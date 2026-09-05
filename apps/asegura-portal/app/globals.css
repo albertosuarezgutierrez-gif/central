@@ -1398,10 +1398,15 @@ h1 {
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) * 0.6);
 }
-/* Una hoja anulada NO se oculta: su dueño tiene que ver que la anuló y cuándo.
-   Se atenúa, que es distinto de desaparecer. */
+/* Una hoja anulada NO se oculta: su dueño tiene que ver que la anuló y
+   cuándo. Pero tampoco se APAGA — `opacity: .6` sobre `--muted` dejaba el
+   texto en 1,99:1 de contraste (AA pide 4,5:1 a 13 px) y encima se lee como
+   «cargando». El estado va donde va en el resto de la app: en un chip. */
 .hoja-fila[data-anulada='si'] {
-  opacity: 0.6;
+  background: var(--panel2);
+}
+.hoja-fila[data-anulada='si'] .hoja-titulo {
+  color: var(--muted);
 }
 .hoja-cuerpo {
   display: grid;
@@ -1432,118 +1437,570 @@ h1 {
   gap: 6px;
 }
 
-/* ── La hoja IMPRESA (`/hoja/[token]`) ──────────────────────────────────── */
+/* 🚨 `.boton-tenue` NO EXISTÍA (05/09/2026). «Anular» —la acción
+   destructiva— y «Cancelar» salían como botones NATIVOS del navegador: 25 px
+   de alto donde la regla de la casa exige 44, esquina cuadrada y gris del
+   sistema, al lado de una píldora azul. No fallaba nada: salía feo y sin
+   superficie táctil. */
+.boton-tenue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms;
+}
+.boton-tenue:hover {
+  background: var(--surface-hover, var(--panel2));
+  border-color: var(--muted2);
+}
+.boton-tenue:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* `.acciones` tampoco existía (existen `.alta-acciones` y `.editor-acciones`). */
+.acciones {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  /* 🚨 Sin estas dos líneas el par sale ESCALONADO y de dos alturas: el
+     `align-items: stretch` por defecto estira uno a la altura de la fila y
+     `.boton.auto` le suma su `margin-top: 10px` al otro (ese margen se
+     escribió para un botón que sigue a un párrafo, no para una rejilla).
+     Medido a 600 px: 44 px contra 54, y 10 px de desfase. */
+  align-items: start;
+}
+.acciones > .boton {
+  margin-top: 0;
+}
+@media (min-width: 420px) {
+  .acciones {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* El formulario, con la forma de la casa: la etiqueta FUERA y el control
+   dentro. `.campo` puesto sobre un <label> o un <fieldset> se queda en
+   `display:inline` —así que `width`, `min-height` y `padding` quedan
+   inertes— y el <input> de dentro sale sin estilar, a 25 px. */
+.hoja-formulario {
+  display: grid;
+  gap: 14px;
+}
+.hoja-formulario legend {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+}
+.hoja-formulario fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  /* Sin esto un <fieldset> no encoge por debajo de su min-content y arrastra
+     la columna a 320 px. Mismo remedio que `.editor-campo.grupo`. */
+  min-inline-size: 0;
+  display: grid;
+  gap: 8px;
+}
+.hoja-formulario .opcion {
+  display: flex;
+  flex: 1 1 auto;
+}
+.hoja-formulario .opciones {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* La aclaración «— también las que contrate más adelante» heredaba el 600 de
+   `.opcion:has(input:checked)` y dejaba de leerse como aclaración, que es
+   justo lo que tiene que ser. */
+.opcion .tenue {
+  font-weight: 400;
+}
+
+/* 🚨 Una confirmación NO es una alarma. «Tu hoja está lista» se pintaba con
+   `.alarma` —fondo negativo y título en `--danger` PURO— con solo el borde
+   sobreescrito: salía en ROJO. El tono negativo está reservado a lo que
+   puede dejar a alguien sin cobertura (ver la cabecera de `.alarma`), y
+   gastarlo en una buena noticia lo devalúa para cuando haga falta. */
+.confirmacion {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: calc(var(--radius) * 0.8);
+  padding: 14px;
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.confirmacion-titulo {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+
+/* Y el espejo del mismo fallo: el ERROR usaba `.hueco`, que es texto normal.
+   El éxito gritaba en rojo y el error susurraba en gris. */
+.error-linea {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: var(--negative-bg);
+  border: 1px solid var(--negative);
+  border-radius: calc(var(--radius) * 0.8);
+  padding: 12px 14px;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--negative);
+}
+
+/* ── La hoja IMPRESA (`/hoja/[token]`) ──────────────────────────────────
+ * Es un DOCUMENTO, no una pantalla: masthead con la marca a la izquierda,
+ * qué es el papel en el centro y el QR a la derecha, filete de cierre, y
+ * dentro de cada ficha DOS zonas separadas por un hairline — arriba «qué
+ * es», abajo «a quién llamo». Ese filete es lo que permite encontrar el
+ * teléfono sin leer nada, que es la única postura desde la que se usa. */
 .hoja {
   max-width: 640px;
   margin: 0 auto;
   padding: 24px 16px 40px;
   color: var(--text);
 }
-.hoja h1 {
-  margin: 0 0 4px;
-  font-size: 24px;
-  font-weight: 600;
+
+.hoja-masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'marca' 'titulo' 'qr';
+  justify-items: start;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--text);
 }
+@media (min-width: 480px) {
+  .hoja-masthead {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'marca titulo qr';
+    justify-items: stretch;
+  }
+}
+.hoja-marca {
+  grid-area: marca;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+/* 🚨 El monograma toma `currentColor` sobre `--text`, NO su cuadro
+   `--brand-soft`: ese cuadro es un BACKGROUND, y Chrome descarta los fondos
+   al imprimir salvo que el usuario marque una casilla que no sabe que
+   existe. En negro pleno es line-art: imprime en cualquier láser y aguanta
+   un año de cocina. */
+.hoja-monograma {
+  flex: 0 0 auto;
+  color: var(--text);
+}
+.hoja-identidad {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.hoja-wordmark {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+/* La clave DGSFP sale de `MEDIADOR`, nunca tecleada: es el átomo legal que
+   hace que el papel parezca de una firma regulada y no una nota. */
+.hoja-dgsfp {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.hoja-titulo-bloque {
+  grid-area: titulo;
+  min-width: 0;
+}
+/* 🚨 El titular dice QUÉ es el papel, no de quién es. La marca ya está a su
+   izquierda, y ponerla también aquí decía «Grupo ASegura» dos veces en 40 px
+   — que era lo que había. Quien pega esto en la nevera ya sabe cuál es su
+   correduría; lo que tiene que reconocer desde el otro lado de la cocina es
+   qué papel es ese. */
+.hoja-titulo-bloque h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+/* La hoja se lee EN VIVO, así que esta fecha es honesta — y es lo único que
+   le dice a alguien, dentro de un año, «esto es viejo, escanea». */
+.hoja-fecha {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hoja-qr {
+  grid-area: qr;
+  margin: 0;
+  text-align: center;
+  break-inside: avoid;
+}
+.hoja-qr svg {
+  width: 104px;
+  height: 104px;
+  display: block;
+  margin: 0 auto;
+}
+.hoja-qr p {
+  margin: 4px 0 0;
+  max-width: 104px;
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
 .hoja-polizas {
   list-style: none;
-  margin: 20px 0 0;
+  margin: 18px 0 0;
   padding: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 .hoja-poliza {
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) * 0.6);
-  /* Que cada póliza no se parta entre dos folios: media ficha en el reverso de
-     la nevera no sirve de nada. */
+  /* Que una ficha no se parta entre dos folios: media ficha en el reverso no
+     sirve de nada. */
   break-inside: avoid;
 }
 .hoja-poliza h2 {
   margin: 0;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
+/* 🚨 El ramo es una ETIQUETA de categoría, no cuerpo de texto. Sin
+   `font-size` heredaba 16 px, o sea que la palabra «auto» se imprimía MÁS
+   GRANDE que el teléfono de la grúa. */
 .hoja-ramo {
-  margin: 2px 0 0;
+  margin: 3px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--muted);
 }
+/* El bien es el título real de la ficha: es lo que te dice cuál es la tuya. */
 .hoja-bien {
-  margin: 6px 0 0;
-  font-weight: 500;
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 .hoja-poliza dl {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 2px 12px;
+  gap: 4px 14px;
   margin: 10px 0 0;
-  font-size: 14px;
 }
 .hoja-poliza dt {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--muted);
+  white-space: nowrap;
 }
 .hoja-poliza dd {
   margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+/* Un «no nos consta» con el peso de una fecha real es un hueco disfrazado de
+   dato — la regla de la casa, aplicada a la tipografía. */
+.hoja-poliza dd.sin-dato {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* 🚨 El filete que parte la ficha en dos zonas. */
 .hoja-vias {
   list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
+  margin: 12px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--border);
   display: grid;
-  gap: 4px;
-  font-size: 14px;
+  gap: 10px;
 }
+.hoja-vias li {
+  display: grid;
+  gap: 1px;
+}
+/* La etiqueta BAJA a versalita y el número SUBE. Antes la palabra «Dar
+   parte» pesaba más (14/700) que el número al que hay que llamar (14/400):
+   la inversión etiqueta-pequeña / valor-grande es lo que hace toda tarjeta
+   de emergencia que funciona. */
+.hoja-vias strong {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+/* 🔑 Lo único que alguien busca con prisa: el número más grande del papel.
+   `nowrap` porque un teléfono partido en dos renglones se marca mal. */
+/* Se marca de un toque: con el teléfono fuera del papel, la pantalla es la
+   ÚNICA superficie donde vive ese número. Sin el azul de enlace y sin subrayado
+   a propósito — aquí el dato ES el número, no un sitio al que ir— pero con los
+   44 px táctiles de la regla de la casa. */
 .hoja-numero {
+  display: inline-block;
+  min-height: 44px;
+  padding: 6px 0;
+  color: inherit;
+  text-decoration: none;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
+/* En su propio renglón: un horario pegado al número se lee como parte de él. */
 .hoja-horario {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
   color: var(--muted);
 }
 .hoja-nota {
   margin: 8px 0 0;
   color: var(--muted);
-  font-size: 13px;
-}
-.hoja-qr {
-  margin: 24px 0 0;
-  text-align: center;
-  break-inside: avoid;
-}
-.hoja-qr svg {
-  width: 128px;
-  height: 128px;
+  font-size: 12px;
 }
 .hoja-pie {
-  margin: 20px 0 0;
+  margin: 16px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 11px;
 }
 
-/* 🖨 Al imprimir: tinta negra sobre blanco y sin cajas grises. Un imán de nevera
-   impreso con el tema oscuro del móvil sale ilegible y gasta media cinta. */
+/* El aviso de qué se va a imprimir. Va SOLO en pantalla (`@media print` lo
+   oculta) y existe para que la vista previa —que enseña una tarjeta con un
+   QR y nada más— no parezca un fallo. */
+.hoja-solo-pantalla {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  /* 🚨 Borde SÓLIDO. El discontinuo es de `.pendiente` y en este portal
+     significa «esto se rellenará» — es la única pieza del sistema que carga
+     ese significado, y gastarlo en una explicación permanente lo devalúa. */
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  border-radius: calc(var(--radius) * 0.6);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* 🖨 AL IMPRIMIR ─────────────────────────────────────────────────────────
+ *
+ * 🚨 Se re-declaran los TOKENS, no las clases, y eso arregla un fallo que
+ * llegó a producción (05/09/2026). El bloque anterior parcheaba `.hoja` con
+ * `color:#000` y no tocaba nada más: imprimiendo desde el TEMA OSCURO el
+ * `body` salía en `oklch(0.17 0 0)` —un folio negro a sangre— y ese mismo
+ * `color:#000` dejaba el contenido NEGRO SOBRE NEGRO. Y con los fondos
+ * desactivados (el defecto de Chrome) el fallo cambiaba de cara pero no se
+ * iba: cabecera y pie en blanco sobre blanco. Todo dependía de una casilla
+ * que el usuario no sabe que existe, con el interruptor de tema a un toque
+ * en la barra de la propia hoja.
+ *
+ * Con los tokens redefinidos, lo que se añada mañana nace ya en tinta negra
+ * sin que nadie tenga que acordarse.
+ *
+ * 🚨 Y el selector va DOBLADO (`:root:root`) a propósito: `app/layout.tsx`
+ * inyecta `emitirRootCss(MARCA)` en un <style> del <head> SIN capa y DESPUÉS
+ * de este fichero, así que un `:root` normal aquí pierde por orden.
+ * `:root:root` (0,2,0) gana a su `:root` (0,1,0). */
 @media print {
-  .hoja {
-    max-width: none;
-    padding: 0;
+  :root:root,
+  :root:root[data-theme='dark'],
+  :root:root.dark {
+    color-scheme: light;
+    --bg: #fff;
+    --panel: #fff;
+    --panel2: #fff;
+    --surface-hover: #fff;
+    --surface-active: #fff;
+    --text: #000;
+    --muted: #333;
+    --muted2: #333;
+    --border: #999;
+    --border-soft: #999;
+    --brand: #000;
+    --brand-ink: #000;
+    --brand-soft: #fff;
+    --accent: #000;
+    --accent-ink: #000;
+    --accent-soft: #fff;
+    --shadow-panel: none;
+    --shadow-float: none;
+    --shadow-over: none;
+  }
+
+  /* Los márgenes se declaran: cada navegador trae el suyo, y este papel
+     acaba bajo un imán — el margen es donde va el imán. */
+  @page {
+    margin: 12mm 12mm 10mm;
+  }
+
+  /* 🚨 Acotado a la hoja con `:has()`, no global: el resto del portal no se
+     imprime, y donde `:has()` no exista esto simplemente no aplica (degrada
+     a lo de antes, no rompe).
+     El armazón NO va al papel: la barra se llevaba 64 px CON EL INTERRUPTOR
+     DE TEMA impreso, y el pie legal 131 px con cuatro enlaces muertos —
+     entre los dos, ~195 px y una segunda página. La identificación del
+     mediador que pide el art. 19 se da EN PANTALLA, antes de que nadie
+     escriba su correo; en el papel la pone el masthead con su clave DGSFP,
+     así que no se pierde. */
+  body:has(> .hoja) {
+    background: #fff;
     color: #000;
   }
-  .hoja-poliza {
-    border-color: #999;
+  body:has(> .hoja) > .marca-barra,
+  body:has(> .hoja) > .pie-legal {
+    display: none !important;
   }
-  .hoja-ramo,
-  .hoja-poliza dt,
-  .hoja-horario,
-  .hoja-nota,
-  .hoja-pie {
-    color: #333;
+
+  /* 🖼 La hoja es UNA TARJETA centrada en el folio, no un encabezado con
+     medio A4 en blanco debajo. El filete a todo lo ancho tenía sentido cuando
+     debajo iban tres fichas; sin ellas, quien dice «esto es un documento» es
+     el contorno, y el filete baja a hairline DENTRO de la tarjeta separando
+     identidad de código. */
+  body:has(> .hoja) {
+    display: grid;
+    place-content: center;
+    min-height: 100vh;
+  }
+  .hoja {
+    width: 96mm;
+    max-width: 100%;
+    margin: 0;
+    padding: 10mm 8mm;
+    border: 1px solid var(--text);
+    border-radius: 4mm;
+    break-inside: avoid;
+  }
+
+  /* 🚨 EN EL PAPEL NO VA NINGÚN DATO. Solo la marca, «Tus seguros» y el QR.
+   *
+   * Decisión de Alberto (05/09/2026): «el que quiera info tiene que escanear;
+   * si pone tlf no entra, y puede que quede obsoleto el tlf».
+   *
+   * Los dos motivos son buenos y el segundo tumba el argumento contrario:
+   * un teléfono impreso ES un dato en papel, y toda esta pieza existe porque
+   * el QR lleva un ENLACE y no datos — con los datos escritos, el imán miente
+   * en cuanto la compañía cambie el número. Imprimir el 900 era contradecir
+   * la regla que sostiene el QR.
+   *
+   * Y de paso arregla lo que ningún tamaño de fuente tapaba: el papel deja de
+   * enseñarle a quien pasa por la cocina con quién tienes el coche, dónde
+   * vives o el número de tu póliza. El papel es anónimo; la llave es el QR, y
+   * el QR se anula desde el portal.
+   *
+   * ⚠️ Lo que se pierde, dicho en voz alta: con el móvil roto o sin cobertura
+   * el papel no da un teléfono. Se asume porque quien no tiene móvil está
+   * llamando desde el de otro — y desde el de otro también se escanea.
+   *
+   * 🚨 Y ESTO ES UNA ALLOW-LIST, no una lista de excepciones, que es la parte
+   * que de verdad importa. Antes se nombraban las cuatro clases a ocultar, y
+   * eso solo protege de lo que ya existe: la rama de error (hoja anulada / sin
+   * pólizas) imprimía su texto porque sus clases no estaban en la lista, y el
+   * día que alguien añadiera un `<p>` con el nombre del titular se imprimiría
+   * sin que nada fallara. Aquí se oculta TODO lo que cuelga de `.hoja` y se
+   * enseña solo la tarjeta; lo que se añada mañana nace sin imprimirse, que es
+   * el modo de fallo barato.
+   *
+   * La ficha de mediador SÍ se queda: no es un dato del cliente, es la
+   * identificación de la correduría (art. 19), y es lo que hace que el papel
+   * parezca de una firma regulada y no una pegatina. */
+  .hoja > * {
+    display: none !important;
+  }
+  .hoja > .hoja-masthead {
+    display: grid !important;
+  }
+
+  /* El masthead ES la tarjeta: marca, titular y QR en una columna centrada.
+     El QR es HIJO suyo (ver `Masthead` en la página), así que su `grid-area`
+     coloca de verdad y el bloque cierra entero. */
+  .hoja-masthead {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'marca' 'titulo' 'qr';
+    justify-items: center;
+    text-align: center;
+    gap: 16px;
+    padding: 0;
+    border-bottom: 0;
+  }
+  .hoja-titulo-bloque {
+    /* El filete se estrecha al ancho de la tarjeta y baja a hairline: a todo
+       lo ancho del folio era una línea que cortaba una página vacía en dos. */
+    width: 100%;
+    padding-bottom: 6mm;
+    border-bottom: 1px solid var(--border);
+  }
+  .hoja-titulo-bloque h1 {
+    font-size: 26px;
+  }
+  /* 🚨 «Datos a día …» es honesto EN PANTALLA —ahí se lee en vivo— y una
+     mentira en el papel, donde no va ningún dato. Es lo único de la tarjeta
+     que se quita, y por eso es una regla suelta y no una excepción de la
+     allow-list: aquí se OCULTA, no se re-enseña. */
+  .hoja-fecha {
+    display: none !important;
   }
   .hoja-qr svg {
-    width: 108px;
-    height: 108px;
+    width: 52mm;
+    height: 52mm;
+  }
+  /* 🚨 Sin `max-width`: el <p> tiene que ocupar el ancho de la tarjeta para
+     que `text-align: center` lo centre BAJO el QR. Con los 220 px de antes era
+     un bloque que arrancaba en el margen izquierdo del folio mientras el
+     código quedaba a 258 px — lo que más delataba el papel a medio hacer. */
+  .hoja-qr p {
+    max-width: none;
+    font-size: 11px;
   }
 }

@@ -123,3 +123,112 @@ test('el enlace del QR exige https y no se inventa un dominio', () => {
   assert.match(src, /if \(!base\) return null/, 'sin dominio configurado no hay enlace')
   assert.match(src, /url\.protocol !== 'https:'/, 'el token viaja en la URL: http lo pondría en claro')
 })
+
+test('EL PAPEL NO LLEVA NINGÚN DATO: al imprimir se oculta TODO menos la tarjeta', () => {
+  // 🚨 Decisión de Alberto (05/09/2026): «el que quiera info tiene que
+  // escanear; si pone tlf no entra, y puede que quede obsoleto el tlf».
+  //
+  // Es el cepo más frágil de esta pieza porque el fallo es INVISIBLE en
+  // pantalla: la página sigue enseñándolo todo, y solo al imprimir —o al
+  // mirar la vista previa, que casi nadie mira dos veces— se vería que el
+  // papel se ha llevado las pólizas, los teléfonos y los números. Nadie se
+  // entera hasta que hay un imán en una nevera ajena con los datos de alguien.
+  //
+  // 🚨 Y lo que se afirma aquí es la FORMA, no una lista de nombres. Hasta el
+  // 05/09/2026 el bloque nombraba las cuatro clases a ocultar, y eso solo
+  // protege de lo que ya existe: la rama de error (hoja anulada, sin pólizas)
+  // imprimía su texto porque sus clases no estaban en la lista. Un `<p>` nuevo
+  // con el nombre del titular saldría impreso sin que nada fallara.
+  const css = leer('apps/asegura-portal/app/globals.css')
+  const i = css.indexOf('@media print')
+  assert.ok(i > 0, 'no encuentro el bloque de impresión')
+  const bloque = css.slice(i)
+
+  assert.match(
+    bloque,
+    /\.hoja > \*\s*\{[^}]*display:\s*none\s*!important/,
+    'la regla base tiene que ocultar TODO lo que cuelga de la hoja, no cuatro clases conocidas',
+  )
+
+  // Y las excepciones son exactamente UNA. Añadir otra tiene que ser una
+  // decisión que rompe este test, no un `git push`.
+  const excepciones = [...bloque.matchAll(/\.hoja > (\.[a-z-]+)\s*\{([^}]*)\}/g)]
+    .filter(([, , cuerpo]) => /display:\s*(?!none)[a-z]/.test(cuerpo))
+    .map(([, sel]) => sel)
+  assert.deepEqual(
+    excepciones.sort(),
+    ['.hoja-masthead'],
+    'al papel solo vuelve la tarjeta: cualquier otra excepción imprime lo que lleve dentro',
+  )
+})
+
+test('lo que se imprime es EXACTAMENTE lo que pinta `Masthead`, y ahí no entra ningún dato', () => {
+  // Corolario del cepo de arriba, y el que de verdad caza: como al imprimir
+  // solo sobrevive `.hoja-masthead`, el papel es el cuerpo de ese componente.
+  // Si algún día recibe algo derivado de la cartera —el nombre del titular,
+  // «2 pólizas»— se imprime, y ningún nombre de clase lo impide.
+  const src = leer(PAGINA)
+  const sinComentarios = src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+
+  const desde = sinComentarios.indexOf('function Masthead(')
+  assert.ok(desde > 0, 'no encuentro el componente del masthead')
+  const cuerpo = sinComentarios.slice(desde, sinComentarios.indexOf('\n}', desde))
+  for (const dato of [
+    'numeroPoliza',
+    'compania',
+    'matricula',
+    'fechaVencimiento',
+    'visibles',
+    'declaradas',
+    'canal',
+    'prima',
+    'bien',
+  ]) {
+    assert.ok(!cuerpo.includes(dato), `\`${dato}\` no puede llegar al masthead: el masthead ES el papel`)
+  }
+
+  // Y por el otro lado: solo se le pasan el titular literal y el QR.
+  const llamadas = [...sinComentarios.matchAll(/<Masthead([^/>]*)\/>/g)].map(([, props]) => props.trim())
+  assert.ok(llamadas.length > 0, 'no encuentro ninguna llamada al masthead')
+  for (const props of llamadas) {
+    assert.match(
+      props,
+      /^titulo="[^"]*"( qr=\{qr\})?$/,
+      `el masthead solo recibe el titular y el QR; recibió: ${props}`,
+    )
+  }
+})
+
+test('la pantalla AVISA de que el papel sale sin datos', () => {
+  // Cepo POSITIVO. Sin este aviso, la vista previa —una tarjeta con un QR y
+  // nada más— parece un fallo de carga, y el usuario le da a cancelar.
+  const src = leer(PAGINA)
+  assert.match(src, /hoja-solo-pantalla/, 'tiene que haber un aviso de qué se imprime')
+  assert.match(
+    src,
+    /Al imprimir sale solo la tarjeta/,
+    'y tiene que decir con todas las letras que los datos no salen',
+  )
+})
+
+test('el papel sigue llevando la identificación del mediador', () => {
+  // Lo único que NO se quita del papel: no es un dato del cliente, es la
+  // identificación de la correduría (art. 19 de la Ley 16/2018) y es lo que
+  // hace que la tarjeta parezca de una firma regulada. Sale de `MEDIADOR`,
+  // nunca tecleada: dos copias de la clave DGSFP es una copia de más.
+  const src = leer(PAGINA)
+  assert.match(src, /MEDIADOR\.identidad\.claveDgsfp/, 'la clave DGSFP sale del módulo, no del JSX')
+  // 🚨 Se quitan los COMENTARIOS antes de mirar. Sin esto el cepo se muerde a
+  // sí mismo: la cabecera que explica por qué la clave no se teclea la escribe
+  // literalmente para explicarlo. Mismo remedio que
+  // `test/regression-portal-parte-siniestro.test.ts`, y ya van tres veces hoy
+  // que un guardián de este portal muerde por una frase de un comentario.
+  const sinComentarios = src
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/^\s*\/\/.*$/gm, '')
+  assert.doesNotMatch(sinComentarios, /CS-F\/0170/, 'la clave no se teclea a mano en la pantalla')
+})

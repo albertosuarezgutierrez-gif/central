@@ -261,6 +261,124 @@ ninguna (23514), la misma póliza dos veces (23505) y el nombre largo (23514). R
 `packages/module-seguros-portal/src/hoja-qr.ts` (11 tests); cepos de raíz en
 `test/regression-portal-hoja-qr.test.ts` (11, con seis mutaciones comprobadas).
 
+### 🖨 La hoja, corregida (05/09/2026) — y el folio NEGRO SOBRE NEGRO que llegó a producción
+
+Alberto pidió revisar el diseño «a nivel corporativo» y aclaró la cabecera: *«TUS SEGUROS y nombre
+Grupo ASegura»*. La revisión destapó tres fallos que se habían mergeado horas antes.
+
+🚨 **El grave: imprimir desde el TEMA OSCURO daba un folio negro con texto negro.** El bloque
+`@media print` parcheaba `.hoja` con `color:#000` y **no tocaba nada más**, así que el `body` seguía
+en `oklch(0.17 0 0)` —negro a sangre— y ese mismo `#000` dejaba el contenido invisible encima. Con
+los fondos desactivados (el defecto de Chrome) cambiaba de cara pero no se iba: cabecera y pie legal
+en blanco sobre blanco. Todo dependía de una casilla que el usuario no sabe que existe, **con el
+interruptor de tema a un toque en la barra de la propia hoja**.
+
+**El arreglo es re-declarar los TOKENS, no parchear clases**: dentro de `@media print` se redefinen
+`--bg`, `--text`, `--muted`, `--border`… a tinta negra sobre blanco. Así lo que se añada mañana nace
+ya bien sin que nadie se acuerde. ⚠️ El selector va **doblado** (`:root:root`) a propósito:
+`app/layout.tsx` inyecta `emitirRootCss(MARCA)` en un `<style>` del `<head>` SIN capa y DESPUÉS del
+`globals.css`, así que un `:root` normal pierde por orden.
+
+📄 **Y el armazón no va al papel.** `.marca-barra` (64 px, **con el interruptor de tema impreso**) y
+`PieLegal` (131 px, cuatro enlaces muertos) se heredaban a `/hoja/[token]` por estar dentro de
+`app/`: ~195 px y una **segunda página**. Se ocultan con `body:has(> .hoja)` en `@media print`, no con
+un root layout propio — eso obligaría a duplicar `SCRIPT_TEMA`, la tipografía y `emitirRootCss`, que
+es el modo de fallo que este repo persigue. La identificación del mediador del art. 19 **no se
+pierde**: en pantalla sigue el pie, y en el papel la pone el masthead con su clave DGSFP.
+
+🎨 **La cabecera, con la jerarquía que pidió Alberto:** monograma AS a **40 px y en negro pleno** a la
+izquierda (a los 15 px de la barra el contraojo de la «A» se cierra; y en su cuadro de color sería un
+*background*, que Chrome descarta al imprimir), «Grupo ASegura» + `Correduría de seguros · DGSFP
+CS-F/0170` sacado de `MEDIADOR`, **«Tus seguros»** de titular con la fecha del día, y el QR a la
+derecha. Cierra un filete de 2 px: es lo más barato y lo que más cambia — es lo que dice «documento».
+El titular dice QUÉ es el papel, no de quién es: antes ponía «Grupo ASegura» de titular **y** en la
+barra, el nombre dos veces en 40 px y ni una palabra de qué era la hoja.
+
+📞 **La jerarquía del teléfono estaba INVERTIDA:** la palabra `auto` se imprimía a 16 px y el 900 de
+la grúa a 14/400. Ahora el número es **20/700 con `nowrap`** (un teléfono partido en dos renglones se
+marca mal) y su etiqueta baja a versalita de 11 — la inversión etiqueta-pequeña / valor-grande de
+cualquier tarjeta de emergencia. Un filete parte la ficha en dos zonas: arriba *qué es*, abajo *a
+quién llamo*, que es lo que permite encontrar el número **sin leer nada**.
+
+Y dos más, de la misma tanda: **`.boton-tenue` no existía** (Anular y Cancelar salían como botones
+nativos de 25 px, contra los 44 de la regla de la casa) y **la confirmación se pintaba con `.alarma`**,
+o sea «Tu hoja está lista» en el rojo reservado a lo que deja a alguien sin cobertura — mientras el
+error usaba `.hueco` y susurraba en gris. Se añaden `.confirmacion` y `.error-linea`.
+
+📌 Medido con Playwright: sin desbordes de 320 a 1100 px e idéntico imprimiendo desde el tema claro
+y el oscuro. El QR sube a `margin: 2` y corrección `Q`: la zona de silencio importa en un papel que
+va pegado a un imán.
+
+🚨 **Y horas después Alberto cambió el producto, con razón: EN EL PAPEL NO VA NINGÚN DATO.** Dictado:
+*«el que quiera info tiene que escanear; si pone tlf no entra, y puede que quede obsoleto el tlf»*.
+Lo que se imprime es **solo la tarjeta**: monograma, «Grupo ASegura» con su clave DGSFP, «Tus
+seguros» y el QR grande. Ni pólizas, ni teléfonos, ni vencimientos.
+
+El segundo argumento suyo es el que zanja la discusión, y tumba lo que se había construido esa misma
+tarde: **un teléfono impreso ES un dato en papel**, y toda esta pieza existe porque el QR lleva un
+ENLACE y no datos — con el número escrito, el imán miente en cuanto la compañía lo cambie. Imprimir
+el 900 contradecía la regla que sostiene el QR. De paso, el papel deja de enseñarle a quien pase por
+la cocina con qué compañía tienes el coche.
+
+⚠️ **Lo que se pierde, dicho en voz alta:** con el móvil roto o sin cobertura el papel no da ningún
+teléfono. Se asume porque quien no tiene móvil está llamando desde el de otro, y desde el de otro
+también se escanea. (El argumento contrario —«en el arcén el papel es lo único que queda»— se
+sostuvo hasta que se vio que un móvil muerto no impide escanear con otro.)
+
+📌 Se hace en `@media print` ocultando `.hoja-polizas`, `.hoja-pie` y `.hoja-fecha`, y el cabezado
+pasa a ser la tarjeta entera: centrada, con el titular a 30 px y el QR a 200. **En pantalla no cambia
+nada**: quien escanea sigue viéndolo todo. Y por eso la página lleva un aviso `.hoja-solo-pantalla`
+que dice qué se va a imprimir — sin él, la vista previa (un logo y un QR) parece un fallo de carga y
+el usuario cancela. Tres cepos nuevos en `test/regression-portal-hoja-qr.test.ts`, incluido el del
+aviso, que es positivo.
+
+🖼 **Y una segunda revisión, horas después, encontró que la tarjeta estaba PARTIDA EN DOS.** El
+bloque del QR se pintaba como HERMANO del masthead, y `.hoja-qr` se coloca con `grid-area: qr` — una
+regla que solo significa algo si es HIJO de la rejilla. Suelto, no hacía nada: la fila `qr` del
+masthead quedaba vacía, el filete de cierre cortaba entre la marca y el código, y la leyenda
+«Escanea…» arrancaba en el margen IZQUIERDO del folio mientras el QR estaba a 258 px (su
+`max-width: 220px` dentro de un `.hoja-qr` de 716 la convertía en un bloque estrecho pegado a la
+izquierda). En pantalla no se veía porque ahí `.hoja` mide 640. **El QR es ahora hijo del
+`Masthead`**, y el papel es una TARJETA de 96 mm centrada en el folio con contorno: el filete baja a
+hairline dentro de ella. Medido: 363×419 px centrada, leyenda centrada bajo el QR, **una página**, e
+idéntica imprimiendo desde el tema claro y el oscuro.
+
+🚨 **Y lo que se ocultaba era una DENY-LIST de cuatro nombres de clase, que es el fallo estructural.**
+Solo protege de lo que ya existe: se comprobó que **la rama de error** (hoja anulada / sin pólizas /
+no encontrada) **SÍ se imprimía** —«Hoja anulada», su explicación y `hola@grupoasegura.es`— porque sus
+clases no estaban en la lista. No era grave (no es dato del cliente) pero era la prueba: el día que
+alguien añada un `<p>` con el nombre del titular o un chip «2 pólizas», se imprime y nadie se entera.
+Ahora es una **allow-list**: `.hoja > *` a `display:none` y **una sola** excepción, `.hoja-masthead`.
+Lo que se añada mañana nace sin imprimirse, que es el modo de fallo barato. El cepo afirma esa FORMA
+—la regla base existe y el conjunto de excepciones es exactamente `{.hoja-masthead}`— más su
+corolario: **lo que se imprime ES el cuerpo de `Masthead`**, así que ahí no puede entrar ningún
+identificador de dato y sus llamadas solo pasan `titulo` y `qr`. Tres mutaciones vistas morder.
+
+📅 **Lo único de la tarjeta que se quita: «Datos a día …».** En pantalla es honesto (se lee en vivo) y
+en el papel es mentira, porque el papel no lleva ningún dato.
+
+⚠️ **Vía que el CSS no tapa, y hay que no prometer lo contrario:** el navegador imprime **la URL en su
+propio pie de página**, y ahí va el token de 64 hex. No añade filtración —quien tiene el papel puede
+escanear— pero contradice literalmente el «el papel es anónimo, la llave es el QR». Depende de la
+casilla «Encabezados y pies» del usuario, así que no está en nuestra mano.
+
+📞 **Y el teléfono de la ficha pasó a ser pulsable** (`tel:`, con los 44 px táctiles y sin el azul de
+enlace: aquí el dato ES el número). Con el teléfono fuera del papel, la pantalla es la ÚNICA
+superficie donde ese número existe, y se abre en el arcén con una mano. **El WhatsApp NO lleva
+enlace**: un `tel:` sobre él marcaría la línea de voz, que es justo lo que no se promete.
+
+🟠 De la misma revisión, dos cosas que la tanda anterior había roto: los dos botones de `.acciones`
+salían **escalonados 10 px y con dos alturas** desde 420 px (el `align-items: stretch` del grid
+estiraba uno y `.boton.auto` le sumaba a otro su margen, escrito para un botón que sigue a un
+párrafo), y `.hoja-solo-pantalla` usaba **borde discontinuo** — que en este portal es el significado
+reservado de `.pendiente` («esto se rellenará») y gastarlo en una explicación permanente lo devalúa.
+
+🦷 **Y una lección de método que ya va por la tercera vez hoy:** el cepo del mediador mordió por una
+frase de un COMENTARIO —la cabecera que explica por qué la clave DGSFP no se teclea la escribía
+literalmente para explicarlo—. Ahora quita los comentarios antes de mirar, como
+`regression-portal-parte-siniestro.test.ts`. Al escribir un cepo que busca texto plano en un fichero
+de este portal, **asume que tus propios comentarios lo van a disparar**.
+
 ### 🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra (05/09/2026)
 
 Alberto, mirando su propio portal en el móvil: *«mis seguros y mis pólizas es lo mismo… tengo lógica

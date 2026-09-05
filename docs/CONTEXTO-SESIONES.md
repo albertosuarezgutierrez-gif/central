@@ -44,6 +44,68 @@
   especificidad). Guardián nuevo `lib/oscuro.test.ts` (probado por mutación). PR #2381, commit
   `976faac3e`. **Sin mergear a propósito: `grupoasegura.es` ya es producción y espera su visto bueno.**
 
+- **🖼 La tarjeta impresa estaba PARTIDA EN DOS, y lo que la protegía era una deny-list (05/09/2026).**
+  Segunda pasada del agente de diseño antes de mergear, a petición de Alberto. El bloque del QR se
+  pintaba como HERMANO del masthead y `.hoja-qr` se coloca con `grid-area: qr` — regla que solo
+  significa algo si es HIJO: la fila `qr` quedaba vacía, el filete cortaba entre la marca y el
+  código, y la leyenda salía pegada al margen IZQUIERDO del folio (QR a 258 px). En pantalla no se
+  veía. **El QR es ahora hijo del `Masthead`** y el papel es una tarjeta de 96 mm centrada con
+  contorno (363×419, una página, idéntica en claro y oscuro). 🚨 Y lo que se ocultaba eran **cuatro
+  nombres de clase**: se comprobó que la rama de error SÍ se imprimía. Ahora es **allow-list**
+  (`.hoja > *` oculto, una sola excepción) y el cepo afirma esa FORMA + que lo impreso ES el cuerpo
+  de `Masthead` (3 mutaciones vistas morder). Se quita «Datos a día …» del papel: en pantalla es
+  honesto, en el papel es mentira. El teléfono de la ficha pasa a `tel:` (el WhatsApp NO). Y dos
+  cosas rotas de la tanda anterior: `.acciones` escalonaba 10 px desde 420 px, y
+  `.hoja-solo-pantalla` usaba el borde discontinuo reservado a `.pendiente`. ⚠️ Sin arreglo posible:
+  el navegador imprime la URL con el token en su propio pie de página.
+
+- **🖨 La hoja impresa, corregida: salía NEGRO SOBRE NEGRO desde el tema oscuro (05/09/2026).**
+  Alberto pidió revisar el diseño «a nivel corporativo» y aclaró la cabecera: «TUS SEGUROS y nombre
+  Grupo ASegura». La revisión (agente de diseño) destapó tres fallos mergeados horas antes: el
+  `@media print` parcheaba `.hoja` con `color:#000` **sin tocar el `body`**, así que desde el tema
+  oscuro el folio salía negro con el texto negro encima — y el interruptor de tema estaba a un toque
+  en la barra de la propia hoja. Arreglado **re-declarando los TOKENS** dentro de `@media print`
+  (selector doblado `:root:root`, porque `emitirRootCss` se inyecta sin capa y después). También:
+  la barra y el pie legal se llevaban ~195 px y una **segunda página** → ocultos con
+  `body:has(> .hoja)`, NO con un root layout propio (duplicaría `SCRIPT_TEMA` y la marca). Cabecera
+  nueva: monograma AS a 40 px en negro, DGSFP desde `MEDIADOR`, **«Tus seguros»** de titular, QR a la
+  derecha, filete de 2 px. El **teléfono pasa de 14/400 a 20/700**: antes la palabra «auto» se
+  imprimía más grande que el 900 de la grúa. Y `.boton-tenue` no existía (botones nativos de 25 px) y
+  la confirmación se pintaba con `.alarma`, en rojo. 🚨 **Y luego Alberto cambió el producto: en el
+  papel NO VA NINGÚN DATO** («el que quiera info tiene que escanear; si pone tlf no entra, y puede
+  que quede obsoleto el tlf»). Su segundo argumento tumba el diseño de esa misma tarde: **un teléfono
+  impreso es un dato en papel**, justo lo que el QR existe para evitar. Se imprime solo la tarjeta
+  —monograma, marca con DGSFP, «Tus seguros» y el QR a 200 px—; en pantalla no cambia nada. Aviso en
+  la página de qué se imprime, para que la vista previa no parezca un fallo. PR pendiente de su OK.
+- **📵 El CUARTO sitio donde vive un contacto, y la pestaña Contactos apretada (05/09/2026).** PR #2391
+  (mergeado, `9d822946`) + PR nuevo. Alberto, mirando la pantalla: «grupo elca ya tiene a pablo y aun
+  aparece», «Studium tiene a victor y berta» — estaban en `cliente_relaciones`, que la consulta de
+  «Clientes sin canal» no miraba. **Medido contra la BD: 18 sin nada en su ficha · 14 ilocalizables con
+  los tres sitios de antes · SEIS con el cuarto.** (En pantalla ponía 16: cifra anterior al lote 10.)
+  🚨 Y una corrección de CRITERIO suya, no de código: «un cliente puede ser muy mayor... es mejor
+  contactar con el familiar» — el familiar NO es un contacto de segunda, así que un solo estado y **viaja
+  el parentesco** («Llama a Pablo Franco Ruz (administración)»). La consulta busca en las DOS direcciones
+  porque el volcado no respeta el convenio «A→B = B es <tipo> de A». Los SEIS restantes son trabajo de
+  Alberto; uno se llama «NO DISPONIBLE NO DISPONIBLE» y es un centinela, no un cliente sin datos.
+  🎨 «Contactos está muy mal aprovechada, ocupa todo mucho»: el coste FIJO de la pestaña era ~1.245px
+  (~1,8 pantallas de móvil) de marco y formulario vacío en la pantalla que se abre para LEER un teléfono.
+  Queda en ~310px: teléfonos/correos/dirección arriba como chips (`tel:`/`mailto:`/WhatsApp; la dirección
+  no se leía en ningún sitio, vivía como `value` de un input) y `EditarCliente` plegado con montaje
+  perezoso — **con badge en el rótulo de lo que no se ha podido leer ahí dentro, que plegar no puede
+  esconder trabajo**. Sin medir en navegador (no hay Playwright ni BD aquí): va con `[preview]`.
+
+- **🔍 Agente de SEO y redes para la correduría + backlog medido (05/09/2026).** Mergeado #2380
+  (`VERSION_TEXTOS_WEB`). Creada la skill **`seo-asegura`** (SEO, contenido y redes de
+  `grupoasegura.es`; rutina semanal pendiente) y el backlog `docs/ASEGURA-SEO-REDES-IDEAS.md` con la
+  auditoría técnica ya medida por subagentes: **cero imagen Open Graph** en toda la app (cada enlace
+  compartido sale sin imagen), `/cambiar-de-correduria` —la página de más intención— sin «Sevilla» en
+  title ni H1, las 6 páginas de ramo son callejones sin salida, `sitemap.lastModified` es la fecha del
+  build (frescura falsa), y `seo.ts:45` teclea la dirección a mano en vez de leerla de `MEDIADOR`.
+  Y `apps/plataforma/app/seguros` **sigue viva e indexable** compitiendo por las mismas consultas.
+  Dos correcciones al plan: el `info@`→`hola@` ya estaba **hecho** en `asegura-web` (lo daba por
+  abierto), y **Mapfre no lleva 5 meses sin ingesta: nunca ha entrado por el cron** (sus 153 recibos
+  tienen una sola fecha de creación, la del volcado; Allianz y Occident sí siguen entrando). Es el
+  64 % de la cartera, así que la comparación hogar-vs-auto puede estar sesgada → `agente-correduria`.
 - **✉️ «Invitar por correo»: la autorización pendiente ya se la cuenta alguien (05/09/2026).** Anotar
   que ELCA autoriza a Pablo dejaba la fila `pendiente` y **nadie avisaba a Pablo**: o Alberto escribía
   el correo a mano, o se caducaba sola a los 90 días. Botón en la fila de la persona (solo si está
