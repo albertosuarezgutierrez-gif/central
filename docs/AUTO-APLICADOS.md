@@ -13,6 +13,15 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-05** · `docs/CONTEXTO-SESIONES.md`, `docs/AUDITORIA-2026-09.md`, este archivo ·
+  informe de la pasada ligera (heartbeat, correduría, pricing, backlog de PRs — sin 🔴) · pasada
+  ligera de esta auditoría, entregado por PR (carril 1 bajo el harness de tareas de GitHub, que no
+  permite push directo a `main`; el PR es solo-registro y se auto-mergea). No se incluye la
+  radiografía (`estructura.generated.json` etc.) porque ya la cubre el PR #2317, abierto minutos
+  antes por `.github/workflows/auditoria.yml` — no duplicado. Los dos hallazgos de doc que SÍ
+  cambian comportamiento (`CLAUDE.md`, `docs/FUENTES-DE-VERDAD.md` por el alta de `apps/asegura-web`)
+  van al PR de carril 2, no aquí.
+
 - **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40
