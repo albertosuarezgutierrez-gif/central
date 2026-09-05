@@ -476,47 +476,152 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Lo TUYO frente a lo que te DEJAN ver ───────────────────────────────────
+/* ── La LISTA de pólizas: una fila por póliza, no una tarjeta ──────────────
  *
- * 🚨 Hasta el 05/09/2026 la única diferencia entre una póliza propia y una
- * ajena era el `<h2>` de la sección de arriba. Con las tarjetas en rejilla —y
- * antes, con dos pantallazos de scroll— ese título queda fuera de la vista y
- * las dos se ven EXACTAMENTE igual. Eso no es un detalle estético: quien cree
- * que la póliza del coche de su padre es suya no llama a la compañía cuando
- * hay que llamar.
+ * 🚨 Por qué (05/09/2026). Alberto, sobre su propia bóveda: «muy sucia la
+ * página… resumen de lo q es, icono de ramo, datos principal, y ya pinchando
+ * entra en lo q sea». La pantalla pintaba coberturas, recibos, prima,
+ * vencimiento y chips DE TODAS las pólizas a la vez.
  *
- * Se marca por partida doble a propósito —filete de color Y etiqueta con el
- * nombre del titular— porque el color solo no le dice nada a quien no
- * distingue bien los tonos, y aquí la etiqueta es además el dato que hace
- * falta: de QUIÉN es. */
-.cartera-card[data-de-otro] {
-  background: var(--panel2);
-  border-color: var(--border-soft);
-  padding-left: 18px;
+ * 📱 La fila ENTERA es el enlace (no un «ver» al final): a 320 px un objetivo
+ * de 44 px de alto y de ancho completo se acierta sin mirar. Y `min-width: 0`
+ * en el cuerpo es lo que permite que el truncado funcione dentro de un flex —
+ * sin él, un texto largo empuja la fila fuera de la pantalla. */
+.polizas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
 }
-.cartera-card[data-de-otro]::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  border-radius: calc(var(--radius) * 1.4) 0 0 calc(var(--radius) * 1.4);
-  background: var(--accent);
+.poliza-enlace {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.4);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 150ms, border-color 150ms;
 }
-/* La etiqueta del titular. `.de-otro` la pinta con el acento; la de las propias
- * (`.cartera-titular`) no existe: una póliza sin etiqueta es tuya, y eso se
- * dice también en el título de la sección. */
-.cartera-de-otro {
-  display: inline-block;
-  margin-bottom: 8px;
-  font-size: 12px;
+.poliza-enlace:hover {
+  background: var(--surface-hover, var(--panel2));
+  border-color: var(--muted2);
+}
+/* El icono, en su cuadro tintado de marca. Es DECORACIÓN: dos pólizas de hogar
+ * de la misma compañía llevan el mismo, así que lo que distingue es el título. */
+.poliza-icono {
+  flex: 0 0 auto;
+  box-sizing: content-box;
+  width: 20px;
+  height: 20px;
+  padding: 8px;
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.poliza-cuerpo {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.poliza-titulo {
+  font-size: 15px;
   font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
+.poliza-meta {
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.poliza-cuerpo .chips {
+  margin-top: 6px;
+}
+.poliza-flecha {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--muted2);
+}
+/* La ajena, marcada también en la fila: filete de acento + la etiqueta «De X»
+ * que pinta el propio componente. Las dos cosas, porque el color solo no le
+ * dice nada a quien no distingue bien los tonos. */
+.poliza-fila[data-de-otro] .poliza-enlace {
+  border-left: 4px solid var(--accent);
+  background: var(--panel2);
+}
+
+/* ── La FICHA de una póliza ──────────────────────────────────────────────── */
+.volver {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+.volver a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.volver a:hover {
+  color: var(--text);
+}
+.ficha-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.ficha-subtitulo {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+/* Etiqueta + valor. Apilado por debajo de 420 px: a esa anchura dos columnas
+ * dejan el valor en un canal de ~120 px (misma razón que `.datos-leidos`). */
+.ficha-datos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px 16px;
+  margin: 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.ficha-datos dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ficha-datos dd {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+/* Lo que cambia lo que el cliente puede esperar de nosotros (no poder avisarle)
+ * no se pinta en el gris de un metadato. */
+.ficha-datos dd.ojo {
+  color: var(--warning);
+  font-weight: 600;
+}
+@media (min-width: 420px) {
+  .ficha-datos {
+    grid-template-columns: minmax(9rem, 30%) minmax(0, 1fr);
+    gap: 8px 16px;
+  }
+  .ficha-datos dt {
+    font-size: 14px;
+  }
+  .ficha-datos dd {
+    margin: 0;
+  }
+}
+
 .cartera-card h3 {
   margin: 0;
   font-size: 16px;
@@ -580,6 +685,19 @@ h1 {
   background: var(--positive-bg);
   border-color: color-mix(in oklab, var(--ok) 30%, var(--panel));
   color: var(--positive);
+}
+/* El recibo devuelto en la lista: es lo único de una póliza que puede dejar a
+ * alguien sin cobertura sin que se entere, así que no se queda detrás del clic. */
+.chip.peligro {
+  background: var(--negative-bg);
+  border-color: color-mix(in oklab, var(--danger) 30%, var(--panel));
+  color: var(--negative);
+}
+/* «De {titular}»: de quién es una póliza que no es tuya. */
+.chip.acento {
+  background: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--accent) 30%, var(--panel));
+  color: var(--accent-ink);
 }
 
 .aviso-linea {

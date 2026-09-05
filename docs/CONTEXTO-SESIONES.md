@@ -1178,8 +1178,14 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   dato del contrato y se ve desde `tarjeta`; `ubicacion` (la dirección del hogar) es dato de la
   PERSONA y entra en `NUNCA_A_UN_TERCERO`. Juntarlas regalaría una dirección a quien pidió ver una
   compañía.
-- La póliza ajena se marca en la TARJETA (filete + «De {titular}»), no solo en el `<h2>` de la
-  sección: en rejilla ese título se sale de la vista.
+- La póliza ajena se marca en la FILA (filete + «De {titular}»), no solo en el `<h2>` de la
+  sección: al hacer scroll ese título se sale de la vista.
+- **Y después, lista→ficha** («muy sucia la página»): `/boveda` es una lista de filas y cada póliza
+  tiene su `/boveda/poliza/[id]`. 🚨 El id de la URL **no consulta nada**: se lee la cartera
+  autorizada y se busca dentro; si no está, 404 (nunca 403). El recibo devuelto **se queda en la
+  fila** — es lo único que quita cobertura sin avisar. Los teléfonos de la compañía NO se repintan
+  ahí (viven con sus 4 cepos en `ParteSiniestro.tsx`). El guardián de aislamiento mordió por una
+  frase de un comentario: no quita comentarios antes de mirar.
 
 ### ⚖️ (05/09/2026, III) Bloque legal 0.5: la solicitud de supresión (art. 17) que NO borra
 

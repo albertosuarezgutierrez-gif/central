@@ -151,6 +151,53 @@ Ahora el ancho y la navegación son del armazón y la página solo aporta conten
 14 el cuerpo, 12 lo secundario, ritmo vertical de 24 px, `tabular-nums` en todo lo numérico,
 botones en **píldora** y anillo de foco de 3 px al 50 %.
 
+### La bóveda es una LISTA, y cada póliza tiene su FICHA
+
+Alberto, mirando la pantalla ya rediseñada: *«muy sucia la página… resumen de lo q es, icono de
+ramo, datos principal, y ya pinchando entra en lo q sea»*. Tenía razón en el diagnóstico: `/boveda`
+pintaba coberturas, recibos, prima, vencimiento y chips **de todas** las pólizas a la vez.
+
+Y resuelve la contradicción de sus dos peticiones del mismo día («poca informacion» y «todo más
+sencillo»): **el resumen es simple, la ficha es completa**. Ya no hay que elegir.
+
+- **`FilaPoliza.tsx`** — una fila, no una tarjeta. Titular = **el bien** (la dirección, la
+  matrícula), porque nadie se sabe su número de póliza. El icono de ramo es **decoración y hay que
+  saberlo**: dos pólizas de hogar de la misma compañía llevan el mismo, así que un resumen que se
+  apoye en él no distingue nada.
+- 🚨 **Lo que NO baja a la ficha:** el **recibo devuelto** se queda en la fila, como chip de
+  peligro. Es lo único de una póliza que puede dejar a alguien sin cobertura sin que se entere, y
+  esconderlo detrás de un clic es exactamente el fallo que la regla de la casa persigue. El aviso
+  entero, con la acción al lado, sigue en la ficha. Igual **de quién es** cuando no es tuya.
+- **`PolizaVista.tsx`** — las piezas compartidas por lista y ficha (`Recibos`, `Coberturas`,
+  `AvisoReciboDevuelto`, `Bien`, `IconoRamo`). Están ahí y no duplicadas porque cada una carga una
+  regla que no se puede romper: con dos copias, la segunda pantalla que alguien escriba dirá «no
+  tienes recibos» sin que nada falle.
+
+#### 🚨 `/boveda/poliza/[id]`: el id de la URL NO consulta nada
+
+Es la línea entera de esa página, y el sitio exacto donde se filtra una cartera: buscar la póliza
+por el id de la URL compila, typechequea y devuelve **200 con la póliza de un desconocido** a quien
+cambie el número en la barra de direcciones. No falla. Sale.
+
+Por eso se lee PRIMERO todo lo que la sesión tiene derecho a ver (`carteraDeIdentidad`, que parte de
+`portal_vinculo` y de las autorizaciones vigentes) y DESPUÉS se busca el id **dentro de esa lista**.
+El id no es una clave de consulta: es un filtro sobre un conjunto ya autorizado. Si no está, **404 y
+nunca 403** — un 403 confirmaría que la póliza existe. Y `deOtro` sale de encontrarla en las ajenas,
+nunca de un parámetro.
+
+⚠️ **Dos cosas medidas al construirla, para no repetirlas:**
+1. El guardián de aislamiento **mordió** por una frase de un COMENTARIO: busca el patrón por texto
+   plano y **no quita los comentarios antes de mirar** (a diferencia del de partes). Por eso la
+   cabecera de esa página describe el fallo sin escribir la llamada literal.
+2. Los **teléfonos de la compañía no se repintan** en la ficha: ese bloque vive en
+   `ParteSiniestro.tsx` con cuatro cepos encima (`test/regression-portal-canal-compania.test.ts`).
+   Una segunda copia quedaría fuera de esos cepos, y el fallo sería alguien marcando el número de
+   urgencias de otra compañía a las tres de la mañana. Se enlaza.
+
+📌 **Pendiente conocido, no olvidado:** `registrarUso` (`lib/autorizaciones.ts`) **sigue sin
+llamarse desde ninguna pantalla**, así que el otorgante lee «no ha entrado nadie» sobre alguien que
+sí entró. La ficha es su sitio natural — es donde un tercero ve de verdad la póliza ajena.
+
 ### `describirBien()`: qué COSA está asegurada — y la línea que no se cruza
 
 El dato estaba en `polizas.datos_especificos` (jsonb) y el rol **ya tenía el GRANT**: simplemente no
