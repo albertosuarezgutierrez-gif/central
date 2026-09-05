@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra: fuera una pestaña (05/09/2026).**
+  Alberto, mirando su portal: *«mis seguros y mis pólizas es lo mismo»*. **No lo eran** (cartera de
+  CIMA vs. lo que aporta él) **pero el fallo era del nombre**: en castellano son sinónimos, así que
+  la barra ofrecía dos puertas iguales. No se rebautizó, se **quitó**: `portal_poliza_declarada`
+  tenía **1 fila en toda la BD**, y `vista-portal.ts` ya argumentaba en contra de las pestañas casi
+  siempre vacías justo encima del código que la creaba. Ahora una sola lista en «Mis seguros», con
+  chip **«Añadida por ti»** en la FILA —no en la ficha— porque esa póliza **no la gestiona la
+  correduría** y el cliente tiene que saberlo antes de contar con ella. Ficha nueva
+  `/boveda/anadida/[id]` con la identidad DENTRO del `where` (2 mutaciones vistas morder). Cepo de
+  sinónimos en la barra. 📱 Y arregla la 4ª pestaña **cortada** en su móvil: con tres caben a 360+,
+  y por debajo de 380 se reparten el ancho (a 320 se salían 39 px). PR #2379.
+
 - **🧾 Los recibos del portal del cliente: el `anulado` no es «no pagado» (05/09/2026).**
   Segunda mitad de «¿y los recibos? e historial siniestros?». Medido sobre los 183 recibos de la
   cartera viva: **54 anulados, y 25 de ellos con importe NEGATIVO** (−1.268,18 € frente a +1.268,18 €:

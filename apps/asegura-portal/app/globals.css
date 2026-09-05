@@ -263,6 +263,31 @@ input, select, textarea, button { font: inherit; }
   color: var(--text);
   background: var(--surface-hover, var(--panel2));
 }
+/* 📱 En un móvil ESTRECHO las tres se reparten el ancho a partes iguales.
+ *
+ * Medido el 05/09/2026, después de bajar de cuatro pestañas a tres: a 360 px y
+ * arriba ya caben, pero a 320 se salen 39 px. El carril hace scroll horizontal
+ * y la barra está oculta, así que la última pestaña no es que quede apretada:
+ * **no hay ninguna pista de que exista**, y quien no arrastre por casualidad no
+ * la encuentra. Es justo lo que le pasaba a Alberto con cuatro en un móvil de
+ * 390 («Qu…» cortado), solo que 70 px más abajo.
+ *
+ * Repartir el ancho no las hace más pequeñas de lo táctil: a 320 tocan a ~106 px
+ * cada una, con los 44 px de alto intactos. El `overflow-x` del carril se queda
+ * como red por si algún día vuelve a haber una cuarta.
+ */
+@media (max-width: 380px) {
+  .portal-nav {
+    padding: 0;
+  }
+  .portal-nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    padding: 0 4px;
+  }
+}
+
 /* El subrayado de la activa es un `::after` que solo cambia de opacidad —el
  * mismo truco que su variante `line` de pestañas—: nada que medir ni animar. */
 .portal-nav-item::after {
