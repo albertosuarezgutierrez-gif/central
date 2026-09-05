@@ -67,8 +67,22 @@ export const FECHA_TEXTOS_LEGALES = '2026-09-05'
  * Arranca en `w1`, que es la revisión que introdujo la medición de visitas. Lo
  * que la web publicó ANTES de esta separación salió bajo `2026-09-v4`: la `w`
  * evita que las dos series se confundan al leer un pie de página antiguo.
+ *
+ * 🚨 `w2` (05/09/2026) corrige un fallo GRAVE de `w1`: se subió la versión
+ * al añadir la medición, pero los textos **no se reescribieron**. La política
+ * de privacidad y el aviso legal seguían diciendo «no hay analítica ni cookies
+ * de terceros, y por eso no se te pide consentimiento» mientras el layout
+ * cargaba Cookiebot y PostHog. Eso no es un texto viejo: es información falsa
+ * al interesado (arts. 12-13 RGPD y 22.2 LSSI) y, ante una inspección, prueba
+ * documental en contra. En `w2` los apartados de cookies dicen lo que el
+ * código hace, aparecen la base jurídica del consentimiento y la del control
+ * antiabuso por IP, y Cookiebot y PostHog se nombran como encargados.
+ *
+ * Lección, porque volverá a pasar: **subir la versión no es revisar el texto.**
+ * La constante solo acredita QUÉ estaba publicado; que lo publicado sea cierto
+ * hay que comprobarlo leyendo la página contra el código.
  */
-export const VERSION_TEXTOS_WEB = '2026-09-w1'
+export const VERSION_TEXTOS_WEB = '2026-09-w2'
 
 /** Fecha de la última revisión de fondo de los textos de la web pública. */
 export const FECHA_TEXTOS_WEB = '2026-09-05'

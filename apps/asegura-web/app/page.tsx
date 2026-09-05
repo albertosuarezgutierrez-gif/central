@@ -383,6 +383,7 @@ export default function Home() {
           { valor: RAMOS.length, texto: 'Ramos que revisamos' },
           { valor: 0, estatico: '0 €', texto: 'Lo que te cuesta el servicio' },
         ]}
+        nota="La comisión la paga la aseguradora, no tú: no cobramos honorarios por el servicio de mediación."
       />
 
       {/* ── Cambiar de correduría ───────────────────────────────────────── */}

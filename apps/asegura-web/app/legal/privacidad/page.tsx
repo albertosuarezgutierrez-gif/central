@@ -223,13 +223,24 @@ const BASES = [
     finalidad: 'Atender tus derechos de protección de datos y tus reclamaciones',
     base: 'Obligación legal (art. 6.1.c RGPD).',
   },
+  {
+    finalidad: 'Medir cuántas visitas tiene la web y qué páginas se ven',
+    base: 'Solo tu consentimiento (art. 6.1.a RGPD), que das o rechazas en el aviso de cookies y puedes retirar cuando quieras. Si no lo das, no se mide nada.',
+  },
+  {
+    finalidad: 'Evitar que el formulario de contacto se use para enviar mensajes en masa',
+    base: 'Interés legítimo en la seguridad del servicio (art. 6.1.f RGPD): se mira la dirección IP desde la que se envía, para limitar cuántos envíos se aceptan por hora.',
+  },
 ] as const
 
 export default function Privacidad() {
   const { identidad, marca } = MEDIADOR
 
+  // `div` y no `main`: el `<main>` lo pone el layout desde el rediseño del
+  // 05/09/2026, y anidar dos es HTML inválido — un lector de pantalla deja de
+  // saber cuál es el contenido principal de la página.
   return (
-    <main style={main}>
+    <div style={main}>
       <div style={contenedor}>
         <header>
           <p style={antetitulo}>Protección de datos · RGPD y LOPDGDD</p>
@@ -289,10 +300,19 @@ export default function Privacidad() {
             </li>
           </ul>
 
+          <h3 style={h3}>Lo que se recoge solo por enviar el formulario</h3>
+          <p style={parrafo}>
+            <strong>Tu dirección IP.</strong> No la pedimos: viaja con cualquier petición de
+            internet, y la usamos únicamente para limitar cuántos envíos se aceptan por hora desde el
+            mismo sitio. Sin eso, el formulario sería un canal cómodo para mandar mensajes en masa.
+          </p>
+
           <h3 style={h3}>Lo que no tratamos aquí</h3>
           <p style={parrafoUltimo}>
             Este sitio no pide contraseñas, ni datos bancarios, ni datos de pago: no se contrata ni
-            se cobra nada desde la web. Tampoco recoge estadísticas de navegación ni te perfila.
+            se cobra nada desde la web. Tampoco te perfila ni construye un historial tuyo. Si aceptas
+            las cookies de medición, se recogen estadísticas de navegación agregadas —qué páginas se
+            visitan— y solo eso; el apartado 7 lo explica y ahí puedes retirar el permiso.
           </p>
 
           <h3 style={h3}>Datos de salud</h3>
@@ -349,6 +369,12 @@ export default function Privacidad() {
               alojamiento del sitio, el correo y las herramientas de gestión de la correduría—, que
               tratan los datos por cuenta nuestra, con contrato de encargo del art. 28 RGPD y
               siguiendo nuestras instrucciones.
+            </li>
+            <li>
+              <strong>Cookiebot y PostHog</strong>, y solo si aceptas las cookies de medición: el
+              primero guarda tu respuesta al aviso de cookies, el segundo cuenta las visitas. PostHog
+              trata los datos en servidores de la Unión Europea. Los dos son encargados nuestros, con
+              contrato del art. 28 RGPD. Si no aceptas, ninguno de los dos recibe nada tuyo.
             </li>
             <li>
               <strong>La Administración</strong> y los tribunales, cuando una norma nos obligue a
@@ -448,13 +474,26 @@ export default function Privacidad() {
           <h2 id="cookies" style={h2}>
             7. Cookies
           </h2>
+          <p style={parrafo}>
+            Este sitio usa <strong>cookies técnicas imprescindibles</strong> para que las páginas se
+            sirvan y el formulario funcione: esas no se pueden desactivar y la ley no exige permiso
+            para ellas.
+          </p>
+          <p style={parrafo}>
+            Y usa <strong>cookies de medición de audiencia, solo si las aceptas</strong>. Sirven para
+            saber qué páginas se visitan y por dónde se abandona el formulario, y nada más: no hay
+            publicidad, no hay perfilado, no se graba tu sesión ni se comparte con redes sociales. La
+            herramienta es <strong>PostHog</strong>, alojada en la Unión Europea, y el permiso lo
+            gestiona <strong>Cookiebot</strong>. Mientras no aceptes, PostHog{' '}
+            <strong>ni siquiera se descarga</strong> a tu navegador.
+          </p>
           <p style={parrafoUltimo}>
-            Este sitio usa <strong>únicamente las cookies técnicas imprescindibles</strong> para que
-            las páginas se sirvan y el formulario funcione. No hay cookies de analítica, ni de
-            publicidad, ni de terceros, ni píxeles de seguimiento: no medimos tu navegación ni la
-            compartimos con nadie. Por eso no aparece ningún banner de consentimiento — la ley no lo
-            exige para las cookies estrictamente necesarias. Si algún día se añadiera cualquier otra
-            cookie, esta página se reescribiría antes y se te pediría permiso.
+            Puedes cambiar de opinión cuando quieras, y retirar el permiso es tan fácil como darlo:
+            el detalle y el botón para hacerlo están en la{' '}
+            <Link href="/legal/cookies" style={enlace}>
+              política de cookies
+            </Link>
+            .
           </p>
         </section>
 
@@ -473,6 +512,6 @@ export default function Privacidad() {
           Versión {VERSION_TEXTOS_WEB} · última revisión {FECHA_TEXTOS_WEB}
         </p>
       </div>
-    </main>
+    </div>
   )
 }

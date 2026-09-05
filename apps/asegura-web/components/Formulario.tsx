@@ -10,6 +10,7 @@
 // no es consentimiento válido).
 import { useState, type CSSProperties, type FormEvent } from 'react'
 import Link from 'next/link'
+import { MEDIADOR } from '@central/module-seguros'
 import { TIPOS_SEGURO, ETIQUETA_TIPO, CAMPO_HONEYPOT, MAX_COMENTARIO } from '@/lib/contrato-lead'
 
 // El aspecto de los campos (alto táctil, anillo de foco, los 16 px exactos que
@@ -168,11 +169,29 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
         />
         <span>
           Acepto que <strong>Alberto Suárez Gutiérrez</strong> (Grupo ASegura) trate mis datos para responder a esta
-          solicitud y prepararme un presupuesto. Puedo retirar el consentimiento cuando quiera. Más detalle en{' '}
-          <Link href="/legal/privacidad">privacidad</Link> y en{' '}
-          <Link href="/legal/informacion-mediador">información del mediador</Link>.
+          solicitud y prepararme un presupuesto. Puedo retirar el consentimiento cuando quiera.
         </span>
       </label>
+
+      {/* 🚨 Capa 1 del art. 13 RGPD, y va AQUÍ y no solo enlazada: la
+          información hay que darla «en el momento en que se obtienen los
+          datos». La casilla de arriba cubría responsable y finalidad, pero no
+          destinatarios, plazo, derechos ni la reclamación ante la AEPD, que
+          son epígrafes obligatorios. El modelo por capas de la AEPD permite
+          resumirlos en una línea cada uno; lo que no permite es omitirlos.
+          Los destinatarios son el dato que más le importa a quien rellena
+          esto: sus datos van a las aseguradoras a las que se pida precio. */}
+      <p style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--muted)', margin: '0 0 16px' }}>
+        <strong>Responsable:</strong> Alberto Suárez Gutiérrez (Grupo ASegura).{' '}
+        <strong>Finalidad:</strong> atender tu solicitud y prepararte un presupuesto.{' '}
+        <strong>Legitimación:</strong> tu consentimiento y las gestiones previas que pides con él.{' '}
+        <strong>Destinatarios:</strong> las entidades aseguradoras a las que consultemos precio, y los proveedores que
+        tratan datos por cuenta nuestra. <strong>Conservación:</strong> un año desde el último contacto si no llegamos a
+        trabajar juntos. <strong>Derechos:</strong> acceso, rectificación, supresión, oposición, limitación y
+        portabilidad escribiendo a {MEDIADOR.identidad.email}, y reclamación ante la Agencia Española de Protección de Datos.{' '}
+        <Link href="/legal/privacidad">Información completa</Link> ·{' '}
+        <Link href="/legal/informacion-mediador">información del mediador</Link>.
+      </p>
 
       {estado.fase === 'error' && (
         <p role="alert" style={{ color: 'var(--danger)', fontSize: 14, fontWeight: 600, margin: '0 0 12px' }}>

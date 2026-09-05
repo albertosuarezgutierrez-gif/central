@@ -138,8 +138,11 @@ const pie: CSSProperties = {
 export default function QuienesSomos() {
   const { identidad, responsabilidadCivil, remuneracion, marca } = MEDIADOR
 
+  // `div` y no `main`: el `<main>` lo pone el layout desde el rediseño del
+  // 05/09/2026, y anidar dos es HTML inválido — un lector de pantalla deja de
+  // saber cuál es el contenido principal de la página.
   return (
-    <main style={main}>
+    <div style={main}>
       <div style={contenedor}>
         <header>
           <p style={antetitulo}>Quiénes somos</p>
@@ -284,6 +287,6 @@ export default function QuienesSomos() {
 
         <p style={pie}>{lineaIdentificacion()}</p>
       </div>
-    </main>
+    </div>
   )
 }

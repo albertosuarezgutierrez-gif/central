@@ -151,8 +151,11 @@ const version: CSSProperties = {
 export default function InformacionMediador() {
   const { identidad, responsabilidadCivil, remuneracion, marca } = MEDIADOR
 
+  // `div` y no `main`: el `<main>` lo pone el layout desde el rediseño del
+  // 05/09/2026, y anidar dos es HTML inválido — un lector de pantalla deja de
+  // saber cuál es el contenido principal de la página.
   return (
-    <main style={main}>
+    <div style={main}>
       <div style={contenedor}>
         <header>
           <p style={antetitulo}>Información precontractual · Art. 19 Ley 16/2018</p>
@@ -268,6 +271,6 @@ export default function InformacionMediador() {
           Versión {VERSION_TEXTOS_WEB} · última revisión {FECHA_TEXTOS_WEB}
         </p>
       </div>
-    </main>
+    </div>
   )
 }

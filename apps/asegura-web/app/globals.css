@@ -1755,3 +1755,12 @@ textarea.f-in {
     transform: none;
   }
 }
+
+/* Matización de las cifras (la comisión la paga la aseguradora). Discreta,
+   pero legible: es información obligatoria, no una nota al pie decorativa. */
+.cifras-nota {
+  margin: var(--e5) 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted);
+}

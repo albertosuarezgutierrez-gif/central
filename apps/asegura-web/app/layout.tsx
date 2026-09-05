@@ -159,6 +159,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Link href="/legal/informacion-mediador">Información del mediador</Link>
                 <Link href="/legal/privacidad">Privacidad</Link>
                 <Link href="/legal/aviso-legal">Aviso legal</Link>
+                {/* 🚨 Sin este enlace la política de cookies queda huérfana —
+                    solo se llegaba desde Google— y con ella el ÚNICO botón para
+                    retirar el consentimiento. El art. 7.3 RGPD exige que
+                    retirarlo sea tan fácil como darlo, y darlo son dos clics en
+                    el banner. */}
+                <Link href="/legal/cookies">Cookies</Link>
                 <Link href="/quienes-somos">Quiénes somos</Link>
               </nav>
             </div>

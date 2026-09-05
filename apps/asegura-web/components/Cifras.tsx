@@ -41,7 +41,16 @@ function Contador({ hasta, sufijo, activo }: { hasta: number; sufijo?: string; a
   )
 }
 
-export default function Cifras({ titular, cifras }: { titular: ReactNode; cifras: readonly Cifra[] }) {
+export default function Cifras({
+  titular,
+  cifras,
+  nota,
+}: {
+  titular: ReactNode
+  cifras: readonly Cifra[]
+  /** Matización que tiene que verse JUNTO a las cifras, no en el pie. */
+  nota?: string
+}) {
   const ref = useRef<HTMLElement>(null)
   const [visible, setVisible] = useState(false)
   const [foco, setFoco] = useState<{ x: number; y: number } | null>(null)
@@ -107,6 +116,11 @@ export default function Cifras({ titular, cifras }: { titular: ReactNode; cifras
             </div>
           ))}
         </div>
+        {/* 🚨 Va aquí y no en el pie a propósito. La cifra «0 €» es un claim
+            comercial y la ley de distribución de seguros obliga a informar de
+            la NATURALEZA de la remuneración; tenerlo solo al final de la
+            página deja el claim sin su matización donde se lee. */}
+        {nota ? <p className="cifras-nota">{nota}</p> : null}
       </div>
     </section>
   )

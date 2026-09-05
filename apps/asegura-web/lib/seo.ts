@@ -7,8 +7,8 @@
 // `@central/module-seguros`, que es la que comparten el panel del corredor y el
 // portal del asegurado.
 import { MEDIADOR } from '@central/module-seguros'
-import { AMBITO, HORARIO, SITIO_URL, url } from './sitio'
-import type { Ramo } from './ramos'
+import { AMBITO, HORARIO, SITIO_URL, url } from './sitio.ts'
+import type { Ramo } from './ramos.ts'
 
 /**
  * Ficha del negocio: `InsuranceAgency`, que es un subtipo de `LocalBusiness` y
@@ -34,7 +34,24 @@ import type { Ramo } from './ramos'
  *     Google a partir de reseñas reales, y marcarlas a mano es motivo de acción
  *     manual.
  */
+/**
+ * Parte el domicilio del mediador en calle y código postal.
+ *
+ * `MEDIADOR.identidad.domicilio` es una línea («San Juan de La Palma, nº 28,
+ * 41003 Sevilla») porque es como se lee en una web; schema.org los quiere
+ * separados. Si algún día esa cadena deja de encajar con este patrón, el CP se
+ * omite en vez de inventarse: un `postalCode` equivocado en la ficha local es
+ * peor que no declararlo.
+ */
+function partirDomicilio(): { calle: string; cp: string | null } {
+  const dom = MEDIADOR.identidad.domicilio
+  const m = /^(.*?),\s*(\d{5})\s+.*$/.exec(dom)
+  if (!m) return { calle: dom, cp: null }
+  return { calle: m[1].replace(/,?\s*n[ºo°]\s*/i, ', ').replace(/\s+/g, ' ').trim(), cp: m[2] }
+}
+
 export function fichaNegocio(): Record<string, unknown> {
+  const { calle, cp } = partirDomicilio()
   const ficha: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'InsuranceAgency',
@@ -48,8 +65,14 @@ export function fichaNegocio(): Record<string, unknown> {
     founder: { '@type': 'Person', name: MEDIADOR.identidad.nombre },
     address: {
       '@type': 'PostalAddress',
-      streetAddress: 'San Juan de La Palma, 28',
-      postalCode: '41003',
+      // 🚨 DERIVADO de `MEDIADOR.identidad.domicilio`, no escrito a mano. Lo
+      // estaba, y coincidía por suerte: es exactamente la segunda copia que la
+      // cabecera de este fichero dice querer evitar, y la que rompe el NAP el
+      // día que alguien corrija una sola de las dos.
+      streetAddress: calle,
+      // Se OMITE si no se pudo leer, en vez de mandar null: un campo ausente
+      // es la verdad, un `postalCode: null` es basura en la ficha.
+      ...(cp ? { postalCode: cp } : {}),
       addressLocality: AMBITO.ciudad,
       addressRegion: AMBITO.provincia,
       addressCountry: AMBITO.pais,
