@@ -114,7 +114,8 @@
   `lib/contrato-lead.test.ts` (lee el fuente de plataforma y compara la lista de ramos: si
   divergen, el visitante elegiría uno que plataforma rechaza con 422 y el lead se pierde en
   silencio). `HORARIO` y el teléfono están **ausentes a propósito** mientras no se confirmen.
-  Plan y diagnóstico en `docs/ASEGURA-MARKETING-PLAN.md`.
+  Plan y diagnóstico en `docs/ASEGURA-MARKETING-PLAN.md`. Tiene `CLAUDE.md` propio desde el
+  05/09/2026 — ver `apps/asegura-web/CLAUDE.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
@@ -578,16 +579,17 @@ salió verde):
 Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
 desbloquea nada.
 
-⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 12** — verificado leyendo el `app:` del
-workflow el 02/09/2026: `ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen,
-mariscos, asegura, asegura-portal, housesevillana` (se añadió `asegura` el 26/08, `housesevillana`
-el 27/08 y **`asegura-portal`** después). Los 9 de la tabla son los que el **ruleset exige**; los
-tres nuevos **corren pero no consta que sean requeridos** (el ruleset no se lee desde aquí, así que
-no se afirma). Cuenta los nombres del workflow antes de citar esta cifra: se ha quedado corta dos
-veces ya. `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la matriz**, y por eso
-sus 5 errores `TS5097` vivieron 15 días sin que nadie los viera: una app que no está en la matriz
-no la typechequea nadie. **Al crear una app nueva, añadirla a la matriz es parte del alta**, igual
-que el `ignoreCommand`.
+⚠️ **La matriz de `tests.yml` ya NO son 12 apps: son 13** — verificado leyendo el `app:` del
+workflow el 05/09/2026: `ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen,
+mariscos, asegura, asegura-portal, asegura-web, housesevillana` (se añadió `asegura` el 26/08,
+`housesevillana` el 27/08, `asegura-portal` después y **`asegura-web`** el 05/09/2026, ya con su
+`ignoreCommand` y `--sin-previews` puestos desde el alta). Los 9 de la tabla son los que el
+**ruleset exige**; el resto **corre pero no consta que sea requerido** (el ruleset no se lee desde
+aquí, así que no se afirma). Cuenta los nombres del workflow antes de citar esta cifra: se ha
+quedado corta ya tres veces. `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la
+matriz**, y por eso sus 5 errores `TS5097` vivieron 15 días sin que nadie los viera: una app que no
+está en la matriz no la typechequea nadie. **Al crear una app nueva, añadirla a la matriz es parte
+del alta**, igual que el `ignoreCommand`.
 
 ✅ **Y los 12 se pueden correr EN LOCAL, en el contenedor de la sesión (27/08/2026).** Media sección de
 aquí arriba da por hecho que el `workflow_dispatch` es la única forma de «SABER si el código está sano».
