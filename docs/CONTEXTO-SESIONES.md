@@ -69,6 +69,24 @@
   vencimiento— sigue apagado. ⏳ Pendiente de Alberto: recoger los 29 correos (no lo arregla el
   código) y la idea nueva de invitar a un conocido desde `/correduria` para que aporte sus pólizas.
 
+- **📉 Mapfre: 64 de 110 pólizas vivas congeladas desde junio, y el borrador ya está escrito (06/09/2026).**
+  Re-medido contra `seguros.cima_ficheros` + `seguros.polizas`: C0058 emitió **14 ficheros en cuatro
+  días (20→23/06) y nunca volvió**; las otras tres entidades siguen llegando (Occident ayer). Eso
+  **corrige** el marco de #2425 («funcionaba y se cortó»): la curva encaja con un volcado inicial y un
+  envío recurrente que no llegó a arrancar — otra pregunta, y más fácil de responder. Las 64 pólizas
+  de Mapfre tienen `eiac_xml_hash`, o sea el **58 % de la cartera viva lleva 75 días sin refrescarse**:
+  toda renovación, baja o siniestro posterior al 23/06 es invisible para el libro de comisiones.
+  `docs/ASEGURA-MAPFRE-C0058.md` deja los hechos, las dos consultas para repetirlos y un **borrador
+  para Codeoscopic SIN ENVIAR** (sin PII: solo código de entidad y agregados). PR #2439.
+
+- **👀 Dos reglas de método nuevas, las dos de fallos medidos hoy (06/09/2026).**
+  (1) **Mirar los PRs abiertos antes de empezar**: varias sesiones trabajan a la vez, todas empujan
+  con la cuenta de Alberto y no se ven entre sí. El #2319 llevaba desde el 05/09 corrigiendo lo de las
+  13 apps; esta sesión lo rehízo en el #2434 sin mirar, y encima le metió un conflicto. (2) **Un cepo
+  no está terminado hasta que se le ha visto fallar**: verde solo prueba que pasa, no que vigila.
+  Tres casos el mismo día —`scrollWidth` sobre un `fixed`, el `includes` sobre todo el fichero, y el
+  `base.sha` viejo de `get_files`—, todos verdes mirando al sitio equivocado. PR #2439.
+
 - **🔢 `CLAUDE.md` citaba 12 apps en la matriz de typecheck y son 13 (06/09/2026).**
   Salió al reproducir los checks en local sobre `main` ya consolidado (13/13 typechecks, suite
   completa, QA y build en verde). Falta `asegura-web`, que entró en la matriz al crearse la app el
