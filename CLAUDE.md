@@ -718,7 +718,45 @@ conflicts»**. No es un fallo del CI ni del ruleset: es el paso 1 del orden de a
 otra punta. Se resuelve igual — mergear `main` en la rama, conservar las DOS entradas del mismo día en
 `docs/CONTEXTO-SESIONES.md` (no son versiones rivales) y empujar.
 
+🕰️ **DECIMOCUARTA (06/09/2026, PRs #2428, #2434 y #2439) — y es de OTRA COSA: no de si los checks
+ARRANCAN, sino de si lo que te cuentan sobre ellos es VERDAD. Hasta el `405` del merge miente.**
+
+Todo lo de arriba diagnostica «el run no existe». Esto es el problema contrario y se confunde con él:
+el run existe, **ha terminado en verde**, y todo lo que puedes preguntar desde aquí sigue diciendo que
+está corriendo. Medido tres veces el mismo día:
+
+| PR | lo que había de verdad | lo que se leía desde aquí |
+|---|---|---|
+| #2428 | job en verde a las 18:41:54 | `get_check_runs` → `in_progress` ~25 min después |
+| #2434 | ídem | ídem, hasta ~50 min |
+| #2439 | `ci.yml` run `34055693102`, ese head exacto, `completed`/`success` (19:45:43) | **`merge_pull_request` → `405 ... "Lint · TypeCheck · Build" is in progress`** |
+
+🚨 **Lo caro es el tercero: el mensaje del `405` se sirve del MISMO almacén retrasado.** Es
+tentador leerlo como la fuente fiable —lo emite el propio merge— y no lo es: reintentar el merge
+**sin cambiar nada** funcionó a la primera. Si el `405` te nombra un check «in progress», eso no
+prueba que lo esté.
+
+⚠️ **Y desde fuera hay TRES cosas que se ven idénticas.** Confundirlas es lo que hace perder la tarde,
+porque solo una se arregla esperando:
+
+| forma | cómo se distingue | qué hacer |
+|---|---|---|
+| **(a) reporte retrasado** — el job acabó, la API no se ha enterado | `list_workflow_runs` (filtrando por rama) da el run `completed`/`success` sobre ese head | reintentar el merge; no tocar nada |
+| **(b) run creado que NUNCA arrancó** | `list_workflow_jobs` sobre el run → `total_count: 0` | **no se arregla solo**: hace falta un head nuevo (paso 3 del orden de abajo) |
+| **(c) run en cola** esperando runner | el run existe con `status: queued` | esperar |
+
+`[Probable]` **`list_workflow_runs` filtrado por rama fue la lectura más fresca de las tres veces**, y
+la única que acertó cuando `get_check_runs` y el `405` se equivocaban a la vez. Medido tres veces, no
+más: úsalo como primer sitio donde mirar, no como verdad garantizada.
+
+La forma (b) se vio una sola vez (#2439, run de `qa.yml` `34055588656`): un `expected` que no se
+resolvía nunca porque no había job que esperar. Un caso, no una ley.
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
+0. **Antes de nada: ¿los runs EXISTEN?** `list_workflow_runs` filtrando por rama. Si existen y están
+   `completed`/`success` sobre ese head, no hay nada que desatascar — es reporte retrasado
+   (DECIMOCUARTA): **reintenta el merge sin tocar nada**, aunque el `405` te jure que un check sigue
+   corriendo. Los pasos 1-4 son para cuando el run NO existe.
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
    ⚠️ Que **coincidan no descarta el lag**, solo descarta el head viejo (#2341): si acabas de empujar, espera igual antes de tocar palancas.
 2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**

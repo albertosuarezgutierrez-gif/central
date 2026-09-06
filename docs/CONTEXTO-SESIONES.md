@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo (06/09/2026).** Al mergear
+  #2439, `merge_pull_request` devolvió `405 ... "Lint · TypeCheck · Build" is in progress` mientras el
+  run de `ci.yml` sobre ese head exacto llevaba minutos en `completed`/`success`. Reintentar **sin tocar
+  nada** funcionó a la primera. Tentador leer el `405` como fuente fiable —lo emite el propio merge— y
+  no lo es: sale del mismo almacén retrasado que `get_check_runs` (25-50 min medidos hoy en #2428/#2434).
+  Desde fuera se ven idénticas TRES cosas y solo una se cura esperando: reporte retrasado · run creado
+  que nunca arrancó (`list_workflow_jobs` → 0 jobs, necesita head nuevo) · run en cola.
+  `list_workflow_runs` por rama fue la lectura más fresca las tres veces. Escrito en `CLAUDE.md`
+  (DECIMOCUARTA + paso 0 del orden). Cierra el «no lo meto hasta separarlas» de la entrada anterior.
+
 - **📮 Canario del formulario público: que no vuelva a morir en silencio (06/09/2026).** Tras arreglar
   el 503 (#2442), el agujero de fondo seguía abierto: cuando ese formulario se rompe **no deja rastro**
   —ni ficha, ni Telegram, ni cuerpo en logs— así que una avería y una semana sin leads se ven IGUAL, y
@@ -50,6 +60,18 @@
   los 5 se contaban como invitables y son el caso peor (entra y ve la bóveda de OTRO, sin error).
   ⚠️ Tres de los cinco cepos del plan **no mordían**; reescritos y verificados con tres mutaciones.
   ⚠️ `cliente_emails.es_principal` NO entra en el desempate: honrarlo movería 42 de 80 a `ambiguo`.
+
+- **🏠 La dirección buena ya estaba en casa: en la LÁPIDA de la fusión (06/09/2026, PR #2447, EJECUTADO).**
+  Al preparar el lote de «provincias falsas» que Alberto tenía pendiente de aprobar, dos cifras mías
+  resultaron falsas al medirlas: no eran 473 sino **523**, y **520 son volcado muerto** (solo 3 tocaban
+  cartera viva). Y la fusión de Piña Franco que llevaba tres mensajes pidiendo permiso **ya estaba
+  hecha** (`d3ea3a53` tiene `merged_into_cliente_id`). Lo que quedaba vivo era otra cosa y más general:
+  **`fusion_*` hereda HUECOS, y `34304` no es un hueco** — es el identificador de población del CRM
+  viejo en la columna `ciudad`, así que la herencia no lo pisó y el nombre bueno se quedó en la lápida.
+  **357 fichas así, 10 con póliza viva.** Ejecutado sobre producción con OK de Alberto: **345 ciudades
+  recuperadas + 4 provincias**, 12 fichas **sin tocar** porque su lápida trae otro CP (41907 vs 41927 son
+  dos pueblos). Fichas y pólizas intactas (32.603 / 28.843). Las 151 que quedan no tienen lápida de la que
+  copiar: ahí no hay dato, y la ficha las sigue enseñando como reparo.
 
 - **✏️ Corregir teléfonos y correos, donde SE LEEN (06/09/2026).** Alberto: «revisa modificar datos, no
   funciona y el diseño es muy malo… hasta creas otra cosa, ocupa más pantalla». Las dos quejas eran la misma
