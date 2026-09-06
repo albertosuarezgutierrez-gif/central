@@ -21,10 +21,11 @@
 // `sin_ficha` a clientes que hoy entran bien.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-// Se importa el fichero PURO (`vinculo-elegir.ts`), no `vinculo.ts`: este
-// último abre Prisma en el import, y un test que necesita BD para comprobar una
-// decisión de tres líneas es un test que nadie corre. `vinculo.ts` re-exporta
-// `elegirFicha`, así que quien la use desde la app no nota la separación.
+// Se importa el fichero PURO. Vivía en `apps/asegura-portal/lib/vinculo.test.ts`
+// y se mudó aquí el 06/09/2026: la regla subió al paquete el 05/09 y su único
+// cepo se quedó en la app, así que la suite del paquete NO la cubría. Una regla
+// compartida cuyo test corre desde una sola de las apps que la usan es una regla
+// que se rompe para la otra sin que falle nada.
 import { elegirFicha, type Candidato } from './vinculo-elegir.ts'
 
 const CORREDURIA = 'corr-1'
@@ -111,4 +112,41 @@ test('la correduria que sale es la de la ficha ganadora, no la de un candidato d
     clienteId: 'c-alberto',
     correduriaId: 'corr-buena',
   })
+})
+
+// ─── prediccionDeVinculo ────────────────────────────────────────────────────
+// La pregunta de la pantalla del corredor: «¿este correo llevará a ESTA ficha?».
+// Es `elegirFicha` más la comparación con el dueño, y está aquí y no en
+// `apps/asegura` porque la contestan ya DOS sitios (la ficha del cliente y la
+// lista de contactabilidad) y una segunda copia divergiría en silencio: una
+// diría «invitable» y la otra «ambiguo» sobre el mismo cliente, las dos con 200.
+import { prediccionDeVinculo } from './vinculo-elegir.ts'
+
+test('prediccion: el correo es suyo y de nadie más → invitable', () => {
+  assert.equal(prediccionDeVinculo([principal('c-alberto')], 'c-alberto'), 'invitable')
+})
+
+test('prediccion: dos fichas lo declaran suyo → ambiguo, y NO «resuelve a otra»', () => {
+  // Son dos arreglos distintos: aquí hay un duplicado que resolver; en
+  // `resuelve_a_otra` lo que falta es la direccion propia de este cliente.
+  assert.equal(prediccionDeVinculo([principal('c-uno'), principal('c-dos')], 'c-uno'), 'ambiguo')
+})
+
+test('prediccion: el correo es principal de OTRA ficha → resuelve_a_otra', () => {
+  assert.equal(prediccionDeVinculo([principal('c-otro')], 'c-alberto'), 'resuelve_a_otra')
+})
+
+test('🚨 prediccion: sin ninguna ficha que case, NO es invitable', () => {
+  // `sin_ficha` con un correo que sale de la propia ficha significa que su hash
+  // no esta escrito: el portal no la encontraria. Para el cliente el efecto es
+  // el mismo que resolver a otra —entra y no ve nada—, y lo que NO puede pasar
+  // es que salga «invitable», que es una promesa.
+  assert.equal(prediccionDeVinculo([], 'c-alberto'), 'resuelve_a_otra')
+})
+
+test('prediccion: gana el principal aunque haya secundarios ajenos (caso real 03/09)', () => {
+  const candidatos = [principal('c-alberto'), secundario('c-tercero-1'), secundario('c-tercero-2')]
+  assert.equal(prediccionDeVinculo(candidatos, 'c-alberto'), 'invitable')
+  // Y para los terceros, ese mismo correo NO les identifica.
+  assert.equal(prediccionDeVinculo(candidatos, 'c-tercero-1'), 'resuelve_a_otra')
 })

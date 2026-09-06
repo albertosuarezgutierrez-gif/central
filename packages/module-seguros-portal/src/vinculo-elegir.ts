@@ -83,3 +83,33 @@ export function elegirFicha(candidatos: readonly Candidato[]): FichaElegida {
   const ganadora = elegibles[0]
   return { estado: 'ok', clienteId: ganadora.clienteId, correduriaId: ganadora.correduriaId }
 }
+
+/** Lo que le pasaría a ESTA ficha si alguien entrase al portal con ese correo. */
+export type PrediccionVinculo = 'invitable' | 'ambiguo' | 'resuelve_a_otra'
+
+/**
+ * ¿Ese correo llevaría al portal a la ficha `clienteId`?
+ *
+ * Es `elegirFicha` más la comparación con el dueño, y vive aquí porque la
+ * preguntan DOS pantallas del corredor: la ficha de un cliente
+ * (`estadoPortalDeFicha`) y la lista de contactabilidad (`clientesSinCanal`).
+ * Con una copia en cada sitio, las dos devolverían 200 y se separarían en
+ * silencio: una diría «invitable» y la otra «ambiguo» del mismo cliente.
+ *
+ * 🚨 Los tres resultados NO se colapsan en «no se puede invitar», porque cada
+ * uno se arregla en un sitio distinto: `ambiguo` es un duplicado que resolver,
+ * `resuelve_a_otra` es que a este cliente le falta SU dirección, e `invitable`
+ * no pide nada. Y `sin_ficha` cae en `resuelve_a_otra` a propósito: con un
+ * correo que sale de la propia ficha significa que su hash no está escrito, o
+ * sea que el portal no la encontraría — el efecto para el cliente es el mismo
+ * y lo que no puede salir nunca es «invitable», que es una promesa.
+ */
+export function prediccionDeVinculo(
+  candidatos: readonly Candidato[],
+  clienteId: string,
+): PrediccionVinculo {
+  const elegida = elegirFicha(candidatos)
+  if (elegida.estado === 'ambiguo') return 'ambiguo'
+  if (elegida.estado === 'sin_ficha') return 'resuelve_a_otra'
+  return elegida.clienteId === clienteId ? 'invitable' : 'resuelve_a_otra'
+}

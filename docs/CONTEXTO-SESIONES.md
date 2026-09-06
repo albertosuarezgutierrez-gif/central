@@ -39,6 +39,16 @@
   que nunca arrancó (`list_workflow_jobs` → 0 jobs, necesita head nuevo) · run en cola.
   `list_workflow_runs` por rama fue la lectura más fresca las tres veces. Escrito en `CLAUDE.md`
   (DECIMOCUARTA + paso 0 del orden). Cierra el «no lo meto hasta separarlas» de la entrada anterior.
+- **🔖 La bóveda ya dice POR QUÉ está vacía, y «51 invitables» era falso (06/09/2026).** Entrega 1 de
+  «que vean su cartera» (PR #2440). `/boveda` no puede recalcular el vínculo —no hay email en claro—,
+  así que se sella en el canje del código (`portal_identidad.ultimo_vinculo`, DDL aplicada) y se sella
+  SIEMPRE, también en `ok`. Tres textos donde había uno: al `ambiguo` NO se le puede decir «no hemos
+  encontrado ninguna póliza» (sí se ha encontrado, en dos fichas), y `sin_clave`/`error` es problema
+  nuestro — eso solo se decía en la entrada, y quien vuelve con la sesión viva de 30 días no lo veía.
+  Medido contra la BD: **46 puede_entrar / 29 sin correo / 5 `resuelve_a_otra` / 0 ambiguos** sobre 80;
+  los 5 se contaban como invitables y son el caso peor (entra y ve la bóveda de OTRO, sin error).
+  ⚠️ Tres de los cinco cepos del plan **no mordían**; reescritos y verificados con tres mutaciones.
+  ⚠️ `cliente_emails.es_principal` NO entra en el desempate: honrarlo movería 42 de 80 a `ambiguo`.
 
 - **✏️ Corregir teléfonos y correos, donde SE LEEN (06/09/2026).** Alberto: «revisa modificar datos, no
   funciona y el diseño es muy malo… hasta creas otra cosa, ocupa más pantalla». Las dos quejas eran la misma
@@ -50,6 +60,15 @@
   corrige en la tira de chips (`ContactosFicha.tsx`, interruptor «Corregir» DENTRO de la tira — en la
   cabecera del bloque envolvía a 390px y la subía de 20 a 64px) y el formulario de abajo se queda con lo que
   de verdad es un formulario. Medido a 390px: tarjeta 256→204px y la lista duplicada 251→0px.
+
+- **💀 El formulario de la web de la correduría estaba MUERTO: «no podemos recoger tu solicitud» (06/09/2026).**
+  Alberto lo vio en su móvil en `grupoasegura.es`. Ese texto es único y solo lo emite UNA rama:
+  `PLATAFORMA_URL` sin definir en el proyecto Vercel `asegura-web` → 503 **antes** de intentar el reenvío.
+  O sea: sin ficha, sin Telegram y sin el cuerpo del formulario en ningún log — **los leads perdidos no se
+  pueden recuperar** (en los logs solo queda el contador: buscar `[lead] PLATAFORMA_URL sin configurar`).
+  El destino estaba sano (medido: `POST plataforma-ten-flame.vercel.app/api/publico/correduria/lead` → 422).
+  Arreglo: defecto REAL en el código, como `SITIO_URL`/`PORTAL_URL`, en vez de `|| ''`; la env sigue mandando.
+  Guardián `lib/canal-lead.test.ts` (defecto no vacío + la ruta destino existe en plataforma). PR #2442.
 
 - **🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE (06/09/2026).** Alberto:
   «no ha respondido el agente, ¿no?». Sí respondió — a él: la reserva 154375571 (House Sevillana) preguntó
