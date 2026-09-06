@@ -37,7 +37,14 @@
   un comparador no puede copiar. La sección `#corredor` deja de repetirlo y se queda con lo comprobable.
   🚨 **Hallazgo de paso:** `lib/ramos.test.ts` se describía como el guardián que «barre todas las
   páginas» y **solo miraba `RAMOS`** — el hero, que es donde acabaría un «ahorra un 30 %», estaba sin
-  vigilar. Ampliado a `app/` y `components/`, y **probado fallando** antes de darlo por bueno. PR #2421.
+  vigilar. Ampliado a `app/` y `components/`, y **probado fallando** antes de darlo por bueno.
+  PR #2421 **mergeado**; la skill `seo-asegura` decía «barre todas las páginas» y era falso — ahora
+  lo es, y queda escrito para que nadie recorte el barrido creyéndolo decorativo.
+  ⚠️ **La verificación en vivo NO se pudo hacer desde el contenedor:** el proxy de la sesión deniega
+  `grupoasegura.es` (`connect_rejected` 403) y el MCP de Vercel da 403 al listar despliegues. Lo
+  probado es el **build de producción** (`pnpm build` + `pnpm start`): el HTML prerenderizado trae el
+  hero nuevo, cero rastro del viejo, y no desborda a 320/390/1024. Que se vea en el dominio lo tiene
+  que mirar Alberto.
 
 - **🔎 Estudio de competencia de la correduría: el rival más caro es no llamar a los tuyos (06/09/2026).**
   Alberto, viendo ya la web en el móvil: «los textos no me gustan, la introducción» + «hay mucha
