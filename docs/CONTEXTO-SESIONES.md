@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔌 34 de 80 clientes entrarían al portal y verían la pantalla VACÍA (06/09/2026).** Alberto va a
+  repartir accesos a toda la cartera y pidió un panel de configuración de avisos. Antes de diseñarlo se
+  midió la BD: el portal vincula por el correo, y de 80 titulares vivos **46 verían su cartera, 29 no
+  tienen ningún correo y 5 lo comparten con otra ficha** (cifra rehecha aplicando el desempate real de
+  `elegirFicha()`, no un conteo crudo). Los tres desenlaces se ven idénticos desde el código. Spec
+  mergeado (**#2427**, `50e413f66`): tres de las cuatro piezas que parecían faltar YA existen —la
+  pantalla de contactabilidad mira cuatro sitios, añadir un correo ya recalcula el índice ciego—, así
+  que el hueco real es que esa pantalla sabe si a alguien **se le puede escribir**, no si **puede
+  entrar y ver su cartera**. Un cliente con el correo compartido sale hoy como «Localizable» y no se
+  vincula jamás. 🚫 Dos cosas quedaron FUERA con su motivo medido: **avisar antes de que llegue un
+  recibo** (de 183 recibos, CERO con emisión futura; no existe columna de fecha de cargo) y **servir
+  documentos** (la tabla existe, con `visible_por_cliente` y todo, y está a **0 filas**). Reparto en 4
+  entregas dentro del spec; el panel nace con UN interruptor porque el único aviso construido —el de
+  vencimiento— sigue apagado. ⏳ Pendiente de Alberto: recoger los 29 correos (no lo arregla el
+  código) y la idea nueva de invitar a un conocido desde `/correduria` para que aporte sus pólizas.
+
 - **🫧 Una burbuja `fixed` NO desborda: se pone encima — y `scrollWidth` no la delata (06/09/2026).**
   Alberto mandó una foto de `grupoasegura.es` en su móvil (que de paso CIERRA la duda de si el dominio
   sirve el build nuevo: sí) y en ella los dos botones flotantes —WhatsApp a la derecha, cookies a la
