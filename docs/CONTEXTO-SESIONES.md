@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💀 El formulario de la web de la correduría estaba MUERTO: «no podemos recoger tu solicitud» (06/09/2026).**
+  Alberto lo vio en su móvil en `grupoasegura.es`. Ese texto es único y solo lo emite UNA rama:
+  `PLATAFORMA_URL` sin definir en el proyecto Vercel `asegura-web` → 503 **antes** de intentar el reenvío.
+  O sea: sin ficha, sin Telegram y sin el cuerpo del formulario en ningún log — **los leads perdidos no se
+  pueden recuperar** (en los logs solo queda el contador: buscar `[lead] PLATAFORMA_URL sin configurar`).
+  El destino estaba sano (medido: `POST plataforma-ten-flame.vercel.app/api/publico/correduria/lead` → 422).
+  Arreglo: defecto REAL en el código, como `SITIO_URL`/`PORTAL_URL`, en vez de `|| ''`; la env sigue mandando.
+  Guardián `lib/canal-lead.test.ts` (defecto no vacío + la ruta destino existe en plataforma). PR #PENDIENTE.
+
 - **🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE (06/09/2026).** Alberto:
   «no ha respondido el agente, ¿no?». Sí respondió — a él: la reserva 154375571 (House Sevillana) preguntó
   por bares el 05/09 a las 15:42 y el agente propuso borrador por Telegram (msg 4087, `fuente:web`, así que
