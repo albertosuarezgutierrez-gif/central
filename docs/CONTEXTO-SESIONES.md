@@ -50,6 +50,20 @@
   `correduria.canario-lead` (máx. 1 cada 6 h, anti-spam sobre `telegram_avisos_log`) y latido
   `canario_lead_web` dado de alta en el vigía. PR #2453.
 
+- **🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo (06/09/2026).**
+  `review` no es una cola de revisión manual sino una cuarentena automática, y a Occident no le entraba
+  ni la mitad de los recibos. Motivo real (`operational_events`): `sin_poliza_en_cartera`. De las 20
+  pólizas que reclamaban los 43 ficheros, **4** ya casaban (nadie reprocesa), **6** estaban como
+  «Plus Ultra» con `codigo_entidad_dgs` a NULL —inalcanzables, porque `NULL = 'C0468'` es falso— y
+  **10** no existen: eso es una llamada a Occident. Descartadas dos causas que parecían buenas: NO es
+  la allowlist (0 eventos) y **NO es la puntuación** (medido: no desatasca ni una).
+  Hecho: `2026-09-06_plus_ultra_codigo_dgs.sql` (**aplicada**) rellena **216 de 242**, no las 242 —
+  11 chocan con una póliza VIVA de Occident y las habría mandado a cuarentena; la guarda es «su número
+  la identifica sola». Y se drenó con `?reconcile=1`: cuarentena **43 → 37**, siniestros 67 → **69**,
+  último siniestro creado del 02/07 a **hoy**. 🚨 **Queda abierto y es lo importante: el `reconcile`
+  NO está en el cron programado** (sale de un input de `workflow_dispatch`), así que esto se vuelve a
+  llenar solo. Parche de tres líneas y por qué no vale un `||` de GitHub, en `docs/CIMA-CUARENTENA.md`.
+
 - **🔖 La bóveda ya dice POR QUÉ está vacía, y «51 invitables» era falso (06/09/2026).** Entrega 1 de
   «que vean su cartera» (PR #2440). `/boveda` no puede recalcular el vínculo —no hay email en claro—,
   así que se sella en el canje del código (`portal_identidad.ultimo_vinculo`, DDL aplicada) y se sella
