@@ -181,14 +181,27 @@ export default function Home() {
               <span className="chip-punto" aria-hidden />
               Correduría en Sevilla · Registro DGSFP {MEDIADOR.identidad.claveDgsfp}
             </span>
+            {/*
+              🚨 El hero habla de lo que le PASA al visitante, no de lo que la
+              correduría es. Lo anterior («Somos correduría, no compañía…»)
+              explicaba la figura jurídica y enumeraba cinco ramos de un tirón,
+              así que no priorizaba ninguno — diagnóstico de
+              `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`.
+
+              El nombre va en PRIMERA PERSONA y sale de `MEDIADOR`, no tecleado:
+              es un corredor persona física, y decir «yo» es exactamente lo que
+              un comparador no puede copiar. Los cinco ramos ya los prioriza la
+              rejilla de abajo, que abre por hogar y comunidades.
+            */}
             <h1 className="display">
-              Tu seguro, mirado por quien
+              Un seguro se juzga el día del parte.
               <br />
-              <span className="destaca">no trabaja para la aseguradora.</span>
+              <span className="destaca">Ese día me llamas a mí.</span>
             </h1>
             <p className="lead" style={{ marginTop: 28 }}>
-              Somos correduría, no compañía: comparamos entre varias aseguradoras tu hogar, tu comunidad, tu comercio,
-              tu coche o tu salud, y te explicamos qué cubre cada opción antes de que firmes.
+              Soy {MEDIADOR.identidad.nombre}, corredor de seguros en Sevilla. No trabajo para ninguna aseguradora:
+              comparo entre varias, te digo qué cubre cada una y qué deja fuera, y sigo siendo yo quien te coge el
+              teléfono cuando hay que dar el parte.
             </p>
             <div className="hero-cta">
               <a href="#presupuesto" className="btn btn-brand btn-brillo">
@@ -368,9 +381,15 @@ export default function Home() {
             <h2 className="display" id="corredor-t" style={{ color: 'inherit' }}>
               Detrás de la web hay un <span className="destaca">corredor de verdad.</span>
             </h2>
+            {/*
+              Ya no repite «la misma persona te coge el teléfono»: eso lo dice
+              ahora el hero. Aquí queda lo que el hero NO puede llevar sin
+              recargarse — la parte comprobable: nombre, clave de registro y un
+              domicilio donde encontrarle, los tres desde `MEDIADOR`.
+            */}
             <p className="lead" style={{ color: 'inherit', opacity: 0.85 }}>
-              No un comparador automático ni un centro de llamadas. La misma persona te coge el teléfono cuando pides
-              presupuesto y cuando tienes un parte que dar.
+              No es un comparador automático. Detrás de cada presupuesto hay una persona con nombre, con clave de
+              registro en la DGSFP y con un domicilio en el que se le puede encontrar.
             </p>
           </Reveal>
           <Reveal delay={0.1}>
