@@ -37,7 +37,7 @@
   un comparador no puede copiar. La sección `#corredor` deja de repetirlo y se queda con lo comprobable.
   🚨 **Hallazgo de paso:** `lib/ramos.test.ts` se describía como el guardián que «barre todas las
   páginas» y **solo miraba `RAMOS`** — el hero, que es donde acabaría un «ahorra un 30 %», estaba sin
-  vigilar. Ampliado a `app/` y `components/`, y **probado fallando** antes de darlo por bueno. PR #PENDIENTE.
+  vigilar. Ampliado a `app/` y `components/`, y **probado fallando** antes de darlo por bueno. PR #2421.
 
 - **🔎 Estudio de competencia de la correduría: el rival más caro es no llamar a los tuyos (06/09/2026).**
   Alberto, viendo ya la web en el móvil: «los textos no me gustan, la introducción» + «hay mucha
