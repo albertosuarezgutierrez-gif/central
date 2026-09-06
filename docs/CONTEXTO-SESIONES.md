@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📅 mercado-booking: jul/ago-2027 siguen cumpliendo, y la línea PRIORIDAD sigue sin quitarse (06/09/2026).**
+  Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 239 comps reales en 24 ventanas
+  (incluye Campeonato Mundo de Remo 01-03 ago) + 1/4 escaparate (busto_reform; house_sevillana,
+  duplex_center y luxury_busto sin disponibilidad en Booking para esas fechas exactas —
+  `escaparateSinRespuesta`, no fallo). Verificado en `/mercado/plan`: jul y ago-2027 YA NO están en
+  `meses_sin_bucket`. **Repite el trabajo del 29/08→05/09**: la sesión sigue sin permiso para
+  escribir el prompt del disparo programado (creado por `http_api`), así que la línea "PRIORIDAD
+  TEMPORAL" sigue viva y cada pasada la vuelve a ejecutar. Pendiente de Alberto, sin cambios.
+
 - **✅ MEDIDOS los dos arreglos del 05/09: los dos funcionan (06/09/2026).** Ya no es «razonado», es dato.
   **Vigía de agentes:** `agente_veredicto` tiene **33 filas**, todas con `evaluado_at` de la pasada de
   hoy (07:45:23 UTC), 2 en alerta y 0 sondas rotas — y **cero** runtime errors en
