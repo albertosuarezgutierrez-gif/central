@@ -42,7 +42,7 @@
   es el de Cookiebot**, que se posa en la esquina inferior izquierda justo donde arrancan las
   garantías (x=16). Apartarlo exige pisar CSS de un tercero; se deja documentado, no tapado. Y ojo
   con la medición: esa burbuja se **simuló** por posición y tamaño, porque sin `CBID` Cookiebot no
-  carga en local. PR #PENDIENTE.
+  carga en local. PR #2428.
 
 - **📉 Mapfre no es que «nunca entrara» por CIMA: entró 14 veces y lleva 75 días callada (06/09/2026).**
   Medido contra `seguros.cima_ficheros`: Occident trajo fichero ayer, Allianz hace 3 días, Reale hace 12,
