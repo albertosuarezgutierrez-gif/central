@@ -40,7 +40,7 @@
  * que decidirla aparte — saltarse la prueba de identidad desde el panel
  * convertiría un error de tecleo en el correo en un acceso a la cartera de otro.
  */
-import { elegirFicha, type Candidato } from '@central/module-seguros-portal'
+import { prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
@@ -236,13 +236,10 @@ async function prediccionVinculo(
     console.error('[invitacion-portal] no se pudieron leer los candidatos:', e instanceof Error ? e.message : e)
     return 'no_comprobado'
   }
-  const elegida = elegirFicha(candidatos)
-  if (elegida.estado === 'ambiguo') return 'ambiguo'
-  // `sin_ficha` con un correo que sale de la propia ficha significa que su hash
-  // no está escrito: el portal no la encontraría. Se cuenta como «resuelve a
-  // otra» —o sea, no a esta— porque el efecto para el cliente es el mismo.
-  if (elegida.estado === 'sin_ficha') return 'resuelve_a_otra'
-  return elegida.clienteId === clienteId ? 'invitable' : 'resuelve_a_otra'
+  // La decisión vive en `@central/module-seguros-portal` y la comparte con la
+  // lista de contactabilidad: dos copias de esta regla darían dos respuestas
+  // distintas sobre el mismo cliente sin que fallara nada.
+  return prediccionDeVinculo(candidatos, clienteId)
 }
 
 /** El nombre de la ficha, para el saludo. `null` = no hay uno legible. */
