@@ -511,6 +511,25 @@ export type EstadoCanal =
   | 'con_ambos'
   | 'no_comprobado'
 
+/**
+ * Si el cliente verá su cartera al entrar al portal. Distinto de `EstadoCanal`,
+ * que dice si se le puede escribir: un «Localizable» cuyo correo es el
+ * principal de otra ficha no se vincula jamás.
+ */
+export type EstadoPortalCliente = 'puede_entrar' | 'sin_email' | 'ambiguo' | 'resuelve_a_otra'
+
+const ESTADOS_PORTAL: readonly string[] = ['puede_entrar', 'sin_email', 'ambiguo', 'resuelve_a_otra']
+
+/**
+ * 🚨 Un valor que no reconocemos es `null` («no comprobado»), no un estado por
+ * defecto. Un asegura más nuevo que esta pantalla mandaría una etiqueta que
+ * aquí no existe, y elegir la optimista diría que el cliente entra sin que
+ * nadie lo haya mirado.
+ */
+function estadoPortal(v: unknown): EstadoPortalCliente | null {
+  return typeof v === 'string' && ESTADOS_PORTAL.includes(v) ? (v as EstadoPortalCliente) : null
+}
+
 /** Ficha de una persona localizable que aparece en las pólizas del cliente.
  *  El nombre viene de `clientes` (en claro); un interviniente suelto lleva el
  *  nombre cifrado y por eso solo cuenta, no se nombra. */
@@ -539,6 +558,8 @@ export type ClienteCanal = {
   fichasContacto: FichaContacto[]
   /** Los allegados, con parentesco. */
   fichasAllegado: FichaAllegado[]
+  /** `null` = asegura no lo informó o no se pudo comprobar. NO es «puede entrar». */
+  portal: EstadoPortalCliente | null
   estado: EstadoCanal
   /** `null` = no se contó. NO es «no tiene pólizas» (estaría fuera de la lista). */
   polizasCima: number | null
@@ -574,6 +595,8 @@ export type SinCanal =
         rescatables: number | null
         /** Ilocalizables cuyas pólizas ya NO renuevan: no hay nada que avisarles. */
         ilocalizablesSinRenovacion: number | null
+        /** Cuántos entrarían y no verían sus pólizas. `null` = no comprobado. */
+        noVenSuCartera: number | null
       }
       truncado: boolean
     }
@@ -685,6 +708,7 @@ export function interpretarSinCanal(status: number, json: unknown): SinCanal {
       contactoDeAllegados,
       fichasContacto: leerFichasContacto(o.fichasContacto),
       fichasAllegado: leerFichasAllegado(o.fichasAllegado),
+      portal: estadoPortal(o.portal),
       estado: derivarEstadoCanal(
         tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros, contactoDeAllegados,
       ),
@@ -712,6 +736,7 @@ export function interpretarSinCanal(status: number, json: unknown): SinCanal {
       ilocalizables: entero(res.ilocalizables),
       rescatables: entero(res.rescatables),
       ilocalizablesSinRenovacion: entero(res.ilocalizablesSinRenovacion),
+      noVenSuCartera: entero(res.noVenSuCartera),
     },
     truncado: r.truncado === true,
   }
