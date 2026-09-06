@@ -3,30 +3,20 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  ETIQUETAS_EMAIL,
-  ETIQUETAS_TELEFONO,
   MOTIVO_DOCUMENTO_REQUERIDO,
   documentosAcreditativos,
   etiquetaEstadoDocumento,
   etiquetaTipoDocumento,
   etiquetasIdentidad,
-  normalizarEmail,
-  normalizarTelefono,
   provinciaPorCp,
   revisarEdicion,
-  type ContactoCliente,
   type DocumentoResumen,
   type EdicionCliente,
-  type TipoContacto,
 } from '@central/module-seguros'
-import { Phone, Mail, Pencil, Star, Plus } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import { btnStyle, btnIcono } from '@/components/ui'
-import BotonWhatsapp from './BotonWhatsapp'
+import { btnStyle } from '@/components/ui'
 import {
   interpretarEscritura,
   textoMotivo,
-  type ContactosCliente,
   type IdentidadFicha,
   type ResultadoEscritura,
 } from '@/lib/cliente-edicion-asegura'
@@ -34,30 +24,31 @@ import {
 /**
  * Editar los datos de un cliente de la correduría, desde la ficha de plataforma.
  *
- * Tres bloques con tres reglas distintas (dictado de Alberto, 02/09/2026):
- *   · Teléfonos y emails: varios, con etiqueta y principal; se cambian libremente.
+ * Dos bloques con dos reglas distintas (dictado de Alberto, 02/09/2026):
  *   · Dirección / CP / ciudad / provincia / notas: libres.
  *   · Identidad (DNI, nombre, apellidos, fecha de nacimiento): SOLO con un DNI
  *     recibido en la ficha — «se pide documentado». Sin él, el bloque está
  *     deshabilitado y ofrece «Pedir DNI».
  *
- * Y tres «no lo sé» que NO se pintan como «no tiene»: `contactos === null`
- * (asegura no manda el bloque o no pudo leerlo), `identidad === null` (versión
- * anterior de asegura) y `documentos === null` (no se pudo consultar la
- * documentación). Cada uno se dice con su frase, no con una lista vacía.
+ * Los teléfonos y correos NO están aquí: se corrigen en la tarjeta de arriba,
+ * donde se leen (06/09/2026). Un formulario que repite la lista que ya está
+ * media pantalla más arriba es otra cosa que ocupa sitio, no una forma de
+ * editarla.
+ *
+ * Y dos «no lo sé» que NO se pintan como «no tiene»: `identidad === null`
+ * (versión anterior de asegura) y `documentos === null` (no se pudo consultar
+ * la documentación). Cada uno se dice con su frase, no con una lista vacía.
  *
  * La BD vive en asegura: aquí se habla con `/api/correduria/cliente` y
  * `/api/correduria/cliente/contactos`, que reenvían al puerto con el secreto.
  */
 export default function EditarCliente({
   clienteId,
-  contactos,
   identidad,
   contacto,
   documentos,
 }: {
   clienteId: string
-  contactos: ContactosCliente | null
   identidad: IdentidadFicha | null
   contacto: {
     direccion: string | null
@@ -70,369 +61,10 @@ export default function EditarCliente({
 }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
-      <BloqueContactos clienteId={clienteId} inicial={contactos} />
       <BloqueDireccion clienteId={clienteId} contacto={contacto} />
       <BloqueIdentidad clienteId={clienteId} identidad={identidad} documentos={documentos} />
     </div>
   )
-}
-
-// ─── Contactos ───────────────────────────────────────────────────────────────
-
-type Pendiente = {
-  method: 'POST' | 'PATCH'
-  body: Record<string, unknown>
-  r: Extract<ResultadoEscritura, { estado: 'conflicto' }>
-} | null
-
-function BloqueContactos({ clienteId, inicial }: { clienteId: string; inicial: ContactosCliente | null }) {
-  const router = useRouter()
-  const [lista, setLista] = useState<ContactosCliente | null>(inicial)
-  const [ocupado, setOcupado] = useState(false)
-  const [resultado, setResultado] = useState<ResultadoEscritura | null>(null)
-  const [pendiente, setPendiente] = useState<Pendiente>(null)
-  const [editando, setEditando] = useState<string | null>(null)
-  const [tipo, setTipo] = useState<TipoContacto>('telefono')
-  const [valor, setValor] = useState('')
-  const [etiqueta, setEtiqueta] = useState<string>(ETIQUETAS_TELEFONO[0])
-  const [principal, setPrincipal] = useState(false)
-  const [valorMal, setValorMal] = useState<string | null>(null)
-
-  async function llamar(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>): Promise<ResultadoEscritura> {
-    try {
-      const res = await fetch('/api/correduria/cliente/contactos', {
-        method,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ clienteId, ...body }),
-      })
-      return interpretarEscritura(res.status, await res.json().catch(() => null))
-    } catch {
-      return { estado: 'error', motivo: 'red' }
-    }
-  }
-
-  function aplicar(r: ResultadoEscritura) {
-    setResultado(r)
-    if (r.estado === 'ok') {
-      if (r.contactos) setLista(r.contactos)
-      router.refresh()
-    }
-  }
-
-  /**
-   * Una sola puerta para las tres escrituras: así el 409 «ese dato ya está en
-   * otra ficha» se ofrece igual venga de un alta o de una corrección, y no hay
-   * dos caminos que puedan divergir en cuál se puede forzar.
-   */
-  async function enviar(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>, forzar = false): Promise<ResultadoEscritura> {
-    setOcupado(true)
-    setPendiente(null)
-    try {
-      const r = await llamar(method, forzar ? { ...body, forzar: true } : body)
-      if (r.estado === 'conflicto' && r.forzable && method !== 'DELETE') setPendiente({ method, body, r })
-      aplicar(r)
-      return r
-    } finally {
-      setOcupado(false)
-    }
-  }
-
-  async function anadir() {
-    const n = tipo === 'telefono' ? normalizarTelefono(valor) : normalizarEmail(valor)
-    if (!n.ok) return setValorMal(n.motivo)
-    setValorMal(null)
-    const r = await enviar('POST', { tipo, valor: n.valor, etiqueta: etiqueta || null, principal })
-    if (r.estado === 'ok') {
-      setValor('')
-      setPrincipal(false)
-    }
-  }
-
-  /** Corregir el valor (y, si lo ha tocado, la etiqueta) de uno que ya está. */
-  async function guardar(id: string, cambios: Record<string, unknown>) {
-    const r = await enviar('PATCH', { id, ...cambios })
-    if (r.estado === 'ok') setEditando(null)
-  }
-
-  async function hacerPrincipal(id: string) {
-    await enviar('PATCH', { id, principal: true })
-  }
-
-  async function borrar(c: ContactoCliente) {
-    if (!confirm(`¿Borrar ${c.valor ?? 'este contacto'} de la ficha? No se puede deshacer.`)) return
-    const r = await enviar('DELETE', { id: c.id })
-    if (r.estado === 'ok') setEditando(null)
-  }
-
-  async function reintentar() {
-    if (!pendiente) return
-    const r = await enviar(pendiente.method, pendiente.body, true)
-    if (r.estado === 'ok') {
-      setEditando(null)
-      if (pendiente.method === 'POST') {
-        setValor('')
-        setPrincipal(false)
-      }
-    }
-  }
-
-  const etiquetas: readonly string[] = tipo === 'telefono' ? ETIQUETAS_TELEFONO : ETIQUETAS_EMAIL
-
-  return (
-    <section style={{ display: 'grid', gap: 10 }}>
-      <h3 style={h3}>Teléfonos y emails</h3>
-
-      {lista === null ? (
-        <div style={pendienteBox}>
-          ❔ No se han podido leer los teléfonos y emails de esta ficha (asegura no manda el bloque
-          o su consulta falló). <strong>No significa que no tenga.</strong> Puedes añadir uno igualmente.
-        </div>
-      ) : (
-        <>
-          <ListaContactos titulo="Teléfonos" icono={Phone} items={lista.telefonos} ocupado={ocupado} editando={editando} onEditar={setEditando} onGuardar={guardar} onPrincipal={hacerPrincipal} onBorrar={borrar} />
-          <ListaContactos titulo="Emails" icono={Mail} items={lista.emails} ocupado={ocupado} editando={editando} onEditar={setEditando} onGuardar={guardar} onPrincipal={hacerPrincipal} onBorrar={borrar} />
-        </>
-      )}
-
-      {/* 🚨 PLEGADO por defecto, y es lo que más alto ahorra de toda la tarjeta:
-          desplegado mide ~246px (dos filas de `campo` porque el 3er `<select>`
-          no cabe, + el checkbox de 44 + el botón de 44 + gaps) sobre ~706px de
-          pantalla útil en el móvil de Alberto — el 35% para teclear nueve
-          dígitos. Y esta ficha se abre para LEER un teléfono y llamar, no para
-          añadir uno: el formulario permanente cobraba a las trescientas
-          consultas el precio de la vez que se da de alta un contacto.
-          `<details>` nativo y no `useState`, como el resto del repo. */}
-      <details style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-        <summary style={{ ...btnStyle('secundario'), listStyle: 'none', userSelect: 'none' }}>
-          <Plus size={15} strokeWidth={1.75} aria-hidden /> Añadir teléfono o email
-        </summary>
-      <form
-        onSubmit={(e) => { e.preventDefault(); void anadir() }}
-        style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, paddingTop: 10 }}
-      >
-        <div className="edicion-fila" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <select
-            value={tipo}
-            onChange={(e) => { const t = e.target.value as TipoContacto; setTipo(t); setEtiqueta((t === 'telefono' ? ETIQUETAS_TELEFONO : ETIQUETAS_EMAIL)[0]) }}
-            style={{ ...campo, flex: '0 0 auto', width: 'auto' }}
-            aria-label="Tipo de contacto"
-          >
-            <option value="telefono">Teléfono</option>
-            <option value="email">Email</option>
-          </select>
-          <input
-            type={tipo === 'telefono' ? 'tel' : 'email'}
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            placeholder={tipo === 'telefono' ? '600 000 000' : 'nombre@dominio.es'}
-            aria-label={tipo === 'telefono' ? 'Teléfono' : 'Email'}
-            style={{ ...campo, flex: '1 1 180px', borderColor: valorMal ? 'var(--negative)' : undefined }}
-          />
-          <select value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} style={{ ...campo, flex: '0 0 auto', width: 'auto' }} aria-label="Etiqueta">
-            {etiquetas.map((et) => <option key={et} value={et}>{et}</option>)}
-          </select>
-        </div>
-        {valorMal && <div style={{ fontSize: 12, color: 'var(--negative)' }}>{valorMal}</div>}
-        <label style={{ fontSize: 13, display: 'flex', gap: 8, alignItems: 'center', minHeight: 44 }}>
-          <input type="checkbox" checked={principal} onChange={(e) => setPrincipal(e.target.checked)} style={{ width: 18, height: 18 }} />
-          Hacerlo el principal (el que sale en la cabecera y en los avisos)
-        </label>
-        <div>
-          <button type="submit" disabled={ocupado || valor.trim() === ''} style={btnStyle('primario')}>
-            Añadir {tipo === 'telefono' ? 'teléfono' : 'email'}
-          </button>
-        </div>
-      </form>
-      </details>
-
-      <Aviso
-        r={resultado}
-        ok="Guardado."
-        ocupado={ocupado}
-        onForzar={pendiente ? () => void reintentar() : undefined}
-        textoForzar={pendiente?.method === 'PATCH' ? 'Guardarlo igualmente' : 'Añadir igualmente'}
-      />
-    </section>
-  )
-}
-
-function ListaContactos({ titulo, icono: Icono, items, ocupado, editando, onEditar, onGuardar, onPrincipal, onBorrar }: {
-  titulo: string
-  icono: LucideIcon
-  items: ContactoCliente[]
-  ocupado: boolean
-  editando: string | null
-  onEditar: (id: string | null) => void
-  onGuardar: (id: string, cambios: Record<string, unknown>) => void
-  onPrincipal: (id: string) => void
-  onBorrar: (c: ContactoCliente) => void
-}) {
-  return (
-    <div>
-      {/* Icono lucide y no emoji: un 📞 a 13px pesa mucho más que el trazo del
-          mismo tamaño, y es parte de lo que Alberto leyó como «iconos muy
-          grandes» en su captura. Misma decisión que el rediseño del PR #2216. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 2 }}>
-        <Icono size={13} strokeWidth={1.75} aria-hidden /> {titulo}
-      </div>
-      {items.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--muted)' }}>Ninguno en la ficha (se ha mirado).</div>
-      ) : (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          {items.map((c, i) => (
-            <li key={c.id} style={{ borderTop: i === 0 ? undefined : '1px solid var(--border)' }}>
-              {editando === c.id ? (
-                <EditarContacto c={c} ocupado={ocupado} onGuardar={onGuardar} onCancelar={() => onEditar(null)} onBorrar={() => onBorrar(c)} />
-              ) : (
-                /* Una LÍNEA con separador fino, no una caja: borde, fondo y radio se
-                   gastan POR FUNCIÓN (regla de `components/ui.tsx`) y «soy un
-                   teléfono» no es una función. Y sin `flexWrap`: envolver es lo que
-                   daba dos alturas a la misma clase de dato (~58px la fila sin
-                   «Hacer principal», ~84px la que lo llevaba). */
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 44 }}>
-                  <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: 14, overflowWrap: 'anywhere' }}>
-                    {c.principal && (
-                      <Star size={13} strokeWidth={2} fill="currentColor" aria-label="Principal" style={{ marginRight: 4, verticalAlign: -1 }} />
-                    )}
-                    <ValorContacto c={c} />
-                    {c.etiqueta && <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 6 }}>{c.etiqueta}</span>}
-                  </span>
-                  {/* Abrir WhatsApp con ese número. Solo aparece en los móviles: un
-                      fijo (o un dato cifrado que no se puede leer) no pinta nada. */}
-                  {c.tipo === 'telefono' && c.valor !== null && <BotonWhatsapp telefono={c.valor} />}
-                  {!c.principal && (
-                    <button
-                      type="button"
-                      disabled={ocupado || c.ilegible}
-                      onClick={() => onPrincipal(c.id)}
-                      style={btnIcono('sutil')}
-                      aria-label={`Hacer principal: ${c.valor ?? 'este contacto'}`}
-                      title={c.ilegible ? 'No se puede hacer principal un dato que no se puede leer' : 'Hacer principal'}
-                    >
-                      <Star size={16} strokeWidth={1.75} aria-hidden />
-                    </button>
-                  )}
-                  {/* Corregir el número/correo EN SU SITIO, sin borrar y volver a
-                      añadir: borrar pierde el orden y, si era el principal,
-                      asciende otro por el camino. Icono y no rótulo porque la
-                      fila ya lleva hasta tres controles y en 320px el dato —que
-                      es lo que se viene a leer— se quedaba sin ancho. */}
-                  <button
-                    type="button"
-                    disabled={ocupado}
-                    onClick={() => onEditar(c.id)}
-                    style={btnIcono('sutil')}
-                    aria-label={`Modificar ${c.valor ?? 'este contacto'}`}
-                    title="Modificar"
-                  >
-                    <Pencil size={16} strokeWidth={1.75} aria-hidden />
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
-/**
- * Corregir un teléfono o email que ya está en la ficha.
- *
- * El «Borrar» vive AQUÍ dentro y no en la fila cerrada: son la misma decisión
- * («este dato está mal») y en la fila cerrada un cuarto control dejaba el
- * número sin ancho en 320px.
- *
- * 🚨 La etiqueta solo se manda si se toca. Las que trae CIMA no siempre están
- * en la lista cerrada del repo, y mandarla sin querer la borraría (el back
- * convierte a `null` lo que no reconoce) por corregir un dígito.
- */
-function EditarContacto({ c, ocupado, onGuardar, onCancelar, onBorrar }: {
-  c: ContactoCliente
-  ocupado: boolean
-  onGuardar: (id: string, cambios: Record<string, unknown>) => void
-  onCancelar: () => void
-  onBorrar: () => void
-}) {
-  const esTel = c.tipo === 'telefono'
-  const [valor, setValor] = useState(c.valor ?? '')
-  const [etiqueta, setEtiqueta] = useState<string>(c.etiqueta ?? '')
-  const [etiquetaTocada, setEtiquetaTocada] = useState(false)
-  const [mal, setMal] = useState<string | null>(null)
-  const etiquetas: readonly string[] = esTel ? ETIQUETAS_TELEFONO : ETIQUETAS_EMAIL
-
-  function guardar() {
-    const n = esTel ? normalizarTelefono(valor) : normalizarEmail(valor)
-    if (!n.ok) return setMal(n.motivo)
-    setMal(null)
-    onGuardar(c.id, { valor: n.valor, ...(etiquetaTocada ? { etiqueta: etiqueta || null } : {}) })
-  }
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, padding: '10px 0' }}>
-      {c.ilegible && (
-        <div style={pendienteBox}>
-          🔒 Este dato está guardado <strong>cifrado con una clave que asegura no puede abrir</strong>, así que
-          no se puede enseñar. Lo que escribas aquí lo sustituye.
-        </div>
-      )}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <input
-          type={esTel ? 'tel' : 'email'}
-          value={valor}
-          onChange={(e) => setValor(e.target.value)}
-          placeholder={esTel ? '600 000 000' : 'nombre@dominio.es'}
-          aria-label={esTel ? 'Teléfono' : 'Email'}
-          autoFocus
-          style={{ ...campo, flex: '1 1 180px', borderColor: mal ? 'var(--negative)' : undefined }}
-        />
-        <select
-          value={etiqueta}
-          onChange={(e) => { setEtiqueta(e.target.value); setEtiquetaTocada(true) }}
-          style={{ ...campo, flex: '0 0 auto', width: 'auto' }}
-          aria-label="Etiqueta"
-        >
-          <option value="">sin etiqueta</option>
-          {/* La que trae CIMA puede no estar en la lista: se conserva como opción
-              para no forzar a cambiarla al abrir el desplegable. */}
-          {c.etiqueta && !etiquetas.includes(c.etiqueta) && <option value={c.etiqueta}>{c.etiqueta}</option>}
-          {etiquetas.map((et) => <option key={et} value={et}>{et}</option>)}
-        </select>
-      </div>
-      {mal && <div style={{ fontSize: 12, color: 'var(--negative)' }}>{mal}</div>}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" disabled={ocupado || valor.trim() === ''} onClick={guardar} style={btnStyle('primario')}>
-          Guardar
-        </button>
-        <button type="button" disabled={ocupado} onClick={onCancelar} style={btnStyle('secundario')}>
-          Cancelar
-        </button>
-        {/* El destructivo CONSERVA su rótulo a propósito — ver `btnIcono`. */}
-        <button type="button" disabled={ocupado} onClick={onBorrar} style={{ ...btnStyle('sutil'), color: 'var(--negative)', marginLeft: 'auto' }}>
-          Borrar
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function ValorContacto({ c }: { c: ContactoCliente }) {
-  if (c.valor === null) {
-    return (
-      <span
-        style={{ color: 'var(--muted)', fontStyle: 'italic' }}
-        title={c.ilegible
-          ? 'Está guardado pero cifrado con una clave que asegura no puede abrir (PII_ENCRYPTION_KEY). No se ha borrado: sigue en la ficha.'
-          : 'Sin valor'}
-      >
-        🔒 {c.ilegible ? 'cifrado' : 'sin valor'}
-      </span>
-    )
-  }
-  return c.tipo === 'telefono'
-    ? <a href={`tel:${c.valor.replace(/\s/g, '')}`}>{c.valor}</a>
-    : <a href={`mailto:${c.valor}`}>{c.valor}</a>
 }
 
 // ─── Dirección y notas ───────────────────────────────────────────────────────

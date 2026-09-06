@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✏️ Corregir teléfonos y correos, donde SE LEEN (06/09/2026).** Alberto: «revisa modificar datos, no
+  funciona y el diseño es muy malo… hasta creas otra cosa, ocupa más pantalla». Las dos quejas eran la misma
+  causa. **Medido, no supuesto:** 0 filas `historial_interno` de tipo `contacto` en 4 días (476 de otros
+  tipos en esa ventana), ninguna fila hija nueva, backend desplegado y **sin errores de runtime** en
+  `/api/correduria/cliente/contactos` → **la petición nunca llegó a salir**. La acción existía y estaba
+  enterrada: el ✏️ vivía dentro del desplegable «Editar datos del cliente», que monta ~1.115px de formularios
+  de dirección e identidad, y **repintaba los contactos por segunda vez** en la misma pestaña. Ahora se
+  corrige en la tira de chips (`ContactosFicha.tsx`, interruptor «Corregir» DENTRO de la tira — en la
+  cabecera del bloque envolvía a 390px y la subía de 20 a 64px) y el formulario de abajo se queda con lo que
+  de verdad es un formulario. Medido a 390px: tarjeta 256→204px y la lista duplicada 251→0px.
+
 - **🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE (06/09/2026).** Alberto:
   «no ha respondido el agente, ¿no?». Sí respondió — a él: la reserva 154375571 (House Sevillana) preguntó
   por bares el 05/09 a las 15:42 y el agente propuso borrador por Telegram (msg 4087, `fuente:web`, así que
