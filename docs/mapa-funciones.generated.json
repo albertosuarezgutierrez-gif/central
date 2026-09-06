@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-06T12:33:48Z",
-  "sha": "9a369d344ffbbcef0ac74a8de03cb2810ceea7c4",
+  "generadoEn": "2026-09-06T16:46:09Z",
+  "sha": "156fef6faa683c0415407a7d98f01537b6c7fa31",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6543,12 +6543,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 85
+          "linea": 100
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1be82165ab1c"
+      "hash": "dda9f1227496"
     },
     {
       "ruta": "apps/asegura-web/app/legal/aviso-legal/page.tsx",
