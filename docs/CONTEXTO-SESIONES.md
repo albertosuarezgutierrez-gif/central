@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📮 Canario del formulario público: que no vuelva a morir en silencio (06/09/2026).** Tras arreglar
+  el 503 (#2442), el agujero de fondo seguía abierto: cuando ese formulario se rompe **no deja rastro**
+  —ni ficha, ni Telegram, ni cuerpo en logs— así que una avería y una semana sin leads se ven IGUAL, y
+  por eso vivió hasta que Alberto la vio en su móvil. Cron horario `/api/cron/canario-lead`: manda un
+  cuerpo VACÍO a `grupoasegura.es/api/lead` (no crea ficha ni lead) y exige un **422** de plataforma,
+  que es la prueba de que el reenvío llega. Regla pura y testeada en `lib/monitoring/canario-lead.ts`
+  con TRES estados: 503/502/404/200 = 🔴 roto · 429 o sin llegar = 🟠 «no lo sé», nunca verde. Telegram
+  `correduria.canario-lead` (máx. 1 cada 6 h, anti-spam sobre `telegram_avisos_log`) y latido
+  `canario_lead_web` dado de alta en el vigía. PR #PENDIENTE.
+
 - **🔖 La bóveda ya dice POR QUÉ está vacía, y «51 invitables» era falso (06/09/2026).** Entrega 1 de
   «que vean su cartera» (PR #2440). `/boveda` no puede recalcular el vínculo —no hay email en claro—,
   así que se sella en el canje del código (`portal_identidad.ultimo_vinculo`, DDL aplicada) y se sella
