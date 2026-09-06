@@ -198,10 +198,17 @@ export default function Home() {
               <br />
               <span className="destaca">Ese día me llamas a mí.</span>
             </h1>
+            {/*
+              Una línea más corto que la primera versión (06/09/2026), y no por
+              estilo: la frase acababa en «…quien te coge el teléfono cuando hay
+              que dar el parte», que es lo MISMO que dice el h1 dos líneas más
+              arriba, y esa redundancia empujaba la última línea justo debajo de
+              los botones flotantes. Lo que sobra en un hero no es neutro: ocupa
+              el sitio donde el visitante decide.
+            */}
             <p className="lead" style={{ marginTop: 28 }}>
               Soy {MEDIADOR.identidad.nombre}, corredor de seguros en Sevilla. No trabajo para ninguna aseguradora:
-              comparo entre varias, te digo qué cubre cada una y qué deja fuera, y sigo siendo yo quien te coge el
-              teléfono cuando hay que dar el parte.
+              comparo entre varias y te digo qué cubre cada una y qué deja fuera.
             </p>
             <div className="hero-cta">
               <a href="#presupuesto" className="btn btn-brand btn-brillo">

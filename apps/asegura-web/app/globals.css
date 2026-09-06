@@ -571,6 +571,37 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
   padding: calc(4.75rem + var(--e7)) 0 var(--e8);
 }
 
+/* 🚨 Abajo, en móvil, hay DOS burbujas fijas —el botón de WhatsApp a la derecha
+   y el de cookies a la izquierda— y el final del hero cae justo en su banda.
+   Medido en el móvil de Alberto el 06/09/2026: las dos tapaban la última línea
+   del párrafo.
+
+   `overflow: hidden` no protege de esto y `scrollWidth` tampoco lo delata: un
+   elemento `position: fixed` NO desborda a nadie, se pone encima. Por eso la
+   medición de responsive de esa mañana dio «no desborda» con el fallo delante.
+
+   Se reserva la banda en el HERO y no se mueven las burbujas porque la de
+   cookies **no es nuestra**: la inyecta el script de Cookiebot y sus clases son
+   suyas. Un margen aquí cubre las dos; subir la nuestra solo habría arreglado
+   la mitad de la foto. */
+@media (max-width: 559px) {
+  .hero {
+    padding-bottom: calc(var(--e8) + 76px);
+  }
+}
+
+/* Y a 320 px la última garantía —la línea más larga de las tres— llegaba hasta
+   debajo del botón de WhatsApp: se leía «Corredor inscrito en la DGSF». La
+   banda de arriba no lo cubre, y esa es la lección: `padding-bottom` reserva
+   sitio al FINAL del hero, pero una burbuja `fixed` se pega al VIEWPORT, así
+   que pisa lo que quede a su altura pase lo que pase. Aquí se aparta el texto
+   de su columna (52 px de botón + su margen), que es lo único que funciona. */
+@media (max-width: 359px) {
+  .hero .garantias {
+    padding-right: 68px;
+  }
+}
+
 .hero-atmosfera {
   position: absolute;
   inset-inline: 0;
@@ -1761,7 +1792,11 @@ textarea.f-in {
 @media (max-width: 559px) {
   .wsp {
     right: calc(var(--e3) + env(safe-area-inset-right, 0px));
-    bottom: calc(var(--e3) + env(safe-area-inset-bottom, 0px));
+    /* Un peldaño por encima del borde (06/09/2026): con `--e3` la burbuja
+       mordía la línea de texto que tenía justo detrás. No arregla el hero por
+       sí sola —para eso está la banda reservada arriba—, pero le devuelve aire
+       en TODAS las páginas, que es donde no hay banda que reservar. */
+    bottom: calc(var(--e4) + env(safe-area-inset-bottom, 0px));
     width: 52px;
     height: 52px;
   }
