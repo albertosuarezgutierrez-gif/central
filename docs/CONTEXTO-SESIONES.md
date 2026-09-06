@@ -41,7 +41,7 @@
   etiqueta, con guardián probado fallando — una `<meta content="">` es peor que ninguna) y
   `docs/ASEGURA-CONSULTA-ABOGADO.md`, que junta las 4 preguntas legales sueltas en una sola consulta;
   la primera —base jurídica de los 32.520 contactos de 2013-2018— es la que puede convertir un supuesto
-  activo en un pasivo. PR #PENDIENTE.
+  activo en un pasivo. PR #2425.
 
 - **✍️ El hero de la correduría pasa a primera persona, y el cepo del copy ya barre la portada (06/09/2026).**
   Se aplica el ángulo que dejó abierto el estudio (#2419): el hero explicaba lo que la correduría **es**
