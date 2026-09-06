@@ -38,7 +38,7 @@
   que es la prueba de que el reenvío llega. Regla pura y testeada en `lib/monitoring/canario-lead.ts`
   con TRES estados: 503/502/404/200 = 🔴 roto · 429 o sin llegar = 🟠 «no lo sé», nunca verde. Telegram
   `correduria.canario-lead` (máx. 1 cada 6 h, anti-spam sobre `telegram_avisos_log`) y latido
-  `canario_lead_web` dado de alta en el vigía. PR #PENDIENTE.
+  `canario_lead_web` dado de alta en el vigía. PR #2453.
 
 - **🔖 La bóveda ya dice POR QUÉ está vacía, y «51 invitables» era falso (06/09/2026).** Entrega 1 de
   «que vean su cartera» (PR #2440). `/boveda` no puede recalcular el vínculo —no hay email en claro—,
