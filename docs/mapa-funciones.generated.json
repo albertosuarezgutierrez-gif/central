@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-05T18:39:13Z",
-  "sha": "eac8d51b35da573f2880e6bfc92d3ca39d888cf8",
+  "generadoEn": "2026-09-06T12:33:48Z",
+  "sha": "9a369d344ffbbcef0ac74a8de03cb2810ceea7c4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6678,7 +6678,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8f24d85dd2bb"
+      "hash": "1df6eaa2f8f5"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
