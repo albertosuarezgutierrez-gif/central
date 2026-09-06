@@ -41,6 +41,18 @@
   ⚠️ Tres de los cinco cepos del plan **no mordían**; reescritos y verificados con tres mutaciones.
   ⚠️ `cliente_emails.es_principal` NO entra en el desempate: honrarlo movería 42 de 80 a `ambiguo`.
 
+- **🏠 La dirección buena ya estaba en casa: en la LÁPIDA de la fusión (06/09/2026, PR #2447, EJECUTADO).**
+  Al preparar el lote de «provincias falsas» que Alberto tenía pendiente de aprobar, dos cifras mías
+  resultaron falsas al medirlas: no eran 473 sino **523**, y **520 son volcado muerto** (solo 3 tocaban
+  cartera viva). Y la fusión de Piña Franco que llevaba tres mensajes pidiendo permiso **ya estaba
+  hecha** (`d3ea3a53` tiene `merged_into_cliente_id`). Lo que quedaba vivo era otra cosa y más general:
+  **`fusion_*` hereda HUECOS, y `34304` no es un hueco** — es el identificador de población del CRM
+  viejo en la columna `ciudad`, así que la herencia no lo pisó y el nombre bueno se quedó en la lápida.
+  **357 fichas así, 10 con póliza viva.** Ejecutado sobre producción con OK de Alberto: **345 ciudades
+  recuperadas + 4 provincias**, 12 fichas **sin tocar** porque su lápida trae otro CP (41907 vs 41927 son
+  dos pueblos). Fichas y pólizas intactas (32.603 / 28.843). Las 151 que quedan no tienen lápida de la que
+  copiar: ahí no hay dato, y la ficha las sigue enseñando como reparo.
+
 - **✏️ Corregir teléfonos y correos, donde SE LEEN (06/09/2026).** Alberto: «revisa modificar datos, no
   funciona y el diseño es muy malo… hasta creas otra cosa, ocupa más pantalla». Las dos quejas eran la misma
   causa. **Medido, no supuesto:** 0 filas `historial_interno` de tipo `contacto` en 4 días (476 de otros
