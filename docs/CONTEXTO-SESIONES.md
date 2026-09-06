@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📉 Mapfre no es que «nunca entrara» por CIMA: entró 14 veces y lleva 75 días callada (06/09/2026).**
+  Medido contra `seguros.cima_ficheros`: Occident trajo fichero ayer, Allianz hace 3 días, Reale hace 12,
+  **Mapfre el 23/06**. CIMA NO está caído — es esa entidad y solo esa, y son 64 de 110 pólizas (58 %).
+  Corrige al estudio #2419, que repetía del plan de marketing que Mapfre «nunca ha entrado»: la
+  diferencia importa porque una tubería que **funcionaba y se cortó** apunta a la suscripción de C0058,
+  no a un cron sin configurar. Ya lo detecta `silencio-entidad.ts` (05/09) comparando a cada compañía
+  con su PROPIO ritmo, y sale por Telegram desde `correduria-ingesta`: **el software avisa, falta la
+  llamada.** Además: verificación de Search Console por env en asegura-web (sin env NO se emite la
+  etiqueta, con guardián probado fallando — una `<meta content="">` es peor que ninguna) y
+  `docs/ASEGURA-CONSULTA-ABOGADO.md`, que junta las 4 preguntas legales sueltas en una sola consulta;
+  la primera —base jurídica de los 32.520 contactos de 2013-2018— es la que puede convertir un supuesto
+  activo en un pasivo. PR #PENDIENTE.
+
 - **✍️ El hero de la correduría pasa a primera persona, y el cepo del copy ya barre la portada (06/09/2026).**
   Se aplica el ángulo que dejó abierto el estudio (#2419): el hero explicaba lo que la correduría **es**
   («Somos correduría, no compañía») y listaba cinco ramos de un tirón, así que no priorizaba ninguno.

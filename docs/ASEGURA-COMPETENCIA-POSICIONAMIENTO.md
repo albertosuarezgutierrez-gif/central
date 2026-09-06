@@ -76,9 +76,30 @@ golpe, y no tienes con qué compensar.
 
 🚨 **Y hay un dato que invalida cualquier campaña de vencimientos hecha hoy:** 55 de tus 110
 pólizas figuran **con la fecha de vencimiento ya pasada**, y 38 de ellas son de Mapfre, cuya ficha
-no se actualiza desde el 15/07. El plan de marketing ya documenta que **Mapfre nunca ha entrado por
-el cron de CIMA**. Así que ese «ya vencida» **no significa que la póliza esté muerta: significa que
-no lo sabemos**. Es el `NULL` disfrazado de dato que persigue todo el repo.
+no se actualiza desde el 15/07. Así que ese «ya vencida» **no significa que la póliza esté muerta:
+significa que no lo sabemos**. Es el `NULL` disfrazado de dato que persigue todo el repo.
+
+⚠️ **Corrección de este mismo documento (06/09/2026).** Arriba se dijo, citando el plan de
+marketing, que «Mapfre nunca ha entrado por el cron de CIMA». **Es falso, y la diferencia cambia
+el diagnóstico.** Medido contra `seguros.cima_ficheros`:
+
+| Entidad | Ficheros CIMA | Último | Días callada |
+|---|---:|---|---:|
+| C0468 Occident | 75 | 05/09/2026 | 1 |
+| C0109 Allianz | 39 | 03/09/2026 | 3 |
+| C0613 Reale | 3 | 25/08/2026 | 12 |
+| **C0058 Mapfre** | **14** | **23/06/2026** | **75** |
+
+Mapfre **sí entró** —catorce veces— y **dejó de entrar**. Y CIMA no está caído: las otras tres
+compañías siguen llegando con normalidad, una de ellas ayer. O sea, no es una tubería que nunca se
+conectó (que se arreglaría configurándola): es una que **funcionaba y se cortó**, y eso apunta a
+la suscripción de esa entidad, no al cron. La pregunta para Codeoscopic/Mapfre es por qué C0058
+dejó de emitir el 23/06, no cómo darla de alta.
+
+Lo detecta desde el 05/09 `packages/module-seguros/src/silencio-entidad.ts`, que compara a cada
+compañía **con su propio ritmo** (30 días fijos no habrían dicho nada de Mapfre hasta el día 30, y
+habrían acusado a Reale, cuyo ritmo normal son 23 días). Sale por Telegram desde el cron
+`correduria-ingesta`. **El software ya avisa; lo que falta es la llamada.**
 
 **Consecuencia práctica:** llamar a esos clientes con la lista actual te expone a decirle «se te
 vence» a alguien que renovó en abril. Eso quema la confianza que es justo tu única ventaja.
