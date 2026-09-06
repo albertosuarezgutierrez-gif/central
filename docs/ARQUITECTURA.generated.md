@@ -262,6 +262,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/09/2026) 🔌 34 de 80 clientes entrarían al portal y verían la pantalla VACÍA
+- (06/09/2026) 🫧 Una burbuja `fixed` NO desborda: se pone encima — y `scrollWidth` no la delata
 - (06/09/2026) 📉 Mapfre no es que «nunca entrara» por CIMA: entró 14 veces y lleva 75 días callada
 - (06/09/2026) ✍️ El hero de la correduría pasa a primera persona, y el cepo del copy ya barre la portada
 - (06/09/2026) 🔎 Estudio de competencia de la correduría: el rival más caro es no llamar a los tuyos
@@ -270,6 +272,4 @@
 - (05/09/2026) 📇 Correduría: se pueden CORREGIR teléfonos y emails, y la ficha deja de afirmar provincias falsas
 - (05/09/2026) 🏷️ Compañías del muro y el ramo que llegaba mal etiquetado
 - (05/09/2026) 🎨 `asegura-web`: una sola atmósfera, no diez bloques
-- (05/09/2026) 📞 `asegura-web`: WhatsApp, y los textos legales que MENTÍAN sobre las cookies
-- (05/09/2026) 🖼 La tarjeta impresa estaba PARTIDA EN DOS, y lo que la protegía era una deny-list
 
