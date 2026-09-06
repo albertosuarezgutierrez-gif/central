@@ -26,8 +26,28 @@ export const dynamic = 'force-dynamic'
 // por persona. No abre ningún agujero nuevo: quien quisiera falsear esa
 // cabecera ya puede llamar al endpoint público directamente.
 
-/** URL base de plataforma. Sin ella no hay canal, y eso se dice, no se traga. */
-const PLATAFORMA_URL = (process.env.PLATAFORMA_URL || '').replace(/\/+$/, '')
+/**
+ * URL base de plataforma, sin barra final.
+ *
+ * Sale de `PLATAFORMA_URL`, pero con un valor por defecto que FUNCIONA: el
+ * origen en el que plataforma sirve hoy. Medido el 06/09/2026 —
+ * `POST /api/publico/correduria/lead` responde 422 con el campo que falta, o
+ * sea la ruta está viva y validando.
+ *
+ * 🚨 Antes el defecto era la cadena vacía, y el resultado fue el peor posible:
+ * el proyecto Vercel de esta web se desplegó sin la variable y el formulario
+ * —el ÚNICO canal de venta de la correduría— contestaba «escríbenos por correo»
+ * a todo el que lo rellenaba. Nada petaba, no había ficha, no había Telegram y
+ * el cuerpo del formulario no se registra en ningún sitio: cada intento se
+ * perdía sin rastro recuperable. Una variable de entorno que falta no puede
+ * decidir si el negocio tiene canal o no.
+ *
+ * Es la misma decisión que `SITIO_URL` y `PORTAL_URL` en `lib/sitio.ts`, y la
+ * que ya usa `apps/housesevillana` contra este mismo origen público: el defecto
+ * es el sitio REAL, y la variable sirve para apuntar a otro (una preview de
+ * plataforma, o el día que tenga dominio propio).
+ */
+const PLATAFORMA_URL = (process.env.PLATAFORMA_URL || 'https://plataforma-ten-flame.vercel.app').replace(/\/+$/, '')
 
 /** IP real del visitante, tal y como la ve esta app (Vercel la pone al frente). */
 function ipVisitante(req: NextRequest): string | null {
@@ -38,10 +58,11 @@ function ipVisitante(req: NextRequest): string | null {
 
 export async function POST(req: NextRequest) {
   if (!PLATAFORMA_URL) {
-    // Tres estados, no dos: esto NO es «el envío falló», es «no hay canal
-    // configurado». Si se colapsaran en el mismo error, un despliegue sin la
-    // variable de entorno se vería igual que una caída pasajera y nadie
-    // buscaría en el sitio correcto. El visitante ve un teléfono humano.
+    // Con el defecto de arriba esto solo salta si alguien pone la variable
+    // EXPLÍCITAMENTE vacía. Se mantiene porque sigue siendo un estado distinto:
+    // NO es «el envío falló», es «no hay canal configurado». Colapsarlos haría
+    // que una configuración rota se viera igual que una caída pasajera y nadie
+    // buscaría en el sitio correcto.
     console.error('[lead] PLATAFORMA_URL sin configurar: el formulario no tiene a dónde enviar')
     return NextResponse.json(
       { ok: false, motivo: 'Ahora mismo no podemos recoger tu solicitud por la web. Escríbenos por correo y te llamamos.' },
