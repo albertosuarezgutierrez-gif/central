@@ -44,7 +44,7 @@
   conectores adjuntos, ya documentado por el propio agente en `VIGIA-CONECTORES.md`, sin
   acción nueva de prompt. Revisión transversal: sin contradicciones/redundancias nuevas
   entre skills. dudas: —; fallos: el propio (ver arriba); PRs/commits: rama
-  `claude/upbeat-shannon-rdw66d` (PR draft del guardarraíl + esta bitácora/memoria).
+  #2413 (`claude/upbeat-shannon-rdw66d`).
 
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
@@ -94,7 +94,7 @@ entradas de ese rango seguían todas en el archivo). Sin pendientes en `FEEDBACK
 Backlog de PRs abiertos: **7** (`claude/*`, el más antiguo #2262 del 04/09 — sano, ninguno de
 2+ semanas, aunque creció desde los 2 del 30/08). Único fix de skill aplicado: guardarraíl
 añadido a esta misma skill para verificar la poda releyendo el archivo antes de dar la pasada
-por cerrada (PR draft, rama `claude/upbeat-shannon-rdw66d`). Hallazgo sin PR (no es de skill,
+por cerrada (PR draft #2413). Hallazgo sin PR (no es de skill,
 es de trigger externo): la línea "PRIORIDAD TEMPORAL" de `mercado-booking` lleva 7 pasadas
 seguidas repitiéndose sin que nadie pueda quitarla desde una sesión — escalado por Telegram.
 
