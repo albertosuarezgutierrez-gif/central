@@ -232,6 +232,22 @@ export type AgenteVigilado = {
 //   - trading (tiene su propio watchdog dedicado con lógica de días).
 export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   {
+    id: 'canario_lead_web',
+    vigiladoDesde: '2026-09-06',
+    etiqueta: '📮 Canario del formulario público (cron horario)',
+    // Horario → 6 h: es el mismo silencio que el canario se concede entre avisos, así que por
+    // debajo de eso saltaría por una pasada perdida sin que nada esté roto.
+    maxHoras: 6,
+    nota:
+      'Nadie está comprobando que el formulario de grupoasegura.es entregue. Cuando ese canal se ' +
+      'rompe no deja rastro (ni ficha, ni Telegram, ni cuerpo en logs), así que sin el canario ' +
+      'una avería se ve igual que una semana sin leads: fue así como estuvo muerto hasta que ' +
+      'Alberto lo vio en su móvil el 06/09/2026. Lee el `detalle`: dice si el veredicto fue ' +
+      '«roto» (503 = falta PLATAFORMA_URL en el proyecto Vercel `asegura-web`; 502 = el reenvío ' +
+      'no completa; 404 = la ruta de plataforma se movió) o «dudoso» (el canario no llegó o topó ' +
+      'el límite por IP, que NO significa que la web esté bien). Huella: agente_latidos.canario_lead_web.',
+  },
+  {
     id: 'correduria_renovaciones',
     vigiladoDesde: '2026-09-01',
     etiqueta: '🛡️ Renovaciones de la correduría (cron diario 06:30)',
