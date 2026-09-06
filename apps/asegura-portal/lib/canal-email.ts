@@ -1,4 +1,5 @@
 import { createMailTransporter } from '@central/core-email'
+import { remitenteCorreo } from '@central/module-seguros'
 import type { Canal } from './canal'
 import { enlaceDeAcceso } from './enlace-acceso'
 
@@ -19,7 +20,7 @@ export const canalEmail: Canal = {
     const transporter = createMailTransporter()
     if (!transporter) return false
 
-    const from = process.env.PORTAL_MAIL_FROM
+    const from = remitenteCorreo(process.env.PORTAL_MAIL_FROM)
     if (!from) {
       console.error('[portal] falta PORTAL_MAIL_FROM: no se envía el código')
       return false

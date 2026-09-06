@@ -149,9 +149,12 @@ Antes de escribir contenido nuevo, comprueba que lo que ya existe se puede index
 - **`app/sitemap.ts`**: que estén todas las páginas reales y ninguna que no deba indexarse.
 - **`app/robots.ts`**: que declare el sitemap y no bloquee lo que quieres posicionar.
 - **JSON-LD** (`lib/seo.ts`): `InsuranceAgency`/`LocalBusiness` con dirección y `areaServed`.
-  🚨 **`HORARIO` y el teléfono están ausentes A PROPÓSITO** mientras no se confirmen: publicar un
-  horario inventado hace que alguien llame y no le cojan. **No los rellenes tú.** Si hacen falta
-  para el JSON-LD, es una pregunta para Alberto, no un valor por defecto.
+  🚨 **`HORARIO` sigue ausente A PROPÓSITO** mientras no se confirme: publicar un horario
+  inventado hace que alguien llame y no le cojan. **No lo rellenes tú**; si hace falta para el
+  JSON-LD, es una pregunta para Alberto, no un valor por defecto.
+  ✅ **El teléfono SÍ existe desde el 05/09/2026** (`MEDIADOR.identidad.telefono`), con
+  `telefonoLegible()` y `whatsappUrl()` en `@central/module-seguros`. O sea que `telephone` en la
+  ficha JSON-LD ya se puede rellenar, y **leyéndolo de ahí**, nunca tecleándolo.
 - **Imagen Open Graph**: un enlace compartido sin imagen convierte mucho peor.
 - **Canibalización**: si `apps/plataforma` mantiene viva una página pública de seguros, compite
   contra la web nueva por las mismas consultas. El plan pide un **301** hacia el dominio nuevo.

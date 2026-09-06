@@ -36,6 +36,8 @@
  * corredor no se relaje por su cuenta.
  */
 
+import { remitenteCorreo } from '@central/module-seguros'
+
 /** Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual. */
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -174,7 +176,7 @@ export async function enviarInvitacionPortal(destino: string, d: DatosInvitacion
     console.error('[asegura/invitacion-portal] no hay proveedor de correo configurado')
     return false
   }
-  const from = process.env.ASEGURA_MAIL_FROM
+  const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
   if (!from) {
     console.error('[asegura/invitacion-portal] falta ASEGURA_MAIL_FROM: no se invita')
     return false
