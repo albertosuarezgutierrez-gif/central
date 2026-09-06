@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🫧 Una burbuja `fixed` NO desborda: se pone encima — y `scrollWidth` no la delata (06/09/2026).**
+  Alberto mandó una foto de `grupoasegura.es` en su móvil (que de paso CIERRA la duda de si el dominio
+  sirve el build nuevo: sí) y en ella los dos botones flotantes —WhatsApp a la derecha, cookies a la
+  izquierda— tapaban la última línea del hero. La medición de responsive de esa misma mañana había
+  dado «no desborda» **y era cierta**: es otra cosa. La regla de `CLAUDE.md` sobre medir el scroller
+  no cubre este caso; hay que medir **solape de rectángulos** contra los elementos `fixed`.
+  Arreglado por tres vías (lead una línea más corto quitando lo que ya decía el h1, banda reservada
+  al pie del hero en móvil, y el FAB un peldaño más arriba en todas las páginas): 360/390/412 quedan
+  limpios, medido con Playwright. ⚠️ **A 320 px queda un solape residual y NO es de nuestro botón:
+  es el de Cookiebot**, que se posa en la esquina inferior izquierda justo donde arrancan las
+  garantías (x=16). Apartarlo exige pisar CSS de un tercero; se deja documentado, no tapado. Y ojo
+  con la medición: esa burbuja se **simuló** por posición y tamaño, porque sin `CBID` Cookiebot no
+  carga en local. PR #2428.
+
 - **📉 Mapfre no es que «nunca entrara» por CIMA: entró 14 veces y lleva 75 días callada (06/09/2026).**
   Medido contra `seguros.cima_ficheros`: Occident trajo fichero ayer, Allianz hace 3 días, Reale hace 12,
   **Mapfre el 23/06**. CIMA NO está caído — es esa entidad y solo esa, y son 64 de 110 pólizas (58 %).
