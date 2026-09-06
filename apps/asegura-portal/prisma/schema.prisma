@@ -83,6 +83,17 @@ model PortalIdentidad {
   creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
   ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
 
+  // Cómo salió el ÚLTIMO intento de vincular esta identidad con una ficha, y
+  // cuándo. Lo sella `lib/vinculo.ts` en el canje del código —el único momento
+  // en que el portal tiene el correo en claro— y lo lee `/boveda` para no
+  // decirle «no hemos encontrado ninguna póliza» a quien SÍ tiene fichas.
+  //
+  // 🚨 El GRANT por columnas se dio ANTES de declararlas aquí. El rol tiene
+  // SELECT por columnas: declarar una sin conceder revienta TODAS las lecturas
+  // de este modelo con 42501, no solo la de esa columna.
+  ultimoVinculo   String?   @map("ultimo_vinculo")
+  ultimoVinculoEn DateTime? @map("ultimo_vinculo_en") @db.Timestamptz(6)
+
   canales      PortalCanal[]
   bienes       PortalBien[]
   polizas      PortalPolizaDeclarada[]

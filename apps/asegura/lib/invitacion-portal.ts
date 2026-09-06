@@ -25,11 +25,16 @@
  * no predecir: las dos darían 200 y divergirían en silencio. Es la razón por la
  * que `elegirFicha` subió al paquete compartido en este mismo cambio.
  *
- * Medido el 05/09/2026 sobre los 80 clientes de cartera viva: **51 invitables**
- * (48 resuelven por su email principal y 3 por uno de contacto), **0 ambiguos** y
- * **29 sin ningún correo** — que son justo los de la pantalla «Clientes sin
- * canal». O sea: hoy el freno no es la ambigüedad, es que a 29 no hay por dónde
- * escribirles.
+ * Medido el 06/09/2026 sobre los 80 clientes de cartera viva, aplicando esta
+ * misma función: **46 invitables** · **29 sin ningún correo** (los de «Clientes
+ * sin canal») · **5 `resuelve_a_otra`** · **0 ambiguos**.
+ *
+ * ⚠️ Aquí ponía «51 invitables» hasta el 06/09/2026, y era una cifra mal
+ * repartida: los 5 que resuelven a OTRA ficha se contaban como invitables. Son
+ * el caso peor de toda esta pantalla —el cliente recibe el correo, entra, y ve
+ * una bóveda que no es la suya— y no se arreglan pidiéndole el correo sino
+ * resolviendo el duplicado. O sea: el freno no es la ambigüedad (hay 0), es
+ * que a 29 no hay por dónde escribirles y que 5 tienen la ficha cruzada.
  *
  * ── Lo que NO hace ─────────────────────────────────────────────────────────
  *
