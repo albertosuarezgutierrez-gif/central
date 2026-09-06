@@ -155,6 +155,11 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/categorizar-movimientos', schedule: '0 7 * * *' },
   { path: '/api/cron/resumen-semanal', schedule: '30 9 * * 1' },
   { path: '/api/cron/health-check', schedule: '0 7 * * *' },
+  // Canario del formulario público de la correduría, CADA HORA. Un diario no valdría: ese
+  // formulario es el único canal de venta de asegura-web y, cuando se rompe, no deja rastro
+  // (ni ficha, ni Telegram, ni cuerpo en logs), así que un día caído son leads perdidos que no
+  // se pueden recuperar ni contar. Minuto 25 para no coincidir con el racimo de en punto.
+  { path: '/api/cron/canario-lead', schedule: '25 * * * *' },
   { path: '/api/cron/pre-renta', schedule: '0 9 1 3 *' },
   { path: '/api/sivra/domotica/programador', schedule: '25,55 8-15 * * *' },
   { path: '/api/sivra/domotica/acceso/programador', schedule: '40 4,12,20 * * *' },

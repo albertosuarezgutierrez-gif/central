@@ -39,6 +39,17 @@
   que nunca arrancó (`list_workflow_jobs` → 0 jobs, necesita head nuevo) · run en cola.
   `list_workflow_runs` por rama fue la lectura más fresca las tres veces. Escrito en `CLAUDE.md`
   (DECIMOCUARTA + paso 0 del orden). Cierra el «no lo meto hasta separarlas» de la entrada anterior.
+
+- **📮 Canario del formulario público: que no vuelva a morir en silencio (06/09/2026).** Tras arreglar
+  el 503 (#2442), el agujero de fondo seguía abierto: cuando ese formulario se rompe **no deja rastro**
+  —ni ficha, ni Telegram, ni cuerpo en logs— así que una avería y una semana sin leads se ven IGUAL, y
+  por eso vivió hasta que Alberto la vio en su móvil. Cron horario `/api/cron/canario-lead`: manda un
+  cuerpo VACÍO a `grupoasegura.es/api/lead` (no crea ficha ni lead) y exige un **422** de plataforma,
+  que es la prueba de que el reenvío llega. Regla pura y testeada en `lib/monitoring/canario-lead.ts`
+  con TRES estados: 503/502/404/200 = 🔴 roto · 429 o sin llegar = 🟠 «no lo sé», nunca verde. Telegram
+  `correduria.canario-lead` (máx. 1 cada 6 h, anti-spam sobre `telegram_avisos_log`) y latido
+  `canario_lead_web` dado de alta en el vigía. PR #2453.
+
 - **🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo (06/09/2026).**
   `review` no es una cola de revisión manual sino una cuarentena automática, y a Occident no le entraba
   ni la mitad de los recibos. Motivo real (`operational_events`): `sin_poliza_en_cartera`. De las 20
