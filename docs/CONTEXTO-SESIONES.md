@@ -39,6 +39,19 @@
   que nunca arrancó (`list_workflow_jobs` → 0 jobs, necesita head nuevo) · run en cola.
   `list_workflow_runs` por rama fue la lectura más fresca las tres veces. Escrito en `CLAUDE.md`
   (DECIMOCUARTA + paso 0 del orden). Cierra el «no lo meto hasta separarlas» de la entrada anterior.
+- **👀 «No aparecen siniestros ni recibos» en el portal: NO era un bug, era el alcance (06/09/2026).**
+  Alberto lo vio en «Seguros que te han autorizado a ver». Medido: hay **UNA sola autorización en
+  todo el sistema y su alcance es `ver`** (el más bajo), y `TARJETA` tiene `recibos: false`,
+  `siniestros: false` y `prima: false`. Los recibos SÍ existen (1-2 por póliza) y siniestros hay
+  **cero** en esas cuatro. Subir a `ver_economico` enseñaría los recibos; **los siniestros no, nunca**
+  — `NUNCA_A_UN_TERCERO` los capa aunque el alcance suba, con su razón escrita: «un siniestro abierto
+  es un hecho de la vida del otorgante, no un dato del contrato». Y la ficha **no pinta** un «no
+  visible» a propósito: decírselo a un tercero ya le cuenta que existe algo.
+  ✅ Lo que SÍ era un fallo y se arregló: **dos hogar de Occident salían como filas idénticas**
+  («Occident · Hogar» + misma segunda línea), porque sin bien que enseñar el título se cae a
+  `compañía · ramo` y a un tercero la dirección se le capa. Ahora desempata el **número de póliza**,
+  que ya se servía desde el nivel más bajo y no abre nada nuevo. Cepo con sus tres mutaciones vistas
+  en rojo: `test/regression-portal-fila-distinguible.test.ts`.
 
 - **📮 Canario del formulario público: que no vuelva a morir en silencio (06/09/2026).** Tras arreglar
   el 503 (#2442), el agujero de fondo seguía abierto: cuando ese formulario se rompe **no deja rastro**
