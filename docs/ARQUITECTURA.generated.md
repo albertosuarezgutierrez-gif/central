@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-05T15:41:12Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-06T20:45:05Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/09/2026) 🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo
+- (06/09/2026) 🔖 La bóveda ya dice POR QUÉ está vacía, y «51 invitables» era falso
+- (06/09/2026) 🏠 La dirección buena ya estaba en casa: en la LÁPIDA de la fusión
+- (06/09/2026) ✏️ Corregir teléfonos y correos, donde SE LEEN
+- (06/09/2026) 💀 El formulario de la web de la correduría estaba MUERTO: «no podemos recoger tu solicitud»
 - (06/09/2026) 🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE
 - (06/09/2026) 🚨 CIMA entra, pero los SINIESTROS no llegan a la cartera desde el 02/07
 - (06/09/2026) 🔌 34 de 80 clientes entrarían al portal y verían la pantalla VACÍA
 - (06/09/2026) 📉 Mapfre: 64 de 110 pólizas vivas congeladas desde junio, y el borrador ya está escrito
 - (06/09/2026) 👀 Dos reglas de método nuevas, las dos de fallos medidos hoy
-- (06/09/2026) 🔢 `CLAUDE.md` citaba 12 apps en la matriz de typecheck y son 13
-- (06/09/2026) 🫧 Una burbuja `fixed` NO desborda: se pone encima — y `scrollWidth` no la delata
-- (06/09/2026) 📉 Mapfre no es que «nunca entrara» por CIMA: entró 14 veces y lleva 75 días callada
-- (06/09/2026) ✍️ El hero de la correduría pasa a primera persona, y el cepo del copy ya barre la portada
-- (06/09/2026) 🔎 Estudio de competencia de la correduría: el rival más caro es no llamar a los tuyos
 
