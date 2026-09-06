@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE (06/09/2026).** Alberto:
+  «no ha respondido el agente, ¿no?». Sí respondió — a él: la reserva 154375571 (House Sevillana) preguntó
+  por bares el 05/09 a las 15:42 y el agente propuso borrador por Telegram (msg 4087, `fuente:web`, así que
+  `apoyada_en_fuente=false` y no auto-envía: regla correcta). Nadie le dio a ✅ Enviar y **nada lo reclamaba**:
+  `barrerUltimoRecurso` solo actúa sobre urgencias NOCTURNAS. Nuevo barrido de PENDIENTES RANCIOS
+  (`rancio.ts` puro + `rancio-guardia.ts`, en el sondeo de 3 min): a 45 min de ATENCIÓN (la noche no cuenta)
+  recordatorio con botones; a 3 h, acuse al huésped de que se está mirando. Un cierre de conversación no da
+  ningún peldaño. Migración `2026-09-06_pendientes_rancios.sql` APLICADA. ⚠️ Aparte: el msg auto-enviado
+  anterior (id 142) dijo «Puerta de Jerez, 10 min andando» y House Sevillana está en C/ Socorro 24 (~25 min).
+
 - **🚨 CIMA entra, pero los SINIESTROS no llegan a la cartera desde el 02/07 (06/09/2026).** Se fue a
   comprobar si la ingesta estaba muerta (el adaptador Java vive en la cuenta de Fly de Manuel) y la
   respuesta es que NO: último fichero el **05/09 09:12**, Occident `C0468`. Lo roto es lo siguiente:
