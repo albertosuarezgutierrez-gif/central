@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-06 · facturas-correo** · hizo: pasada diaria completa. Salud Vía B OK (última copia
+  2026-09-05, 1 día); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`. Paso 4.0
+  (barrido `v_facturas_sin_cargo`): las 9 filas siguen `revisada_sin_cargo` (Petroprix ago,
+  Pepephone ene-jun, CREATE-Socorro dup, Giraldillo may) — nada nuevo que investigar. Candidato
+  único del correo: recibo Anthropic Ireland (Max plan, 180,00€, pagado 05/09) → `seguros`
+  (correduría, regla ya sembrada) → archivado en Drive `09-Septiembre-2026/2026-09-05_anthropic_180.00EUR.pdf`
+  (creada la carpeta del mes, no existía) + fila en `facturas_drive`; cargo bancario aún sin entrar
+  (`movimiento_id` NULL, pendiente próxima pasada). Hilo etiquetado `Facturas/Procesada`. Resto de
+  candidatos del query eran mensajes de huéspedes de Booking y un ticket de soporte Smoobu, no
+  facturas → descartados sin tocar. `agente_salud` actualizado (`ok=true`, `dias_caido=1`).
+  dudas: —; fallos: —; PRs/commits: —.
+
 - **2026-09-05 · conectores-vigia** · hizo: primera pasada real (antes solo sembrado a mano);
   confirmó que la rutina corre sin ningún conector adjunto (`enabledInChat:false` en los ~30 de la
   cuenta) → el Paso 3 (canario) es estructuralmente imposible desde aquí, documentado en
