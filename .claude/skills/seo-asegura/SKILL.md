@@ -24,8 +24,17 @@ las **Fases 3 y 4** de `docs/ASEGURA-MARKETING-PLAN.md`, que es su fuente de ver
 2. **El copy no promete precio.** Nada de «ahorra», «el más barato», «garantizamos el mejor
    precio», ni superlativos de precio. No es estilo: un texto así convierte la web en
    **asesoramiento** y arrastra análisis objetivo + IPID (RDL 3/2020, arts. 11 y 17). Lo vigila
-   `apps/asegura-web/lib/ramos.test.ts`, que barre todas las páginas. Si tu texto pone ese test en
-   rojo, **el texto está mal, no el test**.
+   `apps/asegura-web/lib/ramos.test.ts`. Si tu texto pone ese test en rojo, **el texto está mal,
+   no el test**.
+
+   🚨 **Y ojo con lo que ese cepo cubre, porque hasta el 06/09/2026 aquí ponía «barre todas las
+   páginas» y era MENTIRA: solo miraba `RAMOS`.** El copy de la portada —el hero, la sección del
+   corredor, el bloque del formulario— estaba sin vigilar, que es justo donde más tira la tentación
+   comercial y lo que más gente lee: un «ahorra hasta un 30 %» escrito en el hero habría llegado a
+   producción con los 12 checks en verde. Se amplió en el PR #2421 para barrer también los fuentes
+   de `app/` y `components/`, quitando comentarios antes (para que un aviso que NOMBRA lo prohibido
+   no dispare el cepo), y **se comprobó fallando** antes de darlo por bueno. La frase de arriba ya
+   es cierta; no la conviertas otra vez en un deseo recortando el barrido.
 3. **Nunca tarificas.** Avant2 cuesta **0,50 € por consulta y no es idempotente** (un reintento =
    otro cargo). Ninguna página, ningún botón y ninguna idea de contenido de esta skill dispara una
    tarificación. Se capta con **información**, no con un precio.
@@ -97,6 +106,14 @@ No cinco a medias. Por orden de retorno (§3 del plan):
 - **Cita la ley cuando la haya** (art. 22 LCS para el preaviso, RDL 3/2020 para la mediación): es
   lo que distingue un texto de corredor de un texto de comparador, y es lo que Google premia en
   YMYL. Verifica el artículo antes de citarlo — una cita inventada cuesta más que no citar.
+- **La voz de la home es PRIMERA PERSONA, y el nombre no se teclea** (decidido el 06/09/2026, PR
+  #2421). El hero explicaba lo que la correduría *es* («Somos correduría, no compañía…») y
+  enumeraba cinco ramos de un tirón, así que no priorizaba ninguno; ahora abre por el momento del
+  visitante —el parte— y lo firma `MEDIADOR.identidad.nombre`, que es el mismo dato del pie legal
+  y de la credencial. Es lo único que un comparador no puede copiar, así que **no lo vuelvas a
+  pluralizar ni escribas el nombre a mano**: dos copias del nombre es una copia de más. La
+  prioridad de ramo la marca la rejilla de la home, que abre por hogar y comunidades — el orden
+  que justifica `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`.
 - **Sin foto ni caso de un cliente real** (regla 4).
 
 ### 4. Verifica ANTES de dar nada por hecho
@@ -108,9 +125,11 @@ node --test lib/*.test.ts        # ramos (copy), contrato-lead, analitica, porta
 pnpm exec tsc --noEmit
 ```
 
-`lib/ramos.test.ts` en rojo = el copy promete precio. `lib/contrato-lead.test.ts` en rojo = la
-lista de ramos de la web ya no coincide con la que acepta plataforma, y el visitante elegiría uno
-que se rechaza con un 422: **un lead perdido sin que nada falle**.
+`lib/ramos.test.ts` en rojo = el copy promete precio — mira si el fallo apunta a un ramo o a un
+fichero de `app/`/`components/`, que son dos barridos distintos dentro del mismo test.
+`lib/contrato-lead.test.ts` en rojo = la lista de ramos de la web ya no coincide con la que acepta
+plataforma, y el visitante elegiría uno que se rechaza con un 422: **un lead perdido sin que nada
+falle**.
 
 ### 5. Informa corto y deja rastro
 
