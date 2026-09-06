@@ -59,6 +59,17 @@
   vencimiento— sigue apagado. ⏳ Pendiente de Alberto: recoger los 29 correos (no lo arregla el
   código) y la idea nueva de invitar a un conocido desde `/correduria` para que aporte sus pólizas.
 
+- **🔢 `CLAUDE.md` citaba 12 apps en la matriz de typecheck y son 13 (06/09/2026).**
+  Salió al reproducir los checks en local sobre `main` ya consolidado (13/13 typechecks, suite
+  completa, QA y build en verde). Falta `asegura-web`, que entró en la matriz al crearse la app el
+  04/09. No es cosmético: ese párrafo es la RECETA de verificar en local, así que quien la siga se
+  deja fuera justo la app que no miró — la misma familia que los 15 días de `housesevillana` sin
+  typecheck. El apartado ya avisaba de que la cifra «se ha quedado corta dos veces»; van tres, así
+  que ahora la vigila `test/regression-matriz-typecheck.test.ts`: la fuente de verdad es el WORKFLOW
+  y el doc se compara contra él. ⚠️ Ese cepo **casi nace verde**: buscaba los nombres en TODO el
+  documento y pasaba con `asegura-web` borrado de la lista, porque la app tiene su propio apartado.
+  Solo se vio al probarlo fallando. PR #2434.
+
 - **🫧 Una burbuja `fixed` NO desborda: se pone encima — y `scrollWidth` no la delata (06/09/2026).**
   Alberto mandó una foto de `grupoasegura.es` en su móvil (que de paso CIERRA la duda de si el dominio
   sirve el build nuevo: sí) y en ella los dos botones flotantes —WhatsApp a la derecha, cookies a la
