@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔍 Auditoría ligera (06/09/2026): el webhook de Codeoscopic lleva desde el 04/09 rechazando
+  webhooks reales, y `apps/asegura/CLAUDE.md` seguía diciendo lo contrario.** Rango: 50 commits del
+  05/09 (correduría/asegura-web casi entero). Hallazgo 🔴 sin PR de código posible desde este repo:
+  `packages/module-seguros/src/ingesta.ts` documentó el 04/09 que Codeoscopic manda webhooks reales
+  cada ~30 min y **todos se rechazan** (array vs objeto); el latido `correduria_ingesta` lo sigue
+  reportando hoy (23 rechazos/24h) y no hay ninguna ruta en este repo que reciba ese webhook — lo
+  recibe el CRM de Manuel, fuera de este monorepo. Corregido el texto stale de `apps/asegura/CLAUDE.md`
+  («SIN ESTRENAR, no roto»); el fix real es acción manual de Alberto con Manuel. PR carril-2 con el
+  informe completo (heartbeat, pricing, backlog de PRs) en `docs/AUDITORIA-2026-09.md`. Sin
+  acceso a `list_sessions` en este entorno: no se pudo cruzar conversaciones sin commit.
+
 - **📇 Correduría: se pueden CORREGIR teléfonos y emails, y la ficha deja de afirmar provincias falsas (05/09/2026).** Alberto, desde el móvil: «no puedo modificar movil ni mails» y «a Manuel Piña Franco también le sale Tarragona». Dos fallos: (1) la pestaña Contactos dejaba añadir/borrar/hacer principal pero NO cambiar un valor — `cambiarContacto` acepta ahora `valor` (recifra + recalcula índice ciego + re-espeja la columna), el `col:telefono` del volcado se baja antes a la hija, la regla de duplicados sale a `duplicadoContacto()` compartida con el alta, y el editor —que vive a pantalla y media en móvil— se abre con un botón desde la tira de arriba; (2) el sitio se pintaba con un `join`: «41807 34304, Tarragona» = CP de Espartinas + id de población del CRM viejo + provincia falsa. Medido sobre 31.809 fichas vivas: **473 con provincia que contradice al CP** (386 «Tarragona» con CP 41xxx, todas `intranet:` de mayo, ninguna de CIMA), 455 con número en `ciudad`, 602 con el CP sin el cero. `leerSitio()` (puro, 8 tests) no afirma lo que se contradice y lo explica; **no sustituye** la provincia por la del CP (el equivocado puede ser cualquiera de los dos). PR #2410. **Pendiente:** lote SQL para corregir esas 473 y fusionar el duplicado de Manuel Antonio Piña Franco (la ficha buena dice ESPARTINAS/Sevilla) — con OK de Alberto.
 
 - **🏷️ Compañías del muro y el ramo que llegaba mal etiquetado (05/09/2026).** Alberto, viendo la web

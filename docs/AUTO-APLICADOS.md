@@ -13,6 +13,14 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-06** · `docs/CONTEXTO-SESIONES.md`, `docs/AUDITORIA-2026-09.md` · entrada nueva (rango 50
+  commits del 05/09, casi todo correduría/asegura-web) + sección "Pasada ligera — 06/09/2026" con
+  heartbeat, pricing SIVRA, backlog de PRs y el hallazgo del webhook de Codeoscopic · pasada ligera
+  diaria, rango desde la pasada del 04/09 · commit de esta auditoría. **Nota:** por el harness de esta
+  sesión (rama única asignada, sin permiso para empujar a `main` ni crear otra rama), este cambio va
+  en el mismo PR que el fix de `apps/asegura/CLAUDE.md` (carril 2) en vez de en un PR de registro
+  separado auto-mergeable — desviación del procedimiento habitual, declarada aquí.
+
 - **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40
