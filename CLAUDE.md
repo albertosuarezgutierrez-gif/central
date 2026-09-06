@@ -239,6 +239,43 @@ Al construir cualquier aviso a un tercero (limpieza, gestoría, huésped, conduc
 ## Estilo de respuesta — regla global permanente
 **Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
 
+## 👀 Mira los PRs ABIERTOS antes de empezar — regla global permanente
+**Varias sesiones trabajan en este repo a la vez y no se ven entre sí.** Todas empujan con la
+cuenta de Alberto, así que un PR abierto por otra sesión es indistinguible de uno tuyo, y nadie te
+avisa de que el trabajo que vas a hacer ya está hecho y esperando.
+
+Antes de ponerte con algo que no sea trivial: **lista los PRs abiertos** (`list_pull_requests`,
+`state: open`) y mira si alguno toca lo mismo. Cuesta una llamada.
+
+Caso fundacional (06/09/2026): el PR #2319, abierto desde el 05/09, ya corregía «la matriz son 12
+apps» → 13 en `CLAUDE.md`. Sin mirarlo, esta sesión volvió a encontrar el mismo fallo y abrió el
+#2434 con la misma corrección — trabajo duplicado y, de propina, un conflicto textual metido en el
+PR ajeno. Lo caro no fue el rato perdido: fue dejar peor un PR que ya estaba bien.
+
+Corolario para los PRs de otras sesiones: **mirarlos no es mergearlos.** Lo que solo cuenta lo que
+pasó (`docs/**` de registro) se mergea; lo que le dice a un agente qué hacer o toca código, no —
+es la misma línea que ya traza `.github/workflows/rutinas-automerge.yml`.
+
+## 🪤 Un cepo no está terminado hasta que se le ha visto FALLAR — regla global permanente
+**Escribir el test y verlo verde no prueba nada: prueba que pasa, no que vigila.** Un guardián que
+mira al sitio equivocado es verde el 100 % de las veces, y por eso es indistinguible de uno que
+funciona hasta el día que hacía falta. Es el mismo fallo que `CLAUDE.md` ya prohíbe aguas arriba
+(«un check que se pone verde porque la consulta no devolvió nada es el fallo más caro que hay»),
+un piso más abajo.
+
+Por eso: **rompe a propósito lo que el cepo dice proteger, comprueba que se pone rojo, y restaura.**
+Un brazo por aserción, no uno por fichero. Y pega la salida del rojo en el PR: es la única prueba
+de que el cepo existe.
+
+Tres casos el mismo día (06/09/2026), todos verdes mirando donde no era:
+- La comprobación de responsive midió `scrollWidth` y dijo «no desborda». Cierto e inútil: lo que
+  tapaba el texto era un elemento `position: fixed`, que **no desborda, se pone encima** (PR #2428).
+- `regression-matriz-typecheck` buscaba cada nombre de app en TODO `CLAUDE.md` y pasaba con
+  `asegura-web` borrado de la lista, porque la app tiene su propio apartado más arriba. Se acotó a
+  la lista que declara ese párrafo (PR #2434).
+- Tres PRs de registro parecían tocar código en `get_files`: era el `base.sha` viejo que GitHub
+  guarda para el PR, no el diff real. El de tres puntos contra `main` decía otra cosa.
+
 ## 🤖 Trabajo mecánico → SIEMPRE a un agente — regla global permanente
 **Todo lo MECÁNICO se delega a un subagente (`Task`), nunca se hace en la sesión principal.** Cada archivo
 que lee la sesión principal se queda en su contexto para siempre; un agente lo lee, hace el trabajo y

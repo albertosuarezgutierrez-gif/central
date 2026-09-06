@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/09/2026) 🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE
 - (06/09/2026) 🚨 CIMA entra, pero los SINIESTROS no llegan a la cartera desde el 02/07
 - (06/09/2026) 🔌 34 de 80 clientes entrarían al portal y verían la pantalla VACÍA
+- (06/09/2026) 📉 Mapfre: 64 de 110 pólizas vivas congeladas desde junio, y el borrador ya está escrito
+- (06/09/2026) 👀 Dos reglas de método nuevas, las dos de fallos medidos hoy
 - (06/09/2026) 🔢 `CLAUDE.md` citaba 12 apps en la matriz de typecheck y son 13
 - (06/09/2026) 🫧 Una burbuja `fixed` NO desborda: se pone encima — y `scrollWidth` no la delata
 - (06/09/2026) 📉 Mapfre no es que «nunca entrara» por CIMA: entró 14 veces y lleva 75 días callada
 - (06/09/2026) ✍️ El hero de la correduría pasa a primera persona, y el cepo del copy ya barre la portada
 - (06/09/2026) 🔎 Estudio de competencia de la correduría: el rival más caro es no llamar a los tuyos
-- (06/09/2026) 📅 mercado-booking: jul/ago-2027 siguen cumpliendo, y la línea PRIORIDAD sigue sin quitarse
-- (06/09/2026) ✅ MEDIDOS los dos arreglos del 05/09: los dos funcionan
-- (05/09/2026) 📇 Correduría: se pueden CORREGIR teléfonos y emails, y la ficha deja de afirmar provincias falsas
 

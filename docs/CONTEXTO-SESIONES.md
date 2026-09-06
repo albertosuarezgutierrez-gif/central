@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✏️ Corregir teléfonos y correos, donde SE LEEN (06/09/2026).** Alberto: «revisa modificar datos, no
+  funciona y el diseño es muy malo… hasta creas otra cosa, ocupa más pantalla». Las dos quejas eran la misma
+  causa. **Medido, no supuesto:** 0 filas `historial_interno` de tipo `contacto` en 4 días (476 de otros
+  tipos en esa ventana), ninguna fila hija nueva, backend desplegado y **sin errores de runtime** en
+  `/api/correduria/cliente/contactos` → **la petición nunca llegó a salir**. La acción existía y estaba
+  enterrada: el ✏️ vivía dentro del desplegable «Editar datos del cliente», que monta ~1.115px de formularios
+  de dirección e identidad, y **repintaba los contactos por segunda vez** en la misma pestaña. Ahora se
+  corrige en la tira de chips (`ContactosFicha.tsx`, interruptor «Corregir» DENTRO de la tira — en la
+  cabecera del bloque envolvía a 390px y la subía de 20 a 64px) y el formulario de abajo se queda con lo que
+  de verdad es un formulario. Medido a 390px: tarjeta 256→204px y la lista duplicada 251→0px.
+
 - **💀 El formulario de la web de la correduría estaba MUERTO: «no podemos recoger tu solicitud» (06/09/2026).**
   Alberto lo vio en su móvil en `grupoasegura.es`. Ese texto es único y solo lo emite UNA rama:
   `PLATAFORMA_URL` sin definir en el proyecto Vercel `asegura-web` → 503 **antes** de intentar el reenvío.
@@ -77,6 +88,24 @@
   entregas dentro del spec; el panel nace con UN interruptor porque el único aviso construido —el de
   vencimiento— sigue apagado. ⏳ Pendiente de Alberto: recoger los 29 correos (no lo arregla el
   código) y la idea nueva de invitar a un conocido desde `/correduria` para que aporte sus pólizas.
+
+- **📉 Mapfre: 64 de 110 pólizas vivas congeladas desde junio, y el borrador ya está escrito (06/09/2026).**
+  Re-medido contra `seguros.cima_ficheros` + `seguros.polizas`: C0058 emitió **14 ficheros en cuatro
+  días (20→23/06) y nunca volvió**; las otras tres entidades siguen llegando (Occident ayer). Eso
+  **corrige** el marco de #2425 («funcionaba y se cortó»): la curva encaja con un volcado inicial y un
+  envío recurrente que no llegó a arrancar — otra pregunta, y más fácil de responder. Las 64 pólizas
+  de Mapfre tienen `eiac_xml_hash`, o sea el **58 % de la cartera viva lleva 75 días sin refrescarse**:
+  toda renovación, baja o siniestro posterior al 23/06 es invisible para el libro de comisiones.
+  `docs/ASEGURA-MAPFRE-C0058.md` deja los hechos, las dos consultas para repetirlos y un **borrador
+  para Codeoscopic SIN ENVIAR** (sin PII: solo código de entidad y agregados). PR #2439.
+
+- **👀 Dos reglas de método nuevas, las dos de fallos medidos hoy (06/09/2026).**
+  (1) **Mirar los PRs abiertos antes de empezar**: varias sesiones trabajan a la vez, todas empujan
+  con la cuenta de Alberto y no se ven entre sí. El #2319 llevaba desde el 05/09 corrigiendo lo de las
+  13 apps; esta sesión lo rehízo en el #2434 sin mirar, y encima le metió un conflicto. (2) **Un cepo
+  no está terminado hasta que se le ha visto fallar**: verde solo prueba que pasa, no que vigila.
+  Tres casos el mismo día —`scrollWidth` sobre un `fixed`, el `includes` sobre todo el fichero, y el
+  `base.sha` viejo de `get_files`—, todos verdes mirando al sitio equivocado. PR #2439.
 
 - **🔢 `CLAUDE.md` citaba 12 apps en la matriz de typecheck y son 13 (06/09/2026).**
   Salió al reproducir los checks en local sobre `main` ya consolidado (13/13 typechecks, suite

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { IdCard, KeyRound, Mail, MapPin, Pencil, Phone, Star, Users } from 'lucide-react'
 import { etiquetaRol, leerSitio, textoReparoSitio, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import Bloque from '../../Bloque'
+import ContactosFicha from '../../ContactosFicha'
 import BotonWhatsapp from '../../BotonWhatsapp'
 import EditarCliente from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
@@ -143,9 +144,14 @@ export default function TabContactos({ ficha, personas }: {
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)' }}>
       {/* A quién se llama, en una línea. Es lo primero porque es a lo que se
           entra: leer un teléfono y marcarlo. */}
-      <Bloque primero titulo="Teléfonos, correos y dirección" Icono={Phone}>
-        <Contacto contactos={ficha.contactos} contacto={ficha.contacto} />
-      </Bloque>
+      <ContactosFicha
+        clienteId={ficha.id}
+        inicial={ficha.contactos}
+        espejo={espejoDe(ficha.contacto, ficha.contactos)}
+        cifradoEnEspejo={ficha.contacto.telefonoIlegible || ficha.contacto.emailIlegible}
+      >
+        <Direccion c={ficha.contacto} />
+      </ContactosFicha>
 
       {/* Si entra —o puede entrar— a ver sus seguros por su cuenta. Va aquí y no
           en otra pestaña porque la respuesta depende de lo de arriba: sin correo
@@ -193,124 +199,16 @@ function abrirEditor() {
 }
 
 /**
- * La tira de contacto: lo que se LEE de la ficha, sin el formulario que lo
- * edita (ese vive plegado abajo, en `EditarCliente`, que sigue siendo el dueño
- * de la escritura). Aquí no se toca nada: son enlaces `tel:`/`mailto:` y el
- * botón de WhatsApp, cada uno con su área táctil de 44px.
- *
- * Los tres estados de `contactos` NO se colapsan:
- *   `null` → asegura no manda el bloque o su consulta falló. Se dice, y se
- *            pinta lo único que sí ha llegado: el principal espejado en la
- *            ficha (`clientes.telefono/email`).
- *   `[]`   → se ha mirado y no hay ninguno.
- *   lista  → los que hay, con ⭐ el principal.
- * Y un contacto GUARDADO pero cifrado («la clave PII no lo abre») no es un
- * contacto que falte: se pinta en hueco, porque se arregla en otro sitio.
+ * El principal espejado en `clientes.telefono/email`, que es lo ÚNICO que hay
+ * cuando la lista de contactos no se ha podido leer. Con la lista delante NO se
+ * mezcla: el principal ya está dentro, y pintarlo aparte lo duplicaría.
  */
-function Contacto({ contactos, contacto }: {
-  contactos: ContactosCliente | null
-  contacto: ContactoFicha
-}) {
-  const lista = contactos === null ? [] : [...contactos.telefonos, ...contactos.emails]
-  // Con la lista ilegible, el espejo de la ficha es lo único que hay. Cuando SÍ
-  // llega la lista no se mezcla: el principal ya está dentro, y pintarlo aparte
-  // lo duplicaría.
-  const espejo = contactos === null
-    ? [
-        contacto.telefono && { tipo: 'telefono' as const, valor: contacto.telefono },
-        contacto.email && { tipo: 'email' as const, valor: contacto.email },
-      ].filter((x): x is { tipo: 'telefono' | 'email'; valor: string } => Boolean(x))
-    : []
-  const cifradoEnEspejo = contacto.telefonoIlegible || contacto.emailIlegible
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
-      {contactos === null && (
-        <p style={{ margin: 0, fontSize: 12, lineHeight: 1.5, color: 'var(--muted)' }}>
-          No se han podido leer los teléfonos y correos de esta ficha (asegura no manda el bloque o su
-          consulta falló). <strong>No significa que no tenga.</strong>
-          {espejo.length > 0 && ' Lo de abajo es el principal espejado en la ficha, no la lista entera.'}
-          {' '}Se puede añadir uno igualmente abajo, en «Editar datos del cliente».
-        </p>
-      )}
-
-      {lista.length + espejo.length > 0 ? (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', minWidth: 0 }}>
-          {lista.map(c => <Chip key={c.id} c={c} />)}
-          {espejo.map(e => (
-            <Chip
-              key={`espejo-${e.tipo}`}
-              c={{ id: `espejo-${e.tipo}`, tipo: e.tipo, valor: e.valor, ilegible: false, etiqueta: null, principal: true, creado: '' }}
-            />
-          ))}
-        </div>
-      ) : contactos !== null && (
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-          Ninguno en la ficha (se ha mirado).
-          {cifradoEnEspejo && ' Hay uno guardado cifrado que asegura no puede abrir con la clave que tiene.'}
-        </p>
-      )}
-
-      <Direccion c={contacto} />
-
-      <div>
-        <button type="button" onClick={abrirEditor} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
-          <Pencil size={14} strokeWidth={1.75} aria-hidden /> Modificar teléfonos, correos y dirección
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/** Un teléfono o un correo, con lo que se hace con él: marcar, WhatsApp o escribir. */
-function Chip({ c }: { c: ContactoCliente }) {
-  const esTel = c.tipo === 'telefono'
-  const Icono = esTel ? Phone : Mail
-  // `sm` por el padding (7×12 en vez de 11×16: es lo que permite que dos o tres
-  // quepan en una fila de móvil), pero con los 44px táctiles de la regla
-  // responsive — el rótulo es el dato, así que `btnIcono` no sirve aquí.
-  const base: React.CSSProperties = {
-    ...btnStyle('secundario', 'sm'),
-    minHeight: 44, maxWidth: '100%', minWidth: 0,
-    whiteSpace: 'normal', textAlign: 'left', fontWeight: 500,
-  }
-
-  if (c.valor === null) {
-    return (
-      <span
-        style={{ ...base, borderStyle: 'dashed', borderColor: 'var(--muted)', color: 'var(--muted)', cursor: 'help' }}
-        title={c.ilegible
-          ? 'Está guardado pero cifrado con una clave que asegura no puede abrir (PII_ENCRYPTION_KEY). No se ha borrado: sigue en la ficha.'
-          : 'La ficha tiene la fila pero sin valor.'}
-      >
-        <Icono size={14} strokeWidth={1.75} aria-hidden />
-        {c.ilegible ? 'cifrado' : 'sin valor'}
-      </span>
-    )
-  }
-
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, maxWidth: '100%', minWidth: 0 }}>
-      <a
-        href={esTel ? `tel:${c.valor.replace(/\s/g, '')}` : `mailto:${c.valor}`}
-        style={{ ...base, textDecoration: 'none' }}
-        title={esTel ? `Llamar al ${c.valor}` : `Escribir a ${c.valor}`}
-      >
-        {c.principal && (
-          <Star size={12} strokeWidth={2} fill="currentColor" aria-label="Principal" style={{ flex: '0 0 auto' }} />
-        )}
-        <Icono size={14} strokeWidth={1.75} aria-hidden style={{ flex: '0 0 auto' }} />
-        <span style={{ overflowWrap: 'anywhere', minWidth: 0 }}>{c.valor}</span>
-        {c.etiqueta && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{c.etiqueta}</span>}
-      </a>
-      {/* Solo si el número es un móvil: lo decide `urlWhatsapp`, no esta pantalla.
-          SIN `compacto`: los 32px son para cuando va incrustado en un renglón de
-          texto denso (la cabecera). Aquí es una acción por derecho propio al lado
-          de un chip que ya mide 44, así que no hay renglón que partir y se queda
-          el área táctil completa. */}
-      {esTel && <BotonWhatsapp telefono={c.valor} />}
-    </span>
-  )
+function espejoDe(c: ContactoFicha, contactos: ContactosCliente | null): { tipo: 'telefono' | 'email'; valor: string }[] {
+  if (contactos !== null) return []
+  return [
+    c.telefono && { tipo: 'telefono' as const, valor: c.telefono },
+    c.email && { tipo: 'email' as const, valor: c.email },
+  ].filter((x): x is { tipo: 'telefono' | 'email'; valor: string } => Boolean(x))
 }
 
 /** Dónde vive. La calle va cifrada en la BD: «no se puede leer» ≠ «no consta». */
@@ -538,7 +436,6 @@ function Editor({ ficha }: { ficha: Ficha }) {
   const [montado, setMontado] = useState(false)
 
   const huecos: string[] = []
-  if (ficha.contactos === null) huecos.push('teléfonos y correos')
   if (ficha.identidad === null) huecos.push('identidad')
   if (ficha.documentos === null) huecos.push('documentación')
   if (ficha.contacto.direccionIlegible) huecos.push('dirección (cifrada)')
@@ -556,8 +453,8 @@ function Editor({ ficha }: { ficha: Ficha }) {
         }}
       >
         <IdCard size={15} strokeWidth={1.75} aria-hidden />
-        <span style={{ fontSize: 14, fontWeight: 700 }}>Editar datos del cliente</span>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>teléfonos y correos · dirección · identidad</span>
+        <span style={{ fontSize: 14, fontWeight: 700 }}>Editar dirección e identidad</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>dirección · identidad</span>
         {huecos.length > 0 && (
           <Badge tono="aviso" title={`No se ha podido leer: ${huecos.join(' · ')}. No es que la ficha no lo tenga.`}>
             {huecos.length === 1 ? `sin leer: ${huecos[0]}` : `${huecos.length} datos sin leer`}
@@ -569,7 +466,6 @@ function Editor({ ficha }: { ficha: Ficha }) {
         <div style={{ marginTop: 14 }}>
           <EditarCliente
             clienteId={ficha.id}
-            contactos={ficha.contactos}
             identidad={ficha.identidad}
             contacto={ficha.contacto}
             documentos={ficha.documentos}
