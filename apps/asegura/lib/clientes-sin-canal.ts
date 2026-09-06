@@ -100,6 +100,7 @@
 // aunque el envío luego falle. La pantalla lo dice; no se disfraza de garantía.
 
 import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
+import { prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 /** Tope de filas leídas. La cartera viva son decenas, no miles: si algún día se
@@ -135,6 +136,22 @@ export type EstadoCanal =
   | 'solo_telefono'
   | 'solo_email'
   | 'con_ambos'
+
+/**
+ * ¿Este cliente verá su cartera al entrar al portal? Es una pregunta DISTINTA
+ * de `EstadoCanal`, que responde si se le puede escribir.
+ *
+ * 🚨 Los dos ejemplos que obligaron a separarlas, los dos reales en esta
+ * cartera: alguien con teléfono y sin correo sale «Solo teléfono» —cierto— y
+ * verá una bóveda vacía; y alguien cuyo correo es el principal de OTRA ficha
+ * sale «Localizable» —perfectamente cierto para escribirle— y no se vinculará
+ * jamás. `contactoEfectivo()` no tiene ningún concepto de unicidad y no debe
+ * tenerlo: dice de dónde sale el contacto, no a quién identifica.
+ *
+ * `null` no está en esta union: se representa fuera, en el campo, y significa
+ * «no se ha podido mirar» (lista truncada o consulta caída). Nunca «puede».
+ */
+export type EstadoPortalCliente = 'puede_entrar' | 'sin_email' | 'ambiguo' | 'resuelve_a_otra'
 
 /** Una ficha de persona localizable que aparece en las pólizas del cliente.
  *  El nombre viene de `clientes`, que está EN CLARO; nunca de un interviniente. */
@@ -173,6 +190,13 @@ export type ClienteCanal = {
   fichasContacto: FichaContacto[]
   /** Las de `contactoDeAllegados`, con su parentesco. */
   fichasAllegado: FichaAllegado[]
+  /**
+   * Si entrará y verá su cartera. `null` = **no se ha podido comprobar**
+   * (lista truncada, o la consulta del índice ciego falló): jamás se colapsa a
+   * `puede_entrar`, que sería prometer que la invitación va a funcionar sin
+   * haberlo mirado.
+   */
+  portal: EstadoPortalCliente | null
   estado: EstadoCanal
   /** Pólizas por CIMA de este cliente (siempre ≥ 1: por eso está en la lista). */
   polizasCima: number
@@ -213,6 +237,14 @@ export type ClientesSinCanal = {
      *  siendo ilocalizables, pero no hay nada que avisarles: separarlos es la
      *  diferencia entre una lista de llamadas y una lista de nombres. */
     ilocalizablesSinRenovacion: number | null
+    /**
+     * 🚨 La segunda cifra de la pantalla: cuántos entrarían al portal y NO
+     * verían sus pólizas. `null` = no comprobado. Se cuenta sobre TODOS los
+     * clientes vivos, no sobre `filas`: alguien con email y teléfono es
+     * `con_ambos` y hoy no sale en la lista, y aun así su correo puede llevar
+     * a otra ficha.
+     */
+    noVenSuCartera: number | null
   }
   truncado: boolean
 }
@@ -222,6 +254,7 @@ type FilaSql = {
   nombre: string
   tiene_email: boolean
   tiene_telefono: boolean
+  email_hashes: unknown
   canal_en_poliza: number
   contacto_de_otros: number
   fichas_contacto: unknown
@@ -325,13 +358,56 @@ function leerAllegados(v: unknown): FichaAllegado[] {
   return out
 }
 
+/** Los hashes que trae una fila, ya deduplicados por la SQL. */
+function hashesDeFila(v: unknown): { hash: string; principal: boolean }[] {
+  if (!Array.isArray(v)) return []
+  const out: { hash: string; principal: boolean }[] = []
+  for (const x of v) {
+    if (typeof x !== 'object' || x === null) continue
+    const o = x as Record<string, unknown>
+    if (typeof o.hash === 'string' && o.hash !== '' && typeof o.principal === 'boolean') {
+      out.push({ hash: o.hash, principal: o.principal })
+    }
+  }
+  return out
+}
+
+/**
+ * De todos los correos conocidos de un cliente, ¿alguno le lleva a SU ficha?
+ *
+ * 🚨 Lectura OPTIMISTA a propósito: basta con que UNO le identifique. Es la
+ * pregunta de esta pantalla —«¿hay forma de que este cliente entre y vea lo
+ * suyo?»— y por eso puede diferir de `estadoPortalDeFicha()`, que evalúa la
+ * ÚNICA dirección a la que escribiríamos. Por eso cada fila enlaza a su ficha:
+ * la respuesta por dirección concreta vive allí, no aquí. Colapsar las dos
+ * preguntas en una haría que la lista prometiera lo que el botón de invitar no
+ * puede cumplir.
+ *
+ * El orden de los desenlaces importa: `ambiguo` gana a `resuelve_a_otra` porque
+ * es el que Alberto puede arreglar sin llamar a nadie.
+ */
+function estadoPortalDeCliente(
+  clienteId: string,
+  hashes: readonly { hash: string; principal: boolean }[],
+  porHash: Map<string, Candidato[]>,
+): EstadoPortalCliente {
+  if (hashes.length === 0) return 'sin_email'
+  let hayAmbiguo = false
+  for (const h of hashes) {
+    const p = prediccionDeVinculo(porHash.get(h.hash) ?? [], clienteId)
+    if (p === 'invitable') return 'puede_entrar'
+    if (p === 'ambiguo') hayAmbiguo = true
+  }
+  return hayAmbiguo ? 'ambiguo' : 'resuelve_a_otra'
+}
+
 export async function clientesSinCanal(correduriaId: string): Promise<ClientesSinCanal> {
   const vacio: ClientesSinCanal = {
     filas: [],
     resumen: {
       vivos: null, conEmail: null, conTelefono: null, conAlguno: null,
       sinNinguno: null, ilocalizables: null, rescatables: null,
-      ilocalizablesSinRenovacion: null,
+      ilocalizablesSinRenovacion: null, noVenSuCartera: null,
     },
     truncado: false,
   }
@@ -413,6 +489,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       b.nombre,
       b.tiene_email,
       b.tiene_telefono,
+      coalesce(hs.email_hashes, '[]'::jsonb) as email_hashes,
       coalesce(w.canal_en_poliza, 0) as canal_en_poliza,
       coalesce(w.contacto_de_otros, 0) as contacto_de_otros,
       coalesce(w.fichas_contacto, '[]'::jsonb) as fichas_contacto,
@@ -517,12 +594,70 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
         order by o.id, r.tipo_relacion
       ) y
     ) rl on true
+    -- Los hashes del índice ciego de ESTE cliente, con su procedencia. Es lo
+    -- único que hace falta para saber si su correo le identifica; el correo en
+    -- claro no se lee aquí y NO sale de esta función.
+    left join lateral (
+      select jsonb_agg(jsonb_build_object('hash', z.h, 'principal', z.principal)) as email_hashes
+      from (
+        select b_h.h, bool_or(b_h.principal) as principal
+        from (
+          select c2.email_lookup_hash as h, true as principal
+          from clientes c2 where c2.id = b.id and c2.email_lookup_hash is not null
+          union all
+          select e.email_lookup_hash, false
+          from cliente_emails e where e.cliente_id = b.id and e.email_lookup_hash is not null
+        ) b_h
+        group by b_h.h
+      ) z
+    ) hs on true
     order by b.nombre
     limit ${LIMITE + 1}
   `
 
   const truncado = filas.length > LIMITE
   const leidas = truncado ? filas.slice(0, LIMITE) : filas
+
+  // Quién MÁS reclama esos hashes. Va en UNA consulta para toda la lista: por
+  // cliente serían 80 idas y vueltas para responder una pregunta que se
+  // contesta con un solo barrido.
+  //
+  // ⚠️ Se busca en TODA la base, no solo en esta correduría, por lo mismo que
+  // lo hace el portal: si el mismo correo vive en otra ficha, el empate existe
+  // igual y no verlo sería predecir mejor de lo que la realidad va a ser.
+  const hashesPorFila = new Map(leidas.map((f) => [f.cliente_id, hashesDeFila(f.email_hashes)]))
+  const todosLosHashes = [...new Set([...hashesPorFila.values()].flat().map((h) => h.hash))]
+
+  let porHash: Map<string, Candidato[]> | null = new Map()
+  if (todosLosHashes.length > 0) {
+    try {
+      const duenos = await db.$queryRaw<{ hash: string; cliente_id: string; principal: boolean }[]>`
+        select h as hash, cliente_id::text as cliente_id, bool_or(principal) as principal
+        from (
+          select c.email_lookup_hash as h, c.id as cliente_id, true as principal
+          from clientes c
+          where c.email_lookup_hash = any(${todosLosHashes}) and c.merged_into_cliente_id is null
+          union all
+          select e.email_lookup_hash, e.cliente_id, false
+          from cliente_emails e
+          join clientes c2 on c2.id = e.cliente_id and c2.merged_into_cliente_id is null
+          where e.email_lookup_hash = any(${todosLosHashes})
+        ) t
+        group by h, cliente_id`
+      const acc = new Map<string, Candidato[]>()
+      for (const d of duenos) {
+        const lista = acc.get(d.hash) ?? []
+        lista.push({ clienteId: d.cliente_id, correduriaId, principal: d.principal })
+        acc.set(d.hash, lista)
+      }
+      porHash = acc
+    } catch (e) {
+      // `null` = no se ha podido mirar. Con un Map vacío, TODOS saldrían
+      // `resuelve_a_otra`: una alarma inventada sobre datos que no se leyeron.
+      console.error('[sin-canal] no se pudieron leer los duenos de los hashes:', e instanceof Error ? e.message : e)
+      porHash = null
+    }
+  }
 
   const todos: ClienteCanal[] = leidas.map((f) => {
     const tieneEmail = f.tiene_email === true
@@ -540,6 +675,12 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
       contactoDeAllegados,
       fichasContacto: leerFichas(f.fichas_contacto),
       fichasAllegado: leerAllegados(f.fichas_allegado),
+      // Truncada la lista, el estado del portal tampoco se afirma: se calcularía
+      // sobre un universo de fichas incompleto y podría decir «puede entrar» de
+      // alguien cuyo homónimo se quedó fuera del corte.
+      portal: truncado || porHash === null
+        ? null
+        : estadoPortalDeCliente(f.cliente_id, hashesPorFila.get(f.cliente_id) ?? [], porHash),
       estado: estadoCanal(tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros, contactoDeAllegados),
       polizasCima: f.polizas_cima,
       polizasQueRenuevan: Number.isFinite(f.polizas_que_renuevan) ? f.polizas_que_renuevan : 0,
@@ -560,7 +701,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
     ? {
         vivos: null, conEmail: null, conTelefono: null, conAlguno: null,
         sinNinguno: null, ilocalizables: null, rescatables: null,
-        ilocalizablesSinRenovacion: null,
+        ilocalizablesSinRenovacion: null, noVenSuCartera: null,
       }
     : {
         vivos: todos.length,
@@ -573,10 +714,16 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
         ilocalizablesSinRenovacion: todos.filter(
           (c) => c.estado === 'sin_ninguno' && c.polizasQueRenuevan === 0,
         ).length,
+        noVenSuCartera: todos.filter((c) => c.portal !== null && c.portal !== 'puede_entrar').length,
       }
 
   return {
-    filas: ordenarPorUrgencia(todos.filter((c) => c.estado !== 'con_ambos')),
+    // 🚨 La lista ya no es solo «le falta un canal»: también entra quien NO
+    // verá su cartera aunque tenga correo Y teléfono. Sin esto, el titular
+    // diría «5 no verán sus pólizas» y abajo no habría ni una fila que abrir.
+    filas: ordenarPorUrgencia(
+      todos.filter((c) => c.estado !== 'con_ambos' || (c.portal !== null && c.portal !== 'puede_entrar')),
+    ),
     resumen,
     truncado,
   }

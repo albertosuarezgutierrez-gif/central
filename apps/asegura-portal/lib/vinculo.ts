@@ -38,6 +38,42 @@ export async function vincularIdentidad(
   destino: string,
   tipo: 'email' | 'whatsapp' = 'email',
 ): Promise<ResultadoVinculo> {
+  const r = await intentarVinculo(identidadId, destino, tipo)
+  await sellarVinculo(identidadId, r.estado)
+  return r
+}
+
+/**
+ * Deja constancia de cómo salió el intento. Best-effort a propósito: el vínculo
+ * ya está hecho (o no), y un sello caído no puede deshacerlo ni convertirlo en
+ * un fallo de login. Lo único que se pierde es que /boveda diga el motivo.
+ *
+ * 🚨 Se sella SIEMPRE, también en `ok`. Un sello que solo se escribiera en los
+ * casos malos dejaría a quien se vinculó bien con el estado viejo de un intento
+ * anterior, y la bóveda le explicaría un problema que ya no tiene.
+ */
+async function sellarVinculo(identidadId: string, estado: EstadoVinculo): Promise<void> {
+  try {
+    await prisma.portalIdentidad.update({
+      where: { id: identidadId },
+      data: { ultimoVinculo: estado, ultimoVinculoEn: new Date() },
+    })
+  } catch (e) {
+    console.error('[portal/vinculo] no se pudo sellar el estado:', e instanceof Error ? e.message : e)
+  }
+}
+
+/**
+ * El intento en sí, sin el sello. Se separa para que `vincularIdentidad` tenga
+ * UN solo punto de salida donde sellar: con el `update` repartido por los seis
+ * `return` de aquí abajo, cualquier rama nueva se olvidaría de sellar y la
+ * bóveda seguiría enseñando el estado del intento anterior sin que falle nada.
+ */
+async function intentarVinculo(
+  identidadId: string,
+  destino: string,
+  tipo: 'email' | 'whatsapp' = 'email',
+): Promise<ResultadoVinculo> {
   // Un teléfono es un hogar, no una persona: no se busca siquiera. Cuando el
   // spec fije cómo se desambigua (DNI verificado, elección revisada por el
   // corredor) entrará aquí como rama propia; hoy es `sin_ficha` a propósito.
