@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✅ MEDIDOS los dos arreglos del 05/09: los dos funcionan (06/09/2026).** Ya no es «razonado», es dato.
+  **Vigía de agentes:** `agente_veredicto` tiene **33 filas**, todas con `evaluado_at` de la pasada de
+  hoy (07:45:23 UTC), 2 en alerta y 0 sondas rotas — y **cero** runtime errors en
+  `/api/cron/agentes-latido` en 24 h, donde antes había ~30 diarios. `agente_salud` sigue intacta con
+  su fila de facturas. Las 2 alertas son reales y ya estaban declaradas pendientes: `ses_transporte`
+  (sin establecimientos; hoy manda Chekin, hasta el 06/10) y `sivra_domotica_acceso` (cerradura de
+  Bustos Tavera sin conexión, Tuya 2001/1109, hasta el 12/09).
+  **Modo noche:** hubo caso real la primera noche — Mafalda (154265696) escribió a las **23:19** hora
+  de Madrid, el mensaje escaló y **el acuse salió a las 23:19:34**. Escribió tres veces más (23:22,
+  23:30, 23:31) y el acuse NO se repitió: la guarda de uno por noche y reserva hizo su trabajo.
+  `urgente_nocturno=false` (preguntaba por aparcamiento, no era urgencia) y por eso `ultimo_recurso_at`
+  quedó NULL: no se la derivó al portal, que es lo correcto.
+  🔍 **A mirar, ajeno a esto:** esas 4 filas de `mensajes_log` en 12 min repiten pregunta («Hola,
+  AlbertoZ» a las 23:19 y a las 23:30) y la última salió con `respuesta` vacía. Puede ser el huésped
+  escribiendo dos veces o un reproceso del sondeo; **no se ha determinado** y no se toca sin mirarlo.
+
 - **📇 Correduría: se pueden CORREGIR teléfonos y emails, y la ficha deja de afirmar provincias falsas (05/09/2026).** Alberto, desde el móvil: «no puedo modificar movil ni mails» y «a Manuel Piña Franco también le sale Tarragona». Dos fallos: (1) la pestaña Contactos dejaba añadir/borrar/hacer principal pero NO cambiar un valor — `cambiarContacto` acepta ahora `valor` (recifra + recalcula índice ciego + re-espeja la columna), el `col:telefono` del volcado se baja antes a la hija, la regla de duplicados sale a `duplicadoContacto()` compartida con el alta, y el editor —que vive a pantalla y media en móvil— se abre con un botón desde la tira de arriba; (2) el sitio se pintaba con un `join`: «41807 34304, Tarragona» = CP de Espartinas + id de población del CRM viejo + provincia falsa. Medido sobre 31.809 fichas vivas: **473 con provincia que contradice al CP** (386 «Tarragona» con CP 41xxx, todas `intranet:` de mayo, ninguna de CIMA), 455 con número en `ciudad`, 602 con el CP sin el cero. `leerSitio()` (puro, 8 tests) no afirma lo que se contradice y lo explica; **no sustituye** la provincia por la del CP (el equivocado puede ser cualquiera de los dos). PR #2410. **Pendiente:** lote SQL para corregir esas 473 y fusionar el duplicado de Manuel Antonio Piña Franco (la ficha buena dice ESPARTINAS/Sevilla) — con OK de Alberto.
 
 - **🏷️ Compañías del muro y el ramo que llegaba mal etiquetado (05/09/2026).** Alberto, viendo la web
