@@ -7,6 +7,8 @@
 // difícil de saltarse sin darse cuenta.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { RAMOS, ramoPorSlug, type Ramo } from './ramos.ts'
 
 /** Todo el texto visible de un ramo, en una sola cadena, para barrerlo. */
@@ -88,5 +90,43 @@ test('title y description caben en la SERP sin cortarse a mitad de palabra', () 
 test('el h1 nombra la ciudad', () => {
   for (const r of RAMOS) {
     assert.match(r.h1, /Sevilla/i, `${r.slug}: el h1 no nombra Sevilla`)
+  }
+})
+
+// ── El mismo cepo, sobre el copy que NO vive en `RAMOS` ─────────────────────
+//
+// 🚨 Este fichero se describía como el guardián que «barre todas las páginas»,
+// y no era verdad: solo miraba `RAMOS`. El texto de la portada —el hero, la
+// sección del corredor, el bloque del formulario— estaba SIN vigilar, que es
+// justo donde acabaría un «ahorra hasta un 30 %» si alguien lo escribe: es el
+// sitio con más tentación comercial de toda la web y el que más gente lee.
+//
+// Barre el fuente en vez del HTML renderizado por lo mismo que `portal.test.ts`:
+// ni `tsc` ni `next build` miran lo que dice un párrafo, y montar un render
+// para leer un texto cuesta más de lo que este cepo vale.
+const RAIZ = join(import.meta.dirname, '..')
+
+function fuentesTsx(dir: string, acc: string[] = []): string[] {
+  for (const e of readdirSync(dir)) {
+    const p = join(dir, e)
+    if (statSync(p).isDirectory()) fuentesTsx(p, acc)
+    else if (/\.tsx?$/.test(e) && !/\.test\.tsx?$/.test(e)) acc.push(p)
+  }
+  return acc
+}
+
+/** Sin comentarios: un aviso que NOMBRA lo prohibido no puede disparar el cepo. */
+function sinComentarios(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+}
+
+test('el copy de las páginas (fuera de RAMOS) tampoco promete ahorros ni precios', () => {
+  const fuentes = [...fuentesTsx(join(RAIZ, 'app')), ...fuentesTsx(join(RAIZ, 'components'))]
+  assert.ok(fuentes.length > 0, 'no se ha encontrado ni un fuente que barrer: el guardián estaría en verde mirando al vacío')
+  for (const f of fuentes) {
+    const src = sinComentarios(readFileSync(f, 'utf8'))
+    for (const { patron, porque } of PROHIBIDO) {
+      assert.ok(!patron.test(src), `${f}: ${porque} → ${patron}`)
+    }
   }
 })

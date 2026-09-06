@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✍️ El hero de la correduría pasa a primera persona, y el cepo del copy ya barre la portada (06/09/2026).**
+  Se aplica el ángulo que dejó abierto el estudio (#2419): el hero explicaba lo que la correduría **es**
+  («Somos correduría, no compañía») y listaba cinco ramos de un tirón, así que no priorizaba ninguno.
+  Ahora abre por el momento del visitante y el nombre sale de `MEDIADOR`, no tecleado — es lo único que
+  un comparador no puede copiar. La sección `#corredor` deja de repetirlo y se queda con lo comprobable.
+  🚨 **Hallazgo de paso:** `lib/ramos.test.ts` se describía como el guardián que «barre todas las
+  páginas» y **solo miraba `RAMOS`** — el hero, que es donde acabaría un «ahorra un 30 %», estaba sin
+  vigilar. Ampliado a `app/` y `components/`, y **probado fallando** antes de darlo por bueno. PR #2421.
+
 - **🔎 Estudio de competencia de la correduría: el rival más caro es no llamar a los tuyos (06/09/2026).**
   Alberto, viendo ya la web en el móvil: «los textos no me gustan, la introducción» + «hay mucha
   competencia con el tema de las compañías». Antes de tocar copy se hizo el estudio, y lo que sale
