@@ -324,9 +324,17 @@ utilizable). Reglas que no se negocian al tocar esto:
 - ⚠️ **`expires_at` llegó a NULL en los 15 precios reales: no sabemos cuánto vale una cotización.**
   Mientras siga así, **un precio ya pagado NO se puede reutilizar** para ahorrarse los 0,50€ — no hay
   forma de saber si sigue vigente. Capturar la caducidad es requisito de cualquier plan de caché.
-- 🔬 **El webhook está SIN ESTRENAR, no roto.** Los dos eventos con `project_not_found` de la BD de
-  Manuel son smoke tests con ids inventados (`999999`, `smoke-fix-webhook`); Codeoscopic no ha
-  enviado nunca uno real, porque solo los dispara al emitir. No se pierda tiempo «arreglando» eso.
+- 🚨 **CORREGIDO (06/09/2026): el webhook NO está sin estrenar — está roto, y sigue rechazando hoy.**
+  Los dos `project_not_found` de la BD de Manuel son smoke tests, pero eso no significa que Codeoscopic
+  nunca haya llamado de verdad. Medido en `seguros.operational_events` (`packages/module-seguros/src/ingesta.ts`,
+  hallazgo del 04/09/2026): Codeoscopic lleva mandando webhooks reales cada ~30 min —autenticado, desde
+  su IP— y **todos se rechazan** por una diferencia de FORMA (mandan un array donde el validador espera
+  un objeto). El propio latido `correduria_ingesta` lo sigue reportando cada pasada (23 rechazos/24h
+  el 06/09). El receptor real de ese webhook **no vive en este repo** (no hay ninguna ruta
+  `route.ts` bajo `apps/asegura` ni `apps/plataforma` que escriba `codeoscopic_webhook_invalid_payload`
+  en `operational_events`): es el CRM de Manuel el que lo recibe y escribe el evento en la BD
+  compartida. El fix del validador de forma toca ESE repo, fuera de este monorepo — acción manual
+  de Alberto, no un PR de aquí.
 
 ### El cuerpo de la petición se valida GRATIS antes de gastar
 

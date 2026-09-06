@@ -126,4 +126,73 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 (septiembre sigue abierto).
 
 ---
-<!-- verificado: 2026-09-04 -->
+
+## ✅ Pasada ligera — 06/09/2026
+
+**Rango:** 50 commits del 05/09 completo (`723091c`→`55a241f`), casi todo `apps/asegura` /
+`apps/asegura-portal` / `apps/asegura-web` (correduría: contactos editables, provincia vs CP,
+supresión/acceso RGPD, hoja QR, muro de compañías) + rediseño completo de `asegura-web`. Nota: una
+pasada **profunda** ya corrió hoy a las 02:25 UTC (PR #2412, otro trigger) — esta es la ligera diaria.
+
+### 🔴 Hallazgo: el webhook de Codeoscopic sigue rechazando webhooks reales, y el doc lo negaba
+`packages/module-seguros/src/ingesta.ts:64-77` documentó el 04/09/2026 que Codeoscopic manda webhooks
+autenticados cada ~30 min y que **todos se rechazan** por forma (mandan un array, el validador espera
+un objeto). El latido `correduria_ingesta` de hoy 06:45 lo sigue reportando: **23 rechazos en 24h**
+(`codeoscopic_webhook_invalid_payload`). `apps/asegura/CLAUDE.md:327-329` seguía afirmando «el webhook
+está SIN ESTRENAR, no roto» — stale desde el 04/09, corregido en este PR. **No hay código que arreglar
+en este repo:** ninguna ruta de `apps/asegura` ni `apps/plataforma` escribe ese evento; lo recibe y
+registra el CRM de Manuel (fuera de este monorepo), que apunta a la misma BD compartida. Acción manual
+de Alberto: coordinar con Manuel el fix del validador (aceptar el array, o que Codeoscopic mande
+objeto).
+
+### 🟡 Backlog de PRs de rutinas (2-ter): un registro atascado, un draft cerca del umbral
+- **PR #2318** (registro carril-1, no-draft, del 05/09 08:10): `mergeable_state: dirty` (conflicto en
+  `docs/CONTEXTO-SESIONES.md`/`docs/AUDITORIA-2026-09.md`/`docs/AUTO-APLICADOS.md`, que `main` avanzó
+  muchísimo desde entonces). Lleva **~24h sin mergear**. `rutinas-automerge.yml` está vivo (decenas de
+  runs/hora, última 06:03 UTC hoy) pero no ha dejado el comentario de "no puedo resolver" que describe
+  su propio diseño — no se ha intentado recientemente sobre esta rama. Contenido superado por esta
+  misma pasada (ya cubre el rango 04→05/09). **Recomendado: que Alberto lo cierre** en vez de arreglar
+  el conflicto a mano sobre contenido ya redundante.
+- **PR #2327** (registro carril-1, draft, bitácora `facturas-correo` 05/09): `mergeable_state:
+  blocked`, ~23h sin mergear — bajo el umbral de 24h pero a vigilar en la próxima pasada; podría ser
+  el patrón de CI muda en draft ya documentado en `CLAUDE.md` §CI.
+- Resto sano: #2412/#2413 (drafts de hoy, <1 día), #2407/#2322/#2262 verdes esperando revisión humana
+  (no son registro, no les toca automerge).
+
+### Heartbeat de crons/agentes (2-bis) — sin `⛔` nuevos
+30 filas en `agente_latidos`. `ses_transporte` (`ok=false`) y `sivra_domotica_acceso` (`ok=false`,
+115,4h sin OK) son las dos decisiones YA tomadas por Alberto el 04/09 («déjalo rojo»,
+`apps/plataforma/lib/monitoring/latidos.ts:290-292,541-543`) — no son hallazgo nuevo. Sí a vigilar:
+`sivra_domotica_acceso` **empeoró de 3 a 4 cerraduras en ERROR** desde el 04/09 (detalle de hoy: «4
+con ERROR (Tuya 1109, 2001)») — la decisión de Alberto se tomó viendo 3, no 4; puede merecer una
+revisión si sigue subiendo. `trading_h10`/`paper-tracker` en ~143h son cadencia normal (H10 fue un
+análisis puntual ya cerrado el 01/09; paper-tracker es semanal, cron lunes). `agente_reparaciones`:
+sin intentos en 7 días.
+
+### 🛡️ Salud de la correduría (2-quater, obligatorio) — el hallazgo 🔴 ya descrito arriba aparte
+CIMA sigue latiendo (`cima_pull_completed` real más reciente 05/09 09:12, dentro de umbral de 30h
+aunque sin evento aún hoy en el momento de la consulta ~08h UTC — a revisar la próxima pasada si
+persiste). Mapfre (C0058) sigue el patrón YA vigilado por `silencio-entidad.ts` (74→75 días,
+documentado y con detector propio desde el 05/09 — no es hallazgo nuevo). Codeoscopic: 0 cotizaciones
+en 7 días (dato real, count directo). §21 sigue pausada a propósito.
+
+### 💰 Salud del precio SIVRA (2bis, obligatorio) — sin 🔴
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · `oscilantes=4` (bajo) · última
+pasada hace 2,5h con 36 noches escritas. Palancas: los 4 pisos `enabled`/`apply_enabled=true`,
+`min_price` puesto, `antelacion_k=0` — sin palancas apagadas en silencio.
+
+### Reconciliación memoria/skills — corregido `apps/asegura/CLAUDE.md`, resto ya autodocumentado
+Las 50 sesiones del 05/09 se autodocumentaron extensamente en `docs/CONTEXTO-SESIONES.md` (patrón
+memoria+CLAUDE.md de la app en el mismo PR, visible en #2381/#2394/#2399/#2408/#2410). `docs/SKILLS.md`
+ya lista `seo-asegura` (PR #2397). Único drift encontrado: la afirmación stale sobre el webhook de
+Codeoscopic (ver hallazgo 🔴). ⚠️ **No se pudo listar sesiones** (herramienta no disponible en este
+entorno): no se cruzaron conversaciones sin commit contra memoria/PR — no se afirma que no haya
+pendientes perdidos, solo que no se ha podido mirar. `docs/HUECOS-ABIERTOS.md` y frescura de
+`FUENTES-DE-VERDAD.md` no revisados línea a línea esta pasada ligera (reservado a la profunda, que ya
+corrió hoy).
+
+### Manuales de usuario — nada que tocar
+Ningún commit del rango toca `apps/ia-rest/**`.
+
+---
+<!-- verificado: 2026-09-06 -->
