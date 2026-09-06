@@ -31,19 +31,16 @@
 > registro de qué se hizo y qué queda.
 
 - **🔖 La bóveda ya dice POR QUÉ está vacía, y «51 invitables» era falso (06/09/2026).** Entrega 1 de
-  «que vean su cartera» (PR #2440). `/boveda` no puede recalcular el vínculo —no hay email en claro,
-  solo un hash con pimienta propia—, así que se sella en el canje del código
-  (`portal_identidad.ultimo_vinculo`, DDL aplicada) y se sella SIEMPRE, también en `ok`. Tres textos
-  donde había uno: al `ambiguo` NO se le puede decir «no hemos encontrado ninguna póliza» (sí se ha
-  encontrado, en dos fichas), y `sin_clave`/`error` es problema nuestro — eso solo se decía en la
-  entrada, y quien vuelve con la sesión viva de 30 días no lo veía nunca.
-- **Medido contra la BD: 46 puede_entrar / 29 sin correo / 5 `resuelve_a_otra` / 0 ambiguos** (80
-  vivos). Los 5 se contaban como invitables: son el caso peor (entra y ve la bóveda de OTRO, sin
-  error) y se arreglan resolviendo el duplicado, no pidiéndole el correo. Corregido en dos CLAUDE.md
-  y en `invitacion-portal.ts`. ⚠️ Tres de los cinco cepos que escribió el plan **no mordían** (uno
-  comprobaba que la llamada al sello existiera, no que fuera incondicional); reescritos y verificados
-  con tres mutaciones. ⚠️ Y `cliente_emails.es_principal` NO entra en el desempate: portal y corredor
-  lo ignoran igual, pero honrarlo movería **42 de 80** a `ambiguo` — anotado, sin tocar.
+  «que vean su cartera» (PR #2440). `/boveda` no puede recalcular el vínculo —no hay email en claro—,
+  así que se sella en el canje del código (`portal_identidad.ultimo_vinculo`, DDL aplicada) y se sella
+  SIEMPRE, también en `ok`. Tres textos donde había uno: al `ambiguo` NO se le puede decir «no hemos
+  encontrado ninguna póliza» (sí se ha encontrado, en dos fichas), y `sin_clave`/`error` es problema
+  nuestro — eso solo se decía en la entrada, y quien vuelve con la sesión viva de 30 días no lo veía.
+  Medido contra la BD: **46 puede_entrar / 29 sin correo / 5 `resuelve_a_otra` / 0 ambiguos** sobre 80;
+  los 5 se contaban como invitables y son el caso peor (entra y ve la bóveda de OTRO, sin error).
+  ⚠️ Tres de los cinco cepos del plan **no mordían**; reescritos y verificados con tres mutaciones.
+  ⚠️ `cliente_emails.es_principal` NO entra en el desempate: honrarlo movería 42 de 80 a `ambiguo`.
+
 - **✏️ Corregir teléfonos y correos, donde SE LEEN (06/09/2026).** Alberto: «revisa modificar datos, no
   funciona y el diseño es muy malo… hasta creas otra cosa, ocupa más pantalla». Las dos quejas eran la misma
   causa. **Medido, no supuesto:** 0 filas `historial_interno` de tipo `contacto` en 4 días (476 de otros
