@@ -123,6 +123,16 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   Daniela (Luxury Busto) el agente le AUTO-ENVIÓ que «no podemos atender llegadas entre la 1:00 y las 2:00»
   y que se buscara un hotel la primera noche — se lo inventó porque la política de llegadas tardías no
   estaba en ninguna fuente y dedujo una hora de cierre inexistente a partir de la de entrada.
+- **MODO NOCHE (`noche.ts` — 05/09/2026, PR #2312):** fuera de `HORARIO` (09:00–21:00 Madrid,
+  `esModoNoche()`) el agente sigue auto-enviando lo apoyado en fuente, pero todo lo que ESCALA queda
+  como borrador en Telegram hasta que Alberto lo ve — y sin red de seguridad el huésped no recibía
+  NADA hasta las 09:00 (caso real: Mafalda, Luxury Busto, preguntando a medianoche). Tres peldaños,
+  sin IA (textos fijos, porque la IA/el clasificador pueden estar caídos justo a esa hora): (1) ACUSE
+  de recibo inmediato en el idioma del huésped; (2) si `esUrgenciaNocturna()` detecta acceso/avería,
+  Telegram que despierta a Alberto; (3) a los `MINUTOS_ULTIMO_RECURSO` (15) sin respuesta, se deriva
+  al servicio de atención del portal de reserva (Booking/Airbnb) — ÚLTIMO recurso, nunca sustituto de
+  intentar despertar a Alberto. El modo noche NO redacta ni da autonomía a lo que el sistema marcó
+  `needs_human`.
 - **Early check-in (`disponibilidad.ts`):** es **GRATIS** pero SOLO si la **noche anterior está libre**
   (`nocheAnteriorLibre`; ojo a una reserva que sale el MISMO día → víspera ocupada). `contexto.ts` lo
   consulta en Smoobu (`earlyCheckinPosible`) y `decidir.ts` lo inyecta **SOLO en fase pre-llegada**

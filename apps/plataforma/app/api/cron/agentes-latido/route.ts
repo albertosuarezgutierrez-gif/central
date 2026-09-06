@@ -36,6 +36,13 @@ const PROBES: Record<string, Prisma.Sql> = {
   correduria_siniestros: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_siniestros'`,
+  // Partes del portal sin abrir en la compañía. Misma razón que las dos de arriba: la huella es
+  // la PASADA del vigía (`correduria-partes`), no `seguros.portal_parte_siniestro` — esa tabla
+  // solo crece cuando un cliente da parte, así que un día sin partes nuevos y un cron muerto se
+  // verían igual de silenciosos.
+  correduria_partes: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_partes'`,
   // Pricing: manda el piso MÁS VIEJO, no el max global. Con max(), un solo piso fresco
   // (p.ej. luxury) tapaba que el Dúplex y House Sevillana llevaban 23 días sin estudiar
   // (555 h) → el monitor se callaba. La sonda por-piso (min de los max) delata al rezagado.
