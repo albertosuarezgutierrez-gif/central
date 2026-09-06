@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 CIMA entra, pero los SINIESTROS no llegan a la cartera desde el 02/07 (06/09/2026).** Se fue a
+  comprobar si la ingesta estaba muerta (el adaptador Java vive en la cuenta de Fly de Manuel) y la
+  respuesta es que NO: último fichero el **05/09 09:12**, Occident `C0468`. Lo roto es lo siguiente:
+  **43 ficheros aparcados en `seguros.cima_ficheros` con `estado='review'`** —20 de ellos SIN— y su
+  `error_detalle` dice `0/1 siniestros`, o sea leído y persistido cero. Lo confirma la otra punta: el
+  **último siniestro dado de alta en la cartera es del 02/07/2026** (67 en total), mientras el último
+  SIN *confirmado* es del 08/07. REC y POL sí entran (24/08 y 25/08). ⚠️ Toca al portal: el historial
+  de siniestros que se montó el 05/09 lee esa tabla, así que a un cliente de Occident que diera parte
+  en agosto su ficha le dice «no nos consta ninguno» — frase honesta sobre una tabla congelada. La
+  causa está en el CRM de Manuel (`review` es su cola de revisión manual y nadie la abre); no se tocó
+  nada: es su motor de ingesta. ⏳ Pendiente de Alberto: preguntarle por qué los SIN de C0468 no
+  auto-persisten. Memoria de la sesión anterior mergeada en **#2430** (`995c76b7`).
+
 - **🔌 34 de 80 clientes entrarían al portal y verían la pantalla VACÍA (06/09/2026).** Alberto va a
   repartir accesos a toda la cartera y pidió un panel de configuración de avisos. Antes de diseñarlo se
   midió la BD: el portal vincula por el correo, y de 80 titulares vivos **46 verían su cartera, 29 no
