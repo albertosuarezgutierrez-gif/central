@@ -37,7 +37,7 @@
   pueden recuperar** (en los logs solo queda el contador: buscar `[lead] PLATAFORMA_URL sin configurar`).
   El destino estaba sano (medido: `POST plataforma-ten-flame.vercel.app/api/publico/correduria/lead` → 422).
   Arreglo: defecto REAL en el código, como `SITIO_URL`/`PORTAL_URL`, en vez de `|| ''`; la env sigue mandando.
-  Guardián `lib/canal-lead.test.ts` (defecto no vacío + la ruta destino existe en plataforma). PR #PENDIENTE.
+  Guardián `lib/canal-lead.test.ts` (defecto no vacío + la ruta destino existe en plataforma). PR #2442.
 
 - **🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE (06/09/2026).** Alberto:
   «no ha respondido el agente, ¿no?». Sí respondió — a él: la reserva 154375571 (House Sevillana) preguntó
