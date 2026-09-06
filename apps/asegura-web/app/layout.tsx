@@ -80,6 +80,21 @@ export const metadata: Metadata = {
     siteName: 'Grupo ASegura',
     url: SITIO_URL,
   },
+  // Verificación de Google Search Console.
+  //
+  // Por qué está aquí y no en un fichero suelto: GSC es la ÚNICA fuente de
+  // tráfico sin sesgo que puede tener esta web. PostHog va detrás del
+  // consentimiento de Cookiebot a propósito (`lib/analitica.ts`), así que mide
+  // solo a quien acepta — y «cero visitas medidas» NO es cero visitas, es el
+  // `NULL` que `CLAUDE.md` prohíbe colapsar. Sin GSC no hay forma de saber por
+  // qué consultas entra nadie.
+  //
+  // 🚨 Es `undefined` cuando la env no está, no una cadena vacía: una etiqueta
+  // `<meta content="">` es peor que no ponerla — Google la lee como un intento
+  // de verificación fallido en vez de como una web sin verificar.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+    : {}),
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
