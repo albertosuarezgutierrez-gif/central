@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔎 Estudio de competencia de la correduría: el rival más caro es no llamar a los tuyos (06/09/2026).**
+  Alberto, viendo ya la web en el móvil: «los textos no me gustan, la introducción» + «hay mucha
+  competencia con el tema de las compañías». Antes de tocar copy se hizo el estudio, y lo que sale
+  medido reordena la prioridad: **57 de los 80 clientes tienen auto y NO hogar**, 65 tienen una sola
+  póliza y 72 son de un solo ramo (1,38 pól./cliente). A 68,74€ de comisión el hogar, ese grupo bate
+  en coste por póliza a cualquier campaña. Segundo hallazgo: **Mapfre es el 58 % de la cartera (64
+  pólizas) y no se actualiza desde el 15/07** — de ahí que 55 de 110 figuren «ya vencidas», que es un
+  «no lo sé», no una pérdida: **una campaña de vencimientos hoy le diría «se te vence» a quien renovó**.
+  🚫 El estudio declara lo que NO pudo medir: el contenedor no tiene salida a internet, así que ni una
+  SERP ni un CPC son datos — van marcados [Sector]/[Suposición] frente a [Medido]. Dónde no entrar:
+  auto (comparadores + 40,87€/póliza). Dónde sí: hogar, y sobre todo **comunidades de propietarios**,
+  que no tiene comparador enfrente y se gana visitando administradores de fincas. `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`.
+  **Los textos del hero NO se han tocado**: el estudio deja tres ángulos y los elige Alberto. PR #2419.
+
 - **📅 mercado-booking: jul/ago-2027 siguen cumpliendo, y la línea PRIORIDAD sigue sin quitarse (06/09/2026).**
   Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 239 comps reales en 24 ventanas
   (incluye Campeonato Mundo de Remo 01-03 ago) + 1/4 escaparate (busto_reform; house_sevillana,
