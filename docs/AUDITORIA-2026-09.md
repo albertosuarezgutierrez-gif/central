@@ -126,4 +126,102 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 (septiembre sigue abierto).
 
 ---
-<!-- verificado: 2026-09-04 -->
+
+## 🔬 Pasada PROFUNDA — 06/09/2026 (domingo)
+Última profunda anterior: ~23-29/08/2026 (más de una semana). Rango revisado: commits desde el
+23/08 para memoria/skills, y estado completo del código sin importar rango (typecheck+tests íntegros).
+
+### ✅ Código: TODO VERDE — la pasada más cara sale limpia
+`pnpm install` OK · `pnpm test` en raíz y en los 55 proyectos del monorepo: **0 fallos** (destaca
+plataforma 2570/2570, module-subastas 548/548, module-seguros 469/469, asegura 262/262,
+asegura-portal 141/141) · **13/13 apps de la matriz de `tests.yml` typechequean limpias** (con
+`prisma generate` correcto por app, incluidas las DOS del schema de asegura) · ia-rest:
+`qa-check.ts` sin problemas, lint 0 errores, `next build` OK. No hay ningún error TS, ningún test
+roto y ningún patrón conocido detectado en las 817 archivos de ia-rest. Corrido por agente en
+background; ver el detalle en el propio historial de la sesión.
+
+### 🔴 Heartbeat de agentes (2-bis) — 1 hallazgo NUEVO
+`sivra_eventos_verificar` lleva **68,7 h sin una pasada buena** (umbral diario 30 h) y **no tiene
+`pendienteConocido` declarado** (a diferencia de `ses_transporte` y `sivra_domotica_acceso`, que sí
+siguen dentro de su pendiente vigente y por tanto NO son hallazgo nuevo). Su último `detalle`:
+«1 sin poder verificar (búsqueda caída) · 1 fallos: 2027-06-01: JSON de openrouter no parseable».
+Mientras esté así, los eventos PREVISTOS no caducan ni se confirman: un previsto sin veredicto
+sigue protegiendo el suelo de esa noche indefinidamente. Acción: revisar `/api/sivra/eventos/verificar`
+(presupuesto de la pasarela de búsqueda, claves) — no se toca desde esta pasada por ser diagnóstico,
+no una migración ni un cambio de gran radio.
+
+Resto del registro (32 agentes vigilados): sano. `ses_transporte` y `sivra_domotica_acceso` dentro
+de sus pendientes conocidos (revisarEl 2026-10-06 y 2026-09-12, no vencidos).
+
+**Reconciliación de cobertura:** `correduria_partes` (cron nuevo del 05/09/2026, PR #2313) escribía
+su latido sin estar declarado en `AGENTES_VIGILADOS` ni tener sonda en `PROBES` — un cron que podía
+enmudecer sin que nadie lo notara nunca. **Corregido en esta misma pasada** (`lib/monitoring/latidos.ts`
++ `agentes-latido/route.ts`, mismo patrón que `correduria_siniestros`; 29/29 tests de
+`latidos.test.ts` en verde, incluido el guardián que compara `AGENTES_VIGILADOS` contra `PROBES`).
+
+### 🛡️ Salud de la correduría (2-quater) — sano
+CIMA sigue entrando: último evento `cima_pull_completed` hace ~12 h (dentro del umbral de 30 h),
+131 ficheros acumulados. Gasto Codeoscopic de los últimos 7 días: 0 cotizaciones, 0€ — sin gasto
+fuera de control. `agente_reparaciones`: sin intentos en los últimos 7 días (no hay reparación
+automática en curso que pise el hallazgo de arriba). §21 sigue pausada a propósito.
+
+### 💰 Salud del precio SIVRA (2bis) — sano
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · `oscilantes=3` (bajo). Las 4
+palancas `enabled`/`apply_enabled` en `true`, `min_price` puesto, `antelacion_k=0`.
+`horas_desde_ultima_pasada=11,7h` (por encima del 10h de la tabla) se explica por completo con el
+propio latido `sivra_pricing_apply` (ok, última pasada hace 4,5h con «0 noches escritas» — legítimo,
+nada cruzó el 3%): la métrica de `pricing_applied` solo se actualiza cuando SÍ se escribe una fila,
+así que un par de pasadas seguidas sin cambios alarga el número sin que haya ninguna avería real.
+
+### Backlog de PRs de rutinas + automerge (2-ter)
+`rutinas-automerge.yml` con runs cada 1-2h, vigilante vivo. 6 PRs abiertos; el único que incumplía
+el criterio (**registro-only y >24h sin mergear**) era **#2262** (`trading-analista`, solo
+`docs/AGENTES-BITACORA.md` + `docs/CONTEXTO-SESIONES.md`, draft desde hacía 29,5h con **0 checks
+de los requeridos** — el patrón de «un PR en draft no dispara `pull_request`» de `CLAUDE.md`).
+**Desatascado en esta pasada:** sacado de draft para que `tests.yml`/`ci.yml`/`qa.yml` corran y el
+automerge lo recoja solo. El resto (#2407 código sin draft ~10h, #2327/#2319 draft ~18-19h,
+#2322/#2318 registro ~17-18h) están todos por debajo de los umbrales de alarma.
+
+### Infra (Supabase + Vercel, MCP) — sin sorpresas
+Supabase: `list_projects` solo devuelve `central` (el proyecto viejo sigue borrado, correcto).
+Advisors de seguridad: sin nada en nivel ERROR; en WARN, 4 funciones `seguros.*`
+(`_volcado_verificar`, `cliente_segmento_actual`, `interviniente_purga_log_reject_modification`,
+`_fusion_lote7_tanda`) con `search_path` mutable, `pg_net`/`vector` instaladas en `public` en vez de
+en un schema propio, y `auth_leaked_password_protection` desactivado — los tres son higiene de bajo
+riesgo (sin RLS que sortear en `seguros`, que ya es BYPASSRLS por diseño), se anotan como pendiente
+menor, no se tocan en esta pasada. Vercel: 12 de los 13 proyectos visibles vía MCP; `alquiler` y
+`asegura-web` no aparecen en `list_projects` — limitación YA documentada de la herramienta (ver
+`CLAUDE.md` raíz, 05/09/2026): una lista que no los trae no demuestra que no estén desplegados.
+
+### Reconciliación memoria/skills/docs (paso 4) — hecha por agente en background
+4 ficheros de texto reconciliados y ya commiteados en esta rama: `docs/CONTEXTO-SESIONES.md` (3
+entradas que faltaban: PRs #2297/#2301/#2366), `docs/FUENTES-DE-VERDAD.md` (fila nueva para
+`apps/asegura-web` + skill `seo-asegura`, que no tenían ninguna pese a 39 commits del rango),
+`.claude/skills/sivra-maestro/references/contexto-y-agente-huesped.md` (modo noche del agente de
+huéspedes, PR #2312, que faltaba) y `.claude/skills/agente-correduria/SKILL.md` (cifra de cartera
+viva 109→110 pólizas con la regla de dos brazos `esCarteraViva()`, y `lib/cima.ts` que ya no existe
+en el repo desde el 01/09 pero la skill seguía advirtiendo de él).
+
+`docs/SKILLS.md` y `docs/HUECOS-ABIERTOS.md`: sin discrepancias. `apps/ia-rest`: cero commits en el
+rango, manuales no aplica. Rotación mensual: no aplica (septiembre es el único mes en el archivo
+vivo). Reglas dictadas por Alberto (amortiza/deducible/regla permanente): sin contradicciones.
+
+**🟡 Dos hallazgos de bajo riesgo, sin tocar (decisión de estructura/contenido, no de texto):**
+1. `apps/asegura-web` es la única de las 13 apps sin `CLAUDE.md` propio — su estado vive entero en
+   el `CLAUDE.md` raíz. Vale la pena crear el fichero si la app sigue creciendo al ritmo actual.
+2. El bloque **«Estado vivo»** que la cabecera de `docs/CONTEXTO-SESIONES.md` describe como
+   obligatorio **no existe** en el archivo de septiembre (sí existía en el de agosto). Recrearlo
+   exige decidir qué pendientes reales van dentro — es contenido, no una corrección de texto.
+
+⚠️ Como en la pasada del 04/09, no se pudo listar sesiones remotas para cruzar conversaciones sin
+commit contra memoria/PR (herramienta no adjunta en este entorno).
+
+### Checklist de acciones manuales de Alberto
+- Ninguna acción de infraestructura/BD requerida esta pasada (sin migraciones, sin cortes de env).
+- Revisar por qué `sivra_eventos_verificar` lleva 2,8 días sin verificar ningún evento previsto
+  (presupuesto/clave de la pasarela de búsqueda) — es el único 🔴 de la pasada.
+- Opcional, bajo riesgo: decidir si se crea `apps/asegura-web/CLAUDE.md` y si se recrea el bloque
+  «Estado vivo» de la memoria.
+
+---
+<!-- verificado: 2026-09-06 -->

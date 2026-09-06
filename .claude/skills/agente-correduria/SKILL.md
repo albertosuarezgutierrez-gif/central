@@ -33,9 +33,13 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
 - **NUNCA envíes nada a un cliente, lead, compañía o a Codeoscopic.** Regla global de
   comunicaciones salientes de `CLAUDE.md`: borrador siempre, envía Alberto. Vale también
   para "solo preguntar una duda a soporte".
-- **La cartera viva (32.600 fichas / 28.843 pólizas; VIVA de verdad ~80 clientes / 109
-  pólizas, `polizas.import_ref IS NULL`) está en el schema `seguros` de la BD compartida
-  de central desde el 02/09/2026.** 🚨 **32.600 fichas ≠ 32.600 clientes:** las otras
+- **La cartera viva (32.600 fichas / 28.843 pólizas; VIVA de verdad ~80 clientes / 110
+  pólizas, `esCarteraViva()` de `@central/module-seguros`: `import_ref IS NULL` O
+  `eiac_xml_hash IS NOT NULL`) está en el schema `seguros` de la BD compartida
+  de central desde el 02/09/2026.** ⚠️ `import_ref IS NULL` A SECAS tiene un agujero
+  (medido 03/09/2026): cuando CIMA trae una póliza que ya estaba en el volcado no crea fila
+  nueva, actualiza la vieja y le deja su `import_ref` — el segundo brazo (`eiac_xml_hash`,
+  que solo escribe el pipeline EIAC) lo tapa. 🚨 **32.600 fichas ≠ 32.600 clientes:** las otras
   **28.729** pólizas (32.520 fichas, vencimientos 2013-2018) son volcado histórico y la
   regla de Alberto es «lo que entra por CIMA es cliente actual; el resto son **leads**».
   Nunca informes de la cartera con la cifra grande. Y `import_ref: ''` cuenta como volcado
@@ -71,10 +75,13 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
   «la compañía te debe» se mide contra el BRUTO devengado, no contra lo ingresado.
 - **Los datos de comisiones ya existen parseados, no los re-parsees.** `cuenta_efectivo`,
   `liquidaciones` y `poliza_recibos` (con `prima_neta`, `comision_bruta`, `comision_liquida`,
-  `situacion`) los rellena el **JAR oficial de TIREA** en la BD de la correduría; se leen por
-  `ASEGURA_DATABASE_URL` (SELECT-only). `apps/plataforma/lib/cima.ts` habla SOAP contra un endpoint
-  nunca validado, con parser adivinado y códigos de compañía equivocados (los reales son `C0058`
-  Mapfre, `C0109` Allianz, `C0468` Occident, `C0613` Reale): **no te apoyes en él**.
+  `situacion`) los rellena el **JAR oficial de TIREA** vía el CRM de Manuel (rol `crm_seguros`);
+  se leen del schema `seguros` de central (`prisma_seguros`, `ASEGURA_DATABASE_URL` solo con
+  `ASEGURA_FUENTE=origen`, el camino de vuelta al Supabase congelado de Manuel). Códigos de
+  compañía reales: `C0058` Mapfre, `C0109` Allianz, `C0468` Occident, `C0613` Reale. El viejo
+  `apps/plataforma/lib/cima.ts` (SOAP contra un endpoint nunca validado, con parser adivinado y
+  códigos equivocados) **ya no existe** — se retiró el 01/09/2026 junto con `cima_liquidaciones`
+  (0 filas); el cron `/api/cron/cima-liq` de plataforma habla con el puerto HTTP de `apps/asegura`.
 - **Cobertura DESIGUAL por compañía — no supongas que CIMA lo trae todo (medido 01/09/2026).** Mapfre
   manda recibos pero **ninguna liquidación**; Allianz manda las dos y además un PDF «Cuenta Agente» por
   correo (texto en **EBCDIC**, se decodifica con `cp500`); Occident va por CIMA y lleva meses en **saldo
@@ -144,8 +151,9 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
   de `apps/asegura` (`lib/avisos-vencimiento.ts` + `app/api/cron/avisos-vencimiento/route.ts`), que
   corre con `prisma_seguros` y sí lee `cliente_emails` cifrado. **Está APAGADO**: sin
   `ASEGURA_AVISOS_ACTIVOS === '1'` solo cuenta (`?contar=1` fuerza el ensayo) y sin `CRON_SECRET` no
-  se autoriza a nadie ni en desarrollo. **Antes de proponer encenderlo, cuenta: si no salen ≤109
-  candidatas el filtro no funciona** (serían 28.729 «se te venció el seguro» de pólizas de 2013-2018).
+  se autoriza a nadie ni en desarrollo. **Antes de proponer encenderlo, cuenta: si no salen ≤110
+  candidatas (las pólizas vivas de CIMA, `esCarteraViva()`) el filtro no funciona** (serían 28.729
+  «se te venció el seguro» de pólizas de 2013-2018).
 - 📵 **Y antes de dar por avisado a nadie, mira si hay por dónde.** De los 79 clientes de CIMA:
   **44 con email, 52 con teléfono, 53 con alguno de los dos y 26 con NINGUNO.** Con esos 26 no hay
   forma de comunicarse, y desde el código se ven idénticos a uno al que sí se avisó (regla global

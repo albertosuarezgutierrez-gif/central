@@ -287,6 +287,21 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.correduria_siniestros.',
   },
   {
+    id: 'correduria_partes',
+    vigiladoDesde: '2026-09-05',
+    etiqueta: '🚑 Partes del portal sin abrir en la compañía (cron diario 06:55)',
+    // Diario → 30 h, como el resto de los diarios: un tropiezo pasa, dos días saltan.
+    maxHoras: 30,
+    nota:
+      'Nace del hueco medido el 05/09/2026: el cliente da parte en asegura-portal, la fila entra ' +
+      'en `seguros.portal_parte_siniestro`, asegura la sirve por `/api/operador/partes`… y hasta ' +
+      'este cron nadie avisaba — ni Telegram ni correo, solo se PINTABA en `/correduria` si Alberto ' +
+      'la abría. El plazo del art. 16 LCS (7 días) se consumía en silencio. Lee el `detalle`: ' +
+      '«sin lectura: <causa>» es que el puerto de asegura no respondió (NO es «no hay partes ' +
+      'pendientes»); si el aviso no salió, la firma no se guarda a propósito y vuelve a sonar mañana. ' +
+      'Huella: agente_latidos.correduria_partes.',
+  },
+  {
     id: 'ses_transporte',
     vigiladoDesde: '2026-08-21',
     // Decisión de Alberto (04/09/2026): «déjalo rojo, es un pendiente real». Lo es —la tabla está
