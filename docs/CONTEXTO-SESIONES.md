@@ -77,7 +77,7 @@
   de Mapfre tienen `eiac_xml_hash`, o sea el **58 % de la cartera viva lleva 75 días sin refrescarse**:
   toda renovación, baja o siniestro posterior al 23/06 es invisible para el libro de comisiones.
   `docs/ASEGURA-MAPFRE-C0058.md` deja los hechos, las dos consultas para repetirlos y un **borrador
-  para Codeoscopic SIN ENVIAR** (sin PII: solo código de entidad y agregados). PR #PENDIENTE.
+  para Codeoscopic SIN ENVIAR** (sin PII: solo código de entidad y agregados). PR #2439.
 
 - **👀 Dos reglas de método nuevas, las dos de fallos medidos hoy (06/09/2026).**
   (1) **Mirar los PRs abiertos antes de empezar**: varias sesiones trabajan a la vez, todas empujan
@@ -85,7 +85,7 @@
   13 apps; esta sesión lo rehízo en el #2434 sin mirar, y encima le metió un conflicto. (2) **Un cepo
   no está terminado hasta que se le ha visto fallar**: verde solo prueba que pasa, no que vigila.
   Tres casos el mismo día —`scrollWidth` sobre un `fixed`, el `includes` sobre todo el fichero, y el
-  `base.sha` viejo de `get_files`—, todos verdes mirando al sitio equivocado. PR #PENDIENTE.
+  `base.sha` viejo de `get_files`—, todos verdes mirando al sitio equivocado. PR #2439.
 
 - **🔢 `CLAUDE.md` citaba 12 apps en la matriz de typecheck y son 13 (06/09/2026).**
   Salió al reproducir los checks en local sobre `main` ya consolidado (13/13 typechecks, suite
