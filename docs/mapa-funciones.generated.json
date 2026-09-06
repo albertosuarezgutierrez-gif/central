@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-06T19:07:54Z",
-  "sha": "0f7c766b30e60834a89a46a1146055df07747a7c",
+  "generadoEn": "2026-09-06T19:21:37Z",
+  "sha": "10d8025b1c04c306d31f8ec999e74624ec4ebcf4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -71328,7 +71328,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "esMensajeAutomatico",
@@ -71336,7 +71336,7 @@
           "exportada": false,
           "params": "subject: string, text: string",
           "retorno": "boolean",
-          "linea": 29,
+          "linea": 30,
           "resumen": "Los mensajes del HOST / automáticos de Smoobu/Booking llevan ASUNTO (RECORDATORIO, WHERE TO COLLECT, 📈 Ayúdanos…) o son el aviso \"Check-in online disponible\". Los del HUÉSPED llegan con asunto vacío "
         },
         {
@@ -71345,7 +71345,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Despedidas / cortesías que no necesitan respuesta."
         },
         {
@@ -71354,13 +71354,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 43,
+          "linea": 44,
           "resumen": "Cron (cada 3 min) + red de seguridad del webhook. Sondea los hilos de Smoobu y enruta cada pregunta NUEVA del huésped al agente (propone por Telegram / auto-envía y deja log). Idempotencia por msgId ("
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/mensajes/auto-reply",
-      "hash": "12a2f9f257df"
+      "hash": "fbb82f8ab399"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/diagnostico-guia/route.ts",
@@ -88348,6 +88348,115 @@
       "hash": "cc898b0d653b"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/rancio-guardia.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/rancio-guardia.ts — efectos de los PENDIENTES RANCIOS. (La política —cuánto se espera y qué toca— vive en `rancio.ts`, que es pura y testeada.) Lo llama el sondeo de `/api/sivra/mensajes/auto-reply` (cada 3 min), igual que `barrerUltimoRecurso`. Los dos barridos son hermanos",
+      "exporta": [
+        "barrerPendientesRancios"
+      ],
+      "funciones": [
+        {
+          "nombre": "recorte",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string, n: number",
+          "retorno": "string",
+          "linea": 27
+        },
+        {
+          "nombre": "recordar",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fila, minutos: number",
+          "retorno": "Promise<void>",
+          "linea": 36,
+          "resumen": "Vuelve a poner el borrador delante de Alberto, con los mismos botones que la propuesta original (que a estas alturas ya ha bajado en el hilo de Telegram). Sale por `tgSend*` y NO por `tgAviso*` a prop"
+        },
+        {
+          "nombre": "acusarEspera",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fila, minutos: number",
+          "retorno": "Promise<boolean>",
+          "linea": 61,
+          "resumen": "Peldaño 2: el huésped deja de estar a oscuras. No responde su pregunta (no la sabemos: por eso escaló), solo dice que se está mirando."
+        },
+        {
+          "nombre": "barrerPendientesRancios",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 82,
+          "resumen": "Barrido de PENDIENTES RANCIOS. Solo en horario de atención: de noche manda `noche-guardia`, que ya acusa recibo al escalar y tiene su propio último recurso para las urgencias."
+        }
+      ],
+      "tablas": [
+        "mensajes_pendientes_tg"
+      ],
+      "rutaApi": null,
+      "hash": "d9007e02b52c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/rancio.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/rancio.ts — PENDIENTES RANCIOS (política, pura y testeada). El problema que resuelve (06/09/2026): `modo noche` cubre el silencio de madrugada, pero un borrador que escala EN HORARIO no caduca. Si Alberto no le da a ✅ Enviar, la fila de `mensajes_pendientes_tg` se queda ahí ",
+      "exporta": [
+        "minutosAtencion",
+        "peldanoRancio",
+        "textoEspera"
+      ],
+      "funciones": [
+        {
+          "nombre": "pared",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "",
+          "linea": 44,
+          "resumen": "Instante → { día local, minuto absoluto } en hora de Madrid. El minuto es un reloj de pared monotónico (día × 1440 + hora × 60 + min), lo que permite restar y comparar sin volver a tocar zonas horaria"
+        },
+        {
+          "nombre": "minutosAtencion",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: Date, hasta: Date",
+          "retorno": "number",
+          "linea": 56,
+          "resumen": "Minutos de horario de atención transcurridos entre `desde` y `hasta` (hora de España). Solo suma la franja 09:00–21:00 de cada día; las noches y lo anterior a `desde` no cuentan."
+        },
+        {
+          "nombre": "peldanoRancio",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { minutos: number recordado: boolean acusado: boolean noRequiereRespuesta: boolean }",
+          "retorno": "PeldanoRancio",
+          "linea": 80,
+          "resumen": "¿Qué toca hacer con un pendiente? Un solo peldaño por pasada, y el acuse manda sobre el recordatorio (si llevamos 4 h, lo urgente es que el huésped deje de estar a oscuras). `noRequiereRespuesta` (un "
+        },
+        {
+          "nombre": "normalizarIdioma",
+          "kind": "function",
+          "exportada": false,
+          "params": "lang: string",
+          "retorno": "Idioma",
+          "linea": 93
+        },
+        {
+          "nombre": "textoEspera",
+          "kind": "function",
+          "exportada": true,
+          "params": "lang: string",
+          "retorno": "string",
+          "linea": 111,
+          "resumen": "Acuse de ESPERA (peldaño 2), en el idioma del huésped."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5e626706e5d2"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/recomendar.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/recomendar.ts — recomendaciones de zona por búsqueda web. Intenta /api/ai/search (Gemini, pasarela existente); si no, conocimiento del modelo.",
@@ -88820,7 +88929,7 @@
           "exportada": true,
           "params": "messageId: number | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 174
+          "linea": 175
         },
         {
           "nombre": "confirmarDescartado",
@@ -88828,7 +88937,7 @@
           "exportada": true,
           "params": "messageId: number | null",
           "retorno": "Promise<void>",
-          "linea": 178
+          "linea": 179
         }
       ],
       "tablas": [
@@ -88836,7 +88945,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "374cf955508d"
+      "hash": "f68bf1bbdfd5"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/alertas-autoresolucion.ts",
@@ -123801,7 +123910,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3067,
-    "funciones": 9293
+    "archivos": 3069,
+    "funciones": 9302
   }
 }
