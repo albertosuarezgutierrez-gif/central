@@ -30,6 +30,47 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔎 Estudio de competencia de la correduría: el rival más caro es no llamar a los tuyos (06/09/2026).**
+  Alberto, viendo ya la web en el móvil: «los textos no me gustan, la introducción» + «hay mucha
+  competencia con el tema de las compañías». Antes de tocar copy se hizo el estudio, y lo que sale
+  medido reordena la prioridad: **57 de los 80 clientes tienen auto y NO hogar**, 65 tienen una sola
+  póliza y 72 son de un solo ramo (1,38 pól./cliente). A 68,74€ de comisión el hogar, ese grupo bate
+  en coste por póliza a cualquier campaña. Segundo hallazgo: **Mapfre es el 58 % de la cartera (64
+  pólizas) y no se actualiza desde el 15/07** — de ahí que 55 de 110 figuren «ya vencidas», que es un
+  «no lo sé», no una pérdida: **una campaña de vencimientos hoy le diría «se te vence» a quien renovó**.
+  🚫 El estudio declara lo que NO pudo medir: el contenedor no tiene salida a internet, así que ni una
+  SERP ni un CPC son datos — van marcados [Sector]/[Suposición] frente a [Medido]. Dónde no entrar:
+  auto (comparadores + 40,87€/póliza). Dónde sí: hogar, y sobre todo **comunidades de propietarios**,
+  que no tiene comparador enfrente y se gana visitando administradores de fincas. `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`.
+  **Los textos del hero NO se han tocado**: el estudio deja tres ángulos y los elige Alberto. PR #2412.
+
+- **📅 mercado-booking: jul/ago-2027 siguen cumpliendo, y la línea PRIORIDAD sigue sin quitarse (06/09/2026).**
+  Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 239 comps reales en 24 ventanas
+  (incluye Campeonato Mundo de Remo 01-03 ago) + 1/4 escaparate (busto_reform; house_sevillana,
+  duplex_center y luxury_busto sin disponibilidad en Booking para esas fechas exactas —
+  `escaparateSinRespuesta`, no fallo). Verificado en `/mercado/plan`: jul y ago-2027 YA NO están en
+  `meses_sin_bucket`. **Repite el trabajo del 29/08→05/09**: la sesión sigue sin permiso para
+  escribir el prompt del disparo programado (creado por `http_api`), así que la línea "PRIORIDAD
+  TEMPORAL" sigue viva y cada pasada la vuelve a ejecutar. Pendiente de Alberto, sin cambios.
+
+- **✅ MEDIDOS los dos arreglos del 05/09: los dos funcionan (06/09/2026).** Ya no es «razonado», es dato.
+  **Vigía de agentes:** `agente_veredicto` tiene **33 filas**, todas con `evaluado_at` de la pasada de
+  hoy (07:45:23 UTC), 2 en alerta y 0 sondas rotas — y **cero** runtime errors en
+  `/api/cron/agentes-latido` en 24 h, donde antes había ~30 diarios. `agente_salud` sigue intacta con
+  su fila de facturas. Las 2 alertas son reales y ya estaban declaradas pendientes: `ses_transporte`
+  (sin establecimientos; hoy manda Chekin, hasta el 06/10) y `sivra_domotica_acceso` (cerradura de
+  Bustos Tavera sin conexión, Tuya 2001/1109, hasta el 12/09).
+  **Modo noche:** hubo caso real la primera noche — Mafalda (154265696) escribió a las **23:19** hora
+  de Madrid, el mensaje escaló y **el acuse salió a las 23:19:34**. Escribió tres veces más (23:22,
+  23:30, 23:31) y el acuse NO se repitió: la guarda de uno por noche y reserva hizo su trabajo.
+  `urgente_nocturno=false` (preguntaba por aparcamiento, no era urgencia) y por eso `ultimo_recurso_at`
+  quedó NULL: no se la derivó al portal, que es lo correcto.
+  🔍 **A mirar, ajeno a esto:** esas 4 filas de `mensajes_log` en 12 min repiten pregunta («Hola,
+  AlbertoZ» a las 23:19 y a las 23:30) y la última salió con `respuesta` vacía. Puede ser el huésped
+  escribiendo dos veces o un reproceso del sondeo; **no se ha determinado** y no se toca sin mirarlo.
+
+- **📇 Correduría: se pueden CORREGIR teléfonos y emails, y la ficha deja de afirmar provincias falsas (05/09/2026).** Alberto, desde el móvil: «no puedo modificar movil ni mails» y «a Manuel Piña Franco también le sale Tarragona». Dos fallos: (1) la pestaña Contactos dejaba añadir/borrar/hacer principal pero NO cambiar un valor — `cambiarContacto` acepta ahora `valor` (recifra + recalcula índice ciego + re-espeja la columna), el `col:telefono` del volcado se baja antes a la hija, la regla de duplicados sale a `duplicadoContacto()` compartida con el alta, y el editor —que vive a pantalla y media en móvil— se abre con un botón desde la tira de arriba; (2) el sitio se pintaba con un `join`: «41807 34304, Tarragona» = CP de Espartinas + id de población del CRM viejo + provincia falsa. Medido sobre 31.809 fichas vivas: **473 con provincia que contradice al CP** (386 «Tarragona» con CP 41xxx, todas `intranet:` de mayo, ninguna de CIMA), 455 con número en `ciudad`, 602 con el CP sin el cero. `leerSitio()` (puro, 8 tests) no afirma lo que se contradice y lo explica; **no sustituye** la provincia por la del CP (el equivocado puede ser cualquiera de los dos). PR #2410. **Pendiente:** lote SQL para corregir esas 473 y fusionar el duplicado de Manuel Antonio Piña Franco (la ficha buena dice ESPARTINAS/Sevilla) — con OK de Alberto.
+
 - **🏷️ Compañías del muro y el ramo que llegaba mal etiquetado (05/09/2026).** Alberto, viendo la web
   ya en `grupoasegura.es`: «¿y los logos de más compañías?». En `seguros.companias_dgs` hay 15 filas
   `activa`, pero 10 solo llevan «código verificado en el catálogo de Codeoscopic» — que es

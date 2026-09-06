@@ -262,6 +262,9 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (06/09/2026) ✅ MEDIDOS los dos arreglos del 05/09: los dos funcionan
+- (05/09/2026) 📇 Correduría: se pueden CORREGIR teléfonos y emails, y la ficha deja de afirmar provincias falsas
+- (05/09/2026) 🏷️ Compañías del muro y el ramo que llegaba mal etiquetado
 - (05/09/2026) 🎨 `asegura-web`: una sola atmósfera, no diez bloques
 - (05/09/2026) 📞 `asegura-web`: WhatsApp, y los textos legales que MENTÍAN sobre las cookies
 - (05/09/2026) 🖼 La tarjeta impresa estaba PARTIDA EN DOS, y lo que la protegía era una deny-list
@@ -269,7 +272,4 @@
 - (05/09/2026) 🔑 Invitar a un cliente al portal: el canal entero era invisible
 - (05/09/2026) 📵 El CUARTO sitio donde vive un contacto, y la pestaña Contactos apretada
 - (05/09/2026) 🔍 Agente de SEO y redes para la correduría + backlog medido
-- (05/09/2026) ✉️ «Invitar por correo»: la autorización pendiente ya se la cuenta alguien
-- (05/09/2026) 📊 La web pública ya puede medir, y solo si le dejan
-- (05/09/2026) 📚 Memoria y skill del agente de huéspedes al día + duodécima medición del CI
 
