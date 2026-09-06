@@ -42,7 +42,7 @@
   SERP ni un CPC son datos — van marcados [Sector]/[Suposición] frente a [Medido]. Dónde no entrar:
   auto (comparadores + 40,87€/póliza). Dónde sí: hogar, y sobre todo **comunidades de propietarios**,
   que no tiene comparador enfrente y se gana visitando administradores de fincas. `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`.
-  **Los textos del hero NO se han tocado**: el estudio deja tres ángulos y los elige Alberto. PR #2412.
+  **Los textos del hero NO se han tocado**: el estudio deja tres ángulos y los elige Alberto. PR #2419.
 
 - **📅 mercado-booking: jul/ago-2027 siguen cumpliendo, y la línea PRIORIDAD sigue sin quitarse (06/09/2026).**
   Pasada acotada (`?desde=2027-07-01&hasta=2027-08-31&max=24`): 239 comps reales en 24 ventanas
