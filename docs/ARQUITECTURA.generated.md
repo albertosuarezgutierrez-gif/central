@@ -263,6 +263,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (06/09/2026) 🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo
+- (06/09/2026) 👀 «No aparecen siniestros ni recibos» en el portal: NO era un bug, era el alcance
 - (06/09/2026) 📮 Canario del formulario público: que no vuelva a morir en silencio
 - (06/09/2026) 🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo
 - (06/09/2026) 🔖 La bóveda ya dice POR QUÉ está vacía, y «51 invitables» era falso
@@ -271,5 +272,4 @@
 - (06/09/2026) 💀 El formulario de la web de la correduría estaba MUERTO: «no podemos recoger tu solicitud»
 - (06/09/2026) 🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE
 - (06/09/2026) 🚨 CIMA entra, pero los SINIESTROS no llegan a la cartera desde el 02/07
-- (06/09/2026) 🔌 34 de 80 clientes entrarían al portal y verían la pantalla VACÍA
 

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-06T21:03:35Z",
-  "sha": "08fdbd77d56dc4472acd99fd111f89558396d5d7",
+  "generadoEn": "2026-09-06T22:07:42Z",
+  "sha": "bb019ec738e9ff830fbd458f621bd96ef113cbe6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3461,7 +3461,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4873f4a86705"
+      "hash": "e50e5fe40460"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/HojasQr.tsx",
