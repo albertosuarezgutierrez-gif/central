@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚪 Cerrado el amplificador de correo del portal del cliente (07/09/2026).** `POST /api/acceso/solicitar`
+  es pública y sin sesión y escribía fila en `portal_codigo` + disparaba envío con **cualquier cadena de
+  3-200 chars**: correo a un tercero con nuestro dominio y nuestra factura. Ahora canal(503) → tope IP
+  6/h → `destinoValido()` → tope DESTINO 5/h contando filas (429 + `retry-after`). El de IP **solo no
+  vale**: en Vercel el mapa vive por instancia; el global es el de BD. `destino.ts` valida y **NO
+  normaliza** (devuelve boolean) porque `hashCanal` ya normaliza — dos normalizaciones = el código bueno
+  sale `sin_codigo` en silencio. Cepo de **ORDEN** (`test/regression-portal-limite-acceso.test.ts`),
+  8 mutaciones vistas en rojo. Pendiente: índice por `valor_hash` en `portal_codigo` (DDL aparte).
+
 - **🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código (07/09/2026).** Del banco de
   ideas: **A** imagen Open Graph (`app/opengraph-image.tsx`, `next/og`, marca y clave DGSFP leídas de
   `MARCA_ASEGURA`/`MEDIADOR`, nada quemado; `twitter: summary_large_image` en el layout) — antes cada
