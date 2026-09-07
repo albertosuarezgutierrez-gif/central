@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-07 · buscador-ia** · hizo: pasada semanal completa (preflight Telegram 200 OK).
+  🔴 Hallazgo crítico: `text-embedding-004` (embeddings de `ia-cache`) retirado por Google desde el
+  14/01/2026 — 1ª comprobación real de ese eslabón desde que se añadió al watch el 31/08. Impacto
+  real bajo (caché OFF por defecto + fail-open), pero es un swap con cambio de dimensión → Telegram
+  con el hallazgo y la decisión pendiente (migrar con re-indexado o retirar la caché), no PR
+  mecánico, según regla propia de la skill para embeddings. Resto de la cadena (OpenRouter, Groq,
+  Cerebras, Kimi, visión NIM) confirmado vivo por WebSearch, sin key de proveedor en sesión. Sin
+  candidatos de descubrimiento que crucen el listón calidad/precio esta semana.
+  dudas: si Alberto quiere migrar embeddings o retirar la caché semántica (nunca se ha usado con
+  éxito, así que re-indexar sería trivial: no hay vectores válidos que perder); fallos: —;
+  PRs/commits: sin PR (solo doc + Telegram), commit directo pendiente de este cierre de sesión.
 - **2026-09-06 · facturas-correo** · hizo: pasada diaria completa. Salud Vía B OK (última copia
   2026-09-05, 1 día); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`. Paso 4.0
   (barrido `v_facturas_sin_cargo`): las 9 filas siguen `revisada_sin_cargo` (Petroprix ago,
