@@ -43,7 +43,16 @@ test('PORTAL_URL es https y sin barra final', () => {
 test('la cabecera MONTA el botón al portal del cliente', () => {
   const cab = sinComentarios(readFileSync(join(RAIZ, 'components', 'Cabecera.tsx'), 'utf8'))
   assert.match(cab, /href=\{PORTAL_URL\}/, 'components/Cabecera.tsx ya no enlaza a PORTAL_URL: el cliente no tiene cómo entrar a su intranet desde la web')
-  assert.match(cab, /Área de clientes/, 'el botón perdió su rótulo')
+  // 🚨 «Mis seguros», NO «Área de clientes». El rótulo viejo era una puerta
+  // cerrada: decía «clientes» a una intranet en la que entra cualquiera con un
+  // correo verificado, y ese es el argumento de venta de toda la portada
+  // (Alberto, 07/09/2026). Si alguien lo revierte, el 99 % de los visitantes
+  // vuelve a leer que eso no es para ellos — y nada falla.
+  assert.match(cab, /Mis seguros/, 'el botón perdió su rótulo')
+  assert.ok(
+    !/Área de clientes/.test(cab),
+    'volvió «Área de clientes»: la intranet NO es solo para clientes, y el rótulo lo estaba diciendo',
+  )
 
   const layout = sinComentarios(readFileSync(join(RAIZ, 'app', 'layout.tsx'), 'utf8'))
   assert.match(layout, /<Cabecera\b/, 'el layout ya no monta <Cabecera>: el botón existiría en un fichero que no renderiza nadie')
@@ -63,6 +72,7 @@ test('NINGÚN enlace de la web lleva a la intranet de la correduría ni a plataf
     /\/correduria\b/,
     /\/operador\b/,
     /\/login\b/,
+    /ya\s+soy\s+cliente/i,
     /acceso\s+corredur/i,
     /acceso\s+corredor/i,
     /únete gratis/i,
