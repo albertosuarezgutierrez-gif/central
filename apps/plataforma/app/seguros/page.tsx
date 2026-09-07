@@ -11,6 +11,25 @@ import Formulario from './Formulario'
 export const metadata: Metadata = {
   title: 'Grupo ASegura · Correduría de seguros',
   description: 'Correduría de seguros. Comparamos entre compañías el seguro de auto, moto, hogar, vida, salud, comunidades y comercio, y te llamamos.',
+  // 🚨 FUERA DEL ÍNDICE desde el 07/09/2026, y no es una decisión de estilo.
+  //
+  // Esta landing nació cuando la correduría no tenía web. Desde el 05/09/2026 la
+  // tiene: `apps/asegura-web`, que sirve en `grupoasegura.es` con seis páginas
+  // de ramo, sitemap, JSON-LD y el MISMO endpoint de leads que esta página. O
+  // sea, las dos compiten por «correduría de seguros Sevilla» — y esta lo hace
+  // desde un `*.vercel.app` que no es la marca. Dos URL del mismo negocio
+  // peleando por la misma consulta no suman: reparten la señal y Google elige
+  // una, normalmente la que no quieres.
+  //
+  // `follow: true` a propósito: no queremos que se indexe, pero sí que se sigan
+  // sus enlaces. Y NO se pone un `canonical` hacia grupoasegura.es además del
+  // noindex: son dos señales contradictorias (una dice «ignórame», la otra
+  // «cuéntame en la otra»), y Google desaconseja combinarlas.
+  //
+  // La página SIGUE VIVA y funcionando: quien tenga el enlace la usa y su lead
+  // entra igual. Retirarla del todo (301 hacia grupoasegura.es o borrarla) es
+  // decisión de Alberto, no de este cambio.
+  robots: { index: false, follow: true },
 }
 
 const QUE_HACEMOS = [

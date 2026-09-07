@@ -92,6 +92,13 @@ export const NAV = [
   { href: '/seguros/comercio', texto: 'Comercio y empresa' },
   { href: '/seguros/auto', texto: 'Auto y moto' },
   { href: '/seguros/vida-y-salud', texto: 'Vida y salud' },
+  // 🚨 Responsabilidad civil EXISTE como página (`RAMOS` la trae, el sitemap la
+  // lista) y hasta el 07/09/2026 no la enlazaba NADIE: ni la cabecera, ni el
+  // pie, ni las páginas hermanas. Una página que solo aparece en el sitemap es
+  // una página que Google puede rastrear y no tiene motivo para valorar — todo
+  // el peso interno de un sitio viaja por sus enlaces. Va aquí, que es la lista
+  // del PIE (la cabecera se recorta abajo, y por medida, no por gusto).
+  { href: '/seguros/responsabilidad-civil', texto: 'Responsabilidad civil' },
   { href: '/cambiar-de-correduria', texto: 'Cambiar de correduría' },
 ] as const
 
@@ -103,10 +110,16 @@ export const NAV = [
  * contenedor de 1.104 px, y lo que se salía por la derecha de la pantalla era
  * el botón «Área de clientes» — o sea, justo lo que el cliente viene a pulsar.
  * Se recorta la nav, que es lo que sobra: «Cambiar de correduría» tiene su
- * propia sección en la portada, su enlace en el pie y su página. Los ramos,
- * que son lo que esta web posiciona, se quedan enteros.
+ * propia sección en la portada, su enlace en el pie y su página.
+ *
+ * ⚠️ Y por eso **responsabilidad civil tampoco entra en la cabecera**: sería la
+ * sexta entrada y devolvería el desbordamiento medido. Se enlaza desde el pie y
+ * desde las páginas de ramo hermanas, que es donde el enlace además tiene
+ * sentido temático. Los cinco ramos de la cabecera son los de más volumen.
  */
-export const NAV_CABECERA = NAV.filter((n) => n.href.startsWith('/seguros/'))
+export const NAV_CABECERA = NAV.filter(
+  (n) => n.href.startsWith('/seguros/') && n.href !== '/seguros/responsabilidad-civil',
+)
 
 /**
  * Horario de atención.

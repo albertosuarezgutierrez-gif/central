@@ -23,7 +23,11 @@ export const metadata: Metadata = {
   description:
     'Puedes cambiar de mediador sin tocar tu póliza: mismas coberturas, mismo precio y mismo número. Te explicamos cómo funciona el cambio de correduría, vivas donde vivas.',
   alternates: { canonical: url('/cambiar-de-correduria') },
-  openGraph: { title: 'Cambiar de correduría sin cambiar de seguro', url: url('/cambiar-de-correduria'), type: 'article' },
+  openGraph: {
+    title: 'Cambiar de correduría sin cambiar de seguro',
+    url: url('/cambiar-de-correduria'),
+    type: 'article',
+  },
 }
 
 const panel: CSSProperties = {

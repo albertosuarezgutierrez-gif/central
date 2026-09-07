@@ -30,6 +30,25 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código (07/09/2026).** Del banco de
+  ideas: **A** imagen Open Graph (`app/opengraph-image.tsx`, `next/og`, marca y clave DGSFP leídas de
+  `MARCA_ASEGURA`/`MEDIADOR`, nada quemado; `twitter: summary_large_image` en el layout) — antes cada
+  enlace pegado en WhatsApp salía como texto plano. **B** se hizo y **se deshizo el mismo día**: se metió «Sevilla» en el title
+  y el H1 de `/cambiar-de-correduria` y `/quienes-somos`, y al mergear `main` apareció el PR #2464
+  con la decisión CONTRARIA y mejor razonada (el ámbito es nacional; «Sevilla» en un encabezado no
+  acota la keyword, acota la oferta) más un cepo `ACOTA_AMBITO` que lo prohíbe. Manda #2464: la
+  señal local sale del NAP y del GBP. También se pasó a nacional el texto de la imagen OG. **C** las 6 páginas de ramo dejan de ser
+  islas: bloque «Otros seguros que llevamos» + enlace a `/cambiar-de-correduria`, y
+  `responsabilidad-civil` entra en el pie (**fuera de la cabecera a propósito**: sexta entrada =
+  desborde medido el 05/09). Estaba huérfana: su único rastro era el sitemap. **E** fuera el
+  `lastModified: new Date()` que decía «todo cambió hoy» en cada petición — legales con
+  `FECHA_TEXTOS_WEB`, portada y ramos **omiten** el campo (ausente es la verdad). **D** mitigada:
+  `apps/plataforma/app/seguros` pasa a `robots:{index:false,follow:true}` — competía por las mismas
+  consultas desde un `*.vercel.app` y **no la enlaza nadie**; sigue viva y su formulario sigue
+  entrando. Guardián nuevo `lib/enlazado.test.ts` (huérfanos, cabecera, sitemap, OG). Verificado:
+  40/40 tests de la app, `tsc` limpio, `next build` con `/opengraph-image` prerrenderizada.
+  ❓ **Decisión de Alberto pendiente:** si `/seguros` de plataforma se retira del todo (301 o borrado)
+  o se queda con noindex. Y siguen sin él: Search Console y Google Business Profile.
 - **🧹 «Mergea todo» = 2 de 10, y el orden decide si el resultado es VERDADERO (07/09/2026).** Mergeados
   #2407 (el nombre del remitente sale de `MEDIADOR.marca`, no de la env; devuelve `null` en vez de
   inventar) y #2460 (landmine: Expedia devuelve USD sin parámetro de moneda). Los otros 8 NO los puede

@@ -59,7 +59,16 @@ cualquier campaña**, y le toca a `agente-correduria`, no a esta skill.
 > de trabajar una idea, **compruébala contra el código de hoy**: un backlog que describe una app que
 > ya cambió es justo la clase de dato que este repo no se permite.
 
-## A. Imagen para compartir (Open Graph) — 🔴 la más barata con más impacto
+## ✅ A. Imagen para compartir (Open Graph) — 🔴 la más barata con más impacto
+
+> ✅ **CERRADO el 07/09/2026 (PR de esta sesión).** `apps/asegura-web/app/opengraph-image.tsx`
+> genera la tarjeta 1200×630 con `next/og`, leyendo marca y clave DGSFP de `MARCA_ASEGURA` y
+> `MEDIADOR` (nada quemado en un PNG). Next la aplica a TODAS las páginas que no declaren la
+> suya, y el `layout` añade `twitter: { card: "summary_large_image" }` para que X no la recorte
+> a cuadrado. Verificado en `next build`: `/opengraph-image` sale prerrenderizada.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
 
 **Hoy no existe ninguna.** Cero ficheros `opengraph-image*`, cero `openGraph.images`, cero bloque
 `twitter` en toda la app. `public/` tiene un único activo: `brand/marca-asegura.svg`.
@@ -76,7 +85,28 @@ colores ya están medidos del CSS real) y del logo que ya existe, más una varia
 dependencias nuevas.
 **Coste:** una tarde. **Bloqueo:** ninguno. **Necesita:** nada. Se puede hacer ya.
 
-## B. La página de más intención de compra no dice dónde está — 🔴
+</details>
+
+## 🚫 B. La página de más intención de compra no dice dónde está — REVERTIDA
+
+> 🚫 **CERRADA AL REVÉS, y la decisión NO es mía: el ámbito es NACIONAL (PR #2464, 07/09/2026).**
+> Esta idea pedía meter «en Sevilla» en el `title` y el `h1` de `/cambiar-de-correduria` y de
+> `/quienes-somos`. Se hizo esa misma mañana… y a las pocas horas hubo que deshacerlo: en paralelo
+> entró en `main` la decisión contraria y mejor razonada — **«Sevilla» en un encabezado no acota la
+> palabra clave, acota la OFERTA**, y quien entra desde otra provincia lee en el primer renglón que
+> no es cliente. Un corredor inscrito en la DGSFP media en todo el territorio.
+>
+> Lo que queda vigente de esta idea: **la señal local sí importa, pero sale del NAP y del perfil de
+> Google Business, no de repetir la ciudad en cada `h1`.** El `areaServed` del JSON-LD es ahora
+> `Country: España` y el domicilio postal sigue en Sevilla, que es como se declara un negocio con
+> oficina local y ámbito nacional.
+>
+> 🚨 Y hay cepo: `ACOTA_AMBITO` (`lib/ramos.test.ts`) **prohíbe** «en Sevilla», «Sevilla y su
+> provincia» y «en Andalucía» en `RAMOS` y en todo el fuente de `app/` y `components/`. Si esta
+> idea vuelve a proponerse, el test la para. No la reabras sin hablarlo con Alberto.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
 
 `/cambiar-de-correduria` es, por diseño, la conversión más barata del sitio: convierte un lead en
 cliente **sin tarificar** (0 € de Avant2) y sin competir por precio.
@@ -93,7 +123,19 @@ que hay que arreglar; el cuerpo ya no está mudo.
 **Coste:** una hora. **Bloqueo:** ninguno. **Ojo:** cambiar un H1 es cambiar copy → pasa por
 `lib/ramos.test.ts`.
 
-## C. Las páginas de ramo son callejones sin salida — 🟠
+</details>
+
+## ✅ C. Las páginas de ramo son callejones sin salida — 🟠
+
+> ✅ **CERRADO el 07/09/2026.** Cada página de ramo cierra con un bloque «Otros seguros que
+> llevamos» que enlaza a las cinco hermanas (objetivo táctil de 44 px) y a
+> `/cambiar-de-correduria`. `responsabilidad-civil` entra en `NAV` —o sea, en el pie— y
+> **se queda fuera de la cabecera a propósito**: sería la sexta entrada y devolvería el
+> desbordamiento medido el 05/09. Lo vigila `lib/enlazado.test.ts`, que falla si un ramo se
+> queda sin enlaces o si la cabecera vuelve a crecer.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
 
 Medido: las 6 páginas de ramo **no enlazan entre sí, ni a `/cambiar-de-correduria`, ni a
 `/quienes-somos`**. Su único enlace es la miga hacia `/`. Y el pie (`layout.tsx:175-181`) reparte
@@ -107,7 +149,20 @@ final de cada ramo (que es exactamente donde está la intención), y meter RC en
 explícitamente que es una página secundaria.
 **Coste:** una tarde. **Bloqueo:** ninguno.
 
-## D. Canibalización con `apps/plataforma/seguros` — 🟠 y tiene trampa
+</details>
+
+## D. Canibalización con `apps/plataforma/seguros` — 🟡 mitigada, falta LA decisión
+
+> 🟡 **07/09/2026: la sangría está tapada, la decisión no.** `apps/plataforma/app/seguros/page.tsx`
+> exporta ya `robots: { index: false, follow: true }`, así que deja de competir por «correduría de
+> seguros Sevilla» contra `grupoasegura.es`. **La página sigue viva y su formulario sigue entrando**
+> por el mismo endpoint: quien tenga el enlace la usa igual. No se puso `canonical` además del
+> noindex a propósito (son señales contradictorias y Google desaconseja combinarlas).
+>
+> ❓ **Lo que sigue siendo de Alberto:** ¿se retira del todo (301 hacia `grupoasegura.es`, o
+> borrarla) o se queda como está? Medido esta sesión: la página son **198 líneas**, **no la enlaza
+> nadie** en todo el monorepo, y hace lo mismo que la web nueva con seis páginas de ramo menos.
+> Mientras no se decida, el noindex la deja inofensiva.
 
 `apps/plataforma/app/seguros/page.tsx` **existe, es pública** (middleware la lista en `PUBLIC`,
 `middleware.ts:59`), **es indexable** (exporta `metadata` sin `robots`, y plataforma **no tiene
@@ -124,7 +179,16 @@ permanente. Y además `public/mockup-correduria.html` **se sirve público y es r
 **Coste:** pequeño. **Bloqueo:** decidir si `/seguros` de plataforma se retira del todo. **Riesgo
 si se deja:** el que ya hay, dilución.
 
-## E. Sitemap que declara frescura falsa — 🟠
+## ✅ E. Sitemap que declara frescura falsa — 🟠
+
+> ✅ **CERRADO el 07/09/2026.** Fuera el `new Date()`. Las cuatro legales fechan con
+> `FECHA_TEXTOS_WEB` (`@central/module-seguros`), que es el día real en que se tocaron los
+> textos públicos; la portada y los ramos **omiten** `lastModified` porque no hay fuente de
+> esa fecha, y ausente es la verdad (regla NULL≠0). Las legales se quedan en el sitemap con
+> prioridad 0,3: sacarlas no gana nada y perderían el único sitio donde se declaran.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
 
 `app/sitemap.ts:10` hace `const ahora = new Date()` y se lo pone a las 13 URLs. Es decir: **cada
 regeneración dice que todo cambió hoy**, lo que equivale a no dar señal ninguna. Y las **4 páginas
@@ -133,6 +197,8 @@ legales ocupan el 31 % del sitemap** sin tener intención de búsqueda.
 **Qué haría:** `lastModified` real (fecha del último commit del fichero, o una constante por página
 que se sube a mano) y sacar las legales o dejarlas con prioridad mínima.
 **Coste:** pequeño. **Bloqueo:** ninguno.
+
+</details>
 
 ## F. Huecos de JSON-LD — 🟠
 
@@ -153,11 +219,19 @@ Se deja escrito porque el motivo sigue valiendo: una dirección que no coincide 
 el pie es lo que rompe la correspondencia con el Business Profile.
 **Coste:** el bug, minutos. El resto, una tarde. **Bloqueo:** `sameAs` y `geo` esperan al GBP.
 
-## G. `/legal/cookies` sin canonical — 🟢 minutos
+## ✅ G. `/legal/cookies` sin canonical — 🟢 minutos
+
+> ✅ **CERRADO** — ya lo llevaba (`page.tsx:20`), lo metió el rediseño del 05/09. Este banco lo
+> daba por abierto porque se midió sobre el árbol de esa mañana.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
 
 `app/legal/cookies/page.tsx:12-14` es **la única página del sitio sin `alternates.canonical`** (las
 otras tres legales sí lo llevan). En un sitio que vivió en dos dominios el mismo día, no es un
 detalle de estilo.
+
+</details>
 
 ## H. Los bots de IA pasan por omisión, no por decisión — 🟢 decisión, no código
 
