@@ -288,6 +288,72 @@ export function leerFecha(raw: unknown): string | null {
   return m ? m[1] : null
 }
 
+// ─── Catálogos de MOTO (gratis) ──────────────────────────────────────────────
+//
+// `MotorcycleRisk` comparte casi todo con `CarRisk` (docs/CODEOSCOPIC-API-PORTAL.md
+// § «El ramo MOTO, contrato completo»): mismo catálogo de garajes, catálogo propio
+// de marcas/modelos/versiones bajo `/motorcycle/*`, y dos catálogos que auto no
+// tiene — `driving-experience-options` (obligatorio en el risk) y, dentro de
+// `/vehicles`, el parámetro `engine` es un ENUM cerrado (`Gasoline|Diesel|Others`),
+// no texto libre como en auto.
+
+export async function marcasMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/brands?onlyPopular=false'))
+}
+
+export async function modelosMoto(config: ConfigCodeoscopic, marcaId: string): Promise<Opcion[]> {
+  return normalizarOpciones(
+    await catalogo(config, `/motorcycle/brands/${encodeURIComponent(marcaId)}/models`),
+  )
+}
+
+/** `engine` es un enum cerrado en moto (a diferencia de auto, que es texto libre). */
+export const MOTORES_MOTO = ['Gasoline', 'Diesel', 'Others'] as const
+export type MotorMoto = (typeof MOTORES_MOTO)[number]
+
+export async function versionesMoto(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: MotorMoto,
+): Promise<Opcion[]> {
+  return normalizarOpciones(
+    await catalogo(
+      config,
+      `/motorcycle/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
+        `/vehicles?engine=${encodeURIComponent(motor)}`,
+    ),
+  )
+}
+
+/** `ThisMotorcycle` | `OtherMotorcycle`. Obligatorio en `risk.drivingExperience.id`. */
+export async function experienciaConduccionMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/driving-experience-options'))
+}
+
+/** Ids con los que el vendor podría nombrar el ramo de moto (`insuranceLine.id`). */
+const IDS_MOTO = new Set(['motorcycle', 'moto', 'motorbike'])
+
+/**
+ * ¿Está moto entre los ramos disponibles? Misma forma que `hogarDisponible()` y
+ * por el mismo motivo: `insuranceLine.id` no se escribe a mano nunca — un 'Car'
+ * confirmado no autoriza a adivinar el de moto, y un id equivocado es un 400
+ * pagado en vano (aunque no se cobre, es una vuelta perdida antes de cotizar).
+ */
+export type DisponibilidadMoto =
+  | { estado: 'disponible'; id: string; nombre: string }
+  | { estado: 'ausente'; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export function motoDisponible(lineas: Opcion[]): DisponibilidadMoto {
+  if (lineas.length === 0) return { estado: 'desconocido' }
+  const moto = lineas.find(
+    (l) => IDS_MOTO.has(l.id.toLowerCase()) || IDS_MOTO.has(normalizarTexto(l.nombre)),
+  )
+  if (moto) return { estado: 'disponible', id: moto.id, nombre: moto.nombre }
+  return { estado: 'ausente', ramos: lineas.map((l) => l.nombre) }
+}
+
 // ─── Emparejar texto del CRM con el catálogo del vendor ──────────────────────
 
 // ─── Hogar: tipo de vía y valores por defecto (gratis) ───────────────────────

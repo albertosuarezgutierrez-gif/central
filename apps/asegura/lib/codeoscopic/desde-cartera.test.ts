@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   precalificarAuto,
   precalificarAutoNueva,
+  precalificarMotoNueva,
   partirApellidos,
   sexoDeSaludo,
   aniosEntre,
@@ -13,6 +14,7 @@ import {
   type PolizaCartera,
   type Resueltos,
   type ResueltosAutoNueva,
+  type ResueltosMotoNueva,
 } from './desde-cartera.ts'
 
 const HOY = '2026-09-01'
@@ -284,6 +286,61 @@ test('el garaje solo se marca como supuesto si de verdad lo es', () => {
 test('NINGÚN supuesto de la nueva rellena un dato personal', () => {
   const personales: string[] = ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'telefono', 'fechaCarnet', 'sexo']
   for (const s of preNueva({ dni: null, telefono: null }).supuestos) {
+    assert.ok(!personales.includes(s.campo), `no se puede suponer un dato personal: ${s.campo}`)
+  }
+})
+
+// ─── MOTO, oportunidad nueva (sin póliza) ────────────────────────────────────
+
+const RESUELTOS_MOTO_NUEVA: ResueltosMotoNueva = {
+  municipioId: 41091,
+  estadoCivilId: 'Single',
+  matricula: '1234ABC',
+  fechaMatriculacion: '2016-02-20',
+  codigoVehiculo: '12345678',
+  garaje: 'CommunalParking',
+  experienciaConduccion: null,
+}
+
+function preMoto(c: Partial<ClienteCartera> = {}, r: Partial<ResueltosMotoNueva> = {}) {
+  return precalificarMotoNueva({ ...CLIENTE, ...c }, { ...RESUELTOS_MOTO_NUEVA, ...r }, HOY)
+}
+
+test('moto: sin póliza previa, con todo resuelto no falta nada', () => {
+  const r = preMoto()
+  assert.deepEqual(r.faltan, [])
+  assert.equal(r.datos.matricula, '1234ABC')
+})
+
+test('moto: se cotiza DE CALLE, igual que auto', () => {
+  const r = preMoto()
+  assert.equal(r.datos.aseguradoAntes, false)
+  assert.equal('companiaAnteriorCodigo' in r.datos, false)
+  assert.equal(r.faltan.some((f) => f.campo === 'companiaAnteriorCodigo'), false)
+})
+
+test('moto: sin experiencia de conducción, se supone ThisMotorcycle y se marca como supuesto', () => {
+  const r = preMoto()
+  assert.equal(r.datos.experienciaConduccion, 'ThisMotorcycle')
+  assert.ok(r.supuestos.some((s) => s.campo === 'experienciaConduccion'))
+  assert.equal(r.faltan.length, 0)
+})
+
+test('moto: con experiencia elegida, NO se supone nada', () => {
+  const r = preMoto({}, { experienciaConduccion: 'OtherMotorcycle' })
+  assert.equal(r.datos.experienciaConduccion, 'OtherMotorcycle')
+  assert.equal(r.supuestos.some((s) => s.campo === 'experienciaConduccion'), false)
+  // Y sin el código de la moto anterior, esto SÍ falta: el vendor lo exige.
+  assert.ok(r.faltan.some((f) => f.campo === 'motoAnteriorCodigo'))
+})
+
+test('moto: sin matrícula no se puede cotizar', () => {
+  assert.ok(preMoto({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'))
+})
+
+test('moto: NINGÚN supuesto rellena un dato personal', () => {
+  const personales: string[] = ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'telefono', 'fechaCarnet', 'sexo']
+  for (const s of preMoto({ dni: null, telefono: null }).supuestos) {
     assert.ok(!personales.includes(s.campo), `no se puede suponer un dato personal: ${s.campo}`)
   }
 })

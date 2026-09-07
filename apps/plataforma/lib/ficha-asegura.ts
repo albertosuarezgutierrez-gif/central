@@ -731,3 +731,12 @@ export function urlHogarNuevo(clienteId: string): string {
 export function urlAutoNuevo(clienteId: string): string {
   return `/correduria/cliente/${clienteId}/auto-nuevo`
 }
+
+/**
+ * Presupuesto de MOTO para una oportunidad nueva, hermana de `urlAutoNuevo()`.
+ * La cartera viva tiene 1 sola póliza de moto (03/09/2026): «nueva» es
+ * prácticamente el único caso real de este ramo.
+ */
+export function urlMotoNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/moto-nuevo`
+}

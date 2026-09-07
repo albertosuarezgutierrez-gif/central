@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
@@ -195,6 +195,9 @@ function Acciones({ clienteId }: { clienteId: string }) {
       </BtnLink>
       <BtnLink href={urlHogarNuevo(clienteId)} variante="secundario">
         🏠 Presupuestar hogar (oportunidad nueva)
+      </BtnLink>
+      <BtnLink href={urlMotoNuevo(clienteId)} variante="secundario">
+        🏍️ Presupuestar moto (oportunidad nueva)
       </BtnLink>
     </div>
   )
