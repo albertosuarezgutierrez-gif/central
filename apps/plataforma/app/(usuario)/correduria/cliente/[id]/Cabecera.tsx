@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, urlVidaNuevo, urlSaludNuevo, urlDecesosNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
@@ -199,6 +199,18 @@ function Acciones({ clienteId }: { clienteId: string }) {
       <BtnLink href={urlMotoNuevo(clienteId)} variante="secundario">
         🏍️ Presupuestar moto (oportunidad nueva)
       </BtnLink>
+      <BtnLink href={urlVidaNuevo(clienteId)} variante="secundario">
+        ❤️‍🩹 Presupuestar vida (oportunidad nueva)
+      </BtnLink>
+      <BtnLink href={urlSaludNuevo(clienteId)} variante="secundario">
+        🩺 Presupuestar salud (oportunidad nueva)
+      </BtnLink>
+      <BtnLink href={urlDecesosNuevo(clienteId)} variante="secundario">
+        🕊️ Presupuestar decesos (oportunidad nueva)
+      </BtnLink>
+      <span style={{ color: 'var(--muted)' }} title="El contrato de Codeoscopic para estos tres ramos no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.">
+        🚧 vida/salud/decesos: esquema sin verificar
+      </span>
     </div>
   )
 }

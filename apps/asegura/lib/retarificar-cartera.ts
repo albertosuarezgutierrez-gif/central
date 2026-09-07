@@ -70,6 +70,36 @@ import {
 } from '@/lib/codeoscopic/peticion-hogar'
 import type { Supuesto, ResueltosMotoNueva, SupuestoMoto } from '@/lib/codeoscopic/desde-cartera'
 import { precalificarMotoNueva } from '@/lib/codeoscopic/desde-cartera'
+import {
+  construirPeticionVida,
+  revisarDatosVida,
+  type DatosVida,
+} from '@/lib/codeoscopic/peticion-vida'
+import {
+  precalificarVidaNueva,
+  type ResueltosVidaNueva,
+  type SupuestoVida,
+} from '@/lib/codeoscopic/desde-cartera-vida'
+import {
+  construirPeticionSalud,
+  revisarDatosSalud,
+  type DatosSalud,
+} from '@/lib/codeoscopic/peticion-salud'
+import {
+  precalificarSaludNueva,
+  type ResueltosSaludNueva,
+  type SupuestoSalud,
+} from '@/lib/codeoscopic/desde-cartera-salud'
+import {
+  construirPeticionDecesos,
+  revisarDatosDecesos,
+  type DatosDecesos,
+} from '@/lib/codeoscopic/peticion-decesos'
+import {
+  precalificarDecesosNueva,
+  type ResueltosDecesosNueva,
+  type SupuestoDecesos,
+} from '@/lib/codeoscopic/desde-cartera-decesos'
 import { resolverConfig, explicarConfig } from '@/lib/codeoscopic/config'
 import { sanearSupuestos } from '@/lib/codeoscopic/precalificar-publica'
 import {
@@ -92,9 +122,15 @@ import {
   versionesMoto,
   experienciaConduccionMoto,
   MOTORES_MOTO,
+  vidaDisponible,
+  saludDisponible,
+  decesosDisponible,
   type MotorMoto,
   type DisponibilidadHogar,
   type DisponibilidadMoto,
+  type DisponibilidadVida,
+  type DisponibilidadSalud,
+  type DisponibilidadDecesos,
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
 import type { PeticionCotizacion, ResultadoCotizacion } from '@/lib/codeoscopic/cotizar'
@@ -212,7 +248,7 @@ export type PreparadoRetarificacion =
       estado: 'listo'
       /** Lista para `cotizar()`. La ruta no le añade ni le quita nada. */
       peticion: PeticionCotizacion
-      supuestos: Supuesto[] | SupuestoHogar[] | SupuestoMoto[]
+      supuestos: Supuesto[] | SupuestoHogar[] | SupuestoMoto[] | SupuestoVida[] | SupuestoSalud[] | SupuestoDecesos[]
       fuenteRiesgo?: 'poliza' | 'gemela' | 'catastro' | null
     }
   /** Ya hay respuesta y NO se ha llamado al vendor: se devuelve tal cual. */
@@ -279,7 +315,7 @@ type Preparado =
   | {
       peticion: Record<string, unknown>
       motivo: string
-      supuestos: Supuesto[] | SupuestoHogar[] | SupuestoMoto[]
+      supuestos: Supuesto[] | SupuestoHogar[] | SupuestoMoto[] | SupuestoVida[] | SupuestoSalud[] | SupuestoDecesos[]
       fuenteRiesgo?: 'poliza' | 'gemela' | 'catastro' | null
     }
   | { respuesta: ResultadoRetarificar }
@@ -769,6 +805,168 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
   }
 }
 
+// ─── VIDA / SALUD / DECESOS, oportunidad nueva (sin póliza) ──────────────────
+//
+// Las tres comparten forma: cero pólizas en cartera hoy, así que «nueva» es el
+// ÚNICO caso; no hay vehículo ni vivienda que identificar, solo la persona y un
+// capital que el corredor teclea (nunca se supone, ver `desde-cartera-vida.ts`).
+//
+// 🚧 El `risk` que construyen `construirPeticionVida/Salud/Decesos` es una
+// SUPOSICIÓN sin verificar contra el fabricante (ver `peticion-vida.ts`):
+// construido a propósito de Alberto («hazlo con lo que tengas», 07/09/2026)
+// sabiendo que el primer intento real puede devolver un 400 con el nombre del
+// campo real, igual que pasó con `engine` en auto. Misma disciplina que sus
+// hermanas: **no gasta** hasta que `cotizar()` lo decide en la ruta.
+
+async function prepararRetarificacionNuevaGenerica<D, S>(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  ramo: 'vida' | 'salud' | 'decesos'
+  resueltos: D
+  correcciones: Record<string, unknown> | undefined
+  precalificar: (cliente: ClienteCartera, resueltos: D, hoy: string) => { datos: Partial<any>; supuestos: S[]; faltan: { campo: string }[] }
+  revisar: (d: Partial<any>) => { campo: string }[]
+  construir: (d: any, lineaId: string) => Record<string, unknown>
+  disponible: (lineas: Opcion[]) => DisponibilidadVida | DisponibilidadSalud | DisponibilidadDecesos
+}): Promise<PreparadoRetarificacion> {
+  const { clienteId, solicitadoPor, ramo, resueltos, correcciones, precalificar, revisar, construir, disponible } = entrada
+
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        {
+          error:
+            'No se ha podido resolver la correduría, así que ni se consulta la cartera sin filtro ' +
+            'ni se cotiza. Esto NO significa que el cliente no exista.',
+        },
+        503,
+      ),
+    }
+  }
+
+  const origen = await clienteOrigenDe(correduria.id, clienteId)
+  if (!origen) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'cliente no encontrado' }, 404) }
+  }
+
+  const pre = precalificar(origen.cliente, resueltos, hoyIso())
+  const datos = { ...pre.datos, ...limpiarCorrecciones<any>(correcciones) }
+  const faltan = revisar(datos)
+  if (faltan.length > 0) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan }, 422) }
+  }
+
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista') {
+    return { estado: 'corte', respuesta: sinGasto({ error: explicarConfig(cfg) }, 503) }
+  }
+  const lineas = await lineasDeSeguro(cfg.config).catch(() => [])
+  const linea = disponible(lineas)
+  if (linea.estado !== 'disponible') {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        { error: `${ramo} no tarifica para esta organización (o no se ha podido comprobar)`, [ramo]: linea },
+        409,
+      ),
+    }
+  }
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construir(datos, linea.id)
+  } catch (e) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto({ error: e instanceof Error ? e.message : String(e) }, 422),
+    }
+  }
+  peticion.externalId = `cliente-${clienteId}`
+
+  return {
+    estado: 'listo',
+    peticion: {
+      correduriaId: correduria.id,
+      cuerpo: peticion,
+      motivo: 'defensa-cartera',
+      solicitadoPor,
+      contexto: { ramo, puerta: 'corredor', polizaId: null, clienteId },
+    },
+    supuestos: pre.supuestos as any,
+    fuenteRiesgo: null,
+  }
+}
+
+export function prepararRetarificacionNuevaVida(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const resueltos: ResueltosVidaNueva = {
+    estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
+    capital: numero(entrada.cuerpo.resueltos?.capital),
+    duracionAnios: numero(entrada.cuerpo.resueltos?.duracionAnios),
+  }
+  return prepararRetarificacionNuevaGenerica<ResueltosVidaNueva, SupuestoVida>({
+    clienteId: entrada.clienteId,
+    solicitadoPor: entrada.solicitadoPor,
+    ramo: 'vida',
+    resueltos,
+    correcciones: entrada.cuerpo.correcciones,
+    precalificar: precalificarVidaNueva as any,
+    revisar: revisarDatosVida as any,
+    construir: construirPeticionVida as any,
+    disponible: vidaDisponible,
+  })
+}
+
+export function prepararRetarificacionNuevaSalud(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const resueltos: ResueltosSaludNueva = {
+    estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
+    capital: numero(entrada.cuerpo.resueltos?.capital),
+    modalidadDeseada: cadena(entrada.cuerpo.resueltos?.modalidadDeseada),
+  }
+  return prepararRetarificacionNuevaGenerica<ResueltosSaludNueva, SupuestoSalud>({
+    clienteId: entrada.clienteId,
+    solicitadoPor: entrada.solicitadoPor,
+    ramo: 'salud',
+    resueltos,
+    correcciones: entrada.cuerpo.correcciones,
+    precalificar: precalificarSaludNueva as any,
+    revisar: revisarDatosSalud as any,
+    construir: construirPeticionSalud as any,
+    disponible: saludDisponible,
+  })
+}
+
+export function prepararRetarificacionNuevaDecesos(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const resueltos: ResueltosDecesosNueva = {
+    estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
+    capital: numero(entrada.cuerpo.resueltos?.capital),
+  }
+  return prepararRetarificacionNuevaGenerica<ResueltosDecesosNueva, SupuestoDecesos>({
+    clienteId: entrada.clienteId,
+    solicitadoPor: entrada.solicitadoPor,
+    ramo: 'decesos',
+    resueltos,
+    correcciones: entrada.cuerpo.correcciones,
+    precalificar: precalificarDecesosNueva as any,
+    revisar: revisarDatosDecesos as any,
+    construir: construirPeticionDecesos as any,
+    disponible: decesosDisponible,
+  })
+}
+
 // ─── Catálogos (GRATIS) ──────────────────────────────────────────────────────
 //
 // Los desplegables del MISMO flujo de retarificación. Viven aquí por lo mismo
@@ -781,7 +979,15 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
 // marca y modelo tiene que poder hacerse antes de encender el gasto.
 
 export type ResultadoCatalogo =
-  | { estado: 'ok'; opciones: Opcion[]; hogar?: DisponibilidadHogar; moto?: DisponibilidadMoto }
+  | {
+      estado: 'ok'
+      opciones: Opcion[]
+      hogar?: DisponibilidadHogar
+      moto?: DisponibilidadMoto
+      vida?: DisponibilidadVida
+      salud?: DisponibilidadSalud
+      decesos?: DisponibilidadDecesos
+    }
   /** El parámetro que falta o no existe. La ruta lo devuelve como 400. */
   | { estado: 'invalido'; mensaje: string }
   /** Faltan credenciales/host de Codeoscopic. 503, y NO es «no hay opciones». */
@@ -878,7 +1084,15 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
       // si hogar/moto están entre ellos (con su id EXACTO). Tres estados, no dos.
       case 'lineas': {
         const lineas = await lineasDeSeguro(config)
-        return { estado: 'ok', opciones: lineas, hogar: hogarDisponible(lineas), moto: motoDisponible(lineas) }
+        return {
+          estado: 'ok',
+          opciones: lineas,
+          hogar: hogarDisponible(lineas),
+          moto: motoDisponible(lineas),
+          vida: vidaDisponible(lineas),
+          salud: saludDisponible(lineas),
+          decesos: decesosDisponible(lineas),
+        }
       }
       default:
         return { estado: 'invalido', mensaje: `catálogo desconocido: ${tipo}` }

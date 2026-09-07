@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚧 Vida, salud y decesos sin póliza — construidos con lo que había, sin verificar (07/09/2026, PR #2563).**
+  Alberto: «hazlo con lo que tengas», tras avisar del riesgo de gastar 0,50€ reales en intentos mal
+  formados. Mismo patrón que auto/hogar/moto, pero el `risk` de estos tres NO sale de ningún snapshot
+  verificado (el portal solo documenta 2 y 1+1 operaciones en total, sin campos). Se manda el mínimo
+  razonable — persona + `capital` tecleado SIEMPRE por el corredor —, marcado 🚧: el primer cotizar real
+  puede devolver un 400 que nombre otro campo, como pasó con `engine` en auto. Decesos solo cubre al
+  tomador; en salud `modalidadDeseada` no viaja al vendor. tsc 0, 3.149 tests en verde. RC sigue sin ramo.
+
 - **🧩 Agente de captación: fase 2 desarrollada entera, y dos afirmaciones mías corregidas (07/09/2026).**
   Las once ideas de fase 2 (7-17) pasan de bullets a secciones con dato, regla y modo de fallo; cuatro
   son nuevas (cadencia y «no me preguntes», cambio de coche por matrícula, web push, «súbenos el
