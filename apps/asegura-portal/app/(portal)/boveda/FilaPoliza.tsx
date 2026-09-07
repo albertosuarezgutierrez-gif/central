@@ -46,11 +46,12 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
   // de vencimiento: es justo lo que avisaba el docblock de `tituloDePoliza`
   // («a casi nadie le dice nada "Occident" a secas cuando tiene dos con
   // ellos») y pasaba de verdad — visto el 06/09/2026 en dos hogar de Occident.
-  // Le pasa a quien no ve el bien: porque la compañía no lo informó, o porque
-  // su nivel no llega a la dirección (`direccionRiesgo` está capado para un
-  // tercero: la casa donde duerme quien te autorizó no es un dato del
-  // contrato). El número NO abre nada nuevo — `numeroPoliza` ya se sirve desde
-  // el nivel más bajo—, y si tampoco lo hay se cae a la fecha, como antes.
+  // Le pasa a quien no ve el bien porque la compañía no lo ha informado. (El
+  // otro motivo de aquel día —el nivel no llegaba a la dirección— ya no existe:
+  // desde el 07/09/2026 `direccionRiesgo` se sirve desde el nivel más bajo,
+  // porque en un hogar la dirección hace de matrícula. Ver `acceso.ts`.) El
+  // número NO abre nada nuevo — `numeroPoliza` ya se sirve desde el nivel más
+  // bajo—, y si tampoco lo hay se cae a la fecha, como antes.
   const identificaSola = tituloEsBien(p) ? `${p.compania} · ${ramo}` : p.numeroPoliza ? `Nº ${p.numeroPoliza}` : null
   const meta = [identificaSola, vence ? `Vence el ${vence}` : null]
     .filter(Boolean)

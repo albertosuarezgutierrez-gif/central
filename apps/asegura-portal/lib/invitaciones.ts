@@ -74,7 +74,7 @@ import {
 import { hashCanal } from './auth'
 import {
   TEXTO_AUTORIZACION,
-  TEXTO_AUTORIZACION_V1,
+  TEXTO_AUTORIZACION_V2,
   TEXTO_REPRESENTACION,
   TEXTO_REPRESENTACION_V1,
 } from './autorizaciones'
@@ -1022,7 +1022,7 @@ export async function responderInvitacion(datos: {
             aceptadoEn: hoy,
             aceptadoPorIdentidadId: identidadId,
             // Qué texto se aceptó. La versión depende de quién cede.
-            versionTexto: esJuridica ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V1,
+            versionTexto: esJuridica ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V2,
             // `null` cuando la cabecera no vino: no se inventa una IP.
             ip: datos.ip,
             userAgent: datos.userAgent,

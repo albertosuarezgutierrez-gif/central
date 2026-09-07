@@ -39,6 +39,19 @@
   deja el parte huérfano y la correduría con un siniestro que no habla de nada. Regla en
   `puedeBorrarDeclarada()` (`@central/module-seguros-portal`); 4 cepos vistos en rojo uno a uno
   (`test/regression-portal-borrado.test.ts`). PR #2592.
+- **🏠 El hogar dice QUÉ CASA es, y la dirección deja de estar escondida (07/09/2026).** Alberto:
+  «hogar poner direccion… el número de póliza nadie se lo sabe». Tres cosas debajo, medidas: (1) sus
+  dos Occident tienen `datos_especificos` a NULL — la dirección vive en una fila GEMELA duplicada
+  del volcado (misma póliza, otra aseguradora), y le pasa a **11 de las 19 hogar vivas**; (2) donde
+  sí hay dirección viene **cifrada** y el portal no descifraba: habría pintado el `v1:…` como título;
+  (3) esas dos eran de su padre vistas como TERCERO, donde la dirección estaba capada a propósito.
+  **Decisión de Alberto: la dirección se ve desde el nivel más bajo** (en un hogar hace de matrícula)
+  → sale de `NUNCA_A_UN_TERCERO` y `TARJETA.direccionRiesgo = true`, con **consentimiento v2**
+  (`v2-2026-09-07`) que ahora lo dice. Rescate por gemela emparejando también por `fecha_inicio`: 10
+  de 11, y la ambigua (dos gemelas, 41011 vs 41001) se queda SIN dirección a propósito.
+  ⏳ **Pendiente de Alberto: `PII_ENCRYPTION_KEY` en el Vercel de `asegura-portal`** — sin ella solo
+  sale «41002 SEVILLA» / «11520 ROTA», no la calle, y eso no se ve en ningún log.
+
 - **✉️ «Error enviar invitación» — el mensaje MENTÍA: no hay proveedor de correo (07/09/2026).** Alberto
   con la ficha de GLOBAL 2 abierta: el botón contestaba «⚠️ El proveedor de correo no aceptó el mensaje…
   Vuelve a intentarlo». Medido en los logs de Vercel (`POST /api/operador/cliente/portal 502`, 20:44:59
@@ -49,7 +62,16 @@
   503**, en los DOS correos (invitación al portal y aviso de acceso). Cepo verificado en rojo.
   ⏸️ **Pendiente de Alberto, y es lo único que falta para que el botón funcione:** en Vercel
   `central-asegura`, `RESEND_API_KEY` (o `SMTP_USER`+`SMTP_PASSWORD`, o `GMAIL_USER`+`GMAIL_APP_PASSWORD`)
-  **más `ASEGURA_MAIL_FROM`**, y redesplegar (una env nueva no se aplica sin redeploy).
+  **más `ASEGURA_MAIL_FROM`**, y redesplegar (una env nueva no se aplica sin redeploy). ⚠️ Con el
+  remitente único (más abajo) `ASEGURA_MAIL_FROM` ya es OPCIONAL: basta `RESEND_API_KEY`. Y **los 3
+  registros DNS de `grupoasegura.es` en IONOS siguen sin poner**: el dominio está `not_started` en
+  Resend, así que hasta entonces el correo no sale (medido 21:1x UTC).
+  ✍️ **Y el TEXTO del correo, dictado por Alberto:** fuera «este enlace no abre sesión por sí mismo…»
+  y «si prefieres seguir como hasta ahora, no hagas nada…»; en su lugar una línea de marca («en Grupo
+  ASegura trabajamos para ponértelo cada día más fácil…»). El cepo que exigía la primera frase se movió
+  a donde la garantía vive de verdad —la URL, que no lleva query ni fragmento ni la palabra `token`—
+  y se le vio en ROJO. **Mergeado en `749e3a23`** tras CUATRO merges de `main` (el repo avanza cada
+  pocos minutos y el `405 merge conflicts` salió dos veces con los 19 checks ya en verde).
   📮 **Proveedor resuelto el mismo día: RESEND.** El dominio **`envios.grupoasegura.es` ya estaba
   `verified`** (eu-west-1, alta del 03/09 junto a las claves de `asegura-portal`); se creó la clave
   `central-asegura` con `sending_access` **restringida a ese dominio** y remitente

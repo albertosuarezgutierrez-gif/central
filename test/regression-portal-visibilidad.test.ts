@@ -477,7 +477,14 @@ test('🚨 la ficha pinta la lista entera y dice cuántas hay sin nombre', () =>
 // tiene el nivel `tarjeta` — y no fallaría nada: saldría.
 test('🚨 la descripción del siniestro va DENTRO del historial ya filtrado por nivel', () => {
   const src = leer(LECTURA)
-  const bloque = src.slice(src.indexOf('const historial'), src.indexOf('return {'))
+  // 🚨 El `return {` se busca DESDE `const historial`, no desde el principio del
+  // fichero: buscándolo desde 0 se coge el primer `return {` de cualquier helper
+  // de arriba, el `slice` sale al revés y el bloque queda VACÍO — o sea, el cepo
+  // deja de mirar nada y sigue verde. Cazado el 07/09/2026 al añadir
+  // `descifrarDireccion()`, que trae un `return { ...d }` antes que el historial.
+  const i = src.indexOf('const historial')
+  assert.notEqual(i, -1, 'no se encuentra la derivación del historial en la lectura')
+  const bloque = src.slice(i, src.indexOf('return {', i))
   assert.ok(bloque.length > 0, 'no se encuentra la derivación del historial en la lectura')
   assert.match(
     bloque,

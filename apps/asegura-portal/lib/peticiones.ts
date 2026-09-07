@@ -71,7 +71,7 @@ import {
   type ResultadoPeticion,
 } from '@central/module-seguros-portal'
 
-import { TEXTO_AUTORIZACION_V1, TEXTO_REPRESENTACION_V1 } from './autorizaciones'
+import { TEXTO_AUTORIZACION_V2, TEXTO_REPRESENTACION_V1 } from './autorizaciones'
 import { prisma } from './db'
 import { getIdentidad } from './session'
 import { elegirFicha, type Candidato } from './vinculo-elegir'
@@ -792,7 +792,7 @@ export async function resolverPeticion(datos: {
             // Qué texto se aceptó. La versión depende de quién cede: la de la
             // persona afirma «no verá mi IBAN ni podrá dar partes», que de una
             // sociedad es sencillamente falso.
-            versionTexto: esJuridica ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V1,
+            versionTexto: esJuridica ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V2,
             ip: datos.ip,
             userAgent: datos.userAgent,
           },
