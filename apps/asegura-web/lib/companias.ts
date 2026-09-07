@@ -31,7 +31,13 @@
 export type Compania = {
   nombre: string
   /**
-   * Ruta del SVG bajo `public/`, o `null` cuando NO tenemos su logo.
+   * Ruta del fichero bajo `public/`, o `null` cuando NO tenemos su logo.
+   *
+   * SVG siempre que se pueda; PNG cuando es lo único que hay. Un PNG tiene dos
+   * modos de fallo que un vectorial no tiene, y los dos son silenciosos: sale
+   * borroso si no trae píxeles de sobra para la pantalla retina, y pinta una
+   * CAJA BLANCA sobre el fondo de la banda si no tiene canal alfa. Los vigila
+   * `companias.test.ts` leyendo el fichero.
    *
    * `null` no es un hueco que haya que tapar con un logo parecido ni con uno
    * redibujado a mano: el nombre se pinta como wordmark y ya. Un logo
@@ -77,5 +83,11 @@ export const COMPANIAS: readonly Compania[] = [
   { nombre: 'Reale', logo: '/logos/reale.svg' },
   { nombre: 'Generali', logo: '/logos/generali.svg', escala: 1.6 },
   { nombre: 'Fidelidade', logo: null },
-  { nombre: 'Asisa', logo: null },
+  // 🚨 PNG, no SVG: es el fichero que hay (lo subió Alberto a Drive). Venía en
+  // un lienzo de 640×400 con el dibujo ocupando solo 558×107 —el 74 % era
+  // aire—, así que a la altura del muro habría salido de ~7 px. Se recortó a la
+  // caja del contenido MEDIDA con `Image.getbbox()`, no a ojo. Queda en 5,21 de
+  // relación de aspecto, casi la de Occident (5,42), y por eso no lleva
+  // `escala`: a la misma altura ya casan.
+  { nombre: 'Asisa', logo: '/logos/asisa.png' },
 ] as const
