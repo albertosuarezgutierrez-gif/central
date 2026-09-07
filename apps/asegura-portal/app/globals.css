@@ -1117,6 +1117,28 @@ h1 em {
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+/* El LUGAR y la DESCRIPCIÓN del siniestro (07/09/2026). Los dos ocupan su
+ * propio renglón dentro de la fila (`flex-basis: 100%`): la primera línea es el
+ * índice —cuándo, en qué estado, con qué referencia— y debajo va el relato. Con
+ * la descripción metida en esa primera línea, la fila crecía hasta cuatro
+ * renglones y el estado dejaba de encontrarse de un vistazo. */
+.siniestro-lugar {
+  flex-basis: 100%;
+  min-width: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.siniestro-desc {
+  flex-basis: 100%;
+  min-width: 0;
+  margin: 2px 0 0;
+  line-height: 1.45;
+  /* Texto que escribió una persona, no un dato nuestro: va en el color del
+   * texto (se lee) pero sin negrita — no es un titular, es lo que pasó. */
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 419px) {
   /* A 320 px el `margin-left:auto` dejaría la referencia pegada al borde
    * derecho y separada de su fila; mejor que empiece donde empieza todo. */

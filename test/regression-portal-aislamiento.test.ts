@@ -32,7 +32,7 @@
 //      Una lectura de `prisma.poliza` que no pase por `portal_vinculo` es la
 //      cartera entera a un `where` de distancia.
 //   4. El `schema.prisma` del portal NO declara las columnas que el rol no
-//      puede leer (DNI, IBAN, teléfono, email, dirección, comentario…). Prisma
+//      puede leer (DNI, IBAN, teléfono, email, dirección…). Prisma
 //      pide cada columna por su nombre: una de más y la consulta ENTERA falla
 //      en la BD. Que el schema no las tenga es la garantía; esto la vigila.
 
@@ -201,7 +201,11 @@ test('fase 4: toda lectura de la cartera pasa por lib/session y por portalVincul
 const COLUMNAS_PROHIBIDAS: Record<string, string[]> = {
   Cliente: ['dni', 'telefono', 'email', 'direccion', 'cuentaBancaria', 'fechaNacimiento', 'notas', 'dniLookupHash'],
   PolizaRecibo: ['iban', 'comisionBruta', 'comisionLiquida'],
-  Siniestro: ['lugarDireccion', 'comentario', 'reservaImporte', 'indemnizacionImporte'],
+  // 📌 `comentario` SALIÓ de esta lista el 07/09/2026: se le concedió el GRANT
+  // a propósito para que el cliente vea QUÉ pasó en su siniestro (66 de 69 lo
+  // tienen informado). Los otros tres siguen cerrados: `lugarDireccion` es la
+  // casa de alguien y los dos importes no tienen ni un dato en la cartera.
+  Siniestro: ['lugarDireccion', 'reservaImporte', 'indemnizacionImporte'],
   Poliza: ['cuentaBancaria', 'documentoUrl'],
   PolizaInterviniente: ['nif', 'nombre', 'apellidos', 'telefono', 'email', 'fechaNacimiento', 'fechaCarnet'],
   ClienteEmail: ['email'],

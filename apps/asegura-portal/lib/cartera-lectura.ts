@@ -48,6 +48,8 @@ import {
   type Alcance,
   type BienAsegurado,
   type TipoOtorgante,
+  lugarSiniestro,
+  descripcionSiniestro,
   ordenarRecibos,
   estadoRecibos,
   resumirRecibos,
@@ -112,6 +114,19 @@ export type SiniestroPortal = {
   estado: string
   referencia: string | null
   fechaHora: Date | null
+  /**
+   * QUÉ pasó, en las palabras de quien lo tramitó (`siniestros.comentario`).
+   * `null` = la compañía no lo contó — que NO es «no pasó nada».
+   *
+   * 🚨 Llega desde el 07/09/2026, con GRANT propio
+   * (`prisma/sql/2026-09-07_portal_siniestro_descripcion.sql`) y decisión
+   * explícita de Alberto con la cartera delante: es texto LIBRE y a veces trae
+   * nombres y teléfonos de terceros. Va con el MISMO permiso que el resto del
+   * historial (`ve.siniestros`), no con uno propio.
+   */
+  descripcion: string | null
+  /** DÓNDE pasó, ya legible («Dos Hermanas (Sevilla)»). `null` = no consta. */
+  lugar: string | null
 }
 
 export type PolizaPortal = {
@@ -475,6 +490,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               estado: true,
               referencia: true,
               fechaHora: true,
+              // QUÉ pasó y DÓNDE. `comentario` tiene GRANT desde el 07/09/2026;
+              // las tres de lugar lo tenían desde los grants del 02/09 y
+              // sencillamente no se pedían. `lugar_direccion` sigue SIN grant a
+              // propósito: es la casa de alguien.
+              comentario: true,
+              lugarCiudad: true,
+              lugarProvincia: true,
               // 🚨 `tipo` NO se pide, y no es un olvido: en la BD es un CÓDIGO
               // NUMÉRICO de la compañía (`1107`, `1915`, `1312`, `17`…, medido
               // en la cartera viva el 05/09/2026). «Tipo 1107» no le dice nada
@@ -519,6 +541,11 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             estado: x.estado,
             referencia: x.referencia,
             fechaHora: x.fechaHora,
+            // Las dos normalizaciones viven en el módulo puro: la provincia es
+            // un CÓDIGO («41») y la ciudad viene en MAYÚSCULAS. Aquí solo se
+            // traduce la fila.
+            descripcion: descripcionSiniestro(x.comentario),
+            lugar: lugarSiniestro({ ciudad: x.lugarCiudad, provincia: x.lugarProvincia }),
           })),
         )
       : null

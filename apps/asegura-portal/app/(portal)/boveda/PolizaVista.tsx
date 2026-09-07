@@ -468,6 +468,16 @@ export function HistorialSiniestros({ p }: { p: PolizaPortal }) {
                   (informada en 67 de 67 de la cartera viva), así que va visible
                   y en cifras tabulares para poder leerla en voz alta. */}
               {s.referencia && <span className="siniestro-ref">Ref. {s.referencia}</span>}
+              {/* DÓNDE pasó. Solo consta en 8 de los 69 de la cartera, así que
+                  cuando falta no se pinta nada: un «Lugar: —» no informa. */}
+              {s.lugar && <span className="siniestro-lugar">{s.lugar}</span>}
+              {/* QUÉ pasó, en las palabras de quien lo tramitó y SIN recortar:
+                  media frase de un siniestro es otro relato. Es lo que Alberto
+                  pidió el 07/09/2026 («toda la información») y lo único que
+                  contesta la pregunta que trae aquí a un cliente. `null` = la
+                  compañía no lo contó, y entonces se calla: decir «sin
+                  descripción» no le añade nada a quien ya ve la referencia. */}
+              {s.descripcion && <p className="siniestro-desc">{s.descripcion}</p>}
             </li>
           )
         })}

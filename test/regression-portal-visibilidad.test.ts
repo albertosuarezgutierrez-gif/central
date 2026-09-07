@@ -461,3 +461,52 @@ test('🚨 la ficha pinta la lista entera y dice cuántas hay sin nombre', () =>
     'la ficha tiene que decir cuántas coberturas vienen sin nombre informado',
   )
 })
+
+// ── QUÉ pasó en el siniestro: llega, y pasa por el NIVEL ────────────────────
+//
+// Alberto, 07/09/2026: «también dar acceso a toda la información de los
+// siniestros». La descripción (`siniestros.comentario`, informado en 66 de los
+// 69 de la cartera) es lo único de esa tabla que contesta la pregunta con la
+// que un cliente entra aquí; hasta ese día el historial decía cuándo, en qué
+// estado y con qué referencia — todo menos qué pasó.
+//
+// 🚨 Es texto LIBRE del tramitador y a veces trae nombres y teléfonos de
+// TERCEROS. Por eso el cepo no es «que se pinte»: es que **viaje por el mismo
+// permiso que el resto del historial** y ni un milímetro más. Si algún día
+// alguien lo saca del brazo de `ve.siniestros`, ese texto se sirve a quien solo
+// tiene el nivel `tarjeta` — y no fallaría nada: saldría.
+test('🚨 la descripción del siniestro va DENTRO del historial ya filtrado por nivel', () => {
+  const src = leer(LECTURA)
+  const bloque = src.slice(src.indexOf('const historial'), src.indexOf('return {'))
+  assert.ok(bloque.length > 0, 'no se encuentra la derivación del historial en la lectura')
+  assert.match(
+    bloque,
+    /descripcion: descripcionSiniestro\(x\.comentario\)/,
+    'la descripción tiene que construirse dentro del historial, que es lo que `ve.siniestros` filtra',
+  )
+  assert.match(
+    bloque,
+    /lugar: lugarSiniestro\(/,
+    'el lugar del siniestro va por el mismo camino que la descripción',
+  )
+})
+
+test('🚨 el `select` de siniestros NO pide la dirección exacta ni los importes', () => {
+  // `lugar_direccion` es la casa de alguien (y está cifrada); `reserva_importe`
+  // e `indemnizacion_importe` no tienen NI UN dato en las 69 filas de la
+  // cartera, así que pedirlos sería abrir columnas por si acaso. Ninguno de los
+  // tres tiene GRANT: si vuelven al `select`, la lectura ENTERA de `Siniestro`
+  // revienta con 42501 — en producción, no aquí.
+  const src = leer(LECTURA)
+  const bloque = src.slice(src.indexOf('prisma.siniestro.findMany'), src.indexOf('orderBy: { fechaHora'))
+  for (const campo of ['lugarDireccion', 'reservaImporte', 'indemnizacionImporte']) {
+    assert.doesNotMatch(bloque, new RegExp(campo), `${campo} no puede entrar en el select de siniestros`)
+  }
+})
+
+test('la descripción se pinta ENTERA: nada de recortarla en la vista', () => {
+  const src = leer('apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx')
+  const bloque = src.slice(src.indexOf('export function HistorialSiniestros'))
+  assert.match(bloque, /\{s\.descripcion && <p className="siniestro-desc">\{s\.descripcion\}<\/p>\}/, 
+    'la descripción se pinta tal cual: media frase de un siniestro es otro relato')
+})
