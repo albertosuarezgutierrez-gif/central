@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗑️ El cliente ya puede QUITAR de su bóveda las pólizas que subió él (07/09/2026).** Alberto,
+  sobre su portal: «póliza sin compañía, no la puedo eliminar… las nuestras de CIMA no, pero las que
+  no son nuestras el cliente sí, que se puede confundir». `DELETE /api/polizas/[id]` sobre
+  `portal_poliza_declarada` y solo ahí: la cartera no se borra porque **ninguna ruta del portal la
+  escribe**, no por un `if`. 🚨 Un parte de siniestro BLOQUEA el borrado (409): la FK
+  `portal_parte_siniestro.poliza_declarada_id` es `ON DELETE SET NULL`, así que borrar no falla —
+  deja el parte huérfano y la correduría con un siniestro que no habla de nada. Regla en
+  `puedeBorrarDeclarada()` (`@central/module-seguros-portal`); 4 cepos vistos en rojo uno a uno
+  (`test/regression-portal-borrado.test.ts`). PR pendiente.
+
 - **📲 El portal del cliente se puede INSTALAR (07/09/2026).** Idea de Alberto: «a veces entro en una
   web y me sale la opción de instalar; algo así para cuando entren nuestros clientes». Es una PWA, y
   el sitio es `apps/asegura-portal` (el asegurado), no `/correduria` de plataforma. Manifiesto +
