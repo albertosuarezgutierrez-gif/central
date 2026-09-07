@@ -40,6 +40,24 @@
   Ahora la foto se **encoge en el navegador** (`lib/imagen-cliente.ts`, medido en Chromium: **12,4 MB → 1,8 MB**;
   el PDF no se toca) y cada fallo se dice por su nombre. Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
 
+- **🔗 `sameAs`: la web y el canal de YouTube declarados como el MISMO negocio (07/09/2026).**
+  `PERFILES` en `lib/sitio.ts` → `sameAs` en la ficha `InsuranceAgency`. Importa aquí más que en otras
+  webs: conviven **tres dominios propios** (`grupoasegura.es`, `app.grupoasegura.com`, la landing vieja de
+  plataforma) y existe una **correduría HOMÓNIMA en Montevideo** (`grupoasegura.com.uy`) que el buscador
+  ya me devolvió mezclada con la de Alberto. Guardián `lib/seo-perfiles.test.ts`, **visto en rojo** con el
+  acortador que Alberto pegó primero (`share.google/…`, caduca y esconde su destino) y con el `?si=` que
+  pega el botón «compartir» de YouTube. Sin perfiles, `sameAs` **NO se emite** — un `[]` afirmaría «se
+  miró y no hay». ⚠️ **La pertenencia no está medida y así se declara en el código**: el proxy deniega
+  `youtube.com` y `google.com`, así que la URL entra por palabra de Alberto; el cepo vigila la FORMA.
+  61/61 en asegura-web, tsc verde, `pnpm test` 639 pass / 0 fail.
+  📺 **El canal existía y estaba envenenado.** Se llamaba **«Grupo ASegura - SEGUROS Low Cost»** (17 subs,
+  5 vídeos) y su primer vídeo lleva una escarapela **«Nº1»** en la miniatura: promesa de precio + claim de
+  liderazgo, o sea justo lo que `lib/ramos.test.ts` bloquea en cada commit de la web — con 80 clientes ese
+  «Nº1» además no es acreditable (Ley 3/1991). Alberto cambió nombre y descripción con el texto que se le
+  pasó; **los 5 vídeos siguen sin revisar**. 🏛️ **Google Business SÍ existe y está verificado** (1 reseña,
+  sin horario), pero su categoría es **«Agencia de seguros»** —agente, lo contrario de corredor y de la
+  clave DGSFP CS-F/0170— y su nombre «Grupo ASegura tu corredor de Seguros» ≠ `MEDIADOR.marca`: **NAP
+  roto**. Falta su URL canónica de Maps para cerrar el `sameAs` y desbloquear `geo`.
 - **🧾 Subir una factura a mano ya la ARCHIVA y la CONTABILIZA, no solo la lee (07/09/2026).**
   Alberto subió una factura al agente contable dando por hecho que se archivaba: no lo hacía. La rama
   factura de `lib/contable/documentos.ts` leía el documento, proponía conciliar el cargo y **tiraba el
