@@ -153,6 +153,15 @@ plan de implementación cuando se prioricen.
     `portal_peticion_acceso` (el cliente propone, el corredor decide). Y por la regla de identidad de
     la casa (NIF, nunca nombre): esto NO sustituye a `poliza_intervinientes`, solo abre la puerta a que
     Alberto la complete con el NIF cuando confirme.
+12. **Invitar al tercero declarado en la pieza 11.** Si la relación es un familiar (pareja, hijo/a,
+    padre/madre, hermano/a), ofrecer invitarlo al portal reutilizando el sistema de invitaciones YA
+    construido (`portal_invitacion` — token hasheado, código de un solo uso, nunca clic directo que
+    canjea solo). Cierra el círculo: declaras con quién tienes relación → esa persona entra también →
+    sus propios seguros se convierten en otro lead. Cero infraestructura nueva.
+13. **El vencimiento como ventana para el cambio de mediador (pieza 5).** Cuando una póliza ajena
+    leída esté cerca de vencer, es cuando cambiar de mediador tiene menos fricción con la compañía
+    actual — priorizar la propuesta de cambio de mediador en esa ventana, con el mismo dato de
+    vencimiento que ya extrae `extraer-poliza.ts`.
 
 ## Reglas que no se negocian
 
