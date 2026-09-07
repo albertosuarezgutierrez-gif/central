@@ -1,6 +1,8 @@
 import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
+import { normalizarTitular, type TitularDeclarado } from '@central/module-seguros-portal'
+
 import { prisma } from '@/lib/db'
 import { extraerPoliza } from '@/lib/extraer-poliza'
 import { normalizarAlta } from '@/lib/poliza-editable'
@@ -37,6 +39,22 @@ export async function POST(req: Request) {
   return altaConDocumento(req, identidad.id)
 }
 
+/**
+ * Lo que se guarda de la pregunta «¿es tuya o de tu empresa?».
+ *
+ * 🚨 `sin_preguntar` se guarda como NULL y NO como `'propio'`. Es la diferencia
+ * entre «ha dicho que es suya» y «no consta», y de ella depende contra qué
+ * ficha se comprueba después si la casa ya lleva esa póliza. Un default a
+ * `'propio'` sería cómodo y falso.
+ */
+function columnasTitular(t: TitularDeclarado) {
+  return {
+    titularTipo: t.tipo === 'sin_preguntar' ? null : t.tipo,
+    titularEmpresaNombre: t.nombre,
+    titularEmpresaCif: t.cif,
+  }
+}
+
 async function altaConDocumento(req: Request, identidadId: string) {
   let form: FormData
   try {
@@ -47,6 +65,15 @@ async function altaConDocumento(req: Request, identidadId: string) {
   const fichero = form.get('documento')
   if (!(fichero instanceof File)) return NextResponse.json({ error: 'sin_fichero' }, { status: 400 })
   if (fichero.size > MAX_BYTES) return NextResponse.json({ error: 'fichero_grande' }, { status: 413 })
+
+  // La pregunta viaja en el MISMO formulario que el documento: separarla en una
+  // segunda petición dejaría filas guardadas sin respuesta cuando alguien cierra
+  // la pestaña, y esas filas son indistinguibles de un «no se preguntó».
+  const titular = normalizarTitular({
+    tipo: form.get('titularTipo'),
+    nombre: form.get('titularEmpresaNombre'),
+    cif: form.get('titularEmpresaCif'),
+  })
 
   const buffer = Buffer.from(await fichero.arrayBuffer())
   const { datos, fuente, camposRamo } = await extraerPoliza(buffer, fichero.type, fichero.name)
@@ -94,6 +121,7 @@ async function altaConDocumento(req: Request, identidadId: string) {
       procedencia: 'declarado',
       confirmadaPorUsuario: false,
       documentoNombre: fichero.name,
+      ...columnasTitular(titular),
       // `camposRamo` entra en la extracción bruta para que quede constancia de
       // que la 2ª pasada se intentó y no salió: sin él, una fila con
       // `datos_ramo` a NULL no distingue «la póliza no lo trae» de «no se pudo
@@ -121,6 +149,16 @@ async function altaAMano(req: Request, identidadId: string) {
   if (!normalizado.ok) return NextResponse.json({ error: normalizado.error }, { status: 400 })
   const { datos } = normalizado
 
+  // La misma pregunta que en el alta con documento, leída del JSON. No pasa por
+  // `normalizarAlta` a propósito: aquello valida los campos de la PÓLIZA y esto
+  // es de quién es, que es otra cosa y tiene su propio módulo puro.
+  const cuerpoObj = (cuerpo ?? {}) as Record<string, unknown>
+  const titular = normalizarTitular({
+    tipo: cuerpoObj.titularTipo,
+    nombre: cuerpoObj.titularEmpresaNombre,
+    cif: cuerpoObj.titularEmpresaCif,
+  })
+
   // Las dos columnas de JSON salen del resto a propósito: Prisma NO admite
   // `null` en una columna `Json?`, y el `null` de `DatosAlta` («no se ha
   // declarado ninguno») tiene que llegar a la BD como `DbNull` (NULL de SQL) y
@@ -138,6 +176,7 @@ async function altaAMano(req: Request, identidadId: string) {
       // metros sin decir que los dio el Catastro los deja indistinguibles de una
       // estimación a ojo, y es justo la pregunta que esta columna responde.
       datosRamoOrigen: datosRamoOrigen ?? Prisma.DbNull,
+      ...columnasTitular(titular),
       // Sigue siendo un dato APORTADO por el cliente, no verificado contra la
       // compañía: `declarado`, igual que si viniera de un PDF.
       procedencia: 'declarado',

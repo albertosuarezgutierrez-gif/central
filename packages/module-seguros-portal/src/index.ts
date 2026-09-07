@@ -51,6 +51,8 @@ export {
   ordenarLeads,
 } from './lead-declarada.ts'
 export type { EntradaLead, EstadoLead, Lead } from './lead-declarada.ts'
+export { etiquetaTitular, fichaParaCotejar, normalizarTitular } from './titular-declarado.ts'
+export type { TipoTitular, TitularDeclarado } from './titular-declarado.ts'
 export {
   PARTE_ESTADOS,
   DIAS_COMUNICACION_LCS,

@@ -50,6 +50,13 @@ export type LeadVista = {
   subidaEn: Date | null
   documentoNombre: string | null
   primaAnual: number | null
+  /**
+   * De quién dijo el CLIENTE que era. `'sin_preguntar'` no es «suya»: son las
+   * filas de antes de que existiera la pregunta, y también las que dijeron
+   * «de mi empresa» sin decir cuál. Cambia a quién llamas y qué le dices.
+   */
+  titularTipo: 'propio' | 'empresa' | 'sin_preguntar'
+  titularEmpresa: string | null
 }
 
 export type ResultadoLeads =
@@ -76,6 +83,12 @@ function fecha(v: unknown): Date | null {
   if (t === null) return null
   const d = new Date(t)
   return Number.isNaN(d.getTime()) ? null : d
+}
+
+/** `'sin_preguntar'` ante cualquier duda: es el estado que no afirma nada. */
+function titularDe(bruto: unknown): 'propio' | 'empresa' | 'sin_preguntar' {
+  const t = cadena(obj(bruto)?.tipo)
+  return t === 'propio' || t === 'empresa' ? t : 'sin_preguntar'
 }
 
 export function interpretarLeads(bruto: unknown): ResultadoLeads {
@@ -124,6 +137,11 @@ export function interpretarLeads(bruto: unknown): ResultadoLeads {
       // Cualquier otra cosa —`null`, ausente, basura— es «no lo sabemos».
       yaEnCartera: f.yaEnCartera === false ? false : null,
       clienteId: cadena(f.clienteId),
+      // Solo los dos valores explícitos cuentan. Cualquier otra cosa —ausente,
+      // null, basura— es «no se preguntó»: inventar aquí un `propio` diría que
+      // el cliente afirmó algo que no afirmó.
+      titularTipo: titularDe(f.titular),
+      titularEmpresa: cadena(obj(f.titular)?.nombre),
       subidaEn: fecha(f.subidaEn),
       documentoNombre: cadena(f.documentoNombre),
       primaAnual: numero(f.primaAnual),

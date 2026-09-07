@@ -31,12 +31,15 @@
 // ninguna pantalla ni ningún cron puede dispararlo desde aquí. El lead llega a
 // Alberto y decide él.
 import {
+  fichaParaCotejar,
   leadDeclarada,
   leadUrgente,
   normalizarNumeroPoliza,
+  normalizarTitular,
   ordenarLeads,
   type EntradaLead,
   type Lead,
+  type TitularDeclarado,
 } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
@@ -57,6 +60,12 @@ export type LeadPortal = Lead & {
   /** El nombre del PDF, que es lo único que se guarda de él (no hay bucket todavía). */
   documentoNombre: string | null
   primaAnual: number | null
+  /**
+   * De quién dijo el cliente que era. TRES estados, y `sin_preguntar` es uno:
+   * son todas las filas anteriores al 07/09/2026. La pantalla lo pinta, porque
+   * «la subió a nombre de su empresa» cambia a quién llamas y qué le dices.
+   */
+  titular: TitularDeclarado
 }
 
 export type ResultadoLeads =
@@ -84,6 +93,9 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
         confirmadaPorUsuario: true,
         documentoNombre: true,
         creadaEn: true,
+        titularTipo: true,
+        titularEmpresaNombre: true,
+        titularEmpresaCif: true,
       },
       orderBy: { creadaEn: 'desc' },
     })
@@ -103,6 +115,18 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
       const clienteId = vinculos.get(f.identidadId) ?? null
       if (clienteId === null) sinIdentificar++
 
+      const titular = normalizarTitular({
+        tipo: f.titularTipo,
+        nombre: f.titularEmpresaNombre,
+        cif: f.titularEmpresaCif,
+      })
+      // 🚨 Contra QUÉ ficha se coteja lo decide el módulo puro, no este fichero.
+      // Si se cotejara siempre contra la ficha personal de quien la sube, una
+      // póliza que su SOCIEDAD ya tiene contratada con la casa saldría como
+      // oportunidad — y se llamaría a un cliente para ofrecerle lo que ya se le
+      // vendió. `null` = no hay contra qué cotejar, que NO es «no es nuestra».
+      const fichaCotejo = fichaParaCotejar(titular, clienteId)
+
       const entrada: EntradaLead = {
         id: f.id,
         compania: f.compania,
@@ -110,8 +134,10 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
         ramo: f.ramo,
         fechaVencimiento: f.fechaVencimiento,
         confirmadaPorUsuario: f.confirmadaPorUsuario,
-        // Sin ficha no hay contra qué cotejar: `null`, no `false`.
-        yaEnCartera: clienteId === null ? null : yaEnLaCartera(yaTiene, clienteId, f.numeroPoliza),
+        // Sin ficha CONTRA LA QUE COTEJAR no hay comprobación: `null`, no
+        // `false`. Y eso pasa por dos motivos distintos que aquí dan lo mismo —
+        // no lo hemos casado con nadie, o la dijo de su empresa.
+        yaEnCartera: fichaCotejo === null ? null : yaEnLaCartera(yaTiene, fichaCotejo, f.numeroPoliza),
       }
       const lead = leadDeclarada(entrada, hoy)
       if (lead === null) continue
@@ -125,6 +151,7 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
         // `Decimal` de Prisma → number, y `null` sigue siendo `null`: 0 sería
         // decir que la póliza cuesta cero euros.
         primaAnual: f.primaAnual === null ? null : Number(f.primaAnual),
+        titular,
       })
     }
 

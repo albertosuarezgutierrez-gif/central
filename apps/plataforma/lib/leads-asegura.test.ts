@@ -23,6 +23,7 @@ const OK = {
       subidaEn: '2026-09-07T10:36:53.874Z',
       documentoNombre: '04_Z11_3777894.pdf',
       primaAnual: 412.5,
+      titular: { tipo: 'empresa', nombre: 'GLOBAL 2 SL', cif: null },
     },
   ],
 }
@@ -96,4 +97,18 @@ test('🚨 `urgente` viene del puerto y solo un `true` explícito cuenta', () =>
   assert.equal(r.ok && r.leads[0].urgente, true)
   const sin = interpretarLeads({ ...OK, leads: [{ ...OK.leads[0], urgente: undefined }] })
   assert.equal(sin.ok && sin.leads[0].urgente, false)
+})
+
+test('🚨 el titular sin respuesta NO se lee como «suya»', () => {
+  // Es la fila de antes de que existiera la pregunta. Pintarla como «suya»
+  // afirmaría algo que el cliente no ha dicho — y en esta pantalla se decide a
+  // quién se llama y qué se le dice.
+  const r = interpretarLeads(OK)
+  assert.equal(r.ok && r.leads[0].titularTipo, 'empresa')
+  assert.equal(r.ok && r.leads[0].titularEmpresa, 'GLOBAL 2 SL')
+
+  for (const basura of [undefined, null, {}, { tipo: 'sociedad' }, 'propio']) {
+    const x = interpretarLeads({ ...OK, leads: [{ ...OK.leads[0], titular: basura }] })
+    assert.equal(x.ok && x.leads[0].titularTipo, 'sin_preguntar', `esto debería ser sin_preguntar: ${JSON.stringify(basura)}`)
+  }
 })

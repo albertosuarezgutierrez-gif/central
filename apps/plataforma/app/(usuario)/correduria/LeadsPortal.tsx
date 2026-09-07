@@ -173,6 +173,20 @@ function Fila({ l }: { l: LeadVista }) {
               ¿Ya es tuya? Sin comprobar
             </Badge>
           )}
+          {/* De quién dijo el CLIENTE que era. Cambia a quién llamas: una
+              póliza de su sociedad no se negocia igual que la suya, y el
+              «no se preguntó» son las filas de antes de que existiera la
+              pregunta — no significa que sea personal. */}
+          {l.titularTipo === 'empresa' && (
+            <Badge tono="info" title="Lo ha declarado el cliente al subirla. NO está dada de alta como ficha en la cartera: si quieres trabajarla como empresa, hay que crearla o casarla con la que ya tengas.">
+              De su empresa{l.titularEmpresa ? `: ${l.titularEmpresa}` : ''}
+            </Badge>
+          )}
+          {l.titularTipo === 'sin_preguntar' && (
+            <Badge title="Se subió antes de que existiera la pregunta «¿es tuya o de tu empresa?». No significa que sea personal: significa que no consta.">
+              No consta de quién es
+            </Badge>
+          )}
           {l.clienteId === null && <Badge tono="aviso">Sin identificar</Badge>}
           {l.ventanaPasada && (
             <Badge title="La ventana de este año ya pasó; la póliza se habrá prorrogado. Vuelve a mirarlo en su próximo vencimiento.">

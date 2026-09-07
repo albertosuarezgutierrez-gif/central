@@ -2401,3 +2401,68 @@ h1 em {
     font-size: 11px;
   }
 }
+
+/* ── «¿De quién es esta póliza?» ───────────────────────────────────────────
+ *
+ * Va ANTES del botón de subir y no después, porque la respuesta viaja en el
+ * mismo envío. Y sin marco de `fieldset` de navegador: el borde por defecto es
+ * lo único de todo el portal que no sigue la marca. */
+.de-quien {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.2);
+  background: color-mix(in oklab, var(--brand) 3%, var(--surface));
+}
+.de-quien legend {
+  padding: 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.de-quien-opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* 44px de alto: el mínimo táctil de la casa. Esto lo pulsa gente mayor desde el
+ * móvil, y una radio de 13px con su texto al lado no se acierta. */
+.de-quien-opciones label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--panel);
+  cursor: pointer;
+}
+.de-quien-opciones label:has(input:checked) {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+.de-quien-empresa {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.de-quien-empresa label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+@media (min-width: 560px) {
+  /* El nombre pide más sitio que el CIF, y a partir de aquí caben los dos. */
+  .de-quien-empresa {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+  .de-quien-empresa > p {
+    grid-column: 1 / -1;
+  }
+}
