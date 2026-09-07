@@ -14,6 +14,7 @@ import SinCanal from './SinCanal'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
 import Bloque from './Bloque'
+import Redes from './Redes'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
 import ListaCartera from './ListaCartera'
 import Secciones, { type ContadoresSeccion } from './Secciones'
@@ -442,6 +443,14 @@ export default function CorreduriaClient() {
             vencimiento se pierde y no pueden entrar al portal—, así que el
             trabajo es pedir el correo la próxima vez que se hable con ellos. */}
         <SinCanal onContador={setNSinCanal} />
+      </div>
+
+      {/* ══ REDES ════════════════════════════════════════════════════════════
+          Lo único de esta pantalla que mira hacia FUERA. Sin contador a
+          propósito: mediría «borradores sin publicar», y eso solo lo sabe
+          LinkedIn (ver `secciones.ts`). */}
+      <div role="tabpanel" aria-label="Redes" className="corr-panel" style={panel('redes')}>
+        <Redes />
       </div>
 
       {modal && (

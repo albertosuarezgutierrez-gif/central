@@ -9,6 +9,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { PROHIBIDO, ACOTA_AMBITO } from '@central/module-seguros'
 import { RAMOS, ramoPorSlug, type Ramo } from './ramos.ts'
 
 /** Todo el texto visible de un ramo, en una sola cadena, para barrerlo. */
@@ -47,16 +48,11 @@ test('ramoPorSlug devuelve null para lo que no existe, nunca un ramo de relleno'
 // 🚨 El guardián de verdad. Un claim de ahorro o un superlativo sobre el
 // resultado convierte la página en asesoramiento, y el asesoramiento arrastra
 // análisis objetivo documentado e IPID entregado antes de contratar.
-const PROHIBIDO: readonly { patron: RegExp; porque: string }[] = [
-  { patron: /\bahorr\w*\s+(hasta\s+)?(un\s+)?\d/i, porque: 'cifra de ahorro prometida' },
-  { patron: /\bhasta\s+un\s+\d+\s*%/i, porque: 'porcentaje de ahorro prometido' },
-  { patron: /\b(el|la)\s+mejor\s+(precio|p[óo]liza|seguro|oferta|prima)\b/i, porque: 'superlativo sobre el resultado' },
-  { patron: /\bm[áa]s\s+barat\w+\b/i, porque: 'promesa de precio' },
-  { patron: /\bprecio\s+m[áa]s\s+baj\w+\b/i, porque: 'promesa de precio' },
-  { patron: /\bgarantizamos\b/i, porque: 'garantía que la correduría no puede dar' },
-  { patron: /\bte\s+ahorramos\b/i, porque: 'promesa de ahorro' },
-  { patron: /\bsin\s+letra\s+peque[ñn]a\b/i, porque: 'promesa sobre el condicionado de un tercero' },
-]
+// 🚨 La lista NO vive aquí desde el 07/09/2026: vive en `copy-regulado.ts` de
+// `@central/module-seguros`, porque la correduría ya no publica solo en esta
+// web. Un post de LinkedIn está sujeto a la MISMA regla (RDL 3/2020) y con dos
+// copias de estos patrones una de las dos deja de vigilar sin que nada falle.
+// Y en redes el daño es peor: una página se corrige, un post publicado no.
 
 test('el copy no promete ahorros, precios ni superlativos (RDL 3/2020)', () => {
   for (const r of RAMOS) {
@@ -113,12 +109,7 @@ test('el title no repite la marca que ya añade la plantilla', () => {
 // la ficha `InsuranceAgency` (`lib/seo.ts`) y en el perfil de Google Business,
 // que es de donde sale la señal del pack local. Por eso ese domicilio sigue
 // diciendo Sevilla y estos textos ya no.
-const ACOTA_AMBITO: readonly { patron: RegExp; porque: string }[] = [
-  { patron: /\ben\s+Sevilla\b/i, porque: 'acota el servicio a una ciudad' },
-  { patron: /\bSevilla\s+y\s+(su\s+)?provincia\b/i, porque: 'acota el servicio a una provincia' },
-  { patron: /\ben\s+Andaluc[íi]a\b/i, porque: 'acota el servicio a una comunidad' },
-  { patron: /\bs[óo]lo\s+en\s+\w+/i, porque: 'exclusividad geográfica' },
-]
+// (misma razón: `ACOTA_AMBITO` también es compartida.)
 
 test('ningún texto de ramo acota el servicio a Sevilla, su provincia o Andalucía', () => {
   for (const r of RAMOS) {

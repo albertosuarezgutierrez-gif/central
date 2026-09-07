@@ -17,6 +17,9 @@
  *   Cartera   → la foto: cuántos hay y qué vence (los 90 días enteros).
  *   Comisiones→ el dinero: devengado, liquidado y lo que entró al banco.
  *   Datos     → la calidad del dato (duplicadas, gente sin canal). No urge.
+ *   Redes     → lo que se va a publicar. Va la última a propósito: es lo único
+ *               de la pantalla que mira hacia FUERA, y no compite con la
+ *               cartera que ya está dentro.
  *
  * «Clientes» y «Cartera» no son lo mismo aunque hablen de la misma gente: una
  * es la herramienta de trabajo (filtrar y sacar una lista para llamar) y la
@@ -29,11 +32,19 @@
  * en la barra: el trabajo pendiente se ve desde cualquier pestaña. Y por eso el
  * contador distingue tres estados —igual que `FichaTabs`—: un número, `0` (que
  * no se pinta) y `null` = «no se ha podido leer», que se pinta `!` y NUNCA 0.
+ *
+ * 🚨 «Redes» es la única sección SIN contador, y no es un olvido. El contador
+ * mide trabajo pendiente, y aquí eso sería «borradores sin publicar» — un dato
+ * que solo conoce LinkedIn y que desde aquí no se puede leer. Pintar el número
+ * de borradores del repo diría «tienes 6 cosas pendientes» cuando podrían estar
+ * los 6 publicados; pintar `null` (`!`) daría una alarma sobre algo que no
+ * falla. No reportar contador es la respuesta honesta: la sección no afirma
+ * nada que no sepa.
  */
 
-export type Seccion = 'hoy' | 'clientes' | 'cartera' | 'comisiones' | 'datos'
+export type Seccion = 'hoy' | 'clientes' | 'cartera' | 'comisiones' | 'datos' | 'redes'
 
-export const SECCIONES: readonly Seccion[] = ['hoy', 'clientes', 'cartera', 'comisiones', 'datos']
+export const SECCIONES: readonly Seccion[] = ['hoy', 'clientes', 'cartera', 'comisiones', 'datos', 'redes']
 
 /** Un `?s=` desconocido (o ausente) no deja la pantalla en blanco: cae a «Hoy». */
 export function seccionDeParametro(v: string | string[] | undefined): Seccion {

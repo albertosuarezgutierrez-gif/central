@@ -38,6 +38,60 @@
   desde el 06/09 y sin tocar) y 3 huellas sanas (`smoobu_sync`, `correduria_partes`, `trading_h10`) que
   no estaban en `AGENTES_VIGILADOS`. 🟡 sin acción: Occident/C0058 lleva 76 días sin mandar CIMA (7
   renovaciones ya vencidas). Detalle en `docs/AUDITORIA-2026-09.md`.
+- **🔗 `sameAs`: la web y el canal de YouTube declarados como el MISMO negocio (07/09/2026).**
+  `PERFILES` en `lib/sitio.ts` → `sameAs` en la ficha `InsuranceAgency`. Importa aquí más que en otras
+  webs: conviven **tres dominios propios** (`grupoasegura.es`, `app.grupoasegura.com`, la landing vieja de
+  plataforma) y existe una **correduría HOMÓNIMA en Montevideo** (`grupoasegura.com.uy`) que el buscador
+  ya me devolvió mezclada con la de Alberto. Guardián `lib/seo-perfiles.test.ts`, **visto en rojo** con el
+  acortador que Alberto pegó primero (`share.google/…`, caduca y esconde su destino) y con el `?si=` que
+  pega el botón «compartir» de YouTube. Sin perfiles, `sameAs` **NO se emite** — un `[]` afirmaría «se
+  miró y no hay». ⚠️ **La pertenencia no está medida y así se declara en el código**: el proxy deniega
+  `youtube.com` y `google.com`, así que la URL entra por palabra de Alberto; el cepo vigila la FORMA.
+  61/61 en asegura-web, tsc verde, `pnpm test` 639 pass / 0 fail.
+  📺 **El canal existía y estaba envenenado.** Se llamaba **«Grupo ASegura - SEGUROS Low Cost»** (17 subs,
+  5 vídeos) y su primer vídeo lleva una escarapela **«Nº1»** en la miniatura: promesa de precio + claim de
+  liderazgo, o sea justo lo que `lib/ramos.test.ts` bloquea en cada commit de la web — con 80 clientes ese
+  «Nº1» además no es acreditable (Ley 3/1991). Alberto cambió nombre y descripción con el texto que se le
+  pasó; **los 5 vídeos siguen sin revisar**. 🏛️ **Google Business SÍ existe y está verificado** (1 reseña,
+  sin horario), pero su categoría es **«Agencia de seguros»** —agente, lo contrario de corredor y de la
+  clave DGSFP CS-F/0170— y su nombre «Grupo ASegura tu corredor de Seguros» ≠ `MEDIADOR.marca`: **NAP
+  roto**. Falta su URL canónica de Maps para cerrar el `sameAs` y desbloquear `geo`.
+- **📣 LinkedIn: seis borradores en el repo, bajo el MISMO cepo regulatorio que la web (07/09/2026).**
+  Alberto eligió canal («empieza con LinkedIn»). Lo que se ha construido NO publica nada —regla global de
+  comunicaciones salientes— sino que deja el contenido escrito, vigilado y en la pantalla que él abre.
+  🔁 **La lista de lo prohibido salió de `apps/asegura-web` a `@central/module-seguros`**
+  (`copy-regulado.ts`: `PROHIBIDO`, `ACOTA_AMBITO`, `revisarCopy`, 7 tests). Vivía SOLO en el cepo de la
+  web, así que solo protegía a la web; con la correduría publicando en redes, una segunda copia de esos
+  patrones sería la que deja de vigilar el día que divergen. `lib/ramos.test.ts` la consume ahora en vez
+  de declararla (61/61 antes y después = comportamiento idéntico). 🚨 **Y en redes el daño es asimétrico:
+  una página se corrige, un post publicado no** — por eso la revisión pasa ANTES.
+  📝 `apps/plataforma/lib/correduria/redes-borradores.ts`: 6 posts (comunidades·infraseguro art. 30 LCS ·
+  preaviso art. 22 LCS · hogar del banco art. 17 Ley 5/2019 · flota·mercancía · comercio·actividad
+  declarada · corredor vs agente), cada uno con `porQue` y con `base` = la norma citada, **para poder
+  verificarla antes de publicar** (una cita inventada en un post no se corrige). Los tres artículos se
+  verificaron en fuentes antes de escribirlos; el 30 LCS es DISPOSITIVO (se puede excluir por pacto) y ese
+  matiz es el que da valor al post. Cepo `redes-borradores.test.ts` (9), **visto en rojo tres veces**:
+  promesa de precio, norma citada sin `base`, y clave DGSFP tecleada distinta de `MEDIADOR`.
+  🖥️ Sexta sección **«Redes»** en `/correduria` con los borradores y botón copiar. **Sin contador a
+  propósito**, y es la decisión que más se piensa: mediría «borradores sin publicar», dato que solo conoce
+  LinkedIn — un número diría «tienes 6 pendientes» con los 6 quizá publicados, y un `null` (`!`) daría
+  alarma sobre algo que no falla. No afirmar nada es lo honesto.
+  ⏭️ Pendiente de Alberto: revisar su perfil de LinkedIn (titular y «Acerca de» — no se ven desde aquí) y
+  el ritmo de un post por semana. El adaptador de publicación (`w_member_social`, self-serve para el
+  perfil personal; la página de empresa exige partner) **no se ha construido**: sin ritmo probado sería
+  automatizar un canal que aún no existe.
+
+- **🧾 Subir una factura a mano ya la ARCHIVA y la CONTABILIZA, no solo la lee (07/09/2026).**
+  Alberto subió una factura al agente contable dando por hecho que se archivaba: no lo hacía. La rama
+  factura de `lib/contable/documentos.ts` leía el documento, proponía conciliar el cargo y **tiraba el
+  fichero** — archivar en Drive e imputar a `gastos` solo pasaba con lo que entraba por CORREO. Ahora la
+  subida manual pasa por la maquinaria CANÓNICA del agente de correo (`subir` + `procesarFactura`, con su
+  dedupe por huella), así que **las tres bocas** (chat web, 📎 de Telegram y el botón nuevo) archivan e
+  imputan igual. 🚨 `gastos` NO tiene `cuenta_id`: si la sesión no es la dueña del libro (misma resolución
+  que `facturas-scan`) **no se sube ni se imputa nada** y se DICE (`decision: null` = «no intentado», no
+  «no hay»). Botón 🧾 en la cabecera (icono solo en móvil: la barra de 52px no admite etiqueta a 320px).
+  Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
+
 - **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
   `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
   **sin ninguna página**. Va en `RAMOS`, así que entra sola en sitemap, pie y formulario. Su posición en la
