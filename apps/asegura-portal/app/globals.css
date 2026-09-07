@@ -513,7 +513,15 @@ h1 em {
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  /* 🚨 `auto-FIT`, no `auto-fill` (07/09/2026). Alberto, con la captura de su
+   * bóveda: «el diseño no es acorde». `auto-fill` CREA las pistas aunque no
+   * haya tarjetas para llenarlas, así que con un solo aviso en el calendario la
+   * tarjeta se quedaba en la primera pista y el resto de la fila salía en
+   * blanco. Medido a 1440: la tarjeta ocupaba el **24 %** del ancho (335 de
+   * 1374 px) y a 768 el 49 %. Con `auto-fit` las pistas vacías se colapsan y la
+   * tarjeta ocupa el hueco entero; con dos o más, el reparto es idéntico al de
+   * antes. Es un fallo MUDO: nada se desborda ni falla, solo queda hueco. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: 12px;
 }
 /* Una sola columna, a la fuerza: las listas cuyas tarjetas llevan un formulario
@@ -594,6 +602,76 @@ h1 em {
 /* La primera no separa de nada: pegada al título de la sección queda mejor. */
 .titular-cabecera:first-of-type {
   margin-top: 0;
+}
+
+/* ── Las tres baldosas de cabecera de un titular (07/09/2026) ───────────────
+   Pólizas · Al año · Próximo, las mismas que promete el panel de la portada de
+   `grupoasegura.es`. Van por titular, no una suma global: sumar lo personal y
+   lo de la sociedad volvería a mezclarlas en la cifra que más se mira.
+
+   🚨 `minmax(0, 1fr)` y no `1fr` a secas: la pista implícita de un grid se
+   dimensiona con su contenido más ancho, así que un importe largo empujaría la
+   página entera y anularía cualquier `overflow-x` de más abajo. Es el fallo que
+   el CLAUDE.md documenta para `apps/plataforma`, y aquí se evita de entrada. */
+.resumen-cartera {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.resumen-baldosa {
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+}
+
+.resumen-baldosa dt {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.resumen-baldosa dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text);
+  /* Un importe largo parte por donde sea antes que desbordar la baldosa. */
+  overflow-wrap: anywhere;
+}
+
+/* La nota es la mitad del diseño, no un adorno: es la que convierte «pagas
+   780,75€» en «de lo que sabemos, pagas 780,75€». Si desaparece, la baldosa
+   afirma un total que no lo es. */
+.resumen-nota {
+  margin: 4px 0 0;
+  font-family: var(--sans);
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+/* A 320 px tres baldosas de ~93 px siguen cabiendo, pero el número a 18 px con
+   el rótulo encima aprieta. Se afina en vez de apilarlas: apiladas ocuparían
+   toda la primera pantalla y empujarían la lista, que es a lo que se entra. */
+@media (max-width: 380px) {
+  .resumen-cartera {
+    gap: 6px;
+  }
+  .resumen-baldosa {
+    padding: 8px 9px;
+  }
+  .resumen-baldosa dd {
+    font-size: 16px;
+  }
 }
 /* Quien haya pedido menos movimiento no espera que un elemento se despegue. */
 @media (prefers-reduced-motion: reduce) {
