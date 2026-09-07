@@ -1458,13 +1458,34 @@ textarea.f-in {
   animation: desfile 30s linear infinite;
 }
 
+/* La caja es la MISMA para las siete: así el desfile no da saltos de altura
+   aunque un logo sea un escudo y otro una palabra larga. Lo que varía es la
+   altura del dibujo dentro, por `--escala` (ver `lib/companias.ts`): a la misma
+   altura, Occident (5,42:1) sale más de cuatro veces más ancho que Generali
+   (1,23:1) y el muro parece descuadrado. */
 .companias li {
+  display: flex;
+  align-items: center;
+  height: 3rem;
+  white-space: nowrap;
+}
+
+.companias li img {
+  height: calc(1.75rem * var(--escala, 1));
+  width: auto;
+  max-width: 11rem;
+  object-fit: contain;
+}
+
+/* Las dos compañías sin logo (ver `lib/companias.ts`) se pintan como wordmark,
+   con el mismo tratamiento tipográfico que tenía TODO el muro antes de haber
+   logos. No se dibuja un logo aproximado para tapar el hueco. */
+.companias-nombre {
   font-family: var(--display);
   font-size: 1.5rem;
   font-weight: 500;
   letter-spacing: -0.02em;
   color: var(--muted2);
-  white-space: nowrap;
 }
 
 /* En móvil el desfile se veía casi vacío: con `--e8` de separación y el nombre
@@ -1481,6 +1502,15 @@ textarea.f-in {
   }
 
   .companias li {
+    height: 2.25rem;
+  }
+
+  .companias li img {
+    height: calc(1.25rem * var(--escala, 1));
+    max-width: 8rem;
+  }
+
+  .companias-nombre {
     font-size: 1.125rem;
   }
 }

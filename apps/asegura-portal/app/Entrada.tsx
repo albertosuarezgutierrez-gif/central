@@ -154,6 +154,8 @@ export function Entrada() {
 function textoError(codigo: string): string {
   const mapa: Record<string, string> = {
     canal_no_disponible: 'Ese canal todavía no está disponible.',
+    destino_invalido: 'Revisa el correo o el móvil: el móvil va con prefijo, por ejemplo +34600123456.',
+    demasiadas_peticiones: 'Has pedido demasiados códigos seguidos. Espera un rato y vuelve a intentarlo.',
     envio_fallido: 'No hemos podido enviarte el código. Inténtalo en un momento.',
     caducado: 'El código ha caducado. Pide uno nuevo.',
     ya_usado: 'Ese código ya se usó. Pide uno nuevo.',

@@ -8,6 +8,11 @@ export type { Nivel, CamposVisibles } from './acceso.ts'
 export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar, debeSustituir } from './procedencia.ts'
 export type { Procedencia } from './procedencia.ts'
 export { VALIDEZ_MINUTOS, MAX_INTENTOS, generarCodigo, estadoCodigo } from './codigo.ts'
+// ¿Se le puede ENVIAR un código a esto? Cierra el amplificador de correo de
+// `/api/acceso/solicitar`. Lee su cabecera antes de tocarlo: VALIDA PERO NO
+// NORMALIZA, y esa decisión es la que evita que el hash de escritura y el de
+// lectura dejen de coincidir.
+export { destinoValido, MAX_DESTINO } from './destino.ts'
 export type { EstadoCodigo, CodigoGuardado } from './codigo.ts'
 export {
   RAMOS_POLIZA,
