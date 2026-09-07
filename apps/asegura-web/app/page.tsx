@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
 import { RAMOS } from '@/lib/ramos'
+import { COMPANIAS, COMPANIAS_EN_CARTERA } from '@/lib/companias'
 import { PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
 import Reveal from '@/components/Reveal'
@@ -106,42 +108,6 @@ function IconoRamo({ slug }: { slug: string }) {
  */
 const GARANTIAS = ['Sin coste para ti', 'Sin compromiso', `Corredor inscrito en la DGSFP`] as const
 
-/**
- * Aseguradoras con pólizas VIVAS en la cartera.
- *
- * 🚨 Medido en la BD el 05/09/2026, no puesto de memoria: Mapfre 64, Allianz
- * 26, Occident 19 y Reale 1 — las 110 pólizas vivas. Esta lista es la que
- * alimenta la CIFRA de la banda de estadísticas, y por eso NO se toca para
- * añadir una compañía al muro: el rótulo dice «con pólizas en cartera», así
- * que cada nombre de aquí tiene que tener pólizas de verdad.
- */
-const COMPANIAS_EN_CARTERA = ['Mapfre', 'Allianz', 'Occident', 'Reale'] as const
-
-/**
- * Compañías del muro: con las que la correduría TRABAJA, que es un conjunto
- * más amplio que el anterior (se puede tener acuerdo y no haber colocado
- * todavía ninguna póliza).
- *
- * 🚨 Son DOS listas a propósito. Cuando eran una sola, ampliarla para que el
- * muro luciera más habría subido en silencio la cifra «Compañías con pólizas
- * en cartera» de 4 a 7 — un número falso, y de los que nadie mira dos veces
- * porque sale de una constante.
- *
- * Procedencia de cada nombre, que es lo que hace publicable esta lista:
- *   · Mapfre, Allianz, Occident, Reale — pólizas vivas medidas en la BD (05/09/2026).
- *   · Generali — adherida a CIMA (`seguros.companias_dgs`, C0072), sin pólizas aún.
- *   · Fidelidade (E0118) y Asisa — acuerdo confirmado por Alberto el 05/09/2026.
- *
- * ⚠️ Asisa NO está todavía en `seguros.companias_dgs`: para emitir una póliza
- * suya hará falta dar de alta su código DGS. Aparecer en el muro no la crea en
- * la cartera.
- *
- * Una compañía NO entra aquí por estar en el catálogo de Codeoscopic: que su
- * código DGS sea válido y tarificable no acredita ningún acuerdo, y un muro que
- * afirma trabajar con quien no ha firmado nada es una afirmación falsa sobre un
- * tercero, de las caras.
- */
-const COMPANIAS = ['Mapfre', 'Allianz', 'Occident', 'Reale', 'Generali', 'Fidelidade', 'Asisa'] as const
 
 const PASOS = [
   {
@@ -247,19 +213,45 @@ export default function Home() {
             Compañías con las que trabajamos
           </p>
           <div className="companias">
-            {/* TRES copias, no dos. Medido el 05/09/2026: una copia mide 964 px
-                y el contenedor 1104, así que con dos copias el bucle enseñaba
-                140 px de banda vacía en cada vuelta. La regla es que las copias
-                que quedan por delante cubran el contenedor: con tres, siempre
-                hay 1.928 px por delante. Si algún día la lista se acorta, esto
-                se vuelve a medir. Las copias 2 y 3 son decorativas: `aria-hidden`
-                para que un lector de pantalla no lea siete marcas tres veces. */}
+            {/* TRES copias, no dos. La regla es que las copias que quedan por
+                delante cubran el contenedor; con dos, el bucle enseñaba banda
+                vacía en cada vuelta.
+
+                Medido con Playwright a 1440 px el 07/09/2026, con el mismo
+                script para las dos formas: la copia de SOLO NOMBRES mide 976 px
+                y la de LOGOS 1.172, contra un contenedor de 1.104. O sea, al
+                pasar a logos la banda se ensanchó y el margen creció: con tres
+                copias quedan 2.344 px por delante. Quien acorte la lista o
+                cambie una `escala` de `lib/companias.ts` vuelve a medirlo, en
+                vez de fiarse de esta nota.
+
+                Las copias 2 y 3 son decorativas: `aria-hidden` y `alt=""` para
+                que un lector de pantalla no lea siete marcas tres veces. */}
             <ul>
-              {[...COMPANIAS, ...COMPANIAS, ...COMPANIAS].map((c, i) => (
-                <li key={`${c}-${i}`} aria-hidden={i >= COMPANIAS.length}>
-                  {c}
-                </li>
-              ))}
+              {[...COMPANIAS, ...COMPANIAS, ...COMPANIAS].map((c, i) => {
+                const copia = i >= COMPANIAS.length
+                return (
+                  <li
+                    key={`${c.nombre}-${i}`}
+                    aria-hidden={copia}
+                    style={c.escala ? ({ '--escala': c.escala } as CSSProperties) : undefined}
+                  >
+                    {c.logo ? (
+                      // Sin `next/image` a propósito: son SVG (que el optimizador
+                      // no toca), están en `public/` y su tamaño lo fija el CSS.
+                      // El `alt` va vacío en las copias decorativas para que un
+                      // lector de pantalla no lea siete marcas tres veces.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.logo} alt={copia ? '' : c.nombre} loading="lazy" decoding="async" />
+                    ) : (
+                      // Sin logo todavía: el nombre como wordmark. NO se dibuja
+                      // uno parecido — un logo aproximado de una aseguradora en
+                      // la web de su corredor es peor que no ponerlo.
+                      <span className="companias-nombre">{c.nombre}</span>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         </div>
