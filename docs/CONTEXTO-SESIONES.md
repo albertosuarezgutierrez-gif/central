@@ -40,6 +40,15 @@
   cepo NO puede verlo, porque sin `NEXT_PUBLIC_COOKIEBOT_ID` el script ni se carga. **Decisión pendiente de
   Alberto**: mover o quitar el badge desde el panel de Cookiebot (la vía de retirar consentimiento seguiría en
   `/legal/cookies`, art. 7.3 RGPD). PRs #2502 y #2516 mergeados; el despliegue del apex confirmado por él.
+- **🔇 Cron SEO de sivra: pudo morir MUDO por presupuesto — techo 60→300 (07/09/2026).** El E2E del
+  fix SeoStatus (#1895) descubrió que el cron de hoy no dejó rastro NINGUNO (ni commit, ni fila, ni ❌
+  Telegram, con la ruta viva y sin PR atascado): `maxDuration=60` contra una cadena de análisis cuyo
+  peor caso suma ~140s (Serper 10s + redacción 45s + aiSearch 50s + NIM 25s) → 504 a mitad SIN pasar
+  por el catch, donde vive el tgAlert. Misma lección que facturas-scan (31/07). Fix: techo 300 +
+  timeoutMs explícito en los 3 niveles + guardián `test/regression-seo-refresh-presupuesto.test.ts`.
+  ⚠️ No está DEMOSTRADO que fuera eso hoy (los logs de Vercel `sivra` están fuera del conector): quedan
+  como sospechosos el kill switch `SEO_AGENT_ENABLED` y el propio disparo del cron — próximo lunes decide.
+
 - **🕳️ El cepo de la puerta miraba a UN fichero, y «área de clientes» seguía vivo en DOS (07/09/2026).**
   Alberto, sobre una captura: «no se ve así la web». Cierto lo obvio (el PR #2502 aún sin mergear) y de paso
   destapó lo otro: el mock del hero decía «Área de clientes · Mis seguros». Lo había corregido A MANO porque

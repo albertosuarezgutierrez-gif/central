@@ -24,6 +24,14 @@ export {
 } from './poliza-leida.ts'
 export type { RamoPoliza, PolizaLeida } from './poliza-leida.ts'
 export {
+  TIPOS_DOCUMENTO,
+  avisoDocumentoNoPoliza,
+  importeEsPrimaAnual,
+  normalizarTipoDocumento,
+} from './tipo-documento.ts'
+export type { TipoDocumento } from './tipo-documento.ts'
+
+export {
   DIAS_PREAVISO_TOMADOR,
   DIAS_VENTANA_AVISO,
   fechaAccionable,

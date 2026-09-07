@@ -187,3 +187,127 @@ test('la pantalla de recibos dice las TRES cosas, y ninguna tranquiliza de más'
     'si se ocultan los anulados hay que DECIR que están ahí fuera, no callarlos',
   )
 })
+
+// ── La 2ª pasada del extractor: «no lo hemos leído» ≠ «no lo trae» ──────────
+//
+// Medido en producción el 07/09/2026 con una póliza de auto real: la 1ª pasada
+// leyó compañía, número, vencimiento y matrícula; la 2ª —marca, modelo, uso—
+// se llevó un `OpenRouter: respuesta vacía` con toda la cadena de suplentes
+// apagada. `datosRamo` quedó a NULL y la pantalla dijo «Leída de tu PDF» sin
+// una palabra más. Desde fuera eso es indistinguible de una póliza que no trae
+// esos datos, y el cliente concluye lo que no es.
+//
+// Estos cepos afirman la FORMA del arreglo, no el texto: que el estado exista
+// con sus tres valores, que el fallo lo produzca (y no se pierda por el camino)
+// y que la pantalla lo pinte solo en `no_leidos`.
+const EXTRACTOR = 'apps/asegura-portal/lib/extraer-poliza.ts'
+const SUBIR = 'apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx'
+const RUTA_POLIZAS = 'apps/asegura-portal/app/api/polizas/route.ts'
+
+/** Sin comentarios: aquí la prosa explica justo lo que se prohíbe. */
+const sinComentarios = (s: string) =>
+  s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ')
+
+test('🚨 la 2ª pasada tiene TRES estados, no un booleano', () => {
+  // Dos estados colapsarían «no había nada que preguntar» con «se preguntó y
+  // falló», y la pantalla avisaría de un fallo que no ocurrió en toda póliza de
+  // ramo desconocido.
+  const src = leer(EXTRACTOR)
+  for (const v of ["'leidos'", "'no_leidos'", "'no_aplica'"]) {
+    assert.ok(src.includes(v), `falta el estado ${v} de la 2ª pasada`)
+  }
+})
+
+test('🚨 un fallo de la 2ª pasada devuelve no_leidos, nunca se calla', () => {
+  const src = sinComentarios(leer(EXTRACTOR))
+  const cuerpo = src.slice(src.indexOf('async function leerDatosRamo'))
+  const fin = cuerpo.indexOf('export async function extraerPoliza')
+  const fn = fin > 0 ? cuerpo.slice(0, fin) : cuerpo
+  // Las DOS salidas de fallo —la IA que lanza y el JSON que no parsea— tienen
+  // que marcarlo. Con una sola, la otra sigue siendo muda.
+  const marcas = fn.match(/no_leidos/g) ?? []
+  assert.ok(
+    marcas.length >= 2,
+    `las dos ramas de fallo de leerDatosRamo deben devolver 'no_leidos' (encontradas ${marcas.length})`,
+  )
+})
+
+test('🚨 el estado LLEGA a la respuesta de la ruta, no se queda dentro', () => {
+  // Producirlo y no propagarlo es peor que no producirlo: parece hecho.
+  const src = sinComentarios(leer(RUTA_POLIZAS))
+  assert.match(src, /camposRamo/, 'la ruta /api/polizas no propaga camposRamo')
+})
+
+test('🚨 la pantalla avisa SOLO cuando se intentó y falló', () => {
+  const src = sinComentarios(leer(SUBIR))
+  assert.match(
+    src,
+    /camposRamo === 'no_leidos'/,
+    'SubirPoliza debe condicionar el aviso a no_leidos',
+  )
+  assert.ok(
+    !/camposRamo === 'no_aplica'/.test(src),
+    'no se avisa en no_aplica: ahí no había nada que preguntar',
+  )
+})
+
+test('🚨 la 2ª pasada NO tiene menos presupuesto que la 1ª', () => {
+  // Pide MÁS campos y su instrucción es más larga (lleva etiqueta y ayuda de
+  // cada campo del catálogo). Quedarse corto la trunca, y una respuesta
+  // truncada de OpenRouter no llega a medias: llega VACÍA.
+  const src = sinComentarios(leer(EXTRACTOR))
+  const topes = [...src.matchAll(/maxTokens:\s*(\d+)/g)].map((m) => Number(m[1]))
+  assert.ok(topes.length >= 2, 'se esperan al menos dos llamadas con maxTokens')
+  assert.ok(
+    Math.min(...topes) >= 600,
+    `ninguna pasada puede ir por debajo de 600 tokens (mínimo encontrado: ${Math.min(...topes)})`,
+  )
+})
+
+// ── Un SUPLEMENTO no es una póliza, y su importe no es la prima anual ───────
+//
+// Alberto, 07/09/2026, sobre los 55,85 € que el portal guardó como prima anual
+// de un auto: «es porque es un suplemento (cambio de vehículo)». O sea, la IA
+// no leyó mal el número: leyó bien un número que no es una prima anual y lo
+// metió en el campo de la prima anual.
+//
+// Es «el dato que SÍ está pero se lee mal» del CLAUDE.md de la raíz, que avisa
+// de que es PEOR que un hueco: no hay nada que delate el error. 55,85 € llamó
+// la atención; 340 € habría pasado, y sobre esa cifra se decide si un seguro
+// está caro.
+test('🚨 el extractor PREGUNTA qué documento es', () => {
+  // Sin la clave en el prompt no hay nada que clasificar, y el `null` que
+  // llegaría deja pasar el importe de cualquier papel como prima anual.
+  // 🪤 Acotado al ESQUEMA JSON, no al fichero entero: la primera versión de
+  // este cepo buscaba `"tipoDocumento"` en todo el fuente y se ponía verde con
+  // la clave borrada del esquema, porque la palabra seguía apareciendo en la
+  // línea de Reglas. Verde el 100 % de las veces = indistinguible de uno que
+  // funciona. Se vio.
+  const src = leer(EXTRACTOR)
+  const esquema = src.split('\n').find((l) => l.startsWith('{"') && l.includes('"compania"'))
+  assert.ok(esquema, 'no se encuentra la línea del esquema JSON de INSTRUCCION')
+  assert.match(esquema, /"tipoDocumento"/, 'el esquema JSON debe pedir tipoDocumento')
+  for (const t of ['suplemento', 'recibo']) {
+    assert.ok(esquema.includes(t), `el esquema debe ofrecer "${t}" como valor`)
+    assert.ok(src.includes(t), `el prompt debe explicar qué es "${t}"`)
+  }
+})
+
+test('🚨 la prima se anula con el helper puro, no con un if a mano', () => {
+  // Una segunda copia de la regla en el app diverge del módulo sin que nada
+  // falle, y entonces la pantalla avisaría de un suplemento cuya prima sí se
+  // guardó — o al revés.
+  const src = sinComentarios(leer(EXTRACTOR))
+  assert.match(
+    src,
+    /importeEsPrimaAnual\([^)]*\)\s*\?\s*contrato\.primaAnual\s*:\s*null/,
+    'primaAnual debe pasar por importeEsPrimaAnual()',
+  )
+})
+
+test('🚨 la pantalla avisa cuando el papel no es la póliza', () => {
+  // Callarlo deja un «—» en la prima justo después de subir un documento que
+  // traía una cifra: se lee como un fallo de lectura nuestro.
+  const src = sinComentarios(leer(SUBIR))
+  assert.match(src, /avisoDocumentoNoPoliza/, 'SubirPoliza debe pintar el aviso')
+})
