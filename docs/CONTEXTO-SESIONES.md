@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏷️ El muro de `asegura-web` ya tiene logos — y no «fallaban»: no existían (07/09/2026).** Alberto:
+  «mira porque no salen los logos». Diagnóstico: `page.tsx` pintaba `<li>{c}</li>` y el CSS lo estilaba
+  como texto gris; ni un `<img>` ni una imagen en el repo. Los cinco SVG (Mapfre, Allianz, Occident,
+  Reale, Generali) salen **del propio repo `asegura` de Alberto**, no de la web de cada compañía — la
+  red del contenedor no deja bajar de fuera. Lista movida a `lib/companias.ts` (logo + `escala`
+  óptica), servidos como `<img>` y no en línea (sus `<style>` chocarían). Medido con Playwright:
+  copia 976→1.172 px contra contenedor de 1.104, sin desbordar a 360 ni a 1440. Cepo
+  `lib/companias.test.ts` (7 mutaciones vistas en rojo). ⚠️ **Fidelidade y Asisa siguen en texto (no
+  tenemos su logo) y el de Occident es el de «Catalana Occidente», la marca vieja.**
+
 - **🚪 Cerrado el amplificador de correo del portal del cliente (07/09/2026).** `POST /api/acceso/solicitar`
   es pública y sin sesión y escribía fila en `portal_codigo` + disparaba envío con **cualquier cadena de
   3-200 chars**: correo a un tercero con nuestro dominio y nuestra factura. Ahora canal(503) → tope IP

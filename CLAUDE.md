@@ -159,6 +159,19 @@
   `/operador`, `/login`, «Acceso correduría», «Únete gratis» o «Ya tengo cuenta» (el vocabulario de la
   web de Manuel). Cabecera en DOS filas a todo ancho (marca + botón / nav), medida con Playwright a
   320-360-1024: sin desbordar y sin pisar la marca.
+  🏷️ **El muro de compañías eran NOMBRES en gris, no logos (07/09/2026).** Alberto: «no salen los
+  logos» — y no salían porque **no había ninguno**: `page.tsx` pintaba `<li>{c}</li>` y `globals.css`
+  lo estilaba como texto; ni un `<img>` ni una carpeta de imágenes en todo el repo. Ahora la lista
+  vive en `lib/companias.ts` con su logo, y los cinco SVG (`public/logos/`) vienen **del propio repo
+  `asegura` de Alberto** (`public/logos/insurers/`), no descargados de la web de cada compañía. Se
+  sirven como `<img src>` y **NO en línea**: cada uno trae su `<style>` con clases `.st0`/`.cls-2` y
+  juntos en el mismo documento se repintarían entre sí. La altura es común y el ajuste ÓPTICO va por
+  `escala` (las relaciones de aspecto van de 1,23 —Generali, escudo— a 5,42 —Occident, casi todo
+  palabra—). ⚠️ **Fidelidade y Asisa se quedan como wordmark de texto: no tenemos su logo**, y no se
+  dibuja uno parecido. ⚠️ **Y el SVG de Occident es el de «Catalana Occidente», la marca ANTERIOR** —
+  se sirve tal cual porque es el que hay; sustituirlo pide el archivo nuevo, no un retoque. Lo vigila
+  `lib/companias.test.ts`, que lee el disco: un `<img>` a un fichero que no está **no rompe nada**,
+  pinta el icono de imagen rota y de eso solo se entera quien abre la página.
   🕰️ **Hasta la tarde del 05/09 lo que Alberto veía en `grupoasegura.es` era el CRM de Manuel**, no
   esta app: el apex `.es` y `www` estaban atados al proyecto `asegura` y esta app no tenía dominio. Se
   arregló en paneles, no en código: `.es`+`www` → `asegura-web`; `clientes.grupoasegura.es` →
