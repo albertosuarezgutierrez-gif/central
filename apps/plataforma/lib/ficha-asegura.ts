@@ -719,3 +719,15 @@ export function urlSubirPoliza(): string {
 export function urlHogarNuevo(clienteId: string): string {
   return `/correduria/cliente/${clienteId}/hogar-nuevo`
 }
+
+/**
+ * Presupuesto de AUTO para una oportunidad nueva (sin ninguna póliza en la
+ * cartera), **dentro de plataforma** desde el 07/09/2026. Hermana de
+ * `urlHogarNuevo()`: aquí el riesgo no sale del Catastro sino del catálogo
+ * del vehículo (marca/modelo/motor/versión, gratis) y de la matrícula que
+ * teclea el corredor — no hay servicio público equivalente al Catastro para
+ * un coche. Se cotiza de calle (sin compañía anterior que declarar).
+ */
+export function urlAutoNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/auto-nuevo`
+}

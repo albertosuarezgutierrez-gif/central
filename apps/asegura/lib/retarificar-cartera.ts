@@ -42,7 +42,7 @@
 
 import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion, clienteOrigenDe, type OrigenRetarificacion } from '@/lib/cartera-ficha'
-import { precalificarAuto, type Resueltos } from '@/lib/codeoscopic/desde-cartera'
+import { precalificarAuto, precalificarAutoNueva, type Resueltos, type ResueltosAutoNueva } from '@/lib/codeoscopic/desde-cartera'
 import type { ClienteCartera } from '@/lib/codeoscopic/desde-cartera'
 import {
   precalificarHogarCartera,
@@ -552,6 +552,101 @@ export async function prepararRetarificacionNuevaHogar(entrada: {
     },
     supuestos: preparado.supuestos,
     fuenteRiesgo: preparado.fuenteRiesgo,
+  }
+}
+
+// ─── AUTO, oportunidad nueva (sin póliza) ────────────────────────────────────
+
+/**
+ * Como `prepararRetarificacionNuevaHogar`, pero para AUTO: un cliente que HOY
+ * no tiene ninguna póliza de auto en la cartera. No hay póliza que retarificar
+ * y por tanto ninguna «compañía anterior» que declarar — `precalificarAutoNueva()`
+ * cotiza de calle (`aseguradoAntes: false`). Lo único que la ficha no puede dar
+ * y sí hace falta es el VEHÍCULO: marca/modelo/versión (catálogo, gratis) y la
+ * matrícula, que aquí la teclea el corredor porque no sale de ninguna póliza.
+ *
+ * Misma disciplina que sus hermanas: **no gasta**. Corta antes del vendor (422
+ * faltan datos · 404 cliente · 503 correduría) y esas respuestas llevan
+ * `gastado: '0,00€'`. La llamada que paga sigue en la ruta, no aquí.
+ */
+export async function prepararRetarificacionNuevaAuto(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const { clienteId, solicitadoPor, cuerpo } = entrada
+
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        {
+          error:
+            'No se ha podido resolver la correduría, así que ni se consulta la cartera sin filtro ' +
+            'ni se cotiza. Esto NO significa que el cliente no exista.',
+        },
+        503,
+      ),
+    }
+  }
+
+  // 🛡️ Aislamiento: el cliente se busca SIEMPRE dentro de esta correduría.
+  const origen = await clienteOrigenDe(correduria.id, clienteId)
+  if (!origen) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'cliente no encontrado' }, 404) }
+  }
+
+  const resueltos: ResueltosAutoNueva = {
+    municipioId: numero(cuerpo.resueltos?.municipioId),
+    estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
+    matricula: cadena(cuerpo.resueltos?.matricula),
+    fechaMatriculacion: cadena(cuerpo.resueltos?.fechaMatriculacion),
+    codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
+    garaje: cadena(cuerpo.resueltos?.garaje),
+    garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
+  }
+
+  const pre = precalificarAutoNueva(origen.cliente, resueltos, hoyIso())
+
+  // Las correcciones del corredor mandan sobre lo supuesto: es una persona
+  // diciendo el dato de verdad. Se revisa OTRA VEZ con el resultado, porque una
+  // corrección puede arreglar un hueco y también puede romper otra regla.
+  const datos: Partial<DatosAuto> = {
+    ...pre.datos,
+    ...limpiarCorrecciones<DatosAuto>(cuerpo.correcciones),
+  }
+  const faltan = revisarDatosAuto(datos)
+  if (faltan.length > 0) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan }, 422) }
+  }
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construirPeticionAuto(datos as DatosAuto)
+  } catch (e) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto({ error: e instanceof Error ? e.message : String(e) }, 422),
+    }
+  }
+  // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
+  peticion.externalId = `cliente-${clienteId}`
+
+  return {
+    estado: 'listo',
+    peticion: {
+      correduriaId: correduria.id,
+      cuerpo: peticion,
+      motivo: 'defensa-cartera',
+      solicitadoPor,
+      // Aquí SÍ hay un id de cliente verificado con `clienteOrigenDe` (scoped a
+      // esta correduría): se guarda, para poder seguir la cotización desde su
+      // ficha — misma jugada que hogar sin póliza.
+      contexto: { ramo: 'auto', puerta: 'corredor', polizaId: null, clienteId },
+    },
+    supuestos: pre.supuestos,
+    fuenteRiesgo: null,
   }
 }
 
