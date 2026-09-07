@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚗🏠 Presupuesto de auto y hogar SIN póliza, dentro de plataforma (07/09/2026, PR #2546, mergeado).**
+  Alberto: el botón de hogar saltaba a `apps/asegura` (otro dominio/sesión) — *«no quiero que me
+  desvíe a otra página»* — y luego *«haz todos los ramos no solo hogar»*. Ambas oportunidades nuevas
+  se pintan ahora en `/correduria/cliente/[id]/{hogar-nuevo,auto-nuevo}` de plataforma; asegura sigue
+  siendo la única con el Bearer de Codeoscopic, el contador de gasto y las claves PII. Auto cotiza DE
+  CALLE (`aseguradoAntes:false`, sin póliza no hay compañía anterior que declarar) y reutiliza el
+  catálogo marca→modelo→motor→versión de la retarificación existente + matrícula manual. **RC no tiene
+  ramo en Codeoscopic** (nada que construir); **moto queda fuera** (1 póliza en toda la cartera, sin
+  retarificación siquiera) — pendiente decidir si se quiere igualmente. Verificado: tsc 0 en las dos
+  apps, 277+2656 `node --test` + 53 vitest, 0 fallos, guardianes de aislamiento/gasto en verde.
+
 - **📝 Diseño del agente de captación de `asegura-portal` — solo spec, sin código (07/09/2026).**
   Alberto quería un agente de ventas WhatsApp para la correduría; se acabó aterrizando en
   `docs/superpowers/specs/2026-09-07-asegura-portal-agente-captacion-design.md`: seis piezas
