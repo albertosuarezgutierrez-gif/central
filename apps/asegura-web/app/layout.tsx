@@ -187,6 +187,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                     el banner. */}
                 <Link href="/legal/cookies">Cookies</Link>
                 <Link href="/quienes-somos">Quiénes somos</Link>
+                {/* 🚨 El blog entra por el PIE, no por la cabecera: la cabecera
+                    está llena (ver `NAV_CABECERA` en `lib/sitio.ts`, medido en
+                    píxeles) y una sexta entrada devolvería el desbordamiento que
+                    se echaba el botón «Área de clientes» fuera de la pantalla.
+                    Sin este enlace los artículos existirían solo en el sitemap,
+                    que es exactamente cómo `/seguros/responsabilidad-civil` pasó
+                    meses sin un enlace entrante. */}
+                <Link href="/blog">Guías y artículos</Link>
               </nav>
             </div>
           </div>

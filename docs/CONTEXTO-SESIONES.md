@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📝 Blog de la correduría: tres artículos y el enlazado en los dos sentidos (07/09/2026).**
+  `/blog` + `/blog/[slug]` en `apps/asegura-web`, con el contenido como DATOS (`lib/articulos.ts`), no
+  como JSX: de ahí salen a la vez la página, el `Article` JSON-LD (autor = **Person** con la clave DGSFP
+  de `MEDIADOR`) y el sitemap. Los tres tiran de la LCS (art. 22 preaviso, art. 22 subida en renovación,
+  arts. 18/20/23 + Servicio de Reclamaciones DGSFP para el siniestro denegado) y **citan la norma a la
+  vista**: el cepo exige `base` si el texto nombra un artículo. El copy pasa por el MISMO `revisarCopy`
+  de `@central/module-seguros` que la web y los borradores de redes. Enlazado en los dos sentidos
+  (artículo→ramo y ramo→artículo) + enlace en el pie: sin él el blog existiría solo en el sitemap, que es
+  cómo `responsabilidad-civil` pasó meses huérfana. ⚠️ **Un cepo se vio VERDE con la lista de artículos
+  borrada del sitemap** (leía el fuente con regex y casaba con otro sitio); por eso la construcción se
+  movió a `entradasSitemapBlog()`, función pura que el test EJECUTA. 12 cepos vistos en rojo uno a uno.
+
 - **💸 SIVRA pricing: el huésped de Booking paga el 67% del Standard Rate, y está MEDIDO en el extranet (07/09/2026).**
   Reserva 154638741 de House (05-07/03/2027, 12 pax): 981,02€ = 861,02€ alojamiento + 120€ limpieza. El
   motor tenía 523/542 de base → Standard Rate 628/651 (**base × 1,20**) → Basic Deal 12% × móvil 10% ×
@@ -2090,7 +2102,6 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 - Verificado: 574 tests raíz (0 fallos) · module-seguros 425 · module-seguros-portal 237 · typecheck
   de `asegura` y `asegura-portal` limpio. Tres mutaciones del guardián nuevo comprobadas.
 
-
 ### ⚖️ (05/09/2026) Bloque legal 0.3: el portal ya deja constancia de que informó — y sale una alerta de correo (PR #2326, mergeado)
 - El canje del código no dejaba **ninguna** fila de que se hubiera enseñado la información del mediador. La carga de la prueba es del mediador (art. 19 Ley 16/2018) y un acceso sin constancia **se ve igual que uno correcto**. Ahora escribe `lds_art19` en `portal_consentimiento` (la tabla existía desde Fase 1 sin que nadie escribiera).
 - **Va emparejado con la UI a propósito**: la fila afirma «se le enseñó», así que la pantalla de entrada lo dice junto al botón con los tres enlaces. Separarlos convertiría el registro en prueba fabricada — lo ata `test/regression-portal-consentimiento.test.ts` (8 cepos).
@@ -2121,7 +2132,6 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 - ❌ **`mkt_score` sin filtro de liga: MEDIDO Y DESCARTADO.** La mediana de score con y sin liga difiere 0,0-0,2 puntos → mueve el factor de calidad un **0,8-1,6%**. El diagnóstico lo llamó «doble conteo» y en magnitud es ruido. No se toca.
 - ⏸️ **`noches_ref` vs ventana del corpus: medido, NO cambiado hoy.** El corpus es **86,5% de 2 noches** y Busto/Dúplex tienen `noches_ref=3` → `aBase` descuenta 12,73€/noche cuando el comparable lleva 19,10€ implícitos (**+5-7%**). Pero `noches_ref` es la estancia mediana REAL de nuestras reservas y para ESO es correcto: el arreglo es que `aBase` use la ventana del corpus, no cambiar el ajuste. Sequenciado tras converger el descenso — era el 4º cambio de precio del día.
 
-
 ### 🔇 (05/09/2026) El vigía de CIMA medía a quien venía, no a quien deja de venir — Mapfre, 74 días
 
 - **`saludIngesta` tenía tres señales y las tres se disparan con algo que LLEGÓ y salió mal** (cuarentena, huérfanas, rechazos). `diasSinPersistir` parece taparlo pero mide por TIPO de objeto y agrega compañías: mientras UNA siga mandando recibos, el contador está a cero. **Mapfre (C0058) llevaba 74 días sin un fichero con su peor hueco histórico en 2 días, 64 pólizas vivas (58% de la cartera) y 7 renovaciones pasadas sin fichero** — y el vigía en verde con razón: no había nada atascado porque no había llegado nada.
@@ -2138,7 +2148,6 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 - **Radio: ~448 noches reanudan el descenso**, acotadas por raíl, `min_price`, suelo estacional y los dos techos.
 - ⚠️ Hilos ABIERTOS del diagnóstico, no cerrados: `floorD`/`ceilD` se calculan SIN `dqDate` (el clamp de calidad se anula solo); `noches_ref`=3 en Busto/Dúplex contra un corpus casi todo de 2 noches (+5-8%); `priorRows` ignora `historico_desde` (afecta a House); `mkt_score` se calcula sin filtro de liga (doble conteo a la baja); y `recorridoPalancas` del check #13 no modela los dos techos, así que su «solo llega al 66%» está desactualizado.
 - 🚨 Y una advertencia de método: mi medición del «percentil real» y la del agente NO coinciden (yo Dúplex p70/House p80; él p55/p64 contra corpus de liga). El motor fija el percentil dentro del corpus de SU liga y SU mes; medirlo contra el corpus agregado responde a otra pregunta. **Antes de tocar `target_pctl` hay que fijar UNA definición.**
-
 
 ### 🔕 (04/09/2026) El canal de avisos del pricing no se callaba nunca: 107 abiertas, 94% muertas
 - `pricing_alerts` no tenía NINGÚN camino de cierre: `pushAlert` no recrea un aviso mientras siga abierto, pero nadie lo marcaba `resuelta` al desaparecer la causa. Medido: **107 abiertas**, **54 de `precio_revertido`** desde el 10/08, y **51 de esas 54 ya cuadraban**.
@@ -2551,7 +2560,6 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 - No probado de punta a punta con la app (el contenedor no tiene `DATABASE_URL`): la primera subida real la hace
   Alberto desde `/correduria/cliente/[id]`. Sigue pendiente (y cuesta dinero): la petición de hogar a Codeoscopic.
 
-
 ### 🔐 (02/09/2026, ~09:00 UTC) Correduría: TRASPASO CERRADO salvo Fly — auth copiada, CRM solo como motor de CIMA (PR #2007 mergeado)
 - Alberto: «el punto 2 no se hace… quiero tener todo en nuestra bbdd» → **NO se rota `crm_seguros`** (anotado en
   `apps/asegura/CLAUDE.md` y `docs/TRASPASO-CORREDURIA.md`) y se copió `auth.*` de Manuel a central por dblink con
@@ -2691,7 +2699,6 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   del 27/08) y el doc decía 04:00; corregido en `RUTINAS-PROGRAMADAS.md` §1/§3/cadencias. `ALERTA_TOKEN` de las rutinas
   1-2 vive en el entorno `Default`, no en el prompt: el «NO/NO» de Chrome no es un fallo. Visto al pasar: `sivra_domotica_acceso`
   en rojo (1 cerradura con ERROR).
-
 
 ### 📌 Buscador ya distingue ficha viva de volcado; Vercel deja de comentar en los PRs (02/09/2026)
 - **Duplicado «Jose Suarez Salas»**: dos fichas `tipo='cliente'`, la de 14 pólizas es el volcado (vence 2016) y la de 7 la viva (vence 2027). `clientes.tipo` no sirve → `vitalidadFicha()` en `@central/module-seguros` (CIMA o vencimiento < 18 meses = viva; `null` = no contado ≠ histórica). Buscador rotula y enlaza «Abrir la ficha viva →».
