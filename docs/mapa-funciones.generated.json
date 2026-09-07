@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-07T17:05:18Z",
-  "sha": "ac23f86a90a7be22d03613e51d4abb982e64aa15",
+  "generadoEn": "2026-09-07T18:43:02Z",
+  "sha": "7bc7682f8e09509219f725d8ad33847abca63115",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7644,9 +7644,9 @@
           "nombre": "HogarNuevoPage",
           "kind": "function",
           "exportada": true,
-          "params": "{ params, searchParams, }: { params: Promise<{ clienteId: string }> searchParams: Promise<{ referencia?: string }> }",
+          "params": "{ params, searchParams, }: { params: Promise<{ clienteId: string }> searchParams: Promise<{ referencia?: string; direccion?: string; municipio?: string; provincia?: string }> }",
           "retorno": null,
-          "linea": 50,
+          "linea": 51,
           "resumen": "Presupuesto de HOGAR para un cliente que HOY no tiene ninguna póliza: una oportunidad nueva sobre su residencia (o cualquier otra vivienda), tarificada desde el Catastro en vez de desde una ficha. Es "
         },
         {
@@ -7655,7 +7655,15 @@
           "exportada": false,
           "params": "{ nombre, clienteId, detalle }: { nombre: string; clienteId: string; detalle?: string }",
           "retorno": null,
-          "linea": 276
+          "linea": 348
+        },
+        {
+          "nombre": "FormularioDireccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ direccion, municipio, provincia, clienteId, children, }: { direccion: string municipio: string provincia: string clienteId: string children?: ReactNode }",
+          "retorno": null,
+          "linea": 363
         },
         {
           "nombre": "errar",
@@ -7663,7 +7671,7 @@
           "exportada": false,
           "params": "_e: unknown",
           "retorno": "Opcion[]",
-          "linea": 291
+          "linea": 411
         },
         {
           "nombre": "hoyIso",
@@ -7671,12 +7679,12 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 295
+          "linea": 415
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "be28186fbe17"
+      "hash": "006cfb56f4b9"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
@@ -8651,6 +8659,35 @@
       "hash": "335e99ace6db"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/auto-nuevo/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 46,
+          "resumen": "`POST /api/operador/codeoscopic/auto-nuevo` — presupuesto de AUTO para un cliente que HOY no tiene ninguna póliza (oportunidad nueva), desde `apps/plataforma` → `/correduria`, que es la única pantalla"
+        },
+        {
+          "nombre": "esObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 104
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/auto-nuevo",
+      "hash": "6ab03e5ace7a"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/catalogos/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -8672,6 +8709,35 @@
       "hash": "af9655bc1f3a"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 54,
+          "resumen": "`POST /api/operador/codeoscopic/hogar-nuevo` — presupuesto de HOGAR para un cliente que HOY no tiene ninguna póliza (oportunidad nueva), desde `apps/plataforma` → `/correduria`, que es la única pantal"
+        },
+        {
+          "nombre": "esObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 155
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/hogar-nuevo",
+      "hash": "ef40abd49f4c"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/lineas/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -8691,6 +8757,104 @@
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/lineas",
       "hash": "921a540f3ce9"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 27,
+          "resumen": "`GET /api/operador/codeoscopic/precalificar-auto-nuevo?clienteId=` — la ficha de AUTO para un cliente que HOY no tiene ninguna póliza (oportunidad nueva), gratis, para que `apps/plataforma` → `/corred"
+        },
+        {
+          "nombre": "error",
+          "kind": "function",
+          "exportada": false,
+          "params": "status: number, causa: string, mensaje: string",
+          "retorno": null,
+          "linea": 151
+        },
+        {
+          "nombre": "hoyIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 155
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/precalificar-auto-nuevo",
+      "hash": "dcaa8b2c864c"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-hogar-nuevo/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 59,
+          "resumen": "`GET /api/operador/codeoscopic/precalificar-hogar-nuevo?clienteId=&referencia=` — la ficha de HOGAR sin póliza (oportunidad nueva), gratis, para que `apps/plataforma` → `/correduria` la pinte SIN salt"
+        },
+        {
+          "nombre": "direccionLegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "catastro: CatastroHogar",
+          "retorno": "string | null",
+          "linea": 232
+        },
+        {
+          "nombre": "leerJson",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 241
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 251
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 255
+        },
+        {
+          "nombre": "hoyIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 264
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/precalificar-hogar-nuevo",
+      "hash": "62534c57a3bc"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar/route.ts",
@@ -12050,6 +12214,7 @@
         "aniosEntre",
         "diaSiguiente",
         "precalificarAuto",
+        "precalificarAutoNueva",
         "sePuedeCotizar",
         "supuestosOptimistas"
       ],
@@ -12116,12 +12281,20 @@
           "resumen": "Construye la precalificación. `hoy` entra por parámetro para que la función sea pura y los tests no dependan del calendario."
         },
         {
+          "nombre": "precalificarAutoNueva",
+          "kind": "function",
+          "exportada": true,
+          "params": "cliente: ClienteCartera, resueltos: ResueltosAutoNueva, hoy: string,",
+          "retorno": "Precalificacion",
+          "linea": 359
+        },
+        {
           "nombre": "sePuedeCotizar",
           "kind": "function",
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "boolean",
-          "linea": 340,
+          "linea": 438,
           "resumen": "¿Se puede cotizar ya? Azúcar para la pantalla y para el puerto, que tienen que decidir lo mismo y no deben hacerlo cada uno a su manera."
         },
         {
@@ -12130,13 +12303,13 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "Supuesto[]",
-          "linea": 349,
+          "linea": 447,
           "resumen": "Los supuestos que cambian el precio a mejor. La pantalla los enseña aparte porque son los que pueden decepcionar luego: si el cliente sí tuvo siniestros, la prima real sube respecto a lo que se le ha "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4a05d70d1612"
+      "hash": "e3bee734a23b"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -13654,6 +13827,7 @@
         "prepararRetarificacion",
         "respuestaRetarificacion",
         "prepararRetarificacionNuevaHogar",
+        "prepararRetarificacionNuevaAuto",
         "resolverCatalogo"
       ],
       "funciones": [
@@ -13729,12 +13903,21 @@
           "resumen": "Como `prepararRetarificacion`, pero para un cliente que HOY no tiene ninguna póliza de hogar: una oportunidad nueva, presupuestada desde el Catastro (`/correduria/hogar` en plataforma → aquí, con «Ped"
         },
         {
+          "nombre": "prepararRetarificacionNuevaAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
+          "retorno": "Promise<PreparadoRetarificacion>",
+          "linea": 572,
+          "resumen": "Como `prepararRetarificacionNuevaHogar`, pero para AUTO: un cliente que HOY no tiene ninguna póliza de auto en la cartera. No hay póliza que retarificar y por tanto ninguna «compañía anterior» que dec"
+        },
+        {
           "nombre": "resolverCatalogo",
           "kind": "function",
           "exportada": true,
           "params": "params: URLSearchParams",
           "retorno": "Promise<ResultadoCatalogo>",
-          "linea": 585,
+          "linea": 680,
           "resumen": "Resuelve UN catálogo por su `tipo` y los parámetros que ese tipo pida. Firma neutra (`URLSearchParams`) porque las dos rutas son `GET` con query."
         },
         {
@@ -13743,7 +13926,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 661
+          "linea": 756
         },
         {
           "nombre": "numero",
@@ -13751,7 +13934,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 665
+          "linea": 760
         },
         {
           "nombre": "booleano",
@@ -13759,7 +13942,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 672,
+          "linea": 767,
           "resumen": "`true`/`false` (boolean o cadena) → boolean. Cualquier otra cosa → `null` (no es una respuesta)."
         },
         {
@@ -13768,7 +13951,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 679
+          "linea": 774
         },
         {
           "nombre": "hoyIso",
@@ -13776,7 +13959,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 683
+          "linea": 778
         },
         {
           "nombre": "limpiarCorrecciones",
@@ -13784,13 +13967,13 @@
           "exportada": false,
           "params": "c: Record<string, unknown> | undefined",
           "retorno": "Partial<T>",
-          "linea": 688,
+          "linea": 783,
           "resumen": "Solo se aceptan correcciones CON valor: un campo vacío no borra lo supuesto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9594a47f6aa2"
+      "hash": "8a6bedf252e6"
     },
     {
       "ruta": "apps/asegura/lib/session.ts",
@@ -57981,6 +58164,122 @@
       "hash": "8bde86eb75de"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/acciones.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "pedirCatalogo",
+        "pedirPrecalificacionAuto",
+        "pedirCotizacionAuto"
+      ],
+      "funciones": [
+        {
+          "nombre": "pedirCatalogo",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: Record<string, string>",
+          "retorno": "Promise<RespuestaCatalogo>",
+          "linea": 23,
+          "resumen": "Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.**"
+        },
+        {
+          "nombre": "pedirPrecalificacionAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string }",
+          "retorno": "Promise<RespuestaPrecalificacionAutoNueva>",
+          "linea": 28,
+          "resumen": "La ficha de la persona (municipios, estado civil, huecos, consumo). **Gratis.**"
+        },
+        {
+          "nombre": "pedirCotizacionAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> }",
+          "retorno": "Promise<RespuestaRetarificar>",
+          "linea": 38,
+          "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `cotizarAutoNuevaAsegura()`, en el servidor y en un solo sitio — no se acepta desde el cliente. 🚫 No reintenta."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "eb4aea2c5836"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/AutoNuevo.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AutoNuevo"
+      ],
+      "funciones": [
+        {
+          "nombre": "euroODash",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 25
+        },
+        {
+          "nombre": "AutoNuevo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, consumo, simulacion, }: { clienteId: string etiquetaCliente: string /** `null` = no se ha podido precalificar la persona · `[]` = ",
+          "retorno": null,
+          "linea": 61
+        },
+        {
+          "nombre": "Campo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 416
+        },
+        {
+          "nombre": "Contador",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
+          "retorno": null,
+          "linea": 429
+        },
+        {
+          "nombre": "Precios",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }",
+          "retorno": null,
+          "linea": 448
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "77f6a01a51bb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AutoNuevoPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "AutoNuevoPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 31,
+          "resumen": "**Presupuesto de auto SIN póliza, DENTRO de `/correduria`.** Hermana de `.../hogar-nuevo`, construida el mismo día por el mismo motivo: Alberto no quiere saltar de pantalla para presupuestar una oport"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7e906070bd14"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/Cabecera.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -58043,12 +58342,12 @@
           "exportada": false,
           "params": "{ nombre, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: b",
           "retorno": null,
-          "linea": 216
+          "linea": 219
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3965bcfbd392"
+      "hash": "e9c86806c96c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/DescartarCliente.tsx",
@@ -58107,6 +58406,146 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6350cbba1073"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/acciones.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "pedirPrecalificacionHogar",
+        "pedirCotizacionHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "pedirPrecalificacionHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string referencia: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> }",
+          "retorno": "Promise<RespuestaPrecalificacionHogar>",
+          "linea": 21,
+          "resumen": "La ficha entera (Catastro + catálogos + resumen). **Gratis.**"
+        },
+        {
+          "nombre": "pedirCotizacionHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string referencia: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> }",
+          "retorno": "Promise<RespuestaRetarificar>",
+          "linea": 36,
+          "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `cotizarHogarNuevoAsegura()`, en el servidor y en un solo sitio — no se acepta desde el cliente. 🚫 No reintenta."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2fd49a6ff3b1"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/Formulario.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Formulario"
+      ],
+      "funciones": [
+        {
+          "nombre": "euroODash",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 82
+        },
+        {
+          "nombre": "Formulario",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId, referencia, preInicial, }: { clienteId: string referencia: string preInicial: PrecalificacionHogar }",
+          "retorno": null,
+          "linea": 86
+        },
+        {
+          "nombre": "FilaFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ fila, editando, borrador, setBorrador, abrir, cerrar, guardar, deshacer, pre, }: { fila: Fila editando: boolean borrador: string setBorrador: (v: string) => void abrir: () => void cerrar: () => void guardar: () => void deshacer: () => voi",
+          "retorno": null,
+          "linea": 346
+        },
+        {
+          "nombre": "ControlCampo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ fila, borrador, setBorrador, pre, }: { fila: Fila borrador: string setBorrador: (v: string) => void pre: PrecalificacionHogar }",
+          "retorno": null,
+          "linea": 435
+        },
+        {
+          "nombre": "aTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fila",
+          "retorno": "string",
+          "linea": 502
+        },
+        {
+          "nombre": "deTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fila, t: string",
+          "retorno": "unknown",
+          "linea": 509
+        },
+        {
+          "nombre": "Precios",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r }: { r: Extract<Resultado, { estado: 'ok' }> }",
+          "retorno": null,
+          "linea": 528
+        }
+      ],
+      "tablas": [
+        "lucide",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "e31ccac97930"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "HogarNuevoPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | string[] | undefined",
+          "retorno": "string | null",
+          "linea": 24
+        },
+        {
+          "nombre": "HogarNuevoPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params, searchParams, }: { params: Promise<{ id: string }> searchParams: Promise<Record<string, string | string[] | undefined>> }",
+          "retorno": null,
+          "linea": 44,
+          "resumen": "**Presupuesto de hogar SIN póliza, DENTRO de `/correduria`.** Hasta el 07/09/2026 el botón «Presupuestar hogar (oportunidad nueva)» saltaba a `apps/asegura` — otro dominio, otro diseño, otra sesión. A"
+        },
+        {
+          "nombre": "FormularioBuscar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ clienteId, direccion, municipio, provincia, }: { clienteId: string direccion: string municipio: string provincia: string }",
+          "retorno": null,
+          "linea": 165,
+          "resumen": "El buscador de partida: por dirección o por referencia, en GET puro (sin JS)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5a7cc5e624af"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/page.tsx",
@@ -77504,6 +77943,96 @@
       "hash": "6ea048fd2094"
     },
     {
+      "ruta": "apps/plataforma/lib/auto-nuevo-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "El cliente del puerto de AUTO SIN PÓLIZA («oportunidad nueva») de asegura. Hermano de `hogar-nuevo-asegura.ts`, misma disciplina de dinero (`pedir()` con Bearer, interpretadores PUROS, `gastoDesconocido` para no confundir un timeout con «no se ha gastado»). La llamada que COTIZA (`cotizarAutoNuevaAs",
+      "exporta": [
+        "interpretarPrecalificacionAutoNueva",
+        "precalificarAutoNuevaAsegura",
+        "cotizarAutoNuevaAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 61
+        },
+        {
+          "nombre": "leerOpciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Opcion[]",
+          "linea": 65
+        },
+        {
+          "nombre": "leerOpcionesONulo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Opcion[] | null",
+          "linea": 77
+        },
+        {
+          "nombre": "leerOpcion",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Opcion | null",
+          "linea": 81
+        },
+        {
+          "nombre": "interpretarPrecalificacionAutoNueva",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaPrecalificacionAutoNueva",
+          "linea": 90,
+          "resumen": "PURO: la respuesta HTTP → los cuatro estados. Sin red, testeable."
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 140
+        },
+        {
+          "nombre": "pedir",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string, init: RequestInit, timeoutMs: number",
+          "retorno": "Promise<",
+          "linea": 144
+        },
+        {
+          "nombre": "precalificarAutoNuevaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string }",
+          "retorno": "Promise<RespuestaPrecalificacionAutoNueva>",
+          "linea": 157,
+          "resumen": "La ficha de la persona para auto sin póliza. **Gratis.**"
+        },
+        {
+          "nombre": "cotizarAutoNuevaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string solicitadoPor?: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> }",
+          "retorno": "Promise<RespuestaRetarificar>",
+          "linea": 184,
+          "resumen": "🚨 **LA LLAMADA QUE CUESTA 0,50€ REALES.** Reutiliza `interpretarRetarificacion` y `porFalloDeRed` de `retarificar-asegura.ts`: el puerto de asegura redacta la respuesta de esta ruta con la MISMA func"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3ba92c5ff0f7"
+    },
+    {
       "ruta": "apps/plataforma/lib/banca.ts",
       "ambito": "apps/plataforma",
       "resumen": "Persistencia y consolidación bancaria. Lee/escribe la BD compartida por SQL crudo (mismo patrón que lib/financiero.ts), siempre scopeado por cuenta_id. La lógica de parseo del extracto vive en lib/norma43.ts (pura, testeable).",
@@ -84084,7 +84613,8 @@
         "urlRetarificar",
         "urlRetarificarHogarAsegura",
         "urlSubirPoliza",
-        "urlHogarNuevoAsegura"
+        "urlHogarNuevo",
+        "urlAutoNuevo"
       ],
       "funciones": [
         {
@@ -84304,18 +84834,27 @@
           "resumen": "Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura porque comparte pantalla con la cotización que sale de lo leído. Gratis."
         },
         {
-          "nombre": "urlHogarNuevoAsegura",
+          "nombre": "urlHogarNuevo",
           "kind": "function",
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "string",
-          "linea": 718,
-          "resumen": "Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la cartera): el riesgo sale del Catastro, no de una ficha existente. Es el mismo salto que `urlRetarificarHogarAsegura` para una "
+          "linea": 719,
+          "resumen": "Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la cartera), **DENTRO de plataforma** desde el 07/09/2026. El riesgo sale del Catastro (por dirección o referencia), no de una fi"
+        },
+        {
+          "nombre": "urlAutoNuevo",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string",
+          "retorno": "string",
+          "linea": 731,
+          "resumen": "Presupuesto de AUTO para una oportunidad nueva (sin ninguna póliza en la cartera), **dentro de plataforma** desde el 07/09/2026. Hermana de `urlHogarNuevo()`: aquí el riesgo no sale del Catastro sino "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "38595463b498"
+      "hash": "14b049068d20"
     },
     {
       "ruta": "apps/plataforma/lib/financiero.ts",
@@ -84883,6 +85422,137 @@
       ],
       "rutaApi": null,
       "hash": "85d05886bd99"
+    },
+    {
+      "ruta": "apps/plataforma/lib/hogar-nuevo-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "El cliente del puerto de HOGAR SIN PÓLIZA («oportunidad nueva») de asegura. Hermano de `retarificar-asegura.ts` (auto y hogar CON póliza), con la misma disciplina de dinero: `pedir()` con Bearer, interpretadores PUROS separados de la llamada, y `gastoDesconocido` para no confundir un timeout con «no",
+      "exporta": [
+        "interpretarPrecalificacionHogar",
+        "precalificarHogarNuevoAsegura",
+        "cotizarHogarNuevoAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 103
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 107
+        },
+        {
+          "nombre": "leerOpciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Opcion[]",
+          "linea": 111
+        },
+        {
+          "nombre": "leerCatalogos",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, Opcion[]>",
+          "linea": 123
+        },
+        {
+          "nombre": "leerDefectos",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, string | null>",
+          "linea": 130
+        },
+        {
+          "nombre": "leerFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Fila | null",
+          "linea": 140
+        },
+        {
+          "nombre": "leerFilas",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Fila[]",
+          "linea": 161
+        },
+        {
+          "nombre": "leerResumen",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "ResumenHogar | null",
+          "linea": 172,
+          "resumen": "`null` = no llega o llega con forma rara: NO se degrada a una ficha vacía."
+        },
+        {
+          "nombre": "leerRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Ramo",
+          "linea": 184
+        },
+        {
+          "nombre": "interpretarPrecalificacionHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaPrecalificacionHogar",
+          "linea": 200,
+          "resumen": "PURO: la respuesta HTTP → los cuatro estados. Sin red, testeable."
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 266
+        },
+        {
+          "nombre": "pedir",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string, init: RequestInit, timeoutMs: number,",
+          "retorno": "Promise<",
+          "linea": 270
+        },
+        {
+          "nombre": "precalificarHogarNuevoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string referencia: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> }",
+          "retorno": "Promise<RespuestaPrecalificacionHogar>",
+          "linea": 297,
+          "resumen": "La ficha entera de hogar sin póliza. **Gratis**: al otro lado es un `GET` que no pasa por el embudo de pago y corre con el interruptor de tarificación apagado, igual que la precalificación de auto. `r"
+        },
+        {
+          "nombre": "cotizarHogarNuevoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string referencia: string solicitadoPor?: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> }",
+          "retorno": "Promise<RespuestaRetarificar>",
+          "linea": 342,
+          "resumen": "🚨 **LA LLAMADA QUE CUESTA 0,50€ REALES.** Reutiliza `interpretarRetarificacion` y `porFalloDeRed` de `retarificar-asegura.ts`: el puerto de asegura redacta la respuesta de esta ruta con la MISMA func"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ba6cad8a3635"
     },
     {
       "ruta": "apps/plataforma/lib/ia-cache.ts",
@@ -125741,7 +126411,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3115,
-    "funciones": 9438
+    "archivos": 3127,
+    "funciones": 9499
   }
 }
