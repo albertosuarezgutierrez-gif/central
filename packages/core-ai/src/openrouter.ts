@@ -230,6 +230,46 @@ export async function openrouterSearchEx(
   })
 }
 
+export interface OpenRouterEmbedConfig {
+  apiKey: string
+  baseUrl?: string  // default: https://openrouter.ai/api/v1/embeddings
+  model?: string     // default: openai/text-embedding-3-small
+}
+
+const DEFAULT_EMBED_URL = 'https://openrouter.ai/api/v1/embeddings'
+// text-embedding-3-small soporta `dimensions` (Matryoshka): pedir 768 mantiene compatibilidad
+// con la columna pgvector(768) existente sin migrarla. $0,02/M tokens (24/08/2026: "todo lo que
+// pueda ir por OpenRouter, va por OpenRouter" — sustituye a `geminiEmbed`/text-embedding-004,
+// retirado por Google el 14/01/2026).
+const DEFAULT_EMBED_MODEL = 'openai/text-embedding-3-small'
+const DEFAULT_EMBED_DIMENSIONS = 768
+
+/** Devuelve el vector de embedding del texto vía OpenRouter. Lanza error si falla. */
+export async function openrouterEmbed(
+  config: OpenRouterEmbedConfig,
+  texto: string,
+  opts: { dimensions?: number; timeoutMs?: number; fetchImpl?: typeof fetch } = {},
+): Promise<number[]> {
+  const key = requireKey(config)
+  if (!texto.trim()) throw new Error('OpenRouterEmbed: texto vacío')
+  const doFetch = opts.fetchImpl ?? fetch
+  const res = await doFetch(config.baseUrl ?? DEFAULT_EMBED_URL, {
+    method: 'POST',
+    headers: headers(config, key),
+    body: JSON.stringify({
+      model: config.model ?? DEFAULT_EMBED_MODEL,
+      input: texto,
+      dimensions: opts.dimensions ?? DEFAULT_EMBED_DIMENSIONS,
+    }),
+    signal: opts.timeoutMs ? AbortSignal.timeout(opts.timeoutMs) : undefined,
+  })
+  if (!res.ok) throw new Error(`OpenRouter-Embed HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  const data = await res.json()
+  const values = data?.data?.[0]?.embedding
+  if (!Array.isArray(values) || !values.length) throw new Error('OpenRouter-Embed: respuesta sin vector')
+  return values
+}
+
 /**
  * Function-calling con OpenRouter (formato de tools OpenAI). Espejo de `groqChatTools`,
  * con el mismo contrato `NimToolMessage`/`NimToolResult` para ser drop-in en `aiTools`
