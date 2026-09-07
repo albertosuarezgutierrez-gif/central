@@ -3,7 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { PhoneOff } from 'lucide-react'
 import { eur } from '@/lib/dinero'
-import { MOTIVOS_PUERTO, type ClienteCanal, type EstadoCanal, type SinCanal } from '@/lib/correduria-puerto'
+import {
+  MOTIVOS_PUERTO,
+  type ClienteCanal,
+  type EstadoCanal,
+  type EstadoPortalCliente,
+  type SinCanal,
+} from '@/lib/correduria-puerto'
 import { Badge, Pendiente, type Tono } from '@/components/ui'
 import Bloque from './Bloque'
 
@@ -105,6 +111,31 @@ const ESTILO: Record<EstadoCanal, { label: string; tono: Tono; color: string; qu
     tono: 'aviso',
     color: 'var(--warning)',
     que: 'asegura no ha informado sus canales. NO significa que no los tenga: significa que no se ha podido mirar.',
+  },
+}
+
+/**
+ * Qué se le dice a Alberto de cada estado del portal. Son cuatro textos y no
+ * uno porque cada uno se arregla en un sitio distinto; «no verá su cartera» a
+ * secas le dejaría sin saber si tiene que llamar al cliente o resolver una
+ * ficha duplicada.
+ */
+const PORTAL: Record<EstadoPortalCliente, { label: string; tono: Tono; que: string }> = {
+  puede_entrar: { label: 'Verá su cartera', tono: 'neutral', que: '' },
+  sin_email: {
+    label: 'No verá su cartera',
+    tono: 'negativo',
+    que: 'No hay ningún correo suyo en la base, así que el portal no puede saber qué ficha es la suya: entraría y vería la bóveda vacía. Pídeselo y apúntalo en su ficha.',
+  },
+  ambiguo: {
+    label: 'No verá su cartera',
+    tono: 'negativo',
+    que: 'Ese correo está declarado como suyo en MÁS DE UNA ficha, así que el portal no sabría cuál enseñarle. Es una ficha duplicada: resuélvela y se arregla solo.',
+  },
+  resuelve_a_otra: {
+    label: 'No verá su cartera',
+    tono: 'negativo',
+    que: 'El único correo que consta suyo es en realidad el de OTRA persona, así que le llevaría a la ficha de ella. No es un duplicado: a este cliente le falta su propia dirección.',
   },
 }
 
@@ -263,6 +294,21 @@ export default function SinCanal({
         </div>
       )}
 
+      {resumen.noVenSuCartera !== null && resumen.noVenSuCartera > 0 && (
+        <div style={{ border: '1px solid var(--negative)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
+          <Badge tono="negativo">Portal</Badge>{' '}
+          <strong>{resumen.noVenSuCartera} no verán su cartera</strong> si les das acceso hoy: entran,
+          teclean su código y la bóveda sale vacía, sin ningún error. Es una pregunta distinta de si
+          se les puede escribir — abajo, en cada fila, pone por qué y qué lo arregla.
+        </div>
+      )}
+      {resumen.noVenSuCartera === null && (
+        <p style={{ ...pMuted, marginBottom: 10 }}>
+          No se ha podido comprobar quién verá su cartera al entrar al portal.{' '}
+          <strong>No significa que la vean todos.</strong>
+        </p>
+      )}
+
       <Recuento resumen={resumen} />
 
       {filas.length === 0 ? (
@@ -343,6 +389,9 @@ function Fila({ f }: { f: ClienteCanal }) {
           {f.nombre}
         </Link>
         <Badge tono={e.tono}>{e.label}</Badge>
+        {f.portal !== null && f.portal !== 'puede_entrar' && (
+          <Badge tono={PORTAL[f.portal].tono}>{PORTAL[f.portal].label}</Badge>
+        )}
       </div>
 
       <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
@@ -374,6 +423,20 @@ function Fila({ f }: { f: ClienteCanal }) {
       </div>
 
       {e.que && <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{e.que}</div>}
+
+      {/* El «por qué» del portal va aparte del de la contactabilidad: son dos
+          diagnósticos distintos y mezclarlos en un párrafo hace que Alberto
+          arregle uno creyendo que ha arreglado los dos. */}
+      {f.portal !== null && PORTAL[f.portal].que && (
+        <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{PORTAL[f.portal].que}</div>
+      )}
+      {f.portal === null && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
+          <span title="asegura no ha informado si este cliente veria su cartera: no es que no la vea, es que no se ha podido mirar">
+            portal sin comprobar
+          </span>
+        </div>
+      )}
       <Pista f={f} />
     </div>
   )

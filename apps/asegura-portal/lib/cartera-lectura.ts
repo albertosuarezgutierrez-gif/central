@@ -180,8 +180,35 @@ export type TitularPortal = {
   polizas: PolizaPortal[]
 }
 
+/**
+ * Cómo salió el último intento de vincular esta identidad con una ficha, leído
+ * de `portal_identidad.ultimo_vinculo`.
+ *
+ * 🚨 `null` = **no consta** (nunca se intentó, o el sello falló), y NO es
+ * `sin_ficha`. Son la misma pantalla vacía y dos frases distintas: una dice
+ * «no eres cliente» y la otra no puede decir nada.
+ */
+export type VinculoPortal = 'ok' | 'ya_vinculada' | 'sin_ficha' | 'ambiguo' | 'sin_clave' | 'error'
+
+const VINCULOS: readonly string[] = ['ok', 'ya_vinculada', 'sin_ficha', 'ambiguo', 'sin_clave', 'error']
+
+/**
+ * La columna es `text` con un CHECK en la BD, pero un despliegue viejo o una
+ * escritura por otro camino pueden dejar cualquier cosa: lo que no se reconoce
+ * es «no se sabe», nunca el estado que menos molesta de pintar.
+ */
+function leerVinculo(v: string | null): VinculoPortal | null {
+  return v !== null && VINCULOS.includes(v) ? (v as VinculoPortal) : null
+}
+
 export type CarteraPortal = {
   vinculada: boolean
+  /**
+   * El resultado del último intento de vínculo. Lo usa la bóveda para no
+   * decirle «no hemos encontrado ninguna póliza» a alguien cuyo correo SÍ
+   * encontramos en dos fichas. `null` = no consta.
+   */
+  vinculo: VinculoPortal | null
   /** Nombre de la correduría del vínculo (única columna legible de `corredurias`). */
   correduria: string | null
   /** Fichas de la propia identidad, con el nivel de su vínculo. */
@@ -199,8 +226,12 @@ export type CarteraPortal = {
   autorizacionesUsadas: string[]
 }
 
+// 🚨 Constante COMPARTIDA entre todas las llamadas: `vinculo` va a `null` aquí
+// y el valor real se esparce en el `return` (`{ ...SIN_VINCULO, vinculo }`).
+// Rellenarlo aquí dentro filtraría el motivo de una identidad a la siguiente.
 const SIN_VINCULO: CarteraPortal = {
   vinculada: false,
+  vinculo: null,
   correduria: null,
   propias: [],
   autorizadas: [],
@@ -222,6 +253,16 @@ export async function carteraDeSesion(): Promise<CarteraPortal | null> {
 }
 
 export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPortal> {
+  // Cómo salió el último intento de vínculo. Se LEE, no se recalcula: aquí no
+  // existe el correo en claro (`portal_canal` guarda un hash con pimienta
+  // propia, que no sirve para el índice ciego y no se revierte), así que el
+  // único sitio donde se supo es el canje del código y de ahí viene sellado.
+  const identidad = await prisma.portalIdentidad.findUnique({
+    where: { id: identidadId },
+    select: { ultimoVinculo: true },
+  })
+  const vinculo = leerVinculo(identidad?.ultimoVinculo ?? null)
+
   // El filtro por identidadId es la única frontera entre una bóveda y otra.
   const vinculos = await prisma.portalVinculo.findMany({
     where: { identidadId },
@@ -272,7 +313,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   // 🚨 El corte de «aquí no hay nada» se decide con LAS DOS listas. Hasta el
   // 04/09/2026 bastaba con no tener vínculo para devolver `SIN_VINCULO`, y eso
   // dejaba fuera justo a quien el producto quiere dentro: el invitado.
-  if (vinculos.length === 0 && filasAutorizacion.length === 0) return SIN_VINCULO
+  // 🚨 El corte de «aquí no hay nada» conserva el MOTIVO. Se parte de la
+  // constante COMPARTIDA y se le esparce el vínculo de ESTA identidad, en una
+  // local con nombre: `SIN_VINCULO` no puede llevar el motivo dentro (lo
+  // filtraría de una identidad a la siguiente), y la bóveda sí lo necesita para
+  // no decirle «no hemos encontrado ninguna póliza» a quien tiene dos fichas.
+  const SIN_VINCULO_DE_ESTA_IDENTIDAD: CarteraPortal = { ...SIN_VINCULO, vinculo }
+  if (vinculos.length === 0 && filasAutorizacion.length === 0) return SIN_VINCULO_DE_ESTA_IDENTIDAD
 
   // La correduría sale del vínculo si lo hay y, si no, de la autorización que
   // me deja entrar: un invitado sin ficha también tiene que ver de quién es la
@@ -611,6 +658,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
 
   return {
     vinculada: vinculos.length > 0,
+    vinculo,
     correduria: correduria?.nombre ?? null,
     propias,
     autorizadas,

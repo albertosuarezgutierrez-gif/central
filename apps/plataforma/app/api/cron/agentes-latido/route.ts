@@ -20,6 +20,12 @@ const PROBES: Record<string, Prisma.Sql> = {
   // Renovaciones de la correduría. La huella es la de la PASADA, no la tabla de avisos:
   // `correduria_avisos_renovacion` solo crece cuando alguna póliza cruza un hito, así que un día
   // tranquilo y un cron muerto darían exactamente la misma señal.
+  // Canario del formulario público. La huella es la PASADA del canario, no una tabla de leads:
+  // «hoy no ha entrado ningún lead» y «el formulario lleva un mes muerto» son el mismo silencio,
+  // y distinguirlos es justo para lo que existe.
+  canario_lead_web: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'canario_lead_web'`,
   correduria_renovaciones: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_renovaciones'`,

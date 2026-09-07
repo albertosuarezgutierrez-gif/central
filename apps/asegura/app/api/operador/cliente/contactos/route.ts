@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic'
  *
  *   GET    ?id=<clienteId>                                  → { estado:'ok', telefonos, emails }
  *   POST   { clienteId, tipo, valor, etiqueta?, principal?, forzar? } → añade uno
- *   PATCH  { clienteId, id, principal?, etiqueta? }         → hace principal / re-etiqueta
+ *   PATCH  { clienteId, id, valor?, principal?, etiqueta?, forzar? } → corrige el valor,
+ *                                                            re-etiqueta o hace principal
  *   DELETE { clienteId, id }                                → borra uno
  *
  * Los escribe `lib/cartera-edicion.ts` (cifrado + índice ciego + espejo del
@@ -54,8 +55,10 @@ export async function PATCH(req: Request) {
   return escribir(req, (correduriaId, b) =>
     cambiarContacto(correduriaId, cadena(b.clienteId) ?? '', {
       id: cadena(b.id) ?? '',
+      ...('valor' in b ? { valor: b.valor } : {}),
       ...(b.principal === true ? { principal: true } : {}),
       ...('etiqueta' in b ? { etiqueta: b.etiqueta } : {}),
+      forzar: b.forzar === true,
       actor: cadena(b.actor) ?? 'plataforma',
     }),
   )

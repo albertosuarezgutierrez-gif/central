@@ -8,6 +8,7 @@ import { detectLang, detectCategory } from '@/lib/sivra/agente-huesped/reglas'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
 import { barrerUltimoRecurso } from '@/lib/sivra/agente-huesped/noche-guardia'
+import { barrerPendientesRancios } from '@/lib/sivra/agente-huesped/rancio-guardia'
 
 export const dynamic = 'force-dynamic'
 // El agente hace varias llamadas a IA por mensaje (decisión + traducciones), y el sondeo recorre
@@ -101,6 +102,11 @@ export async function GET(req: NextRequest) {
   // seguiría sin salida. No corre en el simulacro (`dry=1`), que promete no enviar nada.
   const ultimoRecurso = await barrerUltimoRecurso().catch(() => 0)
 
+  // PENDIENTES RANCIOS — un borrador que escaló EN HORARIO y sigue sin que Alberto lo toque. Mismo
+  // motivo para ir aquí arriba y fuera del try grande: si Smoobu falla al listar hilos, un huésped
+  // que lleva horas esperando seguiría sin recibir nada. Solo actúa en horario de atención.
+  const rancios = await barrerPendientesRancios().catch(() => ({ recordados: 0, acusados: 0 }))
+
   const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })
@@ -143,7 +149,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true, results, threads: threads.length, ultimoRecurso, ...(debug ? { detalle } : {}) })
+    return NextResponse.json({ ok: true, results, threads: threads.length, ultimoRecurso, rancios, ...(debug ? { detalle } : {}) })
   } catch (e: any) {
     return NextResponse.json({ error: e.message, results }, { status: 500 })
   }

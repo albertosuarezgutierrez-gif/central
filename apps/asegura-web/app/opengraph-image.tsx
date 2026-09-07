@@ -22,7 +22,7 @@ import { AMBITO } from '@/lib/sitio'
 
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
-export const alt = `${MEDIADOR.marca} · Correduría de seguros en ${AMBITO.ciudad}`
+export const alt = `${MEDIADOR.marca} · Correduría de seguros en ${AMBITO.nacional}`
 
 export default function Imagen() {
   const { primario, acento, acentoInk } = MARCA_ASEGURA.paleta
@@ -43,14 +43,21 @@ export default function Imagen() {
           fontFamily: 'sans-serif',
         }}
       >
+        {/* 🚨 El ámbito que se anuncia es NACIONAL, no la ciudad de la oficina.
+            Lo decidió el PR #2464: un corredor inscrito en la DGSFP media en
+            todo el territorio, y poner «Sevilla» en el primer renglón le dice a
+            quien entra desde otra provincia que no es cliente. La señal local
+            sale del NAP y del perfil de Google Business, no de repetirlo aquí.
+            Lo vigila `ACOTA_AMBITO` en `lib/ramos.test.ts`, que barre este
+            fichero. */}
         <div style={{ display: 'flex', fontSize: 30, letterSpacing: 2, opacity: 0.9 }}>
-          {AMBITO.ciudad.toUpperCase()} · {AMBITO.comunidad.toUpperCase()}
+          CORREDURÍA DE SEGUROS · {AMBITO.nacional.toUpperCase()}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', fontSize: 92, fontWeight: 800, letterSpacing: -2 }}>{MEDIADOR.marca}</div>
           <div style={{ display: 'flex', fontSize: 44, marginTop: 8, opacity: 0.95 }}>
-            Correduría de seguros en {AMBITO.ciudad}
+            Mediamos con varias compañías en toda {AMBITO.nacional}
           </div>
           {/* Sin promesa de precio: la misma regla que el copy de las páginas
               (RDL 3/2020). Lo que diferencia es mediar entre compañías, no un

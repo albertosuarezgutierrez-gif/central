@@ -239,6 +239,43 @@ Al construir cualquier aviso a un tercero (limpieza, gestoría, huésped, conduc
 ## Estilo de respuesta — regla global permanente
 **Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
 
+## 👀 Mira los PRs ABIERTOS antes de empezar — regla global permanente
+**Varias sesiones trabajan en este repo a la vez y no se ven entre sí.** Todas empujan con la
+cuenta de Alberto, así que un PR abierto por otra sesión es indistinguible de uno tuyo, y nadie te
+avisa de que el trabajo que vas a hacer ya está hecho y esperando.
+
+Antes de ponerte con algo que no sea trivial: **lista los PRs abiertos** (`list_pull_requests`,
+`state: open`) y mira si alguno toca lo mismo. Cuesta una llamada.
+
+Caso fundacional (06/09/2026): el PR #2319, abierto desde el 05/09, ya corregía «la matriz son 12
+apps» → 13 en `CLAUDE.md`. Sin mirarlo, esta sesión volvió a encontrar el mismo fallo y abrió el
+#2434 con la misma corrección — trabajo duplicado y, de propina, un conflicto textual metido en el
+PR ajeno. Lo caro no fue el rato perdido: fue dejar peor un PR que ya estaba bien.
+
+Corolario para los PRs de otras sesiones: **mirarlos no es mergearlos.** Lo que solo cuenta lo que
+pasó (`docs/**` de registro) se mergea; lo que le dice a un agente qué hacer o toca código, no —
+es la misma línea que ya traza `.github/workflows/rutinas-automerge.yml`.
+
+## 🪤 Un cepo no está terminado hasta que se le ha visto FALLAR — regla global permanente
+**Escribir el test y verlo verde no prueba nada: prueba que pasa, no que vigila.** Un guardián que
+mira al sitio equivocado es verde el 100 % de las veces, y por eso es indistinguible de uno que
+funciona hasta el día que hacía falta. Es el mismo fallo que `CLAUDE.md` ya prohíbe aguas arriba
+(«un check que se pone verde porque la consulta no devolvió nada es el fallo más caro que hay»),
+un piso más abajo.
+
+Por eso: **rompe a propósito lo que el cepo dice proteger, comprueba que se pone rojo, y restaura.**
+Un brazo por aserción, no uno por fichero. Y pega la salida del rojo en el PR: es la única prueba
+de que el cepo existe.
+
+Tres casos el mismo día (06/09/2026), todos verdes mirando donde no era:
+- La comprobación de responsive midió `scrollWidth` y dijo «no desborda». Cierto e inútil: lo que
+  tapaba el texto era un elemento `position: fixed`, que **no desborda, se pone encima** (PR #2428).
+- `regression-matriz-typecheck` buscaba cada nombre de app en TODO `CLAUDE.md` y pasaba con
+  `asegura-web` borrado de la lista, porque la app tiene su propio apartado más arriba. Se acotó a
+  la lista que declara ese párrafo (PR #2434).
+- Tres PRs de registro parecían tocar código en `get_files`: era el `base.sha` viejo que GitHub
+  guarda para el PR, no el diff real. El de tres puntos contra `main` decía otra cosa.
+
 ## 🤖 Trabajo mecánico → SIEMPRE a un agente — regla global permanente
 **Todo lo MECÁNICO se delega a un subagente (`Task`), nunca se hace en la sesión principal.** Cada archivo
 que lee la sesión principal se queda en su contexto para siempre; un agente lo lee, hace el trabajo y
@@ -681,7 +718,45 @@ conflicts»**. No es un fallo del CI ni del ruleset: es el paso 1 del orden de a
 otra punta. Se resuelve igual — mergear `main` en la rama, conservar las DOS entradas del mismo día en
 `docs/CONTEXTO-SESIONES.md` (no son versiones rivales) y empujar.
 
+🕰️ **DECIMOCUARTA (06/09/2026, PRs #2428, #2434 y #2439) — y es de OTRA COSA: no de si los checks
+ARRANCAN, sino de si lo que te cuentan sobre ellos es VERDAD. Hasta el `405` del merge miente.**
+
+Todo lo de arriba diagnostica «el run no existe». Esto es el problema contrario y se confunde con él:
+el run existe, **ha terminado en verde**, y todo lo que puedes preguntar desde aquí sigue diciendo que
+está corriendo. Medido tres veces el mismo día:
+
+| PR | lo que había de verdad | lo que se leía desde aquí |
+|---|---|---|
+| #2428 | job en verde a las 18:41:54 | `get_check_runs` → `in_progress` ~25 min después |
+| #2434 | ídem | ídem, hasta ~50 min |
+| #2439 | `ci.yml` run `34055693102`, ese head exacto, `completed`/`success` (19:45:43) | **`merge_pull_request` → `405 ... "Lint · TypeCheck · Build" is in progress`** |
+
+🚨 **Lo caro es el tercero: el mensaje del `405` se sirve del MISMO almacén retrasado.** Es
+tentador leerlo como la fuente fiable —lo emite el propio merge— y no lo es: reintentar el merge
+**sin cambiar nada** funcionó a la primera. Si el `405` te nombra un check «in progress», eso no
+prueba que lo esté.
+
+⚠️ **Y desde fuera hay TRES cosas que se ven idénticas.** Confundirlas es lo que hace perder la tarde,
+porque solo una se arregla esperando:
+
+| forma | cómo se distingue | qué hacer |
+|---|---|---|
+| **(a) reporte retrasado** — el job acabó, la API no se ha enterado | `list_workflow_runs` (filtrando por rama) da el run `completed`/`success` sobre ese head | reintentar el merge; no tocar nada |
+| **(b) run creado que NUNCA arrancó** | `list_workflow_jobs` sobre el run → `total_count: 0` | **no se arregla solo**: hace falta un head nuevo (paso 3 del orden de abajo) |
+| **(c) run en cola** esperando runner | el run existe con `status: queued` | esperar |
+
+`[Probable]` **`list_workflow_runs` filtrado por rama fue la lectura más fresca de las tres veces**, y
+la única que acertó cuando `get_check_runs` y el `405` se equivocaban a la vez. Medido tres veces, no
+más: úsalo como primer sitio donde mirar, no como verdad garantizada.
+
+La forma (b) se vio una sola vez (#2439, run de `qa.yml` `34055588656`): un `expected` que no se
+resolvía nunca porque no había job que esperar. Un caso, no una ley.
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
+0. **Antes de nada: ¿los runs EXISTEN?** `list_workflow_runs` filtrando por rama. Si existen y están
+   `completed`/`success` sobre ese head, no hay nada que desatascar — es reporte retrasado
+   (DECIMOCUARTA): **reintenta el merge sin tocar nada**, aunque el `405` te jure que un check sigue
+   corriendo. Los pasos 1-4 son para cuando el run NO existe.
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
    ⚠️ Que **coincidan no descarta el lag**, solo descarta el head viejo (#2341): si acabas de empujar, espera igual antes de tocar palancas.
 2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**
@@ -707,13 +782,14 @@ salió verde):
 Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
 desbloquea nada.
 
-⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 12** — verificado leyendo el `app:` del
-workflow el 02/09/2026: `ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen,
-mariscos, asegura, asegura-portal, housesevillana` (se añadió `asegura` el 26/08, `housesevillana`
-el 27/08 y **`asegura-portal`** después). Los 9 de la tabla son los que el **ruleset exige**; los
-tres nuevos **corren pero no consta que sean requeridos** (el ruleset no se lee desde aquí, así que
-no se afirma). Cuenta los nombres del workflow antes de citar esta cifra: se ha quedado corta dos
-veces ya. `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la matriz**, y por eso
+⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 13** — verificado leyendo el `app:` del
+workflow (`.github/workflows/tests.yml:62`) el 06/09/2026: `ia-rest, ialimp, sivra, plataforma, rrhh,
+transporte, alquiler, almacen, mariscos, asegura, asegura-portal, asegura-web, housesevillana` (se
+añadió `asegura` el 26/08, `housesevillana` el 27/08, `asegura-portal` después y **`asegura-web`**
+al crearla el 04/09). Los 9 de la tabla son los que el **ruleset exige**; los cuatro nuevos **corren
+pero no consta que sean requeridos** (el ruleset no se lee desde aquí, así que no se afirma). Cuenta
+los nombres del workflow antes de citar esta cifra: **se ha quedado corta TRES veces ya** — la
+última, este mismo apartado diciéndose «son 12» mientras el workflow ya corría 13. `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la matriz**, y por eso
 sus 5 errores `TS5097` vivieron 15 días sin que nadie los viera: una app que no está en la matriz
 no la typechequea nadie. **Al crear una app nueva, añadirla a la matriz es parte del alta**, igual
 que el `ignoreCommand`.

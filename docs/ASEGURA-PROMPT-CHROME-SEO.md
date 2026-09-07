@@ -41,6 +41,10 @@ Sin esto el SEO se hace a ciegas: no sé por qué consultas entro ni en qué pos
 2. Añade una propiedad de tipo **Dominio** con `grupoasegura.es` (dominio, no prefijo de URL: así
    cubre `www` y los subdominios de una vez).
 3. Google te dará un **registro TXT** de verificación. Cópialo tal cual.
+   ℹ️ *Si acabas en una propiedad de tipo «Prefijo de URL», Google ofrece verificar con una etiqueta
+   `<meta>`. Esa vía ya está preparada en el código (`NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`, PR
+   #2464) pero exige que yo ponga la env y redespliegue. **Para el tipo Dominio, que es el que
+   queremos, la única vía es el TXT en DNS**: sigue con el paso 4.*
 4. Ve al panel de **IONOS** → dominio `grupoasegura.es` → DNS.
 5. **AÑADE** ese registro TXT (host `@`, o el que indique Google). **No borres ni modifiques
    ningún TXT que ya exista** — si ya hay uno de SPF u otro servicio, el nuevo se añade al lado.
@@ -61,6 +65,9 @@ busca «correduría de seguros Sevilla» desde el móvil.
 3. Si no existe, créala con exactamente los datos de la regla 7. **Nombre, dirección y teléfono
    tienen que coincidir letra por letra** con lo que publica la web — si no, Google reparte la señal
    entre dos negocios distintos y el posicionamiento se hunde.
+   🚨 Y esto pesa MÁS desde el 07/09/2026: la web declara ámbito **nacional** y ya no repite
+   «Sevilla» en sus encabezados (PR #2464), así que este perfil pasa a ser prácticamente **la única
+   señal local que le queda al negocio**. Si el NAP no cuadra aquí, no cuadra en ningún sitio.
 4. Sitio web: `https://grupoasegura.es`
 5. **Horario: déjalo sin rellenar o para y pregúntame.**
 6. La verificación (postal, llamada o vídeo) la inicias, pero **el código lo meto yo**. Dime qué

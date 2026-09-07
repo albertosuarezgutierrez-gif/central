@@ -186,12 +186,32 @@ export default async function Boveda({
       <section className="seccion" aria-labelledby="cartera-titulo">
         <h2 id="cartera-titulo">Tus seguros</h2>
         {!cartera.vinculada ? (
-          // Sin vínculo ≠ sin pólizas: no hay ficha con este email. No se
-          // inventan teléfonos ni emails de la correduría: solo `nombre` es legible.
-          <p className="suave" style={{ margin: 0 }}>
-            No hemos encontrado ninguna póliza a nombre de este email. Si eres cliente con otro email,
-            escríbenos por tu canal habitual con {correduria} y lo vinculamos.
-          </p>
+          cartera.vinculo === 'ambiguo' ? (
+            // 🚨 A este NO se le puede decir que no le hemos encontrado nada: sí
+            // se ha encontrado, y es justo por eso por lo que no se le enseña
+            // ninguna. Decirle lo contrario es mandarle a pensar que ha perdido
+            // sus seguros.
+            <p className="pendiente" style={{ margin: 0 }}>
+              Tu email aparece en más de una ficha de {correduria}, así que todavía no podemos saber
+              cuáles de las pólizas son tuyas. Lo está revisando el corredor y no has perdido nada:
+              vuelve a entrar en unos días y aquí estarán.
+            </p>
+          ) : cartera.vinculo === 'sin_clave' || cartera.vinculo === 'error' ? (
+            // Esto solo se decía en la pantalla de entrada, y quien vuelve con
+            // la sesión viva (30 días) va directo aquí y no lo veía nunca: un
+            // problema NUESTRO se le enseñaba como «no eres cliente».
+            <p className="pendiente" style={{ margin: 0 }}>
+              No hemos podido comprobar tu cartera ahora mismo. Es un problema nuestro, no tuyo: lo
+              reintentamos la próxima vez que entres.
+            </p>
+          ) : (
+            // Sin vínculo ≠ sin pólizas: no hay ficha con este email. No se
+            // inventan teléfonos ni emails de la correduría: solo `nombre` es legible.
+            <p className="suave" style={{ margin: 0 }}>
+              No hemos encontrado ninguna póliza a nombre de este email. Si eres cliente con otro email,
+              escríbenos por tu canal habitual con {correduria} y lo vinculamos.
+            </p>
+          )
         ) : propiasVacia ? (
           <p className="suave" style={{ margin: 0 }}>
             Tu ficha está en {correduria}, pero no tiene pólizas vivas ahora mismo.

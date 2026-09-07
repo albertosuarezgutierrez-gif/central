@@ -135,9 +135,9 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   const mid = await tgAvisoBotones('huespedes.borrador', `${cabecera}\n\n${cuerpo}`, botones)
   // Guardamos el idioma del huésped para que, si Alberto modifica en español, se traduzca a SU idioma.
   await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, esperando_retoque, idioma, pregunta, hueco_guia)
-    VALUES (${ctx.bookingId}, ${ctx.propertyId}, ${dec.reply || ''}, ${dec.categoria}, ${mid}, false, false, ${ctx.lang}, ${pregunta || ''}, ${hueco === 'guia'})
-    ON CONFLICT (booking_id) DO UPDATE SET borrador = ${dec.reply || ''}, categoria = ${dec.categoria}, tg_message_id = ${mid}, esperando_edit = false, esperando_retoque = false, idioma = ${ctx.lang}, pregunta = ${pregunta || ''}, hueco_guia = ${hueco === 'guia'}, created_at = now()
+    INSERT INTO mensajes_pendientes_tg (booking_id, property_id, borrador, categoria, tg_message_id, esperando_edit, esperando_retoque, idioma, pregunta, hueco_guia, no_requiere_respuesta, recordatorio_at, acuse_espera_at)
+    VALUES (${ctx.bookingId}, ${ctx.propertyId}, ${dec.reply || ''}, ${dec.categoria}, ${mid}, false, false, ${ctx.lang}, ${pregunta || ''}, ${hueco === 'guia'}, ${noRespuesta}, NULL, NULL)
+    ON CONFLICT (booking_id) DO UPDATE SET borrador = ${dec.reply || ''}, categoria = ${dec.categoria}, tg_message_id = ${mid}, esperando_edit = false, esperando_retoque = false, idioma = ${ctx.lang}, pregunta = ${pregunta || ''}, hueco_guia = ${hueco === 'guia'}, no_requiere_respuesta = ${noRespuesta}, created_at = now(), recordatorio_at = NULL, acuse_espera_at = NULL
   `).catch(() => {})
 }
 
@@ -166,7 +166,8 @@ export async function reproponerBorrador(
   // Guarda el nuevo borrador como pendiente (el ✅ Enviar mandará ESTE texto) y resetea los modos.
   await prisma.$executeRaw(Prisma.sql`
     UPDATE mensajes_pendientes_tg
-    SET borrador = ${borrador}, tg_message_id = ${mid}, esperando_edit = false, esperando_retoque = false, created_at = now()
+    SET borrador = ${borrador}, tg_message_id = ${mid}, esperando_edit = false, esperando_retoque = false, created_at = now(),
+        recordatorio_at = NULL, acuse_espera_at = NULL
     WHERE booking_id = ${pend.booking_id}
   `).catch(() => {})
 }

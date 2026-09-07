@@ -24,8 +24,17 @@ las **Fases 3 y 4** de `docs/ASEGURA-MARKETING-PLAN.md`, que es su fuente de ver
 2. **El copy no promete precio.** Nada de «ahorra», «el más barato», «garantizamos el mejor
    precio», ni superlativos de precio. No es estilo: un texto así convierte la web en
    **asesoramiento** y arrastra análisis objetivo + IPID (RDL 3/2020, arts. 11 y 17). Lo vigila
-   `apps/asegura-web/lib/ramos.test.ts`, que barre todas las páginas. Si tu texto pone ese test en
-   rojo, **el texto está mal, no el test**.
+   `apps/asegura-web/lib/ramos.test.ts`. Si tu texto pone ese test en rojo, **el texto está mal,
+   no el test**.
+
+   🚨 **Y ojo con lo que ese cepo cubre, porque hasta el 06/09/2026 aquí ponía «barre todas las
+   páginas» y era MENTIRA: solo miraba `RAMOS`.** El copy de la portada —el hero, la sección del
+   corredor, el bloque del formulario— estaba sin vigilar, que es justo donde más tira la tentación
+   comercial y lo que más gente lee: un «ahorra hasta un 30 %» escrito en el hero habría llegado a
+   producción con los 12 checks en verde. Se amplió en el PR #2421 para barrer también los fuentes
+   de `app/` y `components/`, quitando comentarios antes (para que un aviso que NOMBRA lo prohibido
+   no dispare el cepo), y **se comprobó fallando** antes de darlo por bueno. La frase de arriba ya
+   es cierta; no la conviertas otra vez en un deseo recortando el barrido.
 3. **Nunca tarificas.** Avant2 cuesta **0,50 € por consulta y no es idempotente** (un reintento =
    otro cargo). Ninguna página, ningún botón y ninguna idea de contenido de esta skill dispara una
    tarificación. Se capta con **información**, no con un precio.
@@ -51,8 +60,18 @@ Del plan (§1) y de la BD, a **05/09/2026**:
   tasa de conversión del 22 % frente al 10 %. Es hipótesis de trabajo razonada, dicha como tal.
 - **Comisión media por póliza: 48,37 €/año.** Es el denominador de cualquier discusión sobre Ads:
   con esa cifra, un CAC de dos dígitos altos se come el margen del primer año, y del segundo.
-- **Zona: Sevilla.** El domicilio del mediador está en el casco (`MEDIADOR.identidad.domicilio`).
-  Toda keyword que valga la pena lleva «Sevilla» o un barrio dentro.
+- **Ámbito: TODA ESPAÑA. La oficina está en Sevilla; el servicio, no** (dictado de Alberto,
+  07/09/2026: «vendemos a nivel nacional, no provinciales solo»). Hasta ese día los seis `<h1>`
+  decían «Seguro de X en Sevilla» y «quiénes somos» decía «atendemos en Sevilla y su provincia»:
+  eso no acotaba la palabra clave, acotaba **la oferta** — quien entraba desde otra provincia leía
+  que no es cliente. Un corredor inscrito en la DGSFP media en todo el territorio nacional.
+  🚨 **El anclaje local NO se pierde y no vive en los encabezados**: vive en la dirección postal
+  de la ficha `InsuranceAgency` (`lib/seo.ts`, que sigue diciendo Sevilla) y en el perfil de Google
+  Business, que es de donde sale la señal del pack local. Lo que sí cambió en la ficha es
+  `areaServed`: era ciudad + comunidad —o sea, la propia web declaraba en datos estructurados que
+  fuera de Andalucía no se atiende— y ahora es el país.
+  Lo protege `lib/ramos.test.ts` (`ACOTA_AMBITO`, que barre RAMOS **y** los fuentes de `app/` y
+  `components/`) más `lib/seo-nap.test.ts`. Si escribes «en Sevilla» en un copy, se pone rojo.
 
 ---
 
@@ -91,12 +110,24 @@ No cinco a medias. Por orden de retorno (§3 del plan):
   renovación», «preaviso de un mes para cancelar el seguro», «qué cubre de verdad mi seguro de
   hogar», «cómo cambiar de correduría sin cambiar de seguro». Casi no tienen competencia y las
   busca alguien con el problema encima. «Seguro de coche barato» no se gana: no la persigas.
-- **Local + ramo** para lo comercial: «correduría de seguros Sevilla», «seguro de comunidad de
-  propietarios Sevilla», «seguro de local comercial Sevilla», «seguro de flota Sevilla».
+- **Ramo + ámbito nacional** para lo comercial: «correduría de seguros», «seguro de comunidad de
+  propietarios», «seguro de local comercial», «seguro de flota». La modificación local se puede
+  perseguir con **páginas propias** (una landing por zona, si alguna vez se escribe), nunca
+  metiendo «Sevilla» en el h1 de la página nacional: eso ya se hizo y lo que hacía era espantar
+  al visitante de fuera. Y ojo con lo genérico: «seguro de hogar» a secas es una SERP de
+  comparadores con presupuesto de Ads, así que el peso sigue estando en la intención de problema.
 - **Un H1 por página, y que diga lo que la página resuelve.** Nada de rellenar con la marca.
 - **Cita la ley cuando la haya** (art. 22 LCS para el preaviso, RDL 3/2020 para la mediación): es
   lo que distingue un texto de corredor de un texto de comparador, y es lo que Google premia en
   YMYL. Verifica el artículo antes de citarlo — una cita inventada cuesta más que no citar.
+- **La voz de la home es PRIMERA PERSONA, y el nombre no se teclea** (decidido el 06/09/2026, PR
+  #2421). El hero explicaba lo que la correduría *es* («Somos correduría, no compañía…») y
+  enumeraba cinco ramos de un tirón, así que no priorizaba ninguno; ahora abre por el momento del
+  visitante —el parte— y lo firma `MEDIADOR.identidad.nombre`, que es el mismo dato del pie legal
+  y de la credencial. Es lo único que un comparador no puede copiar, así que **no lo vuelvas a
+  pluralizar ni escribas el nombre a mano**: dos copias del nombre es una copia de más. La
+  prioridad de ramo la marca la rejilla de la home, que abre por hogar y comunidades — el orden
+  que justifica `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`.
 - **Sin foto ni caso de un cliente real** (regla 4).
 
 ### 4. Verifica ANTES de dar nada por hecho
@@ -108,9 +139,11 @@ node --test lib/*.test.ts        # ramos (copy), contrato-lead, analitica, porta
 pnpm exec tsc --noEmit
 ```
 
-`lib/ramos.test.ts` en rojo = el copy promete precio. `lib/contrato-lead.test.ts` en rojo = la
-lista de ramos de la web ya no coincide con la que acepta plataforma, y el visitante elegiría uno
-que se rechaza con un 422: **un lead perdido sin que nada falle**.
+`lib/ramos.test.ts` en rojo = el copy promete precio — mira si el fallo apunta a un ramo o a un
+fichero de `app/`/`components/`, que son dos barridos distintos dentro del mismo test.
+`lib/contrato-lead.test.ts` en rojo = la lista de ramos de la web ya no coincide con la que acepta
+plataforma, y el visitante elegiría uno que se rechaza con un 422: **un lead perdido sin que nada
+falle**.
 
 ### 5. Informa corto y deja rastro
 
@@ -147,7 +180,7 @@ Antes de escribir contenido nuevo, comprueba que lo que ya existe se puede index
 **Estado: no hay perfiles.** No los crees. Lo que sí puedes hacer sin permiso adicional es
 **preparar** el material y decir qué haría falta.
 
-Por orden de retorno para una correduría local:
+Por orden de retorno para una correduría pequeña (oficina en Sevilla, venta nacional):
 
 1. **Google Business Profile.** No es «una red social», es **la acción de mayor retorno por hora de
    todo el plan y es gratis**: es lo que sale cuando alguien busca «correduría de seguros Sevilla»

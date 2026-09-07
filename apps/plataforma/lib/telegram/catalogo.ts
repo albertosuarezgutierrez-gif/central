@@ -54,6 +54,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Solo si falla (máx. 1 cada 6 h)',
   },
   {
+    id: 'correduria.canario-lead', categoria: 'correduria',
+    titulo: 'El formulario de la web no entrega',
+    que: 'Cada hora se comprueba que un envío del formulario de grupoasegura.es llega a la cartera. Si no llega, cada persona que lo rellene se pierde sin rastro.',
+    cuando: 'Solo si falla (máx. 1 cada 6 h)',
+  },
+  {
     id: 'sistema.health-check', categoria: 'sistema',
     titulo: 'Chequeo diario del sistema',
     que: 'Repaso de salud: cifras que no cuadran, sincronizaciones paradas, sondas de IA.',

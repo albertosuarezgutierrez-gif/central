@@ -39,7 +39,20 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
   const ramo = RAMO[p.ramo] ?? p.ramo
   // Si el titular ya es el bien, la compañía baja a la segunda línea; si no, el
   // titular YA es «compañía · ramo» y repetirlo debajo sería ruido.
-  const meta = [tituloEsBien(p) ? `${p.compania} · ${ramo}` : null, vence ? `Vence el ${vence}` : null]
+  //
+  // 🚨 Pero entonces hace falta OTRA cosa que distinga la fila, y por eso entra
+  // el número de póliza. Sin él, dos hogares de la misma compañía salen con el
+  // MISMO título y la misma segunda línea, y solo se diferencian por la fecha
+  // de vencimiento: es justo lo que avisaba el docblock de `tituloDePoliza`
+  // («a casi nadie le dice nada "Occident" a secas cuando tiene dos con
+  // ellos») y pasaba de verdad — visto el 06/09/2026 en dos hogar de Occident.
+  // Le pasa a quien no ve el bien: porque la compañía no lo informó, o porque
+  // su nivel no llega a la dirección (`direccionRiesgo` está capado para un
+  // tercero: la casa donde duerme quien te autorizó no es un dato del
+  // contrato). El número NO abre nada nuevo — `numeroPoliza` ya se sirve desde
+  // el nivel más bajo—, y si tampoco lo hay se cae a la fecha, como antes.
+  const identificaSola = tituloEsBien(p) ? `${p.compania} · ${ramo}` : p.numeroPoliza ? `Nº ${p.numeroPoliza}` : null
+  const meta = [identificaSola, vence ? `Vence el ${vence}` : null]
     .filter(Boolean)
     .join(' · ')
   const devueltos = p.recibos?.devueltos ?? 0

@@ -87,11 +87,23 @@ dependencias nuevas.
 
 </details>
 
-## ✅ B. La página de más intención de compra no dice dónde está — 🔴
+## 🚫 B. La página de más intención de compra no dice dónde está — REVERTIDA
 
-> ✅ **CERRADO el 07/09/2026.** «en Sevilla» entra en el `title`, el `openGraph.title` y el `h1`
-> de `/cambiar-de-correduria`, y en el `h1` de `/quienes-somos` («Una correduría de Sevilla, no
-> una compañía»). El copy sigue pasando `lib/ramos.test.ts`.
+> 🚫 **CERRADA AL REVÉS, y la decisión NO es mía: el ámbito es NACIONAL (PR #2464, 07/09/2026).**
+> Esta idea pedía meter «en Sevilla» en el `title` y el `h1` de `/cambiar-de-correduria` y de
+> `/quienes-somos`. Se hizo esa misma mañana… y a las pocas horas hubo que deshacerlo: en paralelo
+> entró en `main` la decisión contraria y mejor razonada — **«Sevilla» en un encabezado no acota la
+> palabra clave, acota la OFERTA**, y quien entra desde otra provincia lee en el primer renglón que
+> no es cliente. Un corredor inscrito en la DGSFP media en todo el territorio.
+>
+> Lo que queda vigente de esta idea: **la señal local sí importa, pero sale del NAP y del perfil de
+> Google Business, no de repetir la ciudad en cada `h1`.** El `areaServed` del JSON-LD es ahora
+> `Country: España` y el domicilio postal sigue en Sevilla, que es como se declara un negocio con
+> oficina local y ámbito nacional.
+>
+> 🚨 Y hay cepo: `ACOTA_AMBITO` (`lib/ramos.test.ts`) **prohíbe** «en Sevilla», «Sevilla y su
+> provincia» y «en Andalucía» en `RAMOS` y en todo el fuente de `app/` y `components/`. Si esta
+> idea vuelve a proponerse, el test la para. No la reabras sin hablarlo con Alberto.
 
 <details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
 

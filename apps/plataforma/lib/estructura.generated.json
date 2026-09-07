@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-05T15:41:12Z",
+  "generadoEn": "2026-09-06T21:03:35Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 36
+        "evidencias": 37
       },
       "rrhh": {
         "estado": "no",
@@ -2188,7 +2188,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4733,6 +4733,7 @@
       "/api/cron/banca-alertas",
       "/api/cron/borme-ingesta",
       "/api/cron/briefing",
+      "/api/cron/canario-lead",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
       "/api/cron/concursos-avisos",
@@ -6178,7 +6179,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1288,
+    "apis": 1289,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

@@ -571,6 +571,37 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
   padding: calc(4.75rem + var(--e7)) 0 var(--e8);
 }
 
+/* 🚨 Abajo, en móvil, hay DOS burbujas fijas —el botón de WhatsApp a la derecha
+   y el de cookies a la izquierda— y el final del hero cae justo en su banda.
+   Medido en el móvil de Alberto el 06/09/2026: las dos tapaban la última línea
+   del párrafo.
+
+   `overflow: hidden` no protege de esto y `scrollWidth` tampoco lo delata: un
+   elemento `position: fixed` NO desborda a nadie, se pone encima. Por eso la
+   medición de responsive de esa mañana dio «no desborda» con el fallo delante.
+
+   Se reserva la banda en el HERO y no se mueven las burbujas porque la de
+   cookies **no es nuestra**: la inyecta el script de Cookiebot y sus clases son
+   suyas. Un margen aquí cubre las dos; subir la nuestra solo habría arreglado
+   la mitad de la foto. */
+@media (max-width: 559px) {
+  .hero {
+    padding-bottom: calc(var(--e8) + 76px);
+  }
+}
+
+/* Y a 320 px la última garantía —la línea más larga de las tres— llegaba hasta
+   debajo del botón de WhatsApp: se leía «Corredor inscrito en la DGSF». La
+   banda de arriba no lo cubre, y esa es la lección: `padding-bottom` reserva
+   sitio al FINAL del hero, pero una burbuja `fixed` se pega al VIEWPORT, así
+   que pisa lo que quede a su altura pase lo que pase. Aquí se aparta el texto
+   de su columna (52 px de botón + su margen), que es lo único que funciona. */
+@media (max-width: 359px) {
+  .hero .garantias {
+    padding-right: 68px;
+  }
+}
+
 .hero-atmosfera {
   position: absolute;
   inset-inline: 0;
@@ -1412,8 +1443,11 @@ textarea.f-in {
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
 
-/* La lista va DUPLICADA en el JSX; por eso el bucle acaba en -50 %: al llegar
-   ahí la segunda copia está donde estaba la primera y el salto no se ve. */
+/* La lista va TRIPLICADA en el JSX; por eso el bucle acaba en -33.3333 %: al
+   llegar ahí la segunda copia está donde estaba la primera y el salto no se ve.
+   Tres y no dos porque con dos el contenedor era más ancho que una copia y se
+   veía el hueco (ver la nota del JSX). Si cambias el número de copias, cambia
+   también este porcentaje: son el mismo ajuste escrito en dos sitios. */
 .companias ul {
   display: flex;
   width: max-content;
@@ -1433,9 +1467,27 @@ textarea.f-in {
   white-space: nowrap;
 }
 
+/* En móvil el desfile se veía casi vacío: con `--e8` de separación y el nombre
+   a 1.5rem, en 360 px de ancho solo caben DOS marcas y media, así que la banda
+   parecía tener dos compañías y un hueco. No es la lista la que se queda corta
+   —son siete—, es el paso del desfile. Se aprieta la separación y se baja el
+   cuerpo para que se lean tres o cuatro de una pasada.
+
+   El `--e8` de escritorio se conserva: ahí el ancho sobra y el aire es el que
+   hace que se lea como un muro de marcas y no como una lista. */
+@media (max-width: 559px) {
+  .companias ul {
+    gap: var(--e6);
+  }
+
+  .companias li {
+    font-size: 1.125rem;
+  }
+}
+
 @keyframes desfile {
   to {
-    transform: translateX(-50%);
+    transform: translateX(-33.3333%);
   }
 }
 
@@ -1740,7 +1792,11 @@ textarea.f-in {
 @media (max-width: 559px) {
   .wsp {
     right: calc(var(--e3) + env(safe-area-inset-right, 0px));
-    bottom: calc(var(--e3) + env(safe-area-inset-bottom, 0px));
+    /* Un peldaño por encima del borde (06/09/2026): con `--e3` la burbuja
+       mordía la línea de texto que tenía justo detrás. No arregla el hero por
+       sí sola —para eso está la banda reservada arriba—, pero le devuelve aire
+       en TODAS las páginas, que es donde no hay banda que reservar. */
+    bottom: calc(var(--e4) + env(safe-area-inset-bottom, 0px));
     width: 52px;
     height: 52px;
   }

@@ -119,6 +119,7 @@ test('🚨 un recuento que no llega se queda en null, JAMÁS en 0', () => {
   assert.deepEqual(r.resumen, {
     vivos: null, conEmail: null, conTelefono: null, conAlguno: null, sinNinguno: null,
     ilocalizables: null, rescatables: null, ilocalizablesSinRenovacion: null,
+    noVenSuCartera: null,
   })
 })
 
@@ -396,4 +397,95 @@ test('🚨 el parentesco viaja y se pinta: no es lo mismo el hijo que un descono
 test('la pantalla enseña el parentesco, no solo el nombre', () => {
   assert.match(PANTALLA, /fichasAllegado/)
   assert.match(PANTALLA, /parentesco/)
+})
+
+// ── 5. ¿Verá su cartera al entrar al portal? ────────────────────────────────
+//
+// Es una pregunta DISTINTA de si se le puede escribir: un «Localizable» cuyo
+// único correo es el principal de OTRA ficha entra, teclea su código y ve la
+// bóveda vacía — sin un solo error por medio.
+
+test('🚨 el estado del portal ausente es null, JAMAS «puede_entrar»', () => {
+  const r = interpretarSinCanal(200, {
+    estado: 'ok',
+    filas: [{ clienteId: 'c1', nombre: 'Jose Suarez Salas' }],
+    resumen: {},
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.filas[0].portal, null, 'un asegura sin desplegar no dice que el cliente entra')
+  assert.equal(r.resumen.noVenSuCartera, null)
+})
+
+test('🚨 un estado de portal desconocido no se cuela como bueno', () => {
+  const r = interpretarSinCanal(200, {
+    estado: 'ok',
+    filas: [{ clienteId: 'c1', nombre: 'X', portal: 'lo_que_sea' }],
+    resumen: {},
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.filas[0].portal, null)
+})
+
+test('los cuatro estados del portal viajan tal cual', () => {
+  for (const e of ['puede_entrar', 'sin_email', 'ambiguo', 'resuelve_a_otra']) {
+    const r = interpretarSinCanal(200, {
+      estado: 'ok',
+      filas: [{ clienteId: 'c1', nombre: 'X', portal: e }],
+      resumen: {},
+    })
+    assert.equal(r.estado, 'ok')
+    if (r.estado !== 'ok') return
+    assert.equal(r.filas[0].portal, e)
+  }
+})
+
+test('🚨 el hash del indice ciego NO cruza el puerto ni se pinta', () => {
+  // Es un dato derivado de un dato personal. Por el puerto viaja el ESTADO.
+  //
+  // ⚠️ El nombre que se vigila es el del índice ciego del CORREO
+  // (`email_lookup_hash` / `email_hashes`), no un `/lookup_hash/` a secas: el
+  // puerto tiene además el backfill del índice ciego del DNI, que habla de
+  // `dni_lookup_hash` en su prosa y es otra cosa que sí vive aquí.
+  const SIN_CANAL_ASEGURA = readFileSync(`${RAIZ}apps/asegura/lib/clientes-sin-canal.ts`, 'utf8')
+  const HASH_DEL_CORREO = /email_lookup_hash|emailLookupHash|email_hashes|emailHashes/
+  assert.doesNotMatch(PUERTO, HASH_DEL_CORREO, 'el puerto no conoce hashes del correo')
+  assert.doesNotMatch(PANTALLA, HASH_DEL_CORREO, 'la pantalla no conoce hashes del correo')
+  // La pantalla no conoce NINGÚN hash: no tiene backfill que valga.
+  assert.doesNotMatch(PANTALLA, /lookup_hash|lookupHash/, 'la pantalla no conoce hashes')
+  // Y en asegura el hash se usa, pero no se declara en el tipo de salida.
+  const tipoFila = SIN_CANAL_ASEGURA.slice(
+    SIN_CANAL_ASEGURA.indexOf('export type ClienteCanal'),
+    SIN_CANAL_ASEGURA.indexOf('export type ClientesSinCanal'),
+  )
+  assert.doesNotMatch(tipoFila, /hash/i, 'ClienteCanal no puede llevar ningun hash')
+})
+
+test('🚨 «no ven su cartera» se cuenta sobre TODOS, no sobre las filas visibles', () => {
+  // Alguien con correo Y telefono es `con_ambos` y no salia en la lista; su
+  // correo puede llevar igualmente a otra ficha. Contarlo solo sobre `filas`
+  // daria una cifra mas baja que la realidad, que es la mentira tranquilizadora.
+  const SIN_CANAL_ASEGURA = readFileSync(`${RAIZ}apps/asegura/lib/clientes-sin-canal.ts`, 'utf8')
+  assert.match(SIN_CANAL_ASEGURA, /noVenSuCartera:\s*todos\.filter/)
+  assert.doesNotMatch(SIN_CANAL_ASEGURA, /noVenSuCartera:\s*filas\.filter/)
+})
+
+// ── 6. Y la PANTALLA lo dice, con los motivos separados ─────────────────────
+
+test('🚨 la pantalla dice cuantos NO veran su cartera, y no lo confunde con «sin canal»', () => {
+  assert.match(PANTALLA, /noVenSuCartera/)
+  assert.match(PANTALLA, /no ver/i)
+  // Y no lo rellena con un cero cuando no se ha medido.
+  assert.doesNotMatch(PANTALLA, /noVenSuCartera\s*\?\?\s*0/)
+  assert.doesNotMatch(PANTALLA, /noVenSuCartera\s*\|\|\s*0/)
+})
+
+test('🚨 la pantalla distingue los cuatro estados del portal, sin colapsarlos', () => {
+  for (const e of ['puede_entrar', 'sin_email', 'ambiguo', 'resuelve_a_otra']) {
+    assert.match(PANTALLA, new RegExp(e), `falta el estado ${e} en la UI`)
+  }
+  // «Ambiguo» y «resuelve a otra» se arreglan de forma distinta: uno resolviendo
+  // un duplicado y el otro pidiendole su direccion. Un texto comun los mezcla.
+  assert.match(PANTALLA, /duplicad/i)
 })

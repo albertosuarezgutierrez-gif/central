@@ -10,9 +10,9 @@ import Cifras from '@/components/Cifras'
 import Escaneo from '@/components/Escaneo'
 
 export const metadata: Metadata = {
-  title: 'Correduría de seguros en Sevilla',
+  title: 'Correduría de seguros en toda España',
   description:
-    'Correduría de seguros en Sevilla inscrita en la DGSFP. Comparamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud. Te llamamos.',
+    'Correduría de seguros inscrita en la DGSFP que media en toda España. Comparamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
   alternates: { canonical: url('/') },
 }
 
@@ -110,11 +110,38 @@ const GARANTIAS = ['Sin coste para ti', 'Sin compromiso', `Corredor inscrito en 
  * Aseguradoras con pólizas VIVAS en la cartera.
  *
  * 🚨 Medido en la BD el 05/09/2026, no puesto de memoria: Mapfre 64, Allianz
- * 26, Occident 19 y Reale 1 — las 110 pólizas vivas. Un muro de logos con una
- * compañía con la que no se trabaja es una afirmación falsa sobre terceros, y
- * de las caras.
+ * 26, Occident 19 y Reale 1 — las 110 pólizas vivas. Esta lista es la que
+ * alimenta la CIFRA de la banda de estadísticas, y por eso NO se toca para
+ * añadir una compañía al muro: el rótulo dice «con pólizas en cartera», así
+ * que cada nombre de aquí tiene que tener pólizas de verdad.
  */
-const COMPANIAS = ['Mapfre', 'Allianz', 'Occident', 'Reale'] as const
+const COMPANIAS_EN_CARTERA = ['Mapfre', 'Allianz', 'Occident', 'Reale'] as const
+
+/**
+ * Compañías del muro: con las que la correduría TRABAJA, que es un conjunto
+ * más amplio que el anterior (se puede tener acuerdo y no haber colocado
+ * todavía ninguna póliza).
+ *
+ * 🚨 Son DOS listas a propósito. Cuando eran una sola, ampliarla para que el
+ * muro luciera más habría subido en silencio la cifra «Compañías con pólizas
+ * en cartera» de 4 a 7 — un número falso, y de los que nadie mira dos veces
+ * porque sale de una constante.
+ *
+ * Procedencia de cada nombre, que es lo que hace publicable esta lista:
+ *   · Mapfre, Allianz, Occident, Reale — pólizas vivas medidas en la BD (05/09/2026).
+ *   · Generali — adherida a CIMA (`seguros.companias_dgs`, C0072), sin pólizas aún.
+ *   · Fidelidade (E0118) y Asisa — acuerdo confirmado por Alberto el 05/09/2026.
+ *
+ * ⚠️ Asisa NO está todavía en `seguros.companias_dgs`: para emitir una póliza
+ * suya hará falta dar de alta su código DGS. Aparecer en el muro no la crea en
+ * la cartera.
+ *
+ * Una compañía NO entra aquí por estar en el catálogo de Codeoscopic: que su
+ * código DGS sea válido y tarificable no acredita ningún acuerdo, y un muro que
+ * afirma trabajar con quien no ha firmado nada es una afirmación falsa sobre un
+ * tercero, de las caras.
+ */
+const COMPANIAS = ['Mapfre', 'Allianz', 'Occident', 'Reale', 'Generali', 'Fidelidade', 'Asisa'] as const
 
 const PASOS = [
   {
@@ -152,16 +179,36 @@ export default function Home() {
           <Reveal>
             <span className="chip">
               <span className="chip-punto" aria-hidden />
-              Correduría en Sevilla · Registro DGSFP {MEDIADOR.identidad.claveDgsfp}
+              Correduría en toda España · Registro DGSFP {MEDIADOR.identidad.claveDgsfp}
             </span>
+            {/*
+              🚨 El hero habla de lo que le PASA al visitante, no de lo que la
+              correduría es. Lo anterior («Somos correduría, no compañía…»)
+              explicaba la figura jurídica y enumeraba cinco ramos de un tirón,
+              así que no priorizaba ninguno — diagnóstico de
+              `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`.
+
+              El nombre va en PRIMERA PERSONA y sale de `MEDIADOR`, no tecleado:
+              es un corredor persona física, y decir «yo» es exactamente lo que
+              un comparador no puede copiar. Los cinco ramos ya los prioriza la
+              rejilla de abajo, que abre por hogar y comunidades.
+            */}
             <h1 className="display">
-              Tu seguro, mirado por quien
+              Un seguro se juzga el día del parte.
               <br />
-              <span className="destaca">no trabaja para la aseguradora.</span>
+              <span className="destaca">Ese día me llamas a mí.</span>
             </h1>
+            {/*
+              Una línea más corto que la primera versión (06/09/2026), y no por
+              estilo: la frase acababa en «…quien te coge el teléfono cuando hay
+              que dar el parte», que es lo MISMO que dice el h1 dos líneas más
+              arriba, y esa redundancia empujaba la última línea justo debajo de
+              los botones flotantes. Lo que sobra en un hero no es neutro: ocupa
+              el sitio donde el visitante decide.
+            */}
             <p className="lead" style={{ marginTop: 28 }}>
-              Somos correduría, no compañía: comparamos entre varias aseguradoras tu hogar, tu comunidad, tu comercio,
-              tu coche o tu salud, y te explicamos qué cubre cada opción antes de que firmes.
+              Soy {MEDIADOR.identidad.nombre}, corredor de seguros en toda España. No trabajo para ninguna
+              aseguradora: comparo entre varias y te digo qué cubre cada una y qué deja fuera.
             </p>
             <div className="hero-cta">
               <a href="#presupuesto" className="btn btn-brand btn-brillo">
@@ -191,18 +238,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Marquesina de compañías. Los nombres NO son de relleno: son las
-          aseguradoras con pólizas VIVAS en la cartera, medidas en la BD el
-          05/09/2026 (Mapfre 64, Allianz 26, Occident 19, Reale 1). Si algún día
-          entra otra compañía, este array se actualiza desde el mismo sitio. */}
+      {/* Marquesina de compañías. Los nombres NO son de relleno: cada uno tiene
+          detrás pólizas vivas medidas en la BD o un acuerdo confirmado — ver la
+          procedencia nombre a nombre en `COMPANIAS`. */}
       <section className="banda" style={{ padding: '32px 0' }} aria-label="Compañías con las que trabajamos">
         <div className="wrap">
           <p className="antetitulo" style={{ display: 'block', textAlign: 'center', marginBottom: 20 }}>
             Compañías con las que trabajamos
           </p>
           <div className="companias">
+            {/* TRES copias, no dos. Medido el 05/09/2026: una copia mide 964 px
+                y el contenedor 1104, así que con dos copias el bucle enseñaba
+                140 px de banda vacía en cada vuelta. La regla es que las copias
+                que quedan por delante cubran el contenedor: con tres, siempre
+                hay 1.928 px por delante. Si algún día la lista se acorta, esto
+                se vuelve a medir. Las copias 2 y 3 son decorativas: `aria-hidden`
+                para que un lector de pantalla no lea siete marcas tres veces. */}
             <ul>
-              {[...COMPANIAS, ...COMPANIAS].map((c, i) => (
+              {[...COMPANIAS, ...COMPANIAS, ...COMPANIAS].map((c, i) => (
                 <li key={`${c}-${i}`} aria-hidden={i >= COMPANIAS.length}>
                   {c}
                 </li>
@@ -335,9 +388,15 @@ export default function Home() {
             <h2 className="display" id="corredor-t" style={{ color: 'inherit' }}>
               Detrás de la web hay un <span className="destaca">corredor de verdad.</span>
             </h2>
+            {/*
+              Ya no repite «la misma persona te coge el teléfono»: eso lo dice
+              ahora el hero. Aquí queda lo que el hero NO puede llevar sin
+              recargarse — la parte comprobable: nombre, clave de registro y un
+              domicilio donde encontrarle, los tres desde `MEDIADOR`.
+            */}
             <p className="lead" style={{ color: 'inherit', opacity: 0.85 }}>
-              No un comparador automático ni un centro de llamadas. La misma persona te coge el teléfono cuando pides
-              presupuesto y cuando tienes un parte que dar.
+              No es un comparador automático. Detrás de cada presupuesto hay una persona con nombre, con clave de
+              registro en la DGSFP y con un domicilio en el que se le puede encontrar.
             </p>
           </Reveal>
           <Reveal delay={0.1}>
@@ -379,7 +438,7 @@ export default function Home() {
           </>
         }
         cifras={[
-          { valor: COMPANIAS.length, texto: 'Compañías con pólizas en cartera' },
+          { valor: COMPANIAS_EN_CARTERA.length, texto: 'Compañías con pólizas en cartera' },
           { valor: RAMOS.length, texto: 'Ramos que revisamos' },
           { valor: 0, estatico: '0 €', texto: 'Lo que te cuesta el servicio' },
         ]}

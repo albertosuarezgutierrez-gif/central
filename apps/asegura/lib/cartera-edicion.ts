@@ -269,6 +269,42 @@ function esUnicoViolado(e: unknown): boolean {
   return typeof e === 'object' && e !== null && (e as { code?: string }).code === 'P2002'
 }
 
+/**
+ * ¿Puede este valor vivir en esta ficha? Mismo criterio para el ALTA de un
+ * contacto y para el CAMBIO de uno que ya está — si cada uno llevara el suyo,
+ * acabarían divergiendo y uno de los dos escribiría lo que el otro rechaza.
+ *
+ * Un teléfono repetido puede ser un matrimonio: se admite a sabiendas
+ * (`forzar`). Como PRINCIPAL no, y eso NO se fuerza: `clientes.telefono` /
+ * `clientes.email` tienen índice único por hash, así que la escritura moriría
+ * en un P2002 después de haber dicho que sí.
+ *
+ * `null` = adelante. Un `Fallo` = el 409 con quién lo tiene y si es forzable.
+ */
+async function duplicadoContacto(
+  correduriaId: string,
+  clienteId: string,
+  tipo: TipoContacto,
+  valor: string,
+  seraPrincipal: boolean,
+  forzar: boolean,
+): Promise<Fallo | null> {
+  const otros = await coincidencias(correduriaId, { [tipo]: valor }, clienteId)
+  if (otros.length === 0) return null
+  if (!seraPrincipal) return forzar ? null : conflicto(otros, true)
+  // ¿La otra ficha lo tiene como principal (columna única) o solo como secundario?
+  const h = tipo === 'telefono' ? computeTelefonoLookupHash(valor) : computeEmailLookupHash(valor)
+  const enColumna = h
+    ? await prismaAsegura().cliente.count({
+        where: tipo === 'telefono'
+          ? { correduriaId, telefonoLookupHash: h, mergedIntoClienteId: null, id: { not: clienteId } }
+          : { correduriaId, emailLookupHash: h, mergedIntoClienteId: null, id: { not: clienteId } },
+      })
+    : 0
+  if (enColumna > 0) return conflicto(otros, false)
+  return forzar ? null : conflicto(otros, true)
+}
+
 export async function anadirContacto(
   correduriaId: string,
   clienteId: string,
@@ -280,27 +316,8 @@ export async function anadirContacto(
   try {
     const c = await clienteDe(correduriaId, clienteId)
     if (!c) return noEncontrado()
-    const otros = await coincidencias(correduriaId, { [tipo]: norm.valor }, clienteId)
-    // Un teléfono repetido puede ser un matrimonio; se admite a sabiendas.
-    // Pero como PRINCIPAL no cabe en la columna única: eso no se fuerza.
-    const principalEnOtra = otros.length > 0 && entrada.principal === true
-    if (otros.length > 0 && (!entrada.forzar || principalEnOtra)) {
-      if (principalEnOtra) {
-        // ¿La otra lo tiene como principal (columna) o solo como secundario?
-        const h = tipo === 'telefono' ? computeTelefonoLookupHash(norm.valor) : computeEmailLookupHash(norm.valor)
-        const enColumna = h
-          ? await prismaAsegura().cliente.count({
-              where: tipo === 'telefono'
-                ? { correduriaId, telefonoLookupHash: h, mergedIntoClienteId: null, id: { not: clienteId } }
-                : { correduriaId, emailLookupHash: h, mergedIntoClienteId: null, id: { not: clienteId } },
-            })
-          : 0
-        if (enColumna > 0) return conflicto(otros, false)
-        if (!entrada.forzar) return conflicto(otros, true)
-      } else {
-        return conflicto(otros, true)
-      }
-    }
+    const dup = await duplicadoContacto(correduriaId, clienteId, tipo, norm.valor, entrada.principal === true, entrada.forzar === true)
+    if (dup) return dup
     await bajarColumnaAHija(correduriaId, clienteId, tipo)
     const db = prismaAsegura()
     const { cifrado: valorCifrado, hash } = cifrado(tipo, norm.valor)
@@ -335,38 +352,126 @@ export async function anadirContacto(
   }
 }
 
+/**
+ * Cambiar un teléfono o email que YA está en la ficha: su VALOR, su etiqueta o
+ * cuál es el principal.
+ *
+ * 🚨 Corregir el valor no es «borrar y añadir»: borrar pierde el id, la fecha y
+ * el orden, y si era el principal asciende otro por el camino. Aquí se reescribe
+ * la fila —cifrado nuevo e índice ciego nuevo— y se vuelve a espejar la columna
+ * de `clientes` si esa fila es la principal; sin el hash nuevo, el buscador y
+ * CIMA dejarían de encontrar la ficha por ese dato EN SILENCIO.
+ *
+ * El valor que solo vive en la columna (`col:telefono`, las 3.000+ fichas del
+ * volcado) se baja antes a la tabla hija: si no, el único teléfono que tienen
+ * esas fichas sería justo el que no se puede corregir.
+ */
 export async function cambiarContacto(
   correduriaId: string,
   clienteId: string,
-  entrada: { id: string; principal?: boolean; etiqueta?: unknown; actor: string },
+  entrada: { id: string; valor?: unknown; principal?: boolean; etiqueta?: unknown; forzar?: boolean; actor: string },
 ): Promise<ResultadoContacto> {
+  const noEsta = (): ResultadoContacto => ({
+    ok: false,
+    estado: 'no_encontrado',
+    motivo: 'Ese teléfono o email no está en la ficha.',
+    status: 404,
+  })
   try {
     const c = await clienteDe(correduriaId, clienteId)
     if (!c) return noEncontrado()
     const db = prismaAsegura()
-    const t = await db.clienteTelefono.findFirst({ where: { id: entrada.id, clienteId, correduriaId } })
-    const m = t ? null : await db.clienteEmail.findFirst({ where: { id: entrada.id, clienteId, correduriaId } })
-    if (!t && !m) return { ok: false, estado: 'no_encontrado', motivo: 'Ese teléfono o email no está en la ficha.', status: 404 }
+
+    let id = entrada.id
+    if (id === 'col:telefono' || id === 'col:email') {
+      const tipoCol: TipoContacto = id === 'col:telefono' ? 'telefono' : 'email'
+      await bajarColumnaAHija(correduriaId, clienteId, tipoCol)
+      const f =
+        tipoCol === 'telefono'
+          ? await db.clienteTelefono.findFirst({ where: { clienteId, correduriaId, esPrincipal: true } })
+          : await db.clienteEmail.findFirst({ where: { clienteId, correduriaId, esPrincipal: true } })
+      if (!f) return noEsta()
+      id = f.id
+    }
+
+    const t = await db.clienteTelefono.findFirst({ where: { id, clienteId, correduriaId } })
+    const m = t ? null : await db.clienteEmail.findFirst({ where: { id, clienteId, correduriaId } })
+    if (!t && !m) return noEsta()
     const tipo: TipoContacto = t ? 'telefono' : 'email'
-    const data: { esPrincipal?: boolean; etiqueta?: string | null } = {}
+
+    const data: {
+      esPrincipal?: boolean
+      etiqueta?: string | null
+      telefono?: string
+      telefonoLookupHash?: string | null
+      email?: string
+      emailLookupHash?: string | null
+    } = {}
+
+    // Cambiar el valor de la fila principal se juzga como principal: acabará en
+    // la columna única de `clientes`.
+    const eraPrincipal = t ? t.esPrincipal : m!.esPrincipal
+    const seraPrincipal = entrada.principal === true || eraPrincipal
+    let valorCambiado = false
+    if ('valor' in entrada) {
+      const norm = normalizarContacto(tipo, entrada.valor)
+      if (!norm.ok) return invalido(norm.motivo, tipo)
+      // Un valor ILEGIBLE (cifrado con una clave que no abre) descifra a `null`,
+      // así que cuenta como distinto: reescribirlo es justo lo que lo arregla.
+      const actual = descifrarCampo(t ? t.telefono : m!.email)
+      if (norm.valor !== actual) {
+        const dup = await duplicadoContacto(correduriaId, clienteId, tipo, norm.valor, seraPrincipal, entrada.forzar === true)
+        if (dup) return dup
+        const { cifrado: valorCifrado, hash } = cifrado(tipo, norm.valor)
+        if (tipo === 'telefono') {
+          data.telefono = valorCifrado
+          data.telefonoLookupHash = hash
+        } else {
+          data.email = valorCifrado
+          data.emailLookupHash = hash
+        }
+        valorCambiado = true
+      }
+    }
+
     if ('etiqueta' in entrada) data.etiqueta = etiquetaContacto(tipo, entrada.etiqueta)
     if (entrada.principal === true) {
       if (tipo === 'telefono') await db.clienteTelefono.updateMany({ where: { clienteId, correduriaId }, data: { esPrincipal: false } })
       else await db.clienteEmail.updateMany({ where: { clienteId, correduriaId }, data: { esPrincipal: false } })
       data.esPrincipal = true
     }
-    if (tipo === 'telefono') await db.clienteTelefono.update({ where: { id: entrada.id }, data })
-    else await db.clienteEmail.update({ where: { id: entrada.id }, data })
-    if (entrada.principal === true) {
+
+    if (tipo === 'telefono') await db.clienteTelefono.update({ where: { id }, data })
+    else await db.clienteEmail.update({ where: { id }, data })
+
+    // La columna de `clientes` es lo que leen la ficha, el buscador y los
+    // avisos: se re-espeja si cambia quién es el principal O si ha cambiado el
+    // valor del que ya lo era.
+    if (entrada.principal === true || (valorCambiado && seraPrincipal)) {
       await espejarPrincipal(correduriaId, clienteId, tipo)
-      await anotarHistorial(correduriaId, clienteId, 'contacto', `${tipo === 'telefono' ? 'Teléfono' : 'Email'} principal cambiado desde plataforma por ${entrada.actor}`)
     }
+
+    const que = tipo === 'telefono' ? 'Teléfono' : 'Email'
+    // Sin el valor: el historial no guarda datos de contacto en claro.
+    const hechos = [
+      valorCambiado ? 'corregido' : null,
+      'etiqueta' in entrada && !valorCambiado ? 're-etiquetado' : null,
+      entrada.principal === true ? 'puesto como principal' : null,
+    ].filter((x): x is string => x !== null)
+    if (hechos.length > 0) {
+      await anotarHistorial(correduriaId, clienteId, 'contacto', `${que} ${hechos.join(' y ')} desde plataforma por ${entrada.actor}`)
+    }
+
     return { ok: true, contacto: null, contactos: (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] } }
   } catch (e) {
     if (esUnicoViolado(e)) {
-      // Se intentó espejar como principal un valor que otra ficha ya tiene en su columna.
-      await prismaAsegura().$executeRaw`select 1`.catch(() => null)
-      return conflicto([], false)
+      // Otra ficha tiene ese valor en su columna única. Se dice CON quién, que
+      // es lo único accionable, y nunca como forzable: forzarlo volvería a P2002.
+      const otros =
+        'valor' in entrada && typeof entrada.valor === 'string'
+          ? await coincidencias(correduriaId, { telefono: entrada.valor, email: entrada.valor }, clienteId).catch(() => [])
+          : []
+      return conflicto(otros, false)
     }
     return fallo(e)
   }

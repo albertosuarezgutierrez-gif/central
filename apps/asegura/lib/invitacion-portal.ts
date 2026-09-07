@@ -25,11 +25,16 @@
  * no predecir: las dos darían 200 y divergirían en silencio. Es la razón por la
  * que `elegirFicha` subió al paquete compartido en este mismo cambio.
  *
- * Medido el 05/09/2026 sobre los 80 clientes de cartera viva: **51 invitables**
- * (48 resuelven por su email principal y 3 por uno de contacto), **0 ambiguos** y
- * **29 sin ningún correo** — que son justo los de la pantalla «Clientes sin
- * canal». O sea: hoy el freno no es la ambigüedad, es que a 29 no hay por dónde
- * escribirles.
+ * Medido el 06/09/2026 sobre los 80 clientes de cartera viva, aplicando esta
+ * misma función: **46 invitables** · **29 sin ningún correo** (los de «Clientes
+ * sin canal») · **5 `resuelve_a_otra`** · **0 ambiguos**.
+ *
+ * ⚠️ Aquí ponía «51 invitables» hasta el 06/09/2026, y era una cifra mal
+ * repartida: los 5 que resuelven a OTRA ficha se contaban como invitables. Son
+ * el caso peor de toda esta pantalla —el cliente recibe el correo, entra, y ve
+ * una bóveda que no es la suya— y no se arreglan pidiéndole el correo sino
+ * resolviendo el duplicado. O sea: el freno no es la ambigüedad (hay 0), es
+ * que a 29 no hay por dónde escribirles y que 5 tienen la ficha cruzada.
  *
  * ── Lo que NO hace ─────────────────────────────────────────────────────────
  *
@@ -40,7 +45,7 @@
  * que decidirla aparte — saltarse la prueba de identidad desde el panel
  * convertiría un error de tecleo en el correo en un acceso a la cartera de otro.
  */
-import { elegirFicha, type Candidato } from '@central/module-seguros-portal'
+import { prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
@@ -236,13 +241,10 @@ async function prediccionVinculo(
     console.error('[invitacion-portal] no se pudieron leer los candidatos:', e instanceof Error ? e.message : e)
     return 'no_comprobado'
   }
-  const elegida = elegirFicha(candidatos)
-  if (elegida.estado === 'ambiguo') return 'ambiguo'
-  // `sin_ficha` con un correo que sale de la propia ficha significa que su hash
-  // no está escrito: el portal no la encontraría. Se cuenta como «resuelve a
-  // otra» —o sea, no a esta— porque el efecto para el cliente es el mismo.
-  if (elegida.estado === 'sin_ficha') return 'resuelve_a_otra'
-  return elegida.clienteId === clienteId ? 'invitable' : 'resuelve_a_otra'
+  // La decisión vive en `@central/module-seguros-portal` y la comparte con la
+  // lista de contactabilidad: dos copias de esta regla darían dos respuestas
+  // distintas sobre el mismo cliente sin que fallara nada.
+  return prediccionDeVinculo(candidatos, clienteId)
 }
 
 /** El nombre de la ficha, para el saludo. `null` = no hay uno legible. */

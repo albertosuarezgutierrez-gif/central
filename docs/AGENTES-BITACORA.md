@@ -15,6 +15,43 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-07 · buscador-ia** · hizo: pasada semanal completa (preflight Telegram 200 OK) + un
+  segundo tramo en vivo tras la respuesta de Alberto. 🔴 Hallazgo crítico: `text-embedding-004`
+  (embeddings de `ia-cache`) retirado por Google desde el 14/01/2026 — 1ª comprobación real de ese
+  eslabón desde que se añadió al watch el 31/08. Impacto real bajo (caché OFF por defecto +
+  fail-open). Aviso por Telegram con el hallazgo; Alberto preguntó «solución? openrouter?» →
+  investigado que OpenRouter ya tiene endpoint `/embeddings` (`openai/text-embedding-3-small`,
+  $0,02/M, `dimensions` configurable) y encaja con la regla permanente OpenRouter-primero
+  (24/08) → implementado (`openrouterEmbed` en `packages/core-ai/src/openrouter.ts`, 11 tests;
+  `geminiEmbed`/`embeddings.ts` eliminados, sin otro consumidor), testeado (`pnpm test` 639/639,
+  `tsc` limpio en plataforma e ia-rest) y mergeado el mismo día. Como la caché nunca sirvió un hit
+  real, no hizo falta re-indexar nada. Resto de la cadena (OpenRouter texto, Groq, Cerebras, Kimi,
+  visión NIM) confirmado vivo por WebSearch, sin key de proveedor en sesión. Sin candidatos de
+  descubrimiento que crucen el listón calidad/precio esta semana.
+  dudas: —; fallos: —; PRs/commits: #2459 (mergeado).
+
+- **2026-09-07 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (obligatorio, no solo los
+  EN VIVO). Paso 1: 10/48 fechas del ciclo 31/08 vendidas con income confirmado, sin anomalías
+  "sin income" (Feria House 1767€ == propuesta exacta). Paso 2: 4 agentes en paralelo barrieron
+  Booking en 12 ventanas/piso (10 meses + Semana Santa + Feria); comps escritos hoy: busto=120,
+  duplex=120, luxury=120, house=140 (120+20 Expedia). Paso 4: 48 propuestas a `aplicar-propuesta`
+  en dry-run forzado, circuit-breaker sano (36 fechas con cambio, 52,8% medio). dudas: —;
+  fallos: 3 de 4 agentes ingestaron comps de Expedia en USD etiquetados como EUR (50 filas
+  contaminando Semana Santa/Feria de busto/duplex/luxury) — detectado y BORRADO antes de decidir
+  precio, y documentado el landmine en `references/ciclo.md` para que no se repita; PRs/commits:
+  ver commit de esta misma pasada.
+- **2026-09-06 · facturas-correo** · hizo: pasada diaria completa. Salud Vía B OK (última copia
+  2026-09-05, 1 día); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`. Paso 4.0
+  (barrido `v_facturas_sin_cargo`): las 9 filas siguen `revisada_sin_cargo` (Petroprix ago,
+  Pepephone ene-jun, CREATE-Socorro dup, Giraldillo may) — nada nuevo que investigar. Candidato
+  único del correo: recibo Anthropic Ireland (Max plan, 180,00€, pagado 05/09) → `seguros`
+  (correduría, regla ya sembrada) → archivado en Drive `09-Septiembre-2026/2026-09-05_anthropic_180.00EUR.pdf`
+  (creada la carpeta del mes, no existía) + fila en `facturas_drive`; cargo bancario aún sin entrar
+  (`movimiento_id` NULL, pendiente próxima pasada). Hilo etiquetado `Facturas/Procesada`. Resto de
+  candidatos del query eran mensajes de huéspedes de Booking y un ticket de soporte Smoobu, no
+  facturas → descartados sin tocar. `agente_salud` actualizado (`ok=true`, `dias_caido=1`).
+  dudas: —; fallos: —; PRs/commits: —.
+
 - **2026-09-05 · conectores-vigia** · hizo: primera pasada real (antes solo sembrado a mano);
   confirmó que la rutina corre sin ningún conector adjunto (`enabledInChat:false` en los ~30 de la
   cuenta) → el Paso 3 (canario) es estructuralmente imposible desde aquí, documentado en

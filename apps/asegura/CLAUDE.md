@@ -732,12 +732,15 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `@central/module-seguros-portal`** en este mismo cambio (el fichero del portal queda como re-export):
   predecir con una copia de la regla sería peor que no predecir — las dos darían 200 y divergirían en
   silencio.
-  📊 **Medido el 05/09/2026 sobre los 80 clientes de cartera viva: 51 invitables** (48 resuelven por su
-  email principal y 3 por uno de contacto), **0 ambiguos** y **29 sin ningún correo** — que son los de
-  «Clientes sin canal». O sea, hoy el freno no es la ambigüedad: es que a 29 no hay por dónde escribir.
-  ⚠️ Una primera medición dio «5 ambiguos» y era falsa: contaba hashes de email compartidos **sin
-  aplicar el desempate** de `elegirFicha` (el email principal de una ficha gana al que aparece como
-  contacto en la de otro). Cuenta con la función, no con un `group by`.
+  📊 **Medido el 06/09/2026 sobre los 80 clientes de cartera viva, con la propia función: 46
+  invitables · 29 sin ningún correo (los de «Clientes sin canal») · 5 `resuelve_a_otra` · 0 ambiguos.**
+  ⚠️ **Aquí ponía «51 invitables» y era una cifra mal repartida:** los 5 cuyo correo resuelve a OTRA
+  ficha se contaban como invitables. Son el caso peor —recibe el correo, entra y ve una bóveda que no
+  es la suya, sin ningún error— y no se arreglan pidiéndole el correo, sino resolviendo el duplicado.
+  ⚠️ Y una medición aún anterior dio «5 ambiguos», también falsa: contaba hashes de email compartidos
+  **sin aplicar el desempate** de `elegirFicha` (el email principal de una ficha gana al que aparece
+  como contacto en la de otro). Ambiguos hay **0**. Cuenta con la función, no con un `group by` — dos
+  veces se ha escrito aquí una cifra sacada por SQL a pelo y las dos ha salido mal.
   🚫 **NO da acceso a nada.** No escribe `portal_vinculo` ni ninguna autorización: el acceso lo sigue
   abriendo el cliente probando que es él con un código de un solo uso. Y **el enlace del correo no
   lleva token** — un correo se reenvía y sobrevive en buzones compartidos; con llave dentro sería la

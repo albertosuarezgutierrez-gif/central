@@ -13,21 +13,32 @@ que es justo lo que el copy no puede hacer (RDL 3/2020).
 
 ---
 
-## 1. Local + ramo — comercial, competencia media
+## 1. Ramo — comercial, competencia media-alta
+
+🚨 **Esta tabla decía «… Sevilla» en las ocho filas hasta el 07/09/2026.** Se vende en toda
+España (dictado de Alberto), así que el copy de las páginas ya no acota la provincia y estas
+consultas se persiguen sin modificador geográfico. La señal local sigue viva por la dirección
+publicada y el perfil de Google Business, no por la palabra en el h1.
 
 | Consulta | Página que la cubre | Estado |
 |---|---|---|
-| correduría de seguros Sevilla | `/` | cubierta (title + H1 + description) |
-| seguro de hogar Sevilla | `/seguros/hogar` | cubierta — **ramo prioritario** |
-| seguro de comunidad de propietarios Sevilla | `/seguros/comunidades` | cubierta |
-| seguro de local comercial Sevilla | `/seguros/comercio` | cubierta |
-| seguro de coche Sevilla | `/seguros/auto` | cubierta |
-| seguro de vida / salud Sevilla | `/seguros/vida-y-salud` | cubierta |
-| seguro de responsabilidad civil Sevilla | `/seguros/responsabilidad-civil` | cubierta y **ya enlazada** (pie + las 5 páginas de ramo hermanas, 07/09/2026). Fuera de la cabecera a propósito: sería la sexta entrada y desborda |
-| seguro de flota Sevilla | — | **sin página**. Es el nicho «empresas y flota», el que más interesa |
+| correduría de seguros | `/` | cubierta (title + H1 + description) |
+| seguro de hogar | `/seguros/hogar` | cubierta — **ramo prioritario** |
+| seguro de comunidad de propietarios | `/seguros/comunidades` | cubierta |
+| seguro de local comercial | `/seguros/comercio` | cubierta |
+| seguro de coche | `/seguros/auto` | cubierta |
+| seguro de vida / salud | `/seguros/vida-y-salud` | cubierta |
+| seguro de responsabilidad civil | `/seguros/responsabilidad-civil` | cubierta y **ya enlazada** (pie + las 5 páginas de ramo hermanas, 07/09/2026). Fuera de la cabecera a propósito: sería la sexta entrada y desborda |
+| seguro de flota | — | **sin página**. Es el nicho «empresas y flota», el que más interesa |
 
-**Señal local pendiente:** ninguna página menciona barrios, distritos ni municipios de la
-provincia. La señal se agota en la palabra «Sevilla».
+⚠️ **El precio de este cambio, dicho como es:** sin el modificador geográfico estas consultas se
+disputan con comparadores nacionales y con las propias aseguradoras, así que la posición esperable
+baja. La contrapartida es que ya no se rechaza en el primer renglón a quien busca desde fuera de
+Sevilla, que es lo que se vende. **Medirlo cuando GSC esté conectada** — hasta entonces, ni el
+antes ni el después están medidos.
+
+**Modificación local, si algún día interesa:** con página propia por zona, nunca metiendo la
+ciudad en los encabezados de la página nacional.
 
 ## 2. Intención de problema — donde está el dinero y casi no hay competencia
 

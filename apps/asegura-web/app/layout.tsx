@@ -69,11 +69,11 @@ const CSS_MARCA = [
 export const metadata: Metadata = {
   metadataBase: new URL(SITIO_URL),
   title: {
-    default: 'Grupo ASegura · Correduría de seguros en Sevilla',
+    default: 'Grupo ASegura · Correduría de seguros en toda España',
     template: '%s · Grupo ASegura',
   },
   description:
-    'Correduría de seguros en Sevilla inscrita en la DGSFP. Analizamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
+    'Correduría de seguros inscrita en la DGSFP que media en toda España. Analizamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
   openGraph: {
     type: 'website',
     locale: 'es_ES',
@@ -86,6 +86,21 @@ export const metadata: Metadata = {
   // de la tarjeta de X/Twitter: sin esto se pinta el recuadro pequeño y la
   // imagen de 1200×630 se ve recortada a un cuadrado.
   twitter: { card: 'summary_large_image' },
+  // Verificación de Google Search Console.
+  //
+  // Por qué está aquí y no en un fichero suelto: GSC es la ÚNICA fuente de
+  // tráfico sin sesgo que puede tener esta web. PostHog va detrás del
+  // consentimiento de Cookiebot a propósito (`lib/analitica.ts`), así que mide
+  // solo a quien acepta — y «cero visitas medidas» NO es cero visitas, es el
+  // `NULL` que `CLAUDE.md` prohíbe colapsar. Sin GSC no hay forma de saber por
+  // qué consultas entra nadie.
+  //
+  // 🚨 Es `undefined` cuando la env no está, no una cadena vacía: una etiqueta
+  // `<meta content="">` es peor que no ponerla — Google la lee como un intento
+  // de verificación fallido en vez de como una web sin verificar.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+    : {}),
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -728,6 +728,54 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
 - **Ningún `clienteId` entra desde la request.** Todo id de ficha sale de `portal_vinculo` o de una
   relación leída a partir de él.
 
+### 🔖 El sello del último vínculo (06/09/2026) — por qué la bóveda no puede recalcularlo
+
+`portal_identidad.ultimo_vinculo` + `ultimo_vinculo_en` (DDL en
+`prisma/sql/2026-09-06_portal_identidad_ultimo_vinculo.sql`, aplicada; CHECK de valor y CHECK de
+«los dos o ninguno»; GRANT de las dos columnas **antes** de declararlas en el schema, porque el rol
+lee por columnas y declarar una sin conceder revienta TODAS las lecturas del modelo con `42501`).
+
+🚨 **Existe porque `/boveda` NO puede volver a preguntarlo.** El vínculo se resuelve por el índice
+ciego del email, y **en la bóveda no hay email en claro**: `portal_canal` guarda un hash con pimienta
+propia, que no sirve para ese índice y no se revierte. El único instante en que el portal ve el correo
+es el canje del código, así que ahí es donde se sella y de ahí lo lee la pantalla.
+
+**Se sella SIEMPRE, también en `ok`.** Un sello escrito solo en los casos malos dejaría a quien acaba
+de vincularse bien con el estado de un intento anterior, y la bóveda le explicaría un problema que ya
+no tiene. Por eso `vincularIdentidad` se partió en dos (`intentarVinculo` + `sellarVinculo`): con el
+`update` repartido por los seis `return`, la primera rama nueva se olvidaría de sellar y **nada
+fallaría**. El sello es **best-effort**: si cae, se registra y el login sigue — lo único que se pierde
+es el motivo.
+
+**Y lo que arregla en pantalla son tres frases, no una** (`test/regression-portal-vinculo-visible.test.ts`):
+- `ambiguo` → «tu email aparece en más de una ficha… lo está revisando el corredor». 🚨 A esta persona
+  **no se le puede decir «no hemos encontrado ninguna póliza»**: sí se ha encontrado, y es justo por eso
+  por lo que no se le enseña ninguna. La frase vieja la mandaba a creer que había perdido sus seguros.
+- `sin_clave` / `error` → «es un problema nuestro, no tuyo». Esto solo se decía en la pantalla de
+  entrada, y **quien vuelve con la sesión viva (30 días) va directo a la bóveda y no lo veía nunca**:
+  un fallo NUESTRO se le enseñaba como «no eres cliente».
+- el resto → la frase de siempre.
+
+⚠️ **`null` = no consta, y NO es `sin_ficha`** (nunca se intentó, el sello falló, o el valor guardado
+no es de la lista: `leerVinculo()` lo trata como desconocido, nunca como el estado que menos molesta).
+Son la misma pantalla vacía y dos frases distintas: una dice «no eres cliente» y la otra no puede
+decir nada.
+
+🚨 **`cliente_emails.es_principal` NO participa en el desempate, y eso NO es un detalle: medido el
+06/09/2026, honrarlo movería 42 de los 80 clientes vivos de «puede entrar» a `ambiguo`.** Tanto el
+portal (`lib/vinculo.ts:119/135`) como el corredor (`apps/asegura/lib/clientes-sin-canal.ts`) marcan
+`principal: true` **solo** al candidato que viene de `clientes.email_lookup_hash`, y `false` a todas
+las filas de `cliente_emails` **aunque la fila diga `es_principal = true`**. O sea, «principal»
+significa aquí «es el correo canónico de la ficha», no «la fila se declara principal». Lo bueno es
+que las dos pantallas lo hacen IGUAL, que es lo que hace fiable la predicción; lo que no consta es
+que alguien lo decidiera a la vista de ese 42. **No se cambie sin medirlo otra vez y sin Alberto**:
+tocar esa línea reetiqueta media cartera de golpe.
+
+⚠️ **Lo que este sello NO caza: `resuelve_a_otra`.** Si el correo de alguien resuelve a la ficha de
+OTRA persona, el portal devuelve `ok` y le enseña esa cartera — para él todo ha ido bien. Ese caso solo
+se ve desde el lado del corredor (`plataforma` → `/correduria` → «Clientes sin canal»), y se arregla
+resolviendo el duplicado, no aquí. Hoy son **5** de los 80 clientes de cartera viva.
+
 ## 👁 Regla de visibilidad del portal (03/09/2026) — qué se OCULTA y qué se DICE EN VOZ ALTA
 
 Dictado de Alberto, literal: **«que aparezcan los datos que tengamos, el resto que no aparezca vacío,
