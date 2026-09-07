@@ -39,6 +39,33 @@
   **Medido:** desde una sesión Claude NO se puede enviar al huésped (el proxy deniega
   `login.smoobu.com`, 403); el ✅ de Telegram envía `borrador` de la BD, no el texto de la burbuja.
   **Pendiente:** el ✅ de Alberto en el mensaje 4219 — la respuesta corregida sigue sin enviarse.
+- **✅ Mergeado y PROBADO en producción (07/09/2026, PR #2571 → `6a567537`).** Los 12 requeridos en
+  verde y desplegado (`dpl_Et6yoY…`, target production, READY; el portal responde 200 sirviendo ese
+  deployment). Medido contra la cartera real: la póliza de la captura de Alberto —Occident
+  547875907, RC— tiene **10 coberturas y las 10 con nombre**, o sea el «y 6 más» que él veía eran
+  R.C. Cruzada, Post-trabajos, Defensa penal y reclamación de daños, Defensa ante la inspección de
+  trabajo, R.C. Profesional técnico dependiente y Liberación de gastos. Y los helpers, ejecutados
+  con los siniestros REALES: «Alcala de Guadaira (Sevilla) · Chinita salta al parabrisas
+  rompíendolo.» — provincia traducida del código 41, ciudad des-mayusculada, descripción entera, y
+  sin lugar ni comentario no se pinta nada.
+
+- **🗒 El siniestro dice QUÉ pasó (07/09/2026).** «También dar acceso a toda la información de los
+  siniestros». Medida la tabla antes de tocar (69 filas): lo único con contenido que no se enseñaba
+  era `comentario` (66/69) y el lugar (8/69); `gravedad`, los dos importes, `se_considera_culpable`
+  y **tramitador/perito están a 0**, o sea la regla del 03/09 hoy no oculta ningún dato. `comentario`
+  es texto libre con nombres y teléfonos de TERCEROS: se le enseñó a Alberto con dos ejemplos reales
+  y eligió publicarlo a todo el que ya ve siniestros, no solo al titular. GRANT aplicado y verificado
+  (solo esa columna), helpers puros para el código de provincia y la ciudad en mayúsculas, y tres
+  cepos vistos en rojo. Va en el mismo PR #2571.
+
+- **👁 El cliente ve TODAS sus coberturas (07/09/2026).** Alberto, sobre la ficha de la RC de
+  Occident: «hay q poner para el cliente vea todas las coberturas que tiene». La lectura del portal
+  las cortaba a 4 (`COBERTURAS_EN_CARD`) y la ficha remataba con «y 6 más» — un «más» que no llevaba
+  a ninguna pantalla: seis coberturas que el cliente PAGA no las veía nadie. Ahora `cartera-lectura`
+  trae la lista entera (recortar es de quien pinta, no de quien lee) y la ficha las lista una por
+  renglón, con el total y, si la compañía informó filas sin nombre, cuántas son. Cepos nuevos en
+  `test/regression-portal-visibilidad.test.ts`, vistos en ROJO al reintroducir el `slice`. tsc 0,
+  lint 0 errores.
 
 - **🧮 Spec de calculadora de bonificación hipotecaria en asegura-portal (07/09/2026, PR #2569 mergeado).**
   Idea de Alberto: simulador de punto de equilibrio entre mantener el seguro (hogar+vida)

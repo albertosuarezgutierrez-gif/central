@@ -217,6 +217,8 @@ export {
   tonoEstadoSiniestro,
   ordenarHistorialSiniestros,
   resumirHistorialSiniestros,
+  lugarSiniestro,
+  descripcionSiniestro,
 } from './siniestro-historial.ts'
 export type { EstadoSiniestro, SiniestroHistorial } from './siniestro-historial.ts'
 export {
