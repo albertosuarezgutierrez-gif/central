@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
         await logTurno(session.id, 'web', 'assistant', doc.resumen)
         return NextResponse.json({ respuesta: doc.resumen, guardados: [], acciones: [] })
       }
-      const respuesta = resumenDocumento(doc.factura, doc.cruce)
+      const respuesta = resumenDocumento(doc.factura, doc.cruce, doc.archivo)
       const prop = accionConciliar(doc.factura, matchDeCruce(doc.cruce))
       const acciones = prop ? await guardarAcciones(session.id, [prop]) : []
       await logTurno(session.id, 'web', 'assistant', respuesta)
