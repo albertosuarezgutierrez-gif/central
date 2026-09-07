@@ -88,6 +88,7 @@ En absoluto Luxury «empeora» (29→33); en porcentaje mejora (39% → 35%).
 |---|---|---|---|---|---|---|
 | 27/08/2026 (base) | 1,92× (47) | 1,61× (45) | 1,42× (40) | 1,31× (29) | 25% | Palanca apagada; el techo de mercado lleva 2 días desinflando |
 | 31/08/2026 | 1,33× (23/94) | 1,40× (40/93) | 1,34× (38/95) | 1,25× (33/93) | 30-31% | Los 4 bajan. **Condición 2 CUMPLIDA** (cobertura >25%). La 1 no: ninguno ≤1,2×. La 3 sigue sin medir (n=1). Sin Telegram |
+| 07/09/2026 | 0,91× (12/91) | **1,40× (33/90)** | 1,03× (9/92) | 0,91× (17/90) | 30% | **Convergencia terminada en 3 pisos**: cada uno aterriza en SU `target_pctl` (0,40/0,40/0,50). House sigue en 1,40× y tiene `antelacion_k=1` — la palanca que el 27/08 se apagó en los cuatro. ⚠️ El barrido lleva 9 de 10 días midiendo SOLO jul-ago 2027 |
 
 #### Lectura del 31/08/2026
 
@@ -122,6 +123,59 @@ aforos, y una sola reserva de House mueve la media entera.
 
 **Sin Telegram esta semana**: no se cumplen las tres condiciones, la cobertura no está estancada
 (sube 5-6 puntos) y ningún piso empeora.
+
+#### Lectura del 07/09/2026 — el motor no se ha roto: ha llegado a su objetivo
+
+Tres pisos caen entre el 18% y el 26% en una semana y quedan **en o por debajo de la mediana** del
+mercado. Antes de tocar nada se comprobó de dónde viene el movimiento: **el p50 del mercado no se ha
+movido ni un euro** sobre las mismas 90-92 fechas (165 / 197 / 648 / 268€ las dos semanas). Baja
+nuestro precio, no sube el mercado.
+
+| Piso | `target_pctl` | ratio medido |
+|---|---|---|
+| Busto Reform | 0,40 | 0,91× |
+| Duplex Center | 0,40 | 1,03× |
+| Luxury Busto | 0,50 | 0,91× |
+| House Sevillana | 0,60 | 1,40× |
+
+**Los cuatro aterrizan donde su propio `target_pctl` dice.** Apuntar al percentil 40 del mercado
+produce mecanicamente ~0,9x la mediana: 0,91x no es un fallo, es el objetivo configurado. Lo que
+paso el 27/08 (1,92x) era el motor MUY por encima de su propio objetivo; lo de ahora es que ha
+terminado de converger. La lectura correcta de la tabla de seguimiento es esa, no «se ha desplomado».
+
+**Lo que si hay que mirar: House Sevillana tiene `antelacion_k = 1`** (`updated_at` 07/09 08:16). El
+27/08 se apago en los cuatro. Es el unico piso que no ha bajado (-1% en la semana, 885,00€ de media),
+el unico por encima de 1,2x y el que sigue siendo mas caro que TODOS los comps en el 37% de sus
+fechas. Si el cambio lo hizo Alberto por la UI, explica el dato y no hay nada que arreglar; si no,
+algo lo escribio. **No se ha tocado.**
+
+**Tercera cosa, operativa: el barrido lleva 9 de los ultimos 10 dias midiendo SOLO jul-ago 2027**
+(100% de los comps del dia). Es la prioridad que se puso el 27/08 y que ya no deberia seguir puesta:
+mientras dure, ninguna otra fecha lejana refresca sus comparables y van envejeciendo dentro de la
+ventana de 30 dias. La cobertura aguanta al 30% porque el corpus acumula, pero es cobertura vieja.
+
+##### Dos hipotesis que se comprobaron y eran FALSAS
+
+Se dejan escritas para que nadie las vuelva a recorrer:
+
+1. **«Es el gate de demanda».** No: `demanda_gateada` lleva entre el 74% y el 98% de las filas
+   **desde el 20/08**, sin escalon. Es el estado normal, no el cambio.
+2. **«El barrido inundo el corpus de julio-agosto, que en Sevilla es temporada barata».** La primera
+   mitad es cierta (100% de comps jul-ago), la segunda **no**: esos comps van a 84-91€/plaza contra
+   51-101€/plaza del resto. No son mas baratos, asi que no pueden ser los que tiran del ancla.
+3. Y un aviso de metodo: `pricing_settings.updated_at` = 03/09 en tres pisos **no significa que se
+   tocara `target_pctl`**. El unico escritor automatico de esa tabla es `/api/sivra/pricing/canal`,
+   que solo cambia `channel_markup`, `cuota_fija` y `noches_ref` — y sella `updated_at`. Leer ese
+   sello como «alguien cambio el objetivo» es exactamente el error de dar por visto un dato que no
+   se ha mirado.
+
+##### Las tres condiciones
+
+- **1 — ratio <= ~1,2x:** cumplida en **3 de 4**. Falta House (1,40x), que es el que tiene la palanca
+  encendida. Con `antelacion_k` a 0 y su `target_pctl` de 0,60, lo esperable seria ~1,1-1,2x.
+- **2 — cobertura > 25%:** cumplida (30%), pero con la reserva de arriba: es corpus que no se
+  refresca desde el 29/08 salvo en jul-ago 2027.
+- **3 — fuga de canal medida:** sigue en **n=1**. Sin cambios.
 
 ### La consulta (reproducible tal cual)
 

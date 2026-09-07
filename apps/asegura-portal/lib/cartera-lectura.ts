@@ -168,6 +168,17 @@ export type TitularPortal = {
   clienteId: string
   nombre: string
   /**
+   * Persona física o jurídica, para decidir en qué bloque de la bóveda se
+   * pinta (`agruparCartera` de `@central/module-seguros-portal`).
+   *
+   * ⚠️ El `NULL` de la BD ya viene colapsado a `fisica` — el mismo lado
+   * restrictivo con el que se deciden los alcances, y una sola fuente para los
+   * dos usos. Consecuencia buscada: una ficha de tipo desconocido cae en «Tus
+   * seguros», no en «Seguros de tus empresas»; inventarle una sociedad a
+   * alguien sí se vería, y sería falso.
+   */
+  tipoPersona: TipoOtorgante
+  /**
    * Etiqueta para pintar («ve la tarjeta» / «ve también lo económico»). Lo que
    * DE VERDAD se ha servido son los campos que trae cada `PolizaPortal`; esto
    * no decide nada. En `autorizadas` sale de `etiquetaNivelAlcances`, que va
@@ -562,6 +573,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   // NULL o cualquier otra cosa → `fisica`, el lado restrictivo. La cartera real
   // tiene `tipo_persona` casi vacía (medido 03/09/2026), así que este default
   // NO es teórico: es el caso normal, y tiene que ser el que menos abre.
+  //
+  // ⚠️ Matiz medido el 07/09/2026, y es el que importa para agrupar la bóveda:
+  // ese «casi vacía» son las 31.730 fichas del VOLCADO (de 31.810 vivas). Las
+  // 80 que tienen una póliza viva —las únicas que llegan a un portal— la tienen
+  // TODAS: 74 físicas y 6 jurídicas. O sea que el cajón «Seguros de tus
+  // empresas» de `agruparCartera` no sale vacío por falta de dato; el default
+  // de arriba sigue haciendo falta para el resto.
   const tipoPor = new Map<string, TipoOtorgante>(
     clientes.map((c) => [c.id, c.tipoPersona === 'juridica' ? 'juridica' : 'fisica']),
   )
@@ -588,6 +606,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     return {
       clienteId,
       nombre,
+      // Del MISMO mapa que ya usan los alcances: dos fuentes para «¿esta ficha
+      // es una sociedad?» se separan sin que falle nada, y entonces la bóveda
+      // diría una cosa y los permisos otra.
+      tipoPersona: tipoPor.get(clienteId) ?? 'fisica',
       nivel,
       ...(autorizacion ? { autorizacion } : {}),
       polizas: suyas,

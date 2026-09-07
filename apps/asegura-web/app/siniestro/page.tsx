@@ -191,6 +191,14 @@ export default function Siniestro() {
           ¿Estás en otra correduría y no te cogen el teléfono cuando hay un parte?{' '}
           <Link href="/cambiar-de-correduria">Puedes cambiar de mediador sin tocar tu póliza</Link>.
         </p>
+        {/* El blog entró en `main` mientras se escribía esta página. No compiten:
+            esto es el proceso entero y ese artículo es UN caso concreto —el
+            peor— contado en detalle. Sin el enlace serían dos islas sobre el
+            mismo tema, que es justo lo que este PR viene a arreglar. */}
+        <p style={{ maxWidth: 640 }}>
+          Si el caso ya está denegado, la guía larga está aquí:{' '}
+          <Link href="/blog/siniestro-denegado-que-hacer">qué hacer cuando la compañía deniega un siniestro</Link>.
+        </p>
       </section>
 
       <section aria-labelledby="faq" style={{ marginBottom: 28 }}>

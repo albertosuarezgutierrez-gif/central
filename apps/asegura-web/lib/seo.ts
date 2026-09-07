@@ -9,6 +9,7 @@
 import { MEDIADOR } from '@central/module-seguros'
 import { AMBITO, HORARIO, PERFILES, SITIO_URL, url } from './sitio.ts'
 import { RAMOS, type Ramo } from './ramos.ts'
+import type { Articulo } from './articulos.ts'
 
 /**
  * Ficha del negocio: `InsuranceAgency`, que es un subtipo de `LocalBusiness` y
@@ -176,6 +177,51 @@ export function fichaFaq(ramo: Ramo): Record<string, unknown> | null {
 }
 
 /** Serializa un objeto para meterlo en un `<script type="application/ld+json">`. */
+/**
+ * Ficha de ARTÍCULO (`Article`).
+ *
+ * Los seguros son un tema YMYL —de los que afectan al dinero de quien lee—, y
+ * ahí lo que un buscador pondera es quién firma. Por eso el `author` no es la
+ * marca: es la PERSONA, con su clave DGSFP como identificador. Es exactamente
+ * lo que un comparador no puede declarar.
+ *
+ * 🚨 El autor sale de `MEDIADOR`, no se teclea. Es el mismo dato del pie legal,
+ * de la ficha del negocio y de la credencial: tres copias del nombre son dos
+ * copias de más.
+ *
+ * 📌 `dateModified` se emite SOLO si el artículo se ha revisado de verdad.
+ * Rellenarlo con la fecha de publicación —o peor, con la de hoy— afirma una
+ * revisión que no ha ocurrido, y es justo el dato que se usa para decidir si el
+ * contenido está al día.
+ */
+export function fichaArticulo(a: Articulo): Record<string, unknown> {
+  const url_ = url(`/blog/${a.slug}`)
+  const ficha: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    '@id': `${url_}#articulo`,
+    headline: a.h1,
+    description: a.description,
+    url: url_,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url_ },
+    inLanguage: 'es-ES',
+    datePublished: a.fecha,
+    author: {
+      '@type': 'Person',
+      name: MEDIADOR.identidad.nombre,
+      jobTitle: MEDIADOR.identidad.figura,
+      identifier: {
+        '@type': 'PropertyValue',
+        name: 'Clave DGSFP',
+        value: MEDIADOR.identidad.claveDgsfp,
+      },
+    },
+    publisher: { '@id': `${SITIO_URL}/#correduria` },
+  }
+  if (a.revisado) ficha.dateModified = a.revisado
+  return ficha
+}
+
 export function jsonLd(obj: Record<string, unknown>): string {
   // `<` escapado: un `</script>` dentro de una cadena del JSON cerraría la
   // etiqueta y convertiría el resto de la página en marcado suelto.

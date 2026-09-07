@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { FECHA_TEXTOS_WEB } from '@central/module-seguros'
+import { entradasSitemapBlog } from '@/lib/articulos'
 import { RAMOS } from '@/lib/ramos'
 import { url } from '@/lib/sitio'
 
@@ -25,6 +26,7 @@ import { url } from '@/lib/sitio'
 // «no informado», no como «no ha cambiado».
 const LEGALES = new Date(FECHA_TEXTOS_WEB)
 
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: url('/'), changeFrequency: 'monthly', priority: 1 },
@@ -40,6 +42,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Prioridad alta a propósito: es la página con la mejor posición medida de
     // todo el dominio (7,7), y la que Google ya conocía del sitio anterior.
     { url: url('/siniestro'), changeFrequency: 'monthly', priority: 0.9 },
+    // 📌 El blog SÍ sabe sus fechas, y por eso es la única familia de URL además
+    // de las legales que declara `lastModified`. La lista se construye en
+    // `lib/articulos.ts` (`entradasSitemapBlog`) a propósito: allí sí se puede
+    // EJECUTAR desde un test y comprobar las URL y las fechas que salen, cosa
+    // que un guardián leyendo este fichero con expresiones regulares no podía.
+    ...entradasSitemapBlog(),
     { url: url('/quienes-somos'), changeFrequency: 'yearly', priority: 0.5 },
     { url: url('/legal/informacion-mediador'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },
     { url: url('/legal/privacidad'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },
