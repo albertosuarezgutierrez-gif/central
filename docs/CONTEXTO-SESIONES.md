@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧩 Agente de captación: fase 2 desarrollada entera, y dos afirmaciones mías corregidas (07/09/2026).**
+  Las once ideas de fase 2 (7-17) pasan de bullets a secciones con dato, regla y modo de fallo; cuatro
+  son nuevas (cadencia y «no me preguntes», cambio de coche por matrícula, web push, «súbenos el
+  recibo de renovación»). **Dos correcciones medidas contra el código, no supuestas:** (1) web push
+  NO puede registrarse en `lib/canal.ts` — ese puerto es solo `enviarCodigo`, y una suscripción push
+  solo existe DESPUÉS de entrar, así que nunca puede entregar el código que te deja entrar: va un
+  puerto de avisos aparte; (2) la idea 12 decía «cero infraestructura nueva» y era falso — José no
+  puede autorizar acceso a la póliza de Pilar, así que es una invitación SIN objeto, no una
+  autorización. Descartados los referidos con incentivo (colaborador externo no registrado, RDL
+  3/2020). PR #2549 (ideas 12-13) y el de esta tanda.
+
 - **📝 Diseño del agente de captación de `asegura-portal` — solo spec, sin código (07/09/2026).**
   Alberto quería un agente de ventas WhatsApp para la correduría; se acabó aterrizando en
   `docs/superpowers/specs/2026-09-07-asegura-portal-agente-captacion-design.md`: seis piezas
