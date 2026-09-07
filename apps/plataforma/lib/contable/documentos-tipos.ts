@@ -48,7 +48,8 @@ export type CoberturaBanco = { banco: string; ultima: string | null }
  * desenlaces posibles, porque los cinco se le cuentan a Alberto de forma distinta:
  * - `match`            — cargo del mismo importe, sin conciliar, dentro de ±7 días. Se propone conciliar.
  * - `ya_conciliado`    — ese cargo existe pero YA está conciliado. No es «no lo encuentro».
- * - `fuera_de_ventana` — existe uno del mismo importe, pero más lejos en el tiempo. Se pregunta.
+ * - `fuera_de_ventana` — existe uno del mismo importe, POSTERIOR pero más lejos en el tiempo. Se pregunta.
+ * - `varios_candidatos`— hay MÁS DE UNO del mismo importe: el importe no identifica a ninguno.
  * - `sin_cobertura`    — el extracto no llega todavía a la fecha de la factura: NO se ha podido mirar.
  * - `sin_match`        — se ha mirado de verdad y no hay nada que cuadre.
  */
@@ -56,6 +57,7 @@ export type CruceDoc =
   | { estado: 'match'; mov: MovCandidato }
   | { estado: 'ya_conciliado'; mov: MovCandidato; otro?: MovCandidato | null }
   | { estado: 'fuera_de_ventana'; mov: MovCandidato; dias: number }
+  | { estado: 'varios_candidatos'; movs: MovCandidato[] }
   | { estado: 'sin_cobertura'; cobertura: CoberturaBanco[] }
   | { estado: 'sin_match'; cobertura: CoberturaBanco[] }
 
@@ -176,8 +178,17 @@ export function resumenDocumento(f: FacturaDoc, cruce: CruceDoc, archivo?: Archi
       return `${cab}\nHay un cargo de ese importe el ${fechaEs(cruce.mov.fecha)}${cruce.mov.banco ? ` (${cruce.mov.banco})` : ''} que YA está conciliado${ref}, así que no toco nada.${alternativa}`
     }
 
+    // «después», no «después/antes»: desde el 07/09/2026 la ventana ancha solo mira hacia ADELANTE
+    // (un cargo anterior no puede pagar una factura que aún no existía), así que el signo se sabe.
     case 'fuera_de_ventana':
-      return `${cab}\nNo hay ningún cargo de ese importe en ±7 días, pero sí uno ${cruce.dias} días después/antes: ${de(cruce.mov)}. ¿Es ese? Dime que sí y lo concilio.`
+      return `${cab}\nNo hay ningún cargo de ese importe en ±7 días, pero sí uno ${cruce.dias} días DESPUÉS: ${de(cruce.mov)}. ¿Es ese? Dime que sí y lo concilio.`
+
+    // Varios del mismo importe: se enseñan y elige Alberto. NO se propone ninguno — un botón aquí
+    // pide un clic a ciegas, y el clic ata la factura al movimiento equivocado sin que nada falle.
+    case 'varios_candidatos': {
+      const lista = cruce.movs.map(m => `· ${de(m)}`).join('\n')
+      return `${cab}\nHay ${cruce.movs.length} cargos de ${eur(f.total)} sin conciliar y el importe no distingue cuál es:\n${lista}\nDime cuál (o concílialo desde /banca): no elijo yo, porque acertar por importe aquí sería suerte.`
+    }
 
     // ⚠️ El caso que motivó todo esto: el extracto del banco NO llega aún a la fecha de la factura,
     // así que no es que el cargo no exista — es que todavía no lo he podido ver. Decir «no encuentro

@@ -233,3 +233,44 @@ test('sin archivado (llamada antigua, 2 argumentos) → el resumen no cambia', (
   const t = resumenDocumento(FACTURA, { estado: 'match', mov: MOV })
   assert.doesNotMatch(t, /Drive|Contabilizada|libro de gastos/)
 })
+
+// ── El cargo ANTERIOR y el importe que se repite (07/09/2026) ────────────────────────────────────
+// Caso real: factura de gasolina de 40,00€ del 07/09 ofrecida contra un cargo del 19/07 —50 días
+// ANTES— y confirmada de un clic. Ese cargo era otro repostaje: en esa gasolinera había CINCO
+// cargos de exactamente 40,00€. Dos fallos distintos, dos cepos.
+
+test('el cargo lejano se cuenta como POSTERIOR, nunca «después/antes»', () => {
+  const t = resumenDocumento(FACTURA, { estado: 'fuera_de_ventana', mov: MOV, dias: 50 })
+  assert.match(t, /50 días DESPUÉS/)
+  // La ventana ancha solo mira hacia adelante, así que el signo se sabe: decir «después/antes»
+  // es declarar una ambigüedad que ya no existe.
+  assert.doesNotMatch(t, /después\/antes/i)
+})
+
+test('varios cargos del mismo importe → se enseñan TODOS y no se propone ninguno', () => {
+  const cruce = {
+    estado: 'varios_candidatos' as const,
+    movs: [
+      { movId: 'm1', fecha: '2026-05-12', concepto: 'COMPRA EN GASOLINERAS ISBILYA', importe: -84.5, banco: 'Kutxabank' },
+      { movId: 'm2', fecha: '2026-06-02', concepto: 'COMPRA EN GASOLINERAS ISBILYA', importe: -84.5, banco: 'Kutxabank' },
+    ],
+  }
+  const t = resumenDocumento(FACTURA, cruce)
+  assert.match(t, /2 cargos/)
+  assert.match(t, /12\/05\/2026/)
+  assert.match(t, /02\/06\/2026/)
+  // 🚨 Lo esencial: NO puede ofrecer conciliar. Un botón aquí pide un clic a ciegas.
+  assert.doesNotMatch(t, /¿Lo concilio\?|Dime que sí y lo concilio/)
+})
+
+test('con varios candidatos NO se construye ninguna propuesta de conciliar', () => {
+  const cruce = {
+    estado: 'varios_candidatos' as const,
+    movs: [
+      { movId: 'm1', fecha: '2026-05-12', concepto: null, importe: -84.5, banco: null },
+      { movId: 'm2', fecha: '2026-06-02', concepto: null, importe: -84.5, banco: null },
+    ],
+  }
+  assert.equal(matchDeCruce(cruce), null)
+  assert.equal(accionConciliar(FACTURA, matchDeCruce(cruce)), null)
+})
