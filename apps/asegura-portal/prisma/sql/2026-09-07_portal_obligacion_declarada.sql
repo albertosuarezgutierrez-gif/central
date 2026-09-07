@@ -16,7 +16,11 @@
 -- PostgreSQL dos NULL no chocan entre sí, así que esta clave NO afecta a las
 -- filas que vienen de la cartera (las que tienen `poliza_id`): siguen
 -- conviviendo tantas como haga falta, exactamente igual que hasta ahora con
--- `portal_obligacion_identidad_id_poliza_id_key`.
+-- `portal_obligacion_una_por_poliza`.
+-- El nombre es el de su hermana, no el que pondría Prisma por defecto: la que
+-- ya existe se llama `portal_obligacion_una_por_poliza` (comprobado en
+-- `pg_constraint` el 07/09/2026, no supuesto). Las dos juntas se leen como lo
+-- que son, una pareja.
 ALTER TABLE seguros.portal_obligacion
-  ADD CONSTRAINT portal_obligacion_identidad_id_poliza_declarada_id_key
+  ADD CONSTRAINT portal_obligacion_una_por_declarada
   UNIQUE (identidad_id, poliza_declarada_id);

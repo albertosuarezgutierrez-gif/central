@@ -232,7 +232,7 @@ model PortalObligacion {
   /// `upsert` y NO perder `avisadaAt` en cada sincronización: sin ella habría
   /// que borrar y recrear, y el sello del envío se iría con el borrado — o sea,
   /// cada visita a la bóveda volvería a mandar el mismo aviso.
-  @@unique([identidadId, polizaDeclaradaId])
+  @@unique([identidadId, polizaDeclaradaId], map: "portal_obligacion_una_por_declarada")
   @@index([identidadId])
   @@map("portal_obligacion")
   @@schema("seguros")
