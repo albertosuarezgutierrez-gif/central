@@ -38,6 +38,9 @@ const PAGINA = sinComentarios(
   readFileSync(`${RAIZ}apps/asegura-portal/app/(portal)/boveda/page.tsx`, 'utf8'),
 )
 const LAYOUT = sinComentarios(readFileSync(`${RAIZ}apps/asegura-portal/app/layout.tsx`, 'utf8'))
+const RESUMEN = sinComentarios(
+  readFileSync(`${RAIZ}apps/asegura-portal/app/(portal)/boveda/ResumenTitular.tsx`, 'utf8'),
+)
 const CSS = readFileSync(`${RAIZ}apps/asegura-portal/app/globals.css`, 'utf8').replace(
   /\/\*[\s\S]*?\*\//g,
   '',
@@ -168,4 +171,53 @@ test('🚨 el titular sube a 32px: a 24 una serif no se distingue', () => {
   // Un peso que no se descarga lo SINTETIZA el navegador, y una serif
   // sintetizada se ve emborronada. Solo se pide el 500.
   assert.match(regla, /font-weight:\s*500/, 'solo se pide el corte 500, así que solo se usa el 500')
+})
+
+test('🚨 las baldosas NO se pintan sobre las pólizas de otro', () => {
+  // «Al año» sobre la cartera de quien te dio acceso pinta su gasto como si
+  // fuera tuyo, y las tres baldosas juntas se leen como un resumen de LO TUYO.
+  // Duplicar se ve; atribuir no.
+  assert.match(
+    PAGINA,
+    /grupo !== 'autorizadas' && <ResumenTitular/,
+    'el resumen es del titular propio; en autorizadas no va',
+  )
+})
+
+test('🚨 y van por TITULAR, no una suma global de la bóveda', () => {
+  // Una sola fila de baldosas arriba sumaría lo personal y lo de la sociedad
+  // justo en la cifra que más se mira, deshaciendo la separación por titular de
+  // este mismo fichero — y sin que nada fallara.
+  assert.match(
+    PAGINA,
+    /<ResumenTitular polizas=\{titular\.polizas\}/,
+    'el resumen se calcula sobre las pólizas de UN titular',
+  )
+})
+
+test('🚨 el total parcial no puede pintarse a secas: lleva su nota', () => {
+  // Medido el 07/09/2026: 26 de 111 pólizas vivas no tienen prima. Un total que
+  // sume las otras 85 y se enseñe sin decirlo es más bajo que la realidad y no
+  // lo parece. Quitar la nota es una línea y no rompe nada.
+  assert.match(RESUMEN, /r\.sinPrima > 0/, 'la baldosa del dinero tiene que mirar cuántas faltan')
+  assert.match(RESUMEN, /resumen-nota/, 'y decirlo en la propia baldosa')
+})
+
+test('🚨 «no lo sé» se pinta como raya, jamás como 0,00€', () => {
+  // `gastoAnual === null` es «no consta ninguna prima». Colapsarlo con un
+  // `?? 0` lo convertiría en «no pagas nada», que es una afirmación.
+  assert.match(
+    RESUMEN,
+    /r\.gastoAnual === null \? '—'/,
+    'sin ninguna prima conocida la baldosa no da una cifra',
+  )
+  assert.doesNotMatch(RESUMEN, /gastoAnual \?\? 0|gastoAnual \|\| 0/, 'un cero aquí es una mentira')
+})
+
+test('🚨 «Próximo» sale de proximoVencimiento, no del primer elemento', () => {
+  // Es el fallo que tenía el panel de ejemplo de la web (`activas[0]`), y aquí
+  // sería peor: con datos reales enseñaría como próximo vencimiento una póliza
+  // cualquiera, y hay vivas ya vencidas cuya fecha ya pasó.
+  assert.match(RESUMEN, /r\.proximoVencimiento === null \? '—'/, 'sin próxima no se inventa una fecha')
+  assert.doesNotMatch(RESUMEN, /polizas\s*\[\s*0\s*\]/, 'la primera de la lista no es la próxima')
 })

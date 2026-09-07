@@ -24,6 +24,7 @@ import { FilaDeclarada } from './FilaDeclarada'
 import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
 import { HistorialSiniestros, RAMO, RecibosDePoliza } from './PolizaVista'
+import { ResumenTitular } from './ResumenTitular'
 import { VistaPorPoliza } from './VistaPorPoliza'
 import { agruparCartera, vistaDeBoveda, type GrupoCartera } from '@central/module-seguros-portal'
 
@@ -249,6 +250,7 @@ export default async function Boveda({
               titular={t}
               grupo="mias"
               conNombre={bloqueMias?.conNombre ?? false}
+              hoy={hoy}
             />
           ))
         )}
@@ -288,7 +290,7 @@ export default async function Boveda({
         <section key={b.grupo} className="seccion" aria-labelledby={`bloque-${b.grupo}-titulo`}>
           <h2 id={`bloque-${b.grupo}-titulo`}>{b.titulo}</h2>
           {b.titulares.map((t) => (
-            <Titular key={t.clienteId} titular={t} grupo={b.grupo} conNombre={b.conNombre} />
+            <Titular key={t.clienteId} titular={t} grupo={b.grupo} conNombre={b.conNombre} hoy={hoy} />
           ))}
         </section>
       ))}
@@ -388,10 +390,13 @@ function Titular({
   titular,
   grupo,
   conNombre,
+  hoy,
 }: {
   titular: TitularPortal
   grupo: GrupoCartera
   conNombre: boolean
+  /** Resuelto en el servidor (la página es `force-dynamic`). */
+  hoy: Date
 }) {
   if (titular.polizas.length === 0) {
     return (
@@ -403,6 +408,11 @@ function Titular({
   return (
     <>
       {conNombre && <h3 className="titular-cabecera">{titular.nombre}</h3>}
+      {/* 🚨 En «autorizadas» NO van: lo que gasta al año quien te dio acceso no
+          es tuyo, y una baldosa «Al año» sobre sus pólizas lo pintaría como si
+          lo fuera. Lo que sí necesita quien mira ahí es la fila, que ya lleva su
+          chip de póliza ajena. */}
+      {grupo !== 'autorizadas' && <ResumenTitular polizas={titular.polizas} hoy={hoy} />}
       <ul className="polizas">
         {titular.polizas.map((p) => (
           <FilaPoliza key={p.id} p={p} deOtro={grupo === 'autorizadas' ? titular.nombre : null} />
