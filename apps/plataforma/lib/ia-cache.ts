@@ -1,12 +1,20 @@
-// Caché SEMÁNTICA de la pasarela de IA (pgvector + Gemini embeddings). OPT-IN doble:
+// Caché SEMÁNTICA de la pasarela de IA (pgvector + embeddings por OpenRouter). OPT-IN doble:
 // env IA_CACHE_SEMANTICA=1 (interruptor global, apagado por defecto) Y el caller manda
 // `cache:{ambito, ttlHoras?}` en el body — nunca se cachea a callers que no lo piden
 // (las consultas sobre datos vivos —finanzas, reservas— quedan fuera por diseño).
 // Umbral ALTO (similitud coseno >= 0.97) para no responder a una pregunta PARECIDA pero
 // distinta ("¿gasto de junio?" vs "¿de julio?"). FAIL-OPEN: cualquier error → camino normal.
+//
+// 🔀 07/09/2026: antes usaba `geminiEmbed` (text-embedding-004, Gemini) — RETIRADO por Google el
+// 14/01/2026 (404 en embedContent), sin que nadie lo notara porque este fail-open lo tragaba en
+// silencio (la caché nunca sirvió un hit real desde entonces). Swap a OpenRouter
+// (`openai/text-embedding-3-small`, $0,02/M, `dimensions:768` para no tocar la columna
+// pgvector(768) existente): regla permanente de Alberto del 24/08 — "todo lo que pueda ir por
+// OpenRouter, va por OpenRouter". Como la caché nunca tuvo un vector válido, no hizo falta
+// re-indexar nada.
 
 import { prisma } from '@/lib/db'
-import { geminiEmbed } from '@central/core-ai'
+import { openrouterEmbed } from '@central/core-ai'
 
 const UMBRAL_SIMILITUD = Number(process.env.IA_CACHE_UMBRAL ?? 0.97)
 const TTL_HORAS_DEFAULT = 24
@@ -16,9 +24,9 @@ export function cacheActiva(): boolean {
 }
 
 async function embed(texto: string): Promise<number[] | null> {
-  const apiKey = process.env.GEMINI_API_KEY
+  const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) return null
-  try { return await geminiEmbed({ apiKey }, texto.slice(0, 6_000)) } catch { return null }
+  try { return await openrouterEmbed({ apiKey }, texto.slice(0, 6_000)) } catch { return null }
 }
 
 export type CacheHit = { respuesta: string; modelo: string | null }

@@ -42,6 +42,24 @@
   «· Grupo ASegura» que la plantilla del layout ya añadía: marca duplicada en las 6 SERP. Actualizada la
   skill `seo-asegura` (mandaba lo contrario y lo habría revertido). Precio dicho: sin modificador
   geográfico se compite con comparadores nacionales — a medir cuando GSC esté conectada. PR #2464.
+- **🔀 buscador-ia: embeddings muertos desde enero → swap a OpenRouter (07/09/2026, PR #2459).**
+  Pasada semanal: `text-embedding-004` (Gemini, embeddings de `ia-cache` de plataforma) llevaba
+  retirado por Google desde el 14/01/2026 (404); 1ª comprobación real de ese eslabón. Impacto bajo
+  (caché OFF por defecto + `embed()` fail-open, nunca sirvió un hit real). Alberto, al ver el aviso
+  Telegram, pidió evaluar OpenRouter → tiene endpoint `/embeddings` (`openai/text-embedding-3-small`,
+  $0,02/M, `dimensions:768` sin migrar la columna pgvector) y encaja con la regla OpenRouter-primero
+  del 24/08. `openrouterEmbed()` nuevo en `packages/core-ai/src/openrouter.ts`; `geminiEmbed`/
+  `embeddings.ts` eliminados (sin otro consumidor). Sin re-indexado necesario (no había vectores
+  válidos que perder). `pnpm test` 639/639, `tsc` limpio en plataforma+ia-rest.
+
+- **💰 Ciclo semanal de pricing SIVRA completo, los 4 pisos (07/09/2026).** 4 agentes en paralelo
+  barrieron Booking (12 ventanas/piso: 10 meses + Semana Santa + Feria) → comps escritos hoy:
+  busto=120, duplex=120, luxury=120, house=140. 48 propuestas a `aplicar-propuesta` en dry-run,
+  circuit-breaker sano. **Landmine nuevo:** `mcp__Expedia__search_hotels` no admite moneda y
+  devuelve USD — 3 de 4 agentes lo etiquetaron como EUR (50 filas contaminando Semana Santa/Feria
+  de 3 pisos); detectado y borrado antes de decidir, documentado en
+  `.claude/skills/pricing-agente/references/ciclo.md`. Detalle en `pricing_aprendizaje`
+  (`ciclo_07_09_2026`) y `docs/AGENTES-BITACORA.md`.
 - **🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo (06/09/2026).** Al mergear
   #2439, `merge_pull_request` devolvió `405 ... "Lint · TypeCheck · Build" is in progress` mientras el
   run de `ci.yml` sobre ese head exacto llevaba minutos en `completed`/`success`. Reintentar **sin tocar

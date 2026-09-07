@@ -18,8 +18,10 @@
    respuesta a una reseña, ni un correo. Regla global de `CLAUDE.md`. El agente deja borradores.
 3. **Nunca se tarifica para captar.** Avant2 son 0,50 €/consulta y no es idempotente.
 4. **Cero PII en el contenido público.** Un testimonio lo pide Alberto y con permiso escrito.
-5. **`HORARIO` y el teléfono siguen ausentes a propósito.** Publicar un horario inventado hace que
-   alguien llame y no le cojan. No se rellenan «para completar el JSON-LD».
+5. **`HORARIO` sigue ausente a propósito.** Publicar un horario inventado hace que alguien llame
+   y no le cojan. No se rellena «para completar el JSON-LD».
+   ✅ **El teléfono ya NO está ausente** (05/09/2026): vive en `MEDIADOR.identidad.telefono` con
+   `telefonoLegible()` y `whatsappUrl()`. Se lee de ahí, nunca se teclea.
 6. **Un dato que no se ha mirado no se afirma.** PostHog solo mide a quien acepta el banner: sus
    cifras no son «el tráfico», son «el tráfico que consintió». Cero medido ≠ cero.
 
@@ -52,6 +54,11 @@ cualquier campaña**, y le toca a `agente-correduria`, no a esta skill.
 
 ---
 
+> ⚠️ **Este backlog se midió sobre el árbol del 05/09/2026 a las ~15:00, y esa misma tarde entró en
+> `main` un rediseño de `apps/asegura-web`.** Lo revalidado tras el merge está marcado abajo. Antes
+> de trabajar una idea, **compruébala contra el código de hoy**: un backlog que describe una app que
+> ya cambió es justo la clase de dato que este repo no se permite.
+
 ## A. Imagen para compartir (Open Graph) — 🔴 la más barata con más impacto
 
 **Hoy no existe ninguna.** Cero ficheros `opengraph-image*`, cero `openGraph.images`, cero bloque
@@ -74,8 +81,13 @@ dependencias nuevas.
 `/cambiar-de-correduria` es, por diseño, la conversión más barata del sitio: convierte un lead en
 cliente **sin tarificar** (0 € de Avant2) y sin competir por precio.
 
-Y es **la única página comercial con cero señales locales**: su `title` (`page.tsx:22`) y su `h1`
-(`:109`) no llevan «Sevilla», y el cuerpo entero (pasos + FAQ) **no la menciona ni una vez**.
+Su `title` (`page.tsx:22`) y su `h1` (`:109`) **no llevan «Sevilla»**, que son los dos sitios que
+más pesan.
+
+⚠️ **Corregido el 05/09/2026, unas horas después de medirlo:** aquí ponía «cero señales locales» y
+«no la menciona ni una vez», y eso **ya es falso** — el rediseño de la web que entró en `main` esa
+misma tarde metió «Sevilla» en la `description` (`:24`). Sigue faltando en title y h1, que es lo
+que hay que arreglar; el cuerpo ya no está mudo.
 `/quienes-somos` tiene el mismo hueco en su H1 (`:146`), aunque su title sí la lleva.
 
 **Coste:** una hora. **Bloqueo:** ninguno. **Ojo:** cambiar un H1 es cambiar copy → pasa por
@@ -134,11 +146,11 @@ que se sube a mano) y sacar las legales o dejarlas con prioridad mínima.
   Google Business Profile**, así que esta queda bloqueada por la idea I.
 - **`WebSite`** (y con él `SearchAction`).
 
-🐛 **Y un bug de NAP:** `seo.ts:45` teclea a mano `'San Juan de La Palma, 28'` mientras la fuente
-única `MEDIADOR.identidad.domicilio` dice `'San Juan de La Palma, nº 28, 41003 Sevilla'`. El propio
-fichero declara en su cabecera que la dirección viene de `MEDIADOR`, y es **el único campo que no
-lo cumple**. Una dirección que no coincide entre el JSON-LD y el pie es exactamente lo que rompe la
-correspondencia con el Business Profile.
+✅ **El bug de NAP que había aquí YA ESTÁ ARREGLADO** (05/09/2026, en `main`). Decía que
+`seo.ts:45` tecleaba `'San Juan de La Palma, 28'` a mano mientras `MEDIADOR.identidad.domicilio`
+decía otra cosa. Ahora `streetAddress` se deriva de `MEDIADOR` y el propio fichero explica por qué.
+Se deja escrito porque el motivo sigue valiendo: una dirección que no coincide entre el JSON-LD y
+el pie es lo que rompe la correspondencia con el Business Profile.
 **Coste:** el bug, minutos. El resto, una tarde. **Bloqueo:** `sameAs` y `geo` esperan al GBP.
 
 ## G. `/legal/cookies` sin canonical — 🟢 minutos

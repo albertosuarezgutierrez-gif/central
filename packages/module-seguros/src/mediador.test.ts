@@ -11,6 +11,7 @@ import {
   VERSION_TEXTOS_WEB,
   FECHA_TEXTOS_WEB,
   lineaIdentificacion,
+  remitenteCorreo,
 } from './mediador.ts'
 
 // Estos tests no comprueban «que compile»: comprueban que no se pueda borrar en
@@ -109,4 +110,47 @@ test('no se declara ninguna lista de ramos ni ningun DPO sin comprobar', () => {
   const texto = JSON.stringify({ MEDIADOR, PUNTOS_PRECONTRACTUALES, NO_EXCLUSIVIDAD })
   assert.ok(!/\bramos?\b/i.test(texto), 'se ha colado una declaración de ramos sin verificar')
   assert.ok(!/\bDPO\b|delegado de protecci/i.test(texto), 'se ha colado un DPO sin confirmar')
+})
+
+test('el nombre del remitente sale del repo, no de la variable de entorno', () => {
+  // El fallo que este test impide está MEDIDO (05/09/2026): `PORTAL_MAIL_FROM` y
+  // `ASEGURA_MAIL_FROM` llevaban la marca con la ese minúscula, y todos los correos
+  // al asegurado salían con el nombre comercial comido. El guardián del nombre
+  // comercial barre `git ls-files`, así que no podía verlo — y varias de esas
+  // variables son de tipo Secret, que el panel de Vercel ni siquiera deja releer.
+  const DIR = 'no-reply@envios.grupoasegura.es'
+  const BUENO = `${MEDIADOR.marca} <${DIR}>`
+  // Las grafías malas se DERIVAN, no se teclean: escribirlas aquí pondría en rojo
+  // al guardián del nombre comercial, que barre este mismo fichero.
+  const MAL = MEDIADOR.marca.replace('AS', 'As')
+  const GRITADO = MEDIADOR.marca.toUpperCase()
+
+  // Da igual lo que ponga la env: el nombre lo pone el repo.
+  assert.equal(remitenteCorreo(`${MAL} <${DIR}>`), BUENO)
+  assert.equal(remitenteCorreo(`${GRITADO} <${DIR}>`), BUENO)
+  assert.equal(remitenteCorreo(`Otra Cosa SL <${DIR}>`), BUENO)
+
+  // Y la env puede traer solo la dirección: es la forma a la que queremos migrar.
+  assert.equal(remitenteCorreo(DIR), BUENO)
+  assert.equal(remitenteCorreo(`  ${DIR}  `), BUENO)
+})
+
+test('sin dirección utilizable NO se inventa un remitente', () => {
+  // Devolver algo aquí sería peor que no enviar: el correo saldría desde una
+  // dirección que nadie ha verificado, o rebotaría sin que se sepa por qué.
+  // Quien llama ya trata el `null` como avería de configuración.
+  assert.equal(remitenteCorreo(undefined), null)
+  assert.equal(remitenteCorreo(null), null)
+  assert.equal(remitenteCorreo(''), null)
+  assert.equal(remitenteCorreo('   '), null)
+  assert.equal(remitenteCorreo(MEDIADOR.marca), null, 'un nombre sin dirección no es un remitente')
+  assert.equal(remitenteCorreo(`${MEDIADOR.marca} <>`), null)
+  assert.equal(remitenteCorreo('dos direcciones@a.es y@b.es'), null, 'un valor con espacios no es una dirección')
+})
+
+test('la marca del remitente es la grafía buena', () => {
+  // Cinturón y tirantes: si alguien cambiara `MEDIADOR.marca`, el remitente lo
+  // seguiría — y este es el sitio donde lo ve un cliente.
+  assert.equal(MEDIADOR.marca, 'Grupo ASegura')
+  assert.match(remitenteCorreo('x@y.es') ?? '', /^Grupo ASegura </)
 })

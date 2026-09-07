@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { openrouterChat, openrouterChatEx, openrouterChatTools } from '../src/openrouter.ts'
+import { openrouterChat, openrouterChatEx, openrouterChatTools, openrouterEmbed } from '../src/openrouter.ts'
 
 type Call = { url: string; headers: Record<string, string>; body: Record<string, unknown> }
 
@@ -114,4 +114,30 @@ test('openrouterChatTools manda tools y devuelve content/tool_calls', async () =
   assert.equal((out.tool_calls as Array<{ id: string }>)[0].id, 't1')
   assert.ok(Array.isArray(calls[0].body.tools))
   assert.equal(calls[0].body.max_tokens, 1024)
+})
+
+test('openrouterEmbed manda el texto y devuelve el vector, con dimensions:768 por defecto', async () => {
+  const calls: Call[] = []
+  const resp = { data: [{ embedding: [0.1, 0.2, 0.3] }], model: 'openai/text-embedding-3-small' }
+  const out = await openrouterEmbed({ apiKey: 'k' }, 'hola mundo', { fetchImpl: fakeFetch(resp, calls) })
+  assert.deepEqual(out, [0.1, 0.2, 0.3])
+  assert.equal(calls[0].url, 'https://openrouter.ai/api/v1/embeddings')
+  assert.equal(calls[0].headers.Authorization, 'Bearer k')
+  assert.equal(calls[0].body.model, 'openai/text-embedding-3-small')
+  assert.equal(calls[0].body.input, 'hola mundo')
+  assert.equal(calls[0].body.dimensions, 768)
+})
+
+test('openrouterEmbed acepta dimensions custom y lanza sin apiKey, con texto vacío y sin vector', async () => {
+  const calls: Call[] = []
+  const resp = { data: [{ embedding: [1, 2] }] }
+  await openrouterEmbed({ apiKey: 'k' }, 'x', { dimensions: 256, fetchImpl: fakeFetch(resp, calls) })
+  assert.equal(calls[0].body.dimensions, 256)
+
+  await assert.rejects(() => openrouterEmbed({ apiKey: '' }, 'x'))
+  await assert.rejects(() => openrouterEmbed({ apiKey: 'k' }, '   '))
+  await assert.rejects(
+    () => openrouterEmbed({ apiKey: 'k' }, 'x', { fetchImpl: fakeFetch({ data: [] }, []) }),
+    /sin vector/,
+  )
 })
