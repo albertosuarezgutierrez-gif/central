@@ -112,6 +112,49 @@
   el correo cifrado y `apps/asegura` lo LEE (es la que tiene correo y BYPASSRLS; un guardián prohíbe
   al portal importar transporte de correo). Medido: 6 obligaciones en toda la BD, 0 avisadas, 0 en
   ventana — el cron mandando cero hoy es correcto y NO prueba que esté apagado.
+- **🔓 Salir, ver quién entra, y que lo que sube el cliente LLEGUE a Alberto (07/09/2026).**
+  Tres cosas del portal del cliente, y las tres nacen de un agujero medido, no de una idea.
+  (1) **No había botón de cerrar sesión** y la cookie dura 30 días: la única salida era borrarla a mano.
+  Es POST y no GET a propósito — con `sameSite: lax`, la PRECARGA de un enlace cerraría la sesión sola.
+  (2) **`portal_poliza_declarada` no la leía ninguna pantalla del corredor**: el cliente subía su póliza
+  de otra compañía con su vencimiento y Alberto no se enteraba nunca. Ahora sale en `/correduria` → Hoy,
+  ordenada por la fecha en que aún se puede mover (un mes antes, art. 22 LCS), con tres estados de
+  fecha y `yaEnCartera` de TRES valores: `null` = «no se ha podido comprobar», jamás «no es tuya».
+  (3) **No había historial de accesos** — `ultimo_acceso_en` es un timestamp que se pisa —, así que
+  `seguros.portal_acceso` entra antes que ninguna pantalla: cada día sin ella era irrecuperable. 🚨 Al
+  aplicarla, `prisma_seguros` salió con INSERT/UPDATE **que no se concedieron** (privilegios por defecto
+  del schema): hizo falta un REVOKE, y la lección es que **el GRANT que escribes no es el permiso que
+  queda**. Aviso de Telegram en la primera entrada (nudge, no registro), pendiente de que Alberto ponga
+  `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` en el proyecto `asegura-portal`.
+  📌 Medido y descartado como riesgo: correos compartidos entre fichas = **0** (índice único), y aunque
+  4.209 de las 4.254 fichas con correo son LEADS, el portal filtra por `WHERE_CARTERA_VIVA` → entran a
+  un portal VACÍO. Por eso NO se hizo el pestillo de aprobar registros: con 45 puertas reales, Alberto
+  sería el cuello de botella de su propio portal. Hoja de ruta de las 5 piezas en
+  `docs/superpowers/plans/2026-09-07-portal-hoja-de-ruta.md`.
+  ⚠️ Y una corrección de método: se afirmó aquí que `clientes.grupoasegura.es` no estaba atado a Vercel
+  leyendo `get_project.domains` — que solo trae los alias automáticos del equipo. Era FALSO; lo desmintió
+  el panel. Está en `CLAUDE.md` junto al mismo fallo con `list_projects`.
+
+- **🏢 El armazón del portal, vestido de marca; y Pilar ya estaba dentro (07/09/2026).**
+  Alberto: «el diseño es como un básico fuera de Grupo ASegura… yo quitaba lo que rodea». Diagnóstico
+  correcto (barra blanca pura, suelo gris neutro, activa gris, wordmark en Inter: cero marca en todo el
+  marco), **pero se VISTE, no se quita** — quitar el lateral deshace lo que él pidió el 05/09 y borra el
+  «dónde estoy». PR **#2522, mergeado y READY en producción** (`593f25d5`). Y **#2529**: marca y modelo
+  pasan a pedirse en la 1ª pasada, que es la que funciona.
+  🚨 **Pilar Piña Franco NO necesitaba invitación**: ya está vinculada por índice ciego del correo y fue
+  ELLA quien subió el PDF. Faltaba la **autorización de GLOBAL 2** (5 pólizas vivas). Se avisó de que
+  por la regla del 03/09 («el papel PROPONE el acceso, no lo concede») quien la da es Manuel Antonio, el
+  dueño; **Alberto lo reafirmó dos veces («dale acceso yo mando», «yo soy el único que estoy autorizado
+  a todo») y se anotó por instrucción suya**: `portal_autorizacion` `cf8884c8`, `origen: 'corredor'`,
+  alcance `ver_economico`, título `empleado_autorizado`, `poliza_id` NULL (todas, también las futuras),
+  caduca 07/09/2027, y **nace PENDIENTE** — no abre nada hasta que Pilar la acepte en el portal. Consta
+  en el historial de las dos fichas **como instrucción directa del dueño de la correduría, NO como
+  consentimiento recibido de la sociedad**: es la diferencia que importa el día que se discuta.
+  No se mandó ningún correo: borrador entregado a Alberto. ⚠️ Una Allianz de GLOBAL 2
+  **venció el 01/09/2024 y sigue marcada como viva**. Y el PDF de esa póliza **no se puede releer**: solo
+  se guarda el nombre del fichero, así que cada campo que falle en la subida se pierde hasta que exista
+  el bucket privado.
+
 - **📄 Un SUPLEMENTO no es una póliza, y el armazón del portal no era de la marca (07/09/2026).**
   Alberto subió una póliza real y salieron tres cosas. (1) **Su dato cerró el diagnóstico que yo no
   podía cerrar**: los 55,85 € que se guardaron como prima anual eran de un *suplemento de cambio de

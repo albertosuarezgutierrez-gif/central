@@ -43,6 +43,15 @@ export {
 } from './obligacion.ts'
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
 export {
+  DIAS_LEAD_URGENTE,
+  estadoLead,
+  leadDeclarada,
+  leadUrgente,
+  normalizarNumeroPoliza,
+  ordenarLeads,
+} from './lead-declarada.ts'
+export type { EntradaLead, EstadoLead, Lead } from './lead-declarada.ts'
+export {
   PARTE_ESTADOS,
   DIAS_COMUNICACION_LCS,
   DESCRIPCION_MIN,

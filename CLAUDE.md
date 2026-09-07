@@ -116,6 +116,17 @@
   se queda en 12 sin él ni `alquiler`) — sí aparece en el comentario del bot de Vercel en los PRs. Con
   esa lista incompleta se afirmó aquí que el proyecto «no existe»: **una lista que no lo trae no
   demuestra que no esté.**
+  🔁 **Y el MISMO error otra vez el 07/09/2026, en otro campo — `get_project.domains` NO es la lista
+  de dominios del proyecto.** Sobre `asegura-portal`, la herramienta devolvió solo
+  `asegura-portal-pisos-turisticos-projects.vercel.app` y su `-git-main`, o sea los **alias
+  automáticos del equipo**. Con eso se afirmó aquí que `clientes.grupoasegura.es` «no estaba atado»
+  (y de paso que el botón «Área de clientes» de la web llevaba a un 404). Alberto miró el panel:
+  los dominios del proyecto eran **`clientes.grupoasegura.es`** (Valid Configuration) y
+  **`asegura-portal.vercel.app`**, y el portal cargaba con su título correcto. Las dos afirmaciones
+  eran falsas y ninguna se había medido contra el panel.
+  **La regla, que ya vale para las dos herramientas:** un campo o una lista del MCP de Vercel prueba
+  lo que SÍ trae, nunca lo que no. Para decir que un dominio no está atado hace falta el panel o un
+  `curl` al host, no la ausencia en un JSON.
   💣 **La lección cara (misma tarde): un dominio que se mueve se lleva por delante las rutas de servicio,
   no solo las páginas.** Los seis workflows de crons de `asegura` se repuntaron a `grupoasegura.es`
   (asegura#818) dando por hecho —sin medirlo— que la canonicalización LOO-670 rompía el host viejo. No lo

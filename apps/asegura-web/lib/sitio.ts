@@ -41,13 +41,18 @@ export const SITIO_URL = (process.env.NEXT_PUBLIC_SITIO_URL || 'https://grupoase
  * plataforma, no desde aquí. Un «Acceso corredor» en la web pública es una
  * puerta que ningún cliente necesita y que enseña dónde está la trastienda.
  *
- * Sale de `NEXT_PUBLIC_PORTAL_URL`. El valor por defecto es la URL en la que
- * el portal sirve HOY (`asegura-portal.vercel.app`), que funciona: un botón que
- * apuntara al dominio bonito antes de que su DNS llegue a Vercel mandaría al
- * cliente a IONOS. Cuando `clientes.grupoasegura.es` esté repuntado, se cambia
- * la variable en Vercel y el botón sigue a ese dominio sin tocar código.
+ * Sale de `NEXT_PUBLIC_PORTAL_URL`. **Ya pasó lo que esta nota anunciaba**
+ * (07/09/2026): `clientes.grupoasegura.es` está atado al proyecto
+ * `asegura-portal` con «Valid Configuration», sirve el portal (título medido:
+ * «Mis seguros — Grupo ASegura»), y la variable está puesta en los tres
+ * entornos. Así que el defecto pasa a ser ese dominio y no el
+ * `asegura-portal.vercel.app` de antes: si algún día falta la variable, el
+ * botón tiene que llevar al dominio de la casa, no a una URL de Vercel.
+ *
+ * El `.vercel.app` sigue existiendo y sirviendo, así que esto no arregla nada
+ * roto — cambia cuál es el canónico.
  */
-export const PORTAL_URL = (process.env.NEXT_PUBLIC_PORTAL_URL || 'https://asegura-portal.vercel.app').replace(/\/+$/, '')
+export const PORTAL_URL = (process.env.NEXT_PUBLIC_PORTAL_URL || 'https://clientes.grupoasegura.es').replace(/\/+$/, '')
 
 /** URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`). */
 export function url(ruta: string): string {

@@ -227,6 +227,9 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-telegram':
+        specifier: workspace:*
+        version: link:../../packages/core-telegram
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros

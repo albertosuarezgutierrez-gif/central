@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { InterruptorTema } from './InterruptorTema'
 import { MarcaAsegura } from './MarcaAsegura'
 import { PieLegal } from './PieLegal'
+import { SalirDelPortal } from './SalirDelPortal'
 import { SCRIPT_TEMA } from './tema'
 
 // Marca activa del portal. Es la de `app.grupoasegura.com` medida del CSS
@@ -85,9 +86,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </span>
           <span className="marca-nombre">{MARCA.logos.wordmark}</span>
           <span className="marca-coletilla">Correduría de seguros</span>
-          {/* El interruptor va en la barra y no en un menú: es la única acción
-              de la cabecera, y esconder una sola cosa detrás de un menú cuesta
-              un toque más y un componente más. */}
+          {/* Las dos acciones de la cabecera van sueltas y no en un menú:
+              esconder dos cosas detrás de un botón cuesta un toque más, un
+              componente más y, en esta pantalla, que gente de 50-70 años no
+              encuentre la salida. El ORDEN importa: `Salir` tiene que ser el
+              hermano inmediatamente anterior al interruptor, porque de eso
+              depende que el CSS junte los dos a la derecha en vez de repartir
+              el hueco entre ellos.
+              🚨 Y `SalirDelPortal` devuelve `null` cuando no hay sesión: quien
+              todavía no ha entrado no ve un botón de salir. */}
+          <SalirDelPortal />
           <InterruptorTema />
         </header>
         {children}
