@@ -17,8 +17,9 @@
  *   Cartera   → la foto: cuántos hay y qué vence (los 90 días enteros).
  *   Comisiones→ el dinero: devengado, liquidado y lo que entró al banco.
  *   Datos     → la calidad del dato (duplicadas, gente sin canal). No urge.
- *   Redes     → lo que se va a publicar. Va la última a propósito: es lo único
- *               de la pantalla que mira hacia FUERA, y no compite con la
+ *   Redes     → lo que se va a publicar: los artículos del blog que esperan tu
+ *               OK y los borradores de LinkedIn. Va la última a propósito: es lo
+ *               único de la pantalla que mira hacia FUERA, y no compite con la
  *               cartera que ya está dentro.
  *
  * «Clientes» y «Cartera» no son lo mismo aunque hablen de la misma gente: una
@@ -33,13 +34,18 @@
  * contador distingue tres estados —igual que `FichaTabs`—: un número, `0` (que
  * no se pinta) y `null` = «no se ha podido leer», que se pinta `!` y NUNCA 0.
  *
- * 🚨 «Redes» es la única sección SIN contador, y no es un olvido. El contador
- * mide trabajo pendiente, y aquí eso sería «borradores sin publicar» — un dato
- * que solo conoce LinkedIn y que desde aquí no se puede leer. Pintar el número
- * de borradores del repo diría «tienes 6 cosas pendientes» cuando podrían estar
- * los 6 publicados; pintar `null` (`!`) daría una alarma sobre algo que no
- * falla. No reportar contador es la respuesta honesta: la sección no afirma
- * nada que no sepa.
+ * 🚨 «Redes» cuenta SOLO los artículos del blog, y eso no es una excepción a
+ * la regla: es la regla. El contador mide trabajo pendiente, y de los dos
+ * bloques de la sección solo uno se puede saber. Los borradores de LinkedIn no
+ * («sin publicar» lo sabe LinkedIn, no el repo: pintar 6 diría «tienes 6 cosas
+ * pendientes» cuando podrían estar los 6 publicados). Un artículo del blog sí:
+ * es un PR abierto que nadie ha aprobado, se cuenta preguntándole a GitHub, y
+ * si GitHub no contesta se reporta `null` (`!`), nunca 0.
+ *
+ * Y no es decorativo. El agente hermano de `apps/ia-rest` tiene cuatro
+ * borradores parados desde junio porque esperan en una pantalla en la que nadie
+ * entra; «Redes» es la última pestaña y la que menos se abre. El badge es
+ * exactamente lo que impide que esta pantalla repita aquel fallo.
  */
 
 export type Seccion = 'hoy' | 'clientes' | 'cartera' | 'comisiones' | 'datos' | 'redes'

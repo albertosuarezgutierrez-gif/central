@@ -576,6 +576,29 @@ export const AVISOS: AvisoTelegram[] = [
     que: 'Alguien ha pedido presupuesto en /seguros: sus datos, qué quiere y el enlace a su ficha (o que no se pudo registrar).',
     cuando: 'Al llegar un formulario',
   },
+  {
+    id: 'correduria.blog-listo', categoria: 'correduria',
+    titulo: 'Artículo del blog listo para revisar',
+    que: 'El agente ha escrito el artículo quincenal de grupoasegura.es y lo ha dejado esperando tu OK. No se publica solo: se aprueba en /correduria → Redes.',
+    cuando: 'Los días 1 y 15 a las 10:00, si el artículo pasa la revisión',
+  },
+  {
+    id: 'correduria.blog-cola-agotada', categoria: 'correduria',
+    titulo: 'Se han acabado los temas del blog',
+    que: 'El agente no ha escrito nada porque ya ha cubierto todos los temas aprobados. NO se inventa el siguiente: hay que aprobar temas nuevos (o conectar Search Console).',
+    cuando: 'Los días 1 y 15, solo cuando la cola se agota',
+  },
+  {
+    // Los tres fallos (falta el token, el artículo no pasó la revisión, no se
+    // pudo abrir el PR) comparten interruptor a propósito: para Alberto son la
+    // MISMA noticia —«este quincena no hay artículo y hay que mirar por qué»— y
+    // tres pastillas separadas en el panel serían tres cosas que apagar para
+    // silenciar una. El texto del mensaje sí dice cuál de los tres fue.
+    id: 'correduria.blog-fallido', categoria: 'correduria',
+    titulo: 'El agente del blog no ha podido',
+    que: 'No hay artículo esta quincena, y por qué: falta el token de GitHub, el borrador citaba normas sin verificar, o no se pudo abrir el PR.',
+    cuando: 'Los días 1 y 15, solo cuando falla',
+  },
 ]
 
 export const AVISOS_POR_ID: ReadonlyMap<string, AvisoTelegram> =

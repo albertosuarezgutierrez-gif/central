@@ -147,6 +147,13 @@ export const CRON_JOBS: CronJob[] = [
   // no trae nada— y antes de `agentes-latido` (07:45), para que el parte del día lea una
   // huella fresca. Avisa a Alberto para que LLAME al cliente y le haga seguimiento.
   { path: '/api/cron/correduria-siniestros', schedule: '50 6 * * *' },
+  // Blog de grupoasegura.es: un artículo cada dos semanas (día 1 y 15, 08:00 UTC).
+  // Cron no sabe decir «cada 14 días», y una lista de días de mes es lo más cercano
+  // que además es ESTABLE: un `*/14` se descuadraría en cada mes de 31 días.
+  // 08:00 va DELANTE del vigía de latidos (07:45 es el día anterior) y detrás de la
+  // ingesta de CIMA, que es lo que de verdad compite por el presupuesto de IA.
+  // 🚨 No publica: deja un PR y avisa. Publicar es un clic de Alberto en /correduria.
+  { path: '/api/cron/blog-asegura', schedule: '0 8 1,15 * *' },
   // Partes del PORTAL sin abrir en la compañía: 06:55, el último de la tanda de
   // correduría. Va detrás de siniestros (06:50) a propósito: si un parte ya se
   // ha convertido en siniestro por CIMA, ese aviso llega primero y este ya no lo

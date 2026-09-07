@@ -15,6 +15,7 @@ import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
 import Bloque from './Bloque'
 import Redes from './Redes'
+import Blog from './Blog'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
 import ListaCartera from './ListaCartera'
 import Secciones, { type ContadoresSeccion } from './Secciones'
@@ -139,6 +140,7 @@ export default function CorreduriaClient() {
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
+  const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
 
   // La sección inicial viaja en la URL (`?s=`), y los cambios la reescriben con
   // `history.replaceState`: un enlace sigue llevando donde debe, pero cambiar
@@ -216,6 +218,14 @@ export default function CorreduriaClient() {
       contador: agregarContadores([nDuplicadas, nSinCanal]),
       tono: 'aviso',
       title: 'Pólizas duplicadas y clientes a los que no se puede avisar',
+    },
+    // Solo el blog: los borradores de LinkedIn no se pueden contar como
+    // pendientes (ver `secciones.ts`). Es lo que impide que un artículo escrito
+    // se quede meses esperando en la pestaña que menos se abre.
+    redes: {
+      contador: agregarContadores([nBlog]),
+      tono: 'aviso',
+      title: 'Artículos del blog escritos y pendientes de tu OK',
     },
   }
 
@@ -450,6 +460,7 @@ export default function CorreduriaClient() {
           propósito: mediría «borradores sin publicar», y eso solo lo sabe
           LinkedIn (ver `secciones.ts`). */}
       <div role="tabpanel" aria-label="Redes" className="corr-panel" style={panel('redes')}>
+        <Blog onContador={setNBlog} />
         <Redes />
       </div>
 

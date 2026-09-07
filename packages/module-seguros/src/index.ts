@@ -488,3 +488,13 @@ export type { PolizaOrdenable } from './orden-polizas.ts'
 
 export { leerSitio, textoReparoSitio } from './sitio.ts'
 export type { Sitio, SitioLeido, ReparoSitio } from './sitio.ts'
+
+export {
+  NORMAS_CITABLES,
+  normaPorId,
+  citaLegible,
+  mencionesNormativas,
+  citasNoRespaldadas,
+  idsDesconocidos,
+} from './normas.ts'
+export type { NormaCitable } from './normas.ts'

@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📝 El blog de la correduría se escribe SOLO, pero no se publica solo (07/09/2026).** Cron quincenal
+  (días 1 y 15, `CRON_JOBS`) → redacta con `categoria:'redaccion'` → valida → deja **PR**, y Alberto aprueba
+  con dos botones en `/correduria` → **Redes** (el badge de la pestaña lo cuenta desde cualquier sección: el
+  agente hermano de ia-rest tiene 4 borradores parados desde junio en una pantalla que nadie abre). Lo que
+  hace publicable un artículo escrito por una máquina: **lista blanca `NORMAS_CITABLES`** (5 normas
+  verificadas contra el BOE) + `citasNoRespaldadas`, porque los cepos comprobaban que `base` EXISTIERA, no
+  que la cita fuera CIERTA. 🚨 El `GITHUB_TOKEN` de Vercel tiene `Contents` pero **no `Pull requests`**: con
+  eso el artículo se escribe y el PR no se abre — se ve igual que «el agente no ha hecho nada», así que el
+  cron lo dice con el motivo. Prompts para Alberto en `docs/CORREDURIA-PROMPTS-CHROME.md`. PR pendiente.
 - **📊 Las tres baldosas de la bóveda: el helper puro, medido antes de escribirlo (07/09/2026).**
   Alberto, viendo el panel de ejemplo de `grupoasegura.es`: «lo ideal es que sea igual la intranet,
   y ese diseño que aparece en la web es mejor que el que hay ahora». Pero ese panel son 5 pólizas
