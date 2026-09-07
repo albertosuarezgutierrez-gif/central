@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-07 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
+  Vía B sana (última copia `_buzon_pdf` 05/09, `dias_caido=2`); sin backlog en
+  `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, no por el contador
+  de `list_labels`). Paso 4.0 (`v_facturas_sin_cargo`): 9 filas `revisada_sin_cargo` sin cambios + 1
+  `sin_revisar` (Anthropic 180€, archivada ayer, sin cargo bancario aún — solo 2 días, no se busca
+  aún el motivo). Candidato único del correo: aviso de PriceLabs de próximo cobro 34,98 USD (cargo el
+  8/09, periodo 7/08-6/09) — sin PDF adjunto y sin cargo bancario todavía, nada que archivar hoy.
+  dudas: PriceLabs seguía facturando 4 semanas después de la baja del 09/08/2026 (se esperaba «como
+  mucho una última, de agosto») — a vigilar si vuelve a facturar el mes que viene. `_subir_aqui` y
+  raíz de `FACTURAS Apartamentos/2026` sin novedades (mismo backlog de pasadas previas, sin PDFs
+  nuevos). fallos: —; PRs/commits: —.
 - **2026-09-07 · buscador-ia** · hizo: pasada semanal completa (preflight Telegram 200 OK) + un
   segundo tramo en vivo tras la respuesta de Alberto. 🔴 Hallazgo crítico: `text-embedding-004`
   (embeddings de `ia-cache`) retirado por Google desde el 14/01/2026 — 1ª comprobación real de ese
