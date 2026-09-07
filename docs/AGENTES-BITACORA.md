@@ -15,6 +15,21 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-07 · buscador-ia** · hizo: pasada semanal completa (preflight Telegram 200 OK) + un
+  segundo tramo en vivo tras la respuesta de Alberto. 🔴 Hallazgo crítico: `text-embedding-004`
+  (embeddings de `ia-cache`) retirado por Google desde el 14/01/2026 — 1ª comprobación real de ese
+  eslabón desde que se añadió al watch el 31/08. Impacto real bajo (caché OFF por defecto +
+  fail-open). Aviso por Telegram con el hallazgo; Alberto preguntó «solución? openrouter?» →
+  investigado que OpenRouter ya tiene endpoint `/embeddings` (`openai/text-embedding-3-small`,
+  $0,02/M, `dimensions` configurable) y encaja con la regla permanente OpenRouter-primero
+  (24/08) → implementado (`openrouterEmbed` en `packages/core-ai/src/openrouter.ts`, 11 tests;
+  `geminiEmbed`/`embeddings.ts` eliminados, sin otro consumidor), testeado (`pnpm test` 639/639,
+  `tsc` limpio en plataforma e ia-rest) y mergeado el mismo día. Como la caché nunca sirvió un hit
+  real, no hizo falta re-indexar nada. Resto de la cadena (OpenRouter texto, Groq, Cerebras, Kimi,
+  visión NIM) confirmado vivo por WebSearch, sin key de proveedor en sesión. Sin candidatos de
+  descubrimiento que crucen el listón calidad/precio esta semana.
+  dudas: —; fallos: —; PRs/commits: #2459 (mergeado).
+
 - **2026-09-07 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (obligatorio, no solo los
   EN VIVO). Paso 1: 10/48 fechas del ciclo 31/08 vendidas con income confirmado, sin anomalías
   "sin income" (Feria House 1767€ == propuesta exacta). Paso 2: 4 agentes en paralelo barrieron
@@ -25,19 +40,6 @@
   contaminando Semana Santa/Feria de busto/duplex/luxury) — detectado y BORRADO antes de decidir
   precio, y documentado el landmine en `references/ciclo.md` para que no se repita; PRs/commits:
   ver commit de esta misma pasada.
-
-- **2026-09-07 · buscador-ia** · hizo: pasada semanal completa (preflight Telegram 200 OK).
-  🔴 Hallazgo crítico: `text-embedding-004` (embeddings de `ia-cache`) retirado por Google desde el
-  14/01/2026 — 1ª comprobación real de ese eslabón desde que se añadió al watch el 31/08. Impacto
-  real bajo (caché OFF por defecto + fail-open), pero es un swap con cambio de dimensión → Telegram
-  con el hallazgo y la decisión pendiente (migrar con re-indexado o retirar la caché), no PR
-  mecánico, según regla propia de la skill para embeddings. Resto de la cadena (OpenRouter, Groq,
-  Cerebras, Kimi, visión NIM) confirmado vivo por WebSearch, sin key de proveedor en sesión. Sin
-  candidatos de descubrimiento que crucen el listón calidad/precio esta semana.
-  dudas: si Alberto quiere migrar embeddings o retirar la caché semántica (nunca se ha usado con
-  éxito, así que re-indexar sería trivial: no hay vectores válidos que perder); fallos: —;
-  PRs/commits: sin PR (solo doc + Telegram), commit directo pendiente de este cierre de sesión.
-
 - **2026-09-06 · facturas-correo** · hizo: pasada diaria completa. Salud Vía B OK (última copia
   2026-09-05, 1 día); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`. Paso 4.0
   (barrido `v_facturas_sin_cargo`): las 9 filas siguen `revisada_sin_cargo` (Petroprix ago,

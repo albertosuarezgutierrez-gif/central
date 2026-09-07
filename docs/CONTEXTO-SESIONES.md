@@ -42,6 +42,15 @@
   y el otro afirma que es la única app sin él. #2413 poda 42 entradas del rango que #2262/#2322/#2327
   reintroducen. Confirmado otra vez que `get_files`/`get_diff` del MCP mienten en 3 PRs (base.sha viejo):
   el diff de TRES puntos sobre un clon completo los desmiente.
+- **🔀 buscador-ia: embeddings muertos desde enero → swap a OpenRouter (07/09/2026, PR #2459).**
+  Pasada semanal: `text-embedding-004` (Gemini, embeddings de `ia-cache` de plataforma) llevaba
+  retirado por Google desde el 14/01/2026 (404); 1ª comprobación real de ese eslabón. Impacto bajo
+  (caché OFF por defecto + `embed()` fail-open, nunca sirvió un hit real). Alberto, al ver el aviso
+  Telegram, pidió evaluar OpenRouter → tiene endpoint `/embeddings` (`openai/text-embedding-3-small`,
+  $0,02/M, `dimensions:768` sin migrar la columna pgvector) y encaja con la regla OpenRouter-primero
+  del 24/08. `openrouterEmbed()` nuevo en `packages/core-ai/src/openrouter.ts`; `geminiEmbed`/
+  `embeddings.ts` eliminados (sin otro consumidor). Sin re-indexado necesario (no había vectores
+  válidos que perder). `pnpm test` 639/639, `tsc` limpio en plataforma+ia-rest.
 
 - **💰 Ciclo semanal de pricing SIVRA completo, los 4 pisos (07/09/2026).** 4 agentes en paralelo
   barrieron Booking (12 ventanas/piso: 10 meses + Semana Santa + Feria) → comps escritos hoy:
@@ -51,7 +60,6 @@
   de 3 pisos); detectado y borrado antes de decidir, documentado en
   `.claude/skills/pricing-agente/references/ciclo.md`. Detalle en `pricing_aprendizaje`
   (`ciclo_07_09_2026`) y `docs/AGENTES-BITACORA.md`.
-
 - **🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo (06/09/2026).** Al mergear
   #2439, `merge_pull_request` devolvió `405 ... "Lint · TypeCheck · Build" is in progress` mientras el
   run de `ci.yml` sobre ese head exacto llevaba minutos en `completed`/`success`. Reintentar **sin tocar
