@@ -30,6 +30,34 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔵 `asegura-web` no tenía icono de pestaña — el «AS» negro era de OTRA app (07/09/2026).** Alberto:
+  «sale el logo antiguo no? me gusta más en azul se ve más». Ni `icon.*` ni `favicon.ico` ni
+  `metadata.icons`: salía el globo de Chrome, y el cuadro negro que veía era el de
+  `app.grupoasegura.com` (CRM de Manuel). Ahora `app/icon.tsx` (`next/og`) pinta el monograma en
+  `primario` sobre `acentoSuave`, igual que la cabecera, **leyendo el dibujo de
+  `public/brand/marca-asegura.svg`** en vez de copiar el `path`. 🚨 Ese SVG trae `currentColor`, que
+  dentro de un `<img>` es NEGRO: si alguien le pone color fijo, la sustitución se vuelve no-op y
+  vuelve el icono viejo en silencio. Cepo `lib/icono.test.ts`, 5 mutaciones vistas en rojo. Renderizado
+  y mirado: 128×128 PNG, AS azul sobre azul claro.
+
+- **🏷️ El muro de `asegura-web` ya tiene logos — y no «fallaban»: no existían (07/09/2026).** Alberto:
+  «mira porque no salen los logos». Diagnóstico: `page.tsx` pintaba `<li>{c}</li>` y el CSS lo estilaba
+  como texto gris; ni un `<img>` ni una imagen en el repo. Los cinco SVG (Mapfre, Allianz, Occident,
+  Reale, Generali) salen **del propio repo `asegura` de Alberto**, no de la web de cada compañía — la
+  red del contenedor no deja bajar de fuera. Lista movida a `lib/companias.ts` (logo + `escala`
+  óptica), servidos como `<img>` y no en línea (sus `<style>` chocarían). Medido con Playwright:
+  copia 976→1.172 px contra contenedor de 1.104, sin desbordar a 360 ni a 1440. Cepo
+  `lib/companias.test.ts` (7 mutaciones vistas en rojo). ⚠️ **Fidelidade y Asisa siguen en texto (no
+  tenemos su logo) y el de Occident es el de «Catalana Occidente», la marca vieja.**
+
+- **🚪 Cerrado el amplificador de correo del portal del cliente (07/09/2026).** `POST /api/acceso/solicitar`
+  es pública y sin sesión y escribía fila en `portal_codigo` + disparaba envío con **cualquier cadena de
+  3-200 chars**: correo a un tercero con nuestro dominio y nuestra factura. Ahora canal(503) → tope IP
+  6/h → `destinoValido()` → tope DESTINO 5/h contando filas (429 + `retry-after`). El de IP **solo no
+  vale**: en Vercel el mapa vive por instancia; el global es el de BD. `destino.ts` valida y **NO
+  normaliza** (devuelve boolean) porque `hashCanal` ya normaliza — dos normalizaciones = el código bueno
+  sale `sin_codigo` en silencio. Cepo de **ORDEN** (`test/regression-portal-limite-acceso.test.ts`),
+  8 mutaciones vistas en rojo. Pendiente: índice por `valor_hash` en `portal_codigo` (DDL aparte).
 - **📵 La foto de la factura no llegaba a salir del móvil: el cuerpo moría antes de la función (07/09/2026).**
   Con el archivado ya mergeado (#2474), Alberto probó a subir la factura y volvió a leer «se me ha cortado la
   conexión» — y le di el visto bueno sin haber probado el flujo, que es el error de método de la sesión. En
