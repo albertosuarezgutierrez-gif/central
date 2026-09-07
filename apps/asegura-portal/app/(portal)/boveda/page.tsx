@@ -26,7 +26,13 @@ import { FilaPoliza } from './FilaPoliza'
 import { HistorialSiniestros, RAMO, RecibosDePoliza } from './PolizaVista'
 import { ResumenTitular } from './ResumenTitular'
 import { VistaPorPoliza } from './VistaPorPoliza'
-import { agruparCartera, vistaDeBoveda, type GrupoCartera } from '@central/module-seguros-portal'
+import {
+  agruparCartera,
+  nombreDePila,
+  saludoPorHora,
+  vistaDeBoveda,
+  type GrupoCartera,
+} from '@central/module-seguros-portal'
 
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
@@ -162,6 +168,26 @@ export default async function Boveda({
   }))
 
   const hoy = new Date()
+
+  // ── El saludo de entrada (07/09/2026) ─────────────────────────────────────
+  //
+  // Alberto: «me gustaría que al entrar el cliente sea más ameno, no tan frío».
+  //
+  // 🚨 Se resuelve en el SERVIDOR y con la zona escrita: la página es
+  // `force-dynamic`, así que el «ahora» del render es el mismo que el de las
+  // demás cuentas de esta pantalla. Calcularlo en el navegador daría un texto
+  // distinto en el primer pintado (aviso de hidratación) y, sin `Europe/Madrid`,
+  // el servidor de Vercel —que corre en UTC— erraría de tramo una o dos horas
+  // cada día sin que fallara nada.
+  //
+  // El nombre sale de la IDENTIDAD (quien ha entrado), no de la cartera: si la
+  // persona está vinculada a varias fichas, la cartera no dice a cuál saludar, y
+  // elegir una sería inventarse quién es. `nombreDePila` devuelve `null` en
+  // cuanto duda —una empresa, una inicial, un formato «APELLIDOS, NOMBRE»— y
+  // entonces se saluda SIN nombre: «Buenas tardes» a secas es cordial;
+  // «Buenas tardes, cliente» delata que no sabemos quién ha entrado.
+  const saludo = saludoPorHora(hoy, 'Europe/Madrid')
+  const pila = nombreDePila(identidad.nombre)
   const partesEnviados: ParteEnviado[] = partes.map((p: PartePortal) => ({
     id: p.id,
     // Columna `date`: llega como medianoche UTC, así que el ISO recortado es
@@ -191,6 +217,12 @@ export default async function Boveda({
           estando a un toque, como una sección más de la navegación: quien
           quiere saber quién le está mirando los seguros —o quitárselo a
           alguien— no debería tener que recorrer nada para encontrarlo. */}
+      {/* Va ANTES del h1 y no dentro: el titular sigue diciendo en qué pantalla
+          estás —que es lo que lee un lector de pantalla al saltar por
+          encabezados—, y el saludo es lo de al lado, no el encabezado. */}
+      <p className="saludo">
+        {pila ? `${saludo}, ${pila}` : saludo} <span aria-hidden="true">👋</span>
+      </p>
       <h1>
         Mis <em>seguros</em>
       </h1>

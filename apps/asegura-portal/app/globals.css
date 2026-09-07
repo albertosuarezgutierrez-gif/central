@@ -559,6 +559,21 @@ h1 {
 /* El acento en itálica de marca, que es la firma del titular de la web. Va
    sobre `<em>` y no sobre una clase: en «Mis <em>seguros</em>» la palabra
    destacada es la que lleva el significado, así que el énfasis es semántico. */
+/* El saludo de entrada, encima del titular. Alberto: «que al entrar el cliente
+ * sea más ameno, no tan frío».
+ *
+ * En la fuente de CUERPO y en gris a propósito: si fuera Fraunces competiría
+ * con el h1 que tiene justo debajo, y lo que manda en la pantalla sigue siendo
+ * dónde estás, no que te hayamos saludado. */
+.saludo {
+  margin: 0 0 4px;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
 /* El único salto de escala del titular. La web llega a 60 y 67px; aquí se queda
  * en 40 a propósito: allí el h1 es el primer golpe de vista de un escaparate, y
  * aquí es la etiqueta de una pantalla que se abre a diario. */
