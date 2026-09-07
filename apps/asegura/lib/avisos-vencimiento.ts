@@ -30,7 +30,7 @@
  */
 import { createMailTransporter } from '@central/core-email'
 import { decryptField } from '@central/module-seguros-pii'
-import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seguros'
+import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA, remitenteCorreo } from '@central/module-seguros'
 import { DIAS_VENTANA_AVISO, entraEnVentana } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { eur } from './dinero'
@@ -253,7 +253,7 @@ export async function ejecutarAvisosVencimiento(opts: {
   if (!soloContar) {
     const transporter = createMailTransporter()
     if (!transporter) throw new Error('sin_proveedor_email')
-    const from = process.env.ASEGURA_MAIL_FROM
+    const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
     if (!from) throw new Error('sin_remitente')
     envio = { transporter, from }
   }
