@@ -42,6 +42,8 @@ export {
   declaradaGeneraObligacion,
 } from './obligacion.ts'
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
+export { estadoLead, leadDeclarada, ordenarLeads } from './lead-declarada.ts'
+export type { EntradaLead, EstadoLead, Lead } from './lead-declarada.ts'
 export {
   PARTE_ESTADOS,
   DIAS_COMUNICACION_LCS,
