@@ -37,7 +37,8 @@
   service worker que **no cachea nada a propósito** (aquí hay pólizas y partes de siniestro) + la
   oferta dentro de la sesión. 🚨 **iOS no dispara `beforeinstallprompt`**: si solo se escuchara el
   evento, en iPhone no se vería NADA y nadie se enteraría — ahí se enseñan las instrucciones de
-  «Añadir a pantalla de inicio». 15 cepos vistos en rojo uno a uno. Sin push todavía.
+  «Añadir a pantalla de inicio», con el glifo de Compartir DIBUJADO (a secas no se entiende, y el
+  público es de 50-70 años). 16 cepos vistos en rojo uno a uno. Sin push todavía. PR #2581.
 
 - **🚪 Salida tardía: se confirma la VÍSPERA, y una postura por mensaje (07/09/2026).**
   Borrador del agente a la reserva 154265696 (Luxury Busto) que retenía y concedía a la vez
