@@ -6,6 +6,7 @@
 // Telegram, así que las tres cuentan lo mismo y ninguna reimplementa el flujo. Lo único propio de
 // aquí es el sitio desde donde se sube (antes había que ir a /asistentes) y la tarjeta del resultado.
 import { useCallback, useRef, useState } from 'react'
+import { prepararAdjunto, pesoLegible } from '@/lib/imagen-cliente'
 
 type Accion = { id: string; tipo: string; resumen: string; estado?: string; mensaje?: string }
 
@@ -22,25 +23,27 @@ export default function SubirFactura({ variante }: { variante: 'barra' | 'latera
 
   const subir = useCallback(async (file: File) => {
     setNombre(file.name); setTexto(''); setAcciones([]); setEstado('subiendo')
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const rd = new FileReader()
-      rd.onload = () => resolve(String(rd.result || '').split(',')[1] || '')
-      rd.onerror = () => reject(new Error('read'))
-      rd.readAsDataURL(file)
-    }).catch(() => '')
-    if (!base64) { setTexto('No pude leer el archivo desde el móvil. Inténtalo otra vez.'); setEstado('listo'); return }
+
+    // La foto se encoge AQUÍ, antes de salir del móvil: una foto de 4-12 MB viaja en base64 (×1,37)
+    // y el cuerpo se planta por encima de lo que acepta una función de Vercel, que lo rechaza en la
+    // plataforma SIN invocarla — sin log, sin JSON y con un mensaje que no dice nada. Ver
+    // `lib/imagen-cliente.ts`. Un PDF no se toca.
+    const adj = await prepararAdjunto(file).catch(() => null)
+    if (!adj || !adj.base64) { setTexto('No pude leer el archivo desde el móvil. Inténtalo otra vez.'); setEstado('listo'); return }
+    if (adj.comprimida) setNombre(`${adj.fileName} · ${pesoLegible(adj.bytesOriginal)} → ${pesoLegible(adj.bytesEnviados)}`)
 
     try {
       const r = await fetch('/api/contable/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adjunto: { base64, mimeType: file.type || 'application/octet-stream', fileName: file.name } }),
+        body: JSON.stringify({ adjunto: { base64: adj.base64, mimeType: adj.mimeType, fileName: adj.fileName } }),
       })
       const data = await r.json().catch(() => null) as { respuesta?: string; acciones?: Accion[] } | null
-      // Sin cuerpo legible (504, conexión cortada) NO es «no ha pasado nada»: el archivado y la
-      // imputación pueden haber entrado ya. Reimportar no duplica (el dedupe por huella lo cubre),
-      // así que se dice dónde comprobarlo en vez de afirmar un fallo que no se ha medido.
-      if (!data) setTexto('Se me ha cortado la conexión antes de contestarte. Puede que la factura SÍ haya entrado: míralo en /finanzas antes de volver a subirla (reintentarlo no la duplica).')
-      else { setTexto(data.respuesta || 'Sin respuesta.'); setAcciones(data.acciones || []) }
+      if (data) { setTexto(data.respuesta || 'Sin respuesta.'); setAcciones(data.acciones || []) }
+      // Sin cuerpo legible NO todos los casos son iguales, y el genérico de antes («se me ha cortado
+      // la conexión») los tapaba todos: se DICE cuál es, porque cada uno se arregla distinto.
+      else if (r.status === 413) setTexto(`El archivo es demasiado grande para enviarlo (${pesoLegible(adj.bytesEnviados)}). Si es un PDF, mándalo por correo al buzón de facturas; si es una foto, hazla de nuevo con menos resolución.`)
+      else if (r.status === 504 || r.status === 408) setTexto('La lectura ha tardado demasiado y el servidor ha cortado. Puede que la factura SÍ haya entrado: míralo en /finanzas antes de reintentar (reintentarlo no la duplica).')
+      else setTexto(`No he podido procesarla (error ${r.status}). Puede que SÍ haya entrado: míralo en /finanzas antes de reintentar (reintentarlo no la duplica).`)
     } catch {
       setTexto('No se pudo subir la factura. Comprueba la conexión y reinténtalo.')
     } finally {
