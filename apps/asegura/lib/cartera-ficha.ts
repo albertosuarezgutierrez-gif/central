@@ -825,6 +825,59 @@ export async function origenRetarificacion(
   }
 }
 
+export type ClienteOrigen = {
+  cliente: ClienteCartera
+  /** Para pintar de quién se habla, como `etiqueta` en `OrigenRetarificacion`. */
+  etiqueta: string
+}
+
+/**
+ * La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad
+ * nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no
+ * desde una póliza de la cartera). Misma disciplina que `origenRetarificacion`:
+ * se descifra aquí, y un fallo de descifrado no se convierte en «sin DNI».
+ *
+ * `fechaCarnet` siempre `null`: sale del CONDUCTOR HABITUAL de una póliza, y
+ * aquí no hay ninguna — no aplica a hogar, así que no se echa en falta.
+ */
+export async function clienteOrigenDe(
+  correduriaId: string,
+  clienteId: string,
+): Promise<ClienteOrigen | null> {
+  if (!aseguraConfigurada()) return null
+  const db = prismaAsegura()
+
+  // 🛡️ Aislamiento: SIEMPRE dentro de esta correduría. Con BYPASSRLS un id
+  // ajeno no daría error — daría la ficha de otro.
+  const c = await db.cliente.findFirst({
+    where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
+    select: {
+      nombre: true,
+      apellidos: true,
+      dni: true,
+      telefono: true,
+      fechaNacimiento: true,
+      estadoCivil: true,
+      saludo: true,
+      codigoPostal: true,
+    },
+  })
+  if (!c) return null
+
+  const cliente: ClienteCartera = {
+    nombre: c.nombre,
+    apellidos: c.apellidos,
+    dni: descifrar(c.dni),
+    telefono: descifrar(c.telefono),
+    fechaNacimiento: normalizarFecha(descifrar(c.fechaNacimiento)),
+    estadoCivil: c.estadoCivil ?? null,
+    saludo: c.saludo ?? null,
+    codigoPostal: c.codigoPostal ?? null,
+    fechaCarnet: null,
+  }
+  return { cliente, etiqueta: `${c.nombre} ${c.apellidos}`.trim() || 'Cliente' }
+}
+
 /**
  * La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO
  * (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra

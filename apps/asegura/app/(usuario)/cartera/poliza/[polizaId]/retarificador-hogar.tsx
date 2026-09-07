@@ -83,7 +83,8 @@ const HUERFANOS: Record<string, { etiqueta: string; tipo: 'texto' | 'sexo' }> = 
  * contrato con el puerto: `resueltos` + `correcciones`.
  */
 export default function RetarificadorHogar({
-  polizaId,
+  endpoint,
+  extra,
   resumen: resumenServidor,
   pre,
   defectos,
@@ -97,7 +98,15 @@ export default function RetarificadorHogar({
   primaActual,
   deshabilitado,
 }: {
-  polizaId: string
+  /**
+   * A dónde manda el POST que gasta 0,50€. La misma pantalla sirve para
+   * retarificar una póliza (`/api/cartera/polizas/{id}/retarificar`) y para
+   * una oportunidad nueva sin póliza (`/api/cartera/cliente/{id}/hogar-nuevo`,
+   * que además exige `referencia` en el cuerpo — ver `extra`).
+   */
+  endpoint: string
+  /** Campos extra que este flujo necesita en el cuerpo del POST (p.ej. `referencia` catastral). */
+  extra?: Record<string, unknown>
   /** La ficha ya armada en el servidor: es lo que se pinta mientras nadie corrija nada. */
   resumen: Resumen
   /** La precalificación entera, para rehacer la ficha al corregir una fila. */
@@ -222,10 +231,10 @@ export default function RetarificadorHogar({
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
     try {
-      const res = await fetch(`/api/cartera/polizas/${polizaId}/retarificar`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ resueltos: cuerpoResueltos(), correcciones: cuerpoCorrecciones() }),
+        body: JSON.stringify({ ...extra, resueltos: cuerpoResueltos(), correcciones: cuerpoCorrecciones() }),
       })
       const j = (await res.json()) as Record<string, unknown>
       if (res.status === 422) {

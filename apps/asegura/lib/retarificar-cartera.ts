@@ -41,12 +41,14 @@
  */
 
 import { correduriaUnica } from '@/lib/cartera'
-import { origenRetarificacion, type OrigenRetarificacion } from '@/lib/cartera-ficha'
+import { origenRetarificacion, clienteOrigenDe, type OrigenRetarificacion } from '@/lib/cartera-ficha'
 import { precalificarAuto, type Resueltos } from '@/lib/codeoscopic/desde-cartera'
+import type { ClienteCartera } from '@/lib/codeoscopic/desde-cartera'
 import {
   precalificarHogarCartera,
   type CatalogoResuelto,
   type CatastroHogar,
+  type HogarCartera,
   type ResueltosHogar,
   type SupuestoHogar,
 } from '@/lib/codeoscopic/desde-cartera-hogar'
@@ -358,10 +360,42 @@ const CORRECCIONES_BOOLEANAS = [
  * ese mensaje es lo que dice qué campo sobra o falta, y un 400 de validación
  * no se cobra.
  */
-async function prepararHogar(
+function prepararHogar(
   origen: OrigenRetarificacion,
   cuerpo: CuerpoRetarificacion,
   polizaId: string,
+): Promise<Preparado> {
+  const catastro: CatastroHogar | null = esObjetoPlano(cuerpo.catastro)
+    ? {
+        metrosCuadrados: numero(cuerpo.catastro.metrosCuadrados),
+        anioConstruccion: numero(cuerpo.catastro.anioConstruccion),
+        codigoPostal: cadena(cuerpo.catastro.codigoPostal),
+        uso: cadena(cuerpo.catastro.uso),
+      }
+    : null
+  return prepararHogarDesde(
+    origen.cliente,
+    { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, hogar: origen.hogar },
+    cuerpo,
+    `poliza-${polizaId}`,
+    catastro,
+  )
+}
+
+/**
+ * El cuerpo de hogar, ramo-agnóstico de origen: le da igual si el riesgo sale
+ * de una póliza (`prepararHogar`) o de un cliente sin ninguna
+ * (`prepararRetarificacionNuevaHogar`, oportunidad nueva desde el Catastro).
+ * `catastro` llega YA resuelto — cada llamante decide de dónde sale (del
+ * cuerpo que manda el navegador para una póliza existente; de una consulta
+ * fresca al Catastro, servidor, para una oportunidad nueva).
+ */
+async function prepararHogarDesde(
+  cliente: ClienteCartera,
+  polizaInfo: { numeroPoliza: string | null; fechaVencimiento: string | null; hogar: HogarCartera | null },
+  cuerpo: CuerpoRetarificacion,
+  externalId: string,
+  catastro: CatastroHogar | null,
 ): Promise<Preparado> {
   const rs: Record<string, unknown> = esObjetoPlano(cuerpo.resueltos) ? cuerpo.resueltos : {}
   const s = esObjetoPlano(rs.supuestos) ? rs.supuestos : {}
@@ -386,26 +420,7 @@ async function prepararHogar(
     propietarioEsTomador: booleano(rs.propietarioEsTomador),
     supuestos,
   }
-  const catastro: CatastroHogar | null = esObjetoPlano(cuerpo.catastro)
-    ? {
-        metrosCuadrados: numero(cuerpo.catastro.metrosCuadrados),
-        anioConstruccion: numero(cuerpo.catastro.anioConstruccion),
-        codigoPostal: cadena(cuerpo.catastro.codigoPostal),
-        uso: cadena(cuerpo.catastro.uso),
-      }
-    : null
-
-  const pre = precalificarHogarCartera(
-    origen.cliente,
-    {
-      numeroPoliza: origen.poliza.numeroPoliza,
-      fechaVencimiento: origen.poliza.fechaVencimiento,
-      hogar: origen.hogar,
-    },
-    resueltos,
-    hoyIso(),
-    catastro,
-  )
+  const pre = precalificarHogarCartera(cliente, polizaInfo, resueltos, hoyIso(), catastro)
 
   // Los números del formulario llegan como TEXTO («76», «61000»); se convierten
   // aquí y lo que no es número se descarta (queda lo precalificado), nunca a 0.
@@ -459,12 +474,84 @@ async function prepararHogar(
     return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
   }
   // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
-  peticion.externalId = `poliza-${polizaId}`
+  peticion.externalId = externalId
   return {
     peticion,
     motivo: 'defensa-cartera-hogar',
     supuestos: pre.supuestos,
     fuenteRiesgo: pre.fuenteRiesgo,
+  }
+}
+
+// ─── HOGAR, oportunidad nueva (sin póliza) ───────────────────────────────────
+
+/**
+ * Como `prepararRetarificacion`, pero para un cliente que HOY no tiene ninguna
+ * póliza de hogar: una oportunidad nueva, presupuestada desde el Catastro
+ * (`/correduria/hogar` en plataforma → aquí, con «Pedir precio real ↗»).
+ *
+ * Misma disciplina que su gemela: **no gasta**. Corta antes del vendor (422
+ * faltan datos · 409 ramo · 404 cliente · 503 correduría/config), y en todos
+ * esos casos la respuesta lleva `gastado: '0,00€'`. La llamada que paga sigue
+ * viviendo en la ruta, no aquí (ver la cabecera del fichero).
+ *
+ * `catastro` llega YA resuelto por el llamante (consulta fresca al Catastro,
+ * en el servidor): a diferencia de una póliza existente, aquí NO hay ficha de
+ * la que sacar el riesgo, así que sin Catastro no hay nada que precalificar.
+ */
+export async function prepararRetarificacionNuevaHogar(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+  catastro: CatastroHogar | null
+}): Promise<PreparadoRetarificacion> {
+  const { clienteId, solicitadoPor, cuerpo, catastro } = entrada
+
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        {
+          error:
+            'No se ha podido resolver la correduría, así que ni se consulta la cartera sin filtro ' +
+            'ni se cotiza. Esto NO significa que el cliente no exista.',
+        },
+        503,
+      ),
+    }
+  }
+
+  // 🛡️ Aislamiento: el cliente se busca SIEMPRE dentro de esta correduría.
+  const origen = await clienteOrigenDe(correduria.id, clienteId)
+  if (!origen) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'cliente no encontrado' }, 404) }
+  }
+
+  const preparado = await prepararHogarDesde(
+    origen.cliente,
+    { numeroPoliza: null, fechaVencimiento: null, hogar: null },
+    cuerpo,
+    `cliente-${clienteId}`,
+    catastro,
+  )
+  if ('respuesta' in preparado) return { estado: 'corte', respuesta: preparado.respuesta }
+
+  return {
+    estado: 'listo',
+    peticion: {
+      correduriaId: correduria.id,
+      cuerpo: preparado.peticion,
+      motivo: preparado.motivo,
+      solicitadoPor,
+      // A diferencia de una póliza (donde `clienteId` va a null porque el
+      // origen trae el cliente por sus datos, no por su id verificado), aquí
+      // SÍ hay un id verificado con `clienteOrigenDe` (scoped a esta
+      // correduría): se guarda, para poder seguir la cotización desde su ficha.
+      contexto: { ramo: 'hogar', puerta: 'corredor', polizaId: null, clienteId },
+    },
+    supuestos: preparado.supuestos,
+    fuenteRiesgo: preparado.fuenteRiesgo,
   }
 }
 

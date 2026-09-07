@@ -48,6 +48,16 @@ export type CatastroHogar = {
   anioConstruccion: number | null
   codigoPostal: string | null
   uso: string | null
+  /**
+   * La dirección oficial del Catastro, YA TROCEADA (con `paramsDnploc` de
+   * `@central/core-catastro`, que entiende el formato propio del Catastro
+   * «Es:1 Pl:01 Pt:IZ» — el `partirDireccion` de aquí abajo está pensado para
+   * el texto libre de la ficha del CRM y NO lo reconoce). Se usa solo cuando
+   * NO hay póliza ni gemela de la que sacar la calle: una oportunidad nueva
+   * sobre un cliente sin riesgo en cartera. Si la póliza SÍ trae dirección,
+   * esta no se usa: manda siempre `h.direccion` (dato de la ficha).
+   */
+  direccion?: DireccionPartida | null
 }
 
 /** Los desplegables de catálogo que la pantalla resuelve (ids del vendor). */
@@ -199,13 +209,19 @@ export function precalificarHogarCartera(
   if (cp === null && limpio(cliente.codigoPostal) !== null) {
     cp = suponer('cp', limpio(cliente.codigoPostal)!, 'la ficha no dice dónde está la vivienda; se supone que es donde vive el tomador')
   }
-  // La calle: troceada de la dirección de la ficha. El vendor la exige entera.
-  const dir = partirDireccion(h?.direccion ?? null)
+  // La calle: troceada de la dirección de la ficha; sin ficha (sin póliza), la
+  // del Catastro, YA troceada por `direccionDesdeCatastro` (`partirDireccion`
+  // no entiende el formato propio del Catastro). El vendor la exige entera.
+  const dirDeFicha = partirDireccion(h?.direccion ?? null)
+  const usaDireccionCatastro = dirDeFicha.nombre === null && Boolean(catastro?.direccion?.nombre)
+  const dir = usaDireccionCatastro ? catastro!.direccion! : dirDeFicha
   if (dir.nombre !== null) {
     supuestos.push({
       campo: 'nombreVia',
       valor: dir.nombre,
-      porque: 'calle y número troceados automáticamente de la dirección de la ficha: comprueba que la calle, el número, la planta y la puerta han quedado bien',
+      porque: usaDireccionCatastro
+        ? 'calle y número troceados automáticamente de la dirección OFICIAL del Catastro (no hay póliza de la que sacarla): comprueba que la calle, el número, la planta y la puerta han quedado bien'
+        : 'calle y número troceados automáticamente de la dirección de la ficha: comprueba que la calle, el número, la planta y la puerta han quedado bien',
     })
   }
 
@@ -358,6 +374,30 @@ const TIPOS_VIA: Record<string, string> = {
   pg: 'Polígono', poligono: 'Polígono',
   al: 'Alameda', alameda: 'Alameda',
   cta: 'Cuesta', cuesta: 'Cuesta',
+}
+
+/**
+ * De `paramsDnploc()` (`@central/core-catastro`, que sí entiende «Es:1 Pl:01
+ * Pt:IZ») a `DireccionPartida`. Existe porque `partirDireccion()` de aquí
+ * abajo está pensado para el texto libre de la ficha del CRM y no reconoce el
+ * formato propio del Catastro — reparsear con el parser equivocado perdía
+ * planta y puerta en silencio.
+ */
+export function direccionDesdeCatastro(p: {
+  sigla: string
+  calle: string
+  numero: string
+  planta?: string | null
+  puerta?: string | null
+} | null): DireccionPartida {
+  if (p === null) return { ...SIN }
+  return {
+    tipoVia: TIPOS_VIA[p.sigla.trim().toLowerCase()] ?? null,
+    nombre: limpio(p.calle) ?? null,
+    numero: limpio(p.numero) ?? null,
+    planta: p.planta ?? null,
+    puerta: p.puerta ?? null,
+  }
 }
 
 const RE_NUMERO = /^\d{1,4}[a-z]?$/i
