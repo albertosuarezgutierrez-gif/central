@@ -15,8 +15,14 @@ import { logTurno } from '@/lib/contable/memoria'
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
-// Tope defensivo del adjunto: ~8 MB de binario (base64 ≈ 4/3). Un ticket/factura entra de sobra.
-const MAX_BASE64 = 11_000_000
+// Tope defensivo del adjunto. 🚨 11.000.000 era INALCANZABLE y por eso engañaba: el cuerpo de una
+// Serverless Function de Vercel se corta MUY por debajo, y ese corte lo hace la plataforma ANTES de
+// invocar la función — sin log, sin JSON y con un `r.json()` del cliente que revienta. O sea, entre
+// este tope y el real había una franja en la que el usuario recibía «se me ha cortado la conexión»
+// y aquí no constaba ni el intento (07/09/2026: dos subidas de una foto de móvil, cero trazas).
+// El cliente encoge la foto antes de enviarla (`lib/imagen-cliente.ts`, TOPE_BASE64 = 3.500.000);
+// esto es el cinturón por si llega algo por otra vía.
+const MAX_BASE64 = 4_000_000
 
 // Traduce un error de la IA a un mensaje claro para Alberto. Los proveedores gratuitos (NIM/Groq/
 // Gemini) devuelven 429/quota cuando se saturan, y el cerebro puede abortar por timeout: en ambos
@@ -40,7 +46,8 @@ export async function POST(req: NextRequest) {
   // --- Rama documento (foto de ticket / PDF de factura) -------------------------------------
   if (adjunto && typeof adjunto.base64 === 'string' && typeof adjunto.mimeType === 'string') {
     if (adjunto.base64.length > MAX_BASE64) {
-      return NextResponse.json({ respuesta: 'El archivo es demasiado grande. Súbelo por debajo de 8 MB.' })
+      const mb = (adjunto.base64.length * 3 / 4 / 1_048_576).toFixed(1).replace('.', ',')
+      return NextResponse.json({ respuesta: `El archivo es demasiado grande (${mb} MB) para procesarlo por aquí. Si es un PDF, mándalo por correo al buzón de facturas; si es una foto, hazla con menos resolución.` })
     }
     try {
       const buffer = Buffer.from(adjunto.base64, 'base64')
@@ -56,7 +63,7 @@ export async function POST(req: NextRequest) {
         await logTurno(session.id, 'web', 'assistant', doc.resumen)
         return NextResponse.json({ respuesta: doc.resumen, guardados: [], acciones: [] })
       }
-      const respuesta = resumenDocumento(doc.factura, doc.cruce)
+      const respuesta = resumenDocumento(doc.factura, doc.cruce, doc.archivo)
       const prop = accionConciliar(doc.factura, matchDeCruce(doc.cruce))
       const acciones = prop ? await guardarAcciones(session.id, [prop]) : []
       await logTurno(session.id, 'web', 'assistant', respuesta)

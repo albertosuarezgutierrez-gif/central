@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Calculator } from 'lucide-react'
 import { PageHeader } from '@/components/ui'
+import { prepararAdjunto, pesoLegible, TOPE_BASE64 } from '@/lib/imagen-cliente'
 
 const SUGERENCIAS = [
   '¿Cuánto llevo gastado en luz este año?',
@@ -65,25 +66,23 @@ export default function ContableChat({ cabecera }: { cabecera?: React.ReactNode 
 
   const subirDocumento = useCallback(async (file: File) => {
     if (!file || loading) return
-    if (file.size > 8_000_000) {
-      setMsgs(m => [...m, { rol: 'agente', texto: 'El archivo pesa más de 8 MB. Súbelo más ligero.' }])
+    // La guarda de «8 MB» que había aquí medía lo que NO viaja: el fichero. Lo que se envía es su
+    // base64 dentro del JSON, que abulta ×1,37 — así que una foto de 5 MB la pasaba y luego la
+    // rechazaba la plataforma, sin invocar la función y sin devolver JSON. Ahora la foto se ENCOGE
+    // antes de salir (ver `lib/imagen-cliente.ts`) y solo se rechaza lo que aun así no cabe.
+    const adj = await prepararAdjunto(file).catch(() => null)
+    if (!adj || !adj.base64) { setMsgs(m => [...m, { rol: 'agente', texto: 'No pude leer el archivo.' }]); return }
+    if (adj.base64.length > TOPE_BASE64) {
+      setMsgs(m => [...m, { rol: 'agente', texto: `Este archivo pesa ${pesoLegible(adj.bytesEnviados)} y no cabe en una subida. Si es un PDF, mándalo por correo al buzón de facturas; si es una foto, hazla con menos resolución.` }])
       return
     }
-    // Leer como base64 (data URL → quitamos el prefijo "data:...;base64,").
-    const base64: string = await new Promise<string>((resolve, reject) => {
-      const rd = new FileReader()
-      rd.onload = () => resolve(String(rd.result || '').split(',')[1] || '')
-      rd.onerror = () => reject(new Error('read'))
-      rd.readAsDataURL(file)
-    }).catch(() => '')
-    if (!base64) { setMsgs(m => [...m, { rol: 'agente', texto: 'No pude leer el archivo.' }]); return }
 
-    setMsgs(m => [...m, { rol: 'tu', texto: `📎 ${file.name}` }])
+    setMsgs(m => [...m, { rol: 'tu', texto: `📎 ${file.name}${adj.comprimida ? ` (${pesoLegible(adj.bytesOriginal)} → ${pesoLegible(adj.bytesEnviados)})` : ''}` }])
     setLoading(true)
     try {
       const r = await fetch('/api/contable/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adjunto: { base64, mimeType: file.type || 'application/octet-stream', fileName: file.name } }),
+        body: JSON.stringify({ adjunto: { base64: adj.base64, mimeType: adj.mimeType, fileName: adj.fileName } }),
       })
       const data = await r.json().catch(() => null)
       // Sin cuerpo legible (504 del servidor, conexión cortada) NO es «el agente no ha dicho nada»:
@@ -91,7 +90,14 @@ export default function ContableChat({ cabecera }: { cabecera?: React.ReactNode 
       // 109 movimientos importado y archivado, y en pantalla «Sin respuesta.» Reimportar no duplica,
       // así que lo honesto es decir dónde comprobarlo antes de volver a subirlo.
       if (!data) {
-        setMsgs(m => [...m, { rol: 'agente', texto: 'Se me ha cortado la conexión antes de poder contestarte. Puede que el documento SÍ haya entrado: compruébalo en /banca antes de volver a subirlo (reimportarlo no duplica nada).' }])
+        // Cada fallo se dice por su nombre: un cuerpo rechazado por tamaño y un tiempo agotado se
+        // arreglan distinto, y el mensaje único de antes los tapaba los dos.
+        const txt = r.status === 413
+          ? `El archivo es demasiado grande para enviarlo (${pesoLegible(adj.bytesEnviados)}). Si es un PDF, mándalo por correo al buzón de facturas.`
+          : r.status === 504 || r.status === 408
+            ? 'La lectura ha tardado demasiado y el servidor ha cortado. Puede que el documento SÍ haya entrado: compruébalo en /banca antes de volver a subirlo (reimportarlo no duplica nada).'
+            : `No he podido procesarlo (error ${r.status}). Puede que SÍ haya entrado: compruébalo en /banca antes de volver a subirlo (reimportarlo no duplica nada).`
+        setMsgs(m => [...m, { rol: 'agente', texto: txt }])
       } else {
         pintarRespuesta(data)
       }

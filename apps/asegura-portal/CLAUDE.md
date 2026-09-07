@@ -594,6 +594,7 @@ apps/asegura-portal/            Next.js 15 (App Router), React 19, Prisma 5 (mul
   lib/canal.ts                  el PUERTO de canal (registro de adaptadores)
   lib/canal-email.ts            adaptador email (producción)
   lib/canal-consola.ts          adaptador desarrollo (log del servidor)
+  lib/rate-limit.ts             tope por IP EN MEMORIA (por instancia; no es el límite real)
   lib/extraer-poliza.ts         PDF→texto→IA, o foto→visión
   lib/db.ts, lib/dinero.ts      cliente Prisma; eur() en formato español
 packages/module-seguros-portal/ lógica PURA: sin BD, sin red, sin Next
@@ -655,6 +656,51 @@ Decirle a alguien que falló el envío cuando en realidad WhatsApp no está mont
 el código las dos cosas se ven idénticas. Por eso `obtenerCanal()` devuelve `null` (no lanza) y
 `enviarCodigo()` devuelve `false` (tampoco lanza): son dos estados distintos y quien llama los separa.
 Los textos de ambos ya están en el mapa de `textoError()` de `app/page.tsx`.
+
+### 📨 El amplificador de correo (07/09/2026): dos topes, y uno solo no vale
+
+`POST /api/acceso/solicitar` es **pública y sin sesión**. Hasta este cambio escribía una fila en
+`portal_codigo` y disparaba un envío con **cualquier cadena de 3 a 200 caracteres**: o sea, cualquiera
+podía usar el portal para meterle correo a un tercero, con nuestro dominio en el remitente y nuestra
+factura de Resend. No hacía falta ser cliente — la fila se escribe para cualquier destino.
+
+Van **tres** guardas, y el orden importa tanto como que existan:
+
+| Orden | Guarda | Respuesta | Por qué ahí |
+|---|---|---|---|
+| 1 | ¿existe el canal? | `503 canal_no_disponible` | Si WhatsApp no está montado el problema es NUESTRO: no se le gasta cuota ni se le echa la culpa a lo que ha escrito. Y no abre agujero: un 503 no escribe fila ni envía |
+| 2 | tope por **IP** (6/h) | `429` + `retry-after` | Barato y en memoria, así que va antes de tocar la BD |
+| 3 | ¿el destino es entregable? | `400 destino_invalido` | Después del tope por IP: una ristra de peticiones con basura es abuso igual, y así no sale gratis |
+| 4 | tope por **DESTINO** (5/h) | `429` + `retry-after` | Cuenta filas en `portal_codigo`, o sea es **global** |
+
+🚨 **El tope por IP NO basta, y confundirlo con «ya está limitado» es el fallo caro.** En Vercel el
+mapa de `lib/rate-limit.ts` vive en la memoria de cada instancia serverless y se recicla: un abusador
+repartido no lo ve nunca, porque cada petición puede caer en otra instancia con el contador a cero. El
+único que de verdad impide llenarle el buzón a una persona es el **de destino**, que cuenta filas en la
+BD. Van los dos: el primero corta el ruido barato antes de tocar la BD, el segundo pone el límite real.
+
+🔎 **El contador por destino NO es un oráculo de «¿es cliente?»**, y eso es deliberado: la fila se
+escribe para CUALQUIER destino que se pida, esté o no en la cartera, así que el contador solo dice
+cuántos códigos se han pedido para ese destino. Si algún día se «optimiza» para no escribir fila
+cuando el destino no está en la cartera, la ruta pasa a responder distinto según quién sea cliente —
+y eso es un enumerador de la cartera servido en abierto.
+
+**La validación del destino vive en `@central/module-seguros-portal` (`src/destino.ts`) y VALIDA PERO
+NO NORMALIZA.** Devuelve `boolean`, no una cadena limpia, y es a propósito: quien busca el código
+después compara `hashCanal(destino)`, y `hashCanal` ya hace su propio `trim().toLowerCase()`
+(`lib/auth.ts`). Dos normalizaciones en dos sitios = el día que una cambie, el hash de escritura y el
+de lectura dejan de coincidir y el código bueno sale `sin_codigo`: un fallo **silencioso**, sin
+excepción y sin log, del que solo se entera el cliente que no puede entrar. Por eso un destino con
+espacios alrededor se **rechaza**, no se limpia. Y un `600123456` sin `+` se rechaza en vez de
+suponerle `+34`: adivinar el país es inventarse un dato de la persona.
+
+⏳ **Cabo suelto conocido:** `portal_codigo` **no tiene índice por `valor_hash`**, así que el `count`
+recorre la tabla. Hoy es diminuta y no se nota; el DDL va en su propio paso, no colado aquí.
+
+Cepos: `test/regression-portal-limite-acceso.test.ts` (mide el **ORDEN** dentro del cuerpo del `POST`,
+no la presencia — un test que solo busque las palabras se pone verde con las guardas DEBAJO del
+`create`, que es justo el fallo que no se vería hasta llegar la factura) y
+`packages/module-seguros-portal/src/destino.test.ts`.
 
 ## 🔒 Aislamiento multi-cliente: lo da el CÓDIGO, no RLS
 
@@ -1005,7 +1051,7 @@ además `PATCH /api/polizas/[id]` (corregir una póliza), `POST /api/siniestros`
 
 | Ruta | Entrada | Salida | Notas |
 |---|---|---|---|
-| `POST /api/acceso/solicitar` | `{ tipo: 'whatsapp'\|'email', destino }` (zod) | `{ ok }` · `400 datos_invalidos` · **`503 canal_no_disponible`** · **`502 envio_fallido`** | Guarda el código con `hashCanal(destino)`, nunca el email en claro |
+| `POST /api/acceso/solicitar` | `{ tipo: 'whatsapp'\|'email', destino }` (zod) | `{ ok }` · `400 datos_invalidos` · **`400 destino_invalido`** · **`429 demasiadas_peticiones`** (+ `retry-after`) · **`503 canal_no_disponible`** · **`502 envio_fallido`** | Guarda el código con `hashCanal(destino)`, nunca el email en claro. **Es pública y sin sesión: lleva dos topes** — ver «El amplificador de correo» |
 | `POST /api/acceso/verificar` | `{ tipo, destino, codigo }` (6 chars) | `{ ok, vinculo }` + cookie · `400 datos_invalidos\|sin_codigo` · `401 incorrecto\|caducado\|ya_usado\|bloqueado` | Coge el código **más reciente** de ese canal; el intento se cuenta siempre que sea `incorrecto`; crea la identidad si no la había; marca `usado_en` y `ultimo_acceso_en` en una transacción; **Fase 4:** llama a `vincularIdentidad()` con el email en claro y devuelve `vinculo` (`ok`/`ya_vinculada`/`sin_ficha`/`ambiguo`/`sin_clave`/`error`) sin bloquear |
 | `POST /api/polizas` | `multipart`, campo `documento` (PDF o imagen) | `{ id, datos, fuente }` · `401 sin_sesion` · `400 sin_fichero` · `413 fichero_grande` | `runtime = 'nodejs'`; tope **10 MB**; la identidad sale de `requireIdentidad()`, nunca del cuerpo |
 | `POST /api/catastro` | `{ direccion, municipio, provincia }` **o** `{ referencia }` (zod, con topes) | `200 ok` · **`300 elegir`** (varios inmuebles) · `401 sin_sesion` · `400 datos_invalidos` · `404 no_encontrado` · `409 via_ambigua` · `422 direccion_ilegible\|referencia_invalida` · **`502 catastro_no_responde`** | **Exige sesión**: sin ella sería un proxy anónimo contra el Catastro con nuestra IP. Solo CONSULTA (no escribe en la BD) y **no registra la dirección en ningún log**. Mira el `estado`, no el número |

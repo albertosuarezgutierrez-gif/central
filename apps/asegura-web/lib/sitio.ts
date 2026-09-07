@@ -85,6 +85,37 @@ export const AMBITO = {
   pais: 'ES',
 } as const
 
+/**
+ * Perfiles oficiales del negocio. Alimentan `sameAs` en la ficha
+ * `InsuranceAgency` (`lib/seo.ts`), que es lo que le dice a un buscador que la
+ * web y esos perfiles son EL MISMO negocio, no varios con nombre parecido.
+ *
+ * Aquí eso no es cosmético: conviven tres dominios propios (`grupoasegura.es`,
+ * `app.grupoasegura.com` con el CRM, y la landing vieja de plataforma) y existe
+ * una correduría HOMÓNIMA en Montevideo (`grupoasegura.com.uy`). Sin `sameAs`,
+ * la señal de marca se reparte entre todos.
+ *
+ * 🚨 Reglas, vigiladas por `seo-perfiles.test.ts`: URL **canónica** del perfil
+ * (nunca un acortador como `share.google`, que caduca y esconde su destino),
+ * sin parámetros de campaña (el botón «compartir» de las apps pega un `?si=`),
+ * y sin repetir. Si la lista queda vacía, `sameAs` **no se emite** — un array
+ * vacío afirmaría «se miró y no hay perfiles», que no es lo mismo que «todavía
+ * no se han dado de alta».
+ *
+ * ⚠️ **Nada de esto está MEDIDO desde el repo**: el proxy de esta sesión deniega
+ * `youtube.com` y `google.com`, así que un perfil entra aquí por la palabra de
+ * Alberto. El guardián comprueba la FORMA; que la URL sea suya, no puede.
+ *
+ * ⏳ Pendiente: la ficha de Google Business (existe y está verificada; falta su
+ * URL canónica de Maps). Cuando entre, `geo` también deja de estar bloqueado.
+ */
+export const PERFILES: readonly string[] = [
+  // Canal de YouTube. El handle canónico lleva las mayúsculas del monograma
+  // («AS» = Alberto Suárez), igual que la marca: YouTube no las distingue, pero
+  // en datos estructurados va la forma que el propio canal publica.
+  'https://www.youtube.com/@GrupoASegura',
+] as const
+
 /** Navegación principal. El orden es el de prioridad comercial, no el alfabético. */
 export const NAV = [
   { href: '/seguros/hogar', texto: 'Hogar' },

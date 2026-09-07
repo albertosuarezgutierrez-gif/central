@@ -1,4 +1,13 @@
 export {
+  PROHIBIDO,
+  ACOTA_AMBITO,
+  revisarCopy,
+  explicarInfracciones,
+  type ReglaCopy,
+  type Infraccion,
+} from './copy-regulado.ts'
+
+export {
   esCarteraViva,
   esVolcadoHistorico,
   sqlCarteraViva,

@@ -11,6 +11,7 @@ import {
   TrendingUp, User, UserCheck, Users, UtensilsCrossed, Wrench,
   type LucideIcon, BookUser } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
+import SubirFactura from './SubirFactura'
 import { activoPorRuta, activoEnLista } from '@/lib/nav-activo'
 
 // Iconos de lucide, NO emojis: cada sistema operativo pinta el emoji a su manera (color,
@@ -427,9 +428,15 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
               lineHeight: 1, cursor: 'pointer', color: 'var(--text)',
             }}
           >☰</button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px', minWidth: 0 }}>
             <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '6px', padding: '1px 7px', fontSize: '12px' }}>ia</span>
             <span>plataforma</span>
+          </div>
+          {/* Subir una factura desde CUALQUIER pantalla, sin pasar por /asistentes: es la acción que
+              Alberto hace con el móvil en la mano delante del papel. `marginLeft:auto` la pega a la
+              derecha sin empujar la marca (la barra mide 52px y el botón 44: cabe sin desbordar). */}
+          <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+            <SubirFactura variante="barra" />
           </div>
         </div>
 
@@ -494,6 +501,11 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
           }}
         >{plegado ? '»' : '«'}</button>
       </div>
+      {!plegado && (
+        <div style={{ padding: '12px 12px 12px 20px', borderBottom: '1px solid var(--border)' }}>
+          <SubirFactura variante="lateral" />
+        </div>
+      )}
       <NavLinks />
       <Footer />
     </nav>
