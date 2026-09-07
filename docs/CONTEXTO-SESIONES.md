@@ -40,6 +40,15 @@
   Ahora la foto se **encoge en el navegador** (`lib/imagen-cliente.ts`, medido en Chromium: **12,4 MB → 1,8 MB**;
   el PDF no se toca) y cada fallo se dice por su nombre. Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
 
+- **🔍 Auditoría ligera (07/09/2026).** Hallazgo grande: **#2318/#2322/#2327 dicen en su cuerpo "solo
+  bitácora" pero traen código real sin revisar** (módulo `mensajes-prog` de SIVRA, `module-seguros-portal`
+  con migraciones) atascados en conflicto con CERO checks corridos nunca — antes de cerrarlos como
+  duplicados, hay que abrir el diff. Corregido en código (verificado con typecheck+tests):
+  `/api/acceso/solicitar` de asegura-portal sin rate limit ni validación de email (H4, "lo más urgente"
+  desde el 06/09 y sin tocar) y 3 huellas sanas (`smoobu_sync`, `correduria_partes`, `trading_h10`) que
+  no estaban en `AGENTES_VIGILADOS`. 🟡 sin acción: Occident/C0058 lleva 76 días sin mandar CIMA (7
+  renovaciones ya vencidas). Detalle en `docs/AUDITORIA-2026-09.md`.
+
 - **🔗 `sameAs`: la web y el canal de YouTube declarados como el MISMO negocio (07/09/2026).**
   `PERFILES` en `lib/sitio.ts` → `sameAs` en la ficha `InsuranceAgency`. Importa aquí más que en otras
   webs: conviven **tres dominios propios** (`grupoasegura.es`, `app.grupoasegura.com`, la landing vieja de
