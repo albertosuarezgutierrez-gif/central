@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-07T06:57:40Z",
-  "sha": "3f4d037f5f47dbf30837bc4b107a1d021078f54a",
+  "generadoEn": "2026-09-07T08:15:31Z",
+  "sha": "189a0850f68108534752911fb1ee8bdbddba6153",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7135,7 +7135,7 @@
           "exportada": true,
           "params": "ramo: Ramo",
           "retorno": "Record<string, unknown>",
-          "linea": 122,
+          "linea": 126,
           "resumen": "Ficha de SERVICIO por ramo (`Service`). Qué añade sobre lo que ya había: la ficha `InsuranceAgency` dice quién es el negocio, y el `FAQPage` dice qué preguntas responde una página. Faltaba el dato del"
         },
         {
@@ -7144,7 +7144,7 @@
           "exportada": true,
           "params": "items: readonly { nombre: string; ruta: string }[]",
           "retorno": "Record<string, unknown> | null",
-          "linea": 140,
+          "linea": 144,
           "resumen": "Migas de pan. Se emiten SOLO cuando hay jerarquía de verdad (home → sección → página); una miga de un solo nivel no aporta nada y ensucia."
         },
         {
@@ -7153,7 +7153,7 @@
           "exportada": true,
           "params": "ramo: Ramo",
           "retorno": "Record<string, unknown> | null",
-          "linea": 161,
+          "linea": 165,
           "resumen": "`FAQPage` a partir del FAQ del ramo. Devuelve `null` si no hay preguntas: un `FAQPage` vacío es marcado inválido, y aquí el hueco («este ramo aún no tiene FAQ») se respeta en vez de emitir un esquelet"
         },
         {
@@ -7162,13 +7162,13 @@
           "exportada": true,
           "params": "obj: Record<string, unknown>",
           "retorno": "string",
-          "linea": 175,
+          "linea": 179,
           "resumen": "Serializa un objeto para meterlo en un `<script type=\"application/ld+json\">`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ef98c3a31a23"
+      "hash": "b6b1c7d512f6"
     },
     {
       "ruta": "apps/asegura-web/lib/sitio.ts",
@@ -7190,7 +7190,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f92bac40e96c"
+      "hash": "8bc34ff89e77"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
@@ -63151,6 +63151,26 @@
       "hash": "967088317b24"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/SubirFactura.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SubirFactura"
+      ],
+      "funciones": [
+        {
+          "nombre": "SubirFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ variante }: { variante: 'barra' | 'lateral' }",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fab2746fdf93"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/telegram/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -63587,7 +63607,7 @@
           "exportada": false,
           "params": "lista: { href: string }[], path: string",
           "retorno": "boolean",
-          "linea": 150
+          "linea": 151
         },
         {
           "nombre": "seccionDeRuta",
@@ -63595,7 +63615,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "ClaveSeccion | null",
-          "linea": 156,
+          "linea": 157,
           "resumen": "Qué sección contiene la ruta activa. Determinista: se calcula igual en el servidor y en el cliente, así que el primer pintado ya trae la sección buena abierta (sin salto al hidratar)."
         },
         {
@@ -63604,7 +63624,7 @@
           "exportada": false,
           "params": "path: string, soloEmpresas: boolean",
           "retorno": "ClaveSeccion | null",
-          "linea": 168,
+          "linea": 169,
           "resumen": "🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Mi negocio». Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta NO se le renderi"
         },
         {
@@ -63613,13 +63633,13 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 181,
+          "linea": 182,
           "resumen": "🚨 El lateral tiene DOS plegados distintos y no pueden pisarse: · `html[data-nav-plegado='1']` = tira de solo iconos (globals.css). Ahí las cabeceras de sección NO se ven (llevan `nav-solo-abierto`), "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4011c7096182"
+      "hash": "1267c2e83a00"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -66212,7 +66232,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/contable/chat",
-      "hash": "948718c6ba6d"
+      "hash": "b2cf3a6a6d8c"
     },
     {
       "ruta": "apps/plataforma/app/api/contable/feedback/route.ts",
@@ -78390,6 +78410,39 @@
       "hash": "b997e465d3f2"
     },
     {
+      "ruta": "apps/plataforma/lib/contable/archivar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/contable/archivar.ts Archiva en Drive e imputa al libro de gastos una factura SUBIDA A MANO (chat web, 📎 de Telegram o el botón 📸 de la cabecera). NO implementa nada nuevo: reutiliza la maquinaria CANÓNICA del agente de correo (`subir` de agente-facturas/drive + `procesarFactur",
+      "exporta": [
+        "archivarEImputar"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCuentaDelLibro",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 26,
+          "resumen": "¿Es esta cuenta la dueña del libro de gastos? Misma resolución que `facturas-scan` y `titulares` (env FACTURAS_CUENTA_ID → cuenta cuyo email == GMAIL_USER → la única real). Ante la duda, false: mejor "
+        },
+        {
+          "nombre": "archivarEImputar",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, data: FacturaExtraida, texto: string, doc: FacturaDoc,",
+          "retorno": "Promise<ArchivoFactura>",
+          "linea": 46,
+          "resumen": "Sube el justificante a Drive (carpeta año/mes según la FECHA DE LA FACTURA, no la de hoy) e imputa el gasto. Nunca lanza: un fallo de Drive no puede tumbar la respuesta del agente, pero tampoco se tra"
+        }
+      ],
+      "tablas": [
+        "cuentas"
+      ],
+      "rutaApi": null,
+      "hash": "f38114a4cb50"
+    },
+    {
       "ruta": "apps/plataforma/lib/contable/cerebro.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/contable/cerebro.ts Un turno del agente: contexto → IA → aprende hábitos → PROPONE acciones (que Alberto confirma).",
@@ -78509,7 +78562,9 @@
         "resumenDocumento",
         "matchDeCruce",
         "refFactura",
-        "accionConciliar"
+        "accionConciliar",
+        "nombreArchivoFactura",
+        "lineasArchivo"
       ],
       "funciones": [
         {
@@ -78552,7 +78607,7 @@
           "nombre": "resumenDocumento",
           "kind": "function",
           "exportada": true,
-          "params": "f: FacturaDoc, cruce: CruceDoc",
+          "params": "f: FacturaDoc, cruce: CruceDoc, archivo?: ArchivoFactura | null",
           "retorno": "string",
           "linea": 159,
           "resumen": "Texto legible para el chat tras leer el documento. Determinista."
@@ -78563,7 +78618,7 @@
           "exportada": true,
           "params": "cruce: CruceDoc",
           "retorno": "MatchDoc",
-          "linea": 198,
+          "linea": 199,
           "resumen": "El movimiento sobre el que se puede PROPONER conciliar. Solo el cruce exacto y el que cae fuera de la ventana (ese se pregunta antes). Un cargo ya conciliado no se vuelve a proponer."
         },
         {
@@ -78572,7 +78627,7 @@
           "exportada": true,
           "params": "f: FacturaDoc",
           "retorno": "string",
-          "linea": 206,
+          "linea": 207,
           "resumen": "Referencia corta que se guarda en factura_ref al conciliar. Determinista."
         },
         {
@@ -78581,12 +78636,30 @@
           "exportada": true,
           "params": "f: FacturaDoc, match: MatchDoc",
           "retorno": "PropuestaAccion | null",
-          "linea": 214
+          "linea": 215
+        },
+        {
+          "nombre": "nombreArchivoFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FacturaDoc, original = ''",
+          "retorno": "string",
+          "linea": 256,
+          "resumen": "Nombre con el que se archiva en Drive. Una foto de móvil (`20260907_093156.jpg`) no dice nada dentro de la carpeta del mes, así que se renombra por proveedor/fecha/importe conservando la extensión ori"
+        },
+        {
+          "nombre": "lineasArchivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "a?: ArchivoFactura | null",
+          "retorno": "string",
+          "linea": 266,
+          "resumen": "Qué se le cuenta a Alberto del archivado. Vacío = no hay nada que contar (no se intentó)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ada2a7802fa8"
+      "hash": "c94512230ea9"
     },
     {
       "ruta": "apps/plataforma/lib/contable/documentos.ts",
@@ -78602,7 +78675,7 @@
           "exportada": false,
           "params": "m: FilaMov",
           "retorno": "MovCandidato",
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "cargosDelImporte",
@@ -78610,7 +78683,7 @@
           "exportada": false,
           "params": "cuentaId: string, f: FacturaDoc, dias: number",
           "retorno": "Promise<FilaMov[]>",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Cargos del MISMO importe (al céntimo) dentro de una ventana de días. READ-ONLY: réplica de la SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí solo proponemos; el UPDATE lo hace accione"
         },
         {
@@ -78619,7 +78692,7 @@
           "exportada": false,
           "params": "cuentaId: string",
           "retorno": "Promise<CoberturaBanco[]>",
-          "linea": 67,
+          "linea": 68,
           "resumen": "Hasta qué fecha llega el extracto de cada cuenta VIVA. Es lo que convierte un «no lo encuentro» en un «todavía no me ha llegado» (regla del CLAUDE.md: dato que no hay ≠ dato que no se ha mirado)."
         },
         {
@@ -78628,7 +78701,7 @@
           "exportada": false,
           "params": "a: string, b: string",
           "retorno": null,
-          "linea": 81
+          "linea": 82
         },
         {
           "nombre": "buscarCruce",
@@ -78636,7 +78709,7 @@
           "exportada": false,
           "params": "cuentaId: string, f: FacturaDoc, tolDias = 7",
           "retorno": "Promise<CruceDoc>",
-          "linea": 85,
+          "linea": 86,
           "resumen": "Cruza la factura contra los movimientos y devuelve CUÁL de los cinco desenlaces es (ver CruceDoc)."
         },
         {
@@ -78645,7 +78718,7 @@
           "exportada": false,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string,",
           "retorno": "Promise<DocProcesado>",
-          "linea": 113,
+          "linea": 114,
           "resumen": "Hoja de cálculo subida al chat: el lector de facturas no sabe abrirla (devolvería «no he podido leer el documento», que es falso). Hoy el Excel que Alberto sube es el MISMO listado de la tarjeta que e"
         },
         {
@@ -78654,7 +78727,7 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<DocProcesado>",
-          "linea": 147
+          "linea": 148
         }
       ],
       "tablas": [
@@ -78662,7 +78735,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "5f82e3b51a71"
+      "hash": "897d0b0f7c23"
     },
     {
       "ruta": "apps/plataforma/lib/contable/extracto-tarjeta.ts",
@@ -79338,7 +79411,7 @@
         "cuentas"
       ],
       "rutaApi": null,
-      "hash": "8f807fe1f7cf"
+      "hash": "657fc580cdd4"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-hogar.ts",
@@ -124084,7 +124157,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3072,
-    "funciones": 9316
+    "archivos": 3074,
+    "funciones": 9321
   }
 }
