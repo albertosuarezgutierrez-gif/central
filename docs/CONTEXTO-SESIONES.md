@@ -39,6 +39,35 @@
   `portal='booking_basic_deal'` para que `pricing/canal` no ajuste sobre dos regímenes; el calibrador
   vuelve a medir solo con ventanas nuevas. Guardián `fuga-canal`: umbral 0,80 (pila aceptada 0,81) y
   solo reservas desde el 07/09. ⚠️ Peor indicador de Booking: cancelaciones 50 % vs 34 % de la zona.
+- **🔴 El logo de Fidelidade entra, y el fichero bueno se llamaba `.jpg` sin serlo (07/09/2026).** De los
+  tres que subió Alberto a Drive, los dos primeros eran JPEG —sin canal alfa, o sea caja blanca sobre la
+  banda— y el tercero, `fidelidades logo3.jpg`, era un **PNG de paleta** (`mimeType: image/png`, 3.310 B):
+  la extensión mentía y el `mimeType` no. El alfa NO se sacó recortando el blanco (deja halo sobre fondo
+  oscuro): se DESPEJÓ de `a·rojo+(1-a)·blanco` por el canal azul, y se comprobó componiendo sobre claro y
+  sobre oscuro. `escala: 0.7` porque con 8,54 de aspecto rebasaría el `max-width` del CSS y el navegador la
+  encogería igual. Con esto **ninguna de las siete queda sin logo**, y eso deja el wordmark de respaldo del
+  muro sin ejercitar: cepo nuevo para el JSX y para la regla BASE del CSS. Ese cepo salió **verde en falso**
+  al primer intento (`.companias-nombre` sale dos veces; se conformaba con la del `@media`). PR #2502.
+- **🗓️ La póliza que SUBE quien no es cliente ya entra en su calendario (07/09/2026).** Alberto:
+  «la intranet donde el cliente controla sus seguros siendo nuestro cliente o no» + «sube póliza y
+  olvídate». Medido: la intranet YA está abierta a cualquiera (`verificar` crea identidad con solo un
+  correo, «El resultado NO bloquea el login»), pero `lib/obligaciones.ts` abría con
+  `if (!c.vinculada) return` y solo miraba la CARTERA — una póliza subida no generaba obligación, ni
+  calendario, ni aviso posible. Nueva regla pura `reparoDeclarada()` (sin fecha / sin confirmar; se
+  devuelve el MOTIVO para que la pantalla lo diga) + `reparosDeclaradasDeIdentidad()`. 10 mutaciones
+  vistas en ROJO. DDL `portal_obligacion_una_por_declarada` **aplicada y verificada** en Supabase con
+  el OK de Alberto. PR #2502.
+- **🚨 «Olvídate» aún no se publica: al aviso le falta EL CANAL, no el remitente (07/09/2026).**
+  ⚠️ Corrección dentro de la propia sesión: se afirmó que «nadie escribe `avisadaAt`» y que faltaban
+  cron y remitente. **Falso** — `apps/asegura/lib/avisos-vencimiento.ts` existe, con cron diario
+  (`/api/cron/avisos-vencimiento`, 08:00 UTC), interruptor `ASEGURA_AVISOS_ACTIVOS` y sellado. El grep
+  lo tapó el ruido del cliente generado de Prisma. **Método: no cortes un grep a 20 líneas y concluyas
+  una ausencia.** Lo que SÍ falta: una obligación de póliza subida no tiene a dónde escribir
+  (`PortalCanal` guarda solo el hash, deliberado) y el cron ya la cuenta como `sinCanal` — o sea, el
+  hueco está declarado en el código, no escondido. Decisión de Alberto: **opt-in**, el portal ESCRIBE
+  el correo cifrado y `apps/asegura` lo LEE (es la que tiene correo y BYPASSRLS; un guardián prohíbe
+  al portal importar transporte de correo). Medido: 6 obligaciones en toda la BD, 0 avisadas, 0 en
+  ventana — el cron mandando cero hoy es correcto y NO prueba que esté apagado.
 - **🏢 El portal, «todo corporativo»: la atmósfera de la web y la clave de IA puesta (07/09/2026).**
   Alberto revirtió mi recomendación («3. igual la web no? debería parecer como la expansión de la
   web» + «todo corporativo»), así que entra lo que yo había dejado fuera: la mancha de marca de

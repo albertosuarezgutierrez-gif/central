@@ -9,7 +9,13 @@
 // puerta (la página de la bóveda lo hace una sola vez por render); las
 // `…DeSesion` lo resuelven aquí. Lo vigila `test/regression-portal-aislamiento.test.ts`.
 import { esCarteraViva } from '@central/module-seguros'
-import { etiquetaRamo, fechaAccionable, obligacionDerivable, type Procedencia } from '@central/module-seguros-portal'
+import {
+  etiquetaRamo,
+  fechaAccionable,
+  obligacionDerivable,
+  reparoDeclarada,
+  type Procedencia,
+} from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, type CarteraPortal } from './cartera-lectura'
 import { prisma } from './db'
@@ -47,11 +53,23 @@ export async function sincronizarObligacionesDeIdentidad(
   identidadId: string,
   cartera?: CarteraPortal,
 ): Promise<void> {
+  // 1) Las pólizas que SUBE la persona. Van SIEMPRE, con vínculo o sin él:
+  //    son lo único que tiene quien todavía no es cliente de la correduría, y
+  //    hasta el 07/09/2026 no generaban nada — se guardaban y se enseñaban, y
+  //    ahí acababa todo. Sin obligación no hay calendario y sin calendario no
+  //    puede haber aviso, así que la intranet le decía a esa persona que su
+  //    póliza estaba «controlada» sin que nadie mirase su vencimiento.
+  //
+  //    Va en su propia transacción y no mezclada con la de la cartera: tocan
+  //    filas distintas (`poliza_declarada_id` contra `poliza_id`) y una no
+  //    tiene por qué caerse porque falle la otra.
+  await prisma.$transaction(await opsDeDeclaradas(identidadId))
+
   const c = cartera ?? (await carteraDeIdentidad(identidadId))
 
-  // Sin vínculo NO se toca nada: no es «esta identidad no tiene vencimientos»,
-  // es «no sabemos qué ficha de la cartera es la suya». Borrar o crear aquí
-  // sería afirmar algo que no se ha mirado.
+  // 2) Las de la CARTERA. Sin vínculo NO se toca nada de esto: no es «esta
+  // identidad no tiene vencimientos», es «no sabemos qué ficha de la cartera
+  // es la suya». Borrar o crear aquí sería afirmar algo que no se ha mirado.
   if (!c.vinculada) return
 
   const vivas: string[] = []
@@ -137,6 +155,114 @@ export async function sincronizarObligacionesDeIdentidad(
   )
 
   await prisma.$transaction(ops)
+}
+
+/**
+ * Las obligaciones que salen de las pólizas que la PERSONA ha subido.
+ *
+ * Qué genera obligación y qué no lo decide `reparoDeclarada()`, que vive en
+ * `@central/module-seguros-portal` con su test: una póliza sin fecha de
+ * vencimiento no se puede contar hacia atrás, y una que nadie ha confirmado
+ * lleva fechas que adivinó un extractor. Avisar sobre una fecha que leyó una
+ * IA y que nadie ha mirado es PEOR que no avisar — el correo llega, la persona
+ * se fía, y el día bueno era otro.
+ *
+ * 🚨 Lo que NO hace esta función es decir cuántas se quedaron fuera. Eso es
+ * cosa de la pantalla (`reparosDeclaradasDeIdentidad()`), y no es un adorno: si la bóveda
+ * enseña la póliza y calla que de ella no va a avisar, la persona se queda
+ * creyendo que la vigilamos. Es la ausencia disfrazada de normalidad de
+ * siempre.
+ */
+async function opsDeDeclaradas(identidadId: string) {
+  const declaradas = await prisma.portalPolizaDeclarada.findMany({
+    where: { identidadId },
+    select: { id: true, compania: true, ramo: true, fechaVencimiento: true, confirmadaPorUsuario: true },
+  })
+
+  const avisables: string[] = []
+  const ops = []
+
+  for (const p of declaradas) {
+    if (reparoDeclarada(p) !== null) continue
+    // El reparo ya garantiza que hay fecha; esto se lo dice al tipo.
+    const evento = p.fechaVencimiento
+    if (evento === null) continue
+
+    avisables.push(p.id)
+    const accionable = fechaAccionable(evento)
+    // La etiqueta, no el enum: esto es lo que se lee en «Tu calendario», y
+    // `responsabilidad_civil` no es castellano. La compañía se OMITE si no se
+    // sabe, en vez de escribir un «sin compañía» que nadie ha declarado.
+    const ramoTxt = p.ramo ? (etiquetaRamo(p.ramo) ?? p.ramo) : 'Póliza'
+    const titulo = p.compania ? `${ramoTxt} · ${p.compania}` : ramoTxt
+
+    ops.push(
+      prisma.portalObligacion.upsert({
+        where: { identidadId_polizaDeclaradaId: { identidadId, polizaDeclaradaId: p.id } },
+        create: {
+          identidadId,
+          polizaDeclaradaId: p.id,
+          tipo: 'poliza',
+          titulo,
+          fechaEvento: evento,
+          fechaAccionable: accionable,
+          procedencia: 'declarado',
+        },
+        // `avisadaAt` NO se toca, igual que en la rama de la cartera: el sello
+        // del envío es lo único que impide avisar dos veces de lo mismo, y esta
+        // función corre en CADA carga de la bóveda.
+        update: { titulo, fechaEvento: evento, fechaAccionable: accionable, actualizadaAt: new Date() },
+      }),
+    )
+  }
+
+  // Poda. La persona pudo borrar la póliza, quitarle la fecha o dejar de
+  // confirmarla: en los tres casos su vencimiento deja de ser algo que podamos
+  // afirmar, y una fila que sobrevive es un aviso que se manda sobre un dato
+  // que ya no existe. Solo se podan las DECLARADAS; las de la cartera tienen
+  // su propia poda más arriba.
+  ops.push(
+    prisma.portalObligacion.deleteMany({
+      where: { identidadId, polizaDeclaradaId: { not: null, notIn: avisables } },
+    }),
+  )
+
+  return ops
+}
+
+/**
+ * De cuántas pólizas subidas por la persona NO se puede avisar, y por qué.
+ *
+ * 🚨 Esto no es una estadística: es la mitad honesta de la función de arriba.
+ * `opsDeDeclaradas()` decide en silencio cuáles entran en el calendario, y sin
+ * esta las demás desaparecerían sin dejar rastro — la bóveda enseñaría la
+ * póliza guardada, no habría ningún vencimiento asociado, y la persona leería
+ * eso como «está controlada». Tres estados, no dos: avisable · sin fecha ·
+ * sin confirmar. Los dos últimos son «todavía no se sabe», y cada uno manda a
+ * la persona a un sitio distinto a arreglarlo.
+ */
+export type ReparosDeclaradas = { sinFecha: number; sinConfirmar: number }
+
+export async function reparosDeclaradasDeIdentidad(identidadId: string): Promise<ReparosDeclaradas> {
+  const declaradas = await prisma.portalPolizaDeclarada.findMany({
+    where: { identidadId },
+    select: { fechaVencimiento: true, confirmadaPorUsuario: true },
+  })
+
+  const cuenta: ReparosDeclaradas = { sinFecha: 0, sinConfirmar: 0 }
+  for (const p of declaradas) {
+    const r = reparoDeclarada(p)
+    if (r === 'sin_fecha') cuenta.sinFecha += 1
+    else if (r === 'sin_confirmar') cuenta.sinConfirmar += 1
+  }
+  return cuenta
+}
+
+/** Envoltura que resuelve la identidad por la puerta única. */
+export async function reparosDeclaradasDeSesion(): Promise<ReparosDeclaradas> {
+  const identidad = await getIdentidad()
+  if (!identidad) return { sinFecha: 0, sinConfirmar: 0 }
+  return reparosDeclaradasDeIdentidad(identidad.id)
 }
 
 /** Envoltura que resuelve la identidad por la puerta única. */
