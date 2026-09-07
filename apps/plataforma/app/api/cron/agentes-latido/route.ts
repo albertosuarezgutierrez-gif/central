@@ -198,6 +198,18 @@ const PROBES: Record<string, Prisma.Sql> = {
   github_vigia: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'github_vigia'`,
+  // Los tres, hallazgo de /auditoria-diaria 07/09/2026: ya escribían su huella de PASADA en
+  // agente_latidos (verificado con filas reales, no solo con el código) pero no estaban en
+  // AGENTES_VIGILADOS — verdes hoy, mudos sin que nadie se entere si dejan de estarlo.
+  smoobu_sync: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'smoobu_sync'`,
+  correduria_partes: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_partes'`,
+  trading_h10: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'trading_h10'`,
 }
 
 /**

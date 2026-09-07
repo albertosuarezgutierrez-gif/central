@@ -135,7 +135,9 @@
   convertiría en asesoramiento y arrastraría análisis objetivo e IPID, RDL 3/2020) y
   `lib/contrato-lead.test.ts` (lee el fuente de plataforma y compara la lista de ramos: si
   divergen, el visitante elegiría uno que plataforma rechaza con 422 y el lead se pierde en
-  silencio). `HORARIO` y el teléfono están **ausentes a propósito** mientras no se confirmen.
+  silencio). `HORARIO` sigue **ausente a propósito** mientras no se confirme; el teléfono SÍ existe
+  desde el 05/09/2026 (`MEDIADOR.identidad.telefono`, con `telefonoLegible()`/`whatsappUrl()`) y se
+  usa en el botón de WhatsApp, el `tel:` del pie y el JSON-LD.
   📊 **Analítica CON consentimiento, y fail-CLOSED a propósito (05/09/2026).** PostHog detrás de
   Cookiebot: la regla vive en una función pura, `puedeMedir()` de `lib/analitica.ts`, y **sin
   `NEXT_PUBLIC_COOKIEBOT_ID` no se mide nada**. Es la decisión CONTRARIA a la web de Manuel, donde
