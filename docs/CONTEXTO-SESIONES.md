@@ -50,6 +50,19 @@
   el correo cifrado y `apps/asegura` lo LEE (es la que tiene correo y BYPASSRLS; un guardián prohíbe
   al portal importar transporte de correo). Medido: 6 obligaciones en toda la BD, 0 avisadas, 0 en
   ventana — el cron mandando cero hoy es correcto y NO prueba que esté apagado.
+- **🪞 La cola del blog pedía un artículo que YA estaba publicado (07/09/2026).** Al ampliarla de 5 a 9
+  temas salió el fallo: `me-han-subido-el-recibo-sin-avisar` (art. 22) respondía la MISMA búsqueda que
+  `me-han-subido-el-seguro-en-la-renovacion`, publicado horas antes con la MISMA norma — dos páginas
+  compitiendo entre sí, que es lo contrario de lo que busca un blog de SEO. Retirado; y el de plazos de
+  pago dice ahora en su ángulo en qué se distingue del de siniestro denegado (uno es el pago que se
+  retrasa, el otro el que se niega). 🚨 De paso destapó que el fixture del test era `TEMAS.find(...)`
+  sobre la cola REAL: retirar ese tema tumbó 7 tests de una función que no había cambiado — el fixture
+  es sintético ahora. Cepo nuevo para la forma dura (mismo slug que un artículo vivo, leyendo el fuente
+  de asegura-web); la blanda —mismo tema con otras palabras— se declara como juicio humano en vez de
+  fingir que un test léxico la caza. **No se dieron de alta normas nuevas: el BOE está bloqueado por el
+  proxy de egreso**, así que los 5 temas añadidos no citan ninguna o usan las ya verificadas. PR #2500
+  mergeado (`d8d68b9a`); rutina `agente-correduria` reactivada (martes 05:30 UTC).
+
 - **📝 El blog de la correduría se escribe SOLO, pero no se publica solo (07/09/2026).** Cron quincenal
   (días 1 y 15, `CRON_JOBS`) → redacta con `categoria:'redaccion'` → valida → deja **PR**, y Alberto aprueba
   con dos botones en `/correduria` → **Redes** (el badge de la pestaña lo cuenta desde cualquier sección: el
