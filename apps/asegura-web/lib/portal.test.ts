@@ -49,10 +49,8 @@ test('la cabecera MONTA el botón al portal del cliente', () => {
   // (Alberto, 07/09/2026). Si alguien lo revierte, el 99 % de los visitantes
   // vuelve a leer que eso no es para ellos — y nada falla.
   assert.match(cab, /Mis seguros/, 'el botón perdió su rótulo')
-  assert.ok(
-    !/Área de clientes/.test(cab),
-    'volvió «Área de clientes»: la intranet NO es solo para clientes, y el rótulo lo estaba diciendo',
-  )
+  // La prohibición de «Área de clientes» NO vive aquí: está en PROHIBIDO, que
+  // se aplica a TODO el fuente. Ver la nota del 07/09/2026 en ese test.
 
   const layout = sinComentarios(readFileSync(join(RAIZ, 'app', 'layout.tsx'), 'utf8'))
   assert.match(layout, /<Cabecera\b/, 'el layout ya no monta <Cabecera>: el botón existiría en un fichero que no renderiza nadie')
@@ -73,6 +71,15 @@ test('NINGÚN enlace de la web lleva a la intranet de la correduría ni a plataf
     /\/operador\b/,
     /\/login\b/,
     /ya\s+soy\s+cliente/i,
+    // 🚨 Este patrón estaba SOLO en el test de la cabecera, y por eso no cazó
+    // nada: al rediseñar la portada el 07/09/2026 el rótulo viejo sobrevivió en
+    // `components/PanelDemo.tsx` —el simulador de navegador decía «Área de
+    // clientes · Mis seguros»—, se corrigió a mano y ningún cepo lo vigilaba.
+    // Lo vio Alberto en una captura, que es exactamente el modo de fallo que
+    // este fichero existe para evitar: un guardián que mira a UN fichero da
+    // verde sobre los otros veinte. El vocabulario de la puerta se prohíbe en
+    // todo el fuente o no se prohíbe.
+    /área de clientes/i,
     /acceso\s+corredur/i,
     /acceso\s+corredor/i,
     /únete gratis/i,
