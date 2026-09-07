@@ -39,6 +39,21 @@
   (PR #2485) corregido: resta la limpieza ANTES de dividir (la 1ª versión daba 0,87 = optimista 11 pts).
   Extranet, decisión de Alberto pendiente: Basic Deal 12% a TODOS hasta 2030, semanal/mensual = precio NR
   con cancelación flexible, comisión real **22%** (+1,3% pagos), no el 19,72% de la skill SEO. `antelacion_k` 0→1 House.
+- **⛽ El cruce ofrecía un cargo ANTERIOR a la factura, y se confirmó de un clic (07/09/2026).**
+  Con el flujo ya vivo, Alberto subió una factura de gasolina de **40,00€ del 07/09** y el agente le
+  ofreció conciliarla con un cargo del **19/07 — 50 días ANTES**. Le dio a «Sí». Ese cargo era otro
+  repostaje: en esa gasolinera hay **CINCO cargos de exactamente 40,00€** (medido en BD), así que el
+  importe no identifica a ninguno. Conciliación revertida a mano (`4dacd9fb`, vuelve a
+  `conciliado=false`). 🚨 La causa era una **contradicción del código consigo mismo**: el comentario
+  de `VENTANA_ANCHA` decía «puede cargarse bastante DESPUÉS de la fecha de la factura» mientras el
+  SQL usaba `ABS(...)`, o sea aceptaba los dos lados — y **un cargo anterior no puede pagar una
+  factura que aún no existía**. Ahora la ventana ancha es **asimétrica** (solo hacia adelante) y,
+  si hay **más de un** candidato libre del mismo importe, se enseñan todos y **no se propone
+  ninguno** (`varios_candidatos`): un botón ahí pide un clic a ciegas y ata el P&L al movimiento
+  equivocado sin que nada falle. ⚠️ Hipótesis descartada MIDIENDO: no era falta de cobertura — las
+  dos cuentas llegan a hoy. Y el guardián `regression-sql-fecha-parametro` cazó de paso un
+  `date + bigint` (42883) en mi propio SQL, que solo habría reventado en runtime. 5 cepos en rojo.
+
 - **🔵 `asegura-web` no tenía icono de pestaña — el «AS» negro era de OTRA app (07/09/2026).** Alberto:
   «sale el logo antiguo no? me gusta más en azul se ve más». Ni `icon.*` ni `favicon.ico` ni
   `metadata.icons`: salía el globo de Chrome, y el cuadro negro que veía era el de
