@@ -35,7 +35,7 @@
   sean míos» y ahora el «todos», que era lo último que insinuaba «de cualquier compañía». El h1 pasa
   a ser de TONO, no de argumento: no dice nada que no pueda decir cualquier correduría. El
   diferenciador vive entero en una frase del `lead`, y el cepo de `lib/ramos.test.ts` (PR #2525) es
-  ahora lo único que impide perderlo en silencio. Medido a 390 y 1280. PR #2527.
+  ahora lo único que impide perderlo en silencio. Medido a 390 y 1280. PR #2530.
 
 - **✍️ El h1 de la portada pasa a «Sube tus seguros. / Y contrólalos todos.» (07/09/2026).**
   Alberto: «póliza» es la palabra del corredor, no la del cliente — nadie dice en su casa «tengo tres
