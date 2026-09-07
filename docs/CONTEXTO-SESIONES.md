@@ -30,6 +30,25 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔗 `sameAs`: la web y el canal de YouTube declarados como el MISMO negocio (07/09/2026).**
+  `PERFILES` en `lib/sitio.ts` → `sameAs` en la ficha `InsuranceAgency`. Importa aquí más que en otras
+  webs: conviven **tres dominios propios** (`grupoasegura.es`, `app.grupoasegura.com`, la landing vieja de
+  plataforma) y existe una **correduría HOMÓNIMA en Montevideo** (`grupoasegura.com.uy`) que el buscador
+  ya me devolvió mezclada con la de Alberto. Guardián `lib/seo-perfiles.test.ts`, **visto en rojo** con el
+  acortador que Alberto pegó primero (`share.google/…`, caduca y esconde su destino) y con el `?si=` que
+  pega el botón «compartir» de YouTube. Sin perfiles, `sameAs` **NO se emite** — un `[]` afirmaría «se
+  miró y no hay». ⚠️ **La pertenencia no está medida y así se declara en el código**: el proxy deniega
+  `youtube.com` y `google.com`, así que la URL entra por palabra de Alberto; el cepo vigila la FORMA.
+  61/61 en asegura-web, tsc verde, `pnpm test` 639 pass / 0 fail.
+  📺 **El canal existía y estaba envenenado.** Se llamaba **«Grupo ASegura - SEGUROS Low Cost»** (17 subs,
+  5 vídeos) y su primer vídeo lleva una escarapela **«Nº1»** en la miniatura: promesa de precio + claim de
+  liderazgo, o sea justo lo que `lib/ramos.test.ts` bloquea en cada commit de la web — con 80 clientes ese
+  «Nº1» además no es acreditable (Ley 3/1991). Alberto cambió nombre y descripción con el texto que se le
+  pasó; **los 5 vídeos siguen sin revisar**. 🏛️ **Google Business SÍ existe y está verificado** (1 reseña,
+  sin horario), pero su categoría es **«Agencia de seguros»** —agente, lo contrario de corredor y de la
+  clave DGSFP CS-F/0170— y su nombre «Grupo ASegura tu corredor de Seguros» ≠ `MEDIADOR.marca`: **NAP
+  roto**. Falta su URL canónica de Maps para cerrar el `sameAs` y desbloquear `geo`.
+
 - **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
   `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
   **sin ninguna página**. Va en `RAMOS`, así que entra sola en sitemap, pie y formulario. Su posición en la

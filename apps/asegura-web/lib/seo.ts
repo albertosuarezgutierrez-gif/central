@@ -7,7 +7,7 @@
 // `@central/module-seguros`, que es la que comparten el panel del corredor y el
 // portal del asegurado.
 import { MEDIADOR } from '@central/module-seguros'
-import { AMBITO, HORARIO, SITIO_URL, url } from './sitio.ts'
+import { AMBITO, HORARIO, PERFILES, SITIO_URL, url } from './sitio.ts'
 import { RAMOS, type Ramo } from './ramos.ts'
 
 /**
@@ -97,6 +97,10 @@ export function fichaNegocio(): Record<string, unknown> {
     knowsAbout: RAMOS.map((r) => `Seguro de ${r.nombre.toLowerCase()}`),
   }
   if (HORARIO) ficha.openingHours = [...HORARIO.schema]
+  // `sameAs` = los perfiles que son ESTE mismo negocio. Se OMITE cuando no hay
+  // ninguno: un array vacío afirmaría «se miró y no hay», y lo cierto es que
+  // todavía no se han dado de alta. Lo vigila `seo-perfiles.test.ts`.
+  if (PERFILES.length > 0) ficha.sameAs = [...PERFILES]
   return ficha
 }
 
