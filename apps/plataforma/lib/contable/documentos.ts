@@ -17,13 +17,14 @@ import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { esExtractoTarjeta, parseTarjetaPdfTexto } from '@/lib/extracto-tarjeta-pdf'
 import { parseExtractoXls } from '@/lib/extracto-xls'
 import { identificarTarjetaExcel, comoExtractoTarjeta } from '@/lib/extracto-tarjeta-excel'
-import { interpretarExtraccion, fechaEs, type FacturaDoc, type CruceDoc, type CoberturaBanco, type MovCandidato } from './documentos-tipos'
+import { interpretarExtraccion, fechaEs, type FacturaDoc, type CruceDoc, type CoberturaBanco, type MovCandidato, type ArchivoFactura } from './documentos-tipos'
+import { archivarEImputar } from './archivar'
 import { detectarListadoMovimientos } from './documento-clase'
 import { procesarExtractoTarjeta } from './extracto-tarjeta'
 
 export type DocProcesado =
   | { ok: false; motivo: string }
-  | { ok: true; tipo: 'factura'; factura: FacturaDoc; cruce: CruceDoc }
+  | { ok: true; tipo: 'factura'; factura: FacturaDoc; cruce: CruceDoc; archivo: ArchivoFactura }
   | { ok: true; tipo: 'extracto_tarjeta'; resumen: string; driveUrl?: string }
 
 // Ventana ancha para el «existe, pero en otra fecha»: un recibo domiciliado puede cargarse bastante
@@ -182,6 +183,13 @@ export async function procesarDocumento(
     return interp
   }
 
-  const cruce = await buscarCruce(cuentaId, interp.factura)
-  return { ok: true, tipo: 'factura', factura: interp.factura, cruce }
+  // Archivar en Drive + imputar al libro de gastos ANTES de cruzar con el banco: es lo que Alberto
+  // da por hecho al subir una factura («que me la lea, me la contabilice y me la archive»), y hasta
+  // el 07/09/2026 no lo hacía nadie salvo el agente de correo. `archivarEImputar` no lanza y ya trae
+  // dentro el dedupe, así que volver a subir la misma factura no la cuenta dos veces.
+  const [archivo, cruce] = await Promise.all([
+    archivarEImputar(cuentaId, buffer, mimeType, fileName, extraido.data, extraido.texto || '', interp.factura),
+    buscarCruce(cuentaId, interp.factura),
+  ])
+  return { ok: true, tipo: 'factura', factura: interp.factura, cruce, archivo }
 }

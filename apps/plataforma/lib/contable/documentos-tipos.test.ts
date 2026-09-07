@@ -1,7 +1,7 @@
 // apps/plataforma/lib/contable/documentos-tipos.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarExtraccion, motivoNoLeido, resumenDocumento, refFactura, accionConciliar, matchDeCruce } from './documentos-tipos.ts'
+import { interpretarExtraccion, motivoNoLeido, resumenDocumento, refFactura, accionConciliar, matchDeCruce, nombreArchivoFactura } from './documentos-tipos.ts'
 
 const FACTURA = { proveedor: 'Endesa', fecha: '2026-05-10', total: 84.5, numero: 'F-1', concepto: null }
 const MOV = { movId: 'mov-1', fecha: '2026-05-09', concepto: 'RECIBO ENDESA', importe: -84.5, banco: 'BBVA' }
@@ -177,4 +177,59 @@ test('accionConciliar con match → propuesta con movId y ref', () => {
   assert.equal(p!.params.facturaRef, 'doc:Endesa F-1')
   assert.match(p!.resumen, /Endesa/)
   assert.match(p!.resumen, /84,50€/)
+})
+
+// ── Archivado + contabilización de una factura subida a mano (07/09/2026) ────────────────────────
+// El hueco que cierran: subir una factura por el chat la leía pero no la archivaba ni la
+// contabilizaba, y el resumen no decía nada de eso — o sea, se leía como si sí.
+
+test('nombre de archivo: renombra la foto del móvil por proveedor/fecha/importe, con su extensión', () => {
+  assert.equal(
+    nombreArchivoFactura(FACTURA, '20260907_093156.jpg'),
+    '2026-05-10_Endesa_F-1_84.50.jpg',
+  )
+})
+
+test('nombre de archivo: sin extensión reconocible cae a .pdf, y los acentos/signos no viajan', () => {
+  const f = { proveedor: 'Gestoría Pérez & Cía', fecha: '2026-01-02', total: 1200, numero: null, concepto: null }
+  assert.equal(nombreArchivoFactura(f, 'documento'), '2026-01-02_Gestoria-Perez-Cia_1200.00.pdf')
+})
+
+test('archivada + contabilizada → el resumen lo DICE (carpeta y libro)', () => {
+  const t = resumenDocumento(FACTURA, { estado: 'sin_match', cobertura: COBERTURA }, {
+    carpeta: 'Facturas/2026/05', url: 'https://drive/x', driveError: false, decision: 'auto',
+  })
+  assert.match(t, /Archivada en Drive \(Facturas\/2026\/05\)/)
+  assert.match(t, /Contabilizada/)
+})
+
+test('Drive falla pero el gasto entra → se avisa del descuadre, no se calla', () => {
+  const t = resumenDocumento(FACTURA, { estado: 'sin_match', cobertura: COBERTURA }, {
+    carpeta: null, url: null, driveError: true, decision: 'bandeja',
+  })
+  assert.match(t, /NO he podido archivarla en Drive/)
+  // Nombrar la pantalla es parte del aviso: «está en la bandeja» sin decir cuál no se ve.
+  assert.match(t, /\/expenses\/pendientes/)
+})
+
+// Regla de la casa: un «no se ha intentado» no se cuenta como un «no hay». Si la cuenta no es la
+// dueña del libro de gastos NO se archiva nada, y callarlo se leería como «hecho».
+test('decision null (cuenta ajena al libro) → se declara que no se ha intentado', () => {
+  const t = resumenDocumento(FACTURA, { estado: 'sin_match', cobertura: COBERTURA }, {
+    carpeta: null, url: null, driveError: false, decision: null,
+  })
+  assert.match(t, /no es la dueña del libro de gastos/)
+})
+
+test('duplicado → dice que ya estaba, no la mete dos veces', () => {
+  const t = resumenDocumento(FACTURA, { estado: 'match', mov: MOV }, {
+    carpeta: 'Facturas/2026/05', url: 'u', driveError: false, decision: 'duplicado',
+  })
+  assert.match(t, /Ya estaba contabilizada/)
+  assert.match(t, /¿Lo concilio\?/)   // el cruce bancario sigue intacto
+})
+
+test('sin archivado (llamada antigua, 2 argumentos) → el resumen no cambia', () => {
+  const t = resumenDocumento(FACTURA, { estado: 'match', mov: MOV })
+  assert.doesNotMatch(t, /Drive|Contabilizada|libro de gastos/)
 })
