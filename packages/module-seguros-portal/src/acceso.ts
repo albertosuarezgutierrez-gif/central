@@ -41,15 +41,24 @@ export type CamposVisibles = {
   /**
    * DÓNDE está el riesgo: la dirección del inmueble asegurado.
    *
-   * 🚨 Va SEPARADO de `bien` a propósito, y es la distinción entera: la
-   * dirección de un hogar asegurado es **la casa donde duerme el titular**. Eso
-   * no es un dato del contrato, es un dato de la PERSONA, del mismo lado que su
-   * DNI — y por eso además está en `NUNCA_A_UN_TERCERO` (`autorizacion.ts`)
-   * cuando quien cede es una persona física, igual que sus siniestros abiertos.
-   * Una SOCIEDAD sí la cede: la dirección de una nave es un dato de la empresa.
+   * 🚨 **DECISIÓN DE ALBERTO, 07/09/2026: se ve desde el nivel más bajo, igual
+   * que la matrícula.** Hasta hoy este flag era `false` en `tarjeta` y además
+   * estaba en `NUNCA_A_UN_TERCERO` (`autorizacion.ts`), con el argumento de que
+   * la dirección de un hogar es la casa donde duerme el titular y por tanto un
+   * dato de la PERSONA. Se le planteó así, con la alternativa de enseñar solo
+   * la localidad, y eligió la dirección completa.
    *
-   * Colapsarlo con `bien` regalaría la dirección de una casa a quien solo pidió
-   * ver de qué compañía es el seguro. No fallaría nada: saldría.
+   * El motivo, y por qué es coherente con el resto del fichero: **en un hogar
+   * la dirección ES la identificación del bien**, exactamente el papel que
+   * juega la matrícula en un auto. Sin ella, dos pólizas de hogar de la misma
+   * compañía salen como dos filas idénticas y lo único que las distingue es el
+   * número de póliza, que no se sabe nadie (medido en su propia bóveda el
+   * 07/09/2026: dos «Occident · Hogar» indistinguibles).
+   *
+   * ⚠️ Sigue siendo un flag APARTE de `bien` y no se colapsa con él: es la
+   * palanca para volver a cerrarlo sin tocar nada más si algún día se decide lo
+   * contrario. Quien lo cambie, que cambie también el cepo de
+   * `bien-asegurado.test.ts` a conciencia, no para que pase.
    */
   direccionRiesgo: boolean
   iban: boolean
@@ -69,7 +78,9 @@ const TARJETA: CamposVisibles = {
   recibos: false,
   siniestros: false,
   bien: true,
-  direccionRiesgo: false,
+  // Ver el docblock del campo: identifica el inmueble, como la matrícula al
+  // coche. Decisión de Alberto del 07/09/2026.
+  direccionRiesgo: true,
   iban: false,
   dniTomador: false,
   documentos: false,
@@ -82,7 +93,6 @@ const COMPLETO: CamposVisibles = {
   prima: true,
   recibos: true,
   siniestros: true,
-  direccionRiesgo: true,
   iban: true,
   dniTomador: true,
   documentos: true,

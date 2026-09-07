@@ -41,7 +41,7 @@ import {
   autorizacionVigente,
   camposDeAlcances,
   camposVisibles,
-  describirBien,
+  describirBienConGemela,
   esAlcance,
   etiquetaNivelAlcances,
   NIVELES,
@@ -60,6 +60,8 @@ import {
   type Nivel,
 } from '@central/module-seguros-portal'
 import { importeEiac, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
+
+import { decryptField } from '@central/module-seguros-pii'
 
 import { prisma } from './db'
 import { getIdentidad } from './session'
@@ -287,6 +289,64 @@ export async function carteraDeSesion(): Promise<CarteraPortal | null> {
   return carteraDeIdentidad(identidad.id)
 }
 
+/**
+ * La clave con la que se empareja una póliza con su GEMELA duplicada.
+ *
+ * Los CUATRO campos van juntos y ninguno sobra: `clienteId` para que el
+ * emparejamiento no pueda cruzar dos fichas, `numeroPoliza` porque es lo que
+ * identifica el contrato, `tipo` porque el mismo número puede repetirse entre
+ * ramos, y `fechaInicio` porque **la compañía REUTILIZA el número al renovar**.
+ *
+ * 🚨 La fecha no es cinturón y tirantes: medido el 07/09/2026, la póliza
+ * `0732200153700` tiene DOS gemelas del mismo cliente con direcciones DISTINTAS
+ * (41011 con efecto 2016 y 41001 con efecto 2022). Sin la fecha, cuál gana
+ * depende del orden de la consulta, y el resultado sería la dirección de otra
+ * casa: plausible, sin error y equivocada — exactamente el fallo que la regla de
+ * «agrupar por identidad, nunca por la etiqueta» persigue. Con la fecha, 10 de
+ * las 11 huérfanas se emparejan y la ambigua se queda sin dirección, que es la
+ * respuesta correcta.
+ *
+ * Sin número no hay identidad que emparejar: `null`, y esa póliza no busca
+ * gemela. Emparejar «todo lo que no tenga número» juntaría contratos distintos.
+ */
+function claveGemela(
+  clienteId: string,
+  numeroPoliza: string | null,
+  tipo: string | null,
+  fechaInicio: Date | null,
+): string | null {
+  if (numeroPoliza === null || numeroPoliza.trim() === '') return null
+  return `${clienteId}|${numeroPoliza.trim()}|${tipo ?? ''}|${fechaInicio?.toISOString() ?? ''}`
+}
+
+/**
+ * La dirección del riesgo viaja CIFRADA dentro de `datos_especificos`
+ * (`v1:iv:cipher:tag`, `@central/module-seguros-pii`). Se descifra aquí, que es
+ * donde se lee la BD: el módulo puro que describe el bien no sabe de claves.
+ *
+ * 🔑 Con `PII_ENCRYPTION_KEY` puesta en el Vercel de `asegura-portal` sale la
+ * calle en claro. **SIN ella `decryptField` devuelve el sobre tal cual**, y
+ * entonces `describirBien` lo anula (ver su `campo()`): la fila cae a
+ * «compañía · ramo», que es lo que se veía antes. O sea que la app no se rompe
+ * sin la clave — simplemente no enseña la dirección, y eso NO se nota en ningún
+ * log. Es el mismo despiste que dejó `central-asegura` muerta en silencio el
+ * 02/09/2026: la clave y el despliegue van en el mismo paso.
+ *
+ * El `catch` deja el valor intacto en vez de borrarlo, por la misma razón: un
+ * fallo de descifrado tiene que acabar en el cepo de `campo()`, no en un hueco
+ * indistinguible de «la compañía no lo ha informado».
+ */
+function descifrarDireccion(datos: unknown): unknown {
+  if (typeof datos !== 'object' || datos === null || Array.isArray(datos)) return datos
+  const d = datos as Record<string, unknown>
+  if (typeof d.direccion !== 'string' || !d.direccion.startsWith('v1:')) return datos
+  try {
+    return { ...d, direccion: decryptField(d.direccion) }
+  } catch {
+    return datos
+  }
+}
+
 export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPortal> {
   // Cómo salió el último intento de vínculo. Se LEE, no se recalcula: aquí no
   // existe el correo en claro (`portal_canal` guarda un hash con pimienta
@@ -453,6 +513,68 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   ])
 
   const polizaIds = polizas.map((p) => p.id)
+
+  // ── Las GEMELAS del volcado ───────────────────────────────────────────────
+  //
+  // 🚨 En la cartera hay pólizas DUPLICADAS: la misma entró dos veces —una por
+  // el volcado del CRM (`import_ref`, con `datos_especificos` completos) y otra
+  // por CIMA (`eiac_xml_hash`, con las fechas al día pero SIN
+  // `datos_especificos`)— porque el nombre de la aseguradora no coincidía y la
+  // ingesta no las emparejó. `WHERE_CARTERA_VIVA` sirve la de CIMA, que es la
+  // buena en todo menos en el único campo que dice QUÉ CASA es. Medido el
+  // 07/09/2026: le pasa a **11 de las 19 hogar vivas**, y por eso Alberto veía
+  // dos «Occident · Hogar» idénticas.
+  //
+  // Se lee solo para las que no traen nada, y solo del MISMO cliente: la clave
+  // de emparejamiento lleva `clienteId` dentro, así que el `in` cruzado de la
+  // consulta no puede colar la póliza de otro. Quién puede ver luego la calle
+  // sigue decidiéndolo `ve.direccionRiesgo`, igual que antes.
+  //
+  // Esto NO arregla el duplicado: lo tapa para que el dato deje de estar
+  // escondido. El duplicado se arregla en la ingesta.
+  const huerfanas = polizas.filter((p) => p.datosEspecificos == null && p.numeroPoliza !== null)
+  const gemelas =
+    huerfanas.length === 0
+      ? []
+      : await prisma.poliza.findMany({
+          where: {
+            clienteId: { in: [...new Set(huerfanas.map((p) => p.clienteId))] },
+            numeroPoliza: { in: [...new Set(huerfanas.map((p) => p.numeroPoliza as string))] },
+            id: { notIn: polizaIds },
+            mergedIntoPolizaId: null,
+          },
+          select: {
+            clienteId: true,
+            numeroPoliza: true,
+            tipo: true,
+            fechaInicio: true,
+            datosEspecificos: true,
+          },
+        })
+  //
+  // 🚨 Y si DOS gemelas caen en la misma clave, no gana ninguna: se marca la
+  // clave como ambigua y esa póliza se queda sin dirección. Quedarse con «la
+  // última» sería elegir por el orden de la consulta, y equivocarse aquí no
+  // produce un hueco visible sino la dirección de OTRA casa.
+  const datosDeGemela = new Map<string, unknown>()
+  const ambiguas = new Set<string>()
+  for (const g of gemelas) {
+    if (g.datosEspecificos == null) continue
+    const clave = claveGemela(g.clienteId, g.numeroPoliza, g.tipo, g.fechaInicio)
+    if (clave === null) continue
+    if (datosDeGemela.has(clave)) {
+      ambiguas.add(clave)
+      continue
+    }
+    datosDeGemela.set(clave, g.datosEspecificos)
+  }
+  for (const clave of ambiguas) datosDeGemela.delete(clave)
+
+  /** Los `datos_especificos` de la gemela de esta póliza, si hay UNA sola. */
+  const gemelaDe = (p: { clienteId: string; numeroPoliza: string | null; tipo: string; fechaInicio: Date | null }) => {
+    const clave = claveGemela(p.clienteId, p.numeroPoliza, p.tipo, p.fechaInicio)
+    return clave === null ? undefined : datosDeGemela.get(clave)
+  }
   const [coberturas, recibos, siniestros] =
     polizaIds.length === 0
       ? [[], [], []]
@@ -586,7 +708,11 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       // titular (nunca a un tercero de una persona física). Un solo `if` aquí
       // regalaría la dirección de una casa a quien solo pidió ver la compañía.
       bien: (() => {
-        const b = describirBien(p.tipo, p.datosEspecificos)
+        const b = describirBienConGemela(
+          p.tipo,
+          descifrarDireccion(p.datosEspecificos),
+          descifrarDireccion(gemelaDe(p)),
+        )
         return {
           cosa: ve.bien ? b.cosa : null,
           ubicacion: ve.direccionRiesgo ? b.ubicacion : null,

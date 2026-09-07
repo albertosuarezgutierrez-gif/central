@@ -13,6 +13,16 @@
 // `localidad` y `cp` en 2 de 2 (y `metrosCuadrados`/`anioConstruccion` en 1).
 // El resto de ramos vivos no traen ninguna clave.
 //
+// 🚨 RE-MEDIDO el 07/09/2026, y el «2 de 2» era engañoso: son 2 de **19** hogar
+// vivas. Las otras 17 no traen NADA, y en 11 de ellas la dirección sí existe —
+// pero en una fila GEMELA del volcado (misma póliza, mismo cliente, otra
+// aseguradora), que la cartera viva no mira. De ahí `describirBienConGemela`.
+//
+// 🔐 Y las 2 que sí traen `direccion` la traen **CIFRADA** (`v1:iv:cipher:tag`,
+// `@central/module-seguros-pii`). Este fichero es puro y no descifra: descifra
+// quien lee la BD (`lib/cartera-lectura.ts`). Lo que hace este fichero es negarse
+// a pintar un criptograma: ver `campo()`.
+//
 // ─────────────────────────────────────────────────────────────────────────────
 // 🚨 LA LÍNEA QUE SEPARA LOS DOS CAMPOS DE SALIDA, y no es una sutileza:
 //
@@ -22,18 +32,18 @@
 //                 furgoneta. Es literalmente el ejemplo con el que se escribió
 //                 `acceso.ts`.
 //
-//   `ubicacion` = DÓNDE está el riesgo, o sea **la dirección donde duerme el
-//                 titular**. Eso no es un dato del contrato: es un dato de la
-//                 PERSONA, del mismo lado que su DNI. Un tercero no lo ve
-//                 NUNCA cuando quien cede es una persona física — ni con
-//                 `ver_economico`—, exactamente por la misma razón por la que
-//                 no ve sus siniestros abiertos (04/09/2026). Cuando quien cede
-//                 es una SOCIEDAD sí: la dirección de una nave es un dato de la
-//                 empresa, y quien la representa lo necesita para su trabajo.
+//   `ubicacion` = DÓNDE está el riesgo: la dirección del inmueble asegurado.
+//                 Es la IDENTIFICACIÓN del bien en un hogar, el papel que juega
+//                 la matrícula en un auto — y por eso desde el **07/09/2026**
+//                 también se ve desde el nivel más bajo (decisión de Alberto;
+//                 el porqué, en el docblock de `direccionRiesgo` en `acceso.ts`,
+//                 y lo que se quitó, en `NUNCA_A_UN_TERCERO` de
+//                 `autorizacion.ts`). Antes de esa fecha era lo contrario.
 //
-// Quien colapse los dos en un solo campo estará regalando la dirección de una
-// casa a quien solo pidió ver de qué compañía es el seguro. No fallaría nada:
-// saldría.
+// Siguen siendo DOS campos y no uno, aunque hoy los dos se vean en el mismo
+// nivel: `direccionRiesgo` es la palanca para volver a cerrar la dirección sin
+// tocar nada más, y un solo campo la haría inseparable de la matrícula para
+// siempre.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { textoConDato } from './poliza-leida.ts'
@@ -79,8 +89,18 @@ function campo(d: Record<string, unknown>, clave: string): string | null {
   if (clave.startsWith('_')) return null
   const v = d[clave]
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : null
-  return textoConDato(v)
+  const t = textoConDato(v)
+  // 🚨 Un valor que sigue siendo el SOBRE CIFRADO (`v1:iv:cipher:tag`) no es un
+  // dato: es un «no he podido leerlo» con forma de texto, o sea exactamente el
+  // valor de cajón que la regla de la casa manda anular antes de que nadie lo
+  // pinte. Sin esto, un portal SIN `PII_ENCRYPTION_KEY` titularía la póliza de
+  // hogar con `v1:FUMEZniYx4Hh2jjo:...` — y no fallaría nada: saldría.
+  if (t !== null && VERSION_CIFRADO.test(t)) return null
+  return t
 }
+
+/** El sobre de `@central/module-seguros-pii`: `v1:iv:cipher:tag` en base64. */
+const VERSION_CIFRADO = /^v\d+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/
 
 /** Un entero positivo, o `null`. Un 0 metros cuadrados es un hueco, no un piso. */
 function entero(d: Record<string, unknown>, clave: string): number | null {
@@ -149,4 +169,35 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   // Un ramo sin bien descriptible (vida, decesos, salud…). No es un error: es
   // que no hay una cosa que enseñar, y se dice callando.
   return { cosa: null, ubicacion: null, detalles }
+}
+
+/**
+ * El bien, rescatando los datos de la fila GEMELA cuando la viva no dice nada.
+ *
+ * 🚨 Por qué hace falta (medido el 07/09/2026). En la cartera hay pólizas
+ * DUPLICADAS: la misma (mismo cliente, mismo número, mismo ramo, misma fecha de
+ * efecto) entró dos veces —una por el volcado del CRM (`import_ref`, con
+ * `datos_especificos` completos) y otra por CIMA (`eiac_xml_hash`, con las
+ * fechas al día pero SIN `datos_especificos`)— porque el nombre de la
+ * aseguradora no coincidía y la ingesta no las emparejó. `esCarteraViva()` sirve
+ * la de CIMA, que es la correcta en todo… menos en el único campo que dice qué
+ * casa es. Le pasa a **11 de las 19 hogar vivas**.
+ *
+ * La regla es de TODO o NADA, nunca clave a clave: si los datos de la fila viva
+ * ya describen algo, se usan tal cual; si no describen nada, se usan los de la
+ * gemela ENTEROS. Mezclarlas cruzaría dos contratos, y el resultado sería
+ * plausible —una dirección de una y unos metros de la otra— que es la forma cara
+ * de equivocarse.
+ *
+ * Esto NO arregla el duplicado, solo deja de esconder el dato. El duplicado se
+ * arregla en la ingesta.
+ */
+export function describirBienConGemela(
+  ramo: string | null | undefined,
+  datosEspecificos: unknown,
+  datosGemela: unknown,
+): BienAsegurado {
+  const propio = describirBien(ramo, datosEspecificos)
+  if (bienTieneAlgo(propio)) return propio
+  return describirBien(ramo, datosGemela)
 }
