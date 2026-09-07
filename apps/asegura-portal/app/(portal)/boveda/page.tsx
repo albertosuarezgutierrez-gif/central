@@ -23,7 +23,8 @@ import Calendario from './Calendario'
 import { FilaDeclarada } from './FilaDeclarada'
 import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
-import { RAMO } from './PolizaVista'
+import { HistorialSiniestros, RAMO, RecibosDePoliza } from './PolizaVista'
+import { VistaPorPoliza } from './VistaPorPoliza'
 import { agruparCartera, vistaDeBoveda, type GrupoCartera } from '@central/module-seguros-portal'
 
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
@@ -314,8 +315,43 @@ export default async function Boveda({
           tiene prisa, y la bóveda es una tarea tranquila que puede esperar a
           mañana. Antes había que bajar por delante de toda la cartera para
           llegar aquí. */}
+      {/* ── Recibos (07/09/2026) ───────────────────────────────────────────
+          Los datos ya estaban, pero solo los encontraba quien entrase póliza a
+          póliza. La lista conserva la separación por titular: los recibos de
+          tu empresa no se mezclan con los tuyos.
+
+          🚨 `incluye` omite las pólizas cuyo bloque no se ve en tu nivel
+          (`recibos === null`, que es el caso de un tercero autorizado). Se
+          omiten ENTERAS: un título con un «no visible» debajo le contaría que
+          ahí hay algo que mirar. */}
+      {vista === 'recibos' && (
+        <VistaPorPoliza
+          bloques={bloques}
+          incluye={(p) => p.recibos !== null}
+          bloque={(p) => <RecibosDePoliza p={p} />}
+          vacio="Aquí verás los recibos de tus seguros cuando tu compañía nos los informe. Que no haya ninguno no significa que estés al corriente: significa que todavía no nos consta nada."
+        />
+      )}
+
+      {/* ── Siniestros: el historial Y el parte, en la MISMA pestaña ────────
+          Dos pestañas serían dos puertas para lo mismo (una diría «siniestro»
+          y la otra «parte», que para un cliente son la misma palabra) — es
+          exactamente lo que mató a «Mis pólizas» el 05/09. El historial va
+          primero porque quien entra a mirar es mayoría; el formulario, debajo.
+
+          ⚠️ Medido el 07/09/2026: solo 31 de los 80 titulares tienen algún
+          siniestro, así que 6 de cada 10 verán el vacío. Por eso el vacío es
+          una frase que dice lo que sabemos y lo que no. */}
       {vista === 'siniestro' && (
-        <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+        <>
+          <VistaPorPoliza
+            bloques={bloques}
+            incluye={(p) => p.siniestros !== null && p.siniestros.length > 0}
+            bloque={(p) => <HistorialSiniestros p={p} />}
+            vacio="No nos consta ningún siniestro en tus seguros. No significa que no hayas tenido ninguno: nos los informa tu compañía. Si acabas de tener uno, cuéntanoslo aquí abajo."
+          />
+          <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+        </>
       )}
 
     </>

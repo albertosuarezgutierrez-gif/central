@@ -263,20 +263,26 @@ input, select, textarea, button { font: inherit; }
   color: var(--text);
   background: var(--surface-hover, var(--panel2));
 }
-/* 📱 En un móvil ESTRECHO las tres se reparten el ancho a partes iguales.
+/* 📱 En cualquier móvil o tablet las pestañas se REPARTEN el ancho del carril.
  *
- * Medido el 05/09/2026, después de bajar de cuatro pestañas a tres: a 360 px y
- * arriba ya caben, pero a 320 se salen 39 px. El carril hace scroll horizontal
- * y la barra está oculta, así que la última pestaña no es que quede apretada:
- * **no hay ninguna pista de que exista**, y quien no arrastre por casualidad no
- * la encuentra. Es justo lo que le pasaba a Alberto con cuatro en un móvil de
- * 390 («Qu…» cortado), solo que 70 px más abajo.
+ * 🚨 Medido el 07/09/2026 con Playwright al volver a CUATRO pestañas, y el
+ * resultado fue el bug de siempre: con `flex: 0 0 auto` el carril desbordaba
+ * **48 px a 390 y 26 px a 412** —los anchos de móvil más comunes— y «Quién me
+ * ve» se salía de la pantalla. Es exactamente el «Qu…» cortado que en su día
+ * obligó a bajar de cuatro pestañas a tres. El carril tiene `overflow-x`, así
+ * que no falla nada: la pestaña simplemente no existe para quien no arrastre
+ * por casualidad, y la barra de scroll está oculta.
  *
- * Repartir el ancho no las hace más pequeñas de lo táctil: a 320 tocan a ~106 px
- * cada una, con los 44 px de alto intactos. El `overflow-x` del carril se queda
- * como red por si algún día vuelve a haber una cuarta.
+ * El reparto se aplica hasta 1023 px (justo debajo del lateral de escritorio)
+ * en vez de hasta 380: repartir es lo correcto en TODO el rango donde el carril
+ * es horizontal, y el umbral de 380 solo tapaba el caso de tres pestañas.
+ *
+ * Y por debajo de 400 px la etiqueta puede partirse en dos líneas: con cuatro
+ * pestañas a ~77 px, «Quién me ve» en una sola línea se corta a media palabra
+ * (`nowrap` no lo parte: lo esconde). Dos renglones centrados dentro de los
+ * 44 px táctiles se leen; media palabra no.
  */
-@media (max-width: 380px) {
+@media (max-width: 1023px) {
   .portal-nav {
     padding: 0;
   }
@@ -284,7 +290,15 @@ input, select, textarea, button { font: inherit; }
     flex: 1 1 0;
     min-width: 0;
     justify-content: center;
+    text-align: center;
     padding: 0 4px;
+  }
+}
+@media (max-width: 400px) {
+  .portal-nav-item {
+    white-space: normal;
+    line-height: 1.15;
+    font-size: 13px;
   }
 }
 
@@ -512,6 +526,27 @@ h1 {
  * de 44 px de alto y de ancho completo se acierta sin mirar. Y `min-width: 0`
  * en el cuerpo es lo que permite que el truncado funcione dentro de un flex —
  * sin él, un texto largo empuja la fila fuera de la pantalla. */
+/* ── Una póliza dentro de las pestañas «Recibos» y «Siniestros» ───────────
+   No es una tarjeta: es un tramo de lista con su título. La tarjeta la usa la
+   bóveda, donde la fila entera es un enlace; aquí lo que se lee es el bloque
+   de debajo, y meterlo en otra caja añade un borde sin añadir información. */
+.poliza-bloque {
+  margin: 0 0 20px;
+}
+.poliza-bloque-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  /* El nombre de una compañía + el ramo no cabe en una línea a 320 px, y
+     partirlo por la mitad de una palabra es peor que dejarlo en dos renglones. */
+  overflow-wrap: anywhere;
+}
+
 /* ── La cabecera de un TITULAR dentro de un bloque de la bóveda ────────────
    Se queda PEGADA arriba mientras se recorre su lista. Un título normal se
    sale de la vista al hacer scroll y entonces la póliza de tu empresa —o la

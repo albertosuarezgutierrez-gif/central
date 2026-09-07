@@ -36,7 +36,17 @@
  * `vistaDeBoveda()` en `seguros`, que es exactamente donde ahora vive ese
  * contenido. No hace falta redirección.
  */
-export const VISTAS_BOVEDA = ['seguros', 'siniestro'] as const
+/**
+ * 🚨 `recibos` se añadió el 07/09/2026, y `siniestro` cambió de ETIQUETA pero
+ * NO de identificador. Alberto, tres veces sobre su portal: «sigue sin
+ * aparecer siniestros ni recibo».
+ *
+ * El id se conserva a propósito: los enlaces `?vista=siniestro` que ya existan
+ * —un correo, un marcador— siguen llevando a su sitio. Cambiarlo los mandaría
+ * a `seguros` por el comportamiento de `vistaDeBoveda()`, sin error y sin que
+ * nadie se enterase.
+ */
+export const VISTAS_BOVEDA = ['seguros', 'recibos', 'siniestro'] as const
 
 export type VistaBoveda = (typeof VISTAS_BOVEDA)[number]
 
@@ -74,17 +84,26 @@ export interface PestanaPortal {
 /**
  * Las pestañas, en orden.
  *
- * 📌 Son TRES y no nueve a propósito. El panel del corredor tiene nueve
- * entradas porque detrás de cada una hay cientos de filas; un asegurado entra
- * con una, dos o tres pólizas. Una pestaña «Siniestros» que casi siempre dice
- * cero no parece un producto moderno: parece un producto a medio hacer.
+ * 📌 Son CUATRO desde el 07/09/2026, y la que vuelve no es «Mis pólizas»: son
+ * «Recibos» y el historial de siniestros, que Alberto echó de menos tres veces
+ * seguidas mirando su propio portal.
  *
- * Eran cuatro hasta el 05/09/2026, y la que sobraba era «Mis pólizas» — ver
- * `VISTAS_BOVEDA`. De paso arregla algo que se veía en el móvil de Alberto: con
- * cuatro, la última salía **cortada** («Qu…»). El carril hace scroll
- * horizontal, pero con la barra oculta no hay ninguna pista de que se pueda
- * arrastrar, así que «Quién me ve» solo la encontraba quien lo hiciera por
- * casualidad. Con tres caben.
+ * 🚨 Esto MATIZA el argumento que había escrito aquí («una pestaña que casi
+ * siempre dice cero parece un producto a medio hacer»), que se midió en vez de
+ * discutirse. Sobre la cartera viva del 07/09/2026, de los 80 titulares:
+ *   · **55 (69 %) tienen algún recibo no anulado** → para recibos el argumento
+ *     era sencillamente falso.
+ *   · **31 (39 %) tienen algún siniestro** → aquí sí acierta a medias, y por
+ *     eso el vacío de esa pestaña dice «no nos consta ninguno» (que NO es «no
+ *     has tenido ninguno»), en vez de quedarse en blanco.
+ * Lo que sigue siendo cierto es lo de «Mis pólizas»: aquella no aportaba una
+ * pantalla, aportaba un sinónimo. Estas dos aportan datos que ya existen y que
+ * solo encontraba quien entrase póliza a póliza.
+ *
+ * ⚠️ Y con cuatro vuelve el riesgo que las dejó en tres: en el móvil de Alberto
+ * la última salía **cortada** («Qu…»). Las etiquetas de ahora son más cortas
+ * («Recibos», «Siniestros») y el carril reparte el ancho por debajo de 380 px,
+ * pero eso **se mide con Playwright antes de darlo por bueno**, no se supone.
  *
  * La última no es un panel, es la otra ruta (`/autorizaciones`). Va en la misma
  * barra porque para quien la usa es «otra sección», no «otra página web».
@@ -92,7 +111,13 @@ export interface PestanaPortal {
 export function pestanasPortal(): PestanaPortal[] {
   return [
     { vista: 'seguros', etiqueta: 'Mis seguros', href: '/boveda' },
-    { vista: 'siniestro', etiqueta: 'Un siniestro', href: '/boveda?vista=siniestro' },
+    { vista: 'recibos', etiqueta: 'Recibos', href: '/boveda?vista=recibos' },
+    // 🚨 «Siniestros» y no «Un siniestro»: la pestaña ya no es solo el
+    // formulario para declarar uno, es también el historial de los que la
+    // compañía nos ha informado. Y el cepo de sinónimos obliga a que sea UNA
+    // palabra en la barra: «Siniestros» + «Un parte» serían dos puertas para
+    // lo mismo, que es exactamente lo que mató a «Mis pólizas».
+    { vista: 'siniestro', etiqueta: 'Siniestros', href: '/boveda?vista=siniestro' },
     { vista: null, etiqueta: 'Quién me ve', href: '/autorizaciones' },
   ]
 }

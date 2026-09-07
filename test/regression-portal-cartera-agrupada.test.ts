@@ -117,3 +117,30 @@ test('🚨 la cabecera del titular es PEGAJOSA', () => {
   assert.match(regla, /position:\s*sticky/, 'una cabecera que se va con el scroll no agrupa nada')
   assert.match(regla, /background:\s*var\(--surface\)/, 'sin fondo, las tarjetas se leen por debajo')
 })
+
+test('🚨 las pestañas del carril se REPARTEN el ancho en todo el rango móvil', () => {
+  // Medido el 07/09/2026 al volver a cuatro pestañas: con `flex: 0 0 auto` el
+  // carril desbordaba 48 px a 390 y 26 px a 412 —los anchos de móvil más
+  // comunes— y «Quién me ve» se salía de la pantalla. No falla nada: el carril
+  // tiene `overflow-x` y la barra está oculta, así que la pestaña simplemente
+  // no existe para quien no arrastre por casualidad. Es el «Qu…» cortado que
+  // en su día obligó a bajar de cuatro pestañas a tres.
+  //
+  // El umbral tiene que cubrir TODO el rango en el que el carril es horizontal
+  // (hasta el lateral de escritorio, 1024). Un `max-width: 380px` deja fuera
+  // justo los móviles donde se rompía.
+  const i = CSS.indexOf('@media (max-width: 1023px)')
+  assert.notEqual(i, -1, 'el reparto tiene que llegar hasta el lateral de escritorio, no hasta 380px')
+  const bloque = CSS.slice(i, i + 400)
+  assert.match(bloque, /\.portal-nav-item\s*\{[^}]*flex:\s*1 1 0/, 'las pestañas reparten el ancho del carril')
+})
+
+test('🚨 y por debajo de 400px la etiqueta puede partirse en dos lineas', () => {
+  // Con cuatro pestañas a ~77 px, «Quién me ve» en una sola línea se corta a
+  // media palabra: `nowrap` no la parte, la esconde. Dos renglones centrados
+  // dentro de los 44 px táctiles se leen; media palabra no.
+  const i = CSS.indexOf('@media (max-width: 400px)')
+  assert.notEqual(i, -1, 'falta la regla que permite el segundo renglón en móvil estrecho')
+  const bloque = CSS.slice(i, i + 300)
+  assert.match(bloque, /white-space:\s*normal/, 'sin esto la etiqueta larga se corta en vez de partirse')
+})

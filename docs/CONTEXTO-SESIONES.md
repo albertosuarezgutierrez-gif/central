@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧾 Portal ASegura: pestañas «Recibos» y «Siniestros», y la cuarta pestaña que NO cabía (07/09/2026).**
+  Alberto, tres veces: «sigue sin aparecer siniestros ni recibo». Los datos estaban, pero solo los veía quien
+  entrase póliza a póliza. 🚨 Esto CONTRADICE la decisión escrita en `vista-portal.ts` («una pestaña que casi
+  siempre dice cero»), así que se midió: **55 de 80 titulares (69 %) tienen recibo no anulado** → para recibos
+  el argumento era falso; **31 de 80 (39 %) tienen siniestro** → ahí acierta a medias, y por eso el vacío dice
+  «no nos consta ninguno». El historial y el parte van en UNA pestaña «Siniestros» (dos serían dos puertas para
+  la misma palabra, lo que mató a «Mis pólizas»); el id `siniestro` NO cambia, para no romper enlaces viejos.
+  ⚠️ Y la cuarta pestaña **reprodujo el bug del «Qu…»**: medido con Playwright, el carril desbordaba **48 px a
+  390 y 26 px a 412** y «Quién me ve» se salía. Arreglado repartiendo el ancho hasta 1023 px (no hasta 380) y
+  permitiendo dos renglones por debajo de 400. Re-medido a 320/360/390/412/768/1023/1024/1440: 0 desbordes.
+
 - **🗂 Portal ASegura: la bóveda ya separa TUS pólizas, las de TUS EMPRESAS y las de quien te autoriza (07/09/2026).**
   Dictado de Alberto: «llegará un momento en que un cliente tenga acceso a varios clientes a su vez, sobre todo
   empresa… se tiene que diferenciar bien cuáles son mías, cuáles de la empresa y de cada autorizado». 🚨 `cartera.propias`
