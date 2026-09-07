@@ -126,4 +126,98 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 (septiembre sigue abierto).
 
 ---
-<!-- verificado: 2026-09-04 -->
+
+## 🟡 Pasada ligera — 07/09/2026
+
+Rango `f341b2e8..HEAD` (46 commits, 05/09 17:31 → 07/09). Integridad estructural (13 apps en
+`ls apps` == 13 en la matriz de `tests.yml`, `ignoreCommand` presente en los 13, `transpilePackages`
+coherente) sin drift.
+
+### 🔴 Backlog de PRs (paso 2-ter) — el hallazgo grande de hoy
+`rutinas-automerge.yml` vivo (decenas de runs/hora). Pero **3 PRs cuyo cuerpo dice "solo bitácora,
+se auto-mergea" traen código real sin revisar**, atascados en conflicto (`dirty`) con CERO ejecuciones
+de los checks requeridos en toda su vida:
+- **#2318** — cuerpo: "solo 3 docs". Diff real: 15 archivos, incluido el módulo de mensajería
+  `mensajes-prog/{cobertura,decidir,orquestador}.ts` (SIVRA) y una migración SQL.
+- **#2322** — cuerpo: "solo bitácora". Diff real: 23 archivos, incluido
+  `packages/module-seguros-portal/src/canal-compania.ts` y una migración Prisma.
+- **#2327** — cuerpo: "1 línea". Diff real: 22 archivos, incluido
+  `packages/module-seguros-portal/src/consentimiento.ts` y una migración SQL.
+- **#2262** — registro puro CONFIRMADO (2 archivos), pero lleva ~59h en conflicto sin que ningún
+  check requerido haya corrido nunca.
+
+Causa probable en los 4: rama reutilizada por sesiones distintas después de escribirse el cuerpo del
+PR, y el conflicto con `main` nunca se resolvió (así que el evento `pull_request` no llegó a
+`tests.yml`/`ci.yml`/`qa.yml`). **Acción manual de Alberto**: antes de cerrar cualquiera de estos
+cuatro dando por hecho que son bitácoras redundantes, hay que abrir el diff y revisar el código que
+traen — #2322 y #2327 en particular tienen trabajo de producto (`module-seguros-portal`) que se
+perdería si se cierran a ciegas. Los PRs `dirty` **<7 días** (2414/2413/2412/2319, todos de
+06/09/2026) no llegan aún al umbral de "olvidado", pero comparten la misma causa (conflicto sin
+resolver) y conviene traer `main` a sus ramas en la próxima pasada.
+
+### Heartbeat de crons/agentes (2-bis) — sin `⛔`, tres huellas sanas SIN vigilar (🟡, cerrado en el
+mismo PR de código de esta pasada)
+Los 34 agentes de `AGENTES_VIGILADOS` ✅ (dos pendientes ya declarados y con fecha de revisión:
+`ses_transporte` sin vencer, `sivra_domotica_acceso` vence el 12/09). Consulta b) toda ✅.
+**Hallazgo**: `smoobu_sync`, `correduria_partes` y `trading_h10` ya escribían huella sana en
+`agente_latidos` (verificado con filas reales) pero no estaban en `AGENTES_VIGILADOS` — verdes hoy,
+mudos sin aviso si dejan de estarlo mañana. **Añadidas las tres** (`apps/plataforma/lib/monitoring/latidos.ts`
++ su probe en `app/api/cron/agentes-latido/route.ts`), typecheck y `latidos.test.ts` en verde.
+`trading-backtest` (cron cada 2h) sigue sin ninguna huella — no se le pudo dar de alta sin escribir un
+`registrarLatido` nuevo en su cron, eso queda para una sesión de código, no de auditoría.
+⚠️ Sin verificar en esta pasada: si las 8 rutinas de Claude Code sin `ALERTA_TOKEN` funcional
+(citadas en `docs/RUTINAS-PROGRAMADAS.md` del 23/08) siguen así — recomendado para la próxima pasada
+profunda.
+
+### 🛡️ Salud de la correduría (2-quater, obligatorio) — sin 🔴, dos 🟡
+Latidos ✅ (`correduria_ingesta` reporta **"DEGRADADA"** en su `detalle`, no solo "no comprobado").
+- **Occident/C0058 lleva 76 días sin mandar ningún fichero CIMA** (su mayor hueco medido hasta hoy
+  eran 2 días), con **7 renovaciones ya vencidas** sin que llegara el fichero y 12 más vencen en 90
+  días (64 pólizas vivas de esa compañía). Merece que Alberto lo mire — no es ruido del auditor.
+- 20 pólizas con recibos/siniestros huérfanos (sin carga inicial de esa clave de mediador); 21
+  envíos rechazados por `webhook_codeoscopic` en 24h.
+- `cima_pull_*`: sigue procesando (`processed=10`, `errores=0` en las últimas 3 pasadas), pero el
+  último FICHERO nuevo es del 05/09 — coherente con la degradación de arriba, no cuarentena atascada
+  (`queueDepth` estable con `processed≠0`).
+- Codeoscopic: 0 cotizaciones en 7 días, 0€.
+- **PR #2410 (05/09) tocó el puerto `/api/operador/cliente/contactos/route.ts` sin tocar ningún test
+  de aislamiento** — los cepos existentes siguen verdes, pero el cambio no sumó cobertura nueva. 🟡,
+  sin acción en esta pasada (no es carril 1 ni un fix de bajo riesgo evidente).
+§21 (`agente-correduria`) sigue pausada, sin entradas en la bitácora — correcto.
+
+### 💰 Salud del precio SIVRA (2bis, obligatorio) — sin 🔴
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · última pasada hace 6 min con 19
+noches escritas. Las 4 palancas sanas (`enabled`/`apply_enabled` en `true`, `min_price` puesto,
+`antelacion_k=0`). Único hallazgo: **4 pares (piso, fecha) oscilantes** en los últimos 7 días (🟠,
+ciclo límite — el motor no converge en esas fechas concretas). No urgente; a vigilar si se repite.
+
+### Reconciliación memoria/skills — 4 hallazgos de texto, corregidos en el acto
+- `CLAUDE.md:138` decía "el teléfono está ausente a propósito" — falso desde el 05/09/2026
+  (`MEDIADOR.identidad.telefono` existe y se usa en WhatsApp/`tel:`/JSON-LD). Corregido.
+- `docs/ASEGURA-SEO-REDES-IDEAS.md` seguía en "6 ramos/6 páginas" tras sumarse `flota` el 06/09
+  (PR #2470, ahora son 7, ~830 palabras de copy real verificadas). Corregido.
+- `docs/FUENTES-DE-VERDAD.md` no tenía fila para la skill `seo-asegura` ni para `apps/asegura-web`
+  pese a 6 PRs de SEO en el rango. Añadida.
+- `docs/HUECOS-ABIERTOS.md` no catalogaba el hueco de `/api/acceso/solicitar` sin rate limit/validación
+  de email que la memoria del 06/09 (PR #2404) marcó como "lo más urgente" — 24h después seguía sin
+  catalogar ni corregir. **Corregido en código** (ver abajo) y anotado directo en "cerrados".
+Sin más hallazgos: `docs/CONTEXTO-SESIONES.md` cubre los 46 commits del rango, sin rotación mensual
+pendiente, reglas fiscales sin tocar, `docs/SKILLS.md` al día, `apps/ia-rest/**` fuera del rango
+(manuales no aplica), triaje de correo sin tocar.
+
+### 🔧 Fix de código (carril 2, bajo riesgo, verificado): rate limit + validación en `/api/acceso/solicitar`
+`apps/asegura-portal/app/api/acceso/solicitar/route.ts` aceptaba `destino: z.string().min(3).max(200)`
+sin exigir forma de email/teléfono y sin ningún límite de tasa — la web pública de la correduría ya
+enlaza a este endpoint, así que era un amplificador de correo/WhatsApp abierto con el dominio de
+Alberto. Ahora: `Entrada` es un `z.discriminatedUnion('tipo', …)` que exige `.email()` real para
+`tipo==='email'` y E.164 (mismo patrón que `canal-compania.ts`) para `tipo==='whatsapp'`; y
+`apps/asegura-portal/lib/rate-limit.ts` (copia del patrón ya usado en `apps/plataforma`) limita a
+5 intentos / 15 min por IP antes de tocar la BD. Typecheck de `asegura-portal` limpio; los 48 tests
+relevantes (`peticiones`, `invitaciones`, `regression-portal-aislamiento`, `regression-secrets`) en
+verde — el fix no toca `prisma.portalX`, así que el guardián de aislamiento lo ignora correctamente.
+
+### Manuales — sin cambios
+Ningún commit del rango toca `apps/ia-rest/**`.
+
+---
+<!-- verificado: 2026-09-07 -->
