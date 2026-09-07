@@ -2529,3 +2529,81 @@ h1 em {
     grid-column: 1 / -1;
   }
 }
+
+/* ── La oferta de instalar el portal como app ────────────────────────────────
+ *
+ * Va al final del contenido y EN EL FLUJO, no flotando: un `position: fixed`
+ * taparía la última fila de la pantalla en el móvil, y eso no lo detecta
+ * ninguna medida de ancho porque un elemento fijo no desborda — se pone encima.
+ *
+ * En móvil las acciones se apilan a todo lo ancho (un botón de 44 px de alto se
+ * falla menos que uno de 30) y a partir de 560 px se ponen en fila. */
+.instalar-app {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  margin-top: 28px;
+  padding: 14px 16px;
+  background: var(--primary-light);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+}
+/* `min-width: 0` no es adorno: en la fila de escritorio, sin él, una frase
+ * larga fija el ancho mínimo de su columna y empuja los botones fuera de la
+ * tarjeta — y ese desbordamiento no se ve midiendo la página, porque el que
+ * crece es el hijo. */
+.instalar-app-texto {
+  min-width: 0;
+}
+.instalar-app-texto strong {
+  display: block;
+  font-size: 14px;
+}
+.instalar-app-texto p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.instalar-app-acciones {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.instalar-app-si,
+.instalar-app-no {
+  min-height: 44px;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.instalar-app-si {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+.instalar-app-si:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+.instalar-app-no {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+}
+.instalar-app-no:hover {
+  background: var(--surface-hover);
+}
+@media (min-width: 560px) {
+  .instalar-app {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .instalar-app-acciones {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+  }
+}

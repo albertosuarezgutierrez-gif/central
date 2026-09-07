@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📲 El portal del cliente se puede INSTALAR (07/09/2026).** Idea de Alberto: «a veces entro en una
+  web y me sale la opción de instalar; algo así para cuando entren nuestros clientes». Es una PWA, y
+  el sitio es `apps/asegura-portal` (el asegurado), no `/correduria` de plataforma. Manifiesto +
+  icono de 512 (`/icono-app`, el monograma pasa a `lib/monograma.ts` para no copiarlo dos veces) +
+  service worker que **no cachea nada a propósito** (aquí hay pólizas y partes de siniestro) + la
+  oferta dentro de la sesión. 🚨 **iOS no dispara `beforeinstallprompt`**: si solo se escuchara el
+  evento, en iPhone no se vería NADA y nadie se enteraría — ahí se enseñan las instrucciones de
+  «Añadir a pantalla de inicio». 15 cepos vistos en rojo uno a uno. Sin push todavía.
+
 - **🗒 El siniestro dice QUÉ pasó (07/09/2026).** «También dar acceso a toda la información de los
   siniestros». Medida la tabla antes de tocar (69 filas): lo único con contenido que no se enseñaba
   era `comentario` (66/69) y el lugar (8/69); `gravedad`, los dos importes, `se_considera_culpable`
