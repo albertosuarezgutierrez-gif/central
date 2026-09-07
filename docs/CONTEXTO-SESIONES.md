@@ -36,7 +36,7 @@
   UTC): `[mailer] sin proveedor de email configurado`. O sea, **la pantalla mandaba a la única acción que
   no podía funcionar**, culpando a un proveedor que no existe. Los tres «no» del envío estaban colapsados
   en un booleano → `error_envio` 502. Ahora el envío devuelve `ResultadoEnvioCorreo` (`enviado` ·
-  `sin_proveedor` · `sin_remitente` · `rechazado`) y sale un desenlace nuevo, **`sin_correo_configurado`
+  `sin_proveedor` · `rechazado`) y sale un desenlace nuevo, **`sin_correo_configurado`
   503**, en los DOS correos (invitación al portal y aviso de acceso). Cepo verificado en rojo.
   ⏸️ **Pendiente de Alberto, y es lo único que falta para que el botón funcione:** en Vercel
   `central-asegura`, `RESEND_API_KEY` (o `SMTP_USER`+`SMTP_PASSWORD`, o `GMAIL_USER`+`GMAIL_APP_PASSWORD`)
@@ -66,6 +66,22 @@
   la portada del código y no en un 404. El defecto de `ASEGURA_PORTAL_URL` pasa de
   `asegura-portal.vercel.app` al dominio de la casa en los DOS correos (el `.vercel.app` sigue
   sirviendo: cambia el canónico, no arregla nada roto).
+- **🚪 Salida tardía: se confirma la VÍSPERA, y una postura por mensaje (07/09/2026).**
+  Borrador del agente a la reserva 154265696 (Luxury Busto) que retenía y concedía a la vez
+  («No podemos confirmar hasta el día de antes… no hay ningún inconveniente»). La política
+  estaba BIEN en `salida.ts`: lo que falló fue redactarla a medias, más una divergencia real —
+  el prompt decía confirmar «el mismo día de la salida» y Alberto dicta **la víspera**. Añadida
+  `UNA_POSTURA` a las ramas que no confirman + 3 cepos vistos en rojo.
+  **Medido:** desde una sesión Claude NO se puede enviar al huésped (el proxy deniega
+  `login.smoobu.com`, 403); el ✅ de Telegram envía `borrador` de la BD, no el texto de la burbuja.
+  **Pendiente:** el ✅ de Alberto en el mensaje 4219 — la respuesta corregida sigue sin enviarse.
+- **📌 Revisión de precios House Sevillana — Genius+Móvil se QUEDAN, ocupación floja no lo permite (07/09/2026, solo charla, sin PR).**
+  Reserva Booking 154638741 (05-07/03/2027) parecía descuadrar (393,78€/noche vs base ~530€): desglose real
+  confirma que es el stack Genius −15% + Móvil −10% (mismo patrón landmine §12 CLAUDE.md, nunca tocado en
+  esos dos por ser de visibilidad). Alberto preguntó si quitar la oferta móvil; ocupación real de House
+  Sevillana (40% a 30d, 36,7% a 60d, 16,7% a 90d) desaconseja tocar NINGUNO de los dos ahora — con esa
+  demanda floja pierdes más reservas de las que ganas en margen. **Pendiente: revisar si la ocupación a
+  61-90d mejora; si no, valorar bajar precio en vez de quitar descuentos.**
 
 - **✅ Mergeado y PROBADO en producción (07/09/2026, PR #2571 → `6a567537`).** Los 12 requeridos en
   verde y desplegado (`dpl_Et6yoY…`, target production, READY; el portal responde 200 sirviendo ese
