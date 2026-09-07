@@ -95,6 +95,7 @@ model PortalIdentidad {
   ultimoVinculoEn DateTime? @map("ultimo_vinculo_en") @db.Timestamptz(6)
 
   canales      PortalCanal[]
+  accesos      PortalAcceso[]
   bienes       PortalBien[]
   polizas      PortalPolizaDeclarada[]
   vinculos     PortalVinculo[]
@@ -103,6 +104,31 @@ model PortalIdentidad {
   hojas        PortalHojaQr[]
 
   @@map("portal_identidad")
+  @@schema("seguros")
+}
+
+/// Cada ENTRADA al portal. Nace el 07/09/2026 porque `PortalIdentidad` solo
+/// guardaba `ultimoAccesoEn` —un timestamp que se pisa— y por tanto no había
+/// historial ni forma de reconstruirlo: cada día sin esta tabla era un día
+/// perdido.
+///
+/// 🚨 Sin correo, y no por olvido: el portal no tiene ninguna dirección en
+/// claro (solo `PortalCanal.valorHash`). Con qué correo entró alguien se mira
+/// en la ficha con la que está casado, no aquí.
+model PortalAcceso {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId String   @map("identidad_id") @db.Uuid
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  /// Datos personales, guardados como registro de seguridad (art. 32 RGPD).
+  /// Retención pretendida 12 meses; el borrado automático NO existe todavía.
+  ip          String?  @db.Inet
+  userAgent   String?  @map("user_agent")
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@index([identidadId, creadoEn(sort: Desc)])
+  @@index([creadoEn(sort: Desc)])
+  @@map("portal_acceso")
   @@schema("seguros")
 }
 
