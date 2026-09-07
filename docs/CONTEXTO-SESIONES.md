@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📝 El blog de la correduría se escribe SOLO, pero no se publica solo (07/09/2026).** Cron quincenal
+  (días 1 y 15, `CRON_JOBS`) → redacta con `categoria:'redaccion'` → valida → deja **PR**, y Alberto aprueba
+  con dos botones en `/correduria` → **Redes** (el badge de la pestaña lo cuenta desde cualquier sección: el
+  agente hermano de ia-rest tiene 4 borradores parados desde junio en una pantalla que nadie abre). Lo que
+  hace publicable un artículo escrito por una máquina: **lista blanca `NORMAS_CITABLES`** (5 normas
+  verificadas contra el BOE) + `citasNoRespaldadas`, porque los cepos comprobaban que `base` EXISTIERA, no
+  que la cita fuera CIERTA. 🚨 El `GITHUB_TOKEN` de Vercel tiene `Contents` pero **no `Pull requests`**: con
+  eso el artículo se escribe y el PR no se abre — se ve igual que «el agente no ha hecho nada», así que el
+  cron lo dice con el motivo. Prompts para Alberto en `docs/CORREDURIA-PROMPTS-CHROME.md`. PR pendiente.
+
 - **🔤 El portal se parece por fin a la web: Fraunces en el titular, y el h1 de 24 a 32 px (07/09/2026).**
   Alberto: «el diseño no es muy parecido a la web… se puede hacer mejor y más acorde». ⚠️ Iba a decirle que
   el portal no usaba la marca y era FALSO: las dos apps inyectan `MARCA_ASEGURA`, así que la paleta ya era la

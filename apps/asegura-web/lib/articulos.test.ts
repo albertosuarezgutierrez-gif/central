@@ -11,7 +11,8 @@
 // verificar la cita antes de publicar, y comprobarla después.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { revisarCopy, explicarInfracciones } from '@central/module-seguros'
+import { readFileSync } from 'node:fs'
+import { revisarCopy, explicarInfracciones, citasNoRespaldadas, idsDesconocidos, mencionesNormativas } from '@central/module-seguros'
 import { ARTICULOS, articuloPorSlug, articulosDeRamo, textoArticulo } from './articulos.ts'
 import { RAMOS } from './ramos.ts'
 
@@ -52,19 +53,34 @@ test('ningún artículo promete precio, superlativos ni acota el ámbito', () =>
   }
 })
 
-// Una cita legal inventada parece autoridad y no lo es. `base` es lo que
-// permite comprobarla; sin ella nadie puede verificar lo que se ha publicado.
-test('todo artículo que cita una norma declara su base verificable', () => {
-  const NOMBRA_NORMA = /\b(art[íi]culo\s+\d+|Ley\s+\d+\/\d{4}|Real\s+Decreto-ley\s+\d+\/\d{4}|Orden\s+[A-Z]{3}\/\d+\/\d{4})/i
+// 🚨 EL cepo que hace publicable un artículo que no ha escrito una persona.
+//
+// Hasta el 07/09/2026 esto solo exigía que `base` existiera, y con los tres
+// artículos escritos a mano bastaba: los verifiqué contra el BOE uno a uno.
+// En cuanto un agente redacte los siguientes deja de bastar — un texto puede
+// citar el artículo 38 y declarar el 22, y el cepo viejo se pone verde. Ahora
+// `base` son ids de `NORMAS_CITABLES` y se comprueba que TODA norma nombrada
+// en el texto esté respaldada por alguno de ellos.
+test('toda norma citada en el texto está en la lista blanca verificada', () => {
   for (const a of ARTICULOS) {
-    if (!NOMBRA_NORMA.test(textoArticulo(a))) continue
+    const texto = textoArticulo(a)
+    const menciones = mencionesNormativas(texto)
+    if (menciones.length === 0) continue
+
     assert.ok(
       a.base && a.base.length > 0,
-      `${a.slug}: el texto cita una norma y no declara \`base\`. Sin eso nadie puede comprobarla antes de publicar`,
+      `${a.slug}: el texto cita ${menciones.join(', ')} y no declara \`base\``,
     )
-    for (const b of a.base!) {
-      assert.ok(b.trim().length > 15, `${a.slug}: una entrada de \`base\` es demasiado corta para identificar la norma`)
-    }
+    assert.deepEqual(
+      idsDesconocidos(a.base!),
+      [],
+      `${a.slug}: declara normas que no están en NORMAS_CITABLES`,
+    )
+    assert.deepEqual(
+      citasNoRespaldadas(texto, a.base!),
+      [],
+      `${a.slug}: cita normas que nadie ha verificado contra el BOE`,
+    )
   }
 })
 
@@ -125,4 +141,22 @@ test('no hay dos artículos para la misma consulta', () => {
     assert.equal(previo, undefined, `«${a.consulta}» la cubren ${previo} y ${a.slug}: se canibalizan`)
     vistas.set(clave, a.slug)
   }
+})
+
+// El agente quincenal inserta por este marcador. Sin él la inserción falla, y
+// falla MUDA: el agente no puede saber que el hueco ya no está, así que el
+// síntoma sería «el blog dejó de crecer» semanas después.
+test('el marcador de inserción del agente sigue en su sitio', () => {
+  const fuente = readFileSync(new URL('./articulos.ts', import.meta.url), 'utf8')
+  assert.match(fuente, /MARCADOR DE INSERCIÓN/, 'el agente quincenal ya no tiene dónde insertar')
+  // Y tiene que estar DENTRO del array, no detrás: insertar tras el cierre
+  // produciría un fichero que ni compila.
+  const inicio = fuente.indexOf('export const ARTICULOS')
+  const cierre = fuente.indexOf('\n]', inicio)
+  const marcador = fuente.indexOf('MARCADOR DE INSERCIÓN')
+  assert.ok(inicio > 0 && cierre > inicio, 'no se localiza el array de ARTICULOS')
+  assert.ok(
+    marcador > inicio && marcador < cierre,
+    'el marcador quedó fuera del array de ARTICULOS: insertar ahí produciría un fichero que no compila',
+  )
 })

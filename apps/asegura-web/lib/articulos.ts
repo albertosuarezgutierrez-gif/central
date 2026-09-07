@@ -52,9 +52,15 @@ export type Articulo = {
   secciones: readonly SeccionArticulo[]
   faq?: readonly Faq[]
   /**
-   * Las normas que el texto cita, con el nombre completo. Obligatorio si el
-   * artículo nombra una ley o un artículo: es lo que se verifica antes de
-   * publicar y lo que permite comprobarlo después.
+   * Las normas que el texto cita, por su **id** en `NORMAS_CITABLES`
+   * (`@central/module-seguros`) — no como texto libre.
+   *
+   * 🚨 El cambio importa: con texto libre, «declarar la base» solo probaba que
+   * alguien había escrito una frase; el artículo podía citar el 38 y declarar
+   * el 22 sin que nada fallara. Con ids, la cita se resuelve contra una lista
+   * verificada contra el BOE, la página enlaza la fuente, y un cepo comprueba
+   * que TODA norma nombrada en el texto esté respaldada. Es lo que hace
+   * publicable un artículo que no ha escrito una persona.
    */
   base?: readonly string[]
   /** Slugs de `RAMOS` con los que enlaza. El enlazado interno reparte el peso. */
@@ -72,7 +78,7 @@ export const ARTICULOS: readonly Articulo[] = [
     consulta: 'preaviso de un mes para cancelar el seguro',
     resumen:
       'Si no quieres que tu póliza se prorrogue, tienes que decirlo por escrito con al menos un mes de antelación al vencimiento. Pasada esa fecha ya no hay decisión que tomar: hay un año más.',
-    base: ['Artículo 22 de la Ley 50/1980, de 8 de octubre, de Contrato de Seguro (prórroga y oposición a la prórroga).'],
+    base: ['lcs-22'],
     ramos: ['auto', 'hogar', 'comunidades'],
     secciones: [
       {
@@ -140,9 +146,7 @@ export const ARTICULOS: readonly Articulo[] = [
     consulta: 'me han subido el seguro del coche en la renovación',
     resumen:
       'Una subida en la renovación no siempre significa lo mismo, y la respuesta correcta depende de por qué ha subido. Antes de cambiar de compañía conviene saber qué ha cambiado en la póliza.',
-    base: [
-      'Artículo 22 de la Ley 50/1980, de 8 de octubre, de Contrato de Seguro (prórroga; el asegurador debe comunicar su oposición con dos meses de antelación).',
-    ],
+    base: ['lcs-22'],
     ramos: ['auto', 'hogar', 'comercio'],
     secciones: [
       {
@@ -212,12 +216,7 @@ export const ARTICULOS: readonly Articulo[] = [
     consulta: 'me han denegado un siniestro qué puedo hacer',
     resumen:
       'Una denegación no es la última palabra, pero sí arranca un reloj. Estos son los plazos que la ley impone a la compañía, los que te impone a ti, y el orden en que conviene reclamar.',
-    base: [
-      'Artículo 18 de la Ley 50/1980, de 8 de octubre, de Contrato de Seguro (pago del importe mínimo en cuarenta días desde la declaración del siniestro).',
-      'Artículo 20 de la Ley 50/1980 (mora del asegurador: interés legal del dinero incrementado en un 50 %).',
-      'Artículo 23 de la Ley 50/1980 (prescripción: dos años en seguros de daños, cinco en seguros de personas).',
-      'Orden ECC/2502/2012 (Servicio de Reclamaciones de la Dirección General de Seguros y Fondos de Pensiones).',
-    ],
+    base: ['lcs-18', 'lcs-20', 'lcs-23', 'orden-ecc-2502-2012'],
     ramos: ['hogar', 'comunidades', 'auto'],
     secciones: [
       {
@@ -281,6 +280,16 @@ export const ARTICULOS: readonly Articulo[] = [
       },
     ],
   },
+  // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
+  //
+  // El agente quincenal de `apps/plataforma` (`lib/correduria/blog-agente.ts`)
+  // añade el artículo nuevo JUSTO ENCIMA de esta línea y abre un PR. Es la
+  // única forma en que un proceso automático toca este fichero: no reescribe
+  // nada de lo que ya hay, solo inserta.
+  //
+  // 🚨 Si alguien borra el marcador, la inserción falla — y falla en SILENCIO,
+  // porque el agente no puede saber que el hueco ya no está: el síntoma sería
+  // «el blog dejó de crecer», semanas después. Lo vigila `articulos.test.ts`.
 ]
 
 export function articuloPorSlug(slug: string): Articulo | null {
