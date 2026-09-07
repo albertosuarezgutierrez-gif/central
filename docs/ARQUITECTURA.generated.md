@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T17:05:18Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T19:17:33Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1296 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1302 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 41
+- **Rutas API:** 47
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
@@ -262,6 +262,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (07/09/2026) 🏍️ Presupuesto de moto SIN póliza, dentro de plataforma
+- (07/09/2026) 🚗🏠 Presupuesto de auto y hogar SIN póliza, dentro de plataforma
 - (07/09/2026) 📝 Diseño del agente de captación de `asegura-portal` — solo spec, sin código
 - (07/09/2026) ✂️ El h1 se queda en «Sube tus seguros. / Y contrólalos.»
 - (07/09/2026) ✍️ El h1 de la portada pasa a «Sube tus seguros. / Y contrólalos todos.»
@@ -270,6 +272,4 @@
 - (07/09/2026) 🕳️ El cepo de la puerta miraba a UN fichero, y «área de clientes» seguía vivo en DOS
 - (07/09/2026) 💸 SIVRA pricing: el extranet de House ya está limpio y el motor recalibrado
 - (07/09/2026) 🔴 El logo de Fidelidade entra, y el fichero bueno se llamaba `.jpg` sin serlo
-- (07/09/2026) 🗓️ La póliza que SUBE quien no es cliente ya entra en su calendario
-- (07/09/2026) 🚨 «Olvídate» aún no se publica: al aviso le falta EL CANAL, no el remitente
 
