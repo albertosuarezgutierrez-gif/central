@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T06:57:40Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T11:46:46Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1289 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1292 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -28,7 +28,7 @@
 - **Tablas (17):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_supresion, seguros.portal_vinculo
 - **Rutas API:** 19
 ### asegura-web
-- **Módulos que usa:** module-seguros
+- **Módulos que usa:** module-seguros, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (0):** —
 - **Rutas API:** 1
@@ -56,7 +56,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (132):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor…
-- **Rutas API:** 348
+- **Rutas API:** 351
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -177,7 +177,7 @@
   - Lo usan: asegura, asegura-portal
   - Depende de: —
 - **module-seguros-portal** (module) → `@central/module-seguros-portal`
-  - Lo usan: asegura, asegura-portal, plataforma
+  - Lo usan: asegura, asegura-portal, asegura-web, plataforma
   - Depende de: core-catastro, module-seguros
 - **module-ses** (module) → `@central/module-ses`
   - Lo usan: plataforma
@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (07/09/2026) 🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD
-- (07/09/2026) 🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código
-- (07/09/2026) 🧹 «Mergea todo» = 2 de 10, y el orden decide si el resultado es VERDADERO
-- (07/09/2026) 🌍 La web de la correduría vendía «en Sevilla» y se vende en TODA ESPAÑA
-- (07/09/2026) 🔀 buscador-ia: embeddings muertos desde enero → swap a OpenRouter
-- (07/09/2026) 💰 Ciclo semanal de pricing SIVRA completo, los 4 pisos
-- (06/09/2026) 🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo
-- (06/09/2026) 👀 «No aparecen siniestros ni recibos» en el portal: NO era un bug, era el alcance
-- (06/09/2026) 📮 Canario del formulario público: que no vuelva a morir en silencio
-- (06/09/2026) 🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo
+- (07/09/2026) ✂️ El h1 se queda en «Sube tus seguros. / Y contrólalos.»
+- (07/09/2026) ✍️ El h1 de la portada pasa a «Sube tus seguros. / Y contrólalos todos.»
+- (07/09/2026) 🍪 El badge de Cookiebot pisa el CTA «Que me llamen» en móvil — y el cepo volvió a estar ciego
+- (07/09/2026) 🔇 Cron SEO de sivra: pudo morir MUDO por presupuesto — techo 60→300
+- (07/09/2026) 🕳️ El cepo de la puerta miraba a UN fichero, y «área de clientes» seguía vivo en DOS
+- (07/09/2026) 💸 SIVRA pricing: el extranet de House ya está limpio y el motor recalibrado
+- (07/09/2026) 🔴 El logo de Fidelidade entra, y el fichero bueno se llamaba `.jpg` sin serlo
+- (07/09/2026) 🗓️ La póliza que SUBE quien no es cliente ya entra en su calendario
+- (07/09/2026) 🚨 «Olvídate» aún no se publica: al aviso le falta EL CANAL, no el remitente
+- (07/09/2026) 📄 Un SUPLEMENTO no es una póliza, y el armazón del portal no era de la marca
 
