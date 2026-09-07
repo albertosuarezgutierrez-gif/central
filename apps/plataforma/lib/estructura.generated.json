@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-07T06:57:40Z",
+  "generadoEn": "2026-09-07T11:33:24Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2084,11 +2084,11 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 48
+        "evidencias": 52
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 23
       },
       "housesevillana": {
         "estado": "no",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 37
+        "evidencias": 42
       },
       "rrhh": {
         "estado": "no",
@@ -2192,11 +2192,11 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 39
+        "evidencias": 42
       },
       "asegura-web": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "housesevillana": {
         "estado": "no",
@@ -2974,7 +2974,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 21
+        "evidencias": 22
       },
       "rrhh": {
         "presente": false,
@@ -4706,6 +4706,7 @@
       "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/backfill-dni",
+      "/api/correduria/blog",
       "/api/correduria/buscar",
       "/api/correduria/cartera",
       "/api/correduria/cartera-lista",
@@ -4731,6 +4732,7 @@
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
+      "/api/cron/blog-asegura",
       "/api/cron/borme-ingesta",
       "/api/cron/briefing",
       "/api/cron/canario-lead",
@@ -4909,6 +4911,7 @@
       "/api/sivra/pricing/config",
       "/api/sivra/pricing/experiments",
       "/api/sivra/pricing/experiments/check-results",
+      "/api/sivra/pricing/fuga-canal",
       "/api/sivra/pricing/guard",
       "/api/sivra/pricing/historial",
       "/api/sivra/pricing/pilot-track",
@@ -6179,7 +6182,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1289,
+    "apis": 1292,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
