@@ -271,5 +271,5 @@
 - (06/09/2026) 🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo
 - (06/09/2026) 👀 «No aparecen siniestros ni recibos» en el portal: NO era un bug, era el alcance
 - (06/09/2026) 📮 Canario del formulario público: que no vuelva a morir en silencio
-- (06/09/2026) 🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo
+- (06/09/2026) 🔔 Spec de la pestaña «Avisos» del portal, y dos huecos que la hacían inútil
 
