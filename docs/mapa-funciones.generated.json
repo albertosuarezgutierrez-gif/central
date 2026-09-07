@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-07T15:56:09Z",
-  "sha": "89ae143121a3e13348a6d53ce31dfab55b591e75",
+  "generadoEn": "2026-09-07T17:05:18Z",
+  "sha": "ac23f86a90a7be22d03613e51d4abb982e64aa15",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7634,6 +7634,51 @@
       "hash": "d94fe7faca50"
     },
     {
+      "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/hogar-nuevo/page.tsx",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "HogarNuevoPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "HogarNuevoPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params, searchParams, }: { params: Promise<{ clienteId: string }> searchParams: Promise<{ referencia?: string }> }",
+          "retorno": null,
+          "linea": 50,
+          "resumen": "Presupuesto de HOGAR para un cliente que HOY no tiene ninguna póliza: una oportunidad nueva sobre su residencia (o cualquier otra vivienda), tarificada desde el Catastro en vez de desde una ficha. Es "
+        },
+        {
+          "nombre": "Cabecera",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ nombre, clienteId, detalle }: { nombre: string; clienteId: string; detalle?: string }",
+          "retorno": null,
+          "linea": 276
+        },
+        {
+          "nombre": "errar",
+          "kind": "function",
+          "exportada": false,
+          "params": "_e: unknown",
+          "retorno": "Opcion[]",
+          "linea": 291
+        },
+        {
+          "nombre": "hoyIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 295
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "be28186fbe17"
+    },
+    {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
       "ambito": "apps/asegura",
       "exporta": [
@@ -7655,7 +7700,7 @@
           "exportada": false,
           "params": "{ titulo, nota, polizas, }: { titulo: string nota?: string polizas: { id: string tipo: string aseguradora: string numeroPoliza: string | null fechaVencimiento: string | null matricula: string | null retarificable: boolean }[] }",
           "retorno": null,
-          "linea": 76
+          "linea": 87
         },
         {
           "nombre": "motivoNoRetarificable",
@@ -7663,13 +7708,13 @@
           "exportada": false,
           "params": "p: { tipo: string; matricula: string | null }",
           "retorno": "string",
-          "linea": 152,
+          "linea": 163,
           "resumen": "Por qué no sale el botón. Decirlo evita que parezca que la pantalla falla."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6faa584d08dd"
+      "hash": "e0071cc10bc5"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/page.tsx",
@@ -7767,7 +7812,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "067160fa0112"
+      "hash": "df8ffcb6c2d4"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/poliza/[polizaId]/retarificador-hogar.tsx",
@@ -7780,7 +7825,7 @@
           "nombre": "RetarificadorHogar",
           "kind": "function",
           "exportada": true,
-          "params": "{ polizaId, resumen: resumenServidor, pre, defectos, vias, catalogos, estadosCiviles, municipios, fallosCatalogo, ramo, consumo, primaActual, deshabilitado, }: { polizaId: string /** La ficha ya armada en el servidor: es lo que se pinta mie",
+          "params": "{ endpoint, extra, resumen: resumenServidor, pre, defectos, vias, catalogos, estadosCiviles, municipios, fallosCatalogo, ramo, consumo, primaActual, deshabilitado, }: { /** * A dónde manda el POST que gasta 0,50€. La misma pantalla sirve pa",
           "retorno": null,
           "linea": 85,
           "resumen": "La ficha de hogar: **se lee, no se rellena.** Todo llega puesto (de la póliza, del volcado, del Catastro o supuesto) y cada fila dice DE DÓNDE sale; el corredor solo toca lo que esté mal, con el lápiz"
@@ -7791,7 +7836,7 @@
           "exportada": false,
           "params": "{ fila, editando, borrador, setBorrador, abrir, cerrar, guardar, deshacer, vias, catalogos, estadosCiviles, municipios, defectos, }: { fila: Fila editando: boolean borrador: string setBorrador: (v: string) => void abrir: () => void cerrar: ",
           "retorno": null,
-          "linea": 563
+          "linea": 572
         },
         {
           "nombre": "Control",
@@ -7799,7 +7844,7 @@
           "exportada": false,
           "params": "{ fila, borrador, setBorrador, vias, catalogos, estadosCiviles, municipios, defectos, }: { fila: Fila borrador: string setBorrador: (v: string) => void vias: Opcion[] catalogos: Partial<Record<CatalogoPantalla, Opcion[]>> estadosCiviles: Op",
           "retorno": null,
-          "linea": 696
+          "linea": 705
         },
         {
           "nombre": "Diferencia",
@@ -7807,7 +7852,7 @@
           "exportada": false,
           "params": "{ primaActual, nueva }: { primaActual: number | null; nueva: number | null }",
           "retorno": null,
-          "linea": 821,
+          "linea": 830,
           "resumen": "El precio nuevo frente al que paga hoy. Sin prima actual NO se inventa una comparación: se dice que no consta, que es distinto de «no hay diferencia»."
         },
         {
@@ -7816,7 +7861,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "string",
-          "linea": 836
+          "linea": 845
         },
         {
           "nombre": "deTexto",
@@ -7824,7 +7869,7 @@
           "exportada": false,
           "params": "f: Fila, t: string",
           "retorno": "unknown",
-          "linea": 843
+          "linea": 852
         },
         {
           "nombre": "cadena",
@@ -7832,7 +7877,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 861
+          "linea": 870
         },
         {
           "nombre": "entero",
@@ -7840,14 +7885,14 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 865
+          "linea": 874
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "32c28594a313"
+      "hash": "680f9037116a"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/poliza/[polizaId]/retarificador.tsx",
@@ -8140,6 +8185,27 @@
       "tablas": [],
       "rutaApi": "/api/cartera/catalogos",
       "hash": "528eef075e78"
+    },
+    {
+      "ruta": "apps/asegura/app/api/cartera/cliente/[clienteId]/hogar-nuevo/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: { params: Promise<{ clienteId: string }> }",
+          "retorno": null,
+          "linea": 37,
+          "resumen": "Cotiza HOGAR para un cliente que HOY no tiene ninguna póliza: una oportunidad nueva, presupuestada desde el Catastro (`/correduria/hogar` en plataforma → aquí, botón «Pedir precio real ↗»). **Esta rut"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cartera/cliente/[clienteId]/hogar-nuevo",
+      "hash": "67616c37c13c"
     },
     {
       "ruta": "apps/asegura/app/api/cartera/documentos/route.ts",
@@ -10184,6 +10250,7 @@
         "buscarClientes",
         "fichaCliente",
         "origenRetarificacion",
+        "clienteOrigenDe",
         "normalizarFecha"
       ],
       "funciones": [
@@ -10284,12 +10351,21 @@
           "linea": 707
         },
         {
+          "nombre": "clienteOrigenDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string,",
+          "retorno": "Promise<ClienteOrigen | null>",
+          "linea": 843,
+          "resumen": "La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no desde una póliza de la cartera). Misma discipl"
+        },
+        {
           "nombre": "normalizarFecha",
           "kind": "function",
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 833,
+          "linea": 886,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
@@ -10297,7 +10373,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "f508f9450c0a"
+      "hash": "229f43796037"
     },
     {
       "ruta": "apps/asegura/lib/cartera-filtro.ts",
@@ -11852,6 +11928,7 @@
       "exporta": [
         "precalificarHogarCartera",
         "habitacionesPorSuperficie",
+        "direccionDesdeCatastro",
         "partirDireccion",
         "hogarDeDatos",
         "elegirRiesgo"
@@ -11863,7 +11940,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 108
+          "linea": 118
         },
         {
           "nombre": "precalificarHogarCartera",
@@ -11871,7 +11948,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaHogarCartera, resueltos: ResueltosHogar, hoy: string, catastro: CatastroHogar | null = null,",
           "retorno": "PrecalificacionHogar",
-          "linea": 131
+          "linea": 141
         },
         {
           "nombre": "habitacionesPorSuperficie",
@@ -11879,7 +11956,7 @@
           "exportada": true,
           "params": "m2: number",
           "retorno": "number",
-          "linea": 314,
+          "linea": 330,
           "resumen": "Habitaciones (dormitorios) estimadas por superficie construida. Es un supuesto declarado, no un dato: el vendor exige el número y la ficha no lo tiene. Tramos típicos de vivienda española."
         },
         {
@@ -11888,7 +11965,16 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 323
+          "linea": 339
+        },
+        {
+          "nombre": "direccionDesdeCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { sigla: string calle: string numero: string planta?: string | null puerta?: string | null } | null",
+          "retorno": "DireccionPartida",
+          "linea": 386,
+          "resumen": "De `paramsDnploc()` (`@central/core-catastro`, que sí entiende «Es:1 Pl:01 Pt:IZ») a `DireccionPartida`. Existe porque `partirDireccion()` de aquí abajo está pensado para el texto libre de la ficha de"
         },
         {
           "nombre": "normalizarToken",
@@ -11896,7 +11982,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": "string",
-          "linea": 370
+          "linea": 410
         },
         {
           "nombre": "partirDireccion",
@@ -11904,7 +11990,7 @@
           "exportada": true,
           "params": "direccion: string | null",
           "retorno": "DireccionPartida",
-          "linea": 385,
+          "linea": 425,
           "resumen": "Trocea «CL SOCORRO 24 3º IZQ» en tipo de vía / nombre / número / planta / puerta. Best-effort y CONSERVADOR: lo que no se reconoce queda a `null` (y la pantalla lo pide), nunca se inventa un número. S"
         },
         {
@@ -11913,7 +11999,7 @@
           "exportada": true,
           "params": "datos: Record<string, unknown> | null, fuente: 'poliza' | 'gemela', direccionDescifrada: string | null = null,",
           "retorno": "HogarCartera | null",
-          "linea": 443,
+          "linea": 483,
           "resumen": "Lee el riesgo de hogar de un `datos_especificos` (póliza o gemela). Los números del volcado vienen como TEXTO («76», «61000»): se convierten, y lo que no es número queda a `null` — nunca a 0."
         },
         {
@@ -11922,7 +12008,7 @@
           "exportada": true,
           "params": "propio: HogarCartera | null, gemela: HogarCartera | null",
           "retorno": "HogarCartera | null",
-          "linea": 464,
+          "linea": 504,
           "resumen": "El riesgo que se usa: el de la póliza si está completa; si no, la gemela; si ninguna, lo que haya."
         },
         {
@@ -11931,7 +12017,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 471
+          "linea": 511
         },
         {
           "nombre": "entero",
@@ -11939,7 +12025,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 475
+          "linea": 515
         },
         {
           "nombre": "cpDe",
@@ -11947,12 +12033,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 479
+          "linea": 519
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53efd99b1290"
+      "hash": "cc734a652e41"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera.ts",
@@ -13567,6 +13653,7 @@
       "exporta": [
         "prepararRetarificacion",
         "respuestaRetarificacion",
+        "prepararRetarificacionNuevaHogar",
         "resolverCatalogo"
       ],
       "funciones": [
@@ -13576,7 +13663,7 @@
           "exportada": true,
           "params": "entrada: { polizaId: string solicitadoPor: string cuerpo: CuerpoRetarificacion }",
           "retorno": "Promise<PreparadoRetarificacion>",
-          "linea": 123,
+          "linea": 125,
           "resumen": "Prepara la retarificación de `polizaId`: resuelve la correduría, lee la póliza, mapea el ramo y **revisa el cuerpo GRATIS**. Devuelve o la petición lista para `cotizar()`, o el corte que hay que respo"
         },
         {
@@ -13585,7 +13672,7 @@
           "exportada": true,
           "params": "r: ResultadoCotizacion, preparado: Extract<PreparadoRetarificacion, { estado: 'listo' }>,",
           "retorno": "ResultadoRetarificar",
-          "linea": 210,
+          "linea": 212,
           "resumen": "Redacta la respuesta a partir de lo que devolvió `cotizar()`. Las dos rutas usan esta, así que la forma del JSON es la misma campo por campo: la pantalla de plataforma y la de asegura leen exactamente"
         },
         {
@@ -13594,7 +13681,7 @@
           "exportada": false,
           "params": "cuerpo: Record<string, unknown>, status: number",
           "retorno": "ResultadoRetarificar",
-          "linea": 272,
+          "linea": 274,
           "resumen": "Respuesta que declara, con su cifra, que NO se ha llamado al vendor."
         },
         {
@@ -13603,7 +13690,7 @@
           "exportada": false,
           "params": "cuerpo: Record<string, unknown>, status: number",
           "retorno": "",
-          "linea": 277,
+          "linea": 279,
           "resumen": "La misma, envuelta para cortar la preparación de un ramo."
         },
         {
@@ -13612,7 +13699,7 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string,",
           "retorno": "Preparado",
-          "linea": 283
+          "linea": 285
         },
         {
           "nombre": "prepararHogar",
@@ -13620,8 +13707,26 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string,",
           "retorno": "Promise<Preparado>",
-          "linea": 361,
+          "linea": 363,
           "resumen": "✅ El contrato del `risk` de hogar está verificado contra el portal del fabricante (02/09/2026; ver la cabecera de `peticion-hogar.ts`). Aun así el 502 devuelve el mensaje ENTERO del vendor: si el cont"
+        },
+        {
+          "nombre": "prepararHogarDesde",
+          "kind": "function",
+          "exportada": false,
+          "params": "cliente: ClienteCartera, polizaInfo: { numeroPoliza: string | null; fechaVencimiento: string | null; hogar: HogarCartera | null }, cuerpo: CuerpoRetarificacion, externalId: string, catastro: CatastroHogar | null,",
+          "retorno": "Promise<Preparado>",
+          "linea": 393,
+          "resumen": "El cuerpo de hogar, ramo-agnóstico de origen: le da igual si el riesgo sale de una póliza (`prepararHogar`) o de un cliente sin ninguna (`prepararRetarificacionNuevaHogar`, oportunidad nueva desde el "
+        },
+        {
+          "nombre": "prepararRetarificacionNuevaHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string solicitadoPor: string cuerpo: CuerpoRetarificacion catastro: CatastroHogar | null }",
+          "retorno": "Promise<PreparadoRetarificacion>",
+          "linea": 502,
+          "resumen": "Como `prepararRetarificacion`, pero para un cliente que HOY no tiene ninguna póliza de hogar: una oportunidad nueva, presupuestada desde el Catastro (`/correduria/hogar` en plataforma → aquí, con «Ped"
         },
         {
           "nombre": "resolverCatalogo",
@@ -13629,7 +13734,7 @@
           "exportada": true,
           "params": "params: URLSearchParams",
           "retorno": "Promise<ResultadoCatalogo>",
-          "linea": 498,
+          "linea": 585,
           "resumen": "Resuelve UN catálogo por su `tipo` y los parámetros que ese tipo pida. Firma neutra (`URLSearchParams`) porque las dos rutas son `GET` con query."
         },
         {
@@ -13638,7 +13743,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 574
+          "linea": 661
         },
         {
           "nombre": "numero",
@@ -13646,7 +13751,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 578
+          "linea": 665
         },
         {
           "nombre": "booleano",
@@ -13654,7 +13759,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 585,
+          "linea": 672,
           "resumen": "`true`/`false` (boolean o cadena) → boolean. Cualquier otra cosa → `null` (no es una respuesta)."
         },
         {
@@ -13663,7 +13768,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 592
+          "linea": 679
         },
         {
           "nombre": "hoyIso",
@@ -13671,7 +13776,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 596
+          "linea": 683
         },
         {
           "nombre": "limpiarCorrecciones",
@@ -13679,13 +13784,13 @@
           "exportada": false,
           "params": "c: Record<string, unknown> | undefined",
           "retorno": "Partial<T>",
-          "linea": 601,
+          "linea": 688,
           "resumen": "Solo se aceptan correcciones CON valor: un campo vacío no borra lo supuesto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "627f775d9e16"
+      "hash": "9594a47f6aa2"
     },
     {
       "ruta": "apps/asegura/lib/session.ts",
@@ -57928,7 +58033,7 @@
           "nombre": "Acciones",
           "kind": "function",
           "exportada": false,
-          "params": "",
+          "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
           "linea": 184
         },
@@ -57938,12 +58043,12 @@
           "exportada": false,
           "params": "{ nombre, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: b",
           "retorno": null,
-          "linea": 213
+          "linea": 216
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "97bb330548d2"
+      "hash": "3965bcfbd392"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/DescartarCliente.tsx",
@@ -83978,7 +84083,8 @@
         "buscarEnAsegura",
         "urlRetarificar",
         "urlRetarificarHogarAsegura",
-        "urlSubirPoliza"
+        "urlSubirPoliza",
+        "urlHogarNuevoAsegura"
       ],
       "funciones": [
         {
@@ -84196,11 +84302,20 @@
           "retorno": "string",
           "linea": 706,
           "resumen": "Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura porque comparte pantalla con la cotización que sale de lo leído. Gratis."
+        },
+        {
+          "nombre": "urlHogarNuevoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string",
+          "retorno": "string",
+          "linea": 718,
+          "resumen": "Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la cartera): el riesgo sale del Catastro, no de una ficha existente. Es el mismo salto que `urlRetarificarHogarAsegura` para una "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b3a36b17559a"
+      "hash": "38595463b498"
     },
     {
       "ruta": "apps/plataforma/lib/financiero.ts",
@@ -125626,7 +125741,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3113,
-    "funciones": 9428
+    "archivos": 3115,
+    "funciones": 9438
   }
 }
