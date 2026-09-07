@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-07 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (obligatorio, no solo los
+  EN VIVO). Paso 1: 10/48 fechas del ciclo 31/08 vendidas con income confirmado, sin anomalías
+  "sin income" (Feria House 1767€ == propuesta exacta). Paso 2: 4 agentes en paralelo barrieron
+  Booking en 12 ventanas/piso (10 meses + Semana Santa + Feria); comps escritos hoy: busto=120,
+  duplex=120, luxury=120, house=140 (120+20 Expedia). Paso 4: 48 propuestas a `aplicar-propuesta`
+  en dry-run forzado, circuit-breaker sano (36 fechas con cambio, 52,8% medio). dudas: —;
+  fallos: 3 de 4 agentes ingestaron comps de Expedia en USD etiquetados como EUR (50 filas
+  contaminando Semana Santa/Feria de busto/duplex/luxury) — detectado y BORRADO antes de decidir
+  precio, y documentado el landmine en `references/ciclo.md` para que no se repita; PRs/commits:
+  ver commit de esta misma pasada.
+
 - **2026-09-07 · buscador-ia** · hizo: pasada semanal completa (preflight Telegram 200 OK).
   🔴 Hallazgo crítico: `text-embedding-004` (embeddings de `ia-cache`) retirado por Google desde el
   14/01/2026 — 1ª comprobación real de ese eslabón desde que se añadió al watch el 31/08. Impacto
@@ -26,6 +37,7 @@
   dudas: si Alberto quiere migrar embeddings o retirar la caché semántica (nunca se ha usado con
   éxito, así que re-indexar sería trivial: no hay vectores válidos que perder); fallos: —;
   PRs/commits: sin PR (solo doc + Telegram), commit directo pendiente de este cierre de sesión.
+
 - **2026-09-06 · facturas-correo** · hizo: pasada diaria completa. Salud Vía B OK (última copia
   2026-09-05, 1 día); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`. Paso 4.0
   (barrido `v_facturas_sin_cargo`): las 9 filas siguen `revisada_sin_cargo` (Petroprix ago,
