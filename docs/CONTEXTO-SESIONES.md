@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💸 SIVRA pricing: la fuga está entre lo LISTADO y lo COBRADO, no en el motor (07/09/2026).**
+  Reserva 154638741 de House (05-07/03/2027, 12 pax) a 981,02€ brutos = 490,51€/noche, por debajo del
+  comparable más barato del día. Diagnóstico corregido sobre la marcha: `pricing_applied.new_price` es
+  BASE de Smoobu, no lista — el motor tenía 523/542 de base = ~623€ de lista, el p60 del mercado. El
+  huésped pagó el 0,79 de eso, y **en las 12 reservas Booking de House desde el 15/07 el bruto es el 0,88
+  de la base** (0,86-0,94 en los otros tres): capa del extranet (Genius, móvil, ofertas) que nadie medía.
+  Nuevo guardián `pricing-fuga-canal` (módulo puro + cron 09:20 + aviso `pisos.pricing-fuga-canal`, visto
+  en rojo). `antelacion_k` 0→1 en House por BD (la venta a 6 meses iba al precio de hoy). Lo que NO era:
+  ni el raíl ±20% (la bajada 1.056→523 corregía una lista al doble del mercado) ni la cobertura (marzo
+  tiene 14/31 días medidos a 120d; el «19/366» de la sesión miraba 7 días, ventana que la ancla no usa).
 - **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
   `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
   **sin ninguna página**. Va en `RAMOS`, así que entra sola en sitemap, pie y formulario. Su posición en la

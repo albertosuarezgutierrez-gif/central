@@ -81,6 +81,9 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/sivra/pricing/experiments/check-results', schedule: '0 8 * * *' },
   { path: '/api/sivra/pricing/apply-auto', schedule: '30 8,14,20 * * *' },
   { path: '/api/sivra/pricing/resumen-diario', schedule: '0 9 * * *' },
+  // Fuga de canal (07/09/2026): lo que el huésped PAGÓ contra lo que el motor tenía LISTADO. Es la capa
+  // que ni `canal` ni el centinela del huésped miran — los dos se quedan en el precio de escaparate.
+  { path: '/api/sivra/pricing/fuga-canal', schedule: '20 9 * * *' },
   { path: '/api/sivra/pricing/pilot-track', schedule: '15 9 * * *' },
   // days=7: el sync es idempotente y la ventana ancha hace que un apagón de varios días del
   // scheduler (o del webhook Smoobu) se auto-repare en la siguiente corrida — con el default

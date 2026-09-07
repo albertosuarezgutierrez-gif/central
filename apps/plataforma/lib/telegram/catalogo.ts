@@ -333,6 +333,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 09:45',
   },
   {
+    id: 'pisos.pricing-fuga-canal', categoria: 'pisos',
+    titulo: 'Fuga de canal en Booking',
+    que: 'El huésped paga bastante menos de lo que el motor tiene listado: descuentos del extranet (Genius, móvil, ofertas).',
+    cuando: 'Todos los días a las 11:20, solo si hay fuga',
+  },
+  {
     id: 'pisos.pricing-piloto', categoria: 'pisos',
     titulo: 'Seguimiento del piloto de pricing',
     que: 'Cómo va el experimento de precios y sus semáforos.',
