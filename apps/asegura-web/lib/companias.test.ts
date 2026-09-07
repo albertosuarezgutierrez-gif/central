@@ -144,13 +144,34 @@ test('las que aún no tienen logo se declaran como null, no con un hueco', () =>
   // `logo: ''` o un fichero que no existe son la misma mentira con dos caras.
   // `null` dice «todavía no lo tenemos», que es un estado, no una ausencia de
   // dato — y por eso la página sabe pintar el nombre en su lugar.
-  // Asisa dejó de estar aquí el 07/09/2026 (Alberto subió su PNG a Drive).
-  // Fidelidade sigue: su fichero no se ha podido traer, y NO se dibuja uno
-  // parecido — un logo aproximado de una aseguradora en la web de su corredor
-  // es peor que no ponerlo.
+  //
+  // Desde el 07/09/2026 la lista está COMPLETA: Asisa y Fidelidade entraron ese
+  // día con los ficheros que subió Alberto a Drive. La expectativa se deja en
+  // vacío a propósito y no se borra el test: obliga a que quien añada una
+  // compañía sin logo lo declare aquí en vez de colarla, y quien le quite el
+  // logo a una que lo tiene se entere de que la está devolviendo al wordmark.
   const sinLogo = COMPANIAS.filter((c) => c.logo === null).map((c) => c.nombre)
-  assert.deepEqual(sinLogo, ['Fidelidade'], 'cambió qué compañías no tienen logo: revisa el muro')
+  assert.deepEqual(sinLogo, [], 'cambió qué compañías no tienen logo: revisa el muro')
   for (const c of COMPANIAS) {
     assert.notEqual(c.logo, '', `${c.nombre}: logo vacío — usa null`)
   }
+})
+
+test('el muro conserva el wordmark para las que no tengan logo', () => {
+  // 🚨 Cepo NUEVO del 07/09/2026, y existe justo porque el test de arriba pasó
+  // a esperar una lista vacía: hoy NINGUNA compañía cae por esa rama, así que
+  // el `<span className="companias-nombre">` del JSX no lo ejecuta nadie. Un
+  // atajo que lo sustituya por `<img src={c.logo}>` a secas no rompería nada
+  // hoy — y el día que entre una compañía sin logo, su hueco se pintaría como
+  // una imagen rota en vez de como su nombre.
+  const fuente = readFileSync(join(RAIZ, 'app/page.tsx'), 'utf8')
+  assert.match(fuente, /c\.logo \?/, 'el muro ya no distingue entre tener logo y no tenerlo')
+  assert.match(fuente, /companias-nombre/, 'desapareció el wordmark de respaldo del muro')
+  // El ancla es la regla BASE, al margen izquierdo. `.companias-nombre` sale
+  // dos veces en el CSS —la otra dentro del `@media (max-width: 559px)`, que
+  // solo baja el cuerpo— y un `/\.companias-nombre\s*\{/` a secas se conforma
+  // con esa segunda: borrando la base, el wordmark perdería tipografía y color
+  // y el cepo seguiría verde. Medido rompiéndolo el 07/09/2026.
+  const css = readFileSync(join(RAIZ, 'app/globals.css'), 'utf8')
+  assert.match(css, /^\.companias-nombre\s*\{/m, 'el wordmark de respaldo se quedó sin estilo: saldría con la tipografía del body')
 })
