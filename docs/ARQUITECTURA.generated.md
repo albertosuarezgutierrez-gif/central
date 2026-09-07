@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-06T21:03:35Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T06:57:40Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (07/09/2026) 🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD
+- (07/09/2026) 🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código
+- (07/09/2026) 🧹 «Mergea todo» = 2 de 10, y el orden decide si el resultado es VERDADERO
+- (07/09/2026) 🌍 La web de la correduría vendía «en Sevilla» y se vende en TODA ESPAÑA
+- (07/09/2026) 🔀 buscador-ia: embeddings muertos desde enero → swap a OpenRouter
+- (07/09/2026) 💰 Ciclo semanal de pricing SIVRA completo, los 4 pisos
 - (06/09/2026) 🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo
 - (06/09/2026) 👀 «No aparecen siniestros ni recibos» en el portal: NO era un bug, era el alcance
 - (06/09/2026) 📮 Canario del formulario público: que no vuelva a morir en silencio
 - (06/09/2026) 🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo
-- (06/09/2026) 🔖 La bóveda ya dice POR QUÉ está vacía, y «51 invitables» era falso
-- (06/09/2026) 🏠 La dirección buena ya estaba en casa: en la LÁPIDA de la fusión
-- (06/09/2026) ✏️ Corregir teléfonos y correos, donde SE LEEN
-- (06/09/2026) 💀 El formulario de la web de la correduría estaba MUERTO: «no podemos recoger tu solicitud»
-- (06/09/2026) 🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE
-- (06/09/2026) 🚨 CIMA entra, pero los SINIESTROS no llegan a la cartera desde el 02/07
 
