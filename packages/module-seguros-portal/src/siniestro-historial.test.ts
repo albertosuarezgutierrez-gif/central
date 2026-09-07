@@ -6,6 +6,8 @@ import {
   etiquetaEstadoSiniestro,
   ordenarHistorialSiniestros,
   resumirHistorialSiniestros,
+  lugarSiniestro,
+  descripcionSiniestro,
   siniestroAbierto,
   tonoEstadoSiniestro,
 } from './siniestro-historial.ts'
@@ -79,4 +81,52 @@ test('sin siniestros el resumen es todo ceros — «no nos consta», no «no has
     cerrados: 0,
     rechazados: 0,
   })
+})
+
+// ─── DÓNDE pasó ──────────────────────────────────────────────────────────────
+
+test('la ciudad en MAYÚSCULAS de la compañía se lee, y la provincia es un CÓDIGO', () => {
+  // Los dos valores son literales de la cartera (07/09/2026).
+  assert.equal(lugarSiniestro({ ciudad: 'DOS HERMANAS', provincia: '41' }), 'Dos Hermanas (Sevilla)')
+  assert.equal(lugarSiniestro({ ciudad: 'ALCALA DE GUADAIRA', provincia: '41' }), 'Alcala de Guadaira (Sevilla)')
+  assert.equal(lugarSiniestro({ ciudad: 'CHIPIONA', provincia: '11' }), 'Chipiona (Cádiz)')
+})
+
+test('🚨 la provincia NO se pinta como código: «41» no es un dato para nadie', () => {
+  const l = lugarSiniestro({ ciudad: 'SEVILLA', provincia: '41' })
+  assert.ok(l !== null && !l.includes('41'), `el código se ha colado en «${l}»`)
+})
+
+test('la ciudad y su provincia homónimas no se repiten', () => {
+  assert.equal(lugarSiniestro({ ciudad: 'SEVILLA', provincia: '41' }), 'Sevilla')
+})
+
+test('un lugar a medias se da a medias, y sin lugar es null (no una cadena vacía)', () => {
+  assert.equal(lugarSiniestro({ ciudad: null, provincia: '41' }), 'Sevilla')
+  assert.equal(lugarSiniestro({ ciudad: 'CAMAS', provincia: null }), 'Camas')
+  assert.equal(lugarSiniestro({ ciudad: null, provincia: null }), null)
+  assert.equal(lugarSiniestro({ ciudad: '  ', provincia: '  ' }), null)
+})
+
+test('un nombre ya bien escrito no se toca (una póliza aportada trae texto de una IA)', () => {
+  assert.equal(lugarSiniestro({ ciudad: 'A Coruña', provincia: 'A Coruña' }), 'A Coruña')
+  assert.equal(lugarSiniestro({ ciudad: 'Camas', provincia: 'Sevilla' }), 'Camas (Sevilla)')
+})
+
+test('una provincia que no existe no inventa nombre', () => {
+  assert.equal(lugarSiniestro({ ciudad: null, provincia: '99' }), null)
+})
+
+// ─── QUÉ pasó ────────────────────────────────────────────────────────────────
+
+test('la descripción se devuelve ENTERA: media frase es otro relato', () => {
+  const largo =
+    'Vehículo asegurado estacionado, vehículo contrario haciendo maniobra colisiona con el vehículo asegurado.'
+  assert.equal(descripcionSiniestro(largo), largo)
+})
+
+test('🚨 un valor de cajón NO es una descripción: es un renglón en blanco con aspecto de dato', () => {
+  for (const v of [null, undefined, '', '   ', '-', '—', '··']) {
+    assert.equal(descripcionSiniestro(v), null, `«${v}» no puede pasar por descripción`)
+  }
 })
