@@ -30,8 +30,6 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-<<<<<<< HEAD
-=======
 - **🔴 El logo de Fidelidade entra, y el fichero bueno se llamaba `.jpg` sin serlo (07/09/2026).** De los
   tres que subió Alberto a Drive, los dos primeros eran JPEG —sin canal alfa, o sea caja blanca sobre la
   banda— y el tercero, `fidelidades logo3.jpg`, era un **PNG de paleta** (`mimeType: image/png`, 3.310 B):
@@ -61,7 +59,6 @@
   el correo cifrado y `apps/asegura` lo LEE (es la que tiene correo y BYPASSRLS; un guardián prohíbe
   al portal importar transporte de correo). Medido: 6 obligaciones en toda la BD, 0 avisadas, 0 en
   ventana — el cron mandando cero hoy es correcto y NO prueba que esté apagado.
->>>>>>> origin/main
 - **🏢 El portal, «todo corporativo»: la atmósfera de la web y la clave de IA puesta (07/09/2026).**
   Alberto revirtió mi recomendación («3. igual la web no? debería parecer como la expansión de la
   web» + «todo corporativo»), así que entra lo que yo había dejado fuera: la mancha de marca de
