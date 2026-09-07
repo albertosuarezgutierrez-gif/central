@@ -728,7 +728,7 @@ Desde Fase 4 el guardián tiene **dos cepos más** (7/7 en verde el 02/09/2026):
 un modelo de CARTERA (`prisma.cliente|clienteEmail|poliza|polizaCobertura|polizaRecibo|siniestro|
 polizaInterviniente|clienteRelacion|correduria`) importa `lib/session` **y** nombra `portalVinculo` — la
 costura; y `prisma/schema.prisma` **no declara** columnas que el rol no puede leer (`Cliente.dni`,
-`PolizaRecibo.iban`, `Siniestro.comentario`…). `lib/vinculo.ts` es el único exento del import de sesión
+`PolizaRecibo.iban`, `Siniestro.lugarDireccion`…). `lib/vinculo.ts` es el único exento del import de sesión
 para la cartera: corre en el canje del código, antes de que exista cookie. El listado del guardián
 incluye ficheros **sin commitear** (`git ls-files --others`): el fichero nuevo es justo el que hay que cazar.
 
@@ -760,7 +760,7 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
   `confirmadaCima = id_poliza_entidad !== null` (si no, chip «pendiente de confirmación por la compañía»).
   Por póliza: coberturas (total + 4 primeras), recibos (próximo al cobro por `situacion`
   `pendiente`/`emitido`, devueltos, último cobrado; **`total: 0` = «sin recibos informados», no «al
-  corriente»**), siniestros `abierto`/`en_tramitacion` **sin tramitador ni perito** (regla de visibilidad del 03/09/2026, sección de abajo).
+  corriente»**), siniestros `abierto`/`en_tramitacion` **sin tramitador ni perito** (regla de visibilidad del 03/09/2026, sección de abajo) y, desde el 07/09/2026, **con QUÉ pasó y DÓNDE** (ver «Toda la información del siniestro»).
 - **Autorizadas:** `cliente_relaciones` fila A→B con `puede_ver_polizas` = **A autoriza a B** (semántica
   de `clientesVisiblesPara` de `@central/module-seguros`; se le pasa `observaciones: null` porque el rol
   no la lee y el helper no la usa). Mis fichas son B; las pólizas vivas de cada A salen bajo «Seguros que
@@ -880,6 +880,48 @@ datos del lado «voz alta» o los comentarios que explican que su `0` es un huec
 `siniestrosAbiertos` deja de preguntar por `ve.siniestros`** (mutación comprobada: sin la guarda,
 4 pass / 1 fail).
 
+## 🗒 «Toda la información del siniestro» (07/09/2026) — y lo que resultó no existir
+
+Dictado de Alberto: *«también dar acceso a toda la información de los siniestros»*. Lo primero fue
+**medir la tabla**, y el resultado cambió la tarea entera (69 siniestros, 07/09/2026):
+
+| Columna | Filas con dato | Qué se hizo |
+|---|---|---|
+| `comentario` | **66** | **Se abre.** Es lo único que contesta «¿qué pasó?» |
+| `lugar_cp` / `lugar_ciudad` / `lugar_provincia` | 8 | Se pinta. El rol **ya** las podía leer desde el 02/09: sencillamente no se pedían |
+| `tipo` | 69 | Sigue sin pintarse: es un código de compañía (`17`, `1107`, `2102`) |
+| `gravedad`, `reserva_importe`, `indemnizacion_importe`, `se_considera_culpable` | **0** | No hay nada que enseñar. Los dos importes ni tienen grant |
+| `tramitador_*`, `perito_*` | **0** | 🚨 La regla del 03/09 que los oculta **hoy no tapa ningún dato**: la columna está vacía en las 69 |
+
+🚨 **`comentario` NO es un campo saneado, y la decisión se tomó con los ejemplos delante.** Lo escribe
+el tramitador para uso interno y contiene datos personales de TERCEROS — en la cartera real hay un
+«Inquilino piso 5: \<nombre\> \<móvil\>» y un «Contacta \<nombre y apellidos\>, familiar de tomadora».
+Alberto eligió el 07/09/2026, sobre esos dos ejemplos, publicarlo **a todo el que ya puede ver
+siniestros**, no solo al titular. Queda escrito aquí porque la decisión es suya y **no debe
+heredarse por descuido**: quien monte la próxima pantalla que lea esta columna merece saberlo.
+
+Lo que sigue sujetándolo, y que NO lo da el GRANT sino el código:
+- `camposVisibles().siniestros` (nivel `completo` o superior), y la descripción viaja **dentro** del
+  historial ya filtrado — no por un camino propio. Con un `descripcion:` fuera de ese brazo, el texto
+  se serviría a quien solo tiene `tarjeta` y **no fallaría nada: saldría**.
+- `NUNCA_A_UN_TERCERO.siniestros = false` cuando quien cede es una persona FÍSICA. **Una SOCIEDAD sí
+  puede cederlos**, y ese es el único camino por el que este texto llega a alguien ajeno.
+
+📌 **El texto NO se recorta ni se «limpia».** Media frase de un siniestro es otro relato, y una
+heurística que borrara teléfonos borraría también datos buenos dejando pasar los malos. Se pinta
+entero, con cepo.
+
+📌 **Dos traducciones, y las dos salen de mirar la BD** (`lugarSiniestro()` en
+`@central/module-seguros-portal`): la provincia es un **código** (`41` → Sevilla, con la MISMA tabla
+que usa la ficha del cliente, no una segunda lista de 52) y la ciudad viene en **MAYÚSCULAS**
+(«DOS HERMANAS» → «Dos Hermanas»). No se corrigen acentos que la fuente no trae: inventarse «Alcalá»
+es tan fácil como inventarse la provincia equivocada.
+
+Cepos: `siniestro-historial.test.ts` (17) y tres en `test/regression-portal-visibilidad.test.ts`
+—la descripción dentro del brazo del nivel, el `select` sin dirección ni importes, y que la vista no
+la recorte—, **vistos morder** con las tres mutaciones (sacarla del historial, recortarla a 80
+caracteres y colar `reservaImporte` en el schema).
+
 ## 🚑 El parte de siniestro (03/09/2026) — y la frase que NO se puede decir
 
 El cliente da parte desde `/boveda` (`ParteSiniestro.tsx` → `POST /api/siniestros` →
@@ -987,7 +1029,10 @@ Lo vigila `test/regression-portal-enlace-acceso.test.ts`.
   sobre `corredurias`, `clientes`, `cliente_emails`, `polizas`, `poliza_coberturas`, `poliza_recibos`,
   `siniestros`, `poliza_intervinientes`, `cliente_relaciones` (`prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`,
   aplicado 02/09/2026; **sin contraseña** hasta que Alberto la ponga). El 03/09/2026 se añadió
-  `GRANT SELECT (eiac_xml_hash) ON seguros.polizas`, que la regla de cartera viva necesita leer. Es lo que toca internet: no lleva
+  `GRANT SELECT (eiac_xml_hash) ON seguros.polizas`, que la regla de cartera viva necesita leer. El
+  07/09/2026, `GRANT SELECT (comentario) ON seguros.siniestros`
+  (`prisma/sql/2026-09-07_portal_siniestro_descripcion.sql`) — la descripción del siniestro; siguen
+  SIN grant `lugar_direccion`, `reserva_importe` e `indemnizacion_importe`. Es lo que toca internet: no lleva
   la llave maestra.
 - **DDL:** `prisma/sql/2026-09-01_portal_fase1.sql` — 3 ENUM + **6 tablas**: `portal_identidad`,
   `portal_canal`, `portal_codigo`, `portal_bien`, `portal_poliza_declarada`, `portal_consentimiento`;

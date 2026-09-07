@@ -48,6 +48,8 @@ import {
   type Alcance,
   type BienAsegurado,
   type TipoOtorgante,
+  lugarSiniestro,
+  descripcionSiniestro,
   ordenarRecibos,
   estadoRecibos,
   resumirRecibos,
@@ -112,6 +114,19 @@ export type SiniestroPortal = {
   estado: string
   referencia: string | null
   fechaHora: Date | null
+  /**
+   * QUÉ pasó, en las palabras de quien lo tramitó (`siniestros.comentario`).
+   * `null` = la compañía no lo contó — que NO es «no pasó nada».
+   *
+   * 🚨 Llega desde el 07/09/2026, con GRANT propio
+   * (`prisma/sql/2026-09-07_portal_siniestro_descripcion.sql`) y decisión
+   * explícita de Alberto con la cartera delante: es texto LIBRE y a veces trae
+   * nombres y teléfonos de terceros. Va con el MISMO permiso que el resto del
+   * historial (`ve.siniestros`), no con uno propio.
+   */
+  descripcion: string | null
+  /** DÓNDE pasó, ya legible («Dos Hermanas (Sevilla)»). `null` = no consta. */
+  lugar: string | null
 }
 
 export type PolizaPortal = {
@@ -137,7 +152,19 @@ export type PolizaPortal = {
    *  03/09/2026 en la 548238086: anual 67,86€, bruta 73,39€, recibo 73,39€. Enseñar solo la neta al
    *  lado de un recibo mayor parece un error de cuentas. */
   prima: { anual: number | null; bruta: number | null; mensual: number | null; fraccionamiento: string | null } | null
-  /** `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel. */
+  /**
+   * `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel.
+   *
+   * 🚨 `lista` va ENTERA, sin recortar (07/09/2026, dictado de Alberto: «que el
+   * cliente vea todas las coberturas que tiene»). Antes se cortaba a 4 aquí, en
+   * la lectura, y la ficha —el único sitio que la pinta— remataba con «y 6 más»:
+   * las coberturas que el cliente paga y no sabe que tiene no las veía nadie.
+   * Cuántas caben en pantalla es cosa de quien pinta, no de quien lee.
+   *
+   * `total > lista.length` significa que hay coberturas informadas SIN
+   * descripción ni código (la fila existe, el texto no): no es que se hayan
+   * escondido.
+   */
   coberturas: { total: number; lista: string[] } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
@@ -248,9 +275,6 @@ const SIN_VINCULO: CarteraPortal = {
   autorizadas: [],
   autorizacionesUsadas: [],
 }
-
-/** Coberturas que se listan en la card antes del «y N más». */
-const COBERTURAS_EN_CARD = 4
 
 /** `nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo. */
 function nivelDeVinculo(v: string): Nivel {
@@ -466,6 +490,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               estado: true,
               referencia: true,
               fechaHora: true,
+              // QUÉ pasó y DÓNDE. `comentario` tiene GRANT desde el 07/09/2026;
+              // las tres de lugar lo tenían desde los grants del 02/09 y
+              // sencillamente no se pedían. `lugar_direccion` sigue SIN grant a
+              // propósito: es la casa de alguien.
+              comentario: true,
+              lugarCiudad: true,
+              lugarProvincia: true,
               // 🚨 `tipo` NO se pide, y no es un olvido: en la BD es un CÓDIGO
               // NUMÉRICO de la compañía (`1107`, `1915`, `1312`, `17`…, medido
               // en la cartera viva el 05/09/2026). «Tipo 1107» no le dice nada
@@ -510,6 +541,11 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             estado: x.estado,
             referencia: x.referencia,
             fechaHora: x.fechaHora,
+            // Las dos normalizaciones viven en el módulo puro: la provincia es
+            // un CÓDIGO («41») y la ciudad viene en MAYÚSCULAS. Aquí solo se
+            // traduce la fila.
+            descripcion: descripcionSiniestro(x.comentario),
+            lugar: lugarSiniestro({ ciudad: x.lugarCiudad, provincia: x.lugarProvincia }),
           })),
         )
       : null
@@ -536,10 +572,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       coberturas: ve.coberturas
         ? {
             total: cobs.length,
-            lista: cobs
-              .map((c) => (c.descripcion ?? c.codigo ?? '').trim())
-              .filter(Boolean)
-              .slice(0, COBERTURAS_EN_CARD),
+            // Sin `slice`: la lista va entera. Ver el comentario del tipo.
+            lista: cobs.map((c) => (c.descripcion ?? c.codigo ?? '').trim()).filter(Boolean),
           }
         : null,
       recibos: ve.recibos ? recibosDePoliza(recs) : null,

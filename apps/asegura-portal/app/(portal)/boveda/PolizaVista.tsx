@@ -374,11 +374,33 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
   if (c.lista.length === 0) {
     return <div className="linea">{c.total === 1 ? '1 cobertura informada' : `${c.total} coberturas informadas`}</div>
   }
+  // 🚨 Se listan TODAS, una por línea (07/09/2026, «que el cliente vea todas
+  // las coberturas que tiene»). Antes se pintaban cuatro seguidas y un «y 6
+  // más» que no llevaba a ninguna parte: no había dónde ver esas seis. Una por
+  // renglón además se lee: en un solo párrafo con puntos medios, nueve
+  // coberturas son una frase larga que nadie termina.
+  const sinTexto = c.total - c.lista.length
   return (
-    <div className="linea">
-      {c.lista.join(' · ')}
-      {c.total > c.lista.length && ` y ${c.total - c.lista.length} más`}
-    </div>
+    <>
+      <p className="suave" style={{ margin: '0 0 8px', fontSize: 13 }}>
+        {c.total === 1 ? '1 cobertura' : `${c.total} coberturas`}
+      </p>
+      <ul className="coberturas">
+        {c.lista.map((nombre, i) => (
+          <li key={`${nombre}-${i}`}>{nombre}</li>
+        ))}
+      </ul>
+      {/* `total > lista.length` = filas informadas SIN descripción ni código.
+          Se dice, en vez de dejar que el cliente cuente y le falten: el hueco es
+          de la compañía, no una cobertura que le estemos escondiendo. */}
+      {sinTexto > 0 && (
+        <p className="suave" style={{ margin: '8px 0 0', fontSize: 13 }}>
+          {sinTexto === 1
+            ? 'Hay además 1 cobertura de la que tu compañía no nos ha informado el nombre.'
+            : `Hay además ${sinTexto} coberturas de las que tu compañía no nos ha informado el nombre.`}
+        </p>
+      )}
+    </>
   )
 }
 
@@ -446,6 +468,16 @@ export function HistorialSiniestros({ p }: { p: PolizaPortal }) {
                   (informada en 67 de 67 de la cartera viva), así que va visible
                   y en cifras tabulares para poder leerla en voz alta. */}
               {s.referencia && <span className="siniestro-ref">Ref. {s.referencia}</span>}
+              {/* DÓNDE pasó. Solo consta en 8 de los 69 de la cartera, así que
+                  cuando falta no se pinta nada: un «Lugar: —» no informa. */}
+              {s.lugar && <span className="siniestro-lugar">{s.lugar}</span>}
+              {/* QUÉ pasó, en las palabras de quien lo tramitó y SIN recortar:
+                  media frase de un siniestro es otro relato. Es lo que Alberto
+                  pidió el 07/09/2026 («toda la información») y lo único que
+                  contesta la pregunta que trae aquí a un cliente. `null` = la
+                  compañía no lo contó, y entonces se calla: decir «sin
+                  descripción» no le añade nada a quien ya ve la referencia. */}
+              {s.descripcion && <p className="siniestro-desc">{s.descripcion}</p>}
             </li>
           )
         })}
