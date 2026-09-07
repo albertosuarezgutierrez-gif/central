@@ -41,6 +41,7 @@ export async function GET(req: Request) {
         estado: 'ok',
         opciones: r.opciones,
         ...(r.hogar ? { hogar: r.hogar } : {}),
+        ...(r.moto ? { moto: r.moto } : {}),
         gastado: '0,00€',
       })
     case 'invalido':
