@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   precalificarAuto,
+  precalificarAutoNueva,
   partirApellidos,
   sexoDeSaludo,
   aniosEntre,
@@ -11,6 +12,7 @@ import {
   type ClienteCartera,
   type PolizaCartera,
   type Resueltos,
+  type ResueltosAutoNueva,
 } from './desde-cartera.ts'
 
 const HOY = '2026-09-01'
@@ -225,6 +227,63 @@ test('un DNI o un carnet que no están se reportan como falta, nunca se inventan
 test('NINGÚN supuesto rellena un dato personal: solo circunstancias del riesgo', () => {
   const personales: string[] = ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'telefono', 'fechaCarnet', 'sexo']
   for (const s of pre({ dni: null, telefono: null, fechaNacimiento: null }).supuestos) {
+    assert.ok(!personales.includes(s.campo), `no se puede suponer un dato personal: ${s.campo}`)
+  }
+})
+
+// ─── AUTO, oportunidad nueva (sin póliza) ────────────────────────────────────
+
+const RESUELTOS_NUEVA: ResueltosAutoNueva = {
+  municipioId: 41091,
+  estadoCivilId: 'Single',
+  matricula: '1234ABC',
+  fechaMatriculacion: '2016-02-20',
+  codigoVehiculo: '12345678',
+  garaje: 'CommunalParking',
+}
+
+function preNueva(c: Partial<ClienteCartera> = {}, r: Partial<ResueltosAutoNueva> = {}) {
+  return precalificarAutoNueva({ ...CLIENTE, ...c }, { ...RESUELTOS_NUEVA, ...r }, HOY)
+}
+
+test('sin póliza previa, con todo resuelto no falta nada', () => {
+  const r = preNueva()
+  assert.deepEqual(r.faltan, [])
+  assert.equal(r.datos.matricula, '1234ABC')
+})
+
+test('se cotiza DE CALLE: sin compañía anterior, sin años asegurado, nunca se inventan', () => {
+  const r = preNueva()
+  assert.equal(r.datos.aseguradoAntes, false)
+  assert.equal('companiaAnteriorCodigo' in r.datos, false)
+  assert.equal('aniosAsegurado' in r.datos, false)
+  // Y por eso NO falta ninguno de esos campos: `revisarDatosAuto` solo los
+  // exige si `aseguradoAntes` es true.
+  assert.equal(r.faltan.some((f) => f.campo === 'companiaAnteriorCodigo'), false)
+  assert.equal(r.faltan.some((f) => f.campo === 'polizaAnterior'), false)
+})
+
+test('la fecha de efecto es SIEMPRE mañana, y se marca como supuesto', () => {
+  const r = preNueva()
+  const manana = '2026-09-02'
+  assert.equal(r.datos.fechaEfecto, manana)
+  assert.ok(r.supuestos.some((s) => s.campo === 'fechaEfecto'))
+})
+
+test('sin matrícula no se puede cotizar: la teclea el corredor, no sale de ninguna póliza', () => {
+  assert.ok(preNueva({}, { matricula: null }).faltan.some((f) => f.campo === 'matricula'))
+})
+
+test('el garaje solo se marca como supuesto si de verdad lo es', () => {
+  assert.equal(preNueva().supuestos.some((s) => s.campo === 'garaje'), false)
+  assert.ok(preNueva({}, {}).supuestos)
+  const r = precalificarAutoNueva(CLIENTE, { ...RESUELTOS_NUEVA, garajeEsSupuesto: true }, HOY)
+  assert.ok(r.supuestos.some((s) => s.campo === 'garaje'))
+})
+
+test('NINGÚN supuesto de la nueva rellena un dato personal', () => {
+  const personales: string[] = ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'telefono', 'fechaCarnet', 'sexo']
+  for (const s of preNueva({ dni: null, telefono: null }).supuestos) {
     assert.ok(!personales.includes(s.campo), `no se puede suponer un dato personal: ${s.campo}`)
   }
 })
