@@ -39,6 +39,24 @@
   evento, en iPhone no se vería NADA y nadie se enteraría — ahí se enseñan las instrucciones de
   «Añadir a pantalla de inicio». 15 cepos vistos en rojo uno a uno. Sin push todavía.
 
+- **📌 Revisión de precios House Sevillana — Genius+Móvil se QUEDAN, ocupación floja no lo permite (07/09/2026, solo charla, sin PR).**
+  Reserva Booking 154638741 (05-07/03/2027) parecía descuadrar (393,78€/noche vs base ~530€): desglose real
+  confirma que es el stack Genius −15% + Móvil −10% (mismo patrón landmine §12 CLAUDE.md, nunca tocado en
+  esos dos por ser de visibilidad). Alberto preguntó si quitar la oferta móvil; ocupación real de House
+  Sevillana (40% a 30d, 36,7% a 60d, 16,7% a 90d) desaconseja tocar NINGUNO de los dos ahora — con esa
+  demanda floja pierdes más reservas de las que ganas en margen. **Pendiente: revisar si la ocupación a
+  61-90d mejora; si no, valorar bajar precio en vez de quitar descuentos.**
+
+- **✅ Mergeado y PROBADO en producción (07/09/2026, PR #2571 → `6a567537`).** Los 12 requeridos en
+  verde y desplegado (`dpl_Et6yoY…`, target production, READY; el portal responde 200 sirviendo ese
+  deployment). Medido contra la cartera real: la póliza de la captura de Alberto —Occident
+  547875907, RC— tiene **10 coberturas y las 10 con nombre**, o sea el «y 6 más» que él veía eran
+  R.C. Cruzada, Post-trabajos, Defensa penal y reclamación de daños, Defensa ante la inspección de
+  trabajo, R.C. Profesional técnico dependiente y Liberación de gastos. Y los helpers, ejecutados
+  con los siniestros REALES: «Alcala de Guadaira (Sevilla) · Chinita salta al parabrisas
+  rompíendolo.» — provincia traducida del código 41, ciudad des-mayusculada, descripción entera, y
+  sin lugar ni comentario no se pinta nada.
+
 - **🗒 El siniestro dice QUÉ pasó (07/09/2026).** «También dar acceso a toda la información de los
   siniestros». Medida la tabla antes de tocar (69 filas): lo único con contenido que no se enseñaba
   era `comentario` (66/69) y el lugar (8/69); `gravedad`, los dos importes, `se_considera_culpable`
