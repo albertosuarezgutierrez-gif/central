@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🌍 La web de la correduría vendía «en Sevilla» y se vende en TODA ESPAÑA (07/09/2026).** Dictado de
+  Alberto viendo `/seguros/auto` en el móvil: «vendemos a nivel nacional, no provinciales solo». Los seis
+  `<h1>`/`<title>`, las descripciones, el chip del hero y «atendemos en Sevilla y su provincia» de
+  quiénes-somos acotaban **la oferta**, no la keyword: quien entra desde otra provincia leía que no es
+  cliente. Y la ficha JSON-LD lo decía en datos estructurados — `areaServed` era ciudad + comunidad →
+  ahora `Country: España`. **El domicilio postal sigue en Sevilla** (NAP con Google Business, que es de
+  donde sale la señal local, no de repetir la ciudad en cada encabezado). Cepo invertido: `ramos.test.ts`
+  exigía Sevilla en el h1 y ahora la prohíbe (barre RAMOS + fuentes de `app/`+`components/`); los 5
+  guardianes nuevos vistos en ROJO antes de darlos por buenos. De propina, los ramo-`title` escribían
+  «· Grupo ASegura» que la plantilla del layout ya añadía: marca duplicada en las 6 SERP. Actualizada la
+  skill `seo-asegura` (mandaba lo contrario y lo habría revertido). Precio dicho: sin modificador
+  geográfico se compite con comparadores nacionales — a medir cuando GSC esté conectada. PR pendiente.
 - **🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo (06/09/2026).** Al mergear
   #2439, `merge_pull_request` devolvió `405 ... "Lint · TypeCheck · Build" is in progress` mientras el
   run de `ci.yml` sobre ese head exacto llevaba minutos en `completed`/`success`. Reintentar **sin tocar
