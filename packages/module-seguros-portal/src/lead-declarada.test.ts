@@ -2,7 +2,13 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { DIAS_PREAVISO_TOMADOR } from './obligacion.ts'
-import { estadoLead, leadDeclarada, ordenarLeads, type EntradaLead } from './lead-declarada.ts'
+import {
+  estadoLead,
+  leadDeclarada,
+  normalizarNumeroPoliza,
+  ordenarLeads,
+  type EntradaLead,
+} from './lead-declarada.ts'
 
 const HOY = new Date('2026-09-07T00:00:00Z')
 
@@ -104,4 +110,24 @@ test('🚨 a igual fecha, el orden lo fija el id — y se comprueba la PROPIEDAD
     .map((id) => leadDeclarada(entrada({ id, fechaVencimiento: null }), HOY))
     .filter((x) => x !== null)
   assert.deepEqual(ordenarLeads(leads).map((l) => l.id), ['a', 'b', 'c', 'd'])
+})
+
+test('🚨 el mismo contrato escrito de dos formas es el MISMO número', () => {
+  // El PDF de la compañía lo escribe con espacios o guiones y la cartera sin
+  // ellos. Compararlos crudos da dos pólizas distintas, y eso significa
+  // ofrecerle a un cliente exactamente lo que ya le has vendido.
+  const canon = normalizarNumeroPoliza('04Z113777894')
+  assert.equal(normalizarNumeroPoliza('04Z11 3777894'), canon)
+  assert.equal(normalizarNumeroPoliza('04-Z11-3777894'), canon)
+  assert.equal(normalizarNumeroPoliza('04z11.3777894'), canon)
+  assert.equal(normalizarNumeroPoliza(' 04Z11/3777894 '), canon)
+})
+
+test('🚨 sin número es `null`, nunca una cadena vacía', () => {
+  // La cadena vacía es el valor de cajón que se cuela por `IS NULL`, `??` y
+  // `COALESCE` — y aquí haría que DOS pólizas sin número se consideraran la
+  // misma, que es la peor forma de acertar.
+  assert.equal(normalizarNumeroPoliza(null), null)
+  assert.equal(normalizarNumeroPoliza('   '), null)
+  assert.equal(normalizarNumeroPoliza('- / .'), null)
 })

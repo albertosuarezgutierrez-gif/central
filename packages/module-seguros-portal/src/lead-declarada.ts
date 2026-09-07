@@ -148,4 +148,27 @@ export function ordenarLeads(leads: readonly Lead[]): Lead[] {
   })
 }
 
+/**
+ * La forma canónica de un número de póliza, para poder decir si dos filas
+ * hablan del MISMO contrato.
+ *
+ * Vive aquí y no en la capa de BD a propósito: de esta comparación depende que
+ * un lead se descarte por «ya la tienes», y una regla que decide eso tiene que
+ * ser probable sin levantar Prisma.
+ *
+ * Se quitan espacios, puntos, guiones y barras, y se sube a mayúsculas: el PDF
+ * de la compañía escribe «04Z11 3777894» y la cartera «04Z113777894». Sin esto
+ * son dos pólizas distintas, y el resultado es ofrecerle a un cliente
+ * exactamente lo que ya le has vendido.
+ *
+ * `null` cuando no queda nada: la cadena vacía es el valor de cajón que se cuela
+ * por `IS NULL`, `??` y `COALESCE`, y haría que dos pólizas SIN número se
+ * consideraran la misma.
+ */
+export function normalizarNumeroPoliza(v: string | null): string | null {
+  if (v === null) return null
+  const n = v.replace(/[\s.\-/]/g, '').toUpperCase()
+  return n === '' ? null : n
+}
+
 export { DIAS_PREAVISO_TOMADOR }

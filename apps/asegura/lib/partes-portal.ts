@@ -44,8 +44,11 @@ import {
   type PlazoComunicacion,
 } from '@central/module-seguros-portal'
 import { estadoDocumento, tipoDocumento, type EstadoDocumento, type TipoDocumento } from '@central/module-seguros'
-import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
+// Los dos viven en `vinculos-portal.ts` desde el 07/09/2026: la misma pregunta
+// la hacen ahora dos pantallas, y la decisión sobre los vínculos múltiples no
+// puede tener dos copias que puedan divergir.
+import { identidadesDeCliente, vinculosPorIdentidad } from './vinculos-portal'
 
 /** La ficha de la cartera detrás de un parte. `null` en la salida = no la sabemos. */
 export type ClienteDelParte = {
@@ -163,52 +166,6 @@ export function limiteParte(v: unknown): number {
 function nombreCompleto(c: { nombre: string | null; apellidos: string | null }): string | null {
   const t = `${c.nombre ?? ''} ${c.apellidos ?? ''}`.replace(/\s+/g, ' ').trim()
   return t === '' ? null : t
-}
-
-type FilaVinculo = { identidad_id: string; cliente_id: string }
-
-/**
- * `portal_vinculo` de esta correduría para esas identidades → ficha de la cartera.
- *
- * ⚠️ Decisión sobre los vínculos MÚLTIPLES (una identidad casada con dos fichas):
- * se devuelve **el más antiguo** (`creado_en`, y el `id` como desempate para que
- * el resultado no dependa del orden en que la BD devuelva las filas) y se deja
- * constancia en el log del servidor. No se adivina «la buena» y tampoco se
- * devuelve `null`: `null` significa en toda esta capa «no lo hemos casado con
- * nadie», y usarlo aquí borraría la diferencia entre no saber quién es y saberlo
- * de más — que se arreglan en sitios distintos (identificar a la persona vs.
- * fusionar dos fichas). El vínculo extra sí queda dicho, en el log, con ids y sin
- * un solo dato personal.
- */
-async function vinculosPorIdentidad(correduriaId: string, identidadIds: string[]): Promise<Map<string, string>> {
-  const mapa = new Map<string, string>()
-  if (identidadIds.length === 0) return mapa
-  const filas = await prismaAsegura().$queryRaw<FilaVinculo[]>`
-    select identidad_id, cliente_id
-    from portal_vinculo
-    where correduria_id = ${correduriaId}::uuid
-      and identidad_id in (${Prisma.join(identidadIds.map((i) => Prisma.sql`${i}::uuid`))})
-    order by identidad_id, creado_en asc, id asc`
-  for (const f of filas) {
-    const ya = mapa.get(f.identidad_id)
-    if (ya === undefined) mapa.set(f.identidad_id, f.cliente_id)
-    else if (ya !== f.cliente_id) {
-      console.warn(
-        `[partes-portal] identidad ${f.identidad_id} vinculada a más de una ficha ` +
-          `(${ya} y ${f.cliente_id}); se usa la más antigua. Puede ser una fusión pendiente.`,
-      )
-    }
-  }
-  return mapa
-}
-
-/** Las identidades vinculadas a una ficha. Lista vacía = esa ficha no tiene a nadie en el portal. */
-async function identidadesDeCliente(correduriaId: string, clienteId: string): Promise<string[]> {
-  const filas = await prismaAsegura().$queryRaw<{ identidad_id: string }[]>`
-    select identidad_id
-    from portal_vinculo
-    where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid`
-  return [...new Set(filas.map((f) => f.identidad_id))]
 }
 
 async function nombresDeClientes(correduriaId: string, ids: string[]): Promise<Map<string, string | null>> {
