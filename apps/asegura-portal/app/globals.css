@@ -377,6 +377,9 @@ input, select, textarea, button { font: inherit; }
     box-shadow: var(--shadow);
     margin: 8px 8px 8px 0;
     padding: 40px 32px 72px;
+    /* La atmósfera de marca es un `::before` absoluto: sin esto se sale por las
+     * esquinas redondeadas de la isla y se ve un rectángulo azul asomando. */
+    overflow: clip;
     min-height: calc(100vh - var(--alto-barra) - 16px);
   }
 }
@@ -559,6 +562,52 @@ h1 {
 /* El acento en itálica de marca, que es la firma del titular de la web. Va
    sobre `<em>` y no sobre una clase: en «Mis <em>seguros</em>» la palabra
    destacada es la que lleva el significado, así que el énfasis es semántico. */
+/* ── La ATMÓSFERA de la web, traída al portal (07/09/2026) ─────────────────
+ * Alberto: «igual la web… debería parecer como la expansión de la web. Todo
+ * corporativo». Es el degradado exacto de `.hero-atmosfera` de `asegura-web`:
+ * `--brand` al 7 % arriba, al 2 % en medio y transparente abajo.
+ *
+ * 🚨 Y aquí está la condición que hace que esto NO estropee la pantalla: el
+ * color de marca entra en FONDOS SUAVES (7 % y 2 %), nunca saturado. En la
+ * bóveda el color saturado ya significa algo —«vencida», «al cobro»— y si la
+ * decoración compitiera con el semáforo, el aviso dejaría de destacar
+ * justamente en la pantalla donde hay que verlo. Un 7 % no compite con nada;
+ * una banda azul plena sí.
+ *
+ * `z-index: -1` y `pointer-events: none`: es fondo, no toca nada.
+ * En la isla de escritorio va recortada por su radio (`overflow: clip`). */
+.portal-contenido {
+  position: relative;
+}
+.portal-contenido::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 26rem;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--brand) 7%, transparent),
+    color-mix(in oklab, var(--brand) 2%, transparent),
+    transparent
+  );
+}
+
+/* La franja de acento de la web (`.banda-acento`): `--brand-soft` de fondo y
+ * `--brand-ink` de texto. UNA sección la lleva, no varias — el propio CSS de la
+ * web deja escrito por qué: «el contraste vale porque es el único». */
+.seccion.acento {
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  border-color: color-mix(in oklab, var(--brand) 20%, transparent);
+}
+.seccion.acento h2,
+.seccion.acento .antetitulo {
+  color: var(--brand-ink);
+}
+
 /* El saludo de entrada, encima del titular. Alberto: «que al entrar el cliente
  * sea más ameno, no tan frío».
  *
