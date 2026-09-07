@@ -53,7 +53,16 @@
   503**, en los DOS correos (invitación al portal y aviso de acceso). Cepo verificado en rojo.
   ⏸️ **Pendiente de Alberto, y es lo único que falta para que el botón funcione:** en Vercel
   `central-asegura`, `RESEND_API_KEY` (o `SMTP_USER`+`SMTP_PASSWORD`, o `GMAIL_USER`+`GMAIL_APP_PASSWORD`)
-  **más `ASEGURA_MAIL_FROM`**, y redesplegar (una env nueva no se aplica sin redeploy).
+  **más `ASEGURA_MAIL_FROM`**, y redesplegar (una env nueva no se aplica sin redeploy). ⚠️ Con el
+  remitente único (más abajo) `ASEGURA_MAIL_FROM` ya es OPCIONAL: basta `RESEND_API_KEY`. Y **los 3
+  registros DNS de `grupoasegura.es` en IONOS siguen sin poner**: el dominio está `not_started` en
+  Resend, así que hasta entonces el correo no sale (medido 21:1x UTC).
+  ✍️ **Y el TEXTO del correo, dictado por Alberto:** fuera «este enlace no abre sesión por sí mismo…»
+  y «si prefieres seguir como hasta ahora, no hagas nada…»; en su lugar una línea de marca («en Grupo
+  ASegura trabajamos para ponértelo cada día más fácil…»). El cepo que exigía la primera frase se movió
+  a donde la garantía vive de verdad —la URL, que no lleva query ni fragmento ni la palabra `token`—
+  y se le vio en ROJO. **Mergeado en `749e3a23`** tras CUATRO merges de `main` (el repo avanza cada
+  pocos minutos y el `405 merge conflicts` salió dos veces con los 19 checks ya en verde).
   📮 **Proveedor resuelto el mismo día: RESEND.** El dominio **`envios.grupoasegura.es` ya estaba
   `verified`** (eu-west-1, alta del 03/09 junto a las claves de `asegura-portal`); se creó la clave
   `central-asegura` con `sending_access` **restringida a ese dominio** y remitente
