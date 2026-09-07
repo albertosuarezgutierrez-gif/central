@@ -200,3 +200,9 @@ Las piezas 2, 3 y 5 no necesitan tabla nueva (reutilizan `portal_poliza_declarad
 - ¿La comparación es un ranking o una tabla de hechos? → **Tabla de hechos, sin ranking.**
 - ¿El presupuesto de la comparación es real o una horquilla? → **Real (Avant2), a petición explícita.**
 - ¿A quién aplica el cuestionario de huecos? → **A cualquiera con sesión en el portal, cliente o lead.**
+- ¿Cómo se muestra en la bóveda que una póliza aportada está a nombre de otra persona (pieza 11)?
+  → **Chip inline en la propia fila** ("De Pilar Piña Franco · tu mujer"), nunca un pop-up ni un
+  panel lateral. Es el mismo patrón que ya usa `FilaPoliza.tsx`/`FilaDeclarada.tsx` para "De
+  {titular}" y "Añadida por ti": un dato que puede cambiar lo que el cliente hace no puede vivir
+  detrás de un clic. Comparativa visual de las tres opciones, aprobada por Alberto:
+  https://claude.ai/code/artifact/95013a06-784e-451a-a6c6-64db3160a2a6
