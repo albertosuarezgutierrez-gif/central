@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🍪 El badge de Cookiebot pisa el CTA «Que me llamen» en móvil — y el cepo volvió a estar ciego (07/09/2026).**
+  Captura de Alberto en `grupoasegura.es` (13:00, móvil): el botón negro de cookies se solapa con el CTA de venta.
+  Es **la segunda vez** que el mismo fallo pasa por delante de una medición: Playwright dijo «no desborda, CTA a
+  48/52 px» porque un `position: fixed` **no desborda, se pone encima** — está escrito en `globals.css:580` desde
+  el 06/09. La mitigación que hay (`.hero{padding-bottom:calc(var(--e8)+76px)}` en móvil) solo reserva la banda
+  **al final del hero**; el CTA está a media altura, así que al hacer scroll pasa igual por debajo de la burbuja.
+  ⚠️ **No se arregla desde el código**: la burbuja la inyecta el script de Cookiebot con sus clases. Y en local el
+  cepo NO puede verlo, porque sin `NEXT_PUBLIC_COOKIEBOT_ID` el script ni se carga. **Decisión pendiente de
+  Alberto**: mover o quitar el badge desde el panel de Cookiebot (la vía de retirar consentimiento seguiría en
+  `/legal/cookies`, art. 7.3 RGPD). PRs #2502 y #2516 mergeados; el despliegue del apex confirmado por él.
 - **🔇 Cron SEO de sivra: pudo morir MUDO por presupuesto — techo 60→300 (07/09/2026).** El E2E del
   fix SeoStatus (#1895) descubrió que el cron de hoy no dejó rastro NINGUNO (ni commit, ni fila, ni ❌
   Telegram, con la ruta viva y sin PR atascado): `maxDuration=60` contra una cadena de análisis cuyo
