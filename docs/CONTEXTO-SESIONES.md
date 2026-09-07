@@ -43,6 +43,16 @@
   ⏳ **Pendiente de Alberto: `PII_ENCRYPTION_KEY` en el Vercel de `asegura-portal`** — sin ella solo
   sale «41002 SEVILLA» / «11520 ROTA», no la calle, y eso no se ve en ningún log.
 
+- **🔤 Una sola letra en los titulares de `asegura-web` (07/09/2026, PR #2583).** Alberto sobre el h1
+  de la portada: «aquí hay dos tipografías, ¿no? me gusta que todo esté como *Sube tus seguros*». No eran
+  dos familias: era la ITÁLICA de Fraunces en `.destaca` (10 titulares de la página), que cambia tanto de
+  forma que se leía como otra letra. Se quita la itálica —el acento lo lleva ya solo el cobalto— también
+  en la cita de credenciales, y con ella el eje `ital` de la petición a Google Fonts (un archivo de fuente
+  menos). Cepo nuevo `lib/tipografia.test.ts`: itálica declarada e itálica pedida van de la mano en los
+  DOS sentidos (sin el eje, el navegador SINTETIZA la inclinación y no falla nada); 5 brazos vistos en rojo.
+  **Pendiente: mirar la preview de Vercel — Google Fonts no carga en el contenedor, así que el aspecto real
+  no se ha visto aquí.**
+
 - **📲 El portal del cliente se puede INSTALAR (07/09/2026).** Idea de Alberto: «a veces entro en una
   web y me sale la opción de instalar; algo así para cuando entren nuestros clientes». Es una PWA, y
   el sitio es `apps/asegura-portal` (el asegurado), no `/correduria` de plataforma. Manifiesto +
@@ -51,7 +61,9 @@
   oferta dentro de la sesión. 🚨 **iOS no dispara `beforeinstallprompt`**: si solo se escuchara el
   evento, en iPhone no se vería NADA y nadie se enteraría — ahí se enseñan las instrucciones de
   «Añadir a pantalla de inicio», con el glifo de Compartir DIBUJADO (a secas no se entiende, y el
-  público es de 50-70 años). 16 cepos vistos en rojo uno a uno. Sin push todavía. PR #2581.
+  público es de 50-70 años). 16 cepos vistos en rojo uno a uno. Sin push todavía. **Mergeado (PR #2581 → `f55de57f`) y PROBADO en
+  producción:** `clientes.grupoasegura.es` sirve `/manifest.webmanifest` (200, `application/manifest+json`),
+  `/icono-app` (200, PNG 512×512, 7.406 B) y `/sw.js` (200).
 
 - **🚪 Salida tardía: se confirma la VÍSPERA, y una postura por mensaje (07/09/2026).**
   Borrador del agente a la reserva 154265696 (Luxury Busto) que retenía y concedía a la vez
@@ -62,6 +74,7 @@
   **Medido:** desde una sesión Claude NO se puede enviar al huésped (el proxy deniega
   `login.smoobu.com`, 403); el ✅ de Telegram envía `borrador` de la BD, no el texto de la burbuja.
   **Pendiente:** el ✅ de Alberto en el mensaje 4219 — la respuesta corregida sigue sin enviarse.
+
 - **📌 Revisión de precios House Sevillana — Genius+Móvil se QUEDAN, ocupación floja no lo permite (07/09/2026, solo charla, sin PR).**
   Reserva Booking 154638741 (05-07/03/2027) parecía descuadrar (393,78€/noche vs base ~530€): desglose real
   confirma que es el stack Genius −15% + Móvil −10% (mismo patrón landmine §12 CLAUDE.md, nunca tocado en
