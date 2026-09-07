@@ -37,8 +37,14 @@
   en la cita de credenciales, y con ella el eje `ital` de la petición a Google Fonts (un archivo de fuente
   menos). Cepo nuevo `lib/tipografia.test.ts`: itálica declarada e itálica pedida van de la mano en los
   DOS sentidos (sin el eje, el navegador SINTETIZA la inclinación y no falla nada); 5 brazos vistos en rojo.
-  **Pendiente: mirar la preview de Vercel — Google Fonts no carga en el contenedor, así que el aspecto real
-  no se ha visto aquí.**
+  **Mergeado** (`0298e16d`) con los 4 workflows en verde; el merge necesitó DOS pasadas porque `main`
+  avanzó dos veces (#2579 y #2581) y el `merge_pull_request` devolvió `405 · merge conflicts`.
+  🚨 **Nadie ha visto todavía el aspecto real:** ni Google Fonts, ni la preview `*.vercel.app`, ni
+  `grupoasegura.es` son alcanzables desde el contenedor (el proxy los deniega), y
+  `list_deployments` del MCP de Vercel da 403 — o sea que **el despliegue de producción tampoco se
+  ha comprobado desde aquí**. Lo medido es de otra clase: `.destaca` computa `font-style: normal` y
+  el mismo `font-family` que el resto del h1 en Chromium sobre `next dev`. **Pendiente: que Alberto
+  abra grupoasegura.es y mire el titular.**
 
 - **📲 El portal del cliente se puede INSTALAR (07/09/2026).** Idea de Alberto: «a veces entro en una
   web y me sale la opción de instalar; algo así para cuando entren nuestros clientes». Es una PWA, y
