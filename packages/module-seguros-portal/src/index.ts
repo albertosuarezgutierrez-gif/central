@@ -30,8 +30,10 @@ export {
   entraEnVentana,
   polizaGeneraObligacion,
   obligacionDerivable,
+  reparoDeclarada,
+  declaradaGeneraObligacion,
 } from './obligacion.ts'
-export type { VigenciaObligacion } from './obligacion.ts'
+export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
 export {
   PARTE_ESTADOS,
   DIAS_COMUNICACION_LCS,

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { DIAS_PREAVISO_TOMADOR, fechaAccionable } from './obligacion.ts'
+import { DIAS_PREAVISO_TOMADOR, fechaAccionable, reparoDeclarada, declaradaGeneraObligacion } from './obligacion.ts'
 
 test('el preaviso del tomador es de 30 dias', () => {
   assert.equal(DIAS_PREAVISO_TOMADOR, 30)
@@ -203,4 +203,50 @@ test('el volcado que CIMA nunca ha tocado sigue sin generar obligación', () => 
     }),
     false,
   )
+})
+
+// ── Pólizas DECLARADAS (las que sube quien todavía no es cliente) ──────────
+//
+// 🪤 El modo de fallo que vigilan estos cepos es MUDO en las dos direcciones:
+// avisar de una fecha que nadie ha confirmado manda un correo con un día
+// equivocado, y no avisar sin decirlo deja a la persona creyendo que la
+// estamos vigilando. Ninguna de las dos cosas rompe nada.
+test('sin fecha de vencimiento no hay obligación, y el motivo se dice', () => {
+  assert.equal(reparoDeclarada({ fechaVencimiento: null, confirmadaPorUsuario: true }), 'sin_fecha')
+  assert.equal(declaradaGeneraObligacion({ fechaVencimiento: null, confirmadaPorUsuario: true }), false)
+})
+
+test('sin fecha manda sobre sin confirmar', () => {
+  // Confirmar una póliza a la que le falta la fecha no la haría avisable, así
+  // que mandarla a confirmar sería mandarla al sitio equivocado.
+  assert.equal(reparoDeclarada({ fechaVencimiento: null, confirmadaPorUsuario: false }), 'sin_fecha')
+})
+
+test('una póliza que nadie ha confirmado NO avisa', () => {
+  // Nace así al subir un PDF: los datos los ha adivinado un extractor.
+  const p = { fechaVencimiento: new Date('2027-03-15T00:00:00Z'), confirmadaPorUsuario: false }
+  assert.equal(reparoDeclarada(p), 'sin_confirmar')
+  assert.equal(declaradaGeneraObligacion(p), false)
+})
+
+test('con fecha y confirmada por la persona, sí genera obligación', () => {
+  const p = { fechaVencimiento: new Date('2027-03-15T00:00:00Z'), confirmadaPorUsuario: true }
+  assert.equal(reparoDeclarada(p), null)
+  assert.equal(declaradaGeneraObligacion(p), true)
+})
+
+test('el atajo y el motivo no pueden separarse', () => {
+  // `declaradaGeneraObligacion` está definido SOBRE `reparoDeclarada`. Si
+  // alguien lo reescribe con su propia condición, este cepo lo caza: recorre
+  // las cuatro combinaciones y exige que las dos respuestas coincidan siempre.
+  for (const fechaVencimiento of [null, new Date('2027-01-01T00:00:00Z')]) {
+    for (const confirmadaPorUsuario of [false, true]) {
+      const p = { fechaVencimiento, confirmadaPorUsuario }
+      assert.equal(
+        declaradaGeneraObligacion(p),
+        reparoDeclarada(p) === null,
+        `se separaron con fecha=${fechaVencimiento} confirmada=${confirmadaPorUsuario}`,
+      )
+    }
+  }
 })
