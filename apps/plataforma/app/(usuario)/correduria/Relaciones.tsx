@@ -107,12 +107,12 @@ export default function Relaciones({
   // la dejaría lejos del botón que la produjo.
   const [aviso, setAviso] = useState<{ fichaId: string; texto: string; ok: boolean } | null>(null)
 
-  async function llamar(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>): Promise<RespuestaRelaciones> {
+  async function llamar(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>, clienteIdOverride?: string): Promise<RespuestaRelaciones> {
     try {
       const res = await fetch('/api/correduria/cliente/relaciones', {
         method,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ clienteId, ...body }),
+        body: JSON.stringify({ clienteId: clienteIdOverride ?? clienteId, ...body }),
       })
       return interpretarRelaciones(res.status, await res.json().catch(() => null))
     } catch {
@@ -120,19 +120,41 @@ export default function Relaciones({
     }
   }
 
-  async function ejecutar(clave: string, method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>): Promise<RespuestaRelaciones> {
+  /**
+   * Cuando `clienteIdOverride` va puesto (autorización en el SENTIDO INVERSO: la
+   * ficha relacionada es quien otorga), el puerto devuelve las relaciones vistas
+   * DESDE esa otra ficha, no desde la que se está pintando aquí — usarlas
+   * directamente sustituiría la lista de esta pantalla por la de otra persona.
+   * Por eso, en ese caso, se relee la propia lista con un GET aparte.
+   */
+  async function ejecutar(
+    clave: string,
+    method: 'POST' | 'PATCH' | 'DELETE',
+    body: Record<string, unknown>,
+    clienteIdOverride?: string,
+  ): Promise<RespuestaRelaciones> {
     setOcupado(clave)
     setResultado(null)
     try {
-      const r = await llamar(method, body)
-      setResultado(r)
-      if (r.estado === 'ok') {
-        setLista(r.relaciones)
+      const r = await llamar(method, body, clienteIdOverride)
+      const final = r.estado === 'ok' && clienteIdOverride ? await recargarPropias() : r
+      setResultado(final)
+      if (final.estado === 'ok') {
+        setLista(final.relaciones)
         router.refresh()
       }
-      return r
+      return final
     } finally {
       setOcupado(null)
+    }
+  }
+
+  async function recargarPropias(): Promise<RespuestaRelaciones> {
+    try {
+      const res = await fetch(`/api/correduria/cliente/relaciones?clienteId=${encodeURIComponent(clienteId)}`, { cache: 'no-store' })
+      return interpretarRelaciones(res.status, await res.json().catch(() => null))
+    } catch {
+      return { estado: 'error', motivo: 'red' }
     }
   }
 
@@ -142,38 +164,58 @@ export default function Relaciones({
    * una ficha de persona no se manda ninguno de los dos y asegura anota el
    * alcance más pequeño («ver»), que es lo único que una persona puede delegar.
    */
+  /**
+   * `invertido` anota la autorización en el sentido CONTRARIO al de siempre:
+   * en vez de que `nombreFicha` autorice a `r.nombre`, es `r.nombre` quien
+   * autoriza a `nombreFicha` — sin tener que navegar a su ficha y repetir el
+   * mismo formulario allí. El consentimiento lo sigue dando el TITULAR de esa
+   * autorización (aquí, `r.nombre`): esto solo evita el viaje, no cambia quién
+   * consiente. Solo vale para el caso simple (persona a persona, alcance
+   * «ver»): no se sabe desde aquí si `r` es una sociedad, así que un
+   * apoderamiento inverso se sigue anotando desde su propia ficha.
+   */
   function autorizar(
     r: RelacionCartera,
     autoriza: boolean,
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
   ) {
+    const otorga = invertido ? r.nombre : nombreFicha
+    const recibe = invertido ? nombreFicha : r.nombre
     if (!autoriza) {
       // Una PENDIENTE todavía no abría nada: decir «dejará de ver» ahí sería falso.
       const efecto = r.autorizacion?.estado === 'vigente'
-        ? `${r.nombre} dejará de poder ver los seguros de ${nombreFicha}.`
-        : `Se retira la autorización anotada (${r.nombre} todavía no veía nada).`
+        ? `${recibe} dejará de poder ver los seguros de ${otorga}.`
+        : `Se retira la autorización anotada (${recibe} todavía no veía nada).`
       if (!confirm(`¿Revocar la autorización? ${efecto}`)) return
+    } else if (invertido) {
+      if (!confirm(`¿Anotar que ${otorga} autoriza a ${recibe} a ver sus seguros? Nace pendiente: no abre nada hasta que ${recibe} la acepte en su portal.`)) return
     }
     // 🚨 Un apoderamiento se confirma aparte: no es «deja mirar», es que esa
     // persona puede obligar a la sociedad frente a la compañía.
     if (autoriza && extra && esApoderamientoPortal(extra.alcance)) {
       const titulo = comoTitulo(extra.tituloRepresentacion)
       const ok = confirm(
-        `¿Anotar que ${nombreFicha} apodera a ${r.nombre} para ${ALCANCE_TEXTO_PORTAL[extra.alcance]}` +
+        `¿Anotar que ${otorga} apodera a ${recibe} para ${ALCANCE_TEXTO_PORTAL[extra.alcance]}` +
           `${titulo ? ` (${titulo})` : ''}? Lo que declare en nombre de la sociedad la OBLIGA frente a la compañía.`,
       )
       if (!ok) return
     }
-    void ejecutar(`aut-${r.relacionadoId}`, 'PATCH', {
-      relacionadoId: r.relacionadoId,
-      autoriza,
-      ...(autoriza && extra
-        ? {
-            alcance: extra.alcance,
-            ...(extra.tituloRepresentacion ? { tituloRepresentacion: extra.tituloRepresentacion } : {}),
-          }
-        : {}),
-    })
+    void ejecutar(
+      `aut-${r.relacionadoId}${invertido ? '-inv' : ''}`,
+      'PATCH',
+      {
+        relacionadoId: invertido ? clienteId : r.relacionadoId,
+        autoriza,
+        ...(autoriza && extra
+          ? {
+              alcance: extra.alcance,
+              ...(extra.tituloRepresentacion ? { tituloRepresentacion: extra.tituloRepresentacion } : {}),
+            }
+          : {}),
+      },
+      invertido ? r.relacionadoId : undefined,
+    )
   }
 
   /**
@@ -358,6 +400,7 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
     r: RelacionCartera,
     autoriza: boolean,
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
   ) => void
   onAvisar: (r: RelacionCartera) => void
   aviso: { fichaId: string; texto: string; ok: boolean } | null
@@ -473,6 +516,7 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
     r: RelacionCartera,
     autoriza: boolean,
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
   ) => void
   onQuitar: (r: RelacionCartera) => void
   onCambiarTipo: (r: RelacionCartera, tipo: string) => void
@@ -480,6 +524,7 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
   const ficha = `/correduria/cliente/${r.relacionadoId}`
   const enCurso =
     ocupado === `aut-${r.relacionadoId}` ||
+    ocupado === `aut-${r.relacionadoId}-inv` ||
     ocupado === `del-${r.relacionadoId}` ||
     ocupado === `tipo-${r.relacionadoId}` ||
     ocupado === `aviso-${r.relacionadoId}`
@@ -533,6 +578,23 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
         ¿{nombreFicha} ve los de {r.nombre}? <strong>{r.puedeVer ? 'sí' : 'no'}</strong> · se decide desde{' '}
         <Link href={ficha}>la ficha de {r.nombre}</Link>
       </div>
+
+      {/* No hace falta navegar a la otra ficha para anotar ESTE sentido: sigue
+          siendo un consentimiento de {r.nombre} (por eso el confirm lo nombra a
+          él como quien otorga), solo que se anota desde aquí. Se oculta en
+          cuanto ya puede ver — re-anotarlo lo rechazaría el puerto igualmente. */}
+      {!r.puedeVer && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            disabled={enCurso}
+            onClick={() => onAutorizar(r, true, undefined, true)}
+            style={{ ...btnStyle('sutil'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+          >
+            🔓 Anotar que {r.nombre} autoriza a {nombreFicha} a ver sus seguros
+          </button>
+        </div>
+      )}
 
       {r.observaciones && (
         <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
@@ -666,6 +728,7 @@ function AnotarSociedad({ r, nombreFicha, enCurso, onAutorizar }: {
     r: RelacionCartera,
     autoriza: boolean,
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
   ) => void
 }) {
   // `''` = todavía no ha elegido, que NO es haber elegido lo más pequeño.
