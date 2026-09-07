@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **👁 El cliente ve TODAS sus coberturas (07/09/2026).** Alberto, sobre la ficha de la RC de
+  Occident: «hay q poner para el cliente vea todas las coberturas que tiene». La lectura del portal
+  las cortaba a 4 (`COBERTURAS_EN_CARD`) y la ficha remataba con «y 6 más» — un «más» que no llevaba
+  a ninguna pantalla: seis coberturas que el cliente PAGA no las veía nadie. Ahora `cartera-lectura`
+  trae la lista entera (recortar es de quien pinta, no de quien lee) y la ficha las lista una por
+  renglón, con el total y, si la compañía informó filas sin nombre, cuántas son. Cepos nuevos en
+  `test/regression-portal-visibilidad.test.ts`, vistos en ROJO al reintroducir el `slice`. tsc 0,
+  lint 0 errores.
+
 - **🚧 Vida, salud y decesos sin póliza — construidos con lo que había, sin verificar (07/09/2026, PR #2563).**
   Alberto: «hazlo con lo que tengas», tras avisar del riesgo de gastar 0,50€ reales en intentos mal
   formados. Mismo patrón que auto/hogar/moto, pero el `risk` de estos tres NO sale de ningún snapshot

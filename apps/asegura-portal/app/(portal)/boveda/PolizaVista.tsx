@@ -374,11 +374,33 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
   if (c.lista.length === 0) {
     return <div className="linea">{c.total === 1 ? '1 cobertura informada' : `${c.total} coberturas informadas`}</div>
   }
+  // 🚨 Se listan TODAS, una por línea (07/09/2026, «que el cliente vea todas
+  // las coberturas que tiene»). Antes se pintaban cuatro seguidas y un «y 6
+  // más» que no llevaba a ninguna parte: no había dónde ver esas seis. Una por
+  // renglón además se lee: en un solo párrafo con puntos medios, nueve
+  // coberturas son una frase larga que nadie termina.
+  const sinTexto = c.total - c.lista.length
   return (
-    <div className="linea">
-      {c.lista.join(' · ')}
-      {c.total > c.lista.length && ` y ${c.total - c.lista.length} más`}
-    </div>
+    <>
+      <p className="suave" style={{ margin: '0 0 8px', fontSize: 13 }}>
+        {c.total === 1 ? '1 cobertura' : `${c.total} coberturas`}
+      </p>
+      <ul className="coberturas">
+        {c.lista.map((nombre, i) => (
+          <li key={`${nombre}-${i}`}>{nombre}</li>
+        ))}
+      </ul>
+      {/* `total > lista.length` = filas informadas SIN descripción ni código.
+          Se dice, en vez de dejar que el cliente cuente y le falten: el hueco es
+          de la compañía, no una cobertura que le estemos escondiendo. */}
+      {sinTexto > 0 && (
+        <p className="suave" style={{ margin: '8px 0 0', fontSize: 13 }}>
+          {sinTexto === 1
+            ? 'Hay además 1 cobertura de la que tu compañía no nos ha informado el nombre.'
+            : `Hay además ${sinTexto} coberturas de las que tu compañía no nos ha informado el nombre.`}
+        </p>
+      )}
+    </>
   )
 }
 

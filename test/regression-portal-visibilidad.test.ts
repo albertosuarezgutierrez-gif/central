@@ -419,3 +419,45 @@ test('🚨 lo que pide la 1ª pasada existe en el catálogo del ramo', () => {
     assert.match(auto, new RegExp(`id:\\s*'${id}'`), `el catálogo de auto debe declarar "${id}"`)
   }
 })
+
+// ── Las coberturas se enseñan TODAS ────────────────────────────────────────
+//
+// Alberto, 07/09/2026, sobre la ficha de la RC de Occident: «hay q poner para
+// el cliente vea todas las coberturas que tiene». La lectura las cortaba a 4
+// (`slice(0, COBERTURAS_EN_CARD)`) y la ficha remataba con «y 6 más» — un «más»
+// que no llevaba a ningún sitio: no había otra pantalla donde verlas. Seis
+// coberturas que el cliente PAGA no las veía nadie.
+//
+// El recorte, si algún día vuelve a hacer falta, es de quien pinta; la lectura
+// trae lo que hay.
+test('🚨 la lectura NO recorta la lista de coberturas', () => {
+  const src = leer(LECTURA)
+  const bloque = src.slice(src.indexOf('coberturas: ve.coberturas'), src.indexOf('recibos: ve.recibos'))
+  assert.ok(bloque.length > 0, 'no se encuentra el bloque de coberturas en la lectura')
+  assert.doesNotMatch(
+    bloque,
+    /\.slice\(/,
+    'la lista de coberturas no puede recortarse en la lectura: el cliente tiene que ver todas ' +
+      'las que paga. Si hace falta acortar en una tarjeta, se acorta al pintarla.',
+  )
+})
+
+test('🚨 la ficha pinta la lista entera y dice cuántas hay sin nombre', () => {
+  const src = leer('apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx')
+  const bloque = src.slice(src.indexOf('export function Coberturas'), src.indexOf('export function HistorialSiniestros'))
+  assert.ok(bloque.length > 0, 'no se encuentra el componente Coberturas')
+  assert.match(bloque, /c\.lista\.map\(/, 'la ficha tiene que recorrer la lista entera de coberturas')
+  assert.doesNotMatch(
+    bloque,
+    /más`/,
+    'nada de «y N más» en las coberturas: no hay ninguna pantalla donde ver ese resto.',
+  )
+  // El hueco que SÍ queda («total > lista.length») es de la compañía: filas sin
+  // descripción ni código. Se dice, no se calla: si no, el cliente cuenta y le
+  // faltan, y parece que se las escondemos nosotros.
+  assert.match(
+    bloque,
+    /c\.total - c\.lista\.length/,
+    'la ficha tiene que decir cuántas coberturas vienen sin nombre informado',
+  )
+})

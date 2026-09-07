@@ -137,7 +137,19 @@ export type PolizaPortal = {
    *  03/09/2026 en la 548238086: anual 67,86€, bruta 73,39€, recibo 73,39€. Enseñar solo la neta al
    *  lado de un recibo mayor parece un error de cuentas. */
   prima: { anual: number | null; bruta: number | null; mensual: number | null; fraccionamiento: string | null } | null
-  /** `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel. */
+  /**
+   * `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel.
+   *
+   * 🚨 `lista` va ENTERA, sin recortar (07/09/2026, dictado de Alberto: «que el
+   * cliente vea todas las coberturas que tiene»). Antes se cortaba a 4 aquí, en
+   * la lectura, y la ficha —el único sitio que la pinta— remataba con «y 6 más»:
+   * las coberturas que el cliente paga y no sabe que tiene no las veía nadie.
+   * Cuántas caben en pantalla es cosa de quien pinta, no de quien lee.
+   *
+   * `total > lista.length` significa que hay coberturas informadas SIN
+   * descripción ni código (la fila existe, el texto no): no es que se hayan
+   * escondido.
+   */
   coberturas: { total: number; lista: string[] } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
@@ -248,9 +260,6 @@ const SIN_VINCULO: CarteraPortal = {
   autorizadas: [],
   autorizacionesUsadas: [],
 }
-
-/** Coberturas que se listan en la card antes del «y N más». */
-const COBERTURAS_EN_CARD = 4
 
 /** `nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo. */
 function nivelDeVinculo(v: string): Nivel {
@@ -536,10 +545,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       coberturas: ve.coberturas
         ? {
             total: cobs.length,
-            lista: cobs
-              .map((c) => (c.descripcion ?? c.codigo ?? '').trim())
-              .filter(Boolean)
-              .slice(0, COBERTURAS_EN_CARD),
+            // Sin `slice`: la lista va entera. Ver el comentario del tipo.
+            lista: cobs.map((c) => (c.descripcion ?? c.codigo ?? '').trim()).filter(Boolean),
           }
         : null,
       recibos: ve.recibos ? recibosDePoliza(recs) : null,

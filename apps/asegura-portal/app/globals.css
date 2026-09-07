@@ -1126,6 +1126,47 @@ h1 em {
   }
 }
 
+/* Las COBERTURAS de una póliza, TODAS (07/09/2026). Una por renglón: son la
+ * lista de lo que el cliente ha comprado y en un párrafo con puntos medios
+ * dejan de leerse a partir de la cuarta. Rejilla de una columna en móvil y de
+ * dos a partir de 560 px, que es donde una lista de nueve empieza a hacer una
+ * columna larga y vacía a su derecha. `minmax(0,1fr)` para que un nombre largo
+ * («Responsabilidad Civil Explotación») no ensanche la pista y arrastre la
+ * página entera. */
+.coberturas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px 16px;
+}
+@media (min-width: 560px) {
+  .coberturas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.coberturas li {
+  position: relative;
+  padding-left: 16px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+/* El punto va en el color de marca y no como `list-style`: con `::before` se
+ * queda alineado con la primera línea cuando el nombre ocupa dos. */
+.coberturas li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand, currentColor);
+}
+
 /* ── La FICHA de una póliza ──────────────────────────────────────────────── */
 .volver {
   margin: 0 0 12px;
