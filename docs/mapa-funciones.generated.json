@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-07T06:57:40Z",
-  "sha": "3f4d037f5f47dbf30837bc4b107a1d021078f54a",
+  "generadoEn": "2026-09-07T09:05:59Z",
+  "sha": "dc66046cfb47e6e75c7b3a5843e083acb322b123",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3925,17 +3925,25 @@
       ],
       "funciones": [
         {
+          "nombre": "demasiadas",
+          "kind": "function",
+          "exportada": false,
+          "params": "retryAfter: number",
+          "retorno": null,
+          "linea": 30
+        },
+        {
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 17
+          "linea": 37
         }
       ],
       "tablas": [],
       "rutaApi": "/api/acceso/solicitar",
-      "hash": "9853d18f7758"
+      "hash": "3166989b9e02"
     },
     {
       "ruta": "apps/asegura-portal/app/api/acceso/verificar/route.ts",
@@ -4418,13 +4426,13 @@
           "exportada": false,
           "params": "estado: string | undefined",
           "retorno": "string | null",
-          "linea": 166,
+          "linea": 168,
           "resumen": "Solo los estados del vínculo que la persona tiene que saber; el resto no dice nada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e94da66f8620"
+      "hash": "6a0cc6788c27"
     },
     {
       "ruta": "apps/asegura-portal/app/hoja/[token]/page.tsx",
@@ -4517,7 +4525,7 @@
           "exportada": false,
           "params": "codigo: unknown",
           "retorno": "string",
-          "linea": 38
+          "linea": 40
         },
         {
           "nombre": "EntrarConCodigo",
@@ -4525,7 +4533,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 42
+          "linea": 44
         },
         {
           "nombre": "textoResponder",
@@ -4533,7 +4541,7 @@
           "exportada": false,
           "params": "codigo: unknown, mensaje: unknown",
           "retorno": "string",
-          "linea": 205
+          "linea": 207
         },
         {
           "nombre": "fechaLarga",
@@ -4541,7 +4549,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 220,
+          "linea": 222,
           "resumen": "Fecha en español legible. Un `YYYY-MM-DD` es un DÍA, sin hora ni zona: se fuerza medianoche UTC y se formatea en UTC, o el 3 sale como el 2 para media Europa (misma regla que `lib/fechas.ts`)."
         },
         {
@@ -4550,12 +4558,12 @@
           "exportada": true,
           "params": "{ token, otorganteNombre, alcance, soloUnaPoliza, mensaje, caducaEn, texto, }: { token: string /** `null` = no hemos podido leer su nombre. No se inventa uno ni se pinta un uuid. */ otorganteNombre: string | null alcance: string /** * `true",
           "retorno": null,
-          "linea": 233
+          "linea": 235
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "91c3860ee2db"
+      "hash": "327986245331"
     },
     {
       "ruta": "apps/asegura-portal/app/invitacion/[token]/page.tsx",
@@ -6360,6 +6368,38 @@
       "hash": "101cc603765b"
     },
     {
+      "ruta": "apps/asegura-portal/lib/rate-limit.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "lib/rate-limit.ts — limitador EN MEMORIA, por proceso. Copia del de `apps/plataforma/lib/rate-limit.ts` (las apps no se importan entre sí). Es «best-effort» a propósito: en Vercel cada instancia serverless tiene su propio mapa y se recicla, así que el tope real es «≈ max por instancia y ventana», no",
+      "exporta": [
+        "getIp",
+        "rateLimit"
+      ],
+      "funciones": [
+        {
+          "nombre": "getIp",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": "string",
+          "linea": 19,
+          "resumen": "IP del cliente tal y como la pone el proxy de Vercel; `'unknown'` si no viene."
+        },
+        {
+          "nombre": "rateLimit",
+          "kind": "function",
+          "exportada": true,
+          "params": "key: string, max = 5, windowMs = 15 * 60 * 1000, ahora = Date.now(),",
+          "retorno": "",
+          "linea": 28,
+          "resumen": "`true` mientras `key` no pase de `max` intentos en `windowMs`. La ventana es fija (arranca en el primer intento y se reinicia al expirar), no deslizante."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "028ff5341446"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/session.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -6557,6 +6597,35 @@
       "hash": "afb0637b78c8"
     },
     {
+      "ruta": "apps/asegura-web/app/icon.tsx",
+      "ambito": "apps/asegura-web",
+      "exporta": [
+        "Icono"
+      ],
+      "funciones": [
+        {
+          "nombre": "monogramaAzul",
+          "kind": "function",
+          "exportada": false,
+          "params": "color: string",
+          "retorno": "string",
+          "linea": 43,
+          "resumen": "El monograma con el color ya puesto. El fichero trae `fill=\"currentColor\"` a propósito (el color lo pone el contexto). Dentro de un `<img>` eso resuelve a NEGRO — que es precisamente el icono viejo qu"
+        },
+        {
+          "nombre": "Icono",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 48
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b8a14e893311"
+    },
+    {
       "ruta": "apps/asegura-web/app/layout.tsx",
       "ambito": "apps/asegura-web",
       "resumen": "Layout del sitio público de Grupo ASegura. La identidad visual NO se escribe aquí: los colores salen de `@central/brand` (`MARCA_ASEGURA`), medidos del fuente de la app que ya existe en `app.grupoasegura.com`, y el sistema (escala, rejillas, movimiento) vive en `globals.css`, que reproduce el de su ",
@@ -6694,7 +6763,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 20,
+          "linea": 22,
           "resumen": "Palomita de las garantías del hero. Trazo grueso, como el suyo."
         },
         {
@@ -6703,7 +6772,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 28
+          "linea": 30
         },
         {
           "nombre": "IconoRamo",
@@ -6711,7 +6780,7 @@
           "exportada": false,
           "params": "{ slug }: { slug: string }",
           "retorno": null,
-          "linea": 41,
+          "linea": 43,
           "resumen": "Iconos de los ramos. Trazo de `currentColor`, así que heredan el color de su cuadro. Dibujados a mano en vez de traer una librería: son cinco glifos y una dependencia entera es peso que paga el visita"
         },
         {
@@ -6720,12 +6789,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 170
+          "linea": 136
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2555c25c6cfb"
+      "hash": "85bed6a7c1d1"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
@@ -7135,7 +7204,7 @@
           "exportada": true,
           "params": "ramo: Ramo",
           "retorno": "Record<string, unknown>",
-          "linea": 122,
+          "linea": 126,
           "resumen": "Ficha de SERVICIO por ramo (`Service`). Qué añade sobre lo que ya había: la ficha `InsuranceAgency` dice quién es el negocio, y el `FAQPage` dice qué preguntas responde una página. Faltaba el dato del"
         },
         {
@@ -7144,7 +7213,7 @@
           "exportada": true,
           "params": "items: readonly { nombre: string; ruta: string }[]",
           "retorno": "Record<string, unknown> | null",
-          "linea": 140,
+          "linea": 144,
           "resumen": "Migas de pan. Se emiten SOLO cuando hay jerarquía de verdad (home → sección → página); una miga de un solo nivel no aporta nada y ensucia."
         },
         {
@@ -7153,7 +7222,7 @@
           "exportada": true,
           "params": "ramo: Ramo",
           "retorno": "Record<string, unknown> | null",
-          "linea": 161,
+          "linea": 165,
           "resumen": "`FAQPage` a partir del FAQ del ramo. Devuelve `null` si no hay preguntas: un `FAQPage` vacío es marcado inválido, y aquí el hueco («este ramo aún no tiene FAQ») se respeta en vez de emitir un esquelet"
         },
         {
@@ -7162,13 +7231,13 @@
           "exportada": true,
           "params": "obj: Record<string, unknown>",
           "retorno": "string",
-          "linea": 175,
+          "linea": 179,
           "resumen": "Serializa un objeto para meterlo en un `<script type=\"application/ld+json\">`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ef98c3a31a23"
+      "hash": "b6b1c7d512f6"
     },
     {
       "ruta": "apps/asegura-web/lib/sitio.ts",
@@ -7190,7 +7259,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f92bac40e96c"
+      "hash": "8bc34ff89e77"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
@@ -56222,13 +56291,13 @@
           "exportada": true,
           "params": "{ cabecera }: { cabecera?: React.ReactNode } = {}",
           "retorno": null,
-          "linea": 28,
+          "linea": 29,
           "resumen": "`cabecera` la pone /asistentes (la barra de pestañas). Se pinta DENTRO del <main> a propósito: este chat calcula su alto con `calc(100vh - 8px)`, así que cualquier cosa puesta por encima desde fuera l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d7dec87cb026"
+      "hash": "cb3a8c67601e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/asistentes/page.tsx",
@@ -57906,7 +57975,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 59
+          "linea": 60
         },
         {
           "nombre": "fmtFecha",
@@ -57914,7 +57983,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 64,
+          "linea": 65,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -57923,7 +57992,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 114
+          "linea": 115
         },
         {
           "nombre": "CorreduriaClient",
@@ -57931,7 +58000,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 116
+          "linea": 117
         },
         {
           "nombre": "CarteraResumen",
@@ -57939,7 +58008,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 464
+          "linea": 473
         },
         {
           "nombre": "btnMini",
@@ -57947,7 +58016,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 581,
+          "linea": 590,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -57956,12 +58025,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 599
+          "linea": 608
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8321eaf84ada"
+      "hash": "d7622b092b0c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -59087,6 +59156,26 @@
       "hash": "349ee9eb6e25"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/Redes.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Redes"
+      ],
+      "funciones": [
+        {
+          "nombre": "Redes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 34
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2a1c4ee4221b"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Relaciones.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -59302,7 +59391,7 @@
           "exportada": true,
           "params": "v: string | string[] | undefined",
           "retorno": "Seccion",
-          "linea": 39,
+          "linea": 50,
           "resumen": "Un `?s=` desconocido (o ausente) no deja la pantalla en blanco: cae a «Hoy»."
         },
         {
@@ -59311,7 +59400,7 @@
           "exportada": true,
           "params": "urgencia: string",
           "retorno": "boolean",
-          "linea": 59
+          "linea": 70
         },
         {
           "nombre": "contarAccionables",
@@ -59319,7 +59408,7 @@
           "exportada": true,
           "params": "polizas: readonly { urgencia: string }[] | null | undefined,",
           "retorno": "number | null",
-          "linea": 70,
+          "linea": 81,
           "resumen": "Cuántas renovaciones son trabajo de hoy. `null` entra y sale: si el puerto no ha contestado no se sabe cuántas hay, y decir 0 sería afirmar «no vence nada», que es justo la mentira que la regla «dato "
         },
         {
@@ -59328,13 +59417,13 @@
           "exportada": true,
           "params": "partes: readonly (number | null | undefined)[],",
           "retorno": "Contador | null",
-          "linea": 95,
+          "linea": 106,
           "resumen": "Agrega los contadores de las colas que viven en una sección. Tres desenlaces, no dos, y la diferencia es la que decide si Alberto abre la pestaña o no: - todas las colas legibles → `{ n, parcial:false"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9275954dd3b9"
+      "hash": "fd7469efe641"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Secciones.tsx",
@@ -59349,7 +59438,7 @@
           "exportada": true,
           "params": "{ activa, contadores, onCambiar }: { activa: Seccion contadores: ContadoresSeccion onCambiar: (s: Seccion) => void }",
           "retorno": null,
-          "linea": 43
+          "linea": 44
         },
         {
           "nombre": "Insignia",
@@ -59357,12 +59446,12 @@
           "exportada": false,
           "params": "{ contador, tono, title }: { contador: Contador | null tono?: 'aviso' | 'malo' title?: string }",
           "retorno": null,
-          "linea": 102
+          "linea": 103
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b0580ccdeed8"
+      "hash": "7fda6e756f9b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/SinCanal.tsx",
@@ -63151,6 +63240,26 @@
       "hash": "967088317b24"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/SubirFactura.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SubirFactura"
+      ],
+      "funciones": [
+        {
+          "nombre": "SubirFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ variante }: { variante: 'barra' | 'lateral' }",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dc7cb4ae830a"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/telegram/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -63587,7 +63696,7 @@
           "exportada": false,
           "params": "lista: { href: string }[], path: string",
           "retorno": "boolean",
-          "linea": 150
+          "linea": 151
         },
         {
           "nombre": "seccionDeRuta",
@@ -63595,7 +63704,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "ClaveSeccion | null",
-          "linea": 156,
+          "linea": 157,
           "resumen": "Qué sección contiene la ruta activa. Determinista: se calcula igual en el servidor y en el cliente, así que el primer pintado ya trae la sección buena abierta (sin salto al hidratar)."
         },
         {
@@ -63604,7 +63713,7 @@
           "exportada": false,
           "params": "path: string, soloEmpresas: boolean",
           "retorno": "ClaveSeccion | null",
-          "linea": 168,
+          "linea": 169,
           "resumen": "🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Mi negocio». Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta NO se le renderi"
         },
         {
@@ -63613,13 +63722,13 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 181,
+          "linea": 182,
           "resumen": "🚨 El lateral tiene DOS plegados distintos y no pueden pisarse: · `html[data-nav-plegado='1']` = tira de solo iconos (globals.css). Ahí las cabeceras de sección NO se ven (llevan `nav-solo-abierto`), "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4011c7096182"
+      "hash": "1267c2e83a00"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -66198,7 +66307,7 @@
           "exportada": false,
           "params": "e: any",
           "retorno": "string",
-          "linea": 24,
+          "linea": 30,
           "resumen": "Traduce un error de la IA a un mensaje claro para Alberto. Los proveedores gratuitos (NIM/Groq/ Gemini) devuelven 429/quota cuando se saturan, y el cerebro puede abortar por timeout: en ambos casos NO"
         },
         {
@@ -66207,12 +66316,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 32
+          "linea": 38
         }
       ],
       "tablas": [],
       "rutaApi": "/api/contable/chat",
-      "hash": "948718c6ba6d"
+      "hash": "f45b24ca8136"
     },
     {
       "ruta": "apps/plataforma/app/api/contable/feedback/route.ts",
@@ -72623,6 +72732,33 @@
       "hash": "15c62cbdc525"
     },
     {
+      "ruta": "apps/plataforma/app/api/sivra/pricing/fuga-canal/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 33
+        }
+      ],
+      "tablas": [
+        "base",
+        "incomes",
+        "next",
+        "noches",
+        "pricing_applied",
+        "pricing_settings"
+      ],
+      "rutaApi": "/api/sivra/pricing/fuga-canal",
+      "hash": "6c32f2851eb7"
+    },
+    {
       "ruta": "apps/plataforma/app/api/sivra/pricing/guard/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -78390,6 +78526,39 @@
       "hash": "b997e465d3f2"
     },
     {
+      "ruta": "apps/plataforma/lib/contable/archivar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/contable/archivar.ts Archiva en Drive e imputa al libro de gastos una factura SUBIDA A MANO (chat web, 📎 de Telegram o el botón 📸 de la cabecera). NO implementa nada nuevo: reutiliza la maquinaria CANÓNICA del agente de correo (`subir` de agente-facturas/drive + `procesarFactur",
+      "exporta": [
+        "archivarEImputar"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCuentaDelLibro",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 26,
+          "resumen": "¿Es esta cuenta la dueña del libro de gastos? Misma resolución que `facturas-scan` y `titulares` (env FACTURAS_CUENTA_ID → cuenta cuyo email == GMAIL_USER → la única real). Ante la duda, false: mejor "
+        },
+        {
+          "nombre": "archivarEImputar",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, data: FacturaExtraida, texto: string, doc: FacturaDoc,",
+          "retorno": "Promise<ArchivoFactura>",
+          "linea": 46,
+          "resumen": "Sube el justificante a Drive (carpeta año/mes según la FECHA DE LA FACTURA, no la de hoy) e imputa el gasto. Nunca lanza: un fallo de Drive no puede tumbar la respuesta del agente, pero tampoco se tra"
+        }
+      ],
+      "tablas": [
+        "cuentas"
+      ],
+      "rutaApi": null,
+      "hash": "f38114a4cb50"
+    },
+    {
       "ruta": "apps/plataforma/lib/contable/cerebro.ts",
       "ambito": "apps/plataforma",
       "resumen": "apps/plataforma/lib/contable/cerebro.ts Un turno del agente: contexto → IA → aprende hábitos → PROPONE acciones (que Alberto confirma).",
@@ -78509,7 +78678,9 @@
         "resumenDocumento",
         "matchDeCruce",
         "refFactura",
-        "accionConciliar"
+        "accionConciliar",
+        "nombreArchivoFactura",
+        "lineasArchivo"
       ],
       "funciones": [
         {
@@ -78518,7 +78689,7 @@
           "exportada": true,
           "params": "m?: MotivoSinLectura | null",
           "retorno": "string",
-          "linea": 92,
+          "linea": 94,
           "resumen": "Texto para Alberto cuando NO se ha podido leer el documento. Determinista y sin red. Sin `motivo` (llamadas antiguas) se conserva la frase histórica."
         },
         {
@@ -78527,7 +78698,7 @@
           "exportada": true,
           "params": "iso: string | null | undefined",
           "retorno": "string",
-          "linea": 118,
+          "linea": 120,
           "resumen": "'YYYY-MM-DD' → 'DD/MM/YYYY' (lo que Alberto lee en su banco). Deja pasar lo que no reconozca."
         },
         {
@@ -78536,7 +78707,7 @@
           "exportada": false,
           "params": "cobertura: CoberturaBanco[]",
           "retorno": "string",
-          "linea": 125,
+          "linea": 127,
           "resumen": "«BBVA hasta el 07/08/2026 · Kutxabank hasta el 05/08/2026». Las cuentas sin un solo movimiento se omiten: no aportan nada al «hasta dónde he podido mirar»."
         },
         {
@@ -78545,16 +78716,16 @@
           "exportada": true,
           "params": "data: ExtraccionCruda, source: 'text' | 'vision' | 'none', motivo?: MotivoSinLectura | null,",
           "retorno": "Interpretacion",
-          "linea": 133,
+          "linea": 135,
           "resumen": "Decide si la extracción es utilizable y normaliza la factura. Determinista, sin red."
         },
         {
           "nombre": "resumenDocumento",
           "kind": "function",
           "exportada": true,
-          "params": "f: FacturaDoc, cruce: CruceDoc",
+          "params": "f: FacturaDoc, cruce: CruceDoc, archivo?: ArchivoFactura | null",
           "retorno": "string",
-          "linea": 159,
+          "linea": 161,
           "resumen": "Texto legible para el chat tras leer el documento. Determinista."
         },
         {
@@ -78563,7 +78734,7 @@
           "exportada": true,
           "params": "cruce: CruceDoc",
           "retorno": "MatchDoc",
-          "linea": 198,
+          "linea": 210,
           "resumen": "El movimiento sobre el que se puede PROPONER conciliar. Solo el cruce exacto y el que cae fuera de la ventana (ese se pregunta antes). Un cargo ya conciliado no se vuelve a proponer."
         },
         {
@@ -78572,7 +78743,7 @@
           "exportada": true,
           "params": "f: FacturaDoc",
           "retorno": "string",
-          "linea": 206,
+          "linea": 218,
           "resumen": "Referencia corta que se guarda en factura_ref al conciliar. Determinista."
         },
         {
@@ -78581,12 +78752,30 @@
           "exportada": true,
           "params": "f: FacturaDoc, match: MatchDoc",
           "retorno": "PropuestaAccion | null",
-          "linea": 214
+          "linea": 226
+        },
+        {
+          "nombre": "nombreArchivoFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FacturaDoc, original = ''",
+          "retorno": "string",
+          "linea": 267,
+          "resumen": "Nombre con el que se archiva en Drive. Una foto de móvil (`20260907_093156.jpg`) no dice nada dentro de la carpeta del mes, así que se renombra por proveedor/fecha/importe conservando la extensión ori"
+        },
+        {
+          "nombre": "lineasArchivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "a?: ArchivoFactura | null",
+          "retorno": "string",
+          "linea": 277,
+          "resumen": "Qué se le cuenta a Alberto del archivado. Vacío = no hay nada que contar (no se intentó)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ada2a7802fa8"
+      "hash": "cab633fab62e"
     },
     {
       "ruta": "apps/plataforma/lib/contable/documentos.ts",
@@ -78602,15 +78791,15 @@
           "exportada": false,
           "params": "m: FilaMov",
           "retorno": "MovCandidato",
-          "linea": 39
+          "linea": 48
         },
         {
           "nombre": "cargosDelImporte",
           "kind": "function",
           "exportada": false,
-          "params": "cuentaId: string, f: FacturaDoc, dias: number",
+          "params": "cuentaId: string, f: FacturaDoc, dias: number, /** `posterior`: solo cargos del día de la factura en adelante (ver VENTANA_ANCHA). */ ventana: 'centrada' | 'posterior' = 'centrada',",
           "retorno": "Promise<FilaMov[]>",
-          "linea": 48,
+          "linea": 57,
           "resumen": "Cargos del MISMO importe (al céntimo) dentro de una ventana de días. READ-ONLY: réplica de la SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí solo proponemos; el UPDATE lo hace accione"
         },
         {
@@ -78619,7 +78808,7 @@
           "exportada": false,
           "params": "cuentaId: string",
           "retorno": "Promise<CoberturaBanco[]>",
-          "linea": 67,
+          "linea": 83,
           "resumen": "Hasta qué fecha llega el extracto de cada cuenta VIVA. Es lo que convierte un «no lo encuentro» en un «todavía no me ha llegado» (regla del CLAUDE.md: dato que no hay ≠ dato que no se ha mirado)."
         },
         {
@@ -78628,7 +78817,7 @@
           "exportada": false,
           "params": "a: string, b: string",
           "retorno": null,
-          "linea": 81
+          "linea": 97
         },
         {
           "nombre": "buscarCruce",
@@ -78636,7 +78825,7 @@
           "exportada": false,
           "params": "cuentaId: string, f: FacturaDoc, tolDias = 7",
           "retorno": "Promise<CruceDoc>",
-          "linea": 85,
+          "linea": 101,
           "resumen": "Cruza la factura contra los movimientos y devuelve CUÁL de los cinco desenlaces es (ver CruceDoc)."
         },
         {
@@ -78645,7 +78834,7 @@
           "exportada": false,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string,",
           "retorno": "Promise<DocProcesado>",
-          "linea": 113,
+          "linea": 138,
           "resumen": "Hoja de cálculo subida al chat: el lector de facturas no sabe abrirla (devolvería «no he podido leer el documento», que es falso). Hoy el Excel que Alberto sube es el MISMO listado de la tarjeta que e"
         },
         {
@@ -78654,7 +78843,7 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<DocProcesado>",
-          "linea": 147
+          "linea": 172
         }
       ],
       "tablas": [
@@ -78662,7 +78851,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "5f82e3b51a71"
+      "hash": "bcdee5cbdf88"
     },
     {
       "ruta": "apps/plataforma/lib/contable/extracto-tarjeta.ts",
@@ -79338,7 +79527,7 @@
         "cuentas"
       ],
       "rutaApi": null,
-      "hash": "8f807fe1f7cf"
+      "hash": "657fc580cdd4"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-hogar.ts",
@@ -79928,6 +80117,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "359ab01677e5"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/redes-borradores.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Borradores para LinkedIn — el canal que Alberto eligió el 07/09/2026. ─── Por qué esto es DATO y no un chat ───────────────────────────────────── Un post publicado no se puede editar como una página. Si un texto promete un precio, ya lo ha visto quien lo iba a ver. Por eso el copy de redes pasa por ",
+      "exporta": [
+        "revisarBorrador",
+        "revisarBorradores",
+        "explicarRevision"
+      ],
+      "funciones": [
+        {
+          "nombre": "revisarBorrador",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: Borrador",
+          "retorno": "RevisionBorrador",
+          "linea": 176
+        },
+        {
+          "nombre": "revisarBorradores",
+          "kind": "function",
+          "exportada": true,
+          "params": "bs: readonly Borrador[] = BORRADORES",
+          "retorno": "RevisionBorrador[]",
+          "linea": 182
+        },
+        {
+          "nombre": "explicarRevision",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RevisionBorrador",
+          "retorno": "string",
+          "linea": 187,
+          "resumen": "Frase para un mensaje de error o un aviso. `''` si está limpio."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "17d7092562d1"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/renovaciones-aviso.ts",
@@ -80650,7 +80879,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 175,
+          "linea": 178,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -80659,7 +80888,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 205,
+          "linea": 208,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -80668,7 +80897,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 227
+          "linea": 230
         },
         {
           "nombre": "ventanaMinutos",
@@ -80676,7 +80905,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 235,
+          "linea": 238,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -80685,13 +80914,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 247,
+          "linea": 250,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8adec7034d23"
+      "hash": "982b06330cf8"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -84002,6 +84231,73 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b2c51f208b7b"
+    },
+    {
+      "ruta": "apps/plataforma/lib/imagen-cliente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "apps/plataforma/lib/imagen-cliente.ts Encoge en el NAVEGADOR la foto de una factura antes de subirla. POR QUÉ EXISTE (07/09/2026). Alberto subió la foto de una factura desde el móvil y recibió «se me ha cortado la conexión», dos veces, sin que la función llegara a ejecutarse. Una foto de un móvil ac",
+      "exporta": [
+        "esImagen",
+        "medidas",
+        "prepararAdjunto",
+        "pesoLegible"
+      ],
+      "funciones": [
+        {
+          "nombre": "esImagen",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: string, nombre = ''",
+          "retorno": "boolean",
+          "linea": 40
+        },
+        {
+          "nombre": "base64De",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "dataUrl: string",
+          "retorno": null,
+          "linea": 44
+        },
+        {
+          "nombre": "leerComoDataURL",
+          "kind": "function",
+          "exportada": false,
+          "params": "file: Blob",
+          "retorno": "Promise<string>",
+          "linea": 46
+        },
+        {
+          "nombre": "medidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "w: number, h: number, ladoMax = LADO_MAX",
+          "retorno": "",
+          "linea": 56,
+          "resumen": "Escala manteniendo la proporción, sin AGRANDAR nunca (una foto pequeña se queda como está)."
+        },
+        {
+          "nombre": "prepararAdjunto",
+          "kind": "function",
+          "exportada": true,
+          "params": "file: File, opts: { ladoMax?: number; tope?: number } = {},",
+          "retorno": "Promise<Adjunto>",
+          "linea": 68,
+          "resumen": "Devuelve el adjunto listo para enviar. Nunca lanza por culpa de la compresión: si algo del canvas falla (navegador viejo, imagen que no decodifica), cae al original — que como mucho será rechazado arr"
+        },
+        {
+          "nombre": "pesoLegible",
+          "kind": "function",
+          "exportada": true,
+          "params": "bytes: number",
+          "retorno": "string",
+          "linea": 129,
+          "resumen": "«3,4 MB» / «812 KB». Para poder decirle a Alberto cuánto pesaba y cuánto se envió."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "57544626d4f1"
     },
     {
       "ruta": "apps/plataforma/lib/inicio-acciones.ts",
@@ -92681,6 +92977,35 @@
       "hash": "fd83d275ea87"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/pricing-fuga-canal.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-fuga-canal.ts — lo que el huésped PAGA contra lo que el motor CREE que lista. POR QUÉ (07/09/2026, reserva 154638741 de House Sevillana, 05-07/03/2027). El motor había dejado esas dos noches a 523€ y 542€ de base: con el canal calibrado (`escaparate = 1,056 × base + 120€`) eso son ",
+      "exporta": [
+        "fugaCanal"
+      ],
+      "funciones": [
+        {
+          "nombre": "mediana",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: number[]",
+          "retorno": "number | null",
+          "linea": 92
+        },
+        {
+          "nombre": "fugaCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: ReservaCobrada[], canal: ParametrosCanal, o: FugaCanalOpts = {}",
+          "retorno": "FugaCanal",
+          "linea": 99
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7f655f2b21fb"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/pricing-guardia.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/pricing-guardia.ts — lógica PURA (sin BD ni red) del guardián de sub-mercado. Contexto (20/07/2026): una reserva de Luxury Busto entró a ~110€/noche cuando el mercado real rondaba ~160-185€. Causa: el precio vivo del piso llevaba semanas anclado a un valor viejo y NADIE se enteró — el dete",
@@ -95755,7 +96080,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 578
+          "linea": 584
         },
         {
           "nombre": "avisosDe",
@@ -95763,7 +96088,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 583,
+          "linea": 589,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -95772,13 +96097,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 593,
+          "linea": 599,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "94f30e9f9e60"
+      "hash": "25f39fe8f716"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -115603,6 +115928,28 @@
       "hash": "027a1aa49baa"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/destino.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "¿Es este destino algo a lo que se pueda ENVIAR un código? Existe para cerrar un amplificador de correo: `POST /api/acceso/solicitar` es público y sin sesión, y antes escribía una fila en `portal_codigo` y disparaba un envío con cualquier cadena de 3 a 200 caracteres. O sea, cualquiera podía usar el ",
+      "exporta": [
+        "destinoValido"
+      ],
+      "funciones": [
+        {
+          "nombre": "destinoValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: 'email' | 'whatsapp', destino: string",
+          "retorno": "boolean",
+          "linea": 56,
+          "resumen": "`true` si a `destino` se le puede enviar un código por `tipo`. No lanza y no muta: con cualquier entrada rara (vacía, larguísima, con espacios) devuelve `false`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dd832bffa8a3"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/direccion-catastro.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "De una dirección tecleada por una persona a algo que el Catastro entienda — y de dónde salió cada dato una vez resuelto. Dos piezas que van juntas porque sirven al mismo paso de la pantalla de hogar: 1. `variantesDireccion()` — el intento BARATO y DETERMINISTA. La inmensa mayoría de los «no lo encue",
@@ -117021,6 +117368,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "0e00b8146ebe"
+    },
+    {
+      "ruta": "packages/module-seguros/src/copy-regulado.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Lo que la correduría NO puede decir en una comunicación pública, en UN sitio. ─── Por qué existe este módulo ──────────────────────────────────────────── La regla regulatoria es la misma escriba donde escriba: RDL 3/2020 (arts. 173-178) distingue INFORMAR de ASESORAR, y en cuanto un texto promete un",
+      "exporta": [
+        "revisarCopy",
+        "explicarInfracciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "revisarCopy",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, opciones?: { ambito?: boolean }",
+          "retorno": "Infraccion[]",
+          "linea": 95,
+          "resumen": "Revisa un texto contra las reglas y devuelve TODAS las infracciones. Devuelve la lista completa, no la primera: quien escribe quiere corregir de una pasada, y un cepo que se para en el primer fallo ob"
+        },
+        {
+          "nombre": "explicarInfracciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "infracciones: readonly Infraccion[]",
+          "retorno": "string",
+          "linea": 106,
+          "resumen": "Frase lista para el mensaje de un test o de un aviso. `''` si está limpio."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "529dcdac636c"
     },
     {
       "ruta": "packages/module-seguros/src/documento-auto.ts",
@@ -124084,7 +124463,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3072,
-    "funciones": 9316
+    "archivos": 3083,
+    "funciones": 9342
   }
 }
