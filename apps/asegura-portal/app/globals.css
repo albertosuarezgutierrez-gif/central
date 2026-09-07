@@ -474,6 +474,59 @@ input, select, textarea, button { font: inherit; }
   .marca-coletilla { display: none; }
 }
 
+/* ── Salir de la sesión ────────────────────────────────────────────────────
+ *
+ * 🚨 `margin-left: auto` va AQUÍ y se le quita al interruptor cuando están los
+ * dos. La barra ya tenía dos `margin-left:auto` (la coletilla y el botón de
+ * tema), que es lo que reparte el hueco libre entre ellos; con un tercero el
+ * reparto se hace a tres bandas y los dos botones de la derecha se separan sin
+ * que nada falle. Por eso `Salir` toma el `auto` y el interruptor pasa a un
+ * hueco fijo — y por eso el ORDEN en el `layout` no es cosmético: la regla es
+ * de hermano ADYACENTE.
+ *
+ * El botón NO es de marca a plena carga: la única acción azul de la barra sería
+ * salir, y la salida no es lo que se invita a pulsar. Va como el interruptor
+ * —contorno sobre papel— porque es su misma familia: acciones de la cabecera,
+ * no del contenido. */
+.salir-form {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: flex;
+}
+.salir-form + .tema-boton {
+  /* 0 y no un valor: los separa el `gap: 10px` de la barra, el mismo que separa
+   * al resto. Con un margen propio quedaban a 18px y los dos botones se leían
+   * como de dos grupos distintos (medido con Playwright). */
+  margin-left: 0;
+}
+.salir-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px de alto: el mínimo táctil de la regla de la casa. Esta barra la usa
+   * gente de 50-70 años desde el móvil, y salir de una pantalla que enseña sus
+   * pólizas no puede depender de acertar con el dedo. */
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.salir-boton:hover {
+  background: var(--surface-hover, var(--panel2));
+  color: var(--text);
+}
+.salir-boton:active {
+  background: var(--surface-active, var(--panel2));
+}
+
 /* ── Secciones y tarjetas ─────────────────────────────────────────────────
  *
  * 📐 Las medidas salen del fuente de la app de Manuel, no de un ojo: radio
