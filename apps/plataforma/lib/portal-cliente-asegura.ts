@@ -123,7 +123,7 @@ export function interpretarPortal(status: number, json: unknown): RespuestaPorta
 
 // ─── POST: el correo con el enlace ───────────────────────────────────────────
 
-/** Los ocho desenlaces de `invitarAlPortal` (`FalloInvitacion` de asegura). */
+/** Los nueve desenlaces de `invitarAlPortal` (`FalloInvitacion` de asegura). */
 export const FALLOS_INVITACION = [
   'no_encontrado',
   'sin_email',
@@ -133,6 +133,7 @@ export const FALLOS_INVITACION = [
   'sin_portal',
   'no_comprobado',
   'error_envio',
+  'sin_correo_configurado',
 ] as const
 export type FalloInvitacion = (typeof FALLOS_INVITACION)[number]
 
@@ -140,10 +141,17 @@ export type FalloInvitacion = (typeof FALLOS_INVITACION)[number]
  * 🚨 Ninguno de los desenlaces se colapsa con otro, porque se arreglan en
  * sitios distintos y el que los mira decide qué hacer después: `sin_email` es
  * «ponle un correo», `ambiguo`/`resuelve_a_otra` es «resuelve el duplicado»,
- * `ilegible` es «mira Vercel», `no_comprobado` es «vuelve a intentarlo» y
- * `error_envio` es una avería del proveedor que sí se reintenta. Un «no se pudo
- * invitar» genérico dejaría a Alberto llamando al cliente por un problema de
- * una variable de entorno.
+ * `ilegible` es «mira Vercel», `no_comprobado` es «vuelve a intentarlo»,
+ * `error_envio` es una avería del proveedor que sí se reintenta y
+ * `sin_correo_configurado` es una env que falta y que NO se arregla
+ * reintentando. Un «no se pudo invitar» genérico dejaría a Alberto llamando al
+ * cliente por un problema de una variable de entorno.
+ *
+ * 🚨 Los dos últimos se separaron el 07/09/2026 justo por eso: estaban
+ * colapsados, y el botón contestaba «el proveedor de correo no aceptó el
+ * mensaje, vuelve a intentarlo» mientras el log de `central-asegura` decía
+ * `[mailer] sin proveedor de email configurado`. La única acción que ofrecía la
+ * pantalla era la única que no podía funcionar.
  */
 export type RespuestaInvitacion =
   | {
@@ -323,6 +331,11 @@ export function textoInvitacion(r: RespuestaInvitacion, nombre: string): string 
       return '⚙️ No se ha enviado: no hay dirección de portal configurada (ASEGURA_PORTAL_URL), así que el correo no tendría a dónde llevar.'
     case 'error_envio':
       return `⚠️ El proveedor de correo no aceptó el mensaje, así que a ${nombre} NO le ha llegado. Vuelve a intentarlo.`
+    case 'sin_correo_configurado':
+      return (
+        `⚙️ No se ha enviado y NO sirve reintentarlo: ${textoMotivoPortal(r.motivo)} Se arregla en las variables ` +
+        `del proyecto Vercel central-asegura (y hay que redesplegar), no llamando a ${nombre}.`
+      )
     case 'no_encontrado':
       return 'Esa ficha ya no está en la correduría. No se ha enviado nada.'
     case 'sin_configurar':

@@ -96,7 +96,7 @@ test('el enlace lleva a /autorizaciones y solo por https', () => {
 test('sin ASEGURA_PORTAL_URL cae a donde el portal sirve HOY, no a un dominio adivinado', () => {
   // Documenta el defecto: el dominio bonito todavia no apunta a Vercel, asi que
   // el enlace tiene que ir a la URL que funciona.
-  assert.equal(enlaceDeAutorizaciones(), 'https://asegura-portal.vercel.app/autorizaciones')
+  assert.equal(enlaceDeAutorizaciones(), 'https://clientes.grupoasegura.es/autorizaciones')
 })
 
 test('el enlace NO lleva token: se puede reenviar sin abrir nada', () => {

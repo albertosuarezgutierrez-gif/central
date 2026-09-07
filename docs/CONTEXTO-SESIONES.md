@@ -43,6 +43,42 @@
   ⏳ **Pendiente de Alberto: `PII_ENCRYPTION_KEY` en el Vercel de `asegura-portal`** — sin ella solo
   sale «41002 SEVILLA» / «11520 ROTA», no la calle, y eso no se ve en ningún log.
 
+- **✉️ «Error enviar invitación» — el mensaje MENTÍA: no hay proveedor de correo (07/09/2026).** Alberto
+  con la ficha de GLOBAL 2 abierta: el botón contestaba «⚠️ El proveedor de correo no aceptó el mensaje…
+  Vuelve a intentarlo». Medido en los logs de Vercel (`POST /api/operador/cliente/portal 502`, 20:44:59
+  UTC): `[mailer] sin proveedor de email configurado`. O sea, **la pantalla mandaba a la única acción que
+  no podía funcionar**, culpando a un proveedor que no existe. Los tres «no» del envío estaban colapsados
+  en un booleano → `error_envio` 502. Ahora el envío devuelve `ResultadoEnvioCorreo` (`enviado` ·
+  `sin_proveedor` · `rechazado`) y sale un desenlace nuevo, **`sin_correo_configurado`
+  503**, en los DOS correos (invitación al portal y aviso de acceso). Cepo verificado en rojo.
+  ⏸️ **Pendiente de Alberto, y es lo único que falta para que el botón funcione:** en Vercel
+  `central-asegura`, `RESEND_API_KEY` (o `SMTP_USER`+`SMTP_PASSWORD`, o `GMAIL_USER`+`GMAIL_APP_PASSWORD`)
+  **más `ASEGURA_MAIL_FROM`**, y redesplegar (una env nueva no se aplica sin redeploy).
+  📮 **Proveedor resuelto el mismo día: RESEND.** El dominio **`envios.grupoasegura.es` ya estaba
+  `verified`** (eu-west-1, alta del 03/09 junto a las claves de `asegura-portal`); se creó la clave
+  `central-asegura` con `sending_access` **restringida a ese dominio** y remitente
+  `hola@envios.grupoasegura.es`. ⚠️ **El MCP de Vercel NO expone variables de entorno** (comprobado con
+  dos búsquedas: solo proyectos, protección, logs, deploys y compras), así que las dos envs y el
+  redeploy los hace Alberto a mano; el agente solo puede llegar hasta la clave.
+  📬 **UN SOLO REMITENTE, y con defecto en el repo (dictado de Alberto: «solo hola@grupoasegura.es,
+  ponlo donde sea para que no vuelva a haber errores; muchos mails al final es un caos»).**
+  `remitenteCorreo()` de `@central/module-seguros` ya NO devuelve `null`: cae a
+  **`REMITENTE_CORREDURIA = 'hola@grupoasegura.es'`**, así que `ASEGURA_MAIL_FROM` y `PORTAL_MAIL_FROM`
+  pasan a ser opcionales y desaparece la avería «falta la env» (que había que acertar en 4 sitios).
+  Retiradas las 5 ramas muertas y el desenlace `sin_remitente`. Un remitente no es un secreto: es la
+  dirección que ve el cliente, y en el repo está protegida por cepos.
+  🚨 **Y se corrigió una afirmación FALSA que llevaba en `canal-email.ts` del portal**: decía que
+  verificar el dominio raíz «obligaría a fusionar a mano el SPF de Resend con el de IONOS», y por eso
+  se enviaba desde `envios.`. Medido al dar de alta `grupoasegura.es` en Resend: **los tres registros
+  van en subdominios** (`resend._domainkey` TXT, `send` MX y TXT), **ninguno toca el apex** — ni SPF
+  que fusionar ni MX de IONOS que tocar. Dominio creado (pendiente de DNS en IONOS y de verificar) y
+  clave `central-asegura (grupoasegura.es)` con `sending_access` restringido a él.
+  🔗 **Y el enlace del correo cambia a `clientes.grupoasegura.es/boveda`** (dictado de Alberto:
+  «esta url es mejor»). Medido antes de tocarlo: ese `GET` responde **200** y sin cookie
+  `x-matched-path: /` — la propia página hace `redirect('/')`, así que quien no tenga sesión cae en
+  la portada del código y no en un 404. El defecto de `ASEGURA_PORTAL_URL` pasa de
+  `asegura-portal.vercel.app` al dominio de la casa en los DOS correos (el `.vercel.app` sigue
+  sirviendo: cambia el canónico, no arregla nada roto).
 - **🔤 Una sola letra en los titulares de `asegura-web` (07/09/2026, PR #2583).** Alberto sobre el h1
   de la portada: «aquí hay dos tipografías, ¿no? me gusta que todo esté como *Sube tus seguros*». No eran
   dos familias: era la ITÁLICA de Fraunces en `.destaca` (10 titulares de la página), que cambia tanto de
@@ -50,8 +86,14 @@
   en la cita de credenciales, y con ella el eje `ital` de la petición a Google Fonts (un archivo de fuente
   menos). Cepo nuevo `lib/tipografia.test.ts`: itálica declarada e itálica pedida van de la mano en los
   DOS sentidos (sin el eje, el navegador SINTETIZA la inclinación y no falla nada); 5 brazos vistos en rojo.
-  **Pendiente: mirar la preview de Vercel — Google Fonts no carga en el contenedor, así que el aspecto real
-  no se ha visto aquí.**
+  **Mergeado** (`0298e16d`) con los 4 workflows en verde; el merge necesitó DOS pasadas porque `main`
+  avanzó dos veces (#2579 y #2581) y el `merge_pull_request` devolvió `405 · merge conflicts`.
+  🚨 **Nadie ha visto todavía el aspecto real:** ni Google Fonts, ni la preview `*.vercel.app`, ni
+  `grupoasegura.es` son alcanzables desde el contenedor (el proxy los deniega), y
+  `list_deployments` del MCP de Vercel da 403 — o sea que **el despliegue de producción tampoco se
+  ha comprobado desde aquí**. Lo medido es de otra clase: `.destaca` computa `font-style: normal` y
+  el mismo `font-family` que el resto del h1 en Chromium sobre `next dev`. **Pendiente: que Alberto
+  abra grupoasegura.es y mire el titular.**
 
 - **📲 El portal del cliente se puede INSTALAR (07/09/2026).** Idea de Alberto: «a veces entro en una
   web y me sale la opción de instalar; algo así para cuando entren nuestros clientes». Es una PWA, y
