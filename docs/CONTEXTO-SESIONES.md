@@ -41,6 +41,49 @@
   autorización. Descartados los referidos con incentivo (colaborador externo no registrado, RDL
   3/2020). PR #2549 (ideas 12-13) y el de esta tanda.
 
+- **📮 Editar la dirección del cliente fallaba en silencio con un 422 (07/09/2026).** Alberto:
+  «puedo ya móvil y mail pero no dirección». Causa: `revisarEdicion` topaba `direccion` a 100
+  caracteres igual que `ciudad`/`provincia` — una dirección real con urbanización/escalera/piso/
+  puerta lo supera con facilidad, mientras que teléfono (9 dígitos) y email (≤254) casi nunca chocan
+  con su propio límite. La columna es `TEXT` sin límite técnico. Subido a 255 en
+  `packages/module-seguros/src/cliente-edicion.ts` (`notas` sigue sin tope). Cepo visto en rojo antes
+  del fix (`cliente-edicion.test.ts`). No es la clave de cifrado PII: dirección/teléfono/email usan
+  la misma `encryptField()`.
+
+- **👪 Autorizar en el sentido inverso SIN salir de la ficha (07/09/2026).** La tarjeta de una
+  relación solo dejaba anotar «esta ficha autoriza al relacionado»; el sentido contrario obligaba a
+  navegar a la otra ficha y repetir el formulario. Nuevo botón en `Relaciones.tsx` que reutiliza el
+  MISMO puerto invirtiendo `clienteId`/`relacionadoId` (confirmado que el backend de asegura es
+  agnóstico a la dirección) y relee la lista PROPIA tras guardar — el puerto devuelve las relaciones
+  de quien otorga, no las de la ficha en pantalla. Solo cubre persona↔persona (alcance «ver»): un
+  apoderamiento inverso de una sociedad sigue anotándose desde su propia ficha.
+
+- **🏍️ Presupuesto de moto SIN póliza, dentro de plataforma (07/09/2026, PR #2553, mergeado).**
+  Continuación del bullet siguiente: Alberto — *«hay que construir todo»* — confirmó moto pese a su
+  volumen mínimo (1 póliza en toda la cartera). Mismo patrón que auto/hogar-nuevo, con las 4
+  diferencias reales de `MotorcycleRisk` sobre `CarRisk` (`drivingExperience` obligatorio con supuesto
+  «ya ha llevado esta moto», `previousMotorcycle.code` condicional, sin `secondaryDriver`/`lightTrailer`),
+  y el id del ramo resuelto SIEMPRE contra `GET /insurance-lines` (a diferencia de auto, que ya tiene
+  `'Car'` confirmado a fuego). **RC sigue sin ramo en Codeoscopic** (confirmado por segunda vez, matriz
+  de Integra); **decesos/vida/salud quedan bloqueados**: nadie ha sacado su contrato de riesgo del
+  portal (a diferencia de hogar, que salió de una captura real) — hace falta que Alberto suba capturas
+  de esos formularios de Avant2 antes de poder construirlos sin arriesgar cotizaciones mal formadas
+  contra dinero real. La reconciliación con CIMA que pidió Alberto ya está cubierta por diseño: el
+  pipeline emisión→CIMA es ramo-agnóstico y sigue apagado tras `CODEOSCOPIC_EMISION_ACTIVA`. Verificado:
+  tsc 0 en asegura+plataforma, 296 tests `node --test` en asegura (20 nuevos) + 2656 en plataforma,
+  guardianes de gasto/aislamiento/tokens en verde, sin secretos filtrados al cliente.
+
+- **🚗🏠 Presupuesto de auto y hogar SIN póliza, dentro de plataforma (07/09/2026, PR #2546, mergeado).**
+  Alberto: el botón de hogar saltaba a `apps/asegura` (otro dominio/sesión) — *«no quiero que me
+  desvíe a otra página»* — y luego *«haz todos los ramos no solo hogar»*. Ambas oportunidades nuevas
+  se pintan ahora en `/correduria/cliente/[id]/{hogar-nuevo,auto-nuevo}` de plataforma; asegura sigue
+  siendo la única con el Bearer de Codeoscopic, el contador de gasto y las claves PII. Auto cotiza DE
+  CALLE (`aseguradoAntes:false`, sin póliza no hay compañía anterior que declarar) y reutiliza el
+  catálogo marca→modelo→motor→versión de la retarificación existente + matrícula manual. **RC no tiene
+  ramo en Codeoscopic** (nada que construir); **moto queda fuera** (1 póliza en toda la cartera, sin
+  retarificación siquiera) — pendiente decidir si se quiere igualmente. Verificado: tsc 0 en las dos
+  apps, 277+2656 `node --test` + 53 vitest, 0 fallos, guardianes de aislamiento/gasto en verde.
+
 - **📝 Diseño del agente de captación de `asegura-portal` — solo spec, sin código (07/09/2026).**
   Alberto quería un agente de ventas WhatsApp para la correduría; se acabó aterrizando en
   `docs/superpowers/specs/2026-09-07-asegura-portal-agente-captacion-design.md`: seis piezas

@@ -33,6 +33,7 @@ import {
   type DatosAuto,
   type Reparo,
 } from './peticion-auto.ts'
+import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-moto.ts'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
 export type Supuesto = {
@@ -333,6 +334,104 @@ export function precalificarAuto(
   return { datos, supuestos, faltan: revisarDatosAuto(datos) }
 }
 
+// ─── AUTO, oportunidad nueva (sin póliza) ────────────────────────────────────
+//
+// Hermana de `precalificarAuto()`, para un cliente que HOY no tiene ninguna
+// póliza de auto en la cartera: no hay historial del que sacar «compañía
+// anterior» ni «años asegurado», así que se cotiza DE CALLE
+// (`aseguradoAntes: false`) — sin el bonus por antigüedad que sí lleva
+// retarificar una póliza real. Es la opción conservadora y la única honesta:
+// inventar una compañía anterior o unos años de antigüedad sería un dato
+// falso de una persona real, y el vendor los exige EXACTOS si se declaran.
+
+export type ResueltosAutoNueva = {
+  municipioId: number | null
+  estadoCivilId: string | null
+  /** No sale de ninguna póliza: la matrícula del coche la teclea el corredor. */
+  matricula: string | null
+  fechaMatriculacion: string | null
+  /** Código Base7 de la VERSIÓN. Sin él no hay cotización posible. */
+  codigoVehiculo: string | null
+  /** Id del catálogo `car/garage-types`. */
+  garaje: string | null
+  garajeEsSupuesto?: boolean
+}
+
+export function precalificarAutoNueva(
+  cliente: ClienteCartera,
+  resueltos: ResueltosAutoNueva,
+  hoy: string,
+): Precalificacion {
+  const supuestos: Supuesto[] = []
+  const suponer = (campo: keyof DatosAuto, valor: unknown, porque: string, optimista = false) => {
+    supuestos.push({ campo, valor, porque, optimista })
+    return valor
+  }
+
+  const { primero, segundo } = partirApellidos(cliente.apellidos)
+
+  const fechaEfecto = suponer(
+    'fechaEfecto',
+    diaSiguiente(hoy),
+    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+  ) as string
+
+  const datos: Partial<DatosAuto> = {
+    // ── Persona ──
+    dni: limpio(cliente.dni) ?? undefined,
+    nombre: nombreUtil(cliente.nombre) ?? undefined,
+    apellido1: primero ?? undefined,
+    apellido2: segundo,
+    fechaNacimiento: limpio(cliente.fechaNacimiento) ?? undefined,
+    sexo: sexoDeSaludo(cliente.saludo) ?? undefined,
+    estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
+    telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
+    fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+    cpResidencia: limpio(cliente.codigoPostal),
+    municipioResidenciaId: resueltos.municipioId,
+
+    // ── Vehículo ──
+    codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
+    matricula: limpio(resueltos.matricula) ?? undefined,
+    fechaMatriculacion: limpio(resueltos.fechaMatriculacion) ?? undefined,
+    kmAnuales: suponer(
+      'kmAnuales',
+      KM_ANUALES_POR_DEFECTO,
+      'no se ha preguntado; se usa la media declarada habitual',
+    ) as number,
+
+    // ── Circulación: se supone que el coche duerme donde vive el tomador ──
+    cpCirculacion: limpio(cliente.codigoPostal) ?? undefined,
+    municipioCirculacionId: resueltos.municipioId ?? undefined,
+    garaje: limpio(resueltos.garaje) ?? undefined,
+
+    // ── Historial: no hay póliza que retarificar, así que no se declara ninguna
+    // compañía anterior. `aseguradoAntes: false` deja fuera de `revisarDatosAuto`
+    // los campos que exigiría declarar (compañía, póliza, años…): no se pueden
+    // rellenar sin inventarlos.
+    aseguradoAntes: false,
+
+    fechaEfecto,
+  }
+
+  if (limpio(cliente.codigoPostal) !== null) {
+    supuestos.push({
+      campo: 'cpCirculacion',
+      valor: limpio(cliente.codigoPostal),
+      porque: 'se supone que el coche circula y aparca donde vive el tomador',
+    })
+  }
+  if (resueltos.garajeEsSupuesto && limpio(resueltos.garaje) !== null) {
+    supuestos.push({
+      campo: 'garaje',
+      valor: resueltos.garaje,
+      porque: 'no se ha preguntado dónde duerme el coche; se usa el tipo de garaje por defecto',
+    })
+  }
+
+  return { datos, supuestos, faltan: revisarDatosAuto(datos) }
+}
+
 /**
  * ¿Se puede cotizar ya? Azúcar para la pantalla y para el puerto, que tienen que
  * decidir lo mismo y no deben hacerlo cada uno a su manera.
@@ -348,4 +447,126 @@ export function sePuedeCotizar(p: Precalificacion): boolean {
  */
 export function supuestosOptimistas(p: Precalificacion): Supuesto[] {
   return p.supuestos.filter((s) => s.optimista === true)
+}
+
+// ─── MOTO, oportunidad nueva (sin póliza) ────────────────────────────────────
+//
+// Espejo de `precalificarAutoNueva()`: cliente que HOY no tiene ninguna póliza
+// de moto en la cartera (medido 03/09/2026: la cartera viva tiene 1 sola, así
+// que «nueva» es prácticamente el único caso real). Cotiza DE CALLE
+// (`aseguradoAntes: false`), mismas razones que auto.
+//
+// La diferencia real con auto es `experienciaConduccion`: el vendor la exige
+// (`drivingExperience.id`) y no es un dato que la ficha pueda dar — no hay
+// forma de saber si el cliente ya ha llevado ESTA moto o viene de otra. Se
+// SUPONE `ThisMotorcycle` (el caso más común y el que no exige el código de
+// una moto anterior que nadie ha tecleado), marcado como supuesto visible para
+// que el corredor lo corrija si no es el caso.
+
+/** Como `Supuesto`, pero para el vocabulario de campos de moto. */
+export type SupuestoMoto = { campo: keyof DatosMoto; valor: unknown; porque: string; optimista?: boolean }
+
+export type PrecalificacionMoto = {
+  datos: Partial<DatosMoto>
+  supuestos: SupuestoMoto[]
+  faltan: ReparoMoto[]
+}
+
+export type ResueltosMotoNueva = {
+  municipioId: number | null
+  estadoCivilId: string | null
+  /** No sale de ninguna póliza: la matrícula del corredor la teclea el corredor. */
+  matricula: string | null
+  fechaMatriculacion: string | null
+  /** Código Base7 de la VERSIÓN. Sin él no hay cotización posible. */
+  codigoVehiculo: string | null
+  /** Id del catálogo `car/garage-types` (compartido con auto). */
+  garaje: string | null
+  garajeEsSupuesto?: boolean
+  /** Id de `/motorcycle/driving-experience-options`. `null` = se supone `ThisMotorcycle`. */
+  experienciaConduccion: string | null
+}
+
+export function precalificarMotoNueva(
+  cliente: ClienteCartera,
+  resueltos: ResueltosMotoNueva,
+  hoy: string,
+): PrecalificacionMoto {
+  const supuestos: SupuestoMoto[] = []
+  const suponer = (campo: keyof DatosMoto, valor: unknown, porque: string, optimista = false) => {
+    supuestos.push({ campo, valor, porque, optimista })
+    return valor
+  }
+
+  const { primero, segundo } = partirApellidos(cliente.apellidos)
+
+  const fechaEfecto = suponer(
+    'fechaEfecto',
+    diaSiguiente(hoy),
+    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+  ) as string
+
+  const experienciaConduccion =
+    limpio(resueltos.experienciaConduccion) ??
+    (suponer(
+      'experienciaConduccion',
+      'ThisMotorcycle',
+      'no se ha preguntado si el conductor viene de otra moto; se supone que ya ha llevado ESTA — ' +
+        'corrígelo si no es el caso',
+    ) as string)
+
+  const datos: Partial<DatosMoto> = {
+    // ── Persona ──
+    dni: limpio(cliente.dni) ?? undefined,
+    nombre: nombreUtil(cliente.nombre) ?? undefined,
+    apellido1: primero ?? undefined,
+    apellido2: segundo,
+    fechaNacimiento: limpio(cliente.fechaNacimiento) ?? undefined,
+    sexo: sexoDeSaludo(cliente.saludo) ?? undefined,
+    estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
+    telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
+    fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+    cpResidencia: limpio(cliente.codigoPostal),
+    municipioResidenciaId: resueltos.municipioId,
+
+    // ── Vehículo ──
+    codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
+    matricula: limpio(resueltos.matricula) ?? undefined,
+    fechaMatriculacion: limpio(resueltos.fechaMatriculacion) ?? undefined,
+    kmAnuales: suponer(
+      'kmAnuales',
+      KM_ANUALES_POR_DEFECTO,
+      'no se ha preguntado; se usa la media declarada habitual',
+    ) as number,
+
+    // ── Circulación ──
+    cpCirculacion: limpio(cliente.codigoPostal) ?? undefined,
+    municipioCirculacionId: resueltos.municipioId ?? undefined,
+    garaje: limpio(resueltos.garaje) ?? undefined,
+
+    // ── Específico de moto ──
+    experienciaConduccion,
+
+    // ── Historial: sin póliza que retarificar, se cotiza de calle ──
+    aseguradoAntes: false,
+
+    fechaEfecto,
+  }
+
+  if (limpio(cliente.codigoPostal) !== null) {
+    supuestos.push({
+      campo: 'cpCirculacion',
+      valor: limpio(cliente.codigoPostal),
+      porque: 'se supone que la moto circula y aparca donde vive el tomador',
+    })
+  }
+  if (resueltos.garajeEsSupuesto && limpio(resueltos.garaje) !== null) {
+    supuestos.push({
+      campo: 'garaje',
+      valor: resueltos.garaje,
+      porque: 'no se ha preguntado dónde duerme la moto; se usa el tipo de garaje por defecto',
+    })
+  }
+
+  return { datos, supuestos, faltan: revisarDatosMoto(datos) }
 }

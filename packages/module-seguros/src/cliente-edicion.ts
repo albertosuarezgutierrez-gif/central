@@ -249,7 +249,11 @@ export function revisarEdicion(e: EdicionCliente): EdicionRevisada {
       continue
     }
     const s = v.replace(/\s+/g, ' ').trim()
-    if (campo !== 'notas' && s.length > 100) return { ok: false, motivo: `${ETIQUETA_CAMPO[campo]}: demasiado largo.`, campo }
+    // `direccion` no cabe en 100: una dirección real con urbanización, escalera,
+    // piso y puerta lo supera con facilidad (a diferencia de ciudad/provincia).
+    // La columna es TEXT sin límite; el tope aquí solo evita basura desmedida.
+    const tope = campo === 'notas' ? Infinity : campo === 'direccion' ? 255 : 100
+    if (s.length > tope) return { ok: false, motivo: `${ETIQUETA_CAMPO[campo]}: demasiado largo.`, campo }
     libre[campo] = s
   }
 

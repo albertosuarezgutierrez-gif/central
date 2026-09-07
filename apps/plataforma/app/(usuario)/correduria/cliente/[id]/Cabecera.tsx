@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { urlSubirPoliza, urlHogarNuevoAsegura, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
@@ -190,8 +190,14 @@ function Acciones({ clienteId }: { clienteId: string }) {
       <span style={{ color: 'var(--muted)' }} title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. El fichero NO se guarda todavía: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro.">
         el agente la lee y enseña lo que ha encontrado · hoy solo auto · el fichero no se guarda aún
       </span>
-      <BtnLink href={urlHogarNuevoAsegura(clienteId)} variante="secundario" nuevaPestana>
-        🏠 Presupuestar hogar (oportunidad nueva) ↗
+      <BtnLink href={urlAutoNuevo(clienteId)} variante="secundario">
+        🚗 Presupuestar auto (oportunidad nueva)
+      </BtnLink>
+      <BtnLink href={urlHogarNuevo(clienteId)} variante="secundario">
+        🏠 Presupuestar hogar (oportunidad nueva)
+      </BtnLink>
+      <BtnLink href={urlMotoNuevo(clienteId)} variante="secundario">
+        🏍️ Presupuestar moto (oportunidad nueva)
       </BtnLink>
     </div>
   )

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { notFound } from 'next/navigation'
 import { requireSession } from '@/lib/session'
 import { correduriaUnica } from '@/lib/cartera'
@@ -29,7 +30,7 @@ import {
 import { estadoConsumo } from '@/lib/codeoscopic/cotizar'
 import { resumen as armarResumenHogar, CATALOGOS_PANTALLA, CAMPO_DE_CATALOGO } from '@/lib/codeoscopic/resumen-hogar'
 import { paramsDnploc } from '@central/core-catastro'
-import { bajarCatastro } from '@central/core-catastro/http'
+import { bajarCatastro, inmueblesPorDireccion } from '@central/core-catastro/http'
 import RetarificadorHogar, { type DefectosHogar } from '../../poliza/[polizaId]/retarificador-hogar'
 
 export const dynamic = 'force-dynamic'
@@ -52,12 +53,20 @@ export default async function HogarNuevoPage({
   searchParams,
 }: {
   params: Promise<{ clienteId: string }>
-  searchParams: Promise<{ referencia?: string }>
+  searchParams: Promise<{ referencia?: string; direccion?: string; municipio?: string; provincia?: string }>
 }) {
   await requireSession()
   const { clienteId } = await params
-  const { referencia: refCruda } = await searchParams
-  const referencia = (refCruda ?? '').replace(/[\s-]/g, '').toUpperCase()
+  const {
+    referencia: refCruda,
+    direccion: direccionCruda,
+    municipio: municipioCrudo,
+    provincia: provinciaCruda,
+  } = await searchParams
+  let referencia = (refCruda ?? '').replace(/[\s-]/g, '').toUpperCase()
+  const direccion = (direccionCruda ?? '').trim()
+  const municipio = (municipioCrudo ?? 'SEVILLA').trim()
+  const provincia = (provinciaCruda ?? 'SEVILLA').trim()
 
   const correduria = await correduriaUnica().catch(() => null)
   if (!correduria) {
@@ -72,29 +81,92 @@ export default async function HogarNuevoPage({
   const origen = await clienteOrigenDe(correduria.id, clienteId).catch(() => null)
   if (!origen) notFound()
 
+  // ── Sin referencia todavía: se busca por DIRECCIÓN, como en /correduria/hogar de plataforma ──
+  if (!RE_REF20.test(referencia) && direccion) {
+    const p = paramsDnploc(direccion)
+    if (p === null) {
+      return (
+        <div className="grid">
+          <Cabecera nombre={origen.etiqueta} clienteId={clienteId} />
+          <FormularioDireccion direccion={direccion} municipio={municipio} provincia={provincia} clienteId={clienteId}>
+            <p className="err" style={{ marginTop: 8 }}>
+              No se ha podido leer «{direccion}» como una dirección (tipo de vía + nombre + número).
+            </p>
+          </FormularioDireccion>
+        </div>
+      )
+    }
+    let r
+    try {
+      r = await inmueblesPorDireccion({ ...p, provincia: provincia.toUpperCase(), municipio: municipio.toUpperCase() })
+    } catch (e) {
+      return (
+        <div className="grid">
+          <Cabecera nombre={origen.etiqueta} clienteId={clienteId} />
+          <div className="card err">
+            <h2>⚠️ No se ha podido consultar el Catastro</h2>
+            <p>{e instanceof Error ? e.message : String(e)}</p>
+          </div>
+        </div>
+      )
+    }
+    if (r === null) {
+      return (
+        <div className="grid">
+          <Cabecera nombre={origen.etiqueta} clienteId={clienteId} />
+          <FormularioDireccion direccion={direccion} municipio={municipio} provincia={provincia} clienteId={clienteId}>
+            <p className="err" style={{ marginTop: 8 }}>
+              El callejero del Catastro devuelve varias vías posibles y ninguna es clara. Prueba con el tipo de vía
+              completo (Calle/Avenida/Plaza) o un municipio más preciso.
+            </p>
+          </FormularioDireccion>
+        </div>
+      )
+    }
+    if (r.inmuebles.length === 0) {
+      return (
+        <div className="grid">
+          <Cabecera nombre={origen.etiqueta} clienteId={clienteId} />
+          <FormularioDireccion direccion={direccion} municipio={municipio} provincia={provincia} clienteId={clienteId}>
+            <p className="err" style={{ marginTop: 8 }}>
+              El Catastro no tiene ningún inmueble en «{r.via}» con ese número, en {municipio} ({provincia}).
+            </p>
+          </FormularioDireccion>
+        </div>
+      )
+    }
+    if (r.inmuebles.length > 1) {
+      return (
+        <div className="grid">
+          <Cabecera nombre={origen.etiqueta} clienteId={clienteId} detalle={r.via} />
+          <div className="card">
+            <h2>¿Cuál de los {r.inmuebles.length} pisos es?</h2>
+            <p className="muted">{r.via}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+              {r.inmuebles.map((inm) => (
+                <Link
+                  key={inm.refCompleta}
+                  href={`?referencia=${inm.refCompleta}`}
+                  className="card"
+                  style={{ minHeight: 44, display: 'flex', alignItems: 'center', padding: '0 12px' }}
+                >
+                  {[inm.planta && `Pl. ${inm.planta}`, inm.puerta && `Pta. ${inm.puerta}`].filter(Boolean).join(' · ') ||
+                    inm.refCompleta}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+    }
+    referencia = r.inmuebles[0].refCompleta
+  }
+
   if (!RE_REF20.test(referencia)) {
     return (
       <div className="grid">
         <Cabecera nombre={origen.etiqueta} clienteId={clienteId} />
-        <div className="card">
-          <h2>Referencia catastral del piso</h2>
-          <p className="muted">
-            La de 20 caracteres (recibo del IBI, o la que dio el buscador de <code>/correduria/hogar</code> en
-            plataforma). La de 14 es la del edificio y no trae m² ni año.
-          </p>
-          <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-            <input
-              name="referencia"
-              defaultValue={referencia}
-              placeholder="4707007TG3440N0003TR"
-              style={{ minHeight: 44, flex: '1 1 260px' }}
-            />
-            <button type="submit" className="primary" style={{ minHeight: 44 }}>
-              Consultar Catastro
-            </button>
-          </form>
-          {refCruda && <p className="err" style={{ marginTop: 8 }}>«{refCruda}» no tiene forma de referencia de 20 caracteres.</p>}
-        </div>
+        <FormularioDireccion direccion={direccion} municipio={municipio} provincia={provincia} clienteId={clienteId} />
       </div>
     )
   }
@@ -284,6 +356,54 @@ function Cabecera({ nombre, clienteId, detalle }: { nombre: string; clienteId: s
         {nombre}
         {detalle && ` · ${detalle}`}
       </p>
+    </div>
+  )
+}
+
+function FormularioDireccion({
+  direccion,
+  municipio,
+  provincia,
+  clienteId,
+  children,
+}: {
+  direccion: string
+  municipio: string
+  provincia: string
+  clienteId: string
+  children?: ReactNode
+}) {
+  return (
+    <div className="card">
+      <h2>Dirección de la vivienda</h2>
+      <p className="muted">
+        Escribe la dirección (p. ej. «Monte Carmelo 68») y se consulta el Catastro. Si el edificio tiene varios
+        pisos, se elige cuál es a continuación. También se puede pegar directamente la{' '}
+        <strong>referencia catastral de 20 caracteres</strong> (recibo del IBI).
+      </p>
+      <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }} action={`/cartera/${clienteId}/hogar-nuevo`}>
+        <input
+          name="direccion"
+          defaultValue={direccion}
+          placeholder="Monte Carmelo 68"
+          style={{ minHeight: 44, flex: '2 1 260px' }}
+        />
+        <input name="municipio" defaultValue={municipio} placeholder="Municipio" style={{ minHeight: 44, flex: '1 1 140px' }} />
+        <input name="provincia" defaultValue={provincia} placeholder="Provincia" style={{ minHeight: 44, flex: '1 1 140px' }} />
+        <button type="submit" className="primary" style={{ minHeight: 44 }}>
+          Consultar Catastro
+        </button>
+      </form>
+      <details style={{ marginTop: 10 }}>
+        <summary className="muted">O pegar la referencia catastral directamente</summary>
+        <form method="get" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+          <input name="referencia" placeholder="4707007TG3440N0003TR" style={{ minHeight: 44, flex: '1 1 260px' }} />
+          <button type="submit" className="primary" style={{ minHeight: 44 }}>
+            Consultar
+          </button>
+        </form>
+      </details>
+      {children}
     </div>
   )
 }
