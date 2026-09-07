@@ -48,6 +48,31 @@
   sin horario), pero su categoría es **«Agencia de seguros»** —agente, lo contrario de corredor y de la
   clave DGSFP CS-F/0170— y su nombre «Grupo ASegura tu corredor de Seguros» ≠ `MEDIADOR.marca`: **NAP
   roto**. Falta su URL canónica de Maps para cerrar el `sameAs` y desbloquear `geo`.
+- **📣 LinkedIn: seis borradores en el repo, bajo el MISMO cepo regulatorio que la web (07/09/2026).**
+  Alberto eligió canal («empieza con LinkedIn»). Lo que se ha construido NO publica nada —regla global de
+  comunicaciones salientes— sino que deja el contenido escrito, vigilado y en la pantalla que él abre.
+  🔁 **La lista de lo prohibido salió de `apps/asegura-web` a `@central/module-seguros`**
+  (`copy-regulado.ts`: `PROHIBIDO`, `ACOTA_AMBITO`, `revisarCopy`, 7 tests). Vivía SOLO en el cepo de la
+  web, así que solo protegía a la web; con la correduría publicando en redes, una segunda copia de esos
+  patrones sería la que deja de vigilar el día que divergen. `lib/ramos.test.ts` la consume ahora en vez
+  de declararla (61/61 antes y después = comportamiento idéntico). 🚨 **Y en redes el daño es asimétrico:
+  una página se corrige, un post publicado no** — por eso la revisión pasa ANTES.
+  📝 `apps/plataforma/lib/correduria/redes-borradores.ts`: 6 posts (comunidades·infraseguro art. 30 LCS ·
+  preaviso art. 22 LCS · hogar del banco art. 17 Ley 5/2019 · flota·mercancía · comercio·actividad
+  declarada · corredor vs agente), cada uno con `porQue` y con `base` = la norma citada, **para poder
+  verificarla antes de publicar** (una cita inventada en un post no se corrige). Los tres artículos se
+  verificaron en fuentes antes de escribirlos; el 30 LCS es DISPOSITIVO (se puede excluir por pacto) y ese
+  matiz es el que da valor al post. Cepo `redes-borradores.test.ts` (9), **visto en rojo tres veces**:
+  promesa de precio, norma citada sin `base`, y clave DGSFP tecleada distinta de `MEDIADOR`.
+  🖥️ Sexta sección **«Redes»** en `/correduria` con los borradores y botón copiar. **Sin contador a
+  propósito**, y es la decisión que más se piensa: mediría «borradores sin publicar», dato que solo conoce
+  LinkedIn — un número diría «tienes 6 pendientes» con los 6 quizá publicados, y un `null` (`!`) daría
+  alarma sobre algo que no falla. No afirmar nada es lo honesto.
+  ⏭️ Pendiente de Alberto: revisar su perfil de LinkedIn (titular y «Acerca de» — no se ven desde aquí) y
+  el ritmo de un post por semana. El adaptador de publicación (`w_member_social`, self-serve para el
+  perfil personal; la página de empresa exige partner) **no se ha construido**: sin ritmo probado sería
+  automatizar un canal que aún no existe.
+
 - **🧾 Subir una factura a mano ya la ARCHIVA y la CONTABILIZA, no solo la lee (07/09/2026).**
   Alberto subió una factura al agente contable dando por hecho que se archivaba: no lo hacía. La rama
   factura de `lib/contable/documentos.ts` leía el documento, proponía conciliar el cargo y **tiraba el
