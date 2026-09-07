@@ -114,6 +114,32 @@ ASegura. **Esto es información, no asesoramiento, SOLO si se construye así:**
 parcialmente construido para retarificar en el panel del corredor — `lib/codeoscopic/*`). Es la
 pieza de mayor alcance y mayor coste de las seis.
 
+## Fase 2 — aprobadas por Alberto, sin detallar todavía
+
+Cuatro ideas más, todas compatibles con la línea roja de este spec (la IA lee y pregunta, nunca
+opina) y todas reutilizando infraestructura ya existente. Se dejan aquí para no perderlas; entran en
+plan de implementación cuando se prioricen.
+
+7. **Enganchar la pregunta al aviso de vencimiento ya existente**, en vez de esperar solo a que el
+   cliente entre por su cuenta. El cron `avisos-vencimiento` de `apps/asegura` (hoy apagado) manda un
+   email cuando SU PÓLIZA con Grupo ASegura está por vencer — mismo consentimiento de servicio ya
+   resuelto. En ese mismo correo, una línea añadida: "¿tienes algún otro seguro que quieras que te
+   vigilemos?", con enlace al cuestionario de la pieza 1. Coste marginal ~0: reutiliza el cron y la
+   plantilla que ya existen.
+8. **Contador factual de cobertura en la bóveda**: "2 de 6 ramos con nosotros, 1 aportado, 3 sin
+   dato". Es la misma información que ya produce el cuestionario de la pieza 1, solo que visible de
+   un vistazo permanente en vez de solo en el momento de preguntar. Sin ranking ni frase de
+   conclusión — un contador, no un juicio.
+9. **El resumen de garantías (pieza 3) como PDF descargable**, no solo texto en pantalla. El
+   contenido ya existe una vez construida la pieza 3; esto es solo darle una salida que el cliente se
+   pueda llevar (a otra correduría, a su pareja, a donde quiera). Refuerza la transparencia sin atarla
+   a que compre nada.
+10. **Actividad del cliente como señal de prioridad para Alberto, nunca para el cliente.** Si alguien
+    entra varias veces a mirar una póliza que aportó, es una señal de interés barata de capturar.
+    Extiende el mecanismo que ya existe para las autorizaciones a terceros (`registrarUso` en
+    `lib/autorizaciones.ts`) a las pólizas propias. Sale solo en `/correduria`, nunca en el portal del
+    cliente — no le dice nada a él, solo ordena a quién llama Alberto primero.
+
 ## Reglas que no se negocian
 
 1. **La IA nunca genera contenido dirigido al cliente sobre seguros.** Solo hace dos cosas: extraer
