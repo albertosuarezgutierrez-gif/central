@@ -112,9 +112,15 @@
   «dónde estoy». PR **#2522, mergeado y READY en producción** (`593f25d5`). Y **#2529**: marca y modelo
   pasan a pedirse en la 1ª pasada, que es la que funciona.
   🚨 **Pilar Piña Franco NO necesitaba invitación**: ya está vinculada por índice ciego del correo y fue
-  ELLA quien subió el PDF. Lo que falta es la **autorización de GLOBAL 2** (5 pólizas vivas), y por la
-  regla del 03/09 («el papel PROPONE el acceso, no lo concede») **la da Manuel Antonio, el dueño**, no
-  el corredor. No se mandó ningún correo: borrador entregado a Alberto. ⚠️ Una Allianz de GLOBAL 2
+  ELLA quien subió el PDF. Faltaba la **autorización de GLOBAL 2** (5 pólizas vivas). Se avisó de que
+  por la regla del 03/09 («el papel PROPONE el acceso, no lo concede») quien la da es Manuel Antonio, el
+  dueño; **Alberto lo reafirmó dos veces («dale acceso yo mando», «yo soy el único que estoy autorizado
+  a todo») y se anotó por instrucción suya**: `portal_autorizacion` `cf8884c8`, `origen: 'corredor'`,
+  alcance `ver_economico`, título `empleado_autorizado`, `poliza_id` NULL (todas, también las futuras),
+  caduca 07/09/2027, y **nace PENDIENTE** — no abre nada hasta que Pilar la acepte en el portal. Consta
+  en el historial de las dos fichas **como instrucción directa del dueño de la correduría, NO como
+  consentimiento recibido de la sociedad**: es la diferencia que importa el día que se discuta.
+  No se mandó ningún correo: borrador entregado a Alberto. ⚠️ Una Allianz de GLOBAL 2
   **venció el 01/09/2024 y sigue marcada como viva**. Y el PDF de esa póliza **no se puede releer**: solo
   se guarda el nombre del fichero, así que cada campo que falle en la subida se pierde hasta que exista
   el bucket privado.
