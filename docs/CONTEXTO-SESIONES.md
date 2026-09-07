@@ -43,6 +43,33 @@
   ⏳ **Pendiente de Alberto: `PII_ENCRYPTION_KEY` en el Vercel de `asegura-portal`** — sin ella solo
   sale «41002 SEVILLA» / «11520 ROTA», no la calle, y eso no se ve en ningún log.
 
+- **📲 El portal del cliente se puede INSTALAR (07/09/2026).** Idea de Alberto: «a veces entro en una
+  web y me sale la opción de instalar; algo así para cuando entren nuestros clientes». Es una PWA, y
+  el sitio es `apps/asegura-portal` (el asegurado), no `/correduria` de plataforma. Manifiesto +
+  icono de 512 (`/icono-app`, el monograma pasa a `lib/monograma.ts` para no copiarlo dos veces) +
+  service worker que **no cachea nada a propósito** (aquí hay pólizas y partes de siniestro) + la
+  oferta dentro de la sesión. 🚨 **iOS no dispara `beforeinstallprompt`**: si solo se escuchara el
+  evento, en iPhone no se vería NADA y nadie se enteraría — ahí se enseñan las instrucciones de
+  «Añadir a pantalla de inicio», con el glifo de Compartir DIBUJADO (a secas no se entiende, y el
+  público es de 50-70 años). 16 cepos vistos en rojo uno a uno. Sin push todavía. PR #2581.
+
+- **🚪 Salida tardía: se confirma la VÍSPERA, y una postura por mensaje (07/09/2026).**
+  Borrador del agente a la reserva 154265696 (Luxury Busto) que retenía y concedía a la vez
+  («No podemos confirmar hasta el día de antes… no hay ningún inconveniente»). La política
+  estaba BIEN en `salida.ts`: lo que falló fue redactarla a medias, más una divergencia real —
+  el prompt decía confirmar «el mismo día de la salida» y Alberto dicta **la víspera**. Añadida
+  `UNA_POSTURA` a las ramas que no confirman + 3 cepos vistos en rojo.
+  **Medido:** desde una sesión Claude NO se puede enviar al huésped (el proxy deniega
+  `login.smoobu.com`, 403); el ✅ de Telegram envía `borrador` de la BD, no el texto de la burbuja.
+  **Pendiente:** el ✅ de Alberto en el mensaje 4219 — la respuesta corregida sigue sin enviarse.
+- **📌 Revisión de precios House Sevillana — Genius+Móvil se QUEDAN, ocupación floja no lo permite (07/09/2026, solo charla, sin PR).**
+  Reserva Booking 154638741 (05-07/03/2027) parecía descuadrar (393,78€/noche vs base ~530€): desglose real
+  confirma que es el stack Genius −15% + Móvil −10% (mismo patrón landmine §12 CLAUDE.md, nunca tocado en
+  esos dos por ser de visibilidad). Alberto preguntó si quitar la oferta móvil; ocupación real de House
+  Sevillana (40% a 30d, 36,7% a 60d, 16,7% a 90d) desaconseja tocar NINGUNO de los dos ahora — con esa
+  demanda floja pierdes más reservas de las que ganas en margen. **Pendiente: revisar si la ocupación a
+  61-90d mejora; si no, valorar bajar precio en vez de quitar descuentos.**
+
 - **✅ Mergeado y PROBADO en producción (07/09/2026, PR #2571 → `6a567537`).** Los 12 requeridos en
   verde y desplegado (`dpl_Et6yoY…`, target production, READY; el portal responde 200 sirviendo ese
   deployment). Medido contra la cartera real: la póliza de la captura de Alberto —Occident

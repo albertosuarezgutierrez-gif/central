@@ -113,3 +113,31 @@ test('dentro de la ventana (o sin hora) NO se sale de ella', () => {
 test('una hora de MADRUGADA no cuenta como salida tardía', () => {
   assert.equal(pideMasAllaDeLaVentana('llegamos a las 23:30'), false)
 })
+
+// 🪤 Cepos de la reserva 154265696 (07/09/2026). La política ya estaba bien; lo que falló fue CÓMO
+// se redactaba, así que lo que se vigila aquí es la redacción del bloque, no la política.
+
+test('confirmación de salida tardía: la VÍSPERA, nunca el mismo día de la salida', () => {
+  const b = bloqueSalidaTardia({ chequeado: true, posible: true, esDiaSalida: false })
+  assert.match(b, /EL DÍA ANTES de la salida/)
+  // El texto viejo mandaba confirmar «el mismo día de la salida», que es justo lo contrario de lo
+  // que dictó Alberto: para entonces la limpieza ya está cerrada y el huésped sin margen.
+  assert.doesNotMatch(b, /confirmáis el mismo día/)
+})
+
+test('las ramas que NO confirman prohíben conceder en el mismo mensaje', () => {
+  // Sin verificar y víspera: las dos pueden resbalar a «no puedo confirmarlo… pero adelante».
+  for (const b of [
+    bloqueSalidaTardia({ chequeado: false, posible: false, esDiaSalida: false }),
+    bloqueSalidaTardia({ chequeado: true, posible: true, esDiaSalida: false }),
+  ]) {
+    assert.match(b, /UNA SOLA POSTURA POR MENSAJE/)
+    assert.match(b, /no hay ningún inconveniente/)
+  }
+})
+
+test('el día de salida con el piso libre SÍ confirma en firme (ahí no aplica la guarda)', () => {
+  const b = bloqueSalidaTardia({ chequeado: true, posible: true, esDiaSalida: true })
+  assert.match(b, /SÍ puedes confirmarle/)
+  assert.doesNotMatch(b, /UNA SOLA POSTURA POR MENSAJE/)
+})

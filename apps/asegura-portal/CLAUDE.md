@@ -1021,6 +1021,45 @@ Sin `PORTAL_PUBLIC_URL`, o si no es **https**, no se manda enlace y el correo sa
 código**, que es lo que de verdad abre la puerta — nunca al revés, y nunca con un dominio adivinado.
 Lo vigila `test/regression-portal-enlace-acceso.test.ts`.
 
+## 📲 Instalable en el móvil (PWA, 07/09/2026)
+
+Idea de Alberto: «a veces entro en una web y me sale la opción de instalar; algo así para cuando
+entren nuestros clientes». El asegurado llega por un enlace del correo, así que dentro de tres meses
+tiene que rebuscar ese correo para ver su póliza. Instalado, es un icono en su pantalla de inicio y
+entra directo — la sesión dura 30 días y `/` ya manda a la bóveda si sigue viva.
+
+| Pieza | Qué hace |
+|---|---|
+| `app/manifest.ts` | `standalone`, colores de `MARCA_ASEGURA` **en hex** (el manifiesto lo leen lanzadores que no parsean `oklch`) |
+| `app/icono-app/route.tsx` | El icono de **512 px**. Con menos de 192 Chrome NO ofrece instalar, y no lo dice. El monograma ocupa ~52 % porque Android recorta los `maskable` a la forma del sistema. `force-static` |
+| `lib/monograma.ts` | El dibujo se LEE de `public/brand/marca-asegura.svg`; lo comparten la pestaña (128) y la app instalada (512) |
+| `public/sw.js` + `app/RegistrarSW.tsx` | El service worker que Chrome exige, registrado en el layout raíz |
+| `app/(portal)/InstalarApp.tsx` | La oferta, dentro de la sesión |
+
+🚨 **El service worker NO CACHEA NADA, y eso es la decisión.** Aquí dentro hay pólizas, recibos y
+partes de siniestro de personas identificadas: una respuesta guardada en el almacén del navegador
+sobrevive al cierre de sesión y se queda legible en el disco del visitante —o del ordenador
+compartido—. El SW existe solo porque Chrome pide un manejador de `fetch` para ofrecer instalar; lo
+que hace con la petición es dejarla pasar. Contrapartida asumida: **sin conexión no enseña nada**.
+
+🚨 **iOS no dispara `beforeinstallprompt` y no lo va a hacer.** Si la oferta solo escuchara el
+evento, en iPhone y iPad **no se vería nada** —ni error ni banner—, que es la forma cara de que esto
+falle. Allí se enseñan las instrucciones y se **dibuja** el glifo de Compartir (`IconoCompartir`):
+«toca Compartir» a secas no le dice nada a quien no sabe cómo se llama ese botón, y esta pantalla la
+abre gente de 50-70 años. Tampoco hay API para hacerlo por él: en iOS lo único posible es explicar
+el gesto.
+
+📌 La oferta va **al final del contenido y en el flujo**, no flotando: un `position: fixed` no
+desborda, se pone encima, y taparía la última fila del móvil sin que ninguna medida de ancho lo
+delatara.
+
+⛔ **Sin push todavía**: hacen falta VAPID, permiso del usuario y decidir qué se avisa. Y en iOS las
+notificaciones web solo funcionan si la app está añadida a la pantalla de inicio.
+
+Lo vigila `lib/pwa.test.ts` (manifiesto, icono ≥192 en TODAS sus entradas, SW con `fetch` y sin
+caché, registro montado, rama de iOS con su glifo). Se rompió a mano una por una: 16 mutaciones, 16
+rojos. PR #2581.
+
 ## Infraestructura
 
 - **BD:** la Supabase **compartida de la casa**, schema **`seguros`** (el mismo donde vive la cartera
