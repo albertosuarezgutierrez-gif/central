@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T17:05:18Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T21:26:43Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1296 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1308 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 41
+- **Rutas API:** 53
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
@@ -178,7 +178,7 @@
   - Depende de: —
 - **module-seguros-portal** (module) → `@central/module-seguros-portal`
   - Lo usan: asegura, asegura-portal, asegura-web, plataforma
-  - Depende de: core-catastro, module-seguros
+  - Depende de: core-catastro, core-fiscal, module-seguros
 - **module-ses** (module) → `@central/module-ses`
   - Lo usan: plataforma
   - Depende de: —
@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (07/09/2026) 📝 Diseño del agente de captación de `asegura-portal` — solo spec, sin código
-- (07/09/2026) ✂️ El h1 se queda en «Sube tus seguros. / Y contrólalos.»
-- (07/09/2026) ✍️ El h1 de la portada pasa a «Sube tus seguros. / Y contrólalos todos.»
-- (07/09/2026) 🍪 El badge de Cookiebot pisa el CTA «Que me llamen» en móvil — y el cepo volvió a estar ciego
-- (07/09/2026) 🔇 Cron SEO de sivra: pudo morir MUDO por presupuesto — techo 60→300
-- (07/09/2026) 🕳️ El cepo de la puerta miraba a UN fichero, y «área de clientes» seguía vivo en DOS
-- (07/09/2026) 💸 SIVRA pricing: el extranet de House ya está limpio y el motor recalibrado
-- (07/09/2026) 🔴 El logo de Fidelidade entra, y el fichero bueno se llamaba `.jpg` sin serlo
-- (07/09/2026) 🗓️ La póliza que SUBE quien no es cliente ya entra en su calendario
-- (07/09/2026) 🚨 «Olvídate» aún no se publica: al aviso le falta EL CANAL, no el remitente
+- (07/09/2026) 🚪 Salida tardía: se confirma la VÍSPERA, y una postura por mensaje
+- (07/09/2026) 📌 Revisión de precios House Sevillana — Genius+Móvil se QUEDAN, ocupación floja no lo permite
+- (07/09/2026) ✅ Mergeado y PROBADO en producción
+- (07/09/2026) 🗒 El siniestro dice QUÉ pasó
+- (07/09/2026) 👁 El cliente ve TODAS sus coberturas
+- (07/09/2026) 🧮 Spec de calculadora de bonificación hipotecaria en asegura-portal
+- (07/09/2026) 🚧 Vida, salud y decesos sin póliza — construidos con lo que había, sin verificar
+- (07/09/2026) 🧩 Agente de captación: fase 2 desarrollada entera, y dos afirmaciones mías corregidas
+- (07/09/2026) 📮 Editar la dirección del cliente fallaba en silencio con un 422
+- (07/09/2026) 👪 Autorizar en el sentido inverso SIN salir de la ficha
 
