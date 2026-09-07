@@ -31,9 +31,16 @@ import './globals.css'
  *
  * `opsz` es el eje óptico de Fraunces: sin declararlo, Google sirve el corte
  * de 9 pt y a 67 px se ve endeble.
+ *
+ * 🚨 Se pide SOLO la redonda: el eje `ital` se retiró el 07/09/2026 al quitar
+ * la itálica de `.destaca` (ver `globals.css`), y con él un archivo de fuente
+ * entero que servía a un `<span>` del h1 y a una cita. Consecuencia que no
+ * falla en ningún build: un `font-style: italic` nuevo sobre `var(--display)`
+ * ya no tiene corte que usar y el navegador lo SINTETIZA inclinando la
+ * redonda. Lo vigila `lib/tipografia.test.ts`.
  */
 const FRAUNCES =
-  'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&display=swap'
+  'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&display=swap'
 
 /**
  * Hoja de tokens de la marca.
