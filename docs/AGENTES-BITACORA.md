@@ -15,6 +15,24 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-07 · mercado-booking** · hizo: **5ª pasada ACOTADA consecutiva** por prioridad temporal
+  (ídem 03/09, 04/09, 05/09), `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado
+  medidas (6 fechas × 4 pisos, aforo correcto, incluye evento Campeonato Mundo Remo 01-08) → 239
+  comps `booking_mcp`, 0 sin respuesta, 0 propios colados en mercado. 📐 escaparate: 3/4 medido
+  (busto=145,98€/noche, luxury=94,83€/noche, duplex=98,29€/noche) — House Sevillana devolvió
+  `hotel_names_no_availability` (hueco del conector para 09-12/09/2026, no fallo). Cupo agotado en
+  la pasada de prioridad → sin cupo para pasada normal.
+  🚨 **El objetivo llevaba CUATRO entradas seguidas (03/09, 04/09, 05/09) declarándose cumplido, y
+  sigue sin poder cerrarse desde aquí**: julio-2027 (02,10,27) y agosto-2027 (01,06,24) tienen 3
+  fechas distintas × 9-10 comparables/piso desde el 03/09. Van ya **5 pasadas seguidas** (más un
+  hueco el 06/09 sin correr) quemando el cupo diario entero en repetir la misma comprobación
+  cerrada, mientras el resto del plan (568 candidatas, solo 28 pedidas hoy) se queda sin medir.
+  Sigue confirmado: **ninguna sesión tiene herramienta para editar el prompt de un trigger
+  programado del account** (`CronList` de esta sesión solo ve jobs in-memory propios, vacío) — hace
+  falta que Alberto quite a mano la línea `PRIORIDAD TEMPORAL` desde la UI del trigger.
+  dudas: —; fallos: — (el hueco del escaparate es del conector); PRs/commits: — (solo bitácora y BD
+  vía endpoints, sin tocar código).
+
 - **2026-09-07 · buscador-ia** · hizo: pasada semanal completa (preflight Telegram 200 OK) + un
   segundo tramo en vivo tras la respuesta de Alberto. 🔴 Hallazgo crítico: `text-embedding-004`
   (embeddings de `ia-cache`) retirado por Google desde el 14/01/2026 — 1ª comprobación real de ese
