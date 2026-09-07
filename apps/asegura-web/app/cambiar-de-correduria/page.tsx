@@ -19,11 +19,21 @@ import Formulario from '@/components/Formulario'
 // objetivo e IPID (RDL 3/2020).
 
 export const metadata: Metadata = {
-  title: 'Cambiar de correduría sin cambiar de seguro',
+  // «en Sevilla» en el title y en el H1: es la página que más barato convierte
+  // (un lead se hace cliente SIN tarificar, o sea 0 € de Avant2) y hasta el
+  // 07/09/2026 no decía en ningún sitio dónde estamos salvo en la description.
+  // El modificador local no le quita la consulta nacional —el cuerpo entero
+  // sigue explicando el cambio de mediador— y sí le da la de Sevilla, que es
+  // la única en la que competimos.
+  title: 'Cambiar de correduría en Sevilla sin cambiar de seguro',
   description:
     'Puedes cambiar de mediador sin tocar tu póliza: mismas coberturas, mismo precio y mismo número. Te explicamos cómo funciona el cambio de correduría en Sevilla.',
   alternates: { canonical: url('/cambiar-de-correduria') },
-  openGraph: { title: 'Cambiar de correduría sin cambiar de seguro', url: url('/cambiar-de-correduria'), type: 'article' },
+  openGraph: {
+    title: 'Cambiar de correduría en Sevilla sin cambiar de seguro',
+    url: url('/cambiar-de-correduria'),
+    type: 'article',
+  },
 }
 
 const panel: CSSProperties = {
@@ -106,7 +116,7 @@ export default function CambiarDeCorreduria() {
         <Link href="/">Inicio</Link> <span aria-hidden>›</span> Cambiar de correduría
       </nav>
 
-      <h1>Cambiar de correduría sin cambiar de seguro</h1>
+      <h1>Cambiar de correduría en Sevilla sin cambiar de seguro</h1>
       <p style={{ fontSize: 17, color: 'var(--muted)', maxWidth: 640 }}>
         Mucha gente aguanta con un mediador con el que no cuenta porque cree que para cambiar hay que anular la póliza y
         volver a empezar. No es así: <strong style={{ color: 'var(--text)' }}>la póliza y el mediador son dos cosas

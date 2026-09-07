@@ -23,7 +23,7 @@ que es justo lo que el copy no puede hacer (RDL 3/2020).
 | seguro de local comercial Sevilla | `/seguros/comercio` | cubierta |
 | seguro de coche Sevilla | `/seguros/auto` | cubierta |
 | seguro de vida / salud Sevilla | `/seguros/vida-y-salud` | cubierta |
-| seguro de responsabilidad civil Sevilla | `/seguros/responsabilidad-civil` | cubierta, **pero la página no está en el NAV** |
+| seguro de responsabilidad civil Sevilla | `/seguros/responsabilidad-civil` | cubierta y **ya enlazada** (pie + las 5 páginas de ramo hermanas, 07/09/2026). Fuera de la cabecera a propósito: sería la sexta entrada y desborda |
 | seguro de flota Sevilla | — | **sin página**. Es el nicho «empresas y flota», el que más interesa |
 
 **Señal local pendiente:** ninguna página menciona barrios, distritos ni municipios de la
@@ -33,7 +33,7 @@ provincia. La señal se agota en la palabra «Sevilla».
 
 | Consulta | Página | Estado |
 |---|---|---|
-| cómo cambiar de correduría sin cambiar de seguro | `/cambiar-de-correduria` | cubierta, **pero sin «Sevilla» en title ni H1** |
+| cómo cambiar de correduría sin cambiar de seguro | `/cambiar-de-correduria` | cubierta, y con «Sevilla» en title y H1 desde el 07/09/2026 |
 | preaviso de un mes para cancelar el seguro (art. 22 LCS) | — | **sin página** |
 | me han subido el seguro del coche en la renovación | — | **sin página** |
 | qué cubre de verdad mi seguro de hogar | parcialmente `/seguros/hogar` | merece página propia |
@@ -47,10 +47,13 @@ provincia. La señal se agota en la palabra «Sevilla».
 > Las consultas se escriben aquí **con la marca bien escrita**, aunque quien busca teclee de otra
 > forma: Google no distingue mayúsculas, y `test/regression-nombre-comercial-asegura.test.ts` sí.
 
-🚨 **Convive con el CRM en `app.grupoasegura.com`**, que es otra web del mismo negocio. Y hasta
-que se retire, `apps/plataforma/app/seguros` compite por «correduría de seguros» desde
-`plataforma-ten-flame.vercel.app`. Antes de dar por perdida o ganada una consulta de marca, mira
-**cuál de los tres dominios** está posicionando.
+🚨 **Convive con el CRM en `app.grupoasegura.com`**, que es otra web del mismo negocio. Antes de
+dar por perdida o ganada una consulta de marca, mira **cuál de los dominios** está posicionando.
+
+✅ `apps/plataforma/app/seguros` ya **no compite**: desde el 07/09/2026 exporta
+`robots: { index: false, follow: true }`. La página sigue viva y su formulario sigue entrando por
+el mismo endpoint, pero sale del índice. Si Google todavía la enseña, es que aún no ha recrawleado:
+se comprueba en Search Console cuando exista, no se vuelve a tocar el código.
 
 ## 4. Lo que NO perseguimos, y por qué
 

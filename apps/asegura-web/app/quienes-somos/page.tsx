@@ -146,7 +146,10 @@ export default function QuienesSomos() {
       <div style={contenedor}>
         <header>
           <p style={antetitulo}>Quiénes somos</p>
-          <h1 style={h1}>Una correduría, no una compañía</h1>
+          {/* La ciudad va en el H1 y no solo en el title: es la página que Google
+              enseña cuando alguien comprueba con quién está tratando, y ahí «de
+              Sevilla» es a la vez señal local y la respuesta a esa duda. */}
+          <h1 style={h1}>Una correduría de Sevilla, no una compañía</h1>
           <p style={entradilla}>
             {marca} es el nombre comercial con el que trabaja {identidad.nombre},{' '}
             {identidad.figura.toLowerCase()} inscrito en el registro de la DGSFP con la clave{' '}

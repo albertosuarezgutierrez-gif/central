@@ -103,6 +103,42 @@ export default async function PaginaRamo({ params }: Props) {
         </div>
       </section>
 
+      {/* Enlazado interno entre hermanas. No es decoración: hasta el 07/09/2026
+          las seis páginas de ramo eran islas —se llegaba a ellas desde la
+          cabecera y desde ningún otro sitio—, y `responsabilidad-civil` no
+          estaba ni en la cabecera, así que solo existía en el sitemap. Con esto
+          cada ramo recibe cinco enlaces internos y la RC deja de ser huérfana.
+          Además es lo que hace un visitante real: el que viene por comercio
+          suele tener también la RC y el auto de la empresa. */}
+      <section aria-labelledby="otros" style={{ marginBottom: 28 }}>
+        <h2 id="otros">Otros seguros que llevamos</h2>
+        <nav aria-label="Otros ramos" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {RAMOS.filter((r) => r.slug !== ramo.slug).map((r) => (
+            <Link
+              key={r.slug}
+              href={`/seguros/${r.slug}`}
+              // 44 px de alto mínimo: es un objetivo táctil, no un enlace de
+              // texto en una lista (regla responsive del monorepo).
+              style={{
+                ...panel,
+                display: 'inline-flex',
+                alignItems: 'center',
+                minHeight: 44,
+                padding: '10px 16px',
+                textDecoration: 'none',
+              }}
+            >
+              {r.nombre}
+            </Link>
+          ))}
+        </nav>
+        <p style={{ color: 'var(--muted)', fontSize: 15, marginTop: 14 }}>
+          ¿Ya tienes este seguro con otro mediador?{' '}
+          <Link href="/cambiar-de-correduria">Puedes cambiar de correduría sin tocar tu póliza</Link>: mismas
+          coberturas, mismo precio y mismo número.
+        </p>
+      </section>
+
       <section id="presupuesto" aria-labelledby="pedir" style={panel}>
         <h2 id="pedir">Que te llamemos</h2>
         <p style={{ color: 'var(--muted)', fontSize: 15 }}>

@@ -30,6 +30,23 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código (07/09/2026).** Del banco de
+  ideas: **A** imagen Open Graph (`app/opengraph-image.tsx`, `next/og`, marca y clave DGSFP leídas de
+  `MARCA_ASEGURA`/`MEDIADOR`, nada quemado; `twitter: summary_large_image` en el layout) — antes cada
+  enlace pegado en WhatsApp salía como texto plano. **B** «Sevilla» en title y H1 de
+  `/cambiar-de-correduria` y en el H1 de `/quienes-somos`. **C** las 6 páginas de ramo dejan de ser
+  islas: bloque «Otros seguros que llevamos» + enlace a `/cambiar-de-correduria`, y
+  `responsabilidad-civil` entra en el pie (**fuera de la cabecera a propósito**: sexta entrada =
+  desborde medido el 05/09). Estaba huérfana: su único rastro era el sitemap. **E** fuera el
+  `lastModified: new Date()` que decía «todo cambió hoy» en cada petición — legales con
+  `FECHA_TEXTOS_WEB`, portada y ramos **omiten** el campo (ausente es la verdad). **D** mitigada:
+  `apps/plataforma/app/seguros` pasa a `robots:{index:false,follow:true}` — competía por las mismas
+  consultas desde un `*.vercel.app` y **no la enlaza nadie**; sigue viva y su formulario sigue
+  entrando. Guardián nuevo `lib/enlazado.test.ts` (huérfanos, cabecera, sitemap, OG). Verificado:
+  40/40 tests de la app, `tsc` limpio, `next build` con `/opengraph-image` prerrenderizada.
+  ❓ **Decisión de Alberto pendiente:** si `/seguros` de plataforma se retira del todo (301 o borrado)
+  o se queda con noindex. Y siguen sin él: Search Console y Google Business Profile.
+
 - **🎨 `asegura-web`: una sola atmósfera, no diez bloques (05/09/2026).** Alberto: «te estás liando,
   hay que mezclar todas las ideas». Diagnóstico: los recursos ya estaban TODOS (aspecto de la landing
   de Manuel, ventana viva, foco con contadores, escáner), pero apilados como diez bloques blancos del

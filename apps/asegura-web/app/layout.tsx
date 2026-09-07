@@ -80,6 +80,12 @@ export const metadata: Metadata = {
     siteName: 'Grupo ASegura',
     url: SITIO_URL,
   },
+  // La imagen de la tarjeta la inyecta Next desde `app/opengraph-image.tsx`
+  // (convención de fichero), así que no se declara aquí: declararla a mano
+  // sería una segunda ruta que mantener. Lo que sí hay que decir es el FORMATO
+  // de la tarjeta de X/Twitter: sin esto se pinta el recuadro pequeño y la
+  // imagen de 1200×630 se ve recortada a un cuadrado.
+  twitter: { card: 'summary_large_image' },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
