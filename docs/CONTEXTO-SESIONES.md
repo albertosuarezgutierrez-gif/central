@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧹 «Mergea todo» = 2 de 10, y el orden decide si el resultado es VERDADERO (07/09/2026).** Mergeados
+  #2407 (el nombre del remitente sale de `MEDIADOR.marca`, no de la env; devuelve `null` en vez de
+  inventar) y #2460 (landmine: Expedia devuelve USD sin parámetro de moneda). Los otros 8 NO los puede
+  mergear un agente, por DOS causas distintas que se confunden: **#2262/#2318/#2322/#2327** tienen los
+  checks en `action_required` (los empujó el bot de `rutinas-automerge`; solo desbloquea Alberto), y
+  **#2412/#2413/#2414/#2319** están `dirty` — resolverlo exige empujar a la rama de OTRA sesión, que el
+  hook `guardian-rama` prohíbe. 🚨 **Trampa en #2319: su hunk de `CLAUDE.md` REGRESA `main`** (fecha un
+  día más vieja y borra la cita `tests.yml:62`); la cifra 13 coincide, así que "resolver" el conflicto a
+  favor del PR empeora el fichero. Y **#2319 contradice a #2412**: uno crea `apps/asegura-web/CLAUDE.md`
+  y el otro afirma que es la única app sin él. #2413 poda 42 entradas del rango que #2262/#2322/#2327
+  reintroducen. Confirmado otra vez que `get_files`/`get_diff` del MCP mienten en 3 PRs (base.sha viejo):
+  el diff de TRES puntos sobre un clon completo los desmiente.
 - **🌍 La web de la correduría vendía «en Sevilla» y se vende en TODA ESPAÑA (07/09/2026).** Dictado de
   Alberto viendo `/seguros/auto` en el móvil: «vendemos a nivel nacional, no provinciales solo». Los seis
   `<h1>`/`<title>`, las descripciones, el chip del hero y «atendemos en Sevilla y su provincia» de
