@@ -20,7 +20,8 @@ export const dynamic = 'force-dynamic'
  * 🚨 Esto **no acepta nada**. La autorización sigue pendiente después del envío:
  * lo único que hace este puerto es que la persona se entere de que la tiene.
  * Las razones por las que puede no salir el correo van cada una con su código
- * —`sin_pendiente` 409, `sin_email` 422, `sin_portal` 503, `error_envio` 502—
+ * —`sin_pendiente` 409, `sin_email` 422, `sin_portal` 503,
+ * `sin_correo_configurado` 503, `error_envio` 502—
  * porque son cosas distintas y se arreglan de forma distinta; colapsarlas en un
  * «no se pudo» deja a Alberto sin saber si falta un correo o falla el proveedor.
  */

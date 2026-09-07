@@ -54,13 +54,17 @@ test('🚨 el enlace NO lleva token: un correo se reenvia', () => {
   // Si algún día alguien mete una llave en la URL, este test cae. Es
   // deliberado: el enlace no puede abrir sesión por sí mismo, porque entonces
   // reenviar el correo regalaría la cartera.
+  //
+  // ⚠️ Hasta el 07/09/2026 este cepo exigía además que el TEXTO lo dijera («este
+  // enlace no abre sesión por sí mismo»). Alberto lo mandó quitar del correo, así
+  // que la garantía se comprueba donde de verdad vive: en la URL, que no lleva
+  // ni query ni fragmento donde meter una llave.
   const c = correoCompleto()
   assert.ok(c.texto.includes(ENLACE))
   assert.ok(!/[?#]/.test(ENLACE), 'el enlace de este correo no lleva query ni fragmento')
-  assert.ok(
-    aplanar(c.texto).includes('no abre sesion por si mismo'),
-    'el correo tiene que DECIR que reenviarlo no sirve de nada',
-  )
+  for (const llave of ['token', 'jwt', 'sesion', 'session', 'codigo=', 'code=']) {
+    assert.ok(!aplanar(c.texto).includes(llave), `el correo no puede llevar un «${llave}»`)
+  }
 })
 
 test('sin nombre legible no se inventa uno', () => {
@@ -81,9 +85,20 @@ test('🚨 a quien YA entra no se le dice que ahora puede entrar', () => {
   assert.notEqual(correoCompleto(false).asunto, correoCompleto(true).asunto)
 })
 
-test('el enlace apunta a la PORTADA, que es donde se pide el codigo', () => {
-  assert.equal(enlacePortal('https://clientes.grupoasegura.es'), 'https://clientes.grupoasegura.es/')
-  assert.equal(enlacePortal('https://clientes.grupoasegura.es/algo'), 'https://clientes.grupoasegura.es/')
+/**
+ * 🚨 El enlace lleva a `/boveda` desde el 07/09/2026 (antes, a la portada), y lo
+ * que lo hace seguro NO es esta función: es que `app/(portal)/boveda/page.tsx`
+ * del portal hace `redirect('/')` cuando no hay sesión. Medido contra el
+ * dominio vivo: `GET /boveda` sin cookie → 200 con `x-matched-path: /`, o sea
+ * la portada donde se pide el código.
+ *
+ * Si alguien quita ese `redirect`, este enlace pasa a llevar a una pantalla
+ * muerta y este cepo NO se enterará: vigila la URL que se compone, no lo que
+ * hay al otro lado.
+ */
+test('el enlace apunta a la BOVEDA, y una ruta que venga en la variable no manda', () => {
+  assert.equal(enlacePortal('https://clientes.grupoasegura.es'), 'https://clientes.grupoasegura.es/boveda')
+  assert.equal(enlacePortal('https://clientes.grupoasegura.es/algo'), 'https://clientes.grupoasegura.es/boveda')
 })
 
 test('🚨 sin portal utilizable NO se manda un correo que dice «entra aqui» sin el aqui', () => {

@@ -29,9 +29,10 @@ export const dynamic = 'force-dynamic'
  * comunicaciones salientes del `CLAUDE.md` raíz —nada sale a un tercero sin
  * autorización para ESE envío— y el clic es esa autorización.
  *
- * Los ocho motivos por los que puede no salir viajan cada uno con su código
+ * Los nueve motivos por los que puede no salir viajan cada uno con su código
  * (`sin_email` 422, `ilegible` 422, `ambiguo` 409, `resuelve_a_otra` 409,
- * `no_comprobado` 503, `sin_portal` 503, `error_envio` 502, `no_encontrado` 404)
+ * `no_comprobado` 503, `sin_portal` 503, `sin_correo_configurado` 503,
+ * `error_envio` 502, `no_encontrado` 404)
  * porque se arreglan en sitios distintos: uno pidiéndole el correo al cliente,
  * otro resolviendo un duplicado y otro mirando una variable de Vercel. Un
  * «no se pudo» común dejaría a Alberto sin saber a cuál de los tres ir.

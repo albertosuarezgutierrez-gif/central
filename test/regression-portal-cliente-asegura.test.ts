@@ -137,7 +137,7 @@ test('GET: ok / no_encontrado / sin_configurar / invalido / error no se confunde
   assert.deepEqual(interpretarPortal(200, { estado: 'ok' }), { estado: 'error', motivo: 'respuesta_ilegible' })
 })
 
-test('POST: los ocho desenlaces del puerto llegan cada uno con su nombre', () => {
+test('POST: los nueve desenlaces del puerto llegan cada uno con su nombre', () => {
   for (const f of FALLOS_INVITACION) {
     const r = interpretarInvitacion(f === 'error_envio' ? 502 : 422, { estado: f, motivo: 'porque sí' })
     assert.equal(r.estado, f, `${f} no puede leerse como otra cosa`)
@@ -147,6 +147,10 @@ test('POST: los ocho desenlaces del puerto llegan cada uno con su nombre', () =>
   assert.equal(interpretarInvitacion(409, { estado: 'resuelve_a_otra', motivo: 'x' }).estado, 'resuelve_a_otra')
   assert.equal(interpretarInvitacion(503, { estado: 'sin_portal', motivo: 'x' }).estado, 'sin_portal')
   assert.equal(interpretarInvitacion(503, { estado: 'no_comprobado', motivo: 'x' }).estado, 'no_comprobado')
+  assert.equal(
+    interpretarInvitacion(503, { estado: 'sin_correo_configurado', motivo: 'x' }).estado,
+    'sin_correo_configurado',
+  )
   // Sin secreto entre los dos proyectos no se ha invitado a nadie, y se nota.
   assert.equal(interpretarInvitacion(401, null).estado, 'error')
   assert.match(textoInvitacion(interpretarInvitacion(403, null), 'Ana'), /ASEGURA_OPERADOR_SECRET/)
@@ -190,4 +194,30 @@ test('los motivos técnicos se traducen; una frase se deja tal cual', () => {
   assert.match(textoMotivoPortal('red'), /timeout/)
   assert.match(textoMotivoPortal('respuesta_ilegible'), /forma esperada/)
   assert.equal(textoMotivoPortal('Esa ficha no existe.'), 'Esa ficha no existe.')
+})
+
+/**
+ * 🚨 El cepo del 07/09/2026, y nació de un fallo real EN PRODUCCIÓN: el botón de
+ * invitar contestaba «el proveedor de correo no aceptó el mensaje, vuelve a
+ * intentarlo» mientras el log de `central-asegura` decía `[mailer] sin proveedor
+ * de email configurado`. O sea, la pantalla mandaba a Alberto a la única acción
+ * que NO podía funcionar, y encima culpaba a un proveedor que no existe.
+ *
+ * Lo que se fija aquí no es un tipo, es la CONSECUENCIA de leer cada frase: una
+ * avería del proveedor se reintenta y una env que falta se va a mirar a Vercel.
+ * Colapsarlas cuesta una tarde de reintentos.
+ */
+test('🚨 una env de correo que falta NO invita a reintentar; una avería del proveedor SÍ', () => {
+  const falta = textoInvitacion(
+    { estado: 'sin_correo_configurado', motivo: 'asegura no tiene ningún proveedor de correo configurado.' },
+    'Ana',
+  )
+  assert.doesNotMatch(falta, /vuelve a intentarlo/i, 'reintentar no pone una variable de entorno')
+  assert.match(falta, /no se ha enviado/i)
+  assert.match(falta, /vercel/i, 'tiene que decir DÓNDE se arregla')
+  assert.doesNotMatch(falta, /no aceptó el mensaje/i, 'no hay proveedor que pueda aceptar ni rechazar nada')
+
+  const averia = textoInvitacion({ estado: 'error_envio', motivo: 'x' }, 'Ana')
+  assert.match(averia, /vuelve a intentarlo/i, 'esta SÍ se reintenta: hubo proveedor y dijo que no')
+  assert.notEqual(averia, falta)
 })
