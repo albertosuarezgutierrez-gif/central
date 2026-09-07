@@ -41,6 +41,12 @@
   ⏸️ **Pendiente de Alberto, y es lo único que falta para que el botón funcione:** en Vercel
   `central-asegura`, `RESEND_API_KEY` (o `SMTP_USER`+`SMTP_PASSWORD`, o `GMAIL_USER`+`GMAIL_APP_PASSWORD`)
   **más `ASEGURA_MAIL_FROM`**, y redesplegar (una env nueva no se aplica sin redeploy).
+  🔗 **Y el enlace del correo cambia a `clientes.grupoasegura.es/boveda`** (dictado de Alberto:
+  «esta url es mejor»). Medido antes de tocarlo: ese `GET` responde **200** y sin cookie
+  `x-matched-path: /` — la propia página hace `redirect('/')`, así que quien no tenga sesión cae en
+  la portada del código y no en un 404. El defecto de `ASEGURA_PORTAL_URL` pasa de
+  `asegura-portal.vercel.app` al dominio de la casa en los DOS correos (el `.vercel.app` sigue
+  sirviendo: cambia el canónico, no arregla nada roto).
 
 - **🧮 Spec de calculadora de bonificación hipotecaria en asegura-portal (07/09/2026, PR #2569 mergeado).**
   Idea de Alberto: simulador de punto de equilibrio entre mantener el seguro (hogar+vida)

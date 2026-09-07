@@ -81,9 +81,20 @@ test('🚨 a quien YA entra no se le dice que ahora puede entrar', () => {
   assert.notEqual(correoCompleto(false).asunto, correoCompleto(true).asunto)
 })
 
-test('el enlace apunta a la PORTADA, que es donde se pide el codigo', () => {
-  assert.equal(enlacePortal('https://clientes.grupoasegura.es'), 'https://clientes.grupoasegura.es/')
-  assert.equal(enlacePortal('https://clientes.grupoasegura.es/algo'), 'https://clientes.grupoasegura.es/')
+/**
+ * 🚨 El enlace lleva a `/boveda` desde el 07/09/2026 (antes, a la portada), y lo
+ * que lo hace seguro NO es esta función: es que `app/(portal)/boveda/page.tsx`
+ * del portal hace `redirect('/')` cuando no hay sesión. Medido contra el
+ * dominio vivo: `GET /boveda` sin cookie → 200 con `x-matched-path: /`, o sea
+ * la portada donde se pide el código.
+ *
+ * Si alguien quita ese `redirect`, este enlace pasa a llevar a una pantalla
+ * muerta y este cepo NO se enterará: vigila la URL que se compone, no lo que
+ * hay al otro lado.
+ */
+test('el enlace apunta a la BOVEDA, y una ruta que venga en la variable no manda', () => {
+  assert.equal(enlacePortal('https://clientes.grupoasegura.es'), 'https://clientes.grupoasegura.es/boveda')
+  assert.equal(enlacePortal('https://clientes.grupoasegura.es/algo'), 'https://clientes.grupoasegura.es/boveda')
 })
 
 test('🚨 sin portal utilizable NO se manda un correo que dice «entra aqui» sin el aqui', () => {

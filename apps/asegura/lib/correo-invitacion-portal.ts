@@ -52,18 +52,31 @@ function unaLinea(s: string): string {
 }
 
 /**
- * A dónde manda el correo: la PORTADA del portal, que es donde se pide el
- * código. `null` = no hay portal utilizable y entonces **no se envía** — un
- * correo que dice «entra aquí» sin el «aquí» no sirve de nada, y adivinar un
- * dominio manda a la persona a ningún sitio.
+ * A dónde manda el correo: **su bóveda**, `/boveda`. `null` = no hay portal
+ * utilizable y entonces **no se envía** — un correo que dice «entra aquí» sin el
+ * «aquí» no sirve de nada, y adivinar un dominio manda a la persona a ningún
+ * sitio.
  *
- * Misma variable y mismo valor por defecto que `enlaceDeAutorizaciones`: el
- * portal sirve HOY en `asegura-portal.vercel.app`, y cuando
- * `clientes.grupoasegura.es` esté repuntado a Vercel se cambia la variable y
- * esto no se toca.
+ * ── Por qué `/boveda` y no la portada (07/09/2026, dictado de Alberto) ──────
+ *
+ * Porque nombra el destino en vez del trámite: quien ya tiene sesión abierta cae
+ * directo en sus seguros, y **quien no la tiene no se pierde nada**. Medido
+ * contra el dominio vivo antes de cambiarlo: `GET https://clientes.grupoasegura.es/boveda`
+ * responde **200** y, sin cookie, `x-matched-path: /` — o sea, la propia página
+ * hace `redirect('/')` a la portada donde se pide el código. No hay 404 ni la
+ * bóveda vacía que este correo existe para evitar.
+ *
+ * ⚠️ Ese `redirect('/')` de `app/(portal)/boveda/page.tsx` es lo que sostiene
+ * esta decisión: si algún día esa página dejara de redirigir al visitante sin
+ * sesión, este enlace pasaría a llevar a una pantalla muerta.
+ *
+ * Misma variable y mismo valor por defecto que `enlaceDeAutorizaciones`:
+ * `clientes.grupoasegura.es` está atado al proyecto `asegura-portal` y sirve el
+ * portal (medido el 07/09/2026), así que el defecto es el dominio de la casa y
+ * no el `asegura-portal.vercel.app` de antes, que sigue sirviendo igual.
  */
 export function enlacePortal(
-  base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://asegura-portal.vercel.app',
+  base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es',
 ): string | null {
   const limpio = base?.trim()
   if (!limpio) return null
@@ -79,7 +92,7 @@ export function enlacePortal(
     console.error('[asegura/invitacion-portal] ASEGURA_PORTAL_URL no es https: no se invita')
     return null
   }
-  url.pathname = '/'
+  url.pathname = '/boveda'
   return url.toString()
 }
 

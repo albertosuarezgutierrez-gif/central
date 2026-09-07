@@ -64,12 +64,14 @@ function unaLinea(s: string): string {
  * envía**: un correo que dice «entra aquí» sin el «aquí» no sirve de nada, y
  * adivinar un dominio manda a la persona a ningún sitio.
  *
- * El valor por defecto es donde el portal sirve HOY, igual que en
- * `apps/asegura-web/lib/sitio.ts`; cuando `clientes.grupoasegura.es` esté
- * repuntado a Vercel se cambia la variable y esto no se toca.
+ * El valor por defecto es el dominio de la casa, igual que en
+ * `apps/asegura-web/lib/sitio.ts` y en `correo-invitacion-portal.ts`:
+ * `clientes.grupoasegura.es` está atado al proyecto `asegura-portal` y sirve el
+ * portal (medido el 07/09/2026). El `asegura-portal.vercel.app` de antes sigue
+ * sirviendo, así que esto no arregla nada roto: cambia cuál es el canónico.
  */
 export function enlaceDeAutorizaciones(
-  base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://asegura-portal.vercel.app',
+  base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es',
 ): string | null {
   const limpio = base?.trim()
   if (!limpio) return null
