@@ -90,6 +90,7 @@ export const NAV = [
   { href: '/seguros/hogar', texto: 'Hogar' },
   { href: '/seguros/comunidades', texto: 'Comunidades' },
   { href: '/seguros/comercio', texto: 'Comercio y empresa' },
+  { href: '/seguros/flota', texto: 'Flota de vehículos' },
   { href: '/seguros/auto', texto: 'Auto y moto' },
   { href: '/seguros/vida-y-salud', texto: 'Vida y salud' },
   // 🚨 Responsabilidad civil EXISTE como página (`RAMOS` la trae, el sitemap la
@@ -116,9 +117,19 @@ export const NAV = [
  * sexta entrada y devolvería el desbordamiento medido. Se enlaza desde el pie y
  * desde las páginas de ramo hermanas, que es donde el enlace además tiene
  * sentido temático. Los cinco ramos de la cabecera son los de más volumen.
+ *
+ * ⚠️ **Flota (07/09/2026) queda fuera por lo mismo, y el cepo lo cazó**: al
+ * meterla en el pie, `enlazado.test.ts` se puso rojo con «la cabecera lleva 6
+ * entradas; se midió el desborde a partir de 6». No se sube el tope: el número
+ * está medido en píxeles, no elegido. Flota se alcanza desde el pie y desde
+ * comercio, que es quien tiene al mismo lector delante —el que decide el seguro
+ * del negocio decide el de las furgonetas—, así que el enlace encaja mejor ahí
+ * que en una cabecera que no cabe.
  */
+const FUERA_DE_CABECERA: readonly string[] = ['/seguros/responsabilidad-civil', '/seguros/flota']
+
 export const NAV_CABECERA = NAV.filter(
-  (n) => n.href.startsWith('/seguros/') && n.href !== '/seguros/responsabilidad-civil',
+  (n) => n.href.startsWith('/seguros/') && !FUERA_DE_CABECERA.includes(n.href),
 )
 
 /**

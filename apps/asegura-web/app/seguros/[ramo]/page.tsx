@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { RAMOS, ramoPorSlug } from '@/lib/ramos'
 import { url } from '@/lib/sitio'
-import { fichaFaq, migas, jsonLd } from '@/lib/seo'
+import { fichaFaq, fichaServicio, migas, jsonLd } from '@/lib/seo'
 import Formulario from '@/components/Formulario'
 
 // Estáticas: son seis páginas de contenido que cambian cuando cambia el copy,
@@ -59,6 +59,7 @@ export default async function PaginaRamo({ params }: Props) {
     <div className="wrap pagina">
       {breadcrumb && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumb) }} />}
       {faq && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faq) }} />}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaServicio(ramo)) }} />
 
       <nav aria-label="Migas de pan" style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 12 }}>
         <Link href="/">Inicio</Link> <span aria-hidden>›</span> {ramo.nombre}

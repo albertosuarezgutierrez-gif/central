@@ -30,6 +30,28 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
+  `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
+  **sin ninguna página**. Va en `RAMOS`, así que entra sola en sitemap, pie y formulario. Su posición en la
+  lista NO está medida —**cero pólizas de flota en la cartera viva**, así que no hay comisión que comparar—
+  y así se declara en el código. Añadir el ramo obligó a tocar **las dos apps**: `TIPOS_SEGURO_LEAD` de
+  plataforma y la copia de `asegura-web`, o el desplegable habría ofrecido un ramo que plataforma rechaza
+  con 422 (lead perdido sin que falle nada) — lo forzó `contrato-lead.test.ts`. **Dos cepos existentes lo
+  cazaron en rojo**: `enlazado.test.ts` («ramo huérfano: /seguros/flota no está en NAV») y, al meterlo en la
+  cabecera, el de desbordamiento medido en píxeles («6 entradas; se midió el desborde a partir de 6») → flota
+  se queda en pie + comercio, como RC. Nuevo `fichaServicio()` (`Service` por ramo, `provider` por `@id`, sin
+  `offers`/`price`) y **`knowsAbout` derivado de `RAMOS`**: era una lista de 6 cadenas a mano que al publicar
+  flota habría dicho que la correduría no sabe de un ramo con página propia. Guardián nuevo
+  `lib/seo-servicio.test.ts` (5 aserciones), **visto en rojo antes de existir**. 55/55 en asegura-web,
+  typecheck de asegura-web y plataforma verdes, `pnpm test` exit 0.
+  🔴 **Y lo que NO es código, medido sobre la ficha real de Google (captura de Alberto, 8:47):** el perfil
+  **existe y está verificado**, pero (a) su categoría es **«Agencia de seguros»** — o sea AGENTE, justo lo
+  contrario de lo que la web entera argumenta y de lo que dice la clave DGSFP CS-F/0170; (b) el nombre es
+  **«Grupo ASegura tu corredor de Seguros»** y la web declara `Grupo ASegura` → **NAP roto**, y además
+  palabras clave en el nombre es motivo de suspensión en las directrices de Google; (c) **sin horario**
+  («Añadir horario de apertura»), que es coherente con `HORARIO = null` pero deja la ficha coja; (d) **1
+  reseña**. `sameAs` sigue sin poder ponerse: falta la URL de la ficha.
+
 - **🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código (07/09/2026).** Del banco de
   ideas: **A** imagen Open Graph (`app/opengraph-image.tsx`, `next/og`, marca y clave DGSFP leídas de
   `MARCA_ASEGURA`/`MEDIADOR`, nada quemado; `twitter: summary_large_image` en el layout) — antes cada
