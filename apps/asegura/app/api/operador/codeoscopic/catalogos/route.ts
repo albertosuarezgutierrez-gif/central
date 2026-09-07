@@ -42,6 +42,9 @@ export async function GET(req: Request) {
         opciones: r.opciones,
         ...(r.hogar ? { hogar: r.hogar } : {}),
         ...(r.moto ? { moto: r.moto } : {}),
+        ...(r.vida ? { vida: r.vida } : {}),
+        ...(r.salud ? { salud: r.salud } : {}),
+        ...(r.decesos ? { decesos: r.decesos } : {}),
         gastado: '0,00€',
       })
     case 'invalido':

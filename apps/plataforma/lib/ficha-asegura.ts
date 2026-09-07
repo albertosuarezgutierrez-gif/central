@@ -740,3 +740,22 @@ export function urlAutoNuevo(clienteId: string): string {
 export function urlMotoNuevo(clienteId: string): string {
   return `/correduria/cliente/${clienteId}/moto-nuevo`
 }
+
+/**
+ * Presupuesto de VIDA para una oportunidad nueva, hermana de `urlMotoNuevo()`.
+ * La cartera viva tiene 0 pólizas de vida (03/09/2026). 🚧 El `risk` que se
+ * manda al vendor no está verificado — ver `apps/asegura/lib/codeoscopic/peticion-vida.ts`.
+ */
+export function urlVidaNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/vida-nuevo`
+}
+
+/** Presupuesto de SALUD para una oportunidad nueva. Mismo aviso 🚧 que `urlVidaNuevo()`. */
+export function urlSaludNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/salud-nuevo`
+}
+
+/** Presupuesto de DECESOS para una oportunidad nueva. Mismo aviso 🚧 que `urlVidaNuevo()`. */
+export function urlDecesosNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/decesos-nuevo`
+}
