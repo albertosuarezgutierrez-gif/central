@@ -30,6 +30,33 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔇 Cron SEO de sivra: pudo morir MUDO por presupuesto — techo 60→300 (07/09/2026).** El E2E del
+  fix SeoStatus (#1895) descubrió que el cron de hoy no dejó rastro NINGUNO (ni commit, ni fila, ni ❌
+  Telegram, con la ruta viva y sin PR atascado): `maxDuration=60` contra una cadena de análisis cuyo
+  peor caso suma ~140s (Serper 10s + redacción 45s + aiSearch 50s + NIM 25s) → 504 a mitad SIN pasar
+  por el catch, donde vive el tgAlert. Misma lección que facturas-scan (31/07). Fix: techo 300 +
+  timeoutMs explícito en los 3 niveles + guardián `test/regression-seo-refresh-presupuesto.test.ts`.
+  ⚠️ No está DEMOSTRADO que fuera eso hoy (los logs de Vercel `sivra` están fuera del conector): quedan
+  como sospechosos el kill switch `SEO_AGENT_ENABLED` y el propio disparo del cron — próximo lunes decide.
+
+- **🕳️ El cepo de la puerta miraba a UN fichero, y «área de clientes» seguía vivo en DOS (07/09/2026).**
+  Alberto, sobre una captura: «no se ve así la web». Cierto lo obvio (el PR #2502 aún sin mergear) y de paso
+  destapó lo otro: el mock del hero decía «Área de clientes · Mis seguros». Lo había corregido A MANO porque
+  `lib/portal.test.ts` prohibía ese rótulo **solo dentro de `Cabecera.tsx`**. Movido a `PROHIBIDO` (todo el
+  fuente, con `/i`) cazó **dos apariciones vivas** que nadie veía: `page.tsx:327` y `PanelDemo.tsx:216`. 🚨 Y
+  se me escaparon por método: busqué «Área» con mayúscula y estaban en minúscula — **un grep vacío no prueba
+  que no haya nada, prueba que ESE grep no lo encontró**. Comprobado sobre el DOM renderizado, no sobre el
+  fuente. Mutación M3 (el rótulo solo en un comentario) debe pasar: si no, borrar la prosa que explica el
+  cambio sería el precio del cepo. PR #2502 mergeado (`0f674b92a`); esto va aparte.
+- **💸 SIVRA pricing: el extranet de House ya está limpio y el motor recalibrado (07/09/2026).**
+  Alberto aplicó y verificó los cambios: fuera Basic Deal 12 %, Mobile 10 % y Genius 15 %; queda
+  Genius 10 % + country rates 10 %; semanal/mensual a no reembolsable con 7/28 noches. Con eso la
+  lista pública vuelve a ser el Standard Rate y **`channel_markup` de House se puso a mano en 1,20**
+  (era 1,056 = 1,20 × 0,88): sin tocarlo el motor habría listado un 13,6 % POR ENCIMA del p60 (no por
+  debajo, como dije antes). Las 17 mediciones del escaparate anteriores se reetiquetaron
+  `portal='booking_basic_deal'` para que `pricing/canal` no ajuste sobre dos regímenes; el calibrador
+  vuelve a medir solo con ventanas nuevas. Guardián `fuga-canal`: umbral 0,80 (pila aceptada 0,81) y
+  solo reservas desde el 07/09. ⚠️ Peor indicador de Booking: cancelaciones 50 % vs 34 % de la zona.
 - **🔴 El logo de Fidelidade entra, y el fichero bueno se llamaba `.jpg` sin serlo (07/09/2026).** De los
   tres que subió Alberto a Drive, los dos primeros eran JPEG —sin canal alfa, o sea caja blanca sobre la
   banda— y el tercero, `fidelidades logo3.jpg`, era un **PNG de paleta** (`mimeType: image/png`, 3.310 B):

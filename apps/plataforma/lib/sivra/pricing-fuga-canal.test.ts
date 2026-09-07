@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { fugaCanal, type ReservaCobrada } from "./pricing-fuga-canal.ts"
+import { fugaCanal, UMBRAL_FUGA, type ReservaCobrada } from "./pricing-fuga-canal.ts"
 
 // Canal de House Sevillana el 07/09/2026 (pricing_settings): escaparate = 1,056 × base + 120,5€/estancia.
 // El 1,056 es Standard Rate (base × 1,20) × Basic Deal 0,88; la cuota es la limpieza (extranet, 07/09).
@@ -52,6 +52,21 @@ test("fuga: las 12 reservas reales de House desde el 15/07/2026 → fuga, median
   assert.ok(r.peores[0].ratio <= r.peores[1].ratio)
   // la peor (0,689) es la pila + country rate 10 % en no reembolsable: 0,765 × 0,9
   assert.equal(Number(r.peores[0].ratio.toFixed(3)), 0.689)
+})
+
+test("fuga: la pila aceptada (Genius 10 % × country 10 % = 0,81) NO es fuga; el Basic Deal encima sí", () => {
+  assert.equal(UMBRAL_FUGA, 0.8)
+  // lista de hoy: base × 1,20 (Standard Rate); mitad de huéspedes con Genius, mitad Genius + country
+  const HOY = { markup: 1.2, cuotaFija: 120.5, nochesRef: 2 }
+  const aceptada = [0.9, 0.81, 0.9, 0.81, 0.9, 0.81].map((k, i) => ({ reservationId: `a${i}`, nights: 2, brutoTotal: 2 * 533 * 1.2 * k + 120.5, baseMedia: 533 }))
+  const ok = fugaCanal(aceptada, HOY)
+  assert.equal(ok.estado, "ok")
+  assert.equal(ok.ratio, 0.855)
+  // vuelve el Basic Deal del 12 % sobre la misma mezcla → 0,79 / 0,71 → fuga
+  const conBasic = aceptada.map(r => ({ ...r, brutoTotal: (r.brutoTotal - 120.5) * 0.88 + 120.5 }))
+  const mal = fugaCanal(conBasic, HOY)
+  assert.equal(mal.estado, "fuga")
+  assert.equal(mal.ratio, 0.752)
 })
 
 test("fuga: cobrado en línea con la lista pública → ok", () => {

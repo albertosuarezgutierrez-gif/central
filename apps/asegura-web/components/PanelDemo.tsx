@@ -213,7 +213,7 @@ export default function PanelDemo() {
             )}
 
             <div className={fase === 'listo' && activas.length > 0 ? 'mock-pie visible' : 'mock-pie'}>
-              <span className="mock-ok">● Todo en tu área de clientes</span>
+              <span className="mock-ok">● Todo en tu intranet</span>
               <span className="mock-coste">0,00€ de coste</span>
             </div>
           </div>
