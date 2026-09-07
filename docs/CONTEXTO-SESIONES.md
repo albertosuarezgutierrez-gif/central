@@ -146,6 +146,20 @@
   `correduria.canario-lead` (máx. 1 cada 6 h, anti-spam sobre `telegram_avisos_log`) y latido
   `canario_lead_web` dado de alta en el vigía. PR #2453.
 
+- **🔔 Spec de la pestaña «Avisos» del portal, y dos huecos que la hacían inútil (06/09/2026).** Dictado
+  de Alberto: que el cliente configure sus avisos y elija la antelación de la renovación. Medido antes
+  de diseñar: el cron de vencimientos está **apagado**, el aviso de siniestro **no existe**, y
+  `portal_obligacion` ya modela **siete** recordatorios (ITV, carnet, gas…), no dos. 🚨 Dos hallazgos
+  que cambiaron el diseño: (1) `portal_obligacion.identidad_id` es **NOT NULL** — solo 3 identidades
+  tienen obligaciones, así que encender el cron hoy mandaría **3 correos**; el vencimiento pasa a
+  leerse de `polizas` directamente, porque es un hecho de la cartera y no algo que el cliente declare.
+  (2) `prisma_asegura_portal` **no puede leer `email_opt_out_at`**, así que la preferencia vive en
+  tabla propia y el envío exige que **ninguna** de las dos bajas diga que no (art. 21 LSSI).
+  Defecto **60 días**, no 30: a 30 el aviso llega en la fecha límite del art. 22 LCS. El correo no
+  nombra ni un campo de la cartera y **el escaparate cuelga del vencimiento, nunca del siniestro**.
+  9 cepos. Spec en `docs/superpowers/specs/2026-09-06-portal-avisos-configurables-design.md` (PR #2473).
+  ⚠️ Sin implementar. Antes de encender: **18 pólizas vivas están vencidas y siguen `activa`**.
+
 - **🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo (06/09/2026).**
   `review` no es una cola de revisión manual sino una cuarentena automática, y a Occident no le entraba
   ni la mitad de los recibos. Motivo real (`operational_events`): `sin_poliza_en_cartera`. De las 20
