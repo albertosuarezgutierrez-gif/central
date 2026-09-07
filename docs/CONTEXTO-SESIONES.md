@@ -41,7 +41,7 @@
   guardianes nuevos vistos en ROJO antes de darlos por buenos. De propina, los ramo-`title` escribían
   «· Grupo ASegura» que la plantilla del layout ya añadía: marca duplicada en las 6 SERP. Actualizada la
   skill `seo-asegura` (mandaba lo contrario y lo habría revertido). Precio dicho: sin modificador
-  geográfico se compite con comparadores nacionales — a medir cuando GSC esté conectada. PR pendiente.
+  geográfico se compite con comparadores nacionales — a medir cuando GSC esté conectada. PR #2464.
 - **🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo (06/09/2026).** Al mergear
   #2439, `merge_pull_request` devolvió `405 ... "Lint · TypeCheck · Build" is in progress` mientras el
   run de `ci.yml` sobre ese head exacto llevaba minutos en `completed`/`success`. Reintentar **sin tocar
