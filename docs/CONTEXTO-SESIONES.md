@@ -30,6 +30,26 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗓️ La póliza que SUBE quien no es cliente ya entra en su calendario (07/09/2026).** Alberto:
+  «la intranet donde el cliente controla sus seguros siendo nuestro cliente o no» + «sube póliza y
+  olvídate». Medido: la intranet YA está abierta a cualquiera (`verificar` crea identidad con solo un
+  correo, «El resultado NO bloquea el login»), pero `lib/obligaciones.ts` abría con
+  `if (!c.vinculada) return` y solo miraba la CARTERA — una póliza subida no generaba obligación, ni
+  calendario, ni aviso posible. Nueva regla pura `reparoDeclarada()` (sin fecha / sin confirmar; se
+  devuelve el MOTIVO para que la pantalla lo diga) + `reparosDeclaradasDeIdentidad()`. 10 mutaciones
+  vistas en ROJO. DDL `portal_obligacion_una_por_declarada` **aplicada y verificada** en Supabase con
+  el OK de Alberto. PR #2502.
+- **🚨 «Olvídate» aún no se publica: al aviso le falta EL CANAL, no el remitente (07/09/2026).**
+  ⚠️ Corrección dentro de la propia sesión: se afirmó que «nadie escribe `avisadaAt`» y que faltaban
+  cron y remitente. **Falso** — `apps/asegura/lib/avisos-vencimiento.ts` existe, con cron diario
+  (`/api/cron/avisos-vencimiento`, 08:00 UTC), interruptor `ASEGURA_AVISOS_ACTIVOS` y sellado. El grep
+  lo tapó el ruido del cliente generado de Prisma. **Método: no cortes un grep a 20 líneas y concluyas
+  una ausencia.** Lo que SÍ falta: una obligación de póliza subida no tiene a dónde escribir
+  (`PortalCanal` guarda solo el hash, deliberado) y el cron ya la cuenta como `sinCanal` — o sea, el
+  hueco está declarado en el código, no escondido. Decisión de Alberto: **opt-in**, el portal ESCRIBE
+  el correo cifrado y `apps/asegura` lo LEE (es la que tiene correo y BYPASSRLS; un guardián prohíbe
+  al portal importar transporte de correo). Medido: 6 obligaciones en toda la BD, 0 avisadas, 0 en
+  ventana — el cron mandando cero hoy es correcto y NO prueba que esté apagado.
 - **📝 Blog de la correduría: tres artículos y el enlazado en los dos sentidos (07/09/2026).**
   `/blog` + `/blog/[slug]` en `apps/asegura-web`, con el contenido como DATOS (`lib/articulos.ts`), no
   como JSX: de ahí salen a la vez la página, el `Article` JSON-LD (autor = **Person** con la clave DGSFP
