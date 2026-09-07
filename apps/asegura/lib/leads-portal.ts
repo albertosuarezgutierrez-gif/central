@@ -32,6 +32,7 @@
 // Alberto y decide él.
 import {
   leadDeclarada,
+  leadUrgente,
   normalizarNumeroPoliza,
   ordenarLeads,
   type EntradaLead,
@@ -42,6 +43,13 @@ import { prismaAsegura } from './asegura-db'
 import { vinculosPorIdentidad } from './vinculos-portal'
 
 export type LeadPortal = Lead & {
+  /**
+   * Si es trabajo de HOY. Se calcula AQUÍ, con `leadUrgente()` del módulo puro,
+   * y viaja ya resuelto: así la regla vive en un solo sitio y plataforma no
+   * necesita depender del módulo del portal para pintar su badge. Copiar el
+   * umbral allí sería tener dos verdades sobre qué es urgente.
+   */
+  urgente: boolean
   /** `null` = no lo hemos casado con ninguna ficha de la cartera (ver cabecera). */
   clienteId: string | null
   /** Cuándo lo subió. Sirve para saber si es de hoy o lleva tres meses ahí. */
@@ -110,6 +118,7 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
 
       leads.push({
         ...lead,
+        urgente: leadUrgente(lead),
         clienteId,
         subidaEn: f.creadaEn,
         documentoNombre: f.documentoNombre,

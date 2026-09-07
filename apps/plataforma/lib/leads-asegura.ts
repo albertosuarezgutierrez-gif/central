@@ -19,10 +19,10 @@
 //
 // Y una fila sin `id` no es una fila que no exista: no hay ficha a la que ir,
 // así que no se pinta — pero se CUENTA en `ilegibles` y la pantalla lo dice.
-import { type MotivoPuerto, describirCausaAsegura } from './correduria-puerto.ts'
+import { MOTIVOS_PUERTO, type MotivoPuerto, describirCausaAsegura } from './correduria-puerto.ts'
 
 export type { MotivoPuerto }
-export { describirCausaAsegura }
+export { MOTIVOS_PUERTO, describirCausaAsegura }
 
 export type EstadoLead = 'confirmado' | 'sin_confirmar' | 'sin_fecha'
 
@@ -36,6 +36,13 @@ export type LeadVista = {
   fechaAccionable: Date | null
   diasParaAccionable: number | null
   ventanaPasada: boolean
+  /**
+   * Trabajo de HOY. Lo calcula el PUERTO con `leadUrgente()` del módulo puro y
+   * llega ya resuelto: la regla («dos semanas antes de que se cierre la
+   * ventana») vive en un solo sitio, y copiar aquí el umbral sería tener dos
+   * verdades sobre qué es urgente. Un valor que no sea `true` es «no urgente».
+   */
+  urgente: boolean
   /** `null` = no se ha podido comprobar si ya la lleva la casa. NUNCA colapsar a false. */
   yaEnCartera: false | null
   /** `null` = no se ha casado con ninguna ficha: hay que identificar a la persona. */
@@ -112,6 +119,7 @@ export function interpretarLeads(bruto: unknown): ResultadoLeads {
       fechaAccionable: fecha(f.fechaAccionable),
       diasParaAccionable: numero(f.diasParaAccionable),
       ventanaPasada: f.ventanaPasada === true,
+      urgente: f.urgente === true,
       // 🚨 Solo un `false` explícito es «comprobado, no es de la casa».
       // Cualquier otra cosa —`null`, ausente, basura— es «no lo sabemos».
       yaEnCartera: f.yaEnCartera === false ? false : null,

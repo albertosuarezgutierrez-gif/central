@@ -5,6 +5,8 @@ import { DIAS_PREAVISO_TOMADOR } from './obligacion.ts'
 import {
   estadoLead,
   leadDeclarada,
+  DIAS_LEAD_URGENTE,
+  leadUrgente,
   normalizarNumeroPoliza,
   ordenarLeads,
   type EntradaLead,
@@ -130,4 +132,30 @@ test('🚨 sin número es `null`, nunca una cadena vacía', () => {
   assert.equal(normalizarNumeroPoliza(null), null)
   assert.equal(normalizarNumeroPoliza('   '), null)
   assert.equal(normalizarNumeroPoliza('- / .'), null)
+})
+
+test('🚨 un lead con la ventana PASADA no es trabajo de hoy', () => {
+  // La oportunidad de este año se fue. Meterlo en la cola de «Hoy» haría que la
+  // cola dejara de significar «esto se hace hoy», que es lo único que la hace
+  // útil. Sigue en la lista, marcado: el cliente sigue ahí.
+  //
+  // 🪤 Los días van a 3 y NO a `null` a propósito. Con `null` este cepo pasaba
+  // por la otra condición y se quedaba verde aunque se borrara la guarda que
+  // dice proteger — se vio al romperla. `leadDeclarada()` nunca produce esta
+  // combinación (anula los días cuando la ventana pasa), así que la guarda es
+  // defensa frente a quien construya un `Lead` a mano; probarla exige
+  // construirlo a mano.
+  assert.equal(leadUrgente({ diasParaAccionable: 3, ventanaPasada: true }), false)
+})
+
+test('🚨 sin fecha tampoco es trabajo de hoy, y no por eso desaparece', () => {
+  // No se puede llamar «hoy» a algo cuya fecha no se sabe. El reparo es otro:
+  // conseguir la fecha.
+  assert.equal(leadUrgente({ diasParaAccionable: null, ventanaPasada: false }), false)
+})
+
+test('el corte es DIAS_LEAD_URGENTE, y se comprueba en el borde', () => {
+  assert.equal(leadUrgente({ diasParaAccionable: DIAS_LEAD_URGENTE, ventanaPasada: false }), true)
+  assert.equal(leadUrgente({ diasParaAccionable: DIAS_LEAD_URGENTE + 1, ventanaPasada: false }), false)
+  assert.equal(leadUrgente({ diasParaAccionable: 0, ventanaPasada: false }), true, 'hoy mismo es hoy')
 })

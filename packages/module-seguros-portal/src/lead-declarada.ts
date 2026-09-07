@@ -171,4 +171,23 @@ export function normalizarNumeroPoliza(v: string | null): string | null {
   return n === '' ? null : n
 }
 
+/**
+ * Cuándo un lead es trabajo de HOY y no de «algún día».
+ *
+ * Dos semanas antes de que se cierre la ventana. Es un juicio de producto, no
+ * una ley —la ley es el mes de preaviso, que ya está DENTRO de
+ * `fechaAccionable`—, y por eso es una constante con nombre y no un número
+ * suelto en un JSX: el día que se decida que son 21, se cambia aquí.
+ *
+ * Un lead con la ventana ya pasada NO es urgente: la oportunidad de este año se
+ * fue, y meterlo en la cola de hoy haría que la cola dejara de significar algo.
+ * Sigue en la lista, marcado, porque el cliente sigue ahí.
+ */
+export const DIAS_LEAD_URGENTE = 14
+
+export function leadUrgente(l: Pick<Lead, 'diasParaAccionable' | 'ventanaPasada'>): boolean {
+  if (l.ventanaPasada) return false
+  return l.diasParaAccionable !== null && l.diasParaAccionable <= DIAS_LEAD_URGENTE
+}
+
 export { DIAS_PREAVISO_TOMADOR }

@@ -17,6 +17,7 @@ const OK = {
       fechaAccionable: '2027-03-04T00:00:00.000Z',
       diasParaAccionable: 178,
       ventanaPasada: false,
+      urgente: true,
       yaEnCartera: false,
       clienteId: 'c1',
       subidaEn: '2026-09-07T10:36:53.874Z',
@@ -84,4 +85,15 @@ test('sinIdentificar viaja, y si no viene es null (no 0)', () => {
   assert.equal(conDato.ok ? conDato.sinIdentificar : 'no-ok', 1)
   const sin = interpretarLeads({ estado: 'ok', leads: [] })
   assert.equal(sin.ok ? sin.sinIdentificar : 'no-ok', null, '0 diría que se comprobó y no hay ninguno sin identificar')
+})
+
+test('🚨 `urgente` viene del puerto y solo un `true` explícito cuenta', () => {
+  // La regla de qué es urgente vive en el módulo puro y la aplica el puerto.
+  // Aquí solo se lee, y cualquier cosa que no sea `true` —ausente, null,
+  // basura— es «no urgente»: inventarlo aquí daría dos verdades sobre qué se
+  // hace hoy, y el badge de la cabecera dejaría de significar nada.
+  const r = interpretarLeads(OK)
+  assert.equal(r.ok && r.leads[0].urgente, true)
+  const sin = interpretarLeads({ ...OK, leads: [{ ...OK.leads[0], urgente: undefined }] })
+  assert.equal(sin.ok && sin.leads[0].urgente, false)
 })
