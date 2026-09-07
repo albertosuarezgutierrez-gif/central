@@ -877,6 +877,11 @@ model Siniestro {
   estado             EstadoSiniestro
   tipo               String?            @db.VarChar(60)
   referencia         String?            @db.VarChar(100)
+  /// QUÉ pasó, en texto libre del tramitador. GRANT concedido el 07/09/2026
+  /// (`prisma/sql/2026-09-07_portal_siniestro_descripcion.sql`): el orden es
+  /// primero el GRANT y después esta línea — al revés, la lectura ENTERA de
+  /// `Siniestro` revienta con `permission denied for column` (42501).
+  comentario         String?
   fechaHora          DateTime?          @map("fecha_hora") @db.Timestamptz(6)
   lugarCp            String?            @map("lugar_cp") @db.VarChar(10)
   lugarCiudad        String?            @map("lugar_ciudad") @db.VarChar(100)
