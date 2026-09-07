@@ -1,5 +1,7 @@
 'use client'
 import { useRouter } from 'next/navigation'
+
+import { normalizarTitular } from '@central/module-seguros-portal'
 import { useState } from 'react'
 
 import { avisoDocumentoNoPoliza } from '@central/module-seguros-portal'
@@ -104,7 +106,16 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   // «de mi empresa» sin nombre no identifica ninguna empresa (la BD lo rechaza
   // con un CHECK, y llegar hasta allí devolvería un error de Postgres en vez de
   // decir qué falta).
-  const listoParaSubir = deQuien === 'propio' || (deQuien === 'empresa' && empresa.trim() !== '')
+  // 🚨 Con «de mi empresa» hacen falta las DOS cosas, y el CIF además VÁLIDO.
+  // El nombre es la etiqueta; el CIF es la identidad. Sin él, «Transportes
+  // Ejemplo SL» y «TRANSPORTES EJEMPLO, S.L.» son dos empresas distintas, y con
+  // uno mal tecleado se funden dos que sí lo son. La persona tiene la póliza
+  // delante: es el único momento en que puede mirarlo.
+  const titularParaEnviar = normalizarTitular({ tipo: deQuien, nombre: empresa, cif })
+  const cifPuesto = cif.trim() !== ''
+  const cifMal = deQuien === 'empresa' && cifPuesto && !titularParaEnviar.cifValido
+  const listoParaSubir =
+    deQuien === 'propio' || (deQuien === 'empresa' && empresa.trim() !== '' && titularParaEnviar.cifValido)
   const etiquetaRamo = (valor: string | null) =>
     valor === null ? null : (ramos.find((r) => r.valor === valor)?.etiqueta ?? valor)
 
@@ -153,14 +164,22 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
                 />
               </label>
               <label>
-                CIF <span className="tenue">(si lo tienes a mano)</span>
+                CIF <span className="tenue">(está en la primera página de la póliza)</span>
                 <input
                   type="text"
                   className="campo"
                   value={cif}
                   onChange={(e) => setCif(e.target.value)}
                   placeholder="B12345678"
+                  aria-invalid={cifMal || undefined}
                 />
+                {/* Se dice en cuanto se ve, no al enviar: la persona tiene el
+                    papel delante y puede volver a mirarlo. */}
+                {cifMal && (
+                  <span className="editor-error" role="alert">
+                    Ese CIF no cuadra. Cópialo tal cual aparece en la póliza.
+                  </span>
+                )}
               </label>
               {/* Se dice lo que ESTO hace y lo que NO hace. Sin esta línea, quien
                   escribe el nombre de su empresa se cree que a partir de ahora

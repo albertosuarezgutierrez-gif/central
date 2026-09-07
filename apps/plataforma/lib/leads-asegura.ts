@@ -57,6 +57,13 @@ export type LeadVista = {
    */
   titularTipo: 'propio' | 'empresa' | 'sin_preguntar'
   titularEmpresa: string | null
+  /**
+   * La ficha de la cartera que corresponde al CIF que declaró, si esa sociedad
+   * ya está fichada. `null` cubre tres casos que la pantalla dice distinto: no
+   * dijo empresa, no dio un CIF válido, o **no la tienes fichada** — que no es
+   * un fallo: es el lead.
+   */
+  fichaEmpresaId: string | null
 }
 
 export type ResultadoLeads =
@@ -142,6 +149,7 @@ export function interpretarLeads(bruto: unknown): ResultadoLeads {
       // el cliente afirmó algo que no afirmó.
       titularTipo: titularDe(f.titular),
       titularEmpresa: cadena(obj(f.titular)?.nombre),
+      fichaEmpresaId: cadena(f.fichaEmpresaId),
       subidaEn: fecha(f.subidaEn),
       documentoNombre: cadena(f.documentoNombre),
       primaAnual: numero(f.primaAnual),

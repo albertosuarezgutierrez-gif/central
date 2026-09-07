@@ -140,3 +140,49 @@ test('🚨 la pregunta se hace UNA vez, y bloquea los DOS caminos', () => {
   )
   assert.match(SUBIR, /onClick=\{abrirManual\}/, 'sigue existiendo el botón de alta a mano')
 })
+
+test('🚨 el CIF es OBLIGATORIO y VALIDADO cuando dice «de mi empresa»', () => {
+  // Alberto, 07/09/2026: «esas empresas tienen cif». Con eso el CIF deja de ser
+  // un extra y pasa a ser el identificador: agrupar por el NOMBRE parte
+  // «Transportes Ejemplo SL» y «TRANSPORTES EJEMPLO, S.L.» en dos empresas, y
+  // eso es la regla de la casa —agrupar por identidad, nunca por la etiqueta—
+  // un piso más abajo. Y uno mal tecleado es PEOR que ninguno: funde dos
+  // sociedades distintas sin que nada falle.
+  // 🪤 Se mira la LÍNEA de `listoParaSubir`, no el fichero: `cifValido` aparece
+  // también en el aviso de «ese CIF no cuadra», así que buscarlo suelto dejaba
+  // el cepo VERDE con la exigencia quitada. Se vio al romperlo.
+  const codigo = SUBIR
+  const linea = codigo.match(/const listoParaSubir =[\s\S]*?\n\n/)?.[0] ?? ''
+  assert.notEqual(linea, '', 'no se encuentra la condición de «listo para subir»')
+  assert.match(
+    linea,
+    /titularParaEnviar\.cifValido/,
+    'subir con «de mi empresa» tiene que exigir un CIF que pase el dígito de control',
+  )
+  assert.ok(
+    !/\(si lo tienes a mano\)/.test(codigo),
+    'el CIF ya no es opcional: el texto que lo decía tiene que haber caído con la regla',
+  )
+})
+
+test('🚨 el casado con la ficha se hace por HASH, nunca con el CIF en claro', () => {
+  // El índice ciego existe justamente para no sacar documentos de la BD. Un
+  // `where: { dni: cif }` funcionaría igual de bien y tiraría por tierra la
+  // razón de que el índice exista.
+  const puerto = sinComentarios(PUERTO)
+  // 🪤 No basta con que la función APAREZCA: tiene que aplicarse AL CIF. La
+  // primera versión buscaba el nombre suelto y se quedaba verde con
+  // `const h = cif`, o sea buscando por el documento en claro.
+  assert.match(
+    puerto,
+    /computeDniLookupHash\(cif\)/,
+    'el hash ciego tiene que calcularse SOBRE el CIF declarado',
+  )
+  assert.match(puerto, /dniLookupHash: \{ in:/, 'la consulta tiene que ir contra la columna del hash')
+  assert.ok(!/\bdni:\s/.test(puerto), 'no se puede consultar la columna del documento en claro')
+  assert.match(
+    puerto,
+    /const fichaCotejo = fichaEmpresaId \?\? fichaParaCotejar\(titular, clienteId\)/,
+    'con la sociedad fichada, el cotejo tiene que hacerse contra ELLA',
+  )
+})

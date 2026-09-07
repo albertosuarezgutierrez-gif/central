@@ -23,7 +23,8 @@ const OK = {
       subidaEn: '2026-09-07T10:36:53.874Z',
       documentoNombre: '04_Z11_3777894.pdf',
       primaAnual: 412.5,
-      titular: { tipo: 'empresa', nombre: 'GLOBAL 2 SL', cif: null },
+      titular: { tipo: 'empresa', nombre: 'GLOBAL 2 SL', cif: 'B91234567', cifValido: true },
+      fichaEmpresaId: null,
     },
   ],
 }
@@ -111,4 +112,16 @@ test('🚨 el titular sin respuesta NO se lee como «suya»', () => {
     const x = interpretarLeads({ ...OK, leads: [{ ...OK.leads[0], titular: basura }] })
     assert.equal(x.ok && x.leads[0].titularTipo, 'sin_preguntar', `esto debería ser sin_preguntar: ${JSON.stringify(basura)}`)
   }
+})
+
+test('🚨 «no la tienes fichada» y «no se comprobó» no se funden', () => {
+  // `fichaEmpresaId: null` con empresa declarada significa que esa sociedad NO
+  // está en la cartera — que es justo el lead. Pintarlo igual que un «no se
+  // preguntó» borraría la única señal de venta que trae la fila.
+  const sinFicha = interpretarLeads(OK)
+  assert.equal(sinFicha.ok && sinFicha.leads[0].fichaEmpresaId, null)
+  assert.equal(sinFicha.ok && sinFicha.leads[0].titularTipo, 'empresa')
+
+  const conFicha = interpretarLeads({ ...OK, leads: [{ ...OK.leads[0], fichaEmpresaId: 'c9' }] })
+  assert.equal(conFicha.ok && conFicha.leads[0].fichaEmpresaId, 'c9')
 })

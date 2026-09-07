@@ -178,9 +178,24 @@ function Fila({ l }: { l: LeadVista }) {
               «no se preguntó» son las filas de antes de que existiera la
               pregunta — no significa que sea personal. */}
           {l.titularTipo === 'empresa' && (
-            <Badge tono="info" title="Lo ha declarado el cliente al subirla. NO está dada de alta como ficha en la cartera: si quieres trabajarla como empresa, hay que crearla o casarla con la que ya tengas.">
-              De su empresa{l.titularEmpresa ? `: ${l.titularEmpresa}` : ''}
+            <Badge
+              tono={l.fichaEmpresaId === null ? 'aviso' : 'info'}
+              title={
+                l.fichaEmpresaId === null
+                  ? 'El cliente ha declarado esta empresa al subir la póliza y su CIF NO casa con ninguna ficha tuya: es una sociedad que no tienes en cartera.'
+                  : 'El CIF que declaró casa con una ficha que ya tienes. Lo que se comprueba de «¿ya es tuya?» se ha hecho contra ESA ficha, no contra la suya personal.'
+              }
+            >
+              {l.fichaEmpresaId === null ? 'Empresa NO fichada' : 'Su empresa'}
+              {l.titularEmpresa ? `: ${l.titularEmpresa}` : ''}
             </Badge>
+          )}
+          {/* Enlace a la ficha de la SOCIEDAD cuando existe: es donde se
+              trabaja esa póliza, no en la ficha personal de quien la subió. */}
+          {l.fichaEmpresaId !== null && (
+            <Link href={`/correduria/cliente/${l.fichaEmpresaId}`} style={{ fontSize: 12 }}>
+              Ver ficha de la empresa
+            </Link>
           )}
           {l.titularTipo === 'sin_preguntar' && (
             <Badge title="Se subió antes de que existiera la pregunta «¿es tuya o de tu empresa?». No significa que sea personal: significa que no consta.">
