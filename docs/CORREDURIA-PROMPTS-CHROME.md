@@ -1,7 +1,13 @@
 # Lo que tiene que hacer Alberto — prompts listos para Claude en Chrome
 
-> Actualizado el 07/09/2026. Cada bloque es un prompt independiente: **ábrelo con Claude en
-> Chrome, pega el texto y ya está.** Están ordenados por lo que desbloquean, no por dificultad.
+> Actualizado el 07/09/2026 **tras contrastarlo contra los paneles**. Cada bloque es un prompt
+> independiente: ábrelo con Claude en Chrome, pega el texto y ya está.
+>
+> 🚨 **Los §1 y §3 se dieron por hechos y eran FALSOS**: ni al token le faltaba un permiso ni
+> `GH_PAT_TRIGGER` estaba caducado. Los dos salían de leer notas del repo como si fueran el estado
+> de los paneles. Quedan tachados a propósito en vez de borrados — un doc que solo enseña lo que
+> queda por hacer no dice dónde se equivocó. **Antes de pedirle a alguien que toque un panel,
+> míralo.**
 >
 > 🚨 **Regla que aplica a todos:** ninguno de estos prompts autoriza a publicar, enviar ni
 > contratar nada. Si Claude en Chrome te pide confirmación para algo que no está escrito aquí,
@@ -9,37 +15,34 @@
 
 ---
 
-## 1. 🔑 Ampliar el permiso del token de GitHub — BLOQUEA EL BLOG ENTERO
+## 1. ~~Ampliar el permiso del token de GitHub~~ — ✅ NO HACE FALTA (comprobado 07/09/2026)
 
-**Por qué:** el `GITHUB_TOKEN` de Vercel se creó para el agente SEO de House Sevillana, que solo
-necesita **escribir ficheros**. El agente del blog necesita además **abrir un PR** y, cuando tú
-pulses «Publicar», **mezclarlo**. Con el permiso actual el artículo se escribe en la rama y el PR
-no aparece — o sea, se ve exactamente igual que si el agente no hubiera hecho nada.
+**Este punto estaba MAL y se retira.** Decía que al token de GitHub le faltaba el permiso
+«Pull requests: Read and write» y que eso bloqueaba el blog entero. Comprobado en el panel: **los
+tres PAT con acceso a `central` ya lo tienen**. El blog no está bloqueado por nada.
 
-**Cómo saber si ya está bien sin tocar nada:** si el día 1 o el 15 te llega el Telegram
-«📝 Blog ASegura — artículo listo para revisar» con un enlace a un PR, está bien. Si te llega
-«no he podido abrir el PR», es esto.
+De dónde salió el error, porque es el que este repo persigue por escrito: `secrets-registry.ts`
+describe ese token como «PAT fine-grained con Repository access = central y **Contents: Read and
+write**». Eso decía *lo que el agente SEO necesita*, no *lo que el token tiene*. Se leyó una
+descripción parcial como si fuera un inventario y se afirmó una ausencia sin mirarla.
 
-```
-Entra en https://github.com/settings/personal-access-tokens y busca el fine-grained personal
-access token que tiene acceso al repositorio albertosuarezgutierrez-gif/central (el que usa
-Vercel, no el de GitHub Actions).
+**Lo que sí salió de mirar el panel, y no lo había pedido nadie:**
 
-Dime:
-1. Qué permisos de repositorio tiene ahora mismo (la lista entera, con su nivel).
-2. Cuál es su fecha de caducidad.
+- `token` (creado el 29/07/2026): **sin acceso a ningún repo y sin ningún permiso**. Vivo e inútil.
+  Borrarlo no puede romper nada. Recomendado.
+- Hay **dos** `GH_PAT_TRIGGER` para `central` —uno caduca el 01/12/2026, el otro no caduca— con
+  propósito aparentemente idéntico. Uno sobra, pero cuál está en uso no se adivina: hay que mirar
+  el valor en los secrets del repo y en las envs de Vercel.
+- El de septiembre lleva **Workflows: Read/write**, que es más de lo que pide el mínimo. ⚠️ **No lo
+  quites a ciegas.** Medido en el repo: ningún código escribe ficheros de `.github/workflows`, y
+  para *disparar* un workflow el permiso correcto es `Actions`, no `Workflows`. Pero los pushes de
+  las rutinas automáticas van por fuera del código y podrían tocar un `.yml`; si se rompe, se rompe
+  en un cron que nadie mira. Quítalo solo después de confirmar cuál de los dos usan esas rutinas.
 
-Después, SIN cambiar ninguno de los que ya tiene, añádele el permiso
-"Pull requests" con nivel "Read and write" y guarda.
-
-No crees un token nuevo, no regeneres el valor y no cambies el Repository access.
-Si al guardar GitHub te obliga a regenerar el token, PARA y dímelo antes de hacerlo:
-regenerarlo invalidaría el valor que está puesto en Vercel y hay que actualizarlo allí también.
-```
-
-⚠️ **Si acabas regenerando el token** (porque GitHub obligue), hay que pegar el valor nuevo en
-**dos** proyectos de Vercel a la vez: `plataforma` y `sivra`. Comparten el mismo valor, y dejar
-uno viejo mata el agente SEO de House Sevillana en silencio.
+⚠️ Y una precisión sobre dónde vive esto: la **conexión Git** de Vercel va por GitHub App, no por
+PAT. El `GITHUB_TOKEN` del que se habla aquí es una **variable de entorno de runtime** que lee
+nuestro propio código (`lib/sivra/seo-landing.ts` y el cron del blog) para llamar a la API de
+GitHub — está en Vercel → Settings → **Environment Variables**, no en la integración de Git.
 
 ---
 
@@ -72,35 +75,30 @@ solo añade el TXT nuevo.
 
 ---
 
-## 3. 🔁 Renovar `GH_PAT_TRIGGER` (caducado desde el 31/08/2026)
+## 3. ~~Renovar `GH_PAT_TRIGGER`~~ — ✅ TAMPOCO ESTÁ CADUCADO (comprobado 07/09/2026)
 
-**Por qué:** es el token con el que las rutinas programadas de Claude Code se disparan solas.
-Caducado, las rutinas no arrancan y **no avisa nadie**: se ve igual que un día sin trabajo.
+Otra afirmación que el panel desmiente: decía «caducado desde el 31/08/2026». Los dos
+`GH_PAT_TRIGGER` con acceso a `central` están **vivos** — uno caduca el 01/12/2026 y el otro no
+caduca. La creencia venía de una nota de sesión anterior que nadie había vuelto a contrastar.
 
-```
-Entra en https://github.com/settings/personal-access-tokens y busca el token llamado
-GH_PAT_TRIGGER (o el que tenga ese propósito: disparar workflows del repo
-albertosuarezgutierrez-gif/central).
+Lo que sí queda pendiente aquí es la limpieza descrita en el §1: **dos tokens con el mismo
+propósito** y uno **sin permisos ni repos** (`token`, del 29/07). Eso es higiene, no una avería.
 
-Dime su estado y su fecha de caducidad. Si está caducado, regenéralo con la MISMA configuración
-que tenía (mismos permisos, mismo Repository access) y caducidad de 1 año.
-
-Cuando tengas el valor nuevo, NO me lo pegues en el chat. Ve directamente a
-https://github.com/albertosuarezgutierrez-gif/central/settings/secrets/actions y actualiza
-con él el secret que corresponda, y dime solo el nombre del secret que has actualizado.
-```
+⏰ El de diciembre sí caduca. Cuando llegue el aviso de GitHub, renuévalo con la MISMA
+configuración y actualiza el secret del repo — sin tocar el otro hasta saber cuál usa cada cosa.
 
 ---
 
-## 4. ▶️ Reactivar la rutina `agente-correduria` (está pausada)
+## 4. ▶️ Reactivar la rutina `agente-correduria` — ✅ HECHO (07/09/2026)
 
-```
-Entra en https://claude.ai/settings y busca en las rutinas programadas (Routines) la que se
-llama agente-correduria. Dime desde cuándo está pausada, cuál es su horario y cuándo fue su
-última ejecución con éxito.
+Ya está reactivada; no tienes que hacer nada. Estaba pausada desde el 1 de septiembre.
 
-No la reactives todavía: enséñame primero el prompt que tiene guardado.
-```
+Antes de reactivarla se leyó su prompt: prohíbe expresamente contactar clientes, leads, compañías y
+Codeoscopic (siempre borradores), no saca PII en informes y **no tarifica** — o sea, no gasta. Solo
+lee la cartera, busca novedades del sector y deja informe en `docs/AGENTES-BITACORA.md` por PR.
+
+Corre los **martes a las 05:30 UTC** (07:30 en España). Si la habías pausado a propósito, se vuelve
+a parar desde `claude.ai/settings` → Routines.
 
 ---
 
@@ -135,8 +133,9 @@ No respondas a ninguna reseña, no publiques ninguna novedad y no subas ninguna 
 
 ## Qué NO tienes que hacer
 
-- **No hay que tocar nada en Vercel** para que el blog funcione: el cron ya está declarado y el
-  token ya existe (solo le falta el permiso del punto 1).
+- **No hay que tocar nada para que el blog funcione.** El cron está declarado y el token tiene los
+  permisos que hacen falta (§1). Lo único que queda de tu lado es el §2 (Search Console), que no
+  bloquea nada: amplía de qué temas escribe, y la cola aguanta ~4 meses sin él.
 - **No hay que aprobar nada en GitHub.** Los artículos se aprueban en `/correduria` → pestaña
   **Redes**, con dos botones. El PR existe para que los tests del repo revisen el artículo antes
   que tú, no para que entres ahí.
