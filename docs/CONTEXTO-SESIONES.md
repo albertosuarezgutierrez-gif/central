@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏠 El hogar dice QUÉ CASA es, y la dirección deja de estar escondida (07/09/2026).** Alberto:
+  «hogar poner direccion… el número de póliza nadie se lo sabe». Tres cosas debajo, medidas: (1) sus
+  dos Occident tienen `datos_especificos` a NULL — la dirección vive en una fila GEMELA duplicada
+  del volcado (misma póliza, otra aseguradora), y le pasa a **11 de las 19 hogar vivas**; (2) donde
+  sí hay dirección viene **cifrada** y el portal no descifraba: habría pintado el `v1:…` como título;
+  (3) esas dos eran de su padre vistas como TERCERO, donde la dirección estaba capada a propósito.
+  **Decisión de Alberto: la dirección se ve desde el nivel más bajo** (en un hogar hace de matrícula)
+  → sale de `NUNCA_A_UN_TERCERO` y `TARJETA.direccionRiesgo = true`, con **consentimiento v2**
+  (`v2-2026-09-07`) que ahora lo dice. Rescate por gemela emparejando también por `fecha_inicio`: 10
+  de 11, y la ambigua (dos gemelas, 41011 vs 41001) se queda SIN dirección a propósito.
+  ⏳ **Pendiente de Alberto: `PII_ENCRYPTION_KEY` en el Vercel de `asegura-portal`** — sin ella solo
+  sale «41002 SEVILLA» / «11520 ROTA», no la calle, y eso no se ve en ningún log.
+
 - **✅ Mergeado y PROBADO en producción (07/09/2026, PR #2571 → `6a567537`).** Los 12 requeridos en
   verde y desplegado (`dpl_Et6yoY…`, target production, READY; el portal responde 200 sirviendo ese
   deployment). Medido contra la cartera real: la póliza de la captura de Alberto —Occident

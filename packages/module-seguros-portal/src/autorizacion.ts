@@ -164,12 +164,19 @@ const NUNCA_A_UN_TERCERO = {
   // enseñando al dejar ver sus seguros. Ni siquiera con `ver_economico`, que
   // abre lo ECONÓMICO de la póliza y no los sucesos de quien la tiene.
   siniestros: false,
-  // La dirección de un hogar asegurado es la casa donde duerme el otorgante.
-  // Es un dato de la PERSONA, no del contrato: quien recibe «ver mis seguros»
-  // no está pidiendo —ni cree estar dando— dónde vive. Fuera hasta con
-  // `ver_economico`. Cuando quien cede es una SOCIEDAD esto no aplica: la
-  // dirección de una nave es un dato de la empresa (ver `NUNCA_NI_REPRESENTANDO`).
-  direccionRiesgo: false,
+  // 🚨 `direccionRiesgo` ESTUVO AQUÍ hasta el 07/09/2026, con este argumento:
+  // «la dirección de un hogar asegurado es la casa donde duerme el otorgante,
+  // un dato de la PERSONA y no del contrato». Lo quitó Alberto a propósito, no
+  // por descuido: en un hogar la dirección es lo que IDENTIFICA el bien —el
+  // papel de la matrícula en un auto—, y sin ella dos pólizas de hogar de la
+  // misma compañía son dos filas idénticas para quien las mira. Se le ofreció
+  // la alternativa de enseñar solo la localidad y eligió la dirección entera.
+  // El detalle, en el docblock del campo en `acceso.ts`.
+  //
+  // Consecuencia que conviene tener escrita: quien concede «ver mis seguros»
+  // (alcance `ver`) está dando también dónde está el inmueble asegurado. El
+  // texto del consentimiento tiene que decirlo — si no lo dice, el problema
+  // está ahí, no aquí.
   abrirParte: false,
   crearPeticiones: false,
   autorizarTerceros: false,

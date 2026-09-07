@@ -341,7 +341,7 @@ test('aceptar crea la autorizacion SIEMPRE por identidad, y en la misma transacc
     'nace ya aceptada: el acto de aceptar la invitación ES la segunda firma',
   )
   assert.ok(
-    /versionTexto:\s*esJuridica\s*\?\s*TEXTO_REPRESENTACION_V1\s*:\s*TEXTO_AUTORIZACION_V1/.test(LIB_CODIGO),
+    /versionTexto:\s*esJuridica\s*\?\s*TEXTO_REPRESENTACION_V1\s*:\s*TEXTO_AUTORIZACION_V2/.test(LIB_CODIGO),
     'sin saber QUÉ texto se aceptó, el consentimiento no se puede demostrar (art. 7.1 RGPD)',
   )
 })
