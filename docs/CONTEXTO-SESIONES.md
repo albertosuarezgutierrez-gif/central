@@ -39,6 +39,22 @@
   que la cita fuera CIERTA. 🚨 El `GITHUB_TOKEN` de Vercel tiene `Contents` pero **no `Pull requests`**: con
   eso el artículo se escribe y el PR no se abre — se ve igual que «el agente no ha hecho nada», así que el
   cron lo dice con el motivo. Prompts para Alberto en `docs/CORREDURIA-PROMPTS-CHROME.md`. PR pendiente.
+- **📊 Las tres baldosas de la bóveda: el helper puro, medido antes de escribirlo (07/09/2026).**
+  Alberto, viendo el panel de ejemplo de `grupoasegura.es`: «lo ideal es que sea igual la intranet,
+  y ese diseño que aparece en la web es mejor que el que hay ahora». Pero ese panel son 5 pólizas
+  escritas a mano y **todas completas**. Medido en `seguros.polizas` antes de diseñar nada: 111 vivas
+  · 111 con vencimiento · **85 con prima, 26 SIN NINGUNA** · 0 con neta pero sin bruta. O sea: casi
+  1 de cada 4 no tiene importe, así que «Al año» sumando las 85 sería un total MÁS BAJO que la
+  realidad y con pinta de correcto. `resumirCartera()` (`@central/module-seguros-portal`) devuelve
+  `gastoAnual: null` (nunca 0), `sinPrima`, `vencidas` y `sinFecha` por separado, y suma **solo la
+  bruta** (no mezcla unidades con la neta; no cuesta cobertura porque `solo_neta = 0`).
+  🚨 Y el mock de la web tiene un fallo real: la baldosa dice «Próximo» y el valor es `activas[0]`,
+  la primera fila del array. Aquí es el mínimo **futuro**: una fecha pasada no puede salir bajo esa
+  palabra (hay vivas ya vencidas). 11 cepos, los tres clave vistos ROJOS.
+  ⚠️ Ojo con el arnés: `node --test --import tsx` NO existe en este paquete y ponía los 11 en rojo
+  pase lo que pase — el comando bueno es el de su `package.json` (`node --test src/*.test.ts`).
+  Pendiente: pintar las baldosas en `/boveda` y arreglar `PanelDemo.tsx` de `asegura-web`.
+  PR #2481 mergeado antes (agrupación por titular + Recibos/Siniestros + Fraunces).
 
 - **🔤 El portal se parece por fin a la web: Fraunces en el titular, y el h1 de 24 a 32 px (07/09/2026).**
   Alberto: «el diseño no es muy parecido a la web… se puede hacer mejor y más acorde». ⚠️ Iba a decirle que

@@ -20,29 +20,24 @@
 //
 // 🚨 Lo que enseña NO es un dato: es un EJEMPLO, y lo dice en la propia
 // ventana. Un panel de portada con pólizas, compañías y vencimientos de
-// aspecto real es justo lo que alguien puede leer como su situación.
+// aspecto real es justo lo que alguien puede leer como su situación. Por eso la
+// barra de la ventana ya NO dice «En vivo» junto a la insignia «Ejemplo»: las
+// dos etiquetas convivían a dos centímetros y la que late gana.
+//
+// ⚠️ Y las filas y la cuenta viven en `lib/panel-demo.ts`, no aquí, porque aquí
+// no se pueden comprobar. La baldosa «Próximo» enseñaba `activas[0]` —la
+// primera fila del array— y con las filas en el orden en que están escritas eso
+// llegaba a decir «12 mar» teniendo «15 ene» encendida.
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-/** Filas de ejemplo. Las compañías son las que de verdad hay en cartera. */
-const FILAS = [
-  { slug: 'hogar', ramo: 'Hogar', compania: 'Mapfre', vence: '12 mar', prima: 312 },
-  { slug: 'auto', ramo: 'Auto', compania: 'Allianz', vence: '04 jun', prima: 468 },
-  { slug: 'vida-y-salud', ramo: 'Salud', compania: 'Occident', vence: '28 sep', prima: 690 },
-  { slug: 'comunidades', ramo: 'Comunidad', compania: 'Mapfre', vence: '15 ene', prima: 1140 },
-  { slug: 'comercio', ramo: 'Comercio', compania: 'Reale', vence: '02 nov', prima: 540 },
-] as const
-
-/** Las tres que entran solas en el guion. Las otras dos las enciende quien mire. */
-const GUION = ['hogar', 'auto', 'vida-y-salud'] as const
-
-const eur = (n: number) =>
-  `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`
+import { FILAS, GUION, etiquetaVence, eur, proximaEnVencer } from '@/lib/panel-demo'
 
 const espera = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 export default function PanelDemo() {
   const [on, setOn] = useState<string[]>([])
   const [fase, setFase] = useState<'reuniendo' | 'listo'>('reuniendo')
+  const [hoy, setHoy] = useState<Date | null>(null)
   const [inclina, setInclina] = useState({ x: 0, y: 0 })
   const caja = useRef<HTMLDivElement>(null)
   const cancelado = useRef(false)
@@ -57,6 +52,7 @@ export default function PanelDemo() {
   }, [])
 
   useEffect(() => {
+    setHoy(new Date())
     reduce.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduce.current) {
       setOn([...GUION])
@@ -133,6 +129,11 @@ export default function PanelDemo() {
 
   const activas = FILAS.filter((f) => on.includes(f.slug))
   const total = activas.reduce((s, f) => s + f.prima, 0)
+  // 🚨 `hoy` se resuelve DESPUÉS de montar y no durante el render: el servidor y
+  // el navegador darían dos fechas distintas y React avisaría de desajuste de
+  // hidratación. Hasta que llega, la baldosa dice «—», que es lo que
+  // corresponde a un dato que aún no se tiene.
+  const proxima = hoy ? proximaEnVencer(activas, hoy) : null
 
   return (
     <div>
@@ -157,11 +158,13 @@ export default function PanelDemo() {
       </div>
 
       <div className="mock-marco">
-        {/* Distintivo «En vivo», con el punto que late — el de ia.rest, con su
-            onda de `box-shadow` de 1,8 s. */}
+        {/* El punto que late — el de ia.rest, con su onda de `box-shadow` de
+            1,8 s. 🚨 El texto NO dice «En vivo»: lo de dentro son cinco pólizas
+            inventadas y la insignia de la barra ya lo declara. Un distintivo que
+            late diciendo «en vivo» pesa más que una etiqueta quieta. */}
         <span className="mock-vivo">
           <span className="mock-latido" />
-          {fase === 'reuniendo' ? 'Reuniendo pólizas…' : 'En vivo'}
+          {fase === 'reuniendo' ? 'Reuniendo pólizas…' : 'Así se ve'}
         </span>
         <div
           ref={caja}
@@ -191,7 +194,7 @@ export default function PanelDemo() {
               </div>
               <div className="mock-tile">
                 <span>Próximo</span>
-                <strong>{activas[0]?.vence ?? '—'}</strong>
+                <strong>{proxima ? etiquetaVence(proxima) : '—'}</strong>
               </div>
             </div>
 
@@ -203,7 +206,7 @@ export default function PanelDemo() {
                   <li key={f.slug}>
                     <span className="mock-ramo">{f.ramo}</span>
                     <span className="mock-cia">{f.compania}</span>
-                    <span className="mock-vence">vence {f.vence}</span>
+                    <span className="mock-vence">vence {etiquetaVence(f)}</span>
                   </li>
                 ))}
               </ul>

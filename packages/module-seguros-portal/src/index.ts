@@ -227,5 +227,8 @@ export type { EstadoHoja, SeleccionHoja, ErrorSeleccion } from './hoja-qr.ts'
 // mismo nombre son dos titulares, y fundirlas mezcla sus pólizas en silencio.
 export { GRUPOS_CARTERA, TITULO_GRUPO, agruparCartera, grupoDeTitular } from './agrupar-cartera.ts'
 export type { GrupoCartera, TitularAgrupable, BloqueCartera } from './agrupar-cartera.ts'
+
+export { resumirCartera } from './resumen-cartera.ts'
+export type { PolizaResumible, ResumenCartera } from './resumen-cartera.ts'
 export { elegirFicha, prediccionDeVinculo } from './vinculo-elegir.ts'
 export type { Candidato, FichaElegida, PrediccionVinculo } from './vinculo-elegir.ts'
