@@ -176,6 +176,26 @@
   el correo cifrado y `apps/asegura` lo LEE (es la que tiene correo y BYPASSRLS; un guardián prohíbe
   al portal importar transporte de correo). Medido: 6 obligaciones en toda la BD, 0 avisadas, 0 en
   ventana — el cron mandando cero hoy es correcto y NO prueba que esté apagado.
+- **🏢 «Si sube pólizas a nombre de empresa, se pregunta» — y el CIF es el identificador (07/09/2026).**
+  Dictado de Alberto, y **corrige un análisis mío de la misma sesión**: yo había mezclado dos cosas que
+  NO dependen una de la otra. **Etiquetar** lo que sube («esto es de mi empresa») no necesita nada —es
+  un dato suyo, con el PDF delante—; **acceder** a la cartera que ya tienes de esa empresa sí exige
+  ficha y autorización. Contesté que no se podía y sí se podía.
+  Ahora se pregunta al subir (y al añadir a mano): `propio` · `empresa` · **`sin_preguntar` = NULL**,
+  que son todas las filas anteriores y no significa «suya». Es una **declaración, no un vínculo**: no
+  crea ficha de sociedad ni la casa sola.
+  🔑 **Y con «esas empresas tienen cif» el diseño mejoró**: el CIF pasa de extra opcional a IDENTIDAD —
+  agrupar por nombre parte «Transportes Ejemplo SL» de «TRANSPORTES EJEMPLO, S.L.». Se valida el dígito
+  de control (`validarNifCif`, ya existía) y se casa con la cartera por **índice ciego**
+  (`computeDniLookupHash` ↔ `clientes.dni_lookup_hash`, hash contra hash). Con eso, si la sociedad está
+  fichada el «¿ya la llevo yo?» se comprueba **contra ella** y no contra la ficha personal de quien
+  sube —antes una póliza que su empresa ya tenía contigo salía como oportunidad—; y si no lo está, sale
+  «Empresa NO fichada», que ES el lead. PR **#2566**.
+  ⚠️ Pendiente y sabido: el tomador (nombre + CIF) se podría LEER del PDF, pero **toda póliza lleva dos
+  CIF** —el del tomador y el de la compañía, que también pasa el dígito de control—, así que se pedirá
+  el tomador ENTERO y como sugerencia a confirmar, nunca autorrelleno. En renting/leasing el tomador es
+  la financiera, no su empresa.
+
 - **🔓 Salir, ver quién entra, y que lo que sube el cliente LLEGUE a Alberto (07/09/2026).**
   Tres cosas del portal del cliente, y las tres nacen de un agujero medido, no de una idea.
   (1) **No había botón de cerrar sesión** y la cookie dura 30 días: la única salida era borrarla a mano.
