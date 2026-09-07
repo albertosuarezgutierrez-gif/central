@@ -48,6 +48,16 @@
   sin horario), pero su categoría es **«Agencia de seguros»** —agente, lo contrario de corredor y de la
   clave DGSFP CS-F/0170— y su nombre «Grupo ASegura tu corredor de Seguros» ≠ `MEDIADOR.marca`: **NAP
   roto**. Falta su URL canónica de Maps para cerrar el `sameAs` y desbloquear `geo`.
+- **🧾 Subir una factura a mano ya la ARCHIVA y la CONTABILIZA, no solo la lee (07/09/2026).**
+  Alberto subió una factura al agente contable dando por hecho que se archivaba: no lo hacía. La rama
+  factura de `lib/contable/documentos.ts` leía el documento, proponía conciliar el cargo y **tiraba el
+  fichero** — archivar en Drive e imputar a `gastos` solo pasaba con lo que entraba por CORREO. Ahora la
+  subida manual pasa por la maquinaria CANÓNICA del agente de correo (`subir` + `procesarFactura`, con su
+  dedupe por huella), así que **las tres bocas** (chat web, 📎 de Telegram y el botón nuevo) archivan e
+  imputan igual. 🚨 `gastos` NO tiene `cuenta_id`: si la sesión no es la dueña del libro (misma resolución
+  que `facturas-scan`) **no se sube ni se imputa nada** y se DICE (`decision: null` = «no intentado», no
+  «no hay»). Botón 🧾 en la cabecera (icono solo en móvil: la barra de 52px no admite etiqueta a 320px).
+  Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
 
 - **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
   `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
