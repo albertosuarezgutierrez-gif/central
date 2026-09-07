@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T06:57:40Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T09:12:51Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1289 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1290 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -56,7 +56,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (132):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor…
-- **Rutas API:** 348
+- **Rutas API:** 349
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (07/09/2026) 🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD
-- (07/09/2026) 🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código
-- (07/09/2026) 🧹 «Mergea todo» = 2 de 10, y el orden decide si el resultado es VERDADERO
-- (07/09/2026) 🌍 La web de la correduría vendía «en Sevilla» y se vende en TODA ESPAÑA
-- (07/09/2026) 🔀 buscador-ia: embeddings muertos desde enero → swap a OpenRouter
-- (07/09/2026) 💰 Ciclo semanal de pricing SIVRA completo, los 4 pisos
-- (06/09/2026) 🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo
-- (06/09/2026) 👀 «No aparecen siniestros ni recibos» en el portal: NO era un bug, era el alcance
-- (06/09/2026) 📮 Canario del formulario público: que no vuelva a morir en silencio
-- (06/09/2026) 🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo
+- (07/09/2026) 📝 Blog de la correduría: tres artículos y el enlazado en los dos sentidos
+- (07/09/2026) 💸 SIVRA pricing: el huésped de Booking paga el 67% del Standard Rate, y está MEDIDO en el extranet
+- (07/09/2026) ⛽ El cruce ofrecía un cargo ANTERIOR a la factura, y se confirmó de un clic
+- (07/09/2026) 🔵 `asegura-web` no tenía icono de pestaña — el «AS» negro era de OTRA app
+- (07/09/2026) 🏷️ El muro de `asegura-web` ya tiene logos — y no «fallaban»: no existían
+- (07/09/2026) 🚪 Cerrado el amplificador de correo del portal del cliente
+- (07/09/2026) 📵 La foto de la factura no llegaba a salir del móvil: el cuerpo moría antes de la función
+- (07/09/2026) 🔗 `sameAs`: la web y el canal de YouTube declarados como el MISMO negocio
+- (07/09/2026) 📣 LinkedIn: seis borradores en el repo, bajo el MISMO cepo regulatorio que la web
+- (07/09/2026) 🧾 Subir una factura a mano ya la ARCHIVA y la CONTABILIZA, no solo la lee
 
