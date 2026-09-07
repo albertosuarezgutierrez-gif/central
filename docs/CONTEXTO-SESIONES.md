@@ -38,6 +38,21 @@
   de quien otorga, no las de la ficha en pantalla. Solo cubre persona↔persona (alcance «ver»): un
   apoderamiento inverso de una sociedad sigue anotándose desde su propia ficha.
 
+- **🏍️ Presupuesto de moto SIN póliza, dentro de plataforma (07/09/2026, PR #2553, mergeado).**
+  Continuación del bullet siguiente: Alberto — *«hay que construir todo»* — confirmó moto pese a su
+  volumen mínimo (1 póliza en toda la cartera). Mismo patrón que auto/hogar-nuevo, con las 4
+  diferencias reales de `MotorcycleRisk` sobre `CarRisk` (`drivingExperience` obligatorio con supuesto
+  «ya ha llevado esta moto», `previousMotorcycle.code` condicional, sin `secondaryDriver`/`lightTrailer`),
+  y el id del ramo resuelto SIEMPRE contra `GET /insurance-lines` (a diferencia de auto, que ya tiene
+  `'Car'` confirmado a fuego). **RC sigue sin ramo en Codeoscopic** (confirmado por segunda vez, matriz
+  de Integra); **decesos/vida/salud quedan bloqueados**: nadie ha sacado su contrato de riesgo del
+  portal (a diferencia de hogar, que salió de una captura real) — hace falta que Alberto suba capturas
+  de esos formularios de Avant2 antes de poder construirlos sin arriesgar cotizaciones mal formadas
+  contra dinero real. La reconciliación con CIMA que pidió Alberto ya está cubierta por diseño: el
+  pipeline emisión→CIMA es ramo-agnóstico y sigue apagado tras `CODEOSCOPIC_EMISION_ACTIVA`. Verificado:
+  tsc 0 en asegura+plataforma, 296 tests `node --test` en asegura (20 nuevos) + 2656 en plataforma,
+  guardianes de gasto/aislamiento/tokens en verde, sin secretos filtrados al cliente.
+
 - **🚗🏠 Presupuesto de auto y hogar SIN póliza, dentro de plataforma (07/09/2026, PR #2546, mergeado).**
   Alberto: el botón de hogar saltaba a `apps/asegura` (otro dominio/sesión) — *«no quiero que me
   desvíe a otra página»* — y luego *«haz todos los ramos no solo hogar»*. Ambas oportunidades nuevas
