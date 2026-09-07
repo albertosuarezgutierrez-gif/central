@@ -37,6 +37,24 @@ export type TemaBlog = {
 }
 
 /**
+ * 🚨 ANTES DE AÑADIR UN TEMA: léelo contra lo que YA hay publicado.
+ *
+ * Dos páginas que responden la misma pregunta no suman, se restan: compiten
+ * entre sí por la misma búsqueda y Google reparte lo que habría ido a una.
+ *
+ * Caso fundacional (07/09/2026, el mismo día de crear esta cola): el tema
+ * `me-han-subido-el-recibo-sin-avisar` —«me han cobrado el seguro más caro sin
+ * avisarme», artículo 22— respondía exactamente lo mismo que el artículo ya
+ * publicado `me-han-subido-el-seguro-en-la-renovacion`, con la MISMA norma. Se
+ * retiró. Y `cuanto-tarda-en-pagar-un-seguro-un-siniestro` rozaba a
+ * `siniestro-denegado-que-hacer`, así que su ángulo dice ahora en voz alta en
+ * qué se distingue: uno es el pago que se retrasa, el otro el que se niega.
+ *
+ * El cepo de `blog-agente.test.ts` caza la forma DURA (mismo slug que un
+ * artículo publicado). La forma blanda —mismo tema con otras palabras— no la
+ * puede juzgar un test léxico sin dar falsos positivos, y un cepo que no caza
+ * lo que promete es peor que no tenerlo. Esa la juzga quien añade el tema.
+ *
  * Temas aprobados, en orden. El agente coge el primero que no esté publicado.
  *
  * Todos se responden con normas ya verificadas contra el BOE
@@ -54,18 +72,10 @@ export const TEMAS: readonly TemaBlog[] = [
     ramos: ['hogar', 'auto'],
   },
   {
-    slug: 'me-han-subido-el-recibo-sin-avisar',
-    consulta: 'me han cobrado el seguro más caro sin avisarme',
-    angulo:
-      'Qué pasa cuando el recibo llega con una prima distinta a la del año anterior sin comunicación previa, y qué margen deja el plazo de oposición.',
-    normas: ['lcs-22'],
-    ramos: ['hogar', 'auto', 'comunidades'],
-  },
-  {
     slug: 'cuanto-tarda-en-pagar-un-seguro-un-siniestro',
     consulta: 'cuánto tarda el seguro en pagar un siniestro',
     angulo:
-      'Los plazos reales: el importe mínimo a los cuarenta días, cuándo empieza a correr la mora y qué se puede hacer mientras la peritación sigue abierta.',
+      'Los plazos reales cuando la compañía SÍ acepta el siniestro y aun así no paga: el importe mínimo a los cuarenta días, cuándo empieza a correr la mora y qué hacer mientras la peritación sigue abierta. El rechazo ya lo cubre el artículo publicado «siniestro-denegado-que-hacer»: aquí se habla del pago que se retrasa, no del que se niega.',
     normas: ['lcs-18', 'lcs-20'],
     ramos: ['hogar', 'comercio'],
   },
@@ -84,6 +94,46 @@ export const TEMAS: readonly TemaBlog[] = [
       'Qué es un corredor, en qué se distingue de un agente vinculado a una compañía, y quién paga su trabajo. Sin comparar precios: explicando la figura.',
     normas: [],
     ramos: ['hogar', 'comercio'],
+  },
+  {
+    slug: 'que-es-la-franquicia-de-un-seguro',
+    consulta: 'qué es la franquicia de un seguro y cuándo se paga',
+    angulo:
+      'Qué significa la franquicia en la práctica: quién adelanta el dinero, en qué siniestros se descuenta y por qué una póliza con franquicia no es una póliza peor. Sin comparar precios: explicando el mecanismo.',
+    normas: [],
+    ramos: ['auto', 'hogar'],
+  },
+  {
+    slug: 'quien-puede-conducir-mi-coche',
+    consulta: 'puede conducir mi coche otra persona con mi seguro',
+    angulo:
+      'Quién está cubierto al volante de un coche que no es suyo, qué es un conductor ocasional y qué cambia si hay un conductor habitual declarado distinto del que iba conduciendo.',
+    normas: [],
+    ramos: ['auto', 'flota'],
+  },
+  {
+    slug: 'seguro-de-la-comunidad-o-el-mio',
+    consulta: 'qué cubre el seguro de la comunidad y qué el de mi piso',
+    angulo:
+      'Dónde acaba el seguro del edificio y dónde empieza el del piso cuando hay una fuga o una humedad, y por qué a veces intervienen los dos. El caso concreto que más se consulta en una comunidad.',
+    normas: [],
+    ramos: ['comunidades', 'hogar'],
+  },
+  {
+    slug: 'responsabilidad-civil-de-un-negocio-pequeno',
+    consulta: 'qué seguro de responsabilidad civil necesita un negocio pequeño',
+    angulo:
+      'Qué cubre una responsabilidad civil de explotación, en qué se distingue de la patronal y de la de producto, y qué preguntas hay que responder antes de fijar el capital. Sin recomendar un importe concreto.',
+    normas: [],
+    ramos: ['comercio', 'responsabilidad-civil'],
+  },
+  {
+    slug: 'vendo-el-coche-que-pasa-con-el-seguro',
+    consulta: 'qué pasa con el seguro si vendo el coche',
+    angulo:
+      'Qué ocurre con la póliza al transmitir el vehículo, qué hay que comunicar y a quién, y por qué el seguro no desaparece solo con la venta. Distinto de darla de baja al vencimiento.',
+    normas: [],
+    ramos: ['auto'],
   },
 ] as const
 
