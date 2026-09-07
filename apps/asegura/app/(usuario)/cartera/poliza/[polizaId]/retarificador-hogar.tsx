@@ -16,6 +16,7 @@ import {
   type Resumen,
 } from '@/lib/codeoscopic/resumen-hogar'
 import type { Veredicto } from '@/lib/codeoscopic/contador'
+import { formatearErrorVendor } from '@/lib/codeoscopic/error-vendor'
 import { eur } from '@/lib/dinero'
 
 type Consumo = { veredicto: Veredicto; gastadoMes: string } | { error: string }
@@ -451,10 +452,11 @@ export default function RetarificadorHogar({
           <div className="err" style={{ marginTop: 12 }}>
             {resultado.clase === 'tope' && '🛑 Tope alcanzado: '}
             {resultado.clase === 'ramo' && '🚫 Ramo: '}
-            {resultado.clase === 'vendor' &&
-              '⚠️ Respuesta del vendor (entera, porque dice qué campo del contrato sobra o falta): '}
+            {resultado.clase === 'vendor' && '⚠️ El vendor ha rechazado la petición: '}
             {resultado.clase === 'otro' && '⚠️ '}
-            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{resultado.mensaje}</span>
+            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {resultado.clase === 'vendor' ? formatearErrorVendor(resultado.mensaje) : resultado.mensaje}
+            </span>
             {resultado.clase === 'vendor' && (
               <p className="muted" style={{ fontSize: 12 }}>
                 Si es un 400 de validación, NO se ha cobrado. Un timeout o un 5xx sí cuentan como gastados.

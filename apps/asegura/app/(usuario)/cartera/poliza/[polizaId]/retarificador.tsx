@@ -10,6 +10,7 @@ import type {
   VersionCandidata,
 } from '@/lib/codeoscopic/desde-cartera'
 import type { Veredicto } from '@/lib/codeoscopic/contador'
+import { formatearErrorVendor } from '@/lib/codeoscopic/error-vendor'
 import { eur } from '@/lib/dinero'
 
 type Consumo = { veredicto: Veredicto; gastadoMes: string } | { error: string }
@@ -802,7 +803,7 @@ export default function Retarificador({
         {resultado.estado === 'error' && (
           <p className="err" style={{ marginTop: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}
-            {resultado.mensaje}
+            {formatearErrorVendor(resultado.mensaje)}
           </p>
         )}
 
