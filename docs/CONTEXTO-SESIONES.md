@@ -30,6 +30,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **⛽ El cruce ofrecía un cargo ANTERIOR a la factura, y se confirmó de un clic (07/09/2026).**
+  Con el flujo ya vivo, Alberto subió una factura de gasolina de **40,00€ del 07/09** y el agente le
+  ofreció conciliarla con un cargo del **19/07 — 50 días ANTES**. Le dio a «Sí». Ese cargo era otro
+  repostaje: en esa gasolinera hay **CINCO cargos de exactamente 40,00€** (medido en BD), así que el
+  importe no identifica a ninguno. Conciliación revertida a mano (`4dacd9fb`, vuelve a
+  `conciliado=false`). 🚨 La causa era una **contradicción del código consigo mismo**: el comentario
+  de `VENTANA_ANCHA` decía «puede cargarse bastante DESPUÉS de la fecha de la factura» mientras el
+  SQL usaba `ABS(...)`, o sea aceptaba los dos lados — y **un cargo anterior no puede pagar una
+  factura que aún no existía**. Ahora la ventana ancha es **asimétrica** (solo hacia adelante) y,
+  si hay **más de un** candidato libre del mismo importe, se enseñan todos y **no se propone
+  ninguno** (`varios_candidatos`): un botón ahí pide un clic a ciegas y ata el P&L al movimiento
+  equivocado sin que nada falle. ⚠️ Hipótesis descartada MIDIENDO: no era falta de cobertura — las
+  dos cuentas llegan a hoy. Y el guardián `regression-sql-fecha-parametro` cazó de paso un
+  `date + bigint` (42883) en mi propio SQL, que solo habría reventado en runtime. 5 cepos en rojo.
+
 - **📵 La foto de la factura no llegaba a salir del móvil: el cuerpo moría antes de la función (07/09/2026).**
   Con el archivado ya mergeado (#2474), Alberto probó a subir la factura y volvió a leer «se me ha cortado la
   conexión» — y le di el visto bueno sin haber probado el flujo, que es el error de método de la sesión. En
