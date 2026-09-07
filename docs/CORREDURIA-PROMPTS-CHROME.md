@@ -119,8 +119,9 @@ Haz estos cuatro cambios y ve confirmándome uno a uno:
    Si esa categoría exacta no existe en el desplegable, dime qué opciones parecidas hay y espera.
 
 2. Nombre del negocio: déjalo exactamente como "Grupo ASegura".
-   Se escribe con A y S mayúsculas: la "AS" es el monograma del logo (A de Alberto, S de Suárez).
-   Ni "Grupo Asegura" ni "Grupo asegura".
+   Las DOS primeras letras van en mayúscula: la "AS" es el monograma del logo (A de Alberto,
+   S de Suárez), así que la ese minúscula no es una errata de estilo, se come la marca.
+   Cópialo de esta línea tal cual en vez de teclearlo.
 
 3. Horario: dime qué horario tiene puesto ahora mismo. NO lo cambies: quiero verlo antes.
 
