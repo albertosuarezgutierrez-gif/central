@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✅ Mergeado y PROBADO en producción (07/09/2026, PR #2571 → `6a567537`).** Los 12 requeridos en
+  verde y desplegado (`dpl_Et6yoY…`, target production, READY; el portal responde 200 sirviendo ese
+  deployment). Medido contra la cartera real: la póliza de la captura de Alberto —Occident
+  547875907, RC— tiene **10 coberturas y las 10 con nombre**, o sea el «y 6 más» que él veía eran
+  R.C. Cruzada, Post-trabajos, Defensa penal y reclamación de daños, Defensa ante la inspección de
+  trabajo, R.C. Profesional técnico dependiente y Liberación de gastos. Y los helpers, ejecutados
+  con los siniestros REALES: «Alcala de Guadaira (Sevilla) · Chinita salta al parabrisas
+  rompíendolo.» — provincia traducida del código 41, ciudad des-mayusculada, descripción entera, y
+  sin lugar ni comentario no se pinta nada.
+
 - **🗒 El siniestro dice QUÉ pasó (07/09/2026).** «También dar acceso a toda la información de los
   siniestros». Medida la tabla antes de tocar (69 filas): lo único con contenido que no se enseñaba
   era `comentario` (66/69) y el lugar (8/69); `gravedad`, los dos importes, `se_considera_culpable`
