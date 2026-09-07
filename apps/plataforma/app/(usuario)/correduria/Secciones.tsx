@@ -1,5 +1,5 @@
 'use client'
-import { ListChecks, Users, Shield, Receipt, TriangleAlert } from 'lucide-react'
+import { ListChecks, Users, Shield, Receipt, TriangleAlert, Megaphone } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { SECCIONES, type Seccion, type Contador } from './secciones'
 
@@ -32,6 +32,7 @@ const META: Record<Seccion, { label: string; Icono: LucideIcon }> = {
   cartera: { label: 'Cartera', Icono: Shield },
   comisiones: { label: 'Comisiones', Icono: Receipt },
   datos: { label: 'Datos', Icono: TriangleAlert },
+  redes: { label: 'Redes', Icono: Megaphone },
 }
 
 export type ContadoresSeccion = Partial<Record<Seccion, {
