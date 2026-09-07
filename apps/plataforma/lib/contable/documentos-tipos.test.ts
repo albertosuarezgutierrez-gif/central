@@ -208,7 +208,8 @@ test('Drive falla pero el gasto entra → se avisa del descuadre, no se calla', 
     carpeta: null, url: null, driveError: true, decision: 'bandeja',
   })
   assert.match(t, /NO he podido archivarla en Drive/)
-  assert.match(t, /bandeja/)
+  // Nombrar la pantalla es parte del aviso: «está en la bandeja» sin decir cuál no se ve.
+  assert.match(t, /\/expenses\/pendientes/)
 })
 
 // Regla de la casa: un «no se ha intentado» no se cuenta como un «no hay». Si la cuenta no es la

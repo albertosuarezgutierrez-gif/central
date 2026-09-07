@@ -272,7 +272,9 @@ export function lineasArchivo(a?: ArchivoFactura | null): string {
 
   switch (a.decision) {
     case 'auto':      out.push('✅ Contabilizada: ya está en el libro de gastos.'); break
-    case 'bandeja':   out.push(`🗂 La he dejado en la bandeja de facturas para que la revises${a.motivo ? ` (${a.motivo})` : ''}.`); break
+    // La pantalla se NOMBRA: «está en la bandeja» sin decir cuál es un aviso que no se ve (regla
+    // de la casa: la pregunta no es si lo he mandado, es en qué pantalla lo va a ver).
+    case 'bandeja':   out.push(`🗂 La he dejado en /expenses/pendientes («Facturas por revisar») para que la confirmes${a.motivo ? ` (${a.motivo})` : ''}.`); break
     case 'duplicado': out.push('♻️ Ya estaba contabilizada, así que no la he metido dos veces.'); break
     case 'omitido':   out.push(`No la contabilizo${a.motivo ? `: ${a.motivo}` : ''}.`); break
     case 'ajena':     out.push(`No la contabilizo: está a nombre de ${a.receptor || 'un tercero'}.`); break
