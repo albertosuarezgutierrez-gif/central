@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏢 El portal, «todo corporativo»: la atmósfera de la web y la clave de IA puesta (07/09/2026).**
+  Alberto revirtió mi recomendación («3. igual la web no? debería parecer como la expansión de la
+  web» + «todo corporativo»), así que entra lo que yo había dejado fuera: la mancha de marca de
+  `.hero-atmosfera` (7%→2%→transparente, 26rem) y la franja tintada, pero **una sola vez y en el
+  calendario** —la sección que dice qué HACER— con `--brand-soft`, no con `--brand` a plena carga:
+  así la marca se ve y el semáforo de «vencida»/«al cobro» sigue siendo lo único saturado. Dos cepos
+  nuevos, los tres brazos vistos rojos. Y **`OPENROUTER_API_KEY` ya está en `asegura-portal`**
+  (la puso Alberto; redespliegue Ready), así que subir un PDF vuelve a leerse. ⚠️ Si aún fallara,
+  el síntoma es idéntico a un PDF ilegible: se distingue en los Runtime Logs por
+  `[portal] aiComplete falló` con un 401 = clave mal copiada. PR #2503. Planes escritos y SIN
+  ejecutar: `docs/superpowers/plans/2026-09-07-portal-documentos-bucket-privado.md` (Alberto eligió
+  bucket privado, NO Drive) y `…-portal-huecos-y-captacion.md` (venta cruzada con consentimiento).
+  🕰️ Y una torpeza propia que conviene no repetir: se leyó el fichero de una espera en segundo plano
+  **antes de que terminara**, se leyó el vacío como «sin salida» y se diagnosticó que el CI llevaba
+  20 minutos colgado cuando llevaba dos. El reloj del contenedor lo desmiente en una línea (`date -u`).
+
 - **🎨 El portal se parece a la web: NO era el color, era la compresión (07/09/2026).**
   Alberto: «el diseño no es acorde a las páginas de los seguros» (comparando con `grupoasegura.es`).
   Medido con un agente sobre los dos `globals.css`: **la paleta y las TRES sombras son idénticas
