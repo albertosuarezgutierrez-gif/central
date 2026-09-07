@@ -159,6 +159,23 @@
   («Añadir horario de apertura»), que es coherente con `HORARIO = null` pero deja la ficha coja; (d) **1
   reseña**. `sameAs` sigue sin poder ponerse: falta la URL de la ficha.
 
+- **📉 Search Console tenía 4 meses de datos y nadie los había mirado; la mejor URL del dominio era
+  un 404 (07/09/2026).** Primera lectura real (3 meses): **350 impresiones, 0 clics, posición media
+  47,1**; las consultas son genéricas de sector, y la consulta de marca —el nombre bien escrito— está
+  en posición 3,0 con 4 impresiones. **No hay tráfico que perder, hay tráfico que construir** — lo que respalda el
+  ámbito nacional del #2464. 🚨 Lo caro: de las 4 páginas con impresiones, **dos no existen**:
+  `/siniestro/` (**posición 7,7**, la mejor del dominio, contra 49,3 de la portada) y
+  `/mejoramos-tu-seguro/` (51 impresiones), las dos en **404** desde que asegura-web tomó el apex el
+  05/09. Se recupera `/siniestro` **como página propia** —su intención no la responde ninguna otra, y
+  una 301 a un destino que no responde es un soft-404 con otro nombre— y `/mejoramos-tu-seguro` por
+  **301** a `/cambiar-de-correduria`. Cepo nuevo en `lib/enlazado.test.ts`, **probado por mutación en
+  sus 4 brazos**. También: GSC verificada desde el **17/05**, GBP **ya existía** (con keyword
+  stuffing en el nombre y `http://`, ambos corregidos, más una autorreseña bloqueada que se retira),
+  el A de `clientes.grupoasegura.es` **ya estaba puesto**, y **395 días de consentimiento NO existe**
+  (Cookiebot solo da meses enteros, máx. 12). ⚠️ Abierto: Cookiebot dice **«Not live»** en el
+  dominio — [Probable] falta `NEXT_PUBLIC_COOKIEBOT_ID` en el Vercel de `asegura-web`, y sin ella no
+  hay banner **ni medición**, en silencio, desde el 05/09.
+
 - **🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código (07/09/2026).** Del banco de
   ideas: **A** imagen Open Graph (`app/opengraph-image.tsx`, `next/og`, marca y clave DGSFP leídas de
   `MARCA_ASEGURA`/`MEDIADOR`, nada quemado; `twitter: summary_large_image` en el layout) — antes cada

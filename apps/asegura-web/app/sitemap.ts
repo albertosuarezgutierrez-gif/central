@@ -37,6 +37,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       // buscadores prácticamente ignoran).
       priority: 0.8,
     })),
+    // Prioridad alta a propósito: es la página con la mejor posición medida de
+    // todo el dominio (7,7), y la que Google ya conocía del sitio anterior.
+    { url: url('/siniestro'), changeFrequency: 'monthly', priority: 0.9 },
     { url: url('/quienes-somos'), changeFrequency: 'yearly', priority: 0.5 },
     { url: url('/legal/informacion-mediador'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },
     { url: url('/legal/privacidad'), lastModified: LEGALES, changeFrequency: 'yearly', priority: 0.3 },

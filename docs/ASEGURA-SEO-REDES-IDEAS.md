@@ -242,7 +242,32 @@ detalle de estilo.
 cuando alguien pregunta «cómo cambio de correduría en Sevilla» es tráfico cualificado gratis. Pero
 que sea **una decisión escrita** y no un descuido. **Decide Alberto.**
 
-## I. Google Business Profile — 🔴 la de más retorno por hora de todo el plan, y gratis
+## ✅ I. Google Business Profile — ya existía, y con dos incumplimientos dentro
+
+> ✅ **CERRADO el 07/09/2026 (comprobado en el panel, no supuesto).** La ficha **ya existía y estaba
+> verificada**: en Maps, 381 visualizaciones, categoría «Agencia de seguros». Este banco la daba por
+> «hay que crearla» — falso. Lo que sí había eran dos incumplimientos:
+> · el **nombre** era `Grupo ASegura · Corredor de seguros`, o sea keyword stuffing. Google lo
+>   prohíbe expresamente y es motivo típico de suspensión; en una cuenta que ya arrastra **4 fichas
+>   suspendidas** eso no es teórico. Corregido al nombre a secas, que además es lo que publica la
+>   web (NAP exacto).
+> · el **sitio web** apuntaba a `http://`. Corregido a `https://`.
+>
+> 🚨 **Y una autorreseña bloqueada**: había una reseña del propio titular en estado «No publicado»
+> con el aviso «No podemos publicar este contenido». No es un fallo temporal — Google prohíbe que el
+> titular reseñe su propio negocio. Se retira.
+>
+> 📉 **Lo que sigue abierto es lo de siempre: 381 visualizaciones y UNA reseña**, de hace 7 años y de
+> dos palabras. La petición de reseña a los ~80 clientes vivos sigue pendiente **y la manda Alberto**,
+> no un agente.
+>
+> ⚠️ La dirección de la ficha (`Calle San Juan de la Palma, 28`) y la del repo (`San Juan de La
+> Palma, nº 28`) difieren en el artículo y una mayúscula. **No se toca ninguna de las dos**: Google
+> normaliza direcciones, y la del repo es el domicilio profesional que se declara por obligación
+> legal (art. 19 Ley 16/2018), no un campo de estilo.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se miró)</summary>
+
 
 Lo que sale cuando alguien busca «correduría de seguros Sevilla» desde el móvil. No es código.
 
@@ -251,7 +276,27 @@ Lo que sale cuando alguien busca «correduría de seguros Sevilla» desde el mó
 actuales es el activo local nº1 y **la manda Alberto**, nunca el agente (regla 2). Desbloquea
 además el `sameAs` de la idea F.
 
-## J. Google Search Console — 🔴 sin esto, el SEO se hace a ciegas
+</details>
+
+## ✅ J. Google Search Console — ya estaba conectada desde mayo
+
+> ✅ **CERRADO el 07/09/2026.** La propiedad de tipo Dominio `sc-domain:grupoasegura.es` **estaba
+> verificada desde el 17/05/2026** y el sitemap enviado desde el 05/09, en estado Correcto con sus
+> URL. O sea: **hay cuatro meses de datos** y este banco los daba por inexistentes.
+>
+> 📊 **Primera lectura real (3 meses, 06/06–05/09/2026): 350 impresiones, 0 clics, posición media
+> 47,1.** Las consultas son genéricas del sector (la palabra «grupo» con «asegurador», «seguros» o
+> «aseguranza» detrás: 176 impresiones la primera, en posición 62), no de marca. La única de marca de
+> verdad —el nombre bien escrito— está en **posición 3,0 con 4 impresiones**. Lectura honesta: **no
+> hay tráfico que perder, hay tráfico que construir**, y eso respalda el cambio de ámbito a nacional
+> del PR #2464, porque la señal local que supuestamente se sacrificaba no existía.
+>
+> ⏸️ **Lo que sigue sin existir es un conector de Search Console del lado del agente.** Los datos
+> están, pero hay que pegarlos a mano. El problema ya no es «medir a ciegas», es «los datos no llegan
+> al que decide»: distinto problema y distinto arreglo.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se miró)</summary>
+
 
 **No conectada.** Es la única fuente sin sesgo de por qué consultas entra la web y en qué posición.
 PostHog no la sustituye: solo ve a quien acepta el banner.
@@ -260,6 +305,8 @@ PostHog no la sustituye: solo ve a quien acepta el banner.
 **Bloqueo:** verificación del dominio por Alberto (registro TXT en IONOS, que es donde está el DNS).
 **Nota:** ya hay un TXT pendiente en esa zona por otro motivo (el DMARC, ver §Pendientes) — se
 pueden hacer en la misma sentada.
+
+</details>
 
 ## K. Contenido de intención de problema — 🟠 el trabajo de fondo (Fase 4)
 
@@ -325,6 +372,21 @@ o accidentes. **Relación ya abierta, coste de captación cero**, y encima son q
 - **DNS de `clientes.grupoasegura.es`** → registro **A** a `216.150.1.1` (nunca CNAME: esa zona
   tiene MX de IONOS que un CNAME mataría).
 - **DMARC** en `p=none` y sin `rua`: hoy es decorativo. Mismo panel que el TXT de la idea J.
-- **Caducidad del consentimiento en Cookiebot**: 12 meses; se quería 395 días. Sin decidir.
+- ~~**Caducidad del consentimiento en Cookiebot**: 12 meses; se quería 395 días.~~ ❌ **No es posible,
+  y deja de ser una decisión pendiente (comprobado 07/09/2026).** El desplegable de Cookiebot solo
+  ofrece meses enteros de 0 a 12: **12 meses es el máximo de la herramienta**, no una preferencia que
+  nadie haya cambiado. Se queda en 12.
+- 🚨 **NUEVO — Cookiebot dice «Not live» en el dominio (07/09/2026).** Está dado de alta en el grupo
+  del CBID, pero el escaneo del 05/09 encontró **1 sola cookie** y el estado del banner es «Not
+  live»: Cookiebot no se detecta en la web. [Probable] falta `NEXT_PUBLIC_COOKIEBOT_ID` en el
+  proyecto Vercel `asegura-web`, y sin esa variable la app **no monta el banner y, por diseño
+  (`lib/analitica.ts`), no mide nada**. El fail-closed funciona; el problema es que es SILENCIOSO.
+  Pendiente de confirmar en el HTML vivo.
+- ⏳ **Cookiebot en Premium Trial, 12 días restantes** (a 07/09/2026), y el trial solo admite 1
+  dominio. Cuando caduque, mirar qué pasa con el banner.
+- ❌ **Google Analytics NO se añade** (decidido 07/09/2026). Ya hay medición —PostHog EU detrás de
+  Cookiebot— y con 0 clics en tres meses GA4 diría exactamente lo mismo. Además duplicaría la
+  superficie legal: PostHog está en la UE a propósito, y GA4 arrastra transferencia internacional.
+  Lo que falta no es una segunda herramienta: es que la que hay deje de estar «Not live».
 - **Redespliegue de `asegura`** (el CRM de Manuel): su build vivo sigue mandando `distinctId` a
   PostHog sin comprobar consentimiento, aunque las envs ya se borraron.

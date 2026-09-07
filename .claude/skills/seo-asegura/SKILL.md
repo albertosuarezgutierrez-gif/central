@@ -84,7 +84,7 @@ canal propio que se toca cada tres semanas no produce nada.
 
 | Fuente | Qué contesta | Estado |
 |---|---|---|
-| **Google Search Console** | Por qué consultas entras y con qué posición. **La única fuente sin sesgo.** | ⏸️ *No conectada.* Mientras no lo esté, **la posición se declara «pendiente», nunca 0** |
+| **Google Search Console** | Por qué consultas entras y con qué posición. **La única fuente sin sesgo.** | 🟢 **Verificada desde el 17/05/2026** (`sc-domain:grupoasegura.es`), con sitemap enviado. ⚠️ Pero **no hay conector**: los datos existen y hay que pegarlos a mano. Sin ellos delante, la posición se declara «no consultada», nunca 0 |
 | **PostHog** (`eu.i.posthog.com`) | Visitas, páginas, origen | 🟢 Vivo desde 05/09/2026 — **pero solo mide a quien ACEPTA el banner** |
 | **BD `seguros`** | Leads reales del formulario y su estado | 🟢 Vivo |
 
