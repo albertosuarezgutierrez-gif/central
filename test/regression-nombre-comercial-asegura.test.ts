@@ -31,8 +31,20 @@ const EXENTOS = ['test/regression-nombre-comercial-asegura.test.ts']
 /** Solo ficheros de texto donde el nombre se escribe de verdad. */
 const EXTENSIONES = /\.(ts|tsx|js|jsx|mjs|cjs|json|md|css|svg|sql|html|txt|yml|yaml|prisma)$/
 
-/** «Grupo» + separador + «asegura» en cualquier caja. Lo que se compara luego es la caja. */
-const PATRON = /Grupo[\s ]+Asegura/gi
+/**
+ * «Grupo» + separador + «asegura» en cualquier caja. Lo que se compara luego es la caja.
+ *
+ * 🚨 El `(?![a-zñ])` del final NO es cosmético: sin él el cepo salta con
+ * «grupo asegurador» y «grupo aseguranza», que son castellano corriente y NO son
+ * la marca — «el grupo asegurador español» lo escribe cualquiera. Se descubrió
+ * el 07/09/2026 al transcribir consultas reales de Search Console: el guardián
+ * las señalaba como marca mal escrita.
+ *
+ * Un cepo que salta con palabras del diccionario acaba desactivado, y el día que
+ * lo esté dejará de proteger lo que sí importa. La marca termina en «asegura»:
+ * lo que siga pegado ya es otra palabra.
+ */
+const PATRON = /Grupo[\s ]+Asegura(?![a-zñ])/gi
 
 function ficherosVersionados(): string[] {
   return execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8' })

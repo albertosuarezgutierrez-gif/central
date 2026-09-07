@@ -39,6 +39,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       // buscadores prácticamente ignoran).
       priority: 0.8,
     })),
+    // Prioridad alta a propósito: es la página con la mejor posición medida de
+    // todo el dominio (7,7), y la que Google ya conocía del sitio anterior.
+    { url: url('/siniestro'), changeFrequency: 'monthly', priority: 0.9 },
     // 📌 El blog SÍ sabe sus fechas, y por eso es la única familia de URL además
     // de las legales que declara `lastModified`. La lista se construye en
     // `lib/articulos.ts` (`entradasSitemapBlog`) a propósito: allí sí se puede

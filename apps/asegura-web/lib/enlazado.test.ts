@@ -11,7 +11,7 @@
 // enterarse.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 // Se importa el fichero de la marca DIRECTAMENTE y no el barril `@central/brand`:
 // ese barril reexporta con imports sin extensión, que `tsc` y Next resuelven y
 // `node --test` no. Aquí interesa el objeto de la marca, no el paquete entero.
@@ -75,6 +75,37 @@ test('la imagen Open Graph se genera desde la fuente de marca', () => {
   for (const token of ['primario', 'acento', 'acentoInk'] as const) {
     assert.match(MARCA_ASEGURA.paleta[token], /^#[0-9a-fA-F]{6}$/, `paleta.${token} ya no es hex: la imagen OG lo ignoraría`)
   }
+})
+
+// ── Las URLs HEREDADAS del sitio anterior ──────────────────────────────────
+//
+// 🚨 Esto no es SEO de manual: es la única señal que el negocio tenía ganada.
+// Medido en Search Console el 07/09/2026, sobre 3 meses y 350 impresiones:
+// `/siniestro/` estaba en posición media **7,7** —la portada, en 49,3— y
+// `/mejoramos-tu-seguro/` sumaba 51 impresiones. Las dos devolvían **404**
+// desde que este proyecto tomó el apex el 05/09.
+//
+// Una de las dos se recuperó como página (la de siniestros, porque su intención
+// no la responde ninguna otra) y la otra por 301. Si alguien borra cualquiera de
+// las dos «porque no la enlaza nadie», vuelve el 404 y se tira la señal otra
+// vez — y en local no falla nada. De ahí el cepo.
+test('la página de siniestros sigue existiendo, en el sitemap y enlazada', () => {
+  assert.ok(
+    existsSync(new URL('../app/siniestro/page.tsx', import.meta.url)),
+    '/siniestro ha desaparecido: era la mejor posición del dominio (7,7) y Google la sigue pidiendo',
+  )
+  const sitemap = readFileSync(new URL('../app/sitemap.ts', import.meta.url), 'utf8')
+  assert.match(sitemap, /url\('\/siniestro'\)/, '/siniestro ya no está en el sitemap')
+  assert.ok(
+    NAV.some((n) => n.href === '/siniestro'),
+    '/siniestro se ha quedado sin enlaces entrantes: vuelve a ser huérfana',
+  )
+})
+
+test('la 301 de /mejoramos-tu-seguro sigue puesta', () => {
+  const cfg = readFileSync(new URL('../next.config.ts', import.meta.url), 'utf8')
+  assert.match(cfg, /source: '\/mejoramos-tu-seguro'/, 'sin esta 301, esa URL vuelve a dar 404')
+  assert.match(cfg, /permanent: true/, 'tiene que ser 301 (permanent), no 307: es un traslado definitivo')
 })
 
 // 🚨 Los tres cepos del blog, y son de lo MISMO que el de responsabilidad civil:

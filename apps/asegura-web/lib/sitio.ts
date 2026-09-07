@@ -132,6 +132,12 @@ export const NAV = [
   // del PIE (la cabecera se recorta abajo, y por medida, no por gusto).
   { href: '/seguros/responsabilidad-civil', texto: 'Responsabilidad civil' },
   { href: '/cambiar-de-correduria', texto: 'Cambiar de correduría' },
+  // Recuperada del sitio anterior el 07/09/2026. No es un ramo: es la página de
+  // más intención de problema que tiene el negocio, y la ÚNICA consulta en la
+  // que ya competía —posición media 7,7 en Search Console, contra 49,3 de la
+  // portada— mientras la servía un 404. Va al pie por lo mismo que RC: la
+  // cabecera está medida al límite y una entrada más la desborda.
+  { href: '/siniestro', texto: 'Tengo un siniestro' },
 ] as const
 
 /**
