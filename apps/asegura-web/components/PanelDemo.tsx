@@ -177,7 +177,7 @@ export default function PanelDemo() {
             <span className="mock-punto" style={{ background: 'var(--danger)' }} />
             <span className="mock-punto" style={{ background: 'var(--warn)' }} />
             <span className="mock-punto" style={{ background: 'var(--ok)' }} />
-            <span className="mock-url">Área de clientes · Mis seguros</span>
+            <span className="mock-url">Mis seguros · Grupo ASegura</span>
             {/* 🚨 No se quita: lo de dentro es inventado. */}
             <span className="mock-ejemplo">Ejemplo</span>
           </div>

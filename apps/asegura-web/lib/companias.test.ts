@@ -33,13 +33,24 @@ test('no queda ningún SVG huérfano en public/logos', () => {
   }
 })
 
+/** Los logos declarados, separados por formato: cada uno falla de otra manera. */
+const CON_LOGO = COMPANIAS.filter((c) => c.logo !== null)
+const SVG = CON_LOGO.filter((c) => c.logo!.endsWith('.svg'))
+const PNG = CON_LOGO.filter((c) => c.logo!.endsWith('.png'))
+
+test('todo logo es .svg o .png, no otra cosa', () => {
+  // Si alguien mete un .webp o un .jpg, las comprobaciones de abajo dejarían de
+  // aplicársele SIN fallar: no estaría en ninguna de las dos listas y pasaría
+  // por el hueco. Es el fallo que este fichero existe para evitar.
+  assert.equal(SVG.length + PNG.length, CON_LOGO.length, 'hay un logo que no es .svg ni .png: nadie lo estaría comprobando')
+})
+
 test('cada SVG trae viewBox: sin él la altura del CSS no dimensiona nada', () => {
   // El muro fija la ALTURA y deja el ancho en `auto`. Un SVG sin `viewBox` no
   // tiene relación de aspecto intrínseca, así que ese `auto` se resuelve a 0 o
   // al ancho por defecto: el logo desaparece o se estira, y otra vez sin error.
-  for (const c of COMPANIAS) {
-    if (!c.logo) continue
-    const svg = readFileSync(join(RAIZ, 'public', c.logo), 'utf8')
+  for (const c of SVG) {
+    const svg = readFileSync(join(RAIZ, 'public', c.logo!), 'utf8')
     assert.match(svg, /<svg[^>]*\sviewBox=/, `${c.nombre}: su SVG no tiene viewBox`)
   }
 })
@@ -49,11 +60,57 @@ test('ningún logo se trae nada de fuera', () => {
   // un fichero a un tercero, contándole la IP del visitante — justo lo que esta
   // web evita no cargando PostHog hasta que hay consentimiento. Se sirven desde
   // nuestro origen o no se sirven.
-  for (const c of COMPANIAS) {
-    if (!c.logo) continue
-    const svg = readFileSync(join(RAIZ, 'public', c.logo), 'utf8')
+  for (const c of SVG) {
+    const svg = readFileSync(join(RAIZ, 'public', c.logo!), 'utf8')
     assert.ok(!/https?:\/\//.test(svg.replace(/xmlns[^=]*="[^"]*"/g, '')), `${c.nombre}: su SVG apunta a una URL externa`)
     assert.ok(!/<script/i.test(svg), `${c.nombre}: su SVG lleva un <script>`)
+  }
+})
+
+// ── Los PNG: dos fallos que un vectorial no puede tener ────────────────────
+//
+// El muro fija la altura en `calc(1.75rem * escala)` = 28 px a escala 1, y
+// `globals.css` lo baja a 20 px en móvil. En una pantalla retina (2×) eso pide
+// 56 px REALES de alto. Un PNG más bajo no rompe nada: sale blando, y de eso
+// solo se entera quien mira la web en un buen monitor.
+const ALTO_CSS_PX = 28
+const DENSIDAD = 2
+
+/** Lee ancho y alto del IHDR, que en un PNG siempre son los bytes 16-23. */
+function medidasPng(ruta: string): { ancho: number; alto: number; colorType: number } {
+  const b = readFileSync(ruta)
+  assert.equal(
+    b.subarray(0, 8).toString('hex'),
+    '89504e470d0a1a0a',
+    `${ruta}: no empieza por la firma PNG — un fichero renombrado pinta el icono de imagen rota`,
+  )
+  assert.equal(b.subarray(12, 16).toString('ascii'), 'IHDR', `${ruta}: el primer chunk no es IHDR`)
+  return { ancho: b.readUInt32BE(16), alto: b.readUInt32BE(20), colorType: b[25] }
+}
+
+test('cada PNG es un PNG de verdad y tiene píxeles para retina', () => {
+  for (const c of PNG) {
+    const { ancho, alto } = medidasPng(join(RAIZ, 'public', c.logo!))
+    const minimo = Math.ceil(ALTO_CSS_PX * (c.escala ?? 1) * DENSIDAD)
+    assert.ok(
+      alto >= minimo,
+      `${c.nombre}: su PNG mide ${ancho}×${alto} y el muro lo pinta a ${ALTO_CSS_PX * (c.escala ?? 1)} px; en retina hacen falta ${minimo} px de alto o se ve borroso`,
+    )
+  }
+})
+
+test('cada PNG tiene canal alfa: sin él sale una caja blanca sobre la banda', () => {
+  // La sección tiene fondo propio (`.banda`). Un PNG sin transparencia se pinta
+  // como un rectángulo del color de su lienzo —normalmente blanco— encima de
+  // ese fondo. No falla nada: queda feo, y solo lo ve quien abre la página.
+  // colorType 4 = gris+alfa, 6 = RGBA. 0/2/3 no llevan alfa (el 3, paleta,
+  // podría traer un chunk tRNS, pero no es lo que vamos a servir).
+  for (const c of PNG) {
+    const { colorType } = medidasPng(join(RAIZ, 'public', c.logo!))
+    assert.ok(
+      colorType === 4 || colorType === 6,
+      `${c.nombre}: su PNG tiene color_type ${colorType}, sin canal alfa — se vería como un recuadro sobre el fondo de la banda`,
+    )
   }
 })
 
@@ -87,9 +144,34 @@ test('las que aún no tienen logo se declaran como null, no con un hueco', () =>
   // `logo: ''` o un fichero que no existe son la misma mentira con dos caras.
   // `null` dice «todavía no lo tenemos», que es un estado, no una ausencia de
   // dato — y por eso la página sabe pintar el nombre en su lugar.
+  //
+  // Desde el 07/09/2026 la lista está COMPLETA: Asisa y Fidelidade entraron ese
+  // día con los ficheros que subió Alberto a Drive. La expectativa se deja en
+  // vacío a propósito y no se borra el test: obliga a que quien añada una
+  // compañía sin logo lo declare aquí en vez de colarla, y quien le quite el
+  // logo a una que lo tiene se entere de que la está devolviendo al wordmark.
   const sinLogo = COMPANIAS.filter((c) => c.logo === null).map((c) => c.nombre)
-  assert.deepEqual(sinLogo, ['Fidelidade', 'Asisa'], 'cambió qué compañías no tienen logo: revisa el muro')
+  assert.deepEqual(sinLogo, [], 'cambió qué compañías no tienen logo: revisa el muro')
   for (const c of COMPANIAS) {
     assert.notEqual(c.logo, '', `${c.nombre}: logo vacío — usa null`)
   }
+})
+
+test('el muro conserva el wordmark para las que no tengan logo', () => {
+  // 🚨 Cepo NUEVO del 07/09/2026, y existe justo porque el test de arriba pasó
+  // a esperar una lista vacía: hoy NINGUNA compañía cae por esa rama, así que
+  // el `<span className="companias-nombre">` del JSX no lo ejecuta nadie. Un
+  // atajo que lo sustituya por `<img src={c.logo}>` a secas no rompería nada
+  // hoy — y el día que entre una compañía sin logo, su hueco se pintaría como
+  // una imagen rota en vez de como su nombre.
+  const fuente = readFileSync(join(RAIZ, 'app/page.tsx'), 'utf8')
+  assert.match(fuente, /c\.logo \?/, 'el muro ya no distingue entre tener logo y no tenerlo')
+  assert.match(fuente, /companias-nombre/, 'desapareció el wordmark de respaldo del muro')
+  // El ancla es la regla BASE, al margen izquierdo. `.companias-nombre` sale
+  // dos veces en el CSS —la otra dentro del `@media (max-width: 559px)`, que
+  // solo baja el cuerpo— y un `/\.companias-nombre\s*\{/` a secas se conforma
+  // con esa segunda: borrando la base, el wordmark perdería tipografía y color
+  // y el cepo seguiría verde. Medido rompiéndolo el 07/09/2026.
+  const css = readFileSync(join(RAIZ, 'app/globals.css'), 'utf8')
+  assert.match(css, /^\.companias-nombre\s*\{/m, 'el wordmark de respaldo se quedó sin estilo: saldría con la tipografía del body')
 })

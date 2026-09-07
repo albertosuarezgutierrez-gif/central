@@ -16,13 +16,21 @@ export const maxDuration = 60
 // limpieza, que Booking mete en el bruto) contra la LISTA PÚBLICA que el motor creía vender cuando
 // entró la reserva (base de `pricing_applied` × `channel_markup`). Es la capa que ningún otro
 // centinela mira: `pricing/canal` calibra escaparate↔base y el centinela del huésped compara
-// escaparate↔mercado; los dos se quedan en el precio listado. La capa está medida en el extranet
-// (Genius 15 % × móvil 10 % = 0,765 de la lista pública en 10 de 12 reservas de House): ver la
-// cabecera de `lib/sivra/pricing-fuga-canal.ts` (07/09/2026, reserva 154638741).
+// escaparate↔mercado; los dos se quedan en el precio listado. La capa se midió en el extranet
+// (Genius 15 % × móvil 10 % = 0,765 de la lista pública en 10 de 12 reservas de House) y esa
+// misma tarde se desmontó: hoy la pila aceptada es Genius 10 % × country rate 10 % = 0,81, y el
+// umbral (`UMBRAL_FUGA`) va justo debajo. Ver la cabecera de `lib/sivra/pricing-fuga-canal.ts`.
 //
 // Solo Booking: el canal calibrado (`channel_markup` + `cuota_fija`) describe ESE portal.
 // Un piso sin reservas en la ventana NO es «sin fuga»: es «sin dato», y así se dice.
 const VENTANA_DIAS = 90
+/**
+ * Solo se juzgan reservas hechas desde que el extranet quedó como está (07/09/2026: fuera Basic
+ * Deal, móvil y Genius 15 %). Las anteriores ya están medidas (5.717€ bajo lista en House) y con
+ * el markup de hoy (1,20) saldrían a 0,67: contarlas sería disparar la alarma 90 días seguidos por
+ * algo que ya se decidió. Ventana efectiva = max(DESDE, hoy − 90 días).
+ */
+const DESDE = "2026-09-07"
 const PROP_NAMES: Record<string, string> = {
   prop_house_sevillana: "House Sevillana",
   prop_duplex_center: "Duplex Center",
@@ -59,7 +67,7 @@ export async function GET(req: NextRequest) {
       FROM incomes i
       WHERE i.portal::text = 'BOOKING' AND i.amount_gross > 0
         AND i.nights BETWEEN 1 AND 14
-        AND i.reserved_at >= now() - (${VENTANA_DIAS} || ' days')::interval
+        AND i.reserved_at >= GREATEST(now() - (${VENTANA_DIAS} || ' days')::interval, ${DESDE}::date)
         AND i."propertyId" LIKE 'prop_%'
     ),
     noches AS (
@@ -118,7 +126,7 @@ export async function GET(req: NextRequest) {
         `🟡 *Fuga de canal en Booking*\n\nEl motor lista al p60 del mercado y el huésped compra por debajo: ` +
         `la diferencia vive en el extranet de Booking (Genius, tarifa móvil, ofertas apiladas), no en el motor.\n\n` +
         bloques.join("\n\n") + nota +
-        `\n\n_Umbral ${porPiso[conFuga[0][0]].umbral} sobre la lista pública (base × markup); el Basic Deal del 12 % ya va dentro del markup y no se ve aquí._`)
+        `\n\n_Umbral ${porPiso[conFuga[0][0]].umbral} sobre la lista pública (base × markup = Standard Rate). Aceptado: Genius 10 % × country rate 10 % = 0,81; por debajo hay un descuento que nadie ha pedido. Reservas desde el ${DESDE}._`)
     } catch { /* el aviso no puede tumbar la medición */ }
   }
 

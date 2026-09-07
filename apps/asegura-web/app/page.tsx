@@ -148,21 +148,32 @@ export default function Home() {
               Correduría en toda España · Registro DGSFP {MEDIADOR.identidad.claveDgsfp}
             </span>
             {/*
-              🚨 El hero habla de lo que le PASA al visitante, no de lo que la
-              correduría es. Lo anterior («Somos correduría, no compañía…»)
-              explicaba la figura jurídica y enumeraba cinco ramos de un tirón,
-              así que no priorizaba ninguno — diagnóstico de
-              `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`.
+              🚨 El hero vende LO QUE NOS DIFERENCIA, y eso no es la figura
+              jurídica ni el parte: es la intranet, que está abierta a
+              cualquiera. Dictado de Alberto (07/09/2026): «la idea principal
+              que nos diferencia es la intranet donde el cliente puede controlar
+              sus seguros siendo nuestro cliente o no».
 
-              El nombre va en PRIMERA PERSONA y sale de `MEDIADOR`, no tecleado:
-              es un corredor persona física, y decir «yo» es exactamente lo que
-              un comparador no puede copiar. Los cinco ramos ya los prioriza la
-              rejilla de abajo, que abre por hogar y comunidades.
+              Lo anterior («Un seguro se juzga el día del parte. Ese día me
+              llamas a mí») describía el servicio de un corredor cualquiera:
+              cierto, pero copiable por los 90.000 mediadores del registro. Que
+              tus pólizas de OTRAS compañías vivan aquí, no.
+
+              ⚠️ Cada frase de aquí abajo tiene que ser cierta HOY, y estas tres
+              lo son: la intranet crea identidad con solo un correo verificado
+              (`verificar/route.ts`, «El resultado NO bloquea el login»), acepta
+              el PDF de cualquier compañía (`POST /api/polizas`, lo lee la IA) y
+              desde el 07/09/2026 pone su vencimiento en el calendario aunque
+              quien la suba no sea cliente. Lo que NO se dice es «olvídate»: eso
+              promete un aviso saliente que para una póliza subida todavía no
+              tiene por dónde salir, y el propio cron lo cuenta como `sinCanal`.
+
+              El nombre va en PRIMERA PERSONA y sale de `MEDIADOR`, no tecleado.
             */}
             <h1 className="display">
-              Un seguro se juzga el día del parte.
+              Sube tus pólizas.
               <br />
-              <span className="destaca">Ese día me llamas a mí.</span>
+              <span className="destaca">Aunque no sean mías.</span>
             </h1>
             {/*
               Una línea más corto que la primera versión (06/09/2026), y no por
@@ -173,18 +184,21 @@ export default function Home() {
               el sitio donde el visitante decide.
             */}
             <p className="lead" style={{ marginTop: 28 }}>
-              Soy {MEDIADOR.identidad.nombre}, corredor de seguros en toda España. No trabajo para ninguna
-              aseguradora: comparo entre varias y te digo qué cubre cada una y qué deja fuera.
+              Soy {MEDIADOR.identidad.nombre}, corredor de seguros en toda España. Tu intranet guarda las
+              pólizas de cualquier compañía, te dice qué cubre cada una y te apunta en el calendario hasta
+              cuándo puedes decidir si la renuevas. Sin coste y sin cambiar de correduría.
             </p>
             <div className="hero-cta">
               <a href="#presupuesto" className="btn btn-brand btn-brillo">
                 Que me llamen
                 <Flecha />
               </a>
-              {/* Segundo clic para quien ya es cliente: su intranet, donde
-                  guarda sus pólizas. Va junto al CTA de venta. */}
+              {/* 🚨 El rótulo NO dice «Ya soy cliente». Decía eso hasta el
+                  07/09/2026, y era el fallo de verdad de esta portada: la
+                  intranet acepta a cualquiera, y el botón le estaba diciendo al
+                  99 % de los visitantes que no era para ellos. */}
               <a href={PORTAL_URL} className="btn btn-outline">
-                Ya soy cliente
+                Entrar a mis seguros
               </a>
             </div>
             <ul className="garantias">
