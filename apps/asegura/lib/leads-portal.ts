@@ -30,13 +30,18 @@
 // Avant2/Codeoscopic cuesta 0,50 € por consulta y no es idempotente, así que
 // ninguna pantalla ni ningún cron puede dispararlo desde aquí. El lead llega a
 // Alberto y decide él.
+import { computeDniLookupHash } from '@central/module-seguros-pii'
 import {
+  cifParaBuscarFicha,
+  fichaParaCotejar,
   leadDeclarada,
   leadUrgente,
   normalizarNumeroPoliza,
+  normalizarTitular,
   ordenarLeads,
   type EntradaLead,
   type Lead,
+  type TitularDeclarado,
 } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
@@ -57,6 +62,19 @@ export type LeadPortal = Lead & {
   /** El nombre del PDF, que es lo único que se guarda de él (no hay bucket todavía). */
   documentoNombre: string | null
   primaAnual: number | null
+  /**
+   * De quién dijo el cliente que era. TRES estados, y `sin_preguntar` es uno:
+   * son todas las filas anteriores al 07/09/2026. La pantalla lo pinta, porque
+   * «la subió a nombre de su empresa» cambia a quién llamas y qué le dices.
+   */
+  titular: TitularDeclarado
+  /**
+   * La ficha de la CARTERA que corresponde al CIF que declaró, si la hay.
+   * `null` cubre TRES casos que la pantalla dice distinto: no dijo empresa, no
+   * dio un CIF válido, o lo dio y esa sociedad **no está fichada** — que no es
+   * un fallo, es justo el lead: una empresa que no tienes.
+   */
+  fichaEmpresaId: string | null
 }
 
 export type ResultadoLeads =
@@ -84,6 +102,9 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
         confirmadaPorUsuario: true,
         documentoNombre: true,
         creadaEn: true,
+        titularTipo: true,
+        titularEmpresaNombre: true,
+        titularEmpresaCif: true,
       },
       orderBy: { creadaEn: 'desc' },
     })
@@ -94,7 +115,24 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
     // Qué números de póliza tiene YA cada ficha en la cartera. Se pregunta de
     // una vez para todas las fichas implicadas: una consulta por lead sería N+1
     // sobre una pantalla que Alberto abre a diario.
-    const clienteIds = [...new Set([...vinculos.values()])]
+    // Los CIF declarados, casados con la cartera por el índice CIEGO: se compara
+    // hash contra hash y no sale ningún documento en claro. Es lo que convierte
+    // «lo ha declarado el cliente» en «esta sociedad ya es tuya» — y, sobre
+    // todo, lo que hace que se coteje contra la ficha CORRECTA.
+    const titulares = new Map(
+      filas.map((f) => [
+        f.id,
+        normalizarTitular({ tipo: f.titularTipo, nombre: f.titularEmpresaNombre, cif: f.titularEmpresaCif }),
+      ]),
+    )
+    const fichasPorCif = await fichasDeEmpresas(
+      correduriaId,
+      [...new Set([...titulares.values()].map(cifParaBuscarFicha).filter((c): c is string => c !== null))],
+    )
+
+    const clienteIds = [
+      ...new Set([...vinculos.values(), ...fichasPorCif.values()]),
+    ]
     const yaTiene = await numerosEnCartera(correduriaId, clienteIds)
 
     const leads: LeadPortal[] = []
@@ -103,6 +141,20 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
       const clienteId = vinculos.get(f.identidadId) ?? null
       if (clienteId === null) sinIdentificar++
 
+      const titular = titulares.get(f.id) ?? normalizarTitular({ tipo: null, nombre: null, cif: null })
+      const cifBuscable = cifParaBuscarFicha(titular)
+      const fichaEmpresaId = cifBuscable === null ? null : (fichasPorCif.get(cifBuscable) ?? null)
+      // 🚨 Contra QUÉ ficha se coteja lo decide el módulo puro, no este fichero.
+      // Si se cotejara siempre contra la ficha personal de quien la sube, una
+      // póliza que su SOCIEDAD ya tiene contratada con la casa saldría como
+      // oportunidad — y se llamaría a un cliente para ofrecerle lo que ya se le
+      // vendió. `null` = no hay contra qué cotejar, que NO es «no es nuestra».
+      // 🚨 Si dijo que es de una empresa Y esa sociedad está fichada, se coteja
+      // contra ELLA. Ese es el arreglo entero: antes se comprobaba contra la
+      // ficha personal de quien sube, así que una póliza que su sociedad ya
+      // tiene contigo salía como oportunidad.
+      const fichaCotejo = fichaEmpresaId ?? fichaParaCotejar(titular, clienteId)
+
       const entrada: EntradaLead = {
         id: f.id,
         compania: f.compania,
@@ -110,8 +162,10 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
         ramo: f.ramo,
         fechaVencimiento: f.fechaVencimiento,
         confirmadaPorUsuario: f.confirmadaPorUsuario,
-        // Sin ficha no hay contra qué cotejar: `null`, no `false`.
-        yaEnCartera: clienteId === null ? null : yaEnLaCartera(yaTiene, clienteId, f.numeroPoliza),
+        // Sin ficha CONTRA LA QUE COTEJAR no hay comprobación: `null`, no
+        // `false`. Y eso pasa por dos motivos distintos que aquí dan lo mismo —
+        // no lo hemos casado con nadie, o la dijo de su empresa.
+        yaEnCartera: fichaCotejo === null ? null : yaEnLaCartera(yaTiene, fichaCotejo, f.numeroPoliza),
       }
       const lead = leadDeclarada(entrada, hoy)
       if (lead === null) continue
@@ -125,6 +179,8 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
         // `Decimal` de Prisma → number, y `null` sigue siendo `null`: 0 sería
         // decir que la póliza cuesta cero euros.
         primaAnual: f.primaAnual === null ? null : Number(f.primaAnual),
+        titular,
+        fichaEmpresaId,
       })
     }
 
@@ -147,6 +203,46 @@ function yaEnLaCartera(
   const numero = normalizarNumeroPoliza(numeroPoliza)
   if (numero === null) return null
   return porCliente.get(clienteId)?.has(numero) ?? false
+}
+
+/**
+ * CIF declarado → ficha de la cartera, por el índice ciego de `clientes.dni`.
+ *
+ * Se compara HASH contra HASH: ningún documento sale en claro de la BD, ni
+ * siquiera aquí. Un CIF que no casa con nada simplemente no entra en el mapa —
+ * y eso NO es un error, es una empresa que la correduría no tiene fichada, que
+ * es exactamente lo que hace interesante el lead.
+ */
+async function fichasDeEmpresas(correduriaId: string, cifs: string[]): Promise<Map<string, string>> {
+  const mapa = new Map<string, string>()
+  if (cifs.length === 0) return mapa
+  const porHash = new Map<string, string>()
+  for (const cif of cifs) {
+    try {
+      const h = computeDniLookupHash(cif)
+      if (h) porHash.set(h, cif)
+    } catch (e) {
+      // Sin `PII_LOOKUP_KEY` el módulo lanza (fail-fast). Aquí no puede tumbar
+      // la pantalla entera: se pierde el casado —y el lead sale «sin
+      // comprobar», que es la verdad— en vez de romper la lista.
+      console.error('[leads-portal] no se pudo calcular el índice ciego del CIF:', e instanceof Error ? e.message : e)
+      return mapa
+    }
+  }
+  const fichas = await prismaAsegura().cliente.findMany({
+    where: {
+      correduriaId,
+      dniLookupHash: { in: [...porHash.keys()] },
+      mergedIntoClienteId: null,
+      activo: true,
+    },
+    select: { id: true, dniLookupHash: true },
+  })
+  for (const f of fichas) {
+    const cif = f.dniLookupHash === null ? null : porHash.get(f.dniLookupHash)
+    if (cif) mapa.set(cif, f.id)
+  }
+  return mapa
 }
 
 /** Números de póliza que cada ficha ya tiene en la cartera VIVA. */

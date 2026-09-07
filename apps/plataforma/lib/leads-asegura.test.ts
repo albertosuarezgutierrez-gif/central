@@ -23,6 +23,8 @@ const OK = {
       subidaEn: '2026-09-07T10:36:53.874Z',
       documentoNombre: '04_Z11_3777894.pdf',
       primaAnual: 412.5,
+      titular: { tipo: 'empresa', nombre: 'GLOBAL 2 SL', cif: 'B91234567', cifValido: true },
+      fichaEmpresaId: null,
     },
   ],
 }
@@ -96,4 +98,30 @@ test('🚨 `urgente` viene del puerto y solo un `true` explícito cuenta', () =>
   assert.equal(r.ok && r.leads[0].urgente, true)
   const sin = interpretarLeads({ ...OK, leads: [{ ...OK.leads[0], urgente: undefined }] })
   assert.equal(sin.ok && sin.leads[0].urgente, false)
+})
+
+test('🚨 el titular sin respuesta NO se lee como «suya»', () => {
+  // Es la fila de antes de que existiera la pregunta. Pintarla como «suya»
+  // afirmaría algo que el cliente no ha dicho — y en esta pantalla se decide a
+  // quién se llama y qué se le dice.
+  const r = interpretarLeads(OK)
+  assert.equal(r.ok && r.leads[0].titularTipo, 'empresa')
+  assert.equal(r.ok && r.leads[0].titularEmpresa, 'GLOBAL 2 SL')
+
+  for (const basura of [undefined, null, {}, { tipo: 'sociedad' }, 'propio']) {
+    const x = interpretarLeads({ ...OK, leads: [{ ...OK.leads[0], titular: basura }] })
+    assert.equal(x.ok && x.leads[0].titularTipo, 'sin_preguntar', `esto debería ser sin_preguntar: ${JSON.stringify(basura)}`)
+  }
+})
+
+test('🚨 «no la tienes fichada» y «no se comprobó» no se funden', () => {
+  // `fichaEmpresaId: null` con empresa declarada significa que esa sociedad NO
+  // está en la cartera — que es justo el lead. Pintarlo igual que un «no se
+  // preguntó» borraría la única señal de venta que trae la fila.
+  const sinFicha = interpretarLeads(OK)
+  assert.equal(sinFicha.ok && sinFicha.leads[0].fichaEmpresaId, null)
+  assert.equal(sinFicha.ok && sinFicha.leads[0].titularTipo, 'empresa')
+
+  const conFicha = interpretarLeads({ ...OK, leads: [{ ...OK.leads[0], fichaEmpresaId: 'c9' }] })
+  assert.equal(conFicha.ok && conFicha.leads[0].fichaEmpresaId, 'c9')
 })

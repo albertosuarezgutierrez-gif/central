@@ -39,10 +39,18 @@ const SIN_IDENTIFICACION =
 
 export function AnadirPoliza({
   ramos,
+  titular,
   onCancelar,
   onGuardada,
 }: {
   ramos: readonly RamoOpcion[]
+  /**
+   * De quién es, ya contestado arriba (`SubirPoliza`). Viaja como prop y no se
+   * vuelve a preguntar aquí: dos controles para la misma pregunta acabarían
+   * discrepando, y el que se guardara sería el que estuviera más cerca del
+   * `fetch` — o sea, cuestión de suerte.
+   */
+  titular: { tipo: 'propio' | 'empresa'; nombre: string; cif: string }
   onCancelar: () => void
   onGuardada: (poliza: PolizaGuardada) => void
 }) {
@@ -94,6 +102,13 @@ export function AnadirPoliza({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          // La misma respuesta que en el alta con documento. Sin esto, todo lo
+          // añadido a mano nacía como «no se preguntó» aunque la persona
+          // acabara de contestar dos centímetros más arriba.
+          titularTipo: titular.tipo,
+          ...(titular.tipo === 'empresa'
+            ? { titularEmpresaNombre: titular.nombre, titularEmpresaCif: titular.cif.trim() || null }
+            : {}),
           compania,
           numeroPoliza,
           ramo: form.ramo || null,

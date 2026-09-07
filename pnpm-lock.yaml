@@ -1217,6 +1217,9 @@ importers:
 
   packages/module-seguros-portal:
     dependencies:
+      '@central/core-fiscal':
+        specifier: workspace:*
+        version: link:../core-fiscal
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../module-seguros

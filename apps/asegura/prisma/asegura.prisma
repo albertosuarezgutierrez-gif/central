@@ -840,6 +840,18 @@ model PortalPolizaDeclarada {
   procedencia          PortalProcedencia @default(declarado)
   confirmadaPorUsuario Boolean           @default(false) @map("confirmada_por_usuario")
   documentoNombre      String?           @map("documento_nombre")
+  /// 🚨 TRES estados y `null` es uno de ellos: «no se le preguntó». Es lo que
+  /// tienen TODAS las filas anteriores al 07/09/2026. Leerlo como `propio`
+  /// convertiría un hueco en una afirmación sobre de quién es una póliza, y de
+  /// eso depende contra qué ficha se comprueba si la casa ya la lleva.
+  /// Vocabulario cerrado por CHECK: `propio` | `empresa` | null.
+  titularTipo          String?           @map("titular_tipo")
+  /// Obligatorio cuando el tipo es `empresa` (CHECK en la BD): «de mi empresa»
+  /// sin decir cuál no identifica ninguna empresa. Es una DECLARACIÓN del
+  /// cliente, no un vínculo: no crea ficha ni se casa con una existente.
+  titularEmpresaNombre String?           @map("titular_empresa_nombre")
+  /// Puede faltar aunque haya empresa: mucha gente no se lo sabe de memoria.
+  titularEmpresaCif    String?           @map("titular_empresa_cif")
   creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
   actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
 
