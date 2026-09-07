@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📌 Revisión de precios House Sevillana — Genius+Móvil se QUEDAN, ocupación floja no lo permite (07/09/2026, solo charla, sin PR).**
+  Reserva Booking 154638741 (05-07/03/2027) parecía descuadrar (393,78€/noche vs base ~530€): desglose real
+  confirma que es el stack Genius −15% + Móvil −10% (mismo patrón landmine §12 CLAUDE.md, nunca tocado en
+  esos dos por ser de visibilidad). Alberto preguntó si quitar la oferta móvil; ocupación real de House
+  Sevillana (40% a 30d, 36,7% a 60d, 16,7% a 90d) desaconseja tocar NINGUNO de los dos ahora — con esa
+  demanda floja pierdes más reservas de las que ganas en margen. **Pendiente: revisar si la ocupación a
+  61-90d mejora; si no, valorar bajar precio en vez de quitar descuentos.**
+
 - **🚧 Vida, salud y decesos sin póliza — construidos con lo que había, sin verificar (07/09/2026, PR #2563).**
   Alberto: «hazlo con lo que tengas», tras avisar del riesgo de gastar 0,50€ reales en intentos mal
   formados. Mismo patrón que auto/hogar/moto, pero el `risk` de estos tres NO sale de ningún snapshot
