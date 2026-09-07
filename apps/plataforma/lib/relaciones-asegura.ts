@@ -286,23 +286,34 @@ export function interpretarRelaciones(status: number, json: unknown): RespuestaR
 /**
  * El resultado de avisar por correo de una autorización pendiente.
  *
- * 🚨 Cinco desenlaces y NINGUNO se colapsa con otro, porque se arreglan de forma
+ * 🚨 Seis desenlaces y NINGUNO se colapsa con otro, porque se arreglan de forma
  * distinta y el que los mira decide qué hacer después: `sin_email` es «ponle un
  * correo a la ficha», `sin_pendiente` es «no hay nada que confirmar» (o ya está
  * confirmado, o caducó), `sin_portal` y `error_envio` son averías nuestras y
- * el segundo se reintenta. Un «no se pudo avisar» genérico dejaría a Alberto
- * mandando el correo a mano sin saber por qué.
+ * el segundo se reintenta, y `sin_correo_configurado` es una env que falta en
+ * Vercel y que reintentar NO pone (separado de `error_envio` el 07/09/2026,
+ * cuando la pantalla mandaba a reintentar un envío sin proveedor de correo).
+ * Un «no se pudo avisar» genérico dejaría a Alberto mandando el correo a mano
+ * sin saber por qué.
  */
 export type RespuestaAviso =
   | { estado: 'ok'; caducaEn: string | null }
   | { estado: 'sin_pendiente'; motivo: string }
   | { estado: 'sin_email'; motivo: string }
   | { estado: 'sin_portal'; motivo: string }
+  | { estado: 'sin_correo_configurado'; motivo: string }
   | { estado: 'error_envio'; motivo: string }
   | { estado: 'invalido'; motivo: string }
   | { estado: 'error'; motivo: string }
 
-const ESTADOS_AVISO = ['sin_pendiente', 'sin_email', 'sin_portal', 'error_envio', 'invalido'] as const
+const ESTADOS_AVISO = [
+  'sin_pendiente',
+  'sin_email',
+  'sin_portal',
+  'sin_correo_configurado',
+  'error_envio',
+  'invalido',
+] as const
 
 export function interpretarAviso(status: number, json: unknown): RespuestaAviso {
   if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
@@ -345,6 +356,11 @@ export function textoAviso(r: RespuestaAviso, nombre: string): string {
       return `⚠️ No se ha enviado: ${textoMotivoRelaciones(r.motivo)}`
     case 'error_envio':
       return `⚠️ El proveedor de correo no aceptó el mensaje, así que NO le ha llegado. Vuelve a intentarlo.`
+    case 'sin_correo_configurado':
+      return (
+        `⚙️ No se ha enviado y NO sirve reintentarlo: ${textoMotivoRelaciones(r.motivo)} Se arregla en las ` +
+        'variables del proyecto Vercel central-asegura (y hay que redesplegar).'
+      )
     default:
       return `⚠️ No se ha enviado: ${textoMotivoRelaciones(r.motivo)}`
   }

@@ -188,10 +188,6 @@ export async function enviarInvitacion(destino: string, d: DatosCorreoInvitacion
   }
 
   const from = remitenteCorreo(process.env.PORTAL_MAIL_FROM)
-  if (!from) {
-    console.error('[portal/invitacion] falta PORTAL_MAIL_FROM: no se envía la invitación')
-    return false
-  }
   // Se manda desde el subdominio verificado y se responde al buzón único de la
   // correduría, igual que el correo del código (ver `lib/canal-email.ts`).
   const replyTo = process.env.PORTAL_MAIL_REPLY_TO?.trim() || undefined
