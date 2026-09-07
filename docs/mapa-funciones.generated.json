@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-07T13:57:49Z",
-  "sha": "fe21c4f6f4026c5ab560eef158c7ff55efaec2e7",
+  "generadoEn": "2026-09-07T15:56:09Z",
+  "sha": "89ae143121a3e13348a6d53ce31dfab55b591e75",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7782,7 +7782,7 @@
           "exportada": true,
           "params": "{ polizaId, resumen: resumenServidor, pre, defectos, vias, catalogos, estadosCiviles, municipios, fallosCatalogo, ramo, consumo, primaActual, deshabilitado, }: { polizaId: string /** La ficha ya armada en el servidor: es lo que se pinta mie",
           "retorno": null,
-          "linea": 84,
+          "linea": 85,
           "resumen": "La ficha de hogar: **se lee, no se rellena.** Todo llega puesto (de la póliza, del volcado, del Catastro o supuesto) y cada fila dice DE DÓNDE sale; el corredor solo toca lo que esté mal, con el lápiz"
         },
         {
@@ -7791,7 +7791,7 @@
           "exportada": false,
           "params": "{ fila, editando, borrador, setBorrador, abrir, cerrar, guardar, deshacer, vias, catalogos, estadosCiviles, municipios, defectos, }: { fila: Fila editando: boolean borrador: string setBorrador: (v: string) => void abrir: () => void cerrar: ",
           "retorno": null,
-          "linea": 561
+          "linea": 563
         },
         {
           "nombre": "Control",
@@ -7799,7 +7799,7 @@
           "exportada": false,
           "params": "{ fila, borrador, setBorrador, vias, catalogos, estadosCiviles, municipios, defectos, }: { fila: Fila borrador: string setBorrador: (v: string) => void vias: Opcion[] catalogos: Partial<Record<CatalogoPantalla, Opcion[]>> estadosCiviles: Op",
           "retorno": null,
-          "linea": 694
+          "linea": 696
         },
         {
           "nombre": "Diferencia",
@@ -7807,7 +7807,7 @@
           "exportada": false,
           "params": "{ primaActual, nueva }: { primaActual: number | null; nueva: number | null }",
           "retorno": null,
-          "linea": 819,
+          "linea": 821,
           "resumen": "El precio nuevo frente al que paga hoy. Sin prima actual NO se inventa una comparación: se dice que no consta, que es distinto de «no hay diferencia»."
         },
         {
@@ -7816,7 +7816,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "string",
-          "linea": 834
+          "linea": 836
         },
         {
           "nombre": "deTexto",
@@ -7824,7 +7824,7 @@
           "exportada": false,
           "params": "f: Fila, t: string",
           "retorno": "unknown",
-          "linea": 841
+          "linea": 843
         },
         {
           "nombre": "cadena",
@@ -7832,7 +7832,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 859
+          "linea": 861
         },
         {
           "nombre": "entero",
@@ -7840,14 +7840,14 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 863
+          "linea": 865
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "2d79c8d3cabd"
+      "hash": "32c28594a313"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/poliza/[polizaId]/retarificador.tsx",
@@ -7862,7 +7862,7 @@
           "exportada": false,
           "params": "catalogo: Opcion[], texto: string | null",
           "retorno": "Emparejamiento",
-          "linea": 95,
+          "linea": 96,
           "resumen": "Empareja un texto de la ficha con una opción del catálogo. Mismo criterio que `emparejar()` de `opciones.ts` —exacto y normalizado, y ante la duda no preselecciona— pero devolviendo POR QUÉ no ha casa"
         },
         {
@@ -7871,7 +7871,7 @@
           "exportada": true,
           "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, estadoCivilAuto, fechaMatriculacion, vehiculo, consumo, simulacion, deshabilitado, }: { polizaId: string faltanInicial: Reparo[] garajes: Opcion[] civiles: Opcion[] municipios: Opcion",
           "retorno": null,
-          "linea": 125,
+          "linea": 126,
           "resumen": "El único sitio de la app donde un clic cuesta 0,50€ — **salvo en simulación**. Cuatro cosas son deliberadas: - El botón dice EN el botón lo que cuesta el clic, no en una nota al pie, y dice la verdad "
         },
         {
@@ -7880,7 +7880,7 @@
           "exportada": false,
           "params": "{ r, simulacion, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean }",
           "retorno": null,
-          "linea": 819
+          "linea": 820
         },
         {
           "nombre": "BannerSimulacion",
@@ -7888,7 +7888,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 1003,
+          "linea": 1004,
           "resumen": "El cartel de simulación, arriba del todo y sin ambigüedad. 🚨 Sustituye al aviso ROJO de «tarificación apagada» que se pintaba aquí. Ese aviso era falso con la simulación puesta: en `cotizar()` el pas"
         },
         {
@@ -7897,7 +7897,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub }: { n: number; titulo: string; sub?: string }",
           "retorno": null,
-          "linea": 1029
+          "linea": 1030
         },
         {
           "nombre": "Paso",
@@ -7905,7 +7905,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub, children, }: { n: number titulo: string sub?: string children: React.ReactNode }",
           "retorno": null,
-          "linea": 1061
+          "linea": 1062
         },
         {
           "nombre": "Campo",
@@ -7913,7 +7913,7 @@
           "exportada": false,
           "params": "{ id, etiqueta, falta, faltaTexto, ayuda, children, }: { id: string etiqueta: string falta: boolean faltaTexto?: string ayuda?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 1087,
+          "linea": 1088,
           "resumen": "Un campo del formulario: etiqueta, control, ayuda y —si falta— su marca. La marca va AQUÍ y no en una lista encima del botón: «falta la versión» a diez centímetros del desplegable de la versión obliga"
         },
         {
@@ -7922,7 +7922,7 @@
           "exportada": false,
           "params": "{ vehiculo, autoMarca, autoModelo, }: { vehiculo: VehiculoConocido autoMarca: Emparejamiento autoModelo: Emparejamiento }",
           "retorno": null,
-          "linea": 1128,
+          "linea": 1129,
           "resumen": "Lo que la cartera YA sabe del coche: informativo, compacto y sin competir con los campos. Sustituye al texto que durante un día negó que la compañía mandara el modelo. Era falso y medido al revés: las"
         },
         {
@@ -7931,7 +7931,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, estado, }: { etiqueta: string valor: string | null estado: Emparejamiento['estado'] }",
           "retorno": null,
-          "linea": 1168
+          "linea": 1169
         },
         {
           "nombre": "ProcedenciaCatalogo",
@@ -7939,7 +7939,7 @@
           "exportada": false,
           "params": "{ emp, elegido, que, }: { emp: Emparejamiento elegido: string que: string }",
           "retorno": null,
-          "linea": 1205,
+          "linea": 1206,
           "resumen": "De dónde sale lo que hay puesto en un desplegable — o por qué no hay nada."
         },
         {
@@ -7948,7 +7948,7 @@
           "exportada": false,
           "params": "{ versiones }: { versiones: VersionCandidata[] }",
           "retorno": null,
-          "linea": 1252,
+          "linea": 1253,
           "resumen": "Las versiones vistas en OTRAS pólizas de la misma matrícula. 🚨 Son PISTAS, nunca una selección. Son texto histórico de otra póliza, no códigos Base7 del catálogo, y con dos o más pueden contradecirse"
         },
         {
@@ -7957,7 +7957,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: Consumo; simulacion: boolean }",
           "retorno": null,
-          "linea": 1306,
+          "linea": 1307,
           "resumen": "El contador de gasto. En simulación no se toca el libro, así que su estado se cuenta como información de contexto y NO en rojo: un «tarificación apagada» en rojo sobre una pantalla que sí funciona y n"
         }
       ],
@@ -7965,7 +7965,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "403405c6aea4"
+      "hash": "eab95dfa1d6c"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/subir/page.tsx",
@@ -12053,6 +12053,27 @@
       "hash": "4a05d70d1612"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Traduce el mensaje crudo de un ErrorCodeoscopic (`codeoscopic_<clase>: {...json...}`) a algo que se pueda leer en pantalla sin descifrar JSON en inglés. No se toca `ErrorCodeoscopic.message` en sí: eso sigue viajando entero a los logs y a `historial_interno` (ahí SÍ hace falta cada campo, requestId ",
+      "exporta": [
+        "formatearErrorVendor"
+      ],
+      "funciones": [
+        {
+          "nombre": "formatearErrorVendor",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajeCrudo: string",
+          "retorno": "string",
+          "linea": 10
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f0a02538d5f5"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/horquilla.ts",
       "ambito": "apps/asegura",
       "resumen": "Estimación propia de prima, a partir de casos que ya conocemos. PURO. Para qué sirve DE VERDAD: no tanto para enseñarle un precio al cliente como para decidir si merece la pena PEDIRLO. Cada cotización cuesta 0,50€ y no es idempotente. Si el cliente paga 250€ y lo que hemos visto en casas parecidas ",
@@ -13599,7 +13620,7 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string,",
           "retorno": "Promise<Preparado>",
-          "linea": 360,
+          "linea": 361,
           "resumen": "✅ El contrato del `risk` de hogar está verificado contra el portal del fabricante (02/09/2026; ver la cabecera de `peticion-hogar.ts`). Aun así el 502 devuelve el mensaje ENTERO del vendor: si el cont"
         },
         {
@@ -13608,7 +13629,7 @@
           "exportada": true,
           "params": "params: URLSearchParams",
           "retorno": "Promise<ResultadoCatalogo>",
-          "linea": 496,
+          "linea": 498,
           "resumen": "Resuelve UN catálogo por su `tipo` y los parámetros que ese tipo pida. Firma neutra (`URLSearchParams`) porque las dos rutas son `GET` con query."
         },
         {
@@ -13617,7 +13638,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 572
+          "linea": 574
         },
         {
           "nombre": "numero",
@@ -13625,7 +13646,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 576
+          "linea": 578
         },
         {
           "nombre": "booleano",
@@ -13633,7 +13654,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 583,
+          "linea": 585,
           "resumen": "`true`/`false` (boolean o cadena) → boolean. Cualquier otra cosa → `null` (no es una respuesta)."
         },
         {
@@ -13642,7 +13663,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 590
+          "linea": 592
         },
         {
           "nombre": "hoyIso",
@@ -13650,7 +13671,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 594
+          "linea": 596
         },
         {
           "nombre": "limpiarCorrecciones",
@@ -13658,13 +13679,13 @@
           "exportada": false,
           "params": "c: Record<string, unknown> | undefined",
           "retorno": "Partial<T>",
-          "linea": 599,
+          "linea": 601,
           "resumen": "Solo se aceptan correcciones CON valor: un campo vacío no borra lo supuesto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bc5c6e86e7ba"
+      "hash": "627f775d9e16"
     },
     {
       "ruta": "apps/asegura/lib/session.ts",
@@ -125605,7 +125626,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3112,
-    "funciones": 9427
+    "archivos": 3113,
+    "funciones": 9428
   }
 }
