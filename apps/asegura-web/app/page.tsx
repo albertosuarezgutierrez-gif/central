@@ -169,11 +169,26 @@ export default function Home() {
               tiene por dónde salir, y el propio cron lo cuenta como `sinCanal`.
 
               El nombre va en PRIMERA PERSONA y sale de `MEDIADOR`, no tecleado.
+
+              ✍️ La palabra es «seguros», no «pólizas» (Alberto, 07/09/2026).
+              Nadie dice en su casa «tengo tres pólizas»: dice «tengo tres
+              seguros». «Póliza» es la palabra del corredor, y el h1 lo lee
+              quien todavía no lo es. Dentro del texto sí se dice «póliza»
+              —cuando se habla del PDF concreto que se sube— porque ahí es el
+              nombre exacto de la cosa.
+
+              🚨 Y la segunda línea ya NO dice «Aunque no sean mías». La quitó
+              Alberto en corto («aunque no sean míos no lo pongas») pese a que
+              era la frase que más nos separaba del resto. Que eso no se pierda
+              depende ahora del `lead` de aquí abajo, que es donde vive el
+              «de cualquier compañía»: si alguien lo recorta por longitud, la
+              portada se queda sin decir en ninguna parte lo único que no puede
+              copiar el corredor de al lado.
             */}
             <h1 className="display">
-              Sube tus pólizas.
+              Sube tus seguros.
               <br />
-              <span className="destaca">Aunque no sean mías.</span>
+              <span className="destaca">Y contrólalos todos.</span>
             </h1>
             {/*
               Una línea más corto que la primera versión (06/09/2026), y no por

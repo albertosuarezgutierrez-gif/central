@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✍️ El h1 de la portada pasa a «Sube tus seguros. / Y contrólalos todos.» (07/09/2026).**
+  Alberto: «póliza» es la palabra del corredor, no la del cliente — nadie dice en su casa «tengo tres
+  pólizas». Y quitó la segunda línea entera («aunque no sean míos no lo pongas»), que era la que más
+  nos separaba del resto: que aquí vivan las pólizas de OTRAS compañías. Se acata; el diferenciador
+  se queda viviendo en UNA frase del `lead` («las pólizas de cualquier compañía»), y por eso se le
+  puso cepo en `lib/ramos.test.ts` — visto ROJO al quitarla, no solo verde. Si alguien acorta ese
+  párrafo por longitud, la portada se queda sin decir en ninguna parte lo único que no puede copiar
+  el corredor de al lado, y no falla nada. Medido a 390 y 1280 con Playwright. PR #2525.
+
 - **🍪 El badge de Cookiebot pisa el CTA «Que me llamen» en móvil — y el cepo volvió a estar ciego (07/09/2026).**
   Captura de Alberto en `grupoasegura.es` (13:00, móvil): el botón negro de cookies se solapa con el CTA de venta.
   Es **la segunda vez** que el mismo fallo pasa por delante de una medición: Playwright dijo «no desborda, CTA a
