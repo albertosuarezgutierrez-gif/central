@@ -50,6 +50,19 @@ test('🚨 lo que YA es de la casa no es un lead', () => {
   assert.equal(leadDeclarada(entrada({ yaEnCartera: true }), HOY), null)
 })
 
+test('🚨 «no se ha podido comprobar» NO es «no es nuestra»', () => {
+  // Cuando la persona no está casada con ninguna ficha de la cartera no hay
+  // contra qué cotejar el número de póliza. Colapsar eso a `false` diría que
+  // se comprobó y no estaba, que es una afirmación que nadie ha hecho.
+  //
+  // Sigue saliendo como lead —esconderlo perdería al cliente— pero el estado
+  // viaja hasta la pantalla para que ella lo pueda decir.
+  const l = leadDeclarada(entrada({ yaEnCartera: null }), HOY)
+  assert.notEqual(l, null, 'no se esconde: sería perder un cliente por una duda')
+  assert.equal(l?.yaEnCartera, null, 'el «no lo sé» tiene que llegar a la pantalla, no colapsarse a false')
+  assert.equal(leadDeclarada(entrada({ yaEnCartera: false }), HOY)?.yaEnCartera, false)
+})
+
 test('🚨 un lead cuya fecha útil ya pasó se marca, NO se tira ni se adelanta un año', () => {
   // Tirarlo pierde al cliente; moverlo a 2028 sería inventar una fecha que
   // nadie ha dicho (la póliza puede no haberse prorrogado). Se dice lo que se

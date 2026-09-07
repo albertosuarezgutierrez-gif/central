@@ -53,8 +53,14 @@ export type EntradaLead = {
   fechaVencimiento: Date | null
   /** `false` = lo leyó una máquina y nadie lo ha mirado. NO es «está mal». */
   confirmadaPorUsuario: boolean
-  /** Lo decide quien consulta la BD, no este módulo (ver cabecera). */
-  yaEnCartera: boolean
+  /**
+   * Lo decide quien consulta la BD, no este módulo (ver cabecera). **Tres
+   * estados, y el tercero no es un adorno:** `null` = no se ha podido
+   * comprobar, que es lo que pasa cuando la persona no está casada con ninguna
+   * ficha de la cartera y por tanto no hay contra qué cotejar el número de
+   * póliza. Colapsarlo a `false` afirmaría que se miró y no estaba.
+   */
+  yaEnCartera: boolean | null
 }
 
 /**
@@ -87,11 +93,22 @@ export type Lead = {
   diasParaAccionable: number | null
   /** La fecha útil de ESTE año ya pasó. La póliza sigue ahí; la ventana no. */
   ventanaPasada: boolean
+  /**
+   * Viaja hasta la pantalla a propósito. `null` = no se ha podido comprobar si
+   * ya la lleva la casa, y eso la pantalla lo tiene que DECIR: es la diferencia
+   * entre «esta no es tuya» y «no lo sabemos». Solo `true` excluye el lead, así
+   * que aquí abajo nunca llega un `true`.
+   */
+  yaEnCartera: false | null
 }
 
-/** `null` = no es una oportunidad (hoy solo por ya estar en la cartera). */
+/**
+ * `null` = no es una oportunidad. Hoy solo por una razón: **consta** que ya
+ * está en la cartera. `yaEnCartera: null` NO excluye — esconder un lead por una
+ * duda es perder a un cliente para no equivocarse, que es el peor cambio.
+ */
 export function leadDeclarada(e: EntradaLead, hoy: Date): Lead | null {
-  if (e.yaEnCartera) return null
+  if (e.yaEnCartera === true) return null
 
   const estado = estadoLead(e)
   const accionable = e.fechaVencimiento === null ? null : fechaAccionable(e.fechaVencimiento)
@@ -110,6 +127,7 @@ export function leadDeclarada(e: EntradaLead, hoy: Date): Lead | null {
     fechaAccionable: accionable,
     diasParaAccionable: faltan !== null && faltan >= 0 ? faltan : null,
     ventanaPasada: faltan !== null && faltan < 0,
+    yaEnCartera: e.yaEnCartera,
   }
 }
 
