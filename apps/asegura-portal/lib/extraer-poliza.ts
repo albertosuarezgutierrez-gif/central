@@ -30,6 +30,8 @@ import { aiComplete, openrouterVision, cleanJSON } from '@central/core-ai'
 import {
   MAX_TEXTO_RAMO,
   camposDeRamo,
+  importeEsPrimaAnual,
+  normalizarTipoDocumento,
   normalizarDatosRamo,
   normalizarOrigenes,
   normalizarPolizaLeida,
@@ -38,6 +40,7 @@ import {
   type DatosRamo,
   type OrigenPorCampo,
   type PolizaLeida,
+  type TipoDocumento,
 } from '@central/module-seguros-portal'
 
 import {
@@ -65,6 +68,14 @@ export type PolizaExtraida = PolizaLeida &
      * traería los metros del bloque entero a una póliza de un piso.
      */
     referenciaCatastral: string | null
+    /**
+     * Qué documento se ha leído. 🚨 NO es metadato: es lo que decide si el
+     * importe puede guardarse como prima ANUAL. Un suplemento y un recibo
+     * llevan una cifra en euros que no lo es, y sin esta clave el extractor los
+     * trataba como una póliza (medido el 07/09/2026: 55,85 € de un suplemento
+     * de cambio de vehículo guardados como prima anual de auto).
+     */
+    tipoDocumento: TipoDocumento | null
     datosRamo: DatosRamo | null
     /**
      * De dónde salió cada clave de `datosRamo`. Aquí SIEMPRE `documento`: lo ha
@@ -76,18 +87,41 @@ export type PolizaExtraida = PolizaLeida &
     datosRamoOrigen: OrigenPorCampo | null
   }
 
+/**
+ * Cómo fue la 2ª pasada, la que lee los campos PROPIOS del ramo (marca, modelo,
+ * uso del coche…). Son tres estados y no dos a propósito:
+ *
+ *   `no_aplica`  — no había nada que preguntar (ramo desconocido o catálogo vacío).
+ *   `no_leidos`  — se preguntó y NO se pudo mirar: la IA falló o devolvió vacío.
+ *   `leidos`     — se preguntó y volvió al menos un campo.
+ *
+ * 🚨 `no_leidos` NO es «la póliza no trae marca ni modelo». Sin este estado las
+ * dos cosas se ven idénticas en pantalla —campos vacíos bajo un cartel que dice
+ * «Leída de tu PDF»— y el cliente concluye que su documento no los lleva. Es el
+ * «no lo sé» pintado como «no hay» que persigue el CLAUDE.md de la raíz, y aquí
+ * mordió de verdad el 07/09/2026: la 1ª pasada leyó compañía, número, vencimiento
+ * y matrícula, la 2ª se llevó un `OpenRouter: respuesta vacía` con toda la cadena
+ * de suplentes apagada, y la pantalla no dijo ni una palabra.
+ *
+ * `leidos` tampoco promete que estén TODOS: promete que la pasada se hizo.
+ */
+export type EstadoCamposRamo = 'leidos' | 'no_leidos' | 'no_aplica'
+
 export type ResultadoExtraccion = {
   datos: PolizaExtraida
   /** `none` = no se pudo leer NADA. No es lo mismo que «la póliza no tiene esos datos». */
   fuente: 'texto' | 'vision' | 'none'
+  /** Cómo fue la 2ª pasada. Ver `EstadoCamposRamo`. */
+  camposRamo: EstadoCamposRamo
 }
 
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
+{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
 Reglas:
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
-- "primaAnual" en euros, solo el número, con punto decimal.
+- "tipoDocumento": qué es este documento. "poliza" = el contrato o sus condiciones particulares. "suplemento" = una MODIFICACIÓN de una póliza que ya existe (cambio de vehículo, de coberturas, de tomador); suele decir "suplemento", "anexo" o "modificación". "recibo" = un justificante de cobro de un periodo. "otro" si no es ninguno de los tres. Si no lo puedes decidir, pon null: NUNCA fuerces "poliza".
+- "primaAnual" en euros, solo el número, con punto decimal. Es lo que se paga AL AÑO por la póliza. Si el documento es un suplemento o un recibo, pon aquí su importe igualmente: nosotros ya sabemos qué hacer con él.
 - "matricula": la matrícula española del vehículo asegurado, tal cual aparece.
 - "bastidor": el número de bastidor o VIN del vehículo, 17 caracteres. Cópialo carácter a carácter; NUNCA lo completes, ni lo corrijas, ni rellenes los que no leas.
 - "fechaMatriculacion": la fecha de PRIMERA MATRICULACIÓN del vehículo, que no es la fecha de efecto ni la de vencimiento de la póliza.
@@ -102,6 +136,7 @@ function extraidaVacia(): PolizaExtraida {
     ...polizaLeidaVacia(),
     ...vehiculoLeidoVacio(),
     referenciaCatastral: null,
+    tipoDocumento: null,
     datosRamo: null,
     datosRamoOrigen: null,
   }
@@ -125,7 +160,10 @@ export function origenesDelDocumento(datos: DatosRamo | null): OrigenPorCampo | 
 
 /** Nada leído: TODOS los campos a `null` y `fuente: 'none'`. */
 function nadaLeido(): ResultadoExtraccion {
-  return { datos: extraidaVacia(), fuente: 'none' }
+  // `no_aplica` y no `no_leidos`: sin ramo no había 2ª pasada que hacer, así que
+  // decir que «no se pudieron leer» los campos del ramo sería inventarse un
+  // intento que nunca ocurrió.
+  return { datos: extraidaVacia(), fuente: 'none', camposRamo: 'no_aplica' }
 }
 
 /**
@@ -216,27 +254,33 @@ export function normalizarDatosRamoLeidos(ramo: string | null, bruto: unknown): 
 async function leerDatosRamo(
   datos: PolizaExtraida,
   pedir: (instruccion: string) => Promise<string>,
-): Promise<PolizaExtraida> {
+): Promise<{ datos: PolizaExtraida; estado: EstadoCamposRamo }> {
   const instruccion = instruccionRamo(datos.ramo)
-  if (instruccion === null) return datos
+  if (instruccion === null) return { datos, estado: 'no_aplica' }
 
   let salida: string
   try {
     salida = await pedir(instruccion)
   } catch (e) {
     // «No lo hemos podido mirar», no «no hay datos»: el contrato ya leído se
-    // conserva y los campos del ramo se completan a mano.
+    // conserva, los campos del ramo se completan a mano — y ahora, además, se
+    // DICE. Antes este `return` era indistinguible de una póliza sin esos datos.
     console.warn('[portal] 2ª pasada (campos del ramo) falló:', e)
-    return datos
+    return { datos, estado: 'no_leidos' }
   }
 
   try {
     const datosRamo = normalizarDatosRamoLeidos(datos.ramo, JSON.parse(cleanJSON(salida)))
     // Datos y orígenes se reemplazan JUNTOS: los de la 1ª pasada hablaban de los
     // valores de la 1ª pasada, y aquí acaban de cambiar.
-    return { ...datos, datosRamo, datosRamoOrigen: origenesDelDocumento(datosRamo) }
+    return {
+      datos: { ...datos, datosRamo, datosRamoOrigen: origenesDelDocumento(datosRamo) },
+      estado: 'leidos',
+    }
   } catch {
-    return datos
+    // El JSON no parsea: se preguntó y no se sacó nada en claro. Es un «no lo
+    // hemos podido leer», no un «no lo trae».
+    return { datos, estado: 'no_leidos' }
   }
 }
 
@@ -266,10 +310,17 @@ export async function extraerPoliza(
       console.warn('[portal] aiComplete falló:', e)
       return nadaLeido()
     }
-    const datos = await leerDatosRamo(parsear(salida), (instruccion) =>
-      aiComplete(texto.slice(0, 20_000), { system: instruccion, maxTokens: 400 }),
+    // 🚨 El mismo presupuesto que la 1ª pasada (600), no 400. La 2ª pide MÁS
+    // campos que la 1ª y su instrucción es más larga —lleva la etiqueta y la
+    // ayuda de cada campo del catálogo—, así que quedarse corto la trunca; y una
+    // respuesta truncada de OpenRouter no llega a medias: llega VACÍA
+    // (`OpenRouter: respuesta vacía`, `openrouter.ts:134`), que es lo que se vio
+    // el 07/09/2026 con toda la cadena de suplentes apagada. No es la causa
+    // demostrada —solo hay una medición— pero es la única variable barata.
+    const { datos, estado } = await leerDatosRamo(parsear(salida), (instruccion) =>
+      aiComplete(texto.slice(0, 20_000), { system: instruccion, maxTokens: 600 }),
     )
-    return { datos, fuente: 'texto' }
+    return { datos, fuente: 'texto', camposRamo: estado }
   }
 
   if (mimeType.startsWith('image/')) {
@@ -287,7 +338,7 @@ export async function extraerPoliza(
       console.warn('[portal] openrouterVision falló:', e)
       return nadaLeido()
     }
-    const datos = await leerDatosRamo(parsear(salida), (instruccion) =>
+    const { datos, estado } = await leerDatosRamo(parsear(salida), (instruccion) =>
       openrouterVision(
         { apiKey },
         instruccion,
@@ -295,7 +346,7 @@ export async function extraerPoliza(
         'Extrae los datos de esta póliza.',
       ),
     )
-    return { datos, fuente: 'vision' }
+    return { datos, fuente: 'vision', camposRamo: estado }
   }
 
   return nadaLeido()
@@ -313,6 +364,9 @@ export async function extraerPoliza(
  */
 export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): PolizaExtraida {
   const contrato = normalizarPolizaLeida(bruto)
+  const tipoDocumento = normalizarTipoDocumento(
+    bruto && typeof bruto === 'object' ? (bruto as Record<string, unknown>).tipoDocumento : null,
+  )
   // Normalmente `null`: los campos del ramo los trae la 2ª pasada. Se mira
   // aquí igualmente porque un modelo puede devolverlos ya en la primera, y
   // tirarlos obligaría a preguntar otra vez por algo que ya está dicho.
@@ -320,6 +374,14 @@ export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): P
   const o = bruto && typeof bruto === 'object' ? (bruto as Record<string, unknown>) : {}
   return {
     ...contrato,
+    // 🚨 La prima se ANULA cuando consta que el documento no es la póliza. El
+    // importe de un suplemento o de un recibo es real, pero no es lo que se
+    // paga al año, y guardarlo ahí no falla: sale un número plausible sobre el
+    // que se decide si un seguro está caro. `null` es «no lo sabemos», que la
+    // pantalla pinta «—» y la persona corrige; el error contrario no se corrige
+    // porque nadie se entera. Con `otro` o sin respuesta NO se toca.
+    primaAnual: importeEsPrimaAnual(tipoDocumento) ? contrato.primaAnual : null,
+    tipoDocumento,
     ...normalizarVehiculoLeido(bruto, hoy),
     // La misma regla que valida la corrección a mano (`lib/poliza-editable.ts`),
     // con la reacción de la máquina: lo que no sea la referencia del INMUEBLE

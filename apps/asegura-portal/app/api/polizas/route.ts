@@ -49,7 +49,7 @@ async function altaConDocumento(req: Request, identidadId: string) {
   if (fichero.size > MAX_BYTES) return NextResponse.json({ error: 'fichero_grande' }, { status: 413 })
 
   const buffer = Buffer.from(await fichero.arrayBuffer())
-  const { datos, fuente } = await extraerPoliza(buffer, fichero.type, fichero.name)
+  const { datos, fuente, camposRamo } = await extraerPoliza(buffer, fichero.type, fichero.name)
 
   const poliza = await prisma.portalPolizaDeclarada.create({
     data: {
@@ -94,12 +94,16 @@ async function altaConDocumento(req: Request, identidadId: string) {
       procedencia: 'declarado',
       confirmadaPorUsuario: false,
       documentoNombre: fichero.name,
-      extraccionBruta: { fuente, datos },
+      // `camposRamo` entra en la extracción bruta para que quede constancia de
+      // que la 2ª pasada se intentó y no salió: sin él, una fila con
+      // `datos_ramo` a NULL no distingue «la póliza no lo trae» de «no se pudo
+      // mirar», y esa distinción es justo lo que hay que poder auditar después.
+      extraccionBruta: { fuente, camposRamo, datos },
     },
     select: { id: true },
   })
 
-  return NextResponse.json({ id: poliza.id, datos, fuente })
+  return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo })
 }
 
 async function altaAMano(req: Request, identidadId: string) {
