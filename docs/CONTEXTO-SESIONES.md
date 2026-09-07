@@ -30,6 +30,13 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✂️ El h1 se queda en «Sube tus seguros. / Y contrólalos.» (07/09/2026).**
+  Alberto: «quita todos». Segundo recorte del mismo titular en el mismo día: primero cayó «Aunque no
+  sean míos» y ahora el «todos», que era lo último que insinuaba «de cualquier compañía». El h1 pasa
+  a ser de TONO, no de argumento: no dice nada que no pueda decir cualquier correduría. El
+  diferenciador vive entero en una frase del `lead`, y el cepo de `lib/ramos.test.ts` (PR #2525) es
+  ahora lo único que impide perderlo en silencio. Medido a 390 y 1280. PR #2530.
+
 - **✍️ El h1 de la portada pasa a «Sube tus seguros. / Y contrólalos todos.» (07/09/2026).**
   Alberto: «póliza» es la palabra del corredor, no la del cliente — nadie dice en su casa «tengo tres
   pólizas». Y quitó la segunda línea entera («aunque no sean míos no lo pongas»), que era la que más

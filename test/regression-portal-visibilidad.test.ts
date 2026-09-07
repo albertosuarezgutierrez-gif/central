@@ -384,3 +384,38 @@ test('🚨 la isla y sus secciones comparten radio', () => {
     assert.ok(seccion.includes(r), `la isla usa radio ×${r} y .seccion usa ×${seccion.join('/')}`)
   }
 })
+
+// ── La identidad del vehículo se pide en la pasada que FUNCIONA ─────────────
+//
+// Alberto, sobre la póliza real de auto: «falta la marca, el modelo y la
+// versión del vehículo; hay que buscar todo lo posible». La causa medida no era
+// el catálogo —`marca` y `modelo` están en `campos-ramo.ts` desde el 04/09—
+// sino que la 2ª pasada volvió VACÍA de OpenRouter con toda la cadena de
+// suplentes apagada.
+//
+// 🚗 Por eso `marca` y `modelo` se piden TAMBIÉN en la 1ª, que es la que
+// respondió. No compiten: si la 2ª contesta, sus valores reemplazan a estos
+// (`leerDatosRamo` sustituye datos y orígenes juntos). Es un SUELO.
+//
+// ⚠️ Y el suelo importa porque el documento no se guarda: lo que no se lea en
+// la subida hay que pedírselo otra vez a la persona.
+test('🚨 la 1ª pasada pide la identidad del vehículo, no solo la matrícula', () => {
+  const src = leer(EXTRACTOR)
+  const esquema = src.split('\n').find((l) => l.startsWith('{"') && l.includes('"compania"'))
+  assert.ok(esquema, 'no se encuentra el esquema JSON de INSTRUCCION')
+  for (const k of ['"matricula"', '"marca"', '"modelo"']) {
+    assert.ok(esquema.includes(k), `el esquema de la 1ª pasada debe pedir ${k}`)
+  }
+})
+
+test('🚨 lo que pide la 1ª pasada existe en el catálogo del ramo', () => {
+  // Si el prompt pidiera una clave que el catálogo no conoce,
+  // `normalizarDatosRamoLeidos` la tiraría en silencio: la IA gastaría tokens
+  // en un dato que nadie guarda, y en pantalla se vería igual que si no lo
+  // hubiera leído.
+  const catalogo = leer('packages/module-seguros-portal/src/campos-ramo.ts')
+  const auto = catalogo.slice(catalogo.indexOf('auto: ['), catalogo.indexOf('moto: ['))
+  for (const id of ['marca', 'modelo']) {
+    assert.match(auto, new RegExp(`id:\\s*'${id}'`), `el catálogo de auto debe declarar "${id}"`)
+  }
+})

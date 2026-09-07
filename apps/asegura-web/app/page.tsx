@@ -179,16 +179,23 @@ export default function Home() {
 
               🚨 Y la segunda línea ya NO dice «Aunque no sean mías». La quitó
               Alberto en corto («aunque no sean míos no lo pongas») pese a que
-              era la frase que más nos separaba del resto. Que eso no se pierda
-              depende ahora del `lead` de aquí abajo, que es donde vive el
-              «de cualquier compañía»: si alguien lo recorta por longitud, la
-              portada se queda sin decir en ninguna parte lo único que no puede
-              copiar el corredor de al lado.
+              era la frase que más nos separaba del resto. Se probó «Y
+              contrólalos todos.», donde el «todos» aún insinuaba lo de las
+              otras compañías, y también lo quitó («quita todos»). Así que el h1
+              ya no dice NADA que no pueda decir cualquier correduría: es un
+              titular de tono, no de argumento.
+
+              Que el diferenciador no se pierda depende entera y únicamente del
+              `lead` de aquí abajo, que es donde vive el «de cualquier
+              compañía». Si alguien recorta ese párrafo por longitud —cosa
+              razonable, tiene siete líneas en móvil—, la portada se queda sin
+              decir en ninguna parte lo único que no puede copiar el corredor de
+              al lado, y no falla nada. Lo ancla `lib/ramos.test.ts`.
             */}
             <h1 className="display">
               Sube tus seguros.
               <br />
-              <span className="destaca">Y contrólalos todos.</span>
+              <span className="destaca">Y contrólalos.</span>
             </h1>
             {/*
               Una línea más corto que la primera versión (06/09/2026), y no por
