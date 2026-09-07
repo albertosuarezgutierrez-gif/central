@@ -37,7 +37,7 @@
   se queda viviendo en UNA frase del `lead` («las pólizas de cualquier compañía»), y por eso se le
   puso cepo en `lib/ramos.test.ts` — visto ROJO al quitarla, no solo verde. Si alguien acorta ese
   párrafo por longitud, la portada se queda sin decir en ninguna parte lo único que no puede copiar
-  el corredor de al lado, y no falla nada. Medido a 390 y 1280 con Playwright. PR pendiente.
+  el corredor de al lado, y no falla nada. Medido a 390 y 1280 con Playwright. PR #2525.
 
 - **🍪 El badge de Cookiebot pisa el CTA «Que me llamen» en móvil — y el cepo volvió a estar ciego (07/09/2026).**
   Captura de Alberto en `grupoasegura.es` (13:00, móvil): el botón negro de cookies se solapa con el CTA de venta.
