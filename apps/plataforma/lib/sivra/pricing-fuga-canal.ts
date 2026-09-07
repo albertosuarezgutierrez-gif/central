@@ -30,6 +30,19 @@
 // puesta cuando entró la reserva. No decide precios. Tres estados, como manda la casa: sin reservas
 // no hay ratio (null), muestra corta se informa sin juzgar, y solo con muestra suficiente se dice
 // «fuga». Módulo PURO (sin BD ni `@/`), testeable con `node --test`.
+//
+// 🔄 LA MISMA TARDE (07/09/2026) Alberto cambió el extranet y la lista dejó de ser la de arriba:
+//   · Basic Deal 12 % → fuera. Mobile rate 10 % → fuera. Genius nivel 2-3 15 % → fuera.
+//   · Se queda: Genius 10 % (todos los niveles) y los country rates del 10 % (EEA/UK/US, no
+//     reembolsable, ≥3 noches). Tarifa semanal/mensual pasan a no reembolsable con 7/28 noches.
+//   Con eso `channel_markup` de House se puso a mano en 1,20 (= Standard Rate) y las mediciones
+//   del escaparate anteriores se apartaron (`pricing_escaparate.portal = 'booking_basic_deal'`)
+//   para que el calibrador no ajuste una recta sobre dos regímenes. Consecuencia para ESTE
+//   módulo: la pila ACEPTADA es Genius × country = 0,90 × 0,90 = 0,81 de la lista, y el umbral
+//   por defecto baja a 0,80 — por debajo hay un descuento que nadie ha pedido. Límite conocido:
+//   un 10 % suelto sobre huéspedes que no apilan (0,81 → 0,90 × 0,90) queda en el borde y no se
+//   ve; lo que sí se ve es cualquier pila como la de arriba (0,67-0,77). La reserva 154638741,
+//   con la lista de hoy, habría pagado 565,20€ + 585,90€ = 1.151,10€ + limpieza (+33,6 %).
 
 import { type ParametrosCanal } from './pricing-canal.ts'
 
@@ -83,7 +96,7 @@ export interface FugaCanal {
 export interface FugaCanalOpts {
   /** reservas juzgables mínimas para emitir veredicto (por debajo: `muestra_corta`) */
   minReservas?: number
-  /** por debajo de este ratio (mediana) el estado es `fuga` */
+  /** por debajo de este ratio (mediana) el estado es `fuga`; por defecto `UMBRAL_FUGA` */
   umbral?: number
   /** cuántas reservas listar en `peores` */
   maxPeores?: number
@@ -96,9 +109,16 @@ function mediana(xs: number[]): number | null {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
 }
 
+/**
+ * Pila de descuentos ACEPTADA en el extranet (07/09/2026): Genius 10 % × country rate 10 % = 0,81.
+ * El umbral va justo debajo: la mediana solo cae de ahí si alguien apila algo más.
+ */
+export const PILA_ACEPTADA = { genius: 0.10, countryRate: 0.10 } as const
+export const UMBRAL_FUGA = Number(((1 - PILA_ACEPTADA.genius) * (1 - PILA_ACEPTADA.countryRate) - 0.01).toFixed(2))
+
 export function fugaCanal(reservas: ReservaCobrada[], canal: ParametrosCanal, o: FugaCanalOpts = {}): FugaCanal {
   const minReservas = o.minReservas ?? 5
-  const umbral = o.umbral ?? 0.9
+  const umbral = o.umbral ?? UMBRAL_FUGA
   const maxPeores = o.maxPeores ?? 3
   const markup = Number(canal.markup) > 0 ? Number(canal.markup) : 1
   const cuota = Number(canal.cuotaFija) > 0 ? Number(canal.cuotaFija) : 0

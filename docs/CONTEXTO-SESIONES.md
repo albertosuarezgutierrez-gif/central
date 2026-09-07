@@ -39,6 +39,15 @@
   que no haya nada, prueba que ESE grep no lo encontró**. Comprobado sobre el DOM renderizado, no sobre el
   fuente. Mutación M3 (el rótulo solo en un comentario) debe pasar: si no, borrar la prosa que explica el
   cambio sería el precio del cepo. PR #2502 mergeado (`0f674b92a`); esto va aparte.
+- **💸 SIVRA pricing: el extranet de House ya está limpio y el motor recalibrado (07/09/2026).**
+  Alberto aplicó y verificó los cambios: fuera Basic Deal 12 %, Mobile 10 % y Genius 15 %; queda
+  Genius 10 % + country rates 10 %; semanal/mensual a no reembolsable con 7/28 noches. Con eso la
+  lista pública vuelve a ser el Standard Rate y **`channel_markup` de House se puso a mano en 1,20**
+  (era 1,056 = 1,20 × 0,88): sin tocarlo el motor habría listado un 13,6 % POR ENCIMA del p60 (no por
+  debajo, como dije antes). Las 17 mediciones del escaparate anteriores se reetiquetaron
+  `portal='booking_basic_deal'` para que `pricing/canal` no ajuste sobre dos regímenes; el calibrador
+  vuelve a medir solo con ventanas nuevas. Guardián `fuga-canal`: umbral 0,80 (pila aceptada 0,81) y
+  solo reservas desde el 07/09. ⚠️ Peor indicador de Booking: cancelaciones 50 % vs 34 % de la zona.
 - **🔴 El logo de Fidelidade entra, y el fichero bueno se llamaba `.jpg` sin serlo (07/09/2026).** De los
   tres que subió Alberto a Drive, los dos primeros eran JPEG —sin canal alfa, o sea caja blanca sobre la
   banda— y el tercero, `fidelidades logo3.jpg`, era un **PNG de paleta** (`mimeType: image/png`, 3.310 B):
