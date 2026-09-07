@@ -12,11 +12,13 @@ export const maxDuration = 60
 
 // GET /api/sivra/pricing/fuga-canal   (cron diario 09:20 UTC · o sesión de admin)
 //
-// Mide, por piso, lo que el huésped PAGÓ de verdad (`incomes.amount_gross`) contra lo que el motor
-// tenía LISTADO cuando entró la reserva (base de `pricing_applied` × canal calibrado). Es la capa
-// que ningún otro centinela mira: `pricing/canal` calibra escaparate↔base y el centinela del huésped
-// compara escaparate↔mercado; los dos se quedan en el precio listado. Ver la cabecera de
-// `lib/sivra/pricing-fuga-canal.ts` (07/09/2026, reserva 154638741 de House).
+// Mide, por piso, lo que el huésped PAGÓ de verdad por dormir (`incomes.amount_gross` menos la
+// limpieza, que Booking mete en el bruto) contra la LISTA PÚBLICA que el motor creía vender cuando
+// entró la reserva (base de `pricing_applied` × `channel_markup`). Es la capa que ningún otro
+// centinela mira: `pricing/canal` calibra escaparate↔base y el centinela del huésped compara
+// escaparate↔mercado; los dos se quedan en el precio listado. La capa está medida en el extranet
+// (Genius 15 % × móvil 10 % = 0,765 de la lista pública en 10 de 12 reservas de House): ver la
+// cabecera de `lib/sivra/pricing-fuga-canal.ts` (07/09/2026, reserva 154638741).
 //
 // Solo Booking: el canal calibrado (`channel_markup` + `cuota_fija`) describe ESE portal.
 // Un piso sin reservas en la ventana NO es «sin fuga»: es «sin dato», y así se dice.
@@ -94,18 +96,19 @@ export async function GET(req: NextRequest) {
   const conFuga = Object.entries(porPiso).filter(([, f]) => f.estado === "fuga")
   const sinDato = Object.entries(porPiso).filter(([, f]) => f.estado === "sin_reservas" || f.estado === "muestra_corta")
   const resumen = Object.entries(porPiso)
-    .map(([p, f]) => `${PROP_NAMES[p] ?? p}: ${f.estado}${f.ratioSinCuota != null ? ` ${f.ratioSinCuota}` : ""} (n=${f.n})`)
+    .map(([p, f]) => `${PROP_NAMES[p] ?? p}: ${f.estado}${f.ratio != null ? ` ${f.ratio}` : ""} (n=${f.n})`)
     .join(" · ")
 
   if (conFuga.length > 0) {
     const bloques = conFuga.map(([p, f]) => {
       const peores = f.peores
-        .map(x => `    · ${x.checkIn ?? x.reservationId} ${x.nights}n: cobrado ${eur(x.cobradoNoche)}/noche, listado ${eur(x.listaNoche)} (×${x.ratioLista.toFixed(2)})`)
+        .map(x => `    · ${x.checkIn ?? x.reservationId} ${x.nights}n: cobrado ${eur(x.cobradoNoche)}/noche por dormir, lista pública ${eur(x.listaNoche)} (×${x.ratio.toFixed(2)})`)
         .join("\n")
-      return `*${PROP_NAMES[p] ?? p}* — el huésped paga el *${Math.round((f.ratioSinCuota ?? 0) * 100)}%* de base×markup ` +
-        `(${Math.round((f.ratioLista ?? 0) * 100)}% de la lista con cuota) en ${f.n} reservas de Booking de ${VENTANA_DIAS} días` +
+      return `*${PROP_NAMES[p] ?? p}* — el huésped paga el *${Math.round((f.ratio ?? 0) * 100)}%* de la lista pública ` +
+        `(alojamiento, limpieza aparte) en ${f.n} reservas de Booking de ${VENTANA_DIAS} días` +
         (f.nSinBase ? ` (+${f.nSinBase} sin base del motor, no juzgadas)` : "") +
-        `\n  ${eur(f.eurosBajoBase ?? 0)} brutos por debajo de la base en el periodo\n${peores}`
+        (f.nBrutoRaro ? ` (+${f.nBrutoRaro} con bruto raro)` : "") +
+        `\n  ${eur(f.eurosBajoLista ?? 0)} de alojamiento por debajo de la lista en el periodo\n${peores}`
     })
     const nota = sinDato.length
       ? `\n\n⚪ Sin dato suficiente: ${sinDato.map(([p, f]) => `${PROP_NAMES[p] ?? p} (${f.estado}, n=${f.n})`).join(", ")}`
@@ -113,9 +116,9 @@ export async function GET(req: NextRequest) {
     try {
       await tgAviso('pisos.pricing-fuga-canal',
         `🟡 *Fuga de canal en Booking*\n\nEl motor lista al p60 del mercado y el huésped compra por debajo: ` +
-        `la diferencia vive en el extranet de Booking (Genius, tarifa móvil, ofertas), no en el motor.\n\n` +
+        `la diferencia vive en el extranet de Booking (Genius, tarifa móvil, ofertas apiladas), no en el motor.\n\n` +
         bloques.join("\n\n") + nota +
-        `\n\n_Umbral ${porPiso[conFuga[0][0]].umbral} sobre base×markup, sin cuota fija: el ratio conservador._`)
+        `\n\n_Umbral ${porPiso[conFuga[0][0]].umbral} sobre la lista pública (base × markup); el Basic Deal del 12 % ya va dentro del markup y no se ve aquí._`)
     } catch { /* el aviso no puede tumbar la medición */ }
   }
 

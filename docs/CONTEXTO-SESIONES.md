@@ -30,16 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **💸 SIVRA pricing: la fuga está entre lo LISTADO y lo COBRADO, no en el motor (07/09/2026).**
-  Reserva 154638741 de House (05-07/03/2027, 12 pax) a 981,02€ brutos = 490,51€/noche, por debajo del
-  comparable más barato del día. Diagnóstico corregido sobre la marcha: `pricing_applied.new_price` es
-  BASE de Smoobu, no lista — el motor tenía 523/542 de base = ~623€ de lista, el p60 del mercado. El
-  huésped pagó el 0,79 de eso, y **en las 12 reservas Booking de House desde el 15/07 el bruto es el 0,88
-  de la base** (0,86-0,94 en los otros tres): capa del extranet (Genius, móvil, ofertas) que nadie medía.
-  Nuevo guardián `pricing-fuga-canal` (módulo puro + cron 09:20 + aviso `pisos.pricing-fuga-canal`, visto
-  en rojo). `antelacion_k` 0→1 en House por BD (la venta a 6 meses iba al precio de hoy). Lo que NO era:
-  ni el raíl ±20% (la bajada 1.056→523 corregía una lista al doble del mercado) ni la cobertura (marzo
-  tiene 14/31 días medidos a 120d; el «19/366» de la sesión miraba 7 días, ventana que la ancla no usa).
+- **💸 SIVRA pricing: el huésped de Booking paga el 67% del Standard Rate, y está MEDIDO en el extranet (07/09/2026).**
+  Reserva 154638741 de House (05-07/03/2027, 12 pax): 981,02€ = 861,02€ alojamiento + 120€ limpieza. El
+  motor tenía 523/542 de base → Standard Rate 628/651 (**base × 1,20**) → Basic Deal 12% × móvil 10% ×
+  Genius 15% = **0,6732**. `channel_markup` 1,056 = 1,20 × 0,88: el calibrado YA lleva el Basic Deal. En
+  las 12 reservas Booking de House desde el 15/07, **10 caen en 0,764-0,766 de la lista pública** (la pila
+  Genius×móvil, no casos sueltos): 5.717€ de alojamiento por debajo de la lista. Guardián `pricing-fuga-canal`
+  (PR #2485) corregido: resta la limpieza ANTES de dividir (la 1ª versión daba 0,87 = optimista 11 pts).
+  Extranet, decisión de Alberto pendiente: Basic Deal 12% a TODOS hasta 2030, semanal/mensual = precio NR
+  con cancelación flexible, comisión real **22%** (+1,3% pagos), no el 19,72% de la skill SEO. `antelacion_k` 0→1 House.
 - **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
   `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
   **sin ninguna página**. Va en `RAMOS`, así que entra sola en sitemap, pie y formulario. Su posición en la

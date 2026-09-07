@@ -1,27 +1,35 @@
 // lib/sivra/pricing-fuga-canal.ts — lo que el huésped PAGA contra lo que el motor CREE que lista.
 //
 // POR QUÉ (07/09/2026, reserva 154638741 de House Sevillana, 05-07/03/2027). El motor había dejado
-// esas dos noches a 523€ y 542€ de base: con el canal calibrado (`escaparate = 1,056 × base + 60€`)
+// esas dos noches a 523€ y 542€ de base: con el canal calibrado (`escaparate = 1,056 × base + 120€`)
 // eso son ~623€/noche de lista, el percentil 60 del mercado medido de esa fecha. Es decir, el motor
-// hizo su trabajo. Y el huésped pagó 981,02€ por las dos noches: 490,51€/noche, un 21% por debajo
-// de la lista y por debajo del comparable MÁS BARATO de los diez medidos ese mismo día.
+// hizo su trabajo. Y el huésped pagó 981,02€ por las dos noches. Nadie lo medía: el calibrado del
+// canal (`pricing/canal`) mide el ESCAPARATE contra la base, y el centinela del huésped compara ese
+// escaparate con el mercado — los dos miran el precio LISTADO. Entre lo listado y lo cobrado hay una
+// capa que vive en el extranet de Booking y que el motor no ve.
 //
-// No era esa reserva: en las 12 reservas de Booking de House desde el 15/07/2026 el bruto cobrado por
-// noche fue de media el 0,88 de la BASE (no de la lista: de la base), o sea ~0,79 de la lista. En los
-// otros tres pisos, 0,86-0,94 de la base. Nadie lo medía: el calibrado del canal (`pricing/canal`)
-// mide el ESCAPARATE contra la base, y el centinela del huésped compara ese escaparate con el
-// mercado — los dos miran el precio LISTADO. Entre lo listado y lo cobrado hay una capa que vive en
-// el extranet de Booking (Genius, tarifa móvil, ofertas apiladas) y que el motor no ve: cada noche
-// que vende, vende un ~20% por debajo de donde cree estar, y el objetivo p60 se convierte en un p25.
+// LA CAPA, MEDIDA en el extranet la misma tarde (Alberto, literal de la reserva 6188885041):
+//
+//   Standard Rate (Booking)  = base Smoobu × 1,20          628€ y 651€  (523 × 1,2 · 542 × 1,2)
+//   × Basic Deal 12 %        → precio público, ordenador   = base × 1,056  ← esto es `channel_markup`
+//   × Mobile rate 10 %
+//   × Genius nivel 2-3 15 %  → cobrado                     0,88 × 0,90 × 0,85 = 0,6732 del Standard
+//                                                           422,77€ + 438,25€ = 861,02€
+//   + limpieza 120€/estancia (NO descontable)               = 981,02€  ← `incomes.amount_gross`
+//
+// Dos consecuencias que este módulo incorpora y que la primera versión (misma mañana) no sabía:
+//   1. El bruto de Booking LLEVA la limpieza dentro. Compararlo entero contra base×markup daba 0,87
+//      para esta reserva; sobre el alojamiento es 0,764. La cuota se resta ANTES de dividir.
+//   2. `channel_markup` = 1,056 = 1,20 × 0,88: el calibrado ya trae el Basic Deal, porque el
+//      escaparate que raspa es el que ve un huésped sin Genius desde ordenador. O sea, `base ×
+//      markup` es la LISTA PÚBLICA y este ratio mide lo que se pierde POR DEBAJO de ella (móvil +
+//      Genius + lo que se apile). El 12 % del Basic Deal se pierde ANTES y aquí no se ve: el
+//      motor lo absorbe subiendo la base, y por eso el objetivo p60 se cumple en lista y no en caja.
 //
 // Este módulo MIDE esa capa desde `incomes` (bruto real por reserva) y la base que el motor tenía
 // puesta cuando entró la reserva. No decide precios. Tres estados, como manda la casa: sin reservas
 // no hay ratio (null), muestra corta se informa sin juzgar, y solo con muestra suficiente se dice
-// «fuga». El umbral compara contra `base × markup` SIN la cuota fija a propósito: no está medido si
-// el bruto que reporta Booking incluye la limpieza, y el ratio contra la lista completa sería el
-// más alarmante de los dos — se da también, pero como dato, no como veredicto.
-//
-// Módulo PURO (sin BD ni `@/`), testeable con `node --test`.
+// «fuga». Módulo PURO (sin BD ni `@/`), testeable con `node --test`.
 
 import { type ParametrosCanal } from './pricing-canal.ts'
 
@@ -29,7 +37,7 @@ export interface ReservaCobrada {
   reservationId: string
   /** noches de la estancia (≥1) */
   nights: number
-  /** bruto total de la reserva antes de comisión (`incomes.amount_gross`) */
+  /** bruto total de la reserva antes de comisión (`incomes.amount_gross`), limpieza INCLUIDA */
   brutoTotal: number
   /**
    * Base MEDIA de Smoobu en esas noches en el momento de reservar (última escritura del motor antes
@@ -46,27 +54,26 @@ export interface ReservaJuzgada {
   reservationId: string
   checkIn?: string
   nights: number
+  /** (bruto − limpieza) / noches: lo que el huésped pagó por DORMIR cada noche */
   cobradoNoche: number
-  /** base × markup (sin cuota) */
-  listaSinCuotaNoche: number
-  /** base × markup + cuota / noches de ESTA estancia */
+  /** base × markup: la lista pública (sin Genius, sin móvil, sin limpieza) que el motor creía vender */
   listaNoche: number
-  ratioSinCuota: number
-  ratioLista: number
+  /** cobradoNoche / listaNoche */
+  ratio: number
 }
 
 export interface FugaCanal {
   estado: EstadoFuga
-  /** reservas con base conocida (las que forman los ratios) */
+  /** reservas con base conocida (las que forman el ratio) */
   n: number
   /** reservas que el motor no había tarifado: se cuentan, no se juzgan */
   nSinBase: number
-  /** mediana de cobrado / (base × markup). `null` sin reservas juzgables */
-  ratioSinCuota: number | null
-  /** mediana de cobrado / lista completa (con cuota). Informativo: ver cabecera */
-  ratioLista: number | null
-  /** € brutos que separan lo cobrado de `base × markup` en el periodo (>0 = cobrado por debajo) */
-  eurosBajoBase: number | null
+  /** reservas cuyo bruto no cubre ni la limpieza: dato raro, se cuenta y no se juzga */
+  nBrutoRaro: number
+  /** mediana de cobradoNoche / listaNoche. `null` sin reservas juzgables */
+  ratio: number | null
+  /** € de alojamiento que separan lo cobrado de la lista pública en el periodo (>0 = cobrado por debajo) */
+  eurosBajoLista: number | null
   umbral: number
   minReservas: number
   /** las reservas con peor ratio, para que el aviso diga CUÁLES */
@@ -76,7 +83,7 @@ export interface FugaCanal {
 export interface FugaCanalOpts {
   /** reservas juzgables mínimas para emitir veredicto (por debajo: `muestra_corta`) */
   minReservas?: number
-  /** por debajo de este ratio (mediana, sin cuota) el estado es `fuga` */
+  /** por debajo de este ratio (mediana) el estado es `fuga` */
   umbral?: number
   /** cuántas reservas listar en `peores` */
   maxPeores?: number
@@ -98,41 +105,39 @@ export function fugaCanal(reservas: ReservaCobrada[], canal: ParametrosCanal, o:
 
   const juzgadas: ReservaJuzgada[] = []
   let nSinBase = 0
-  let eurosBajoBase = 0
+  let nBrutoRaro = 0
+  let eurosBajoLista = 0
   for (const r of reservas) {
     const nights = Number(r.nights)
     if (!(nights >= 1) || !(r.brutoTotal > 0)) continue
     if (r.baseMedia == null || !(r.baseMedia > 0)) { nSinBase++; continue }
-    const cobradoNoche = r.brutoTotal / nights
-    const listaSinCuotaNoche = r.baseMedia * markup
-    const listaNoche = listaSinCuotaNoche + cuota / nights
+    const alojamiento = r.brutoTotal - cuota
+    if (!(alojamiento > 0)) { nBrutoRaro++; continue }
+    const cobradoNoche = alojamiento / nights
+    const listaNoche = r.baseMedia * markup
     juzgadas.push({
       reservationId: r.reservationId, checkIn: r.checkIn, nights,
       cobradoNoche: Math.round(cobradoNoche),
-      listaSinCuotaNoche: Math.round(listaSinCuotaNoche),
       listaNoche: Math.round(listaNoche),
-      ratioSinCuota: cobradoNoche / listaSinCuotaNoche,
-      ratioLista: cobradoNoche / listaNoche,
+      ratio: cobradoNoche / listaNoche,
     })
-    eurosBajoBase += (listaSinCuotaNoche - cobradoNoche) * nights
+    eurosBajoLista += (listaNoche - cobradoNoche) * nights
   }
 
   const n = juzgadas.length
-  const ratioSinCuota = mediana(juzgadas.map(j => j.ratioSinCuota))
-  const ratioLista = mediana(juzgadas.map(j => j.ratioLista))
-  const peores = [...juzgadas].sort((a, b) => a.ratioSinCuota - b.ratioSinCuota).slice(0, maxPeores)
+  const ratio = mediana(juzgadas.map(j => j.ratio))
+  const peores = [...juzgadas].sort((a, b) => a.ratio - b.ratio).slice(0, maxPeores)
 
   let estado: EstadoFuga
   if (n === 0) estado = 'sin_reservas'
   else if (n < minReservas) estado = 'muestra_corta'
-  else if ((ratioSinCuota as number) < umbral) estado = 'fuga'
+  else if ((ratio as number) < umbral) estado = 'fuga'
   else estado = 'ok'
 
   return {
-    estado, n, nSinBase,
-    ratioSinCuota: ratioSinCuota == null ? null : Number(ratioSinCuota.toFixed(3)),
-    ratioLista: ratioLista == null ? null : Number(ratioLista.toFixed(3)),
-    eurosBajoBase: n === 0 ? null : Math.round(eurosBajoBase),
+    estado, n, nSinBase, nBrutoRaro,
+    ratio: ratio == null ? null : Number(ratio.toFixed(3)),
+    eurosBajoLista: n === 0 ? null : Math.round(eurosBajoLista),
     umbral, minReservas, peores,
   }
 }
