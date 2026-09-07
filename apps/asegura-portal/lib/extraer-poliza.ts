@@ -30,6 +30,8 @@ import { aiComplete, openrouterVision, cleanJSON } from '@central/core-ai'
 import {
   MAX_TEXTO_RAMO,
   camposDeRamo,
+  importeEsPrimaAnual,
+  normalizarTipoDocumento,
   normalizarDatosRamo,
   normalizarOrigenes,
   normalizarPolizaLeida,
@@ -38,6 +40,7 @@ import {
   type DatosRamo,
   type OrigenPorCampo,
   type PolizaLeida,
+  type TipoDocumento,
 } from '@central/module-seguros-portal'
 
 import {
@@ -65,6 +68,14 @@ export type PolizaExtraida = PolizaLeida &
      * traería los metros del bloque entero a una póliza de un piso.
      */
     referenciaCatastral: string | null
+    /**
+     * Qué documento se ha leído. 🚨 NO es metadato: es lo que decide si el
+     * importe puede guardarse como prima ANUAL. Un suplemento y un recibo
+     * llevan una cifra en euros que no lo es, y sin esta clave el extractor los
+     * trataba como una póliza (medido el 07/09/2026: 55,85 € de un suplemento
+     * de cambio de vehículo guardados como prima anual de auto).
+     */
+    tipoDocumento: TipoDocumento | null
     datosRamo: DatosRamo | null
     /**
      * De dónde salió cada clave de `datosRamo`. Aquí SIEMPRE `documento`: lo ha
@@ -106,10 +117,11 @@ export type ResultadoExtraccion = {
 
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
+{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
 Reglas:
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
-- "primaAnual" en euros, solo el número, con punto decimal.
+- "tipoDocumento": qué es este documento. "poliza" = el contrato o sus condiciones particulares. "suplemento" = una MODIFICACIÓN de una póliza que ya existe (cambio de vehículo, de coberturas, de tomador); suele decir "suplemento", "anexo" o "modificación". "recibo" = un justificante de cobro de un periodo. "otro" si no es ninguno de los tres. Si no lo puedes decidir, pon null: NUNCA fuerces "poliza".
+- "primaAnual" en euros, solo el número, con punto decimal. Es lo que se paga AL AÑO por la póliza. Si el documento es un suplemento o un recibo, pon aquí su importe igualmente: nosotros ya sabemos qué hacer con él.
 - "matricula": la matrícula española del vehículo asegurado, tal cual aparece.
 - "bastidor": el número de bastidor o VIN del vehículo, 17 caracteres. Cópialo carácter a carácter; NUNCA lo completes, ni lo corrijas, ni rellenes los que no leas.
 - "fechaMatriculacion": la fecha de PRIMERA MATRICULACIÓN del vehículo, que no es la fecha de efecto ni la de vencimiento de la póliza.
@@ -124,6 +136,7 @@ function extraidaVacia(): PolizaExtraida {
     ...polizaLeidaVacia(),
     ...vehiculoLeidoVacio(),
     referenciaCatastral: null,
+    tipoDocumento: null,
     datosRamo: null,
     datosRamoOrigen: null,
   }
@@ -351,6 +364,9 @@ export async function extraerPoliza(
  */
 export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): PolizaExtraida {
   const contrato = normalizarPolizaLeida(bruto)
+  const tipoDocumento = normalizarTipoDocumento(
+    bruto && typeof bruto === 'object' ? (bruto as Record<string, unknown>).tipoDocumento : null,
+  )
   // Normalmente `null`: los campos del ramo los trae la 2ª pasada. Se mira
   // aquí igualmente porque un modelo puede devolverlos ya en la primera, y
   // tirarlos obligaría a preguntar otra vez por algo que ya está dicho.
@@ -358,6 +374,14 @@ export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): P
   const o = bruto && typeof bruto === 'object' ? (bruto as Record<string, unknown>) : {}
   return {
     ...contrato,
+    // 🚨 La prima se ANULA cuando consta que el documento no es la póliza. El
+    // importe de un suplemento o de un recibo es real, pero no es lo que se
+    // paga al año, y guardarlo ahí no falla: sale un número plausible sobre el
+    // que se decide si un seguro está caro. `null` es «no lo sabemos», que la
+    // pantalla pinta «—» y la persona corrige; el error contrario no se corrige
+    // porque nadie se entera. Con `otro` o sin respuesta NO se toca.
+    primaAnual: importeEsPrimaAnual(tipoDocumento) ? contrato.primaAnual : null,
+    tipoDocumento,
     ...normalizarVehiculoLeido(bruto, hoy),
     // La misma regla que valida la corrección a mano (`lib/poliza-editable.ts`),
     // con la reacción de la máquina: lo que no sea la referencia del INMUEBLE

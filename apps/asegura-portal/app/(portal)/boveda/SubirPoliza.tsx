@@ -2,6 +2,8 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { avisoDocumentoNoPoliza } from '@central/module-seguros-portal'
+
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
 
@@ -16,7 +18,7 @@ type DatosLeidos = {
   fechaVencimiento: string | null
 }
 type Resultado = {
-  datos: DatosLeidos
+  datos: DatosLeidos & { tipoDocumento?: 'poliza' | 'suplemento' | 'recibo' | 'otro' | null }
   fuente: 'texto' | 'vision' | 'none'
   /** Cómo fue la 2ª pasada, la de los campos propios del ramo. Ver `EstadoCamposRamo`. */
   camposRamo?: 'leidos' | 'no_leidos' | 'no_aplica'
@@ -150,6 +152,17 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
                 Guardada. <strong>Estos datos los hemos leído nosotros del documento</strong> — revísalos y
                 confírmalos.
               </p>
+              {/* 🚨 Y se DICE cuando el papel no es la póliza. Sin esta frase, la
+                  prima sale «—» justo después de subir un documento que llevaba
+                  una cifra bien visible, y eso se lee como un fallo de lectura
+                  nuestro en vez de como lo que es: ese importe existe y NO es la
+                  prima anual. La frase la calcula el módulo puro, no el JSX: el
+                  aviso y la anulación de la prima tienen que ir siempre juntos. */}
+              {avisoDocumentoNoPoliza(resultado.datos.tipoDocumento ?? null) && (
+                <p className="pendiente" style={{ fontSize: 13 }}>
+                  {avisoDocumentoNoPoliza(resultado.datos.tipoDocumento ?? null)}
+                </p>
+              )}
               {/* 🚨 Se DICE que la segunda lectura no salió. Sin esta frase, una
                   póliza cuyo bloque de marca y modelo no se pudo leer se ve
                   exactamente igual que una que no los trae: campos vacíos bajo un

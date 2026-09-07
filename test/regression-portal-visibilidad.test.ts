@@ -263,3 +263,51 @@ test('🚨 la 2ª pasada NO tiene menos presupuesto que la 1ª', () => {
     `ninguna pasada puede ir por debajo de 600 tokens (mínimo encontrado: ${Math.min(...topes)})`,
   )
 })
+
+// ── Un SUPLEMENTO no es una póliza, y su importe no es la prima anual ───────
+//
+// Alberto, 07/09/2026, sobre los 55,85 € que el portal guardó como prima anual
+// de un auto: «es porque es un suplemento (cambio de vehículo)». O sea, la IA
+// no leyó mal el número: leyó bien un número que no es una prima anual y lo
+// metió en el campo de la prima anual.
+//
+// Es «el dato que SÍ está pero se lee mal» del CLAUDE.md de la raíz, que avisa
+// de que es PEOR que un hueco: no hay nada que delate el error. 55,85 € llamó
+// la atención; 340 € habría pasado, y sobre esa cifra se decide si un seguro
+// está caro.
+test('🚨 el extractor PREGUNTA qué documento es', () => {
+  // Sin la clave en el prompt no hay nada que clasificar, y el `null` que
+  // llegaría deja pasar el importe de cualquier papel como prima anual.
+  // 🪤 Acotado al ESQUEMA JSON, no al fichero entero: la primera versión de
+  // este cepo buscaba `"tipoDocumento"` en todo el fuente y se ponía verde con
+  // la clave borrada del esquema, porque la palabra seguía apareciendo en la
+  // línea de Reglas. Verde el 100 % de las veces = indistinguible de uno que
+  // funciona. Se vio.
+  const src = leer(EXTRACTOR)
+  const esquema = src.split('\n').find((l) => l.startsWith('{"') && l.includes('"compania"'))
+  assert.ok(esquema, 'no se encuentra la línea del esquema JSON de INSTRUCCION')
+  assert.match(esquema, /"tipoDocumento"/, 'el esquema JSON debe pedir tipoDocumento')
+  for (const t of ['suplemento', 'recibo']) {
+    assert.ok(esquema.includes(t), `el esquema debe ofrecer "${t}" como valor`)
+    assert.ok(src.includes(t), `el prompt debe explicar qué es "${t}"`)
+  }
+})
+
+test('🚨 la prima se anula con el helper puro, no con un if a mano', () => {
+  // Una segunda copia de la regla en el app diverge del módulo sin que nada
+  // falle, y entonces la pantalla avisaría de un suplemento cuya prima sí se
+  // guardó — o al revés.
+  const src = sinComentarios(leer(EXTRACTOR))
+  assert.match(
+    src,
+    /importeEsPrimaAnual\([^)]*\)\s*\?\s*contrato\.primaAnual\s*:\s*null/,
+    'primaAnual debe pasar por importeEsPrimaAnual()',
+  )
+})
+
+test('🚨 la pantalla avisa cuando el papel no es la póliza', () => {
+  // Callarlo deja un «—» en la prima justo después de subir un documento que
+  // traía una cifra: se lee como un fallo de lectura nuestro.
+  const src = sinComentarios(leer(SUBIR))
+  assert.match(src, /avisoDocumentoNoPoliza/, 'SubirPoliza debe pintar el aviso')
+})
