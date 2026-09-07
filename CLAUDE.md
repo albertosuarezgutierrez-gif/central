@@ -172,6 +172,16 @@
   se sirve tal cual porque es el que hay; sustituirlo pide el archivo nuevo, no un retoque. Lo vigila
   `lib/companias.test.ts`, que lee el disco: un `<img>` a un fichero que no está **no rompe nada**,
   pinta el icono de imagen rota y de eso solo se entera quien abre la página.
+  🔵 **Y la pestaña NO tenía icono (07/09/2026).** Ni `icon.*`, ni `favicon.ico`, ni `metadata.icons`:
+  salía el globo por defecto de Chrome, y el «AS» NEGRO que se veía en una pestaña era el de
+  `app.grupoasegura.com` (el CRM de Manuel), no el de esta web. Alberto: «me gusta más en azul, se ve
+  más». `app/icon.tsx` pinta el monograma en `primario` sobre `acentoSuave` — el mismo gesto que
+  `.marca-tile`/`.marca-mono` de la cabecera — y **lee el dibujo de `public/brand/marca-asegura.svg`**
+  en vez de copiar el `path`. 🚨 Ese SVG trae `fill="currentColor"` a propósito, y dentro de un `<img>`
+  eso resuelve a **negro**: `icon.tsx` lo sustituye por el azul antes de embeberlo, así que **si alguien
+  le pone un color fijo al SVG la sustitución pasa a ser un no-op y vuelve el icono viejo sin que falle
+  nada**. Lo vigila `lib/icono.test.ts` (y que ningún hex se escriba a mano ahí: satori no entiende
+  `oklch`, así que solo valen `primario` y `acentoSuave`).
   🕰️ **Hasta la tarde del 05/09 lo que Alberto veía en `grupoasegura.es` era el CRM de Manuel**, no
   esta app: el apex `.es` y `www` estaban atados al proyecto `asegura` y esta app no tenía dominio. Se
   arregló en paneles, no en código: `.es`+`www` → `asegura-web`; `clientes.grupoasegura.es` →

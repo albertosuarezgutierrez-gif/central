@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔵 `asegura-web` no tenía icono de pestaña — el «AS» negro era de OTRA app (07/09/2026).** Alberto:
+  «sale el logo antiguo no? me gusta más en azul se ve más». Ni `icon.*` ni `favicon.ico` ni
+  `metadata.icons`: salía el globo de Chrome, y el cuadro negro que veía era el de
+  `app.grupoasegura.com` (CRM de Manuel). Ahora `app/icon.tsx` (`next/og`) pinta el monograma en
+  `primario` sobre `acentoSuave`, igual que la cabecera, **leyendo el dibujo de
+  `public/brand/marca-asegura.svg`** en vez de copiar el `path`. 🚨 Ese SVG trae `currentColor`, que
+  dentro de un `<img>` es NEGRO: si alguien le pone color fijo, la sustitución se vuelve no-op y
+  vuelve el icono viejo en silencio. Cepo `lib/icono.test.ts`, 5 mutaciones vistas en rojo. Renderizado
+  y mirado: 128×128 PNG, AS azul sobre azul claro.
+
 - **🏷️ El muro de `asegura-web` ya tiene logos — y no «fallaban»: no existían (07/09/2026).** Alberto:
   «mira porque no salen los logos». Diagnóstico: `page.tsx` pintaba `<li>{c}</li>` y el CSS lo estilaba
   como texto gris; ni un `<img>` ni una imagen en el repo. Los cinco SVG (Mapfre, Allianz, Occident,
