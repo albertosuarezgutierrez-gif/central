@@ -21,6 +21,7 @@ export default function Calendario({
 }) {
   return (
     <section className="seccion" aria-labelledby="calendario-titulo">
+      <p className="antetitulo">Lo que vence</p>
       <h2 id="calendario-titulo">Tu calendario</h2>
 
       {obligaciones.length === 0 ? (

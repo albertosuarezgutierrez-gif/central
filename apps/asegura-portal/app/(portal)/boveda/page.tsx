@@ -211,6 +211,10 @@ export default async function Boveda({
           cada una es el cartel de su FILA, que va con ella cuando se hace
           scroll — un encabezado de sección no. */}
       <section className="seccion" aria-labelledby="cartera-titulo">
+        {/* El rótulo sobre el titular, como en `grupoasegura.es`. Dice de dónde
+            sale la lista, que es la pregunta que el título («Tus seguros») ya no
+            responde desde que conviven las de la correduría y las añadidas. */}
+        <p className="antetitulo">Tu cartera</p>
         <h2 id="cartera-titulo">Tus seguros</h2>
         {!cartera.vinculada ? (
           cartera.vinculo === 'ambiguo' ? (
@@ -288,6 +292,7 @@ export default async function Boveda({
           avería, no como «aquí no hay nada». */}
       {bloquesAparte.map((b) => (
         <section key={b.grupo} className="seccion" aria-labelledby={`bloque-${b.grupo}-titulo`}>
+          <p className="antetitulo">{b.grupo === 'empresas' ? 'Tus sociedades' : 'Te han dado acceso'}</p>
           <h2 id={`bloque-${b.grupo}-titulo`}>{b.titulo}</h2>
           {b.titulares.map((t) => (
             <Titular key={t.clienteId} titular={t} grupo={b.grupo} conNombre={b.conNombre} hoy={hoy} />
@@ -306,6 +311,7 @@ export default async function Boveda({
           justo debajo — y no es una quinta pestaña, que es lo que Alberto acaba
           de quitar de la barra. */}
       <section className="seccion" aria-labelledby="hojas-titulo">
+        <p className="antetitulo">Para llevar encima</p>
         <h2 id="hojas-titulo">Tu hoja para imprimir</h2>
         <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
       </section>

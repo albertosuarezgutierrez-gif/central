@@ -72,6 +72,10 @@
    * `@central/brand` cambia el azul, `--primary` lo sigue solo. */
   --primary: var(--brand);
   --primary-hover: var(--brand-ink);
+  /* La curva de `asegura-web` (`--curva`), copiada al valor exacto: el
+   * movimiento también es marca, y dos curvas distintas hacen que las dos
+   * superficies se noten de dos manos. */
+  --curva: cubic-bezier(0.22, 1, 0.36, 1);
   --primary-light: var(--accent-soft);
   --surface: var(--panel);
   --radius: var(--radio);
@@ -372,7 +376,7 @@ input, select, textarea, button { font: inherit; }
     border-radius: calc(var(--radius) * 1.4);
     box-shadow: var(--shadow);
     margin: 8px 8px 8px 0;
-    padding: 28px 32px 56px;
+    padding: 40px 32px 72px;
     min-height: calc(100vh - var(--alto-barra) - 16px);
   }
 }
@@ -453,22 +457,81 @@ input, select, textarea, button { font: inherit; }
  * título de página, 18/600 el de sección, 16/500 el de tarjeta, 14 el cuerpo,
  * 12 lo secundario — con `letter-spacing: -0.025em` en lo que pasa de 18px,
  * que es lo que hace que un titular no parezca una etiqueta de formulario. */
+/* ── El aire y la escala de `grupoasegura.es` (07/09/2026) ─────────────────
+ * Alberto: «el diseño no es acorde a las páginas de los seguros», comparando
+ * con la web pública. Medido antes de tocar nada: la paleta y las TRES sombras
+ * son idénticas carácter a carácter en las dos apps (ambas inyectan
+ * `MARCA_ASEGURA`). Lo que separaba a la intranet de la web NO era el color,
+ * era la COMPRESIÓN:
+ *
+ *   sección: web 72px de padding vertical (96 en escritorio) · portal 16 + 24
+ *   h2:      web 32 → 36 → 48px en Fraunces · portal 18px en Inter
+ *
+ * O sea que el h2 del portal era más pequeño que el CUERPO de la web (16px).
+ * Aquí se sube el aire y la escala; lo que NO se copia es el rango entero de la
+ * web (h1 hasta 67px, secciones de 96px): esto es una pantalla de trabajo y
+ * cada píxel de aire es una póliza menos a la vista. */
 .seccion {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 1.4);
+  /* ×1.8 = 28,8px, el mismo radio que `.tarjeta`/`.panel` de la web. Las filas
+   * de dentro se quedan más bajas a propósito: la jerarquía la marca el radio. */
+  border-radius: calc(var(--radius) * 1.8);
   box-shadow: var(--shadow);
-  padding: 16px;
-  margin-bottom: 24px;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+/* 🚨 Va AQUÍ y no en el bloque de escritorio que hay más ARRIBA en el fichero,
+ * donde se escribió primero: aquel está ANTES que la regla base, así que con la
+ * misma especificidad ganaba la última y la media query no hacía NADA. Medido
+ * con Playwright: a 1440px seguía dando 24px. Fallo mudo — el CSS es válido, no
+ * falla ningún test, y solo se ve midiendo con el navegador.
+ *
+ * En escritorio la web usa 96px de padding de sección; aquí 32 dentro de la
+ * tarjeta, que con los 32 de separación entre secciones da un ritmo comparable
+ * sin gastar media pantalla en aire. */
+@media (min-width: 1024px) {
+  .seccion {
+    padding: 32px;
+  }
+}
+/* El RÓTULO sobre el titular de sección. Es el gesto más reconocible de la web
+ * (`.antetitulo`) y aquí cuesta una clase: 12px, versalitas muy espaciadas en
+ * gris, encima del h2. Sin él, el titular arranca en seco. */
+.antetitulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  color: var(--muted);
+  text-transform: uppercase;
 }
 .seccion h2 {
-  font-family: var(--serif);
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.4;
-  margin: 0 0 12px;
+  /* 🚨 `--display` (Fraunces), NO `--serif`: en esta marca `--serif` es Inter y
+   * el nombre engaña — la misma trampa que ya documenta el h1. El h2 era el
+   * último titular del portal que seguía en la fuente de cuerpo. */
+  font-family: var(--display, var(--serif));
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+  margin: 0 0 16px;
   letter-spacing: -0.025em;
   text-wrap: balance;
+}
+/* La ENTRADILLA de la web (`.lead`): el párrafo que explica una sección antes
+ * de la lista. `max-width: 32rem` no es decorativo — una línea de 1.056px es
+ * ilegible, y ese es justo el ancho útil de la isla en escritorio. */
+.lead {
+  margin: 0 0 16px;
+  font-size: 16px;
+  line-height: 1.625;
+  color: var(--muted);
+  max-width: 32rem;
 }
 
 /* ── El titular de página ──────────────────────────────────────────────────
@@ -496,6 +559,14 @@ h1 {
 /* El acento en itálica de marca, que es la firma del titular de la web. Va
    sobre `<em>` y no sobre una clase: en «Mis <em>seguros</em>» la palabra
    destacada es la que lleva el significado, así que el énfasis es semántico. */
+/* El único salto de escala del titular. La web llega a 60 y 67px; aquí se queda
+ * en 40 a propósito: allí el h1 es el primer golpe de vista de un escaparate, y
+ * aquí es la etiqueta de una pantalla que se abre a diario. */
+@media (min-width: 640px) {
+  h1 {
+    font-size: 40px;
+  }
+}
 h1 em {
   font-style: italic;
   color: var(--brand);
@@ -533,8 +604,8 @@ h1 em {
 .cartera-card {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 1.4);
-  padding: 16px;
+  border-radius: calc(var(--radius) * 1.8);
+  padding: 20px;
   min-width: 0;
   background: var(--surface);
   /* 🔢 `tabular-nums` en toda la tarjeta. No es un pulido: aquí casi todo son
@@ -678,6 +749,15 @@ h1 em {
   .titular-cabecera {
     position: static;
   }
+  /* Y la fila no se levanta: el color del borde ya dice que está bajo el
+   * puntero, así que no se pierde la señal, solo el movimiento. */
+  .poliza-enlace {
+    transition: background-color 150ms, border-color 150ms;
+  }
+  .poliza-enlace:hover {
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 .polizas {
@@ -699,11 +779,21 @@ h1 em {
   background: var(--surface);
   color: inherit;
   text-decoration: none;
-  transition: background-color 150ms, border-color 150ms;
+  transition:
+    transform 300ms var(--curva),
+    background-color 300ms var(--curva),
+    border-color 300ms var(--curva),
+    box-shadow 300ms var(--curva);
 }
+/* El hover de la web (`a.tarjeta`) levanta la tarjeta y tiñe el borde de marca.
+ * 🚨 Aquí `scale(1.01)` y no el `1.03` de allí: aquellas son tarjetas de tres
+ * columnas y estas son filas a todo el ancho de la isla — un 3 % sobre 1.056px
+ * son 32px de desplazamiento y la fila pisa a sus vecinas. */
 .poliza-enlace:hover {
   background: var(--surface-hover, var(--panel2));
-  border-color: var(--muted2);
+  border-color: color-mix(in oklab, var(--brand) 40%, transparent);
+  box-shadow: var(--shadow);
+  transform: scale(1.01);
 }
 /* El icono, en su cuadro tintado de marca. Es DECORACIÓN: dos pólizas de hogar
  * de la misma compañía llevan el mismo, así que lo que distingue es el título. */
