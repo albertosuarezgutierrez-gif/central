@@ -139,6 +139,20 @@ plan de implementación cuando se prioricen.
     Extiende el mecanismo que ya existe para las autorizaciones a terceros (`registrarUso` en
     `lib/autorizaciones.ts`) a las pólizas propias. Sale solo en `/correduria`, nunca en el portal del
     cliente — no le dice nada a él, solo ordena a quién llama Alberto primero.
+11. **Cerrar relaciones cuando el titular de la póliza aportada NO es el cliente.** Si al leer el
+    documento (pieza 2) el tomador extraído no coincide con el nombre de la identidad que lo sube
+    (el hogar a nombre de su mujer, el coche con un conductor habitual que no es él), preguntarle —
+    mismo guion fijo tri-estado— qué relación tiene con esa persona (pareja, hijo/a, padre/madre,
+    hermano/a, empresa propia, otro/no lo sé). Ataca un problema ya medido en la cartera:
+    `poliza_intervinientes` está al 1,7% y el 81% de los intervinientes no trae NIF, así que hoy la
+    correduría no sabe quién más hay detrás de sus 110 pólizas.
+    ⚠️ **Lo que declara el cliente es una PROPUESTA, no una relación operativa**: no se escribe
+    directamente en `cliente_relaciones` (eso es autoridad del corredor, escrita desde
+    `apps/asegura` con `prisma_seguros`), sino que se guarda como sugerencia pendiente y se enseña en
+    `/correduria` para que Alberto la confirme — mismo patrón que toda la pieza 6 y que
+    `portal_peticion_acceso` (el cliente propone, el corredor decide). Y por la regla de identidad de
+    la casa (NIF, nunca nombre): esto NO sustituye a `poliza_intervinientes`, solo abre la puerta a que
+    Alberto la complete con el NIF cuando confirme.
 
 ## Reglas que no se negocian
 
