@@ -47,6 +47,19 @@
   `hola@envios.grupoasegura.es`. ⚠️ **El MCP de Vercel NO expone variables de entorno** (comprobado con
   dos búsquedas: solo proyectos, protección, logs, deploys y compras), así que las dos envs y el
   redeploy los hace Alberto a mano; el agente solo puede llegar hasta la clave.
+  📬 **UN SOLO REMITENTE, y con defecto en el repo (dictado de Alberto: «solo hola@grupoasegura.es,
+  ponlo donde sea para que no vuelva a haber errores; muchos mails al final es un caos»).**
+  `remitenteCorreo()` de `@central/module-seguros` ya NO devuelve `null`: cae a
+  **`REMITENTE_CORREDURIA = 'hola@grupoasegura.es'`**, así que `ASEGURA_MAIL_FROM` y `PORTAL_MAIL_FROM`
+  pasan a ser opcionales y desaparece la avería «falta la env» (que había que acertar en 4 sitios).
+  Retiradas las 5 ramas muertas y el desenlace `sin_remitente`. Un remitente no es un secreto: es la
+  dirección que ve el cliente, y en el repo está protegida por cepos.
+  🚨 **Y se corrigió una afirmación FALSA que llevaba en `canal-email.ts` del portal**: decía que
+  verificar el dominio raíz «obligaría a fusionar a mano el SPF de Resend con el de IONOS», y por eso
+  se enviaba desde `envios.`. Medido al dar de alta `grupoasegura.es` en Resend: **los tres registros
+  van en subdominios** (`resend._domainkey` TXT, `send` MX y TXT), **ninguno toca el apex** — ni SPF
+  que fusionar ni MX de IONOS que tocar. Dominio creado (pendiente de DNS en IONOS y de verificar) y
+  clave `central-asegura (grupoasegura.es)` con `sending_access` restringido a él.
   🔗 **Y el enlace del correo cambia a `clientes.grupoasegura.es/boveda`** (dictado de Alberto:
   «esta url es mejor»). Medido antes de tocarlo: ese `GET` responde **200** y sin cookie
   `x-matched-path: /` — la propia página hace `redirect('/')`, así que quien no tenga sesión cae en

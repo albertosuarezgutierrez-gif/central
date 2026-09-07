@@ -341,14 +341,12 @@ export async function invitarAlPortal(
   // 🚨 «No hay proveedor» y «rechazó el mensaje» NO se colapsan: el primero se
   // arregla en las variables de Vercel y reintentarlo no lo arregla nunca. Ver
   // la cabecera de `ResultadoEnvioCorreo` para el caso que lo obligó.
-  if (enviado === 'sin_proveedor' || enviado === 'sin_remitente') {
+  if (enviado === 'sin_proveedor') {
     return {
       ok: false,
       estado: 'sin_correo_configurado',
       motivo:
-        enviado === 'sin_proveedor'
-          ? 'asegura no tiene ningún proveedor de correo configurado (falta RESEND_API_KEY, SMTP_USER+SMTP_PASSWORD o GMAIL_USER+GMAIL_APP_PASSWORD en Vercel). No es que el envío fallara: no hay por dónde enviar, y reintentarlo no lo arregla.'
-          : 'A asegura le falta ASEGURA_MAIL_FROM en Vercel: no hay remitente con el que firmar el correo. Reintentarlo no lo arregla.',
+        'asegura no tiene ningún proveedor de correo configurado (falta RESEND_API_KEY, SMTP_USER+SMTP_PASSWORD o GMAIL_USER+GMAIL_APP_PASSWORD en Vercel). No es que el envío fallara: no hay por dónde enviar, y reintentarlo no lo arregla.',
       status: 503,
     }
   }

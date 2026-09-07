@@ -167,10 +167,10 @@ export function cuerpoAvisoAcceso(d: DatosAvisoAcceso): CuerpoAviso {
 
 /**
  * Manda el correo. El desenlace es el MISMO tipo que la invitación al portal
- * (`ResultadoEnvioCorreo`), y por la misma razón: «no hay proveedor» y «falta el
- * remitente» son variables de Vercel que faltan, y decirle a Alberto que
- * reintente un envío que no puede salir es mandarle a la única acción que no
- * arregla nada (medido en producción el 07/09/2026).
+ * (`ResultadoEnvioCorreo`), y por la misma razón: «no hay proveedor» es una variable de
+ * Vercel que falta, y decirle a Alberto que reintente un envío que no puede
+ * salir es mandarle a la única acción que no arregla nada (medido en producción
+ * el 07/09/2026).
  *
  * Un `rechazado` NO significa que la autorización no exista: la fila ya estaba
  * escrita mucho antes de llamar aquí. Por eso quien llama contesta
@@ -190,10 +190,6 @@ export async function enviarAvisoAcceso(destino: string, d: DatosAvisoAcceso): P
     return 'sin_proveedor'
   }
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-  if (!from) {
-    console.error('[asegura/aviso-acceso] falta ASEGURA_MAIL_FROM: no se avisa')
-    return 'sin_remitente'
-  }
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
 
   const { asunto, texto, html } = cuerpoAvisoAcceso(d)

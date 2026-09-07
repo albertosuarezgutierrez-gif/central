@@ -111,14 +111,12 @@ export async function avisarAccesoPendiente(
   const enviado = await enviarAvisoAcceso(destino, { otorgante: nombre === '' ? null : nombre, enlace, caducaEn })
   // 🚨 Igual que en la invitación al portal: una env que falta no se cuenta como
   // «el proveedor lo rechazó», porque reintentar no la pone.
-  if (enviado === 'sin_proveedor' || enviado === 'sin_remitente') {
+  if (enviado === 'sin_proveedor') {
     return {
       ok: false,
       estado: 'sin_correo_configurado',
       motivo:
-        enviado === 'sin_proveedor'
-          ? 'asegura no tiene ningún proveedor de correo configurado (falta RESEND_API_KEY, SMTP_USER+SMTP_PASSWORD o GMAIL_USER+GMAIL_APP_PASSWORD en Vercel). Reintentarlo no lo arregla.'
-          : 'A asegura le falta ASEGURA_MAIL_FROM en Vercel: no hay remitente con el que firmar el correo. Reintentarlo no lo arregla.',
+        'asegura no tiene ningún proveedor de correo configurado (falta RESEND_API_KEY, SMTP_USER+SMTP_PASSWORD o GMAIL_USER+GMAIL_APP_PASSWORD en Vercel). Reintentarlo no lo arregla.',
       status: 503,
     }
   }

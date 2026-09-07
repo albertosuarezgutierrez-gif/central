@@ -170,14 +170,17 @@ export function cuerpoInvitacionPortal(d: DatosInvitacionPortal): CuerpoInvitaci
 }
 
 /**
- * El desenlace del envío. 🚨 Son CUATRO y no un booleano, porque «no ha salido»
+ * El desenlace del envío. 🚨 Son TRES y no un booleano, porque «no ha salido»
  * se arregla en sitios distintos y el que lo lee decide qué hacer después:
  *
  *   - `enviado`        → el proveedor lo aceptó.
  *   - `sin_proveedor`  → no hay ninguno configurado (`RESEND_API_KEY` / `SMTP_*`
  *                        / `GMAIL_*`). Es una variable de Vercel que falta.
- *   - `sin_remitente`  → falta `ASEGURA_MAIL_FROM`. Ídem.
- *   - `rechazado`      → había proveedor y remitente, y aun así dijo que no.
+ *   - `rechazado`      → había proveedor, y aun así dijo que no.
+ *
+ * ⚠️ Hubo un cuarto, `sin_remitente`, y se retiró el 07/09/2026: el remitente
+ * ya no puede faltar porque `remitenteCorreo()` tiene uno por defecto
+ * (`hola@grupoasegura.es`). Una rama que no puede ocurrir es ruido.
  *
  * ── Por qué esto no es un booleano (07/09/2026) ────────────────────────────
  *
@@ -194,7 +197,7 @@ export function cuerpoInvitacionPortal(d: DatosInvitacionPortal): CuerpoInvitaci
  * hacerlo igual desde la portada con su correo. Lo único que ha fallado es
  * contárselo.
  */
-export type ResultadoEnvioCorreo = 'enviado' | 'sin_proveedor' | 'sin_remitente' | 'rechazado'
+export type ResultadoEnvioCorreo = 'enviado' | 'sin_proveedor' | 'rechazado'
 
 export async function enviarInvitacionPortal(
   destino: string,
@@ -212,10 +215,6 @@ export async function enviarInvitacionPortal(
     return 'sin_proveedor'
   }
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-  if (!from) {
-    console.error('[asegura/invitacion-portal] falta ASEGURA_MAIL_FROM: no se invita')
-    return 'sin_remitente'
-  }
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
 
   const { asunto, texto, html } = cuerpoInvitacionPortal(d)

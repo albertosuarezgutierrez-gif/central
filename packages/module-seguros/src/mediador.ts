@@ -243,17 +243,43 @@ export function lineaIdentificacion(): string {
  *   - `"Lo que sea <no-reply@envios.grupoasegura.es>"` → se ignora el nombre
  *   - `"no-reply@envios.grupoasegura.es"` → se le pone el nombre
  *
- * Devuelve `null` si no hay dirección utilizable: quien llama ya trata eso como
- * avería de configuración, y un remitente inventado sería peor que no enviar.
+ * ── 🚨 Y desde el 07/09/2026 NO devuelve `null`: hay un remitente por defecto ──
+ *
+ * Dictado de Alberto: «solo hola@grupoasegura.es, ponlo donde sea para que no
+ * vuelva a haber errores; muchos mails al final es un caos, un mail es más
+ * práctico». Antes, una env ausente o mal escrita hacía que el correo **no
+ * saliera**, y esa env había que acertarla en CUATRO sitios (`ASEGURA_MAIL_FROM`
+ * en asegura, `PORTAL_MAIL_FROM` en el portal, y en cada uno de sus entornos de
+ * Vercel). Cada sitio era una ocasión de romperlo en silencio.
+ *
+ * Un remitente NO es un secreto —es la dirección que el cliente ve— así que la
+ * regla de «nunca un literal de reserva» (que existe para lo que FIRMA sesiones)
+ * no aplica aquí; sí aplica la de al lado: el valor vive en el repo, donde se
+ * revisa y se protege, y no en un panel que además oculta los valores Secret.
+ * Es lo mismo que ya hacen `ASEGURA_PORTAL_URL` y `NEXT_PUBLIC_PORTAL_URL`.
+ *
+ * Una env presente y válida sigue mandando: sirve para probar otro buzón sin
+ * tocar código. Una env con basura (sin arroba, con espacios) **cae al defecto y
+ * lo dice en el log** — enviar desde la dirección buena es mejor que no enviar,
+ * que era lo que pasaba antes.
+ *
+ * ⚠️ Esto no exime de verificar el dominio en el proveedor de envío: si
+ * `grupoasegura.es` no está verificado en Resend, el envío se rechaza igual.
+ * Lo que se elimina es la clase de fallo «falta la variable».
  */
-export function remitenteCorreo(env: string | undefined | null): string | null {
+export const REMITENTE_CORREDURIA = 'hola@grupoasegura.es'
+
+export function remitenteCorreo(env?: string | undefined | null): string {
   const bruto = (env ?? '').trim()
-  if (!bruto) return null
+  if (!bruto) return `${MEDIADOR.marca} <${REMITENTE_CORREDURIA}>`
   // Con `<...>` la dirección es lo de dentro; sin ellos, el valor entero.
   const entreAngulos = bruto.match(/<([^>]+)>/)
   const direccion = (entreAngulos ? entreAngulos[1] : bruto).trim()
   // Una dirección sin arroba no es una dirección: no se disfraza con la marca.
-  if (!direccion || !direccion.includes('@') || /\s/.test(direccion)) return null
+  if (!direccion || !direccion.includes('@') || /\s/.test(direccion)) {
+    console.error(`[mediador] remitente mal escrito (${JSON.stringify(bruto)}): se usa ${REMITENTE_CORREDURIA}`)
+    return `${MEDIADOR.marca} <${REMITENTE_CORREDURIA}>`
+  }
   return `${MEDIADOR.marca} <${direccion}>`
 }
 
