@@ -324,7 +324,7 @@ export default function Home() {
             </h2>
             <p className="lead">
               Un PDF o una foto con el móvil. Sacamos la compañía, el número, el vencimiento y las coberturas, y te
-              dejamos la ficha rellena en tu área de clientes para que la revises.
+              dejamos la ficha rellena en tu intranet para que la revises.
             </p>
             <ul className="garantias" style={{ marginTop: 24 }}>
               <li>

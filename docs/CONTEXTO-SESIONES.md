@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🕳️ El cepo de la puerta miraba a UN fichero, y «área de clientes» seguía vivo en DOS (07/09/2026).**
+  Alberto, sobre una captura: «no se ve así la web». Cierto lo obvio (el PR #2502 aún sin mergear) y de paso
+  destapó lo otro: el mock del hero decía «Área de clientes · Mis seguros». Lo había corregido A MANO porque
+  `lib/portal.test.ts` prohibía ese rótulo **solo dentro de `Cabecera.tsx`**. Movido a `PROHIBIDO` (todo el
+  fuente, con `/i`) cazó **dos apariciones vivas** que nadie veía: `page.tsx:327` y `PanelDemo.tsx:216`. 🚨 Y
+  se me escaparon por método: busqué «Área» con mayúscula y estaban en minúscula — **un grep vacío no prueba
+  que no haya nada, prueba que ESE grep no lo encontró**. Comprobado sobre el DOM renderizado, no sobre el
+  fuente. Mutación M3 (el rótulo solo en un comentario) debe pasar: si no, borrar la prosa que explica el
+  cambio sería el precio del cepo. PR #2502 mergeado (`0f674b92a`); esto va aparte.
 - **💸 SIVRA pricing: el extranet de House ya está limpio y el motor recalibrado (07/09/2026).**
   Alberto aplicó y verificó los cambios: fuera Basic Deal 12 %, Mobile 10 % y Genius 15 %; queda
   Genius 10 % + country rates 10 %; semanal/mensual a no reembolsable con 7/28 noches. Con eso la
