@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 
+import { InstalarApp } from './InstalarApp'
 import { NavPortal } from './NavPortal'
 
 /**
@@ -23,7 +24,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <Suspense fallback={<div className="portal-nav portal-nav-hueco" aria-hidden />}>
         <NavPortal />
       </Suspense>
-      <main className="portal-contenido">{children}</main>
+      <main className="portal-contenido">
+        {children}
+        {/* Al FINAL del contenido y en el flujo, no flotando: un elemento
+            `position: fixed` no desborda —se pone encima—, así que taparía la
+            última fila de la pantalla sin que ninguna medición de ancho lo
+            delatara. Y aquí dentro y no en la puerta: pedirle instalar a quien
+            todavía no ha entrado es ruido. */}
+        <InstalarApp />
+      </main>
     </div>
   )
 }

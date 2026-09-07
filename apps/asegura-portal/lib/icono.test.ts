@@ -11,6 +11,10 @@ import { MARCA_ASEGURA } from '../../../packages/brand/src/marcas/asegura.ts'
 
 const RAIZ = join(import.meta.dirname, '..')
 const ICONO = join(RAIZ, 'app/icon.tsx')
+// El dibujo lo sirve un helper compartido desde el 07/09/2026: lo usan el icono
+// de la pestaña (128 px) y el de la app instalada (512 px).
+const HELPER = join(RAIZ, 'lib/monograma.ts')
+const ICONO_APP = join(RAIZ, 'app/icono-app/route.tsx')
 const MONOGRAMA = join(RAIZ, 'public/brand/marca-asegura.svg')
 
 test('la app declara un icono', () => {
@@ -22,12 +26,24 @@ test('la app declara un icono', () => {
 })
 
 test('el monograma se LEE del vectorial, no se copia', () => {
-  const fuente = readFileSync(ICONO, 'utf8')
-  assert.match(fuente, /public\/brand\/marca-asegura\.svg/, 'el icono ya no lee el vectorial de la marca')
-  assert.ok(
-    !/\sd="[Mm][\s\d.-]/.test(fuente),
-    'hay un `path` copiado dentro de icon.tsx: dos monogramas se separan en cuanto uno cambie',
+  assert.match(
+    readFileSync(HELPER, 'utf8'),
+    // En el `join(...)`, no en el comentario que lo explica.
+    /join\(.*'public\/brand\/marca-asegura\.svg'\)/,
+    'el helper del monograma ya no lee el vectorial de la marca',
   )
+  // Ni la pestaña ni la app instalada pueden llevar el dibujo dentro: dos
+  // monogramas copiados se separan en cuanto uno cambie.
+  for (const fichero of [ICONO, ICONO_APP]) {
+    const fuente = readFileSync(fichero, 'utf8')
+    // La LLAMADA, no el import: dejar el import y pintar otra cosa deja el
+    // icono cambiado sin que nada falle.
+    assert.match(fuente, /src=\{monogramaTenido\(/, `${fichero} ya no usa el helper del monograma`)
+    assert.ok(
+      !/\sd="[Mm][\s\d.-]/.test(fuente),
+      `hay un \`path\` copiado dentro de ${fichero}: dos monogramas se separan en cuanto uno cambie`,
+    )
+  }
 })
 
 test('el vectorial sigue trayendo currentColor', () => {
@@ -37,9 +53,18 @@ test('el vectorial sigue trayendo currentColor', () => {
   // color que traiga el fichero —negro, si es el original— SIN que falle nada.
   // Es exactamente el icono viejo que Alberto pidió cambiar.
   const svg = readFileSync(MONOGRAMA, 'utf8')
-  assert.match(svg, /currentColor/, 'el monograma perdió `currentColor`: el icono dejaría de teñirse')
-  const fuente = readFileSync(ICONO, 'utf8')
-  assert.match(fuente, /replaceAll\('currentColor'/, 'el icono ya no tiñe el monograma')
+  // Son DOS trazos. Fijar el color de UNO deja medio monograma en negro, que se
+  // ve peor que fijarlos los dos y no lo delata ningún `match` a secas.
+  const fill = [...svg.matchAll(/fill="([^"]+)"/g)].map((m) => m[1])
+  assert.ok(fill.length > 0, 'el monograma ya no declara ningún `fill`')
+  for (const valor of fill) {
+    assert.equal(valor, 'currentColor', `el monograma trae fill="${valor}": ese trazo dejaría de teñirse`)
+  }
+  assert.match(
+    readFileSync(HELPER, 'utf8'),
+    /replaceAll\('currentColor'/,
+    'el helper ya no tiñe el monograma: saldría negro, que es el icono viejo',
+  )
 })
 
 test('los colores salen de la marca, no escritos a mano', () => {
