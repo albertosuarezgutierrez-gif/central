@@ -66,6 +66,16 @@
   la portada del código y no en un 404. El defecto de `ASEGURA_PORTAL_URL` pasa de
   `asegura-portal.vercel.app` al dominio de la casa en los DOS correos (el `.vercel.app` sigue
   sirviendo: cambia el canónico, no arregla nada roto).
+- **📲 El portal del cliente se puede INSTALAR (07/09/2026).** Idea de Alberto: «a veces entro en una
+  web y me sale la opción de instalar; algo así para cuando entren nuestros clientes». Es una PWA, y
+  el sitio es `apps/asegura-portal` (el asegurado), no `/correduria` de plataforma. Manifiesto +
+  icono de 512 (`/icono-app`, el monograma pasa a `lib/monograma.ts` para no copiarlo dos veces) +
+  service worker que **no cachea nada a propósito** (aquí hay pólizas y partes de siniestro) + la
+  oferta dentro de la sesión. 🚨 **iOS no dispara `beforeinstallprompt`**: si solo se escuchara el
+  evento, en iPhone no se vería NADA y nadie se enteraría — ahí se enseñan las instrucciones de
+  «Añadir a pantalla de inicio», con el glifo de Compartir DIBUJADO (a secas no se entiende, y el
+  público es de 50-70 años). 16 cepos vistos en rojo uno a uno. Sin push todavía. PR #2581.
+
 - **🚪 Salida tardía: se confirma la VÍSPERA, y una postura por mensaje (07/09/2026).**
   Borrador del agente a la reserva 154265696 (Luxury Busto) que retenía y concedía a la vez
   («No podemos confirmar hasta el día de antes… no hay ningún inconveniente»). La política
