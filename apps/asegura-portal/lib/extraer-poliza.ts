@@ -115,14 +115,34 @@ export type ResultadoExtraccion = {
   camposRamo: EstadoCamposRamo
 }
 
+// 🚗 `marca` y `modelo` se piden AQUÍ, en la 1ª pasada, además de estar en el
+// catálogo del ramo que pide la 2ª. No es duplicar por duplicar:
+//
+//   · La 1ª pasada es la que FUNCIONA. La 2ª depende de una segunda llamada que
+//     el 07/09/2026 volvió VACÍA en producción con toda la cadena de suplentes
+//     apagada, y con ella se perdieron marca, modelo y uso de una póliza que sí
+//     los traía. Alberto, sobre esa póliza: «falta la marca, el modelo y la
+//     versión del vehículo; hay que buscar todo lo posible».
+//   · Son identidad del BIEN, como la matrícula y el bastidor, que ya se piden
+//     aquí. Van con sus hermanos.
+//   · No hay riesgo de dos verdades: `parsearPolizaExtraida` ya pasa la
+//     respuesta de la 1ª pasada por `normalizarDatosRamoLeidos`, y si la 2ª
+//     responde, sus valores REEMPLAZAN a estos (`leerDatosRamo` sustituye datos
+//     y orígenes juntos). O sea, esto es un suelo, no una competencia.
+//
+// ⚠️ Y el suelo importa porque el documento NO se guarda: `portal_poliza_declarada`
+// conserva el NOMBRE del fichero, no el PDF. Lo que no se lea en la subida no se
+// puede volver a leer — hay que pedirle a la persona que lo suba otra vez.
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
+{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
 Reglas:
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
 - "tipoDocumento": qué es este documento. "poliza" = el contrato o sus condiciones particulares. "suplemento" = una MODIFICACIÓN de una póliza que ya existe (cambio de vehículo, de coberturas, de tomador); suele decir "suplemento", "anexo" o "modificación". "recibo" = un justificante de cobro de un periodo. "otro" si no es ninguno de los tres. Si no lo puedes decidir, pon null: NUNCA fuerces "poliza".
 - "primaAnual" en euros, solo el número, con punto decimal. Es lo que se paga AL AÑO por la póliza. Si el documento es un suplemento o un recibo, pon aquí su importe igualmente: nosotros ya sabemos qué hacer con él.
 - "matricula": la matrícula española del vehículo asegurado, tal cual aparece.
+- "marca": la MARCA del vehículo (Seat, Renault, Kia, Citroën…), sola, sin el modelo.
+- "modelo": el modelo y la versión juntos, tal cual vengan ("León 1.5 TSI", "C4 Grand Picasso 1.6 HDi"). Si solo aparece el modelo sin versión, pon el modelo.
 - "bastidor": el número de bastidor o VIN del vehículo, 17 caracteres. Cópialo carácter a carácter; NUNCA lo completes, ni lo corrijas, ni rellenes los que no leas.
 - "fechaMatriculacion": la fecha de PRIMERA MATRICULACIÓN del vehículo, que no es la fecha de efecto ni la de vencimiento de la póliza.
 - "referenciaCatastral": la referencia catastral del inmueble asegurado, tal cual aparece. Cópiala carácter a carácter; NUNCA la completes ni la corrijas.
