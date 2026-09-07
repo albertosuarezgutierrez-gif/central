@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📝 Blog de la correduría: tres artículos y el enlazado en los dos sentidos (07/09/2026).**
+  `/blog` + `/blog/[slug]` en `apps/asegura-web`, con el contenido como DATOS (`lib/articulos.ts`), no
+  como JSX: de ahí salen a la vez la página, el `Article` JSON-LD (autor = **Person** con la clave DGSFP
+  de `MEDIADOR`) y el sitemap. Los tres tiran de la LCS (art. 22 preaviso, art. 22 subida en renovación,
+  arts. 18/20/23 + Servicio de Reclamaciones DGSFP para el siniestro denegado) y **citan la norma a la
+  vista**: el cepo exige `base` si el texto nombra un artículo. El copy pasa por el MISMO `revisarCopy`
+  de `@central/module-seguros` que la web y los borradores de redes. Enlazado en los dos sentidos
+  (artículo→ramo y ramo→artículo) + enlace en el pie: sin él el blog existiría solo en el sitemap, que es
+  cómo `responsabilidad-civil` pasó meses huérfana. ⚠️ **Un cepo se vio VERDE con la lista de artículos
+  borrada del sitemap** (leía el fuente con regex y casaba con otro sitio); por eso la construcción se
+  movió a `entradasSitemapBlog()`, función pura que el test EJECUTA. 12 cepos vistos en rojo uno a uno.
+
 - **🔗 `sameAs`: la web y el canal de YouTube declarados como el MISMO negocio (07/09/2026).**
   `PERFILES` en `lib/sitio.ts` → `sameAs` en la ficha `InsuranceAgency`. Importa aquí más que en otras
   webs: conviven **tres dominios propios** (`grupoasegura.es`, `app.grupoasegura.com`, la landing vieja de
