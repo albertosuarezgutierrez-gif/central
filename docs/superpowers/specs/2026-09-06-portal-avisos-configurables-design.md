@@ -22,6 +22,8 @@ Todo lo de esta sección está **medido** contra la Supabase compartida el 06/09
 | **69 siniestros ya cargados**, ninguno con sello de avisado | Sin el backfill de §3.1, el día 1 salen 69 correos sobre siniestros de 2024 |
 | **5 identidades** en el portal (las 5 han entrado), **46 invitables**, **29 sin correo** | El VALOR POR DEFECTO es lo que de verdad decide. Casi nadie tocará el panel |
 | El portal solo guarda un **hash con pimienta** del canal | La pantalla no puede decir a qué correo escribe |
+| 🚨 `portal_obligacion.identidad_id` es **NOT NULL**, y solo **3 identidades** tienen obligaciones (**6 filas** para 111 pólizas vivas) | Encender el cron hoy manda **3 correos**. El vencimiento no puede depender de que el cliente ya haya entrado → §1.4 |
+| **18 pólizas vivas están vencidas y siguen en estado `activa`** (de 55 con fecha pasada, 37 son `cancelada`) | A esos clientes el aviso no les llega nunca: su fecha ya pasó. Se mide **antes** de encender (§6) |
 
 ---
 
@@ -90,6 +92,33 @@ total. Decisión de Alberto: una baja nunca se reabre por haber entrado al porta
 
 ⚠️ **Coste asumido:** el panel puede mostrar un aviso «pedido» a alguien que está de baja en la
 cartera y no lo sabe. Se resuelve con la regla de redacción de §2, no ocultándolo.
+
+### 1.4 🚨 De dónde sale la obligación de «te vence la póliza»
+
+**No de `portal_obligacion`.** Esa tabla exige `identidad_id NOT NULL`, así que una obligación no
+puede existir para quien todavía no ha entrado al portal. Medido: **3 identidades con obligaciones,
+6 filas, para 111 pólizas vivas**. Con el cron encendido hoy saldrían **3 correos**.
+
+Y es circular: el aviso es justamente lo que traería a la gente al portal, pero solo existiría si ya
+hubieran venido.
+
+**La distinción que lo arregla — qué es cada cosa:**
+
+| Tipo | Quién lo sabe | De dónde lo lee el cron |
+|---|---|---|
+| `poliza` (el vencimiento) | **la cartera**: es un hecho de `polizas`, lo sepa el cliente o no | **`seguros.polizas` directamente**, sin pasar por identidad |
+| `itv · carnet · recibo · mantenimiento · revision_gas · libre` | **el cliente**, que lo declaró en el portal | `portal_obligacion`, como hoy |
+
+`portal_obligacion` sigue siendo lo que es —lo que el cliente **cuenta**— y deja de cargar con algo
+que nunca fue suyo. El destinatario se resuelve en el envío (ficha → correo legible), que es donde
+ya vive esa lógica (`lib/email-ficha.ts`).
+
+**Consecuencia:** el aviso de vencimiento pasa de alcanzar a 3 personas a alcanzar a **todas las que
+tengan correo**, entren o no al portal. Que era el punto de tenerlo.
+
+⚠️ Y la preferencia se sigue aplicando igual: si el titular no tiene identidad en el portal, no tiene
+preferencia, y se usa el defecto de §1.2. Nunca al revés — **no tener preferencia no es haber pedido
+silencio**.
 
 ---
 
@@ -208,6 +237,8 @@ no cosmética: es el tiempo que queda para retarificar y presentar algo.
 
 Es de Alberto, no del código:
 
+0. **Mirar las 18 vencidas-pero-`activa`** (§0). O CIMA no refresca la fecha al renovar, o caducaron
+   de verdad. Es una consulta, no código — y decide si el recuento del paso 2 significa algo.
 1. `GET /api/cron/avisos-vencimiento?contar=1` (ensayo, no envía).
 2. **Comprobar que el número sale ≤ 110** (las pólizas vivas de CIMA). Si sale de miles, el filtro de
    cartera viva no está funcionando y **no se enciende nada**.
@@ -227,6 +258,8 @@ Es de Alberto, no del código:
 | 5 | La pantalla no dice «recibirás» | afirma un envío que la baja de cartera puede impedir |
 | 6 | Rango 7–120 y advertencia por debajo de 30 | se le deja pedir, en silencio, un aviso que llega tarde |
 | 7 | El envío exige las TRES condiciones de §1.3 | una baja reabierta por haber entrado al portal |
+| 8 | El vencimiento se lee de `polizas`, **no** de `portal_obligacion` | el aviso vuelve a alcanzar solo a quien ya entró — 3 personas — y nada falla |
+| 9 | Sin preferencia se usa el defecto, **nunca** silencio | quien no ha entrado al portal dejaría de recibir avisos por no haber entrado |
 
 **No basta con escribirlos y verlos verdes.** Se rompe a propósito lo que cada uno dice proteger, se
 comprueba que se pone rojo, se restaura, y la salida del rojo va en el PR. Un brazo por aserción.
@@ -241,5 +274,9 @@ comprueba que se pone rojo, se restaura, y la salida del rojo va en el PR. Un br
   (`/api/hojas`) es el único artefacto que hoy les llega.
 - **El sello dentro de `siniestros`** depende de que la ingesta del CRM no reescriba la fila entera
   (§3.2). Si resultara que sí, el sello se muda a una tabla `portal_*` propia.
+- **Lo siguiente, anotado y fuera de esta entrega:** una pantalla en `/correduria` que diga **a quién
+  se avisó y a quién no se pudo** (`sinCanal`). El sello ya existe (`avisada_at`, `avisado_en`) y no
+  lo ve nadie: cuando un cliente diga «a mí no me avisasteis», hoy no hay con qué contestarle. Y el
+  recuento de `sinCanal` es accionable — son los correos que faltan.
 - **Con 5 identidades, esto se construye para nadie todavía.** El orden que lo hace útil es:
   encender el cron → invitar a los 46 → mirar quién entra. El panel vale lo que valga esa invitación.
