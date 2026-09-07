@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📝 Diseño del agente de captación de `asegura-portal` — solo spec, sin código (07/09/2026).**
+  Alberto quería un agente de ventas WhatsApp para la correduría; se acabó aterrizando en
+  `docs/superpowers/specs/2026-09-07-asegura-portal-agente-captacion-design.md`: seis piezas
+  (cuestionario de huecos por ramo, subida+lectura ya existente, resumen de garantías por IA,
+  recordatorios a la carta por email, cambio de mediador, comparación transparente con presupuesto
+  real de Avant2). Línea roja repetida en toda la conversación: la IA lee y pregunta, nunca opina ni
+  recomienda — un "comparador" que insinúe cuál es mejor es asesoramiento (RDL 3/2020), no
+  información. Sin WhatsApp (no hay WABA de Grupo ASegura): todo el diseño usa el canal email ya
+  construido. **Pendiente:** revisión de Alberto y pasar a plan de implementación.
+
 - **✂️ El h1 se queda en «Sube tus seguros. / Y contrólalos.» (07/09/2026).**
   Alberto: «quita todos». Segundo recorte del mismo titular en el mismo día: primero cayó «Aunque no
   sean míos» y ahora el «todos», que era lo último que insinuaba «de cualquier compañía». El h1 pasa
