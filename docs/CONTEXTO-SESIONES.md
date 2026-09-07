@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📋 Plan de implementación de «Avisos» del portal, con cuatro correcciones al spec (07/09/2026).**
+  `docs/superpowers/plans/2026-09-07-portal-avisos-configurables.md`, 10 tareas. Lo que CORRIGE del spec, medido:
+  (1) el spec dice que hay «siete recordatorios que configurar» y es falso — solo `poliza` lo escribe alguien
+  (`obligaciones.ts:105`), así que NO se construyen siete interruptores; (2) el riesgo del §3.2 se verificó y
+  NO se cumple: el upsert de CIMA (`persist-siniestro.ts:165-190` del repo `asegura`) usa un `set` explícito,
+  así que el sello puede vivir dentro de `seguros.siniestros`; (3) son 68 siniestros, no 69 — la siembra no
+  lleva número a mano; (4) «Avisos» NO va como quinta pestaña: la barra ya tiene cuatro y se midió que a
+  390 px la cuarta se salía. La siembra del sello va en la MISMA migración que crea las columnas.
+  ⚠️ Sin ejecutar: es el plan, no la entrega.
+
 - **🧾 Portal ASegura: pestañas «Recibos» y «Siniestros», y la cuarta pestaña que NO cabía (07/09/2026).**
   Alberto, tres veces: «sigue sin aparecer siniestros ni recibo». Los datos estaban, pero solo los veía quien
   entrase póliza a póliza. 🚨 Esto CONTRADICE la decisión escrita en `vista-portal.ts` («una pestaña que casi
