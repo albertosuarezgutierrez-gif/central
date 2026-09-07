@@ -25,6 +25,38 @@ import { useEffect, useState } from 'react'
 
 const DESCARTADO = 'asegura-portal:instalar-descartado'
 
+/**
+ * El glifo de «Compartir» de iOS, dibujado.
+ *
+ * 🚨 No es decoración: en iPhone el aviso no puede hacer nada, solo EXPLICAR un
+ * gesto, y «toca Compartir» a secas no le dice nada a quien no sabe cómo se
+ * llama ese botón. Esta pantalla la abre gente de 50-70 años; enseñarles el
+ * dibujo que van a buscar es la diferencia entre que lo encuentren o no.
+ *
+ * Va en línea y no como imagen: es un icono de 14 px que tiene que seguir el
+ * color del texto y estar cuando el texto está, sin una petición de por medio.
+ */
+function IconoCompartir() {
+  return (
+    <svg
+      className="instalar-app-glifo"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      focusable="false"
+    >
+      {/* La flecha hacia arriba saliendo de la caja: eso es lo que se reconoce. */}
+      <path d="M12 3v12" />
+      <path d="M8 7l4-4 4 4" />
+      <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
+    </svg>
+  )
+}
+
 interface EventoInstalacion extends Event {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
@@ -107,11 +139,15 @@ export function InstalarApp() {
     <aside className="instalar-app" aria-label="Instalar la aplicación">
       <div className="instalar-app-texto">
         <strong>Tenlo a mano</strong>
-        <p>
-          {ayudaIOS
-            ? 'Puedes añadir «Mis seguros» a la pantalla de inicio: toca Compartir y luego «Añadir a pantalla de inicio».'
-            : 'Instala «Mis seguros» en tu dispositivo y entra sin buscar el correo.'}
-        </p>
+        {ayudaIOS ? (
+          <p>
+            Añade «Mis seguros» a la pantalla de inicio: toca{' '}
+            <IconoCompartir /> <strong>Compartir</strong> en la barra de tu
+            navegador y elige <strong>«Añadir a pantalla de inicio»</strong>.
+          </p>
+        ) : (
+          <p>Instala «Mis seguros» en tu dispositivo y entra sin buscar el correo.</p>
+        )}
       </div>
       <div className="instalar-app-acciones">
         {!ayudaIOS && (

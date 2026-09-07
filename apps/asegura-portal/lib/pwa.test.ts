@@ -91,11 +91,16 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
   assert.match(
     fuente,
     // En un literal de cadena, no en el comentario que lo explica.
-    // `[^'\n]` y no `[^']`: una clase de caracteres SÍ cruza saltos de línea,
-    // así que sin excluirlos el cepo se conformaba con la mención del
-    // comentario de arriba entre dos comillas cualesquiera del fichero.
-    /'[^'\n]*Añadir a pantalla de inicio[^'\n]*'/,
+    // Dentro del `<strong>` del JSX, no en el comentario que lo explica: el
+    // nombre del gesto aparece también ahí arriba, y un cepo que se conforma
+    // con eso pasa aunque el aviso ya no lo diga.
+    /<strong>«Añadir a pantalla de inicio»<\/strong>/,
     'se perdieron las instrucciones de iOS: sin ellas, en iPhone la oferta no explica cómo instalar',
+  )
+  assert.match(
+    fuente,
+    /<IconoCompartir \/>/,
+    'se perdió el dibujo del botón Compartir: en iPhone el aviso solo puede explicar el gesto',
   )
   // Enseñárselo a quien ya la tiene instalada es la forma tonta de molestar.
   assert.match(fuente, /display-mode: standalone/, 'la oferta ya no comprueba si la app está instalada')

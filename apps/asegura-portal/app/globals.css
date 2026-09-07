@@ -2556,7 +2556,10 @@ h1 em {
 .instalar-app-texto {
   min-width: 0;
 }
-.instalar-app-texto strong {
+/* `>` a propósito: el título es hijo directo. Los `<strong>` de dentro del
+ * párrafo (los que resaltan «Compartir» y «Añadir a pantalla de inicio») son
+ * texto en línea, y con `display:block` cada uno se iría a su propia línea. */
+.instalar-app-texto > strong {
   display: block;
   font-size: 14px;
 }
@@ -2566,6 +2569,16 @@ h1 em {
   line-height: 1.45;
   color: var(--muted);
 }
+/* El glifo de Compartir, dentro de la frase. Sin medidas un `<svg>` se pinta a
+ * 300×150 px y revienta el aviso: no hereda el tamaño del texto como una letra.
+ * `vertical-align: -2px` lo sienta en la línea base en vez de dejarlo flotando. */
+.instalar-app-glifo {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  color: var(--primary);
+}
+
 .instalar-app-acciones {
   display: grid;
   gap: 8px;
