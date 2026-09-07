@@ -75,6 +75,23 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
     en el idioma del huésped + `🔁` español para verificar) con botones ✅/✏️/🔧 y mantiene el pendiente;
     **solo el botón ✅ Enviar manda al huésped**. Así Alberto ve SIEMPRE lo que sale (incluida la traducción
     de su respuesta es→idioma del huésped) y puede **encadenar varias vueltas**. Decisión de Alberto.
+  - 🔌 **Y desde una sesión de Claude NO se puede enviar (medido 07/09/2026).** El contenedor cloud no
+    tiene ningún env cargado (`SMOOBU_API_KEY`, `DATABASE_URL`, token del bot: ninguno), y aunque se
+    saque la key de `pms_connections`, **la política de red del entorno deniega `login.smoobu.com`**
+    (`CONNECT` → 403 `connect_rejected` en el proxy de egreso). El envío al huésped es SIEMPRE de
+    Alberto por Telegram. 🚨 **No saques la key de `pms_connections`**: no sirve para nada desde aquí
+    y queda volcada en el transcript (pasó ese día, por comprobar la salida a internet DESPUÉS de
+    leer el secreto en vez de antes).
+  - 🔑 **Lo que SÍ puede hacer una sesión: corregir el borrador en BD.** El handler del ✅ envía
+    `pend.borrador` **leído de `mensajes_pendientes_tg`** (`telegram-webhook/route.ts:838`), **no el
+    texto de la burbuja de Telegram**. Un `UPDATE ... SET borrador` deja el texto bueno cargado y
+    Alberto solo pulsa ✅. ⚠️ Avísale de que **la burbuja seguirá mostrando el texto viejo**: lo que
+    sale es lo de la BD. Y si el pendiente se borrara, el ✅ ya no envía nada — responde «ese borrador
+    ya se envió o se gestionó» y retira los botones, así que no hay riesgo de doble envío.
+  - 🚫 **Una postura por mensaje (07/09/2026, reserva 154265696).** El borrador retenía y concedía en
+    el mismo párrafo («No podemos confirmar hasta el día de antes, … no hay ningún inconveniente»).
+    La política estaba BIEN en el prompt: lo que falló fue redactarla a medias. La guarda vive en
+    `salida.ts` (`UNA_POSTURA`, solo en las ramas que NO confirman) con cepos en `salida.test.ts`.
 - **Contexto del hilo (`decidir.ts` + `hilo.ts` — 26/06/2026):** antes de redactar, el agente
   recibe el **hilo de la conversación** (`hiloComoMensajes`: últimos 15 mensajes, ambos lados, huésped=user /
   anfitrión=assistant) como mensajes previos a `aiComplete`, además de ficha+guía+aprendizajes. Regla:
@@ -112,7 +129,7 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   Antes estaba hardcodeado "ya está dentro" para TODAS las reservas → generaba borradores inapropiados
   (p.ej. "¡Disfruta tu estancia!" para un huésped que ya se había ido 2 días antes).
 - **`horarios.ts` (fuente de verdad de horas):** Smoobu graba la hora de check-in POR RESERVA y queda
-  desfasada → override por piso: **todos 15:00 salvo Busto Reform 13:00; salida 11:00**. Fallback a Smoobu
+  desfasada → override por piso: **todos 15:00 salvo Busto Reform 13:00; salida 11:00**. La salida más tarde de las 11:00 se confirma **la VÍSPERA, no el mismo día** (Alberto, 07/09/2026): hasta esa fecha `salida.ts` decía «el mismo día de la salida», que contradecía la política real. Fallback a Smoobu
   si el piso no está en la tabla. Mantener esta tabla cuando cambien horarios.
 - **Llegada tardía (`llegada.ts` — 06/08/2026):** la entrada es AUTÓNOMA → **no hay hora LÍMITE**: a partir
   de la hora oficial se puede llegar a cualquier hora, madrugada incluida. Lo que sí se avisa es que la
