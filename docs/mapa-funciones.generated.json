@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-07T11:46:46Z",
-  "sha": "dfcd0c132e3a0444bf84ee39539d2e736663e6fa",
+  "generadoEn": "2026-09-07T13:57:49Z",
+  "sha": "fe21c4f6f4026c5ab560eef158c7ff55efaec2e7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4009,7 +4009,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         }
       ],
       "tablas": [
@@ -4017,7 +4017,7 @@
         "zod"
       ],
       "rutaApi": "/api/acceso/verificar",
-      "hash": "25c6989c9097"
+      "hash": "d8f9ad3f52be"
     },
     {
       "ruta": "apps/asegura-portal/app/api/autorizaciones/[id]/route.ts",
@@ -4341,6 +4341,27 @@
       ],
       "rutaApi": "/api/polizas",
       "hash": "63f179ea2192"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/salir/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 35,
+          "resumen": "- y peor, porque no hace falta ni el clic: los navegadores, los antivirus y el propio `<Link>` de Next **precargan** enlaces. Un GET que destruye la sesión se dispara al pasar el ratón por encima. Por"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/salir",
+      "hash": "fbf8ece6ebc9"
     },
     {
       "ruta": "apps/asegura-portal/app/api/siniestros/[id]/adjuntos/[documentoId]/route.ts",
@@ -4688,12 +4709,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f9eca11d620d"
+      "hash": "497a198d1138"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/condiciones/page.tsx",
@@ -4863,6 +4884,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "edf3cf6915f0"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/SalirDelPortal.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "SalirDelPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "SalirDelPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "El botón de salir de la barra de marca. Hasta el 07/09/2026 el portal **no tenía ninguno**: la cookie dura 30 días y la única forma de salir era borrarla a mano desde el navegador. En una pantalla que"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "56411517d16a"
     },
     {
       "ruta": "apps/asegura-portal/app/tema.ts",
@@ -5164,6 +5206,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "eaf6298c4d29"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/aviso-acceso.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El aviso de que alguien ha entrado al portal POR PRIMERA VEZ. 🚨 Es el NUDGE, no el registro. El registro es `portal_acceso`, que se escribe dentro de la misma transacción que el login y no depende de nada externo. Si este aviso no sale, no se pierde información: se pierde la inmediatez. Confundir l",
+      "exporta": [
+        "mensajePrimerAcceso",
+        "avisarPrimerAcceso"
+      ],
+      "funciones": [
+        {
+          "nombre": "mensajePrimerAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContextoPrimerAcceso",
+          "retorno": "string",
+          "linea": 51,
+          "resumen": "El texto, puro y probado aparte. 🚨 **El nombre solo se dice si hay VÍNCULO.** Sin él, lo único que hay es lo que esa persona ha tecleado, y nadie lo ha comprobado: escribir «Ha entrado Fulano» afirma"
+        },
+        {
+          "nombre": "avisarPrimerAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContextoPrimerAcceso",
+          "retorno": "Promise<ResultadoAviso>",
+          "linea": 64,
+          "resumen": "Nunca lanza: un fallo del aviso no puede impedir que alguien entre."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fb15396b045c"
     },
     {
       "ruta": "apps/asegura-portal/lib/canal-email.ts",
@@ -7551,13 +7625,13 @@
           "exportada": true,
           "params": "ruta: string",
           "retorno": "string",
-          "linea": 53,
+          "linea": 58,
           "resumen": "URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3336d1bc4623"
+      "hash": "d94fe7faca50"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
@@ -8856,6 +8930,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/ingesta",
       "hash": "4f4c1daff309"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/leads/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 30,
+          "resumen": "Las pólizas que los clientes han subido al portal, como OPORTUNIDADES (plataforma → asegura, Bearer). GET → { estado:'ok', leads, sinIdentificar } 🚨 Los tres estados de salida son distintos y NO se p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/leads",
+      "hash": "bf0efe17b343"
     },
     {
       "ruta": "apps/asegura/app/api/operador/partes/route.ts",
@@ -13172,6 +13267,46 @@
       "hash": "d9e3c482cfb2"
     },
     {
+      "ruta": "apps/asegura/lib/leads-portal.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Las pólizas que los clientes suben al portal, vistas como OPORTUNIDADES. ── El agujero que cierra (medido el 07/09/2026) ──────────────────────────── `seguros.portal_poliza_declarada` solo la leían `partes-portal.ts` y `export-rgpd.ts`. **Ninguna pantalla del corredor la miraba.** El cliente subía l",
+      "exporta": [
+        "listarLeads"
+      ],
+      "funciones": [
+        {
+          "nombre": "listarLeads",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, hoy: Date = new Date()",
+          "retorno": "Promise<ResultadoLeads>",
+          "linea": 72,
+          "resumen": "🚨 Degrada a `ok: false`, JAMÁS a una lista vacía. «No he podido leer los leads» y «no hay ninguno» se pintan igual de vacíos, y solo uno de los dos autoriza a decirle a Alberto que ahí no hay nada qu"
+        },
+        {
+          "nombre": "yaEnLaCartera",
+          "kind": "function",
+          "exportada": false,
+          "params": "porCliente: Map<string, Set<string>>, clienteId: string, numeroPoliza: string | null,",
+          "retorno": "boolean | null",
+          "linea": 142,
+          "resumen": "`null` cuando la póliza declarada no trae número: sin número no se puede cotejar, y decir `false` afirmaría que se miró. Es el mismo «no lo sé» que la falta de ficha, por otra causa."
+        },
+        {
+          "nombre": "numerosEnCartera",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteIds: string[]",
+          "retorno": "Promise<Map<string, Set<string>>>",
+          "linea": 153,
+          "resumen": "Números de póliza que cada ficha ya tiene en la cartera VIVA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "93a5c491b8b7"
+    },
+    {
       "ruta": "apps/asegura/lib/migracion-decision.ts",
       "ambito": "apps/asegura",
       "resumen": "¿Cuándo se considera que la cartera «ya está aquí»? — LÓGICA PURA, sin BD. Vive aparte de `estado-migracion.ts` por el mismo motivo que `tenant-ambito.ts` vive aparte de `tenant.ts`: la regla se puede probar sin Prisma ni red, y lo que se equivocó fue la REGLA, no la consulta. ─── El fallo que origi",
@@ -13243,7 +13378,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is string",
-          "linea": 147
+          "linea": 150
         },
         {
           "nombre": "esParteEstado",
@@ -13251,7 +13386,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is ParteEstado",
-          "linea": 151
+          "linea": 154
         },
         {
           "nombre": "limiteParte",
@@ -13259,7 +13394,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "number",
-          "linea": 156,
+          "linea": 159,
           "resumen": "`limite` acotado. Un `0` o un `-1` que se colara traería la lista vacía y se leería como «no hay partes»."
         },
         {
@@ -13268,26 +13403,8 @@
           "exportada": false,
           "params": "c: { nombre: string | null; apellidos: string | null }",
           "retorno": "string | null",
-          "linea": 163,
+          "linea": 166,
           "resumen": "Nombre visible de una ficha. Vacío ⇒ `null`: una cadena en blanco no es un nombre."
-        },
-        {
-          "nombre": "vinculosPorIdentidad",
-          "kind": "function",
-          "exportada": false,
-          "params": "correduriaId: string, identidadIds: string[]",
-          "retorno": "Promise<Map<string, string>>",
-          "linea": 183,
-          "resumen": "`portal_vinculo` de esta correduría para esas identidades → ficha de la cartera. ⚠️ Decisión sobre los vínculos MÚLTIPLES (una identidad casada con dos fichas): se devuelve **el más antiguo** (`creado"
-        },
-        {
-          "nombre": "identidadesDeCliente",
-          "kind": "function",
-          "exportada": false,
-          "params": "correduriaId: string, clienteId: string",
-          "retorno": "Promise<string[]>",
-          "linea": 206,
-          "resumen": "Las identidades vinculadas a una ficha. Lista vacía = esa ficha no tiene a nadie en el portal."
         },
         {
           "nombre": "nombresDeClientes",
@@ -13295,7 +13412,7 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<Map<string, string | null>>",
-          "linea": 214
+          "linea": 171
         },
         {
           "nombre": "fechaIso",
@@ -13303,7 +13420,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 258,
+          "linea": 215,
           "resumen": "Las columnas `date` de Postgres llegan a medianoche UTC."
         },
         {
@@ -13312,7 +13429,7 @@
           "exportada": false,
           "params": "correduriaId: string, parteIds: string[],",
           "retorno": "Promise<Map<string, AdjuntoDelParte[]> | null>",
-          "linea": 275,
+          "linea": 232,
           "resumen": "Los adjuntos de un lote de partes, agrupados por parte. 🚨 Devuelve `null` cuando la consulta FALLA, y ese `null` se propaga a cada parte tal cual. Un `Map` vacío se pintaría como «no adjuntó nada», q"
         },
         {
@@ -13321,7 +13438,7 @@
           "exportada": false,
           "params": "p: FilaParte, ctx: { vinculos: Map<string, string> titulares: Map<string, string> nombres: Map<string, string | null> /** `null` = la consulta de documentos falló para TODO el lote. */ adjuntos: Map<string, AdjuntoDelParte[]> | null hoy: Da",
           "retorno": "PartePortal",
-          "linea": 322,
+          "linea": 279,
           "resumen": "Monta la salida del puerto. `titulares` trae el dueño de cada `polizaId` que había que comparar; que falte una que se pidió es un error de quien llama, no un `null` (ver `listarPartes`)."
         },
         {
@@ -13330,7 +13447,7 @@
           "exportada": false,
           "params": "correduriaId: string, filas: FilaParte[], hoy: Date",
           "retorno": "Promise<PartePortal[]>",
-          "linea": 374,
+          "linea": 331,
           "resumen": "Resuelve el contexto (vínculos, titulares, nombres) de un lote de partes y los monta."
         },
         {
@@ -13339,7 +13456,7 @@
           "exportada": true,
           "params": "correduriaId: string, f: FiltrosPartes = {}, hoy: Date = new Date()",
           "retorno": "Promise<PartePortal[]>",
-          "linea": 413,
+          "linea": 370,
           "resumen": "La bandeja. Lanza si la cartera no se puede leer o si un parte apunta a una póliza que no está en esta correduría: quien llama lo convierte en `{ estado:'error', causa }`, nunca en una lista vacía. `c"
         },
         {
@@ -13348,7 +13465,7 @@
           "exportada": true,
           "params": "de: ParteEstado, a: ParteEstado",
           "retorno": "boolean",
-          "linea": 454
+          "linea": 411
         },
         {
           "nombre": "fallo",
@@ -13356,7 +13473,7 @@
           "exportada": false,
           "params": "error: Exclude<ResultadoMoverParte, { ok: true }>['error'], status: 400 | 404 | 409",
           "retorno": "ResultadoMoverParte",
-          "linea": 470
+          "linea": 427
         },
         {
           "nombre": "cadena",
@@ -13364,7 +13481,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 472
+          "linea": 429
         },
         {
           "nombre": "anotarHistorial",
@@ -13372,7 +13489,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 487,
+          "linea": 444,
           "resumen": "Anota el movimiento en la bitácora de la ficha (`historial_interno`, tipo `siniestro`) — la misma que pinta la carpeta «Historial» de la ficha. Best-effort **pero no mudo**: si falla, el cambio de est"
         },
         {
@@ -13381,16 +13498,15 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: EntradaMoverParte",
           "retorno": "Promise<ResultadoMoverParte>",
-          "linea": 507,
+          "linea": 464,
           "resumen": "Mueve el estado de un parte. `abierto_en_compania` exige un `siniestroId` que EXISTA en esta correduría: es el único estado que autoriza a decirle al cliente que su compañía lo sabe, y sin siniestro d"
         }
       ],
       "tablas": [
-        "historial_interno",
-        "portal_vinculo"
+        "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "c57f5d79e46e"
+      "hash": "b3e763d27dee"
     },
     {
       "ruta": "apps/asegura/lib/pii-estado.ts",
@@ -13703,6 +13819,40 @@
       ],
       "rutaApi": null,
       "hash": "ee0d56ab0ab9"
+    },
+    {
+      "ruta": "apps/asegura/lib/vinculos-portal.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Quién es, en la CARTERA, la persona que hay detrás de una identidad del portal. Vivía dentro de `partes-portal.ts` y sale de ahí el 07/09/2026, al aparecer la segunda pantalla que necesita la misma respuesta (los leads de `leads-portal.ts`). No es una limpieza estética: la decisión sobre los vínculo",
+      "exporta": [
+        "vinculosPorIdentidad",
+        "identidadesDeCliente"
+      ],
+      "funciones": [
+        {
+          "nombre": "vinculosPorIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, identidadIds: string[],",
+          "retorno": "Promise<Map<string, string>>",
+          "linea": 27,
+          "resumen": "`portal_vinculo` de esta correduría para esas identidades → ficha de la cartera. ⚠️ Decisión sobre los vínculos MÚLTIPLES (una identidad casada con dos fichas): se devuelve **el más antiguo** (`creado"
+        },
+        {
+          "nombre": "identidadesDeCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<string[]>",
+          "linea": 53,
+          "resumen": "Las identidades vinculadas a una ficha. Lista vacía = esa ficha no tiene a nadie en el portal."
+        }
+      ],
+      "tablas": [
+        "portal_vinculo"
+      ],
+      "rutaApi": null,
+      "hash": "496a082502e2"
     },
     {
       "ruta": "apps/asegura/middleware.ts",
@@ -58293,7 +58443,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 61
+          "linea": 62
         },
         {
           "nombre": "fmtFecha",
@@ -58301,7 +58451,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 66,
+          "linea": 67,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -58310,7 +58460,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 116
+          "linea": 117
         },
         {
           "nombre": "CorreduriaClient",
@@ -58318,7 +58468,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 118
+          "linea": 119
         },
         {
           "nombre": "CarteraResumen",
@@ -58326,7 +58476,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 484
+          "linea": 493
         },
         {
           "nombre": "btnMini",
@@ -58334,7 +58484,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 601,
+          "linea": 610,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -58343,12 +58493,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 619
+          "linea": 628
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "553201647998"
+      "hash": "e3d5c33272bc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -58713,6 +58863,44 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f7f3580b9c36"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/LeadsPortal.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "LeadsPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "LeadsPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ onContador }: { onContador: (n: number | null) => void }",
+          "retorno": null,
+          "linea": 59,
+          "resumen": "un lead solo se aplaza. ── Lo que esta pantalla NO puede decir ───────────────────────────────────── 1. **`yaEnCartera: null` no es «no es tuya».** Es «no se ha podido comprobar», y pasa cuando la per"
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ l }: { l: LeadVista }",
+          "retorno": null,
+          "linea": 127
+        },
+        {
+          "nombre": "textoPlazo",
+          "kind": "function",
+          "exportada": false,
+          "params": "l: LeadVista",
+          "retorno": "string",
+          "linea": 194,
+          "resumen": "Las tres frases posibles, y ninguna inventa una fecha que no se sabe."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5af12fa6136f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/ListaCartera.tsx",
@@ -67256,6 +67444,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/intervinientes",
       "hash": "5b40afa0a0a1"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/leads/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "/api/correduria/leads — las pólizas que los CLIENTES suben al portal (`apps/asegura-portal`) y que la casa no lleva: las oportunidades de Alberto. Esta app no toca la BD de la correduría: reenvía al p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/leads",
+      "hash": "187e08bc8f6f"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/partes/route.ts",
@@ -85243,6 +85452,78 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "19f9c752a45a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/leads-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Los LEADS del portal —pólizas que el cliente sube y que la casa no lleva— leídos del puerto de asegura (`GET /api/operador/leads`) y convertidos en algo que la pantalla pueda pintar sin adivinar nada. Dos partes, como en `cartera-lista-asegura.ts` y `duplicados-asegura.ts`: 1. Lo PURO: `interpretarL",
+      "exporta": [
+        "interpretarLeads",
+        "leadsAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 61
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 65
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 69
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Date | null",
+          "linea": 74,
+          "resumen": "Texto ISO → `Date`. Una fecha que no parsea es `null`, nunca «Invalid Date»."
+        },
+        {
+          "nombre": "interpretarLeads",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: unknown",
+          "retorno": "ResultadoLeads",
+          "linea": 81
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 138
+        },
+        {
+          "nombre": "leadsAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 145,
+          "resumen": "`GET /api/operador/leads` — las pólizas que suben los clientes al portal."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "67fe417c363e"
     },
     {
       "ruta": "apps/plataforma/lib/leads-web.ts",
@@ -116860,6 +117141,74 @@
       "hash": "e3b48b5a0fa0"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/lead-declarada.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Una póliza que el cliente sube al portal, vista DESDE EL LADO DEL CORREDOR. ── Por qué existe (07/09/2026) ───────────────────────────────────────────── Medido ese día: `seguros.portal_poliza_declarada` solo la leían los partes y la exportación RGPD. **Ninguna pantalla de Alberto la miraba.** O sea,",
+      "exporta": [
+        "estadoLead",
+        "leadDeclarada",
+        "ordenarLeads",
+        "normalizarNumeroPoliza",
+        "leadUrgente"
+      ],
+      "funciones": [
+        {
+          "nombre": "diaUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "Date",
+          "linea": 44
+        },
+        {
+          "nombre": "estadoLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: Pick<EntradaLead, 'fechaVencimiento' | 'confirmadaPorUsuario'>",
+          "retorno": "EstadoLead",
+          "linea": 74
+        },
+        {
+          "nombre": "leadDeclarada",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaLead, hoy: Date",
+          "retorno": "Lead | null",
+          "linea": 110,
+          "resumen": "`null` = no es una oportunidad. Hoy solo por una razón: **consta** que ya está en la cartera. `yaEnCartera: null` NO excluye — esconder un lead por una duda es perder a un cliente para no equivocarse,"
+        },
+        {
+          "nombre": "ordenarLeads",
+          "kind": "function",
+          "exportada": true,
+          "params": "leads: readonly Lead[]",
+          "retorno": "Lead[]",
+          "linea": 143,
+          "resumen": "Por fecha útil ascendente; los que no tienen fecha, al FINAL — no fuera. Un lead sin fecha sigue siendo un cliente con una póliza de otra compañía, y dejarlo fuera de la lista lo convierte en un dato "
+        },
+        {
+          "nombre": "normalizarNumeroPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null",
+          "retorno": "string | null",
+          "linea": 168,
+          "resumen": "La forma canónica de un número de póliza, para poder decir si dos filas hablan del MISMO contrato. Vive aquí y no en la capa de BD a propósito: de esta comparación depende que un lead se descarte por "
+        },
+        {
+          "nombre": "leadUrgente",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: Pick<Lead, 'diasParaAccionable' | 'ventanaPasada'>",
+          "retorno": "boolean",
+          "linea": 188
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "da1ff07587af"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/obligacion.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "La fecha que se le dice al usuario NO es la del vencimiento: es la última en la que todavía puede oponerse a la prórroga (art. 22 LCS). Decirle «vence el 15 de marzo» le deja creer que tiene hasta el 15; el plazo se le pasó el 13 de febrero. Se resta en DÍAS, no en meses: `setUTCMonth(m - 1)` sobre ",
@@ -125256,7 +125605,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3102,
-    "funciones": 9402
+    "archivos": 3112,
+    "funciones": 9427
   }
 }
