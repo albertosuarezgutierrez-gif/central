@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚪 Salida tardía: se confirma la VÍSPERA, y una postura por mensaje (07/09/2026).**
+  Borrador del agente a la reserva 154265696 (Luxury Busto) que retenía y concedía a la vez
+  («No podemos confirmar hasta el día de antes… no hay ningún inconveniente»). La política
+  estaba BIEN en `salida.ts`: lo que falló fue redactarla a medias, más una divergencia real —
+  el prompt decía confirmar «el mismo día de la salida» y Alberto dicta **la víspera**. Añadida
+  `UNA_POSTURA` a las ramas que no confirman + 3 cepos vistos en rojo.
+  **Medido:** desde una sesión Claude NO se puede enviar al huésped (el proxy deniega
+  `login.smoobu.com`, 403); el ✅ de Telegram envía `borrador` de la BD, no el texto de la burbuja.
+  **Pendiente:** el ✅ de Alberto en el mensaje 4219 — la respuesta corregida sigue sin enviarse.
+
 - **🧮 Spec de calculadora de bonificación hipotecaria en asegura-portal (07/09/2026, PR #2569 mergeado).**
   Idea de Alberto: simulador de punto de equilibrio entre mantener el seguro (hogar+vida)
   vinculado al banco por la bonificación del tipo, o contratarlo fuera. Sirve en los dos
