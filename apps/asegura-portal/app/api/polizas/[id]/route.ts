@@ -1,6 +1,8 @@
 import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
+import { puedeBorrarDeclarada } from '@central/module-seguros-portal'
+
 import { prisma } from '@/lib/db'
 import { normalizarParche } from '@/lib/poliza-editable'
 import { requireIdentidad } from '@/lib/session'
@@ -108,4 +110,69 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       ? poliza.fechaVencimiento.toISOString().slice(0, 10)
       : null,
   })
+}
+
+/**
+ * Quitar de la bóveda una póliza que aportó el propio cliente.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🚨 SOLO TOCA `portal_poliza_declarada`, Y ESO ES EL PERMISO.
+ *
+ * Las pólizas de la CARTERA (las que entran por CIMA) no se pueden borrar desde
+ * el portal, y no porque aquí haya un `if` que lo compruebe: es que ninguna ruta
+ * del portal escribe en `polizas`. Lo que el cliente puede quitar es lo que él
+ * mismo metió — que es justo lo que confunde cuando ya no vale (Alberto,
+ * 07/09/2026: «las que no son nuestras el cliente sí puede»).
+ *
+ * El aislamiento, igual que en el PATCH: `deleteMany` con `identidadId` DENTRO
+ * del `where`. Un `delete({ where: { id } })` con el uuid de otro —que viaja en
+ * la URL— borraría la póliza de un tercero con un 200 en el log.
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * 🚨 El reparo del parte NO es cosmético. La FK
+ * `portal_parte_siniestro.poliza_declarada_id` es `ON DELETE SET NULL`: borrar
+ * una póliza con parte no falla, deja el parte apuntando a nada (el CHECK admite
+ * las dos columnas nulas) y la correduría se queda con un siniestro ilegible sin
+ * que nada avise. Por eso se comprueba ANTES y dentro de la MISMA transacción:
+ * comprobar fuera deja la ventana abierta a que el parte entre justo en medio.
+ */
+export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  let identidad
+  try {
+    identidad = await requireIdentidad()
+  } catch {
+    return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
+  }
+
+  const { id } = await ctx.params
+
+  const resultado = await prisma.$transaction(async (tx) => {
+    // Existe Y es suya: las dos cosas en la misma consulta. Si no, 404 — nunca
+    // un 403, que confirmaría que esa póliza existe.
+    const suya = await tx.portalPolizaDeclarada.findFirst({
+      where: { id, identidadId: identidad.id },
+      select: { id: true },
+    })
+    if (!suya) return { estado: 404 as const, cuerpo: { error: 'no_encontrada' } }
+
+    const partes = await tx.portalParteSiniestro.count({
+      where: { polizaDeclaradaId: id, identidadId: identidad.id },
+    })
+    const veredicto = puedeBorrarDeclarada({ partes })
+    if (!veredicto.puede) {
+      return { estado: 409 as const, cuerpo: { error: veredicto.reparo, mensaje: veredicto.mensaje } }
+    }
+
+    const { count } = await tx.portalPolizaDeclarada.deleteMany({
+      where: { id, identidadId: identidad.id },
+    })
+    // 0 aquí solo puede ser una carrera (otra pestaña la borró en medio). No es
+    // un error que el cliente pueda arreglar, y el resultado que ve es el mismo
+    // que quería: la póliza ya no está.
+    if (count === 0) return { estado: 404 as const, cuerpo: { error: 'no_encontrada' } }
+
+    return { estado: 200 as const, cuerpo: { ok: true } }
+  })
+
+  return NextResponse.json(resultado.cuerpo, { status: resultado.estado })
 }

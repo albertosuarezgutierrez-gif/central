@@ -23,6 +23,11 @@ export {
   seLeyoAlgo,
 } from './poliza-leida.ts'
 export type { RamoPoliza, PolizaLeida } from './poliza-leida.ts'
+// Quitar de la bóveda una póliza que aportó el CLIENTE. Lee su cabecera: las de
+// la CARTERA no se borran (no hay ruta que las escriba) y un parte de siniestro
+// bloquea el borrado, porque la FK es ON DELETE SET NULL y lo dejaría huérfano.
+export { MENSAJE_PARTE_SINIESTRO, puedeBorrarDeclarada } from './poliza-borrable.ts'
+export type { Borrabilidad, ReparoBorrado } from './poliza-borrable.ts'
 export {
   TIPOS_DOCUMENTO,
   avisoDocumentoNoPoliza,

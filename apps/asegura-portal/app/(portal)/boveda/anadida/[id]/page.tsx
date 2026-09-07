@@ -7,6 +7,7 @@ import { getIdentidad } from '@/lib/session'
 
 import { BienDeclarada, IconoRamo, RAMO } from '../../PolizaVista'
 import { EditarPoliza } from '../../EditarPoliza'
+import { EliminarPoliza } from '../../EliminarPoliza'
 import { etiquetaProcedencia } from '@central/module-seguros-portal'
 
 export const dynamic = 'force-dynamic'
@@ -143,6 +144,20 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
             deDocumento: p.documentoNombre !== null,
           }}
         />
+      </section>
+
+      {/* 🚨 Quitarla SOLO existe aquí, en la ficha de una póliza APORTADA. La
+          ficha de una póliza de la cartera no tiene esta sección: lo que entra
+          por CIMA es el registro de la correduría y el cliente no lo borra.
+          Esta es suya —la subió él— y dejarla ahí cuando ya no vale ensucia la
+          única lista donde mira qué tiene asegurado. */}
+      <section className="seccion" aria-labelledby="quitar-titulo">
+        <h2 id="quitar-titulo">Quitarla de tu bóveda</h2>
+        <p className="linea">
+          Si la subiste por error o ya no tienes este seguro, puedes quitarla. Solo desaparece de tu
+          bóveda: no cancela nada con la compañía.
+        </p>
+        <EliminarPoliza id={p.id} titulo={p.compania ?? 'esta póliza'} />
       </section>
     </>
   )
