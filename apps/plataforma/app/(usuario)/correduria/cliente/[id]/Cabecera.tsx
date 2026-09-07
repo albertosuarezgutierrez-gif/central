@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { urlSubirPoliza, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import { urlSubirPoliza, urlHogarNuevoAsegura, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
@@ -46,7 +46,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
         />
       </div>
 
-      <Acciones />
+      <Acciones clienteId={ficha.id} />
 
       <Titulares resumen={resumen} />
     </>
@@ -181,7 +181,7 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 // gratis (el agente lo lee; el precio se pide aparte) y vive en asegura porque
 // comparte pantalla con la cotización que sale de lo leído.
 
-function Acciones() {
+function Acciones({ clienteId }: { clienteId: string }) {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 13 }}>
       <BtnLink href={urlSubirPoliza()} variante="secundario" nuevaPestana>
@@ -190,6 +190,9 @@ function Acciones() {
       <span style={{ color: 'var(--muted)' }} title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. El fichero NO se guarda todavía: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro.">
         el agente la lee y enseña lo que ha encontrado · hoy solo auto · el fichero no se guarda aún
       </span>
+      <BtnLink href={urlHogarNuevoAsegura(clienteId)} variante="secundario" nuevaPestana>
+        🏠 Presupuestar hogar (oportunidad nueva) ↗
+      </BtnLink>
     </div>
   )
 }

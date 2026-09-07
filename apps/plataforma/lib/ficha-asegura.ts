@@ -706,3 +706,15 @@ export function urlRetarificarHogarAsegura(polizaId: string): string {
 export function urlSubirPoliza(): string {
   return `${urlAsegura()}/cartera/subir`
 }
+
+/**
+ * Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la
+ * cartera): el riesgo sale del Catastro, no de una ficha existente. Es el
+ * mismo salto que `urlRetarificarHogarAsegura` para una póliza — hogar
+ * todavía no está portado a plataforma, con o sin póliza — pero por
+ * `clienteId` en vez de `polizaId`, porque aquí no hay ninguna póliza que
+ * identifique el destino.
+ */
+export function urlHogarNuevoAsegura(clienteId: string): string {
+  return `${urlAsegura()}/cartera/${clienteId}/hogar-nuevo`
+}
