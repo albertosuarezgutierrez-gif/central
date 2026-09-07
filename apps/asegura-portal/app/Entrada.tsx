@@ -83,7 +83,9 @@ export function Entrada() {
         <span className="entrada-marca">
           <MarcaAsegura alto={34} />
         </span>
-        <h1>Mis seguros</h1>
+        <h1>
+          Mis <em>seguros</em>
+        </h1>
         <p className="suave" style={{ marginTop: 0 }}>
           Todos tus seguros en un sitio. Gratis, seas cliente o no.
         </p>

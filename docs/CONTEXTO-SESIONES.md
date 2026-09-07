@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔤 El portal se parece por fin a la web: Fraunces en el titular, y el h1 de 24 a 32 px (07/09/2026).**
+  Alberto: «el diseño no es muy parecido a la web… se puede hacer mejor y más acorde». ⚠️ Iba a decirle que
+  el portal no usaba la marca y era FALSO: las dos apps inyectan `MARCA_ASEGURA`, así que la paleta ya era la
+  misma. La distancia era solo el titular — la web lo pone en **Fraunces a 41-67 px** y el portal en **Inter
+  a 24**. Ahora el portal pide Fraunces **en su propio layout** (como hace la web; no se toca `@central/brand`,
+  que la deja fuera a propósito para otras superficies) y el h1 sube a 32 px con el acento en itálica azul:
+  cargar la fuente sin subir el tamaño habría sido pagar un webfont para no notarlo, que era justo el argumento
+  en contra. 🚨 El coste en bytes **sigue sin medirse** (el listener de Playwright no captura `fonts.gstatic`):
+  por eso un solo peso (500), `display=swap` y Georgia de reserva. Medido a 320/360/390/768/1440: 0 desbordes.
+
 - **📋 Plan de implementación de «Avisos» del portal, con cuatro correcciones al spec (07/09/2026).**
   `docs/superpowers/plans/2026-09-07-portal-avisos-configurables.md`, 10 tareas. Lo que CORRIGE del spec, medido:
   (1) el spec dice que hay «siete recordatorios que configurar» y es falso — solo `poliza` lo escribe alguien

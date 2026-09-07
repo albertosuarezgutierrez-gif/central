@@ -190,7 +190,9 @@ export default async function Boveda({
           estando a un toque, como una sección más de la navegación: quien
           quiere saber quién le está mirando los seguros —o quitárselo a
           alguien— no debería tener que recorrer nada para encontrarlo. */}
-      <h1>Mis seguros</h1>
+      <h1>
+        Mis <em>seguros</em>
+      </h1>
 
       {vista === 'seguros' && (
         <>

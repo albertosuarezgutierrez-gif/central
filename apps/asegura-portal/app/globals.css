@@ -471,14 +471,34 @@ input, select, textarea, button { font: inherit; }
   text-wrap: balance;
 }
 
+/* ── El titular de página ──────────────────────────────────────────────────
+   Va en `--display` (Fraunces, la misma serif que la web pública) y no en
+   `--serif`, que en esta marca es Inter. Lo pide `app/layout.tsx`: ver su
+   cabecera para por qué la fuente se decide en la app y no en `@central/brand`.
+
+   🚨 Y sube de 24 a 32 px, que es la mitad del arreglo: a 24 px una serif no
+   se distingue de una grotesca —era el argumento por el que Fraunces se había
+   quedado fuera— así que cargarla sin subir el tamaño habría sido pagar un
+   webfont para no notarlo. Sigue muy por debajo de los 41 px del titular de la
+   web: esto es una pantalla de trabajo, no una portada.
+
+   `font-weight: 500` porque es el único corte que se pide. Si alguien pone 600
+   o 700, el navegador lo sintetiza y la serif se ve emborronada. */
 h1 {
-  font-family: var(--serif);
-  font-size: 24px;
-  font-weight: 600;
-  line-height: 1.3;
-  letter-spacing: -0.025em;
+  font-family: var(--display, var(--serif));
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
   margin: 0 0 16px;
   text-wrap: balance;
+}
+/* El acento en itálica de marca, que es la firma del titular de la web. Va
+   sobre `<em>` y no sobre una clase: en «Mis <em>seguros</em>» la palabra
+   destacada es la que lleva el significado, así que el énfasis es semántico. */
+h1 em {
+  font-style: italic;
+  color: var(--brand);
 }
 
 /* ── Cards de la cartera ─────────────────────────────────────────────────

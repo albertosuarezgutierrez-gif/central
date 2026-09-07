@@ -37,6 +37,7 @@ const AGRUPAR = sinComentarios(
 const PAGINA = sinComentarios(
   readFileSync(`${RAIZ}apps/asegura-portal/app/(portal)/boveda/page.tsx`, 'utf8'),
 )
+const LAYOUT = sinComentarios(readFileSync(`${RAIZ}apps/asegura-portal/app/layout.tsx`, 'utf8'))
 const CSS = readFileSync(`${RAIZ}apps/asegura-portal/app/globals.css`, 'utf8').replace(
   /\/\*[\s\S]*?\*\//g,
   '',
@@ -143,4 +144,28 @@ test('🚨 y por debajo de 400px la etiqueta puede partirse en dos lineas', () =
   assert.notEqual(i, -1, 'falta la regla que permite el segundo renglón en móvil estrecho')
   const bloque = CSS.slice(i, i + 300)
   assert.match(bloque, /white-space:\s*normal/, 'sin esto la etiqueta larga se corta en vez de partirse')
+})
+
+test('🚨 el titular del portal va en la MISMA serif que la web publica', () => {
+  // Alberto, 07/09/2026: «el diseño no es muy parecido a la web». La paleta ya
+  // era la misma (las dos apps inyectan MARCA_ASEGURA); lo que no lo era es el
+  // titular. Si alguien quita Fraunces, el portal vuelve a no parecerse a
+  // `grupoasegura.es` y nada falla.
+  assert.match(LAYOUT, /Fraunces/, 'la serif de titulares se pide en el layout de la app')
+  assert.match(LAYOUT, /--display:/, 'y se expone como token, no cableada en el CSS')
+  const i = CSS.indexOf('h1 {')
+  assert.notEqual(i, -1)
+  const regla = CSS.slice(i, CSS.indexOf('}', i))
+  assert.match(regla, /font-family:\s*var\(--display/, 'el h1 usa --display, no --serif (que aquí es Inter)')
+})
+
+test('🚨 el titular sube a 32px: a 24 una serif no se distingue', () => {
+  // Cargar la fuente sin subir el tamaño sería pagar un webfont para no
+  // notarlo — que es justo el argumento por el que Fraunces estaba fuera.
+  const i = CSS.indexOf('h1 {')
+  const regla = CSS.slice(i, CSS.indexOf('}', i))
+  assert.match(regla, /font-size:\s*32px/, 'el titular de página va a 32px')
+  // Un peso que no se descarga lo SINTETIZA el navegador, y una serif
+  // sintetizada se ve emborronada. Solo se pide el 500.
+  assert.match(regla, /font-weight:\s*500/, 'solo se pide el corte 500, así que solo se usa el 500')
 })
