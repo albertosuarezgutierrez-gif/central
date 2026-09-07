@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📮 Editar la dirección del cliente fallaba en silencio con un 422 (07/09/2026).** Alberto:
+  «puedo ya móvil y mail pero no dirección». Causa: `revisarEdicion` topaba `direccion` a 100
+  caracteres igual que `ciudad`/`provincia` — una dirección real con urbanización/escalera/piso/
+  puerta lo supera con facilidad, mientras que teléfono (9 dígitos) y email (≤254) casi nunca chocan
+  con su propio límite. La columna es `TEXT` sin límite técnico. Subido a 255 en
+  `packages/module-seguros/src/cliente-edicion.ts` (`notas` sigue sin tope). Cepo visto en rojo antes
+  del fix (`cliente-edicion.test.ts`). No es la clave de cifrado PII: dirección/teléfono/email usan
+  la misma `encryptField()`.
+
 - **👪 Autorizar en el sentido inverso SIN salir de la ficha (07/09/2026).** La tarjeta de una
   relación solo dejaba anotar «esta ficha autoriza al relacionado»; el sentido contrario obligaba a
   navegar a la otra ficha y repetir el formulario. Nuevo botón en `Relaciones.tsx` que reutiliza el

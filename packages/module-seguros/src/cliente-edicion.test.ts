@@ -96,6 +96,24 @@ test('edición: lo libre no pide documento; CP valida y vacío = borrar; nada = 
   if (!sinNombre.ok) assert.equal(sinNombre.campo, 'nombre')
 })
 
+test('edición: dirección larga (urbanización+escalera+piso+puerta) cabe hasta 255, ciudad sigue topada en 100', () => {
+  const larga = 'Urbanización Los Olivos, Avenida de la Constitución, número 34, escalera 2, piso 3º, puerta B, ' +
+    'entre las calles Real y San Juan, junto al parque municipal'
+  assert.ok(larga.length > 100 && larga.length <= 255)
+  const ok = revisarEdicion({ libre: { direccion: larga } })
+  assert.equal(ok.ok, true)
+  if (ok.ok) assert.equal(ok.libre.direccion, larga)
+
+  const demasiadoLarga = 'x'.repeat(256)
+  const mal = revisarEdicion({ libre: { direccion: demasiadoLarga } })
+  assert.equal(mal.ok, false)
+  if (!mal.ok) assert.equal(mal.campo, 'direccion')
+
+  const ciudadLarga = revisarEdicion({ libre: { ciudad: 'x'.repeat(101) } })
+  assert.equal(ciudadLarga.ok, false)
+  if (!ciudadLarga.ok) assert.equal(ciudadLarga.campo, 'ciudad')
+})
+
 test('el historial no lleva el DNI ni la dirección, sí la ciudad y el documento', () => {
   const r = revisarEdicion({ identidad: { dni: '12345678Z' }, libre: { ciudad: 'Sevilla', direccion: 'Calle X 1' }, documentoId: 'doc-9' })
   assert.equal(r.ok, true)
