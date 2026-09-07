@@ -21,7 +21,7 @@ import Formulario from '@/components/Formulario'
 export const metadata: Metadata = {
   title: 'Cambiar de correduría sin cambiar de seguro',
   description:
-    'Puedes cambiar de mediador sin tocar tu póliza: mismas coberturas, mismo precio y mismo número. Te explicamos cómo funciona el cambio de correduría en Sevilla.',
+    'Puedes cambiar de mediador sin tocar tu póliza: mismas coberturas, mismo precio y mismo número. Te explicamos cómo funciona el cambio de correduría, vivas donde vivas.',
   alternates: { canonical: url('/cambiar-de-correduria') },
   openGraph: { title: 'Cambiar de correduría sin cambiar de seguro', url: url('/cambiar-de-correduria'), type: 'article' },
 }

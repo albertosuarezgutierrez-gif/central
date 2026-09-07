@@ -78,18 +78,64 @@ test('si se nombra la marca, se escribe «Grupo ASegura»', () => {
   }
 })
 
+// La plantilla del layout es `%s · Grupo ASegura`, así que Next le añade la
+// marca a cada `title` de ramo: lo que mide Google es la suma, no lo escrito
+// aquí. Medir solo el trozo dejaba 16 caracteres fuera de la cuenta.
+const SUFIJO_MARCA = ' · Grupo ASegura'
+
 test('title y description caben en la SERP sin cortarse a mitad de palabra', () => {
   for (const r of RAMOS) {
-    assert.ok(r.title.length <= 65, `${r.slug}: title de ${r.title.length} caracteres (máx 65)`)
+    const titulo = r.title + SUFIJO_MARCA
+    assert.ok(titulo.length <= 65, `${r.slug}: title de ${titulo.length} caracteres con la marca (máx 65)`)
     assert.ok(r.description.length >= 110 && r.description.length <= 165, `${r.slug}: description de ${r.description.length} caracteres (110-165)`)
   }
 })
 
-// Sevilla en el h1 no es relleno: la pelea que se puede ganar es la local, y
-// perderla por no nombrar la ciudad sería tonto.
-test('el h1 nombra la ciudad', () => {
+// El `title` NO lleva la marca escrita: la pone la plantilla. Escribirla aquí
+// la duplicaba («… · Grupo ASegura · Grupo ASegura»), que es lo que se estaba
+// publicando en las seis páginas de ramo hasta el 07/09/2026.
+test('el title no repite la marca que ya añade la plantilla', () => {
   for (const r of RAMOS) {
-    assert.match(r.h1, /Sevilla/i, `${r.slug}: el h1 no nombra Sevilla`)
+    assert.ok(!/Grupo\s+ASegura/i.test(r.title), `${r.slug}: el title escribe la marca y la plantilla la añade otra vez`)
+  }
+})
+
+// ── Ámbito: se vende en toda España ────────────────────────────────────────
+//
+// 🚨 Hasta el 07/09/2026 el cepo de aquí exigía justo lo contrario: que el h1
+// nombrara Sevilla. La intención era SEO local, pero el efecto lo pagaba la
+// venta — «Seguro de coche y moto en Sevilla» le dice a quien entra desde
+// Madrid que no es cliente. Un corredor inscrito en la DGSFP media en todo el
+// territorio nacional, así que un texto que acota la provincia no está
+// acotando la palabra clave: está acotando la oferta.
+//
+// El anclaje local no vive en los encabezados: vive en la dirección postal de
+// la ficha `InsuranceAgency` (`lib/seo.ts`) y en el perfil de Google Business,
+// que es de donde sale la señal del pack local. Por eso ese domicilio sigue
+// diciendo Sevilla y estos textos ya no.
+const ACOTA_AMBITO: readonly { patron: RegExp; porque: string }[] = [
+  { patron: /\ben\s+Sevilla\b/i, porque: 'acota el servicio a una ciudad' },
+  { patron: /\bSevilla\s+y\s+(su\s+)?provincia\b/i, porque: 'acota el servicio a una provincia' },
+  { patron: /\ben\s+Andaluc[íi]a\b/i, porque: 'acota el servicio a una comunidad' },
+  { patron: /\bs[óo]lo\s+en\s+\w+/i, porque: 'exclusividad geográfica' },
+]
+
+test('ningún texto de ramo acota el servicio a Sevilla, su provincia o Andalucía', () => {
+  for (const r of RAMOS) {
+    const texto = copy(r)
+    for (const { patron, porque } of ACOTA_AMBITO) {
+      assert.ok(!patron.test(texto), `${r.slug}: ${porque} → ${patron}`)
+    }
+  }
+})
+
+// Y que se diga en voz alta dónde se trabaja, no solo que no se diga lo
+// contrario: un h1 mudo sobre el ámbito no le aclara nada a quien llega de
+// fuera.
+test('el h1 y el title declaran el ámbito nacional', () => {
+  for (const r of RAMOS) {
+    assert.match(r.h1, /Espa[ñn]a/i, `${r.slug}: el h1 no dice dónde se trabaja`)
+    assert.match(r.title, /Espa[ñn]a/i, `${r.slug}: el title no dice dónde se trabaja`)
   }
 })
 
@@ -126,6 +172,30 @@ test('el copy de las páginas (fuera de RAMOS) tampoco promete ahorros ni precio
   for (const f of fuentes) {
     const src = sinComentarios(readFileSync(f, 'utf8'))
     for (const { patron, porque } of PROHIBIDO) {
+      assert.ok(!patron.test(src), `${f}: ${porque} → ${patron}`)
+    }
+  }
+})
+
+// El mismo cepo del ámbito, sobre las páginas: la portada, «quiénes somos» y
+// los legales son justo donde vivían las frases que acotaban («Correduría en
+// Sevilla», «Atendemos en Sevilla y su provincia»).
+//
+// ⚠️ El aviso legal queda FUERA a propósito: su fuero nombra los juzgados de
+// la ciudad del titular, y eso es una cláusula jurídica, no una promesa
+// comercial. Excluir el fichero entero es lo honesto: si mañana su copy acota
+// el servicio, este cepo no lo verá. Lo cubre el de arriba para los ramos y la
+// revisión del texto legal, que no se toca sin mirarlo.
+const SIN_CEPO_DE_AMBITO = [join('legal', 'aviso-legal')]
+
+test('el copy de las páginas no acota el servicio a Sevilla ni a Andalucía', () => {
+  const fuentes = [...fuentesTsx(join(RAIZ, 'app')), ...fuentesTsx(join(RAIZ, 'components'))].filter(
+    (f) => !SIN_CEPO_DE_AMBITO.some((excluido) => f.includes(excluido)),
+  )
+  assert.ok(fuentes.length > 0, 'no se ha encontrado ni un fuente que barrer: el guardián estaría en verde mirando al vacío')
+  for (const f of fuentes) {
+    const src = sinComentarios(readFileSync(f, 'utf8'))
+    for (const { patron, porque } of ACOTA_AMBITO) {
       assert.ok(!patron.test(src), `${f}: ${porque} → ${patron}`)
     }
   }

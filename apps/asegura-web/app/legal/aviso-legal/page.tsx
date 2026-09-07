@@ -25,7 +25,7 @@ import { AMBITO, SITIO_URL, url } from '@/lib/sitio'
 export const metadata: Metadata = {
   title: 'Aviso legal · Grupo ASegura',
   description:
-    'Titular del sitio, objeto, condiciones de uso, propiedad intelectual, ley aplicable y fuero de la web de Grupo ASegura, correduría de seguros en Sevilla.',
+    'Titular del sitio, objeto, condiciones de uso, propiedad intelectual, ley aplicable y fuero de la web de Grupo ASegura, correduría de seguros que media en toda España.',
   alternates: { canonical: url('/legal/aviso-legal') },
   robots: { index: true, follow: true },
 }

@@ -42,6 +42,18 @@
   y el otro afirma que es la única app sin él. #2413 poda 42 entradas del rango que #2262/#2322/#2327
   reintroducen. Confirmado otra vez que `get_files`/`get_diff` del MCP mienten en 3 PRs (base.sha viejo):
   el diff de TRES puntos sobre un clon completo los desmiente.
+- **🌍 La web de la correduría vendía «en Sevilla» y se vende en TODA ESPAÑA (07/09/2026).** Dictado de
+  Alberto viendo `/seguros/auto` en el móvil: «vendemos a nivel nacional, no provinciales solo». Los seis
+  `<h1>`/`<title>`, las descripciones, el chip del hero y «atendemos en Sevilla y su provincia» de
+  quiénes-somos acotaban **la oferta**, no la keyword: quien entra desde otra provincia leía que no es
+  cliente. Y la ficha JSON-LD lo decía en datos estructurados — `areaServed` era ciudad + comunidad →
+  ahora `Country: España`. **El domicilio postal sigue en Sevilla** (NAP con Google Business, que es de
+  donde sale la señal local, no de repetir la ciudad en cada encabezado). Cepo invertido: `ramos.test.ts`
+  exigía Sevilla en el h1 y ahora la prohíbe (barre RAMOS + fuentes de `app/`+`components/`); los 5
+  guardianes nuevos vistos en ROJO antes de darlos por buenos. De propina, los ramo-`title` escribían
+  «· Grupo ASegura» que la plantilla del layout ya añadía: marca duplicada en las 6 SERP. Actualizada la
+  skill `seo-asegura` (mandaba lo contrario y lo habría revertido). Precio dicho: sin modificador
+  geográfico se compite con comparadores nacionales — a medir cuando GSC esté conectada. PR #2464.
 - **🔀 buscador-ia: embeddings muertos desde enero → swap a OpenRouter (07/09/2026, PR #2459).**
   Pasada semanal: `text-embedding-004` (Gemini, embeddings de `ia-cache` de plataforma) llevaba
   retirado por Google desde el 14/01/2026 (404); 1ª comprobación real de ese eslabón. Impacto bajo

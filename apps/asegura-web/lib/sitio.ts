@@ -55,14 +55,30 @@ export function url(ruta: string): string {
 }
 
 /**
- * Ámbito geográfico declarado.
+ * Ámbito geográfico.
  *
- * 📌 Es una DECISIÓN comercial, no un dato medido: el 76 % de la cartera viva
- * está en Sevilla y ahí es donde se puede competir en búsquedas locales. Un
- * corredor puede mediar en toda España, así que el texto dice dónde trabajamos,
- * no dónde podemos.
+ * 🚨 DOS COSAS DISTINTAS, y confundirlas fue lo que había que arreglar
+ * (07/09/2026, dictado de Alberto: «vendemos a nivel nacional, no provinciales
+ * solo»):
+ *
+ *   · `nacional` es el ámbito en el que se VENDE y se media. Un corredor
+ *     inscrito en la DGSFP puede mediar en toda España, y así se trabaja. Es lo
+ *     que dice el copy visible y lo que declara `areaServed` en el JSON-LD.
+ *   · `ciudad`/`provincia`/`comunidad` son el DOMICILIO de la oficina, no un
+ *     límite de servicio. Solo se usan para la dirección postal de la ficha
+ *     `InsuranceAgency` —que tiene que coincidir con el perfil de Google
+ *     Business (NAP)— y para el fuero del aviso legal.
+ *
+ * Hasta esta fecha los `<h1>`, los `<title>` y la ficha decían «en Sevilla» y
+ * «atendemos en Sevilla y su provincia»: eso no acotaba el SEO, acotaba la
+ * OFERTA — quien entraba desde otra provincia leía que no se le atiende. El
+ * anclaje local no se pierde: sigue en la dirección publicada y en el perfil de
+ * Google Business, que es de donde sale la señal del pack local, no de repetir
+ * la ciudad en cada encabezado.
  */
 export const AMBITO = {
+  /** Dónde se vende y se media. Es el ámbito que se declara al visitante. */
+  nacional: 'España',
   ciudad: 'Sevilla',
   provincia: 'Sevilla',
   comunidad: 'Andalucía',

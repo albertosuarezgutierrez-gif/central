@@ -12,6 +12,7 @@ import assert from 'node:assert/strict'
 // extensión). Es una limitación del runner, no del paquete.
 import { MEDIADOR } from '../../../packages/module-seguros/src/mediador.ts'
 import { fichaNegocio } from './seo.ts'
+import { AMBITO } from './sitio.ts'
 
 test('la dirección del JSON-LD SALE del domicilio del mediador', () => {
   const dir = fichaNegocio().address as Record<string, string>
@@ -29,4 +30,19 @@ test('el teléfono y el correo del JSON-LD son los del mediador', () => {
   const f = fichaNegocio()
   assert.equal(f.telephone, MEDIADOR.identidad.telefono)
   assert.equal(f.email, MEDIADOR.identidad.email)
+})
+
+// `areaServed` es dónde se PRESTA el servicio; `address`, dónde está la
+// oficina. La ficha declaraba ciudad + comunidad, o sea que afirmaba en datos
+// estructurados lo mismo que el copy: que fuera de Andalucía no se atiende.
+// Se media en toda España, así que va el país — y la dirección sigue siendo la
+// de Sevilla, que es la que tiene que cuadrar con Google Business.
+test('la ficha declara ámbito NACIONAL y domicilio en la ciudad de la oficina', () => {
+  const f = fichaNegocio()
+  const area = f.areaServed as Record<string, string>
+  assert.equal(area['@type'], 'Country', 'areaServed no es un país: la ficha acota el servicio')
+  assert.equal(area.name, AMBITO.nacional)
+
+  const dir = f.address as Record<string, string>
+  assert.equal(dir.addressLocality, AMBITO.ciudad, 'el domicilio de la ficha tiene que seguir siendo el de la oficina (NAP)')
 })

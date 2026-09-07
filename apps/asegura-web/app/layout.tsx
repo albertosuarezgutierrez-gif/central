@@ -69,11 +69,11 @@ const CSS_MARCA = [
 export const metadata: Metadata = {
   metadataBase: new URL(SITIO_URL),
   title: {
-    default: 'Grupo ASegura · Correduría de seguros en Sevilla',
+    default: 'Grupo ASegura · Correduría de seguros en toda España',
     template: '%s · Grupo ASegura',
   },
   description:
-    'Correduría de seguros en Sevilla inscrita en la DGSFP. Analizamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
+    'Correduría de seguros inscrita en la DGSFP que media en toda España. Analizamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
   openGraph: {
     type: 'website',
     locale: 'es_ES',

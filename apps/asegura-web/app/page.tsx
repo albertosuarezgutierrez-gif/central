@@ -10,9 +10,9 @@ import Cifras from '@/components/Cifras'
 import Escaneo from '@/components/Escaneo'
 
 export const metadata: Metadata = {
-  title: 'Correduría de seguros en Sevilla',
+  title: 'Correduría de seguros en toda España',
   description:
-    'Correduría de seguros en Sevilla inscrita en la DGSFP. Comparamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud. Te llamamos.',
+    'Correduría de seguros inscrita en la DGSFP que media en toda España. Comparamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
   alternates: { canonical: url('/') },
 }
 
@@ -179,7 +179,7 @@ export default function Home() {
           <Reveal>
             <span className="chip">
               <span className="chip-punto" aria-hidden />
-              Correduría en Sevilla · Registro DGSFP {MEDIADOR.identidad.claveDgsfp}
+              Correduría en toda España · Registro DGSFP {MEDIADOR.identidad.claveDgsfp}
             </span>
             {/*
               🚨 El hero habla de lo que le PASA al visitante, no de lo que la
@@ -207,8 +207,8 @@ export default function Home() {
               el sitio donde el visitante decide.
             */}
             <p className="lead" style={{ marginTop: 28 }}>
-              Soy {MEDIADOR.identidad.nombre}, corredor de seguros en Sevilla. No trabajo para ninguna aseguradora:
-              comparo entre varias y te digo qué cubre cada una y qué deja fuera.
+              Soy {MEDIADOR.identidad.nombre}, corredor de seguros en toda España. No trabajo para ninguna
+              aseguradora: comparo entre varias y te digo qué cubre cada una y qué deja fuera.
             </p>
             <div className="hero-cta">
               <a href="#presupuesto" className="btn btn-brand btn-brillo">

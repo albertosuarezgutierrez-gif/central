@@ -22,7 +22,7 @@ import { MEDIADOR, NO_EXCLUSIVIDAD, lineaIdentificacion } from '@central/module-
 import { AMBITO, url } from '@/lib/sitio'
 
 export const metadata: Metadata = {
-  title: 'Quiénes somos · Correduría de seguros en Sevilla',
+  title: 'Quiénes somos · Correduría de seguros en toda España',
   // Ni aquí se teclea la clave: la descripción se compone desde `MEDIADOR`, que
   // es la misma fuente que pinta el cuerpo de la página.
   description: `${MEDIADOR.marca} es la correduría de ${MEDIADOR.identidad.nombre}, corredor inscrito en la DGSFP con la clave ${MEDIADOR.identidad.claveDgsfp}. Qué es una correduría, quién responde y cómo cobramos.`,
@@ -150,7 +150,7 @@ export default function QuienesSomos() {
           <p style={entradilla}>
             {marca} es el nombre comercial con el que trabaja {identidad.nombre},{' '}
             {identidad.figura.toLowerCase()} inscrito en el registro de la DGSFP con la clave{' '}
-            {identidad.claveDgsfp}. Atendemos en {AMBITO.ciudad} y su provincia.
+            {identidad.claveDgsfp}. Trabajamos en toda {AMBITO.nacional}, con oficina en {AMBITO.ciudad}.
           </p>
         </header>
 
@@ -247,9 +247,10 @@ export default function QuienesSomos() {
             Dónde trabajamos
           </h2>
           <p style={parrafo}>
-            En {AMBITO.ciudad} y su provincia. Un corredor puede mediar en toda España, pero esto es
-            lo que decimos que hacemos: atender de cerca, en {AMBITO.comunidad}, a quien puede
-            llamarnos y encontrarnos.
+            En toda {AMBITO.nacional}. Un corredor inscrito en la DGSFP puede mediar en todo el
+            territorio nacional, y así trabajamos: la oficina está en {AMBITO.ciudad}, y desde ahí se
+            atiende por teléfono, correo y WhatsApp a clientes de cualquier provincia. Si estás cerca
+            y prefieres venir, también.
           </p>
           <ul style={lista}>
             <li>Hogar, comunidades de propietarios, comercio y empresa, auto y moto, vida y salud.</li>
