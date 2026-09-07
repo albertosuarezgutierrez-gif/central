@@ -29,7 +29,13 @@ import { prismaAsegura } from './asegura-db'
 import { emailDeFicha } from './email-ficha'
 import { enlaceDeAutorizaciones, enviarAvisoAcceso } from './correo-aviso-acceso'
 
-export type FalloAviso = 'no_encontrado' | 'sin_pendiente' | 'sin_email' | 'sin_portal' | 'error_envio'
+export type FalloAviso =
+  | 'no_encontrado'
+  | 'sin_pendiente'
+  | 'sin_email'
+  | 'sin_portal'
+  | 'sin_correo_configurado'
+  | 'error_envio'
 
 export type ResultadoAviso =
   | { ok: true; caducaEn: Date }
@@ -103,7 +109,20 @@ export async function avisarAccesoPendiente(
 
   const nombre = `${otorgante.nombre} ${otorgante.apellidos}`.trim()
   const enviado = await enviarAvisoAcceso(destino, { otorgante: nombre === '' ? null : nombre, enlace, caducaEn })
-  if (!enviado) {
+  // 🚨 Igual que en la invitación al portal: una env que falta no se cuenta como
+  // «el proveedor lo rechazó», porque reintentar no la pone.
+  if (enviado === 'sin_proveedor' || enviado === 'sin_remitente') {
+    return {
+      ok: false,
+      estado: 'sin_correo_configurado',
+      motivo:
+        enviado === 'sin_proveedor'
+          ? 'asegura no tiene ningún proveedor de correo configurado (falta RESEND_API_KEY, SMTP_USER+SMTP_PASSWORD o GMAIL_USER+GMAIL_APP_PASSWORD en Vercel). Reintentarlo no lo arregla.'
+          : 'A asegura le falta ASEGURA_MAIL_FROM en Vercel: no hay remitente con el que firmar el correo. Reintentarlo no lo arregla.',
+      status: 503,
+    }
+  }
+  if (enviado === 'rechazado') {
     return { ok: false, estado: 'error_envio', motivo: 'El proveedor de correo no aceptó el mensaje. Vuelve a intentarlo.', status: 502 }
   }
 

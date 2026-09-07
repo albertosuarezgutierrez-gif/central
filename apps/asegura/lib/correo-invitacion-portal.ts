@@ -157,14 +157,36 @@ export function cuerpoInvitacionPortal(d: DatosInvitacionPortal): CuerpoInvitaci
 }
 
 /**
- * Manda el correo. `true` = el proveedor lo aceptó.
+ * El desenlace del envío. 🚨 Son CUATRO y no un booleano, porque «no ha salido»
+ * se arregla en sitios distintos y el que lo lee decide qué hacer después:
  *
- * Un `false` NO significa que el cliente no pueda entrar al portal: puede
+ *   - `enviado`        → el proveedor lo aceptó.
+ *   - `sin_proveedor`  → no hay ninguno configurado (`RESEND_API_KEY` / `SMTP_*`
+ *                        / `GMAIL_*`). Es una variable de Vercel que falta.
+ *   - `sin_remitente`  → falta `ASEGURA_MAIL_FROM`. Ídem.
+ *   - `rechazado`      → había proveedor y remitente, y aun así dijo que no.
+ *
+ * ── Por qué esto no es un booleano (07/09/2026) ────────────────────────────
+ *
+ * Lo era, y los tres «no» se leían igual aguas arriba: `error_envio` 502, que
+ * la pantalla traduce a «el proveedor de correo no aceptó el mensaje, vuelve a
+ * intentarlo». Medido en producción ese día: el botón de invitar contestaba eso
+ * mientras el log decía `[mailer] sin proveedor de email configurado`. O sea, la
+ * pantalla mandaba a Alberto a reintentar un envío que **no podía salir nunca**,
+ * y encima culpando a un proveedor que no existe. Es la regla del `CLAUDE.md`
+ * raíz —un «no lo sé» disfrazado de dato— en su versión más cara: la única
+ * acción que ofrecía era la única que no arregla nada.
+ *
+ * Un `rechazado` NO significa que el cliente no pueda entrar al portal: puede
  * hacerlo igual desde la portada con su correo. Lo único que ha fallado es
- * contárselo, y por eso quien llama contesta `error_envio` — que es lo que se
- * reintenta— y no «no tiene acceso».
+ * contárselo.
  */
-export async function enviarInvitacionPortal(destino: string, d: DatosInvitacionPortal): Promise<boolean> {
+export type ResultadoEnvioCorreo = 'enviado' | 'sin_proveedor' | 'sin_remitente' | 'rechazado'
+
+export async function enviarInvitacionPortal(
+  destino: string,
+  d: DatosInvitacionPortal,
+): Promise<ResultadoEnvioCorreo> {
   // El transporte se carga AQUÍ, no arriba, por lo mismo que en el aviso de
   // acceso: el cepo de `cuerpoInvitacionPortal()` corre con `node --test`, que
   // no sabe resolver `@central/core-email` (su `main` importa sin extensión).
@@ -174,22 +196,22 @@ export async function enviarInvitacionPortal(destino: string, d: DatosInvitacion
   const transporter = createMailTransporter()
   if (!transporter) {
     console.error('[asegura/invitacion-portal] no hay proveedor de correo configurado')
-    return false
+    return 'sin_proveedor'
   }
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
   if (!from) {
     console.error('[asegura/invitacion-portal] falta ASEGURA_MAIL_FROM: no se invita')
-    return false
+    return 'sin_remitente'
   }
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
 
   const { asunto, texto, html } = cuerpoInvitacionPortal(d)
   try {
     await transporter.sendMail({ from, to: destino, ...(replyTo ? { replyTo } : {}), subject: asunto, text: texto, html })
-    return true
+    return 'enviado'
   } catch (e) {
     // El motivo, nunca el destino: un log es donde un dato personal sobrevive más tiempo.
     console.error('[asegura/invitacion-portal] fallo enviando la invitación:', e instanceof Error ? e.message : e)
-    return false
+    return 'rechazado'
   }
 }

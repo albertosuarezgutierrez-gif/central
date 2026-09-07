@@ -746,10 +746,14 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   lleva token** — un correo se reenvía y sobrevive en buzones compartidos; con llave dentro sería la
   cartera regalada. El cepo `lib/correo-invitacion-portal.test.ts` lo fija, junto con que el texto no
   nombre ni un campo de la cartera (`CAMPOS_PROHIBIDOS_EN_INVITACION`) ni cuántas pólizas tiene.
-  **Ocho desenlaces sin colapsar** porque se arreglan en sitios distintos: `sin_email` (pídele el
+  **NUEVE desenlaces sin colapsar** porque se arreglan en sitios distintos: `sin_email` (pídele el
   correo) · `ilegible` (clave PII, se arregla en Vercel, NO llamando al cliente) · `ambiguo` y
   `resuelve_a_otra` (hay un duplicado que resolver) · `no_comprobado` (no se ha mirado ≠ no se puede) ·
-  `sin_portal` · `error_envio` · `no_encontrado`. El GET existe para que la pantalla pueda decir «ya
+  `sin_portal` · **`sin_correo_configurado`** (falta el proveedor o `ASEGURA_MAIL_FROM`: reintentar NO lo
+  arregla — ver el aviso de acceso, más abajo) · `error_envio` · `no_encontrado`.
+  ⏸️ **Y a día 07/09/2026 el botón NO manda nada, por esto último:** `central-asegura` no tiene ningún
+  proveedor de correo en Vercel. Hace falta `RESEND_API_KEY` (o `SMTP_USER`+`SMTP_PASSWORD`, o
+  `GMAIL_USER`+`GMAIL_APP_PASSWORD`) **más `ASEGURA_MAIL_FROM`**, y redesplegar. El GET existe para que la pantalla pueda decir «ya
   entra, última vez el …» ANTES de ofrecer botón: un botón que solo se evalúa pulsándolo es una apuesta.
   🔁 **`lib/email-ficha.ts` (nuevo): a qué dirección se le escribe a una ficha, UNA regla y un sitio.**
   Se extrajo de `aviso-acceso.ts` al necesitarla también aquí. Baja de correo manda sobre cualquier
@@ -1117,7 +1121,20 @@ proveedor:
 | `sin_pendiente` | 409 | no hay autorización pendiente entre ese par (o ya se aceptó, o caducó) |
 | `sin_email` | 422 | la ficha autorizada no tiene correo legible, o está de baja de correo |
 | `sin_portal` | 503 | `ASEGURA_PORTAL_URL` no es una https válida |
-| `error_envio` | 502 | el proveedor rechazó el mensaje |
+| `sin_correo_configurado` | 503 | **no hay proveedor de correo** (`RESEND_API_KEY`/`SMTP_*`/`GMAIL_*`) o falta `ASEGURA_MAIL_FROM` |
+| `error_envio` | 502 | había proveedor y remitente, y el proveedor rechazó el mensaje |
+
+🚨 **Los dos últimos se separaron el 07/09/2026 y NO se vuelven a juntar.** Estaban colapsados en
+`error_envio`, así que el botón de plataforma contestaba «el proveedor de correo no aceptó el mensaje,
+vuelve a intentarlo» mientras el log de `central-asegura` decía `[mailer] sin proveedor de email
+configurado` (medido en producción: `POST /api/operador/cliente/portal 502`, 20:44:59 UTC). O sea: la
+pantalla mandaba a Alberto a la ÚNICA acción que no podía funcionar, y culpaba a un proveedor
+inexistente. Es la regla del `CLAUDE.md` raíz —un «no lo sé» disfrazado de dato— en el sitio donde más
+caro sale: el desenlace que decide qué hace la persona después. El desenlace del envío es ahora
+`ResultadoEnvioCorreo` (`enviado` · `sin_proveedor` · `sin_remitente` · `rechazado`), compartido por los
+dos correos, y el cepo vive en `test/regression-portal-cliente-asegura.test.ts` +
+`apps/plataforma/lib/relaciones-aviso.test.ts`: una env que falta **no puede** decir «vuelve a
+intentarlo», y una avería del proveedor **sí tiene que** decirlo.
 
 El estado «pendiente» lo decide `estadoAutorizacion()` del módulo puro sobre la fila, **no un `where`
 que dé por hecho que «sin aceptar» es «pendiente»**: una sin aceptar que ya pasó su fecha está

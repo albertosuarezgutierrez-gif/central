@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✉️ «Error enviar invitación» — el mensaje MENTÍA: no hay proveedor de correo (07/09/2026).** Alberto
+  con la ficha de GLOBAL 2 abierta: el botón contestaba «⚠️ El proveedor de correo no aceptó el mensaje…
+  Vuelve a intentarlo». Medido en los logs de Vercel (`POST /api/operador/cliente/portal 502`, 20:44:59
+  UTC): `[mailer] sin proveedor de email configurado`. O sea, **la pantalla mandaba a la única acción que
+  no podía funcionar**, culpando a un proveedor que no existe. Los tres «no» del envío estaban colapsados
+  en un booleano → `error_envio` 502. Ahora el envío devuelve `ResultadoEnvioCorreo` (`enviado` ·
+  `sin_proveedor` · `sin_remitente` · `rechazado`) y sale un desenlace nuevo, **`sin_correo_configurado`
+  503**, en los DOS correos (invitación al portal y aviso de acceso). Cepo verificado en rojo.
+  ⏸️ **Pendiente de Alberto, y es lo único que falta para que el botón funcione:** en Vercel
+  `central-asegura`, `RESEND_API_KEY` (o `SMTP_USER`+`SMTP_PASSWORD`, o `GMAIL_USER`+`GMAIL_APP_PASSWORD`)
+  **más `ASEGURA_MAIL_FROM`**, y redesplegar (una env nueva no se aplica sin redeploy).
+
 - **🧮 Spec de calculadora de bonificación hipotecaria en asegura-portal (07/09/2026, PR #2569 mergeado).**
   Idea de Alberto: simulador de punto de equilibrio entre mantener el seguro (hogar+vida)
   vinculado al banco por la bonificación del tipo, o contratarlo fuera. Sirve en los dos
