@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-07T13:57:49Z",
+  "generadoEn": "2026-09-07T16:54:37Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -406,7 +406,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3845,6 +3845,7 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/cartera/catalogos",
+      "/api/cartera/cliente/[clienteId]/hogar-nuevo",
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/cron/avisos-vencimiento",
@@ -6186,7 +6187,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1295,
+    "apis": 1296,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
