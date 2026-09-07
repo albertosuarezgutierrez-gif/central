@@ -54,7 +54,6 @@ export default function Redes() {
         titulo="Borradores para LinkedIn"
         sub={`${BORRADORES.length} escritos. Ninguno se publica solo: se copian y los publicas tú. La lista dice qué hay ESCRITO, no qué hay publicado — eso solo lo sabe LinkedIn.`}
         Icono={Megaphone}
-        primero
       >
         <div style={{ display: 'grid', gap: 10 }}>
           {BORRADORES.map((b) => {

@@ -23,8 +23,10 @@ import Calendario from './Calendario'
 import { FilaDeclarada } from './FilaDeclarada'
 import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
-import { RAMO } from './PolizaVista'
-import { vistaDeBoveda } from '@central/module-seguros-portal'
+import { HistorialSiniestros, RAMO, RecibosDePoliza } from './PolizaVista'
+import { ResumenTitular } from './ResumenTitular'
+import { VistaPorPoliza } from './VistaPorPoliza'
+import { agruparCartera, vistaDeBoveda, type GrupoCartera } from '@central/module-seguros-portal'
 
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
@@ -78,6 +80,29 @@ export default async function Boveda({
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo ASegura'
+
+  // ── Los tres cajones (07/09/2026) ─────────────────────────────────────────
+  //
+  // Alberto: «llegará un momento en que un cliente tenga acceso a varios
+  // clientes a su vez, sobre todo empresa… se tiene que diferenciar bien cuáles
+  // son pólizas mías personales, cuáles de la empresa y a su vez de cada
+  // autorizado».
+  //
+  // 🚨 `propias` es un ARRAY: una identidad puede estar vinculada a varias
+  // fichas (tú y tu sociedad). Hasta hoy se pintaban todas en la misma lista
+  // plana y SIN etiqueta —el chip de titular solo salía en las ajenas—, así que
+  // las pólizas personales y las de la empresa eran indistinguibles.
+  //
+  // El reparto lo decide `agruparCartera`, que es puro y tiene su cepo: aquí no
+  // se compara ningún `tipoPersona` a mano.
+  const bloques = agruparCartera([
+    ...cartera.propias.map((t) => ({ ...t, propia: true })),
+    ...cartera.autorizadas.map((t) => ({ ...t, propia: false })),
+  ])
+  const bloqueMias = bloques.find((b) => b.grupo === 'mias') ?? null
+  // «Tus seguros» ya tiene su sección propia abajo (con los estados vacíos, las
+  // añadidas a mano y el alta), así que aquí quedan los OTROS cajones.
+  const bloquesAparte = bloques.filter((b) => b.grupo !== 'mias')
 
   // Lo que se le ofrece elegir al dar un parte. Incluye las AUTORIZADAS a
   // propósito: la ruta acepta lo mismo (`carteraDeIdentidad` propias +
@@ -166,7 +191,9 @@ export default async function Boveda({
           estando a un toque, como una sección más de la navegación: quien
           quiere saber quién le está mirando los seguros —o quitárselo a
           alguien— no debería tener que recorrer nada para encontrarlo. */}
-      <h1>Mis seguros</h1>
+      <h1>
+        Mis <em>seguros</em>
+      </h1>
 
       {vista === 'seguros' && (
         <>
@@ -217,7 +244,15 @@ export default async function Boveda({
             Tu ficha está en {correduria}, pero no tiene pólizas vivas ahora mismo.
           </p>
         ) : (
-          cartera.propias.map((t) => <Titular key={t.clienteId} titular={t} propia />)
+          (bloqueMias?.titulares ?? []).map((t) => (
+            <Titular
+              key={t.clienteId}
+              titular={t}
+              grupo="mias"
+              conNombre={bloqueMias?.conNombre ?? false}
+              hoy={hoy}
+            />
+          ))
         )}
 
         {/* Las que ha añadido la persona, en la MISMA lista y con el mismo
@@ -248,14 +283,17 @@ export default async function Boveda({
         <SubirPoliza ramos={RAMOS_OPCIONES} />
       </section>
 
-      {cartera.autorizadas.length > 0 && (
-        <section className="seccion" aria-labelledby="autorizadas-titulo">
-          <h2 id="autorizadas-titulo">Seguros que te han autorizado a ver</h2>
-          {cartera.autorizadas.map((t) => (
-            <Titular key={t.clienteId} titular={t} propia={false} />
+      {/* Un bloque por cajón, y los vacíos no llegan hasta aquí (`agruparCartera`
+          no los devuelve): una sección con título y nada debajo se lee como una
+          avería, no como «aquí no hay nada». */}
+      {bloquesAparte.map((b) => (
+        <section key={b.grupo} className="seccion" aria-labelledby={`bloque-${b.grupo}-titulo`}>
+          <h2 id={`bloque-${b.grupo}-titulo`}>{b.titulo}</h2>
+          {b.titulares.map((t) => (
+            <Titular key={t.clienteId} titular={t} grupo={b.grupo} conNombre={b.conNombre} hoy={hoy} />
           ))}
         </section>
-      )}
+      ))}
 
       {/* El derecho de supresión (art. 17). Va aquí, dentro de la vista que la
           persona abre por defecto y con el nombre que la política de privacidad
@@ -281,8 +319,43 @@ export default async function Boveda({
           tiene prisa, y la bóveda es una tarea tranquila que puede esperar a
           mañana. Antes había que bajar por delante de toda la cartera para
           llegar aquí. */}
+      {/* ── Recibos (07/09/2026) ───────────────────────────────────────────
+          Los datos ya estaban, pero solo los encontraba quien entrase póliza a
+          póliza. La lista conserva la separación por titular: los recibos de
+          tu empresa no se mezclan con los tuyos.
+
+          🚨 `incluye` omite las pólizas cuyo bloque no se ve en tu nivel
+          (`recibos === null`, que es el caso de un tercero autorizado). Se
+          omiten ENTERAS: un título con un «no visible» debajo le contaría que
+          ahí hay algo que mirar. */}
+      {vista === 'recibos' && (
+        <VistaPorPoliza
+          bloques={bloques}
+          incluye={(p) => p.recibos !== null}
+          bloque={(p) => <RecibosDePoliza p={p} />}
+          vacio="Aquí verás los recibos de tus seguros cuando tu compañía nos los informe. Que no haya ninguno no significa que estés al corriente: significa que todavía no nos consta nada."
+        />
+      )}
+
+      {/* ── Siniestros: el historial Y el parte, en la MISMA pestaña ────────
+          Dos pestañas serían dos puertas para lo mismo (una diría «siniestro»
+          y la otra «parte», que para un cliente son la misma palabra) — es
+          exactamente lo que mató a «Mis pólizas» el 05/09. El historial va
+          primero porque quien entra a mirar es mayoría; el formulario, debajo.
+
+          ⚠️ Medido el 07/09/2026: solo 31 de los 80 titulares tienen algún
+          siniestro, así que 6 de cada 10 verán el vacío. Por eso el vacío es
+          una frase que dice lo que sabemos y lo que no. */}
       {vista === 'siniestro' && (
-        <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+        <>
+          <VistaPorPoliza
+            bloques={bloques}
+            incluye={(p) => p.siniestros !== null && p.siniestros.length > 0}
+            bloque={(p) => <HistorialSiniestros p={p} />}
+            vacio="No nos consta ningún siniestro en tus seguros. No significa que no hayas tenido ninguno: nos los informa tu compañía. Si acabas de tener uno, cuéntanoslo aquí abajo."
+          />
+          <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+        </>
       )}
 
     </>
@@ -292,13 +365,39 @@ export default async function Boveda({
 /**
  * Las pólizas de un titular, como LISTA.
  *
- * 🚨 El nombre del titular baja hasta cada FILA cuando la póliza no es de esta
- * persona, en vez de quedarse en un párrafo encima de la lista: ese párrafo se
- * sale de la vista al hacer scroll y una póliza ajena pasa a verse idéntica a
- * una propia. Quien cree que la del coche de su padre es suya no llama a la
- * compañía cuando hay que llamar.
+ * 🚨 Dos marcas distintas, que dicen cosas distintas:
+ *
+ *  - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo
+ *    de la lista, y se queda a la vista mientras se recorre. Un título normal
+ *    no vale: se sale de la vista al hacer scroll y entonces no se sabe dónde
+ *    acaba un titular y empieza el siguiente.
+ *  - El **chip de la fila** dice algo más fuerte y más caro de equivocar: que
+ *    esa póliza **no es tuya**. Por eso va SOLO en las autorizadas, viaja con
+ *    la fila y sobrevive a leerla suelta. Quien cree que la del coche de su
+ *    padre es suya no llama a la compañía cuando hay que llamar.
+ *
+ * ⚠️ Y por eso el chip NO se pone en las propias ni en las de tus empresas,
+ * aunque lleven cabecera: ahí el nombre ya lo da ella, repetirlo en cada fila
+ * es ruido —el nombre de una sociedad ocupa dos líneas— y además diría «de»
+ * sobre algo que sí es tuyo.
+ *
+ * `conNombre` lo decide `agruparCartera`, no esta función: con una sola ficha
+ * propia el nombre es ruido (la persona ya sabe cómo se llama), y en cuanto hay
+ * dos —o son de una empresa o de un tercero— es la información que separa una
+ * póliza de otra.
  */
-function Titular({ titular, propia }: { titular: TitularPortal; propia: boolean }) {
+function Titular({
+  titular,
+  grupo,
+  conNombre,
+  hoy,
+}: {
+  titular: TitularPortal
+  grupo: GrupoCartera
+  conNombre: boolean
+  /** Resuelto en el servidor (la página es `force-dynamic`). */
+  hoy: Date
+}) {
   if (titular.polizas.length === 0) {
     return (
       <p className="tenue" style={{ margin: '0 0 12px', fontSize: 14 }}>
@@ -307,11 +406,19 @@ function Titular({ titular, propia }: { titular: TitularPortal; propia: boolean 
     )
   }
   return (
-    <ul className="polizas">
-      {titular.polizas.map((p) => (
-        <FilaPoliza key={p.id} p={p} deOtro={propia ? null : titular.nombre} />
-      ))}
-    </ul>
+    <>
+      {conNombre && <h3 className="titular-cabecera">{titular.nombre}</h3>}
+      {/* 🚨 En «autorizadas» NO van: lo que gasta al año quien te dio acceso no
+          es tuyo, y una baldosa «Al año» sobre sus pólizas lo pintaría como si
+          lo fuera. Lo que sí necesita quien mira ahí es la fila, que ya lleva su
+          chip de póliza ajena. */}
+      {grupo !== 'autorizadas' && <ResumenTitular polizas={titular.polizas} hoy={hoy} />}
+      <ul className="polizas">
+        {titular.polizas.map((p) => (
+          <FilaPoliza key={p.id} p={p} deOtro={grupo === 'autorizadas' ? titular.nombre : null} />
+        ))}
+      </ul>
+    </>
   )
 }
 
