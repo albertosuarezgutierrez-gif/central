@@ -317,7 +317,8 @@ function prepararAuto(
     return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
   }
   // Nuestra referencia, para casar después la cotización con la póliza.
-  peticion.externalId = `poliza:${polizaId}`
+  // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
+  peticion.externalId = `poliza-${polizaId}`
   return { peticion, motivo: 'defensa-cartera', supuestos: pre.supuestos }
 }
 
@@ -457,7 +458,8 @@ async function prepararHogar(
   } catch (e) {
     return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
   }
-  peticion.externalId = `poliza:${polizaId}`
+  // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
+  peticion.externalId = `poliza-${polizaId}`
   return {
     peticion,
     motivo: 'defensa-cartera-hogar',
