@@ -354,6 +354,44 @@ export function motoDisponible(lineas: Opcion[]): DisponibilidadMoto {
   return { estado: 'ausente', ramos: lineas.map((l) => l.nombre) }
 }
 
+// ─── Ramos VIDA / SALUD / DECESOS: solo disponibilidad (gratis) ──────────────
+//
+// A diferencia de auto/hogar/moto, estos tres ramos NO tienen catálogos propios
+// documentados con certeza (el índice del portal cuenta 2 operaciones para vida
+// y 1+1 para salud/decesos EN TOTAL — nada parecido a los 11 de cada uno de los
+// otros tres). Lo único que se puede comprobar sin adivinar es si el ramo
+// tarifica para esta organización, con el mismo `GET /insurance-lines` de
+// siempre. Ver `docs/CODEOSCOPIC-API-PORTAL.md` y la cabecera de
+// `peticion-vida.ts` para el porqué completo.
+
+const IDS_VIDA = new Set(['termlife', 'term-life', 'vida', 'life'])
+const IDS_SALUD = new Set(['health', 'salud'])
+const IDS_DECESOS = new Set(['burial', 'decesos'])
+
+export type DisponibilidadVida =
+  | { estado: 'disponible'; id: string; nombre: string }
+  | { estado: 'ausente'; ramos: string[] }
+  | { estado: 'desconocido' }
+export type DisponibilidadSalud = DisponibilidadVida
+export type DisponibilidadDecesos = DisponibilidadVida
+
+function disponibleDeIds(lineas: Opcion[], ids: Set<string>): DisponibilidadVida {
+  if (lineas.length === 0) return { estado: 'desconocido' }
+  const l = lineas.find((x) => ids.has(x.id.toLowerCase()) || ids.has(normalizarTexto(x.nombre)))
+  if (l) return { estado: 'disponible', id: l.id, nombre: l.nombre }
+  return { estado: 'ausente', ramos: lineas.map((x) => x.nombre) }
+}
+
+export function vidaDisponible(lineas: Opcion[]): DisponibilidadVida {
+  return disponibleDeIds(lineas, IDS_VIDA)
+}
+export function saludDisponible(lineas: Opcion[]): DisponibilidadSalud {
+  return disponibleDeIds(lineas, IDS_SALUD)
+}
+export function decesosDisponible(lineas: Opcion[]): DisponibilidadDecesos {
+  return disponibleDeIds(lineas, IDS_DECESOS)
+}
+
 // ─── Emparejar texto del CRM con el catálogo del vendor ──────────────────────
 
 // ─── Hogar: tipo de vía y valores por defecto (gratis) ───────────────────────
