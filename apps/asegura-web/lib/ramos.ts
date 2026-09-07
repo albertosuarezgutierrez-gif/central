@@ -32,9 +32,12 @@ export type Ramo = {
   slug: string
   /** Nombre corto, para navegación y migas. */
   nombre: string
-  /** `<h1>` de la página. Lleva la localidad porque la pelea es local. */
+  /** `<h1>` de la página. Declara el ámbito NACIONAL: se media en toda España. */
   h1: string
-  /** `<title>`. Máx ~60 caracteres útiles antes de que Google lo corte. */
+  /**
+   * `<title>`. SIN la marca: la plantilla del layout (`%s · Grupo ASegura`)
+   * se la añade sola, y escribirla aquí la duplicaba en la SERP.
+   */
   title: string
   /** `<meta name="description">`. ~150-160 caracteres. */
   description: string
@@ -68,10 +71,10 @@ export const RAMOS: readonly Ramo[] = [
   {
     slug: 'hogar',
     nombre: 'Hogar',
-    h1: 'Seguro de hogar en Sevilla',
-    title: 'Seguro de hogar en Sevilla · Grupo ASegura',
+    h1: 'Seguro de hogar en toda España',
+    title: 'Seguro de hogar en toda España',
     description:
-      'Correduría de seguros en Sevilla. Revisamos tu seguro de hogar entre varias compañías y te explicamos qué cubre de verdad tu póliza. Sin compromiso.',
+      'Correduría de seguros en toda España. Revisamos tu seguro de hogar entre varias compañías y te explicamos qué cubre de verdad tu póliza. Sin compromiso.',
     intro: [
       'Somos correduría, no aseguradora: trabajamos con varias compañías a la vez, así que nuestro trabajo es mirar tu caso y buscar dónde encaja mejor, no colocarte la póliza de una marca concreta.',
       'En hogar, la mayoría de los disgustos no vienen del precio sino de una cobertura que se daba por supuesta y no estaba: el continente y el contenido mal valorados, la responsabilidad civil corta, o una exclusión que nadie leyó. Eso es lo que revisamos contigo antes de nada.',
@@ -85,7 +88,7 @@ export const RAMOS: readonly Ramo[] = [
       'Asistencia en el hogar y peritaje: quién decide y en cuánto tiempo.',
     ],
     paraQuien: [
-      'Tienes piso o casa en Sevilla y no sabes qué cubre exactamente tu póliza actual.',
+      'Tienes piso o casa y no sabes qué cubre exactamente tu póliza actual.',
       'Te ha subido la prima en la renovación y quieres entender por qué antes de decidir.',
       'Has reformado, comprado o heredado y las sumas aseguradas se han quedado antiguas.',
       'Alquilas tu vivienda y no tienes claro qué te toca a ti y qué al inquilino.',
@@ -121,10 +124,10 @@ export const RAMOS: readonly Ramo[] = [
   {
     slug: 'comunidades',
     nombre: 'Comunidades',
-    h1: 'Seguro de comunidades de propietarios en Sevilla',
-    title: 'Seguro de comunidad en Sevilla · Grupo ASegura',
+    h1: 'Seguro de comunidades de propietarios en toda España',
+    title: 'Seguro de comunidad en toda España',
     description:
-      'Correduría de seguros en Sevilla. Revisamos la póliza de tu comunidad de propietarios entre varias compañías y te explicamos qué mirar antes de la junta.',
+      'Correduría de seguros en toda España. Revisamos la póliza de tu comunidad de propietarios entre varias compañías y te explicamos qué mirar antes de la junta.',
     intro: [
       'Somos correduría, no aseguradora: trabajamos con varias compañías a la vez y el análisis lo hacemos nosotros. En una comunidad eso pesa, porque quien firma responde ante los vecinos de una decisión que casi nunca ha tomado antes.',
       'La mayoría de los problemas en comunidades no son de prima: son de dónde acaba la póliza de la comunidad y dónde empieza la del vecino cuando una bajante moja tres pisos. Eso es lo que ponemos por escrito antes de hablar de precio.',
@@ -141,7 +144,7 @@ export const RAMOS: readonly Ramo[] = [
       'Eres presidente o administrador y te toca renovar una póliza que se firmó hace años y nadie ha vuelto a leer.',
       'Un siniestro de agua ha acabado en discusión sobre si lo paga la comunidad o el propietario.',
       'La finca ha hecho obras —cubierta, ascensor, fachada— y las sumas aseguradas siguen siendo las de antes.',
-      'Administras varias comunidades en Sevilla y quieres una revisión ordenada, no una por urgencia.',
+      'Administras varias comunidades, estén en la provincia que estén, y quieres una revisión ordenada, no una por urgencia.',
     ],
     faq: [
       {
@@ -174,10 +177,10 @@ export const RAMOS: readonly Ramo[] = [
   {
     slug: 'comercio',
     nombre: 'Comercio y pyme',
-    h1: 'Seguro de comercio y pyme en Sevilla',
-    title: 'Seguro de comercio y pyme en Sevilla · Grupo ASegura',
+    h1: 'Seguro de comercio y pyme en toda España',
+    title: 'Seguro de comercio y pyme en toda España',
     description:
-      'Correduría de seguros en Sevilla. Analizamos el seguro de tu local, comercio o pyme entre varias compañías: continente, contenido y responsabilidad civil.',
+      'Correduría de seguros en toda España. Analizamos el seguro de tu local, comercio o pyme entre varias compañías: continente, contenido y responsabilidad civil.',
     intro: [
       'Somos correduría: trabajamos con varias compañías y el análisis del riesgo lo hacemos nosotros. En un negocio eso se nota, porque dos comercios de la misma calle rara vez necesitan la misma póliza.',
       'En comercio el daño caro casi nunca es el escaparate roto: es el mes que el local está cerrado mientras se repara. Por eso miramos primero cómo trabajas —qué guardas, qué maquinaria tienes, cuánta gente entra— y después la prima.',
@@ -191,7 +194,7 @@ export const RAMOS: readonly Ramo[] = [
       'La actividad declarada en la póliza: si es exactamente la que haces, porque una actividad mal descrita es la vía más rápida a un siniestro discutido.',
     ],
     paraQuien: [
-      'Tienes un local abierto al público en Sevilla —tienda, bar, taller, clínica, oficina— y la póliza se firmó al abrir y no se ha tocado.',
+      'Tienes un local abierto al público —tienda, bar, taller, clínica, oficina— y la póliza se firmó al abrir y no se ha tocado.',
       'Has cambiado de actividad, ampliado el local o incorporado maquinaria nueva.',
       'Te piden acreditar responsabilidad civil para el arrendador, para una licencia o para un cliente.',
       'Eres autónomo con local y no tienes claro qué separa el seguro del negocio del de tu casa.',
@@ -227,10 +230,10 @@ export const RAMOS: readonly Ramo[] = [
   {
     slug: 'auto',
     nombre: 'Auto y moto',
-    h1: 'Seguro de coche y moto en Sevilla',
-    title: 'Seguro de coche y moto en Sevilla · Grupo ASegura',
+    h1: 'Seguro de coche y moto en toda España',
+    title: 'Seguro de coche y moto en toda España',
     description:
-      'Correduría de seguros en Sevilla. Vemos contigo tu seguro de coche o moto entre varias compañías: terceros, todo riesgo, franquicia y qué revisar.',
+      'Correduría de seguros en toda España. Vemos contigo tu seguro de coche o moto entre varias compañías: terceros, todo riesgo, franquicia y qué revisar.',
     intro: [
       'Auto es el ramo donde más fácil resulta contratar mirando solo la cifra final, y donde peor sienta descubrir después lo que no se miró. Como correduría trabajamos con varias compañías, así que podemos enseñarte qué cambia de una modalidad a otra antes de que elijas.',
       'El seguro de responsabilidad civil de suscripción obligatoria lo lleva todo vehículo a motor: es el mínimo legal, no una modalidad. A partir de ahí, terceros ampliado o todo riesgo con o sin franquicia es una decisión sobre cuánto asumes tú, y depende del coche y del uso que le das.',
@@ -245,7 +248,7 @@ export const RAMOS: readonly Ramo[] = [
       'Vehículo de sustitución y peritaje: quién decide la reparación y en cuánto tiempo.',
     ],
     paraQuien: [
-      'Tienes coche o moto en Sevilla y renuevas cada año sin mirar qué ha cambiado en el condicionado.',
+      'Tienes coche o moto y renuevas cada año sin mirar qué ha cambiado en el condicionado.',
       'Vas a cambiar de vehículo, o el tuyo ya tiene años y dudas si mantener el todo riesgo.',
       'Has dado un parte y quieres entender cómo afecta a tu bonificación antes de renovar.',
       'En casa conduce más de una persona y quieres que la póliza lo refleje.',
@@ -281,10 +284,10 @@ export const RAMOS: readonly Ramo[] = [
   {
     slug: 'vida-y-salud',
     nombre: 'Vida y salud',
-    h1: 'Seguro de vida y de salud en Sevilla',
-    title: 'Seguro de vida y de salud en Sevilla · Grupo ASegura',
+    h1: 'Seguro de vida y de salud en toda España',
+    title: 'Seguro de vida y salud en toda España',
     description:
-      'Correduría de seguros en Sevilla. Vida riesgo, vida ahorro y salud: te explicamos carencias, copago, cuadro médico y cuestionario antes de contratar.',
+      'Correduría de seguros en toda España. Vida riesgo, vida ahorro y salud: te explicamos carencias, copago, cuadro médico y cuestionario antes de contratar.',
     intro: [
       'Vida y salud son los dos ramos donde las preguntas se vuelven personales, así que el trato es el que corresponde: se pregunta lo justo, se explica para qué sirve cada dato y se decide sin prisa.',
       'Los datos de salud son categorías especiales de datos personales (art. 9 del RGPD). Solo se recogen los que la aseguradora necesita para valorar el riesgo y se tratan con esa protección reforzada, tanto en el cuestionario como después.',
@@ -294,14 +297,14 @@ export const RAMOS: readonly Ramo[] = [
       'El capital y la designación de beneficiarios: si la cifra encaja con lo que hoy sostiene tu hogar y si los beneficiarios están actualizados.',
       'Vida vinculado a una hipoteca: qué te exige el banco, qué es voluntario y con quién puedes contratarlo.',
       'El cuestionario de salud: contestarlo completo y con exactitud es lo que sostiene la póliza el día que hace falta usarla.',
-      'En salud, el cuadro médico en Sevilla y provincia: si están los especialistas y hospitales a los que realmente vas a ir.',
+      'En salud, el cuadro médico allí donde vives: si están los especialistas y hospitales a los que realmente vas a ir.',
       'Copago o sin copago: cuánto se paga por acto médico y cómo encaja con el uso que prevés hacer de la póliza.',
       'Carencias y preexistencias: desde cuándo puedes usar cada prestación y cómo se tratan las enfermedades anteriores a la contratación.',
     ],
     paraQuien: [
       'Tienes hijos, hipoteca o un negocio que depende de ti y quieres entender qué pasaría económicamente si tú faltas.',
       'El banco te pide un seguro de vida por la hipoteca y quieres saber qué margen de elección tienes.',
-      'Buscas acceso a especialistas privados en Sevilla y estás comparando pólizas de salud.',
+      'Buscas acceso a especialistas privados en tu ciudad y estás comparando pólizas de salud.',
       'Ya tienes salud contratada y no sabes qué carencias te quedan ni qué recoge tu cuadro médico.',
     ],
     faq: [
@@ -335,10 +338,10 @@ export const RAMOS: readonly Ramo[] = [
   {
     slug: 'responsabilidad-civil',
     nombre: 'Responsabilidad civil',
-    h1: 'Seguro de responsabilidad civil en Sevilla',
-    title: 'Seguro de responsabilidad civil en Sevilla · Grupo ASegura',
+    h1: 'Seguro de responsabilidad civil en toda España',
+    title: 'Seguro de responsabilidad civil en España',
     description:
-      'Correduría de seguros en Sevilla. RC profesional y de autónomo: límites, retroactividad y delimitación temporal explicados antes de firmar la póliza.',
+      'Correduría de seguros en toda España. RC profesional y de autónomo: límites, retroactividad y delimitación temporal explicados antes de firmar la póliza.',
     intro: [
       'La responsabilidad civil es el ramo donde peor sienta la sorpresa: la reclamación llega años después del trabajo que la origina, y para entonces lo que decide no es lo que uno recuerda haber contratado, sino cómo estaba delimitada la póliza en el tiempo.',
       'Somos correduría y trabajamos con varias compañías, así que aquí nuestro trabajo empieza antes del precio: entender qué haces exactamente, para quién y con qué encargo, porque de ahí salen el límite y la delimitación temporal que necesitas.',
@@ -353,7 +356,7 @@ export const RAMOS: readonly Ramo[] = [
       'Los seguros de RC exigidos por norma o por colegio profesional, y si el que tienes acredita lo que te están pidiendo.',
     ],
     paraQuien: [
-      'Eres autónomo o profesional en Sevilla y un cliente, un colegio o un pliego te pide acreditar responsabilidad civil.',
+      'Eres autónomo o profesional y un cliente, un colegio o un pliego te pide acreditar responsabilidad civil.',
       'Ejerces una profesión en la que un error puede reclamarse años después: técnicos, sanitarios, asesores, arquitectura o ingeniería.',
       'Tienes empleados o subcontratas parte del trabajo y no sabes hasta dónde llega tu responsabilidad.',
       'Vas a cambiar de compañía y quieres evitar que quede un hueco entre la póliza vieja y la nueva.',

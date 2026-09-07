@@ -61,7 +61,7 @@ export function fichaNegocio(): Record<string, unknown> {
     email: MEDIADOR.identidad.email,
     telephone: MEDIADOR.identidad.telefono,
     description:
-      'Correduría de seguros en Sevilla. Analizamos entre varias compañías el seguro de hogar, comunidades, comercio, auto, vida y salud.',
+      'Correduría de seguros que media en toda España. Analizamos entre varias compañías el seguro de hogar, comunidades, comercio, auto, vida y salud.',
     founder: { '@type': 'Person', name: MEDIADOR.identidad.nombre },
     address: {
       '@type': 'PostalAddress',
@@ -77,10 +77,11 @@ export function fichaNegocio(): Record<string, unknown> {
       addressRegion: AMBITO.provincia,
       addressCountry: AMBITO.pais,
     },
-    areaServed: [
-      { '@type': 'City', name: AMBITO.ciudad },
-      { '@type': 'AdministrativeArea', name: AMBITO.comunidad },
-    ],
+    // 🚨 `areaServed` es dónde se PRESTA el servicio, no dónde está la oficina
+    // (eso lo dice `address`, y sigue siendo Sevilla). Declaraba ciudad y
+    // comunidad, o sea que la propia ficha afirmaba que fuera de Andalucía no
+    // se atiende. Se media en toda España: el país, y punto.
+    areaServed: { '@type': 'Country', name: AMBITO.nacional },
     // La clave DGSFP es lo que distingue a un corredor inscrito de cualquiera
     // que monte una web de seguros. Va como identificador, no como texto suelto.
     identifier: {
