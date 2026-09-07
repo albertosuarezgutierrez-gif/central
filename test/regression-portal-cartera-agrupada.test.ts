@@ -221,3 +221,20 @@ test('🚨 «Próximo» sale de proximoVencimiento, no del primer elemento', () 
   assert.match(RESUMEN, /r\.proximoVencimiento === null \? '—'/, 'sin próxima no se inventa una fecha')
   assert.doesNotMatch(RESUMEN, /polizas\s*\[\s*0\s*\]/, 'la primera de la lista no es la próxima')
 })
+
+test('🚨 la rejilla de tarjetas usa auto-FIT: auto-fill deja la fila a medias', () => {
+  // Alberto, 07/09/2026, con la captura de su bóveda: «el diseño no es acorde».
+  // `auto-fill` CREA las pistas aunque no haya tarjetas que ponerlas, así que
+  // con un solo aviso en el calendario la tarjeta se quedaba en la primera y el
+  // resto de la fila salía en blanco. Medido con Playwright a 1440: ocupaba el
+  // 24 % del ancho (335 de 1374 px); a 768, el 49 %. Con `auto-fit` es el 100 %
+  // en los cuatro anchos, y con dos o más tarjetas el reparto no cambia.
+  //
+  // Es un fallo MUDO: no desborda, no falla ningún test, no hay error. Solo
+  // queda hueco, y de eso solo se entera quien abre la pantalla en un monitor.
+  const i = CSS.indexOf('.cartera {')
+  assert.notEqual(i, -1, 'la rejilla de tarjetas tiene que existir')
+  const regla = CSS.slice(i, CSS.indexOf('}', i))
+  assert.match(regla, /repeat\(auto-fit,/, 'con auto-fill una sola tarjeta deja el resto de la fila vacío')
+  assert.doesNotMatch(regla, /auto-fill/, 'auto-fill crea pistas que nadie va a llenar')
+})

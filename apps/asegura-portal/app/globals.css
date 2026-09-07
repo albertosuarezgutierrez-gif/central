@@ -513,7 +513,15 @@ h1 em {
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  /* 🚨 `auto-FIT`, no `auto-fill` (07/09/2026). Alberto, con la captura de su
+   * bóveda: «el diseño no es acorde». `auto-fill` CREA las pistas aunque no
+   * haya tarjetas para llenarlas, así que con un solo aviso en el calendario la
+   * tarjeta se quedaba en la primera pista y el resto de la fila salía en
+   * blanco. Medido a 1440: la tarjeta ocupaba el **24 %** del ancho (335 de
+   * 1374 px) y a 768 el 49 %. Con `auto-fit` las pistas vacías se colapsan y la
+   * tarjeta ocupa el hueco entero; con dos o más, el reparto es idéntico al de
+   * antes. Es un fallo MUDO: nada se desborda ni falla, solo queda hueco. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: 12px;
 }
 /* Una sola columna, a la fuerza: las listas cuyas tarjetas llevan un formulario
