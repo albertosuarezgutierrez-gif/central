@@ -54,13 +54,17 @@ test('🚨 el enlace NO lleva token: un correo se reenvia', () => {
   // Si algún día alguien mete una llave en la URL, este test cae. Es
   // deliberado: el enlace no puede abrir sesión por sí mismo, porque entonces
   // reenviar el correo regalaría la cartera.
+  //
+  // ⚠️ Hasta el 07/09/2026 este cepo exigía además que el TEXTO lo dijera («este
+  // enlace no abre sesión por sí mismo»). Alberto lo mandó quitar del correo, así
+  // que la garantía se comprueba donde de verdad vive: en la URL, que no lleva
+  // ni query ni fragmento donde meter una llave.
   const c = correoCompleto()
   assert.ok(c.texto.includes(ENLACE))
   assert.ok(!/[?#]/.test(ENLACE), 'el enlace de este correo no lleva query ni fragmento')
-  assert.ok(
-    aplanar(c.texto).includes('no abre sesion por si mismo'),
-    'el correo tiene que DECIR que reenviarlo no sirve de nada',
-  )
+  for (const llave of ['token', 'jwt', 'sesion', 'session', 'codigo=', 'code=']) {
+    assert.ok(!aplanar(c.texto).includes(llave), `el correo no puede llevar un «${llave}»`)
+  }
 })
 
 test('sin nombre legible no se inventa uno', () => {

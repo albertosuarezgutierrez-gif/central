@@ -140,9 +140,8 @@ export function cuerpoInvitacionPortal(d: DatosInvitacionPortal): CuerpoInvitaci
     'Entras con ESTE mismo correo: el portal te manda un código de un solo uso y listo. ' +
       'No hay contraseña que recordar.',
     '',
-    'Este enlace no abre sesión por sí mismo, así que a quien se lo reenvíes no le sirve de nada.',
-    '',
-    'Si prefieres seguir como hasta ahora, no hagas nada: no cambia nada de tus pólizas.' +
+    'En Grupo ASegura trabajamos para ponértelo cada día más fácil: tus seguros a mano cuando los ' +
+      'necesites, a cualquier hora y sin tener que llamar a nadie.' +
       (contacto ? ` Y si tienes cualquier duda, escríbenos a ${contacto}.` : ''),
   ]
   const texto = lineas.join('\n')
@@ -159,10 +158,8 @@ export function cuerpoInvitacionPortal(d: DatosInvitacionPortal): CuerpoInvitaci
     `color:#fff;text-decoration:none;border-radius:8px">Entrar en Mis Seguros</a></p>` +
     `<p style="color:#666;font-size:13px">Entras con ESTE mismo correo: el portal te manda un código de ` +
     `un solo uso y listo. No hay contraseña que recordar.</p>` +
-    `<p style="color:#666;font-size:13px">Este enlace no abre sesión por sí mismo, así que a quien se lo ` +
-    `reenvíes no le sirve de nada.</p>` +
-    `<p style="color:#666;font-size:13px">Si prefieres seguir como hasta ahora, no hagas nada: no cambia ` +
-    `nada de tus pólizas.` +
+    `<p style="color:#666;font-size:13px">En Grupo ASegura trabajamos para ponértelo cada día más fácil: ` +
+    `tus seguros a mano cuando los necesites, a cualquier hora y sin tener que llamar a nadie.` +
     (contacto ? ` Y si tienes cualquier duda, escríbenos a ${esc(contacto)}.` : '') +
     `</p></div>`
 
