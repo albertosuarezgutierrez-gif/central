@@ -157,7 +157,7 @@
   tabla propia y el envío exige que **ninguna** de las dos bajas diga que no (art. 21 LSSI).
   Defecto **60 días**, no 30: a 30 el aviso llega en la fecha límite del art. 22 LCS. El correo no
   nombra ni un campo de la cartera y **el escaparate cuelga del vencimiento, nunca del siniestro**.
-  9 cepos. Spec en `docs/superpowers/specs/2026-09-06-portal-avisos-configurables-design.md` (PR #2473).
+  9 cepos. Spec en `docs/superpowers/specs/2026-09-06-portal-avisos-configurables-design.md` (PR #2472).
   ⚠️ Sin implementar. Antes de encender: **18 pólizas vivas están vencidas y siguen `activa`**.
 
 - **🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo (06/09/2026).**
