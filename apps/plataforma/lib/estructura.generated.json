@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-07T06:57:40Z",
+  "generadoEn": "2026-09-07T08:29:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2088,7 +2088,7 @@
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 17
       },
       "housesevillana": {
         "estado": "no",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 37
+        "evidencias": 39
       },
       "rrhh": {
         "estado": "no",
