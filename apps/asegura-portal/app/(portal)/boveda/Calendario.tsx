@@ -19,8 +19,14 @@ export default function Calendario({
   /** Pólizas en vigor cuya fecha de vencimiento la compañía no ha informado. */
   sinFecha: number
 }) {
+  // 🚨 `acento` va SOLO aquí, y es deliberado que sea el calendario: es la
+  // sección que dice qué hay que HACER, y la web usa su franja tintada una sola
+  // vez por la misma razón que su CSS deja escrita — «el contraste vale porque
+  // es el único». Con dos secciones tintadas deja de contrastar y empieza a
+  // competir con el color de estado de las filas.
   return (
-    <section className="seccion" aria-labelledby="calendario-titulo">
+    <section className="seccion acento" aria-labelledby="calendario-titulo">
+      <p className="antetitulo">Lo que vence</p>
       <h2 id="calendario-titulo">Tu calendario</h2>
 
       {obligaciones.length === 0 ? (

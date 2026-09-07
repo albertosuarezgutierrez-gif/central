@@ -775,6 +775,29 @@ más: úsalo como primer sitio donde mirar, no como verdad garantizada.
 La forma (b) se vio una sola vez (#2439, run de `qa.yml` `34055588656`): un `expected` que no se
 resolvía nunca porque no había job que esperar. Un caso, no una ley.
 
+🧵 **DECIMOQUINTA (07/09/2026, PR #2503) — cuatro pushes al MISMO PR en draft: tres dispararon y el
+cuarto no, y lo único que cambió fue que ese cuarto dejó el PR en conflicto.** Medido en orden, sin
+palancas de por medio:
+
+| paso | qué se hizo | ¿draft? | `mergeable_state` | runs de los requeridos |
+|---|---|---|---|---|
+| 1 | PR abierto por la herramienta MCP (head `d7fd6bf5`) | **sí** | clean | ✅ **19 runs** al instante, `event: pull_request` |
+| 2 | merge de `main` + push (`b6e78903`) | **sí** | clean | ✅ dispara |
+| 3 | push con contenido real (`7b57f525`) | **sí** | clean | ✅ dispara |
+| 4 | push con contenido real (`c3449b0e`) | **sí** | **dirty** | **0** |
+
+Lo que aporta: **el draft NO silenció ni una sola vez en este PR** —tres `synchronize` seguidos en
+draft dispararon con normalidad—, así que suma al lado de #1777/#1940/#2341/#2386 y en contra de
+#2029/#2277/#2339, todos abiertos igual. Y aporta un sospechoso nuevo que no estaba en la lista:
+**el único push mudo es el que coincidió con que `main` avanzara y el PR pasara a `dirty`**.
+
+`[Suposición]` que un PR en conflicto no reciba `synchronize` explicaría de una vez las tres veces
+que «mergear `main`» apareció como la palanca que desatascaba (#1789, #1938, #2378) — en las tres
+había conflicto, y resolverlo es lo que devuelve el PR a un estado computable. **No está aislado**:
+aquí el conflicto y el push llegaron juntos, así que no se sabe cuál de los dos manda. No la des por
+causa; lo accionable ya está en el paso 1 del orden de abajo, que manda resolver el conflicto
+primero por otra razón (es trabajo obligatorio de todas formas).
+
 🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
 0. **Antes de nada: ¿los runs EXISTEN?** `list_workflow_runs` filtrando por rama. Si existen y están
    `completed`/`success` sobre ese head, no hay nada que desatascar — es reporte retrasado
