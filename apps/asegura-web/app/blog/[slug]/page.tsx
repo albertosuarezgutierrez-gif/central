@@ -6,6 +6,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { normaPorId, citaLegible } from '@central/module-seguros'
 import { ARTICULOS, articuloPorSlug } from '@/lib/articulos'
 import { ramoPorSlug } from '@/lib/ramos'
 import { url } from '@/lib/sitio'
@@ -107,7 +108,23 @@ export default async function ArticuloPagina({ params }: { params: Promise<{ slu
           >
             <h2 style={{ fontSize: 15, margin: '0 0 8px' }}>Normativa citada</h2>
             <ul style={{ margin: 0, paddingLeft: 18 }}>
-              {a.base.map((b) => <li key={b} style={{ marginBottom: 4 }}>{b}</li>)}
+              {a.base.map((id) => {
+                const n = normaPorId(id)
+                // Un id que no resuelve no se pinta: el cepo lo caza antes de
+                // llegar aquí, y pintar el id crudo sería peor que no pintar nada.
+                if (!n) return null
+                return (
+                  <li key={id} style={{ marginBottom: 6 }}>
+                    {citaLegible(n)}{' '}
+                    {/* El enlace es lo que convierte la cita en comprobable.
+                        `rel="nofollow"` no: el BOE es exactamente la clase de
+                        fuente a la que conviene enlazar sin reservas. */}
+                    <a href={n.url} target="_blank" rel="noopener noreferrer">
+                      Texto en el BOE
+                    </a>
+                  </li>
+                )
+              })}
             </ul>
             <p style={{ marginTop: 12 }}>
               Este artículo informa con carácter general y no sustituye al análisis de tu póliza concreta.
