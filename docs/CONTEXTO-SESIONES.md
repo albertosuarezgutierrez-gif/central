@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧮 Spec de calculadora de bonificación hipotecaria en asegura-portal (07/09/2026, PR #2569 mergeado).**
+  Idea de Alberto: simulador de punto de equilibrio entre mantener el seguro (hogar+vida)
+  vinculado al banco por la bonificación del tipo, o contratarlo fuera. Sirve en los dos
+  sentidos (retener cliente propio / captar prospecto del banco). Cálculo estático sin BD,
+  sin amortización ni proyección de precios (decisión explícita de Alberto), con precarga de
+  la prima real si el cliente ya tiene póliza viva en Grupo ASegura, CTA a presupuesto real y
+  disclaimer para no leerse como recomendación en firme (RDL 3/2020). Spec en
+  `docs/superpowers/specs/2026-09-07-calculadora-bonificacion-hipoteca-design.md`.
+  **Pendiente:** plan de implementación (writing-plans) y código — aún no hay nada construido.
+
 - **🚧 Vida, salud y decesos sin póliza — construidos con lo que había, sin verificar (07/09/2026, PR #2563).**
   Alberto: «hazlo con lo que tengas», tras avisar del riesgo de gastar 0,50€ reales en intentos mal
   formados. Mismo patrón que auto/hogar/moto, pero el `risk` de estos tres NO sale de ningún snapshot
