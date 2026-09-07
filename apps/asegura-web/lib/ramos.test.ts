@@ -191,3 +191,23 @@ test('el copy de las páginas no acota el servicio a Sevilla ni a Andalucía', (
     }
   }
 })
+
+// 🚨 Cepo del 07/09/2026, y nace de un cambio que DEBILITÓ la portada a
+// propósito. El h1 decía «Sube tus pólizas. / Aunque no sean mías.» y esa
+// segunda línea era lo único de toda la web que un corredor de al lado no
+// puede copiar: que las pólizas de OTRAS compañías vivan aquí. Alberto la
+// quitó («aunque no sean míos no lo pongas»), así que el diferenciador se
+// quedó viviendo en UNA frase del `lead` del hero.
+//
+// El modo de fallo es mudo: alguien acorta el `lead` porque tiene cuatro
+// líneas en móvil —cosa razonable— y la portada pasa a no decir en ninguna
+// parte lo único que la distingue. No falla el build, no falla el typecheck y
+// la página sigue teniendo buen aspecto. Por eso se ancla aquí.
+test('la portada sigue diciendo que la intranet acepta pólizas de CUALQUIER compañía', () => {
+  const home = sinComentarios(readFileSync(join(RAIZ, 'app', 'page.tsx'), 'utf8'))
+  assert.match(
+    home,
+    /de cualquier compañía/i,
+    'la portada ya no dice que acepta pólizas de cualquier compañía: se quedó sin el único argumento que no puede copiar otro corredor',
+  )
+})
