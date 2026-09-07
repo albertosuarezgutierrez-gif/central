@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (07/09/2026) 🧾 Subir una factura a mano ya la ARCHIVA y la CONTABILIZA, no solo la lee
 - (07/09/2026) 🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD
 - (07/09/2026) 🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código
 - (07/09/2026) 🧹 «Mergea todo» = 2 de 10, y el orden decide si el resultado es VERDADERO
@@ -271,5 +272,4 @@
 - (06/09/2026) 🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo
 - (06/09/2026) 👀 «No aparecen siniestros ni recibos» en el portal: NO era un bug, era el alcance
 - (06/09/2026) 📮 Canario del formulario público: que no vuelva a morir en silencio
-- (06/09/2026) 🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo
 
