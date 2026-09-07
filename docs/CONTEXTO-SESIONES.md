@@ -105,6 +105,20 @@
   el correo cifrado y `apps/asegura` lo LEE (es la que tiene correo y BYPASSRLS; un guardián prohíbe
   al portal importar transporte de correo). Medido: 6 obligaciones en toda la BD, 0 avisadas, 0 en
   ventana — el cron mandando cero hoy es correcto y NO prueba que esté apagado.
+- **🏢 El armazón del portal, vestido de marca; y Pilar ya estaba dentro (07/09/2026).**
+  Alberto: «el diseño es como un básico fuera de Grupo ASegura… yo quitaba lo que rodea». Diagnóstico
+  correcto (barra blanca pura, suelo gris neutro, activa gris, wordmark en Inter: cero marca en todo el
+  marco), **pero se VISTE, no se quita** — quitar el lateral deshace lo que él pidió el 05/09 y borra el
+  «dónde estoy». PR **#2522, mergeado y READY en producción** (`593f25d5`). Y **#2529**: marca y modelo
+  pasan a pedirse en la 1ª pasada, que es la que funciona.
+  🚨 **Pilar Piña Franco NO necesitaba invitación**: ya está vinculada por índice ciego del correo y fue
+  ELLA quien subió el PDF. Lo que falta es la **autorización de GLOBAL 2** (5 pólizas vivas), y por la
+  regla del 03/09 («el papel PROPONE el acceso, no lo concede») **la da Manuel Antonio, el dueño**, no
+  el corredor. No se mandó ningún correo: borrador entregado a Alberto. ⚠️ Una Allianz de GLOBAL 2
+  **venció el 01/09/2024 y sigue marcada como viva**. Y el PDF de esa póliza **no se puede releer**: solo
+  se guarda el nombre del fichero, así que cada campo que falle en la subida se pierde hasta que exista
+  el bucket privado.
+
 - **📄 Un SUPLEMENTO no es una póliza, y el armazón del portal no era de la marca (07/09/2026).**
   Alberto subió una póliza real y salieron tres cosas. (1) **Su dato cerró el diagnóstico que yo no
   podía cerrar**: los 55,85 € que se guardaron como prima anual eran de un *suplemento de cambio de
