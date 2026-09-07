@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔤 Una sola letra en los titulares de `asegura-web` (07/09/2026, PR pendiente).** Alberto sobre el h1
+  de la portada: «aquí hay dos tipografías, ¿no? me gusta que todo esté como *Sube tus seguros*». No eran
+  dos familias: era la ITÁLICA de Fraunces en `.destaca` (10 titulares de la página), que cambia tanto de
+  forma que se leía como otra letra. Se quita la itálica —el acento lo lleva ya solo el cobalto— también
+  en la cita de credenciales, y con ella el eje `ital` de la petición a Google Fonts (un archivo de fuente
+  menos). Cepo nuevo `lib/tipografia.test.ts`: itálica declarada e itálica pedida van de la mano en los
+  DOS sentidos (sin el eje, el navegador SINTETIZA la inclinación y no falla nada); 5 brazos vistos en rojo.
+  **Pendiente: mirar la preview de Vercel — Google Fonts no carga en el contenedor, así que el aspecto real
+  no se ha visto aquí.**
+
 - **📌 Revisión de precios House Sevillana — Genius+Móvil se QUEDAN, ocupación floja no lo permite (07/09/2026, solo charla, sin PR).**
   Reserva Booking 154638741 (05-07/03/2027) parecía descuadrar (393,78€/noche vs base ~530€): desglose real
   confirma que es el stack Genius −15% + Móvil −10% (mismo patrón landmine §12 CLAUDE.md, nunca tocado en
