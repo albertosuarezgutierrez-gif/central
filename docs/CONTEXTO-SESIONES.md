@@ -58,6 +58,13 @@
   `docs/superpowers/specs/2026-09-07-calculadora-bonificacion-hipoteca-design.md`.
   **Pendiente:** plan de implementación (writing-plans) y código — aún no hay nada construido.
 
+- **📈 Pasada diaria trading-analista (07/09/2026, 20:15 UTC).** NAV/cartera/latido empujados a
+  plataforma; 24 símbolos analizados y puntuados (276 tesis, 0 stops, 0 vetados). Sin ideas operadas
+  hoy (CVX vetada por concentración). Radar lunes: 4/5 cohetes confirmados. Resumen por Telegram.
+  Nota de método: al transcribir manualmente el histórico OHLCV de 24 símbolos se perdió un valor en
+  el `close` de NVDA (125 vs 126) — lo cazó el chequeo de longitudes antes de enviar, no llegó a
+  contaminar nada. Entrada completa en `docs/AGENTES-BITACORA.md`.
+
 - **🚧 Vida, salud y decesos sin póliza — construidos con lo que había, sin verificar (07/09/2026, PR #2563).**
   Alberto: «hazlo con lo que tengas», tras avisar del riesgo de gastar 0,50€ reales en intentos mal
   formados. Mismo patrón que auto/hogar/moto, pero el `risk` de estos tres NO sale de ningún snapshot
