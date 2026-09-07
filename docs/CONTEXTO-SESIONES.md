@@ -48,6 +48,91 @@
   normaliza** (devuelve boolean) porque `hashCanal` ya normaliza — dos normalizaciones = el código bueno
   sale `sin_codigo` en silencio. Cepo de **ORDEN** (`test/regression-portal-limite-acceso.test.ts`),
   8 mutaciones vistas en rojo. Pendiente: índice por `valor_hash` en `portal_codigo` (DDL aparte).
+- **📵 La foto de la factura no llegaba a salir del móvil: el cuerpo moría antes de la función (07/09/2026).**
+  Con el archivado ya mergeado (#2474), Alberto probó a subir la factura y volvió a leer «se me ha cortado la
+  conexión» — y le di el visto bueno sin haber probado el flujo, que es el error de método de la sesión. En
+  los logs: **cero invocaciones de `/api/contable/chat`**. El adjunto viaja en base64 (**×1,37**) y una
+  Serverless Function de Vercel corta el CUERPO por debajo de eso, en la plataforma: sin log y sin JSON, así
+  que el `r.json()` revienta y cae en un mensaje genérico que tapaba 413, 504 y 500 por igual. Las dos guardas
+  medían lo que NO viaja: el cliente el **fichero** (8 MB) y el servidor un tope **inalcanzable** (11 MB).
+  Ahora la foto se **encoge en el navegador** (`lib/imagen-cliente.ts`, medido en Chromium: **12,4 MB → 1,8 MB**;
+  el PDF no se toca) y cada fallo se dice por su nombre. Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
+
+- **🔗 `sameAs`: la web y el canal de YouTube declarados como el MISMO negocio (07/09/2026).**
+  `PERFILES` en `lib/sitio.ts` → `sameAs` en la ficha `InsuranceAgency`. Importa aquí más que en otras
+  webs: conviven **tres dominios propios** (`grupoasegura.es`, `app.grupoasegura.com`, la landing vieja de
+  plataforma) y existe una **correduría HOMÓNIMA en Montevideo** (`grupoasegura.com.uy`) que el buscador
+  ya me devolvió mezclada con la de Alberto. Guardián `lib/seo-perfiles.test.ts`, **visto en rojo** con el
+  acortador que Alberto pegó primero (`share.google/…`, caduca y esconde su destino) y con el `?si=` que
+  pega el botón «compartir» de YouTube. Sin perfiles, `sameAs` **NO se emite** — un `[]` afirmaría «se
+  miró y no hay». ⚠️ **La pertenencia no está medida y así se declara en el código**: el proxy deniega
+  `youtube.com` y `google.com`, así que la URL entra por palabra de Alberto; el cepo vigila la FORMA.
+  61/61 en asegura-web, tsc verde, `pnpm test` 639 pass / 0 fail.
+  📺 **El canal existía y estaba envenenado.** Se llamaba **«Grupo ASegura - SEGUROS Low Cost»** (17 subs,
+  5 vídeos) y su primer vídeo lleva una escarapela **«Nº1»** en la miniatura: promesa de precio + claim de
+  liderazgo, o sea justo lo que `lib/ramos.test.ts` bloquea en cada commit de la web — con 80 clientes ese
+  «Nº1» además no es acreditable (Ley 3/1991). Alberto cambió nombre y descripción con el texto que se le
+  pasó; **los 5 vídeos siguen sin revisar**. 🏛️ **Google Business SÍ existe y está verificado** (1 reseña,
+  sin horario), pero su categoría es **«Agencia de seguros»** —agente, lo contrario de corredor y de la
+  clave DGSFP CS-F/0170— y su nombre «Grupo ASegura tu corredor de Seguros» ≠ `MEDIADOR.marca`: **NAP
+  roto**. Falta su URL canónica de Maps para cerrar el `sameAs` y desbloquear `geo`.
+- **📣 LinkedIn: seis borradores en el repo, bajo el MISMO cepo regulatorio que la web (07/09/2026).**
+  Alberto eligió canal («empieza con LinkedIn»). Lo que se ha construido NO publica nada —regla global de
+  comunicaciones salientes— sino que deja el contenido escrito, vigilado y en la pantalla que él abre.
+  🔁 **La lista de lo prohibido salió de `apps/asegura-web` a `@central/module-seguros`**
+  (`copy-regulado.ts`: `PROHIBIDO`, `ACOTA_AMBITO`, `revisarCopy`, 7 tests). Vivía SOLO en el cepo de la
+  web, así que solo protegía a la web; con la correduría publicando en redes, una segunda copia de esos
+  patrones sería la que deja de vigilar el día que divergen. `lib/ramos.test.ts` la consume ahora en vez
+  de declararla (61/61 antes y después = comportamiento idéntico). 🚨 **Y en redes el daño es asimétrico:
+  una página se corrige, un post publicado no** — por eso la revisión pasa ANTES.
+  📝 `apps/plataforma/lib/correduria/redes-borradores.ts`: 6 posts (comunidades·infraseguro art. 30 LCS ·
+  preaviso art. 22 LCS · hogar del banco art. 17 Ley 5/2019 · flota·mercancía · comercio·actividad
+  declarada · corredor vs agente), cada uno con `porQue` y con `base` = la norma citada, **para poder
+  verificarla antes de publicar** (una cita inventada en un post no se corrige). Los tres artículos se
+  verificaron en fuentes antes de escribirlos; el 30 LCS es DISPOSITIVO (se puede excluir por pacto) y ese
+  matiz es el que da valor al post. Cepo `redes-borradores.test.ts` (9), **visto en rojo tres veces**:
+  promesa de precio, norma citada sin `base`, y clave DGSFP tecleada distinta de `MEDIADOR`.
+  🖥️ Sexta sección **«Redes»** en `/correduria` con los borradores y botón copiar. **Sin contador a
+  propósito**, y es la decisión que más se piensa: mediría «borradores sin publicar», dato que solo conoce
+  LinkedIn — un número diría «tienes 6 pendientes» con los 6 quizá publicados, y un `null` (`!`) daría
+  alarma sobre algo que no falla. No afirmar nada es lo honesto.
+  ⏭️ Pendiente de Alberto: revisar su perfil de LinkedIn (titular y «Acerca de» — no se ven desde aquí) y
+  el ritmo de un post por semana. El adaptador de publicación (`w_member_social`, self-serve para el
+  perfil personal; la página de empresa exige partner) **no se ha construido**: sin ritmo probado sería
+  automatizar un canal que aún no existe.
+
+- **🧾 Subir una factura a mano ya la ARCHIVA y la CONTABILIZA, no solo la lee (07/09/2026).**
+  Alberto subió una factura al agente contable dando por hecho que se archivaba: no lo hacía. La rama
+  factura de `lib/contable/documentos.ts` leía el documento, proponía conciliar el cargo y **tiraba el
+  fichero** — archivar en Drive e imputar a `gastos` solo pasaba con lo que entraba por CORREO. Ahora la
+  subida manual pasa por la maquinaria CANÓNICA del agente de correo (`subir` + `procesarFactura`, con su
+  dedupe por huella), así que **las tres bocas** (chat web, 📎 de Telegram y el botón nuevo) archivan e
+  imputan igual. 🚨 `gastos` NO tiene `cuenta_id`: si la sesión no es la dueña del libro (misma resolución
+  que `facturas-scan`) **no se sube ni se imputa nada** y se DICE (`decision: null` = «no intentado», no
+  «no hay»). Botón 🧾 en la cabecera (icono solo en móvil: la barra de 52px no admite etiqueta a 320px).
+  Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
+
+- **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
+  `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
+  **sin ninguna página**. Va en `RAMOS`, así que entra sola en sitemap, pie y formulario. Su posición en la
+  lista NO está medida —**cero pólizas de flota en la cartera viva**, así que no hay comisión que comparar—
+  y así se declara en el código. Añadir el ramo obligó a tocar **las dos apps**: `TIPOS_SEGURO_LEAD` de
+  plataforma y la copia de `asegura-web`, o el desplegable habría ofrecido un ramo que plataforma rechaza
+  con 422 (lead perdido sin que falle nada) — lo forzó `contrato-lead.test.ts`. **Dos cepos existentes lo
+  cazaron en rojo**: `enlazado.test.ts` («ramo huérfano: /seguros/flota no está en NAV») y, al meterlo en la
+  cabecera, el de desbordamiento medido en píxeles («6 entradas; se midió el desborde a partir de 6») → flota
+  se queda en pie + comercio, como RC. Nuevo `fichaServicio()` (`Service` por ramo, `provider` por `@id`, sin
+  `offers`/`price`) y **`knowsAbout` derivado de `RAMOS`**: era una lista de 6 cadenas a mano que al publicar
+  flota habría dicho que la correduría no sabe de un ramo con página propia. Guardián nuevo
+  `lib/seo-servicio.test.ts` (5 aserciones), **visto en rojo antes de existir**. 55/55 en asegura-web,
+  typecheck de asegura-web y plataforma verdes, `pnpm test` exit 0.
+  🔴 **Y lo que NO es código, medido sobre la ficha real de Google (captura de Alberto, 8:47):** el perfil
+  **existe y está verificado**, pero (a) su categoría es **«Agencia de seguros»** — o sea AGENTE, justo lo
+  contrario de lo que la web entera argumenta y de lo que dice la clave DGSFP CS-F/0170; (b) el nombre es
+  **«Grupo ASegura tu corredor de Seguros»** y la web declara `Grupo ASegura` → **NAP roto**, y además
+  palabras clave en el nombre es motivo de suspensión en las directrices de Google; (c) **sin horario**
+  («Añadir horario de apertura»), que es coherente con `HORARIO = null` pero deja la ficha coja; (d) **1
+  reseña**. `sameAs` sigue sin poder ponerse: falta la URL de la ficha.
 
 - **🔎 SEO de `asegura-web`: cinco huecos cerrados, y el que no es código (07/09/2026).** Del banco de
   ideas: **A** imagen Open Graph (`app/opengraph-image.tsx`, `next/og`, marca y clave DGSFP leídas de
@@ -142,6 +227,20 @@
   con TRES estados: 503/502/404/200 = 🔴 roto · 429 o sin llegar = 🟠 «no lo sé», nunca verde. Telegram
   `correduria.canario-lead` (máx. 1 cada 6 h, anti-spam sobre `telegram_avisos_log`) y latido
   `canario_lead_web` dado de alta en el vigía. PR #2453.
+
+- **🔔 Spec de la pestaña «Avisos» del portal, y dos huecos que la hacían inútil (06/09/2026).** Dictado
+  de Alberto: que el cliente configure sus avisos y elija la antelación de la renovación. Medido antes
+  de diseñar: el cron de vencimientos está **apagado**, el aviso de siniestro **no existe**, y
+  `portal_obligacion` ya modela **siete** recordatorios (ITV, carnet, gas…), no dos. 🚨 Dos hallazgos
+  que cambiaron el diseño: (1) `portal_obligacion.identidad_id` es **NOT NULL** — solo 3 identidades
+  tienen obligaciones, así que encender el cron hoy mandaría **3 correos**; el vencimiento pasa a
+  leerse de `polizas` directamente, porque es un hecho de la cartera y no algo que el cliente declare.
+  (2) `prisma_asegura_portal` **no puede leer `email_opt_out_at`**, así que la preferencia vive en
+  tabla propia y el envío exige que **ninguna** de las dos bajas diga que no (art. 21 LSSI).
+  Defecto **60 días**, no 30: a 30 el aviso llega en la fecha límite del art. 22 LCS. El correo no
+  nombra ni un campo de la cartera y **el escaparate cuelga del vencimiento, nunca del siniestro**.
+  9 cepos. Spec en `docs/superpowers/specs/2026-09-06-portal-avisos-configurables-design.md` (PR #2472).
+  ⚠️ Sin implementar. Antes de encender: **18 pólizas vivas están vencidas y siguen `activa`**.
 
 - **🧯 Los siniestros de CIMA llevaban DOS MESES sin entrar, y la causa no era la que se dijo (06/09/2026).**
   `review` no es una cola de revisión manual sino una cuarentena automática, y a Occident no le entraba

@@ -227,6 +227,73 @@ export const RAMOS: readonly Ramo[] = [
       },
     ],
   },
+  // 📌 Flota va PEGADA a comercio, y su sitio NO está medido: en la cartera viva
+  // no hay ni una sola póliza de flota, así que no hay comisión que comparar con
+  // los 68,74 €/año de hogar o los 40,87 € de auto. Está aquí por afinidad —la
+  // decide la misma persona que el seguro del local, y se vende en la misma
+  // conversación—, no por un dato. Cuando haya recibos cobrados de flota, se
+  // mide y se recoloca; hasta entonces esta posición es una hipótesis declarada.
+  {
+    slug: 'flota',
+    nombre: 'Flota de vehículos',
+    h1: 'Seguro de flota de vehículos en España',
+    title: 'Seguro de flota de vehículos en España',
+    description:
+      'Correduría de seguros en toda España. Analizamos la flota de tu empresa entre varias compañías: turismos, furgonetas, camiones, remolques y conductores.',
+    intro: [
+      'Una flota no es la suma de pólizas de coche de una empresa: es una sola póliza con condiciones comunes, altas y bajas de vehículos durante el año, y una siniestralidad que se mira en conjunto cuando llega la renovación.',
+      'Somos correduría, así que el análisis lo hacemos nosotros y lo llevamos a varias compañías. En flota eso pesa más que en ningún otro ramo, porque cada aseguradora agrupa los vehículos de una manera distinta y valora de forma distinta el histórico de partes.',
+    ],
+    cubre: [
+      'Cuántos vehículos entran y cómo se agrupan: cada compañía fija a partir de qué número trata a un parque de vehículos como flota, y el criterio no es el mismo en todas.',
+      'El uso real de cada vehículo: no es lo mismo un turismo de empresa que una furgoneta de reparto, un vehículo industrial o uno que transporta mercancía ajena.',
+      'Quién conduce: conductor designado, conductor ocupacional o cualquier empleado con permiso en vigor, y qué ocurre cuando conduce alguien que no encaja en lo declarado.',
+      'Responsabilidad civil obligatoria y voluntaria, y hasta qué límite responde cada una por encima del mínimo legal.',
+      'La mercancía que va dentro: el seguro del vehículo responde de los daños que el vehículo causa, no de lo que transporta. Si la carga tiene valor, se mira por separado.',
+      'Altas, bajas y sustituciones a mitad de póliza: cómo se comunican, desde cuándo queda cubierto un vehículo nuevo y cómo se regulariza la prima.',
+      'Remolques y semirremolques enganchados, y qué pasa cuando se desenganchan.',
+      'Defensa jurídica, reclamación de daños y asistencia: en una flota parada, el tiempo de inmovilización suele doler más que la reparación.',
+    ],
+    paraQuien: [
+      'Tienes varios vehículos a nombre de la empresa y cada uno con su póliza, su vencimiento y su compañía.',
+      'Has crecido y sigues dando de alta los vehículos nuevos de uno en uno, como cuando eran dos.',
+      'Repartes, transportas o das servicio a domicilio, y no tienes claro qué cubre el seguro del vehículo y qué no.',
+      'Te han subido la renovación después de un año con varios partes y quieres que alguien lo mire con el histórico delante.',
+      'Tus empleados usan vehículos de empresa y quieres saber cómo queda declarado eso en la póliza.',
+    ],
+    faq: [
+      {
+        pregunta: '¿A partir de cuántos vehículos se considera una flota?',
+        respuesta:
+          'No lo fija la ley, lo fija cada compañía en sus normas de contratación, y el umbral varía: hay aseguradoras que agrupan desde cinco vehículos y otras que piden más. Como corredores lo consultamos con tu parque de vehículos concreto y te decimos qué compañías lo tratan como flota y cuáles no.',
+      },
+      {
+        pregunta: '¿El seguro del camión cubre la mercancía que transporto?',
+        respuesta:
+          'No. El seguro del vehículo responde de los daños que el vehículo causa a terceros y, si se contrata, de los daños al propio vehículo. La mercancía transportada se asegura aparte, y no es lo mismo transportar mercancía propia que ajena: si es ajena entra en juego tu responsabilidad como transportista. Se revisa con lo que mueves de verdad.',
+      },
+      {
+        pregunta: '¿Qué pasa si conduce un empleado que no está declarado en la póliza?',
+        respuesta:
+          'Depende de cómo esté definida la conducción en el contrato. Si la póliza es de conductor designado y conduce otra persona, la compañía puede aplicar las consecuencias previstas en el condicionado, y eso se discute justo cuando hay un siniestro. En una flota con varios empleados al volante, la modalidad de conducción es de las primeras cosas que hay que dejar bien declarada.',
+      },
+      {
+        pregunta: '¿Puedo dar de alta un vehículo nuevo a mitad de año?',
+        respuesta:
+          'Sí: es lo normal en una flota y es una de sus ventajas frente a tener pólizas sueltas. El vehículo se comunica, se incorpora a la póliza con las condiciones ya pactadas y la prima se regulariza. Lo que conviene saber de antemano es desde qué momento queda cubierto, porque no siempre es desde la llamada.',
+      },
+      {
+        pregunta: '¿Es obligatorio el seguro para los vehículos de empresa?',
+        respuesta:
+          'El seguro de responsabilidad civil de suscripción obligatoria lo exige la Ley sobre responsabilidad civil y seguro en la circulación de vehículos a motor (texto refundido aprobado por el Real Decreto Legislativo 8/2004) a todo vehículo con estacionamiento habitual en España, sea de una persona o de una empresa. Lo que no es obligatorio es el resto de coberturas, y ahí es donde hay decisiones que tomar.',
+      },
+      {
+        pregunta: '¿Cobráis por estudiar la flota de mi empresa?',
+        respuesta:
+          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
+      },
+    ],
+  },
   {
     slug: 'auto',
     nombre: 'Auto y moto',

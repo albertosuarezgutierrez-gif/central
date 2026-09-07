@@ -7,8 +7,8 @@
 // `@central/module-seguros`, que es la que comparten el panel del corredor y el
 // portal del asegurado.
 import { MEDIADOR } from '@central/module-seguros'
-import { AMBITO, HORARIO, SITIO_URL, url } from './sitio.ts'
-import type { Ramo } from './ramos.ts'
+import { AMBITO, HORARIO, PERFILES, SITIO_URL, url } from './sitio.ts'
+import { RAMOS, type Ramo } from './ramos.ts'
 
 /**
  * Ficha del negocio: `InsuranceAgency`, que es un subtipo de `LocalBusiness` y
@@ -89,10 +89,52 @@ export function fichaNegocio(): Record<string, unknown> {
       name: 'Clave DGSFP',
       value: MEDIADOR.identidad.claveDgsfp,
     },
-    knowsAbout: ['Seguro de hogar', 'Seguro de comunidades', 'Seguro de comercio', 'Seguro de auto', 'Seguro de vida', 'Seguro de salud'],
+    // 🚨 DERIVADO de `RAMOS`, no escrito a mano. Era una lista de seis cadenas
+    // fijas, y el día que se publicó flota (07/09/2026) se quedó corta sin que
+    // fallara nada: la ficha habría declarado que la correduría no sabe de un
+    // ramo con página propia, formulario y enlace en el pie. Es la misma segunda
+    // copia que la cabecera de este fichero dice querer evitar.
+    knowsAbout: RAMOS.map((r) => `Seguro de ${r.nombre.toLowerCase()}`),
   }
   if (HORARIO) ficha.openingHours = [...HORARIO.schema]
+  // `sameAs` = los perfiles que son ESTE mismo negocio. Se OMITE cuando no hay
+  // ninguno: un array vacío afirmaría «se miró y no hay», y lo cierto es que
+  // todavía no se han dado de alta. Lo vigila `seo-perfiles.test.ts`.
+  if (PERFILES.length > 0) ficha.sameAs = [...PERFILES]
   return ficha
+}
+
+/**
+ * Ficha de SERVICIO por ramo (`Service`).
+ *
+ * Qué añade sobre lo que ya había: la ficha `InsuranceAgency` dice quién es el
+ * negocio, y el `FAQPage` dice qué preguntas responde una página. Faltaba el
+ * dato del medio — que ESTE negocio presta ESTE servicio —, y es justo el que
+ * une la página de ramo con la entidad. Sin él, «seguro de flota» es una
+ * cadena de texto en una página; con él, un servicio atribuido a una correduría
+ * con clave DGSFP.
+ *
+ * 🚨 El `provider` va por referencia (`@id`), nunca copiando la ficha. Dos
+ * descripciones del mismo negocio en la misma página es la segunda copia de
+ * siempre: el día que cambie el teléfono, una de las dos se queda vieja.
+ *
+ * 🚨 Y sin `offers` ni `price`. No es una omisión técnica: una prima publicada
+ * en datos estructurados es una promesa de precio —lo que RDL 3/2020 convierte
+ * en asesoramiento— y además sería falsa, porque la fija cada compañía por
+ * riesgo. Lo vigila `seo-servicio.test.ts`.
+ */
+export function fichaServicio(ramo: Ramo): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    '@id': `${url(`/seguros/${ramo.slug}`)}#servicio`,
+    name: ramo.h1,
+    serviceType: `Seguro de ${ramo.nombre.toLowerCase()}`,
+    url: url(`/seguros/${ramo.slug}`),
+    description: ramo.description,
+    provider: { '@id': `${SITIO_URL}/#correduria` },
+    areaServed: { '@type': 'Country', name: AMBITO.nacional },
+  }
 }
 
 /**

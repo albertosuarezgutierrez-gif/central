@@ -156,8 +156,9 @@ export function interpretarExtraccion(
 }
 
 // Texto legible para el chat tras leer el documento. Determinista.
-export function resumenDocumento(f: FacturaDoc, cruce: CruceDoc): string {
-  const cab = `📄 Leído: ${f.proveedor} · ${fechaEs(f.fecha)} · ${eur(f.total)}${f.numero ? ` · nº ${f.numero}` : ''}.`
+export function resumenDocumento(f: FacturaDoc, cruce: CruceDoc, archivo?: ArchivoFactura | null): string {
+  const arch = lineasArchivo(archivo)
+  const cab = `📄 Leído: ${f.proveedor} · ${fechaEs(f.fecha)} · ${eur(f.total)}${f.numero ? ` · nº ${f.numero}` : ''}.${arch ? `\n${arch}` : ''}`
   const de = (m: MovCandidato) => `${fechaEs(m.fecha)}${m.banco ? ` · ${m.banco}` : ''} · ${eur(Math.abs(m.importe))}${m.concepto ? ` (${m.concepto})` : ''}`
 
   switch (cruce.estado) {
@@ -218,4 +219,68 @@ export function accionConciliar(f: FacturaDoc, match: MatchDoc): PropuestaAccion
     params: { movId: match.movId, facturaRef: refFactura(f), concepto: match.concepto },
     resumen: `Conciliar factura de ${f.proveedor} (${eur(f.total)}) con el movimiento de ${eur(Math.abs(match.importe))}`,
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Archivado + contabilización de una factura SUBIDA A MANO (07/09/2026)
+//
+// POR QUÉ EXISTE. Hasta hoy subir una factura por el chat (o por el 📎 de Telegram) solo la LEÍA y
+// proponía conciliarla con el cargo del banco: el fichero se tiraba y el gasto no entraba en el
+// libro. Archivar en Drive e imputar solo pasaba con lo que llegaba por CORREO. Alberto subió una
+// factura al agente el 07/09/2026 dando por hecho que se archivaba — y no se archivaba en ningún
+// sitio. Ahora la subida manual pasa por la MISMA maquinaria que el correo (subir → procesarFactura)
+// y esto es lo que se le cuenta de vuelta.
+//
+// TRES ESTADOS, NO DOS (regla de la casa): `decision: null` NO significa «no se ha contabilizado»,
+// significa «no se ha intentado» (esta cuenta no es la dueña del libro de gastos). Y `driveError`
+// distingue «no está en Drive» de «no se sabe si está»: si la subida falla, se DICE, porque el gasto
+// sí ha entrado y el justificante no — que es justo el descuadre que hay que poder ver.
+
+/** Qué pasó al archivar/imputar una factura subida a mano. Puro: lo llena `lib/contable/archivar.ts`. */
+export type ArchivoFactura = {
+  /** Carpeta de Drive donde ha quedado (año/mes). null = no ha llegado a Drive. */
+  carpeta: string | null
+  url: string | null
+  /** true = se intentó subir a Drive y falló. Distinto de «no se intentó». */
+  driveError: boolean
+  /** Decisión de `procesarFactura`. null = NO se intentó imputar (cuenta ajena al libro). */
+  decision: 'auto' | 'bandeja' | 'duplicado' | 'error' | 'omitido' | 'ajena' | null
+  motivo?: string | null
+  /** A nombre de quién venía, cuando se descarta por ajena. */
+  receptor?: string | null
+}
+
+/** Nombre con el que se archiva en Drive. Una foto de móvil (`20260907_093156.jpg`) no dice nada
+ *  dentro de la carpeta del mes, así que se renombra por proveedor/fecha/importe conservando la
+ *  extensión original. Determinista (mismo documento → mismo nombre). */
+export function nombreArchivoFactura(f: FacturaDoc, original = ''): string {
+  const ext = (/\.([a-z0-9]{1,5})$/i.exec(original.trim())?.[1] || 'pdf').toLowerCase()
+  const prov = (f.proveedor || 'factura')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'factura'
+  const num = f.numero ? `_${f.numero.replace(/[^a-zA-Z0-9-]+/g, '')}`.slice(0, 25) : ''
+  return `${f.fecha}_${prov}${num}_${f.total.toFixed(2)}.${ext}`
+}
+
+/** Qué se le cuenta a Alberto del archivado. Vacío = no hay nada que contar (no se intentó). */
+export function lineasArchivo(a?: ArchivoFactura | null): string {
+  if (!a) return ''
+  const out: string[] = []
+
+  if (a.carpeta || a.url) out.push(`📁 Archivada en Drive${a.carpeta ? ` (${a.carpeta})` : ''}.`)
+  else if (a.driveError) out.push('⚠️ NO he podido archivarla en Drive (reintenta subirla luego; el resto sí está hecho).')
+
+  switch (a.decision) {
+    case 'auto':      out.push('✅ Contabilizada: ya está en el libro de gastos.'); break
+    // La pantalla se NOMBRA: «está en la bandeja» sin decir cuál es un aviso que no se ve (regla
+    // de la casa: la pregunta no es si lo he mandado, es en qué pantalla lo va a ver).
+    case 'bandeja':   out.push(`🗂 La he dejado en /expenses/pendientes («Facturas por revisar») para que la confirmes${a.motivo ? ` (${a.motivo})` : ''}.`); break
+    case 'duplicado': out.push('♻️ Ya estaba contabilizada, así que no la he metido dos veces.'); break
+    case 'omitido':   out.push(`No la contabilizo${a.motivo ? `: ${a.motivo}` : ''}.`); break
+    case 'ajena':     out.push(`No la contabilizo: está a nombre de ${a.receptor || 'un tercero'}.`); break
+    case 'error':     out.push(`⚠️ No he podido contabilizarla${a.motivo ? `: ${a.motivo}` : ''}.`); break
+    // null = no se intentó. Se DICE, no se calla: callarlo se lee como «hecho».
+    case null:        out.push('ℹ️ No la he archivado ni contabilizado: esta cuenta no es la dueña del libro de gastos.'); break
+  }
+  return out.join('\n')
 }

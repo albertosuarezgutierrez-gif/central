@@ -1835,6 +1835,34 @@ inventario ni forma de callar uno solo: para bajar ruido había que buscar el `t
 - Migración `prisma/sql/2026-09-01_telegram_avisos.sql` **aplicada** (incluye el `GRANT USAGE` de
   `telegram_avisos_log_id_seq` a `prisma_plataforma`: sin él el `bigserial` no deja insertar).
 
+## 🚨 LANDMINE — el adjunto que muere ANTES de llegar a la función (07/09/2026)
+Alberto subió la foto de una factura desde el móvil y recibió **«Se me ha cortado la conexión»**, dos
+veces. En los logs de runtime: **ni una sola invocación de `/api/contable/chat`**. No falló la función —
+no llegó a ejecutarse.
+
+El adjunto viaja en **base64 dentro del JSON**, que abulta **×1,37**: una foto de 4 MB son ~5,5 MB de
+cuerpo, y **una Serverless Function de Vercel corta el cuerpo muy por debajo de eso**. El corte lo hace la
+PLATAFORMA: sin invocar la función, sin log y con una respuesta que no es JSON → el `r.json()` del cliente
+revienta → cae en el `if (!data)`, cuyo texto genérico («se me ha cortado la conexión») **tapaba por igual
+un 413, un 504 y un 500**, que se arreglan en tres sitios distintos.
+
+**Las dos guardas que había estaban puestas sobre lo que NO viaja, y por eso no protegían nada:**
+- `ContableChat.tsx`: `file.size > 8_000_000` medía el **fichero**, no su base64.
+- `route.ts`: `MAX_BASE64 = 11_000_000` era **inalcanzable** — entre ese número y el corte real había una
+  franja entera en la que el usuario veía un error y aquí no constaba ni el intento.
+
+**Arreglo: la foto se ENCOGE en el navegador antes de salir** (`lib/imagen-cliente.ts`:
+`createImageBitmap` + canvas → JPEG, lado máximo 2200 px ≈ 190 ppp sobre un A4, calidad decreciente hasta
+caber, suelo en 0,45 porque por debajo el OCR deja de leer). Medido en Chromium: **12,4 MB → 1,8 MB**.
+Un **PDF no se toca** (rasterizarlo le quitaría la capa de texto, que es justo lo que se lee bien) y una
+imagen ya pequeña tampoco. Lo consumen las dos bocas web: el botón 🧾 y el 📎 de `/asistentes`.
+
+⚠️ **Al añadir un endpoint que reciba ficheros, la guarda va sobre el CUERPO, no sobre el fichero**, y por
+debajo del corte de la plataforma — un tope por encima no es un tope, es una franja de fallos mudos. Y el
+mensaje de error **distingue el status**: un genérico convierte tres averías distintas en una sola frase
+que no dice dónde mirar. Cepos en `lib/imagen-cliente.test.ts` (leen el FUENTE del route: el valor vive en
+una constante que ni `tsc` ni el build contrastan con nada).
+
 ## 🎨 Sistema de diseño — `components/ui.tsx` (02/09/2026)
 Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pasó a solo REDIRIGIR a
 `/banca`: el sistema de diseño colgaba de una ruta muerta. Y al auditarlo, **ningún archivo lo importaba**
