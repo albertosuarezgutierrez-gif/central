@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-06T22:07:42Z",
-  "sha": "bb019ec738e9ff830fbd458f621bd96ef113cbe6",
+  "generadoEn": "2026-09-07T06:16:47Z",
+  "sha": "06a8e2b04f4da2f9009962393edc078c44387e89",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5088,13 +5088,13 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 6,
+          "linea": 7,
           "resumen": "Escapa lo que va dentro del HTML del correo. El destino lo escribe el usuario."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d68d7ff9c51b"
+      "hash": "c29912525767"
     },
     {
       "ruta": "apps/asegura-portal/lib/canal.ts",
@@ -5401,7 +5401,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 34,
+          "linea": 35,
           "resumen": "Escapa lo que va dentro del HTML. `mensaje` lo escribe una persona."
         },
         {
@@ -5410,7 +5410,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 49,
+          "linea": 50,
           "resumen": "Quita saltos de línea de lo que va a una CABECERA (el asunto). El nombre sale de la cartera, no de un formulario, pero una cabecera es una cabecera: un `\\r\\n` dentro del asunto parte el mensaje y deja"
         },
         {
@@ -5419,7 +5419,7 @@
           "exportada": true,
           "params": "token: string",
           "retorno": "string | null",
-          "linea": 65,
+          "linea": 66,
           "resumen": "El enlace del correo. `null` = no hay dominio configurado, y entonces la invitación **no se escribe siquiera** (lo decide `lib/invitaciones.ts`). 🚨 Aquí el enlace NO es una comodidad como en el corre"
         },
         {
@@ -5428,7 +5428,7 @@
           "exportada": true,
           "params": "d: DatosCorreoInvitacion",
           "retorno": "CuerpoCorreo",
-          "linea": 106,
+          "linea": 107,
           "resumen": "El cuerpo del correo, PURO: sin red, sin BD y sin `process.env` más allá del buzón de respuesta. Está separado del envío para que su test pueda recorrer el texto entero buscando lo que no puede aparec"
         },
         {
@@ -5437,13 +5437,13 @@
           "exportada": true,
           "params": "destino: string, d: DatosCorreoInvitacion",
           "retorno": "Promise<boolean>",
-          "linea": 174,
+          "linea": 175,
           "resumen": "Manda el correo. `true` = el proveedor lo aceptó. 🚨 Un `false` NO es una excepción y **no significa que no haya invitación**: la fila ya está escrita cuando esto se llama, y por eso quien llama conte"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f23347ef80ce"
+      "hash": "35384b167996"
     },
     {
       "ruta": "apps/asegura-portal/lib/dinero.ts",
@@ -6554,7 +6554,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f197c1a80b18"
+      "hash": "7a8da08b707e"
     },
     {
       "ruta": "apps/asegura-web/app/layout.tsx",
@@ -6575,7 +6575,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dda9f1227496"
+      "hash": "5255919d0f56"
     },
     {
       "ruta": "apps/asegura-web/app/legal/aviso-legal/page.tsx",
@@ -6596,7 +6596,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "42fce5bfa4b0"
+      "hash": "74c8c219cb1d"
     },
     {
       "ruta": "apps/asegura-web/app/legal/cookies/page.tsx",
@@ -6705,7 +6705,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7e4280d51999"
+      "hash": "2555c25c6cfb"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
@@ -6726,7 +6726,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "75031fc06641"
+      "hash": "a4654a46f5c1"
     },
     {
       "ruta": "apps/asegura-web/app/robots.ts",
@@ -7073,13 +7073,13 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Ramo | null",
-          "linea": 392,
+          "linea": 395,
           "resumen": "Devuelve un ramo por su slug, o `null` si no existe (nunca un ramo de relleno)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3ef074a8c94a"
+      "hash": "74dcc0d15e45"
     },
     {
       "ruta": "apps/asegura-web/lib/seo.ts",
@@ -7115,7 +7115,7 @@
           "exportada": true,
           "params": "items: readonly { nombre: string; ruta: string }[]",
           "retorno": "Record<string, unknown> | null",
-          "linea": 101,
+          "linea": 102,
           "resumen": "Migas de pan. Se emiten SOLO cuando hay jerarquía de verdad (home → sección → página); una miga de un solo nivel no aporta nada y ensucia."
         },
         {
@@ -7124,7 +7124,7 @@
           "exportada": true,
           "params": "ramo: Ramo",
           "retorno": "Record<string, unknown> | null",
-          "linea": 122,
+          "linea": 123,
           "resumen": "`FAQPage` a partir del FAQ del ramo. Devuelve `null` si no hay preguntas: un `FAQPage` vacío es marcado inválido, y aquí el hueco («este ramo aún no tiene FAQ») se respeta en vez de emitir un esquelet"
         },
         {
@@ -7133,13 +7133,13 @@
           "exportada": true,
           "params": "obj: Record<string, unknown>",
           "retorno": "string",
-          "linea": 136,
+          "linea": 137,
           "resumen": "Serializa un objeto para meterlo en un `<script type=\"application/ld+json\">`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d391035d01f8"
+      "hash": "a157a5f81222"
     },
     {
       "ruta": "apps/asegura-web/lib/sitio.ts",
@@ -7161,7 +7161,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5b4a33a34659"
+      "hash": "50dee0b37497"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/page.tsx",
@@ -9064,7 +9064,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8e9a65764f52"
+      "hash": "8e8d9af80b6e"
     },
     {
       "ruta": "apps/asegura/lib/backfill-dni.ts",
@@ -12252,7 +12252,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 45,
+          "linea": 48,
           "resumen": "Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual."
         },
         {
@@ -12261,7 +12261,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 53,
+          "linea": 56,
           "resumen": "Quita saltos de línea de lo que va a una CABECERA (el asunto). Un `\\r\\n` en el asunto parte el mensaje y deja colar un `Bcc:`."
         },
         {
@@ -12270,7 +12270,7 @@
           "exportada": true,
           "params": "base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://asegura-portal.vercel.app',",
           "retorno": "string | null",
-          "linea": 66,
+          "linea": 69,
           "resumen": "A dónde manda el correo. `null` = no hay portal utilizable y entonces **no se envía**: un correo que dice «entra aquí» sin el «aquí» no sirve de nada, y adivinar un dominio manda a la persona a ningún"
         },
         {
@@ -12279,7 +12279,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 103
+          "linea": 106
         },
         {
           "nombre": "cuerpoAvisoAcceso",
@@ -12287,7 +12287,7 @@
           "exportada": true,
           "params": "d: DatosAvisoAcceso",
           "retorno": "CuerpoAviso",
-          "linea": 112,
+          "linea": 115,
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta. Separado del envío para que su cepo pueda recorrer el texto entero — un guardián que necesitara un servidor SMTP par"
         },
         {
@@ -12296,13 +12296,13 @@
           "exportada": true,
           "params": "destino: string, d: DatosAvisoAcceso",
           "retorno": "Promise<boolean>",
-          "linea": 169,
+          "linea": 172,
           "resumen": "Manda el correo. `true` = el proveedor lo aceptó. Un `false` NO significa que la autorización no exista: la fila ya estaba escrita mucho antes de llamar aquí. Por eso quien llama contesta `error_envio"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d32b1567665e"
+      "hash": "d7f977cca501"
     },
     {
       "ruta": "apps/asegura/lib/correo-invitacion-portal.ts",
@@ -12320,7 +12320,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 40,
+          "linea": 42,
           "resumen": "Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual."
         },
         {
@@ -12329,7 +12329,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 48,
+          "linea": 50,
           "resumen": "Quita saltos de línea de lo que va a una CABECERA (el asunto). Un `\\r\\n` en el asunto parte el mensaje y deja colar un `Bcc:`."
         },
         {
@@ -12338,7 +12338,7 @@
           "exportada": true,
           "params": "base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://asegura-portal.vercel.app',",
           "retorno": "string | null",
-          "linea": 63,
+          "linea": 65,
           "resumen": "A dónde manda el correo: la PORTADA del portal, que es donde se pide el código. `null` = no hay portal utilizable y entonces **no se envía** — un correo que dice «entra aquí» sin el «aquí» no sirve de"
         },
         {
@@ -12347,7 +12347,7 @@
           "exportada": true,
           "params": "d: DatosInvitacionPortal",
           "retorno": "CuerpoInvitacion",
-          "linea": 108,
+          "linea": 110,
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta. Separado del envío para que su cepo pueda recorrer el texto entero — un guardián que necesitara un servidor SMTP par"
         },
         {
@@ -12356,13 +12356,13 @@
           "exportada": true,
           "params": "destino: string, d: DatosInvitacionPortal",
           "retorno": "Promise<boolean>",
-          "linea": 165,
+          "linea": 167,
           "resumen": "Manda el correo. `true` = el proveedor lo aceptó. Un `false` NO significa que el cliente no pueda entrar al portal: puede hacerlo igual desde la portada con su correo. Lo único que ha fallado es contá"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b06b3b6faf3c"
+      "hash": "ececf86852cc"
     },
     {
       "ruta": "apps/asegura/lib/cron-auth.ts",
@@ -83709,7 +83709,7 @@
     {
       "ruta": "apps/plataforma/lib/ia-cache.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Caché SEMÁNTICA de la pasarela de IA (pgvector + Gemini embeddings). OPT-IN doble: env IA_CACHE_SEMANTICA=1 (interruptor global, apagado por defecto) Y el caller manda `cache:{ambito, ttlHoras?}` en el body — nunca se cachea a callers que no lo piden (las consultas sobre datos vivos —finanzas, reser",
+      "resumen": "Caché SEMÁNTICA de la pasarela de IA (pgvector + embeddings por OpenRouter). OPT-IN doble: env IA_CACHE_SEMANTICA=1 (interruptor global, apagado por defecto) Y el caller manda `cache:{ambito, ttlHoras?}` en el body — nunca se cachea a callers que no lo piden (las consultas sobre datos vivos —finanza",
       "exporta": [
         "cacheActiva",
         "buscarCache",
@@ -83723,7 +83723,7 @@
           "exportada": true,
           "params": "",
           "retorno": "boolean",
-          "linea": 14
+          "linea": 22
         },
         {
           "nombre": "embed",
@@ -83731,7 +83731,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "Promise<number[] | null>",
-          "linea": 18
+          "linea": 26
         },
         {
           "nombre": "buscarCache",
@@ -83739,7 +83739,7 @@
           "exportada": true,
           "params": "app: string, ambito: string, texto: string",
           "retorno": "Promise<CacheHit | null>",
-          "linea": 27,
+          "linea": 35,
           "resumen": "Busca una respuesta cacheada semánticamente equivalente dentro del ámbito. null = miss."
         },
         {
@@ -83748,7 +83748,7 @@
           "exportada": true,
           "params": "app: string, ambito: string, texto: string, respuesta: string, opts: { modelo?: string | null; ttlHoras?: number } = {},",
           "retorno": "Promise<void>",
-          "linea": 48,
+          "linea": 56,
           "resumen": "Guarda una respuesta en la caché (fire-and-forget desde la ruta; nunca lanza)."
         },
         {
@@ -83757,7 +83757,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 67,
+          "linea": 75,
           "resumen": "Métricas para el panel /operador/ia: hit-rate del mes (hits vs misses registrados en ai_usos)."
         }
       ],
@@ -83766,7 +83766,7 @@
         "ia_cache_semantica"
       ],
       "rutaApi": null,
-      "hash": "30f7dc87bf89"
+      "hash": "377f5c91ad6e"
     },
     {
       "ruta": "apps/plataforma/lib/ia-director-codigo.ts",
@@ -110158,28 +110158,6 @@
       "hash": "56b3829aeac8"
     },
     {
-      "ruta": "packages/core-ai/src/embeddings.ts",
-      "ambito": "packages/core-ai",
-      "resumen": "Embeddings con Gemini (text-embedding-004, 768 dims, free tier) — adaptador puro, identity-agnostic. Primer proveedor de embeddings del monorepo: alimenta la caché semántica (pgvector) de la pasarela de plataforma. La app inyecta la config con su GEMINI_API_KEY (la misma que ya usa geminiChat/gemini",
-      "exporta": [
-        "geminiEmbed"
-      ],
-      "funciones": [
-        {
-          "nombre": "geminiEmbed",
-          "kind": "function",
-          "exportada": true,
-          "params": "config: GeminiEmbedConfig, texto: string, opts: { timeoutMs?: number; fetchImpl?: typeof fetch } = {},",
-          "retorno": "Promise<number[]>",
-          "linea": 15,
-          "resumen": "Devuelve el vector de embedding (768 floats) del texto. Lanza error si falla."
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "c9a20d9c7937"
-    },
-    {
       "ruta": "packages/core-ai/src/fal.ts",
       "ambito": "packages/core-ai",
       "resumen": "Cliente fal.ai — generación de vídeo con IA (WAN 2.1, text-to-video e image-to-video). Identity-agnostic: la config (apiKey) la inyecta siempre la app consumidora.",
@@ -110554,6 +110532,7 @@
         "openrouterVision",
         "openrouterChat",
         "openrouterSearchEx",
+        "openrouterEmbed",
         "openrouterChatTools"
       ],
       "funciones": [
@@ -110637,18 +110616,27 @@
           "resumen": "Búsqueda web + síntesis vía el PLUGIN `web` de OpenRouter (Exa por debajo): inyecta resultados de búsqueda reales en el prompt de CUALQUIER modelo. Espejo funcional de `geminiSearch` para usarlo como "
         },
         {
+          "nombre": "openrouterEmbed",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: OpenRouterEmbedConfig, texto: string, opts: { dimensions?: number; timeoutMs?: number; fetchImpl?: typeof fetch } = {},",
+          "retorno": "Promise<number[]>",
+          "linea": 248,
+          "resumen": "Devuelve el vector de embedding del texto vía OpenRouter. Lanza error si falla."
+        },
+        {
           "nombre": "openrouterChatTools",
           "kind": "function",
           "exportada": true,
           "params": "config: OpenRouterConfig, messages: NimToolMessage[], tools: unknown[], opts: OpenRouterChatOptions = {},",
           "retorno": "Promise<NimToolResult &",
-          "linea": 239,
+          "linea": 279,
           "resumen": "Function-calling con OpenRouter (formato de tools OpenAI). Espejo de `groqChatTools`, con el mismo contrato `NimToolMessage`/`NimToolResult` para ser drop-in en `aiTools` — más el modelo REAL usado (p"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5a5062472087"
+      "hash": "bcd318fa7c8b"
     },
     {
       "ruta": "packages/core-ai/src/stt.ts",
@@ -117914,6 +117902,7 @@
       "resumen": "Datos canónicos del MEDIADOR (Grupo ASegura) para todo lo que se le enseña al cliente final: información precontractual del art. 19 de la Ley 16/2018 de Distribución de Seguros (LDS), pies de página legales y políticas. Vive en `@central/module-seguros` y no en una app porque los DOS lados de la cor",
       "exporta": [
         "lineaIdentificacion",
+        "remitenteCorreo",
         "telefonoLegible",
         "whatsappUrl"
       ],
@@ -117928,12 +117917,21 @@
           "resumen": "Una línea con la identificación mínima del mediador, para pies de página donde no cabe la ficha entera. Es lo que el art. 19 exige que el cliente vea SIEMPRE, no solo si entra en una página aparte."
         },
         {
+          "nombre": "remitenteCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: string | undefined | null",
+          "retorno": "string | null",
+          "linea": 249,
+          "resumen": "Remitente de un correo de la correduría, con el nombre visible SIEMPRE tomado de `MEDIADOR.marca`. 🚨 Esto existe por un fallo MEDIDO el 05/09/2026: las variables de entorno `PORTAL_MAIL_FROM` y `ASEG"
+        },
+        {
           "nombre": "telefonoLegible",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 235,
+          "linea": 272,
           "resumen": "El teléfono, escrito como se lee: `+34 637 34 99 90`. Existe como función y no como una segunda constante para que **no puedan divergir**: dos cadenas con el mismo número escritas a mano acaban siendo"
         },
         {
@@ -117942,13 +117940,13 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 248,
+          "linea": 285,
           "resumen": "Enlace de WhatsApp al mediador, con el primer mensaje ya escrito. `wa.me` quiere el número **sin `+` y sin espacios**; con el `+` delante abre la app pero deja el chat en blanco, que es un fallo que n"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "89d44cdaca40"
+      "hash": "c3b8877f09d0"
     },
     {
       "ruta": "packages/module-seguros/src/objeto.ts",
@@ -124057,7 +124055,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3072,
-    "funciones": 9313
+    "archivos": 3071,
+    "funciones": 9314
   }
 }
