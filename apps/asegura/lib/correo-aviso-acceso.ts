@@ -41,6 +41,9 @@
  * enlace sin llave dentro es además un enlace que se puede reenviar sin abrir
  * nada.
  */
+
+import { remitenteCorreo } from '@central/module-seguros'
+
 /** Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual. */
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -178,7 +181,7 @@ export async function enviarAvisoAcceso(destino: string, d: DatosAvisoAcceso): P
     console.error('[asegura/aviso-acceso] no hay proveedor de correo configurado')
     return false
   }
-  const from = process.env.ASEGURA_MAIL_FROM
+  const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
   if (!from) {
     console.error('[asegura/aviso-acceso] falta ASEGURA_MAIL_FROM: no se avisa')
     return false

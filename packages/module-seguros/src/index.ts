@@ -418,6 +418,7 @@ export {
   VERSION_TEXTOS_WEB,
   FECHA_TEXTOS_WEB,
   lineaIdentificacion,
+  remitenteCorreo,
   telefonoLegible,
   whatsappUrl,
   type CanalReclamacion,
