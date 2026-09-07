@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔴 El logo de Fidelidade entra, y el fichero bueno se llamaba `.jpg` sin serlo (07/09/2026).** De los
+  tres que subió Alberto a Drive, los dos primeros eran JPEG —sin canal alfa, o sea caja blanca sobre la
+  banda— y el tercero, `fidelidades logo3.jpg`, era un **PNG de paleta** (`mimeType: image/png`, 3.310 B):
+  la extensión mentía y el `mimeType` no. El alfa NO se sacó recortando el blanco (deja halo sobre fondo
+  oscuro): se DESPEJÓ de `a·rojo+(1-a)·blanco` por el canal azul, y se comprobó componiendo sobre claro y
+  sobre oscuro. `escala: 0.7` porque con 8,54 de aspecto rebasaría el `max-width` del CSS y el navegador la
+  encogería igual. Con esto **ninguna de las siete queda sin logo**, y eso deja el wordmark de respaldo del
+  muro sin ejercitar: cepo nuevo para el JSX y para la regla BASE del CSS. Ese cepo salió **verde en falso**
+  al primer intento (`.companias-nombre` sale dos veces; se conformaba con la del `@media`). PR #2502.
 - **🗓️ La póliza que SUBE quien no es cliente ya entra en su calendario (07/09/2026).** Alberto:
   «la intranet donde el cliente controla sus seguros siendo nuestro cliente o no» + «sube póliza y
   olvídate». Medido: la intranet YA está abierta a cualquiera (`verificar` crea identidad con solo un
