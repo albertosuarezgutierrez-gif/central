@@ -230,6 +230,9 @@ export type { EstadoHoja, SeleccionHoja, ErrorSeleccion } from './hoja-qr.ts'
 export { GRUPOS_CARTERA, TITULO_GRUPO, agruparCartera, grupoDeTitular } from './agrupar-cartera.ts'
 export type { GrupoCartera, TitularAgrupable, BloqueCartera } from './agrupar-cartera.ts'
 
+export { TRAMOS, saludoPorHora, nombreDePila } from './saludo.ts'
+export type { Tramo } from './saludo.ts'
+
 export { resumirCartera } from './resumen-cartera.ts'
 export type { PolizaResumible, ResumenCartera } from './resumen-cartera.ts'
 export { elegirFicha, prediccionDeVinculo } from './vinculo-elegir.ts'

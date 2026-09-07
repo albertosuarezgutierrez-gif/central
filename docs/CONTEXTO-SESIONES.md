@@ -59,6 +59,34 @@
   el correo cifrado y `apps/asegura` lo LEE (es la que tiene correo y BYPASSRLS; un guardián prohíbe
   al portal importar transporte de correo). Medido: 6 obligaciones en toda la BD, 0 avisadas, 0 en
   ventana — el cron mandando cero hoy es correcto y NO prueba que esté apagado.
+- **🎨 El portal se parece a la web: NO era el color, era la compresión (07/09/2026).**
+  Alberto: «el diseño no es acorde a las páginas de los seguros» (comparando con `grupoasegura.es`).
+  Medido con un agente sobre los dos `globals.css`: **la paleta y las TRES sombras son idénticas
+  carácter a carácter** —las dos apps inyectan `MARCA_ASEGURA`—, así que decir «el portal ignora la
+  marca» habría sido falso. Lo que separaba: h1 web 40,8→60→67,2 px vs portal **32 fijo** · h2 web
+  32→48 px en Fraunces vs portal **18 px en Inter** (más pequeño que el CUERPO de la web) · aire de
+  sección web 72-96 px vs portal 16+24 (**3-4×**) · superficies tintadas web 2, portal **0**.
+  Se sube: `.antetitulo` (rótulo 12px/0.14em), h2 a Fraunces 24, h1 a 40 en ≥640, sección 24/32 px y
+  radio ×1.8, `.lead`, `--curva` de la web y hover con `scale(1.01)` (no 1.03: son filas anchas).
+  🚨 Fallo MUDO cazado midiendo: la media query de ≥1024 se escribió ANTES que `.seccion` en el
+  fichero → misma especificidad, ganaba la última, y a 1440 seguía dando 24px. Tiene cepo.
+  ⚠️ Y una torpeza cara: `git checkout globals.css` para restaurar tras probar un cepo **borró todo
+  el trabajo sin commitear**. Para restaurar un fichero no versionado, `cp` de una copia, nunca checkout.
+  Pendiente de Alberto: `OPENROUTER_API_KEY` (sin ella, subir un PDF da «no hemos podido leer»), y
+  decidir si los documentos se guardan (hoy solo se guarda el NOMBRE, no el PDF). PRs #2481, #2498.
+- **🔍 Los dos «pendientes de Alberto» que le mandé eran FALSOS, y salían de leer el repo como si fuera
+  el panel (07/09/2026).** Afirmé que al `GITHUB_TOKEN` le faltaba «Pull requests: R/W» (bloqueaba el
+  blog entero) y que `GH_PAT_TRIGGER` estaba caducado. Alberto lo comprobó: **los tres PAT con acceso a
+  `central` ya tienen PRs R/W, y ninguno está caducado** — dos no-ops de trabajo para él. El origen del
+  primero: `secrets-registry.ts` dice «PAT con Contents: Read and write», que describe **lo que el
+  agente SEO necesita**, no lo que el token tiene; leí una descripción parcial como inventario y afirmé
+  una ausencia sin mirarla. Es la regla NULL≠0 del repo aplicada a un panel. Corregidos el registro, el
+  comentario del cron y el doc de prompts (tachados, no borrados). 🎁 De su revisión salen tres cosas
+  que nadie había mirado: un token `token` **sin repos ni permisos** (borrar), **dos** `GH_PAT_TRIGGER`
+  duplicados, y uno con `Workflows: R/W` de más — **no quitarlo a ciegas**: ningún código del repo
+  escribe `.github/workflows` y disparar pide `Actions`, no `Workflows`, pero los pushes de las rutinas
+  van por fuera y romperían en un cron mudo.
+
 - **🪞 La cola del blog pedía un artículo que YA estaba publicado (07/09/2026).** Al ampliarla de 5 a 9
   temas salió el fallo: `me-han-subido-el-recibo-sin-avisar` (art. 22) respondía la MISMA búsqueda que
   `me-han-subido-el-seguro-en-la-renovacion`, publicado horas antes con la MISMA norma — dos páginas
@@ -81,6 +109,7 @@
   que la cita fuera CIERTA. 🚨 El `GITHUB_TOKEN` de Vercel tiene `Contents` pero **no `Pull requests`**: con
   eso el artículo se escribe y el PR no se abre — se ve igual que «el agente no ha hecho nada», así que el
   cron lo dice con el motivo. Prompts para Alberto en `docs/CORREDURIA-PROMPTS-CHROME.md`. PR pendiente.
+
 - **📊 Las tres baldosas de la bóveda: el helper puro, medido antes de escribirlo (07/09/2026).**
   Alberto, viendo el panel de ejemplo de `grupoasegura.es`: «lo ideal es que sea igual la intranet,
   y ese diseño que aparece en la web es mejor que el que hay ahora». Pero ese panel son 5 pólizas

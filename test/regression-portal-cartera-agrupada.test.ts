@@ -38,6 +38,9 @@ const PAGINA = sinComentarios(
   readFileSync(`${RAIZ}apps/asegura-portal/app/(portal)/boveda/page.tsx`, 'utf8'),
 )
 const LAYOUT = sinComentarios(readFileSync(`${RAIZ}apps/asegura-portal/app/layout.tsx`, 'utf8'))
+const CALENDARIO = sinComentarios(
+  readFileSync(`${RAIZ}apps/asegura-portal/app/(portal)/boveda/Calendario.tsx`, 'utf8'),
+)
 const RESUMEN = sinComentarios(
   readFileSync(`${RAIZ}apps/asegura-portal/app/(portal)/boveda/ResumenTitular.tsx`, 'utf8'),
 )
@@ -237,4 +240,89 @@ test('🚨 la rejilla de tarjetas usa auto-FIT: auto-fill deja la fila a medias'
   const regla = CSS.slice(i, CSS.indexOf('}', i))
   assert.match(regla, /repeat\(auto-fit,/, 'con auto-fill una sola tarjeta deja el resto de la fila vacío')
   assert.doesNotMatch(regla, /auto-fill/, 'auto-fill crea pistas que nadie va a llenar')
+})
+
+test('🚨 el h2 de sección va en Fraunces, no en la fuente de cuerpo', () => {
+  // Alberto, 07/09/2026: «el diseño no es acorde a las páginas de los seguros»,
+  // comparando con `grupoasegura.es`. Medido: la paleta y las tres sombras son
+  // IDÉNTICAS en las dos apps —las dos inyectan `MARCA_ASEGURA`—, así que la
+  // distancia no era el color. Era la escala: la web pone el h2 en Fraunces a
+  // 32-48px y el portal lo tenía en Inter a 18px, o sea MÁS PEQUEÑO que el
+  // cuerpo de la web (16px).
+  //
+  // 🚨 Y `--serif` no vale: en esta marca resuelve a Inter, así que volver a él
+  // deshace el cambio sin que nada falle. Es la misma trampa del h1.
+  const i = CSS.indexOf('.seccion h2 {')
+  assert.notEqual(i, -1, 'el titular de sección tiene que existir')
+  const regla = CSS.slice(i, CSS.indexOf('}', i))
+  assert.match(regla, /font-family:\s*var\(--display/, 'el h2 usa --display; --serif aquí es Inter')
+  assert.match(regla, /font-size:\s*24px/, 'a 18px el titular no se distingue del cuerpo')
+})
+
+test('🚨 el rótulo de sección existe y NO se pinta a mano', () => {
+  // `.antetitulo` es el gesto más reconocible de la web. Si alguien lo escribe
+  // con estilos en línea en una pantalla, las demás se quedan sin él y la
+  // diferencia solo se ve abriendo las dos.
+  const i = CSS.indexOf('.antetitulo {')
+  assert.notEqual(i, -1, 'falta la clase del rótulo de sección')
+  const regla = CSS.slice(i, CSS.indexOf('}', i))
+  assert.match(regla, /text-transform:\s*uppercase/, 'el rótulo va en versalitas')
+  assert.match(regla, /letter-spacing:\s*0\.14em/, 'el espaciado ancho es lo que lo hace reconocible')
+  assert.match(PAGINA, /className="antetitulo"/, 'la bóveda tiene que usarlo')
+})
+
+test('🚨 la fila no se levanta si se ha pedido menos movimiento', () => {
+  // El hover con `scale` viene de la web. Quien pide movimiento reducido no
+  // espera que una fila se despegue, y sin la excepción se despega igual: la
+  // regla de `prefers-reduced-motion` que ya había solo tocaba la cabecera.
+  const i = CSS.indexOf('@media (prefers-reduced-motion: reduce)')
+  assert.notEqual(i, -1)
+  const bloque = CSS.slice(i, i + 600)
+  assert.match(bloque, /\.poliza-enlace:hover\s*\{[^}]*transform:\s*none/, 'la fila sigue escalando con movimiento reducido')
+})
+
+test('🚨 el padding de escritorio de la sección va DESPUÉS de la regla base', () => {
+  // Fallo mudo medido el 07/09/2026: la media query de ≥1024px se escribió en
+  // el bloque de escritorio que hay ARRIBA del fichero, y `.seccion` se define
+  // más abajo. Misma especificidad, gana la última: a 1440px seguía dando 24px
+  // y la regla no hacía absolutamente nada. El CSS es válido, no falla ningún
+  // test y solo se ve midiendo con el navegador.
+  const base = CSS.indexOf('.seccion {')
+  assert.notEqual(base, -1)
+  const escritorio = CSS.indexOf('padding: 32px;', base)
+  assert.notEqual(escritorio, -1, 'falta el padding de sección en escritorio')
+  assert.ok(
+    escritorio > base,
+    'la media query de escritorio está antes que la regla base: queda pisada sin fallar',
+  )
+})
+
+test('🚨 el color de marca decora en SUAVE; el saturado se reserva al estado', () => {
+  // Alberto, 07/09/2026: «igual la web… debería parecer como la expansión de la
+  // web. Todo corporativo». Se acepta, con una condición técnica: en la bóveda
+  // el color saturado ya SIGNIFICA algo («vencida», «al cobro»), y una banda de
+  // marca a todo color competiría con el semáforo justo en la pantalla donde
+  // hay que leerlo. Por eso la atmósfera va al 7 % y 2 %, y la franja usa
+  // `--brand-soft`, que es el azul claro de la marca, no el pleno.
+  //
+  // Si alguien sube esos porcentajes o cambia `--brand-soft` por `--brand`, la
+  // pantalla sigue funcionando y el aviso deja de destacar. Nada falla.
+  const i = CSS.indexOf('.portal-contenido::before')
+  assert.notEqual(i, -1, 'falta la atmósfera de marca del encabezado')
+  const regla = CSS.slice(i, CSS.indexOf('}', i))
+  assert.match(regla, /var\(--brand\) 7%/, 'la atmósfera arranca al 7 %, como en la web')
+  assert.doesNotMatch(regla, /var\(--brand\) (?:[2-9]\d|1\d\d)%/, 'un tinte fuerte compite con el semáforo')
+
+  const j = CSS.indexOf('.seccion.acento {')
+  assert.notEqual(j, -1, 'falta la franja de acento')
+  const acento = CSS.slice(j, CSS.indexOf('}', j))
+  assert.match(acento, /background:\s*var\(--brand-soft\)/, 'la franja va en el azul claro, no en el pleno')
+})
+
+test('🚨 la franja de acento es UNA, no varias', () => {
+  // El propio CSS de la web lo deja escrito: «el contraste vale porque es el
+  // único». Con dos secciones tintadas deja de ser un acento y pasa a ser el
+  // fondo de la pantalla.
+  const usos = [PAGINA, CALENDARIO].join('\n').match(/className="seccion acento"/g) ?? []
+  assert.equal(usos.length, 1, `la clase «acento» se usa ${usos.length} veces; tiene que ser 1`)
 })

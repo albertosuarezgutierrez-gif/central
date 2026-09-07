@@ -75,12 +75,13 @@ async function prepararRama(token: string): Promise<void> {
 /**
  * Abre el PR (o devuelve el que ya está abierto en esta rama).
  *
- * 🚨 Devuelve el MOTIVO cuando falla, no `null`. El `GITHUB_TOKEN` de este
- * proyecto se creó para el agente SEO con `Contents: Read and write` — que basta
- * para escribir el fichero y NO basta para abrir un PR (eso pide además
- * `Pull requests: Read and write`). Con permisos justos el artículo se escribe,
- * la rama queda bien y el PR no aparece: exactamente el fallo que se lee como
- * «el agente no ha hecho nada». El 403 lo dice, así que se cuenta.
+ * 🚨 Devuelve el MOTIVO cuando falla, no `null`. Escribir el fichero y abrir el
+ * PR piden permisos distintos del PAT (`Contents` y `Pull requests`), así que
+ * hay un fallo posible en el que el artículo se escribe, la rama queda bien y
+ * el PR no aparece — indistinguible desde fuera de «el agente no ha hecho
+ * nada». Hoy los tres PAT con acceso al repo tienen los dos permisos
+ * (comprobado el 07/09/2026), pero eso puede cambiar sin que nadie avise: el
+ * 403 trae la causa, así que se cuenta en vez de devolver `null`.
  */
 async function abrirPr(
   token: string, titulo: string, cuerpo: string,
@@ -101,7 +102,7 @@ async function abrirPr(
   if (r.ok) return { url: ((await r.json()) as { html_url: string }).html_url }
   const detalle = (await r.text()).slice(0, 200)
   if (r.status === 403 || r.status === 404) {
-    return { error: `GitHub ${r.status}: al token le falta el permiso «Pull requests: Read and write» (hoy solo tiene Contents). El artículo está escrito en la rama ${RAMA}.` }
+    return { error: `GitHub ${r.status}: el token no puede abrir PRs en el repo (mira «Pull requests: Read and write» en el PAT). El artículo está escrito en la rama ${RAMA}.` }
   }
   return { error: `GitHub ${r.status}: ${detalle}` }
 }
