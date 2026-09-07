@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔍 Los dos «pendientes de Alberto» que le mandé eran FALSOS, y salían de leer el repo como si fuera
+  el panel (07/09/2026).** Afirmé que al `GITHUB_TOKEN` le faltaba «Pull requests: R/W» (bloqueaba el
+  blog entero) y que `GH_PAT_TRIGGER` estaba caducado. Alberto lo comprobó: **los tres PAT con acceso a
+  `central` ya tienen PRs R/W, y ninguno está caducado** — dos no-ops de trabajo para él. El origen del
+  primero: `secrets-registry.ts` dice «PAT con Contents: Read and write», que describe **lo que el
+  agente SEO necesita**, no lo que el token tiene; leí una descripción parcial como inventario y afirmé
+  una ausencia sin mirarla. Es la regla NULL≠0 del repo aplicada a un panel. Corregidos el registro, el
+  comentario del cron y el doc de prompts (tachados, no borrados). 🎁 De su revisión salen tres cosas
+  que nadie había mirado: un token `token` **sin repos ni permisos** (borrar), **dos** `GH_PAT_TRIGGER`
+  duplicados, y uno con `Workflows: R/W` de más — **no quitarlo a ciegas**: ningún código del repo
+  escribe `.github/workflows` y disparar pide `Actions`, no `Workflows`, pero los pushes de las rutinas
+  van por fuera y romperían en un cron mudo.
+
 - **🪞 La cola del blog pedía un artículo que YA estaba publicado (07/09/2026).** Al ampliarla de 5 a 9
   temas salió el fallo: `me-han-subido-el-recibo-sin-avisar` (art. 22) respondía la MISMA búsqueda que
   `me-han-subido-el-seguro-en-la-renovacion`, publicado horas antes con la MISMA norma — dos páginas
