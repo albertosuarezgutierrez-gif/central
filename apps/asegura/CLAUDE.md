@@ -753,7 +753,19 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   arregla — ver el aviso de acceso, más abajo) · `error_envio` · `no_encontrado`.
   ⏸️ **Y a día 07/09/2026 el botón NO manda nada, por esto último:** `central-asegura` no tiene ningún
   proveedor de correo en Vercel. Hace falta `RESEND_API_KEY` (o `SMTP_USER`+`SMTP_PASSWORD`, o
-  `GMAIL_USER`+`GMAIL_APP_PASSWORD`) **más `ASEGURA_MAIL_FROM`**, y redesplegar. El GET existe para que la pantalla pueda decir «ya
+  `GMAIL_USER`+`GMAIL_APP_PASSWORD`) **más `ASEGURA_MAIL_FROM`**, y redesplegar.
+  📮 **El proveedor es RESEND y el dominio ya estaba listo antes de que hiciera falta** (medido por el
+  conector el 07/09/2026): **`envios.grupoasegura.es`, `verified`, sending enabled, región `eu-west-1`**
+  (dado de alta el 03/09, el mismo día que las dos claves `asegura-portal` — o sea, el portal ya envía
+  por ahí). Para esta app se creó la clave **`central-asegura`**, con permiso **`sending_access`
+  restringido a ese dominio**: si se filtra, solo sirve para mandar correo desde él, no toca el resto de
+  la cuenta. Remitente elegido por Alberto: **`hola@envios.grupoasegura.es`**; la marca la antepone
+  `remitenteCorreo()` (`Grupo ASegura <…>`), así que en la env va la dirección PELADA.
+  ⚠️ **Sin `ASEGURA_MAIL_REPLY_TO` las respuestas caen en ese mismo buzón** y alguien tiene que leerlo —
+  y el correo solo invita a «escríbenos» cuando esa variable existe.
+  🚨 **El transporte es SMTP, no la API de Resend** (`smtp.resend.com:465`, usuario literal `resend`,
+  contraseña = la API key; ver `@central/core-email`). Una clave de `sending_access` vale; lo que no
+  vale es esperar que `RESEND_API_KEY` se use por HTTP. El GET existe para que la pantalla pueda decir «ya
   entra, última vez el …» ANTES de ofrecer botón: un botón que solo se evalúa pulsándolo es una apuesta.
   🔁 **`lib/email-ficha.ts` (nuevo): a qué dirección se le escribe a una ficha, UNA regla y un sitio.**
   Se extrajo de `aviso-acceso.ts` al necesitarla también aquí. Baja de correo manda sobre cualquier

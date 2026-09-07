@@ -41,12 +41,28 @@
   ⏸️ **Pendiente de Alberto, y es lo único que falta para que el botón funcione:** en Vercel
   `central-asegura`, `RESEND_API_KEY` (o `SMTP_USER`+`SMTP_PASSWORD`, o `GMAIL_USER`+`GMAIL_APP_PASSWORD`)
   **más `ASEGURA_MAIL_FROM`**, y redesplegar (una env nueva no se aplica sin redeploy).
+  📮 **Proveedor resuelto el mismo día: RESEND.** El dominio **`envios.grupoasegura.es` ya estaba
+  `verified`** (eu-west-1, alta del 03/09 junto a las claves de `asegura-portal`); se creó la clave
+  `central-asegura` con `sending_access` **restringida a ese dominio** y remitente
+  `hola@envios.grupoasegura.es`. ⚠️ **El MCP de Vercel NO expone variables de entorno** (comprobado con
+  dos búsquedas: solo proyectos, protección, logs, deploys y compras), así que las dos envs y el
+  redeploy los hace Alberto a mano; el agente solo puede llegar hasta la clave.
   🔗 **Y el enlace del correo cambia a `clientes.grupoasegura.es/boveda`** (dictado de Alberto:
   «esta url es mejor»). Medido antes de tocarlo: ese `GET` responde **200** y sin cookie
   `x-matched-path: /` — la propia página hace `redirect('/')`, así que quien no tenga sesión cae en
   la portada del código y no en un 404. El defecto de `ASEGURA_PORTAL_URL` pasa de
   `asegura-portal.vercel.app` al dominio de la casa en los DOS correos (el `.vercel.app` sigue
   sirviendo: cambia el canónico, no arregla nada roto).
+
+- **✅ Mergeado y PROBADO en producción (07/09/2026, PR #2571 → `6a567537`).** Los 12 requeridos en
+  verde y desplegado (`dpl_Et6yoY…`, target production, READY; el portal responde 200 sirviendo ese
+  deployment). Medido contra la cartera real: la póliza de la captura de Alberto —Occident
+  547875907, RC— tiene **10 coberturas y las 10 con nombre**, o sea el «y 6 más» que él veía eran
+  R.C. Cruzada, Post-trabajos, Defensa penal y reclamación de daños, Defensa ante la inspección de
+  trabajo, R.C. Profesional técnico dependiente y Liberación de gastos. Y los helpers, ejecutados
+  con los siniestros REALES: «Alcala de Guadaira (Sevilla) · Chinita salta al parabrisas
+  rompíendolo.» — provincia traducida del código 41, ciudad des-mayusculada, descripción entera, y
+  sin lugar ni comentario no se pinta nada.
 
 - **🗒 El siniestro dice QUÉ pasó (07/09/2026).** «También dar acceso a toda la información de los
   siniestros». Medida la tabla antes de tocar (69 filas): lo único con contenido que no se enseñaba
