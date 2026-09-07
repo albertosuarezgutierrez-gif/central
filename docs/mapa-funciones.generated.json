@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-07T13:57:49Z",
-  "sha": "fe21c4f6f4026c5ab560eef158c7ff55efaec2e7",
+  "generadoEn": "2026-09-07T15:38:33Z",
+  "sha": "71123ab481cc9b73714f8be8292abc27d284c067",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -13599,7 +13599,7 @@
           "exportada": false,
           "params": "origen: OrigenRetarificacion, cuerpo: CuerpoRetarificacion, polizaId: string,",
           "retorno": "Promise<Preparado>",
-          "linea": 360,
+          "linea": 361,
           "resumen": "✅ El contrato del `risk` de hogar está verificado contra el portal del fabricante (02/09/2026; ver la cabecera de `peticion-hogar.ts`). Aun así el 502 devuelve el mensaje ENTERO del vendor: si el cont"
         },
         {
@@ -13608,7 +13608,7 @@
           "exportada": true,
           "params": "params: URLSearchParams",
           "retorno": "Promise<ResultadoCatalogo>",
-          "linea": 496,
+          "linea": 498,
           "resumen": "Resuelve UN catálogo por su `tipo` y los parámetros que ese tipo pida. Firma neutra (`URLSearchParams`) porque las dos rutas son `GET` con query."
         },
         {
@@ -13617,7 +13617,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 572
+          "linea": 574
         },
         {
           "nombre": "numero",
@@ -13625,7 +13625,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 576
+          "linea": 578
         },
         {
           "nombre": "booleano",
@@ -13633,7 +13633,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 583,
+          "linea": 585,
           "resumen": "`true`/`false` (boolean o cadena) → boolean. Cualquier otra cosa → `null` (no es una respuesta)."
         },
         {
@@ -13642,7 +13642,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 590
+          "linea": 592
         },
         {
           "nombre": "hoyIso",
@@ -13650,7 +13650,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 594
+          "linea": 596
         },
         {
           "nombre": "limpiarCorrecciones",
@@ -13658,13 +13658,13 @@
           "exportada": false,
           "params": "c: Record<string, unknown> | undefined",
           "retorno": "Partial<T>",
-          "linea": 599,
+          "linea": 601,
           "resumen": "Solo se aceptan correcciones CON valor: un campo vacío no borra lo supuesto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bc5c6e86e7ba"
+      "hash": "627f775d9e16"
     },
     {
       "ruta": "apps/asegura/lib/session.ts",
