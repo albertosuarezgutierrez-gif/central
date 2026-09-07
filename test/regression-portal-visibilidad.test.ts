@@ -311,3 +311,76 @@ test('🚨 la pantalla avisa cuando el papel no es la póliza', () => {
   const src = sinComentarios(leer(SUBIR))
   assert.match(src, /avisoDocumentoNoPoliza/, 'SubirPoliza debe pintar el aviso')
 })
+
+// ── El armazón es de la marca, no andamio genérico ─────────────────────────
+//
+// Alberto, 07/09/2026: «el diseño es como un básico fuera de Grupo ASegura, y
+// el lateral con las pestañas, y dentro otro diseño». Tenía razón: la barra era
+// blanco puro, el suelo del lateral un gris neutro y la pestaña activa gris
+// sobre negro — cero marca en todo el marco, mientras la isla de dentro llevaba
+// Fraunces, el azul y el radio grande. Dos lenguajes pegados.
+//
+// Estos cepos protegen las dos REGLAS que sobreviven a cualquier retoque de
+// tono, no los valores exactos.
+const CSS_PORTAL = 'apps/asegura-portal/app/globals.css'
+
+test('🚨 el nombre de la correduría va en --display, NUNCA en --serif', () => {
+  // En esta marca `--serif` ES Inter y el nombre engaña: volver a él pinta
+  // «Grupo ASegura» con la misma letra que un menú de sistema, y nada falla.
+  // Es la misma trampa que ya documentan el h1 y el h2 de sección.
+  const bloque = leer(CSS_PORTAL).split('.marca-nombre {')[1]?.split('}')[0] ?? ''
+  assert.match(bloque, /font-family:\s*var\(--display/, '.marca-nombre debe usar --display')
+})
+
+/**
+ * Todos los bloques declarados para un selector, no el primero.
+ *
+ * 🪤 La primera versión de los dos cepos de abajo usaba `indexOf`/`lastIndexOf`
+ * y se ponía VERDE con el fallo dentro: `.portal-shell` y `.portal-contenido`
+ * se declaran varias veces (base + media query de escritorio), y el bloque que
+ * salía por sorteo no llevaba la propiedad que se quería vigilar. Sin propiedad
+ * no hay nada que comparar y el test pasa. Se vio, y por eso está escrito aquí.
+ */
+const bloquesDe = (src, sel) => {
+  const out = []
+  let i = src.indexOf(`${sel} {`)
+  while (i !== -1) {
+    out.push(src.slice(i, src.indexOf('}', i)))
+    i = src.indexOf(`${sel} {`, i + 1)
+  }
+  return out
+}
+
+test('🚨 el armazón NO se tiñe con el azul a plena carga', () => {
+  // El azul saturado significa ACCIÓN (botones) y ESTADO (vencida, al cobro).
+  // Gastarlo en el decorado del lateral deja el semáforo sin contraste, y el
+  // semáforo es el que hay que leer. Se tiñe con mezclas suaves o --brand-soft.
+  const src = leer(CSS_PORTAL)
+  for (const sel of ['.portal-shell', '.marca-barra']) {
+    const fondos = bloquesDe(src, sel)
+      .map((b) => b.match(/background:\s*([^;]+);/)?.[1]?.trim())
+      .filter(Boolean)
+    assert.ok(fondos.length > 0, `${sel} no declara ningún fondo: el cepo no vigila nada`)
+    for (const f of fondos) {
+      assert.ok(f !== 'var(--brand)', `${sel} no puede llevar --brand a plena carga de fondo`)
+    }
+  }
+})
+
+test('🚨 la isla y sus secciones comparten radio', () => {
+  // Con dos radios distintos, la isla y las tarjetas de dentro parecen de dos
+  // juegos de piezas — que es justo la sensación de «marco ajeno».
+  const src = leer(CSS_PORTAL)
+  const radio = (sel) => {
+    const rs = bloquesDe(src, sel)
+      .map((b) => b.match(/border-radius:\s*calc\(var\(--radius\)\s*\*\s*([\d.]+)\)/)?.[1])
+      .filter(Boolean)
+    assert.ok(rs.length > 0, `${sel} no declara radio en múltiplo de --radius: el cepo no vigila nada`)
+    return rs
+  }
+  const isla = radio('.portal-contenido')
+  const seccion = radio('.seccion')
+  for (const r of isla) {
+    assert.ok(seccion.includes(r), `la isla usa radio ×${r} y .seccion usa ×${seccion.join('/')}`)
+  }
+})

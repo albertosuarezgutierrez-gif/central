@@ -176,8 +176,13 @@ input, select, textarea, button { font: inherit; }
   gap: 10px;
   min-height: var(--alto-barra);
   padding: 8px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  /* 🎨 Tintada, no blanca. Con `--surface` la barra era del mismo blanco que
+   * cualquier panel de administración, y el único gesto de marca era el filete
+   * de 3px de abajo — que a esa altura se lee como cromo del navegador, no como
+   * identidad. Un 4 % de marca sobre el papel basta para que la primera franja
+   * de pantalla ya sea de la correduría sin robarle contraste a nada. */
+  background: color-mix(in oklab, var(--brand) 4%, var(--surface));
+  border-bottom: 1px solid color-mix(in oklab, var(--brand) 12%, var(--border));
   /* Filete de acento: es lo único decorativo del portal y basta para que la
    * primera franja de pantalla ya sea de la correduría. */
   border-top: 3px solid var(--accent);
@@ -264,8 +269,8 @@ input, select, textarea, button { font: inherit; }
   transition: color 150ms, background-color 150ms;
 }
 .portal-nav-item:hover {
-  color: var(--text);
-  background: var(--surface-hover, var(--panel2));
+  color: var(--brand-ink);
+  background: color-mix(in oklab, var(--brand) 8%, transparent);
 }
 /* 📱 En cualquier móvil o tablet las pestañas se REPARTEN el ancho del carril.
  *
@@ -316,7 +321,10 @@ input, select, textarea, button { font: inherit; }
   bottom: -1px;
   height: 2px;
   border-radius: 2px;
-  background: var(--text);
+  /* De marca y no del color del texto: es el ÚNICO sitio del carril donde se
+   * puede decir «estás aquí» con color sin competir con el semáforo de las
+   * filas, que vive dentro de la isla y no aquí. */
+  background: var(--brand);
   opacity: 0;
   transition: opacity 150ms;
 }
@@ -324,7 +332,7 @@ input, select, textarea, button { font: inherit; }
   opacity: 1;
 }
 .portal-nav-item[data-activa] {
-  color: var(--text);
+  color: var(--brand-ink);
   font-weight: 600;
 }
 
@@ -334,7 +342,13 @@ input, select, textarea, button { font: inherit; }
    * Ese contraste de dos grises es lo que separa las dos zonas sin una línea. */
   .portal-shell {
     grid-template-columns: 256px minmax(0, 1fr);
-    background: var(--panel2);
+    /* 🎨 El suelo del armazón es MARCA, no un gris neutro. Con `--panel2` el
+     * lateral era andamio de administrador y la isla blanca de dentro parecía
+     * otra aplicación metida en un marco ajeno — que es literalmente lo que
+     * dijo Alberto: «un básico fuera de Grupo ASegura y dentro otro diseño».
+     * Con el suelo teñido, el lateral y la isla se leen como UNA superficie con
+     * dos alturas: la marca abajo, el papel encima. */
+    background: color-mix(in oklab, var(--brand) 7%, var(--bg2));
   }
   .portal-nav {
     flex-direction: column;
@@ -367,13 +381,18 @@ input, select, textarea, button { font: inherit; }
     display: none;
   }
   .portal-nav-item[data-activa] {
-    background: var(--surface-active, var(--panel2));
-    color: var(--text);
+    /* El mismo par que la franja del calendario (`--brand-soft`/`--brand-ink`):
+     * un solo vocabulario para «esto es de la casa». Sigue sin ser el azul a
+     * plena carga, que se reserva a las ACCIONES. */
+    background: var(--brand-soft);
+    color: var(--brand-ink);
   }
   /* La ISLA: el contenido flota sobre el tono del lateral. */
   .portal-contenido {
     background: var(--bg);
-    border-radius: calc(var(--radius) * 1.4);
+    /* El mismo radio que las secciones de dentro (×1.8), no ×1.4: con dos
+     * radios distintos la isla y sus tarjetas parecen de dos juegos. */
+    border-radius: calc(var(--radius) * 1.8);
     box-shadow: var(--shadow);
     margin: 8px 8px 8px 0;
     padding: 40px 32px 72px;
@@ -432,7 +451,10 @@ input, select, textarea, button { font: inherit; }
   color: var(--primary);
 }
 .marca-nombre {
-  font-family: var(--serif);
+  /* 🚨 `--display`, NO `--serif`: en esta marca `--serif` ES Inter y el nombre
+   * engaña (la misma trampa que ya documenta el h1). Con Inter, el nombre de la
+   * correduría se pintaba con la misma letra que un menú de sistema. */
+  font-family: var(--display, var(--serif));
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;

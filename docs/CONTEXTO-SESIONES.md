@@ -96,6 +96,27 @@
   el correo cifrado y `apps/asegura` lo LEE (es la que tiene correo y BYPASSRLS; un guardián prohíbe
   al portal importar transporte de correo). Medido: 6 obligaciones en toda la BD, 0 avisadas, 0 en
   ventana — el cron mandando cero hoy es correcto y NO prueba que esté apagado.
+- **📄 Un SUPLEMENTO no es una póliza, y el armazón del portal no era de la marca (07/09/2026).**
+  Alberto subió una póliza real y salieron tres cosas. (1) **Su dato cerró el diagnóstico que yo no
+  podía cerrar**: los 55,85 € que se guardaron como prima anual eran de un *suplemento de cambio de
+  vehículo*. O sea, la IA no leyó mal el número: lo metió en el campo equivocado, porque el extractor
+  trataba igual una póliza, un suplemento y un recibo. Nuevo `tipo-documento.ts` (módulo puro): la
+  prima se anula SOLO con `suplemento`/`recibo` —con `otro` o `null` no se toca, o cada duda del
+  modelo sería una prima perdida— y la pantalla lo dice. (2) **La 2ª pasada del extractor fallaba en
+  SILENCIO**: los logs de Vercel dieron `OpenRouter: respuesta vacía` con toda la cadena de suplentes
+  apagada, así que marca/modelo quedaban a NULL bajo un cartel que decía «Leída de tu PDF» —
+  indistinguible de «el PDF no lo trae». Tres estados (`EstadoCamposRamo`) + presupuesto igualado a
+  600 tokens. PRs #2515 (mergeado) y #2522 (**DRAFT, esperando decisión de Alberto**: vestir el
+  armazón de marca en vez de quitar el lateral, con las capturas antes/después ya enseñadas).
+  🪤 **Cinco cepos nacieron VERDES CON EL FALLO DENTRO** en un solo día: buscaban texto en todo el
+  fichero, o `indexOf`/`lastIndexOf` sobre selectores declarados varias veces (base + media query) y
+  caían en el bloque que no llevaba la propiedad vigilada. Sin propiedad no hay nada que comparar y el
+  test pasa. Ahora exigen que la propiedad exista. **Verlos rojos no es opcional.**
+  ⚠️ Y dos torpezas propias: leer el fichero de una espera en segundo plano ANTES de que terminara y
+  diagnosticar «el CI lleva 20 min colgado» cuando llevaban dos (`date -u` lo desmiente en una línea);
+  y encadenar `git merge` con `&&` detrás de un `| tail`, que devuelve cero aunque el merge falle —
+  se empujaron marcadores de conflicto a la memoria.
+
 - **🏢 El portal, «todo corporativo»: la atmósfera de la web y la clave de IA puesta (07/09/2026).**
   Alberto revirtió mi recomendación («3. igual la web no? debería parecer como la expansión de la
   web» + «todo corporativo»), así que entra lo que yo había dejado fuera: la mancha de marca de
