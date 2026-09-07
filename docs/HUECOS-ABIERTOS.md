@@ -26,6 +26,7 @@
 
 | Hueco | Cerrado con | Fecha |
 |---|---|---|
+| `POST /api/acceso/solicitar` de `asegura-portal` sin rate limit ni validación de formato email (`z.string().min(3).max(200)`) — la web pública ya enlaza ahí, y era un amplificador de correo abierto con el dominio de envío de la correduría (declarado 06/09/2026, PR #2404) | `destino` valida formato (email real / E.164 para whatsapp, `z.discriminatedUnion`) y rate limit best-effort de 5/15min por IP (`apps/asegura-portal/lib/rate-limit.ts`), aplicado por `/auditoria-diaria` | **07/09/2026** |
 | Fecha de próximos resultados (la guarda `earningsInminente` no podía vetar sin ella) | **Pieza propia**: `apps/plataforma/lib/trading/earnings-yahoo.ts`, que `/api/trading/analizar` ya usa. Da además `confirmada` (anunciada por la empresa vs estimada), que Alpha Vantage NO da, y corre server-side para todas las rutas, no solo la sesión Claude. | **05/08/2026** |
 | Histórico de deslistadas (sesgo de supervivencia del retrovisor) | Alpha Vantage `LISTING_STATUS`, tier gratis (8.491 filas con `ipoDate`/`delistingDate`). Sin equivalente propio en el repo (comprobado 21/08/2026). **Pendiente de integrar**: se consume por HTTP/CSV, no por MCP (182.000 tokens). | 21/08/2026 |
 | Screener de acciones para la cantera (H2) | **Financial Datasets `screen_stocks`**, cuenta con crédito real activado. `packages/module-trading/src/screenerMercado.ts` (PR #1579) traduce las filas al contrato `MetricasFactor` y neutraliza ROIC/divisa/nulos con denominador ≈0. | 21/08/2026 |

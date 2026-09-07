@@ -801,4 +801,37 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'que nadie mira es la clase de aviso que solo se echa en falta después. Huella: ' +
       'agente_latidos.github_vigia.',
   },
+  // Los tres siguientes ya escribían su huella (verificado con filas reales en `agente_latidos`,
+  // no solo leyendo el código) pero no estaban vigilados — hallazgo de /auditoria-diaria 07/09/2026.
+  {
+    id: 'smoobu_sync',
+    vigiladoDesde: '2026-09-07',
+    etiqueta: '🛏️ Sincronización de reservas con Smoobu (cron diario)',
+    maxHoras: 30,
+    nota:
+      'El cron que trae altas/modificaciones/cancelaciones de Smoobu a la BD de sivra no ha latido. ' +
+      'Sin él, `/sivra` y el pricing trabajan con la ocupación de ayer sin que nada lo diga. Huella: ' +
+      'agente_latidos.smoobu_sync.',
+  },
+  {
+    id: 'correduria_partes',
+    vigiladoDesde: '2026-09-07',
+    etiqueta: '📄 Partes de siniestro de la correduría (cron diario 06:55)',
+    maxHoras: 30,
+    nota:
+      'El cron que abre en la BD del corredor los partes que los clientes mandan desde el portal no ' +
+      'ha latido. Un parte que no se abre es un cliente que cree que ya avisó y Alberto sin verlo. ' +
+      'Huella: agente_latidos.correduria_partes.',
+  },
+  {
+    id: 'trading_h10',
+    vigiladoDesde: '2026-09-07',
+    etiqueta: '📈 Retrovisor de hipótesis H10-H15 de trading (cron semanal, lunes)',
+    // Semanal → 8 días.
+    maxHoras: 192,
+    nota:
+      'El cron que evalúa las hipótesis de salida del backtest (H11-H15) no ha latido. No bloquea ' +
+      'nada en vivo, pero es la señal de que el retrovisor de trading dejó de refrescarse. Huella: ' +
+      'agente_latidos.trading_h10.',
+  },
 ]

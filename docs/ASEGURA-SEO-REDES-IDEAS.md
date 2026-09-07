@@ -279,9 +279,10 @@ principio la rutina propone y Alberto decide, no al revés.
 
 ## L. Canibalización interna de las FAQ — 🟢 menor
 
-La última pregunta de los 6 ramos es prácticamente la misma («¿cobráis algo?») con la misma
-respuesta (`ramos.ts:116, 169, 222, 275, 383` + `cambiar-de-correduria:76`). Seis respuestas casi
-idénticas repartidas en siete URLs. Se diferencian o se centralizan en una.
+La última pregunta de los 7 ramos (se sumó `flota` el 06/09/2026, PR #2470; las líneas de `ramos.ts`
+de esta entrada son de antes de esa suma y no se han recontado) es prácticamente la misma («¿cobráis
+algo?») con la misma respuesta + `cambiar-de-correduria:76`. Respuestas casi idénticas repartidas en
+ocho URLs. Se diferencian o se centralizan en una.
 
 ## M. Redes sociales — 🟠 no hay perfiles, y no se crean solos
 
@@ -317,8 +318,9 @@ o accidentes. **Relación ya abierta, coste de captación cero**, y encima son q
   reaparezca. Los documentos que lo dan por vivo se refieren al **repo `asegura` antiguo**, no a
   esta app. *(medido 05/09/2026)*
 - **Analítica con consentimiento.** PostHog EU detrás de Cookiebot, fail-closed. PR #2385 + #2380.
-- **Las 6 páginas de ramo tienen contenido real**, ~700-900 palabras únicas cada una, H1 propio y
-  jerarquía correcta. No es una plantilla rellenada: no hace falta reescribirlas.
+- **Las 7 páginas de ramo tienen contenido real**, ~700-900 palabras únicas cada una, H1 propio y
+  jerarquía correcta (`flota` sumada el 06/09/2026 con ~830 palabras, medida al reconciliar este
+  doc el 07/09/2026). No es una plantilla rellenada: no hace falta reescribirlas.
 
 ## Pendientes que no son de esta skill pero bloquean cosas de aquí
 
