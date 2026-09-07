@@ -1477,9 +1477,15 @@ textarea.f-in {
   object-fit: contain;
 }
 
-/* Las dos compañías sin logo (ver `lib/companias.ts`) se pintan como wordmark,
-   con el mismo tratamiento tipográfico que tenía TODO el muro antes de haber
-   logos. No se dibuja un logo aproximado para tapar el hueco. */
+/* El respaldo para una compañía sin logo (`logo: null` en `lib/companias.ts`):
+   se pinta su nombre como wordmark, con el mismo tratamiento tipográfico que
+   tenía TODO el muro antes de haber logos. No se dibuja un logo aproximado para
+   tapar el hueco.
+
+   ⚠️ Desde el 07/09/2026 NO LO USA NADIE —las siete tienen logo—, así que es
+   código que no se ejercita solo: si alguien lo borra, el muro no cambia hoy y
+   el hueco de la próxima compañía saldría como una imagen rota. Lo sujeta
+   `lib/companias.test.ts`. */
 .companias-nombre {
   font-family: var(--display);
   font-size: 1.5rem;

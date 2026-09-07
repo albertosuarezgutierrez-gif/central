@@ -15,7 +15,12 @@ type DatosLeidos = {
   primaAnual: number | null
   fechaVencimiento: string | null
 }
-type Resultado = { datos: DatosLeidos; fuente: 'texto' | 'vision' | 'none' }
+type Resultado = {
+  datos: DatosLeidos
+  fuente: 'texto' | 'vision' | 'none'
+  /** Cómo fue la 2ª pasada, la de los campos propios del ramo. Ver `EstadoCamposRamo`. */
+  camposRamo?: 'leidos' | 'no_leidos' | 'no_aplica'
+}
 
 /**
  * La entrada a la bóveda de aportadas: dos caminos para la misma fila.
@@ -145,6 +150,18 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
                 Guardada. <strong>Estos datos los hemos leído nosotros del documento</strong> — revísalos y
                 confírmalos.
               </p>
+              {/* 🚨 Se DICE que la segunda lectura no salió. Sin esta frase, una
+                  póliza cuyo bloque de marca y modelo no se pudo leer se ve
+                  exactamente igual que una que no los trae: campos vacíos bajo un
+                  cartel que dice «leída de tu PDF». El cliente concluiría que su
+                  documento no los lleva, y es falso — lo lleva y no lo miramos.
+                  `no_aplica` NO pinta nada: ahí no había nada que preguntar. */}
+              {resultado.camposRamo === 'no_leidos' && (
+                <p className="pendiente" style={{ fontSize: 13 }}>
+                  Los datos propios de este seguro (marca, modelo, uso…) no los hemos podido leer esta vez.
+                  No es que el documento no los traiga: puedes ponerlos a mano.
+                </p>
+              )}
               {/* Nada de volcar el JSON crudo: la prima se pinta con `eur()`
                   (formato español, regla global) y un campo que la IA no supo
                   leer dice «no lo hemos encontrado», no un hueco ni un 0. */}

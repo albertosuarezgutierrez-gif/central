@@ -90,3 +90,47 @@ export function obligacionDerivable(p: {
   if (!polizaGeneraObligacion(p)) return false
   return p.vigencia === 'vigente'
 }
+
+/**
+ * Por qué una póliza DECLARADA por la persona todavía no genera obligación.
+ * `null` = sí la genera.
+ *
+ * Es la hermana de `obligacionDerivable()` y NO comparte sus cepos a propósito:
+ * aquellos preguntan de dónde salió la fila en la CARTERA (`import_ref`,
+ * `eiac_xml_hash`, `vigencia`), y una póliza declarada no sale de la cartera —
+ * la ha traído su dueño, que puede no ser cliente de la correduría.
+ *
+ * Devuelve el MOTIVO y no un booleano porque la pantalla tiene que poder
+ * decirlo. Una póliza que se guarda pero de la que nadie va a avisar, sin que
+ * se diga, es la mentira de siempre: la persona cree que está cubierta por un
+ * aviso que no va a llegar nunca.
+ */
+export type ReparoDeclarada = 'sin_fecha' | 'sin_confirmar'
+
+export function reparoDeclarada(p: {
+  fechaVencimiento: Date | null
+  confirmadaPorUsuario: boolean
+}): ReparoDeclarada | null {
+  // `sin_fecha` manda sobre `sin_confirmar`: sin fecha no hay nada que contar
+  // hacia atrás, así que es lo primero que la persona tiene que arreglar —
+  // confirmar una póliza a la que le falta la fecha no la haría avisable.
+  if (p.fechaVencimiento === null) return 'sin_fecha'
+  // Una póliza subida en PDF nace con `confirmadaPorUsuario: false`: las fechas
+  // las ha adivinado un extractor. Avisar sobre una fecha que leyó una IA y que
+  // nadie ha mirado es PEOR que no avisar — el correo llega, la persona se fía,
+  // y el día bueno era otro. Ante la duda, el estado conservador es callar, la
+  // misma regla que `polizaGeneraObligacion` aplica a `importRef: ''`.
+  if (!p.confirmadaPorUsuario) return 'sin_confirmar'
+  return null
+}
+
+/**
+ * Atajo para quien solo necesita el sí/no. Se define SOBRE `reparoDeclarada()`
+ * y no al revés: así no pueden separarse el día que se añada un tercer motivo.
+ */
+export function declaradaGeneraObligacion(p: {
+  fechaVencimiento: Date | null
+  confirmadaPorUsuario: boolean
+}): boolean {
+  return reparoDeclarada(p) === null
+}
