@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-07T11:46:46Z",
+  "generadoEn": "2026-09-07T13:57:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -895,8 +895,8 @@
         "evidencias": 0
       },
       "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "asegura-web": {
         "estado": "no",
@@ -2080,7 +2080,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 39
+        "evidencias": 40
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2188,7 +2188,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 11
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3871,6 +3871,7 @@
       "/api/operador/huerfanas",
       "/api/operador/impagados",
       "/api/operador/ingesta",
+      "/api/operador/leads",
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza/emitida",
@@ -3898,6 +3899,7 @@
       "/api/peticiones/[id]",
       "/api/polizas",
       "/api/polizas/[id]",
+      "/api/salir",
       "/api/siniestros",
       "/api/siniestros/[id]/adjuntos",
       "/api/siniestros/[id]/adjuntos/[documentoId]",
@@ -4725,6 +4727,7 @@
       "/api/correduria/duplicados",
       "/api/correduria/impagados",
       "/api/correduria/intervinientes",
+      "/api/correduria/leads",
       "/api/correduria/partes",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
@@ -5215,6 +5218,7 @@
     ],
     "asegura-portal": [
       "seguros.cliente_relaciones_permiso_volcado",
+      "seguros.portal_acceso",
       "seguros.portal_autorizacion",
       "seguros.portal_autorizacion_uso",
       "seguros.portal_bien",
@@ -6182,7 +6186,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1292,
+    "apis": 1295,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
