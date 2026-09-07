@@ -48,7 +48,9 @@
   oferta dentro de la sesión. 🚨 **iOS no dispara `beforeinstallprompt`**: si solo se escuchara el
   evento, en iPhone no se vería NADA y nadie se enteraría — ahí se enseñan las instrucciones de
   «Añadir a pantalla de inicio», con el glifo de Compartir DIBUJADO (a secas no se entiende, y el
-  público es de 50-70 años). 16 cepos vistos en rojo uno a uno. Sin push todavía. PR #2581.
+  público es de 50-70 años). 16 cepos vistos en rojo uno a uno. Sin push todavía. **Mergeado (PR #2581 → `f55de57f`) y PROBADO en
+  producción:** `clientes.grupoasegura.es` sirve `/manifest.webmanifest` (200, `application/manifest+json`),
+  `/icono-app` (200, PNG 512×512, 7.406 B) y `/sw.js` (200).
 
 - **🚪 Salida tardía: se confirma la VÍSPERA, y una postura por mensaje (07/09/2026).**
   Borrador del agente a la reserva 154265696 (Luxury Busto) que retenía y concedía a la vez
