@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T13:57:49Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T16:44:22Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1295 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1296 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 40
+- **Rutas API:** 41
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
