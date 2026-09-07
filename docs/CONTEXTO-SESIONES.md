@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **👪 Autorizar en el sentido inverso SIN salir de la ficha (07/09/2026).** La tarjeta de una
+  relación solo dejaba anotar «esta ficha autoriza al relacionado»; el sentido contrario obligaba a
+  navegar a la otra ficha y repetir el formulario. Nuevo botón en `Relaciones.tsx` que reutiliza el
+  MISMO puerto invirtiendo `clienteId`/`relacionadoId` (confirmado que el backend de asegura es
+  agnóstico a la dirección) y relee la lista PROPIA tras guardar — el puerto devuelve las relaciones
+  de quien otorga, no las de la ficha en pantalla. Solo cubre persona↔persona (alcance «ver»): un
+  apoderamiento inverso de una sociedad sigue anotándose desde su propia ficha.
+
 - **🏍️ Presupuesto de moto SIN póliza, dentro de plataforma (07/09/2026, PR #2553, mergeado).**
   Continuación del bullet siguiente: Alberto — *«hay que construir todo»* — confirmó moto pese a su
   volumen mínimo (1 póliza en toda la cartera). Mismo patrón que auto/hogar-nuevo, con las 4
