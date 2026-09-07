@@ -93,7 +93,8 @@ img {
 /* ── Tipografía ─────────────────────────────────────────────────────────────
    🚨 Lo que de verdad separa su web de un documento: los titulares NO van en la
    fuente del cuerpo. Van en **Fraunces**, una serif variable, a peso 500 y con
-   `letter-spacing: -0.025em`. El cuerpo sigue en Inter.
+   `letter-spacing: -0.025em`. El cuerpo sigue en Inter. Se usa UN solo corte:
+   redonda. La itálica se retiró (ver `.destaca`).
 
    Fraunces se carga SOLO en esta app y no se sube a `@central/brand` a
    propósito: allí está documentado que el portal del cliente la descarta
@@ -109,10 +110,18 @@ img {
   margin: 0;
 }
 
-/* Su recurso de acento, y es la firma de la marca: una parte del titular en
-   itálica y en el cobalto. Sin esto el titular es solo texto grande. */
+/* Su recurso de acento: una parte del titular en el cobalto. Iba además en
+   itálica, y se le quitó el 07/09/2026 por decisión de Alberto sobre el h1 de
+   la portada («aquí hay dos tipografías, me gusta que todo esté como "Sube tus
+   seguros"»): la itálica de Fraunces cambia tanto de forma —la «a» pasa de dos
+   pisos a uno— que el titular se leía como DOS letras distintas, no como una
+   con énfasis. El acento lo lleva ahora solo el color.
+
+   🚨 Y con esto la web ya NO pide el eje `ital` de Fraunces (`layout.tsx`), así
+   que un `font-style: italic` nuevo no saldría en itálica de verdad: el
+   navegador SINTETIZA una inclinación, que es la versión fea y no falla nada.
+   Lo vigila `lib/tipografia.test.ts`. */
 .destaca {
-  font-style: italic;
   color: var(--brand);
 }
 
@@ -985,12 +994,13 @@ a.tarjeta:hover .tarjeta-mas svg {
   border-left: 2px solid color-mix(in oklab, var(--brand) 30%, transparent);
 }
 
+/* Sin itálica, por lo mismo que `.destaca`: la cita ya se distingue por la
+   barra de la izquierda y por ser la única serif de su sección. */
 .credencial-cita blockquote {
   margin: 0;
   font-family: var(--display);
   font-size: 1.125rem;
   font-weight: 500;
-  font-style: italic;
   letter-spacing: -0.02em;
   line-height: 1.5;
 }
