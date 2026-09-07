@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { InterruptorTema } from './InterruptorTema'
 import { MarcaAsegura } from './MarcaAsegura'
 import { PieLegal } from './PieLegal'
+import { RegistrarSW } from './RegistrarSW'
 import { SalirDelPortal } from './SalirDelPortal'
 import { SCRIPT_TEMA } from './tema'
 
@@ -99,6 +100,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <InterruptorTema />
         </header>
         {children}
+        {/* Registra el service worker que Chrome exige para ofrecer instalar la
+            app. No cachea nada: ver `public/sw.js`. */}
+        <RegistrarSW />
         {/* En el layout raíz y no en el del portal: quien todavía no ha metido
             el código tiene que poder identificar al mediador y leer la política
             de privacidad ANTES de escribir su correo, no después. */}
