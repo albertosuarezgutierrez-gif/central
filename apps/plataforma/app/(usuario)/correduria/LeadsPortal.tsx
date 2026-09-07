@@ -132,7 +132,7 @@ function Fila({ l }: { l: LeadVista }) {
         // El filete de la izquierda distingue lo urgente sin un segundo color
         // de fondo: la pantalla ya usa el fondo tintado para los partes, que
         // son lo único más urgente que esto.
-        borderLeft: `4px solid ${l.urgente ? 'var(--warn, #9A6510)' : 'var(--border)'}`,
+        borderLeft: `4px solid ${l.urgente ? 'var(--warning)' : 'var(--border)'}`,
         borderRadius: 8,
         padding: 12,
         background: 'var(--surface)',
