@@ -16,8 +16,9 @@ import { readFileSync } from 'node:fs'
 // ese barril reexporta con imports sin extensión, que `tsc` y Next resuelven y
 // `node --test` no. Aquí interesa el objeto de la marca, no el paquete entero.
 import { MARCA_ASEGURA } from '../../../packages/brand/src/marcas/asegura.ts'
+import { ARTICULOS, entradasSitemapBlog } from './articulos.ts'
 import { RAMOS } from './ramos.ts'
-import { NAV, NAV_CABECERA } from './sitio.ts'
+import { NAV, NAV_CABECERA, url } from './sitio.ts'
 
 test('ningún ramo se queda sin enlace en el pie (nada huérfano)', () => {
   // `Set<string>` explícito: `NAV` es `as const`, así que su `href` es una unión
@@ -74,4 +75,61 @@ test('la imagen Open Graph se genera desde la fuente de marca', () => {
   for (const token of ['primario', 'acento', 'acentoInk'] as const) {
     assert.match(MARCA_ASEGURA.paleta[token], /^#[0-9a-fA-F]{6}$/, `paleta.${token} ya no es hex: la imagen OG lo ignoraría`)
   }
+})
+
+// 🚨 Los tres cepos del blog, y son de lo MISMO que el de responsabilidad civil:
+// una página que solo existe en el sitemap es una página huérfana. `tsc` está
+// verde tanto si `/blog` se enlaza como si no, y el día que alguien reordene el
+// pie el blog entero se queda sin puerta de entrada sin que falle nada.
+test('el blog tiene enlace entrante desde el pie', () => {
+  const fuente = readFileSync(new URL('../app/layout.tsx', import.meta.url), 'utf8')
+  assert.match(fuente, /href="\/blog"/, 'el pie ya no enlaza al blog: los artículos quedan huérfanos')
+})
+
+test('cada página de ramo enlaza a sus artículos', () => {
+  const fuente = readFileSync(new URL('../app/seguros/[ramo]/page.tsx', import.meta.url), 'utf8')
+  assert.match(fuente, /articulosDeRamo\(ramo\.slug\)/, 'la página de ramo ya no enlaza a sus guías')
+  assert.match(fuente, /href=\{`\/blog\/\$\{a\.slug\}`\}/, 'la página de ramo ya no construye el enlace al artículo')
+})
+
+// 🚨 Este SÍ ejecuta el código y mira lo que sale. Su primera versión leía
+// `app/sitemap.ts` con expresiones regulares y se quedaba verde con la lista de
+// artículos borrada del sitemap (el texto del cuerpo del `map` seguía en el
+// fichero). Por eso la construcción se movió a una función pura.
+test('el sitemap emite una URL por artículo, fechada con la fecha del artículo', () => {
+  const filas = entradasSitemapBlog()
+  const indice = filas.find((f) => f.url === url('/blog'))
+  assert.ok(indice, 'el sitemap ya no lista el índice del blog')
+
+  for (const a of ARTICULOS) {
+    const fila = filas.find((f) => f.url === url(`/blog/${a.slug}`))
+    assert.ok(fila, `el sitemap no lista el artículo ${a.slug}`)
+    assert.equal(
+      fila!.lastModified.toISOString().slice(0, 10),
+      a.revisado ?? a.fecha,
+      `${a.slug}: el sitemap lo fecha con algo que no es su propia fecha`,
+    )
+  }
+  assert.equal(filas.length, ARTICULOS.length + 1, 'el sitemap emite filas de blog que no corresponden a ningún artículo')
+})
+
+// La fecha de hoy en `lastModified` es el `NULL` colapsado a un valor que
+// prohíbe `CLAUDE.md`: le dice al buscador «he cambiado» cada vez que pide el
+// sitemap, y así se aprende a ignorar el campo en todo el sitio.
+//
+// 🚨 Con artículos REALES este cepo no podía ponerse rojo: los tres se
+// publicaron el mismo día, así que `new Date()` y `a.fecha` daban lo mismo. Por
+// eso se le pasan artículos de prueba con fechas del pasado.
+test('el sitemap no fecha el blog con la hora de la petición', () => {
+  const falso = (slug: string, fecha: string, revisado?: string) =>
+    ({ ...ARTICULOS[0], slug, fecha, revisado }) as (typeof ARTICULOS)[number]
+  const filas = entradasSitemapBlog([falso('viejo', '2020-01-02'), falso('medio', '2021-03-04', '2022-05-06')])
+
+  const porUrl = new Map(filas.map((f) => [f.url, f.lastModified.toISOString().slice(0, 10)]))
+  assert.equal(porUrl.get(url('/blog/viejo')), '2020-01-02')
+  // `revisado` gana a `fecha`: es cuándo cambió el contenido, que es lo que
+  // `lastModified` significa.
+  assert.equal(porUrl.get(url('/blog/medio')), '2022-05-06')
+  // El índice se fecha con el artículo más reciente, no con hoy ni con el más viejo.
+  assert.equal(porUrl.get(url('/blog')), '2022-05-06')
 })

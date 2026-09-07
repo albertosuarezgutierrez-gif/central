@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { articulosDeRamo } from '@/lib/articulos'
 import { RAMOS, ramoPorSlug } from '@/lib/ramos'
 import { url } from '@/lib/sitio'
 import { fichaFaq, fichaServicio, migas, jsonLd } from '@/lib/seo'
@@ -50,6 +51,10 @@ export default async function PaginaRamo({ params }: Props) {
   if (!ramo) notFound()
 
   const faq = fichaFaq(ramo)
+  // Los artículos que tratan ESTE ramo. Vacío es un estado normal: hay ramos sin
+  // artículo todavía, y entonces la sección no se pinta (no se anuncia una
+  // sección de guías vacía).
+  const guias = articulosDeRamo(ramo.slug)
   const breadcrumb = migas([
     { nombre: 'Inicio', ruta: '/' },
     { nombre: ramo.nombre, ruta: `/seguros/${ramo.slug}` },
@@ -111,6 +116,24 @@ export default async function PaginaRamo({ params }: Props) {
           cada ramo recibe cinco enlaces internos y la RC deja de ser huérfana.
           Además es lo que hace un visitante real: el que viene por comercio
           suele tener también la RC y el auto de la empresa. */}
+      {/* Enlazado ramo → artículo. Es la otra mitad del enlazado del blog: el
+          artículo enlaza a sus ramos y el ramo a sus artículos, así que el peso
+          circula en los dos sentidos y quien llega buscando el producto encuentra
+          la respuesta al problema concreto (y al revés). */}
+      {guias.length > 0 && (
+        <section aria-labelledby="guias" style={{ marginBottom: 28 }}>
+          <h2 id="guias">Guías sobre este seguro</h2>
+          <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 10 }}>
+            {guias.map((a) => (
+              <li key={a.slug}>
+                <Link href={`/blog/${a.slug}`}>{a.h1}</Link>
+                <span style={{ display: 'block', color: 'var(--muted)', fontSize: 15 }}>{a.resumen}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section aria-labelledby="otros" style={{ marginBottom: 28 }}>
         <h2 id="otros">Otros seguros que llevamos</h2>
         <nav aria-label="Otros ramos" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
