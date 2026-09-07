@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-07T17:05:18Z",
+  "generadoEn": "2026-09-07T21:42:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -406,7 +406,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 7
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2084,7 +2084,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 54
       },
       "asegura-web": {
         "estado": "usado",
@@ -2134,7 +2134,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2192,7 +2192,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 43
       },
       "asegura-web": {
         "estado": "usado",
@@ -3797,6 +3797,7 @@
     "module-seguros-pii": [],
     "module-seguros-portal": [
       "core-catastro",
+      "core-fiscal",
       "module-seguros"
     ],
     "module-ses": [],
@@ -3859,11 +3860,23 @@
       "/api/operador/cliente/relaciones",
       "/api/operador/cliente/relaciones/aviso",
       "/api/operador/clientes",
+      "/api/operador/codeoscopic/auto-nuevo",
       "/api/operador/codeoscopic/catalogos",
+      "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/hogar-nuevo",
       "/api/operador/codeoscopic/lineas",
+      "/api/operador/codeoscopic/moto-nuevo",
       "/api/operador/codeoscopic/precalificar",
+      "/api/operador/codeoscopic/precalificar-auto-nuevo",
+      "/api/operador/codeoscopic/precalificar-decesos-nuevo",
+      "/api/operador/codeoscopic/precalificar-hogar-nuevo",
+      "/api/operador/codeoscopic/precalificar-moto-nuevo",
+      "/api/operador/codeoscopic/precalificar-salud-nuevo",
+      "/api/operador/codeoscopic/precalificar-vida-nuevo",
       "/api/operador/codeoscopic/retarificar",
+      "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
+      "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
@@ -6187,7 +6200,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1296,
+    "apis": 1308,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
