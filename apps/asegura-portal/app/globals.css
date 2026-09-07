@@ -512,6 +512,41 @@ h1 {
  * de 44 px de alto y de ancho completo se acierta sin mirar. Y `min-width: 0`
  * en el cuerpo es lo que permite que el truncado funcione dentro de un flex —
  * sin él, un texto largo empuja la fila fuera de la pantalla. */
+/* ── La cabecera de un TITULAR dentro de un bloque de la bóveda ────────────
+   Se queda PEGADA arriba mientras se recorre su lista. Un título normal se
+   sale de la vista al hacer scroll y entonces la póliza de tu empresa —o la
+   del coche de tu padre— se ve idéntica a una tuya; quien cree que es suya no
+   llama a la compañía cuando hay que llamar. El chip «De {titular}» de cada
+   fila es la otra mitad: la cabecera agrupa, el chip acompaña a la fila.
+   `--surface` de fondo (no transparente) porque debajo pasan las tarjetas, y
+   una cabecera translúcida las deja leerse a través. */
+.titular-cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 16px 0 8px;
+  padding: 6px 0;
+  background: var(--surface);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+/* La primera no separa de nada: pegada al título de la sección queda mejor. */
+.titular-cabecera:first-of-type {
+  margin-top: 0;
+}
+/* Quien haya pedido menos movimiento no espera que un elemento se despegue. */
+@media (prefers-reduced-motion: reduce) {
+  .titular-cabecera {
+    position: static;
+  }
+}
+
 .polizas {
   list-style: none;
   margin: 0;

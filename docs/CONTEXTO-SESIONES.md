@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗂 Portal ASegura: la bóveda ya separa TUS pólizas, las de TUS EMPRESAS y las de quien te autoriza (07/09/2026).**
+  Dictado de Alberto: «llegará un momento en que un cliente tenga acceso a varios clientes a su vez, sobre todo
+  empresa… se tiene que diferenciar bien cuáles son mías, cuáles de la empresa y de cada autorizado». 🚨 `cartera.propias`
+  es un ARRAY y se pintaba en lista plana **sin etiqueta ninguna**: las personales y las de la sociedad salían
+  mezcladas. Reparto en `agruparCartera` (módulo puro, 11 tests, 4 mutaciones vistas morder), agrupado por
+  `clienteId` y NUNCA por nombre. Cabecera pegajosa por titular + chip solo en las ajenas. Medido antes: `tipo_persona`
+  **no** está vacía (74 físicas / 6 jurídicas de 80 con póliza viva) pero hoy **0 identidades tienen varias fichas** y
+  hay **1 autorización viva** — no cambia lo que ve nadie todavía. Cepo `test/regression-portal-cartera-agrupada.test.ts`
+  (6, cinco mutaciones rojas). Responsive medido con Playwright a 320/390/768/1024 sobre maqueta con el CSS real.
+  ⚠️ Casi corrijo por error el comentario que dice que `tipo_persona` está «casi vacía»: es CIERTO para la
+  cartera entera (31.730 NULL de 31.810). Lo que cambia es el subconjunto que ve el portal. Matizado, no tachado.
+
 - **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
   `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
   **sin ninguna página**. Va en `RAMOS`, así que entra sola en sitemap, pie y formulario. Su posición en la
