@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-06T21:03:35Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T06:08:36Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -262,6 +262,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (07/09/2026) 🔀 buscador-ia: embeddings muertos desde enero → swap a OpenRouter
+- (07/09/2026) 💰 Ciclo semanal de pricing SIVRA completo, los 4 pisos
 - (06/09/2026) 🕰️ El `405` del merge TAMBIÉN miente: reporte retrasado ≠ check corriendo
 - (06/09/2026) 👀 «No aparecen siniestros ni recibos» en el portal: NO era un bug, era el alcance
 - (06/09/2026) 📮 Canario del formulario público: que no vuelva a morir en silencio
@@ -270,6 +272,4 @@
 - (06/09/2026) 🏠 La dirección buena ya estaba en casa: en la LÁPIDA de la fusión
 - (06/09/2026) ✏️ Corregir teléfonos y correos, donde SE LEEN
 - (06/09/2026) 💀 El formulario de la web de la correduría estaba MUERTO: «no podemos recoger tu solicitud»
-- (06/09/2026) 🛑 Un borrador del agente de huéspedes se quedaba en Telegram PARA SIEMPRE
-- (06/09/2026) 🚨 CIMA entra, pero los SINIESTROS no llegan a la cartera desde el 02/07
 
