@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (07/09/2026) 🩺 `total_count: 0` NO prueba que un run de Actions esté muerto — corregida la tabla de la DECIMOCUARTA
 - (07/09/2026) 🗑️ El cliente ya puede QUITAR de su bóveda las pólizas que subió él
 - (07/09/2026) 🏠 El hogar dice QUÉ CASA es, y la dirección deja de estar escondida
 - (07/09/2026) ✉️ «Error enviar invitación» — el mensaje MENTÍA: no hay proveedor de correo
@@ -271,5 +272,4 @@
 - (07/09/2026) 📌 Revisión de precios House Sevillana — Genius+Móvil se QUEDAN, ocupación floja no lo permite
 - (07/09/2026) ✅ Mergeado y PROBADO en producción
 - (07/09/2026) 🗒 El siniestro dice QUÉ pasó
-- (07/09/2026) 👁 El cliente ve TODAS sus coberturas
 
