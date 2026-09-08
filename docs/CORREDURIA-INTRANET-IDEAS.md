@@ -147,6 +147,22 @@ qué compañía llevar cada riesgo. **Para qué probablemente NO sirve:** negoci
 compañía — su palanca es producción emitida, no una base de primas declaradas. Si el objetivo es un
 acuerdo, el camino es concentrar producción en pocas compañías, y esta idea es lo que dice en cuáles.
 
+### M. La campana de avisos del portal — lo que queda para la v2 🟡
+La v1 entró el 08/09/2026 (spec `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`):
+autorizaciones pendientes en las dos direcciones + vencimientos en ventana + instalar, sin tabla de
+«visto». Lo que se quedó fuera, con lo que lo bloquea:
+- **Datos que nos faltan (teléfono, DNI sin documentar)** — 🔴 el rol `prisma_asegura_portal` no lee
+  esas columnas. Haría falta un puerto estrecho en `apps/asegura` que diga «falta X» sin dar el dato.
+- **Siniestro que cambia de estado · petición respondida · documento nuevo en la póliza** — 🟡 hay que
+  saber qué vio ya el cliente: tabla `portal_aviso_visto` (identidad, tipo, clave, visto_at). Sin ella
+  el siniestro cerrado en 2024 sería «nuevo» para siempre.
+- **Recibo devuelto** — 🟡 el aviso que más dinero ahorra, pero depende de que CIMA traiga la situación
+  del recibo. Medir antes de prometerlo (hoy la fila sale en la ficha como chip de peligro).
+- **Web Push** (`@central/core-push`) para lo que ya está en la campana — 🔴 es salida al cliente: OK
+  de Alberto por envío y nace apagado, como el cron de vencimientos. En iOS solo con la app instalada.
+- **Lo que NO se hace**: «renueva con nosotros» o comparativas de prima en la campana. Un aviso
+  informativo vale; uno que empuje una decisión es asesoramiento (análisis objetivo, IPID).
+
 ## Preguntas abiertas para Alberto
 
 - ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?
