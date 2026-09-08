@@ -38,6 +38,13 @@
   personales. Coste asumido: una de empresa subida sin marcar se coteja contra la ficha personal; lo ve
   el corredor. Cepo `regression-portal-titular-declarado` reescrito y visto en rojo por cada brazo (el
   `append` se ancló a inicio de línea: suelto seguía verde con un `if` delante).
+- **🧹 La ficha de cliente: de 7 botones a 2 (08/09/2026).** Alberto, con la captura: «esto es una
+  guarrería, tantos botones». `Cabecera.tsx` pintaba «Subir póliza» + seis «Presupuestar <ramo>» + dos
+  avisos grises sueltos, en tres filas que empujaban los titulares fuera de la primera pantalla. Ahora:
+  menú «➕ Presupuestar ▾» (`<details>` nativo, sigue Server Component; 🚧 en vida/salud/decesos) +
+  «📄 Subir póliza» con su aviso en el `title`. El menú va PRIMERO: en segunda posición el desplegable
+  se salía a 360px (medido con Playwright, right=427). Cepo `test/regression-ficha-cliente-acciones.test.ts`
+  visto en rojo. Regla anotada en la skill `correduria-crm`. PR #2622 (19/19 verdes, mergeado).
 - **🔔 La campana de avisos del portal del cliente (08/09/2026).** Alberto, ante el «nace pendiente
   hasta que la acepte en su portal»: un icono de campana en la cabecera del portal con autorizaciones,
   vencimientos e instalar. Entró: `lib/avisos.ts` (puro) + `GET /api/avisos` (`allSettled`) +
@@ -757,7 +764,7 @@
   que el `r.json()` revienta y cae en un mensaje genérico que tapaba 413, 504 y 500 por igual. Las dos guardas
   medían lo que NO viaja: el cliente el **fichero** (8 MB) y el servidor un tope **inalcanzable** (11 MB).
   Ahora la foto se **encoge en el navegador** (`lib/imagen-cliente.ts`, medido en Chromium: **12,4 MB → 1,8 MB**;
-  el PDF no se toca) y cada fallo se dice por su nombre. Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
+  el PDF no se toca) y cada fallo se dice por su nombre. Cepos vistos en ROJO (3 roturas). PR #2622.
 
 - **🔗 `sameAs`: la web y el canal de YouTube declarados como el MISMO negocio (07/09/2026).**
   `PERFILES` en `lib/sitio.ts` → `sameAs` en la ficha `InsuranceAgency`. Importa aquí más que en otras
@@ -812,7 +819,7 @@
   imputan igual. 🚨 `gastos` NO tiene `cuenta_id`: si la sesión no es la dueña del libro (misma resolución
   que `facturas-scan`) **no se sube ni se imputa nada** y se DICE (`decision: null` = «no intentado», no
   «no hay»). Botón 🧾 en la cabecera (icono solo en móvil: la barra de 52px no admite etiqueta a 320px).
-  Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
+  Cepos vistos en ROJO (3 roturas). PR #2622.
 
 - **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
   `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
