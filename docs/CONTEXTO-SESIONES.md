@@ -39,6 +39,14 @@
   el corredor. Cepo `regression-portal-titular-declarado` reescrito y visto en rojo por cada brazo (el
   `append` se ancló a inicio de línea: suelto seguía verde con un `if` delante).
 
+- **✂️ Búsqueda PARCIAL por email: dominio y usuario (08/09/2026, II).** Alberto: «tiene que ser de
+  cualquier campo». El email va cifrado y solo casaba entero; ahora hay dos índices ciegos más
+  (`email_dominio_hash`, `email_usuario_hash`, en ficha e hijas, migración `seguros_email_mitades_hash`
+  aplicada) con prefijo dentro del HMAC para que no colisionen. «@gmail.com» o «gmail.com» → dominio;
+  «alberto.suarez@» o «alberto.suarez» → usuario; un email entero no dispara el dominio. Las escrituras
+  de `cartera-edicion.ts` dejan las tres claves; el corpus viejo (todo a NULL) lo rellena el backfill de
+  contacto con el mismo botón de `/correduria/mantenimiento` (`derivadosRestantes`). PR #2613 mergeado
+  (backfill); este es el segundo. **Pendiente: pulsar el botón hasta 0** y probar «@gmail.com».
 - **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
   correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
   cifrado): `planBusqueda()` lanza `email` + `nombre`. Medido: **250 fichas con email y sin

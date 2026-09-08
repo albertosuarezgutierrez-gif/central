@@ -36,6 +36,10 @@ export type TipoCriterio =
   | 'dni'
   | 'telefono'
   | 'email'
+  /** Solo el dominio del email («@gmail.com»): índice ciego propio, exacto sobre el dominio. */
+  | 'email_dominio'
+  /** Solo el usuario del email («alberto.suarez@»): ídem sobre lo que va antes de la @. */
+  | 'email_usuario'
   | 'codigo_postal'
   | 'ciudad'
   /** Localidad o CP del RIESGO (`datos_especificos`), no del cliente. */
@@ -100,6 +104,45 @@ function compacto(v: string): string {
   return v.toUpperCase().replace(/[^A-Z0-9]/g, '')
 }
 
+/** TLD que hacen que un texto SIN arroba se lea también como dominio («gmail.com»). */
+const TLD_CONOCIDOS = new Set(['es', 'com', 'net', 'org', 'eu', 'cat', 'info', 'biz', 'io', 'edu', 'gov', 'gal', 'eus'])
+
+/**
+ * «@gmail.com» → `gmail.com`. Sin arroba solo si acaba en un TLD conocido:
+ * «alberto.suarez» también tiene un punto y no es un dominio.
+ */
+export function dominioDeEmail(t: string): string | null {
+  if (/\s/.test(t)) return null
+  if (t.startsWith('@')) {
+    const d = t.slice(1)
+    return /^[a-z0-9.-]+\.[a-z]{2,}$/.test(d) ? d : null
+  }
+  if (t.includes('@')) return null
+  const m = /^[a-z0-9.-]+\.([a-z]{2,})$/.exec(t)
+  return m && TLD_CONOCIDOS.has(m[1]) ? t : null
+}
+
+/**
+ * «alberto.suarez@» → `alberto.suarez`. Sin arroba, solo si parece un usuario
+ * de correo y no una palabra suelta: lleva punto, más o barra baja.
+ * «alberto» a secas es un nombre y ya lo busca el nombre; no hace falta
+ * cargar cada búsqueda con un criterio de email que casi siempre sale vacío.
+ */
+export function usuarioDeEmail(t: string): string | null {
+  if (/\s/.test(t)) return null
+  if (t.endsWith('@')) {
+    const u = t.slice(0, -1)
+    return u !== '' && !u.includes('@') && /^[a-z0-9._+-]+$/.test(u) ? u : null
+  }
+  if (t.includes('@')) return null
+  if (!/^[a-z0-9._+-]+$/.test(t)) return null
+  // Solo punto, barra baja o más: «A-12345» es un número de póliza y «asuarez77»
+  // un nombre de usuario que, sin la @, no se distingue de un apodo.
+  if (!/[._+]/.test(t)) return null
+  if (dominioDeEmail(t) !== null) return null
+  return t
+}
+
 /**
  * Decide dónde buscar un término. Puede devolver varios criterios: `41003` es
  * a la vez un código postal plausible y un número de póliza plausible, y no hay
@@ -123,8 +166,22 @@ export function planBusqueda(termino: string): PlanBusqueda {
   if (RE_CP.test(c)) {
     criterios.push({ tipo: 'codigo_postal', valor: c, coincidencia: 'parcial' })
   }
-  if (t.includes('@') && /@[^@\s]+\.[^@\s]{2,}$/.test(t)) {
+  // Con algo delante de la @: «@gmail.com» es un dominio, no un email a medias.
+  const esEmailEntero = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(t)
+  if (esEmailEntero) {
     criterios.push({ tipo: 'email', valor: t.toLowerCase(), coincidencia: 'exacto' })
+  }
+  // ── Las MITADES del email (08/09/2026): el email va cifrado y su índice solo
+  // casa entero, así que «alberto.suarez» o «@gmail.com» no encontraban nada.
+  // Hay un hash aparte del dominio y otro del usuario; siguen siendo EXACTOS
+  // sobre esa mitad (no es un LIKE). Un email entero NO dispara el dominio:
+  // buscar «a@gmail.com» no debe listar a todo gmail.
+  if (!esEmailEntero) {
+    const b = t.toLowerCase()
+    const dominio = dominioDeEmail(b)
+    if (dominio !== null) criterios.push({ tipo: 'email_dominio', valor: dominio, coincidencia: 'exacto' })
+    const usuario = usuarioDeEmail(b)
+    if (usuario !== null) criterios.push({ tipo: 'email_usuario', valor: usuario, coincidencia: 'exacto' })
   }
 
   // ── Teléfono: 9 dígitos, o 6+ si el término es SOLO dígitos y separadores ──
@@ -225,6 +282,8 @@ export function explicarVacio(tipo: TipoCriterio, cob: Cobertura | null): string
     dni: 'el DNI',
     telefono: 'el teléfono',
     email: 'el email',
+    email_dominio: 'el dominio del email',
+    email_usuario: 'el usuario del email',
     codigo_postal: 'el código postal',
     ciudad: 'la ciudad',
     riesgo: 'la localidad o el CP del riesgo',
