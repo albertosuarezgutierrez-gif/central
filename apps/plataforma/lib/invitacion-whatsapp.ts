@@ -33,6 +33,7 @@
  * sigue dando `urlWhatsapp()` de `lib/telefono-wa.ts`, que es la fuente única
  * del repo; aquí no se vuelve a normalizar ningún número.
  */
+import { nombreDePila } from '@central/module-seguros'
 import { urlWhatsapp } from './telefono-wa.ts'
 import type { AccionPortal, PortalCartera } from './portal-cliente-asegura.ts'
 
@@ -57,7 +58,11 @@ export function movilParaInvitar(telefonos: readonly (string | null | undefined)
 }
 
 export type DatosMensajeWhatsapp = {
-  /** Nombre del cliente. `null` = no hay uno legible: se saluda sin nombre, no se inventa. */
+  /**
+   * Nombre COMPLETO de la ficha; el mensaje saluda solo por el de pila
+   * (`nombreDePila`). `null`, o un nombre del que no se puede sacar el de pila
+   * (sociedad, formato «APELLIDOS, NOMBRE»…) = se saluda sin nombre, no se inventa.
+   */
   nombre: string | null
   /** La dirección EXACTA con la que entra, tal y como la manda asegura. */
   email: string
@@ -78,9 +83,17 @@ export type DatosMensajeWhatsapp = {
  * cuando la persona ha probado que es ella. Es la misma lista de campos
  * prohibidos que vigila el cepo del correo, y aquí la sostiene el hecho de que
  * esta función solo reciba tres datos.
+ *
+ * ── Solo el nombre de pila (08/09/2026) ─────────────────────────────────────
+ * Alberto, al ver «Hola, Gabriel Duran Martinez:»: «solo pondría el nombre...
+ * apellidos es demasiado formal, al ser cliente tiene que ser trato más
+ * cercano». La regla es la misma que la del «Buenas tardes, Alberto» de la
+ * bóveda (`nombreDePila`): primera palabra, con inicial mayúscula aunque la
+ * ficha venga en mayúsculas, y si no se puede saber (una sociedad, un nombre
+ * con coma) se saluda sin nombre antes que saludar mal.
  */
 export function mensajeInvitacionWhatsapp(d: DatosMensajeWhatsapp): string {
-  const nombre = unaLinea(d.nombre ?? '')
+  const nombre = nombreDePila(unaLinea(d.nombre ?? ''))
   const saludo = nombre ? `Hola, ${nombre}:` : 'Hola:'
   return [
     saludo,

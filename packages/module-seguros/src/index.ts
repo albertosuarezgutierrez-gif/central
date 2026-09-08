@@ -510,3 +510,4 @@ export {
   idsDesconocidos,
 } from './normas.ts'
 export type { NormaCitable } from './normas.ts'
+export { nombreDePila } from './nombre-de-pila.ts'

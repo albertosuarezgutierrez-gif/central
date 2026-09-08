@@ -46,6 +46,13 @@
   `lib/pwa.test.ts` ya vigila el orden (visto en rojo con el orden viejo). Coste conocido: en Android
   el evento llega tras cargar y el contenido baja un salto una vez al aparecer el aviso.
 
+- **📲 El WhatsApp de invitación saluda por el NOMBRE DE PILA (08/09/2026).** Alberto, al ver «Hola,
+  Gabriel Duran Martinez:»: «solo pondría el nombre... apellidos es demasiado formal, al ser cliente tiene
+  que ser trato más cercano». `mensajeInvitacionWhatsapp` usa ahora `nombreDePila` —la misma regla que el
+  «Buenas tardes, Alberto» de la bóveda—, que **bajó de `module-seguros-portal` a `@central/module-seguros`**
+  (plataforma no depende del portal a propósito; el portal la re-exporta). Sociedad o nombre con coma →
+  «Hola:», no «Hola, Global:». 4 cepos nuevos vistos en rojo. ⏸️ El **correo** de invitación
+  (`apps/asegura/lib/correo-invitacion-portal.ts`) sigue con nombre completo: Alberto habló del WhatsApp.
 - **📲 Invitar al portal también por WhatsApp (08/09/2026).** Alberto: «poner al lado el botón de
   WhatsApp, le doy y ese mismo mensaje se le envía al cliente, se le confirma qué correo tiene
   asignado y el enlace». Sin WABA no hay envío desde el servidor: es `wa.me`, que **abre** WhatsApp
