@@ -776,8 +776,8 @@ porque solo una se arregla esperando:
 | forma | cómo se distingue | qué hacer |
 |---|---|---|
 | **(a) reporte retrasado** — el job acabó, la API no se ha enterado | `list_workflow_runs` (filtrando por rama) da el run `completed`/`success` sobre ese head | reintentar el merge; no tocar nada |
-| **(b) run creado que NUNCA arrancó** | `list_workflow_jobs` sobre el run → `total_count: 0` | **no se arregla solo**: hace falta un head nuevo (paso 3 del orden de abajo) |
-| **(c) run en cola** esperando runner | el run existe con `status: queued` | esperar |
+| **(b) run creado que NUNCA arrancó** | **no hay señal que lo demuestre en el momento** — solo que pase el tiempo y el run siga sin jobs (ver DECIMOSEXTA) | **no se arregla solo**: hace falta un head nuevo (paso 3 del orden de abajo) |
+| **(c) run en cola** esperando runner | el run existe con `status: queued`/`pending` — **y también da `total_count: 0`** | esperar |
 
 `[Probable]` **`list_workflow_runs` filtrado por rama fue la lectura más fresca de las tres veces**, y
 la única que acertó cuando `get_check_runs` y el `405` se equivocaban a la vez. Medido tres veces, no
@@ -785,6 +785,31 @@ más: úsalo como primer sitio donde mirar, no como verdad garantizada.
 
 La forma (b) se vio una sola vez (#2439, run de `qa.yml` `34055588656`): un `expected` que no se
 resolvía nunca porque no había job que esperar. Un caso, no una ley.
+
+🩺 **DECIMOSEXTA (07/09/2026, PR #2530) — y corrige la fila (b) de la tabla de aquí arriba:
+`total_count: 0` NO distingue un run muerto de uno en cola. Lo confundí y se lo dije a Alberto.**
+
+Lo medido, en orden:
+
+| hora (UTC) | qué se vio |
+|---|---|
+| 11:38 | run `34117636782` (`Tests & Typecheck`) creado, `status: pending`; `list_workflow_jobs` → **`total_count: 0`** |
+| 11:38 | se diagnosticó **forma (b)** («run creado que nunca arrancó, hace falta un head nuevo») |
+| 11:43:13 | los jobs **arrancaron solos**, ~5 min después de crearse el run |
+| 11:47 | **14/14 en verde** — sin tocar nada: sin des-draftear, sin merge de `main`, sin push nuevo |
+
+`[Seguro]` **Un run en cola todavía no tiene jobs materializados**, así que devuelve exactamente el
+mismo `total_count: 0` que uno muerto. La fila (b) mandaba mirar la única señal que las dos formas
+comparten, y por eso el diagnóstico salió al revés: era (c) disfrazada de (b).
+
+`[Probable]` **lo único que separa (b) de (c) es el TIEMPO**, no una lectura: si el run sigue sin
+jobs varios minutos después, empieza a parecer (b); antes de eso, no hay con qué afirmarlo. Y como
+la palanca de (b) es fabricar un head nuevo —que reinicia la espera y borra la evidencia—,
+**equivocarse hacia (b) es caro y equivocarse hacia (c) solo cuesta esperar**.
+
+⚠️ Y ojo con el sesgo que lo provocó: la DECIMOCUARTA acababa de escribir la forma (b) con su
+`total_count: 0` al lado, así que era el patrón que se tenía delante. **Un caso no es una ley** —lo
+decía la propia DECIMOCUARTA de sí misma— y aquí se leyó como si lo fuera.
 
 🧵 **DECIMOQUINTA (07/09/2026, PR #2503) — cuatro pushes al MISMO PR en draft: tres dispararon y el
 cuarto no, y lo único que cambió fue que ese cuarto dejó el PR en conflicto.** Medido en orden, sin
@@ -814,6 +839,9 @@ primero por otra razón (es trabajo obligatorio de todas formas).
    `completed`/`success` sobre ese head, no hay nada que desatascar — es reporte retrasado
    (DECIMOCUARTA): **reintenta el merge sin tocar nada**, aunque el `405` te jure que un check sigue
    corriendo. Los pasos 1-4 son para cuando el run NO existe.
+   ⚠️ Y si el run existe pero **`list_workflow_jobs` da `total_count: 0`, eso NO prueba que esté
+   muerto**: un run en cola da lo mismo (DECIMOSEXTA). Espera unos minutos antes de fabricar un head
+   nuevo — esperar es gratis y el head nuevo borra la evidencia.
 1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
    ⚠️ Que **coincidan no descarta el lag**, solo descarta el head viejo (#2341): si acabas de empujar, espera igual antes de tocar palancas.
 2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**
