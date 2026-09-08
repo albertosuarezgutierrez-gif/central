@@ -127,3 +127,69 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 
 ---
 <!-- verificado: 2026-09-04 -->
+
+## ✅ Pasada ligera — 08/09/2026
+
+**Rango:** desde la pasada del 07/09 (`89dfc5a`) hasta hoy (`087aefa`) — ~24h, correduría
+(`apps/asegura*`) a un ritmo muy alto: backfill de índice por email/teléfono, invitación al portal
+por WhatsApp con nombre de pila, el cliente puede quitar sus pólizas aportadas (congelan sus
+partes) y editar su dirección de contacto. Preflight Telegram → `200 ok`.
+
+### 🔴 Hallazgo repetido y AGRAVADO: `sivra_domotica_acceso` sigue sin una pasada OK desde el 01/09
+**163,4 h** sin `ok=true` (última buena: 01/09 12:40 — no ha cambiado desde que se detectó el
+02/09). Detalle de hoy: «2 cerradura(s) · 0 PIN creado(s)/borrado(s) · 1 con la ventana
+desactualizada · **3 con ERROR** (Tuya 1109, 2001)» — el mismo conteo de errores que el 04/09,
+pero la ventana sin pasada buena ha pasado de 67 h a 163 h sin que nadie lo revise en
+`/sivra/domotica`. `agente_reparaciones` sigue sin ningún intento en 7 días (no es un error con
+forma de excepción, es un estado sostenido de la API de Tuya — el reparador automático no lo
+toca). **Acción manual de Alberto:** revisar las 3 cerraduras en ERROR en `/sivra/domotica`; es la
+tercera pasada que lo señala sin cambios.
+
+### 🟡 Backlog de PRs de rutinas — sigue creciendo, ya con mano humana pedida dos veces
+7 PRs de registro/rutinas atascados sin mergear, varios desde hace días: `#2262` (4 días,
+"registro puro" — el bot de `rutinas-automerge.yml` ya comentó el 04/09 que el conflicto NO es de
+inserción pura y **no volverá a avisar**: hace falta rehacer la rama a mano), `#2318`/`#2322`
+(3 días, `mergeable_state: dirty`, ambos con más código real del que su título sugiere — ya
+señalado en el PR #2483 de ayer), `#2483` (el propio PR de registro de ayer, `blocked`, sin
+mergear todavía) y `#2488` (`dirty`, ~24h). El vigilante (`rutinas-automerge.yml`) SÍ está vivo —
+corrió y mergeó varios PRs esta misma mañana (`087aefa`, `7678a6e`) — pero los atascados por
+conflicto no-trivial no se resuelven solos y ya se ha pedido la mano de Alberto en dos pasadas
+seguidas (07/09 y 08/09) sin que se haya tocado. No se abre un tercer PR duplicado sobre esto.
+
+### Heartbeat de crons/agentes (2-bis) — resto ✅
+32 filas en `agente_latidos`. `ses_transporte` sigue `ok=false` sin `ultimo_ok_at` (ya conocido
+desde el 21/08: sin establecimiento dado de alta en `/sivra/partes/establecimientos`, pendiente de
+Alberto). `agente_reparaciones`: sin intentos en 7 días. Resto de las 32 filas frescas dentro de su
+cadencia — incluidas las 13 filas de correduría (`correduria_renovaciones`, `correduria_ingesta`,
+`correduria_siniestros`, `correduria_partes`) todas `ok=true` y por debajo del umbral de 30 h.
+
+### 🛡️ Salud de la correduría (2-quater, obligatorio) — sin 🔴 nuevo
+`correduria_ingesta` reporta «DEGRADADA» pero es backlog ya conocido, creciendo poco: **Occident
+(C0058) ahora en 77 días sin mandar CIMA** (76 el 07/09) con 7 renovaciones ya vencidas — mismo
+hallazgo de ayer, un día más viejo, sigue pendiente de pedírselo a la compañía (no es una acción de
+esta auditoría). `cima_pull_*`: último evento 07/09 16:36 (`queueDepth=131`, `processed=0`, dos
+pasadas seguidas en 0 tras un `processed=10` el 06/09 20:48) — dentro del umbral de 30 h, no
+`parada`, y coincide con el backlog ya descrito por el propio latido. Codeoscopic: 3 cotizaciones
+en 7 días, 1,50 €, 2 descartadas — gasto trivial, sin cotización huérfana de decisión. Aislamiento:
+cepos no re-verificados esta pasada ligera (reservado a la profunda). §21 sigue pausada a
+propósito. `agente_reparaciones` sin intentos → nada que el reparador automático esté gestionando
+sobre correduría.
+
+### 💰 Salud del precio SIVRA (2bis, obligatorio) — sin 🔴
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · `oscilantes=3` (bajo) ·
+última pasada hace 2,1 h con 15 noches escritas. Palancas: los 4 pisos `enabled`/`apply_enabled` en
+`true`, `min_price` puesto. `prop_house_sevillana` tiene `antelacion_k=1` (los otros 3 en `0`) —
+**no es drift**: es la palanca deliberada documentada en `docs/POSICION-MERCADO-lejano.md` (House
+sigue en 1,40× de mercado sin converger, es la única de las 4 que la mantiene encendida a
+propósito desde el 07/09).
+
+### Reconciliación memoria/skills — sin huecos detectados
+Las propias sesiones del rango se autodocumentaron en cada PR (memoria + `CLAUDE.md`/tests en el
+mismo commit — patrón visible en #2585/#2592/#2599/#2603/#2604/#2613/#2614). No se ha tocado
+`apps/ia-rest/**` (manuales no aplica) ni hay rotación mensual pendiente. ⚠️ **No se pudo listar
+sesiones remotas** (herramienta no adjunta en este entorno): no se cruzaron conversaciones sin
+commit contra memoria/PR — no se afirma que no haya pendientes perdidos, solo que no se ha podido
+mirar. `docs/HUECOS-ABIERTOS.md` no revisado línea a línea (reservado a la profunda).
+
+---
+<!-- verificado: 2026-09-08 -->

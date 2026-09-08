@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🩺 Auditoría ligera 08/09/2026: domótica lleva 163 h sin pasada OK (era 67 h el 04/09).**
+  `sivra_domotica_acceso` no tiene un `ok=true` desde el 01/09 (3 cerraduras en ERROR Tuya
+  1109/2001) y es la tercera pasada que lo señala sin que se haya mirado `/sivra/domotica`.
+  Backlog de PRs de registro (`#2262`/`#2318`/`#2322`/`#2483`/`#2488`) sigue atascado por
+  conflictos que el automerge no resuelve solo — ya pedido a Alberto en dos pasadas seguidas, no
+  se abre PR duplicado. Correduría: Occident/C0058 en 77 días sin mandar CIMA (76 el 07/09).
+  Pricing y resto del heartbeat, sanos. Detalle en `docs/AUDITORIA-2026-09.md`.
+
 - **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
   correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
   cifrado): `planBusqueda()` lanza `email` + `nombre`. Medido: **250 fichas con email y sin
