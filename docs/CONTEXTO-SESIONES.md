@@ -37,7 +37,10 @@
   nada en el historial. El correo que se nombra lo dice asegura (`portal.emailInvitacion`, la MISMA
   regla que elige el destinatario del correo) y el enlace también: nombrar uno a ojo mandaría al
   cliente a teclear una dirección que el portal no reconoce. El canal nuevo NO rodea los frenos del
-  viejo: si no se le puede invitar por correo, tampoco por WhatsApp. PR #2604.
+  viejo: si no se le puede invitar por correo, tampoco por WhatsApp. PR #2604, mergeado y en
+  producción. Techo medido en BD: de los **80 clientes de cartera viva, 60 tienen algún
+  teléfono, 51 algún correo y 49 los dos** — el botón no puede salir en más de 49, y de esos
+  solo donde el teléfono sea móvil (cifrado: no se cuenta desde SQL) y el correo resuelva a su ficha.
 
 - **📍 El CLIENTE cambia su dirección de contacto, y sugiere (08/09/2026).** Sin cola de aprobación
   («¿solicitar el cambio de algo?», Alberto): su dirección es suya y el art. 16 RGPD prohíbe la
