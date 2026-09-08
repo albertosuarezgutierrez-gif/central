@@ -258,10 +258,7 @@ export {
   type RelacionFila,
   type RelacionFicha,
 } from './relaciones.ts'
-export {
-  mensajePresentacionWhatsapp,
-  nombreDePila,
-} from './mensaje-whatsapp.ts'
+export { mensajePresentacionWhatsapp } from './mensaje-whatsapp.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -410,6 +407,18 @@ export {
 } from './backfill-dni.ts'
 
 export {
+  planBackfillContacto,
+  type CampoContacto,
+  type OrigenContacto,
+  type FilaContacto,
+  type DestinoContacto,
+  type FilaPlanContacto,
+  type GrupoChoqueContacto,
+  type CuentaContacto,
+  type PlanBackfillContacto,
+} from './backfill-contacto.ts'
+
+export {
   ALFABETO_SERIE,
   PRIMERA_MATRICULA_MODERNA,
   ULTIMO_HITO_CONOCIDO,
@@ -502,3 +511,4 @@ export {
   idsDesconocidos,
 } from './normas.ts'
 export type { NormaCitable } from './normas.ts'
+export { nombreDePila } from './nombre-de-pila.ts'

@@ -927,6 +927,15 @@ El paso 1 y el 3 son `GET`/`POST /api/operador/backfill-dni` (vive aquí porque 
 `@central/module-seguros` (`backfill-dni.ts`, `planBackfillDni()`, 11 tests), con los tres estados de
 siempre: un DNI que **no descifra es `ilegible`, jamás «sin DNI»**, y un valor de cajón
 (`PENDIENTE`, `X`) **no genera hash** para que no funda a dos personas.
+🔎 **Y el CONTACTO tenía el mismo agujero, sin backfill (08/09/2026).** El buscador encuentra email y
+teléfono SOLO por hash, y había **250 fichas con email, 100 secundarios y 91 teléfonos** con el dato y sin
+`*_lookup_hash`: teclear el correo exacto decía «nadie coincide». `GET`/`POST /api/operador/backfill-contacto`
+(`lib/backfill-contacto.ts`; regla pura `backfill-contacto.ts` de `@central/module-seguros`) cubre los dos
+campos en ficha y tablas hijas. Diferencia con el DNI: **`uq_clientes_email_lookup_hash` es UNIQUE** sobre
+toda `clientes`, así que dos fichas con el mismo correo chocan y no se escriben (grupos de ids, sin el
+email); teléfono e hijas no tienen índice único y se escriben enteras. Sin `PII_LOOKUP_KEY` contesta 503
+con motivo, no «todo indexado». Botón en `/correduria/mantenimiento` (mismo `EscribirIndiceDni.tsx` con
+otro `endpoint`).
 📸 **Desde el 04/09/2026 el plan deja FOTO en `seguros.backfill_dni_plan`** (una fila, se sobreescribe
 en cada GET/POST; `resumen` + `choques` como listas de uuid, sin DNI ni hash ni nombre —
 `2026-09-04_backfill_dni_plan.sql`). Es el puente entre el paso 1 y el 2: los grupos de mismo DNI solo

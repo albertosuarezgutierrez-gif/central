@@ -32,6 +32,7 @@
 // dentro de un componente no lo mira ningún cepo, y lo enviado por WhatsApp
 // —como lo publicado en redes— no se corrige con un commit.
 import { MEDIADOR } from './mediador.ts'
+import { nombreDePila } from './nombre-de-pila.ts'
 
 /**
  * Cómo se presenta. Sale de `MEDIADOR` y no de un literal: el nombre comercial
@@ -39,20 +40,6 @@ import { MEDIADOR } from './mediador.ts'
  * y escribirlo a mano aquí sería la segunda copia que se queda atrás.
  */
 const FIRMA = `${MEDIADOR.identidad.nombre.split(' ').slice(0, 2).join(' ')}, de ${MEDIADOR.marca}`
-
-/**
- * El nombre de pila, para que el saludo no diga «Hola José Antonio Suárez
- * Gutiérrez». `null` si no hay ninguno legible: se saluda sin nombre, porque un
- * «Hola ,» delata la plantilla más que no saludar.
- */
-export function nombreDePila(nombre: string): string | null {
-  const limpio = nombre.trim().replace(/\s+/g, ' ')
-  if (!limpio) return null
-  // Una razón social («GLOBAL 2 SL») no tiene nombre de pila y cortarla por el
-  // primer espacio produce «Hola GLOBAL». Se saluda entera.
-  const primera = limpio.split(' ')[0]!
-  return primera.length >= 3 ? primera : limpio
-}
 
 /**
  * El mensaje ya escrito para abrir WhatsApp con un lead: quién eres, dónde

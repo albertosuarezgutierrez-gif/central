@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mensajePresentacionWhatsapp, nombreDePila } from './mensaje-whatsapp.ts'
+import { mensajePresentacionWhatsapp } from './mensaje-whatsapp.ts'
 import { revisarCopy, explicarInfracciones } from './copy-regulado.ts'
 import { MEDIADOR } from './mediador.ts'
 
@@ -52,11 +52,17 @@ test('🪤 la firma sale de MEDIADOR, no de un literal escrito a mano', () => {
   assert.match(M(), new RegExp(MEDIADOR.marca))
 })
 
-test('nombre de pila: recorta, pero no parte una razón social ni inventa saludo', () => {
-  assert.equal(nombreDePila('José Antonio Suárez'), 'José')
-  assert.equal(nombreDePila('  Ana   Ruiz  '), 'Ana')
-  assert.equal(nombreDePila('Ana'), 'Ana')
-  assert.equal(nombreDePila('SL 2 GLOBAL'), 'SL 2 GLOBAL')
-  assert.equal(nombreDePila('   '), null)
-  assert.doesNotMatch(mensajePresentacionWhatsapp('  '), /Hola\s+,/)
+test('saluda por el nombre de pila, y sin nombre cuando no lo hay', () => {
+  // La regla es la MISMA que usa la bóveda del portal (`nombre-de-pila.ts`, con
+  // sus propios tests): aquí solo se comprueba que este mensaje la respeta y no
+  // trae una segunda copia que un día se separe.
+  assert.match(mensajePresentacionWhatsapp('José Antonio Suárez'), /^Hola José, soy /)
+  // Sociedad: no tiene nombre de pila, así que se saluda sin nombre en vez de
+  // gritarle «Hola GLOBAL» a una empresa.
+  assert.match(mensajePresentacionWhatsapp('GLOBAL 2 SL'), /^Hola, soy /)
+  assert.match(mensajePresentacionWhatsapp('   '), /^Hola, soy /)
+  // Lo que NUNCA puede salir es la plantilla a medio rellenar.
+  for (const n of ['  ', 'GLOBAL 2 SL', 'José Antonio Suárez']) {
+    assert.doesNotMatch(mensajePresentacionWhatsapp(n), /Hola\s+,|Hola\s*,\s*,/)
+  }
 })
