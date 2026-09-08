@@ -1034,7 +1034,7 @@ entra directo — la sesión dura 30 días y `/` ya manda a la bóveda si sigue 
 | `app/icono-app/route.tsx` | El icono de **512 px**. Con menos de 192 Chrome NO ofrece instalar, y no lo dice. El monograma ocupa ~52 % porque Android recorta los `maskable` a la forma del sistema. `force-static` |
 | `lib/monograma.ts` | El dibujo se LEE de `public/brand/marca-asegura.svg`; lo comparten la pestaña (128) y la app instalada (512) |
 | `public/sw.js` + `app/RegistrarSW.tsx` | El service worker que Chrome exige, registrado en el layout raíz |
-| `app/(portal)/InstalarApp.tsx` + `app/instalacion.tsx` | La oferta (franja, se descarta una vez) y el **almacén compartido** del evento; desde el 08/09/2026 la campana ofrece instalar también |
+| `app/Campana.tsx` (entrada «Instalar») + `app/instalacion.tsx` | La oferta y el **almacén compartido** del evento. La franja «Tenlo a mano» de encima de las pólizas **se quitó el 08/09/2026** (Alberto: «arriba al lado de salir, queda más limpio»): la campana es el único sitio que ofrece instalar |
 
 🚨 **El service worker NO CACHEA NADA, y eso es la decisión.** Aquí dentro hay pólizas, recibos y
 partes de siniestro de personas identificadas: una respuesta guardada en el almacén del navegador
@@ -1072,7 +1072,7 @@ no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura
 | `lib/avisos.ts` | **Puro.** Compone la lista y el globo: autorizaciones pendientes recibidas Y otorgadas (→ `/autorizaciones`), obligaciones en la ventana del módulo (→ `/boveda#calendario-titulo`) |
 | `app/api/avisos/route.ts` | `requireIdentidad()`; **`allSettled`**, no `all`: una fuente caída se declara en `fuentesIlegibles` y la otra se sirve |
 | `app/CampanaAvisos.tsx` → `app/Campana.tsx` | La puerta (sesión VERIFICADA, como `SalirDelPortal`) y la campana. En la cabecera, **entre Salir y el tema** |
-| `app/instalacion.tsx` | El almacén compartido de la instalación: la franja «Tenlo a mano» y la entrada «Instalar» de la campana leen el MISMO evento |
+| `app/instalacion.tsx` | El almacén compartido de la instalación (evento de Chrome, detección de iOS/standalone, `InstruccionesIOS`); lo lee la entrada «Instalar» de la campana. Se compartía con la franja «Tenlo a mano» hasta que se quitó el 08/09/2026 |
 
 🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
 `!` (ninguna legible, o fallo de red). Este portal renunció a la hamburguesa porque un botón que

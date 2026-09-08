@@ -43,6 +43,14 @@
   ⚠️ **No se pudo medir el antes/después de las 9 direcciones reales**: van cifradas y esta sesión
   no tiene la clave. Los fixtures son los dos casos que Alberto vio en pantalla.
 
+- **📲 Fuera la franja «Tenlo a mano» del portal: la campana es el único sitio que ofrece instalar (08/09/2026).**
+  Alberto, sobre el banner de esa misma mañana: «yo subiría el instalador arriba al lado de salir, queda más
+  limpio». Esta sesión montó un botón «Instalar» en la cabecera + `ConSesion`; **en paralelo otra sesión mergeó
+  la campana de avisos (#2630)**, que ya ofrece instalar (Chrome y las instrucciones de iOS) desde el mismo
+  almacén `app/instalacion.tsx`. Cuatro controles no caben a 320 px, así que se adoptó la campana y el PR
+  quedó en quitar la franja de encima de las pólizas (fichero, montaje, CSS salvo el glifo) y `pwa.test.ts`
+  vigila que no vuelva. ⚠️ La oferta queda a UN clic (dentro de la campana, sin contar en el globo): si Alberto
+  la quiere visible sin abrir nada, es otra decisión. Caso de trabajo duplicado entre sesiones, otra vez.
 - **☑️ Portal: «¿de quién es la póliza?» deja de ser una puerta obligatoria (08/09/2026).** Alberto:
   «la mayoría no tiene empresa, darle una vuelta». Los radios «Mía / De mi empresa» sin respuesta
   bloqueaban los DOS botones a todo el mundo. Ahora: casilla «Esta póliza es de una empresa, no mía»,
