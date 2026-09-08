@@ -263,3 +263,25 @@ export { resumirCartera } from './resumen-cartera.ts'
 export type { PolizaResumible, ResumenCartera } from './resumen-cartera.ts'
 export { elegirFicha, prediccionDeVinculo } from './vinculo-elegir.ts'
 export type { Candidato, FichaElegida, PrediccionVinculo } from './vinculo-elegir.ts'
+// El cliente corrige SU dirección de CONTACTO desde el portal (08/09/2026). Lee
+// su cabecera antes de tocarlo: la decisión que importa es que con varias fichas
+// vinculadas NO se elige una, y que esto no le cambia nada a ninguna compañía.
+export {
+  decidirFichaPropia,
+  textoHistorialContactoPropio,
+  CAMPOS_CONTACTO_PROPIO,
+  CAMPOS_VETADOS_AL_CLIENTE,
+} from './contacto-propio.ts'
+export type { FichaPropia, CampoContactoPropio } from './contacto-propio.ts'
+// El botón de sugerencias del portal (08/09/2026). Lee su cabecera: aquí
+// Telegram NO es un aviso, es el ÚNICO registro — y por eso «enviada» es lo
+// único que promete algo, y el texto de la persona se ESCAPA antes de componer.
+export {
+  MAX_SUGERENCIA,
+  MIN_SUGERENCIA,
+  escaparHtml,
+  normalizarSugerencia,
+  mensajeSugerencia,
+  resultadoSugerencia,
+} from './sugerencia.ts'
+export type { ContextoSugerencia, ResultadoSugerencia } from './sugerencia.ts'
