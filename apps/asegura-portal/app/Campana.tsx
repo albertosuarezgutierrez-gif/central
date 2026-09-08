@@ -3,8 +3,6 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import type { Avisos } from '@/lib/avisos'
 
-import { instalar, InstruccionesIOS, useInstalacion } from './instalacion'
-
 /**
  * La campana de la cabecera: lo que la persona tiene pendiente, en un solo
  * sitio, con un número encima.
@@ -14,8 +12,8 @@ import { instalar, InstruccionesIOS, useInstalacion } from './instalacion'
  * enteraba si entraba en la pestaña «Quién me ve». Si venía a mirar su póliza y
  * no abría esa pestaña, la autorización se quedaba ahí sin que nada fallara.
  * Alberto: «un icono de campana de avisos, para autorizaciones, vencimientos,
- * etc.». Y de paso, la instalación de la app, que tras descartar la franja no
- * tenía otro sitio.
+ * etc.». Instalar la app NO va aquí: es el botón de la barra (`InstalarBoton`),
+ * decisión de Alberto del mismo día.
  *
  * 🚨 UNA CAMPANA ESCONDE; LO QUE LA SALVA ES EL NÚMERO. Este portal renunció a
  * la hamburguesa porque «un botón que las esconde detrás de un toque las hace
@@ -40,7 +38,6 @@ export function Campana() {
   const [abierto, setAbierto] = useState(false)
   const raiz = useRef<HTMLDivElement>(null)
   const idPanel = useId()
-  const instalacion = useInstalacion()
 
   const cargar = useCallback(async () => {
     try {
@@ -129,20 +126,6 @@ export function Campana() {
       {abierto && (
         <div className="campana-panel" id={idPanel} role="region" aria-label="Avisos">
           <Contenido datos={datos} reintentar={cargar} cerrar={() => setAbierto(false)} />
-          {(instalacion === 'instalable' || instalacion === 'ios') && (
-            <div className="campana-instalar">
-              <strong>Tenlo a mano</strong>
-              {instalacion === 'ios' ? (
-                <p>
-                  <InstruccionesIOS />
-                </p>
-              ) : (
-                <button type="button" className="campana-instalar-boton" onClick={() => void instalar()}>
-                  Instalar «Mis seguros» en este dispositivo
-                </button>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>

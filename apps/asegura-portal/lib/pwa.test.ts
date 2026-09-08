@@ -15,7 +15,7 @@ const leer = (rel: string) => readFileSync(join(RAIZ, rel), 'utf8')
 const MANIFIESTO = 'app/manifest.ts'
 const SW = 'public/sw.js'
 const ICONO_APP = 'app/icono-app/route.tsx'
-const OFERTA = 'app/(portal)/InstalarApp.tsx'
+const OFERTA = 'app/InstalarBoton.tsx'
 /** El almacén compartido: quién escucha el evento de Chrome y quién detecta iOS (desde el 08/09/2026). */
 const INSTALACION = 'app/instalacion.tsx'
 
@@ -91,14 +91,17 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
     'el almacén de instalación dejó de escuchar el evento de Chrome',
   )
   assert.match(almacen, /iphone\|ipad\|ipod/i, 'el almacén dejó de detectar iOS: ahí no se vería nada')
-  // La franja y la campana leen el MISMO almacén: dos listeners del mismo
-  // evento es cómo el segundo `prompt()` rechaza sin que nadie lo pinte.
-  assert.match(fuente, /useInstalacion\(\)/, 'la franja ya no lee el almacén compartido de instalación')
-  assert.match(leer('app/Campana.tsx'), /useInstalacion\(\)/, 'la campana ya no lee el almacén compartido de instalación')
+  // El botón lee el almacén compartido y NO escucha el evento por su cuenta:
+  // dos listeners del mismo evento es cómo el segundo `prompt()` rechaza sin
+  // que nadie lo pinte.
+  assert.match(fuente, /useInstalacion\(\)/, 'el botón ya no lee el almacén compartido de instalación')
   assert.ok(
     !/addEventListener\('beforeinstallprompt'/.test(fuente),
-    'la franja volvió a escuchar el evento por su cuenta: con dos listeners el segundo prompt() rechaza en silencio',
+    'el botón volvió a escuchar el evento por su cuenta: con dos listeners el segundo prompt() rechaza en silencio',
   )
+  // Y un solo sitio para instalar: la campana no lo ofrece (Alberto, 08/09/2026:
+  // «el instalador moverlo en el banner fijo de arriba»).
+  assert.ok(!/instalacion/.test(leer('app/Campana.tsx')), 'la campana volvió a ofrecer instalar: el sitio es el botón de la barra')
   assert.match(
     almacen,
     // En un literal de cadena, no en el comentario que lo explica.
@@ -113,18 +116,25 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
     /<IconoCompartir \/>/,
     'se perdió el dibujo del botón Compartir: en iPhone el aviso solo puede explicar el gesto',
   )
-  // Y la franja enseña esas instrucciones (no un texto propio que se desvíe).
-  assert.match(fuente, /<InstruccionesIOS \/>/, 'la franja dejó de enseñar las instrucciones de iOS')
+  // Y el botón enseña esas instrucciones en su globo (no un texto propio que se
+  // desvíe), con `role="dialog"` y cierre por Escape: en iPhone es lo ÚNICO que
+  // explica cómo instalar.
+  assert.match(fuente, /<InstruccionesIOS \/>/, 'el botón dejó de enseñar las instrucciones de iOS')
+  assert.match(fuente, /role="dialog"/, 'el globo de iOS perdió su role="dialog"')
+  assert.match(fuente, /e\.key === 'Escape'/, 'el globo de iOS no se cierra con Escape')
   // Enseñárselo a quien ya la tiene instalada es la forma tonta de molestar.
   // La consulta de verdad, no la frase: la cabecera del almacén la nombra para
   // explicarla, y con solo la palabra el cepo pasaba con la comprobación borrada.
   assert.match(almacen, /matchMedia\('\(display-mode: standalone\)'\)/, 'el almacén ya no comprueba si la app está instalada')
-  const layout = leer('app/(portal)/layout.tsx')
-  assert.match(layout, /<InstalarApp\s*\/>/, 'la oferta no está montada en el portal')
-  // Y ANTES del contenido: detrás de las pólizas, en el móvil se iba fuera de
-  // la primera pantalla y en iPhone es lo único que explica cómo instalar.
-  assert.ok(
-    layout.indexOf('<InstalarApp') < layout.indexOf('{children}'),
-    'la oferta volvió a quedar debajo del contenido: en el móvil no se ve',
-  )
+  // Montado en la BARRA del layout raíz (no en el contenido), dentro de la
+  // puerta de sesión y el PRIMERO del grupo: Salir va «a la derecha del todo».
+  const layout = leer('app/layout.tsx')
+  const instalar = layout.indexOf('<InstalarEnBarra />')
+  const campana = layout.indexOf('<CampanaAvisos />')
+  const salir = layout.indexOf('<SalirDelPortal />')
+  const acciones = layout.indexOf('className="marca-acciones"')
+  assert.ok(instalar > 0, 'el botón de instalar no está montado en la barra del layout raíz')
+  assert.ok(acciones > 0 && acciones < instalar && instalar < campana && campana < salir, 'el orden es instalar → avisos → tema → salir, dentro de .marca-acciones')
+  assert.match(leer('app/InstalarEnBarra.tsx'), /verificarSesion\(token\)/, 'la puerta del botón ya no verifica el token: la portada ofrecería instalar')
+  assert.ok(!/InstalarApp|InstalarBoton/.test(leer('app/(portal)/layout.tsx')), 'la franja de instalar volvió al contenido: Alberto la quitó de ahí')
 })
