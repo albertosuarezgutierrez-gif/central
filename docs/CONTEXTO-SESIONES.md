@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🩺 `total_count: 0` NO prueba que un run de Actions esté muerto — corregida la tabla de la
+  DECIMOCUARTA (07/09/2026).** En el PR #2530 se vio el run `34117636782` en `pending` con
+  `list_workflow_jobs` → `total_count: 0`, se diagnosticó **forma (b)** («nunca arrancó, hace falta
+  head nuevo») y se le dijo así a Alberto. **Era falso:** los jobs arrancaron solos ~5 min después y
+  acabaron 14/14 en verde sin tocar nada. Un run **en cola** todavía no tiene jobs materializados, o
+  sea da el MISMO `total_count: 0` que uno muerto: la fila (b) mandaba mirar la única señal que las
+  dos formas comparten. Añadida la DECIMOSEXTA a `CLAUDE.md` y corregidas las filas (b)/(c) + el
+  paso 0 del orden. Equivocarse hacia (c) cuesta esperar; hacia (b) cuesta un head nuevo que borra
+  la evidencia.
+
 - **🗑️ El cliente ya puede QUITAR de su bóveda las pólizas que subió él (07/09/2026).** Alberto,
   sobre su portal: «póliza sin compañía, no la puedo eliminar… las nuestras de CIMA no, pero las que
   no son nuestras el cliente sí, que se puede confundir». `DELETE /api/polizas/[id]` sobre
