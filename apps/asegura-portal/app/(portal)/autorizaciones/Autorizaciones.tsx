@@ -6,6 +6,10 @@ import {
   DIAS_VIGENCIA,
   DIAS_VIGENCIA_INVITACION,
   MAX_MENSAJE_INVITACION,
+  MAX_NOMBRE_INVITADO,
+  RELACIONES_INVITACION,
+  SIN_COMPARTIR,
+  type AlcanceInvitacion,
 } from '@central/module-seguros-portal'
 
 /**
@@ -342,7 +346,12 @@ export type EstadoInvitacion = 'enviada' | 'aceptada' | 'rechazada' | 'retirada'
 type InvitacionVista = {
   id: string
   estado: EstadoInvitacion
-  alcance: Alcance
+  /** `ninguno` = solo se le presentó el portal: no comparte nada (08/09/2026). */
+  alcance: AlcanceInvitacion
+  /** Cómo la llamaste tú. `null` = invitación anterior al 08/09/2026 (nunca `''`). */
+  invitadoNombre: string | null
+  /** Qué es de ti, con el vocabulario de la cartera. `null` = no consta. */
+  relacion: string | null
   /** `true` = se invitó a UNA póliza; `false` = a todas las de la ficha, futuras incluidas. */
   soloUnaPoliza: boolean
   otorganteClienteId: string
@@ -435,7 +444,7 @@ function opcionesInvitacion(f: FichaPropia): readonly Alcance[] {
  */
 const ERROR_INVITAR: Record<string, string> = {
   sin_sesion: 'Se ha cerrado tu sesión. Vuelve a entrar con tu email y lo intentamos otra vez.',
-  datos_invalidos: 'Falta algún dato: revisa el correo y marca qué le dejas ver.',
+  datos_invalidos: 'Falta algún dato: revisa el nombre, qué es de ti, el correo y qué compartes.',
   a_si_mismo: 'Ese es tu propio correo: tus seguros ya los ves tú al entrar.',
   ya_invitado: 'Ya hay una invitación viva para esa dirección. La tienes en la lista de arriba.',
   ya_autorizado: 'Esa persona ya tiene acceso a tus seguros: lo verás en «Has dado acceso a».',
@@ -1564,6 +1573,16 @@ function EstadoInvitacionLinea({ i }: { i: InvitacionVista }) {
     )
   }
   if (i.estado === 'aceptada') {
+    // Sin acceso no hay nada arriba que revocar: lo que hay es una persona con
+    // su propio espacio en el portal. Decirle a José que mire en «Has dado
+    // acceso a» le mandaría a buscar algo que no existe.
+    if (i.alcance === SIN_COMPARTIR) {
+      return (
+        <div className="linea dicho">
+          La aceptó — ya tiene su propio espacio en el portal. <strong>No ve nada tuyo.</strong>
+        </div>
+      )
+    }
     return (
       <div className="linea dicho">
         La aceptó — el acceso está arriba, en <strong>«Has dado acceso a»</strong>, y desde ahí puedes
@@ -1630,7 +1649,17 @@ function TarjetaInvitacion({ i, onCambio }: { i: InvitacionVista; onCambio: () =
           lo tenemos en claro y no se puede pintar. Quien invitó sabe a quién
           escribió; lo que necesita de esta lista es reconocer CUÁL es y en qué
           ha quedado. */}
-      <h3>Invitación {enviada ? `del ${enviada}` : 'por correo'}</h3>
+      {/* 08/09/2026: si José escribió un nombre, la tarjeta es esa PERSONA;
+          las invitaciones de antes (sin nombre) siguen siendo su fecha. El
+          nombre es el que él tecleó, no una identidad: se pinta como texto. */}
+      <h3>
+        {i.invitadoNombre !== null && i.invitadoNombre.trim() !== ''
+          ? i.invitadoNombre.trim()
+          : `Invitación ${enviada ? `del ${enviada}` : 'por correo'}`}
+      </h3>
+      {i.relacion !== null && i.relacion.trim() !== '' && (
+        <div className="linea">{i.relacion === 'Otra' ? 'Otra relación.' : `${i.relacion}.`}</div>
+      )}
       {/* De qué ficha tuya salió. Con una sola no sobra —le dice a José con qué
           nombre le llegó el correo al otro— y con varias es lo único que
           distingue dos invitaciones del mismo día. `null` = ya no se puede leer
@@ -1638,11 +1667,17 @@ function TarjetaInvitacion({ i, onCambio }: { i: InvitacionVista; onCambio: () =
       {i.otorganteNombre !== null && i.otorganteNombre.trim() !== '' && (
         <div className="linea">Desde tu ficha {i.otorganteNombre.trim()}.</div>
       )}
-      <div className="linea">Le ofreces ver {queVe(i.alcance, 'fisica')}.</div>
+      {i.alcance === SIN_COMPARTIR ? (
+        <div className="linea">
+          Solo le presentaste el portal: <strong>no comparte ninguno de tus seguros</strong>.
+        </div>
+      ) : (
+        <div className="linea">Le ofreces ver {queVe(i.alcance, 'fisica')}.</div>
+      )}
       {/* Mismo aviso que en la autorización: sin póliza concreta es la cartera
           entera, hoy y mañana. Aquí importa aún más, porque quien lo recibe
           todavía no es nadie conocido. */}
-      {i.soloUnaPoliza ? (
+      {i.alcance === SIN_COMPARTIR ? null : i.soloUnaPoliza ? (
         <div className="linea dicho">
           Alcanza <strong>solo a una de tus pólizas</strong>. El resto de tus seguros no los vería.
         </div>
@@ -1723,7 +1758,7 @@ function Invitaciones({
 }) {
   return (
     <section className="seccion" aria-labelledby={`${uid}-invitaciones`}>
-      <h2 id={`${uid}-invitaciones`}>Invitaciones que has mandado</h2>
+      <h2 id={`${uid}-invitaciones`}>Personas que has invitado</h2>
       {/* Tres estados, y ninguno se colapsa con otro: cargando ≠ no se ha podido
           mirar ≠ lo hemos mirado y no hay ninguna. Pintar el error como «no has
           invitado a nadie» convertiría un fallo de red en una afirmación sobre
@@ -1743,7 +1778,8 @@ function Invitaciones({
         </>
       ) : lista.length === 0 ? (
         <p className="suave" style={{ margin: 0 }}>
-          No has invitado a nadie por correo todavía.
+          No has invitado a nadie todavía. Puedes hacerlo aquí abajo: para compartirle tus seguros o solo
+          para presentarle el portal.
         </p>
       ) : (
         <ul className="cartera">
@@ -1771,8 +1807,10 @@ function Invitar({
 }) {
   const fichas = useMemo(() => fichasPropias(candidatos), [candidatos])
   const [fichaId, setFichaId] = useState('')
+  const [nombre, setNombre] = useState('')
+  const [relacion, setRelacion] = useState('')
   const [email, setEmail] = useState('')
-  const [alcance, setAlcance] = useState<Alcance | ''>('')
+  const [alcance, setAlcance] = useState<AlcanceInvitacion | ''>('')
   const [polizaId, setPolizaId] = useState('')
   const [mensaje, setMensaje] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -1802,7 +1840,15 @@ function Invitar({
   async function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (ficha === null) {
-      setError('Elige desde qué ficha tuya le das acceso.')
+      setError('Elige desde qué ficha tuya le invitas.')
+      return
+    }
+    if (nombre.trim() === '') {
+      setError('Escribe cómo se llama esa persona.')
+      return
+    }
+    if (relacion === '') {
+      setError('Di qué es de ti esa persona.')
       return
     }
     if (email.trim() === '') {
@@ -1810,7 +1856,7 @@ function Invitar({
       return
     }
     if (alcance === '') {
-      setError('Elige qué puede ver.')
+      setError('Elige qué compartes con esa persona.')
       return
     }
 
@@ -1826,7 +1872,10 @@ function Invitar({
           alcance,
           // Omitir la póliza ES «todas», igual que al conceder: el cuerpo dice
           // lo mismo que la pantalla en vez de mandar un `null` explícito.
-          ...(polizaId !== '' ? { polizaId } : {}),
+          // Sin compartir nada no hay póliza que acotar: el puerto lo rechaza.
+          ...(polizaId !== '' && alcance !== SIN_COMPARTIR ? { polizaId } : {}),
+          invitadoNombre: nombre.trim(),
+          relacion,
           email: email.trim(),
           ...(mensaje.trim() !== '' ? { mensaje: mensaje.trim() } : {}),
         }),
@@ -1836,7 +1885,9 @@ function Invitar({
         setAviso({
           tono: 'ok',
           texto:
-            'Invitación enviada. Le hemos escrito a esa dirección; para verla tendrá que entrar al portal con su propio código y aceptarla — hasta entonces no ve nada.',
+            alcance === SIN_COMPARTIR
+              ? 'Invitación enviada. Le hemos escrito a esa dirección; entrará al portal con su propio código y tendrá su espacio. No ve nada tuyo.'
+              : 'Invitación enviada. Le hemos escrito a esa dirección; para verla tendrá que entrar al portal con su propio código y aceptarla — hasta entonces no ve nada.',
         })
         limpiar()
         await onInvitada()
@@ -1877,6 +1928,8 @@ function Invitar({
   }
 
   function limpiar() {
+    setNombre('')
+    setRelacion('')
     setEmail('')
     setAlcance('')
     setPolizaId('')
@@ -1886,7 +1939,7 @@ function Invitar({
 
   return (
     <section className="seccion" aria-labelledby={`${uid}-invitar`}>
-      <h2 id={`${uid}-invitar`}>Invitar por correo a quien no está</h2>
+      <h2 id={`${uid}-invitar`}>Añadir una persona</h2>
 
       {!puedeAutorizar ? (
         <p className="suave" style={{ margin: 0 }}>
@@ -1904,8 +1957,9 @@ function Invitar({
       ) : (
         <form className="editor-form" onSubmit={enviar} noValidate>
           <p className="editor-ayuda" style={{ margin: 0 }}>
-            Si la persona a la que quieres dar acceso <strong>no es cliente nuestro</strong>, escribe su
-            correo y le mandamos una invitación. El portal es gratis para cualquiera, sea cliente o no.
+            Escribe su nombre, qué es de ti y su correo, y le mandamos una invitación{' '}
+            <strong>de tu parte</strong>. Puedes compartirle tus seguros o solo presentarle el portal, que
+            es gratis para cualquiera, sea cliente o no.
           </p>
 
           {fichas.length > 1 && (
@@ -1932,6 +1986,57 @@ function Invitar({
               </select>
             </div>
           )}
+
+          <div className="editor-campo">
+            <label htmlFor={`${uid}-inv-nombre`}>Cómo se llama</label>
+            <p className="editor-ayuda" id={`${uid}-inv-nombre-ayuda`}>
+              Es para tu lista y para el saludo del correo. Quién es de verdad lo prueba después con el
+              código que le llega a su buzón.
+            </p>
+            <input
+              id={`${uid}-inv-nombre`}
+              type="text"
+              autoComplete="off"
+              className="campo"
+              value={nombre}
+              onChange={(e) => {
+                setNombre(e.target.value)
+                setError(null)
+              }}
+              maxLength={MAX_NOMBRE_INVITADO}
+              placeholder="María García"
+              aria-describedby={`${uid}-inv-nombre-ayuda`}
+              disabled={enviando}
+            />
+          </div>
+
+          <div className="editor-campo">
+            <label htmlFor={`${uid}-inv-relacion`}>Qué es de ti</label>
+            {/* 🚨 La relación se queda en TU lista: no va en el correo. Quien
+                abra ese buzón puede no ser quien tú crees, y «su hija» o «su
+                empleado» es un dato de los dos. */}
+            <p className="editor-ayuda" id={`${uid}-inv-relacion-ayuda`}>
+              Solo para que lo tengas apuntado. <strong>No va en el correo.</strong>
+            </p>
+            <select
+              id={`${uid}-inv-relacion`}
+              className="campo"
+              value={relacion}
+              onChange={(e) => {
+                setRelacion(e.target.value)
+                setError(null)
+              }}
+              aria-describedby={`${uid}-inv-relacion-ayuda`}
+              disabled={enviando}
+            >
+              <option value="">Elige…</option>
+              {RELACIONES_INVITACION.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="editor-campo">
             <label htmlFor={`${uid}-inv-email`}>Su correo</label>
@@ -1969,7 +2074,7 @@ function Invitar({
                  del módulo puro está para que ese «poco más» no crezca solo).
                  Y por eso existe el botón de retirar. */}
           <div className="aviso-linea">
-            En ese correo va <strong>tu nombre</strong>
+            En ese correo van <strong>tu nombre</strong>
             {ficha !== null && (ficha.nombre ?? '').trim() !== '' ? (
               <>
                 {' '}
@@ -1977,15 +2082,70 @@ function Invitar({
               </>
             ) : (
               <> tal y como consta en la correduría</>
-            )}
-            , porque tiene que saber quién le invita. <strong>Nada más</strong>: ni tus pólizas, ni tu
-            compañía, ni matrículas ni importes.{' '}
+            )}{' '}
+            y <strong>el nombre que escribas de esa persona</strong>, porque tiene que saber quién le
+            invita. <strong>Nada más</strong>: ni qué es de ti, ni tus pólizas, ni tu compañía, ni
+            matrículas ni importes.{' '}
             <strong>Si te equivocas de dirección, el correo le llega a un desconocido</strong> — por eso
             no dice nada de tus seguros, y por eso puedes retirar la invitación arriba mientras no la
             acepten.
           </div>
 
-          {ficha !== null && ficha.polizas.length > 0 && (
+          {/* Qué compartes: va ANTES de la póliza, porque de esto depende que
+              haya póliza que elegir. «Nada» es la primera opción a propósito:
+              es la que no cede un solo dato. */}
+          {ficha !== null && (
+            <fieldset className="editor-campo grupo">
+              <legend>Qué compartes con esa persona</legend>
+              <div className="opciones" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                <label className="opcion" style={{ alignItems: 'flex-start' }}>
+                  <input
+                    type="radio"
+                    name={`${uid}-inv-alcance`}
+                    value={SIN_COMPARTIR}
+                    checked={alcance === SIN_COMPARTIR}
+                    disabled={enviando}
+                    onChange={() => {
+                      setAlcance(SIN_COMPARTIR)
+                      setPolizaId('')
+                    }}
+                    style={{ marginTop: 3 }}
+                  />
+                  <span style={{ minWidth: 0 }}>
+                    Nada: solo le presento el portal
+                    <span className="editor-ayuda" style={{ display: 'block', fontWeight: 400 }}>
+                      Le recomiendas el portal para que tenga a mano sus propios seguros. No ve ninguno de
+                      los tuyos.
+                    </span>
+                  </span>
+                </label>
+                {opciones.map((x) => (
+                  <label key={x} className="opcion" style={{ alignItems: 'flex-start' }}>
+                    <input
+                      type="radio"
+                      name={`${uid}-inv-alcance`}
+                      value={x}
+                      checked={alcance === x}
+                      disabled={enviando}
+                      // `opciones` sale filtrado por `ALCANCES_CONCEDIBLES` (solo
+                      // `ver` y `ver_economico`), que son alcances de invitación;
+                      // el tipo `Alcance` es más ancho de lo que la lista trae.
+                      onChange={() => setAlcance(x as AlcanceInvitacion)}
+                      style={{ marginTop: 3 }}
+                    />
+                    <span style={{ minWidth: 0 }}>
+                      {ETIQUETA_OPCION[x]}
+                      <span className="editor-ayuda" style={{ display: 'block', fontWeight: 400 }}>
+                        {AYUDA_OPCION[x]}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
+          {ficha !== null && alcance !== '' && alcance !== SIN_COMPARTIR && ficha.polizas.length > 0 && (
             <div className="editor-campo">
               <label htmlFor={`${uid}-inv-poliza`}>Qué le dejas ver</label>
               <p className="editor-ayuda" id={`${uid}-inv-poliza-ayuda`}>
@@ -2016,7 +2176,7 @@ function Invitar({
           {/* El mismo aviso que al conceder, y por la misma razón: «todas»
               incluye las que se contraten más adelante, sin volver a autorizar
               nada. Que quien lo recibe sea alguien de fuera no lo hace menor. */}
-          {ficha !== null && polizaId === '' && (
+          {ficha !== null && alcance !== '' && alcance !== SIN_COMPARTIR && polizaId === '' && (
             <div className="aviso-linea">
               {ficha.polizas.length > 0 ? (
                 <>
@@ -2032,33 +2192,6 @@ function Invitar({
                 </>
               )}
             </div>
-          )}
-
-          {ficha !== null && (
-            <fieldset className="editor-campo grupo">
-              <legend>Qué puede ver</legend>
-              <div className="opciones" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-                {opciones.map((x) => (
-                  <label key={x} className="opcion" style={{ alignItems: 'flex-start' }}>
-                    <input
-                      type="radio"
-                      name={`${uid}-inv-alcance`}
-                      value={x}
-                      checked={alcance === x}
-                      disabled={enviando}
-                      onChange={() => setAlcance(x)}
-                      style={{ marginTop: 3 }}
-                    />
-                    <span style={{ minWidth: 0 }}>
-                      {ETIQUETA_OPCION[x]}
-                      <span className="editor-ayuda" style={{ display: 'block', fontWeight: 400 }}>
-                        {AYUDA_OPCION[x]}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
           )}
 
           <div className="editor-campo">
@@ -2092,8 +2225,14 @@ function Invitar({
           <p className="editor-ayuda" style={{ margin: 0 }}>
             La invitación vale <strong>{DIAS_VIGENCIA_INVITACION} días</strong> y{' '}
             <strong>no abre nada por sí sola</strong>: quien la reciba tendrá que entrar al portal con un
-            código que le mandaremos a ese mismo correo y aceptarla. A partir de ahí, el acceso{' '}
-            <strong>caduca al año</strong> ({DIAS_VIGENCIA} días) y puedes revocarlo cuando quieras.
+            código que le mandaremos a ese mismo correo y aceptarla.
+            {alcance !== SIN_COMPARTIR && (
+              <>
+                {' '}
+                A partir de ahí, el acceso <strong>caduca al año</strong> ({DIAS_VIGENCIA} días) y puedes
+                revocarlo cuando quieras.
+              </>
+            )}
           </p>
 
           {error && (
@@ -2110,7 +2249,14 @@ function Invitar({
           <button
             type="submit"
             className="boton"
-            disabled={enviando || ficha === null || email.trim() === '' || alcance === ''}
+            disabled={
+              enviando ||
+              ficha === null ||
+              nombre.trim() === '' ||
+              relacion === '' ||
+              email.trim() === '' ||
+              alcance === ''
+            }
           >
             {enviando ? 'Enviando…' : 'Enviar la invitación'}
           </button>

@@ -147,6 +147,19 @@ qué compañía llevar cada riesgo. **Para qué probablemente NO sirve:** negoci
 compañía — su palanca es producción emitida, no una base de primas declaradas. Si el objetivo es un
 acuerdo, el camino es concentrar producción en pocas compañías, y esta idea es lo que dice en cuáles.
 
+### M. «Contactos» y «recomiéndanos» ✅ CONSTRUIDO (08/09/2026) — y los regalos 🔴 APARCADOS
+La pestaña `/autorizaciones` pasa a llamarse **Contactos**: la invitación pide **nombre y relación**
+(vocabulario de `cliente_relaciones`; la relación NUNCA va en el correo) y admite el alcance
+**`ninguno`**: «solo te presento el portal», sin compartir un seguro. Al aceptar no se crea
+autorización. Es la forma defendible de captar: el correo lo firma el cliente, dice quién invita y
+qué NO pasa, y no vende nada — un acto entre personas, no comunicación comercial (art. 21 LSSI).
+Spec: `docs/superpowers/specs/2026-09-08-portal-contactos-design.md`.
+🚨 **Regalos por traer gente: NO, mientras no lo revise la asesoría.** [Probable] Un premio por quien
+acabe contratando convierte al cliente en **colaborador externo** del mediador (RDL 3/2020: registro,
+formación y contrato), y [Seguro] un correo de presentación de la correduría a quien no lo ha pedido
+es comunicación comercial sin consentimiento. Además el embudo es minúsculo (80 clientes vivos, 44 con
+email): el regalo no compensa el riesgo. Si algún día se hace, no puede ir atado a contratar.
+
 ## Preguntas abiertas para Alberto
 
 - ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?
