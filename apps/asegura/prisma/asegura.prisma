@@ -248,6 +248,8 @@ model Cliente {
   emailOptOutAt       DateTime?          @map("email_opt_out_at") @db.Timestamp(6)
   emailOptOutSource   String?            @map("email_opt_out_source") @db.VarChar(30)
   emailLookupHash     String?            @map("email_lookup_hash")
+  emailDominioHash    String?            @map("email_dominio_hash")
+  emailUsuarioHash    String?            @map("email_usuario_hash")
   telefonoLookupHash  String?            @map("telefono_lookup_hash")
   activo              Boolean            @default(true)
   segmento            SegmentoCliente    @default(prospecto)
@@ -322,9 +324,11 @@ model ClienteEmail {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   clienteId       String   @map("cliente_id") @db.Uuid
   correduriaId    String   @map("correduria_id") @db.Uuid
-  email           String // cifrado
-  emailLookupHash String?  @map("email_lookup_hash")
-  etiqueta        String?  @db.VarChar(30)
+  email            String // cifrado
+  emailLookupHash  String?  @map("email_lookup_hash")
+  emailDominioHash String?  @map("email_dominio_hash")
+  emailUsuarioHash String?  @map("email_usuario_hash")
+  etiqueta         String?  @db.VarChar(30)
   esPrincipal     Boolean  @default(false) @map("es_principal")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 

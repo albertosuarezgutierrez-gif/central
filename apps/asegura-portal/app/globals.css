@@ -482,7 +482,10 @@ input, select, textarea, button { font: inherit; }
  * reparto se hace a tres bandas y los dos botones de la derecha se separan sin
  * que nada falle. Por eso `Salir` toma el `auto` y el interruptor pasa a un
  * hueco fijo — y por eso el ORDEN en el `layout` no es cosmético: la regla es
- * de hermano ADYACENTE.
+ * de hermano POSTERIOR (`~`). Era `+` (adyacente) hasta el 08/09/2026, cuando
+ * la campana se puso entre los dos: con `+` el interruptor dejaba de casar,
+ * recuperaba su `auto` y se iba solo al extremo, con la campana y Salir a un
+ * palmo. La campana no lleva `auto` nunca: los separa el `gap` de la barra.
  *
  * El botón NO es de marca a plena carga: la única acción azul de la barra sería
  * salir, y la salida no es lo que se invita a pulsar. Va como el interruptor
@@ -493,7 +496,7 @@ input, select, textarea, button { font: inherit; }
   flex: 0 0 auto;
   display: flex;
 }
-.salir-form + .tema-boton {
+.salir-form ~ .tema-boton {
   /* 0 y no un valor: los separa el `gap: 10px` de la barra, el mismo que separa
    * al resto. Con un margen propio quedaban a 18px y los dos botones se leían
    * como de dos grupos distintos (medido con Playwright). */
@@ -525,6 +528,168 @@ input, select, textarea, button { font: inherit; }
 }
 .salir-boton:active {
   background: var(--surface-active, var(--panel2));
+}
+
+/* ── La campana de avisos ──────────────────────────────────────────────────
+ *
+ * Mismo tamaño y familia que el interruptor (44 px, contorno sobre papel): son
+ * acciones de la cabecera, no del contenido. El globo va ENCIMA de la esquina
+ * y en color de acento: es lo único de la barra que pide ser mirado, y tiene
+ * que serlo — sin el número, la campana esconde (ver `app/Campana.tsx`).
+ *
+ * El panel es un desplegable `position:absolute` colgado de la campana, ENCIMA
+ * del contenido a propósito; en el móvil (≤ 480 px) se ancla a los bordes de la
+ * pantalla, que es la única forma de que un panel de 320 px quepa en una de 320. */
+.campana {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+}
+.campana-boton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.campana-boton:hover {
+  background: var(--surface-hover, var(--panel2));
+  color: var(--text);
+}
+.campana-boton[aria-expanded='true'],
+.campana-boton[data-globo] {
+  color: var(--text);
+}
+.campana-globo {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--brand-ink);
+  /* Un filete del color de la barra para que el globo no se funda con el borde
+   * del botón: parece flotar encima, que es lo que es. */
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 4%, var(--surface));
+}
+.campana-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, calc(100vw - 16px));
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  z-index: 30;
+}
+@media (max-width: 480px) {
+  .campana-panel {
+    /* Anclado a la pantalla, no al botón: a 320 px el botón está a 8 px del
+     * borde y un panel colgado de él se saldría por la izquierda. */
+    position: fixed;
+    top: calc(var(--alto-barra) + 4px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
+.campana-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.campana-aviso {
+  display: block;
+  padding: 10px 12px;
+  border-radius: calc(var(--radius) * 0.6);
+  color: inherit;
+  text-decoration: none;
+}
+.campana-aviso:hover,
+.campana-aviso:focus-visible {
+  background: var(--surface-hover, var(--panel2));
+}
+.campana-aviso-titulo {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.campana-aviso-detalle {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.campana-vacio {
+  margin: 0;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.campana-ilegible {
+  color: var(--text);
+  background: var(--primary-light);
+  border-radius: calc(var(--radius) * 0.6);
+}
+.campana-reintentar {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.campana-instalar {
+  margin-top: 6px;
+  padding: 12px;
+  border-top: 1px solid var(--border-soft, var(--border));
+}
+.campana-instalar > strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.campana-instalar p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.campana-instalar-boton {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
 }
 
 /* ── Secciones y tarjetas ─────────────────────────────────────────────────
@@ -975,6 +1140,19 @@ h1 em {
   font-size: 20px;
   line-height: 1;
   color: var(--muted2);
+}
+/* La acción de QUITAR de una póliza aportada, debajo de su tarjeta y fuera del
+ * enlace (un botón dentro de un <a> no es HTML válido y el clic navegaría). Va
+ * alineada a la derecha, con el tamaño táctil de `.boton-tenue` (44px); la
+ * confirmación (`.aviso-linea`) se despliega a todo el ancho de la fila. */
+.poliza-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 6px 4px 0;
+}
+.poliza-acciones .aviso-linea {
+  flex: 1 1 100%;
 }
 /* La ajena, marcada también en la fila: filete de acento + la etiqueta «De X»
  * que pinta el propio componente. Las dos cosas, porque el color solo no le

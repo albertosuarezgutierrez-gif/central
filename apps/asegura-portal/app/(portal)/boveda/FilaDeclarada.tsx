@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { fechaEs } from '@/lib/fechas'
 
+import { EliminarPoliza } from './EliminarPoliza'
 import { IconoRamo, RAMO } from './PolizaVista'
 
 /**
@@ -27,6 +28,7 @@ import { IconoRamo, RAMO } from './PolizaVista'
  */
 export function FilaDeclarada({
   p,
+  avisoPartes,
 }: {
   p: {
     id: string
@@ -36,6 +38,11 @@ export function FilaDeclarada({
     /** El nombre del PDF que subió, si vino de ahí. Solo dice de dónde salió. */
     deDocumento: boolean
   }
+  /**
+   * El aviso de que sus partes de siniestro se conservan al quitarla, o `null`
+   * si no tiene ninguno. Lo calcula el padre con `avisoPartesConservados()`.
+   */
+  avisoPartes: string | null
 }) {
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
@@ -70,6 +77,17 @@ export function FilaDeclarada({
           ›
         </span>
       </Link>
+      {/* 🚨 Quitarla se ofrece AQUÍ, en la lista, y no solo al final de su ficha.
+          Alberto (08/09/2026): «no puedo eliminar “Póliza sin compañía
+          identificada”… el cliente se puede equivocar, puede crear y quitar las
+          pólizas que quiera, esto es una herramienta de gestión». El botón ya
+          existía en la ficha —debajo del formulario de corregir— y desde la lista
+          no se veía: una acción que hay que ir a buscar es una acción que no
+          existe. Solo las APORTADAS lo llevan: `FilaPoliza` (cartera) no tiene
+          esto, porque lo que entra por CIMA no lo borra el cliente. */}
+      <div className="poliza-acciones">
+        <EliminarPoliza id={p.id} titulo={titulo} avisoPartes={avisoPartes} />
+      </div>
     </li>
   )
 }

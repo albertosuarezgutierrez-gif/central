@@ -178,8 +178,23 @@ export {
   normalizarTokenInvitacion,
   CAMPOS_PROHIBIDOS_EN_INVITACION,
   normalizarMensajeInvitacion,
+  MAX_NOMBRE_INVITADO,
+  normalizarNombreInvitado,
+  relacionInvitacion,
+  RELACIONES_INVITACION,
+  SIN_COMPARTIR,
+  ALCANCES_INVITACION,
+  alcanceInvitacion,
+  invitacionAbreAcceso,
+  TEXTO_INVITACION_SIN_ACCESO,
+  TEXTO_INVITACION_SIN_ACCESO_V1,
 } from './invitacion.ts'
-export type { ResultadoInvitacion, EstadoInvitacion, InvitacionFechas } from './invitacion.ts'
+export type {
+  ResultadoInvitacion,
+  EstadoInvitacion,
+  InvitacionFechas,
+  AlcanceInvitacion,
+} from './invitacion.ts'
 
 // A quién llama el cliente cuando acaba de pasarle algo. Lee su cabecera antes
 // de tocarlo: sus cuatro prohibiciones (no decir «no tiene», no decir «24 h»,

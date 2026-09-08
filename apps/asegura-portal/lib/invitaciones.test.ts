@@ -75,6 +75,8 @@ function aplanar(s: string): string {
 function correoCompleto() {
   return cuerpoInvitacion({
     invitante: 'José Pérez Muñoz',
+    invitado: 'Ana López Ruiz',
+    abreAcceso: true,
     mensaje: 'Hola Ana, te dejo ver mis seguros por si te hace falta algo.',
     enlace: 'https://portal.example.com/invitacion/' + 'a'.repeat(64),
   })
@@ -130,11 +132,14 @@ test('el correo dice que el enlace NO abre sesion por si mismo', () => {
 test('el mensaje de quien invita se ESCAPA en el HTML', () => {
   const c = cuerpoInvitacion({
     invitante: 'José <script>alert(1)</script>',
+    invitado: '<b>Ana</b>',
+    abreAcceso: true,
     mensaje: '<img src=x onerror="alert(1)">',
     enlace: 'https://portal.example.com/invitacion/' + 'b'.repeat(64),
   })
   assert.ok(!c.html.includes('<script>'), 'el nombre va escapado')
   assert.ok(!c.html.includes('<img src=x'), 'el mensaje lo escribe una persona: va escapado')
+  assert.ok(!c.html.includes('<b>Ana'), 'el nombre del invitado también lo escribe una persona: va escapado')
   assert.ok(c.html.includes('&lt;'), 'el escapado tiene que haber hecho algo')
 })
 
@@ -142,21 +147,102 @@ test('el asunto no admite un salto de linea: una cabecera es una cabecera', () =
   // Un `\r\n` dentro del asunto parte el mensaje y deja añadir un `Bcc:`.
   const c = cuerpoInvitacion({
     invitante: 'José\r\nBcc: alguien@example.com',
+    invitado: 'Ana\r\nBcc: otro@example.com',
+    abreAcceso: true,
     mensaje: null,
     enlace: 'https://portal.example.com/invitacion/' + 'c'.repeat(64),
   })
   assert.ok(!/[\r\n]/.test(c.asunto), 'el asunto va en una sola línea')
+  assert.ok(!/Hola, Ana\r?\n/.test(c.texto), 'el saludo con el nombre del invitado va en una sola línea')
 })
 
 test('sin nombre no se inventa uno, y sin mensaje no aparece un bloque vacio', () => {
   const c = cuerpoInvitacion({
     invitante: null,
+    invitado: null,
+    abreAcceso: true,
     mensaje: null,
     enlace: 'https://portal.example.com/invitacion/' + 'd'.repeat(64),
   })
   assert.ok(!c.texto.includes('null') && !c.html.includes('null'), 'un `null` pintado es un hueco, no un dato')
   assert.ok(!c.texto.includes('Te escribe esto'), 'sin mensaje no se pinta el bloque del mensaje')
   assert.ok(c.asunto.length > 10, 'el asunto sigue diciendo algo')
+  assert.ok(c.texto.startsWith('Hola:'), 'sin nombre del invitado, el saludo de siempre: no se inventa uno')
+})
+
+// ─── 1b. «Contactos» (08/09/2026): el nombre SÍ, la relación NUNCA, y «nada» no vende ──
+
+test('el correo saluda al invitado por el nombre que escribio quien invita', () => {
+  const c = correoCompleto()
+  assert.ok(c.texto.startsWith('Hola, Ana López Ruiz:'), 'el saludo lleva el nombre tecleado por José')
+  assert.ok(c.html.includes('Hola, Ana López Ruiz:'), 'también en el HTML')
+})
+
+test('la RELACION no sale hacia el correo por ninguna puerta', () => {
+  // «Su hija», «su empleado» es un dato de la relación entre dos personas, y
+  // quien abre ese buzón puede no ser ninguna de las dos. Está en la lista de
+  // prohibidos del módulo puro, y aquí se comprueban las dos capas por las que
+  // podría colarse: el TIPO del correo y la LLAMADA que lo manda.
+  assert.ok(
+    (CAMPOS_PROHIBIDOS_EN_INVITACION as readonly string[]).includes('relacion'),
+    'la relación tiene que estar en la lista de lo que el correo no puede decir',
+  )
+  assert.ok(
+    !/relacion/i.test(CORREO_CODIGO),
+    'el código del correo no conoce la palabra «relación»: si la conoce, es que alguien la pintó',
+  )
+  const llamada = LIB_CODIGO.match(/enviarInvitacion\(datos\.email,\s*\{[\s\S]*?\}\)/)
+  assert.ok(llamada, 'no se encuentra la llamada que manda el correo')
+  assert.ok(!/relacion/i.test(llamada[0]), 'la relación no se le pasa al correo')
+  assert.ok(/invitado:\s*invitadoNombre/.test(llamada[0]), 'el nombre del invitado sí: es el saludo')
+})
+
+test('sin acceso, el correo dice que NO se comparte nada y no vende nada', () => {
+  const c = cuerpoInvitacion({
+    invitante: 'José Pérez Muñoz',
+    invitado: 'Ana López Ruiz',
+    abreAcceso: false,
+    mensaje: null,
+    enlace: 'https://portal.example.com/invitacion/' + 'f'.repeat(64),
+  })
+  const todo = aplanar(c.asunto + '\n' + c.texto + '\n' + c.html)
+  assert.ok(todo.includes('no se comparte contigo ningun seguro'), 'lo primero que tiene que decir es qué NO pasa')
+  assert.ok(!todo.includes('ver sus seguros'), 'no promete un acceso que no existe')
+  // Es un acto entre dos personas, no una comunicación comercial de la
+  // correduría (art. 21 LSSI): ni ahorro, ni precio, ni oferta, ni regalo.
+  for (const venta of ['ahorr', 'precio', 'oferta', 'descuento', 'regalo', 'promoci', 'gratis para ti']) {
+    assert.ok(!todo.includes(venta), `«${venta}» convierte la presentación en publicidad: fuera`)
+  }
+  assert.ok(todo.includes('no conoces'), 'la salida de quien no esperaba nada sigue ahí')
+  assert.ok(todo.includes('no abre sesion'), 'y la advertencia del enlace también')
+  // Mutación: el mismo filtro caza un texto de venta cuando de verdad está.
+  assert.ok(aplanar(c.texto + ' ¡ahorra con nosotros!').includes('ahorr'), 'el filtro muerde')
+})
+
+test('sin acceso, aceptar sella la invitacion y NO crea autorizacion', () => {
+  // Sin acceso no hay nada que autorizar. Si aceptar creara una
+  // `portal_autorizacion` con alcance `ninguno`, el invitado aparecería en «Te
+  // han dado acceso a» con un permiso vacío y el CHECK de la BD lo rechazaría.
+  const desde = LIB_CODIGO.indexOf('export async function responderInvitacion')
+  const transaccion = LIB_CODIGO.indexOf('$transaction', desde)
+  const rama = LIB_CODIGO.indexOf('if (!invitacionAbreAcceso(alcance))', desde)
+  assert.ok(desde > 0 && transaccion > desde && rama > desde, 'no se encuentra la rama sin acceso de responder')
+  assert.ok(rama < transaccion, 'la rama sin acceso se resuelve ANTES de la transacción que crea la autorización')
+  const bloque = LIB_CODIGO.slice(rama, transaccion)
+  assert.ok(/portalInvitacion\.updateMany/.test(bloque), 'sella la invitación')
+  assert.ok(!/portalAutorizacion/.test(bloque), 'y no toca la tabla de autorizaciones')
+  assert.ok(/autorizacionId:\s*null/.test(bloque), 'devuelve `autorizacionId: null`: no hay costura que enseñar')
+  // Y al crear, sin acceso no se pregunta por autorizaciones vivas (no las hay)
+  // ni se admite una póliza (no hay nada que acotar).
+  assert.ok(/abreAcceso\s*\?\s*await tieneAutorizacionViva/.test(LIB_CODIGO), 'ya_autorizado solo cuando se comparte algo')
+  assert.ok(/!abreAcceso && polizaId !== null/.test(LIB_CODIGO), 'sin compartir, una póliza es `datos_invalidos`')
+})
+
+test('la ruta de crear EXIGE nombre y relacion, y la relacion es el vocabulario de la cartera', () => {
+  const codigo = soloCodigo(RUTA_CREAR)
+  assert.ok(/invitadoNombre:\s*z\.string\(\)\.trim\(\)\.min\(1\)/.test(codigo), 'el nombre es obligatorio')
+  assert.ok(/relacion:\s*z\.enum\(TIPOS_RELACION/.test(codigo), 'la relación valida contra `TIPOS_RELACION`, no contra una copia')
+  assert.ok(/ALCANCES_INVITACION/.test(codigo), 'el alcance es el vocabulario de la INVITACIÓN (que admite «ninguno»)')
 })
 
 // ─── 2. El ENLACE: sin dominio no hay invitación ─────────────────────────────
