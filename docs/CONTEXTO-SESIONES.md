@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📲 El instalador del portal pasa a la CABECERA, junto a «Salir» (08/09/2026).** Alberto, sobre el
+  banner «Tenlo a mano» de esa misma mañana: «yo subiría el instalador arriba al lado de salir, queda más
+  limpio». Ahora es un botón `Instalar` en `.marca-acciones` (instalar → salir → tema, UN solo
+  `margin-left:auto` en el contenedor; fuera la regla `.salir-form + .tema-boton`), gateado por
+  `app/ConSesion.tsx` (verifica el token; `SalirDelPortal` ya no lo hace por su cuenta). Chrome lanza el
+  `prompt`; iOS abre un globo con el gesto (cierra con «Entendido», fuera o Escape). Solo icono por debajo de
+  480 px: medido con Playwright 320-1440, una fila, nada fuera. Sin «Ahora no» ni `localStorage`.
+  Desaparece al instalar (`appinstalled`/`standalone`); en iPhone solo si abren desde el icono. 8 cepos vistos en rojo.
 - **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
   correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
   cifrado): `planBusqueda()` lanza `email` + `nombre`. Medido: **250 fichas con email y sin

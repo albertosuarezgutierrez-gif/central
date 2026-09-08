@@ -15,7 +15,7 @@ const leer = (rel: string) => readFileSync(join(RAIZ, rel), 'utf8')
 const MANIFIESTO = 'app/manifest.ts'
 const SW = 'public/sw.js'
 const ICONO_APP = 'app/icono-app/route.tsx'
-const OFERTA = 'app/(portal)/InstalarApp.tsx'
+const OFERTA = 'app/InstalarApp.tsx'
 
 test('el manifiesto declara lo que Chrome exige para ofrecer instalar', () => {
   assert.ok(existsSync(join(RAIZ, MANIFIESTO)), 'sin manifiesto no hay app instalable')
@@ -104,12 +104,29 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
   )
   // Enseñárselo a quien ya la tiene instalada es la forma tonta de molestar.
   assert.match(fuente, /display-mode: standalone/, 'la oferta ya no comprueba si la app está instalada')
-  const layout = leer('app/(portal)/layout.tsx')
-  assert.match(layout, /<InstalarApp\s*\/>/, 'la oferta no está montada en el portal')
-  // Y ANTES del contenido: detrás de las pólizas, en el móvil se iba fuera de
-  // la primera pantalla y en iPhone es lo único que explica cómo instalar.
-  assert.ok(
-    layout.indexOf('<InstalarApp') < layout.indexOf('{children}'),
-    'la oferta volvió a quedar debajo del contenido: en el móvil no se ve',
+  // Desde el 08/09/2026 es un BOTÓN de la barra de marca, dentro de la puerta
+  // de sesión y ANTES de «Salir» (Alberto: «al lado de salir, más limpio»).
+  // Fuera de `ConSesion` la portada de quien aún no ha entrado ofrecería
+  // instalar; detrás de «Salir» rompe el orden instalar → salir → tema.
+  const layout = leer('app/layout.tsx')
+  assert.match(layout, /<InstalarApp\s*\/>/, 'el botón de instalar no está montado en la barra')
+  assert.match(
+    layout,
+    /<ConSesion>\s*<InstalarApp\s*\/>\s*<SalirDelPortal\s*\/>/,
+    'el botón de instalar tiene que ir dentro de <ConSesion> e inmediatamente antes de <SalirDelPortal />',
   )
+  assert.ok(
+    !/InstalarApp/.test(leer('app/(portal)/layout.tsx').replace(/\{\/\*[\s\S]*?\*\/\}/g, '')),
+    'la oferta volvió al layout del portal: se pintaría dos veces',
+  )
+  // En iPhone el botón no instala: abre un globo con el gesto. Si el globo se
+  // pintara siempre, taparía el contenido; si no se pudiera cerrar, igual.
+  assert.match(fuente, /role="dialog"/, 'el globo de iOS perdió su role="dialog"')
+  assert.match(fuente, /className="instalar-ayuda-cerrar"/, 'el globo de iOS no tiene botón de cerrar')
+  assert.match(fuente, /'Escape'/, 'el globo de iOS no se cierra con Escape')
+  // Y en pantallas estrechas se queda solo el icono: sin `aria-label` el botón
+  // se queda sin nombre justo donde el texto desaparece.
+  assert.match(fuente, /aria-label="(Instalar|Cómo instalar) la aplicación"/, 'el botón de instalar perdió su aria-label')
+  const css = leer('app/globals.css')
+  assert.match(css, /\.instalar-boton-texto\s*\{\s*display:\s*none/, 'a 320 px el texto del botón tiene que esconderse o la barra se sale')
 })

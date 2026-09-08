@@ -1034,7 +1034,8 @@ entra directo — la sesión dura 30 días y `/` ya manda a la bóveda si sigue 
 | `app/icono-app/route.tsx` | El icono de **512 px**. Con menos de 192 Chrome NO ofrece instalar, y no lo dice. El monograma ocupa ~52 % porque Android recorta los `maskable` a la forma del sistema. `force-static` |
 | `lib/monograma.ts` | El dibujo se LEE de `public/brand/marca-asegura.svg`; lo comparten la pestaña (128) y la app instalada (512) |
 | `public/sw.js` + `app/RegistrarSW.tsx` | El service worker que Chrome exige, registrado en el layout raíz |
-| `app/(portal)/InstalarApp.tsx` | La oferta, dentro de la sesión |
+| `app/InstalarApp.tsx` | El botón «Instalar» de la barra de marca, junto a «Salir», dentro de `<ConSesion>` (08/09/2026; antes fue un banner sobre las pólizas). Chrome: lanza el `prompt`. iOS: abre un globo con el gesto. Sin «Ahora no»: quien no quiere no lo pulsa |
+| `app/ConSesion.tsx` | La puerta de sesión de la barra (verifica el token, no mira solo la cookie): sin ella, la portada ofrecería instalar y salir |
 
 🚨 **El service worker NO CACHEA NADA, y eso es la decisión.** Aquí dentro hay pólizas, recibos y
 partes de siniestro de personas identificadas: una respuesta guardada en el almacén del navegador

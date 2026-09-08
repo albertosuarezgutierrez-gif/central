@@ -29,6 +29,7 @@ function sinComentarios(fuente: string): string {
 const RUTA = leer('app', 'api', 'salir', 'route.ts')
 const BOTON = leer('app', 'SalirDelPortal.tsx')
 const LAYOUT = leer('app', 'layout.tsx')
+const PUERTA = leer('app', 'ConSesion.tsx')
 const CSS = leer('app', 'globals.css')
 
 test('🚨 la ruta de salir NO acepta GET', () => {
@@ -66,33 +67,42 @@ test('🚨 la cookie se borra con las MISMAS opciones con las que se puso', () =
   )
 })
 
-test('🚨 el botón sale del layout RAÍZ y va pegado al interruptor', () => {
-  // El `margin-left:auto` de `.salir-form` solo junta los dos botones si el
-  // interruptor es su hermano ADYACENTE. Si alguien mete algo entre medias, la
-  // regla `+` deja de aplicar, el interruptor recupera su propio `auto` y el
-  // hueco se reparte a tres bandas: los dos botones se separan solos.
+test('🚨 el botón sale del layout RAÍZ, agrupado con el interruptor', () => {
+  // Hasta el 08/09/2026 los dos botones se juntaban con `margin-left:auto` en
+  // `.salir-form` y una regla de hermano adyacente; con el botón de instalar
+  // eso se rompía solo. Ahora los tres viven en `.marca-acciones`, que es el
+  // ÚNICO con `auto`: si a un botón le vuelve el suyo, el hueco se reparte y
+  // los botones se separan sin que nada falle.
   assert.ok(/<SalirDelPortal\s*\/>/.test(LAYOUT), 'falta <SalirDelPortal /> en la barra')
   assert.ok(
-    /<SalirDelPortal\s*\/>\s*<InterruptorTema\s*\/>/.test(LAYOUT),
-    'SalirDelPortal tiene que ir INMEDIATAMENTE antes de InterruptorTema (la regla CSS es de hermano adyacente)',
+    /<div className="marca-acciones">[\s\S]*<SalirDelPortal\s*\/>[\s\S]*<InterruptorTema\s*\/>[\s\S]*<\/div>/.test(LAYOUT),
+    'SalirDelPortal e InterruptorTema tienen que ir dentro de .marca-acciones, salir antes que tema',
   )
-  assert.ok(
-    /\.salir-form\s*\+\s*\.tema-boton/.test(CSS),
-    'falta la regla que le quita el margin-left:auto al interruptor cuando está el botón de salir',
-  )
+  const cssSinComentarios = sinComentarios(CSS)
+  const regla = (sel: string) => cssSinComentarios.match(new RegExp(`\\${sel}\\s*\\{[^}]*\\}`))?.[0] ?? ''
+  assert.ok(/margin-left:\s*auto/.test(regla('.marca-acciones')), '.marca-acciones perdió su margin-left:auto')
+  for (const sel of ['.salir-form', '.tema-boton', '.instalar-boton']) {
+    assert.ok(!/margin-left:\s*auto/.test(regla(sel)), `${sel} no puede llevar margin-left:auto: separa los botones`)
+  }
 })
 
 test('🚨 el botón no se pinta sin sesión, y la sesión se VERIFICA', () => {
   // Ver que la cookie existe no es tener sesión: una caducada o manipulada
   // sigue siendo una cookie. Y al revés importa más — un botón pintado siempre
   // ofrecería «Salir» en la portada de quien todavía no ha entrado.
+  // La puerta es `ConSesion` (desde el 08/09/2026, compartida con «Instalar»):
+  // el botón tiene que estar DENTRO de ella, y ella tiene que verificar.
   assert.ok(
-    /verificarSesion/.test(BOTON),
-    'hay que verificar el token, no solo mirar si la cookie está',
+    /<ConSesion>[\s\S]*<SalirDelPortal\s*\/>[\s\S]*<\/ConSesion>/.test(LAYOUT),
+    'SalirDelPortal tiene que ir dentro de <ConSesion>',
   )
   assert.ok(
-    /return null/.test(BOTON),
-    'sin sesión válida el componente devuelve null',
+    /verificarSesion/.test(PUERTA),
+    'ConSesion tiene que verificar el token, no solo mirar si la cookie está',
+  )
+  assert.ok(
+    /return null/.test(PUERTA),
+    'sin sesión válida ConSesion devuelve null',
   )
 })
 
