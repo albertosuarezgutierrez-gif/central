@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-08T06:53:57Z",
-  "sha": "633434c06094ff389519f72f9f314c86354409fe",
+  "generadoEn": "2026-09-08T07:59:42Z",
+  "sha": "7678a6eee21ad1920b9a0b71fae67b41ead2cabf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4072,7 +4072,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7b02e328c665"
+      "hash": "fd4935677f87"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/NavPortal.tsx",
@@ -8611,6 +8611,37 @@
       "hash": "27e942b3fa21"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/backfill-contacto/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "GET /api/operador/backfill-contacto — plan EN SECO del backfill del blind index de email y teléfono (ficha + tablas hijas). No escribe nada. Por qué existe (08/09/2026): el buscador de `/correduria` e"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 48,
+          "resumen": "POST /api/operador/backfill-contacto — ESCRIBE los hashes que no chocan. Idempotente: sólo toca filas con el hash a NULL. Pide `{\"confirmar\":\"escribir\"}` en el cuerpo y admite `{\"limite\":N}` para escr"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/backfill-contacto",
+      "hash": "9a6c5793c558"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/backfill-dni/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -10421,6 +10452,75 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2ed007c4b3a0"
+    },
+    {
+      "ruta": "apps/asegura/lib/backfill-contacto.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Backfill del blind index de CONTACTO (`email_lookup_hash` y `telefono_lookup_hash`) en `clientes`, `cliente_emails` y `cliente_telefonos`. El PORQUÉ y la clasificación están en la pieza pura, `packages/module-seguros/src/backfill-contacto.ts`. Aquí sólo se hace lo que no se puede hacer sin claves ni",
+      "exporta": [
+        "backfillContactoLookupHash"
+      ],
+      "funciones": [
+        {
+          "nombre": "hayClaveDeIndice",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 50,
+          "resumen": "`true` si con la configuración actual se puede calcular un hash."
+        },
+        {
+          "nombre": "hashDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "campo: CampoContacto, valor: string",
+          "retorno": "string | null",
+          "linea": 58
+        },
+        {
+          "nombre": "leer",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "",
+          "linea": 63,
+          "resumen": "Descifra en memoria. Devuelve `{ valor }` o `{ fallo: true }`; nunca el cifrado tal cual."
+        },
+        {
+          "nombre": "aFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: string, origen: FilaContacto['origen'], campo: CampoContacto, cifrado: string | null, hashActual: string | null,",
+          "retorno": "FilaContacto",
+          "linea": 75
+        },
+        {
+          "nombre": "backfillContactoLookupHash",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opciones: { seco: boolean; limite?: number },",
+          "retorno": "Promise<ResultadoBackfillContacto>",
+          "linea": 99,
+          "resumen": "Lee TODAS las filas de la correduría con contacto, calcula el plan y —sólo si `seco === false`— escribe los hashes que se pueden escribir. El plan se calcula siempre sobre la cartera ENTERA: un choque"
+        },
+        {
+          "nombre": "escribirTanda",
+          "kind": "function",
+          "exportada": false,
+          "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, origen: FilaContacto['origen'], campo: CampoContacto, tanda: { id: string; hash: string }[],",
+          "retorno": "Promise<number>",
+          "linea": 188,
+          "resumen": "Un solo `UPDATE` para toda la tanda, contra la tabla y la columna que tocan. `<hash> is null` en el WHERE no es adorno: hace la escritura idempotente y a prueba de carreras. `correduria_id` tampoco: c"
+        }
+      ],
+      "tablas": [
+        "cliente_emails",
+        "cliente_telefonos",
+        "clientes"
+      ],
+      "rutaApi": null,
+      "hash": "af872c635bfd"
     },
     {
       "ruta": "apps/asegura/lib/backfill-dni.ts",
@@ -61219,7 +61319,7 @@
           "nombre": "EscribirIndiceDni",
           "kind": "function",
           "exportada": true,
-          "params": "{ pendientes }: { pendientes: number }",
+          "params": "{ pendientes, endpoint = '/api/correduria/backfill-dni', queSeDescifra = 'el DNI de las 32.000 fichas', }: { pendientes: number /** El mismo botón sirve al índice de contacto (email + teléfono): cambia sólo a dónde pega. */ endpoint?: strin",
           "retorno": null,
           "linea": 31,
           "resumen": "El botón que escribe el índice de búsqueda por DNI (paso 3 del backfill). 🚨 Existe desde el 05/09/2026 porque hasta ese día NO HABÍA NINGUNO. La pantalla calculaba el plan y decía «se lanza desde ase"
@@ -61230,7 +61330,7 @@
           "exportada": false,
           "params": "{ r }: { r: EscrituraBackfillDni }",
           "retorno": null,
-          "linea": 89
+          "linea": 98
         },
         {
           "nombre": "Nota",
@@ -61238,12 +61338,12 @@
           "exportada": false,
           "params": "{ children, alerta }: { children: React.ReactNode; alerta?: boolean }",
           "retorno": null,
-          "linea": 116
+          "linea": 125
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6220fc2aad16"
+      "hash": "ee8db1a37a90"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/page.tsx",
@@ -61267,7 +61367,24 @@
           "exportada": false,
           "params": "{ plan }: { plan: PlanBackfillDni }",
           "retorno": null,
-          "linea": 57
+          "linea": 58
+        },
+        {
+          "nombre": "BlindIndexContacto",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ plan }: { plan: PlanBackfillContacto }",
+          "retorno": null,
+          "linea": 136,
+          "resumen": "El índice de búsqueda por email y teléfono (ficha + tablas hijas). Añadido el 08/09/2026: Alberto buscó un correo en `/correduria` y preguntó si el buscador miraba el email. Lo mira — pero sólo por ha"
+        },
+        {
+          "nombre": "CuentaContacto",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, c }: { titulo: string; c: CuentaBackfillContacto }",
+          "retorno": null,
+          "linea": 187
         },
         {
           "nombre": "Cifra",
@@ -61275,12 +61392,12 @@
           "exportada": false,
           "params": "{ n, rotulo, nota, alerta }: { n: number; rotulo: string; nota: string; alerta?: boolean }",
           "retorno": null,
-          "linea": 129
+          "linea": 204
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4208c09033bb"
+      "hash": "402a1e37f0a6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mantenimiento/pendientes.ts",
@@ -69032,6 +69149,27 @@
       "tablas": [],
       "rutaApi": "/api/contable/feedback",
       "hash": "29333ccf75c2"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/backfill-contacto/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "POST /api/correduria/backfill-contacto — ESCRIBE el índice de búsqueda por email y teléfono que falta (ficha + tablas hijas). Reenvía al puerto de asegura, que es la única con `PII_ENCRYPTION_KEY` y `"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/backfill-contacto",
+      "hash": "09cf21050968"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/backfill-dni/route.ts",
@@ -82463,7 +82601,10 @@
         "planBackfillDni",
         "interpretarPlanBackfill",
         "escribirBackfillDni",
-        "interpretarEscrituraBackfill"
+        "interpretarEscrituraBackfill",
+        "planBackfillContacto",
+        "interpretarPlanBackfillContacto",
+        "escribirBackfillContacto"
       ],
       "funciones": [
         {
@@ -82692,11 +82833,37 @@
           "retorno": "EscrituraBackfillDni",
           "linea": 890,
           "resumen": "Puro: separado para poder probarlo sin red."
+        },
+        {
+          "nombre": "planBackfillContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<PlanBackfillContacto>",
+          "linea": 941
+        },
+        {
+          "nombre": "interpretarPlanBackfillContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "PlanBackfillContacto",
+          "linea": 952,
+          "resumen": "Puro: separado para poder probarlo sin red."
+        },
+        {
+          "nombre": "escribirBackfillContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "limite?: number",
+          "retorno": "Promise<EscrituraBackfillDni>",
+          "linea": 988,
+          "resumen": "Lanza la escritura, por tandas. Misma forma de respuesta que la del DNI."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5505e84a0730"
+      "hash": "805408df81a3"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
@@ -88014,7 +88181,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 40,
+          "linea": 41,
           "resumen": "Quita saltos de línea de lo que se mete dentro del mensaje."
         },
         {
@@ -88023,7 +88190,7 @@
           "exportada": true,
           "params": "telefonos: readonly (string | null | undefined)[]",
           "retorno": "string | null",
-          "linea": 51,
+          "linea": 52,
           "resumen": "El primer teléfono de la ficha que se pueda afirmar que es un móvil, en el orden en que se le pasen (el principal primero). `null` = ninguno lo es, que **no** significa «no tiene teléfono»: significa "
         },
         {
@@ -88032,7 +88199,7 @@
           "exportada": true,
           "params": "d: DatosMensajeWhatsapp",
           "retorno": "string",
-          "linea": 82,
+          "linea": 95,
           "resumen": "por WhatsApp es justo el dato que falta para poder entrar. 🚨 Y nada más que eso. Ni compañía, ni póliza, ni matrícula, ni prima, ni DNI, ni cuántos seguros tiene: el número lo ha tecleado Alberto y p"
         },
         {
@@ -88041,7 +88208,7 @@
           "exportada": true,
           "params": "telefono: string, texto: string",
           "retorno": "string | null",
-          "linea": 101,
+          "linea": 114,
           "resumen": "El `wa.me` con el mensaje ya escrito, o `null` si ese número no es un móvil."
         },
         {
@@ -88050,12 +88217,12 @@
           "exportada": true,
           "params": "{ accion, portal, enlace, telefonos, nombre }: { accion: AccionPortal portal: PortalCartera enlace: string | null telefonos: readonly (string | null | undefined)[] nombre: string | null },",
           "retorno": "CanalWhatsapp",
-          "linea": 129
+          "linea": 142
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5e3468bff7c2"
+      "hash": "e36d12b36862"
     },
     {
       "ruta": "apps/plataforma/lib/leads-asegura.ts",
@@ -120680,8 +120847,7 @@
       "ambito": "packages/module-seguros-portal",
       "resumen": "El saludo de entrada del portal: «Buenas tardes, Alberto». Puro y sin BD. ── Por qué existe (07/09/2026) ───────────────────────────────────────────── Alberto: «me gustaría que al entrar el cliente sea más ameno, no tan frío». La bóveda abría con «Mis seguros» y una tarjeta de vencimientos: correcto",
       "exporta": [
-        "saludoPorHora",
-        "nombreDePila"
+        "saludoPorHora"
       ],
       "funciones": [
         {
@@ -120690,22 +120856,13 @@
           "exportada": true,
           "params": "ahora: Date, zona: string",
           "retorno": "Tramo",
-          "linea": 47,
+          "linea": 39,
           "resumen": "Qué se dice a esta hora. 6-13 mañana · 13-21 tarde · resto noche. Los cortes son los del castellano hablado, no los del reloj: a las 14:00 en España se dice «buenas tardes» aunque el mediodía haya pas"
-        },
-        {
-          "nombre": "nombreDePila",
-          "kind": "function",
-          "exportada": true,
-          "params": "nombre: string | null | undefined",
-          "retorno": "string | null",
-          "linea": 81,
-          "resumen": "· la primera palabra tiene una sola letra (una inicial) o pasa de 20 caracteres (no es un nombre, es otra cosa). 🚨 Un nombre compuesto («José María») se queda en «José». Es una pérdida aceptada: sigu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1bb04dd331fe"
+      "hash": "810fbdcc98bc"
     },
     {
       "ruta": "packages/module-seguros-portal/src/siniestro-historial.ts",
@@ -121104,6 +121261,44 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9ec97befd115"
+    },
+    {
+      "ruta": "packages/module-seguros/src/backfill-contacto.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Backfill del blind index de CONTACTO: `email_lookup_hash` y `telefono_lookup_hash`, en la ficha (`clientes`) y en las tablas hijas (`cliente_emails`, `cliente_telefonos`). EL PROBLEMA (medido 08/09/2026, buscando un email en `/correduria`): el buscador encuentra un email o un teléfono SOLO por su ha",
+      "exporta": [
+        "planBackfillContacto"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuentaVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "CuentaContacto",
+          "linea": 84
+        },
+        {
+          "nombre": "planBackfillContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: FilaContacto[], hashDe: (campo: CampoContacto, valor: string) => string | null,",
+          "retorno": "PlanBackfillContacto",
+          "linea": 97,
+          "resumen": "Clasifica cada fila y calcula el hash de las que se pueden escribir. `hashDe` es la función de blind index del campo (HMAC con `PII_LOOKUP_KEY`), inyectada para que esto sea puro y testeable. Debe dev"
+        },
+        {
+          "nombre": "apuntar",
+          "kind": "function",
+          "exportada": false,
+          "params": "mapa: Map<string, { id: string; preexistente: boolean }[]>, hash: string, id: string, preexistente: boolean,",
+          "retorno": "void",
+          "linea": 160
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a3a048d02f24"
     },
     {
       "ruta": "packages/module-seguros/src/backfill-dni.ts",
@@ -122568,6 +122763,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "cb30a0be23f0"
+    },
+    {
+      "ruta": "packages/module-seguros/src/nombre-de-pila.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "El nombre de pila con el que saludar a un cliente. Puro y sin BD. ── Por qué vive en `module-seguros` y no en el portal (08/09/2026) ───────── Nació en `module-seguros-portal/src/saludo.ts` para el «Buenas tardes, Alberto» de la bóveda. Alberto, sobre el mensaje de WhatsApp de invitación («Hola, Gab",
+      "exporta": [
+        "nombreDePila"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreDePila",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 49,
+          "resumen": "· la primera palabra tiene una sola letra (una inicial) o pasa de 20 caracteres (no es un nombre, es otra cosa). 🚨 Un nombre compuesto («José María») se queda en «José». Es una pérdida aceptada: sigu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "da5c8c67c216"
     },
     {
       "ruta": "packages/module-seguros/src/normas.ts",
@@ -128738,7 +128955,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3179,
-    "funciones": 9690
+    "archivos": 3184,
+    "funciones": 9707
   }
 }

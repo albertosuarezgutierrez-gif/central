@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-08T06:53:57Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-08T07:59:42Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1312 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1314 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 55
+- **Rutas API:** 56
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
@@ -56,7 +56,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (132):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor…
-- **Rutas API:** 352
+- **Rutas API:** 353
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -262,6 +262,9 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (08/09/2026) 🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles
+- (08/09/2026) 📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido
+- (08/09/2026) 📲 El WhatsApp de invitación saluda por el NOMBRE DE PILA
 - (08/09/2026) 📲 Invitar al portal también por WhatsApp
 - (08/09/2026) 📍 El CLIENTE cambia su dirección de contacto, y sugiere
 - (08/09/2026) 📍 La dirección del cliente se corrige DONDE SE LEE
@@ -269,7 +272,4 @@
 - (07/09/2026) 🧊 Y al quitarla, el parte de siniestro NO se borra: se CONGELA
 - (07/09/2026) 🗑️ El cliente ya puede QUITAR de su bóveda las pólizas que subió él
 - (07/09/2026) 🏠 El hogar dice QUÉ CASA es, y la dirección deja de estar escondida
-- (07/09/2026) ✉️ «Error enviar invitación» — el mensaje MENTÍA: no hay proveedor de correo
-- (07/09/2026) 🔤 Una sola letra en los titulares de `asegura-web`
-- (07/09/2026) 📲 El portal del cliente se puede INSTALAR
 
