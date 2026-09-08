@@ -1,11 +1,11 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { IdCard, KeyRound, Mail, MapPin, Pencil, Phone, Star, Users } from 'lucide-react'
+import { IdCard, KeyRound, Mail, MapPin, MessageCircle, Pencil, Phone, Star, Users } from 'lucide-react'
 import { etiquetaRol, leerSitio, textoReparoSitio, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import Bloque from '../../Bloque'
 import ContactosFicha from '../../ContactosFicha'
-import BotonWhatsapp from '../../BotonWhatsapp'
+import BotonWhatsapp, { VERDE_WHATSAPP } from '../../BotonWhatsapp'
 import EditarCliente, { EditarDireccion } from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
 import { Badge, btnStyle } from '@/components/ui'
@@ -18,6 +18,7 @@ import {
   textoMotivoPortal,
   type RespuestaPortal,
 } from '@/lib/portal-cliente-asegura'
+import { canalWhatsapp } from '@/lib/invitacion-whatsapp'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import type { ContactoFicha, Ficha, IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { RelacionCartera } from '@/lib/relaciones-asegura'
@@ -157,7 +158,7 @@ export default function TabContactos({ ficha, personas }: {
           en otra pestaña porque la respuesta depende de lo de arriba: sin correo
           no hay invitación que mandar. */}
       <Bloque titulo="Portal del cliente" Icono={KeyRound}>
-        <Portal clienteId={ficha.id} nombre={ficha.nombre} />
+        <Portal clienteId={ficha.id} nombre={ficha.nombre} telefonos={telefonosDe(ficha)} />
       </Bloque>
 
       {/* UNA lista: quién sale en sus pólizas y quién tiene vínculo declarado. */}
@@ -210,6 +211,21 @@ function espejoDe(c: ContactoFicha, contactos: ContactosCliente | null): { tipo:
     c.telefono && { tipo: 'telefono' as const, valor: c.telefono },
     c.email && { tipo: 'email' as const, valor: c.email },
   ].filter((x): x is { tipo: 'telefono' | 'email'; valor: string } => Boolean(x))
+}
+
+/**
+ * Los teléfonos de la ficha para el canal de WhatsApp, **el principal primero**.
+ *
+ * El orden importa: `movilParaInvitar` coge el primero que sea un móvil, así que
+ * si el principal lo es, gana él. Los ilegibles se caen (`valor` es `null`) y el
+ * espejo de `contacto` va al final por si la lista no se pudo leer — que NO es
+ * «no tiene teléfonos». Quién es móvil y quién no se decide en `telefono-wa.ts`,
+ * no aquí.
+ */
+function telefonosDe(ficha: Ficha): (string | null)[] {
+  const lista = ficha.contactos?.telefonos ?? []
+  const ordenados = [...lista].sort((a, b) => Number(b.principal) - Number(a.principal))
+  return [...ordenados.map((c) => c.valor), ficha.contacto.telefono]
 }
 
 /** Dónde vive. La calle va cifrada en la BD: «no se puede leer» ≠ «no consta». */
@@ -297,11 +313,22 @@ function Direccion({ clienteId, c }: { clienteId: string; c: ContactoFicha }) {
  * preguntando, sin alarma ni botón. Pintar «no se ha podido comprobar» durante
  * la carga sería inventar una avería una vez por visita.
  */
-function Portal({ clienteId, nombre }: { clienteId: string; nombre: string }) {
+function Portal({ clienteId, nombre, telefonos }: {
+  clienteId: string
+  nombre: string
+  /** Los teléfonos de la ficha, el principal primero. Para el canal de WhatsApp. */
+  telefonos: (string | null)[]
+}) {
   const [datos, setDatos] = useState<RespuestaPortal | null>(null)
   const [cargando, setCargando] = useState(true)
   const [enviando, setEnviando] = useState(false)
   const [aviso, setAviso] = useState<{ texto: string; ok: boolean } | null>(null)
+  /**
+   * Separado de `aviso` a propósito: aquel es el desenlace de un envío del
+   * SERVIDOR (salió o no salió), y este solo dice que se ha abierto WhatsApp.
+   * Colapsarlos pintaría un ✅ verde sobre algo que nadie ha enviado todavía.
+   */
+  const [avisoWa, setAvisoWa] = useState<string | null>(null)
 
   const consultar = useCallback(async () => {
     setCargando(true)
@@ -380,6 +407,16 @@ function Portal({ clienteId, nombre }: { clienteId: string; nombre: string }) {
   }
 
   const frase = explicarPortal(datos.portal)
+  // El segundo canal. Decide un módulo puro y con cepo: la regla clave es que
+  // NO puede rodear los frenos del correo (si no se le puede invitar, tampoco
+  // por WhatsApp) y que no se nombra un correo que asegura no haya confirmado.
+  const wa = canalWhatsapp({
+    accion: frase.accion,
+    portal: datos.portal,
+    enlace: datos.enlace,
+    telefonos,
+    nombre,
+  })
   return (
     <div style={marco}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
@@ -418,7 +455,64 @@ function Portal({ clienteId, nombre }: { clienteId: string; nombre: string }) {
                 ? `✉️ Invitar a ${nombre} al portal`
                 : `✉️ Reenviarle el enlace a ${nombre}`}
           </button>
+
+          {/* 🚨 Es un ENLACE, no un botón, y su rótulo dice «abrir» y no
+              «enviar»: sin WhatsApp Business API lo único que existe es
+              `wa.me`, que deja el mensaje escrito y espera a que Alberto le dé
+              a enviar. Un rótulo que dijera «enviar por WhatsApp» prometería un
+              envío que esta app no hace y del que además no puede saber nada. */}
+          {wa.estado === 'listo' && (
+            <a
+              href={wa.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setAvisoWa(
+                `📲 WhatsApp abierto con el mensaje escrito para ${nombre} (${wa.telefono}). ` +
+                'Aquí NO consta como enviado: eso pasa cuando le des a enviar tú, en WhatsApp.',
+              )}
+              title={`Abre WhatsApp con el mensaje ya escrito para ${wa.telefono}. Lo envías tú.`}
+              style={{
+                ...btnStyle('secundario'),
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                whiteSpace: 'normal', textAlign: 'left', minHeight: 44,
+                color: VERDE_WHATSAPP, textDecoration: 'none',
+              }}
+            >
+              <MessageCircle size={16} strokeWidth={2} aria-hidden />
+              {frase.accion === 'invitar'
+                ? `Abrir WhatsApp para invitar a ${nombre}`
+                : `Abrir WhatsApp para reenviarle el enlace`}
+            </a>
+          )}
         </div>
+      )}
+
+      {/* Por qué NO hay botón de WhatsApp, cuando el de correo sí está. Es un
+          hueco que se explica, no un icono que falta: cada motivo se arregla en
+          un sitio distinto (ponerle el móvil · resolver el duplicado del correo
+          · mirar una variable de Vercel). `no_procede` no dice nada: ahí el
+          bloque de arriba ya explica que a este cliente no se le invita todavía. */}
+      {wa.estado !== 'listo' && wa.estado !== 'no_procede' && (
+        <p style={{ ...sutil, maxWidth: '72ch' }}>{wa.nota}</p>
+      )}
+
+      {/* Lo que el WhatsApp le va a decir, ANTES de abrirlo. Plegado: son seis
+          líneas que no se leen trescientas veces, pero el mensaje nombra su
+          correo y ese dato conviene poder mirarlo antes de mandarlo a un número
+          que ha tecleado una persona. */}
+      {wa.estado === 'listo' && (
+        <details>
+          <summary style={{ ...sutil, cursor: 'pointer' }}>Ver el mensaje que se le abre en WhatsApp</summary>
+          <pre style={{
+            ...sutil, marginTop: 6, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
+            fontFamily: 'inherit', background: 'var(--bg)', padding: 8, borderRadius: 8, border: '1px solid var(--border)',
+          }}>{wa.texto}</pre>
+        </details>
+      )}
+
+      {avisoWa && (
+        // Ni verde ni rojo: no es un desenlace, es que se ha abierto una ventana.
+        <div role="status" style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{avisoWa}</div>
       )}
 
       {/* El desenlace, pegado al botón que lo produjo. El texto sale de
