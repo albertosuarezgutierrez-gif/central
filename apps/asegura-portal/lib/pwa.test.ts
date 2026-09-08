@@ -16,6 +16,8 @@ const MANIFIESTO = 'app/manifest.ts'
 const SW = 'public/sw.js'
 const ICONO_APP = 'app/icono-app/route.tsx'
 const OFERTA = 'app/(portal)/InstalarApp.tsx'
+/** El almacén compartido: quién escucha el evento de Chrome y quién detecta iOS (desde el 08/09/2026). */
+const INSTALACION = 'app/instalacion.tsx'
 
 test('el manifiesto declara lo que Chrome exige para ofrecer instalar', () => {
   assert.ok(existsSync(join(RAIZ, MANIFIESTO)), 'sin manifiesto no hay app instalable')
@@ -75,6 +77,7 @@ test('el service worker se registra de verdad', () => {
 })
 
 test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
+  const almacen = leer(INSTALACION)
   const fuente = leer(OFERTA)
   // Safari no implementa `beforeinstallprompt`. Si esto solo escuchara el
   // evento, en iOS no se vería NADA —ni error ni banner—, y ahí está la mitad
@@ -83,13 +86,21 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
   // en el comentario de arriba, y un cepo que se conforma con eso pasa aunque
   // nadie escuche nada.
   assert.match(
-    fuente,
+    almacen,
     /addEventListener\('beforeinstallprompt'/,
-    'la oferta dejó de escuchar el evento de Chrome',
+    'el almacén de instalación dejó de escuchar el evento de Chrome',
   )
-  assert.match(fuente, /iphone\|ipad\|ipod/i, 'la oferta dejó de detectar iOS: ahí no se vería nada')
+  assert.match(almacen, /iphone\|ipad\|ipod/i, 'el almacén dejó de detectar iOS: ahí no se vería nada')
+  // La franja y la campana leen el MISMO almacén: dos listeners del mismo
+  // evento es cómo el segundo `prompt()` rechaza sin que nadie lo pinte.
+  assert.match(fuente, /useInstalacion\(\)/, 'la franja ya no lee el almacén compartido de instalación')
+  assert.match(leer('app/Campana.tsx'), /useInstalacion\(\)/, 'la campana ya no lee el almacén compartido de instalación')
+  assert.ok(
+    !/addEventListener\('beforeinstallprompt'/.test(fuente),
+    'la franja volvió a escuchar el evento por su cuenta: con dos listeners el segundo prompt() rechaza en silencio',
+  )
   assert.match(
-    fuente,
+    almacen,
     // En un literal de cadena, no en el comentario que lo explica.
     // Dentro del `<strong>` del JSX, no en el comentario que lo explica: el
     // nombre del gesto aparece también ahí arriba, y un cepo que se conforma
@@ -98,12 +109,16 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
     'se perdieron las instrucciones de iOS: sin ellas, en iPhone la oferta no explica cómo instalar',
   )
   assert.match(
-    fuente,
+    almacen,
     /<IconoCompartir \/>/,
     'se perdió el dibujo del botón Compartir: en iPhone el aviso solo puede explicar el gesto',
   )
+  // Y la franja enseña esas instrucciones (no un texto propio que se desvíe).
+  assert.match(fuente, /<InstruccionesIOS \/>/, 'la franja dejó de enseñar las instrucciones de iOS')
   // Enseñárselo a quien ya la tiene instalada es la forma tonta de molestar.
-  assert.match(fuente, /display-mode: standalone/, 'la oferta ya no comprueba si la app está instalada')
+  // La consulta de verdad, no la frase: la cabecera del almacén la nombra para
+  // explicarla, y con solo la palabra el cepo pasaba con la comprobación borrada.
+  assert.match(almacen, /matchMedia\('\(display-mode: standalone\)'\)/, 'el almacén ya no comprueba si la app está instalada')
   const layout = leer('app/(portal)/layout.tsx')
   assert.match(layout, /<InstalarApp\s*\/>/, 'la oferta no está montada en el portal')
   // Y ANTES del contenido: detrás de las pólizas, en el móvil se iba fuera de

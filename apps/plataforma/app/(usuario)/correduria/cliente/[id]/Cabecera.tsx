@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, urlVidaNuevo, urlSaludNuevo, urlDecesosNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
-import { PageHeader, BtnLink } from '@/components/ui'
+import { PageHeader, BtnLink, btnStyle } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
 import { fmt } from './piezas'
 
@@ -185,36 +185,73 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 // Lo que se puede HACER desde la ficha, además de mirar. Subir un documento es
 // gratis (el agente lo lee; el precio se pide aparte) y vive en asegura porque
 // comparte pantalla con la cotización que sale de lo leído.
+//
+// 🚨 DOS botones, no ocho (08/09/2026). Hasta hoy la cabecera pintaba siete
+// botones del mismo peso —«Subir póliza» y seis «Presupuestar <ramo>
+// + oportunidad nueva»— más dos avisos sueltos en gris, en tres filas que
+// empujaban los titulares (recibos devueltos, siniestros abiertos) fuera de la
+// primera pantalla. Alberto: «esto es una guarrería, tantos botones». Los seis
+// ramos son UNA acción («presupuestar») con un parámetro, así que van en un
+// menú; y los avisos van pegados a lo que avisan (el `title` del botón y una
+// nota al pie del menú), no flotando entre botones.
+//
+// El menú es un `<details>` nativo, como los filtros de `ListaCartera`: abre y
+// cierra sin JS, así que la cabecera sigue siendo Server Component. Ninguno de
+// estos enlaces tarifica: llevan a un formulario (regla 20 de `correduria-crm`).
+//
+// El menú va PRIMERO a propósito: su desplegable se ancla a la izquierda del
+// botón, y medido a 360px con Playwright, en segunda posición se salía de la
+// pantalla por la derecha (right=427 > 360). En primera cabe hasta en 320.
+
+/** Los ramos que se pueden presupuestar desde la ficha, en el orden del menú. */
+const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => string; sinVerificar?: boolean }[] = [
+  { etiqueta: '🚗 Auto', url: urlAutoNuevo },
+  { etiqueta: '🏠 Hogar', url: urlHogarNuevo },
+  { etiqueta: '🏍️ Moto', url: urlMotoNuevo },
+  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo, sinVerificar: true },
+  { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
+  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo, sinVerificar: true },
+]
+
+const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para vida, salud y decesos no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
 
 function Acciones({ clienteId }: { clienteId: string }) {
   return (
-    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', fontSize: 13 }}>
-      <BtnLink href={urlSubirPoliza()} variante="secundario" nuevaPestana>
-        📄 Subir póliza o documento ↗
-      </BtnLink>
-      <span style={{ color: 'var(--muted)' }} title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. El fichero NO se guarda todavía: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro.">
-        el agente la lee y enseña lo que ha encontrado · hoy solo auto · el fichero no se guarda aún
-      </span>
-      <BtnLink href={urlAutoNuevo(clienteId)} variante="secundario">
-        🚗 Presupuestar auto (oportunidad nueva)
-      </BtnLink>
-      <BtnLink href={urlHogarNuevo(clienteId)} variante="secundario">
-        🏠 Presupuestar hogar (oportunidad nueva)
-      </BtnLink>
-      <BtnLink href={urlMotoNuevo(clienteId)} variante="secundario">
-        🏍️ Presupuestar moto (oportunidad nueva)
-      </BtnLink>
-      <BtnLink href={urlVidaNuevo(clienteId)} variante="secundario">
-        ❤️‍🩹 Presupuestar vida (oportunidad nueva)
-      </BtnLink>
-      <BtnLink href={urlSaludNuevo(clienteId)} variante="secundario">
-        🩺 Presupuestar salud (oportunidad nueva)
-      </BtnLink>
-      <BtnLink href={urlDecesosNuevo(clienteId)} variante="secundario">
-        🕊️ Presupuestar decesos (oportunidad nueva)
-      </BtnLink>
-      <span style={{ color: 'var(--muted)' }} title="El contrato de Codeoscopic para estos tres ramos no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.">
-        🚧 vida/salud/decesos: esquema sin verificar
+    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+      <details style={{ position: 'relative' }}>
+        <summary style={{ ...btnStyle('primario', 'sm'), listStyle: 'none', userSelect: 'none' }}>
+          ➕ Presupuestar ▾
+        </summary>
+        <div
+          role="menu"
+          style={{
+            position: 'absolute', zIndex: 30, top: '100%', left: 0, marginTop: 6,
+            width: 240, maxWidth: '86vw',
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: 10, padding: 6, boxShadow: 'var(--shadow)',
+          }}
+        >
+          {RAMOS_PRESUPUESTO.map(r => (
+            <Link
+              key={r.etiqueta}
+              role="menuitem"
+              href={r.url(clienteId)}
+              title={r.sinVerificar ? AVISO_SIN_VERIFICAR : `Oportunidad nueva de ${r.etiqueta.replace(/^\S+\s/, '').toLowerCase()} para este cliente`}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 10px', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}
+            >
+              {r.etiqueta}
+              {r.sinVerificar && <span aria-label="esquema sin verificar" style={{ marginLeft: 'auto', fontSize: 12 }}>🚧</span>}
+            </Link>
+          ))}
+          <p style={{ margin: '6px 4px 2px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }} title={AVISO_SIN_VERIFICAR}>
+            🚧 = esquema sin verificar
+          </p>
+        </div>
+      </details>
+      <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro.">
+        <BtnLink href={urlSubirPoliza()} variante="secundario" tam="sm" nuevaPestana>
+          📄 Subir póliza ↗
+        </BtnLink>
       </span>
     </div>
   )

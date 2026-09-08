@@ -51,6 +51,8 @@ import {
 import {
   computeDniLookupHash,
   computeEmailLookupHash,
+  computeEmailDominioLookupHash,
+  computeEmailUsuarioLookupHash,
   computeTelefonoLookupHash,
   decryptField,
   encryptField,
@@ -94,10 +96,22 @@ function fallo(e: unknown): Fallo {
  * producción: eso se convierte en un 500 con su mensaje, nunca en escribir el
  * dato en claro o sin índice.
  */
-function cifrado(tipo: TipoContacto | 'dni', valor: string): { cifrado: string; hash: string | null } {
+function cifrado(tipo: TipoContacto | 'dni', valor: string): { cifrado: string; hash: string | null; mitades: Mitades } {
   const hash =
     tipo === 'telefono' ? computeTelefonoLookupHash(valor) : tipo === 'email' ? computeEmailLookupHash(valor) : computeDniLookupHash(valor)
-  return { cifrado: encryptField(valor), hash }
+  return { cifrado: encryptField(valor), hash, mitades: tipo === 'email' ? mitadesEmail(valor) : SIN_MITADES }
+}
+
+/**
+ * Los índices de las MITADES de un email (dominio y usuario), para la búsqueda
+ * parcial («@gmail.com», «alberto.suarez@»). Van SIEMPRE junto al hash del
+ * email entero: un email escrito sin sus mitades es invisible a esa búsqueda
+ * hasta que pase el backfill, y desde el código el hueco no se ve.
+ */
+type Mitades = { emailDominioHash: string | null; emailUsuarioHash: string | null }
+const SIN_MITADES: Mitades = { emailDominioHash: null, emailUsuarioHash: null }
+function mitadesEmail(valor: string): Mitades {
+  return { emailDominioHash: computeEmailDominioLookupHash(valor), emailUsuarioHash: computeEmailUsuarioLookupHash(valor) }
 }
 
 async function clienteDe(correduriaId: string, clienteId: string) {
@@ -232,7 +246,7 @@ async function bajarColumnaAHija(correduriaId: string, clienteId: string, tipo: 
   const db = prismaAsegura()
   const c = await db.cliente.findFirst({
     where: { id: clienteId, correduriaId },
-    select: { telefono: true, email: true, telefonoLookupHash: true, emailLookupHash: true, _count: { select: { telefonos: true, emails: true } } },
+    select: { telefono: true, email: true, telefonoLookupHash: true, emailLookupHash: true, emailDominioHash: true, emailUsuarioHash: true, _count: { select: { telefonos: true, emails: true } } },
   })
   if (!c) return
   if (tipo === 'telefono' && c._count.telefonos === 0 && c.telefono) {
@@ -242,7 +256,7 @@ async function bajarColumnaAHija(correduriaId: string, clienteId: string, tipo: 
   }
   if (tipo === 'email' && c._count.emails === 0 && c.email) {
     await db.clienteEmail.create({
-      data: { clienteId, correduriaId, email: c.email, emailLookupHash: c.emailLookupHash, esPrincipal: true },
+      data: { clienteId, correduriaId, email: c.email, emailLookupHash: c.emailLookupHash, emailDominioHash: c.emailDominioHash, emailUsuarioHash: c.emailUsuarioHash, esPrincipal: true },
     })
   }
 }
@@ -260,7 +274,7 @@ async function espejarPrincipal(correduriaId: string, clienteId: string, tipo: T
     const p = await db.clienteEmail.findFirst({ where: { clienteId, correduriaId, esPrincipal: true } })
     await db.cliente.updateMany({
       where: { id: clienteId, correduriaId },
-      data: { email: p?.email ?? null, emailLookupHash: p?.emailLookupHash ?? null, updatedAt: new Date() },
+      data: { email: p?.email ?? null, emailLookupHash: p?.emailLookupHash ?? null, emailDominioHash: p?.emailDominioHash ?? null, emailUsuarioHash: p?.emailUsuarioHash ?? null, updatedAt: new Date() },
     })
   }
 }
@@ -320,7 +334,7 @@ export async function anadirContacto(
     if (dup) return dup
     await bajarColumnaAHija(correduriaId, clienteId, tipo)
     const db = prismaAsegura()
-    const { cifrado: valorCifrado, hash } = cifrado(tipo, norm.valor)
+    const { cifrado: valorCifrado, hash, mitades } = cifrado(tipo, norm.valor)
     const etiqueta = etiquetaContacto(tipo, entrada.etiqueta)
     const hayPrincipal =
       tipo === 'telefono'
@@ -334,7 +348,7 @@ export async function anadirContacto(
     const fila =
       tipo === 'telefono'
         ? await db.clienteTelefono.create({ data: { clienteId, correduriaId, telefono: valorCifrado, telefonoLookupHash: hash, etiqueta, esPrincipal: principal } })
-        : await db.clienteEmail.create({ data: { clienteId, correduriaId, email: valorCifrado, emailLookupHash: hash, etiqueta, esPrincipal: principal } })
+        : await db.clienteEmail.create({ data: { clienteId, correduriaId, email: valorCifrado, emailLookupHash: hash, ...mitades, etiqueta, esPrincipal: principal } })
     if (principal) await espejarPrincipal(correduriaId, clienteId, tipo)
     await anotarHistorial(correduriaId, clienteId, 'contacto', `${tipo === 'telefono' ? 'Teléfono' : 'Email'} añadido${etiqueta ? ` (${etiqueta})` : ''}${principal ? ', principal' : ''} desde plataforma por ${entrada.actor}`)
     const contactos = (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] }
@@ -406,6 +420,8 @@ export async function cambiarContacto(
       telefonoLookupHash?: string | null
       email?: string
       emailLookupHash?: string | null
+      emailDominioHash?: string | null
+      emailUsuarioHash?: string | null
     } = {}
 
     // Cambiar el valor de la fila principal se juzga como principal: acabará en
@@ -422,13 +438,15 @@ export async function cambiarContacto(
       if (norm.valor !== actual) {
         const dup = await duplicadoContacto(correduriaId, clienteId, tipo, norm.valor, seraPrincipal, entrada.forzar === true)
         if (dup) return dup
-        const { cifrado: valorCifrado, hash } = cifrado(tipo, norm.valor)
+        const { cifrado: valorCifrado, hash, mitades } = cifrado(tipo, norm.valor)
         if (tipo === 'telefono') {
           data.telefono = valorCifrado
           data.telefonoLookupHash = hash
         } else {
           data.email = valorCifrado
           data.emailLookupHash = hash
+          data.emailDominioHash = mitades.emailDominioHash
+          data.emailUsuarioHash = mitades.emailUsuarioHash
         }
         valorCambiado = true
       }
@@ -491,7 +509,7 @@ export async function borrarContacto(
       const tipo: TipoContacto = entrada.id === 'col:telefono' ? 'telefono' : 'email'
       await db.cliente.updateMany({
         where: { id: clienteId, correduriaId },
-        data: tipo === 'telefono' ? { telefono: null, telefonoLookupHash: null } : { email: null, emailLookupHash: null },
+        data: tipo === 'telefono' ? { telefono: null, telefonoLookupHash: null } : { email: null, emailLookupHash: null, emailDominioHash: null, emailUsuarioHash: null },
       })
       await anotarHistorial(correduriaId, clienteId, 'contacto', `${tipo === 'telefono' ? 'Teléfono' : 'Email'} borrado desde plataforma por ${entrada.actor}`)
       return { ok: true, contacto: null, contactos: (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] } }
@@ -809,6 +827,8 @@ export async function altaCliente(
           telefonoLookupHash: tel && !telEnOtra ? tel.hash : null,
           email: mail && !mailEnOtra ? mail.cifrado : null,
           emailLookupHash: mail && !mailEnOtra ? mail.hash : null,
+          emailDominioHash: mail && !mailEnOtra ? mail.mitades.emailDominioHash : null,
+          emailUsuarioHash: mail && !mailEnOtra ? mail.mitades.emailUsuarioHash : null,
           direccion: a.direccion ? encryptField(a.direccion) : null,
           codigoPostal: a.codigoPostal,
           ciudad: a.ciudad,
@@ -825,7 +845,7 @@ export async function altaCliente(
       }
       if (mail) {
         await tx.clienteEmail.create({
-          data: { clienteId: creado.id, correduriaId, email: mail.cifrado, emailLookupHash: mail.hash, etiqueta: 'personal', esPrincipal: true },
+          data: { clienteId: creado.id, correduriaId, email: mail.cifrado, emailLookupHash: mail.hash, ...mail.mitades, etiqueta: 'personal', esPrincipal: true },
         })
       }
       const tipoHist: TipoHistorial = tipoHistorialAlta(a.fuente)

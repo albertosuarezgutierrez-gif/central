@@ -91,6 +91,20 @@ export type DatosCorreoInvitacion = {
    * lo que es, sin fingir que conoce a nadie.
    */
   invitante: string | null
+  /**
+   * Cómo llama José al invitado, para el saludo. `null` = no lo escribió (las
+   * invitaciones anteriores al 08/09/2026). 🚨 Lo que NO hay aquí es la
+   * RELACIÓN, y no es un campo pendiente: es un dato de la relación entre dos
+   * personas y quien abre el buzón puede no ser ninguna de las dos
+   * (`CAMPOS_PROHIBIDOS_EN_INVITACION`).
+   */
+  invitado: string | null
+  /**
+   * `false` = «solo te presento el portal» (`SIN_COMPARTIR`): el correo no dice
+   * que se comparta ningún seguro, porque no se comparte. Y tampoco vende nada:
+   * es un acto entre dos personas, no una comunicación comercial (art. 21 LSSI).
+   */
+  abreAcceso: boolean
   /** Lo que escribió quien invita, ya recortado por el módulo puro. */
   mensaje: string | null
   enlace: string
@@ -115,12 +129,21 @@ export function cuerpoInvitacion(d: DatosCorreoInvitacion): CuerpoCorreo {
   // que es lo que de verdad protege (sin su aceptación no se comparte nada).
   const contacto = process.env.PORTAL_MAIL_REPLY_TO?.trim() || null
 
-  const asunto = `${quien} te invita a ver sus seguros`
+  // El saludo lleva el nombre que escribió quien invita, escapado y en una
+  // línea. Sin nombre, el «Hola:» de siempre: no se inventa uno.
+  const saludo = d.invitado !== null && unaLinea(d.invitado) !== '' ? `Hola, ${unaLinea(d.invitado)}:` : 'Hola:'
+
+  const asunto = d.abreAcceso
+    ? `${quien} te invita a ver sus seguros`
+    : `${quien} te invita a Mis Seguros, el portal de Grupo ASegura`
 
   const lineas = [
-    'Hola:',
+    saludo,
     '',
-    `${quien} te ha invitado a consultar sus seguros en Mis Seguros, el portal de Grupo ASegura.`,
+    d.abreAcceso
+      ? `${quien} te ha invitado a consultar sus seguros en Mis Seguros, el portal de Grupo ASegura.`
+      : `${quien} te ha invitado a Mis Seguros, el portal gratuito de Grupo ASegura. ` +
+        'No se comparte contigo ningún seguro suyo: tendrás tu propio espacio para tener a mano los tuyos.',
   ]
   // El texto de otra persona va entrecomillado y en su propio bloque: que se
   // vea que lo escribió quien invita y no nosotros.
@@ -142,9 +165,13 @@ export function cuerpoInvitacion(d: DatosCorreoInvitacion): CuerpoCorreo {
 
   const html =
     `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:480px;line-height:1.5">` +
-    `<p>Hola:</p>` +
-    `<p><strong>${esc(quien)}</strong> te ha invitado a consultar sus seguros en ` +
-    `<strong>Mis Seguros</strong>, el portal de Grupo ASegura.</p>` +
+    `<p>${esc(saludo)}</p>` +
+    (d.abreAcceso
+      ? `<p><strong>${esc(quien)}</strong> te ha invitado a consultar sus seguros en ` +
+        `<strong>Mis Seguros</strong>, el portal de Grupo ASegura.</p>`
+      : `<p><strong>${esc(quien)}</strong> te ha invitado a <strong>Mis Seguros</strong>, el portal ` +
+        `gratuito de Grupo ASegura. No se comparte contigo ningún seguro suyo: tendrás tu propio ` +
+        `espacio para tener a mano los tuyos.</p>`) +
     (d.mensaje !== null
       ? `<blockquote style="margin:16px 0;padding:8px 12px;border-left:3px solid #ddd;color:#444">` +
         `${esc(d.mensaje)}</blockquote>`

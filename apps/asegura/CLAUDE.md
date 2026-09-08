@@ -818,6 +818,8 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
 | **DNI** | **índice ciego, EXACTO** | **3.904 = 12%** |
 | teléfono | índice ciego, exacto | 5.377 = 16% |
 | email | índice ciego, exacto | 4.308 = 13% |
+| **email: dominio** («@gmail.com») | índice ciego propio del DOMINIO, exacto sobre esa mitad | **desde el 08/09/2026**; lo rellena el backfill de contacto |
+| **email: usuario** («alberto.suarez@») | índice ciego propio del USUARIO, exacto sobre esa mitad | ídem |
 | **dirección (calle)** | CIFRADA (`v1:`) → **se DESCIFRA EN MEMORIA** y se compara sin acentos/signos | 170 pólizas; sin clave = «ilegibles», y se dice |
 | localidad / CP **del riesgo** | en claro en `datos_especificos` (`localidad`, `cp`), SQL sobre el JSON | 179 / 328 pólizas (**desde el 02/09/2026**) |
 
@@ -936,6 +938,20 @@ toda `clientes`, así que dos fichas con el mismo correo chocan y no se escriben
 email); teléfono e hijas no tienen índice único y se escriben enteras. Sin `PII_LOOKUP_KEY` contesta 503
 con motivo, no «todo indexado». Botón en `/correduria/mantenimiento` (mismo `EscribirIndiceDni.tsx` con
 otro `endpoint`).
+✂️ **Búsqueda PARCIAL por email desde el 08/09/2026 (mismo día, segundo PR): las MITADES.** Alberto:
+«tiene que ser de cualquier campo». Un LIKE sobre un valor cifrado no existe, así que se añaden **dos
+índices ciegos más por email**, `email_dominio_hash` y `email_usuario_hash` (en `clientes` y en
+`cliente_emails`, migración `seguros_email_mitades_hash`, SIN índice único: un dominio lo comparten
+miles). `computeEmailDominioLookupHash`/`computeEmailUsuarioLookupHash` de `module-seguros-pii` llevan
+prefijo `dom:`/`usr:` dentro del HMAC para que «gmail.com» como usuario y como dominio no casen entre sí
+ni con el email entero (cepo en `blind-index.test.ts`). `planBusqueda()` lanza `email_dominio` con
+«@gmail.com» (o «gmail.com», TLD conocido) y `email_usuario` con «alberto.suarez@» (o «alberto.suarez»:
+sin @ hace falta punto/barra baja/más, «alberto» a secas sigue siendo un nombre); **un email entero NO
+dispara el dominio** (buscar a uno no lista a todo gmail). Toda escritura de email en `cartera-edicion.ts`
+pasa por `cifrado()` y deja las tres claves; el corpus viejo (todas a NULL) lo rellena el mismo backfill
+de contacto (`derivadosEscritos`/`derivadosRestantes`, también en las fichas que chocan por email entero).
+**Lo que sigue sin poderse: «suarez» a secas dentro de un email.** Eso pediría descifrar 4.500 correos
+por búsqueda, y no se hace.
 📸 **Desde el 04/09/2026 el plan deja FOTO en `seguros.backfill_dni_plan`** (una fila, se sobreescribe
 en cada GET/POST; `resumen` + `choques` como listas de uuid, sin DNI ni hash ni nombre —
 `2026-09-04_backfill_dni_plan.sql`). Es el puente entre el paso 1 y el 2: los grupos de mismo DNI solo

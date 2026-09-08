@@ -67,6 +67,14 @@ contador al padre** (`onContador?: (n: number|null) => void`, llamado en el `.th
 `useRef`): una pestaña esconde, y el badge es lo único que impide que esconda TRABAJO. Tres desenlaces
 y ninguno es 0 — `{n}` · `n+` (alguna cola ilegible) · `!` (ninguna legible).
 
+**Las acciones de la ficha de cliente son DOS botones, no una fila por ramo (08/09/2026).** La
+cabecera de `/correduria/cliente/[id]` (`Cabecera.tsx`, `RAMOS_PRESUPUESTO`) lleva «➕ Presupuestar ▾»
+(menú `<details>` nativo con los seis ramos; 🚧 en los de esquema sin verificar) y «📄 Subir póliza»
+con su aviso en el `title`. Un ramo nuevo se AÑADE a la lista del menú, no como botón; y un aviso va
+pegado a lo que avisa, nunca suelto entre botones. El menú va primero porque su desplegable se ancla a
+la izquierda y en segunda posición se salía a 360px. Guardián:
+`test/regression-ficha-cliente-acciones.test.ts` (lee el fuente).
+
 Un bloque **NO pinta caja propia**: se envuelve en `<Bloque>`, que da línea fina + título; `destacado`
 (fondo tintado) se reserva para alarmas con alguien esperando al otro lado.
 

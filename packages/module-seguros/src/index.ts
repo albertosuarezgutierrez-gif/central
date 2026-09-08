@@ -415,6 +415,7 @@ export {
   type FilaPlanContacto,
   type GrupoChoqueContacto,
   type CuentaContacto,
+  type Derivados,
   type PlanBackfillContacto,
 } from './backfill-contacto.ts'
 

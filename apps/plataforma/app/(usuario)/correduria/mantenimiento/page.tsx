@@ -154,7 +154,8 @@ function BlindIndexContacto({ plan }: { plan: PlanBackfillContacto }) {
       </div>
     )
   }
-  const listo = plan.rellenables === 0
+  const pendientes = plan.rellenables + plan.mitadesPendientes
+  const listo = pendientes === 0
   return (
     <div style={tarjeta}>
       <h2 style={{ margin: 0, fontSize: 15 }}>Índice de búsqueda por email y teléfono</h2>
@@ -171,11 +172,17 @@ function BlindIndexContacto({ plan }: { plan: PlanBackfillContacto }) {
           misma persona dos veces o un buzón familiar, y eso lo decide una persona.
         </p>
       )}
+      {plan.email.derivadosPendientes > 0 && (
+        <p style={{ margin: 0, fontSize: 13 }}>
+          {plan.email.derivadosPendientes.toLocaleString('es-ES')} emails sin el índice de <strong>dominio o usuario</strong>:
+          hasta que se escriba, buscar «@gmail.com» o «alberto.suarez@» no los encuentra. Se escribe con el mismo botón.
+        </p>
+      )}
       {listo ? (
         <p style={{ margin: 0, fontSize: 13 }}>✅ No queda nada por escribir.</p>
       ) : (
         <EscribirIndiceDni
-          pendientes={plan.rellenables}
+          pendientes={pendientes}
           endpoint="/api/correduria/backfill-contacto"
           queSeDescifra="el email y el teléfono de las 32.000 fichas"
         />

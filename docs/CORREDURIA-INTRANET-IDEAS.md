@@ -147,6 +147,35 @@ qué compañía llevar cada riesgo. **Para qué probablemente NO sirve:** negoci
 compañía — su palanca es producción emitida, no una base de primas declaradas. Si el objetivo es un
 acuerdo, el camino es concentrar producción en pocas compañías, y esta idea es lo que dice en cuáles.
 
+### M. «Contactos» y «recomiéndanos» ✅ CONSTRUIDO (08/09/2026) — y los regalos 🔴 APARCADOS
+La pestaña `/autorizaciones` pasa a llamarse **Contactos**: la invitación pide **nombre y relación**
+(vocabulario de `cliente_relaciones`; la relación NUNCA va en el correo) y admite el alcance
+**`ninguno`**: «solo te presento el portal», sin compartir un seguro. Al aceptar no se crea
+autorización. Es la forma defendible de captar: el correo lo firma el cliente, dice quién invita y
+qué NO pasa, y no vende nada — un acto entre personas, no comunicación comercial (art. 21 LSSI).
+Spec: `docs/superpowers/specs/2026-09-08-portal-contactos-design.md`.
+🚨 **Regalos por traer gente: NO, mientras no lo revise la asesoría.** [Probable] Un premio por quien
+acabe contratando convierte al cliente en **colaborador externo** del mediador (RDL 3/2020: registro,
+formación y contrato), y [Seguro] un correo de presentación de la correduría a quien no lo ha pedido
+es comunicación comercial sin consentimiento. Además el embudo es minúsculo (80 clientes vivos, 44 con
+email): el regalo no compensa el riesgo. Si algún día se hace, no puede ir atado a contratar.
+
+### N. La campana de avisos del portal — lo que queda para la v2 🟡
+La v1 entró el 08/09/2026 (spec `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`):
+autorizaciones pendientes en las dos direcciones + vencimientos en ventana + instalar, sin tabla de
+«visto». Lo que se quedó fuera, con lo que lo bloquea:
+- **Datos que nos faltan (teléfono, DNI sin documentar)** — 🔴 el rol `prisma_asegura_portal` no lee
+  esas columnas. Haría falta un puerto estrecho en `apps/asegura` que diga «falta X» sin dar el dato.
+- **Siniestro que cambia de estado · petición respondida · documento nuevo en la póliza** — 🟡 hay que
+  saber qué vio ya el cliente: tabla `portal_aviso_visto` (identidad, tipo, clave, visto_at). Sin ella
+  el siniestro cerrado en 2024 sería «nuevo» para siempre.
+- **Recibo devuelto** — 🟡 el aviso que más dinero ahorra, pero depende de que CIMA traiga la situación
+  del recibo. Medir antes de prometerlo (hoy la fila sale en la ficha como chip de peligro).
+- **Web Push** (`@central/core-push`) para lo que ya está en la campana — 🔴 es salida al cliente: OK
+  de Alberto por envío y nace apagado, como el cron de vencimientos. En iOS solo con la app instalada.
+- **Lo que NO se hace**: «renueva con nosotros» o comparativas de prima en la campana. Un aviso
+  informativo vale; uno que empuje una decisión es asesoramiento (análisis objetivo, IPID).
+
 ## Preguntas abiertas para Alberto
 
 - ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?
