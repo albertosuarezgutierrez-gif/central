@@ -52,6 +52,14 @@ export type PortalCartera = {
   ultimoAccesoEn: string | null
   /** Identidades vinculadas. `null` = **no se pudo contar**, que NO es 0. */
   identidades: number | null
+  /**
+   * El correo con el que ESTE cliente entraría al portal, tal y como lo elige
+   * asegura. `null` = **no se puede afirmar cuál** (no hay, no se lee, o su
+   * correo no lleva a esta ficha), y entonces la pantalla no nombra ninguno:
+   * decirle al cliente que entre con una dirección equivocada es mandarle a
+   * teclear un correo que no recibirá ningún código.
+   */
+  emailInvitacion: string | null
 }
 
 function cadena(v: unknown): string | null {
@@ -88,6 +96,10 @@ export function leerPortal(v: unknown): PortalCartera | null {
     // se pinta «no consta cuándo». Nunca se inventa un día.
     ultimoAccesoEn: iso !== null && !Number.isNaN(Date.parse(iso)) ? iso : null,
     identidades: enteroONull(o.identidades),
+    // Una versión de asegura anterior al 08/09/2026 no manda este campo, y eso
+    // se lee como `null` —«no se sabe cuál»—, que es justo lo que apaga el
+    // canal de WhatsApp en vez de inventarse una dirección.
+    emailInvitacion: cadena(o.emailInvitacion),
   }
 }
 
@@ -99,7 +111,18 @@ export function leerPortal(v: unknown): PortalCartera | null {
  * colapsan: el primero manda a mirar la conexión, el segundo a mirar el id.
  */
 export type RespuestaPortal =
-  | { estado: 'ok'; portal: PortalCartera }
+  | {
+      estado: 'ok'
+      portal: PortalCartera
+      /**
+       * A dónde lleva la invitación (`ASEGURA_PORTAL_URL` + `/boveda`), dicho
+       * por asegura. `null` = no hay portal configurado, y entonces no se
+       * ofrece ningún canal: un «entra aquí» sin el «aquí» no sirve. Se lee del
+       * puerto en vez de componerlo aquí para que el correo y el WhatsApp no
+       * puedan acabar apuntando a dominios distintos.
+       */
+      enlace: string | null
+    }
   | { estado: 'no_encontrado' }
   | { estado: 'sin_configurar' }
   | { estado: 'invalido'; motivo: string }
@@ -116,7 +139,7 @@ export function interpretarPortal(status: number, json: unknown): RespuestaPorta
     // Un `ok` sin bloque legible no se convierte en «no tiene acceso»: no se ha
     // podido leer, y se dice.
     if (portal === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
-    return { estado: 'ok', portal }
+    return { estado: 'ok', portal, enlace: cadena(o.enlace) }
   }
   return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
 }

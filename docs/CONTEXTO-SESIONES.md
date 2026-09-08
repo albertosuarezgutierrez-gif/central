@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📲 Invitar al portal también por WhatsApp (08/09/2026).** Alberto: «poner al lado el botón de
+  WhatsApp, le doy y ese mismo mensaje se le envía al cliente, se le confirma qué correo tiene
+  asignado y el enlace». Sin WABA no hay envío desde el servidor: es `wa.me`, que **abre** WhatsApp
+  con el mensaje escrito y lo manda él — por eso el rótulo dice «abrir», no «enviar», y no se anota
+  nada en el historial. El correo que se nombra lo dice asegura (`portal.emailInvitacion`, la MISMA
+  regla que elige el destinatario del correo) y el enlace también: nombrar uno a ojo mandaría al
+  cliente a teclear una dirección que el portal no reconoce. El canal nuevo NO rodea los frenos del
+  viejo: si no se le puede invitar por correo, tampoco por WhatsApp. PR pendiente de número.
+
 - **📍 La dirección del cliente se corrige DONDE SE LEE (08/09/2026).** Alberto: «sigo sin poder
   modificar dirección clientes». El formulario existía desde el PR #2093, pero dentro del
   desplegable del final de la pestaña Contactos, a pantalla y media del dato y detrás de dos
