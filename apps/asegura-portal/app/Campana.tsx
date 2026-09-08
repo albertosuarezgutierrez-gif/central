@@ -14,8 +14,9 @@ import { instalar, InstruccionesIOS, useInstalacion } from './instalacion'
  * enteraba si entraba en la pestaña «Quién me ve». Si venía a mirar su póliza y
  * no abría esa pestaña, la autorización se quedaba ahí sin que nada fallara.
  * Alberto: «un icono de campana de avisos, para autorizaciones, vencimientos,
- * etc.». Y de paso, la instalación de la app, que tras descartar la franja no
- * tenía otro sitio.
+ * etc.». Y la instalación de la app: desde el 08/09/2026 esta entrada es el
+ * ÚNICO sitio que la ofrece — la franja «Tenlo a mano» de encima de las
+ * pólizas se quitó (Alberto: «arriba al lado de salir, queda más limpio»).
  *
  * 🚨 UNA CAMPANA ESCONDE; LO QUE LA SALVA ES EL NÚMERO. Este portal renunció a
  * la hamburguesa porque «un botón que las esconde detrás de un toque las hace
