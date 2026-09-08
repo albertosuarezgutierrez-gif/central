@@ -13,6 +13,11 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-08** · `docs/CONTEXTO-SESIONES.md`, `docs/AUDITORIA-2026-09.md`, este archivo ·
+  informe de la pasada ligera 08/09/2026 (heartbeat/correduría/pricing/backlog de PRs) · el
+  entorno de esta sesión no permite push directo a `main` (rama asignada por el harness), va por
+  PR de solo-registro como plan B documentado en el propio skill.
+
 - **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40
