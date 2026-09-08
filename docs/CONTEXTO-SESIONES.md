@@ -123,6 +123,18 @@
   habiendo UN solo formulario. Pendiente de decisión de Alberto: que el cliente edite dirección y
   teléfono desde el portal y que TODO lo que haga salga en el historial de su ficha.
 
+- **🔎 El agente SEO de la correduría ya tiene datos sin que nadie se los pegue (08/09/2026).** Alberto:
+  «controlar las visitas y sobre todo para el agente de SEO… analizar competencia e ir posicionando».
+  Medido antes: la skill corría a MANO, GSC verificada desde mayo pero leída una vez a mano (350
+  impresiones, 0 clics, posición 47), competencia escrita sin internet. Cron `seo-correduria` en
+  plataforma (lunes 08:30 UTC): Search Console por cuenta de servicio (JWT RS256 con `jose`), Serper
+  (top-10 de las 14 consultas de `keywords.md`, espejadas en `CONSULTAS` con cepo), PostHog por HogQL
+  → `seo_correduria_semana` (fila por fuente y semana, tri-estado `ok|error|no_configurado`, nunca 0) +
+  Telegram `correduria.seo-semana` con UNA acción por regla pura. Migración `2026-09-08_seo_correduria_semana.sql`
+  **pendiente de aplicar** (OK de Alberto). Faltan de él: cuenta de servicio de Google con acceso a la
+  propiedad, Personal API key de PostHog, créditos de Serper (a cero desde el 24/08). ⏳ Cookiebot está
+  en trial de 12 días desde el 07/09: al caducar, mirar si el banner sigue (fail-closed = deja de medir en silencio).
+
 - **🍪 `grupoasegura.es` SÍ mide, y mide bien — aquí se afirmó lo contrario sin haberlo medido
   (08/09/2026).** Claude en Chrome lo comprobó en los paneles: `asegura-web` tiene desde el 05/09
   `NEXT_PUBLIC_COOKIEBOT_ID` (Domain Group #1 de Cookiebot, solo `grupoasegura.es`; `www` no persiste
