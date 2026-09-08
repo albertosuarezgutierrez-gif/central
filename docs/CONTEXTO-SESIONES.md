@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧹 La ficha de cliente: de 7 botones a 2 (08/09/2026).** Alberto, con la captura: «esto es una
+  guarrería, tantos botones». `Cabecera.tsx` pintaba «Subir póliza» + seis «Presupuestar <ramo>» + dos
+  avisos grises sueltos, en tres filas que empujaban los titulares fuera de la primera pantalla. Ahora:
+  menú «➕ Presupuestar ▾» (`<details>` nativo, sigue Server Component; 🚧 en vida/salud/decesos) +
+  «📄 Subir póliza» con su aviso en el `title`. El menú va PRIMERO: en segunda posición el desplegable
+  se salía a 360px (medido con Playwright, right=427). Cepo `test/regression-ficha-cliente-acciones.test.ts`
+  visto en rojo. PR pendiente de nº.
+
 - **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
   correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
   cifrado): `planBusqueda()` lanza `email` + `nombre`. Medido: **250 fichas con email y sin
