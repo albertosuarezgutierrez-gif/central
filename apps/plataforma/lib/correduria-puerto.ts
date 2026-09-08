@@ -908,7 +908,7 @@ export function interpretarEscrituraBackfill(status: number, json: unknown): Esc
 
 // ─── Backfill del índice de CONTACTO (email + teléfono) ──────────────────────
 // Hermano del de DNI, sin fusiones de por medio: lo único que choca es el email
-// de ficha (`uq_clientes_email_lookup_hash` es UNIQUE), y ésos se cuentan y no
+// de ficha (el índice de la ficha es UNIQUE), y ésos se cuentan y no
 // se escriben. Por qué existe (08/09/2026): 250 fichas con email y 91 con
 // teléfono tenían el dato y no el hash, y el buscador sólo encuentra por hash.
 
