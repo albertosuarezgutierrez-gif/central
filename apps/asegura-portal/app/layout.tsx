@@ -2,6 +2,7 @@ import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 
 import './globals.css'
 import type { ReactNode } from 'react'
+import { CampanaAvisos } from './CampanaAvisos'
 import { InterruptorTema } from './InterruptorTema'
 import { MarcaAsegura } from './MarcaAsegura'
 import { PieLegal } from './PieLegal'
@@ -87,16 +88,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </span>
           <span className="marca-nombre">{MARCA.logos.wordmark}</span>
           <span className="marca-coletilla">Correduría de seguros</span>
-          {/* Las dos acciones de la cabecera van sueltas y no en un menú:
-              esconder dos cosas detrás de un botón cuesta un toque más, un
+          {/* Las acciones de la cabecera van sueltas y no en un menú:
+              esconder cosas detrás de un botón cuesta un toque más, un
               componente más y, en esta pantalla, que gente de 50-70 años no
-              encuentre la salida. El ORDEN importa: `Salir` tiene que ser el
-              hermano inmediatamente anterior al interruptor, porque de eso
-              depende que el CSS junte los dos a la derecha en vez de repartir
-              el hueco entre ellos.
-              🚨 Y `SalirDelPortal` devuelve `null` cuando no hay sesión: quien
-              todavía no ha entrado no ve un botón de salir. */}
+              encuentre la salida. El ORDEN importa: `Salir` tiene que ir
+              ANTES de la campana y del interruptor, porque de eso depende que
+              el CSS (`.salir-form ~ …`) junte los tres a la derecha en vez de
+              repartir el hueco entre ellos.
+              🚨 `SalirDelPortal` y `CampanaAvisos` devuelven `null` cuando no
+              hay sesión: quien todavía no ha entrado no ve ni salir ni avisos. */}
           <SalirDelPortal />
+          <CampanaAvisos />
           <InterruptorTema />
         </header>
         {children}

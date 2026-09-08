@@ -38,6 +38,24 @@
   personales. Coste asumido: una de empresa subida sin marcar se coteja contra la ficha personal; lo ve
   el corredor. Cepo `regression-portal-titular-declarado` reescrito y visto en rojo por cada brazo (el
   `append` se ancló a inicio de línea: suelto seguía verde con un `if` delante).
+- **🔔 La campana de avisos del portal del cliente (08/09/2026).** Alberto, ante el «nace pendiente
+  hasta que la acepte en su portal»: un icono de campana en la cabecera del portal con autorizaciones,
+  vencimientos e instalar. Entró: `lib/avisos.ts` (puro) + `GET /api/avisos` (`allSettled`) +
+  `Campana.tsx` entre Salir y el tema, globo con tres desenlaces (`n`·`n+`·`!`, nunca 0), enlaza y
+  NO acepta, `setAppBadge`; almacén único del `beforeinstallprompt` (`app/instalacion.tsx`). Sin
+  tabla de «visto»: la v2 (siniestro cerrado, recibo devuelto, push) está en IDEAS §N con su
+  bloqueo. 27 mutaciones/27 rojos; Playwright 320/390/1024 sin desbordes. Spec en
+  `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`.
+- **👥 Portal del cliente: pestaña «Contactos» + invitación sin compartir nada (08/09/2026).** Alberto
+  pidió «pestaña de contactos: nombre, relación y mail, un mail de presentación… y regalos por traer
+  gente». Lo primero ya existía en `/autorizaciones` (invitar por correo, 04/09); se añadió lo que
+  faltaba. Pestaña renombrada a **Contactos** (ruta igual). `portal_invitacion` gana `invitado_nombre`
+  + `relacion` (vocabulario `TIPOS_RELACION`, CHECK + cepo raíz `regression-portal-contactos`) y el
+  alcance **`ninguno`** («solo te presento el portal»: al aceptar NO se crea autorización). Migración
+  aplicada en Supabase. La relación **nunca va en el correo** (`CAMPOS_PROHIBIDOS_EN_INVITACION`) y el
+  correo sin acceso no vende nada. **Regalos: aparcados** (colaborador externo RDL 3/2020 + art. 21
+  LSSI) → `CORREDURIA-INTRANET-IDEAS.md` §M. Spec `docs/superpowers/specs/2026-09-08-portal-contactos-design.md`.
+  Cepos con 4 mutaciones en rojo. PR #2623.
 
 - **✂️ Búsqueda PARCIAL por email: dominio y usuario (08/09/2026, II).** Alberto: «tiene que ser de
   cualquier campo». El email va cifrado y solo casaba entero; ahora hay dos índices ciegos más
@@ -135,7 +153,9 @@
   de corregir de `/boveda/anadida/[id]`; desde la lista no se veía, y una acción que hay que ir a buscar
   no existe. `FilaDeclarada` monta ahora `EliminarPoliza` bajo la tarjeta (fuera del `<Link>`, 44px,
   confirmación a todo ancho); `FilaPoliza` (cartera) sigue sin él. Cepo nuevo con los dos brazos vistos
-  en rojo en `test/regression-portal-borrado.test.ts`. Responsive NO medido en navegador (sin sesión).
+  en rojo en `test/regression-portal-borrado.test.ts`. Responsive NO medido en navegador (sin sesión). **PR #2620 mergeado** (`00e0cbb`, 19/19 verdes) y
+  **en producción**: deploy de `asegura-portal` READY sobre ese commit, aliases `clientes.grupoasegura.es`
+  y `asegura-portal.vercel.app`.
 - **🧊 Y al quitarla, el parte de siniestro NO se borra: se CONGELA (07/09/2026).** Alberto: «al borrar
   póliza tb borraría siniestros, ¿es lo lógico?». No: un parte es la prueba de que el cliente comunicó
   el siniestro y CUÁNDO (art. 16 LCS), y la cascada la destruiría —la borraría él mismo ordenando su

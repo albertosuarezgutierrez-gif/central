@@ -67,18 +67,24 @@ test('🚨 la cookie se borra con las MISMAS opciones con las que se puso', () =
 })
 
 test('🚨 el botón sale del layout RAÍZ y va pegado al interruptor', () => {
-  // El `margin-left:auto` de `.salir-form` solo junta los dos botones si el
-  // interruptor es su hermano ADYACENTE. Si alguien mete algo entre medias, la
-  // regla `+` deja de aplicar, el interruptor recupera su propio `auto` y el
-  // hueco se reparte a tres bandas: los dos botones se separan solos.
+  // El `margin-left:auto` de `.salir-form` solo junta los botones de la derecha
+  // si los que van detrás pierden el suyo. Hasta el 08/09/2026 la regla era de
+  // hermano ADYACENTE (`+`) y Salir tenía que ir INMEDIATAMENTE antes del
+  // interruptor; al meter la campana entre los dos, `+` dejaba de casar, el
+  // interruptor recuperaba su `auto` y se iba solo al extremo. Ahora la regla es
+  // de hermano POSTERIOR (`~`): Salir va ANTES del interruptor (con la campana
+  // en medio o sin ella) y la campana no lleva `auto` nunca.
   assert.ok(/<SalirDelPortal\s*\/>/.test(LAYOUT), 'falta <SalirDelPortal /> en la barra')
+  const salir = LAYOUT.indexOf('<SalirDelPortal')
+  const tema = LAYOUT.indexOf('<InterruptorTema')
+  assert.ok(salir > 0 && tema > salir, 'SalirDelPortal tiene que ir ANTES de InterruptorTema: es el que toma el margin-left:auto')
   assert.ok(
-    /<SalirDelPortal\s*\/>\s*<InterruptorTema\s*\/>/.test(LAYOUT),
-    'SalirDelPortal tiene que ir INMEDIATAMENTE antes de InterruptorTema (la regla CSS es de hermano adyacente)',
+    /\.salir-form\s*~\s*\.tema-boton/.test(CSS),
+    'falta la regla (~) que le quita el margin-left:auto al interruptor cuando está el botón de salir',
   )
   assert.ok(
-    /\.salir-form\s*\+\s*\.tema-boton/.test(CSS),
-    'falta la regla que le quita el margin-left:auto al interruptor cuando está el botón de salir',
+    !/\.salir-form\s*\+\s*\.tema-boton/.test(CSS),
+    'volvió la regla adyacente (+): con la campana en medio el interruptor se separa solo',
   )
 })
 

@@ -52,19 +52,23 @@ import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import {
   MAX_INVITACIONES_DIA,
   NIVELES,
-  alcanceConcedible,
   BYTES_TOKEN_INVITACION,
+  TEXTO_INVITACION_SIN_ACCESO,
+  alcanceInvitacion,
   caducidadInvitacion,
   caducidadPorDefecto,
-  esAlcance,
   estadoAutorizacion,
   estadoInvitacion,
   invitacionEscrita,
+  invitacionAbreAcceso,
   invitacionResoluble,
   normalizarMensajeInvitacion,
+  normalizarNombreInvitado,
   normalizarTokenInvitacion,
   puedeAutorizar,
+  relacionInvitacion,
   type Alcance,
+  type AlcanceInvitacion,
   type EstadoInvitacion,
   type Nivel,
   type ResultadoInvitacion,
@@ -121,8 +125,8 @@ function tipoDeFicha(v: string | null | undefined): TipoOtorgante {
  * vocabulario NO se pinta como otra cosa: se cae de la lista, porque enseñarla
  * como «ver» sería afirmar un permiso que nadie concedió.
  */
-function alcanceDeFila(v: string): Alcance | null {
-  return esAlcance(v) ? v : null
+function alcanceDeFila(v: string): AlcanceInvitacion | null {
+  return alcanceInvitacion(v)
 }
 
 /**
@@ -209,6 +213,10 @@ export async function crearInvitacion(datos: {
   /** El correo invitado, en claro. **Entra aquí y no sale**: se guarda su hash. */
   email: string
   mensaje?: unknown
+  /** Cómo lo llama José. Para SU lista y el saludo del correo; no es una identidad. */
+  invitadoNombre?: unknown
+  /** Qué es de José, con el vocabulario de `cliente_relaciones`. NUNCA va en el correo. */
+  relacion?: unknown
   ip: string | null
   userAgent: string | null
 }): Promise<ResultadoCrearInvitacion> {
@@ -241,10 +249,26 @@ export async function crearInvitacion(datos: {
   // de otro, y eso no se reparte por un enlace de correo a alguien que todavía
   // no ha probado ni quién es. Representar a una sociedad se concede desde
   // `conceder()`, a una ficha que ya está en la cartera.
-  const alcance = alcanceConcedible(datos.alcance)
+  // Desde el 08/09/2026 el vocabulario es el de la INVITACIÓN, que además de
+  // mirar admite «nada» (`SIN_COMPARTIR`): presentar el portal sin abrir un solo
+  // seguro. Los dos de lectura siguen siendo los de `ALCANCES_CONCEDIBLES`.
+  const alcance = alcanceInvitacion(datos.alcance)
   if (alcance === null) {
     return no('datos_invalidos', 'Ese permiso no se puede ofrecer por invitación. Vuelve a cargar la pantalla.')
   }
+  const abreAcceso = invitacionAbreAcceso(alcance)
+  // Sin acceso no hay póliza que acotar. Lo repite el CHECK
+  // `portal_invitacion_sin_compartir_sin_poliza`, pero mejor decirlo aquí.
+  if (!abreAcceso && polizaId !== null) {
+    return no('datos_invalidos', 'Si no compartes ningún seguro, no hay ninguna póliza que elegir.')
+  }
+  // La relación se valida contra el vocabulario y no se adivina: un valor fuera
+  // de la lista moriría en el CHECK de la BD después de haber escrito el correo.
+  const relacion = relacionInvitacion(datos.relacion)
+  if (datos.relacion !== undefined && datos.relacion !== null && relacion === null) {
+    return no('datos_invalidos', 'No hemos entendido qué es esa persona de ti. Vuelve a cargar la pantalla.')
+  }
+  const invitadoNombre = normalizarNombreInvitado(datos.invitadoNombre)
 
   // ── 2. El enlace, ANTES de tocar la BD ───────────────────────────────────
   // El token se genera aquí porque el enlace lo lleva dentro. `randomBytes` de
@@ -352,13 +376,17 @@ export async function crearInvitacion(datos: {
   // (`autorizadoIdentidadId`). Mirar solo una dejaría a José con dos
   // autorizaciones vivas equivalentes para la misma persona: una concedida y
   // otra nacida de esta invitación.
-  const yaAutorizado = await tieneAutorizacionViva({
-    otorganteClienteId,
-    alcance,
-    polizaId,
-    email: datos.email,
-    canalHash: destinatarioCanalHash,
-  })
+  // Sin acceso no hay autorización con la que chocar: lo único que impide
+  // repetir es el índice único de invitaciones vivas.
+  const yaAutorizado = abreAcceso
+    ? await tieneAutorizacionViva({
+        otorganteClienteId,
+        alcance,
+        polizaId,
+        email: datos.email,
+        canalHash: destinatarioCanalHash,
+      })
+    : false
   if (yaAutorizado) {
     return no(
       'ya_autorizado',
@@ -390,6 +418,10 @@ export async function crearInvitacion(datos: {
         // Texto de quien invita: se recorta y se normaliza en el módulo puro,
         // se escapa al pintarlo y no entra en ninguna cabecera del correo.
         mensaje,
+        // Para la LISTA de José: sin el correo (hasheado) es como reconoce a
+        // quién invitó. La relación no sale de aquí hacia el correo.
+        invitadoNombre,
+        relacion,
         creadaEn,
         caducaEn: caducidadInvitacion(creadaEn),
         ip: datos.ip,
@@ -418,6 +450,11 @@ export async function crearInvitacion(datos: {
     // `null` = no hay nombre que enseñar, nunca `''`: el correo lo dice como lo
     // que es en vez de dejar un hueco en blanco delante de un desconocido.
     invitante: nombre === '' ? null : nombre,
+    // El nombre del invitado va en el saludo; la relación NO va (es un dato de
+    // la relación entre dos personas, y quien abre el buzón puede no ser
+    // ninguna de las dos).
+    invitado: invitadoNombre,
+    abreAcceso,
     mensaje,
     enlace,
   })
@@ -562,8 +599,12 @@ async function tieneAutorizacionViva(d: {
  */
 export type InvitacionEnviada = {
   id: string
-  alcance: Alcance
+  alcance: AlcanceInvitacion
   estado: EstadoInvitacion
+  /** Cómo la llamó José. `null` = invitación anterior al 08/09/2026 (nunca `''`). */
+  invitadoNombre: string | null
+  /** Qué es de José. `null` = no consta. */
+  relacion: string | null
   /** `true` = se invitó a UNA póliza; `false` = a todas las de la ficha. */
   soloUnaPoliza: boolean
   /** La ficha desde la que se invitó, para que José sepa cuál de las suyas abrió. */
@@ -577,7 +618,7 @@ export type InvitacionEnviada = {
 /** Una invitación que me han mandado A MÍ (casa el hash de alguno de mis canales). */
 export type InvitacionRecibida = {
   id: string
-  alcance: Alcance
+  alcance: AlcanceInvitacion
   estado: EstadoInvitacion
   soloUnaPoliza: boolean
   /**
@@ -647,6 +688,8 @@ export async function invitacionesDeIdentidad(identidadId: string): Promise<Invi
           id: i.id,
           alcance,
           estado: estadoInvitacion(i, hoy),
+          invitadoNombre: i.invitadoNombre,
+          relacion: i.relacion,
           soloUnaPoliza: i.polizaId !== null,
           otorganteClienteId: i.otorganteClienteId,
           otorganteNombre: nombres.get(i.otorganteClienteId) ?? null,
@@ -739,7 +782,7 @@ export async function invitacionPorToken(token: unknown): Promise<{ existe: bool
  */
 export type InvitacionParaMi = {
   id: string
-  alcance: Alcance
+  alcance: AlcanceInvitacion
   soloUnaPoliza: boolean
   otorganteNombre: string | null
   mensaje: string | null
@@ -799,7 +842,13 @@ export async function invitacionParaIdentidad(
       // Qué texto se acepta depende de QUIÉN cede: el de la persona afirma «no
       // verá mi IBAN ni podrá dar partes», que de una sociedad es sencillamente
       // falso. Ficha ilegible → se trata como física, el lado restrictivo.
-      texto: tipoDeFicha(ficha?.tipoPersona) === 'juridica' ? TEXTO_REPRESENTACION : TEXTO_AUTORIZACION,
+      // Sin acceso no se cede ningún dato, pero sigue habiendo un texto que se
+      // acepta y que se puede enseñar después: lo que se firma se puede decir.
+      texto: !invitacionAbreAcceso(alcance)
+        ? TEXTO_INVITACION_SIN_ACCESO
+        : tipoDeFicha(ficha?.tipoPersona) === 'juridica'
+          ? TEXTO_REPRESENTACION
+          : TEXTO_AUTORIZACION,
     },
   }
 }
@@ -923,6 +972,22 @@ export async function responderInvitacion(datos: {
     // La fila guarda un alcance que ya no está en el vocabulario. No se acepta
     // como si fuera «ver»: sería conceder un permiso que nadie ofreció.
     return { ok: false, error: 'no_encontrada', mensaje: 'Esta invitación ya no se puede aceptar.' }
+  }
+
+  // ── Sin acceso: aceptar sella la invitación y NADA más ─────────────────
+  // No se crea `portal_autorizacion` porque no hay nada que autorizar: José
+  // solo presentó el portal. El CHECK `portal_invitacion_acepta_con_sello`
+  // exige aquí que `autorizacion_id` quede NULL, y quién aceptó sigue
+  // constando: un «aceptado por nadie» tampoco vale para una presentación.
+  if (!invitacionAbreAcceso(alcance)) {
+    const { count } = await prisma.portalInvitacion.updateMany({
+      where: { id: fila.id, aceptadaEn: null, rechazadaEn: null, retiradaEn: null },
+      data: { aceptadaEn: hoy, aceptadaPorIdentidadId: identidadId },
+    })
+    if (count === 0) {
+      return { ok: false, error: 'no_encontrada', mensaje: 'Esta invitación ya estaba contestada.' }
+    }
+    return { ok: true, estado: 'aceptada', autorizacionId: null }
   }
 
   // Qué ES la ficha que cede: de ello depende QUÉ TEXTO se guarda como prueba.
