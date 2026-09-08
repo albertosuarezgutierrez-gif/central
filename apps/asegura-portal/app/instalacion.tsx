@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 
 /**
  * Lo que la instalación de la app tiene de COMPARTIDO entre la franja «Tenlo a
- * mano» (`(portal)/InstalarApp.tsx`) y la entrada «Instalar» de la campana
+ * mano» (retirada el 08/09/2026) y la entrada «Instalar» de la campana
  * (`Campana.tsx`).
  *
  * ── Por qué un almacén de módulo y no un hook con su propio `useEffect` ──────
