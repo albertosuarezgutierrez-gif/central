@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
-import { puedeBorrarDeclarada } from '@central/module-seguros-portal'
+import { fotoDeLaPoliza, puedeBorrarDeclarada } from '@central/module-seguros-portal'
 
 import { prisma } from '@/lib/db'
 import { normalizarParche } from '@/lib/poliza-editable'
@@ -129,12 +129,20 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
  * la URL— borraría la póliza de un tercero con un 200 en el log.
  * ─────────────────────────────────────────────────────────────────────────────
  *
- * 🚨 El reparo del parte NO es cosmético. La FK
- * `portal_parte_siniestro.poliza_declarada_id` es `ON DELETE SET NULL`: borrar
- * una póliza con parte no falla, deja el parte apuntando a nada (el CHECK admite
- * las dos columnas nulas) y la correduría se queda con un siniestro ilegible sin
- * que nada avise. Por eso se comprueba ANTES y dentro de la MISMA transacción:
- * comprobar fuera deja la ventana abierta a que el parte entre justo en medio.
+ * 🚨 Y LOS PARTES DE SINIESTRO NO SE VAN CON ELLA. Un parte es la prueba de que
+ * esa persona nos comunicó un siniestro y de cuándo (art. 16 LCS), así que ni se
+ * borra en cascada —eso destruiría la prueba— ni se deja huérfano, que es lo que
+ * haría el `ON DELETE SET NULL` de la FK por su cuenta: un siniestro que no dice
+ * de qué póliza habla, sin que nada falle. Se CONGELA: la compañía, el número y
+ * el ramo se copian dentro del parte y el vínculo se corta a mano.
+ *
+ * Lo único que bloquea el borrado es un parte que la compañía YA tramita
+ * (`abierto_en_compania` o con `siniestroId`): ahí hay un expediente vivo con un
+ * tercero. La regla vive en `puedeBorrarDeclarada()`.
+ *
+ * Todo ocurre en la MISMA transacción: comprobar fuera dejaría la ventana
+ * abierta a que un parte entre justo entre la comprobación y el borrado, y ese
+ * sí se quedaría huérfano.
  */
 export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   let identidad
@@ -149,18 +157,48 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const resultado = await prisma.$transaction(async (tx) => {
     // Existe Y es suya: las dos cosas en la misma consulta. Si no, 404 — nunca
     // un 403, que confirmaría que esa póliza existe.
+    // Se leen ADEMÁS los tres campos que hay que congelar en los partes: si se
+    // pidieran después del `deleteMany` ya no existirían, y esta es la única
+    // ventana en la que la póliza y sus partes están vivos a la vez.
     const suya = await tx.portalPolizaDeclarada.findFirst({
       where: { id, identidadId: identidad.id },
-      select: { id: true },
+      select: { id: true, compania: true, numeroPoliza: true, ramo: true },
     })
     if (!suya) return { estado: 404 as const, cuerpo: { error: 'no_encontrada' } }
 
-    const partes = await tx.portalParteSiniestro.count({
+    // El ESTADO de cada parte, no solo cuántos hay: lo que bloquea no es tener
+    // partes, es tener uno que la compañía ya está tramitando.
+    const partes = await tx.portalParteSiniestro.findMany({
       where: { polizaDeclaradaId: id, identidadId: identidad.id },
+      select: { estado: true, siniestroId: true },
     })
     const veredicto = puedeBorrarDeclarada({ partes })
     if (!veredicto.puede) {
       return { estado: 409 as const, cuerpo: { error: veredicto.reparo, mensaje: veredicto.mensaje } }
+    }
+
+    // 🚨 CONGELAR ANTES DE BORRAR, y en esta misma transacción.
+    //
+    // La FK es `ON DELETE SET NULL`: si se borrara primero, el `poliza_declarada_id`
+    // de cada parte se pondría a NULL solo y ya no habría forma de saber de qué
+    // póliza hablaba. Aquí se copian compañía, número y ramo DENTRO del parte y
+    // se corta el vínculo a mano, para que el borrado de abajo no tenga nada que
+    // poner a NULL. El CHECK `portal_parte_desligada_coherente` de la BD exige
+    // justo eso: fecha presente y `poliza_declarada_id` ya nulo.
+    const foto = fotoDeLaPoliza(suya)
+    if (partes.length > 0) {
+      await tx.portalParteSiniestro.updateMany({
+        where: { polizaDeclaradaId: id, identidadId: identidad.id },
+        data: {
+          polizaDeclaradaId: null,
+          // La fecha SIEMPRE, aunque la foto venga vacía: es lo que distingue
+          // «se desligó y la póliza no decía nada» de «nunca se desligó».
+          polizaDesligadaAt: new Date(),
+          polizaDesligadaCompania: foto?.compania ?? null,
+          polizaDesligadaNumero: foto?.numeroPoliza ?? null,
+          polizaDesligadaRamo: foto?.ramo ?? null,
+        },
+      })
     }
 
     const { count } = await tx.portalPolizaDeclarada.deleteMany({
@@ -171,7 +209,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     // que quería: la póliza ya no está.
     if (count === 0) return { estado: 404 as const, cuerpo: { error: 'no_encontrada' } }
 
-    return { estado: 200 as const, cuerpo: { ok: true } }
+    return { estado: 200 as const, cuerpo: { ok: true, partesDesligados: partes.length } }
   })
 
   return NextResponse.json(resultado.cuerpo, { status: resultado.estado })

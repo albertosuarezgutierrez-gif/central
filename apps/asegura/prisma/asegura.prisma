@@ -713,6 +713,19 @@ model PortalParteSiniestro {
   abiertoEnCompaniaAt DateTime?         @map("abierto_en_compania_at") @db.Timestamptz(6)
   descartadoAt        DateTime?         @map("descartado_at") @db.Timestamptz(6)
   motivoDescarte      String?           @map("motivo_descarte")
+  /// 🚨 La FOTO de la póliza APORTADA que el cliente quitó de su bóveda. Es texto
+  /// y no una relación a propósito: vale porque la fila de origen ya NO existe.
+  /// Sin esto, borrar la póliza dejaría el parte huérfano (la FK es
+  /// `ON DELETE SET NULL` y el CHECK admite las dos columnas de póliza nulas):
+  /// una comunicación de siniestro que no dice de qué habla, sin que nada avise.
+  /// La fecha se escribe SIEMPRE que se desliga; las otras tres pueden ser NULL
+  /// porque una póliza aportada puede no tener ni compañía. Un parte sobre un
+  /// siniestro que la compañía ya tramita NO se desliga: ahí el borrado se
+  /// rechaza (`@central/module-seguros-portal`, `puedeBorrarDeclarada`).
+  polizaDesligadaAt       DateTime?         @map("poliza_desligada_at") @db.Timestamptz(6)
+  polizaDesligadaCompania String?           @map("poliza_desligada_compania")
+  polizaDesligadaNumero   String?           @map("poliza_desligada_numero")
+  polizaDesligadaRamo     String?           @map("poliza_desligada_ramo")
   creadoEn            DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
   actualizadoEn       DateTime          @default(now()) @map("actualizado_en") @db.Timestamptz(6)
 

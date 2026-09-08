@@ -78,14 +78,61 @@ test('los borrados del portal van por deleteMany con identidadId, nunca por dele
   )
 })
 
-test('el DELETE de pólizas filtra por identidadId y comprueba el parte de siniestro', () => {
+test('el DELETE de pólizas filtra por identidadId y consulta el ESTADO de los partes', () => {
   const src = leer(`${APP}/app/api/polizas/[id]/route.ts`)
   const delete_ = src.slice(src.indexOf('export async function DELETE'))
   assert.notEqual(delete_, '', 'No hay handler DELETE de pólizas aportadas')
   assert.match(delete_, /deleteMany\(\{\s*\n?\s*where:\s*\{\s*id,\s*identidadId:\s*identidad\.id\s*\}/)
-  // Sin esto, la FK `ON DELETE SET NULL` deja el parte huérfano sin fallar.
   assert.match(delete_, /puedeBorrarDeclarada/)
-  assert.match(delete_, /portalParteSiniestro\.count/)
+  // `count` NO basta: lo que bloquea no es tener partes, es tener uno que la
+  // compañía ya tramita. Con un contador esa distinción no se puede hacer.
+  assert.match(delete_, /portalParteSiniestro\.findMany/)
+  assert.match(delete_, /estado:\s*true/)
+  assert.match(delete_, /siniestroId:\s*true/)
+})
+
+test('🚨 el DELETE CONGELA la póliza en sus partes ANTES de borrarla', () => {
+  // El modo de fallo que esto persigue no rompe nada: la FK es
+  // `ON DELETE SET NULL`, así que borrar primero pone el vínculo a NULL solo y
+  // el parte queda sin poder decir de qué póliza hablaba. Nadie se entera.
+  const src = leer(`${APP}/app/api/polizas/[id]/route.ts`)
+  const delete_ = src.slice(src.indexOf('export async function DELETE'))
+
+  const congelar = delete_.indexOf('polizaDesligadaAt')
+  const borrar = delete_.indexOf('portalPolizaDeclarada.deleteMany')
+  assert.notEqual(congelar, -1, 'El DELETE no congela la póliza en los partes')
+  assert.notEqual(borrar, -1, 'El DELETE no borra la póliza')
+  assert.ok(congelar < borrar, 'La congelación tiene que ir ANTES del borrado, no después')
+
+  // Y el vínculo se corta a mano: si se dejara al `ON DELETE SET NULL`, el CHECK
+  // `portal_parte_desligada_coherente` de la BD rechazaría la fila igualmente.
+  assert.match(delete_, /polizaDeclaradaId:\s*null/)
+  // Los tres campos de la foto viajan juntos: uno suelto es media verdad.
+  for (const campo of ['polizaDesligadaCompania', 'polizaDesligadaNumero', 'polizaDesligadaRamo']) {
+    assert.match(delete_, new RegExp(campo), `Falta ${campo} en la foto congelada`)
+  }
+  // La lectura de la póliza pide los tres campos ANTES del borrado: después ya
+  // no existirían.
+  assert.match(delete_, /select:\s*\{[^}]*compania:\s*true[^}]*\}/)
+})
+
+test('la migración de la foto existe y la BD exige que sea coherente', () => {
+  const sql = leer(`${APP}/prisma/sql/2026-09-07_portal_parte_poliza_desligada.sql`)
+  assert.match(sql, /poliza_desligada_at/)
+  // Sin el CHECK, una fila podría decir a la vez «apunta a esta póliza» y
+  // «la póliza se borró», y la pantalla elegiría una de las dos al azar.
+  assert.match(sql, /portal_parte_desligada_coherente/)
+  assert.match(sql, /poliza_desligada_at IS NOT NULL AND poliza_declarada_id IS NULL/)
+})
+
+test('los dos schemas de Prisma declaran la foto: el del portal ESCRIBE y el de asegura LEE', () => {
+  // Si solo lo tuviera uno, el otro seguiría compilando y la mitad del circuito
+  // no vería el dato — que es justo el fallo silencioso que esto evita.
+  for (const schema of [`${APP}/prisma/schema.prisma`, 'apps/asegura/prisma/asegura.prisma']) {
+    const src = leer(schema)
+    assert.match(src, /polizaDesligadaAt/, `${schema} no declara la foto`)
+    assert.match(src, /poliza_desligada_compania/, `${schema} no mapea la columna`)
+  }
 })
 
 test('quitar una póliza solo está en la ficha de las APORTADAS, no en la de la cartera', () => {
