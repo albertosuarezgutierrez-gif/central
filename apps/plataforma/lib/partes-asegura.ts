@@ -104,6 +104,17 @@ export type ParteSiniestro = {
   siniestroId: string | null
   polizaId: string | null
   polizaDeclaradaId: string | null
+  /**
+   * 🚨 El parte iba sobre una póliza que el cliente APORTÓ y luego QUITÓ de su
+   * bóveda: `polizaDeclaradaId` viene `null` y sin esto la pantalla lo leería
+   * como «sin póliza». No lo es — hubo una, y esto es la foto que quedó de ella
+   * (compañía · ramo · nº), congelada en el momento del borrado.
+   *
+   * `null` = nunca se desligó, que es el caso de todos los partes de siempre.
+   */
+  polizaDesligada: string | null
+  /** ISO con hora: cuándo la quitó. `null` = no la quitó. */
+  polizaDesligadaEn: string | null
   /** ISO con hora. `null` = no llegó. */
   creadoEn: string | null
   /** `null` = asegura no lo calculó (o llegó con forma rara): «sin calcular», nunca 0 días. */
@@ -186,6 +197,11 @@ export function leerParte(v: unknown): ParteSiniestro | null {
     siniestroId: cadena(p.siniestroId),
     polizaId: cadena(p.polizaId),
     polizaDeclaradaId: cadena(p.polizaDeclaradaId),
+    // Campos NUEVOS (07/09/2026): un asegura antiguo no los manda, y entonces
+    // `cadena()` los deja en `null` — que aquí significa «no se desligó», el
+    // valor correcto para todo lo anterior. Degrada sin mentir.
+    polizaDesligada: cadena(p.polizaDesligada),
+    polizaDesligadaEn: cadena(p.polizaDesligadaEn),
     creadoEn: cadena(p.creadoEn),
     plazo: plazo(p.plazo),
   }

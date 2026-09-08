@@ -20,7 +20,22 @@ import { useState } from 'react'
  * parte del flujo, se puede bloquear, y en móvil aparece pegado arriba, lejos
  * del dedo. Mismo patrón que revocar una autorización.
  */
-export function EliminarPoliza({ id, titulo }: { id: string; titulo: string }) {
+export function EliminarPoliza({
+  id,
+  titulo,
+  avisoPartes,
+}: {
+  id: string
+  titulo: string
+  /**
+   * Qué pasa con los partes de siniestro que colgaban de esta póliza, cuando los
+   * hay. Lo compone el servidor con `avisoPartesConservados()` y `null` es «no
+   * tenía ninguno». No es decoración: sin esta frase, quien declaró un siniestro
+   * puede creer que al quitar la póliza retira también el parte — que es justo
+   * lo contrario de lo que hace el botón.
+   */
+  avisoPartes: string | null
+}) {
   const router = useRouter()
   const [confirmando, setConfirmando] = useState(false)
   const [borrando, setBorrando] = useState(false)
@@ -76,6 +91,7 @@ export function EliminarPoliza({ id, titulo }: { id: string; titulo: string }) {
           <strong>¿Quitas {titulo} de tu bóveda?</strong> Se borran los datos que nos diste de ella y no
           la vas a poder recuperar. Esto no cancela el seguro: si lo tienes contratado, sigue en vigor
           con su compañía.
+          {avisoPartes && <span className="linea">{avisoPartes}</span>}
           <div className="editor-acciones" style={{ marginTop: 10 }}>
             <button type="button" className="boton" onClick={() => void eliminar()} disabled={borrando}>
               {borrando ? 'Quitando…' : 'Sí, quitarla'}

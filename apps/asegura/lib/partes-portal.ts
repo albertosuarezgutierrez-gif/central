@@ -39,6 +39,7 @@
 import {
   PARTE_ESTADOS,
   comunicadoACompania,
+  describirPolizaDesligada,
   plazoComunicacion,
   type ParteEstado,
   type PlazoComunicacion,
@@ -99,6 +100,18 @@ export type PartePortal = {
   siniestroId: string | null
   polizaId: string | null
   polizaDeclaradaId: string | null
+  /**
+   * 🚨 El parte iba sobre una póliza que el cliente APORTÓ y luego quitó de su
+   * bóveda. `polizaDeclaradaId` es `null` en ese caso, así que sin esto el parte
+   * se leería como «sin póliza» — y no lo es: es una póliza que existió y de la
+   * que quedó esta FOTO (compañía · ramo · nº), congelada al borrarla.
+   *
+   * `null` = nunca se desligó. Una cadena aquí NO es una relación: la fila de
+   * origen ya no existe y no se puede volver a resolver.
+   */
+  polizaDesligada: string | null
+  /** ISO-8601. Cuándo la quitó. `null` si no la quitó. */
+  polizaDesligadaEn: string | null
   /** ISO-8601. */
   creadoEn: string
   plazo: PlazoComunicacion
@@ -192,6 +205,10 @@ type FilaParte = {
   hayTerceros: boolean | null
   estado: ParteEstado
   siniestroId: string | null
+  polizaDesligadaAt: Date | null
+  polizaDesligadaCompania: string | null
+  polizaDesligadaNumero: string | null
+  polizaDesligadaRamo: string | null
   creadoEn: Date
 }
 
@@ -208,6 +225,10 @@ const SELECT_PARTE = {
   hayTerceros: true,
   estado: true,
   siniestroId: true,
+  polizaDesligadaAt: true,
+  polizaDesligadaCompania: true,
+  polizaDesligadaNumero: true,
+  polizaDesligadaRamo: true,
   creadoEn: true,
 } as const
 
@@ -318,6 +339,18 @@ function aParte(
     siniestroId: p.siniestroId,
     polizaId: p.polizaId,
     polizaDeclaradaId: p.polizaDeclaradaId,
+    // La foto se compone en el módulo puro: el corredor y el portal tienen que
+    // nombrar igual una póliza que ya no existe.
+    polizaDesligada: describirPolizaDesligada(
+      p.polizaDesligadaAt === null
+        ? null
+        : {
+            compania: p.polizaDesligadaCompania,
+            numeroPoliza: p.polizaDesligadaNumero,
+            ramo: p.polizaDesligadaRamo,
+          },
+    ),
+    polizaDesligadaEn: p.polizaDesligadaAt?.toISOString() ?? null,
     creadoEn: p.creadoEn.toISOString(),
     plazo: plazoComunicacion({ fechaHecho: p.fechaHecho, hoy: ctx.hoy }),
     titularDistinto,
