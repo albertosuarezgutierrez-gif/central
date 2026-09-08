@@ -37,7 +37,11 @@
   NO acepta, `setAppBadge`; almacén único del `beforeinstallprompt` (`app/instalacion.tsx`). Sin
   tabla de «visto»: la v2 (siniestro cerrado, recibo devuelto, push) está en IDEAS §N con su
   bloqueo. 27 mutaciones/27 rojos; Playwright 320/390/1024 sin desbordes. Spec en
-  `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`.
+  `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`. **PR #2630 mergeado**
+  (`455e0c40`), producción de `asegura-portal` construida desde ese commit. ⚠️ **Solapa con el PR
+  #2632** (otra sesión, «el instalador pasa a la cabecera junto a Salir»): toca la misma barra
+  (`layout.tsx`, `.salir-form ~ .tema-boton`, `InstalarApp`) y va a entrar en conflicto — decisión de
+  Alberto: instalar como botón propio de la barra o dentro de la campana (hoy: las dos, franja + campana).
 - **👥 Portal del cliente: pestaña «Contactos» + invitación sin compartir nada (08/09/2026).** Alberto
   pidió «pestaña de contactos: nombre, relación y mail, un mail de presentación… y regalos por traer
   gente». Lo primero ya existía en `/autorizaciones` (invitar por correo, 04/09); se añadió lo que
