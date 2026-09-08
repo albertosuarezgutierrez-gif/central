@@ -259,6 +259,11 @@ export {
   type RelacionFicha,
 } from './relaciones.ts'
 export {
+  mensajeWhatsapp,
+  nombreDePila,
+  type DestinatarioWhatsapp,
+} from './mensaje-whatsapp.ts'
+export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
   type EstadoCliente,

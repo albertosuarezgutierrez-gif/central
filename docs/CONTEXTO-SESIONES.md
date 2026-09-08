@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💬 El botón de WhatsApp de la ficha abre el mensaje YA ESCRITO, y es OTRO si es lead (08/09/2026).**
+  Alberto pidió invitar al portal desde el icono de WhatsApp que ya existía; abría el chat VACÍO.
+  `mensajeWhatsapp()` (`@central/module-seguros`, puro) da tres textos: cliente con correo (dice A
+  QUÉ correo le llega la invitación), cliente sin correo (se lo pide) y lead (sin portal: entraría a
+  una bóveda vacía). 🚨 El mensaje **nunca lleva el enlace** — el token viaja por correo a propósito
+  y un chat se reenvía; y dice «te VOY a mandar», porque el botón no dispara la invitación. El correo
+  PRESTADO de un interviniente no se promete (`viaEmail==='interviniente'` → se pide uno suyo). Los 4
+  cepos vistos en ROJO. Decidido de paso: el email de cumpleaños queda para los 44 clientes con correo,
+  y a los 4.206 leads NO se les manda WhatsApp masivo (lo bloquea Meta, no la ley). PR pendiente.
+
 - **📍 La dirección del cliente se corrige DONDE SE LEE (08/09/2026).** Alberto: «sigo sin poder
   modificar dirección clientes». El formulario existía desde el PR #2093, pero dentro del
   desplegable del final de la pestaña Contactos, a pantalla y media del dato y detrás de dos

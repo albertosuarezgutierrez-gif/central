@@ -16,8 +16,15 @@ const VERDE_WHATSAPP = '#25D366'
  * de pulsar) ni un icono apagado (un icono que se ve promete una acción). El
  * teléfono se queda con su `tel:`, que es lo que sí se sabe que funciona.
  */
-export default function BotonWhatsapp({ telefono, compacto = false }: {
+export default function BotonWhatsapp({ telefono, mensaje, compacto = false }: {
   telefono: string
+  /**
+   * Abre WhatsApp con el texto ya escrito, para no teclear lo mismo ochenta
+   * veces. Lo redacta `mensajeWhatsapp()` de `@central/module-seguros` — aquí
+   * NO se compone copy: un literal en un `.tsx` se salta los cepos de
+   * `copy-regulado`.
+   */
+  mensaje?: string | null
   /**
    * Para cuando va incrustado en una línea de texto densa (la cabecera de la
    * ficha, la lista de personas): 32px en vez de 44 para no partir el renglón.
@@ -26,7 +33,7 @@ export default function BotonWhatsapp({ telefono, compacto = false }: {
    */
   compacto?: boolean
 }) {
-  const url = urlWhatsapp(telefono)
+  const url = urlWhatsapp(telefono, mensaje)
   if (url === null) return null
   const lado = compacto ? 32 : 44
   return (
@@ -35,7 +42,9 @@ export default function BotonWhatsapp({ telefono, compacto = false }: {
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`Abrir WhatsApp con ${telefono}`}
-      title={`Abrir WhatsApp con ${telefono} (se abre en una pestaña nueva)`}
+      title={mensaje
+        ? `Abrir WhatsApp con ${telefono} y el mensaje ya escrito — lo envías tú (se abre en una pestaña nueva)`
+        : `Abrir WhatsApp con ${telefono} (se abre en una pestaña nueva)`}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: lado, height: lado, minWidth: lado,

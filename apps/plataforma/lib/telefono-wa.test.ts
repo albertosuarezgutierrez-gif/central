@@ -54,3 +54,32 @@ test('null cuando NO se puede afirmar que sea un móvil: la UI no pinta nada', (
   assert.equal(urlWhatsapp('cifrado'), null)
   assert.equal(urlWhatsapp('912345678'), null, 'un fijo NO se cuela por la puerta del extranjero')
 })
+
+test('con mensaje: lo cuelga en ?text= codificado, y el espacio NO viaja como «+»', () => {
+  const url = urlWhatsapp('612 345 678', 'Hola José, soy Alberto')
+  // El `+` de `URLSearchParams` se pintaría literal en la caja de WhatsApp.
+  assert.equal(url, 'https://wa.me/34612345678?text=Hola%20Jos%C3%A9%2C%20soy%20Alberto')
+  assert.doesNotMatch(url!, /\+/)
+})
+
+test('con mensaje: los saltos de línea sobreviven, que es lo que separa los párrafos', () => {
+  assert.match(urlWhatsapp('612345678', 'Una\n\nOtra')!, /%0A%0A/)
+})
+
+test('mensaje vacío o en blanco: URL limpia, sin un ?text= que no dice nada', () => {
+  assert.equal(urlWhatsapp('612345678', ''), 'https://wa.me/34612345678')
+  assert.equal(urlWhatsapp('612345678', '   \n '), 'https://wa.me/34612345678')
+  assert.equal(urlWhatsapp('612345678', null), 'https://wa.me/34612345678')
+  assert.equal(urlWhatsapp('612345678'), 'https://wa.me/34612345678')
+})
+
+test('un mensaje NO convierte en válido un número que no lo es', () => {
+  // El veredicto lo sigue dando el número. Si no, el icono aparecería sobre un
+  // fijo en cuanto alguien pasara un texto.
+  assert.equal(urlWhatsapp('954123456', 'Hola'), null)
+  assert.equal(urlWhatsapp('', 'Hola'), null)
+})
+
+test('internacional con mensaje: también lo lleva', () => {
+  assert.match(urlWhatsapp('+351912345678', 'Hola')!, /^https:\/\/wa\.me\/351912345678\?text=Hola$/)
+})

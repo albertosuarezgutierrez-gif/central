@@ -32,8 +32,18 @@ export type AccionesContacto = {
 }
 
 export function accionesContacto(
-  { telefono, email, ilegible = false }:
-  { telefono?: string | null; email?: string | null; ilegible?: boolean },
+  { telefono, email, ilegible = false, mensaje }:
+  {
+    telefono?: string | null
+    email?: string | null
+    ilegible?: boolean
+    /**
+     * Texto con el que abrir WhatsApp ya escrito. Se propaga tal cual: este
+     * módulo NO redacta nada (el copy de la correduría vive en
+     * `mensajeWhatsapp()` de `@central/module-seguros`, donde pasa los cepos).
+     */
+    mensaje?: string | null
+  },
 ): AccionesContacto {
   if (ilegible) {
     return { tel: null, email: null, whatsapp: null, nota: 'el contacto está cifrado y no se ha podido leer' }
@@ -41,7 +51,7 @@ export function accionesContacto(
 
   const tel = (telefono ?? '').trim()
   const correo = (email ?? '').trim()
-  const whatsapp = tel ? urlWhatsapp(tel) : null
+  const whatsapp = tel ? urlWhatsapp(tel, mensaje) : null
 
   return {
     tel: tel ? `tel:${tel.replace(/\s/g, '')}` : null,

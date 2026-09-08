@@ -64,10 +64,18 @@ export function esMovilEs(telefono: string): boolean {
  *   aquí en vez de fingir una certeza que no se tiene.
  * · Cualquier otra cosa (fijo español, número corto, cadena vacía, texto) →
  *   `null`, y la UI no pinta el icono.
+ *
+ * Con `mensaje`, la URL lleva `?text=` para que WhatsApp abra el chat con el
+ * texto ya escrito y Alberto solo tenga que darle a enviar. El mensaje NO se
+ * compone aquí: llega hecho desde `mensajeWhatsapp()` de
+ * `@central/module-seguros`, que es donde el copy de la correduría pasa por los
+ * cepos de `copy-regulado`.
  */
-export function urlWhatsapp(telefono: string): string | null {
+export function urlWhatsapp(telefono: string, mensaje?: string | null): string | null {
   const nacional = nacionalEs(telefono)
-  if (nacional !== null) return /^[67]/.test(nacional) ? `https://wa.me/34${nacional}` : null
+  if (nacional !== null) {
+    return /^[67]/.test(nacional) ? conTexto(`https://wa.me/34${nacional}`, mensaje) : null
+  }
 
   const limpio = limpiar(telefono)
   // Sin prefijo internacional explícito no hay país que poner, y wa.me sin país
@@ -78,5 +86,22 @@ export function urlWhatsapp(telefono: string): string | null {
   // no se cuela por la puerta de «extranjero plausible».
   if (digitos.startsWith('34')) return null
   if (!/^\d{8,15}$/.test(digitos)) return null
-  return `https://wa.me/${digitos}`
+  return conTexto(`https://wa.me/${digitos}`, mensaje)
+}
+
+/**
+ * Le cuelga el `?text=` a la URL, o la devuelve tal cual.
+ *
+ * 🚨 `encodeURIComponent` y no `URLSearchParams`: este último codifica el
+ * espacio como `+`, y WhatsApp lo pinta LITERAL en la caja del mensaje
+ * («Hola+José,+soy+Alberto»). Es un fallo que no rompe nada —la URL abre, el
+ * chat se abre— y que solo se ve en el móvil de la persona a la que se le
+ * acaba de mandar.
+ *
+ * Un mensaje en blanco (o de solo espacios) NO pone un `?text=` vacío: deja la
+ * URL limpia, que es exactamente lo que hacía antes de que existiera esto.
+ */
+function conTexto(url: string, mensaje?: string | null): string {
+  const texto = (mensaje ?? '').trim()
+  return texto ? `${url}?text=${encodeURIComponent(texto)}` : url
 }
