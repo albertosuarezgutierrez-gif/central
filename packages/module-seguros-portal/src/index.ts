@@ -298,3 +298,20 @@ export {
   resultadoSugerencia,
 } from './sugerencia.ts'
 export type { ContextoSugerencia, ResultadoSugerencia } from './sugerencia.ts'
+// La «vista de corredor» (08/09/2026): Alberto abre el portal como lo ve un
+// cliente. Lee su cabecera: identidad REAL dedicada + vínculo temporal con
+// `origen = 'corredor'`, que asegura tiene que EXCLUIR al decir «ya entra».
+export {
+  IDENTIDAD_CORREDOR_ID,
+  ORIGEN_VINCULO_CORREDOR,
+  VIGENCIA_ENLACE_CORREDOR_MS,
+  SESION_CORREDOR,
+  SESION_CORREDOR_SEGUNDOS,
+  RUTA_VISTA_CORREDOR,
+  formatoTokenVistaValido,
+  generarTokenVista,
+  hashTokenVista,
+  estadoEnlaceVista,
+  enlaceVistaCorredor,
+} from './vista-corredor.ts'
+export type { EstadoEnlaceVista } from './vista-corredor.ts'
