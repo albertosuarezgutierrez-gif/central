@@ -291,9 +291,13 @@ además el `sameAs` de la idea F.
 > hay tráfico que perder, hay tráfico que construir**, y eso respalda el cambio de ámbito a nacional
 > del PR #2464, porque la señal local que supuestamente se sacrificaba no existía.
 >
-> ⏸️ **Lo que sigue sin existir es un conector de Search Console del lado del agente.** Los datos
-> están, pero hay que pegarlos a mano. El problema ya no es «medir a ciegas», es «los datos no llegan
-> al que decide»: distinto problema y distinto arreglo.
+> ✅ **Conector construido el 08/09/2026** (spec `docs/superpowers/specs/2026-09-08-seo-correduria-conectores-design.md`):
+> el cron `seo-correduria` de plataforma (lunes 08:30 UTC) lee Search Console por API con una cuenta
+> de servicio, Serper (top-10 de las 14 consultas objetivo) y PostHog (HogQL), guarda una fila por
+> fuente y semana en `seo_correduria_semana` con tri-estado y manda el informe por Telegram con UNA
+> acción propuesta. La skill lee esa tabla en vez de pedir que le peguen datos. ⏸️ **Lo que sigue
+> pendiente de Alberto**: la cuenta de servicio de Google con acceso a la propiedad, la Personal API
+> key de PostHog y créditos en Serper — sin ellos el informe llega diciendo qué fuente falta, no un 0.
 
 <details><summary>Diagnóstico original (se conserva: explica POR QUÉ se miró)</summary>
 
@@ -376,12 +380,12 @@ o accidentes. **Relación ya abierta, coste de captación cero**, y encima son q
   y deja de ser una decisión pendiente (comprobado 07/09/2026).** El desplegable de Cookiebot solo
   ofrece meses enteros de 0 a 12: **12 meses es el máximo de la herramienta**, no una preferencia que
   nadie haya cambiado. Se queda en 12.
-- 🚨 **NUEVO — Cookiebot dice «Not live» en el dominio (07/09/2026).** Está dado de alta en el grupo
-  del CBID, pero el escaneo del 05/09 encontró **1 sola cookie** y el estado del banner es «Not
-  live»: Cookiebot no se detecta en la web. [Probable] falta `NEXT_PUBLIC_COOKIEBOT_ID` en el
-  proyecto Vercel `asegura-web`, y sin esa variable la app **no monta el banner y, por diseño
-  (`lib/analitica.ts`), no mide nada**. El fail-closed funciona; el problema es que es SILENCIOSO.
-  Pendiente de confirmar en el HTML vivo.
+- ✅ **El «Not live» de Cookiebot del 07/09 ERA FALSO — confirmado en los paneles el 08/09/2026.**
+  `asegura-web` tiene `NEXT_PUBLIC_COOKIEBOT_ID` + `NEXT_PUBLIC_POSTHOG_KEY` + `_HOST` desde el 05/09
+  (solo Production, a propósito), el banner sale en español en modo opt-in y las cuatro verificaciones
+  fail-closed pasan en sesión limpia (cero PostHog antes de aceptar). PostHog EU registra visitas
+  reales. El [Probable] de arriba se escribió sin mirar el HTML vivo ni las envs: es un caso más de
+  «dato que NO hay ≠ dato que NO se ha mirado» (PR #2618).
 - ⏳ **Cookiebot en Premium Trial, 12 días restantes** (a 07/09/2026), y el trial solo admite 1
   dominio. Cuando caduque, mirar qué pasa con el banner.
 - ❌ **Google Analytics NO se añade** (decidido 07/09/2026). Ya hay medición —PostHog EU detrás de

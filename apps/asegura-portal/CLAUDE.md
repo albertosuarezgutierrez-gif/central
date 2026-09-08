@@ -1034,7 +1034,7 @@ entra directo — la sesión dura 30 días y `/` ya manda a la bóveda si sigue 
 | `app/icono-app/route.tsx` | El icono de **512 px**. Con menos de 192 Chrome NO ofrece instalar, y no lo dice. El monograma ocupa ~52 % porque Android recorta los `maskable` a la forma del sistema. `force-static` |
 | `lib/monograma.ts` | El dibujo se LEE de `public/brand/marca-asegura.svg`; lo comparten la pestaña (128) y la app instalada (512) |
 | `public/sw.js` + `app/RegistrarSW.tsx` | El service worker que Chrome exige, registrado en el layout raíz |
-| `app/(portal)/InstalarApp.tsx` | La oferta, dentro de la sesión |
+| `app/(portal)/InstalarApp.tsx` + `app/instalacion.tsx` | La oferta (franja, se descarta una vez) y el **almacén compartido** del evento; desde el 08/09/2026 la campana ofrece instalar también |
 
 🚨 **El service worker NO CACHEA NADA, y eso es la decisión.** Aquí dentro hay pólizas, recibos y
 partes de siniestro de personas identificadas: una respuesta guardada en el almacén del navegador
@@ -1059,6 +1059,48 @@ notificaciones web solo funcionan si la app está añadida a la pantalla de inic
 Lo vigila `lib/pwa.test.ts` (manifiesto, icono ≥192 en TODAS sus entradas, SW con `fetch` y sin
 caché, registro montado, rama de iOS con su glifo). Se rompió a mano una por una: 16 mutaciones, 16
 rojos. PR #2581.
+
+## 🔔 La campana de avisos (08/09/2026) — una campana esconde; el globo es lo que la salva
+
+Idea de Alberto, mirando el `confirm()` de «nace pendiente: no abre nada hasta que Gabriel la acepte
+en su portal»: *«un icono de campana de avisos, para autorizaciones, vencimientos, etc.»*. Hasta ese
+día una autorización recibida solo se veía entrando en «Quién me ve»; quien venía a mirar su póliza
+no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`.
+
+| Pieza | Qué hace |
+|---|---|
+| `lib/avisos.ts` | **Puro.** Compone la lista y el globo: autorizaciones pendientes recibidas Y otorgadas (→ `/autorizaciones`), obligaciones en la ventana del módulo (→ `/boveda#calendario-titulo`) |
+| `app/api/avisos/route.ts` | `requireIdentidad()`; **`allSettled`**, no `all`: una fuente caída se declara en `fuentesIlegibles` y la otra se sirve |
+| `app/CampanaAvisos.tsx` → `app/Campana.tsx` | La puerta (sesión VERIFICADA, como `SalirDelPortal`) y la campana. En la cabecera, **entre Salir y el tema** |
+| `app/instalacion.tsx` | El almacén compartido de la instalación: la franja «Tenlo a mano» y la entrada «Instalar» de la campana leen el MISMO evento |
+
+🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
+`!` (ninguna legible, o fallo de red). Este portal renunció a la hamburguesa porque un botón que
+esconde hace las cosas menos visibles que enseñarlas, y la campana es exactamente ese botón: sin
+número, una autorización detrás de ella es lo mismo que hoy en `/autorizaciones`. Y «sin avisos»
+sobre una fuente que no se leyó es la mentira que el `CLAUDE.md` de la raíz persigue.
+
+🚨 **Desde la campana NO se acepta ni se revoca nada.** Cada aviso es un enlace a la pantalla donde
+se resuelve, con el alcance y el texto delante. Un «Aceptar» en el panel sería aceptar sin leer y
+duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. Cepo: un solo `fetch` en
+`Campana.tsx`, y es el GET.
+
+📌 **Sin tabla de «visto», a propósito**: el aviso desaparece al resolverse. Lo que necesita saber
+qué vio ya el cliente (siniestro que cambia de estado, petición respondida, recibo devuelto) es v2 y
+está en `docs/CORREDURIA-INTRANET-IDEAS.md` §N con su bloqueo. Y el número va también al icono de
+la app instalada (`setAppBadge`), que es lo que hace que instalar sirva de algo.
+
+⚠️ **El CSS de la cabecera cambió de `+` a `~`**: `.salir-form ~ .tema-boton`. Con el adyacente,
+la campana en medio dejaba al interruptor sin casar, recuperaba su `margin-left:auto` y se iba solo
+al extremo. El orden en `layout.tsx` sigue sin ser cosmético. El panel del móvil (≤ 480 px) va
+`position: fixed` anclado a los bordes, y es un desplegable que se cierra con Escape o clic fuera:
+se mide que quepa, no que no tape.
+
+Lo vigilan `lib/avisos.test.ts` (9) y `lib/campana.test.ts` (7); `lib/pwa.test.ts` se repuntó al
+almacén. **27 mutaciones, 27 rojos**: dos cepos salieron verdes a la primera porque buscaban la
+PALABRA (`clearAppBadge`, `display-mode: standalone`) y la encontraban en un tipo o en un comentario;
+se endurecieron a la LLAMADA. Medido con Playwright a 320/390/1024 con sesión firmada y BD
+inalcanzable: sin desbordes, 44 px, y con la API caída el globo es `!`.
 
 ## Infraestructura
 

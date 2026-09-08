@@ -84,9 +84,23 @@ canal propio que se toca cada tres semanas no produce nada.
 
 | Fuente | Qué contesta | Estado |
 |---|---|---|
-| **Google Search Console** | Por qué consultas entras y con qué posición. **La única fuente sin sesgo.** | 🟢 **Verificada desde el 17/05/2026** (`sc-domain:grupoasegura.es`), con sitemap enviado. ⚠️ Pero **no hay conector**: los datos existen y hay que pegarlos a mano. Sin ellos delante, la posición se declara «no consultada», nunca 0 |
-| **PostHog** (`eu.i.posthog.com`) | Visitas, páginas, origen | 🟢 Vivo desde 05/09/2026 — **pero solo mide a quien ACEPTA el banner** |
+| **Google Search Console** | Por qué consultas entras y con qué posición. **La única fuente sin sesgo.** | 🟢 **Verificada desde el 17/05/2026** (`sc-domain:grupoasegura.es`), con sitemap enviado. ✅ **Conector desde el 08/09/2026**: el cron `seo-correduria` de plataforma (lunes 08:30 UTC) la lee por API y deja la foto en `seo_correduria_semana` (fila `fuente='gsc'`). Si esa fila dice `estado ≠ ok`, la posición se declara «no consultada» con el motivo, nunca 0 |
+| **SERP en vivo** (Serper) | Quién ocupa el top-10 de cada consulta objetivo (`references/keywords.md` = `CONSULTAS` de plataforma, un cepo los compara) y si estamos | ✅ Desde el 08/09/2026, fila `fuente='serp'`. `propia: null` = fuera del top-10, que NO es posición 0. Sin créditos en Serper la fila sale `error` |
+| **PostHog** (`eu.i.posthog.com`) | Visitas, páginas, origen | 🟢 Vivo desde 05/09/2026 — **pero solo mide a quien ACEPTA el banner**. ✅ Desde el 08/09 el cron la lee por HogQL: fila `fuente='posthog'` |
 | **BD `seguros`** | Leads reales del formulario y su estado | 🟢 Vivo |
+
+**Cómo se lee la foto** (Supabase MCP, `execute_sql`, proyecto `wswbehlcuxqxyinousql`):
+
+```sql
+SELECT fuente, estado, detalle, datos
+FROM seo_correduria_semana
+WHERE semana = (SELECT max(semana) FROM seo_correduria_semana)
+```
+
+Una fuente con `estado = 'no_configurado'` o `'error'` se dice **tal cual** en el informe («GSC sin
+conectar: falta X»), y la acción de la semana es arreglar esa fuente, no escribir contenido a ciegas.
+El cron ya propone una acción (`accionPropuesta` en `apps/plataforma/lib/seo-correduria/informe.ts`,
+regla pura); si la contradices, di por qué.
 
 🚨 **PostHog subestima el tráfico por diseño.** La medición va detrás del consentimiento de
 Cookiebot (`apps/asegura-web/lib/analitica.ts`, `puedeMedir()`), así que quien rechaza no aparece.

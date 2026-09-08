@@ -43,6 +43,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧹 La ficha de cliente: de 7 botones a 2 (08/09/2026).** Alberto, con la captura: «esto es una
+  guarrería, tantos botones». `Cabecera.tsx` pintaba «Subir póliza» + seis «Presupuestar <ramo>» + dos
+  avisos grises sueltos, en tres filas que empujaban los titulares fuera de la primera pantalla. Ahora:
+  menú «➕ Presupuestar ▾» (`<details>` nativo, sigue Server Component; 🚧 en vida/salud/decesos) +
+  «📄 Subir póliza» con su aviso en el `title`. El menú va PRIMERO: en segunda posición el desplegable
+  se salía a 360px (medido con Playwright, right=427). Cepo `test/regression-ficha-cliente-acciones.test.ts`
+  visto en rojo. Regla anotada en la skill `correduria-crm`. PR #2622 (19/19 verdes, mergeado).
+- **🔔 La campana de avisos del portal del cliente (08/09/2026).** Alberto, ante el «nace pendiente
+  hasta que la acepte en su portal»: un icono de campana en la cabecera del portal con autorizaciones,
+  vencimientos e instalar. Entró: `lib/avisos.ts` (puro) + `GET /api/avisos` (`allSettled`) +
+  `Campana.tsx` entre Salir y el tema, globo con tres desenlaces (`n`·`n+`·`!`, nunca 0), enlaza y
+  NO acepta, `setAppBadge`; almacén único del `beforeinstallprompt` (`app/instalacion.tsx`). Sin
+  tabla de «visto»: la v2 (siniestro cerrado, recibo devuelto, push) está en IDEAS §N con su
+  bloqueo. 27 mutaciones/27 rojos; Playwright 320/390/1024 sin desbordes. Spec en
+  `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`.
 - **👥 Portal del cliente: pestaña «Contactos» + invitación sin compartir nada (08/09/2026).** Alberto
   pidió «pestaña de contactos: nombre, relación y mail, un mail de presentación… y regalos por traer
   gente». Lo primero ya existía en `/autorizaciones` (invitar por correo, 04/09); se añadió lo que
@@ -120,6 +135,18 @@
   «Corregir dirección» (montaje perezoso); el desplegable se queda solo con la identidad. Sigue
   habiendo UN solo formulario. Pendiente de decisión de Alberto: que el cliente edite dirección y
   teléfono desde el portal y que TODO lo que haga salga en el historial de su ficha.
+
+- **🔎 El agente SEO de la correduría ya tiene datos sin que nadie se los pegue (08/09/2026).** Alberto:
+  «controlar las visitas y sobre todo para el agente de SEO… analizar competencia e ir posicionando».
+  Medido antes: la skill corría a MANO, GSC verificada desde mayo pero leída una vez a mano (350
+  impresiones, 0 clics, posición 47), competencia escrita sin internet. Cron `seo-correduria` en
+  plataforma (lunes 08:30 UTC): Search Console por cuenta de servicio (JWT RS256 con `jose`), Serper
+  (top-10 de las 14 consultas de `keywords.md`, espejadas en `CONSULTAS` con cepo), PostHog por HogQL
+  → `seo_correduria_semana` (fila por fuente y semana, tri-estado `ok|error|no_configurado`, nunca 0) +
+  Telegram `correduria.seo-semana` con UNA acción por regla pura. Migración `2026-09-08_seo_correduria_semana.sql`
+  **pendiente de aplicar** (OK de Alberto). Faltan de él: cuenta de servicio de Google con acceso a la
+  propiedad, Personal API key de PostHog, créditos de Serper (a cero desde el 24/08). ⏳ Cookiebot está
+  en trial de 12 días desde el 07/09: al caducar, mirar si el banner sigue (fail-closed = deja de medir en silencio).
 
 - **🍪 `grupoasegura.es` SÍ mide, y mide bien — aquí se afirmó lo contrario sin haberlo medido
   (08/09/2026).** Claude en Chrome lo comprobó en los paneles: `asegura-web` tiene desde el 05/09
@@ -754,7 +781,7 @@
   que el `r.json()` revienta y cae en un mensaje genérico que tapaba 413, 504 y 500 por igual. Las dos guardas
   medían lo que NO viaja: el cliente el **fichero** (8 MB) y el servidor un tope **inalcanzable** (11 MB).
   Ahora la foto se **encoge en el navegador** (`lib/imagen-cliente.ts`, medido en Chromium: **12,4 MB → 1,8 MB**;
-  el PDF no se toca) y cada fallo se dice por su nombre. Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
+  el PDF no se toca) y cada fallo se dice por su nombre. Cepos vistos en ROJO (3 roturas). PR #2622.
 
 - **🔗 `sameAs`: la web y el canal de YouTube declarados como el MISMO negocio (07/09/2026).**
   `PERFILES` en `lib/sitio.ts` → `sameAs` en la ficha `InsuranceAgency`. Importa aquí más que en otras
@@ -809,7 +836,7 @@
   imputan igual. 🚨 `gastos` NO tiene `cuenta_id`: si la sesión no es la dueña del libro (misma resolución
   que `facturas-scan`) **no se sube ni se imputa nada** y se DICE (`decision: null` = «no intentado», no
   «no hay»). Botón 🧾 en la cabecera (icono solo en móvil: la barra de 52px no admite etiqueta a 320px).
-  Cepos vistos en ROJO (3 roturas). PR pendiente de nº.
+  Cepos vistos en ROJO (3 roturas). PR #2622.
 
 - **🚚 Flota: el ramo que el mapa de keywords pedía y nadie había escrito + `Service` en el JSON-LD (07/09/2026).**
   `/seguros/flota` publicada (7º ramo): es el nicho «empresas y flota», el único del mapa de consultas
