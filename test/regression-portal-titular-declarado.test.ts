@@ -30,30 +30,41 @@ const PUERTO = leer('apps', 'asegura', 'lib', 'leads-portal.ts')
 const MANUAL = leer('apps', 'asegura-portal', 'app', '(portal)', 'boveda', 'AnadirPoliza.tsx')
 const SQL = leer('apps', 'asegura-portal', 'prisma', 'sql', '2026-09-07_portal_declarada_titular.sql')
 
-test('🚨 la pregunta NO nace contestada', () => {
-  // Un valor por defecto aquí no es una comodidad: es responder por el cliente.
-  // Y de esa respuesta depende contra qué ficha se comprueba después si la
-  // correduría ya lleva esa póliza.
+test('🚨 la casilla «es de una empresa» arranca SIN marcar, y sin marcarla se manda «propio»', () => {
+  // Alberto, 08/09/2026: «la mayoría no tiene empresa». La pregunta ya no es
+  // una puerta que hay que cruzar para subir nada: es una casilla a la vista
+  // que arranca en «no». Y lo que viaja SIEMPRE es una respuesta («propio» o
+  // «empresa»), porque «no se preguntó» decide que NO se coteje contra ninguna
+  // ficha, y eso dejaría sin comprobar todas las pólizas personales.
   const codigo = sinComentarios(SUBIR)
+  assert.match(codigo, /useState\(false\)/, 'la casilla de empresa tiene que arrancar sin marcar')
+  assert.match(codigo, /type="checkbox"/, 'tiene que ser una casilla, no un par de radios obligatorios')
+  // 🪤 Anclado al principio de línea: la primera versión buscaba el `append`
+  // suelto y seguía verde con `if (esDeEmpresa) body.append(...)` delante, que
+  // es exactamente el condicional que este cepo prohíbe. Se vio al romperlo.
   assert.match(
     codigo,
-    /useState<'propio' \| 'empresa' \| null>\(null\)/,
-    'el estado de «¿de quién es?» tiene que arrancar en null, sin respuesta',
+    /^\s*body\.append\('titularTipo', deQuien\)/m,
+    'el titular tiene que viajar siempre, sin condicionarlo a que se haya contestado',
+  )
+  assert.ok(
+    !/useState<'propio' \| 'empresa' \| null>/.test(codigo),
+    'la pregunta ya no arranca en null: eso bloqueaba los dos botones a todo el mundo',
   )
 })
 
-test('🚨 no se puede subir sin contestar, ni decir «empresa» sin decir cuál', () => {
+test('🚨 no se puede decir «empresa» sin decir cuál', () => {
   // «De mi empresa» sin nombre no identifica ninguna empresa: viajaría como si
   // lo hiciera. La BD lo rechaza con un CHECK, pero llegar hasta allí devuelve
   // un error de Postgres en vez de decir qué falta.
   const codigo = sinComentarios(SUBIR)
-  assert.match(codigo, /listoParaSubir/, 'falta la guarda que impide subir sin contestar')
+  assert.match(codigo, /listoParaSubir/, 'falta la guarda que impide subir «de empresa» sin decir cuál')
   assert.match(
     codigo,
     /deQuien === 'empresa' && empresa\.trim\(\) !== ''/,
     'decir «de mi empresa» tiene que exigir el nombre',
   )
-  assert.match(codigo, /disabled=\{subiendo \|\| !listoParaSubir\}/, 'el input de fichero tiene que estar bloqueado sin respuesta')
+  assert.match(codigo, /disabled=\{subiendo \|\| !listoParaSubir\}/, 'el input de fichero tiene que estar bloqueado con «empresa» a medias')
 })
 
 test('🚨 «no se preguntó» se guarda como NULL, nunca como «propio»', () => {
