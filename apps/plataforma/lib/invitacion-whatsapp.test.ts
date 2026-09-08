@@ -46,7 +46,32 @@ test('a quien ya entraba no se le dice que ya puede entrar por primera vez', () 
 
 test('un salto de línea en el nombre no parte el mensaje', () => {
   const texto = mensajeInvitacionWhatsapp({ nombre: 'Ana\nMaría', email: 'a@b.es', enlace: ENLACE, yaEntraba: false })
-  assert.ok(texto.startsWith('Hola, Ana María:'))
+  assert.ok(texto.startsWith('Hola, Ana:'))
+  assert.equal(texto.split('\n')[0], 'Hola, Ana:')
+})
+
+// ─── Solo el nombre de pila (Alberto, 08/09/2026: «apellidos es demasiado formal») ───
+
+test('saluda por el nombre de pila, sin apellidos', () => {
+  const texto = mensajeInvitacionWhatsapp({
+    nombre: 'Gabriel Duran Martinez',
+    email: 'g@example.com',
+    enlace: ENLACE,
+    yaEntraba: false,
+  })
+  assert.ok(texto.startsWith('Hola, Gabriel:'))
+  assert.ok(!texto.includes('Duran'))
+})
+
+test('una ficha en MAYÚSCULAS no grita el nombre', () => {
+  const texto = mensajeInvitacionWhatsapp({ nombre: 'GABRIEL DURAN', email: 'g@b.es', enlace: ENLACE, yaEntraba: false })
+  assert.ok(texto.startsWith('Hola, Gabriel:'))
+})
+
+test('a una sociedad no se le saluda por la «primera palabra»', () => {
+  const texto = mensajeInvitacionWhatsapp({ nombre: 'GLOBAL 2 SL', email: 'g@b.es', enlace: ENLACE, yaEntraba: false })
+  assert.ok(texto.startsWith('Hola:'))
+  assert.ok(!texto.includes('Global'))
 })
 
 // ─── El número ──────────────────────────────────────────────────────────────

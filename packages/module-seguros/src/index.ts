@@ -406,6 +406,18 @@ export {
 } from './backfill-dni.ts'
 
 export {
+  planBackfillContacto,
+  type CampoContacto,
+  type OrigenContacto,
+  type FilaContacto,
+  type DestinoContacto,
+  type FilaPlanContacto,
+  type GrupoChoqueContacto,
+  type CuentaContacto,
+  type PlanBackfillContacto,
+} from './backfill-contacto.ts'
+
+export {
   ALFABETO_SERIE,
   PRIMERA_MATRICULA_MODERNA,
   ULTIMO_HITO_CONOCIDO,
@@ -498,3 +510,4 @@ export {
   idsDesconocidos,
 } from './normas.ts'
 export type { NormaCitable } from './normas.ts'
+export { nombreDePila } from './nombre-de-pila.ts'

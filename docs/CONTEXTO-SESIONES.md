@@ -40,6 +40,14 @@
 - **Regalos: aparcados** (colaborador externo RDL 3/2020 + art. 21 LSSI) → `CORREDURIA-INTRANET-IDEAS.md` §M.
 - Spec `docs/superpowers/specs/2026-09-08-portal-contactos-design.md`. Cepos con 4 mutaciones en rojo.
 
+- **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
+  correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
+  cifrado): `planBusqueda()` lanza `email` + `nombre`. Medido: **250 fichas con email y sin
+  `email_lookup_hash`, 100 secundarios, 91 teléfonos** — para ésas el correo correcto decía «nadie
+  coincide». No había backfill (solo el del DNI). Ahora: pieza pura `backfill-contacto.ts` en
+  `@central/module-seguros` (9 tests, cepo visto en rojo), `GET/POST /api/operador/backfill-contacto`
+  en asegura y tarjeta+botón en `/correduria/mantenimiento`. Ojo: `uq_clientes_email_lookup_hash` es
+  UNIQUE → fichas con el mismo correo chocan y no se escriben. **Pendiente: pulsar el botón** (tandas).
 - **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
   captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil
   quedaba fuera de la primera pantalla, y en iPhone ese aviso es lo ÚNICO que explica cómo instalar
@@ -48,6 +56,14 @@
   `lib/pwa.test.ts` ya vigila el orden (visto en rojo con el orden viejo). Coste conocido: en Android
   el evento llega tras cargar y el contenido baja un salto una vez al aparecer el aviso.
 
+- **📲 El WhatsApp de invitación saluda por el NOMBRE DE PILA (08/09/2026).** Alberto, al ver «Hola,
+  Gabriel Duran Martinez:»: «solo pondría el nombre... apellidos es demasiado formal, al ser cliente tiene
+  que ser trato más cercano». `mensajeInvitacionWhatsapp` usa ahora `nombreDePila` —la misma regla que el
+  «Buenas tardes, Alberto» de la bóveda—, que **bajó de `module-seguros-portal` a `@central/module-seguros`**
+  (plataforma no depende del portal a propósito; el portal la re-exporta). Sociedad o nombre con coma →
+  «Hola:», no «Hola, Global:». 4 cepos nuevos vistos en rojo. **PR #2614, mergeado** (19 checks
+  verdes al abrirlo por MCP en draft, sin palancas). ⏸️ El **correo** de invitación
+  (`apps/asegura/lib/correo-invitacion-portal.ts`) sigue con nombre completo: Alberto habló del WhatsApp.
 - **📲 Invitar al portal también por WhatsApp (08/09/2026).** Alberto: «poner al lado el botón de
   WhatsApp, le doy y ese mismo mensaje se le envía al cliente, se le confirma qué correo tiene
   asignado y el enlace». Sin WABA no hay envío desde el servidor: es `wa.me`, que **abre** WhatsApp
@@ -83,6 +99,18 @@
   habiendo UN solo formulario. Pendiente de decisión de Alberto: que el cliente edite dirección y
   teléfono desde el portal y que TODO lo que haga salga en el historial de su ficha.
 
+- **🍪 `grupoasegura.es` SÍ mide, y mide bien — aquí se afirmó lo contrario sin haberlo medido
+  (08/09/2026).** Claude en Chrome lo comprobó en los paneles: `asegura-web` tiene desde el 05/09
+  `NEXT_PUBLIC_COOKIEBOT_ID` (Domain Group #1 de Cookiebot, solo `grupoasegura.es`; `www` no persiste
+  y no hace falta, es 308 al apex) + `NEXT_PUBLIC_POSTHOG_KEY` + `_HOST`, solo Production a propósito
+  (decisión de Alberto 07/09: un preview no mide antes que ensuciar). PostHog EU «Grupo ASegura»
+  (proyecto 266897): 5 visitantes / 81 pv / 21 sesiones en 7 días. Las 4 verificaciones fail-closed
+  pasan en sesión limpia: banner ES opt-in, CERO PostHog antes de aceptar, carga tras «Estadísticas»,
+  consentimiento persiste. **Vercel Web Analytics sigue apagada y es OTRO producto: su 404 no es
+  «cero visitas».** La sesión partió de «no existe el CBID» sin medirlo — la regla «dato que NO hay ≠
+  dato que NO se ha mirado», aplicada a un panel. Lo que SÍ sigue en pie: `housesevillana` (GA4
+  `G-N5CMQL9C4M`) e `ia-rest` (GA4 `G-EN2YQLRLEX`) cargan GA sin banner; ese CBID puede servirles.
+
 - **🩺 `total_count: 0` NO prueba que un run de Actions esté muerto — corregida la tabla de la
   DECIMOCUARTA (07/09/2026).** En el PR #2530 se vio el run `34117636782` en `pending` con
   `list_workflow_jobs` → `total_count: 0`, se diagnosticó **forma (b)** («nunca arrancó, hace falta
@@ -93,6 +121,14 @@
   paso 0 del orden. Equivocarse hacia (c) cuesta esperar; hacia (b) cuesta un head nuevo que borra
   la evidencia.
 
+- **🗑️ Quitar una póliza aportada se ofrece EN LA LISTA, no solo al final de su ficha (08/09/2026).**
+  Alberto, con el botón del PR #2592 ya en producción (deploy READY sobre `65f97f8`, sin errores de
+  runtime en la ficha): «no puedo eliminar "Póliza sin compañía identificada"… el cliente se puede
+  equivocar, puede crear y quitar las pólizas que quiera». El botón existía, pero debajo del formulario
+  de corregir de `/boveda/anadida/[id]`; desde la lista no se veía, y una acción que hay que ir a buscar
+  no existe. `FilaDeclarada` monta ahora `EliminarPoliza` bajo la tarjeta (fuera del `<Link>`, 44px,
+  confirmación a todo ancho); `FilaPoliza` (cartera) sigue sin él. Cepo nuevo con los dos brazos vistos
+  en rojo en `test/regression-portal-borrado.test.ts`. Responsive NO medido en navegador (sin sesión).
 - **🧊 Y al quitarla, el parte de siniestro NO se borra: se CONGELA (07/09/2026).** Alberto: «al borrar
   póliza tb borraría siniestros, ¿es lo lógico?». No: un parte es la prueba de que el cliente comunicó
   el siniestro y CUÁNDO (art. 16 LCS), y la cascada la destruiría —la borraría él mismo ordenando su
