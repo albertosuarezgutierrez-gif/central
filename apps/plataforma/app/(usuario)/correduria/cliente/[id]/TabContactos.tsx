@@ -6,7 +6,7 @@ import { etiquetaRol, leerSitio, textoReparoSitio, type ContactoCliente, type Pe
 import Bloque from '../../Bloque'
 import ContactosFicha from '../../ContactosFicha'
 import BotonWhatsapp from '../../BotonWhatsapp'
-import EditarCliente from '../../EditarCliente'
+import EditarCliente, { EditarDireccion } from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
 import { Badge, btnStyle } from '@/components/ui'
 import {
@@ -150,7 +150,7 @@ export default function TabContactos({ ficha, personas }: {
         espejo={espejoDe(ficha.contacto, ficha.contactos)}
         cifradoEnEspejo={ficha.contacto.telefonoIlegible || ficha.contacto.emailIlegible}
       >
-        <Direccion c={ficha.contacto} />
+        <Direccion clienteId={ficha.id} c={ficha.contacto} />
       </ContactosFicha>
 
       {/* Si entra —o puede entrar— a ver sus seguros por su cuenta. Va aquí y no
@@ -173,7 +173,8 @@ export default function TabContactos({ ficha, personas }: {
         {resultado && resultado.estado !== 'ok' && <Aviso r={resultado} />}
       </Bloque>
 
-      {/* Editar: contactos (libres), dirección (libre) e identidad (solo con DNI recibido). */}
+      {/* Editar la identidad (solo con DNI recibido). Los contactos y la
+          dirección se corrigen arriba, en la tarjeta donde se leen. */}
       <Editor ficha={ficha} />
     </div>
   )
@@ -224,11 +225,12 @@ function espejoDe(c: ContactoFicha, contactos: ContactosCliente | null): { tipo:
  * `intranet:` de mayo; ninguna de CIMA. Antes se pintaban seguidas, igual que
  * las que concuerdan: «41807 34304, Tarragona». La calle sí es la que hay.
  */
-function Direccion({ c }: { c: ContactoFicha }) {
+function Direccion({ clienteId, c }: { clienteId: string; c: ContactoFicha }) {
+  const [corrigiendo, setCorrigiendo] = useState(false)
   const sitio = leerSitio({ codigoPostal: c.codigoPostal, ciudad: c.ciudad, provincia: c.provincia })
   const texto = [c.direccion, sitio.texto].filter(Boolean).join(' · ')
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4, minWidth: 0 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 13, color: 'var(--muted)', minWidth: 0 }}>
         <MapPin size={14} strokeWidth={1.75} aria-hidden style={{ flex: '0 0 auto', marginTop: 2 }} />
         {c.direccionIlegible ? (
@@ -249,6 +251,26 @@ function Direccion({ c }: { c: ContactoFicha }) {
           ⚠️ {textoReparoSitio(r)}
         </div>
       ))}
+
+      {/* 🚨 El botón va PEGADO a la dirección, no en el desplegable del final
+          de la pestaña. Ahí abajo el formulario existía desde el 02/09/2026 y
+          Alberto siguió sin poder corregir una dirección desde el móvil
+          (08/09): estaba a pantalla y media del dato, detrás de dos tarjetas.
+          Es la misma corrección que se le hizo a los teléfonos y correos el
+          06/09, y por el mismo motivo. El formulario NO se duplica: es el
+          `EditarDireccion` de `EditarCliente.tsx`, montado aquí. */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setCorrigiendo((v) => !v)}
+          style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}
+        >
+          {corrigiendo ? 'Listo' : <><Pencil size={14} strokeWidth={1.75} aria-hidden /> Corregir dirección</>}
+        </button>
+      </div>
+      {/* Montaje perezoso: son cinco campos que no pinta nadie que entre a leer
+          un teléfono, que es a lo que se entra a esta pestaña. */}
+      {corrigiendo && <EditarDireccion clienteId={clienteId} contacto={c} />}
     </div>
   )
 }
@@ -422,12 +444,16 @@ const COLOR_PORTAL: Record<'neutral' | 'positivo' | 'negativo' | 'aviso', string
 // ─── El formulario, plegado ──────────────────────────────────────────────────
 
 /**
- * `EditarCliente` son ~1.115px de campos permanentes que no dependen de los
- * datos del cliente, en una pestaña que se abre para leer un teléfono. Se
- * pliega — pero plegar NO puede esconder trabajo: lo que ahí dentro es un «no
- * se ha podido leer» (y por tanto lo único que reclama una acción) sube al
- * rótulo. `<details>` nativo, como el resto del repo, con montaje perezoso:
- * uno cerrado igualmente crea todo su DOM, y aquí eso son tres formularios.
+ * La IDENTIDAD (DNI, nombre, fecha de nacimiento) son campos permanentes que no
+ * dependen de los datos del cliente, en una pestaña que se abre para leer un
+ * teléfono. Se pliega — pero plegar NO puede esconder trabajo: lo que ahí
+ * dentro es un «no se ha podido leer» (y por tanto lo único que reclama una
+ * acción) sube al rótulo. `<details>` nativo, como el resto del repo, con
+ * montaje perezoso: uno cerrado igualmente crea todo su DOM.
+ *
+ * La dirección salió de aquí el 08/09/2026 y se edita en la tarjeta de arriba,
+ * donde se lee. Por eso `direccionIlegible` ya NO es un hueco de este rótulo:
+ * lo dice el propio formulario de la dirección, que ahora está a la vista.
  */
 function Editor({ ficha }: { ficha: Ficha }) {
   const [abierto, setAbierto] = useState(false)
@@ -438,7 +464,6 @@ function Editor({ ficha }: { ficha: Ficha }) {
   const huecos: string[] = []
   if (ficha.identidad === null) huecos.push('identidad')
   if (ficha.documentos === null) huecos.push('documentación')
-  if (ficha.contacto.direccionIlegible) huecos.push('dirección (cifrada)')
 
   return (
     <details
@@ -453,8 +478,8 @@ function Editor({ ficha }: { ficha: Ficha }) {
         }}
       >
         <IdCard size={15} strokeWidth={1.75} aria-hidden />
-        <span style={{ fontSize: 14, fontWeight: 700 }}>Editar dirección e identidad</span>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>dirección · identidad</span>
+        <span style={{ fontSize: 14, fontWeight: 700 }}>Editar identidad</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>DNI · nombre · fecha de nacimiento</span>
         {huecos.length > 0 && (
           <Badge tono="aviso" title={`No se ha podido leer: ${huecos.join(' · ')}. No es que la ficha no lo tenga.`}>
             {huecos.length === 1 ? `sin leer: ${huecos[0]}` : `${huecos.length} datos sin leer`}
@@ -467,7 +492,6 @@ function Editor({ ficha }: { ficha: Ficha }) {
           <EditarCliente
             clienteId={ficha.id}
             identidad={ficha.identidad}
-            contacto={ficha.contacto}
             documentos={ficha.documentos}
           />
         </div>

@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📍 La dirección del cliente se corrige DONDE SE LEE (08/09/2026).** Alberto: «sigo sin poder
+  modificar dirección clientes». El formulario existía desde el PR #2093, pero dentro del
+  desplegable del final de la pestaña Contactos, a pantalla y media del dato y detrás de dos
+  tarjetas — desde el móvil eso es no existir. Es EXACTAMENTE el mismo fallo que se corrigió el
+  06/09 con los teléfonos y correos, y no se generalizó entonces. `EditarDireccion` sale de
+  `EditarCliente` como export con nombre y se monta en la tarjeta de contactos tras un botón
+  «Corregir dirección» (montaje perezoso); el desplegable se queda solo con la identidad. Sigue
+  habiendo UN solo formulario. Pendiente de decisión de Alberto: que el cliente edite dirección y
+  teléfono desde el portal y que TODO lo que haga salga en el historial de su ficha.
+
 - **🩺 `total_count: 0` NO prueba que un run de Actions esté muerto — corregida la tabla de la
   DECIMOCUARTA (07/09/2026).** En el PR #2530 se vio el run `34117636782` en `pending` con
   `list_workflow_jobs` → `total_count: 0`, se diagnosticó **forma (b)** («nunca arrancó, hace falta
