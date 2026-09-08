@@ -104,5 +104,12 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
   )
   // Enseñárselo a quien ya la tiene instalada es la forma tonta de molestar.
   assert.match(fuente, /display-mode: standalone/, 'la oferta ya no comprueba si la app está instalada')
-  assert.match(leer('app/(portal)/layout.tsx'), /<InstalarApp\s*\/>/, 'la oferta no está montada en el portal')
+  const layout = leer('app/(portal)/layout.tsx')
+  assert.match(layout, /<InstalarApp\s*\/>/, 'la oferta no está montada en el portal')
+  // Y ANTES del contenido: detrás de las pólizas, en el móvil se iba fuera de
+  // la primera pantalla y en iPhone es lo único que explica cómo instalar.
+  assert.ok(
+    layout.indexOf('<InstalarApp') < layout.indexOf('{children}'),
+    'la oferta volvió a quedar debajo del contenido: en el móvil no se ve',
+  )
 })

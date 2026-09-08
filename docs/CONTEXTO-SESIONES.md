@@ -38,6 +38,14 @@
   `@central/module-seguros` (9 tests, cepo visto en rojo), `GET/POST /api/operador/backfill-contacto`
   en asegura y tarjeta+botón en `/correduria/mantenimiento`. Ojo: `uq_clientes_email_lookup_hash` es
   UNIQUE → fichas con el mismo correo chocan y no se escriben. **Pendiente: pulsar el botón** (tandas).
+- **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
+  captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil
+  quedaba fuera de la primera pantalla, y en iPhone ese aviso es lo ÚNICO que explica cómo instalar
+  (no hay `beforeinstallprompt`). Cuesta una pantalla una sola vez: descartado, se recuerda. Se
+  mueve en el `layout` del portal (antes de `{children}`), `margin-bottom` en vez de `margin-top`, y
+  `lib/pwa.test.ts` ya vigila el orden (visto en rojo con el orden viejo). Coste conocido: en Android
+  el evento llega tras cargar y el contenido baja un salto una vez al aparecer el aviso.
+
 - **📲 Invitar al portal también por WhatsApp (08/09/2026).** Alberto: «poner al lado el botón de
   WhatsApp, le doy y ese mismo mensaje se le envía al cliente, se le confirma qué correo tiene
   asignado y el enlace». Sin WABA no hay envío desde el servidor: es `wa.me`, que **abre** WhatsApp
