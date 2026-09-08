@@ -36,7 +36,7 @@
   menú «➕ Presupuestar ▾» (`<details>` nativo, sigue Server Component; 🚧 en vida/salud/decesos) +
   «📄 Subir póliza» con su aviso en el `title`. El menú va PRIMERO: en segunda posición el desplegable
   se salía a 360px (medido con Playwright, right=427). Cepo `test/regression-ficha-cliente-acciones.test.ts`
-  visto en rojo. PR #2622.
+  visto en rojo. Regla anotada en la skill `correduria-crm`. PR #2622 (19/19 verdes, mergeado).
 
 - **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
   correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
