@@ -40,8 +40,12 @@
   cliente lo sigue invitando el botón del bloque Portal, que es el camino bueno. Corregido de paso
   un argumento MÍO que era falso: «el mensaje no puede llevar el enlace» — el de #2604 no manda
   ningún token, manda la URL pública del portal, y el código sigue yendo por correo. PR #2612.
-  Decidido aparte: el email de cumpleaños queda para los 44 clientes con correo, y a los 4.206 leads
-  NO se les manda WhatsApp masivo (lo bloquea Meta, no la ley).
+  Alberto, sobre el mensaje: «no aparece enlace de la web ni su mail para q pueda acceder» — el
+  enlace SÍ (`MEDIADOR.identidad.web`, campo nuevo: el apex `.es`, que es la única superficie hecha
+  para quien no es cliente), el correo de acceso NO (sin pólizas, el portal es una bóveda vacía:
+  nombrar la llave de una puerta que no lleva a nada es peor que no darla). Decidido aparte: el email
+  de cumpleaños queda para los 44 clientes con correo, y a los 4.206 leads NO se les manda WhatsApp
+  masivo (lo bloquea Meta, no la ley).
 
 - **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
   captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil

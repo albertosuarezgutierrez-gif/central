@@ -24,10 +24,23 @@ test('🪤 no le habla como si ya fuera cliente', () => {
   assert.doesNotMatch(M(), /tus pólizas|tus recibos|tu seguro con nosotros/i)
 })
 
-test('🪤 no lleva ningún enlace', () => {
-  // No hay a dónde mandarle todavía, y una URL suelta en un primer mensaje a
-  // un desconocido es lo que hace que lo lea como spam.
-  assert.doesNotMatch(M(), /https?:\/\/|www\.|\.es\/|\.com\//i)
+test('lleva la web pública, y sale de MEDIADOR (no escrita a mano)', () => {
+  assert.match(M(), new RegExp(MEDIADOR.identidad.web.replace(/[.]/g, '\\.')))
+})
+
+test('🪤 el ÚNICO enlace del mensaje es la web: ni portal, ni CRM, ni el .com', () => {
+  // El portal enseña SUS pólizas y un lead no tiene ninguna: mandarle ahí es
+  // la bóveda vacía. `app.grupoasegura.com` es el CRM de Manuel y el apex
+  // `.com` es un parking de IONOS — los tres mandan a la persona a un sitio
+  // donde no hay nada suyo, y desde el mensaje se ven todos iguales.
+  const urls = M().match(/https?:\/\/[^\s]+/g) ?? []
+  assert.deepEqual(urls, [MEDIADOR.identidad.web], `enlaces del mensaje: ${urls.join(' · ')}`)
+  assert.doesNotMatch(M(), /clientes\.|app\.grupoasegura|grupoasegura\.com/i)
+})
+
+test('🪤 no le nombra un correo «para acceder»', () => {
+  // Sería la llave de una puerta que no lleva a ningún sitio.
+  assert.doesNotMatch(M(), /para (entrar|acceder)|tu correo|con tu email/i)
 })
 
 test('🪤 no promete precio ni ahorro (RDL 3/2020)', () => {

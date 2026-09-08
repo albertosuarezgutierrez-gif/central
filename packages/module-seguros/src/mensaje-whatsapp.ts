@@ -55,12 +55,28 @@ export function nombreDePila(nombre: string): string | null {
 }
 
 /**
- * El mensaje ya escrito para abrir WhatsApp con un lead: quién eres y para qué
- * estás, y nada más.
+ * El mensaje ya escrito para abrir WhatsApp con un lead: quién eres, dónde
+ * verte, y para qué estás.
  *
- * 🚨 No ofrece el portal (no tiene pólizas que ver), no promete precio (sería
- * asesoramiento) y no dice «tus pólizas»: con la correduría no tiene ninguna, y
- * escribirlo sería hablarle como a un cliente que no es.
+ * ── 🚨 Lleva la WEB, y NO el portal ────────────────────────────────────────
+ *
+ * Son dos sitios distintos y solo uno tiene algo que enseñarle:
+ *
+ *   · `MEDIADOR.identidad.web` (`apps/asegura-web`) es público y está hecho
+ *     justo para quien todavía no es cliente. Ahí puede mirar quién eres sin
+ *     hablar con nadie, que es lo que hace la gente antes de contestar.
+ *   · El portal enseña TUS pólizas, y él no tiene ninguna: entraría a una
+ *     bóveda vacía. Por eso tampoco se le nombra un correo «para acceder» —
+ *     nombrar una llave de una puerta que no lleva a ningún sitio es peor que
+ *     no dar ninguna.
+ *
+ * Una URL suelta en un primer mensaje a un desconocido se lee como spam; la
+ * web de la persona que le acaba de escribir, no. La diferencia es que este
+ * mensaje lo manda Alberto a mano, uno a uno, no un cron a una lista.
+ *
+ * 🚨 No promete precio (sería asesoramiento) y no dice «tus pólizas»: con la
+ * correduría no tiene ninguna, y escribirlo sería hablarle como a un cliente
+ * que no es.
  */
 export function mensajePresentacionWhatsapp(nombre: string): string {
   const pila = nombreDePila(nombre)
@@ -68,6 +84,8 @@ export function mensajePresentacionWhatsapp(nombre: string): string {
     pila ? `Hola ${pila}, soy ${FIRMA}, corredor de seguros.` : `Hola, soy ${FIRMA}, corredor de seguros.`,
     '',
     'Encantado. Te dejo mi contacto por aquí para lo que necesites de tus seguros: una duda, un parte, o echar un ojo a una póliza que tengas contratada con otro.',
+    '',
+    `Aquí puedes ver quiénes somos y con qué compañías trabajamos: ${MEDIADOR.identidad.web}`,
     '',
     'Cuando quieras, me escribes.',
   ].join('\n')

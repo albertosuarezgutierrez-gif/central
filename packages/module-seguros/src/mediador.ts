@@ -126,6 +126,24 @@ export const MEDIADOR = {
      * WhatsApp), se sustituye AQUÍ y cambia en todas las superficies a la vez.
      */
     telefono: '+34637349990',
+    /**
+     * La web pública (`apps/asegura-web`), que es la ÚNICA superficie pensada
+     * para quien todavía no es cliente: quién eres, qué ramos medias y un
+     * formulario para que te escriba.
+     *
+     * 🚨 Sin barra final y con `https://`: se concatena para formar rutas y se
+     * manda tal cual por WhatsApp.
+     *
+     * ⚠️ El `.com` NO es nuestro (apunta a un parking de IONOS) y
+     * `app.grupoasegura.com` sirve el CRM de Manuel: ni uno ni otro valen aquí.
+     * El apex `.es` lo sirve `asegura-web` desde el 05/09/2026.
+     *
+     * `apps/asegura-web/lib/sitio.ts` deja sobreescribirlo por
+     * `NEXT_PUBLIC_SITIO_URL` para sus previews; ESTE es el dominio que se le
+     * enseña a una persona, así que no depende de ninguna env: un mensaje de
+     * WhatsApp con la URL de una preview de Vercel no lo arregla un redeploy.
+     */
+    web: 'https://grupoasegura.es',
   },
   /** Seguro de responsabilidad civil profesional, art. 156.3 Ley 16/2018. */
   responsabilidadCivil: {
