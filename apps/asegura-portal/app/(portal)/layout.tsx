@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 
 import { NavPortal } from './NavPortal'
+import { BandaCorredor } from './BandaCorredor'
 
 /**
  * El armazón de las pantallas con sesión.
@@ -17,9 +18,10 @@ import { NavPortal } from './NavPortal'
  * a renderizarse en cliente. El respaldo reserva el hueco del carril para que
  * el contenido no salte al montarse.
  */
-export default function PortalLayout({ children }: { children: React.ReactNode }) {
+export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="portal-shell">
+      <BandaCorredor />
       <Suspense fallback={<div className="portal-nav portal-nav-hueco" aria-hidden />}>
         <NavPortal />
       </Suspense>

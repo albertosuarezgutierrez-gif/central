@@ -13,9 +13,11 @@ import {
   explicarPortal,
   interpretarInvitacion,
   interpretarPortal,
+  interpretarVista,
   textoIdentidades,
   textoInvitacion,
   textoMotivoPortal,
+  textoVista,
   type RespuestaPortal,
 } from '@/lib/portal-cliente-asegura'
 import { canalWhatsapp } from '@/lib/invitacion-whatsapp'
@@ -329,6 +331,43 @@ function Portal({ clienteId, nombre, telefonos }: {
    * Colapsarlos pintaría un ✅ verde sobre algo que nadie ha enviado todavía.
    */
   const [avisoWa, setAvisoWa] = useState<string | null>(null)
+  const [abriendo, setAbriendo] = useState(false)
+  const [avisoVista, setAvisoVista] = useState<string | null>(null)
+
+  /**
+   * La «vista de corredor» (08/09/2026): abre el portal en una pestaña nueva
+   * COMO lo ve este cliente. Dictado: «el corredor puede acceder a cualquier
+   * cosa». La pestaña se abre ANTES del fetch (el navegador solo deja abrir
+   * ventanas dentro del gesto del clic) y luego se le pone la dirección; si
+   * asegura no da enlace, se cierra y se explica aquí. Es un botón y no un
+   * `<a href>`: el enlace es de UN solo uso y un prefetch lo gastaría.
+   */
+  async function abrirVista() {
+    setAbriendo(true)
+    setAvisoVista(null)
+    const pestana = window.open('about:blank', '_blank', 'noopener,noreferrer')
+    try {
+      const res = await fetch('/api/correduria/cliente/portal/vista', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ clienteId }),
+      })
+      const r = interpretarVista(res.status, await res.json().catch(() => null))
+      if (r.estado === 'ok') {
+        if (pestana) pestana.location.href = r.url
+        else window.location.assign(r.url)
+        setAvisoVista(`👁 Portal de ${nombre} abierto en otra pestaña (solo lectura, 4 h). Pulsa «Salir» allí al terminar.`)
+      } else {
+        pestana?.close()
+        setAvisoVista(textoVista(r, nombre))
+      }
+    } catch {
+      pestana?.close()
+      setAvisoVista(textoVista({ estado: 'error', motivo: 'red' }, nombre))
+    } finally {
+      setAbriendo(false)
+    }
+  }
 
   const consultar = useCallback(async () => {
     setCargando(true)
@@ -435,6 +474,18 @@ function Portal({ clienteId, nombre, telefonos }: {
       </div>
 
       <p style={{ ...sutil, maxWidth: '72ch' }}>{frase.queHacer}</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          disabled={abriendo}
+          onClick={() => void abrirVista()}
+          style={{ ...btnStyle('sutil'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+          title="Abre el portal en otra pestaña exactamente como lo ve este cliente. Solo lectura."
+        >
+          {abriendo ? 'abriendo…' : `👁 Ver su portal como lo ve ${nombre}`}
+        </button>
+      </div>
+      {avisoVista && <p style={{ ...sutil, maxWidth: '72ch', color: 'var(--text)' }}>{avisoVista}</p>}
 
       {frase.accion !== 'ninguna' && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
