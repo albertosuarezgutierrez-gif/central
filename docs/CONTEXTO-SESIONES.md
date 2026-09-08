@@ -38,6 +38,14 @@
   quedó en quitar la franja de encima de las pólizas (fichero, montaje, CSS salvo el glifo) y `pwa.test.ts`
   vigila que no vuelva. ⚠️ La oferta queda a UN clic (dentro de la campana, sin contar en el globo): si Alberto
   la quiere visible sin abrir nada, es otra decisión. Caso de trabajo duplicado entre sesiones, otra vez.
+- **☑️ Portal: «¿de quién es la póliza?» deja de ser una puerta obligatoria (08/09/2026).** Alberto:
+  «la mayoría no tiene empresa, darle una vuelta». Los radios «Mía / De mi empresa» sin respuesta
+  bloqueaban los DOS botones a todo el mundo. Ahora: casilla «Esta póliza es de una empresa, no mía»,
+  sin marcar por defecto; solo al marcarla se piden nombre + CIF válido (esa exigencia sigue). Sin marcar
+  viaja `propio` SIEMPRE, no `null`: «no se preguntó» decide no cotejar y dejaría sin comprobar todas las
+  personales. Coste asumido: una de empresa subida sin marcar se coteja contra la ficha personal; lo ve
+  el corredor. Cepo `regression-portal-titular-declarado` reescrito y visto en rojo por cada brazo (el
+  `append` se ancló a inicio de línea: suelto seguía verde con un `if` delante).
 - **🧹 La ficha de cliente: de 7 botones a 2 (08/09/2026).** Alberto, con la captura: «esto es una
   guarrería, tantos botones». `Cabecera.tsx` pintaba «Subir póliza» + seis «Presupuestar <ramo>» + dos
   avisos grises sueltos, en tres filas que empujaban los titulares fuera de la primera pantalla. Ahora:

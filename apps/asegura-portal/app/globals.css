@@ -2650,28 +2650,14 @@ h1 em {
  * lo único de todo el portal que no sigue la marca. */
 .de-quien {
   margin: 0 0 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 1.2);
-  background: color-mix(in oklab, var(--brand) 3%, var(--surface));
 }
-.de-quien legend {
-  padding: 0 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-.de-quien-opciones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-/* 44px de alto: el mínimo táctil de la casa. Esto lo pulsa gente mayor desde el
- * móvil, y una radio de 13px con su texto al lado no se acierta. */
-.de-quien-opciones label {
+/* Una sola casilla, a la vista pero sin puerta: la mayoría sube pólizas
+ * personales y no tiene que contestar nada. 44px de alto: el mínimo táctil de
+ * la casa — esto lo pulsa gente mayor desde el móvil. */
+.de-quien-casilla {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-height: 44px;
   padding: 0 14px;
   font-size: 14px;
@@ -2679,8 +2665,15 @@ h1 em {
   border-radius: calc(var(--radius) * 0.8);
   background: var(--panel);
   cursor: pointer;
+  max-width: 100%;
 }
-.de-quien-opciones label:has(input:checked) {
+.de-quien-casilla input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--brand);
+}
+.de-quien-casilla:has(input:checked) {
   border-color: var(--brand);
   background: var(--brand-soft);
   color: var(--brand-ink);
