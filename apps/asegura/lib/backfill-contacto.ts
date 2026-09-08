@@ -21,11 +21,14 @@
 import {
   decryptField,
   computeEmailLookupHash,
+  computeEmailDominioLookupHash,
+  computeEmailUsuarioLookupHash,
   computeTelefonoLookupHash,
 } from '@central/module-seguros-pii'
 import {
   planBackfillContacto,
   type CampoContacto,
+  type Derivados,
   type FilaContacto,
   type PlanBackfillContacto,
 } from '@central/module-seguros'
@@ -37,6 +40,13 @@ export interface ResultadoBackfillContacto {
   choques: PlanBackfillContacto['choques']
   /** Cuántos hashes se han escrito de verdad. `0` en seco. */
   escritos: number
+  /**
+   * Las MITADES del email (dominio + usuario, búsqueda parcial): cuántas filas
+   * se han completado y cuántas quedan. Van aparte porque se escriben también
+   * en filas que ya tienen su hash principal.
+   */
+  derivadosEscritos: number
+  derivadosRestantes: number
   /** Filas que no se pudieron escribir pese a entrar en el plan (carrera con otra escritura). */
   fallidos: string[]
   /** Cuántas quedan por escribir tras esta pasada. `0` = terminado. */
@@ -59,6 +69,13 @@ function hashDe(campo: CampoContacto, valor: string): string | null {
   return campo === 'email' ? computeEmailLookupHash(valor) : computeTelefonoLookupHash(valor)
 }
 
+function derivadosDe(valor: string): Derivados | null {
+  const dominio = computeEmailDominioLookupHash(valor)
+  const usuario = computeEmailUsuarioLookupHash(valor)
+  if (dominio === null && usuario === null) return null
+  return { dominio, usuario }
+}
+
 /** Descifra en memoria. Devuelve `{ valor }` o `{ fallo: true }`; nunca el cifrado tal cual. */
 function leer(v: string | null): { valor: string | null; fallo: boolean } {
   if (v === null || v.trim() === '') return { valor: null, fallo: false }
@@ -78,9 +95,10 @@ function aFila(
   campo: CampoContacto,
   cifrado: string | null,
   hashActual: string | null,
+  derivadosActuales?: Derivados,
 ): FilaContacto {
   const l = leer(cifrado)
-  return { id, origen, campo, valor: l.valor, descifradoFallido: l.fallo || undefined, hashActual }
+  return { id, origen, campo, valor: l.valor, descifradoFallido: l.fallo || undefined, hashActual, derivadosActuales }
 }
 
 export class SinClaveDeIndice extends Error {
@@ -106,11 +124,11 @@ export async function backfillContactoLookupHash(
   const [fichas, emailsHijos, telefonosHijos] = await Promise.all([
     db.cliente.findMany({
       where: { correduriaId, mergedIntoClienteId: null },
-      select: { id: true, email: true, emailLookupHash: true, telefono: true, telefonoLookupHash: true },
+      select: { id: true, email: true, emailLookupHash: true, emailDominioHash: true, emailUsuarioHash: true, telefono: true, telefonoLookupHash: true },
     }),
     db.clienteEmail.findMany({
       where: { correduriaId },
-      select: { id: true, email: true, emailLookupHash: true },
+      select: { id: true, email: true, emailLookupHash: true, emailDominioHash: true, emailUsuarioHash: true },
     }),
     db.clienteTelefono.findMany({
       where: { correduriaId },
@@ -120,23 +138,37 @@ export async function backfillContactoLookupHash(
 
   const filas: FilaContacto[] = []
   for (const f of fichas) {
-    filas.push(aFila(f.id, 'ficha', 'email', f.email, f.emailLookupHash))
+    filas.push(aFila(f.id, 'ficha', 'email', f.email, f.emailLookupHash, { dominio: f.emailDominioHash, usuario: f.emailUsuarioHash }))
     filas.push(aFila(f.id, 'ficha', 'telefono', f.telefono, f.telefonoLookupHash))
   }
-  for (const e of emailsHijos) filas.push(aFila(e.id, 'hija', 'email', e.email, e.emailLookupHash))
+  for (const e of emailsHijos) filas.push(aFila(e.id, 'hija', 'email', e.email, e.emailLookupHash, { dominio: e.emailDominioHash, usuario: e.emailUsuarioHash }))
   for (const t of telefonosHijos) filas.push(aFila(t.id, 'hija', 'telefono', t.telefono, t.telefonoLookupHash))
 
-  const plan = planBackfillContacto(filas, hashDe)
+  const plan = planBackfillContacto(filas, hashDe, derivadosDe)
   const pendientes = plan.filas.filter(
     (f): f is typeof f & { destino: 'rellenable'; hash: string } => f.destino === 'rellenable' && f.hash !== null,
   )
+  const mitadesPendientes = plan.filas.filter(
+    (f): f is typeof f & { derivados: Derivados } => f.campo === 'email' && f.derivados !== null,
+  )
 
   if (opciones.seco) {
-    return { resumen: plan.resumen, choques: plan.choques, escritos: 0, fallidos: [], restantes: pendientes.length, seco: true }
+    return {
+      resumen: plan.resumen,
+      choques: plan.choques,
+      escritos: 0,
+      fallidos: [],
+      restantes: pendientes.length,
+      derivadosEscritos: 0,
+      derivadosRestantes: mitadesPendientes.length,
+      seco: true,
+    }
   }
 
   const tope = opciones.limite !== undefined && opciones.limite > 0 ? opciones.limite : pendientes.length
   const aEscribir = pendientes.slice(0, tope)
+  const topeMitades = opciones.limite !== undefined && opciones.limite > 0 ? opciones.limite : mitadesPendientes.length
+  const mitadesAEscribir = mitadesPendientes.slice(0, topeMitades)
 
   let escritos = 0
   const fallidos: string[] = []
@@ -167,14 +199,69 @@ export async function backfillContactoLookupHash(
     }
   }
 
+  // Las mitades: no tienen índice único, así que no chocan; una tanda que falle
+  // es una carrera o una columna que no existe, y se dice por `fallidos`.
+  let derivadosEscritos = 0
+  for (const origen of ['ficha', 'hija'] as const) {
+    const lote = mitadesAEscribir.filter((f) => f.origen === origen)
+    for (let i = 0; i < lote.length; i += TANDA) {
+      const tanda = lote.slice(i, i + TANDA)
+      try {
+        derivadosEscritos += await escribirMitades(db, correduriaId, origen, tanda)
+      } catch (e) {
+        console.warn('[backfill-contacto] tanda de mitades rechazada, se reintenta fila a fila', e instanceof Error ? e.message : e)
+        for (const fila of tanda) {
+          try {
+            derivadosEscritos += await escribirMitades(db, correduriaId, origen, [fila])
+          } catch {
+            fallidos.push(fila.id)
+          }
+        }
+      }
+    }
+  }
+
   return {
     resumen: plan.resumen,
     choques: plan.choques,
     escritos,
     fallidos,
     restantes: pendientes.length - aEscribir.length,
+    derivadosEscritos,
+    derivadosRestantes: mitadesPendientes.length - mitadesAEscribir.length,
     seco: false,
   }
+}
+
+/**
+ * Escribe las mitades que FALTAN sin pisar las que ya están: `coalesce` deja
+ * la existente y el WHERE solo toca filas con alguna a NULL. Idempotente.
+ */
+async function escribirMitades(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  origen: FilaContacto['origen'],
+  tanda: { id: string; derivados: Derivados }[],
+): Promise<number> {
+  const ids = tanda.map((t) => t.id)
+  const dominios = tanda.map((t) => t.derivados.dominio)
+  const usuarios = tanda.map((t) => t.derivados.usuario)
+  if (origen === 'ficha') {
+    return db.$executeRaw`
+      update clientes c
+         set email_dominio_hash = coalesce(c.email_dominio_hash, v.dominio),
+             email_usuario_hash = coalesce(c.email_usuario_hash, v.usuario)
+        from (select unnest(${ids}::uuid[]) as id, unnest(${dominios}::text[]) as dominio, unnest(${usuarios}::text[]) as usuario) v
+       where c.id = v.id and c.correduria_id = ${correduriaId}::uuid
+         and (c.email_dominio_hash is null or c.email_usuario_hash is null)`
+  }
+  return db.$executeRaw`
+    update cliente_emails e
+       set email_dominio_hash = coalesce(e.email_dominio_hash, v.dominio),
+           email_usuario_hash = coalesce(e.email_usuario_hash, v.usuario)
+      from (select unnest(${ids}::uuid[]) as id, unnest(${dominios}::text[]) as dominio, unnest(${usuarios}::text[]) as usuario) v
+     where e.id = v.id and e.correduria_id = ${correduriaId}::uuid
+       and (e.email_dominio_hash is null or e.email_usuario_hash is null)`
 }
 
 /**

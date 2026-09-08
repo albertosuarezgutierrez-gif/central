@@ -41,6 +41,14 @@
   LSSI) → `CORREDURIA-INTRANET-IDEAS.md` §M. Spec `docs/superpowers/specs/2026-09-08-portal-contactos-design.md`.
   Cepos con 4 mutaciones en rojo. PR #2623.
 
+- **✂️ Búsqueda PARCIAL por email: dominio y usuario (08/09/2026, II).** Alberto: «tiene que ser de
+  cualquier campo». El email va cifrado y solo casaba entero; ahora hay dos índices ciegos más
+  (`email_dominio_hash`, `email_usuario_hash`, en ficha e hijas, migración `seguros_email_mitades_hash`
+  aplicada) con prefijo dentro del HMAC para que no colisionen. «@gmail.com» o «gmail.com» → dominio;
+  «alberto.suarez@» o «alberto.suarez» → usuario; un email entero no dispara el dominio. Las escrituras
+  de `cartera-edicion.ts` dejan las tres claves; el corpus viejo (todo a NULL) lo rellena el backfill de
+  contacto con el mismo botón de `/correduria/mantenimiento` (`derivadosRestantes`). PR #2613 mergeado
+  (backfill); este es el segundo. **Pendiente: pulsar el botón hasta 0** y probar «@gmail.com».
 - **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
   correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
   cifrado): `planBusqueda()` lanza `email` + `nombre`. Medido: **250 fichas con email y sin

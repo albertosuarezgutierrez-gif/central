@@ -107,6 +107,68 @@ export function computeEmailLookupHash(
 /**
  * Hash blind-index para telefono. Aplica `normalizeTelefonoForHash`.
  */
+/**
+ * Las dos MITADES de un email, normalizadas como el email entero (trim +
+ * minúsculas): `usuario` es lo que va antes de la `@`, `dominio` lo de después.
+ * `null` si no hay `@` con algo a cada lado.
+ *
+ * Existen para la búsqueda PARCIAL (08/09/2026): el email va cifrado y el
+ * índice ciego del email entero solo casa con la dirección exacta. Con un
+ * hash del usuario y otro del dominio se puede buscar «alberto.suarez» o
+ * «@gmail.com» sin descifrar nada. Un trozo arbitrario («suarez») sigue sin
+ * poderse: esto son dos claves más, no un LIKE.
+ */
+export function partesEmail(
+  email: string | null | undefined
+): { usuario: string; dominio: string } | null {
+  const n = normalizeEmailForHash(email);
+  if (n === null) return null;
+  const at = n.indexOf("@");
+  if (at <= 0 || at === n.length - 1) return null;
+  const usuario = n.slice(0, at);
+  const dominio = n.slice(at + 1);
+  if (dominio.includes("@")) return null;
+  return { usuario, dominio };
+}
+
+/**
+ * Hash del DOMINIO de un email (`gmail.com`). Acepta el email entero o solo el
+ * dominio (con o sin `@` delante). Lleva prefijo para que nunca coincida con
+ * el hash de un email entero ni con el del usuario aunque el texto sea igual.
+ */
+export function computeEmailDominioLookupHash(
+  valor: string | null | undefined
+): string | null {
+  const n = normalizeEmailForHash(valor);
+  if (n === null) return null;
+  const dominio = n.startsWith("@")
+    ? n.slice(1)
+    : n.includes("@")
+      ? partesEmail(n)?.dominio ?? null
+      : n;
+  if (dominio !== null && dominio.includes("@")) return null;
+  if (dominio === null || dominio === "") return null;
+  return computeLookupHash(`dom:${dominio}`);
+}
+
+/**
+ * Hash del USUARIO de un email (`alberto.suarez`). Acepta el email entero o
+ * solo la parte local (con o sin `@` al final).
+ */
+export function computeEmailUsuarioLookupHash(
+  valor: string | null | undefined
+): string | null {
+  const n = normalizeEmailForHash(valor);
+  if (n === null) return null;
+  const usuario = n.includes("@")
+    ? n.endsWith("@")
+      ? n.slice(0, -1)
+      : partesEmail(n)?.usuario ?? null
+    : n;
+  if (usuario === null || usuario === "") return null;
+  return computeLookupHash(`usr:${usuario}`);
+}
+
 export function computeTelefonoLookupHash(
   telefono: string | null | undefined
 ): string | null {
