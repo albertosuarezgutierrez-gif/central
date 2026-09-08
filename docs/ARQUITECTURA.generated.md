@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (08/09/2026) 📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido
 - (08/09/2026) 📲 Invitar al portal también por WhatsApp
 - (08/09/2026) 📍 El CLIENTE cambia su dirección de contacto, y sugiere
 - (08/09/2026) 📍 La dirección del cliente se corrige DONDE SE LEE
@@ -271,5 +272,4 @@
 - (07/09/2026) 🏠 El hogar dice QUÉ CASA es, y la dirección deja de estar escondida
 - (07/09/2026) ✉️ «Error enviar invitación» — el mensaje MENTÍA: no hay proveedor de correo
 - (07/09/2026) 🔤 Una sola letra en los titulares de `asegura-web`
-- (07/09/2026) 📲 El portal del cliente se puede INSTALAR
 

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-08T06:53:57Z",
-  "sha": "633434c06094ff389519f72f9f314c86354409fe",
+  "generadoEn": "2026-09-08T07:36:53Z",
+  "sha": "fbb631cb7031700e872fb99ab79ccd8e4738cbbf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4072,7 +4072,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7b02e328c665"
+      "hash": "fd4935677f87"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/NavPortal.tsx",
