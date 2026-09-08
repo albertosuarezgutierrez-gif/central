@@ -8,10 +8,15 @@ export async function getIdentidad() {
   if (!token) return null
   const payload = await verificarSesion(token)
   if (!payload) return null
-  return prisma.portalIdentidad.findUnique({
+  const identidad = await prisma.portalIdentidad.findUnique({
     where: { id: payload.identidadId },
     select: { id: true, nombre: true },
   })
+  if (!identidad) return null
+  // `corredor` ≠ null = es Alberto mirando el portal como lo ve un cliente
+  // (`lib/vista-corredor.ts`). Las lecturas no lo miran —la bóveda sale del
+  // vínculo temporal—; lo miran la banda de aviso y el veto a escribir.
+  return { ...identidad, corredor: payload.corredor }
 }
 
 export async function requireIdentidad() {

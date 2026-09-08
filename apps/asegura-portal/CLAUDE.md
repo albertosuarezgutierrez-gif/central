@@ -1186,8 +1186,36 @@ además `PATCH /api/polizas/[id]` (corregir una póliza), `POST /api/siniestros`
 | `POST /api/catastro` | `{ direccion, municipio, provincia }` **o** `{ referencia }` (zod, con topes) | `200 ok` · **`300 elegir`** (varios inmuebles) · `401 sin_sesion` · `400 datos_invalidos` · `404 no_encontrado` · `409 via_ambigua` · `422 direccion_ilegible\|referencia_invalida` · **`502 catastro_no_responde`** | **Exige sesión**: sin ella sería un proxy anónimo contra el Catastro con nuestra IP. Solo CONSULTA (no escribe en la BD) y **no registra la dirección en ningún log**. Mira el `estado`, no el número |
 
 Pantallas: `/` (pedir + verificar código) y `/boveda` (`force-dynamic`, redirige a `/` sin sesión).
-**No hay `middleware.ts`**: cada ruta y cada página resuelve la sesión por su cuenta — que es
-precisamente lo que vigila el guardián.
+**El `middleware.ts` NO resuelve sesión**: cada ruta y cada página la resuelve por su cuenta — que es
+precisamente lo que vigila el guardián. El middleware (08/09/2026) solo veta escrituras en la sesión
+del corredor (sección «Vista de corredor», abajo).
+
+## 👁 Vista de corredor (08/09/2026) — Alberto abre el portal como lo ve un cliente
+
+Dictado: *«el corredor puede acceder a cualquier cosa»* (tras pedir acceso a la intranet de un cliente
+para revisarla antes de invitarle). Desde la ficha en plataforma (Contactos → «👁 Ver su portal») sale
+un enlace de **UN solo uso y 10 minutos** que crea `apps/asegura`
+(`POST /api/operador/cliente/portal/vista`, tabla `seguros.portal_vista_corredor`, token hasheado
+SHA-256 sin pimienta porque las dos apps no la comparten) y consume `GET /corredor/[token]` aquí.
+
+🚨 **Cómo se ve «lo mismo» sin tocar ninguna lectura:** una identidad REAL dedicada al corredor
+(`IDENTIDAD_CORREDOR_ID` de `@central/module-seguros-portal`, sembrada por la migración, **sin
+canales**: nadie entra como ella con un código) recibe un vínculo TEMPORAL con la ficha
+(`portal_vinculo.origen = 'corredor'`), y las diez lecturas que filtran por identidad hacen el resto.
+Solo hay un vínculo de corredor a la vez; `Salir` lo suelta. La sesión lleva el claim `corredor`
+(`lib/auth.ts`, 4 h) y `getIdentidad()` lo devuelve.
+
+Los dos filos, con cepo en `test/regression-portal-vista-corredor.test.ts` (4 mutaciones vistas morder):
+- **asegura EXCLUYE ese origen** en `estadoPortalDeFicha` — si lo contara, mirar una ficha la
+  convertiría en «Ya entra al portal», que es el titular con el que se decide si invitar.
+- **La sesión del corredor NO escribe como el cliente**: `middleware.ts` responde `403 modo_corredor` a
+  todo `POST/PATCH/DELETE` de `/api/*` salvo `/api/salir` y `/api/acceso/*`. Decodifica el JWT sin
+  verificar firma a propósito (protege de un clic de Alberto, no de un atacante; un token falso solo
+  se veta a sí mismo) y por eso importa `lib/auth-cookie.ts` y no `lib/auth.ts` (`node:crypto` no
+  arranca en edge — y el veto desaparecería sin error).
+
+Migración `prisma/sql/2026-09-08_portal_vista_corredor.sql`, **APLICADA el 08/09/2026** en el mismo
+paso que el código (regla de `portal_supresion`).
 
 ## 🧩 Los campos PROPIOS de cada tipo de seguro (04/09/2026)
 
