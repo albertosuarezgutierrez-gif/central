@@ -30,27 +30,27 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **👋 El WhatsApp del LEAD: lo único que faltaba, tras chocar con el PR #2604 (08/09/2026).** Esta
-  sesión implementó los tres mensajes de WhatsApp (cliente con correo · sin correo · lead) SIN mirar
-  antes los PRs abiertos — y el #2604, mergeado esa misma mañana, ya cubría los dos de cliente, y
-  mejor: nombra el correo que manda **asegura** (`portal.emailInvitacion`), no el de la cabecera, que
-  puede ser otro. Reducido a `mensajePresentacionWhatsapp()` (`@central/module-seguros`), que es el
-  caso que #2604 deja fuera a propósito: un lead no tiene portal, así que su `canalWhatsapp` devuelve
-  `no_procede` y no ofrece nada. El icono de la cabecera lleva mensaje SOLO si no es cliente; al
-  cliente lo sigue invitando el botón del bloque Portal, que es el camino bueno. Corregido de paso
-  un argumento MÍO que era falso: «el mensaje no puede llevar el enlace» — el de #2604 no manda
-  ningún token, manda la URL pública del portal, y el código sigue yendo por correo. PR #2612.
-  Alberto, sobre el mensaje: «no aparece enlace de la web ni su mail para q pueda acceder» — el
-  enlace SÍ (`MEDIADOR.identidad.web`, campo nuevo: el apex `.es`, que es la única superficie hecha
-  para quien no es cliente), el correo de acceso NO (sin pólizas, el portal es una bóveda vacía:
-  nombrar la llave de una puerta que no lleva a nada es peor que no darla). Decidido aparte: el email
-  de cumpleaños queda para los 44 clientes con correo, y a los 4.206 leads NO se les manda WhatsApp
-  masivo (lo bloquea Meta, no la ley). 🚨 Y al mergear `main` apareció una COLISIÓN que el auto-merge
-  de git no ve y el `tsc` de una app suelta tampoco: `nombreDePila` bajó ese mismo día a
-  `@central/module-seguros` (PR del saludo del portal) y esta rama exportaba OTRA con el mismo nombre
-  desde `mensaje-whatsapp.ts` → el barril la exportaba dos veces, en líneas distintas, sin conflicto.
-  Se borró la copia y se usa la canónica, que además normaliza mayúsculas (CARMEN → Carmen) y sabe
-  que una sociedad no tiene nombre de pila.
+- **👋 El WhatsApp del LEAD VENDE la intranet — y mi argumento para no hacerlo era falso (08/09/2026).**
+  Se implementaron los tres mensajes (cliente con correo · sin correo · lead) SIN mirar antes los PRs
+  abiertos: el #2604, mergeado esa misma mañana, ya cubría los dos de cliente y mejor (nombra el correo
+  que manda asegura, `portal.emailInvitacion`, no el de la cabecera). Reducido a
+  `mensajePresentacionWhatsapp()` de `@central/module-seguros`. Alberto, sobre el texto: «hay q vender
+  la intranet para que entre y meta sus datos… es una herramienta gratis q no existe y así puede
+  controlar todos sus seguros». 🚨 Yo lo escondía «porque un lead entraría a una bóveda vacía» y,
+  medido contra `apps/asegura-portal`, era FALSO: entrar no exige cartera (el código va a cualquier
+  correo; la vinculación pasa DESPUÉS del login y no bloquea), la bóveda vacía tiene texto propio, y
+  **«Añade una póliza» se pinta sin ninguna condición** — PDF, foto o a mano, de CUALQUIER compañía,
+  exigiendo solo compañía O número. Su pantalla de entrada ya lo dice: «Todos tus seguros en un sitio.
+  Gratis, seas cliente o no.» El enlace del mensaje pasa a ser el portal (`MEDIADOR.identidad.portal`,
+  dato canónico nuevo) y la web sale: dos URLs en un mensaje corto compiten. El límite que NO se cruza
+  es prometer que se las gestionamos —el portal declara «no la contratamos ni la gestionamos por ti»—
+  ni nombrar un correo (eso lo decide `portal.emailInvitacion`). 11 cepos, los 6 nuevos vistos en rojo.
+  PR #2612. Lección de método: antes de decidir que una pantalla «no sirve» para alguien, LÉELA — lo
+  que había aquí era una suposición sobre el producto, no el producto. Y la colisión del día: `nombreDePila`
+  bajó a `@central/module-seguros` (PR del saludo del portal) mientras esta rama exportaba otra con el
+  mismo nombre → el barril la exportaba dos veces, sin conflicto de git y sin que lo viera ningún tsc.
+  Aparte: el email de cumpleaños queda para los 44 clientes con correo, y a los 4.206 leads NO se les
+  manda WhatsApp masivo (lo bloquea Meta, no la ley).
 
 - **☑️ Portal: «¿de quién es la póliza?» deja de ser una puerta obligatoria (08/09/2026).** Alberto:
   «la mayoría no tiene empresa, darle una vuelta». Los radios «Mía / De mi empresa» sin respuesta
