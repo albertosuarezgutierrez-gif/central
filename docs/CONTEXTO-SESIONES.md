@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
+  correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
+  cifrado): `planBusqueda()` lanza `email` + `nombre`. Medido: **250 fichas con email y sin
+  `email_lookup_hash`, 100 secundarios, 91 teléfonos** — para ésas el correo correcto decía «nadie
+  coincide». No había backfill (solo el del DNI). Ahora: pieza pura `backfill-contacto.ts` en
+  `@central/module-seguros` (9 tests, cepo visto en rojo), `GET/POST /api/operador/backfill-contacto`
+  en asegura y tarjeta+botón en `/correduria/mantenimiento`. Ojo: `uq_clientes_email_lookup_hash` es
+  UNIQUE → fichas con el mismo correo chocan y no se escriben. **Pendiente: pulsar el botón** (tandas).
 - **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
   captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil
   quedaba fuera de la primera pantalla, y en iPhone ese aviso es lo ÚNICO que explica cómo instalar

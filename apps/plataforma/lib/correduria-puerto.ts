@@ -905,3 +905,100 @@ export function interpretarEscrituraBackfill(status: number, json: unknown): Esc
     fallidos: Array.isArray(j.fallidos) ? j.fallidos.length : 0,
   }
 }
+
+// ─── Backfill del índice de CONTACTO (email + teléfono) ──────────────────────
+// Hermano del de DNI, sin fusiones de por medio: lo único que choca es el email
+// de ficha (el índice de la ficha es UNIQUE), y ésos se cuentan y no
+// se escriben. Por qué existe (08/09/2026): 250 fichas con email y 91 con
+// teléfono tenían el dato y no el hash, y el buscador sólo encuentra por hash.
+
+export type CuentaBackfillContacto = {
+  total: number
+  yaTiene: number
+  sinDato: number
+  /** El valor está guardado pero no descifra. NO es «sin dato». */
+  ilegibles: number
+  /** Descifra pero no produce hash (un teléfono sin dígitos). Tampoco es «sin dato». */
+  noHasheables: number
+  rellenables: number
+  /** Fichas que comparten email con otra. Sólo puede ser > 0 en email. */
+  enChoque: number
+}
+
+export type PlanBackfillContacto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | {
+      estado: 'ok'
+      email: CuentaBackfillContacto
+      telefono: CuentaBackfillContacto
+      /** Grupos de fichas que comparten email. */
+      grupos: number
+      /** Total de filas que se van a escribir (los dos campos, ficha + hijas). */
+      rellenables: number
+    }
+
+export async function planBackfillContacto(): Promise<PlanBackfillContacto> {
+  try {
+    const r = await pedir('/api/operador/backfill-contacto')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarPlanBackfillContacto(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** Puro: separado para poder probarlo sin red. */
+export function interpretarPlanBackfillContacto(status: number, json: unknown): PlanBackfillContacto {
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos)' }
+  }
+  const j = (json ?? {}) as Record<string, unknown>
+  if (j.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (j.estado !== 'ok') {
+    const causa = typeof j.causa === 'string' ? j.causa : typeof j.motivo === 'string' ? j.motivo : `respuesta ${status}`
+    return { estado: 'error', motivo: causa }
+  }
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  const cuenta = (v: unknown): CuentaBackfillContacto => {
+    const c = (v ?? {}) as Record<string, unknown>
+    return {
+      total: n(c.total),
+      yaTiene: n(c.yaTiene),
+      sinDato: n(c.sinDato),
+      ilegibles: n(c.ilegibles),
+      noHasheables: n(c.noHasheables),
+      rellenables: n(c.rellenables),
+      enChoque: n(c.enChoque),
+    }
+  }
+  const resumen = (j.resumen ?? {}) as Record<string, unknown>
+  const email = cuenta(resumen.email)
+  const telefono = cuenta(resumen.telefono)
+  return {
+    estado: 'ok',
+    email,
+    telefono,
+    grupos: Array.isArray(j.choques) ? j.choques.length : 0,
+    rellenables: n(j.restantes),
+  }
+}
+
+/** Lanza la escritura, por tandas. Misma forma de respuesta que la del DNI. */
+export async function escribirBackfillContacto(limite?: number): Promise<EscrituraBackfillDni> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/backfill-contacto`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ confirmar: 'escribir', limite }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(290_000),
+    })
+    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    return interpretarEscrituraBackfill(res.status, json)
+  } catch {
+    return { estado: 'error', motivo: 'se cortó la conexión antes de recibir el resultado — vuelve a cargar la página para ver cuánto se escribió' }
+  }
+}
