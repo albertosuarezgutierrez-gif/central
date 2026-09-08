@@ -37,6 +37,14 @@
   «📄 Subir póliza» con su aviso en el `title`. El menú va PRIMERO: en segunda posición el desplegable
   se salía a 360px (medido con Playwright, right=427). Cepo `test/regression-ficha-cliente-acciones.test.ts`
   visto en rojo. Regla anotada en la skill `correduria-crm`. PR #2622 (19/19 verdes, mergeado).
+- **🔔 La campana de avisos del portal del cliente (08/09/2026).** Alberto, ante el «nace pendiente
+  hasta que la acepte en su portal»: un icono de campana en la cabecera del portal con autorizaciones,
+  vencimientos e instalar. Entró: `lib/avisos.ts` (puro) + `GET /api/avisos` (`allSettled`) +
+  `Campana.tsx` entre Salir y el tema, globo con tres desenlaces (`n`·`n+`·`!`, nunca 0), enlaza y
+  NO acepta, `setAppBadge`; almacén único del `beforeinstallprompt` (`app/instalacion.tsx`). Sin
+  tabla de «visto»: la v2 (siniestro cerrado, recibo devuelto, push) está en IDEAS §N con su
+  bloqueo. 27 mutaciones/27 rojos; Playwright 320/390/1024 sin desbordes. Spec en
+  `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`.
 - **👥 Portal del cliente: pestaña «Contactos» + invitación sin compartir nada (08/09/2026).** Alberto
   pidió «pestaña de contactos: nombre, relación y mail, un mail de presentación… y regalos por traer
   gente». Lo primero ya existía en `/autorizaciones` (invitar por correo, 04/09); se añadió lo que
