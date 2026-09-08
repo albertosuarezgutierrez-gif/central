@@ -1100,6 +1100,9 @@ rojos. PR #2581.
 | `PII_LOOKUP_KEY` | Clave HMAC del índice ciego de la cartera (64 hex). **Idéntica a la de `central-asegura`** o nadie se vincula. Sin ella: `sin_clave`, se entra sin cartera |
 | `PORTAL_MAIL_FROM` | Remitente del correo con el código. Si falta, el envío devuelve `false` (502), no revienta |
 | `PORTAL_PUBLIC_URL` | Dominio **https** del portal, para el enlace de un clic del correo. Si falta o no es https, el correo sale igual **solo con el código**: no se inventa un dominio |
+| `ASEGURA_PUENTE_URL` | Base https de `apps/asegura` para el puerto estrecho (dirección de contacto y notas). Sin ella no se guardan cambios de dirección: se DICE (`sin_puente`), no se falla en silencio |
+| `ASEGURA_PORTAL_PUENTE_SECRET` | Bearer de ese puerto. **MISMO valor en el proyecto Vercel `central-asegura`.** 🚨 NO es `ASEGURA_OPERADOR_SECRET`: aquél abre la cartera entera |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | El bot único del monorepo. Los usan el aviso de primer acceso y el botón de sugerencias; sin ellos, `sin_canal` (que NO es «falló el envío») |
 | `OPENROUTER_API_KEY` | Visión (fotos) **y, vía `aiComplete`, también los PDF**. Si falta, la extracción degrada a `none` |
 | Proveedor de correo (lo lee `@central/core-email` solo) | `RESEND_API_KEY`, **o** `SMTP_USER`+`SMTP_PASSWORD` (+`SMTP_HOST`/`SMTP_PORT`), **o** `GMAIL_USER`+`GMAIL_APP_PASSWORD` |
 
@@ -1185,6 +1188,64 @@ estimada desde la matrícula: el Catastro puede estar desactualizado y quien fir
 Y los cinco estados de la respuesta están separados a propósito —no responde ≠ ahí no hay nada ≠ la
 dirección no se entiende ≠ la calle es ambigua ≠ hay quince pisos y no sabemos cuál es el suyo—
 porque colapsarlos convierte un «no lo sé» en un «no hay».
+
+## 📍 El cliente cambia SU dirección de contacto, y sugiere (08/09/2026)
+
+Dictado de Alberto: *«que el cliente pueda modificar su dirección y tlf»* y, al preguntarle si eso
+pasaba por una solicitud, **«¿solicitar el cambio de algo? si el cliente cambia de dirección…»**.
+Tenía razón: **no hay cola de aprobación.** Su dirección de contacto es suya, y el art. 16 RGPD le da
+derecho a que se rectifique *sin dilación indebida* — una cola que quizá nadie mira es exactamente la
+dilación que ese artículo prohíbe.
+
+🚨 **Pero la dirección de CONTACTO no es la de la PÓLIZA, y la pantalla lo dice dos veces** (antes de
+escribir y en el acuse). Medido el 08/09/2026 sobre `src/lib/integrations/cima/` del CRM: la cadena de
+CIMA es de una sola dirección (`recibir-ficheros-pendientes` + `confirmar-descarga`, cero endpoints de
+envío) y **no toca la dirección en ningún caso** — sobre un cliente que ya existe el pull dice
+literalmente «MATCH legacy: NO se re-escribe PII de contacto». O sea: esto no llega a ninguna
+compañía, y si se ha mudado su seguro de hogar sigue cubriendo la casa anterior. Callarlo sería el
+mismo modo de fallo que «parte enviado ≠ siniestro comunicado», pagado con una casa sin cobertura.
+(La buena noticia del mismo hallazgo: lo que se corrige a mano **no lo pisa el pull de las 05:30**.)
+
+**Cómo se escribe, y por qué no lo escribe esta app.** `clientes.direccion` va cifrada con
+`PII_ENCRYPTION_KEY` y el modelo `Cliente` de este schema ni la declara. Conceder el grant y traer la
+clave sería el peor cambio posible: la app pública podría descifrar la PII de 32.600 fichas para que
+alguien corrija su calle. Sale por un **puerto estrecho** a `apps/asegura`
+(`lib/mis-datos.ts` → `POST /api/portal/contacto`), que **no acepta `clienteId`**: la ficha la resuelve
+allí `portal_vinculo`. Con el secreto filtrado, el daño máximo es cambiarle la calle a alguien que ya
+tiene portal — y queda en su historial.
+
+- **El formulario sale VACÍO y lo dice**: no podemos mostrar lo guardado (no lo podemos descifrar), y
+  un campo vacío sin explicación se lee como «no consta ninguna dirección».
+- **Un hueco NO es un borrado**: solo viajan los campos con algo escrito. Como la pantalla no puede
+  enseñar lo que hay, tratar un blanco como «bórralo» vaciaría la ciudad a quien venía a cambiar la calle.
+- **Con VARIAS fichas vinculadas no se escribe en ninguna** (`decidirFichaPropia`, módulo puro). Para
+  LEER, asegura desempata quedándose con el vínculo más antiguo; **para escribir eso no vale**: meter
+  el domicilio nuevo de una persona en la ficha de su sociedad es un dato falso escrito en silencio.
+- **Las reglas de validación son las MISMAS** que cuando lo corrige Alberto (`revisarEdicion` de
+  `@central/module-seguros`): con dos vocabularios, el portal aceptaría lo que la ficha rechaza.
+
+### 💡 El botón de sugerencias
+
+«¿Echas algo de menos?» al final de `/boveda` → Telegram a Alberto (`POST /api/sugerencia`) **y**
+línea en el historial de su ficha por `POST /api/portal/nota`.
+
+🚨 **Aquí Telegram NO es un aviso: es EL REGISTRO.** En `lib/aviso-acceso.ts` el dato de verdad vive en
+`portal_acceso` y Telegram solo adelanta la noticia; una sugerencia no se guarda en ninguna tabla del
+portal, así que para un **lead** —que no tiene ficha donde anotarla— un envío perdido significa que su
+texto no existe en ningún sitio. Por eso **solo `enviada` da las gracias**, y `sin_canal` («no hay
+Telegram montado») no se colapsa con `error` («se intentó y no salió»): uno se arregla en Vercel y el
+otro reintentando.
+
+🚨 **Y el texto de la persona se ESCAPA antes de componer** (`escaparHtml`): `tgSend` manda con
+`parse_mode: 'HTML'`, así que un `<` en «el botón de <ver póliza> no se ve» hace que Telegram
+devuelva 400, `tgSend` conteste `null` y el mensaje se pierda **sin un solo error**.
+
+⚠️ **El tope es por IP y en memoria**, o sea por instancia (lo dice `lib/rate-limit.ts`): corta el
+ruido, no es un límite global. Se acepta aquí porque exige sesión y el destino es un chat nuestro —
+**no se copie el razonamiento** a una ruta pública ni a una que escriba a terceros.
+
+Reglas puras: `packages/module-seguros-portal/src/contacto-propio.ts` y `src/sugerencia.ts`.
+Cepos de raíz: `test/regression-portal-contacto-propio.test.ts` (10, con seis mutaciones vistas morder).
 
 ## ⚖️ Bloque legal (04/09/2026) — el pie va en el layout RAÍZ, y por qué
 

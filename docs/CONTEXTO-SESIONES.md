@@ -37,7 +37,20 @@
   nada en el historial. El correo que se nombra lo dice asegura (`portal.emailInvitacion`, la MISMA
   regla que elige el destinatario del correo) y el enlace también: nombrar uno a ojo mandaría al
   cliente a teclear una dirección que el portal no reconoce. El canal nuevo NO rodea los frenos del
-  viejo: si no se le puede invitar por correo, tampoco por WhatsApp. PR pendiente de número.
+  viejo: si no se le puede invitar por correo, tampoco por WhatsApp. PR #2604.
+
+- **📍 El CLIENTE cambia su dirección de contacto, y sugiere (08/09/2026).** Sin cola de aprobación
+  («¿solicitar el cambio de algo?», Alberto): su dirección es suya y el art. 16 RGPD prohíbe la
+  dilación. Pero la pantalla dice DOS veces que esto no llega a ninguna compañía — medido en el CRM:
+  **la cadena de CIMA es de una sola dirección y no toca la dirección en ningún caso** («NO se
+  re-escribe PII de contacto»), o sea que tampoco pisa lo que se corrige a mano. El portal no escribe
+  la cartera (no tiene la clave PII): sale por un puerto ESTRECHO nuevo a asegura
+  (`/api/portal/contacto` y `/nota`, secreto propio ≠ el de operador, y **no acepta `clienteId`**).
+  Con varias fichas vinculadas no se escribe en ninguna. Botón de sugerencias → Telegram + historial
+  de la ficha; ahí Telegram es el ÚNICO registro, así que solo `enviada` da las gracias y el texto se
+  escapa (HTML de Telegram). Cepos: 10, seis mutaciones vistas morder. Envs pendientes de Alberto en
+  Vercel: `ASEGURA_PUENTE_URL` + `ASEGURA_PORTAL_PUENTE_SECRET` (mismo valor en las dos apps) y
+  `TELEGRAM_*` en el portal.
 
 - **📍 La dirección del cliente se corrige DONDE SE LEE (08/09/2026).** Alberto: «sigo sin poder
   modificar dirección clientes». El formulario existía desde el PR #2093, pero dentro del
