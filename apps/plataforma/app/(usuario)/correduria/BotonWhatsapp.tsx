@@ -2,8 +2,13 @@
 import { MessageCircle } from 'lucide-react'
 import { urlWhatsapp } from '@/lib/telefono-wa'
 
-/** Verde de marca de WhatsApp. No es un estado de la app, así que no es un token. */
-const VERDE_WHATSAPP = '#25D366'
+/**
+ * Verde de marca de WhatsApp. No es un estado de la app, así que no es un token.
+ * Se exporta para que el botón de invitar por WhatsApp de la ficha use ESTE y no
+ * una segunda copia del hex: dos verdes que se separen un día es justo lo que
+ * `@central/brand` existe para evitar.
+ */
+export const VERDE_WHATSAPP = '#25D366'
 
 /**
  * Abre WhatsApp con el cliente, al lado de su teléfono (Alberto, 03/09/2026:

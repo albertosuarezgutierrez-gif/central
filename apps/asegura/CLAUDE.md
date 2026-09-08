@@ -775,6 +775,29 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `string | null` (sin clave, o si lo guardado no tiene forma de correo) y **lanza** si la clave está
   mal formada. Normalizar antes a mano crea una segunda ruta de normalización, que es justo el contrato
   de sincronía que el paquete PII declara en su cabecera. Se le pasa el correo crudo.
+- **📍 `POST /api/portal/contacto` y `POST /api/portal/nota` (08/09/2026) — el puerto ESTRECHO del
+  portal del cliente.** No cuelgan de `/api/operador/*` a propósito: van con **`ASEGURA_PORTAL_PUENTE_SECRET`,
+  un secreto distinto**. El de operador abre la cartera entera y lo tiene plataforma, que es la
+  pantalla de Alberto; el portal es una app pública a la que entra cualquiera con un código a su
+  correo, y darle ese mismo secreto sería poner las 32.600 fichas detrás de la app menos protegida
+  del grupo. 🚨 **Ninguno de los dos acepta `clienteId`**: la ficha la resuelve `portal_vinculo` a
+  partir de la identidad (`lib/contacto-portal.ts`), así que con el secreto en la mano solo se puede
+  escribir en la ficha vinculada a esa persona. Y no devuelven nada de la ficha —ni el nombre, ni lo
+  que había antes—: un puerto que contestara «no había dirección» ya sería una lectura de la cartera
+  desde fuera.
+  - `/contacto` aplica la dirección de contacto que escribe el propio cliente, con `editarCliente` (o
+    sea: cifra la calle y deja fila en `historial_interno`) y `actor = 'el cliente, desde el portal'`.
+    **Lista blanca dura de campos** (`CAMPOS_CONTACTO_PROPIO`): nada de identidad — entrar al portal
+    es un código al correo, que acredita el correo y no a la persona, y la regla de la casa es que la
+    identidad se cambia con un DNI recibido en la ficha.
+  - `/nota` deja constancia en el historial de algo que ha hecho el cliente (hoy, una sugerencia). Es
+    lo que contesta a «que en la historia de cada cliente aparezca reflejado todo lo que haga».
+  - **Con VARIAS fichas vinculadas no se escribe en ninguna** (`decidirFichaPropia`): `vinculosPorIdentidad`
+    desempata por el vínculo más antiguo para LEER, y para escribir eso metería el domicilio de una
+    persona en la ficha de su sociedad sin que nada fallara. `sin_ficha` y `varias_fichas` salen 409.
+  - ⚠️ Env nueva: **`ASEGURA_PORTAL_PUENTE_SECRET`**, con el MISMO valor en el proyecto Vercel del
+    portal (que además necesita `ASEGURA_PUENTE_URL` apuntando aquí). Cerrado por defecto: sin la env
+    no se autoriza a nadie, tampoco en desarrollo.
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en

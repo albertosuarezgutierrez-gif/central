@@ -30,15 +30,51 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **💬 El botón de WhatsApp de la ficha abre el mensaje YA ESCRITO, y es OTRO si es lead (08/09/2026).**
-  Alberto pidió invitar al portal desde el icono de WhatsApp que ya existía; abría el chat VACÍO.
-  `mensajeWhatsapp()` (`@central/module-seguros`, puro) da tres textos: cliente con correo (dice A
-  QUÉ correo le llega la invitación), cliente sin correo (se lo pide) y lead (sin portal: entraría a
-  una bóveda vacía). 🚨 El mensaje **nunca lleva el enlace** — el token viaja por correo a propósito
-  y un chat se reenvía; y dice «te VOY a mandar», porque el botón no dispara la invitación. El correo
-  PRESTADO de un interviniente no se promete (`viaEmail==='interviniente'` → se pide uno suyo). Los 4
-  cepos vistos en ROJO. Decidido de paso: el email de cumpleaños queda para los 44 clientes con correo,
-  y a los 4.206 leads NO se les manda WhatsApp masivo (lo bloquea Meta, no la ley). PR pendiente.
+- **👋 El WhatsApp del LEAD: lo único que faltaba, tras chocar con el PR #2604 (08/09/2026).** Esta
+  sesión implementó los tres mensajes de WhatsApp (cliente con correo · sin correo · lead) SIN mirar
+  antes los PRs abiertos — y el #2604, mergeado esa misma mañana, ya cubría los dos de cliente, y
+  mejor: nombra el correo que manda **asegura** (`portal.emailInvitacion`), no el de la cabecera, que
+  puede ser otro. Reducido a `mensajePresentacionWhatsapp()` (`@central/module-seguros`), que es el
+  caso que #2604 deja fuera a propósito: un lead no tiene portal, así que su `canalWhatsapp` devuelve
+  `no_procede` y no ofrece nada. El icono de la cabecera lleva mensaje SOLO si no es cliente; al
+  cliente lo sigue invitando el botón del bloque Portal, que es el camino bueno. Corregido de paso
+  un argumento MÍO que era falso: «el mensaje no puede llevar el enlace» — el de #2604 no manda
+  ningún token, manda la URL pública del portal, y el código sigue yendo por correo. PR #2612.
+  Decidido aparte: el email de cumpleaños queda para los 44 clientes con correo, y a los 4.206 leads
+  NO se les manda WhatsApp masivo (lo bloquea Meta, no la ley).
+
+- **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
+  captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil
+  quedaba fuera de la primera pantalla, y en iPhone ese aviso es lo ÚNICO que explica cómo instalar
+  (no hay `beforeinstallprompt`). Cuesta una pantalla una sola vez: descartado, se recuerda. Se
+  mueve en el `layout` del portal (antes de `{children}`), `margin-bottom` en vez de `margin-top`, y
+  `lib/pwa.test.ts` ya vigila el orden (visto en rojo con el orden viejo). Coste conocido: en Android
+  el evento llega tras cargar y el contenido baja un salto una vez al aparecer el aviso.
+
+- **📲 Invitar al portal también por WhatsApp (08/09/2026).** Alberto: «poner al lado el botón de
+  WhatsApp, le doy y ese mismo mensaje se le envía al cliente, se le confirma qué correo tiene
+  asignado y el enlace». Sin WABA no hay envío desde el servidor: es `wa.me`, que **abre** WhatsApp
+  con el mensaje escrito y lo manda él — por eso el rótulo dice «abrir», no «enviar», y no se anota
+  nada en el historial. El correo que se nombra lo dice asegura (`portal.emailInvitacion`, la MISMA
+  regla que elige el destinatario del correo) y el enlace también: nombrar uno a ojo mandaría al
+  cliente a teclear una dirección que el portal no reconoce. El canal nuevo NO rodea los frenos del
+  viejo: si no se le puede invitar por correo, tampoco por WhatsApp. PR #2604, mergeado y en
+  producción. Techo medido en BD: de los **80 clientes de cartera viva, 60 tienen algún
+  teléfono, 51 algún correo y 49 los dos** — el botón no puede salir en más de 49, y de esos
+  solo donde el teléfono sea móvil (cifrado: no se cuenta desde SQL) y el correo resuelva a su ficha.
+
+- **📍 El CLIENTE cambia su dirección de contacto, y sugiere (08/09/2026).** Sin cola de aprobación
+  («¿solicitar el cambio de algo?», Alberto): su dirección es suya y el art. 16 RGPD prohíbe la
+  dilación. Pero la pantalla dice DOS veces que esto no llega a ninguna compañía — medido en el CRM:
+  **la cadena de CIMA es de una sola dirección y no toca la dirección en ningún caso** («NO se
+  re-escribe PII de contacto»), o sea que tampoco pisa lo que se corrige a mano. El portal no escribe
+  la cartera (no tiene la clave PII): sale por un puerto ESTRECHO nuevo a asegura
+  (`/api/portal/contacto` y `/nota`, secreto propio ≠ el de operador, y **no acepta `clienteId`**).
+  Con varias fichas vinculadas no se escribe en ninguna. Botón de sugerencias → Telegram + historial
+  de la ficha; ahí Telegram es el ÚNICO registro, así que solo `enviada` da las gracias y el texto se
+  escapa (HTML de Telegram). Cepos: 10, seis mutaciones vistas morder. Envs pendientes de Alberto en
+  Vercel: `ASEGURA_PUENTE_URL` + `ASEGURA_PORTAL_PUENTE_SECRET` (mismo valor en las dos apps) y
+  `TELEGRAM_*` en el portal.
 
 - **📍 La dirección del cliente se corrige DONDE SE LEE (08/09/2026).** Alberto: «sigo sin poder
   modificar dirección clientes». El formulario existía desde el PR #2093, pero dentro del

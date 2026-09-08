@@ -131,6 +131,75 @@ No respondas a ninguna reseña, no publiques ninguna novedad y no subas ninguna 
 
 ---
 
+## 4. 🔌 Enchufar el puente del portal del cliente (08/09/2026)
+
+**Por qué:** desde el PR #2603 el cliente puede corregir su **dirección de contacto** desde el portal
+y mandar **sugerencias**. El código está en `main`; lo único que falta son **cuatro variables en
+Vercel**. No hay ninguna migración de base de datos.
+
+**Qué pasa si no lo haces:** nada se rompe y nada miente — la pantalla le dice al cliente «no se ha
+podido guardar» en vez de darlo por guardado. Simplemente la función no está viva.
+
+```
+Ayúdame con unas variables de entorno en Vercel (equipo pisos-turisticos-projects).
+
+REGLAS, antes de empezar:
+· NO generes tú ningún secreto ni contraseña. Los valores te los pego yo.
+· No toques ninguna variable que empiece por PII_.
+· NO pulses nunca "Rotate Variable" en ninguna variable: generaría un valor nuevo y
+  dejaría ilegible la cartera de clientes entera.
+· No crees proyectos, no cambies dominios, no toques la integración de Git y no borres
+  ninguna variable existente.
+
+PASO 1 — Proyecto "asegura-portal" → Settings → Environment Variables
+Ve creando estas cuatro, en Production (y también en Preview si te deja marcar las dos).
+Para cada una: abre el formulario, dime que estás listo y espera a que yo pegue el valor.
+  · ASEGURA_PUENTE_URL  → este sí lo pones tú: https://central-asegura.vercel.app
+  · ASEGURA_PORTAL_PUENTE_SECRET  → lo pego yo (márcala Sensitive)
+  · TELEGRAM_BOT_TOKEN  → lo pego yo (márcala Sensitive)
+  · TELEGRAM_CHAT_ID  → lo pego yo
+
+PASO 2 — Proyecto "central-asegura" → Settings → Environment Variables
+  · ASEGURA_PORTAL_PUENTE_SECRET → lo pego yo, y es el MISMO valor del paso 1.
+Si esa variable ya existiera con otro valor, PARA y dímelo antes de cambiarla.
+
+PASO 3 — Que se apliquen
+Las variables solo entran en vigor con un despliegue nuevo. En cada uno de los dos
+proyectos, ve a Deployments y pulsa Redeploy sobre el último de Production.
+Si Vercel no te deja ("A more recent Production Deployment has been created") o el
+redeploy sale como "Canceled by Ignored Build Step", NO insistas ni cambies nada de
+configuración: dímelo y lo desatasco yo desde el repo.
+
+PASO 4 — Dime qué ha quedado
+Enséñame la lista de NOMBRES de variables de los dos proyectos (nunca los valores) y el
+estado del último deployment de cada uno.
+```
+
+🔑 **El secreto lo generas TÚ y lo pegas tú** (dictado de Alberto, 08/09/2026): el agente del
+navegador no genera ni maneja contraseñas. `openssl rand -hex 32` en un terminal, o desde la consola
+del propio navegador (F12):
+
+```js
+Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('')
+```
+
+🚨 **El de `asegura-portal` y el de `central-asegura` tienen que ser IDÉNTICOS.** Si no coinciden, el
+puente contesta 401 y el portal le dice al cliente que no se ha podido guardar — no se lo traga en
+silencio, pero tampoco funciona, y el 401 no distingue «secreto distinto» de «secreto ausente».
+
+⚠️ **Un aviso sobre el Telegram:** si `TELEGRAM_BOT_TOKEN` está marcada *Sensitive* en el proyecto
+donde ya vive (plataforma), **no se puede releer desde el panel** — es un buzón, no un almacén. Si
+no lo tienes a mano, sácalo de BotFather (`/mytoken`) o deja esas dos para después: sin ellas el
+cambio de dirección funciona igual y lo único que no sale es la sugerencia (y la pantalla lo dice,
+no se la traga).
+
+✅ **Cómo comprobar que funciona**, cuando acabes: entra al portal como cliente, abre la bóveda y
+usa «Dónde te escribimos» con tu propia ficha. 🚨 **Se aplica de verdad**: escribe tu dirección
+buena, no una de prueba. Luego manda una sugerencia y mira si llega el Telegram. Las dos cosas
+tienen que aparecer en `/correduria` → tu ficha → 🕘 Historial.
+
+---
+
 ## Qué NO tienes que hacer
 
 - **No hay que tocar nada para que el blog funcione.** El cron está declarado y el token tiene los

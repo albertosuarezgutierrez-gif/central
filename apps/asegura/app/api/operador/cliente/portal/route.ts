@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { estadoPortalDeFicha, invitarAlPortal } from '@/lib/invitacion-portal'
+import { enlacePortal } from '@/lib/correo-invitacion-portal'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,7 +12,8 @@ export const dynamic = 'force-dynamic'
 /**
  * El acceso de un CLIENTE al portal (plataforma → asegura, Bearer).
  *
- *   GET  ?clienteId=…            → qué se puede hacer hoy con esa ficha
+ *   GET  ?clienteId=…            → qué se puede hacer hoy con esa ficha,
+ *                                  con qué correo entraría y a qué enlace
  *   POST { clienteId, actor }    → le manda el correo con el enlace
  *
  * ── Por qué el GET existe y no basta con el POST ───────────────────────────
@@ -49,7 +51,14 @@ export async function GET(req: Request) {
 
     const portal = await estadoPortalDeFicha(correduria.id, clienteId)
     if (portal === null) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
-    return NextResponse.json({ estado: 'ok', portal })
+    // 🚨 El `enlace` va aquí y NO dentro de `portal`: no es un dato de la ficha
+    // sino de la instalación (`ASEGURA_PORTAL_URL`), y es la MISMA función que
+    // usa el correo. Que la pantalla lo componga por su cuenta sería una
+    // segunda fuente del destino: el día que cambie el dominio, el correo iría
+    // a uno y el WhatsApp a otro, los dos con un 200. `null` = no hay portal
+    // utilizable, y entonces no se ofrece ningún canal que prometa un «entra
+    // aquí» sin el «aquí».
+    return NextResponse.json({ estado: 'ok', portal, enlace: enlacePortal() })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente/portal', e) }, { status: 500 })
   }
