@@ -111,6 +111,14 @@
   paso 0 del orden. Equivocarse hacia (c) cuesta esperar; hacia (b) cuesta un head nuevo que borra
   la evidencia.
 
+- **🗑️ Quitar una póliza aportada se ofrece EN LA LISTA, no solo al final de su ficha (08/09/2026).**
+  Alberto, con el botón del PR #2592 ya en producción (deploy READY sobre `65f97f8`, sin errores de
+  runtime en la ficha): «no puedo eliminar "Póliza sin compañía identificada"… el cliente se puede
+  equivocar, puede crear y quitar las pólizas que quiera». El botón existía, pero debajo del formulario
+  de corregir de `/boveda/anadida/[id]`; desde la lista no se veía, y una acción que hay que ir a buscar
+  no existe. `FilaDeclarada` monta ahora `EliminarPoliza` bajo la tarjeta (fuera del `<Link>`, 44px,
+  confirmación a todo ancho); `FilaPoliza` (cartera) sigue sin él. Cepo nuevo con los dos brazos vistos
+  en rojo en `test/regression-portal-borrado.test.ts`. Responsive NO medido en navegador (sin sesión).
 - **🧊 Y al quitarla, el parte de siniestro NO se borra: se CONGELA (07/09/2026).** Alberto: «al borrar
   póliza tb borraría siniestros, ¿es lo lógico?». No: un parte es la prueba de que el cliente comunicó
   el siniestro y CUÁNDO (art. 16 LCS), y la cascada la destruiría —la borraría él mismo ordenando su
