@@ -36,6 +36,8 @@ import {
 
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
+import { MiDireccion } from './MiDireccion'
+import { Sugerencia } from './Sugerencia'
 import { TusDatos } from './TusDatos'
 
 export const dynamic = 'force-dynamic'
@@ -348,7 +350,14 @@ export default async function Boveda({
         <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
       </section>
 
+      {/* Va ANTES de «Tus datos» (la supresión) a propósito: corregir una calle
+          es lo que viene a hacer la gente; pedir el borrado de sus datos, no. */}
+      <MiDireccion />
+
       <TusDatos inicial={supresiones} />
+
+      {/* La última, porque no es de sus seguros: es sobre la pantalla. */}
+      <Sugerencia />
         </>
       )}
 

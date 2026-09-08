@@ -2620,3 +2620,30 @@ h1 em {
     grid-template-columns: none;
   }
 }
+
+/* ─── «Dónde te escribimos»: la dirección de contacto que corrige el cliente ───
+   Una columna siempre: a 320px dos campos por fila dejan el código postal en
+   140px y la calle sin sitio. El input hereda el tamaño del sistema (16px) para
+   que Safari en iPhone no haga zoom al enfocarlo, que descoloca la página. */
+.mi-direccion-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.mi-direccion-campo { display: grid; gap: 4px; min-width: 0; }
+.mi-direccion-campo span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.mi-direccion-campo input {
+  width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit;
+}
+.mi-direccion-ok { font-size: 13px; line-height: 1.5; color: var(--positive); margin: 12px 0 0; }
+.mi-direccion-aviso { font-size: 13px; line-height: 1.5; color: var(--warning); margin: 12px 0 0; }
+
+/* ─── «¿Echas algo de menos?»: la sugerencia del cliente ─────────────────────
+   El textarea hereda el tamaño del sistema para que Safari en iPhone no haga
+   zoom al enfocarlo. Los dos botones se apilan en móvil: en una fila de 320px
+   quedarían por debajo de los 44px táctiles. */
+.sugerencia-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.sugerencia-form textarea {
+  width: 100%; min-width: 0; box-sizing: border-box; min-height: 96px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px; resize: vertical;
+  background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit; line-height: 1.5;
+}
+.sugerencia-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
