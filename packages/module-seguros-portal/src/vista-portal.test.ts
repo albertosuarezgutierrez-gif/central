@@ -55,7 +55,7 @@ test('las pestañas son cuatro, en orden, y la última es otra ruta', () => {
   assert.equal(p.length, 4)
   assert.deepEqual(
     p.map((x) => x.etiqueta),
-    ['Mis seguros', 'Recibos', 'Siniestros', 'Quién me ve'],
+    ['Mis seguros', 'Recibos', 'Siniestros', 'Contactos'],
   )
   assert.equal(p[3].vista, null)
   assert.equal(p[3].href, '/autorizaciones')

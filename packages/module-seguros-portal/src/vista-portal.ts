@@ -118,7 +118,11 @@ export function pestanasPortal(): PestanaPortal[] {
     // palabra en la barra: «Siniestros» + «Un parte» serían dos puertas para
     // lo mismo, que es exactamente lo que mató a «Mis pólizas».
     { vista: 'siniestro', etiqueta: 'Siniestros', href: '/boveda?vista=siniestro' },
-    { vista: null, etiqueta: 'Quién me ve', href: '/autorizaciones' },
+    // 08/09/2026: «Quién me ve» → «Contactos». Alberto pidió «una pestaña de
+    // contactos» y la pantalla ya era eso: la gente a la que das acceso, la que
+    // te lo da y la que invitas. La ruta NO cambia: los enlaces guardados a
+    // `/autorizaciones` siguen llegando.
+    { vista: null, etiqueta: 'Contactos', href: '/autorizaciones' },
   ]
 }
 
