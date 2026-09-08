@@ -69,9 +69,13 @@ export default async function InvitacionPage({ params }: { params: Promise<{ tok
     return (
       <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
         <div className="seccion">
-          <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Te han invitado a ver unos seguros</h1>
+          <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Te han invitado a Mis Seguros</h1>
+          {/* Ni siquiera si se comparte algo: desde el 08/09/2026 una invitación
+              puede ser solo una presentación del portal, y decir «te han dado
+              acceso a unos seguros» a quien todavía no ha probado ser nadie ya
+              sería contar algo de la invitación. */}
           <p className="suave" style={{ marginTop: 0 }}>
-            Alguien te ha dado acceso a sus seguros en Grupo ASegura.{' '}
+            Alguien te ha invitado al portal de Grupo ASegura.{' '}
             <strong>Entra con tu correo para verlo</strong>: te mandamos un código de un solo uso y, una
             vez dentro, decides si lo aceptas.
           </p>

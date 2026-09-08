@@ -61,6 +61,8 @@
 // pruebe que es ella. `CAMPOS_PROHIBIDOS_EN_INVITACION` está aquí para que ese
 // «poco más» no crezca solo con el tiempo.
 
+import { TIPOS_RELACION, type TipoRelacion } from '@central/module-seguros'
+
 /** Lo que pasó de verdad al invitar. Vive en el servidor. */
 export const RESULTADOS_INVITACION = [
   'enviada',
@@ -205,6 +207,11 @@ export const CAMPOS_PROHIBIDOS_EN_INVITACION = [
   'iban',
   'dni',
   'referenciaCatastral',
+  // 08/09/2026: qué es el invitado de José («su hija», «su empleado») es un dato
+  // de la relación entre dos personas, y quien abre el buzón puede no ser
+  // ninguna de las dos. Se guarda para la LISTA de José, no para el correo.
+  'relacion',
+  'parentesco',
 ] as const
 
 /**
@@ -218,3 +225,104 @@ export function normalizarMensajeInvitacion(v: unknown): string | null {
   if (t === '') return null
   return t.slice(0, MAX_MENSAJE_INVITACION)
 }
+
+// ── 👥 «Contactos» (08/09/2026): a quién invitas, qué es de ti, y si le abres algo ──
+//
+// Alberto: *«poner nombre, tipo relación y mail y se le manda un mail de
+// presentación a esa persona»*. Hasta ese día la invitación solo pedía el
+// correo, y en la lista de José cada una se reconocía por su FECHA —el correo
+// del invitado se guarda hasheado a propósito y no se puede pintar—. Con el
+// nombre y la relación la lista pasa a ser lo que él quería: sus contactos.
+//
+// 🚨 Y una invitación puede NO abrir nada (`SIN_COMPARTIR`): «recomiéndanos».
+// José presenta el portal a alguien sin compartir un solo seguro. Es la forma
+// legalmente defendible de captar: un acto ENTRE PERSONAS —el correo lo firma
+// José, dice quién invita y a qué— y no una comunicación comercial de la
+// correduría a alguien que no la ha pedido (art. 21 LSSI). Por eso el correo de
+// esta variante tampoco lleva argumento de venta, y por eso NO hay regalo por
+// traer gente: un premio por quien acabe contratando convierte al cliente en
+// colaborador externo del mediador (RDL 3/2020), con registro y contrato. Está
+// aparcado a propósito en `docs/CORREDURIA-INTRANET-IDEAS.md`.
+
+/** Tope del nombre que José escribe del invitado. Va delante de esa persona: se escapa al pintarlo. */
+export const MAX_NOMBRE_INVITADO = 120
+
+/**
+ * El nombre del invitado tal y como lo escribió José. `null` si venía vacío,
+ * nunca `''` (un valor de cajón que se cuela por las guardas de NULL). Se
+ * quitan saltos de línea: acaba en el saludo del correo, y una cabecera es una
+ * cabecera.
+ */
+export function normalizarNombreInvitado(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const t = v.replace(/\s+/g, ' ').trim()
+  if (t === '') return null
+  return t.slice(0, MAX_NOMBRE_INVITADO)
+}
+
+/**
+ * Qué es el invitado de José. Se guarda con el MISMO vocabulario que
+ * `cliente_relaciones.tipo_relacion` (`TIPOS_RELACION` de `@central/module-seguros`)
+ * para que el día que el invitado tenga ficha la relación se copie tal cual, sin
+ * traducir. `null` = no es un valor del vocabulario: no se adivina el más
+ * parecido.
+ */
+export function relacionInvitacion(v: unknown): TipoRelacion | null {
+  return typeof v === 'string' && (TIPOS_RELACION as readonly string[]).includes(v) ? (v as TipoRelacion) : null
+}
+
+/**
+ * Las que se OFRECEN en el portal, en el orden del desplegable. Es un subconjunto
+ * de `TIPOS_RELACION` a propósito: «Accionista» o «Administración» son vocabulario
+ * del corredor, no de José invitando a su hija. Todas validan con
+ * `relacionInvitacion()`; un valor del vocabulario completo también se acepta.
+ */
+export const RELACIONES_INVITACION: readonly TipoRelacion[] = [
+  'Cónyuge/Pareja de Hecho',
+  'Hijo/a',
+  'Padre/Madre',
+  'Hermano/a',
+  'Amigo/a',
+  'Empleado/a',
+  'Socio/a',
+  'Otra',
+]
+
+/**
+ * El alcance «no comparto nada»: la invitación solo presenta el portal. Al
+ * aceptarla NO se crea ninguna `portal_autorizacion` —no hay nada que autorizar—
+ * y el invitado se queda con su propio espacio, vacío hasta que aporte algo.
+ */
+export const SIN_COMPARTIR = 'ninguno' as const
+
+/** Lo que una invitación puede ofrecer: mirar (`ver`, `ver_economico`) o nada. */
+export const ALCANCES_INVITACION = ['ver', 'ver_economico', SIN_COMPARTIR] as const
+export type AlcanceInvitacion = (typeof ALCANCES_INVITACION)[number]
+
+export function alcanceInvitacion(v: unknown): AlcanceInvitacion | null {
+  return typeof v === 'string' && (ALCANCES_INVITACION as readonly string[]).includes(v)
+    ? (v as AlcanceInvitacion)
+    : null
+}
+
+/**
+ * ¿Aceptar esta invitación abre los seguros de José? `false` = `SIN_COMPARTIR`:
+ * aceptar sella la invitación y nada más. Quien decide si hay que crear una
+ * autorización es esta función, no un `=== 'ninguno'` copiado en la capa de BD.
+ */
+export function invitacionAbreAcceso(a: AlcanceInvitacion): a is Exclude<AlcanceInvitacion, typeof SIN_COMPARTIR> {
+  return a !== SIN_COMPARTIR
+}
+
+/**
+ * Lo que acepta quien recibe una invitación SIN acceso. Se enseña tal cual y se
+ * guarda como versión, igual que `TEXTO_AUTORIZACION`: aunque aquí no se ceda
+ * ningún dato, tiene que poder decirse qué se aceptó.
+ */
+export const TEXTO_INVITACION_SIN_ACCESO_V1 = 'invitacion_sin_acceso_v1' as const
+export const TEXTO_INVITACION_SIN_ACCESO = [
+  'No se comparte contigo ningún seguro ni ningún dato de quien te invita.',
+  'Solo queda registrado que te invitó y que aceptaste, con la fecha.',
+  'Tendrás tu propio espacio en el portal, vacío hasta que tú añadas algo.',
+  'Puedes borrar tu cuenta cuando quieras desde «Mis datos».',
+].join('\n')

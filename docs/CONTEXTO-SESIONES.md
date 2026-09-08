@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+### Portal del cliente: pestaña «Contactos» + invitación sin compartir (08/09/2026)
+- Alberto pidió «pestaña de contactos: nombre, relación y mail, y un mail de presentación… y regalos por traer gente».
+  Lo primero ya existía en `/autorizaciones` (invitar por correo, 04/09); se añadió lo que faltaba.
+- Pestaña renombrada a **Contactos** (ruta igual). `portal_invitacion` gana `invitado_nombre` + `relacion`
+  (vocabulario `TIPOS_RELACION`, CHECK + cepo raíz `regression-portal-contactos`) y el alcance **`ninguno`**
+  («solo te presento el portal»: al aceptar NO se crea autorización). Migración aplicada en Supabase.
+- **La relación nunca va en el correo** (`CAMPOS_PROHIBIDOS_EN_INVITACION`); el correo sin acceso no vende nada.
+- **Regalos: aparcados** (colaborador externo RDL 3/2020 + art. 21 LSSI) → `CORREDURIA-INTRANET-IDEAS.md` §M.
+- Spec `docs/superpowers/specs/2026-09-08-portal-contactos-design.md`. Cepos con 4 mutaciones en rojo.
+
 - **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
   captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil
   quedaba fuera de la primera pantalla, y en iPhone ese aviso es lo ÚNICO que explica cómo instalar
