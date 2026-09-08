@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-07T22:09:12Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-08T06:43:36Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1308 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1312 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,12 +21,12 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 53
+- **Rutas API:** 55
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (18):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_supresion, seguros.portal_vinculo
-- **Rutas API:** 20
+- **Rutas API:** 22
 ### asegura-web
 - **Módulos que usa:** module-seguros, module-seguros-portal
 - **Capacidades:** —
@@ -262,6 +262,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (08/09/2026) 📲 Invitar al portal también por WhatsApp
+- (08/09/2026) 📍 El CLIENTE cambia su dirección de contacto, y sugiere
 - (08/09/2026) 📍 La dirección del cliente se corrige DONDE SE LEE
 - (07/09/2026) 🩺 `total_count: 0` NO prueba que un run de Actions esté muerto — corregida la tabla de la DECIMOCUARTA
 - (07/09/2026) 🧊 Y al quitarla, el parte de siniestro NO se borra: se CONGELA
@@ -270,6 +272,4 @@
 - (07/09/2026) ✉️ «Error enviar invitación» — el mensaje MENTÍA: no hay proveedor de correo
 - (07/09/2026) 🔤 Una sola letra en los titulares de `asegura-web`
 - (07/09/2026) 📲 El portal del cliente se puede INSTALAR
-- (07/09/2026) 🚪 Salida tardía: se confirma la VÍSPERA, y una postura por mensaje
-- (07/09/2026) 📌 Revisión de precios House Sevillana — Genius+Móvil se QUEDAN, ocupación floja no lo permite
 

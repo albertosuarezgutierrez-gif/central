@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-07T22:09:12Z",
+  "generadoEn": "2026-09-08T06:43:36Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -896,7 +896,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-web": {
         "estado": "no",
@@ -2080,11 +2080,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 40
+        "evidencias": 42
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 55
+        "evidencias": 58
       },
       "asegura-web": {
         "estado": "usado",
@@ -2188,11 +2188,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 13
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 44
+        "evidencias": 47
       },
       "asegura-web": {
         "estado": "usado",
@@ -2730,7 +2730,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 1
+        "evidencias": 3
       },
       "asegura-portal": {
         "presente": false,
@@ -3896,7 +3896,9 @@
       "/api/operador/siniestro",
       "/api/operador/siniestros-nuevos",
       "/api/operador/supresiones",
-      "/api/operador/vencimientos"
+      "/api/operador/vencimientos",
+      "/api/portal/contacto",
+      "/api/portal/nota"
     ],
     "asegura-portal": [
       "/api/acceso/solicitar",
@@ -3910,6 +3912,7 @@
       "/api/invitaciones",
       "/api/invitaciones/[id]",
       "/api/invitaciones/responder",
+      "/api/mis-datos",
       "/api/peticiones",
       "/api/peticiones/[id]",
       "/api/polizas",
@@ -3918,6 +3921,7 @@
       "/api/siniestros",
       "/api/siniestros/[id]/adjuntos",
       "/api/siniestros/[id]/adjuntos/[documentoId]",
+      "/api/sugerencia",
       "/api/supresion"
     ],
     "asegura-web": [
@@ -6201,7 +6205,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1308,
+    "apis": 1312,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

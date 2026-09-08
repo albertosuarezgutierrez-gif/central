@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-08T05:50:38Z",
-  "sha": "1f9087518c1a58ccfe9f514cb7f39f179aa15cc1",
+  "generadoEn": "2026-09-08T06:43:36Z",
+  "sha": "4f6c253516cff02a0369ff99dbc529d1d1cbb9f7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3515,6 +3515,36 @@
       "hash": "4fda0a2d4861"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/MiDireccion.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "MiDireccion",
+        "desenlace"
+      ],
+      "funciones": [
+        {
+          "nombre": "MiDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 45
+        },
+        {
+          "nombre": "desenlace",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string | undefined, motivo?: string",
+          "retorno": "Estado",
+          "linea": 127,
+          "resumen": "El desenlace, en las palabras de quien lo lee. Está fuera del componente y es puro para que el guardián pueda comprobar lo único que no se puede equivocar: que **ningún camino que no haya guardado dig"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "854dacf3b34c"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/page.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -3527,7 +3557,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 49
+          "linea": 51
         },
         {
           "nombre": "Titular",
@@ -3535,7 +3565,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date }",
           "retorno": null,
-          "linea": 427,
+          "linea": 436,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -3544,13 +3574,13 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], titular?: string",
           "retorno": "PolizaOpcionParte",
-          "linea": 470,
+          "linea": 479,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae2bf175819f"
+      "hash": "007240368451"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -3905,6 +3935,37 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e445d16617f1"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/Sugerencia.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Sugerencia",
+        "desenlaceSugerencia"
+      ],
+      "funciones": [
+        {
+          "nombre": "Sugerencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "«¿Echas algo de menos?» — la sugerencia del cliente, que le llega a Alberto por Telegram. 🚨 **Ningún desenlace que no haya salido puede decir «gracias, la tenemos».** Para quien no tiene ficha, ese T"
+        },
+        {
+          "nombre": "desenlaceSugerencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string | undefined",
+          "retorno": "",
+          "linea": 98,
+          "resumen": "Qué se le dice a quien escribió. Puro y exportado para que el guardián pueda comprobar lo único que no se puede equivocar: que `ok: true` sale de UN solo caso."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8cec54c09640"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/TusDatos.tsx",
@@ -4306,6 +4367,26 @@
       "hash": "40ae2a8ddb92"
     },
     {
+      "ruta": "apps/asegura-portal/app/api/mis-datos/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 28
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/mis-datos",
+      "hash": "7623cf5686c7"
+    },
+    {
       "ruta": "apps/asegura-portal/app/api/peticiones/[id]/route.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -4512,6 +4593,26 @@
       ],
       "rutaApi": "/api/siniestros",
       "hash": "1ae6dac89009"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/sugerencia/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 39
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/sugerencia",
+      "hash": "e0c35ea21275"
     },
     {
       "ruta": "apps/asegura-portal/app/api/supresion/route.ts",
@@ -6254,6 +6355,27 @@
       "hash": "80b9b2a145d2"
     },
     {
+      "ruta": "apps/asegura-portal/lib/mis-datos.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "«Esta es mi dirección» — el portal manda a asegura lo que el cliente escribió. ─── Por qué el portal NO lo escribe él mismo ──────────────────────────────── `clientes.direccion` va cifrada con `PII_ENCRYPTION_KEY` y el rol de esta app (`prisma_asegura_portal`, sin BYPASSRLS) ni declara esa columna: ",
+      "exporta": [
+        "guardarMiDireccion"
+      ],
+      "funciones": [
+        {
+          "nombre": "guardarMiDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, libre: Libre",
+          "retorno": "Promise<ResultadoMisDatos>",
+          "linea": 42
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6ae2b5652210"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/monograma.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -6788,6 +6910,36 @@
       ],
       "rutaApi": null,
       "hash": "d482d4992a8f"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/sugerencia.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El botón de sugerencias del portal: le llega a Alberto por Telegram y, si esa persona tiene ficha, queda además en su historial. ─── Por qué van las DOS cosas ─────────────────────────────────────────────── Telegram es donde Alberto lo va a ver hoy (regla de la casa: «¿en qué pantalla lo va a ver?»)",
+      "exporta": [
+        "enviarSugerencia"
+      ],
+      "funciones": [
+        {
+          "nombre": "enviarSugerencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "ctx: ContextoSugerencia, textoCrudo: unknown,",
+          "retorno": "Promise<ResultadoSugerencia>",
+          "linea": 33
+        },
+        {
+          "nombre": "anotarEnFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 67,
+          "resumen": "Deja la sugerencia en el historial de su ficha, por el puerto estrecho de asegura (el portal no puede escribir en la cartera; ver `lib/mis-datos.ts`). No lanza y no devuelve nada: quien llama ya ha de"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "465dd2dd9e1a"
     },
     {
       "ruta": "apps/asegura-portal/lib/supresion.ts",
@@ -8630,8 +8782,8 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 40,
-          "resumen": "El acceso de un CLIENTE al portal (plataforma → asegura, Bearer). GET ?clienteId=… → qué se puede hacer hoy con esa ficha POST { clienteId, actor } → le manda el correo con el enlace ── Por qué el GET"
+          "linea": 42,
+          "resumen": "El acceso de un CLIENTE al portal (plataforma → asegura, Bearer). GET ?clienteId=… → qué se puede hacer hoy con esa ficha, con qué correo entraría y a qué enlace POST { clienteId, actor } → le manda e"
         },
         {
           "nombre": "POST",
@@ -8639,12 +8791,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 58
+          "linea": 67
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/cliente/portal",
-      "hash": "76c8f2087e4e"
+      "hash": "e40d99f577c6"
     },
     {
       "ruta": "apps/asegura/app/api/operador/cliente/relaciones/aviso/route.ts",
@@ -9886,6 +10038,48 @@
       "tablas": [],
       "rutaApi": "/api/operador/vencimientos",
       "hash": "512ac21bc1cf"
+    },
+    {
+      "ruta": "apps/asegura/app/api/portal/contacto/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "POST /api/portal/contacto — el CLIENTE corrige su dirección de contacto desde el portal. Cuerpo: `{ identidadId, libre: { direccion?, codigoPostal?, ciudad?, provincia? } }`. 🚨 No acepta `clienteId`,"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/portal/contacto",
+      "hash": "cc329bf0dc6a"
+    },
+    {
+      "ruta": "apps/asegura/app/api/portal/nota/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 28,
+          "resumen": "POST /api/portal/nota — deja en el historial de la ficha constancia de algo que ha hecho el cliente en el portal. Cuerpo: `{ identidadId, texto }`. Es lo que contesta a «que en la historia de cada cli"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/portal/nota",
+      "hash": "82c2ccbf59e1"
     },
     {
       "ruta": "apps/asegura/app/layout.tsx",
@@ -13851,6 +14045,59 @@
       "hash": "b61d25065cbb"
     },
     {
+      "ruta": "apps/asegura/lib/contacto-portal.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Aplicar a la cartera el cambio de dirección de CONTACTO que hace el propio cliente desde `apps/asegura-portal`. ─── Por qué esto vive aquí y no en el portal ──────────────────────────────── `clientes.direccion` va CIFRADA con `PII_ENCRYPTION_KEY`, y el rol del portal (`prisma_asegura_portal`, sin BY",
+      "exporta": [
+        "aplicarContactoPropio",
+        "anotarActividadPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "fichasDeIdentidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, identidadId: string",
+          "retorno": "Promise<string[]>",
+          "linea": 50,
+          "resumen": "Los `cliente_id` que esa identidad tiene vinculados en esta correduría."
+        },
+        {
+          "nombre": "aplicarContactoPropio",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, identidadId: string, libre: NonNullable<EdicionCliente['libre']>,",
+          "retorno": "Promise<ResultadoContactoPropio>",
+          "linea": 66,
+          "resumen": "Aplica la dirección de contacto que ha escrito el cliente. `libre` trae SOLO los campos que la persona cambió (`undefined` = no lo tocó, `null` = lo dejó en blanco a propósito). Esa distinción es la m"
+        },
+        {
+          "nombre": "anotarActividadPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, identidadId: string, texto: string,",
+          "retorno": "Promise<'ok' | 'sin_ficha' | 'varias_fichas' | 'error'>",
+          "linea": 123,
+          "resumen": "Anota en el historial de la ficha de esa identidad algo que ha HECHO el cliente en el portal (hoy: una sugerencia). Es lo que hace que «todo lo que haga el cliente» acabe en la pantalla donde Alberto "
+        },
+        {
+          "nombre": "anotar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 145,
+          "resumen": "La línea de bitácora. Best-effort a propósito, como el resto de anotaciones del repo: el dato YA está guardado, y tumbar la respuesta porque no se pudo escribir el renglón le diría al cliente que no s"
+        }
+      ],
+      "tablas": [
+        "historial_interno",
+        "portal_vinculo"
+      ],
+      "rutaApi": null,
+      "hash": "fc699f2c15c8"
+    },
+    {
       "ruta": "apps/asegura/lib/correo-aviso-acceso.ts",
       "ambito": "apps/asegura",
       "resumen": "«Tienes un acceso esperando»: el correo que avisa a quien la correduría ha anotado como autorizado a ver los seguros de otra ficha. ── Por qué existe ────────────────────────────────────────────────────────── `autorizarVer()` escribe una fila de `portal_autorizacion` con `origen = 'corredor'` que na",
@@ -14324,7 +14571,7 @@
           "exportada": false,
           "params": "hash: string",
           "retorno": "Promise<Candidato[]>",
-          "linea": 128,
+          "linea": 143,
           "resumen": "Los candidatos que el portal encontraría para ese email: su columna principal (`clientes.email_lookup_hash`) y la lista de contacto (`cliente_emails`). ⚠️ Se busca en TODA la base, no solo en esta cor"
         },
         {
@@ -14333,7 +14580,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 147,
+          "linea": 162,
           "resumen": "Las identidades que ya entran con esta ficha, y cuándo lo hicieron por última vez."
         },
         {
@@ -14342,7 +14589,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FichaPortal | null>",
-          "linea": 178,
+          "linea": 193,
           "resumen": "¿Qué se puede hacer hoy con esta ficha? Es lo que la pantalla pinta ANTES de ofrecer el botón, para que Alberto no invite a quien va a acabar mirando una bóveda vacía ni le mande a alguien que entró a"
         },
         {
@@ -14351,8 +14598,17 @@
           "exportada": false,
           "params": "email: string, clienteId: string,",
           "retorno": "Promise<'invitable' | 'ambiguo' | 'resuelve_a_otra' | 'no_comprobado'>",
-          "linea": 211,
+          "linea": 240,
           "resumen": "Lo que el portal decidiría con ese correo, calculado con SU misma función. Cualquier tropiezo devuelve `no_comprobado`, nunca `invitable`."
+        },
+        {
+          "nombre": "emailLegibleDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 287,
+          "resumen": "El correo al que se le escribiría, o `null` si no hay uno legible **por el motivo que sea**. Aquí los cinco desenlaces de `estadoEmailDeFicha` sí se colapsan a propósito: quien llama solo necesita sab"
         },
         {
           "nombre": "nombreDe",
@@ -14360,7 +14616,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 252,
+          "linea": 298,
           "resumen": "El nombre de la ficha, para el saludo. `null` = no hay uno legible."
         },
         {
@@ -14369,7 +14625,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { clienteId: string; actor: string },",
           "retorno": "Promise<ResultadoInvitacion>",
-          "linea": 267,
+          "linea": 313,
           "resumen": "Manda la invitación. Comprueba lo mismo que `estadoPortalDeFicha` **otra vez** y no se fía de lo que la pantalla creyera: entre que se pintó el botón y se pulsó pueden haber pasado minutos, y el estad"
         },
         {
@@ -14378,7 +14634,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 380,
+          "linea": 426,
           "resumen": "Deja constancia de que se le contó. Best-effort a propósito: el correo ya ha salido y un historial caído no puede deshacerlo ni presentarlo como fallido. 🚨 Sin la dirección dentro: un historial es do"
         }
       ],
@@ -14386,7 +14642,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "d3841cf0e2f5"
+      "hash": "ff90bb073100"
     },
     {
       "ruta": "apps/asegura/lib/leads-portal.ts",
@@ -14669,6 +14925,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b29916f5c7f7"
+    },
+    {
+      "ruta": "apps/asegura/lib/puente-portal.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Puerto ESTRECHO del portal del cliente (`apps/asegura-portal` → asegura). 🚨 Es un secreto DISTINTO de `ASEGURA_OPERADOR_SECRET` y no es una duplicación: el de operador abre la cartera entera (leer cualquier ficha, dar de alta, descartar) y lo tiene plataforma, que es la pantalla de Alberto. El port",
+      "exporta": [
+        "puentePortalAutorizado"
+      ],
+      "funciones": [
+        {
+          "nombre": "puentePortalAutorizado",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": "boolean",
+          "linea": 21,
+          "resumen": "Puerto ESTRECHO del portal del cliente (`apps/asegura-portal` → asegura). 🚨 Es un secreto DISTINTO de `ASEGURA_OPERADOR_SECRET` y no es una duplicación: el de operador abre la cartera entera (leer cu"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b5180123e092"
     },
     {
       "ruta": "apps/asegura/lib/retarificar-cartera.ts",
@@ -58980,13 +59258,13 @@
           "exportada": true,
           "params": "{ telefono, compacto = false }: { telefono: string /** * Para cuando va incrustado en una línea de texto densa (la cabecera de la * ficha, la lista de personas): 32px en vez de 44 para no partir el renglón. * En una fila de lista —donde es ",
           "retorno": null,
-          "linea": 19,
+          "linea": 24,
           "resumen": "Abre WhatsApp con el cliente, al lado de su teléfono (Alberto, 03/09/2026: «se podría poner al lado de los móviles un icono de WhatsApp y me ir al WhatsApp del cliente pulsándolo»). 🚨 Si `urlWhatsapp"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9ba7eb201c97"
+      "hash": "fcbb46e4d039"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/BuscadorCartera.tsx",
@@ -59915,7 +60193,7 @@
           "exportada": true,
           "params": "{ ficha, personas }: { ficha: Ficha /** `null` = asegura no pudo leer quién interviene; NO es «no hay nadie». */ personas: PersonaDePolizas[] | null }",
           "retorno": null,
-          "linea": 83,
+          "linea": 84,
           "resumen": "Con quién se habla de esta ficha: **una sola lista de personas** y los datos de la propia ficha. 🚨 Hasta el 05/09/2026 eran DOS tarjetas —👤 quién sale en sus pólizas (lo que dice CIMA) y 👪 los vínc"
         },
         {
@@ -59924,7 +60202,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 195
+          "linea": 196
         },
         {
           "nombre": "espejoDe",
@@ -59932,8 +60210,17 @@
           "exportada": false,
           "params": "c: ContactoFicha, contactos: ContactosCliente | null",
           "retorno": "",
-          "linea": 207,
+          "linea": 208,
           "resumen": "El principal espejado en `clientes.telefono/email`, que es lo ÚNICO que hay cuando la lista de contactos no se ha podido leer. Con la lista delante NO se mezcla: el principal ya está dentro, y pintarl"
+        },
+        {
+          "nombre": "telefonosDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "ficha: Ficha",
+          "retorno": "(string | null)[]",
+          "linea": 225,
+          "resumen": "Los teléfonos de la ficha para el canal de WhatsApp, **el principal primero**. El orden importa: `movilParaInvitar` coge el primero que sea un móvil, así que si el principal lo es, gana él. Los ilegib"
         },
         {
           "nombre": "Direccion",
@@ -59941,16 +60228,16 @@
           "exportada": false,
           "params": "{ clienteId, c }: { clienteId: string; c: ContactoFicha }",
           "retorno": null,
-          "linea": 228,
+          "linea": 244,
           "resumen": "Dónde vive la ficha. El sitio (CP + ciudad + provincia) NO se concatena a pelo: lo lee `leerSitio`, que solo afirma lo que se sostiene y devuelve lo que se contradice como reparos. 🚨 Medido el 05/09/"
         },
         {
           "nombre": "Portal",
           "kind": "function",
           "exportada": false,
-          "params": "{ clienteId, nombre }: { clienteId: string; nombre: string }",
+          "params": "{ clienteId, nombre, telefonos }: { clienteId: string nombre: string /** Los teléfonos de la ficha, el principal primero. Para el canal de WhatsApp. */ telefonos: (string | null)[] }",
           "retorno": null,
-          "linea": 300,
+          "linea": 316,
           "resumen": "¿Este cliente entra al portal (`apps/asegura-portal`) a ver sus seguros? Y si no, ¿se le puede invitar? 🚨 Por qué esto PREGUNTA antes de ofrecer el botón. El portal vincula a una persona con su ficha"
         },
         {
@@ -59959,7 +60246,7 @@
           "exportada": false,
           "params": "{ ficha }: { ficha: Ficha }",
           "retorno": null,
-          "linea": 458,
+          "linea": 552,
           "resumen": "La IDENTIDAD (DNI, nombre, fecha de nacimiento) son campos permanentes que no dependen de los datos del cliente, en una pestaña que se abre para leer un teléfono. Se pliega — pero plegar NO puede esco"
         },
         {
@@ -59968,7 +60255,7 @@
           "exportada": false,
           "params": "ficha: Ficha",
           "retorno": "'fisica' | 'juridica' | null",
-          "linea": 506,
+          "linea": 600,
           "resumen": "Qué es la ficha, para ofrecer primero los vínculos de empresa en una sociedad. Solo se afirma con lo que asegura manda: `null` es «no se sabe», y adivinarlo por el nombre es justo lo que la regla de i"
         },
         {
@@ -59977,7 +60264,7 @@
           "exportada": false,
           "params": "{ papel, quien, linea, ocupado, onQuitar }: { papel: { rol: string; etiqueta: string | null } quien: string linea: Coincidencia ocupado: string | null onQuitar: (fila: IntervinienteFicha, quien: string, dondePoliza: string) => void }",
           "retorno": null,
-          "linea": 515,
+          "linea": 609,
           "resumen": "Un papel («conductor ocasional del 1234ABC») con lo que se puede hacer con él."
         },
         {
@@ -59986,7 +60273,7 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaQuitarInterviniente, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 579
+          "linea": 673
         },
         {
           "nombre": "lineaDe",
@@ -59994,7 +60281,7 @@
           "exportada": false,
           "params": "persona: PersonaMinima, rol: string, etiqueta: string | null, filas: IntervinienteFicha[], idsPorEtiqueta: Map<string, string[]>,",
           "retorno": "Coincidencia",
-          "linea": 618
+          "linea": 712
         },
         {
           "nombre": "esLaMisma",
@@ -60002,7 +60289,7 @@
           "exportada": false,
           "params": "fila: IntervinienteFicha, persona: PersonaMinima",
           "retorno": "boolean",
-          "linea": 642,
+          "linea": 736,
           "resumen": "¿Esta fila es de esta persona? Identificador primero (la ficha enlazada) y solo se cae al nombre cuando NINGUNA de las dos lo tiene. Dos fichas distintas no se funden jamás, coincida lo que coincida e"
         },
         {
@@ -60011,7 +60298,7 @@
           "exportada": false,
           "params": "n: string | null",
           "retorno": "string | null",
-          "linea": 649
+          "linea": 743
         },
         {
           "nombre": "papelesDe",
@@ -60019,7 +60306,7 @@
           "exportada": false,
           "params": "p: { papeles: { rol: string; polizas: string[] }[] }",
           "retorno": "",
-          "linea": 655,
+          "linea": 749,
           "resumen": "Los papeles de una persona, uno por póliza (que es la unidad que se quita)."
         },
         {
@@ -60028,13 +60315,13 @@
           "exportada": false,
           "params": "ficha: Ficha",
           "retorno": "Map<string, string[]>",
-          "linea": 667,
+          "linea": 761,
           "resumen": "Etiqueta de póliza → sus ids. Es una lista porque dos pólizas pueden rotularse igual."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0791cdb1dd17"
+      "hash": "01f36d6080cd"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabPolizas.tsx",
@@ -87711,6 +87998,66 @@
       "hash": "19f9c752a45a"
     },
     {
+      "ruta": "apps/plataforma/lib/invitacion-whatsapp.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Invitar al portal **por WhatsApp**, con el mismo mensaje que va por correo. ── Lo que pidió Alberto (08/09/2026) ─────────────────────────────────────── «Como tenemos el tema de WhatsApp ya desarrollado, poner al lado el botón de WhatsApp: le doy y ese mismo mensaje se le envía al cliente, que tenem",
+      "exporta": [
+        "movilParaInvitar",
+        "mensajeInvitacionWhatsapp",
+        "enlaceWhatsappConMensaje",
+        "canalWhatsapp"
+      ],
+      "funciones": [
+        {
+          "nombre": "unaLinea",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 40,
+          "resumen": "Quita saltos de línea de lo que se mete dentro del mensaje."
+        },
+        {
+          "nombre": "movilParaInvitar",
+          "kind": "function",
+          "exportada": true,
+          "params": "telefonos: readonly (string | null | undefined)[]",
+          "retorno": "string | null",
+          "linea": 51,
+          "resumen": "El primer teléfono de la ficha que se pueda afirmar que es un móvil, en el orden en que se le pasen (el principal primero). `null` = ninguno lo es, que **no** significa «no tiene teléfono»: significa "
+        },
+        {
+          "nombre": "mensajeInvitacionWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosMensajeWhatsapp",
+          "retorno": "string",
+          "linea": 82,
+          "resumen": "por WhatsApp es justo el dato que falta para poder entrar. 🚨 Y nada más que eso. Ni compañía, ni póliza, ni matrícula, ni prima, ni DNI, ni cuántos seguros tiene: el número lo ha tecleado Alberto y p"
+        },
+        {
+          "nombre": "enlaceWhatsappConMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "telefono: string, texto: string",
+          "retorno": "string | null",
+          "linea": 101,
+          "resumen": "El `wa.me` con el mensaje ya escrito, o `null` si ese número no es un móvil."
+        },
+        {
+          "nombre": "canalWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ accion, portal, enlace, telefonos, nombre }: { accion: AccionPortal portal: PortalCartera enlace: string | null telefonos: readonly (string | null | undefined)[] nombre: string | null },",
+          "retorno": "CanalWhatsapp",
+          "linea": 129
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5e3468bff7c2"
+    },
+    {
       "ruta": "apps/plataforma/lib/leads-asegura.ts",
       "ambito": "apps/plataforma",
       "resumen": "Los LEADS del portal —pólizas que el cliente sube y que la casa no lleva— leídos del puerto de asegura (`GET /api/operador/leads`) y convertidos en algo que la pantalla pueda pintar sin adivinar nada. Dos partes, como en `cartera-lista-asegura.ts` y `duplicados-asegura.ts`: 1. Lo PURO: `interpretarL",
@@ -89109,7 +89456,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 57
+          "linea": 65
         },
         {
           "nombre": "enteroONull",
@@ -89117,7 +89464,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 61
+          "linea": 69
         },
         {
           "nombre": "esEstado",
@@ -89125,7 +89472,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is EstadoPortalCartera",
-          "linea": 65
+          "linea": 73
         },
         {
           "nombre": "leerPortal",
@@ -89133,7 +89480,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PortalCartera | null",
-          "linea": 81,
+          "linea": 89,
           "resumen": "El bloque `portal` del puerto → `PortalCartera`, o `null` si no llega o no tiene forma de objeto (o sea: no se ha podido leer, y eso lo dice la pantalla con otras palabras). 🚨 Un `estado` que no está"
         },
         {
@@ -89142,7 +89489,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaPortal",
-          "linea": 108
+          "linea": 131
         },
         {
           "nombre": "interpretarInvitacion",
@@ -89150,7 +89497,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaInvitacion",
-          "linea": 173
+          "linea": 196
         },
         {
           "nombre": "fechaAcceso",
@@ -89158,7 +89505,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 210,
+          "linea": 233,
           "resumen": "Una fecha ISO en castellano de pantalla: «3 de septiembre de 2026»."
         },
         {
@@ -89167,7 +89514,7 @@
           "exportada": true,
           "params": "ultimoAccesoEn: string | null",
           "retorno": "string",
-          "linea": 223,
+          "linea": 246,
           "resumen": "Cuándo entró por última vez. 🚨 Sin fecha se dice **«no consta cuándo»**, nunca «nunca ha entrado»: llegamos aquí porque hay una identidad vinculada, o sea que entrar, entró — lo que falta es la marca"
         },
         {
@@ -89176,7 +89523,7 @@
           "exportada": true,
           "params": "p: PortalCartera",
           "retorno": "FrasePortal",
-          "linea": 233,
+          "linea": 256,
           "resumen": "El estado → la frase que dice qué hacer. Vive aquí (puro, con test) y no en el JSX: es lo que Alberto lee para decidir, y el sitio donde dos estados que se arreglan en sitios distintos acabarían con e"
         },
         {
@@ -89185,7 +89532,7 @@
           "exportada": true,
           "params": "identidades: number | null",
           "retorno": "string",
-          "linea": 295,
+          "linea": 318,
           "resumen": "Cuántas personas entran con esta ficha. `null` = no se contó, y se dice."
         },
         {
@@ -89194,7 +89541,7 @@
           "exportada": true,
           "params": "r: RespuestaInvitacion, nombre: string",
           "retorno": "string",
-          "linea": 309,
+          "linea": 332,
           "resumen": "El desenlace del envío, en una frase. Puro y con test para que un «se ha enviado» no pueda salir de un desenlace que no envió nada. 🚨 En el caso bueno el texto NO dice que el cliente ya esté dentro: "
         },
         {
@@ -89203,7 +89550,7 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 349,
+          "linea": 372,
           "resumen": "El motivo técnico del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
@@ -89212,7 +89559,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 364
+          "linea": 387
         },
         {
           "nombre": "cabeceras",
@@ -89220,7 +89567,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Record<string, string> | null",
-          "linea": 368
+          "linea": 391
         },
         {
           "nombre": "llamar",
@@ -89228,7 +89575,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit",
           "retorno": "Promise<Reenvio>",
-          "linea": 375
+          "linea": 398
         },
         {
           "nombre": "portalAsegura",
@@ -89236,7 +89583,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 392,
+          "linea": 415,
           "resumen": "`GET /api/operador/cliente/portal?clienteId=` — qué se puede hacer hoy con esa ficha. Gratis."
         },
         {
@@ -89245,13 +89592,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 405,
+          "linea": 428,
           "resumen": "`POST /api/operador/cliente/portal` — `{clienteId, actor}`: le manda el correo con el enlace del portal. 🚨 Escribe a una persona real, así que no es un `GET` más: lo dispara Alberto pulsando, nunca u"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45e7eab7f832"
+      "hash": "2d4021156f74"
     },
     {
       "ruta": "apps/plataforma/lib/pricing-calendar.ts",
@@ -119351,6 +119698,38 @@
       "hash": "027a1aa49baa"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/contacto-propio.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "El cliente corrige SU dirección de contacto desde el portal. ─── Por qué esto no es una «solicitud» ────────────────────────────────────── Dictado de Alberto (08/09/2026): «me refiero a la dirección de contacto, no la del seguro». Y tiene razón: dónde vive es SUYO. Poner una cola de aprobación entre",
+      "exporta": [
+        "decidirFichaPropia",
+        "textoHistorialContactoPropio"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirFichaPropia",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteIds: readonly string[]",
+          "retorno": "FichaPropia",
+          "linea": 48,
+          "resumen": "Decide sobre qué ficha escribe el cliente. Se le pasan los `cliente_id` de sus vínculos ya deduplicados. Nótese que `[a, a]` es UNA ficha (dos vínculos a la misma) y sí se aplica: lo que bloquea es qu"
+        },
+        {
+          "nombre": "textoHistorialContactoPropio",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: readonly string[]",
+          "retorno": "string",
+          "linea": 89,
+          "resumen": "La línea que se escribe en `historial_interno` de la ficha. 🚨 Dice QUIÉN lo hizo y QUÉ campos, y **no dice los valores**. El historial lo lee el corredor en una pantalla y no es sitio para repetir el"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "af94c70d285e"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/destino.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "¿Es este destino algo a lo que se pueda ENVIAR un código? Existe para cerrar un amplificador de correo: `POST /api/acceso/solicitar` es público y sin sesión, y antes escribía una fila en `portal_codigo` y disparaba un envío con cualquier cadena de 3 a 200 caracteres. O sea, cualquiera podía usar el ",
@@ -120426,6 +120805,58 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "159635a598d7"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/sugerencia.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "«Dinos qué echas de menos» — la sugerencia que el cliente escribe en el portal y que le llega a Alberto por Telegram. ─── La decisión que sostiene el fichero ───────────────────────────────────── 🚨 Aquí Telegram NO es un aviso: es EL REGISTRO. En el aviso de primer acceso (`lib/aviso-acceso.ts`) el",
+      "exporta": [
+        "escaparHtml",
+        "normalizarSugerencia",
+        "mensajeSugerencia",
+        "resultadoSugerencia"
+      ],
+      "funciones": [
+        {
+          "nombre": "escaparHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 31,
+          "resumen": "Escapa lo que HTML de Telegram interpreta. Solo estos tres, y en este orden."
+        },
+        {
+          "nombre": "normalizarSugerencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 43,
+          "resumen": "Limpia el texto de la persona. Devuelve `null` cuando no hay sugerencia que mandar — y `null` NO es un error que enseñarle: es que no ha escrito nada. Se colapsan los saltos de línea de más (tres o má"
+        },
+        {
+          "nombre": "mensajeSugerencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContextoSugerencia, texto: string",
+          "retorno": "string",
+          "linea": 71,
+          "resumen": "El mensaje de Telegram. 🚨 **El nombre solo se dice si hay VÍNCULO**, igual que en el aviso de primer acceso: sin él, lo único que hay es lo que esa persona tecleó y nadie lo ha comprobado. «Sugerenci"
+        },
+        {
+          "nombre": "resultadoSugerencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "idMensaje: number | null, hubo: 'ok' | 'fallo'",
+          "retorno": "ResultadoSugerencia",
+          "linea": 90,
+          "resumen": "Traduce el desenlace del envío. `sin_canal` («no hay Telegram configurado en este despliegue») y `error` («se intentó y no salió») **no se colapsan**: el primero se arregla en Vercel y el segundo rein"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "700dea305e23"
     },
     {
       "ruta": "packages/module-seguros-portal/src/supresion.ts",
@@ -128307,7 +128738,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3166,
-    "funciones": 9661
+    "archivos": 3179,
+    "funciones": 9690
   }
 }
