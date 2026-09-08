@@ -15,7 +15,9 @@ const leer = (rel: string) => readFileSync(join(RAIZ, rel), 'utf8')
 const MANIFIESTO = 'app/manifest.ts'
 const SW = 'public/sw.js'
 const ICONO_APP = 'app/icono-app/route.tsx'
-const OFERTA = 'app/InstalarApp.tsx'
+const OFERTA = 'app/(portal)/InstalarApp.tsx'
+/** El almacén compartido: quién escucha el evento de Chrome y quién detecta iOS (desde el 08/09/2026). */
+const INSTALACION = 'app/instalacion.tsx'
 
 test('el manifiesto declara lo que Chrome exige para ofrecer instalar', () => {
   assert.ok(existsSync(join(RAIZ, MANIFIESTO)), 'sin manifiesto no hay app instalable')
@@ -75,6 +77,7 @@ test('el service worker se registra de verdad', () => {
 })
 
 test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
+  const almacen = leer(INSTALACION)
   const fuente = leer(OFERTA)
   // Safari no implementa `beforeinstallprompt`. Si esto solo escuchara el
   // evento, en iOS no se vería NADA —ni error ni banner—, y ahí está la mitad
@@ -83,13 +86,21 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
   // en el comentario de arriba, y un cepo que se conforma con eso pasa aunque
   // nadie escuche nada.
   assert.match(
-    fuente,
+    almacen,
     /addEventListener\('beforeinstallprompt'/,
-    'la oferta dejó de escuchar el evento de Chrome',
+    'el almacén de instalación dejó de escuchar el evento de Chrome',
   )
-  assert.match(fuente, /iphone\|ipad\|ipod/i, 'la oferta dejó de detectar iOS: ahí no se vería nada')
+  assert.match(almacen, /iphone\|ipad\|ipod/i, 'el almacén dejó de detectar iOS: ahí no se vería nada')
+  // La franja y la campana leen el MISMO almacén: dos listeners del mismo
+  // evento es cómo el segundo `prompt()` rechaza sin que nadie lo pinte.
+  assert.match(fuente, /useInstalacion\(\)/, 'la franja ya no lee el almacén compartido de instalación')
+  assert.match(leer('app/Campana.tsx'), /useInstalacion\(\)/, 'la campana ya no lee el almacén compartido de instalación')
+  assert.ok(
+    !/addEventListener\('beforeinstallprompt'/.test(fuente),
+    'la franja volvió a escuchar el evento por su cuenta: con dos listeners el segundo prompt() rechaza en silencio',
+  )
   assert.match(
-    fuente,
+    almacen,
     // En un literal de cadena, no en el comentario que lo explica.
     // Dentro del `<strong>` del JSX, no en el comentario que lo explica: el
     // nombre del gesto aparece también ahí arriba, y un cepo que se conforma
@@ -98,35 +109,22 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
     'se perdieron las instrucciones de iOS: sin ellas, en iPhone la oferta no explica cómo instalar',
   )
   assert.match(
-    fuente,
+    almacen,
     /<IconoCompartir \/>/,
     'se perdió el dibujo del botón Compartir: en iPhone el aviso solo puede explicar el gesto',
   )
+  // Y la franja enseña esas instrucciones (no un texto propio que se desvíe).
+  assert.match(fuente, /<InstruccionesIOS \/>/, 'la franja dejó de enseñar las instrucciones de iOS')
   // Enseñárselo a quien ya la tiene instalada es la forma tonta de molestar.
-  assert.match(fuente, /display-mode: standalone/, 'la oferta ya no comprueba si la app está instalada')
-  // Desde el 08/09/2026 es un BOTÓN de la barra de marca, dentro de la puerta
-  // de sesión y ANTES de «Salir» (Alberto: «al lado de salir, más limpio»).
-  // Fuera de `ConSesion` la portada de quien aún no ha entrado ofrecería
-  // instalar; detrás de «Salir» rompe el orden instalar → salir → tema.
-  const layout = leer('app/layout.tsx')
-  assert.match(layout, /<InstalarApp\s*\/>/, 'el botón de instalar no está montado en la barra')
-  assert.match(
-    layout,
-    /<ConSesion>\s*<InstalarApp\s*\/>\s*<SalirDelPortal\s*\/>/,
-    'el botón de instalar tiene que ir dentro de <ConSesion> e inmediatamente antes de <SalirDelPortal />',
-  )
+  // La consulta de verdad, no la frase: la cabecera del almacén la nombra para
+  // explicarla, y con solo la palabra el cepo pasaba con la comprobación borrada.
+  assert.match(almacen, /matchMedia\('\(display-mode: standalone\)'\)/, 'el almacén ya no comprueba si la app está instalada')
+  const layout = leer('app/(portal)/layout.tsx')
+  assert.match(layout, /<InstalarApp\s*\/>/, 'la oferta no está montada en el portal')
+  // Y ANTES del contenido: detrás de las pólizas, en el móvil se iba fuera de
+  // la primera pantalla y en iPhone es lo único que explica cómo instalar.
   assert.ok(
-    !/InstalarApp/.test(leer('app/(portal)/layout.tsx').replace(/\{\/\*[\s\S]*?\*\/\}/g, '')),
-    'la oferta volvió al layout del portal: se pintaría dos veces',
+    layout.indexOf('<InstalarApp') < layout.indexOf('{children}'),
+    'la oferta volvió a quedar debajo del contenido: en el móvil no se ve',
   )
-  // En iPhone el botón no instala: abre un globo con el gesto. Si el globo se
-  // pintara siempre, taparía el contenido; si no se pudiera cerrar, igual.
-  assert.match(fuente, /role="dialog"/, 'el globo de iOS perdió su role="dialog"')
-  assert.match(fuente, /className="instalar-ayuda-cerrar"/, 'el globo de iOS no tiene botón de cerrar')
-  assert.match(fuente, /'Escape'/, 'el globo de iOS no se cierra con Escape')
-  // Y en pantallas estrechas se queda solo el icono: sin `aria-label` el botón
-  // se queda sin nombre justo donde el texto desaparece.
-  assert.match(fuente, /aria-label="(Instalar|Cómo instalar) la aplicación"/, 'el botón de instalar perdió su aria-label')
-  const css = leer('app/globals.css')
-  assert.match(css, /\.instalar-boton-texto\s*\{\s*display:\s*none/, 'a 320 px el texto del botón tiene que esconderse o la barra se sale')
 })

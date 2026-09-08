@@ -2,8 +2,7 @@ import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 
 import './globals.css'
 import type { ReactNode } from 'react'
-import { ConSesion } from './ConSesion'
-import { InstalarApp } from './InstalarApp'
+import { CampanaAvisos } from './CampanaAvisos'
 import { InterruptorTema } from './InterruptorTema'
 import { MarcaAsegura } from './MarcaAsegura'
 import { PieLegal } from './PieLegal'
@@ -90,23 +89,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <span className="marca-nombre">{MARCA.logos.wordmark}</span>
           <span className="marca-coletilla">Correduría de seguros</span>
           {/* Las acciones de la cabecera van sueltas y no en un menú:
-              esconder tres cosas detrás de un botón cuesta un toque más, un
+              esconder cosas detrás de un botón cuesta un toque más, un
               componente más y, en esta pantalla, que gente de 50-70 años no
-              encuentre la salida. Van agrupadas en UN contenedor con
-              `margin-left:auto`: la barra ya tiene el `auto` de la coletilla,
-              y con un `auto` por botón el hueco libre se reparte entre todos y
-              los botones se separan solos (medido el 07/09/2026 con dos).
-              Orden: instalar → salir → tema; «Salir» pegado al borde de las
-              acciones de sesión, como hasta ahora.
-              🚨 `ConSesion` devuelve `null` sin sesión verificada: quien
-              todavía no ha entrado no ve ni instalar ni salir. */}
-          <div className="marca-acciones">
-            <ConSesion>
-              <InstalarApp />
-              <SalirDelPortal />
-            </ConSesion>
-            <InterruptorTema />
-          </div>
+              encuentre la salida. El ORDEN importa: `Salir` tiene que ir
+              ANTES de la campana y del interruptor, porque de eso depende que
+              el CSS (`.salir-form ~ …`) junte los tres a la derecha en vez de
+              repartir el hueco entre ellos.
+              🚨 `SalirDelPortal` y `CampanaAvisos` devuelven `null` cuando no
+              hay sesión: quien todavía no ha entrado no ve ni salir ni avisos. */}
+          <SalirDelPortal />
+          <CampanaAvisos />
+          <InterruptorTema />
         </header>
         {children}
         {/* Registra el service worker que Chrome exige para ofrecer instalar la

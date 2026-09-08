@@ -1,3 +1,7 @@
+import { cookies } from 'next/headers'
+
+import { COOKIE_NAME, verificarSesion } from '@/lib/auth'
+
 /**
  * El botón de salir de la barra de marca.
  *
@@ -8,11 +12,21 @@
  * persona— eso no es una comodidad que falta: es que no se puede deshacer el
  * «entrar».
  *
- * 🚨 **Solo se monta dentro de `<ConSesion>`** (ver `app/layout.tsx`): quien
- * todavía no ha entrado no ve un botón de salir. La verificación del token vive
- * allí desde el 08/09/2026, compartida con el botón de instalar.
+ * 🚨 **Se pinta solo si HAY sesión, y eso se comprueba VERIFICANDO el token,
+ * no viendo que la cookie existe.** Una cookie caducada o manipulada sigue
+ * siendo una cookie: con la comprobación barata, quien no tiene sesión vería un
+ * «Salir» que no significa nada. Y al revés importa más — si esto se pintara
+ * siempre, la portada de quien aún no ha entrado ofrecería salir.
+ *
+ * No toca la BD a propósito: `verificarSesion` es firma, no consulta. Esta
+ * cabecera la ve TODA la app, incluidas las páginas legales, y una consulta por
+ * carga para decidir si se pinta un botón es un precio que no hay que pagar.
  */
-export function SalirDelPortal() {
+export async function SalirDelPortal() {
+  const token = (await cookies()).get(COOKIE_NAME)?.value
+  if (!token) return null
+  if ((await verificarSesion(token)) === null) return null
+
   return (
     // Un `<form>` y no un enlace: la ruta es POST a propósito (ver
     // `app/api/salir/route.ts`), así que un `<Link>` aquí no cerraría nada — y
