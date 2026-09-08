@@ -15,7 +15,6 @@ const leer = (rel: string) => readFileSync(join(RAIZ, rel), 'utf8')
 const MANIFIESTO = 'app/manifest.ts'
 const SW = 'public/sw.js'
 const ICONO_APP = 'app/icono-app/route.tsx'
-const OFERTA = 'app/(portal)/InstalarApp.tsx'
 /** El almacén compartido: quién escucha el evento de Chrome y quién detecta iOS (desde el 08/09/2026). */
 const INSTALACION = 'app/instalacion.tsx'
 
@@ -78,7 +77,7 @@ test('el service worker se registra de verdad', () => {
 
 test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
   const almacen = leer(INSTALACION)
-  const fuente = leer(OFERTA)
+  const campana = leer('app/Campana.tsx')
   // Safari no implementa `beforeinstallprompt`. Si esto solo escuchara el
   // evento, en iOS no se vería NADA —ni error ni banner—, y ahí está la mitad
   // de los clientes de la correduría.
@@ -91,13 +90,13 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
     'el almacén de instalación dejó de escuchar el evento de Chrome',
   )
   assert.match(almacen, /iphone\|ipad\|ipod/i, 'el almacén dejó de detectar iOS: ahí no se vería nada')
-  // La franja y la campana leen el MISMO almacén: dos listeners del mismo
-  // evento es cómo el segundo `prompt()` rechaza sin que nadie lo pinte.
-  assert.match(fuente, /useInstalacion\(\)/, 'la franja ya no lee el almacén compartido de instalación')
-  assert.match(leer('app/Campana.tsx'), /useInstalacion\(\)/, 'la campana ya no lee el almacén compartido de instalación')
+  // La campana lee el almacén compartido y NO escucha el evento por su cuenta:
+  // dos listeners del mismo evento es cómo el segundo `prompt()` rechaza sin
+  // que nadie lo pinte.
+  assert.match(campana, /useInstalacion\(\)/, 'la campana ya no lee el almacén compartido de instalación')
   assert.ok(
-    !/addEventListener\('beforeinstallprompt'/.test(fuente),
-    'la franja volvió a escuchar el evento por su cuenta: con dos listeners el segundo prompt() rechaza en silencio',
+    !/addEventListener\('beforeinstallprompt'/.test(campana),
+    'la campana escucha el evento por su cuenta: con dos listeners el segundo prompt() rechaza en silencio',
   )
   assert.match(
     almacen,
@@ -113,18 +112,19 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
     /<IconoCompartir \/>/,
     'se perdió el dibujo del botón Compartir: en iPhone el aviso solo puede explicar el gesto',
   )
-  // Y la franja enseña esas instrucciones (no un texto propio que se desvíe).
-  assert.match(fuente, /<InstruccionesIOS \/>/, 'la franja dejó de enseñar las instrucciones de iOS')
+  // Y la campana enseña esas instrucciones (no un texto propio que se desvíe)
+  // y el botón de Chrome: desde el 08/09/2026 es el ÚNICO sitio que ofrece
+  // instalar, así que si esto se cae no hay franja que lo tape.
+  assert.match(campana, /<InstruccionesIOS \/>/, 'la campana dejó de enseñar las instrucciones de iOS')
+  assert.match(campana, /onClick=\{\(\) => void instalar\(\)\}/, 'la campana perdió el botón que lanza la instalación en Chrome')
   // Enseñárselo a quien ya la tiene instalada es la forma tonta de molestar.
   // La consulta de verdad, no la frase: la cabecera del almacén la nombra para
   // explicarla, y con solo la palabra el cepo pasaba con la comprobación borrada.
   assert.match(almacen, /matchMedia\('\(display-mode: standalone\)'\)/, 'el almacén ya no comprueba si la app está instalada')
-  const layout = leer('app/(portal)/layout.tsx')
-  assert.match(layout, /<InstalarApp\s*\/>/, 'la oferta no está montada en el portal')
-  // Y ANTES del contenido: detrás de las pólizas, en el móvil se iba fuera de
-  // la primera pantalla y en iPhone es lo único que explica cómo instalar.
-  assert.ok(
-    layout.indexOf('<InstalarApp') < layout.indexOf('{children}'),
-    'la oferta volvió a quedar debajo del contenido: en el móvil no se ve',
-  )
+  // La franja «Tenlo a mano» de encima de las pólizas se quitó el 08/09/2026
+  // (Alberto: «arriba al lado de salir, queda más limpio»). Si vuelve, la
+  // misma oferta estaría en dos sitios — y el fichero de la franja ya no existe.
+  const layout = leer('app/(portal)/layout.tsx').replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+  assert.ok(!/InstalarApp/.test(layout), 'la franja «Tenlo a mano» volvió al layout del portal: la campana ya ofrece instalar')
+  assert.ok(!existsSync(join(RAIZ, 'app/(portal)/InstalarApp.tsx')), 'reapareció el fichero de la franja «Tenlo a mano»')
 })

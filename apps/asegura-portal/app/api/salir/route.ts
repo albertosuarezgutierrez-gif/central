@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { COOKIE_NAME, COOKIE_OPTS } from '@/lib/auth'
+import { cerrarVistaCorredorDeSesion } from '@/lib/vista-corredor'
 
 export const runtime = 'nodejs'
 
@@ -33,6 +34,9 @@ export const runtime = 'nodejs'
  * más caro que puede tener esta ruta porque su síntoma es el éxito.
  */
 export async function POST(req: Request) {
+  // Si quien sale es el CORREDOR mirando una ficha, se suelta el vínculo
+  // temporal antes de borrar la cookie. Best-effort: la cookie se borra igual.
+  await cerrarVistaCorredorDeSesion()
   const res = NextResponse.redirect(new URL('/', req.url), 303)
   res.cookies.set(COOKIE_NAME, '', { ...COOKIE_OPTS, maxAge: 0 })
   return res

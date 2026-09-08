@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 
-import { InstalarApp } from './InstalarApp'
 import { NavPortal } from './NavPortal'
+import { BandaCorredor } from './BandaCorredor'
 
 /**
  * El armazón de las pantallas con sesión.
@@ -18,22 +18,20 @@ import { NavPortal } from './NavPortal'
  * a renderizarse en cliente. El respaldo reserva el hueco del carril para que
  * el contenido no salte al montarse.
  */
-export default function PortalLayout({ children }: { children: React.ReactNode }) {
+export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="portal-shell">
+      <BandaCorredor />
       <Suspense fallback={<div className="portal-nav portal-nav-hueco" aria-hidden />}>
         <NavPortal />
       </Suspense>
       <main className="portal-contenido">
-        {/* ARRIBA del contenido (Alberto, 08/09/2026): abajo, detrás de las
-            pólizas, en el móvil quedaba fuera de la primera pantalla y nadie lo
-            veía — y en iPhone el aviso es lo ÚNICO que explica cómo instalar.
-            Cuesta una pantalla una sola vez: al descartarlo se recuerda.
-            En el flujo, no flotando: un elemento `position: fixed` no desborda
-            —se pone encima—, así que taparía una fila sin que ninguna medición
-            de ancho lo delatara. Y aquí dentro y no en la puerta: pedirle
-            instalar a quien todavía no ha entrado es ruido. */}
-        <InstalarApp />
+        {/* Aquí NO va ya la franja «Tenlo a mano» (08/09/2026). Alberto: «yo
+            subiría el instalador arriba al lado de salir, queda más limpio».
+            La oferta de instalar vive en la CAMPANA de la cabecera
+            (`app/Campana.tsx`, entrada «Instalar»), que lee el mismo almacén
+            (`app/instalacion.tsx`). Una franja encima de las pólizas y la
+            misma oferta en la campana eran dos sitios para una cosa. */}
         {children}
       </main>
     </div>

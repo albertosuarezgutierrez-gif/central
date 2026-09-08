@@ -52,6 +52,24 @@
   Aparte: el email de cumpleaños queda para los 44 clientes con correo, y a los 4.206 leads NO se les
   manda WhatsApp masivo (lo bloquea Meta, no la ley).
 
+- **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
+  intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
+  «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»
+  en Contactos de la ficha → puerto `POST /api/operador/cliente/portal/vista` (asegura) → enlace de UN uso
+  (10 min) → `/corredor/[token]` del portal: identidad REAL dedicada (`IDENTIDAD_CORREDOR_ID`) + vínculo
+  temporal `origen='corredor'`, así las 10 lecturas del portal no cambian. `accesoDe()` de asegura EXCLUYE
+  ese origen (mirar ≠ «ya entra»); `middleware.ts` veta escrituras en modo corredor (403 `modo_corredor`);
+  banda ámbar y `Salir` suelta el vínculo. Migración `2026-09-08_portal_vista_corredor.sql` APLICADA.
+  Dato del camino: Víctor YA entró el 06/09 (código a `victor@grupostudium.com`); 4 pólizas vivas, 3 caducadas.
+
+- **📲 Fuera la franja «Tenlo a mano» del portal: la campana es el único sitio que ofrece instalar (08/09/2026).**
+  Alberto, sobre el banner de esa misma mañana: «yo subiría el instalador arriba al lado de salir, queda más
+  limpio». Esta sesión montó un botón «Instalar» en la cabecera + `ConSesion`; **en paralelo otra sesión mergeó
+  la campana de avisos (#2630)**, que ya ofrece instalar (Chrome y las instrucciones de iOS) desde el mismo
+  almacén `app/instalacion.tsx`. Cuatro controles no caben a 320 px, así que se adoptó la campana y el PR
+  quedó en quitar la franja de encima de las pólizas (fichero, montaje, CSS salvo el glifo) y `pwa.test.ts`
+  vigila que no vuelva. ⚠️ La oferta queda a UN clic (dentro de la campana, sin contar en el globo): si Alberto
+  la quiere visible sin abrir nada, es otra decisión. Caso de trabajo duplicado entre sesiones, otra vez.
 - **☑️ Portal: «¿de quién es la póliza?» deja de ser una puerta obligatoria (08/09/2026).** Alberto:
   «la mayoría no tiene empresa, darle una vuelta». Los radios «Mía / De mi empresa» sin respuesta
   bloqueaban los DOS botones a todo el mundo. Ahora: casilla «Esta póliza es de una empresa, no mía»,

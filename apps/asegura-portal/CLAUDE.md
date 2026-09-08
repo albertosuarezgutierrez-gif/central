@@ -1034,7 +1034,7 @@ entra directo — la sesión dura 30 días y `/` ya manda a la bóveda si sigue 
 | `app/icono-app/route.tsx` | El icono de **512 px**. Con menos de 192 Chrome NO ofrece instalar, y no lo dice. El monograma ocupa ~52 % porque Android recorta los `maskable` a la forma del sistema. `force-static` |
 | `lib/monograma.ts` | El dibujo se LEE de `public/brand/marca-asegura.svg`; lo comparten la pestaña (128) y la app instalada (512) |
 | `public/sw.js` + `app/RegistrarSW.tsx` | El service worker que Chrome exige, registrado en el layout raíz |
-| `app/(portal)/InstalarApp.tsx` + `app/instalacion.tsx` | La oferta (franja, se descarta una vez) y el **almacén compartido** del evento; desde el 08/09/2026 la campana ofrece instalar también |
+| `app/Campana.tsx` (entrada «Instalar») + `app/instalacion.tsx` | La oferta y el **almacén compartido** del evento. La franja «Tenlo a mano» de encima de las pólizas **se quitó el 08/09/2026** (Alberto: «arriba al lado de salir, queda más limpio»): la campana es el único sitio que ofrece instalar |
 
 🚨 **El service worker NO CACHEA NADA, y eso es la decisión.** Aquí dentro hay pólizas, recibos y
 partes de siniestro de personas identificadas: una respuesta guardada en el almacén del navegador
@@ -1072,7 +1072,7 @@ no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura
 | `lib/avisos.ts` | **Puro.** Compone la lista y el globo: autorizaciones pendientes recibidas Y otorgadas (→ `/autorizaciones`), obligaciones en la ventana del módulo (→ `/boveda#calendario-titulo`) |
 | `app/api/avisos/route.ts` | `requireIdentidad()`; **`allSettled`**, no `all`: una fuente caída se declara en `fuentesIlegibles` y la otra se sirve |
 | `app/CampanaAvisos.tsx` → `app/Campana.tsx` | La puerta (sesión VERIFICADA, como `SalirDelPortal`) y la campana. En la cabecera, **entre Salir y el tema** |
-| `app/instalacion.tsx` | El almacén compartido de la instalación: la franja «Tenlo a mano» y la entrada «Instalar» de la campana leen el MISMO evento |
+| `app/instalacion.tsx` | El almacén compartido de la instalación (evento de Chrome, detección de iOS/standalone, `InstruccionesIOS`); lo lee la entrada «Instalar» de la campana. Se compartía con la franja «Tenlo a mano» hasta que se quitó el 08/09/2026 |
 
 🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
 `!` (ninguna legible, o fallo de red). Este portal renunció a la hamburguesa porque un botón que
@@ -1186,8 +1186,36 @@ además `PATCH /api/polizas/[id]` (corregir una póliza), `POST /api/siniestros`
 | `POST /api/catastro` | `{ direccion, municipio, provincia }` **o** `{ referencia }` (zod, con topes) | `200 ok` · **`300 elegir`** (varios inmuebles) · `401 sin_sesion` · `400 datos_invalidos` · `404 no_encontrado` · `409 via_ambigua` · `422 direccion_ilegible\|referencia_invalida` · **`502 catastro_no_responde`** | **Exige sesión**: sin ella sería un proxy anónimo contra el Catastro con nuestra IP. Solo CONSULTA (no escribe en la BD) y **no registra la dirección en ningún log**. Mira el `estado`, no el número |
 
 Pantallas: `/` (pedir + verificar código) y `/boveda` (`force-dynamic`, redirige a `/` sin sesión).
-**No hay `middleware.ts`**: cada ruta y cada página resuelve la sesión por su cuenta — que es
-precisamente lo que vigila el guardián.
+**El `middleware.ts` NO resuelve sesión**: cada ruta y cada página la resuelve por su cuenta — que es
+precisamente lo que vigila el guardián. El middleware (08/09/2026) solo veta escrituras en la sesión
+del corredor (sección «Vista de corredor», abajo).
+
+## 👁 Vista de corredor (08/09/2026) — Alberto abre el portal como lo ve un cliente
+
+Dictado: *«el corredor puede acceder a cualquier cosa»* (tras pedir acceso a la intranet de un cliente
+para revisarla antes de invitarle). Desde la ficha en plataforma (Contactos → «👁 Ver su portal») sale
+un enlace de **UN solo uso y 10 minutos** que crea `apps/asegura`
+(`POST /api/operador/cliente/portal/vista`, tabla `seguros.portal_vista_corredor`, token hasheado
+SHA-256 sin pimienta porque las dos apps no la comparten) y consume `GET /corredor/[token]` aquí.
+
+🚨 **Cómo se ve «lo mismo» sin tocar ninguna lectura:** una identidad REAL dedicada al corredor
+(`IDENTIDAD_CORREDOR_ID` de `@central/module-seguros-portal`, sembrada por la migración, **sin
+canales**: nadie entra como ella con un código) recibe un vínculo TEMPORAL con la ficha
+(`portal_vinculo.origen = 'corredor'`), y las diez lecturas que filtran por identidad hacen el resto.
+Solo hay un vínculo de corredor a la vez; `Salir` lo suelta. La sesión lleva el claim `corredor`
+(`lib/auth.ts`, 4 h) y `getIdentidad()` lo devuelve.
+
+Los dos filos, con cepo en `test/regression-portal-vista-corredor.test.ts` (4 mutaciones vistas morder):
+- **asegura EXCLUYE ese origen** en `estadoPortalDeFicha` — si lo contara, mirar una ficha la
+  convertiría en «Ya entra al portal», que es el titular con el que se decide si invitar.
+- **La sesión del corredor NO escribe como el cliente**: `middleware.ts` responde `403 modo_corredor` a
+  todo `POST/PATCH/DELETE` de `/api/*` salvo `/api/salir` y `/api/acceso/*`. Decodifica el JWT sin
+  verificar firma a propósito (protege de un clic de Alberto, no de un atacante; un token falso solo
+  se veta a sí mismo) y por eso importa `lib/auth-cookie.ts` y no `lib/auth.ts` (`node:crypto` no
+  arranca en edge — y el veto desaparecería sin error).
+
+Migración `prisma/sql/2026-09-08_portal_vista_corredor.sql`, **APLICADA el 08/09/2026** en el mismo
+paso que el código (regla de `portal_supresion`).
 
 ## 🧩 Los campos PROPIOS de cada tipo de seguro (04/09/2026)
 
