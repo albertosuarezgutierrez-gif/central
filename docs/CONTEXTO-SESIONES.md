@@ -88,6 +88,18 @@
   habiendo UN solo formulario. Pendiente de decisión de Alberto: que el cliente edite dirección y
   teléfono desde el portal y que TODO lo que haga salga en el historial de su ficha.
 
+- **🍪 `grupoasegura.es` SÍ mide, y mide bien — aquí se afirmó lo contrario sin haberlo medido
+  (08/09/2026).** Claude en Chrome lo comprobó en los paneles: `asegura-web` tiene desde el 05/09
+  `NEXT_PUBLIC_COOKIEBOT_ID` (Domain Group #1 de Cookiebot, solo `grupoasegura.es`; `www` no persiste
+  y no hace falta, es 308 al apex) + `NEXT_PUBLIC_POSTHOG_KEY` + `_HOST`, solo Production a propósito
+  (decisión de Alberto 07/09: un preview no mide antes que ensuciar). PostHog EU «Grupo ASegura»
+  (proyecto 266897): 5 visitantes / 81 pv / 21 sesiones en 7 días. Las 4 verificaciones fail-closed
+  pasan en sesión limpia: banner ES opt-in, CERO PostHog antes de aceptar, carga tras «Estadísticas»,
+  consentimiento persiste. **Vercel Web Analytics sigue apagada y es OTRO producto: su 404 no es
+  «cero visitas».** La sesión partió de «no existe el CBID» sin medirlo — la regla «dato que NO hay ≠
+  dato que NO se ha mirado», aplicada a un panel. Lo que SÍ sigue en pie: `housesevillana` (GA4
+  `G-N5CMQL9C4M`) e `ia-rest` (GA4 `G-EN2YQLRLEX`) cargan GA sin banner; ese CBID puede servirles.
+
 - **🩺 `total_count: 0` NO prueba que un run de Actions esté muerto — corregida la tabla de la
   DECIMOCUARTA (07/09/2026).** En el PR #2530 se vio el run `34117636782` en `pending` con
   `list_workflow_jobs` → `total_count: 0`, se diagnosticó **forma (b)** («nunca arrancó, hace falta
