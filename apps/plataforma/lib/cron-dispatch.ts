@@ -164,6 +164,10 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/facturas-resumen-semanal', schedule: '15 9 * * 1' },
   { path: '/api/cron/categorizar-movimientos', schedule: '0 7 * * *' },
   { path: '/api/cron/resumen-semanal', schedule: '30 9 * * 1' },
+  // SEO de la correduría, lunes 08:30: Search Console (posiciones reales), Serper (quién ocupa
+  // el top-10 de cada consulta objetivo) y PostHog (visitas medidas) → seo_correduria_semana +
+  // informe por Telegram con UNA acción propuesta. Spec: docs/superpowers/specs/2026-09-08-seo-correduria-conectores-design.md
+  { path: '/api/cron/seo-correduria', schedule: '30 8 * * 1' },
   { path: '/api/cron/health-check', schedule: '0 7 * * *' },
   // Canario del formulario público de la correduría, CADA HORA. Un diario no valdría: ese
   // formulario es el único canal de venta de asegura-web y, cuando se rompe, no deja rastro

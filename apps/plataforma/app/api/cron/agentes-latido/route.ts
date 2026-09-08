@@ -26,6 +26,10 @@ const PROBES: Record<string, Prisma.Sql> = {
   canario_lead_web: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'canario_lead_web'`,
+  // SEO de la correduría (lunes). La huella lleva ok=false mientras falte un secreto: es lo que se quiere.
+  seo_correduria: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'seo_correduria'`,
   correduria_renovaciones: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_renovaciones'`,

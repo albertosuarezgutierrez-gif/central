@@ -45,7 +45,7 @@
  * que decidirla aparte — saltarse la prueba de identidad desde el panel
  * convertiría un error de tecleo en el correo en un acceso a la cartera de otro.
  */
-import { prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
+import { ORIGEN_VINCULO_CORREDOR, prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
@@ -165,8 +165,12 @@ async function accesoDe(
 ): Promise<{ identidades: number; ultimoAccesoEn: Date | null } | null> {
   try {
     const db = prismaAsegura()
+    // 🚨 Sin el vínculo del CORREDOR: es el temporal que deja la «vista de
+    // corredor» (Alberto mirando la ficha desde plataforma). Contarlo diría
+    // «ya entra al portal» de alguien que nunca ha entrado — y ese es el
+    // titular con el que se decide si invitarle.
     const vinculos = await db.portalVinculo.findMany({
-      where: { correduriaId, clienteId },
+      where: { correduriaId, clienteId, origen: { not: ORIGEN_VINCULO_CORREDOR } },
       select: { identidadId: true },
     })
     if (vinculos.length === 0) return { identidades: 0, ultimoAccesoEn: null }

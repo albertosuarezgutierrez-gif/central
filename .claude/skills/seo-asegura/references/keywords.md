@@ -1,8 +1,14 @@
 # Mapa de consultas — Grupo ASegura
 
 Qué buscamos ganar y qué página lo cubre. **Se amplía cada ciclo con lo que diga Google Search
-Console** — hasta que GSC esté conectada, las columnas de posición e impresiones se quedan en
-«pendiente», que NO es cero.
+Console** (conectada desde el 08/09/2026: las posiciones reales están en `seo_correduria_semana`,
+no aquí — esta tabla es el MAPA, no la medición).
+
+🚨 **Las tablas §1 y §2 son el espejo de `CONSULTAS` en
+`apps/plataforma/lib/seo-correduria/consultas.ts`**, que es lo que el cron lanza a Serper cada
+lunes. Las compara `consultas.test.ts` (igualdad de conjuntos sobre la primera celda de cada fila):
+añadir o cambiar una consulta aquí sin tocar allí —o al revés— pone ese test en rojo, que es lo que
+impide que la skill vigile unas consultas y el cron otras.
 
 ## Regla de selección
 
@@ -70,7 +76,8 @@ se comprueba en Search Console cuando exista, no se vuelve a tocar el código.
 
 - **«seguro barato», «el más barato», comparativas de precio.** El copy no puede prometer precio
   sin convertirse en asesoramiento (análisis objetivo + IPID). Lo bloquea `lib/ramos.test.ts`.
-- **Consultas nacionales genéricas.** Somos una correduría local; el ámbito declarado en el JSON-LD
-  es Sevilla + Andalucía.
+- **Consultas genéricas de PRECIO a nivel nacional** («seguro de hogar barato»). El ámbito SÍ es
+  nacional desde el 07/09/2026 (`areaServed` = país; esta línea decía «somos una correduría local»
+  y contradecía el §1), pero una SERP genérica de precio la ganan los comparadores con Ads.
 - **Nombres de compañías como reclamo** («seguro Mapfre barato»). Además de la trampa del precio,
   usar su marca en el copy es un problema de permisos: sin permiso, texto y nunca el logo.
