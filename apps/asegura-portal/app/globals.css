@@ -976,6 +976,19 @@ h1 em {
   line-height: 1;
   color: var(--muted2);
 }
+/* La acción de QUITAR de una póliza aportada, debajo de su tarjeta y fuera del
+ * enlace (un botón dentro de un <a> no es HTML válido y el clic navegaría). Va
+ * alineada a la derecha, con el tamaño táctil de `.boton-tenue` (44px); la
+ * confirmación (`.aviso-linea`) se despliega a todo el ancho de la fila. */
+.poliza-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 6px 4px 0;
+}
+.poliza-acciones .aviso-linea {
+  flex: 1 1 100%;
+}
 /* La ajena, marcada también en la fila: filete de acento + la etiqueta «De X»
  * que pinta el propio componente. Las dos cosas, porque el color solo no le
  * dice nada a quien no distingue bien los tonos. */
