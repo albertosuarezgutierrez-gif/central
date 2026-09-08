@@ -63,6 +63,17 @@
   paso 0 del orden. Equivocarse hacia (c) cuesta esperar; hacia (b) cuesta un head nuevo que borra
   la evidencia.
 
+- **🧊 Y al quitarla, el parte de siniestro NO se borra: se CONGELA (07/09/2026).** Alberto: «al borrar
+  póliza tb borraría siniestros, ¿es lo lógico?». No: un parte es la prueba de que el cliente comunicó
+  el siniestro y CUÁNDO (art. 16 LCS), y la cascada la destruiría —la borraría él mismo ordenando su
+  bóveda—. Pero dejarlo tal cual tampoco vale: el `ON DELETE SET NULL` lo deja huérfano. Tercera vía:
+  antes de borrar, compañía + número + ramo se copian DENTRO del parte como texto
+  (`poliza_desligada_*`, con CHECK que exige fecha y vínculo ya nulo) y el vínculo se corta a mano.
+  Sigue bloqueando UN caso: parte que la compañía ya tramita (`abierto_en_compania` o con
+  `siniestroId`). La foto llega hasta `/correduria`, que la pinta —esa pantalla no muestra la póliza
+  de ningún otro parte, así que solo aparece en este caso—. Migración YA aplicada en Supabase; 5 cepos
+  nuevos vistos en rojo. PR #2599.
+
 - **🗑️ El cliente ya puede QUITAR de su bóveda las pólizas que subió él (07/09/2026).** Alberto,
   sobre su portal: «póliza sin compañía, no la puedo eliminar… las nuestras de CIMA no, pero las que
   no son nuestras el cliente sí, que se puede confundir». `DELETE /api/polizas/[id]` sobre

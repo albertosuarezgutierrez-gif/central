@@ -8,7 +8,7 @@ import { getIdentidad } from '@/lib/session'
 import { BienDeclarada, IconoRamo, RAMO } from '../../PolizaVista'
 import { EditarPoliza } from '../../EditarPoliza'
 import { EliminarPoliza } from '../../EliminarPoliza'
-import { etiquetaProcedencia } from '@central/module-seguros-portal'
+import { avisoPartesConservados, etiquetaProcedencia } from '@central/module-seguros-portal'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +50,13 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
     where: { id, identidadId: identidad.id },
   })
   if (!p) notFound()
+
+  // Cuántos partes cuelgan de esta póliza. Se cuenta AQUÍ, al pintar, para poder
+  // decírselo antes de que confirme: el servidor lo vuelve a mirar al borrar
+  // (y con los estados), así que esto informa, no autoriza.
+  const partes = await prisma.portalParteSiniestro.count({
+    where: { polizaDeclaradaId: p.id, identidadId: identidad.id },
+  })
 
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
   const objeto =
@@ -155,9 +162,14 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
         <h2 id="quitar-titulo">Quitarla de tu bóveda</h2>
         <p className="linea">
           Si la subiste por error o ya no tienes este seguro, puedes quitarla. Solo desaparece de tu
-          bóveda: no cancela nada con la compañía.
+          bóveda: no cancela nada con la compañía, y lo que nos hayas contado de un siniestro se
+          conserva.
         </p>
-        <EliminarPoliza id={p.id} titulo={p.compania ?? 'esta póliza'} />
+        <EliminarPoliza
+          id={p.id}
+          titulo={p.compania ?? 'esta póliza'}
+          avisoPartes={avisoPartesConservados(partes)}
+        />
       </section>
     </>
   )

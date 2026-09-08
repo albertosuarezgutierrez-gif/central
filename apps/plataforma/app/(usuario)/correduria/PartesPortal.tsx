@@ -337,6 +337,20 @@ function Parte({
         {p.creadoEn && ` · parte enviado el ${fechaHoraEs(p.creadoEn)}`}
       </div>
 
+      {/* 🚨 La póliza que el cliente APORTÓ y luego quitó de su bóveda.
+          Solo se pinta en ese caso (`polizaDesligada` no nulo), que es el único
+          en el que el parte se quedaría sin poder decir de qué habla: aquí ya no
+          hay fila que consultar, esto es la foto que se congeló al borrarla.
+          El resto de partes no pintan póliza en esta tarjeta —ni los de cartera—
+          y eso no cambia con esto. */}
+      {p.polizaDesligada && (
+        <p style={{ ...pMuted, marginTop: 6 }}>
+          Sobre <strong>{p.polizaDesligada}</strong> — una póliza que había añadido él y que
+          {p.polizaDesligadaEn ? ` quitó de su bóveda el ${fechaHoraEs(p.polizaDesligadaEn)}` : ' quitó de su bóveda'}.
+          Nosotros no la gestionábamos.
+        </p>
+      )}
+
       {/* 🚨 Los dos tri-estados. Ver `Triestado`: los tres valores se pintan distinto. */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         <Triestado
