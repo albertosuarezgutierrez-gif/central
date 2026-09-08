@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-08T06:53:57Z",
+  "generadoEn": "2026-09-08T08:41:18Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -920,7 +920,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "rrhh": {
         "estado": "usado",
@@ -2080,11 +2080,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 43
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 58
+        "evidencias": 60
       },
       "asegura-web": {
         "estado": "usado",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 43
       },
       "rrhh": {
         "estado": "no",
@@ -2134,7 +2134,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 15
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2192,7 +2192,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 47
+        "evidencias": 49
       },
       "asegura-web": {
         "estado": "usado",
@@ -3851,6 +3851,7 @@
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/cron/avisos-vencimiento",
+      "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
       "/api/operador/cartera",
@@ -3905,6 +3906,7 @@
       "/api/acceso/verificar",
       "/api/autorizaciones",
       "/api/autorizaciones/[id]",
+      "/api/avisos",
       "/api/catastro",
       "/api/catastro/sugerir",
       "/api/hojas",
@@ -4726,6 +4728,7 @@
       "/api/contable/chat",
       "/api/contable/feedback",
       "/api/correduria",
+      "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
       "/api/correduria/blog",
       "/api/correduria/buscar",
@@ -4785,6 +4788,7 @@
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
+      "/api/cron/seo-correduria",
       "/api/cron/ses-latido",
       "/api/cron/sivra-extras-impago",
       "/api/cron/subastas-avisos",
@@ -5473,11 +5477,13 @@
       "rutina_tokens",
       "secrets_audit",
       "sector_tendencias",
+      "seo_correduria_semana",
       "ses_establecimientos",
       "sivra_codigos_acceso",
       "sivra_extras_catalogo",
       "sivra_extras_reserva",
       "sivra_ordenes_limpieza",
+      "sobre",
       "subastas",
       "subastas_consultas",
       "subastas_correo_cursor",
@@ -6205,7 +6211,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1312,
+    "apis": 1316,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
