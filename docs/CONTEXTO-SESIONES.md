@@ -38,6 +38,14 @@
   `prompt`; iOS abre un globo con el gesto (cierra con «Entendido», fuera o Escape). Solo icono por debajo de
   480 px: medido con Playwright 320-1440, una fila, nada fuera. Sin «Ahora no» ni `localStorage`.
   Desaparece al instalar (`appinstalled`/`standalone`); en iPhone solo si abren desde el icono. 8 cepos vistos en rojo.
+- **✂️ Búsqueda PARCIAL por email: dominio y usuario (08/09/2026, II).** Alberto: «tiene que ser de
+  cualquier campo». El email va cifrado y solo casaba entero; ahora hay dos índices ciegos más
+  (`email_dominio_hash`, `email_usuario_hash`, en ficha e hijas, migración `seguros_email_mitades_hash`
+  aplicada) con prefijo dentro del HMAC para que no colisionen. «@gmail.com» o «gmail.com» → dominio;
+  «alberto.suarez@» o «alberto.suarez» → usuario; un email entero no dispara el dominio. Las escrituras
+  de `cartera-edicion.ts` dejan las tres claves; el corpus viejo (todo a NULL) lo rellena el backfill de
+  contacto con el mismo botón de `/correduria/mantenimiento` (`derivadosRestantes`). PR #2613 mergeado
+  (backfill); este es el segundo. **Pendiente: pulsar el botón hasta 0** y probar «@gmail.com».
 - **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
   correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
   cifrado): `planBusqueda()` lanza `email` + `nombre`. Medido: **250 fichas con email y sin
@@ -126,7 +134,9 @@
   de corregir de `/boveda/anadida/[id]`; desde la lista no se veía, y una acción que hay que ir a buscar
   no existe. `FilaDeclarada` monta ahora `EliminarPoliza` bajo la tarjeta (fuera del `<Link>`, 44px,
   confirmación a todo ancho); `FilaPoliza` (cartera) sigue sin él. Cepo nuevo con los dos brazos vistos
-  en rojo en `test/regression-portal-borrado.test.ts`. Responsive NO medido en navegador (sin sesión).
+  en rojo en `test/regression-portal-borrado.test.ts`. Responsive NO medido en navegador (sin sesión). **PR #2620 mergeado** (`00e0cbb`, 19/19 verdes) y
+  **en producción**: deploy de `asegura-portal` READY sobre ese commit, aliases `clientes.grupoasegura.es`
+  y `asegura-portal.vercel.app`.
 - **🧊 Y al quitarla, el parte de siniestro NO se borra: se CONGELA (07/09/2026).** Alberto: «al borrar
   póliza tb borraría siniestros, ¿es lo lógico?». No: un parte es la prueba de que el cliente comunicó
   el siniestro y CUÁNDO (art. 16 LCS), y la cascada la destruiría —la borraría él mismo ordenando su

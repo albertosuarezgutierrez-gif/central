@@ -106,3 +106,51 @@ test('el resumen cuenta cada campo por separado', () => {
   assert.equal(p.resumen.telefono.sinDato, 1)
   assert.equal(p.resumen.telefono.rellenables, 1)
 })
+
+// ─── Mitades del email (búsqueda parcial) ────────────────────────────────────
+const mitades = (v: string) => {
+  const at = v.indexOf('@')
+  if (at <= 0) return null
+  return { dominio: `D(${v.slice(at + 1).toLowerCase()})`, usuario: `U(${v.slice(0, at).toLowerCase()})` }
+}
+
+test('las mitades se planifican TAMBIÉN en filas que ya tienen su hash principal', () => {
+  // Es el caso del corpus entero el 08/09/2026: 4.251 fichas con hash y sin mitades.
+  const p = planBackfillContacto([fila({ id: 'a', valor: 'x@y.es', hashActual: 'H(email:x@y.es)' })], h, mitades)
+  assert.equal(p.filas[0].destino, 'ya_tiene')
+  assert.deepEqual(p.filas[0].derivados, { dominio: 'D(y.es)', usuario: 'U(x)' })
+  assert.equal(p.resumen.email.derivadosPendientes, 1)
+})
+
+test('una fila con las dos mitades ya puestas no tiene nada que escribir', () => {
+  const p = planBackfillContacto(
+    [fila({ id: 'a', valor: 'x@y.es', hashActual: 'H', derivadosActuales: { dominio: 'D(y.es)', usuario: 'U(x)' } })],
+    h,
+    mitades,
+  )
+  assert.equal(p.filas[0].derivados, null)
+  assert.equal(p.resumen.email.derivadosPendientes, 0)
+})
+
+test('solo se escribe la mitad que falta, y las fichas que CHOCAN también reciben las suyas', () => {
+  const p = planBackfillContacto(
+    [
+      fila({ id: 'a', valor: 'casa@x.es', derivadosActuales: { dominio: 'D(x.es)', usuario: null } }),
+      fila({ id: 'b', valor: 'casa@x.es' }),
+    ],
+    h,
+    mitades,
+  )
+  assert.deepEqual(p.filas.map((f) => f.destino), ['choca', 'choca'])
+  assert.deepEqual(p.filas[0].derivados, { dominio: null, usuario: 'U(casa)' })
+  assert.deepEqual(p.filas[1].derivados, { dominio: 'D(x.es)', usuario: 'U(casa)' })
+  assert.equal(p.resumen.email.derivadosPendientes, 2)
+})
+
+test('sin función de mitades, o en teléfono, no se planifica ninguna', () => {
+  const sinFn = planBackfillContacto([fila({ id: 'a', valor: 'x@y.es' })], h)
+  assert.equal(sinFn.filas[0].derivados, null)
+  const tel = planBackfillContacto([fila({ id: 'a', campo: 'telefono', valor: '600112233' })], h, mitades)
+  assert.equal(tel.filas[0].derivados, null)
+  assert.equal(tel.resumen.telefono.derivadosPendientes, 0)
+})
