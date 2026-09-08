@@ -137,6 +137,30 @@ test('GET: ok / no_encontrado / sin_configurar / invalido / error no se confunde
   assert.deepEqual(interpretarPortal(200, { estado: 'ok' }), { estado: 'error', motivo: 'respuesta_ilegible' })
 })
 
+test('el correo con el que ENTRA solo se lee si asegura lo afirma', () => {
+  // 5º cepo (08/09/2026, canal de WhatsApp): este campo es el que la pantalla
+  // le enseña al cliente —«entras con tu correo X»— por un canal que NO es el
+  // correo, así que nadie va a descubrir el error rebotando. Si asegura no lo
+  // manda (versión anterior), si viene vacío o si no es una cadena, se lee
+  // `null` = «no se sabe cuál», y eso APAGA el botón de WhatsApp. Caer a
+  // cualquier otra cosa haría que Alberto le dijera al cliente que entre con
+  // una dirección a la que el portal no le mandará ningún código.
+  assert.equal(leerPortal({ ...YA_ENTRA })?.emailInvitacion, null, 'sin el campo = no se sabe cuál')
+  assert.equal(leerPortal({ ...YA_ENTRA, emailInvitacion: '' })?.emailInvitacion, null)
+  assert.equal(leerPortal({ ...YA_ENTRA, emailInvitacion: 42 })?.emailInvitacion, null)
+  assert.equal(leerPortal({ ...YA_ENTRA, emailInvitacion: 'ana@example.com' })?.emailInvitacion, 'ana@example.com')
+})
+
+test('el enlace del portal se LEE del puerto, no se compone aquí', () => {
+  // Un `enlace` inventado en plataforma sería una segunda fuente del destino:
+  // el día que cambie el dominio, el correo iría a uno y el WhatsApp a otro,
+  // los dos con un 200. Sin él, `null` = no se ofrece el canal.
+  const con = interpretarPortal(200, { estado: 'ok', portal: YA_ENTRA, enlace: 'https://clientes.grupoasegura.es/boveda' })
+  assert.equal(con.estado === 'ok' && con.enlace, 'https://clientes.grupoasegura.es/boveda')
+  const sin = interpretarPortal(200, { estado: 'ok', portal: YA_ENTRA })
+  assert.equal(sin.estado === 'ok' && sin.enlace, null)
+})
+
 test('POST: los nueve desenlaces del puerto llegan cada uno con su nombre', () => {
   for (const f of FALLOS_INVITACION) {
     const r = interpretarInvitacion(f === 'error_envio' ? 502 : 422, { estado: f, motivo: 'porque sí' })
