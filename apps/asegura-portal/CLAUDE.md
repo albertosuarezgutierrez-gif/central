@@ -1732,7 +1732,7 @@ de `packages/module-seguros-portal/src/invitacion.ts`). Spec:
   `autorizacion_id IS NULL`; `poliza_id` va NULL por otro CHECK). El correo dice quién invita y que
   no se comparte nada, **sin argumento de venta** — un acto entre personas, no una comunicación
   comercial de la correduría (art. 21 LSSI); el cepo busca «ahorr», «precio», «oferta», «regalo»…
-- 🚫 **Regalos por traer gente: aparcado** (ver `docs/CORREDURIA-INTRANET-IDEAS.md` §N). Un premio
+- 🚫 **Regalos por traer gente: aparcado** (ver `docs/CORREDURIA-INTRANET-IDEAS.md` §M). Un premio
   por quien contrate convierte al cliente en colaborador externo del mediador (RDL 3/2020).
 - 📌 Pendiente conocido: copiar la relación a `cliente_relaciones` cuando el invitado tenga ficha es
   trabajo del puerto del corredor (`prisma_asegura_portal` solo tiene `SELECT` sobre esa tabla).
