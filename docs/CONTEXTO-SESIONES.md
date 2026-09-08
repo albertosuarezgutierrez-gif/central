@@ -30,14 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **📲 El instalador del portal pasa a la CABECERA, junto a «Salir» (08/09/2026).** Alberto, sobre el
-  banner «Tenlo a mano» de esa misma mañana: «yo subiría el instalador arriba al lado de salir, queda más
-  limpio». Ahora es un botón `Instalar` en `.marca-acciones` (instalar → salir → tema, UN solo
-  `margin-left:auto` en el contenedor; fuera la regla `.salir-form + .tema-boton`), gateado por
-  `app/ConSesion.tsx` (verifica el token; `SalirDelPortal` ya no lo hace por su cuenta). Chrome lanza el
-  `prompt`; iOS abre un globo con el gesto (cierra con «Entendido», fuera o Escape). Solo icono por debajo de
-  480 px: medido con Playwright 320-1440, una fila, nada fuera. Sin «Ahora no» ni `localStorage`.
-  Desaparece al instalar (`appinstalled`/`standalone`); en iPhone solo si abren desde el icono. 8 cepos vistos en rojo.
+- **📲 Fuera la franja «Tenlo a mano» del portal: la campana es el único sitio que ofrece instalar (08/09/2026).**
+  Alberto, sobre el banner de esa misma mañana: «yo subiría el instalador arriba al lado de salir, queda más
+  limpio». Esta sesión montó un botón «Instalar» en la cabecera + `ConSesion`; **en paralelo otra sesión mergeó
+  la campana de avisos (#2630)**, que ya ofrece instalar (Chrome y las instrucciones de iOS) desde el mismo
+  almacén `app/instalacion.tsx`. Cuatro controles no caben a 320 px, así que se adoptó la campana y el PR
+  quedó en quitar la franja de encima de las pólizas (fichero, montaje, CSS salvo el glifo) y `pwa.test.ts`
+  vigila que no vuelva. ⚠️ La oferta queda a UN clic (dentro de la campana, sin contar en el globo): si Alberto
+  la quiere visible sin abrir nada, es otra decisión. Caso de trabajo duplicado entre sesiones, otra vez.
 - **🔔 La campana de avisos del portal del cliente (08/09/2026).** Alberto, ante el «nace pendiente
   hasta que la acepte en su portal»: un icono de campana en la cabecera del portal con autorizaciones,
   vencimientos e instalar. Entró: `lib/avisos.ts` (puro) + `GET /api/avisos` (`allSettled`) +
