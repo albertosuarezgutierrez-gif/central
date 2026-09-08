@@ -1087,7 +1087,7 @@ duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. Cepo: un sol
 
 📌 **Sin tabla de «visto», a propósito**: el aviso desaparece al resolverse. Lo que necesita saber
 qué vio ya el cliente (siniestro que cambia de estado, petición respondida, recibo devuelto) es v2 y
-está en `docs/CORREDURIA-INTRANET-IDEAS.md` §M con su bloqueo. Y el número va también al icono de
+está en `docs/CORREDURIA-INTRANET-IDEAS.md` §N con su bloqueo. Y el número va también al icono de
 la app instalada (`setAppBadge`), que es lo que hace que instalar sirva de algo.
 
 ⚠️ **El CSS de la cabecera cambió de `+` a `~`**: `.salir-form ~ .tema-boton`. Con el adyacente,
@@ -1704,6 +1704,41 @@ mismo, la pantalla del invitado dice «solo a una de sus pólizas» **sin nombra
 Cepos: `packages/module-seguros-portal/src/invitacion.test.ts` (10, con las mutaciones comprobadas:
 colapsar `sin_enlace` con `envio_fallido` y sumar la caducidad en meses hacen fallar los suyos) y
 `apps/asegura-portal/lib/invitaciones.test.ts` (25).
+
+## 👥 «Contactos» (08/09/2026): nombre, relación y la invitación que NO comparte nada
+
+Alberto: *«una pestaña de contactos… nombre, tipo relación y mail, y se le manda un mail de
+presentación»*. La pestaña `/autorizaciones` se llama ahora **«Contactos»** (la RUTA no cambia: los
+enlaces guardados siguen llegando) y la invitación pide **`invitado_nombre`** y **`relacion`**
+(`prisma/sql/2026-09-08_portal_invitacion_contacto.sql`, aplicada; reglas en el apartado «Contactos»
+de `packages/module-seguros-portal/src/invitacion.ts`). Spec:
+`docs/superpowers/specs/2026-09-08-portal-contactos-design.md`.
+
+- **El nombre es para la LISTA de José y el saludo del correo, no una identidad.** Quién es de verdad
+  lo sigue probando el código al correo. Las invitaciones anteriores tienen `NULL` y se pintan por su
+  fecha, como antes (nunca `''`).
+- **La relación usa el vocabulario de `cliente_relaciones.tipo_relacion`** (`TIPOS_RELACION`; el
+  portal ofrece el subconjunto `RELACIONES_INVITACION`) para copiarla tal cual el día que el invitado
+  tenga ficha. Un CHECK repite la lista y `test/regression-portal-contactos.test.ts` obliga a que BD y
+  TypeScript sean la misma: si divergen, el envío moriría con un 23514 **después** de escribir el
+  correo de un tercero.
+- 🚨 **La relación NUNCA va en el correo** (`relacion` y `parentesco` entran en
+  `CAMPOS_PROHIBIDOS_EN_INVITACION`): «su hija» es un dato de la relación entre dos personas y quien
+  abre el buzón puede no ser ninguna de las dos. La pantalla lo promete («No va en el correo») y el
+  cepo de `lib/invitaciones.test.ts` mira el tipo del correo y la llamada que lo manda.
+- 🚨 **`alcance = 'ninguno'` (`SIN_COMPARTIR`) = «solo te presento el portal».** Es el
+  «recomiéndanos»: la misma invitación sin abrir un solo seguro. Al aceptar se sella la invitación y
+  **NO se crea `portal_autorizacion`** (el CHECK `portal_invitacion_acepta_con_sello` exige aquí
+  `autorizacion_id IS NULL`; `poliza_id` va NULL por otro CHECK). El correo dice quién invita y que
+  no se comparte nada, **sin argumento de venta** — un acto entre personas, no una comunicación
+  comercial de la correduría (art. 21 LSSI); el cepo busca «ahorr», «precio», «oferta», «regalo»…
+- 🚫 **Regalos por traer gente: aparcado** (ver `docs/CORREDURIA-INTRANET-IDEAS.md` §N). Un premio
+  por quien contrate convierte al cliente en colaborador externo del mediador (RDL 3/2020).
+- 📌 Pendiente conocido: copiar la relación a `cliente_relaciones` cuando el invitado tenga ficha es
+  trabajo del puerto del corredor (`prisma_asegura_portal` solo tiene `SELECT` sobre esa tabla).
+
+Cepos nuevos con las mutaciones comprobadas (relación colada en el correo, un valor menos en el CHECK,
+la rama sin acceso desactivada, la ruta de la pestaña cambiada: las cuatro en rojo).
 
 ## 🗑 «Borradme los datos» (05/09/2026) — la solicitud que NO borra
 

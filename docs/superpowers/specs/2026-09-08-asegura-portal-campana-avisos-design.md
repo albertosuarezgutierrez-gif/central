@@ -40,7 +40,7 @@ y que podría dar uso para instalar (ya creado)»*.
 | `app/instalacion.tsx` | Almacén compartido de la instalación (`useInstalacion()`, `instalar()`, `InstruccionesIOS`) |
 | `globals.css` | `.salir-form ~ .tema-boton` (era `+`: con la campana en medio, el interruptor recuperaba su `margin-left:auto`) |
 
-## 4. Lo que NO entra (y por qué), anotado en `docs/CORREDURIA-INTRANET-IDEAS.md` §M
+## 4. Lo que NO entra (y por qué), anotado en `docs/CORREDURIA-INTRANET-IDEAS.md` §N
 
 - **Datos que faltan (teléfono, DNI)**: el rol del portal no lee esas columnas; no hay con qué.
 - **Siniestro que cambia de estado, petición respondida, documento nuevo, recibo devuelto**:
