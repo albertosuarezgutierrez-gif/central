@@ -28,6 +28,7 @@ import { ResumenTitular } from './ResumenTitular'
 import { VistaPorPoliza } from './VistaPorPoliza'
 import {
   agruparCartera,
+  avisoPartesConservados,
   nombreDePila,
   saludoPorHora,
   vistaDeBoveda,
@@ -309,6 +310,9 @@ export default async function Boveda({
                   fechaVencimiento: d.fechaVencimiento,
                   deDocumento: d.documentoNombre !== null,
                 }}
+                avisoPartes={avisoPartesConservados(
+                  partes.filter((x: PartePortal) => x.polizaDeclaradaId === d.id).length,
+                )}
               />
             ))}
           </ul>

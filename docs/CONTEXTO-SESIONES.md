@@ -38,6 +38,14 @@
   se salía a 360px (medido con Playwright, right=427). Cepo `test/regression-ficha-cliente-acciones.test.ts`
   visto en rojo. Regla anotada en la skill `correduria-crm`. PR #2622 (19/19 verdes, mergeado).
 
+- **✂️ Búsqueda PARCIAL por email: dominio y usuario (08/09/2026, II).** Alberto: «tiene que ser de
+  cualquier campo». El email va cifrado y solo casaba entero; ahora hay dos índices ciegos más
+  (`email_dominio_hash`, `email_usuario_hash`, en ficha e hijas, migración `seguros_email_mitades_hash`
+  aplicada) con prefijo dentro del HMAC para que no colisionen. «@gmail.com» o «gmail.com» → dominio;
+  «alberto.suarez@» o «alberto.suarez» → usuario; un email entero no dispara el dominio. Las escrituras
+  de `cartera-edicion.ts` dejan las tres claves; el corpus viejo (todo a NULL) lo rellena el backfill de
+  contacto con el mismo botón de `/correduria/mantenimiento` (`derivadosRestantes`). PR #2613 mergeado
+  (backfill); este es el segundo. **Pendiente: pulsar el botón hasta 0** y probar «@gmail.com».
 - **🔎 El buscador SÍ mira el email, pero 250 fichas eran invisibles (08/09/2026).** Alberto buscó su
   correo en `/correduria` y preguntó si el buscador mira el mail. Lo mira, **exacto y por hash** (va
   cifrado): `planBusqueda()` lanza `email` + `nombre`. Medido: **250 fichas con email y sin
@@ -59,7 +67,8 @@
   que ser trato más cercano». `mensajeInvitacionWhatsapp` usa ahora `nombreDePila` —la misma regla que el
   «Buenas tardes, Alberto» de la bóveda—, que **bajó de `module-seguros-portal` a `@central/module-seguros`**
   (plataforma no depende del portal a propósito; el portal la re-exporta). Sociedad o nombre con coma →
-  «Hola:», no «Hola, Global:». 4 cepos nuevos vistos en rojo. ⏸️ El **correo** de invitación
+  «Hola:», no «Hola, Global:». 4 cepos nuevos vistos en rojo. **PR #2614, mergeado** (19 checks
+  verdes al abrirlo por MCP en draft, sin palancas). ⏸️ El **correo** de invitación
   (`apps/asegura/lib/correo-invitacion-portal.ts`) sigue con nombre completo: Alberto habló del WhatsApp.
 - **📲 Invitar al portal también por WhatsApp (08/09/2026).** Alberto: «poner al lado el botón de
   WhatsApp, le doy y ese mismo mensaje se le envía al cliente, se le confirma qué correo tiene
@@ -96,6 +105,18 @@
   habiendo UN solo formulario. Pendiente de decisión de Alberto: que el cliente edite dirección y
   teléfono desde el portal y que TODO lo que haga salga en el historial de su ficha.
 
+- **🍪 `grupoasegura.es` SÍ mide, y mide bien — aquí se afirmó lo contrario sin haberlo medido
+  (08/09/2026).** Claude en Chrome lo comprobó en los paneles: `asegura-web` tiene desde el 05/09
+  `NEXT_PUBLIC_COOKIEBOT_ID` (Domain Group #1 de Cookiebot, solo `grupoasegura.es`; `www` no persiste
+  y no hace falta, es 308 al apex) + `NEXT_PUBLIC_POSTHOG_KEY` + `_HOST`, solo Production a propósito
+  (decisión de Alberto 07/09: un preview no mide antes que ensuciar). PostHog EU «Grupo ASegura»
+  (proyecto 266897): 5 visitantes / 81 pv / 21 sesiones en 7 días. Las 4 verificaciones fail-closed
+  pasan en sesión limpia: banner ES opt-in, CERO PostHog antes de aceptar, carga tras «Estadísticas»,
+  consentimiento persiste. **Vercel Web Analytics sigue apagada y es OTRO producto: su 404 no es
+  «cero visitas».** La sesión partió de «no existe el CBID» sin medirlo — la regla «dato que NO hay ≠
+  dato que NO se ha mirado», aplicada a un panel. Lo que SÍ sigue en pie: `housesevillana` (GA4
+  `G-N5CMQL9C4M`) e `ia-rest` (GA4 `G-EN2YQLRLEX`) cargan GA sin banner; ese CBID puede servirles.
+
 - **🩺 `total_count: 0` NO prueba que un run de Actions esté muerto — corregida la tabla de la
   DECIMOCUARTA (07/09/2026).** En el PR #2530 se vio el run `34117636782` en `pending` con
   `list_workflow_jobs` → `total_count: 0`, se diagnosticó **forma (b)** («nunca arrancó, hace falta
@@ -106,6 +127,16 @@
   paso 0 del orden. Equivocarse hacia (c) cuesta esperar; hacia (b) cuesta un head nuevo que borra
   la evidencia.
 
+- **🗑️ Quitar una póliza aportada se ofrece EN LA LISTA, no solo al final de su ficha (08/09/2026).**
+  Alberto, con el botón del PR #2592 ya en producción (deploy READY sobre `65f97f8`, sin errores de
+  runtime en la ficha): «no puedo eliminar "Póliza sin compañía identificada"… el cliente se puede
+  equivocar, puede crear y quitar las pólizas que quiera». El botón existía, pero debajo del formulario
+  de corregir de `/boveda/anadida/[id]`; desde la lista no se veía, y una acción que hay que ir a buscar
+  no existe. `FilaDeclarada` monta ahora `EliminarPoliza` bajo la tarjeta (fuera del `<Link>`, 44px,
+  confirmación a todo ancho); `FilaPoliza` (cartera) sigue sin él. Cepo nuevo con los dos brazos vistos
+  en rojo en `test/regression-portal-borrado.test.ts`. Responsive NO medido en navegador (sin sesión). **PR #2620 mergeado** (`00e0cbb`, 19/19 verdes) y
+  **en producción**: deploy de `asegura-portal` READY sobre ese commit, aliases `clientes.grupoasegura.es`
+  y `asegura-portal.vercel.app`.
 - **🧊 Y al quitarla, el parte de siniestro NO se borra: se CONGELA (07/09/2026).** Alberto: «al borrar
   póliza tb borraría siniestros, ¿es lo lógico?». No: un parte es la prueba de que el cliente comunicó
   el siniestro y CUÁNDO (art. 16 LCS), y la cascada la destruiría —la borraría él mismo ordenando su

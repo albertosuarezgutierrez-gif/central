@@ -44,7 +44,16 @@ export interface FilaContacto {
   descifradoFallido?: boolean
   /** Hash que la fila ya tiene guardado, si lo tiene. */
   hashActual: string | null
+  /**
+   * Solo email: los hashes de sus MITADES (dominio y usuario) que la fila ya
+   * tiene. Sirven a la búsqueda parcial («@gmail.com», «alberto.suarez@») y
+   * nacieron el 08/09/2026, así que el corpus entero los tiene a NULL.
+   */
+  derivadosActuales?: Derivados
 }
+
+/** Hashes del dominio y del usuario de un email. `null` en cada uno = no se sabe / no hay. */
+export type Derivados = { dominio: string | null; usuario: string | null }
 
 export type DestinoContacto = 'ya_tiene' | 'sin_dato' | 'ilegible' | 'no_hasheable' | 'rellenable' | 'choca'
 
@@ -55,6 +64,12 @@ export interface FilaPlanContacto {
   destino: DestinoContacto
   /** Hash a escribir. Solo en `rellenable`. */
   hash: string | null
+  /**
+   * Mitades a escribir (solo email). Se rellenan aunque el hash principal ya
+   * exista o choque: no tienen índice único, y sin ellas la búsqueda parcial
+   * no ve la ficha. `null` = nada que escribir.
+   */
+  derivados: Derivados | null
 }
 
 export interface GrupoChoqueContacto {
@@ -73,6 +88,8 @@ export interface CuentaContacto {
   rellenables: number
   /** Solo puede ser > 0 en `email`: es el único con índice único. */
   enChoque: number
+  /** Solo email: filas legibles a las que les falta el hash del dominio o del usuario. */
+  derivadosPendientes: number
 }
 
 export interface PlanBackfillContacto {
@@ -82,7 +99,7 @@ export interface PlanBackfillContacto {
 }
 
 function cuentaVacia(): CuentaContacto {
-  return { total: 0, yaTiene: 0, sinDato: 0, ilegibles: 0, noHasheables: 0, rellenables: 0, enChoque: 0 }
+  return { total: 0, yaTiene: 0, sinDato: 0, ilegibles: 0, noHasheables: 0, rellenables: 0, enChoque: 0, derivadosPendientes: 0 }
 }
 
 /**
@@ -97,6 +114,8 @@ function cuentaVacia(): CuentaContacto {
 export function planBackfillContacto(
   filas: FilaContacto[],
   hashDe: (campo: CampoContacto, valor: string) => string | null,
+  /** Mitades de un email. Si no se pasa, no se planifica ninguna. */
+  derivadosDe?: (valor: string) => Derivados | null,
 ): PlanBackfillContacto {
   const resumen = { email: cuentaVacia(), telefono: cuentaVacia() }
   const plan: FilaPlanContacto[] = []
@@ -111,27 +130,27 @@ export function planBackfillContacto(
     c.total += 1
     if (f.hashActual !== null && f.hashActual !== '') {
       c.yaTiene += 1
-      plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'ya_tiene', hash: null })
+      plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'ya_tiene', hash: null, derivados: derivadosPara(f, derivadosDe, resumen) })
       if (f.campo === 'email' && f.origen === 'ficha') apuntar(fichasPorHashEmail, f.hashActual, f.id, true)
       continue
     }
     if (f.descifradoFallido) {
       c.ilegibles += 1
-      plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'ilegible', hash: null })
+      plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'ilegible', hash: null, derivados: null })
       continue
     }
     if (f.valor === null || f.valor.trim() === '') {
       c.sinDato += 1
-      plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'sin_dato', hash: null })
+      plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'sin_dato', hash: null, derivados: null })
       continue
     }
     const hash = hashDe(f.campo, f.valor)
     if (hash === null) {
       c.noHasheables += 1
-      plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'no_hasheable', hash: null })
+      plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'no_hasheable', hash: null, derivados: derivadosPara(f, derivadosDe, resumen) })
       continue
     }
-    plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'rellenable', hash })
+    plan.push({ id: f.id, origen: f.origen, campo: f.campo, destino: 'rellenable', hash, derivados: derivadosPara(f, derivadosDe, resumen) })
     if (f.campo === 'email' && f.origen === 'ficha') apuntar(fichasPorHashEmail, hash, f.id, false)
   }
 
@@ -155,6 +174,27 @@ export function planBackfillContacto(
   for (const p of plan) if (p.destino === 'rellenable') resumen[p.campo].rellenables += 1
 
   return { filas: plan, resumen, choques }
+}
+
+/**
+ * Qué mitades hay que escribir en esta fila: las que se pueden calcular y aún
+ * no están. Solo email; una fila con las dos ya puestas devuelve `null`.
+ */
+function derivadosPara(
+  f: FilaContacto,
+  derivadosDe: ((valor: string) => Derivados | null) | undefined,
+  resumen: { email: CuentaContacto },
+): Derivados | null {
+  if (f.campo !== 'email' || derivadosDe === undefined) return null
+  if (f.valor === null || f.valor.trim() === '') return null
+  const calc = derivadosDe(f.valor)
+  if (calc === null) return null
+  const actual = f.derivadosActuales ?? { dominio: null, usuario: null }
+  const dominio = actual.dominio === null ? calc.dominio : null
+  const usuario = actual.usuario === null ? calc.usuario : null
+  if (dominio === null && usuario === null) return null
+  resumen.email.derivadosPendientes += 1
+  return { dominio, usuario }
 }
 
 function apuntar(

@@ -144,3 +144,20 @@ test('quitar una póliza solo está en la ficha de las APORTADAS, no en la de la
     'La ficha de una póliza de la CARTERA no puede ofrecer quitarla: es el registro de la correduría',
   )
 })
+
+/**
+ * 🚨 Quitarla tiene que verse DESDE LA LISTA, no solo al final de la ficha.
+ * Alberto (08/09/2026), con el botón ya en producción debajo del formulario de
+ * corregir: «no puedo eliminar “Póliza sin compañía identificada”». Una acción
+ * que hay que ir a buscar es una acción que no existe. Y la fila de la CARTERA
+ * sigue sin ofrecerla: lo que entra por CIMA no lo borra el cliente.
+ */
+test('la fila de una póliza APORTADA ofrece quitarla en la lista; la de la cartera, no', () => {
+  const aportada = leer(`${APP}/app/(portal)/boveda/FilaDeclarada.tsx`)
+  const cartera = leer(`${APP}/app/(portal)/boveda/FilaPoliza.tsx`)
+  assert.match(aportada, /<EliminarPoliza\b/, 'FilaDeclarada tiene que montar EliminarPoliza en la propia fila')
+  assert.ok(
+    !/EliminarPoliza/.test(cartera),
+    'FilaPoliza (cartera) no puede ofrecer quitar: es el registro de la correduría',
+  )
+})
