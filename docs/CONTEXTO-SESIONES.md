@@ -23,7 +23,14 @@
 > actualizar el bloque, re-fecha su cabecera (si su fecha queda en un mes cerrado, la
 > rotación se lo lleva al archivo).
 >
-> **Formato de cabecera de entrada:** `- **🏠 La dirección del hogar dejaba de decir el CP dos veces (08/09/2026, PR pendiente).** Con
+> **Formato de cabecera de entrada:** `- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
+> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
+> funde con la entrada anterior y se archiva mal.
+>
+> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
+> registro de qué se hizo y qué queda.
+
+- **🏠 La dirección del hogar dejaba de decir el CP dos veces (08/09/2026, PR pendiente).** Con
   `PII_ENCRYPTION_KEY` ya puesta en el Vercel de `asegura-portal` (la añadió Alberto; el build que
   la recogió es `d6a954bb`), la calle sale en claro — y con ella el defecto: **«MARINA GOLF 82,
   11520 costa ballena, 11520 ROTA»**. `describirBien` componía `calle, cp localidad` a ciegas y la
@@ -35,13 +42,6 @@
   la calle), se rehicieron hasta que discriminaron.
   ⚠️ **No se pudo medir el antes/después de las 9 direcciones reales**: van cifradas y esta sesión
   no tiene la clave. Los fixtures son los dos casos que Alberto vio en pantalla.
-
-- **… (dd/mm/aaaa).**` o `### … (dd/mm/aaaa)` —
-> son los ÚNICOS que `rotar-memoria.mjs` reconoce como entrada; una cabecera `## ` se
-> funde con la entrada anterior y se archiva mal.
->
-> Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
-> registro de qué se hizo y qué queda.
 
 - **🧹 La ficha de cliente: de 7 botones a 2 (08/09/2026).** Alberto, con la captura: «esto es una
   guarrería, tantos botones». `Cabecera.tsx` pintaba «Subir póliza» + seis «Presupuestar <ramo>» + dos
