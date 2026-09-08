@@ -13,9 +13,20 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
+import { TIPOS_RELACION } from '@central/module-seguros'
+
 import {
+  ALCANCES_INVITACION,
   BYTES_TOKEN_INVITACION,
   CAMPOS_PROHIBIDOS_EN_INVITACION,
+  MAX_NOMBRE_INVITADO,
+  RELACIONES_INVITACION,
+  SIN_COMPARTIR,
+  TEXTO_INVITACION_SIN_ACCESO,
+  alcanceInvitacion,
+  invitacionAbreAcceso,
+  normalizarNombreInvitado,
+  relacionInvitacion,
   DIAS_VIGENCIA_INVITACION,
   ESTADOS_INVITACION,
   MAX_INVITACIONES_DIA,
@@ -174,4 +185,48 @@ test('el cupo diario es un freno de abuso, no una cuota comercial', () => {
     'Un cupo alto convierte esto en una herramienta de envío masivo a terceros que no han ' +
       'consentido nada.',
   )
+})
+
+// ─── «Contactos» (08/09/2026) ────────────────────────────────────────────────
+
+test('el nombre del invitado: una línea, recortado, y vacío es `null`', () => {
+  assert.equal(normalizarNombreInvitado('  Ana   López\nRuiz '), 'Ana López Ruiz', 'espacios y saltos colapsan a uno')
+  assert.equal(normalizarNombreInvitado('   '), null, 'vacío es `null`, nunca `""`: acaba en el saludo del correo')
+  assert.equal(normalizarNombreInvitado(42), null)
+  assert.equal(normalizarNombreInvitado('x'.repeat(500))?.length, MAX_NOMBRE_INVITADO)
+})
+
+test('la relación es el vocabulario de la cartera, y las ofrecidas están todas en él', () => {
+  // Se guarda con las mismas palabras que `cliente_relaciones.tipo_relacion`
+  // para copiarla tal cual el día que el invitado tenga ficha.
+  assert.equal(relacionInvitacion('Hijo/a'), 'Hijo/a')
+  assert.equal(relacionInvitacion('hija'), null, 'no se adivina el valor más parecido')
+  assert.equal(relacionInvitacion(''), null)
+  assert.equal(relacionInvitacion(undefined), null)
+  for (const r of RELACIONES_INVITACION) {
+    assert.ok((TIPOS_RELACION as readonly string[]).includes(r), `«${r}» no está en TIPOS_RELACION`)
+    assert.equal(relacionInvitacion(r), r)
+  }
+  assert.ok(RELACIONES_INVITACION.includes('Otra'), 'siempre hay una salida para lo que no encaja')
+})
+
+test('«nada» es un alcance de invitación, y es el único que no abre acceso', () => {
+  assert.equal(alcanceInvitacion(SIN_COMPARTIR), 'ninguno')
+  assert.equal(alcanceInvitacion('ver'), 'ver')
+  assert.equal(alcanceInvitacion('partes'), null, 'apoderar por invitación sigue prohibido')
+  assert.equal(alcanceInvitacion(''), null)
+  assert.equal(invitacionAbreAcceso(SIN_COMPARTIR), false)
+  for (const a of ALCANCES_INVITACION) {
+    if (a !== SIN_COMPARTIR) assert.equal(invitacionAbreAcceso(a), true, `«${a}» abre acceso`)
+  }
+})
+
+test('la relación está entre lo que el correo NO puede decir', () => {
+  assert.ok((CAMPOS_PROHIBIDOS_EN_INVITACION as readonly string[]).includes('relacion'))
+})
+
+test('el texto que se acepta sin acceso dice que no se comparte nada', () => {
+  const t = TEXTO_INVITACION_SIN_ACCESO.toLowerCase()
+  assert.ok(t.includes('no se comparte contigo ningún seguro'))
+  assert.ok(t.includes('queda registrado'), 'aunque no se ceda nada, se dice qué queda registrado')
 })

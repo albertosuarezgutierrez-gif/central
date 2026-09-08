@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **👥 Portal del cliente: pestaña «Contactos» + invitación sin compartir nada (08/09/2026).** Alberto
+  pidió «pestaña de contactos: nombre, relación y mail, un mail de presentación… y regalos por traer
+  gente». Lo primero ya existía en `/autorizaciones` (invitar por correo, 04/09); se añadió lo que
+  faltaba. Pestaña renombrada a **Contactos** (ruta igual). `portal_invitacion` gana `invitado_nombre`
+  + `relacion` (vocabulario `TIPOS_RELACION`, CHECK + cepo raíz `regression-portal-contactos`) y el
+  alcance **`ninguno`** («solo te presento el portal»: al aceptar NO se crea autorización). Migración
+  aplicada en Supabase. La relación **nunca va en el correo** (`CAMPOS_PROHIBIDOS_EN_INVITACION`) y el
+  correo sin acceso no vende nada. **Regalos: aparcados** (colaborador externo RDL 3/2020 + art. 21
+  LSSI) → `CORREDURIA-INTRANET-IDEAS.md` §M. Spec `docs/superpowers/specs/2026-09-08-portal-contactos-design.md`.
+  Cepos con 4 mutaciones en rojo. PR #2623.
+
 - **✂️ Búsqueda PARCIAL por email: dominio y usuario (08/09/2026, II).** Alberto: «tiene que ser de
   cualquier campo». El email va cifrado y solo casaba entero; ahora hay dos índices ciegos más
   (`email_dominio_hash`, `email_usuario_hash`, en ficha e hijas, migración `seguros_email_mitades_hash`
