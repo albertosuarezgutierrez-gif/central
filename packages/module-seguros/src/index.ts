@@ -259,9 +259,8 @@ export {
   type RelacionFicha,
 } from './relaciones.ts'
 export {
-  mensajeWhatsapp,
+  mensajePresentacionWhatsapp,
   nombreDePila,
-  type DestinatarioWhatsapp,
 } from './mensaje-whatsapp.ts'
 export {
   estadoCliente,

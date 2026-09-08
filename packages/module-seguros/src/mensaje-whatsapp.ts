@@ -1,62 +1,37 @@
-// El mensaje que Alberto abre YA ESCRITO al pulsar el icono de WhatsApp de una
-// ficha, para no teclear lo mismo ochenta veces.
+// El mensaje de PRESENTACIÓN que se abre en WhatsApp con quien todavía NO es
+// cliente.
 //
-// Petición de Alberto (08/09/2026): «crea un botón de invitación… que yo pulse
-// y le diga los mensajes así de bienvenida, diciéndole qué correo es el que
-// tiene acceso… si esa persona, en vez de cliente es lead, se le envía otro
-// tipo de mensaje».
+// Petición de Alberto (08/09/2026): «si esa persona, en vez de cliente es lead,
+// se le envía otro tipo de mensaje».
 //
-// ── 🚨 POR QUÉ EL TEXTO VIVE AQUÍ Y NO EN EL COMPONENTE ────────────────────
+// ── 🚨 LO QUE ESTE MÓDULO **NO** HACE: invitar al portal ────────────────────
 //
-// Porque es COPY DE LA CORREDURÍA, y en esta casa el copy de la correduría pasa
-// por `copy-regulado.ts` (RDL 3/2020: prometer un precio o un ahorro convierte
-// la comunicación en asesoramiento, que arrastra análisis objetivo e IPID). Un
-// literal escrito dentro de un `.tsx` no lo mira nadie: el guardián de este
-// módulo pasa CADA mensaje por `revisarCopy()`, así que el cepo se dispara al
-// escribirlo, no cuando ya se ha mandado por WhatsApp — donde, como en redes,
-// lo enviado no se corrige.
+// Eso ya existe y vive en otro sitio: `lib/invitacion-whatsapp.ts` de
+// `apps/plataforma` (PR #2604), que nombra el correo EXACTO con el que el
+// cliente entra —el que manda asegura en `portal.emailInvitacion`, la misma
+// regla que elige el destinatario del correo— y el enlace del portal.
 //
-// ── 🚨 EL MENSAJE NO LLEVA NUNCA EL ENLACE DEL PORTAL ──────────────────────
+// Escribir aquí un segundo mensaje de invitación sería una segunda regla de
+// elección del correo conviviendo con aquella: el día que se separen, el
+// cliente teclearía la dirección que le dijimos y no recibiría ningún código,
+// sin un solo error por ninguna parte. Por eso este módulo se queda SOLO con el
+// caso que aquel deja fuera a propósito.
 //
-// Solo el CORREO al que va la invitación. El enlace viaja por email a propósito
-// (ver `invitacion.ts` de `@central/module-seguros-portal`): la identidad se
-// prueba con un código de un solo uso que llega al buzón del invitado, y ese es
-// justo el mecanismo que se rompería mandando el token por un canal reenviable.
-// Un chat de WhatsApp se reenvía con dos toques.
+// ── Por qué el lead queda fuera de aquel canal ──────────────────────────────
 //
-// Así que el reparto es: **WhatsApp avisa, el correo abre.** Y de paso tapa el
-// fallo real de que la invitación se le vaya a spam y el cliente no se entere.
+// Porque el portal enseña TUS pólizas y un lead no tiene ninguna: entraría a
+// una bóveda vacía, que es peor que no entrar (mismo criterio que
+// `portal-cliente-asegura.ts`). Su `canalWhatsapp` devuelve `no_procede` y no
+// ofrece nada — correctamente. Lo que faltaba era tener algo que decirle.
 //
-// ── 🚨 «TE VOY A MANDAR», NO «TE HE MANDADO» ───────────────────────────────
+// ── 🚨 Y por qué el texto vive en el módulo y no en el `.tsx` ───────────────
 //
-// El botón de WhatsApp NO dispara la invitación: son dos acciones distintas y
-// Alberto puede pulsar esta antes, después o sin la otra. Un mensaje que afirma
-// «te he mandado un correo» sería falso justo la mitad de las veces, y el
-// cliente se quedaría mirando una bandeja vacía. El futuro es verdad en los dos
-// órdenes.
-import { revisarCopy } from './copy-regulado.ts'
+// Porque es COPY DE LA CORREDURÍA y en esta casa pasa por `copy-regulado.ts`
+// (RDL 3/2020: prometer un precio o un ahorro convierte la comunicación en
+// asesoramiento, que arrastra análisis objetivo e IPID). Un literal escrito
+// dentro de un componente no lo mira ningún cepo, y lo enviado por WhatsApp
+// —como lo publicado en redes— no se corrige con un commit.
 import { MEDIADOR } from './mediador.ts'
-
-/** A quién se le escribe, y con qué se le puede escribir. */
-export type DestinatarioWhatsapp = {
-  /**
-   * Si tiene pólizas vivas con la correduría. Se decide FUERA (la ficha ya lo
-   * deriva de los hechos, no del enum `tipo`: CIMA engancha pólizas por DNI a
-   * fichas que siguen marcadas como `lead`).
-   */
-  esCliente: boolean
-  /** Cómo se le llama en el saludo. Se recorta al nombre de pila. */
-  nombre: string
-  /**
-   * El correo al que le llegaría la invitación al portal.
-   *
-   * 🚨 `null` NO es «no tiene correo, da igual»: cambia el mensaje entero. Sin
-   * correo no hay portal que ofrecer, así que en vez de prometer un acceso que
-   * no puede llegar a ninguna parte, el mensaje se lo PIDE. Prometer el envío y
-   * no poder hacerlo es el modo de fallo que deja al cliente esperando.
-   */
-  email: string | null
-}
 
 /**
  * Cómo se presenta. Sale de `MEDIADOR` y no de un literal: el nombre comercial
@@ -66,9 +41,9 @@ export type DestinatarioWhatsapp = {
 const FIRMA = `${MEDIADOR.identidad.nombre.split(' ').slice(0, 2).join(' ')}, de ${MEDIADOR.marca}`
 
 /**
- * El nombre de pila, para que el saludo no diga «Hola Jose Antonio Suárez
- * Gutiérrez». Si viene vacío, no se saluda por el nombre: un «Hola ,» delata
- * la plantilla más que no saludar.
+ * El nombre de pila, para que el saludo no diga «Hola José Antonio Suárez
+ * Gutiérrez». `null` si no hay ninguno legible: se saluda sin nombre, porque un
+ * «Hola ,» delata la plantilla más que no saludar.
  */
 export function nombreDePila(nombre: string): string | null {
   const limpio = nombre.trim().replace(/\s+/g, ' ')
@@ -79,54 +54,21 @@ export function nombreDePila(nombre: string): string | null {
   return primera.length >= 3 ? primera : limpio
 }
 
-/** El saludo, con o sin nombre. */
-function saludo(nombre: string): string {
-  const pila = nombreDePila(nombre)
-  return pila ? `Hola ${pila}, soy ${FIRMA}` : `Hola, soy ${FIRMA}`
-}
-
 /**
- * El mensaje ya escrito para abrir WhatsApp con esta persona.
+ * El mensaje ya escrito para abrir WhatsApp con un lead: quién eres y para qué
+ * estás, y nada más.
  *
- * Tres textos, no dos, porque hay tres situaciones que se arreglan de forma
- * distinta: el cliente al que se le puede dar el portal, el cliente al que hay
- * que pedirle antes un correo, y el que todavía no es cliente.
+ * 🚨 No ofrece el portal (no tiene pólizas que ver), no promete precio (sería
+ * asesoramiento) y no dice «tus pólizas»: con la correduría no tiene ninguna, y
+ * escribirlo sería hablarle como a un cliente que no es.
  */
-export function mensajeWhatsapp(d: DestinatarioWhatsapp): string {
-  const hola = saludo(d.nombre)
-
-  // Todavía no es cliente: no hay pólizas que enseñarle, así que NO se le
-  // ofrece el portal — entraría a una bóveda vacía, que es peor que no entrar
-  // (misma razón que `portal-cliente-asegura.ts`). Se le ofrece la persona.
-  if (!d.esCliente) {
-    return [
-      `${hola}, corredor de seguros.`,
-      '',
-      'Encantado. Te dejo mi contacto por aquí para lo que necesites de tus seguros: una duda, un parte, o echar un ojo a una póliza que tengas contratada con otro.',
-      '',
-      'Cuando quieras, me escribes.',
-    ].join('\n')
-  }
-
-  // Cliente sin correo en la ficha: el portal existe pero no hay por dónde
-  // mandarle la llave. Se le pide, que es la acción que desatasca.
-  if (!d.email) {
-    return [
-      `${hola}.`,
-      '',
-      'Quiero darte acceso a tu área de clientes, donde tienes tus pólizas y tus recibos siempre a mano.',
-      '',
-      '¿Me pasas un correo electrónico y te mando el enlace para entrar?',
-    ].join('\n')
-  }
-
+export function mensajePresentacionWhatsapp(nombre: string): string {
+  const pila = nombreDePila(nombre)
   return [
-    `${hola}.`,
+    pila ? `Hola ${pila}, soy ${FIRMA}, corredor de seguros.` : `Hola, soy ${FIRMA}, corredor de seguros.`,
     '',
-    'Te voy a dar acceso a tu área de clientes: ahí tienes tus pólizas y tus recibos siempre a mano.',
+    'Encantado. Te dejo mi contacto por aquí para lo que necesites de tus seguros: una duda, un parte, o echar un ojo a una póliza que tengas contratada con otro.',
     '',
-    `Te llega un correo a ${d.email} con el enlace para entrar. Si no lo ves, echa un vistazo a la carpeta de spam.`,
-    '',
-    'Cualquier cosa, me escribes por aquí.',
+    'Cuando quieras, me escribes.',
   ].join('\n')
 }

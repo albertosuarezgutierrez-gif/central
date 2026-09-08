@@ -19,6 +19,7 @@
  * `tel:` sobre una cadena base64 es prometer una acción que falla.
  */
 import { urlWhatsapp } from './telefono-wa.ts'
+import { enlaceWhatsappConMensaje } from './invitacion-whatsapp.ts'
 
 export type AccionesContacto = {
   /** href de `tel:`, o null si no hay teléfono utilizable. */
@@ -40,7 +41,12 @@ export function accionesContacto(
     /**
      * Texto con el que abrir WhatsApp ya escrito. Se propaga tal cual: este
      * módulo NO redacta nada (el copy de la correduría vive en
-     * `mensajeWhatsapp()` de `@central/module-seguros`, donde pasa los cepos).
+     * `@central/module-seguros`, donde pasa los cepos de `copy-regulado`).
+     *
+     * 🚨 Para INVITAR AL PORTAL no se pasa por aquí: ese mensaje lo compone
+     * `canalWhatsapp()` de `lib/invitacion-whatsapp.ts`, que es quien sabe con
+     * qué correo entra el cliente. Dos sitios redactando esa invitación son dos
+     * reglas de elección del correo que un día se separan.
      */
     mensaje?: string | null
   },
@@ -51,7 +57,10 @@ export function accionesContacto(
 
   const tel = (telefono ?? '').trim()
   const correo = (email ?? '').trim()
-  const whatsapp = tel ? urlWhatsapp(tel, mensaje) : null
+  const texto = (mensaje ?? '').trim()
+  const whatsapp = tel
+    ? (texto ? enlaceWhatsappConMensaje(tel, texto) : urlWhatsapp(tel))
+    : null
 
   return {
     tel: tel ? `tel:${tel.replace(/\s/g, '')}` : null,

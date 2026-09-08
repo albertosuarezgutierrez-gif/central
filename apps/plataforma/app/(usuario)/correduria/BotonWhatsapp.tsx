@@ -1,6 +1,7 @@
 'use client'
 import { MessageCircle } from 'lucide-react'
 import { urlWhatsapp } from '@/lib/telefono-wa'
+import { enlaceWhatsappConMensaje } from '@/lib/invitacion-whatsapp'
 
 /**
  * Verde de marca de WhatsApp. No es un estado de la app, así que no es un token.
@@ -38,7 +39,8 @@ export default function BotonWhatsapp({ telefono, mensaje, compacto = false }: {
    */
   compacto?: boolean
 }) {
-  const url = urlWhatsapp(telefono, mensaje)
+  const texto = (mensaje ?? '').trim()
+  const url = texto ? enlaceWhatsappConMensaje(telefono, texto) : urlWhatsapp(telefono)
   if (url === null) return null
   const lado = compacto ? 32 : 44
   return (
@@ -47,7 +49,7 @@ export default function BotonWhatsapp({ telefono, mensaje, compacto = false }: {
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`Abrir WhatsApp con ${telefono}`}
-      title={mensaje
+      title={texto
         ? `Abrir WhatsApp con ${telefono} y el mensaje ya escrito — lo envías tú (se abre en una pestaña nueva)`
         : `Abrir WhatsApp con ${telefono} (se abre en una pestaña nueva)`}
       style={{

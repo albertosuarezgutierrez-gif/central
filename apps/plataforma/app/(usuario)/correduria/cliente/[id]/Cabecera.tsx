@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { contactoEfectivo, etiquetaRol, mensajeWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, urlVidaNuevo, urlSaludNuevo, urlDecesosNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink } from '@/components/ui'
@@ -282,13 +282,13 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
     ) : null
   // Sin intervinientes que mirar, «sin teléfono» solo habla del tomador.
   const coletilla = ef.intervinientesSinMirar ? ' · intervinientes sin comprobar' : ''
-  // 🚨 El correo PRESTADO de un interviniente no se le promete a nadie: el
-  // mensaje diría «te llega un correo a …» con la dirección de OTRA persona (el
-  // conductor habitual de su furgoneta, p. ej.). Sin correo SUYO, el mensaje
-  // se lo pide — que es además la acción que desatasca. `tomador_en_poliza` SÍ
-  // es suyo: está guardado en la póliza en vez de en su ficha.
-  const emailSuyo = ef.viaEmail === 'interviniente' ? null : ef.email
-  const mensajeWa = mensajeWhatsapp({ esCliente, nombre, email: emailSuyo })
+  // 🚨 SOLO al que todavía no es cliente. A un cliente se le invita al portal
+  // desde el botón «Abrir WhatsApp» del bloque Portal (pestaña Contactos), que
+  // es quien sabe con qué correo entra —el que manda asegura, no el que se vea
+  // aquí— y adjunta el enlace. Un segundo mensaje de invitación redactado desde
+  // la cabecera nombraría un correo elegido por otra regla, y el día que las dos
+  // se separen el cliente teclearía una dirección que el portal no reconoce.
+  const mensajeWa = esCliente ? null : mensajePresentacionWhatsapp(nombre)
   return (
     <>
       {/* Los tres iconos van juntos y al principio: es lo que se TOCA. Detrás
