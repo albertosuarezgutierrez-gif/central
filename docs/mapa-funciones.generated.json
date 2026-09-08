@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-07T22:09:12Z",
-  "sha": "f27c24c1df05da51d8c091590c90b86eb3f90f47",
+  "generadoEn": "2026-09-08T05:50:38Z",
+  "sha": "1f9087518c1a58ccfe9f514cb7f39f179aa15cc1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3192,7 +3192,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "42108148cd79"
+      "hash": "1e9d5e68a10c"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/AnadirPoliza.tsx",
@@ -3432,7 +3432,7 @@
           "nombre": "EliminarPoliza",
           "kind": "function",
           "exportada": true,
-          "params": "{ id, titulo }: { id: string; titulo: string }",
+          "params": "{ id, titulo, avisoPartes, }: { id: string titulo: string /** * Qué pasa con los partes de siniestro que colgaban de esta póliza, cuando los * hay. Lo compone el servidor con `avisoPartesConservados()` y `null` es «no * tenía ninguno». No e",
           "retorno": null,
           "linea": 23,
           "resumen": "Quitar de la bóveda una póliza que aportó el propio cliente. 🚨 Este botón NO existe en la ficha de una póliza de la CARTERA, y no es un olvido: lo que entra por CIMA es el registro de la correduría y"
@@ -3440,7 +3440,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3d5c2f9ccf8"
+      "hash": "8eff45dde594"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/FilaDeclarada.tsx",
@@ -4369,7 +4369,7 @@
           "exportada": true,
           "params": "_req: Request, ctx: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 139,
+          "linea": 147,
           "resumen": "Quitar de la bóveda una póliza que aportó el propio cliente. ───────────────────────────────────────────────────────────────────────────── 🚨 SOLO TOCA `portal_poliza_declarada`, Y ESO ES EL PERMISO. "
         }
       ],
@@ -4377,7 +4377,7 @@
         "next"
       ],
       "rutaApi": "/api/polizas/[id]",
-      "hash": "2b97a5e8bce0"
+      "hash": "285dc93d0d62"
     },
     {
       "ruta": "apps/asegura-portal/app/api/polizas/route.ts",
@@ -14509,7 +14509,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is string",
-          "linea": 150
+          "linea": 163
         },
         {
           "nombre": "esParteEstado",
@@ -14517,7 +14517,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is ParteEstado",
-          "linea": 154
+          "linea": 167
         },
         {
           "nombre": "limiteParte",
@@ -14525,7 +14525,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "number",
-          "linea": 159,
+          "linea": 172,
           "resumen": "`limite` acotado. Un `0` o un `-1` que se colara traería la lista vacía y se leería como «no hay partes»."
         },
         {
@@ -14534,7 +14534,7 @@
           "exportada": false,
           "params": "c: { nombre: string | null; apellidos: string | null }",
           "retorno": "string | null",
-          "linea": 166,
+          "linea": 179,
           "resumen": "Nombre visible de una ficha. Vacío ⇒ `null`: una cadena en blanco no es un nombre."
         },
         {
@@ -14543,7 +14543,7 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<Map<string, string | null>>",
-          "linea": 171
+          "linea": 184
         },
         {
           "nombre": "fechaIso",
@@ -14551,7 +14551,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 215,
+          "linea": 236,
           "resumen": "Las columnas `date` de Postgres llegan a medianoche UTC."
         },
         {
@@ -14560,7 +14560,7 @@
           "exportada": false,
           "params": "correduriaId: string, parteIds: string[],",
           "retorno": "Promise<Map<string, AdjuntoDelParte[]> | null>",
-          "linea": 232,
+          "linea": 253,
           "resumen": "Los adjuntos de un lote de partes, agrupados por parte. 🚨 Devuelve `null` cuando la consulta FALLA, y ese `null` se propaga a cada parte tal cual. Un `Map` vacío se pintaría como «no adjuntó nada», q"
         },
         {
@@ -14569,7 +14569,7 @@
           "exportada": false,
           "params": "p: FilaParte, ctx: { vinculos: Map<string, string> titulares: Map<string, string> nombres: Map<string, string | null> /** `null` = la consulta de documentos falló para TODO el lote. */ adjuntos: Map<string, AdjuntoDelParte[]> | null hoy: Da",
           "retorno": "PartePortal",
-          "linea": 279,
+          "linea": 300,
           "resumen": "Monta la salida del puerto. `titulares` trae el dueño de cada `polizaId` que había que comparar; que falte una que se pidió es un error de quien llama, no un `null` (ver `listarPartes`)."
         },
         {
@@ -14578,7 +14578,7 @@
           "exportada": false,
           "params": "correduriaId: string, filas: FilaParte[], hoy: Date",
           "retorno": "Promise<PartePortal[]>",
-          "linea": 331,
+          "linea": 364,
           "resumen": "Resuelve el contexto (vínculos, titulares, nombres) de un lote de partes y los monta."
         },
         {
@@ -14587,7 +14587,7 @@
           "exportada": true,
           "params": "correduriaId: string, f: FiltrosPartes = {}, hoy: Date = new Date()",
           "retorno": "Promise<PartePortal[]>",
-          "linea": 370,
+          "linea": 403,
           "resumen": "La bandeja. Lanza si la cartera no se puede leer o si un parte apunta a una póliza que no está en esta correduría: quien llama lo convierte en `{ estado:'error', causa }`, nunca en una lista vacía. `c"
         },
         {
@@ -14596,7 +14596,7 @@
           "exportada": true,
           "params": "de: ParteEstado, a: ParteEstado",
           "retorno": "boolean",
-          "linea": 411
+          "linea": 444
         },
         {
           "nombre": "fallo",
@@ -14604,7 +14604,7 @@
           "exportada": false,
           "params": "error: Exclude<ResultadoMoverParte, { ok: true }>['error'], status: 400 | 404 | 409",
           "retorno": "ResultadoMoverParte",
-          "linea": 427
+          "linea": 460
         },
         {
           "nombre": "cadena",
@@ -14612,7 +14612,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 429
+          "linea": 462
         },
         {
           "nombre": "anotarHistorial",
@@ -14620,7 +14620,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 444,
+          "linea": 477,
           "resumen": "Anota el movimiento en la bitácora de la ficha (`historial_interno`, tipo `siniestro`) — la misma que pinta la carpeta «Historial» de la ficha. Best-effort **pero no mudo**: si falla, el cambio de est"
         },
         {
@@ -14629,7 +14629,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: EntradaMoverParte",
           "retorno": "Promise<ResultadoMoverParte>",
-          "linea": 464,
+          "linea": 497,
           "resumen": "Mueve el estado de un parte. `abierto_en_compania` exige un `siniestroId` que EXISTA en esta correduría: es el único estado que autoriza a decirle al cliente que su compañía lo sabe, y sin siniestro d"
         }
       ],
@@ -14637,7 +14637,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "b3e763d27dee"
+      "hash": "a0288976a88a"
     },
     {
       "ruta": "apps/asegura/lib/pii-estado.ts",
@@ -59924,7 +59924,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 194
+          "linea": 195
         },
         {
           "nombre": "espejoDe",
@@ -59932,16 +59932,16 @@
           "exportada": false,
           "params": "c: ContactoFicha, contactos: ContactosCliente | null",
           "retorno": "",
-          "linea": 206,
+          "linea": 207,
           "resumen": "El principal espejado en `clientes.telefono/email`, que es lo ÚNICO que hay cuando la lista de contactos no se ha podido leer. Con la lista delante NO se mezcla: el principal ya está dentro, y pintarl"
         },
         {
           "nombre": "Direccion",
           "kind": "function",
           "exportada": false,
-          "params": "{ c }: { c: ContactoFicha }",
+          "params": "{ clienteId, c }: { clienteId: string; c: ContactoFicha }",
           "retorno": null,
-          "linea": 227,
+          "linea": 228,
           "resumen": "Dónde vive la ficha. El sitio (CP + ciudad + provincia) NO se concatena a pelo: lo lee `leerSitio`, que solo afirma lo que se sostiene y devuelve lo que se contradice como reparos. 🚨 Medido el 05/09/"
         },
         {
@@ -59950,7 +59950,7 @@
           "exportada": false,
           "params": "{ clienteId, nombre }: { clienteId: string; nombre: string }",
           "retorno": null,
-          "linea": 278,
+          "linea": 300,
           "resumen": "¿Este cliente entra al portal (`apps/asegura-portal`) a ver sus seguros? Y si no, ¿se le puede invitar? 🚨 Por qué esto PREGUNTA antes de ofrecer el botón. El portal vincula a una persona con su ficha"
         },
         {
@@ -59959,8 +59959,8 @@
           "exportada": false,
           "params": "{ ficha }: { ficha: Ficha }",
           "retorno": null,
-          "linea": 432,
-          "resumen": "`EditarCliente` son ~1.115px de campos permanentes que no dependen de los datos del cliente, en una pestaña que se abre para leer un teléfono. Se pliega — pero plegar NO puede esconder trabajo: lo que"
+          "linea": 458,
+          "resumen": "La IDENTIDAD (DNI, nombre, fecha de nacimiento) son campos permanentes que no dependen de los datos del cliente, en una pestaña que se abre para leer un teléfono. Se pliega — pero plegar NO puede esco"
         },
         {
           "nombre": "tipoPersonaDe",
@@ -59968,7 +59968,7 @@
           "exportada": false,
           "params": "ficha: Ficha",
           "retorno": "'fisica' | 'juridica' | null",
-          "linea": 482,
+          "linea": 506,
           "resumen": "Qué es la ficha, para ofrecer primero los vínculos de empresa en una sociedad. Solo se afirma con lo que asegura manda: `null` es «no se sabe», y adivinarlo por el nombre es justo lo que la regla de i"
         },
         {
@@ -59977,7 +59977,7 @@
           "exportada": false,
           "params": "{ papel, quien, linea, ocupado, onQuitar }: { papel: { rol: string; etiqueta: string | null } quien: string linea: Coincidencia ocupado: string | null onQuitar: (fila: IntervinienteFicha, quien: string, dondePoliza: string) => void }",
           "retorno": null,
-          "linea": 491,
+          "linea": 515,
           "resumen": "Un papel («conductor ocasional del 1234ABC») con lo que se puede hacer con él."
         },
         {
@@ -59986,7 +59986,7 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaQuitarInterviniente, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 555
+          "linea": 579
         },
         {
           "nombre": "lineaDe",
@@ -59994,7 +59994,7 @@
           "exportada": false,
           "params": "persona: PersonaMinima, rol: string, etiqueta: string | null, filas: IntervinienteFicha[], idsPorEtiqueta: Map<string, string[]>,",
           "retorno": "Coincidencia",
-          "linea": 594
+          "linea": 618
         },
         {
           "nombre": "esLaMisma",
@@ -60002,7 +60002,7 @@
           "exportada": false,
           "params": "fila: IntervinienteFicha, persona: PersonaMinima",
           "retorno": "boolean",
-          "linea": 618,
+          "linea": 642,
           "resumen": "¿Esta fila es de esta persona? Identificador primero (la ficha enlazada) y solo se cae al nombre cuando NINGUNA de las dos lo tiene. Dos fichas distintas no se funden jamás, coincida lo que coincida e"
         },
         {
@@ -60011,7 +60011,7 @@
           "exportada": false,
           "params": "n: string | null",
           "retorno": "string | null",
-          "linea": 625
+          "linea": 649
         },
         {
           "nombre": "papelesDe",
@@ -60019,7 +60019,7 @@
           "exportada": false,
           "params": "p: { papeles: { rol: string; polizas: string[] }[] }",
           "retorno": "",
-          "linea": 631,
+          "linea": 655,
           "resumen": "Los papeles de una persona, uno por póliza (que es la unidad que se quita)."
         },
         {
@@ -60028,13 +60028,13 @@
           "exportada": false,
           "params": "ficha: Ficha",
           "retorno": "Map<string, string[]>",
-          "linea": 643,
+          "linea": 667,
           "resumen": "Etiqueta de póliza → sus ids. Es una lista porque dos pólizas pueden rotularse igual."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c3d2946f4f37"
+      "hash": "0791cdb1dd17"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabPolizas.tsx",
@@ -60488,25 +60488,26 @@
       "ruta": "apps/plataforma/app/(usuario)/correduria/EditarCliente.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
-        "EditarCliente"
+        "EditarCliente",
+        "EditarDireccion"
       ],
       "funciones": [
         {
           "nombre": "EditarCliente",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId, identidad, contacto, documentos, }: { clienteId: string identidad: IdentidadFicha | null contacto: { direccion: string | null direccionIlegible: boolean codigoPostal: string | null ciudad: string | null provincia: string | null",
+          "params": "{ clienteId, identidad, documentos, }: { clienteId: string identidad: IdentidadFicha | null documentos: DocumentoResumen[] | null }",
           "retorno": null,
-          "linea": 45,
-          "resumen": "Editar los datos de un cliente de la correduría, desde la ficha de plataforma. Dos bloques con dos reglas distintas (dictado de Alberto, 02/09/2026): · Dirección / CP / ciudad / provincia / notas: lib"
+          "linea": 46,
+          "resumen": "Editar la IDENTIDAD de un cliente de la correduría, desde la ficha de plataforma: DNI, nombre, apellidos y fecha de nacimiento, y SOLO con un DNI recibido en la ficha — «se pide documentado» (dictado "
         },
         {
-          "nombre": "BloqueDireccion",
+          "nombre": "EditarDireccion",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "{ clienteId, contacto }: { clienteId: string contacto: { direccion: string | null; direccionIlegible: boolean; codigoPostal: string | null; ciudad: string | null; provincia: string | null } }",
           "retorno": null,
-          "linea": 74
+          "linea": 66
         },
         {
           "nombre": "BloqueIdentidad",
@@ -60514,7 +60515,7 @@
           "exportada": false,
           "params": "{ clienteId, identidad, documentos }: { clienteId: string identidad: IdentidadFicha | null documentos: DocumentoResumen[] | null }",
           "retorno": null,
-          "linea": 181
+          "linea": 172
         },
         {
           "nombre": "Aviso",
@@ -60522,7 +60523,7 @@
           "exportada": false,
           "params": "{ r, ok, ocupado, onForzar, textoForzar }: { r: ResultadoEscritura | null ok: string ocupado: boolean onForzar?: () => void textoForzar?: string }",
           "retorno": null,
-          "linea": 350
+          "linea": 341
         },
         {
           "nombre": "Campo",
@@ -60530,7 +60531,7 @@
           "exportada": false,
           "params": "{ label, mal, ayuda, children }: { label: string; mal?: boolean; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 397
+          "linea": 388
         }
       ],
       "tablas": [
@@ -60538,7 +60539,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6a63234736db"
+      "hash": "10624287d586"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/EvolucionPrima.tsx",
@@ -61126,7 +61127,7 @@
           "exportada": false,
           "params": "{ valor, pregunta, si, no, }: { valor: boolean | null pregunta: string si: { texto: string; tono: 'negativo' | 'aviso' } no: string }",
           "retorno": null,
-          "linea": 473,
+          "linea": 487,
           "resumen": "🚨 Un tri-estado, con sus TRES pintados. `true` y `false` son respuestas del cliente y se pintan como tales; `null` es un hueco y se pinta como hueco (borde discontinuo), con la pregunta dentro para q"
         },
         {
@@ -61135,12 +61136,12 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 501
+          "linea": 515
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "09e13b6ef9ab"
+      "hash": "388d77ddd60b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/page.tsx",
@@ -88528,7 +88529,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 113
+          "linea": 124
         },
         {
           "nombre": "entero",
@@ -88536,7 +88537,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 118,
+          "linea": 129,
           "resumen": "Entero finito o `null`. Un `null` del puerto se QUEDA en null."
         },
         {
@@ -88545,7 +88546,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 130,
+          "linea": 141,
           "resumen": "🚨 El tri-estado, en su única puerta. Solo un booleano de verdad es una respuesta. Cualquier otra cosa —campo ausente, `null`, una cadena, un 0— es «no lo ha contestado», y se queda en `null`. Nunca `"
         },
         {
@@ -88554,7 +88555,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "PersonaParte | null",
-          "linea": 134
+          "linea": 145
         },
         {
           "nombre": "plazo",
@@ -88562,7 +88563,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "PlazoParte | null",
-          "linea": 145
+          "linea": 156
         },
         {
           "nombre": "leerParte",
@@ -88570,7 +88571,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "ParteSiniestro | null",
-          "linea": 164,
+          "linea": 175,
           "resumen": "Una fila del puerto → `ParteSiniestro`, o `null` si no tiene forma de parte. Se exige `id` y un `estado` CONOCIDO: el estado decide qué se pinta y qué botones se ofrecen, así que un estado que no se e"
         },
         {
@@ -88579,7 +88580,7 @@
           "exportada": true,
           "params": "partes: readonly ParteSiniestro[]",
           "retorno": "ParteSiniestro[]",
-          "linea": 195,
+          "linea": 211,
           "resumen": "Los partes que nadie ha mirado todavía. Es lo que pinta la bandeja."
         },
         {
@@ -88588,7 +88589,7 @@
           "exportada": true,
           "params": "partes: readonly ParteSiniestro[]",
           "retorno": "ParteSiniestro[]",
-          "linea": 206,
+          "linea": 222,
           "resumen": "Orden de trabajo: primero el que lleva más tiempo esperando. Un parte sin plazo calculable NO se pone el primero (no se sabe que sea urgente) ni desaparece: va al final y la pantalla dice que su plazo"
         },
         {
@@ -88597,7 +88598,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaPartes",
-          "linea": 239
+          "linea": 255
         },
         {
           "nombre": "interpretarEscrituraParte",
@@ -88605,7 +88606,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaEscrituraParte",
-          "linea": 285
+          "linea": 301
         },
         {
           "nombre": "textoMotivoParte",
@@ -88613,7 +88614,7 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 298,
+          "linea": 314,
           "resumen": "El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
@@ -88622,7 +88623,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 323
+          "linea": 339
         },
         {
           "nombre": "cabeceras",
@@ -88630,7 +88631,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Record<string, string> | null",
-          "linea": 327
+          "linea": 343
         },
         {
           "nombre": "llamar",
@@ -88638,7 +88639,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit",
           "retorno": "Promise<Reenvio>",
-          "linea": 334
+          "linea": 350
         },
         {
           "nombre": "partesAsegura",
@@ -88646,7 +88647,7 @@
           "exportada": true,
           "params": "filtros: { estado?: string; clienteId?: string; limite?: number } = {}",
           "retorno": "Promise<Reenvio>",
-          "linea": 351,
+          "linea": 367,
           "resumen": "`GET /api/operador/partes?estado=&clienteId=&limite=` — la bandeja."
         },
         {
@@ -88655,13 +88656,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 361,
+          "linea": 377,
           "resumen": "`PATCH` — `{ id, estado, siniestroId?, motivoDescarte?, actor }`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3e7aa34be02d"
+      "hash": "8756194cc063"
     },
     {
       "ruta": "apps/plataforma/lib/pasarela.ts",
@@ -119961,24 +119962,73 @@
     {
       "ruta": "packages/module-seguros-portal/src/poliza-borrable.ts",
       "ambito": "packages/module-seguros-portal",
-      "resumen": "¿Puede el CLIENTE quitar de su bóveda una póliza que añadió él? ───────────────────────────────────────────────────────────────────────────── 🚨 LA LÍNEA QUE SEPARA LAS DOS LISTAS, Y POR QUÉ ES ESTRUCTURAL. En «Mis seguros» conviven dos cosas que para quien mira son lo mismo —«un seguro»— y que para",
+      "resumen": "¿Puede el CLIENTE quitar de su bóveda una póliza que añadió él, y qué hay que hacer antes con los partes de siniestro que colgaban de ella? ───────────────────────────────────────────────────────────────────────────── 🚨 LA LÍNEA QUE SEPARA LAS DOS LISTAS, Y POR QUÉ ES ESTRUCTURAL. En «Mis seguros» ",
       "exporta": [
-        "puedeBorrarDeclarada"
+        "parteEnCompania",
+        "puedeBorrarDeclarada",
+        "avisoPartesConservados",
+        "fotoDeLaPoliza",
+        "describirPolizaDesligada"
       ],
       "funciones": [
+        {
+          "nombre": "parteEnCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: ParteDePoliza",
+          "retorno": "boolean",
+          "linea": 82,
+          "resumen": "Un parte está EN LA COMPAÑÍA si el corredor ya lo abrió allí o si consta el siniestro real. Se miran las dos cosas y no solo el estado: el `siniestroId` puede llegar por otra vía, y basta uno de los d"
+        },
         {
           "nombre": "puedeBorrarDeclarada",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { partes: number }",
+          "params": "entrada: { partes: ParteDePoliza[] }",
           "retorno": "Borrabilidad",
-          "linea": 54,
-          "resumen": "`partes` es cuántos partes de siniestro apuntan a esa póliza, en CUALQUIER estado. También cuentan los descartados: un parte descartado sigue siendo algo que esa persona nos contó, y sin la póliza det"
+          "linea": 92,
+          "resumen": "`partes` son TODOS los partes que cuelgan de esa póliza, en cualquier estado. También cuentan los descartados: un parte descartado sigue siendo algo que esa persona nos contó, así que se congela igual"
+        },
+        {
+          "nombre": "avisoPartesConservados",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuantos: number",
+          "retorno": "string | null",
+          "linea": 108,
+          "resumen": "Lo que la pantalla le dice a quien está a punto de confirmar, cuando esa póliza tenía partes. No es decoración: sin esta frase, alguien que declaró un siniestro puede creer que al quitar la póliza ret"
+        },
+        {
+          "nombre": "fotoDeLaPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: FotoPolizaDesligada",
+          "retorno": "FotoPolizaDesligada | null",
+          "linea": 134,
+          "resumen": "🚨 Si la póliza no tenía NI compañía NI número NI ramo, no se escribe una foto vacía: se devuelve `null`. Tres columnas a `null` y «no se rellenaron nunca» se leen igual en la BD, pero una foto vacía "
+        },
+        {
+          "nombre": "vacioANulo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "string | null",
+          "linea": 145,
+          "resumen": "`''` y `' '` son «no lo sé» escritos con espacios: nunca se guardan como dato."
+        },
+        {
+          "nombre": "describirPolizaDesligada",
+          "kind": "function",
+          "exportada": true,
+          "params": "foto: FotoPolizaDesligada | null",
+          "retorno": "string | null",
+          "linea": 158,
+          "resumen": "Cómo se nombra en pantalla una póliza que ya no existe. Se usa en la bandeja del corredor, donde el parte tiene que seguir diciendo DE QUÉ habla. `null` cuando no hay foto: la pantalla dirá «la quitó "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8a1e47278201"
+      "hash": "b5be3e9d7a4c"
     },
     {
       "ruta": "packages/module-seguros-portal/src/poliza-leida.ts",
@@ -128258,6 +128308,6 @@
   ],
   "resumen": {
     "archivos": 3166,
-    "funciones": 9656
+    "funciones": 9661
   }
 }
