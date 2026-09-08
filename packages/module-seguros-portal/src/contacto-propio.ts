@@ -94,3 +94,78 @@ export function textoHistorialContactoPropio(campos: readonly string[]): string 
     'No se ha comunicado a ninguna compañía: esto es su dirección de contacto, no la de sus pólizas.'
   )
 }
+
+// ─── «Comprueba tus datos de contacto» (08/09/2026) ──────────────────────────
+//
+// El portal NO descifra PII: lo que enseña son MÁSCARAS que calcula asegura con
+// estas funciones y manda por el puente. Lo justo para que la persona reconozca
+// el dato («¿sigue siendo el que acaba en 512?») sin que el valor entero cruce
+// hacia la app pública. Y una confirmación tiene tres estados, no dos: `nunca`
+// (NULL: todo el volcado nace así) NO es `caducada` — un «no se sabe» no se
+// disfraza de «se supo y ya es viejo».
+
+/** Solo los 3 últimos dígitos: `··· ··· 512`. Con menos de 5 dígitos, nada. */
+export function enmascararTelefono(t: string): string {
+  const digitos = t.replace(/\D/g, '')
+  if (digitos.length < 5) return '···'
+  return `··· ··· ${digitos.slice(-3)}`
+}
+
+/** Primera letra + `···` + dominio: `m···@gmail.com`. Sin `@`, nada. */
+export function enmascararEmail(e: string): string {
+  const s = e.trim()
+  const arroba = s.indexOf('@')
+  if (arroba < 1 || arroba === s.length - 1) return '···'
+  return `${s[0]}···@${s.slice(arroba + 1)}`
+}
+
+/**
+ * Primeras 6 letras de la calle + `···`, y «CP ciudad» cuando existan:
+ * `Calle ···, 41003 Sevilla`. Todo vacío → `null` (no hay nada que reconocer).
+ */
+export function enmascararDireccion(
+  direccion: string | null,
+  cp: string | null,
+  ciudad: string | null,
+): string | null {
+  const calle = (direccion ?? '').trim()
+  const sitio = [cp, ciudad]
+    .map((v) => (v ?? '').trim())
+    .filter((v) => v !== '')
+    .join(' ')
+  const partes: string[] = []
+  if (calle !== '') partes.push(`${calle.slice(0, 6)}···`)
+  if (sitio !== '') partes.push(sitio)
+  return partes.length === 0 ? null : partes.join(', ')
+}
+
+/** Cada cuánto se le vuelve a preguntar. */
+export const DIAS_VIGENCIA_CONFIRMACION_CONTACTO = 365
+
+export type EstadoConfirmacionContacto = 'nunca' | 'vigente' | 'caducada'
+
+/**
+ * `nunca` = NULL (no consta que lo haya mirado jamás) · `vigente` = sello de
+ * hace menos de 365 días · `caducada` = sello más viejo. Un sello en el FUTURO
+ * (reloj mal puesto) se trata como vigente: no se le pide confirmar dos veces
+ * por un fallo nuestro.
+ */
+export function estadoConfirmacion(confirmadoEn: Date | null, hoy: Date): EstadoConfirmacionContacto {
+  if (!confirmadoEn || Number.isNaN(confirmadoEn.getTime())) return 'nunca'
+  const dias = (hoy.getTime() - confirmadoEn.getTime()) / 86_400_000
+  return dias < DIAS_VIGENCIA_CONFIRMACION_CONTACTO ? 'vigente' : 'caducada'
+}
+
+/** `true` solo si hay sello y tiene menos de 365 días. NULL → `false`. */
+export function confirmacionContactoVigente(confirmadoEn: Date | null, hoy: Date): boolean {
+  return estadoConfirmacion(confirmadoEn, hoy) === 'vigente'
+}
+
+/**
+ * La línea de `historial_interno` cuando el cliente dice «siguen igual». Sin
+ * valores, por la misma razón que `textoHistorialContactoPropio`: el historial
+ * no es sitio para repetir el teléfono de nadie.
+ */
+export function textoHistorialConfirmacionContacto(): string {
+  return 'El cliente confirmó desde el portal que sus datos de contacto siguen siendo correctos.'
+}
