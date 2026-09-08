@@ -13,6 +13,9 @@ paths = [
   # Falso positivo: enablebanking.ts construye la cabecera "-----BEGIN PRIVATE KEY-----"
   # alrededor de una variable de runtime (la clave real viene de env); no hay material de clave.
   '''apps/plataforma/lib/enablebanking\.ts''',
+  # Mismo falso positivo, copia de ese cargador para la cuenta de servicio de Google del cron SEO
+  # (08/09/2026): monta la armadura PEM alrededor de un cuerpo base64 que llega por env. Sin clave.
+  '''apps/plataforma/lib/seo-correduria/google-sa\.ts''',
   # Mismo falso positivo: la Edge Function rescatada `drive-upload-factura` hace
   # `sa.private_key.replace(/-----BEGIN PRIVATE KEY-----|…/g, '')` para quitar la cabecera PEM
   # de una clave que viene de env. Es la cabecera literal dentro de un regex, no material de clave.

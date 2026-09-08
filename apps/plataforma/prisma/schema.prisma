@@ -535,3 +535,20 @@ model TradingCarteraRealTrack {
   @@index([cuentaId, fecha(sort: Desc)])
   @@map("trading_cartera_real_track")
 }
+
+// Foto semanal de las fuentes del agente SEO de la correduría (grupoasegura.es): una fila por
+// fuente y semana con TRI-ESTADO. `estado != ok` NO es «cero»: es que no se leyó. Ver
+// docs/superpowers/specs/2026-09-08-seo-correduria-conectores-design.md
+model SeoCorreduriaSemana {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  semana   DateTime @db.Date
+  fuente   String
+  estado   String
+  detalle  String?
+  datos    Json?
+  creadoEn DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([semana, fuente])
+  @@index([fuente, semana(sort: Desc)])
+  @@map("seo_correduria_semana")
+}
