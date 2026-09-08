@@ -43,15 +43,21 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   const [estado, setEstado] = useState<'reposo' | 'subiendo' | 'listo' | 'error'>('reposo')
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [manual, setManual] = useState(false)
-  // De quién es la póliza que se va a subir. Se pregunta ANTES de elegir el
-  // fichero porque la respuesta viaja en el mismo envío: preguntarla después
-  // dejaría filas ya guardadas sin respuesta cuando alguien cierra la pestaña,
-  // y esas serían indistinguibles de un «no se preguntó».
+  // ¿Es de una empresa? Se pregunta ANTES de elegir el fichero porque la
+  // respuesta viaja en el mismo envío: preguntarla después dejaría filas ya
+  // guardadas sin respuesta cuando alguien cierra la pestaña.
   //
-  // 🚨 Arranca en `null` — sin respuesta — y NO en «mía». Un valor por defecto
-  // aquí no es una comodidad: es responder por el cliente, y de esa respuesta
-  // depende contra qué ficha se comprueba luego si la correduría ya la lleva.
-  const [deQuien, setDeQuien] = useState<'propio' | 'empresa' | null>(null)
+  // Arranca en «no» —póliza personal— y NO bloquea nada. Alberto, 08/09/2026:
+  // «la mayoría no tiene empresa»: obligar a todo el mundo a contestar «¿de
+  // quién es?» antes de poder subir nada era ponerle una puerta al 95 % para
+  // atender al 5 %. La casilla sigue a la vista, así que quien sube la de su
+  // sociedad la marca y entonces sí se le pide cuál (nombre + CIF).
+  // Lo que se guarda si no la marca es «propio», y eso se coteja contra su
+  // ficha personal — el coste asumido es que una póliza de empresa subida sin
+  // marcar la casilla puede salir como oportunidad aunque la sociedad ya la
+  // tenga con la casa; lo revisa el corredor, que ve la fila igualmente.
+  const [esDeEmpresa, setEsDeEmpresa] = useState(false)
+  const deQuien: 'propio' | 'empresa' = esDeEmpresa ? 'empresa' : 'propio'
   // Se recuerda entre subidas porque quien trae las pólizas de su empresa trae
   // varias seguidas. Se recuerda VISIBLE: el control sigue en pantalla con la
   // respuesta marcada, así que cambiarla es un clic y no hay nada oculto.
@@ -68,9 +74,8 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     setGuardadaAMano(null)
     const body = new FormData()
     body.append('documento', f)
-    // Solo se manda lo que la persona ha CONTESTADO. Sin respuesta no se manda
-    // nada y la fila queda con «no se preguntó», que es la verdad.
-    if (deQuien !== null) body.append('titularTipo', deQuien)
+    // Siempre viaja: «propio» si no ha marcado la casilla, «empresa» si sí.
+    body.append('titularTipo', deQuien)
     if (deQuien === 'empresa') {
       body.append('titularEmpresaNombre', empresa)
       if (cif.trim() !== '') body.append('titularEmpresaCif', cif)
@@ -102,10 +107,9 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   }
 
   const subiendo = estado === 'subiendo'
-  // No se puede subir sin contestar, y si dice «de mi empresa» hace falta CUÁL:
-  // «de mi empresa» sin nombre no identifica ninguna empresa (la BD lo rechaza
-  // con un CHECK, y llegar hasta allí devolvería un error de Postgres en vez de
-  // decir qué falta).
+  // Si dice «de mi empresa» hace falta CUÁL: «de mi empresa» sin nombre no
+  // identifica ninguna empresa (la BD lo rechaza con un CHECK, y llegar hasta
+  // allí devolvería un error de Postgres en vez de decir qué falta).
   // 🚨 Con «de mi empresa» hacen falta las DOS cosas, y el CIF además VÁLIDO.
   // El nombre es la etiqueta; el CIF es la identidad. Sin él, «Transportes
   // Ejemplo SL» y «TRANSPORTES EJEMPLO, S.L.» son dos empresas distintas, y con
@@ -128,77 +132,65 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
         contratamos ni la gestionamos por ti.
       </p>
 
-      {(
-        <fieldset className="de-quien" disabled={subiendo}>
-          <legend>¿De quién es esta póliza?</legend>
-          <div className="de-quien-opciones">
+      <div className="de-quien">
+        <label className="de-quien-casilla">
+          <input
+            type="checkbox"
+            checked={esDeEmpresa}
+            onChange={(e) => setEsDeEmpresa(e.target.checked)}
+            disabled={subiendo}
+          />
+          Esta póliza es de una empresa, no mía
+        </label>
+        {esDeEmpresa && (
+          <div className="de-quien-empresa">
             <label>
+              Nombre de la empresa
               <input
-                type="radio"
-                name="de-quien"
-                checked={deQuien === 'propio'}
-                onChange={() => setDeQuien('propio')}
+                type="text"
+                className="campo"
+                value={empresa}
+                onChange={(e) => setEmpresa(e.target.value)}
+                placeholder="Ej.: Transportes Ejemplo, S.L."
+                disabled={subiendo}
               />
-              Mía
             </label>
             <label>
+              CIF <span className="tenue">(está en la primera página de la póliza)</span>
               <input
-                type="radio"
-                name="de-quien"
-                checked={deQuien === 'empresa'}
-                onChange={() => setDeQuien('empresa')}
+                type="text"
+                className="campo"
+                value={cif}
+                onChange={(e) => setCif(e.target.value)}
+                placeholder="B12345678"
+                aria-invalid={cifMal || undefined}
+                disabled={subiendo}
               />
-              De mi empresa
+              {/* Se dice en cuanto se ve, no al enviar: la persona tiene el
+                  papel delante y puede volver a mirarlo. */}
+              {cifMal && (
+                <span className="editor-error" role="alert">
+                  Ese CIF no cuadra. Cópialo tal cual aparece en la póliza.
+                </span>
+              )}
             </label>
+            {/* Se dice lo que ESTO hace y lo que NO hace. Sin esta línea, quien
+                escribe el nombre de su empresa se cree que a partir de ahora
+                la correduría gestiona sus seguros, y no es así. */}
+            <p className="suave" style={{ fontSize: 13, margin: 0 }}>
+              Lo guardamos como una nota tuya para saber que esta póliza no es personal. No damos de alta
+              a la empresa ni gestionamos sus seguros por decirlo aquí.
+            </p>
           </div>
-          {deQuien === 'empresa' && (
-            <div className="de-quien-empresa">
-              <label>
-                Nombre de la empresa
-                <input
-                  type="text"
-                  className="campo"
-                  value={empresa}
-                  onChange={(e) => setEmpresa(e.target.value)}
-                  placeholder="Ej.: Transportes Ejemplo, S.L."
-                />
-              </label>
-              <label>
-                CIF <span className="tenue">(está en la primera página de la póliza)</span>
-                <input
-                  type="text"
-                  className="campo"
-                  value={cif}
-                  onChange={(e) => setCif(e.target.value)}
-                  placeholder="B12345678"
-                  aria-invalid={cifMal || undefined}
-                />
-                {/* Se dice en cuanto se ve, no al enviar: la persona tiene el
-                    papel delante y puede volver a mirarlo. */}
-                {cifMal && (
-                  <span className="editor-error" role="alert">
-                    Ese CIF no cuadra. Cópialo tal cual aparece en la póliza.
-                  </span>
-                )}
-              </label>
-              {/* Se dice lo que ESTO hace y lo que NO hace. Sin esta línea, quien
-                  escribe el nombre de su empresa se cree que a partir de ahora
-                  la correduría gestiona sus seguros, y no es así. */}
-              <p className="suave" style={{ fontSize: 13, margin: 0 }}>
-                Lo guardamos como una nota tuya para saber que esta póliza no es personal. No damos de alta
-                a la empresa ni gestionamos sus seguros por decirlo aquí.
-              </p>
-            </div>
-          )}
-        </fieldset>
-      )}
+        )}
+      </div>
 
       {!manual && (
         <div className="alta-acciones">
           <label
             className="boton-subir"
             aria-disabled={subiendo || !listoParaSubir}
-            title={listoParaSubir ? undefined : 'Dinos antes de quién es la póliza'}
+            title={listoParaSubir ? undefined : 'Dinos de qué empresa es (nombre y CIF)'}
           >
             {subiendo ? 'Leyendo el documento…' : 'Elegir PDF o foto'}
             <input
@@ -213,7 +205,7 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
             className="boton secundario"
             onClick={abrirManual}
             disabled={subiendo || !listoParaSubir}
-            title={listoParaSubir ? undefined : 'Dinos antes de quién es la póliza'}
+            title={listoParaSubir ? undefined : 'Dinos de qué empresa es (nombre y CIF)'}
           >
             Añadirla a mano
           </button>
@@ -221,8 +213,8 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
       )}
 
       {/* `listoParaSubir` bloquea los DOS caminos, no solo el del fichero: el
-          alta a mano guarda la misma fila y merece la misma respuesta. */}
-      {manual && listoParaSubir && deQuien !== null && (
+          alta a mano guarda la misma fila y merece la misma exigencia. */}
+      {manual && listoParaSubir && (
         <AnadirPoliza
           ramos={ramos}
           titular={{ tipo: deQuien, nombre: empresa, cif }}
