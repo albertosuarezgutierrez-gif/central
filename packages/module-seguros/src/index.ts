@@ -414,6 +414,7 @@ export {
   type FilaPlanContacto,
   type GrupoChoqueContacto,
   type CuentaContacto,
+  type Derivados,
   type PlanBackfillContacto,
 } from './backfill-contacto.ts'
 
@@ -510,3 +511,4 @@ export {
   idsDesconocidos,
 } from './normas.ts'
 export type { NormaCitable } from './normas.ts'
+export { nombreDePila } from './nombre-de-pila.ts'

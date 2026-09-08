@@ -18,16 +18,8 @@
 //    dos horas — a la 01:00 de Madrid en UTC son las 23:00 o las 00:00, o sea
 //    otro tramo del día. La zona entra como parámetro y NO se da por hecha.
 //
-// ── Medido antes de escribir `nombreDePila` (07/09/2026) ────────────────────
-//
-//   80 clientes vivos · **0 con coma** · 7 en mayúsculas · 21 de dos palabras
-//   · 1 con forma de sociedad
-//
-// Cero comas significa que el formato de la cartera es «Nombre Apellido1
-// Apellido2» y NO «APELLIDOS, NOMBRE». Por eso la primera palabra es el nombre
-// de pila. Si algún día entrara una ficha con coma, el corte sería al revés y
-// saludaríamos a la gente por su primer apellido: ese caso se detecta y se
-// devuelve `null`.
+// El porqué de `nombreDePila` (medición de la cartera incluida) vive con ella
+// en `module-seguros/src/nombre-de-pila.ts`.
 
 /** Los tres tramos, con el texto exacto que se pinta. */
 export const TRAMOS = ['Buenos días', 'Buenas tardes', 'Buenas noches'] as const
@@ -59,39 +51,6 @@ export function saludoPorHora(ahora: Date, zona: string): Tramo {
   return 'Buenas noches'
 }
 
-/** Palabras que delatan que la ficha es una sociedad, no una persona. */
-const FORMAS_SOCIETARIAS =
-  /\b(s\.?l\.?u?\.?|s\.?a\.?u?\.?|s\.?c\.?p?\.?|c\.?b\.?|s\.?l\.?n\.?e\.?|sociedad|comunidad|asociacion|asociación|fundacion|fundación)\b/i
-
-/**
- * El nombre de pila con el que saludar, o `null` si no se puede saber.
- *
- * Devuelve `null` —y la pantalla saluda sin nombre— cuando:
- *   · no hay nombre, o está en blanco;
- *   · trae una coma (formato «APELLIDOS, NOMBRE»: cortar por delante daría el
- *     apellido, y saludar a alguien por su apellido es peor que no saludar);
- *   · lleva dígitos o una forma societaria (es una empresa, no una persona);
- *   · la primera palabra tiene una sola letra (una inicial) o pasa de 20
- *     caracteres (no es un nombre, es otra cosa).
- *
- * 🚨 Un nombre compuesto («José María») se queda en «José». Es una pérdida
- * aceptada: sigue siendo su nombre y sigue siendo cierto. Lo que no se hace es
- * adivinar dónde acaba el nombre y empiezan los apellidos.
- */
-export function nombreDePila(nombre: string | null | undefined): string | null {
-  if (!nombre) return null
-  const limpio = nombre.trim().replace(/\s+/g, ' ')
-  if (limpio === '') return null
-  if (limpio.includes(',')) return null
-  if (/\d/.test(limpio)) return null
-  if (FORMAS_SOCIETARIAS.test(limpio)) return null
-
-  const primera = limpio.split(' ')[0]
-  if (primera.length < 2 || primera.length > 20) return null
-  // Solo letras (con acentos, ñ, guion y apóstrofo de nombres compuestos).
-  if (!/^[\p{L}][\p{L}'’-]*$/u.test(primera)) return null
-
-  // La cartera trae 7 de 80 fichas en MAYÚSCULAS. Gritar el nombre de alguien
-  // no es ameno, así que se normaliza siempre a inicial mayúscula.
-  return primera.charAt(0).toLocaleUpperCase('es-ES') + primera.slice(1).toLocaleLowerCase('es-ES')
-}
+// `nombreDePila` bajó a `@central/module-seguros` el 08/09/2026 (la usa también
+// el mensaje de WhatsApp de plataforma). Se re-exporta para no mover a nadie.
+export { nombreDePila } from '@central/module-seguros'

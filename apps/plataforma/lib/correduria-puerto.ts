@@ -886,7 +886,12 @@ export async function escribirBackfillDni(limite?: number): Promise<EscrituraBac
   }
 }
 
-/** Puro: separado para poder probarlo sin red. */
+/**
+ * Puro: separado para poder probarlo sin red. Para el backfill de CONTACTO la
+ * respuesta trae además `derivadosEscritos`/`derivadosRestantes` (las mitades
+ * del email); se suman a `escritos`/`restantes` para que el botón siga
+ * ofreciéndose mientras quede algo, sea el hash principal o una mitad.
+ */
 export function interpretarEscrituraBackfill(status: number, json: unknown): EscrituraBackfillDni {
   if (status === 401 || status === 403) {
     return { estado: 'error', motivo: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos)' }
@@ -900,8 +905,8 @@ export function interpretarEscrituraBackfill(status: number, json: unknown): Esc
   const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
   return {
     estado: 'ok',
-    escritos: n(j.escritos),
-    restantes: n(j.restantes),
+    escritos: n(j.escritos) + n(j.derivadosEscritos),
+    restantes: n(j.restantes) + n(j.derivadosRestantes),
     fallidos: Array.isArray(j.fallidos) ? j.fallidos.length : 0,
   }
 }
@@ -923,6 +928,8 @@ export type CuentaBackfillContacto = {
   rellenables: number
   /** Fichas que comparten email con otra. Sólo puede ser > 0 en email. */
   enChoque: number
+  /** Solo email: filas a las que les falta el índice del dominio o del usuario (búsqueda parcial). */
+  derivadosPendientes: number
 }
 
 export type PlanBackfillContacto =
@@ -936,6 +943,8 @@ export type PlanBackfillContacto =
       grupos: number
       /** Total de filas que se van a escribir (los dos campos, ficha + hijas). */
       rellenables: number
+      /** Filas de email a las que se les va a escribir alguna mitad. */
+      mitadesPendientes: number
     }
 
 export async function planBackfillContacto(): Promise<PlanBackfillContacto> {
@@ -970,6 +979,7 @@ export function interpretarPlanBackfillContacto(status: number, json: unknown): 
       noHasheables: n(c.noHasheables),
       rellenables: n(c.rellenables),
       enChoque: n(c.enChoque),
+      derivadosPendientes: n(c.derivadosPendientes),
     }
   }
   const resumen = (j.resumen ?? {}) as Record<string, unknown>
@@ -981,6 +991,7 @@ export function interpretarPlanBackfillContacto(status: number, json: unknown): 
     telefono,
     grupos: Array.isArray(j.choques) ? j.choques.length : 0,
     rellenables: n(j.restantes),
+    mitadesPendientes: n(j.derivadosRestantes),
   }
 }
 
