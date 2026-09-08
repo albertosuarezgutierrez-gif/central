@@ -25,13 +25,16 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         <NavPortal />
       </Suspense>
       <main className="portal-contenido">
-        {children}
-        {/* Al FINAL del contenido y en el flujo, no flotando: un elemento
-            `position: fixed` no desborda —se pone encima—, así que taparía la
-            última fila de la pantalla sin que ninguna medición de ancho lo
-            delatara. Y aquí dentro y no en la puerta: pedirle instalar a quien
-            todavía no ha entrado es ruido. */}
+        {/* ARRIBA del contenido (Alberto, 08/09/2026): abajo, detrás de las
+            pólizas, en el móvil quedaba fuera de la primera pantalla y nadie lo
+            veía — y en iPhone el aviso es lo ÚNICO que explica cómo instalar.
+            Cuesta una pantalla una sola vez: al descartarlo se recuerda.
+            En el flujo, no flotando: un elemento `position: fixed` no desborda
+            —se pone encima—, así que taparía una fila sin que ninguna medición
+            de ancho lo delatara. Y aquí dentro y no en la puerta: pedirle
+            instalar a quien todavía no ha entrado es ruido. */}
         <InstalarApp />
+        {children}
       </main>
     </div>
   )

@@ -2543,7 +2543,7 @@ h1 em {
   gap: 12px;
   grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  margin-top: 28px;
+  margin-bottom: 20px;
   padding: 14px 16px;
   background: var(--primary-light);
   border: 1px solid var(--border-soft);
