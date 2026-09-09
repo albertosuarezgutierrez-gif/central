@@ -16,11 +16,13 @@ import {
 } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
+import { leerMisDatos } from '@/lib/mis-datos'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
 import Calendario from './Calendario'
 import { FilaDeclarada } from './FilaDeclarada'
+import { FiltroVigencia } from './FiltroVigencia'
 import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
 import { HistorialSiniestros, RAMO, RecibosDePoliza } from './PolizaVista'
@@ -37,8 +39,7 @@ import {
 
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
-import { MiDireccion } from './MiDireccion'
-import { Sugerencia } from './Sugerencia'
+import { MisDatos } from './MisDatos'
 import { TusDatos } from './TusDatos'
 
 export const dynamic = 'force-dynamic'
@@ -160,7 +161,10 @@ export default async function Boveda({
   // vuelve a pedirlo — y aquí lo que corre por debajo es un plazo legal. El
   // `?? []` solo cubre el «no hay sesión», que en esta página es inalcanzable:
   // más arriba ya se redirigió a `/` si no la había.
-  const supresiones = ((await supresionesDelUsuario()) ?? []).map((s) => ({
+  //
+  // Solo se leen en la vista «Mis datos» (09/09/2026), que es donde se pintan:
+  // leerlas para quien entra a mirar el coche es una consulta que no se usa.
+  const supresiones = vista !== 'datos' ? [] : ((await supresionesDelUsuario()) ?? []).map((s) => ({
     id: s.id,
     recibidaEn: s.recibidaEn.toISOString(),
     estado: s.estado,
@@ -338,30 +342,34 @@ export default async function Boveda({
         </section>
       ))}
 
-      {/* El derecho de supresión (art. 17). Va aquí, dentro de la vista que la
-          persona abre por defecto y con el nombre que la política de privacidad
-          le da («Mis seguros → Tus datos»), y NO como una pestaña quinta: la
-          barra son cuatro por decisión de diseño. Y va en la pantalla, no solo
-          enlazado desde un texto legal: un derecho que solo se ejerce
-          escribiendo un correo es un derecho con peaje. */}
-      {/* La hoja para imprimir va DESPUÉS de la lista y antes de «Tus datos»:
-          se crea a partir de lo que se acaba de mirar, así que tiene sentido
-          justo debajo — y no es una quinta pestaña, que es lo que Alberto acaba
-          de quitar de la barra. */}
+      {/* La hoja para imprimir va DESPUÉS de la lista: se crea a partir de lo
+          que se acaba de mirar, así que tiene sentido justo debajo. (El derecho
+          de supresión, que iba detrás, vive desde el 09/09/2026 en la pestaña
+          «Mis datos», con el resto de lo que es sobre la persona y no sobre
+          sus seguros.) */}
       <section className="seccion" aria-labelledby="hojas-titulo">
         <p className="antetitulo">Para llevar encima</p>
         <h2 id="hojas-titulo">Tu hoja para imprimir</h2>
         <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
       </section>
 
-      {/* Va ANTES de «Tus datos» (la supresión) a propósito: corregir una calle
-          es lo que viene a hacer la gente; pedir el borrado de sus datos, no. */}
-      <MiDireccion />
+        </>
+      )}
 
-      <TusDatos inicial={supresiones} />
+      {/* ── Mis datos (09/09/2026) ─────────────────────────────────────────
+          Alberto: «añadiría pestaña mis datos, donde el cliente puede ver sus
+          datos de contacto (tlf, mail y dirección) pudiendo modificarlos». Lo
+          que hasta hoy colgaba al final de «Mis seguros» —la dirección de
+          contacto y el derecho de supresión— vive aquí, con su pestaña. Y la
+          sugerencia («¿Echas algo de menos?») subió a la barra de la cabecera.
 
-      {/* La última, porque no es de sus seguros: es sobre la pantalla. */}
-      <Sugerencia />
+          La lectura de la ficha va por el puente de asegura, que es quien
+          descifra: esta app sigue sin clave de PII. Si no se puede leer, la
+          pantalla lo DICE (ver `MisDatos`), no deja un hueco. */}
+      {vista === 'datos' && (
+        <>
+          <MisDatos lectura={await leerMisDatos(identidad.id)} />
+          <TusDatos inicial={supresiones} />
         </>
       )}
 
@@ -464,11 +472,17 @@ function Titular({
           lo fuera. Lo que sí necesita quien mira ahí es la fila, que ya lleva su
           chip de póliza ajena. */}
       {grupo !== 'autorizadas' && <ResumenTitular polizas={titular.polizas} hoy={hoy} />}
-      <ul className="polizas">
-        {titular.polizas.map((p) => (
-          <FilaPoliza key={p.id} p={p} deOtro={grupo === 'autorizadas' ? titular.nombre : null} />
-        ))}
-      </ul>
+      {/* Por defecto solo las EN VIGOR, con el filtro y el contador de las
+          escondidas por titular (09/09/2026; Alberto: «ocultar las canceladas
+          porque da confusión… un filtro por cada panel»). `pendiente` (sin
+          fecha, no se sabe) se enseña: lo que no se sabe no se esconde. */}
+      <FiltroVigencia
+        filas={titular.polizas.map((p) => ({
+          key: p.id,
+          enVigor: p.vigencia !== 'no_vigente',
+          nodo: <FilaPoliza key={p.id} p={p} deOtro={grupo === 'autorizadas' ? titular.nombre : null} />,
+        }))}
+      />
     </>
   )
 }

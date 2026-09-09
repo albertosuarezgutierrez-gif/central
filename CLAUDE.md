@@ -271,7 +271,7 @@ Al construir cualquier aviso a un tercero (limpieza, gestoría, huésped, conduc
 «¿lo he mandado?» sino **«¿en qué pantalla lo va a ver, y tengo cómo saber que está ahí?»**.
 
 ## Estilo de respuesta — regla global permanente
-**Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
+**No narres el trabajo: solo el resultado.** Durante una tarea no expliques lo que vas a hacer ni vayas relatando cada paso — trabaja y, al terminar, da UN resumen final sintético (qué se hizo, archivos, y solo si aplica: tests/pendiente). Sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular. Nada de listas exhaustivas de opciones que no vas a seguir. Si hace falta explicar un porqué, hazlo en una o dos frases dentro de ese resumen final. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
 
 ## 👀 Mira los PRs ABIERTOS antes de empezar — regla global permanente
 **Varias sesiones trabajan en este repo a la vez y no se ven entre sí.** Todas empujan con la
