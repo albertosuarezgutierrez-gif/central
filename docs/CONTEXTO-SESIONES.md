@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏠 La dirección del hogar dejaba de decir el CP dos veces (08/09/2026, PR pendiente).** Con
+  `PII_ENCRYPTION_KEY` ya puesta en el Vercel de `asegura-portal` (la añadió Alberto; el build que
+  la recogió es `d6a954bb`), la calle sale en claro — y con ella el defecto: **«MARINA GOLF 82,
+  11520 costa ballena, 11520 ROTA»**. `describirBien` componía `calle, cp localidad` a ciegas y la
+  calle del volcado a veces ya trae el CP. Nuevo `componerUbicacion()` con dos reglas ASIMÉTRICAS a
+  propósito: el **CP** se quita esté donde esté (cinco cifras, coincidencia casual imposible), la
+  **localidad** solo si la calle TERMINA con ella (si no, «Avenida de Sevilla 4, esc B» en Sevilla
+  perdería su ciudad). La calle se pinta TAL CUAL: no se normaliza nada. 4 cepos vistos en rojo —
+  y dos de ellos no vigilaban nada al primer intento (los fixtures usaban pueblos que no salían en
+  la calle), se rehicieron hasta que discriminaron.
+  ⚠️ **No se pudo medir el antes/después de las 9 direcciones reales**: van cifradas y esta sesión
+  no tiene la clave. Los fixtures son los dos casos que Alberto vio en pantalla.
 - **🔔 La campana de avisos del portal del cliente (08/09/2026).** Alberto: «un icono de campana de avisos,
   para autorizaciones, vencimientos, etc.». Entró: `lib/avisos.ts` (puro) + `GET /api/avisos` (`allSettled`) +
   `Campana.tsx`, globo con tres desenlaces (`n`·`n+`·`!`, nunca 0), enlaza y NO acepta, `setAppBadge`; sin tabla
