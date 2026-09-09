@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-09T10:55:37Z",
-  "sha": "882373fb643cb2de2cba56a341c874a275edd1c0",
+  "generadoEn": "2026-09-09T14:53:50Z",
+  "sha": "dc67e4dc2ec7d9feb1cbf9daa4b5418a40b93fc3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3523,7 +3523,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f4529eda5b6a"
+      "hash": "eb46f7daa670"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/HojasQr.tsx",
@@ -4080,7 +4080,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0f8b7d6e54d1"
+      "hash": "534efa5a858a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/NavPortal.tsx",
@@ -4696,7 +4696,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 39,
+          "linea": 36,
           "resumen": "el vencimiento al calendario). Un «Aceptar» en el panel sería aceptar sin leer, y duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. El panel se pone ENCIMA del contenido a propósito ("
         },
         {
@@ -4705,7 +4705,7 @@
           "exportada": false,
           "params": "{ datos, reintentar, cerrar, }: { datos: Avisos | 'error' | null reintentar: () => void cerrar: () => void }",
           "retorno": null,
-          "linea": 153
+          "linea": 135
         },
         {
           "nombre": "nombreFuente",
@@ -4713,7 +4713,7 @@
           "exportada": false,
           "params": "f: Avisos['fuentesIlegibles'][number]",
           "retorno": "string",
-          "linea": 207
+          "linea": 189
         },
         {
           "nombre": "IconoCampana",
@@ -4721,13 +4721,13 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 213,
+          "linea": 195,
           "resumen": "En línea, no de una librería: es un icono, y el portal lo abre gente desde el móvil con datos. Trazo con `currentColor` para que siga al tema."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d70bfcdd9a6"
+      "hash": "f7e56c0d03c5"
     },
     {
       "ruta": "apps/asegura-portal/app/CampanaAvisos.tsx",
@@ -4971,6 +4971,57 @@
       "hash": "64aa4850fd6b"
     },
     {
+      "ruta": "apps/asegura-portal/app/InstalarBoton.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "InstalarBoton"
+      ],
+      "funciones": [
+        {
+          "nombre": "InstalarBoton",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "El botón «Instalar» de la barra de marca. ── Por qué está AQUÍ y no en el contenido (08/09/2026) ───────────────────── La primera versión fue una franja «Tenlo a mano» encima de las pólizas, y la segu"
+        },
+        {
+          "nombre": "IconoInstalar",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 97,
+          "resumen": "En línea, no de una librería: es un icono, y el portal lo abre gente desde el móvil con datos. Trazo con `currentColor` para que siga al tema. La flecha hacia abajo entrando en la bandeja: «bajar a es"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "72669f0ece29"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/InstalarEnBarra.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "InstalarEnBarra"
+      ],
+      "funciones": [
+        {
+          "nombre": "InstalarEnBarra",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "El botón de instalar, solo si HAY sesión. Misma regla que `SalirDelPortal` y `CampanaAvisos`: se comprueba VERIFICANDO el token, no viendo que la cookie existe. Y dentro de la sesión y no en la puerta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "43b366c033dc"
+    },
+    {
       "ruta": "apps/asegura-portal/app/InterruptorTema.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5105,12 +5156,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 51
+          "linea": 52
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7a1a74e2967c"
+      "hash": "1480a62bd7b2"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/condiciones/page.tsx",
@@ -11372,6 +11423,7 @@
         "campoIlegible",
         "coincidencias",
         "listarContactos",
+        "duplicadoContacto",
         "anadirContacto",
         "cambiarContacto",
         "borrarContacto",
@@ -11504,7 +11556,7 @@
         {
           "nombre": "duplicadoContacto",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "correduriaId: string, clienteId: string, tipo: TipoContacto, valor: string, seraPrincipal: boolean, forzar: boolean,",
           "retorno": "Promise<Fallo | null>",
           "linea": 298,
@@ -11620,7 +11672,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "1b77d96c66d0"
+      "hash": "d111032a5b21"
     },
     {
       "ruta": "apps/asegura/lib/cartera-ficha.ts",
@@ -14675,12 +14727,21 @@
       ],
       "funciones": [
         {
+          "nombre": "contactoPrincipal",
+          "kind": "function",
+          "exportada": false,
+          "params": "lista: { principal: boolean; valor: string | null }[]",
+          "retorno": "string | null",
+          "linea": 59,
+          "resumen": "«El canal que el cliente ve como suyo hoy», usado en LOS DOS sentidos — leerlo (`leerContactoPropio`) y decidir si lo que manda ya es ese mismo valor (`aplicarContactoPropio`). Con dos criterios disti"
+        },
+        {
           "nombre": "fichasDeIdentidad",
           "kind": "function",
           "exportada": false,
           "params": "correduriaId: string, identidadId: string",
           "retorno": "Promise<string[]>",
-          "linea": 62,
+          "linea": 82,
           "resumen": "Los `cliente_id` que esa identidad tiene vinculados en esta correduría."
         },
         {
@@ -14689,7 +14750,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, entrada: EntradaContactoPropio,",
           "retorno": "Promise<ResultadoContactoPropio>",
-          "linea": 94,
+          "linea": 114,
           "resumen": "- el TELÉFONO y el CORREO son filas de `cliente_telefonos` / `cliente_emails` → `anadirContacto` como principal, que es lo que baja el anterior a secundario (no se pierde: sigue en la ficha) y lo que "
         },
         {
@@ -14698,7 +14759,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string",
           "retorno": "Promise<LecturaContactoPropio>",
-          "linea": 208,
+          "linea": 244,
           "resumen": "Lo que la ficha tiene de contacto de ESA identidad, para que pueda verlo y corregirlo (09/09/2026; Alberto: «ver sus datos de contacto… pudiendo modificarlos»). 🚨 Esto REVISA la decisión del 08/09/20"
         },
         {
@@ -14707,7 +14768,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, texto: string,",
           "retorno": "Promise<'ok' | 'sin_ficha' | 'varias_fichas' | 'error'>",
-          "linea": 264,
+          "linea": 304,
           "resumen": "Anota en el historial de la ficha de esa identidad algo que ha HECHO el cliente en el portal (hoy: una sugerencia). Es lo que hace que «todo lo que haga el cliente» acabe en la pantalla donde Alberto "
         },
         {
@@ -14716,7 +14777,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 286,
+          "linea": 326,
           "resumen": "La línea de bitácora. Best-effort a propósito, como el resto de anotaciones del repo: el dato YA está guardado, y tumbar la respuesta porque no se pudo escribir el renglón le diría al cliente que no s"
         }
       ],
@@ -14725,7 +14786,7 @@
         "portal_vinculo"
       ],
       "rutaApi": null,
-      "hash": "29ba339b45bd"
+      "hash": "c7607d049298"
     },
     {
       "ruta": "apps/asegura/lib/correo-aviso-acceso.ts",
@@ -15570,13 +15631,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 21,
+          "linea": 26,
           "resumen": "Puerto ESTRECHO del portal del cliente (`apps/asegura-portal` → asegura). 🚨 Es un secreto DISTINTO de `ASEGURA_OPERADOR_SECRET` y no es una duplicación: el de operador abre la cartera entera (leer cu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b5180123e092"
+      "hash": "a81bf2dd5398"
     },
     {
       "ruta": "apps/asegura/lib/retarificar-cartera.ts",
@@ -60121,12 +60182,21 @@
           "resumen": "La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto. 🚨 Por qué los contadores viven aquí y no dentro de "
         },
         {
+          "nombre": "Iniciales",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ nombre }: { nombre: string }",
+          "retorno": null,
+          "linea": 63,
+          "resumen": "── Iniciales ─────────────────────────────────────────────────────────────── Avant2 pone un avatar circular con las iniciales delante del nombre; aquí se reutiliza el hueco `icono` que `PageHeader` YA"
+        },
+        {
           "nombre": "Titulares",
           "kind": "function",
           "exportada": false,
           "params": "{ resumen }: { resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 61
+          "linea": 77
         },
         {
           "nombre": "ProximoVencimiento",
@@ -60134,7 +60204,7 @@
           "exportada": false,
           "params": "{ proximo, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 107,
+          "linea": 123,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -60143,7 +60213,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: 22px se sale de la tarjeta en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 142
+          "linea": 158
         },
         {
           "nombre": "EstadoCabecera",
@@ -60151,7 +60221,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 160
+          "linea": 176
         },
         {
           "nombre": "Acciones",
@@ -60159,7 +60229,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 213
+          "linea": 229
         },
         {
           "nombre": "Contacto",
@@ -60167,12 +60237,12 @@
           "exportada": false,
           "params": "{ nombre, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: b",
           "retorno": null,
-          "linea": 271
+          "linea": 287
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "83b577dc46ee"
+      "hash": "0680c706dd19"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/decesos-nuevo/acciones.ts",
@@ -62373,12 +62443,60 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "3b99f2c685e3"
+      "hash": "07d33af16c46"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/preemision-mock.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PreemisionMock"
+      ],
+      "funciones": [
+        {
+          "nombre": "buscarEsquema",
+          "kind": "function",
+          "exportada": false,
+          "params": "compania: string | null",
+          "retorno": "EsquemaCompania | null",
+          "linea": 320,
+          "resumen": "Busca el esquema por coincidencia parcial: «Allianz Seguros y Reaseguros» tiene que casar con la clave `allianz`, igual que hace ya el emparejador de catálogos de `apps/asegura/lib/codeoscopic/opcione"
+        },
+        {
+          "nombre": "PreemisionMock",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ compania, producto, onCerrar, }: { compania: string | null producto: string | null onCerrar: () => void }",
+          "retorno": null,
+          "linea": 327
+        },
+        {
+          "nombre": "SeccionCampos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ seccion }: { seccion: Seccion }",
+          "retorno": null,
+          "linea": 393
+        },
+        {
+          "nombre": "CampoControl",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ campo }: { campo: Campo }",
+          "retorno": null,
+          "linea": 406
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "46484e643a0f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/retarificador.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
+        "normalizarTexto",
         "Retarificador",
         "ValorSupuesto"
       ],
@@ -62386,11 +62504,11 @@
         {
           "nombre": "normalizarTexto",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 25,
-          "resumen": "Quita tildes y mayúsculas para comparar «Casado» con «CASADO». Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`."
+          "linea": 28,
+          "resumen": "Quita tildes y mayúsculas para comparar «Casado» con «CASADO». Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`. Exportada porque `preemision-mock.tsx` la reutiliza para emp"
         },
         {
           "nombre": "euroODash",
@@ -62398,7 +62516,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 38,
+          "linea": 41,
           "resumen": "🚨 El `eur()` de plataforma devuelve «0,00€» para lo que no es un número finito, y eso aquí sería una MENTIRA: una prima que la compañía no ha declarado es un «no lo sé», no un cero. Tres estados, no "
         },
         {
@@ -62407,7 +62525,7 @@
           "exportada": false,
           "params": "catalogo: Opcion[], texto: string | null",
           "retorno": "Emparejamiento",
-          "linea": 144,
+          "linea": 147,
           "resumen": "Empareja un texto de la ficha con una opción del catálogo. Mismo criterio que `emparejar()` de `opciones.ts` —exacto y normalizado, y ante la duda no preselecciona— pero devolviendo POR QUÉ no ha casa"
         },
         {
@@ -62416,7 +62534,7 @@
           "exportada": true,
           "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, fechaMatriculacion, vehiculo, consumo, simulacion, deshabilitado, }: { polizaId: string /** * Los huecos que la ficha NO tapa, ya revisados. **`null",
           "retorno": null,
-          "linea": 174,
+          "linea": 177,
           "resumen": "El único sitio de la app donde un clic cuesta 0,50€ — **salvo en simulación**. Cuatro cosas son deliberadas: - El botón dice EN el botón lo que cuesta el clic, no en una nota al pie, y dice la verdad "
         },
         {
@@ -62425,7 +62543,7 @@
           "exportada": false,
           "params": "{ r, simulacion, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean }",
           "retorno": null,
-          "linea": 942
+          "linea": 945
         },
         {
           "nombre": "ValorSupuesto",
@@ -62433,7 +62551,7 @@
           "exportada": true,
           "params": "{ s }: { s: Supuesto }",
           "retorno": null,
-          "linea": 1128,
+          "linea": 1164,
           "resumen": "Un supuesto, con su valor — o con la explicación de por qué no lo hay. 🔒 `oculto` NO es «no hay valor»: es «lo hay y se queda en asegura», porque es un dato personal del tomador (su código postal, tí"
         },
         {
@@ -62442,7 +62560,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 1151,
+          "linea": 1187,
           "resumen": "El cartel de simulación, arriba del todo y sin ambigüedad. 🚨 Sustituye al aviso ROJO de «tarificación apagada» que se pintaba aquí. Ese aviso era falso con la simulación puesta: en `cotizar()` el pas"
         },
         {
@@ -62451,7 +62569,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub }: { n: number; titulo: string; sub?: string }",
           "retorno": null,
-          "linea": 1177
+          "linea": 1213
         },
         {
           "nombre": "Paso",
@@ -62459,7 +62577,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub, children, }: { n: number titulo: string sub?: string children: React.ReactNode }",
           "retorno": null,
-          "linea": 1209
+          "linea": 1245
         },
         {
           "nombre": "Campo",
@@ -62467,7 +62585,7 @@
           "exportada": false,
           "params": "{ id, etiqueta, falta, faltaTexto, ayuda, children, }: { id: string etiqueta: string falta: boolean faltaTexto?: string ayuda?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 1235,
+          "linea": 1271,
           "resumen": "Un campo del formulario: etiqueta, control, ayuda y —si falta— su marca. La marca va AQUÍ y no en una lista encima del botón: «falta la versión» a diez centímetros del desplegable de la versión obliga"
         },
         {
@@ -62476,7 +62594,7 @@
           "exportada": false,
           "params": "{ vehiculo, autoMarca, autoModelo, }: { vehiculo: VehiculoConocido | null autoMarca: Emparejamiento autoModelo: Emparejamiento }",
           "retorno": null,
-          "linea": 1276,
+          "linea": 1312,
           "resumen": "Lo que la cartera YA sabe del coche: informativo, compacto y sin competir con los campos. Sustituye al texto que durante un día negó que la compañía mandara el modelo. Era falso y medido al revés: las"
         },
         {
@@ -62485,7 +62603,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, estado, }: { etiqueta: string valor: string | null estado: Emparejamiento['estado'] }",
           "retorno": null,
-          "linea": 1347
+          "linea": 1383
         },
         {
           "nombre": "ProcedenciaCatalogo",
@@ -62493,7 +62611,7 @@
           "exportada": false,
           "params": "{ emp, elegido, que, }: { emp: Emparejamiento elegido: string que: string }",
           "retorno": null,
-          "linea": 1384,
+          "linea": 1420,
           "resumen": "De dónde sale lo que hay puesto en un desplegable — o por qué no hay nada."
         },
         {
@@ -62502,7 +62620,7 @@
           "exportada": false,
           "params": "{ versiones }: { versiones: VersionCandidata[] }",
           "retorno": null,
-          "linea": 1431,
+          "linea": 1467,
           "resumen": "Las versiones vistas en OTRAS pólizas de la misma matrícula. 🚨 Son PISTAS, nunca una selección. Son texto histórico de otra póliza, no códigos Base7 del catálogo, y con dos o más pueden contradecirse"
         },
         {
@@ -62511,7 +62629,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: Consumo; simulacion: boolean }",
           "retorno": null,
-          "linea": 1485,
+          "linea": 1521,
           "resumen": "El contador de gasto. En simulación no se toca el libro, así que su estado se cuenta como información de contexto y NO en rojo: un «tarificación apagada» en rojo sobre una pantalla que sí funciona y n"
         }
       ],
@@ -62519,7 +62637,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "349ee9eb6e25"
+      "hash": "1ccfe6c9bc8f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Redes.tsx",
@@ -120623,7 +120741,8 @@
       "exporta": [
         "bienTieneAlgo",
         "describirBien",
-        "describirBienConGemela"
+        "describirBienConGemela",
+        "componerUbicacion"
       ],
       "funciones": [
         {
@@ -120677,13 +120796,31 @@
           "exportada": true,
           "params": "ramo: string | null | undefined, datosEspecificos: unknown, datosGemela: unknown,",
           "retorno": "BienAsegurado",
-          "linea": 195,
+          "linea": 191,
           "resumen": "El bien, rescatando los datos de la fila GEMELA cuando la viva no dice nada. 🚨 Por qué hace falta (medido el 07/09/2026). En la cartera hay pólizas DUPLICADAS: la misma (mismo cliente, mismo número, "
+        },
+        {
+          "nombre": "paraComparar",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 208,
+          "resumen": "La forma de un texto para COMPARARLO, nunca para enseñarlo. Minúsculas, sin acentos y con todo lo que no sea letra o número convertido en un espacio: así «11520 Costa Ballena» y «11520 costa ballena,»"
+        },
+        {
+          "nombre": "componerUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "calle: string | null, cp: string | null, localidad: string | null,",
+          "retorno": "string | null",
+          "linea": 239,
+          "resumen": "La dirección del inmueble, en una línea y SIN repetir lo que la calle ya dice. 🚨 Por qué existe (08/09/2026). Se componía `calle, cp localidad` a ciegas, y en la cartera real la calle del volcado a v"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad28b14a98a4"
+      "hash": "b968747d3782"
     },
     {
       "ruta": "packages/module-seguros-portal/src/campos-ramo.ts",
@@ -130132,7 +130269,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3206,
-    "funciones": 9807
+    "archivos": 3209,
+    "funciones": 9818
   }
 }
