@@ -26,12 +26,6 @@ export default async function PortalLayout({ children }: { children: React.React
         <NavPortal />
       </Suspense>
       <main className="portal-contenido">
-        {/* Aquí NO va ya la franja «Tenlo a mano» (08/09/2026). Alberto: «yo
-            subiría el instalador arriba al lado de salir, queda más limpio».
-            La oferta de instalar vive en la CAMPANA de la cabecera
-            (`app/Campana.tsx`, entrada «Instalar»), que lee el mismo almacén
-            (`app/instalacion.tsx`). Una franja encima de las pólizas y la
-            misma oferta en la campana eran dos sitios para una cosa. */}
         {children}
       </main>
     </div>
