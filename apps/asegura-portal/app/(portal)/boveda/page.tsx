@@ -30,6 +30,7 @@ import {
   saludoPorHora,
   vistaDeBoveda,
   type GrupoCartera,
+  type VistaBoveda,
 } from '@central/module-seguros-portal'
 
 import { AvisoContacto } from './AvisoContacto'
@@ -45,6 +46,16 @@ export const dynamic = 'force-dynamic'
  *  que acepta el backend no se separen con el tiempo. Va como prop porque
  *  `EditarPoliza` y `SubirPoliza` (alta a mano) son componentes de cliente. */
 const RAMOS_OPCIONES = Object.entries(RAMO).map(([valor, etiqueta]) => ({ valor, etiqueta }))
+
+/** La palabra en cursiva del h1, una por pestaña. Mismo criterio que
+ *  `pestanasPortal()` (que da el texto de la nav), pero en singular con «Mis»
+ *  delante en vez del texto exacto de la pestaña. */
+const TITULO_VISTA: Record<VistaBoveda, string> = {
+  seguros: 'seguros',
+  recibos: 'recibos',
+  siniestro: 'siniestros',
+  datos: 'datos',
+}
 
 export default async function Boveda({
   searchParams,
@@ -235,8 +246,11 @@ export default async function Boveda({
       <p className="saludo">
         {pila ? `${saludo}, ${pila}` : saludo} <span aria-hidden="true">👋</span>
       </p>
+      {/* El h1 dice en qué pestaña estás. Antes decía siempre «Mis seguros»,
+          también dentro de «Mis datos»: el titular contradecía a la nav justo
+          debajo (09/09/2026, aviso de Alberto). */}
       <h1>
-        Mis <em>seguros</em>
+        Mis <em>{TITULO_VISTA[vista]}</em>
       </h1>
 
       {vista === 'seguros' && (
