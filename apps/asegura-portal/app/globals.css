@@ -2777,10 +2777,45 @@ h1 em {
   cursor: pointer;
 }
 
-/* ─── «Dónde te escribimos»: la dirección de contacto que corrige el cliente ───
-   Una columna siempre: a 320px dos campos por fila dejan el código postal en
-   140px y la calle sin sitio. El input hereda el tamaño del sistema (16px) para
-   que Safari en iPhone no haga zoom al enfocarlo, que descoloca la página. */
+/* ─── «Tus datos de contacto»: el cliente comprueba y corrige (08/09/2026) ───
+   El bloque de «Comprueba tus datos» va en el tono de `.confirmacion` (acento,
+   no alarma): es una petición amable al entrar, no un fallo. Los dos botones se
+   apilan a 320px —en una fila quedarían por debajo de los 44px táctiles— y
+   pasan a una fila en cuanto caben. La línea de «confirmados el…» es discreta
+   a propósito: cuando está vigente no hay nada que pedirle.
+   El formulario: una columna siempre (a 320px dos campos por fila dejan el
+   código postal en 140px y la calle sin sitio). El input hereda el tamaño del
+   sistema (16px) para que Safari en iPhone no haga zoom al enfocarlo. */
+.contacto-revisar {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: calc(var(--radius) * 0.8);
+  padding: 14px;
+  margin: 0 0 14px;
+  min-width: 0;
+}
+.contacto-revisar-titulo { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: var(--accent-ink); }
+.contacto-revisar-texto { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: var(--text); }
+.contacto-ficha { margin-bottom: 14px; }
+.contacto-ficha dd { overflow-wrap: anywhere; }
+.contacto-nota { font-size: 12px; color: var(--muted); }
+.contacto-acciones { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+@media (min-width: 420px) {
+  .contacto-acciones { grid-template-columns: repeat(auto-fit, minmax(140px, max-content)); }
+  .contacto-acciones .boton { width: auto; }
+}
+.contacto-vigente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.contacto-vigente .boton-tenue { min-width: 0; }
+.mi-direccion-form .contacto-acciones { margin-top: 4px; }
 .mi-direccion-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .mi-direccion-campo { display: grid; gap: 4px; min-width: 0; }
 .mi-direccion-campo span { font-size: 12px; color: var(--muted); font-weight: 600; }
