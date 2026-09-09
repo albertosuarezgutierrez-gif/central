@@ -36,7 +36,10 @@
   ramo 211 (accidentes). No era Fly ni la allowlist de entidad que sugería el brief de Manuel para
   REC/SIN — refutado: su motivo real es `sin_poliza_en_cartera`. Dada de alta a mano con dato de CIMA
   (+ `eiac_xml_hash` real, para que cuente como cartera viva) y creado el valor `accidentes` en el
-  enum (BD + `filtro-cartera.ts` + `emision.ts`; único ramo que no encajaba). PR #2671 (draft), verde.
+  enum (BD + `filtro-cartera.ts` + `emision.ts`; único ramo que no encajaba). `code-review` obligatorio
+  antes de mergear cazó un tercer sitio sin mapear (`RAMOS_POR_TIPO_POLIZA` de siniestros-asegura.ts,
+  ofrecía siniestros de auto/hogar sobre una póliza de accidentes) y que su propio guardián llevaba una
+  copia hardcodeada del enum sin `accidentes` — ahora lee el enum del fuente. PR #2671, verde.
   Pendiente, fuera de este repo: arreglar el mapeador de tipo de seguro del adaptador Java en Fly.
 
 - **🏠 La dirección del hogar dejaba de decir el CP dos veces (08/09/2026, PR pendiente).** Con
