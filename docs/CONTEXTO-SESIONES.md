@@ -38,6 +38,25 @@
   05/09 era la línea de DANA/catástrofes. Asistencia de Allianz sigue NULL (una columna, dos números por
   ramo). SQL en `apps/asegura-portal/prisma/sql/2026-09-08_…`. Pendiente de decisión: tabla
   `compania_canales` por ramo/uso, `codigo_dgs` en las declaradas y cola «compañía sin canal» en /correduria.
+
+- **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
+  vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
+  `apps/asegura-portal/app/(portal)/boveda/Calendario.tsx`; se mantiene el de procedencia
+  (`Confirmado por la compañía`). El dato `o.avisada` se sigue calculando en `lib/obligaciones.ts` por
+  si hace falta, solo deja de pintarse. Typecheck de la app y los dos cepos de raíz que tocan el
+  fichero (`regression-portal-obligaciones`, `regression-portal-visibilidad`) en verde. PR #2647
+  (rama `claude/quitar-confusion-3bxugj`), sacado de draft; sin pendientes.
+
+- **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
+  intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
+  «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»
+  en Contactos de la ficha → puerto `POST /api/operador/cliente/portal/vista` (asegura) → enlace de UN uso
+  (10 min) → `/corredor/[token]` del portal: identidad REAL dedicada (`IDENTIDAD_CORREDOR_ID`) + vínculo
+  temporal `origen='corredor'`, así las 10 lecturas del portal no cambian. `accesoDe()` de asegura EXCLUYE
+  ese origen (mirar ≠ «ya entra»); `middleware.ts` veta escrituras en modo corredor (403 `modo_corredor`);
+  banda ámbar y `Salir` suelta el vínculo. Migración `2026-09-08_portal_vista_corredor.sql` APLICADA.
+  Dato del camino: Víctor YA entró el 06/09 (código a `victor@grupostudium.com`); 4 pólizas vivas, 3 caducadas.
+
 - **📲 Fuera la franja «Tenlo a mano» del portal: la campana es el único sitio que ofrece instalar (08/09/2026).**
   Alberto, sobre el banner de esa misma mañana: «yo subiría el instalador arriba al lado de salir, queda más
   limpio». Esta sesión montó un botón «Instalar» en la cabecera + `ConSesion`; **en paralelo otra sesión mergeó
