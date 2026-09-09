@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧲 La hoja de la nevera solo ofrece pólizas EN VIGOR (09/09/2026).** Alberto, mirando el selector de
+  crear la hoja: «¿ahí solo tiene que salir las que están en vigor, no?». Tenía razón: «cartera viva»
+  (CIMA) ≠ «en vigor» (fecha de vencimiento), y el selector arrastraba vencidas — la propia página del
+  QR ya prometía «solo lo que sigue en vigor» sin que el código lo aplicara. Regla 5 en `hoja-qr.ts`
+  (`polizaEnVigorParaHoja`/`declaradaEnVigorParaHoja`), filtrada en el selector Y en el render en vivo
+  del QR. `pendiente` (vigor desconocido) se sigue incluyendo. Tests: 13/13 (paquete), 432/432
+  (módulo), typecheck limpio. PR pendiente de abrir.
+
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
   «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»
