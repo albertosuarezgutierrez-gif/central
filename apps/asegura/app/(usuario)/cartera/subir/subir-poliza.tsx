@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { AutoLeido, HogarLeido } from '@central/module-seguros'
 import { revisarFichero, TIPOS_ACEPTADOS } from '@/lib/documentos/fichero'
 import { eur } from '@/lib/dinero'
 
@@ -22,8 +23,15 @@ type Estado =
 
 /** Cómo se llama cada campo en pantalla, por tipo de lectura. El orden ES el
  *  orden en que se pintan. Los campos comunes (compañía, número…) van en las
- *  dos listas: cada póliza los tiene, sea del ramo que sea. */
-const ETIQUETAS_COMUNES: [string, string][] = [
+ *  dos listas: cada póliza los tiene, sea del ramo que sea.
+ *
+ *  Las claves se tipan contra `AutoLeido`/`HogarLeido` (no `string` a secas)
+ *  para que, si esos tipos renombran un campo, `tsc` avise aquí en vez de
+ *  dejar la fila leyendo `undefined` en silencio y pintando «no aparece en
+ *  el documento» sobre un dato que sí se leyó. */
+type ClaveComun = keyof AutoLeido & keyof HogarLeido & string
+
+const ETIQUETAS_COMUNES: [ClaveComun, string][] = [
   ['compania', 'Compañía'],
   ['codigoEntidadDgs', 'Código DGS'],
   ['numeroPoliza', 'Nº de póliza'],
@@ -32,7 +40,7 @@ const ETIQUETAS_COMUNES: [string, string][] = [
   ['primaAnual', 'Prima anual'],
 ]
 
-const ETIQUETAS_AUTO: [string, string][] = [
+const ETIQUETAS_AUTO: [keyof AutoLeido & string, string][] = [
   ...ETIQUETAS_COMUNES,
   ['matricula', 'Matrícula'],
   ['marca', 'Marca'],
@@ -47,7 +55,7 @@ const ETIQUETAS_AUTO: [string, string][] = [
   ['siniestrosUltimos5', 'Siniestros en 5 años'],
 ]
 
-const ETIQUETAS_HOGAR: [string, string][] = [
+const ETIQUETAS_HOGAR: [keyof HogarLeido & string, string][] = [
   ...ETIQUETAS_COMUNES,
   ['direccion', 'Dirección de la vivienda'],
   ['cp', 'Código postal'],
@@ -63,7 +71,9 @@ const ETIQUETAS_HOGAR: [string, string][] = [
 
 const CAMPOS_DINERO = new Set(['primaAnual', 'capitalContinente', 'capitalContenido'])
 
-function etiquetasPara(tipoLectura: 'auto' | 'hogar' | 'contrato_solo'): [string, string][] {
+function etiquetasPara(
+  tipoLectura: 'auto' | 'hogar' | 'contrato_solo',
+): [(keyof AutoLeido | keyof HogarLeido) & string, string][] {
   if (tipoLectura === 'hogar') return ETIQUETAS_HOGAR
   if (tipoLectura === 'auto') return ETIQUETAS_AUTO
   return ETIQUETAS_COMUNES

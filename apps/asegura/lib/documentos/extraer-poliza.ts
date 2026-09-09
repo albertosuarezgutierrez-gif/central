@@ -58,10 +58,23 @@ function ramoDetectado(v: unknown): Ramo | null {
   return (RAMOS as readonly string[]).includes(t) ? (t as Ramo) : null
 }
 
-/** Ramos para los que HOY se lee algo más que el contrato. Mismos dos que se
- *  retarifican (`retarificabilidad()`): leer campos propios de un ramo que
- *  no se puede cotizar no aporta nada y complicaría el prompt para nada. */
-export const RAMOS_CON_LECTURA_EXTENDIDA = ['auto', 'moto', 'hogar'] as const
+/**
+ * Qué lectura extendida le corresponde a cada ramo que hoy la tiene. Mismos
+ * dos que se retarifican (`retarificabilidad()`): leer campos propios de un
+ * ramo que no se puede cotizar no aporta nada y complicaría el prompt para
+ * nada. `RAMOS_CON_LECTURA_EXTENDIDA` se DERIVA de este mapa —nunca al
+ * revés— para que no puedan divergir: añadir un ramo aquí es lo único que
+ * hace falta para que `empaquetar()` lo lea de verdad.
+ */
+const FASE_POR_RAMO_EXTENDIDO = {
+  auto: 'auto',
+  moto: 'auto',
+  hogar: 'hogar',
+} as const satisfies Record<string, 'auto' | 'hogar'>
+
+export const RAMOS_CON_LECTURA_EXTENDIDA = Object.keys(
+  FASE_POR_RAMO_EXTENDIDO,
+) as (keyof typeof FASE_POR_RAMO_EXTENDIDO)[]
 
 export type ResultadoLecturaPoliza =
   | { fase: 'ninguno'; motivo: string }
@@ -136,8 +149,11 @@ function empaquetar(
   hogar: HogarLeido,
   fuente: 'texto' | 'vision',
 ): ResultadoLecturaPoliza {
-  if (ramo === 'hogar') return { ramo, fase: 'hogar', fuente, datos: hogar }
-  if (ramo === 'auto' || ramo === 'moto') return { ramo, fase: 'auto', fuente, datos: auto }
+  // La ÚNICA fuente de qué ramo tiene lectura extendida es `FASE_POR_RAMO_EXTENDIDO`:
+  // si un ramo no está ahí (incluido "no reconocido"), no hay `fase` que mirar.
+  const fase = ramo !== null ? FASE_POR_RAMO_EXTENDIDO[ramo as keyof typeof FASE_POR_RAMO_EXTENDIDO] : undefined
+  if (fase === 'hogar') return { ramo, fase, fuente, datos: hogar }
+  if (fase === 'auto') return { ramo, fase, fuente, datos: auto }
   // Ramo sin lectura extendida (o no reconocido): se enseña el contrato con la
   // misma forma que auto (comparte todos esos campos), sin el vehículo — que
   // ya llega a `null` porque el modelo no debía rellenarlo para ese ramo.
