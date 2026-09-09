@@ -18,6 +18,7 @@ export {
   RAMOS_POLIZA,
   ETIQUETA_RAMO,
   etiquetaRamo,
+  coberturaEspecificaDeRamo,
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
