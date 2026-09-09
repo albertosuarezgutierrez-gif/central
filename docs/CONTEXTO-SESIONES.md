@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗂 «Mis datos» + filtro «en vigor» por panel + sugerencia a la cabecera (09/09/2026).** Tres pedidos
+  de Alberto sobre la pantalla del cliente. (1) Nueva pestaña «Mis datos» (5ª, tras «Contactos»):
+  teléfono, correo y dirección de contacto, ahora **legibles** desde el portal (`GET
+  /api/portal/contacto`, que asegura descifra y sirve — antes solo se escribía a ciegas) y editables por
+  el MISMO puerto (`CAMPOS_CONTACTO_PROPIO` ganó `telefono`/`email`; un canal se CAMBIA, no se borra; si
+  ya está en otra ficha, `en_otra_ficha` y no se pisa a nadie). (2) Cada panel de pólizas («Tus seguros»,
+  «Te han dado acceso», «Tus sociedades») filtra por defecto a **en vigor**, con pastillas «En vigor /
+  Todas» y contador de lo oculto (`FiltroVigencia.tsx`; `pendiente` se sigue enseñando). (3) «¿Echas algo
+  de menos?» sube de «Mis seguros» a un botón en la cabecera junto a la campana y Salir. **Pendiente
+  abierto y sin decidir:** Alberto pidió luego que la autorización a un tercero NO caduque al año, y
+  después matizó que quizá sea mejor que la caducidad (o su ausencia) se declare al invitar, según el
+  caso (hijo↔padre mayor). No se tocó `DIAS_VIGENCIA`: es una decisión legal (art. 7.1 RGPD,
+  demostrabilidad) que necesita su OK explícito antes de tocar `autorizacion.ts`.
+
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
   «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»

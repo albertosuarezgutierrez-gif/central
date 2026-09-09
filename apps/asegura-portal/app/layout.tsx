@@ -8,6 +8,7 @@ import { MarcaAsegura } from './MarcaAsegura'
 import { PieLegal } from './PieLegal'
 import { RegistrarSW } from './RegistrarSW'
 import { SalirDelPortal } from './SalirDelPortal'
+import { SugerenciaBarra } from './SugerenciaBarra'
 import { SCRIPT_TEMA } from './tema'
 
 // Marca activa del portal. Es la de `app.grupoasegura.com` medida del CSS
@@ -98,6 +99,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               🚨 `SalirDelPortal` y `CampanaAvisos` devuelven `null` cuando no
               hay sesión: quien todavía no ha entrado no ve ni salir ni avisos. */}
           <SalirDelPortal />
+          {/* 09/09/2026: la sugerencia sube a la barra («arriba del todo, donde
+              está la campanita, la luna y salir»). Entre Salir y la campana:
+              es la acción que más se parece a la campana (un desplegable), y
+              así `.salir-form ~ .tema-boton` sigue casando igual. */}
+          <SugerenciaBarra />
           <CampanaAvisos />
           <InterruptorTema />
         </header>
