@@ -38,6 +38,15 @@
   `@central/module-seguros` (9 tests, cepo visto en rojo), `GET/POST /api/operador/backfill-contacto`
   en asegura y tarjeta+botón en `/correduria/mantenimiento`. Ojo: `uq_clientes_email_lookup_hash` es
   UNIQUE → fichas con el mismo correo chocan y no se escriben. **Pendiente: pulsar el botón** (tandas).
+- **✅ Aviso automático «comprueba tus datos de contacto» en el portal (08/09/2026).** Alberto vio en
+  la ficha de un cliente que faltaban estado civil/fecha de carnet/municipio y preguntó cómo verificar
+  que móvil/email/dirección de la BD antigua siguen siendo correctos, **sin que el corredor intervenga**.
+  Descartado avisar en la ficha del corredor (fecha de carnet es del CONDUCTOR de una póliza, no del
+  cliente; ya lo pide `revisarDatosAuto()` al presupuestar). En su lugar: `clientes.contacto_confirmado_at`
+  (PR `fc9c789cb`, puerto `/api/portal/contacto-estado|-confirmar` con datos ENMASCARADOS) + banner en
+  la bóveda del portal (`MisDatos`, antes `MiDireccion.tsx`) que sale si nunca/caducó (>365d) con
+  «Siguen igual» o corregir; email no editable (es la llave de acceso). PRs de esta sesión, mismo commit
+  de asegura + `b6d7150e4` (portal). Pendiente: aplicar la migración SQL en preview→prod.
 - **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
   captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil
   quedaba fuera de la primera pantalla, y en iPhone ese aviso es lo ÚNICO que explica cómo instalar
