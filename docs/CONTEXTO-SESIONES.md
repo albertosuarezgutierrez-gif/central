@@ -37,7 +37,10 @@
   compañía (Occident/Reale/Mapfre/Allianz) con el look de `/correduria`, interactivos pero SIN llamar a
   Codeoscopic ni gastar nada (banner "🧪 MAQUETA"). Sirve para validar diseño antes de decidir si se
   cierra la integración real (Submit sigue en sandbox, `CODEOSCOPIC_EMISION_ACTIVA` apagado). tsc+lint
-  en verde. Rama `claude/retarificacion-emision-poliza-gpuhpa`, PR pendiente de abrir.
+  en verde. Rama `claude/retarificacion-emision-poliza-gpuhpa`, PR #2661 (draft, abierto y suscrito).
+  De paso: la ficha de cliente ganó avatar de iniciales en `Cabecera.tsx` (reutiliza el hueco `icono`
+  de `PageHeader`, sin tocar su forma) — comparado con la ficha de Avant2, pero SIN copiar su rueda de
+  iconos decorativa: contradice el rediseño minimalista del 03/09. tsc+lint en verde, mismo PR.
 
 - **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
   vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
