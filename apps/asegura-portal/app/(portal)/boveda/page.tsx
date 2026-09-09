@@ -9,18 +9,13 @@ import {
 import { companiasConCanal } from '@/lib/canales-compania'
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
-import {
-  obligacionesDeIdentidad,
-  polizasSinFechaDeVencimiento,
-  sincronizarObligacionesDeIdentidad,
-} from '@/lib/obligaciones'
+import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { leerMisDatos } from '@/lib/mis-datos'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
-import Calendario from './Calendario'
 import { FilaDeclarada } from './FilaDeclarada'
 import { FiltroVigencia } from './FiltroVigencia'
 import { HojasQr } from './HojasQr'
@@ -83,10 +78,11 @@ export default async function Boveda({
   ])
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
-  // vuelve a leer) y se releen después: el `upsert` es idempotente, así que
-  // recargar la bóveda no duplica nada.
+  // vuelve a leer). Ya no se pintan aquí (el calendario se quitó de la bóveda
+  // el 09/09/2026: no aportaba nada que la ficha de cada póliza no dijera ya),
+  // pero se siguen sincronizando: es lo que lee la campana de avisos
+  // (`/api/avisos`) para el chip «puedes actuar hasta…».
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
-  const obligaciones = await obligacionesDeIdentidad(identidad.id)
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo ASegura'
@@ -236,8 +232,6 @@ export default async function Boveda({
 
       {vista === 'seguros' && (
         <>
-          <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
-
       {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
           su portal: «mis seguros y mis pólizas es lo mismo… que venga de CIMA,
           que ya tenemos datos, o que alguna no la tengamos y el cliente la

@@ -30,6 +30,13 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗑 Quitado el calendario de vencimientos de `/boveda` (09/09/2026).** Alberto, viendo el bloque
+  «Lo que vence · Tu calendario» en producción: «no aporta nada» (cada póliza ya dice su vencimiento
+  en su propia fila). Se borró `boveda/Calendario.tsx` y la franja CSS `.seccion.acento` (era su único
+  usuario). El motor de obligaciones sigue vivo: lo lee la campana de avisos (`lib/avisos.ts`), cuyo
+  enlace ya no apunta a `#calendario-titulo` (borrado) sino a `/boveda`. Tests y `apps/asegura-portal/CLAUDE.md`
+  actualizados; typecheck + `node --test` en verde.
+
 - **🔔 La campana de avisos del portal del cliente (08/09/2026).** Alberto: «un icono de campana de avisos,
   para autorizaciones, vencimientos, etc.». Entró: `lib/avisos.ts` (puro) + `GET /api/avisos` (`allSettled`) +
   `Campana.tsx`, globo con tres desenlaces (`n`·`n+`·`!`, nunca 0), enlaza y NO acepta, `setAppBadge`; sin tabla
