@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🩹 Póliza BIDV004566 (Occident, GLOBAL 2 INSTALACIONES TÉCNICAS): faltaba en cartera, causa medida
+  (09/09/2026).** El fichero EIAC llegó el 23/06 y quedó en cuarentena (`operational_events`:
+  `reviewReasons: tipo_seguro_no_clasificable`) porque `seguros.tipo_seguro` no tenía valor para el
+  ramo 211 (accidentes). No era Fly ni la allowlist de entidad que sugería el brief de Manuel para
+  REC/SIN — refutado: su motivo real es `sin_poliza_en_cartera`. Dada de alta a mano con dato de CIMA
+  (+ `eiac_xml_hash` real, para que cuente como cartera viva) y creado el valor `accidentes` en el
+  enum (BD + `filtro-cartera.ts` + `emision.ts`; único ramo que no encajaba). `code-review` obligatorio
+  antes de mergear cazó un tercer sitio sin mapear (`RAMOS_POR_TIPO_POLIZA` de siniestros-asegura.ts,
+  ofrecía siniestros de auto/hogar sobre una póliza de accidentes) y que su propio guardián llevaba una
+  copia hardcodeada del enum sin `accidentes` — ahora lee el enum del fuente. PR #2671, verde.
+  Pendiente, fuera de este repo: arreglar el mapeador de tipo de seguro del adaptador Java en Fly.
 - **📝 Bóveda del cliente: «Selecciona» en vez de «No lo sé», ramo obligatorio y forma de pago con aviso de recibo (09/09/2026).** Alberto pidió además defaults reales en «uso»/«garaje» (Particular/No); se le planteó que eso fabrica un hecho falso si el cliente no toca el select —justo lo que el propio cepo del tri-estado prohíbe— y él pidió mi criterio: se dejaron esos dos SIN valor marcado (solo cambia el rótulo a «Selecciona»), y «Tipo de seguro» sí pasó a obligatorio porque elegir categoría no fabrica un dato. Nuevo campo «Forma de pago» (periodicidad: anual/semestral/trimestral/mensual) en `portal_poliza_declarada` (migración aplicada) que alimenta una obligación `tipo: 'recibo'` nueva en `portal_obligacion` (unicidad ensanchada a `(identidad, poliza_declarada, tipo)`) calculada por `proximoCobroDeclarado()` de `@central/module-seguros-portal` — avisa 5 días antes del próximo cobro, no solo de la renovación anual. `pnpm test` verde (2718+ tests), typecheck y lint de `asegura-portal` en verde. PR #2667.
 - **📞 Teléfonos de compañía en el portal: Generali cargado y Allianz CORREGIDO (08/09/2026).** Alberto,
   con la captura de «Un siniestro»: «falta número de compañía» + tabla de Generali/Allianz. La pantalla
