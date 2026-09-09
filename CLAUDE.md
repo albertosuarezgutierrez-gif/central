@@ -402,6 +402,13 @@ revisión de un cambio de alto riesgo), usa `.claude/agents/agente-architect.md`
 no por defecto. Programación normal (endpoints, CRUD, Server Actions, bugs normales) la sigue haciendo
 la sesión principal, sin delegar.
 
+**Mide el ahorro, no lo supongas (09/09/2026):** si el informe de `agente-mecanico` viene incompleto,
+con verificación que no cuadra, o la sesión principal tiene que corregir/rehacer una parte no trivial
+de lo que entregó, anótalo con el marcador `🔧 agente-mecanico:` en la entrada de esa sesión en
+`docs/CONTEXTO-SESIONES.md` (una línea: qué falló). Sin ese rastro no hay forma de saber si el modelo
+económico ahorra tokens de verdad o si el re-trabajo se come el ahorro — y la respuesta hoy es «no se
+sabe» (el agente se creó en el PR #2658, aún sin usos).
+
 ## Comunicaciones salientes — regla global permanente
 **NUNCA enviar correos, mensajes ni ninguna comunicación a terceros (email a la asesoría, a clientes,
 a quien sea) sin autorización explícita de Alberto para ESE envío concreto.** Que Alberto pida que un
