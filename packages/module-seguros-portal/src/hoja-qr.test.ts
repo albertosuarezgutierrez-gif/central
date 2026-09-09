@@ -9,6 +9,8 @@ import {
   estadoHoja,
   seleccionHoja,
   polizasDeLaHoja,
+  polizaEnVigorParaHoja,
+  declaradaEnVigorParaHoja,
   loQueVeQuienEscanea,
 } from './hoja-qr.ts'
 
@@ -84,4 +86,22 @@ test('quien escanea distingue las CUATRO situaciones, y anulada no es «no exist
 test('una hoja anulada NO enseña sus pólizas aunque le queden', () => {
   // El caso del papel viejo en la guantera: el estado manda sobre el contenido.
   assert.equal(loQueVeQuienEscanea({ anuladaEn: new Date('2026-01-01T00:00:00Z') }, 5), 'anulada')
+})
+
+test('regla 5: una póliza de cartera no_vigente no entra en la hoja', () => {
+  assert.equal(polizaEnVigorParaHoja({ vigencia: 'vigente' }), true)
+  assert.equal(polizaEnVigorParaHoja({ vigencia: 'no_vigente' }), false)
+  // «Pendiente» (vigor desconocido) se INCLUYE: no se puede afirmar que ha
+  // vencido lo que no se sabe cuándo vence — regla del NULL del monorepo.
+  assert.equal(polizaEnVigorParaHoja({ vigencia: 'pendiente' }), true)
+})
+
+test('regla 5, para una DECLARADA: sin estado, decide solo la fecha', () => {
+  const hoy = new Date('2026-09-09T00:00:00Z')
+  assert.equal(declaradaEnVigorParaHoja({ fechaVencimiento: new Date('2026-09-10T00:00:00Z') }, hoy), true)
+  // Vence HOY: sigue en vigor hoy, misma regla que vigenciaPoliza().
+  assert.equal(declaradaEnVigorParaHoja({ fechaVencimiento: new Date('2026-09-09T00:00:00Z') }, hoy), true)
+  assert.equal(declaradaEnVigorParaHoja({ fechaVencimiento: new Date('2026-09-08T00:00:00Z') }, hoy), false)
+  // Sin fecha registrada: no se sabe, así que se incluye (no es «ha vencido»).
+  assert.equal(declaradaEnVigorParaHoja({ fechaVencimiento: null }, hoy), true)
 })
