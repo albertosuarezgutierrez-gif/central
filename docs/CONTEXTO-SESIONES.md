@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📄 «Subir póliza» (corredor) generalizado a cualquier ramo, no solo auto (09/09/2026).** Alberto:
+  «¿por qué no se puede subir cualquier póliza si la IA la lee y asigna a los campos?». Tenía razón:
+  la lectura estaba limitada a auto por diseño de propósito (leer lo que hace falta para COTIZAR, no
+  los 5 campos del portal), y hogar —19 pólizas vivas— se quedaba fuera sin motivo real. Nuevo
+  `documento-hogar.ts` en `@central/module-seguros` (hermano de `documento-auto.ts`, mismo guardián
+  compartido de marcadores «no lo sé»), y `lib/documentos/extraer-poliza.ts` sustituye a
+  `extraer-auto.ts`: UNA llamada de IA detecta el ramo y lee sus campos propios si es auto/moto u
+  hogar (los dos únicos que hoy se retarifican); cualquier otro ramo lee solo lo común (compañía,
+  número, vencimiento, prima) y lo dice en pantalla, en vez de fingir que no hay nada. Tests (`pnpm
+  test`) 756/756 verde, typecheck de asegura 0.
+
 - **🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia (09/09/2026, PR #2680).** La
   hoja/QR de la nevera (`HojasQr`, asegura-portal) vivía embebida al final de «Mis seguros» y solo
   la encontraba quien bajara del todo — lo mismo que ya se corrigió con «Mis datos» el mismo día.
