@@ -36,7 +36,7 @@
   (`Confirmado por la compañía`). El dato `o.avisada` se sigue calculando en `lib/obligaciones.ts` por
   si hace falta, solo deja de pintarse. Typecheck de la app y los dos cepos de raíz que tocan el
   fichero (`regression-portal-obligaciones`, `regression-portal-visibilidad`) en verde. PR #2647
-  (rama `claude/quitar-confusion-3bxugj`), sacado de draft; sin pendientes.
+  (rama `claude/quitar-confusion-3bxugj`) mergeado en `main` (`4fe76c9`), 20/20 checks en verde; sin pendientes.
 
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
