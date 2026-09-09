@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **Maqueta de pre-emisión por compañía en el retarificador (09/09/2026).** Alberto vio en Avant2 que
+  tras elegir presupuesto cada compañía pide sus propios "datos adicionales del riesgo" (eso viene del
+  paso Preemisión de Codeoscopic, no lo inventa Avant2 — ver `apps/asegura/CLAUDE.md`). Botón
+  "Pre-emitir" por fila en `retarificador.tsx` abre `preemision-mock.tsx`: los mismos campos por
+  compañía (Occident/Reale/Mapfre/Allianz) con el look de `/correduria`, interactivos pero SIN llamar a
+  Codeoscopic ni gastar nada (banner "🧪 MAQUETA"). Sirve para validar diseño antes de decidir si se
+  cierra la integración real (Submit sigue en sandbox, `CODEOSCOPIC_EMISION_ACTIVA` apagado). tsc+lint
+  en verde. Rama `claude/retarificacion-emision-poliza-gpuhpa`, PR pendiente de abrir.
+
 - **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
   vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
   `apps/asegura-portal/app/(portal)/boveda/Calendario.tsx`; se mantiene el de procedencia
