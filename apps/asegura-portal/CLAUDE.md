@@ -974,6 +974,14 @@ es «todavía NO está comunicado a tu compañía» y contiene la frase prohibid
 
 ## 📅 El calendario de vencimientos (02/09/2026) — y por qué el aviso NO sale de aquí
 
+🚨 **La sección visible («Lo que vence · Tu calendario») se QUITÓ de `/boveda` el 09/09/2026**
+(Alberto: «no aporta nada» — cada póliza ya dice su vencimiento en su propia fila, `FilaPoliza.tsx`).
+`boveda/Calendario.tsx` se borró y con él la franja `.seccion.acento` del CSS (era su único usuario).
+**Lo de abajo sigue vigente**: la tabla, el derivador y `sincronizarObligacionesDeIdentidad` (llamado
+en `page.tsx` en cada visita) siguen vivos porque los lee la campana de avisos (`lib/avisos.ts` →
+`GET /api/avisos`, chip «puedes actuar hasta…»); su enlace ya no lleva a un ancla (`#calendario-titulo`
+no existe) y apunta a `/boveda` a secas.
+
 La tabla es **`seguros.portal_obligacion`** (`prisma/sql/2026-09-03_portal_obligacion.sql`, aplicada
 el 02/09/2026). Cuelga del **bien**, no de la póliza: `poliza_id` es opcional a propósito para que el
 mismo motor sirva luego a ITV, carnet o revisión de gas de alguien que no tiene ninguna póliza con la

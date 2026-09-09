@@ -73,7 +73,7 @@ const CRON_AUTH = 'apps/asegura/lib/cron-auth.ts'
 test('el portal NO manda avisos de vencimiento: no tiene a donde', () => {
   const sospechosos = [
     'apps/asegura-portal/lib/obligaciones.ts',
-    'apps/asegura-portal/app/(portal)/boveda/Calendario.tsx',
+    'apps/asegura-portal/lib/avisos.ts',
   ]
   for (const f of sospechosos) {
     const src = leer(f)

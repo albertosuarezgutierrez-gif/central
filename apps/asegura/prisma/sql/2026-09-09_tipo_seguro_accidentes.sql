@@ -1,0 +1,19 @@
+-- Añade 'accidentes' al enum seguros.tipo_seguro.
+--
+-- Motivo: la póliza BIDV004566 (Occident/C0468, ramo DGS 211 - Accidentes
+-- convenios/colectivo) quedó atascada en la ingesta de CIMA con el motivo
+-- `tipo_seguro_no_clasificable` (medido en seguros.operational_events, evento
+-- cima_fichero_review) porque el enum no tiene ningún valor para "accidentes"
+-- — el alta manual de esa póliza la había clasificado como 'otros' a falta de
+-- uno mejor. Dictado por Alberto (09/09/2026): «todo tipo de seguro que trae
+-- CIMA, si no lo tenemos, lo creamos».
+--
+-- Auditado el mismo día: de las 110 pólizas vivas, esta es la ÚNICA cuyo
+-- ramo_dgs no encajaba en el enum existente (auto=241, hogar=2151,
+-- responsabilidad_civil=282, comercio=2171 sí encajan). No hace falta crear
+-- ningún otro valor hoy.
+--
+-- ⚠️ Un valor de enum no se puede QUITAR después (ver CLAUDE.md raíz) — solo
+-- añadir. ALTER TYPE ... ADD VALUE no puede usarse en la misma transacción en
+-- la que se añade, así que va sola en su propia migración.
+ALTER TYPE seguros.tipo_seguro ADD VALUE IF NOT EXISTS 'accidentes';

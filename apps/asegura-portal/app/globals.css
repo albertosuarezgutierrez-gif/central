@@ -825,19 +825,6 @@ h1 {
   );
 }
 
-/* La franja de acento de la web (`.banda-acento`): `--brand-soft` de fondo y
- * `--brand-ink` de texto. UNA sección la lleva, no varias — el propio CSS de la
- * web deja escrito por qué: «el contraste vale porque es el único». */
-.seccion.acento {
-  background: var(--brand-soft);
-  color: var(--brand-ink);
-  border-color: color-mix(in oklab, var(--brand) 20%, transparent);
-}
-.seccion.acento h2,
-.seccion.acento .antetitulo {
-  color: var(--brand-ink);
-}
-
 /* El saludo de entrada, encima del titular. Alberto: «que al entrar el cliente
  * sea más ameno, no tan frío».
  *

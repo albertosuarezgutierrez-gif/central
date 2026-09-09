@@ -38,9 +38,6 @@ const PAGINA = sinComentarios(
   readFileSync(`${RAIZ}apps/asegura-portal/app/(portal)/boveda/page.tsx`, 'utf8'),
 )
 const LAYOUT = sinComentarios(readFileSync(`${RAIZ}apps/asegura-portal/app/layout.tsx`, 'utf8'))
-const CALENDARIO = sinComentarios(
-  readFileSync(`${RAIZ}apps/asegura-portal/app/(portal)/boveda/Calendario.tsx`, 'utf8'),
-)
 const RESUMEN = sinComentarios(
   readFileSync(`${RAIZ}apps/asegura-portal/app/(portal)/boveda/ResumenTitular.tsx`, 'utf8'),
 )
@@ -312,17 +309,9 @@ test('🚨 el color de marca decora en SUAVE; el saturado se reserva al estado',
   const regla = CSS.slice(i, CSS.indexOf('}', i))
   assert.match(regla, /var\(--brand\) 7%/, 'la atmósfera arranca al 7 %, como en la web')
   assert.doesNotMatch(regla, /var\(--brand\) (?:[2-9]\d|1\d\d)%/, 'un tinte fuerte compite con el semáforo')
-
-  const j = CSS.indexOf('.seccion.acento {')
-  assert.notEqual(j, -1, 'falta la franja de acento')
-  const acento = CSS.slice(j, CSS.indexOf('}', j))
-  assert.match(acento, /background:\s*var\(--brand-soft\)/, 'la franja va en el azul claro, no en el pleno')
 })
 
-test('🚨 la franja de acento es UNA, no varias', () => {
-  // El propio CSS de la web lo deja escrito: «el contraste vale porque es el
-  // único». Con dos secciones tintadas deja de ser un acento y pasa a ser el
-  // fondo de la pantalla.
-  const usos = [PAGINA, CALENDARIO].join('\n').match(/className="seccion acento"/g) ?? []
-  assert.equal(usos.length, 1, `la clase «acento» se usa ${usos.length} veces; tiene que ser 1`)
-})
+// La franja `.seccion.acento` (el calendario de vencimientos) se quitó el
+// 09/09/2026 junto con su único usuario, `boveda/Calendario.tsx`: no aportaba
+// nada que la fila de cada póliza no dijera ya. Con la sección fuera, la
+// regla «UNA franja, no varias» dejó de tener nada que vigilar.
