@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-09T10:55:37Z",
-  "sha": "882373fb643cb2de2cba56a341c874a275edd1c0",
+  "generadoEn": "2026-09-09T14:36:05Z",
+  "sha": "579da0bd39da3b6e53cd1e5bf345414332cfac3a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4080,7 +4080,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0f8b7d6e54d1"
+      "hash": "534efa5a858a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/NavPortal.tsx",
@@ -4696,7 +4696,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 39,
+          "linea": 36,
           "resumen": "el vencimiento al calendario). Un «Aceptar» en el panel sería aceptar sin leer, y duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. El panel se pone ENCIMA del contenido a propósito ("
         },
         {
@@ -4705,7 +4705,7 @@
           "exportada": false,
           "params": "{ datos, reintentar, cerrar, }: { datos: Avisos | 'error' | null reintentar: () => void cerrar: () => void }",
           "retorno": null,
-          "linea": 153
+          "linea": 135
         },
         {
           "nombre": "nombreFuente",
@@ -4713,7 +4713,7 @@
           "exportada": false,
           "params": "f: Avisos['fuentesIlegibles'][number]",
           "retorno": "string",
-          "linea": 207
+          "linea": 189
         },
         {
           "nombre": "IconoCampana",
@@ -4721,13 +4721,13 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 213,
+          "linea": 195,
           "resumen": "En línea, no de una librería: es un icono, y el portal lo abre gente desde el móvil con datos. Trazo con `currentColor` para que siga al tema."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d70bfcdd9a6"
+      "hash": "f7e56c0d03c5"
     },
     {
       "ruta": "apps/asegura-portal/app/CampanaAvisos.tsx",
@@ -4971,6 +4971,57 @@
       "hash": "64aa4850fd6b"
     },
     {
+      "ruta": "apps/asegura-portal/app/InstalarBoton.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "InstalarBoton"
+      ],
+      "funciones": [
+        {
+          "nombre": "InstalarBoton",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "El botón «Instalar» de la barra de marca. ── Por qué está AQUÍ y no en el contenido (08/09/2026) ───────────────────── La primera versión fue una franja «Tenlo a mano» encima de las pólizas, y la segu"
+        },
+        {
+          "nombre": "IconoInstalar",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 97,
+          "resumen": "En línea, no de una librería: es un icono, y el portal lo abre gente desde el móvil con datos. Trazo con `currentColor` para que siga al tema. La flecha hacia abajo entrando en la bandeja: «bajar a es"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "72669f0ece29"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/InstalarEnBarra.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "InstalarEnBarra"
+      ],
+      "funciones": [
+        {
+          "nombre": "InstalarEnBarra",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "El botón de instalar, solo si HAY sesión. Misma regla que `SalirDelPortal` y `CampanaAvisos`: se comprueba VERIFICANDO el token, no viendo que la cookie existe. Y dentro de la sesión y no en la puerta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "43b366c033dc"
+    },
+    {
       "ruta": "apps/asegura-portal/app/InterruptorTema.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5105,12 +5156,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 51
+          "linea": 52
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7a1a74e2967c"
+      "hash": "1480a62bd7b2"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/condiciones/page.tsx",
@@ -130132,7 +130183,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3206,
-    "funciones": 9807
+    "archivos": 3208,
+    "funciones": 9810
   }
 }
