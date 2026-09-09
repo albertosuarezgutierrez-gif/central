@@ -1224,6 +1224,24 @@ tiene portal — y queda en su historial.
 - **Las reglas de validación son las MISMAS** que cuando lo corrige Alberto (`revisarEdicion` de
   `@central/module-seguros`): con dos vocabularios, el portal aceptaría lo que la ficha rechaza.
 
+### ✅ «Comprueba tus datos de contacto» (08/09/2026)
+
+Dictado de Alberto: *«tiene que ser automático, un aviso en la intranet; yo no intervengo»*. La
+cartera es un volcado de jun/2026, así que al entrar la bóveda le enseña al cliente sus datos de
+contacto **ENMASCARADOS** (la máscara la fabrica asegura en `GET /api/portal/contacto-estado`; el
+portal sigue sin descifrar nada ni decidir qué se tapa) con dos salidas: **«Siguen igual»** (sella
+por `POST /api/mis-datos/confirmar` → `POST /api/portal/contacto-confirmar`) o **«Corregir»**
+(dirección y, desde hoy, **teléfono**; el email NO, es la llave de acceso). El aviso se apaga con
+`confirmacion: 'vigente'` (<365 días) y vuelve al caducar — **la vigencia la decide el puente**,
+el portal la recibe calculada (`lib/mis-datos.ts` → `estadoMisDatos`) y la página la lee en el
+servidor. Tres estados por dato: «no consta» (`tiene:false`) ≠ «consta pero no se puede mostrar»
+(`mascara:null`) ≠ la máscara. `sin_ficha`/`varias_fichas`/`sin_puente`/`error`/`conflicto` (el
+teléfono ya es de otra ficha) tienen cada uno su frase y **ninguno se pinta como confirmado ni
+guardado**. La ruta de confirmar **ni lee el cuerpo**: la identidad es la de la cookie. Cepos en
+`test/regression-portal-contacto-propio.test.ts` (13, los tres nuevos vistos morder con cinco
+mutaciones). El componente sigue en `boveda/MiDireccion.tsx` (el guardián lo cita por ruta) y se
+llama `MisDatos`.
+
 ### 💡 El botón de sugerencias
 
 «¿Echas algo de menos?» al final de `/boveda` → Telegram a Alberto (`POST /api/sugerencia`) **y**

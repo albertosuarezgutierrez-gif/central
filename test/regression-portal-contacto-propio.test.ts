@@ -59,7 +59,7 @@ test('el portal usa su secreto propio y NUNCA el de operador', () => {
   assert.match(cliente, /sin_puente/)
 })
 
-test('el portal NO lee de vuelta la dirección guardada', () => {
+test('el portal NO descifra: lo que lee de vuelta llega ENMASCARADO por asegura', () => {
   const cliente = leer(RUTA_CLIENTE)
   // Se mira el CÓDIGO, no la prosa: la cabecera del módulo explica justamente
   // por qué no descifra, y una expresión que casara con el texto daría rojo por
@@ -69,7 +69,12 @@ test('el portal NO lee de vuelta la dirección guardada', () => {
     !/PII_ENCRYPTION_KEY|decryptField|descifrarCampo/.test(codigo),
     'esta app no descifra PII: si aprende, la app pública puede leer la cartera',
   )
-  // La pantalla tiene que DECIR que sale vacía, no dejar creer que no consta.
+  // Desde el 08/09/2026 SÍ hay una lectura, y es la del puerto que enmascara
+  // (`contacto-estado`): la máscara la fabrica asegura, el portal solo la pinta.
+  assert.match(codigo, /\/api\/portal\/contacto-estado/, 'la lectura pasa por el puerto que enmascara')
+  // Y la vigencia NO se calcula aquí: viene decidida del puente.
+  assert.ok(!/estadoConfirmacion\(/.test(codigo), 'el portal no calcula la vigencia: la recibe del puente')
+  // La pantalla tiene que DECIR que el formulario sale vacío, no dejar creer que no consta.
   assert.match(leer(RUTA_PANTALLA), /No podemos mostrarte la que tenemos guardada/)
 })
 
@@ -97,6 +102,70 @@ test('la pantalla avisa de que esto NO cambia la dirección de las pólizas', ()
   )
   // También en el acuse: el aviso previo se lee antes de escribir y se olvida.
   assert.match(fuente, /esto no cambia la\s*\n?\s*dirección de tus pólizas/)
+})
+
+// ─── «Comprueba tus datos de contacto» (08/09/2026) ─────────────────────────
+//
+// Dictado de Alberto: «tiene que ser automático, un aviso en la intranet; yo no
+// intervengo». El cliente ve sus datos tapados y sella «siguen igual» o corrige.
+// Tres cosas que no pueden caer: quién sella (la cookie, nunca el cuerpo), qué
+// se pinta como confirmado (solo el `ok` del puente / el `vigente` que él
+// decide) y qué NO se edita (el email, que es la llave de acceso).
+
+const RUTA_CONFIRMAR = 'apps/asegura-portal/app/api/mis-datos/confirmar/route.ts'
+const RUTA_MIS_DATOS_API = 'apps/asegura-portal/app/api/mis-datos/route.ts'
+const sinComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
+
+test('confirmar toma la identidad de la SESIÓN y no lee nada del cuerpo', () => {
+  const fuente = sinComentarios(leer(RUTA_CONFIRMAR))
+  assert.match(fuente, /requireIdentidad\(\)/, 'la identidad sale de la cookie')
+  assert.match(fuente, /confirmarMisDatos\(identidad\.id\)/, 'se confirma la identidad de la sesión, no otra')
+  // El cuerpo NI SE LEE: no hay nada que la ruta necesite saber además de quién
+  // tiene la sesión. Un `identidadId` o `clienteId` de fuera dejaría sellar
+  // como «revisados» los datos de otra persona.
+  assert.ok(!/clienteId/.test(fuente), 'clienteId no puede aparecer en la ruta de confirmar')
+  assert.ok(!/identidadId/.test(fuente), 'identidadId no puede leerse del cuerpo: viene de la sesión')
+  assert.ok(!/\.json\(\)|formData\(\)|\.text\(\)/.test(fuente), 'la ruta de confirmar no lee el cuerpo')
+})
+
+test('solo el ok del puente pasa a «confirmado», y solo vigente pinta «confirmados»', () => {
+  const fuente = sinComentarios(leer(RUTA_PANTALLA))
+  // El desenlace puro: un único VALOR `{ tipo: 'confirmado', … }` (el tipo de
+  // retorno lo declara con `;`, y eso no es un camino), colgado de `estado === 'ok'`.
+  const confirmados = fuente.match(/\{ tipo: 'confirmado', confirmadoEn \}/g) ?? []
+  assert.equal(confirmados.length, 1, 'solo el ok del puente puede devolver confirmado')
+  const okIdx = fuente.indexOf("estado === 'ok' && typeof confirmadoEn === 'string'")
+  const confIdx = fuente.indexOf("{ tipo: 'confirmado', confirmadoEn }")
+  assert.ok(okIdx !== -1 && confIdx > okIdx && confIdx - okIdx < 80, 'el «confirmado» cuelga del ok CON fecha')
+  // La palabra «confirmados» solo existe DENTRO de `LineaVigente` (con fecha y
+  // sin ella, que son sus dos frases): ni en el bloque de aviso ni en los fallos.
+  const lineaIdx = fuente.indexOf('function LineaVigente')
+  const finLinea = fuente.indexOf('\nfunction ', lineaIdx + 1)
+  assert.ok(lineaIdx !== -1 && finLinea > lineaIdx, 'existe LineaVigente y no es la última función')
+  const fuera = fuente.slice(0, lineaIdx) + fuente.slice(finLinea)
+  assert.ok(!/confirmados/.test(fuera), '«confirmados» solo puede escribirse dentro de LineaVigente')
+  assert.match(fuente.slice(lineaIdx, finLinea), /confirmados/, 'LineaVigente es la que dice «confirmados»')
+  // …y `LineaVigente` se monta una sola vez, bajo `confirmacion === 'vigente'`.
+  const montajes = fuente.match(/<LineaVigente/g) ?? []
+  assert.equal(montajes.length, 1, 'la línea de vigente se monta en un solo sitio')
+  const montajeIdx = fuente.indexOf('<LineaVigente')
+  const guardaIdx = fuente.lastIndexOf("confirmacion === 'vigente'", montajeIdx)
+  assert.ok(guardaIdx !== -1 && montajeIdx - guardaIdx < 120, 'LineaVigente cuelga de confirmacion === vigente')
+  // Y los estados que no son ok tienen cada uno su frase, ninguna de «en orden».
+  for (const estado of ['sin_ficha', 'varias_fichas', 'sin_puente', 'error']) {
+    assert.match(fuente, new RegExp(`case '${estado}':\\s*\\n\\s*return '`), `falta la frase de ${estado}`)
+  }
+})
+
+test('el email NO se edita desde el portal: es la llave de acceso', () => {
+  const pantalla = sinComentarios(leer(RUTA_PANTALLA))
+  assert.ok(!/k: 'email'/.test(pantalla), 'el email no puede ser un campo del formulario')
+  assert.ok(!/type="email"|inputMode="email"|modo: 'email'/.test(pantalla), 'ningún input de email en la pantalla')
+  const api = sinComentarios(leer(RUTA_MIS_DATOS_API))
+  assert.ok(!/email:\s*z\./.test(api), 'la ruta no acepta email: cambiarlo es cambiar la cerradura con la puerta abierta')
+  // El teléfono SÍ, y viaja aparte de `libre` (contrato del puerto).
+  assert.match(api, /telefono:\s*z\./, 'el teléfono se acepta')
+  assert.match(sinComentarios(leer(RUTA_CLIENTE)), /cuerpo\.telefono = /, 'el teléfono viaja a nivel raíz, no dentro de libre')
 })
 
 test('el historial de la ficha dice que lo hizo el CLIENTE', () => {

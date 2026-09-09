@@ -15,6 +15,7 @@ import {
   sincronizarObligacionesDeIdentidad,
 } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
+import { estadoMisDatos } from '@/lib/mis-datos'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
@@ -37,7 +38,7 @@ import {
 
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
-import { MiDireccion } from './MiDireccion'
+import { MisDatos } from './MiDireccion'
 import { Sugerencia } from './Sugerencia'
 import { TusDatos } from './TusDatos'
 
@@ -68,7 +69,14 @@ export default async function Boveda({
   // La cuarta es de otra naturaleza y por eso no lleva identidad: `companias_dgs`
   // es un catálogo público (códigos DGS y teléfonos que publican las propias
   // compañías), no la cartera de nadie. Ver `lib/canales-compania.ts`.
-  const [cartera, declaradas, partes, companias, hojas, elegibles] = await Promise.all([
+  //
+  // La séptima tampoco lee BD: es el puente a asegura (`lib/mis-datos.ts`) que
+  // devuelve sus datos de contacto ENMASCARADOS y si la confirmación está
+  // vigente. Va en el mismo `Promise.all` porque tiene un tope de 8 s y en
+  // serie se lo cargaría a la página entera; y se resuelve AQUÍ, en el
+  // servidor, para que la pantalla reciba ya decidido si toca avisar — el
+  // portal no calcula la vigencia (ver la cabecera de ese módulo).
+  const [cartera, declaradas, partes, companias, hojas, elegibles, contacto] = await Promise.all([
     carteraDeIdentidad(identidad.id),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id },
@@ -79,6 +87,7 @@ export default async function Boveda({
     companiasConCanal(),
     hojasDeIdentidad(identidad.id),
     polizasElegibles(identidad.id),
+    estadoMisDatos(identidad.id),
   ])
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
@@ -354,9 +363,11 @@ export default async function Boveda({
         <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
       </section>
 
-      {/* Va ANTES de «Tus datos» (la supresión) a propósito: corregir una calle
-          es lo que viene a hacer la gente; pedir el borrado de sus datos, no. */}
-      <MiDireccion />
+      {/* Va ANTES de «Tus datos» (la supresión) a propósito: comprobar que su
+          teléfono sigue siendo el suyo o corregir una calle es lo que viene a
+          hacer la gente; pedir el borrado de sus datos, no. El estado llega ya
+          resuelto del servidor: la pantalla no pregunta al puente. */}
+      <MisDatos inicial={contacto} />
 
       <TusDatos inicial={supresiones} />
 
