@@ -52,7 +52,6 @@
   después matizó que quizá sea mejor que la caducidad (o su ausencia) se declare al invitar, según el
   caso (hijo↔padre mayor). No se tocó `DIAS_VIGENCIA`: es una decisión legal (art. 7.1 RGPD,
   demostrabilidad) que necesita su OK explícito antes de tocar `autorizacion.ts`. PR #2660.
->>>>>>> origin/main
 
 - **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
   pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
