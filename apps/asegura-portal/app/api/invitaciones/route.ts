@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { ALCANCES_CONCEDIBLES, MAX_MENSAJE_INVITACION } from '@central/module-seguros-portal'
+import { TIPOS_RELACION } from '@central/module-seguros'
+import {
+  ALCANCES_INVITACION,
+  MAX_MENSAJE_INVITACION,
+  MAX_NOMBRE_INVITADO,
+} from '@central/module-seguros-portal'
 
 import { crearInvitacion, invitacionesDeSesion, type MotivoNoEnviada } from '@/lib/invitaciones'
 import { ipDe, userAgentDe } from '@/lib/peticiones'
@@ -46,8 +51,14 @@ const Entrada = z.object({
   // La ficha DESDE la que se invita. No se fía de esto: `crearInvitacion` la
   // comprueba contra `portal_vinculo` filtrado por la identidad de la cookie.
   otorganteClienteId: z.string().uuid(),
-  // El vocabulario lo fija el módulo puro: por invitación solo se ofrece MIRAR.
-  alcance: z.enum(ALCANCES_CONCEDIBLES as unknown as [string, ...string[]]),
+  // El vocabulario lo fija el módulo puro: mirar (`ver`, `ver_economico`) o
+  // NADA (`ninguno`, «solo le presento el portal»). Apoderar, nunca.
+  alcance: z.enum(ALCANCES_INVITACION as unknown as [string, ...string[]]),
+  // 08/09/2026, «Contactos»: cómo se llama y qué es de quien invita. Los dos
+  // obligatorios desde la pantalla — sin ellos la lista de José vuelve a ser
+  // una lista de fechas. La relación, con el vocabulario de la cartera.
+  invitadoNombre: z.string().trim().min(1).max(MAX_NOMBRE_INVITADO),
+  relacion: z.enum(TIPOS_RELACION as unknown as [string, ...string[]]),
   // Ausente = todas las pólizas de la ficha, futuras incluidas.
   polizaId: z.string().uuid().optional(),
   // Solo la FORMA del correo. Que exista o no esa dirección no lo dice nadie.
@@ -77,6 +88,8 @@ export async function POST(req: Request) {
     polizaId: parsed.data.polizaId,
     email: parsed.data.email,
     mensaje: parsed.data.mensaje,
+    invitadoNombre: parsed.data.invitadoNombre,
+    relacion: parsed.data.relacion,
     ip: ipDe(req),
     userAgent: userAgentDe(req),
   })

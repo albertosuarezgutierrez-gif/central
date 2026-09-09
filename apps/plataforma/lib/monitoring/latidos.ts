@@ -748,6 +748,18 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
   // Es la verdad, no ruido: hoy están igual de mudas, solo que invisibles. Umbrales generosos a
   // propósito (cadencia real × ~1,2): mejor detectar tarde que dar falsas alarmas.
   {
+    id: 'seo_correduria',
+    vigiladoDesde: '2026-09-08',
+    etiqueta: '🔎 SEO correduría (cron semanal, lunes 08:30 UTC)',
+    // Semanal → 8 días: una semana perdida salta.
+    maxHoras: 192,
+    nota:
+      'El cron que lee Search Console, Serper y PostHog para el agente SEO de grupoasegura.es no ha ' +
+      'dejado huella, o la dejó con ok=false. `ok=false` con detalle «no_configurado» = falta un ' +
+      'secreto (GSC_SA_*, POSTHOG_PERSONAL_API_KEY, SERPER_API_KEY): el cron corre pero el agente ' +
+      'sigue a ciegas en esa fuente. Sin latido: el dispatcher no lo dispara. Huella: agente_latidos.seo_correduria.',
+  },
+  {
     id: 'psd2_health_check',
     vigiladoDesde: '2026-09-02',
     etiqueta: '🏦 Guardián del sync bancario PSD2 (rutina semanal, miércoles 09:00)',

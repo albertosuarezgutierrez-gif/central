@@ -18,6 +18,7 @@ export {
   RAMOS_POLIZA,
   ETIQUETA_RAMO,
   etiquetaRamo,
+  coberturaEspecificaDeRamo,
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
@@ -178,8 +179,23 @@ export {
   normalizarTokenInvitacion,
   CAMPOS_PROHIBIDOS_EN_INVITACION,
   normalizarMensajeInvitacion,
+  MAX_NOMBRE_INVITADO,
+  normalizarNombreInvitado,
+  relacionInvitacion,
+  RELACIONES_INVITACION,
+  SIN_COMPARTIR,
+  ALCANCES_INVITACION,
+  alcanceInvitacion,
+  invitacionAbreAcceso,
+  TEXTO_INVITACION_SIN_ACCESO,
+  TEXTO_INVITACION_SIN_ACCESO_V1,
 } from './invitacion.ts'
-export type { ResultadoInvitacion, EstadoInvitacion, InvitacionFechas } from './invitacion.ts'
+export type {
+  ResultadoInvitacion,
+  EstadoInvitacion,
+  InvitacionFechas,
+  AlcanceInvitacion,
+} from './invitacion.ts'
 
 // A quién llama el cliente cuando acaba de pasarle algo. Lee su cabecera antes
 // de tocarlo: sus cuatro prohibiciones (no decir «no tiene», no decir «24 h»,
@@ -307,3 +323,20 @@ export {
   resultadoSugerencia,
 } from './sugerencia.ts'
 export type { ContextoSugerencia, ResultadoSugerencia } from './sugerencia.ts'
+// La «vista de corredor» (08/09/2026): Alberto abre el portal como lo ve un
+// cliente. Lee su cabecera: identidad REAL dedicada + vínculo temporal con
+// `origen = 'corredor'`, que asegura tiene que EXCLUIR al decir «ya entra».
+export {
+  IDENTIDAD_CORREDOR_ID,
+  ORIGEN_VINCULO_CORREDOR,
+  VIGENCIA_ENLACE_CORREDOR_MS,
+  SESION_CORREDOR,
+  SESION_CORREDOR_SEGUNDOS,
+  RUTA_VISTA_CORREDOR,
+  formatoTokenVistaValido,
+  generarTokenVista,
+  hashTokenVista,
+  estadoEnlaceVista,
+  enlaceVistaCorredor,
+} from './vista-corredor.ts'
+export type { EstadoEnlaceVista } from './vista-corredor.ts'

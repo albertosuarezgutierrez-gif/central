@@ -1034,7 +1034,7 @@ entra directo — la sesión dura 30 días y `/` ya manda a la bóveda si sigue 
 | `app/icono-app/route.tsx` | El icono de **512 px**. Con menos de 192 Chrome NO ofrece instalar, y no lo dice. El monograma ocupa ~52 % porque Android recorta los `maskable` a la forma del sistema. `force-static` |
 | `lib/monograma.ts` | El dibujo se LEE de `public/brand/marca-asegura.svg`; lo comparten la pestaña (128) y la app instalada (512) |
 | `public/sw.js` + `app/RegistrarSW.tsx` | El service worker que Chrome exige, registrado en el layout raíz |
-| `app/(portal)/InstalarApp.tsx` | La oferta, dentro de la sesión |
+| `app/Campana.tsx` (entrada «Instalar») + `app/instalacion.tsx` | La oferta y el **almacén compartido** del evento. La franja «Tenlo a mano» de encima de las pólizas **se quitó el 08/09/2026** (Alberto: «arriba al lado de salir, queda más limpio»): la campana es el único sitio que ofrece instalar |
 
 🚨 **El service worker NO CACHEA NADA, y eso es la decisión.** Aquí dentro hay pólizas, recibos y
 partes de siniestro de personas identificadas: una respuesta guardada en el almacén del navegador
@@ -1059,6 +1059,48 @@ notificaciones web solo funcionan si la app está añadida a la pantalla de inic
 Lo vigila `lib/pwa.test.ts` (manifiesto, icono ≥192 en TODAS sus entradas, SW con `fetch` y sin
 caché, registro montado, rama de iOS con su glifo). Se rompió a mano una por una: 16 mutaciones, 16
 rojos. PR #2581.
+
+## 🔔 La campana de avisos (08/09/2026) — una campana esconde; el globo es lo que la salva
+
+Idea de Alberto, mirando el `confirm()` de «nace pendiente: no abre nada hasta que Gabriel la acepte
+en su portal»: *«un icono de campana de avisos, para autorizaciones, vencimientos, etc.»*. Hasta ese
+día una autorización recibida solo se veía entrando en «Quién me ve»; quien venía a mirar su póliza
+no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`.
+
+| Pieza | Qué hace |
+|---|---|
+| `lib/avisos.ts` | **Puro.** Compone la lista y el globo: autorizaciones pendientes recibidas Y otorgadas (→ `/autorizaciones`), obligaciones en la ventana del módulo (→ `/boveda#calendario-titulo`) |
+| `app/api/avisos/route.ts` | `requireIdentidad()`; **`allSettled`**, no `all`: una fuente caída se declara en `fuentesIlegibles` y la otra se sirve |
+| `app/CampanaAvisos.tsx` → `app/Campana.tsx` | La puerta (sesión VERIFICADA, como `SalirDelPortal`) y la campana. En la cabecera, **entre Salir y el tema** |
+| `app/instalacion.tsx` | El almacén compartido de la instalación (evento de Chrome, detección de iOS/standalone, `InstruccionesIOS`); lo lee la entrada «Instalar» de la campana. Se compartía con la franja «Tenlo a mano» hasta que se quitó el 08/09/2026 |
+
+🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
+`!` (ninguna legible, o fallo de red). Este portal renunció a la hamburguesa porque un botón que
+esconde hace las cosas menos visibles que enseñarlas, y la campana es exactamente ese botón: sin
+número, una autorización detrás de ella es lo mismo que hoy en `/autorizaciones`. Y «sin avisos»
+sobre una fuente que no se leyó es la mentira que el `CLAUDE.md` de la raíz persigue.
+
+🚨 **Desde la campana NO se acepta ni se revoca nada.** Cada aviso es un enlace a la pantalla donde
+se resuelve, con el alcance y el texto delante. Un «Aceptar» en el panel sería aceptar sin leer y
+duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. Cepo: un solo `fetch` en
+`Campana.tsx`, y es el GET.
+
+📌 **Sin tabla de «visto», a propósito**: el aviso desaparece al resolverse. Lo que necesita saber
+qué vio ya el cliente (siniestro que cambia de estado, petición respondida, recibo devuelto) es v2 y
+está en `docs/CORREDURIA-INTRANET-IDEAS.md` §N con su bloqueo. Y el número va también al icono de
+la app instalada (`setAppBadge`), que es lo que hace que instalar sirva de algo.
+
+⚠️ **El CSS de la cabecera cambió de `+` a `~`**: `.salir-form ~ .tema-boton`. Con el adyacente,
+la campana en medio dejaba al interruptor sin casar, recuperaba su `margin-left:auto` y se iba solo
+al extremo. El orden en `layout.tsx` sigue sin ser cosmético. El panel del móvil (≤ 480 px) va
+`position: fixed` anclado a los bordes, y es un desplegable que se cierra con Escape o clic fuera:
+se mide que quepa, no que no tape.
+
+Lo vigilan `lib/avisos.test.ts` (9) y `lib/campana.test.ts` (7); `lib/pwa.test.ts` se repuntó al
+almacén. **27 mutaciones, 27 rojos**: dos cepos salieron verdes a la primera porque buscaban la
+PALABRA (`clearAppBadge`, `display-mode: standalone`) y la encontraban en un tipo o en un comentario;
+se endurecieron a la LLAMADA. Medido con Playwright a 320/390/1024 con sesión firmada y BD
+inalcanzable: sin desbordes, 44 px, y con la API caída el globo es `!`.
 
 ## Infraestructura
 
@@ -1144,8 +1186,36 @@ además `PATCH /api/polizas/[id]` (corregir una póliza), `POST /api/siniestros`
 | `POST /api/catastro` | `{ direccion, municipio, provincia }` **o** `{ referencia }` (zod, con topes) | `200 ok` · **`300 elegir`** (varios inmuebles) · `401 sin_sesion` · `400 datos_invalidos` · `404 no_encontrado` · `409 via_ambigua` · `422 direccion_ilegible\|referencia_invalida` · **`502 catastro_no_responde`** | **Exige sesión**: sin ella sería un proxy anónimo contra el Catastro con nuestra IP. Solo CONSULTA (no escribe en la BD) y **no registra la dirección en ningún log**. Mira el `estado`, no el número |
 
 Pantallas: `/` (pedir + verificar código) y `/boveda` (`force-dynamic`, redirige a `/` sin sesión).
-**No hay `middleware.ts`**: cada ruta y cada página resuelve la sesión por su cuenta — que es
-precisamente lo que vigila el guardián.
+**El `middleware.ts` NO resuelve sesión**: cada ruta y cada página la resuelve por su cuenta — que es
+precisamente lo que vigila el guardián. El middleware (08/09/2026) solo veta escrituras en la sesión
+del corredor (sección «Vista de corredor», abajo).
+
+## 👁 Vista de corredor (08/09/2026) — Alberto abre el portal como lo ve un cliente
+
+Dictado: *«el corredor puede acceder a cualquier cosa»* (tras pedir acceso a la intranet de un cliente
+para revisarla antes de invitarle). Desde la ficha en plataforma (Contactos → «👁 Ver su portal») sale
+un enlace de **UN solo uso y 10 minutos** que crea `apps/asegura`
+(`POST /api/operador/cliente/portal/vista`, tabla `seguros.portal_vista_corredor`, token hasheado
+SHA-256 sin pimienta porque las dos apps no la comparten) y consume `GET /corredor/[token]` aquí.
+
+🚨 **Cómo se ve «lo mismo» sin tocar ninguna lectura:** una identidad REAL dedicada al corredor
+(`IDENTIDAD_CORREDOR_ID` de `@central/module-seguros-portal`, sembrada por la migración, **sin
+canales**: nadie entra como ella con un código) recibe un vínculo TEMPORAL con la ficha
+(`portal_vinculo.origen = 'corredor'`), y las diez lecturas que filtran por identidad hacen el resto.
+Solo hay un vínculo de corredor a la vez; `Salir` lo suelta. La sesión lleva el claim `corredor`
+(`lib/auth.ts`, 4 h) y `getIdentidad()` lo devuelve.
+
+Los dos filos, con cepo en `test/regression-portal-vista-corredor.test.ts` (4 mutaciones vistas morder):
+- **asegura EXCLUYE ese origen** en `estadoPortalDeFicha` — si lo contara, mirar una ficha la
+  convertiría en «Ya entra al portal», que es el titular con el que se decide si invitar.
+- **La sesión del corredor NO escribe como el cliente**: `middleware.ts` responde `403 modo_corredor` a
+  todo `POST/PATCH/DELETE` de `/api/*` salvo `/api/salir` y `/api/acceso/*`. Decodifica el JWT sin
+  verificar firma a propósito (protege de un clic de Alberto, no de un atacante; un token falso solo
+  se veta a sí mismo) y por eso importa `lib/auth-cookie.ts` y no `lib/auth.ts` (`node:crypto` no
+  arranca en edge — y el veto desaparecería sin error).
+
+Migración `prisma/sql/2026-09-08_portal_vista_corredor.sql`, **APLICADA el 08/09/2026** en el mismo
+paso que el código (regla de `portal_supresion`).
 
 ## 🧩 Los campos PROPIOS de cada tipo de seguro (04/09/2026)
 
@@ -1680,6 +1750,41 @@ mismo, la pantalla del invitado dice «solo a una de sus pólizas» **sin nombra
 Cepos: `packages/module-seguros-portal/src/invitacion.test.ts` (10, con las mutaciones comprobadas:
 colapsar `sin_enlace` con `envio_fallido` y sumar la caducidad en meses hacen fallar los suyos) y
 `apps/asegura-portal/lib/invitaciones.test.ts` (25).
+
+## 👥 «Contactos» (08/09/2026): nombre, relación y la invitación que NO comparte nada
+
+Alberto: *«una pestaña de contactos… nombre, tipo relación y mail, y se le manda un mail de
+presentación»*. La pestaña `/autorizaciones` se llama ahora **«Contactos»** (la RUTA no cambia: los
+enlaces guardados siguen llegando) y la invitación pide **`invitado_nombre`** y **`relacion`**
+(`prisma/sql/2026-09-08_portal_invitacion_contacto.sql`, aplicada; reglas en el apartado «Contactos»
+de `packages/module-seguros-portal/src/invitacion.ts`). Spec:
+`docs/superpowers/specs/2026-09-08-portal-contactos-design.md`.
+
+- **El nombre es para la LISTA de José y el saludo del correo, no una identidad.** Quién es de verdad
+  lo sigue probando el código al correo. Las invitaciones anteriores tienen `NULL` y se pintan por su
+  fecha, como antes (nunca `''`).
+- **La relación usa el vocabulario de `cliente_relaciones.tipo_relacion`** (`TIPOS_RELACION`; el
+  portal ofrece el subconjunto `RELACIONES_INVITACION`) para copiarla tal cual el día que el invitado
+  tenga ficha. Un CHECK repite la lista y `test/regression-portal-contactos.test.ts` obliga a que BD y
+  TypeScript sean la misma: si divergen, el envío moriría con un 23514 **después** de escribir el
+  correo de un tercero.
+- 🚨 **La relación NUNCA va en el correo** (`relacion` y `parentesco` entran en
+  `CAMPOS_PROHIBIDOS_EN_INVITACION`): «su hija» es un dato de la relación entre dos personas y quien
+  abre el buzón puede no ser ninguna de las dos. La pantalla lo promete («No va en el correo») y el
+  cepo de `lib/invitaciones.test.ts` mira el tipo del correo y la llamada que lo manda.
+- 🚨 **`alcance = 'ninguno'` (`SIN_COMPARTIR`) = «solo te presento el portal».** Es el
+  «recomiéndanos»: la misma invitación sin abrir un solo seguro. Al aceptar se sella la invitación y
+  **NO se crea `portal_autorizacion`** (el CHECK `portal_invitacion_acepta_con_sello` exige aquí
+  `autorizacion_id IS NULL`; `poliza_id` va NULL por otro CHECK). El correo dice quién invita y que
+  no se comparte nada, **sin argumento de venta** — un acto entre personas, no una comunicación
+  comercial de la correduría (art. 21 LSSI); el cepo busca «ahorr», «precio», «oferta», «regalo»…
+- 🚫 **Regalos por traer gente: aparcado** (ver `docs/CORREDURIA-INTRANET-IDEAS.md` §M). Un premio
+  por quien contrate convierte al cliente en colaborador externo del mediador (RDL 3/2020).
+- 📌 Pendiente conocido: copiar la relación a `cliente_relaciones` cuando el invitado tenga ficha es
+  trabajo del puerto del corredor (`prisma_asegura_portal` solo tiene `SELECT` sobre esa tabla).
+
+Cepos nuevos con las mutaciones comprobadas (relación colada en el correo, un valor menos en el CHECK,
+la rama sin acceso desactivada, la ruta de la pestaña cambiada: las cuatro en rojo).
 
 ## 🗑 «Borradme los datos» (05/09/2026) — la solicitud que NO borra
 

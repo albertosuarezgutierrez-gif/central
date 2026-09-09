@@ -12,6 +12,8 @@
 //   DNI               CIFRADO     3.904 fichas    → EXACTO por índice ciego
 //   teléfono          CIFRADO     5.377 fichas    → EXACTO por índice ciego
 //   email             CIFRADO     4.308 fichas    → EXACTO por índice ciego
+//   email: dominio    CIFRADO     (mitad)         → EXACTO por índice ciego del DOMINIO («@gmail.com»)
+//   email: usuario    CIFRADO     (mitad)         → EXACTO por índice ciego del USUARIO («alberto.suarez@»)
 //   dirección (calle) CIFRADA     170 pólizas     → se DESCIFRA EN MEMORIA y se filtra
 //
 // 🚨 Las tres búsquedas por índice ciego son la trampa de esta pantalla. Solo
@@ -49,6 +51,8 @@ import {
 import {
   computeDniLookupHash,
   computeEmailLookupHash,
+  computeEmailDominioLookupHash,
+  computeEmailUsuarioLookupHash,
   computeTelefonoLookupHash,
   decryptField,
 } from '@central/module-seguros-pii'
@@ -193,6 +197,13 @@ async function ejecutar(correduriaId: string, c: Criterio): Promise<BloqueResult
       return porHash(correduriaId, c, 'telefonoLookupHash', hashSeguro(() => computeTelefonoLookupHash(c.valor)))
     case 'email':
       return porHash(correduriaId, c, 'emailLookupHash', hashSeguro(() => computeEmailLookupHash(c.valor)))
+    // Las MITADES del email (08/09/2026): mismo camino que el email entero,
+    // contra su propio índice. Un dominio devuelve a todos los que lo comparten
+    // (tope LIMITE), y eso es lo que se busca cuando se teclea «@gmail.com».
+    case 'email_dominio':
+      return porHash(correduriaId, c, 'emailDominioHash', hashSeguro(() => computeEmailDominioLookupHash(c.valor)))
+    case 'email_usuario':
+      return porHash(correduriaId, c, 'emailUsuarioHash', hashSeguro(() => computeEmailUsuarioLookupHash(c.valor)))
   }
 }
 
@@ -571,7 +582,7 @@ async function porNumeroPoliza(correduriaId: string, c: Criterio): Promise<Bloqu
 async function porHash(
   correduriaId: string,
   c: Criterio,
-  campo: 'dniLookupHash' | 'telefonoLookupHash' | 'emailLookupHash',
+  campo: 'dniLookupHash' | 'telefonoLookupHash' | 'emailLookupHash' | 'emailDominioHash' | 'emailUsuarioHash',
   hash: string | null,
 ): Promise<BloqueResultados | null> {
   if (hash === null) return null
@@ -594,7 +605,7 @@ async function porHash(
             take: LIMITE,
           })
         : await db.clienteEmail.findMany({
-            where: { correduriaId, emailLookupHash: hash, cliente: { mergedIntoClienteId: null, activo: true } },
+            where: { correduriaId, [campo]: hash, cliente: { mergedIntoClienteId: null, activo: true } },
             select: { cliente: { select: SELECT_CLIENTE } },
             take: LIMITE,
           })
@@ -606,7 +617,15 @@ async function porHash(
     }
   }
   const etiqueta =
-    c.tipo === 'dni' ? `DNI ${c.valor}` : c.tipo === 'telefono' ? `teléfono ${c.valor}` : `email ${c.valor}`
+    c.tipo === 'dni'
+      ? `DNI ${c.valor}`
+      : c.tipo === 'telefono'
+        ? `teléfono ${c.valor}`
+        : c.tipo === 'email_dominio'
+          ? `email en @${c.valor}`
+          : c.tipo === 'email_usuario'
+            ? `email ${c.valor}@…`
+            : `email ${c.valor}`
   return bloque(
     c,
     filas.map((f) => aHallazgo(f, etiqueta)),

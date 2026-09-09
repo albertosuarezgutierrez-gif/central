@@ -77,14 +77,12 @@ function Fila({ o }: { o: ObligacionVista }) {
       <div className="linea">Vence el {evento}.</div>
       <div className="chips">
         <span className="chip">{etiquetaProcedencia(o.procedencia)}</span>
-        {/* `avisada: false` es «todavía no te hemos avisado», no «no hace falta»
-            — y tampoco «te avisaremos»: el cron de avisos vive en el panel del
-            corredor y solo manda con `ASEGURA_AVISOS_ACTIVOS=1`. Un chip que
-            prometiera el aviso estaría afirmando algo que esta app no puede
-            comprobar desde aquí. Se dice el hecho, no la promesa. */}
-        <span className={o.avisada ? 'chip ok' : 'chip'}>
-          {o.avisada ? 'Ya te hemos avisado' : 'Todavía no te hemos avisado'}
-        </span>
+        {/* El chip «Ya/Todavía no te hemos avisado» se quitó el 09/09/2026
+            (Alberto: «quitar esto, confunde»). El dato (`o.avisada`) se sigue
+            calculando en `lib/obligaciones.ts` para el día que haga falta,
+            pero no se pinta: a un cliente que ya está viendo su propio
+            calendario no le aporta nada saber si le mandamos o no un correo
+            aparte, y leerlo como promesa de aviso era justo la confusión. */}
       </div>
     </li>
   )

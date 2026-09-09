@@ -525,11 +525,20 @@ model PortalInvitacion {
   /// que hay deja a Prisma sin poder usar la clave y empuja a buscar con
   /// `findFirst`, que es la misma consulta contada peor.
   tokenHash                String    @unique @map("token_hash")
+  /// `ver` | `ver_economico` | `ninguno`. El tercero (08/09/2026) es «solo le
+  /// presento el portal»: al aceptar NO se crea autorizacion (lo obliga un CHECK).
   alcance                  String
   /// La UNICA poliza que abrira. `null` = todas las del otorgante, futuras
   /// incluidas. FK COMPUESTA con el otorgante: la BD exige que sea suya.
   polizaId                 String?   @map("poliza_id") @db.Uuid
   mensaje                  String?
+  /// Como lo escribio quien invita, para SU lista y el saludo del correo. No es
+  /// una identidad: quien es de verdad lo prueba el codigo al correo. `null` en
+  /// las filas anteriores al 08/09/2026.
+  invitadoNombre           String?   @map("invitado_nombre")
+  /// Vocabulario de `cliente_relaciones.tipo_relacion` (CHECK en la BD). NUNCA
+  /// va en el correo.
+  relacion                 String?
   creadaEn                 DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
   caducaEn                 DateTime  @map("caduca_en") @db.Timestamptz(6)
   aceptadaEn               DateTime? @map("aceptada_en") @db.Timestamptz(6)
@@ -1050,5 +1059,22 @@ model PortalHojaQrPoliza {
   hoja PortalHojaQr @relation(fields: [hojaId], references: [id], onDelete: Cascade)
 
   @@map("portal_hoja_qr_poliza")
+  @@schema("seguros")
+}
+
+/// El enlace de un solo uso con el que el CORREDOR abre el portal como lo ve un
+/// cliente (`seguros.portal_vista_corredor`). Lo crea asegura; aquí solo se lee
+/// y se sella `usadoEn`. Reglas en `@central/module-seguros-portal/vista-corredor`.
+model PortalVistaCorredor {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  clienteId    String    @map("cliente_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  actor        String
+  creadoEn     DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  usadoEn      DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@index([clienteId, creadoEn])
+  @@map("portal_vista_corredor")
   @@schema("seguros")
 }

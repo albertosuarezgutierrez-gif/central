@@ -248,6 +248,8 @@ model Cliente {
   emailOptOutAt       DateTime?          @map("email_opt_out_at") @db.Timestamp(6)
   emailOptOutSource   String?            @map("email_opt_out_source") @db.VarChar(30)
   emailLookupHash     String?            @map("email_lookup_hash")
+  emailDominioHash    String?            @map("email_dominio_hash")
+  emailUsuarioHash    String?            @map("email_usuario_hash")
   telefonoLookupHash  String?            @map("telefono_lookup_hash")
   activo              Boolean            @default(true)
   segmento            SegmentoCliente    @default(prospecto)
@@ -325,9 +327,11 @@ model ClienteEmail {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   clienteId       String   @map("cliente_id") @db.Uuid
   correduriaId    String   @map("correduria_id") @db.Uuid
-  email           String // cifrado
-  emailLookupHash String?  @map("email_lookup_hash")
-  etiqueta        String?  @db.VarChar(30)
+  email            String // cifrado
+  emailLookupHash  String?  @map("email_lookup_hash")
+  emailDominioHash String?  @map("email_dominio_hash")
+  emailUsuarioHash String?  @map("email_usuario_hash")
+  etiqueta         String?  @db.VarChar(30)
   esPrincipal     Boolean  @default(false) @map("es_principal")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
@@ -927,4 +931,20 @@ model PortalSupresion {
 
   @@index([estado, recibidaEn])
   @@map("portal_supresion")
+}
+
+/// El enlace de un solo uso con el que el corredor abre el portal como lo ve un
+/// cliente (`seguros.portal_vista_corredor`). Aquí se CREA (puerto
+/// `/api/operador/cliente/portal/vista`); el portal lo consume.
+model PortalVistaCorredor {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  clienteId    String    @map("cliente_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  actor        String
+  creadoEn     DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  usadoEn      DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@index([clienteId, creadoEn])
+  @@map("portal_vista_corredor")
 }
