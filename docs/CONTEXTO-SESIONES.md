@@ -39,6 +39,14 @@
   ramo). SQL en `apps/asegura-portal/prisma/sql/2026-09-08_…`. Pendiente de decisión: tabla
   `compania_canales` por ramo/uso, `codigo_dgs` en las declaradas y cola «compañía sin canal» en /correduria.
 
+- **🧲 La hoja de la nevera solo ofrece pólizas EN VIGOR (09/09/2026).** Alberto, mirando el selector de
+  crear la hoja: «¿ahí solo tiene que salir las que están en vigor, no?». Tenía razón: «cartera viva»
+  (CIMA) ≠ «en vigor» (fecha de vencimiento), y el selector arrastraba vencidas — la propia página del
+  QR ya prometía «solo lo que sigue en vigor» sin que el código lo aplicara. Regla 5 en `hoja-qr.ts`
+  (`polizaEnVigorParaHoja`/`declaradaEnVigorParaHoja`), filtrada en el selector Y en el render en vivo
+  del QR. `pendiente` (vigor desconocido) se sigue incluyendo. Tests: 13/13 (paquete), 432/432
+  (módulo), typecheck limpio. PR #2657 abierto.
+
 - **🗂 «Mis datos» + filtro «en vigor» por panel + sugerencia a la cabecera (09/09/2026).** Tres pedidos
   de Alberto sobre la pantalla del cliente. (1) Nueva pestaña «Mis datos» (5ª, tras «Contactos»):
   teléfono, correo y dirección de contacto, ahora **legibles** desde el portal (`GET
@@ -61,6 +69,7 @@
   (presente/ausente/desconocido, y en qué ramos hay producto). ⚠️ Lista vacía = desconocido, nunca «no
   está». La afinación de Avant2 (captura) sigue sin duplicarse: se hereda al cotizar por `config`
   (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR #2651.
+
 - **Título de póliza específico para RC de perros y similares (09/09/2026).** Alberto: la ficha de la
   RC de Occident (548238086) salía como «Occident · Responsabilidad civil» a secas, y hay miles de
   tipos de RC distintos. `tituloDePoliza` (`apps/asegura-portal/.../PolizaVista.tsx`) cae ahora a la
