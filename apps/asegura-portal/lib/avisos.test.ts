@@ -67,7 +67,7 @@ test('las obligaciones entran solo en la VENTANA del módulo (0..7 días antes d
     ['hoy', 'borde'],
   )
   assert.equal(r.avisos[0]!.tipo, 'obligacion_en_ventana')
-  assert.equal(r.avisos[0]!.href, '/boveda#calendario-titulo', 'el ancla es el titular del calendario')
+  assert.equal(r.avisos[0]!.href, '/boveda', 'lleva a la bóveda, que ya no tiene un calendario con ancla propia')
   assert.match(r.avisos[0]!.detalle, /hasta el 8 de septiembre/, 'la fecha que se enseña es la ACCIONABLE, no la del vencimiento')
 })
 

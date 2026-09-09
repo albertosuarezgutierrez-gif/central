@@ -30,6 +30,12 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗑 Quitado el calendario de vencimientos de `/boveda` (09/09/2026).** Alberto, viendo el bloque
+  «Lo que vence · Tu calendario» en producción: «no aporta nada» (cada póliza ya dice su vencimiento
+  en su propia fila). Se borró `boveda/Calendario.tsx` y la franja CSS `.seccion.acento` (era su único
+  usuario). El motor de obligaciones sigue vivo: lo lee la campana de avisos (`lib/avisos.ts`), cuyo
+  enlace ya no apunta a `#calendario-titulo` (borrado) sino a `/boveda`. Tests y `apps/asegura-portal/CLAUDE.md`
+  actualizados; typecheck + `node --test` en verde.
 - **🩹 Póliza BIDV004566 (Occident, GLOBAL 2 INSTALACIONES TÉCNICAS): faltaba en cartera, causa medida
   (09/09/2026).** El fichero EIAC llegó el 23/06 y quedó en cuarentena (`operational_events`:
   `reviewReasons: tipo_seguro_no_clasificable`) porque `seguros.tipo_seguro` no tenía valor para el

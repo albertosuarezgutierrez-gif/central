@@ -67,8 +67,10 @@ export type Avisos = {
 export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   autorizacion_pendiente: '/autorizaciones',
   autorizacion_sin_aceptar: '/autorizaciones',
-  // El `#` es el `id` del titular del calendario en `boveda/Calendario.tsx`.
-  obligacion_en_ventana: '/boveda#calendario-titulo',
+  // El calendario de la bóveda se quitó el 09/09/2026 (no aportaba nada que la
+  // fila de cada póliza no dijera ya); el aviso sigue existiendo y enlaza a la
+  // bóveda a secas, sin ancla.
+  obligacion_en_ventana: '/boveda',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
