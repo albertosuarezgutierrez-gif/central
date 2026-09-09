@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-09T15:47:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-09T16:53:03Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (09/09/2026) 📄 «Subir póliza» (corredor) generalizado a cualquier ramo, no solo auto
 - (09/09/2026) 🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia
 - (09/09/2026) 🗑 Quitado el calendario de vencimientos de `/boveda`
 - (09/09/2026) 🩹 Póliza BIDV004566 (Occident, GLOBAL 2 INSTALACIONES TÉCNICAS): faltaba en cartera, causa medida
@@ -271,5 +272,4 @@
 - (09/09/2026) Maqueta de pre-emisión por compañía en el retarificador
 - (08/09/2026) 🏠 La dirección del hogar dejaba de decir el CP dos veces
 - (08/09/2026) 🔔 La campana de avisos del portal del cliente
-- (09/09/2026) ⚙️ Optimización de consumo de tokens de Claude Code
 
