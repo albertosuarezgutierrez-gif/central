@@ -48,6 +48,7 @@ export async function POST(req: Request) {
       : r.estado === 'invalido' ? 422
         : r.estado === 'sin_puente' ? 503
           : r.estado === 'error' ? 502
+            // `en_otra_ficha`, `sin_ficha` y `varias_fichas`: nada que reintentar desde aquí.
             : 409
   return NextResponse.json(r, { status })
 }

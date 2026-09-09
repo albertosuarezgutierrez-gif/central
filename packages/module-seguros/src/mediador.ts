@@ -126,6 +126,47 @@ export const MEDIADOR = {
      * WhatsApp), se sustituye AQUÍ y cambia en todas las superficies a la vez.
      */
     telefono: '+34637349990',
+    /**
+     * La web pública (`apps/asegura-web`), que es la ÚNICA superficie pensada
+     * para quien todavía no es cliente: quién eres, qué ramos medias y un
+     * formulario para que te escriba.
+     *
+     * 🚨 Sin barra final y con `https://`: se concatena para formar rutas y se
+     * manda tal cual por WhatsApp.
+     *
+     * ⚠️ El `.com` NO es nuestro (apunta a un parking de IONOS) y
+     * `app.grupoasegura.com` sirve el CRM de Manuel: ni uno ni otro valen aquí.
+     * El apex `.es` lo sirve `asegura-web` desde el 05/09/2026.
+     *
+     * `apps/asegura-web/lib/sitio.ts` deja sobreescribirlo por
+     * `NEXT_PUBLIC_SITIO_URL` para sus previews; ESTE es el dominio que se le
+     * enseña a una persona, así que no depende de ninguna env: un mensaje de
+     * WhatsApp con la URL de una preview de Vercel no lo arregla un redeploy.
+     */
+    web: 'https://grupoasegura.es',
+    /**
+     * La intranet del cliente (`apps/asegura-portal`), que es lo que se le
+     * ofrece a alguien que todavía no tiene ninguna póliza con nosotros.
+     *
+     * 🚨 NO es «el área de clientes» en el sentido de «solo para clientes»:
+     * entrar no exige tener cartera (el código de un solo uso se manda a
+     * cualquier correo, `app/api/acceso/solicitar`), la bóveda vacía tiene su
+     * propio texto, y «Añade una póliza» se pinta SIN condición — admite
+     * pólizas de cualquier compañía, sea nuestra o no. Su propia pantalla de
+     * entrada lo dice: «Todos tus seguros en un sitio. Gratis, seas cliente o
+     * no.» Por eso se puede nombrar en un primer mensaje sin mentir.
+     *
+     * ⚠️ Lo que NO se le puede prometer desde aquí es que se las gestionamos:
+     * el propio portal declara «no la contratamos ni la gestionamos por ti»
+     * sobre una póliza declarada. Es un cuaderno suyo con avisos, no un
+     * encargo de mediación — y decirlo al revés sería asumir por WhatsApp un
+     * deber que no existe.
+     *
+     * `apps/asegura-web/lib/sitio.ts` lo deja sobreescribir por
+     * `NEXT_PUBLIC_PORTAL_URL` para sus previews; ESTE es el que se manda por
+     * WhatsApp, así que no depende de env por la misma razón que `web`.
+     */
+    portal: 'https://clientes.grupoasegura.es',
   },
   /** Seguro de responsabilidad civil profesional, art. 156.3 Ley 16/2018. */
   responsabilidadCivil: {

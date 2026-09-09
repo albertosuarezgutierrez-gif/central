@@ -1351,6 +1351,33 @@ tiene portal — y queda en su historial.
 - **Las reglas de validación son las MISMAS** que cuando lo corrige Alberto (`revisarEdicion` de
   `@central/module-seguros`): con dos vocabularios, el portal aceptaría lo que la ficha rechaza.
 
+### ✅ «Comprueba tus datos de contacto» (08/09/2026, integrado con «Mis datos» el 09/09/2026)
+
+Dictado de Alberto: *«tiene que ser automático, un aviso en la intranet; yo no intervengo»*. La
+cartera es un volcado de jun/2026: solo el propio cliente sabe si su contacto sigue siendo el suyo.
+
+🚨 **Nació pensado con datos ENMASCARADOS y se REDISEÑÓ el mismo 09/09/2026, en el mismo momento en
+que otra sesión añadía la pestaña «Mis datos»** (ver el apartado de arriba): esa pestaña ya lee y
+enseña el contacto EN CLARO por su propio puente (`GET /api/portal/contacto`, `leerContactoPropio`),
+así que el enmascarado quedó redundante y se retiró — de aquella pieza solo sobrevive el
+RECORDATORIO. Las dos capas ahora se reparten así:
+
+- **`AvisoContacto.tsx`** (nuevo, en `boveda/`) — el empujón AUTOMÁTICO, arriba del todo en «Mis
+  seguros» (antes que el calendario): solo se pinta si `confirmacion` es `nunca` o `caducada`, con
+  **«Sí, siguen igual»** (sella por `POST /api/mis-datos/confirmar` → `POST
+  /api/portal/contacto-confirmar`, sin leer el cuerpo — la identidad es la de la cookie) y un enlace a
+  `?vista=datos`. No enseña ningún dato ni edita nada: reutiliza la MISMA lectura que ya se pidió para
+  «Mis datos» (una sola llamada al puente por visita), así que si esa lectura falla (`sin_ficha`,
+  `sin_puente`, `error`…) el aviso simplemente no se pinta — el fallo ya lo dice «Mis datos» cuando la
+  persona entra a corregir.
+- **`MisDatos.tsx`** — donde de verdad se corrige (teléfono, correo y dirección, en claro).
+
+`contacto_confirmado_at` (`clientes`) se sella tanto al decir «siguen igual» como al corregir algo
+desde «Mis datos» (`aplicarContactoPropio`): quien acaba de escribir un dato acaba de verificarlo.
+`estadoConfirmacion()` de `@central/module-seguros-portal` decide `nunca`/`vigente`/`caducada` — NUNCA
+en el navegador, para que un «hoy» de aquí y otro del servidor no den dos respuestas. Cepos en
+`test/regression-portal-contacto-propio.test.ts`.
+
 ### 💡 El botón de sugerencias
 
 «¿Echas algo de menos?» al final de `/boveda` → Telegram a Alberto (`POST /api/sugerencia`) **y**

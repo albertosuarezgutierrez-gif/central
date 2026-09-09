@@ -20,8 +20,9 @@ const esCanal = (k: string): k is (typeof CAMPOS_CANAL_PROPIO)[number] =>
  * ciudad?, provincia?, telefono?, email? } }`.
  *
  * GET /api/portal/contacto?identidadId= — lo que tiene la ficha de esa
- * identidad para que lo vea y lo corrija (09/09/2026). Mismo secreto, misma
- * resolución por vínculo, y devuelve SOLO esos seis campos.
+ * identidad para que lo vea y lo corrija (09/09/2026), más si ha confirmado
+ * que sigue siendo correcto (`confirmadoEn`/`confirmacion`). Mismo secreto,
+ * misma resolución por vínculo.
  *
  * 🚨 No acepta `clienteId`, y esa ausencia es la seguridad de esta ruta: la
  * ficha la resuelve asegura por `portal_vinculo`. Si aceptara uno, el portal
@@ -67,9 +68,10 @@ export async function POST(req: Request) {
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
 
     const r = await aplicarContactoPropio(correduria.id, identidadId, libre)
-    // 422 solo para lo que el cliente puede arreglar reescribiendo. `sin_ficha`
-    // y `varias_fichas` son 409: no ha hecho nada mal, es que no hay una ficha
-    // suya donde escribirlo, y eso lo resuelve el corredor.
+    // 422 solo para lo que el cliente puede arreglar reescribiendo. `sin_ficha`,
+    // `varias_fichas` y `conflicto` son 409: no ha hecho nada mal, es que no hay
+    // una ficha suya donde escribirlo (o el teléfono ya es el principal de otra),
+    // y eso lo resuelve el corredor.
     const status =
       r.estado === 'ok' || r.estado === 'sin_cambios' ? 200
         : r.estado === 'invalido' ? 422
