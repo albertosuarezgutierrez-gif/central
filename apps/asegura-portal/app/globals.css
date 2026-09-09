@@ -1935,6 +1935,19 @@ h1 em {
  * diseño lo que el copy tiene prohibido, dejar creer que se borra todo.
  * A 320 px van apiladas; en cuanto caben, una al lado de la otra. */
 .tus-datos { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); }
+/* Plegado por defecto y con voz baja: no es una acción que se ofrezca al
+   mismo nivel que el resto de la pantalla (09/09/2026). El marcador nativo
+   de <details> ya avisa de que se abre; no se duplica con una flecha propia. */
+.supresion-plegable summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: revert;
+  width: fit-content;
+}
+.supresion-plegable summary:hover { color: var(--text); }
+.supresion-plegable-cuerpo { margin-top: 12px; }
 .supresion-intro { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
 .supresion-alcance { display: grid; gap: 14px; margin-bottom: 14px; }
 @media (min-width: 560px) { .supresion-alcance { grid-template-columns: 1fr 1fr; } }
