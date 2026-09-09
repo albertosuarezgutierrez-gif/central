@@ -30,14 +30,58 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia (09/09/2026, PR pendiente).** La
+- **🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia (09/09/2026, PR #2680).** La
   hoja/QR de la nevera (`HojasQr`, asegura-portal) vivía embebida al final de «Mis seguros» y solo
   la encontraba quien bajara del todo — lo mismo que ya se corrigió con «Mis datos» el mismo día.
   Nueva vista `hoja` en `VISTAS_BOVEDA` (`packages/module-seguros-portal/src/vista-portal.ts`) y
   pestaña «Mi QR» en `pestanasPortal()` (2ª, tras «Mis seguros»); el nav lateral/carril ya es
   genérico por `pestanasPortal()`, sin tocar `NavPortal.tsx`. `page.tsx` mueve la sección de
-  `vista==='seguros'` a `vista==='hoja'`. Tests y typecheck de asegura-portal en verde.
+  `vista==='seguros'` a `vista==='hoja'`. 🚨 Con SEIS pestañas el reparto de ancho sin suelo
+  (`flex:1 1 0; min-width:0`) solapaba texto de pestañas contiguas a 320/390 px — visto fallar
+  con Playwright contra el `globals.css` real y corregido con `min-width:76px` (por debajo, el
+  carril se desliza en vez de aplastar). Tests y typecheck de asegura-portal en verde.
 
+- **📞 Teléfonos de compañía en el portal: Generali cargado y Allianz CORREGIDO (08/09/2026).** Alberto,
+  con la captura de «Un siniestro»: «falta número de compañía» + tabla de Generali/Allianz. La pantalla
+  YA filtra por las compañías de las pólizas de esa persona (la captura enseña Occident+Mapfre porque son
+  las suyas). Contrastado con buscador restringido al dominio oficial (webs bloqueadas): Generali `C0072`
+  900 903 433 (siniestros = asistencia); Allianz `C0109` **900 300 250 L-V 9-19** — el 900 101 920 del
+  05/09 era la línea de DANA/catástrofes. Asistencia de Allianz sigue NULL (una columna, dos números por
+  ramo). SQL en `apps/asegura-portal/prisma/sql/2026-09-08_…`. Pendiente de decisión: tabla
+  `compania_canales` por ramo/uso, `codigo_dgs` en las declaradas y cola «compañía sin canal» en /correduria.
+
+- **👋 El WhatsApp del LEAD VENDE la intranet — y mi argumento para no hacerlo era falso (08/09/2026).**
+  Se implementaron los tres mensajes (cliente con correo · sin correo · lead) SIN mirar antes los PRs
+  abiertos: el #2604, mergeado esa misma mañana, ya cubría los dos de cliente y mejor (nombra el correo
+  que manda asegura, `portal.emailInvitacion`, no el de la cabecera). Reducido a
+  `mensajePresentacionWhatsapp()` de `@central/module-seguros`. Alberto, sobre el texto: «hay q vender
+  la intranet para que entre y meta sus datos… es una herramienta gratis q no existe y así puede
+  controlar todos sus seguros». 🚨 Yo lo escondía «porque un lead entraría a una bóveda vacía» y,
+  medido contra `apps/asegura-portal`, era FALSO: entrar no exige cartera (el código va a cualquier
+  correo; la vinculación pasa DESPUÉS del login y no bloquea), la bóveda vacía tiene texto propio, y
+  **«Añade una póliza» se pinta sin ninguna condición** — PDF, foto o a mano, de CUALQUIER compañía,
+  exigiendo solo compañía O número. Su pantalla de entrada ya lo dice: «Todos tus seguros en un sitio.
+  Gratis, seas cliente o no.» El enlace del mensaje pasa a ser el portal (`MEDIADOR.identidad.portal`,
+  dato canónico nuevo) y la web sale: dos URLs en un mensaje corto compiten. El límite que NO se cruza
+  es prometer que se las gestionamos —el portal declara «no la contratamos ni la gestionamos por ti»—
+  ni nombrar un correo (eso lo decide `portal.emailInvitacion`). 11 cepos, los 6 nuevos vistos en rojo.
+  PR #2612. Lección de método: antes de decidir que una pantalla «no sirve» para alguien, LÉELA — lo
+  que había aquí era una suposición sobre el producto, no el producto. Y la colisión del día: `nombreDePila`
+  bajó a `@central/module-seguros` (PR del saludo del portal) mientras esta rama exportaba otra con el
+  mismo nombre → el barril la exportaba dos veces, sin conflicto de git y sin que lo viera ningún tsc.
+  Aparte: el email de cumpleaños queda para los 44 clientes con correo, y a los 4.206 leads NO se les
+  manda WhatsApp masivo (lo bloquea Meta, no la ley).
+- **Maqueta de pre-emisión por compañía en el retarificador (09/09/2026).** Alberto vio en Avant2 que
+  tras elegir presupuesto cada compañía pide sus propios "datos adicionales del riesgo" (eso viene del
+  paso Preemisión de Codeoscopic, no lo inventa Avant2 — ver `apps/asegura/CLAUDE.md`). Botón
+  "Pre-emitir" por fila en `retarificador.tsx` abre `preemision-mock.tsx`: los mismos campos por
+  compañía (Occident/Reale/Mapfre/Allianz) con el look de `/correduria`, interactivos pero SIN llamar a
+  Codeoscopic ni gastar nada (banner "🧪 MAQUETA"). Sirve para validar diseño antes de decidir si se
+  cierra la integración real (Submit sigue en sandbox, `CODEOSCOPIC_EMISION_ACTIVA` apagado). tsc+lint
+  en verde. Rama `claude/retarificacion-emision-poliza-gpuhpa`, PR #2661 (abierto y suscrito).
+  De paso: la ficha de cliente ganó avatar de iniciales en `Cabecera.tsx` (reutiliza el hueco `icono`
+  de `PageHeader`, sin tocar su forma) — comparado con la ficha de Avant2, pero SIN copiar su rueda de
+  iconos decorativa: contradice el rediseño minimalista del 03/09. tsc+lint en verde, mismo PR.
 - **🏠 La dirección del hogar dejaba de decir el CP dos veces (08/09/2026, PR pendiente).** Con
   `PII_ENCRYPTION_KEY` ya puesta en el Vercel de `asegura-portal` (la añadió Alberto; el build que
   la recogió es `d6a954bb`), la calle sale en claro — y con ella el defecto: **«MARINA GOLF 82,
@@ -90,7 +134,6 @@
   (`polizaEnVigorParaHoja`/`declaradaEnVigorParaHoja`), filtrada en el selector Y en el render en vivo
   del QR. `pendiente` (vigor desconocido) se sigue incluyendo. Tests: 13/13 (paquete), 432/432
   (módulo), typecheck limpio. PR #2657.
-
 - **🗂 «Mis datos» + filtro «en vigor» por panel + sugerencia a la cabecera (09/09/2026).** Tres pedidos
   de Alberto sobre la pantalla del cliente. (1) Nueva pestaña «Mis datos» (5ª, tras «Contactos»):
   teléfono, correo y dirección de contacto, ahora **legibles** desde el portal (`GET
@@ -109,7 +152,6 @@
   nada»), lectura/escritura del canal «principal» con criterios distintos (reenviar el MISMO
   teléfono creaba una fila duplicada) y un `id` de `FiltroVigencia` que faltaba en la rama vacía —
   corregidos en PR #2672 (draft, a la espera de CI).
-
 - **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
   pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
   `vendoresDeSeguro()` (`/insurance-vendors`) + `productosDeLinea()` (`/insurance-lines/{id}/products`)
@@ -197,6 +239,20 @@
   `@central/module-seguros` (9 tests, cepo visto en rojo), `GET/POST /api/operador/backfill-contacto`
   en asegura y tarjeta+botón en `/correduria/mantenimiento`. Ojo: `uq_clientes_email_lookup_hash` es
   UNIQUE → fichas con el mismo correo chocan y no se escriben. **Pendiente: pulsar el botón** (tandas).
+- **✅ Aviso automático «comprueba tus datos de contacto» en el portal (08-09/09/2026), integrado con
+  «Mis datos» tras solape de PRs concurrentes.** Alberto vio en la ficha de un cliente que faltaban
+  estado civil/fecha de carnet/municipio y preguntó cómo verificar que móvil/email/dirección de la BD
+  antigua siguen siendo correctos, **sin que el corredor intervenga**. Descartado avisar en la ficha
+  del corredor (fecha de carnet es del CONDUCTOR de una póliza, no del cliente; ya lo pide
+  `revisarDatosAuto()` al presupuestar). Se construyó con datos ENMASCARADOS (`/api/portal/contacto-estado`)
+  y, al ir a mergear, **el PR #2660 de otra sesión concurrente ya había añadido una pestaña «Mis datos»
+  completa** (lectura en claro + edición de teléfono/correo/dirección, sustituyendo `MiDireccion.tsx`
+  por `MisDatos.tsx`). Se resolvió por integración, no por descarte: se retiró el enmascarado (ya
+  redundante) y quedó solo el recordatorio como `AvisoContacto.tsx` (arriba de «Mis seguros», antes que
+  el calendario), reutilizando la MISMA lectura de `leerContactoPropio`/`leerMisDatos` (ahora con
+  `confirmadoEn`/`confirmacion`) en vez de un puerto propio — `contacto-estado` se eliminó.
+  `clientes.contacto_confirmado_at` se sella al decir «siguen igual» o al corregir algo. PR de esta
+  sesión (merge de main + resolución del solape). Pendiente: aplicar la migración SQL en preview→prod.
 - **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
   captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil
   quedaba fuera de la primera pantalla, y en iPhone ese aviso es lo ÚNICO que explica cómo instalar

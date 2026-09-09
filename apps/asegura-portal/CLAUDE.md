@@ -1351,6 +1351,33 @@ tiene portal — y queda en su historial.
 - **Las reglas de validación son las MISMAS** que cuando lo corrige Alberto (`revisarEdicion` de
   `@central/module-seguros`): con dos vocabularios, el portal aceptaría lo que la ficha rechaza.
 
+### ✅ «Comprueba tus datos de contacto» (08/09/2026, integrado con «Mis datos» el 09/09/2026)
+
+Dictado de Alberto: *«tiene que ser automático, un aviso en la intranet; yo no intervengo»*. La
+cartera es un volcado de jun/2026: solo el propio cliente sabe si su contacto sigue siendo el suyo.
+
+🚨 **Nació pensado con datos ENMASCARADOS y se REDISEÑÓ el mismo 09/09/2026, en el mismo momento en
+que otra sesión añadía la pestaña «Mis datos»** (ver el apartado de arriba): esa pestaña ya lee y
+enseña el contacto EN CLARO por su propio puente (`GET /api/portal/contacto`, `leerContactoPropio`),
+así que el enmascarado quedó redundante y se retiró — de aquella pieza solo sobrevive el
+RECORDATORIO. Las dos capas ahora se reparten así:
+
+- **`AvisoContacto.tsx`** (nuevo, en `boveda/`) — el empujón AUTOMÁTICO, arriba del todo en «Mis
+  seguros» (antes que el calendario): solo se pinta si `confirmacion` es `nunca` o `caducada`, con
+  **«Sí, siguen igual»** (sella por `POST /api/mis-datos/confirmar` → `POST
+  /api/portal/contacto-confirmar`, sin leer el cuerpo — la identidad es la de la cookie) y un enlace a
+  `?vista=datos`. No enseña ningún dato ni edita nada: reutiliza la MISMA lectura que ya se pidió para
+  «Mis datos» (una sola llamada al puente por visita), así que si esa lectura falla (`sin_ficha`,
+  `sin_puente`, `error`…) el aviso simplemente no se pinta — el fallo ya lo dice «Mis datos» cuando la
+  persona entra a corregir.
+- **`MisDatos.tsx`** — donde de verdad se corrige (teléfono, correo y dirección, en claro).
+
+`contacto_confirmado_at` (`clientes`) se sella tanto al decir «siguen igual» como al corregir algo
+desde «Mis datos» (`aplicarContactoPropio`): quien acaba de escribir un dato acaba de verificarlo.
+`estadoConfirmacion()` de `@central/module-seguros-portal` decide `nunca`/`vigente`/`caducada` — NUNCA
+en el navegador, para que un «hoy» de aquí y otro del servidor no den dos respuestas. Cepos en
+`test/regression-portal-contacto-propio.test.ts`.
+
 ### 💡 El botón de sugerencias
 
 «¿Echas algo de menos?» al final de `/boveda` → Telegram a Alberto (`POST /api/sugerencia`) **y**
@@ -1980,8 +2007,14 @@ bloque del canal), y el de las `sinDatos` dejaba pasar un `.filter()` posterior 
 que no se ha visto morder es una suposición.
 
 📌 Cartera viva al 05/09/2026: Mapfre `C0058` (64 pólizas, 900 122 122) · Allianz `C0109` (26,
-900 101 920; **asistencia a NULL a propósito** porque depende del ramo y la columna admite uno solo) ·
-Occident `C0468` (19, **solo WhatsApp**) · Reale `C0613` (1, 900 365 900).
+**900 300 250, L-V 9-19** — corregido el 08/09/2026: el 900 101 920 que se cargó el 05/09 es la línea
+especial de DANA/catástrofes según `prensa.allianz.es`; **asistencia a NULL a propósito** porque depende
+del ramo —900 117 115 vehículos / 913 255 258 hogar— y la columna admite uno solo) · Occident `C0468`
+(19, **solo WhatsApp**) · Reale `C0613` (1, 900 365 900). Y **Generali `C0072`** (sin pólizas vivas;
+una declarada en el portal como «GeneraliSegurosy Reaseguros,S.A.U.», que NO cruza por nombre exacto):
+900 903 433 para dar parte y asistencia, horario NULL; su grúa por WhatsApp (+34 654 033 629) **no se
+pinta** porque es asistencia y `whatsapp_siniestros` se rotula «Dar parte». SQL:
+`prisma/sql/2026-09-08_companias_telefonos_generali_allianz.sql`.
 
 🔗 **Y el QR de esa hoja lleva un ENLACE, no los datos.** Un QR no caduca —es una imagen con un texto
 dentro— pero lo que se mete dentro sí: con los datos escritos, la imagen miente en cuanto cambie la

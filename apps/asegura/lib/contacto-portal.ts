@@ -22,14 +22,27 @@
  * LECTURA (`leerContactoPropio`, 09/09/2026) devuelve exactamente lo que el
  * cliente puede corregir —su dirección de contacto, su teléfono y su correo
  * principales— y nada más: ni el nombre, ni el DNI, ni las notas del corredor.
+ *
+ * ─── «Comprueba tus datos de contacto» (08/09/2026, adaptado 09/09/2026) ─────
+ * La cartera viene de un volcado de junio/2026: nadie ha vuelto a preguntarle
+ * al cliente si su contacto sigue siendo el mismo. Además de poder EDITAR (lo
+ * de arriba), la ficha guarda `contacto_confirmado_at` — cuándo dijo por
+ * última vez «sigue siendo el mío», a mano (`confirmarContactoPropio`) o de
+ * hecho, al corregir algo (`aplicarContactoPropio` sella al salir `ok`). La
+ * lectura devuelve también ese estado para que el portal decida si merece la
+ * pena preguntar (`estadoConfirmacion` de `@central/module-seguros-portal`:
+ * `nunca` ≠ `caducada`, y ninguna de las dos es «confirmado»).
  */
 import {
   CAMPOS_CANAL_PROPIO,
   CAMPOS_DIRECCION_PROPIA,
   decidirFichaPropia,
+  estadoConfirmacion,
+  textoHistorialConfirmacionContacto,
   textoHistorialContactoPropio,
   type CampoCanalPropio,
   type CampoDireccionPropia,
+  type EstadoConfirmacionContacto,
   type FichaPropia,
 } from '@central/module-seguros-portal'
 import { normalizarContacto, revisarEdicion, type EdicionCliente } from '@central/module-seguros'
@@ -87,6 +100,29 @@ async function fichasDeIdentidad(correduriaId: string, identidadId: string): Pro
   return filas.map((f) => f.cliente_id)
 }
 
+/** Resuelve la ficha de la identidad; el error de vínculos NO se colapsa con `sin_ficha`. */
+async function fichaPropiaDe(
+  correduriaId: string,
+  identidadId: string,
+): Promise<{ estado: 'ok'; clienteId: string } | { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }> {
+  let ficha: FichaPropia
+  try {
+    ficha = decidirFichaPropia(await fichasDeIdentidad(correduriaId, identidadId))
+  } catch (e) {
+    console.error('[contacto-portal] no se pudieron leer los vínculos:', e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: 'vinculos_ilegibles' }
+  }
+  if (ficha.estado === 'sin_ficha') return { estado: 'sin_ficha' }
+  if (ficha.estado === 'varias_fichas') {
+    console.warn(
+      `[contacto-portal] identidad ${identidadId} vinculada a ${ficha.clienteIds.length} fichas ` +
+        `(${ficha.clienteIds.join(', ')}); no se escribe/lee en ninguna.`,
+    )
+    return { estado: 'varias_fichas' }
+  }
+  return ficha
+}
+
 /** Lo que el cliente puede mandar: su dirección de contacto y sus dos canales. */
 export type EntradaContactoPropio = Partial<Record<CampoDireccionPropia, string | null>> &
   Partial<Record<CampoCanalPropio, string>>
@@ -110,6 +146,9 @@ export type EntradaContactoPropio = Partial<Record<CampoDireccionPropia, string 
  *
  * 🚨 Un canal que no cambia no se reescribe: si manda el mismo número que ya es
  * su principal, se cuenta como «sin cambios» y no deja una fila nueva.
+ *
+ * Y quien corrige acaba de verificar: al salir `ok` se sella
+ * `contacto_confirmado_at`, igual que si hubiera dicho «siguen igual».
  */
 export async function aplicarContactoPropio(
   correduriaId: string,
@@ -141,24 +180,8 @@ export async function aplicarContactoPropio(
     canalesNorm[k] = n.valor
   }
 
-  let ficha: FichaPropia
-  try {
-    ficha = decidirFichaPropia(await fichasDeIdentidad(correduriaId, identidadId))
-  } catch (e) {
-    // 🚨 No se colapsa con `sin_ficha`: «no he podido mirar sus vínculos» y «no
-    // tiene ninguno» se arreglan en sitios distintos, y el segundo le diría al
-    // cliente que no le consta ninguna póliza, que es una afirmación falsa.
-    console.error('[contacto-portal] no se pudieron leer los vínculos:', e instanceof Error ? e.message : e)
-    return { estado: 'error', causa: 'vinculos_ilegibles' }
-  }
-  if (ficha.estado === 'sin_ficha') return { estado: 'sin_ficha' }
-  if (ficha.estado === 'varias_fichas') {
-    console.warn(
-      `[contacto-portal] identidad ${identidadId} vinculada a ${ficha.clienteIds.length} fichas ` +
-        `(${ficha.clienteIds.join(', ')}); no se escribe en ninguna.`,
-    )
-    return { estado: 'varias_fichas' }
-  }
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
 
   const aplicados: string[] = []
 
@@ -212,6 +235,8 @@ export async function aplicarContactoPropio(
   // Una segunda anotación que nombra al autor y avisa de que esto no ha salido
   // hacia ninguna compañía.
   await anotar(correduriaId, ficha.clienteId, textoHistorialContactoPropio(aplicados))
+  // Quien acaba de corregir un dato acaba de VERIFICARLO: cuenta como confirmar.
+  await sellarConfirmacion(correduriaId, ficha.clienteId)
   return { estado: 'ok', campos: aplicados }
 }
 
@@ -219,8 +244,18 @@ export async function aplicarContactoPropio(
 export type ContactoPropio = Record<CampoDireccionPropia | CampoCanalPropio, string | null>
 
 export type LecturaContactoPropio =
-  /** `ilegibles`: campos que HAY pero no se han podido descifrar. No son «no consta». */
-  | { estado: 'ok'; contacto: ContactoPropio; ilegibles: string[] }
+  /**
+   * `ilegibles`: campos que HAY pero no se han podido descifrar. No son «no
+   * consta». `confirmadoEn`/`confirmacion` vienen de `contacto_confirmado_at`
+   * (ver cabecera del módulo): `null` = nunca se ha confirmado desde el volcado.
+   */
+  | {
+      estado: 'ok'
+      contacto: ContactoPropio
+      ilegibles: string[]
+      confirmadoEn: string | null
+      confirmacion: EstadoConfirmacionContacto
+    }
   | { estado: 'sin_ficha' }
   | { estado: 'varias_fichas' }
   | { estado: 'error'; causa: string }
@@ -242,21 +277,14 @@ export type LecturaContactoPropio =
  * corrige el cliente. Los secundarios son cosa de la ficha del corredor.
  */
 export async function leerContactoPropio(correduriaId: string, identidadId: string): Promise<LecturaContactoPropio> {
-  let ficha: FichaPropia
-  try {
-    ficha = decidirFichaPropia(await fichasDeIdentidad(correduriaId, identidadId))
-  } catch (e) {
-    console.error('[contacto-portal] no se pudieron leer los vínculos:', e instanceof Error ? e.message : e)
-    return { estado: 'error', causa: 'vinculos_ilegibles' }
-  }
-  if (ficha.estado === 'sin_ficha') return { estado: 'sin_ficha' }
-  if (ficha.estado === 'varias_fichas') return { estado: 'varias_fichas' }
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
 
   try {
     const [c, contactos] = await Promise.all([
       prismaAsegura().cliente.findFirst({
         where: { id: ficha.clienteId, correduriaId, mergedIntoClienteId: null },
-        select: { direccion: true, codigoPostal: true, ciudad: true, provincia: true },
+        select: { direccion: true, codigoPostal: true, ciudad: true, provincia: true, contactoConfirmadoAt: true },
       }),
       listarContactos(correduriaId, ficha.clienteId),
     ])
@@ -284,11 +312,47 @@ export async function leerContactoPropio(correduriaId: string, identidadId: stri
         email: contactoPrincipal(contactos.emails),
       },
       ilegibles,
+      confirmadoEn: c.contactoConfirmadoAt ? c.contactoConfirmadoAt.toISOString() : null,
+      confirmacion: estadoConfirmacion(c.contactoConfirmadoAt, new Date()),
     }
   } catch (e) {
     console.error('[contacto-portal] no se pudo leer la ficha:', e instanceof Error ? e.message : e)
     return { estado: 'error', causa: 'ficha_ilegible' }
   }
+}
+
+export type ResultadoConfirmarContacto =
+  | { estado: 'ok'; confirmadoEn: string }
+  | { estado: 'sin_ficha' }
+  | { estado: 'varias_fichas' }
+  | { estado: 'error'; causa: string }
+
+/**
+ * «Siguen igual»: el cliente dice que su contacto sigue siendo correcto SIN
+ * cambiar nada. Sella `contacto_confirmado_at = now()` y lo deja en el
+ * historial — sin valores, como toda anotación de esta puerta.
+ */
+export async function confirmarContactoPropio(correduriaId: string, identidadId: string): Promise<ResultadoConfirmarContacto> {
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
+  try {
+    const ahora = await sellarConfirmacion(correduriaId, ficha.clienteId)
+    await anotar(correduriaId, ficha.clienteId, textoHistorialConfirmacionContacto())
+    return { estado: 'ok', confirmadoEn: ahora.toISOString() }
+  } catch (e) {
+    console.error('[contacto-portal] no se pudo sellar la confirmación:', e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: 'sello_fallido' }
+  }
+}
+
+/** `contacto_confirmado_at = now()`: el cliente acaba de mirar (o corregir) sus datos. */
+async function sellarConfirmacion(correduriaId: string, clienteId: string): Promise<Date> {
+  const ahora = new Date()
+  await prismaAsegura().cliente.updateMany({
+    where: { id: clienteId, correduriaId },
+    data: { contactoConfirmadoAt: ahora },
+  })
+  return ahora
 }
 
 /**
@@ -306,13 +370,8 @@ export async function anotarActividadPortal(
   identidadId: string,
   texto: string,
 ): Promise<'ok' | 'sin_ficha' | 'varias_fichas' | 'error'> {
-  let ficha: FichaPropia
-  try {
-    ficha = decidirFichaPropia(await fichasDeIdentidad(correduriaId, identidadId))
-  } catch {
-    return 'error'
-  }
-  if (ficha.estado !== 'ok') return ficha.estado === 'sin_ficha' ? 'sin_ficha' : 'varias_fichas'
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha.estado === 'error' ? 'error' : ficha.estado
   await anotar(correduriaId, ficha.clienteId, texto)
   return 'ok'
 }

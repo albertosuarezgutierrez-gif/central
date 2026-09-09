@@ -458,6 +458,24 @@ const CSS_RETARIFICADOR = `
   cursor: pointer;
   min-height: 44px;
 }
+/* Toggle Sí/No de la maqueta de pre-emisión (preemision-mock.tsx) — el mismo
+   gesto azul/blanco que enseña Avant2, pero con los tokens de plataforma. */
+.retarificar .toggle-sino {
+  flex: 1;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+.retarificar .toggle-sino.activo {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
 .retarificar .err {
   background: var(--negative-bg);
   color: var(--danger);

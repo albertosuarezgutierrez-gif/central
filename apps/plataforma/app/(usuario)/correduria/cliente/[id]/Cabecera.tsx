@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { contactoEfectivo, etiquetaRol, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, urlVidaNuevo, urlSaludNuevo, urlDecesosNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, btnStyle } from '@/components/ui'
@@ -23,20 +23,26 @@ import { fmt } from './piezas'
 export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: ResumenFicha }) {
   // Solo el cónyuge sube a la cabecera; el resto de vínculos vive en «Contactos».
   const conyuge = ficha.relaciones?.find(r => r.tipo === 'Cónyuge/Pareja de Hecho') ?? null
+  // 🚨 El MISMO criterio que el rótulo de estado, calculado una sola vez: CIMA
+  // engancha pólizas por DNI a fichas que siguen marcadas como `lead`, así que
+  // el enum `tipo` no basta. Si el rótulo dice «Cliente» y el WhatsApp le trata
+  // de desconocido (o al revés), el fallo se ve en la pantalla y en el chat.
+  const esCliente = ficha.tipo === 'cliente' || resumen.conteo.vivas > 0
   return (
     <>
       <div>
         <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
         <PageHeader
           titulo={ficha.nombre}
+          icono={<Iniciales nombre={ficha.nombre} />}
           sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {/* El estado lo DERIVA asegura de los hechos (cliente · con presupuesto ·
                 lead · ex-cliente) y lo trae con su motivo. Sin él (asegura viejo),
                 la regla de siempre: CIMA engancha pólizas por DNI a una ficha que
                 puede seguir `lead`, y con pólizas vivas ES cliente, diga lo que
                 diga el enum. */}
-            <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={ficha.tipo === 'cliente' || resumen.conteo.vivas > 0} />
-            <Contacto nombre={ficha.nombre} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
+            <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
+            <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
             {conyuge && (
               <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                 💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
@@ -51,6 +57,21 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
       <Titulares resumen={resumen} />
     </>
   )
+}
+
+// ── Iniciales ───────────────────────────────────────────────────────────────
+// Avant2 pone un avatar circular con las iniciales delante del nombre; aquí se
+// reutiliza el hueco `icono` que `PageHeader` YA ofrece (55 consumidores, ver
+// CLAUDE.md) en vez de inventar un componente nuevo o cambiar su forma — un
+// círculo distinto del resto de la app sería otra decisión de diseño, y esta
+// solo busca dar identidad visual a la ficha sin abrir ese melón.
+function Iniciales({ nombre }: { nombre: string }) {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean)
+  const iniciales =
+    partes.length === 0 ? '?'
+      : partes.length === 1 ? partes[0]!.slice(0, 2).toUpperCase()
+        : (partes[0]![0] + partes[1]![0]).toUpperCase()
+  return <span style={{ fontSize: 15, fontWeight: 800 }}>{iniciales}</span>
 }
 
 // ── Titulares ───────────────────────────────────────────────────────────────
@@ -268,9 +289,12 @@ const CAUSA_PII: Record<string, string> = {
   sin_muestra: 'no hay ningún dato cifrado con el que probar la clave',
 }
 
-function Contacto({ nombre, c, intervinientes, piiClave, contactos, polizas }: {
+function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: {
   /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */
   nombre: string
+  /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el
+   *  mismo criterio que el rótulo de estado. */
+  esCliente: boolean
   c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
   intervinientes: IntervinienteFicha[] | null
   piiClave: string | null
@@ -311,13 +335,20 @@ function Contacto({ nombre, c, intervinientes, piiClave, contactos, polizas }: {
     ) : null
   // Sin intervinientes que mirar, «sin teléfono» solo habla del tomador.
   const coletilla = ef.intervinientesSinMirar ? ' · intervinientes sin comprobar' : ''
+  // 🚨 SOLO al que todavía no es cliente. A un cliente se le invita al portal
+  // desde el botón «Abrir WhatsApp» del bloque Portal (pestaña Contactos), que
+  // es quien sabe con qué correo entra —el que manda asegura, no el que se vea
+  // aquí— y adjunta el enlace. Un segundo mensaje de invitación redactado desde
+  // la cabecera nombraría un correo elegido por otra regla, y el día que las dos
+  // se separen el cliente teclearía una dirección que el portal no reconoce.
+  const mensajeWa = esCliente ? null : mensajePresentacionWhatsapp(nombre)
   return (
     <>
       {/* Los tres iconos van juntos y al principio: es lo que se TOCA. Detrás
           sigue el número y de quién es, que es lo que se LEE. El WhatsApp lo
           pinta ahí dentro `BotonWhatsapp`, y solo si el número es un móvil
           (ver `lib/telefono-wa.ts`): no se repite suelto al lado del número. */}
-      <AccionesContacto telefono={ef.telefono} email={ef.email} quien={nombre} />
+      <AccionesContacto telefono={ef.telefono} email={ef.email} quien={nombre} mensaje={mensajeWa} />
       {ef.telefono ? (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
           <a href={`tel:${ef.telefono.replace(/\s/g, '')}`}>📞 {ef.telefono}</a>

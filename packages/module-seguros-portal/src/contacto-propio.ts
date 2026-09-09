@@ -109,3 +109,44 @@ export function textoHistorialContactoPropio(campos: readonly string[]): string 
     'No se ha comunicado a ninguna compañía: son sus datos de contacto con nosotros, no los de sus pólizas.'
   )
 }
+
+// ─── «Comprueba tus datos de contacto» (08/09/2026, adaptado 09/09/2026) ─────
+//
+// Nace pensado como aviso con datos ENMASCARADOS (el portal no descifraba
+// PII). Desde el 09/09/2026 la pestaña «Mis datos» ya lee y enseña el dato en
+// claro por su propio puente (`leerContactoPropio`/`leerMisDatos`), así que el
+// enmascarado sobra: lo que queda de esta pieza es solo el RECORDATORIO
+// periódico — la confirmación tiene tres estados, no dos: `nunca` (NULL: todo
+// el volcado nace así) NO es `caducada` — un «no se sabe» no se disfraza de
+// «se supo y ya es viejo».
+
+/** Cada cuánto se le vuelve a preguntar. */
+export const DIAS_VIGENCIA_CONFIRMACION_CONTACTO = 365
+
+export type EstadoConfirmacionContacto = 'nunca' | 'vigente' | 'caducada'
+
+/**
+ * `nunca` = NULL (no consta que lo haya mirado jamás) · `vigente` = sello de
+ * hace menos de 365 días · `caducada` = sello más viejo. Un sello en el FUTURO
+ * (reloj mal puesto) se trata como vigente: no se le pide confirmar dos veces
+ * por un fallo nuestro.
+ */
+export function estadoConfirmacion(confirmadoEn: Date | null, hoy: Date): EstadoConfirmacionContacto {
+  if (!confirmadoEn || Number.isNaN(confirmadoEn.getTime())) return 'nunca'
+  const dias = (hoy.getTime() - confirmadoEn.getTime()) / 86_400_000
+  return dias < DIAS_VIGENCIA_CONFIRMACION_CONTACTO ? 'vigente' : 'caducada'
+}
+
+/** `true` solo si hay sello y tiene menos de 365 días. NULL → `false`. */
+export function confirmacionContactoVigente(confirmadoEn: Date | null, hoy: Date): boolean {
+  return estadoConfirmacion(confirmadoEn, hoy) === 'vigente'
+}
+
+/**
+ * La línea de `historial_interno` cuando el cliente dice «siguen igual». Sin
+ * valores, por la misma razón que `textoHistorialContactoPropio`: el historial
+ * no es sitio para repetir el teléfono de nadie.
+ */
+export function textoHistorialConfirmacionContacto(): string {
+  return 'El cliente confirmó desde el portal que sus datos de contacto siguen siendo correctos.'
+}
