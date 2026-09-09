@@ -798,6 +798,10 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   - ⚠️ Env nueva: **`ASEGURA_PORTAL_PUENTE_SECRET`**, con el MISMO valor en el proyecto Vercel del
     portal (que además necesita `ASEGURA_PUENTE_URL` apuntando aquí). Cerrado por defecto: sin la env
     no se autoriza a nadie, tampoco en desarrollo.
+  - ✅ **Puesta por Alberto en los dos proyectos Vercel el 09/09/2026** (mismo valor de 64 hex en
+    `asegura-portal` y en `central-asegura`). Este commit es el que desatasca el redeploy de
+    producción de `central-asegura`: los commits recientes no tocaban `apps/asegura/` y el
+    `ignoreCommand` los saltaba, así que un simple «Redeploy» del panel repetía el mismo salto.
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en
