@@ -74,6 +74,8 @@ test('el portal NO aprende a descifrar PII, aunque desde el 09/09/2026 SÍ lee d
   // Desde el 09/09/2026 SÍ hay una lectura (`leerMisDatos`/`GET`), pero viene YA
   // descifrada del puerto de asegura: el portal solo la reenvía.
   assert.match(cliente, /leerMisDatos/, 'la lectura tiene que existir: Alberto pidió poder VER los datos')
+  // Y la vigencia NO se calcula aquí: viene decidida del puente.
+  assert.ok(!/estadoConfirmacion\(/.test(codigo), 'el portal no calcula la vigencia: la recibe del puente')
   // Y cuando esa lectura falla, la pantalla lo DICE — no deja un hueco que
   // parezca «no consta».
   assert.match(leer(RUTA_PANTALLA), /No hemos podido/)
@@ -104,6 +106,61 @@ test('la pantalla avisa de que esto NO cambia la dirección de las pólizas', ()
   )
   // También en el acuse: el aviso previo se lee antes de escribir y se olvida.
   assert.match(fuente, /esto no cambia la\s*\n?\s*dirección de tus pólizas/)
+})
+
+// ─── «Comprueba tus datos de contacto» (08/09/2026) ─────────────────────────
+//
+// Dictado de Alberto: «tiene que ser automático, un aviso en la intranet; yo no
+// intervengo». El cliente ve sus datos tapados y sella «siguen igual» o corrige.
+// Tres cosas que no pueden caer: quién sella (la cookie, nunca el cuerpo), qué
+// se pinta como confirmado (solo el `ok` del puente / el `vigente` que él
+// decide) y qué NO se edita (el email, que es la llave de acceso).
+
+const RUTA_CONFIRMAR = 'apps/asegura-portal/app/api/mis-datos/confirmar/route.ts'
+const RUTA_AVISO = 'apps/asegura-portal/app/(portal)/boveda/AvisoContacto.tsx'
+const sinComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
+
+test('confirmar toma la identidad de la SESIÓN y no lee nada del cuerpo', () => {
+  const fuente = sinComentarios(leer(RUTA_CONFIRMAR))
+  assert.match(fuente, /requireIdentidad\(\)/, 'la identidad sale de la cookie')
+  assert.match(fuente, /confirmarMisDatos\(identidad\.id\)/, 'se confirma la identidad de la sesión, no otra')
+  // El cuerpo NI SE LEE: no hay nada que la ruta necesite saber además de quién
+  // tiene la sesión. Un `identidadId` o `clienteId` de fuera dejaría sellar
+  // como «revisados» los datos de otra persona.
+  assert.ok(!/clienteId/.test(fuente), 'clienteId no puede aparecer en la ruta de confirmar')
+  assert.ok(!/identidadId/.test(fuente), 'identidadId no puede leerse del cuerpo: viene de la sesión')
+  assert.ok(!/\.json\(\)|formData\(\)|\.text\(\)/.test(fuente), 'la ruta de confirmar no lee el cuerpo')
+})
+
+test('el aviso automático solo se confirma tras un ok del puente, nunca antes', () => {
+  const fuente = sinComentarios(leer(RUTA_AVISO))
+  // `setConfirmado(true)` es la ÚNICA forma de pasar a «confirmado», y cuelga
+  // del único sitio que de verdad supo que el puente dijo ok.
+  const confirmaciones = fuente.match(/setConfirmado\(true\)/g) ?? []
+  assert.equal(confirmaciones.length, 1, 'solo un sitio puede marcar la confirmación como hecha')
+  const okIdx = fuente.indexOf("res.ok && j?.estado === 'ok'")
+  const confIdx = fuente.indexOf('setConfirmado(true)')
+  assert.ok(okIdx !== -1 && confIdx > okIdx && confIdx - okIdx < 100, 'el «confirmado» cuelga del ok del puente')
+  // Y un fallo (red, estado inesperado) tiene que decirlo, nunca marcar confirmado.
+  assert.match(fuente, /No hemos podido guardar la confirmación/)
+})
+
+test('el aviso no se pinta si ya está vigente, ni si la lectura falló', () => {
+  const fuente = sinComentarios(leer(RUTA_AVISO))
+  // Las dos guardas de salida temprana, ANTES de cualquier JSX: un fallo de
+  // lectura (`sin_ficha`, `sin_puente`, `error`…) no es asunto de esta pantalla
+  // — lo dice «Mis datos» cuando la persona entra a mirarlo — y una confirmación
+  // vigente no se vuelve a preguntar.
+  assert.match(fuente, /if \(lectura\.estado !== 'ok'\) return null/)
+  assert.match(fuente, /lectura\.confirmacion === 'vigente'.*return null/)
+  // El botón «siguen igual» y el enlace a la pestaña real, siempre los dos:
+  // sin el enlace, quien quiere corregir algo no tiene dónde ir desde aquí.
+  assert.match(fuente, /[Ss]iguen igual/)
+  assert.match(fuente, /href="\/boveda\?vista=datos"/)
+})
+
+test('confirmar toma la identidad de la sesión, y el aviso llama a esa misma ruta', () => {
+  assert.match(sinComentarios(leer(RUTA_AVISO)), /\/api\/mis-datos\/confirmar/, 'el aviso confirma por la ruta de sesión, no inventa una propia')
 })
 
 test('el historial de la ficha dice que lo hizo el CLIENTE', () => {

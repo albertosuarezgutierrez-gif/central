@@ -15,8 +15,8 @@ import {
   sincronizarObligacionesDeIdentidad,
 } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
-import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { leerMisDatos } from '@/lib/mis-datos'
+import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
@@ -35,8 +35,10 @@ import {
   saludoPorHora,
   vistaDeBoveda,
   type GrupoCartera,
+  type VistaBoveda,
 } from '@central/module-seguros-portal'
 
+import { AvisoContacto } from './AvisoContacto'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { SubirPoliza } from './SubirPoliza'
 import { MisDatos } from './MisDatos'
@@ -49,6 +51,16 @@ export const dynamic = 'force-dynamic'
  *  que acepta el backend no se separen con el tiempo. Va como prop porque
  *  `EditarPoliza` y `SubirPoliza` (alta a mano) son componentes de cliente. */
 const RAMOS_OPCIONES = Object.entries(RAMO).map(([valor, etiqueta]) => ({ valor, etiqueta }))
+
+/** La palabra en cursiva del h1, una por pestaña. Mismo criterio que
+ *  `pestanasPortal()` (que da el texto de la nav), pero en singular con «Mis»
+ *  delante en vez del texto exacto de la pestaña. */
+const TITULO_VISTA: Record<VistaBoveda, string> = {
+  seguros: 'seguros',
+  recibos: 'recibos',
+  siniestro: 'siniestros',
+  datos: 'datos',
+}
 
 export default async function Boveda({
   searchParams,
@@ -69,7 +81,14 @@ export default async function Boveda({
   // La cuarta es de otra naturaleza y por eso no lleva identidad: `companias_dgs`
   // es un catálogo público (códigos DGS y teléfonos que publican las propias
   // compañías), no la cartera de nadie. Ver `lib/canales-compania.ts`.
-  const [cartera, declaradas, partes, companias, hojas, elegibles] = await Promise.all([
+  //
+  // La séptima tampoco lee BD: es el puente a asegura (`lib/mis-datos.ts`) que
+  // devuelve el contacto ya descifrado y si la confirmación está vigente. Va
+  // en el mismo `Promise.all` porque tiene un tope de 8 s y en serie se lo
+  // cargaría a la página entera; se lee UNA vez y la usan tanto el aviso
+  // automático de «Mis seguros» (`AvisoContacto`) como la pestaña «Mis datos»
+  // — el portal no calcula la vigencia (ver la cabecera de ese módulo).
+  const [cartera, declaradas, partes, companias, hojas, elegibles, contacto] = await Promise.all([
     carteraDeIdentidad(identidad.id),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id },
@@ -80,6 +99,7 @@ export default async function Boveda({
     companiasConCanal(),
     hojasDeIdentidad(identidad.id),
     polizasElegibles(identidad.id),
+    leerMisDatos(identidad.id),
   ])
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
@@ -230,12 +250,21 @@ export default async function Boveda({
       <p className="saludo">
         {pila ? `${saludo}, ${pila}` : saludo} <span aria-hidden="true">👋</span>
       </p>
+      {/* El h1 dice en qué pestaña estás. Antes decía siempre «Mis seguros»,
+          también dentro de «Mis datos»: el titular contradecía a la nav justo
+          debajo (09/09/2026, aviso de Alberto). */}
       <h1>
-        Mis <em>seguros</em>
+        Mis <em>{TITULO_VISTA[vista]}</em>
       </h1>
 
       {vista === 'seguros' && (
         <>
+          {/* Antes que el calendario: es el aviso más urgente porque no lo
+              genera ninguna póliza, lo genera que nadie haya vuelto a mirar la
+              cartera desde el volcado. Reutiliza la MISMA lectura de arriba
+              (`contacto`): sin ella, cada visita a «Mis seguros» pagaría una
+              segunda llamada al puente. */}
+          <AvisoContacto lectura={contacto} />
           <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
 
       {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
@@ -365,10 +394,11 @@ export default async function Boveda({
 
           La lectura de la ficha va por el puente de asegura, que es quien
           descifra: esta app sigue sin clave de PII. Si no se puede leer, la
-          pantalla lo DICE (ver `MisDatos`), no deja un hueco. */}
+          pantalla lo DICE (ver `MisDatos`), no deja un hueco. Reutiliza la
+          MISMA `contacto` leída arriba, junto al aviso automático. */}
       {vista === 'datos' && (
         <>
-          <MisDatos lectura={await leerMisDatos(identidad.id)} />
+          <MisDatos lectura={contacto} />
           <TusDatos inicial={supresiones} />
         </>
       )}
