@@ -53,7 +53,14 @@
  * correo (editables) y el derecho de supresión — que hasta hoy colgaban al
  * final de «Mis seguros», donde solo los encontraba quien bajara del todo.
  */
-export const VISTAS_BOVEDA = ['seguros', 'recibos', 'siniestro', 'datos'] as const
+/**
+ * `hoja` (09/09/2026): la hoja de la nevera y su QR. Vivía embebida al final
+ * de «Mis seguros» (`HojasQr`, ver `apps/asegura-portal/CLAUDE.md`) y solo la
+ * encontraba quien bajara del todo tras la lista de pólizas — justo la pieza
+ * que Alberto pensó para llevar encima, no para enterrar. Pasa a su propia
+ * pestaña por la misma razón que ya sacó «Mis datos» de ahí abajo.
+ */
+export const VISTAS_BOVEDA = ['seguros', 'hoja', 'recibos', 'siniestro', 'datos'] as const
 
 export type VistaBoveda = (typeof VISTAS_BOVEDA)[number]
 
@@ -119,6 +126,11 @@ export interface PestanaPortal {
 export function pestanasPortal(): PestanaPortal[] {
   return [
     { vista: 'seguros', etiqueta: 'Mis seguros', href: '/boveda' },
+    // 09/09/2026: acceso directo a la hoja/QR de la nevera, antes enterrada
+    // al final de «Mis seguros». «Mi QR» y no «Hoja» ni «QR de acceso»: es la
+    // palabra que ya usa el propio botón de crearla, y no compite con
+    // ninguna otra pestaña.
+    { vista: 'hoja', etiqueta: 'Mi QR', href: '/boveda?vista=hoja' },
     { vista: 'recibos', etiqueta: 'Recibos', href: '/boveda?vista=recibos' },
     // 🚨 «Siniestros» y no «Un siniestro»: la pestaña ya no es solo el
     // formulario para declarar uno, es también el historial de los que la

@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia (09/09/2026, PR pendiente).** La
+  hoja/QR de la nevera (`HojasQr`, asegura-portal) vivía embebida al final de «Mis seguros» y solo
+  la encontraba quien bajara del todo — lo mismo que ya se corrigió con «Mis datos» el mismo día.
+  Nueva vista `hoja` en `VISTAS_BOVEDA` (`packages/module-seguros-portal/src/vista-portal.ts`) y
+  pestaña «Mi QR» en `pestanasPortal()` (2ª, tras «Mis seguros»); el nav lateral/carril ya es
+  genérico por `pestanasPortal()`, sin tocar `NavPortal.tsx`. `page.tsx` mueve la sección de
+  `vista==='seguros'` a `vista==='hoja'`. Tests y typecheck de asegura-portal en verde.
+
 - **🏠 La dirección del hogar dejaba de decir el CP dos veces (08/09/2026, PR pendiente).** Con
   `PII_ENCRYPTION_KEY` ya puesta en el Vercel de `asegura-portal` (la añadió Alberto; el build que
   la recogió es `d6a954bb`), la calle sale en claro — y con ella el defecto: **«MARINA GOLF 82,

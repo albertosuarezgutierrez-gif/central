@@ -46,24 +46,28 @@ test('la vista por defecto se enlaza SIN parámetro', () => {
   assert.equal(hrefDeVista('siniestro'), '/boveda?vista=siniestro')
 })
 
-test('las pestañas son cinco, en orden, y «Contactos» es otra ruta', () => {
+test('las pestañas son seis, en orden, y «Contactos» es otra ruta', () => {
   // Eran tres hasta el 07/09/2026. Vuelven a ser cuatro con «Recibos», que
   // Alberto echó de menos tres veces sobre su propio portal, y el argumento en
   // contra («casi siempre dirá cero») se midió antes de tocar nada: 55 de los
   // 80 titulares tienen algún recibo no anulado. Ver `pestanasPortal()`.
-  // Y cinco desde el 09/09/2026: «Mis datos» (teléfono, correo, dirección de
+  // Cinco desde el 09/09/2026: «Mis datos» (teléfono, correo, dirección de
   // contacto y el derecho de supresión), que antes colgaba al final de «Mis
-  // seguros» y solo lo encontraba quien bajara del todo.
+  // seguros» y solo lo encontraba quien bajara del todo. Y seis el mismo día:
+  // «Mi QR» (la hoja de la nevera), enterrada en el mismo sitio.
   const p = pestanasPortal()
-  assert.equal(p.length, 5)
+  assert.equal(p.length, 6)
   assert.deepEqual(
     p.map((x) => x.etiqueta),
-    ['Mis seguros', 'Recibos', 'Siniestros', 'Contactos', 'Mis datos'],
+    ['Mis seguros', 'Mi QR', 'Recibos', 'Siniestros', 'Contactos', 'Mis datos'],
   )
-  assert.equal(p[3].vista, null)
-  assert.equal(p[3].href, '/autorizaciones')
-  assert.equal(p[4].vista, 'datos')
+  assert.equal(p[1].vista, 'hoja')
+  assert.equal(p[1].href, '/boveda?vista=hoja')
+  assert.equal(p[4].vista, null)
+  assert.equal(p[4].href, '/autorizaciones')
+  assert.equal(p[5].vista, 'datos')
   assert.equal(vistaDeBoveda('datos'), 'datos')
+  assert.equal(vistaDeBoveda('hoja'), 'hoja')
 })
 
 test('🚨 el id de la vista de siniestros NO cambia al cambiar su etiqueta', () => {

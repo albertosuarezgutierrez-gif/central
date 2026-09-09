@@ -342,18 +342,21 @@ export default async function Boveda({
         </section>
       ))}
 
-      {/* La hoja para imprimir va DESPUÉS de la lista: se crea a partir de lo
-          que se acaba de mirar, así que tiene sentido justo debajo. (El derecho
-          de supresión, que iba detrás, vive desde el 09/09/2026 en la pestaña
-          «Mis datos», con el resto de lo que es sobre la persona y no sobre
-          sus seguros.) */}
-      <section className="seccion" aria-labelledby="hojas-titulo">
-        <p className="antetitulo">Para llevar encima</p>
-        <h2 id="hojas-titulo">Tu hoja para imprimir</h2>
-        <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
-      </section>
-
         </>
+      )}
+
+      {/* ── Mi QR (09/09/2026) ─────────────────────────────────────────────
+          Vivía embebida al final de «Mis seguros»: se crea a partir de la
+          cartera, pero es una pieza para llevar encima (la nevera, la
+          guantera), no una fila más de la lista de pólizas — y ahí abajo solo
+          la encontraba quien bajara del todo. Pasa a su propia pestaña por la
+          misma razón que ya sacó «Mis datos» de ese mismo sitio. */}
+      {vista === 'hoja' && (
+        <section className="seccion" aria-labelledby="hojas-titulo">
+          <p className="antetitulo">Para llevar encima</p>
+          <h2 id="hojas-titulo">Tu hoja para imprimir</h2>
+          <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
+        </section>
       )}
 
       {/* ── Mis datos (09/09/2026) ─────────────────────────────────────────
