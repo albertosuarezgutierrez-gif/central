@@ -2007,8 +2007,14 @@ bloque del canal), y el de las `sinDatos` dejaba pasar un `.filter()` posterior 
 que no se ha visto morder es una suposición.
 
 📌 Cartera viva al 05/09/2026: Mapfre `C0058` (64 pólizas, 900 122 122) · Allianz `C0109` (26,
-900 101 920; **asistencia a NULL a propósito** porque depende del ramo y la columna admite uno solo) ·
-Occident `C0468` (19, **solo WhatsApp**) · Reale `C0613` (1, 900 365 900).
+**900 300 250, L-V 9-19** — corregido el 08/09/2026: el 900 101 920 que se cargó el 05/09 es la línea
+especial de DANA/catástrofes según `prensa.allianz.es`; **asistencia a NULL a propósito** porque depende
+del ramo —900 117 115 vehículos / 913 255 258 hogar— y la columna admite uno solo) · Occident `C0468`
+(19, **solo WhatsApp**) · Reale `C0613` (1, 900 365 900). Y **Generali `C0072`** (sin pólizas vivas;
+una declarada en el portal como «GeneraliSegurosy Reaseguros,S.A.U.», que NO cruza por nombre exacto):
+900 903 433 para dar parte y asistencia, horario NULL; su grúa por WhatsApp (+34 654 033 629) **no se
+pinta** porque es asistencia y `whatsapp_siniestros` se rotula «Dar parte». SQL:
+`prisma/sql/2026-09-08_companias_telefonos_generali_allianz.sql`.
 
 🔗 **Y el QR de esa hoja lleva un ENLACE, no los datos.** Un QR no caduca —es una imagen con un texto
 dentro— pero lo que se mete dentro sí: con los datos escritos, la imagen miente en cuanto cambie la

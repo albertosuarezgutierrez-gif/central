@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📞 Teléfonos de compañía en el portal: Generali cargado y Allianz CORREGIDO (08/09/2026).** Alberto,
+  con la captura de «Un siniestro»: «falta número de compañía» + tabla de Generali/Allianz. La pantalla
+  YA filtra por las compañías de las pólizas de esa persona (la captura enseña Occident+Mapfre porque son
+  las suyas). Contrastado con buscador restringido al dominio oficial (webs bloqueadas): Generali `C0072`
+  900 903 433 (siniestros = asistencia); Allianz `C0109` **900 300 250 L-V 9-19** — el 900 101 920 del
+  05/09 era la línea de DANA/catástrofes. Asistencia de Allianz sigue NULL (una columna, dos números por
+  ramo). SQL en `apps/asegura-portal/prisma/sql/2026-09-08_…`. Pendiente de decisión: tabla
+  `compania_canales` por ramo/uso, `codigo_dgs` en las declaradas y cola «compañía sin canal» en /correduria.
+
 - **👋 El WhatsApp del LEAD VENDE la intranet — y mi argumento para no hacerlo era falso (08/09/2026).**
   Se implementaron los tres mensajes (cliente con correo · sin correo · lead) SIN mirar antes los PRs
   abiertos: el #2604, mergeado esa misma mañana, ya cubría los dos de cliente y mejor (nombra el correo
