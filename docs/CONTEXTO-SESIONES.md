@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
+  pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
+  `vendoresDeSeguro()` (`/insurance-vendors`) + `productosDeLinea()` (`/insurance-lines/{id}/products`)
+  en `catalogos.ts`, ruta `GET /api/operador/codeoscopic/companias?buscar=fidelidade` (corre con el
+  interruptor apagado, 0,00€) y un bloque en `/correduria/hogar` de plataforma con TRES estados
+  (presente/ausente/desconocido, y en qué ramos hay producto). ⚠️ Lista vacía = desconocido, nunca «no
+  está». La afinación de Avant2 (captura) sigue sin duplicarse: se hereda al cotizar por `config`
+  (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR draft.
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
   «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»
