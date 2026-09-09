@@ -8,11 +8,16 @@
  * a su correo; darle ese mismo secreto sería poner la cartera de 32.600 fichas
  * detrás de la app menos protegida del grupo.
  *
- * Lo que hay detrás de ESTE secreto es una sola cosa —escribir la dirección de
- * contacto en la ficha vinculada a una identidad— y ni siquiera admite decir en
+ * Lo que hay detrás de ESTE secreto es escribir Y LEER los datos de contacto
+ * (dirección, teléfono, correo) de la ficha vinculada a una identidad —desde
+ * el 09/09/2026 también `GET`, no solo `POST`— y ni siquiera admite decir en
  * qué ficha: eso lo resuelve asegura por `portal_vinculo`. Con el secreto
- * filtrado, el daño máximo es cambiarle la calle a alguien que ya tiene portal,
- * y queda escrito en su historial. No es cero; es acotado y auditable.
+ * filtrado, el daño ya NO es solo de integridad (cambiarle la calle a alguien):
+ * es también de CONFIDENCIALIDAD, porque quien lo tenga puede leer el
+ * teléfono, el correo y la dirección de cualquier identidad vinculada dando
+ * su `identidadId`. Sigue acotado a esa única identidad por vez y queda
+ * escrito en el historial cuando escribe, pero ya no es «acotado y auditable»
+ * a secas: una lectura no deja rastro en `historial_interno`.
  *
  * Cerrado por defecto: sin `ASEGURA_PORTAL_PUENTE_SECRET` no se autoriza a
  * nadie, tampoco en desarrollo. Un fallback a un literal sería una credencial

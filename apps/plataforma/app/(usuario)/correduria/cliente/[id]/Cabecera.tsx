@@ -34,6 +34,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
         <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
         <PageHeader
           titulo={ficha.nombre}
+          icono={<Iniciales nombre={ficha.nombre} />}
           sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {/* El estado lo DERIVA asegura de los hechos (cliente · con presupuesto ·
                 lead · ex-cliente) y lo trae con su motivo. Sin él (asegura viejo),
@@ -56,6 +57,21 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
       <Titulares resumen={resumen} />
     </>
   )
+}
+
+// ── Iniciales ───────────────────────────────────────────────────────────────
+// Avant2 pone un avatar circular con las iniciales delante del nombre; aquí se
+// reutiliza el hueco `icono` que `PageHeader` YA ofrece (55 consumidores, ver
+// CLAUDE.md) en vez de inventar un componente nuevo o cambiar su forma — un
+// círculo distinto del resto de la app sería otra decisión de diseño, y esta
+// solo busca dar identidad visual a la ficha sin abrir ese melón.
+function Iniciales({ nombre }: { nombre: string }) {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean)
+  const iniciales =
+    partes.length === 0 ? '?'
+      : partes.length === 1 ? partes[0]!.slice(0, 2).toUpperCase()
+        : (partes[0]![0] + partes[1]![0]).toUpperCase()
+  return <span style={{ fontSize: 15, fontWeight: 800 }}>{iniciales}</span>
 }
 
 // ── Titulares ───────────────────────────────────────────────────────────────
