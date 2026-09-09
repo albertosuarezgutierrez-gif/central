@@ -12,7 +12,9 @@ import { esCarteraViva } from '@central/module-seguros'
 import {
   etiquetaRamo,
   fechaAccionable,
+  fechaAccionableRecibo,
   obligacionDerivable,
+  proximoCobroDeclarado,
   reparoDeclarada,
   type Procedencia,
 } from '@central/module-seguros-portal'
@@ -173,13 +175,42 @@ export async function sincronizarObligacionesDeIdentidad(
  * creyendo que la vigilamos. Es la ausencia disfrazada de normalidad de
  * siempre.
  */
-async function opsDeDeclaradas(identidadId: string) {
+async function opsDeDeclaradas(identidadId: string, hoy: Date = new Date()) {
   const declaradas = await prisma.portalPolizaDeclarada.findMany({
     where: { identidadId },
-    select: { id: true, compania: true, ramo: true, fechaVencimiento: true, confirmadaPorUsuario: true },
+    select: {
+      id: true,
+      compania: true,
+      ramo: true,
+      fechaVencimiento: true,
+      confirmadaPorUsuario: true,
+      periodicidadPago: true,
+    },
   })
 
+  // La fecha de RECIBO que ya había, para saber si el cálculo de hoy apunta a
+  // un cobro DISTINTO del que ya se avisó. Es necesario porque, al revés que la
+  // obligación `poliza` (que solo cambia si la persona edita el vencimiento a
+  // mano), esta fila avanza SOLA en cada sincronización: cuando el cobro de hoy
+  // queda atrás, `proximoCobroDeclarado()` ya devuelve el del ciclo siguiente.
+  // Sin resetear `avisadaAt` en ese momento, el sello del cobro VIEJO seguiría
+  // puesto y el cron nunca avisaría del nuevo — silencio total, sin que nada
+  // fallara.
+  const recibosPrevios = new Map(
+    (
+      await prisma.portalObligacion.findMany({
+        where: { identidadId, tipo: 'recibo', polizaDeclaradaId: { not: null } },
+        select: { polizaDeclaradaId: true, fechaEvento: true },
+      })
+    ).map((r) => [r.polizaDeclaradaId as string, r.fechaEvento]),
+  )
+
   const avisables: string[] = []
+  // Subconjunto de `avisables` que además genera obligación de RECIBO. No es
+  // lo mismo que «tiene periodicidad»: `anual` la tiene y no genera nada (ver
+  // la cabecera de `proximoCobroDeclarado()`), y sin vencimiento fiable no hay
+  // ciclo del que contar el próximo cobro.
+  const cobrables: string[] = []
   const ops = []
 
   for (const p of declaradas) {
@@ -198,7 +229,7 @@ async function opsDeDeclaradas(identidadId: string) {
 
     ops.push(
       prisma.portalObligacion.upsert({
-        where: { identidadId_polizaDeclaradaId: { identidadId, polizaDeclaradaId: p.id } },
+        where: { identidadId_polizaDeclaradaId_tipo: { identidadId, polizaDeclaradaId: p.id, tipo: 'poliza' } },
         create: {
           identidadId,
           polizaDeclaradaId: p.id,
@@ -214,16 +245,70 @@ async function opsDeDeclaradas(identidadId: string) {
         update: { titulo, fechaEvento: evento, fechaAccionable: accionable, actualizadaAt: new Date() },
       }),
     )
+
+    // El PRÓXIMO cobro, aparte de la renovación de arriba. `null` cuando no hay
+    // periodicidad declarada, o es `anual` (ese pago YA es la renovación: una
+    // segunda fila con el mismo día sería el mismo aviso dos veces). Se
+    // recalcula en CADA sincronización — es lo que hace que, tras pasar la
+    // fecha de un cobro, la siguiente visita a la bóveda ya apunte al próximo
+    // sin que nadie tenga que borrar nada a mano.
+    const proximoCobro = proximoCobroDeclarado({ vencimiento: evento, periodicidad: p.periodicidadPago, hoy })
+    if (proximoCobro !== null) {
+      cobrables.push(p.id)
+      const accionableRecibo = fechaAccionableRecibo(proximoCobro)
+      const tituloRecibo = `Recibo · ${titulo}`
+      // Si ya había una fila de recibo y su fecha ERA OTRA, es un cobro nuevo:
+      // el sello del aviso anterior no vale para este y hay que soltarlo. Si no
+      // había fila (recién declarada la periodicidad) o la fecha es la misma
+      // de siempre, no se toca — tocar `avisadaAt` sin que el cobro cambie
+      // reabriría un aviso que ya se mandó del MISMO cobro.
+      const anterior = recibosPrevios.get(p.id)
+      const esCicloNuevo = anterior !== undefined && anterior.getTime() !== proximoCobro.getTime()
+      ops.push(
+        prisma.portalObligacion.upsert({
+          where: { identidadId_polizaDeclaradaId_tipo: { identidadId, polizaDeclaradaId: p.id, tipo: 'recibo' } },
+          create: {
+            identidadId,
+            polizaDeclaradaId: p.id,
+            tipo: 'recibo',
+            titulo: tituloRecibo,
+            fechaEvento: proximoCobro,
+            fechaAccionable: accionableRecibo,
+            procedencia: 'declarado',
+          },
+          update: {
+            titulo: tituloRecibo,
+            fechaEvento: proximoCobro,
+            fechaAccionable: accionableRecibo,
+            actualizadaAt: new Date(),
+            ...(esCicloNuevo ? { avisadaAt: null } : {}),
+          },
+        }),
+      )
+    }
   }
 
   // Poda. La persona pudo borrar la póliza, quitarle la fecha o dejar de
   // confirmarla: en los tres casos su vencimiento deja de ser algo que podamos
   // afirmar, y una fila que sobrevive es un aviso que se manda sobre un dato
   // que ya no existe. Solo se podan las DECLARADAS; las de la cartera tienen
-  // su propia poda más arriba.
+  // su propia poda más arriba. Esto borra TODOS los tipos de la póliza que ya
+  // no es avisable —«poliza» y «recibo» si lo tuviera— y es correcto: ninguno
+  // de los dos se puede seguir afirmando sin un vencimiento fiable.
   ops.push(
     prisma.portalObligacion.deleteMany({
       where: { identidadId, polizaDeclaradaId: { not: null, notIn: avisables } },
+    }),
+  )
+
+  // Segunda poda, más fina: una póliza que SIGUE siendo avisable (está en
+  // `avisables`) pero ya no genera recibo —le quitaron la periodicidad, o la
+  // pusieron a `anual`— conserva su obligación `poliza` y pierde solo la de
+  // `recibo`. Sin esto, quitar la periodicidad dejaría un aviso de un cobro
+  // que la persona acaba de decir que ya no existe.
+  ops.push(
+    prisma.portalObligacion.deleteMany({
+      where: { identidadId, tipo: 'recibo', polizaDeclaradaId: { in: avisables, notIn: cobrables } },
     }),
   )
 

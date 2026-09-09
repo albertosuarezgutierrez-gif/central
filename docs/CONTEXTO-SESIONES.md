@@ -30,6 +30,8 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📝 Bóveda del cliente: «Selecciona» en vez de «No lo sé», ramo obligatorio y forma de pago con aviso de recibo (09/09/2026).** Alberto pidió además defaults reales en «uso»/«garaje» (Particular/No); se le planteó que eso fabrica un hecho falso si el cliente no toca el select —justo lo que el propio cepo del tri-estado prohíbe— y él pidió mi criterio: se dejaron esos dos SIN valor marcado (solo cambia el rótulo a «Selecciona»), y «Tipo de seguro» sí pasó a obligatorio porque elegir categoría no fabrica un dato. Nuevo campo «Forma de pago» (periodicidad: anual/semestral/trimestral/mensual) en `portal_poliza_declarada` (migración aplicada) que alimenta una obligación `tipo: 'recibo'` nueva en `portal_obligacion` (unicidad ensanchada a `(identidad, poliza_declarada, tipo)`) calculada por `proximoCobroDeclarado()` de `@central/module-seguros-portal` — avisa 5 días antes del próximo cobro, no solo de la renovación anual. `pnpm test` verde (2718+ tests), typecheck y lint de `asegura-portal` en verde.
+
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
   «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»
