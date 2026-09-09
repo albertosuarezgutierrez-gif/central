@@ -262,6 +262,9 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (09/09/2026) ⚙️ Optimización de consumo de tokens de Claude Code
+- (09/09/2026) 🗺️ Graphify conectado, grafo verificado, reglas de uso en CLAUDE.md + memoria arquitectónica
+- (09/09/2026) Regla de estilo de respuesta endurecida: resumen solo al final
 - (09/09/2026) 🧲 La hoja de la nevera solo ofrece pólizas EN VIGOR
 - (09/09/2026) 🗂 «Mis datos» + filtro «en vigor» por panel + sugerencia a la cabecera
 - (09/09/2026) 🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email
@@ -269,7 +272,4 @@
 - (09/09/2026) Calendario del portal: fuera el chip de aviso
 - (08/09/2026) 👁 Vista de corredor: Alberto abre el portal como lo ve un cliente
 - (08/09/2026) 📲 Fuera la franja «Tenlo a mano» del portal: la campana es el único sitio que ofrece instalar
-- (08/09/2026) ☑️ Portal: «¿de quién es la póliza?» deja de ser una puerta obligatoria
-- (08/09/2026) 🧹 La ficha de cliente: de 7 botones a 2
-- (08/09/2026) 🔔 La campana de avisos del portal del cliente
 

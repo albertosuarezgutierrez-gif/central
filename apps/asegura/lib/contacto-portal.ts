@@ -35,10 +35,30 @@ import {
 import { normalizarContacto, revisarEdicion, type EdicionCliente } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
-import { anadirContacto, campoIlegible, descifrarCampo, editarCliente, listarContactos } from './cartera-edicion'
+import {
+  anadirContacto,
+  campoIlegible,
+  descifrarCampo,
+  duplicadoContacto,
+  editarCliente,
+  listarContactos,
+} from './cartera-edicion'
 
 /** Quién figura como autor en `historial_interno`. No es Alberto: fue el cliente. */
 const ACTOR = 'el cliente, desde el portal'
+
+/**
+ * «El canal que el cliente ve como suyo hoy», usado en LOS DOS sentidos —
+ * leerlo (`leerContactoPropio`) y decidir si lo que manda ya es ese mismo
+ * valor (`aplicarContactoPropio`). Con dos criterios distintos, un teléfono
+ * importado del volcado (filas sin `esPrincipal` marcado, plausible en
+ * fichas antiguas) se LEE como el primero de la lista pero se ESCRIBE contra
+ * «ninguno es principal» — la persona reenvía el mismo número que ya veía en
+ * pantalla y esto lo trata como un cambio, dejando una fila duplicada.
+ */
+function contactoPrincipal(lista: { principal: boolean; valor: string | null }[]): string | null {
+  return (lista.find((x) => x.principal) ?? lista[0])?.valor ?? null
+}
 
 export type ResultadoContactoPropio =
   | { estado: 'ok'; campos: string[] }
@@ -145,13 +165,29 @@ export async function aplicarContactoPropio(
   // Los canales, ANTES que la dirección: es donde puede saltar «ya está en otra
   // ficha», y si salta no se ha escrito nada todavía.
   const actuales = Object.keys(canalesNorm).length > 0 ? await listarContactos(correduriaId, ficha.clienteId) : null
+  // Qué canales cambian de verdad (el que ya es principal y coincide no cuenta).
+  const canalesACambiar: { k: CampoCanalPropio; valor: string }[] = []
   for (const k of CAMPOS_CANAL_PROPIO) {
     const valor = canalesNorm[k]
     if (valor === undefined) continue
-    const principal = (k === 'telefono' ? actuales?.telefonos : actuales?.emails)?.find((c) => c.principal)?.valor ?? null
+    const listaActual = k === 'telefono' ? actuales?.telefonos : actuales?.emails
+    const principal = listaActual ? contactoPrincipal(listaActual) : null
     if (principal !== null && principal === valor) continue
+    canalesACambiar.push({ k, valor })
+  }
+  // 🚨 Se COMPRUEBAN los dos canales ANTES de escribir el primero. Si esto
+  // escribiera uno a uno y el segundo chocara con otra ficha, el teléfono ya
+  // habría quedado guardado mientras la persona lee «no se ha cambiado nada»
+  // — justo lo que este módulo promete que no pasa con la dirección.
+  for (const { k, valor } of canalesACambiar) {
+    const choque = await duplicadoContacto(correduriaId, ficha.clienteId, k, valor, true, false)
+    if (choque) return { estado: 'en_otra_ficha', campo: k }
+  }
+  for (const { k, valor } of canalesACambiar) {
     const res = await anadirContacto(correduriaId, ficha.clienteId, { tipo: k, valor, principal: true, actor: ACTOR })
     if (!res.ok) {
+      // El choque ya se descartó arriba: llegar aquí es una carrera con otra
+      // escritura entre la comprobación y el alta, no el caso normal.
       if (res.estado === 'conflicto') return { estado: 'en_otra_ficha', campo: k }
       if (res.estado === 'invalido') return { estado: 'invalido', motivo: res.motivo, campo: k }
       if (res.estado === 'no_encontrado') return { estado: 'sin_ficha' }
@@ -228,11 +264,15 @@ export async function leerContactoPropio(correduriaId: string, identidadId: stri
     if (contactos === null) return { estado: 'error', causa: 'contactos_ilegibles' }
     const ilegibles: string[] = []
     if (campoIlegible(c.direccion)) ilegibles.push('direccion')
-    const principal = (lista: { principal: boolean; valor: string | null; ilegible: boolean }[], campo: string) => {
-      const p = lista.find((x) => x.principal) ?? lista[0] ?? null
+    // Misma regla que decide «cuál es el canal actual» al escribir
+    // (`contactoPrincipal`): las dos tienen que coincidir, o un reenvío del
+    // mismo número que aquí se enseña se leería allí como un cambio.
+    const marcarSiIlegible = (lista: { principal: boolean; ilegible: boolean }[], campo: string) => {
+      const p = lista.find((x) => x.principal) ?? lista[0]
       if (p?.ilegible) ilegibles.push(campo)
-      return p?.valor ?? null
     }
+    marcarSiIlegible(contactos.telefonos, 'telefono')
+    marcarSiIlegible(contactos.emails, 'email')
     return {
       estado: 'ok',
       contacto: {
@@ -240,8 +280,8 @@ export async function leerContactoPropio(correduriaId: string, identidadId: stri
         codigoPostal: c.codigoPostal ?? null,
         ciudad: c.ciudad ?? null,
         provincia: c.provincia ?? null,
-        telefono: principal(contactos.telefonos, 'telefono'),
-        email: principal(contactos.emails, 'email'),
+        telefono: contactoPrincipal(contactos.telefonos),
+        email: contactoPrincipal(contactos.emails),
       },
       ilegibles,
     }
