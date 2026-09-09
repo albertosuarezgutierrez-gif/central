@@ -4,6 +4,7 @@ import {
   interpretarBusqueda,
   interpretarImpagados,
   interpretarLineas,
+  interpretarCompanias,
 } from '../apps/plataforma/lib/correduria-puerto.ts'
 
 // ── Buscador ────────────────────────────────────────────────────────────────
@@ -230,6 +231,43 @@ test('sin configurar, secreto rechazado y error no se confunden entre sí', () =
   })
   assert.deepEqual(interpretarLineas(401, null), { estado: 'error', motivo: 'secreto' })
   assert.deepEqual(interpretarLineas(502, { estado: 'error', mensaje: 'host caído' }), {
+    estado: 'error',
+    motivo: 'host caído',
+  })
+})
+
+// ─── Compañías abiertas en Avant2 (¿Fidelidade?) ─────────────────────────────
+
+test('compañía presente: id exacto, nombre y ramos donde tiene producto', () => {
+  const r = interpretarCompanias(200, {
+    estado: 'ok',
+    companias: [{ id: 'reale', nombre: 'Reale' }, { id: 'fid', nombre: 'Fidelidade' }],
+    buscada: { estado: 'presente', id: 'fid', nombre: 'Fidelidade', ramos: ['Hogar'] },
+  })
+  assert.deepEqual(r, {
+    estado: 'ok',
+    companias: ['Reale', 'Fidelidade'],
+    buscada: { estado: 'presente', id: 'fid', nombre: 'Fidelidade', ramos: ['Hogar'] },
+  })
+})
+
+test('🚨 «presente» sin id o una forma rara NO se afirma: desconocido', () => {
+  const r = interpretarCompanias(200, { estado: 'ok', companias: [], buscada: { estado: 'presente' } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.deepEqual(r.buscada, { estado: 'desconocido' })
+  const r2 = interpretarCompanias(200, { estado: 'ok', companias: [], buscada: 'fidelidade' })
+  if (r2.estado === 'ok') assert.deepEqual(r2.buscada, { estado: 'desconocido' })
+})
+
+test('compañía ausente: se dice cuáles hay, y los errores llevan su motivo', () => {
+  const r = interpretarCompanias(200, {
+    estado: 'ok',
+    companias: [{ id: 'reale', nombre: 'Reale' }],
+    buscada: { estado: 'ausente', companias: ['Reale'], ramos: [] },
+  })
+  if (r.estado === 'ok') assert.deepEqual(r.buscada, { estado: 'ausente', companias: ['Reale'], ramos: [] })
+  assert.deepEqual(interpretarCompanias(401, null), { estado: 'error', motivo: 'secreto' })
+  assert.deepEqual(interpretarCompanias(502, { estado: 'error', mensaje: 'host caído' }), {
     estado: 'error',
     motivo: 'host caído',
   })
