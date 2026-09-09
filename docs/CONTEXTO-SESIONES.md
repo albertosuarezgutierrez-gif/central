@@ -34,10 +34,19 @@
   la infra de ahorro (maestros por vertical, `code-map`, `delegar-codigo`, regla "mecánico→agente",
   memoria de sesión) ya cubría casi todo el prompt; NO se montó la estructura genérica
   frontend/backend/testing (no encaja, aquí se enruta por vertical). Se aplicó lo accionable: recorté
-  `CLAUDE.md` de 1.056→684 líneas moviendo el histórico de CI (16 mediciones) a
+  `CLAUDE.md` de 1.056→691 líneas moviendo el histórico de CI (16 mediciones) a
   `docs/ci-troubleshooting.md`, y añadí dos agentes de modelo en `.claude/agents/`
   (`agente-mecanico`=haiku, `agente-architect`=opus), registrados en `docs/SKILLS.md`.
-  Sin PR aún — pendiente de push.
+  PR #2658 (rama `claude/optimize-token-consumption-yrd4yc`), abierto en draft.
+
+- **Título de póliza específico para RC de perros y similares (09/09/2026).** Alberto: la ficha de la
+  RC de Occident (548238086) salía como «Occident · Responsabilidad civil» a secas, y hay miles de
+  tipos de RC distintos. `tituloDePoliza` (`apps/asegura-portal/.../PolizaVista.tsx`) cae ahora a la
+  cobertura que ESPECIALIZA el ramo genérico (ej. «Responsabilidad civil perros») antes de caer a
+  `Compañía · Ramo`. Lógica pura y testeada en `coberturaEspecificaDeRamo()` de
+  `@central/module-seguros-portal` (`poliza-leida.ts`, 4 tests nuevos). Typecheck del portal y
+  `regression-portal-visibilidad` en verde. PR #2648 (rama `claude/responsabilidad-civil-perro-ixeh6y`),
+  mergeado; sin pendientes.
 
 - **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
   vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
