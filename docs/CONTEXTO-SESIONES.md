@@ -51,6 +51,13 @@
   mismo nombre → el barril la exportaba dos veces, sin conflicto de git y sin que lo viera ningún tsc.
   Aparte: el email de cumpleaños queda para los 44 clientes con correo, y a los 4.206 leads NO se les
   manda WhatsApp masivo (lo bloquea Meta, no la ley).
+- **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
+  vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
+  `apps/asegura-portal/app/(portal)/boveda/Calendario.tsx`; se mantiene el de procedencia
+  (`Confirmado por la compañía`). El dato `o.avisada` se sigue calculando en `lib/obligaciones.ts` por
+  si hace falta, solo deja de pintarse. Typecheck de la app y los dos cepos de raíz que tocan el
+  fichero (`regression-portal-obligaciones`, `regression-portal-visibilidad`) en verde. PR #2647
+  (rama `claude/quitar-confusion-3bxugj`), sacado de draft; sin pendientes.
 
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
