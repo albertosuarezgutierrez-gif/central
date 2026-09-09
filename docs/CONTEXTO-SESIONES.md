@@ -39,13 +39,44 @@
   ramo). SQL en `apps/asegura-portal/prisma/sql/2026-09-08_…`. Pendiente de decisión: tabla
   `compania_canales` por ramo/uso, `codigo_dgs` en las declaradas y cola «compañía sin canal» en /correduria.
 
+- **🗂 «Mis datos» + filtro «en vigor» por panel + sugerencia a la cabecera (09/09/2026).** Tres pedidos
+  de Alberto sobre la pantalla del cliente. (1) Nueva pestaña «Mis datos» (5ª, tras «Contactos»):
+  teléfono, correo y dirección de contacto, ahora **legibles** desde el portal (`GET
+  /api/portal/contacto`, que asegura descifra y sirve — antes solo se escribía a ciegas) y editables por
+  el MISMO puerto (`CAMPOS_CONTACTO_PROPIO` ganó `telefono`/`email`; un canal se CAMBIA, no se borra; si
+  ya está en otra ficha, `en_otra_ficha` y no se pisa a nadie). (2) Cada panel de pólizas («Tus seguros»,
+  «Te han dado acceso», «Tus sociedades») filtra por defecto a **en vigor**, con pastillas «En vigor /
+  Todas» y contador de lo oculto (`FiltroVigencia.tsx`; `pendiente` se sigue enseñando). (3) «¿Echas algo
+  de menos?» sube de «Mis seguros» a un botón en la cabecera junto a la campana y Salir. **Pendiente
+  abierto y sin decidir:** Alberto pidió luego que la autorización a un tercero NO caduque al año, y
+  después matizó que quizá sea mejor que la caducidad (o su ausencia) se declare al invitar, según el
+  caso (hijo↔padre mayor). No se tocó `DIAS_VIGENCIA`: es una decisión legal (art. 7.1 RGPD,
+  demostrabilidad) que necesita su OK explícito antes de tocar `autorizacion.ts`. PR #2660.
+
+- **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
+  pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
+  `vendoresDeSeguro()` (`/insurance-vendors`) + `productosDeLinea()` (`/insurance-lines/{id}/products`)
+  en `catalogos.ts`, ruta `GET /api/operador/codeoscopic/companias?buscar=fidelidade` (corre con el
+  interruptor apagado, 0,00€) y un bloque en `/correduria/hogar` de plataforma con TRES estados
+  (presente/ausente/desconocido, y en qué ramos hay producto). ⚠️ Lista vacía = desconocido, nunca «no
+  está». La afinación de Avant2 (captura) sigue sin duplicarse: se hereda al cotizar por `config`
+  (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR #2651.
+- **Título de póliza específico para RC de perros y similares (09/09/2026).** Alberto: la ficha de la
+  RC de Occident (548238086) salía como «Occident · Responsabilidad civil» a secas, y hay miles de
+  tipos de RC distintos. `tituloDePoliza` (`apps/asegura-portal/.../PolizaVista.tsx`) cae ahora a la
+  cobertura que ESPECIALIZA el ramo genérico (ej. «Responsabilidad civil perros») antes de caer a
+  `Compañía · Ramo`. Lógica pura y testeada en `coberturaEspecificaDeRamo()` de
+  `@central/module-seguros-portal` (`poliza-leida.ts`, 4 tests nuevos). Typecheck del portal y
+  `regression-portal-visibilidad` en verde. PR #2648 (rama `claude/responsabilidad-civil-perro-ixeh6y`),
+  mergeado; sin pendientes.
+
 - **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
   vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
   `apps/asegura-portal/app/(portal)/boveda/Calendario.tsx`; se mantiene el de procedencia
   (`Confirmado por la compañía`). El dato `o.avisada` se sigue calculando en `lib/obligaciones.ts` por
   si hace falta, solo deja de pintarse. Typecheck de la app y los dos cepos de raíz que tocan el
   fichero (`regression-portal-obligaciones`, `regression-portal-visibilidad`) en verde. PR #2647
-  (rama `claude/quitar-confusion-3bxugj`), sacado de draft; sin pendientes.
+  (rama `claude/quitar-confusion-3bxugj`) mergeado en `main` (`4fe76c9`), 20/20 checks en verde; sin pendientes.
 
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
@@ -73,6 +104,7 @@
   personales. Coste asumido: una de empresa subida sin marcar se coteja contra la ficha personal; lo ve
   el corredor. Cepo `regression-portal-titular-declarado` reescrito y visto en rojo por cada brazo (el
   `append` se ancló a inicio de línea: suelto seguía verde con un `if` delante).
+  PR #2628 mergeado y en producción (Vercel `asegura-portal` READY, deploy de `main` `6ffbb4d9` sirviendo `clientes.grupoasegura.es`).
 - **🧹 La ficha de cliente: de 7 botones a 2 (08/09/2026).** Alberto, con la captura: «esto es una
   guarrería, tantos botones». `Cabecera.tsx` pintaba «Subir póliza» + seis «Presupuestar <ramo>» + dos
   avisos grises sueltos, en tres filas que empujaban los titulares fuera de la primera pantalla. Ahora:

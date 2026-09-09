@@ -46,7 +46,14 @@
  * a `seguros` por el comportamiento de `vistaDeBoveda()`, sin error y sin que
  * nadie se enterase.
  */
-export const VISTAS_BOVEDA = ['seguros', 'recibos', 'siniestro'] as const
+/**
+ * `datos` (09/09/2026): «Mis datos». Alberto: «añadiría pestaña mis datos,
+ * donde el cliente puede ver sus datos de contacto (tlf, mail y dirección)
+ * pudiendo modificarlos». Ahí viven la dirección de contacto, el teléfono y el
+ * correo (editables) y el derecho de supresión — que hasta hoy colgaban al
+ * final de «Mis seguros», donde solo los encontraba quien bajara del todo.
+ */
+export const VISTAS_BOVEDA = ['seguros', 'recibos', 'siniestro', 'datos'] as const
 
 export type VistaBoveda = (typeof VISTAS_BOVEDA)[number]
 
@@ -84,7 +91,8 @@ export interface PestanaPortal {
 /**
  * Las pestañas, en orden.
  *
- * 📌 Son CUATRO desde el 07/09/2026, y la que vuelve no es «Mis pólizas»: son
+ * 📌 Son CINCO desde el 09/09/2026 («Mis datos»). Eran cuatro desde el
+ * 07/09/2026, y la que volvió entonces no era «Mis pólizas»: eran
  * «Recibos» y el historial de siniestros, que Alberto echó de menos tres veces
  * seguidas mirando su propio portal.
  *
@@ -105,8 +113,8 @@ export interface PestanaPortal {
  * («Recibos», «Siniestros») y el carril reparte el ancho por debajo de 380 px,
  * pero eso **se mide con Playwright antes de darlo por bueno**, no se supone.
  *
- * La última no es un panel, es la otra ruta (`/autorizaciones`). Va en la misma
- * barra porque para quien la usa es «otra sección», no «otra página web».
+ * «Contactos» no es un panel, es la otra ruta (`/autorizaciones`). Va en la
+ * misma barra porque para quien la usa es «otra sección», no «otra página web».
  */
 export function pestanasPortal(): PestanaPortal[] {
   return [
@@ -123,6 +131,10 @@ export function pestanasPortal(): PestanaPortal[] {
     // te lo da y la que invitas. La ruta NO cambia: los enlaces guardados a
     // `/autorizaciones` siguen llegando.
     { vista: null, etiqueta: 'Contactos', href: '/autorizaciones' },
+    // 09/09/2026: «Mis datos», la última. Es sobre la persona, no sobre sus
+    // seguros, y por eso va al final: quien entra viene a mirar pólizas, y su
+    // ficha es lo que se toca una vez al mudarse o cambiar de número.
+    { vista: 'datos', etiqueta: 'Mis datos', href: '/boveda?vista=datos' },
   ]
 }
 
