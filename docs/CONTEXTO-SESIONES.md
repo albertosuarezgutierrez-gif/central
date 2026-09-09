@@ -37,7 +37,7 @@
   interruptor apagado, 0,00€) y un bloque en `/correduria/hogar` de plataforma con TRES estados
   (presente/ausente/desconocido, y en qué ramos hay producto). ⚠️ Lista vacía = desconocido, nunca «no
   está». La afinación de Avant2 (captura) sigue sin duplicarse: se hereda al cotizar por `config`
-  (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR draft.
+  (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR #2651.
 - **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
   vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
   `apps/asegura-portal/app/(portal)/boveda/Calendario.tsx`; se mantiene el de procedencia
