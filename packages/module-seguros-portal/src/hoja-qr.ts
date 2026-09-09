@@ -40,7 +40,18 @@
  * papel es la premisa; el token no añade filtración sobre el papel. Lo que sí
  * haría daño es un QR que abriera la cartera ENTERA, y por eso la selección no
  * es un adorno: es la que acota el token.
+ *
+ * 5. **Solo entra lo que sigue en vigor.** Una hoja de emergencia con una
+ *    póliza vencida es peor que no tener hoja: promete una cobertura que ya no
+ *    existe, y en el arcén nadie va a comprobar la fecha antes de llamar. Por
+ *    eso «todas mis pólizas» significa «todas las que están en vigor», nunca
+ *    el histórico completo — y esto se aplica en los DOS sitios: al construir
+ *    el selector de la pantalla de crear, y al pintar la hoja en vivo (una
+ *    póliza que vence DESPUÉS de crear el QR desaparece sola, igual que la que
+ *    deja de ser suya).
  */
+
+import type { Vigencia } from '@central/module-seguros'
 
 /** Bytes de aleatoriedad del token. 32 → 64 caracteres hex. */
 export const BYTES_TOKEN_HOJA = 32
@@ -117,6 +128,32 @@ export function polizasDeLaHoja<T extends { id: string }>(
   if (seleccion.todas) return [...suyas]
   const elegidas = new Set(seleccion.polizaIds)
   return suyas.filter((p) => elegidas.has(p.id))
+}
+
+/**
+ * Si una póliza de la CARTERA sigue en vigor para esta hoja (regla 5).
+ *
+ * `pendiente` (vigor desconocido: estado vigente pero sin fecha de
+ * vencimiento) se INCLUYE — no se puede afirmar que ha vencido lo que no se
+ * sabe cuándo vence, y la regla del NULL del monorepo no deja colapsar «no lo
+ * sé» en «no». Solo se excluye `no_vigente`, que es un hecho, no una duda.
+ */
+export function polizaEnVigorParaHoja(p: { vigencia: Vigencia }): boolean {
+  return p.vigencia !== 'no_vigente'
+}
+
+/**
+ * La misma regla para una póliza DECLARADA (aportada a mano), que no tiene
+ * `estado` — solo `fechaVencimiento`. Sin fecha, «pendiente»: se incluye por
+ * el mismo motivo que arriba. La comparación es por DÍA en UTC, igual que
+ * `vigenciaPoliza()`: una que vence hoy sigue en vigor hoy.
+ */
+export function declaradaEnVigorParaHoja(d: { fechaVencimiento: Date | null }, hoy: Date): boolean {
+  if (d.fechaVencimiento === null) return true
+  const v = d.fechaVencimiento
+  const venceDia = Date.UTC(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate())
+  const hoyDia = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate())
+  return venceDia >= hoyDia
 }
 
 /**
