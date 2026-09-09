@@ -158,12 +158,8 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   // CP y localidad dejaría a quien aplica el nivel decidiendo cuál de los tres
   // trozos es personal, y la respuesta es que los tres lo son juntos.
   if (RAMOS_INMUEBLE.has(r) || campo(d, 'direccion') !== null) {
-    const calle = campo(d, 'direccion')
-    const cp = campo(d, 'cp')
-    const localidad = campo(d, 'localidad')
-    const cola = [cp, localidad].filter(Boolean).join(' ')
-    const ubicacion = [calle, cola || null].filter(Boolean).join(', ')
-    return { cosa: null, ubicacion: ubicacion || null, detalles }
+    const ubicacion = componerUbicacion(campo(d, 'direccion'), campo(d, 'cp'), campo(d, 'localidad'))
+    return { cosa: null, ubicacion, detalles }
   }
 
   // Un ramo sin bien descriptible (vida, decesos, salud…). No es un error: es
@@ -200,4 +196,59 @@ export function describirBienConGemela(
   const propio = describirBien(ramo, datosEspecificos)
   if (bienTieneAlgo(propio)) return propio
   return describirBien(ramo, datosGemela)
+}
+
+/**
+ * La forma de un texto para COMPARARLO, nunca para enseñarlo.
+ *
+ * Minúsculas, sin acentos y con todo lo que no sea letra o número convertido en
+ * un espacio: así «11520 Costa Ballena» y «11520 costa ballena,» son el mismo
+ * texto a efectos de «¿está ya dicho?». Lo que se pinta es SIEMPRE el original.
+ */
+function paraComparar(t: string): string {
+  return t
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9ñ]+/g, ' ')
+    .trim()
+}
+
+/**
+ * La dirección del inmueble, en una línea y SIN repetir lo que la calle ya dice.
+ *
+ * 🚨 Por qué existe (08/09/2026). Se componía `calle, cp localidad` a ciegas, y
+ * en la cartera real la calle del volcado a veces trae ya el CP dentro: Alberto
+ * vio en su portal **«MARINA GOLF 82, 11520 costa ballena, 11520 ROTA»**. El
+ * código postal dos veces, en el título de la tarjeta.
+ *
+ * Las dos reglas son distintas a propósito, y la asimetría es lo importante:
+ *
+ * - **El CP se omite si aparece en cualquier parte de la calle.** Es un número
+ *   de cinco cifras: que el MISMO CP salga dentro de la calle por casualidad es
+ *   casi imposible, así que quitarlo es seguro.
+ * - **La localidad solo se omite si la calle TERMINA con ella.** Aquí sí hay
+ *   homónimos que muerden: «Avenida de Sevilla 4» en Dos Hermanas no puede
+ *   perder su localidad porque la calle mencione Sevilla. Duplicar al final es
+ *   el único caso que se ve feo, y es el único que se corrige.
+ *
+ * Y nada más: la calle se pinta TAL CUAL. No se normalizan mayúsculas,
+ * abreviaturas ni comas — es el dato del cliente, no nuestro, y «arreglarlo»
+ * sería inventar sobre una dirección que puede estar en una póliza.
+ */
+export function componerUbicacion(
+  calle: string | null,
+  cp: string | null,
+  localidad: string | null,
+): string | null {
+  const c = calle === null ? null : paraComparar(calle)
+
+  const cpFuera = cp !== null && c !== null && new RegExp(`(^| )${paraComparar(cp)}( |$)`).test(c)
+  const locComp = localidad === null ? null : paraComparar(localidad)
+  const locFuera = locComp !== null && locComp !== '' && c !== null && (c === locComp || c.endsWith(` ${locComp}`))
+
+  const cola = [cpFuera ? null : cp, locFuera ? null : localidad].filter(Boolean).join(' ')
+  // Si la calle se lo lleva todo, la calle basta; y si no hay calle, la cola
+  // sola sigue diciendo el pueblo, que es más que nada.
+  return [calle, cola || null].filter(Boolean).join(', ') || null
 }
