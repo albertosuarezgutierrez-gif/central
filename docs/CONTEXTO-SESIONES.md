@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗺️ Graphify conectado, grafo verificado, reglas de uso en CLAUDE.md (09/09/2026).** MCP operativo:
+  workspace `grupo-asegura`, repo `central` (25.323 nodos) ya indexado y con commit al día — no hizo
+  falta reindexar. Probadas `query_graph`/`graphify_rank_files`/`graphify_find`/`graphify_callers`
+  contra símbolos reales, correctas. Añadida sección de reglas obligatorias a `CLAUDE.md` (corregida
+  la `god_nodes` del pedido de Alberto: no existe en el MCP, sustituida por `graphify_impact`/`graph_stats`).
+  PR #2646 (draft, watch activo). Ojo: el workspace también indexa `asegura`/`sivra`/`ialimp`/
+  `house-sevillana-landing` como repos sueltos — siempre pasar `repository_id` explícito a `central`.
+
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
   «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»
