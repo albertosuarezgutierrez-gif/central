@@ -52,15 +52,43 @@ test('las pólizas SUBIDAS se sincronizan ANTES del corte por vínculo', () => {
   )
 })
 
-test('el upsert de una póliza declarada NO toca avisadaAt', () => {
-  // `avisadaAt` es el sello del envío y esta función corre en CADA carga de la
-  // bóveda. Ponerlo en el `update` —aunque sea a `null`— haría que cada visita
-  // volviera a mandar el mismo correo.
+/** El cuerpo entero de `opsDeDeclaradas`, para acotar los dos upserts que trae. */
+function cuerpoOpsDeDeclaradas(): string {
   const i = FUENTE.indexOf('async function opsDeDeclaradas')
   assert.notEqual(i, -1, 'ya no existe opsDeDeclaradas')
   const j = FUENTE.indexOf('\n}', FUENTE.indexOf('return ops', i))
-  const bloque = sinComentarios(FUENTE.slice(i, j))
-  assert.ok(!/avisadaAt/.test(bloque), 'opsDeDeclaradas escribe avisadaAt: el aviso se reenviaría en cada visita a la bóveda')
+  return FUENTE.slice(i, j)
+}
+
+test('el upsert de la obligación «poliza» de una declarada NO toca avisadaAt', () => {
+  // `avisadaAt` es el sello del envío y esta función corre en CADA carga de la
+  // bóveda. Ponerlo en el `update` de la RENOVACIÓN —aunque sea a `null`— haría
+  // que cada visita volviera a mandar el mismo correo: a diferencia del recibo
+  // (ver el test de abajo), esta fecha no avanza sola en cada sincronización.
+  const cuerpo = cuerpoOpsDeDeclaradas()
+  const iPoliza = cuerpo.indexOf("tipo: 'poliza'")
+  const iRecibo = cuerpo.indexOf("tipo: 'recibo'")
+  assert.notEqual(iPoliza, -1, 'ya no se genera la obligación de tipo poliza')
+  assert.notEqual(iRecibo, -1, 'ya no se genera la obligación de tipo recibo: revisa este guardián')
+  const bloque = sinComentarios(cuerpo.slice(iPoliza, iRecibo))
+  assert.ok(!/avisadaAt/.test(bloque), 'el upsert de «poliza» escribe avisadaAt: el aviso de renovación se reenviaría en cada visita a la bóveda')
+})
+
+test('el upsert de «recibo» SOLO resetea avisadaAt cuando el cobro cambia de ciclo, nunca sin condición', () => {
+  // Al revés que la renovación, esta fecha SÍ avanza sola: en cuanto el cobro
+  // de hoy queda atrás, `proximoCobroDeclarado()` ya apunta al siguiente. Sin
+  // soltar el sello del ciclo viejo, el del ciclo nuevo nunca se avisaría — el
+  // mismo silencio que el test de arriba prohíbe, pero en la dirección
+  // contraria. Por eso aquí SÍ tiene que aparecer, y condicionado.
+  const cuerpo = cuerpoOpsDeDeclaradas()
+  const iRecibo = cuerpo.indexOf("tipo: 'recibo'")
+  assert.notEqual(iRecibo, -1, 'ya no se genera la obligación de tipo recibo')
+  const bloque = sinComentarios(cuerpo.slice(iRecibo))
+  assert.match(
+    bloque,
+    /esCicloNuevo\s*\?\s*\{\s*avisadaAt:\s*null\s*\}\s*:\s*\{\}/,
+    'el reseteo de avisadaAt en el recibo ya no está condicionado al cambio de ciclo (o ha desaparecido)',
+  )
 })
 
 test('quién avisa lo decide reparoDeclarada(), no una condición escrita aquí', () => {

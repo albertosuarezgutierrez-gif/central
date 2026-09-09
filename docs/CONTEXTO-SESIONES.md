@@ -41,6 +41,7 @@
   con Playwright contra el `globals.css` real y corregido con `min-width:76px` (por debajo, el
   carril se desliza en vez de aplastar). Tests y typecheck de asegura-portal en verde.
 
+- **📝 Bóveda del cliente: «Selecciona» en vez de «No lo sé», ramo obligatorio y forma de pago con aviso de recibo (09/09/2026).** Alberto pidió además defaults reales en «uso»/«garaje» (Particular/No); se le planteó que eso fabrica un hecho falso si el cliente no toca el select —justo lo que el propio cepo del tri-estado prohíbe— y él pidió mi criterio: se dejaron esos dos SIN valor marcado (solo cambia el rótulo a «Selecciona»), y «Tipo de seguro» sí pasó a obligatorio porque elegir categoría no fabrica un dato. Nuevo campo «Forma de pago» (periodicidad: anual/semestral/trimestral/mensual) en `portal_poliza_declarada` (migración aplicada) que alimenta una obligación `tipo: 'recibo'` nueva en `portal_obligacion` (unicidad ensanchada a `(identidad, poliza_declarada, tipo)`) calculada por `proximoCobroDeclarado()` de `@central/module-seguros-portal` — avisa 5 días antes del próximo cobro, no solo de la renovación anual. `pnpm test` verde (2718+ tests), typecheck y lint de `asegura-portal` en verde. PR #2667.
 - **📞 Teléfonos de compañía en el portal: Generali cargado y Allianz CORREGIDO (08/09/2026).** Alberto,
   con la captura de «Un siniestro»: «falta número de compañía» + tabla de Generali/Allianz. La pantalla
   YA filtra por las compañías de las pólizas de esa persona (la captura enseña Occident+Mapfre porque son
@@ -49,7 +50,6 @@
   05/09 era la línea de DANA/catástrofes. Asistencia de Allianz sigue NULL (una columna, dos números por
   ramo). SQL en `apps/asegura-portal/prisma/sql/2026-09-08_…`. Pendiente de decisión: tabla
   `compania_canales` por ramo/uso, `codigo_dgs` en las declaradas y cola «compañía sin canal» en /correduria.
-
 - **👋 El WhatsApp del LEAD VENDE la intranet — y mi argumento para no hacerlo era falso (08/09/2026).**
   Se implementaron los tres mensajes (cliente con correo · sin correo · lead) SIN mirar antes los PRs
   abiertos: el #2604, mergeado esa misma mañana, ya cubría los dos de cliente y mejor (nombra el correo
