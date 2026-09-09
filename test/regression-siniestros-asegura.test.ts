@@ -131,13 +131,22 @@ test('ramo de la póliza → tipos de siniestro: cada tipo del enum filtra; solo
 })
 
 test('ningún tipo del enum TipoSeguro se queda sin decisión salvo «otros»', () => {
-  // El enum `TipoSeguro` de `apps/asegura/prisma/asegura.prisma`, entero. Si se
-  // le añade un valor y no se mapea, este test cae — que es el punto: el
-  // agujero de RC fue exactamente un valor del enum que nadie mapeó.
-  const ENUM_TIPO_SEGURO = [
-    'auto', 'moto', 'hogar', 'vida', 'salud', 'decesos',
-    'responsabilidad_civil', 'comercio', 'comunidades', 'otros',
-  ]
+  // El enum `TipoSeguro` de `apps/asegura/prisma/asegura.prisma`, LEÍDO DEL
+  // FUENTE (no copiado a mano): un valor nuevo que se añada ahí y no se mapee
+  // aquí tumba este test SIN tocarlo — el agujero de RC (y luego el de
+  // `accidentes`, que este mismo test no cazó por llevar su propia copia
+  // desactualizada del enum) fue exactamente un valor del enum que nadie mapeó.
+  const prismaSrc = readFileSync(
+    path.join(process.cwd(), 'apps/asegura/prisma/asegura.prisma'),
+    'utf8',
+  )
+  const bloqueEnum = prismaSrc.match(/enum\s+TipoSeguro\s*\{([^}]*)\}/)
+  assert.ok(bloqueEnum, 'no se encontró "enum TipoSeguro { … }" en asegura.prisma')
+  const ENUM_TIPO_SEGURO = bloqueEnum[1]
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('@@') && !l.startsWith('//'))
+  assert.ok(ENUM_TIPO_SEGURO.length > 0, 'el enum TipoSeguro se leyó vacío')
   for (const t of ENUM_TIPO_SEGURO) {
     const ramos = ramosSiniestroParaPoliza(t)
     if (t === 'otros') {
