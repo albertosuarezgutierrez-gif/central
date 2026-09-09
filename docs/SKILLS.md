@@ -77,6 +77,16 @@
 | **`code-map`** | Al empezar una tarea de CÓDIGO donde hay que localizar qué archivo/función maneja algo, ANTES de Grep/Read a ciegas. Consulta la tabla `mapa_arquitectura` (índice de firmas, ~0 tokens) por `word_similarity`/GIN para acotar archivos candidatos y leer solo esos. Gemelo lado-sesión del endpoint `/api/ai/codigo`. Degrada al método clásico si el mapa no está. Ver `docs/DIRECTOR-CODIGO.md`. |
 | **`delegar-codigo`** | Cuando una tarea de código sea MECÁNICA o VOLUMINOSA (renames masivos, mismo patrón en N archivos, boilerplate, migraciones planas) y quieras ahorrar tokens de Claude. Esquema "caro planifica / barato ejecuta": tú organizas y decides, un modelo barato de OpenRouter escribe cada archivo vía `scripts/ai-ejecutar.mjs` → `/api/ai/ejecutar` (endpoint `codigo`); tú planificas, delegas y REVISAS/verificas, no generas los diffs. NO usarla para lógica sutil ni sin volumen. Gemela del endpoint `/api/ai/ejecutar`; complementa a `code-map` (que acota QUÉ archivos). Ver `docs/DIRECTOR-CODIGO.md`. |
 
+## Agentes (subagentes con modelo fijado en `.claude/agents/`)
+> Distinto de una skill: es un subagente invocable por `Task`/`Agent` con su propio modelo
+> fijado en el frontmatter. Complementan (no sustituyen) a la regla "Trabajo mecánico →
+> SIEMPRE a un agente" de `CLAUDE.md` y a `delegar-codigo`. Añadido 09/09/2026.
+
+| Agente | Modelo | Cuándo usarlo |
+|---|---|---|
+| **`agente-mecanico`** | económico (haiku) | Trabajo mecánico/bajo riesgo: texto, CSS/Tailwind pequeño, componentes UI pequeños, renombrados masivos, lint, tests sencillos. NO lógica de negocio ni nada que toque LANDMINES. |
+| **`agente-architect`** | potente (opus) | Arquitectura, seguridad, bugs que han resistido varios intentos, integraciones críticas (Smoobu/Booking/webhooks), revisión de cambios de alto riesgo. Con moderación — no por defecto. |
+
 ## Skills SINCRONIZADAS (viven FUERA del repo)
 > Vienen de la cuenta de Claude y se cargan en la sesión desde `/root/.claude/skills/synced/`.
 > **No están en git**, así que ni se versionan ni se pueden corregir desde aquí, y su drift no

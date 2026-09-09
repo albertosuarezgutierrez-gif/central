@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-08T06:53:57Z",
+  "generadoEn": "2026-09-09T10:55:37Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -920,7 +920,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "rrhh": {
         "estado": "usado",
@@ -2080,11 +2080,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 44
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 58
+        "evidencias": 62
       },
       "asegura-web": {
         "estado": "usado",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 43
       },
       "rrhh": {
         "estado": "no",
@@ -2134,7 +2134,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 15
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2188,11 +2188,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 47
+        "evidencias": 51
       },
       "asegura-web": {
         "estado": "usado",
@@ -2730,7 +2730,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-portal": {
         "presente": false,
@@ -2758,7 +2758,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 1
+        "evidencias": 2
       },
       "rrhh": {
         "presente": false,
@@ -3851,6 +3851,7 @@
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/cron/avisos-vencimiento",
+      "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
       "/api/operador/cartera",
@@ -3858,11 +3859,13 @@
       "/api/operador/cliente/contactos",
       "/api/operador/cliente/historial",
       "/api/operador/cliente/portal",
+      "/api/operador/cliente/portal/vista",
       "/api/operador/cliente/relaciones",
       "/api/operador/cliente/relaciones/aviso",
       "/api/operador/clientes",
       "/api/operador/codeoscopic/auto-nuevo",
       "/api/operador/codeoscopic/catalogos",
+      "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
       "/api/operador/codeoscopic/hogar-nuevo",
       "/api/operador/codeoscopic/lineas",
@@ -3905,6 +3908,7 @@
       "/api/acceso/verificar",
       "/api/autorizaciones",
       "/api/autorizaciones/[id]",
+      "/api/avisos",
       "/api/catastro",
       "/api/catastro/sugerir",
       "/api/hojas",
@@ -4726,6 +4730,7 @@
       "/api/contable/chat",
       "/api/contable/feedback",
       "/api/correduria",
+      "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
       "/api/correduria/blog",
       "/api/correduria/buscar",
@@ -4735,6 +4740,7 @@
       "/api/correduria/cliente",
       "/api/correduria/cliente/contactos",
       "/api/correduria/cliente/portal",
+      "/api/correduria/cliente/portal/vista",
       "/api/correduria/cliente/relaciones",
       "/api/correduria/cliente/relaciones/aviso",
       "/api/correduria/clientes",
@@ -4785,6 +4791,7 @@
       "/api/cron/psd2-sync",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
+      "/api/cron/seo-correduria",
       "/api/cron/ses-latido",
       "/api/cron/sivra-extras-impago",
       "/api/cron/subastas-avisos",
@@ -5253,7 +5260,8 @@
       "seguros.portal_peticion_acceso",
       "seguros.portal_poliza_declarada",
       "seguros.portal_supresion",
-      "seguros.portal_vinculo"
+      "seguros.portal_vinculo",
+      "seguros.portal_vista_corredor"
     ],
     "asegura-web": [],
     "housesevillana": [],
@@ -5473,11 +5481,13 @@
       "rutina_tokens",
       "secrets_audit",
       "sector_tendencias",
+      "seo_correduria_semana",
       "ses_establecimientos",
       "sivra_codigos_acceso",
       "sivra_extras_catalogo",
       "sivra_extras_reserva",
       "sivra_ordenes_limpieza",
+      "sobre",
       "subastas",
       "subastas_consultas",
       "subastas_correo_cursor",
@@ -6205,7 +6215,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1312,
+    "apis": 1319,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

@@ -1034,7 +1034,7 @@ entra directo — la sesión dura 30 días y `/` ya manda a la bóveda si sigue 
 | `app/icono-app/route.tsx` | El icono de **512 px**. Con menos de 192 Chrome NO ofrece instalar, y no lo dice. El monograma ocupa ~52 % porque Android recorta los `maskable` a la forma del sistema. `force-static` |
 | `lib/monograma.ts` | El dibujo se LEE de `public/brand/marca-asegura.svg`; lo comparten la pestaña (128) y la app instalada (512) |
 | `public/sw.js` + `app/RegistrarSW.tsx` | El service worker que Chrome exige, registrado en el layout raíz |
-| `app/Campana.tsx` (entrada «Instalar») + `app/instalacion.tsx` | La oferta y el **almacén compartido** del evento. La franja «Tenlo a mano» de encima de las pólizas **se quitó el 08/09/2026** (Alberto: «arriba al lado de salir, queda más limpio»): la campana es el único sitio que ofrece instalar |
+| `app/InstalarBoton.tsx` + `app/InstalarEnBarra.tsx` + `app/instalacion.tsx` | El **botón «Instalar» de la barra** (desde el 08/09/2026), su **puerta de sesión** (solo con token VERIFICADO, como `SalirDelPortal`) y el **almacén compartido** del evento `beforeinstallprompt` |
 
 🚨 **El service worker NO CACHEA NADA, y eso es la decisión.** Aquí dentro hay pólizas, recibos y
 partes de siniestro de personas identificadas: una respuesta guardada en el almacén del navegador
@@ -1049,9 +1049,17 @@ falle. Allí se enseñan las instrucciones y se **dibuja** el glifo de Compartir
 abre gente de 50-70 años. Tampoco hay API para hacerlo por él: en iOS lo único posible es explicar
 el gesto.
 
-📌 La oferta va **al final del contenido y en el flujo**, no flotando: un `position: fixed` no
-desborda, se pone encima, y taparía la última fila del móvil sin que ninguna medida de ancho lo
-delatara.
+📌 **Desde el 08/09/2026 instalar es un BOTÓN de la barra fija**, el primero de `.marca-acciones`
+(instalar → avisos → tema → salir). La primera versión fue una franja «Tenlo a mano» al final del
+contenido y la segunda le añadió una entrada en la campana; Alberto, viendo las dos en producción:
+*«el instalador moverlo en el banner fijo de arriba»*. Las dos se borraron (`app/(portal)/InstalarApp.tsx`
+y la entrada de `Campana.tsx`): un solo sitio para instalar es uno menos que se descoordina. Por
+debajo de **480 px** queda solo el icono (44×44 con `aria-label`); en iOS el botón abre un globo
+`role="dialog"` con el gesto y el glifo, que se cierra con «Entendido», fuera o Escape (≤ 480 px va
+`position: fixed` anclado a los bordes). Y **a 320 px cuatro botones no caben al lado del nombre**:
+la barra se salía 28 px (medido con Playwright), así que hasta 380 px los huecos bajan a 6 px y por
+debajo de **340 px se esconde `.marca-nombre`** — queda el monograma, que lleva el `aria-label`. Entre
+341 y ~405 px el nombre va en dos líneas y la barra sigue en 64 px.
 
 ⛔ **Sin push todavía**: hacen falta VAPID, permiso del usuario y decidir qué se avisa. Y en iOS las
 notificaciones web solo funcionan si la app está añadida a la pantalla de inicio.
@@ -1071,8 +1079,8 @@ no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura
 |---|---|
 | `lib/avisos.ts` | **Puro.** Compone la lista y el globo: autorizaciones pendientes recibidas Y otorgadas (→ `/autorizaciones`), obligaciones en la ventana del módulo (→ `/boveda#calendario-titulo`) |
 | `app/api/avisos/route.ts` | `requireIdentidad()`; **`allSettled`**, no `all`: una fuente caída se declara en `fuentesIlegibles` y la otra se sirve |
-| `app/CampanaAvisos.tsx` → `app/Campana.tsx` | La puerta (sesión VERIFICADA, como `SalirDelPortal`) y la campana. En la cabecera, **entre Salir y el tema** |
-| `app/instalacion.tsx` | El almacén compartido de la instalación (evento de Chrome, detección de iOS/standalone, `InstruccionesIOS`); lo lee la entrada «Instalar» de la campana. Se compartía con la franja «Tenlo a mano» hasta que se quitó el 08/09/2026 |
+| `app/CampanaAvisos.tsx` → `app/Campana.tsx` | La puerta (sesión VERIFICADA, como `SalirDelPortal`) y la campana. En la cabecera, **entre instalar y el tema**; Salir va a la derecha del todo |
+| `app/instalacion.tsx` | El almacén compartido de la instalación (`beforeinstallprompt` se dispara UNA vez). Desde el 08/09/2026 lo lee solo `InstalarBoton`: la campana ya NO ofrece instalar |
 
 🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
 `!` (ninguna legible, o fallo de red). Este portal renunció a la hamburguesa porque un botón que
@@ -1090,11 +1098,16 @@ qué vio ya el cliente (siniestro que cambia de estado, petición respondida, re
 está en `docs/CORREDURIA-INTRANET-IDEAS.md` §N con su bloqueo. Y el número va también al icono de
 la app instalada (`setAppBadge`), que es lo que hace que instalar sirva de algo.
 
-⚠️ **El CSS de la cabecera cambió de `+` a `~`**: `.salir-form ~ .tema-boton`. Con el adyacente,
-la campana en medio dejaba al interruptor sin casar, recuperaba su `margin-left:auto` y se iba solo
-al extremo. El orden en `layout.tsx` sigue sin ser cosmético. El panel del móvil (≤ 480 px) va
-`position: fixed` anclado a los bordes, y es un desplegable que se cierra con Escape o clic fuera:
-se mide que quepa, no que no tape.
+⚠️ **El CSS de la cabecera evolucionó `+` → `~` → contenedor.** Primero `.salir-form + .tema-boton`;
+con la campana en medio el adyacente dejaba al interruptor sin casar, recuperaba su `margin-left:auto`
+y se iba solo al extremo, y pasó a `~`. Y con instalar (que solo existe si el navegador lo ofrece) el
+reparto del hueco cambiaba según el dispositivo sin que nada fallara. Desde el 08/09/2026 (mismo día,
+segunda vuelta) los cuatro botones van dentro de **`.marca-acciones`, que lleva el ÚNICO
+`margin-left:auto`** y los separa por `gap`: la regla `.salir-form ~ .tema-boton` ya no existe. Orden
+(dictado de Alberto): instalar → avisos → tema → **Salir a la derecha del todo** («es lo lógico»). El
+orden en `layout.tsx` sigue sin ser cosmético. El panel del móvil (≤ 480 px) va `position: fixed`
+anclado a los bordes, y es un desplegable que se cierra con Escape o clic fuera: se mide que quepa,
+no que no tape.
 
 Lo vigilan `lib/avisos.test.ts` (9) y `lib/campana.test.ts` (7); `lib/pwa.test.ts` se repuntó al
 almacén. **27 mutaciones, 27 rojos**: dos cepos salieron verdes a la primera porque buscaban la

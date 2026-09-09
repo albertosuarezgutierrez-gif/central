@@ -26,7 +26,7 @@ y que podría dar uso para instalar (ya creado)»*.
 | **La campana ENLAZA, no acepta** | Aceptar se hace en `/autorizaciones` con el alcance y el texto delante. Duplicar el «aceptar» en dos componentes es aceptar sin leer |
 | **Sin tabla de «visto»** | El aviso desaparece cuando se resuelve (aceptar/revocar; obligación fuera de ventana). YAGNI |
 | **`GET /api/avisos` con `allSettled`** | Una fuente caída no se lleva la otra y se DECLARA (`fuentesIlegibles`); un `catch → []` diría «sin avisos» sobre lo no leído |
-| **La franja «Tenlo a mano» se queda la primera vez; la campana la conserva después** | En iPhone la franja es lo único que explica el gesto. Un solo almacén (`app/instalacion.tsx`) para el evento `beforeinstallprompt`, que se dispara una vez |
+| **Instalar es un BOTÓN de la barra (Alberto, 08/09): ni franja en el contenido ni entrada en la campana** | La primera versión fue la franja + una entrada en la campana; Alberto, viendo producción: «el instalador moverlo en el banner fijo de arriba». Un solo sitio para instalar es uno menos que se descoordina. En iOS el botón abre un globo `role="dialog"` con el gesto. Sigue habiendo un solo almacén (`app/instalacion.tsx`) para `beforeinstallprompt`, que se dispara una vez |
 | **Número también en el icono de la app instalada** (`setAppBadge`) | Es lo que hace que instalar sirva: ve el número sin abrir nada. Cifra solo si es cierta; con `+`/`!` un punto |
 
 ## 3. Piezas
@@ -36,9 +36,11 @@ y que podría dar uso para instalar (ya creado)»*.
 | `lib/avisos.ts` | Puro. `avisosDe({ autorizaciones \| null, obligaciones \| null, hoy })` → `{ avisos, fuentesIlegibles, globo }`. Tipos: `autorizacion_pendiente` (recibida pendiente → `/autorizaciones`), `autorizacion_sin_aceptar` (otorgada pendiente → `/autorizaciones`), `obligacion_en_ventana` (`entraEnVentana` del módulo → `/boveda#calendario-titulo`). `textoGlobo(n, ilegibles, fuentes)` |
 | `app/api/avisos/route.ts` | `requireIdentidad()` por cookie; `allSettled` sobre `autorizacionesDeIdentidad` + `obligacionesDeIdentidad`; `cache-control: no-store` |
 | `app/CampanaAvisos.tsx` | Servidor. Solo con sesión **verificada** (como `SalirDelPortal`): sin ella la campana pediría la API, 401, y pintaría `!` en la portada |
-| `app/Campana.tsx` | Cliente. Botón 44 px + globo; panel `absolute` bajo la barra (≤480 px anclado a la pantalla, `left/right: 8px`); cierra con Escape o clic fuera; recarga al abrir; entrada «Instalar» |
+| `app/Campana.tsx` | Cliente. Botón 44 px + globo; panel `absolute` bajo la barra (≤480 px anclado a la pantalla, `left/right: 8px`); cierra con Escape o clic fuera; recarga al abrir. Sin entrada «Instalar» (08/09, segunda vuelta) |
 | `app/instalacion.tsx` | Almacén compartido de la instalación (`useInstalacion()`, `instalar()`, `InstruccionesIOS`) |
-| `globals.css` | `.salir-form ~ .tema-boton` (era `+`: con la campana en medio, el interruptor recuperaba su `margin-left:auto`) |
+| `app/InstalarBoton.tsx` | Cliente. El botón «Instalar» de la barra, el primero de `.marca-acciones`: en Chrome/Android lanza el diálogo; en iOS abre un globo `role="dialog"` (Entendido, fuera o Escape; ≤480 px `fixed` a los bordes). Solo icono ≤480 px (44×44 + `aria-label`); no se pinta si no hay nada que instalar |
+| `app/InstalarEnBarra.tsx` | Servidor. La puerta: sesión **verificada**, como `SalirDelPortal` y `CampanaAvisos` |
+| `globals.css` | `.marca-acciones`: UN contenedor con el único `margin-left:auto`, botones separados por `gap` (orden instalar → avisos → tema → Salir a la derecha del todo). Sustituye a `.salir-form ~ .tema-boton` (que antes fue `+`). ≤380 px gap 6 px; <340 px se esconde `.marca-nombre` |
 
 ## 4. Lo que NO entra (y por qué), anotado en `docs/CORREDURIA-INTRANET-IDEAS.md` §N
 
@@ -56,3 +58,23 @@ y que podría dar uso para instalar (ya creado)»*.
 - Playwright a 320 / 390 / 1024 con sesión firmada y BD inalcanzable: `scrollWidth` = viewport en
   los tres; Salir · campana · tema a 44 px y 10 px de separación; panel de 8 a 312 px a 320; con la
   API caída el globo es `!` y el panel ofrece reintentar.
+- **Segunda vuelta (08/09, instalar como botón de la barra, PR #2636).** Playwright sobre
+  `/legal/privacidad` con sesión firmada, BD inalcanzable y `/api/avisos` simulada, en tres modos
+  (Chrome con `beforeinstallprompt` simulado · iOS por UA · sin sesión) y seis anchos. En todos:
+  `scrollWidth` = viewport, ningún elemento de la barra fuera, los cuatro botones a 44 px de alto,
+  orden instalar → campana → tema → salir; en iOS el globo `role="dialog"` dentro de pantalla y
+  cerrado con Escape; sin sesión solo el interruptor de tema.
+
+  | ancho | instalar (x→right) | campana | tema | salir | globo iOS (x→right) |
+  |---|---|---|---|---|---|
+  | 320 | 93→137 (icono; nombre oculto) | 143→187 | 193→237 | 243→304 | 8→312 |
+  | 340 | 113→157 (icono; nombre oculto) | 163→207 | 213→257 | 263→324 | 8→332 |
+  | 360 | 133→177 (icono) | 183→227 | 233→277 | 283→344 | 8→352 |
+  | 375 | 148→192 (icono) | 198→242 | 248→292 | 298→359 | 8→367 |
+  | 390 | 151→195 (icono) | 205→249 | 259→303 | 313→374 | 8→382 |
+  | 1024 | 712→829 (con texto) | 839→883 | 893→937 | 947→1008 | 469→829 |
+
+  Antes del arreglo la barra se salía 28 px a 320. Hasta 380 px los botones van a 6 px (medido:
+  el override tiene que ir DETRÁS del bloque base de `.marca-acciones`, si no la cascada lo pisa y
+  el hueco se queda en 10). Entre 341 y ~405 px el nombre va en dos líneas y la barra se queda en
+  64 px.
