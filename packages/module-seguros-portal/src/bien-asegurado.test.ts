@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { BIEN_VACIO, bienTieneAlgo, describirBien, describirBienConGemela } from './bien-asegurado.ts'
+import {
+  BIEN_VACIO,
+  bienTieneAlgo,
+  componerUbicacion,
+  describirBien,
+  describirBienConGemela,
+} from './bien-asegurado.ts'
 import { camposVisibles } from './acceso.ts'
 import { camposDeAlcance } from './autorizacion.ts'
 
@@ -121,4 +127,54 @@ test('el ramo desconocido se resuelve por las CLAVES, no se pierde', () => {
   // en silencio.
   assert.equal(describirBien('lo-que-sea', { matricula: '1234ABC' }).cosa, '1234ABC')
   assert.equal(describirBien('lo-que-sea', { direccion: 'Calle Falsa 1' }).ubicacion, 'Calle Falsa 1')
+})
+
+test('🚨 el CP no se dice DOS veces cuando la calle ya lo trae', () => {
+  // El caso real que vio Alberto en su portal el 08/09/2026:
+  // «MARINA GOLF 82, 11520 costa ballena, 11520 ROTA».
+  assert.equal(
+    componerUbicacion('MARINA GOLF 82, 11520 costa ballena', '11520', 'ROTA'),
+    'MARINA GOLF 82, 11520 costa ballena, ROTA',
+  )
+  // Y si la calle trae CP y localidad, no se repite ninguno de los dos.
+  assert.equal(componerUbicacion('MARINA GOLF 82, 11520 ROTA', '11520', 'ROTA'), 'MARINA GOLF 82, 11520 ROTA')
+})
+
+test('la dirección que NO repite nada se queda exactamente igual', () => {
+  // La otra póliza de la misma captura: sin CP dentro, no se toca una coma.
+  assert.equal(
+    componerUbicacion('San vicente 40 2º 14', '41002', 'SEVILLA'),
+    'San vicente 40 2º 14, 41002 SEVILLA',
+  )
+})
+
+test('🚨 una localidad NOMBRADA a mitad de la calle no borra la localidad de verdad', () => {
+  // El cepo que de verdad separa las dos reglas: aquí la localidad SÍ aparece
+  // en la calle, pero NO al final. Con `includes` en vez de `endsWith` la
+  // dirección perdería su pueblo y nadie lo notaría — «Avenida de Sevilla 4,
+  // esc B, 41005» no dice en qué ciudad está.
+  assert.equal(
+    componerUbicacion('Avenida de Sevilla 4, esc B', '41005', 'SEVILLA'),
+    'Avenida de Sevilla 4, esc B, 41005 SEVILLA',
+  )
+  // Y el homónimo de otro pueblo: la calle menciona Rota, el piso está en El
+  // Puerto. Ni se quita ni se confunde.
+  assert.equal(componerUbicacion('Camino de Rota 9', '11500', 'EL PUERTO'), 'Camino de Rota 9, 11500 EL PUERTO')
+})
+
+test('la comparación ignora acentos, mayúsculas y puntuación, pero PINTA el original', () => {
+  assert.equal(componerUbicacion('Plaza Alcalá, 41500 ALCALÁ', '41500', 'Alcala'), 'Plaza Alcalá, 41500 ALCALÁ')
+})
+
+test('sin calle sigue diciendo el pueblo; sin nada, null', () => {
+  assert.equal(componerUbicacion(null, '41002', 'SEVILLA'), '41002 SEVILLA')
+  assert.equal(componerUbicacion(null, null, null), null)
+  // Y una calle sola no se queda sin salir por no tener cola.
+  assert.equal(componerUbicacion('Calle Falsa 1', null, null), 'Calle Falsa 1')
+})
+
+test('🚨 un CP parcial NO cuenta como repetido', () => {
+  // «1152» dentro de «11520» no es el CP: si contara, se perdería el código
+  // postal de verdad y nadie lo notaría.
+  assert.equal(componerUbicacion('Portal 11520B', '1152', 'ROTA'), 'Portal 11520B, 1152 ROTA')
 })
