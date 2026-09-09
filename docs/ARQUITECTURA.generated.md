@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-09T10:55:37Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-09T14:59:45Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1319 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1321 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,12 +21,12 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 58
+- **Rutas API:** 59
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (19):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_supresion, seguros.portal_vinculo, seguros.portal_vista_corredor
-- **Rutas API:** 23
+- **Rutas API:** 24
 ### asegura-web
 - **Módulos que usa:** module-seguros, module-seguros-portal
 - **Capacidades:** —
@@ -262,6 +262,9 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (09/09/2026) Maqueta de pre-emisión por compañía en el retarificador
+- (08/09/2026) 🏠 La dirección del hogar dejaba de decir el CP dos veces
+- (08/09/2026) 🔔 La campana de avisos del portal del cliente
 - (09/09/2026) ⚙️ Optimización de consumo de tokens de Claude Code
 - (09/09/2026) 🗺️ Graphify conectado, grafo verificado, reglas de uso en CLAUDE.md + memoria arquitectónica
 - (09/09/2026) Regla de estilo de respuesta endurecida: resumen solo al final
@@ -269,7 +272,4 @@
 - (09/09/2026) 🗂 «Mis datos» + filtro «en vigor» por panel + sugerencia a la cabecera
 - (09/09/2026) 🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email
 - (09/09/2026) Título de póliza específico para RC de perros y similares
-- (09/09/2026) Calendario del portal: fuera el chip de aviso
-- (08/09/2026) 👁 Vista de corredor: Alberto abre el portal como lo ve un cliente
-- (08/09/2026) 📲 Fuera la franja «Tenlo a mano» del portal: la campana es el único sitio que ofrece instalar
 
