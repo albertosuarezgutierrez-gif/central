@@ -37,10 +37,26 @@
   compañía (Occident/Reale/Mapfre/Allianz) con el look de `/correduria`, interactivos pero SIN llamar a
   Codeoscopic ni gastar nada (banner "🧪 MAQUETA"). Sirve para validar diseño antes de decidir si se
   cierra la integración real (Submit sigue en sandbox, `CODEOSCOPIC_EMISION_ACTIVA` apagado). tsc+lint
-  en verde. Rama `claude/retarificacion-emision-poliza-gpuhpa`, PR #2661 (draft, abierto y suscrito).
+  en verde. Rama `claude/retarificacion-emision-poliza-gpuhpa`, PR #2661 (abierto y suscrito).
   De paso: la ficha de cliente ganó avatar de iniciales en `Cabecera.tsx` (reutiliza el hueco `icono`
   de `PageHeader`, sin tocar su forma) — comparado con la ficha de Avant2, pero SIN copiar su rueda de
   iconos decorativa: contradice el rediseño minimalista del 03/09. tsc+lint en verde, mismo PR.
+- **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
+  pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
+  `vendoresDeSeguro()` (`/insurance-vendors`) + `productosDeLinea()` (`/insurance-lines/{id}/products`)
+  en `catalogos.ts`, ruta `GET /api/operador/codeoscopic/companias?buscar=fidelidade` (corre con el
+  interruptor apagado, 0,00€) y un bloque en `/correduria/hogar` de plataforma con TRES estados
+  (presente/ausente/desconocido, y en qué ramos hay producto). ⚠️ Lista vacía = desconocido, nunca «no
+  está». La afinación de Avant2 (captura) sigue sin duplicarse: se hereda al cotizar por `config`
+  (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR #2651.
+- **Título de póliza específico para RC de perros y similares (09/09/2026).** Alberto: la ficha de la
+  RC de Occident (548238086) salía como «Occident · Responsabilidad civil» a secas, y hay miles de
+  tipos de RC distintos. `tituloDePoliza` (`apps/asegura-portal/.../PolizaVista.tsx`) cae ahora a la
+  cobertura que ESPECIALIZA el ramo genérico (ej. «Responsabilidad civil perros») antes de caer a
+  `Compañía · Ramo`. Lógica pura y testeada en `coberturaEspecificaDeRamo()` de
+  `@central/module-seguros-portal` (`poliza-leida.ts`, 4 tests nuevos). Typecheck del portal y
+  `regression-portal-visibilidad` en verde. PR #2648 (rama `claude/responsabilidad-civil-perro-ixeh6y`),
+  mergeado; sin pendientes.
 
 - **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
   vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
