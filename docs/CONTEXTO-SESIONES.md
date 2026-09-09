@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia (09/09/2026, PR #2680).** La
+  hoja/QR de la nevera (`HojasQr`, asegura-portal) vivía embebida al final de «Mis seguros» y solo
+  la encontraba quien bajara del todo — lo mismo que ya se corrigió con «Mis datos» el mismo día.
+  Nueva vista `hoja` en `VISTAS_BOVEDA` (`packages/module-seguros-portal/src/vista-portal.ts`) y
+  pestaña «Mi QR» en `pestanasPortal()` (2ª, tras «Mis seguros»); el nav lateral/carril ya es
+  genérico por `pestanasPortal()`, sin tocar `NavPortal.tsx`. `page.tsx` mueve la sección de
+  `vista==='seguros'` a `vista==='hoja'`. 🚨 Con SEIS pestañas el reparto de ancho sin suelo
+  (`flex:1 1 0; min-width:0`) solapaba texto de pestañas contiguas a 320/390 px — visto fallar
+  con Playwright contra el `globals.css` real y corregido con `min-width:76px` (por debajo, el
+  carril se desliza en vez de aplastar). Tests y typecheck de asegura-portal en verde.
+
 - **🗑 Quitado el calendario de vencimientos de `/boveda` (09/09/2026).** Alberto, viendo el bloque
   «Lo que vence · Tu calendario» en producción: «no aporta nada» (cada póliza ya dice su vencimiento
   en su propia fila). Se borró `boveda/Calendario.tsx` y la franja CSS `.seccion.acento` (era su único

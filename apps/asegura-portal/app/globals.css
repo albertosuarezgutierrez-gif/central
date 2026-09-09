@@ -290,6 +290,17 @@ input, select, textarea, button { font: inherit; }
  * pestañas a ~77 px, «Quién me ve» en una sola línea se corta a media palabra
  * (`nowrap` no lo parte: lo esconde). Dos renglones centrados dentro de los
  * 44 px táctiles se leen; media palabra no.
+ *
+ * 🚨 Y con SEIS pestañas (09/09/2026, «Mi QR») el reparto sin suelo vuelve a
+ * partir palabras — pero esta vez ni envolviendo a dos líneas alcanza: a 320
+ * px cada ítem baja a 50 px y una palabra suelta como «Siniestros» o
+ * «Contactos» no tiene espacio ni para envolverse (no hay una segunda palabra
+ * en la que partir), así que `overflow: visible` la deja pintarse ENCIMA del
+ * ítem vecino — texto de dos pestañas distintas literalmente superpuesto,
+ * medido con Playwright. `min-width: 76px` (el ancho natural de «Contactos»,
+ * la más larga de una sola palabra, con margen) es el suelo por debajo del
+ * cual el reparto se rinde: el carril vuelve a su `overflow-x` de base y
+ * pasa a deslizarse, en vez de aplastar el texto hasta que se solape.
  */
 @media (max-width: 1023px) {
   .portal-nav {
@@ -297,7 +308,7 @@ input, select, textarea, button { font: inherit; }
   }
   .portal-nav-item {
     flex: 1 1 0;
-    min-width: 0;
+    min-width: 76px;
     justify-content: center;
     text-align: center;
     padding: 0 4px;
