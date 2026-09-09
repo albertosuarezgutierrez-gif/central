@@ -26,7 +26,9 @@ const leer = (r: string) => readFileSync(join(raiz, r), 'utf8')
 const RUTA_PUERTO = 'apps/asegura/app/api/portal/contacto/route.ts'
 const RUTA_APLICA = 'apps/asegura/lib/contacto-portal.ts'
 const RUTA_CLIENTE = 'apps/asegura-portal/lib/mis-datos.ts'
-const RUTA_PANTALLA = 'apps/asegura-portal/app/(portal)/boveda/MiDireccion.tsx'
+// 09/09/2026: «Mis datos» sustituye a «Dónde te escribimos», con su propia
+// pestaña, y ahora también teléfono y correo (no solo la dirección).
+const RUTA_PANTALLA = 'apps/asegura-portal/app/(portal)/boveda/MisDatos.tsx'
 
 test('el puerto NO acepta un clienteId de fuera: la ficha la resuelve el vínculo', () => {
   const fuente = leer(RUTA_PUERTO)
@@ -59,7 +61,7 @@ test('el portal usa su secreto propio y NUNCA el de operador', () => {
   assert.match(cliente, /sin_puente/)
 })
 
-test('el portal NO lee de vuelta la dirección guardada', () => {
+test('el portal NO aprende a descifrar PII, aunque desde el 09/09/2026 SÍ lee de vuelta', () => {
   const cliente = leer(RUTA_CLIENTE)
   // Se mira el CÓDIGO, no la prosa: la cabecera del módulo explica justamente
   // por qué no descifra, y una expresión que casara con el texto daría rojo por
@@ -69,20 +71,25 @@ test('el portal NO lee de vuelta la dirección guardada', () => {
     !/PII_ENCRYPTION_KEY|decryptField|descifrarCampo/.test(codigo),
     'esta app no descifra PII: si aprende, la app pública puede leer la cartera',
   )
-  // La pantalla tiene que DECIR que sale vacía, no dejar creer que no consta.
-  assert.match(leer(RUTA_PANTALLA), /No podemos mostrarte la que tenemos guardada/)
+  // Desde el 09/09/2026 SÍ hay una lectura (`leerMisDatos`/`GET`), pero viene YA
+  // descifrada del puerto de asegura: el portal solo la reenvía.
+  assert.match(cliente, /leerMisDatos/, 'la lectura tiene que existir: Alberto pidió poder VER los datos')
+  // Y cuando esa lectura falla, la pantalla lo DICE — no deja un hueco que
+  // parezca «no consta».
+  assert.match(leer(RUTA_PANTALLA), /No hemos podido/)
 })
 
 test('ningún desenlace que no haya guardado dice «guardado»', () => {
   const fuente = leer(RUTA_PANTALLA)
-  // El único `tipo: 'guardado'` del fichero es el del caso 'ok'.
-  const guardados = fuente.match(/return \{ tipo: 'guardado' \}/g) ?? []
+  // El único `return { tipo: 'guardado', ... }` del fichero es el del caso 'ok'
+  // (el tipo `Estado` también declara la forma, pero eso no es un `return`).
+  const guardados = fuente.match(/return \{ tipo: 'guardado'/g) ?? []
   assert.equal(guardados.length, 1, 'solo el desenlace ok puede decir que se guardó')
   const okIdx = fuente.indexOf("case 'ok':")
-  const guardadoIdx = fuente.indexOf("return { tipo: 'guardado' }")
-  assert.ok(okIdx !== -1 && guardadoIdx > okIdx && guardadoIdx - okIdx < 80, 'el «guardado» cuelga del caso ok')
+  const guardadoIdx = fuente.indexOf("return { tipo: 'guardado'")
+  assert.ok(okIdx !== -1 && guardadoIdx > okIdx && guardadoIdx - okIdx < 200, 'el «guardado» cuelga del caso ok')
   // Y los caminos que no guardan lo dicen con todas las letras.
-  for (const estado of ['sin_ficha', 'varias_fichas', 'sin_puente']) {
+  for (const estado of ['sin_ficha', 'varias_fichas', 'sin_puente', 'en_otra_ficha']) {
     assert.match(fuente, new RegExp(`case '${estado}':`), `falta el desenlace de ${estado}`)
   }
   assert.match(fuente, /No se ha cambiado nada/, 'un fallo tiene que decir que no se cambió nada')
@@ -110,7 +117,9 @@ test('el historial de la ficha dice que lo hizo el CLIENTE', () => {
 // que el cliente hace en el portal tiene que llegar a Alberto, y lo que no ha
 // llegado no se le puede agradecer.
 
-const RUTA_SUGERENCIA_UI = 'apps/asegura-portal/app/(portal)/boveda/Sugerencia.tsx'
+// 09/09/2026: sube a la barra de la cabecera («donde está la campanita, la
+// luna y salir»), fuera del grupo `(portal)/boveda`.
+const RUTA_SUGERENCIA_UI = 'apps/asegura-portal/app/Sugerencia.tsx'
 const RUTA_SUGERENCIA_LIB = 'apps/asegura-portal/lib/sugerencia.ts'
 const RUTA_SUGERENCIA_API = 'apps/asegura-portal/app/api/sugerencia/route.ts'
 

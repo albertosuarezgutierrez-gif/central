@@ -18,6 +18,7 @@ export {
   RAMOS_POLIZA,
   ETIQUETA_RAMO,
   etiquetaRamo,
+  coberturaEspecificaDeRamo,
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
@@ -298,9 +299,16 @@ export {
   decidirFichaPropia,
   textoHistorialContactoPropio,
   CAMPOS_CONTACTO_PROPIO,
+  CAMPOS_DIRECCION_PROPIA,
+  CAMPOS_CANAL_PROPIO,
   CAMPOS_VETADOS_AL_CLIENTE,
 } from './contacto-propio.ts'
-export type { FichaPropia, CampoContactoPropio } from './contacto-propio.ts'
+export type {
+  FichaPropia,
+  CampoContactoPropio,
+  CampoDireccionPropia,
+  CampoCanalPropio,
+} from './contacto-propio.ts'
 // El botón de sugerencias del portal (08/09/2026). Lee su cabecera: aquí
 // Telegram NO es un aviso, es el ÚNICO registro — y por eso «enviada» es lo
 // único que promete algo, y el texto de la persona se ESCAPA antes de componer.
