@@ -66,26 +66,23 @@ test('🚨 la cookie se borra con las MISMAS opciones con las que se puso', () =
   )
 })
 
-test('🚨 el botón sale del layout RAÍZ y va pegado al interruptor', () => {
-  // El `margin-left:auto` de `.salir-form` solo junta los botones de la derecha
-  // si los que van detrás pierden el suyo. Hasta el 08/09/2026 la regla era de
-  // hermano ADYACENTE (`+`) y Salir tenía que ir INMEDIATAMENTE antes del
-  // interruptor; al meter la campana entre los dos, `+` dejaba de casar, el
-  // interruptor recuperaba su `auto` y se iba solo al extremo. Ahora la regla es
-  // de hermano POSTERIOR (`~`): Salir va ANTES del interruptor (con la campana
-  // en medio o sin ella) y la campana no lleva `auto` nunca.
+test('🚨 el botón sale del layout RAÍZ y va a la derecha del todo', () => {
+  // Desde el 08/09/2026 los botones de la derecha (instalar, salir, avisos,
+  // tema) viven en UN contenedor, `.marca-acciones`, que es quien lleva el
+  // único `margin-left:auto`. Antes lo llevaba `.salir-form` y se le quitaba
+  // al interruptor con una regla de hermano; cada botón nuevo la rompía y el
+  // hueco se repartía separándolos sin que nada fallara.
   assert.ok(/<SalirDelPortal\s*\/>/.test(LAYOUT), 'falta <SalirDelPortal /> en la barra')
+  // Y Salir es el ÚLTIMO del grupo: «a la derecha del todo, es lo lógico»
+  // (Alberto, 08/09/2026).
+  const acciones = LAYOUT.indexOf('className="marca-acciones"')
   const salir = LAYOUT.indexOf('<SalirDelPortal')
   const tema = LAYOUT.indexOf('<InterruptorTema')
-  assert.ok(salir > 0 && tema > salir, 'SalirDelPortal tiene que ir ANTES de InterruptorTema: es el que toma el margin-left:auto')
-  assert.ok(
-    /\.salir-form\s*~\s*\.tema-boton/.test(CSS),
-    'falta la regla (~) que le quita el margin-left:auto al interruptor cuando está el botón de salir',
-  )
-  assert.ok(
-    !/\.salir-form\s*\+\s*\.tema-boton/.test(CSS),
-    'volvió la regla adyacente (+): con la campana en medio el interruptor se separa solo',
-  )
+  assert.ok(acciones > 0 && acciones < tema && tema < salir, 'SalirDelPortal tiene que ir dentro de .marca-acciones y el último: a la derecha del todo')
+  const bloque = CSS.match(/\.marca-acciones\s*\{[^}]*\}/)?.[0] ?? ''
+  assert.ok(/margin-left:\s*auto/.test(bloque), 'falta el margin-left:auto de .marca-acciones: los botones dejan de ir a la derecha')
+  const salirCss = CSS.match(/\.salir-form\s*\{[^}]*\}/)?.[0] ?? ''
+  assert.ok(!/margin-left:\s*auto/.test(salirCss), '.salir-form volvió a llevar margin-left:auto: reparte el hueco y separa los botones')
 })
 
 test('🚨 el botón no se pinta sin sesión, y la sesión se VERIFICA', () => {

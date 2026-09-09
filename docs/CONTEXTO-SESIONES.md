@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔔 La campana de avisos del portal del cliente (08/09/2026).** Alberto: «un icono de campana de avisos,
+  para autorizaciones, vencimientos, etc.». Entró: `lib/avisos.ts` (puro) + `GET /api/avisos` (`allSettled`) +
+  `Campana.tsx`, globo con tres desenlaces (`n`·`n+`·`!`, nunca 0), enlaza y NO acepta, `setAppBadge`; sin tabla
+  de «visto» (v2 en IDEAS §N). 27 mutaciones/27 rojos. Spec `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`. **PR #2630 mergeado** (`455e0c40`).
+  Luego Alberto, viendo producción: «el instalador moverlo en el banner fijo de arriba» y «el botón salir a la
+  derecha del todo, es lo lógico». Hecho en el **PR #2636**: botón `InstalarBoton` en la barra (fuera la franja y la
+  entrada de la campana), `.marca-acciones` con el único `margin-left:auto`, nombre oculto <340 px; Playwright
+  320-1024 limpio. ⚠️ **Corrige al #2632** (mergeado antes: dejó instalar DENTRO de la campana, que no es «el banner fijo de arriba»).
 - **⚙️ Optimización de consumo de tokens de Claude Code (09/09/2026).** Auditoría pedida por Alberto:
   la infra de ahorro (maestros por vertical, `code-map`, `delegar-codigo`, regla "mecánico→agente",
   memoria de sesión) ya cubría casi todo el prompt; NO se montó la estructura genérica
@@ -75,7 +83,12 @@
   abierto y sin decidir:** Alberto pidió luego que la autorización a un tercero NO caduque al año, y
   después matizó que quizá sea mejor que la caducidad (o su ausencia) se declare al invitar, según el
   caso (hijo↔padre mayor). No se tocó `DIAS_VIGENCIA`: es una decisión legal (art. 7.1 RGPD,
-  demostrabilidad) que necesita su OK explícito antes de tocar `autorizacion.ts`. PR #2660.
+  demostrabilidad) que necesita su OK explícito antes de tocar `autorizacion.ts`. **PR #2660
+  mergeado.** Revisión de código posterior al merge encontró 3 bugs reales — escritura no atómica
+  de canales (un choque en el correo podía dejar el teléfono ya guardado diciendo «no se cambió
+  nada»), lectura/escritura del canal «principal» con criterios distintos (reenviar el MISMO
+  teléfono creaba una fila duplicada) y un `id` de `FiltroVigencia` que faltaba en la rama vacía —
+  corregidos en PR #2672 (draft, a la espera de CI).
 
 - **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
   pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
@@ -137,14 +150,6 @@
   «📄 Subir póliza» con su aviso en el `title`. El menú va PRIMERO: en segunda posición el desplegable
   se salía a 360px (medido con Playwright, right=427). Cepo `test/regression-ficha-cliente-acciones.test.ts`
   visto en rojo. Regla anotada en la skill `correduria-crm`. PR #2622 (19/19 verdes, mergeado).
-- **🔔 La campana de avisos del portal del cliente (08/09/2026).** Alberto, ante el «nace pendiente
-  hasta que la acepte en su portal»: un icono de campana en la cabecera del portal con autorizaciones,
-  vencimientos e instalar. Entró: `lib/avisos.ts` (puro) + `GET /api/avisos` (`allSettled`) +
-  `Campana.tsx` entre Salir y el tema, globo con tres desenlaces (`n`·`n+`·`!`, nunca 0), enlaza y
-  NO acepta, `setAppBadge`; almacén único del `beforeinstallprompt` (`app/instalacion.tsx`). Sin
-  tabla de «visto»: la v2 (siniestro cerrado, recibo devuelto, push) está en IDEAS §N con su
-  bloqueo. 27 mutaciones/27 rojos; Playwright 320/390/1024 sin desbordes. Spec en
-  `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`.
 - **👥 Portal del cliente: pestaña «Contactos» + invitación sin compartir nada (08/09/2026).** Alberto
   pidió «pestaña de contactos: nombre, relación y mail, un mail de presentación… y regalos por traer
   gente». Lo primero ya existía en `/autorizaciones` (invitar por correo, 04/09); se añadió lo que
