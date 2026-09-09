@@ -41,6 +41,7 @@
 //     no tener origen. Ver el bloque «Origen de los datos del ramo».
 
 import {
+  esPeriodicidadPagoValida,
   formatoReferencia,
   normalizarDatosRamo,
   normalizarOrigenes,
@@ -55,6 +56,15 @@ export type ParchePoliza = {
   numeroPoliza?: string | null
   ramo?: string | null
   primaAnual?: number | null
+  /**
+   * Cada cuánto se le pasa el recibo (`anual`/`semestral`/`trimestral`/
+   * `mensual`). Con esto se puede avisar del PRÓXIMO cobro, no solo de la
+   * renovación anual — ver `proximoCobroDeclarado()` del módulo puro. Sigue
+   * la MISMA gramática que el resto: `null` o un centinela borra, y NINGUNO
+   * es obligatorio (a diferencia de `ramo`, que sí lo es pero solo en la
+   * pantalla, no aquí — ver `CamposPoliza.tsx`).
+   */
+  periodicidadPago?: string | null
   fechaVencimiento?: Date | null
   /** Del BIEN, no del contrato. Ver la sección de identificadores más abajo. */
   matricula?: string | null
@@ -522,6 +532,25 @@ export function normalizarParche(
     parche.primaAnual = r.valor
   }
 
+  // «No lo sé» (`null`, `''`, un centinela) borra; cualquier otra cosa tiene
+  // que ser una de las cuatro palabras del vocabulario compartido con
+  // `@central/module-seguros` (`FRACCIONES`) — una quinta inventada aquí
+  // pisaría el catálogo real de la cartera el día que alguien lo lea junto.
+  if ('periodicidadPago' in bruto && bruto.periodicidadPago !== undefined) {
+    const valor = bruto.periodicidadPago
+    if (valor === null) {
+      parche.periodicidadPago = null
+    } else if (typeof valor !== 'string') {
+      return { ok: false, error: 'periodicidad_pago_invalida' }
+    } else if (esCentinelaSinDato(valor)) {
+      parche.periodicidadPago = null
+    } else if (!esPeriodicidadPagoValida(valor.trim().toLowerCase())) {
+      return { ok: false, error: 'periodicidad_pago_invalida' }
+    } else {
+      parche.periodicidadPago = valor.trim().toLowerCase()
+    }
+  }
+
   if ('fechaVencimiento' in bruto && bruto.fechaVencimiento !== undefined) {
     const valor = bruto.fechaVencimiento
     if (valor === null) {
@@ -731,6 +760,8 @@ export type DatosAlta = {
   numeroPoliza: string | null
   ramo: string | null
   primaAnual: number | null
+  /** Ver `ParchePoliza.periodicidadPago`. `null` = no lo sabe, y es válido. */
+  periodicidadPago: string | null
   fechaVencimiento: Date | null
   matricula: string | null
   bastidor: string | null
@@ -784,6 +815,7 @@ export function normalizarAlta(entrada: unknown, hoy: Date = new Date()): Result
     numeroPoliza: p.numeroPoliza ?? null,
     ramo: p.ramo ?? null,
     primaAnual: p.primaAnual ?? null,
+    periodicidadPago: p.periodicidadPago ?? null,
     fechaVencimiento: p.fechaVencimiento ?? null,
     matricula: p.matricula ?? null,
     bastidor: p.bastidor ?? null,

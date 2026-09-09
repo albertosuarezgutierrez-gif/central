@@ -62,6 +62,14 @@ export {
 } from './obligacion.ts'
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
 export {
+  PERIODICIDADES_PAGO,
+  DIAS_PREAVISO_RECIBO,
+  esPeriodicidadPagoValida,
+  fechaAccionableRecibo,
+  proximoCobroDeclarado,
+} from './cobro-declarado.ts'
+export type { PeriodicidadPago } from './cobro-declarado.ts'
+export {
   DIAS_LEAD_URGENTE,
   estadoLead,
   leadDeclarada,
