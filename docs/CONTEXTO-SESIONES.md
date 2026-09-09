@@ -30,6 +30,11 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **Regla de estilo de respuesta endurecida: resumen solo al final (09/09/2026).** Alberto pidió que
+  las conversaciones no narren cada paso, solo den un resumen final sintético — ahorra tokens. Se
+  reflejó en `## Estilo de respuesta` de `CLAUDE.md` (no solo en las preferencias de cuenta) para que
+  aplique a cualquier sesión/agente del repo. PR #2663, mergeado.
+
 - **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
   pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
   `vendoresDeSeguro()` (`/insurance-vendors`) + `productosDeLinea()` (`/insurance-lines/{id}/products`)
