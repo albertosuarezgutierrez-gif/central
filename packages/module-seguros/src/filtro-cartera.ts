@@ -17,7 +17,7 @@
 /** Los ramos que existen en el enum `tipo_seguro` del schema `seguros`. */
 export type RamoSeguro =
   | 'auto' | 'moto' | 'hogar' | 'vida' | 'salud'
-  | 'decesos' | 'responsabilidad_civil' | 'comercio' | 'comunidades' | 'otros'
+  | 'decesos' | 'responsabilidad_civil' | 'comercio' | 'comunidades' | 'accidentes' | 'otros'
 
 /**
  * Los ramos, con su rótulo. El orden es el de la cartera real medida el
@@ -36,6 +36,7 @@ export const RAMOS: readonly { v: RamoSeguro; label: string }[] = [
   { v: 'decesos', label: 'Decesos' },
   { v: 'comercio', label: 'Comercio' },
   { v: 'comunidades', label: 'Comunidades' },
+  { v: 'accidentes', label: 'Accidentes' },
   { v: 'otros', label: 'Otros' },
 ]
 
