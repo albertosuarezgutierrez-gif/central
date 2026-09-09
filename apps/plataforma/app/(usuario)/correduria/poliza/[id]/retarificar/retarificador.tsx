@@ -19,10 +19,13 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
+import { PreemisionMock } from './preemision-mock'
 
 /** Quita tildes y mayúsculas para comparar «Casado» con «CASADO».
- *  Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`. */
-function normalizarTexto(s: string): string {
+ *  Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`.
+ *  Exportada porque `preemision-mock.tsx` la reutiliza para emparejar el
+ *  nombre de compañía del precio con su esquema de maqueta. */
+export function normalizarTexto(s: string): string {
   return s
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -946,6 +949,10 @@ function Precios({
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
 }) {
+  // 🧪 Qué fila tiene la maqueta de pre-emisión abierta (ver preemision-mock.tsx).
+  // `null` = ninguna. Vive aquí, no en el padre: es puro estado de pantalla,
+  // no algo que la póliza necesite recordar entre visitas.
+  const [abierta, setAbierta] = useState<string | null>(null)
   return (
     <div style={{ marginTop: 16 }}>
       {/* Un precio simulado y uno real se leen igual: la única diferencia está
@@ -1007,11 +1014,14 @@ function Precios({
               <th>Prima anual</th>
               <th>Franquicia</th>
               <th>Firmeza</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {r.precios.map((p, i) => (
-              <tr key={`${p.compania}-${p.producto}-${i}`}>
+            {r.precios.map((p, i) => {
+              const id = `${p.compania}-${p.producto}-${i}`
+              return (
+              <tr key={id}>
                 <td>{p.compania ?? '—'}</td>
                 <td>{p.producto ?? '—'}</td>
                 <td>{p.categoria ?? <span className="muted">sin declarar</span>}</td>
@@ -1044,11 +1054,37 @@ function Precios({
                     {p.firmeza ?? 'sin determinar'}
                   </span>
                 </td>
+                <td>
+                  {/* 🧪 Maqueta de pre-emisión (ver preemision-mock.tsx): NO llama a
+                      Codeoscopic ni gasta nada, es solo para que Alberto pruebe el
+                      diseño de la pantalla siguiente. */}
+                  <button
+                    type="button"
+                    className="ghost"
+                    onClick={() => setAbierta(abierta === id ? null : id)}
+                  >
+                    {abierta === id ? 'Ocultar' : 'Pre-emitir'}
+                  </button>
+                </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
       </div>
+
+      {r.precios.map((p, i) => {
+        const id = `${p.compania}-${p.producto}-${i}`
+        if (abierta !== id) return null
+        return (
+          <PreemisionMock
+            key={id}
+            compania={p.compania ?? null}
+            producto={p.producto ?? null}
+            onCerrar={() => setAbierta(null)}
+          />
+        )
+      })}
 
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p className="muted">
