@@ -200,6 +200,20 @@
   `@central/module-seguros` (9 tests, cepo visto en rojo), `GET/POST /api/operador/backfill-contacto`
   en asegura y tarjeta+botón en `/correduria/mantenimiento`. Ojo: `uq_clientes_email_lookup_hash` es
   UNIQUE → fichas con el mismo correo chocan y no se escriben. **Pendiente: pulsar el botón** (tandas).
+- **✅ Aviso automático «comprueba tus datos de contacto» en el portal (08-09/09/2026), integrado con
+  «Mis datos» tras solape de PRs concurrentes.** Alberto vio en la ficha de un cliente que faltaban
+  estado civil/fecha de carnet/municipio y preguntó cómo verificar que móvil/email/dirección de la BD
+  antigua siguen siendo correctos, **sin que el corredor intervenga**. Descartado avisar en la ficha
+  del corredor (fecha de carnet es del CONDUCTOR de una póliza, no del cliente; ya lo pide
+  `revisarDatosAuto()` al presupuestar). Se construyó con datos ENMASCARADOS (`/api/portal/contacto-estado`)
+  y, al ir a mergear, **el PR #2660 de otra sesión concurrente ya había añadido una pestaña «Mis datos»
+  completa** (lectura en claro + edición de teléfono/correo/dirección, sustituyendo `MiDireccion.tsx`
+  por `MisDatos.tsx`). Se resolvió por integración, no por descarte: se retiró el enmascarado (ya
+  redundante) y quedó solo el recordatorio como `AvisoContacto.tsx` (arriba de «Mis seguros», antes que
+  el calendario), reutilizando la MISMA lectura de `leerContactoPropio`/`leerMisDatos` (ahora con
+  `confirmadoEn`/`confirmacion`) en vez de un puerto propio — `contacto-estado` se eliminó.
+  `clientes.contacto_confirmado_at` se sella al decir «siguen igual» o al corregir algo. PR de esta
+  sesión (merge de main + resolución del solape). Pendiente: aplicar la migración SQL en preview→prod.
 - **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
   captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil
   quedaba fuera de la primera pantalla, y en iPhone ese aviso es lo ÚNICO que explica cómo instalar
