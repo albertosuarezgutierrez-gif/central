@@ -409,6 +409,16 @@ de lo que entregó, anótalo con el marcador `🔧 agente-mecanico:` en la entra
 económico ahorra tokens de verdad o si el re-trabajo se come el ahorro — y la respuesta hoy es «no se
 sabe» (el agente se creó en el PR #2658, aún sin usos).
 
+**Revisión obligatoria antes de pedir merge (09/09/2026):** el gate que BLOQUEA el merge ya existe
+(CI + `Claude Approvals`, ver sección de CI) — no se monta un agente nuevo para eso. Lo que faltaba
+es que nadie exigía una pasada de calidad/correctness ANTES de llegar a ese gate: `code-review` y
+`agente-architect` eran opt-in. Ahora es paso obligatorio: **antes de sacar un PR de draft**, la
+sesión corre la skill `code-review` sobre el diff (o delega en `agente-architect` si el cambio es de
+alto riesgo — auth, pagos, RLS, multi-tenant, migraciones). Si hay hallazgos bloqueantes, se
+corrigen o se documenta en el PR por qué no, antes de continuar — igual que exige `code-review` con
+PRs ajenos. No sustituye a `Claude Approvals` ni a los tests: es la pasada que ninguno de los dos
+hace (bugs de lógica, simplificación, reuso).
+
 ## Comunicaciones salientes — regla global permanente
 **NUNCA enviar correos, mensajes ni ninguna comunicación a terceros (email a la asesoría, a clientes,
 a quien sea) sin autorización explícita de Alberto para ESE envío concreto.** Que Alberto pida que un

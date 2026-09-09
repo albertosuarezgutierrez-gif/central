@@ -70,7 +70,10 @@ export function FiltroVigencia({ filas }: { filas: FilaFiltrable[] }) {
         )}
       </div>
       {visibles.length === 0 ? (
-        <p className="tenue" style={{ margin: '0 0 12px', fontSize: 14 }}>
+        // Mismo `id` que la lista de abajo: los botones apuntan con
+        // `aria-controls` a lo que esté visible, y las dos ramas son
+        // mutuamente excluyentes — nunca coexisten dos elementos con este id.
+        <p className="tenue" id={id} style={{ margin: '0 0 12px', fontSize: 14 }}>
           Ninguna en vigor ahora mismo.
         </p>
       ) : (
