@@ -317,6 +317,14 @@ Asegura son **Reale y Fidelidade**, y **Fidelidade no aparece en el catálogo**.
 un mapa de lo posible, no una fuente de verdad. La fuente de verdad sigue siendo `GET /insurance-lines`
 (gratis, ya cableado en `lib/codeoscopic/catalogos.ts`). **No sustituir la llamada por esta tabla.**
 
+✅ **Y para las COMPAÑÍAS (09/09/2026): `GET /insurance-vendors` + `GET /insurance-lines/{id}/products`,
+cableados en `catalogos.ts` (`vendoresDeSeguro`, `productosDeLinea`, `companiaDisponible`) y servidos
+por `GET /api/operador/codeoscopic/companias?buscar=<nombre>` (gratis, con el interruptor apagado).
+Plataforma lo pinta en `/correduria/hogar`: presente (con id y ramos con producto) · ausente (con la
+lista de las que sí hay) · desconocido (lista vacía o no leída — NO se afirma ausencia). Es la forma de
+comprobar «me dicen que ya nos han incluido a X» sin gastar ni preguntar. ⚠️ La forma del producto no
+está documentada: la búsqueda recorre los valores del JSON (`mencionaCompania`), no adivina campos.
+
 ### La matriz, tal cual la publica el fabricante
 
 18 aseguradoras × 7 columnas: AUTOS · HOGAR · MOTOS · DECESOS · VIDA · SALUD · COMPLEMENTARIOS.
