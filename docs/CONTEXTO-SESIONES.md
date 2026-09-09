@@ -38,6 +38,14 @@
   derecha del todo, es lo lógico». Hecho en el **PR #2636**: botón `InstalarBoton` en la barra (fuera la franja y la
   entrada de la campana), `.marca-acciones` con el único `margin-left:auto`, nombre oculto <340 px; Playwright
   320-1024 limpio. ⚠️ **Corrige al #2632** (mergeado antes: dejó instalar DENTRO de la campana, que no es «el banner fijo de arriba»).
+- **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
+  pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
+  `vendoresDeSeguro()` (`/insurance-vendors`) + `productosDeLinea()` (`/insurance-lines/{id}/products`)
+  en `catalogos.ts`, ruta `GET /api/operador/codeoscopic/companias?buscar=fidelidade` (corre con el
+  interruptor apagado, 0,00€) y un bloque en `/correduria/hogar` de plataforma con TRES estados
+  (presente/ausente/desconocido, y en qué ramos hay producto). ⚠️ Lista vacía = desconocido, nunca «no
+  está». La afinación de Avant2 (captura) sigue sin duplicarse: se hereda al cotizar por `config`
+  (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR #2651.
 - **Título de póliza específico para RC de perros y similares (09/09/2026).** Alberto: la ficha de la
   RC de Occident (548238086) salía como «Occident · Responsabilidad civil» a secas, y hay miles de
   tipos de RC distintos. `tituloDePoliza` (`apps/asegura-portal/.../PolizaVista.tsx`) cae ahora a la
