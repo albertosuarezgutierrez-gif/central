@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (08/09/2026) 🔔 La campana de avisos del portal del cliente
 - (09/09/2026) ⚙️ Optimización de consumo de tokens de Claude Code
 - (09/09/2026) 🗺️ Graphify conectado, grafo verificado, reglas de uso en CLAUDE.md + memoria arquitectónica
 - (09/09/2026) Regla de estilo de respuesta endurecida: resumen solo al final
@@ -271,5 +272,4 @@
 - (09/09/2026) Título de póliza específico para RC de perros y similares
 - (09/09/2026) Calendario del portal: fuera el chip de aviso
 - (08/09/2026) 👁 Vista de corredor: Alberto abre el portal como lo ve un cliente
-- (08/09/2026) 📲 Fuera la franja «Tenlo a mano» del portal: la campana es el único sitio que ofrece instalar
 

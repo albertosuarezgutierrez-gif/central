@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-09T10:55:37Z",
-  "sha": "882373fb643cb2de2cba56a341c874a275edd1c0",
+  "generadoEn": "2026-09-09T14:38:54Z",
+  "sha": "376cfac75e84c76a137ecf70d45b2ac23f6efa83",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3523,7 +3523,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f4529eda5b6a"
+      "hash": "eb46f7daa670"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/HojasQr.tsx",
@@ -4080,7 +4080,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0f8b7d6e54d1"
+      "hash": "534efa5a858a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/NavPortal.tsx",
@@ -4696,7 +4696,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 39,
+          "linea": 36,
           "resumen": "el vencimiento al calendario). Un «Aceptar» en el panel sería aceptar sin leer, y duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. El panel se pone ENCIMA del contenido a propósito ("
         },
         {
@@ -4705,7 +4705,7 @@
           "exportada": false,
           "params": "{ datos, reintentar, cerrar, }: { datos: Avisos | 'error' | null reintentar: () => void cerrar: () => void }",
           "retorno": null,
-          "linea": 153
+          "linea": 135
         },
         {
           "nombre": "nombreFuente",
@@ -4713,7 +4713,7 @@
           "exportada": false,
           "params": "f: Avisos['fuentesIlegibles'][number]",
           "retorno": "string",
-          "linea": 207
+          "linea": 189
         },
         {
           "nombre": "IconoCampana",
@@ -4721,13 +4721,13 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 213,
+          "linea": 195,
           "resumen": "En línea, no de una librería: es un icono, y el portal lo abre gente desde el móvil con datos. Trazo con `currentColor` para que siga al tema."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d70bfcdd9a6"
+      "hash": "f7e56c0d03c5"
     },
     {
       "ruta": "apps/asegura-portal/app/CampanaAvisos.tsx",
@@ -4971,6 +4971,57 @@
       "hash": "64aa4850fd6b"
     },
     {
+      "ruta": "apps/asegura-portal/app/InstalarBoton.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "InstalarBoton"
+      ],
+      "funciones": [
+        {
+          "nombre": "InstalarBoton",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "El botón «Instalar» de la barra de marca. ── Por qué está AQUÍ y no en el contenido (08/09/2026) ───────────────────── La primera versión fue una franja «Tenlo a mano» encima de las pólizas, y la segu"
+        },
+        {
+          "nombre": "IconoInstalar",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 97,
+          "resumen": "En línea, no de una librería: es un icono, y el portal lo abre gente desde el móvil con datos. Trazo con `currentColor` para que siga al tema. La flecha hacia abajo entrando en la bandeja: «bajar a es"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "72669f0ece29"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/InstalarEnBarra.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "InstalarEnBarra"
+      ],
+      "funciones": [
+        {
+          "nombre": "InstalarEnBarra",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "El botón de instalar, solo si HAY sesión. Misma regla que `SalirDelPortal` y `CampanaAvisos`: se comprueba VERIFICANDO el token, no viendo que la cookie existe. Y dentro de la sesión y no en la puerta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "43b366c033dc"
+    },
+    {
       "ruta": "apps/asegura-portal/app/InterruptorTema.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5105,12 +5156,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 51
+          "linea": 52
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7a1a74e2967c"
+      "hash": "1480a62bd7b2"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/condiciones/page.tsx",
@@ -11372,6 +11423,7 @@
         "campoIlegible",
         "coincidencias",
         "listarContactos",
+        "duplicadoContacto",
         "anadirContacto",
         "cambiarContacto",
         "borrarContacto",
@@ -11504,7 +11556,7 @@
         {
           "nombre": "duplicadoContacto",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "correduriaId: string, clienteId: string, tipo: TipoContacto, valor: string, seraPrincipal: boolean, forzar: boolean,",
           "retorno": "Promise<Fallo | null>",
           "linea": 298,
@@ -11620,7 +11672,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "1b77d96c66d0"
+      "hash": "d111032a5b21"
     },
     {
       "ruta": "apps/asegura/lib/cartera-ficha.ts",
@@ -14675,12 +14727,21 @@
       ],
       "funciones": [
         {
+          "nombre": "contactoPrincipal",
+          "kind": "function",
+          "exportada": false,
+          "params": "lista: { principal: boolean; valor: string | null }[]",
+          "retorno": "string | null",
+          "linea": 59,
+          "resumen": "«El canal que el cliente ve como suyo hoy», usado en LOS DOS sentidos — leerlo (`leerContactoPropio`) y decidir si lo que manda ya es ese mismo valor (`aplicarContactoPropio`). Con dos criterios disti"
+        },
+        {
           "nombre": "fichasDeIdentidad",
           "kind": "function",
           "exportada": false,
           "params": "correduriaId: string, identidadId: string",
           "retorno": "Promise<string[]>",
-          "linea": 62,
+          "linea": 82,
           "resumen": "Los `cliente_id` que esa identidad tiene vinculados en esta correduría."
         },
         {
@@ -14689,7 +14750,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, entrada: EntradaContactoPropio,",
           "retorno": "Promise<ResultadoContactoPropio>",
-          "linea": 94,
+          "linea": 114,
           "resumen": "- el TELÉFONO y el CORREO son filas de `cliente_telefonos` / `cliente_emails` → `anadirContacto` como principal, que es lo que baja el anterior a secundario (no se pierde: sigue en la ficha) y lo que "
         },
         {
@@ -14698,7 +14759,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string",
           "retorno": "Promise<LecturaContactoPropio>",
-          "linea": 208,
+          "linea": 244,
           "resumen": "Lo que la ficha tiene de contacto de ESA identidad, para que pueda verlo y corregirlo (09/09/2026; Alberto: «ver sus datos de contacto… pudiendo modificarlos»). 🚨 Esto REVISA la decisión del 08/09/20"
         },
         {
@@ -14707,7 +14768,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, texto: string,",
           "retorno": "Promise<'ok' | 'sin_ficha' | 'varias_fichas' | 'error'>",
-          "linea": 264,
+          "linea": 304,
           "resumen": "Anota en el historial de la ficha de esa identidad algo que ha HECHO el cliente en el portal (hoy: una sugerencia). Es lo que hace que «todo lo que haga el cliente» acabe en la pantalla donde Alberto "
         },
         {
@@ -14716,7 +14777,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 286,
+          "linea": 326,
           "resumen": "La línea de bitácora. Best-effort a propósito, como el resto de anotaciones del repo: el dato YA está guardado, y tumbar la respuesta porque no se pudo escribir el renglón le diría al cliente que no s"
         }
       ],
@@ -14725,7 +14786,7 @@
         "portal_vinculo"
       ],
       "rutaApi": null,
-      "hash": "29ba339b45bd"
+      "hash": "c7607d049298"
     },
     {
       "ruta": "apps/asegura/lib/correo-aviso-acceso.ts",
@@ -15570,13 +15631,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": "boolean",
-          "linea": 21,
+          "linea": 26,
           "resumen": "Puerto ESTRECHO del portal del cliente (`apps/asegura-portal` → asegura). 🚨 Es un secreto DISTINTO de `ASEGURA_OPERADOR_SECRET` y no es una duplicación: el de operador abre la cartera entera (leer cu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b5180123e092"
+      "hash": "a81bf2dd5398"
     },
     {
       "ruta": "apps/asegura/lib/retarificar-cartera.ts",
@@ -130132,7 +130193,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3206,
-    "funciones": 9807
+    "archivos": 3208,
+    "funciones": 9811
   }
 }
