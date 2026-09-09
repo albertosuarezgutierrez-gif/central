@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🩹 Póliza BIDV004566 (Occident, GLOBAL 2 INSTALACIONES TÉCNICAS): faltaba en cartera, causa medida
+  (09/09/2026).** El fichero EIAC llegó el 23/06 y quedó en cuarentena (`operational_events`:
+  `reviewReasons: tipo_seguro_no_clasificable`) porque `seguros.tipo_seguro` no tenía valor para el
+  ramo 211 (accidentes). No era Fly ni la allowlist de entidad que sugería el brief de Manuel para
+  REC/SIN — refutado: su motivo real es `sin_poliza_en_cartera`. Dada de alta a mano con dato de CIMA
+  (+ `eiac_xml_hash` real, para que cuente como cartera viva) y creado el valor `accidentes` en el
+  enum (BD + `filtro-cartera.ts` + `emision.ts`; único ramo que no encajaba). PR #2671 (draft), verde.
+  Pendiente, fuera de este repo: arreglar el mapeador de tipo de seguro del adaptador Java en Fly.
+
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
   «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»
