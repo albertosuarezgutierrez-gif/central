@@ -276,6 +276,8 @@ export {
   estadoHoja,
   seleccionHoja,
   polizasDeLaHoja,
+  polizaEnVigorParaHoja,
+  declaradaEnVigorParaHoja,
   loQueVeQuienEscanea,
 } from './hoja-qr.ts'
 export type { EstadoHoja, SeleccionHoja, ErrorSeleccion } from './hoja-qr.ts'
