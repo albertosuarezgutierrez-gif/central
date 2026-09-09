@@ -38,13 +38,22 @@
   (presente/ausente/desconocido, y en qué ramos hay producto). ⚠️ Lista vacía = desconocido, nunca «no
   está». La afinación de Avant2 (captura) sigue sin duplicarse: se hereda al cotizar por `config`
   (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR #2651.
+- **Título de póliza específico para RC de perros y similares (09/09/2026).** Alberto: la ficha de la
+  RC de Occident (548238086) salía como «Occident · Responsabilidad civil» a secas, y hay miles de
+  tipos de RC distintos. `tituloDePoliza` (`apps/asegura-portal/.../PolizaVista.tsx`) cae ahora a la
+  cobertura que ESPECIALIZA el ramo genérico (ej. «Responsabilidad civil perros») antes de caer a
+  `Compañía · Ramo`. Lógica pura y testeada en `coberturaEspecificaDeRamo()` de
+  `@central/module-seguros-portal` (`poliza-leida.ts`, 4 tests nuevos). Typecheck del portal y
+  `regression-portal-visibilidad` en verde. PR #2648 (rama `claude/responsabilidad-civil-perro-ixeh6y`),
+  mergeado; sin pendientes.
+
 - **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
   vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
   `apps/asegura-portal/app/(portal)/boveda/Calendario.tsx`; se mantiene el de procedencia
   (`Confirmado por la compañía`). El dato `o.avisada` se sigue calculando en `lib/obligaciones.ts` por
   si hace falta, solo deja de pintarse. Typecheck de la app y los dos cepos de raíz que tocan el
   fichero (`regression-portal-obligaciones`, `regression-portal-visibilidad`) en verde. PR #2647
-  (rama `claude/quitar-confusion-3bxugj`), sacado de draft; sin pendientes.
+  (rama `claude/quitar-confusion-3bxugj`) mergeado en `main` (`4fe76c9`), 20/20 checks en verde; sin pendientes.
 
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
