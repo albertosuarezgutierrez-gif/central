@@ -1,7 +1,7 @@
 /**
- * Aplicar a la cartera el cambio de dirección de CONTACTO (y de teléfono) que
- * hace el propio cliente desde `apps/asegura-portal`, y servirle lo justo para
- * que compruebe si sus datos «siguen igual» (08/09/2026).
+ * Aplicar a la cartera los datos de CONTACTO que corrige el propio cliente
+ * desde `apps/asegura-portal` (dirección; y desde el 09/09/2026 teléfono y
+ * correo), y leérselos de vuelta para que los vea.
  *
  * ─── Por qué esto vive aquí y no en el portal ────────────────────────────────
  * `clientes.direccion` va CIFRADA con `PII_ENCRYPTION_KEY`, y el rol del portal
@@ -18,34 +18,37 @@
  * diferencia con `ASEGURA_OPERADOR_SECRET`, que sí abre la cartera entera y por
  * eso NO se le da al portal.
  *
- * Y la ESCRITURA no devuelve NADA de la ficha: ni el nombre, ni lo que había
- * antes. Solo si se pudo aplicar. La única lectura que sale por aquí es
- * `estadoContactoPropio`, y sale ENMASCARADA (`··· ··· 512`, `m···@gmail.com`,
- * `Calle ···, 41003 Sevilla`): lo justo para reconocer el dato, calculado aquí
- * con la clave PII que el portal no tiene.
+ * La ESCRITURA no devuelve nada de la ficha: solo si se pudo aplicar. La
+ * LECTURA (`leerContactoPropio`, 09/09/2026) devuelve exactamente lo que el
+ * cliente puede corregir —su dirección de contacto, su teléfono y su correo
+ * principales— y nada más: ni el nombre, ni el DNI, ni las notas del corredor.
+ *
+ * ─── «Comprueba tus datos de contacto» (08/09/2026, adaptado 09/09/2026) ─────
+ * La cartera viene de un volcado de junio/2026: nadie ha vuelto a preguntarle
+ * al cliente si su contacto sigue siendo el mismo. Además de poder EDITAR (lo
+ * de arriba), la ficha guarda `contacto_confirmado_at` — cuándo dijo por
+ * última vez «sigue siendo el mío», a mano (`confirmarContactoPropio`) o de
+ * hecho, al corregir algo (`aplicarContactoPropio` sella al salir `ok`). La
+ * lectura devuelve también ese estado para que el portal decida si merece la
+ * pena preguntar (`estadoConfirmacion` de `@central/module-seguros-portal`:
+ * `nunca` ≠ `caducada`, y ninguna de las dos es «confirmado»).
  */
 import {
+  CAMPOS_CANAL_PROPIO,
+  CAMPOS_DIRECCION_PROPIA,
   decidirFichaPropia,
-  enmascararDireccion,
-  enmascararEmail,
-  enmascararTelefono,
   estadoConfirmacion,
   textoHistorialConfirmacionContacto,
   textoHistorialContactoPropio,
+  type CampoCanalPropio,
+  type CampoDireccionPropia,
   type EstadoConfirmacionContacto,
   type FichaPropia,
 } from '@central/module-seguros-portal'
-import { normalizarTelefono, revisarEdicion, type EdicionCliente } from '@central/module-seguros'
+import { normalizarContacto, revisarEdicion, type EdicionCliente } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
-import {
-  anadirContacto,
-  cambiarContacto,
-  campoIlegible,
-  descifrarCampo,
-  editarCliente,
-  listarContactos,
-} from './cartera-edicion'
+import { anadirContacto, campoIlegible, descifrarCampo, editarCliente, listarContactos } from './cartera-edicion'
 
 /** Quién figura como autor en `historial_interno`. No es Alberto: fue el cliente. */
 const ACTOR = 'el cliente, desde el portal'
@@ -55,11 +58,11 @@ export type ResultadoContactoPropio =
   /** El cuerpo no pasa las mismas reglas que la edición del corredor. */
   | { estado: 'invalido'; motivo: string; campo: string | null }
   /**
-   * El teléfono ya es el PRINCIPAL de otra ficha (índice único por hash en
-   * `clientes.telefono`): no se puede escribir y lo resuelve el corredor. Sin
-   * decir de quién: eso ya sería leer la cartera desde fuera.
+   * El teléfono o el correo que escribió YA está en OTRA ficha de la cartera.
+   * No se fuerza desde el portal: dos fichas con el mismo principal es justo lo
+   * que la BD prohíbe, y quién se queda con él lo decide el corredor.
    */
-  | { estado: 'conflicto'; campo: 'telefono' }
+  | { estado: 'en_otra_ficha'; campo: CampoCanalPropio }
   /** No hay nada que escribir: manda los mismos campos que ya tenía. */
   | { estado: 'sin_cambios' }
   /** Su identidad no está casada con ninguna ficha de la cartera. */
@@ -77,110 +80,7 @@ async function fichasDeIdentidad(correduriaId: string, identidadId: string): Pro
   return filas.map((f) => f.cliente_id)
 }
 
-/** Lo que el cliente puede corregir desde el portal: la dirección de contacto y su teléfono. */
-export type CambiosContactoPropio = {
-  libre?: NonNullable<EdicionCliente['libre']>
-  /** Va aparte de `libre` a propósito: no es un campo de `EdicionCliente`, es un contacto de `cliente_telefonos`. */
-  telefono?: string
-}
-
-/**
- * Aplica la dirección de contacto y/o el teléfono que ha escrito el cliente.
- *
- * `libre` trae SOLO los campos que la persona cambió (`undefined` = no lo tocó,
- * `null` = lo dejó en blanco a propósito). Esa distinción es la misma que usa la
- * edición del corredor y no se colapsa: con un `?? ''`, no tocar la ciudad y
- * borrarla serían el mismo gesto.
- *
- * El teléfono va por las MISMAS puertas que cuando lo toca Alberto
- * (`cambiarContacto` / `anadirContacto`): si la ficha tiene principal se
- * corrige ese —conservando id, fecha y orden, y re-espejando la columna única
- * de `clientes`—; si no lo tiene, se añade como principal. Se escribe ANTES que
- * la dirección porque es lo único que puede chocar con otra ficha (409): así un
- * conflicto no deja la calle cambiada a medias.
- *
- * Y quien corrige acaba de verificar: al salir `ok` se sella
- * `contacto_confirmado_at`, igual que si hubiera dicho «siguen igual».
- */
-export async function aplicarContactoPropio(
-  correduriaId: string,
-  identidadId: string,
-  cambios: CambiosContactoPropio,
-): Promise<ResultadoContactoPropio> {
-  const libre = cambios.libre ?? {}
-  const camposLibre = Object.keys(libre)
-  const tocaTelefono = cambios.telefono !== undefined
-  if (camposLibre.length === 0 && !tocaTelefono) return { estado: 'sin_cambios' }
-
-  // Las MISMAS reglas que cuando lo corrige Alberto (longitudes, forma del CP,
-  // forma del teléfono). Reimplementarlas aquí sería tener dos vocabularios para
-  // el mismo campo, y el día que uno cambie el portal aceptaría lo que la ficha
-  // rechaza. Todo se valida ANTES de escribir nada: un teléfono mal escrito no
-  // puede dejar la dirección ya cambiada.
-  if (camposLibre.length > 0) {
-    const r = revisarEdicion({ libre })
-    if (!r.ok) return { estado: 'invalido', motivo: r.motivo, campo: r.campo ?? null }
-  }
-  let telefono: string | null = null
-  if (tocaTelefono) {
-    const t = normalizarTelefono(cambios.telefono)
-    if (!t.ok) return { estado: 'invalido', motivo: t.motivo, campo: 'telefono' }
-    telefono = t.valor
-  }
-
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
-  if (ficha.estado !== 'ok') return ficha
-
-  const campos: string[] = []
-
-  if (telefono !== null) {
-    const r = await escribirTelefonoPropio(correduriaId, ficha.clienteId, telefono)
-    if (r) return r
-    campos.push('telefono')
-  }
-
-  if (camposLibre.length > 0) {
-    // `editarCliente` cifra la calle, escribe la ficha y deja la fila en
-    // `historial_interno`. Lo único que se añade es una segunda anotación que
-    // nombra al autor y avisa de que esto no ha salido hacia ninguna compañía.
-    const res = await editarCliente(correduriaId, ficha.clienteId, { libre }, ACTOR)
-    if (!res.ok) {
-      if (res.estado === 'invalido') return { estado: 'invalido', motivo: res.motivo, campo: res.campo ?? null }
-      if (res.estado === 'no_encontrado') return { estado: 'sin_ficha' }
-      return { estado: 'error', causa: res.estado }
-    }
-    campos.push(...camposLibre)
-  }
-
-  await sellarConfirmacion(correduriaId, ficha.clienteId)
-  await anotar(correduriaId, ficha.clienteId, textoHistorialContactoPropio(campos))
-  return { estado: 'ok', campos }
-}
-
-/**
- * El teléfono del cliente por las puertas de `cartera-edicion`. `null` = escrito;
- * si no, el resultado con el que hay que contestar. El historial que dejan esas
- * funciones NO lleva el número (es su regla, no la nuestra).
- */
-async function escribirTelefonoPropio(
-  correduriaId: string,
-  clienteId: string,
-  telefono: string,
-): Promise<ResultadoContactoPropio | null> {
-  const actuales = await listarContactos(correduriaId, clienteId)
-  if (actuales === null) return { estado: 'error', causa: 'contactos_ilegibles' }
-  const principal = actuales.telefonos.find((t) => t.principal) ?? actuales.telefonos[0] ?? null
-  const r = principal
-    ? await cambiarContacto(correduriaId, clienteId, { id: principal.id, valor: telefono, principal: true, actor: ACTOR })
-    : await anadirContacto(correduriaId, clienteId, { tipo: 'telefono', valor: telefono, principal: true, actor: ACTOR })
-  if (r.ok) return null
-  if (r.estado === 'invalido') return { estado: 'invalido', motivo: r.motivo, campo: 'telefono' }
-  if (r.estado === 'conflicto') return { estado: 'conflicto', campo: 'telefono' }
-  if (r.estado === 'no_encontrado') return { estado: 'sin_ficha' }
-  return { estado: 'error', causa: r.estado }
-}
-
-/** Resuelve la ficha de la identidad; los tres desenlaces malos ya vienen con forma de resultado. */
+/** Resuelve la ficha de la identidad; el error de vínculos NO se colapsa con `sin_ficha`. */
 async function fichaPropiaDe(
   correduriaId: string,
   identidadId: string,
@@ -189,9 +89,6 @@ async function fichaPropiaDe(
   try {
     ficha = decidirFichaPropia(await fichasDeIdentidad(correduriaId, identidadId))
   } catch (e) {
-    // 🚨 No se colapsa con `sin_ficha`: «no he podido mirar sus vínculos» y «no
-    // tiene ninguno» se arreglan en sitios distintos, y el segundo le diría al
-    // cliente que no le consta ninguna póliza, que es una afirmación falsa.
     console.error('[contacto-portal] no se pudieron leer los vínculos:', e instanceof Error ? e.message : e)
     return { estado: 'error', causa: 'vinculos_ilegibles' }
   }
@@ -199,11 +96,213 @@ async function fichaPropiaDe(
   if (ficha.estado === 'varias_fichas') {
     console.warn(
       `[contacto-portal] identidad ${identidadId} vinculada a ${ficha.clienteIds.length} fichas ` +
-        `(${ficha.clienteIds.join(', ')}); no se escribe en ninguna.`,
+        `(${ficha.clienteIds.join(', ')}); no se escribe/lee en ninguna.`,
     )
     return { estado: 'varias_fichas' }
   }
   return ficha
+}
+
+/** Lo que el cliente puede mandar: su dirección de contacto y sus dos canales. */
+export type EntradaContactoPropio = Partial<Record<CampoDireccionPropia, string | null>> &
+  Partial<Record<CampoCanalPropio, string>>
+
+/**
+ * Aplica los datos de contacto que ha escrito el cliente.
+ *
+ * `entrada` trae SOLO los campos que la persona cambió (`undefined` = no lo
+ * tocó, `null` = lo dejó en blanco a propósito). Esa distinción es la misma que
+ * usa la edición del corredor y no se colapsa: con un `?? ''`, no tocar la
+ * ciudad y borrarla serían el mismo gesto.
+ *
+ * Dos caminos, porque en la ficha son dos cosas:
+ *  - la DIRECCIÓN son columnas de `clientes` → `editarCliente`, con las mismas
+ *    reglas que cuando lo corrige Alberto;
+ *  - el TELÉFONO y el CORREO son filas de `cliente_telefonos` / `cliente_emails`
+ *    → `anadirContacto` como principal, que es lo que baja el anterior a
+ *    secundario (no se pierde: sigue en la ficha) y lo que detecta que ese
+ *    número ya está en OTRA ficha. El anterior no se borra a propósito: desde
+ *    el portal se cambia el principal, no se destruye un canal.
+ *
+ * 🚨 Un canal que no cambia no se reescribe: si manda el mismo número que ya es
+ * su principal, se cuenta como «sin cambios» y no deja una fila nueva.
+ *
+ * Y quien corrige acaba de verificar: al salir `ok` se sella
+ * `contacto_confirmado_at`, igual que si hubiera dicho «siguen igual».
+ */
+export async function aplicarContactoPropio(
+  correduriaId: string,
+  identidadId: string,
+  entrada: EntradaContactoPropio,
+): Promise<ResultadoContactoPropio> {
+  const libre: NonNullable<EdicionCliente['libre']> = {}
+  for (const k of CAMPOS_DIRECCION_PROPIA) if (k in entrada && entrada[k] !== undefined) libre[k] = entrada[k] ?? null
+  const canales: Partial<Record<CampoCanalPropio, string>> = {}
+  for (const k of CAMPOS_CANAL_PROPIO) if (typeof entrada[k] === 'string') canales[k] = entrada[k]
+
+  if (Object.keys(libre).length === 0 && Object.keys(canales).length === 0) return { estado: 'sin_cambios' }
+
+  // Las MISMAS reglas que cuando lo corrige Alberto (longitudes, forma del CP,
+  // forma del teléfono y del correo). Reimplementarlas aquí sería tener dos
+  // vocabularios para el mismo campo, y el día que uno cambie el portal
+  // aceptaría lo que la ficha rechaza. Se revisa TODO antes de escribir NADA:
+  // un correo mal escrito no puede dejar la calle a medio guardar.
+  if (Object.keys(libre).length > 0) {
+    const r = revisarEdicion({ libre })
+    if (!r.ok) return { estado: 'invalido', motivo: r.motivo, campo: r.campo ?? null }
+  }
+  const canalesNorm: Partial<Record<CampoCanalPropio, string>> = {}
+  for (const k of CAMPOS_CANAL_PROPIO) {
+    const v = canales[k]
+    if (v === undefined) continue
+    const n = normalizarContacto(k, v)
+    if (!n.ok) return { estado: 'invalido', motivo: n.motivo, campo: k }
+    canalesNorm[k] = n.valor
+  }
+
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
+
+  const aplicados: string[] = []
+
+  // Los canales, ANTES que la dirección: es donde puede saltar «ya está en otra
+  // ficha», y si salta no se ha escrito nada todavía.
+  const actuales = Object.keys(canalesNorm).length > 0 ? await listarContactos(correduriaId, ficha.clienteId) : null
+  for (const k of CAMPOS_CANAL_PROPIO) {
+    const valor = canalesNorm[k]
+    if (valor === undefined) continue
+    const principal = (k === 'telefono' ? actuales?.telefonos : actuales?.emails)?.find((c) => c.principal)?.valor ?? null
+    if (principal !== null && principal === valor) continue
+    const res = await anadirContacto(correduriaId, ficha.clienteId, { tipo: k, valor, principal: true, actor: ACTOR })
+    if (!res.ok) {
+      if (res.estado === 'conflicto') return { estado: 'en_otra_ficha', campo: k }
+      if (res.estado === 'invalido') return { estado: 'invalido', motivo: res.motivo, campo: k }
+      if (res.estado === 'no_encontrado') return { estado: 'sin_ficha' }
+      return { estado: 'error', causa: res.estado }
+    }
+    aplicados.push(k)
+  }
+
+  if (Object.keys(libre).length > 0) {
+    // `editarCliente` cifra la calle, escribe la ficha y deja la fila en
+    // `historial_interno`.
+    const res = await editarCliente(correduriaId, ficha.clienteId, { libre }, ACTOR)
+    if (!res.ok) {
+      if (res.estado === 'invalido') return { estado: 'invalido', motivo: res.motivo, campo: res.campo ?? null }
+      if (res.estado === 'no_encontrado') return { estado: 'sin_ficha' }
+      return { estado: 'error', causa: res.estado }
+    }
+    aplicados.push(...Object.keys(libre))
+  }
+
+  if (aplicados.length === 0) return { estado: 'sin_cambios' }
+  // Una segunda anotación que nombra al autor y avisa de que esto no ha salido
+  // hacia ninguna compañía.
+  await anotar(correduriaId, ficha.clienteId, textoHistorialContactoPropio(aplicados))
+  // Quien acaba de corregir un dato acaba de VERIFICARLO: cuenta como confirmar.
+  await sellarConfirmacion(correduriaId, ficha.clienteId)
+  return { estado: 'ok', campos: aplicados }
+}
+
+/** Lo que el cliente ve de sí mismo en «Mis datos». `null` = no consta. */
+export type ContactoPropio = Record<CampoDireccionPropia | CampoCanalPropio, string | null>
+
+export type LecturaContactoPropio =
+  /**
+   * `ilegibles`: campos que HAY pero no se han podido descifrar. No son «no
+   * consta». `confirmadoEn`/`confirmacion` vienen de `contacto_confirmado_at`
+   * (ver cabecera del módulo): `null` = nunca se ha confirmado desde el volcado.
+   */
+  | {
+      estado: 'ok'
+      contacto: ContactoPropio
+      ilegibles: string[]
+      confirmadoEn: string | null
+      confirmacion: EstadoConfirmacionContacto
+    }
+  | { estado: 'sin_ficha' }
+  | { estado: 'varias_fichas' }
+  | { estado: 'error'; causa: string }
+
+/**
+ * Lo que la ficha tiene de contacto de ESA identidad, para que pueda verlo y
+ * corregirlo (09/09/2026; Alberto: «ver sus datos de contacto… pudiendo
+ * modificarlos»).
+ *
+ * 🚨 Esto REVISA la decisión del 08/09/2026 («el portal NO lee de vuelta»), y lo
+ * que se conserva de ella es lo que importaba: el portal sigue SIN clave de
+ * PII. Descifra esta app, y solo para la ficha que esa identidad tiene
+ * vinculada por `portal_vinculo` — con varias fichas no se adivina y no se
+ * devuelve nada. Una sesión del portal ya enseña las pólizas, las primas y la
+ * dirección del riesgo de esa persona; su propio teléfono no es un dato más
+ * sensible que eso.
+ *
+ * Solo el PRINCIPAL de cada canal: es el que usa el cron de avisos y el que
+ * corrige el cliente. Los secundarios son cosa de la ficha del corredor.
+ */
+export async function leerContactoPropio(correduriaId: string, identidadId: string): Promise<LecturaContactoPropio> {
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
+
+  try {
+    const [c, contactos] = await Promise.all([
+      prismaAsegura().cliente.findFirst({
+        where: { id: ficha.clienteId, correduriaId, mergedIntoClienteId: null },
+        select: { direccion: true, codigoPostal: true, ciudad: true, provincia: true, contactoConfirmadoAt: true },
+      }),
+      listarContactos(correduriaId, ficha.clienteId),
+    ])
+    if (!c) return { estado: 'sin_ficha' }
+    if (contactos === null) return { estado: 'error', causa: 'contactos_ilegibles' }
+    const ilegibles: string[] = []
+    if (campoIlegible(c.direccion)) ilegibles.push('direccion')
+    const principal = (lista: { principal: boolean; valor: string | null; ilegible: boolean }[], campo: string) => {
+      const p = lista.find((x) => x.principal) ?? lista[0] ?? null
+      if (p?.ilegible) ilegibles.push(campo)
+      return p?.valor ?? null
+    }
+    return {
+      estado: 'ok',
+      contacto: {
+        direccion: descifrarCampo(c.direccion),
+        codigoPostal: c.codigoPostal ?? null,
+        ciudad: c.ciudad ?? null,
+        provincia: c.provincia ?? null,
+        telefono: principal(contactos.telefonos, 'telefono'),
+        email: principal(contactos.emails, 'email'),
+      },
+      ilegibles,
+      confirmadoEn: c.contactoConfirmadoAt ? c.contactoConfirmadoAt.toISOString() : null,
+      confirmacion: estadoConfirmacion(c.contactoConfirmadoAt, new Date()),
+    }
+  } catch (e) {
+    console.error('[contacto-portal] no se pudo leer la ficha:', e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: 'ficha_ilegible' }
+  }
+}
+
+export type ResultadoConfirmarContacto =
+  | { estado: 'ok'; confirmadoEn: string }
+  | { estado: 'sin_ficha' }
+  | { estado: 'varias_fichas' }
+  | { estado: 'error'; causa: string }
+
+/**
+ * «Siguen igual»: el cliente dice que su contacto sigue siendo correcto SIN
+ * cambiar nada. Sella `contacto_confirmado_at = now()` y lo deja en el
+ * historial — sin valores, como toda anotación de esta puerta.
+ */
+export async function confirmarContactoPropio(correduriaId: string, identidadId: string): Promise<ResultadoConfirmarContacto> {
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
+  try {
+    const ahora = await sellarConfirmacion(correduriaId, ficha.clienteId)
+    await anotar(correduriaId, ficha.clienteId, textoHistorialConfirmacionContacto())
+    return { estado: 'ok', confirmadoEn: ahora.toISOString() }
+  } catch (e) {
+    console.error('[contacto-portal] no se pudo sellar la confirmación:', e instanceof Error ? e.message : e)
+    return { estado: 'error', causa: 'sello_fallido' }
+  }
 }
 
 /** `contacto_confirmado_at = now()`: el cliente acaba de mirar (o corregir) sus datos. */
@@ -214,120 +313,6 @@ async function sellarConfirmacion(correduriaId: string, clienteId: string): Prom
     data: { contactoConfirmadoAt: ahora },
   })
   return ahora
-}
-
-// ─── «Comprueba tus datos de contacto» ───────────────────────────────────────
-
-type Mascara = { tiene: boolean; mascara: string | null }
-
-export type EstadoContactoPropio =
-  | {
-      estado: 'ok'
-      confirmadoEn: string | null
-      confirmacion: EstadoConfirmacionContacto
-      contacto: {
-        direccion: Mascara
-        telefono: Mascara
-        /** `confirmadoPorAcceso`: el vínculo con esta ficha nació de casar ESTE correo (`portal_vinculo.origen = 'email_hash'`). */
-        email: Mascara & { confirmadoPorAcceso: boolean }
-      }
-    }
-  | { estado: 'sin_ficha' }
-  | { estado: 'varias_fichas' }
-  | { estado: 'error'; causa: string }
-
-/**
- * Lo que el portal enseña para preguntar «¿siguen igual?». Todo ENMASCARADO
- * aquí, con la clave PII que el portal no tiene: hacia fuera solo salen las
- * máscaras. Y con tres estados por dato: `tiene:false` = no consta ·
- * `tiene:true, mascara:null` = consta pero la clave no lo abre (ilegible) ·
- * `tiene:true, mascara` = reconocible. Un ilegible NO se pinta como «no tienes
- * teléfono»: le haría añadir uno que ya está.
- */
-export async function estadoContactoPropio(correduriaId: string, identidadId: string): Promise<EstadoContactoPropio> {
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
-  if (ficha.estado !== 'ok') return ficha
-  try {
-    const db = prismaAsegura()
-    const [c, vinculo] = await Promise.all([
-      db.cliente.findFirst({
-        where: { id: ficha.clienteId, correduriaId, mergedIntoClienteId: null },
-        select: {
-          direccion: true,
-          codigoPostal: true,
-          ciudad: true,
-          telefono: true,
-          email: true,
-          contactoConfirmadoAt: true,
-          telefonos: { orderBy: [{ esPrincipal: 'desc' }, { createdAt: 'asc' }], take: 1, select: { telefono: true } },
-          emails: { orderBy: [{ esPrincipal: 'desc' }, { createdAt: 'asc' }], take: 1, select: { email: true } },
-        },
-      }),
-      db.portalVinculo.findFirst({
-        where: { identidadId, clienteId: ficha.clienteId, correduriaId },
-        select: { origen: true },
-      }),
-    ])
-    if (!c) return { estado: 'sin_ficha' }
-
-    // Principal de la tabla hija y, si no hay filas, el suelto de `clientes`
-    // (3.000+ fichas del volcado están así). Mismo orden que `listarContactos`.
-    const telefonoCrudo = c.telefonos[0]?.telefono ?? c.telefono ?? null
-    const emailCrudo = c.emails[0]?.email ?? c.email ?? null
-
-    const mascaraDe = (crudo: string | null, enmascarar: (v: string) => string): Mascara => {
-      if (typeof crudo !== 'string' || crudo.trim() === '') return { tiene: false, mascara: null }
-      if (campoIlegible(crudo)) return { tiene: true, mascara: null }
-      const claro = descifrarCampo(crudo)
-      return { tiene: true, mascara: claro && claro.trim() !== '' ? enmascarar(claro.trim()) : null }
-    }
-
-    const hayDireccion = [c.direccion, c.codigoPostal, c.ciudad].some((v) => typeof v === 'string' && v.trim() !== '')
-    let direccion: Mascara = { tiene: false, mascara: null }
-    if (hayDireccion) {
-      direccion = campoIlegible(c.direccion)
-        ? { tiene: true, mascara: null }
-        : { tiene: true, mascara: enmascararDireccion(descifrarCampo(c.direccion), c.codigoPostal, c.ciudad) }
-    }
-
-    return {
-      estado: 'ok',
-      confirmadoEn: c.contactoConfirmadoAt?.toISOString() ?? null,
-      confirmacion: estadoConfirmacion(c.contactoConfirmadoAt, new Date()),
-      contacto: {
-        direccion,
-        telefono: mascaraDe(telefonoCrudo, enmascararTelefono),
-        email: { ...mascaraDe(emailCrudo, enmascararEmail), confirmadoPorAcceso: vinculo?.origen === 'email_hash' },
-      },
-    }
-  } catch (e) {
-    console.error('[contacto-portal] no se pudo leer el contacto:', e instanceof Error ? e.message : e)
-    return { estado: 'error', causa: 'contacto_ilegible' }
-  }
-}
-
-export type ResultadoConfirmacionPropia =
-  | { estado: 'ok'; confirmadoEn: string }
-  | { estado: 'sin_ficha' }
-  | { estado: 'varias_fichas' }
-  | { estado: 'error'; causa: string }
-
-/**
- * El cliente dice «siguen igual»: se sella `contacto_confirmado_at` y queda en
- * el historial, sin valores. No se escribe ningún dato de contacto.
- */
-export async function confirmarContactoPropio(correduriaId: string, identidadId: string): Promise<ResultadoConfirmacionPropia> {
-  const ficha = await fichaPropiaDe(correduriaId, identidadId)
-  if (ficha.estado !== 'ok') return ficha
-  let confirmadoEn: Date
-  try {
-    confirmadoEn = await sellarConfirmacion(correduriaId, ficha.clienteId)
-  } catch (e) {
-    console.error('[contacto-portal] no se pudo sellar la confirmación:', e instanceof Error ? e.message : e)
-    return { estado: 'error', causa: 'sello_no_escrito' }
-  }
-  await anotar(correduriaId, ficha.clienteId, textoHistorialConfirmacionContacto())
-  return { estado: 'ok', confirmadoEn: confirmadoEn.toISOString() }
 }
 
 /**
@@ -345,13 +330,8 @@ export async function anotarActividadPortal(
   identidadId: string,
   texto: string,
 ): Promise<'ok' | 'sin_ficha' | 'varias_fichas' | 'error'> {
-  let ficha: FichaPropia
-  try {
-    ficha = decidirFichaPropia(await fichasDeIdentidad(correduriaId, identidadId))
-  } catch {
-    return 'error'
-  }
-  if (ficha.estado !== 'ok') return ficha.estado === 'sin_ficha' ? 'sin_ficha' : 'varias_fichas'
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha.estado === 'error' ? 'error' : ficha.estado
   await anotar(correduriaId, ficha.clienteId, texto)
   return 'ok'
 }

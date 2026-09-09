@@ -6,9 +6,6 @@ import {
   CAMPOS_VETADOS_AL_CLIENTE,
   confirmacionContactoVigente,
   decidirFichaPropia,
-  enmascararDireccion,
-  enmascararEmail,
-  enmascararTelefono,
   estadoConfirmacion,
   textoHistorialConfirmacionContacto,
   textoHistorialContactoPropio,
@@ -59,45 +56,10 @@ test('los campos vetados y los permitidos no se solapan', () => {
   }
 })
 
-// ─── «Comprueba tus datos de contacto» (08/09/2026) ──────────────────────────
-
-test('el teléfono enmascarado solo deja ver los 3 últimos dígitos', () => {
-  assert.equal(enmascararTelefono('612345512'), '··· ··· 512')
-  assert.equal(enmascararTelefono('+34 612 34 55 12'), '··· ··· 512')
-  // Nunca puede salir el número entero ni su prefijo.
-  assert.ok(!enmascararTelefono('+441234567890').includes('44123'))
-})
-
-test('un teléfono con menos de 5 dígitos no se enseña ni enmascarado', () => {
-  // Con 4 dígitos, «los 3 últimos» ya es casi el número entero.
-  assert.equal(enmascararTelefono('1234'), '···')
-  assert.equal(enmascararTelefono(''), '···')
-})
-
-test('el email enmascarado deja la primera letra y el dominio', () => {
-  assert.equal(enmascararEmail('maria@gmail.com'), 'm···@gmail.com')
-  assert.equal(enmascararEmail('  Ana.Lopez@empresa.es '), 'A···@empresa.es')
-})
-
-test('un email sin forma de email no se enseña', () => {
-  assert.equal(enmascararEmail('sin-arroba'), '···')
-  assert.equal(enmascararEmail('@dominio.com'), '···')
-  assert.equal(enmascararEmail('a@'), '···')
-})
-
-test('la dirección enmascarada: 6 letras de la calle, CP y ciudad', () => {
-  assert.equal(enmascararDireccion('Calle Socorro 24, 2ºB', '41003', 'Sevilla'), 'Calle ···, 41003 Sevilla')
-  // El número de portal y el piso NUNCA salen: es lo que identifica la casa.
-  assert.ok(!enmascararDireccion('Calle Socorro 24, 2ºB', '41003', 'Sevilla')!.includes('24'))
-})
-
-test('la dirección se sostiene con partes vacías, y todo vacío es null', () => {
-  assert.equal(enmascararDireccion(null, '41003', 'Sevilla'), '41003 Sevilla')
-  assert.equal(enmascararDireccion('Avenida de la Constitución', null, null), 'Avenid···')
-  assert.equal(enmascararDireccion(null, null, 'Sevilla'), 'Sevilla')
-  assert.equal(enmascararDireccion(null, null, null), null)
-  assert.equal(enmascararDireccion('  ', '', null), null)
-})
+// ─── «Comprueba tus datos de contacto» (08/09/2026, adaptado 09/09/2026) ─────
+//
+// El enmascarado se retiró: la pestaña «Mis datos» (09/09/2026) ya enseña el
+// dato en claro por su propio puente. Lo que queda es solo el recordatorio.
 
 test('la confirmación tiene TRES estados: nunca ≠ caducada', () => {
   const hoy = new Date('2026-09-08T10:00:00Z')

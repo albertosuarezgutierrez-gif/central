@@ -299,18 +299,23 @@ export {
   decidirFichaPropia,
   textoHistorialContactoPropio,
   CAMPOS_CONTACTO_PROPIO,
+  CAMPOS_DIRECCION_PROPIA,
+  CAMPOS_CANAL_PROPIO,
   CAMPOS_VETADOS_AL_CLIENTE,
-  // «Comprueba tus datos de contacto»: máscaras que calcula asegura (el portal
-  // no descifra PII) y la confirmación con TRES estados (nunca ≠ caducada).
+  // «Comprueba tus datos de contacto»: confirmación con TRES estados (nunca ≠
+  // caducada), sobre la pestaña «Mis datos» que ya enseña el dato en claro.
   DIAS_VIGENCIA_CONFIRMACION_CONTACTO,
-  enmascararTelefono,
-  enmascararEmail,
-  enmascararDireccion,
   estadoConfirmacion,
   confirmacionContactoVigente,
   textoHistorialConfirmacionContacto,
 } from './contacto-propio.ts'
-export type { FichaPropia, CampoContactoPropio, EstadoConfirmacionContacto } from './contacto-propio.ts'
+export type {
+  FichaPropia,
+  CampoContactoPropio,
+  CampoDireccionPropia,
+  CampoCanalPropio,
+  EstadoConfirmacionContacto,
+} from './contacto-propio.ts'
 // El botón de sugerencias del portal (08/09/2026). Lee su cabecera: aquí
 // Telegram NO es un aviso, es el ÚNICO registro — y por eso «enviada» es lo
 // único que promete algo, y el texto de la persona se ESCAPA antes de componer.

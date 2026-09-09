@@ -26,7 +26,9 @@ const leer = (r: string) => readFileSync(join(raiz, r), 'utf8')
 const RUTA_PUERTO = 'apps/asegura/app/api/portal/contacto/route.ts'
 const RUTA_APLICA = 'apps/asegura/lib/contacto-portal.ts'
 const RUTA_CLIENTE = 'apps/asegura-portal/lib/mis-datos.ts'
-const RUTA_PANTALLA = 'apps/asegura-portal/app/(portal)/boveda/MiDireccion.tsx'
+// 09/09/2026: «Mis datos» sustituye a «Dónde te escribimos», con su propia
+// pestaña, y ahora también teléfono y correo (no solo la dirección).
+const RUTA_PANTALLA = 'apps/asegura-portal/app/(portal)/boveda/MisDatos.tsx'
 
 test('el puerto NO acepta un clienteId de fuera: la ficha la resuelve el vínculo', () => {
   const fuente = leer(RUTA_PUERTO)
@@ -59,7 +61,7 @@ test('el portal usa su secreto propio y NUNCA el de operador', () => {
   assert.match(cliente, /sin_puente/)
 })
 
-test('el portal NO descifra: lo que lee de vuelta llega ENMASCARADO por asegura', () => {
+test('el portal NO aprende a descifrar PII, aunque desde el 09/09/2026 SÍ lee de vuelta', () => {
   const cliente = leer(RUTA_CLIENTE)
   // Se mira el CÓDIGO, no la prosa: la cabecera del módulo explica justamente
   // por qué no descifra, y una expresión que casara con el texto daría rojo por
@@ -69,25 +71,27 @@ test('el portal NO descifra: lo que lee de vuelta llega ENMASCARADO por asegura'
     !/PII_ENCRYPTION_KEY|decryptField|descifrarCampo/.test(codigo),
     'esta app no descifra PII: si aprende, la app pública puede leer la cartera',
   )
-  // Desde el 08/09/2026 SÍ hay una lectura, y es la del puerto que enmascara
-  // (`contacto-estado`): la máscara la fabrica asegura, el portal solo la pinta.
-  assert.match(codigo, /\/api\/portal\/contacto-estado/, 'la lectura pasa por el puerto que enmascara')
+  // Desde el 09/09/2026 SÍ hay una lectura (`leerMisDatos`/`GET`), pero viene YA
+  // descifrada del puerto de asegura: el portal solo la reenvía.
+  assert.match(cliente, /leerMisDatos/, 'la lectura tiene que existir: Alberto pidió poder VER los datos')
   // Y la vigencia NO se calcula aquí: viene decidida del puente.
   assert.ok(!/estadoConfirmacion\(/.test(codigo), 'el portal no calcula la vigencia: la recibe del puente')
-  // La pantalla tiene que DECIR que el formulario sale vacío, no dejar creer que no consta.
-  assert.match(leer(RUTA_PANTALLA), /No podemos mostrarte la que tenemos guardada/)
+  // Y cuando esa lectura falla, la pantalla lo DICE — no deja un hueco que
+  // parezca «no consta».
+  assert.match(leer(RUTA_PANTALLA), /No hemos podido/)
 })
 
 test('ningún desenlace que no haya guardado dice «guardado»', () => {
   const fuente = leer(RUTA_PANTALLA)
-  // El único `tipo: 'guardado'` del fichero es el del caso 'ok'.
-  const guardados = fuente.match(/return \{ tipo: 'guardado' \}/g) ?? []
+  // El único `return { tipo: 'guardado', ... }` del fichero es el del caso 'ok'
+  // (el tipo `Estado` también declara la forma, pero eso no es un `return`).
+  const guardados = fuente.match(/return \{ tipo: 'guardado'/g) ?? []
   assert.equal(guardados.length, 1, 'solo el desenlace ok puede decir que se guardó')
   const okIdx = fuente.indexOf("case 'ok':")
-  const guardadoIdx = fuente.indexOf("return { tipo: 'guardado' }")
-  assert.ok(okIdx !== -1 && guardadoIdx > okIdx && guardadoIdx - okIdx < 80, 'el «guardado» cuelga del caso ok')
+  const guardadoIdx = fuente.indexOf("return { tipo: 'guardado'")
+  assert.ok(okIdx !== -1 && guardadoIdx > okIdx && guardadoIdx - okIdx < 200, 'el «guardado» cuelga del caso ok')
   // Y los caminos que no guardan lo dicen con todas las letras.
-  for (const estado of ['sin_ficha', 'varias_fichas', 'sin_puente']) {
+  for (const estado of ['sin_ficha', 'varias_fichas', 'sin_puente', 'en_otra_ficha']) {
     assert.match(fuente, new RegExp(`case '${estado}':`), `falta el desenlace de ${estado}`)
   }
   assert.match(fuente, /No se ha cambiado nada/, 'un fallo tiene que decir que no se cambió nada')
@@ -113,7 +117,7 @@ test('la pantalla avisa de que esto NO cambia la dirección de las pólizas', ()
 // decide) y qué NO se edita (el email, que es la llave de acceso).
 
 const RUTA_CONFIRMAR = 'apps/asegura-portal/app/api/mis-datos/confirmar/route.ts'
-const RUTA_MIS_DATOS_API = 'apps/asegura-portal/app/api/mis-datos/route.ts'
+const RUTA_AVISO = 'apps/asegura-portal/app/(portal)/boveda/AvisoContacto.tsx'
 const sinComentarios = (s: string) => s.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
 
 test('confirmar toma la identidad de la SESIÓN y no lee nada del cuerpo', () => {
@@ -128,44 +132,35 @@ test('confirmar toma la identidad de la SESIÓN y no lee nada del cuerpo', () =>
   assert.ok(!/\.json\(\)|formData\(\)|\.text\(\)/.test(fuente), 'la ruta de confirmar no lee el cuerpo')
 })
 
-test('solo el ok del puente pasa a «confirmado», y solo vigente pinta «confirmados»', () => {
-  const fuente = sinComentarios(leer(RUTA_PANTALLA))
-  // El desenlace puro: un único VALOR `{ tipo: 'confirmado', … }` (el tipo de
-  // retorno lo declara con `;`, y eso no es un camino), colgado de `estado === 'ok'`.
-  const confirmados = fuente.match(/\{ tipo: 'confirmado', confirmadoEn \}/g) ?? []
-  assert.equal(confirmados.length, 1, 'solo el ok del puente puede devolver confirmado')
-  const okIdx = fuente.indexOf("estado === 'ok' && typeof confirmadoEn === 'string'")
-  const confIdx = fuente.indexOf("{ tipo: 'confirmado', confirmadoEn }")
-  assert.ok(okIdx !== -1 && confIdx > okIdx && confIdx - okIdx < 80, 'el «confirmado» cuelga del ok CON fecha')
-  // La palabra «confirmados» solo existe DENTRO de `LineaVigente` (con fecha y
-  // sin ella, que son sus dos frases): ni en el bloque de aviso ni en los fallos.
-  const lineaIdx = fuente.indexOf('function LineaVigente')
-  const finLinea = fuente.indexOf('\nfunction ', lineaIdx + 1)
-  assert.ok(lineaIdx !== -1 && finLinea > lineaIdx, 'existe LineaVigente y no es la última función')
-  const fuera = fuente.slice(0, lineaIdx) + fuente.slice(finLinea)
-  assert.ok(!/confirmados/.test(fuera), '«confirmados» solo puede escribirse dentro de LineaVigente')
-  assert.match(fuente.slice(lineaIdx, finLinea), /confirmados/, 'LineaVigente es la que dice «confirmados»')
-  // …y `LineaVigente` se monta una sola vez, bajo `confirmacion === 'vigente'`.
-  const montajes = fuente.match(/<LineaVigente/g) ?? []
-  assert.equal(montajes.length, 1, 'la línea de vigente se monta en un solo sitio')
-  const montajeIdx = fuente.indexOf('<LineaVigente')
-  const guardaIdx = fuente.lastIndexOf("confirmacion === 'vigente'", montajeIdx)
-  assert.ok(guardaIdx !== -1 && montajeIdx - guardaIdx < 120, 'LineaVigente cuelga de confirmacion === vigente')
-  // Y los estados que no son ok tienen cada uno su frase, ninguna de «en orden».
-  for (const estado of ['sin_ficha', 'varias_fichas', 'sin_puente', 'error']) {
-    assert.match(fuente, new RegExp(`case '${estado}':\\s*\\n\\s*return '`), `falta la frase de ${estado}`)
-  }
+test('el aviso automático solo se confirma tras un ok del puente, nunca antes', () => {
+  const fuente = sinComentarios(leer(RUTA_AVISO))
+  // `setConfirmado(true)` es la ÚNICA forma de pasar a «confirmado», y cuelga
+  // del único sitio que de verdad supo que el puente dijo ok.
+  const confirmaciones = fuente.match(/setConfirmado\(true\)/g) ?? []
+  assert.equal(confirmaciones.length, 1, 'solo un sitio puede marcar la confirmación como hecha')
+  const okIdx = fuente.indexOf("res.ok && j?.estado === 'ok'")
+  const confIdx = fuente.indexOf('setConfirmado(true)')
+  assert.ok(okIdx !== -1 && confIdx > okIdx && confIdx - okIdx < 100, 'el «confirmado» cuelga del ok del puente')
+  // Y un fallo (red, estado inesperado) tiene que decirlo, nunca marcar confirmado.
+  assert.match(fuente, /No hemos podido guardar la confirmación/)
 })
 
-test('el email NO se edita desde el portal: es la llave de acceso', () => {
-  const pantalla = sinComentarios(leer(RUTA_PANTALLA))
-  assert.ok(!/k: 'email'/.test(pantalla), 'el email no puede ser un campo del formulario')
-  assert.ok(!/type="email"|inputMode="email"|modo: 'email'/.test(pantalla), 'ningún input de email en la pantalla')
-  const api = sinComentarios(leer(RUTA_MIS_DATOS_API))
-  assert.ok(!/email:\s*z\./.test(api), 'la ruta no acepta email: cambiarlo es cambiar la cerradura con la puerta abierta')
-  // El teléfono SÍ, y viaja aparte de `libre` (contrato del puerto).
-  assert.match(api, /telefono:\s*z\./, 'el teléfono se acepta')
-  assert.match(sinComentarios(leer(RUTA_CLIENTE)), /cuerpo\.telefono = /, 'el teléfono viaja a nivel raíz, no dentro de libre')
+test('el aviso no se pinta si ya está vigente, ni si la lectura falló', () => {
+  const fuente = sinComentarios(leer(RUTA_AVISO))
+  // Las dos guardas de salida temprana, ANTES de cualquier JSX: un fallo de
+  // lectura (`sin_ficha`, `sin_puente`, `error`…) no es asunto de esta pantalla
+  // — lo dice «Mis datos» cuando la persona entra a mirarlo — y una confirmación
+  // vigente no se vuelve a preguntar.
+  assert.match(fuente, /if \(lectura\.estado !== 'ok'\) return null/)
+  assert.match(fuente, /lectura\.confirmacion === 'vigente'.*return null/)
+  // El botón «siguen igual» y el enlace a la pestaña real, siempre los dos:
+  // sin el enlace, quien quiere corregir algo no tiene dónde ir desde aquí.
+  assert.match(fuente, /[Ss]iguen igual/)
+  assert.match(fuente, /href="\/boveda\?vista=datos"/)
+})
+
+test('confirmar toma la identidad de la sesión, y el aviso llama a esa misma ruta', () => {
+  assert.match(sinComentarios(leer(RUTA_AVISO)), /\/api\/mis-datos\/confirmar/, 'el aviso confirma por la ruta de sesión, no inventa una propia')
 })
 
 test('el historial de la ficha dice que lo hizo el CLIENTE', () => {
@@ -179,7 +174,9 @@ test('el historial de la ficha dice que lo hizo el CLIENTE', () => {
 // que el cliente hace en el portal tiene que llegar a Alberto, y lo que no ha
 // llegado no se le puede agradecer.
 
-const RUTA_SUGERENCIA_UI = 'apps/asegura-portal/app/(portal)/boveda/Sugerencia.tsx'
+// 09/09/2026: sube a la barra de la cabecera («donde está la campanita, la
+// luna y salir»), fuera del grupo `(portal)/boveda`.
+const RUTA_SUGERENCIA_UI = 'apps/asegura-portal/app/Sugerencia.tsx'
 const RUTA_SUGERENCIA_LIB = 'apps/asegura-portal/lib/sugerencia.ts'
 const RUTA_SUGERENCIA_API = 'apps/asegura-portal/app/api/sugerencia/route.ts'
 

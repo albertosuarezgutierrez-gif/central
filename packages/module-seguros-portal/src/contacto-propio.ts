@@ -52,8 +52,23 @@ export function decidirFichaPropia(clienteIds: readonly string[]): FichaPropia {
   return { estado: 'ok', clienteId: unicos[0]! }
 }
 
-/** Los campos de contacto que el cliente puede tocar. La calle y su sitio, nada más. */
-export const CAMPOS_CONTACTO_PROPIO = ['direccion', 'codigoPostal', 'ciudad', 'provincia'] as const
+/**
+ * Los campos de contacto que el cliente puede tocar: su dirección de contacto
+ * y sus dos canales (teléfono y correo). Desde el 09/09/2026 —Alberto: «una
+ * pestaña "Mis datos" donde el cliente pueda ver sus datos de contacto (tlf,
+ * mail y dirección) pudiendo modificarlos»— ya no es solo la calle.
+ *
+ * Se parten en DOS listas porque en la ficha viven en dos sitios distintos: la
+ * dirección son columnas de `clientes` (van por `editarCliente`), y el
+ * teléfono y el correo son filas de `cliente_telefonos` / `cliente_emails` con
+ * su principal espejado en la ficha (van por `anadirContacto`, que es lo que
+ * detecta que ese número ya está en OTRA ficha).
+ */
+export const CAMPOS_DIRECCION_PROPIA = ['direccion', 'codigoPostal', 'ciudad', 'provincia'] as const
+export const CAMPOS_CANAL_PROPIO = ['telefono', 'email'] as const
+export const CAMPOS_CONTACTO_PROPIO = [...CAMPOS_DIRECCION_PROPIA, ...CAMPOS_CANAL_PROPIO] as const
+export type CampoDireccionPropia = (typeof CAMPOS_DIRECCION_PROPIA)[number]
+export type CampoCanalPropio = (typeof CAMPOS_CANAL_PROPIO)[number]
 export type CampoContactoPropio = (typeof CAMPOS_CONTACTO_PROPIO)[number]
 
 /**
@@ -91,53 +106,19 @@ export function textoHistorialContactoPropio(campos: readonly string[]): string 
   const que = lista.length === 0 ? 'sus datos de contacto' : lista.join(', ')
   return (
     `El cliente actualizó desde el portal: ${que}. ` +
-    'No se ha comunicado a ninguna compañía: esto es su dirección de contacto, no la de sus pólizas.'
+    'No se ha comunicado a ninguna compañía: son sus datos de contacto con nosotros, no los de sus pólizas.'
   )
 }
 
-// ─── «Comprueba tus datos de contacto» (08/09/2026) ──────────────────────────
+// ─── «Comprueba tus datos de contacto» (08/09/2026, adaptado 09/09/2026) ─────
 //
-// El portal NO descifra PII: lo que enseña son MÁSCARAS que calcula asegura con
-// estas funciones y manda por el puente. Lo justo para que la persona reconozca
-// el dato («¿sigue siendo el que acaba en 512?») sin que el valor entero cruce
-// hacia la app pública. Y una confirmación tiene tres estados, no dos: `nunca`
-// (NULL: todo el volcado nace así) NO es `caducada` — un «no se sabe» no se
-// disfraza de «se supo y ya es viejo».
-
-/** Solo los 3 últimos dígitos: `··· ··· 512`. Con menos de 5 dígitos, nada. */
-export function enmascararTelefono(t: string): string {
-  const digitos = t.replace(/\D/g, '')
-  if (digitos.length < 5) return '···'
-  return `··· ··· ${digitos.slice(-3)}`
-}
-
-/** Primera letra + `···` + dominio: `m···@gmail.com`. Sin `@`, nada. */
-export function enmascararEmail(e: string): string {
-  const s = e.trim()
-  const arroba = s.indexOf('@')
-  if (arroba < 1 || arroba === s.length - 1) return '···'
-  return `${s[0]}···@${s.slice(arroba + 1)}`
-}
-
-/**
- * Primeras 6 letras de la calle + `···`, y «CP ciudad» cuando existan:
- * `Calle ···, 41003 Sevilla`. Todo vacío → `null` (no hay nada que reconocer).
- */
-export function enmascararDireccion(
-  direccion: string | null,
-  cp: string | null,
-  ciudad: string | null,
-): string | null {
-  const calle = (direccion ?? '').trim()
-  const sitio = [cp, ciudad]
-    .map((v) => (v ?? '').trim())
-    .filter((v) => v !== '')
-    .join(' ')
-  const partes: string[] = []
-  if (calle !== '') partes.push(`${calle.slice(0, 6)}···`)
-  if (sitio !== '') partes.push(sitio)
-  return partes.length === 0 ? null : partes.join(', ')
-}
+// Nace pensado como aviso con datos ENMASCARADOS (el portal no descifraba
+// PII). Desde el 09/09/2026 la pestaña «Mis datos» ya lee y enseña el dato en
+// claro por su propio puente (`leerContactoPropio`/`leerMisDatos`), así que el
+// enmascarado sobra: lo que queda de esta pieza es solo el RECORDATORIO
+// periódico — la confirmación tiene tres estados, no dos: `nunca` (NULL: todo
+// el volcado nace así) NO es `caducada` — un «no se sabe» no se disfraza de
+// «se supo y ya es viejo».
 
 /** Cada cuánto se le vuelve a preguntar. */
 export const DIAS_VIGENCIA_CONFIRMACION_CONTACTO = 365

@@ -30,6 +30,37 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗂 «Mis datos» + filtro «en vigor» por panel + sugerencia a la cabecera (09/09/2026).** Tres pedidos
+  de Alberto sobre la pantalla del cliente. (1) Nueva pestaña «Mis datos» (5ª, tras «Contactos»):
+  teléfono, correo y dirección de contacto, ahora **legibles** desde el portal (`GET
+  /api/portal/contacto`, que asegura descifra y sirve — antes solo se escribía a ciegas) y editables por
+  el MISMO puerto (`CAMPOS_CONTACTO_PROPIO` ganó `telefono`/`email`; un canal se CAMBIA, no se borra; si
+  ya está en otra ficha, `en_otra_ficha` y no se pisa a nadie). (2) Cada panel de pólizas («Tus seguros»,
+  «Te han dado acceso», «Tus sociedades») filtra por defecto a **en vigor**, con pastillas «En vigor /
+  Todas» y contador de lo oculto (`FiltroVigencia.tsx`; `pendiente` se sigue enseñando). (3) «¿Echas algo
+  de menos?» sube de «Mis seguros» a un botón en la cabecera junto a la campana y Salir. **Pendiente
+  abierto y sin decidir:** Alberto pidió luego que la autorización a un tercero NO caduque al año, y
+  después matizó que quizá sea mejor que la caducidad (o su ausencia) se declare al invitar, según el
+  caso (hijo↔padre mayor). No se tocó `DIAS_VIGENCIA`: es una decisión legal (art. 7.1 RGPD,
+  demostrabilidad) que necesita su OK explícito antes de tocar `autorizacion.ts`. PR #2660.
+
+- **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
+  pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
+  `vendoresDeSeguro()` (`/insurance-vendors`) + `productosDeLinea()` (`/insurance-lines/{id}/products`)
+  en `catalogos.ts`, ruta `GET /api/operador/codeoscopic/companias?buscar=fidelidade` (corre con el
+  interruptor apagado, 0,00€) y un bloque en `/correduria/hogar` de plataforma con TRES estados
+  (presente/ausente/desconocido, y en qué ramos hay producto). ⚠️ Lista vacía = desconocido, nunca «no
+  está». La afinación de Avant2 (captura) sigue sin duplicarse: se hereda al cotizar por `config`
+  (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR #2651.
+- **Título de póliza específico para RC de perros y similares (09/09/2026).** Alberto: la ficha de la
+  RC de Occident (548238086) salía como «Occident · Responsabilidad civil» a secas, y hay miles de
+  tipos de RC distintos. `tituloDePoliza` (`apps/asegura-portal/.../PolizaVista.tsx`) cae ahora a la
+  cobertura que ESPECIALIZA el ramo genérico (ej. «Responsabilidad civil perros») antes de caer a
+  `Compañía · Ramo`. Lógica pura y testeada en `coberturaEspecificaDeRamo()` de
+  `@central/module-seguros-portal` (`poliza-leida.ts`, 4 tests nuevos). Typecheck del portal y
+  `regression-portal-visibilidad` en verde. PR #2648 (rama `claude/responsabilidad-civil-perro-ixeh6y`),
+  mergeado; sin pendientes.
+
 - **Calendario del portal: fuera el chip de aviso (09/09/2026).** Alberto, sobre la tarjeta de «Lo que
   vence»: «quitar esto, confunde». Se quita el chip `Ya/Todavía no te hemos avisado` de
   `apps/asegura-portal/app/(portal)/boveda/Calendario.tsx`; se mantiene el de procedencia
@@ -107,15 +138,20 @@
   `@central/module-seguros` (9 tests, cepo visto en rojo), `GET/POST /api/operador/backfill-contacto`
   en asegura y tarjeta+botón en `/correduria/mantenimiento`. Ojo: `uq_clientes_email_lookup_hash` es
   UNIQUE → fichas con el mismo correo chocan y no se escriben. **Pendiente: pulsar el botón** (tandas).
-- **✅ Aviso automático «comprueba tus datos de contacto» en el portal (08/09/2026).** Alberto vio en
-  la ficha de un cliente que faltaban estado civil/fecha de carnet/municipio y preguntó cómo verificar
-  que móvil/email/dirección de la BD antigua siguen siendo correctos, **sin que el corredor intervenga**.
-  Descartado avisar en la ficha del corredor (fecha de carnet es del CONDUCTOR de una póliza, no del
-  cliente; ya lo pide `revisarDatosAuto()` al presupuestar). En su lugar: `clientes.contacto_confirmado_at`
-  (PR `fc9c789cb`, puerto `/api/portal/contacto-estado|-confirmar` con datos ENMASCARADOS) + banner en
-  la bóveda del portal (`MisDatos`, antes `MiDireccion.tsx`) que sale si nunca/caducó (>365d) con
-  «Siguen igual» o corregir; email no editable (es la llave de acceso). PRs de esta sesión, mismo commit
-  de asegura + `b6d7150e4` (portal). Pendiente: aplicar la migración SQL en preview→prod.
+- **✅ Aviso automático «comprueba tus datos de contacto» en el portal (08-09/09/2026), integrado con
+  «Mis datos» tras solape de PRs concurrentes.** Alberto vio en la ficha de un cliente que faltaban
+  estado civil/fecha de carnet/municipio y preguntó cómo verificar que móvil/email/dirección de la BD
+  antigua siguen siendo correctos, **sin que el corredor intervenga**. Descartado avisar en la ficha
+  del corredor (fecha de carnet es del CONDUCTOR de una póliza, no del cliente; ya lo pide
+  `revisarDatosAuto()` al presupuestar). Se construyó con datos ENMASCARADOS (`/api/portal/contacto-estado`)
+  y, al ir a mergear, **el PR #2660 de otra sesión concurrente ya había añadido una pestaña «Mis datos»
+  completa** (lectura en claro + edición de teléfono/correo/dirección, sustituyendo `MiDireccion.tsx`
+  por `MisDatos.tsx`). Se resolvió por integración, no por descarte: se retiró el enmascarado (ya
+  redundante) y quedó solo el recordatorio como `AvisoContacto.tsx` (arriba de «Mis seguros», antes que
+  el calendario), reutilizando la MISMA lectura de `leerContactoPropio`/`leerMisDatos` (ahora con
+  `confirmadoEn`/`confirmacion`) en vez de un puerto propio — `contacto-estado` se eliminó.
+  `clientes.contacto_confirmado_at` se sella al decir «siguen igual» o al corregir algo. PR de esta
+  sesión (merge de main + resolución del solape). Pendiente: aplicar la migración SQL en preview→prod.
 - **📲 El aviso «Tenlo a mano» del portal, ARRIBA del contenido (08/09/2026).** Alberto, sobre la
   captura de `Mis seguros`: «este mensaje mejor arriba, ¿no?». Sí: detrás de las pólizas, en el móvil
   quedaba fuera de la primera pantalla, y en iPhone ese aviso es lo ÚNICO que explica cómo instalar

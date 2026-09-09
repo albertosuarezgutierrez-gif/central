@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 
 /**
  * POST /api/mis-datos/confirmar — «Siguen igual»: el cliente sella que los datos
- * de contacto que le hemos enseñado (enmascarados) siguen siendo los suyos.
+ * de contacto que le hemos enseñado siguen siendo los suyos, sin tocar nada.
  *
  * 🚨 La identidad sale de la COOKIE, nunca del cuerpo — la misma regla que en
  * `/api/mis-datos` y `/api/peticiones`. Aquí el cuerpo NI SE LEE: no hay nada

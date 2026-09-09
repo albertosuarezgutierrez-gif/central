@@ -1259,6 +1259,50 @@ Y los cinco estados de la respuesta están separados a propósito —no responde
 dirección no se entiende ≠ la calle es ambigua ≠ hay quince pisos y no sabemos cuál es el suyo—
 porque colapsarlos convierte un «no lo sé» en un «no hay».
 
+## 📇 «Mis datos», filtro «en vigor» por panel, y sugerencia a la cabecera (09/09/2026)
+
+Tres pedidos de Alberto sobre la pantalla del cliente, en la misma sesión que ampliaron lo del
+apartado siguiente (que sigue siendo la fuente para la dirección de contacto y el derecho de
+supresión: esto lo REVISA, no lo sustituye).
+
+1. **Nueva pestaña «Mis datos» (5ª), donde el cliente VE y corrige teléfono, correo y dirección.**
+   Hasta hoy `MiDireccion.tsx` (renombrado `MisDatos.tsx`) solo ESCRIBÍA a ciegas y la pantalla salía
+   vacía «porque no podemos descifrar». Ahora hay lectura: `GET /api/portal/contacto?identidadId=` en
+   `apps/asegura` (`leerContactoPropio` en `lib/contacto-portal.ts`) descifra con SU clave —el portal
+   sigue SIN `PII_ENCRYPTION_KEY`— y sirve solo esos seis campos de la ficha vinculada por
+   `portal_vinculo`. Con varias fichas o sin ninguna, no se inventa nada: se dice.
+2. **El cliente ahora edita también SU teléfono y correo, no solo la calle.**
+   `CAMPOS_CONTACTO_PROPIO` (`packages/module-seguros-portal/src/contacto-propio.ts`) se partió en
+   `CAMPOS_DIRECCION_PROPIA` (columnas de `clientes`, vía `editarCliente`) y `CAMPOS_CANAL_PROPIO`
+   (filas de `cliente_telefonos`/`cliente_emails`, vía `anadirContacto` como PRINCIPAL). 🚨 Un canal
+   **se cambia, nunca se borra** desde el portal: sin teléfono ni correo no habría por dónde avisar. Y
+   si el valor ya es el principal de OTRA ficha, `anadirContacto` lo detecta como conflicto y la
+   respuesta es `en_otra_ficha` (409) — no se le quita el número a nadie desde aquí, lo resuelve
+   Alberto. `aplicarContactoPropio` valida TODO antes de escribir NADA: un correo mal escrito no deja
+   la dirección a medio guardar.
+3. **Cada panel de pólizas filtra por defecto a EN VIGOR** (Alberto, mirando el panel de un cliente al
+   que le han dado acceso: «lo suyo es ver solo las pólizas en vigor y ocultar las canceladas porque
+   da confusión… un filtro por cada panel»). `FiltroVigencia.tsx` es un filtro POR TITULAR (no
+   global): dos pastillas «En vigor / Todas» y, mientras el filtro esconde algo, su contador — nunca
+   se esconde sin decir cuánto. `pendiente` (sin fecha, no se sabe) **se enseña**: esconder lo que no
+   se sabe sería decidir por la persona que su póliza caducó.
+4. **«¿Echas algo de menos?» sube de «Mis seguros» a la cabecera**, como botón junto a la campana y
+   Salir (Alberto: «arriba del todo, donde está la campanita, la luna y salir»). Mismo mecanismo que
+   `Campana.tsx` (desplegable, cierra con clic fuera o Escape) y misma puerta que `SalirDelPortal`
+   (sesión VERIFICADA, no solo cookie presente): `app/SugerenciaBarra.tsx`.
+
+🚨 **Pendiente ABIERTO, sin decidir — no tocar `autorizacion.ts` sin el OK de Alberto.** Sobre el aviso
+legal de «cada acceso caduca al año», Alberto primero pidió que NO caduque, y después él mismo lo
+matizó: «o mejor que en la invitación autorice… ejemplo: padre mayor y que el hijo le lleva todo, eso
+hay que darle una vuelta». Es una decisión de las que exige negociar con él (regla de la casa de
+`Task`), no un ajuste mecánico: `DIAS_VIGENCIA = 365` (`packages/module-seguros-portal/src/
+autorizacion.ts`) existe porque el consentimiento tiene que poder demostrarse (art. 7.1 RGPD) y
+renovarse, y el caso que lo empujó a existir es justo el que el propio Alberto cita ahora (el
+divorcio: nadie entra a revocar ese día). Una vía a explorar sin tocar código todavía: que la
+DURACIÓN se declare al invitar (una petición «para gestionar de por vida a mi padre» pide un
+alcance/plazo distinto de «para que mi mujer vea el coche este año»), en vez de un valor fijo para
+todo el mundo. Sin código hasta que Alberto elija.
+
 ## 📍 El cliente cambia SU dirección de contacto, y sugiere (08/09/2026)
 
 Dictado de Alberto: *«que el cliente pueda modificar su dirección y tlf»* y, al preguntarle si eso
@@ -1294,23 +1338,32 @@ tiene portal — y queda en su historial.
 - **Las reglas de validación son las MISMAS** que cuando lo corrige Alberto (`revisarEdicion` de
   `@central/module-seguros`): con dos vocabularios, el portal aceptaría lo que la ficha rechaza.
 
-### ✅ «Comprueba tus datos de contacto» (08/09/2026)
+### ✅ «Comprueba tus datos de contacto» (08/09/2026, integrado con «Mis datos» el 09/09/2026)
 
 Dictado de Alberto: *«tiene que ser automático, un aviso en la intranet; yo no intervengo»*. La
-cartera es un volcado de jun/2026, así que al entrar la bóveda le enseña al cliente sus datos de
-contacto **ENMASCARADOS** (la máscara la fabrica asegura en `GET /api/portal/contacto-estado`; el
-portal sigue sin descifrar nada ni decidir qué se tapa) con dos salidas: **«Siguen igual»** (sella
-por `POST /api/mis-datos/confirmar` → `POST /api/portal/contacto-confirmar`) o **«Corregir»**
-(dirección y, desde hoy, **teléfono**; el email NO, es la llave de acceso). El aviso se apaga con
-`confirmacion: 'vigente'` (<365 días) y vuelve al caducar — **la vigencia la decide el puente**,
-el portal la recibe calculada (`lib/mis-datos.ts` → `estadoMisDatos`) y la página la lee en el
-servidor. Tres estados por dato: «no consta» (`tiene:false`) ≠ «consta pero no se puede mostrar»
-(`mascara:null`) ≠ la máscara. `sin_ficha`/`varias_fichas`/`sin_puente`/`error`/`conflicto` (el
-teléfono ya es de otra ficha) tienen cada uno su frase y **ninguno se pinta como confirmado ni
-guardado**. La ruta de confirmar **ni lee el cuerpo**: la identidad es la de la cookie. Cepos en
-`test/regression-portal-contacto-propio.test.ts` (13, los tres nuevos vistos morder con cinco
-mutaciones). El componente sigue en `boveda/MiDireccion.tsx` (el guardián lo cita por ruta) y se
-llama `MisDatos`.
+cartera es un volcado de jun/2026: solo el propio cliente sabe si su contacto sigue siendo el suyo.
+
+🚨 **Nació pensado con datos ENMASCARADOS y se REDISEÑÓ el mismo 09/09/2026, en el mismo momento en
+que otra sesión añadía la pestaña «Mis datos»** (ver el apartado de arriba): esa pestaña ya lee y
+enseña el contacto EN CLARO por su propio puente (`GET /api/portal/contacto`, `leerContactoPropio`),
+así que el enmascarado quedó redundante y se retiró — de aquella pieza solo sobrevive el
+RECORDATORIO. Las dos capas ahora se reparten así:
+
+- **`AvisoContacto.tsx`** (nuevo, en `boveda/`) — el empujón AUTOMÁTICO, arriba del todo en «Mis
+  seguros» (antes que el calendario): solo se pinta si `confirmacion` es `nunca` o `caducada`, con
+  **«Sí, siguen igual»** (sella por `POST /api/mis-datos/confirmar` → `POST
+  /api/portal/contacto-confirmar`, sin leer el cuerpo — la identidad es la de la cookie) y un enlace a
+  `?vista=datos`. No enseña ningún dato ni edita nada: reutiliza la MISMA lectura que ya se pidió para
+  «Mis datos» (una sola llamada al puente por visita), así que si esa lectura falla (`sin_ficha`,
+  `sin_puente`, `error`…) el aviso simplemente no se pinta — el fallo ya lo dice «Mis datos» cuando la
+  persona entra a corregir.
+- **`MisDatos.tsx`** — donde de verdad se corrige (teléfono, correo y dirección, en claro).
+
+`contacto_confirmado_at` (`clientes`) se sella tanto al decir «siguen igual» como al corregir algo
+desde «Mis datos» (`aplicarContactoPropio`): quien acaba de escribir un dato acaba de verificarlo.
+`estadoConfirmacion()` de `@central/module-seguros-portal` decide `nunca`/`vigente`/`caducada` — NUNCA
+en el navegador, para que un «hoy» de aquí y otro del servidor no den dos respuestas. Cepos en
+`test/regression-portal-contacto-propio.test.ts`.
 
 ### 💡 El botón de sugerencias
 
