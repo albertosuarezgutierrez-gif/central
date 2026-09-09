@@ -50,7 +50,12 @@
   abierto y sin decidir:** Alberto pidió luego que la autorización a un tercero NO caduque al año, y
   después matizó que quizá sea mejor que la caducidad (o su ausencia) se declare al invitar, según el
   caso (hijo↔padre mayor). No se tocó `DIAS_VIGENCIA`: es una decisión legal (art. 7.1 RGPD,
-  demostrabilidad) que necesita su OK explícito antes de tocar `autorizacion.ts`. PR #2660.
+  demostrabilidad) que necesita su OK explícito antes de tocar `autorizacion.ts`. **PR #2660
+  mergeado.** Revisión de código posterior al merge encontró 3 bugs reales — escritura no atómica
+  de canales (un choque en el correo podía dejar el teléfono ya guardado diciendo «no se cambió
+  nada»), lectura/escritura del canal «principal» con criterios distintos (reenviar el MISMO
+  teléfono creaba una fila duplicada) y un `id` de `FiltroVigencia` que faltaba en la rama vacía —
+  corregidos en PR #2672 (draft, a la espera de CI).
 
 - **🏢 «¿Avant2 ya nos ha incluido a Fidelidade?» se mide por API, no por email (09/09/2026).** Alberto
   pidió confirmarlo; desde aquí no hay credenciales, así que se cableó la comprobación GRATIS:
