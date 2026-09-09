@@ -52,8 +52,23 @@ export function decidirFichaPropia(clienteIds: readonly string[]): FichaPropia {
   return { estado: 'ok', clienteId: unicos[0]! }
 }
 
-/** Los campos de contacto que el cliente puede tocar. La calle y su sitio, nada más. */
-export const CAMPOS_CONTACTO_PROPIO = ['direccion', 'codigoPostal', 'ciudad', 'provincia'] as const
+/**
+ * Los campos de contacto que el cliente puede tocar: su dirección de contacto
+ * y sus dos canales (teléfono y correo). Desde el 09/09/2026 —Alberto: «una
+ * pestaña "Mis datos" donde el cliente pueda ver sus datos de contacto (tlf,
+ * mail y dirección) pudiendo modificarlos»— ya no es solo la calle.
+ *
+ * Se parten en DOS listas porque en la ficha viven en dos sitios distintos: la
+ * dirección son columnas de `clientes` (van por `editarCliente`), y el
+ * teléfono y el correo son filas de `cliente_telefonos` / `cliente_emails` con
+ * su principal espejado en la ficha (van por `anadirContacto`, que es lo que
+ * detecta que ese número ya está en OTRA ficha).
+ */
+export const CAMPOS_DIRECCION_PROPIA = ['direccion', 'codigoPostal', 'ciudad', 'provincia'] as const
+export const CAMPOS_CANAL_PROPIO = ['telefono', 'email'] as const
+export const CAMPOS_CONTACTO_PROPIO = [...CAMPOS_DIRECCION_PROPIA, ...CAMPOS_CANAL_PROPIO] as const
+export type CampoDireccionPropia = (typeof CAMPOS_DIRECCION_PROPIA)[number]
+export type CampoCanalPropio = (typeof CAMPOS_CANAL_PROPIO)[number]
 export type CampoContactoPropio = (typeof CAMPOS_CONTACTO_PROPIO)[number]
 
 /**
@@ -91,6 +106,6 @@ export function textoHistorialContactoPropio(campos: readonly string[]): string 
   const que = lista.length === 0 ? 'sus datos de contacto' : lista.join(', ')
   return (
     `El cliente actualizó desde el portal: ${que}. ` +
-    'No se ha comunicado a ninguna compañía: esto es su dirección de contacto, no la de sus pólizas.'
+    'No se ha comunicado a ninguna compañía: son sus datos de contacto con nosotros, no los de sus pólizas.'
   )
 }

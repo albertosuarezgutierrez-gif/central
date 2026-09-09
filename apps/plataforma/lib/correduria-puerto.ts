@@ -459,6 +459,63 @@ export async function lineasCodeoscopic(): Promise<LineasCodeoscopic> {
   }
 }
 
+// ─── Compañías abiertas en Avant2 (¿nos han incluido a Fidelidade?) ─────────
+
+export type CompaniaBuscada =
+  | { estado: 'presente'; id: string; nombre: string; ramos: string[] }
+  | { estado: 'ausente'; companias: string[]; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export type CompaniasCodeoscopic =
+  | { estado: 'sin_configurar'; mensaje: string | null }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; companias: string[]; buscada: CompaniaBuscada }
+
+/**
+ * Puro. Como `interpretarLineas`: `buscada` degrada a `desconocido` ante
+ * cualquier forma rara. Decir «Fidelidade ausente» sobre un JSON que no se
+ * entiende sería afirmar una ausencia sin haberla medido.
+ */
+export function interpretarCompanias(status: number, json: unknown): CompaniasCodeoscopic {
+  if (status === 401) return { estado: 'error', motivo: 'secreto' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje: cadena(o.mensaje) }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: cadena(o.mensaje) ?? `HTTP ${status}` }
+  const companias = Array.isArray(o.companias)
+    ? o.companias.map((c) => cadena((c as Record<string, unknown>)?.nombre)).filter((x): x is string => x !== null)
+    : []
+  return { estado: 'ok', companias, buscada: leerBuscada(o.buscada) }
+}
+
+function leerBuscada(v: unknown): CompaniaBuscada {
+  if (typeof v !== 'object' || v === null) return { estado: 'desconocido' }
+  const b = v as Record<string, unknown>
+  const ramos = Array.isArray(b.ramos) ? b.ramos.map(cadena).filter((x): x is string => x !== null) : []
+  if (b.estado === 'presente') {
+    const id = cadena(b.id)
+    if (id === null) return { estado: 'desconocido' }
+    return { estado: 'presente', id, nombre: cadena(b.nombre) ?? id, ramos }
+  }
+  if (b.estado === 'ausente') {
+    const companias = Array.isArray(b.companias)
+      ? b.companias.map(cadena).filter((x): x is string => x !== null)
+      : []
+    return { estado: 'ausente', companias, ramos }
+  }
+  return { estado: 'desconocido' }
+}
+
+export async function companiasCodeoscopic(buscar: string): Promise<CompaniasCodeoscopic> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/companias?buscar=${encodeURIComponent(buscar)}`)
+    if (r === null) return { estado: 'sin_configurar', mensaje: null }
+    return interpretarCompanias(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
 export async function impagadosAsegura(): Promise<Impagados> {
   try {
     const r = await pedir('/api/operador/impagados')
