@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **⚙️ Optimización de consumo de tokens de Claude Code (09/09/2026).** Auditoría pedida por Alberto:
+  la infra de ahorro (maestros por vertical, `code-map`, `delegar-codigo`, regla "mecánico→agente",
+  memoria de sesión) ya cubría casi todo el prompt; NO se montó la estructura genérica
+  frontend/backend/testing (no encaja, aquí se enruta por vertical). Se aplicó lo accionable: recorté
+  `CLAUDE.md` de 1.056→684 líneas moviendo el histórico de CI (16 mediciones) a
+  `docs/ci-troubleshooting.md`, y añadí dos agentes de modelo en `.claude/agents/`
+  (`agente-mecanico`=haiku, `agente-architect`=opus), registrados en `docs/SKILLS.md`.
+  Sin PR aún — pendiente de push.
+
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
   intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
   «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»
