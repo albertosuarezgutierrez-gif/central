@@ -2806,9 +2806,49 @@ h1 em {
 .mi-direccion-aviso { font-size: 13px; line-height: 1.5; color: var(--warning); margin: 12px 0 0; }
 
 /* ─── «¿Echas algo de menos?»: la sugerencia del cliente ─────────────────────
+   Vive en la cabecera (09/09/2026), al lado de la campana: mismo tamaño y
+   familia (44px, contorno sobre papel), mismo mecanismo de panel desplegable.
    El textarea hereda el tamaño del sistema para que Safari en iPhone no haga
    zoom al enfocarlo. Los dos botones se apilan en móvil: en una fila de 320px
    quedarían por debajo de los 44px táctiles. */
+.sugerencia {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+}
+.sugerencia-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.sugerencia-boton:hover,
+.sugerencia-boton[aria-expanded='true'] {
+  background: var(--surface-hover, var(--panel2));
+  color: var(--text);
+}
+.sugerencia-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: min(320px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+.sugerencia-titulo { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+.sugerencia-intro { font-size: 13px; line-height: 1.5; color: var(--muted); margin: 0 0 10px; }
 .sugerencia-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .sugerencia-form textarea {
   width: 100%; min-width: 0; box-sizing: border-box; min-height: 96px; padding: 10px 12px;
@@ -2816,6 +2856,71 @@ h1 em {
   background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit; line-height: 1.5;
 }
 .sugerencia-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ─── El filtro «En vigor / Todas» por titular (09/09/2026) ──────────────────
+   Alberto: «lo suyo es ver solo las pólizas en vigor y ocultar las canceladas
+   porque da confusión; un filtro por cada panel y que salga por defecto las
+   que están en vigor». Dos pastillas, no un `<select>`: son dos opciones y
+   esta pantalla la usa gente de 50-70 años — un desplegable cuesta un toque
+   más para lo mismo. La nota de lo escondido es lo que impide que «en vigor»
+   se lea como «solo tienes esta»: sin ella, el filtro sería la misma trampa
+   que la casa persigue en otros sitios (esconder sin decir que se esconde). */
+.filtro-vigencia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.filtro-vigencia-opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.filtro-vigencia-opcion:hover { color: var(--text); }
+.filtro-vigencia-opcion[aria-pressed='true'] {
+  color: var(--brand-ink, var(--text));
+  background: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--panel));
+  font-weight: 600;
+}
+.filtro-vigencia-n { font-variant-numeric: tabular-nums; opacity: 0.85; }
+.filtro-vigencia-nota { font-size: 12px; color: var(--muted); }
+
+/* ─── «Mis datos» (09/09/2026): canal + dirección en dos grupos ──────────────
+   Dos `fieldset`, no una lista plana: teléfono/correo son POR DÓNDE se avisa,
+   la dirección es a DÓNDE se escribe, y son dos preguntas distintas para quien
+   lee. El `legend` hereda la tipografía de `.lista-titulo`. */
+.mis-datos-grupo {
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.mis-datos-grupo legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+@media (min-width: 560px) {
+  .mis-datos-grupo:last-of-type { grid-template-columns: 1fr 1fr; }
+}
 
 /* La banda de «vista de corredor» (08/09/2026): Alberto mirando el portal como
    lo ve un cliente. En el flujo, encima de la navegación; el ámbar es el tono

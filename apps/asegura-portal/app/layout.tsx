@@ -9,6 +9,7 @@ import { MarcaAsegura } from './MarcaAsegura'
 import { PieLegal } from './PieLegal'
 import { RegistrarSW } from './RegistrarSW'
 import { SalirDelPortal } from './SalirDelPortal'
+import { SugerenciaBarra } from './SugerenciaBarra'
 import { SCRIPT_TEMA } from './tema'
 
 // Marca activa del portal. Es la de `app.grupoasegura.com` medida del CSS
@@ -95,16 +96,20 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               encuentre la salida. Van dentro de UN contenedor con el único
               `margin-left:auto` de la derecha (`.marca-acciones`): con el
               `auto` repartido entre botones, cada uno que se añadía o se
-              quitaba (instalar solo existe si el navegador lo ofrece) cambiaba
-              el reparto del hueco y los separaba sin que nada fallara.
-              Orden (Alberto, 08/09/2026): instalar «en el banner fijo de
-              arriba» → avisos → tema → salir, que va «a la derecha del
-              todo, es lo lógico».
-              🚨 `InstalarEnBarra`, `SalirDelPortal` y `CampanaAvisos` devuelven
-              `null` cuando no hay sesión: quien todavía no ha entrado no ve
-              ni instalar, ni salir, ni avisos. */}
+              quitaba (instalar solo existe si el navegador lo ofrece, y la
+              sugerencia y la campana solo con sesión) cambiaba el reparto
+              del hueco y los separaba sin que nada fallara.
+              Orden (Alberto, 08-09/09/2026): instalar «en el banner fijo de
+              arriba» → sugerencia (junto a la campana, el otro desplegable)
+              → avisos → tema → salir, que va «a la derecha del todo, es lo
+              lógico».
+              🚨 `InstalarEnBarra`, `SugerenciaBarra`, `SalirDelPortal` y
+              `CampanaAvisos` devuelven `null` cuando no hay sesión: quien
+              todavía no ha entrado no ve ni instalar, ni sugerencia, ni
+              salir, ni avisos. */}
           <div className="marca-acciones">
             <InstalarEnBarra />
+            <SugerenciaBarra />
             <CampanaAvisos />
             <InterruptorTema />
             <SalirDelPortal />

@@ -1272,6 +1272,50 @@ Y los cinco estados de la respuesta están separados a propósito —no responde
 dirección no se entiende ≠ la calle es ambigua ≠ hay quince pisos y no sabemos cuál es el suyo—
 porque colapsarlos convierte un «no lo sé» en un «no hay».
 
+## 📇 «Mis datos», filtro «en vigor» por panel, y sugerencia a la cabecera (09/09/2026)
+
+Tres pedidos de Alberto sobre la pantalla del cliente, en la misma sesión que ampliaron lo del
+apartado siguiente (que sigue siendo la fuente para la dirección de contacto y el derecho de
+supresión: esto lo REVISA, no lo sustituye).
+
+1. **Nueva pestaña «Mis datos» (5ª), donde el cliente VE y corrige teléfono, correo y dirección.**
+   Hasta hoy `MiDireccion.tsx` (renombrado `MisDatos.tsx`) solo ESCRIBÍA a ciegas y la pantalla salía
+   vacía «porque no podemos descifrar». Ahora hay lectura: `GET /api/portal/contacto?identidadId=` en
+   `apps/asegura` (`leerContactoPropio` en `lib/contacto-portal.ts`) descifra con SU clave —el portal
+   sigue SIN `PII_ENCRYPTION_KEY`— y sirve solo esos seis campos de la ficha vinculada por
+   `portal_vinculo`. Con varias fichas o sin ninguna, no se inventa nada: se dice.
+2. **El cliente ahora edita también SU teléfono y correo, no solo la calle.**
+   `CAMPOS_CONTACTO_PROPIO` (`packages/module-seguros-portal/src/contacto-propio.ts`) se partió en
+   `CAMPOS_DIRECCION_PROPIA` (columnas de `clientes`, vía `editarCliente`) y `CAMPOS_CANAL_PROPIO`
+   (filas de `cliente_telefonos`/`cliente_emails`, vía `anadirContacto` como PRINCIPAL). 🚨 Un canal
+   **se cambia, nunca se borra** desde el portal: sin teléfono ni correo no habría por dónde avisar. Y
+   si el valor ya es el principal de OTRA ficha, `anadirContacto` lo detecta como conflicto y la
+   respuesta es `en_otra_ficha` (409) — no se le quita el número a nadie desde aquí, lo resuelve
+   Alberto. `aplicarContactoPropio` valida TODO antes de escribir NADA: un correo mal escrito no deja
+   la dirección a medio guardar.
+3. **Cada panel de pólizas filtra por defecto a EN VIGOR** (Alberto, mirando el panel de un cliente al
+   que le han dado acceso: «lo suyo es ver solo las pólizas en vigor y ocultar las canceladas porque
+   da confusión… un filtro por cada panel»). `FiltroVigencia.tsx` es un filtro POR TITULAR (no
+   global): dos pastillas «En vigor / Todas» y, mientras el filtro esconde algo, su contador — nunca
+   se esconde sin decir cuánto. `pendiente` (sin fecha, no se sabe) **se enseña**: esconder lo que no
+   se sabe sería decidir por la persona que su póliza caducó.
+4. **«¿Echas algo de menos?» sube de «Mis seguros» a la cabecera**, como botón junto a la campana y
+   Salir (Alberto: «arriba del todo, donde está la campanita, la luna y salir»). Mismo mecanismo que
+   `Campana.tsx` (desplegable, cierra con clic fuera o Escape) y misma puerta que `SalirDelPortal`
+   (sesión VERIFICADA, no solo cookie presente): `app/SugerenciaBarra.tsx`.
+
+🚨 **Pendiente ABIERTO, sin decidir — no tocar `autorizacion.ts` sin el OK de Alberto.** Sobre el aviso
+legal de «cada acceso caduca al año», Alberto primero pidió que NO caduque, y después él mismo lo
+matizó: «o mejor que en la invitación autorice… ejemplo: padre mayor y que el hijo le lleva todo, eso
+hay que darle una vuelta». Es una decisión de las que exige negociar con él (regla de la casa de
+`Task`), no un ajuste mecánico: `DIAS_VIGENCIA = 365` (`packages/module-seguros-portal/src/
+autorizacion.ts`) existe porque el consentimiento tiene que poder demostrarse (art. 7.1 RGPD) y
+renovarse, y el caso que lo empujó a existir es justo el que el propio Alberto cita ahora (el
+divorcio: nadie entra a revocar ese día). Una vía a explorar sin tocar código todavía: que la
+DURACIÓN se declare al invitar (una petición «para gestionar de por vida a mi padre» pide un
+alcance/plazo distinto de «para que mi mujer vea el coche este año»), en vez de un valor fijo para
+todo el mundo. Sin código hasta que Alberto elija.
+
 ## 📍 El cliente cambia SU dirección de contacto, y sugiere (08/09/2026)
 
 Dictado de Alberto: *«que el cliente pueda modificar su dirección y tlf»* y, al preguntarle si eso
