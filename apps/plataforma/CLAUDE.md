@@ -1635,8 +1635,12 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ahorra. Bajo «Vence», `ventanaAnulacion()` recuerda que el contrato es anual y solo se deja al
   vencimiento avisando 30 días antes (se pinta cuando faltan ≤60 días).
 - **📄 «Subir póliza o documento ↗»** (botón en la ficha) salta a `asegura/cartera/subir`: el agente lee
-  el PDF/foto y enseña lo leído. Es gratis. **Hoy solo lee pólizas de AUTO y NO guarda el fichero**
-  (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
+  el PDF/foto y enseña lo leído. Es gratis. **Desde el 09/09/2026 lee cualquier ramo**: detecta el ramo
+  y, si es auto/moto o hogar, lee además sus campos propios (vehículo, o dirección/m²/año/capitales de
+  la vivienda — `lib/documentos/extraer-poliza.ts`, `@central/module-seguros` `documento-auto.ts` /
+  `documento-hogar.ts`); en cualquier otro ramo solo lee lo común a toda póliza (compañía, número,
+  vencimiento, prima) y lo dice, porque hoy no se retarifica ningún otro ramo. **Sigue SIN guardar el
+  fichero** (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
 - **🔎 Buscador de TODO (`BuscadorCartera.tsx`)**: nombre, matrícula, nº de póliza, DNI, teléfono,
   email, ciudad o código postal, en un solo cuadro. Un término se busca por **todos** los criterios que
   encaje (`41003` es CP y nº de póliza plausibles a la vez).

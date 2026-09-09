@@ -91,6 +91,14 @@ export {
   camposLeidos,
 } from './documento-auto.ts'
 export type { AutoLeido } from './documento-auto.ts'
+export {
+  CAMPOS_PERSONALES_HOGAR,
+  hogarLeidoVacio,
+  normalizarHogarLeido,
+  seLeyoAlgoHogar,
+  camposLeidosHogar,
+} from './documento-hogar.ts'
+export type { HogarLeido } from './documento-hogar.ts'
 
 export { importeEiac, sumarImportesEiac } from './importe-eiac.ts'
 export {

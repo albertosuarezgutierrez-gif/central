@@ -4,22 +4,36 @@ import { useState } from 'react'
 import { revisarFichero, TIPOS_ACEPTADOS } from '@/lib/documentos/fichero'
 import { eur } from '@/lib/dinero'
 
-type AutoLeido = Record<string, string | number | null>
+type DatosLeidos = Record<string, string | number | null>
 
 type Estado =
   | { fase: 'inicio' }
   | { fase: 'leyendo' }
-  | { fase: 'leido'; nombre: string; fuente: string; datos: AutoLeido; campos: string[] }
+  | {
+      fase: 'leido'
+      nombre: string
+      fuente: string
+      ramo: string | null
+      tipoLectura: 'auto' | 'hogar' | 'contrato_solo'
+      datos: DatosLeidos
+      campos: string[]
+    }
   | { fase: 'error'; mensaje: string }
 
-/** Cómo se llama cada campo en pantalla. El orden ES el orden de lectura. */
-const ETIQUETAS: [keyof AutoLeido & string, string][] = [
+/** Cómo se llama cada campo en pantalla, por tipo de lectura. El orden ES el
+ *  orden en que se pintan. Los campos comunes (compañía, número…) van en las
+ *  dos listas: cada póliza los tiene, sea del ramo que sea. */
+const ETIQUETAS_COMUNES: [string, string][] = [
   ['compania', 'Compañía'],
   ['codigoEntidadDgs', 'Código DGS'],
   ['numeroPoliza', 'Nº de póliza'],
   ['fechaEfecto', 'Fecha de efecto'],
   ['fechaVencimiento', 'Vencimiento'],
   ['primaAnual', 'Prima anual'],
+]
+
+const ETIQUETAS_AUTO: [string, string][] = [
+  ...ETIQUETAS_COMUNES,
   ['matricula', 'Matrícula'],
   ['marca', 'Marca'],
   ['modelo', 'Modelo'],
@@ -32,6 +46,28 @@ const ETIQUETAS: [keyof AutoLeido & string, string][] = [
   ['aniosSinSiniestros', 'Años sin siniestros'],
   ['siniestrosUltimos5', 'Siniestros en 5 años'],
 ]
+
+const ETIQUETAS_HOGAR: [string, string][] = [
+  ...ETIQUETAS_COMUNES,
+  ['direccion', 'Dirección de la vivienda'],
+  ['cp', 'Código postal'],
+  ['localidad', 'Localidad'],
+  ['metrosCuadrados', 'Metros cuadrados'],
+  ['anioConstruccion', 'Año de construcción'],
+  ['capitalContinente', 'Capital del continente'],
+  ['capitalContenido', 'Capital del contenido'],
+  ['tomador', 'Tomador'],
+  ['dni', 'DNI'],
+  ['fechaNacimiento', 'Fecha de nacimiento'],
+]
+
+const CAMPOS_DINERO = new Set(['primaAnual', 'capitalContinente', 'capitalContenido'])
+
+function etiquetasPara(tipoLectura: 'auto' | 'hogar' | 'contrato_solo'): [string, string][] {
+  if (tipoLectura === 'hogar') return ETIQUETAS_HOGAR
+  if (tipoLectura === 'auto') return ETIQUETAS_AUTO
+  return ETIQUETAS_COMUNES
+}
 
 export default function SubirPoliza() {
   const [estado, setEstado] = useState<Estado>({ fase: 'inicio' })
@@ -54,11 +90,14 @@ export default function SubirPoliza() {
         setEstado({ fase: 'error', mensaje: String(j.error ?? `error ${res.status}`) })
         return
       }
+      const tipoLectura = j.tipoLectura === 'hogar' || j.tipoLectura === 'auto' ? j.tipoLectura : 'contrato_solo'
       setEstado({
         fase: 'leido',
         nombre: String(j.nombre ?? f.name),
         fuente: String(j.fuente),
-        datos: (j.datos ?? {}) as AutoLeido,
+        ramo: typeof j.ramo === 'string' ? j.ramo : null,
+        tipoLectura,
+        datos: (j.datos ?? {}) as DatosLeidos,
         campos: (j.campos ?? []) as string[],
       })
     } catch (e) {
@@ -91,17 +130,26 @@ export default function SubirPoliza() {
           <h2>Lo que el agente ha leído</h2>
           <p className="muted">
             {estado.nombre} · leído {estado.fuente === 'vision' ? 'de la imagen' : 'del texto del PDF'}
+            {' · ramo '}
+            <strong>{estado.ramo ?? 'no identificado'}</strong>
             {' · '}
             <strong>{estado.campos.length}</strong> campo(s) encontrado(s)
           </p>
+
+          {estado.tipoLectura === 'contrato_solo' && (
+            <p className="muted">
+              Hoy solo se leen a fondo pólizas de <strong>auto</strong> y <strong>hogar</strong>. De
+              esta se ha leído lo común a cualquier póliza (compañía, número, vencimiento, prima); lo
+              propio de su ramo hay que teclearlo a mano.
+            </p>
+          )}
 
           {estado.campos.length === 0 ? (
             // El modelo respondió pero no encontró nada. NO es lo mismo que no
             // haber podido mirar (eso llega como error), y se dice distinto.
             <p>
               El documento se ha leído, pero <strong>no se ha reconocido ningún dato</strong>. Puede
-              que no sea una póliza de auto, o que la calidad no dé. Revísalo antes de darlo por
-              vacío.
+              que la calidad no dé, o que no sea una póliza. Revísalo antes de darlo por vacío.
             </p>
           ) : (
             <>
@@ -114,7 +162,7 @@ export default function SubirPoliza() {
                     </tr>
                   </thead>
                   <tbody>
-                    {ETIQUETAS.map(([clave, etiqueta]) => {
+                    {etiquetasPara(estado.tipoLectura).map(([clave, etiqueta]) => {
                       const v = estado.datos[clave]
                       return (
                         <tr key={clave}>
@@ -123,7 +171,7 @@ export default function SubirPoliza() {
                             {v === null || v === undefined ? (
                               // Un hueco se dice. Nunca se pinta 0 ni vacío.
                               <span className="muted">no aparece en el documento</span>
-                            ) : clave === 'primaAnual' ? (
+                            ) : CAMPOS_DINERO.has(clave) ? (
                               eur(Number(v))
                             ) : (
                               String(v)
