@@ -32,6 +32,17 @@
 
 - **📝 Bóveda del cliente: «Selecciona» en vez de «No lo sé», ramo obligatorio y forma de pago con aviso de recibo (09/09/2026).** Alberto pidió además defaults reales en «uso»/«garaje» (Particular/No); se le planteó que eso fabrica un hecho falso si el cliente no toca el select —justo lo que el propio cepo del tri-estado prohíbe— y él pidió mi criterio: se dejaron esos dos SIN valor marcado (solo cambia el rótulo a «Selecciona»), y «Tipo de seguro» sí pasó a obligatorio porque elegir categoría no fabrica un dato. Nuevo campo «Forma de pago» (periodicidad: anual/semestral/trimestral/mensual) en `portal_poliza_declarada` (migración aplicada) que alimenta una obligación `tipo: 'recibo'` nueva en `portal_obligacion` (unicidad ensanchada a `(identidad, poliza_declarada, tipo)`) calculada por `proximoCobroDeclarado()` de `@central/module-seguros-portal` — avisa 5 días antes del próximo cobro, no solo de la renovación anual. `pnpm test` verde (2718+ tests), typecheck y lint de `asegura-portal` en verde. PR #2667.
 
+- **Maqueta de pre-emisión por compañía en el retarificador (09/09/2026).** Alberto vio en Avant2 que
+  tras elegir presupuesto cada compañía pide sus propios "datos adicionales del riesgo" (eso viene del
+  paso Preemisión de Codeoscopic, no lo inventa Avant2 — ver `apps/asegura/CLAUDE.md`). Botón
+  "Pre-emitir" por fila en `retarificador.tsx` abre `preemision-mock.tsx`: los mismos campos por
+  compañía (Occident/Reale/Mapfre/Allianz) con el look de `/correduria`, interactivos pero SIN llamar a
+  Codeoscopic ni gastar nada (banner "🧪 MAQUETA"). Sirve para validar diseño antes de decidir si se
+  cierra la integración real (Submit sigue en sandbox, `CODEOSCOPIC_EMISION_ACTIVA` apagado). tsc+lint
+  en verde. Rama `claude/retarificacion-emision-poliza-gpuhpa`, PR #2661 (abierto y suscrito).
+  De paso: la ficha de cliente ganó avatar de iniciales en `Cabecera.tsx` (reutiliza el hueco `icono`
+  de `PageHeader`, sin tocar su forma) — comparado con la ficha de Avant2, pero SIN copiar su rueda de
+  iconos decorativa: contradice el rediseño minimalista del 03/09. tsc+lint en verde, mismo PR.
 - **🏠 La dirección del hogar dejaba de decir el CP dos veces (08/09/2026, PR pendiente).** Con
   `PII_ENCRYPTION_KEY` ya puesta en el Vercel de `asegura-portal` (la añadió Alberto; el build que
   la recogió es `d6a954bb`), la calle sale en claro — y con ella el defecto: **«MARINA GOLF 82,
