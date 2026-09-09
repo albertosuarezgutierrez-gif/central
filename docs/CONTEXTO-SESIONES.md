@@ -37,7 +37,23 @@
   `CLAUDE.md` de 1.056→691 líneas moviendo el histórico de CI (16 mediciones) a
   `docs/ci-troubleshooting.md`, y añadí dos agentes de modelo en `.claude/agents/`
   (`agente-mecanico`=haiku, `agente-architect`=opus), registrados en `docs/SKILLS.md`.
-  PR #2658 (rama `claude/optimize-token-consumption-yrd4yc`), abierto en draft.
+  PR #2658 (rama `claude/optimize-token-consumption-yrd4yc`), mergeado.
+
+- **🗺️ Graphify conectado, grafo verificado, reglas de uso en CLAUDE.md + memoria arquitectónica (09/09/2026).**
+  MCP operativo: workspace `grupo-asegura`, repo `central` (25.323 nodos) ya indexado y con commit al
+  día — no hizo falta reindexar. Probadas `query_graph`/`graphify_rank_files`/`graphify_find`/
+  `graphify_callers` contra símbolos reales, correctas. Añadida sección de reglas obligatorias a
+  `CLAUDE.md` (corregida la `god_nodes` del pedido de Alberto: no existe en el MCP, sustituida por
+  `graphify_impact`/`graph_stats`). Grabadas 13 decisiones estables con `remember` (arquitectura,
+  desarrollo, proyecto, calidad); corregida al grabar la afirmación de que ASegura es SaaS
+  multi-tenant (es single-tenant, la correduría propia de Alberto). Ojo: el workspace también indexa
+  `asegura`/`sivra`/`ialimp`/`house-sevillana-landing` como repos sueltos — siempre pasar
+  `repository_id` explícito a `central`. PR #2646 mergeado.
+
+- **Regla de estilo de respuesta endurecida: resumen solo al final (09/09/2026).** Alberto pidió que
+  las conversaciones no narren cada paso, solo den un resumen final sintético — ahorra tokens. Se
+  reflejó en `## Estilo de respuesta` de `CLAUDE.md` (no solo en las preferencias de cuenta) para que
+  aplique a cualquier sesión/agente del repo. PR #2663, mergeado.
 
 - **🧲 La hoja de la nevera solo ofrece pólizas EN VIGOR (09/09/2026).** Alberto, mirando el selector de
   crear la hoja: «¿ahí solo tiene que salir las que están en vigor, no?». Tenía razón: «cartera viva»
@@ -45,7 +61,7 @@
   QR ya prometía «solo lo que sigue en vigor» sin que el código lo aplicara. Regla 5 en `hoja-qr.ts`
   (`polizaEnVigorParaHoja`/`declaradaEnVigorParaHoja`), filtrada en el selector Y en el render en vivo
   del QR. `pendiente` (vigor desconocido) se sigue incluyendo. Tests: 13/13 (paquete), 432/432
-  (módulo), typecheck limpio. PR #2657 abierto.
+  (módulo), typecheck limpio. PR #2657.
 
 - **🗂 «Mis datos» + filtro «en vigor» por panel + sugerencia a la cabecera (09/09/2026).** Tres pedidos
   de Alberto sobre la pantalla del cliente. (1) Nueva pestaña «Mis datos» (5ª, tras «Contactos»):
