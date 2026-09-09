@@ -30,13 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **Regla de estilo de respuesta endurecida: resumen solo al final (09/09/2026).** Alberto pidió que
+  las conversaciones no narren cada paso, solo den un resumen final sintético — ahorra tokens. Se
+  reflejó en `## Estilo de respuesta` de `CLAUDE.md` (no solo en las preferencias de cuenta) para que
+  aplique a cualquier sesión/agente del repo. PR #2663, mergeado.
+
 - **🧲 La hoja de la nevera solo ofrece pólizas EN VIGOR (09/09/2026).** Alberto, mirando el selector de
   crear la hoja: «¿ahí solo tiene que salir las que están en vigor, no?». Tenía razón: «cartera viva»
   (CIMA) ≠ «en vigor» (fecha de vencimiento), y el selector arrastraba vencidas — la propia página del
   QR ya prometía «solo lo que sigue en vigor» sin que el código lo aplicara. Regla 5 en `hoja-qr.ts`
   (`polizaEnVigorParaHoja`/`declaradaEnVigorParaHoja`), filtrada en el selector Y en el render en vivo
   del QR. `pendiente` (vigor desconocido) se sigue incluyendo. Tests: 13/13 (paquete), 432/432
-  (módulo), typecheck limpio. PR #2657 abierto.
+  (módulo), typecheck limpio. PR #2657.
 
 - **🗂 «Mis datos» + filtro «en vigor» por panel + sugerencia a la cabecera (09/09/2026).** Tres pedidos
   de Alberto sobre la pantalla del cliente. (1) Nueva pestaña «Mis datos» (5ª, tras «Contactos»):
