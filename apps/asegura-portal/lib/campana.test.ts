@@ -18,16 +18,18 @@ const CAMPANA = 'app/Campana.tsx'
 const RUTA = 'app/api/avisos/route.ts'
 const CSS = 'app/globals.css'
 
-test('la campana está en la cabecera, entre Salir y el interruptor de tema', () => {
+test('la campana está en la cabecera, antes del tema y con Salir al final', () => {
   const layout = leer(LAYOUT)
   const salir = layout.indexOf('<SalirDelPortal />')
   const campana = layout.indexOf('<CampanaAvisos />')
   const tema = layout.indexOf('<InterruptorTema />')
   assert.ok(campana > 0, 'la campana no está montada en el layout raíz')
-  // El orden lo exige el CSS: `Salir` toma el `margin-left:auto` y los que van
-  // detrás (`.salir-form ~ …`) se pegan a él. Con la campana delante de Salir,
-  // Salir se iría al extremo y la campana quedaría suelta en medio.
-  assert.ok(salir < campana && campana < tema, 'el orden Salir → campana → tema se ha roto')
+  // El orden es el que pidió Alberto (instalar → avisos → tema → salir, con
+  // Salir «a la derecha del todo») y los cuatro van dentro del contenedor que
+  // lleva el único `margin-left:auto`.
+  const acciones = layout.indexOf('className="marca-acciones"')
+  assert.ok(acciones > 0 && acciones < campana, 'la campana ya no está dentro de .marca-acciones')
+  assert.ok(campana < tema && tema < salir, 'el orden campana → tema → Salir se ha roto: Salir va a la derecha del todo')
 })
 
 test('la campana solo se pinta con sesión VERIFICADA, no con que exista la cookie', () => {
@@ -78,12 +80,18 @@ test('la ruta resuelve la identidad por la cookie y NO colapsa una fuente caída
   assert.match(ruta, /no-store/, 'sin no-store, una copia guardada enseña avisos ya resueltos')
 })
 
-test('el CSS junta Salir, campana y tema con el hermano POSTERIOR (~), no el adyacente (+)', () => {
+test('el CSS junta instalar, Salir, campana y tema en UN contenedor con el único margin-left:auto', () => {
   const css = leer(CSS)
-  // Con `+`, la campana en medio deja al interruptor sin casar, recupera su
-  // `margin-left:auto` y se va solo al extremo (medido antes de cambiarlo).
-  assert.match(css, /\.salir-form ~ \.tema-boton \{/, 'la regla del interruptor volvió a ser adyacente: con la campana en medio se separan')
-  assert.ok(!/\.salir-form \+ \.tema-boton/.test(css), 'quedó la regla adyacente vieja')
+  // Con el `auto` repartido entre botones (y una regla de hermano para
+  // quitárselo al tema), cada botón que entraba o salía cambiaba el reparto del
+  // hueco: instalar solo existe si el navegador lo ofrece.
+  const acciones = css.match(/\.marca-acciones \{[^}]*\}/)?.[0] ?? ''
+  assert.match(acciones, /margin-left: auto/, '.marca-acciones perdió su margin-left:auto: los botones dejan de ir a la derecha')
+  const salir = css.match(/\.salir-form \{[^}]*\}/)?.[0] ?? ''
+  const tema = css.match(/\.tema-boton \{[^}]*\}/)?.[0] ?? ''
+  assert.ok(!/margin-left: auto/.test(salir), '.salir-form volvió a llevar margin-left:auto: reparte el hueco y separa los botones')
+  assert.ok(!/margin-left: auto/.test(tema), '.tema-boton volvió a llevar margin-left:auto: reparte el hueco y separa los botones')
+  assert.ok(!/\.salir-form\s*[+~]\s*\.tema-boton/.test(css), 'volvió la regla de hermano de Salir: ya no hace falta y con instalar en medio se rompe')
   // 44 px: el mínimo táctil de la casa, y esta barra la usa gente de 50-70 años.
   const boton = css.match(/\.campana-boton \{[^}]*\}/)?.[0] ?? ''
   assert.match(boton, /width: 44px/, 'la campana ya no mide 44 px de ancho')
