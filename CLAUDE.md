@@ -249,6 +249,63 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
+## 🗺️ Graphify — mapa arquitectónico, regla de uso obligatoria
+Este proyecto usa el MCP de **Graphify** como mapa arquitectónico principal del monorepo.
+Workspace `grupo-asegura`; `repository_id` principal **`albertosuarezgutierrez-gif/central`**.
+Es la fuente de verdad del grafo para este repo — el workspace también tiene indexados como
+repos SUELTOS `asegura`, `sivra`, `ialimp`, `house-sevillana-landing` (restos de cuando esas
+apps vivían fuera, o el CRM externo de Manuel): **pasa siempre `repository_id:
+"albertosuarezgutierrez-gif/central"` explícito** en toda consulta — el nombre corto sin
+`repository_id` puede resolver al repo suelto viejo en vez de a `apps/sivra`/`apps/ialimp`
+dentro de central.
+
+**Principio:** Graphify responde «¿dónde está algo y qué está relacionado con ello?». El
+código fuente responde «¿qué hace realmente?». **Nunca sustituyas la lectura del código por
+una suposición del grafo** — el grafo localiza y traza relaciones, no sustituye leer la
+implementación antes de tocarla.
+
+Flujo antes de modificar código compartido (función, componente, servicio, API, modelo):
+`GRAPHIFY (localizar) → ANALIZAR IMPACTO → LEER CÓDIGO → PLANIFICAR → MODIFICAR → VERIFICAR`.
+
+**Herramientas y cuándo usar cada una** (nombres reales del MCP — antes de asumir que existe
+una herramienta que no está en esta lista, compruébalo con `ToolSearch`, no la inventes):
+- **Localizar / cambios normales:** `graphify_find` (símbolo por substring), `graphify_node`
+  (cuerpo + vecinos directos), `graphify_callers`/`graphify_callees` (quién llama a qué,
+  dirigido y exacto), `graphify_file_neighbors` (qué otros archivos toca modificar uno dado).
+- **Preguntas en lenguaje natural:** `query_graph` (contexto semántico con cuerpo de código
+  real — la de uso por defecto para «¿dónde está X?») y `graphify_rank_files` (qué archivos
+  son relevantes para una tarea, antes de empezar a leer o editar).
+- **Impacto y cambios complejos** — usar siempre antes de un refactor, un cambio en un módulo
+  compartido, un cambio de contrato de API/modelo de datos, o cualquier cosa que pueda tocar
+  producción: `graphify_impact` / `impact_and_risk` (blast radius amplio), `graphify_trace`
+  (camino de llamadas entrada→servicio→lógica→salida), `shortest_path` /
+  `graphify_render_subgraph` (relación entre dos nodos concretos).
+- **Piezas centrales / arquitectura:** no existe una herramienta `god_nodes` en este MCP — para
+  identificar componentes centrales usa `graphify_impact` con `max_seeds` alto sobre el
+  candidato, o `graph_stats` (nº de comunidades) como primera foto de tamaño/complejidad.
+- **Memoria durable** (`memories_about`, `recall`, `remember`): decisiones técnicas
+  permanentes, convenciones del proyecto, gotchas y restricciones importantes — NO detalles
+  temporales de una tarea concreta ni información obvia que ya está en el código. Complementa
+  a `docs/CONTEXTO-SESIONES.md`, no lo sustituye.
+
+**Navegación:** no hagas exploraciones masivas con `Grep`/`Glob`/lectura indiscriminada.
+Pregunta primero al grafo (dónde vive la funcionalidad, quién la consume, qué depende de
+ella, qué archivos están relacionados, cuál es el camino de ejecución) y lee después
+SOLO el código necesario — ni carpetas completas ni archivos enteros cuando basta una función.
+
+**Antes de crear algo nuevo**, busca en Graphify componentes similares, patrones existentes,
+servicios reutilizables o integraciones ya montadas: no dupliques un patrón que ya existe en
+el monorepo.
+
+**Frescura:** antes de confiar en el grafo para una decisión importante, comprueba que el
+`commitSha` que devuelve la respuesta (viene en el propio payload de cada tool) coincide con
+el HEAD real de la rama. Si no coincide, el grafo va con retraso: avísalo, no asumas que las
+relaciones que devuelve siguen vigentes.
+
+**Después de cambios que afecten arquitectura**, vuelve a consultar Graphify para validar el
+impacto real, además de la verificación normal (tests, typecheck, lint, build) que ya exige
+este documento.
+
 ## 🧹 Quién mira qué pantalla — regla global permanente
 **Antes de dar por avisada a una persona, comprueba en qué pantalla trabaja.** Un aviso que sale por
 un canal que esa persona no abre es un aviso que no existe, y desde el código se ve idéntico a uno

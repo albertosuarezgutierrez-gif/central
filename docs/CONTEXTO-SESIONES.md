@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗺️ Graphify conectado, grafo verificado, reglas de uso en CLAUDE.md + memoria arquitectónica (09/09/2026).**
+  MCP operativo: workspace `grupo-asegura`, repo `central` (25.323 nodos) ya indexado y con commit al
+  día — no hizo falta reindexar. Probadas `query_graph`/`graphify_rank_files`/`graphify_find`/
+  `graphify_callers` contra símbolos reales, correctas. Añadida sección de reglas obligatorias a
+  `CLAUDE.md` (corregida la `god_nodes` del pedido de Alberto: no existe en el MCP, sustituida por
+  `graphify_impact`/`graph_stats`). Grabadas 13 decisiones estables con `remember` (arquitectura,
+  desarrollo, proyecto, calidad); corregida al grabar la afirmación de que ASegura es SaaS
+  multi-tenant (es single-tenant, la correduría propia de Alberto). Ojo: el workspace también indexa
+  `asegura`/`sivra`/`ialimp`/`house-sevillana-landing` como repos sueltos — siempre pasar
+  `repository_id` explícito a `central`. PR #2646 mergeado.
+
 - **Regla de estilo de respuesta endurecida: resumen solo al final (09/09/2026).** Alberto pidió que
   las conversaciones no narren cada paso, solo den un resumen final sintético — ahorra tokens. Se
   reflejó en `## Estilo de respuesta` de `CLAUDE.md` (no solo en las preferencias de cuenta) para que
