@@ -1,6 +1,7 @@
 import {
   ETIQUETA_RAMO,
   bienTieneAlgo,
+  coberturaEspecificaDeRamo,
   describirBien,
   etiquetaEstadoSiniestro,
   resumirHistorialSiniestros,
@@ -108,22 +109,28 @@ export function IconoRamo({ ramo }: { ramo: string | null }) {
   )
 }
 
+/** La cobertura que especializa el ramo genérico de esta póliza (ver `coberturaEspecificaDeRamo`). */
+function coberturaEspecifica(p: PolizaPortal): string | null {
+  return coberturaEspecificaDeRamo(p.ramo, p.coberturas?.lista ?? [])
+}
+
 /**
  * El titular de una fila: **qué cosa es**, no de qué compañía.
  *
  * Nadie se sabe su número de póliza y a casi nadie le dice nada «Occident» a
  * secas cuando tiene dos con ellos. Lo que reconoce es su coche y su calle. Si
- * la compañía no ha informado el bien, se cae a compañía + ramo, que es lo
- * único cierto que queda — nunca a un hueco.
+ * la compañía no ha informado el bien, se cae a la cobertura que especializa
+ * el ramo (si la hay) y, si tampoco, a compañía + ramo — que es lo único
+ * cierto que queda cuando no hay nada más específico.
  */
 export function tituloDePoliza(p: PolizaPortal): string {
   const b = p.bien
-  return b.cosa ?? b.ubicacion ?? `${p.compania} · ${RAMO[p.ramo] ?? p.ramo}`
+  return b.cosa ?? b.ubicacion ?? coberturaEspecifica(p) ?? `${p.compania} · ${RAMO[p.ramo] ?? p.ramo}`
 }
 
-/** ¿El titular de la fila ya es el bien? Decide qué queda para la segunda línea. */
+/** ¿El titular de la fila ya identifica la póliza por sí solo (bien o cobertura específica)? Decide qué queda para la segunda línea. */
 export function tituloEsBien(p: PolizaPortal): boolean {
-  return p.bien.cosa !== null || p.bien.ubicacion !== null
+  return p.bien.cosa !== null || p.bien.ubicacion !== null || coberturaEspecifica(p) !== null
 }
 
 
