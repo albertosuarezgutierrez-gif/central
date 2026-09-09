@@ -57,6 +57,7 @@ const RAMOS_OPCIONES = Object.entries(RAMO).map(([valor, etiqueta]) => ({ valor,
  *  delante en vez del texto exacto de la pestaña. */
 const TITULO_VISTA: Record<VistaBoveda, string> = {
   seguros: 'seguros',
+  hoja: 'QR',
   recibos: 'recibos',
   siniestro: 'siniestros',
   datos: 'datos',
