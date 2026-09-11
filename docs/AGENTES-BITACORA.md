@@ -15,6 +15,12 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-11 · ialimp-client-health** · hizo: pasada semanal Sique Brilla completa. Preflight canal
+  200 OK. `pms_connections`: `sync_error` = "Smoobu API 401" en el intento más reciente
+  (`last_sync_at` 11/09 15:00 UTC), pero `cleaning_sessions` sigue moviéndose (51 en 24h / 54 en 7d,
+  última 09:50 UTC) — el fallo es del último intento, no un corte total todavía. Programaciones sin
+  cubrir: 0. Impagos activos: 0. Aviso ⚠️ enviado por Telegram (messageId 4405) recomendando revisar
+  el token/API key de Smoobu antes de que corte la sync entera. dudas: —; fallos: —; PRs/commits: —.
 - **2026-09-07 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
   Vía B sana (última copia `_buzon_pdf` 05/09, `dias_caido=2`); sin backlog en
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, no por el contador
