@@ -18,7 +18,7 @@
 
 import { PARKINGS_CERCANOS } from '../agente-huesped/parking.ts'
 import { SALIDA_FLEX_HASTA, llavesAlSalir } from '../agente-huesped/salida.ts'
-import { bloqueAcceso, type CodigosAcceso } from '../acceso.ts'
+import { bloqueAcceso, AVISO_CANAL, type CodigosAcceso } from '../acceso.ts'
 
 export type TipoMensaje =
   | 'confirmacion'
@@ -90,6 +90,8 @@ function confirmacion(d: DatosPlantilla): string {
     parkingGuest(),
     '',
     `${HORARIO_ASISTENCIA}.`,
+    '',
+    AVISO_CANAL,
     '',
     '¿A qué hora tenéis pensado llegar, aproximadamente? ¿Necesitáis algo especial para la estancia (cuna, trona…)? Contádnoslo por aquí y lo organizamos.',
   ].join('\n')

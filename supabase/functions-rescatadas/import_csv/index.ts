@@ -10,6 +10,7 @@
 //    Borrado sin coste: no hace nada que se pueda perder.
 // @ts-ignore
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 // Slim wrapper: edge function streams remaining batches by reading them from a staging table
 // To keep the deployment small, we'll embed records via batch fetches.
@@ -17,7 +18,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 Deno.serve(async () => {
   try {
     // @ts-ignore
-    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, claveSecreta());
     return new Response(JSON.stringify({ ok: true, msg: "placeholder, use SQL batches" }), { headers: { "Content-Type": "application/json" }});
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500, headers: { "Content-Type": "application/json" }});

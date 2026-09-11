@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { cabecerasClave, clavePublicable } from '@/lib/claves-supabase'
 
 export const dynamic = 'force-dynamic'
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_ANON = clavePublicable()
 const BUCKET        = 'cleaning-photos'
 const TTL_DIAS      = 5
 
@@ -14,7 +15,7 @@ async function listarArchivos(session_id: string): Promise<string[]> {
     SUPABASE_URL + '/storage/v1/object/list/' + BUCKET,
     {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Content-Type': 'application/json' },
+      headers: { ...cabecerasClave(SUPABASE_ANON), 'Content-Type': 'application/json' },
       body: JSON.stringify({ prefix: 'sessions/' + session_id + '/', limit: 100 })
     }
   )
@@ -31,7 +32,7 @@ async function borrarArchivos(paths: string[]): Promise<number> {
     SUPABASE_URL + '/storage/v1/object/' + BUCKET,
     {
       method: 'DELETE',
-      headers: { 'Authorization': 'Bearer ' + SUPABASE_ANON, 'Content-Type': 'application/json' },
+      headers: { ...cabecerasClave(SUPABASE_ANON), 'Content-Type': 'application/json' },
       body: JSON.stringify({ prefixes: paths })
     }
   )

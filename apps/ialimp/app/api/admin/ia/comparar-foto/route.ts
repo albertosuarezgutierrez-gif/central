@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { signCleaningPhoto } from '@/lib/cleaning-photos'
 import { aiVision } from '@/lib/ai-client'
+import { cabecerasClave, clavePublicable } from '@/lib/claves-supabase'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const SUPABASE_ANON  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_ANON  = clavePublicable()
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!
 const VISION_MODEL   = 'meta/llama-3.2-90b-vision-instruct'
 const nimConfig = () => ({ apiKey: NVIDIA_API_KEY, visionModel: VISION_MODEL })
@@ -22,7 +23,7 @@ async function descargarBuffer(url: string): Promise<Buffer> {
   // Bucket cleaning-photos privado -> firmamos; fallback al público + anon mientras siga abierto.
   const signed = await signCleaningPhoto(url)
   const r = await fetch(signed || url,
-    signed ? {} : { headers: { Authorization: 'Bearer ' + SUPABASE_ANON } })
+    signed ? {} : { headers: cabecerasClave(SUPABASE_ANON) })
   if (!r.ok) throw new Error('No se pudo descargar imagen: ' + r.status)
   return Buffer.from(await r.arrayBuffer())
 }

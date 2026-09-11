@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 // ════════════════════════════════════════════════════════════════════════════════
 // ia.rest · enviar-verifactu
@@ -47,7 +48,7 @@ Deno.serve(async (req: Request) => {
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    claveSecreta(),
     { db: { schema: 'iarest' } },
   )
 

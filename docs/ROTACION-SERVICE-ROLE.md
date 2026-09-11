@@ -184,14 +184,161 @@ es de ~24 h.
    veces. ⚠️ No confundir el tipo **Sensitive** con el tipo **Secret** («Secreto» en el panel
    traducido): Secret vacía el valor y pide elegir un secreto ya existente de Vercel — no es lo que
    queremos, y elegirlo por error perdería el valor actual.
-3. **Edge Functions (PR).** `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')` →
-   `JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')!)['default']`, en 43 funciones.
-4. **Clientes a publishable key (PR).** Los 27 ficheros con `ANON_KEY` + los envs
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY` de cada proyecto Vercel.
+3. ✅ **Edge Functions — CÓDIGO HECHO (11/09/2026), pendiente de desplegar.** Las 43 versionadas +
+   las 7 rescatadas usan `claveSecreta()` de `_shared/clave-supabase.ts`, que prefiere
+   `SUPABASE_SECRET_KEYS['default']` y cae a la legacy mientras convivan.
+4. ✅ **Clientes a publishable key — CÓDIGO HECHO (11/09/2026).** Los 27 ficheros usan
+   `clavePublicable()` de `lib/claves-supabase.ts` (prefiere `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+   cae a `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Falta **añadir** esa variable en los 4 proyectos Vercel
+   — ver la tabla de «Lo que hay que hacer A MANO».
 5. **Cron `monitor-health`:** pasar de `Authorization: Bearer <anon>` a cabecera `apikey`.
 6. **Desactivar las legacy** con «Disable JWT-based API keys». **Esto es la rotación.** Es reversible
    (se pueden reactivar si aparece un consumidor olvidado).
 7. **Revisar los logs de Supabase** por uso ajeno entre el 06/05 y la desactivación.
+
+## ✅ Piloto EJECUTADO y pasos 3 y 4 escritos (11/09/2026)
+
+**El piloto salió bien: la clave nueva SÍ habla con PostgREST.** `ia-training-dashboard` se desplegó
+(v24) usando `claveSecreta()` y devolvió **200 con datos reales** (559 registros, 20 recientes,
+2 clientes activos).
+
+Cómo se midió, que es la mitad del hallazgo: **un 200 no demuestra nada por sí solo**, porque el
+helper cae a la legacy si la nueva no está — habría salido igual de verde sin migrar nada. Por eso
+la respuesta lleva ahora dos campos que no existían:
+
+- **`origen_clave: "nueva"`** → confirma que la petición fue con `sb_secret_…` (o sea, que
+  `SUPABASE_SECRET_KEYS` está inyectada y se prefirió).
+- **`error_postgrest`** → el primer error de PostgREST, si lo hay. Destapó de paso que
+  `iarest.v_training_stats` **no existe** («Could not find the table … in the schema cache»): el
+  panel lleva pintando «Por restaurante» vacío desde siempre y nadie se enteraba porque el código
+  hacía `a.data ?? []`. No es culpa de la rotación (la versión legacy devolvía lo mismo), pero es
+  la regla de la casa en vivo: un `?? []` convirtiendo un fallo en «no hay datos».
+
+⚠️ **Sin salida a internet desde la sesión** (el proxy bloquea `*.supabase.co`), así que la llamada
+se hizo **desde la propia BD** con `pg_net`: `select net.http_get('…/functions/v1/ia-training-dashboard?pin=9999&api=1')`
+y luego leyendo `net._http_response`. Sirve igual y no hace falta navegador.
+
+### 🔧 Corrección medida a las «trampas conocidas»: el gateway SÍ entiende las claves nuevas
+
+La sección de abajo daba por hecho, leyendo documentación contradictoria, que una clave nueva en
+`Authorization: Bearer` sería rechazada como `Invalid JWT` y que **las 43 funciones necesitarían
+`verify_jwt = false` a mano**. **Medido el 11/09/2026 contra el gateway real** (`img-b64`, que está
+en `verify_jwt = true`), con `pg_net` y la `sb_publishable_…`:
+
+| Cabeceras enviadas | Resultado |
+|---|---|
+| *(ninguna)* | **401** `UNAUTHORIZED_NO_AUTH_HEADER` |
+| `Authorization: Bearer esto-no-es-un-jwt` | **401** `UNAUTHORIZED_INVALID_JWT_FORMAT` |
+| `Authorization: Bearer sb_publishable_…` | **pasa** (responde la función) |
+| `apikey: sb_publishable_…` *(sin Authorization)* | **pasa** (responde la función) |
+| las dos a la vez | **pasa** |
+
+O sea: el gateway **sí reconoce el formato nuevo**, en `Authorization` y en `apikey`, y sigue
+rechazando lo que no es ni una cosa ni la otra. Las dos primeras filas son el control que demuestra
+que el check estaba activo de verdad y no que «pasa todo».
+
+### 🔴 Y LA TRAMPA DE VERDAD, que esa tabla no veía: **Storage NO se comporta igual**
+
+Lo de arriba se midió contra `/functions/v1` y se dio por bueno para todo. **Lo es para
+`/rest/v1`, y NO lo es para `/storage/v1`** — medido el mismo día, después de que la revisión
+preguntara por qué se extrapolaba de un subsistema a los otros dos:
+
+| Cabeceras | `/storage/v1` | `/functions/v1` | `/rest/v1` |
+|---|---|---|---|
+| solo `Authorization: Bearer <clave nueva>` | **❌ 403 `Invalid Compact JWS`** | ✅ pasa | ✅ pasa |
+| solo `apikey: <clave nueva>` | ✅ pasa | ✅ pasa | ✅ pasa |
+| las dos | ✅ pasa | ✅ pasa | ✅ pasa |
+
+Control de la medición: con la **`anon` legacy** en `Authorization` a secas, Storage responde
+`404 Object not found` (o sea, autenticó y el objeto no existe), y con una cadena inventada
+responde el mismo `403 Invalid Compact JWS` que con la clave nueva. Es decir: **Storage trata la
+clave nueva como un JWT roto**, exactamente igual que si no fuera nada.
+
+**Por qué esto era el fallo más caro de todo el trabajo.** Trece sitios del monorepo suben fotos,
+firman URLs o borran objetos mandando la clave SOLO en `Authorization: Bearer`: las fotos de
+limpieza de ialimp y sivra (cliente vivo), el expediente y las nóminas de RR.HH., los logos del
+god-panel, y `packages/core-storage`. Con la `anon` legacy funcionan. El día que se añada la clave
+nueva —**un cambio de env, sin desplegar nada, sin tocar código**— **dejan de funcionar todos a la
+vez**, y el error que sale (`Invalid Compact JWS`) no menciona ni la variable ni la migración.
+
+Arreglado mandando **siempre las dos cabeceras**, que es lo que hace `supabase-js` por su cuenta y
+lo único que funciona con las claves viejas y con las nuevas en los tres subsistemas:
+`cabecerasClave()` en `lib/claves-supabase.ts` (y a mano en `packages/core-storage`, que no puede
+importar el helper de una app). Lo vigila un brazo propio del guardián.
+
+> Lección de método: **las tres APIs de Supabase comparten dominio y clave, pero no comparten
+> validador.** Una medida contra `/functions/v1` no dice nada de `/storage/v1`. Medir el
+> subsistema que se va a usar, no un primo suyo.
+
+**Consecuencia práctica: NO hay que tocar `verify_jwt` en las 43.** Lo que sí queda pendiente de
+confirmar con la clave SECRETA (no se puede leer su valor desde aquí, solo usarla dentro de una
+función) es el mismo comportamiento en `Authorization: Bearer`. Por eso `cabecerasServicio()`
+manda la clave nueva **solo en `apikey`**, que es la forma que sí está medida: es la opción
+conservadora, y las 5 funciones destino a las que se invoca ya están todas en `verify_jwt = false`.
+
+🚨 **Y el agujero que esto NO cierra, que conviene no confundir:** esas funciones destino
+(`push-send`, `notify-error`, `brain-parse`, `courier-route`, `vox-confirm`, `menu-stockout`,
+`verifactu-sign`) **no comprueban ninguna credencial en su código** — se apoyaban en el gateway, y
+con `verify_jwt = false` no queda nadie mirando. Cambiar de clave no lo empeora ni lo mejora: ya
+estaban abiertas. Es trabajo aparte, de la misma familia que las 12 huérfanas que se cerraron el
+10-11/09.
+
+### Qué queda hecho en código (pendiente de desplegar)
+
+- **Paso 3 — las 43 Edge Functions versionadas**: migradas a `claveSecreta()` /
+  `clavePublicable()` de `apps/ia-rest/supabase/functions/_shared/clave-supabase.ts`.
+- **Las 7 rescatadas** que leían la legacy (`sync-smoobu`, `github-commit`, `deploy-dashboard`,
+  `inject-ga4`, `rehost-catalogo`, `drive-upload-factura`, `import_csv`): igual, con una copia del
+  helper en `supabase/functions-rescatadas/_shared/` (son dos raíces de despliegue distintas; un
+  guardián comprueba que las dos copias no se separen).
+- **Paso 4 — los 27 ficheros de app** que leían la anon: migrados a `clavePublicable()` de
+  `lib/claves-supabase.ts` (uno por app: ia-rest, ialimp, sivra, rrhh).
+- **Guardián**: `test/regression-claves-supabase.test.ts` — impide que vuelva a colarse una lectura
+  directa de la legacy y **ejecuta** los helpers para comprobar el orden de preferencia (un helper
+  con el orden invertido tiene el mismo aspecto, sale verde y no migra nada).
+
+⚠️ **`ia-training-dashboard` está DESPLEGADA (v24) con código que solo existe en la rama del piloto.**
+Si esa rama no se mergea, producción corre algo que no está en git — el mismo desajuste que se
+encontró en `sync-smoobu` (ver abajo). El bundle es autocontenido, así que funciona; pero hasta el
+merge, el repo no describe lo que hay corriendo.
+
+🩹 **`sync-smoobu`: el repo iba DETRÁS de lo desplegado.** Las dos guardas que impiden vaciar
+`incomes` se aplicaron el 10-11/09 por MCP y no se commitearon, así que redesplegar la copia del
+repo las habría borrado en silencio. El fichero del repo se ha puesto al día con la v27 viva antes
+de migrarle la clave. **Norma que deja esto:** una función que se arregla por MCP se commitea en el
+mismo movimiento, o el repo se convierte en una mina.
+
+### Lo que hay que hacer A MANO (no cabe en un PR)
+
+🚨 **Antes de añadir ninguna env: el cambio de la clave publicable se nota SIN desplegar.** Las
+apps leen `NEXT_PUBLIC_*` en build, así que la variable nueva no entra hasta el siguiente
+despliegue… **salvo en las rutas de servidor**, que la leen en caliente. Añádela cuando puedas
+mirar las fotos de ialimp y sivra justo después, no un viernes por la tarde.
+
+**Envs de Vercel — añadir, no sustituir** (así el fallback del código tiene sentido y la vuelta
+atrás es quitar la variable nueva):
+
+| Proyecto | Variable a AÑADIR | Valor |
+|---|---|---|
+| `ia-rest` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` |
+| `ialimp` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` |
+| `sivra` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` |
+| `central-rrhh` | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` |
+
+Y la cara de servicio, que **sí es sustituir el VALOR** (el nombre de la variable no cambia, paso 2):
+`SUPABASE_SERVICE_ROLE_KEY` → `sb_secret_…` en `ia-rest` y en `central-rrhh`.
+
+**Despliegue de las Edge Functions**: las 43 + las 7 rescatadas hay que desplegarlas para que el
+cambio surta efecto. Se despliegan con el helper incluido en el bundle: el fichero `_shared/clave-supabase.ts`
+va como segundo fichero del deploy y el entrypoint es `<slug>/index.ts` (así se hizo el piloto y
+así resolvió el import relativo `../_shared/clave-supabase.ts`). **Al desplegar, respetar el
+`verify_jwt` que cada función tiene HOY** — el valor por defecto de la herramienta es `true` y
+ponérselo a una que estaba en `false` deja mudo a su cron.
+
+**El bridge del restaurante** (`apps/ia-rest/scripts/bridge-v6/bridge-v6.js`) lleva la `anon` legacy
+incrustada porque corre en el PC del cliente y no se actualiza solo. Ahora prefiere
+`SUPABASE_PUBLISHABLE_KEY` del entorno, pero **si no se le pone esa variable, el día de la rotación
+se queda sin Realtime**. No es la app: es un binario instalado.
 
 ## 🧪 Piloto antes de tocar las 43 (19/08/2026)
 
@@ -214,12 +361,18 @@ porque solo lee, está detrás de un PIN y se abre en el navegador (o sea que ya
 
 ## ⚠️ Trampas conocidas antes de tocar código
 
-- **Las claves nuevas NO son JWT.** Van en la cabecera `apikey`; en `Authorization: Bearer` el gateway
-  intenta parsearlas como JWT y devuelve `Invalid JWT`. Esto afecta a los pasos 3, 4 y 5.
-- **`verify_jwt`**: el check del gateway solo entiende las claves legacy, y la plataforma **no valida
-  la cabecera `apikey`** por su cuenta: la función que pase a la clave nueva necesita `verify_jwt = false`
-  y comprobar el `apikey` en su propio código. Este repo **no tiene `config.toml`**, así que ese ajuste
-  vive en el panel por función y NO puede viajar en un PR: hay que tocarlo a mano al migrar cada una.
+> 🔁 **Las dos primeras trampas se MIDIERON el 11/09/2026 y resultaron ser falsas tal como estaban
+> escritas.** Se dejan aquí porque explican de dónde venía el miedo, pero manda la tabla de la
+> sección «Corrección medida» de arriba: el gateway entiende las claves nuevas en `Authorization` y
+> en `apikey`, y **no hay que tocar `verify_jwt` en las 43**.
+
+- ~~**Las claves nuevas NO son JWT.** Van en la cabecera `apikey`; en `Authorization: Bearer` el gateway
+  intenta parsearlas como JWT y devuelve `Invalid JWT`.~~ Medido: pasa en las dos cabeceras. Sigue
+  siendo cierto que **no son JWT** y que lo que no es ni JWT ni clave válida da `Invalid JWT`.
+- ~~**`verify_jwt`**: la función que pase a la clave nueva necesita `verify_jwt = false`.~~ Medido:
+  no lo necesita. Lo que sí es cierto es la segunda mitad — **una función en `verify_jwt = false` no
+  tiene a nadie validando su credencial** salvo que lo haga su propio código, y ninguna de las de
+  ia-rest lo hace. Eso es un agujero preexistente, no un efecto de la rotación.
 - **Realtime**: las conexiones públicas quedan limitadas a 24 h salvo que se eleven con auth de usuario.
   Ojo al **KDS de ia-rest**, que son pantallas abiertas días enteros.
 
