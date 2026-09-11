@@ -4,6 +4,7 @@ import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, urlVidaNuevo
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
+import VerDniCompleto from './VerDniCompleto'
 import { fmt, TIPOS } from './piezas'
 
 /**
@@ -49,7 +50,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                     diga el enum. */}
                 <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
                 <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
-                <Identidad identidad={ficha.identidad} />
+                <Identidad identidad={ficha.identidad} clienteId={ficha.id} />
                 {conyuge && (
                   <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                     💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
@@ -455,7 +456,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
 // puerto de asegura por diseño — para cambiarlo hace falta el DNI recibido y
 // documentado en 📎 Documentos (regla de identidad de la correduria-crm).
 
-function Identidad({ identidad }: { identidad: IdentidadFicha | null }) {
+function Identidad({ identidad, clienteId }: { identidad: IdentidadFicha | null; clienteId: string }) {
   // `null` = asegura aún no manda el bloque (versión anterior): no se afirma
   // «sin DNI», se calla — es distinto de «se miró y no hay ninguno».
   if (identidad === null) return null
@@ -464,8 +465,11 @@ function Identidad({ identidad }: { identidad: IdentidadFicha | null }) {
       {identidad.dniIlegible ? (
         <span title="Está guardado pero cifrado con una clave que asegura no puede abrir">🪪 DNI cifrado</span>
       ) : identidad.dniEnmascarado ? (
-        <span title="El DNI completo no sale de asegura por diseño: para cambiarlo hace falta el documento recibido en 📎 Documentos">
-          🪪 {identidad.dniEnmascarado}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span title="El DNI completo no sale de asegura por diseño: para verlo entero, pide un código de un solo uso">
+            🪪 {identidad.dniEnmascarado}
+          </span>
+          <VerDniCompleto clienteId={clienteId} />
         </span>
       ) : (
         <span style={{ color: 'var(--muted)' }} title="No consta DNI en la ficha">🪪 sin DNI</span>
