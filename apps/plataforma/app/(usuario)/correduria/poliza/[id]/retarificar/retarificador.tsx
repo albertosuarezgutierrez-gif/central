@@ -170,6 +170,58 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
 }
 
 /**
+ * Borrador LOCAL de esta pantalla — lo que se ha tecleado ANTES de pagar los
+ * 0,50€. Vive en `localStorage` del navegador, no en `seguros.*`: no es una
+ * cotización real, solo la red de seguridad de lo tecleado mientras tanto.
+ * `guardadaPrevia` (cotización YA pagada) SIEMPRE manda sobre este borrador.
+ *
+ * `localStorage` puede fallar (modo privado, cuota, o `window` sin existir
+ * durante el render en servidor): un fallo aquí nunca debe romper la
+ * pantalla, solo perder la comodidad de recuperar lo tecleado.
+ */
+type Borrador = {
+  marcaId?: string
+  modeloId?: string
+  motorId?: string
+  codigoVehiculo?: string
+  garaje?: string
+  estadoCivilId?: string
+  municipioId?: string
+  matriculacion?: string
+  correcciones?: Record<string, string>
+}
+
+function leerBorrador(clave: string): Borrador | null {
+  try {
+    if (typeof window === 'undefined') return null
+    const raw = window.localStorage.getItem(clave)
+    if (!raw) return null
+    const b: unknown = JSON.parse(raw)
+    return b && typeof b === 'object' ? (b as Borrador) : null
+  } catch {
+    return null
+  }
+}
+
+function guardarBorrador(clave: string, b: Borrador) {
+  try {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(clave, JSON.stringify(b))
+  } catch {
+    // Ver el comentario del tipo: perder el borrador no puede romper nada.
+  }
+}
+
+function borrarBorrador(clave: string) {
+  try {
+    if (typeof window === 'undefined') return
+    window.localStorage.removeItem(clave)
+  } catch {
+    // Ver el comentario del tipo.
+  }
+}
+
+/**
  * Resultado de buscar un texto de la ficha en un catálogo del vendor.
  *
  * Cuatro estados y no un booleano, porque los cuatro se arreglan distinto y
@@ -293,6 +345,10 @@ export default function Retarificador({
    */
   guardadaPrevia: TarificacionGuardadaAuto | null
 }) {
+  // Borrador local (localStorage) de esta póliza — ver `leerBorrador`/
+  // `guardarBorrador`/`borrarBorrador` arriba.
+  const claveBorrador = `asegura_retarificar_borrador_${polizaId}`
+
   // ── Vehículo: marca → modelo → versión, todo del catálogo y todo gratis ────
   const [marcas, setMarcas] = useState<Opcion[]>([])
   const [modelos, setModelos] = useState<Opcion[]>([])
@@ -396,6 +452,61 @@ export default function Retarificador({
       if (!vivo) return
       setMarcas(lista)
 
+      // 🚨 Un borrador LOCAL (lo que ya se había tecleado, sin pagar todavía)
+      // manda sobre la preselección por ficha: son ids que YA pasaron por el
+      // catálogo la vez anterior, no hay nada que emparejar por texto. Si el
+      // catálogo cambió y el id ya no existe, se cae al flujo normal de abajo.
+      const borradorLocal = guardadaPrevia ? null : leerBorrador(claveBorrador)
+      if (borradorLocal?.codigoVehiculo) setCodigoVehiculo(borradorLocal.codigoVehiculo)
+      if (borradorLocal?.marcaId) {
+        const marcaEncontrada = lista.find((m) => m.id === borradorLocal.marcaId)
+        if (marcaEncontrada) {
+          setMarcaId(marcaEncontrada.id)
+          setAutoMarca({ estado: 'casa', opcion: marcaEncontrada, texto: '(borrador)' })
+
+          setCargando('modelos')
+          let listaModelos: Opcion[] = []
+          try {
+            listaModelos = await catalogo(`tipo=modelos&marcaId=${encodeURIComponent(marcaEncontrada.id)}`)
+          } catch (e) {
+            if (vivo) setFallo((e as Error).message)
+          } finally {
+            if (vivo) setCargando(null)
+          }
+          if (!vivo) return
+          setModelos(listaModelos)
+
+          const modeloEncontrado = borradorLocal.modeloId
+            ? listaModelos.find((m) => m.id === borradorLocal.modeloId)
+            : undefined
+          if (modeloEncontrado) {
+            setModeloId(modeloEncontrado.id)
+            setAutoModelo({ estado: 'casa', opcion: modeloEncontrado, texto: '(borrador)' })
+          }
+
+          setCargando('motores')
+          let listaMotores: Opcion[] = []
+          try {
+            listaMotores = await catalogo('tipo=motores')
+          } catch (e) {
+            if (vivo) setFallo((e as Error).message)
+          } finally {
+            if (vivo) setCargando(null)
+          }
+          if (!vivo) return
+          setMotores(listaMotores)
+
+          const motorEncontrado = borradorLocal.motorId
+            ? listaMotores.find((m) => m.id === borradorLocal.motorId)
+            : undefined
+          if (modeloEncontrado && motorEncontrado) {
+            setMotorId(motorEncontrado.id)
+            void cargarVersiones(marcaEncontrada.id, modeloEncontrado.id, motorEncontrado.id)
+          }
+          return
+        }
+      }
+
       // 🚨 Sin `vehiculo` NO se llama a `buscarEnCatalogo`: devolvería
       // `sin_dato`, cuyo texto es «la ficha no lo trae» — una ausencia
       // COMPROBADA. Aquí lo que pasa es que no se ha podido mirar, y son cosas
@@ -458,6 +569,54 @@ export default function Retarificador({
     // Se corre una sola vez por póliza: la ficha no cambia mientras la miras.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deshabilitado])
+
+  // Borrador local — el resto de campos (no dependen de ningún catálogo, así
+  // que no hace falta la cadena async de arriba). Mismo criterio de
+  // prioridad: `guardadaPrevia` (ya pagada) manda si existe.
+  useEffect(() => {
+    if (deshabilitado || guardadaPrevia) return
+    const b = leerBorrador(claveBorrador)
+    if (!b) return
+    if (b.garaje && garajes.some((g) => g.id === b.garaje)) setGaraje(b.garaje)
+    if (b.estadoCivilId && civiles.some((c) => c.id === b.estadoCivilId)) setEstadoCivilId(b.estadoCivilId)
+    if (b.municipioId && listaMunicipios.some((m) => m.id === b.municipioId)) setMunicipioId(b.municipioId)
+    if (b.matriculacion) setMatriculacion(b.matriculacion)
+    if (b.correcciones) setCorrecciones(b.correcciones)
+    // Se restaura una sola vez al abrir la pantalla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Autoguardado: CUALQUIER cambio se guarda en el navegador, aunque nunca se
+  // llegue a pulsar «Pedir precio». Es la red de seguridad de lo tecleado
+  // ANTES de pagar — `guardadaPrevia` sigue siendo la fuente de verdad de lo
+  // YA pagado y siempre manda sobre este borrador al recargar la pantalla.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      guardarBorrador(claveBorrador, {
+        marcaId,
+        modeloId,
+        motorId,
+        codigoVehiculo,
+        garaje,
+        estadoCivilId,
+        municipioId,
+        matriculacion,
+        correcciones,
+      })
+    }, 400)
+    return () => clearTimeout(t)
+  }, [
+    claveBorrador,
+    marcaId,
+    modeloId,
+    motorId,
+    codigoVehiculo,
+    garaje,
+    estadoCivilId,
+    municipioId,
+    matriculacion,
+    correcciones,
+  ])
 
   async function alElegirMarca(id: string) {
     setMarcaId(id)
@@ -560,6 +719,11 @@ export default function Retarificador({
         setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: r.gastoDesconocido })
         return
       case 'ok':
+        // 🚨 Cotización REAL pagada: a partir de ahora la fuente de verdad es
+        // `seguros.tarificaciones` (vía `guardadaPrevia` en la próxima carga).
+        // El borrador local ya no hace falta y dejarlo podría, en teoría,
+        // resucitar un valor tecleado y luego cambiado antes de pulsar.
+        if (!r.simulado) borrarBorrador(claveBorrador)
         setResultado({
           estado: 'ok',
           coste: r.coste,

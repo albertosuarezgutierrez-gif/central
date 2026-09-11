@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💾 Autoguardado del formulario de retarificar (borrador local, 11/09/2026).** Sigue a la entrada
+  de abajo: Alberto pidió que TODO lo tecleado se guarde, no solo lo que ya llegó a pagarse.
+  `retarificador.tsx` guarda en `localStorage` (debounce 400ms) marca/modelo/motor/versión/garaje/
+  estado civil/municipio/matriculación/correcciones de cada póliza, y los restaura al reabrir la
+  pantalla — restaurando también la cadena de catálogos (marca→modelo→motor→versión) por id, no por
+  texto. Prioridad: `guardadaPrevia` (cotización YA pagada) > borrador local > valores de la ficha.
+  El borrador se borra solo al completar una cotización real (no simulada), porque a partir de ahí
+  manda la copia en `seguros.tarificaciones`. De paso, aviso en `emision.tsx`: si la compañía pide
+  fecha de efecto en el Submit, tiene que ser HOY — Alberto avisó de que las compañías no admiten
+  pólizas retroactivas. 2730/2730 + 774/774 tests, tsc 0 en plataforma.
 - **🔁 Retomar una cotización sin volver a pagar + prellenar el formulario (11/09/2026).**
   Alberto, probando la emisión de Pilar Franco Ruz: rellenó combustible/versión/garaje/móvil,
   vio que no se persistía y preguntó si se podía "rescatar la preemisión de antes". Diagnóstico
