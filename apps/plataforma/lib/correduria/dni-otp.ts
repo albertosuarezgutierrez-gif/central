@@ -31,7 +31,7 @@ export async function crearCodigoDni(cuentaId: string, clienteId: string): Promi
     where cuenta_id = ${cuentaId}::uuid and cliente_id = ${clienteId} and usado_at is null`
   await prisma.$executeRaw`
     insert into correduria_dni_otp (cuenta_id, cliente_id, codigo_hash, expira_at)
-    values (${cuentaId}::uuid, ${clienteId}, ${hash}, now() + make_interval(mins => ${VIGENCIA_MIN}))`
+    values (${cuentaId}::uuid, ${clienteId}, ${hash}, now() + make_interval(mins => ${VIGENCIA_MIN}::int))`
   return codigo
 }
 
