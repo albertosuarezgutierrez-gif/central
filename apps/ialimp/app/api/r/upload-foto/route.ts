@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { cookies } from 'next/headers'
+import { cabecerasClave, clavePublicable } from '@/lib/claves-supabase'
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_ANON = clavePublicable()
 const BUCKET        = 'cleaning-photos'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
   const resp = await fetch(uploadUrl, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${SUPABASE_ANON}`,
+      ...cabecerasClave(SUPABASE_ANON),
       'Content-Type': file.type || 'image/jpeg',
       'x-upsert': 'true',
       'Cache-Control': 'max-age=432000',

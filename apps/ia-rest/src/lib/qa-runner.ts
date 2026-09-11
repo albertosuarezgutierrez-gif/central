@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
 import { callAI } from '@/lib/ai-client'
+import { clavePublicable, origenClavePublicable } from '@/lib/claves-supabase'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 export type Estado    = 'ok' | 'fallo' | 'warning' | 'skip'
@@ -122,7 +123,10 @@ export async function autoFixTier1(checks: QACheck[], supabase: ReturnType<typeo
 // ─── Checks ENV ───────────────────────────────────────────────────────────────
 export function checkEnvVars(): QACheck[] {
   const checks: QACheck[] = []
-  const criticas = ['SUPABASE_SERVICE_ROLE_KEY','NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  // OJO: la clave publicable NO va en esta lista porque durante la rotación vale cualquiera de
+  // las DOS variables (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` nueva o `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  // legacy). Se comprueba aparte, más abajo. Ver docs/ROTACION-SERVICE-ROLE.md
+  const criticas = ['SUPABASE_SERVICE_ROLE_KEY','NEXT_PUBLIC_SUPABASE_URL',
     'GROQ_API_KEY','NVIDIA_API_KEY','ANTHROPIC_API_KEY','TELEGRAM_BOT_TOKEN','TELEGRAM_CHAT_ID',
     'RESEND_API_KEY','STRIPE_SECRET_KEY','SUPER_ACCESS_KEY','CRON_SECRET']
   const degradadas = ['CLOUDINARY_API_KEY','CLOUDINARY_CLOUD_NAME','GOOGLE_DRIVE_REFRESH_TOKEN',
@@ -144,6 +148,15 @@ export function checkEnvVars(): QACheck[] {
     checks.push({ categoria:'ENV', nombre: key, estado: v ? 'ok' : 'warning', severidad: v ? 'info' : 'degradado',
       detalle: v ? 'Presente' : 'Ausente — módulo degradado' })
   })
+  const origenPublicable = origenClavePublicable()
+  checks.push({ categoria:'ENV', nombre:'Clave publicable de Supabase',
+    estado: origenPublicable ? 'ok' : 'fallo', severidad: origenPublicable ? 'info' : 'critico',
+    detalle: origenPublicable === 'nueva' ? 'Presente (sb_publishable_…, la nueva)'
+      : origenPublicable === 'legacy' ? 'Presente pero LEGACY (anon JWT): muere al desactivar las claves legacy'
+      : 'AUSENTE — ni NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ni NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    fix_sugerido: origenPublicable === 'nueva' ? undefined
+      : 'Añadir NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (sb_publishable_…) en Vercel env vars' })
+
   const mode = process.env.STRIPE_MODE
   checks.push({ categoria:'ENV', nombre:'STRIPE_MODE', estado: mode==='live' ? 'ok' : 'warning',
     severidad: mode==='live' ? 'info' : 'degradado',
@@ -280,7 +293,7 @@ export async function checkAPIs(): Promise<QACheck[]> {
     pingUrl(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getMe`),
     pingUrl('https://api.stripe.com/v1/balance', { headers: { Authorization:`Basic ${Buffer.from(process.env.STRIPE_SECRET_KEY+':').toString('base64')}` }}),
     pingUrl('https://api.resend.com/domains', { headers: { Authorization:`Bearer ${process.env.RESEND_API_KEY}` }}),
-    pingUrl(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/qr-session`, { method:'OPTIONS', headers:{ Authorization:`Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` }}),
+    pingUrl(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/qr-session`, { method:'OPTIONS', headers:{ apikey: clavePublicable(), Authorization:`Bearer ${clavePublicable()}` }}),
     pingUrl('https://www.iarest.es'),
   ])
   const defs = [

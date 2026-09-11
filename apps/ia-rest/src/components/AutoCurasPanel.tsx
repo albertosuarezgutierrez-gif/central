@@ -8,10 +8,11 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { SB_OPTS } from '@/lib/supabase'
+import { cabecerasClave, clavePublicable } from '@/lib/claves-supabase'
 
 const sb = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  clavePublicable(),
     SB_OPTS
 )
 
@@ -119,7 +120,7 @@ export default function AutoCurasPanel() {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+            ...cabecerasClave(),
             'Content-Type': 'application/json',
           },
         }
