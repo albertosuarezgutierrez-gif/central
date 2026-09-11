@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔁 Retomar una cotización sin volver a pagar + prellenar el formulario (11/09/2026).**
+  Alberto, probando la emisión de Pilar Franco Ruz: rellenó combustible/versión/garaje/móvil,
+  vio que no se persistía y preguntó si se podía "rescatar la preemisión de antes". Diagnóstico
+  en BD: la cotización SÍ se guardaba (`seguros.tarificaciones`); lo que faltaba era que la
+  pantalla comprobara si ya había una antes de mostrar el formulario en blanco — recargar
+  llevaba a pagar otro 0,50€ para volver a llegar a "Emitir". Nuevo `GET /api/operador/
+  codeoscopic/tarificacion` (gratis, solo lee) + `extraerFormularioAuto()` (reconstruye
+  garaje/versión/municipio/estado civil/datos a mano del `peticion` YA guardado) +
+  `retarificador.tsx` arranca con la tabla de precios puesta y el formulario prellenado
+  (editable) cuando existe. 774/774 + 330/330 + 2730/2730 tests, tsc 0 en las dos apps.
 - **🧾 Emisión real por Codeoscopic: ReRate + Submit construidos, sin sandbox (11/09/2026).**
   Caso real: Pilar Franco Ruz, auto → Allianz Terceros Ampliado (319,02€), OK explícito de Alberto.
   Nuevos `apps/asegura/lib/codeoscopic/{emitir,emitir-envio}.ts` (ReRate + Submit multipart, candado

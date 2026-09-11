@@ -16,7 +16,7 @@
 // aquí para que la copia sea UNA y no dos.
 
 import { useEffect, useMemo, useState } from 'react'
-import type { Opcion, Reparo, Supuesto, Precio, Fallo } from '@/lib/retarificar-asegura'
+import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
@@ -134,6 +134,42 @@ type Resultado =
 // es exactamente lo que pasó con `primaAnual`/`primaEur` en asegura.
 
 /**
+ * El resumen honrado de una cotización, a partir de solo sus precios (sin
+ * fallos: la cotización GUARDADA no los persiste, ver `apps/asegura/lib/
+ * codeoscopic/cotizaciones.ts`). Mismo criterio que `resumirCotizacion()` de
+ * asegura, recortado a lo que hay.
+ */
+function resumenDePrecios(precios: Precio[]): string {
+  const firmes = precios.filter((p) => p.firmeza === 'firme').length
+  const noFirmes = precios.length - firmes
+  return `${precios.length} precios (${firmes} en firme${noFirmes > 0 ? `, ${noFirmes} con reparos)` : ')'}`
+}
+
+/**
+ * Convierte la cotización YA GUARDADA en el mismo `Resultado` que pinta una
+ * cotización recién pedida — para que la pantalla no necesite un camino
+ * aparte para «lo que ya había» frente a «lo que se acaba de pagar».
+ *
+ * 🚨 El `coste` NO dice «0,50€»: sería mentir sobre un cargo que no ha pasado
+ * ahora. Y `fallos`/`supuestos` van vacíos porque no se persisten — es la
+ * letra pequeña de una cotización recuperada, no de una recién pedida.
+ */
+function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
+  return {
+    estado: 'ok',
+    coste: 'recuperada de una cotización anterior — no se ha vuelto a cobrar',
+    restantesHoy: null,
+    simulado: false,
+    avisoSimulacion: null,
+    resumen: resumenDePrecios(g.precios),
+    precios: g.precios,
+    fallos: [],
+    supuestos: [],
+    guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+  }
+}
+
+/**
  * Resultado de buscar un texto de la ficha en un catálogo del vendor.
  *
  * Cuatro estados y no un booleano, porque los cuatro se arreglan distinto y
@@ -201,6 +237,7 @@ export default function Retarificador({
   consumo,
   simulacion,
   deshabilitado,
+  guardadaPrevia,
 }: {
   polizaId: string
   /**
@@ -247,6 +284,14 @@ export default function Retarificador({
    */
   simulacion: boolean
   deshabilitado: boolean
+  /**
+   * La última cotización REAL ya guardada de esta póliza (11/09/2026),
+   * gratis de leer. `null` = no hay ninguna todavía (normal en la primera
+   * visita). Sirve para no perder el trabajo si se recarga la pantalla: el
+   * formulario se prellena con lo que se tecleó y la tabla de precios sale
+   * directamente, SIN volver a pagar los 0,50€ del `POST /insurances`.
+   */
+  guardadaPrevia: TarificacionGuardadaAuto | null
 }) {
   // ── Vehículo: marca → modelo → versión, todo del catálogo y todo gratis ────
   const [marcas, setMarcas] = useState<Opcion[]>([])
@@ -261,7 +306,12 @@ export default function Retarificador({
   // un código EIAC («1»), de OTRO catálogo — traducirlo a ojo sería inventar el
   // motor de un coche real. Lo elige el corredor.
   const [motorId, setMotorId] = useState('')
-  const [codigoVehiculo, setCodigoVehiculo] = useState('')
+  // 🚨 Si hay cotización guardada, el código Base7 se recupera TAL CUAL —no
+  // el ID de marca/modelo/motor, que el vendor no pide y aquí no se guardan—.
+  // Por eso puede llegar «puesto» sin que marca/modelo/motor lo estén: se
+  // pinta como un chip bloqueado (ver `faltaVersion`/`Campo id="version"`) en
+  // vez de un desplegable con un valor que no está en su lista de opciones.
+  const [codigoVehiculo, setCodigoVehiculo] = useState(guardadaPrevia?.formulario.codigoVehiculo ?? '')
   const [cargando, setCargando] = useState<string | null>(null)
   const [fallo, setFallo] = useState<string | null>(null)
 
@@ -277,8 +327,10 @@ export default function Retarificador({
     porque: 'primero hace falta la marca',
   })
 
-  const [garaje, setGaraje] = useState('')
-  const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
+  const [garaje, setGaraje] = useState(guardadaPrevia?.formulario.garaje ?? '')
+  const [estadoCivilId, setEstadoCivilId] = useState(
+    guardadaPrevia?.formulario.estadoCivilId ?? estadoCivilAuto?.id ?? '',
+  )
   // 🔒 Aquí NO hay caja de código postal, y es deliberado. Durante unas horas la
   // hubo —el puerto no servía la precalificación y se le pedía el CP a Alberto—
   // y eran las dos cosas malas a la vez: hacerle teclear un dato que la ficha ya
@@ -288,11 +340,21 @@ export default function Retarificador({
   // resuelve el CP por dentro y manda la lista ya hecha.
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(
-    listaMunicipios.length === 1 ? listaMunicipios[0].id : '',
+    guardadaPrevia?.formulario.municipioId != null
+      ? String(guardadaPrevia.formulario.municipioId)
+      : listaMunicipios.length === 1
+        ? listaMunicipios[0].id
+        : '',
   )
-  const [matriculacion, setMatriculacion] = useState(fechaMatriculacion ?? '')
-  const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
-  const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
+  const [matriculacion, setMatriculacion] = useState(
+    guardadaPrevia?.formulario.fechaMatriculacion ?? fechaMatriculacion ?? '',
+  )
+  const [correcciones, setCorrecciones] = useState<Record<string, string>>(
+    guardadaPrevia?.formulario.correcciones ?? {},
+  )
+  const [resultado, setResultado] = useState<Resultado>(
+    guardadaPrevia ? resultadoDeGuardada(guardadaPrevia) : { estado: 'idle' },
+  )
 
   /**
    * Un catálogo del vendor, por el puerto. **Gratis.**
@@ -565,8 +627,15 @@ export default function Retarificador({
   // cuerpo se revisa igual antes de responder.
   const puedePulsar = !deshabilitado && !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
+  // El código Base7 vino de una cotización guardada (no del desplegable en
+  // vivo) mientras no aparezca entre las versiones ya cargadas: marca/modelo/
+  // motor no se recuperan (el vendor no los pide, así que no se guardan), y
+  // sin ellos el desplegable de versiones no tiene con qué mostrar el nombre.
+  const versionRecuperada = codigoVehiculo !== '' && !versiones.some((v) => v.id === codigoVehiculo)
+
   return (
     <>
+      {guardadaPrevia && <BannerRecuperada guardadaPrevia={guardadaPrevia} />}
       {simulacion && <BannerSimulacion />}
 
       {/* ── Paso 1 · el vehículo ───────────────────────────────────────────── */}
@@ -662,26 +731,50 @@ export default function Retarificador({
               </span>
             }
           >
-            <select
-              id="version"
-              value={codigoVehiculo}
-              onChange={(e) => setCodigoVehiculo(e.target.value)}
-              disabled={!modeloId || !motorId || cargando === 'versiones'}
-              style={{ minHeight: 44 }}
-            >
-              <option value="">
-                {cargando === 'versiones'
-                  ? 'Cargando…'
-                  : !motorId
-                    ? 'Elige antes el combustible'
-                    : 'Elige versión'}
-              </option>
-              {versiones.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.nombre}
+            {versionRecuperada ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                  minHeight: 44,
+                  padding: '0 2px',
+                }}
+              >
+                <span className="badge ok">recuperada</span>
+                <code style={{ fontSize: 13 }}>{codigoVehiculo}</code>
+                <button
+                  type="button"
+                  className="ghost"
+                  style={{ minHeight: 32, padding: '4px 10px' }}
+                  onClick={() => setCodigoVehiculo('')}
+                >
+                  Olvidar y elegir otra
+                </button>
+              </div>
+            ) : (
+              <select
+                id="version"
+                value={codigoVehiculo}
+                onChange={(e) => setCodigoVehiculo(e.target.value)}
+                disabled={!modeloId || !motorId || cargando === 'versiones'}
+                style={{ minHeight: 44 }}
+              >
+                <option value="">
+                  {cargando === 'versiones'
+                    ? 'Cargando…'
+                    : !motorId
+                      ? 'Elige antes el combustible'
+                      : 'Elige versión'}
                 </option>
-              ))}
-            </select>
+                {versiones.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
           </Campo>
 
           <Campo
@@ -1212,6 +1305,34 @@ export function ValorSupuesto({ s }: { s: Supuesto }) {
  * simulación y va ANTES de mirar `CODEOSCOPIC_TARIFICACION_ACTIVA`, así que el
  * botón SÍ funciona y NO cuesta nada.
  */
+/**
+ * Avisa de que la pantalla ha arrancado con una cotización YA PAGADA, para
+ * que no se lea como si el precio de abajo fuera gratis o recién pedido.
+ * Todo lo prellenado sigue siendo editable: volver a pulsar «Pedir precio»
+ * pide una cotización nueva (y esa sí cuesta 0,50€).
+ */
+function BannerRecuperada({ guardadaPrevia }: { guardadaPrevia: TarificacionGuardadaAuto }) {
+  const fecha = new Date(guardadaPrevia.creadaEn)
+  const cuando = Number.isNaN(fecha.getTime())
+    ? 'antes'
+    : fecha.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return (
+    <div
+      className="card"
+      style={{ borderColor: 'var(--ok)', borderWidth: 2, background: 'rgba(22, 163, 74, 0.08)' }}
+    >
+      <p style={{ margin: 0, fontWeight: 800, color: 'var(--ok)' }}>
+        📋 Cotización recuperada ({cuando})
+      </p>
+      <p style={{ margin: '4px 0 0' }}>
+        Ya se pidió precio para esta póliza y sigue guardado — <strong>no se ha vuelto a cobrar</strong>.
+        Los datos de abajo están precargados; se pueden cambiar y, si hace falta un precio nuevo,
+        «Pedir precio» sigue funcionando (y ese sí cuesta 0,50€).
+      </p>
+    </div>
+  )
+}
+
 function BannerSimulacion() {
   return (
     <div
