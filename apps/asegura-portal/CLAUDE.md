@@ -1172,6 +1172,12 @@ inalcanzable: sin desbordes, 44 px, y con la API caída el globo es `!`.
 ⚠️ **No existen envs `PORTAL_SMTP_*`**: `createMailTransporter()` no recibe credenciales por parámetro,
 las lee él del entorno. Lo único que pone el portal es el `from`.
 
+✅ **`ASEGURA_PORTAL_PUENTE_SECRET` rotado el 09/09/2026** (mismo valor nuevo en las dos apps, tras un
+401 en el primer valor puesto). Este commit es el que fuerza el rebuild de producción de esta app: el
+`Redeploy` del panel reutiliza el último commit de `main`, y si ese commit no toca `apps/asegura-portal/`
+el `ignoreCommand` lo salta — pasó justo con el commit que arregló `central-asegura` (solo tocaba
+`apps/asegura/`), así que esta app se quedó sirviendo el build viejo con el secreto viejo.
+
 ## 🤖 Leer una póliza subida: HOY NO LEE NADA, y no es por el PDF (04/09/2026)
 
 `POST /api/polizas` acaba en `fuente: 'none'` («No hemos podido leer el documento») para **todos** los
