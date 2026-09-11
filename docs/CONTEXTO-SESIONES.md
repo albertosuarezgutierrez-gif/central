@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧾 Emisión real por Codeoscopic: ReRate + Submit construidos, sin sandbox (11/09/2026).**
+  Caso real: Pilar Franco Ruz, auto → Allianz Terceros Ampliado (319,02€), OK explícito de Alberto.
+  Nuevos `apps/asegura/lib/codeoscopic/{emitir,emitir-envio}.ts` (ReRate + Submit multipart, candado
+  `submit_in_flight_at`, índice único nuevo en `codeoscopic_projects`) + puertos
+  `/api/operador/codeoscopic/{oferta,emitir}` + `emision.tsx` en plataforma (sustituye la maqueta
+  `preemision-mock.tsx`, borrada). Sin fixture del fabricante para estas dos llamadas: los campos
+  del Submit se piden a `policy-application-fields`, no se adivinan. Guardián nuevo
+  `test/regression-puerto-emision.test.ts`. Pendiente: Alberto dispara la primera llamada real
+  desde `/correduria` — sin credenciales de prod aquí, no se puede probar en esta sesión.
+
 - **🤖 Reparto mecánico afinado: umbral objetivo + bitácora sin sesgo (11/09/2026).** Alberto preguntó
   cómo optimizar el flujo con Graphify/agentes/OpenRouter y si convenía un "agente director". Decisión:
   NO — la tabla de reparto es fija, meter un agente a decidir cuesta más que aplicarla yo. Se afinó
