@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-11T12:21:33Z",
+  "generadoEn": "2026-09-11T13:17:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3882,6 +3882,7 @@
       "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
+      "/api/operador/codeoscopic/tarificacion",
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
       "/api/operador/documentos",
@@ -6219,7 +6220,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1323,
+    "apis": 1324,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
