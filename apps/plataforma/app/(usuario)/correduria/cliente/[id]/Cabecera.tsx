@@ -274,39 +274,6 @@ function Acciones({ clienteId }: { clienteId: string }) {
   )
 }
 
-// ── Identidad ───────────────────────────────────────────────────────────────
-// DNI y fecha de nacimiento, en lectura directa en la cabecera (antes solo se
-// veían dentro del formulario de «Datos del cliente», que hay que desplegar).
-// El DNI sale SIEMPRE enmascarado (`*****678Z`): el completo no cruza el
-// puerto de asegura por diseño — para cambiarlo hace falta el DNI recibido y
-// documentado en 📎 Documentos (regla de identidad de la correduria-crm).
-
-function Identidad({ identidad }: { identidad: IdentidadFicha | null }) {
-  // `null` = asegura aún no manda el bloque (versión anterior): no se afirma
-  // «sin DNI», se calla — es distinto de «se miró y no hay ninguno».
-  if (identidad === null) return null
-  return (
-    <>
-      {identidad.dniIlegible ? (
-        <span title="Está guardado pero cifrado con una clave que asegura no puede abrir">🪪 DNI cifrado</span>
-      ) : identidad.dniEnmascarado ? (
-        <span title="El DNI completo no sale de asegura por diseño: para cambiarlo hace falta el documento recibido en 📎 Documentos">
-          🪪 {identidad.dniEnmascarado}
-        </span>
-      ) : (
-        <span style={{ color: 'var(--muted)' }} title="No consta DNI en la ficha">🪪 sin DNI</span>
-      )}
-      {identidad.fechaNacimientoIlegible ? (
-        <span title="Está guardada pero cifrada con una clave que asegura no puede abrir">🎂 cifrada</span>
-      ) : identidad.fechaNacimiento ? (
-        <span>🎂 {fmt(identidad.fechaNacimiento)}</span>
-      ) : (
-        <span style={{ color: 'var(--muted)' }} title="No consta fecha de nacimiento">🎂 sin fecha</span>
-      )}
-    </>
-  )
-}
-
 // ── Contacto ────────────────────────────────────────────────────────────────
 // 🚨 «Sin teléfono» en la ficha del TOMADOR no es «no hay a quién llamar».
 // Esquiansa (empresa) no tiene teléfono; su conductor habitual —dueño del
@@ -408,6 +375,39 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
         </span>
       )}
       {sitio && <span>📍 {sitio}</span>}
+    </>
+  )
+}
+
+// ── Identidad ───────────────────────────────────────────────────────────────
+// DNI y fecha de nacimiento, en lectura directa en la cabecera (antes solo se
+// veían dentro del formulario de «Datos del cliente», que hay que desplegar).
+// El DNI sale SIEMPRE enmascarado (`*****678Z`): el completo no cruza el
+// puerto de asegura por diseño — para cambiarlo hace falta el DNI recibido y
+// documentado en 📎 Documentos (regla de identidad de la correduria-crm).
+
+function Identidad({ identidad }: { identidad: IdentidadFicha | null }) {
+  // `null` = asegura aún no manda el bloque (versión anterior): no se afirma
+  // «sin DNI», se calla — es distinto de «se miró y no hay ninguno».
+  if (identidad === null) return null
+  return (
+    <>
+      {identidad.dniIlegible ? (
+        <span title="Está guardado pero cifrado con una clave que asegura no puede abrir">🪪 DNI cifrado</span>
+      ) : identidad.dniEnmascarado ? (
+        <span title="El DNI completo no sale de asegura por diseño: para cambiarlo hace falta el documento recibido en 📎 Documentos">
+          🪪 {identidad.dniEnmascarado}
+        </span>
+      ) : (
+        <span style={{ color: 'var(--muted)' }} title="No consta DNI en la ficha">🪪 sin DNI</span>
+      )}
+      {identidad.fechaNacimientoIlegible ? (
+        <span title="Está guardada pero cifrada con una clave que asegura no puede abrir">🎂 cifrada</span>
+      ) : identidad.fechaNacimiento ? (
+        <span>🎂 {fmt(identidad.fechaNacimiento)}</span>
+      ) : (
+        <span style={{ color: 'var(--muted)' }} title="No consta fecha de nacimiento">🎂 sin fecha</span>
+      )}
     </>
   )
 }
