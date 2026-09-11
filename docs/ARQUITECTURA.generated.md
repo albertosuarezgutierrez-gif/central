@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (11/09/2026) 🚨🔒 Sospecha de phishing por WhatsApp a huéspedes de SIVRA → auditoría de seguridad de infra (10-11/09/2026).
 - (09/09/2026) 📄 «Subir póliza» (corredor) generalizado a cualquier ramo, no solo auto
 - (09/09/2026) 🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia
 - (09/09/2026) 🗑 Quitado el calendario de vencimientos de `/boveda`
@@ -271,5 +272,4 @@
 - (08/09/2026) 👋 El WhatsApp del LEAD VENDE la intranet — y mi argumento para no hacerlo era falso
 - (09/09/2026) Maqueta de pre-emisión por compañía en el retarificador
 - (08/09/2026) 🏠 La dirección del hogar dejaba de decir el CP dos veces
-- (08/09/2026) 🔔 La campana de avisos del portal del cliente
 
