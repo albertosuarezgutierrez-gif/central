@@ -54,7 +54,7 @@ async function bloquearEnvio(
     on conflict (correduria_id, project_id_codeoscopic) do update
       set submit_attempt_id = excluded.submit_attempt_id, submit_in_flight_at = now()
       where codeoscopic_projects.submit_in_flight_at is null
-         or codeoscopic_projects.submit_in_flight_at < now() - (${MARGEN_EN_VUELO_MIN} * interval '1 minute')
+         or codeoscopic_projects.submit_in_flight_at < now() - (${MARGEN_EN_VUELO_MIN}::int * interval '1 minute')
     returning id::text as id
   `
   return filas.length > 0
