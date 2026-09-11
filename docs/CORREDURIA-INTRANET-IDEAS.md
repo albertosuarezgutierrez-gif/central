@@ -210,12 +210,21 @@ en vez de a un valor. Lo que sí tiene sentido, y es más barato: un recordatori
 sin promesa de vencimiento, servido por la campana de avisos ya construida (`lib/avisos.ts`), no por
 el calendario de obligaciones.
 
-⚠️ **Y antes de construir un «ramo» entero, mide si ya hay demanda.** La cartera de pymes/autónomos
-hoy no es una categoría propia: son un puñado de las 9 pólizas de RC ya existentes (Esquiansa, GLOBAL
-2 Instalaciones Técnicas, Kartenbrot, Phenix Automoción — ver `apps/asegura/CLAUDE.md` §ramos). Esto
-puede ser aspiracional (crecer en ese segmento) o responder a una demanda ya vista; conviene que
-Alberto lo diga antes de que el calendario prometa avisos de extintores a un tomador que hoy es un
-particular con un coche.
+⚠️ **Corregido (11/09/2026): SÍ hay demanda ya vista, y sí viene de CIMA — esto estaba mal medido
+arriba.** `seguros.polizas.tipo` (`tipo_seguro`) ya trae `comercio` y `comunidades` en su enum, y
+**`comercio` NO es hipotético: hay 1 póliza viva de verdad, entrando por CIMA** (Occident, `ramo_dgs
+2171`, vence 21/06/2027) — el caso exacto de «asegurar una nave». Mismo mecanismo que auto/hogar: si
+la compañía manda un EIAC de un ramo comercial, `ramo_dgs` se rellena y la póliza cuenta como viva
+por `esCarteraViva()`, sin tocar código. Y el volcado histórico trae **110 pólizas `comercio`** más
+(Plus Ultra, AXA, Generali, Metropolis — vencimientos 2015-2016, muertas, pero prueba que la cartera
+SÍ tuvo negocio de pymes). `comunidades` está en el enum y a 0 filas: modelado, nunca usado.
+🚨 **Y de paso: la cifra «80 clientes / 110 pólizas — 81 auto·19 hogar·9 RC·1 moto»**, repetida en
+`apps/asegura/CLAUDE.md` y en varios sitios más, **se ha quedado corta**: son **112**, no 110 — le
+faltan esta `comercio` y una `accidentes` (`ramo_dgs 211`) también viva por CIMA, ninguna de las dos
+contaba en el desglose por ramo. No se corrige aquí en cada sitio (es un barrido, no esta idea); se
+deja anotado para que no se repita la cifra vieja sin medirla. Sigue siendo cierto que hoy es una cola
+pequeña, así que antes de construir un ramo entero conviene que Alberto diga si quiere crecer ahí —
+pero ya no es una apuesta a ciegas: hay un cliente real de ese tipo y un libro histórico detrás.
 
 ## Preguntas abiertas para Alberto
 
