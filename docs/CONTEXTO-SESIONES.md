@@ -30,6 +30,13 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🤖 Reparto mecánico afinado: umbral objetivo + bitácora sin sesgo (11/09/2026).** Alberto preguntó
+  cómo optimizar el flujo con Graphify/agentes/OpenRouter y si convenía un "agente director". Decisión:
+  NO — la tabla de reparto es fija, meter un agente a decidir cuesta más que aplicarla yo. Se afinó
+  `CLAUDE.md` § "Trabajo mecánico": umbral objetivo (≥3 archivos, boilerplate, >~80 líneas) y se corrigió
+  el sesgo de medición — antes solo se anotaban los FALLOS de `agente-mecanico`; ahora TODO uso (ok o
+  fallo) va a `docs/AGENTE-MECANICO-BITACORA.md` (nuevo). Sin código tocado. Pendiente: que las próximas
+  sesiones usen de verdad esa bitácora.
 - **📄 «Subir póliza» (corredor) generalizado a cualquier ramo, no solo auto (09/09/2026).** Alberto:
   «¿por qué no se puede subir cualquier póliza si la IA la lee y asigna a los campos?». Tenía razón:
   la lectura estaba limitada a auto por diseño de propósito (leer lo que hace falta para COTIZAR, no
