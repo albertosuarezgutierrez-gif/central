@@ -179,7 +179,7 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
  * durante el render en servidor): un fallo aquí nunca debe romper la
  * pantalla, solo perder la comodidad de recuperar lo tecleado.
  */
-type Borrador = {
+type DatosBorrador = {
   marcaId?: string
   modeloId?: string
   motorId?: string
@@ -190,22 +190,36 @@ type Borrador = {
   matriculacion?: string
   correcciones?: Record<string, string>
 }
+type Borrador = DatosBorrador & { guardadoEn: number }
 
-function leerBorrador(clave: string): Borrador | null {
+/** El borrador puede llevar DNI/nombre/teléfono/fecha de nacimiento tecleados
+ *  a mano (`correcciones`): una caducidad corta acota cuánto tiempo se queda
+ *  ese dato personal en el navegador si nunca se llega a pagar la cotización
+ *  (`borrarBorrador` ya lo limpia ANTES, en cuanto eso pasa). */
+const BORRADOR_TTL_MS = 3 * 24 * 60 * 60 * 1000
+
+function leerBorrador(clave: string): DatosBorrador | null {
   try {
     if (typeof window === 'undefined') return null
     const raw = window.localStorage.getItem(clave)
     if (!raw) return null
     const b: unknown = JSON.parse(raw)
-    return b && typeof b === 'object' ? (b as Borrador) : null
+    if (!b || typeof b !== 'object') return null
+    const { guardadoEn, ...datos } = b as Borrador
+    if (typeof guardadoEn !== 'number' || Date.now() - guardadoEn > BORRADOR_TTL_MS) {
+      window.localStorage.removeItem(clave)
+      return null
+    }
+    return datos
   } catch {
     return null
   }
 }
 
-function guardarBorrador(clave: string, b: Borrador) {
+function guardarBorrador(clave: string, datos: DatosBorrador) {
   try {
     if (typeof window === 'undefined') return
+    const b: Borrador = { ...datos, guardadoEn: Date.now() }
     window.localStorage.setItem(clave, JSON.stringify(b))
   } catch {
     // Ver el comentario del tipo: perder el borrador no puede romper nada.
@@ -482,6 +496,15 @@ export default function Retarificador({
           if (modeloEncontrado) {
             setModeloId(modeloEncontrado.id)
             setAutoModelo({ estado: 'casa', opcion: modeloEncontrado, texto: '(borrador)' })
+          } else if (borradorLocal.modeloId) {
+            // El modelo del borrador ya no está en el catálogo (cambió desde
+            // la vez anterior): decirlo, en vez de dejar el mensaje inicial
+            // «primero hace falta la marca» — que ya no es cierto, la marca
+            // SÍ está puesta.
+            setAutoModelo({
+              estado: 'no_buscado',
+              porque: 'el modelo del borrador ya no está en el catálogo del vendor: elígelo de nuevo',
+            })
           }
 
           setCargando('motores')
