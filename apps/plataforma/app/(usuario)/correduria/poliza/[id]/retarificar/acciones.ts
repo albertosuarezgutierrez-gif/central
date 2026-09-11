@@ -39,15 +39,28 @@ import {
   retarificarAsegura,
   ofertaAsegura,
   emitirAsegura,
+  tarificacionGuardadaAsegura,
   type RespuestaCatalogo,
   type RespuestaRetarificar,
   type RespuestaOferta,
   type RespuestaEmitir,
+  type RespuestaTarificacionGuardada,
 } from '@/lib/retarificar-asegura'
 
 /** Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.** */
 export async function pedirCatalogo(params: Record<string, string>): Promise<RespuestaCatalogo> {
   return catalogoAsegura(params)
+}
+
+/**
+ * La última cotización REAL ya guardada de esta póliza (11/09/2026). **Gratis
+ * — no confirma nada con el vendor.** Sirve para "retomar" sin volver a pagar
+ * los 0,50€ del `POST /insurances` que ya se pagó, y para prellenar el
+ * formulario con lo que se tecleó la vez anterior. `estado: 'ninguna'` no es
+ * un fallo: esta póliza aún no tiene ninguna cotización real.
+ */
+export async function pedirTarificacionGuardada(polizaId: string): Promise<RespuestaTarificacionGuardada> {
+  return tarificacionGuardadaAsegura(polizaId)
 }
 
 /**

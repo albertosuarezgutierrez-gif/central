@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-11T11:07:26Z",
-  "sha": "d63dea9ec221f484b7934a716a4a54a6a8310e7d",
+  "generadoEn": "2026-09-11T12:21:33Z",
+  "sha": "48c8ac00e4a02134c6f15c798b02837b5c7dd669",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9619,6 +9619,63 @@
       "hash": "3fe6a55f35cb"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/emitir/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "`POST /api/operador/codeoscopic/emitir` — el Submit de verdad (`POST /insurances/{id}/policy-applications`), y el acuñado en nuestra BD si el vendor lo acepta. 🚨 **Construida el 11/09/2026, sin sandb"
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 202
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 206
+        },
+        {
+          "nombre": "esObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 210
+        },
+        {
+          "nombre": "coincideCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombreComun: string, aseguradora: string",
+          "retorno": "boolean",
+          "linea": 214
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "next",
+        "polizas"
+      ],
+      "rutaApi": "/api/operador/codeoscopic/emitir",
+      "hash": "bbd2a263de0e"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -9696,6 +9753,40 @@
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/moto-nuevo",
       "hash": "ab520736b9b6"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/oferta/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate) el precio que ya se enseñó en pantalla desde una cotización REAL de `seguros.tarificaciones`. 🚨 **Construida el 11/09/2026,"
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 145
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "next",
+        "set",
+        "tarificaciones"
+      ],
+      "rutaApi": "/api/operador/codeoscopic/oferta",
+      "hash": "b04580cd2edc"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -13871,6 +13962,162 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "870722086ba7"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/emitir-envio.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El Submit REAL a Codeoscopic (`POST /insurances/{id}/policy-applications`) y su candado de idempotencia. Separado de `emitir.ts` (puro) porque este fichero SÍ toca BD (`prisma`), y `emitir.ts` tiene que poder importarse bajo `node --test` sin arrastrar `tenant.ts` (ver su cabecera). 🚨 SIN SANDBOX Y",
+      "exporta": [
+        "enviarEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 26
+        },
+        {
+          "nombre": "bloquearEnvio",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, projectId: string, attemptId: string,",
+          "retorno": "Promise<boolean>",
+          "linea": 43,
+          "resumen": "Toma el candado ANTES de llamar al vendor. `false` = ya había un intento en vuelo (o reciente) para este proyecto: no se llama, para no arriesgar un segundo Submit sobre el mismo contrato mientras no "
+        },
+        {
+          "nombre": "cerrarEnvio",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, projectId: string, attemptId: string, // `codeoscopic_project_estado` no tiene un valor «enviada»: el éxito del // Submit se refleja aparte, cuando `registrarPolizaEmitida` (module-seguros) // pone `estado='emitida'` a",
+          "retorno": "Promise<void>",
+          "linea": 66,
+          "resumen": "`submit_in_flight_at` se limpia siempre, se haya enviado o no, porque un candado que no se suelta deja el proyecto bloqueado para siempre."
+        },
+        {
+          "nombre": "enviarEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, entrada: { correduriaId: string projectId: string offerId: string campos: Record<string, unknown> },",
+          "retorno": "Promise<ResultadoEnvio>",
+          "linea": 100,
+          "resumen": "`POST /insurances/{projectId}/policy-applications`, multipart. Un solo intento, con CANDADO antes de llamar (ver `bloquearEnvio`). El transporte NO reutiliza `peticion()` de `cliente.ts` (JSON puro): "
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "node",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "843708e15d6b"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/emitir.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Envío REAL a Codeoscopic: ReRate (confirma el precio) y Submit (emite la póliza). Construido el 11/09/2026 sobre el caso real de Pilar Franco Ruz (proyecto `40675025`, Allianz Terceros Ampliado) — OK explícito de Alberto. 🚨 SIN SANDBOX Y SIN FIXTURE DEL FABRICANTE para estas dos llamadas, a diferen",
+      "exporta": [
+        "resolverConfigEmision",
+        "refrescarProyecto",
+        "encontrarPrecio",
+        "leerOferta",
+        "reRate",
+        "camposDeEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverConfigEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env,",
+          "retorno": "ResolucionConfig",
+          "linea": 46,
+          "resumen": "Config de EMISIÓN. Gate PROPIO, `CODEOSCOPIC_EMISION_ACTIVA`, distinto del de tarificar (`CODEOSCOPIC_TARIFICACION_ACTIVA`): emitir compromete un contrato real, no solo cuesta dinero, y no se enciende"
+        },
+        {
+          "nombre": "refrescarProyecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string,",
+          "retorno": "Promise<Cotizacion>",
+          "linea": 63,
+          "resumen": "`GET /insurances/{id}`. Gratis: es una lectura, no una cotización nueva."
+        },
+        {
+          "nombre": "encontrarPrecio",
+          "kind": "function",
+          "exportada": true,
+          "params": "cotizacion: Cotizacion, compania: string, categoria: string,",
+          "retorno": "Precio | null",
+          "linea": 77,
+          "resumen": "El precio elegido por compañía + categoría, tal y como se enseñó en pantalla. Sin esto no hay `id` de precio con el que pedir el ReRate."
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Json",
+          "linea": 104
+        },
+        {
+          "nombre": "arr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown[]",
+          "linea": 105
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 106
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 108
+        },
+        {
+          "nombre": "leerOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "Oferta",
+          "linea": 121,
+          "resumen": "Lee la respuesta de `POST .../offers`. 🚨 Defensivo A PROPÓSITO: la forma exacta NO está verificada contra el fabricante. Se acepta tanto `{ mainQuote: {...} }` como el objeto pelado, porque no se sab"
+        },
+        {
+          "nombre": "reRate",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string, quoteId: string,",
+          "retorno": "Promise<Oferta>",
+          "linea": 158,
+          "resumen": "`POST /insurances/{projectId}/offers` — confirma el precio elegido (ReRate/preemisión). UN SOLO INTENTO: si el vendor rechaza el cuerpo (400/422), NO se reintenta con otra forma a ciegas — `peticion()"
+        },
+        {
+          "nombre": "camposDeEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
+          "retorno": "Promise<CampoEmision[]>",
+          "linea": 186,
+          "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5e7d43c2eda3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -62665,7 +62912,9 @@
       "ambito": "apps/plataforma",
       "exporta": [
         "pedirCatalogo",
-        "pedirCotizacion"
+        "pedirCotizacion",
+        "pedirOferta",
+        "pedirEmision"
       ],
       "funciones": [
         {
@@ -62674,7 +62923,7 @@
           "exportada": true,
           "params": "params: Record<string, string>",
           "retorno": "Promise<RespuestaCatalogo>",
-          "linea": 45,
+          "linea": 49,
           "resumen": "Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.**"
         },
         {
@@ -62683,13 +62932,59 @@
           "exportada": true,
           "params": "entrada: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> catastro?: Record<string, unknown> | null }",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 64,
+          "linea": 68,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `retarificarAsegura()`, en el servidor y en un solo sitio. No se acepta desde el cliente a propósito: si viajara en el cuerpo, dejaría de ser una"
+        },
+        {
+          "nombre": "pedirOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { tarificacionId: string compania: string categoria: string }",
+          "retorno": "Promise<RespuestaOferta>",
+          "linea": 90,
+          "resumen": "🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo pone `ofertaAsegura()` en el servidor, y esto NO reintenta"
+        },
+        {
+          "nombre": "pedirEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null }",
+          "retorno": "Promise<RespuestaEmitir>",
+          "linea": 103,
+          "resumen": "🚨 **EL SUBMIT REAL. Compromete un contrato de verdad, no solo dinero.** Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin reintento: un fallo de red aquí NO dice que la póliza no se "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d1473debbdf"
+      "hash": "0aade17c4cc9"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Emision"
+      ],
+      "funciones": [
+        {
+          "nombre": "euroODash",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": "string",
+          "linea": 44
+        },
+        {
+          "nombre": "Emision",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
+          "retorno": null,
+          "linea": 48
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "74239d96f662"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -62767,53 +63062,6 @@
       "hash": "07d33af16c46"
     },
     {
-      "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/preemision-mock.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "PreemisionMock"
-      ],
-      "funciones": [
-        {
-          "nombre": "buscarEsquema",
-          "kind": "function",
-          "exportada": false,
-          "params": "compania: string | null",
-          "retorno": "EsquemaCompania | null",
-          "linea": 320,
-          "resumen": "Busca el esquema por coincidencia parcial: «Allianz Seguros y Reaseguros» tiene que casar con la clave `allianz`, igual que hace ya el emparejador de catálogos de `apps/asegura/lib/codeoscopic/opcione"
-        },
-        {
-          "nombre": "PreemisionMock",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ compania, producto, onCerrar, }: { compania: string | null producto: string | null onCerrar: () => void }",
-          "retorno": null,
-          "linea": 327
-        },
-        {
-          "nombre": "SeccionCampos",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ seccion }: { seccion: Seccion }",
-          "retorno": null,
-          "linea": 393
-        },
-        {
-          "nombre": "CampoControl",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ campo }: { campo: Campo }",
-          "retorno": null,
-          "linea": 406
-        }
-      ],
-      "tablas": [
-        "react"
-      ],
-      "rutaApi": null,
-      "hash": "46484e643a0f"
-    },
-    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/retarificador.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -62823,13 +63071,22 @@
       ],
       "funciones": [
         {
+          "nombre": "cotizacionIdDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "guardado: unknown",
+          "retorno": "string | null",
+          "linea": 30,
+          "resumen": "Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el embudo de asegura (`Guardado`: `{estado:'guardada', cotizacionId}` | `{estado:'no_guardada'|'no_intentada', motivo}`). `unknown`"
+        },
+        {
           "nombre": "normalizarTexto",
           "kind": "function",
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 28,
-          "resumen": "Quita tildes y mayúsculas para comparar «Casado» con «CASADO». Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`. Exportada porque `preemision-mock.tsx` la reutiliza para emp"
+          "linea": 38,
+          "resumen": "Quita tildes y mayúsculas para comparar «Casado» con «CASADO». Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`."
         },
         {
           "nombre": "euroODash",
@@ -62837,7 +63094,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 41,
+          "linea": 51,
           "resumen": "🚨 El `eur()` de plataforma devuelve «0,00€» para lo que no es un número finito, y eso aquí sería una MENTIRA: una prima que la compañía no ha declarado es un «no lo sé», no un cero. Tres estados, no "
         },
         {
@@ -62846,7 +63103,7 @@
           "exportada": false,
           "params": "catalogo: Opcion[], texto: string | null",
           "retorno": "Emparejamiento",
-          "linea": 147,
+          "linea": 161,
           "resumen": "Empareja un texto de la ficha con una opción del catálogo. Mismo criterio que `emparejar()` de `opciones.ts` —exacto y normalizado, y ante la duda no preselecciona— pero devolviendo POR QUÉ no ha casa"
         },
         {
@@ -62855,7 +63112,7 @@
           "exportada": true,
           "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, fechaMatriculacion, vehiculo, consumo, simulacion, deshabilitado, }: { polizaId: string /** * Los huecos que la ficha NO tapa, ya revisados. **`null",
           "retorno": null,
-          "linea": 177,
+          "linea": 191,
           "resumen": "El único sitio de la app donde un clic cuesta 0,50€ — **salvo en simulación**. Cuatro cosas son deliberadas: - El botón dice EN el botón lo que cuesta el clic, no en una nota al pie, y dice la verdad "
         },
         {
@@ -62864,7 +63121,7 @@
           "exportada": false,
           "params": "{ r, simulacion, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean }",
           "retorno": null,
-          "linea": 945
+          "linea": 960
         },
         {
           "nombre": "ValorSupuesto",
@@ -62872,7 +63129,7 @@
           "exportada": true,
           "params": "{ s }: { s: Supuesto }",
           "retorno": null,
-          "linea": 1164,
+          "linea": 1192,
           "resumen": "Un supuesto, con su valor — o con la explicación de por qué no lo hay. 🔒 `oculto` NO es «no hay valor»: es «lo hay y se queda en asegura», porque es un dato personal del tomador (su código postal, tí"
         },
         {
@@ -62881,7 +63138,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 1187,
+          "linea": 1215,
           "resumen": "El cartel de simulación, arriba del todo y sin ambigüedad. 🚨 Sustituye al aviso ROJO de «tarificación apagada» que se pintaba aquí. Ese aviso era falso con la simulación puesta: en `cotizar()` el pas"
         },
         {
@@ -62890,7 +63147,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub }: { n: number; titulo: string; sub?: string }",
           "retorno": null,
-          "linea": 1213
+          "linea": 1241
         },
         {
           "nombre": "Paso",
@@ -62898,7 +63155,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub, children, }: { n: number titulo: string sub?: string children: React.ReactNode }",
           "retorno": null,
-          "linea": 1245
+          "linea": 1273
         },
         {
           "nombre": "Campo",
@@ -62906,7 +63163,7 @@
           "exportada": false,
           "params": "{ id, etiqueta, falta, faltaTexto, ayuda, children, }: { id: string etiqueta: string falta: boolean faltaTexto?: string ayuda?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 1271,
+          "linea": 1299,
           "resumen": "Un campo del formulario: etiqueta, control, ayuda y —si falta— su marca. La marca va AQUÍ y no en una lista encima del botón: «falta la versión» a diez centímetros del desplegable de la versión obliga"
         },
         {
@@ -62915,7 +63172,7 @@
           "exportada": false,
           "params": "{ vehiculo, autoMarca, autoModelo, }: { vehiculo: VehiculoConocido | null autoMarca: Emparejamiento autoModelo: Emparejamiento }",
           "retorno": null,
-          "linea": 1312,
+          "linea": 1340,
           "resumen": "Lo que la cartera YA sabe del coche: informativo, compacto y sin competir con los campos. Sustituye al texto que durante un día negó que la compañía mandara el modelo. Era falso y medido al revés: las"
         },
         {
@@ -62924,7 +63181,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, estado, }: { etiqueta: string valor: string | null estado: Emparejamiento['estado'] }",
           "retorno": null,
-          "linea": 1383
+          "linea": 1411
         },
         {
           "nombre": "ProcedenciaCatalogo",
@@ -62932,7 +63189,7 @@
           "exportada": false,
           "params": "{ emp, elegido, que, }: { emp: Emparejamiento elegido: string que: string }",
           "retorno": null,
-          "linea": 1420,
+          "linea": 1448,
           "resumen": "De dónde sale lo que hay puesto en un desplegable — o por qué no hay nada."
         },
         {
@@ -62941,7 +63198,7 @@
           "exportada": false,
           "params": "{ versiones }: { versiones: VersionCandidata[] }",
           "retorno": null,
-          "linea": 1467,
+          "linea": 1495,
           "resumen": "Las versiones vistas en OTRAS pólizas de la misma matrícula. 🚨 Son PISTAS, nunca una selección. Son texto histórico de otra póliza, no códigos Base7 del catálogo, y con dos o más pueden contradecirse"
         },
         {
@@ -62950,7 +63207,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: Consumo; simulacion: boolean }",
           "retorno": null,
-          "linea": 1521,
+          "linea": 1549,
           "resumen": "El contador de gasto. En simulación no se toca el libro, así que su estado se cuenta como información de contexto y NO en rojo: un «tarificación apagada» en rojo sobre una pantalla que sí funciona y n"
         }
       ],
@@ -62958,7 +63215,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "1ccfe6c9bc8f"
+      "hash": "d842336e4dd4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Redes.tsx",
@@ -91591,7 +91848,11 @@
         "interpretarRetarificacion",
         "porFalloDeRed",
         "catalogoAsegura",
-        "retarificarAsegura"
+        "retarificarAsegura",
+        "interpretarOferta",
+        "ofertaAsegura",
+        "interpretarEmitir",
+        "emitirAsegura"
       ],
       "funciones": [
         {
@@ -91730,11 +91991,55 @@
           "retorno": "Promise<RespuestaRetarificar>",
           "linea": 648,
           "resumen": "🚨 **LA LLAMADA QUE CUESTA 0,50€ REALES.** La única de plataforma que gasta dinero de Alberto en un tercero. `confirmado: true` va SIEMPRE y es el booleano exacto: es el cerrojo que exige el puerto (`"
+        },
+        {
+          "nombre": "leerOferta",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "",
+          "linea": 705
+        },
+        {
+          "nombre": "interpretarOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaOferta",
+          "linea": 719,
+          "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
+        },
+        {
+          "nombre": "ofertaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tarificacionId: string compania: string categoria: string }",
+          "retorno": "Promise<RespuestaOferta>",
+          "linea": 750,
+          "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía el precio de `tarificacionId` (id de `seguros.tarificaciones`) para la `compania`/`categoria` elegidas en pantalla. NO reintenta."
+        },
+        {
+          "nombre": "interpretarEmitir",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaEmitir",
+          "linea": 796,
+          "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
+        },
+        {
+          "nombre": "emitirAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { projectId: string campos: Record<string, unknown> actor?: string primaAnual?: number | null }",
+          "retorno": "Promise<RespuestaEmitir>",
+          "linea": 845,
+          "resumen": "`POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO reintenta: un fallo de red aquí no dice que no se haya emitid"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f651b1ad39a9"
+      "hash": "9615884a9025"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -130943,7 +131248,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3219,
-    "funciones": 9877
+    "archivos": 3223,
+    "funciones": 9904
   }
 }
