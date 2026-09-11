@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-09T16:53:03Z",
+  "generadoEn": "2026-09-11T12:21:33Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3867,9 +3867,11 @@
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/hogar-nuevo",
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/moto-nuevo",
+      "/api/operador/codeoscopic/oferta",
       "/api/operador/codeoscopic/precalificar",
       "/api/operador/codeoscopic/precalificar-auto-nuevo",
       "/api/operador/codeoscopic/precalificar-decesos-nuevo",
@@ -6217,7 +6219,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1321,
+    "apis": 1323,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
