@@ -36,11 +36,18 @@ export async function POST(req: Request) {
     })
     if (!cliente) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
 
-    await anotar(correduria.id, cliente.id, `DNI completo revelado por ${actor} (copia para intranet de compañía).`)
-
-    if (!cliente.dni) return NextResponse.json({ estado: 'sin_dni' })
+    // El historial refleja lo que REALMENTE pasó, no lo que se pidió: pedir el
+    // DNI y no poder dárselo (sin_dni/ilegible) no es lo mismo que revelarlo.
+    if (!cliente.dni) {
+      await anotar(correduria.id, cliente.id, `${actor} pidió el DNI completo (copia para intranet de compañía); la ficha no tiene DNI guardado.`)
+      return NextResponse.json({ estado: 'sin_dni' })
+    }
     const dni = descifrarCampo(cliente.dni)
-    if (dni === null) return NextResponse.json({ estado: 'ilegible' })
+    if (dni === null) {
+      await anotar(correduria.id, cliente.id, `${actor} pidió el DNI completo (copia para intranet de compañía); no se pudo descifrar.`)
+      return NextResponse.json({ estado: 'ilegible' })
+    }
+    await anotar(correduria.id, cliente.id, `DNI completo revelado por ${actor} (copia para intranet de compañía).`)
     return NextResponse.json({ estado: 'ok', dni })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente/dni', e) }, { status: 500 })
