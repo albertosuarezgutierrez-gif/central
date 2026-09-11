@@ -30,6 +30,7 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💡 Banco de ideas de la intranet del cliente: nuevo lote consolidado + comercio SÍ viene por CIMA (11/09/2026).** Brainstorming con Alberto sobre funciones nuevas (auto/moto, hogar, comunidades, pymes/autónomos, wizard de partes). Idea O en `docs/CORREDURIA-INTRANET-IDEAS.md`: el wizard de partes YA estaba construido (se corrige, no era pendiente); extintores/OCA/climatización/ascensores extienden el motor de obligaciones (idea B, falta ampliar el enum); LOPD/ciberriesgos y masa salarial NO encajan (sin fecha de vencimiento real, mejor recordatorio periódico). **Hallazgo medido contra la BD:** `comercio` SÍ entra por CIMA — 1 póliza viva real (Occident, `ramo_dgs 2171`, un caso "nave") — y la cifra "80 clientes/110 pólizas · 81 auto·19 hogar·9 RC·1 moto" repetida en `apps/asegura/CLAUDE.md` está desactualizada (son 112, faltan esa `comercio` y una `accidentes`). `comunidades` existe en el enum, 0 filas. Solo docs, PR #2696 mergeado. **Pendiente:** corregir la cifra 110→112 en los demás sitios de `apps/asegura/CLAUDE.md` (no se tocó, es un barrido aparte).
 - **🤖 Reparto mecánico afinado: umbral objetivo + bitácora sin sesgo (11/09/2026).** Alberto preguntó
   cómo optimizar el flujo con Graphify/agentes/OpenRouter y si convenía un "agente director". Decisión:
   NO — la tabla de reparto es fija, meter un agente a decidir cuesta más que aplicarla yo. Se afinó
