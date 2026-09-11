@@ -3,9 +3,11 @@ import { polizaAsegura } from '@/lib/poliza-asegura'
 import {
   catalogoAsegura,
   precalificacionAsegura,
+  tarificacionGuardadaAsegura,
   type Precalificacion,
   type RespuestaCatalogo,
   type RespuestaPrecalificacion,
+  type TarificacionGuardadaAuto,
 } from '@/lib/retarificar-asegura'
 import { urlRetarificarHogarAsegura } from '@/lib/ficha-asegura'
 import Retarificador, { ValorSupuesto } from './retarificador'
@@ -126,10 +128,13 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
   // al otro lado (corren con el interruptor de tarificación apagado). Es la que
   // trae marca y modelo preseleccionados, la fecha de matriculación, el
   // municipio ya resuelto, el estado civil, los supuestos y el veredicto del tope.
-  const [garajes, civiles, precal] = await Promise.all([
+  const [garajes, civiles, precal, guardadaR] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
     precalificacionAsegura(p.id),
+    // Gratis, no confirma nada: solo lee si ya hay una cotización real pagada
+    // para no obligar a repetir el gasto al recargar la pantalla.
+    tarificacionGuardadaAsegura(p.id),
   ])
 
   // 🚨 `null` = la precalificación no ha llegado. NO se sustituye por un objeto
@@ -137,6 +142,10 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
   // que cuesta 0,50€; `municipios: []` diría «el tomador no tiene municipio».
   const pre: Precalificacion | null = precal.estado === 'ok' ? precal.pre : null
   const falloPre = pre === null ? explicarPrecalificacion(precal) : null
+  // Un fallo al leerla NO se enseña como error de pantalla: en el peor caso el
+  // formulario sale vacío, igual que hasta ahora. Solo importa el caso `ok`.
+  const guardadaPrevia: TarificacionGuardadaAuto | null =
+    guardadaR.estado === 'ok' ? guardadaR.guardada : null
 
   // 🚨 Sin catálogos NO hay ids válidos que mandar, así que no se puede cotizar.
   // Se dice con el motivo del puerto: «no se ha podido leer» y «no está
@@ -209,6 +218,7 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
         // precio es simulado sigue siendo el campo `simulado` de la RESPUESTA.
         simulacion={pre?.simulacion ?? false}
         deshabilitado={falla !== null}
+        guardadaPrevia={guardadaPrevia}
       />
     </Marco>
   )
