@@ -30,6 +30,8 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔐 `/security-review` personalizado con las LANDMINES del repo; CI de `claude-code-security-review` descartado a propósito (10/09/2026).** Alberto pasó el repo `anthropics/claude-code-security-review`. El Quick Start (workflow de Actions con `CLAUDE_API_KEY`, Opus 4.1 por PR) se descartó: redundante con `Claude Approvals` (ya obligatorio) + la exigencia de `code-review`/`agente-architect` antes de sacar de draft (regla del 09/09), y con coste real recurrente en este volumen de PRs — mismo patrón que el incidente de Vercel (PR #904). En su lugar, `.claude/commands/security-review.md` (el comando que Claude Code trae de serie, sin coste ni secret) se personalizó con el contexto de aislamiento multi-tenant por CÓDIGO (roles BYPASSRLS en `asegura`/`asegura-portal`/`rrhh`) y el patrón prohibido de fallback a literal en secretos de sesión. Fila nueva en `docs/SKILLS.md`. Sin PR de código — solo `.claude/commands/`, `docs/SKILLS.md` y esta entrada.
+
 - **📄 «Subir póliza» (corredor) generalizado a cualquier ramo, no solo auto (09/09/2026).** Alberto:
   «¿por qué no se puede subir cualquier póliza si la IA la lee y asigna a los campos?». Tenía razón:
   la lectura estaba limitada a auto por diseño de propósito (leer lo que hace falta para COTIZAR, no
