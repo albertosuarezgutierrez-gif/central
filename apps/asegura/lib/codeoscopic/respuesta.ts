@@ -42,6 +42,24 @@ export type Precio = {
   avisos: string[]
   /** `true` si la oferta exige preemisión (re-rate) para poder avanzar. */
   requiereReRate: boolean
+  /**
+   * 🚨 `product.id` — DISTINTO de `id` de arriba. Medido en el fixture real:
+   * `id` es `"Q7601460"` (string, el mainQuote) y `product.id` es `10`
+   * (número, el producto del catálogo del vendor). El primer 400 real de
+   * ReRate (11/09/2026, proyecto 40681298) confundía los dos: mandaba el
+   * `id` del mainQuote como si fuera el del producto, y encima nunca ponía
+   * `mainQuote.id`. Se pasa TAL CUAL (`unknown`), sin coaccionar tipo.
+   */
+  productId: unknown
+  /**
+   * `product.options` — el vendor lo exige en el ReRate («[Path
+   * '/mainQuote/product'] Object has missing required properties
+   * (['options'])») pero el fixture real de la cotización NUNCA lo trae: no
+   * es un campo que el vendor devuelva al cotizar, así que aquí casi
+   * siempre será `null`. Se reenvía tal cual en vez de inventar una forma —
+   * ver `reRate()` en `emitir.ts` para qué se manda cuando falta.
+   */
+  productOptions: unknown
 }
 
 /**
@@ -137,6 +155,8 @@ function leerPrecio(raw: unknown): Precio | null {
     firmeza: firmezaDe(q.estimate, q.messages),
     avisos: arr(q.messages).map(textoMensaje).filter((t): t is string => t !== null),
     requiereReRate: acciones.some((a) => str(obj(a).id)?.toLowerCase() === 'rerate'),
+    productId: producto.id ?? null,
+    productOptions: producto.options ?? null,
   }
 }
 

@@ -107,7 +107,13 @@ export async function POST(req: Request) {
       )
     }
 
-    const oferta = await reRate(r.config, t.project_id_codeoscopic, precio.id)
+    const oferta = await reRate(
+      r.config,
+      t.project_id_codeoscopic,
+      precio.id,
+      precio.productId,
+      precio.productOptions,
+    )
 
     // Puente hacia `codeoscopic_projects`, que es lo que lee `registrarPolizaEmitida`
     // (D2) al acuñar la póliza. Esta cotización nació en `tarificaciones` (tabla

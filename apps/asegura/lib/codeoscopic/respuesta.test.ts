@@ -108,6 +108,25 @@ test('sin franquicia declarada es null, NO cero (que sería «sin franquicia»)'
   assert.equal(p.franquiciaEur, null)
 })
 
+// ─── product.id vs id: el 400 real del 11/09/2026 confundía los dos ─────────
+test('el id del mainQuote y el id del product son DOS cosas distintas', () => {
+  // Ground truth del fixture: `id` es el string del mainQuote («Q7601460»);
+  // `product.id` es el número del catálogo del vendor (10, «Reale Autos»).
+  // El primer ReRate real mandó el primero donde iba el segundo y nunca puso
+  // el primero en su sitio — de ahí el 400 «mainQuote missing id».
+  const p = leerCotizacion(CRUDO).precios.find((x) => x.id === 'Q7601460')
+  assert.ok(p)
+  assert.equal(p.productId, 10)
+})
+
+test('`product.options` no viene en la cotización real: productOptions es null', () => {
+  // El vendor lo exige al hacer ReRate pero no lo devuelve al cotizar — no
+  // hay nada que «reenviar tal cual» en la práctica, hay que mandar algo.
+  const p = leerCotizacion(CRUDO).precios.find((x) => x.id === 'Q7601460')
+  assert.ok(p)
+  assert.equal(p.productOptions, null)
+})
+
 test('la categoría permite agrupar la comparativa', () => {
   const cats = new Set(leerCotizacion(CRUDO).precios.map((p) => p.categoria))
   assert.ok(cats.has('Terceros'))

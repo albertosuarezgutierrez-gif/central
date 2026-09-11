@@ -150,20 +150,43 @@ export function leerOferta(raw: unknown): Oferta {
 
 /**
  * `POST /insurances/{projectId}/offers` — confirma el precio elegido
- * (ReRate/preemisión). UN SOLO INTENTO: si el vendor rechaza el cuerpo
- * (400/422), NO se reintenta con otra forma a ciegas — `peticion()` ya
- * clasifica ese caso como `validacion` y su mensaje trae el texto del vendor
- * recortado, que es la única fuente de verdad que hay sin sandbox.
+ * (ReRate/preemisión).
+ *
+ * 🚨 **Corregido el 11/09/2026 tras el primer 400 real** (proyecto 40681298,
+ * Pilar Franco Ruz): el vendor exige `mainQuote.id` (el id del mainQuote,
+ * `"Q7601460"`) Y `mainQuote.product.id` (el id del PRODUCTO del catálogo,
+ * un número — `10` para «Reale Autos» en el fixture real, NADA que ver con
+ * el id del mainQuote). La forma anterior mandaba `quoteId` (el id del
+ * mainQuote) en el sitio del `product.id` y nunca ponía `mainQuote.id`:
+ * `[Path '/mainQuote'] Object has missing required properties (['id'])`.
+ *
+ * `productOptions` se reenvía TAL CUAL desde la cotización — el fixture real
+ * demuestra que el vendor **no lo devuelve al cotizar**, así que casi
+ * siempre será `null`; se manda `{}` en ese caso (intención: "sin cambios,
+ * usa los valores por defecto de la compañía", que es lo que la
+ * documentación en prosa del portal sugiere sin confirmarlo del todo).
+ *
+ * UN SOLO INTENTO: si el vendor rechaza el cuerpo (400/422), NO se reintenta
+ * con otra forma a ciegas — `peticion()` ya clasifica ese caso como
+ * `validacion` y su mensaje trae el texto del vendor recortado, que sigue
+ * siendo la única fuente de verdad que hay sin sandbox.
  */
 export async function reRate(
   config: ConfigCodeoscopic,
   projectId: string,
   quoteId: string,
+  productId: unknown,
+  productOptions: unknown,
 ): Promise<Oferta> {
   const crudo = await peticion(config, {
     metodo: 'POST',
     path: `/insurances/${encodeURIComponent(projectId)}/offers`,
-    cuerpo: { mainQuote: { product: { id: quoteId } } },
+    cuerpo: {
+      mainQuote: {
+        id: quoteId,
+        product: { id: productId, options: productOptions ?? {} },
+      },
+    },
     timeoutMs: config.timeoutGenericoMs,
   })
   return leerOferta(crudo)

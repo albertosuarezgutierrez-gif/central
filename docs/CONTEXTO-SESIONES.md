@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🐛 Primer ReRate real: 400 por confundir el id del mainQuote con el del producto (11/09/2026).**
+  Con `CODEOSCOPIC_EMISION_ACTIVA=true` ya activada por Alberto, el primer «Confirmar precio» real
+  (Pilar Franco Ruz, proyecto 40681298) devolvió `400`: `mainQuote` sin `id` y `mainQuote.product` sin
+  `options`. Nada se cobró ni se comprometió (falló antes de eso, tal como estaba diseñado). Causa
+  real, confirmada contra el fixture: `Precio.id` («Q7601460») es el id del **mainQuote**;
+  `product.id` es OTRO campo, un número (10, «Reale Autos»), y `reRate()` mandaba el primero donde
+  iba el segundo sin poner nunca el `mainQuote.id`. Fix: `Precio` gana `productId`/`productOptions`
+  (capturados de `leerPrecio`, tal cual — `options` no viene en la cotización real, así que se manda
+  `{}` como intento de "sin cambios"); `reRate()` ahora manda `{mainQuote:{id, product:{id, options}}}`
+  completo. 2 tests nuevos contra el fixture real. 332/332 (asegura) + 774/774 (raíz), tsc 0. Pendiente:
+  Alberto reintenta el ReRate — si vuelve a fallar, el mensaje del vendor dirá qué falta ahora.
 - **🔓 «Ver DNI completo» en la ficha del cliente, con código de un solo uso por Telegram (11/09/2026, PR #2715).** Alberto pidió el DNI completo para copiarlo a la intranet de una compañía y, ante mi negativa a quitar el enmascarado para toda la cartera, aceptó un camino gated: botón junto al DNI enmascarado → pide código de 6 dígitos (5 min, un solo uso, hasheado — tabla nueva `correduria_dni_otp`) que llega SOLO a su Telegram → verificado, plataforma llama a un endpoint NUEVO del puerto de asegura (`POST /api/operador/cliente/dni`, la única salida que deja cruzar el DNI entero) que descifra y **deja fila en `historial_interno`** con quién lo pidió (el texto distingue revelado de sin_dni/ilegible). El DNI queda solo en memoria del navegador (botón Copiar, nada persistido). Revisión de Graphify: un hallazgo real corregido (log antes de confirmar desenlace), el resto verificados y descartados (mismo modelo de confianza del puerto, grants por default privileges confirmados contra la BD). `tsc` 0 errores en plataforma y asegura; 774/774 tests. **No probado en navegador** (sin `TELEGRAM_BOT_TOKEN`/`ASEGURA_OPERADOR_SECRET` en el entorno) — pendiente confirmación de Alberto.
 - **💾 Autoguardado del formulario de retarificar (borrador local, 11/09/2026).** Sigue a la entrada
   de abajo: Alberto pidió que TODO lo tecleado se guarde, no solo lo que ya llegó a pagarse.
