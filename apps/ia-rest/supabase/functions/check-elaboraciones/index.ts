@@ -3,6 +3,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,7 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'iarest' } })
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, claveSecreta(), { db: { schema: 'iarest' } })
 
   const appUrl = Deno.env.get('NEXT_PUBLIC_APP_URL') ?? 'https://www.iarest.es'
 

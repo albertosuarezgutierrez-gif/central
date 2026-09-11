@@ -1,10 +1,23 @@
 // ⚠️ RESCATADA del panel de Supabase el 20/08/2026 — ver ../README.md
-// ✅ Sin secretos en claro: usa Deno.env.get(). Copia FIEL del original.
-// 🔴 EN PRODUCCIÓN: la invoca el cron pg_cron `jobid 1` a diario (05:00 UTC).
-//    Lee `SUPABASE_SERVICE_ROLE_KEY` (clave legacy filtrada) y **borra filas de
-//    `incomes`** — los ingresos de SIVRA. Al desactivar las claves legacy, deja de
-//    sincronizar. Consumidor confirmado; ver docs/ROTACION-SERVICE-ROLE.md.
+// 🩹 ARREGLADA el 10-11/09/2026 (sesión sidra-guest-data-breach): hallazgo 3 del README —
+//    si Smoobu respondía 200 con la lista vacía (clave degradada, cambio de API, límite de
+//    peticiones, mantenimiento) el paso 3 borraba TODOS los ingresos del rango porque
+//    `smoobuIds` quedaba vacío. Dos guardas nuevas, sin tocar el resto del algoritmo:
+//    (a) si Smoobu no devuelve NINGUNA reserva activa, no se borra nada — se declara el
+//        fallo en vez de vaciar `incomes`;
+//    (b) si el borrado calculado supera el 30% de las filas existentes (o son ya >15 filas),
+//        tampoco se ejecuta — un cambio así de grande no es "unas pocas cancelaciones", es la
+//        misma señal degradada que (a) pero a medias.
+//    `verify_jwt` se deja en `false` a propósito: la invoca el cron `pg_cron` jobid 1 sin
+//    JWT, y no se ha podido confirmar desde aquí si ese cron manda un `apikey`/Bearer que
+//    verify_jwt=true aceptaría — cambiarlo a ciegas puede dejar el cron mudo. Repasar aparte.
+// ✅ Sin secretos en claro: usa Deno.env.get(). El resto del algoritmo es copia FIEL del original.
+// 🔑 11/09/2026: este fichero se puso al día con lo que hay DESPLEGADO (v27) — las dos guardas de
+//    arriba se habían aplicado por MCP sin commitearlas, así que el repo iba detrás y redesplegarlo
+//    las habría borrado en silencio. Encima va la migración de la clave a `claveSecreta()`.
+//    Antes de redesplegar, comprobar que la versión viva no ha vuelto a adelantarse al repo.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { claveSecreta } from '../_shared/clave-supabase.ts'
 
 const SMOOBU_API = 'https://login.smoobu.com/api'
 
@@ -21,7 +34,7 @@ const PORTAL_MAP: Record<string, string> = {
 Deno.serve(async (_req: Request) => {
   const apiKey = Deno.env.get('SMOOBU_API_KEY')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabaseKey = claveSecreta()
 
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'SMOOBU_API_KEY no configurada' }), { status: 500 })
@@ -29,14 +42,12 @@ Deno.serve(async (_req: Request) => {
 
   const supabase = createClient(supabaseUrl, supabaseKey)
 
-  // Rango: 365 dias atras hasta 730 dias adelante (historico + futuro)
   const now = new Date()
   const from = new Date(now); from.setDate(from.getDate() - 365)
   const to = new Date(now); to.setDate(to.getDate() + 730)
   const fromStr = from.toISOString().slice(0, 10)
   const toStr = to.toISOString().slice(0, 10)
 
-  // --- PASO 1: Obtener TODAS las reservas activas de Smoobu ---
   const smoobuIds = new Set<string>()
   const smoobuReservations: any[] = []
   let page = 1
@@ -60,7 +71,6 @@ Deno.serve(async (_req: Request) => {
     if (bookings.length === 0) break
 
     for (const b of bookings) {
-      // Solo reservas activas (no canceladas)
       if (b.type === 'cancellation' || b.status === 'cancelled') continue
       const id = String(b.id)
       smoobuIds.add(id)
@@ -71,7 +81,6 @@ Deno.serve(async (_req: Request) => {
     page++
   }
 
-  // --- PASO 2: Obtener reservas actuales en Supabase para el mismo periodo ---
   const { data: existingIncomes, error: fetchErr } = await supabase
     .from('incomes')
     .select('id, reservationId')
@@ -88,17 +97,34 @@ Deno.serve(async (_req: Request) => {
     supabaseMap[inc.reservationId] = inc.id
   }
 
-  // --- PASO 3: Canceladas = en Supabase pero NO en Smoobu -> ELIMINAR ---
-  let deleted = 0
-  for (const [resId, incId] of Object.entries(supabaseMap)) {
-    if (!smoobuIds.has(resId)) {
-      await supabase.from('incomes').delete().eq('id', incId)
-      deleted++
-    }
+  if (smoobuIds.size === 0 && Object.keys(supabaseMap).length > 0) {
+    return new Response(JSON.stringify({
+      success: false,
+      abortado: true,
+      motivo: 'Smoobu devolvió 0 reservas activas y hay filas existentes en incomes: posible fallo de API, no una cancelación masiva. No se ha borrado nada.',
+      filasExistentes: Object.keys(supabaseMap).length,
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
 
-  // --- PASO 4: Nuevas = en Smoobu pero NO en Supabase -> INSERTAR ---
-  // Crear mapa de propiedades
+  const aBorrar = Object.entries(supabaseMap).filter(([resId]) => !smoobuIds.has(resId))
+
+  const totalExistentes = Object.keys(supabaseMap).length
+  const porcentaje = totalExistentes > 0 ? aBorrar.length / totalExistentes : 0
+  if (aBorrar.length > 15 && porcentaje > 0.3) {
+    return new Response(JSON.stringify({
+      success: false,
+      abortado: true,
+      motivo: `El borrado calculado (${aBorrar.length} de ${totalExistentes}, ${Math.round(porcentaje * 100)}%) supera el límite de seguridad (>15 filas y >30%). No se ha borrado nada — revisar a mano.`,
+      candidatasABorrar: aBorrar.map(([resId]) => resId),
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  let deleted = 0
+  for (const [resId, incId] of aBorrar) {
+    await supabase.from('incomes').delete().eq('id', incId)
+    deleted++
+  }
+
   const propCache: Record<string, string> = {}
 
   async function getOrCreateProp(name: string): Promise<string | null> {
@@ -119,7 +145,6 @@ Deno.serve(async (_req: Request) => {
 
   for (const res of smoobuReservations) {
     const rid = String(res.id)
-    // Solo insertar si no existe ya
     if (supabaseMap[rid]) continue
 
     try {

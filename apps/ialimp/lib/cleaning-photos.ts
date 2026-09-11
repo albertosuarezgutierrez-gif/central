@@ -2,9 +2,10 @@
 // La anon key tiene policy SELECT sobre el bucket -> NO hace falta service_role.
 // La primitiva de firmado vive en @central/core-storage; aquí queda fijo el bucket.
 import { storageObjectPath, signStorageObject } from '@central/core-storage'
+import { clavePublicable } from './claves-supabase'
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_ANON = clavePublicable()
 const BUCKET = 'cleaning-photos'
 const MARKER = `/${BUCKET}/`
 
