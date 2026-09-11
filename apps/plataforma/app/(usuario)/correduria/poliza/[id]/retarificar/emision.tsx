@@ -178,6 +178,11 @@ export function Emision({
               JSON con lo que pida la compañía. Si falta algo, la respuesta dirá exactamente qué
               claves espera — no hay que adivinarlas.
             </p>
+            <p className="err" style={{ fontSize: 12, margin: '4px 0 8px' }}>
+              ⚠️ Si la compañía pide una fecha de efecto, tiene que ser <strong>HOY</strong> (o más
+              tarde) — nunca una fecha pasada de esta cotización. Las compañías no admiten pólizas
+              retroactivas.
+            </p>
             <textarea
               value={camposJson}
               onChange={(e) => setCamposJson(e.target.value)}
