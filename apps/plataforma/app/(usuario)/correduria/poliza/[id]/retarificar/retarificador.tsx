@@ -19,12 +19,22 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
-import { PreemisionMock } from './preemision-mock'
+import { Emision } from './emision'
+
+/**
+ * Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el
+ * embudo de asegura (`Guardado`: `{estado:'guardada', cotizacionId}` |
+ * `{estado:'no_guardada'|'no_intentada', motivo}`). `unknown` a propósito
+ * (viene de la OTRA app): solo se confía en la forma exacta, nunca se adivina.
+ */
+function cotizacionIdDe(guardado: unknown): string | null {
+  if (typeof guardado !== 'object' || guardado === null) return null
+  const g = guardado as Record<string, unknown>
+  return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
+}
 
 /** Quita tildes y mayúsculas para comparar «Casado» con «CASADO».
- *  Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`.
- *  Exportada porque `preemision-mock.tsx` la reutiliza para emparejar el
- *  nombre de compañía del precio con su esquema de maqueta. */
+ *  Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`. */
 export function normalizarTexto(s: string): string {
   return s
     .normalize('NFD')
@@ -100,6 +110,10 @@ type Resultado =
       precios: Precio[]
       fallos: Fallo[]
       supuestos: Supuesto[]
+      /** Qué pasó con la COPIA en `seguros.tarificaciones`. Sin `cotizacionId`
+       *  (dentro, si `estado==='guardada'`) no hay a qué proyecto pedirle el
+       *  ReRate/Submit reales: `cotizacionIdDe()` lo extrae con cuidado. */
+      guardado: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   /**
@@ -496,6 +510,7 @@ export default function Retarificador({
           precios: r.precios,
           fallos: r.fallos,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
     }
@@ -949,9 +964,9 @@ function Precios({
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
 }) {
-  // 🧪 Qué fila tiene la maqueta de pre-emisión abierta (ver preemision-mock.tsx).
-  // `null` = ninguna. Vive aquí, no en el padre: es puro estado de pantalla,
-  // no algo que la póliza necesite recordar entre visitas.
+  // Qué fila tiene abierto el panel de emisión real (ver emision.tsx). `null` =
+  // ninguna. Vive aquí, no en el padre: es puro estado de pantalla, no algo
+  // que la póliza necesite recordar entre visitas.
   const [abierta, setAbierta] = useState<string | null>(null)
   return (
     <div style={{ marginTop: 16 }}>
@@ -1055,15 +1070,24 @@ function Precios({
                   </span>
                 </td>
                 <td>
-                  {/* 🧪 Maqueta de pre-emisión (ver preemision-mock.tsx): NO llama a
-                      Codeoscopic ni gasta nada, es solo para que Alberto pruebe el
-                      diseño de la pantalla siguiente. */}
+                  {/* El botón real (11/09/2026): confirma con la compañía
+                      (ReRate) y, si sale firme, permite el Submit de verdad.
+                      Sin `cotizacionId` (la cotización no quedó guardada) no
+                      hay proyecto al que pedírselo. */}
                   <button
                     type="button"
                     className="ghost"
+                    disabled={r.simulado || cotizacionIdDe(r.guardado) === null}
+                    title={
+                      r.simulado
+                        ? 'Simulado: no hay proyecto real de Codeoscopic'
+                        : cotizacionIdDe(r.guardado) === null
+                          ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
+                          : undefined
+                    }
                     onClick={() => setAbierta(abierta === id ? null : id)}
                   >
-                    {abierta === id ? 'Ocultar' : 'Pre-emitir'}
+                    {abierta === id ? 'Ocultar' : 'Emitir'}
                   </button>
                 </td>
               </tr>
@@ -1076,11 +1100,15 @@ function Precios({
       {r.precios.map((p, i) => {
         const id = `${p.compania}-${p.producto}-${i}`
         if (abierta !== id) return null
+        const cotizacionId = cotizacionIdDe(r.guardado)
+        if (!cotizacionId) return null
         return (
-          <PreemisionMock
+          <Emision
             key={id}
-            compania={p.compania ?? null}
-            producto={p.producto ?? null}
+            tarificacionId={cotizacionId}
+            compania={p.compania ?? ''}
+            categoria={p.categoria ?? ''}
+            primaEur={p.primaEur ?? null}
             onCerrar={() => setAbierta(null)}
           />
         )
