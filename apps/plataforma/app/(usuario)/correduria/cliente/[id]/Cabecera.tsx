@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, urlVidaNuevo, urlSaludNuevo, urlDecesosNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
-import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
+import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, btnStyle } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
 import { fmt } from './piezas'
@@ -43,6 +43,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                 diga el enum. */}
             <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
             <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
+            <Identidad identidad={ficha.identidad} />
             {conyuge && (
               <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                 💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
@@ -270,6 +271,39 @@ function Acciones({ clienteId }: { clienteId: string }) {
         </BtnLink>
       </span>
     </div>
+  )
+}
+
+// ── Identidad ───────────────────────────────────────────────────────────────
+// DNI y fecha de nacimiento, en lectura directa en la cabecera (antes solo se
+// veían dentro del formulario de «Datos del cliente», que hay que desplegar).
+// El DNI sale SIEMPRE enmascarado (`*****678Z`): el completo no cruza el
+// puerto de asegura por diseño — para cambiarlo hace falta el DNI recibido y
+// documentado en 📎 Documentos (regla de identidad de la correduria-crm).
+
+function Identidad({ identidad }: { identidad: IdentidadFicha | null }) {
+  // `null` = asegura aún no manda el bloque (versión anterior): no se afirma
+  // «sin DNI», se calla — es distinto de «se miró y no hay ninguno».
+  if (identidad === null) return null
+  return (
+    <>
+      {identidad.dniIlegible ? (
+        <span title="Está guardado pero cifrado con una clave que asegura no puede abrir">🪪 DNI cifrado</span>
+      ) : identidad.dniEnmascarado ? (
+        <span title="El DNI completo no sale de asegura por diseño: para cambiarlo hace falta el documento recibido en 📎 Documentos">
+          🪪 {identidad.dniEnmascarado}
+        </span>
+      ) : (
+        <span style={{ color: 'var(--muted)' }} title="No consta DNI en la ficha">🪪 sin DNI</span>
+      )}
+      {identidad.fechaNacimientoIlegible ? (
+        <span title="Está guardada pero cifrada con una clave que asegura no puede abrir">🎂 cifrada</span>
+      ) : identidad.fechaNacimiento ? (
+        <span>🎂 {fmt(identidad.fechaNacimiento)}</span>
+      ) : (
+        <span style={{ color: 'var(--muted)' }} title="No consta fecha de nacimiento">🎂 sin fecha</span>
+      )}
+    </>
   )
 }
 
