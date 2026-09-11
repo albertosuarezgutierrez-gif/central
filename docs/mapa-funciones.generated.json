@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-11T13:48:09Z",
-  "sha": "3ea40768b2a3815d4135da2a001e0f9dfa25e52e",
+  "generadoEn": "2026-09-11T14:14:37Z",
+  "sha": "906b9b1e8c7a47e76597847e3c18c08af12858a5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9809,7 +9809,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 145
+          "linea": 151
         }
       ],
       "tablas": [
@@ -9819,7 +9819,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "b04580cd2edc"
+      "hash": "32c7e26fef72"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -14154,10 +14154,10 @@
           "nombre": "reRate",
           "kind": "function",
           "exportada": true,
-          "params": "config: ConfigCodeoscopic, projectId: string, quoteId: string,",
+          "params": "config: ConfigCodeoscopic, projectId: string, quoteId: string, productId: unknown, productOptions: unknown,",
           "retorno": "Promise<Oferta>",
-          "linea": 158,
-          "resumen": "`POST /insurances/{projectId}/offers` — confirma el precio elegido (ReRate/preemisión). UN SOLO INTENTO: si el vendor rechaza el cuerpo (400/422), NO se reintenta con otra forma a ciegas — `peticion()"
+          "linea": 174,
+          "resumen": "`POST /insurances/{projectId}/offers` — confirma el precio elegido (ReRate/preemisión). 🚨 **Corregido el 11/09/2026 tras el primer 400 real** (proyecto 40681298, Pilar Franco Ruz): el vendor exige `m"
         },
         {
           "nombre": "camposDeEmision",
@@ -14165,13 +14165,13 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
           "retorno": "Promise<CampoEmision[]>",
-          "linea": 186,
+          "linea": 209,
           "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5e7d43c2eda3"
+      "hash": "c1d9fed80f3a"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -14792,7 +14792,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Json",
-          "linea": 82
+          "linea": 100
         },
         {
           "nombre": "arr",
@@ -14800,7 +14800,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "unknown[]",
-          "linea": 83
+          "linea": 101
         },
         {
           "nombre": "str",
@@ -14808,7 +14808,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 84
+          "linea": 102
         },
         {
           "nombre": "num",
@@ -14816,7 +14816,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 86
+          "linea": 104
         },
         {
           "nombre": "firmezaDe",
@@ -14824,7 +14824,7 @@
           "exportada": true,
           "params": "estimate: unknown, mensajes: unknown",
           "retorno": "Firmeza",
-          "linea": 94,
+          "linea": 112,
           "resumen": "Decide la firmeza de un precio. Orden deliberado: `estimate` manda sobre todo lo demás, porque si el propio vendor dice que la cifra es una estimación, ningún aviso la vuelve firme."
         },
         {
@@ -14833,7 +14833,7 @@
           "exportada": false,
           "params": "m: unknown",
           "retorno": "string | null",
-          "linea": 107,
+          "linea": 125,
           "resumen": "Junta `text` y `description` de un mensaje en una línea legible."
         },
         {
@@ -14842,7 +14842,7 @@
           "exportada": false,
           "params": "raw: unknown",
           "retorno": "Precio | null",
-          "linea": 114
+          "linea": 132
         },
         {
           "nombre": "leerFallo",
@@ -14850,7 +14850,7 @@
           "exportada": false,
           "params": "raw: unknown, companiasConPrecio: Set<string>",
           "retorno": "FalloProducto | null",
-          "linea": 143
+          "linea": 163
         },
         {
           "nombre": "leerCotizacion",
@@ -14858,7 +14858,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "Cotizacion",
-          "linea": 167,
+          "linea": 187,
           "resumen": "Convierte la respuesta cruda del vendor en el modelo de la casa. Lanza si falta el `id` de raíz: sin él no podemos correlacionar el webhook ni demostrar por qué nos han facturado esa cotización, así q"
         },
         {
@@ -14867,13 +14867,13 @@
           "exportada": true,
           "params": "c: Cotizacion",
           "retorno": "string",
-          "linea": 192,
+          "linea": 212,
           "resumen": "Resumen honrado para la UI y para Telegram: dice lo que NO se pudo cotizar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "86690c96e136"
+      "hash": "e18fc6660377"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/resumen-hogar.ts",
