@@ -61,6 +61,8 @@ test('encontrarPrecio: casa por compañía y categoría, sin distinguir mayúscu
         firmeza: 'estimado',
         avisos: [],
         requiereReRate: true,
+        productId: 10,
+        productOptions: null,
       },
     ],
   }
