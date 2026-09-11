@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-09T16:53:03Z",
-  "sha": "4dcc83dd7dab031da702257ea7de1fcb5d45278c",
+  "generadoEn": "2026-09-11T10:50:55Z",
+  "sha": "83f7ed757ba289de01569615d2e8e815ff35c2a5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -16751,7 +16751,7 @@
           "exportada": false,
           "params": "TOKEN, restauranteId",
           "retorno": null,
-          "linea": 42
+          "linea": 48
         },
         {
           "nombre": "handleCashlogyCommand",
@@ -16759,7 +16759,7 @@
           "exportada": false,
           "params": "job, TOKEN",
           "retorno": null,
-          "linea": 58,
+          "linea": 64,
           "resumen": "── Handler de comandos Cashlogy ────────────────────────────"
         },
         {
@@ -16768,7 +16768,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 107,
+          "linea": 113,
           "resumen": "── Config ────────────────────────────────────────────────────"
         },
         {
@@ -16777,7 +16777,7 @@
           "exportada": false,
           "params": "data",
           "retorno": null,
-          "linea": 112
+          "linea": 118
         },
         {
           "nombre": "sendESCPOS",
@@ -16785,7 +16785,7 @@
           "exportada": false,
           "params": "ip, port, data",
           "retorno": null,
-          "linea": 118,
+          "linea": 124,
           "resumen": "── TCP ESC/POS ───────────────────────────────────────────────"
         },
         {
@@ -16794,7 +16794,7 @@
           "exportada": false,
           "params": "url, opts = {}",
           "retorno": null,
-          "linea": 130,
+          "linea": 136,
           "resumen": "── REST helpers ──────────────────────────────────────────────"
         },
         {
@@ -16803,7 +16803,7 @@
           "exportada": false,
           "params": "ip, port, timeoutMs = 800",
           "retorno": null,
-          "linea": 160,
+          "linea": 166,
           "resumen": "── Escaneo de red para impresoras ────────────────────────────"
         },
         {
@@ -16812,7 +16812,7 @@
           "exportada": false,
           "params": "TOKEN",
           "retorno": null,
-          "linea": 175
+          "linea": 181
         },
         {
           "nombre": "installAutostart",
@@ -16820,7 +16820,7 @@
           "exportada": false,
           "params": "token",
           "retorno": null,
-          "linea": 214,
+          "linea": 220,
           "resumen": "── Autostart Windows (registro) ─────────────────────────────"
         },
         {
@@ -16829,7 +16829,7 @@
           "exportada": false,
           "params": "token",
           "retorno": null,
-          "linea": 238,
+          "linea": 244,
           "resumen": "── Validar token con el servidor ────────────────────────────"
         },
         {
@@ -16838,7 +16838,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 247,
+          "linea": 253,
           "resumen": "── Setup interactivo (primer uso) ───────────────────────────"
         },
         {
@@ -16847,7 +16847,7 @@
           "exportada": false,
           "params": "job_id, status, error_msg, TOKEN",
           "retorno": null,
-          "linea": 310,
+          "linea": 316,
           "resumen": "── Imprimir job ──────────────────────────────────────────────"
         },
         {
@@ -16856,7 +16856,7 @@
           "exportada": false,
           "params": "job, TOKEN",
           "retorno": null,
-          "linea": 327
+          "linea": 333
         },
         {
           "nombre": "ping",
@@ -16864,7 +16864,7 @@
           "exportada": false,
           "params": "TOKEN",
           "retorno": null,
-          "linea": 353,
+          "linea": 359,
           "resumen": "── Ping ──────────────────────────────────────────────────────"
         },
         {
@@ -16873,7 +16873,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 368,
+          "linea": 374,
           "resumen": "Detecta si el dispositivo está en WiFi o datos móviles En Android (Termux): WiFi = interfaz wlan0 / datos = rmnet_data0"
         },
         {
@@ -16882,7 +16882,7 @@
           "exportada": false,
           "params": "TOKEN",
           "retorno": null,
-          "linea": 402,
+          "linea": 408,
           "resumen": "Ping mejorado — incluye info de red + recibe rol del servidor"
         },
         {
@@ -16891,7 +16891,7 @@
           "exportada": false,
           "params": "impresoraId, ipFallida, TOKEN",
           "retorno": null,
-          "linea": 446,
+          "linea": 452,
           "resumen": "Auto-scan cuando una impresora no responde Solo lanza si soy master y no hay ya un scan en curso"
         },
         {
@@ -16900,7 +16900,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 474,
+          "linea": 480,
           "resumen": "Scan de red silencioso (solo para auto-recovery, sin log verboso)"
         },
         {
@@ -16909,12 +16909,12 @@
           "exportada": false,
           "params": "TOKEN, restauranteId",
           "retorno": null,
-          "linea": 509
+          "linea": 515
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cebe65174ec6"
+      "hash": "7fec3ba37cee"
     },
     {
       "ruta": "apps/ia-rest/scripts/qa-check.ts",
@@ -22135,12 +22135,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/health",
-      "hash": "7bad56f9bef9"
+      "hash": "879d1fbad990"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/help/chat/route.ts",
@@ -33116,7 +33116,7 @@
           "exportada": false,
           "params": "{ label, value, sub, mono = true }: { label: string; value: string; sub?: string; mono?: boolean }",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "BienvenidaPage",
@@ -33124,14 +33124,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "c6eef3d6dd98"
+      "hash": "c80a8fee4566"
     },
     {
       "ruta": "apps/ia-rest/src/app/blog/[slug]/page.tsx",
@@ -33912,7 +33912,7 @@
           "exportada": false,
           "params": "b: BrainResult, a86: string[] = [], aAlerg: {producto:string;alergenos:string[]}[] = []",
           "retorno": "string",
-          "linea": 71
+          "linea": 72
         },
         {
           "nombre": "stopVox",
@@ -33920,7 +33920,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 87
+          "linea": 88
         },
         {
           "nombre": "speakFallback",
@@ -33928,7 +33928,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "Promise<void>",
-          "linea": 94
+          "linea": 95
         },
         {
           "nombre": "speak",
@@ -33936,7 +33936,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "Promise<void>",
-          "linea": 108
+          "linea": 109
         },
         {
           "nombre": "EdgeChatTab",
@@ -33944,7 +33944,7 @@
           "exportada": false,
           "params": "{ session, mensajes, marcarMensajeLeido, chatTexto, setChatTexto, chatDestino, setChatDestino, chatEndRef, enviarMensaje, mesaFijada, restauranteId }: { session: { id: string; nombre: string; rol: string } mensajes: { id: string; camarero_i",
           "retorno": null,
-          "linea": 162
+          "linea": 163
         },
         {
           "nombre": "EdgePage",
@@ -33952,7 +33952,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 546,
+          "linea": 547,
           "resumen": "═══════════════════════════════════════════════════════════════"
         },
         {
@@ -33961,7 +33961,7 @@
           "exportada": false,
           "params": "{ session, turnoId, setTurnoId }:{ session: {id:string;nombre:string;rol:string;restaurante_id:string} turnoId: string|null setTurnoId: (id:string|null)=>void }",
           "retorno": null,
-          "linea": 553
+          "linea": 554
         },
         {
           "nombre": "capturarWAV",
@@ -33969,7 +33969,7 @@
           "exportada": false,
           "params": "duracionMs: number",
           "retorno": "Promise<Blob>",
-          "linea": 3030,
+          "linea": 3031,
           "resumen": "Captura audio del micrófono como WAV PCM 16kHz mono (formato requerido por Azure)"
         },
         {
@@ -33978,7 +33978,7 @@
           "exportada": false,
           "params": "{ session }: { session: { id: string; restaurante_id: string } }",
           "retorno": null,
-          "linea": 3078
+          "linea": 3079
         },
         {
           "nombre": "ForceUpdateRow",
@@ -33986,7 +33986,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 3336,
+          "linea": 3337,
           "resumen": "─── CONFIG ─────────────────────────────────────────────────── ── ForceUpdateRow: comprueba SW + versión y fuerza recarga ──────"
         },
         {
@@ -33995,7 +33995,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 3420
+          "linea": 3421
         },
         {
           "nombre": "ConfigScreen",
@@ -34003,7 +34003,7 @@
           "exportada": false,
           "params": "{session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceConfirm,zonasAsignadas,onZonasAsignadas,zonasDisponibles,fontBig,onFontBig,alergenosMesa,onAlergenosMesa,subscribed,onSubscribe,hasInstall,onInstall,autoConfirm,onAutoConfirm,autoThre",
           "retorno": null,
-          "linea": 3445
+          "linea": 3446
         },
         {
           "nombre": "BridgeConfigSection",
@@ -34011,7 +34011,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 3643,
+          "linea": 3644,
           "resumen": "── BridgeConfigSection — configura el bridge desde la app ────"
         }
       ],
@@ -34020,7 +34020,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e4599d2915af"
+      "hash": "90c89b528aef"
     },
     {
       "ruta": "apps/ia-rest/src/app/edge/pedido-rapido/page.tsx",
@@ -36779,7 +36779,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 43
+          "linea": 44
         },
         {
           "nombre": "urlBase64ToUint8Array",
@@ -36787,7 +36787,7 @@
           "exportada": false,
           "params": "base64String: string",
           "retorno": null,
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "callEF",
@@ -36795,7 +36795,7 @@
           "exportada": false,
           "params": "fn: string, body: object",
           "retorno": null,
-          "linea": 58
+          "linea": 59
         },
         {
           "nombre": "QrClientApp",
@@ -36803,12 +36803,12 @@
           "exportada": true,
           "params": "{ token }: { token: string }",
           "retorno": null,
-          "linea": 67
+          "linea": 68
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4146b284886b"
+      "hash": "5aaf3841b5db"
     },
     {
       "ruta": "apps/ia-rest/src/app/q/evento/[token]/page.tsx",
@@ -36845,7 +36845,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "QrSuccessInner",
@@ -36853,7 +36853,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         },
         {
           "nombre": "QrSuccess",
@@ -36861,7 +36861,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 347
+          "linea": 348
         }
       ],
       "tablas": [
@@ -36869,7 +36869,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "32745120988d"
+      "hash": "07f152d592d2"
     },
     {
       "ruta": "apps/ia-rest/src/app/r/[slug]/route.ts",
@@ -37100,12 +37100,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad70508b1faf"
+      "hash": "58ee974e9e9d"
     },
     {
       "ruta": "apps/ia-rest/src/app/registro/page.tsx",
@@ -37120,7 +37120,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "RegistroPage",
@@ -37128,7 +37128,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "Logo",
@@ -37136,7 +37136,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 317
+          "linea": 318
         },
         {
           "nombre": "Field",
@@ -37144,12 +37144,12 @@
           "exportada": false,
           "params": "{ label, children }: { label: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 327
+          "linea": 328
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b581e0c3f63b"
+      "hash": "0e66e7f676fb"
     },
     {
       "ruta": "apps/ia-rest/src/app/restaurante-indio/page.tsx",
@@ -37958,12 +37958,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "38bb82c0cdcb"
+      "hash": "d00c66eb0709"
     },
     {
       "ruta": "apps/ia-rest/src/components/asesoria/AsesoriaAgente.tsx",
@@ -38018,7 +38018,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "fmt",
@@ -38026,7 +38026,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 67
+          "linea": 68
         },
         {
           "nombre": "AutoCurasPanel",
@@ -38034,14 +38034,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 72
+          "linea": 73
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "4c4ed0a3cc42"
+      "hash": "d16e85c433b7"
     },
     {
       "ruta": "apps/ia-rest/src/components/BlogSEOTab.tsx",
@@ -41420,7 +41420,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "relativo",
@@ -41428,7 +41428,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "SystemHealth",
@@ -41436,14 +41436,14 @@
           "exportada": true,
           "params": "{ session }: Props",
           "retorno": null,
-          "linea": 59
+          "linea": 60
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "8eb301ac558b"
+      "hash": "9de09637f2ee"
     },
     {
       "ruta": "apps/ia-rest/src/components/VinoModal.tsx",
@@ -41535,7 +41535,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "registrarPush",
@@ -41543,7 +41543,7 @@
           "exportada": false,
           "params": "camareroId: string, restauranteId: string",
           "retorno": null,
-          "linea": 26
+          "linea": 30
         },
         {
           "nombre": "urlBase64ToUint8Array",
@@ -41551,7 +41551,7 @@
           "exportada": false,
           "params": "base64String: string",
           "retorno": null,
-          "linea": 62
+          "linea": 66
         },
         {
           "nombre": "hablar",
@@ -41559,7 +41559,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": null,
-          "linea": 69
+          "linea": 73
         },
         {
           "nombre": "useAlertas",
@@ -41567,14 +41567,14 @@
           "exportada": true,
           "params": "camareroId: string | null, restauranteId: string | null",
           "retorno": null,
-          "linea": 84
+          "linea": 88
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "75737bb10466"
+      "hash": "6c5b92d6aee7"
     },
     {
       "ruta": "apps/ia-rest/src/hooks/useAuth.ts",
@@ -42732,6 +42732,67 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8f4eba2a13bd"
+    },
+    {
+      "ruta": "apps/ia-rest/src/lib/claves-supabase.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "Clave PUBLICABLE de Supabase — la que sustituye a la `anon` legacy. Contexto: el botón «Disable JWT-based API keys» del panel mata a la vez la `service_role` filtrada y la `anon` legacy. Para poder pulsarlo, todo lo que hoy manda la `anon` tiene que poder mandar la nueva `sb_publishable_…`. Plan: do",
+      "exporta": [
+        "clavePublicable",
+        "origenClavePublicable",
+        "hayClavePublicable",
+        "cabecerasClave"
+      ],
+      "funciones": [
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "La clave publicable, o `''` si no hay ninguna configurada. Devuelve cadena vacía (no lanza) a propósito: hay módulos que la leen en el top level y un throw ahí rompería el build. Una clave vacía falla"
+        },
+        {
+          "nombre": "origenClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClavePublicable | null",
+          "linea": 31,
+          "resumen": "De dónde salió la clave: `'nueva'`, `'legacy'`, o null si no hay ninguna."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "Una variable puesta a `\" \"` (o a la cadena vacía) es una variable SIN poner: se trata como ausente en vez de como una clave que falla todas las llamadas. Mismo criterio que el helper de las Edge Funct"
+        },
+        {
+          "nombre": "hayClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "¿Hay alguna clave publicable configurada? Para health-checks y avisos de entorno."
+        },
+        {
+          "nombre": "cabecerasClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string = clavePublicable()",
+          "retorno": "Record<string, string>",
+          "linea": 73,
+          "resumen": "Cabeceras de autenticación para llamar A MANO a la API HTTP de Supabase (`/storage/v1`, `/rest/v1`, `/functions/v1`). Manda la clave en `apikey` **y** en `Authorization: Bearer`, que es lo que hace `s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9aa980688701"
     },
     {
       "ruta": "apps/ia-rest/src/lib/clipboard.ts",
@@ -44099,7 +44160,7 @@
           "exportada": false,
           "params": "p: Promise<any>, ms = 5000",
           "retorno": null,
-          "linea": 50,
+          "linea": 51,
           "resumen": "─── Helpers ──────────────────────────────────────────────────────────────────"
         },
         {
@@ -44108,7 +44169,7 @@
           "exportada": true,
           "params": "url: string, opts?: RequestInit",
           "retorno": null,
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "calcScore",
@@ -44116,7 +44177,7 @@
           "exportada": true,
           "params": "checks: QACheck[]",
           "retorno": "number",
-          "linea": 62,
+          "linea": 63,
           "resumen": "─── Score ────────────────────────────────────────────────────────────────────"
         },
         {
@@ -44125,7 +44186,7 @@
           "exportada": true,
           "params": "checks: QACheck[], supabase: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 74,
+          "linea": 75,
           "resumen": "─── Detección regresiones ────────────────────────────────────────────────────"
         },
         {
@@ -44134,7 +44195,7 @@
           "exportada": true,
           "params": "checks: QACheck[], supabase: ReturnType<typeof createServerClient>",
           "retorno": "Promise<",
-          "linea": 94,
+          "linea": 95,
           "resumen": "─── Auto-fix Tier1 ───────────────────────────────────────────────────────────"
         },
         {
@@ -44143,7 +44204,7 @@
           "exportada": true,
           "params": "",
           "retorno": "QACheck[]",
-          "linea": 123,
+          "linea": 124,
           "resumen": "─── Checks ENV ───────────────────────────────────────────────────────────────"
         },
         {
@@ -44152,7 +44213,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 161,
+          "linea": 174,
           "resumen": "─── Checks BD ────────────────────────────────────────────────────────────────"
         },
         {
@@ -44161,7 +44222,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 195,
+          "linea": 208,
           "resumen": "─── Checks Negocio ───────────────────────────────────────────────────────────"
         },
         {
@@ -44170,7 +44231,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<QACheck[]>",
-          "linea": 276,
+          "linea": 289,
           "resumen": "─── Checks APIs externas ─────────────────────────────────────────────────────"
         },
         {
@@ -44179,7 +44240,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<QACheck[]>",
-          "linea": 307,
+          "linea": 320,
           "resumen": "─── Checks Crons ─────────────────────────────────────────────────────────────"
         },
         {
@@ -44188,7 +44249,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<QACheck[]>",
-          "linea": 371,
+          "linea": 384,
           "resumen": "─── Checks SEO ───────────────────────────────────────────────────────────────"
         },
         {
@@ -44197,7 +44258,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 485,
+          "linea": 498,
           "resumen": "─── Checks Propuestas ────────────────────────────────────────────────────────"
         },
         {
@@ -44206,7 +44267,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 533,
+          "linea": 546,
           "resumen": "─── Checks Patrones Aprendidos (desde BD) ───────────────────────────────────"
         },
         {
@@ -44215,7 +44276,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 618,
+          "linea": 631,
           "resumen": "─── Checks CRM Lead Onboarding ──────────────────────────────────────────────"
         },
         {
@@ -44224,7 +44285,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 770,
+          "linea": 783,
           "resumen": "─── Checks Performance ───────────────────────────────────────────────────────"
         },
         {
@@ -44233,7 +44294,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 808,
+          "linea": 821,
           "resumen": "─── Check DEMO (antes de reunión) ────────────────────────────────────────────"
         },
         {
@@ -44242,7 +44303,7 @@
           "exportada": true,
           "params": "checks: QACheck[], trigger: string",
           "retorno": "Promise<string | undefined>",
-          "linea": 846,
+          "linea": 859,
           "resumen": "─── Informe NIM ──────────────────────────────────────────────────────────────"
         },
         {
@@ -44251,7 +44312,7 @@
           "exportada": false,
           "params": "c: QACheck",
           "retorno": "string",
-          "linea": 900
+          "linea": 913
         },
         {
           "nombre": "formatTelegram",
@@ -44259,7 +44320,7 @@
           "exportada": true,
           "params": "trigger: string, checks: QACheck[], score: number, duracionMs: number, informeIA?: string",
           "retorno": "string",
-          "linea": 905,
+          "linea": 918,
           "resumen": "─── Formato Telegram ─────────────────────────────────────────────────────────"
         },
         {
@@ -44268,13 +44329,13 @@
           "exportada": true,
           "params": "trigger: string, onCheck?: (c: QACheck) => void, onCategoria?: (s: string) => void",
           "retorno": "Promise<QAResult>",
-          "linea": 999,
+          "linea": 1012,
           "resumen": "─── Runner principal ─────────────────────────────────────────────────────────"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b333c676f870"
+      "hash": "f317b86456d1"
     },
     {
       "ruta": "apps/ia-rest/src/lib/qr-notify.ts",
@@ -44887,13 +44948,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 28,
+          "linea": 29,
           "resumen": "Server-side client with service role (for API routes)"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd04040838a6"
+      "hash": "e81992355483"
     },
     {
       "ruta": "apps/ia-rest/src/lib/telegram.ts",
@@ -45170,6 +45231,103 @@
       "hash": "1c4be50c8b69"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/_shared/clave-supabase.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "Claves de Supabase para Edge Functions — fuente ÚNICA del monorepo. Contexto: la `service_role` legacy (JWT) del proyecto compartido estuvo pública ~3 meses (06/05→12/08/2026) y hay que poder desactivarla. El botón «Disable JWT-based API keys» mata a la vez la `service_role` y la `anon` legacy, así ",
+      "exporta": [
+        "resolverClaveSecreta",
+        "claveSecreta",
+        "origenClaveSecreta",
+        "resolverClavePublicable",
+        "clavePublicable",
+        "cabecerasServicio"
+      ],
+      "funciones": [
+        {
+          "nombre": "deJsonPorDefecto",
+          "kind": "function",
+          "exportada": false,
+          "params": "bruto: string | undefined | null",
+          "retorno": "string | null",
+          "linea": 42,
+          "resumen": "Lee `{\"default\": \"…\"}` de una variable JSON. Devuelve null si falta o es ilegible."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined | null",
+          "retorno": "string | null",
+          "linea": 56
+        },
+        {
+          "nombre": "resolver",
+          "kind": "function",
+          "exportada": false,
+          "params": "envNueva: string, envLegacy: string",
+          "retorno": "ClaveResuelta | null",
+          "linea": 62
+        },
+        {
+          "nombre": "resolverClaveSecreta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "ClaveResuelta | null",
+          "linea": 71,
+          "resumen": "Clave de servicio (salta RLS) con su procedencia, o null si no hay ninguna."
+        },
+        {
+          "nombre": "claveSecreta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 76,
+          "resumen": "Clave de servicio. Lanza si no hay ninguna: mejor fallar fuerte que hablar sin credencial."
+        },
+        {
+          "nombre": "origenClaveSecreta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClave | null",
+          "linea": 91,
+          "resumen": "De dónde salió la clave de servicio: `\"nueva\"`, `\"legacy\"` o null si no hay. Se expone para poder MEDIR la migración desde fuera (un 200 no dice qué clave se usó). No devuelve la clave: es seguro pint"
+        },
+        {
+          "nombre": "resolverClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "ClaveResuelta | null",
+          "linea": 96,
+          "resumen": "Clave publicable (la que sustituye a la `anon`) con su procedencia."
+        },
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 101,
+          "resumen": "Clave publicable. Lanza si no hay ninguna."
+        },
+        {
+          "nombre": "cabecerasServicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Record<string, string>",
+          "linea": 123,
+          "resumen": "Cabeceras para invocar OTRA Edge Function con la clave de servicio. Con la clave NUEVA va **solo en `apikey`**. El gateway de funciones también la acepta en `Authorization: Bearer` (medido con la publ"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1728a4158c3a"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/alerta-ritmo-cron/index.ts",
       "ambito": "apps/ia-rest",
       "resumen": "ia.rest · alerta-ritmo-cron v3 (local_id) Evaluador de reglas + mensajes de voz naturales + push real",
@@ -45268,7 +45426,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "fc313ff173fa"
+      "hash": "3b825d9c9cdc"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/analizar-cv/index.ts",
@@ -45281,14 +45439,14 @@
           "exportada": false,
           "params": "system: string, user: string",
           "retorno": "Promise<string>",
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "e56487af2876"
+      "hash": "2267daa2d645"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/auth-pin-validate/index.ts",
@@ -45302,7 +45460,7 @@
           "exportada": false,
           "params": "ip: string, salt: string",
           "retorno": "Promise<string>",
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "getClientIP",
@@ -45310,7 +45468,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "string",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "jsonResponse",
@@ -45318,7 +45476,7 @@
           "exportada": false,
           "params": "body: object, status = 200",
           "retorno": "Response",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "reportarError",
@@ -45326,14 +45484,14 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "19325bd5fe74"
+      "hash": "34c0dfc9dd7d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/auth-register/index.ts",
@@ -45346,7 +45504,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "generarPinSeguro",
@@ -45354,7 +45512,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "buildLineItems",
@@ -45362,7 +45520,7 @@
           "exportada": false,
           "params": "n: number, cfg: ReturnType<typeof getStripeConfig>",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "toSlug",
@@ -45370,7 +45528,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "toCodigo",
@@ -45378,7 +45536,7 @@
           "exportada": false,
           "params": "nombre: string",
           "retorno": null,
-          "linea": 42
+          "linea": 43
         },
         {
           "nombre": "enviarEmailBienvenida",
@@ -45386,14 +45544,14 @@
           "exportada": false,
           "params": "opts: { email: string; nombre: string; nombre_restaurante: string codigo_acceso: string; pin_owner: string; app_url: string }",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "0f40172a9aa7"
+      "hash": "69822bac8831"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/auth-verify-sms/index.ts",
@@ -45404,7 +45562,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "0797a05fae6f"
+      "hash": "806b0414607c"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/brain-parse/index.ts",
@@ -45418,7 +45576,7 @@
           "exportada": false,
           "params": "supabase: any, restaurante_id: string",
           "retorno": "Promise<string>",
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "contextoMesa",
@@ -45426,7 +45584,7 @@
           "exportada": false,
           "params": "supabase: any, restaurante_id: string, mesa_id: string",
           "retorno": "Promise<string>",
-          "linea": 55
+          "linea": 56
         },
         {
           "nombre": "cargarMesas",
@@ -45434,14 +45592,14 @@
           "exportada": false,
           "params": "supabase: any, restaurante_id: string",
           "retorno": "Promise<string>",
-          "linea": 72
+          "linea": 73
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d621b13a02de"
+      "hash": "47e0a3083ff3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/brain/index.ts",
@@ -45454,7 +45612,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, payload: { restaurante_id: string; input_raw: string; input_context: object; output_brain: BrainOutput; latencia_ms: number; modelo_usado: string; }",
           "retorno": "Promise<string | null>",
-          "linea": 68
+          "linea": 69
         },
         {
           "nombre": "marcarCorreccion",
@@ -45462,14 +45620,14 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, log_id: string, correccion: BrainOutput",
           "retorno": "Promise<void>",
-          "linea": 111
+          "linea": 112
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d543ca9f4773"
+      "hash": "e8e01d633f58"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/bridge-agent/index.ts",
@@ -45483,7 +45641,7 @@
           "exportada": false,
           "params": "d: unknown, s = 200",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "getAgent",
@@ -45491,7 +45649,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": null,
-          "linea": 24,
+          "linea": 25,
           "resumen": "Autenticar agente por token en header X-Bridge-Token o Authorization: Bearer"
         }
       ],
@@ -45499,7 +45657,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "23552ed721f3"
+      "hash": "a00cb2810d8d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/check-elaboraciones/index.ts",
@@ -45511,7 +45669,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "7f40acd96313"
+      "hash": "8f8f74a28c55"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/cobro-monei/index.ts",
@@ -45524,7 +45682,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "json",
@@ -45532,14 +45690,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 160
+          "linea": 161
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "ca6c85fc9f80"
+      "hash": "d3b21dee475f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/cobro-stripe/index.ts",
@@ -45552,7 +45710,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "stripe",
@@ -45560,7 +45718,7 @@
           "exportada": false,
           "params": "method: string, path: string, params: URLSearchParams, secretKey: string, idempotencyKey?: string",
           "retorno": "Promise<Response>",
-          "linea": 184
+          "linea": 185
         },
         {
           "nombre": "json",
@@ -45568,14 +45726,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 196
+          "linea": 197
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "c37fc890842e"
+      "hash": "8ef0d95a4292"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/contact-lead/index.ts",
@@ -45588,13 +45746,13 @@
           "exportada": false,
           "params": "ip: string | null",
           "retorno": "string | null",
-          "linea": 12,
+          "linea": 13,
           "resumen": "Anonimiza IP: pone a 0 el último octeto IPv4"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3d13323db59f"
+      "hash": "83396d2a62fc"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/courier-route/index.ts",
@@ -45608,14 +45766,14 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 5
+          "linea": 6
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d395c757b465"
+      "hash": "81fd7fef8c9a"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/daily-briefing/formato.ts",
@@ -45681,7 +45839,7 @@
           "exportada": false,
           "params": "token: string, chatId: string, text: string",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "motivo",
@@ -45689,7 +45847,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 69
+          "linea": 70
         },
         {
           "nombre": "generarNarrativa",
@@ -45697,7 +45855,7 @@
           "exportada": false,
           "params": "contexto: string",
           "retorno": "Promise<Narrativa>",
-          "linea": 84,
+          "linea": 85,
           "resumen": "Genera la narrativa del briefing contra la pasarela IA de plataforma (/api/ai/chat): el Agente Director elige modelo por petición y detrás tiene la cadena completa OpenRouter (con fallback nativo entr"
         },
         {
@@ -45706,14 +45864,14 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, restauranteId: string",
           "retorno": "Promise<Metricas>",
-          "linea": 135
+          "linea": 136
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "1b590f12d51e"
+      "hash": "cc236a0c5cc6"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ear-transcribe/index.ts",
@@ -45725,7 +45883,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "e6b8ff65240e"
+      "hash": "27a3f32a859b"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/enviar-verifactu/index.ts",
@@ -45738,7 +45896,7 @@
           "exportada": false,
           "params": "f: any",
           "retorno": "string",
-          "linea": 154,
+          "linea": 155,
           "resumen": "── Generar XML LROE (SOAP) para AEAT ─────────────────────────────────── Especificación: Orden HAC/1177/2024 + RD 1007/2023"
         },
         {
@@ -45747,7 +45905,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 220,
+          "linea": 221,
           "resumen": "Escapar caracteres especiales XML"
         },
         {
@@ -45756,14 +45914,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 230
+          "linea": 231
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "662bdc343724"
+      "hash": "d4087d5adc92"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -45776,7 +45934,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "enviarTelegram",
@@ -45784,14 +45942,14 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "76fb4fb11d89"
+      "hash": "c2542a64f084"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ia-training-dashboard/index.ts",
@@ -45799,21 +45957,12 @@
       "exporta": [],
       "funciones": [
         {
-          "nombre": "claveSecreta",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": "string",
-          "linea": 19,
-          "resumen": "🧪 PILOTO de la migración a las claves nuevas de Supabase (`sb_secret_…`), ver docs/ROTACION-SERVICE-ROLE.md. Esta función es el conejillo de indias a propósito: solo lee, está detrás de un PIN y se a"
-        },
-        {
           "nombre": "authPage",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 57
+          "linea": 40
         },
         {
           "nombre": "dashboardPage",
@@ -45821,14 +45970,14 @@
           "exportada": false,
           "params": "pin:string",
           "retorno": "string",
-          "linea": 61
+          "linea": 44
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "0db021907c48"
+      "hash": "ae9a739989cb"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -45919,14 +46068,14 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string, mensaje: string",
           "retorno": null,
-          "linea": 58
+          "linea": 63
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "cac8c66b0a11"
+      "hash": "0c0df322876b"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/kds-token-validate/index.ts",
@@ -45940,14 +46089,14 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "Promise<string>",
-          "linea": 95
+          "linea": 96
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "f50886c22e14"
+      "hash": "55651df7c217"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/lead-research/index.ts",
@@ -45961,7 +46110,7 @@
           "exportada": false,
           "params": "apiKey: string, system: string, user: string, max = 1000",
           "retorno": "Promise<string>",
-          "linea": 203
+          "linea": 204
         },
         {
           "nombre": "esc",
@@ -45969,14 +46118,14 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 214
+          "linea": 215
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "4cd790c66822"
+      "hash": "e1b843564a0f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/menu-stockout/index.ts",
@@ -45990,14 +46139,14 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "c4da498fffd4"
+      "hash": "7f69125bbdac"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/monitor-health/index.ts",
@@ -46009,7 +46158,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "320a7bc5c55e"
+      "hash": "79c832eca7d4"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-diagnostico/index.ts",
@@ -46023,7 +46172,7 @@
           "exportada": false,
           "params": "apiKey: string, funcion: string, mensaje: string, stack?: string",
           "retorno": "Promise<",
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "sendTelegram",
@@ -46031,14 +46180,14 @@
           "exportada": false,
           "params": "token: string, chatId: string, text: string",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d5d8111a4632"
+      "hash": "ed5d6fe66c01"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-sentiment/index.ts",
@@ -46052,14 +46201,14 @@
           "exportada": false,
           "params": "apiKey: string, texto: string",
           "retorno": "Promise<",
-          "linea": 13
+          "linea": 14
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "49f9740d31f4"
+      "hash": "9854bbf4f32a"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/notify-error/index.ts",
@@ -46071,7 +46220,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "9130bc94328b"
+      "hash": "2ea8f2a49408"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/owner-panel/index.ts",
@@ -46084,7 +46233,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "json",
@@ -46092,7 +46241,7 @@
           "exportada": false,
           "params": "d: unknown, s = 200",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "generarCodigo",
@@ -46100,7 +46249,7 @@
           "exportada": false,
           "params": "zonaNombre: string, numero: number",
           "retorno": "string",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "getHTML",
@@ -46108,7 +46257,7 @@
           "exportada": false,
           "params": "BASE: string",
           "retorno": "string",
-          "linea": 203
+          "linea": 204
         },
         {
           "nombre": "api",
@@ -46116,7 +46265,7 @@
           "exportada": false,
           "params": "path,opts={}",
           "retorno": null,
-          "linea": 254
+          "linea": 255
         },
         {
           "nombre": "set",
@@ -46124,7 +46273,7 @@
           "exportada": false,
           "params": "patch",
           "retorno": null,
-          "linea": 255
+          "linea": 256
         },
         {
           "nombre": "loadAll",
@@ -46132,7 +46281,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 256
+          "linea": 257
         },
         {
           "nombre": "loadHW",
@@ -46140,7 +46289,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 257
+          "linea": 258
         },
         {
           "nombre": "loadZonas",
@@ -46148,7 +46297,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 258
+          "linea": 259
         },
         {
           "nombre": "el",
@@ -46156,7 +46305,7 @@
           "exportada": false,
           "params": "tag,props,...ch",
           "retorno": null,
-          "linea": 259
+          "linea": 260
         },
         {
           "nombre": "Toggle",
@@ -46164,7 +46313,7 @@
           "exportada": false,
           "params": "on,onChange",
           "retorno": null,
-          "linea": 260
+          "linea": 261
         },
         {
           "nombre": "renderLogin",
@@ -46172,7 +46321,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 261
+          "linea": 262
         },
         {
           "nombre": "buildForm",
@@ -46180,7 +46329,7 @@
           "exportada": false,
           "params": "regla",
           "retorno": null,
-          "linea": 262
+          "linea": 263
         },
         {
           "nombre": "renderReglaCard",
@@ -46188,7 +46337,7 @@
           "exportada": false,
           "params": "r",
           "retorno": null,
-          "linea": 264
+          "linea": 265
         },
         {
           "nombre": "renderLog",
@@ -46196,7 +46345,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 265
+          "linea": 266
         },
         {
           "nombre": "renderMesas",
@@ -46204,7 +46353,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 266
+          "linea": 267
         },
         {
           "nombre": "buildDeviceForm",
@@ -46212,7 +46361,7 @@
           "exportada": false,
           "params": "device",
           "retorno": null,
-          "linea": 267
+          "linea": 268
         },
         {
           "nombre": "renderHardware",
@@ -46220,7 +46369,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 268
+          "linea": 269
         },
         {
           "nombre": "render",
@@ -46228,14 +46377,14 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 269
+          "linea": 270
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "0d49776e1d21"
+      "hash": "dabc37ef910f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/push-send/index.ts",
@@ -46249,7 +46398,7 @@
           "exportada": false,
           "params": "d: unknown, s = 200",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "generarVapidKeys",
@@ -46257,7 +46406,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "── Generación de claves VAPID (ECDSA P-256) ──────────────────────────────"
         },
         {
@@ -46266,7 +46415,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "vapidJWT",
@@ -46274,7 +46423,7 @@
           "exportada": false,
           "params": "audience: string, privateKeyB64: string",
           "retorno": "Promise<string>",
-          "linea": 41,
+          "linea": 42,
           "resumen": "── JWT VAPID ────────────────────────────────────────────────────"
         },
         {
@@ -46283,7 +46432,7 @@
           "exportada": false,
           "params": "sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: { title: string; body: string; mensaje_voz?: string }, vapidKeys: { publicKey: string; privateKey: string }",
           "retorno": null,
-          "linea": 68,
+          "linea": 69,
           "resumen": "── Enviar una notificación push ──────────────────────────────────────"
         }
       ],
@@ -46291,7 +46440,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "8f842d42c01c"
+      "hash": "7bb57c177113"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-assistant/index.ts",
@@ -46303,7 +46452,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "94c39d6ca520"
+      "hash": "190fce5528d8"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-call-waiter/index.ts",
@@ -46317,14 +46466,14 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 126
+          "linea": 127
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "10654303a21d"
+      "hash": "ebe3392f8dff"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-cobro/index.ts",
@@ -46336,7 +46485,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "423c7a9b19a6"
+      "hash": "91df283d11ac"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-connect/index.ts",
@@ -46348,7 +46497,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "309b7201382a"
+      "hash": "b09f40762268"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-order/index.ts",
@@ -46362,14 +46511,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d70fbc80d3a0"
+      "hash": "bf5f86e72333"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-session/index.ts",
@@ -46383,7 +46532,7 @@
           "exportada": false,
           "params": "d: object",
           "retorno": null,
-          "linea": 212
+          "linea": 213
         },
         {
           "nombre": "res400",
@@ -46391,7 +46540,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 213
+          "linea": 214
         },
         {
           "nombre": "res403",
@@ -46399,7 +46548,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 214
+          "linea": 215
         },
         {
           "nombre": "res404",
@@ -46407,14 +46556,14 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 215
+          "linea": 216
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "ed786b0ed02d"
+      "hash": "107d126b49b9"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-split/index.ts",
@@ -46428,7 +46577,7 @@
           "exportada": false,
           "params": "d: object",
           "retorno": null,
-          "linea": 198
+          "linea": 199
         },
         {
           "nombre": "err",
@@ -46436,14 +46585,14 @@
           "exportada": false,
           "params": "e: string, status = 400",
           "retorno": null,
-          "linea": 199
+          "linea": 200
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "05710facd244"
+      "hash": "8ec1bb43b21c"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/recuperar-pin/index.ts",
@@ -46454,7 +46603,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "216f67321b64"
+      "hash": "cdaaf7a660ac"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/stripe-checkout/index.ts",
@@ -46467,7 +46616,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "buildLineItems",
@@ -46475,14 +46624,14 @@
           "exportada": false,
           "params": "numUsuarios: number, cfg: ReturnType<typeof getStripeConfig>",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "542001e7eb10"
+      "hash": "311ee5396cbc"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/test-runner/index.ts",
@@ -46494,16 +46643,16 @@
           "nombre": "call",
           "kind": "function",
           "exportada": false,
-          "params": "slug: string, body: unknown, key: string",
+          "params": "slug: string, body: unknown",
           "retorno": "Promise<",
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "f63a4e887710"
+      "hash": "c419d2c137ec"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/verifactu-sign/index.ts",
@@ -46517,7 +46666,7 @@
           "exportada": false,
           "params": "data: string",
           "retorno": "Promise<string>",
-          "linea": 5
+          "linea": 6
         },
         {
           "nombre": "reportarError",
@@ -46525,14 +46674,14 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "dba0f12ff64b"
+      "hash": "fb78c2b4712d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/vox-confirm/index.ts",
@@ -46546,7 +46695,7 @@
           "exportada": false,
           "params": "params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "textoConfirmacion",
@@ -46554,12 +46703,12 @@
           "exportada": false,
           "params": "body: any",
           "retorno": "string",
-          "linea": 31
+          "linea": 32
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "75353d891403"
+      "hash": "af42808097f0"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/webhook-monei/index.ts",
@@ -46572,7 +46721,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "verificarFirma",
@@ -46580,7 +46729,7 @@
           "exportada": false,
           "params": "body: string, signature: string, secret: string",
           "retorno": "boolean",
-          "linea": 142
+          "linea": 143
         }
       ],
       "tablas": [
@@ -46588,7 +46737,7 @@
         "node"
       ],
       "rutaApi": null,
-      "hash": "f40e24d47417"
+      "hash": "7126e59e7cc3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/webhook-stripe/index.ts",
@@ -46601,7 +46750,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string[]",
-          "linea": 14,
+          "linea": 15,
           "resumen": "─── Selector de secretos (robusto: live + test a la vez) ──────────────── Antes dependía de STRIPE_MODE: si el flag no estaba en \"live\", validaba los eventos LIVE con el secreto de TEST → firma inváli"
         },
         {
@@ -46610,7 +46759,7 @@
           "exportada": false,
           "params": "supabase: any, paymentIntentId: string, stripeStatus: string, event: any",
           "retorno": null,
-          "linea": 75
+          "linea": 76
         },
         {
           "nombre": "procesarPagoFallido",
@@ -46618,7 +46767,7 @@
           "exportada": false,
           "params": "supabase: any, paymentIntentId: string, stripeStatus: string, event: any",
           "retorno": null,
-          "linea": 82
+          "linea": 83
         },
         {
           "nombre": "activarSuscripcion",
@@ -46626,7 +46775,7 @@
           "exportada": false,
           "params": "supabase: any, session: any",
           "retorno": null,
-          "linea": 89
+          "linea": 90
         },
         {
           "nombre": "renovarSuscripcion",
@@ -46634,7 +46783,7 @@
           "exportada": false,
           "params": "supabase: any, invoice: any",
           "retorno": null,
-          "linea": 99
+          "linea": 100
         },
         {
           "nombre": "actualizarSuscripcion",
@@ -46642,7 +46791,7 @@
           "exportada": false,
           "params": "supabase: any, subscription: any",
           "retorno": null,
-          "linea": 104
+          "linea": 105
         },
         {
           "nombre": "cancelarSuscripcion",
@@ -46650,7 +46799,7 @@
           "exportada": false,
           "params": "supabase: any, subscription: any",
           "retorno": null,
-          "linea": 112
+          "linea": 113
         },
         {
           "nombre": "marcarPagoFallidoSaaS",
@@ -46658,7 +46807,7 @@
           "exportada": false,
           "params": "supabase: any, invoice: any",
           "retorno": null,
-          "linea": 117
+          "linea": 118
         },
         {
           "nombre": "verificarFirmaStripe",
@@ -46666,7 +46815,7 @@
           "exportada": false,
           "params": "body: string, signature: string, secret: string",
           "retorno": "boolean",
-          "linea": 123
+          "linea": 124
         }
       ],
       "tablas": [
@@ -46674,7 +46823,7 @@
         "node"
       ],
       "rutaApi": null,
-      "hash": "f3e65e5eed05"
+      "hash": "643d70d899e9"
     },
     {
       "ruta": "apps/ialimp/app/admin/agenda/page.tsx",
@@ -48891,7 +49040,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 12,
+          "linea": 13,
           "resumen": "POST /api/admin/contabilidad/adjunto (FormData: tipo, id, file) Sube un justificante (PDF/imagen) a Storage y guarda su URL en el apunte. tipo = 'gasto' (documentos_contables) | 'ingreso' (ingresos_ma"
         }
       ],
@@ -48901,7 +49050,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/contabilidad/adjunto",
-      "hash": "fe3d2ebd9862"
+      "hash": "95d097568444"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/contabilidad/apuntes/[id]/route.ts",
@@ -49633,7 +49782,7 @@
           "exportada": false,
           "params": "session_id: string",
           "retorno": "Promise<string[]>",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "borrarArchivos",
@@ -49641,7 +49790,7 @@
           "exportada": false,
           "params": "paths: string[]",
           "retorno": "Promise<number>",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "GET",
@@ -49649,7 +49798,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 41
+          "linea": 42
         }
       ],
       "tablas": [
@@ -49657,7 +49806,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/fotos-cleanup",
-      "hash": "7e5148820c9a"
+      "hash": "33c23b2152be"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/historial/route.ts",
@@ -49802,7 +49951,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "analizarImagenConIA",
@@ -49810,7 +49959,7 @@
           "exportada": false,
           "params": "imageUrl: string",
           "retorno": "Promise<AnalisisCalidad>",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "enviarPushCoordinadora",
@@ -49818,7 +49967,7 @@
           "exportada": false,
           "params": "empresa_id: string, propiedad: string, descripcion: string, severidad: string",
           "retorno": null,
-          "linea": 72
+          "linea": 73
         },
         {
           "nombre": "POST",
@@ -49826,7 +49975,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 122,
+          "linea": 123,
           "resumen": "POST /api/admin/ia/analizar-foto Body: { foto_url, session_id, empresa_id, propiedad_id?, property_name? } Llamado automáticamente desde upload-photo tras subir la imagen"
         }
       ],
@@ -49838,7 +49987,7 @@
         "quejas"
       ],
       "rutaApi": "/api/admin/ia/analizar-foto",
-      "hash": "953e89f98dcc"
+      "hash": "1c0c96070177"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/ia/briefing/route.ts",
@@ -49912,7 +50061,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "descargarBuffer",
@@ -49920,7 +50069,7 @@
           "exportada": false,
           "params": "url: string",
           "retorno": "Promise<Buffer>",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "componerMontaje",
@@ -49928,7 +50077,7 @@
           "exportada": false,
           "params": "refBuf: Buffer, fotoBuf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 31,
+          "linea": 32,
           "resumen": "NVIDIA NIM admite 1 imagen por peticion -> componemos referencia | foto en una sola imagen."
         },
         {
@@ -49937,7 +50086,7 @@
           "exportada": false,
           "params": "montajeB64: string, contexto: string",
           "retorno": "Promise<Comparacion>",
-          "linea": 52
+          "linea": 53
         },
         {
           "nombre": "POST",
@@ -49945,7 +50094,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 83,
+          "linea": 84,
           "resumen": "POST /api/admin/ia/comparar-foto Body: { referencia_url, foto_url, contexto?, empresa_id?, property_name? } NOTA: el \"score\" del modelo no es fiable; solo se usan accion/coincide como semaforo. La IA "
         }
       ],
@@ -49954,7 +50103,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/ia/comparar-foto",
-      "hash": "a9667293050c"
+      "hash": "02560637bdd2"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/ia/patrones/route.ts",
@@ -53033,7 +53182,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 18,
+          "linea": 19,
           "resumen": "Solo alfanumérico/-/_ en los segmentos que van a la ruta de Storage (evita path traversal: item_id=\"../..\" escaparía a otra sesión/bucket)."
         },
         {
@@ -53042,7 +53191,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         }
       ],
       "tablas": [
@@ -53052,7 +53201,7 @@
         "protocolos"
       ],
       "rutaApi": "/api/l/upload-photo",
-      "hash": "7fd628a019f8"
+      "hash": "1799e67fbc79"
     },
     {
       "ruta": "apps/ialimp/app/api/lead-saas/route.ts",
@@ -53367,7 +53516,7 @@
           "exportada": false,
           "params": "token: string",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "GET",
@@ -53375,7 +53524,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 22,
+          "linea": 23,
           "resumen": "GET — devuelve instrucciones_acceso y archivos_acceso de todas las propiedades del cliente"
         },
         {
@@ -53384,7 +53533,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 37,
+          "linea": 38,
           "resumen": "PATCH — el propietario actualiza instrucciones de una propiedad suya"
         },
         {
@@ -53393,7 +53542,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 64,
+          "linea": 65,
           "resumen": "POST — sube un archivo adjunto para una propiedad"
         }
       ],
@@ -53403,7 +53552,7 @@
         "propiedades"
       ],
       "rutaApi": "/api/propietario/[token]/acceso",
-      "hash": "71a4d8b07bf8"
+      "hash": "e86af04aeaf5"
     },
     {
       "ruta": "apps/ialimp/app/api/propietario/[token]/chat/route.ts",
@@ -53545,7 +53694,7 @@
           "exportada": false,
           "params": "token: string",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "getPropiedad",
@@ -53553,7 +53702,7 @@
           "exportada": false,
           "params": "propiedad_id: string, cliente_id: string",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "guardarDocs",
@@ -53561,7 +53710,7 @@
           "exportada": false,
           "params": "propiedad_id: string, docs: any[]",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "GET",
@@ -53569,7 +53718,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 43,
+          "linea": 44,
           "resumen": "GET — documentos de todas las propiedades del cliente"
         },
         {
@@ -53578,7 +53727,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 58,
+          "linea": 59,
           "resumen": "POST — añadir o borrar un documento (FormData)"
         },
         {
@@ -53587,7 +53736,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 122,
+          "linea": 123,
           "resumen": "PATCH — editar metadatos de un documento (categoría, caducidad, compartido, notas)"
         }
       ],
@@ -53597,7 +53746,7 @@
         "propiedades"
       ],
       "rutaApi": "/api/propietario/[token]/documentos-piso",
-      "hash": "6b71cb8095ba"
+      "hash": "8b6ca850a51f"
     },
     {
       "ruta": "apps/ialimp/app/api/propietario/[token]/documentos/route.ts",
@@ -54407,7 +54556,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "getRepartidor",
@@ -54415,7 +54564,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "POST",
@@ -54423,7 +54572,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [
@@ -54433,7 +54582,7 @@
         "repartidores"
       ],
       "rutaApi": "/api/r/upload-foto",
-      "hash": "7484225f3455"
+      "hash": "6842f8ac8781"
     },
     {
       "ruta": "apps/ialimp/app/api/stripe/checkout/route.ts",
@@ -56943,6 +57092,67 @@
       "hash": "3858b9ea6522"
     },
     {
+      "ruta": "apps/ialimp/lib/claves-supabase.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "Clave PUBLICABLE de Supabase — la que sustituye a la `anon` legacy. Contexto: el botón «Disable JWT-based API keys» del panel mata a la vez la `service_role` filtrada y la `anon` legacy. Para poder pulsarlo, todo lo que hoy manda la `anon` tiene que poder mandar la nueva `sb_publishable_…`. Plan: do",
+      "exporta": [
+        "clavePublicable",
+        "origenClavePublicable",
+        "hayClavePublicable",
+        "cabecerasClave"
+      ],
+      "funciones": [
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "La clave publicable, o `''` si no hay ninguna configurada. Devuelve cadena vacía (no lanza) a propósito: hay módulos que la leen en el top level y un throw ahí rompería el build. Una clave vacía falla"
+        },
+        {
+          "nombre": "origenClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClavePublicable | null",
+          "linea": 31,
+          "resumen": "De dónde salió la clave: `'nueva'`, `'legacy'`, o null si no hay ninguna."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "Una variable puesta a `\" \"` (o a la cadena vacía) es una variable SIN poner: se trata como ausente en vez de como una clave que falla todas las llamadas. Mismo criterio que el helper de las Edge Funct"
+        },
+        {
+          "nombre": "hayClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "¿Hay alguna clave publicable configurada? Para health-checks y avisos de entorno."
+        },
+        {
+          "nombre": "cabecerasClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string = clavePublicable()",
+          "retorno": "Record<string, string>",
+          "linea": 73,
+          "resumen": "Cabeceras de autenticación para llamar A MANO a la API HTTP de Supabase (`/storage/v1`, `/rest/v1`, `/functions/v1`). Manda la clave en `apikey` **y** en `Authorization: Bearer`, que es lo que hace `s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9aa980688701"
+    },
+    {
       "ruta": "apps/ialimp/lib/cleaning-photos.ts",
       "ambito": "apps/ialimp",
       "resumen": "Firmado de fotos del bucket cleaning-photos (privado) con la anon key. La anon key tiene policy SELECT sobre el bucket -> NO hace falta service_role. La primitiva de firmado vive en @central/core-storage; aquí queda fijo el bucket.",
@@ -56957,7 +57167,7 @@
           "exportada": true,
           "params": "u: string",
           "retorno": "string | null",
-          "linea": 12,
+          "linea": 13,
           "resumen": "Extrae el path dentro del bucket a partir de una URL pública (o de un path suelto)."
         },
         {
@@ -56966,13 +57176,13 @@
           "exportada": true,
           "params": "u: string, expiresIn = 3600",
           "retorno": "Promise<string | null>",
-          "linea": 18,
+          "linea": 19,
           "resumen": "Devuelve una URL firmada absoluta dentro de cleaning-photos, o null si no aplica/falla. Solo firma URLs del bucket cleaning-photos (deja fuera data: y otros buckets)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "57f830528fbe"
+      "hash": "23aaf6201251"
     },
     {
       "ruta": "apps/ialimp/lib/contab-recurrentes.ts",
@@ -57895,7 +58105,7 @@
           "exportada": false,
           "params": "",
           "retorno": "SupabaseStorageConfig",
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "serviceKey",
@@ -57903,7 +58113,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 34,
+          "linea": 35,
           "resumen": "🚨 `requireSecret` y no `process.env.X!` (12/08/2026). El proyecto Vercel `ialimp` NO tiene `SUPABASE_SERVICE_ROLE_KEY` — comprobado en las variables propias del proyecto, en las compartidas enlazadas"
         },
         {
@@ -57912,7 +58122,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "subirObjeto",
@@ -57920,7 +58130,7 @@
           "exportada": true,
           "params": "path: string, bytes: ArrayBuffer, contentType: string",
           "retorno": "Promise<string>",
-          "linea": 39,
+          "linea": 40,
           "resumen": "Sube bytes al bucket privado con service_role. Devuelve el path o lanza."
         },
         {
@@ -57929,7 +58139,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<void>",
-          "linea": 54,
+          "linea": 55,
           "resumen": "Borra un objeto del bucket privado (best-effort)."
         },
         {
@@ -57938,7 +58148,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string | null>",
-          "linea": 59,
+          "linea": 60,
           "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado."
         },
         {
@@ -57947,13 +58157,13 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<ArrayBuffer>",
-          "linea": 64,
+          "linea": 65,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7ae779354364"
+      "hash": "8b59296bc21d"
     },
     {
       "ruta": "apps/ialimp/lib/tenant.ts",
@@ -92339,7 +92549,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "string",
-          "linea": 49
+          "linea": 55
         },
         {
           "nombre": "fotosDeAcceso",
@@ -92347,7 +92557,7 @@
           "exportada": true,
           "params": "",
           "retorno": "",
-          "linea": 192,
+          "linea": 198,
           "resumen": "Inventario de las fotos que las indicaciones enseñan al huésped, por piso. Existe porque esta es la ÚNICA atadura dura que le queda al proveedor: los pasos van en texto plano y funcionan sin red, pero"
         },
         {
@@ -92356,7 +92566,7 @@
           "exportada": true,
           "params": "",
           "retorno": "",
-          "linea": 209,
+          "linea": 215,
           "resumen": "Pasos que PROMETEN una imagen («en esta foto», «la señalada en rojo», «así se ve») y no la llevan. Un paso así es peor que uno sin foto: manda a mirar algo que no está."
         },
         {
@@ -92365,7 +92575,7 @@
           "exportada": true,
           "params": "propertyId: string, codigos: CodigosAcceso",
           "retorno": "string[]",
-          "linea": 236,
+          "linea": 242,
           "resumen": "¿Qué códigos necesita este piso (por sus pasos) que NO vienen en `codigos`? El orquestador usa esto para avisar a Telegram si falta un código en BD — el hueco se declara, nunca se inventa."
         },
         {
@@ -92374,13 +92584,13 @@
           "exportada": true,
           "params": "propertyId: string, codigos: CodigosAcceso, opts: { conCodigos: boolean },",
           "retorno": "string",
-          "linea": 252,
+          "linea": 258,
           "resumen": "Bloque de acceso en texto plano para las plantillas (y, más adelante, para la ficha del agente). `conCodigos:false` = versión de los 7 días: el PROCESO completo sin los códigos («el código te llega la"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "13c37a7ca6de"
+      "hash": "c1547c089f47"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/aprender.ts",
@@ -96373,7 +96583,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 98
+          "linea": 100
         },
         {
           "nombre": "visperaLlegada",
@@ -96381,7 +96591,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 113
+          "linea": 115
         },
         {
           "nombre": "bienvenida",
@@ -96389,7 +96599,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 132
+          "linea": 134
         },
         {
           "nombre": "estancia",
@@ -96397,7 +96607,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 144
+          "linea": 146
         },
         {
           "nombre": "visperaSalida",
@@ -96405,7 +96615,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 152
+          "linea": 154
         },
         {
           "nombre": "postSalida",
@@ -96413,7 +96623,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 170
+          "linea": 172
         },
         {
           "nombre": "renderPlantilla",
@@ -96421,7 +96631,7 @@
           "exportada": true,
           "params": "tipo: TipoMensaje, d: DatosPlantilla",
           "retorno": "string",
-          "linea": 182
+          "linea": 184
         },
         {
           "nombre": "renderAsunto",
@@ -96429,13 +96639,13 @@
           "exportada": true,
           "params": "tipo: TipoMensaje, d: DatosPlantilla",
           "retorno": "string",
-          "linea": 195,
+          "linea": 197,
           "resumen": "Asunto (solo lo aprovechan los canales de email; en el chat del portal no estorba)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "501faf6c807b"
+      "hash": "9ded3c489d39"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/traduccion-guarda.ts",
@@ -106416,12 +106626,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/logos",
-      "hash": "04d5d94fd832"
+      "hash": "9bcf0c2d60e8"
     },
     {
       "ruta": "apps/rrhh/app/api/operador/personas/route.ts",
@@ -107350,6 +107560,67 @@
       ],
       "rutaApi": null,
       "hash": "32f28f33d080"
+    },
+    {
+      "ruta": "apps/rrhh/lib/claves-supabase.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Clave PUBLICABLE de Supabase — la que sustituye a la `anon` legacy. Contexto: el botón «Disable JWT-based API keys» del panel mata a la vez la `service_role` filtrada y la `anon` legacy. Para poder pulsarlo, todo lo que hoy manda la `anon` tiene que poder mandar la nueva `sb_publishable_…`. Plan: do",
+      "exporta": [
+        "clavePublicable",
+        "origenClavePublicable",
+        "hayClavePublicable",
+        "cabecerasClave"
+      ],
+      "funciones": [
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "La clave publicable, o `''` si no hay ninguna configurada. Devuelve cadena vacía (no lanza) a propósito: hay módulos que la leen en el top level y un throw ahí rompería el build. Una clave vacía falla"
+        },
+        {
+          "nombre": "origenClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClavePublicable | null",
+          "linea": 31,
+          "resumen": "De dónde salió la clave: `'nueva'`, `'legacy'`, o null si no hay ninguna."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "Una variable puesta a `\" \"` (o a la cadena vacía) es una variable SIN poner: se trata como ausente en vez de como una clave que falla todas las llamadas. Mismo criterio que el helper de las Edge Funct"
+        },
+        {
+          "nombre": "hayClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "¿Hay alguna clave publicable configurada? Para health-checks y avisos de entorno."
+        },
+        {
+          "nombre": "cabecerasClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string = clavePublicable()",
+          "retorno": "Record<string, string>",
+          "linea": 73,
+          "resumen": "Cabeceras de autenticación para llamar A MANO a la API HTTP de Supabase (`/storage/v1`, `/rest/v1`, `/functions/v1`). Manda la clave en `apikey` **y** en `Authorization: Bearer`, que es lo que hace `s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9aa980688701"
     },
     {
       "ruta": "apps/rrhh/lib/contratos.ts",
@@ -108490,7 +108761,7 @@
           "exportada": false,
           "params": "",
           "retorno": "SupabaseStorageConfig",
-          "linea": 4
+          "linea": 5
         },
         {
           "nombre": "serviceKey",
@@ -108498,7 +108769,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "subirObjeto",
@@ -108506,7 +108777,7 @@
           "exportada": true,
           "params": "path: string, bytes: ArrayBuffer, contentType: string",
           "retorno": "Promise<string>",
-          "linea": 14,
+          "linea": 15,
           "resumen": "Sube bytes al bucket privado con service_role. Devuelve el path o lanza."
         },
         {
@@ -108515,7 +108786,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<void>",
-          "linea": 30,
+          "linea": 31,
           "resumen": "Borra un objeto del bucket privado (best-effort)."
         },
         {
@@ -108524,7 +108795,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string | null>",
-          "linea": 36,
+          "linea": 37,
           "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado."
         },
         {
@@ -108533,7 +108804,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string>",
-          "linea": 45,
+          "linea": 46,
           "resumen": "Crea una URL firmada para que el cliente suba DIRECTAMENTE a Supabase Storage sin pasar por la función serverless (elimina el doble salto de red). El token caduca en 60 s — suficiente para iniciar la "
         },
         {
@@ -108542,13 +108813,13 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<ArrayBuffer>",
-          "linea": 58,
+          "linea": 59,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0ea68e8016a6"
+      "hash": "6dd1070e0c55"
     },
     {
       "ruta": "apps/rrhh/lib/tenant.ts",
@@ -111303,13 +111574,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 13,
+          "linea": 14,
           "resumen": "Proxy de lectura para el bucket privado `cleaning-photos`. Recibe la URL/ruta guardada (?u=...), genera una signed URL fresca y redirige. Las <img> de la zona limpiadoras apuntan aquí en vez de a una "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/limpiadoras/photo",
-      "hash": "e7bbb40d5311"
+      "hash": "1fcf1e51ef9a"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/sessions/route.ts",
@@ -111360,12 +111631,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [],
       "rutaApi": "/api/limpiadoras/upload-photo",
-      "hash": "1ffe14fd289e"
+      "hash": "4400bd1fe3c9"
     },
     {
       "ruta": "apps/sivra/app/api/mensajes/[bookingId]/email/route.ts",
@@ -113906,6 +114177,67 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "02b97e375048"
+    },
+    {
+      "ruta": "apps/sivra/lib/claves-supabase.ts",
+      "ambito": "apps/sivra",
+      "resumen": "Clave PUBLICABLE de Supabase — la que sustituye a la `anon` legacy. Contexto: el botón «Disable JWT-based API keys» del panel mata a la vez la `service_role` filtrada y la `anon` legacy. Para poder pulsarlo, todo lo que hoy manda la `anon` tiene que poder mandar la nueva `sb_publishable_…`. Plan: do",
+      "exporta": [
+        "clavePublicable",
+        "origenClavePublicable",
+        "hayClavePublicable",
+        "cabecerasClave"
+      ],
+      "funciones": [
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "La clave publicable, o `''` si no hay ninguna configurada. Devuelve cadena vacía (no lanza) a propósito: hay módulos que la leen en el top level y un throw ahí rompería el build. Una clave vacía falla"
+        },
+        {
+          "nombre": "origenClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClavePublicable | null",
+          "linea": 31,
+          "resumen": "De dónde salió la clave: `'nueva'`, `'legacy'`, o null si no hay ninguna."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "Una variable puesta a `\" \"` (o a la cadena vacía) es una variable SIN poner: se trata como ausente en vez de como una clave que falla todas las llamadas. Mismo criterio que el helper de las Edge Funct"
+        },
+        {
+          "nombre": "hayClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "¿Hay alguna clave publicable configurada? Para health-checks y avisos de entorno."
+        },
+        {
+          "nombre": "cabecerasClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string = clavePublicable()",
+          "retorno": "Record<string, string>",
+          "linea": 73,
+          "resumen": "Cabeceras de autenticación para llamar A MANO a la API HTTP de Supabase (`/storage/v1`, `/rest/v1`, `/functions/v1`). Manda la clave en `apikey` **y** en `Authorization: Bearer`, que es lo que hace `s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9aa980688701"
     },
     {
       "ruta": "apps/sivra/lib/cron-auth.ts",
@@ -117115,7 +117447,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fe9f7f2893c1"
+      "hash": "4fbb2cd107f8"
     },
     {
       "ruta": "packages/core-telegram/src/index.ts",
@@ -130596,7 +130928,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3214,
-    "funciones": 9847
+    "archivos": 3219,
+    "funciones": 9875
   }
 }
