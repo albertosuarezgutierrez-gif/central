@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-11T12:21:33Z",
-  "sha": "48c8ac00e4a02134c6f15c798b02837b5c7dd669",
+  "generadoEn": "2026-09-11T13:48:09Z",
+  "sha": "3ea40768b2a3815d4135da2a001e0f9dfa25e52e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9240,6 +9240,39 @@
       "hash": "492cb2adaacc"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/cliente/dni/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "POST /api/operador/cliente/dni — el DNI COMPLETO, sin enmascarar. 🚨 Es la ÚNICA salida del puerto que deja cruzar el documento entero. El resto del puerto (`/cliente`, `/impagados`…) lo enmascara a p"
+        },
+        {
+          "nombre": "anotar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 58,
+          "resumen": "Best-effort: que el historial falle no bloquea la revelación, pero se grita."
+        }
+      ],
+      "tablas": [
+        "historial_interno",
+        "next"
+      ],
+      "rutaApi": "/api/operador/cliente/dni",
+      "hash": "94b35456b08b"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/cliente/historial/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -10149,6 +10182,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/sonda",
       "hash": "e59bc76498f0"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/tarificacion/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "`GET /api/operador/codeoscopic/tarificacion?polizaId=` — la ÚLTIMA cotización REAL ya guardada de esta póliza, para \"retomarla\" en pantalla sin volver a pagar el `POST /insurances` que ya se pagó (11/"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/tarificacion",
+      "hash": "babd7f24877f"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/vida-nuevo/route.ts",
@@ -14141,6 +14195,67 @@
       "hash": "f0a02538d5f5"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/formulario-guardado.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Reconstruye del `peticion` guardado en `seguros.tarificaciones` los campos que el corredor tecleó a mano en el formulario de retarificar auto, para poder \"retomar\" una cotización sin volver a escribirlos. PURO: entra el `CreateInsuranceRequest_V1` tal cual se guardó (el mismo que construye `peticion",
+      "exporta": [
+        "extraerFormularioAuto"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Json",
+          "linea": 27
+        },
+        {
+          "nombre": "arr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown[]",
+          "linea": 28
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 29
+        },
+        {
+          "nombre": "idTexto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 31
+        },
+        {
+          "nombre": "idEntero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 36
+        },
+        {
+          "nombre": "extraerFormularioAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "peticion: unknown",
+          "retorno": "FormularioAutoGuardado",
+          "linea": 43
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "153b9a9be2d5"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/horquilla.ts",
       "ambito": "apps/asegura",
       "resumen": "Estimación propia de prima, a partir de casos que ya conocemos. PURO. Para qué sirve DE VERDAD: no tanto para enseñarle un precio al cliente como para decidir si merece la pena PEDIRLO. Cada cotización cuesta 0,50€ y no es idempotente. Si el cliente paga 250€ y lo que hemos visto en casas parecidas ",
@@ -14974,6 +15089,39 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b321ba4e9807"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/tarificacion-guardada.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lee la ÚLTIMA cotización REAL ya guardada de una póliza, para poder \"retomarla\" en pantalla sin volver a pagar el `POST /insurances` que ya se pagó. Impuro (BD) — hermano de `cotizaciones.ts`, que es quien la escribió. 🚨 Recuperar el precio NO sustituye al ReRate: `expires_at` llega a NULL en la re",
+      "exporta": [
+        "ultimaTarificacionRealAuto"
+      ],
+      "funciones": [
+        {
+          "nombre": "ultimaTarificacionRealAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaId: string,",
+          "retorno": "Promise<TarificacionGuardada | null>",
+          "linea": 39,
+          "resumen": "La última tarificación REAL (no simulada) de auto guardada para esta póliza en ESTA correduría. `null` = no hay ninguna — no es un error, es que todavía no se ha pedido precio nunca para esta póliza."
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: number | string | null",
+          "retorno": "number | null",
+          "linea": 98
+        }
+      ],
+      "tablas": [
+        "tarificacion_precios",
+        "tarificaciones"
+      ],
+      "rutaApi": null,
+      "hash": "2f84691179dc"
     },
     {
       "ruta": "apps/asegura/lib/comisiones.ts",
@@ -60731,7 +60879,7 @@
           "exportada": true,
           "params": "{ ficha, resumen }: { ficha: Ficha; resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 23,
+          "linea": 24,
           "resumen": "La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto. 🚨 Por qué los contadores viven aquí y no dentro de "
         },
         {
@@ -60740,7 +60888,7 @@
           "exportada": false,
           "params": "nombre: string",
           "retorno": "string",
-          "linea": 84
+          "linea": 85
         },
         {
           "nombre": "RuedaRamos",
@@ -60748,7 +60896,7 @@
           "exportada": false,
           "params": "{ nombre, tiposVivos }: { nombre: string; tiposVivos: string[] }",
           "retorno": null,
-          "linea": 91
+          "linea": 92
         },
         {
           "nombre": "Titulares",
@@ -60756,7 +60904,7 @@
           "exportada": false,
           "params": "{ resumen }: { resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 140
+          "linea": 141
         },
         {
           "nombre": "ProximoVencimiento",
@@ -60764,7 +60912,7 @@
           "exportada": false,
           "params": "{ proximo, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 186,
+          "linea": 187,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -60773,7 +60921,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: 22px se sale de la tarjeta en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 221
+          "linea": 222
         },
         {
           "nombre": "EstadoCabecera",
@@ -60781,7 +60929,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 239
+          "linea": 240
         },
         {
           "nombre": "Acciones",
@@ -60789,7 +60937,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 301
+          "linea": 302
         },
         {
           "nombre": "Contacto",
@@ -60797,20 +60945,20 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 359
+          "linea": 360
         },
         {
           "nombre": "Identidad",
           "kind": "function",
           "exportada": false,
-          "params": "{ identidad }: { identidad: IdentidadFicha | null }",
+          "params": "{ identidad, clienteId }: { identidad: IdentidadFicha | null; clienteId: string }",
           "retorno": null,
-          "linea": 458
+          "linea": 459
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "33ffe7725803"
+      "hash": "cf3beecd18f6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/decesos-nuevo/acciones.ts",
@@ -61712,6 +61860,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1dd5573c74b6"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/VerDniCompleto.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "VerDniCompleto"
+      ],
+      "funciones": [
+        {
+          "nombre": "VerDniCompleto",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId }: { clienteId: string }",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "«Ver DNI completo» — el ÚNICO camino para destapar el DNI entero de un cliente. El resto de la ficha lo enseña enmascarado a propósito (`*****678Z`, puerto de asegura); esto existe para el caso real d"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "abd220ac9581"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/vida-nuevo/acciones.ts",
@@ -62912,6 +63081,7 @@
       "ambito": "apps/plataforma",
       "exporta": [
         "pedirCatalogo",
+        "pedirTarificacionGuardada",
         "pedirCotizacion",
         "pedirOferta",
         "pedirEmision"
@@ -62923,8 +63093,17 @@
           "exportada": true,
           "params": "params: Record<string, string>",
           "retorno": "Promise<RespuestaCatalogo>",
-          "linea": 49,
+          "linea": 51,
           "resumen": "Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.**"
+        },
+        {
+          "nombre": "pedirTarificacionGuardada",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizaId: string",
+          "retorno": "Promise<RespuestaTarificacionGuardada>",
+          "linea": 62,
+          "resumen": "La última cotización REAL ya guardada de esta póliza (11/09/2026). **Gratis — no confirma nada con el vendor.** Sirve para \"retomar\" sin volver a pagar los 0,50€ del `POST /insurances` que ya se pagó,"
         },
         {
           "nombre": "pedirCotizacion",
@@ -62932,7 +63111,7 @@
           "exportada": true,
           "params": "entrada: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> catastro?: Record<string, unknown> | null }",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 68,
+          "linea": 81,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `retarificarAsegura()`, en el servidor y en un solo sitio. No se acepta desde el cliente a propósito: si viajara en el cuerpo, dejaría de ser una"
         },
         {
@@ -62941,7 +63120,7 @@
           "exportada": true,
           "params": "entrada: { tarificacionId: string compania: string categoria: string }",
           "retorno": "Promise<RespuestaOferta>",
-          "linea": 90,
+          "linea": 103,
           "resumen": "🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo pone `ofertaAsegura()` en el servidor, y esto NO reintenta"
         },
         {
@@ -62950,13 +63129,13 @@
           "exportada": true,
           "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null }",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 103,
+          "linea": 116,
           "resumen": "🚨 **EL SUBMIT REAL. Compromete un contrato de verdad, no solo dinero.** Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin reintento: un fallo de red aquí NO dice que la póliza no se "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0aade17c4cc9"
+      "hash": "308bf7283149"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx",
@@ -62984,7 +63163,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "74239d96f662"
+      "hash": "5eb5127a967b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -62999,7 +63178,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 35,
+          "linea": 37,
           "resumen": "**Retarificar, DENTRO de `/correduria`.** Hasta el 03/09/2026 esto era un enlace ↗ a `apps/asegura`, que es otro dominio con otra sesión: en producción, `GET /cartera/poliza/9588dad8-… → 307 /login`. "
         },
         {
@@ -63008,7 +63187,7 @@
           "exportada": false,
           "params": "r: RespuestaPrecalificacion",
           "retorno": "string",
-          "linea": 224,
+          "linea": 234,
           "resumen": "Por qué no hay precalificación, en la frase que dice DÓNDE mirar. Nunca se degrada a «la ficha no tiene datos»: la póliza sí trae marca, modelo y código postal — lo que ha fallado es leerlos. El corre"
         },
         {
@@ -63017,7 +63196,7 @@
           "exportada": false,
           "params": "{ supuestos, }: { supuestos: Array<{ campo: string; valor: unknown; porque: string; optimista?: boolean; oculto?: boolean }> }",
           "retorno": null,
-          "linea": 244,
+          "linea": 254,
           "resumen": "Lo que se ha SUPUESTO para poder pedir precio. Va ANTES del botón a propósito: es la letra pequeña de la cifra, y verla después no sirve de nada."
         },
         {
@@ -63026,7 +63205,7 @@
           "exportada": false,
           "params": "garajes: RespuestaCatalogo, civiles: RespuestaCatalogo",
           "retorno": "string | null",
-          "linea": 275,
+          "linea": 285,
           "resumen": "El motivo por el que no se puede cotizar, o `null` si se puede."
         },
         {
@@ -63035,7 +63214,7 @@
           "exportada": false,
           "params": "{ sub, polizaId }: { sub: string; polizaId?: string }",
           "retorno": null,
-          "linea": 292
+          "linea": 302
         },
         {
           "nombre": "Fila",
@@ -63043,7 +63222,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, nota, }: { etiqueta: string valor: string | null /** La letra pequeña del dato: de dónde sale, o por qué no está. */ nota?: string | null }",
           "retorno": null,
-          "linea": 310
+          "linea": 320
         },
         {
           "nombre": "Marco",
@@ -63051,7 +63230,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 356,
+          "linea": 366,
           "resumen": "El marco de la pantalla, con **el CSS que el retarificador da por supuesto**. El componente se trajo de `apps/asegura` tal cual (tres pasos, combustible antes de versión, banners, badges) y esas clase"
         }
       ],
@@ -63059,7 +63238,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "07d33af16c46"
+      "hash": "4fa4d2e6b99d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/retarificador.tsx",
@@ -63098,21 +63277,63 @@
           "resumen": "🚨 El `eur()` de plataforma devuelve «0,00€» para lo que no es un número finito, y eso aquí sería una MENTIRA: una prima que la compañía no ha declarado es un «no lo sé», no un cero. Tres estados, no "
         },
         {
+          "nombre": "resumenDePrecios",
+          "kind": "function",
+          "exportada": false,
+          "params": "precios: Precio[]",
+          "retorno": "string",
+          "linea": 142,
+          "resumen": "El resumen honrado de una cotización, a partir de solo sus precios (sin fallos: la cotización GUARDADA no los persiste, ver `apps/asegura/lib/ codeoscopic/cotizaciones.ts`). Mismo criterio que `resumi"
+        },
+        {
+          "nombre": "resultadoDeGuardada",
+          "kind": "function",
+          "exportada": false,
+          "params": "g: TarificacionGuardadaAuto",
+          "retorno": "Resultado",
+          "linea": 157,
+          "resumen": "Convierte la cotización YA GUARDADA en el mismo `Resultado` que pinta una cotización recién pedida — para que la pantalla no necesite un camino aparte para «lo que ya había» frente a «lo que se acaba "
+        },
+        {
+          "nombre": "leerBorrador",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: string",
+          "retorno": "DatosBorrador | null",
+          "linea": 201
+        },
+        {
+          "nombre": "guardarBorrador",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: string, datos: DatosBorrador",
+          "retorno": null,
+          "linea": 219
+        },
+        {
+          "nombre": "borrarBorrador",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: string",
+          "retorno": null,
+          "linea": 229
+        },
+        {
           "nombre": "buscarEnCatalogo",
           "kind": "function",
           "exportada": false,
           "params": "catalogo: Opcion[], texto: string | null",
           "retorno": "Emparejamiento",
-          "linea": 161,
+          "linea": 263,
           "resumen": "Empareja un texto de la ficha con una opción del catálogo. Mismo criterio que `emparejar()` de `opciones.ts` —exacto y normalizado, y ante la duda no preselecciona— pero devolviendo POR QUÉ no ha casa"
         },
         {
           "nombre": "Retarificador",
           "kind": "function",
           "exportada": true,
-          "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, fechaMatriculacion, vehiculo, consumo, simulacion, deshabilitado, }: { polizaId: string /** * Los huecos que la ficha NO tapa, ya revisados. **`null",
+          "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, fechaMatriculacion, vehiculo, consumo, simulacion, deshabilitado, guardadaPrevia, }: { polizaId: string /** * Los huecos que la ficha NO tapa, ya re",
           "retorno": null,
-          "linea": 191,
+          "linea": 293,
           "resumen": "El único sitio de la app donde un clic cuesta 0,50€ — **salvo en simulación**. Cuatro cosas son deliberadas: - El botón dice EN el botón lo que cuesta el clic, no en una nota al pie, y dice la verdad "
         },
         {
@@ -63121,7 +63342,7 @@
           "exportada": false,
           "params": "{ r, simulacion, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean }",
           "retorno": null,
-          "linea": 960
+          "linea": 1240
         },
         {
           "nombre": "ValorSupuesto",
@@ -63129,8 +63350,17 @@
           "exportada": true,
           "params": "{ s }: { s: Supuesto }",
           "retorno": null,
-          "linea": 1192,
+          "linea": 1472,
           "resumen": "Un supuesto, con su valor — o con la explicación de por qué no lo hay. 🔒 `oculto` NO es «no hay valor»: es «lo hay y se queda en asegura», porque es un dato personal del tomador (su código postal, tí"
+        },
+        {
+          "nombre": "BannerRecuperada",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ guardadaPrevia }: { guardadaPrevia: TarificacionGuardadaAuto }",
+          "retorno": null,
+          "linea": 1501,
+          "resumen": "Avisa de que la pantalla ha arrancado con una cotización YA PAGADA, para que no se lea como si el precio de abajo fuera gratis o recién pedido. Todo lo prellenado sigue siendo editable: volver a pulsa"
         },
         {
           "nombre": "BannerSimulacion",
@@ -63138,8 +63368,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 1215,
-          "resumen": "El cartel de simulación, arriba del todo y sin ambigüedad. 🚨 Sustituye al aviso ROJO de «tarificación apagada» que se pintaba aquí. Ese aviso era falso con la simulación puesta: en `cotizar()` el pas"
+          "linea": 1523
         },
         {
           "nombre": "CabeceraPaso",
@@ -63147,7 +63376,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub }: { n: number; titulo: string; sub?: string }",
           "retorno": null,
-          "linea": 1241
+          "linea": 1549
         },
         {
           "nombre": "Paso",
@@ -63155,7 +63384,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub, children, }: { n: number titulo: string sub?: string children: React.ReactNode }",
           "retorno": null,
-          "linea": 1273
+          "linea": 1581
         },
         {
           "nombre": "Campo",
@@ -63163,7 +63392,7 @@
           "exportada": false,
           "params": "{ id, etiqueta, falta, faltaTexto, ayuda, children, }: { id: string etiqueta: string falta: boolean faltaTexto?: string ayuda?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 1299,
+          "linea": 1607,
           "resumen": "Un campo del formulario: etiqueta, control, ayuda y —si falta— su marca. La marca va AQUÍ y no en una lista encima del botón: «falta la versión» a diez centímetros del desplegable de la versión obliga"
         },
         {
@@ -63172,7 +63401,7 @@
           "exportada": false,
           "params": "{ vehiculo, autoMarca, autoModelo, }: { vehiculo: VehiculoConocido | null autoMarca: Emparejamiento autoModelo: Emparejamiento }",
           "retorno": null,
-          "linea": 1340,
+          "linea": 1648,
           "resumen": "Lo que la cartera YA sabe del coche: informativo, compacto y sin competir con los campos. Sustituye al texto que durante un día negó que la compañía mandara el modelo. Era falso y medido al revés: las"
         },
         {
@@ -63181,7 +63410,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, estado, }: { etiqueta: string valor: string | null estado: Emparejamiento['estado'] }",
           "retorno": null,
-          "linea": 1411
+          "linea": 1719
         },
         {
           "nombre": "ProcedenciaCatalogo",
@@ -63189,7 +63418,7 @@
           "exportada": false,
           "params": "{ emp, elegido, que, }: { emp: Emparejamiento elegido: string que: string }",
           "retorno": null,
-          "linea": 1448,
+          "linea": 1756,
           "resumen": "De dónde sale lo que hay puesto en un desplegable — o por qué no hay nada."
         },
         {
@@ -63198,7 +63427,7 @@
           "exportada": false,
           "params": "{ versiones }: { versiones: VersionCandidata[] }",
           "retorno": null,
-          "linea": 1495,
+          "linea": 1803,
           "resumen": "Las versiones vistas en OTRAS pólizas de la misma matrícula. 🚨 Son PISTAS, nunca una selección. Son texto histórico de otra póliza, no códigos Base7 del catálogo, y con dos o más pueden contradecirse"
         },
         {
@@ -63207,7 +63436,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: Consumo; simulacion: boolean }",
           "retorno": null,
-          "linea": 1549,
+          "linea": 1857,
           "resumen": "El contador de gasto. En simulación no se toca el libro, así que su estado se cuenta como información de contexto y NO en rojo: un «tarificación apagada» en rojo sobre una pantalla que sí funciona y n"
         }
       ],
@@ -63215,7 +63444,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "d842336e4dd4"
+      "hash": "75b4023b1965"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Redes.tsx",
@@ -70576,6 +70805,48 @@
       "tablas": [],
       "rutaApi": "/api/correduria/catastro",
       "hash": "6ec9b303efe9"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/cliente/[id]/dni-codigo/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "POST /api/correduria/cliente/[id]/dni-codigo — pide un código de un solo uso para revelar el DNI completo de ese cliente. El código llega SOLO al Telegram de Alberto (nunca a la respuesta HTTP): sin a"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/cliente/[id]/dni-codigo",
+      "hash": "5321903c15ed"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/cliente/[id]/dni-revelar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "POST /api/correduria/cliente/[id]/dni-revelar — { codigo } → el DNI completo, SOLO si el código pedido en /dni-codigo sigue vigente, sin usar y coincide. Un código erróneo o caducado no distingue el m"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/cliente/[id]/dni-revelar",
+      "hash": "8a0052eafe5d"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/cliente/contactos/route.ts",
@@ -82023,7 +82294,8 @@
         "altaClienteAsegura",
         "descartarClienteAsegura",
         "restaurarClienteAsegura",
-        "historialClienteAsegura"
+        "historialClienteAsegura",
+        "revelarDniAsegura"
       ],
       "funciones": [
         {
@@ -82219,11 +82491,20 @@
           "retorno": "Promise<Reenvio>",
           "linea": 315,
           "resumen": "`POST /api/operador/cliente/historial` — anota una fila de historial en una ficha que ya existe (`{ clienteId, tipo, texto, actor? }`). Lo usa el canal de leads web cuando el teléfono/email ya está en"
+        },
+        {
+          "nombre": "revelarDniAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: { id: string; actor: string }",
+          "retorno": "Promise<Reenvio>",
+          "linea": 325,
+          "resumen": "este helper no sabe nada de esa comprobación, confía en que la ruta ya la hizo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3dd07addecd4"
+      "hash": "e5ef7a1dfacc"
     },
     {
       "ruta": "apps/plataforma/lib/comercio-canonico.ts",
@@ -84508,6 +84789,57 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "69a7dc8257ee"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/dni-otp.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Código de un solo uso por Telegram para revelar el DNI COMPLETO de un cliente de la correduría. El resto de la ficha lo enseña enmascarado a propósito (`*****678Z`, puerto de asegura) — esto es el único camino que lo destapa, y solo con: (1) el corredor tiene sesión en plataforma, (2) pide un código",
+      "exporta": [
+        "crearCodigoDni",
+        "verificarCodigoDni"
+      ],
+      "funciones": [
+        {
+          "nombre": "hashCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "codigo: string, cuentaId: string, clienteId: string",
+          "retorno": "string",
+          "linea": 16
+        },
+        {
+          "nombre": "generarCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 21
+        },
+        {
+          "nombre": "crearCodigoDni",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, clienteId: string",
+          "retorno": "Promise<string>",
+          "linea": 26,
+          "resumen": "Genera un código nuevo, invalida los anteriores sin usar de ese cliente y lo guarda hasheado."
+        },
+        {
+          "nombre": "verificarCodigoDni",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, clienteId: string, codigo: string",
+          "retorno": "Promise<boolean>",
+          "linea": 39,
+          "resumen": "Verifica y CONSUME un código. `true` solo si estaba vigente, sin usar y coincidía."
+        }
+      ],
+      "tablas": [
+        "correduria_dni_otp",
+        "crypto"
+      ],
+      "rutaApi": null,
+      "hash": "8e35c5a91be7"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/ingesta-cima.ts",
@@ -91852,7 +92184,9 @@
         "interpretarOferta",
         "ofertaAsegura",
         "interpretarEmitir",
-        "emitirAsegura"
+        "emitirAsegura",
+        "interpretarTarificacionGuardada",
+        "tarificacionGuardadaAsegura"
       ],
       "funciones": [
         {
@@ -92035,11 +92369,45 @@
           "retorno": "Promise<RespuestaEmitir>",
           "linea": 845,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO reintenta: un fallo de red aquí no dice que no se haya emitid"
+        },
+        {
+          "nombre": "leerFormularioGuardado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "FormularioGuardado | null",
+          "linea": 927
+        },
+        {
+          "nombre": "leerPreciosGuardados",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Precio[] | null",
+          "linea": 946
+        },
+        {
+          "nombre": "interpretarTarificacionGuardada",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaTarificacionGuardada",
+          "linea": 963,
+          "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
+        },
+        {
+          "nombre": "tarificacionGuardadaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizaId: string",
+          "retorno": "Promise<RespuestaTarificacionGuardada>",
+          "linea": 1004,
+          "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9615884a9025"
+      "hash": "54865e81f048"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -131248,7 +131616,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3223,
-    "funciones": 9904
+    "archivos": 3231,
+    "funciones": 9934
   }
 }
