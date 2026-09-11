@@ -176,6 +176,47 @@ autorizaciones pendientes en las dos direcciones + vencimientos en ventana + ins
 - **Lo que NO se hace**: «renueva con nosotros» o comparativas de prima en la campana. Un aviso
   informativo vale; uno que empuje una decisión es asesoramiento (análisis objetivo, IPID).
 
+### O. Ramo Pymes/Comercio/Autónomos — calendario ampliado + «Lanzador de Partes» 🟡 mitad ya hecha, mitad no encaja en el modelo
+
+Lote del 10-11/09/2026: calendario de inspecciones técnicas (extintores, OCA eléctrica, climatización,
+ascensores), renovación LOPD/ciberriesgos, actualización de plantilla/masa salarial (póliza de
+accidentes convenio) y un «Lanzador de Partes Guiado» (wizard con fotos desde el móvil).
+
+✅ **El wizard de partes YA ESTÁ CONSTRUIDO, desde el 03/09/2026.** No es una idea nueva:
+`ParteSiniestro.tsx` es exactamente eso — paso a paso, foto (`lib/adjuntos-parte.ts`, hasta
+`MAX_ADJUNTOS_POR_PARTE`), tri-estado «¿hay heridos?»/«¿hay terceros?» (nunca un checkbox que
+convierta «no lo sé» en «no»), y **desde el 05/09 enseña primero el canal directo de la compañía**
+(teléfono/WhatsApp de siniestros) antes de pedir rellenar nada — «nosotros nos enteramos por CIMA y
+hacemos seguimiento», dictado de Alberto. Lo único pendiente es correr el wizard sobre pólizas del
+ramo nuevo cuando exista, que no pide código: ya funciona sobre cualquier póliza de la cartera o
+autorizada.
+
+🟡 **Extintores / OCA eléctrica / climatización / ascensores SÍ encajan en la idea B** (motor de
+obligaciones genérico): tienen fecha legal real, calculable por norma, y cuelgan del **bien** (el
+local, no la póliza) — el mismo patrón que ITV cuelga del vehículo. Lo que hace falta, y no está
+hecho: **4 valores nuevos en `PortalObligacionTipo`** (`itv`, `carnet`, `recibo`, `mantenimiento`,
+`revision_gas`, `libre` hoy) más su derivador de próxima fecha por normativa — extintores anual (RD
+513/2017), OCA eléctrica según potencia/uso (ITC-BT-05), climatización RITE (2-4 años según potencia),
+ascensores (1-6 años según antigüedad, RD 88/2013). Coste: cero externo, como el resto de B.
+
+🔴 **LOPD/ciberriesgos y «actualiza tu plantilla» NO tienen la misma forma, y meterlas en
+`portal_obligacion` tal cual sería forzar el modelo.** Esa tabla existe para fechas **accionables** —
+un plazo legal real que vence un día concreto (ITV, art. 22 LCS). Ni la revisión de LOPD/ciberriesgos
+ni la masa salarial vencen: son recordatorios de gestión sin fecha impuesta por nadie, y el disparador
+de la segunda no es el calendario, es un HECHO del negocio (contrataste o despediste) que hoy no
+medimos en ningún sitio. Presentarlas como «vence el X» sería inventar una fecha que no existe — la
+misma regla del `CLAUDE.md` raíz («dato que no hay ≠ dato que no se ha mirado»), aplicada a una fecha
+en vez de a un valor. Lo que sí tiene sentido, y es más barato: un recordatorio **periódico** (anual)
+sin promesa de vencimiento, servido por la campana de avisos ya construida (`lib/avisos.ts`), no por
+el calendario de obligaciones.
+
+⚠️ **Y antes de construir un «ramo» entero, mide si ya hay demanda.** La cartera de pymes/autónomos
+hoy no es una categoría propia: son un puñado de las 9 pólizas de RC ya existentes (Esquiansa, GLOBAL
+2 Instalaciones Técnicas, Kartenbrot, Phenix Automoción — ver `apps/asegura/CLAUDE.md` §ramos). Esto
+puede ser aspiracional (crecer en ese segmento) o responder a una demanda ya vista; conviene que
+Alberto lo diga antes de que el calendario prometa avisos de extintores a un tomador que hoy es un
+particular con un coche.
+
 ## Preguntas abiertas para Alberto
 
 - ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?
