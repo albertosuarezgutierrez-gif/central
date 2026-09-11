@@ -1,5 +1,23 @@
 # Rotación de la `service_role` expuesta — inventario y plan
 
+> 🚨 **Checklist de emergencia añadido 10-11/09/2026** (sesión `sidra-guest-data-breach`,
+> disparada por una sospecha de phishing por WhatsApp a huéspedes de SIVRA). Lo que sí se
+> pudo hacer desde una sesión de Claude ya está hecho: 12 Edge Functions huérfanas
+> neutralizadas (`verify_jwt: true`, ver `supabase/functions-rescatadas/README.md`) y
+> arreglado el bug de borrado de `sync-smoobu`. **Lo de abajo sigue pendiente — necesita
+> paneles/credenciales que esta sesión no tiene:**
+> 1. Revocar los 3 PAT de GitHub (`ghp_97Ct…`, `ghp_5MfB…`, `ghp_hft2…`) — GitHub → Settings →
+>    Developer settings → Personal access tokens.
+> 2. Cambiar la contraseña que iba en claro en `trigger-deploy` (login de
+>    `housesevillana.vercel.app`), y si se reusó en otro sitio, cambiarla también ahí.
+> 3. Regenerar el deploy hook de Vercel del proyecto `sivra` (Settings → Git → Deploy Hooks).
+> 4. Rotar la API key de Smoobu (panel Smoobu → Settings → API) y actualizarla en
+>    `pms_connections` (4 filas) y en el secreto `SMOOBU_API_KEY` de Edge Functions.
+> 5. Activar **Secret scanning + Push protection** en GitHub (repo `central` → Settings →
+>    Code security and analysis) — confirmado con `run_secret_scanning` que hoy NO está.
+> 6. El plan completo de abajo (migrar a `sb_secret_…`/`sb_publishable_…` en ~50 sitios antes
+>    de pulsar «Disable JWT-based API keys») sigue siendo el paso que cierra la fuga real.
+
 > Credencial: `service_role` (legacy, JWT) del proyecto Supabase **`wswbehlcuxqxyinousql`** («central»),
 > emitida el 15/04/2026, **vigente hasta 2036**, publicada en el repo PÚBLICO `house-sevillana-landing`
 > (commit `7c53e19`, 06/05/2026) y detectada por gitleaks el 12/08/2026 al unificar la landing.
