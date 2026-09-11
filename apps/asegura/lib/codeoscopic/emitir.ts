@@ -203,6 +203,31 @@ export async function reRate(
   return leerOferta(crudo)
 }
 
+/**
+ * `PATCH /insurances/{id}` — corrige un campo del proyecto YA creado, GRATIS
+ * (solo `POST /insurances` está documentado como facturable). Es **incremental**
+ * (`docs/CODEOSCOPIC-API-PORTAL.md`: «descarta lo que no esté en el esquema»),
+ * así que solo se manda `effectiveDate`.
+ *
+ * 🚨 **Nace el 11/09/2026 tras el cuarto 400 real** (proyecto 40681298, Pilar
+ * Franco Ruz): «Fecha de Efecto no puede estar más de 90 días en el futuro».
+ * La fecha la tecleó el corredor al cotizar (`peticion-auto.ts`); corregirla
+ * es una decisión de negocio (qué fecha quiere el cliente), nunca una
+ * suposición del código — la decide quien pide el ReRate.
+ */
+export async function actualizarFechaEfecto(
+  config: ConfigCodeoscopic,
+  projectId: string,
+  fechaEfecto: string,
+): Promise<void> {
+  await peticion(config, {
+    metodo: 'PATCH',
+    path: `/insurances/${encodeURIComponent(projectId)}`,
+    cuerpo: { effectiveDate: fechaEfecto },
+    timeoutMs: config.timeoutGenericoMs,
+  })
+}
+
 // ─── 3. Qué exige la emisión (GRATIS): lo dice el vendor, no se adivina ─────
 
 export type CampoEmision = {
