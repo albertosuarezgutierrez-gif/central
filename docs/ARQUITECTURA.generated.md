@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (11/09/2026) 🔒 Cierre del incidente de phishing/fuga de credenciales
+- (11/09/2026) 💡 Banco de ideas de la intranet del cliente: nuevo lote consolidado + comercio SÍ viene por CIMA
 - (11/09/2026) 🤖 Reparto mecánico afinado: umbral objetivo + bitácora sin sesgo
 - (11/09/2026) 🚨🔒 Sospecha de phishing por WhatsApp a huéspedes de SIVRA → auditoría de seguridad de infra (10-11/09/2026).
+- (10/09/2026) 🔐 `/security-review` personalizado con las LANDMINES del repo; CI de `claude-code-security-review` descartado a propósito
 - (09/09/2026) 📄 «Subir póliza» (corredor) generalizado a cualquier ramo, no solo auto
 - (09/09/2026) 🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia
 - (09/09/2026) 🗑 Quitado el calendario de vencimientos de `/boveda`
 - (09/09/2026) 🩹 Póliza BIDV004566 (Occident, GLOBAL 2 INSTALACIONES TÉCNICAS): faltaba en cartera, causa medida
 - (09/09/2026) 📝 Bóveda del cliente: «Selecciona» en vez de «No lo sé», ramo obligatorio y forma de pago con aviso de recibo
-- (08/09/2026) 📞 Teléfonos de compañía en el portal: Generali cargado y Allianz CORREGIDO
-- (08/09/2026) 👋 El WhatsApp del LEAD VENDE la intranet — y mi argumento para no hacerlo era falso
-- (09/09/2026) Maqueta de pre-emisión por compañía en el retarificador
 
