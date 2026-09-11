@@ -56,8 +56,12 @@ export type Precio = {
    * '/mainQuote/product'] Object has missing required properties
    * (['options'])») pero el fixture real de la cotización NUNCA lo trae: no
    * es un campo que el vendor devuelva al cotizar, así que aquí casi
-   * siempre será `null`. Se reenvía tal cual en vez de inventar una forma —
-   * ver `reRate()` en `emitir.ts` para qué se manda cuando falta.
+   * siempre será `null`. 🚨 Es un ARRAY, no un objeto: el backend Java lo
+   * declara `ArrayList<InsuranceProductOption>` (segundo 400 real,
+   * 11/09/2026, mismo proyecto — mandar `{}` revienta con
+   * `JsonMappingException` porque espera `START_ARRAY`, no `START_OBJECT`).
+   * Se reenvía tal cual en vez de inventar una forma — ver `reRate()` en
+   * `emitir.ts` para qué se manda cuando falta.
    */
   productOptions: unknown
 }

@@ -30,6 +30,12 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🐛 Segundo 400 del ReRate real: `options` es un ARRAY, no un objeto (11/09/2026).** Alberto
+  reintentó tras el fix anterior y el vendor rechazó otra vez, ahora con `JsonMappingException`:
+  el backend Java declara `mainQuote.product.options` como `ArrayList<InsuranceProductOption>`, y
+  se mandaba `{}`. Sigue sin cobrarse ni comprometerse nada. Fix de una línea: `productOptions ?? []`
+  en vez de `?? {}`. tsc 0, 26/26 (`emitir`+`respuesta`), 332/332 (asegura). Pendiente: Alberto
+  reintenta otra vez — sin sandbox, cada 400 real es la única forma de aprender la forma exacta.
 - **🐛 Primer ReRate real: 400 por confundir el id del mainQuote con el del producto (11/09/2026).**
   Con `CODEOSCOPIC_EMISION_ACTIVA=true` ya activada por Alberto, el primer «Confirmar precio» real
   (Pilar Franco Ruz, proyecto 40681298) devolvió `400`: `mainQuote` sin `id` y `mainQuote.product` sin

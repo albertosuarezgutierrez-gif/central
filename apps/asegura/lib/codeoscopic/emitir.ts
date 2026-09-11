@@ -162,9 +162,12 @@ export function leerOferta(raw: unknown): Oferta {
  *
  * `productOptions` se reenvía TAL CUAL desde la cotización — el fixture real
  * demuestra que el vendor **no lo devuelve al cotizar**, así que casi
- * siempre será `null`; se manda `{}` en ese caso (intención: "sin cambios,
- * usa los valores por defecto de la compañía", que es lo que la
- * documentación en prosa del portal sugiere sin confirmarlo del todo).
+ * siempre será `null`. 🚨 **Segundo 400 real (mismo proyecto, mismo día):**
+ * un `{}` no vale — el backend Java lo declara
+ * `ArrayList<InsuranceProductOption>` (`Cannot deserialize value of type
+ * java.util.ArrayList<...InsuranceProductOption> from Object value`), o sea
+ * que `options` es un ARRAY, no un objeto. Se manda `[]` cuando falta
+ * (intención: "sin cambios, usa los valores por defecto de la compañía").
  *
  * UN SOLO INTENTO: si el vendor rechaza el cuerpo (400/422), NO se reintenta
  * con otra forma a ciegas — `peticion()` ya clasifica ese caso como
@@ -184,7 +187,7 @@ export async function reRate(
     cuerpo: {
       mainQuote: {
         id: quoteId,
-        product: { id: productId, options: productOptions ?? {} },
+        product: { id: productId, options: productOptions ?? [] },
       },
     },
     timeoutMs: config.timeoutGenericoMs,
