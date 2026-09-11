@@ -70,6 +70,7 @@
 | **`verification-before-completion`** | Antes de afirmar que algo está hecho/arreglado/pasa; exige evidencia. |
 | **`requesting-code-review`** | Al completar tareas o features grandes, antes de mergear. |
 | **`receiving-code-review`** | Al recibir feedback de revisión, antes de implementar las sugerencias. |
+| **`/security-review`** (comando) | Revisión de seguridad de los cambios pendientes de la rama actual, bajo demanda (motor de `anthropics/claude-code-security-review`; viene de serie en Claude Code). Personalizado en `.claude/commands/security-review.md` con las LANDMINES del repo: aislamiento multi-tenant por CÓDIGO en tablas/apps con rol BYPASSRLS (`asegura`, `asegura-portal`, `rrhh`…) y el patrón prohibido de fallback a literal en secretos de sesión/auth. Úsalo en cambios de auth, sesión o consultas sobre tablas multi-tenant antes de sacar el PR de draft, además de (no en vez de) `code-review`. **Sin CI ni coste recurrente a propósito** (10/09/2026): el workflow de Actions de ese mismo repo se descartó por redundante con `Claude Approvals` + la exigencia de `code-review`/`agente-architect` ya obligatoria, y por el coste de Opus 4.1 por PR en un repo con este volumen — ver `CLAUDE.md` §CI. |
 
 ## Desarrollo (ahorro de tokens)
 | Skill | Cuándo usarla |
