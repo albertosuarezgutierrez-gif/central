@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-09T15:47:05Z",
-  "sha": "af32fdc6d0af9718dbf1579a4fe04627092de739",
+  "generadoEn": "2026-09-09T16:53:03Z",
+  "sha": "4dcc83dd7dab031da702257ea7de1fcb5d45278c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8831,17 +8831,25 @@
       ],
       "funciones": [
         {
+          "nombre": "etiquetasPara",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipoLectura: 'auto' | 'hogar' | 'contrato_solo',",
+          "retorno": "[(keyof AutoLeido | keyof HogarLeido) & string, string][]",
+          "linea": 74
+        },
+        {
           "nombre": "SubirPoliza",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 36
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae39dabc091c"
+      "hash": "327925c61a62"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/dashboard/page.tsx",
@@ -9019,7 +9027,7 @@
         "node"
       ],
       "rutaApi": "/api/cartera/documentos",
-      "hash": "c0ea8f55cd10"
+      "hash": "72bc8525cdf1"
     },
     {
       "ruta": "apps/asegura/app/api/cartera/polizas/[polizaId]/retarificar/route.ts",
@@ -10156,7 +10164,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 26,
+          "linea": 27,
           "resumen": "Documentos de la correduría por el puerto de operador (plataforma → asegura). GET ?clienteId= | ?polizaId= | ?siniestroId= → la lista (sin ficheros) POST multipart (fichero + tipo + destino + notas) →"
         },
         {
@@ -10165,7 +10173,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "texto",
@@ -10173,7 +10181,7 @@
           "exportada": false,
           "params": "v: FormDataEntryValue | null",
           "retorno": "string | null",
-          "linea": 91
+          "linea": 92
         },
         {
           "nombre": "cadena",
@@ -10181,12 +10189,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 94
+          "linea": 95
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/documentos",
-      "hash": "9b9ba980413e"
+      "hash": "62320fdd22ff"
     },
     {
       "ruta": "apps/asegura/app/api/operador/duplicados/route.ts",
@@ -15058,37 +15066,28 @@
       "hash": "96d636df29e6"
     },
     {
-      "ruta": "apps/asegura/lib/documentos/extraer-auto.ts",
+      "ruta": "apps/asegura/lib/documentos/extraer-poliza.ts",
       "ambito": "apps/asegura",
-      "resumen": "Lee una PÓLIZA DE AUTO que sube el corredor: PDF → texto → IA, o foto → visión. Sigue el mismo pipeline que `apps/asegura-portal/lib/extraer-poliza.ts`, que ya está probado contra documentos reales. La diferencia es QUÉ se busca: allí los cinco campos que el asegurado ve en su bóveda, aquí lo que ha",
+      "resumen": "Lee una PÓLIZA que sube el corredor, de CUALQUIER ramo: PDF → texto → IA, o foto → visión. Sustituye a `extraer-auto.ts` (que solo leía auto): la IA detecta primero el ramo y, según cuál sea, lee lo que hace falta para pedir precio de ESE ramo (hoy: auto/moto y hogar, los dos que se retarifican — `r",
       "exporta": [
-        "leerPolizaAuto"
+        "leerPoliza"
       ],
       "funciones": [
+        {
+          "nombre": "ramoDetectado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Ramo | null",
+          "linea": 55
+        },
         {
           "nombre": "nadaLeido",
           "kind": "function",
           "exportada": false,
           "params": "motivo: string",
-          "retorno": "ResultadoLectura",
-          "linea": 62
-        },
-        {
-          "nombre": "leerPolizaAuto",
-          "kind": "function",
-          "exportada": true,
-          "params": "buffer: Buffer, mimeType: string, fileName = '',",
-          "retorno": "Promise<ResultadoLectura>",
-          "linea": 66
-        },
-        {
-          "nombre": "parsear",
-          "kind": "function",
-          "exportada": false,
-          "params": "salida: string",
-          "retorno": "AutoLeido",
-          "linea": 129,
-          "resumen": "Un JSON que no parsea devuelve TODOS los campos a `null`, nunca campos a medias. Media extracción pintada como póliza es peor que ninguna: quien la mira se cree que eso es lo que pone el documento."
+          "retorno": "ResultadoLecturaPoliza",
+          "linea": 119
         },
         {
           "nombre": "mensaje",
@@ -15096,12 +15095,37 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 137
+          "linea": 123
+        },
+        {
+          "nombre": "parsear",
+          "kind": "function",
+          "exportada": false,
+          "params": "salida: string",
+          "retorno": "",
+          "linea": 131,
+          "resumen": "Un JSON que no parsea produce TODOS los campos a `null`, nunca campos a medias: media extracción pintada como póliza es peor que ninguna."
+        },
+        {
+          "nombre": "empaquetar",
+          "kind": "function",
+          "exportada": false,
+          "params": "ramo: Ramo | null, auto: AutoLeido, hogar: HogarLeido, fuente: 'texto' | 'vision',",
+          "retorno": "ResultadoLecturaPoliza",
+          "linea": 146
+        },
+        {
+          "nombre": "leerPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "buffer: Buffer, mimeType: string, fileName = '',",
+          "retorno": "Promise<ResultadoLecturaPoliza>",
+          "linea": 163
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "962e9b75dc70"
+      "hash": "657f28a87d32"
     },
     {
       "ruta": "apps/asegura/lib/email-ficha.ts",
@@ -123406,6 +123430,119 @@
       "hash": "b7720f35cc21"
     },
     {
+      "ruta": "packages/module-seguros/src/documento-hogar.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Normalización de lo que una máquina dice haber leído en una PÓLIZA DE HOGAR. Puro: sin BD, sin red, sin proveedor de IA. Hermano de `documento-auto.ts`: mismo propósito (lo que hace falta para PEDIR PRECIO, no los cinco campos que ve el asegurado en su bóveda — eso es `@central/module-seguros-portal",
+      "exporta": [
+        "hogarLeidoVacio",
+        "seLeyoAlgoHogar",
+        "normalizarHogarLeido",
+        "camposLeidosHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "hogarLeidoVacio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "HogarLeido",
+          "linea": 52
+        },
+        {
+          "nombre": "seLeyoAlgoHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: HogarLeido",
+          "retorno": "boolean",
+          "linea": 74,
+          "resumen": "¿Se ha leído ALGO? `false` = el documento no se pudo leer, no que esté vacío."
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 81
+        },
+        {
+          "nombre": "enteroEnRango",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, min: number, max: number",
+          "retorno": "number | null",
+          "linea": 91,
+          "resumen": "Entero en un rango. Fuera de forma o de rango, `null`."
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 105,
+          "resumen": "Importe en euros. Un capital o una prima de 0€ no existen: son un «no lo he leído»."
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 123,
+          "resumen": "`aaaa-mm-dd` estricto: rechaza los días que `Date` «arregla» solo."
+        },
+        {
+          "nombre": "codigoPostal",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 136,
+          "resumen": "Código postal español: 5 dígitos, SIEMPRE como texto (Álava, Albacete y Alicante empiezan por 0 — la misma trampa que ya evita `campos-ramo.ts`)."
+        },
+        {
+          "nombre": "documentoIdentidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 144,
+          "resumen": "DNI/NIE. Se comprueba la LETRA: un DNI mal leído es de otra persona."
+        },
+        {
+          "nombre": "codigoDgs",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 157,
+          "resumen": "Código DGS de entidad: `C` + 4 dígitos (C0058 Mapfre, C0109 Allianz…)."
+        },
+        {
+          "nombre": "normalizarHogarLeido",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "HogarLeido",
+          "linea": 169,
+          "resumen": "Convierte lo que devuelva el modelo en `HogarLeido`. Nunca lanza: una respuesta ilegible produce TODO a `null`."
+        },
+        {
+          "nombre": "camposLeidosHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: HogarLeido",
+          "retorno": "(keyof HogarLeido)[]",
+          "linea": 193,
+          "resumen": "Los campos que SÍ se han leído. Es lo que la pantalla enseña para revisar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1905ca8888e4"
+    },
+    {
       "ruta": "packages/module-seguros/src/documentos.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Documentos de la correduría — lógica PURA (sin BD, sin red). ─── El hueco que cierra (01-02/09/2026) ──────────────────────────────────── Hacían falta en TRES sitios (cliente, póliza, siniestro) y solo la póliza tenía tabla; y faltaba el estado «pedido pero no recibido»: sin él, «0 documentos» no di",
@@ -130459,7 +130596,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3213,
-    "funciones": 9833
+    "archivos": 3214,
+    "funciones": 9847
   }
 }
