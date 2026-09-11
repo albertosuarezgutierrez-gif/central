@@ -5,9 +5,12 @@
 //    `smoobuIds` quedaba vacío. Dos guardas nuevas, sin tocar el resto del algoritmo:
 //    (a) si Smoobu no devuelve NINGUNA reserva activa, no se borra nada — se declara el
 //        fallo en vez de vaciar `incomes`;
-//    (b) si el borrado calculado supera el 30% de las filas existentes (o son ya >15 filas),
+//    (b) si el borrado calculado supera el 30% de las filas existentes O son ya >15 filas,
 //        tampoco se ejecuta — un cambio así de grande no es "unas pocas cancelaciones", es la
 //        misma señal degradada que (a) pero a medias.
+// 🩹 11/09/2026 (2ª pasada): la guarda (b) estaba escrita con Y en vez de O — con 10 filas
+//    existentes y Smoobu devolviendo 0 de ellas (porcentaje 100%, pero 10 no supera 15), NINGUNA
+//    de las dos condiciones saltaba y se borraban las 10. Corregido a O.
 //    `verify_jwt` se deja en `false` a propósito: la invoca el cron `pg_cron` jobid 1 sin
 //    JWT, y no se ha podido confirmar desde aquí si ese cron manda un `apikey`/Bearer que
 //    verify_jwt=true aceptaría — cambiarlo a ciegas puede dejar el cron mudo. Repasar aparte.
@@ -110,11 +113,11 @@ Deno.serve(async (_req: Request) => {
 
   const totalExistentes = Object.keys(supabaseMap).length
   const porcentaje = totalExistentes > 0 ? aBorrar.length / totalExistentes : 0
-  if (aBorrar.length > 15 && porcentaje > 0.3) {
+  if (aBorrar.length > 15 || porcentaje > 0.3) {
     return new Response(JSON.stringify({
       success: false,
       abortado: true,
-      motivo: `El borrado calculado (${aBorrar.length} de ${totalExistentes}, ${Math.round(porcentaje * 100)}%) supera el límite de seguridad (>15 filas y >30%). No se ha borrado nada — revisar a mano.`,
+      motivo: `El borrado calculado (${aBorrar.length} de ${totalExistentes}, ${Math.round(porcentaje * 100)}%) supera el límite de seguridad (>15 filas o >30%). No se ha borrado nada — revisar a mano.`,
       candidatasABorrar: aBorrar.map(([resId]) => resId),
     }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
