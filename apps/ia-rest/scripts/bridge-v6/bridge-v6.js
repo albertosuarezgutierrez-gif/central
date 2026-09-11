@@ -30,7 +30,13 @@ const { CashlogyManager } = require('./azkoyen-cashlogy')
 const VERSION      = '7.0.1'
 const API          = 'https://www.iarest.es'
 const SUPABASE_URL = 'https://wswbehlcuxqxyinousql.supabase.co'  // BD compartida (schema iarest)
-const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd2JlaGxjdXhxeHlpbm91c3FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDU2OTIsImV4cCI6MjA5MTgyMTY5Mn0.pskPJ1U-i0Vjg_suxMfXNqHOtKJpWchf0-CzLUQIzRo'
+// ⚠️ Clave `anon` LEGACY incrustada desde siempre. Es pública por diseño (va en el bundle de
+// cualquier navegador), pero **deja de autenticar** el día que se pulse «Disable JWT-based API
+// keys» en Supabase — y este bridge corre en el PC del restaurante, así que no se actualiza solo.
+// Ver docs/ROTACION-SERVICE-ROLE.md. Prefiere la publicable nueva por entorno; el literal queda
+// solo para no dejar mudo un bridge ya instalado que todavía no tenga la variable puesta.
+const ANON_KEY_LEGACY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indzd2JlaGxjdXhxeHlpbm91c3FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNDU2OTIsImV4cCI6MjA5MTgyMTY5Mn0.pskPJ1U-i0Vjg_suxMfXNqHOtKJpWchf0-CzLUQIzRo'
+const ANON_KEY     = process.env.SUPABASE_PUBLISHABLE_KEY || ANON_KEY_LEGACY
 
 const CONFIG_DIR  = path.join(os.homedir(), '.iarest')
 const CONFIG_FILE = path.join(CONFIG_DIR, 'bridge-v6.json')

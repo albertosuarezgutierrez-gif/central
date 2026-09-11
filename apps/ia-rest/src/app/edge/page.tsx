@@ -28,6 +28,7 @@ import CuentasTab from '@/components/edge/CuentasTab'
 import PreavisoBanner, { type PreavisoEntrante } from '@/components/edge/PreavisoBanner'
 import { supabase, SB_SCHEMA } from '@/lib/supabase'
 import { resumenPlatos, textoPreaviso, type PlatoLinea } from '@/lib/preaviso'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 
@@ -766,7 +767,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     try {
       w.IaRestBridge.setPreavisoSesion(
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        clavePublicable(),
         SB_SCHEMA,
         session.restaurante_id ?? '',
         ids,

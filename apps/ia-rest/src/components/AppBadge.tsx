@@ -5,6 +5,7 @@
  * Muestra: entorno (DEMO/PROD) · restaurante · rol · versión
  */
 import { useEffect, useState } from 'react'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 const APP_VERSION = '2.6.0'
 
@@ -36,7 +37,7 @@ export default function AppBadge() {
     try {
       w.IaRestBridge.setSupabase(
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        clavePublicable(),
         process.env.NEXT_PUBLIC_SUPABASE_SCHEMA ?? 'public',
       )
     } catch { /* bridge no disponible */ }

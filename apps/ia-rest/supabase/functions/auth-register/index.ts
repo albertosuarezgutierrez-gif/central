@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno'
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -261,7 +262,7 @@ serve(async (req) => {
 
     const nU = Math.max(1, Math.floor(Number(num_usuarios)))
     const cfg = getStripeConfig()
-    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'iarest' } })
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, claveSecreta(), { db: { schema: 'iarest' } })
 
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email, phone: telefono?.trim() || undefined, email_confirm: true,
