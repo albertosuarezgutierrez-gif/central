@@ -57,6 +57,9 @@ const ALLIANZ_AUTO_320200: OpcionProducto[] = [
  */
 export function opcionesPorDefecto(compania: string): OpcionProducto[] | null {
   const c = compania.trim().toLowerCase()
-  if (c.includes('allianz')) return ALLIANZ_AUTO_320200
+  // Copia defensiva: el array de arriba es un módulo compartido entre invocaciones
+  // (proceso Node reutilizado en serverless) — devolver la misma referencia dejaría
+  // una mutación accidental del caller filtrarse a la siguiente petición.
+  if (c.includes('allianz')) return ALLIANZ_AUTO_320200.map((o) => ({ ...o }))
   return null
 }

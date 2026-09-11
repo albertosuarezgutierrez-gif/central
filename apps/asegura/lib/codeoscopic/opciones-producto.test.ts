@@ -20,3 +20,12 @@ test('opcionesPorDefecto: sin catálogo para el resto de compañías → null', 
   assert.equal(opcionesPorDefecto('Mapfre'), null)
   assert.equal(opcionesPorDefecto('Fidelidade'), null)
 })
+
+test('opcionesPorDefecto: cada llamada devuelve una copia — mutar una no afecta a la siguiente', () => {
+  const primera = opcionesPorDefecto('Allianz')
+  assert.ok(primera)
+  primera[0].value = 'mutado'
+  const segunda = opcionesPorDefecto('Allianz')
+  assert.ok(segunda)
+  assert.notEqual(segunda[0].value, 'mutado')
+})
