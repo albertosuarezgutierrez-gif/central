@@ -381,6 +381,14 @@ aparece algo · leer un directorio entero para responder una pregunta acotada.
 que exige criterio o negociar con Alberto, y los cambios de 1-2 archivos que ya se tienen delante
 (delegarlos cuesta más de lo que ahorra).
 
+**Umbral objetivo, para no decidir a ojo cada vez (11/09/2026):** delega si se cumple CUALQUIERA de —
+mismo patrón en ≥3 archivos · boilerplate/renombrado sin decisión de negocio · generación >~80 líneas
+sin lógica que exija criterio. No delegues nunca si toca auth/pagos/RLS/multi-tenant/migraciones (eso
+es `agente-architect`, no mecánico) o si son 1-2 archivos que la sesión ya tiene abiertos. Sin agente
+director: la sesión principal aplica esta tabla directamente en el mismo turno — meter un agente
+intermedio solo para decidir a quién delegar cuesta más (otra llamada, otro contexto) que la propia
+decisión, que es una tabla fija.
+
 **Cómo repartir sin que se pisen:** reparto **por archivos**, y en el prompt de cada agente va la lista
 EXPLÍCITA de lo que puede tocar y de lo que NO (incluidos los archivos que edita la sesión principal en
 paralelo). Dos agentes sobre el mismo archivo es un conflicto silencioso: el segundo pisa al primero y
@@ -402,12 +410,13 @@ revisión de un cambio de alto riesgo), usa `.claude/agents/agente-architect.md`
 no por defecto. Programación normal (endpoints, CRUD, Server Actions, bugs normales) la sigue haciendo
 la sesión principal, sin delegar.
 
-**Mide el ahorro, no lo supongas (09/09/2026):** si el informe de `agente-mecanico` viene incompleto,
-con verificación que no cuadra, o la sesión principal tiene que corregir/rehacer una parte no trivial
-de lo que entregó, anótalo con el marcador `🔧 agente-mecanico:` en la entrada de esa sesión en
-`docs/CONTEXTO-SESIONES.md` (una línea: qué falló). Sin ese rastro no hay forma de saber si el modelo
-económico ahorra tokens de verdad o si el re-trabajo se come el ahorro — y la respuesta hoy es «no se
-sabe» (el agente se creó en el PR #2658, aún sin usos).
+**Mide el ahorro, no lo supongas (09/09/2026, corregido 11/09/2026):** anotar solo los fallos (como
+decía esta regla hasta ahora) sesga la medición — sin el total de usos, un fallo cada diez pasadas y
+un fallo cada dos son indistinguibles en la bitácora. Corrección: **cada invocación de
+`agente-mecanico` o `delegar-codigo`, salga bien o mal, se anota en `docs/AGENTE-MECANICO-BITACORA.md`**
+(una línea: tarea, cuál de los dos, resultado — `ok` o `fallo: qué falló`). Solo con numerador Y
+denominador se puede saber si el modelo económico ahorra tokens de verdad o si el re-trabajo se come
+el ahorro.
 
 **Revisión obligatoria antes de pedir merge (09/09/2026):** el gate que BLOQUEA el merge ya existe
 (CI + `Claude Approvals`, ver sección de CI) — no se monta un agente nuevo para eso. Lo que faltaba
