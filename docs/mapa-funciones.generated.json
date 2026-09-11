@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-11T14:30:29Z",
-  "sha": "5b6ddf1b6b84073259699232e2a6a44f84b83ab8",
+  "generadoEn": "2026-09-11T15:07:03Z",
+  "sha": "e70c883c355e0a35621e841e5c6bd22e0fa2b7d9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9800,7 +9800,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 33,
+          "linea": 34,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate) el precio que ya se enseñó en pantalla desde una cotización REAL de `seguros.tarificaciones`. 🚨 **Construida el 11/09/2026,"
         },
         {
@@ -9809,7 +9809,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 151
+          "linea": 157
         }
       ],
       "tablas": [
@@ -9819,7 +9819,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "32c7e26fef72"
+      "hash": "d5d0b3e079f3"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -14156,7 +14156,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, quoteId: string, productId: unknown, productOptions: unknown,",
           "retorno": "Promise<Oferta>",
-          "linea": 177,
+          "linea": 185,
           "resumen": "`POST /insurances/{projectId}/offers` — confirma el precio elegido (ReRate/preemisión). 🚨 **Corregido el 11/09/2026 tras el primer 400 real** (proyecto 40681298, Pilar Franco Ruz): el vendor exige `m"
         },
         {
@@ -14165,13 +14165,13 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
           "retorno": "Promise<CampoEmision[]>",
-          "linea": 212,
+          "linea": 220,
           "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "41288f317a18"
+      "hash": "895ab61c89ed"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -14327,6 +14327,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "063d549378bd"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/opciones-producto.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Catálogo ESTÁTICO de `product.options` por defecto para el ReRate, para las compañías que exigen campos que la cotización NUNCA devuelve (ver `Precio.productOptions` en `respuesta.ts` — el vendor no los manda al cotizar, así que aquí casi siempre es `null`). Sin sandbox y sin catálogo REST para esto",
+      "exporta": [
+        "opcionesPorDefecto"
+      ],
+      "funciones": [
+        {
+          "nombre": "opcionesPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string",
+          "retorno": "OpcionProducto[] | null",
+          "linea": 58,
+          "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bf03a9c4153c"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -131616,7 +131638,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3231,
-    "funciones": 9934
+    "archivos": 3232,
+    "funciones": 9935
   }
 }

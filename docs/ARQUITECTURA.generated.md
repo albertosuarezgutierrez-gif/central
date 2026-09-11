@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (11/09/2026) 🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST
 - (11/09/2026) 🐛 Segundo 400 del ReRate real: `options` es un ARRAY, no un objeto
 - (11/09/2026) 🐛 Primer ReRate real: 400 por confundir el id del mainQuote con el del producto
 - (11/09/2026) 🔓 «Ver DNI completo» en la ficha del cliente, con código de un solo uso por Telegram
@@ -271,5 +272,4 @@
 - (11/09/2026) 🎨 Ficha de cliente de la correduría: DNI/fecha de nacimiento en cabecera + rueda de ramos
 - (11/09/2026) 🔑 Migración a las claves nuevas de Supabase + aviso anti-phishing en mensajes de huéspedes
 - (11/09/2026) 🔒 Cierre del incidente de phishing/fuga de credenciales
-- (11/09/2026) 💡 Banco de ideas de la intranet del cliente: nuevo lote consolidado + comercio SÍ viene por CIMA
 
