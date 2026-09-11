@@ -173,6 +173,14 @@ export function leerOferta(raw: unknown): Oferta {
  * con otra forma a ciegas — `peticion()` ya clasifica ese caso como
  * `validacion` y su mensaje trae el texto del vendor recortado, que sigue
  * siendo la única fuente de verdad que hay sin sandbox.
+ *
+ * 🚨 **Tercer 400 real (mismo proyecto, mismo día): `productOptions` vacío no
+ * basta para Allianz** — «El campo Fenómenos de la naturaleza de Allianz es
+ * obligatorio». El vendor no publica por REST qué campos exige cada producto
+ * (`docs/CODEOSCOPIC-API-PORTAL.md`), pero el CRM de Manuel (`asegura`) SÍ
+ * tiene una captura real del formulario de Allianz Auto validada contra el
+ * vendor: `opciones-producto.ts` la porta. El caller (`route.ts`) rellena
+ * `productOptions` con ese catálogo cuando la cotización no trae nada.
  */
 export async function reRate(
   config: ConfigCodeoscopic,

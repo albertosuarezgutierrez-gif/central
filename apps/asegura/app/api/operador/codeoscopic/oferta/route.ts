@@ -3,6 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { prisma } from '@/lib/tenant'
 import { ErrorCodeoscopic } from '@/lib/codeoscopic/cliente'
 import { resolverConfigEmision, refrescarProyecto, encontrarPrecio, reRate } from '@/lib/codeoscopic/emitir'
+import { opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -107,12 +108,17 @@ export async function POST(req: Request) {
       )
     }
 
+    // El vendor nunca devuelve `product.options` al cotizar (ver
+    // `Precio.productOptions`), así que casi siempre hay que rellenarlas con
+    // el catálogo estático por defecto — hoy solo cubre Allianz auto, ver
+    // `opciones-producto.ts`. Para el resto sigue mandándose `[]` (dentro de
+    // `reRate`) hasta que un 400 real diga qué le hace falta.
     const oferta = await reRate(
       r.config,
       t.project_id_codeoscopic,
       precio.id,
       precio.productId,
-      precio.productOptions,
+      precio.productOptions ?? opcionesPorDefecto(compania),
     )
 
     // Puente hacia `codeoscopic_projects`, que es lo que lee `registrarPolizaEmitida`

@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST (11/09/2026).**
+  Tras el fix de `options: []`, el vendor rechazó con «El campo Fenómenos de la naturaleza de Allianz
+  es obligatorio». `docs/CODEOSCOPIC-API-PORTAL.md` ya avisaba: qué opciones pide cada producto no se
+  puede saber por REST, solo por su formulario iframe. Se encontró la solución en el CRM de Manuel
+  (repo `asegura`, añadido a la sesión de solo lectura): `product-form-catalog.data.ts` tiene los 13-14
+  campos reales de Allianz Auto (`config 320200`) capturados en vivo y validados contra el vendor.
+  Portado a `lib/codeoscopic/opciones-producto.ts` (`opcionesPorDefecto(compania)`, solo Allianz — el
+  resto de compañías/ramos NO tienen catálogo, ni aquí ni en el CRM de Manuel, y seguirán dependiendo
+  de su propio 400 real). `naturalPhenomena` no traía valor ni en la captura de Manuel: Alberto decidió
+  mandarlo `false` (no incluido). tsc 0, 335/335 (asegura). Pendiente: Alberto reintenta el ReRate.
 - **🐛 Segundo 400 del ReRate real: `options` es un ARRAY, no un objeto (11/09/2026).** Alberto
   reintentó tras el fix anterior y el vendor rechazó otra vez, ahora con `JsonMappingException`:
   el backend Java declara `mainQuote.product.options` como `ArrayList<InsuranceProductOption>`, y
