@@ -15,6 +15,18 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-07 · trading-analista** · hizo: pasada diaria completa a las 20:15 UTC (no repesca; huella
+  previa comprobada — último saldo 04/09, sin fila de hoy en `trading_pasadas` → seguir). Preflight OK.
+  NAV 33.034,97€ (sin salto) + cartera real (CVX+VWCE) + latido `trading_operaciones` (0 nuevas)
+  empujados a plataforma. Los 24 símbolos de la watchlist analizados y puntuados (276 tesis, 0 stops);
+  0 vetados/descartados/suplantados/divergentes. 0 ideas `operada=true` hoy (CVX vetada por
+  concentración 20%). Radar del lunes: 4/5 cohetes confirmados, correlación top-10 baja (0,12).
+  Resumen enviado por Telegram. dudas: los `get_price_history` traen fecha 04/09 (viernes) a las 20:16
+  UTC del lunes — la vela de hoy aún no liquida en IBKR a esa hora, anotado en el aviso para que no se
+  lea como dato desfasado real. fallos: al transcribir manualmente el histórico de NVDA (24 símbolos,
+  ~126 velas c/u) se perdió un valor del array `close` (125 en vez de 126) — detectado por el chequeo
+  de longitudes antes de enviar el payload y corregido re-consultando IBKR, sin llegar a contaminar
+  `/analizar`. PRs/commits: —.
 - **2026-09-07 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
   Vía B sana (última copia `_buzon_pdf` 05/09, `dias_caido=2`); sin backlog en
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, no por el contador
