@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
 import { sendWebPush } from '@central/core-push'
-import { debeAvisarPush } from '@central/module-seguros-portal'
+import { DIAS_VENTANA_AVISO, debeAvisarPush } from '@central/module-seguros-portal'
+import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seguros'
 
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+
+const MS_DIA = 86_400_000
 
 /**
  * GET /api/cron/avisos-push — un push por obligación a punto de dejar de ser accionable, al
@@ -31,11 +34,35 @@ export async function GET(req: Request) {
   const vapid = { publicKey: VAPID_PUBLIC, privateKey: VAPID_PRIVATE, subject: 'mailto:hola@grupoasegura.es' }
 
   const hoy = new Date()
-  const candidatas = await prisma.portalObligacion.findMany({
-    where: { avisadaPushAt: null },
-    select: { id: true, identidadId: true, titulo: true, fechaAccionable: true },
+  // El rango en SQL es una CRIBA (para no traer decenas de miles de filas de golpe); quien
+  // decide de verdad es `debeAvisarPush()`, más abajo — mismo patrón que
+  // `apps/asegura/lib/avisos-vencimiento.ts`.
+  const filas = await prisma.portalObligacion.findMany({
+    where: {
+      avisadaPushAt: null,
+      fechaAccionable: { gte: hoy, lte: new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA) },
+    },
+    select: { id: true, identidadId: true, polizaId: true, titulo: true, fechaAccionable: true },
+    orderBy: { fechaAccionable: 'asc' },
+    take: 500,
   })
-  const debidas = candidatas.filter((o) => debeAvisarPush({ fechaAccionable: o.fechaAccionable, avisadaPushAt: null }, hoy))
+  const enVentana = filas.filter((o) => debeAvisarPush({ fechaAccionable: o.fechaAccionable, avisadaPushAt: null }, hoy))
+
+  // 🚨 Re-comprobar que la póliza SIGUE viva: una obligación se deriva cuando el cliente entra en
+  // su bóveda (`sincronizarObligacionesDeIdentidad`) y puede no volver a entrar nunca — si CIMA
+  // cancela la póliza después, la fila de obligación se queda huérfana y este cron mandaría un
+  // push diciéndole a alguien que decida sobre un seguro que ya no tiene. Mismo filtro que el
+  // correo: cartera viva, no fusionada y en un estado vigente. Una obligación SIN póliza
+  // (declarada por la persona) no pasa por aquí: sigue siendo candidata igual.
+  const polizaIds = [...new Set(enVentana.map((o) => o.polizaId).filter((id): id is string => id !== null))]
+  const polizasVivas = polizaIds.length
+    ? await prisma.poliza.findMany({
+        where: { id: { in: polizaIds }, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null, estado: { in: [...POLIZA_ESTADOS_VIGENTES] } },
+        select: { id: true },
+      })
+    : []
+  const idsVivos = new Set(polizasVivas.map((p) => p.id))
+  const debidas = enVentana.filter((o) => o.polizaId === null || idsVivos.has(o.polizaId))
 
   let avisadas = 0
   let sinSuscripcion = 0
