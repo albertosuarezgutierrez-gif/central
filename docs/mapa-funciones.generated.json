@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-11T15:07:03Z",
-  "sha": "e70c883c355e0a35621e841e5c6bd22e0fa2b7d9",
+  "generadoEn": "2026-09-12T08:00:30Z",
+  "sha": "95b1fec0561a62605880c8ef5d54f0248b1a3185",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9800,7 +9800,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 34,
+          "linea": 40,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate) el precio que ya se enseñó en pantalla desde una cotización REAL de `seguros.tarificaciones`. 🚨 **Construida el 11/09/2026,"
         },
         {
@@ -9809,7 +9809,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 157
+          "linea": 189
         }
       ],
       "tablas": [
@@ -9819,7 +9819,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "d5d0b3e079f3"
+      "hash": "687ae1ce2ae1"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -10548,7 +10548,8 @@
       "ruta": "apps/asegura/app/api/operador/poliza/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
-        "GET"
+        "GET",
+        "PATCH"
       ],
       "funciones": [
         {
@@ -10557,13 +10558,22 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "GET /api/operador/poliza?id=<uuid> — la ficha de UNA póliza: coberturas, todos los recibos, siniestros, intervinientes, documentos y la copia gemela del volcado. Read-only, gratis. Mismos cuatro estad"
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 37,
+          "resumen": "PATCH /api/operador/poliza — ÚNICA escritura de esta ruta: anotar a mano la MODALIDAD de una RC cuando la compañía no manda coberturas por CIMA. Body `{ id, modalidad, nota?, actor }`. Nunca sobre otr"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/poliza",
-      "hash": "e11aaee6bc9f"
+      "hash": "b5f6330f2d33"
     },
     {
       "ruta": "apps/asegura/app/api/operador/resumen/route.ts",
@@ -12273,6 +12283,38 @@
       "hash": "eb1164d4c291"
     },
     {
+      "ruta": "apps/asegura/lib/cartera-poliza-editar.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Anotar a mano la MODALIDAD de una RC cuando la compañía no manda coberturas por CIMA (09-12/09/2026). Es el único camino de escritura sobre `polizas.datos_especificos` para este caso concreto — no un editor genérico de la póliza. ─── Reglas ───────────────────────────────────────────────────────────",
+      "exporta": [
+        "establecerModalidadRc"
+      ],
+      "funciones": [
+        {
+          "nombre": "establecerModalidadRc",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaId: string, entrada: { modalidad?: unknown; nota?: unknown; actor: string },",
+          "retorno": "Promise<ResultadoModalidadRc>",
+          "linea": 25
+        },
+        {
+          "nombre": "anotar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 68,
+          "resumen": "Best-effort: que el historial falle no deshace la anotación, pero se grita."
+        }
+      ],
+      "tablas": [
+        "historial_interno"
+      ],
+      "rutaApi": null,
+      "hash": "c90ceb35b077"
+    },
+    {
       "ruta": "apps/asegura/lib/cartera-poliza.ts",
       "ambito": "apps/asegura",
       "resumen": "La ficha de UNA póliza: lo que la fila de la ficha del cliente no cabe. Coberturas, todos los recibos, siniestros, intervinientes, documentos y la COPIA GEMELA del volcado, que a veces sabe lo que CIMA no manda. ─── La copia gemela (medido 02/09/2026) ──────────────────────────────────── 16 de las 1",
@@ -13286,7 +13328,7 @@
           "nombre": "peticion",
           "kind": "function",
           "exportada": true,
-          "params": "config: ConfigCodeoscopic, opciones: { metodo: 'GET' | 'POST' path: string cuerpo?: unknown timeoutMs: number },",
+          "params": "config: ConfigCodeoscopic, opciones: { metodo: 'GET' | 'POST' | 'PATCH' path: string cuerpo?: unknown timeoutMs: number },",
           "retorno": "Promise<unknown>",
           "linea": 175,
           "resumen": "Llama al vendor con las cabeceras que Avant2 exige. Un solo intento. La única repetición es el auto-curado de un 401, y es segura incluso en la llamada facturable porque un 401 significa que el vendor"
@@ -13303,7 +13345,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6f5527eebb63"
+      "hash": "5cd3895f7ff1"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/config.ts",
@@ -14079,6 +14121,7 @@
         "encontrarPrecio",
         "leerOferta",
         "reRate",
+        "actualizarFechaEfecto",
         "camposDeEmision"
       ],
       "funciones": [
@@ -14160,18 +14203,27 @@
           "resumen": "`POST /insurances/{projectId}/offers` — confirma el precio elegido (ReRate/preemisión). 🚨 **Corregido el 11/09/2026 tras el primer 400 real** (proyecto 40681298, Pilar Franco Ruz): el vendor exige `m"
         },
         {
+          "nombre": "actualizarFechaEfecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string, fechaEfecto: string, insuranceLineId: string | null,",
+          "retorno": "Promise<void>",
+          "linea": 226,
+          "resumen": "`PATCH /insurances/{id}` — corrige un campo del proyecto YA creado, GRATIS (solo `POST /insurances` está documentado como facturable). 🚨 **Nace el 11/09/2026 tras el cuarto 400 real** (proyecto 40681"
+        },
+        {
           "nombre": "camposDeEmision",
           "kind": "function",
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
           "retorno": "Promise<CampoEmision[]>",
-          "linea": 220,
+          "linea": 254,
           "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "895ab61c89ed"
+      "hash": "b57fbc5fe498"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -14814,7 +14866,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Json",
-          "linea": 104
+          "linea": 113
         },
         {
           "nombre": "arr",
@@ -14822,7 +14874,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "unknown[]",
-          "linea": 105
+          "linea": 114
         },
         {
           "nombre": "str",
@@ -14830,7 +14882,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 106
+          "linea": 115
         },
         {
           "nombre": "num",
@@ -14838,7 +14890,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 108
+          "linea": 117
         },
         {
           "nombre": "firmezaDe",
@@ -14846,7 +14898,7 @@
           "exportada": true,
           "params": "estimate: unknown, mensajes: unknown",
           "retorno": "Firmeza",
-          "linea": 116,
+          "linea": 125,
           "resumen": "Decide la firmeza de un precio. Orden deliberado: `estimate` manda sobre todo lo demás, porque si el propio vendor dice que la cifra es una estimación, ningún aviso la vuelve firme."
         },
         {
@@ -14855,7 +14907,7 @@
           "exportada": false,
           "params": "m: unknown",
           "retorno": "string | null",
-          "linea": 129,
+          "linea": 138,
           "resumen": "Junta `text` y `description` de un mensaje en una línea legible."
         },
         {
@@ -14864,7 +14916,7 @@
           "exportada": false,
           "params": "raw: unknown",
           "retorno": "Precio | null",
-          "linea": 136
+          "linea": 145
         },
         {
           "nombre": "leerFallo",
@@ -14872,7 +14924,7 @@
           "exportada": false,
           "params": "raw: unknown, companiasConPrecio: Set<string>",
           "retorno": "FalloProducto | null",
-          "linea": 167
+          "linea": 176
         },
         {
           "nombre": "leerCotizacion",
@@ -14880,7 +14932,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "Cotizacion",
-          "linea": 191,
+          "linea": 200,
           "resumen": "Convierte la respuesta cruda del vendor en el modelo de la casa. Lanza si falta el `id` de raíz: sin él no podemos correlacionar el webhook ni demostrar por qué nos han facturado esa cotización, así q"
         },
         {
@@ -14889,13 +14941,13 @@
           "exportada": true,
           "params": "c: Cotizacion",
           "retorno": "string",
-          "linea": 216,
+          "linea": 226,
           "resumen": "Resumen honrado para la UI y para Telegram: dice lo que NO se pudo cotizar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e6b99dac481e"
+      "hash": "4475959bccb1"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/resumen-hogar.ts",
@@ -53894,7 +53946,7 @@
           "exportada": false,
           "params": "conn: any, propMap: Map<string, any>",
           "retorno": "Promise<",
-          "linea": 24,
+          "linea": 25,
           "resumen": "── Sync Smoobu API (para Alberto — mantener mientras siga usando Smoobu) ───── Reconcilia en cada pasada: da de alta/actualiza reservas (filtradas por SALIDA, que es lo que define una limpieza) y elim"
         },
         {
@@ -53903,7 +53955,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 146,
+          "linea": 155,
           "resumen": "── Endpoint ──────────────────────────────────────────────────────────────────"
         }
       ],
@@ -53916,7 +53968,7 @@
         "set"
       ],
       "rutaApi": "/api/pms/sync",
-      "hash": "dd740aa7a4dd"
+      "hash": "affecd93f483"
     },
     {
       "ruta": "apps/ialimp/app/api/propietario/[token]/acceso/route.ts",
@@ -58506,6 +58558,74 @@
       "hash": "2d028744dda5"
     },
     {
+      "ruta": "apps/ialimp/lib/smoobu-firma.ts",
+      "ambito": "apps/ialimp",
+      "exporta": [
+        "hashCuerpo",
+        "queryCanonica",
+        "construirCanonical",
+        "firmarCanonical",
+        "selloTiempo",
+        "firmarPeticion"
+      ],
+      "funciones": [
+        {
+          "nombre": "hashCuerpo",
+          "kind": "function",
+          "exportada": true,
+          "params": "body?: string | null",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "queryCanonica",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: URLSearchParams | string",
+          "retorno": "string",
+          "linea": 32,
+          "resumen": "Query canónica: `clave=valor` ordenado alfabéticamente por clave, tal cual (sin URL-encode extra). Sin parámetros devuelve `''` — pero la LÍNEA sigue existiendo en el canonical (por eso el ejemplo POS"
+        },
+        {
+          "nombre": "construirCanonical",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PartesCanonical",
+          "retorno": "string",
+          "linea": 50
+        },
+        {
+          "nombre": "firmarCanonical",
+          "kind": "function",
+          "exportada": true,
+          "params": "canonical: string, apiSecret: string",
+          "retorno": "string",
+          "linea": 62
+        },
+        {
+          "nombre": "selloTiempo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 67,
+          "resumen": "ISO 8601 UTC con segundos y `Z` (`2026-04-01T12:00:00Z`). Smoobu rechaza >5 min de desfase."
+        },
+        {
+          "nombre": "firmarPeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PeticionFirmable",
+          "retorno": "",
+          "linea": 87,
+          "resumen": "Devuelve los 4 headers de auth. Faltando uno, Smoobu responde 401 aunque la firma sea correcta; el nonce NO se reutiliza jamás (401 aunque todo lo demás cuadre)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e95f2f21155e"
+    },
+    {
       "ruta": "apps/ialimp/lib/storage-limpiadora.ts",
       "ambito": "apps/ialimp",
       "resumen": "Acceso al bucket PRIVADO `documentos-limpiadora` (RR.HH. de la limpiadora). Espejo de apps/rrhh/lib/storage.ts: subir/borrar con service_role, URL firmada con anon key (core-storage), descargar para hashear al firmar. NO es el bucket público de fotos.",
@@ -62937,6 +63057,30 @@
       "hash": "388d77ddd60b"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/EditarModalidadRc.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "EditarModalidadRc"
+      ],
+      "funciones": [
+        {
+          "nombre": "EditarModalidadRc",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ polizaId, informadoPorCima }: { polizaId: string; informadoPorCima: boolean }",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "«¿Qué tipo de RC es?» — cuando la compañía no manda coberturas por CIMA, este es el único camino para anotar a mano la modalidad (locativa, patronal, profesional…). Escribe en `datos_especificos` de l"
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "e7c58596b536"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -62949,7 +63093,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 21,
+          "linea": 22,
           "resumen": "La ficha de UNA póliza (Alberto, 02/09/2026: «no puedo pinchar en la póliza para ir a la pantalla de póliza, ahí especifica más los datos de ese seguro, documentación, siniestros, recibos»). Todo en u"
         },
         {
@@ -62958,7 +63102,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 160,
+          "linea": 167,
           "resumen": "Qué asegura. Si la copia de CIMA no lo trae y la GEMELA del volcado sí (10 de las 109 vivas: la casa de Rota está en la copia de junio), se enseña la gemela y se dice de dónde sale. Sin gemela informa"
         },
         {
@@ -62967,7 +63111,7 @@
           "exportada": false,
           "params": "{ lista }: { lista: Poliza['coberturas'] }",
           "retorno": null,
-          "linea": 192
+          "linea": 199
         },
         {
           "nombre": "fechaCorta",
@@ -62975,7 +63119,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string",
-          "linea": 248
+          "linea": 255
         },
         {
           "nombre": "CapitalCobertura",
@@ -62983,7 +63127,7 @@
           "exportada": false,
           "params": "{ capital, descripcion }: { capital: string | null; descripcion: string | null }",
           "retorno": null,
-          "linea": 254
+          "linea": 261
         },
         {
           "nombre": "Limites",
@@ -62991,7 +63135,7 @@
           "exportada": false,
           "params": "{ detalle }: { detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 266
+          "linea": 273
         },
         {
           "nombre": "Franquicia",
@@ -62999,7 +63143,7 @@
           "exportada": false,
           "params": "{ texto, detalle }: { texto: string | null; detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 281
+          "linea": 288
         },
         {
           "nombre": "Recibos",
@@ -63007,7 +63151,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 299
+          "linea": 306
         },
         {
           "nombre": "Intervinientes",
@@ -63015,7 +63159,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 343,
+          "linea": 350,
           "resumen": "El TOMADOR va SIEMPRE, y el primero: no es un interviniente sino el titular de la póliza, así que no está en `poliza_intervinientes` y antes no salía. Alberto lo vio el 02/09/2026 en la 6930FBP, donde"
         },
         {
@@ -63024,7 +63168,7 @@
           "exportada": false,
           "params": "{ label, valor, nota, color }: { label: string; valor: string | null; nota?: string; color?: string }",
           "retorno": null,
-          "linea": 371
+          "linea": 378
         },
         {
           "nombre": "NoSePudo",
@@ -63032,7 +63176,7 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 388
+          "linea": 395
         },
         {
           "nombre": "Tarjeta",
@@ -63040,7 +63184,7 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 412
+          "linea": 419
         },
         {
           "nombre": "fmt",
@@ -63048,7 +63192,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 415
+          "linea": 422
         },
         {
           "nombre": "Estimacion",
@@ -63056,7 +63200,7 @@
           "exportada": false,
           "params": "{ e, retarificar }: { e: Poliza['estimacion']; retarificar: { href: string; rotulo: string } | null }",
           "retorno": null,
-          "linea": 433,
+          "linea": 440,
           "resumen": "─── ¿Merece la pena pedir precio? ──────────────────────────────────────── Va pegada a la evolución de la prima porque responde a la MISMA pregunta: pedir precio cuesta 0,50€ reales y esto dice si com"
         },
         {
@@ -63065,7 +63209,7 @@
           "exportada": false,
           "params": "{ etiqueta, eur: importe }: { etiqueta: string; eur: number }",
           "retorno": null,
-          "linea": 508,
+          "linea": 515,
           "resumen": "Un número ESTIMADO: `≈`, tamaño y color propios para no confundirlo con una prima real."
         },
         {
@@ -63074,7 +63218,7 @@
           "exportada": false,
           "params": "v: NonNullable<Poliza['estimacion']>['veredicto']",
           "retorno": "React.CSSProperties",
-          "linea": 523
+          "linea": 530
         },
         {
           "nombre": "CapitalesHogar",
@@ -63082,7 +63226,7 @@
           "exportada": false,
           "params": "{ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }",
           "retorno": null,
-          "linea": 543,
+          "linea": 550,
           "resumen": "─── Capitales de hogar ─────────────────────────────────────────────────── SEIS estados y ninguno se colapsa con otro. Los dos que muerden: · `solo_sublimites`: `mayorEur` NO es el continente — pintar"
         },
         {
@@ -63091,12 +63235,12 @@
           "exportada": false,
           "params": "{ titulo, c }: { titulo: string; c: CapitalAsegurado | null }",
           "retorno": null,
-          "linea": 557
+          "linea": 564
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "734ea0559a76"
+      "hash": "36347b7c5563"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/acciones.ts",
@@ -63140,7 +63284,7 @@
           "nombre": "pedirOferta",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { tarificacionId: string compania: string categoria: string }",
+          "params": "entrada: { tarificacionId: string compania: string categoria: string fechaEfectoCorregida?: string }",
           "retorno": "Promise<RespuestaOferta>",
           "linea": 103,
           "resumen": "🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo pone `ofertaAsegura()` en el servidor, y esto NO reintenta"
@@ -63151,13 +63295,13 @@
           "exportada": true,
           "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null }",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 116,
+          "linea": 117,
           "resumen": "🚨 **EL SUBMIT REAL. Compromete un contrato de verdad, no solo dinero.** Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin reintento: un fallo de red aquí NO dice que la póliza no se "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "308bf7283149"
+      "hash": "1bed2616b216"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx",
@@ -63175,17 +63319,26 @@
           "linea": 44
         },
         {
+          "nombre": "hoyISO",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 51,
+          "resumen": "La fecha de HOY en local (no `toISOString()`, que es UTC y puede dar el día de ayer/mañana según la hora): es el valor que Allianz acepta siempre — su 400 real es «no puede estar a más de 90 días vist"
+        },
+        {
           "nombre": "Emision",
           "kind": "function",
           "exportada": true,
           "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
           "retorno": null,
-          "linea": 48
+          "linea": 58
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5eb5127a967b"
+      "hash": "1cc2d98ca33d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -71388,6 +71541,27 @@
       "hash": "2617219d97fc"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/poliza/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "PATCH /api/correduria/poliza — anotar a mano la MODALIDAD de una RC cuando la compañía no manda coberturas por CIMA. Reenvía a `PATCH /api/operador/ poliza` de asegura con `actor` = quien está en sesi"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/poliza",
+      "hash": "22cd12a29e12"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -75033,7 +75207,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/incomes/backfill-reserved-at",
-      "hash": "994c42c28ece"
+      "hash": "c6d0685dfe5c"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/incomes/route.ts",
@@ -75204,7 +75378,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/limpiadoras/alerta-ventana",
-      "hash": "13ec59fac855"
+      "hash": "3664dd3f7499"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpiadoras/asignacion/route.ts",
@@ -75333,7 +75507,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/limpiadoras/auto-sessions",
-      "hash": "38f5214b1472"
+      "hash": "4f95c26dd830"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpiadoras/checklist/route.ts",
@@ -76077,7 +76251,7 @@
           "exportada": true,
           "params": "req: NextRequest, context: { params: Promise<{ bookingId: string }> }",
           "retorno": null,
-          "linea": 73
+          "linea": 72
         }
       ],
       "tablas": [
@@ -76086,7 +76260,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mensajes/[bookingId]",
-      "hash": "89243d7fff3c"
+      "hash": "537557705a72"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/auto-reply/route.ts",
@@ -76154,7 +76328,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/mensajes/diagnostico-guia",
-      "hash": "01f4a008f259"
+      "hash": "ea6366d1fc57"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/knowledge/route.ts",
@@ -76275,7 +76449,7 @@
           "exportada": false,
           "params": "propertyId: string, fromDate: string",
           "retorno": "Promise<string | null>",
-          "linea": 35
+          "linea": 32
         },
         {
           "nombre": "getPrevCheckout",
@@ -76283,7 +76457,7 @@
           "exportada": false,
           "params": "propertyId: string, toDate: string",
           "retorno": "Promise<string | null>",
-          "linea": 47
+          "linea": 44
         },
         {
           "nombre": "lookupKB",
@@ -76291,7 +76465,7 @@
           "exportada": false,
           "params": "category: string, propertyId: string, lang: string",
           "retorno": "Promise<string | null>",
-          "linea": 59
+          "linea": 56
         },
         {
           "nombre": "POST",
@@ -76299,7 +76473,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 77
+          "linea": 74
         }
       ],
       "tablas": [
@@ -76308,7 +76482,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/mensajes/reply",
-      "hash": "f9a0dd8f4c40"
+      "hash": "a6b1ae8d6e37"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/resumen-diario/route.ts",
@@ -76389,7 +76563,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/mensajes",
-      "hash": "b0670df974ba"
+      "hash": "fcb424ca2f0b"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/seed-aprendizaje/route.ts",
@@ -76421,7 +76595,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/mensajes/seed-aprendizaje",
-      "hash": "8bfb7e8bac16"
+      "hash": "dff075bb3da2"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/telegram-webhook/route.ts",
@@ -76990,7 +77164,7 @@
         "pricing_settings"
       ],
       "rutaApi": "/api/sivra/pricing/aplicar-propuesta",
-      "hash": "7475d933ea68"
+      "hash": "cc98225cb36f"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/apply-auto/route.ts",
@@ -77075,7 +77249,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "81a719ba1843"
+      "hash": "8bad1d0c8439"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -77508,7 +77682,7 @@
         "pricing_applied"
       ],
       "rutaApi": "/api/sivra/pricing/restore",
-      "hash": "36c27e11d995"
+      "hash": "928d9bfe41be"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/resultados/route.ts",
@@ -77626,7 +77800,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/rates/snapshot",
-      "hash": "411b1c87bc83"
+      "hash": "df8178bab60d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/reservas-booking/verificar/route.ts",
@@ -91294,6 +91468,44 @@
       "hash": "752bb92b0575"
     },
     {
+      "ruta": "apps/plataforma/lib/poliza-edicion-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Reenvío al puerto de asegura para anotar a mano la modalidad de una RC (09-12/09/2026). Mismo patrón que `cliente-edicion-asegura.ts::llamar`.",
+      "exporta": [
+        "modalidadRcAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 4
+        },
+        {
+          "nombre": "llamar",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string, init: RequestInit",
+          "retorno": "Promise<Reenvio>",
+          "linea": 10
+        },
+        {
+          "nombre": "modalidadRcAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 27,
+          "resumen": "`PATCH /api/operador/poliza` — modalidad de RC. El `actor` lo pone la ruta (sesión)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9d72760e6622"
+    },
+    {
       "ruta": "apps/plataforma/lib/portal-cliente-asegura.ts",
       "ambito": "apps/plataforma",
       "resumen": "El acceso de un CLIENTE al portal (`apps/asegura-portal`), desde la pantalla de Alberto. ── El hueco que tapa (Alberto, 05/09/2026) ───────────────────────────────── «No aparece el enviar invitación a la intranet.» No aparecía porque no existía: el portal funciona desde el 01/09 y la única forma de ",
@@ -92369,7 +92581,7 @@
           "nombre": "ofertaAsegura",
           "kind": "function",
           "exportada": true,
-          "params": "p: { tarificacionId: string compania: string categoria: string }",
+          "params": "p: { tarificacionId: string compania: string categoria: string /** Corrige la fecha de efecto del proyecto (aaaa-mm-dd) ANTES del ReRate, * vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha * rechazado — ver `apps/aseg",
           "retorno": "Promise<RespuestaOferta>",
           "linea": 750,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía el precio de `tarificacionId` (id de `seguros.tarificaciones`) para la `compania`/`categoria` elegidas en pantalla. NO reintenta."
@@ -92380,7 +92592,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaEmitir",
-          "linea": 796,
+          "linea": 800,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -92389,7 +92601,7 @@
           "exportada": true,
           "params": "p: { projectId: string campos: Record<string, unknown> actor?: string primaAnual?: number | null }",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 845,
+          "linea": 849,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO reintenta: un fallo de red aquí no dice que no se haya emitid"
         },
         {
@@ -92398,7 +92610,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FormularioGuardado | null",
-          "linea": 927
+          "linea": 931
         },
         {
           "nombre": "leerPreciosGuardados",
@@ -92406,7 +92618,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Precio[] | null",
-          "linea": 946
+          "linea": 950
         },
         {
           "nombre": "interpretarTarificacionGuardada",
@@ -92414,7 +92626,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaTarificacionGuardada",
-          "linea": 963,
+          "linea": 967,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -92423,13 +92635,13 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 1004,
+          "linea": 1008,
           "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "54865e81f048"
+      "hash": "c85bc8a760ca"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -99791,7 +100003,7 @@
           "nombre": "fetchPage",
           "kind": "function",
           "exportada": false,
-          "params": "p: number, from: string, apiKey: string, arrFrom?: string, arrTo?: string",
+          "params": "p: number, from: string, arrFrom?: string, arrTo?: string",
           "retorno": null,
           "linea": 43
         },
@@ -99801,7 +100013,7 @@
           "exportada": true,
           "params": "arrFrom: string, arrTo: string, modifiedDays = 800, maxPages = 10",
           "retorno": null,
-          "linea": 66,
+          "linea": 64,
           "resumen": "Lista las reservas CRUDAS de Smoobu cuya estancia toca la ventana [arrFrom, arrTo] — canceladas y bloqueos manuales incluidos (showCancellation=1 y sin filtrar `is-blocked-booking`, al revés que runSy"
         },
         {
@@ -99810,7 +100022,7 @@
           "exportada": true,
           "params": "days: number, maxPages = 20, arrFrom?: string, arrTo?: string",
           "retorno": null,
-          "linea": 81
+          "linea": 82
         }
       ],
       "tablas": [
@@ -99820,23 +100032,101 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "418828309e5f"
+      "hash": "5502efb3e54c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/smoobu-firma.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "hashCuerpo",
+        "queryCanonica",
+        "construirCanonical",
+        "firmarCanonical",
+        "selloTiempo",
+        "firmarPeticion"
+      ],
+      "funciones": [
+        {
+          "nombre": "hashCuerpo",
+          "kind": "function",
+          "exportada": true,
+          "params": "body?: string | null",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "queryCanonica",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: URLSearchParams | string",
+          "retorno": "string",
+          "linea": 32,
+          "resumen": "Query canónica: `clave=valor` ordenado alfabéticamente por clave, tal cual (sin URL-encode extra). Sin parámetros devuelve `''` — pero la LÍNEA sigue existiendo en el canonical (por eso el ejemplo POS"
+        },
+        {
+          "nombre": "construirCanonical",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PartesCanonical",
+          "retorno": "string",
+          "linea": 50
+        },
+        {
+          "nombre": "firmarCanonical",
+          "kind": "function",
+          "exportada": true,
+          "params": "canonical: string, apiSecret: string",
+          "retorno": "string",
+          "linea": 62
+        },
+        {
+          "nombre": "selloTiempo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 67,
+          "resumen": "ISO 8601 UTC con segundos y `Z` (`2026-04-01T12:00:00Z`). Smoobu rechaza >5 min de desfase."
+        },
+        {
+          "nombre": "firmarPeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PeticionFirmable",
+          "retorno": "",
+          "linea": 87,
+          "resumen": "Devuelve los 4 headers de auth. Faltando uno, Smoobu responde 401 aunque la firma sea correcta; el nonce NO se reutiliza jamás (401 aunque todo lo demás cuadre)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e95f2f21155e"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "getSmoobuCredenciales",
         "getSmoobuKey",
         "smoobuFetch"
       ],
       "funciones": [
+        {
+          "nombre": "getSmoobuCredenciales",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Credenciales>",
+          "linea": 26
+        },
         {
           "nombre": "getSmoobuKey",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "Promise<string>",
-          "linea": 21
+          "linea": 55,
+          "resumen": "Sigue exportada porque varias rutas la usan solo para comprobar «¿hay key configurada?» antes de seguir. Para HABLAR con Smoobu, `smoobuFetch`."
         },
         {
           "nombre": "smoobuFetch",
@@ -99844,15 +100134,15 @@
           "exportada": true,
           "params": "pathOrUrl: string, init: RequestInit = {}",
           "retorno": "Promise<Response>",
-          "linea": 41,
-          "resumen": "fetch a Smoobu con el header `Api-Key`. `pathOrUrl` puede ser ruta ('/api/...') o URL completa."
+          "linea": 65,
+          "resumen": "fetch a Smoobu firmado con HMAC-SHA256. `pathOrUrl` puede ser ruta ('/api/...') o URL completa. Se firma el METHOD, el PATH, la query ORDENADA, el sello de tiempo, un nonce único y el hash del cuerpo "
         }
       ],
       "tablas": [
         "pms_connections"
       ],
       "rutaApi": null,
-      "hash": "bdb5320b2141"
+      "hash": "d44b36d5b528"
     },
     {
       "ruta": "apps/plataforma/lib/subastas-ingesta.ts",
@@ -111901,7 +112191,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/limpiadoras/alerta-ventana",
-      "hash": "f960036d7ef4"
+      "hash": "ebf4d3d89fde"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/alertas/route.ts",
@@ -112052,7 +112342,7 @@
         "next"
       ],
       "rutaApi": "/api/limpiadoras/auto-sessions",
-      "hash": "5f1d7b00595a"
+      "hash": "ad84032966ce"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/complete/route.ts",
@@ -112366,7 +112656,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/mensajes/[bookingId]/email",
-      "hash": "0a5fc461319b"
+      "hash": "a11714450757"
     },
     {
       "ruta": "apps/sivra/app/api/mensajes/[bookingId]/route.ts",
@@ -112399,7 +112689,7 @@
           "exportada": true,
           "params": "req: NextRequest, context: { params: Promise<{ bookingId: string }> }",
           "retorno": null,
-          "linea": 56,
+          "linea": 55,
           "resumen": "── PATCH: persiste cambio de estado en mensajes_status ──"
         }
       ],
@@ -112409,7 +112699,7 @@
         "set"
       ],
       "rutaApi": "/api/mensajes/[bookingId]",
-      "hash": "c3977ac7ef78"
+      "hash": "00d8e156fcb0"
     },
     {
       "ruta": "apps/sivra/app/api/mensajes/auto-reply/route.ts",
@@ -112494,7 +112784,7 @@
         "update_logs"
       ],
       "rutaApi": "/api/mensajes/auto-reply",
-      "hash": "c987e94fb7f5"
+      "hash": "ec45d84f695b"
     },
     {
       "ruta": "apps/sivra/app/api/mensajes/knowledge/route.ts",
@@ -112599,7 +112889,7 @@
           "exportada": false,
           "params": "propertyId: string, fromDate: string",
           "retorno": "Promise<string | null>",
-          "linea": 90
+          "linea": 87
         },
         {
           "nombre": "getPrevCheckout",
@@ -112607,7 +112897,7 @@
           "exportada": false,
           "params": "propertyId: string, toDate: string",
           "retorno": "Promise<string | null>",
-          "linea": 102
+          "linea": 99
         },
         {
           "nombre": "lookupKB",
@@ -112615,7 +112905,7 @@
           "exportada": false,
           "params": "category: string, propertyId: string, lang: string",
           "retorno": "Promise<string | null>",
-          "linea": 114
+          "linea": 111
         },
         {
           "nombre": "POST",
@@ -112623,7 +112913,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 132
+          "linea": 129
         }
       ],
       "tablas": [
@@ -112633,7 +112923,7 @@
         "what"
       ],
       "rutaApi": "/api/mensajes/reply",
-      "hash": "821c3ec2f0ef"
+      "hash": "5182794e25f9"
     },
     {
       "ruta": "apps/sivra/app/api/mensajes/route.ts",
@@ -112689,7 +112979,7 @@
         "next"
       ],
       "rutaApi": "/api/mensajes",
-      "hash": "b127a79bc329"
+      "hash": "89849b602e38"
     },
     {
       "ruta": "apps/sivra/app/api/mercado/cron/route.ts",
@@ -113062,7 +113352,7 @@
         "pricing_settings"
       ],
       "rutaApi": "/api/pricing/aplicar-propuesta",
-      "hash": "fc349162ba76"
+      "hash": "90ba1d4b9c26"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/apply-auto/route.ts",
@@ -113355,7 +113645,7 @@
         "set"
       ],
       "rutaApi": "/api/pricing/pisos-zona",
-      "hash": "c255e5c6c2ed"
+      "hash": "36639611611a"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/recommend/route.ts",
@@ -113405,7 +113695,7 @@
         "pricing_applied"
       ],
       "rutaApi": "/api/pricing/restore",
-      "hash": "f3496d76ba2a"
+      "hash": "54d8e6f98596"
     },
     {
       "ruta": "apps/sivra/app/api/pricing/resultados/route.ts",
@@ -113571,13 +113861,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 32,
+          "linea": 31,
           "resumen": "POST /api/rates Body: { propertyId: string, operations: { dates: string[], daily_price: number, min_length_of_stay: number }[] }"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/rates",
-      "hash": "d35d8d34cfc4"
+      "hash": "8bc08cdb5c0d"
     },
     {
       "ruta": "apps/sivra/app/api/rates/snapshot/route.ts",
@@ -113609,7 +113899,7 @@
         "set"
       ],
       "rutaApi": "/api/rates/snapshot",
-      "hash": "720e96191e0e"
+      "hash": "d3c49048249f"
     },
     {
       "ruta": "apps/sivra/app/api/resumen-semanal/route.ts",
@@ -113853,7 +114143,7 @@
           "nombre": "fetchPage",
           "kind": "function",
           "exportada": false,
-          "params": "p:number,from:string,apiKey:string,arrFrom?:string,arrTo?:string",
+          "params": "p:number,from:string,arrFrom?:string,arrTo?:string",
           "retorno": null,
           "linea": 30,
           "resumen": "Smoobu, sin rango de llegada (`from`/`to`), SOLO devuelve reservas próximas → para un backfill del pasado hay que pasar el rango de fechas de llegada explícito. showCancellation=1: sin este flag Smoob"
@@ -113886,7 +114176,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/updates/sync",
-      "hash": "2166eae9317d"
+      "hash": "b8e384918620"
     },
     {
       "ruta": "apps/sivra/app/layout.tsx",
@@ -115313,26 +115603,114 @@
       "hash": "bbca632701fd"
     },
     {
+      "ruta": "apps/sivra/lib/smoobu-firma.ts",
+      "ambito": "apps/sivra",
+      "exporta": [
+        "hashCuerpo",
+        "queryCanonica",
+        "construirCanonical",
+        "firmarCanonical",
+        "selloTiempo",
+        "firmarPeticion"
+      ],
+      "funciones": [
+        {
+          "nombre": "hashCuerpo",
+          "kind": "function",
+          "exportada": true,
+          "params": "body?: string | null",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "queryCanonica",
+          "kind": "function",
+          "exportada": true,
+          "params": "params: URLSearchParams | string",
+          "retorno": "string",
+          "linea": 32,
+          "resumen": "Query canónica: `clave=valor` ordenado alfabéticamente por clave, tal cual (sin URL-encode extra). Sin parámetros devuelve `''` — pero la LÍNEA sigue existiendo en el canonical (por eso el ejemplo POS"
+        },
+        {
+          "nombre": "construirCanonical",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PartesCanonical",
+          "retorno": "string",
+          "linea": 50
+        },
+        {
+          "nombre": "firmarCanonical",
+          "kind": "function",
+          "exportada": true,
+          "params": "canonical: string, apiSecret: string",
+          "retorno": "string",
+          "linea": 62
+        },
+        {
+          "nombre": "selloTiempo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 67,
+          "resumen": "ISO 8601 UTC con segundos y `Z` (`2026-04-01T12:00:00Z`). Smoobu rechaza >5 min de desfase."
+        },
+        {
+          "nombre": "firmarPeticion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PeticionFirmable",
+          "retorno": "",
+          "linea": 87,
+          "resumen": "Devuelve los 4 headers de auth. Faltando uno, Smoobu responde 401 aunque la firma sea correcta; el nonce NO se reutiliza jamás (401 aunque todo lo demás cuadre)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e95f2f21155e"
+    },
+    {
       "ruta": "apps/sivra/lib/smoobu.ts",
       "ambito": "apps/sivra",
       "exporta": [
-        "getSmoobuKey"
+        "getSmoobuCredenciales",
+        "getSmoobuKey",
+        "smoobuFetch"
       ],
       "funciones": [
+        {
+          "nombre": "getSmoobuCredenciales",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Credenciales>",
+          "linea": 28
+        },
         {
           "nombre": "getSmoobuKey",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": "Promise<string>",
-          "linea": 19
+          "linea": 57,
+          "resumen": "Sigue exportada porque varias rutas la usan solo para comprobar «¿hay key configurada?». Para HABLAR con Smoobu, `smoobuFetch`."
+        },
+        {
+          "nombre": "smoobuFetch",
+          "kind": "function",
+          "exportada": true,
+          "params": "pathOrUrl: string, init: RequestInit = {}",
+          "retorno": "Promise<Response>",
+          "linea": 65,
+          "resumen": "fetch a Smoobu firmado con HMAC-SHA256. `pathOrUrl` puede ser ruta ('/api/...') o URL completa. La URL y el cuerpo que se firman son EXACTAMENTE los que se envían."
         }
       ],
       "tablas": [
         "pms_connections"
       ],
       "rutaApi": null,
-      "hash": "f098b6a93c6b"
+      "hash": "385c6637cd42"
     },
     {
       "ruta": "apps/sivra/lib/telegram.ts",
@@ -125619,9 +125997,9 @@
           "nombre": "objetoResponsabilidadCivil",
           "kind": "function",
           "exportada": false,
-          "params": "coberturas: EntradaObjeto['coberturas']",
+          "params": "d: Record<string, unknown>, coberturas: EntradaObjeto['coberturas'],",
           "retorno": "ObjetoAsegurado",
-          "linea": 219,
+          "linea": 226,
           "resumen": "Una RC no tiene bien: tiene MODALIDAD. Lo que la describe («de qué es») son las coberturas contratadas — locativa, patronal/accidentes de trabajo, explotación… y eso vive en `poliza_coberturas`, no en"
         },
         {
@@ -125630,7 +126008,7 @@
           "exportada": false,
           "params": "coberturas: EntradaObjeto['coberturas'], nota: string | null",
           "retorno": "ObjetoAsegurado",
-          "linea": 228,
+          "linea": 250,
           "resumen": "Describe una póliza por las coberturas contratadas, que es lo único que hay cuando no existe ficha del bien."
         },
         {
@@ -125639,13 +126017,13 @@
           "exportada": false,
           "params": "d: Record<string, unknown>, coberturas: EntradaObjeto['coberturas'],",
           "retorno": "ObjetoAsegurado",
-          "linea": 247,
+          "linea": 269,
           "resumen": "Ramos sin plantilla propia: se aprovecha lo que haya, sin inventar etiquetas."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "77ade921171e"
+      "hash": "a92d54422c68"
     },
     {
       "ruta": "packages/module-seguros/src/orden-polizas.ts",
@@ -125950,6 +126328,47 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "01020495ff28"
+    },
+    {
+      "ruta": "packages/module-seguros/src/rc-modalidad.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Modalidad de una RC \"suelta\" (responsabilidad civil general, no ligada a un bien) cuando la compañía no manda coberturas por CIMA/EIAC. `objeto.ts` ya distingue «no informado» (la compañía no lo ha mandado, es un \"todavía no se sabe\") de las demás ausencias. Esto NO sustituye esa lectura: es el ÚNIC",
+      "exporta": [
+        "etiquetaModalidadRc",
+        "validarModalidadRc",
+        "tituloModalidadRc"
+      ],
+      "funciones": [
+        {
+          "nombre": "etiquetaModalidadRc",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "string | null",
+          "linea": 28
+        },
+        {
+          "nombre": "validarModalidadRc",
+          "kind": "function",
+          "exportada": true,
+          "params": "idCrudo: unknown, notaCruda?: unknown",
+          "retorno": "ValidacionRc",
+          "linea": 46,
+          "resumen": "Valida lo que teclea el corredor. `id` tiene que estar en el catálogo (no se acepta un id inventado: un id que no está en `MODALIDADES_RC` no se puede ni pintar, porque `etiquetaModalidadRc` devolverí"
+        },
+        {
+          "nombre": "tituloModalidadRc",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, nota: string | null",
+          "retorno": "string | null",
+          "linea": 59,
+          "resumen": "El texto final que se guarda y se pinta como título del objeto asegurado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cfa47a354570"
     },
     {
       "ruta": "packages/module-seguros/src/recibos.ts",
@@ -131638,7 +132057,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3232,
-    "funciones": 9935
+    "archivos": 3240,
+    "funciones": 9969
   }
 }
