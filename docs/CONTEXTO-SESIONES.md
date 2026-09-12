@@ -71,6 +71,17 @@
   plataforma → `emision.tsx`, campo `<details>` bajo «Confirmar precio», solo se usa si la compañía
   ya rechazó la fecha). tsc 0 en las dos apps, 336/336 (asegura) + 2730/2730 (plataforma) +
   774/774 raíz. Pendiente: Alberto reintenta con la fecha de hoy.
+- **🐛 «Qué asegura» de una RC seguía «sin informar» con coberturas REALES de CIMA (12/09/2026, PR
+  #2730 + fix).** El PR #2730 añadió modalidad manual de RC para cuando CIMA no manda coberturas —
+  pero Alberto probó sobre la RC de Gabriel Duran Martinez (Occident 549570971, la del caso
+  fundacional) y seguía igual. Causa real, distinta: `objetoConGemela()` de
+  `apps/asegura/lib/cartera-ficha.ts` (la ficha del CLIENTE, `/correduria/cliente/[id]`) pasaba
+  `coberturas: null` SIEMPRE a `objetoAsegurado()` — un hardcode preexistente, no relacionado con el
+  PR. Esa póliza SÍ tenía 4 coberturas de CIMA («Responsabilidad civil caballos», «Defensa penal…»);
+  solo `/correduria/poliza/[id]` (que sí las consulta) las mostraba bien. Fix: `fichaCliente()` ahora
+  hace la MISMA consulta batched que ya usaba `cartera.ts` para el listado de vencimientos
+  (`RAMOS_DESCRITOS_POR_COBERTURAS`, exportada) y se la pasa a `objetoConGemela`. La modalidad manual
+  del PR #2730 sigue existiendo para cuando de verdad no hay coberturas. `tsc` 0, `pnpm test` 0 fallos.
 - **🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST (11/09/2026).**
   Tras el fix de `options: []`, el vendor rechazó con «El campo Fenómenos de la naturaleza de Allianz
   es obligatorio». `docs/CODEOSCOPIC-API-PORTAL.md` ya avisaba: qué opciones pide cada producto no se
