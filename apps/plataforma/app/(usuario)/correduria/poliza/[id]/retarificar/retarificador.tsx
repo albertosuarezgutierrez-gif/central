@@ -766,9 +766,13 @@ export default function Retarificador({
         setResultado({
           estado: 'error',
           mensaje:
-            `${r.mensaje}\n\nNo se ha cobrado nada. Recarga la pantalla: ese precio sale arriba como ` +
-            '«Cotización recuperada» y se confirma con «Emitir» sin pagar. Si de verdad hace falta otro ' +
-            'precio, primero «Descartar y pedir precio de cero».',
+            `Ya hay un precio pagado y vigente para esta póliza${r.proyecto.compania ? ` (${r.proyecto.compania}` : ''}` +
+            `${r.proyecto.primaEur !== null ? `${r.proyecto.compania ? ', ' : ' ('}${eur(r.proyecto.primaEur)}` : ''}` +
+            `${r.proyecto.compania || r.proyecto.primaEur !== null ? ')' : ''}` +
+            `${r.proyecto.caducaEn ? `, válido hasta ${r.proyecto.caducaEn}` : ''}. ` +
+            'No se ha cobrado nada. Recarga la pantalla: ese precio sale arriba como «Cotización ' +
+            'recuperada» y se confirma con «Emitir» sin pagar. Si de verdad hace falta otro precio, ' +
+            'primero «Descartar y pedir precio de cero».',
           gastoDesconocido: false,
         })
         return
@@ -855,14 +859,22 @@ export default function Retarificador({
   // pinta nada: bloquear por él sería impedir algo que no cuesta. Lo que NO
   // cambia es el resto de la guarda: los datos siguen haciendo falta porque el
   // cuerpo se revisa igual antes de responder.
-  // 🚨 Con la cotización recuperada en pantalla, «Pedir precio» está APAGADO:
-  // asegura rechazaría la petición igualmente (409 `proyecto_vigente`, sin
-  // cobrar), así que ofrecer el botón era ofrecer un callejón sin salida —
-  // medido por Alberto el 12/09/2026 con la póliza de Pilar Franco Ruz. El
-  // camino es «Emitir» (gratis) o, si hace falta otro precio, «Descartar» antes.
-  const precioVigenteEnPantalla = guardadaPrevia !== null && !guardadaDescartada
+  // 🚨 Con un precio REAL ya pagado en pantalla, «Pedir precio» está APAGADO —
+  // sea la cotización recuperada al abrir (y no descartada) o la que se acaba
+  // de pagar en esta misma visita. Si asegura la considera vigente (oferta
+  // confirmada y sin caducar) rechazaría la petición igualmente (409
+  // `proyecto_vigente`, sin cobrar), así que ofrecer el botón era ofrecer un
+  // callejón sin salida — medido por Alberto el 12/09/2026 con la póliza de
+  // Pilar Franco Ruz. Y si NO la considera vigente (sin ReRate, caducada), el
+  // botón encendido era justo el doble cargo por accidente que creó los
+  // proyectos 40684815 → 40684860. Se apaga ante la duda: el camino es
+  // «Emitir» (gratis) o, si hace falta otro precio, «Descartar» antes — que es
+  // el único gesto que manda `forzarNuevo`.
+  const precioPagadoEnPantalla =
+    (guardadaPrevia !== null && !guardadaDescartada) ||
+    (resultado.estado === 'ok' && !resultado.simulado && cotizacionIdDe(resultado.guardado) !== null)
   const puedePulsar =
-    !deshabilitado && !cotizando && !faltaAlgo && !precioVigenteEnPantalla && (simulacion || consumoPermite)
+    !deshabilitado && !cotizando && !faltaAlgo && !precioPagadoEnPantalla && (simulacion || consumoPermite)
 
   // El código Base7 vino de una cotización guardada (no del desplegable en
   // vivo) mientras no aparezca entre las versiones ya cargadas: marca/modelo/
@@ -1274,12 +1286,12 @@ export default function Retarificador({
 
         <Contador consumo={consumo} simulacion={simulacion} />
 
-        {precioVigenteEnPantalla && (
+        {precioPagadoEnPantalla && (
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-            Botón apagado a propósito: arriba hay un precio <strong>ya pagado y vigente</strong>, y
-            asegura no deja pedir otro mientras exista. Para confirmarlo, «Emitir» en la tabla de
-            precios (gratis). Si de verdad hace falta otro precio, primero «Descartar y pedir precio
-            de cero».
+            Botón apagado a propósito: ya hay un precio <strong>pagado</strong> en esta pantalla, y
+            pedir otro sería otro cargo (y puede salir otra cifra). Para confirmarlo, «Emitir» en la
+            tabla de precios (gratis). Si de verdad hace falta otro precio, primero «Descartar y pedir
+            precio de cero».
           </p>
         )}
 

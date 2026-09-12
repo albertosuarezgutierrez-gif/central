@@ -59,12 +59,38 @@ test('`forzarNuevo` solo viaja tras «Descartar»: en la pantalla vale `guardada
   assert.match(cuerpo, /p\.forzarNuevo === true \? \{ forzarNuevo: true \}/, 'el puerto compara `forzarNuevo` con `=== true`.')
 })
 
-test('con la cotización recuperada en pantalla, «Pedir precio» está apagado', () => {
+// La otra orilla del puerto, leída como fuente (mismo patrón que
+// `apps/asegura-web/lib/contrato-lead.test.ts`): que plataforma MANDE el flag no
+// sirve de nada si la ruta de asegura lo tira antes de `prepararRetarificacion`
+// — que es exactamente lo que pasaba hasta el 12/09/2026, con este mismo test
+// verde mirando solo al emisor.
+test('la ruta de operador de asegura REENVÍA `forzarNuevo` a prepararRetarificacion', () => {
+  const ruta = codigo('../../asegura/app/api/operador/codeoscopic/retarificar/route.ts')
+  const i = ruta.indexOf('prepararRetarificacion({')
+  assert.ok(i > 0, 'la ruta tiene que llamar a `prepararRetarificacion({`')
+  const llamada = ruta.slice(i, ruta.indexOf('})', i))
   assert.match(
-    PANTALLA,
-    /const precioVigenteEnPantalla = guardadaPrevia !== null && !guardadaDescartada/,
-    'falta la guarda que detecta el precio recuperado (y no descartado) en pantalla.',
+    llamada,
+    /forzarNuevo:\s*cuerpo\.forzarNuevo === true/,
+    'la ruta `/api/operador/codeoscopic/retarificar` de asegura tiene que pasar `forzarNuevo: ' +
+      'cuerpo.forzarNuevo === true` dentro del `cuerpo` de `prepararRetarificacion`. Si lo tira, ' +
+      '«Descartar y pedir precio de cero» muere en el 409 del guardián desde plataforma.',
+  )
+})
+
+test('con un precio real ya pagado en pantalla, «Pedir precio» está apagado', () => {
+  const guarda = /const precioPagadoEnPantalla =([\s\S]*?)\n  const puedePulsar/.exec(PANTALLA)?.[1] ?? ''
+  assert.match(
+    guarda,
+    /guardadaPrevia !== null && !guardadaDescartada/,
+    'la guarda tiene que cubrir la cotización recuperada al abrir (y no descartada).',
+  )
+  assert.match(
+    guarda,
+    /resultado\.estado === 'ok' && !resultado\.simulado && cotizacionIdDe\(resultado\.guardado\) !== null/,
+    'la guarda tiene que cubrir también el precio REAL que se acaba de pagar en esta visita: si no, ' +
+      'tras «Descartar» + «Pedir precio» el botón seguía encendido y `forzarNuevo` seguía valiendo `true`.',
   )
   const puede = /const puedePulsar =[\s\S]*?\n\n/.exec(PANTALLA)?.[0] ?? ''
-  assert.match(puede, /!precioVigenteEnPantalla/, '`puedePulsar` tiene que apagar el botón con el precio recuperado a la vista.')
+  assert.match(puede, /!precioPagadoEnPantalla/, '`puedePulsar` tiene que apagar el botón con un precio pagado a la vista.')
 })
