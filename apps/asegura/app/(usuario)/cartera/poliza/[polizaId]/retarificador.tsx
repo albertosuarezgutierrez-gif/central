@@ -1367,6 +1367,10 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
+  // La compañía lo exige al confirmar el precio (ReRate), no al cotizar — por
+  // eso la ficha nunca lo trae y hay que teclearlo aquí, como el resto de datos
+  // personales que no se suponen.
+  nombreVia: { etiqueta: 'Calle (nombre de la vía)', tipo: 'text' },
 }
 
 /**

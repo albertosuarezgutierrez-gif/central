@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 Undécimo 400 real de Codeoscopic — ReRate exige la calle del tomador (12/09/2026).**
+  `POST /insurances/40684860/offers` rechazado: «The road name of the address of the holder/primary
+  driver/owner is mandatory.» La cotización inicial nunca lo pedía (por eso `construirPersona()` solo
+  mandaba CP+municipio, deliberadamente sin calle) — el ReRate sí lo exige cuando SÍ viaja dirección de
+  residencia. `DatosPersona` gana `nombreVia` (opcional; hogar no lo necesita), `construirPersona` lo
+  manda como `roadName` si está, y `revisarDatosAuto` lo exige (solo auto) cuando hay CP+municipio.
+  Como la ficha NUNCA trae la calle, se teclea a mano — nuevo campo en `CAMPOS_A_MANO` del
+  retarificador, mismo patrón que DNI/teléfono. 342/342 tests + tsc limpios.
 - **🛑 No crear proyecto por proyecto en Codeoscopic — guardián de reutilización (12/09/2026).**
   Alberto, revisando el proceso: el reintento de Pilar creó un proyecto NUEVO (`40684860`) en vez de
   reusar el `40684815` (que seguía vigente) — otros 0,50€ gastados y riesgo de que la compañía dé OTRO

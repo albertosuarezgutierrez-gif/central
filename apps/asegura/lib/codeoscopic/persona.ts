@@ -15,6 +15,15 @@ export type DatosPersona = {
   telefono: string
   cpResidencia?: string | null
   municipioResidenciaId?: number | null
+  /**
+   * Nombre de la calle de residencia. Optativo AQUÍ (hogar no lo necesita para
+   * su tomador; la dirección que hogar tarifica es la del RIESGO, no la de la
+   * persona) — quien lo exige de verdad es `revisarDatosAuto` (11º 400 real,
+   * 12/09/2026, ReRate del proyecto 40684860): «The road name of the address
+   * of the holder/primary driver/owner is mandatory». La ficha NO lo trae para
+   * auto, así que lo teclea el corredor — nunca se supone un dato personal.
+   */
+  nombreVia?: string | null
 }
 
 export const RE_TELEFONO = /^[67][0-9]{8}$/
@@ -71,10 +80,19 @@ export function construirPersona(d: DatosPersona, extra: { fechaCarnet?: string 
   // La dirección solo viaja si están las DOS mitades: el vendor rechaza el
   // municipio sin código postal. Cuatro productos del grupo de salida la exigen.
   if (texto(d.cpResidencia) && numero(d.municipioResidenciaId)) {
-    persona.addresses = [{ postalCode: d.cpResidencia, town: { id: d.municipioResidenciaId }, primary: true }]
+    const direccion: Record<string, unknown> = {
+      postalCode: d.cpResidencia,
+      town: { id: d.municipioResidenciaId },
+      primary: true,
+    }
+    // `roadName`: el ReRate de auto lo exige (ver el comentario del campo en el
+    // tipo); la cotización inicial NO lo pedía, así que hasta ahora nadie lo echaba
+    // en falta. Se manda si lo hay, nunca inventado.
+    if (texto(d.nombreVia)) direccion.roadName = d.nombreVia!.trim()
+    persona.addresses = [direccion]
   }
 
-  // 🔒 Lo que NO se manda, y es deliberado: email, calle y número, ocupación,
+  // 🔒 Lo que NO se manda, y es deliberado: email, número de la calle, ocupación,
   // situación laboral y país de nacimiento. No hacen falta para el precio, así
   // que no salen de aquí. Menos datos personales fuera, menos que proteger.
   return persona
