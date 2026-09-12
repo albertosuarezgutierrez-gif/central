@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T16:19:41Z",
-  "sha": "63cc20326356c1eb70e872ae1e785d069da7b9a9",
+  "generadoEn": "2026-09-12T17:27:17Z",
+  "sha": "df916dc2ba4a07279c1734cdf542a85d3fefb8cc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9820,7 +9820,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 58,
+          "linea": 59,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — el Submit de verdad (`POST /insurances/{id}/policy-applications`), y el acuñado en nuestra BD si el vendor lo acepta. 🚨 **Construida el 11/09/2026, sin sandb"
         },
         {
@@ -9829,7 +9829,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 448
+          "linea": 460
         },
         {
           "nombre": "numero",
@@ -9837,7 +9837,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 453
+          "linea": 465
         },
         {
           "nombre": "esObjeto",
@@ -9845,7 +9845,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 457
+          "linea": 469
         },
         {
           "nombre": "coincideCompania",
@@ -9853,7 +9853,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 461
+          "linea": 473
         }
       ],
       "tablas": [
@@ -9862,7 +9862,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "081f6fd86a24"
+      "hash": "053ae27e50c1"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
@@ -10009,7 +10009,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "9eef8b60b970"
+      "hash": "4b331e8bb47b"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -14624,6 +14624,8 @@
         "reRate",
         "actualizarFechaEfecto",
         "leerProyectoCrudo",
+        "redactarPersona",
+        "redactarCrudoVendor",
         "papelesDeLaMismaPersona",
         "completarPersonas",
         "camposDeEmision"
@@ -14721,8 +14723,26 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string",
           "retorno": "Promise<Json>",
-          "linea": 289,
+          "linea": 291,
           "resumen": "El proyecto tal cual lo devuelve el vendor (GET). Gratis."
+        },
+        {
+          "nombre": "redactarPersona",
+          "kind": "function",
+          "exportada": true,
+          "params": "persona: unknown",
+          "retorno": "Json",
+          "linea": 319,
+          "resumen": "`crudo` viaja a la respuesta HTTP del puerto para que se pueda ver DÓNDE puso el vendor el dato (o que no lo puso en ningún sitio) — pero es la persona releída ENTERA, con DNI y teléfono dentro. Se en"
+        },
+        {
+          "nombre": "redactarCrudoVendor",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "unknown",
+          "linea": 392,
+          "resumen": "`envio.crudo` (y `envio.mensaje`, el texto del 400/500) son la respuesta ENTERA del vendor al Submit — sin sandbox ni fixture, no se sabe de antemano si traen los mismos `holder`/`risk` con DNI/teléfo"
         },
         {
           "nombre": "dniDe",
@@ -14730,7 +14750,7 @@
           "exportada": false,
           "params": "persona: unknown",
           "retorno": "string | null",
-          "linea": 305
+          "linea": 410
         },
         {
           "nombre": "papelesDeLaMismaPersona",
@@ -14738,7 +14758,7 @@
           "exportada": true,
           "params": "crudo: Json",
           "retorno": "Papel[]",
-          "linea": 322,
+          "linea": 427,
           "resumen": "Los papeles del `risk` que son LA MISMA PERSONA que el tomador (mismo DNI). Un `owner` o `secondaryDriver` con otro DNI es otra persona: escribirle el teléfono o la fecha de nacimiento del tomador ser"
         },
         {
@@ -14747,7 +14767,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, valores: Partial<Record<CampoPersona, string>>,",
           "retorno": "Promise<ResultadoCompletar>",
-          "linea": 339,
+          "linea": 444,
           "resumen": "Escribe `valores` en el tomador y en los papeles del `risk` que sean la misma persona (mismo DNI) — el vendor cruza por DNI y rechaza si un campo difiere entre ellos, así que no se puede completar sol"
         },
         {
@@ -14756,13 +14776,13 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
           "retorno": "Promise<CampoEmision[]>",
-          "linea": 396,
+          "linea": 505,
           "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4ac53fad67da"
+      "hash": "aa71cc75d121"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -133505,6 +133525,6 @@
   ],
   "resumen": {
     "archivos": 3270,
-    "funciones": 10084
+    "funciones": 10086
   }
 }
