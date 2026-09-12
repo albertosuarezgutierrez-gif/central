@@ -71,3 +71,19 @@ test('un 502 del vendor sin traducir sigue siendo error, como antes', () => {
   const r = interpretarOferta(502, { estado: 'error', causa: 'vendor', mensaje: 'codeoscopic_servidor: 500' })
   assert.equal(r.estado, 'error')
 })
+
+// La cuenta de cargo tras el ReRate viene en TRES formas: la cuenta (enmascarada),
+// un aviso de por qué no hay una utilizable, o null = se miró y no hay ninguna.
+// `no_comprobada` (la consulta falló) NUNCA se lee como «no tiene».
+test('el aviso de la cuenta se lee tal cual y lo desconocido no se convierte en «no tiene»', async () => {
+  const { leerAvisoCuenta } = await import('./retarificar-asegura.ts')
+  assert.equal(leerAvisoCuenta({ aviso: 'no_comprobada' }), 'no_comprobada')
+  assert.equal(leerAvisoCuenta({ aviso: 'ilegible' }), 'ilegible')
+  assert.equal(leerAvisoCuenta({ aviso: 'invalida' }), 'invalida')
+  assert.equal(leerAvisoCuenta({ aviso: 'otra_cosa' }), null)
+  assert.equal(leerAvisoCuenta({ enmascarada: 'ES91…1332' }), null)
+  assert.equal(leerAvisoCuenta(null), null)
+  // Y la pantalla pinta los tres avisos con frases DISTINTAS: cada uno se arregla en otro sitio.
+  const pantalla = readFileSync(fileURLToPath(new URL('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx', import.meta.url)), 'utf8')
+  for (const a of ['ilegible', 'invalida', 'no_comprobada']) assert.match(pantalla, new RegExp(`aviso === '${a}'`), a)
+})
