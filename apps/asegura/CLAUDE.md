@@ -1277,6 +1277,18 @@ Envs: `ASEGURA_MAIL_FROM` (ya usada por el cron de avisos) + un proveedor de cor
 `ASEGURA_PORTAL_URL` (por defecto `https://asegura-portal.vercel.app`, que es donde el portal sirve
 HOY; cuando `clientes.grupoasegura.es` esté repuntado a Vercel se cambia la env y no se toca código).
 
+## 🎯 Recaptación de leads sin vencimiento (12/09/2026)
+
+`/api/operador/recaptacion` sirve la cola de leads del volcado sin fecha de vencimiento,
+con teléfono o email, EXCLUYENDO a quien ya es cliente vivo por CIMA en otro ramo (esos se
+trabajan desde su ficha). WhatsApp es un enlace manual (`wa.me`, sin WABA — solo se registra
+que Alberto lo abrió, no que el cliente lo leyó); el email SÍ lo manda el servidor por la
+**API HTTP de Resend** (no SMTP, para poder trackear apertura/clic vía webhook
+`/api/webhooks/resend`, verificado con `RESEND_WEBHOOK_SECRET`). Cooldown de 14 días tras
+cualquier envío (`seguros.recaptacion_envios`). El "no interesado" reutiliza el descarte de
+ficha YA EXISTENTE (`descartarCliente`, `DELETE /api/operador/cliente`) — no se construyó
+un estado de descarte nuevo. Spec: `docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md`.
+
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se
   descargan los ficheros de las compañías, si usa Vercel Blob y qué dominios tiene.

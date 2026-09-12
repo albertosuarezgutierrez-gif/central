@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📞 Recaptación de leads sin vencimiento — completo (12/09/2026).** Cola de los 669 leads del
+  volcado sin fecha de vencimiento, con contacto y excluyendo a quien ya es cliente vivo por CIMA
+  (`/api/operador/recaptacion` en asegura, proxy + pantalla en `plataforma` → `/correduria` →
+  Clientes). WhatsApp manual (enlace `wa.me`, solo se registra que Alberto lo abrió) + email por la
+  API HTTP de Resend con tracking de apertura/clic (webhook `/api/webhooks/resend`), cooldown de 14
+  días tras cualquier envío, texto base determinista pulido opcionalmente por IA. El "no interesado"
+  reutiliza el descarte de ficha ya existente, sin estado nuevo. Detalle en `apps/asegura/CLAUDE.md`.
+  **Pendiente de Alberto:** configurar `RESEND_WEBHOOK_SECRET` en Vercel (`central-asegura`) + crear
+  el endpoint `email.opened`/`email.clicked` en el dashboard de Resend, y probar un envío real.
+
 - **🕵️ Pólizas "zombi" del volcado + revertido un arreglo propio equivocado (12/09/2026).** Alberto
   reportó BIDP023227 (Comunidades, Plus Ultra) «no aparece, es de catalana»: corregí su
   `codigo_entidad_dgs` de C0468→C0517 pensando que era un fallo puntual, y era un error — **215
