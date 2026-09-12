@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🌐 IONOS quitó por error el dominio de grupoasegura.es/.com — repuesto (12/09/2026).** Sin
+  código: se hizo vía Claude en Chrome (el proxy de esta sesión bloquea egress a esos hosts). Se
+  repuso DNS en IONOS (`grupoasegura.es`/`www` → `asegura-web`; `clientes.grupoasegura.es` →
+  `asegura-portal` con registro A, no CNAME, porque el subdominio tiene MX de correo) y se verificó
+  que los deployments de ambos proyectos en Vercel estaban `Ready` en producción (los `Canceled`
+  posteriores eran el `ignoreCommand` del monorepo funcionando bien, no un fallo). Confirmado con
+  curl externo (200, cert Let's Encrypt válido) y por Alberto en su propio navegador. `app.grupoasegura.com`
+  y el apex `.com` no se tocaron.
 - **📬 Pasada diaria `facturas-correo` (12/09/2026).** Sin incidencias: Vía B sana (0 días caída), sin
   backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`. Archivado 1 recibo OpenRouter (25,64$ →
   `seguros`, mismo criterio que Anthropic/FAL.ai) en `09-Septiembre-2026`; descartados 2 correos IONOS
