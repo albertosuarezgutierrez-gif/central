@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (12/09/2026) 🛣️ `tipoVia` en `faltan_vendor` era una caja de texto que pedía un id de catálogo a ciegas
 - (12/09/2026) 🔒 `patch_no_aplicado` del Submit: mensaje falso + PII en claro en `crudo`
 - (12/09/2026) 🧾 Diagnóstico de «subida de póliza trae poca información» + spec de tercero
 - (12/09/2026) 📮 14º 400 real de Codeoscopic — el Submit trocea la calle en TRES campos
@@ -271,5 +272,4 @@
 - (12/09/2026) 📱 Portal del cliente, seguimiento del móvil compactado
 - (12/09/2026) 🧠 Grafo propio, parte 2: búsqueda SEMÁNTICA + lo estructural que faltaba para dar de baja Graphify
 - (12/09/2026) 🏦 Duodécimo 400 real de Codeoscopic — el Submit exige IBAN, y el IBAN SIEMPRE se confirma
-- (12/09/2026) 🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel
 

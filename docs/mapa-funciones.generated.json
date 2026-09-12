@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T17:27:17Z",
-  "sha": "df916dc2ba4a07279c1734cdf542a85d3fefb8cc",
+  "generadoEn": "2026-09-12T21:23:45Z",
+  "sha": "9758cc9480269e17594f697573aeb726ce824cdb",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64158,7 +64158,7 @@
           "exportada": false,
           "params": "cuenta: CuentaConocida | null, cuentaOk: boolean, iban: string",
           "retorno": "boolean",
-          "linea": 100,
+          "linea": 114,
           "resumen": "sin cuenta conocida no hay nada que confirmar (si la compañía la exige, su 400 vuelve como hueco y entonces sí se teclea). PURO, para poder verlo fallar."
         },
         {
@@ -64167,7 +64167,7 @@
           "exportada": false,
           "params": "{ cuenta, aviso, obligatoria, cuentaOk, onCuentaOk, iban, onIban, }: { cuenta: CuentaConocida | null aviso: AvisoCuenta | null obligatoria: boolean cuentaOk: boolean onCuentaOk: (v: boolean) => void iban: string onIban: (v: string) => void ",
           "retorno": null,
-          "linea": 113,
+          "linea": 127,
           "resumen": "La cuenta de cargo del recibo. 🚨 «iban importante siempre confirmar» (Alberto, 12/09/2026): la que la ficha ya conoce se pinta ENMASCARADA con su origen y una casilla que el corredor marca a mano; la"
         },
         {
@@ -64176,12 +64176,14 @@
           "exportada": true,
           "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
           "retorno": null,
-          "linea": 192
+          "linea": 206
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "react"
+      ],
       "rutaApi": null,
-      "hash": "d0fbc38aa176"
+      "hash": "6332429e043a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
