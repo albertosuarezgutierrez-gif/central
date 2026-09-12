@@ -12,6 +12,35 @@
 > `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md` (producto completo) y
 > `docs/superpowers/plans/2026-09-01-asegura-portal-fase-1.md` (lo que se construyó de verdad).
 
+## 🔔 Avisos por Web Push (12/09/2026) — canal nuevo, sin pasar por el email
+
+`GET /api/cron/avisos-push` (diario 08:00 UTC, `vercel.json`), hermano de
+`apps/asegura` → `/api/cron/avisos-vencimiento` pero **sin compartir sello ni sitio**: ese cron
+necesita el email en CLARO (`prisma_seguros`, BYPASSRLS) y por eso vive allí; el push no tiene ese
+problema —`endpoint`+claves del navegador no son un dato descifrable— así que vive aquí, sobre la
+misma tabla `seguros.portal_obligacion` que ya sincroniza `lib/obligaciones.ts`.
+
+- **Sello independiente: `avisadaPushAt`, no `avisadaAt`.** Dos canales que fallan por separado
+  (sin suscripción, endpoint muerto, proveedor de correo caído…); compartir sello dejaría que el
+  fallo de uno tapara el envío del otro. Se sella solo si `sendWebPush` acepta al menos un envío
+  —mismo criterio que el correo—; si todos fallan, se reintenta en la siguiente pasada.
+- **Tabla nueva `seguros.portal_push_suscripcion`** (`identidad_id`, `endpoint` UNIQUE, `p256dh`,
+  `auth_key`), aplicada el 12/09/2026 (`prisma/sql/2026-09-12_portal_push_avisos.sql`). Varias
+  filas por identidad = varios dispositivos; un endpoint muerto (404/410 de `sendWebPush`) se borra
+  en el propio cron.
+- **`packages/module-seguros-portal/src/push.ts` (`debeAvisarPush`)** reutiliza la MISMA ventana que
+  el correo (`entraEnVentana`/`DIAS_VENTANA_AVISO` de `obligacion.ts`): un vencimiento entra en
+  ventana una vez, y los dos canales lo ven a la vez.
+- **Cliente:** `app/ActivarPush.tsx`, un interruptor dentro del panel de la campana (`Campana.tsx`)
+  — no se pinta sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` ni sin soporte del navegador, para no ofrecer un
+  botón que no puede funcionar. `public/sw.js` añadió `push`/`notificationclick` (sigue SIN
+  `caches`: el guardián `lib/pwa.test.ts` lo sigue vigilando).
+- **Envs que faltan, de Alberto (Vercel `asegura-portal`):** `NEXT_PUBLIC_VAPID_PUBLIC_KEY` +
+  `VAPID_PRIVATE_KEY` (par VAPID propio de esta app, generado con `npx web-push generate-vapid-keys`
+  o `webpush.generateVAPIDKeys()`) y `CRON_SECRET` (puede ser el mismo valor que el de `asegura`,
+  o uno propio — este cron no lo comparte con nadie). Sin las claves VAPID el endpoint responde 503
+  `sin_vapid` en vez de fingir un `{avisadas:0}`.
+
 ## Estado (03/09/2026): DESPLEGADA en Vercel; Fase 1 mergeada + Fase 4 en código; DDL aplicado
 
 Fase 1 entró en `main` el 01/09/2026 con el PR **#1965** (`f12b7b46`): entrar con un código de un solo

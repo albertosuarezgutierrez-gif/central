@@ -687,6 +687,15 @@ input, select, textarea, button { font: inherit; }
   text-decoration: underline;
   cursor: pointer;
 }
+.campana-push {
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.campana-push .campana-reintentar {
+  font-size: 13px;
+  font-weight: 500;
+}
 
 /* ── Secciones y tarjetas ─────────────────────────────────────────────────
  *

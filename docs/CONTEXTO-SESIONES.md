@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔔 Avisos por Web Push en `apps/asegura-portal` (12/09/2026).** Nuevo canal, hermano del correo
+  de vencimientos de `apps/asegura` pero SIN compartir sello ni sitio: la suscripción push no es un
+  dato descifrable, así que vive en el portal, sobre `seguros.portal_obligacion` (sello propio
+  `avisada_push_at`) + tabla nueva `seguros.portal_push_suscripcion` (migración aplicada en la BD
+  real). Interruptor en el panel de la campana (`ActivarPush.tsx`); `sw.js` ganó `push`/
+  `notificationclick` sin tocar el guardián «no cachea nada». Cron `/api/cron/avisos-push`
+  (`vercel.json`), 32 tests nuevos en verde. **Pendiente de Alberto:** poner `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+  + `VAPID_PRIVATE_KEY` + `CRON_SECRET` en Vercel `asegura-portal` (detalle en su `CLAUDE.md`).
+
 - **🏦 Duodécimo 400 real de Codeoscopic — el Submit exige IBAN, y el IBAN SIEMPRE se confirma (12/09/2026).**
   «The bank account is mandatory according to the selected companies and payment types.» Aquí se
   escribió primero que Pilar «no tiene cuenta»: **falso** — está en **`poliza_recibos.iban`** (CIMA; 121/187

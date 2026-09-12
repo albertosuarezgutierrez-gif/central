@@ -16,6 +16,7 @@
     "@central/core-catastro": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-identity": "workspace:*",
+    "@central/core-push": "workspace:*",
     "@central/core-telegram": "workspace:*",
     "@central/module-seguros": "workspace:*",
     "@central/module-seguros-pii": "workspace:*",
