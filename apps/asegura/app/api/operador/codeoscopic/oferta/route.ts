@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { prisma } from '@/lib/tenant'
 import { ErrorCodeoscopic } from '@/lib/codeoscopic/cliente'
-import { resolverConfigEmision, refrescarProyecto, encontrarPrecio, reRate } from '@/lib/codeoscopic/emitir'
+import {
+  resolverConfigEmision,
+  refrescarProyecto,
+  encontrarPrecio,
+  reRate,
+  actualizarFechaEfecto,
+} from '@/lib/codeoscopic/emitir'
 import { opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 
 export const runtime = 'nodejs'
@@ -61,6 +67,18 @@ export async function POST(req: Request) {
     )
   }
 
+  // 🚨 Corrección MANUAL de la fecha de efecto (11/09/2026, cuarto 400 real):
+  // el vendor la rechaza si está mal — p.ej. «más de 90 días en el futuro» — y
+  // qué fecha poner es una decisión de negocio, nunca una suposición del
+  // código. Opcional: sin ella, el ReRate usa la fecha ya guardada en el proyecto.
+  const fechaEfectoCorregida = cadena(cuerpo.fechaEfectoCorregida)
+  if (fechaEfectoCorregida && !/^\d{4}-\d{2}-\d{2}$/.test(fechaEfectoCorregida)) {
+    return NextResponse.json(
+      { estado: 'error', causa: 'otro', mensaje: 'fechaEfectoCorregida tiene que ser aaaa-mm-dd' },
+      { status: 400 },
+    )
+  }
+
   const filas = await prisma.$queryRaw<
     { correduria_id: string; project_id_codeoscopic: string | null; poliza_id: string | null }[]
   >`
@@ -93,6 +111,12 @@ export async function POST(req: Request) {
   }
 
   try {
+    if (fechaEfectoCorregida) {
+      // GRATIS: PATCH incremental, antes de leer el proyecto para que el
+      // refresco de abajo ya vea la fecha corregida.
+      await actualizarFechaEfecto(r.config, t.project_id_codeoscopic, fechaEfectoCorregida)
+    }
+
     // GRATIS: recupera el `id` real del precio (el vendor no lo devuelve al
     // guardar la cotización en nuestra BD, solo el precio en euros).
     const cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)

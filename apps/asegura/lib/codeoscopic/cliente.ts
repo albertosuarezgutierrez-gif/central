@@ -175,7 +175,7 @@ async function fetchConTimeout(
 export async function peticion(
   config: ConfigCodeoscopic,
   opciones: {
-    metodo: 'GET' | 'POST'
+    metodo: 'GET' | 'POST' | 'PATCH'
     path: string
     cuerpo?: unknown
     timeoutMs: number

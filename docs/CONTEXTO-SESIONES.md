@@ -48,6 +48,14 @@
   **Pendiente de Alberto:** revisar el PR y confirmar en producción que `smoobu_sync`/`sivra_pricing_apply`
   vuelven a OK y que Martine recibe respuesta (su mensaje no llegó a `mensajes_log` mientras esto estuvo roto).
 
+- **🐛 Cuarto 400 del ReRate real: fecha de efecto a >90 días (11/09/2026).** Tras el fix de
+  `naturalPhenomena`, Allianz rechazó con «Fecha de Efecto no puede estar más de 90 dias en el
+  futuro» — la fecha la tecleó el corredor al cotizar y no se puede corregir sin decidir cuál poner
+  (Alberto: hoy). Nuevo `actualizarFechaEfecto()` en `emitir.ts` (`PATCH /insurances/{id}`, GRATIS,
+  incremental) + `fechaEfectoCorregida` opcional de punta a punta (route de asegura → puerto de
+  plataforma → `emision.tsx`, campo `<details>` bajo «Confirmar precio», solo se usa si la compañía
+  ya rechazó la fecha). tsc 0 en las dos apps, 336/336 (asegura) + 2730/2730 (plataforma) +
+  774/774 raíz. Pendiente: Alberto reintenta con la fecha de hoy.
 - **🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST (11/09/2026).**
   Tras el fix de `options: []`, el vendor rechazó con «El campo Fenómenos de la naturaleza de Allianz
   es obligatorio». `docs/CODEOSCOPIC-API-PORTAL.md` ya avisaba: qué opciones pide cada producto no se

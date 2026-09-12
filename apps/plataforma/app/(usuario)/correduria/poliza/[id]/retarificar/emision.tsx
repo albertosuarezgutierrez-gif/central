@@ -60,10 +60,16 @@ export function Emision({
 }) {
   const [estado, setEstado] = useState<EstadoPanel>({ paso: 'inicio' })
   const [camposJson, setCamposJson] = useState('{}')
+  const [fechaEfectoCorregida, setFechaEfectoCorregida] = useState('')
 
   async function confirmarPrecio() {
     setEstado({ paso: 'confirmando' })
-    const r = await pedirOferta({ tarificacionId, compania, categoria })
+    const r = await pedirOferta({
+      tarificacionId,
+      compania,
+      categoria,
+      ...(fechaEfectoCorregida ? { fechaEfectoCorregida } : {}),
+    })
     if (r.estado === 'ok') {
       setEstado({
         paso: 'oferta',
@@ -148,7 +154,21 @@ export function Emision({
             Precio en pantalla: <strong>{euroODash(primaEur)}</strong>. El primer paso lo confirma con
             la compañía (puede cambiar de «estimado» a un precio firme).
           </p>
-          <button type="button" className="primary" onClick={confirmarPrecio}>
+          <details style={{ marginTop: 8 }}>
+            <summary className="muted" style={{ cursor: 'pointer' }}>
+              Corregir fecha de efecto (opcional — solo si la compañía ya la rechazó)
+            </summary>
+            <p className="muted" style={{ fontSize: 12 }}>
+              Algunas compañías rechazan la fecha guardada al cotizar (p. ej. «más de 90 días en el
+              futuro»). Rellena esto SOLO si ya viste ese error, con la fecha que quiere el cliente.
+            </p>
+            <input
+              type="date"
+              value={fechaEfectoCorregida}
+              onChange={(e) => setFechaEfectoCorregida(e.target.value)}
+            />
+          </details>
+          <button type="button" className="primary" onClick={confirmarPrecio} style={{ marginTop: 8 }}>
             Confirmar precio con la compañía
           </button>
         </div>

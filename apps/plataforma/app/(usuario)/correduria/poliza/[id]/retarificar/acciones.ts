@@ -104,6 +104,7 @@ export async function pedirOferta(entrada: {
   tarificacionId: string
   compania: string
   categoria: string
+  fechaEfectoCorregida?: string
 }): Promise<RespuestaOferta> {
   return ofertaAsegura(entrada)
 }
