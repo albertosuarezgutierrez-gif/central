@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T17:27:17Z",
-  "sha": "df916dc2ba4a07279c1734cdf542a85d3fefb8cc",
+  "generadoEn": "2026-09-12T21:44:11Z",
+  "sha": "27ce7926741f229212dcadfbb968ee0490ae21f4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64158,7 +64158,7 @@
           "exportada": false,
           "params": "cuenta: CuentaConocida | null, cuentaOk: boolean, iban: string",
           "retorno": "boolean",
-          "linea": 100,
+          "linea": 114,
           "resumen": "sin cuenta conocida no hay nada que confirmar (si la compañía la exige, su 400 vuelve como hueco y entonces sí se teclea). PURO, para poder verlo fallar."
         },
         {
@@ -64167,7 +64167,7 @@
           "exportada": false,
           "params": "{ cuenta, aviso, obligatoria, cuentaOk, onCuentaOk, iban, onIban, }: { cuenta: CuentaConocida | null aviso: AvisoCuenta | null obligatoria: boolean cuentaOk: boolean onCuentaOk: (v: boolean) => void iban: string onIban: (v: string) => void ",
           "retorno": null,
-          "linea": 113,
+          "linea": 127,
           "resumen": "La cuenta de cargo del recibo. 🚨 «iban importante siempre confirmar» (Alberto, 12/09/2026): la que la ficha ya conoce se pinta ENMASCARADA con su origen y una casilla que el corredor marca a mano; la"
         },
         {
@@ -64176,12 +64176,14 @@
           "exportada": true,
           "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
           "retorno": null,
-          "linea": 192
+          "linea": 206
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "react"
+      ],
       "rutaApi": null,
-      "hash": "d0fbc38aa176"
+      "hash": "6332429e043a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -75038,6 +75040,56 @@
       ],
       "rutaApi": "/api/internal/mapa-arquitectura",
       "hash": "d56f9c89048a"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/internal/memoria/embeddings/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/internal/memoria/embeddings — Calcula los embeddings de la memoria semántica propia (memoria_buscar, sustituto de recall/memories_about de Graphify). Lo llama auditoria.yml (scripts/memoria-embeddings-inyectar.mjs) tras inyectar las entradas; se puede llamar varias veces, cada pasada embebe lo ",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [
+        "memoria_embeddings",
+        "next"
+      ],
+      "rutaApi": "/api/internal/memoria/embeddings",
+      "hash": "c64ef492d104"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/internal/memoria/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/internal/memoria — Puerto de INYECCIÓN de la memoria semántica (docs/CONTEXTO-SESIONES.md + docs/memoria/*.md) en Supabase. Lo llama scripts/memoria-inyectar.mjs desde auditoria.yml (solo desde main) con el JSON que genera scripts/memoria-parsear.mjs, partido en lotes (mismo límite ~4,5 MB de V",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [
+        "memoria_embeddings",
+        "next",
+        "set",
+        "solo"
+      ],
+      "rutaApi": "/api/internal/memoria",
+      "hash": "a417cf4484e6"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/reclamar-reparacion/route.ts",
@@ -133524,7 +133576,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3270,
-    "funciones": 10086
+    "archivos": 3272,
+    "funciones": 10088
   }
 }
