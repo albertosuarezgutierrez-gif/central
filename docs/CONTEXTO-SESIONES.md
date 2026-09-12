@@ -30,6 +30,13 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📬 Pasada diaria `facturas-correo` (12/09/2026).** Sin incidencias: Vía B sana (0 días caída), sin
+  backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`. Archivado 1 recibo OpenRouter (25,64$ →
+  `seguros`, mismo criterio que Anthropic/FAL.ai) en `09-Septiembre-2026`; descartados 2 correos IONOS
+  de confirmación de pedido de dominio (sin importe/PDF). Barrido 4.0 reconcilió la única factura
+  `sin_revisar` pendiente (Anthropic 180€ ↔ cargo 07/09) con la FK real; el resto del backlog de
+  `v_facturas_sin_cargo` sigue con motivo ya fijado. Papelera de duplicados: 23 avisos, muestreados los
+  5 más recientes, ninguno zombi. Detalle en `docs/AGENTES-BITACORA.md`.
 - **✅ Smoobu 401 REALMENTE resuelto — no era el HMAC, era la credencial (12/09/2026, PR #2753).**
   Tras el fix de firma (PR #2731) el 401 seguía (entrada de abajo, "SIGUE en 401"): dos pasadas reales
   del cron con el código ya desplegado confirmaron que la firma llegaba bien y Smoobu la rechazaba
