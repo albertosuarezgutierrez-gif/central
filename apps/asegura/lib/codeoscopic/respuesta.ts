@@ -95,6 +95,15 @@ export type Cotizacion = {
    *  (el `project_not_found` de 2026 fue justo no haberlo guardado). */
   projectId: string
   fechaEfecto: string | null
+  /**
+   * `insuranceLine.id` de raíz (`"Car"`, `"Home"`…). Hace falta para el
+   * `PATCH /insurances/{id}` de `actualizarFechaEfecto()`: el cuarto 400 real
+   * decía «incremental» y el quinto demostró que NO lo es del todo — el
+   * vendor exige `insuranceLine` en el cuerpo aunque solo se corrija
+   * `effectiveDate` («The `insuranceLine` field is missing or invalid.»,
+   * 12/09/2026). Se relee del proyecto en vez de suponerse por ramo.
+   */
+  insuranceLineId: string | null
   precios: Precio[]
   fallos: FalloProducto[]
 }
@@ -205,6 +214,7 @@ export function leerCotizacion(raw: unknown): Cotizacion {
   return {
     projectId: String(idRaiz),
     fechaEfecto: str(r.effectiveDate),
+    insuranceLineId: str(obj(r.insuranceLine).id),
     precios,
     fallos: arr(r.errors)
       .map((e) => leerFallo(e, companiasConPrecio))

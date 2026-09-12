@@ -31,6 +31,14 @@ test('sin id de raíz se LANZA: un proyecto huérfano no se puede correlacionar'
   assert.throws(() => leerCotizacion({ mainQuotes: [] }), /sin_project_id/)
 })
 
+test('insuranceLineId sale del `insuranceLine.id` de raíz del fixture real (auto → Car)', () => {
+  assert.equal(leerCotizacion(CRUDO).insuranceLineId, 'Car')
+})
+
+test('insuranceLineId es null si el proyecto no lo trae, nunca inventado', () => {
+  assert.equal(leerCotizacion({ id: 1, mainQuotes: [] }).insuranceLineId, null)
+})
+
 // ─── Firmeza: lo que impide pintar una prima que no se sostiene ──────────────
 test('en la cotización real NINGÚN precio es «firme»: los 18 traen avisos', () => {
   const c = leerCotizacion(CRUDO)
