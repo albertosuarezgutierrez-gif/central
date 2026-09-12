@@ -30,44 +30,14 @@
             "timeout": 10
           }
         ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/persist-memoria.sh\""
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "startup|clear|compact",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/superpowers-session-start.sh\""
-          }
-        ]
       },
       {
-        "matcher": "startup|clear",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/memoria-record-base.sh\""
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/memoria-precompact.sh\""
+            "command": "python3 -c \"import json,sys; d=json.load(sys.stdin); c=d.get('tool_input',{}).get('command',''); out={'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'ask','permissionDecisionReason':'TEST: ask forzado por hook experimental'}} if 'ASK_TEST_MARKER_XYZ' in c else {}; print(json.dumps(out))\"",
+            "timeout": 5
           }
         ]
       }
