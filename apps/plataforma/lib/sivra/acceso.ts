@@ -18,12 +18,6 @@
 
 import { elegirCodigoPortal } from './mensajes-prog/codigo-portal.ts'
 
-// 🔒 Aviso de phishing (11/09/2026, sesión sidra-guest-data-breach): huéspedes de SIVRA recibieron
-// WhatsApp suplantando al portal de reserva. Toda nuestra comunicación real es SOLO por el hilo de
-// la reserva; nunca por WhatsApp/SMS/llamada a un número suelto. Exportado desde aquí (no solo desde
-// plantillas.ts) porque este es el módulo del momento de mayor riesgo real: los códigos de acceso.
-export const AVISO_CANAL = '🔒 Recuerda: nuestra comunicación contigo es SIEMPRE por este chat, el de tu reserva. Nunca te escribiremos por WhatsApp ni desde otro número — si te llega algo así, no es nuestro.'
-
 export type AccesoPiso = {
   nombre: string
   /** Dirección postal del PISO, en texto plano. */
@@ -283,7 +277,6 @@ export function bloqueAcceso(
   // El PIN por reserva se ANUNCIA como tal: que caduque es una ventaja para el huésped (nadie más
   // tiene su código) y le explica por qué no le sirve el de una estancia anterior.
   if (opts.conCodigos && elegido.nota) lineas.push(`🔐 ${elegido.nota}`)
-  if (opts.conCodigos) lineas.push(AVISO_CANAL)
   for (const a of piso.avisos) lineas.push(`⚠️ ${a}`)
   if (opts.conCodigos && codigos.wifiSsid) {
     lineas.push('')

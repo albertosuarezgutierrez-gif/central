@@ -1,7 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { renderPlantilla, renderAsunto, TIPOS_MENSAJE, type DatosPlantilla } from './plantillas.ts'
-import { AVISO_CANAL } from '../acceso.ts'
+import { renderPlantilla, renderAsunto, TIPOS_MENSAJE, AVISO_CANAL, type DatosPlantilla } from './plantillas.ts'
 
 const BASE: DatosPlantilla = {
   guestName: 'Grégory Acobez',
@@ -70,10 +69,12 @@ test('estancia y post_salida no contienen códigos ni piden datos de pago', () =
   }
 })
 
-test('el aviso de phishing sale en el primer contacto y en el mensaje con códigos; NO en el de 7 días sin códigos', () => {
+test('el aviso de phishing sale SOLO en el primer contacto (confirmación)', () => {
   assert.ok(renderPlantilla('confirmacion', BASE).includes(AVISO_CANAL))
-  assert.ok(!renderPlantilla('acceso', BASE).includes(AVISO_CANAL))         // 7 días, conCodigos:false
-  assert.ok(renderPlantilla('vispera_llegada', BASE).includes(AVISO_CANAL)) // el momento real del incidente
+  for (const tipo of TIPOS_MENSAJE) {
+    if (tipo === 'confirmacion') continue
+    assert.ok(!renderPlantilla(tipo, BASE).includes(AVISO_CANAL), `no debería salir en «${tipo}»`)
+  }
 })
 
 test('el asunto solo existe en los hitos con contenido de email', () => {
