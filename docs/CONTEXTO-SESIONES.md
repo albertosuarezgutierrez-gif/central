@@ -37,6 +37,13 @@
   `sin_revisar` pendiente (Anthropic 180€ ↔ cargo 07/09) con la FK real; el resto del backlog de
   `v_facturas_sin_cargo` sigue con motivo ya fijado. Papelera de duplicados: 23 avisos, muestreados los
   5 más recientes, ninguno zombi. Detalle en `docs/AGENTES-BITACORA.md`.
+- **🎯 Retarificar: fecha de efecto corregible ANTES de pagar, no después (12/09/2026).** Cierra el
+  ciclo del ReRate de Pilar Franco Ruz (proyecto 40681298): `effectiveDate` es inmutable tras el
+  `POST /insurances` (PR #2761) — el campo «Fecha de efecto» de `emision.tsx` no servía y **se retiró**.
+  Arreglo real en `retarificador.tsx` (pantalla de cotizar, Paso 2): input opcional «Fecha de efecto» →
+  `correcciones.fechaEfecto`, pisa el supuesto auto-derivado del vencimiento antes del `POST` pagado.
+  **Para retomar a Pilar:** el proyecto 40681298 se da por perdido; «Pedir precio» de cero y rellenar
+  esa fecha a ≤90 días vista (su vencimiento real cae a más de un año). Sin PR abierto aún.
 - **✏️ Correduría: RC en "Pólizas vivas" ya no vuelca las coberturas en la celda (12/09/2026, PR #2760).**
   Alberto: quería un resumen corto y el desglose al pinchar, no la lista entera de coberturas separada por
   comas. `objetoAsegurado()` (`@central/module-seguros`) gana `coberturas: string[] | null` con el desglose
