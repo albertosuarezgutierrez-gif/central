@@ -30,14 +30,23 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📮 Y si la ficha SÍ trae la calle, no se vuelve a pedir (12/09/2026, mismo PR #2796).**
+  Alberto: «si ya la tenemos, que salga por defecto la que tenemos, no?» — corrección a la entrada de
+  abajo, que decía «la ficha NUNCA trae la calle»: SÍ la trae en `clientes.direccion` (texto libre,
+  cifrado), solo que nadie la troceaba para auto. `precalificarAuto()`/`precalificarAutoNueva()` ahora
+  llaman a `partirDireccion()` (extraída de `desde-cartera-hogar.ts` a `lib/codeoscopic/direccion.ts`
+  para poder compartirla sin import circular) sobre `cliente.direccion`; si sale un nombre reconocible,
+  `nombreVia` se rellena solo y desaparece de `faltan` — visible como `Supuesto`, igual que ya hacía
+  hogar con la calle del riesgo. El campo manual del retarificador sigue existiendo para cuando la
+  ficha no trae dirección o el trocebo sale mal. 344/344 tests + tsc limpios.
 - **🚨 Undécimo 400 real de Codeoscopic — ReRate exige la calle del tomador (12/09/2026).**
   `POST /insurances/40684860/offers` rechazado: «The road name of the address of the holder/primary
   driver/owner is mandatory.» La cotización inicial nunca lo pedía (por eso `construirPersona()` solo
   mandaba CP+municipio, deliberadamente sin calle) — el ReRate sí lo exige cuando SÍ viaja dirección de
   residencia. `DatosPersona` gana `nombreVia` (opcional; hogar no lo necesita), `construirPersona` lo
   manda como `roadName` si está, y `revisarDatosAuto` lo exige (solo auto) cuando hay CP+municipio.
-  Como la ficha NUNCA trae la calle, se teclea a mano — nuevo campo en `CAMPOS_A_MANO` del
-  retarificador, mismo patrón que DNI/teléfono. 342/342 tests + tsc limpios.
+  Nuevo campo en `CAMPOS_A_MANO` del retarificador para cuando la ficha no la trae, mismo patrón que
+  DNI/teléfono. 342/342 tests + tsc limpios.
 - **🛑 No crear proyecto por proyecto en Codeoscopic — guardián de reutilización (12/09/2026).**
   Alberto, revisando el proceso: el reintento de Pilar creó un proyecto NUEVO (`40684860`) en vez de
   reusar el `40684815` (que seguía vigente) — otros 0,50€ gastados y riesgo de que la compañía dé OTRO
