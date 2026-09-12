@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🤖 El 400 del ReRate deja de ser un error: es una lista de huecos (12/09/2026).** Alberto: «un
+  agente interlocutor entre Codeoscopic y nosotros». Codeoscopic no pregunta, devuelve un 400
+  semi-estructurado («The <campo> of the <papel> is mandatory», una línea por campo), así que el
+  interlocutor es determinista: `lib/codeoscopic/interprete-400.ts` (puro, 12 tests) lo traduce a
+  nuestros campos; la ruta `/api/operador/codeoscopic/oferta` busca el valor en la FICHA (hoy la calle,
+  `clientes.direccion` troceada), lo escribe en el proyecto con `completarPersonas()` (PATCH gratis +
+  RELECTURA obligatoria, lección de `effectiveDate`) y repite el ReRate UNA vez; lo que la ficha no
+  tiene vuelve a plataforma como **422 `faltan_vendor`** (+`sugeridos`, +`noReconocidos` enteros) y
+  `emision.tsx` pinta los inputs y reenvía `correcciones`. Nada personal se inventa; el Submit no se
+  toca. Si el PATCH «acepta» y no cuaja → 409 `patch_no_aplicado` (cotizar de cero). Pendiente:
+  escribir de vuelta en la ficha lo tecleado; registrar los `noReconocidos` para mapearlos sin PR.
 - **📡 Muro de ACTIVIDAD de toda la cartera en `/correduria` (12/09/2026).** Alberto: «una genérica
   donde ver resumen de todo y controlar todo lo que hacen los clientes, incluso el acceso a la
   intranet». Sección nueva con DOS mitades y el orden importa: arriba el **embudo** (clientes → con

@@ -689,6 +689,22 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
 export type RespuestaOferta =
   | { estado: 'sin_configurar'; mensaje: string }
   | { estado: 'error'; motivo: MotivoPuerto; mensaje: string }
+  /**
+   * 422 · la compañía pide datos que el proyecto no tiene y la ficha tampoco.
+   * `faltan` son NUESTROS campos (ya traducidos por asegura), `sugeridos` lo
+   * que asegura ha podido sacar de la ficha para prerrellenar, y
+   * `noReconocidos` las líneas del vendor que asegura no supo mapear — se
+   * enseñan enteras, porque son un hallazgo. No se ha gastado nada.
+   */
+  | {
+      estado: 'faltan_vendor'
+      faltan: Reparo[]
+      sugeridos: Record<string, string>
+      noReconocidos: string[]
+      mensaje: string
+    }
+  /** 409 · el PATCH al proyecto «tuvo éxito» pero al releerlo el dato no está. Toca cotizar de cero. */
+  | { estado: 'patch_no_aplicado'; mensaje: string }
   | {
       estado: 'ok'
       projectId: string
@@ -734,6 +750,37 @@ export function interpretarOferta(status: number, json: unknown): RespuestaOfert
       mensaje: cadenaONulo(r.mensaje) ?? 'La emisión real está apagada en central-asegura (CODEOSCOPIC_EMISION_ACTIVA).',
     }
   }
+  if (status === 422 && r.estado === 'faltan_vendor') {
+    const sugeridos: Record<string, string> = {}
+    if (typeof r.sugeridos === 'object' && r.sugeridos !== null) {
+      for (const [k, v] of Object.entries(r.sugeridos as Record<string, unknown>)) {
+        if (typeof v === 'string') sugeridos[k] = v
+      }
+    }
+    const faltan: Reparo[] = Array.isArray(r.faltan)
+      ? r.faltan.flatMap((f): Reparo[] => {
+          const x = (typeof f === 'object' && f !== null ? f : {}) as Record<string, unknown>
+          return typeof x.campo === 'string' ? [{ campo: x.campo, motivo: cadenaONulo(x.motivo) ?? '' }] : []
+        })
+      : []
+    return {
+      estado: 'faltan_vendor',
+      faltan,
+      sugeridos,
+      noReconocidos: Array.isArray(r.noReconocidos)
+        ? r.noReconocidos.filter((s): s is string => typeof s === 'string')
+        : [],
+      mensaje: cadenaONulo(r.mensaje) ?? 'La compañía pide datos que faltan en el proyecto.',
+    }
+  }
+  if (status === 409 && r.causa === 'patch_no_aplicado') {
+    return {
+      estado: 'patch_no_aplicado',
+      mensaje:
+        cadenaONulo(r.mensaje) ??
+        'El proyecto de Codeoscopic no ha aceptado el dato: hay que pedir precio de cero (0,50€).',
+    }
+  }
   const detalle = describirCausaAsegura(typeof r.causa === 'string' ? r.causa : undefined)
   return {
     estado: 'error',
@@ -755,6 +802,9 @@ export async function ofertaAsegura(p: {
    *  vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha
    *  rechazado — ver `apps/asegura/lib/codeoscopic/emitir.ts::actualizarFechaEfecto`. */
   fechaEfectoCorregida?: string
+  /** Lo que el corredor teclea tras un `faltan_vendor` (campo nuestro → valor).
+   *  Asegura lo escribe en el proyecto (PATCH, gratis) y vuelve a pedir el ReRate. */
+  correcciones?: Record<string, string>
 }): Promise<RespuestaOferta> {
   try {
     const r = await pedir(
