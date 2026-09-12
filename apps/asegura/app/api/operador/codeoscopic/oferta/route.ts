@@ -197,6 +197,27 @@ export async function POST(req: Request) {
       precio.productOptions ?? opcionesPorDefecto(compania),
     )
 
+    // 🚨 Noveno fallo real (12/09/2026): `uq_codeoscopic_projects_poliza` es un
+    // índice ÚNICO parcial sobre `poliza_id` — solo UN proyecto puede tenerlo
+    // enlazado a la vez. El flujo "Descartar y pedir precio de cero" (PR #2770)
+    // crea un proyecto Codeoscopic NUEVO en cada reintento, pero el proyecto
+    // VIEJO seguía reteniendo el `poliza_id` de la póliza que se está
+    // retarificando — así que el segundo intento reventaba aquí con
+    // `23505 unique_violation`, sin llegar siquiera a devolver el precio ya
+    // confirmado por la compañía. Se libera el `poliza_id` de cualquier OTRO
+    // proyecto de esta póliza que no haya llegado a emitirse: uno ya
+    // `emitida` no se toca nunca, es un contrato real.
+    if (t.poliza_id) {
+      await prisma.$executeRaw`
+        update codeoscopic_projects
+        set poliza_id = null
+        where correduria_id = ${t.correduria_id}::uuid
+          and poliza_id = ${t.poliza_id}::uuid
+          and project_id_codeoscopic <> ${t.project_id_codeoscopic}
+          and estado <> 'emitida'
+      `
+    }
+
     // Puente hacia `codeoscopic_projects`, que es lo que lee `registrarPolizaEmitida`
     // (D2) al acuñar la póliza. Esta cotización nació en `tarificaciones` (tabla
     // nueva del 03/09), así que hasta este ReRate no tenía fila ahí.

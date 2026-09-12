@@ -38,6 +38,27 @@
   posteriores eran el `ignoreCommand` del monorepo funcionando bien, no un fallo). Confirmado con
   curl externo (200, cert Let's Encrypt válido) y por Alberto en su propio navegador. `app.grupoasegura.com`
   y el apex `.com` no se tocaron.
+- **📬 Pasada diaria `facturas-correo` (12/09/2026).** Sin incidencias: Vía B sana (0 días caída), sin
+  backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`. Archivado 1 recibo OpenRouter (25,64$ →
+  `seguros`, mismo criterio que Anthropic/FAL.ai) en `09-Septiembre-2026`; descartados 2 correos IONOS
+  de confirmación de pedido de dominio (sin importe/PDF). Barrido 4.0 reconcilió la única factura
+  `sin_revisar` pendiente (Anthropic 180€ ↔ cargo 07/09) con la FK real; el resto del backlog de
+  `v_facturas_sin_cargo` sigue con motivo ya fijado. Papelera de duplicados: 23 avisos, muestreados los
+  5 más recientes, ninguno zombi. Detalle en `docs/AGENTES-BITACORA.md`.
+- **🎯 Retarificar: fecha de efecto corregible ANTES de pagar, no después (12/09/2026).** Cierra el
+  ciclo del ReRate de Pilar Franco Ruz (proyecto 40681298): `effectiveDate` es inmutable tras el
+  `POST /insurances` (PR #2761) — el campo «Fecha de efecto» de `emision.tsx` no servía y **se retiró**.
+  Arreglo real en `retarificador.tsx` (pantalla de cotizar, Paso 2): input opcional «Fecha de efecto» →
+  `correcciones.fechaEfecto`, pisa el supuesto auto-derivado del vencimiento antes del `POST` pagado.
+  **Para retomar a Pilar:** el proyecto 40681298 se da por perdido; «Pedir precio» de cero y rellenar
+  esa fecha a ≤90 días vista (su vencimiento real cae a más de un año). Sin PR abierto aún.
+- **✏️ Correduría: RC en "Pólizas vivas" ya no vuelca las coberturas en la celda (12/09/2026, PR #2760).**
+  Alberto: quería un resumen corto y el desglose al pinchar, no la lista entera de coberturas separada por
+  comas. `objetoAsegurado()` (`@central/module-seguros`) gana `coberturas: string[] | null` con el desglose
+  ENTERO (sin tocar `titulo`/`detalle`, que siguen igual para el resto de consumidores); `ObjetoFicha` de
+  plataforma lo lee y `ObjetoCelda` (ficha del cliente) lo colapsa en un `<details>`: "N coberturas
+  contratadas" cerrado, lista completa al abrir. Sigue el PR #2744 (fix del mismo día: la ficha del cliente
+  no leía coberturas reales de RC en absoluto — este PR es solo presentación sobre datos ya correctos).
 - **✅ Smoobu 401 REALMENTE resuelto — no era el HMAC, era la credencial (12/09/2026, PR #2753).**
   Tras el fix de firma (PR #2731) el 401 seguía (entrada de abajo, "SIGUE en 401"): dos pasadas reales
   del cron con el código ya desplegado confirmaron que la firma llegaba bien y Smoobu la rechazaba
@@ -51,16 +72,16 @@
   tenían NINGÚN vigilante Telegram — el primero escribía su latido desde julio y nadie lo miraba; el
   segundo no dejaba ni huella. PR #2753 los da de alta en `AGENTES_VIGILADOS`/`PROBES` (+ heartbeat
   nuevo en el segundo). `tsc` 0, 29/29 en `latidos.test.ts`, CI verde, mergeado.
-- **📞 «Otras compañías por vencer» — venta cruzada sin tarificar (12/09/2026).** Alberto proponía
-  avisar en pantalla a los NO clientes de las ventajas de la casa; se descartó el comparador de precio
-  automático por ramo/compañía (idea F: 110 pólizas vivas dan muestra insuficiente, sería un número
-  falso) y en su lugar Alberto pidió avisarSE A ÉL 2 meses antes para vender a mano («luego será
-  automático»). Nuevo bloque en `/correduria` → Hoy: `lib/cartera-declaradas.ts` (asegura) lee
-  `portal_poliza_declarada` por vencimiento, vinculada por `portal_vinculo`; puerto
+- **📞 «Otras compañías por vencer» — venta cruzada sin tarificar (12/09/2026, PR #2750, mergeado).**
+  Alberto proponía avisar en pantalla a los NO clientes de las ventajas de la casa; se descartó el
+  comparador de precio automático por ramo/compañía (idea F: 110 pólizas vivas dan muestra insuficiente,
+  sería un número falso) y en su lugar Alberto pidió avisarSE A ÉL 2 meses antes para vender a mano
+  («luego será automático»). Nuevo bloque en `/correduria` → Hoy: `lib/cartera-declaradas.ts` (asegura)
+  lee `portal_poliza_declarada` por vencimiento, vinculada por `portal_vinculo`; puerto
   `/api/operador/declaradas-vencer`, proxy `/api/correduria/declaradas-vencer`, UI `DeclaradasVencer.tsx`.
   Declara aparte (`sinVincular`) las declaradas cuya identidad del portal no resuelve a ninguna ficha.
   Idea F queda anotada en `docs/CORREDURIA-INTRANET-IDEAS.md` con este desenlace. `tsc` 0 en asegura y
-  plataforma.
+  plataforma, 12 checks requeridos en verde. **Pendiente:** confirmación visual de Alberto en producción.
 - **🚨 Smoobu SIGUE en 401 tras el fix de HMAC — NO se corrija a "arreglado" (12/09/2026, PR #2731 ya mergeado).**
   Código desplegado en las 3 apps (verificado por timestamp de deploy, READY 07:57:40Z). Dos pasadas del
   cron `ialimp_pms` YA con el código nuevo (08:00:06Z y 08:10:06Z) siguen devolviendo `sync_error='Smoobu
