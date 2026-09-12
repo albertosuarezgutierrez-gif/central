@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T09:36:30Z",
-  "sha": "cd07e3828aacc4adad2f271d3e31e0fdf3bec2de",
+  "generadoEn": "2026-09-12T10:21:27Z",
+  "sha": "9bfd711ee4fc31cc9dc496d57b53b625ef896e9d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9809,7 +9809,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 233
+          "linea": 254
         }
       ],
       "tablas": [
@@ -9819,7 +9819,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "dbc2204ce7f5"
+      "hash": "56a66112803b"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
