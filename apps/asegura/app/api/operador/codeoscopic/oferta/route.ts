@@ -150,6 +150,26 @@ export async function POST(req: Request) {
       console.log(
         `[oferta] fechaEfecto del proyecto tras PATCH+reread: ${cotizacion.fechaEfecto ?? '(el vendor no la trae)'}`,
       )
+
+      // 🔬 Octavo fallo real (12/09/2026), evidencia YA recogida: con
+      // `fechaEfectoCorregida` recibida correctamente (measured: llegó bien)
+      // y el PATCH sin lanzar error, el reread INMEDIATO seguía devolviendo
+      // la fecha ORIGINAL sin tocar (2027-09-10 en vez de 2026-09-12) — el
+      // PATCH "tiene éxito" pero no se aplica, al menos no al instante.
+      // Hipótesis a descartar GRATIS (sin gastar nada más): que el vendor
+      // procese el PATCH de forma asíncrona y una relectura inmediata quede
+      // desfasada por una ventana de segundos. Se comprueba con una segunda
+      // relectura tras una pausa corta; si TAMBIÉN sale sin corregir, la
+      // hipótesis async queda descartada y el PATCH de `effectiveDate` no
+      // sirve de nada (haría falta re-cotizar de cero, con coste real).
+      if (cotizacion.fechaEfecto !== fechaEfectoCorregida) {
+        await new Promise((resolve) => setTimeout(resolve, 2500))
+        const relectura = await refrescarProyecto(r.config, t.project_id_codeoscopic)
+        console.log(
+          `[oferta] fechaEfecto tras una 2ª relectura (+2,5s): ${relectura.fechaEfecto ?? '(el vendor no la trae)'}`,
+        )
+        if (relectura.fechaEfecto === fechaEfectoCorregida) cotizacion = relectura
+      }
     }
 
     const precio = encontrarPrecio(cotizacion, compania, categoria)
