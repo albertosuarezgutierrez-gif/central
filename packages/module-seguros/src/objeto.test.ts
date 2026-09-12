@@ -101,6 +101,31 @@ test('RC sin coberturas cargadas es «no informado»', () => {
   assert.equal(objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: [] }).estado, 'no_informado')
 })
 
+test('RC sin coberturas pero con modalidad anotada a mano: se pinta esa modalidad, marcada como manual', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: [],
+    datos: { rcModalidad: 'locativa', rcModalidadTitulo: 'RC Locativa (inmueble alquilado)' },
+  })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'RC Locativa (inmueble alquilado)')
+  assert.match(o.nota ?? '', /a mano/i)
+})
+
+test('RC: las coberturas de CIMA mandan SIEMPRE sobre la modalidad manual', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: ['Básica'],
+    datos: { rcModalidad: 'locativa', rcModalidadTitulo: 'RC Locativa (inmueble alquilado)' },
+  })
+  assert.equal(o.titulo, 'Básica')
+})
+
+test('RC con `rcModalidad` pero sin título guardado (dato a medias): no se inventa nada', () => {
+  const o = objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: [], datos: { rcModalidad: 'locativa' } })
+  assert.equal(o.estado, 'no_informado')
+})
+
 test('comercio: manda la actividad', () => {
   const o = objetoAsegurado({ tipo: 'comercio', datos: { actividad: 'Bar-cafetería', localidad: 'DOS HERMANAS' } })
   assert.equal(o.titulo, 'Bar-cafetería')

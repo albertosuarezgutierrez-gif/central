@@ -50,6 +50,15 @@ export {
 } from './objeto.ts'
 
 export {
+  MODALIDADES_RC,
+  etiquetaModalidadRc,
+  tituloModalidadRc,
+  validarModalidadRc,
+  type ModalidadRc,
+  type ValidacionRc,
+} from './rc-modalidad.ts'
+
+export {
   saludIngesta,
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
