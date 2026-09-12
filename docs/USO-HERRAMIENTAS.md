@@ -56,6 +56,8 @@ valía con Graphify.
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 1 | 4 | 6.575 | 0 | 0 |
+| `bash` | 1 | 26 | 42.058 | 0 | 0 |
 | `escritura` | 1 | 4 | 34.635 | 0 | 0 |
+| `mcp:github` | 1 | 4 | 134 | 0 | 0 |
+| `otro` | 1 | 2 | 1.584 | 14.545 | 0 |
 <!-- ahorro:fin -->
