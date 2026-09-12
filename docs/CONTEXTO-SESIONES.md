@@ -38,6 +38,37 @@
   (las estructurales verificadas contra la BD). Puerto `/api/internal/grafo-codigo/embeddings` + paso nuevo en `auditoria.yml`;
   key `GRAFO_OPENROUTER_API_KEY` (dedicada, recomendada) con caída a `OPENROUTER_API_KEY`. Cepo `test/grafo-semantico.test.ts` (9, rojo brazo a brazo).
   PENDIENTE: merge → deploy READY → dispatch → `pendientes 0` → MEDIR paridad vs Graphify (`docs/USO-HERRAMIENTAS.md`) → PR de docs → baja.
+- **🏦 Duodécimo 400 real de Codeoscopic — el Submit exige IBAN, y el IBAN SIEMPRE se confirma (12/09/2026).**
+  «The bank account is mandatory according to the selected companies and payment types.» Aquí se
+  escribió primero que Pilar «no tiene cuenta»: **falso** — está en **`poliza_recibos.iban`** (CIMA; 121/187
+  recibos, 69 de 110 vivas). `lib/codeoscopic/cuenta-ficha.ts` la busca en póliza → recibos → ficha → recibos
+  de otras vivas; sin cuenta utilizable dice POR QUÉ (`ilegible` clave PII · `invalida` CCC/errata · `no_comprobada`
+  consulta caída — ninguno es «no tiene»); `/oferta` la devuelve ENMASCARADA con su origen. SQL ejecutado en la BD real.
+  Dictado de Alberto: **«iban importante siempre confirmar»** → `decidirCuentaEnvio()` (puro): la cuenta de la
+  ficha solo viaja si plataforma devuelve la MÁSCARA que enseñó (`cuentaConfirmada`), si no 422 `confirmar`
+  ANTES de llamar al vendor; tecleada > JSON > ficha confirmada. Cepos vistos en rojo. Pendiente: pintar las
+  cuentas (varias, por póliza) en la ficha del cliente y escribir el IBAN tecleado de vuelta.
+- **🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel (12/09/2026).**
+  Al mergear el #2807 y disparar `auditoria.yml`, el paso «Inyectar mapa» murió con **413 FUNCTION_PAYLOAD_TOO_LARGE**
+  (4.492.854 → 4.493.847 bytes: un kilobyte de más) y el del grafo se saltó por dependencia. Helper compartido
+  `scripts/inyectar-lotes.mjs` (`partirEnLotes` por bytes + reintentos), `scripts/mapa-arquitectura-inyectar.mjs`
+  sustituye al `curl --data-binary` del workflow, `grafo-codigo-inyectar.mjs` lo reutiliza. El puerto del mapa acepta
+  `lote/total`, estampa el `sha` siempre y borra por `sha` en el último lote (antes: por lista de rutas + WHERE hash
+  que dejaba el sha viejo). Paso del grafo con `!cancelled()`. Medido en local: mapa 4 lotes ≤1 MB, grafo 13.
+  Cepos en `test/inyectar-lotes.test.ts` (6, vistos en rojo contra main). Pendiente: mergear y verificar `grafo_nodos`.
+- **🛡️📲 MCP Sentinel avisa por Telegram cuando el modo sombra intervendría (12/09/2026).**
+  `sentinel_alerta.py` envuelve (sin tocar) `sentinel_preflight.py` y, cuando la decisión es
+  `allow` pero el motivo contiene `SENTINEL_SHADOW`, dispara `POST /api/internal/alerta`
+  (canal Telegram ya existente, sin credenciales nuevas). Deduplicado por hash+día. **Ojo con
+  la marca de idioma**: comprobar solo `[SOMBRA]` fallaba en transcripts sin señales de español
+  (el motor cae a `[SHADOW]` en inglés) — se usa `SENTINEL_SHADOW`, literal en las dos
+  plantillas. Probado funcionalmente en aislado (dispara, dedup, sin credenciales no hace nada,
+  comando inocuo no dispara), y confirmado en real: un aviso llegó solo cuando el propio
+  `git checkout` de esta rama activó el wrapper en la sesión y detectó su propio `curl`.
+  Revisión de Graphify encontró el token viajando en el argv de `curl` (visible por
+  `ps`/`/proc`): corregido pasándolo por el fichero de config que `curl -K -` lee de stdin,
+  más HTTPS-only y liberar el marcador de dedupe si `curl` no arranca. Detalle en
+  `.claude/mcp-sentinel/README.md`.
 - **🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel (12/09/2026, PR #2816).**
   Tras el #2807, «Inyectar mapa» murió con **413 FUNCTION_PAYLOAD_TOO_LARGE** (4.492.854 → 4.493.847 B) y el grafo se saltó por
   dependencia. Helper `scripts/inyectar-lotes.mjs` (lotes por bytes + reintentos), `mapa-arquitectura-inyectar.mjs` sustituye al
