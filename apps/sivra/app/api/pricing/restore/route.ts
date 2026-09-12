@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { smoobuFetch } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
   const smoobuId = SMOOBU_ID[property]
   if (!smoobuId) return NextResponse.json({ error: "property inválida" }, { status: 400 })
   const dryRun = req.nextUrl.searchParams.get("dryRun") === "true"
-  const SMOOBU_KEY = await getSmoobuKey()
 
   // Último cambio real por fecha futura con old_price conocido.
   const rows = await prisma.$queryRaw<{ rate_date: string; old_price: number }[]>(Prisma.sql`
@@ -47,9 +46,9 @@ export async function POST(req: NextRequest) {
   let written = false
   if (!dryRun) {
     try {
-      const res = await fetch(`${BASE}/rates`, {
+      const res = await smoobuFetch(`${BASE}/rates`, {
         method: "POST",
-        headers: { "Api-Key": SMOOBU_KEY, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apartments: [smoobuId], operations }),
       })
       written = res.ok

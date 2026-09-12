@@ -30,6 +30,23 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✅ Smoobu 401 ARREGLADO: HMAC-SHA256 implementado y migradas TODAS las llamadas (12/09/2026).** Causa:
+  `pms_connections` ya tenía el par HMAC (`smoobu_api_key`+`smoobu_api_secret`) pero el código seguía
+  mandando el header legacy `Api-Key` (Smoobu lo deprecó, sunset 25/09/2026). Alberto trajo la spec exacta
+  de `docs.smoobu.com` vía Claude en Chrome (bloqueado por el proxy de esta sesión). Fix: módulo puro nuevo
+  **`lib/smoobu-firma.ts`** (idéntico en sivra/plataforma/ialimp) con la firma HMAC-SHA256 sobre el
+  canonical `METHOD\nPATH\nQUERY\nTIMESTAMP\nNONCE\nBODY_HASH\nAPI_KEY`, contrastada BYTE A BYTE contra el
+  ejemplo oficial de Smoobu (firma esperada verificada dos veces, agente + sesión principal, mismo resultado).
+  `smoobuFetch()` (sivra+plataforma) firma sola — las ~24 rutas que hacían `fetch('login.smoobu.com/...')`
+  a mano quedaron migradas para pasar TODAS por ahí (antes la key salía de un sitio único pero la petición
+  HTTP se construía 20 veces). `apps/ialimp/app/api/pms/sync` (fuera del helper compartido, app aislada)
+  firma con su propia copia. Sin `smoobu_api_secret`, `smoobuFetch` devuelve un 401 con la causa exacta
+  en vez de dejar un 401 mudo indistinguible de credencial mala.
+  **Verificado:** `tsc` 0 en sivra/plataforma/ialimp, 11/11 tests de la firma, suite completa de las 3 apps
+  en verde (2741+11+33 tests), cepo visto en ROJO en 4 mutaciones deliberadas (hex vs base64, query sin
+  ordenar, línea de query omitida, nonce fijo). Sin llamar a la API real (proxy bloquea `*.smoobu.com`).
+  **Pendiente de Alberto:** revisar el PR y confirmar en producción que `smoobu_sync`/`sivra_pricing_apply`
+  vuelven a OK y que Martine recibe respuesta (su mensaje no llegó a `mensajes_log` mientras esto estuvo roto).
 - **🐛 Quinto 400 del ReRate real, mismo campo: la fecha corregida seguía naciendo vacía (12/09/2026).**
   El fix del cuarto 400 (PATCH gratis de fecha de efecto) era opt-in: si nadie rellenaba el `<details>`
   a mano, se seguía mandando la fecha vieja y Allianz volvía a rechazarla. `emision.tsx` ahora precarga

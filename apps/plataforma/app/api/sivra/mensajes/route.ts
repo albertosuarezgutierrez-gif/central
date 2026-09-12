@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { getSmoobuKey, smoobuFetch } from '@/lib/smoobu'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -80,9 +80,7 @@ export async function GET() {
     const API_KEY = await getSmoobuKey()
     if (!API_KEY) throw new Error('SMOOBU_API_KEY not set')
 
-    const res = await fetch('https://login.smoobu.com/api/threads?pageSize=100&page=1', {
-      headers: { 'Api-Key': API_KEY }, cache: 'no-store',
-    })
+    const res = await smoobuFetch('/api/threads?pageSize=100&page=1', { cache: 'no-store' })
     if (!res.ok) throw new Error(`Smoobu threads ${res.status}`)
     const data = await res.json()
     const rawThreads: any[] = data.threads || []
