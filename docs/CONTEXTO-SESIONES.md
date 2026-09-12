@@ -30,31 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel (12/09/2026).**
-  Al mergear el #2807 y disparar `auditoria.yml`, el paso «Inyectar mapa» murió con **413 FUNCTION_PAYLOAD_TOO_LARGE**
-  (4.492.854 → 4.493.847 bytes: un kilobyte de más) y el del grafo se saltó por dependencia. Helper compartido
-  `scripts/inyectar-lotes.mjs` (`partirEnLotes` por bytes + reintentos), `scripts/mapa-arquitectura-inyectar.mjs`
-  sustituye al `curl --data-binary` del workflow, `grafo-codigo-inyectar.mjs` lo reutiliza. El puerto del mapa acepta
-  `lote/total`, estampa el `sha` siempre y borra por `sha` en el último lote (antes: por lista de rutas + WHERE hash
-  que dejaba el sha viejo). Paso del grafo con `!cancelled()`. Medido en local: mapa 4 lotes ≤1 MB, grafo 13.
-  Cepos en `test/inyectar-lotes.test.ts` (6, vistos en rojo contra main). Mergeado (#2816) y `auditoria.yml` disparado: grafo cargado
-  (17.264 nodos / 59.868 aristas) pero el mapa quedó con **85 filas de 3.265** — el run corrió 25 s después del merge y el puerto viejo
-  (aún desplegándose) borraba por lista de rutas en cada lote: **tras mergear un cambio de un puerto, espera al deploy READY antes de
-  disparar** (segundo disparo hecho). Y el grafo llevaba el sha del commit local de la radiografía (ea311fe), no el de main: `gitSha()`
-  prefiere ahora `GITHUB_SHA` (cepo en `test/grafo-codigo.test.ts`, visto en rojo).
-- **🛡️📲 MCP Sentinel avisa por Telegram cuando el modo sombra intervendría (12/09/2026).**
-  `sentinel_alerta.py` envuelve (sin tocar) `sentinel_preflight.py` y, cuando la decisión es
-  `allow` pero el motivo contiene `SENTINEL_SHADOW`, dispara `POST /api/internal/alerta`
-  (canal Telegram ya existente, sin credenciales nuevas). Deduplicado por hash+día. **Ojo con
-  la marca de idioma**: comprobar solo `[SOMBRA]` fallaba en transcripts sin señales de español
-  (el motor cae a `[SHADOW]` en inglés) — se usa `SENTINEL_SHADOW`, literal en las dos
-  plantillas. Probado funcionalmente en aislado (dispara, dedup, sin credenciales no hace nada,
-  comando inocuo no dispara), y confirmado en real: un aviso llegó solo cuando el propio
-  `git checkout` de esta rama activó el wrapper en la sesión y detectó su propio `curl`.
-  Revisión de Graphify encontró el token viajando en el argv de `curl` (visible por
-  `ps`/`/proc`): corregido pasándolo por el fichero de config que `curl -K -` lee de stdin,
-  más HTTPS-only y liberar el marcador de dedupe si `curl` no arranca. Detalle en
-  `.claude/mcp-sentinel/README.md`.
+- **🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel (12/09/2026, PR #2816).**
+  Tras el #2807, «Inyectar mapa» murió con **413 FUNCTION_PAYLOAD_TOO_LARGE** (4.492.854 → 4.493.847 B) y el grafo se saltó por
+  dependencia. Helper `scripts/inyectar-lotes.mjs` (lotes por bytes + reintentos), `mapa-arquitectura-inyectar.mjs` sustituye al
+  `curl`, el puerto acepta `lote/total`, estampa `sha` siempre y borra por `sha` en el último lote; paso del grafo con `!cancelled()`.
+  Cepos en `test/inyectar-lotes.test.ts` (vistos en rojo). **Dos lecciones del primer disparo:** (a) el run corrió 25 s después del
+  merge y el puerto VIEJO, aún desplegándose, dejó el mapa en 85 filas de 3.266 → **tras mergear un puerto, espera al deploy READY
+  antes de disparar** (re-disparado: 3.266 ✔); (b) el grafo llevaba el sha del commit local de la radiografía, no el de main →
+  `scripts/git-sha.mjs` (GITHUB_SHA primero) compartido por mapa y grafo, cepo en `test/grafo-codigo.test.ts` (PR #2821).
 - **🗺️ Grafo de código PROPIO (sustituto de Graphify para callers/impacto/vecinos/tests) + medición automática del uso de cada herramienta (12/09/2026).**
   Alberto: «se acaba el free de Graphify, ¿creamos el nuestro?» → «Hazlo […] controlar el uso como bien dices». `scripts/grafo-codigo.mjs`
   (regex, Node puro, 4.128 archivos → 17k nodos / 60k aristas en 1,8 s) → `/api/internal/grafo-codigo` por lotes → tablas `grafo_nodos`/

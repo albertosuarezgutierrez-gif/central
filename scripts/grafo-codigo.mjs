@@ -20,7 +20,7 @@
 import { readdirSync, readFileSync, statSync, existsSync, writeFileSync } from 'node:fs'
 import { join, dirname, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { execSync } from 'node:child_process'
+import { gitSha } from './git-sha.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const EXTS = ['.ts', '.tsx', '.mjs', '.js', '.jsx']
@@ -357,17 +357,6 @@ export function extraerGrafo(archivos, alias = {}) {
   return { nodos: [...nodos.values()], aristas: [...aristas.values()] }
 }
 
-/**
- * SHA que estampa el grafo. En CI manda `GITHUB_SHA` (el commit de main que disparó el run): el
- * paso del grafo corre DESPUÉS de que auditoria.yml commitee la radiografía en una rama, así que
- * `git rev-parse HEAD` ya no es main (medido el 12/09/2026: grafo_nodos con ea311fe y main en
- * 5bf8913, y la comprobación «sha del grafo = origin/main» fallando siempre por un commit).
- */
-export function gitSha(env = process.env) {
-  if (env.GITHUB_SHA) return env.GITHUB_SHA
-  try { return execSync('git rev-parse HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return '' }
-}
-
 // ── CLI ────────────────────────────────────────────────────────────────────────
 const esMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
 if (esMain) {
@@ -376,7 +365,7 @@ if (esMain) {
   const t0 = Date.now()
   const archivos = listarArchivos()
   const grafo = extraerGrafo(archivos, leerAliases())
-  const res = { sha: gitSha(), generado: new Date().toISOString(), archivos: archivos.length, ...grafo }
+  const res = { sha: gitSha(process.env, ROOT), generado: new Date().toISOString(), archivos: archivos.length, ...grafo }
   const porTipo = (xs) => xs.reduce((acc, x) => { acc[x.tipo] = (acc[x.tipo] ?? 0) + 1; return acc }, {})
   console.log(`grafo: ${archivos.length} archivos → ${grafo.nodos.length} nodos ${JSON.stringify(porTipo(grafo.nodos))}, ${grafo.aristas.length} aristas ${JSON.stringify(porTipo(grafo.aristas))} en ${Date.now() - t0} ms`)
   if (outIdx >= 0 && args[outIdx + 1]) {
