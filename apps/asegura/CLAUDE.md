@@ -775,6 +775,32 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `string | null` (sin clave, o si lo guardado no tiene forma de correo) y **lanza** si la clave está
   mal formada. Normalizar antes a mano crea una segunda ruta de normalización, que es justo el contrato
   de sincronía que el paquete PII declara en su cabecera. Se le pasa el correo crudo.
+- **📡 `GET /api/operador/actividad` (12/09/2026) — el muro de TODA la cartera.** `?quien=todo|cliente
+  &dias=1|7|30|90&pagina=` → `{estado:'ok', eventos, total, embudo, descartados}`. Lo pinta
+  `plataforma` → `/correduria` → sección «Actividad». `lib/actividad-cartera.ts`.
+  **Seis fuentes que YA existían y nadie leía juntas**, en un solo `UNION ALL` (seis consultas y
+  ordenar en JS no sabría paginar): `portal_acceso` —creada el 07/09 con sus dos índices puestos
+  literalmente para esto y **sin un solo consumidor hasta hoy**—, `portal_codigo` sin canjear (= «pidió
+  entrar y no pudo»), `portal_parte_siniestro`, `portal_poliza_declarada`, `portal_supresion` e
+  `historial_interno`.
+  🚨 **De `historial_interno` no se afirma autor**: `actor_user_id` no la escribe nadie y el autor va
+  dentro del texto. Solo las dos líneas que compone el portal se clasifican como del cliente, por los
+  **prefijos constantes** de `@central/module-seguros-portal` — escritos a mano en el SQL, el día que
+  alguien retoque la frase el cambio de dirección de un cliente dejaría de constar como suyo sin que
+  fallara nada. Hay cepo.
+  🚨 **No devuelve NI UN dato de contacto** (ni email, ni teléfono, ni dirección): solo qué pasó, la
+  fecha y el `cliente_id` para enlazar. El muro se mira con gente delante.
+  🚨 **El embudo son cinco cuentas INDEPENDIENTES y cada una vale `number | null`** (`contar()` captura
+  por separado): que una reviente no puede tumbar las otras cuatro ni, peor, pintar un escalón a 0 que
+  se leería como «nadie ha entrado». Cuenta **cartera viva** (`sqlCarteraViva`), jamás `clientes.tipo`.
+  📊 Medido el 12/09/2026: **80 clientes · 52 con correo · 5 con acceso · 4 han entrado · 4 activos en
+  30 días**. El cuello son los **47 con correo y sin invitar**, no los 28 sin correo.
+  ⚠️ El código recién pedido no cuenta como intento fallido (`MINUTOS_GRACIA_CODIGO = 60`): si no, el
+  que alguien está tecleando ahora mismo saldría como avería.
+  Guardián `lib/actividad-cartera.test.ts`, que lee el **FUENTE** con `readFileSync` — lo que vigila
+  vive dentro de un `Prisma.sql`, donde ni `tsc` ni el build miran, y además importar el módulo
+  arrastraría el cliente generado y tumbaría el job `Tests (packages + guardián)`, que corre sin
+  `prisma generate`. El SQL se ejecutó contra la BD real antes de mergear.
 - **📍 `POST /api/portal/contacto` y `POST /api/portal/nota` (08/09/2026) — el puerto ESTRECHO del
   portal del cliente.** No cuelgan de `/api/operador/*` a propósito: van con **`ASEGURA_PORTAL_PUENTE_SECRET`,
   un secreto distinto**. El de operador abre la cartera entera y lo tiene plataforma, que es la

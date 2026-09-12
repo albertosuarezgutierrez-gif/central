@@ -308,6 +308,8 @@ export type { Candidato, FichaElegida, PrediccionVinculo } from './vinculo-elegi
 export {
   decidirFichaPropia,
   textoHistorialContactoPropio,
+  PREFIJO_HISTORIAL_CONTACTO_PROPIO,
+  PREFIJO_HISTORIAL_SUGERENCIA,
   CAMPOS_CONTACTO_PROPIO,
   CAMPOS_DIRECCION_PROPIA,
   CAMPOS_CANAL_PROPIO,

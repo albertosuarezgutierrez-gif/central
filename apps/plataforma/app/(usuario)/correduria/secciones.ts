@@ -48,9 +48,9 @@
  * exactamente lo que impide que esta pantalla repita aquel fallo.
  */
 
-export type Seccion = 'hoy' | 'clientes' | 'cartera' | 'comisiones' | 'datos' | 'redes'
+export type Seccion = 'hoy' | 'actividad' | 'clientes' | 'cartera' | 'comisiones' | 'datos' | 'redes'
 
-export const SECCIONES: readonly Seccion[] = ['hoy', 'clientes', 'cartera', 'comisiones', 'datos', 'redes']
+export const SECCIONES: readonly Seccion[] = ['hoy', 'actividad', 'clientes', 'cartera', 'comisiones', 'datos', 'redes']
 
 /** Un `?s=` desconocido (o ausente) no deja la pantalla en blanco: cae a «Hoy». */
 export function seccionDeParametro(v: string | string[] | undefined): Seccion {

@@ -9,6 +9,7 @@ import CuadreComisiones from './CuadreComisiones'
 import BuscadorCartera from './BuscadorCartera'
 import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
+import Actividad from './Actividad'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
 import PartesPortal from './PartesPortal'
@@ -312,6 +313,21 @@ export default function CorreduriaClient() {
             en otra pestaña porque caduca igual — pasado el mes de preaviso el
             cliente ya no puede oponerse a la prórroga. */}
         <LeadsPortal onContador={setNLeads} />
+      </div>
+
+      {/* ══ ACTIVIDAD ════════════════════════════════════════════════════════
+          Qué hacen los clientes, incluida su entrada en la intranet. Es la única
+          sección que mira al PORTAL en conjunto: el resto de la pantalla mira la
+          cartera, y lo que hace un cliente por su cuenta solo se veía entrando
+          en su ficha de una en una.
+
+          🚨 No reporta contador a la pestaña, a propósito: esto NO es una cola
+          de trabajo. Lo que sí lo es —partes, supresiones, leads— ya tiene su
+          badge en «Hoy», y contarlo dos veces haría que atender un parte no
+          bajara el número de aquí, que es como se deja de creer un badge. Lo
+          nuevo desde la última visita se marca dentro, con un punto. */}
+      <div role="tabpanel" aria-label="Actividad" className="corr-panel" style={panel('actividad')}>
+        <Actividad />
       </div>
 
       {/* ══ CLIENTES ═════════════════════════════════════════════════════════
