@@ -523,6 +523,17 @@ test('quien no es dueño de la ficha puede invitar en su nombre si representa a 
   )
 })
 
+test('la correduría de la ficha sale de MI vínculo, no del más antiguo de todos los míos', () => {
+  // `vinculos` está ordenado por creadoEn y cubre TODAS las fichas de la
+  // identidad; `vinculos[0]` puede no ser el vínculo de `otorganteClienteId`
+  // si la identidad tiene fichas en más de una correduría. Usar ese valor a
+  // ciegas escribiría la invitación con la correduría equivocada.
+  assert.ok(
+    /mio\?\.\s*correduriaId\s*\?\?\s*vinculos\[0\]\.correduriaId/.test(LIB_CODIGO),
+    'la correduría tiene que preferir `mio.correduriaId` (el vínculo real con esa ficha) y caer a `vinculos[0]` solo en la vía de representación',
+  )
+})
+
 test('la vía de representación no amplía ALCANCES_INVITACION', () => {
   // `ALCANCES_INVITACION` no varía por tipo de otorgante (a diferencia de
   // `conceder()`): por eso la rama de representación no necesita ni puede

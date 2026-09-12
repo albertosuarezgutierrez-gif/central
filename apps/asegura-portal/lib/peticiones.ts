@@ -50,6 +50,7 @@
 // de la cookie (`lib/session`), y **ningún `clienteId` entra desde la request**
 // — toda ficha propia se comprueba antes contra `portal_vinculo` filtrado por
 // esa identidad.
+import { permiteAutorizar } from '@central/module-seguros'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import {
   MAX_PETICIONES_DIA,
@@ -433,6 +434,39 @@ export async function peticionDesdeRelacion(datos: {
 
   if (misFichas.has(relacionadoClienteId)) {
     return { ok: true, resultado: 'a_si_mismo', respuesta: respuestaPublica('a_si_mismo') }
+  }
+
+  // 🚨 Defensa en profundidad: `relacionadoClienteId` viene del cliente, y la
+  // pantalla lo calcula a partir de `relacionesSugeribles()` — pero eso no lo
+  // hace confiable aquí. Sin esta comprobación, cualquier identidad con sesión
+  // podría pedir acceso a CUALQUIER clienteId (uno visto en otra pantalla, uno
+  // adivinado) sin que exista ninguna relación real que lo justifique. Se mira
+  // en las dos direcciones, igual que `esRepresentanteDe()`: el volcado no
+  // siempre respeta «fila A→B = B es <tipo> de A».
+  if (misFichas.size > 0) {
+    const relaciones = await prisma.clienteRelacion.findMany({
+      where: {
+        OR: [
+          { clienteAId: { in: [...misFichas] }, clienteBId: relacionadoClienteId },
+          { clienteAId: relacionadoClienteId, clienteBId: { in: [...misFichas] } },
+        ],
+      },
+      select: { tipoRelacion: true },
+    })
+    if (!relaciones.some((r) => permiteAutorizar(r.tipoRelacion))) {
+      return {
+        ok: false,
+        error: 'datos_invalidos',
+        mensaje: 'No encontramos esa relación en tus contactos. Vuelve a cargar la pantalla e inténtalo desde ahí.',
+      }
+    }
+  } else {
+    // Sin ficha propia no hay relación que comprobar: nada que sugerir.
+    return {
+      ok: false,
+      error: 'datos_invalidos',
+      mensaje: 'No encontramos esa relación en tus contactos. Vuelve a cargar la pantalla e inténtalo desde ahí.',
+    }
   }
 
   const correduriaId = vinculos.length > 0 ? vinculos[0].correduriaId : await correduriaUnica()

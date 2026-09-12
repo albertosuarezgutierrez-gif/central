@@ -333,10 +333,14 @@ export async function crearInvitacion(datos: {
   // Sin `try/catch`: si esta lectura falla, que suba como error. Caer a un
   // valor por defecto convertiría un fallo de BD en una invitación mandada con
   // el texto legal equivocado.
-  // `vinculos[0]` existe siempre en las dos ramas: la directa lo exige `mio`, y
-  // `esRepresentanteDe()` ya comprobó que hay al menos una ficha propia.
+  // La correduría sale de `mio` cuando existe: es EL vínculo de esta identidad
+  // con `otorganteClienteId`, y `vinculos[0]` (el más antiguo de TODOS sus
+  // vínculos) puede ser uno distinto si la identidad tiene fichas en más de
+  // una correduría. Solo cae a `vinculos[0]` en la vía de representación,
+  // donde no hay vínculo propio a la ficha que se cede.
+  const correduriaId = mio?.correduriaId ?? vinculos[0].correduriaId
   const ficha = await prisma.cliente.findFirst({
-    where: { id: otorganteClienteId, correduriaId: vinculos[0].correduriaId, mergedIntoClienteId: null },
+    where: { id: otorganteClienteId, correduriaId, mergedIntoClienteId: null },
     select: { nombre: true, apellidos: true, tipoPersona: true },
   })
   if (ficha === null) {
@@ -417,7 +421,7 @@ export async function crearInvitacion(datos: {
   try {
     const fila = await prisma.portalInvitacion.create({
       data: {
-        correduriaId: vinculos[0].correduriaId,
+        correduriaId,
         otorganteClienteId,
         // Una ficha puede tener varias personas detrás: el registro tiene que
         // decir CUÁL de ellas invitó (art. 7.1 RGPD).
