@@ -37,13 +37,30 @@
 import {
   catalogoAsegura,
   retarificarAsegura,
+  ofertaAsegura,
+  emitirAsegura,
+  tarificacionGuardadaAsegura,
   type RespuestaCatalogo,
   type RespuestaRetarificar,
+  type RespuestaOferta,
+  type RespuestaEmitir,
+  type RespuestaTarificacionGuardada,
 } from '@/lib/retarificar-asegura'
 
 /** Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.** */
 export async function pedirCatalogo(params: Record<string, string>): Promise<RespuestaCatalogo> {
   return catalogoAsegura(params)
+}
+
+/**
+ * La última cotización REAL ya guardada de esta póliza (11/09/2026). **Gratis
+ * — no confirma nada con el vendor.** Sirve para "retomar" sin volver a pagar
+ * los 0,50€ del `POST /insurances` que ya se pagó, y para prellenar el
+ * formulario con lo que se tecleó la vez anterior. `estado: 'ninguna'` no es
+ * un fallo: esta póliza aún no tiene ninguna cotización real.
+ */
+export async function pedirTarificacionGuardada(polizaId: string): Promise<RespuestaTarificacionGuardada> {
+  return tarificacionGuardadaAsegura(polizaId)
 }
 
 /**
@@ -74,5 +91,38 @@ export async function pedirCotizacion(entrada: {
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
     catastro: entrada.catastro ?? null,
+  })
+}
+
+/**
+ * 🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el
+ * 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo
+ * pone `ofertaAsegura()` en el servidor, y esto NO reintenta — un fallo de
+ * red no dice que la compañía no haya confirmado.
+ */
+export async function pedirOferta(entrada: {
+  tarificacionId: string
+  compania: string
+  categoria: string
+  fechaEfectoCorregida?: string
+}): Promise<RespuestaOferta> {
+  return ofertaAsegura(entrada)
+}
+
+/**
+ * 🚨 **EL SUBMIT REAL. Compromete un contrato de verdad, no solo dinero.**
+ * Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin
+ * reintento: un fallo de red aquí NO dice que la póliza no se haya emitido.
+ */
+export async function pedirEmision(entrada: {
+  projectId: string
+  campos: Record<string, unknown>
+  primaAnual?: number | null
+}): Promise<RespuestaEmitir> {
+  return emitirAsegura({
+    projectId: entrada.projectId,
+    campos: entrada.campos,
+    actor: 'plataforma/correduria',
+    primaAnual: entrada.primaAnual ?? null,
   })
 }

@@ -56,8 +56,14 @@ test('ninguna ruta que cotiza expone un GET: un prefetch del navegador gastaría
 test('nadie llama al vendor por su cuenta: el POST de cotización pasa por cotizar()', () => {
   // `peticion()` es el transporte. Usarlo con POST fuera del embudo es saltarse
   // el interruptor, el libro y el tope de golpe.
+  //
+  // 🚨 `lib/codeoscopic/emitir.ts` es la SEGUNDA excepción (11/09/2026): el
+  // embudo del ENVÍO real (ReRate + Submit), detrás de su propio interruptor
+  // `CODEOSCOPIC_EMISION_ACTIVA` — distinto del de cotizar — y con su propio
+  // candado de un solo intento (`submit_in_flight_at`). No es un segundo
+  // camino sin control: es un segundo embudo, con guardas propias.
   const infractores = ficheros(/^apps\/asegura\/(app|lib)\/.*\.tsx?$/)
-    .filter((f) => !f.includes('lib/codeoscopic/cotizar.ts'))
+    .filter((f) => !f.includes('lib/codeoscopic/cotizar.ts') && !f.includes('lib/codeoscopic/emitir.ts'))
     .filter((f) => {
       const src = FUENTE(f)
       if (!/from ['"][^'"]*codeoscopic\/cliente(\.ts)?['"]/.test(src)) return false

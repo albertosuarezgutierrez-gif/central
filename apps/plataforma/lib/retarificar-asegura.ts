@@ -677,6 +677,358 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
   }
 }
 
+// ─── Confirmar el precio con la compañía (ReRate) ────────────────────────────
+//
+// 🚨 Construido el 11/09/2026, SIN sandbox y sin fixture del fabricante para
+// esta operación (a diferencia de retarificar, que sí tiene fixture real):
+// `docs/CODEOSCOPIC-API-PORTAL.md` solo la describe en prosa. El coste NO está
+// documentado (a diferencia de `POST /insurances`, que sí lo está en tres
+// sitios): se trata igual de conservador que un gasto, con confirmación
+// explícita y sin reintento automático.
+
+export type RespuestaOferta =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string }
+  | {
+      estado: 'ok'
+      projectId: string
+      offerId: string
+      primaEur: number | null
+      firmeza: string
+      caducaEn: string | null
+      avisos: string[]
+    }
+
+/** Hasta 60 s: es una llamada de red al vendor, sin duración documentada. */
+export const TIMEOUT_OFERTA_MS = 60_000
+
+function leerOferta(v: unknown): { offerId: string; primaEur: number | null; firmeza: string; caducaEn: string | null; avisos: string[] } | null {
+  if (typeof v !== 'object' || v === null) return null
+  const x = v as Record<string, unknown>
+  if (typeof x.offerId !== 'string') return null
+  return {
+    offerId: x.offerId,
+    primaEur: typeof x.primaEur === 'number' ? x.primaEur : null,
+    firmeza: typeof x.firmeza === 'string' ? x.firmeza : 'estimado',
+    caducaEn: cadenaONulo(x.caducaEn),
+    avisos: Array.isArray(x.avisos) ? x.avisos.filter((a): a is string => typeof a === 'string') : [],
+  }
+}
+
+/** PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable. */
+export function interpretarOferta(status: number, json: unknown): RespuestaOferta {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'secreto_rechazado', mensaje: MOTIVOS_PUERTO.secreto_rechazado }
+  }
+  if (status === 200 && r.estado === 'ok') {
+    const oferta = leerOferta(r.oferta)
+    if (!oferta || typeof r.projectId !== 'string') {
+      return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible }
+    }
+    return { estado: 'ok', projectId: r.projectId, ...oferta }
+  }
+  if (r.estado === 'sin_configurar' || (status === 503 && r.causa === 'apagado')) {
+    return {
+      estado: 'sin_configurar',
+      mensaje: cadenaONulo(r.mensaje) ?? 'La emisión real está apagada en central-asegura (CODEOSCOPIC_EMISION_ACTIVA).',
+    }
+  }
+  const detalle = describirCausaAsegura(typeof r.causa === 'string' ? r.causa : undefined)
+  return {
+    estado: 'error',
+    motivo: status === 502 ? 'asegura_error' : 'asegura_error',
+    mensaje: [cadenaONulo(r.mensaje), detalle].filter((s): s is string => !!s).join(' — ') || `error ${status}`,
+  }
+}
+
+/**
+ * `POST /api/operador/codeoscopic/oferta` — confirma con la compañía el
+ * precio de `tarificacionId` (id de `seguros.tarificaciones`) para la
+ * `compania`/`categoria` elegidas en pantalla. NO reintenta.
+ */
+export async function ofertaAsegura(p: {
+  tarificacionId: string
+  compania: string
+  categoria: string
+  /** Corrige la fecha de efecto del proyecto (aaaa-mm-dd) ANTES del ReRate,
+   *  vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha
+   *  rechazado — ver `apps/asegura/lib/codeoscopic/emitir.ts::actualizarFechaEfecto`. */
+  fechaEfectoCorregida?: string
+}): Promise<RespuestaOferta> {
+  try {
+    const r = await pedir(
+      '/api/operador/codeoscopic/oferta',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...p, confirmado: true }),
+      },
+      TIMEOUT_OFERTA_MS,
+    )
+    if (r === null) {
+      return {
+        estado: 'sin_configurar',
+        mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).',
+      }
+    }
+    return interpretarOferta(r.status, r.json)
+  } catch (e) {
+    return {
+      estado: 'error',
+      motivo: 'red',
+      mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)}). ` +
+        'No se sabe si la compañía ha confirmado el precio: mira el consumo antes de repetir.',
+    }
+  }
+}
+
+// ─── Emitir de verdad (Submit) ────────────────────────────────────────────────
+
+export type RespuestaEmitir =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'faltan_campos'; faltan: string[]; campos: unknown }
+  | { estado: 'en_vuelo'; mensaje: string }
+  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown }
+  | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown }
+  | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
+
+/** Hasta 90 s: es el Submit, la llamada más pesada del flujo y sin duración documentada. */
+export const TIMEOUT_EMITIR_MS = 90_000
+
+/** PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable. */
+export function interpretarEmitir(status: number, json: unknown): RespuestaEmitir {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'secreto_rechazado', mensaje: MOTIVOS_PUERTO.secreto_rechazado, crudo: null }
+  }
+  if (status === 422 && r.causa === 'faltan_campos') {
+    return {
+      estado: 'faltan_campos',
+      faltan: Array.isArray(r.faltan) ? r.faltan.filter((f): f is string => typeof f === 'string') : [],
+      campos: r.campos ?? null,
+    }
+  }
+  if (status === 409 && r.causa === 'en-vuelo') {
+    return { estado: 'en_vuelo', mensaje: cadenaONulo(r.mensaje) ?? 'Ya hay un envío de este proyecto en curso.' }
+  }
+  if (status === 200) {
+    if (r.estado === 'emitido_sin_acunar') {
+      return {
+        estado: 'emitido_sin_acunar',
+        mensaje: cadenaONulo(r.mensaje) ?? 'Codeoscopic aceptó la emisión pero no se pudo acuñar sola.',
+        referenciaVendor: cadenaONulo(r.referenciaVendor),
+      }
+    }
+    if (r.estado === 'ok') {
+      return { estado: 'ok', referenciaVendor: cadenaONulo(r.referenciaVendor), acunado: r.acunado ?? null }
+    }
+    return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible, crudo: r }
+  }
+  if (r.estado === 'sin_configurar' || (status === 503 && r.causa === 'apagado')) {
+    return {
+      estado: 'sin_configurar',
+      mensaje: cadenaONulo(r.mensaje) ?? 'La emisión real está apagada en central-asegura (CODEOSCOPIC_EMISION_ACTIVA).',
+    }
+  }
+  const detalle = describirCausaAsegura(typeof r.causa === 'string' ? r.causa : undefined)
+  return {
+    estado: 'error',
+    motivo: 'asegura_error',
+    mensaje: [cadenaONulo(r.mensaje), detalle].filter((s): s is string => !!s).join(' — ') || `error ${status}`,
+    crudo: r.crudo ?? null,
+  }
+}
+
+/**
+ * `POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que
+ * `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO
+ * reintenta: un fallo de red aquí no dice que no se haya emitido, exactamente
+ * igual que retarificar.
+ */
+export async function emitirAsegura(p: {
+  projectId: string
+  campos: Record<string, unknown>
+  actor?: string
+  primaAnual?: number | null
+}): Promise<RespuestaEmitir> {
+  try {
+    const r = await pedir(
+      '/api/operador/codeoscopic/emitir',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          projectId: p.projectId,
+          campos: p.campos,
+          actor: p.actor ?? 'plataforma',
+          primaAnual: p.primaAnual ?? null,
+          confirmado: true,
+        }),
+      },
+      TIMEOUT_EMITIR_MS,
+    )
+    if (r === null) {
+      return {
+        estado: 'sin_configurar',
+        mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).',
+      }
+    }
+    return interpretarEmitir(r.status, r.json)
+  } catch (e) {
+    return {
+      estado: 'error',
+      motivo: 'red',
+      mensaje:
+        `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)}). ` +
+        'NO SE SABE si la póliza ha llegado a emitirse: antes de repetir, comprueba en Avant2 o pide ' +
+        'a asegura el estado del proyecto — reintentar podría duplicar la emisión.',
+      crudo: null,
+    }
+  }
+}
+
+// ─── Retomar una cotización YA guardada (GRATIS, sin volver a pagar) ─────────
+//
+// 🚨 Construido el 11/09/2026: sin esto, recargar la pantalla de retarificar
+// borra el formulario Y esconde que ya existe un precio pagado — así que
+// pulsar «Pedir precio» otra vez para poder llegar a Emitir crea una
+// cotización NUEVA (otro cargo de 0,50€) en vez de reutilizar la de hace un
+// minuto. Esto solo LEE lo que ya está en `seguros.tarificaciones`: no
+// confirma nada con la compañía (eso sigue siendo el ReRate de `ofertaAsegura`).
+
+/** Lo que el corredor tecleó a mano la vez anterior, recuperado de la
+ *  cotización guardada — para poder prellenar el formulario sin adivinar. */
+export type FormularioGuardado = {
+  codigoVehiculo: string | null
+  fechaMatriculacion: string | null
+  garaje: string | null
+  estadoCivilId: string | null
+  municipioId: number | null
+  /** Mismas claves que `CAMPOS_A_MANO` de la pantalla (dni, nombre,
+   *  apellido1, telefono, fechaNacimiento, fechaCarnet). */
+  correcciones: Record<string, string>
+}
+
+export type TarificacionGuardadaAuto = {
+  cotizacionId: string
+  projectId: string
+  creadaEn: string
+  precios: Precio[]
+  formulario: FormularioGuardado
+}
+
+export type RespuestaTarificacionGuardada =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string }
+  /** No es un fallo: esta póliza todavía no tiene ninguna cotización real guardada. */
+  | { estado: 'ninguna' }
+  | { estado: 'ok'; guardada: TarificacionGuardadaAuto }
+
+/** Gratis y solo lectura: no hay llamada al vendor detrás. */
+const TIMEOUT_TARIFICACION_GUARDADA_MS = 15_000
+
+function leerFormularioGuardado(v: unknown): FormularioGuardado | null {
+  if (typeof v !== 'object' || v === null) return null
+  const x = v as Record<string, unknown>
+  const correcciones: Record<string, string> = {}
+  if (typeof x.correcciones === 'object' && x.correcciones !== null) {
+    for (const [k, val] of Object.entries(x.correcciones as Record<string, unknown>)) {
+      if (typeof val === 'string' && val.trim() !== '') correcciones[k] = val
+    }
+  }
+  return {
+    codigoVehiculo: cadenaONulo(x.codigoVehiculo),
+    fechaMatriculacion: cadenaONulo(x.fechaMatriculacion),
+    garaje: cadenaONulo(x.garaje),
+    estadoCivilId: cadenaONulo(x.estadoCivilId),
+    municipioId: typeof x.municipioId === 'number' ? x.municipioId : null,
+    correcciones,
+  }
+}
+
+function leerPreciosGuardados(v: unknown): Precio[] | null {
+  if (!Array.isArray(v)) return null
+  return v.map((raw): Precio => {
+    const x = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
+    return {
+      compania: cadenaONulo(x.compania),
+      producto: cadenaONulo(x.producto),
+      categoria: cadenaONulo(x.categoria),
+      primaEur: typeof x.primaEur === 'number' ? x.primaEur : null,
+      franquiciaEur: typeof x.franquiciaEur === 'number' ? x.franquiciaEur : null,
+      firmeza: typeof x.firmeza === 'string' ? x.firmeza : 'estimado',
+      avisos: Array.isArray(x.avisos) ? x.avisos.filter((a): a is string => typeof a === 'string') : [],
+    }
+  })
+}
+
+/** PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable. */
+export function interpretarTarificacionGuardada(status: number, json: unknown): RespuestaTarificacionGuardada {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'secreto_rechazado', mensaje: MOTIVOS_PUERTO.secreto_rechazado }
+  }
+  if (status === 200 && r.estado === 'ninguna') return { estado: 'ninguna' }
+  if (status === 200 && r.estado === 'ok') {
+    const formulario = leerFormularioGuardado(r.formulario)
+    const precios = leerPreciosGuardados(r.precios)
+    if (!formulario || !precios || typeof r.cotizacionId !== 'string' || typeof r.projectId !== 'string') {
+      return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible }
+    }
+    return {
+      estado: 'ok',
+      guardada: {
+        cotizacionId: r.cotizacionId,
+        projectId: r.projectId,
+        creadaEn: cadenaONulo(r.creadaEn) ?? '',
+        precios,
+        formulario,
+      },
+    }
+  }
+  if (r.estado === 'sin_configurar') {
+    return {
+      estado: 'sin_configurar',
+      mensaje: cadenaONulo(r.mensaje) ?? 'Codeoscopic no está configurado en central-asegura.',
+    }
+  }
+  const detalle = describirCausaAsegura(typeof r.causa === 'string' ? r.causa : undefined)
+  return {
+    estado: 'error',
+    motivo: 'asegura_error',
+    mensaje: [cadenaONulo(r.mensaje), detalle].filter((s): s is string => !!s).join(' — ') || `error ${status}`,
+  }
+}
+
+/**
+ * `GET /api/operador/codeoscopic/tarificacion` — la última cotización real
+ * guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo.
+ */
+export async function tarificacionGuardadaAsegura(polizaId: string): Promise<RespuestaTarificacionGuardada> {
+  try {
+    const r = await pedir(
+      `/api/operador/codeoscopic/tarificacion?polizaId=${encodeURIComponent(polizaId)}`,
+      { method: 'GET' },
+      TIMEOUT_TARIFICACION_GUARDADA_MS,
+    )
+    if (r === null) {
+      return {
+        estado: 'sin_configurar',
+        mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).',
+      }
+    }
+    return interpretarTarificacionGuardada(r.status, r.json)
+  } catch (e) {
+    // No se degrada a «ninguna»: un fallo de red no es «no hay cotización».
+    return {
+      estado: 'error',
+      motivo: 'red',
+      mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})`,
+    }
+  }
+}
+
 // ─── Nota sobre los tipos duplicados ─────────────────────────────────────────
 //
 // `Opcion`, `Reparo`, `Supuesto`, `Precio` y `Fallo` existen también en

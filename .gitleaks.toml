@@ -39,4 +39,9 @@ regexes = [
   # es una clave de cliente (viaja en todo bundle del navegador), la protección real es RLS.
   # NO es un secreto de auth — esos siguen prohibidos por el guardián.
   '''pskPJ1U-i0Vjg_suxMfXNqHOtKJpWchf0-CzLUQIzRo''',
+  # Falso positivo: 'usr_live_abc123' es el API key de EJEMPLO del propio ejemplo oficial
+  # de Smoobu (docs.smoobu.com, sección HMAC authentication), usado en
+  # apps/{sivra,plataforma,ialimp}/lib/smoobu-firma.test.ts para verificar byte a byte que
+  # la firma coincide con la de Smoobu. No es una credencial real ni ha existido nunca.
+  '''usr_live_abc123''',
 ]

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { isAlertaTokenAuthorized } from "@/lib/cron-auth"
 import { getSession } from "@/lib/session"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { getSmoobuKey, smoobuFetch } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -157,8 +157,8 @@ export async function POST(req: NextRequest) {
     const start = dates[0], end = dates[dates.length - 1]
     let cur: Record<string, { price: number | null; available: number }> = {}
     try {
-      const res = await fetch(`${BASE}/rates?apartments[]=${smoobuId}&start_date=${start}&end_date=${end}`,
-        { headers: { "Api-Key": SMOOBU_KEY, "Cache-Control": "no-cache" }, next: { revalidate: 0 } })
+      const res = await smoobuFetch(`${BASE}/rates?apartments[]=${smoobuId}&start_date=${start}&end_date=${end}`,
+        { next: { revalidate: 0 } })
       if (!res.ok) { plan.errors.push(`Smoobu GET ${res.status}`); plans.push(plan); continue }
       cur = (await res.json()).data?.[smoobuId] ?? {}
     } catch (e) {
@@ -236,9 +236,9 @@ export async function POST(req: NextRequest) {
     const canWrite = !dryRun && !paused && plan.apply_enabled && plan.ops.length > 0
     if (canWrite) {
       try {
-        const res = await fetch(`${BASE}/rates`, {
+        const res = await smoobuFetch(`${BASE}/rates`, {
           method: "POST",
-          headers: { "Api-Key": SMOOBU_KEY, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ apartments: [plan.smoobuId], operations: plan.ops }),
         })
         written = res.ok

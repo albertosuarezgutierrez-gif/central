@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-09T15:47:05Z",
-  "sha": "af32fdc6d0af9718dbf1579a4fe04627092de739",
+  "generadoEn": "2026-09-11T15:07:03Z",
+  "sha": "e70c883c355e0a35621e841e5c6bd22e0fa2b7d9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8831,17 +8831,25 @@
       ],
       "funciones": [
         {
+          "nombre": "etiquetasPara",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipoLectura: 'auto' | 'hogar' | 'contrato_solo',",
+          "retorno": "[(keyof AutoLeido | keyof HogarLeido) & string, string][]",
+          "linea": 74
+        },
+        {
           "nombre": "SubirPoliza",
           "kind": "function",
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 36
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae39dabc091c"
+      "hash": "327925c61a62"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/dashboard/page.tsx",
@@ -9019,7 +9027,7 @@
         "node"
       ],
       "rutaApi": "/api/cartera/documentos",
-      "hash": "c0ea8f55cd10"
+      "hash": "72bc8525cdf1"
     },
     {
       "ruta": "apps/asegura/app/api/cartera/polizas/[polizaId]/retarificar/route.ts",
@@ -9230,6 +9238,39 @@
       "tablas": [],
       "rutaApi": "/api/operador/cliente/contactos",
       "hash": "492cb2adaacc"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/cliente/dni/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "POST /api/operador/cliente/dni — el DNI COMPLETO, sin enmascarar. 🚨 Es la ÚNICA salida del puerto que deja cruzar el documento entero. El resto del puerto (`/cliente`, `/impagados`…) lo enmascara a p"
+        },
+        {
+          "nombre": "anotar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 58,
+          "resumen": "Best-effort: que el historial falle no bloquea la revelación, pero se grita."
+        }
+      ],
+      "tablas": [
+        "historial_interno",
+        "next"
+      ],
+      "rutaApi": "/api/operador/cliente/dni",
+      "hash": "94b35456b08b"
     },
     {
       "ruta": "apps/asegura/app/api/operador/cliente/historial/route.ts",
@@ -9611,6 +9652,63 @@
       "hash": "3fe6a55f35cb"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/emitir/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "`POST /api/operador/codeoscopic/emitir` — el Submit de verdad (`POST /insurances/{id}/policy-applications`), y el acuñado en nuestra BD si el vendor lo acepta. 🚨 **Construida el 11/09/2026, sin sandb"
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 202
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 206
+        },
+        {
+          "nombre": "esObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 210
+        },
+        {
+          "nombre": "coincideCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombreComun: string, aseguradora: string",
+          "retorno": "boolean",
+          "linea": 214
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "next",
+        "polizas"
+      ],
+      "rutaApi": "/api/operador/codeoscopic/emitir",
+      "hash": "bbd2a263de0e"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -9688,6 +9786,40 @@
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/moto-nuevo",
       "hash": "ab520736b9b6"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/oferta/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 34,
+          "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate) el precio que ya se enseñó en pantalla desde una cotización REAL de `seguros.tarificaciones`. 🚨 **Construida el 11/09/2026,"
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 157
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "next",
+        "set",
+        "tarificaciones"
+      ],
+      "rutaApi": "/api/operador/codeoscopic/oferta",
+      "hash": "d5d0b3e079f3"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -10052,6 +10184,27 @@
       "hash": "e59bc76498f0"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/tarificacion/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "`GET /api/operador/codeoscopic/tarificacion?polizaId=` — la ÚLTIMA cotización REAL ya guardada de esta póliza, para \"retomarla\" en pantalla sin volver a pagar el `POST /insurances` que ya se pagó (11/"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/tarificacion",
+      "hash": "babd7f24877f"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/vida-nuevo/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -10156,7 +10309,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 26,
+          "linea": 27,
           "resumen": "Documentos de la correduría por el puerto de operador (plataforma → asegura). GET ?clienteId= | ?polizaId= | ?siniestroId= → la lista (sin ficheros) POST multipart (fichero + tipo + destino + notas) →"
         },
         {
@@ -10165,7 +10318,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "texto",
@@ -10173,7 +10326,7 @@
           "exportada": false,
           "params": "v: FormDataEntryValue | null",
           "retorno": "string | null",
-          "linea": 91
+          "linea": 92
         },
         {
           "nombre": "cadena",
@@ -10181,12 +10334,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 94
+          "linea": 95
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/documentos",
-      "hash": "9b9ba980413e"
+      "hash": "62320fdd22ff"
     },
     {
       "ruta": "apps/asegura/app/api/operador/duplicados/route.ts",
@@ -13865,6 +14018,162 @@
       "hash": "870722086ba7"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/emitir-envio.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El Submit REAL a Codeoscopic (`POST /insurances/{id}/policy-applications`) y su candado de idempotencia. Separado de `emitir.ts` (puro) porque este fichero SÍ toca BD (`prisma`), y `emitir.ts` tiene que poder importarse bajo `node --test` sin arrastrar `tenant.ts` (ver su cabecera). 🚨 SIN SANDBOX Y",
+      "exporta": [
+        "enviarEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 26
+        },
+        {
+          "nombre": "bloquearEnvio",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, projectId: string, attemptId: string,",
+          "retorno": "Promise<boolean>",
+          "linea": 43,
+          "resumen": "Toma el candado ANTES de llamar al vendor. `false` = ya había un intento en vuelo (o reciente) para este proyecto: no se llama, para no arriesgar un segundo Submit sobre el mismo contrato mientras no "
+        },
+        {
+          "nombre": "cerrarEnvio",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, projectId: string, attemptId: string, // `codeoscopic_project_estado` no tiene un valor «enviada»: el éxito del // Submit se refleja aparte, cuando `registrarPolizaEmitida` (module-seguros) // pone `estado='emitida'` a",
+          "retorno": "Promise<void>",
+          "linea": 66,
+          "resumen": "`submit_in_flight_at` se limpia siempre, se haya enviado o no, porque un candado que no se suelta deja el proyecto bloqueado para siempre."
+        },
+        {
+          "nombre": "enviarEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, entrada: { correduriaId: string projectId: string offerId: string campos: Record<string, unknown> },",
+          "retorno": "Promise<ResultadoEnvio>",
+          "linea": 100,
+          "resumen": "`POST /insurances/{projectId}/policy-applications`, multipart. Un solo intento, con CANDADO antes de llamar (ver `bloquearEnvio`). El transporte NO reutiliza `peticion()` de `cliente.ts` (JSON puro): "
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "node",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "843708e15d6b"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/emitir.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Envío REAL a Codeoscopic: ReRate (confirma el precio) y Submit (emite la póliza). Construido el 11/09/2026 sobre el caso real de Pilar Franco Ruz (proyecto `40675025`, Allianz Terceros Ampliado) — OK explícito de Alberto. 🚨 SIN SANDBOX Y SIN FIXTURE DEL FABRICANTE para estas dos llamadas, a diferen",
+      "exporta": [
+        "resolverConfigEmision",
+        "refrescarProyecto",
+        "encontrarPrecio",
+        "leerOferta",
+        "reRate",
+        "camposDeEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverConfigEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined> = process.env,",
+          "retorno": "ResolucionConfig",
+          "linea": 46,
+          "resumen": "Config de EMISIÓN. Gate PROPIO, `CODEOSCOPIC_EMISION_ACTIVA`, distinto del de tarificar (`CODEOSCOPIC_TARIFICACION_ACTIVA`): emitir compromete un contrato real, no solo cuesta dinero, y no se enciende"
+        },
+        {
+          "nombre": "refrescarProyecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string,",
+          "retorno": "Promise<Cotizacion>",
+          "linea": 63,
+          "resumen": "`GET /insurances/{id}`. Gratis: es una lectura, no una cotización nueva."
+        },
+        {
+          "nombre": "encontrarPrecio",
+          "kind": "function",
+          "exportada": true,
+          "params": "cotizacion: Cotizacion, compania: string, categoria: string,",
+          "retorno": "Precio | null",
+          "linea": 77,
+          "resumen": "El precio elegido por compañía + categoría, tal y como se enseñó en pantalla. Sin esto no hay `id` de precio con el que pedir el ReRate."
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Json",
+          "linea": 104
+        },
+        {
+          "nombre": "arr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown[]",
+          "linea": 105
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 106
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 108
+        },
+        {
+          "nombre": "leerOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "Oferta",
+          "linea": 121,
+          "resumen": "Lee la respuesta de `POST .../offers`. 🚨 Defensivo A PROPÓSITO: la forma exacta NO está verificada contra el fabricante. Se acepta tanto `{ mainQuote: {...} }` como el objeto pelado, porque no se sab"
+        },
+        {
+          "nombre": "reRate",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string, quoteId: string, productId: unknown, productOptions: unknown,",
+          "retorno": "Promise<Oferta>",
+          "linea": 185,
+          "resumen": "`POST /insurances/{projectId}/offers` — confirma el precio elegido (ReRate/preemisión). 🚨 **Corregido el 11/09/2026 tras el primer 400 real** (proyecto 40681298, Pilar Franco Ruz): el vendor exige `m"
+        },
+        {
+          "nombre": "camposDeEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
+          "retorno": "Promise<CampoEmision[]>",
+          "linea": 220,
+          "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "895ab61c89ed"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
       "ambito": "apps/asegura",
       "resumen": "Traduce el mensaje crudo de un ErrorCodeoscopic (`codeoscopic_<clase>: {...json...}`) a algo que se pueda leer en pantalla sin descifrar JSON en inglés. No se toca `ErrorCodeoscopic.message` en sí: eso sigue viajando entero a los logs y a `historial_interno` (ahí SÍ hace falta cada campo, requestId ",
@@ -13884,6 +14193,67 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f0a02538d5f5"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/formulario-guardado.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Reconstruye del `peticion` guardado en `seguros.tarificaciones` los campos que el corredor tecleó a mano en el formulario de retarificar auto, para poder \"retomar\" una cotización sin volver a escribirlos. PURO: entra el `CreateInsuranceRequest_V1` tal cual se guardó (el mismo que construye `peticion",
+      "exporta": [
+        "extraerFormularioAuto"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Json",
+          "linea": 27
+        },
+        {
+          "nombre": "arr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown[]",
+          "linea": 28
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 29
+        },
+        {
+          "nombre": "idTexto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 31
+        },
+        {
+          "nombre": "idEntero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 36
+        },
+        {
+          "nombre": "extraerFormularioAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "peticion: unknown",
+          "retorno": "FormularioAutoGuardado",
+          "linea": 43
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "153b9a9be2d5"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/horquilla.ts",
@@ -13957,6 +14327,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "063d549378bd"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/opciones-producto.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Catálogo ESTÁTICO de `product.options` por defecto para el ReRate, para las compañías que exigen campos que la cotización NUNCA devuelve (ver `Precio.productOptions` en `respuesta.ts` — el vendor no los manda al cotizar, así que aquí casi siempre es `null`). Sin sandbox y sin catálogo REST para esto",
+      "exporta": [
+        "opcionesPorDefecto"
+      ],
+      "funciones": [
+        {
+          "nombre": "opcionesPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string",
+          "retorno": "OpcionProducto[] | null",
+          "linea": 58,
+          "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bf03a9c4153c"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -14422,7 +14814,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Json",
-          "linea": 82
+          "linea": 104
         },
         {
           "nombre": "arr",
@@ -14430,7 +14822,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "unknown[]",
-          "linea": 83
+          "linea": 105
         },
         {
           "nombre": "str",
@@ -14438,7 +14830,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 84
+          "linea": 106
         },
         {
           "nombre": "num",
@@ -14446,7 +14838,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 86
+          "linea": 108
         },
         {
           "nombre": "firmezaDe",
@@ -14454,7 +14846,7 @@
           "exportada": true,
           "params": "estimate: unknown, mensajes: unknown",
           "retorno": "Firmeza",
-          "linea": 94,
+          "linea": 116,
           "resumen": "Decide la firmeza de un precio. Orden deliberado: `estimate` manda sobre todo lo demás, porque si el propio vendor dice que la cifra es una estimación, ningún aviso la vuelve firme."
         },
         {
@@ -14463,7 +14855,7 @@
           "exportada": false,
           "params": "m: unknown",
           "retorno": "string | null",
-          "linea": 107,
+          "linea": 129,
           "resumen": "Junta `text` y `description` de un mensaje en una línea legible."
         },
         {
@@ -14472,7 +14864,7 @@
           "exportada": false,
           "params": "raw: unknown",
           "retorno": "Precio | null",
-          "linea": 114
+          "linea": 136
         },
         {
           "nombre": "leerFallo",
@@ -14480,7 +14872,7 @@
           "exportada": false,
           "params": "raw: unknown, companiasConPrecio: Set<string>",
           "retorno": "FalloProducto | null",
-          "linea": 143
+          "linea": 167
         },
         {
           "nombre": "leerCotizacion",
@@ -14488,7 +14880,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "Cotizacion",
-          "linea": 167,
+          "linea": 191,
           "resumen": "Convierte la respuesta cruda del vendor en el modelo de la casa. Lanza si falta el `id` de raíz: sin él no podemos correlacionar el webhook ni demostrar por qué nos han facturado esa cotización, así q"
         },
         {
@@ -14497,13 +14889,13 @@
           "exportada": true,
           "params": "c: Cotizacion",
           "retorno": "string",
-          "linea": 192,
+          "linea": 216,
           "resumen": "Resumen honrado para la UI y para Telegram: dice lo que NO se pudo cotizar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "86690c96e136"
+      "hash": "e6b99dac481e"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/resumen-hogar.ts",
@@ -14719,6 +15111,39 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b321ba4e9807"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/tarificacion-guardada.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lee la ÚLTIMA cotización REAL ya guardada de una póliza, para poder \"retomarla\" en pantalla sin volver a pagar el `POST /insurances` que ya se pagó. Impuro (BD) — hermano de `cotizaciones.ts`, que es quien la escribió. 🚨 Recuperar el precio NO sustituye al ReRate: `expires_at` llega a NULL en la re",
+      "exporta": [
+        "ultimaTarificacionRealAuto"
+      ],
+      "funciones": [
+        {
+          "nombre": "ultimaTarificacionRealAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaId: string,",
+          "retorno": "Promise<TarificacionGuardada | null>",
+          "linea": 39,
+          "resumen": "La última tarificación REAL (no simulada) de auto guardada para esta póliza en ESTA correduría. `null` = no hay ninguna — no es un error, es que todavía no se ha pedido precio nunca para esta póliza."
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: number | string | null",
+          "retorno": "number | null",
+          "linea": 98
+        }
+      ],
+      "tablas": [
+        "tarificacion_precios",
+        "tarificaciones"
+      ],
+      "rutaApi": null,
+      "hash": "2f84691179dc"
     },
     {
       "ruta": "apps/asegura/lib/comisiones.ts",
@@ -15058,37 +15483,28 @@
       "hash": "96d636df29e6"
     },
     {
-      "ruta": "apps/asegura/lib/documentos/extraer-auto.ts",
+      "ruta": "apps/asegura/lib/documentos/extraer-poliza.ts",
       "ambito": "apps/asegura",
-      "resumen": "Lee una PÓLIZA DE AUTO que sube el corredor: PDF → texto → IA, o foto → visión. Sigue el mismo pipeline que `apps/asegura-portal/lib/extraer-poliza.ts`, que ya está probado contra documentos reales. La diferencia es QUÉ se busca: allí los cinco campos que el asegurado ve en su bóveda, aquí lo que ha",
+      "resumen": "Lee una PÓLIZA que sube el corredor, de CUALQUIER ramo: PDF → texto → IA, o foto → visión. Sustituye a `extraer-auto.ts` (que solo leía auto): la IA detecta primero el ramo y, según cuál sea, lee lo que hace falta para pedir precio de ESE ramo (hoy: auto/moto y hogar, los dos que se retarifican — `r",
       "exporta": [
-        "leerPolizaAuto"
+        "leerPoliza"
       ],
       "funciones": [
+        {
+          "nombre": "ramoDetectado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Ramo | null",
+          "linea": 55
+        },
         {
           "nombre": "nadaLeido",
           "kind": "function",
           "exportada": false,
           "params": "motivo: string",
-          "retorno": "ResultadoLectura",
-          "linea": 62
-        },
-        {
-          "nombre": "leerPolizaAuto",
-          "kind": "function",
-          "exportada": true,
-          "params": "buffer: Buffer, mimeType: string, fileName = '',",
-          "retorno": "Promise<ResultadoLectura>",
-          "linea": 66
-        },
-        {
-          "nombre": "parsear",
-          "kind": "function",
-          "exportada": false,
-          "params": "salida: string",
-          "retorno": "AutoLeido",
-          "linea": 129,
-          "resumen": "Un JSON que no parsea devuelve TODOS los campos a `null`, nunca campos a medias. Media extracción pintada como póliza es peor que ninguna: quien la mira se cree que eso es lo que pone el documento."
+          "retorno": "ResultadoLecturaPoliza",
+          "linea": 119
         },
         {
           "nombre": "mensaje",
@@ -15096,12 +15512,37 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 137
+          "linea": 123
+        },
+        {
+          "nombre": "parsear",
+          "kind": "function",
+          "exportada": false,
+          "params": "salida: string",
+          "retorno": "",
+          "linea": 131,
+          "resumen": "Un JSON que no parsea produce TODOS los campos a `null`, nunca campos a medias: media extracción pintada como póliza es peor que ninguna."
+        },
+        {
+          "nombre": "empaquetar",
+          "kind": "function",
+          "exportada": false,
+          "params": "ramo: Ramo | null, auto: AutoLeido, hogar: HogarLeido, fuente: 'texto' | 'vision',",
+          "retorno": "ResultadoLecturaPoliza",
+          "linea": 146
+        },
+        {
+          "nombre": "leerPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "buffer: Buffer, mimeType: string, fileName = '',",
+          "retorno": "Promise<ResultadoLecturaPoliza>",
+          "linea": 163
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "962e9b75dc70"
+      "hash": "657f28a87d32"
     },
     {
       "ruta": "apps/asegura/lib/email-ficha.ts",
@@ -16727,7 +17168,7 @@
           "exportada": false,
           "params": "TOKEN, restauranteId",
           "retorno": null,
-          "linea": 42
+          "linea": 48
         },
         {
           "nombre": "handleCashlogyCommand",
@@ -16735,7 +17176,7 @@
           "exportada": false,
           "params": "job, TOKEN",
           "retorno": null,
-          "linea": 58,
+          "linea": 64,
           "resumen": "── Handler de comandos Cashlogy ────────────────────────────"
         },
         {
@@ -16744,7 +17185,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 107,
+          "linea": 113,
           "resumen": "── Config ────────────────────────────────────────────────────"
         },
         {
@@ -16753,7 +17194,7 @@
           "exportada": false,
           "params": "data",
           "retorno": null,
-          "linea": 112
+          "linea": 118
         },
         {
           "nombre": "sendESCPOS",
@@ -16761,7 +17202,7 @@
           "exportada": false,
           "params": "ip, port, data",
           "retorno": null,
-          "linea": 118,
+          "linea": 124,
           "resumen": "── TCP ESC/POS ───────────────────────────────────────────────"
         },
         {
@@ -16770,7 +17211,7 @@
           "exportada": false,
           "params": "url, opts = {}",
           "retorno": null,
-          "linea": 130,
+          "linea": 136,
           "resumen": "── REST helpers ──────────────────────────────────────────────"
         },
         {
@@ -16779,7 +17220,7 @@
           "exportada": false,
           "params": "ip, port, timeoutMs = 800",
           "retorno": null,
-          "linea": 160,
+          "linea": 166,
           "resumen": "── Escaneo de red para impresoras ────────────────────────────"
         },
         {
@@ -16788,7 +17229,7 @@
           "exportada": false,
           "params": "TOKEN",
           "retorno": null,
-          "linea": 175
+          "linea": 181
         },
         {
           "nombre": "installAutostart",
@@ -16796,7 +17237,7 @@
           "exportada": false,
           "params": "token",
           "retorno": null,
-          "linea": 214,
+          "linea": 220,
           "resumen": "── Autostart Windows (registro) ─────────────────────────────"
         },
         {
@@ -16805,7 +17246,7 @@
           "exportada": false,
           "params": "token",
           "retorno": null,
-          "linea": 238,
+          "linea": 244,
           "resumen": "── Validar token con el servidor ────────────────────────────"
         },
         {
@@ -16814,7 +17255,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 247,
+          "linea": 253,
           "resumen": "── Setup interactivo (primer uso) ───────────────────────────"
         },
         {
@@ -16823,7 +17264,7 @@
           "exportada": false,
           "params": "job_id, status, error_msg, TOKEN",
           "retorno": null,
-          "linea": 310,
+          "linea": 316,
           "resumen": "── Imprimir job ──────────────────────────────────────────────"
         },
         {
@@ -16832,7 +17273,7 @@
           "exportada": false,
           "params": "job, TOKEN",
           "retorno": null,
-          "linea": 327
+          "linea": 333
         },
         {
           "nombre": "ping",
@@ -16840,7 +17281,7 @@
           "exportada": false,
           "params": "TOKEN",
           "retorno": null,
-          "linea": 353,
+          "linea": 359,
           "resumen": "── Ping ──────────────────────────────────────────────────────"
         },
         {
@@ -16849,7 +17290,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 368,
+          "linea": 374,
           "resumen": "Detecta si el dispositivo está en WiFi o datos móviles En Android (Termux): WiFi = interfaz wlan0 / datos = rmnet_data0"
         },
         {
@@ -16858,7 +17299,7 @@
           "exportada": false,
           "params": "TOKEN",
           "retorno": null,
-          "linea": 402,
+          "linea": 408,
           "resumen": "Ping mejorado — incluye info de red + recibe rol del servidor"
         },
         {
@@ -16867,7 +17308,7 @@
           "exportada": false,
           "params": "impresoraId, ipFallida, TOKEN",
           "retorno": null,
-          "linea": 446,
+          "linea": 452,
           "resumen": "Auto-scan cuando una impresora no responde Solo lanza si soy master y no hay ya un scan en curso"
         },
         {
@@ -16876,7 +17317,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 474,
+          "linea": 480,
           "resumen": "Scan de red silencioso (solo para auto-recovery, sin log verboso)"
         },
         {
@@ -16885,12 +17326,12 @@
           "exportada": false,
           "params": "TOKEN, restauranteId",
           "retorno": null,
-          "linea": 509
+          "linea": 515
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cebe65174ec6"
+      "hash": "7fec3ba37cee"
     },
     {
       "ruta": "apps/ia-rest/scripts/qa-check.ts",
@@ -22111,12 +22552,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/health",
-      "hash": "7bad56f9bef9"
+      "hash": "879d1fbad990"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/help/chat/route.ts",
@@ -33092,7 +33533,7 @@
           "exportada": false,
           "params": "{ label, value, sub, mono = true }: { label: string; value: string; sub?: string; mono?: boolean }",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "BienvenidaPage",
@@ -33100,14 +33541,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "c6eef3d6dd98"
+      "hash": "c80a8fee4566"
     },
     {
       "ruta": "apps/ia-rest/src/app/blog/[slug]/page.tsx",
@@ -33888,7 +34329,7 @@
           "exportada": false,
           "params": "b: BrainResult, a86: string[] = [], aAlerg: {producto:string;alergenos:string[]}[] = []",
           "retorno": "string",
-          "linea": 71
+          "linea": 72
         },
         {
           "nombre": "stopVox",
@@ -33896,7 +34337,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 87
+          "linea": 88
         },
         {
           "nombre": "speakFallback",
@@ -33904,7 +34345,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "Promise<void>",
-          "linea": 94
+          "linea": 95
         },
         {
           "nombre": "speak",
@@ -33912,7 +34353,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "Promise<void>",
-          "linea": 108
+          "linea": 109
         },
         {
           "nombre": "EdgeChatTab",
@@ -33920,7 +34361,7 @@
           "exportada": false,
           "params": "{ session, mensajes, marcarMensajeLeido, chatTexto, setChatTexto, chatDestino, setChatDestino, chatEndRef, enviarMensaje, mesaFijada, restauranteId }: { session: { id: string; nombre: string; rol: string } mensajes: { id: string; camarero_i",
           "retorno": null,
-          "linea": 162
+          "linea": 163
         },
         {
           "nombre": "EdgePage",
@@ -33928,7 +34369,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 546,
+          "linea": 547,
           "resumen": "═══════════════════════════════════════════════════════════════"
         },
         {
@@ -33937,7 +34378,7 @@
           "exportada": false,
           "params": "{ session, turnoId, setTurnoId }:{ session: {id:string;nombre:string;rol:string;restaurante_id:string} turnoId: string|null setTurnoId: (id:string|null)=>void }",
           "retorno": null,
-          "linea": 553
+          "linea": 554
         },
         {
           "nombre": "capturarWAV",
@@ -33945,7 +34386,7 @@
           "exportada": false,
           "params": "duracionMs: number",
           "retorno": "Promise<Blob>",
-          "linea": 3030,
+          "linea": 3031,
           "resumen": "Captura audio del micrófono como WAV PCM 16kHz mono (formato requerido por Azure)"
         },
         {
@@ -33954,7 +34395,7 @@
           "exportada": false,
           "params": "{ session }: { session: { id: string; restaurante_id: string } }",
           "retorno": null,
-          "linea": 3078
+          "linea": 3079
         },
         {
           "nombre": "ForceUpdateRow",
@@ -33962,7 +34403,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 3336,
+          "linea": 3337,
           "resumen": "─── CONFIG ─────────────────────────────────────────────────── ── ForceUpdateRow: comprueba SW + versión y fuerza recarga ──────"
         },
         {
@@ -33971,7 +34412,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 3420
+          "linea": 3421
         },
         {
           "nombre": "ConfigScreen",
@@ -33979,7 +34420,7 @@
           "exportada": false,
           "params": "{session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceConfirm,zonasAsignadas,onZonasAsignadas,zonasDisponibles,fontBig,onFontBig,alergenosMesa,onAlergenosMesa,subscribed,onSubscribe,hasInstall,onInstall,autoConfirm,onAutoConfirm,autoThre",
           "retorno": null,
-          "linea": 3445
+          "linea": 3446
         },
         {
           "nombre": "BridgeConfigSection",
@@ -33987,7 +34428,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 3643,
+          "linea": 3644,
           "resumen": "── BridgeConfigSection — configura el bridge desde la app ────"
         }
       ],
@@ -33996,7 +34437,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "e4599d2915af"
+      "hash": "90c89b528aef"
     },
     {
       "ruta": "apps/ia-rest/src/app/edge/pedido-rapido/page.tsx",
@@ -36755,7 +37196,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 43
+          "linea": 44
         },
         {
           "nombre": "urlBase64ToUint8Array",
@@ -36763,7 +37204,7 @@
           "exportada": false,
           "params": "base64String: string",
           "retorno": null,
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "callEF",
@@ -36771,7 +37212,7 @@
           "exportada": false,
           "params": "fn: string, body: object",
           "retorno": null,
-          "linea": 58
+          "linea": 59
         },
         {
           "nombre": "QrClientApp",
@@ -36779,12 +37220,12 @@
           "exportada": true,
           "params": "{ token }: { token: string }",
           "retorno": null,
-          "linea": 67
+          "linea": 68
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4146b284886b"
+      "hash": "5aaf3841b5db"
     },
     {
       "ruta": "apps/ia-rest/src/app/q/evento/[token]/page.tsx",
@@ -36821,7 +37262,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "QrSuccessInner",
@@ -36829,7 +37270,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         },
         {
           "nombre": "QrSuccess",
@@ -36837,7 +37278,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 347
+          "linea": 348
         }
       ],
       "tablas": [
@@ -36845,7 +37286,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "32745120988d"
+      "hash": "07f152d592d2"
     },
     {
       "ruta": "apps/ia-rest/src/app/r/[slug]/route.ts",
@@ -37076,12 +37517,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad70508b1faf"
+      "hash": "58ee974e9e9d"
     },
     {
       "ruta": "apps/ia-rest/src/app/registro/page.tsx",
@@ -37096,7 +37537,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "RegistroPage",
@@ -37104,7 +37545,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 51
+          "linea": 52
         },
         {
           "nombre": "Logo",
@@ -37112,7 +37553,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 317
+          "linea": 318
         },
         {
           "nombre": "Field",
@@ -37120,12 +37561,12 @@
           "exportada": false,
           "params": "{ label, children }: { label: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 327
+          "linea": 328
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b581e0c3f63b"
+      "hash": "0e66e7f676fb"
     },
     {
       "ruta": "apps/ia-rest/src/app/restaurante-indio/page.tsx",
@@ -37934,12 +38375,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 23
+          "linea": 24
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "38bb82c0cdcb"
+      "hash": "d00c66eb0709"
     },
     {
       "ruta": "apps/ia-rest/src/components/asesoria/AsesoriaAgente.tsx",
@@ -37994,7 +38435,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "fmt",
@@ -38002,7 +38443,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 67
+          "linea": 68
         },
         {
           "nombre": "AutoCurasPanel",
@@ -38010,14 +38451,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 72
+          "linea": 73
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "4c4ed0a3cc42"
+      "hash": "d16e85c433b7"
     },
     {
       "ruta": "apps/ia-rest/src/components/BlogSEOTab.tsx",
@@ -41396,7 +41837,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "relativo",
@@ -41404,7 +41845,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 48
+          "linea": 49
         },
         {
           "nombre": "SystemHealth",
@@ -41412,14 +41853,14 @@
           "exportada": true,
           "params": "{ session }: Props",
           "retorno": null,
-          "linea": 59
+          "linea": 60
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "8eb301ac558b"
+      "hash": "9de09637f2ee"
     },
     {
       "ruta": "apps/ia-rest/src/components/VinoModal.tsx",
@@ -41511,7 +41952,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "registrarPush",
@@ -41519,7 +41960,7 @@
           "exportada": false,
           "params": "camareroId: string, restauranteId: string",
           "retorno": null,
-          "linea": 26
+          "linea": 30
         },
         {
           "nombre": "urlBase64ToUint8Array",
@@ -41527,7 +41968,7 @@
           "exportada": false,
           "params": "base64String: string",
           "retorno": null,
-          "linea": 62
+          "linea": 66
         },
         {
           "nombre": "hablar",
@@ -41535,7 +41976,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": null,
-          "linea": 69
+          "linea": 73
         },
         {
           "nombre": "useAlertas",
@@ -41543,14 +41984,14 @@
           "exportada": true,
           "params": "camareroId: string | null, restauranteId: string | null",
           "retorno": null,
-          "linea": 84
+          "linea": 88
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "75737bb10466"
+      "hash": "6c5b92d6aee7"
     },
     {
       "ruta": "apps/ia-rest/src/hooks/useAuth.ts",
@@ -42708,6 +43149,67 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8f4eba2a13bd"
+    },
+    {
+      "ruta": "apps/ia-rest/src/lib/claves-supabase.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "Clave PUBLICABLE de Supabase — la que sustituye a la `anon` legacy. Contexto: el botón «Disable JWT-based API keys» del panel mata a la vez la `service_role` filtrada y la `anon` legacy. Para poder pulsarlo, todo lo que hoy manda la `anon` tiene que poder mandar la nueva `sb_publishable_…`. Plan: do",
+      "exporta": [
+        "clavePublicable",
+        "origenClavePublicable",
+        "hayClavePublicable",
+        "cabecerasClave"
+      ],
+      "funciones": [
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "La clave publicable, o `''` si no hay ninguna configurada. Devuelve cadena vacía (no lanza) a propósito: hay módulos que la leen en el top level y un throw ahí rompería el build. Una clave vacía falla"
+        },
+        {
+          "nombre": "origenClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClavePublicable | null",
+          "linea": 31,
+          "resumen": "De dónde salió la clave: `'nueva'`, `'legacy'`, o null si no hay ninguna."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "Una variable puesta a `\" \"` (o a la cadena vacía) es una variable SIN poner: se trata como ausente en vez de como una clave que falla todas las llamadas. Mismo criterio que el helper de las Edge Funct"
+        },
+        {
+          "nombre": "hayClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "¿Hay alguna clave publicable configurada? Para health-checks y avisos de entorno."
+        },
+        {
+          "nombre": "cabecerasClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string = clavePublicable()",
+          "retorno": "Record<string, string>",
+          "linea": 73,
+          "resumen": "Cabeceras de autenticación para llamar A MANO a la API HTTP de Supabase (`/storage/v1`, `/rest/v1`, `/functions/v1`). Manda la clave en `apikey` **y** en `Authorization: Bearer`, que es lo que hace `s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9aa980688701"
     },
     {
       "ruta": "apps/ia-rest/src/lib/clipboard.ts",
@@ -44075,7 +44577,7 @@
           "exportada": false,
           "params": "p: Promise<any>, ms = 5000",
           "retorno": null,
-          "linea": 50,
+          "linea": 51,
           "resumen": "─── Helpers ──────────────────────────────────────────────────────────────────"
         },
         {
@@ -44084,7 +44586,7 @@
           "exportada": true,
           "params": "url: string, opts?: RequestInit",
           "retorno": null,
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "calcScore",
@@ -44092,7 +44594,7 @@
           "exportada": true,
           "params": "checks: QACheck[]",
           "retorno": "number",
-          "linea": 62,
+          "linea": 63,
           "resumen": "─── Score ────────────────────────────────────────────────────────────────────"
         },
         {
@@ -44101,7 +44603,7 @@
           "exportada": true,
           "params": "checks: QACheck[], supabase: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 74,
+          "linea": 75,
           "resumen": "─── Detección regresiones ────────────────────────────────────────────────────"
         },
         {
@@ -44110,7 +44612,7 @@
           "exportada": true,
           "params": "checks: QACheck[], supabase: ReturnType<typeof createServerClient>",
           "retorno": "Promise<",
-          "linea": 94,
+          "linea": 95,
           "resumen": "─── Auto-fix Tier1 ───────────────────────────────────────────────────────────"
         },
         {
@@ -44119,7 +44621,7 @@
           "exportada": true,
           "params": "",
           "retorno": "QACheck[]",
-          "linea": 123,
+          "linea": 124,
           "resumen": "─── Checks ENV ───────────────────────────────────────────────────────────────"
         },
         {
@@ -44128,7 +44630,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 161,
+          "linea": 174,
           "resumen": "─── Checks BD ────────────────────────────────────────────────────────────────"
         },
         {
@@ -44137,7 +44639,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 195,
+          "linea": 208,
           "resumen": "─── Checks Negocio ───────────────────────────────────────────────────────────"
         },
         {
@@ -44146,7 +44648,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<QACheck[]>",
-          "linea": 276,
+          "linea": 289,
           "resumen": "─── Checks APIs externas ─────────────────────────────────────────────────────"
         },
         {
@@ -44155,7 +44657,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<QACheck[]>",
-          "linea": 307,
+          "linea": 320,
           "resumen": "─── Checks Crons ─────────────────────────────────────────────────────────────"
         },
         {
@@ -44164,7 +44666,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<QACheck[]>",
-          "linea": 371,
+          "linea": 384,
           "resumen": "─── Checks SEO ───────────────────────────────────────────────────────────────"
         },
         {
@@ -44173,7 +44675,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 485,
+          "linea": 498,
           "resumen": "─── Checks Propuestas ────────────────────────────────────────────────────────"
         },
         {
@@ -44182,7 +44684,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 533,
+          "linea": 546,
           "resumen": "─── Checks Patrones Aprendidos (desde BD) ───────────────────────────────────"
         },
         {
@@ -44191,7 +44693,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 618,
+          "linea": 631,
           "resumen": "─── Checks CRM Lead Onboarding ──────────────────────────────────────────────"
         },
         {
@@ -44200,7 +44702,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 770,
+          "linea": 783,
           "resumen": "─── Checks Performance ───────────────────────────────────────────────────────"
         },
         {
@@ -44209,7 +44711,7 @@
           "exportada": true,
           "params": "sb: ReturnType<typeof createServerClient>",
           "retorno": "Promise<QACheck[]>",
-          "linea": 808,
+          "linea": 821,
           "resumen": "─── Check DEMO (antes de reunión) ────────────────────────────────────────────"
         },
         {
@@ -44218,7 +44720,7 @@
           "exportada": true,
           "params": "checks: QACheck[], trigger: string",
           "retorno": "Promise<string | undefined>",
-          "linea": 846,
+          "linea": 859,
           "resumen": "─── Informe NIM ──────────────────────────────────────────────────────────────"
         },
         {
@@ -44227,7 +44729,7 @@
           "exportada": false,
           "params": "c: QACheck",
           "retorno": "string",
-          "linea": 900
+          "linea": 913
         },
         {
           "nombre": "formatTelegram",
@@ -44235,7 +44737,7 @@
           "exportada": true,
           "params": "trigger: string, checks: QACheck[], score: number, duracionMs: number, informeIA?: string",
           "retorno": "string",
-          "linea": 905,
+          "linea": 918,
           "resumen": "─── Formato Telegram ─────────────────────────────────────────────────────────"
         },
         {
@@ -44244,13 +44746,13 @@
           "exportada": true,
           "params": "trigger: string, onCheck?: (c: QACheck) => void, onCategoria?: (s: string) => void",
           "retorno": "Promise<QAResult>",
-          "linea": 999,
+          "linea": 1012,
           "resumen": "─── Runner principal ─────────────────────────────────────────────────────────"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b333c676f870"
+      "hash": "f317b86456d1"
     },
     {
       "ruta": "apps/ia-rest/src/lib/qr-notify.ts",
@@ -44863,13 +45365,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 28,
+          "linea": 29,
           "resumen": "Server-side client with service role (for API routes)"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd04040838a6"
+      "hash": "e81992355483"
     },
     {
       "ruta": "apps/ia-rest/src/lib/telegram.ts",
@@ -45146,6 +45648,103 @@
       "hash": "1c4be50c8b69"
     },
     {
+      "ruta": "apps/ia-rest/supabase/functions/_shared/clave-supabase.ts",
+      "ambito": "apps/ia-rest",
+      "resumen": "Claves de Supabase para Edge Functions — fuente ÚNICA del monorepo. Contexto: la `service_role` legacy (JWT) del proyecto compartido estuvo pública ~3 meses (06/05→12/08/2026) y hay que poder desactivarla. El botón «Disable JWT-based API keys» mata a la vez la `service_role` y la `anon` legacy, así ",
+      "exporta": [
+        "resolverClaveSecreta",
+        "claveSecreta",
+        "origenClaveSecreta",
+        "resolverClavePublicable",
+        "clavePublicable",
+        "cabecerasServicio"
+      ],
+      "funciones": [
+        {
+          "nombre": "deJsonPorDefecto",
+          "kind": "function",
+          "exportada": false,
+          "params": "bruto: string | undefined | null",
+          "retorno": "string | null",
+          "linea": 42,
+          "resumen": "Lee `{\"default\": \"…\"}` de una variable JSON. Devuelve null si falta o es ilegible."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined | null",
+          "retorno": "string | null",
+          "linea": 56
+        },
+        {
+          "nombre": "resolver",
+          "kind": "function",
+          "exportada": false,
+          "params": "envNueva: string, envLegacy: string",
+          "retorno": "ClaveResuelta | null",
+          "linea": 62
+        },
+        {
+          "nombre": "resolverClaveSecreta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "ClaveResuelta | null",
+          "linea": 71,
+          "resumen": "Clave de servicio (salta RLS) con su procedencia, o null si no hay ninguna."
+        },
+        {
+          "nombre": "claveSecreta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 76,
+          "resumen": "Clave de servicio. Lanza si no hay ninguna: mejor fallar fuerte que hablar sin credencial."
+        },
+        {
+          "nombre": "origenClaveSecreta",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClave | null",
+          "linea": 91,
+          "resumen": "De dónde salió la clave de servicio: `\"nueva\"`, `\"legacy\"` o null si no hay. Se expone para poder MEDIR la migración desde fuera (un 200 no dice qué clave se usó). No devuelve la clave: es seguro pint"
+        },
+        {
+          "nombre": "resolverClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "ClaveResuelta | null",
+          "linea": 96,
+          "resumen": "Clave publicable (la que sustituye a la `anon`) con su procedencia."
+        },
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 101,
+          "resumen": "Clave publicable. Lanza si no hay ninguna."
+        },
+        {
+          "nombre": "cabecerasServicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Record<string, string>",
+          "linea": 123,
+          "resumen": "Cabeceras para invocar OTRA Edge Function con la clave de servicio. Con la clave NUEVA va **solo en `apikey`**. El gateway de funciones también la acepta en `Authorization: Bearer` (medido con la publ"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1728a4158c3a"
+    },
+    {
       "ruta": "apps/ia-rest/supabase/functions/alerta-ritmo-cron/index.ts",
       "ambito": "apps/ia-rest",
       "resumen": "ia.rest · alerta-ritmo-cron v3 (local_id) Evaluador de reglas + mensajes de voz naturales + push real",
@@ -45244,7 +45843,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "fc313ff173fa"
+      "hash": "3b825d9c9cdc"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/analizar-cv/index.ts",
@@ -45257,14 +45856,14 @@
           "exportada": false,
           "params": "system: string, user: string",
           "retorno": "Promise<string>",
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "e56487af2876"
+      "hash": "2267daa2d645"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/auth-pin-validate/index.ts",
@@ -45278,7 +45877,7 @@
           "exportada": false,
           "params": "ip: string, salt: string",
           "retorno": "Promise<string>",
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "getClientIP",
@@ -45286,7 +45885,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": "string",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "jsonResponse",
@@ -45294,7 +45893,7 @@
           "exportada": false,
           "params": "body: object, status = 200",
           "retorno": "Response",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "reportarError",
@@ -45302,14 +45901,14 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "19325bd5fe74"
+      "hash": "34c0dfc9dd7d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/auth-register/index.ts",
@@ -45322,7 +45921,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "generarPinSeguro",
@@ -45330,7 +45929,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 25
+          "linea": 26
         },
         {
           "nombre": "buildLineItems",
@@ -45338,7 +45937,7 @@
           "exportada": false,
           "params": "n: number, cfg: ReturnType<typeof getStripeConfig>",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "toSlug",
@@ -45346,7 +45945,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "toCodigo",
@@ -45354,7 +45953,7 @@
           "exportada": false,
           "params": "nombre: string",
           "retorno": null,
-          "linea": 42
+          "linea": 43
         },
         {
           "nombre": "enviarEmailBienvenida",
@@ -45362,14 +45961,14 @@
           "exportada": false,
           "params": "opts: { email: string; nombre: string; nombre_restaurante: string codigo_acceso: string; pin_owner: string; app_url: string }",
           "retorno": null,
-          "linea": 47
+          "linea": 48
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "0f40172a9aa7"
+      "hash": "69822bac8831"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/auth-verify-sms/index.ts",
@@ -45380,7 +45979,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "0797a05fae6f"
+      "hash": "806b0414607c"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/brain-parse/index.ts",
@@ -45394,7 +45993,7 @@
           "exportada": false,
           "params": "supabase: any, restaurante_id: string",
           "retorno": "Promise<string>",
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "contextoMesa",
@@ -45402,7 +46001,7 @@
           "exportada": false,
           "params": "supabase: any, restaurante_id: string, mesa_id: string",
           "retorno": "Promise<string>",
-          "linea": 55
+          "linea": 56
         },
         {
           "nombre": "cargarMesas",
@@ -45410,14 +46009,14 @@
           "exportada": false,
           "params": "supabase: any, restaurante_id: string",
           "retorno": "Promise<string>",
-          "linea": 72
+          "linea": 73
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d621b13a02de"
+      "hash": "47e0a3083ff3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/brain/index.ts",
@@ -45430,7 +46029,7 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, payload: { restaurante_id: string; input_raw: string; input_context: object; output_brain: BrainOutput; latencia_ms: number; modelo_usado: string; }",
           "retorno": "Promise<string | null>",
-          "linea": 68
+          "linea": 69
         },
         {
           "nombre": "marcarCorreccion",
@@ -45438,14 +46037,14 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, log_id: string, correccion: BrainOutput",
           "retorno": "Promise<void>",
-          "linea": 111
+          "linea": 112
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d543ca9f4773"
+      "hash": "e8e01d633f58"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/bridge-agent/index.ts",
@@ -45459,7 +46058,7 @@
           "exportada": false,
           "params": "d: unknown, s = 200",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "getAgent",
@@ -45467,7 +46066,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": null,
-          "linea": 24,
+          "linea": 25,
           "resumen": "Autenticar agente por token en header X-Bridge-Token o Authorization: Bearer"
         }
       ],
@@ -45475,7 +46074,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "23552ed721f3"
+      "hash": "a00cb2810d8d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/check-elaboraciones/index.ts",
@@ -45487,7 +46086,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "7f40acd96313"
+      "hash": "8f8f74a28c55"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/cobro-monei/index.ts",
@@ -45500,7 +46099,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "json",
@@ -45508,14 +46107,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 160
+          "linea": 161
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "ca6c85fc9f80"
+      "hash": "d3b21dee475f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/cobro-stripe/index.ts",
@@ -45528,7 +46127,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "stripe",
@@ -45536,7 +46135,7 @@
           "exportada": false,
           "params": "method: string, path: string, params: URLSearchParams, secretKey: string, idempotencyKey?: string",
           "retorno": "Promise<Response>",
-          "linea": 184
+          "linea": 185
         },
         {
           "nombre": "json",
@@ -45544,14 +46143,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 196
+          "linea": 197
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "c37fc890842e"
+      "hash": "8ef0d95a4292"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/contact-lead/index.ts",
@@ -45564,13 +46163,13 @@
           "exportada": false,
           "params": "ip: string | null",
           "retorno": "string | null",
-          "linea": 12,
+          "linea": 13,
           "resumen": "Anonimiza IP: pone a 0 el último octeto IPv4"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3d13323db59f"
+      "hash": "83396d2a62fc"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/courier-route/index.ts",
@@ -45584,14 +46183,14 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 5
+          "linea": 6
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d395c757b465"
+      "hash": "81fd7fef8c9a"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/daily-briefing/formato.ts",
@@ -45657,7 +46256,7 @@
           "exportada": false,
           "params": "token: string, chatId: string, text: string",
           "retorno": null,
-          "linea": 46
+          "linea": 47
         },
         {
           "nombre": "motivo",
@@ -45665,7 +46264,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 69
+          "linea": 70
         },
         {
           "nombre": "generarNarrativa",
@@ -45673,7 +46272,7 @@
           "exportada": false,
           "params": "contexto: string",
           "retorno": "Promise<Narrativa>",
-          "linea": 84,
+          "linea": 85,
           "resumen": "Genera la narrativa del briefing contra la pasarela IA de plataforma (/api/ai/chat): el Agente Director elige modelo por petición y detrás tiene la cadena completa OpenRouter (con fallback nativo entr"
         },
         {
@@ -45682,14 +46281,14 @@
           "exportada": false,
           "params": "supabase: ReturnType<typeof createClient>, restauranteId: string",
           "retorno": "Promise<Metricas>",
-          "linea": 135
+          "linea": 136
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "1b590f12d51e"
+      "hash": "cc236a0c5cc6"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ear-transcribe/index.ts",
@@ -45701,7 +46300,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "e6b8ff65240e"
+      "hash": "27a3f32a859b"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/enviar-verifactu/index.ts",
@@ -45714,7 +46313,7 @@
           "exportada": false,
           "params": "f: any",
           "retorno": "string",
-          "linea": 154,
+          "linea": 155,
           "resumen": "── Generar XML LROE (SOAP) para AEAT ─────────────────────────────────── Especificación: Orden HAC/1177/2024 + RD 1007/2023"
         },
         {
@@ -45723,7 +46322,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 220,
+          "linea": 221,
           "resumen": "Escapar caracteres especiales XML"
         },
         {
@@ -45732,14 +46331,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": "Response",
-          "linea": 230
+          "linea": 231
         }
       ],
       "tablas": [
         "jsr"
       ],
       "rutaApi": null,
-      "hash": "662bdc343724"
+      "hash": "d4087d5adc92"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/eventos-entorno/index.ts",
@@ -45752,7 +46351,7 @@
           "exportada": false,
           "params": "aforo: number",
           "retorno": "number",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "enviarTelegram",
@@ -45760,14 +46359,14 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "76fb4fb11d89"
+      "hash": "c2542a64f084"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ia-training-dashboard/index.ts",
@@ -45775,21 +46374,12 @@
       "exporta": [],
       "funciones": [
         {
-          "nombre": "claveSecreta",
-          "kind": "function",
-          "exportada": false,
-          "params": "",
-          "retorno": "string",
-          "linea": 19,
-          "resumen": "🧪 PILOTO de la migración a las claves nuevas de Supabase (`sb_secret_…`), ver docs/ROTACION-SERVICE-ROLE.md. Esta función es el conejillo de indias a propósito: solo lee, está detrás de un PIN y se a"
-        },
-        {
           "nombre": "authPage",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 57
+          "linea": 40
         },
         {
           "nombre": "dashboardPage",
@@ -45797,14 +46387,14 @@
           "exportada": false,
           "params": "pin:string",
           "retorno": "string",
-          "linea": 61
+          "linea": 44
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "0db021907c48"
+      "hash": "ae9a739989cb"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/ig-video-gen/index.ts",
@@ -45895,14 +46485,14 @@
           "exportada": false,
           "params": "restauranteId: string, tipo: string, mensaje: string",
           "retorno": null,
-          "linea": 58
+          "linea": 63
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "cac8c66b0a11"
+      "hash": "0c0df322876b"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/kds-token-validate/index.ts",
@@ -45916,14 +46506,14 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "Promise<string>",
-          "linea": 95
+          "linea": 96
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "f50886c22e14"
+      "hash": "55651df7c217"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/lead-research/index.ts",
@@ -45937,7 +46527,7 @@
           "exportada": false,
           "params": "apiKey: string, system: string, user: string, max = 1000",
           "retorno": "Promise<string>",
-          "linea": 203
+          "linea": 204
         },
         {
           "nombre": "esc",
@@ -45945,14 +46535,14 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 214
+          "linea": 215
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "4cd790c66822"
+      "hash": "e1b843564a0f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/menu-stockout/index.ts",
@@ -45966,14 +46556,14 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 9
+          "linea": 10
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "c4da498fffd4"
+      "hash": "7f69125bbdac"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/monitor-health/index.ts",
@@ -45985,7 +46575,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "320a7bc5c55e"
+      "hash": "79c832eca7d4"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-diagnostico/index.ts",
@@ -45999,7 +46589,7 @@
           "exportada": false,
           "params": "apiKey: string, funcion: string, mensaje: string, stack?: string",
           "retorno": "Promise<",
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "sendTelegram",
@@ -46007,14 +46597,14 @@
           "exportada": false,
           "params": "token: string, chatId: string, text: string",
           "retorno": null,
-          "linea": 36
+          "linea": 37
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d5d8111a4632"
+      "hash": "ed5d6fe66c01"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/nim-sentiment/index.ts",
@@ -46028,14 +46618,14 @@
           "exportada": false,
           "params": "apiKey: string, texto: string",
           "retorno": "Promise<",
-          "linea": 13
+          "linea": 14
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "49f9740d31f4"
+      "hash": "9854bbf4f32a"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/notify-error/index.ts",
@@ -46047,7 +46637,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "9130bc94328b"
+      "hash": "2ea8f2a49408"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/owner-panel/index.ts",
@@ -46060,7 +46650,7 @@
           "exportada": false,
           "params": "req: Request",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "json",
@@ -46068,7 +46658,7 @@
           "exportada": false,
           "params": "d: unknown, s = 200",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "generarCodigo",
@@ -46076,7 +46666,7 @@
           "exportada": false,
           "params": "zonaNombre: string, numero: number",
           "retorno": "string",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "getHTML",
@@ -46084,7 +46674,7 @@
           "exportada": false,
           "params": "BASE: string",
           "retorno": "string",
-          "linea": 203
+          "linea": 204
         },
         {
           "nombre": "api",
@@ -46092,7 +46682,7 @@
           "exportada": false,
           "params": "path,opts={}",
           "retorno": null,
-          "linea": 254
+          "linea": 255
         },
         {
           "nombre": "set",
@@ -46100,7 +46690,7 @@
           "exportada": false,
           "params": "patch",
           "retorno": null,
-          "linea": 255
+          "linea": 256
         },
         {
           "nombre": "loadAll",
@@ -46108,7 +46698,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 256
+          "linea": 257
         },
         {
           "nombre": "loadHW",
@@ -46116,7 +46706,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 257
+          "linea": 258
         },
         {
           "nombre": "loadZonas",
@@ -46124,7 +46714,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 258
+          "linea": 259
         },
         {
           "nombre": "el",
@@ -46132,7 +46722,7 @@
           "exportada": false,
           "params": "tag,props,...ch",
           "retorno": null,
-          "linea": 259
+          "linea": 260
         },
         {
           "nombre": "Toggle",
@@ -46140,7 +46730,7 @@
           "exportada": false,
           "params": "on,onChange",
           "retorno": null,
-          "linea": 260
+          "linea": 261
         },
         {
           "nombre": "renderLogin",
@@ -46148,7 +46738,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 261
+          "linea": 262
         },
         {
           "nombre": "buildForm",
@@ -46156,7 +46746,7 @@
           "exportada": false,
           "params": "regla",
           "retorno": null,
-          "linea": 262
+          "linea": 263
         },
         {
           "nombre": "renderReglaCard",
@@ -46164,7 +46754,7 @@
           "exportada": false,
           "params": "r",
           "retorno": null,
-          "linea": 264
+          "linea": 265
         },
         {
           "nombre": "renderLog",
@@ -46172,7 +46762,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 265
+          "linea": 266
         },
         {
           "nombre": "renderMesas",
@@ -46180,7 +46770,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 266
+          "linea": 267
         },
         {
           "nombre": "buildDeviceForm",
@@ -46188,7 +46778,7 @@
           "exportada": false,
           "params": "device",
           "retorno": null,
-          "linea": 267
+          "linea": 268
         },
         {
           "nombre": "renderHardware",
@@ -46196,7 +46786,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 268
+          "linea": 269
         },
         {
           "nombre": "render",
@@ -46204,14 +46794,14 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 269
+          "linea": 270
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "0d49776e1d21"
+      "hash": "dabc37ef910f"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/push-send/index.ts",
@@ -46225,7 +46815,7 @@
           "exportada": false,
           "params": "d: unknown, s = 200",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         },
         {
           "nombre": "generarVapidKeys",
@@ -46233,7 +46823,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "── Generación de claves VAPID (ECDSA P-256) ──────────────────────────────"
         },
         {
@@ -46242,7 +46832,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "vapidJWT",
@@ -46250,7 +46840,7 @@
           "exportada": false,
           "params": "audience: string, privateKeyB64: string",
           "retorno": "Promise<string>",
-          "linea": 41,
+          "linea": 42,
           "resumen": "── JWT VAPID ────────────────────────────────────────────────────"
         },
         {
@@ -46259,7 +46849,7 @@
           "exportada": false,
           "params": "sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: { title: string; body: string; mensaje_voz?: string }, vapidKeys: { publicKey: string; privateKey: string }",
           "retorno": null,
-          "linea": 68,
+          "linea": 69,
           "resumen": "── Enviar una notificación push ──────────────────────────────────────"
         }
       ],
@@ -46267,7 +46857,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "8f842d42c01c"
+      "hash": "7bb57c177113"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-assistant/index.ts",
@@ -46279,7 +46869,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "94c39d6ca520"
+      "hash": "190fce5528d8"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-call-waiter/index.ts",
@@ -46293,14 +46883,14 @@
           "exportada": false,
           "params": "msg: string",
           "retorno": null,
-          "linea": 126
+          "linea": 127
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "10654303a21d"
+      "hash": "ebe3392f8dff"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-cobro/index.ts",
@@ -46312,7 +46902,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "423c7a9b19a6"
+      "hash": "91df283d11ac"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-connect/index.ts",
@@ -46324,7 +46914,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "309b7201382a"
+      "hash": "b09f40762268"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-order/index.ts",
@@ -46338,14 +46928,14 @@
           "exportada": false,
           "params": "data: unknown, status = 200",
           "retorno": null,
-          "linea": 14
+          "linea": 15
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "d70fbc80d3a0"
+      "hash": "bf5f86e72333"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-session/index.ts",
@@ -46359,7 +46949,7 @@
           "exportada": false,
           "params": "d: object",
           "retorno": null,
-          "linea": 212
+          "linea": 213
         },
         {
           "nombre": "res400",
@@ -46367,7 +46957,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 213
+          "linea": 214
         },
         {
           "nombre": "res403",
@@ -46375,7 +46965,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 214
+          "linea": 215
         },
         {
           "nombre": "res404",
@@ -46383,14 +46973,14 @@
           "exportada": false,
           "params": "e: string",
           "retorno": null,
-          "linea": 215
+          "linea": 216
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "ed786b0ed02d"
+      "hash": "107d126b49b9"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/qr-split/index.ts",
@@ -46404,7 +46994,7 @@
           "exportada": false,
           "params": "d: object",
           "retorno": null,
-          "linea": 198
+          "linea": 199
         },
         {
           "nombre": "err",
@@ -46412,14 +47002,14 @@
           "exportada": false,
           "params": "e: string, status = 400",
           "retorno": null,
-          "linea": 199
+          "linea": 200
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "05710facd244"
+      "hash": "8ec1bb43b21c"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/recuperar-pin/index.ts",
@@ -46430,7 +47020,7 @@
         "https"
       ],
       "rutaApi": null,
-      "hash": "216f67321b64"
+      "hash": "cdaaf7a660ac"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/stripe-checkout/index.ts",
@@ -46443,7 +47033,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 18
+          "linea": 19
         },
         {
           "nombre": "buildLineItems",
@@ -46451,14 +47041,14 @@
           "exportada": false,
           "params": "numUsuarios: number, cfg: ReturnType<typeof getStripeConfig>",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "542001e7eb10"
+      "hash": "311ee5396cbc"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/test-runner/index.ts",
@@ -46470,16 +47060,16 @@
           "nombre": "call",
           "kind": "function",
           "exportada": false,
-          "params": "slug: string, body: unknown, key: string",
+          "params": "slug: string, body: unknown",
           "retorno": "Promise<",
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "f63a4e887710"
+      "hash": "c419d2c137ec"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/verifactu-sign/index.ts",
@@ -46493,7 +47083,7 @@
           "exportada": false,
           "params": "data: string",
           "retorno": "Promise<string>",
-          "linea": 5
+          "linea": 6
         },
         {
           "nombre": "reportarError",
@@ -46501,14 +47091,14 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [
         "https"
       ],
       "rutaApi": null,
-      "hash": "dba0f12ff64b"
+      "hash": "fb78c2b4712d"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/vox-confirm/index.ts",
@@ -46522,7 +47112,7 @@
           "exportada": false,
           "params": "params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "textoConfirmacion",
@@ -46530,12 +47120,12 @@
           "exportada": false,
           "params": "body: any",
           "retorno": "string",
-          "linea": 31
+          "linea": 32
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "75353d891403"
+      "hash": "af42808097f0"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/webhook-monei/index.ts",
@@ -46548,7 +47138,7 @@
           "exportada": false,
           "params": "supabase: any, params: { nivel: 'info'|'warning'|'critical', categoria: string, mensaje: string, restaurante_id?: string|null, contexto?: any }",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         },
         {
           "nombre": "verificarFirma",
@@ -46556,7 +47146,7 @@
           "exportada": false,
           "params": "body: string, signature: string, secret: string",
           "retorno": "boolean",
-          "linea": 142
+          "linea": 143
         }
       ],
       "tablas": [
@@ -46564,7 +47154,7 @@
         "node"
       ],
       "rutaApi": null,
-      "hash": "f40e24d47417"
+      "hash": "7126e59e7cc3"
     },
     {
       "ruta": "apps/ia-rest/supabase/functions/webhook-stripe/index.ts",
@@ -46577,7 +47167,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string[]",
-          "linea": 14,
+          "linea": 15,
           "resumen": "─── Selector de secretos (robusto: live + test a la vez) ──────────────── Antes dependía de STRIPE_MODE: si el flag no estaba en \"live\", validaba los eventos LIVE con el secreto de TEST → firma inváli"
         },
         {
@@ -46586,7 +47176,7 @@
           "exportada": false,
           "params": "supabase: any, paymentIntentId: string, stripeStatus: string, event: any",
           "retorno": null,
-          "linea": 75
+          "linea": 76
         },
         {
           "nombre": "procesarPagoFallido",
@@ -46594,7 +47184,7 @@
           "exportada": false,
           "params": "supabase: any, paymentIntentId: string, stripeStatus: string, event: any",
           "retorno": null,
-          "linea": 82
+          "linea": 83
         },
         {
           "nombre": "activarSuscripcion",
@@ -46602,7 +47192,7 @@
           "exportada": false,
           "params": "supabase: any, session: any",
           "retorno": null,
-          "linea": 89
+          "linea": 90
         },
         {
           "nombre": "renovarSuscripcion",
@@ -46610,7 +47200,7 @@
           "exportada": false,
           "params": "supabase: any, invoice: any",
           "retorno": null,
-          "linea": 99
+          "linea": 100
         },
         {
           "nombre": "actualizarSuscripcion",
@@ -46618,7 +47208,7 @@
           "exportada": false,
           "params": "supabase: any, subscription: any",
           "retorno": null,
-          "linea": 104
+          "linea": 105
         },
         {
           "nombre": "cancelarSuscripcion",
@@ -46626,7 +47216,7 @@
           "exportada": false,
           "params": "supabase: any, subscription: any",
           "retorno": null,
-          "linea": 112
+          "linea": 113
         },
         {
           "nombre": "marcarPagoFallidoSaaS",
@@ -46634,7 +47224,7 @@
           "exportada": false,
           "params": "supabase: any, invoice: any",
           "retorno": null,
-          "linea": 117
+          "linea": 118
         },
         {
           "nombre": "verificarFirmaStripe",
@@ -46642,7 +47232,7 @@
           "exportada": false,
           "params": "body: string, signature: string, secret: string",
           "retorno": "boolean",
-          "linea": 123
+          "linea": 124
         }
       ],
       "tablas": [
@@ -46650,7 +47240,7 @@
         "node"
       ],
       "rutaApi": null,
-      "hash": "f3e65e5eed05"
+      "hash": "643d70d899e9"
     },
     {
       "ruta": "apps/ialimp/app/admin/agenda/page.tsx",
@@ -48867,7 +49457,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 12,
+          "linea": 13,
           "resumen": "POST /api/admin/contabilidad/adjunto (FormData: tipo, id, file) Sube un justificante (PDF/imagen) a Storage y guarda su URL en el apunte. tipo = 'gasto' (documentos_contables) | 'ingreso' (ingresos_ma"
         }
       ],
@@ -48877,7 +49467,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/contabilidad/adjunto",
-      "hash": "fe3d2ebd9862"
+      "hash": "95d097568444"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/contabilidad/apuntes/[id]/route.ts",
@@ -49609,7 +50199,7 @@
           "exportada": false,
           "params": "session_id: string",
           "retorno": "Promise<string[]>",
-          "linea": 12
+          "linea": 13
         },
         {
           "nombre": "borrarArchivos",
@@ -49617,7 +50207,7 @@
           "exportada": false,
           "params": "paths: string[]",
           "retorno": "Promise<number>",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "GET",
@@ -49625,7 +50215,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 41
+          "linea": 42
         }
       ],
       "tablas": [
@@ -49633,7 +50223,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/fotos-cleanup",
-      "hash": "7e5148820c9a"
+      "hash": "33c23b2152be"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/historial/route.ts",
@@ -49778,7 +50368,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "analizarImagenConIA",
@@ -49786,7 +50376,7 @@
           "exportada": false,
           "params": "imageUrl: string",
           "retorno": "Promise<AnalisisCalidad>",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "enviarPushCoordinadora",
@@ -49794,7 +50384,7 @@
           "exportada": false,
           "params": "empresa_id: string, propiedad: string, descripcion: string, severidad: string",
           "retorno": null,
-          "linea": 72
+          "linea": 73
         },
         {
           "nombre": "POST",
@@ -49802,7 +50392,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 122,
+          "linea": 123,
           "resumen": "POST /api/admin/ia/analizar-foto Body: { foto_url, session_id, empresa_id, propiedad_id?, property_name? } Llamado automáticamente desde upload-photo tras subir la imagen"
         }
       ],
@@ -49814,7 +50404,7 @@
         "quejas"
       ],
       "rutaApi": "/api/admin/ia/analizar-foto",
-      "hash": "953e89f98dcc"
+      "hash": "1c0c96070177"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/ia/briefing/route.ts",
@@ -49888,7 +50478,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "descargarBuffer",
@@ -49896,7 +50486,7 @@
           "exportada": false,
           "params": "url: string",
           "retorno": "Promise<Buffer>",
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "componerMontaje",
@@ -49904,7 +50494,7 @@
           "exportada": false,
           "params": "refBuf: Buffer, fotoBuf: Buffer",
           "retorno": "Promise<string>",
-          "linea": 31,
+          "linea": 32,
           "resumen": "NVIDIA NIM admite 1 imagen por peticion -> componemos referencia | foto en una sola imagen."
         },
         {
@@ -49913,7 +50503,7 @@
           "exportada": false,
           "params": "montajeB64: string, contexto: string",
           "retorno": "Promise<Comparacion>",
-          "linea": 52
+          "linea": 53
         },
         {
           "nombre": "POST",
@@ -49921,7 +50511,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 83,
+          "linea": 84,
           "resumen": "POST /api/admin/ia/comparar-foto Body: { referencia_url, foto_url, contexto?, empresa_id?, property_name? } NOTA: el \"score\" del modelo no es fiable; solo se usan accion/coincide como semaforo. La IA "
         }
       ],
@@ -49930,7 +50520,7 @@
         "next"
       ],
       "rutaApi": "/api/admin/ia/comparar-foto",
-      "hash": "a9667293050c"
+      "hash": "02560637bdd2"
     },
     {
       "ruta": "apps/ialimp/app/api/admin/ia/patrones/route.ts",
@@ -53009,7 +53599,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 18,
+          "linea": 19,
           "resumen": "Solo alfanumérico/-/_ en los segmentos que van a la ruta de Storage (evita path traversal: item_id=\"../..\" escaparía a otra sesión/bucket)."
         },
         {
@@ -53018,7 +53608,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 20
+          "linea": 21
         }
       ],
       "tablas": [
@@ -53028,7 +53618,7 @@
         "protocolos"
       ],
       "rutaApi": "/api/l/upload-photo",
-      "hash": "7fd628a019f8"
+      "hash": "1799e67fbc79"
     },
     {
       "ruta": "apps/ialimp/app/api/lead-saas/route.ts",
@@ -53343,7 +53933,7 @@
           "exportada": false,
           "params": "token: string",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "GET",
@@ -53351,7 +53941,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 22,
+          "linea": 23,
           "resumen": "GET — devuelve instrucciones_acceso y archivos_acceso de todas las propiedades del cliente"
         },
         {
@@ -53360,7 +53950,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 37,
+          "linea": 38,
           "resumen": "PATCH — el propietario actualiza instrucciones de una propiedad suya"
         },
         {
@@ -53369,7 +53959,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 64,
+          "linea": 65,
           "resumen": "POST — sube un archivo adjunto para una propiedad"
         }
       ],
@@ -53379,7 +53969,7 @@
         "propiedades"
       ],
       "rutaApi": "/api/propietario/[token]/acceso",
-      "hash": "71a4d8b07bf8"
+      "hash": "e86af04aeaf5"
     },
     {
       "ruta": "apps/ialimp/app/api/propietario/[token]/chat/route.ts",
@@ -53521,7 +54111,7 @@
           "exportada": false,
           "params": "token: string",
           "retorno": null,
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "getPropiedad",
@@ -53529,7 +54119,7 @@
           "exportada": false,
           "params": "propiedad_id: string, cliente_id: string",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "guardarDocs",
@@ -53537,7 +54127,7 @@
           "exportada": false,
           "params": "propiedad_id: string, docs: any[]",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "GET",
@@ -53545,7 +54135,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 43,
+          "linea": 44,
           "resumen": "GET — documentos de todas las propiedades del cliente"
         },
         {
@@ -53554,7 +54144,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 58,
+          "linea": 59,
           "resumen": "POST — añadir o borrar un documento (FormData)"
         },
         {
@@ -53563,7 +54153,7 @@
           "exportada": true,
           "params": "req: NextRequest, { params }: { params: Promise<{ token: string }> }",
           "retorno": null,
-          "linea": 122,
+          "linea": 123,
           "resumen": "PATCH — editar metadatos de un documento (categoría, caducidad, compartido, notas)"
         }
       ],
@@ -53573,7 +54163,7 @@
         "propiedades"
       ],
       "rutaApi": "/api/propietario/[token]/documentos-piso",
-      "hash": "6b71cb8095ba"
+      "hash": "8b6ca850a51f"
     },
     {
       "ruta": "apps/ialimp/app/api/propietario/[token]/documentos/route.ts",
@@ -54383,7 +54973,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "getRepartidor",
@@ -54391,7 +54981,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "POST",
@@ -54399,7 +54989,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 28
         }
       ],
       "tablas": [
@@ -54409,7 +54999,7 @@
         "repartidores"
       ],
       "rutaApi": "/api/r/upload-foto",
-      "hash": "7484225f3455"
+      "hash": "6842f8ac8781"
     },
     {
       "ruta": "apps/ialimp/app/api/stripe/checkout/route.ts",
@@ -56919,6 +57509,67 @@
       "hash": "3858b9ea6522"
     },
     {
+      "ruta": "apps/ialimp/lib/claves-supabase.ts",
+      "ambito": "apps/ialimp",
+      "resumen": "Clave PUBLICABLE de Supabase — la que sustituye a la `anon` legacy. Contexto: el botón «Disable JWT-based API keys» del panel mata a la vez la `service_role` filtrada y la `anon` legacy. Para poder pulsarlo, todo lo que hoy manda la `anon` tiene que poder mandar la nueva `sb_publishable_…`. Plan: do",
+      "exporta": [
+        "clavePublicable",
+        "origenClavePublicable",
+        "hayClavePublicable",
+        "cabecerasClave"
+      ],
+      "funciones": [
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "La clave publicable, o `''` si no hay ninguna configurada. Devuelve cadena vacía (no lanza) a propósito: hay módulos que la leen en el top level y un throw ahí rompería el build. Una clave vacía falla"
+        },
+        {
+          "nombre": "origenClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClavePublicable | null",
+          "linea": 31,
+          "resumen": "De dónde salió la clave: `'nueva'`, `'legacy'`, o null si no hay ninguna."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "Una variable puesta a `\" \"` (o a la cadena vacía) es una variable SIN poner: se trata como ausente en vez de como una clave que falla todas las llamadas. Mismo criterio que el helper de las Edge Funct"
+        },
+        {
+          "nombre": "hayClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "¿Hay alguna clave publicable configurada? Para health-checks y avisos de entorno."
+        },
+        {
+          "nombre": "cabecerasClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string = clavePublicable()",
+          "retorno": "Record<string, string>",
+          "linea": 73,
+          "resumen": "Cabeceras de autenticación para llamar A MANO a la API HTTP de Supabase (`/storage/v1`, `/rest/v1`, `/functions/v1`). Manda la clave en `apikey` **y** en `Authorization: Bearer`, que es lo que hace `s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9aa980688701"
+    },
+    {
       "ruta": "apps/ialimp/lib/cleaning-photos.ts",
       "ambito": "apps/ialimp",
       "resumen": "Firmado de fotos del bucket cleaning-photos (privado) con la anon key. La anon key tiene policy SELECT sobre el bucket -> NO hace falta service_role. La primitiva de firmado vive en @central/core-storage; aquí queda fijo el bucket.",
@@ -56933,7 +57584,7 @@
           "exportada": true,
           "params": "u: string",
           "retorno": "string | null",
-          "linea": 12,
+          "linea": 13,
           "resumen": "Extrae el path dentro del bucket a partir de una URL pública (o de un path suelto)."
         },
         {
@@ -56942,13 +57593,13 @@
           "exportada": true,
           "params": "u: string, expiresIn = 3600",
           "retorno": "Promise<string | null>",
-          "linea": 18,
+          "linea": 19,
           "resumen": "Devuelve una URL firmada absoluta dentro de cleaning-photos, o null si no aplica/falla. Solo firma URLs del bucket cleaning-photos (deja fuera data: y otros buckets)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "57f830528fbe"
+      "hash": "23aaf6201251"
     },
     {
       "ruta": "apps/ialimp/lib/contab-recurrentes.ts",
@@ -57871,7 +58522,7 @@
           "exportada": false,
           "params": "",
           "retorno": "SupabaseStorageConfig",
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "serviceKey",
@@ -57879,7 +58530,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 34,
+          "linea": 35,
           "resumen": "🚨 `requireSecret` y no `process.env.X!` (12/08/2026). El proyecto Vercel `ialimp` NO tiene `SUPABASE_SERVICE_ROLE_KEY` — comprobado en las variables propias del proyecto, en las compartidas enlazadas"
         },
         {
@@ -57888,7 +58539,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": null,
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "subirObjeto",
@@ -57896,7 +58547,7 @@
           "exportada": true,
           "params": "path: string, bytes: ArrayBuffer, contentType: string",
           "retorno": "Promise<string>",
-          "linea": 39,
+          "linea": 40,
           "resumen": "Sube bytes al bucket privado con service_role. Devuelve el path o lanza."
         },
         {
@@ -57905,7 +58556,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<void>",
-          "linea": 54,
+          "linea": 55,
           "resumen": "Borra un objeto del bucket privado (best-effort)."
         },
         {
@@ -57914,7 +58565,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string | null>",
-          "linea": 59,
+          "linea": 60,
           "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado."
         },
         {
@@ -57923,13 +58574,13 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<ArrayBuffer>",
-          "linea": 64,
+          "linea": 65,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7ae779354364"
+      "hash": "8b59296bc21d"
     },
     {
       "ruta": "apps/ialimp/lib/tenant.ts",
@@ -60250,17 +60901,24 @@
           "exportada": true,
           "params": "{ ficha, resumen }: { ficha: Ficha; resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 23,
+          "linea": 24,
           "resumen": "La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto. 🚨 Por qué los contadores viven aquí y no dentro de "
         },
         {
-          "nombre": "Iniciales",
+          "nombre": "inicialesDe",
           "kind": "function",
           "exportada": false,
-          "params": "{ nombre }: { nombre: string }",
+          "params": "nombre: string",
+          "retorno": "string",
+          "linea": 85
+        },
+        {
+          "nombre": "RuedaRamos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ nombre, tiposVivos }: { nombre: string; tiposVivos: string[] }",
           "retorno": null,
-          "linea": 68,
-          "resumen": "── Iniciales ─────────────────────────────────────────────────────────────── Avant2 pone un avatar circular con las iniciales delante del nombre; aquí se reutiliza el hueco `icono` que `PageHeader` YA"
+          "linea": 92
         },
         {
           "nombre": "Titulares",
@@ -60268,7 +60926,7 @@
           "exportada": false,
           "params": "{ resumen }: { resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 82
+          "linea": 141
         },
         {
           "nombre": "ProximoVencimiento",
@@ -60276,7 +60934,7 @@
           "exportada": false,
           "params": "{ proximo, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 128,
+          "linea": 187,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -60285,7 +60943,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: 22px se sale de la tarjeta en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 163
+          "linea": 222
         },
         {
           "nombre": "EstadoCabecera",
@@ -60293,7 +60951,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 181
+          "linea": 240
         },
         {
           "nombre": "Acciones",
@@ -60301,7 +60959,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 234
+          "linea": 302
         },
         {
           "nombre": "Contacto",
@@ -60309,12 +60967,20 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 292
+          "linea": 360
+        },
+        {
+          "nombre": "Identidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ identidad, clienteId }: { identidad: IdentidadFicha | null; clienteId: string }",
+          "retorno": null,
+          "linea": 459
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1fecfed0db8a"
+      "hash": "cf3beecd18f6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/decesos-nuevo/acciones.ts",
@@ -60780,9 +61446,9 @@
           "nombre": "Polizas",
           "kind": "function",
           "exportada": true,
-          "params": "{ titulo, nota, polizas, vacio, plegado, intervinientes }: { titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean intervinientes: IntervinienteFicha[] | null }",
+          "params": "{ titulo, nota, polizas, vacio, plegado, intervinientes, accion }: { titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean intervinientes: IntervinienteFicha[] | null /** CTA para el estado vacío (\"+ Presup",
           "retorno": null,
-          "linea": 27
+          "linea": 37
         },
         {
           "nombre": "Intervinientes",
@@ -60790,7 +61456,7 @@
           "exportada": false,
           "params": "{ lista, polizaId }: { lista: IntervinienteFicha[] | null; polizaId: string }",
           "retorno": null,
-          "linea": 126,
+          "linea": 142,
           "resumen": "Quién más figura en la póliza (propietario, conductor habitual, contacto…), debajo de qué asegura. Se omite al tomador: ya es el título de la ficha. `null` = asegura no los informa; se calla en vez de"
         },
         {
@@ -60799,7 +61465,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
-          "linea": 147
+          "linea": 163
         },
         {
           "nombre": "CeldaPago",
@@ -60807,7 +61473,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
-          "linea": 176,
+          "linea": 192,
           "resumen": "Forma de pago (Alberto, 02/09/2026): son contratos anuales que la compañía FINANCIA al fraccionar, cobrando por ello. Lo que CIMA da es la periodicidad y la forma de cobro; el recargo se deriva de los"
         },
         {
@@ -60816,7 +61482,7 @@
           "exportada": false,
           "params": "{ vencimiento, viva }: { vencimiento: string | null; viva: boolean }",
           "retorno": null,
-          "linea": 202,
+          "linea": 218,
           "resumen": "La única salida de una póliza es su vencimiento, avisando 30 días antes (LCS art. 22). Se pinta solo en las vivas y solo mientras merece la pena saberlo: cuando el plazo de aviso está cerca o ya ha pa"
         },
         {
@@ -60825,7 +61491,7 @@
           "exportada": true,
           "params": "{ r }: { r: RecibosPoliza | null }",
           "retorno": null,
-          "linea": 221,
+          "linea": 237,
           "resumen": "El estado de cobro de UNA póliza. Cuatro cosas distintas, cuatro pintados: null → asegura no manda el bloque (desplegar). total 0 → la compañía no ha mandado recibos (18 de 109 vivas, medido). devuelt"
         },
         {
@@ -60834,7 +61500,7 @@
           "exportada": false,
           "params": "p: PolizaFicha",
           "retorno": "string",
-          "linea": 248
+          "linea": 264
         },
         {
           "nombre": "etiquetaPoliza",
@@ -60842,7 +61508,7 @@
           "exportada": true,
           "params": "p: PolizaFicha",
           "retorno": "string",
-          "linea": 264,
+          "linea": 280,
           "resumen": "Cómo se nombra una póliza en una frase: la matrícula si la hay."
         },
         {
@@ -60851,7 +61517,7 @@
           "exportada": true,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 268
+          "linea": 284
         },
         {
           "nombre": "fmt",
@@ -60859,13 +61525,13 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 278,
+          "linea": 294,
           "resumen": "Fecha siempre en español: \"2026-06-03\" → \"03/06/2026\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a6cdafedfb10"
+      "hash": "2c023f4702bb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/salud-nuevo/acciones.ts",
@@ -61179,7 +61845,7 @@
           "exportada": true,
           "params": "{ resumen, porClase, intervinientes, clienteId }: { resumen: ResumenFicha porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]> intervinientes: IntervinienteFicha[] | null clienteId: string }",
           "retorno": null,
-          "linea": 15,
+          "linea": 16,
           "resumen": "La pestaña que se abre al pinchar un nombre: lo que está en vigor y lo que hay que hacer con ello. «Pide acción» es una LISTA de cosas concretas con su enlace, no un semáforo: un 🟢 se pone verde tamb"
         },
         {
@@ -61188,12 +61854,12 @@
           "exportada": false,
           "params": "{ resumen, vivas, clienteId }: { resumen: ResumenFicha; vivas: PolizaFicha[]; clienteId: string }",
           "retorno": null,
-          "linea": 52
+          "linea": 63
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "213f6287a551"
+      "hash": "595bc9660454"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts",
@@ -61216,6 +61882,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1dd5573c74b6"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/VerDniCompleto.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "VerDniCompleto"
+      ],
+      "funciones": [
+        {
+          "nombre": "VerDniCompleto",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId }: { clienteId: string }",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "«Ver DNI completo» — el ÚNICO camino para destapar el DNI entero de un cliente. El resto de la ficha lo enseña enmascarado a propósito (`*****678Z`, puerto de asegura); esto existe para el caso real d"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "abd220ac9581"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/vida-nuevo/acciones.ts",
@@ -62416,7 +63103,10 @@
       "ambito": "apps/plataforma",
       "exporta": [
         "pedirCatalogo",
-        "pedirCotizacion"
+        "pedirTarificacionGuardada",
+        "pedirCotizacion",
+        "pedirOferta",
+        "pedirEmision"
       ],
       "funciones": [
         {
@@ -62425,8 +63115,17 @@
           "exportada": true,
           "params": "params: Record<string, string>",
           "retorno": "Promise<RespuestaCatalogo>",
-          "linea": 45,
+          "linea": 51,
           "resumen": "Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.**"
+        },
+        {
+          "nombre": "pedirTarificacionGuardada",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizaId: string",
+          "retorno": "Promise<RespuestaTarificacionGuardada>",
+          "linea": 62,
+          "resumen": "La última cotización REAL ya guardada de esta póliza (11/09/2026). **Gratis — no confirma nada con el vendor.** Sirve para \"retomar\" sin volver a pagar los 0,50€ del `POST /insurances` que ya se pagó,"
         },
         {
           "nombre": "pedirCotizacion",
@@ -62434,13 +63133,59 @@
           "exportada": true,
           "params": "entrada: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> catastro?: Record<string, unknown> | null }",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 64,
+          "linea": 81,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `retarificarAsegura()`, en el servidor y en un solo sitio. No se acepta desde el cliente a propósito: si viajara en el cuerpo, dejaría de ser una"
+        },
+        {
+          "nombre": "pedirOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { tarificacionId: string compania: string categoria: string }",
+          "retorno": "Promise<RespuestaOferta>",
+          "linea": 103,
+          "resumen": "🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo pone `ofertaAsegura()` en el servidor, y esto NO reintenta"
+        },
+        {
+          "nombre": "pedirEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null }",
+          "retorno": "Promise<RespuestaEmitir>",
+          "linea": 116,
+          "resumen": "🚨 **EL SUBMIT REAL. Compromete un contrato de verdad, no solo dinero.** Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin reintento: un fallo de red aquí NO dice que la póliza no se "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6d1473debbdf"
+      "hash": "308bf7283149"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Emision"
+      ],
+      "funciones": [
+        {
+          "nombre": "euroODash",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": "string",
+          "linea": 44
+        },
+        {
+          "nombre": "Emision",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
+          "retorno": null,
+          "linea": 48
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5eb5127a967b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -62455,7 +63200,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 35,
+          "linea": 37,
           "resumen": "**Retarificar, DENTRO de `/correduria`.** Hasta el 03/09/2026 esto era un enlace ↗ a `apps/asegura`, que es otro dominio con otra sesión: en producción, `GET /cartera/poliza/9588dad8-… → 307 /login`. "
         },
         {
@@ -62464,7 +63209,7 @@
           "exportada": false,
           "params": "r: RespuestaPrecalificacion",
           "retorno": "string",
-          "linea": 224,
+          "linea": 234,
           "resumen": "Por qué no hay precalificación, en la frase que dice DÓNDE mirar. Nunca se degrada a «la ficha no tiene datos»: la póliza sí trae marca, modelo y código postal — lo que ha fallado es leerlos. El corre"
         },
         {
@@ -62473,7 +63218,7 @@
           "exportada": false,
           "params": "{ supuestos, }: { supuestos: Array<{ campo: string; valor: unknown; porque: string; optimista?: boolean; oculto?: boolean }> }",
           "retorno": null,
-          "linea": 244,
+          "linea": 254,
           "resumen": "Lo que se ha SUPUESTO para poder pedir precio. Va ANTES del botón a propósito: es la letra pequeña de la cifra, y verla después no sirve de nada."
         },
         {
@@ -62482,7 +63227,7 @@
           "exportada": false,
           "params": "garajes: RespuestaCatalogo, civiles: RespuestaCatalogo",
           "retorno": "string | null",
-          "linea": 275,
+          "linea": 285,
           "resumen": "El motivo por el que no se puede cotizar, o `null` si se puede."
         },
         {
@@ -62491,7 +63236,7 @@
           "exportada": false,
           "params": "{ sub, polizaId }: { sub: string; polizaId?: string }",
           "retorno": null,
-          "linea": 292
+          "linea": 302
         },
         {
           "nombre": "Fila",
@@ -62499,7 +63244,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, nota, }: { etiqueta: string valor: string | null /** La letra pequeña del dato: de dónde sale, o por qué no está. */ nota?: string | null }",
           "retorno": null,
-          "linea": 310
+          "linea": 320
         },
         {
           "nombre": "Marco",
@@ -62507,7 +63252,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 356,
+          "linea": 366,
           "resumen": "El marco de la pantalla, con **el CSS que el retarificador da por supuesto**. El componente se trajo de `apps/asegura` tal cual (tres pasos, combustible antes de versión, banners, badges) y esas clase"
         }
       ],
@@ -62515,54 +63260,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "07d33af16c46"
-    },
-    {
-      "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/preemision-mock.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "PreemisionMock"
-      ],
-      "funciones": [
-        {
-          "nombre": "buscarEsquema",
-          "kind": "function",
-          "exportada": false,
-          "params": "compania: string | null",
-          "retorno": "EsquemaCompania | null",
-          "linea": 320,
-          "resumen": "Busca el esquema por coincidencia parcial: «Allianz Seguros y Reaseguros» tiene que casar con la clave `allianz`, igual que hace ya el emparejador de catálogos de `apps/asegura/lib/codeoscopic/opcione"
-        },
-        {
-          "nombre": "PreemisionMock",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ compania, producto, onCerrar, }: { compania: string | null producto: string | null onCerrar: () => void }",
-          "retorno": null,
-          "linea": 327
-        },
-        {
-          "nombre": "SeccionCampos",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ seccion }: { seccion: Seccion }",
-          "retorno": null,
-          "linea": 393
-        },
-        {
-          "nombre": "CampoControl",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ campo }: { campo: Campo }",
-          "retorno": null,
-          "linea": 406
-        }
-      ],
-      "tablas": [
-        "react"
-      ],
-      "rutaApi": null,
-      "hash": "46484e643a0f"
+      "hash": "4fa4d2e6b99d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/retarificador.tsx",
@@ -62574,13 +63272,22 @@
       ],
       "funciones": [
         {
+          "nombre": "cotizacionIdDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "guardado: unknown",
+          "retorno": "string | null",
+          "linea": 30,
+          "resumen": "Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el embudo de asegura (`Guardado`: `{estado:'guardada', cotizacionId}` | `{estado:'no_guardada'|'no_intentada', motivo}`). `unknown`"
+        },
+        {
           "nombre": "normalizarTexto",
           "kind": "function",
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 28,
-          "resumen": "Quita tildes y mayúsculas para comparar «Casado» con «CASADO». Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`. Exportada porque `preemision-mock.tsx` la reutiliza para emp"
+          "linea": 38,
+          "resumen": "Quita tildes y mayúsculas para comparar «Casado» con «CASADO». Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`."
         },
         {
           "nombre": "euroODash",
@@ -62588,8 +63295,50 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 41,
+          "linea": 51,
           "resumen": "🚨 El `eur()` de plataforma devuelve «0,00€» para lo que no es un número finito, y eso aquí sería una MENTIRA: una prima que la compañía no ha declarado es un «no lo sé», no un cero. Tres estados, no "
+        },
+        {
+          "nombre": "resumenDePrecios",
+          "kind": "function",
+          "exportada": false,
+          "params": "precios: Precio[]",
+          "retorno": "string",
+          "linea": 142,
+          "resumen": "El resumen honrado de una cotización, a partir de solo sus precios (sin fallos: la cotización GUARDADA no los persiste, ver `apps/asegura/lib/ codeoscopic/cotizaciones.ts`). Mismo criterio que `resumi"
+        },
+        {
+          "nombre": "resultadoDeGuardada",
+          "kind": "function",
+          "exportada": false,
+          "params": "g: TarificacionGuardadaAuto",
+          "retorno": "Resultado",
+          "linea": 157,
+          "resumen": "Convierte la cotización YA GUARDADA en el mismo `Resultado` que pinta una cotización recién pedida — para que la pantalla no necesite un camino aparte para «lo que ya había» frente a «lo que se acaba "
+        },
+        {
+          "nombre": "leerBorrador",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: string",
+          "retorno": "DatosBorrador | null",
+          "linea": 201
+        },
+        {
+          "nombre": "guardarBorrador",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: string, datos: DatosBorrador",
+          "retorno": null,
+          "linea": 219
+        },
+        {
+          "nombre": "borrarBorrador",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: string",
+          "retorno": null,
+          "linea": 229
         },
         {
           "nombre": "buscarEnCatalogo",
@@ -62597,16 +63346,16 @@
           "exportada": false,
           "params": "catalogo: Opcion[], texto: string | null",
           "retorno": "Emparejamiento",
-          "linea": 147,
+          "linea": 263,
           "resumen": "Empareja un texto de la ficha con una opción del catálogo. Mismo criterio que `emparejar()` de `opciones.ts` —exacto y normalizado, y ante la duda no preselecciona— pero devolviendo POR QUÉ no ha casa"
         },
         {
           "nombre": "Retarificador",
           "kind": "function",
           "exportada": true,
-          "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, fechaMatriculacion, vehiculo, consumo, simulacion, deshabilitado, }: { polizaId: string /** * Los huecos que la ficha NO tapa, ya revisados. **`null",
+          "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, fechaMatriculacion, vehiculo, consumo, simulacion, deshabilitado, guardadaPrevia, }: { polizaId: string /** * Los huecos que la ficha NO tapa, ya re",
           "retorno": null,
-          "linea": 177,
+          "linea": 293,
           "resumen": "El único sitio de la app donde un clic cuesta 0,50€ — **salvo en simulación**. Cuatro cosas son deliberadas: - El botón dice EN el botón lo que cuesta el clic, no en una nota al pie, y dice la verdad "
         },
         {
@@ -62615,7 +63364,7 @@
           "exportada": false,
           "params": "{ r, simulacion, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean }",
           "retorno": null,
-          "linea": 945
+          "linea": 1240
         },
         {
           "nombre": "ValorSupuesto",
@@ -62623,8 +63372,17 @@
           "exportada": true,
           "params": "{ s }: { s: Supuesto }",
           "retorno": null,
-          "linea": 1164,
+          "linea": 1472,
           "resumen": "Un supuesto, con su valor — o con la explicación de por qué no lo hay. 🔒 `oculto` NO es «no hay valor»: es «lo hay y se queda en asegura», porque es un dato personal del tomador (su código postal, tí"
+        },
+        {
+          "nombre": "BannerRecuperada",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ guardadaPrevia }: { guardadaPrevia: TarificacionGuardadaAuto }",
+          "retorno": null,
+          "linea": 1501,
+          "resumen": "Avisa de que la pantalla ha arrancado con una cotización YA PAGADA, para que no se lea como si el precio de abajo fuera gratis o recién pedido. Todo lo prellenado sigue siendo editable: volver a pulsa"
         },
         {
           "nombre": "BannerSimulacion",
@@ -62632,8 +63390,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 1187,
-          "resumen": "El cartel de simulación, arriba del todo y sin ambigüedad. 🚨 Sustituye al aviso ROJO de «tarificación apagada» que se pintaba aquí. Ese aviso era falso con la simulación puesta: en `cotizar()` el pas"
+          "linea": 1523
         },
         {
           "nombre": "CabeceraPaso",
@@ -62641,7 +63398,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub }: { n: number; titulo: string; sub?: string }",
           "retorno": null,
-          "linea": 1213
+          "linea": 1549
         },
         {
           "nombre": "Paso",
@@ -62649,7 +63406,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub, children, }: { n: number titulo: string sub?: string children: React.ReactNode }",
           "retorno": null,
-          "linea": 1245
+          "linea": 1581
         },
         {
           "nombre": "Campo",
@@ -62657,7 +63414,7 @@
           "exportada": false,
           "params": "{ id, etiqueta, falta, faltaTexto, ayuda, children, }: { id: string etiqueta: string falta: boolean faltaTexto?: string ayuda?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 1271,
+          "linea": 1607,
           "resumen": "Un campo del formulario: etiqueta, control, ayuda y —si falta— su marca. La marca va AQUÍ y no en una lista encima del botón: «falta la versión» a diez centímetros del desplegable de la versión obliga"
         },
         {
@@ -62666,7 +63423,7 @@
           "exportada": false,
           "params": "{ vehiculo, autoMarca, autoModelo, }: { vehiculo: VehiculoConocido | null autoMarca: Emparejamiento autoModelo: Emparejamiento }",
           "retorno": null,
-          "linea": 1312,
+          "linea": 1648,
           "resumen": "Lo que la cartera YA sabe del coche: informativo, compacto y sin competir con los campos. Sustituye al texto que durante un día negó que la compañía mandara el modelo. Era falso y medido al revés: las"
         },
         {
@@ -62675,7 +63432,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, estado, }: { etiqueta: string valor: string | null estado: Emparejamiento['estado'] }",
           "retorno": null,
-          "linea": 1383
+          "linea": 1719
         },
         {
           "nombre": "ProcedenciaCatalogo",
@@ -62683,7 +63440,7 @@
           "exportada": false,
           "params": "{ emp, elegido, que, }: { emp: Emparejamiento elegido: string que: string }",
           "retorno": null,
-          "linea": 1420,
+          "linea": 1756,
           "resumen": "De dónde sale lo que hay puesto en un desplegable — o por qué no hay nada."
         },
         {
@@ -62692,7 +63449,7 @@
           "exportada": false,
           "params": "{ versiones }: { versiones: VersionCandidata[] }",
           "retorno": null,
-          "linea": 1467,
+          "linea": 1803,
           "resumen": "Las versiones vistas en OTRAS pólizas de la misma matrícula. 🚨 Son PISTAS, nunca una selección. Son texto histórico de otra póliza, no códigos Base7 del catálogo, y con dos o más pueden contradecirse"
         },
         {
@@ -62701,7 +63458,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: Consumo; simulacion: boolean }",
           "retorno": null,
-          "linea": 1521,
+          "linea": 1857,
           "resumen": "El contador de gasto. En simulación no se toca el libro, así que su estado se cuenta como información de contexto y NO en rojo: un «tarificación apagada» en rojo sobre una pantalla que sí funciona y n"
         }
       ],
@@ -62709,7 +63466,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "1ccfe6c9bc8f"
+      "hash": "75b4023b1965"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Redes.tsx",
@@ -70070,6 +70827,48 @@
       "tablas": [],
       "rutaApi": "/api/correduria/catastro",
       "hash": "6ec9b303efe9"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/cliente/[id]/dni-codigo/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "POST /api/correduria/cliente/[id]/dni-codigo — pide un código de un solo uso para revelar el DNI completo de ese cliente. El código llega SOLO al Telegram de Alberto (nunca a la respuesta HTTP): sin a"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/cliente/[id]/dni-codigo",
+      "hash": "5321903c15ed"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/cliente/[id]/dni-revelar/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "POST /api/correduria/cliente/[id]/dni-revelar — { codigo } → el DNI completo, SOLO si el código pedido en /dni-codigo sigue vigente, sin usar y coincide. Un código erróneo o caducado no distingue el m"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/cliente/[id]/dni-revelar",
+      "hash": "8a0052eafe5d"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/cliente/contactos/route.ts",
@@ -81517,7 +82316,8 @@
         "altaClienteAsegura",
         "descartarClienteAsegura",
         "restaurarClienteAsegura",
-        "historialClienteAsegura"
+        "historialClienteAsegura",
+        "revelarDniAsegura"
       ],
       "funciones": [
         {
@@ -81713,11 +82513,20 @@
           "retorno": "Promise<Reenvio>",
           "linea": 315,
           "resumen": "`POST /api/operador/cliente/historial` — anota una fila de historial en una ficha que ya existe (`{ clienteId, tipo, texto, actor? }`). Lo usa el canal de leads web cuando el teléfono/email ya está en"
+        },
+        {
+          "nombre": "revelarDniAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: { id: string; actor: string }",
+          "retorno": "Promise<Reenvio>",
+          "linea": 325,
+          "resumen": "este helper no sabe nada de esa comprobación, confía en que la ruta ya la hizo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3dd07addecd4"
+      "hash": "e5ef7a1dfacc"
     },
     {
       "ruta": "apps/plataforma/lib/comercio-canonico.ts",
@@ -84002,6 +84811,57 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "69a7dc8257ee"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/dni-otp.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Código de un solo uso por Telegram para revelar el DNI COMPLETO de un cliente de la correduría. El resto de la ficha lo enseña enmascarado a propósito (`*****678Z`, puerto de asegura) — esto es el único camino que lo destapa, y solo con: (1) el corredor tiene sesión en plataforma, (2) pide un código",
+      "exporta": [
+        "crearCodigoDni",
+        "verificarCodigoDni"
+      ],
+      "funciones": [
+        {
+          "nombre": "hashCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "codigo: string, cuentaId: string, clienteId: string",
+          "retorno": "string",
+          "linea": 16
+        },
+        {
+          "nombre": "generarCodigo",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 21
+        },
+        {
+          "nombre": "crearCodigoDni",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, clienteId: string",
+          "retorno": "Promise<string>",
+          "linea": 26,
+          "resumen": "Genera un código nuevo, invalida los anteriores sin usar de ese cliente y lo guarda hasheado."
+        },
+        {
+          "nombre": "verificarCodigoDni",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuentaId: string, clienteId: string, codigo: string",
+          "retorno": "Promise<boolean>",
+          "linea": 39,
+          "resumen": "Verifica y CONSUME un código. `true` solo si estaba vigente, sin usar y coincidía."
+        }
+      ],
+      "tablas": [
+        "correduria_dni_otp",
+        "crypto"
+      ],
+      "rutaApi": null,
+      "hash": "8e35c5a91be7"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/ingesta-cima.ts",
@@ -91342,7 +92202,13 @@
         "interpretarRetarificacion",
         "porFalloDeRed",
         "catalogoAsegura",
-        "retarificarAsegura"
+        "retarificarAsegura",
+        "interpretarOferta",
+        "ofertaAsegura",
+        "interpretarEmitir",
+        "emitirAsegura",
+        "interpretarTarificacionGuardada",
+        "tarificacionGuardadaAsegura"
       ],
       "funciones": [
         {
@@ -91481,11 +92347,89 @@
           "retorno": "Promise<RespuestaRetarificar>",
           "linea": 648,
           "resumen": "🚨 **LA LLAMADA QUE CUESTA 0,50€ REALES.** La única de plataforma que gasta dinero de Alberto en un tercero. `confirmado: true` va SIEMPRE y es el booleano exacto: es el cerrojo que exige el puerto (`"
+        },
+        {
+          "nombre": "leerOferta",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "",
+          "linea": 705
+        },
+        {
+          "nombre": "interpretarOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaOferta",
+          "linea": 719,
+          "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
+        },
+        {
+          "nombre": "ofertaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { tarificacionId: string compania: string categoria: string }",
+          "retorno": "Promise<RespuestaOferta>",
+          "linea": 750,
+          "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía el precio de `tarificacionId` (id de `seguros.tarificaciones`) para la `compania`/`categoria` elegidas en pantalla. NO reintenta."
+        },
+        {
+          "nombre": "interpretarEmitir",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaEmitir",
+          "linea": 796,
+          "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
+        },
+        {
+          "nombre": "emitirAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { projectId: string campos: Record<string, unknown> actor?: string primaAnual?: number | null }",
+          "retorno": "Promise<RespuestaEmitir>",
+          "linea": 845,
+          "resumen": "`POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO reintenta: un fallo de red aquí no dice que no se haya emitid"
+        },
+        {
+          "nombre": "leerFormularioGuardado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "FormularioGuardado | null",
+          "linea": 927
+        },
+        {
+          "nombre": "leerPreciosGuardados",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Precio[] | null",
+          "linea": 946
+        },
+        {
+          "nombre": "interpretarTarificacionGuardada",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaTarificacionGuardada",
+          "linea": 963,
+          "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
+        },
+        {
+          "nombre": "tarificacionGuardadaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizaId: string",
+          "retorno": "Promise<RespuestaTarificacionGuardada>",
+          "linea": 1004,
+          "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f651b1ad39a9"
+      "hash": "54865e81f048"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -92315,7 +93259,7 @@
           "exportada": false,
           "params": "query: string",
           "retorno": "string",
-          "linea": 49
+          "linea": 55
         },
         {
           "nombre": "fotosDeAcceso",
@@ -92323,7 +93267,7 @@
           "exportada": true,
           "params": "",
           "retorno": "",
-          "linea": 192,
+          "linea": 198,
           "resumen": "Inventario de las fotos que las indicaciones enseñan al huésped, por piso. Existe porque esta es la ÚNICA atadura dura que le queda al proveedor: los pasos van en texto plano y funcionan sin red, pero"
         },
         {
@@ -92332,7 +93276,7 @@
           "exportada": true,
           "params": "",
           "retorno": "",
-          "linea": 209,
+          "linea": 215,
           "resumen": "Pasos que PROMETEN una imagen («en esta foto», «la señalada en rojo», «así se ve») y no la llevan. Un paso así es peor que uno sin foto: manda a mirar algo que no está."
         },
         {
@@ -92341,7 +93285,7 @@
           "exportada": true,
           "params": "propertyId: string, codigos: CodigosAcceso",
           "retorno": "string[]",
-          "linea": 236,
+          "linea": 242,
           "resumen": "¿Qué códigos necesita este piso (por sus pasos) que NO vienen en `codigos`? El orquestador usa esto para avisar a Telegram si falta un código en BD — el hueco se declara, nunca se inventa."
         },
         {
@@ -92350,13 +93294,13 @@
           "exportada": true,
           "params": "propertyId: string, codigos: CodigosAcceso, opts: { conCodigos: boolean },",
           "retorno": "string",
-          "linea": 252,
+          "linea": 258,
           "resumen": "Bloque de acceso en texto plano para las plantillas (y, más adelante, para la ficha del agente). `conCodigos:false` = versión de los 7 días: el PROCESO completo sin los códigos («el código te llega la"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "13c37a7ca6de"
+      "hash": "c1547c089f47"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/aprender.ts",
@@ -96349,7 +97293,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 98
+          "linea": 100
         },
         {
           "nombre": "visperaLlegada",
@@ -96357,7 +97301,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 113
+          "linea": 115
         },
         {
           "nombre": "bienvenida",
@@ -96365,7 +97309,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 132
+          "linea": 134
         },
         {
           "nombre": "estancia",
@@ -96373,7 +97317,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 144
+          "linea": 146
         },
         {
           "nombre": "visperaSalida",
@@ -96381,7 +97325,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 152
+          "linea": 154
         },
         {
           "nombre": "postSalida",
@@ -96389,7 +97333,7 @@
           "exportada": false,
           "params": "d: DatosPlantilla",
           "retorno": "string",
-          "linea": 170
+          "linea": 172
         },
         {
           "nombre": "renderPlantilla",
@@ -96397,7 +97341,7 @@
           "exportada": true,
           "params": "tipo: TipoMensaje, d: DatosPlantilla",
           "retorno": "string",
-          "linea": 182
+          "linea": 184
         },
         {
           "nombre": "renderAsunto",
@@ -96405,13 +97349,13 @@
           "exportada": true,
           "params": "tipo: TipoMensaje, d: DatosPlantilla",
           "retorno": "string",
-          "linea": 195,
+          "linea": 197,
           "resumen": "Asunto (solo lo aprovechan los canales de email; en el chat del portal no estorba)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "501faf6c807b"
+      "hash": "9ded3c489d39"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/traduccion-guarda.ts",
@@ -106392,12 +107336,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/logos",
-      "hash": "04d5d94fd832"
+      "hash": "9bcf0c2d60e8"
     },
     {
       "ruta": "apps/rrhh/app/api/operador/personas/route.ts",
@@ -107326,6 +108270,67 @@
       ],
       "rutaApi": null,
       "hash": "32f28f33d080"
+    },
+    {
+      "ruta": "apps/rrhh/lib/claves-supabase.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Clave PUBLICABLE de Supabase — la que sustituye a la `anon` legacy. Contexto: el botón «Disable JWT-based API keys» del panel mata a la vez la `service_role` filtrada y la `anon` legacy. Para poder pulsarlo, todo lo que hoy manda la `anon` tiene que poder mandar la nueva `sb_publishable_…`. Plan: do",
+      "exporta": [
+        "clavePublicable",
+        "origenClavePublicable",
+        "hayClavePublicable",
+        "cabecerasClave"
+      ],
+      "funciones": [
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "La clave publicable, o `''` si no hay ninguna configurada. Devuelve cadena vacía (no lanza) a propósito: hay módulos que la leen en el top level y un throw ahí rompería el build. Una clave vacía falla"
+        },
+        {
+          "nombre": "origenClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClavePublicable | null",
+          "linea": 31,
+          "resumen": "De dónde salió la clave: `'nueva'`, `'legacy'`, o null si no hay ninguna."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "Una variable puesta a `\" \"` (o a la cadena vacía) es una variable SIN poner: se trata como ausente en vez de como una clave que falla todas las llamadas. Mismo criterio que el helper de las Edge Funct"
+        },
+        {
+          "nombre": "hayClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "¿Hay alguna clave publicable configurada? Para health-checks y avisos de entorno."
+        },
+        {
+          "nombre": "cabecerasClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string = clavePublicable()",
+          "retorno": "Record<string, string>",
+          "linea": 73,
+          "resumen": "Cabeceras de autenticación para llamar A MANO a la API HTTP de Supabase (`/storage/v1`, `/rest/v1`, `/functions/v1`). Manda la clave en `apikey` **y** en `Authorization: Bearer`, que es lo que hace `s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9aa980688701"
     },
     {
       "ruta": "apps/rrhh/lib/contratos.ts",
@@ -108466,7 +109471,7 @@
           "exportada": false,
           "params": "",
           "retorno": "SupabaseStorageConfig",
-          "linea": 4
+          "linea": 5
         },
         {
           "nombre": "serviceKey",
@@ -108474,7 +109479,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 11
+          "linea": 12
         },
         {
           "nombre": "subirObjeto",
@@ -108482,7 +109487,7 @@
           "exportada": true,
           "params": "path: string, bytes: ArrayBuffer, contentType: string",
           "retorno": "Promise<string>",
-          "linea": 14,
+          "linea": 15,
           "resumen": "Sube bytes al bucket privado con service_role. Devuelve el path o lanza."
         },
         {
@@ -108491,7 +109496,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<void>",
-          "linea": 30,
+          "linea": 31,
           "resumen": "Borra un objeto del bucket privado (best-effort)."
         },
         {
@@ -108500,7 +109505,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string | null>",
-          "linea": 36,
+          "linea": 37,
           "resumen": "URL firmada de descarga (1 h) para un objeto del bucket privado."
         },
         {
@@ -108509,7 +109514,7 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<string>",
-          "linea": 45,
+          "linea": 46,
           "resumen": "Crea una URL firmada para que el cliente suba DIRECTAMENTE a Supabase Storage sin pasar por la función serverless (elimina el doble salto de red). El token caduca en 60 s — suficiente para iniciar la "
         },
         {
@@ -108518,13 +109523,13 @@
           "exportada": true,
           "params": "path: string",
           "retorno": "Promise<ArrayBuffer>",
-          "linea": 58,
+          "linea": 59,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0ea68e8016a6"
+      "hash": "6dd1070e0c55"
     },
     {
       "ruta": "apps/rrhh/lib/tenant.ts",
@@ -111279,13 +112284,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 13,
+          "linea": 14,
           "resumen": "Proxy de lectura para el bucket privado `cleaning-photos`. Recibe la URL/ruta guardada (?u=...), genera una signed URL fresca y redirige. Las <img> de la zona limpiadoras apuntan aquí en vez de a una "
         }
       ],
       "tablas": [],
       "rutaApi": "/api/limpiadoras/photo",
-      "hash": "e7bbb40d5311"
+      "hash": "1fcf1e51ef9a"
     },
     {
       "ruta": "apps/sivra/app/api/limpiadoras/sessions/route.ts",
@@ -111336,12 +112341,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 7
+          "linea": 8
         }
       ],
       "tablas": [],
       "rutaApi": "/api/limpiadoras/upload-photo",
-      "hash": "1ffe14fd289e"
+      "hash": "4400bd1fe3c9"
     },
     {
       "ruta": "apps/sivra/app/api/mensajes/[bookingId]/email/route.ts",
@@ -113882,6 +114887,67 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "02b97e375048"
+    },
+    {
+      "ruta": "apps/sivra/lib/claves-supabase.ts",
+      "ambito": "apps/sivra",
+      "resumen": "Clave PUBLICABLE de Supabase — la que sustituye a la `anon` legacy. Contexto: el botón «Disable JWT-based API keys» del panel mata a la vez la `service_role` filtrada y la `anon` legacy. Para poder pulsarlo, todo lo que hoy manda la `anon` tiene que poder mandar la nueva `sb_publishable_…`. Plan: do",
+      "exporta": [
+        "clavePublicable",
+        "origenClavePublicable",
+        "hayClavePublicable",
+        "cabecerasClave"
+      ],
+      "funciones": [
+        {
+          "nombre": "clavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 24,
+          "resumen": "La clave publicable, o `''` si no hay ninguna configurada. Devuelve cadena vacía (no lanza) a propósito: hay módulos que la leen en el top level y un throw ahí rompería el build. Una clave vacía falla"
+        },
+        {
+          "nombre": "origenClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "OrigenClavePublicable | null",
+          "linea": 31,
+          "resumen": "De dónde salió la clave: `'nueva'`, `'legacy'`, o null si no hay ninguna."
+        },
+        {
+          "nombre": "noVacia",
+          "kind": "function",
+          "exportada": false,
+          "params": "valor: string | undefined",
+          "retorno": "string",
+          "linea": 42,
+          "resumen": "Una variable puesta a `\" \"` (o a la cadena vacía) es una variable SIN poner: se trata como ausente en vez de como una clave que falla todas las llamadas. Mismo criterio que el helper de las Edge Funct"
+        },
+        {
+          "nombre": "hayClavePublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 47,
+          "resumen": "¿Hay alguna clave publicable configurada? Para health-checks y avisos de entorno."
+        },
+        {
+          "nombre": "cabecerasClave",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string = clavePublicable()",
+          "retorno": "Record<string, string>",
+          "linea": 73,
+          "resumen": "Cabeceras de autenticación para llamar A MANO a la API HTTP de Supabase (`/storage/v1`, `/rest/v1`, `/functions/v1`). Manda la clave en `apikey` **y** en `Authorization: Bearer`, que es lo que hace `s"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9aa980688701"
     },
     {
       "ruta": "apps/sivra/lib/cron-auth.ts",
@@ -117091,7 +118157,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fe9f7f2893c1"
+      "hash": "4fbb2cd107f8"
     },
     {
       "ruta": "packages/core-telegram/src/index.ts",
@@ -123404,6 +124470,119 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b7720f35cc21"
+    },
+    {
+      "ruta": "packages/module-seguros/src/documento-hogar.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Normalización de lo que una máquina dice haber leído en una PÓLIZA DE HOGAR. Puro: sin BD, sin red, sin proveedor de IA. Hermano de `documento-auto.ts`: mismo propósito (lo que hace falta para PEDIR PRECIO, no los cinco campos que ve el asegurado en su bóveda — eso es `@central/module-seguros-portal",
+      "exporta": [
+        "hogarLeidoVacio",
+        "seLeyoAlgoHogar",
+        "normalizarHogarLeido",
+        "camposLeidosHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "hogarLeidoVacio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "HogarLeido",
+          "linea": 52
+        },
+        {
+          "nombre": "seLeyoAlgoHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: HogarLeido",
+          "retorno": "boolean",
+          "linea": 74,
+          "resumen": "¿Se ha leído ALGO? `false` = el documento no se pudo leer, no que esté vacío."
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 81
+        },
+        {
+          "nombre": "enteroEnRango",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, min: number, max: number",
+          "retorno": "number | null",
+          "linea": 91,
+          "resumen": "Entero en un rango. Fuera de forma o de rango, `null`."
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 105,
+          "resumen": "Importe en euros. Un capital o una prima de 0€ no existen: son un «no lo he leído»."
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 123,
+          "resumen": "`aaaa-mm-dd` estricto: rechaza los días que `Date` «arregla» solo."
+        },
+        {
+          "nombre": "codigoPostal",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 136,
+          "resumen": "Código postal español: 5 dígitos, SIEMPRE como texto (Álava, Albacete y Alicante empiezan por 0 — la misma trampa que ya evita `campos-ramo.ts`)."
+        },
+        {
+          "nombre": "documentoIdentidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 144,
+          "resumen": "DNI/NIE. Se comprueba la LETRA: un DNI mal leído es de otra persona."
+        },
+        {
+          "nombre": "codigoDgs",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 157,
+          "resumen": "Código DGS de entidad: `C` + 4 dígitos (C0058 Mapfre, C0109 Allianz…)."
+        },
+        {
+          "nombre": "normalizarHogarLeido",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "HogarLeido",
+          "linea": 169,
+          "resumen": "Convierte lo que devuelva el modelo en `HogarLeido`. Nunca lanza: una respuesta ilegible produce TODO a `null`."
+        },
+        {
+          "nombre": "camposLeidosHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: HogarLeido",
+          "retorno": "(keyof HogarLeido)[]",
+          "linea": 193,
+          "resumen": "Los campos que SÍ se han leído. Es lo que la pantalla enseña para revisar."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1905ca8888e4"
     },
     {
       "ruta": "packages/module-seguros/src/documentos.ts",
@@ -130459,7 +131638,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3213,
-    "funciones": 9833
+    "archivos": 3232,
+    "funciones": 9935
   }
 }

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-09T15:47:05Z",
+  "generadoEn": "2026-09-11T13:48:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -920,7 +920,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 11
       },
       "rrhh": {
         "estado": "usado",
@@ -2080,7 +2080,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 44
+        "evidencias": 45
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3857,6 +3857,7 @@
       "/api/operador/cartera",
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
+      "/api/operador/cliente/dni",
       "/api/operador/cliente/historial",
       "/api/operador/cliente/portal",
       "/api/operador/cliente/portal/vista",
@@ -3867,9 +3868,11 @@
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/hogar-nuevo",
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/moto-nuevo",
+      "/api/operador/codeoscopic/oferta",
       "/api/operador/codeoscopic/precalificar",
       "/api/operador/codeoscopic/precalificar-auto-nuevo",
       "/api/operador/codeoscopic/precalificar-decesos-nuevo",
@@ -3880,6 +3883,7 @@
       "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
+      "/api/operador/codeoscopic/tarificacion",
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
       "/api/operador/documentos",
@@ -4740,6 +4744,8 @@
       "/api/correduria/cartera-lista",
       "/api/correduria/catastro",
       "/api/correduria/cliente",
+      "/api/correduria/cliente/[id]/dni-codigo",
+      "/api/correduria/cliente/[id]/dni-revelar",
       "/api/correduria/cliente/contactos",
       "/api/correduria/cliente/portal",
       "/api/correduria/cliente/portal/vista",
@@ -5421,6 +5427,7 @@
       "contable_log",
       "contable_memoria",
       "correduria_avisos_renovacion",
+      "correduria_dni_otp",
       "correduria_reglas",
       "correo_cursor",
       "correo_reglas",
@@ -6217,7 +6224,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1321,
+    "apis": 1327,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

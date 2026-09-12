@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { getSmoobuKey, smoobuFetch } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -31,8 +31,7 @@ export async function GET(req: NextRequest) {
   const results: any[] = []
   for (const [propId, smoobuId] of Object.entries(SMOOBU_ID)) {
     try {
-      const res = await fetch(`${BASE}/apartments/${smoobuId}`, {
-        headers: { "Api-Key": key, "Cache-Control": "no-cache" },
+      const res = await smoobuFetch(`${BASE}/apartments/${smoobuId}`, {
         signal: AbortSignal.timeout(12_000),
       })
       if (!res.ok) { results.push({ propId, error: `Smoobu ${res.status}` }); continue }

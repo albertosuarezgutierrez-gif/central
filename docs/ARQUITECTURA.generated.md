@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-09T15:47:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-11T13:48:09Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1321 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1327 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 59
+- **Rutas API:** 63
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
@@ -55,8 +55,8 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (134):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor…
-- **Rutas API:** 355
+- **Tablas (135):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_dni_otp, correduria_reglas…
+- **Rutas API:** 357
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (09/09/2026) 🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia
-- (09/09/2026) 🗑 Quitado el calendario de vencimientos de `/boveda`
-- (09/09/2026) 🩹 Póliza BIDV004566 (Occident, GLOBAL 2 INSTALACIONES TÉCNICAS): faltaba en cartera, causa medida
-- (09/09/2026) 📝 Bóveda del cliente: «Selecciona» en vez de «No lo sé», ramo obligatorio y forma de pago con aviso de recibo
-- (08/09/2026) 📞 Teléfonos de compañía en el portal: Generali cargado y Allianz CORREGIDO
-- (08/09/2026) 👋 El WhatsApp del LEAD VENDE la intranet — y mi argumento para no hacerlo era falso
-- (09/09/2026) Maqueta de pre-emisión por compañía en el retarificador
-- (08/09/2026) 🏠 La dirección del hogar dejaba de decir el CP dos veces
-- (08/09/2026) 🔔 La campana de avisos del portal del cliente
-- (09/09/2026) ⚙️ Optimización de consumo de tokens de Claude Code
+- (11/09/2026) 🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST
+- (11/09/2026) 🐛 Segundo 400 del ReRate real: `options` es un ARRAY, no un objeto
+- (11/09/2026) 🐛 Primer ReRate real: 400 por confundir el id del mainQuote con el del producto
+- (11/09/2026) 🔓 «Ver DNI completo» en la ficha del cliente, con código de un solo uso por Telegram
+- (11/09/2026) 💾 Autoguardado del formulario de retarificar (borrador local, 11/09/2026).
+- (11/09/2026) 🔁 Retomar una cotización sin volver a pagar + prellenar el formulario
+- (11/09/2026) 🧾 Emisión real por Codeoscopic: ReRate + Submit construidos, sin sandbox
+- (11/09/2026) 🎨 Ficha de cliente de la correduría: DNI/fecha de nacimiento en cabecera + rueda de ramos
+- (11/09/2026) 🔑 Migración a las claves nuevas de Supabase + aviso anti-phishing en mensajes de huéspedes
+- (11/09/2026) 🔒 Cierre del incidente de phishing/fuga de credenciales
 

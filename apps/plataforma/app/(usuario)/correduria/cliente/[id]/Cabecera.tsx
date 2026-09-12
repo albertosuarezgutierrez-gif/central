@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, urlVidaNuevo, urlSaludNuevo, urlDecesosNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
-import type { ContactosCliente } from '@/lib/cliente-edicion-asegura'
-import { PageHeader, BtnLink, btnStyle } from '@/components/ui'
+import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
+import { PageHeader, BtnLink, Badge, btnStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
-import { fmt } from './piezas'
+import VerDniCompleto from './VerDniCompleto'
+import { fmt, TIPOS } from './piezas'
 
 /**
  * La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada
@@ -28,28 +29,37 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
   // el enum `tipo` no basta. Si el rótulo dice «Cliente» y el WhatsApp le trata
   // de desconocido (o al revés), el fallo se ve en la pantalla y en el chat.
   const esCliente = ficha.tipo === 'cliente' || resumen.conteo.vivas > 0
+  // Ramos con alguna póliza VIVA (no canceladas, no volcado): lo que alimenta
+  // la rueda. `ficha.polizas` siempre es array (nunca null), así que esto no
+  // necesita un tercer estado — a diferencia de casi todo lo demás de la ficha.
+  const tiposVivos = ficha.polizas.filter(p => p.viva).map(p => p.tipo)
   return (
     <>
       <div>
         <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
-        <PageHeader
-          titulo={ficha.nombre}
-          icono={<Iniciales nombre={ficha.nombre} />}
-          sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {/* El estado lo DERIVA asegura de los hechos (cliente · con presupuesto ·
-                lead · ex-cliente) y lo trae con su motivo. Sin él (asegura viejo),
-                la regla de siempre: CIMA engancha pólizas por DNI a una ficha que
-                puede seguir `lead`, y con pólizas vivas ES cliente, diga lo que
-                diga el enum. */}
-            <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
-            <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
-            {conyuge && (
-              <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
-                💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
-              </span>
-            )}
-          </span>}
-        />
+        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <RuedaRamos nombre={ficha.nombre} tiposVivos={tiposVivos} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <PageHeader
+              titulo={ficha.nombre}
+              sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {/* El estado lo DERIVA asegura de los hechos (cliente · con presupuesto ·
+                    lead · ex-cliente) y lo trae con su motivo. Sin él (asegura viejo),
+                    la regla de siempre: CIMA engancha pólizas por DNI a una ficha que
+                    puede seguir `lead`, y con pólizas vivas ES cliente, diga lo que
+                    diga el enum. */}
+                <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
+                <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
+                <Identidad identidad={ficha.identidad} clienteId={ficha.id} />
+                {conyuge && (
+                  <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
+                    💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
+                  </span>
+                )}
+              </span>}
+            />
+          </div>
+        </div>
       </div>
 
       <Acciones clienteId={ficha.id} />
@@ -59,19 +69,68 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
   )
 }
 
-// ── Iniciales ───────────────────────────────────────────────────────────────
-// Avant2 pone un avatar circular con las iniciales delante del nombre; aquí se
-// reutiliza el hueco `icono` que `PageHeader` YA ofrece (55 consumidores, ver
-// CLAUDE.md) en vez de inventar un componente nuevo o cambiar su forma — un
-// círculo distinto del resto de la app sería otra decisión de diseño, y esta
-// solo busca dar identidad visual a la ficha sin abrir ese melón.
-function Iniciales({ nombre }: { nombre: string }) {
+// ── Rueda de ramos ──────────────────────────────────────────────────────────
+// Avant2 (Codeoscopic) pone un anillo de iconos de ramo alrededor del avatar
+// del cliente: de un vistazo se ve qué tiene contratado y qué no, sin leer una
+// sola palabra (capturas en Drive, carpeta INTRANET, 11/09/2026). Es la pieza
+// más fuerte de esa referencia y hoy no existe nada parecido aquí — el filtro
+// «Auto sin Hogar» de `ListaCartera` ya hace esta misma pregunta en texto.
+//
+// Los siete ramos son los presupuestables desde la ficha (`RAMOS_PRESUPUESTO`
+// de `Acciones`, más R. Civil por ser el tercero más frecuente en cartera viva
+// — 9 de 110 pólizas, medido 03/09/2026). El emoji sale de `TIPOS` (piezas.tsx)
+// para no mantener un segundo mapeo ramo→icono en este mismo archivo.
+const RUEDA_RAMOS = ['auto', 'hogar', 'moto', 'vida', 'salud', 'decesos', 'responsabilidad_civil'] as const
+
+function inicialesDe(nombre: string): string {
   const partes = nombre.trim().split(/\s+/).filter(Boolean)
-  const iniciales =
-    partes.length === 0 ? '?'
-      : partes.length === 1 ? partes[0]!.slice(0, 2).toUpperCase()
-        : (partes[0]![0] + partes[1]![0]).toUpperCase()
-  return <span style={{ fontSize: 15, fontWeight: 800 }}>{iniciales}</span>
+  return partes.length === 0 ? '?'
+    : partes.length === 1 ? partes[0]!.slice(0, 2).toUpperCase()
+      : (partes[0]![0] + partes[1]![0]).toUpperCase()
+}
+
+function RuedaRamos({ nombre, tiposVivos }: { nombre: string; tiposVivos: string[] }) {
+  const activos = new Set(tiposVivos)
+  const n = RUEDA_RAMOS.length
+  const radio = 40
+  const tam = 96
+  return (
+    <div
+      aria-hidden
+      style={{ position: 'relative', width: tam, height: tam, flexShrink: 0 }}
+    >
+      <div style={{
+        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        width: 40, height: 40, borderRadius: '50%',
+        background: 'var(--primary-light)', color: 'var(--primary)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 14, fontWeight: 800,
+      }}>{inicialesDe(nombre)}</div>
+      {RUEDA_RAMOS.map((tipo, i) => {
+        const angulo = (i / n) * 2 * Math.PI - Math.PI / 2
+        const x = Math.cos(angulo) * radio
+        const y = Math.sin(angulo) * radio
+        const activo = activos.has(tipo)
+        const etiqueta = TIPOS[tipo] ?? tipo
+        return (
+          <span
+            key={tipo}
+            title={`${etiqueta} — ${activo ? 'contratado' : 'no contratado'}`}
+            style={{
+              position: 'absolute', top: `calc(50% + ${y}px)`, left: `calc(50% + ${x}px)`,
+              transform: 'translate(-50%, -50%)',
+              width: 22, height: 22, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, lineHeight: 1,
+              background: activo ? 'var(--primary-light)' : 'var(--surface)',
+              border: `1px solid ${activo ? 'var(--primary)' : 'var(--border)'}`,
+              opacity: activo ? 1 : 0.55,
+            }}
+          >{etiqueta.split(' ')[0]}</span>
+        )
+      })}
+    </div>
+  )
 }
 
 // ── Titulares ───────────────────────────────────────────────────────────────
@@ -187,13 +246,22 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
   const etiqueta = estado ? estado.etiqueta : cliente ? '✅ Cliente (CIMA)' : '🕐 Lead'
   const esCliente = estado ? estado.estado === 'cliente' : cliente
   const title = estado ? estado.motivo : cliente ? 'tiene póliza viva por CIMA o su ficha es de tipo cliente' : 'sin póliza viva por CIMA'
+  // Segmentación visual (Occident pinta un badge de segmento junto al nombre,
+  // capturas en Drive 11/09/2026): mismo rótulo de siempre, pero como Badge del
+  // sistema de diseño en vez de texto plano — un vistazo distingue el estado
+  // por FORMA, no solo por leer la palabra.
+  const tono: Tono = !estado
+    ? (cliente ? 'positivo' : 'neutral')
+    : estado.estado === 'cliente' ? 'positivo'
+      : estado.estado === 'con_presupuesto' ? 'info'
+        : 'neutral'
   return (
-    <span title={title}>
+    <Badge tono={tono} title={title}>
       {etiqueta}
       {!esCliente && cotizacionesVivas !== null && cotizacionesVivas > 0 && (
-        <span style={{ color: 'var(--muted)' }}> ({cotizacionesVivas} presupuesto{cotizacionesVivas === 1 ? '' : 's'})</span>
+        <> ({cotizacionesVivas} presupuesto{cotizacionesVivas === 1 ? '' : 's'})</>
       )}
-    </span>
+    </Badge>
   )
 }
 
@@ -351,7 +419,10 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
       <AccionesContacto telefono={ef.telefono} email={ef.email} quien={nombre} mensaje={mensajeWa} />
       {ef.telefono ? (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-          <a href={`tel:${ef.telefono.replace(/\s/g, '')}`}>📞 {ef.telefono}</a>
+          {/* Convención de Occident (capturas Drive, 11/09/2026): lo que se
+              puede TOCAR se pinta en el color de marca y subrayado, para
+              distinguirlo del texto de solo lectura sin depender de un icono. */}
+          <a href={`tel:${ef.telefono.replace(/\s/g, '')}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>📞 {ef.telefono}</a>
           {deOtro(ef.viaTelefono)}
           {mas(masTel)}
         </span>
@@ -364,7 +435,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
       )}
       {ef.email ? (
         <span>
-          <a href={`mailto:${ef.email}`}>✉️ {ef.email}</a>
+          <a href={`mailto:${ef.email}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>✉️ {ef.email}</a>
           {deOtro(ef.viaEmail)}
           {mas(masEmail)}
         </span>
@@ -374,6 +445,42 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
         </span>
       )}
       {sitio && <span>📍 {sitio}</span>}
+    </>
+  )
+}
+
+// ── Identidad ───────────────────────────────────────────────────────────────
+// DNI y fecha de nacimiento, en lectura directa en la cabecera (antes solo se
+// veían dentro del formulario de «Datos del cliente», que hay que desplegar).
+// El DNI sale SIEMPRE enmascarado (`*****678Z`): el completo no cruza el
+// puerto de asegura por diseño — para cambiarlo hace falta el DNI recibido y
+// documentado en 📎 Documentos (regla de identidad de la correduria-crm).
+
+function Identidad({ identidad, clienteId }: { identidad: IdentidadFicha | null; clienteId: string }) {
+  // `null` = asegura aún no manda el bloque (versión anterior): no se afirma
+  // «sin DNI», se calla — es distinto de «se miró y no hay ninguno».
+  if (identidad === null) return null
+  return (
+    <>
+      {identidad.dniIlegible ? (
+        <span title="Está guardado pero cifrado con una clave que asegura no puede abrir">🪪 DNI cifrado</span>
+      ) : identidad.dniEnmascarado ? (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span title="El DNI completo no sale de asegura por diseño: para verlo entero, pide un código de un solo uso">
+            🪪 {identidad.dniEnmascarado}
+          </span>
+          <VerDniCompleto clienteId={clienteId} />
+        </span>
+      ) : (
+        <span style={{ color: 'var(--muted)' }} title="No consta DNI en la ficha">🪪 sin DNI</span>
+      )}
+      {identidad.fechaNacimientoIlegible ? (
+        <span title="Está guardada pero cifrada con una clave que asegura no puede abrir">🎂 cifrada</span>
+      ) : identidad.fechaNacimiento ? (
+        <span>🎂 {fmt(identidad.fechaNacimiento)}</span>
+      ) : (
+        <span style={{ color: 'var(--muted)' }} title="No consta fecha de nacimiento">🎂 sin fecha</span>
+      )}
     </>
   )
 }

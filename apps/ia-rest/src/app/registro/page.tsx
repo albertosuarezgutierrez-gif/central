@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react'
 import { copyToClipboard } from '@/lib/clipboard'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_ANON_KEY = clavePublicable()
 
 const T = {
   bg: 'var(--paper)', elev: 'var(--bone)', elev2: 'var(--paper-2)',
