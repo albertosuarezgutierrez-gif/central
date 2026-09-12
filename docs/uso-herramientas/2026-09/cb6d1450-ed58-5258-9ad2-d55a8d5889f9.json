@@ -1,18 +1,18 @@
 {
  "sesion": "cb6d1450-ed58-5258-9ad2-d55a8d5889f9",
  "inicio": "2026-09-12T13:08:36.222Z",
- "fin": "2026-09-12T13:21:15.188Z",
- "llamadas": 39,
+ "fin": "2026-09-12T13:21:43.813Z",
+ "llamadas": 40,
  "categorias": {
   "bash": {
-   "llamadas": 27,
-   "chars_in": 35697,
-   "chars_out": 169126,
+   "llamadas": 28,
+   "chars_in": 36119,
+   "chars_out": 169391,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 27
+    "Bash": 28
    }
   },
   "escritura": {
