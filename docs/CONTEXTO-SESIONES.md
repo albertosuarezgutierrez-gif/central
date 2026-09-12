@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✏️ Correduría: RC en "Pólizas vivas" ya no vuelca las coberturas en la celda (12/09/2026, PR #2760).**
+  Alberto: quería un resumen corto y el desglose al pinchar, no la lista entera de coberturas separada por
+  comas. `objetoAsegurado()` (`@central/module-seguros`) gana `coberturas: string[] | null` con el desglose
+  ENTERO (sin tocar `titulo`/`detalle`, que siguen igual para el resto de consumidores); `ObjetoFicha` de
+  plataforma lo lee y `ObjetoCelda` (ficha del cliente) lo colapsa en un `<details>`: "N coberturas
+  contratadas" cerrado, lista completa al abrir. Sigue el PR #2744 (fix del mismo día: la ficha del cliente
+  no leía coberturas reales de RC en absoluto — este PR es solo presentación sobre datos ya correctos).
+
 - **✅ Smoobu 401 REALMENTE resuelto — no era el HMAC, era la credencial (12/09/2026, PR #2753).**
   Tras el fix de firma (PR #2731) el 401 seguía (entrada de abajo, "SIGUE en 401"): dos pasadas reales
   del cron con el código ya desplegado confirmaron que la firma llegaba bien y Smoobu la rechazaba
