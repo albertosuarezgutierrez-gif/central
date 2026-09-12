@@ -1150,6 +1150,39 @@ export default function Retarificador({
             </p>
           </div>
         )}
+
+        {/* 🚨 Fecha de efecto — corrección MANUAL, opcional, y NUNCA gated por
+            "falta": el servidor SIEMPRE supone una (el día siguiente al
+            vencimiento de la póliza actual, o mañana si no hay vencimiento),
+            así que nunca aparece en `faltanInicial`. Existe porque ese supuesto
+            se rechaza al confirmar el precio (ReRate) si cae a más de 90 días
+            vista — y para entonces ya se ha pagado el 0,50€ de esta pantalla.
+            Se corrige AQUÍ, antes de pagar, no después: `effectiveDate` no es
+            editable una vez creado el proyecto en el vendor (11-12/09/2026,
+            varios intentos reales sobre el proyecto de Pilar Franco Ruz). */}
+        <div style={{ marginTop: 16 }}>
+          <Campo
+            id="c-fechaEfecto"
+            etiqueta="Fecha de efecto (opcional)"
+            falta={false}
+            ayuda={
+              <>
+                Déjalo en blanco para que se calcule solo (el día siguiente al vencimiento actual).
+                Corrígelo a mano <strong>solo</strong> si esa fecha cae a más de 90 días vista — la
+                compañía rechaza la confirmación del precio con esa fecha, y para entonces ya se ha
+                pagado la cotización. No se puede arreglar después: hay que acertarla aquí.
+              </>
+            }
+          >
+            <input
+              id="c-fechaEfecto"
+              type="date"
+              value={correcciones.fechaEfecto ?? ''}
+              onChange={(e) => setCorrecciones((c) => ({ ...c, fechaEfecto: e.target.value }))}
+              style={{ minHeight: 44 }}
+            />
+          </Campo>
+        </div>
       </Paso>
 
       {/* ── Paso 3 · el disparo ────────────────────────────────────────────── */}
