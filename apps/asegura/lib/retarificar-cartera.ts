@@ -101,6 +101,8 @@ import {
   type SupuestoDecesos,
 } from '@/lib/codeoscopic/desde-cartera-decesos'
 import { resolverConfig, explicarConfig } from '@/lib/codeoscopic/config'
+import { refrescarProyecto } from '@/lib/codeoscopic/emitir'
+import { prisma } from '@/lib/tenant'
 import { sanearSupuestos } from '@/lib/codeoscopic/precalificar-publica'
 import {
   marcas,
@@ -144,6 +146,69 @@ export type CuerpoRetarificacion = {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  /** Pasa por encima de `proyectoVigenteDePoliza`: pide precio de nuevo aunque
+   *  ya haya un proyecto vigente sin emitir. Solo para cuando de verdad hace
+   *  falta una cotización nueva (los datos del riesgo cambiaron). */
+  forzarNuevo?: boolean
+}
+
+export type ProyectoVigente = {
+  projectId: string
+  compania: string | null
+  primaEur: number | null
+  caducaEn: string | null
+}
+
+/**
+ * ¿Ya hay un proyecto de Codeoscopic con una oferta CONFIRMADA (ReRate) para
+ * esta póliza, sin emitir todavía y sin caducar?
+ *
+ * 🚨 Existe por Alberto (12/09/2026): un reintento de emisión de Pilar Franco
+ * Ruz creó un SEGUNDO proyecto (`40684860`) mientras el primero (`40684815`)
+ * seguía teniendo una oferta confirmada y vigente — nadie comprobó que ya
+ * había uno antes de pedir precio otra vez. Crear un proyecto nuevo no es
+ * gratis (0,50€) NI es el mismo precio: cada `POST /insurances` es una
+ * cotización independiente y la compañía puede devolver otra cifra. «Lo más
+ * fácil» es no volver a preguntar si la respuesta ya la tenemos.
+ *
+ * La comprobación de vigencia es un `GET /insurances/{id}` — GRATIS, no
+ * cuenta como cotización nueva.
+ */
+async function proyectoVigenteDePoliza(polizaId: string): Promise<ProyectoVigente | null> {
+  const filas = await prisma.$queryRaw<
+    { project_id_codeoscopic: string; aseguradora: string | null; accepted_offer_id_codeoscopic: string | null }[]
+  >`
+    select project_id_codeoscopic, aseguradora, accepted_offer_id_codeoscopic
+    from codeoscopic_projects
+    where poliza_id = ${polizaId}::uuid and estado <> 'emitida'
+    order by submit_in_flight_at desc nulls last
+    limit 1
+  `.catch(() => [])
+  const p = filas[0]
+  // Sin oferta confirmada por ReRate no hay nada que reutilizar: es un
+  // proyecto que se quedó en el paso de cotizar, no de emitir.
+  if (!p || !p.accepted_offer_id_codeoscopic) return null
+
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista') return null // no se puede comprobar: no bloquea
+
+  try {
+    const cotizacion = await refrescarProyecto(cfg.config, p.project_id_codeoscopic)
+    const precio = cotizacion.precios.find((pr) => pr.id === p.accepted_offer_id_codeoscopic)
+    // La oferta confirmada ya no aparece en el proyecto: no hay nada que reutilizar.
+    if (!precio) return null
+    // `expiraEn` ausente NO cuenta como caducado: solo lo que el vendor marca
+    // explícitamente como pasado es una caducidad comprobada.
+    if (precio.expiraEn && precio.expiraEn < hoyIso()) return null
+    return {
+      projectId: p.project_id_codeoscopic,
+      compania: p.aseguradora,
+      primaEur: precio.primaEur,
+      caducaEn: precio.expiraEn,
+    }
+  } catch {
+    return null // no se ha podido comprobar: no bloquea (mejor dejar cotizar que atascar sin motivo)
+  }
 }
 
 /** Lo que la ruta serializa tal cual. `status` incluido para no repartirlo por ahí. */
@@ -200,6 +265,30 @@ export async function prepararRetarificacion(entrada: {
   const origen = await origenRetarificacion(correduria.id, polizaId)
   if (!origen) {
     return { estado: 'corte', respuesta: { status: 404, cuerpo: { error: 'póliza no encontrada' } } }
+  }
+
+  // 🚨 No pedir precio de nuevo si ya hay un proyecto vigente sin emitir para
+  // esta póliza: ver `proyectoVigenteDePoliza`. GRATIS (un `GET`).
+  if (cuerpo.forzarNuevo !== true) {
+    const vigente = await proyectoVigenteDePoliza(polizaId)
+    if (vigente) {
+      return {
+        estado: 'corte',
+        respuesta: sinGasto(
+          {
+            error:
+              `Ya hay un proyecto de Codeoscopic vigente para esta póliza (${vigente.projectId}` +
+              `${vigente.compania ? `, ${vigente.compania}` : ''}` +
+              `${vigente.primaEur !== null ? `, ${vigente.primaEur}€` : ''}` +
+              `${vigente.caducaEn ? `, válido hasta ${vigente.caducaEn}` : ''}). No se pide precio de ` +
+              'nuevo: crear otro proyecto cuesta otros 0,50€ y la compañía puede dar otro precio. Manda ' +
+              '`forzarNuevo: true` solo si de verdad hace falta una cotización nueva.',
+            proyectoExistente: vigente,
+          },
+          409,
+        ),
+      }
+    }
   }
 
   // ── El cuerpo que viaja, según el ramo. Todo lo de aquí es GRATIS ─────────
