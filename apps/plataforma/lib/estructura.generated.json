@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-12T12:01:02Z",
+  "generadoEn": "2026-09-12T12:30:46Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -380,7 +380,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 36
+        "evidencias": 37
       },
       "rrhh": {
         "estado": "usado",
@@ -406,7 +406,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 46
+        "evidencias": 48
       },
       "rrhh": {
         "estado": "no",
@@ -4807,6 +4807,7 @@
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/cron/seo-correduria",
+      "/api/cron/seo-correduria-agente",
       "/api/cron/ses-latido",
       "/api/cron/sivra-extras-impago",
       "/api/cron/subastas-avisos",
@@ -6231,7 +6232,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1334,
+    "apis": 1335,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
