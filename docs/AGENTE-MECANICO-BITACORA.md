@@ -12,3 +12,5 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+
+- (12/09/2026) endpoint `/api/internal/grafo-codigo` + `scripts/grafo-codigo-inyectar.mjs` + step de `auditoria.yml`, calcados del patrón `mapa-arquitectura` — agente-mecanico — ok (typecheck 0 errores; solo se retocó un comentario de cabecera)

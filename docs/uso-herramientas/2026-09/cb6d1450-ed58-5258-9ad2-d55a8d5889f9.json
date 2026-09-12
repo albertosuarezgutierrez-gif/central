@@ -1,0 +1,31 @@
+{
+ "sesion": "cb6d1450-ed58-5258-9ad2-d55a8d5889f9",
+ "inicio": "2026-09-12T13:08:36.222Z",
+ "fin": "2026-09-12T13:12:26.241Z",
+ "llamadas": 9,
+ "categorias": {
+  "bash": {
+   "llamadas": 5,
+   "chars_in": 11030,
+   "chars_out": 28067,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 5
+   }
+  },
+  "escritura": {
+   "llamadas": 4,
+   "chars_in": 11446,
+   "chars_out": 138538,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 2,
+    "Edit": 2
+   }
+  }
+ }
+}

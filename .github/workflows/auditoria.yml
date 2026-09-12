@@ -220,3 +220,14 @@ jobs:
           done
           [ "$code" = "200" ] || { echo "Inyección del mapa falló tras los reintentos (HTTP $code)"; exit 1; }
           echo "Inyección OK (HTTP 200)."
+
+      # Grafo de código propio (nodos + aristas) → tablas grafo_nodos/grafo_aristas, por lotes.
+      # Mismo patrón que el mapa: solo desde main, sin DATABASE_URL en CI, se omite si faltan secrets.
+      - name: Inyectar grafo de código en Supabase
+        if: github.ref_name == 'main'
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          node scripts/grafo-codigo.mjs --out /tmp/grafo-codigo.json
+          node scripts/grafo-codigo-inyectar.mjs /tmp/grafo-codigo.json
