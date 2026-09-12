@@ -7,6 +7,7 @@
 
 import { decryptField } from '@central/module-seguros-pii'
 import { prisma } from '../tenant'
+import { emailDeFicha } from '../email-ficha'
 import { partirDireccion } from './direccion'
 import type { CampoPersona } from './interprete-400'
 
@@ -34,10 +35,15 @@ export async function valoresPersonaDesdeFicha(
   if (pedidosSoportados.length === 0) return {}
   if (!t.cliente_id && !t.poliza_id) return {}
   try {
-    const filas = await prisma.$queryRaw<{ direccion: string | null; email: string | null }[]>`
-      select c.direccion, c.email
+    // 🚨 SIEMPRE por el cliente vivo, nunca por una lápida: `merged_into_cliente_id
+    // is null` en las dos consultas de abajo. Sin esto, una ficha fusionada (50+
+    // en esta cartera) devolvería la dirección/correo de la lápida — que puede
+    // llevar meses sin actualizarse — en vez de los de la ficha superviviente.
+    const filas = await prisma.$queryRaw<{ cliente_id: string; direccion: string | null }[]>`
+      select c.id::text as cliente_id, c.direccion
       from clientes c
       where c.correduria_id = ${t.correduria_id}::uuid
+        and c.merged_into_cliente_id is null
         and c.id = coalesce(
           ${t.cliente_id}::uuid,
           (select p.cliente_id from polizas p where p.id = ${t.poliza_id}::uuid limit 1)
@@ -53,7 +59,14 @@ export async function valoresPersonaDesdeFicha(
       if (nombre) resultado.nombreVia = nombre
     }
     if (pedidosSoportados.includes('email')) {
-      const email = descifrado(fila.email)
+      // 🚨 Reutiliza `emailDeFicha` (email-ficha.ts) en vez de leer
+      // `clientes.email` a pelo: esa columna es el ESPEJO, no la fuente — el
+      // email principal puede vivir solo en `cliente_emails` (57 fichas de la
+      // cartera, 5 de las 80 vivas), y una segunda implementación de «cuál es
+      // el correo de este cliente» es justo la divergencia silenciosa que ese
+      // fichero se extrajo para evitar (respeta además la baja de correo y el
+      // ilegible≠inexistente que `descifrado()` de aquí no distingue).
+      const email = await emailDeFicha(t.correduria_id, fila.cliente_id)
       if (email) resultado.email = email
     }
     return resultado

@@ -312,8 +312,14 @@ const dniDe = (persona: unknown): string | null => {
  * Un `owner` o `secondaryDriver` con otro DNI es otra persona: escribirle el
  * teléfono o la fecha de nacimiento del tomador sería falsear sus datos. Sin
  * DNI en el tomador no se puede afirmar la identidad → solo el tomador.
+ *
+ * Exportada (13º 400 real, Submit) para que el caller compruebe ANTES de
+ * gastar un reintento de Submit si el 400 pide un papel que `completarPersonas`
+ * NO va a poder rellenar (p. ej. un `owner` con DNI distinto del tomador,
+ * frecuente en vehículos de empresa o familiares): sin esta comprobación se
+ * reintentaría un Submit real que fallaría otra vez por el mismo motivo.
  */
-function papelesDeLaMismaPersona(crudo: Json): Papel[] {
+export function papelesDeLaMismaPersona(crudo: Json): Papel[] {
   const dniHolder = dniDe(crudo.holder)
   if (dniHolder === null) return []
   const risk = obj(crudo.risk)
