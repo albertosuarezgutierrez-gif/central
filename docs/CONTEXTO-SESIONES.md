@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🏦 Duodécimo 400 real de Codeoscopic — el Submit exige IBAN (12/09/2026).** Con la calle ya
+  reparada, `POST /insurances/40684860/policy-applications` respondió «The bank account is mandatory
+  according to the selected companies and payment types.» — y Pilar no tiene cuenta ni en
+  `polizas.cuenta_bancaria` ni en `clientes.cuenta_bancaria` (medido). Mismo patrón que el ReRate:
+  `lib/codeoscopic/emitir-iban.ts` (puro: mod-97, `payment.bankAccount.iban`, detector del texto);
+  la ruta `emitir` toma el IBAN en este orden — `campos.iban` tecleado > `payment.bankAccount.iban`
+  del JSON avanzado > ficha descifrada (póliza, luego cliente; un `v1:` no pasa mod-97 y no viaja) —
+  y traduce ese 400 a **422 `faltan_campos: ['iban']`**; `emision.tsx` pinta la caja del IBAN. Nada
+  se inventa ni se guarda aún en la ficha (pendiente: escribir de vuelta). Cepos vistos en rojo.
 - **🗺️ Grafo de código PROPIO (sustituto de Graphify para callers/impacto/vecinos/tests) + medición automática del uso de cada herramienta (12/09/2026).**
   Alberto: «se acaba el free de Graphify, ¿creamos el nuestro?» → «Hazlo […] controlar el uso como bien dices». `scripts/grafo-codigo.mjs`
   (regex, Node puro, 4.128 archivos → 17k nodos / 60k aristas en 1,8 s) → `/api/internal/grafo-codigo` por lotes → tablas `grafo_nodos`/

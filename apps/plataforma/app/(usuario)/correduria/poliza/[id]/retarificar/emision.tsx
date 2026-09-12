@@ -36,7 +36,7 @@ type EstadoPanel =
       projectId: string
     }
   | { paso: 'emitiendo' }
-  | { paso: 'faltan_campos'; faltan: string[]; campos: unknown; projectId: string }
+  | { paso: 'faltan_campos'; faltan: string[]; campos: unknown; projectId: string; mensaje: string | null }
   /**
    * La compañía pide, al confirmar el precio, un dato que el proyecto no tiene y
    * la ficha tampoco (12/09/2026). No es un error: son huecos que se teclean
@@ -93,6 +93,10 @@ export function Emision({
   const [camposJson, setCamposJson] = useState('{}')
   // Lo que el corredor teclea para los huecos de `faltan_vendor` (campo → valor).
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
+  // La cuenta bancaria del Submit (12/09/2026): la compañía la exige según forma
+  // de pago y la ficha de Pilar no la tenía. Se teclea aquí y asegura la pone en
+  // `payment.bankAccount.iban`; nunca se inventa ni se rellena por defecto.
+  const [iban, setIban] = useState('')
 
   async function confirmarPrecio(conCorrecciones?: Record<string, string>) {
     setEstado({ paso: 'confirmando' })
@@ -150,10 +154,11 @@ export function Emision({
       setEstado({ paso: 'error', mensaje: 'Los campos adicionales no son un JSON válido.' })
       return
     }
+    if (iban.trim() !== '') campos = { ...campos, iban: iban.trim() }
     setEstado({ paso: 'emitiendo' })
     const r = await pedirEmision({ projectId, campos, primaAnual: primaEur })
     if (r.estado === 'faltan_campos') {
-      setEstado({ paso: 'faltan_campos', faltan: r.faltan, campos: r.campos, projectId })
+      setEstado({ paso: 'faltan_campos', faltan: r.faltan, campos: r.campos, projectId, mensaje: r.mensaje })
       return
     }
     if (r.estado === 'ok') {
@@ -356,26 +361,64 @@ export function Emision({
 
       {estado.paso === 'faltan_campos' && (
         <div style={{ marginTop: 14 }}>
-          <p className="err">La compañía pide estos datos antes de emitir:</p>
-          <ul>
-            {estado.faltan.map((f) => (
-              <li key={f}>
-                <code>{f}</code>
-              </li>
-            ))}
-          </ul>
-          <p className="muted" style={{ fontSize: 12 }}>
-            Añádelos al JSON de arriba con esas claves exactas y vuelve a pulsar «Emitir».
+          <p className="err" style={{ margin: 0 }}>
+            La compañía pide {estado.faltan.length === 1 ? 'un dato' : 'estos datos'} antes de emitir. No se ha
+            emitido nada.
           </p>
-          <textarea
-            value={camposJson}
-            onChange={(e) => setCamposJson(e.target.value)}
-            rows={4}
-            style={{ width: '100%', fontFamily: 'monospace' }}
-          />
+          {estado.mensaje && (
+            <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
+              {estado.mensaje}
+            </p>
+          )}
+          {estado.faltan.includes('iban') && (
+            <label style={{ display: 'grid', gap: 4, marginTop: 10 }}>
+              <span style={{ fontWeight: 600 }}>IBAN de la cuenta de cargo</span>
+              <input
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                placeholder="ES00 0000 0000 0000 0000 0000"
+                value={iban}
+                onChange={(e) => setIban(e.target.value)}
+                style={{ width: '100%', minHeight: 44, boxSizing: 'border-box', fontFamily: 'monospace' }}
+              />
+              <span className="muted" style={{ fontSize: 12 }}>
+                La cuenta del tomador para el recibo. asegura comprueba los dígitos de control antes de mandarla;
+                no se guarda en la ficha todavía.
+              </span>
+            </label>
+          )}
+          {estado.faltan.some((f) => f !== 'iban') && (
+            <div style={{ marginTop: 10 }}>
+              <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                Y estas claves, en el JSON (con esos nombres exactos):
+              </p>
+              <ul style={{ margin: '4px 0' }}>
+                {estado.faltan
+                  .filter((f) => f !== 'iban')
+                  .map((f) => (
+                    <li key={f}>
+                      <code>{f}</code>
+                    </li>
+                  ))}
+              </ul>
+              <textarea
+                value={camposJson}
+                onChange={(e) => setCamposJson(e.target.value)}
+                rows={4}
+                style={{ width: '100%', fontFamily: 'monospace' }}
+              />
+            </div>
+          )}
           <div style={{ marginTop: 10 }}>
-            <button type="button" className="primary" onClick={() => emitir(estado.projectId)}>
-              Reintentar con los campos añadidos
+            <button
+              type="button"
+              className="primary"
+              style={{ minHeight: 44 }}
+              disabled={estado.faltan.includes('iban') && iban.trim() === ''}
+              onClick={() => emitir(estado.projectId)}
+            >
+              Reintentar la emisión
             </button>
           </div>
         </div>

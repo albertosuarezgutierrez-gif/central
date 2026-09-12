@@ -5,6 +5,16 @@ import { correduriaUnica } from '@/lib/cartera'
 import { catalogoCompanias, registrarPolizaEmitida } from '@/lib/emision'
 import { resolverConfigEmision, camposDeEmision } from '@/lib/codeoscopic/emitir'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
+import {
+  conCuentaBancaria,
+  esFalloDeCuentaBancaria,
+  extraerIbanTecleado,
+  ibanEnCampos,
+  ibanEnmascarado,
+  ibanValido,
+  normalizarIban,
+} from '@/lib/codeoscopic/emitir-iban'
+import { decryptField } from '@central/module-seguros-pii'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -97,10 +107,20 @@ export async function POST(req: Request) {
   }
 
   const polizas = await prisma.$queryRaw<
-    { cliente_id: string; tipo: string; fraccionamiento: string | null; datos_especificos: unknown }[]
+    {
+      cliente_id: string
+      tipo: string
+      fraccionamiento: string | null
+      datos_especificos: unknown
+      cuenta_poliza: string | null
+      cuenta_cliente: string | null
+    }[]
   >`
-    select cliente_id::text as cliente_id, tipo::text as tipo, fraccionamiento::text as fraccionamiento, datos_especificos
-    from polizas where id = ${p.poliza_id}::uuid and correduria_id = ${correduria.id}::uuid
+    select p.cliente_id::text as cliente_id, p.tipo::text as tipo, p.fraccionamiento::text as fraccionamiento,
+           p.datos_especificos, p.cuenta_bancaria as cuenta_poliza, c.cuenta_bancaria as cuenta_cliente
+    from polizas p
+    left join clientes c on c.id = p.cliente_id and c.correduria_id = p.correduria_id
+    where p.id = ${p.poliza_id}::uuid and p.correduria_id = ${correduria.id}::uuid
   `
   const poliza = polizas[0]
   if (!poliza) {
@@ -109,6 +129,27 @@ export async function POST(req: Request) {
       { status: 404 },
     )
   }
+
+  // ── La cuenta bancaria del Submit (duodécimo 400 real, 12/09/2026) ────────
+  // Orden: lo tecleado en plataforma (`campos.iban`) > lo que ya viniera en
+  // `payment.bankAccount.iban` > la ficha (póliza, luego cliente; cifradas).
+  // Nunca se inventa: si no está en ningún sitio, se manda sin ella y, si la
+  // compañía la exige, su 400 vuelve como hueco `iban` (más abajo).
+  const { iban: ibanTecleado, resto: camposBase } = extraerIbanTecleado(camposCliente)
+  if (ibanTecleado !== null && !ibanValido(ibanTecleado)) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'faltan_campos',
+        mensaje: `El IBAN tecleado (${ibanEnmascarado(ibanTecleado)}) no pasa los dígitos de control: revísalo.`,
+        faltan: ['iban'],
+        campos: null,
+      },
+      { status: 422 },
+    )
+  }
+  const ibanFicha = ibanTecleado ?? ibanEnCampos(camposBase) ?? ibanDeFicha([poliza.cuenta_poliza, poliza.cuenta_cliente])
+  const camposEnvio = ibanFicha ? conCuentaBancaria(camposBase, ibanFicha) : camposBase
 
   const r = resolverConfigEmision()
   if (r.estado !== 'lista') {
@@ -130,7 +171,7 @@ export async function POST(req: Request) {
     () => null,
   )
   const faltan = (campos ?? [])
-    .filter((c) => c.obligatorio && !(c.id in camposCliente))
+    .filter((c) => c.obligatorio && !(c.id in camposEnvio))
     .map((c) => c.id)
   if (faltan.length > 0) {
     return NextResponse.json(
@@ -149,10 +190,32 @@ export async function POST(req: Request) {
     correduriaId: correduria.id,
     projectId,
     offerId: p.accepted_offer_id_codeoscopic,
-    campos: camposCliente,
+    campos: camposEnvio,
   })
 
   if (!envio.ok) {
+    // «The bank account is mandatory according to the selected companies and
+    // payment types.» — no es un fallo del vendor: es un dato que falta. Se
+    // devuelve como hueco para que plataforma pinte la caja del IBAN. Si YA se
+    // mandó una cuenta y la compañía sigue pidiéndola, se dice cuál (enmascarada)
+    // para que nadie crea que no viajó.
+    if (envio.razon === 'vendor' && esFalloDeCuentaBancaria(envio.mensaje)) {
+      return NextResponse.json(
+        {
+          estado: 'error',
+          causa: 'faltan_campos',
+          mensaje: ibanFicha
+            ? `La compañía exige cuenta bancaria para esta forma de pago y se le mandó ${ibanEnmascarado(ibanFicha)}, ` +
+              'pero la sigue pidiendo: revisa la respuesta completa (`crudo`) antes de repetir.'
+            : 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago, y ni la póliza ni la ficha ' +
+              'del cliente la tienen. Tecléala y vuelve a emitir: no se ha emitido nada.',
+          faltan: ['iban'],
+          campos: null,
+          crudo: envio.crudo ?? null,
+        },
+        { status: 422 },
+      )
+    }
     return NextResponse.json(
       { estado: 'error', causa: envio.razon, mensaje: envio.mensaje, crudo: envio.crudo ?? null },
       { status: envio.razon === 'en-vuelo' ? 409 : 502 },
@@ -201,6 +264,28 @@ export async function POST(req: Request) {
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+/**
+ * La primera cuenta VÁLIDA de la ficha, descifrada. 🚨 Sin `PII_ENCRYPTION_KEY`,
+ * `decryptField` devuelve el cifrado tal cual (`v1:…`) sin lanzar: eso no es un
+ * IBAN y no pasa `ibanValido`, así que no puede viajar al vendor. Ilegible o
+ * inválido = «no lo sé», y lo pide la pantalla.
+ */
+function ibanDeFicha(candidatas: (string | null)[]): string | null {
+  for (const cifrada of candidatas) {
+    if (!cifrada) continue
+    let claro: string | null
+    try {
+      claro = decryptField(cifrada)
+    } catch {
+      continue
+    }
+    if (claro === null || claro.startsWith('v1:')) continue
+    const iban = normalizarIban(claro)
+    if (iban && ibanValido(iban)) return iban
+  }
+  return null
 }
 
 function numero(v: unknown): number | null {

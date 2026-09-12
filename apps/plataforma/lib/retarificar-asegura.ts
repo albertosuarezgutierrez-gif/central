@@ -879,7 +879,9 @@ export async function ofertaAsegura(p: {
 
 export type RespuestaEmitir =
   | { estado: 'sin_configurar'; mensaje: string }
-  | { estado: 'faltan_campos'; faltan: string[]; campos: unknown }
+  /** 422 · la compañía pide datos antes de emitir. `faltan` lleva `'iban'` cuando
+   *  exige cuenta bancaria y ni la póliza ni la ficha la tienen (12/09/2026). */
+  | { estado: 'faltan_campos'; faltan: string[]; campos: unknown; mensaje: string | null }
   | { estado: 'en_vuelo'; mensaje: string }
   | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown }
   | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown }
@@ -899,6 +901,7 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
       estado: 'faltan_campos',
       faltan: Array.isArray(r.faltan) ? r.faltan.filter((f): f is string => typeof f === 'string') : [],
       campos: r.campos ?? null,
+      mensaje: cadenaONulo(r.mensaje),
     }
   }
   if (status === 409 && r.causa === 'en-vuelo') {
