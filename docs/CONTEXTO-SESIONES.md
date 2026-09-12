@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📡 Muro de ACTIVIDAD de toda la cartera en `/correduria` (12/09/2026).** Alberto: «una genérica
+  donde ver resumen de todo y controlar todo lo que hacen los clientes, incluso el acceso a la
+  intranet». Sección nueva con DOS mitades y el orden importa: arriba el **embudo** (clientes → con
+  correo → con acceso → han entrado → activos 30d) y debajo la cronología. Medido contra la BD antes
+  de escribirlo: **80 → 52 → 5 → 4 → 4**, o sea el cuello NO es el correo (28 sin él) sino **47
+  clientes con correo a los que nadie ha invitado**; un muro cronológico solo habría enseñado
+  silencio. Seis fuentes que ya existían y nadie leía juntas (`portal_acceso` —creada el 07/09 y sin
+  un solo consumidor—, `portal_codigo` sin canjear = «quiso entrar y no pudo», partes, pólizas
+  declaradas, supresiones e `historial_interno`). De `historial_interno` NO se afirma autor: la
+  columna `actor_user_id` no la escribe nadie y el autor va dentro del texto — solo las dos líneas
+  que compone el portal se reconocen, y por constante compartida, no adivinando sobre texto libre.
+  Un cambio de dirección sale con aviso: el domicilio tarifica en hogar y auto. Cepos: 34, y los 11
+  del muro vistos morder. PR #2801.
+
 - **📮 Y si la ficha SÍ trae la calle, no se vuelve a pedir (12/09/2026, mismo PR #2796).**
   Alberto: «si ya la tenemos, que salga por defecto la que tenemos, no?» — corrección a la entrada de
   abajo, que decía «la ficha NUNCA trae la calle»: SÍ la trae en `clientes.direccion` (texto libre,
