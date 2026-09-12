@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-12T17:27:17Z",
+  "generadoEn": "2026-09-12T21:39:10Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4865,6 +4865,8 @@
       "/api/internal/grafo-codigo/embeddings",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
+      "/api/internal/memoria",
+      "/api/internal/memoria/embeddings",
       "/api/internal/reclamar-reparacion",
       "/api/internal/reparacion-resultado",
       "/api/inversion/underwrite",
@@ -5469,6 +5471,7 @@
       "limpieza_partes",
       "limpieza_tareas",
       "mapa_arquitectura",
+      "memoria_embeddings",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_conflictos_guia",
@@ -6239,7 +6242,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1339,
+    "apis": 1341,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
