@@ -24,6 +24,9 @@ solo sirve para ver, dentro de una sesión larga, si Sentinel habría intervenid
 - `.claude/mcp-sentinel/hooks/sentinel_preflight.py` — motor de detección, copiado
   tal cual del original (verificado byte a byte contra la fuente de Drive).
 - `.claude/mcp-sentinel/hooks/sentinel_stats.py` — telemetría, igual de verificado.
+- `.claude/mcp-sentinel/hooks/sentinel_alerta.py` — envoltorio propio (no vendor,
+  ver sección de abajo) que avisa por Telegram cuando el modo sombra habría
+  bloqueado algo de verdad.
 - `.claude/mcp-sentinel/references/iocs.json` — **reconstrucción curada, NO el
   `iocs.b64` original.** El original es un blob base64 denso de ~13.000
   caracteres; la transcripción manual se corrompió (falló al decodificar) y en
@@ -33,7 +36,33 @@ solo sirve para ver, dentro de una sesión larga, si Sentinel habría intervenid
   Se puede ampliar libremente — no es exhaustiva.
 - Una entrada nueva en `.claude/settings.json` → `hooks.PreToolUse` (matcher `""`,
   o sea todas las herramientas), con `SENTINEL_SHADOW=on` en el propio comando.
-  Los hooks existentes (`guardian-rama.mjs`, etc.) no se han tocado.
+  Apunta a `sentinel_alerta.py` (no directamente a `sentinel_preflight.py`) desde
+  el 12/09/2026. Los hooks existentes (`guardian-rama.mjs`, etc.) no se han tocado.
+
+## Aviso por Telegram cuando el modo sombra intervendría (12/09/2026)
+
+`sentinel_alerta.py` es un envoltorio propio (no copia del vendor) que reenvía
+stdin/stdout/exit-code de `sentinel_preflight.py` sin tocarlo ni un byte, y
+además: si la decisión final es `allow` pero el `additionalContext` contiene
+el literal `SENTINEL_SHADOW` (marca común a las dos plantillas bilingües
+`[SOMBRA]`/`[SHADOW]` de `render("shadow", ...)` — **usar solo `[SOMBRA]` como
+marca sería frágil: el motor detecta el idioma del transcript y por defecto cae
+a inglés**, medido en pruebas de este mismo cambio), dispara un aviso
+`POST {PLATAFORMA_URL}/api/internal/alerta` (el canal de Telegram ya existente,
+ver `docs/RUTINAS-PROGRAMADAS.md` — **no se maneja ningún token de Telegram
+nuevo ni en claro aquí**, solo el `ALERTA_TOKEN` que ya abre ese endpoint).
+
+- **Best-effort de verdad**: cualquier excepción (JSON raro, red caída, faltan
+  `PLATAFORMA_URL`/`ALERTA_TOKEN`) se traga en silencio — nunca cambia la
+  decisión del hook ni hace fallar la llamada de la herramienta.
+- **Deduplicado por hash del motivo + día** (`~/.claude/sentinel/alertas/`):
+  el mismo `[SOMBRA]` repetido en bucle solo avisa una vez por día, no satura
+  el Telegram de Alberto.
+- **Probado funcionalmente** (no solo `py_compile`) en un entorno aislado que
+  replica `hooks/`+`references/`: dispara el aviso con las credenciales
+  puestas, NO dispara nada sin `PLATAFORMA_URL`/`ALERTA_TOKEN`, NO repite aviso
+  en la segunda llamada idéntica el mismo día, y NO dispara nada ante un
+  comando inocuo. Detalle completo de los cuatro casos en el PR de este cambio.
 
 Deliberadamente NO se instaló (para mantener el primer paso mínimo):
 `sentinel_postflight.py` ("remember on approve"), `sentinel_quarantine.py`,
@@ -129,5 +158,5 @@ memoria en `docs/CONTEXTO-SESIONES.md`).
 ## Cómo desinstalarlo
 
 Quitar la entrada añadida en `.claude/settings.json` → `hooks.PreToolUse` (la
-que apunta a `sentinel_preflight.py`) y, si se quiere, borrar el directorio
+que apunta a `sentinel_alerta.py`) y, si se quiere, borrar el directorio
 `.claude/mcp-sentinel/`. No toca nada más del repo.

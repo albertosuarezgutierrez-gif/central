@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🛡️📲 MCP Sentinel avisa por Telegram cuando el modo sombra intervendría (12/09/2026).**
+  `sentinel_alerta.py` envuelve (sin tocar) `sentinel_preflight.py` y, cuando la decisión es
+  `allow` pero el motivo contiene `SENTINEL_SHADOW`, dispara `POST /api/internal/alerta`
+  (canal Telegram ya existente, sin credenciales nuevas). Deduplicado por hash+día. **Ojo con
+  la marca de idioma**: comprobar solo `[SOMBRA]` fallaba en transcripts sin señales de español
+  (el motor cae a `[SHADOW]` en inglés) — se usa `SENTINEL_SHADOW`, literal en las dos
+  plantillas. Probado funcionalmente en aislado (dispara, dedup, sin credenciales no hace nada,
+  comando inocuo no dispara). Detalle en `.claude/mcp-sentinel/README.md`.
 - **🤖 El 400 del ReRate deja de ser un error: es una lista de huecos (12/09/2026).** Alberto: «un
   agente interlocutor entre Codeoscopic y nosotros». Codeoscopic no pregunta, devuelve un 400
   semi-estructurado («The <campo> of the <papel> is mandatory», una línea por campo), así que el
