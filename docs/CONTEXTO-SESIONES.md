@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📞 «Otras compañías por vencer» — venta cruzada sin tarificar (12/09/2026).** Alberto proponía
+  avisar en pantalla a los NO clientes de las ventajas de la casa; se descartó el comparador de precio
+  automático por ramo/compañía (idea F: 110 pólizas vivas dan muestra insuficiente, sería un número
+  falso) y en su lugar Alberto pidió avisarSE A ÉL 2 meses antes para vender a mano («luego será
+  automático»). Nuevo bloque en `/correduria` → Hoy: `lib/cartera-declaradas.ts` (asegura) lee
+  `portal_poliza_declarada` por vencimiento, vinculada por `portal_vinculo`; puerto
+  `/api/operador/declaradas-vencer`, proxy `/api/correduria/declaradas-vencer`, UI `DeclaradasVencer.tsx`.
+  Declara aparte (`sinVincular`) las declaradas cuya identidad del portal no resuelve a ninguna ficha.
+  Idea F queda anotada en `docs/CORREDURIA-INTRANET-IDEAS.md` con este desenlace. `tsc` 0 en asegura y
+  plataforma.
+
 - **📄 «Subir póliza» (corredor) generalizado a cualquier ramo, no solo auto (09/09/2026).** Alberto:
   «¿por qué no se puede subir cualquier póliza si la IA la lee y asigna a los campos?». Tenía razón:
   la lectura estaba limitada a auto por diseño de propósito (leer lo que hace falta para COTIZAR, no
