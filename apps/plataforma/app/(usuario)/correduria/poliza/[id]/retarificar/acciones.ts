@@ -83,6 +83,8 @@ export async function pedirCotizacion(entrada: {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetarificar.forzarNuevo`. */
+  forzarNuevo?: boolean
 }): Promise<RespuestaRetarificar> {
   return retarificarAsegura({
     polizaId: entrada.polizaId,
@@ -91,6 +93,7 @@ export async function pedirCotizacion(entrada: {
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
     catastro: entrada.catastro ?? null,
+    forzarNuevo: entrada.forzarNuevo === true,
   })
 }
 

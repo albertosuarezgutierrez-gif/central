@@ -12,3 +12,5 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+
+- (12/09/2026) `case 'proyecto_vigente'` + guarda `never` en los 6 `switch` de los flujos «nuevo» de plataforma (PR #2806) — agente-mecanico — ok (tsc limpio, 6/6 ficheros, 123k tokens del subagente)
