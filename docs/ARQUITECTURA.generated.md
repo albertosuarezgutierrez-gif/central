@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-12T12:01:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-12T12:59:35Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1334 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1337 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 65
+- **Rutas API:** 66
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
@@ -56,7 +56,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (135):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_dni_otp, correduria_reglas…
-- **Rutas API:** 360
+- **Rutas API:** 362
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (12/09/2026) 🤖 El 400 del ReRate deja de ser un error: es una lista de huecos
+- (12/09/2026) 📡 Muro de ACTIVIDAD de toda la cartera en `/correduria`
+- (12/09/2026) 📮 Y si la ficha SÍ trae la calle, no se vuelve a pedir
+- (12/09/2026) 🚨 Undécimo 400 real de Codeoscopic — ReRate exige la calle del tomador
 - (12/09/2026) 🛑 No crear proyecto por proyecto en Codeoscopic — guardián de reutilización
 - (12/09/2026) 🚨 Décimo 400 real de Codeoscopic — Submit sin el body part `policyApplications`
 - (12/09/2026) MCP Sentinel instalado en modo solo-auditoría (12/09/2026), PR #2780 MERGEADO.
 - (12/09/2026) 🔒 Aviso de phishing solo en la confirmación
 - (12/09/2026) 🌐 IONOS quitó por error el dominio de grupoasegura.es/.com — repuesto
 - (12/09/2026) 📬 Pasada diaria `facturas-correo`
-- (12/09/2026) 🎯 Retarificar: fecha de efecto corregible ANTES de pagar, no después
-- (12/09/2026) ✏️ Correduría: RC en "Pólizas vivas" ya no vuelca las coberturas en la celda
-- (12/09/2026) ✅ Smoobu 401 REALMENTE resuelto — no era el HMAC, era la credencial
-- (12/09/2026) 📞 «Otras compañías por vencer» — venta cruzada sin tarificar
 

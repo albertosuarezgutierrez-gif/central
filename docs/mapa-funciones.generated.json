@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T12:01:02Z",
-  "sha": "cd05babfd039a58cb71f8fc6fae5b71bb6bf234e",
+  "generadoEn": "2026-09-12T12:59:35Z",
+  "sha": "17ffc77edbf6584f440e3644c1378c586c6ca555",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7420,7 +7420,7 @@
           "exportada": true,
           "params": "ctx: ContextoSugerencia, textoCrudo: unknown,",
           "retorno": "Promise<ResultadoSugerencia>",
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "anotarEnFicha",
@@ -7428,13 +7428,13 @@
           "exportada": false,
           "params": "identidadId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 67,
+          "linea": 68,
           "resumen": "Deja la sugerencia en el historial de su ficha, por el puerto estrecho de asegura (el portal no puede escribir en la cartera; ver `lib/mis-datos.ts`). No lanza y no devuelve nada: quien llama ya ha de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "465dd2dd9e1a"
+      "hash": "a55b733eff81"
     },
     {
       "ruta": "apps/asegura-portal/lib/sugerencias.ts",
@@ -8935,7 +8935,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "eab95dfa1d6c"
+      "hash": "21c7a9236438"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/subir/page.tsx",
@@ -9205,6 +9205,27 @@
       "tablas": [],
       "rutaApi": "/api/cron/avisos-vencimiento",
       "hash": "27e942b3fa21"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/actividad/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 35,
+          "resumen": "El MURO DE ACTIVIDAD de toda la cartera, por el puerto de operador (plataforma → asegura). La pantalla es `plataforma` → `/correduria`; aquí solo está el dato. GET ?quien=todo|cliente&dias=1|7|30|90&p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/actividad",
+      "hash": "4de0eee8f074"
     },
     {
       "ruta": "apps/asegura/app/api/operador/backfill-contacto/route.ts",
@@ -9935,7 +9956,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 40,
+          "linea": 51,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate) el precio que ya se enseñó en pantalla desde una cotización REAL de `seguros.tarificaciones`. 🚨 **Construida el 11/09/2026,"
         },
         {
@@ -9944,17 +9965,61 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 254
+          "linea": 337
+        },
+        {
+          "nombre": "leerCorrecciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown,",
+          "retorno": "",
+          "linea": 347,
+          "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
+        },
+        {
+          "nombre": "valorInvalido",
+          "kind": "function",
+          "exportada": false,
+          "params": "campo: CampoPersona, s: string",
+          "retorno": "string | null",
+          "linea": 366
+        },
+        {
+          "nombre": "respuestaSigueFaltando",
+          "kind": "function",
+          "exportada": false,
+          "params": "campos: CampoPersona[], mensajeVendor: string",
+          "retorno": null,
+          "linea": 384
+        },
+        {
+          "nombre": "respuestaNoAplicado",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
+          "retorno": null,
+          "linea": 399
+        },
+        {
+          "nombre": "valoresDesdeFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: { correduria_id: string; poliza_id: string | null; cliente_id: string | null }, pedidos: CampoPersona[],",
+          "retorno": "Promise<Partial<Record<CampoPersona, string>>>",
+          "linea": 422,
+          "resumen": "La cascada ANTES de preguntar al corredor: lo que ya está en la ficha. Hoy solo la calle (`clientes.direccion`, cifrada, troceada con `partirDireccion`): es el único dato que el ReRate pide y la cotiz"
         }
       ],
       "tablas": [
+        "clientes",
         "codeoscopic_projects",
         "next",
+        "polizas",
         "set",
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "56a66112803b"
+      "hash": "3687d958b258"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -11062,6 +11127,80 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ced9dccc438a"
+    },
+    {
+      "ruta": "apps/asegura/lib/actividad-cartera.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El muro de actividad de TODA la cartera, y el embudo de la intranet. ─── Qué problema resuelve ─────────────────────────────────────────────────── El historial existía por ficha: para saber qué había hecho alguien había que entrar en su ficha, y para saber qué había hecho *alguien* había que entrar ",
+      "exporta": [
+        "embudoPortal",
+        "actividadCartera"
+      ],
+      "funciones": [
+        {
+          "nombre": "consultaEventos",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, filtro: FiltroActividad, porPagina: number, offset: number",
+          "retorno": null,
+          "linea": 76,
+          "resumen": "La línea de tiempo. Un solo `UNION ALL` porque la alternativa —seis consultas y ordenarlas en JavaScript— no sabe paginar: para dar la página 3 habría que traerse las tres primeras de cada fuente y de"
+        },
+        {
+          "nombre": "contar",
+          "kind": "function",
+          "exportada": false,
+          "params": "etiqueta: string, sql: Prisma.Sql",
+          "retorno": "Promise<number | null>",
+          "linea": 180,
+          "resumen": "Una cuenta del embudo. `null` si no se pudo hacer — nunca 0."
+        },
+        {
+          "nombre": "embudoPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<EmbudoPortal>",
+          "linea": 200,
+          "resumen": "El embudo: de los clientes de la casa, cuántos llegan a cada escalón de la intranet. «Cliente» es cartera viva y punto (`sqlCarteraViva`), no `clientes.tipo`: esa columna dice 2.742 clientes cuando so"
+        },
+        {
+          "nombre": "actividadCartera",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, filtro: FiltroActividad,",
+          "retorno": "Promise<RespuestaActividad>",
+          "linea": 258,
+          "resumen": "El muro entero: eventos de la ventana pedida + el embudo."
+        },
+        {
+          "nombre": "nombreFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string | null, apellidos: string | null",
+          "retorno": "string | null",
+          "linea": 298,
+          "resumen": "`null` cuando el evento no tiene ficha detrás. No cae a «Sin nombre» ni a una cadena vacía: la pantalla necesita distinguir «esto lo hizo alguien que todavía no está casado con ninguna ficha» de «esto"
+        }
+      ],
+      "tablas": [
+        "cliente_emails",
+        "clientes",
+        "eventos",
+        "historial_interno",
+        "polizas",
+        "portal_acceso",
+        "portal_canal",
+        "portal_codigo",
+        "portal_identidad",
+        "portal_parte_siniestro",
+        "portal_poliza_declarada",
+        "portal_supresion",
+        "portal_vinculo",
+        "vinc"
+      ],
+      "rutaApi": null,
+      "hash": "4b77b3aa6130"
     },
     {
       "ruta": "apps/asegura/lib/asegura-db.ts",
@@ -12218,7 +12357,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<ClienteOrigen | null>",
-          "linea": 870,
+          "linea": 872,
           "resumen": "La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no desde una póliza de la cartera). Misma discipl"
         },
         {
@@ -12227,7 +12366,7 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 913,
+          "linea": 917,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
@@ -12235,7 +12374,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "feaa33ccbe1e"
+      "hash": "fcd4b802efe6"
     },
     {
       "ruta": "apps/asegura/lib/cartera-filtro.ts",
@@ -13979,8 +14118,6 @@
       "exporta": [
         "precalificarHogarCartera",
         "habitacionesPorSuperficie",
-        "direccionDesdeCatastro",
-        "partirDireccion",
         "hogarDeDatos",
         "elegirRiesgo"
       ],
@@ -13991,7 +14128,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 118
+          "linea": 119
         },
         {
           "nombre": "precalificarHogarCartera",
@@ -13999,7 +14136,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaHogarCartera, resueltos: ResueltosHogar, hoy: string, catastro: CatastroHogar | null = null,",
           "retorno": "PrecalificacionHogar",
-          "linea": 141
+          "linea": 142
         },
         {
           "nombre": "habitacionesPorSuperficie",
@@ -14007,7 +14144,7 @@
           "exportada": true,
           "params": "m2: number",
           "retorno": "number",
-          "linea": 330,
+          "linea": 331,
           "resumen": "Habitaciones (dormitorios) estimadas por superficie construida. Es un supuesto declarado, no un dato: el vendor exige el número y la ficha no lo tiene. Tramos típicos de vivienda española."
         },
         {
@@ -14016,33 +14153,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 339
-        },
-        {
-          "nombre": "direccionDesdeCatastro",
-          "kind": "function",
-          "exportada": true,
-          "params": "p: { sigla: string calle: string numero: string planta?: string | null puerta?: string | null } | null",
-          "retorno": "DireccionPartida",
-          "linea": 386,
-          "resumen": "De `paramsDnploc()` (`@central/core-catastro`, que sí entiende «Es:1 Pl:01 Pt:IZ») a `DireccionPartida`. Existe porque `partirDireccion()` de aquí abajo está pensado para el texto libre de la ficha de"
-        },
-        {
-          "nombre": "normalizarToken",
-          "kind": "function",
-          "exportada": false,
-          "params": "t: string",
-          "retorno": "string",
-          "linea": 410
-        },
-        {
-          "nombre": "partirDireccion",
-          "kind": "function",
-          "exportada": true,
-          "params": "direccion: string | null",
-          "retorno": "DireccionPartida",
-          "linea": 425,
-          "resumen": "Trocea «CL SOCORRO 24 3º IZQ» en tipo de vía / nombre / número / planta / puerta. Best-effort y CONSERVADOR: lo que no se reconoce queda a `null` (y la pantalla lo pide), nunca se inventa un número. S"
+          "linea": 340
         },
         {
           "nombre": "hogarDeDatos",
@@ -14050,7 +14161,7 @@
           "exportada": true,
           "params": "datos: Record<string, unknown> | null, fuente: 'poliza' | 'gemela', direccionDescifrada: string | null = null,",
           "retorno": "HogarCartera | null",
-          "linea": 483,
+          "linea": 357,
           "resumen": "Lee el riesgo de hogar de un `datos_especificos` (póliza o gemela). Los números del volcado vienen como TEXTO («76», «61000»): se convierten, y lo que no es número queda a `null` — nunca a 0."
         },
         {
@@ -14059,7 +14170,7 @@
           "exportada": true,
           "params": "propio: HogarCartera | null, gemela: HogarCartera | null",
           "retorno": "HogarCartera | null",
-          "linea": 504,
+          "linea": 378,
           "resumen": "El riesgo que se usa: el de la póliza si está completa; si no, la gemela; si ninguna, lo que haya."
         },
         {
@@ -14068,7 +14179,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 511
+          "linea": 385
         },
         {
           "nombre": "entero",
@@ -14076,7 +14187,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 515
+          "linea": 389
         },
         {
           "nombre": "cpDe",
@@ -14084,12 +14195,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 519
+          "linea": 393
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cc734a652e41"
+      "hash": "8b459225ae1a"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera-salud.ts",
@@ -14188,7 +14299,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 157
+          "linea": 166
         },
         {
           "nombre": "nombreUtil",
@@ -14196,7 +14307,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 163
+          "linea": 172
         },
         {
           "nombre": "partirApellidos",
@@ -14204,7 +14315,7 @@
           "exportada": true,
           "params": "apellidos: string | null",
           "retorno": "",
-          "linea": 170,
+          "linea": 179,
           "resumen": "«Pérez García» → ['Pérez', 'García']. El vendor quiere los dos por separado."
         },
         {
@@ -14213,7 +14324,7 @@
           "exportada": true,
           "params": "saludo: string | null",
           "retorno": "'hombre' | 'mujer' | null",
-          "linea": 186,
+          "linea": 195,
           "resumen": "Sexo a partir del tratamiento del CRM. Medido el 01/09/2026 sobre las 32.600 fichas: con `saludo='1'` los nombres de pila más frecuentes son Jose, Juan, Antonio, Francisco y Manuel; con `'2'`, María. "
         },
         {
@@ -14222,7 +14333,7 @@
           "exportada": true,
           "params": "desde: string | null, hasta: string",
           "retorno": "number | null",
-          "linea": 198,
+          "linea": 207,
           "resumen": "Años completos entre dos fechas aaaa-mm-dd. `null` si alguna no es fecha."
         },
         {
@@ -14231,7 +14342,7 @@
           "exportada": true,
           "params": "f: string",
           "retorno": "string",
-          "linea": 207,
+          "linea": 216,
           "resumen": "El día siguiente a una fecha aaaa-mm-dd."
         },
         {
@@ -14240,7 +14351,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaCartera, resueltos: Resueltos, hoy: string,",
           "retorno": "Precalificacion",
-          "linea": 219,
+          "linea": 228,
           "resumen": "Construye la precalificación. `hoy` entra por parámetro para que la función sea pura y los tests no dependan del calendario."
         },
         {
@@ -14249,7 +14360,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, resueltos: ResueltosAutoNueva, hoy: string,",
           "retorno": "Precalificacion",
-          "linea": 360
+          "linea": 387
         },
         {
           "nombre": "sePuedeCotizar",
@@ -14257,7 +14368,7 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "boolean",
-          "linea": 439,
+          "linea": 481,
           "resumen": "¿Se puede cotizar ya? Azúcar para la pantalla y para el puerto, que tienen que decidir lo mismo y no deben hacerlo cada uno a su manera."
         },
         {
@@ -14266,7 +14377,7 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "Supuesto[]",
-          "linea": 448,
+          "linea": 490,
           "resumen": "Los supuestos que cambian el precio a mejor. La pantalla los enseña aparte porque son los que pueden decepcionar luego: si el cliente sí tuvo siniestros, la prima real sube respecto a lo que se le ha "
         },
         {
@@ -14275,12 +14386,60 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, resueltos: ResueltosMotoNueva, hoy: string,",
           "retorno": "PrecalificacionMoto",
-          "linea": 490
+          "linea": 532
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "870722086ba7"
+      "hash": "d04cdc72e50d"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/direccion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Trocear una dirección de texto libre (CRM) o del Catastro en tipo de vía / nombre / número / planta / puerta, que es como Codeoscopic la exige. PURO: sin red, sin BD. Extraído de `desde-cartera-hogar.ts` el 12/09/2026 para que `desde-cartera.ts` (auto) pueda usarlo también sin crear un import circul",
+      "exporta": [
+        "direccionDesdeCatastro",
+        "partirDireccion"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 7
+        },
+        {
+          "nombre": "direccionDesdeCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { sigla: string calle: string numero: string planta?: string | null puerta?: string | null } | null",
+          "retorno": "DireccionPartida",
+          "linea": 52,
+          "resumen": "De `paramsDnploc()` (`@central/core-catastro`, que sí entiende «Es:1 Pl:01 Pt:IZ») a `DireccionPartida`. Existe porque `partirDireccion()` de aquí abajo está pensado para el texto libre de la ficha de"
+        },
+        {
+          "nombre": "normalizarToken",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 76
+        },
+        {
+          "nombre": "partirDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "direccion: string | null",
+          "retorno": "DireccionPartida",
+          "linea": 91,
+          "resumen": "Trocea «CL SOCORRO 24 3º IZQ» en tipo de vía / nombre / número / planta / puerta. Best-effort y CONSERVADOR: lo que no se reconoce queda a `null` (y la pantalla lo pide), nunca se inventa un número. S"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1b7769a4dbc6"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emitir-envio.ts",
@@ -14345,6 +14504,8 @@
         "leerOferta",
         "reRate",
         "actualizarFechaEfecto",
+        "leerProyectoCrudo",
+        "completarPersonas",
         "camposDeEmision"
       ],
       "funciones": [
@@ -14435,18 +14596,53 @@
           "resumen": "`PATCH /insurances/{id}` — corrige un campo del proyecto YA creado, GRATIS (solo `POST /insurances` está documentado como facturable). 🚨 **Nace el 11/09/2026 tras el cuarto 400 real** (proyecto 40681"
         },
         {
+          "nombre": "leerProyectoCrudo",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string",
+          "retorno": "Promise<Json>",
+          "linea": 289,
+          "resumen": "El proyecto tal cual lo devuelve el vendor (GET). Gratis."
+        },
+        {
+          "nombre": "dniDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "persona: unknown",
+          "retorno": "string | null",
+          "linea": 305
+        },
+        {
+          "nombre": "papelesDeLaMismaPersona",
+          "kind": "function",
+          "exportada": false,
+          "params": "crudo: Json",
+          "retorno": "Papel[]",
+          "linea": 316,
+          "resumen": "Los papeles del `risk` que son LA MISMA PERSONA que el tomador (mismo DNI). Un `owner` o `secondaryDriver` con otro DNI es otra persona: escribirle el teléfono o la fecha de nacimiento del tomador ser"
+        },
+        {
+          "nombre": "completarPersonas",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string, valores: Partial<Record<CampoPersona, string>>,",
+          "retorno": "Promise<ResultadoCompletar>",
+          "linea": 333,
+          "resumen": "Escribe `valores` en el tomador y en los papeles del `risk` que sean la misma persona (mismo DNI) — el vendor cruza por DNI y rechaza si un campo difiere entre ellos, así que no se puede completar sol"
+        },
+        {
           "nombre": "camposDeEmision",
           "kind": "function",
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
           "retorno": "Promise<CampoEmision[]>",
-          "linea": 286,
+          "linea": 390,
           "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "42bac8c11d59"
+      "hash": "8ece233b60a2"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -14604,6 +14800,128 @@
       "hash": "063d549378bd"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/interprete-400.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Traduce el 400 de validación de Codeoscopic a NUESTROS campos, para que un «The road name of the address of the holder is mandatory.» deje de ser un error que se enseña tal cual y pase a ser un hueco que la pantalla pide. PURO: entra el texto del vendor, salen campos. Sin red, sin BD. ─── Por qué ex",
+      "exporta": [
+        "esCampoPersona",
+        "lineasDelVendor",
+        "interpretarError400",
+        "reparosDe",
+        "aplicarCamposPersona",
+        "aplicarCampoPersona",
+        "leerCampoPersona",
+        "mismoValor"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCampoPersona",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is CampoPersona",
+          "linea": 53
+        },
+        {
+          "nombre": "lineasDelVendor",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajeCrudo: string",
+          "retorno": "string[]",
+          "linea": 118,
+          "resumen": "Saca las líneas del `message` del vendor. Acepta tanto el `detalle` de `ErrorCodeoscopic` (JSON) como su `message` entero (`codeoscopic_validacion: {...}`). 🚨 En producción el `detalle` viene RECORTA"
+        },
+        {
+          "nombre": "desescapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 139
+        },
+        {
+          "nombre": "interpretarError400",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajeCrudo: string",
+          "retorno": "Interpretacion",
+          "linea": 145
+        },
+        {
+          "nombre": "reparosDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "interp: Interpretacion",
+          "retorno": "Reparo[]",
+          "linea": 176,
+          "resumen": "Los campos interpretados como `Reparo`, que es lo que la pantalla ya sabe pintar."
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Json",
+          "linea": 186
+        },
+        {
+          "nombre": "arr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown[]",
+          "linea": 187
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 188
+        },
+        {
+          "nombre": "aplicarCamposPersona",
+          "kind": "function",
+          "exportada": true,
+          "params": "persona: unknown, valores: Partial<Record<CampoPersona, string>>",
+          "retorno": "Json",
+          "linea": 202,
+          "resumen": "Devuelve la persona con TODOS los `valores` escritos en la forma del vendor. No muta. 🚨 `nombreVia`/`cpResidencia`/`municipioResidenciaId` viven DENTRO de `addresses[0]`, y una dirección solo es váli"
+        },
+        {
+          "nombre": "aplicarCampoPersona",
+          "kind": "function",
+          "exportada": true,
+          "params": "persona: unknown, campo: CampoPersona, valor: string",
+          "retorno": "Json",
+          "linea": 229,
+          "resumen": "Un solo campo. Para los de dirección delega en `aplicarCamposPersona` (misma guarda)."
+        },
+        {
+          "nombre": "leerCampoPersona",
+          "kind": "function",
+          "exportada": true,
+          "params": "persona: unknown, campo: CampoPersona",
+          "retorno": "string | null",
+          "linea": 266,
+          "resumen": "Lee el campo tal y como está en la persona del proyecto. `null` = no está."
+        },
+        {
+          "nombre": "mismoValor",
+          "kind": "function",
+          "exportada": true,
+          "params": "campo: CampoPersona, escrito: string, leido: string | null",
+          "retorno": "boolean",
+          "linea": 298,
+          "resumen": "Normaliza para comparar lo escrito con lo leído (el vendor puede cambiar mayúsculas/espacios)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "407041e14e7e"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/opciones-producto.ts",
       "ambito": "apps/asegura",
       "resumen": "Catálogo ESTÁTICO de `product.options` por defecto para el ReRate, para las compañías que exigen campos que la cotización NUNCA devuelve (ver `Precio.productOptions` en `respuesta.ts` — el vendor no los manda al cotizar, así que aquí casi siempre es `null`). Sin sandbox y sin catálogo REST para esto",
@@ -14694,7 +15012,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 23
+          "linea": 32
         },
         {
           "nombre": "numero",
@@ -14702,7 +15020,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 26
+          "linea": 35
         },
         {
           "nombre": "revisarPersona",
@@ -14710,7 +15028,7 @@
           "exportada": true,
           "params": "d: Partial<DatosPersona>",
           "retorno": "ReparoPersona[]",
-          "linea": 34,
+          "linea": 43,
           "resumen": "Las reglas del tomador que valen para cualquier ramo."
         },
         {
@@ -14719,13 +15037,13 @@
           "exportada": true,
           "params": "d: DatosPersona, extra: { fechaCarnet?: string | null } = {}",
           "retorno": "Record<string, unknown>",
-          "linea": 56,
+          "linea": 65,
           "resumen": "Construye la persona. `fechaCarnet` solo la lleva auto: es el carnet B del conductor. Hogar no lo manda — no hace falta para el precio."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c289a524abd3"
+      "hash": "45836c91f0b4"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/peticion-auto.ts",
@@ -14752,7 +15070,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 115
+          "linea": 125
         },
         {
           "nombre": "numero",
@@ -14760,7 +15078,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 118
+          "linea": 128
         },
         {
           "nombre": "construirPeticionAuto",
@@ -14768,7 +15086,7 @@
           "exportada": true,
           "params": "d: DatosAuto",
           "retorno": "Record<string, unknown>",
-          "linea": 128,
+          "linea": 138,
           "resumen": "Construye el cuerpo `CreateInsuranceRequest_V1`. Lanza si los datos no pasan `revisarDatosAuto`: preferimos fallar aquí, gratis, a mandar una petición que el vendor rechazará después de facturarla."
         },
         {
@@ -14777,13 +15095,13 @@
           "exportada": true,
           "params": "d: Partial<DatosAuto>",
           "retorno": "boolean",
-          "linea": 188,
+          "linea": 198,
           "resumen": "¿El vendor exige el detalle de siniestros de los últimos 5 años?"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53a1a99780ed"
+      "hash": "5e30aa41e266"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/peticion-decesos.ts",
@@ -60995,6 +61313,86 @@
       "hash": "6b6649aeb204"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/Actividad.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Actividad"
+      ],
+      "funciones": [
+        {
+          "nombre": "Actividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 45,
+          "resumen": "El muro de actividad de TODA la cartera: qué han hecho los clientes, incluidas sus entradas en la intranet. ─── Por qué existe ────────────────────────────────────────────────────────── El historial y"
+        },
+        {
+          "nombre": "esPosterior",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string, desde: string | null",
+          "retorno": "boolean",
+          "linea": 174,
+          "resumen": "`true` solo cuando las dos fechas son legibles: ante la duda, no se marca nada como nuevo."
+        },
+        {
+          "nombre": "Embudo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ e }: { e: EmbudoPortal }",
+          "retorno": null,
+          "linea": 183
+        },
+        {
+          "nombre": "Filtros",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ quien, dias, onQuien, onDias, }: { quien: QuienActividad dias: number onQuien: (v: QuienActividad) => void onDias: (v: number) => void }",
+          "retorno": null,
+          "linea": 241
+        },
+        {
+          "nombre": "Fila",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ e, nuevo, }: { e: { id: string; tipo: string; fecha: string; clienteId: string | null; cliente: string | null; texto: string | null } nuevo: boolean }",
+          "retorno": null,
+          "linea": 288
+        },
+        {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 371,
+          "resumen": "Una fecha que no parsea se enseña tal cual: preferible a «Invalid Date»."
+        },
+        {
+          "nombre": "Paginador",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ pagina, total, mostrados, onPagina, cargando, }: { pagina: number total: number mostrados: number onPagina: (n: number) => void cargando: boolean }",
+          "retorno": null,
+          "linea": 379
+        },
+        {
+          "nombre": "Aviso",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r, cargando }: { r: ResultadoActividad | null; cargando: boolean }",
+          "retorno": null,
+          "linea": 427,
+          "resumen": "🚨 Nunca se pinta un muro vacío por un fallo. «No se ha podido leer» y «no ha pasado nada» se verían igual, y solo uno de los dos autoriza a concluir que los clientes no están usando la intranet."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fb7389d281e1"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Blog.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -62459,7 +62857,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "fmtFecha",
@@ -62467,7 +62865,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 68,
+          "linea": 69,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -62476,7 +62874,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 118
+          "linea": 119
         },
         {
           "nombre": "CorreduriaClient",
@@ -62484,7 +62882,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 120
+          "linea": 121
         },
         {
           "nombre": "CarteraResumen",
@@ -62492,7 +62890,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 500
+          "linea": 516
         },
         {
           "nombre": "btnMini",
@@ -62500,7 +62898,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 617,
+          "linea": 633,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -62509,12 +62907,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 635
+          "linea": 651
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ba8fb913eed0"
+      "hash": "28e2b9d7734c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -63546,7 +63944,7 @@
           "nombre": "pedirOferta",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { tarificacionId: string compania: string categoria: string fechaEfectoCorregida?: string }",
+          "params": "entrada: { tarificacionId: string compania: string categoria: string fechaEfectoCorregida?: string /** Respuesta del corredor a un `faltan_vendor` anterior (campo nuestro → valor). */ correcciones?: Record<string, string> }",
           "retorno": "Promise<RespuestaOferta>",
           "linea": 103,
           "resumen": "🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo pone `ofertaAsegura()` en el servidor, y esto NO reintenta"
@@ -63557,13 +63955,13 @@
           "exportada": true,
           "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null }",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 117,
+          "linea": 119,
           "resumen": "🚨 **EL SUBMIT REAL. Compromete un contrato de verdad, no solo dinero.** Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin reintento: un fallo de red aquí NO dice que la póliza no se "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1bed2616b216"
+      "hash": "e0a181c3d9e5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx",
@@ -63578,7 +63976,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 44
+          "linea": 56
         },
         {
           "nombre": "Emision",
@@ -63586,12 +63984,12 @@
           "exportada": true,
           "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
           "retorno": null,
-          "linea": 48
+          "linea": 79
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "401a37060d27"
+      "hash": "1e0247fd3e62"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -64151,7 +64549,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db8796d963f9"
+      "hash": "7b7dd6106cf0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Secciones.tsx",
@@ -64166,7 +64564,7 @@
           "exportada": true,
           "params": "{ activa, contadores, onCambiar }: { activa: Seccion contadores: ContadoresSeccion onCambiar: (s: Seccion) => void }",
           "retorno": null,
-          "linea": 44
+          "linea": 45
         },
         {
           "nombre": "Insignia",
@@ -64174,12 +64572,12 @@
           "exportada": false,
           "params": "{ contador, tono, title }: { contador: Contador | null tono?: 'aviso' | 'malo' title?: string }",
           "retorno": null,
-          "linea": 103
+          "linea": 104
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7fda6e756f9b"
+      "hash": "7abf87452799"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/SinCanal.tsx",
@@ -71073,6 +71471,27 @@
       "hash": "29333ccf75c2"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/actividad/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "GET — el muro de actividad de toda la cartera (puerto HTTP a central-asegura). Reenvía los filtros tal cual y devuelve la respuesta del puerto **con su mismo status**: quien la interpreta es `interpre"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/actividad",
+      "hash": "0dfff962e588"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/backfill-contacto/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -72926,6 +73345,44 @@
       "tablas": [],
       "rutaApi": "/api/cron/resumen-semanal",
       "hash": "ef41d64d1f31"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/seo-correduria-agente/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Cron SEO AUTÓNOMO de la correduría — lunes 09:00 UTC (30 min detrás de `seo-correduria`, que deja escrita la foto semanal de la que este agente se alimenta). Qué hace: mira qué ramos de apps/asegura-web NO aparecen en el top-10 de su consulta principal (SERP semanal), propone un title/description nu",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "proponerTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "slug: string, tituloActual: string, descActual: string, consulta: string",
+          "retorno": null,
+          "linea": 49
+        },
+        {
+          "nombre": "validar",
+          "kind": "function",
+          "exportada": false,
+          "params": "propuesta: { title: string; description: string }",
+          "retorno": "string | null",
+          "linea": 67,
+          "resumen": "`null` = pasa todos los guardarraíles de copy/longitud. Si no, el motivo por el que se descarta."
+        },
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 77
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/cron/seo-correduria-agente",
+      "hash": "f871253d548a"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/seo-correduria/route.ts",
@@ -79606,6 +80063,87 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d9630d52b113"
+    },
+    {
+      "ruta": "apps/plataforma/lib/actividad-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "El MURO DE ACTIVIDAD de la cartera, leído del puerto de asegura (`GET /api/operador/actividad`) y convertido en algo que la pantalla pueda pintar sin adivinar nada. Dos partes, como en `leads-asegura.ts` y `duplicados-asegura.ts`: 1. Lo PURO: `interpretarActividad` (test en `lib/actividad-asegura.te",
+      "exporta": [
+        "interpretarActividad",
+        "actividadAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 39
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 43
+        },
+        {
+          "nombre": "cuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 55,
+          "resumen": "Una cuenta del embudo. 🚨 Solo un número finito cuenta. Cualquier otra cosa —ausente, `null`, basura— es `null`, que la pantalla pinta como «—» y no como un cero. Un 0 inventado aquí diría «ninguno de"
+        },
+        {
+          "nombre": "embudoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "bruto: unknown",
+          "retorno": "EmbudoPortal",
+          "linea": 59
+        },
+        {
+          "nombre": "fechaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 71,
+          "resumen": "Una fecha ISO que no parsea es tan ilegible como una fila sin id: no se pinta."
+        },
+        {
+          "nombre": "interpretarActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "bruto: unknown",
+          "retorno": "ResultadoActividad",
+          "linea": 77
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 137
+        },
+        {
+          "nombre": "actividadAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "query: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 144,
+          "resumen": "`GET /api/operador/actividad` — el muro de toda la cartera."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0d4d3a8c154c"
     },
     {
       "ruta": "apps/plataforma/lib/actividad-ialimp.ts",
@@ -86312,7 +86850,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 189,
+          "linea": 193,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -86321,7 +86859,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 219,
+          "linea": 223,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -86330,7 +86868,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 241
+          "linea": 245
         },
         {
           "nombre": "ventanaMinutos",
@@ -86338,7 +86876,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 249,
+          "linea": 253,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -86347,13 +86885,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 261,
+          "linea": 265,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dadb606c66ce"
+      "hash": "ab7955c9ceef"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -92907,7 +93445,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 705
+          "linea": 721
         },
         {
           "nombre": "interpretarOferta",
@@ -92915,7 +93453,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaOferta",
-          "linea": 719,
+          "linea": 735,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -92924,7 +93462,7 @@
           "exportada": true,
           "params": "p: { tarificacionId: string compania: string categoria: string /** Corrige la fecha de efecto del proyecto (aaaa-mm-dd) ANTES del ReRate, * vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha * rechazado — ver `apps/aseg",
           "retorno": "Promise<RespuestaOferta>",
-          "linea": 750,
+          "linea": 797,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía el precio de `tarificacionId` (id de `seguros.tarificaciones`) para la `compania`/`categoria` elegidas en pantalla. NO reintenta."
         },
         {
@@ -92933,7 +93471,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaEmitir",
-          "linea": 800,
+          "linea": 850,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -92942,7 +93480,7 @@
           "exportada": true,
           "params": "p: { projectId: string campos: Record<string, unknown> actor?: string primaAnual?: number | null }",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 849,
+          "linea": 899,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO reintenta: un fallo de red aquí no dice que no se haya emitid"
         },
         {
@@ -92951,7 +93489,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FormularioGuardado | null",
-          "linea": 931
+          "linea": 981
         },
         {
           "nombre": "leerPreciosGuardados",
@@ -92959,7 +93497,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Precio[] | null",
-          "linea": 950
+          "linea": 1000
         },
         {
           "nombre": "interpretarTarificacionGuardada",
@@ -92967,7 +93505,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaTarificacionGuardada",
-          "linea": 967,
+          "linea": 1017,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -92976,13 +93514,13 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 1008,
+          "linea": 1058,
           "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c85bc8a760ca"
+      "hash": "4b5e4e735667"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -93151,6 +93689,239 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "bd2abd7c894c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seo-correduria/agente-decidir.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/agente-decidir.ts — qué ramo de asegura-web merece una propuesta de metadata nueva, a partir del SERP semanal. Puro: no toca red ni BD. Criterio v1 (deliberadamente simple): un ramo con página propia que NO aparece en el top-10 de su consulta principal es candidato — no hay CTR qu",
+      "exporta": [
+        "slugDeRuta",
+        "candidatosRamo"
+      ],
+      "funciones": [
+        {
+          "nombre": "slugDeRuta",
+          "kind": "function",
+          "exportada": true,
+          "params": "pagina: string | null",
+          "retorno": "string | null",
+          "linea": 13,
+          "resumen": "'/seguros/hogar' → 'hogar'; cualquier otra forma (null, '/', '/quienes-somos') → null."
+        },
+        {
+          "nombre": "candidatosRamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "consultas: ConsultaSerp[], ramosEditables: readonly string[], recientes: { ruta: string; creadoEn: string | Date }[], ahora: Date, max: number,",
+          "retorno": "CandidatoRamo[]",
+          "linea": 24,
+          "resumen": "Candidatos: consultas de grupo 'ramo' cuya página es un slug editable, no están en el top-10 (`propia === null`), no están en cooldown, hasta `max`. Orden: el orden de `CONSULTAS` (que ya está prioriz"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9c8136ace012"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seo-correduria/agente-github.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/agente-github.ts — lee y escribe apps/asegura-web/lib/ramos.ts por la GitHub Contents API. Mismo patrón que apps/sivra/lib/seo-landing.ts (housesevillana), con UNA diferencia deliberada: el PR se abre en DRAFT y esta rutina NUNCA lo mergea — a diferencia de la landing (contenido p",
+      "exporta": [
+        "githubToken",
+        "leerRamosTs",
+        "proponerCambioRamos"
+      ],
+      "funciones": [
+        {
+          "nombre": "githubToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 11
+        },
+        {
+          "nombre": "cabecerasGh",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Record<string, string>",
+          "linea": 17
+        },
+        {
+          "nombre": "leerRamosTs",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 26
+        },
+        {
+          "nombre": "prepararRama",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<void>",
+          "linea": 38,
+          "resumen": "Deja `RAMA_SEO_ASEGURA` apuntando al `main` de ahora mismo (la crea si no existía). Se resetea en cada pasada: si el PR anterior no se mergeó, esta lo reemplaza."
+        },
+        {
+          "nombre": "commitRamos",
+          "kind": "function",
+          "exportada": false,
+          "params": "contenidoNuevo: string, mensaje: string",
+          "retorno": "Promise<void>",
+          "linea": 58
+        },
+        {
+          "nombre": "abrirPrDraft",
+          "kind": "function",
+          "exportada": false,
+          "params": "titulo: string, cuerpo: string",
+          "retorno": "Promise<string>",
+          "linea": 78,
+          "resumen": "Abre el PR en DRAFT si no hay ya uno abierto para la rama. Devuelve su URL."
+        },
+        {
+          "nombre": "proponerCambioRamos",
+          "kind": "function",
+          "exportada": true,
+          "params": "opts: { transformar: (contenidoMain: string) => string commitMsg: string prTitulo: string prCuerpo: string }",
+          "retorno": "Promise<string>",
+          "linea": 98,
+          "resumen": "Ciclo completo: lee ramos.ts de main, aplica `transformar`, commitea en rama fija y abre (o reutiliza) el PR draft. Devuelve la URL del PR. `transformar` recibe el contenido actual de MAIN (no de la r"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d1b3f8e19675"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seo-correduria/agente-guardrails.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/agente-guardrails.ts — lógica pura del agente AUTÓNOMO de SEO de la correduría (propone PRs contra apps/asegura-web/lib/ramos.ts, nunca escribe directo a main). Mismo patrón que apps/ia-rest/src/lib/seo/guardrails.ts, adaptado: aquí el \"target\" es un SLUG de ramo (@central/module-",
+      "exporta": [
+        "agenteHabilitado",
+        "slugEditable",
+        "dentroDeLimite",
+        "enCooldown",
+        "maxCambios",
+        "minImpresiones"
+      ],
+      "funciones": [
+        {
+          "nombre": "agenteHabilitado",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: { SEO_ASEGURA_AGENT_ENABLED?: string }",
+          "retorno": "boolean",
+          "linea": 11,
+          "resumen": "Kill switch. El agente no toca nada salvo que esta env sea EXACTAMENTE 'true'."
+        },
+        {
+          "nombre": "slugEditable",
+          "kind": "function",
+          "exportada": true,
+          "params": "slug: string, allowlist: readonly string[]",
+          "retorno": "boolean",
+          "linea": 16,
+          "resumen": "Solo se puede tocar un slug de la allowlist (los ramos reales de lib/ramos.ts)."
+        },
+        {
+          "nombre": "dentroDeLimite",
+          "kind": "function",
+          "exportada": true,
+          "params": "cambiosEnRun: number, max: number",
+          "retorno": "boolean",
+          "linea": 20
+        },
+        {
+          "nombre": "enCooldown",
+          "kind": "function",
+          "exportada": true,
+          "params": "slug: string, recientes: { ruta: string; creadoEn: string | Date }[], ahora: Date, dias = SEO_ASEGURA_COOLDOWN_DIAS,",
+          "retorno": "boolean",
+          "linea": 25,
+          "resumen": "¿Se tocó este slug en los últimos `dias` días? (anti-oscilación, mismo criterio que ia-rest)."
+        },
+        {
+          "nombre": "maxCambios",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: { SEO_ASEGURA_MAX_CAMBIOS?: string }",
+          "retorno": "number",
+          "linea": 35
+        },
+        {
+          "nombre": "minImpresiones",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: { SEO_ASEGURA_MIN_IMPR?: string }",
+          "retorno": "number",
+          "linea": 40
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ef40c7680fbe"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seo-correduria/agente-ramos-texto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/agente-ramos-texto.ts — edición de texto QUIRÚRGICA sobre el contenido (string) de apps/asegura-web/lib/ramos.ts. Puro: no toca disco ni red — recibe el contenido ya leído (de GitHub, ver agente-github.ts) y devuelve el contenido modificado. Por qué edición de texto y no un parser",
+      "exporta": [
+        "leerCampoRamo",
+        "aplicarCambioRamo"
+      ],
+      "funciones": [
+        {
+          "nombre": "ventanaDeSlug",
+          "kind": "function",
+          "exportada": false,
+          "params": "contenido: string, slug: string",
+          "retorno": "",
+          "linea": 19,
+          "resumen": "Ventana del array que corresponde a UN ramo: desde su `slug: '<slug>'` hasta el `slug:` siguiente (o el cierre del array `\\n]`). Lanza si el slug no aparece."
+        },
+        {
+          "nombre": "leerCampoRamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "contenido: string, slug: string, campo: 'title' | 'description'",
+          "retorno": "string",
+          "linea": 32,
+          "resumen": "Lee el `title`/`description` ACTUALES de un ramo (para el \"antes\" de la auditoría y para dar contexto al prompt de la IA). Lanza si no encuentra el ramo o el campo."
+        },
+        {
+          "nombre": "escaparComilla",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 45
+        },
+        {
+          "nombre": "desescaparComilla",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 50,
+          "resumen": "Inversa de `escaparComilla`, para que leer lo que se acaba de escribir dé el texto real."
+        },
+        {
+          "nombre": "aplicarCambioRamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "contenido: string, slug: string, cambios: CambioRamo",
+          "retorno": "string",
+          "linea": 57,
+          "resumen": "Aplica `cambios.title`/`cambios.description` al ramo `slug` dentro de `contenido` y devuelve el fichero completo modificado. Lanza si no hay nada reconocible que cambiar — nunca devuelve el contenido "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f76a12f5606a"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/google-sa.ts",
@@ -102648,7 +103419,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 613
+          "linea": 619
         },
         {
           "nombre": "avisosDe",
@@ -102656,7 +103427,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 618,
+          "linea": 624,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -102665,13 +103436,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 628,
+          "linea": 634,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b6b204ecabab"
+      "hash": "4c28c89bccef"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -123003,7 +123774,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2d992c49ce2d"
+      "hash": "3270f9f81192"
     },
     {
       "ruta": "packages/module-seguros-portal/src/destino.ts",
@@ -124521,6 +125292,78 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6cf3920f32f9"
+    },
+    {
+      "ruta": "packages/module-seguros/src/actividad.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "El muro de actividad de la cartera: qué se considera un evento, cómo se rotula y cuál de ellos exige mirar una póliza. Vive en el módulo compartido porque lo necesitan las DOS apps: `apps/asegura` para construir la consulta y `apps/plataforma` para pintar los filtros y los rótulos. Es la misma razón",
+      "exporta": [
+        "definicionActividad",
+        "etiquetaActividad",
+        "riesgoActividad",
+        "parseFiltroActividad",
+        "mayorCaidaEmbudo",
+        "nuevosDesde"
+      ],
+      "funciones": [
+        {
+          "nombre": "definicionActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: string",
+          "retorno": "Definicion | null",
+          "linea": 98,
+          "resumen": "`null` si el tipo no se reconoce — que es distinto de «no tiene rótulo»."
+        },
+        {
+          "nombre": "etiquetaActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: string",
+          "retorno": "string",
+          "linea": 103,
+          "resumen": "El rótulo, cayendo al propio valor para que un tipo nuevo se VEA en vez de desaparecer."
+        },
+        {
+          "nombre": "riesgoActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: string",
+          "retorno": "string | null",
+          "linea": 113,
+          "resumen": "Lo que hay que hacer con este evento, o `null` si solo hay que saberlo. Un tipo desconocido devuelve `null` a propósito: no se inventa una alarma sobre algo que esta versión del código no sabe leer."
+        },
+        {
+          "nombre": "parseFiltroActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: URLSearchParams",
+          "retorno": "",
+          "linea": 156,
+          "resumen": "Lee el filtro de unos parámetros de URL y **declara lo que ha descartado**. Misma regla que `parseFiltroCartera`: un valor que no se reconoce no se ignora. Ignorar `?dias=abc` convierte «lo de hoy» en"
+        },
+        {
+          "nombre": "mayorCaidaEmbudo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EmbudoPortal",
+          "retorno": "",
+          "linea": 229,
+          "resumen": "El escalón donde más gente se queda por el camino, que es donde vale la pena trabajar. `null` cuando faltan cuentas: sin los dos extremos de un salto no se puede decir cuál es el peor, y decir uno cua"
+        },
+        {
+          "nombre": "nuevosDesde",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: readonly { fecha: string }[], desde: string | null",
+          "retorno": "number | null",
+          "linea": 250,
+          "resumen": "Cuántos de estos eventos son posteriores a la última vez que se miró. `desde` nulo (nunca se ha mirado, o el navegador no lo guardó) devuelve `null`, no `eventos.length`: «no sé cuándo miraste» y «tod"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b9855c0189dd"
     },
     {
       "ruta": "packages/module-seguros/src/backfill-contacto.ts",
@@ -132420,7 +133263,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3252,
-    "funciones": 9993
+    "archivos": 3265,
+    "funciones": 10067
   }
 }
