@@ -18,10 +18,10 @@
 // encadene las dos llamadas: el coste/compromiso de cada una es distinto y
 // ninguna de las dos se puede deshacer sola.
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
-import { pedirOferta, pedirEmision } from './acciones'
-import type { AvisoCuenta, CuentaConocida } from '@/lib/retarificar-asegura'
+import { pedirOferta, pedirEmision, pedirCatalogo } from './acciones'
+import type { AvisoCuenta, CuentaConocida, Opcion } from '@/lib/retarificar-asegura'
 
 type EstadoPanel =
   | { paso: 'inicio' }
@@ -78,7 +78,7 @@ function euroODash(n: number | null): string {
 const ETIQUETAS_HUECO: Record<string, { etiqueta: string; tipo: string; pista?: string }> = {
   nombreVia: { etiqueta: 'Calle (nombre de la vía)', tipo: 'text', pista: 'Solo el nombre: «San Vicente», sin número ni piso' },
   numeroVia: { etiqueta: 'Número de la calle', tipo: 'text' },
-  tipoVia: { etiqueta: 'Tipo de vía (id del catálogo)', tipo: 'text', pista: 'Id del catálogo /road-types del vendor, no el nombre (p. ej. «Calle»)' },
+  tipoVia: { etiqueta: 'Tipo de vía', tipo: 'text' },
   cpResidencia: { etiqueta: 'Código postal de residencia', tipo: 'text' },
   municipioResidenciaId: { etiqueta: 'Municipio (id del catálogo)', tipo: 'text' },
   dni: { etiqueta: 'DNI/NIE', tipo: 'text' },
@@ -86,10 +86,24 @@ const ETIQUETAS_HUECO: Record<string, { etiqueta: string; tipo: string; pista?: 
   apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
   sexo: { etiqueta: 'Sexo (hombre/mujer)', tipo: 'text' },
-  estadoCivil: { etiqueta: 'Estado civil (id del catálogo)', tipo: 'text' },
+  estadoCivil: { etiqueta: 'Estado civil', tipo: 'text' },
   telefono: { etiqueta: 'Teléfono móvil', tipo: 'tel' },
   fechaCarnet: { etiqueta: 'Fecha del carnet de conducir', tipo: 'date' },
   email: { etiqueta: 'Email', tipo: 'email' },
+}
+
+/**
+ * Campos de `faltan_vendor` que son referencia de CATÁLOGO del vendor
+ * (`GET /<tipo>`, gratis, sin parámetros) y no texto libre: se piden UNA vez
+ * y se pintan como desplegable por nombre — el valor que viaja sigue siendo
+ * el id real del catálogo. `municipioResidenciaId` se queda fuera a
+ * propósito: su catálogo (`municipios`) exige un CP que esta pantalla no
+ * pide (es un dato personal del tomador, ver el comentario de `municipioId`
+ * más abajo), así que no se puede resolver con el mismo mecanismo.
+ */
+const CATALOGO_DE_CAMPO: Record<string, string> = {
+  tipoVia: 'vias',
+  estadoCivil: 'estados-civiles',
 }
 
 /**
@@ -212,6 +226,54 @@ export function Emision({
   // `payment.bankAccount.iban`. Nunca se inventa ni viaja sin confirmar.
   const [iban, setIban] = useState('')
   const [cuentaOk, setCuentaOk] = useState(false)
+
+  // Catálogos de `faltan_vendor` (ver `CATALOGO_DE_CAMPO`): se piden UNA vez
+  // por campo —gratis, con el interruptor apagado— y se pintan como
+  // desplegable por NOMBRE; lo que viaja en `correcciones[campo]` sigue
+  // siendo el id real del catálogo, nunca el nombre.
+  type CatalogoEstado =
+    | { paso: 'cargando' }
+    | { paso: 'ok'; opciones: Opcion[] }
+    /** `sin_configurar` es permanente (falta un secreto en el servidor): reintentar
+     *  no lo arregla solo, así que se dice tal cual en vez de invitar a un botón
+     *  «reintenta» que nunca va a funcionar. `error` sí es reintentable (red,
+     *  asegura caída) y lleva su propio botón. */
+    | { paso: 'sin_configurar'; mensaje: string }
+    | { paso: 'error'; mensaje: string }
+  const [catalogos, setCatalogos] = useState<Record<string, CatalogoEstado>>({})
+  // `solicitados` vive en un ref, NO en estado: si estuviera en estado, marcar
+  // un campo como "ya pedido" cambiaría la dependencia del efecto de abajo y
+  // lo relanzaría a mitad del `await` — cancelando (`vivo=false`) la propia
+  // petición que acaba de empezar antes de que el vendor responda, y el
+  // desplegable se queda en «Cargando…» para siempre. Un ref no dispara render.
+  const solicitados = useRef<Set<string>>(new Set())
+  const vivoRef = useRef(true)
+  useEffect(() => () => {
+    vivoRef.current = false
+  }, [])
+
+  /** Pide UN catálogo y actualiza su estado. La usan el efecto de abajo (uno
+   *  por campo pendiente, en paralelo) y el botón «Reintentar». */
+  async function pedirCatalogoCampo(campo: string) {
+    const tipo = CATALOGO_DE_CAMPO[campo]
+    if (!tipo) return
+    solicitados.current.add(campo)
+    setCatalogos((prev) => ({ ...prev, [campo]: { paso: 'cargando' } }))
+    const r = await pedirCatalogo({ tipo })
+    if (!vivoRef.current) return
+    setCatalogos((prev) => ({
+      ...prev,
+      [campo]: r.estado === 'ok' ? { paso: 'ok', opciones: r.opciones } : { paso: r.estado, mensaje: r.mensaje },
+    }))
+  }
+
+  useEffect(() => {
+    if (estado.paso !== 'faltan_vendor') return
+    const pendientes = estado.faltan
+      .map((f) => f.campo)
+      .filter((campo): campo is string => campo in CATALOGO_DE_CAMPO && !solicitados.current.has(campo))
+    for (const campo of pendientes) void pedirCatalogoCampo(campo)
+  }, [estado])
 
   async function confirmarPrecio(conCorrecciones?: Record<string, string>) {
     setEstado({ paso: 'confirmando' })
@@ -380,15 +442,76 @@ export function Emision({
                     {meta.etiqueta}
                     {deFicha && <span className="badge warn" style={{ marginLeft: 8 }}>de la ficha · comprobar</span>}
                   </span>
-                  <input
-                    type={meta.tipo}
-                    value={valor}
-                    onChange={(e) => setCorrecciones((prev) => ({ ...prev, [f.campo]: e.target.value }))}
-                    style={{ width: '100%', minHeight: 44, boxSizing: 'border-box' }}
-                    autoComplete="off"
-                  />
+                  {(() => {
+                    const tipoCatalogo = CATALOGO_DE_CAMPO[f.campo]
+                    if (!tipoCatalogo) {
+                      return (
+                        <input
+                          type={meta.tipo}
+                          value={valor}
+                          onChange={(e) => setCorrecciones((prev) => ({ ...prev, [f.campo]: e.target.value }))}
+                          style={{ width: '100%', minHeight: 44, boxSizing: 'border-box' }}
+                          autoComplete="off"
+                        />
+                      )
+                    }
+                    const cat: CatalogoEstado = catalogos[f.campo] ?? { paso: 'cargando' }
+                    // Sin catálogo (caído o sin configurar) se vuelve a la caja
+                    // de texto: peor que el desplegable, pero mejor que un
+                    // callejón sin salida en el que no se puede completar nada.
+                    if (cat.paso === 'error' || cat.paso === 'sin_configurar') {
+                      return (
+                        <>
+                          <input
+                            type="text"
+                            value={valor}
+                            onChange={(e) => setCorrecciones((prev) => ({ ...prev, [f.campo]: e.target.value }))}
+                            placeholder="Id del catálogo del vendor"
+                            style={{ width: '100%', minHeight: 44, boxSizing: 'border-box' }}
+                            autoComplete="off"
+                          />
+                          <p className="err" style={{ margin: '4px 0 0', fontSize: 12 }}>
+                            {cat.mensaje}
+                            {cat.paso === 'error' && (
+                              <>
+                                {' '}
+                                <button
+                                  type="button"
+                                  className="ghost"
+                                  style={{ minHeight: 28, padding: '2px 8px', fontSize: 12 }}
+                                  onClick={() => void pedirCatalogoCampo(f.campo)}
+                                >
+                                  Reintentar
+                                </button>
+                              </>
+                            )}
+                          </p>
+                        </>
+                      )
+                    }
+                    return (
+                      <select
+                        value={valor}
+                        onChange={(e) => setCorrecciones((prev) => ({ ...prev, [f.campo]: e.target.value }))}
+                        disabled={cat.paso !== 'ok'}
+                        style={{ width: '100%', minHeight: 44, boxSizing: 'border-box' }}
+                      >
+                        <option value="">{cat.paso === 'cargando' ? 'Cargando catálogo…' : 'Elige una opción'}</option>
+                        {cat.paso === 'ok' &&
+                          cat.opciones.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.nombre}
+                            </option>
+                          ))}
+                      </select>
+                    )
+                  })()}
                   <span className="muted" style={{ fontSize: 12 }}>
-                    {meta.pista ? `${meta.pista} · ` : ''}
+                    {CATALOGO_DE_CAMPO[f.campo]
+                      ? 'Del catálogo del vendor — se elige, no se teclea. '
+                      : meta.pista
+                        ? `${meta.pista} · `
+                        : ''}
                     {f.motivo}
                   </span>
                 </label>
@@ -440,7 +563,13 @@ export function Emision({
               style={{ minHeight: 44 }}
               disabled={
                 estado.faltan.some((f) => !ETIQUETAS_HUECO[f.campo]) ||
-                estado.faltan.some((f) => !(correcciones[f.campo] ?? '').trim())
+                estado.faltan.some((f) => !(correcciones[f.campo] ?? '').trim()) ||
+                // Con un catálogo aún cargando, el `sugerido` prerrellenado no se
+                // ve en pantalla (el desplegable está deshabilitado): no se manda
+                // un id que el corredor no ha podido leer ni comprobar.
+                estado.faltan.some(
+                  (f) => CATALOGO_DE_CAMPO[f.campo] && (catalogos[f.campo]?.paso ?? 'cargando') === 'cargando',
+                )
               }
               onClick={() => confirmarPrecio(correcciones)}
             >
