@@ -59,16 +59,16 @@
   tenían NINGÚN vigilante Telegram — el primero escribía su latido desde julio y nadie lo miraba; el
   segundo no dejaba ni huella. PR #2753 los da de alta en `AGENTES_VIGILADOS`/`PROBES` (+ heartbeat
   nuevo en el segundo). `tsc` 0, 29/29 en `latidos.test.ts`, CI verde, mergeado.
-- **📞 «Otras compañías por vencer» — venta cruzada sin tarificar (12/09/2026).** Alberto proponía
-  avisar en pantalla a los NO clientes de las ventajas de la casa; se descartó el comparador de precio
-  automático por ramo/compañía (idea F: 110 pólizas vivas dan muestra insuficiente, sería un número
-  falso) y en su lugar Alberto pidió avisarSE A ÉL 2 meses antes para vender a mano («luego será
-  automático»). Nuevo bloque en `/correduria` → Hoy: `lib/cartera-declaradas.ts` (asegura) lee
-  `portal_poliza_declarada` por vencimiento, vinculada por `portal_vinculo`; puerto
+- **📞 «Otras compañías por vencer» — venta cruzada sin tarificar (12/09/2026, PR #2750, mergeado).**
+  Alberto proponía avisar en pantalla a los NO clientes de las ventajas de la casa; se descartó el
+  comparador de precio automático por ramo/compañía (idea F: 110 pólizas vivas dan muestra insuficiente,
+  sería un número falso) y en su lugar Alberto pidió avisarSE A ÉL 2 meses antes para vender a mano
+  («luego será automático»). Nuevo bloque en `/correduria` → Hoy: `lib/cartera-declaradas.ts` (asegura)
+  lee `portal_poliza_declarada` por vencimiento, vinculada por `portal_vinculo`; puerto
   `/api/operador/declaradas-vencer`, proxy `/api/correduria/declaradas-vencer`, UI `DeclaradasVencer.tsx`.
   Declara aparte (`sinVincular`) las declaradas cuya identidad del portal no resuelve a ninguna ficha.
   Idea F queda anotada en `docs/CORREDURIA-INTRANET-IDEAS.md` con este desenlace. `tsc` 0 en asegura y
-  plataforma.
+  plataforma, 12 checks requeridos en verde. **Pendiente:** confirmación visual de Alberto en producción.
 - **🚨 Smoobu SIGUE en 401 tras el fix de HMAC — NO se corrija a "arreglado" (12/09/2026, PR #2731 ya mergeado).**
   Código desplegado en las 3 apps (verificado por timestamp de deploy, READY 07:57:40Z). Dos pasadas del
   cron `ialimp_pms` YA con el código nuevo (08:00:06Z y 08:10:06Z) siguen devolviendo `sync_error='Smoobu
