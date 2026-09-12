@@ -64,6 +64,7 @@
   Alberto pidió además, tras el incidente de phishing por WhatsApp, dejar `AVISO_CANAL` SOLO en el
   mensaje de confirmación de los 4 pisos (antes salía también en el de acceso/víspera con códigos).
   Constante movida de `acceso.ts` a `plantillas.ts` (único consumidor). Tests actualizados, 17/17 verde.
+  **PRs #2787 (código) y #2791 (esta memoria) MERGEADOS** — cierre de sesión, nada pendiente.
 - **🌐 IONOS quitó por error el dominio de grupoasegura.es/.com — repuesto (12/09/2026).** Sin
   código: se hizo vía Claude en Chrome (el proxy de esta sesión bloquea egress a esos hosts). Se
   repuso DNS en IONOS (`grupoasegura.es`/`www` → `asegura-web`; `clientes.grupoasegura.es` →
