@@ -173,6 +173,7 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
                 if (confirm(`¿Borrar ${c.valor ?? 'este contacto'} de la ficha? No se puede deshacer.`)) void enviar('DELETE', { id: c.id })
               }}
               onCerrar={() => setAbierto(null)}
+              onAnadirComoNuevo={(tipo, val) => void enviar('POST', { tipo, valor: val, etiqueta: null, principal: false })}
             />
           ) : null
         })()}
@@ -292,30 +293,45 @@ function Chip({ c, corrigiendo, onAbrir }: {
  * la lista cerrada del repo, y el back convierte a `null` lo que no reconoce:
  * mandarla sin querer la borraría por corregir un dígito.
  */
-function EditarUno({ c, ocupado, onGuardar, onPrincipal, onBorrar, onCerrar }: {
+function EditarUno({ c, ocupado, onGuardar, onPrincipal, onBorrar, onCerrar, onAnadirComoNuevo }: {
   c: ContactoCliente
   ocupado: boolean
   onGuardar: (cambios: Record<string, unknown>) => void
   onPrincipal: () => void
   onBorrar: () => void
   onCerrar: () => void
+  /** El valor tecleado es del OTRO tipo (p.ej. un email dentro de la corrección de un teléfono):
+      no se puede convertir este contacto, pero sí añadir el dato nuevo aparte, sin perderlo. */
+  onAnadirComoNuevo: (tipo: TipoContacto, valor: string) => void
 }) {
   const esTel = c.tipo === 'telefono'
   const [valor, setValor] = useState(c.valor ?? '')
   const [etiqueta, setEtiqueta] = useState<string>(c.etiqueta ?? '')
   const [tocada, setTocada] = useState(false)
   const [mal, setMal] = useState<string | null>(null)
+  const [sugerencia, setSugerencia] = useState<{ tipo: TipoContacto; valor: string } | null>(null)
   const etiquetas: readonly string[] = esTel ? ETIQUETAS_TELEFONO : ETIQUETAS_EMAIL
 
   function guardar() {
     const n = esTel ? normalizarTelefono(valor) : normalizarEmail(valor)
-    if (!n.ok) return setMal(n.motivo)
+    if (!n.ok) {
+      // No vale como lo que se está corrigiendo, pero puede ser del OTRO tipo: es la confusión
+      // más frecuente (querer añadir un email y teclearlo dentro de la corrección de un teléfono).
+      const otro = esTel ? normalizarEmail(valor) : normalizarTelefono(valor)
+      setSugerencia(otro.ok ? { tipo: esTel ? 'email' : 'telefono', valor: otro.valor } : null)
+      return setMal(n.motivo)
+    }
     setMal(null)
+    setSugerencia(null)
     onGuardar({ valor: n.valor, ...(tocada ? { etiqueta: etiqueta || null } : {}) })
   }
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
+        {esTel ? <Phone size={12} strokeWidth={1.75} aria-hidden /> : <Mail size={12} strokeWidth={1.75} aria-hidden />}
+        Corrigiendo este {esTel ? 'teléfono' : 'email'} — para cambiarlo de tipo hay que añadir uno nuevo y borrar este.
+      </div>
       {c.ilegible && (
         <div style={pendienteBox}>
           🔒 Este dato está guardado <strong>cifrado con una clave que asegura no puede abrir</strong>, así que
@@ -326,7 +342,7 @@ function EditarUno({ c, ocupado, onGuardar, onPrincipal, onBorrar, onCerrar }: {
         <input
           type={esTel ? 'tel' : 'email'}
           value={valor}
-          onChange={(e) => setValor(e.target.value)}
+          onChange={(e) => { setValor(e.target.value); setSugerencia(null) }}
           placeholder={esTel ? '600 000 000' : 'nombre@dominio.es'}
           aria-label={esTel ? 'Teléfono' : 'Email'}
           autoFocus
@@ -345,7 +361,24 @@ function EditarUno({ c, ocupado, onGuardar, onPrincipal, onBorrar, onCerrar }: {
           {etiquetas.map((et) => <option key={et} value={et}>{et}</option>)}
         </select>
       </div>
-      {mal && <div style={{ fontSize: 12, color: 'var(--negative)' }}>{mal}</div>}
+      {mal && (
+        <div style={{ fontSize: 12, color: 'var(--negative)' }}>
+          {mal}
+          {sugerencia && (
+            <div style={{ marginTop: 6 }}>
+              <button
+                type="button"
+                disabled={ocupado}
+                onClick={() => onAnadirComoNuevo(sugerencia.tipo, sugerencia.valor)}
+                style={btnStyle('secundario', 'sm')}
+              >
+                <Plus size={14} strokeWidth={1.75} aria-hidden /> Añadir como {sugerencia.tipo === 'email' ? 'email' : 'teléfono'} nuevo,
+                sin tocar este {esTel ? 'teléfono' : 'email'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <button type="button" disabled={ocupado || valor.trim() === ''} onClick={guardar} style={btnStyle('primario', 'sm')}>
           Guardar
