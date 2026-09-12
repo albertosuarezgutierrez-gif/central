@@ -45,3 +45,24 @@ test('caso patológico — un único párrafo sin ninguna separación se corta e
   for (const t of trozos) assert.ok(t.length <= MAX_LEN_TROZO)
   assert.equal(trozos.join(''), cuerpo)
 })
+
+test('el corte duro NO parte un emoji (par subrogado) por la mitad', () => {
+  // Construido para que el borde de corte caiga EXACTAMENTE dentro de un emoji: relleno hasta
+  // maxLen-1, luego el emoji de 2 code units a caballo del límite.
+  const maxLen = 20
+  const relleno = 'x'.repeat(maxLen - 1)
+  const cuerpo = relleno + '🚨' + 'y'.repeat(maxLen * 2)
+  const trozos = partirGrande(cuerpo, maxLen)
+  assert.ok(trozos.length > 1)
+  for (const t of trozos) {
+    assert.ok(t.length <= maxLen, `ningún trozo puede superar el tope (${t.length})`)
+    // Ninguna mitad alta (0xd800-0xdbff) puede quedar como ÚLTIMO carácter de un trozo, ni
+    // ninguna mitad baja (0xdc00-0xdfff) como PRIMERO — eso sería un emoji partido en dos.
+    const ultimo = t.charCodeAt(t.length - 1)
+    const primero = t.charCodeAt(0)
+    assert.ok(!(ultimo >= 0xd800 && ultimo <= 0xdbff), `trozo termina en mitad alta suelta: ${JSON.stringify(t.slice(-5))}`)
+    assert.ok(!(primero >= 0xdc00 && primero <= 0xdfff), `trozo empieza en mitad baja suelta: ${JSON.stringify(t.slice(0, 5))}`)
+  }
+  assert.equal(trozos.join(''), cuerpo, 'el corte no puede perder ni un carácter')
+  assert.ok(cuerpo.includes('🚨') && trozos.some((t) => t.includes('🚨')), 'el emoji debe sobrevivir entero en algún trozo')
+})

@@ -63,12 +63,27 @@ export function partirGrande(cuerpo, maxLen = MAX_LEN_TROZO) {
     }
     if (actual) trozos.push(actual)
   }
-  return trozos.flatMap((t) => {
-    if (t.length <= maxLen) return [t]
-    const partes = []
-    for (let i = 0; i < t.length; i += maxLen) partes.push(t.slice(i, i + maxLen))
-    return partes
-  })
+  return trozos.flatMap((t) => (t.length <= maxLen ? [t] : corteSeguro(t, maxLen)))
+}
+
+// Corte duro de último recurso, pero sin partir un PAR SUBROGADO (emoji/astral) por la mitad: un
+// `slice` a ciegas por índice UTF-16 puede dejar la mitad alta en un trozo y la baja en el
+// siguiente, y las dos mitades sueltas se corrompen al pasar por UTF-8 (inserción en Postgres,
+// JSON hacia la API de embeddings) — justo en el borde de los bloques grandes y con emojis que
+// esta función existe para trocear (el estilo de `docs/CONTEXTO-SESIONES.md` los usa a diario).
+function corteSeguro(texto, maxLen) {
+  const partes = []
+  let i = 0
+  while (i < texto.length) {
+    let fin = Math.min(i + maxLen, texto.length)
+    if (fin < texto.length) {
+      const code = texto.charCodeAt(fin - 1)
+      if (code >= 0xd800 && code <= 0xdbff && fin - 1 > i) fin -= 1 // mitad alta: retrocede
+    }
+    partes.push(texto.slice(i, fin))
+    i = fin
+  }
+  return partes
 }
 
 function parsearArchivo(rutaAbs, fuente) {
@@ -85,10 +100,21 @@ function parsearArchivo(rutaAbs, fuente) {
     // columna) que un valor a medias tipo '30/06/' que parece fecha y no lo es.
     const m = ultimaFecha(textoFechaDe(lineasEntrada))
     const fecha = m && m[3] ? `${m[1].padStart(2, '0')}/${m[2]}/${m[3]}` : null
-    const hash = createHash('md5').update(cuerpo).digest('hex').slice(0, 16)
     const trozos = partirGrande(cuerpo)
-    if (trozos.length === 1) return [{ id: `${fuente}#${hash}`, fuente, fecha, texto: cuerpo }]
-    return trozos.map((texto, i) => ({ id: `${fuente}#${hash}-p${i + 1}`, fuente, fecha, texto }))
+    // El id de CADA trozo sale del hash de SU PROPIO texto, nunca del hash del cuerpo entero +
+    // sufijo posicional: si `MAX_LEN_TROZO` (o el propio criterio de corte) cambia más adelante —
+    // plausible, el tope de hoy es deliberadamente conservador — un id posicional seguiría
+    // llamándose igual con OTRO contenido dentro, y el `ON CONFLICT (id) DO UPDATE SET sha=...`
+    // de /api/internal/memoria (que asume "mismo id = mismo texto", ver su comentario) dejaría el
+    // texto/hash/embedding VIEJOS para siempre sin ningún error. Con el hash del propio trozo, un
+    // recorte distinto simplemente produce ids nuevos — los viejos dejan de generarse y el DELETE
+    // por `sha` del último lote los limpia solo, igual que con cualquier entrada editada.
+    return trozos.map((texto) => ({
+      id: `${fuente}#${createHash('md5').update(texto).digest('hex').slice(0, 16)}`,
+      fuente,
+      fecha,
+      texto,
+    }))
   })
 }
 
