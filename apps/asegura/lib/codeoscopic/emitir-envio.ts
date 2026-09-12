@@ -83,9 +83,10 @@ async function cerrarEnvio(
    * El texto del vendor (ya enmascarado por el caller) cuando `estado` es
    * `error`. Hasta el 12/09/2026 `error_mensaje` quedaba a NULL en cada
    * Submit rechazado: el 400 solo vivía en la respuesta HTTP y en el chat, y
-   * al día siguiente no había forma de saber POR QUÉ falló un proyecto. Con
-   * `preemision` se deja como está (no se borra el último error por un
-   * intento que sí cuajó: eso lo cierra `registrarPolizaEmitida`).
+   * al día siguiente no había forma de saber POR QUÉ falló un proyecto. Un
+   * Submit que SÍ cuaja (`preemision`) la deja a NULL: nadie más escribe esta
+   * columna, así que un error viejo se quedaría pegado a un proyecto ya
+   * emitido si no se limpiara aquí.
    */
   mensaje: string | null = null,
 ): Promise<void> {
@@ -94,7 +95,7 @@ async function cerrarEnvio(
     update codeoscopic_projects
     set estado = ${estado}::codeoscopic_project_estado,
         submit_in_flight_at = null,
-        error_mensaje = coalesce(${errorMensaje}::text, error_mensaje)
+        error_mensaje = ${errorMensaje}::text
     where correduria_id = ${correduriaId}::uuid
       and project_id_codeoscopic = ${projectId}
       and submit_attempt_id = ${attemptId}::uuid

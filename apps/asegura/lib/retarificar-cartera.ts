@@ -42,7 +42,14 @@
 
 import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion, clienteOrigenDe, type OrigenRetarificacion } from '@/lib/cartera-ficha'
-import { precalificarAuto, precalificarAutoNueva, type Resueltos, type ResueltosAutoNueva } from '@/lib/codeoscopic/desde-cartera'
+import {
+  precalificarAuto,
+  precalificarAutoNueva,
+  tipoViaDelTomador,
+  tipoViaTextoDelTomador,
+  type Resueltos,
+  type ResueltosAutoNueva,
+} from '@/lib/codeoscopic/desde-cartera'
 import type { ClienteCartera } from '@/lib/codeoscopic/desde-cartera'
 import {
   precalificarHogarCartera,
@@ -102,8 +109,6 @@ import {
 } from '@/lib/codeoscopic/desde-cartera-decesos'
 import { resolverConfig, explicarConfig } from '@/lib/codeoscopic/config'
 import { refrescarProyecto } from '@/lib/codeoscopic/emitir'
-import { partirDireccion } from '@/lib/codeoscopic/direccion'
-import { emparejar } from '@/lib/codeoscopic/opciones'
 import { prisma } from '@/lib/tenant'
 import { sanearSupuestos } from '@/lib/codeoscopic/precalificar-publica'
 import {
@@ -443,12 +448,11 @@ async function prepararAuto(
   // dirección de la ficha contra el catálogo VIVO (gratis) — el mismo
   // emparejamiento que hace la precalificación; si no casa, queda a `null` y
   // `revisarDatosAuto(..., { paraEmitir })` lo declara como hueco SIN gastar.
-  if (resueltos.tipoViaId === null && resueltos.municipioId !== null) {
-    const tipoTexto = partirDireccion(origen.cliente.direccion ?? null).tipoVia
-    const cfg = tipoTexto ? resolverConfig(process.env, { ignorarInterruptor: true }) : null
-    if (tipoTexto && cfg?.estado === 'lista') {
+  if (resueltos.tipoViaId === null && resueltos.municipioId !== null && tipoViaTextoDelTomador(origen.cliente) !== null) {
+    const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+    if (cfg.estado === 'lista') {
       try {
-        resueltos.tipoViaId = emparejar(await tiposDeVia(cfg.config), tipoTexto)?.id ?? null
+        resueltos.tipoViaId = tipoViaDelTomador(origen.cliente, await tiposDeVia(cfg.config))?.id ?? null
       } catch {
         // Catálogo caído: no se inventa el id; saldrá como hueco.
       }

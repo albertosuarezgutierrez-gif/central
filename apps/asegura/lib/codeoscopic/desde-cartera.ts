@@ -34,7 +34,7 @@ import {
   type Reparo,
 } from './peticion-auto.ts'
 import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-moto.ts'
-import { partirDireccion } from './direccion.ts'
+import { partirDireccion, tipoViaDeFicha } from './direccion.ts'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
 export type Supuesto = {
@@ -162,6 +162,24 @@ export type Resueltos = {
    * elige el corredor. Es una referencia de catálogo: nunca texto.
    */
   tipoViaId?: string | null
+}
+
+/**
+ * El `roadType` del tomador para `Resueltos.tipoViaId`: la dirección de la
+ * ficha se queda DENTRO de esta función (la ruta del puerto no puede nombrarla
+ * — guardián `test/regression-retarificar-plataforma.test.ts`); lo que sale es
+ * una opción del catálogo, que no es un dato personal. `null` = elígelo a mano.
+ */
+export function tipoViaDelTomador(
+  cliente: Pick<ClienteCartera, 'direccion'>,
+  catalogo: ReadonlyArray<{ id: string; nombre: string }>,
+): { id: string; nombre: string } | null {
+  return tipoViaDeFicha(cliente.direccion ?? null, catalogo)
+}
+
+/** El tipo de vía tal y como lo trocea la ficha («Calle», «Avenida»…), sin catálogo. Para explicar por qué no casa. */
+export function tipoViaTextoDelTomador(cliente: Pick<ClienteCartera, 'direccion'>): string | null {
+  return partirDireccion(cliente.direccion ?? null).tipoVia
 }
 
 /** Kilómetros al año cuando nadie lo ha dicho. Media española declarada. */

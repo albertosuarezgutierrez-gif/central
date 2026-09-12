@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion } from '@/lib/cartera-ficha'
-import { precalificarAuto, type Resueltos } from '@/lib/codeoscopic/desde-cartera'
+import {
+  precalificarAuto,
+  tipoViaDelTomador,
+  tipoViaTextoDelTomador,
+  type Resueltos,
+} from '@/lib/codeoscopic/desde-cartera'
 import { resolverConfig, explicarConfig, simulacionActiva } from '@/lib/codeoscopic/config'
 import { estadoConsumo } from '@/lib/codeoscopic/cotizar'
 import {
@@ -13,7 +18,6 @@ import {
   emparejar,
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
-import { partirDireccion } from '@/lib/codeoscopic/direccion'
 import { peticion } from '@/lib/codeoscopic/cliente'
 import type { ConfigCodeoscopic } from '@/lib/codeoscopic/config'
 import { prisma } from '@/lib/tenant'
@@ -153,7 +157,6 @@ export async function GET(req: Request) {
         tiposVia: null,
         tipoVia: null,
         tipoViaMotivo: null,
-        estructuraPersonaVendor: null,
         consumo: { error: 'no se ha mirado el libro de consumo: este ramo no se precalifica aquí' },
         simulacion,
         gastado: '0,00€',
@@ -175,7 +178,7 @@ export async function GET(req: Request) {
   // 🔒 El CP no sale de esta función: entra en `municipiosPorCp` y lo que viaja
   // es la lista de municipios, que son ids de un catálogo público del vendor.
   const cpTomador = origen.cliente.codigoPostal
-  const [civiles, muni, fm, vias, estructuraPersonaVendor] = await Promise.all([
+  const [civiles, muni, fm, vias] = await Promise.all([
     estadosCiviles(cfg).then(
       (o): Opcion[] | null => o,
       (): Opcion[] | null => null,
@@ -196,21 +199,24 @@ export async function GET(req: Request) {
       (o): Opcion[] | null => o,
       (): Opcion[] | null => null,
     ),
-    leerEstructuraPersonaVendor(cfg, correduriaId, polizaId),
+    // 🔎 Diagnóstico de la clave del correo (ver la función). Solo escribe en
+    // el log; no forma parte de la respuesta y un fallo suyo no tumba nada.
+    registrarEstructuraPersonaVendor(cfg, correduriaId, polizaId),
   ])
 
-  // 🛣️ Tipo de vía: emparejado EXACTO del que trocea la dirección de la ficha
-  // («CL» → Calle) contra el catálogo vivo. Sin match no se preselecciona nada
-  // (el caso de Pilar Franco Ruz: «Severo Ochoa 12», sin tipo) y se elige a mano.
-  const tipoViaTexto = partirDireccion(origen.cliente.direccion ?? null).tipoVia
-  const tipoViaAuto = vias === null ? null : emparejar(vias, tipoViaTexto)
+  // 🛣️ Tipo de vía: emparejado EXACTO del que trocea la calle de la ficha
+  // («CL» → Calle) contra el catálogo vivo — dentro de `desde-cartera.ts`, la
+  // calle no se nombra aquí. Sin match no se preselecciona nada (el caso de
+  // Pilar Franco Ruz: «Severo Ochoa 12», sin tipo) y se elige a mano.
+  const tipoViaTexto = tipoViaTextoDelTomador(origen.cliente)
+  const tipoViaAuto = vias === null ? null : tipoViaDelTomador(origen.cliente, vias)
   const tipoViaMotivo =
     vias === null
       ? 'No se ha podido leer el catálogo de tipos de vía de Codeoscopic. Sin él no se puede elegir.'
       : tipoViaAuto !== null
         ? null
         : tipoViaTexto === null
-          ? 'La dirección de la ficha no empieza por un tipo de vía reconocible (Calle, Avenida…): elígelo a mano. ' +
+          ? 'La calle de la ficha no empieza por un tipo de vía reconocible (Calle, Avenida…): elígelo a mano. ' +
             'La compañía lo exige para emitir.'
           : `La ficha dice «${tipoViaTexto}» y el catálogo de Codeoscopic no tiene esa opción con ese nombre exacto: elígelo a mano.`
 
@@ -292,7 +298,6 @@ export async function GET(req: Request) {
       tiposVia: vias,
       tipoVia: tipoViaAuto,
       tipoViaMotivo,
-      estructuraPersonaVendor,
       consumo,
       simulacion,
       gastado: '0,00€',
@@ -307,31 +312,35 @@ type EstructuraPersonaVendor = {
   /** Claves de `holder` tal y como las devuelve el vendor. */
   holder: string[]
   /** Claves de `holder.addresses[0]`. */
-  direccion: string[]
+  domicilio: string[]
   /** Las claves de `holder` que contienen «mail», con el TIPO de su valor. */
   correo: { clave: string; tipo: string }[]
 }
+
+/** Tope propio del diagnóstico: no puede retrasar la pantalla más que esto. */
+const TIMEOUT_DIAGNOSTICO_MS = 5_000
 
 /**
  * 🔎 Diagnóstico GRATIS (una lectura `GET /insurances/{id}`) del último
  * proyecto REAL de esta póliza: la ESTRUCTURA de la persona que devuelve el
  * vendor — solo nombres de campo y el tipo de cada valor, nunca los valores.
+ * Escribe en el log del servidor y NADA más: no viaja por el puerto.
  *
  * Por qué existe (12/09/2026): el Submit exige el correo, el PATCH con la
  * clave `email` devolvió 200 y al releer el proyecto 40685666 el correo no
  * estaba (`patch_no_aplicado`), mientras que `roadName` por el mismo PATCH sí
  * se aplicó. O la clave no es la suya o la forma es otra (`emails[]`) — y sin
  * sandbox ni OpenAPI a mano, la única fuente de verdad es lo que el propio
- * vendor devuelve. Esto lo registra en el log del servidor y lo publica por el
- * puerto al abrir la pantalla, para fijar `CLAVE_EMAIL_VENDOR` con un dato y
- * no con otro 0,50€. `null` = no hay proyecto real o no se pudo leer (y se
- * dice en el log), nunca «el vendor no devuelve persona».
+ * vendor devuelve. Con esto se fija `CLAVE_EMAIL_VENDOR` con un dato y no con
+ * otro 0,50€. Solo corre si la póliza YA tiene un proyecto real (hoy, una), con
+ * tope de 5 s, y los tres desenlaces se distinguen en el log: sin proyecto ·
+ * leído · no se pudo leer. ⏳ Temporal: cuando la clave esté confirmada, se quita.
  */
-async function leerEstructuraPersonaVendor(
+async function registrarEstructuraPersonaVendor(
   cfg: ConfigCodeoscopic,
   correduriaId: string,
   polizaId: string,
-): Promise<EstructuraPersonaVendor | null> {
+): Promise<void> {
   try {
     const filas = await prisma.$queryRaw<{ project_id_codeoscopic: string }[]>`
       select t.project_id_codeoscopic
@@ -344,30 +353,31 @@ async function leerEstructuraPersonaVendor(
       limit 1
     `
     const projectId = filas[0]?.project_id_codeoscopic
-    if (!projectId) return null
+    if (!projectId) {
+      console.log('[precalificar] estructura persona vendor: esta póliza no tiene proyecto real todavía')
+      return
+    }
     const crudo = await peticion(cfg, {
       metodo: 'GET',
       path: `/insurances/${encodeURIComponent(projectId)}`,
-      timeoutMs: cfg.timeoutGenericoMs,
+      timeoutMs: Math.min(cfg.timeoutGenericoMs, TIMEOUT_DIAGNOSTICO_MS),
     })
     const obj = (v: unknown): Record<string, unknown> =>
       v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
     const holder = obj(obj(crudo).holder)
-    const direccion = obj((Array.isArray(holder.addresses) ? holder.addresses : [])[0])
+    const domicilio = obj((Array.isArray(holder.addresses) ? holder.addresses : [])[0])
     const tipoDe = (v: unknown): string => (v === null ? 'null' : Array.isArray(v) ? `array(${v.length})` : typeof v)
     const estructura: EstructuraPersonaVendor = {
       projectId,
       holder: Object.keys(holder).sort(),
-      direccion: Object.keys(direccion).sort(),
+      domicilio: Object.keys(domicilio).sort(),
       correo: Object.keys(holder)
         .filter((k) => /mail/i.test(k))
         .map((k) => ({ clave: k, tipo: tipoDe(holder[k]) })),
     }
     console.log('[precalificar] estructura de la persona que devuelve el vendor:', JSON.stringify(estructura))
-    return estructura
   } catch (e) {
     console.log('[precalificar] estructura persona vendor: no se pudo leer —', e instanceof Error ? e.message : String(e))
-    return null
   }
 }
 

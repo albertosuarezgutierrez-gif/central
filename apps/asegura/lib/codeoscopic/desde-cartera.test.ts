@@ -9,6 +9,8 @@ import {
   aniosEntre,
   sePuedeCotizar,
   supuestosOptimistas,
+  tipoViaDelTomador,
+  tipoViaTextoDelTomador,
   KM_ANUALES_POR_DEFECTO,
   type ClienteCartera,
   type PolizaCartera,
@@ -110,6 +112,22 @@ test('un correo sin forma de correo es un reparo, no viaja al vendor', () => {
   const r = pre({ direccion: 'CL SAN VICENTE, 40', email: 'sin-arroba' }, {}, { tipoViaId: 'Street' })
   assert.deepEqual(r.faltan.map((f) => f.campo), ['email'])
   assert.match(r.faltan[0].motivo, /forma de correo/)
+})
+
+test('tipoViaDelTomador: empareja EXACTO el tipo troceado contra el catálogo; sin tipo o sin match, null', () => {
+  const catalogo = [
+    { id: 'Street', nombre: 'Calle' },
+    { id: 'Avenue', nombre: 'Avenida' },
+  ]
+  assert.deepEqual(tipoViaDelTomador({ direccion: 'CL SAN VICENTE, 40 2º-14' }, catalogo), { id: 'Street', nombre: 'Calle' })
+  assert.deepEqual(tipoViaDelTomador({ direccion: 'C/Betis 12' }, catalogo), { id: 'Street', nombre: 'Calle' })
+  // El caso de Pilar: sin tipo delante → nada que emparejar, se elige a mano.
+  assert.equal(tipoViaDelTomador({ direccion: 'Severo Ochoa 12' }, catalogo), null)
+  assert.equal(tipoViaTextoDelTomador({ direccion: 'Severo Ochoa 12' }), null)
+  // Tipo reconocido pero que el catálogo no trae con ese nombre → null, no «el más parecido».
+  assert.equal(tipoViaDelTomador({ direccion: 'PZ NUEVA 1' }, catalogo), null)
+  assert.equal(tipoViaTextoDelTomador({ direccion: 'PZ NUEVA 1' }), 'Plaza')
+  assert.equal(tipoViaDelTomador({ direccion: null }, catalogo), null)
 })
 
 test('si la ficha no trae ninguna dirección reconocible, sigue siendo un reparo', () => {

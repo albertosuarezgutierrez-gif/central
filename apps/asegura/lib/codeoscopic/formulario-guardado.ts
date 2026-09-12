@@ -25,6 +25,8 @@ export type FormularioAutoGuardado = {
   correcciones: Record<string, string>
 }
 
+import { leerCampoPersona } from './interprete-400.ts'
+
 type Json = Record<string, unknown>
 const obj = (v: unknown): Json => (v && typeof v === 'object' ? (v as Json) : {})
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
@@ -64,7 +66,9 @@ export function extraerFormularioAuto(peticion: unknown): FormularioAutoGuardado
   const direccion = obj(arr(holder.addresses)[0])
   poner('nombreVia', str(direccion.roadName))
   poner('numeroVia', str(direccion.roadNumber))
-  poner('email', str(holder.email))
+  // Por `leerCampoPersona`, que usa `CLAVE_EMAIL_VENDOR` (y tolera `emails[]`):
+  // si la clave cambia, esto la sigue sin tocar nada.
+  poner('email', leerCampoPersona(holder, 'email'))
 
   return {
     codigoVehiculo: str(obj(risk.vehicle).code),

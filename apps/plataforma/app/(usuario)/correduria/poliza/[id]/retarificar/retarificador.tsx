@@ -848,10 +848,27 @@ export default function Retarificador({
   const faltaTipoVia = !!municipioId && !tipoViaId
   const faltaMatriculacion = !matriculacion
 
+  /**
+   * Los huecos conocidos: los de la precalificación MÁS los que el servidor
+   * haya devuelto en un 422 (sin gastar). Los segundos importan porque la
+   * precalificación solo revisa la dirección si ya sabe el municipio: con un
+   * CP de varios municipios la calle/número/correo no salen en `faltanInicial`
+   * y aparecen por primera vez en el 422 de «Pedir precio» — sin esto no
+   * habría caja donde teclearlos (hallado en `code-review`, 12/09/2026).
+   */
+  const faltanConocidos = useMemo(() => {
+    const porCampo = new Map<string, Reparo>()
+    const delServidor = resultado.estado === 'faltan' ? resultado.faltan : []
+    for (const f of [...(faltanInicial ?? []), ...delServidor]) {
+      if (!porCampo.has(f.campo)) porCampo.set(f.campo, f)
+    }
+    return [...porCampo.values()]
+  }, [faltanInicial, resultado])
+
   /** Los huecos de la ficha que SÍ se teclean aquí (sexo + los de texto). */
   const aMano = useMemo(
-    () => (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo]),
-    [faltanInicial],
+    () => faltanConocidos.filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo]),
+    [faltanConocidos],
   )
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
 
@@ -860,7 +877,7 @@ export default function Retarificador({
    * callan: el servidor los rechazará con un 422 —sin gastar— y quien mire la
    * pantalla tiene que saber por qué antes de pulsar.
    */
-  const huerfanos = (faltanInicial ?? []).filter(
+  const huerfanos = faltanConocidos.filter(
     (f) => !RESUELTOS_EN_PANTALLA.has(f.campo as string) && !CAMPOS_A_MANO[f.campo],
   )
 
