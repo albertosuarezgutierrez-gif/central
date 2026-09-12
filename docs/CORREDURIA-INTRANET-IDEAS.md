@@ -91,6 +91,15 @@ para cuando el usuario dice «quiero el precio de verdad».
 ⚠️ [Suposición] Las primas del volcado son de 2013-2018: sirven para ordenar, no para cotizar. Hay
 que medir la dispersión antes de enseñar una horquilla, o será un número plausible y falso.
 
+**✅ Desenlace parcial (12/09/2026):** al revisitarla, Alberto confirmó la sospecha de la muestra
+—110 pólizas vivas repartidas en 4 ramos dan casi siempre 1-2 comparables por celda compañía/ramo—
+y decidió NO automatizar el precio todavía: **«datos minúsculos, mejor avisarme dos meses antes
+para yo venderle… luego será automático»**. Se construyó el aviso a Alberto (no al cliente): bloque
+«Otras compañías por vencer» en `/correduria` → Hoy, sobre las pólizas DECLARADAS (de otra compañía)
+que vencen en ≤60 días — ver `apps/asegura/lib/cartera-declaradas.ts` +
+`apps/plataforma/app/(usuario)/correduria/DeclaradasVencer.tsx`. El comparador de precio con umbral
+mínimo de muestra (≥5 por celda) sigue pendiente y sin medir.
+
 ### G. Botón de «quiero el precio de verdad» (Avant2) 🔴 el que gasta
 Retarificación real. **Nunca automático, nunca en lote.** Cupo, motivo y `intento_id` contra
 `seguros.codeoscopic_consumo`, que ya existe justo para esto. Se dispara **una vez**, al acercarse el
