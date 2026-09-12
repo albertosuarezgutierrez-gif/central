@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📧 13º 400 real de Codeoscopic — el Submit exige email+calle, y ya se repara solo (12/09/2026).**
+  Tras el fix del IBAN (#2815), el Submit (no el ReRate) rechazó con «e-mail/road name of the
+  holder/owner/primaryDriver is mandatory». `interprete-400.ts` aprendió `email`; `valoresPersonaDesdeFicha`
+  (nuevo, compartido con `/oferta`) la saca de la ficha; `emitir/route.ts` repara con PATCH+relectura y
+  repite el Submit UNA vez. Alberto pidió que sirva para todos los ramos: la reparación ya era agnóstica
+  por construcción; lo que SÍ mentía por ramo era `codeoscopic_projects.producto` hardcodeado a `'auto'`
+  en dos sitios — ahora usa `polizas.tipo` real. Tests nuevos en `interprete-400.test.ts`. PENDIENTE: PR,
+  y que Alberto pruebe hogar.
 - **🧠 Grafo propio, parte 2: búsqueda SEMÁNTICA + lo estructural que faltaba para dar de baja Graphify (12/09/2026).**
   Condición de Alberto: baja solo si lo propio es «100 % igual». Faltaban `query_graph`/`rank_files`, `trace`/`shortest_path`,
   `references`, `imports_exports`, `node`, `render_subgraph` y la memoria. Migración `2026-09-12_grafo_semantico.sql` (APLICADA):
