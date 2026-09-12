@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **💸 Causa de fondo del día de emisión fallida: el `POST /insurances` mandaba la persona SIN email ni calle completa (12/09/2026).**
+  Medido en `codeoscopic_consumo`: 7 cargos de 0,50€ (11-12/09) sobre la póliza de Pilar Franco Ruz, los 7 con la misma
+  persona incompleta — `persona.ts` los omitía a propósito («no hacen falta para el precio»), el Submit los exige y el
+  vendor NO aplica el correo por PATCH (`roadName` sí). Cada capa de la cascada descubría un campo por cargo.
+  Fix (PR de esta rama): `construirPersona` manda lo que la ficha tiene (email por `emailDeFicha`, calle troceada, `roadType`
+  emparejado); `revisarDatosAuto(d,{paraEmitir:true})` exige correo + calle completa ANTES de pagar (solo cartera, no
+  oportunidad nueva); plataforma pide tipo de vía (desplegable) y nombre/número/correo en el formulario; `/precalificar`
+  registra `estructuraPersonaVendor` (solo claves, gratis) para fijar `CLAVE_EMAIL_VENDOR` con un dato — mirar ese log
+  antes del próximo cargo; `error_mensaje` ya guarda el 400 del Submit. PR #2847 (desplegable post-pago) mergeado.
+
 - **🛣️ `tipoVia` en `faltan_vendor` era una caja de texto que pedía un id de catálogo a ciegas (12/09/2026).**
   Alberto, sobre el ReRate de Allianz para Pilar Franco Ruz: «no entiendo que pida otra vez poner calle».
   El panel de Emisión (`retarificar/emision.tsx`, plataforma) pintaba `tipoVia` y `estadoCivil` como

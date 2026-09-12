@@ -77,6 +77,14 @@ export type ClienteCartera = {
    * del riesgo, aplicada aquí a la calle del tomador.
    */
   direccion?: string | null
+  /**
+   * El correo al que se le escribe (`emailDeFicha`: principal de las tablas
+   * hijas, respetando la baja de correo), ya descifrado. `null` = no hay o no
+   * se ha podido descifrar. El SUBMIT lo exige y el vendor no lo aplica por
+   * PATCH (12/09/2026), así que viaja en el `POST /insurances` desde el
+   * principio; si falta, es un hueco que se pide ANTES de pagar.
+   */
+  email?: string | null
 }
 
 /**
@@ -148,6 +156,12 @@ export type Resueltos = {
   /** Id del catálogo `car/garage-types`. */
   garaje: string | null
   garajeEsSupuesto?: boolean
+  /**
+   * `roadType.id` del catálogo `/road-types` — lo empareja el caller (que es
+   * quien tiene red) desde el tipo de vía que trocea `partirDireccion()`, o lo
+   * elige el corredor. Es una referencia de catálogo: nunca texto.
+   */
+  tipoViaId?: string | null
 }
 
 /** Kilómetros al año cuando nadie lo ha dicho. Media española declarada. */
@@ -289,10 +303,13 @@ export function precalificarAuto(
   // calle del riesgo, troceando el mismo texto libre con `partirDireccion()`.
   // Si no hay CP+municipio la dirección no viaja y el nombre de la vía no hace
   // falta; si la ficha no trae calle reconocible, sigue siendo un reparo.
-  const nombreViaDeFicha =
-    limpio(cliente.codigoPostal) !== null && resueltos.municipioId !== null
-      ? partirDireccion(cliente.direccion ?? null).nombre
-      : null
+  // El número va con el nombre (misma troceada); el TIPO de vía es una
+  // referencia de catálogo y lo trae `resueltos.tipoViaId` (emparejado por el
+  // caller o elegido por el corredor). El Submit exige los tres (14º 400 real).
+  const viajaDireccion = limpio(cliente.codigoPostal) !== null && resueltos.municipioId !== null
+  const direccionPartida = viajaDireccion ? partirDireccion(cliente.direccion ?? null) : null
+  const nombreViaDeFicha = direccionPartida?.nombre ?? null
+  const numeroViaDeFicha = direccionPartida?.numero ?? null
 
   const datos: Partial<DatosAuto> = {
     // ── Persona ──
@@ -304,10 +321,13 @@ export function precalificarAuto(
     sexo: sexoDeSaludo(cliente.saludo) ?? undefined,
     estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
+    email: limpio(cliente.email) ?? undefined,
     fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
     cpResidencia: limpio(cliente.codigoPostal),
     municipioResidenciaId: resueltos.municipioId,
     nombreVia: nombreViaDeFicha ?? undefined,
+    numeroVia: numeroViaDeFicha ?? undefined,
+    tipoVia: viajaDireccion ? (limpio(resueltos.tipoViaId) ?? undefined) : undefined,
 
     // ── Vehículo ──
     codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
@@ -357,8 +377,18 @@ export function precalificarAuto(
       porque: 'calle troceada automáticamente de la dirección de la ficha: comprueba que ha quedado bien',
     })
   }
+  if (numeroViaDeFicha !== null) {
+    supuestos.push({
+      campo: 'numeroVia',
+      valor: numeroViaDeFicha,
+      porque: 'número troceado automáticamente de la dirección de la ficha: comprueba que ha quedado bien',
+    })
+  }
 
-  return { datos, supuestos, faltan: revisarDatosAuto(datos) }
+  // 🎯 Retarificar una póliza de la cartera es para EMITIR: se exige ya lo que
+  // el Submit pedirá después y el proyecto no admite añadir (correo, calle
+  // completa). Ver `OpcionesRevision` en `peticion-auto.ts`.
+  return { datos, supuestos, faltan: revisarDatosAuto(datos, { paraEmitir: true }) }
 }
 
 // ─── AUTO, oportunidad nueva (sin póliza) ────────────────────────────────────

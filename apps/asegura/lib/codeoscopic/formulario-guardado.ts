@@ -17,6 +17,8 @@ export type FormularioAutoGuardado = {
   estadoCivilId: string | null
   /** Id del catálogo de municipios (`risk.circulationAddress.town.id`). */
   municipioId: number | null
+  /** Id del catálogo de tipos de vía (`holder.addresses[0].roadType.id`). */
+  tipoViaId: string | null
   /** Los mismos campos que `CAMPOS_A_MANO` de la pantalla — solo los que
    *  vinieron con valor. Un campo ausente no entra aquí: no se rellena con
    *  cadena vacía, que se leería como «se tecleó y estaba en blanco». */
@@ -57,6 +59,12 @@ export function extraerFormularioAuto(peticion: unknown): FormularioAutoGuardado
   poner('telefono', telefono)
   poner('fechaNacimiento', str(holder.birthDate))
   poner('fechaCarnet', str(carnet.date))
+  // La calle completa y el correo (12/09/2026): lo que tecleó el corredor
+  // porque la ficha no lo traía, para no volver a pedírselo.
+  const direccion = obj(arr(holder.addresses)[0])
+  poner('nombreVia', str(direccion.roadName))
+  poner('numeroVia', str(direccion.roadNumber))
+  poner('email', str(holder.email))
 
   return {
     codigoVehiculo: str(obj(risk.vehicle).code),
@@ -64,6 +72,7 @@ export function extraerFormularioAuto(peticion: unknown): FormularioAutoGuardado
     garaje: idTexto(risk.garageType),
     estadoCivilId: idTexto(holder.maritalStatus),
     municipioId: idEntero(obj(risk.circulationAddress).town),
+    tipoViaId: idTexto(direccion.roadType),
     correcciones,
   }
 }

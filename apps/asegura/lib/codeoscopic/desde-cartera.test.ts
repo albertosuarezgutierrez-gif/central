@@ -59,27 +59,57 @@ function pre(
 
 // ─── El caso feliz: una póliza de la cartera se cotiza sin pedir nada ────────
 
-test('con la ficha completa solo falta el nombre de la calle (11º 400 real, ReRate)', () => {
-  // La ficha no trae la calle de residencia (nunca se ha necesitado hasta el
-  // ReRate) y no se inventa: es el único hueco que queda tras precalificar.
+/** Lo que el SUBMIT exige y la ficha mínima no trae: se pide ANTES de pagar (12/09/2026). */
+const HUECOS_EMISION = ['nombreVia', 'numeroVia', 'tipoVia', 'email'] as const
+
+test('con la ficha mínima faltan la calle completa y el correo — ANTES de pagar, no después', () => {
+  // Retarificar una póliza de la cartera es para EMITIR, y el Submit exige
+  // correo + tipo/nombre/número de vía. El vendor no aplica el correo por PATCH
+  // (7 cargos de 0,50€ el 11-12/09/2026 sobre la misma persona incompleta), así
+  // que estos huecos se declaran aquí, gratis, y no a 0,50€ por campo.
   const r = pre()
-  assert.deepEqual(r.faltan, [
-    { campo: 'nombreVia', motivo: 'la compañía lo exige para poder confirmar el precio (ReRate) cuando hay dirección' },
-  ])
+  assert.deepEqual([...r.faltan.map((f) => f.campo)].sort(), [...HUECOS_EMISION].sort())
   assert.equal(sePuedeCotizar(r), false)
+  assert.match(r.faltan.find((f) => f.campo === 'email')!.motivo, /pagar otra vez/)
+  assert.match(r.faltan.find((f) => f.campo === 'tipoVia')!.motivo, /catálogo/)
 })
 
 // ─── Si ya la tenemos, no se vuelve a pedir (Alberto, 12/09/2026) ────────────
 
-test('si la ficha SÍ trae dirección, la calle sale sola y ya no falta nada', () => {
-  const r = pre({ direccion: 'CL SAN VICENTE, 40 2º-14' })
+test('si la ficha trae dirección con tipo de vía, número y correo, ya no falta nada', () => {
+  const r = pre({ direccion: 'CL SAN VICENTE, 40 2º-14', email: 'cliente@example.com' }, {}, { tipoViaId: 'Street' })
   assert.equal(r.datos.nombreVia, 'SAN VICENTE')
+  assert.equal(r.datos.numeroVia, '40')
+  assert.equal(r.datos.tipoVia, 'Street')
+  assert.equal(r.datos.email, 'cliente@example.com')
   assert.deepEqual(r.faltan, [])
   assert.equal(sePuedeCotizar(r), true)
   assert.ok(
     r.supuestos.some((s) => s.campo === 'nombreVia' && s.valor === 'SAN VICENTE'),
     'la calle troceada de la ficha tiene que verse como supuesto, no colarse en silencio',
   )
+  assert.ok(r.supuestos.some((s) => s.campo === 'numeroVia' && s.valor === '40'))
+})
+
+test('el caso de Pilar: dirección SIN tipo de vía («Severo Ochoa 12») → falta SOLO el tipo de vía', () => {
+  // `partirDireccion` no reconoce tipo (no hay «CL»/«Calle»), así que el caller
+  // no puede emparejarlo con `/road-types` y llega `tipoViaId: null`. Es el
+  // único hueco: se elige del catálogo en pantalla, antes del cargo.
+  const r = pre({ direccion: 'Severo Ochoa 12', email: 'cliente@example.com' }, {}, { tipoViaId: null })
+  assert.deepEqual(r.faltan.map((f) => f.campo), ['tipoVia'])
+  assert.equal(r.datos.nombreVia, 'Severo Ochoa')
+  assert.equal(r.datos.numeroVia, '12')
+})
+
+test('sin correo en la ficha, falta el correo aunque la calle esté completa', () => {
+  const r = pre({ direccion: 'CL SAN VICENTE, 40', email: null }, {}, { tipoViaId: 'Street' })
+  assert.deepEqual(r.faltan.map((f) => f.campo), ['email'])
+})
+
+test('un correo sin forma de correo es un reparo, no viaja al vendor', () => {
+  const r = pre({ direccion: 'CL SAN VICENTE, 40', email: 'sin-arroba' }, {}, { tipoViaId: 'Street' })
+  assert.deepEqual(r.faltan.map((f) => f.campo), ['email'])
+  assert.match(r.faltan[0].motivo, /forma de correo/)
 })
 
 test('si la ficha no trae ninguna dirección reconocible, sigue siendo un reparo', () => {
@@ -161,9 +191,9 @@ test('presumir cero siniestros iguala los años y evita el 400 del detalle de si
   // coinciden — y el 400 (ya pagado) no llega.
   const r = pre({}, { fechaEfectoInicial: '2024-03-01' })
   assert.equal(r.datos.aniosAsegurado, r.datos.aniosSinSiniestros)
-  // `nombreVia` es un hueco aparte (11º 400 real, la ficha nunca trae la calle);
-  // lo que este test vigila es que NO aparezca el reparo de siniestros.
-  assert.deepEqual(r.faltan.filter((f) => f.campo !== 'nombreVia'), [])
+  // La calle completa y el correo son huecos aparte (la ficha mínima no los
+  // trae); lo que este test vigila es que NO aparezca el reparo de siniestros.
+  assert.deepEqual(r.faltan.filter((f) => !(HUECOS_EMISION as readonly string[]).includes(f.campo)), [])
 })
 
 // ─── Los supuestos que NO son optimistas tiran a la baja ─────────────────────
@@ -273,8 +303,10 @@ function preNueva(c: Partial<ClienteCartera> = {}, r: Partial<ResueltosAutoNueva
 }
 
 test('sin póliza previa, con todo resuelto solo falta el nombre de la calle', () => {
-  // Mismo hueco que en la póliza existente: la ficha no trae la calle de
-  // residencia (11º 400 real, ReRate) y no se inventa.
+  // La ficha no trae la calle de residencia (11º 400 real, ReRate) y no se
+  // inventa. 🎯 Y a diferencia de la póliza de cartera, aquí NO se exigen
+  // correo ni calle completa: una oportunidad nueva es PRESUPUESTO (fase 1) y
+  // un dato que no hace falta para el precio no bloquea.
   const r = preNueva()
   assert.deepEqual(r.faltan, [
     { campo: 'nombreVia', motivo: 'la compañía lo exige para poder confirmar el precio (ReRate) cuando hay dirección' },

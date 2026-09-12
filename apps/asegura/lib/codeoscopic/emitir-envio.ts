@@ -21,6 +21,7 @@
 import { randomUUID } from 'node:crypto'
 import type { ConfigCodeoscopic } from './config.ts'
 import { obtenerToken } from './cliente.ts'
+import { redactarCrudoVendor } from './emitir.ts'
 import { prisma } from '../tenant.ts'
 
 const str = (v: unknown): string | null =>
@@ -78,10 +79,22 @@ async function cerrarEnvio(
   // enlaza esta fila. Aquí solo se libera el candado; `'preemision'` mantiene
   // el estado de «ya tiene oferta confirmada, aún sin póliza acuñada».
   estado: 'preemision' | 'error',
+  /**
+   * El texto del vendor (ya enmascarado por el caller) cuando `estado` es
+   * `error`. Hasta el 12/09/2026 `error_mensaje` quedaba a NULL en cada
+   * Submit rechazado: el 400 solo vivía en la respuesta HTTP y en el chat, y
+   * al día siguiente no había forma de saber POR QUÉ falló un proyecto. Con
+   * `preemision` se deja como está (no se borra el último error por un
+   * intento que sí cuajó: eso lo cierra `registrarPolizaEmitida`).
+   */
+  mensaje: string | null = null,
 ): Promise<void> {
+  const errorMensaje = estado === 'error' && mensaje ? mensaje.slice(0, 2000) : null
   await prisma.$executeRaw`
     update codeoscopic_projects
-    set estado = ${estado}::codeoscopic_project_estado, submit_in_flight_at = null
+    set estado = ${estado}::codeoscopic_project_estado,
+        submit_in_flight_at = null,
+        error_mensaje = coalesce(${errorMensaje}::text, error_mensaje)
     where correduria_id = ${correduriaId}::uuid
       and project_id_codeoscopic = ${projectId}
       and submit_attempt_id = ${attemptId}::uuid
@@ -165,8 +178,15 @@ export async function enviarEmision(
     }
 
     if (!res.ok) {
-      await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'error')
-      return { ok: false, razon: 'vendor', mensaje: `${res.status}: ${texto.slice(0, 1000)}`, crudo }
+      const mensaje = `${res.status}: ${texto.slice(0, 1000)}`
+      await cerrarEnvio(
+        entrada.correduriaId,
+        entrada.projectId,
+        attemptId,
+        'error',
+        String(redactarCrudoVendor(mensaje)),
+      )
+      return { ok: false, razon: 'vendor', mensaje, crudo }
     }
 
     const referenciaVendor = str((crudo as Record<string, unknown> | null)?.referenceFromVendor)
@@ -177,13 +197,12 @@ export async function enviarEmision(
     // cortara la conexión: el candado se libera igual (para no dejar el
     // proyecto bloqueado para siempre), pero el `estado: 'error'` deja
     // constancia de que este intento NO terminó con una respuesta clara.
-    await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'error').catch(() => {})
-    return {
-      ok: false,
-      razon: 'vendor',
-      mensaje:
-        `${e instanceof Error ? e.message : String(e)} — no hay confirmación de qué hizo el ` +
-        'vendor con esta petición: antes de reintentar, consultar `GET /insurances/{id}` para ver si ya emitió.',
-    }
+    const mensaje =
+      `${e instanceof Error ? e.message : String(e)} — no hay confirmación de qué hizo el ` +
+      'vendor con esta petición: antes de reintentar, consultar `GET /insurances/{id}` para ver si ya emitió.'
+    await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'error', String(redactarCrudoVendor(mensaje))).catch(
+      () => {},
+    )
+    return { ok: false, razon: 'vendor', mensaje }
   }
 }

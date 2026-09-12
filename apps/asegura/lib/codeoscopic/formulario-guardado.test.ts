@@ -25,6 +25,24 @@ const DATOS: DatosAuto = {
   fechaEfecto: '2026-10-01',
 }
 
+test('recupera el tipo de vía (catálogo) y la calle completa + correo tecleados (12/09/2026)', () => {
+  const f = extraerFormularioAuto(
+    construirPeticionAuto({
+      ...DATOS,
+      email: 'pilar@example.com',
+      cpResidencia: '41003',
+      municipioResidenciaId: 41091,
+      nombreVia: 'Severo Ochoa',
+      numeroVia: '12',
+      tipoVia: 'Street',
+    }),
+  )
+  assert.equal(f.tipoViaId, 'Street')
+  assert.equal(f.correcciones.nombreVia, 'Severo Ochoa')
+  assert.equal(f.correcciones.numeroVia, '12')
+  assert.equal(f.correcciones.email, 'pilar@example.com')
+})
+
 test('extraerFormularioAuto recupera el vehículo y el tomador de una petición real', () => {
   const peticion = construirPeticionAuto(DATOS)
   const f = extraerFormularioAuto(peticion)
@@ -34,6 +52,7 @@ test('extraerFormularioAuto recupera el vehículo y el tomador de una petición 
   assert.equal(f.garaje, 'Garage')
   assert.equal(f.estadoCivilId, 'Married')
   assert.equal(f.municipioId, 41091)
+  assert.equal(f.tipoViaId, null) // sin dirección de residencia no hay tipo de vía
   assert.equal(f.correcciones.dni, '12345678Z') // se normaliza en mayúsculas al construirla
   assert.equal(f.correcciones.nombre, 'Pilar')
   assert.equal(f.correcciones.apellido1, 'Franco Ruz')

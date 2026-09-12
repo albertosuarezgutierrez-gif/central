@@ -345,8 +345,24 @@ Las tres reglas que más cotizaciones tumban, todas con test:
   los años asegurado.** Es la condición anidada que se incumple sin enterarse. Ojo: `0` siniestros
   es una respuesta válida, no un hueco (regla NULL≠0).
 
-Y lo que NO se manda, a propósito: email, calle, ocupación, situación laboral y país de nacimiento.
-No hacen falta para el precio.
+Y lo que NO se manda, a propósito: ocupación, situación laboral y país de nacimiento. No hacen
+falta ni para el precio ni para emitir.
+
+🚨 **Hasta el 12/09/2026 tampoco se mandaban el email ni la calle completa («no hacen falta para el
+precio»), y ESA era la causa de fondo de un día entero de emisión fallida.** Cierto para el precio,
+falso para EMITIR: el Submit exige email + tipo/nombre/número de vía en `holder`/`owner`/
+`primaryDriver`, y **el vendor NO aplica el correo por PATCH** (proyecto 40685666: 200 y al releer no
+está; `roadName` por el mismo PATCH sí). Consecuencia medida en `codeoscopic_consumo`: **7 cargos de
+0,50€ (11-12/09) sobre la póliza de Pilar Franco Ruz, los 7 con la misma persona incompleta**, y cada
+capa de la cascada `interpretarError400 → completarPersonas → reintento` descubría UN campo por cargo.
+Ahora: (1) `construirPersona` manda lo que la FICHA ya tiene (email por `emailDeFicha`, calle troceada
+con `partirDireccion`, `roadType` emparejado contra `/road-types`); (2) `revisarDatosAuto(d, { paraEmitir:
+true })` —solo defensa de cartera, NO oportunidad nueva— exige correo y calle completa **antes de pagar**,
+y la pantalla de plataforma los pide (tipo de vía como desplegable del catálogo, `CAMPOS_A_MANO` para
+nombre/número/correo); (3) la clave del correo es UNA constante, `CLAVE_EMAIL_VENDOR` (`persona.ts`),
+porque sigue siendo una SUPOSICIÓN: `/precalificar` registra `estructuraPersonaVendor` (solo nombres
+de campo del último proyecto real, gratis) para fijarla con un dato — mira ese log ANTES del próximo
+cargo; (4) `codeoscopic_projects.error_mensaje` guarda ya el 400 del Submit (antes quedaba NULL).
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 
