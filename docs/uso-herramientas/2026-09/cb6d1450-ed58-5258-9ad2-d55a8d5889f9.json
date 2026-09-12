@@ -1,8 +1,8 @@
 {
  "sesion": "cb6d1450-ed58-5258-9ad2-d55a8d5889f9",
  "inicio": "2026-09-12T13:08:36.222Z",
- "fin": "2026-09-12T13:25:13.716Z",
- "llamadas": 71,
+ "fin": "2026-09-12T13:25:40.000Z",
+ "llamadas": 79,
  "categorias": {
   "bash": {
    "llamadas": 37,
@@ -28,31 +28,31 @@
    }
   },
   "otro": {
-   "llamadas": 14,
-   "chars_in": 503,
-   "chars_out": 690915,
+   "llamadas": 20,
+   "chars_in": 515,
+   "chars_out": 1083737,
    "errores": 0,
    "archivos_citados": 7,
    "chars_citados": 58181,
    "tools": {
     "ToolSearch": 3,
     "Skill": 1,
-    "ReadNotifications": 10
+    "ReadNotifications": 16
    }
   },
   "mcp:github": {
-   "llamadas": 14,
-   "chars_in": 7156,
-   "chars_out": 52277,
+   "llamadas": 16,
+   "chars_in": 7356,
+   "chars_out": 63860,
    "errores": 0,
-   "archivos_citados": 23,
-   "chars_citados": 170893,
+   "archivos_citados": 30,
+   "chars_citados": 223490,
    "tools": {
     "mcp__github__create_pull_request": 1,
     "mcp__github__update_pull_request": 1,
     "mcp__github__subscribe_pr_activity": 1,
     "mcp__github__add_issue_comment": 1,
-    "mcp__github__pull_request_read": 7,
+    "mcp__github__pull_request_read": 9,
     "mcp__github__actions_list": 3
    }
   },
