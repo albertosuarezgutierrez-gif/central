@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🕵️ Pólizas "zombi" del volcado + revertido un arreglo propio equivocado (12/09/2026).** Alberto
+  reportó BIDP023227 (Comunidades, Plus Ultra) «no aparece, es de catalana»: corregí su
+  `codigo_entidad_dgs` de C0468→C0517 pensando que era un fallo puntual, y era un error — **215
+  pólizas "Plus Ultra" + 101 "Catalana Occidente" + 21 "Occident" (337 en total) usan TODAS C0468**
+  en el volcado: así registra el grupo, no la entidad legal exacta. Revertido. Criterio útil que
+  queda para reusar: **134 pólizas / 64 clientes "zombi"** (volcado sin CIMA, `activa` sin
+  vencimiento, del cliente que YA tiene otra póliza confirmada por CIMA) — candidatas a revisar una
+  a una, no a fusionar en bloque. Dato de Alberto: **"en vigor" = confirmado por CIMA siempre; solo
+  falta Generali, que se conecta la semana del 15/09/2026** (hoy sin acceso, ver `apps/asegura/CLAUDE.md`).
+
 - **🔒 `patch_no_aplicado` del Submit: mensaje falso + PII en claro en `crudo` (12/09/2026).**
   Tras el fix del 14º 400, Alberto probó «Emitir» de nuevo: el vendor NO aplicó `email` en holder/owner/
   primaryDriver pese a que sí aplicó nombreVia/numeroVia/tipoVia en el MISMO PATCH — la vía real para

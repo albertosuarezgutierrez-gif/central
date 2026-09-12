@@ -1,8 +1,8 @@
 {
  "sesion": "45a6feef-7836-5409-9fd0-22cbc85746aa",
  "inicio": "2026-09-12T18:10:35.945Z",
- "fin": "2026-09-12T20:02:11.380Z",
- "llamadas": 30,
+ "fin": "2026-09-12T20:38:49.114Z",
+ "llamadas": 34,
  "categorias": {
   "otro": {
    "llamadas": 3,
@@ -29,26 +29,26 @@
    }
   },
   "sql": {
-   "llamadas": 19,
-   "chars_in": 6534,
-   "chars_out": 97398,
+   "llamadas": 20,
+   "chars_in": 7557,
+   "chars_out": 122282,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 19
+    "mcp__Supabase__execute_sql": 20
    }
   },
   "lectura-directa": {
-   "llamadas": 5,
-   "chars_in": 613,
-   "chars_out": 4822,
+   "llamadas": 7,
+   "chars_in": 767,
+   "chars_out": 8668,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 4,
-    "Read": 1
+    "Read": 3
    }
   },
   "bash": {
@@ -63,14 +63,15 @@
    }
   },
   "escritura": {
-   "llamadas": 1,
-   "chars_in": 11800,
-   "chars_out": 11877,
+   "llamadas": 2,
+   "chars_in": 13004,
+   "chars_out": 489239,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 1
+    "Write": 1,
+    "Edit": 1
    }
   }
  }
