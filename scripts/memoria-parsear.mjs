@@ -10,7 +10,7 @@
 // Uso: node scripts/memoria-parsear.mjs --out /tmp/memoria.json
 import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { trocear, esInicioEntrada, ultimaFecha, textoFechaDe } from './rotar-memoria.mjs'
@@ -141,8 +141,13 @@ function main() {
   console.log(`Memoria parseada: ${resultado.entradas.length} entradas (de ${entradas.length} brutas) → ${salida}`)
 }
 
-// Solo ejecuta el CLI si se invoca directamente, no cuando memoria-parsear.test.mjs importa
-// las funciones puras de aquí (mismo patrón que rotar-memoria.mjs).
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Solo ejecuta el CLI si se invoca directamente, no cuando un test importa las funciones puras
+// de aquí. `import.meta.url` viene percent-encoded (Node lo construye así); un `file://` crudo
+// sobre `process.argv[1]` NO lo está, así que una ruta con espacios u otros caracteres especiales
+// nunca coincide y el CLI no arrancaría en silencio (hallazgo real de Graphify, verificado:
+// 'file:///tmp/con espacios' ≠ pathToFileURL('/tmp/con espacios').href). `pathToFileURL` codifica
+// igual que `import.meta.url`, así que la comparación es robusta sin más cambio de comportamiento
+// en las rutas normales (sin espacios) que ya usa este repo.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main()
 }
