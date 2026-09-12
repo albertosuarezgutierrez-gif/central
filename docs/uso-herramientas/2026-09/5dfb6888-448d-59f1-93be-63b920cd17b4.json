@@ -1,18 +1,18 @@
 {
  "sesion": "5dfb6888-448d-59f1-93be-63b920cd17b4",
  "inicio": "2026-09-12T13:47:37.256Z",
- "fin": "2026-09-12T17:59:12.306Z",
- "llamadas": 873,
+ "fin": "2026-09-12T20:01:13.071Z",
+ "llamadas": 877,
  "categorias": {
   "bash": {
-   "llamadas": 546,
-   "chars_in": 167197,
-   "chars_out": 1258287,
+   "llamadas": 548,
+   "chars_in": 167599,
+   "chars_out": 1260092,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 546
+    "Bash": 548
    }
   },
   "mcp:github": {
@@ -75,14 +75,14 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 76,
-   "chars_in": 8211,
-   "chars_out": 225500,
+   "llamadas": 78,
+   "chars_in": 8439,
+   "chars_out": 306475,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 66,
+    "Read": 68,
     "Grep": 10
    }
   },
