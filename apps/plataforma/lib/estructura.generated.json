@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-11T13:48:09Z",
+  "generadoEn": "2026-09-12T08:41:37Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2080,7 +2080,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 45
+        "evidencias": 47
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 45
+        "evidencias": 46
       },
       "rrhh": {
         "estado": "no",
@@ -2134,7 +2134,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 16
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3886,6 +3886,7 @@
       "/api/operador/codeoscopic/tarificacion",
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
+      "/api/operador/declaradas-vencer",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
@@ -4754,6 +4755,7 @@
       "/api/correduria/clientes",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
+      "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
       "/api/correduria/documentos",
       "/api/correduria/documentos/[id]",
@@ -4762,6 +4764,7 @@
       "/api/correduria/intervinientes",
       "/api/correduria/leads",
       "/api/correduria/partes",
+      "/api/correduria/poliza",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
       "/api/correduria/supresiones",
@@ -6224,7 +6227,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1327,
+    "apis": 1330,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
