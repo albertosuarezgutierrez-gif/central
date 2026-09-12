@@ -1,18 +1,18 @@
 {
  "sesion": "cb6d1450-ed58-5258-9ad2-d55a8d5889f9",
  "inicio": "2026-09-12T13:08:36.222Z",
- "fin": "2026-09-12T13:12:26.241Z",
- "llamadas": 9,
+ "fin": "2026-09-12T13:19:46.767Z",
+ "llamadas": 30,
  "categorias": {
   "bash": {
-   "llamadas": 5,
-   "chars_in": 11030,
-   "chars_out": 28067,
+   "llamadas": 23,
+   "chars_in": 33494,
+   "chars_out": 165663,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 5
+    "Bash": 23
    }
   },
   "escritura": {
@@ -25,6 +25,29 @@
    "tools": {
     "Write": 2,
     "Edit": 2
+   }
+  },
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 301,
+   "chars_out": 6337,
+   "errores": 0,
+   "archivos_citados": 7,
+   "chars_citados": 58181,
+   "tools": {
+    "ToolSearch": 1,
+    "Skill": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 4417,
+   "chars_out": 91,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 1
    }
   }
  }

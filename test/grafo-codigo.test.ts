@@ -101,3 +101,21 @@ test('nodos: archivo + símbolos con su línea; un símbolo importado que no se 
   const s = g2.nodos.find(n => n.nombre === 'nada')
   assert.equal(s?.tipo, 'simbolo')
 })
+
+test('un `/*` dentro de un comentario `//` NO abre un bloque que se trague código real (hallazgo del code-review, 12/09/2026)', () => {
+  const t = sinComentarios(`// bajo \`/motorcycle/*\` van las motos\nexport async function marcasMoto() {}\nconst x = 1 /* bloque */ + 2\n`)
+  assert.match(t.split('\n')[1], /export async function marcasMoto/)
+  assert.doesNotMatch(t, /bloque/)
+  assert.deepEqual(declaraciones(t).map(d => d.nombre), ['marcasMoto'])
+})
+
+test('`export { x }` local resuelve al símbolo real, incluso si `x` era un import de otro archivo', () => {
+  const g3 = extraerGrafo([
+    { rel: 'apps/a/lib/db.ts', text: `export const prisma = () => 1\n` },
+    { rel: 'apps/a/lib/tenant.ts', text: `import { prisma } from './db'\nconst COOKIE = { a: 1 }\nexport { prisma, COOKIE as COOKIE_OPTS }\n` },
+    { rel: 'apps/a/lib/uso.ts', text: `import { prisma, COOKIE_OPTS } from './tenant'\nexport const f = () => prisma() && COOKIE_OPTS\n` },
+  ])
+  const ids = g3.aristas.filter(a => a.origen === 'apps/a/lib/uso.ts#f').map(a => a.destino).sort()
+  assert.deepEqual(ids, ['apps/a/lib/db.ts#prisma', 'apps/a/lib/tenant.ts#COOKIE'])
+  assert.equal(g3.nodos.filter(n => n.tipo === 'simbolo').length, 0, 'sin símbolos fantasma')
+})

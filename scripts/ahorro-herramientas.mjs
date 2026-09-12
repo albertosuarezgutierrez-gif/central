@@ -7,7 +7,7 @@
 // Uso:  node scripts/ahorro-herramientas.mjs [--mes AAAA-MM] [--json] [--md <fichero>]
 //   --md reescribe el bloque entre <!-- ahorro:inicio --> y <!-- ahorro:fin --> de ese fichero
 //   (docs/USO-HERRAMIENTAS.md) y deja el resto intacto.
-// Lógica pura exportada (agregar, tablaMarkdown) para test/ahorro-herramientas.test.ts.
+// Lógica pura exportada (agregar, tablaMarkdown) para test/uso-herramientas.test.ts (comparte guardián con el hook).
 
 import { readdirSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs'
 import { join, dirname } from 'node:path'

@@ -10,8 +10,8 @@
 // simple y se resuelven bien; las llamadas se detectan como `nombre(` / `<Nombre` sobre nombres
 // IMPORTADOS de archivos del repo o declarados en el propio archivo, atribuidas a la función de
 // primer nivel cuyo rango (inicio → siguiente declaración) contiene la línea. Lo que NO ve:
-// llamadas por variable intermedia, re-exports con alias encadenados, imports dinámicos con
-// cadenas calculadas. Antes de fiarte de un «nadie llama a X», lee el código (misma regla que
+// llamadas por variable intermedia, imports dinámicos con cadenas calculadas, y `/*` dentro de un
+// string literal (abre un comentario falso). Antes de fiarte de un «nadie llama a X», lee el código (misma regla que
 // con Graphify). La precisión se midió contra Graphify el 12/09/2026: ver docs/USO-HERRAMIENTAS.md.
 //
 // Uso:  node scripts/grafo-codigo.mjs [--out <ruta.json>] [--stats]
@@ -105,9 +105,13 @@ export function resolverImport(spec, desde, existe, alias = {}) {
 
 /** Quita comentarios (bloque y línea) conservando los saltos de línea → los números de línea no cambian. */
 export function sinComentarios(text) {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
-    .replace(/(^|[^:\\'"`])\/\/[^\n]*/g, (m, pre) => pre + ' '.repeat(m.length - pre.length))
+  // UNA sola pasada con alternancia: el comentario que EMPIEZA antes gana. En dos pasadas, un `/*`
+  // dentro de un `// …` (p. ej. «bajo `/motorcycle/*`») abría un bloque falso que se tragaba código
+  // real hasta el siguiente `*/` (medido: 15 declaraciones perdidas en ≥10 archivos, 12/09/2026).
+  return text.replace(/\/\*[\s\S]*?\*\/|(^|[^:\\'"`])\/\/[^\n]*/g, (m, pre) => {
+    if (m.startsWith('/*')) return m.replace(/[^\n]/g, ' ')
+    return pre + ' '.repeat(m.length - pre.length)
+  })
 }
 
 const DECL_RES = [
@@ -116,19 +120,40 @@ const DECL_RES = [
   { tipo: 'const', re: /^(export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+?)?=/ },
 ]
 
+const EXPORT_LOCAL_RE = /(?:^|\n)[ \t]*export\s*\{([^}]*)\}\s*(?:;|\n|$)/g
+
+/** `export { a, b as c }` SIN `from`: [{ local:'b', exportado:'c' }]. Lo que se exporta así se declaró (o importó) en el mismo archivo. */
+export function exportsLocales(text) {
+  const out = []
+  let m
+  EXPORT_LOCAL_RE.lastIndex = 0
+  while ((m = EXPORT_LOCAL_RE.exec(text))) {
+    for (const part of m[1].split(',')) {
+      const p = part.trim().replace(/^type\s+/, '')
+      if (!p) continue
+      const [loc, exp] = p.split(/\s+as\s+/)
+      out.push({ local: loc.trim(), exportado: (exp ?? loc).trim() })
+    }
+  }
+  return out
+}
+
 /** Declaraciones de PRIMER NIVEL (columna 0): { nombre, tipo, linea, exportado }. */
 export function declaraciones(text) {
   const out = []
   const lineas = text.split('\n')
+  const exportadosLocal = new Set(exportsLocales(text).map(e => e.local))
   for (let i = 0; i < lineas.length; i++) {
     const l = lineas[i]
     if (!l || /^\s/.test(l)) continue
     for (const { tipo, re } of DECL_RES) {
       const m = l.match(re)
       if (m) {
-        // `const x = 5` no es función: solo cuenta como nodo si es flecha/función o está exportado.
-        const esFn = tipo !== 'const' || /=>|\bfunction\b/.test(l) || !!m[1]
-        if (esFn) out.push({ nombre: m[2], tipo: tipo === 'const' && /=>|\bfunction\b/.test(l) ? 'funcion' : tipo, linea: i + 1, exportado: !!m[1] })
+        // `const x = 5` no es función: solo cuenta como nodo si es flecha/función, está exportado
+        // en la propia línea o lo exporta más abajo un `export { x }`.
+        const exportado = !!m[1] || exportadosLocal.has(m[2])
+        const esFn = tipo !== 'const' || /=>|\bfunction\b/.test(l) || exportado
+        if (esFn) out.push({ nombre: m[2], tipo: tipo === 'const' && /=>|\bfunction\b/.test(l) ? 'funcion' : tipo, linea: i + 1, exportado })
         break
       }
     }
@@ -273,6 +298,17 @@ export function extraerGrafo(archivos, alias = {}) {
   const resolverSimbolo = (ruta, nombre, salto = 0) => {
     if (nombre === 'default') nombre = defaultDe(ruta) ?? 'default'
     if (declarado(ruta, nombre) || salto > 4) return `${ruta}#${nombre}`
+    // `export { x as y }` local: `y` es el `x` del archivo, que puede ser un import (`import { x } from './db'`).
+    const el = exportsLocales(declsPor.get(ruta)?.limpio ?? '').find(e => e.exportado === nombre)
+    if (el) {
+      if (declarado(ruta, el.local)) return `${ruta}#${el.local}`
+      for (const im of impsPor.get(ruta) ?? []) {
+        const s = im.simbolos.find(x => x.local === el.local)
+        if (!s) continue
+        const dest = resolverImport(im.spec, ruta, rutas, alias)
+        if (dest) return resolverSimbolo(dest, s.exportado, salto + 1)
+      }
+    }
     for (const im of impsPor.get(ruta) ?? []) {
       if (im.tipo !== 'reexporta') continue
       const dest = resolverImport(im.spec, ruta, rutas, alias)

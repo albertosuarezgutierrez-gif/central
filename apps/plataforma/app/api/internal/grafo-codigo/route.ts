@@ -76,13 +76,12 @@ export async function POST(req: NextRequest) {
     // Si es el último lote, borra las filas viejas (código eliminado)
     let nodosBorrados = 0
     let aristasBorradas = 0
+    // En UNA transacción: si el segundo DELETE fallara suelto, quedarían aristas cuyos extremos ya no existen.
     if (lote === total) {
-      nodosBorrados = await prisma.$executeRaw(Prisma.sql`
-        DELETE FROM grafo_nodos WHERE sha IS DISTINCT FROM ${sha}
-      `)
-      aristasBorradas = await prisma.$executeRaw(Prisma.sql`
-        DELETE FROM grafo_aristas WHERE sha IS DISTINCT FROM ${sha}
-      `)
+      ;[aristasBorradas, nodosBorrados] = await prisma.$transaction([
+        prisma.$executeRaw(Prisma.sql`DELETE FROM grafo_aristas WHERE sha IS DISTINCT FROM ${sha}`),
+        prisma.$executeRaw(Prisma.sql`DELETE FROM grafo_nodos WHERE sha IS DISTINCT FROM ${sha}`),
+      ])
     }
 
     return NextResponse.json({

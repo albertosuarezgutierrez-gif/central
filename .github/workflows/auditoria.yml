@@ -46,7 +46,9 @@ jobs:
   radiografia:
     name: Radiografía al día
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # 5 → 15 min (12/09/2026): la inyección del grafo son ~13 POSTs secuenciales con reintentos, y un
+    # corte a mitad deja las tablas con dos `sha` mezclados hasta la siguiente pasada completa.
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4

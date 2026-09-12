@@ -15,7 +15,7 @@ import path from 'path'
 
 const PLATAFORMA_URL = process.env.PLATAFORMA_URL || ''
 const CRON_SECRET = process.env.CRON_SECRET || ''
-const MAX_FILAS_POR_LOTE = 2500
+const MAX_FILAS_POR_LOTE = 6000 // ~1 MB por lote (fila ≈ 150 B), lejos del corte de 4,5 MB; menos POSTs = menos ventana de corte
 
 // Validar envs
 if (!PLATAFORMA_URL || !CRON_SECRET) {
