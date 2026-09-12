@@ -20,7 +20,7 @@
 import { readdirSync, readFileSync, statSync, existsSync, writeFileSync } from 'node:fs'
 import { join, dirname, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { execSync } from 'node:child_process'
+import { gitSha } from './git-sha.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const EXTS = ['.ts', '.tsx', '.mjs', '.js', '.jsx']
@@ -357,10 +357,6 @@ export function extraerGrafo(archivos, alias = {}) {
   return { nodos: [...nodos.values()], aristas: [...aristas.values()] }
 }
 
-function gitSha() {
-  try { return execSync('git rev-parse HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return '' }
-}
-
 // ── CLI ────────────────────────────────────────────────────────────────────────
 const esMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
 if (esMain) {
@@ -369,7 +365,7 @@ if (esMain) {
   const t0 = Date.now()
   const archivos = listarArchivos()
   const grafo = extraerGrafo(archivos, leerAliases())
-  const res = { sha: gitSha(), generado: new Date().toISOString(), archivos: archivos.length, ...grafo }
+  const res = { sha: gitSha(process.env, ROOT), generado: new Date().toISOString(), archivos: archivos.length, ...grafo }
   const porTipo = (xs) => xs.reduce((acc, x) => { acc[x.tipo] = (acc[x.tipo] ?? 0) + 1; return acc }, {})
   console.log(`grafo: ${archivos.length} archivos → ${grafo.nodos.length} nodos ${JSON.stringify(porTipo(grafo.nodos))}, ${grafo.aristas.length} aristas ${JSON.stringify(porTipo(grafo.aristas))} en ${Date.now() - t0} ms`)
   if (outIdx >= 0 && args[outIdx + 1]) {

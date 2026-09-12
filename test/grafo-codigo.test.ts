@@ -7,6 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { extraerGrafo, resolverImport, imports, declaraciones, referencias, sinComentarios, esTest } from '../scripts/grafo-codigo.mjs'
+import { gitSha } from '../scripts/git-sha.mjs'
 
 const archivos = [
   { rel: 'packages/m/src/viva.ts', text: `// helper
@@ -118,4 +119,13 @@ test('`export { x }` local resuelve al símbolo real, incluso si `x` era un impo
   const ids = g3.aristas.filter(a => a.origen === 'apps/a/lib/uso.ts#f').map(a => a.destino).sort()
   assert.deepEqual(ids, ['apps/a/lib/db.ts#prisma', 'apps/a/lib/tenant.ts#COOKIE'])
   assert.equal(g3.nodos.filter(n => n.tipo === 'simbolo').length, 0, 'sin símbolos fantasma')
+})
+
+test('gitSha: en CI manda GITHUB_SHA (el sha de main), no el HEAD local que la radiografía acaba de commitear', () => {
+  // El 12/09/2026 grafo_nodos quedó con el sha del commit local «regenerar radiografía» (ea311fe) en vez
+  // del de main (5bf8913): el paso del grafo corre DESPUÉS de que el workflow commitee la radiografía en
+  // una rama. Misma regla para el mapa (scripts/auditar-estructura.mjs): un solo helper para los dos.
+  assert.equal(gitSha({ GITHUB_SHA: 'abc123' }, '/x', () => { throw new Error('no debe llamarse') }), 'abc123')
+  assert.equal(gitSha({}, '/x', (root) => `head-de-${root}`), 'head-de-/x', 'fuera de CI lee el HEAD del checkout')
+  assert.equal(gitSha({}, '/x', () => { throw new Error('sin git') }), '', 'sin git no revienta: sha vacío')
 })
