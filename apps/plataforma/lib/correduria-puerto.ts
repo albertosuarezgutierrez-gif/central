@@ -459,6 +459,42 @@ export async function lineasCodeoscopic(): Promise<LineasCodeoscopic> {
   }
 }
 
+// ─── Diagnóstico puntual de un proyecto Codeoscopic (12/09/2026) ────────────
+//
+// El Submit real de las 09:41:54 sobre el proyecto 40684815 murió a mitad de
+// ejecución (el candado `submit_in_flight_at` quedó puesto y `cerrarEnvio`
+// nunca corrió), así que no hay confirmación de si Codeoscopic llegó a
+// procesar el `POST .../policy-applications` antes del corte. Reenvía al
+// `GET /api/operador/codeoscopic/proyecto` de asegura (gratis, lectura) para
+// comprobarlo desde AQUÍ — la pantalla de Alberto — en vez de un curl suelto
+// o el portal del vendor.
+
+export type DiagnosticoProyecto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; crudo: unknown }
+
+export function interpretarDiagnosticoProyecto(status: number, json: unknown): DiagnosticoProyecto {
+  if (status === 401) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado !== 'ok') {
+    const mensaje = cadena(o.mensaje) ?? cadena(o.error) ?? `HTTP ${status}`
+    return { estado: 'error', motivo: mensaje }
+  }
+  return { estado: 'ok', crudo: o.crudo ?? null }
+}
+
+export async function diagnosticoProyectoCodeoscopic(projectId: string): Promise<DiagnosticoProyecto> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/proyecto?projectId=${encodeURIComponent(projectId)}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarDiagnosticoProyecto(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
 // ─── Compañías abiertas en Avant2 (¿nos han incluido a Fidelidade?) ─────────
 
 export type CompaniaBuscada =
