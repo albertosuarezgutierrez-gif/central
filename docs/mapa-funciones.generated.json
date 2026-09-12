@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T09:36:30Z",
-  "sha": "cd07e3828aacc4adad2f271d3e31e0fdf3bec2de",
+  "generadoEn": "2026-09-12T10:37:34Z",
+  "sha": "5c383e77c81853c8647225b2356142b8adb8860e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9809,7 +9809,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 233
+          "linea": 254
         }
       ],
       "tablas": [
@@ -9819,7 +9819,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "dbc2204ce7f5"
+      "hash": "56a66112803b"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -10103,6 +10103,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/precalificar",
       "hash": "4dc8de5865e4"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/proyecto/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "`GET /insurances/{id}` en CRUDO, sin pasar por `leerCotizacion` (que solo extrae precios). **Gratis: es una lectura.** Diagnóstico puntual (12/09/2026) para el caso en que `emitir-envio.ts` murió a mi"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/proyecto",
+      "hash": "808af09efe05"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/retarificar/route.ts",
@@ -132192,7 +132213,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3244,
-    "funciones": 9979
+    "archivos": 3245,
+    "funciones": 9980
   }
 }

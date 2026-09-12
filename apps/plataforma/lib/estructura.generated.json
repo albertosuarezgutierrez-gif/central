@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-12T09:36:30Z",
+  "generadoEn": "2026-09-12T10:37:34Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3880,6 +3880,7 @@
       "/api/operador/codeoscopic/precalificar-moto-nuevo",
       "/api/operador/codeoscopic/precalificar-salud-nuevo",
       "/api/operador/codeoscopic/precalificar-vida-nuevo",
+      "/api/operador/codeoscopic/proyecto",
       "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
@@ -6227,7 +6228,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1330,
+    "apis": 1331,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
