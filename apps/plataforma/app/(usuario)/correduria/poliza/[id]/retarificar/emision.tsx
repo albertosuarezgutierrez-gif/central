@@ -45,6 +45,16 @@ function euroODash(n: number | null): string {
   return n === null || !Number.isFinite(n) ? '—' : eur(n)
 }
 
+// La fecha de HOY en local (no `toISOString()`, que es UTC y puede dar el día
+// de ayer/mañana según la hora): es el valor que Allianz acepta siempre — su
+// 400 real es «no puede estar a más de 90 días vista», nunca por ser hoy.
+function hoyISO(): string {
+  const d = new Date()
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mes}-${dia}`
+}
+
 export function Emision({
   tarificacionId,
   compania,
@@ -60,7 +70,7 @@ export function Emision({
 }) {
   const [estado, setEstado] = useState<EstadoPanel>({ paso: 'inicio' })
   const [camposJson, setCamposJson] = useState('{}')
-  const [fechaEfectoCorregida, setFechaEfectoCorregida] = useState('')
+  const [fechaEfectoCorregida, setFechaEfectoCorregida] = useState(hoyISO())
 
   async function confirmarPrecio() {
     setEstado({ paso: 'confirmando' })
@@ -154,13 +164,14 @@ export function Emision({
             Precio en pantalla: <strong>{euroODash(primaEur)}</strong>. El primer paso lo confirma con
             la compañía (puede cambiar de «estimado» a un precio firme).
           </p>
-          <details style={{ marginTop: 8 }}>
+          <details open style={{ marginTop: 8 }}>
             <summary className="muted" style={{ cursor: 'pointer' }}>
-              Corregir fecha de efecto (opcional — solo si la compañía ya la rechazó)
+              Fecha de efecto
             </summary>
             <p className="muted" style={{ fontSize: 12 }}>
-              Algunas compañías rechazan la fecha guardada al cotizar (p. ej. «más de 90 días en el
-              futuro»). Rellena esto SOLO si ya viste ese error, con la fecha que quiere el cliente.
+              Precargada a HOY: algunas compañías rechazan la fecha guardada al cotizar (p. ej.
+              Allianz, «más de 90 días en el futuro»). Cámbiala si el cliente quiere otra fecha; se
+              manda siempre con la confirmación (PATCH gratis, no gasta).
             </p>
             <input
               type="date"
