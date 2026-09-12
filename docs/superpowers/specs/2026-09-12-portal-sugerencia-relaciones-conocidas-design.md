@@ -54,19 +54,25 @@ tabla, pero solo para el sentido «invitar» (yo ofrezco), no para «se me sugie
    !puedeVer`, nombre + tipo (`relacionesDeFicha().tipo`) y el botón de pedir. Reusa
    `RegistrarPeticion`/pantalla de «Contactos» ya existente para el estado pendiente/concedida.
 
-## Lo que NO se resuelve aquí — pendiente de decisión de Alberto
+## Representación societaria — decisión de Alberto (12/09/2026)
 
-**El caso «el dueño da de alta a su administrativo con acceso solo a la empresa» necesita que
-alguien actúe COMO GLOBAL 2**, y eso hoy no existe: `portal_vinculo` ata una identidad a un
-`clienteId` por coincidencia de email, y el email de login de Manuel Antonio es el suyo personal,
-no el de la empresa. Sin una ficha vinculada a GLOBAL 2, nadie puede ser el `otorgante` de una
-`portal_autorizacion`/`portal_invitacion` sobre las pólizas de la empresa.
+**«Dueño y Administración, empieza a implementar.»** La figura que puede actuar en nombre de una
+empresa es exactamente el vínculo YA existente en `cliente_relaciones` con tipo `Dueño` o
+`Administración` hacia la ficha de la empresa — dato que Alberto ya mantiene desde `/correduria` →
+Contactos (así está cargado, p. ej., Manuel Antonio → GLOBAL 2). No hace falta ninguna tabla ni
+columna nueva, ni que la identidad tenga un `portal_vinculo` propio a la ficha de la empresa.
 
-Esto es representación societaria (el `APODERAMIENTO` que `autorizacion.ts` ya reserva «solo
-delegable por una sociedad», hoy sin flujo que lo conceda) y es una decisión de las que exige
-negociar con Alberto, no un ajuste mecánico — mismo criterio que el pendiente ya abierto sobre la
-caducidad de un año de las autorizaciones. No se toca código de esto hasta que decida cómo quiere
-que un dueño demuestre que puede actuar en nombre de su empresa.
+- Cuando la identidad de una persona (vinculada a SU ficha personal) tiene una relación `Dueño` o
+  `Administración` hacia una empresa, el portal le deja **actuar como apoderado de esa empresa**:
+  invitar (`portal_invitacion`) o autorizar (`portal_autorizacion`) con
+  `otorganteClienteId = <empresa>`, en vez de sobre su propia ficha.
+- **Sigue sin ser `APODERAMIENTO` de verdad** (`autorizacion.ts`): el alcance que puede conceder en
+  nombre de la empresa es el mismo `ver`/`ver_economico` de siempre — nunca `partes`/`documentos`,
+  que exige el poder real, no un dato de relación en la BD.
+- Los demás tipos del vocabulario (`Empleado/a`, `Socio/a`, `Accionista`) **no** dan esta capacidad:
+  gestionan el negocio o son dueños de participaciones, pero no son la figura que decide a quién se
+  le enseña qué. Si el día de mañana hace falta ampliar el conjunto, es una fila más en esta lista,
+  no un cambio de mecanismo.
 
 ## Piezas a tocar (fase acotada, solo puntos 1-5)
 
