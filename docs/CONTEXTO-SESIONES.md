@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧾 Diagnóstico de «subida de póliza trae poca información» + spec de tercero (12/09/2026, PR
+  #2843).** Prueba real en `asegura-portal` (Mapfre hogar de Alberto): la 1ª pasada de extracción
+  funciona (compañía/nº/ramo/vencimiento correctos), la 2ª falló esta vez (`no_leidos`, ya
+  documentado el 07/09), y forma de pago/coberturas NUNCA se piden en ningún ramo — hueco
+  estructural, no fallo de lectura. Hallazgo nuevo: el tomador leído (María, madre de Alberto) no
+  coincide con quien sube el documento. Spec en `docs/superpowers/specs/2026-09-12-portal-poliza-
+  tercero-design.md`: detección automática comparando contra la ficha vinculada (nunca fusión por
+  nombre — descartado explícitamente), invitación real si hay email a mano o aviso interno si no,
+  vía una tabla hermana de `portal_invitacion` (esta exige ficha de cartera como otorgante). Falta
+  el plan de implementación.
+
 - **📮 14º 400 real de Codeoscopic — el Submit trocea la calle en TRES campos (12/09/2026).**
   Tras el fix del 13º (email+nombreVia), el Submit volvió a rechazar pidiendo TAMBIÉN «road number» y
   «road type» de holder/owner/primaryDriver — el vendor exige `roadNumber` (texto libre) y `roadType.id`
