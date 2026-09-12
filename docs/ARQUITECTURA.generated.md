@@ -262,6 +262,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (12/09/2026) 📱 Portal del cliente, móvil compactado
+- (12/09/2026) 🔘 «Pedir precio» se APAGA mientras haya un precio vigente en pantalla
 - (12/09/2026) 🤖 El 400 del ReRate deja de ser un error: es una lista de huecos
 - (12/09/2026) 📡 Muro de ACTIVIDAD de toda la cartera en `/correduria`
 - (12/09/2026) 📮 Y si la ficha SÍ trae la calle, no se vuelve a pedir
@@ -270,6 +272,4 @@
 - (12/09/2026) 🚨 Décimo 400 real de Codeoscopic — Submit sin el body part `policyApplications`
 - (12/09/2026) MCP Sentinel instalado en modo solo-auditoría, PR #2780 MERGEADO (12/09/2026) — CERRADO.
 - (12/09/2026) 🔒 Aviso de phishing solo en la confirmación
-- (12/09/2026) 🌐 IONOS quitó por error el dominio de grupoasegura.es/.com — repuesto
-- (12/09/2026) 📬 Pasada diaria `facturas-correo`
 
