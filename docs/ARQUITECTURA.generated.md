@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (12/09/2026) 🧾 Diagnóstico de «subida de póliza trae poca información» + spec de tercero
 - (12/09/2026) 📮 14º 400 real de Codeoscopic — el Submit trocea la calle en TRES campos
 - (12/09/2026) 🔀 Comentarios de `decidir.ts` (agente huéspedes) corregidos: OpenRouter primario, no NIM
 - (12/09/2026) 🗺️ Paridad grafo propio vs Graphify: medida, y gana en 2 de 10
@@ -271,5 +272,4 @@
 - (12/09/2026) 🏦 Duodécimo 400 real de Codeoscopic — el Submit exige IBAN, y el IBAN SIEMPRE se confirma
 - (12/09/2026) 🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel
 - (12/09/2026) 🛡️📲 MCP Sentinel avisa por Telegram cuando el modo sombra intervendría
-- (12/09/2026) 🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel
 
