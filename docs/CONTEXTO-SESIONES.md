@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **MCP Sentinel instalado en modo solo-auditoría (12/09/2026), PR #2780.** Hook de terceros
+  (carpeta Drive «Sentinel V3») que evalúa cada llamada a herramienta contra IOCs (rutas sensibles,
+  comandos peligrosos, red sospechosa) con `SENTINEL_SHADOW=on`: no bloquea nada, solo cuenta
+  cuántas veces habría intervenido. `references/iocs.json` es una reconstrucción propia (la copia
+  del original no se pudo transcribir con fiabilidad y se descartó); probada antes de instalar
+  contra operaciones reales del repo, 0 falsos positivos. Pendiente antes de activar bloqueo real:
+  verificar con una prueba concreta qué pasa con una confirmación pendiente cuando corre una rutina
+  programada sin nadie delante (hoy es solo una inferencia). Instalación hecha vía API de GitHub:
+  la escritura local bajo `.claude/` la bloqueó el propio entorno de la sesión.
 - **🌐 IONOS quitó por error el dominio de grupoasegura.es/.com — repuesto (12/09/2026).** Sin
   código: se hizo vía Claude en Chrome (el proxy de esta sesión bloquea egress a esos hosts). Se
   repuso DNS en IONOS (`grupoasegura.es`/`www` → `asegura-web`; `clientes.grupoasegura.es` →
