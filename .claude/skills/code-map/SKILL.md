@@ -81,7 +81,7 @@ Lo que Graphify servía como tools vive ahora en dos tablas de la MISMA Supabase
 - **`grafo_buscar`/`grafo_nodo` dan línea y tipo, no el cuerpo** — a propósito, para no saltarse el paso
   de leer el código real. Precisión (12 categorías de Graphify, incluida la búsqueda semántica) medida
   contra un símbolo real y ambiguo el 12/09/2026: `docs/USO-HERRAMIENTAS.md` — el grafo propio igualó o
-  superó a Graphify en 9 de 10 categorías comparables.
+  superó a Graphify en 10 de 12 categorías (2 con forma distinta, ninguna perdida).
 - **Graphify ya NO se usa para código** (ni estructural ni semántico) — solo sigue conectado para
   `memories_about`/`recall`/`remember` (memoria durable), mientras dure la cuota. Para
   callers/impacto/vecinos/tests/camino/referencias/búsqueda semántica, usa siempre esto.

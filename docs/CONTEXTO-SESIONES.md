@@ -33,7 +33,7 @@
 - **🗺️ Paridad grafo propio vs Graphify: medida, y gana en 2 de 10 (12/09/2026, III).** PR #2827
   (fix `grafo_guardar_clave` void→boolean) mergeado y embeddings ya en producción (13.352 nodos,
   `pendientes:0`, coste ≈0,01$). Con eso corrí la medición de paridad pendiente: 12 categorías de
-  Graphify contra un símbolo real y ambiguo (`isCronAuthorized`, duplicado en 3 apps). En 9/10
+  Graphify contra un símbolo real y ambiguo (`isCronAuthorized`, duplicado en 3 apps). En 10/12
   comparables el grafo propio igualó o superó; en 2 lo superó con datos objetivamente mejores —
   Graphify resuelve nombres duplicados a UNA declaración arbitraria (1 caller de 80 reales) y su
   `query_graph` confundió «autorización de cron» con «autorización de cliente de seguros». Detalle en

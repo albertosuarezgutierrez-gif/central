@@ -66,14 +66,18 @@ homónimo):
 | `trace`/`shortest_path` vs `camino` | camino de **6 saltos**, confuso, por la misma resolución ambigua | `camino` (a nivel archivo, sin ambigüedad): **1 salto**, correcto |
 | `query_graph` semántico (pregunta: «¿cómo se decide si una petición de cron está autorizada?») | **Falló**: devolvió `apps/asegura-portal/lib/autorizaciones.ts` — el consentimiento del cliente para VER sus seguros, un significado de «autorización» totalmente distinto | `grafo_buscar`: acertó — top resultado `apps/plataforma/lib/cron-auth.ts` (similitud 0,63-0,67) |
 | `rank_files` (misma pregunta) | Top archivo: el mismo falso positivo de seguros (score 7,2) | Top archivo: `apps/plataforma/lib/cron-auth.ts` (correcto) |
-| `impact` | ~60 nodos, sembrando las 6 declaraciones (correcto en espíritu, pero mezclado) | `impacto` (archivo): 85 archivos a 2 saltos |
-| `imports_exports` (archivo concreto) | 0 imports, 154 imported_by | 4 exports (coinciden con el archivo), 0 imports — mismo dato, forma distinta |
-| `node`/`references` | `node` incluye el CUERPO inline; `references` dio **0** (mismo sesgo de resolución arbitraria) | `nodo` da línea+tipo (no cuerpo — a propósito, ver abajo); `referencias`: **156** filas, agregando las 6 declaraciones |
+| `impact` | ~60 nodos, sembrando las 6 declaraciones (fanout multi-archivo) | `impacto` (un solo archivo): 85 archivos a 2 saltos — **forma distinta, no comparable cifra a cifra** (fanout multi-símbolo vs radio de un archivo), magnitud similar |
+| `node` | incluye el CUERPO inline | `nodo` da línea+tipo, no cuerpo — **diferencia de diseño a propósito** (ver abajo), no un déficit |
+| `references` | **0** (mismo sesgo de resolución arbitraria) | **156** filas, agregando las 6 declaraciones |
 
-**Veredicto de esta medición: en 9 de las 10 categorías comparables, el grafo propio igualó o superó
-a Graphify — y en 2 (resolución de nombres duplicados entre apps, y la búsqueda semántica) lo superó
-con datos objetivamente más completos o más correctos**, no solo «igual de bien». El caso `query_graph`
-es el más serio: Graphify devolvió un resultado plausible pero **equivocado de dominio** (confundió
+**Cuenta verificable (12 filas de la tabla):** `find`, `file_neighbors`/`vecinos`, `tests_for`/`tests_de`
+e `imports_exports` — **igual** (4). `callers`, `callees`, `trace`/`shortest_path` vs `camino`,
+`query_graph`, `rank_files` y `references` — **grafo propio mejor, con datos objetivamente más
+completos o correctos** (6). `impact` y `node` — **forma distinta, no comparable directamente** (2,
+ninguno es un déficit: uno es fanout multi-símbolo vs radio de un archivo, el otro es una diferencia
+de diseño deliberada). **Total: 10 de 12 categorías igualadas o superadas, 2 con forma distinta y
+ninguna perdida.** El caso `query_graph` es el más serio: Graphify devolvió un resultado plausible
+pero **equivocado de dominio** (confundió
 «autorización de cron» con «autorización de cliente de seguros» por la palabra compartida), mientras
 que la búsqueda propia acertó. La única diferencia real de diseño: `grafo_nodo` da línea y tipo, no el
 cuerpo — a propósito («el CUERPO se lee del archivo, el grafo da la línea, no sustituye leer el

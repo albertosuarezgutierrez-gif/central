@@ -264,7 +264,7 @@ cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el u
   `grafo_nodos` va por detrás de `origin/main`, dispara `auditoria.yml` a mano (`workflow_dispatch`).
 - **Medición de paridad (12/09/2026, `docs/USO-HERRAMIENTAS.md`):** las 12 categorías de herramienta
   de Graphify probadas contra un símbolo REAL y ambiguo (`isCronAuthorized`, duplicado en 3 apps) —
-  en 9 de 10 categorías comparables el grafo propio igualó o superó a Graphify, y en 2 lo superó con
+  en 10 de 12 categorías el grafo propio igualó o superó a Graphify, y en 2 lo superó con
   datos objetivamente mejores: **callers/referencias** (Graphify resuelve nombres duplicados entre
   apps a UNA declaración arbitraria y calla el resto — 1 caller contra los 80 reales; el grafo propio
   agrega las 6 declaraciones homónimas) y **búsqueda semántica** (`query_graph` confundió «autorización
@@ -316,14 +316,14 @@ SOLO el código necesario — ni carpetas completas ni archivos enteros cuando b
 similares, patrones existentes, servicios reutilizables o integraciones ya montadas: no dupliques
 un patrón que ya existe en el monorepo.
 
-**Frescura:** antes de confiar en el grafo para una decisión importante, comprueba que el
-`commitSha` que devuelve la respuesta (viene en el propio payload de cada tool) coincide con
-el HEAD real de la rama. Si no coincide, el grafo va con retraso: avísalo, no asumas que las
+**Frescura:** antes de confiar en el grafo propio para una decisión importante, compara su `sha`
+contra el HEAD real de la rama (`SELECT sha, max(updated_at) FROM grafo_nodos GROUP BY 1` vs
+`git rev-parse origin/main`). Si no coincide, el grafo va con retraso: avísalo, no asumas que las
 relaciones que devuelve siguen vigentes.
 
-**Después de cambios que afecten arquitectura**, vuelve a consultar Graphify para validar el
-impacto real, además de la verificación normal (tests, typecheck, lint, build) que ya exige
-este documento.
+**Después de cambios que afecten arquitectura**, vuelve a consultar el grafo propio (`grafo_impacto`/
+`grafo_vecinos`) para validar el impacto real, además de la verificación normal (tests, typecheck,
+lint, build) que ya exige este documento.
 
 ## 🧹 Quién mira qué pantalla — regla global permanente
 **Antes de dar por avisada a una persona, comprueba en qué pantalla trabaja.** Un aviso que sale por
