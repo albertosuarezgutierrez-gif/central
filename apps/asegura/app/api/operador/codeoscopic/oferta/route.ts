@@ -260,7 +260,7 @@ export async function POST(req: Request) {
         const pedidos = interp.campos.map((c) => c.campo).filter(esCampoPersona)
         const yaEscritos = pedidos.filter((c) => aplicados.has(c))
         if (yaEscritos.length > 0) return respuestaSigueFaltando(yaEscritos, e.message)
-        const deFicha = reparadoDesdeFicha ? {} : await valoresPersonaDesdeFicha(t, pedidos)
+        const deFicha = reparadoDesdeFicha ? {} : await valoresPersonaDesdeFicha(t, pedidos, r.config)
         const cubiertos = Object.keys(deFicha)
         const todosSonDePersona = pedidos.length === interp.campos.length
         const fichaLoCubreTodo = todosSonDePersona && pedidos.length > 0 && pedidos.every((c) => cubiertos.includes(c))

@@ -9,9 +9,12 @@ import { decryptField } from '@central/module-seguros-pii'
 import { prisma } from '../tenant'
 import { emailDeFicha } from '../email-ficha'
 import { partirDireccion } from './direccion'
+import { tiposDeVia } from './catalogos'
+import { emparejar } from './opciones'
+import type { ConfigCodeoscopic } from './config'
 import type { CampoPersona } from './interprete-400'
 
-const CAMPOS_SOPORTADOS: readonly CampoPersona[] = ['nombreVia', 'email']
+const CAMPOS_SOPORTADOS: readonly CampoPersona[] = ['nombreVia', 'numeroVia', 'tipoVia', 'email']
 
 /**
  * Sin `PII_ENCRYPTION_KEY`, `decryptField` devuelve el cifrado (`v1:…`) tal
@@ -27,9 +30,22 @@ function descifrado(cifrado: string | null): string | null {
   }
 }
 
+/**
+ * `config` es OPCIONAL y solo hace falta para `tipoVia`: es la única pieza de
+ * este fichero que toca red (14º 400 real, 12/09/2026 — el Submit exige
+ * `roadType.id` además de `roadName`/`roadNumber`). `roadType` es una
+ * referencia de CATÁLOGO (`GET /road-types`), no texto libre: nunca se manda
+ * un id que no haya salido del catálogo vivo (misma regla que el resto de
+ * catálogos de hogar, `docs/CODEOSCOPIC-API-PORTAL.md`), así que se empareja
+ * el tipo de vía que trocea `partirDireccion()` contra ese catálogo con
+ * `emparejar()` (exacto, normalizado; ambiguo o sin match = no se manda
+ * nada). Sin `config` (o si el catálogo falla), `tipoVia` simplemente no se
+ * resuelve — no es un error, es un dato que no se pudo comprobar.
+ */
 export async function valoresPersonaDesdeFicha(
   t: { correduria_id: string; poliza_id: string | null; cliente_id: string | null },
   pedidos: CampoPersona[],
+  config?: ConfigCodeoscopic,
 ): Promise<Partial<Record<CampoPersona, string>>> {
   const pedidosSoportados = pedidos.filter((c) => CAMPOS_SOPORTADOS.includes(c))
   if (pedidosSoportados.length === 0) return {}
@@ -53,10 +69,18 @@ export async function valoresPersonaDesdeFicha(
     const fila = filas[0]
     if (!fila) return {}
     const resultado: Partial<Record<CampoPersona, string>> = {}
-    if (pedidosSoportados.includes('nombreVia')) {
-      const direccion = descifrado(fila.direccion)
-      const nombre = direccion ? partirDireccion(direccion).nombre : null
-      if (nombre) resultado.nombreVia = nombre
+    const direccion = descifrado(fila.direccion)
+    const partida = direccion ? partirDireccion(direccion) : null
+    if (pedidosSoportados.includes('nombreVia') && partida?.nombre) resultado.nombreVia = partida.nombre
+    if (pedidosSoportados.includes('numeroVia') && partida?.numero) resultado.numeroVia = partida.numero
+    if (pedidosSoportados.includes('tipoVia') && partida?.tipoVia && config) {
+      try {
+        const catalogo = await tiposDeVia(config)
+        const match = emparejar(catalogo, partida.tipoVia)
+        if (match) resultado.tipoVia = match.id
+      } catch {
+        // Catálogo caído o inalcanzable: no se resuelve, nunca se inventa el id.
+      }
     }
     if (pedidosSoportados.includes('email')) {
       // 🚨 Reutiliza `emailDeFicha` (email-ficha.ts) en vez de leer
