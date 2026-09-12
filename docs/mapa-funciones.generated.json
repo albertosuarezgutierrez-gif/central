@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T14:33:19Z",
-  "sha": "800bf303fade30517f589ddff3434b01a4b1f785",
+  "generadoEn": "2026-09-12T15:33:05Z",
+  "sha": "6d408888f839e9a8ab8af9e28d151103b4e40965",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9820,7 +9820,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 50,
+          "linea": 58,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — el Submit de verdad (`POST /insurances/{id}/policy-applications`), y el acuñado en nuestra BD si el vendor lo acepta. 🚨 **Construida el 11/09/2026, sin sandb"
         },
         {
@@ -9829,7 +9829,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 331
+          "linea": 446
         },
         {
           "nombre": "numero",
@@ -9837,7 +9837,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 336
+          "linea": 451
         },
         {
           "nombre": "esObjeto",
@@ -9845,7 +9845,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 340
+          "linea": 455
         },
         {
           "nombre": "coincideCompania",
@@ -9853,7 +9853,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 344
+          "linea": 459
         }
       ],
       "tablas": [
@@ -9862,7 +9862,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "6c1bd836b0e6"
+      "hash": "22f2dcb239c3"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
@@ -9956,7 +9956,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 53,
+          "linea": 52,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate) el precio que ya se enseñó en pantalla desde una cotización REAL de `seguros.tarificaciones`. 🚨 **Construida el 11/09/2026,"
         },
         {
@@ -9965,7 +9965,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 356
+          "linea": 372
         },
         {
           "nombre": "leerCorrecciones",
@@ -9973,7 +9973,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 366,
+          "linea": 382,
           "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
         },
         {
@@ -9982,7 +9982,7 @@
           "exportada": false,
           "params": "campo: CampoPersona, s: string",
           "retorno": "string | null",
-          "linea": 385
+          "linea": 401
         },
         {
           "nombre": "respuestaSigueFaltando",
@@ -9990,7 +9990,7 @@
           "exportada": false,
           "params": "campos: CampoPersona[], mensajeVendor: string",
           "retorno": null,
-          "linea": 403
+          "linea": 419
         },
         {
           "nombre": "respuestaNoAplicado",
@@ -9998,20 +9998,10 @@
           "exportada": false,
           "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
           "retorno": null,
-          "linea": 418
-        },
-        {
-          "nombre": "valoresDesdeFicha",
-          "kind": "function",
-          "exportada": false,
-          "params": "t: { correduria_id: string; poliza_id: string | null; cliente_id: string | null }, pedidos: CampoPersona[],",
-          "retorno": "Promise<Partial<Record<CampoPersona, string>>>",
-          "linea": 441,
-          "resumen": "La cascada ANTES de preguntar al corredor: lo que ya está en la ficha. Hoy solo la calle (`clientes.direccion`, cifrada, troceada con `partirDireccion`): es el único dato que el ReRate pide y la cotiz"
+          "linea": 434
         }
       ],
       "tablas": [
-        "clientes",
         "codeoscopic_projects",
         "next",
         "polizas",
@@ -10019,7 +10009,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "fc67e3017ff8"
+      "hash": "22f80a4e4ad1"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -14488,9 +14478,9 @@
           "nombre": "bloquearEnvio",
           "kind": "function",
           "exportada": false,
-          "params": "correduriaId: string, projectId: string, attemptId: string,",
+          "params": "correduriaId: string, projectId: string, attemptId: string, producto: string,",
           "retorno": "Promise<boolean>",
-          "linea": 43,
+          "linea": 47,
           "resumen": "Toma el candado ANTES de llamar al vendor. `false` = ya había un intento en vuelo (o reciente) para este proyecto: no se llama, para no arriesgar un segundo Submit sobre el mismo contrato mientras no "
         },
         {
@@ -14499,16 +14489,16 @@
           "exportada": false,
           "params": "correduriaId: string, projectId: string, attemptId: string, // `codeoscopic_project_estado` no tiene un valor «enviada»: el éxito del // Submit se refleja aparte, cuando `registrarPolizaEmitida` (module-seguros) // pone `estado='emitida'` a",
           "retorno": "Promise<void>",
-          "linea": 66,
+          "linea": 71,
           "resumen": "`submit_in_flight_at` se limpia siempre, se haya enviado o no, porque un candado que no se suelta deja el proyecto bloqueado para siempre."
         },
         {
           "nombre": "enviarEmision",
           "kind": "function",
           "exportada": true,
-          "params": "config: ConfigCodeoscopic, entrada: { correduriaId: string projectId: string offerId: string campos: Record<string, unknown> },",
+          "params": "config: ConfigCodeoscopic, entrada: { correduriaId: string projectId: string offerId: string campos: Record<string, unknown> /** `polizas.tipo` de la póliza enlazada — solo se usa si hay que crear la * fila de emergencia (ver `bloquearEnvio",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 100,
+          "linea": 105,
           "resumen": "`POST /insurances/{projectId}/policy-applications`, multipart. Un solo intento, con CANDADO antes de llamar (ver `bloquearEnvio`). El transporte NO reutiliza `peticion()` de `cliente.ts` (JSON puro): "
         }
       ],
@@ -14518,7 +14508,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "a6ba2ed70e82"
+      "hash": "e36f5b370db3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emitir-iban.ts",
@@ -14634,6 +14624,7 @@
         "reRate",
         "actualizarFechaEfecto",
         "leerProyectoCrudo",
+        "papelesDeLaMismaPersona",
         "completarPersonas",
         "camposDeEmision"
       ],
@@ -14744,10 +14735,10 @@
         {
           "nombre": "papelesDeLaMismaPersona",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "crudo: Json",
           "retorno": "Papel[]",
-          "linea": 316,
+          "linea": 322,
           "resumen": "Los papeles del `risk` que son LA MISMA PERSONA que el tomador (mismo DNI). Un `owner` o `secondaryDriver` con otro DNI es otra persona: escribirle el teléfono o la fecha de nacimiento del tomador ser"
         },
         {
@@ -14756,7 +14747,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, valores: Partial<Record<CampoPersona, string>>,",
           "retorno": "Promise<ResultadoCompletar>",
-          "linea": 333,
+          "linea": 339,
           "resumen": "Escribe `valores` en el tomador y en los papeles del `risk` que sean la misma persona (mismo DNI) — el vendor cruza por DNI y rechaza si un campo difiere entre ellos, así que no se puede completar sol"
         },
         {
@@ -14765,13 +14756,13 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
           "retorno": "Promise<CampoEmision[]>",
-          "linea": 390,
+          "linea": 396,
           "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8ece233b60a2"
+      "hash": "4ac53fad67da"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -14949,7 +14940,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is CampoPersona",
-          "linea": 53
+          "linea": 55
         },
         {
           "nombre": "lineasDelVendor",
@@ -14957,7 +14948,7 @@
           "exportada": true,
           "params": "mensajeCrudo: string",
           "retorno": "string[]",
-          "linea": 118,
+          "linea": 121,
           "resumen": "Saca las líneas del `message` del vendor. Acepta tanto el `detalle` de `ErrorCodeoscopic` (JSON) como su `message` entero (`codeoscopic_validacion: {...}`). 🚨 En producción el `detalle` viene RECORTA"
         },
         {
@@ -14966,7 +14957,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 139
+          "linea": 142
         },
         {
           "nombre": "interpretarError400",
@@ -14974,7 +14965,7 @@
           "exportada": true,
           "params": "mensajeCrudo: string",
           "retorno": "Interpretacion",
-          "linea": 145
+          "linea": 148
         },
         {
           "nombre": "reparosDe",
@@ -14982,7 +14973,7 @@
           "exportada": true,
           "params": "interp: Interpretacion",
           "retorno": "Reparo[]",
-          "linea": 176,
+          "linea": 179,
           "resumen": "Los campos interpretados como `Reparo`, que es lo que la pantalla ya sabe pintar."
         },
         {
@@ -14991,7 +14982,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Json",
-          "linea": 186
+          "linea": 189
         },
         {
           "nombre": "arr",
@@ -14999,7 +14990,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "unknown[]",
-          "linea": 187
+          "linea": 190
         },
         {
           "nombre": "str",
@@ -15007,7 +14998,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 188
+          "linea": 191
         },
         {
           "nombre": "aplicarCamposPersona",
@@ -15015,7 +15006,7 @@
           "exportada": true,
           "params": "persona: unknown, valores: Partial<Record<CampoPersona, string>>",
           "retorno": "Json",
-          "linea": 202,
+          "linea": 205,
           "resumen": "Devuelve la persona con TODOS los `valores` escritos en la forma del vendor. No muta. 🚨 `nombreVia`/`cpResidencia`/`municipioResidenciaId` viven DENTRO de `addresses[0]`, y una dirección solo es váli"
         },
         {
@@ -15024,7 +15015,7 @@
           "exportada": true,
           "params": "persona: unknown, campo: CampoPersona, valor: string",
           "retorno": "Json",
-          "linea": 229,
+          "linea": 232,
           "resumen": "Un solo campo. Para los de dirección delega en `aplicarCamposPersona` (misma guarda)."
         },
         {
@@ -15033,7 +15024,7 @@
           "exportada": true,
           "params": "persona: unknown, campo: CampoPersona",
           "retorno": "string | null",
-          "linea": 266,
+          "linea": 277,
           "resumen": "Lee el campo tal y como está en la persona del proyecto. `null` = no está."
         },
         {
@@ -15042,13 +15033,13 @@
           "exportada": true,
           "params": "campo: CampoPersona, escrito: string, leido: string | null",
           "retorno": "boolean",
-          "linea": 298,
+          "linea": 311,
           "resumen": "Normaliza para comparar lo escrito con lo leído (el vendor puede cambiar mayúsculas/espacios)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "407041e14e7e"
+      "hash": "81cc79808227"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones-producto.ts",
@@ -15141,7 +15132,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 32
+          "linea": 41
         },
         {
           "nombre": "numero",
@@ -15149,7 +15140,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 35
+          "linea": 44
         },
         {
           "nombre": "revisarPersona",
@@ -15157,7 +15148,7 @@
           "exportada": true,
           "params": "d: Partial<DatosPersona>",
           "retorno": "ReparoPersona[]",
-          "linea": 43,
+          "linea": 52,
           "resumen": "Las reglas del tomador que valen para cualquier ramo."
         },
         {
@@ -15166,13 +15157,13 @@
           "exportada": true,
           "params": "d: DatosPersona, extra: { fechaCarnet?: string | null } = {}",
           "retorno": "Record<string, unknown>",
-          "linea": 65,
+          "linea": 74,
           "resumen": "Construye la persona. `fechaCarnet` solo la lleva auto: es el carnet B del conductor. Hogar no lo manda — no hace falta para el precio."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45836c91f0b4"
+      "hash": "863e2a44634b"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/peticion-auto.ts",
@@ -15866,6 +15857,39 @@
       ],
       "rutaApi": null,
       "hash": "2f84691179dc"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/valores-ficha.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Valores de la PERSONA que se pueden sacar de la ficha del cliente para reparar un 400 sin preguntar al corredor. Compartido por `/oferta` (ReRate) y `/emitir` (Submit): las dos llamadas piden campos que la cotización inicial no exigía, y las dos los reparan igual — ficha primero, nunca un dato inven",
+      "exporta": [
+        "valoresPersonaDesdeFicha"
+      ],
+      "funciones": [
+        {
+          "nombre": "descifrado",
+          "kind": "function",
+          "exportada": false,
+          "params": "cifrado: string | null",
+          "retorno": "string | null",
+          "linea": 20,
+          "resumen": "Sin `PII_ENCRYPTION_KEY`, `decryptField` devuelve el cifrado (`v1:…`) tal cual sin lanzar: eso no es un valor, y tampoco es «no tiene»."
+        },
+        {
+          "nombre": "valoresPersonaDesdeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: { correduria_id: string; poliza_id: string | null; cliente_id: string | null }, pedidos: CampoPersona[],",
+          "retorno": "Promise<Partial<Record<CampoPersona, string>>>",
+          "linea": 30
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "d3b7a9f716a5"
     },
     {
       "ruta": "apps/asegura/lib/comisiones.ts",
@@ -64113,7 +64137,7 @@
           "exportada": false,
           "params": "cuenta: CuentaConocida | null, cuentaOk: boolean, iban: string",
           "retorno": "boolean",
-          "linea": 97,
+          "linea": 98,
           "resumen": "sin cuenta conocida no hay nada que confirmar (si la compañía la exige, su 400 vuelve como hueco y entonces sí se teclea). PURO, para poder verlo fallar."
         },
         {
@@ -64122,7 +64146,7 @@
           "exportada": false,
           "params": "{ cuenta, aviso, obligatoria, cuentaOk, onCuentaOk, iban, onIban, }: { cuenta: CuentaConocida | null aviso: AvisoCuenta | null obligatoria: boolean cuentaOk: boolean onCuentaOk: (v: boolean) => void iban: string onIban: (v: string) => void ",
           "retorno": null,
-          "linea": 110,
+          "linea": 111,
           "resumen": "La cuenta de cargo del recibo. 🚨 «iban importante siempre confirmar» (Alberto, 12/09/2026): la que la ficha ya conoce se pinta ENMASCARADA con su origen y una casilla que el corredor marca a mano; la"
         },
         {
@@ -64131,12 +64155,12 @@
           "exportada": true,
           "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
           "retorno": null,
-          "linea": 189
+          "linea": 190
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c2b3b763a270"
+      "hash": "07d49add516b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -74896,6 +74920,31 @@
       "tablas": [],
       "rutaApi": "/api/internal/alerta",
       "hash": "cded09e0f8ec"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/internal/grafo-codigo/embeddings/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/internal/grafo-codigo/embeddings — Calcula los embeddings del grafo de código (búsqueda semántica propia, sustituto de query_graph/rank_files de Graphify). Lo llama auditoria.yml (scripts/grafo-embeddings-inyectar.mjs) tras inyectar el mapa; se puede llamar varias veces: cada pasada sincroniza ",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [
+        "grafo_embeddings",
+        "grafo_embeddings_sync",
+        "next"
+      ],
+      "rutaApi": "/api/internal/grafo-codigo/embeddings",
+      "hash": "bf7e07051624"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/grafo-codigo/route.ts",
@@ -125467,7 +125516,7 @@
           "exportada": true,
           "params": "",
           "retorno": "PestanaPortal[]",
-          "linea": 126,
+          "linea": 136,
           "resumen": "Las pestañas, en orden. 📌 Son CINCO desde el 09/09/2026 («Mis datos»). Eran cuatro desde el 07/09/2026, y la que volvió entonces no era «Mis pólizas»: eran «Recibos» y el historial de siniestros, que"
         },
         {
@@ -125476,13 +125525,13 @@
           "exportada": true,
           "params": "vista: VistaBoveda",
           "retorno": "string",
-          "linea": 160,
+          "linea": 170,
           "resumen": "La vista por defecto se enlaza como `/boveda` a secas, sin `?vista=seguros`. No es cosmética: si la pestaña activa llevara el parámetro, `/boveda` y `/boveda?vista=seguros` serían la misma pantalla co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6cf3920f32f9"
+      "hash": "cc532bafb7bb"
     },
     {
       "ruta": "packages/module-seguros/src/actividad.ts",
@@ -133454,7 +133503,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3268,
-    "funciones": 10082
+    "archivos": 3270,
+    "funciones": 10084
   }
 }
