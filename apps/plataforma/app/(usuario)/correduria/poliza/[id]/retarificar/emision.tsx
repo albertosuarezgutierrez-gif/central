@@ -21,6 +21,7 @@
 import { useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { pedirOferta, pedirEmision } from './acciones'
+import type { CuentaConocida } from '@/lib/retarificar-asegura'
 
 type EstadoPanel =
   | { paso: 'inicio' }
@@ -34,9 +35,21 @@ type EstadoPanel =
       avisos: string[]
       // El `projectId` que hace falta para el Submit lo devuelve `pedirOferta`.
       projectId: string
+      // La cuenta de cargo que asegura YA conoce del cliente, enmascarada. Se
+      // enseña ANTES de emitir y no viaja sin confirmarla (Alberto, 12/09/2026).
+      cuenta: CuentaConocida | null
+      cuentaIlegible: boolean
     }
   | { paso: 'emitiendo' }
-  | { paso: 'faltan_campos'; faltan: string[]; campos: unknown; projectId: string; mensaje: string | null }
+  | {
+      paso: 'faltan_campos'
+      faltan: string[]
+      campos: unknown
+      projectId: string
+      mensaje: string | null
+      cuenta: CuentaConocida | null
+      confirmar: boolean
+    }
   /**
    * La compañía pide, al confirmar el precio, un dato que el proyecto no tiene y
    * la ficha tampoco (12/09/2026). No es un error: son huecos que se teclean
@@ -76,6 +89,94 @@ const ETIQUETAS_HUECO: Record<string, { etiqueta: string; tipo: string; pista?: 
   fechaCarnet: { etiqueta: 'Fecha del carnet de conducir', tipo: 'date' },
 }
 
+/**
+ * Con cuenta conocida, emitir exige haberla confirmado O haber tecleado otra;
+ * sin cuenta conocida no hay nada que confirmar (si la compañía la exige, su
+ * 400 vuelve como hueco y entonces sí se teclea). PURO, para poder verlo fallar.
+ */
+function cuentaDecidida(cuenta: CuentaConocida | null, cuentaOk: boolean, iban: string): boolean {
+  if (iban.trim() !== '') return true
+  if (cuenta === null) return true
+  return cuentaOk
+}
+
+/**
+ * La cuenta de cargo del recibo. 🚨 «iban importante siempre confirmar»
+ * (Alberto, 12/09/2026): la que la ficha ya conoce se pinta ENMASCARADA con su
+ * origen y una casilla que el corredor marca a mano; la caja de texto es para
+ * usar otra. Nada se preselecciona: un checkbox marcado por defecto no es una
+ * confirmación, es la misma sorpresa con un clic menos.
+ */
+function CuentaCargo({
+  cuenta,
+  ilegible,
+  obligatoria,
+  cuentaOk,
+  onCuentaOk,
+  iban,
+  onIban,
+}: {
+  cuenta: CuentaConocida | null
+  ilegible: boolean
+  obligatoria: boolean
+  cuentaOk: boolean
+  onCuentaOk: (v: boolean) => void
+  iban: string
+  onIban: (v: string) => void
+}) {
+  const otra = iban.trim() !== ''
+  return (
+    <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+      <span style={{ fontWeight: 600 }}>Cuenta de cargo del recibo</span>
+      {cuenta ? (
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', minHeight: 44, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={cuentaOk && !otra}
+            disabled={otra}
+            onChange={(e) => onCuentaOk(e.target.checked)}
+            style={{ width: 22, height: 22, marginTop: 2, flex: '0 0 auto' }}
+          />
+          <span>
+            Confirmo que el recibo se domicilie en <code style={{ fontSize: 14 }}>{cuenta.enmascarada}</code>
+            {cuenta.descripcion && <span className="muted"> — {cuenta.descripcion}</span>}
+            <br />
+            <span className="muted" style={{ fontSize: 12 }}>
+              Solo se enseñan país y últimos cuatro dígitos; asegura no manda esta cuenta sin esta casilla.
+            </span>
+          </span>
+        </label>
+      ) : ilegible ? (
+        <p className="err" style={{ margin: 0, fontSize: 12 }}>
+          La ficha TIENE una cuenta guardada pero central-asegura no la puede descifrar (clave PII): revisa la
+          clave en Vercel, o tecléala aquí.
+        </p>
+      ) : (
+        <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+          {obligatoria
+            ? 'Ni la póliza ni la ficha del cliente tienen cuenta: tecléala.'
+            : 'Ni la póliza ni la ficha del cliente tienen cuenta. Si la compañía la exige para esta forma de pago, se pedirá aquí.'}
+        </p>
+      )}
+      <label style={{ display: 'grid', gap: 4 }}>
+        <span className="muted" style={{ fontSize: 12 }}>{cuenta ? 'O usar otra cuenta (IBAN):' : 'IBAN:'}</span>
+        <input
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          placeholder="ES00 0000 0000 0000 0000 0000"
+          value={iban}
+          onChange={(e) => onIban(e.target.value)}
+          style={{ width: '100%', minHeight: 44, boxSizing: 'border-box', fontFamily: 'monospace' }}
+        />
+        <span className="muted" style={{ fontSize: 12 }}>
+          asegura comprueba los dígitos de control antes de mandarla; no se guarda en la ficha todavía.
+        </span>
+      </label>
+    </div>
+  )
+}
+
 export function Emision({
   tarificacionId,
   compania,
@@ -94,9 +195,11 @@ export function Emision({
   // Lo que el corredor teclea para los huecos de `faltan_vendor` (campo → valor).
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   // La cuenta bancaria del Submit (12/09/2026): la compañía la exige según forma
-  // de pago y la ficha de Pilar no la tenía. Se teclea aquí y asegura la pone en
-  // `payment.bankAccount.iban`; nunca se inventa ni se rellena por defecto.
+  // de pago. Si la ficha ya la tiene, se enseña enmascarada y el corredor la
+  // CONFIRMA (`cuentaOk`) o teclea otra (`iban`); asegura la pone en
+  // `payment.bankAccount.iban`. Nunca se inventa ni viaja sin confirmar.
   const [iban, setIban] = useState('')
+  const [cuentaOk, setCuentaOk] = useState(false)
 
   async function confirmarPrecio(conCorrecciones?: Record<string, string>) {
     setEstado({ paso: 'confirmando' })
@@ -118,7 +221,11 @@ export function Emision({
         caducaEn: r.caducaEn,
         avisos: r.avisos,
         projectId: r.projectId,
+        cuenta: r.cuenta,
+        cuentaIlegible: r.cuentaIlegible,
       })
+      // Una oferta nueva puede traer otra cuenta: la confirmación anterior no vale.
+      setCuentaOk(false)
       return
     }
     if (r.estado === 'faltan_vendor') {
@@ -146,7 +253,7 @@ export function Emision({
     setEstado({ paso: 'error', mensaje: r.mensaje })
   }
 
-  async function emitir(projectId: string) {
+  async function emitir(projectId: string, cuenta: CuentaConocida | null) {
     let campos: Record<string, unknown>
     try {
       campos = JSON.parse(camposJson || '{}')
@@ -154,11 +261,23 @@ export function Emision({
       setEstado({ paso: 'error', mensaje: 'Los campos adicionales no son un JSON válido.' })
       return
     }
-    if (iban.trim() !== '') campos = { ...campos, iban: iban.trim() }
+    const otraCuenta = iban.trim() !== ''
+    if (otraCuenta) campos = { ...campos, iban: iban.trim() }
+    // La máscara que el corredor ha visto y marcado: es lo ÚNICO que autoriza a
+    // asegura a mandar la cuenta de la ficha. Un IBAN tecleado la sustituye.
+    const cuentaConfirmada = !otraCuenta && cuentaOk && cuenta ? cuenta.enmascarada : null
     setEstado({ paso: 'emitiendo' })
-    const r = await pedirEmision({ projectId, campos, primaAnual: primaEur })
+    const r = await pedirEmision({ projectId, campos, primaAnual: primaEur, cuentaConfirmada })
     if (r.estado === 'faltan_campos') {
-      setEstado({ paso: 'faltan_campos', faltan: r.faltan, campos: r.campos, projectId, mensaje: r.mensaje })
+      setEstado({
+        paso: 'faltan_campos',
+        faltan: r.faltan,
+        campos: r.campos,
+        projectId,
+        mensaje: r.mensaje,
+        cuenta: r.cuenta,
+        confirmar: r.confirmar,
+      })
       return
     }
     if (r.estado === 'ok') {
@@ -329,6 +448,15 @@ export function Emision({
               ))}
             </ul>
           )}
+          <CuentaCargo
+            cuenta={estado.cuenta}
+            ilegible={estado.cuentaIlegible}
+            obligatoria={false}
+            cuentaOk={cuentaOk}
+            onCuentaOk={setCuentaOk}
+            iban={iban}
+            onIban={setIban}
+          />
           <details style={{ marginTop: 8 }}>
             <summary className="muted" style={{ cursor: 'pointer' }}>
               Campos adicionales (avanzado, opcional)
@@ -350,9 +478,20 @@ export function Emision({
             />
           </details>
           <div style={{ marginTop: 10 }}>
-            <button type="button" className="primary" onClick={() => emitir(estado.projectId)}>
+            <button
+              type="button"
+              className="primary"
+              style={{ minHeight: 44 }}
+              disabled={!cuentaDecidida(estado.cuenta, cuentaOk, iban)}
+              onClick={() => emitir(estado.projectId, estado.cuenta)}
+            >
               Emitir la póliza
             </button>
+            {estado.cuenta && !cuentaDecidida(estado.cuenta, cuentaOk, iban) && (
+              <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
+                Confirma la cuenta de cargo o teclea otra antes de emitir.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -371,22 +510,15 @@ export function Emision({
             </p>
           )}
           {estado.faltan.includes('iban') && (
-            <label style={{ display: 'grid', gap: 4, marginTop: 10 }}>
-              <span style={{ fontWeight: 600 }}>IBAN de la cuenta de cargo</span>
-              <input
-                type="text"
-                inputMode="text"
-                autoComplete="off"
-                placeholder="ES00 0000 0000 0000 0000 0000"
-                value={iban}
-                onChange={(e) => setIban(e.target.value)}
-                style={{ width: '100%', minHeight: 44, boxSizing: 'border-box', fontFamily: 'monospace' }}
-              />
-              <span className="muted" style={{ fontSize: 12 }}>
-                La cuenta del tomador para el recibo. asegura comprueba los dígitos de control antes de mandarla;
-                no se guarda en la ficha todavía.
-              </span>
-            </label>
+            <CuentaCargo
+              cuenta={estado.cuenta}
+              ilegible={false}
+              obligatoria
+              cuentaOk={cuentaOk}
+              onCuentaOk={setCuentaOk}
+              iban={iban}
+              onIban={setIban}
+            />
           )}
           {estado.faltan.some((f) => f !== 'iban') && (
             <div style={{ marginTop: 10 }}>
@@ -415,8 +547,11 @@ export function Emision({
               type="button"
               className="primary"
               style={{ minHeight: 44 }}
-              disabled={estado.faltan.includes('iban') && iban.trim() === ''}
-              onClick={() => emitir(estado.projectId)}
+              disabled={
+                estado.faltan.includes('iban') &&
+                !(iban.trim() !== '' || (estado.cuenta !== null && cuentaOk))
+              }
+              onClick={() => emitir(estado.projectId, estado.cuenta)}
             >
               Reintentar la emisión
             </button>

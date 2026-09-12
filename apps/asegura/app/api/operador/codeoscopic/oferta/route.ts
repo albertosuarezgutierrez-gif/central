@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { decryptField } from '@central/module-seguros-pii'
+import { cuentaDeFicha, describirOrigenCuenta } from '@/lib/codeoscopic/cuenta-ficha'
+import { ibanEnmascarado } from '@/lib/codeoscopic/emitir-iban'
 import { operadorAutorizado } from '@/lib/operador'
 import { prisma } from '@/lib/tenant'
 import { ErrorCodeoscopic } from '@/lib/codeoscopic/cliente'
@@ -319,7 +321,21 @@ export async function POST(req: Request) {
             estado = 'preemision'
     `
 
-    return NextResponse.json({ estado: 'ok', projectId: t.project_id_codeoscopic, oferta })
+    // La cuenta de cargo que YA conocemos del cliente (póliza, recibos de CIMA,
+    // ficha), ENMASCARADA y con su origen, para que la pantalla la enseñe
+    // ANTES del Submit: el Submit es el contrato, y con qué cuenta se domicilia
+    // no puede ser una sorpresa del mensaje de «emitida». Gratis (BD).
+    const cuenta = await cuentaDeFicha(t.correduria_id, t.poliza_id, t.cliente_id)
+    return NextResponse.json({
+      estado: 'ok',
+      projectId: t.project_id_codeoscopic,
+      oferta,
+      cuenta: cuenta.iban
+        ? { enmascarada: ibanEnmascarado(cuenta.iban), origen: cuenta.origen, descripcion: cuenta.origen ? describirOrigenCuenta(cuenta.origen) : null }
+        : cuenta.ilegible
+          ? { ilegible: true }
+          : null,
+    })
   } catch (e) {
     if (e instanceof ErrorCodeoscopic) {
       return NextResponse.json(

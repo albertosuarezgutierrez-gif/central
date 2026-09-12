@@ -47,3 +47,43 @@ test('la ruta de emitir de asegura entiende `iban` y traduce el 400 de la cuenta
   assert.match(ruta, /esFalloDeCuentaBancaria\(envio\.mensaje\)/, 'el 400 «bank account is mandatory» vuelve como 422 `faltan_campos: [\'iban\']`.')
   assert.match(ruta, /faltan: \['iban'\]/, 'el hueco se llama `iban`, igual que en la pantalla.')
 })
+
+// «iban importante siempre confirmar» (Alberto, 12/09/2026).
+test('el 422 trae la cuenta conocida (enmascarada) y si pide confirmarla; nunca el IBAN entero', () => {
+  const r = interpretarEmitir(422, {
+    estado: 'error',
+    causa: 'faltan_campos',
+    faltan: ['iban'],
+    campos: null,
+    mensaje: 'Confirma la cuenta de cargo ES91…1332 …',
+    cuenta: { enmascarada: 'ES91…1332', origen: 'recibo', descripcion: 'la cuenta con la que paga los recibos de su póliza actual' },
+    confirmar: true,
+  })
+  assert.equal(r.estado, 'faltan_campos')
+  if (r.estado !== 'faltan_campos') return
+  assert.equal(r.confirmar, true)
+  assert.deepEqual(r.cuenta, { enmascarada: 'ES91…1332', origen: 'recibo', descripcion: 'la cuenta con la que paga los recibos de su póliza actual' })
+  // Sin `cuenta` ni `confirmar` (asegura anterior): null / false, no undefined.
+  const viejo = interpretarEmitir(422, { causa: 'faltan_campos', faltan: ['iban'] })
+  if (viejo.estado !== 'faltan_campos') return assert.fail('faltan_campos')
+  assert.equal(viejo.cuenta, null)
+  assert.equal(viejo.confirmar, false)
+})
+
+test('la cuenta de la ficha solo viaja con la máscara confirmada a mano: ni por defecto, ni con `true`', () => {
+  const pantalla = codigo('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx')
+  assert.match(pantalla, /useState\(false\)/, 'la casilla de confirmación arranca SIN marcar.')
+  assert.doesNotMatch(pantalla, /defaultChecked|checked=\{true\}/, 'nunca se preselecciona.')
+  assert.match(
+    pantalla,
+    /cuentaConfirmada = !otraCuenta && cuentaOk && cuenta \? cuenta\.enmascarada : null/,
+    'lo que viaja es la MÁSCARA que el corredor vio, y solo con la casilla marcada y sin otro IBAN tecleado.',
+  )
+  assert.match(pantalla, /disabled=\{!cuentaDecidida\(estado\.cuenta, cuentaOk, iban\)\}/, 'el botón Emitir se apaga hasta decidir la cuenta.')
+
+  const ruta = codigo('../../asegura/app/api/operador/codeoscopic/emitir/route.ts')
+  assert.match(ruta, /decidirCuentaEnvio\(\{ ibanTecleado, ibanJson, ficha, cuentaConfirmada: cuerpo\.cuentaConfirmada \}\)/, 'la ruta decide con la función pura y la confirmación del cuerpo.')
+  assert.match(ruta, /if \(decision\.tipo === 'confirmar'\) \{/, 'y con cuenta sin confirmar contesta ANTES de llamar al vendor.')
+  assert.match(ruta, /confirmar: true,/, 'diciéndole a plataforma que es una confirmación, no un hueco vacío.')
+  assert.doesNotMatch(ruta, /ibanEnvio = ibanHumano \?\? ficha\.iban/, 'la ficha ya no cae al envío por su cuenta.')
+})
