@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📱 Portal del cliente, seguimiento del móvil compactado (12/09/2026, II).** Alberto probó el
+  PR #2810 en su móvil real (incógnito): el wordmark ya se esconde, pero seguían dos fallos. (1)
+  «Sigue apareciendo MIS seguros dos veces»: no era el titular de sección que ya se había quitado,
+  era la pestaña «Mis seguros» y el h1 «Mis seguros» diciendo la frase EXACTA uno encima del otro —
+  las pestañas «Seguros»/«Datos» pierden el posesivo (el h1 lo sigue diciendo), como ya pasaba sin
+  querer en «Mi QR»/«Mis QR». (2) «Sugerencia no se abre bien»: su panel colgaba `position:absolute`
+  de un botón que NO está en el borde derecho de la barra (van instalar, sugerencia, campana, tema,
+  salir detrás) — se salía por la izquierda en móvil. Mismo fallo ya corregido en la campana
+  (05/09/2026) y no portado al añadir la sugerencia (09/09/2026); ahora lleva el mismo
+  `@media (max-width:480px)` anclado a la pantalla. 458+291+180 tests y typecheck en verde.
+  **Pendiente sin tocar (Alberto lo señaló de pasada):** el teléfono de cada compañía en
+  `companias_dgs` se actualiza a mano, un SQL por compañía tras mirar su web — no hay cron ni
+  agente que lo repase. Sin decisión de cadencia/mecanismo, no se ha construido nada.
+
 - **📱 Portal del cliente, móvil compactado (12/09/2026).** Alberto, con la captura de su móvil: «dos
   veces mis seguros, Grupo ASegura quitarlo, ocupa mucho». La sección de cartera pintaba «Tu cartera /
   Tus seguros» bajo el h1 «Mis seguros» y la pestaña activa «Mis seguros»: se quita el titular de esa
