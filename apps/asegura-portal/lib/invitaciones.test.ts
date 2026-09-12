@@ -509,3 +509,37 @@ test('el correo del invitado no vuelve en ninguna respuesta', () => {
     )
   }
 })
+
+test('quien no es dueño de la ficha puede invitar en su nombre si representa a la empresa (12/09/2026)', () => {
+  // Sin esta rama, un empleado que gestiona GLOBAL 2 no podría invitar a nadie
+  // a ver las pólizas de la empresa: solo podría el dueño con vínculo propio.
+  assert.ok(
+    /esRepresentanteDe\(identidadId,\s*otorganteClienteId\)/.test(LIB_CODIGO),
+    'la ficha ajena solo se acepta si `esRepresentanteDe` lo confirma',
+  )
+  assert.ok(
+    /ficha_no_tuya/.test(LIB_CODIGO),
+    'sin vínculo propio NI representación, sigue rechazándose como ficha ajena',
+  )
+})
+
+test('la correduría de la ficha sale de MI vínculo, no del más antiguo de todos los míos', () => {
+  // `vinculos` está ordenado por creadoEn y cubre TODAS las fichas de la
+  // identidad; `vinculos[0]` puede no ser el vínculo de `otorganteClienteId`
+  // si la identidad tiene fichas en más de una correduría. Usar ese valor a
+  // ciegas escribiría la invitación con la correduría equivocada.
+  assert.ok(
+    /mio\?\.\s*correduriaId\s*\?\?\s*vinculos\[0\]\.correduriaId/.test(LIB_CODIGO),
+    'la correduría tiene que preferir `mio.correduriaId` (el vínculo real con esa ficha) y caer a `vinculos[0]` solo en la vía de representación',
+  )
+})
+
+test('la vía de representación no amplía ALCANCES_INVITACION', () => {
+  // `ALCANCES_INVITACION` no varía por tipo de otorgante (a diferencia de
+  // `conceder()`): por eso la rama de representación no necesita ni puede
+  // calcular un alcance distinto para invitar en nombre de una empresa.
+  assert.ok(
+    !/esRepresentanteDe[\s\S]{0,200}alcancesConcedible/.test(LIB_CODIGO),
+    'la representación societaria no debe tocar `alcancesConcedibles`: eso ampliaría lo que se puede compartir',
+  )
+})

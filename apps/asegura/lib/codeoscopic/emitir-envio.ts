@@ -76,7 +76,7 @@ async function cerrarEnvio(
 ): Promise<void> {
   await prisma.$executeRaw`
     update codeoscopic_projects
-    set estado = ${estado}, submit_in_flight_at = null
+    set estado = ${estado}::codeoscopic_project_estado, submit_in_flight_at = null
     where correduria_id = ${correduriaId}::uuid
       and project_id_codeoscopic = ${projectId}
       and submit_attempt_id = ${attemptId}::uuid
