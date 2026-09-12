@@ -47,7 +47,12 @@
   ordenar, línea de query omitida, nonce fijo). Sin llamar a la API real (proxy bloquea `*.smoobu.com`).
   **Pendiente de Alberto:** revisar el PR y confirmar en producción que `smoobu_sync`/`sivra_pricing_apply`
   vuelven a OK y que Martine recibe respuesta (su mensaje no llegó a `mensajes_log` mientras esto estuvo roto).
-
+- **🐛 Quinto 400 del ReRate real, mismo campo: la fecha corregida seguía naciendo vacía (12/09/2026).**
+  El fix del cuarto 400 (PATCH gratis de fecha de efecto) era opt-in: si nadie rellenaba el `<details>`
+  a mano, se seguía mandando la fecha vieja y Allianz volvía a rechazarla. `emision.tsx` ahora precarga
+  el campo con `hoyISO()` (fecha LOCAL, no `toISOString()` que es UTC) y lo manda siempre; sigue
+  editable. tsc 0 en plataforma. PR #2732 mergeado. Pendiente: Alberto reintenta con la fecha de hoy ya
+  puesta por defecto.
 - **🐛 Cuarto 400 del ReRate real: fecha de efecto a >90 días (11/09/2026).** Tras el fix de
   `naturalPhenomena`, Allianz rechazó con «Fecha de Efecto no puede estar más de 90 dias en el
   futuro» — la fecha la tecleó el corredor al cotizar y no se puede corregir sin decidir cuál poner
