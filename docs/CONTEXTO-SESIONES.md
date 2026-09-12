@@ -37,6 +37,16 @@
   secas y un huésped a las 2:00 saltaría al portal sin darle al modo noche su oportunidad. Ahora lo dice
   («urgencia a cualquier hora, escríbenos por este chat: nos llega un aviso») y repite el WIFI (pregunta
   nº 1 del día de llegada; no es código de acceso). Cepo en `plantillas.test.ts`, visto rojo 3 veces.
+- **🔘 «Pedir precio» se APAGA mientras haya un precio vigente en pantalla (12/09/2026).** Alberto,
+  con la póliza de Pilar: el guardián de reutilización de asegura (PR #2790) respondía 409 «ya hay un
+  proyecto vigente… manda `forzarNuevo: true`», y su pregunta fue la correcta: «si es así, ¿por qué
+  sale el botón?». Plataforma ofrecía DOS callejones sin salida: «Pedir precio» y «Descartar y pedir
+  precio de cero» morían los dos en ese 409 (nadie mandaba `forzarNuevo`). Ahora: con la cotización
+  recuperada a la vista el botón está apagado y lo dice; «Descartar» es el ÚNICO gesto que manda
+  `forzarNuevo` (= `guardadaDescartada`, nunca un `true` fijo); y el 409 con `proyectoExistente` es
+  su propio estado (`proyecto_vigente`), no «este ramo no se retarifica». Medido en BD: Pilar lleva
+  8 tarificaciones reales (4€) desde el 10/09; el vigente es `40684860` (Allianz, Q2018415779) y su
+  ficha SÍ tiene dirección cifrada, así que el ReRate debería repararse solo. 3 cepos vistos en rojo.
 - **🤖 El 400 del ReRate deja de ser un error: es una lista de huecos (12/09/2026).** Alberto: «un
   agente interlocutor entre Codeoscopic y nosotros». Codeoscopic no pregunta, devuelve un 400
   semi-estructurado («The <campo> of the <papel> is mandatory», una línea por campo), así que el
