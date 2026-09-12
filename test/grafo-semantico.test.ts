@@ -111,3 +111,10 @@ test('el medidor de uso clasifica las funciones nuevas como grafo-propio (si no,
     assert.equal(clasificar('mcp__Supabase__execute_sql', { query: `select * from ${f}('x')` }), 'grafo-propio', f)
   }
 })
+
+test('grafo_guardar_clave devuelve boolean, no void — Prisma no puede deserializar una columna de tipo void ($queryRaw)', () => {
+  const cuerpo = sql.slice(sql.indexOf('FUNCTION public.grafo_guardar_clave('), sql.indexOf('FUNCTION public.grafo_embed_textos('))
+  assert.match(cuerpo, /RETURNS boolean/)
+  assert.doesNotMatch(cuerpo, /RETURNS void/)
+  assert.match(cuerpo, /RETURN true;/)
+})
