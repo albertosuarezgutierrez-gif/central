@@ -37,12 +37,43 @@ type EstadoPanel =
     }
   | { paso: 'emitiendo' }
   | { paso: 'faltan_campos'; faltan: string[]; campos: unknown; projectId: string }
+  /**
+   * La compañía pide, al confirmar el precio, un dato que el proyecto no tiene y
+   * la ficha tampoco (12/09/2026). No es un error: son huecos que se teclean
+   * aquí y asegura escribe en el proyecto (gratis) antes de repetir el ReRate.
+   */
+  | {
+      paso: 'faltan_vendor'
+      faltan: { campo: string; motivo: string }[]
+      sugeridos: Record<string, string>
+      noReconocidos: string[]
+      mensaje: string
+    }
   | { paso: 'emitido'; referenciaVendor: string | null }
   | { paso: 'emitido_sin_acunar'; mensaje: string }
   | { paso: 'error'; mensaje: string }
 
 function euroODash(n: number | null): string {
   return n === null || !Number.isFinite(n) ? '—' : eur(n)
+}
+
+/**
+ * Cómo se llama cada hueco en castellano. Un campo que no esté aquí se pinta
+ * con su nombre técnico: mejor feo que invisible. Los valores nunca se
+ * suponen — se teclean, o vienen `sugeridos` de la ficha para comprobar.
+ */
+const ETIQUETAS_HUECO: Record<string, { etiqueta: string; tipo: string; pista?: string }> = {
+  nombreVia: { etiqueta: 'Calle (nombre de la vía)', tipo: 'text', pista: 'Solo el nombre: «San Vicente», sin número ni piso' },
+  cpResidencia: { etiqueta: 'Código postal de residencia', tipo: 'text' },
+  municipioResidenciaId: { etiqueta: 'Municipio (id del catálogo)', tipo: 'text' },
+  dni: { etiqueta: 'DNI/NIE', tipo: 'text' },
+  nombre: { etiqueta: 'Nombre', tipo: 'text' },
+  apellido1: { etiqueta: 'Primer apellido', tipo: 'text' },
+  fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
+  sexo: { etiqueta: 'Sexo (hombre/mujer)', tipo: 'text' },
+  estadoCivil: { etiqueta: 'Estado civil (id del catálogo)', tipo: 'text' },
+  telefono: { etiqueta: 'Teléfono móvil', tipo: 'tel' },
+  fechaCarnet: { etiqueta: 'Fecha del carnet de conducir', tipo: 'date' },
 }
 
 export function Emision({
@@ -60,10 +91,20 @@ export function Emision({
 }) {
   const [estado, setEstado] = useState<EstadoPanel>({ paso: 'inicio' })
   const [camposJson, setCamposJson] = useState('{}')
+  // Lo que el corredor teclea para los huecos de `faltan_vendor` (campo → valor).
+  const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
 
-  async function confirmarPrecio() {
+  async function confirmarPrecio(conCorrecciones?: Record<string, string>) {
     setEstado({ paso: 'confirmando' })
-    const r = await pedirOferta({ tarificacionId, compania, categoria })
+    const limpias = Object.fromEntries(
+      Object.entries(conCorrecciones ?? {}).filter(([, v]) => typeof v === 'string' && v.trim() !== ''),
+    )
+    const r = await pedirOferta({
+      tarificacionId,
+      compania,
+      categoria,
+      ...(Object.keys(limpias).length > 0 ? { correcciones: limpias } : {}),
+    })
     if (r.estado === 'ok') {
       setEstado({
         paso: 'oferta',
@@ -73,6 +114,28 @@ export function Emision({
         caducaEn: r.caducaEn,
         avisos: r.avisos,
         projectId: r.projectId,
+      })
+      return
+    }
+    if (r.estado === 'faltan_vendor') {
+      // Se prerrellena con lo que asegura sacó de la ficha, sin pisar lo que el
+      // corredor ya hubiera tecleado en una vuelta anterior.
+      setCorrecciones((prev) => ({ ...r.sugeridos, ...prev }))
+      setEstado({
+        paso: 'faltan_vendor',
+        faltan: r.faltan,
+        sugeridos: r.sugeridos,
+        noReconocidos: r.noReconocidos,
+        mensaje: r.mensaje,
+      })
+      return
+    }
+    if (r.estado === 'patch_no_aplicado') {
+      setEstado({
+        paso: 'error',
+        mensaje:
+          `${r.mensaje} Cierra este panel y usa «Descartar y pedir precio de cero» — es la única vía ` +
+          'cuando el proyecto no admite el dato.',
       })
       return
     }
@@ -148,13 +211,104 @@ export function Emision({
             Precio en pantalla: <strong>{euroODash(primaEur)}</strong>. El primer paso lo confirma con
             la compañía (puede cambiar de «estimado» a un precio firme).
           </p>
-          <button type="button" className="primary" onClick={confirmarPrecio} style={{ marginTop: 8 }}>
+          <button type="button" className="primary" onClick={() => confirmarPrecio()} style={{ marginTop: 8 }}>
             Confirmar precio con la compañía
           </button>
         </div>
       )}
 
       {estado.paso === 'confirmando' && <p style={{ marginTop: 14 }}>Confirmando con la compañía…</p>}
+
+      {estado.paso === 'faltan_vendor' && (
+        <div style={{ marginTop: 14 }}>
+          <p className="err" style={{ margin: 0 }}>
+            La compañía pide {estado.faltan.length === 1 ? 'un dato' : `${estado.faltan.length} datos`} para
+            confirmar el precio. No se ha gastado nada.
+          </p>
+          <p className="muted" style={{ margin: '4px 0 10px', fontSize: 12 }}>
+            Lo que venga relleno lo ha sacado asegura de la ficha del cliente: compruébalo. Lo vacío no está en
+            ningún sitio — se teclea aquí y se escribe en el proyecto (gratis) antes de volver a confirmar.
+          </p>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {estado.faltan.filter((f) => ETIQUETAS_HUECO[f.campo]).map((f) => {
+              const meta = ETIQUETAS_HUECO[f.campo]!
+              const valor = correcciones[f.campo] ?? ''
+              const deFicha = estado.sugeridos[f.campo] !== undefined && valor === estado.sugeridos[f.campo]
+              return (
+                <label key={f.campo} style={{ display: 'grid', gap: 4 }}>
+                  <span style={{ fontWeight: 600 }}>
+                    {meta.etiqueta}
+                    {deFicha && <span className="badge warn" style={{ marginLeft: 8 }}>de la ficha · comprobar</span>}
+                  </span>
+                  <input
+                    type={meta.tipo}
+                    value={valor}
+                    onChange={(e) => setCorrecciones((prev) => ({ ...prev, [f.campo]: e.target.value }))}
+                    style={{ width: '100%', minHeight: 44, boxSizing: 'border-box' }}
+                    autoComplete="off"
+                  />
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    {meta.pista ? `${meta.pista} · ` : ''}
+                    {f.motivo}
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+          {/* Lo que la compañía pide y NO es un dato de la persona (p. ej. la fecha de
+              efecto, que el proyecto no deja cambiar): aquí no hay input que valga. */}
+          {estado.faltan.some((f) => !ETIQUETAS_HUECO[f.campo]) && (
+            <div style={{ marginTop: 10 }}>
+              <p className="err" style={{ margin: 0, fontSize: 13 }}>
+                Esto no se puede corregir sobre el proyecto ya creado — hay que «Descartar y pedir precio de cero»:
+              </p>
+              <ul style={{ margin: '4px 0 0' }}>
+                {estado.faltan
+                  .filter((f) => !ETIQUETAS_HUECO[f.campo])
+                  .map((f) => (
+                    <li key={f.campo}>
+                      <code>{f.campo}</code> — {f.motivo}
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          )}
+          {estado.noReconocidos.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <p className="err" style={{ margin: 0, fontSize: 13 }}>
+                Y esto lo dice la compañía pero asegura no sabe a qué campo corresponde (hay que mapearlo):
+              </p>
+              <ul style={{ margin: '4px 0 0' }}>
+                {estado.noReconocidos.map((t, i) => (
+                  <li key={i}>
+                    <code>{t}</code>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <details style={{ marginTop: 8 }}>
+            <summary className="muted" style={{ cursor: 'pointer', fontSize: 12 }}>
+              Mensaje completo de la compañía
+            </summary>
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, margin: '4px 0 0' }}>{estado.mensaje}</pre>
+          </details>
+          <div style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="primary"
+              style={{ minHeight: 44 }}
+              disabled={
+                estado.faltan.some((f) => !ETIQUETAS_HUECO[f.campo]) ||
+                estado.faltan.some((f) => !(correcciones[f.campo] ?? '').trim())
+              }
+              onClick={() => confirmarPrecio(correcciones)}
+            >
+              Completar y volver a confirmar el precio
+            </button>
+          </div>
+        </div>
+      )}
 
       {estado.paso === 'oferta' && (
         <div style={{ marginTop: 14 }}>

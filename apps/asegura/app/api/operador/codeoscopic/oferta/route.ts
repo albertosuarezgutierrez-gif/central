@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { decryptField } from '@central/module-seguros-pii'
 import { operadorAutorizado } from '@/lib/operador'
 import { prisma } from '@/lib/tenant'
 import { ErrorCodeoscopic } from '@/lib/codeoscopic/cliente'
@@ -8,8 +9,18 @@ import {
   encontrarPrecio,
   reRate,
   actualizarFechaEfecto,
+  completarPersonas,
+  type ResultadoCompletar,
 } from '@/lib/codeoscopic/emitir'
 import { opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
+import {
+  interpretarError400,
+  reparosDe,
+  esCampoPersona,
+  type CampoPersona,
+} from '@/lib/codeoscopic/interprete-400'
+import { partirDireccion } from '@/lib/codeoscopic/direccion'
+import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -79,10 +90,19 @@ export async function POST(req: Request) {
     )
   }
 
+  // Lo que el corredor teclea tras un `faltan_vendor`: solo campos de la PERSONA
+  // que sabemos escribir en el proyecto (lista blanca), nunca claves arbitrarias.
+  const lectura = leerCorrecciones(cuerpo.correcciones)
+  if ('error' in lectura) {
+    return NextResponse.json({ estado: 'error', causa: 'otro', mensaje: lectura.error }, { status: 400 })
+  }
+  const correcciones = lectura.valores
+
   const filas = await prisma.$queryRaw<
-    { correduria_id: string; project_id_codeoscopic: string | null; poliza_id: string | null }[]
+    { correduria_id: string; project_id_codeoscopic: string | null; poliza_id: string | null; cliente_id: string | null }[]
   >`
-    select correduria_id::text as correduria_id, project_id_codeoscopic, poliza_id::text as poliza_id
+    select correduria_id::text as correduria_id, project_id_codeoscopic,
+           poliza_id::text as poliza_id, cliente_id::text as cliente_id
     from tarificaciones
     where id = ${tarificacionId}::uuid and simulado = false
   `
@@ -172,30 +192,93 @@ export async function POST(req: Request) {
       }
     }
 
-    const precio = encontrarPrecio(cotizacion, compania, categoria)
-    if (!precio) {
-      return NextResponse.json(
-        {
-          estado: 'error',
-          causa: 'otro',
-          mensaje: `el proyecto ${t.project_id_codeoscopic} ya no trae un precio de «${compania}» / «${categoria}» — puede haber caducado`,
-        },
-        { status: 404 },
-      )
+    // ── Lo que el corredor ya tecleó (respuesta a un `faltan_vendor` anterior) ──
+    // Se escribe en el proyecto ANTES del ReRate, gratis, y se verifica releyendo.
+    // Lo que se ha escrito Y VERIFICADO en el proyecto durante esta petición. Si
+    // el vendor lo vuelve a pedir, no es que falte: es que el PATCH no le vale
+    // (la trampa de `effectiveDate`), y pedírselo otra vez al corredor sería
+    // un bucle sin salida.
+    const aplicados = new Set<CampoPersona>()
+    if (Object.keys(correcciones).length > 0) {
+      const c = await completarPersonas(r.config, t.project_id_codeoscopic, correcciones)
+      if (c.estado === 'no_aplicado') return respuestaNoAplicado(c)
+      cotizacion = c.cotizacion
+      for (const k of Object.keys(correcciones) as CampoPersona[]) aplicados.add(k)
     }
 
-    // El vendor nunca devuelve `product.options` al cotizar (ver
-    // `Precio.productOptions`), así que casi siempre hay que rellenarlas con
-    // el catálogo estático por defecto — hoy solo cubre Allianz auto, ver
-    // `opciones-producto.ts`. Para el resto sigue mandándose `[]` (dentro de
-    // `reRate`) hasta que un 400 real diga qué le hace falta.
-    const oferta = await reRate(
-      r.config,
-      t.project_id_codeoscopic,
-      precio.id,
-      precio.productId,
-      precio.productOptions ?? opcionesPorDefecto(compania),
-    )
+    // ── El bucle de reparación (12/09/2026) ─────────────────────────────────
+    // Un 400 de validación del ReRate es GRATIS (`pruebaQueNoHuboCargo`) y
+    // semi-estructurado: se traduce a nuestros campos, se busca el valor en la
+    // FICHA (nunca se inventa) y, si la ficha lo tiene todo, se completa el
+    // proyecto y se repite UNA vez. Lo que la ficha no tiene vuelve a la
+    // pantalla como huecos (422 `faltan_vendor`), con lo que sí tenía como
+    // `sugeridos`, para que el corredor lo teclee y esta ruta lo escriba.
+    let oferta: Awaited<ReturnType<typeof reRate>> | null = null
+    let reparadoDesdeFicha = false
+    while (oferta === null) {
+      const precio = encontrarPrecio(cotizacion, compania, categoria)
+      if (!precio) {
+        return NextResponse.json(
+          {
+            estado: 'error',
+            causa: 'otro',
+            mensaje: `el proyecto ${t.project_id_codeoscopic} ya no trae un precio de «${compania}» / «${categoria}» — puede haber caducado`,
+          },
+          { status: 404 },
+        )
+      }
+
+      try {
+        // El vendor nunca devuelve `product.options` al cotizar (ver
+        // `Precio.productOptions`), así que casi siempre hay que rellenarlas con
+        // el catálogo estático por defecto — hoy solo cubre Allianz auto, ver
+        // `opciones-producto.ts`. Para el resto sigue mandándose `[]` (dentro de
+        // `reRate`) hasta que un 400 real diga qué le hace falta.
+        oferta = await reRate(
+          r.config,
+          t.project_id_codeoscopic,
+          precio.id,
+          precio.productId,
+          precio.productOptions ?? opcionesPorDefecto(compania),
+        )
+      } catch (e) {
+        if (!(e instanceof ErrorCodeoscopic) || e.clase !== 'validacion') throw e
+        const interp = interpretarError400(e.detalle)
+        // Nada que reparar (ninguna línea se reconoce): sale como fallo del
+        // vendor, con el texto entero, igual que hasta hoy.
+        if (interp.campos.length === 0) throw e
+
+        const pedidos = interp.campos.map((c) => c.campo).filter(esCampoPersona)
+        const yaEscritos = pedidos.filter((c) => aplicados.has(c))
+        if (yaEscritos.length > 0) return respuestaSigueFaltando(yaEscritos, e.message)
+        const deFicha = reparadoDesdeFicha ? {} : await valoresDesdeFicha(t, pedidos)
+        const cubiertos = Object.keys(deFicha)
+        const todosSonDePersona = pedidos.length === interp.campos.length
+        const fichaLoCubreTodo = todosSonDePersona && pedidos.length > 0 && pedidos.every((c) => cubiertos.includes(c))
+
+        if (!fichaLoCubreTodo) {
+          return NextResponse.json(
+            {
+              estado: 'faltan_vendor',
+              projectId: t.project_id_codeoscopic,
+              faltan: reparosDe(interp),
+              sugeridos: deFicha,
+              noReconocidos: interp.noReconocidos,
+              mensaje: e.message,
+            },
+            { status: 422 },
+          )
+        }
+
+        reparadoDesdeFicha = true
+        const c = await completarPersonas(r.config, t.project_id_codeoscopic, deFicha)
+        if (c.estado === 'no_aplicado') return respuestaNoAplicado(c)
+        cotizacion = c.cotizacion
+        for (const k of Object.keys(deFicha) as CampoPersona[]) aplicados.add(k)
+        // Y vuelta al ReRate, una sola vez: si vuelve a fallar por validación,
+        // `reparadoDesdeFicha` ya no deja repararlo solo y sale como `faltan_vendor`.
+      }
+    }
 
     // 🚨 Noveno fallo real (12/09/2026): `uq_codeoscopic_projects_poliza` es un
     // índice ÚNICO parcial sobre `poliza_id` — solo UN proyecto puede tenerlo
@@ -253,4 +336,121 @@ export async function POST(req: Request) {
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+/**
+ * Solo claves de la lista blanca y valores con la forma que el vendor acepta
+ * (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha
+ * en formato español llegarían al PATCH y volverían como un 400 sin pista, o
+ * como un 409 que manda a pagar 0,50€ por un dato mal tecleado.
+ */
+function leerCorrecciones(
+  v: unknown,
+): { valores: Partial<Record<CampoPersona, string>> } | { error: string } {
+  if (v === undefined || v === null) return { valores: {} }
+  if (typeof v !== 'object' || Array.isArray(v)) {
+    return { error: 'correcciones tiene que ser un objeto {campo: texto}' }
+  }
+  const valores: Partial<Record<CampoPersona, string>> = {}
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (!esCampoPersona(k)) return { error: `correcciones: «${k}» no es un campo de la persona que se pueda escribir` }
+    const s = cadena(val)
+    if (s === null) continue
+    const mal = valorInvalido(k, s)
+    if (mal) return { error: `correcciones.${k}: ${mal}` }
+    valores[k] = s
+  }
+  return { valores }
+}
+
+function valorInvalido(campo: CampoPersona, s: string): string | null {
+  switch (campo) {
+    case 'municipioResidenciaId':
+      return /^\d+$/.test(s) ? null : 'tiene que ser el id numérico del catálogo de municipios'
+    case 'cpResidencia':
+      return /^\d{5}$/.test(s) ? null : 'tiene que ser un código postal de 5 cifras'
+    case 'fechaNacimiento':
+    case 'fechaCarnet':
+      return RE_FECHA.test(s) ? null : 'la fecha tiene que ser aaaa-mm-dd'
+    case 'telefono':
+      return RE_TELEFONO.test(s.replace(/\s/g, '')) ? null : 'tiene que ser un móvil español de 9 cifras'
+    case 'sexo':
+      return s === 'hombre' || s === 'mujer' ? null : 'tiene que ser «hombre» o «mujer»'
+    default:
+      return null
+  }
+}
+
+function respuestaSigueFaltando(campos: CampoPersona[], mensajeVendor: string) {
+  return NextResponse.json(
+    {
+      estado: 'error',
+      causa: 'patch_no_aplicado',
+      sinAplicar: campos.map((campo) => ({ campo, papel: 'holder' })),
+      mensaje:
+        `El proyecto ya trae ${campos.join(', ')} (escrito y comprobado en esta misma petición) y la compañía ` +
+        `lo sigue pidiendo: el PATCH no le vale para este campo. La única vía segura es pedir precio de cero ` +
+        `(0,50€, puede variar). Mensaje de la compañía: ${mensajeVendor}`,
+    },
+    { status: 409 },
+  )
+}
+
+function respuestaNoAplicado(c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>) {
+  const lista = c.sinAplicar.map((x) => `${x.campo} (${x.papel})`).join(', ')
+  return NextResponse.json(
+    {
+      estado: 'error',
+      causa: 'patch_no_aplicado',
+      sinAplicar: c.sinAplicar,
+      mensaje:
+        `El PATCH al proyecto no ha dado error pero, al releerlo, sigue sin traer: ${lista}. ` +
+        'Es la misma trampa que effectiveDate: la única vía segura es pedir precio de cero (0,50€, puede variar).',
+    },
+    { status: 409 },
+  )
+}
+
+/**
+ * La cascada ANTES de preguntar al corredor: lo que ya está en la ficha.
+ * Hoy solo la calle (`clientes.direccion`, cifrada, troceada con
+ * `partirDireccion`): es el único dato que el ReRate pide y la cotización no.
+ * El resto de campos de persona ya iban en el proyecto al cotizar, así que si
+ * el vendor los echa en falta es que la ficha tampoco los tiene.
+ * Nunca lanza: si la ficha no se puede leer, devuelve `{}` y se pregunta.
+ */
+async function valoresDesdeFicha(
+  t: { correduria_id: string; poliza_id: string | null; cliente_id: string | null },
+  pedidos: CampoPersona[],
+): Promise<Partial<Record<CampoPersona, string>>> {
+  if (!pedidos.includes('nombreVia')) return {}
+  if (!t.cliente_id && !t.poliza_id) return {}
+  try {
+    const filas = await prisma.$queryRaw<{ direccion: string | null }[]>`
+      select c.direccion
+      from clientes c
+      where c.correduria_id = ${t.correduria_id}::uuid
+        and c.id = coalesce(
+          ${t.cliente_id}::uuid,
+          (select p.cliente_id from polizas p where p.id = ${t.poliza_id}::uuid limit 1)
+        )
+      limit 1
+    `
+    const cifrada = filas[0]?.direccion ?? null
+    if (!cifrada) return {}
+    let direccion: string | null
+    try {
+      direccion = decryptField(cifrada)
+    } catch {
+      return {}
+    }
+    // 🚨 Sin `PII_ENCRYPTION_KEY`, `decryptField` devuelve el CIFRADO tal cual
+    // (no lanza). Trocearlo daría «v1:iv:ct:tag» como nombre de calle y se
+    // escribiría en el proyecto del vendor. Ilegible = no se sabe, se pregunta.
+    if (direccion === null || direccion.startsWith('v1:')) return {}
+    const nombre = partirDireccion(direccion).nombre
+    return nombre ? { nombreVia: nombre } : {}
+  } catch {
+    return {}
+  }
 }
