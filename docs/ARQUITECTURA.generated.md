@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (11/09/2026) 🐛 Cuarto 400 del ReRate real: fecha de efecto a >90 días
 - (11/09/2026) 🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST
 - (11/09/2026) 🐛 Segundo 400 del ReRate real: `options` es un ARRAY, no un objeto
 - (11/09/2026) 🐛 Primer ReRate real: 400 por confundir el id del mainQuote con el del producto
@@ -271,5 +272,4 @@
 - (11/09/2026) 🧾 Emisión real por Codeoscopic: ReRate + Submit construidos, sin sandbox
 - (11/09/2026) 🎨 Ficha de cliente de la correduría: DNI/fecha de nacimiento en cabecera + rueda de ramos
 - (11/09/2026) 🔑 Migración a las claves nuevas de Supabase + aviso anti-phishing en mensajes de huéspedes
-- (11/09/2026) 🔒 Cierre del incidente de phishing/fuga de credenciales
 

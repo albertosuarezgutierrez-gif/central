@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-11T15:07:03Z",
-  "sha": "e70c883c355e0a35621e841e5c6bd22e0fa2b7d9",
+  "generadoEn": "2026-09-12T07:46:26Z",
+  "sha": "c8e154cc3ca97797c262076650a665b7a46f13e5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9800,7 +9800,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 34,
+          "linea": 40,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate) el precio que ya se enseñó en pantalla desde una cotización REAL de `seguros.tarificaciones`. 🚨 **Construida el 11/09/2026,"
         },
         {
@@ -9809,7 +9809,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 157
+          "linea": 181
         }
       ],
       "tablas": [
@@ -9819,7 +9819,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "d5d0b3e079f3"
+      "hash": "f3bb5618f1e5"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -13286,7 +13286,7 @@
           "nombre": "peticion",
           "kind": "function",
           "exportada": true,
-          "params": "config: ConfigCodeoscopic, opciones: { metodo: 'GET' | 'POST' path: string cuerpo?: unknown timeoutMs: number },",
+          "params": "config: ConfigCodeoscopic, opciones: { metodo: 'GET' | 'POST' | 'PATCH' path: string cuerpo?: unknown timeoutMs: number },",
           "retorno": "Promise<unknown>",
           "linea": 175,
           "resumen": "Llama al vendor con las cabeceras que Avant2 exige. Un solo intento. La única repetición es el auto-curado de un 401, y es segura incluso en la llamada facturable porque un 401 significa que el vendor"
@@ -13303,7 +13303,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6f5527eebb63"
+      "hash": "5cd3895f7ff1"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/config.ts",
@@ -14079,6 +14079,7 @@
         "encontrarPrecio",
         "leerOferta",
         "reRate",
+        "actualizarFechaEfecto",
         "camposDeEmision"
       ],
       "funciones": [
@@ -14160,18 +14161,27 @@
           "resumen": "`POST /insurances/{projectId}/offers` — confirma el precio elegido (ReRate/preemisión). 🚨 **Corregido el 11/09/2026 tras el primer 400 real** (proyecto 40681298, Pilar Franco Ruz): el vendor exige `m"
         },
         {
+          "nombre": "actualizarFechaEfecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, projectId: string, fechaEfecto: string,",
+          "retorno": "Promise<void>",
+          "linea": 218,
+          "resumen": "`PATCH /insurances/{id}` — corrige un campo del proyecto YA creado, GRATIS (solo `POST /insurances` está documentado como facturable). Es **incremental** (`docs/CODEOSCOPIC-API-PORTAL.md`: «descarta l"
+        },
+        {
           "nombre": "camposDeEmision",
           "kind": "function",
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
           "retorno": "Promise<CampoEmision[]>",
-          "linea": 220,
+          "linea": 245,
           "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "895ab61c89ed"
+      "hash": "93cf2df344e0"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -63140,7 +63150,7 @@
           "nombre": "pedirOferta",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { tarificacionId: string compania: string categoria: string }",
+          "params": "entrada: { tarificacionId: string compania: string categoria: string fechaEfectoCorregida?: string }",
           "retorno": "Promise<RespuestaOferta>",
           "linea": 103,
           "resumen": "🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo pone `ofertaAsegura()` en el servidor, y esto NO reintenta"
@@ -63151,13 +63161,13 @@
           "exportada": true,
           "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null }",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 116,
+          "linea": 117,
           "resumen": "🚨 **EL SUBMIT REAL. Compromete un contrato de verdad, no solo dinero.** Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin reintento: un fallo de red aquí NO dice que la póliza no se "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "308bf7283149"
+      "hash": "1bed2616b216"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx",
@@ -63175,17 +63185,26 @@
           "linea": 44
         },
         {
+          "nombre": "hoyISO",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 51,
+          "resumen": "La fecha de HOY en local (no `toISOString()`, que es UTC y puede dar el día de ayer/mañana según la hora): es el valor que Allianz acepta siempre — su 400 real es «no puede estar a más de 90 días vist"
+        },
+        {
           "nombre": "Emision",
           "kind": "function",
           "exportada": true,
           "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
           "retorno": null,
-          "linea": 48
+          "linea": 58
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5eb5127a967b"
+      "hash": "1cc2d98ca33d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -92369,7 +92388,7 @@
           "nombre": "ofertaAsegura",
           "kind": "function",
           "exportada": true,
-          "params": "p: { tarificacionId: string compania: string categoria: string }",
+          "params": "p: { tarificacionId: string compania: string categoria: string /** Corrige la fecha de efecto del proyecto (aaaa-mm-dd) ANTES del ReRate, * vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha * rechazado — ver `apps/aseg",
           "retorno": "Promise<RespuestaOferta>",
           "linea": 750,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía el precio de `tarificacionId` (id de `seguros.tarificaciones`) para la `compania`/`categoria` elegidas en pantalla. NO reintenta."
@@ -92380,7 +92399,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaEmitir",
-          "linea": 796,
+          "linea": 800,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -92389,7 +92408,7 @@
           "exportada": true,
           "params": "p: { projectId: string campos: Record<string, unknown> actor?: string primaAnual?: number | null }",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 845,
+          "linea": 849,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO reintenta: un fallo de red aquí no dice que no se haya emitid"
         },
         {
@@ -92398,7 +92417,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FormularioGuardado | null",
-          "linea": 927
+          "linea": 931
         },
         {
           "nombre": "leerPreciosGuardados",
@@ -92406,7 +92425,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Precio[] | null",
-          "linea": 946
+          "linea": 950
         },
         {
           "nombre": "interpretarTarificacionGuardada",
@@ -92414,7 +92433,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaTarificacionGuardada",
-          "linea": 963,
+          "linea": 967,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -92423,13 +92442,13 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 1004,
+          "linea": 1008,
           "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "54865e81f048"
+      "hash": "c85bc8a760ca"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -131639,6 +131658,6 @@
   ],
   "resumen": {
     "archivos": 3232,
-    "funciones": 9935
+    "funciones": 9937
   }
 }
