@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T14:33:19Z",
-  "sha": "800bf303fade30517f589ddff3434b01a4b1f785",
+  "generadoEn": "2026-09-12T15:17:26Z",
+  "sha": "4df38d020b26327192dda5f16f34390962a75fdc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -74898,6 +74898,31 @@
       "hash": "cded09e0f8ec"
     },
     {
+      "ruta": "apps/plataforma/app/api/internal/grafo-codigo/embeddings/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/internal/grafo-codigo/embeddings — Calcula los embeddings del grafo de código (búsqueda semántica propia, sustituto de query_graph/rank_files de Graphify). Lo llama auditoria.yml (scripts/grafo-embeddings-inyectar.mjs) tras inyectar el mapa; se puede llamar varias veces: cada pasada sincroniza ",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [
+        "grafo_embeddings",
+        "grafo_embeddings_sync",
+        "next"
+      ],
+      "rutaApi": "/api/internal/grafo-codigo/embeddings",
+      "hash": "bf7e07051624"
+    },
+    {
       "ruta": "apps/plataforma/app/api/internal/grafo-codigo/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/internal/grafo-codigo — Puerto de INYECCIÓN del grafo de código (nodos + aristas) en Supabase. Lo llama scripts/grafo-codigo-inyectar.mjs desde el workflow .github/workflows/auditoria.yml (solo desde main) con el JSON que genera scripts/grafo-codigo.mjs (NO se commitea: ~15 MB), partido en lote",
@@ -125467,7 +125492,7 @@
           "exportada": true,
           "params": "",
           "retorno": "PestanaPortal[]",
-          "linea": 126,
+          "linea": 136,
           "resumen": "Las pestañas, en orden. 📌 Son CINCO desde el 09/09/2026 («Mis datos»). Eran cuatro desde el 07/09/2026, y la que volvió entonces no era «Mis pólizas»: eran «Recibos» y el historial de siniestros, que"
         },
         {
@@ -125476,13 +125501,13 @@
           "exportada": true,
           "params": "vista: VistaBoveda",
           "retorno": "string",
-          "linea": 160,
+          "linea": 170,
           "resumen": "La vista por defecto se enlaza como `/boveda` a secas, sin `?vista=seguros`. No es cosmética: si la pestaña activa llevara el parámetro, `/boveda` y `/boveda?vista=seguros` serían la misma pantalla co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6cf3920f32f9"
+      "hash": "cc532bafb7bb"
     },
     {
       "ruta": "packages/module-seguros/src/actividad.ts",
@@ -133454,7 +133479,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3268,
-    "funciones": 10082
+    "archivos": 3269,
+    "funciones": 10083
   }
 }
