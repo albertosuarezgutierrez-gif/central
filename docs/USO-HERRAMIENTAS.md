@@ -89,12 +89,48 @@ resolución de imports dinámicos con cadena calculada ni de barriles multi-nive
 ya cubre `grafo_deps_archivo`. `graphify_render_subgraph` (visualización) no se probó porque su
 equivalente (`grafo_subgrafo`) no tiene contraparte de renderizado — uso residual, no bloqueante.
 
-**Lo que el grafo propio sigue sin cubrir, y NO es parte de este trabajo:** `remember`/`recall`/
-`memories_about` (memoria durable de Graphify). Alberto ya decidió (`CLAUDE.md`, 12/09/2026) que
-esas dos siguen en Graphify «mientras haya cuota» — la memoria de este repo vive en
-`docs/CONTEXTO-SESIONES.md`, que es un sustituto funcional pero no el mismo mecanismo (no hace
-recuperación semántica sobre las notas). Cancelar Graphify hoy significaría perder `remember`/`recall`
-sin sustituto, no solo ahorrar cuota de grafo.
+**Lo que este trabajo (grafo de código) no cubría:** `remember`/`recall`/`memories_about` (memoria
+durable de Graphify) — hasta el 12/09/2026 la única pieza sin sustituto propio. Medido más abajo
+("Paridad de MEMORIA"): ya tiene sustituto.
+
+## Paridad de MEMORIA (`memoria_buscar` vs `recall`/`memories_about`) — medición del 12/09/2026
+
+Última pieza sin sustituto propio (ver `CLAUDE.md`, sección Graphify): la memoria DURABLE entre
+sesiones. `memoria_buscar()` (embeddings sobre `docs/CONTEXTO-SESIONES.md` + `docs/memoria/*.md`,
+PR #2848) frente a `recall`/`memories_about` de Graphify (memoria construida a partir de llamadas
+`remember()` de sesiones pasadas). **No son el mismo corpus**: el de Graphify es lo que alguna sesión
+decidió explícitamente recordar (dominado por notas automáticas «PR pasó el gate de revisión» y un
+resto menor de gotchas/decisiones reales); el de `memoria_buscar` es el `docs/CONTEXTO-SESIONES.md` +
+`docs/memoria/*.md` completo, que ya es el hábito de cierre de cada sesión (`persist-memoria.sh`) — la
+pregunta no es «¿leen la misma fuente?» sino «¿`memoria_buscar` encuentra decisiones reales al menos
+tan bien como `recall`?». Cuatro preguntas reales, ambas herramientas con `repository_id`/consulta
+explícitos:
+
+| Pregunta | Graphify (`recall`) | `memoria_buscar` |
+|---|---|---|
+| Barrido de precios/cuota de Serper | Nada relevante (solo ruido genérico «PR pasó el gate») | Acierta la entrada correcta (rank 4/5, similitud 0,518) |
+| Qué pantalla mira Vanesa (limpieza) | Nada relevante | Acierta como **#1** (similitud 0,597) |
+| Incidente Smoobu 401/HMAC | **Relevante pero DESFASADO**: hechos bien descompuestos, pero congelados en el estado intermedio 07:07-08:01 UTC del 23/06 — describe el problema como aún bloqueado, y ya está resuelto (PR #2753) | Devuelve la línea de tiempo **completa y vigente**: 5 resultados desde el diagnóstico inicial (23/06) hasta la resolución final (12/09, PR #2753) |
+| Por qué «Grupo ASegura» lleva la S en mayúscula | Nada relevante (devuelve hechos de otro tema: ASegura single-tenant, el mismo Smoobu desfasado, arquitectura Supabase, WhatsApp, autodescripción de Graphify) | Acierta como **#1** (similitud 0,691), exactamente la decisión documentada |
+
+**Resultado: 4 de 4 — en ninguna `memoria_buscar` fue peor, en 3 Graphify no encontró nada relevante y
+en la 4ª (Smoobu) Graphify SÍ era relevante pero factualmente desfasado** (la clase de fallo más cara:
+un dato que parece bueno y no lo es — ver la regla global de `CLAUDE.md` sobre datos leídos mal). La
+causa del caso Smoobu no es un defecto de `memoria_buscar`: es que la memoria de Graphify no se
+actualiza sola cuando el hecho cambia, mientras que `docs/CONTEXTO-SESIONES.md` se reescribe cada vez
+que hay novedad y el cron de embeddings la recoge a diario.
+
+**Lo que esta medición NO cubre** [es una limitación, no una garantía de que no existan casos peor]:
+4 preguntas, elegidas por tocar decisiones/gotchas reales y dispersas en el tiempo, no un muestreo
+exhaustivo. No prueba memoria sobre proyectos con muy poco historial documentado, ni el caso de una
+pregunta cuya respuesta NO esté en ningún `.md` de memoria (ninguna herramienta la encontraría, pero
+no se ha verificado que ambas fallen igual de "limpio").
+
+**Veredicto sobre la condición de Alberto («100% igual» para dar de baja Graphify, 12/09/2026):** en
+las 4 preguntas medidas `memoria_buscar` igualó o superó a `recall`, nunca al revés. Es una muestra
+pequeña, no una prueba exhaustiva — pero es consistente y en la única dirección que importa (nunca
+peor). Con esto, la sección de Graphify en `CLAUDE.md` deja de marcar `remember`/`recall`/
+`memories_about` como pieza sin sustituto.
 
 ## Agregado
 
