@@ -18,7 +18,13 @@
 
 import { PARKINGS_CERCANOS } from '../agente-huesped/parking.ts'
 import { SALIDA_FLEX_HASTA, llavesAlSalir } from '../agente-huesped/salida.ts'
-import { bloqueAcceso, AVISO_CANAL, type CodigosAcceso } from '../acceso.ts'
+import { bloqueAcceso, type CodigosAcceso } from '../acceso.ts'
+
+// 🔒 Aviso de phishing (11/09/2026, sesión sidra-guest-data-breach): huéspedes de SIVRA recibieron
+// WhatsApp suplantando al portal de reserva. Toda nuestra comunicación real es SOLO por el hilo de
+// la reserva; nunca por WhatsApp/SMS/llamada a un número suelto. Decisión de Alberto (12/09/2026):
+// SOLO en el primer mensaje (confirmación) — no repetirlo en el resto del ciclo.
+export const AVISO_CANAL = '🔒 Recuerda: nuestra comunicación contigo es SIEMPRE por este chat, el de tu reserva. Nunca te escribiremos por WhatsApp ni desde otro número — si te llega algo así, no es nuestro.'
 
 export type TipoMensaje =
   | 'confirmacion'
