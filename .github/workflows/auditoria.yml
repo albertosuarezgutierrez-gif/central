@@ -210,3 +210,12 @@ jobs:
         run: |
           node scripts/grafo-codigo.mjs --out /tmp/grafo-codigo.json
           node scripts/grafo-codigo-inyectar.mjs /tmp/grafo-codigo.json
+
+      # Embeddings del grafo (búsqueda semántica propia: grafo_buscar / grafo_rank_files). Va detrás del
+      # mapa porque los textos salen de mapa_arquitectura; se llama al puerto hasta que no queden pendientes.
+      - name: Calcular embeddings del grafo (búsqueda semántica)
+        if: github.ref_name == 'main' && !cancelled()
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scripts/grafo-embeddings-inyectar.mjs

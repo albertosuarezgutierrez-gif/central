@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🧠 Grafo propio, parte 2: búsqueda SEMÁNTICA + lo estructural que faltaba para dar de baja Graphify (12/09/2026).**
+  Condición de Alberto: baja solo si lo propio es «100 % igual». Faltaban `query_graph`/`rank_files`, `trace`/`shortest_path`,
+  `references`, `imports_exports`, `node`, `render_subgraph` y la memoria. Migración `2026-09-12_grafo_semantico.sql` (APLICADA):
+  `grafo_embeddings` (pgvector 768, hnsw) desde `mapa_arquitectura` (13.350 textos; el que cambia pierde su vector), embeddings por
+  SQL (`http` → OpenRouter `text-embedding-3-small`, clave en Vault) y `grafo_buscar/rank_files/camino/referencias/imports_exports/nodo/subgrafo`
+  (las estructurales verificadas contra la BD). Puerto `/api/internal/grafo-codigo/embeddings` + paso nuevo en `auditoria.yml`;
+  key `GRAFO_OPENROUTER_API_KEY` (dedicada, recomendada) con caída a `OPENROUTER_API_KEY`. Cepo `test/grafo-semantico.test.ts` (9, rojo brazo a brazo).
+  PENDIENTE: merge → deploy READY → dispatch → `pendientes 0` → MEDIR paridad vs Graphify (`docs/USO-HERRAMIENTAS.md`) → PR de docs → baja.
 - **🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel (12/09/2026, PR #2816).**
   Tras el #2807, «Inyectar mapa» murió con **413 FUNCTION_PAYLOAD_TOO_LARGE** (4.492.854 → 4.493.847 B) y el grafo se saltó por
   dependencia. Helper `scripts/inyectar-lotes.mjs` (lotes por bytes + reintentos), `mapa-arquitectura-inyectar.mjs` sustituye al
