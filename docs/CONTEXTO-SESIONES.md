@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🗺️ Paridad grafo propio vs Graphify: medida, y gana en 2 de 10 (12/09/2026, III).** PR #2827
+  (fix `grafo_guardar_clave` void→boolean) mergeado y embeddings ya en producción (13.352 nodos,
+  `pendientes:0`, coste ≈0,01$). Con eso corrí la medición de paridad pendiente: 12 categorías de
+  Graphify contra un símbolo real y ambiguo (`isCronAuthorized`, duplicado en 3 apps). En 10/12
+  comparables el grafo propio igualó o superó; en 2 lo superó con datos objetivamente mejores —
+  Graphify resuelve nombres duplicados a UNA declaración arbitraria (1 caller de 80 reales) y su
+  `query_graph` confundió «autorización de cron» con «autorización de cliente de seguros». Detalle en
+  `docs/USO-HERRAMIENTAS.md`. Reescrito `CLAUDE.md` y `code-map`: Graphify queda SOLO para
+  `memories_about`/`recall`/`remember` (sin sustituto propio) — cancelarlo hoy perdería la memoria
+  durable, no solo cuota de grafo. **No se ha dado de baja nada**, es decisión de Alberto.
+
 - **📧 13º 400 real de Codeoscopic — el Submit exige email+calle, y ya se repara solo (12/09/2026).**
   Tras el fix del IBAN (#2815), el Submit (no el ReRate) rechazó con «e-mail/road name of the
   holder/owner/primaryDriver is mandatory». `interprete-400.ts` aprendió `email`; `valoresPersonaDesdeFicha`
