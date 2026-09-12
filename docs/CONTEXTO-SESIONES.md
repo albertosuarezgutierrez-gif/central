@@ -39,7 +39,8 @@
   de un botón que NO está en el borde derecho de la barra (van instalar, sugerencia, campana, tema,
   salir detrás) — se salía por la izquierda en móvil. Mismo fallo ya corregido en la campana
   (05/09/2026) y no portado al añadir la sugerencia (09/09/2026); ahora lleva el mismo
-  `@media (max-width:480px)` anclado a la pantalla. 458+291+180 tests y typecheck en verde. PR #2817 (draft).
+  `@media (max-width:480px)` anclado a la pantalla. 458+291+180 tests y typecheck en verde. PR #2817
+  mergeado (CI 18/18 verde, sin conflictos, revisión Graphify sin bloqueantes).
   **Pendiente sin tocar (Alberto lo señaló de pasada):** el teléfono de cada compañía en
   `companias_dgs` se actualiza a mano, un SQL por compañía tras mirar su web — no hay cron ni
   agente que lo repase. Sin decisión de cadencia/mecanismo, no se ha construido nada.
