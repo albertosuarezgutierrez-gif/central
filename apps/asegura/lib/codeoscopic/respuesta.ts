@@ -64,6 +64,14 @@ export type Precio = {
    * `emitir.ts` para qué se manda cuando falta.
    */
   productOptions: unknown
+  /**
+   * `expirationDate` del precio. Solo lo trae un precio ya CONFIRMADO por
+   * ReRate (`Q2018406592` en el caso real de Pilar Franco Ruz, 12/09/2026);
+   * el resto de precios de una cotización inicial no lo declaran. Existe para
+   * poder decidir si un proyecto ya cotizado sigue vigente ANTES de pedir uno
+   * nuevo — ver `proyectoVigenteDePoliza` en `retarificar-cartera.ts`.
+   */
+  expiraEn: string | null
 }
 
 /**
@@ -170,6 +178,7 @@ function leerPrecio(raw: unknown): Precio | null {
     requiereReRate: acciones.some((a) => str(obj(a).id)?.toLowerCase() === 'rerate'),
     productId: producto.id ?? null,
     productOptions: producto.options ?? null,
+    expiraEn: str(q.expirationDate),
   }
 }
 

@@ -64,6 +64,7 @@ test('encontrarPrecio: casa por compañía y categoría, sin distinguir mayúscu
         requiereReRate: true,
         productId: 10,
         productOptions: null,
+        expiraEn: null,
       },
     ],
   }

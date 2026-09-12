@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🛑 No crear proyecto por proyecto en Codeoscopic — guardián de reutilización (12/09/2026).**
+  Alberto, revisando el proceso: el reintento de Pilar creó un proyecto NUEVO (`40684860`) en vez de
+  reusar el `40684815` (que seguía vigente) — otros 0,50€ gastados y riesgo de que la compañía dé OTRO
+  precio. `prepararRetarificacion()` (`lib/retarificar-cartera.ts`) ahora comprueba GRATIS (`GET`, vía
+  `proyectoVigenteDePoliza`) si ya hay un proyecto con oferta confirmada y sin caducar antes de dejar
+  pedir precio de nuevo; si lo hay, corta con 409 y da el proyecto a reutilizar. Escape hatch
+  `forzarNuevo: true` para cuando de verdad hace falta recotizar. `Precio` ganó `expiraEn` (parseado de
+  `expirationDate`, antes descartado). 340/340 tests + tsc limpios, mismo PR #2790.
 - **🚨 Décimo 400 real de Codeoscopic — Submit sin el body part `policyApplications` (12/09/2026).**
   Reintento de emisión de Pilar (proyecto nuevo `40684860`, Allianz) rechazado: «The
   `policyApplications` body part is required.» `enviarEmision()` mandaba `offerId` + campos sueltos
