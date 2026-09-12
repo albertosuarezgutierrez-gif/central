@@ -8,6 +8,7 @@
 // ⚠️ Lleva la `cuenta_id` del tenant de Joaquín incrustada: no es un secreto, pero sí
 //    la ata a ESE cliente. Si el rehosting ya terminó (`remaining = 0`), borrar.
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 const CUENTA = "0de50000-0000-4000-a000-000000000001";
 const BUCKET = "catalogo";
@@ -27,7 +28,7 @@ Deno.serve(async (req: Request) => {
 
   const supa = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    claveSecreta(),
   );
 
   const { data: rows, error: qErr } = await supa

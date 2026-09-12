@@ -660,6 +660,7 @@ enum TipoSeguro {
   responsabilidad_civil
   comercio
   comunidades
+  accidentes
   otros
 
   @@map("tipo_seguro")

@@ -20,6 +20,12 @@ import { PARKINGS_CERCANOS } from '../agente-huesped/parking.ts'
 import { SALIDA_FLEX_HASTA, llavesAlSalir } from '../agente-huesped/salida.ts'
 import { bloqueAcceso, type CodigosAcceso } from '../acceso.ts'
 
+// 🔒 Aviso de phishing (11/09/2026, sesión sidra-guest-data-breach): huéspedes de SIVRA recibieron
+// WhatsApp suplantando al portal de reserva. Toda nuestra comunicación real es SOLO por el hilo de
+// la reserva; nunca por WhatsApp/SMS/llamada a un número suelto. Decisión de Alberto (12/09/2026):
+// SOLO en el primer mensaje (confirmación) — no repetirlo en el resto del ciclo.
+export const AVISO_CANAL = '🔒 Recuerda: nuestra comunicación contigo es SIEMPRE por este chat, el de tu reserva. Nunca te escribiremos por WhatsApp ni desde otro número — si te llega algo así, no es nuestro.'
+
 export type TipoMensaje =
   | 'confirmacion'
   | 'acceso'
@@ -91,6 +97,8 @@ function confirmacion(d: DatosPlantilla): string {
     '',
     `${HORARIO_ASISTENCIA}.`,
     '',
+    AVISO_CANAL,
+    '',
     '¿A qué hora tenéis pensado llegar, aproximadamente? ¿Necesitáis algo especial para la estancia (cuna, trona…)? Contádnoslo por aquí y lo organizamos.',
   ].join('\n')
 }
@@ -129,16 +137,29 @@ function visperaLlegada(d: DatosPlantilla): string {
   ].join('\n')
 }
 
+// La bienvenida NO lleva teléfono nuestro ni del portal (decisión de Alberto, 12/09/2026): el chat de
+// la reserva ES el canal de urgencias. Fuera de horario el modo noche del agente (`agente-huesped/
+// noche.ts`) acusa recibo, despierta a Alberto por Telegram y solo si nadie contesta deriva al portal.
+// Lo que sí hace falta es DECIRLO: con «respondemos de 9:00 a 21:00» a secas, un huésped con un
+// problema a las 2:00 cree que nadie lee el chat y llama al portal directamente — y esa llamada abre
+// un caso contra el anfitrión sin haber dado al modo noche la oportunidad de actuar.
+// El wifi se repite aquí a propósito: ya iba en la víspera, dentro del bloque de acceso, pero es la
+// pregunta más frecuente del día de llegada y no es un código de acceso (solo sirve dentro del piso).
 function bienvenida(d: DatosPlantilla): string {
+  const wifi = d.codigos.wifiSsid
+    ? `WIFI: red «${d.codigos.wifiSsid}»${d.codigos.wifiPass ? ` · contraseña: ${d.codigos.wifiPass}` : ''}`
+    : null
   return [
     `¡Bienvenido/a, ${nombre(d)}! Esperamos que la llegada a ${d.property} vaya genial.`,
     '',
+    wifi,
+    wifi ? '' : null,
     'Solo un par de cosas para la buena convivencia con los vecinos: no hacer ruido de 22:00 a 9:00, no se pueden hacer fiestas, no se puede fumar dentro, y al apartamento solo pueden acceder las personas de la reserva.',
     '',
-    `${HORARIO_ASISTENCIA} — escríbenos por este chat para cualquier cosa. Emergencias: 112 · Policía: 091.`,
+    `${HORARIO_ASISTENCIA}, pero si tienes una urgencia de acceso o una avería a cualquier hora, escríbenos igualmente por este chat: nos llega un aviso. Emergencias: 112 · Policía: 091.`,
     '',
     '¡Disfruta de Sevilla! Y si quieres recomendaciones de la zona (dónde comer, qué ver), pídenoslas por aquí.',
-  ].join('\n')
+  ].filter(l => l !== null).join('\n')
 }
 
 function estancia(d: DatosPlantilla): string {

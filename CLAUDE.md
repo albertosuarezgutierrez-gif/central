@@ -249,62 +249,81 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
-## 🗺️ Graphify — mapa arquitectónico, regla de uso obligatoria
-Este proyecto usa el MCP de **Graphify** como mapa arquitectónico principal del monorepo.
-Workspace `grupo-asegura`; `repository_id` principal **`albertosuarezgutierrez-gif/central`**.
-Es la fuente de verdad del grafo para este repo — el workspace también tiene indexados como
-repos SUELTOS `asegura`, `sivra`, `ialimp`, `house-sevillana-landing` (restos de cuando esas
-apps vivían fuera, o el CRM externo de Manuel): **pasa siempre `repository_id:
+## 🗺️ Grafo de código PROPIO — Graphify queda solo para memoria (12/09/2026, ampliado el mismo día)
+**La cuota gratis de Graphify se agota, y a los tres días de hacerlo obligatorio nadie había medido
+cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el uso de cada herramienta.
+- **Callers, callees, impacto, vecinos, tests que cubren un archivo, buscar símbolo, camino entre
+  archivos, referencias, imports/exports, ficha de nodo Y búsqueda semántica → grafo propio**
+  (`grafo_nodos`/`grafo_aristas`/`grafo_embeddings` en la Supabase compartida; funciones
+  `grafo_callers/callees/impacto/vecinos/tests_de/find/camino/referencias/imports_exports/nodo/
+  buscar/rank_files`, por `mcp__Supabase__execute_sql`). Recetas en la skill **`code-map`**. La parte
+  estructural la genera `scripts/grafo-codigo.mjs` (regex, Node puro, 1,8 s) en cada push a `main`
+  (`scripts/grafo-codigo-inyectar.mjs` → `/api/internal/grafo-codigo`); la semántica corre
+  `grafo_embed_lote` sobre OpenRouter (`/api/internal/grafo-codigo/embeddings`, mismo workflow).
+  ⚠️ Un push a `main` con token de App NO dispara el workflow (ver sección CI): si el `sha` de
+  `grafo_nodos` va por detrás de `origin/main`, dispara `auditoria.yml` a mano (`workflow_dispatch`).
+- **Medición de paridad (12/09/2026, `docs/USO-HERRAMIENTAS.md`):** las 12 categorías de herramienta
+  de Graphify probadas contra un símbolo REAL y ambiguo (`isCronAuthorized`, duplicado en 3 apps) —
+  en 10 de 12 categorías el grafo propio igualó o superó a Graphify, y en 2 lo superó con
+  datos objetivamente mejores: **callers/referencias** (Graphify resuelve nombres duplicados entre
+  apps a UNA declaración arbitraria y calla el resto — 1 caller contra los 80 reales; el grafo propio
+  agrega las 6 declaraciones homónimas) y **búsqueda semántica** (`query_graph` confundió «autorización
+  de cron» con «autorización de cliente de seguros» por la palabra compartida; `grafo_buscar` acertó
+  el archivo correcto). Detalle completo, tabla por tabla, en `docs/USO-HERRAMIENTAS.md`.
+- **Graphify queda EXCLUSIVAMENTE para `memories_about`/`recall`/`remember`** (memoria durable) mientras
+  haya cuota — es la única pieza sin sustituto propio: `docs/CONTEXTO-SESIONES.md` guarda memoria pero
+  no hace recuperación semántica sobre las notas. **Ya NO se usan** `graphify_find/node/callers/callees/
+  file_neighbors/tests_for/impact/trace/shortest_path/references/imports_exports/rank_files/
+  render_subgraph` ni `query_graph` para código — usa siempre su equivalente `grafo_*`. Cancelar
+  Graphify hoy perdería `remember`/`recall` sin sustituto: no es solo una cuestión de cuota de grafo.
+- **📏 Todo uso de herramienta se MIDE solo** (hook `PostToolUse` → `scripts/uso-herramientas.mjs`, un
+  JSON por sesión en `docs/uso-herramientas/AAAA-MM/`; en vivo se escribe en `.git/uso-herramientas/` y
+  el `Stop` hook lo copia y commitea solo con la memoria o cada 30 min — persistirlo en cada `Stop` era
+  un push por turno = CI + 12 deployments de Vercel por turno, medido el 12/09/2026). Agregado con
+  `node scripts/ahorro-herramientas.mjs --md docs/USO-HERRAMIENTAS.md`. Mide llamadas, tokens pagados
+  y **cota superior** del ahorro (archivos citados); **no mide utilidad** — eso sigue en
+  `docs/AGENTE-MECANICO-BITACORA.md`. Antes de declarar obligatoria (o retirar) una herramienta, mira
+  esa tabla: es la regla «mide el ahorro, no lo supongas» con denominador de verdad.
+
+El MCP de **Graphify** sigue instalado solo por `memories_about`/`recall`/`remember`. Workspace
+`grupo-asegura`; `repository_id` principal **`albertosuarezgutierrez-gif/central`** — el workspace
+también tiene indexados como repos SUELTOS `asegura`, `sivra`, `ialimp`, `house-sevillana-landing`
+(restos de cuando esas apps vivían fuera, o el CRM externo de Manuel): **pasa siempre `repository_id:
 "albertosuarezgutierrez-gif/central"` explícito** en toda consulta — el nombre corto sin
 `repository_id` puede resolver al repo suelto viejo en vez de a `apps/sivra`/`apps/ialimp`
 dentro de central.
 
-**Principio:** Graphify responde «¿dónde está algo y qué está relacionado con ello?». El
-código fuente responde «¿qué hace realmente?». **Nunca sustituyas la lectura del código por
-una suposición del grafo** — el grafo localiza y traza relaciones, no sustituye leer la
-implementación antes de tocarla.
+**Principio (vale igual para el grafo propio):** el grafo responde «¿dónde está algo y qué está
+relacionado con ello?». El código fuente responde «¿qué hace realmente?». **Nunca sustituyas la
+lectura del código por una suposición del grafo** — el grafo localiza y traza relaciones, no
+sustituye leer la implementación antes de tocarla. `grafo_nodo`/`grafo_buscar` dan línea y tipo, no
+el cuerpo, precisamente para que este paso no se salte.
 
 Flujo antes de modificar código compartido (función, componente, servicio, API, modelo):
-`GRAPHIFY (localizar) → ANALIZAR IMPACTO → LEER CÓDIGO → PLANIFICAR → MODIFICAR → VERIFICAR`.
+`GRAFO PROPIO (localizar) → ANALIZAR IMPACTO → LEER CÓDIGO → PLANIFICAR → MODIFICAR → VERIFICAR`.
 
-**Herramientas y cuándo usar cada una** (nombres reales del MCP — antes de asumir que existe
-una herramienta que no está en esta lista, compruébalo con `ToolSearch`, no la inventes):
-- **Localizar / cambios normales:** `graphify_find` (símbolo por substring), `graphify_node`
-  (cuerpo + vecinos directos), `graphify_callers`/`graphify_callees` (quién llama a qué,
-  dirigido y exacto), `graphify_file_neighbors` (qué otros archivos toca modificar uno dado).
-- **Preguntas en lenguaje natural:** `query_graph` (contexto semántico con cuerpo de código
-  real — la de uso por defecto para «¿dónde está X?») y `graphify_rank_files` (qué archivos
-  son relevantes para una tarea, antes de empezar a leer o editar).
-- **Impacto y cambios complejos** — usar siempre antes de un refactor, un cambio en un módulo
-  compartido, un cambio de contrato de API/modelo de datos, o cualquier cosa que pueda tocar
-  producción: `graphify_impact` / `impact_and_risk` (blast radius amplio), `graphify_trace`
-  (camino de llamadas entrada→servicio→lógica→salida), `shortest_path` /
-  `graphify_render_subgraph` (relación entre dos nodos concretos).
-- **Piezas centrales / arquitectura:** no existe una herramienta `god_nodes` en este MCP — para
-  identificar componentes centrales usa `graphify_impact` con `max_seeds` alto sobre el
-  candidato, o `graph_stats` (nº de comunidades) como primera foto de tamaño/complejidad.
-- **Memoria durable** (`memories_about`, `recall`, `remember`): decisiones técnicas
-  permanentes, convenciones del proyecto, gotchas y restricciones importantes — NO detalles
-  temporales de una tarea concreta ni información obvia que ya está en el código. Complementa
-  a `docs/CONTEXTO-SESIONES.md`, no lo sustituye.
+**Memoria durable** (`memories_about`, `recall`, `remember`, únicos usos que quedan de Graphify):
+decisiones técnicas permanentes, convenciones del proyecto, gotchas y restricciones importantes —
+NO detalles temporales de una tarea concreta ni información obvia que ya está en el código.
+Complementa a `docs/CONTEXTO-SESIONES.md`, no lo sustituye.
 
 **Navegación:** no hagas exploraciones masivas con `Grep`/`Glob`/lectura indiscriminada.
-Pregunta primero al grafo (dónde vive la funcionalidad, quién la consume, qué depende de
+Pregunta primero al grafo propio (dónde vive la funcionalidad, quién la consume, qué depende de
 ella, qué archivos están relacionados, cuál es el camino de ejecución) y lee después
 SOLO el código necesario — ni carpetas completas ni archivos enteros cuando basta una función.
 
-**Antes de crear algo nuevo**, busca en Graphify componentes similares, patrones existentes,
-servicios reutilizables o integraciones ya montadas: no dupliques un patrón que ya existe en
-el monorepo.
+**Antes de crear algo nuevo**, busca en el grafo propio (`grafo_find`/`grafo_buscar`) componentes
+similares, patrones existentes, servicios reutilizables o integraciones ya montadas: no dupliques
+un patrón que ya existe en el monorepo.
 
-**Frescura:** antes de confiar en el grafo para una decisión importante, comprueba que el
-`commitSha` que devuelve la respuesta (viene en el propio payload de cada tool) coincide con
-el HEAD real de la rama. Si no coincide, el grafo va con retraso: avísalo, no asumas que las
+**Frescura:** antes de confiar en el grafo propio para una decisión importante, compara su `sha`
+contra el HEAD real de la rama (`SELECT sha, max(updated_at) FROM grafo_nodos GROUP BY 1` vs
+`git rev-parse origin/main`). Si no coincide, el grafo va con retraso: avísalo, no asumas que las
 relaciones que devuelve siguen vigentes.
 
-**Después de cambios que afecten arquitectura**, vuelve a consultar Graphify para validar el
-impacto real, además de la verificación normal (tests, typecheck, lint, build) que ya exige
-este documento.
+**Después de cambios que afecten arquitectura**, vuelve a consultar el grafo propio (`grafo_impacto`/
+`grafo_vecinos`) para validar el impacto real, además de la verificación normal (tests, typecheck,
+lint, build) que ya exige este documento.
 
 ## 🧹 Quién mira qué pantalla — regla global permanente
 **Antes de dar por avisada a una persona, comprueba en qué pantalla trabaja.** Un aviso que sale por
@@ -381,6 +400,14 @@ aparece algo · leer un directorio entero para responder una pregunta acotada.
 que exige criterio o negociar con Alberto, y los cambios de 1-2 archivos que ya se tienen delante
 (delegarlos cuesta más de lo que ahorra).
 
+**Umbral objetivo, para no decidir a ojo cada vez (11/09/2026):** delega si se cumple CUALQUIERA de —
+mismo patrón en ≥3 archivos · boilerplate/renombrado sin decisión de negocio · generación >~80 líneas
+sin lógica que exija criterio. No delegues nunca si toca auth/pagos/RLS/multi-tenant/migraciones (eso
+es `agente-architect`, no mecánico) o si son 1-2 archivos que la sesión ya tiene abiertos. Sin agente
+director: la sesión principal aplica esta tabla directamente en el mismo turno — meter un agente
+intermedio solo para decidir a quién delegar cuesta más (otra llamada, otro contexto) que la propia
+decisión, que es una tabla fija.
+
 **Cómo repartir sin que se pisen:** reparto **por archivos**, y en el prompt de cada agente va la lista
 EXPLÍCITA de lo que puede tocar y de lo que NO (incluidos los archivos que edita la sesión principal en
 paralelo). Dos agentes sobre el mismo archivo es un conflicto silencioso: el segundo pisa al primero y
@@ -402,12 +429,13 @@ revisión de un cambio de alto riesgo), usa `.claude/agents/agente-architect.md`
 no por defecto. Programación normal (endpoints, CRUD, Server Actions, bugs normales) la sigue haciendo
 la sesión principal, sin delegar.
 
-**Mide el ahorro, no lo supongas (09/09/2026):** si el informe de `agente-mecanico` viene incompleto,
-con verificación que no cuadra, o la sesión principal tiene que corregir/rehacer una parte no trivial
-de lo que entregó, anótalo con el marcador `🔧 agente-mecanico:` en la entrada de esa sesión en
-`docs/CONTEXTO-SESIONES.md` (una línea: qué falló). Sin ese rastro no hay forma de saber si el modelo
-económico ahorra tokens de verdad o si el re-trabajo se come el ahorro — y la respuesta hoy es «no se
-sabe» (el agente se creó en el PR #2658, aún sin usos).
+**Mide el ahorro, no lo supongas (09/09/2026, corregido 11/09/2026):** anotar solo los fallos (como
+decía esta regla hasta ahora) sesga la medición — sin el total de usos, un fallo cada diez pasadas y
+un fallo cada dos son indistinguibles en la bitácora. Corrección: **cada invocación de
+`agente-mecanico` o `delegar-codigo`, salga bien o mal, se anota en `docs/AGENTE-MECANICO-BITACORA.md`**
+(una línea: tarea, cuál de los dos, resultado — `ok` o `fallo: qué falló`). Solo con numerador Y
+denominador se puede saber si el modelo económico ahorra tokens de verdad o si el re-trabajo se come
+el ahorro.
 
 **Revisión obligatoria antes de pedir merge (09/09/2026):** el gate que BLOQUEA el merge ya existe
 (CI + `Claude Approvals`, ver sección de CI) — no se monta un agente nuevo para eso. Lo que faltaba

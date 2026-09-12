@@ -59,7 +59,7 @@ test('las pestañas son seis, en orden, y «Contactos» es otra ruta', () => {
   assert.equal(p.length, 6)
   assert.deepEqual(
     p.map((x) => x.etiqueta),
-    ['Mis seguros', 'Mi QR', 'Recibos', 'Siniestros', 'Contactos', 'Mis datos'],
+    ['Seguros', 'Mi QR', 'Recibos', 'Siniestros', 'Contactos', 'Datos'],
   )
   assert.equal(p[1].vista, 'hoja')
   assert.equal(p[1].href, '/boveda?vista=hoja')

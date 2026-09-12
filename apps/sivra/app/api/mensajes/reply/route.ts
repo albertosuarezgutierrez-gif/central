@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { aiComplete } from "@/lib/ai-client"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { smoobuFetch } from "@/lib/smoobu"
 
 const SMOOBU_PROP: Record<string, string> = {
   '352007': 'prop_house_sevillana',
@@ -77,10 +77,7 @@ function detectLang(text: string): "es" | "en" | "fr" | "de" | "it" {
 async function getSmoobuGuestUrl(reservationId: string | null): Promise<string | null> {
   if (!reservationId) return null
   try {
-    const SMOOBU_KEY = await getSmoobuKey()
-    const res = await fetch(`https://login.smoobu.com/api/reservations/${reservationId}`, {
-      headers: { "Api-Key": SMOOBU_KEY, "Cache-Control": "no-cache" }
-    })
+    const res = await smoobuFetch(`/api/reservations/${reservationId}`)
     if (!res.ok) return null
     const d = await res.json()
     return d["guest-app-url"] || null

@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
+import { clavePublicable } from './claves-supabase'
 
 // Fallback vacío para build time (Next.js evalúa el módulo sin env vars)
 // En runtime (Vercel) las vars siempre están disponibles
 const supabaseUrl     = process.env.NEXT_PUBLIC_SUPABASE_URL     ?? ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+const supabaseAnonKey = clavePublicable()
 
 // Schema de BD. Por defecto 'public' (BD propia histórica). En la BD unificada de la
 // casa de marcas, ia-rest vive en el schema 'iarest' → fijar NEXT_PUBLIC_SUPABASE_SCHEMA=iarest

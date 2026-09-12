@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-09T16:53:03Z",
+  "generadoEn": "2026-09-12T16:19:41Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -380,7 +380,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 36
+        "evidencias": 37
       },
       "rrhh": {
         "estado": "usado",
@@ -406,7 +406,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "asegura-portal": {
         "estado": "usado",
@@ -920,7 +920,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 11
       },
       "rrhh": {
         "estado": "usado",
@@ -2080,11 +2080,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 45
+        "evidencias": 51
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 63
+        "evidencias": 66
       },
       "asegura-web": {
         "estado": "usado",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 45
+        "evidencias": 50
       },
       "rrhh": {
         "estado": "no",
@@ -2134,7 +2134,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 17
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2188,11 +2188,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 15
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 55
       },
       "asegura-web": {
         "estado": "usado",
@@ -3851,12 +3851,14 @@
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/cron/avisos-vencimiento",
+      "/api/operador/actividad",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
       "/api/operador/cartera",
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
+      "/api/operador/cliente/dni",
       "/api/operador/cliente/historial",
       "/api/operador/cliente/portal",
       "/api/operador/cliente/portal/vista",
@@ -3867,9 +3869,11 @@
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/hogar-nuevo",
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/moto-nuevo",
+      "/api/operador/codeoscopic/oferta",
       "/api/operador/codeoscopic/precalificar",
       "/api/operador/codeoscopic/precalificar-auto-nuevo",
       "/api/operador/codeoscopic/precalificar-decesos-nuevo",
@@ -3877,11 +3881,14 @@
       "/api/operador/codeoscopic/precalificar-moto-nuevo",
       "/api/operador/codeoscopic/precalificar-salud-nuevo",
       "/api/operador/codeoscopic/precalificar-vida-nuevo",
+      "/api/operador/codeoscopic/proyecto",
       "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
+      "/api/operador/codeoscopic/tarificacion",
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
+      "/api/operador/declaradas-vencer",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
@@ -3928,6 +3935,8 @@
       "/api/siniestros/[id]/adjuntos",
       "/api/siniestros/[id]/adjuntos/[documentoId]",
       "/api/sugerencia",
+      "/api/sugerencias",
+      "/api/sugerencias/pedir",
       "/api/supresion"
     ],
     "asegura-web": [
@@ -4732,6 +4741,7 @@
       "/api/contable/chat",
       "/api/contable/feedback",
       "/api/correduria",
+      "/api/correduria/actividad",
       "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
       "/api/correduria/blog",
@@ -4740,14 +4750,18 @@
       "/api/correduria/cartera-lista",
       "/api/correduria/catastro",
       "/api/correduria/cliente",
+      "/api/correduria/cliente/[id]/dni-codigo",
+      "/api/correduria/cliente/[id]/dni-revelar",
       "/api/correduria/cliente/contactos",
       "/api/correduria/cliente/portal",
       "/api/correduria/cliente/portal/vista",
       "/api/correduria/cliente/relaciones",
       "/api/correduria/cliente/relaciones/aviso",
       "/api/correduria/clientes",
+      "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
+      "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
       "/api/correduria/documentos",
       "/api/correduria/documentos/[id]",
@@ -4756,6 +4770,7 @@
       "/api/correduria/intervinientes",
       "/api/correduria/leads",
       "/api/correduria/partes",
+      "/api/correduria/poliza",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
       "/api/correduria/supresiones",
@@ -4794,6 +4809,7 @@
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/cron/seo-correduria",
+      "/api/cron/seo-correduria-agente",
       "/api/cron/ses-latido",
       "/api/cron/sivra-extras-impago",
       "/api/cron/subastas-avisos",
@@ -4845,6 +4861,8 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
+      "/api/internal/grafo-codigo",
+      "/api/internal/grafo-codigo/embeddings",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
       "/api/internal/reclamar-reparacion",
@@ -5421,6 +5439,7 @@
       "contable_log",
       "contable_memoria",
       "correduria_avisos_renovacion",
+      "correduria_dni_otp",
       "correduria_reglas",
       "correo_cursor",
       "correo_reglas",
@@ -5436,6 +5455,9 @@
       "empresas_ficha",
       "facturas_proveedor",
       "fiscal_ayudas",
+      "grafo_aristas",
+      "grafo_embeddings",
+      "grafo_nodos",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
@@ -6217,7 +6239,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1321,
+    "apis": 1339,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

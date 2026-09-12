@@ -1,5 +1,6 @@
 // ia.rest · VERIFACTU-SIGN v9 · con error monitoring
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 async function sha256(data: string): Promise<string> {
@@ -33,7 +34,7 @@ async function reportarError(supabase: any, params: {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: 'iarest' } });
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, claveSecreta(), { db: { schema: 'iarest' } });
   let restaurante_id: string | undefined;
 
   try {

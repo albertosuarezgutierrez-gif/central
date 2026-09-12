@@ -2,21 +2,19 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { gmailTransporter } from "@central/core-email"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { smoobuFetch } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
 
 // Cron: comprobar si algún checkout + checkin en mismo día tiene ventana < 3h
 export async function GET() {
   try {
-    const SMOOBU_KEY = await getSmoobuKey()
     const hoy = new Date().toISOString().split("T")[0]
     const d7  = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0]
 
     // Leer reservas Smoobu próximos 7 días
-    const res = await fetch(
-      `https://login.smoobu.com/api/reservations?arrival_from=${hoy}&arrival_to=${d7}&pageSize=50`,
-      { headers: { "Api-Key": SMOOBU_KEY } }
+    const res = await smoobuFetch(
+      `/api/reservations?arrival_from=${hoy}&arrival_to=${d7}&pageSize=50`
     )
     const { bookings = [] } = await res.json()
 

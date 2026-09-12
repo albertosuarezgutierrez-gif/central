@@ -296,3 +296,24 @@ test('insistir NO revienta ni contesta distinto: lo resuelve el índice único d
     'El «ya se lo pediste» lo decide el índice único, no un SELECT previo.',
   )
 })
+
+test('peticionDesdeRelacion no confía a ciegas en relacionadoClienteId: lo revalida contra cliente_relaciones (12/09/2026)', () => {
+  // Sin esto, cualquier identidad con sesión podría pedir acceso a CUALQUIER
+  // clienteId (uno visto en otra pantalla, uno adivinado) sin que exista
+  // ninguna relación real que lo justifique — la pantalla lo calcula con
+  // `relacionesSugeribles()`, pero eso no hace confiable lo que llega al servidor.
+  assert.match(
+    LIB_CODIGO,
+    /clienteRelacion\.findMany/,
+    'peticionDesdeRelacion tiene que comprobar la relación real en la BD, no confiar en el parámetro',
+  )
+  assert.match(
+    LIB_CODIGO,
+    /permiteAutorizar\(r\.tipoRelacion\)/,
+    'y el tipo de relación tiene que ser uno que de verdad habilite pedir acceso',
+  )
+  // Las dos direcciones, como en `esRepresentanteDe()`: el volcado no siempre
+  // respeta "fila A→B = B es <tipo> de A".
+  assert.match(LIB_CODIGO, /clienteAId:\s*\{\s*in:\s*\[\.\.\.misFichas\]\s*\},\s*clienteBId:\s*relacionadoClienteId/, 'falta la dirección A→destino')
+  assert.match(LIB_CODIGO, /clienteAId:\s*relacionadoClienteId,\s*clienteBId:\s*\{\s*in:\s*\[\.\.\.misFichas\]\s*\}/, 'falta la dirección destino→A')
+})

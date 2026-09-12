@@ -9,6 +9,7 @@ import CuadreComisiones from './CuadreComisiones'
 import BuscadorCartera from './BuscadorCartera'
 import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
+import Actividad from './Actividad'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
 import PartesPortal from './PartesPortal'
@@ -18,6 +19,7 @@ import Redes from './Redes'
 import Blog from './Blog'
 import LeadsPortal from './LeadsPortal'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
+import DeclaradasVencer from './DeclaradasVencer'
 import ListaCartera from './ListaCartera'
 import Secciones, { type ContadoresSeccion } from './Secciones'
 import { MOTIVOS, type MotivoError } from './estado-puerto'
@@ -143,6 +145,7 @@ export default function CorreduriaClient() {
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
+  const [nDeclaradas, setNDeclaradas] = useState<number | null | undefined>(undefined)
 
   // La sección inicial viaja en la URL (`?s=`), y los cambios la reescriben con
   // `history.replaceState`: un enlace sigue llevando donde debe, pero cambiar
@@ -200,9 +203,9 @@ export default function CorreduriaClient() {
 
   const contadores: ContadoresSeccion = {
     hoy: {
-      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads]),
+      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nDeclaradas]),
       tono: 'malo',
-      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso y pólizas de otras compañías cuya ventana se cierra',
+      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra y declaradas de otra compañía a punto de renovar',
     },
     clientes: {
       // Aquí el número NO es trabajo pendiente, es cuántos clientes cumplen el
@@ -291,6 +294,11 @@ export default function CorreduriaClient() {
             teléfono en la mano. */}
         <Retencion onContador={setNRetencion} />
 
+        {/* Pólizas que el cliente declaró de OTRA compañía y vencen pronto:
+            la venta cruzada, con el teléfono en la mano en vez de un precio
+            automático que la muestra no soporta (idea F del banco de ideas). */}
+        <DeclaradasVencer onContador={setNDeclaradas} />
+
         <Bloque
           titulo="Renovaciones en plazo de preaviso"
           Icono={CalendarClock}
@@ -305,6 +313,21 @@ export default function CorreduriaClient() {
             en otra pestaña porque caduca igual — pasado el mes de preaviso el
             cliente ya no puede oponerse a la prórroga. */}
         <LeadsPortal onContador={setNLeads} />
+      </div>
+
+      {/* ══ ACTIVIDAD ════════════════════════════════════════════════════════
+          Qué hacen los clientes, incluida su entrada en la intranet. Es la única
+          sección que mira al PORTAL en conjunto: el resto de la pantalla mira la
+          cartera, y lo que hace un cliente por su cuenta solo se veía entrando
+          en su ficha de una en una.
+
+          🚨 No reporta contador a la pestaña, a propósito: esto NO es una cola
+          de trabajo. Lo que sí lo es —partes, supresiones, leads— ya tiene su
+          badge en «Hoy», y contarlo dos veces haría que atender un parte no
+          bajara el número de aquí, que es como se deja de creer un badge. Lo
+          nuevo desde la última visita se marca dentro, con un punto. */}
+      <div role="tabpanel" aria-label="Actividad" className="corr-panel" style={panel('actividad')}>
+        <Actividad />
       </div>
 
       {/* ══ CLIENTES ═════════════════════════════════════════════════════════

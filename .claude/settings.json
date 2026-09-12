@@ -20,6 +20,28 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "SENTINEL_SHADOW=on python3 \"$CLAUDE_PROJECT_DIR/.claude/mcp-sentinel/hooks/sentinel_alerta.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/uso-herramientas.mjs\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "Stop": [

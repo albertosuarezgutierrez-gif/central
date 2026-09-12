@@ -50,6 +50,15 @@ export {
 } from './objeto.ts'
 
 export {
+  MODALIDADES_RC,
+  etiquetaModalidadRc,
+  tituloModalidadRc,
+  validarModalidadRc,
+  type ModalidadRc,
+  type ValidacionRc,
+} from './rc-modalidad.ts'
+
+export {
   saludIngesta,
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
@@ -402,6 +411,28 @@ export {
   type FiltroCartera,
   type ParseFiltro,
 } from './filtro-cartera.ts'
+
+export {
+  ACTIVIDADES,
+  PASOS_EMBUDO,
+  VENTANAS_ACTIVIDAD,
+  DIAS_ACTIVIDAD_DEFECTO,
+  POR_PAGINA_ACTIVIDAD,
+  POR_PAGINA_ACTIVIDAD_MAX,
+  definicionActividad,
+  etiquetaActividad,
+  riesgoActividad,
+  parseFiltroActividad,
+  mayorCaidaEmbudo,
+  nuevosDesde,
+  type OrigenActividad,
+  type TipoActividad,
+  type EventoActividad,
+  type QuienActividad,
+  type FiltroActividad,
+  type EmbudoPortal,
+  type PasoEmbudo,
+} from './actividad.ts'
 
 export {
   planBackfillDni,

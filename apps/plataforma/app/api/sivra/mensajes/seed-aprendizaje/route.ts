@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { smoobuFetch } from '@/lib/smoobu'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { detectCategory } from '@/lib/sivra/agente-huesped/reglas'
@@ -20,12 +20,10 @@ function strip(html: string): string {
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const key = await getSmoobuKey()
   const pageSize = Math.min(parseInt(req.nextUrl.searchParams.get('pageSize') || '50'), 100)
 
-  const list = await fetch(`https://login.smoobu.com/api/reservations?pageSize=${pageSize}`, {
-    headers: { 'Api-Key': key }, cache: 'no-store',
-  }).then(r => r.json()).catch(() => null)
+  const list = await smoobuFetch(`/api/reservations?pageSize=${pageSize}`, { cache: 'no-store' })
+    .then(r => r.json()).catch(() => null)
   const bookings: any[] = list?.bookings || list || []
 
   let sembrados = 0, revisados = 0
@@ -35,9 +33,8 @@ export async function GET(req: NextRequest) {
     const apartmentName: string = b?.apartment?.name || ''
     const propertyId = toPropertyId(b?.apartment?.id, apartmentName)
 
-    const msgs: any[] = await fetch(`https://login.smoobu.com/api/reservations/${bookingId}/messages`, {
-      headers: { 'Api-Key': key }, cache: 'no-store',
-    }).then(r => r.json()).then(d => d.messages || d || []).catch(() => [])
+    const msgs: any[] = await smoobuFetch(`/api/reservations/${bookingId}/messages`, { cache: 'no-store' })
+      .then(r => r.json()).then(d => d.messages || d || []).catch(() => [])
 
     // Emparejar: respuesta del anfitrión precedida de un mensaje del huésped.
     for (let i = 1; i < msgs.length; i++) {

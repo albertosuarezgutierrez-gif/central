@@ -34,6 +34,7 @@ import {
   type Reparo,
 } from './peticion-auto.ts'
 import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-moto.ts'
+import { partirDireccion } from './direccion.ts'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
 export type Supuesto = {
@@ -68,6 +69,14 @@ export type ClienteCartera = {
   codigoPostal: string | null
   /** Fecha del carnet B, de `cliente_carnets_conducir`. */
   fechaCarnet: string | null
+  /**
+   * Dirección en texto libre de la ficha, ya descifrada. `null` = no hay o no
+   * se ha podido descifrar. Se usa SOLO para trocearla y rellenar `nombreVia`
+   * por defecto (11º 400 real, ReRate): si ya la tenemos, no se le vuelve a
+   * pedir al corredor — es la misma jugada que ya hacía hogar con la calle
+   * del riesgo, aplicada aquí a la calle del tomador.
+   */
+  direccion?: string | null
 }
 
 /**
@@ -275,6 +284,16 @@ export function precalificarAuto(
         true,
       ) as number)
 
+  // ── El nombre de la vía: si la ficha ya trae una dirección, no se vuelve a
+  // pedir (11º 400 real, ReRate). Es la misma jugada que ya hace hogar con la
+  // calle del riesgo, troceando el mismo texto libre con `partirDireccion()`.
+  // Si no hay CP+municipio la dirección no viaja y el nombre de la vía no hace
+  // falta; si la ficha no trae calle reconocible, sigue siendo un reparo.
+  const nombreViaDeFicha =
+    limpio(cliente.codigoPostal) !== null && resueltos.municipioId !== null
+      ? partirDireccion(cliente.direccion ?? null).nombre
+      : null
+
   const datos: Partial<DatosAuto> = {
     // ── Persona ──
     dni: limpio(cliente.dni) ?? undefined,
@@ -288,6 +307,7 @@ export function precalificarAuto(
     fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
     cpResidencia: limpio(cliente.codigoPostal),
     municipioResidenciaId: resueltos.municipioId,
+    nombreVia: nombreViaDeFicha ?? undefined,
 
     // ── Vehículo ──
     codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
@@ -328,6 +348,13 @@ export function precalificarAuto(
       campo: 'garaje',
       valor: resueltos.garaje,
       porque: 'la ficha no dice dónde duerme el coche; se usa el tipo de garaje por defecto',
+    })
+  }
+  if (nombreViaDeFicha !== null) {
+    supuestos.push({
+      campo: 'nombreVia',
+      valor: nombreViaDeFicha,
+      porque: 'calle troceada automáticamente de la dirección de la ficha: comprueba que ha quedado bien',
     })
   }
 
@@ -376,6 +403,13 @@ export function precalificarAutoNueva(
     'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
   ) as string
 
+  // Ver `precalificarAuto()`: si la ficha ya trae una dirección, no se vuelve
+  // a pedir el nombre de la vía (11º 400 real, ReRate).
+  const nombreViaDeFicha =
+    limpio(cliente.codigoPostal) !== null && resueltos.municipioId !== null
+      ? partirDireccion(cliente.direccion ?? null).nombre
+      : null
+
   const datos: Partial<DatosAuto> = {
     // ── Persona ──
     dni: limpio(cliente.dni) ?? undefined,
@@ -389,6 +423,7 @@ export function precalificarAutoNueva(
     fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
     cpResidencia: limpio(cliente.codigoPostal),
     municipioResidenciaId: resueltos.municipioId,
+    nombreVia: nombreViaDeFicha ?? undefined,
 
     // ── Vehículo ──
     codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
@@ -426,6 +461,13 @@ export function precalificarAutoNueva(
       campo: 'garaje',
       valor: resueltos.garaje,
       porque: 'no se ha preguntado dónde duerme el coche; se usa el tipo de garaje por defecto',
+    })
+  }
+  if (nombreViaDeFicha !== null) {
+    supuestos.push({
+      campo: 'nombreVia',
+      valor: nombreViaDeFicha,
+      porque: 'calle troceada automáticamente de la dirección de la ficha: comprueba que ha quedado bien',
     })
   }
 

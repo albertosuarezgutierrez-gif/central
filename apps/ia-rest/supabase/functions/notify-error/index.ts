@@ -3,6 +3,7 @@
 // POST { tipo, modulo, mensaje, detalle, restaurante_id?, nivel }
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,7 +36,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'iarest' } })
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')!, claveSecreta(), { db: { schema: 'iarest' } })
 
     const body = await req.json()
     const {

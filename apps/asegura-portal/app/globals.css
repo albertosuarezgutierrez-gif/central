@@ -506,15 +506,21 @@ input, select, textarea, button { font: inherit; }
 
 /* 📱 Con cuatro botones a la derecha (instalar, avisos, tema, salir: 08/09/2026)
  * la barra se salía 28 px a 320 px (medido con Playwright). Hasta 380 px los
- * huecos bajan a 6 px, y por debajo de 340 px se esconde también el NOMBRE: se
- * queda el monograma, que lleva el `aria-label` de la marca. Un botón menos no
- * es opción: Salir tiene que verse, instalar es lo que pidió Alberto, y el tema
- * y los avisos ya son solo icono. */
+ * huecos bajan a 6 px. Un botón menos no es opción: Salir tiene que verse,
+ * instalar es lo que pidió Alberto, y el tema y los avisos ya son solo icono.
+ *
+ * Y en el MÓVIL (≤ 639 px) el NOMBRE no se pinta (12/09/2026; Alberto, con la
+ * captura: «Grupo ASegura quitarlo, ocupa mucho»). Se queda el monograma, que
+ * lleva el `aria-label` de la marca, así que quién es la correduría se sigue
+ * diciendo — a un lector de pantalla y, a dos líneas, en Fraunces, en el
+ * escritorio, donde el sitio sobra. Hasta hoy solo se escondía por debajo de
+ * 340 px: en un móvil normal el wordmark a dos líneas era lo más alto de la
+ * barra y la única pieza que no hacía nada. */
 @media (max-width: 380px) {
   .marca-barra,
   .marca-acciones { gap: 6px; }
 }
-@media (max-width: 340px) {
+@media (max-width: 639px) {
   .marca-nombre { display: none; }
 }
 .salir-form {
@@ -2893,6 +2899,25 @@ h1 em {
   background: var(--surface);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
 }
+/* 🚨 Va colgado del BOTÓN (`right: 0` de arriba), y el botón de sugerencia NO
+ * está en el borde derecho de la barra: van instalar, sugerencia, campana,
+ * tema y salir detrás. Con `right: 0` a secas, el panel — hasta 320 px de
+ * ancho — se abre hacia la izquierda desde un botón que en un móvil normal
+ * está a mitad de la barra, y con «Alberto: sugerencia no se abre bien» es
+ * justo lo que se veía: la mitad se sale por la izquierda o queda debajo de
+ * los otros botones. Es el MISMO fallo que ya se corrigió en `.campana-panel`
+ * (05/09/2026) y aquí no se había portado. Por debajo de 480 px se ancla a la
+ * pantalla, no al botón: es la única forma de que cuepa un panel de 320 px en
+ * una pantalla de 320. */
+@media (max-width: 480px) {
+  .sugerencia-panel {
+    position: fixed;
+    top: calc(var(--alto-barra) + 4px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
 .sugerencia-titulo { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
 .sugerencia-intro { font-size: 13px; line-height: 1.5; color: var(--muted); margin: 0 0 10px; }
 .sugerencia-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
@@ -2979,4 +3004,53 @@ h1 em {
   background: var(--warning-bg);
   border-bottom: 2px solid var(--warning-border);
   overflow-wrap: anywhere;
+}
+
+/* ── Móvil compacto (12/09/2026) ────────────────────────────────────────────
+ *
+ * Alberto, con la captura de su móvil: «ocupa mucho». Medido sobre esa
+ * captura (412 px): antes de la primera póliza iban la barra (60 px), el carril
+ * (45), el saludo + h1 (≈ 90), y la tarjeta gastaba 24 px de padding por lado
+ * más otros 24 de la tarjeta anidada («Añade una póliza» es una `.seccion`
+ * dentro de otra): a 412 px de ancho, 96 px eran solo márgenes.
+ *
+ * Va al FINAL del fichero a propósito: misma especificidad que las reglas base,
+ * así que gana la última — es la misma trampa que ya se documentó en `.seccion`
+ * (una media query escrita ANTES de la regla base no hacía nada).
+ *
+ * Lo que NO se toca: los 44 px táctiles de los botones y del carril, el
+ * saludo (lo pidió Alberto) y el h1, que es lo único que dice en qué pestaña
+ * estás cuando el carril se ha ido con el scroll. */
+@media (max-width: 639px) {
+  :root {
+    --alto-barra: 52px;
+  }
+  .marca-barra {
+    padding: 4px 12px;
+  }
+  .portal-contenido {
+    padding: 12px 16px 40px;
+  }
+  .saludo {
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+  .seccion {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  /* La tarjeta anidada (el alta dentro de la cartera): 12 px más y sin el
+   * margen de abajo, que ya lo pone la sección que la contiene. */
+  .seccion .seccion {
+    padding: 14px;
+    margin-bottom: 0;
+  }
+  .seccion h2 {
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
 }

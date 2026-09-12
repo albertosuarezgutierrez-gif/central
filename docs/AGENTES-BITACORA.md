@@ -15,6 +15,26 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-12 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
+  Vía B sana (`_buzon_pdf` copió hoy mismo, `dias_caido=0`); sin backlog en
+  `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, `agente_salud`
+  actualizado ok=true). Candidatos Gmail: recibo OpenRouter 25,64$ (21,19$+IVA) → clasificado
+  `seguros` (SaaS IA, mismo criterio que Anthropic/FAL.ai), archivado en `09-Septiembre-2026` y
+  registrado en `facturas_drive` (aún sin cargo bancario, normal a 0 días); 2 correos IONOS
+  "información sobre tu pedido" (dominios grupoasegura.es/.com) descartados — sin importe ni PDF,
+  solo confirmación de registro, etiquetados Procesada. Paso 4.0 (`v_facturas_sin_cargo`): 1
+  `sin_revisar` (Anthropic 180€, archivada 05/09) reconciliado contra el cargo único del 07/09 (FK
+  `facturas_drive.movimiento_id` + `factura_ref`); 9 `revisada_sin_cargo` sin cambios (motivo ya
+  fijado, no reabiertas). `_subir_aqui` y raíz `FACTURAS Apartamentos/2026` sin subidas nuevas.
+  Papelera `_DUPLICADOS_BORRAR`: 23 avisos pendientes; muestreados los 5 más recientes
+  (Petroprix ago., Leroy Merlin, SiQueBrilla julio, 2ª copia FACTURA JULIO SOCORRO, DIGI julio) —
+  los 5 ficheros a borrar siguen existiendo, ninguno zombi. dudas: —; fallos: —; PRs/commits: —.
+- **2026-09-11 · ialimp-client-health** · hizo: pasada semanal Sique Brilla completa. Preflight canal
+  200 OK. `pms_connections`: `sync_error` = "Smoobu API 401" en el intento más reciente
+  (`last_sync_at` 11/09 15:00 UTC), pero `cleaning_sessions` sigue moviéndose (51 en 24h / 54 en 7d,
+  última 09:50 UTC) — el fallo es del último intento, no un corte total todavía. Programaciones sin
+  cubrir: 0. Impagos activos: 0. Aviso ⚠️ enviado por Telegram (messageId 4405) recomendando revisar
+  el token/API key de Smoobu antes de que corte la sync entera. dudas: —; fallos: —; PRs/commits: —.
 - **2026-09-07 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
   Vía B sana (última copia `_buzon_pdf` 05/09, `dias_caido=2`); sin backlog en
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, no por el contador

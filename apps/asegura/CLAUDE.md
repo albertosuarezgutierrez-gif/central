@@ -695,12 +695,35 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `emparejarConCima` (D4), `conciliarConCima` (D3). `lib/emision.ts` → `registrarPolizaEmitida` acuña la
   fila + `codeoscopic_projects.poliza_id` + historial en UNA transacción y exige DNI en la ficha del tomador.
   Puerto **`POST /api/operador/poliza/emitida`, cerrado tras `CODEOSCOPIC_EMISION_ACTIVA=true`** (503
-  `emision_desactivada`). 🚫 **El envío al vendor (`POST /insurances/{id}/policy-applications`, multipart)
-  NO está construido a propósito**: el gate de la spec (mismo `attempt_id` dos veces contra un sandbox) no se
-  puede correr porque no hay sandbox; escribirlo a ciegas es estrenarlo en producción con dinero y con el
-  contrato de un cliente. Cuando exista entorno de pruebas: transporte multipart nuevo, candado
-  `submit_in_flight_at`, y ampliar la excepción del guardián de gasto (hoy tumba cualquier `metodo: 'POST'`
-  fuera de `cotizar.ts`).
+  `emision_desactivada`). ✅ **Y desde el 11/09/2026 SÍ está construido: `POST /insurances/{id}/policy-
+  applications`** (multipart, `lib/codeoscopic/emitir-envio.ts::enviarEmision`), sin sandbox ni fixture del
+  fabricante, sobre el caso real de Pilar Franco Ruz con OK explícito de Alberto — se estrenó en producción
+  a propósito, no en un entorno de pruebas que nunca llegó. Candado `submit_in_flight_at` de un solo intento
+  en vuelo por proyecto (`bloquearEnvio`/`cerrarEnvio`); el gate de «mismo `attempt_id` dos veces» de la
+  spec sigue sin correrse (sigue sin haber sandbox), así que el vendor podría no deduplicar un reintento tras
+  una respuesta perdida. Ver las dos entradas de más abajo (12/09/2026) para la cascada de reparación de 400s
+  del ReRate y del propio Submit.
+- **🤖 El 400 del ReRate se TRADUCE, no se enseña (12/09/2026).** Once 400 reales, cada uno un PR.
+  Ahora `lib/codeoscopic/interprete-400.ts` (puro) mapea las líneas del vendor («The <campo> of the
+  <papel> is mandatory») a nuestros campos y `POST /api/operador/codeoscopic/oferta` hace la cascada:
+  ficha (hoy la calle de `clientes.direccion`, con `partirDireccion`) → `completarPersonas()` (PATCH
+  gratis a `holder`+`risk.*` **con relectura y comprobación campo a campo**, porque el PATCH de
+  `effectiveDate` «acepta» y no aplica) → repite el ReRate UNA vez → lo que no está en ningún sitio sale
+  como **422 `faltan_vendor`** (`faltan` nuestros, `sugeridos` de la ficha, `noReconocidos` íntegros)
+  y vuelve con `correcciones` (lista blanca `CampoPersona`, nunca claves libres). 409
+  `patch_no_aplicado` = cotizar de cero. Un mensaje que el intérprete no reconoce **se enseña entero**:
+  es el siguiente mapeo que falta, no ruido. Nada personal se supone.
+- **📧 Y el SUBMIT tiene su PROPIA cascada — 13º 400 real (12/09/2026): «el vendor pide MÁS para EMITIR
+  que para cotizar».** Tras el fix del IBAN (12º), Alberto probó «Emitir» de verdad y `policy-applications`
+  rechazó pidiendo `email` (nuevo `CampoPersona`) y `roadName` en `holder`/`owner`/`primaryDriver` — campos
+  que el ReRate nunca había pedido. `POST /api/operador/codeoscopic/emitir` hace la MISMA cascada que
+  `/oferta` (mismo `interpretarError400`/`completarPersonas`, y `valoresPersonaDesdeFicha` — antes
+  duplicada solo para la calle, ahora compartida) y repite el Submit UNA vez; el candado ya libera
+  `submit_in_flight_at` en el fallo, así que el reintento no es un segundo envío a ciegas. 🌐 **Es agnóstica
+  de ramo por diseño** (opera sobre `holder`/`risk.*` genéricamente, sin ramificar por auto/hogar/RC), así
+  que ya vale para hogar sin tocarla — lo que SÍ ramificaba mal era el bookkeeping: `codeoscopic_projects.
+  producto` llevaba `'auto'` a fuego en el INSERT del ReRate y en el puente de emergencia del Submit
+  (`bloquearEnvio`); los dos usan ahora `polizas.tipo` real.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo
@@ -775,6 +798,32 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `string | null` (sin clave, o si lo guardado no tiene forma de correo) y **lanza** si la clave está
   mal formada. Normalizar antes a mano crea una segunda ruta de normalización, que es justo el contrato
   de sincronía que el paquete PII declara en su cabecera. Se le pasa el correo crudo.
+- **📡 `GET /api/operador/actividad` (12/09/2026) — el muro de TODA la cartera.** `?quien=todo|cliente
+  &dias=1|7|30|90&pagina=` → `{estado:'ok', eventos, total, embudo, descartados}`. Lo pinta
+  `plataforma` → `/correduria` → sección «Actividad». `lib/actividad-cartera.ts`.
+  **Seis fuentes que YA existían y nadie leía juntas**, en un solo `UNION ALL` (seis consultas y
+  ordenar en JS no sabría paginar): `portal_acceso` —creada el 07/09 con sus dos índices puestos
+  literalmente para esto y **sin un solo consumidor hasta hoy**—, `portal_codigo` sin canjear (= «pidió
+  entrar y no pudo»), `portal_parte_siniestro`, `portal_poliza_declarada`, `portal_supresion` e
+  `historial_interno`.
+  🚨 **De `historial_interno` no se afirma autor**: `actor_user_id` no la escribe nadie y el autor va
+  dentro del texto. Solo las dos líneas que compone el portal se clasifican como del cliente, por los
+  **prefijos constantes** de `@central/module-seguros-portal` — escritos a mano en el SQL, el día que
+  alguien retoque la frase el cambio de dirección de un cliente dejaría de constar como suyo sin que
+  fallara nada. Hay cepo.
+  🚨 **No devuelve NI UN dato de contacto** (ni email, ni teléfono, ni dirección): solo qué pasó, la
+  fecha y el `cliente_id` para enlazar. El muro se mira con gente delante.
+  🚨 **El embudo son cinco cuentas INDEPENDIENTES y cada una vale `number | null`** (`contar()` captura
+  por separado): que una reviente no puede tumbar las otras cuatro ni, peor, pintar un escalón a 0 que
+  se leería como «nadie ha entrado». Cuenta **cartera viva** (`sqlCarteraViva`), jamás `clientes.tipo`.
+  📊 Medido el 12/09/2026: **80 clientes · 52 con correo · 5 con acceso · 4 han entrado · 4 activos en
+  30 días**. El cuello son los **47 con correo y sin invitar**, no los 28 sin correo.
+  ⚠️ El código recién pedido no cuenta como intento fallido (`MINUTOS_GRACIA_CODIGO = 60`): si no, el
+  que alguien está tecleando ahora mismo saldría como avería.
+  Guardián `lib/actividad-cartera.test.ts`, que lee el **FUENTE** con `readFileSync` — lo que vigila
+  vive dentro de un `Prisma.sql`, donde ni `tsc` ni el build miran, y además importar el módulo
+  arrastraría el cliente generado y tumbaría el job `Tests (packages + guardián)`, que corre sin
+  `prisma generate`. El SQL se ejecutó contra la BD real antes de mergear.
 - **📍 `POST /api/portal/contacto` y `POST /api/portal/nota` (08/09/2026) — el puerto ESTRECHO del
   portal del cliente.** No cuelgan de `/api/operador/*` a propósito: van con **`ASEGURA_PORTAL_PUENTE_SECRET`,
   un secreto distinto**. El de operador abre la cartera entera y lo tiene plataforma, que es la

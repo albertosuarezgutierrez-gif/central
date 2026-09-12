@@ -97,8 +97,41 @@ test('RC: con más de tres coberturas se resume el resto sin ocultarlo', () => {
   assert.equal(o.detalle, '+2 coberturas')
 })
 
+test('RC: el desglose entero viaja en `coberturas`, sin truncar a 3 ni comas', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: ['Básica', 'Locativa', 'Patronal', 'Explotación', 'Productos'],
+  })
+  assert.deepEqual(o.coberturas, ['Básica', 'Locativa', 'Patronal', 'Explotación', 'Productos'])
+})
+
 test('RC sin coberturas cargadas es «no informado»', () => {
   assert.equal(objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: [] }).estado, 'no_informado')
+})
+
+test('RC sin coberturas pero con modalidad anotada a mano: se pinta esa modalidad, marcada como manual', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: [],
+    datos: { rcModalidad: 'locativa', rcModalidadTitulo: 'RC Locativa (inmueble alquilado)' },
+  })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'RC Locativa (inmueble alquilado)')
+  assert.match(o.nota ?? '', /a mano/i)
+})
+
+test('RC: las coberturas de CIMA mandan SIEMPRE sobre la modalidad manual', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: ['Básica'],
+    datos: { rcModalidad: 'locativa', rcModalidadTitulo: 'RC Locativa (inmueble alquilado)' },
+  })
+  assert.equal(o.titulo, 'Básica')
+})
+
+test('RC con `rcModalidad` pero sin título guardado (dato a medias): no se inventa nada', () => {
+  const o = objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: [], datos: { rcModalidad: 'locativa' } })
+  assert.equal(o.estado, 'no_informado')
 })
 
 test('comercio: manda la actividad', () => {

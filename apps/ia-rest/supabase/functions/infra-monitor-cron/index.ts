@@ -8,10 +8,10 @@
 //   3. Turno activo sin comandas en más de 2 horas
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { cabecerasServicio, claveSecreta } from "../_shared/clave-supabase.ts";
 
-const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'iarest' } })
+const sb = createClient(Deno.env.get('SUPABASE_URL')!, claveSecreta(), { db: { schema: 'iarest' } })
 const PUSH_URL = Deno.env.get('SUPABASE_URL')!.replace(/\/$/, '') + '/functions/v1/push-send'
-const SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const DEDUP: Record<string, number> = {
   bridge_offline:   30,
@@ -48,11 +48,16 @@ async function getOwnerIds(restauranteId: string): Promise<string[]> {
 
 async function enviarPush(camareroIds: string[], title: string, body: string) {
   if (!camareroIds.length) return
-  await fetch(PUSH_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SRK}` },
-    body: JSON.stringify({ camarero_ids: camareroIds, title, body, mensaje_voz: body }),
-  }).catch(e => console.error('[infra-push]', e))
+  try {
+    await fetch(PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...cabecerasServicio() },
+      body: JSON.stringify({ camarero_ids: camareroIds, title, body, mensaje_voz: body }),
+    })
+  } catch (e) {
+    // Ver nota en alerta-ritmo-cron: el `.catch` no cubría la construcción de las cabeceras.
+    console.error('[infra-push]', e)
+  }
 }
 
 async function registrarAlerta(restauranteId: string, tipo: string, mensaje: string) {

@@ -42,6 +42,36 @@ export type Precio = {
   avisos: string[]
   /** `true` si la oferta exige preemisión (re-rate) para poder avanzar. */
   requiereReRate: boolean
+  /**
+   * 🚨 `product.id` — DISTINTO de `id` de arriba. Medido en el fixture real:
+   * `id` es `"Q7601460"` (string, el mainQuote) y `product.id` es `10`
+   * (número, el producto del catálogo del vendor). El primer 400 real de
+   * ReRate (11/09/2026, proyecto 40681298) confundía los dos: mandaba el
+   * `id` del mainQuote como si fuera el del producto, y encima nunca ponía
+   * `mainQuote.id`. Se pasa TAL CUAL (`unknown`), sin coaccionar tipo.
+   */
+  productId: unknown
+  /**
+   * `product.options` — el vendor lo exige en el ReRate («[Path
+   * '/mainQuote/product'] Object has missing required properties
+   * (['options'])») pero el fixture real de la cotización NUNCA lo trae: no
+   * es un campo que el vendor devuelva al cotizar, así que aquí casi
+   * siempre será `null`. 🚨 Es un ARRAY, no un objeto: el backend Java lo
+   * declara `ArrayList<InsuranceProductOption>` (segundo 400 real,
+   * 11/09/2026, mismo proyecto — mandar `{}` revienta con
+   * `JsonMappingException` porque espera `START_ARRAY`, no `START_OBJECT`).
+   * Se reenvía tal cual en vez de inventar una forma — ver `reRate()` en
+   * `emitir.ts` para qué se manda cuando falta.
+   */
+  productOptions: unknown
+  /**
+   * `expirationDate` del precio. Solo lo trae un precio ya CONFIRMADO por
+   * ReRate (`Q2018406592` en el caso real de Pilar Franco Ruz, 12/09/2026);
+   * el resto de precios de una cotización inicial no lo declaran. Existe para
+   * poder decidir si un proyecto ya cotizado sigue vigente ANTES de pedir uno
+   * nuevo — ver `proyectoVigenteDePoliza` en `retarificar-cartera.ts`.
+   */
+  expiraEn: string | null
 }
 
 /**
@@ -73,6 +103,15 @@ export type Cotizacion = {
    *  (el `project_not_found` de 2026 fue justo no haberlo guardado). */
   projectId: string
   fechaEfecto: string | null
+  /**
+   * `insuranceLine.id` de raíz (`"Car"`, `"Home"`…). Hace falta para el
+   * `PATCH /insurances/{id}` de `actualizarFechaEfecto()`: el cuarto 400 real
+   * decía «incremental» y el quinto demostró que NO lo es del todo — el
+   * vendor exige `insuranceLine` en el cuerpo aunque solo se corrija
+   * `effectiveDate` («The `insuranceLine` field is missing or invalid.»,
+   * 12/09/2026). Se relee del proyecto en vez de suponerse por ramo.
+   */
+  insuranceLineId: string | null
   precios: Precio[]
   fallos: FalloProducto[]
 }
@@ -137,6 +176,9 @@ function leerPrecio(raw: unknown): Precio | null {
     firmeza: firmezaDe(q.estimate, q.messages),
     avisos: arr(q.messages).map(textoMensaje).filter((t): t is string => t !== null),
     requiereReRate: acciones.some((a) => str(obj(a).id)?.toLowerCase() === 'rerate'),
+    productId: producto.id ?? null,
+    productOptions: producto.options ?? null,
+    expiraEn: str(q.expirationDate),
   }
 }
 
@@ -181,6 +223,7 @@ export function leerCotizacion(raw: unknown): Cotizacion {
   return {
     projectId: String(idRaiz),
     fechaEfecto: str(r.effectiveDate),
+    insuranceLineId: str(obj(r.insuranceLine).id),
     precios,
     fallos: arr(r.errors)
       .map((e) => leerFallo(e, companiasConPrecio))

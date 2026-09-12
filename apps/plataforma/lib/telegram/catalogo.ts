@@ -583,6 +583,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Lunes 08:30 UTC',
   },
   {
+    id: 'correduria.seo-agente-cambio', categoria: 'correduria',
+    titulo: 'Propuesta de metadata SEO para un ramo (agente autónomo)',
+    que: 'Un ramo de asegura-web no aparece en el top-10 de su consulta objetivo: la IA propone un title/description nuevo y abre un PR DRAFT contra apps/asegura-web para que lo revises. Nunca escribe a main ni mergea solo.',
+    cuando: 'Lunes 09:00 UTC (detrás del informe semanal), solo si SEO_ASEGURA_AGENT_ENABLED=true',
+  },
+  {
     id: 'correduria.blog-listo', categoria: 'correduria',
     titulo: 'Artículo del blog listo para revisar',
     que: 'El agente ha escrito el artículo quincenal de grupoasegura.es y lo ha dejado esperando tu OK. No se publica solo: se aprueba en /correduria → Redes.',

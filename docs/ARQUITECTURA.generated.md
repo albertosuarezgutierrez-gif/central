@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-09T16:53:03Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-12T16:19:41Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1321 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1339 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,12 +21,12 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 59
+- **Rutas API:** 66
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** —
 - **Tablas (19):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_supresion, seguros.portal_vinculo, seguros.portal_vista_corredor
-- **Rutas API:** 24
+- **Rutas API:** 26
 ### asegura-web
 - **Módulos que usa:** module-seguros, module-seguros-portal
 - **Capacidades:** —
@@ -55,8 +55,8 @@
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
-- **Tablas (134):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_reglas, correo_cursor…
-- **Rutas API:** 355
+- **Tablas (138):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_dni_otp, correduria_reglas…
+- **Rutas API:** 364
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (09/09/2026) 📄 «Subir póliza» (corredor) generalizado a cualquier ramo, no solo auto
-- (09/09/2026) 🎫 «Mi QR» sale de la lista de pólizas y pasa a pestaña propia
-- (09/09/2026) 🗑 Quitado el calendario de vencimientos de `/boveda`
-- (09/09/2026) 🩹 Póliza BIDV004566 (Occident, GLOBAL 2 INSTALACIONES TÉCNICAS): faltaba en cartera, causa medida
-- (09/09/2026) 📝 Bóveda del cliente: «Selecciona» en vez de «No lo sé», ramo obligatorio y forma de pago con aviso de recibo
-- (08/09/2026) 📞 Teléfonos de compañía en el portal: Generali cargado y Allianz CORREGIDO
-- (08/09/2026) 👋 El WhatsApp del LEAD VENDE la intranet — y mi argumento para no hacerlo era falso
-- (09/09/2026) Maqueta de pre-emisión por compañía en el retarificador
-- (08/09/2026) 🏠 La dirección del hogar dejaba de decir el CP dos veces
-- (08/09/2026) 🔔 La campana de avisos del portal del cliente
+- (12/09/2026) 📮 14º 400 real de Codeoscopic — el Submit trocea la calle en TRES campos
+- (12/09/2026) 🔀 Comentarios de `decidir.ts` (agente huéspedes) corregidos: OpenRouter primario, no NIM
+- (12/09/2026) 🗺️ Paridad grafo propio vs Graphify: medida, y gana en 2 de 10
+- (12/09/2026) 📧 13º 400 real de Codeoscopic — el Submit exige email+calle, y ya se repara solo
+- (12/09/2026) 📱 Portal del cliente, seguimiento del móvil compactado
+- (12/09/2026) 🧠 Grafo propio, parte 2: búsqueda SEMÁNTICA + lo estructural que faltaba para dar de baja Graphify
+- (12/09/2026) 🏦 Duodécimo 400 real de Codeoscopic — el Submit exige IBAN, y el IBAN SIEMPRE se confirma
+- (12/09/2026) 🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel
+- (12/09/2026) 🛡️📲 MCP Sentinel avisa por Telegram cuando el modo sombra intervendría
+- (12/09/2026) 🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel
 

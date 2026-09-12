@@ -15,6 +15,42 @@ export type DatosPersona = {
   telefono: string
   cpResidencia?: string | null
   municipioResidenciaId?: number | null
+  /**
+   * Nombre de la calle de residencia. Optativo AQUÍ (hogar no lo necesita para
+   * su tomador; la dirección que hogar tarifica es la del RIESGO, no la de la
+   * persona) — quien lo exige de verdad es `revisarDatosAuto` (11º 400 real,
+   * 12/09/2026, ReRate del proyecto 40684860): «The road name of the address
+   * of the holder/primary driver/owner is mandatory». La ficha NO lo trae para
+   * auto, así que lo teclea el corredor — nunca se supone un dato personal.
+   */
+  nombreVia?: string | null
+  /**
+   * Optativo AQUÍ por la misma razón que `nombreVia`: no lo pide la cotización
+   * inicial (`construirPersona` lo deja fuera a propósito), pero el SUBMIT de
+   * auto sí (13º 400 real, 12/09/2026, `POST …/policy-applications` del
+   * proyecto 40684860): «The e-mail of the holder/owner/primaryDriver is
+   * mandatory». Se repara desde la ficha del cliente cuando el vendor lo pide
+   * (`valoresPersonaDesdeFicha`), nunca inventado.
+   */
+  email?: string | null
+  /**
+   * Número de la calle de residencia. 14º 400 real (12/09/2026, mismo
+   * proyecto): el Submit, además de `nombreVia` y `email`, pide TAMBIÉN «road
+   * number» — el vendor trocea la dirección en tres campos, no dos. Texto
+   * libre, igual que `nombreVia`.
+   */
+  numeroVia?: string | null
+  /**
+   * `roadType.id` del catálogo `/road-types` — mismo 14º 400 real: «road
+   * type» de la dirección también es obligatorio. 🚨 A diferencia de
+   * `nombreVia`/`numeroVia`/`email`, esto es una referencia de CATÁLOGO, no
+   * texto libre: nunca se manda un id que no haya salido de `GET
+   * /road-types` (misma regla que el resto de catálogos de hogar,
+   * `docs/CODEOSCOPIC-API-PORTAL.md`). Lo resuelve `valoresPersonaDesdeFicha`
+   * emparejando el tipo de vía de la ficha (`partirDireccion`) contra el
+   * catálogo vivo — si no hay match, no se manda nada inventado.
+   */
+  tipoVia?: string | null
 }
 
 export const RE_TELEFONO = /^[67][0-9]{8}$/
@@ -71,10 +107,22 @@ export function construirPersona(d: DatosPersona, extra: { fechaCarnet?: string 
   // La dirección solo viaja si están las DOS mitades: el vendor rechaza el
   // municipio sin código postal. Cuatro productos del grupo de salida la exigen.
   if (texto(d.cpResidencia) && numero(d.municipioResidenciaId)) {
-    persona.addresses = [{ postalCode: d.cpResidencia, town: { id: d.municipioResidenciaId }, primary: true }]
+    const direccion: Record<string, unknown> = {
+      postalCode: d.cpResidencia,
+      town: { id: d.municipioResidenciaId },
+      primary: true,
+    }
+    // `roadName`/`roadNumber`/`roadType`: el ReRate/Submit de auto los exige (ver
+    // el comentario de cada campo en el tipo); la cotización inicial NO los pedía,
+    // así que hasta ahora nadie los echaba en falta. Se mandan si los hay, nunca
+    // inventados — `roadType` es además una referencia de catálogo, nunca texto.
+    if (texto(d.nombreVia)) direccion.roadName = d.nombreVia!.trim()
+    if (texto(d.numeroVia)) direccion.roadNumber = d.numeroVia!.trim()
+    if (texto(d.tipoVia)) direccion.roadType = { id: d.tipoVia!.trim() }
+    persona.addresses = [direccion]
   }
 
-  // 🔒 Lo que NO se manda, y es deliberado: email, calle y número, ocupación,
+  // 🔒 Lo que NO se manda, y es deliberado: email, número de la calle, ocupación,
   // situación laboral y país de nacimiento. No hacen falta para el precio, así
   // que no salen de aquí. Menos datos personales fuera, menos que proteger.
   return persona
