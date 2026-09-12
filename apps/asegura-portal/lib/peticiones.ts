@@ -374,6 +374,125 @@ function esChoqueDePendiente(e: unknown): boolean {
 
 
 /**
+ * Pedir acceso a partir de una relación YA CONOCIDA (`cliente_relaciones`),
+ * sin que quien pide escriba ningún correo — 12/09/2026, spec «sugerencia de
+ * relaciones conocidas».
+ *
+ * A diferencia de `crearPeticion()`, aquí `relacionadoClienteId` ya es un
+ * `clienteId` exacto (sale de una relación de la propia ficha del
+ * solicitante, calculada con `relacionesSugeribles()` del módulo puro) — no
+ * hay que resolver nada por email. El `destinatario_email_hash` que exige la
+ * tabla se arma con el `email_lookup_hash` YA GUARDADO de esa misma ficha, sin
+ * pedirle el correo a nadie.
+ *
+ * 🚨 El oráculo sigue cerrado: `respuestaPublica()` colapsa el resultado en
+ * `registrada` igual que en `crearPeticion()`. Aquí no hay caso «no existe»
+ * (el `clienteId` viene de una relación que la propia ficha del solicitante ya
+ * conoce), pero sí siguen existiendo `ya_pendiente`, `ya_autorizado` y
+ * `a_si_mismo`, así que la respuesta pasa por el mismo colapso.
+ *
+ * Si esa ficha no tiene `email_lookup_hash` (sin correo cargado en la
+ * cartera), no se puede resolver por esta vía: se devuelve `sin_hash` para que
+ * la pantalla ofrezca el flujo manual (`crearPeticion`), nunca a ciegas.
+ */
+export async function peticionDesdeRelacion(datos: {
+  identidadId: string
+  relacionadoClienteId: string
+  alcance: string
+  mensaje?: unknown
+  ip: string | null
+  userAgent: string | null
+}): Promise<ResultadoCrear | { ok: false; error: 'sin_hash'; mensaje: string }> {
+  const { identidadId, relacionadoClienteId } = datos
+
+  const alcance = alcanceConcedible(datos.alcance)
+  if (alcance === null) {
+    return {
+      ok: false,
+      error: 'datos_invalidos',
+      mensaje: 'Ese permiso no se puede pedir. Vuelve a cargar la pantalla y elige uno de los que salen.',
+    }
+  }
+
+  // ── Cupo, lo PRIMERO y por SOLICITANTE (misma razón que en `crearPeticion`) ─
+  const enviadasHoy = await prisma.portalPeticionAcceso.count({
+    where: { solicitanteIdentidadId: identidadId, creadaEn: { gte: new Date(Date.now() - VENTANA_CUPO_MS) } },
+  })
+  if (enviadasHoy >= MAX_PETICIONES_DIA) {
+    return { ok: true, resultado: 'limite_diario', respuesta: respuestaPublica('limite_diario') }
+  }
+
+  // ── Quién pide ───────────────────────────────────────────────────────────
+  const vinculos = await prisma.portalVinculo.findMany({
+    where: { identidadId },
+    select: { clienteId: true, correduriaId: true },
+    orderBy: { creadoEn: 'asc' },
+  })
+  const misFichas = new Set(vinculos.map((v) => v.clienteId))
+  const solicitanteClienteId = vinculos.length === 1 ? vinculos[0].clienteId : null
+
+  if (misFichas.has(relacionadoClienteId)) {
+    return { ok: true, resultado: 'a_si_mismo', respuesta: respuestaPublica('a_si_mismo') }
+  }
+
+  const correduriaId = vinculos.length > 0 ? vinculos[0].correduriaId : await correduriaUnica()
+
+  // ── El destinatario ya es un clienteId exacto: solo falta su hash ────────
+  const destinatario = await prisma.cliente.findFirst({
+    where: { id: relacionadoClienteId, mergedIntoClienteId: null, activo: true },
+    select: { emailLookupHash: true },
+  })
+  if (destinatario?.emailLookupHash == null) {
+    return {
+      ok: false,
+      error: 'sin_hash',
+      mensaje: 'Esa ficha no tiene un correo cargado: pídele acceso escribiendo su email.',
+    }
+  }
+  const hash = destinatario.emailLookupHash
+
+  // ── Lo que ya había ──────────────────────────────────────────────────────
+  const hoy = new Date()
+  const autorizaciones = await prisma.portalAutorizacion.findMany({
+    where: {
+      otorganteClienteId: relacionadoClienteId,
+      autorizadoClienteId: solicitanteClienteId ?? NINGUNA_FICHA,
+      alcance,
+      revocadoEn: null,
+    },
+    select: { aceptadoEn: true, caducaEn: true, revocadoEn: true },
+  })
+  const yaAutorizado = autorizaciones.some((a) => estadoAutorizacion(a, hoy) === 'vigente')
+
+  const creadaEn = new Date()
+  let yaPendiente = false
+  try {
+    await prisma.portalPeticionAcceso.create({
+      data: {
+        correduriaId,
+        solicitanteIdentidadId: identidadId,
+        solicitanteClienteId,
+        destinatarioEmailHash: hash,
+        destinatarioClienteId: relacionadoClienteId,
+        alcance,
+        mensaje: normalizarMensajePeticion(datos.mensaje),
+        creadaEn,
+        caducaEn: caducidadPeticion(creadaEn),
+        ip: datos.ip,
+        userAgent: datos.userAgent,
+      },
+      select: { id: true },
+    })
+  } catch (e) {
+    if (!esChoqueDePendiente(e)) throw e
+    yaPendiente = true
+  }
+
+  const resultado: ResultadoPeticion = yaPendiente ? 'ya_pendiente' : yaAutorizado ? 'ya_autorizado' : 'creada'
+  return { ok: true, resultado, respuesta: respuestaPublica(resultado) }
+}
+
+/**
  * La única correduría de la casa, para quien escribe sin tener ficha (los
  * ~32.520 leads). **Lanza** si hubiera 0 o más de 1: elegir sería adivinar, y
  * una fila colgada de la correduría equivocada no se la encuentra nadie. Mismo

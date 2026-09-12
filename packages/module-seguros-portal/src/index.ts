@@ -355,3 +355,9 @@ export {
   enlaceVistaCorredor,
 } from './vista-corredor.ts'
 export type { EstadoEnlaceVista } from './vista-corredor.ts'
+
+// Sugerir pedir acceso a partir de relaciones YA CONOCIDAS (12/09/2026). Lee
+// su cabecera: sugerir no es conceder, y una relación «Sin vínculo» no se
+// sugiere nunca — misma guarda que ya usa `clientesVisiblesPara()`.
+export { relacionesSugeribles } from './sugerencia-relacion.ts'
+export type { SugerenciaRelacion } from './sugerencia-relacion.ts'
