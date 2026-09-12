@@ -50,6 +50,16 @@
   key, o revocado. **Pendiente de Alberto:** entrar a Smoobu (Settings → Advanced → API Keys), confirmar/
   regenerar el par, y volver a guardarlo en la conexión de `pms_connections` (UI de ialimp). Esta sesión
   no pudo probar contra la API real de Smoobu (el proxy bloquea `*.smoobu.com`).
+
+- **🔴 Auditoría diaria: backlog de PRs de rutinas atascado, `AUDITORIA-2026-09.md` sin reflejar 8 días
+  de pasadas reales (12/09/2026).** Las pasadas del 05-08/09 SÍ corrieron (existen sus PRs), pero al
+  menos 3 PRs de registro (`#2318`/`#2322`/`#2483`) llevan 4-7 días con `mergeable_state:dirty` sin que
+  `rutinas-automerge.yml` los mergee ni comente, pese a estar corriendo con normalidad sobre otros PRs
+  — por eso el registro parecía mudo. 8 drafts de carril 2 más sin tocar 4-8 días (`#2262` el más
+  viejo, 04/09). Pendiente de Alberto: revisar/mergear el lote. Aparte: Smoobu 401 tumbó 4 agentes
+  ~24h, ya arreglado por otra sesión esa misma mañana (PR #2731); `AGENTE mercado-booking` MUDO 119h
+  sin investigar (carril 2). Detalle en `docs/AUDITORIA-2026-09.md` (pasada 12/09).
+
 - **✅ Smoobu 401 ARREGLADO: HMAC-SHA256 implementado y migradas TODAS las llamadas (12/09/2026).** Causa:
   `pms_connections` ya tenía el par HMAC (`smoobu_api_key`+`smoobu_api_secret`) pero el código seguía
   mandando el header legacy `Api-Key` (Smoobu lo deprecó, sunset 25/09/2026). Alberto trajo la spec exacta

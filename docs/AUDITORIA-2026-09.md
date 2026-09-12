@@ -126,4 +126,59 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 (septiembre sigue abierto).
 
 ---
-<!-- verificado: 2026-09-04 -->
+
+## ✅ Pasada ligera — 12/09/2026
+
+**Rango:** desde la última entrada de este doc (04/09) hasta hoy — 8 días, ~90 commits. **Este doc no
+se actualizaba desde el 04/09 pese a que la auditoría SÍ corrió en el intermedio** (existen PRs de
+pasadas del 05, 06, 07 y 08/09): la causa no es que la rutina dejara de correr, es que su salida se
+quedó sin llegar a `main` — ver el hallazgo del backlog más abajo, que es el central de esta pasada.
+
+### 🔴 Backlog de PRs de rutinas (2-ter) — el hallazgo real de esta pasada
+Al menos 3 PRs de **registro** (carril 1, tocan solo `docs/CONTEXTO-SESIONES.md`/
+`AUDITORIA-2026-09.md`/`AUTO-APLICADOS.md`, `draft:false`, listos para el automerge) llevan **4-7
+días abiertos con `mergeable_state:dirty`**: `#2318` (05/09, 7 días), `#2322` (05/09, 7 días),
+`#2483` (07/09, 5 días). `rutinas-automerge.yml` SIGUE VIVO y corriendo con total normalidad (miles
+de runs acumulados, éxito constante sobre otros PRs hoy mismo), pero no ha resuelto el conflicto de
+estos tres ni ha dejado el comentario de "no he podido, hace falta mano humana" que el diseño
+promete — se han quedado mudos, ni mergeados ni señalizados. Consecuencia medida: el registro de la
+auditoría (este doc, `CONTEXTO-SESIONES.md`) llevaba 8 días sin reflejar nada, dando la apariencia de
+que la rutina había dejado de correr cuando en realidad corrió y su salida se pudrió en conflicto.
+Además hay **8 drafts de carril 2 sin actividad 4-8 días**: `#2262` (trading-analista, 04/09, 8
+días), `#2319`/`#2327` (05/09, 7 días), `#2412`/`#2413`/`#2414` (06/09, 6 días), `#2484`/`#2534`/
+`#2548`/`#2573` (07/09, 5 días), `#2627` (08/09, 4 días). **Acción manual recomendada para Alberto:**
+revisar y mergear/cerrar el lote (varios son puro registro y deberían fusionarse sin fricción trayendo
+`main`), y mirar por qué el automerge no señaliza conflictos en vez de quedarse callado — puede ser
+que el paso de "traer `main` a la rama" del workflow esté fallando en silencio para PRs con más de un
+día de antigüedad de conflicto.
+
+### Heartbeat de crons/agentes (2-bis)
+🔴→ya en vías de arreglo: **Smoobu HTTP 401** tumbó 4 agentes durante ~24h (`sivra_rates_snapshot`,
+`sivra_pricing_guard`, `smoobu_sync`, `reservas_booking_vigia`) — Smoobu deprecó el header legacy
+`Api-Key`; otra sesión ya diagnosticó y migró a HMAC-SHA256 esta misma mañana (commit `d5ec555`, PR
+#2731, **merged** a `main` a las 07:40 UTC). Los latidos afectados son de ANTES del fix; pendiente
+confirmar en verde en la próxima pasada de estos crons. 🔴 **`AGENTE mercado-booking` (diario) MUDO
+119h** — sin escribir en `market_rates fuente='booking_mcp'` desde el 07/09 08:41 (el mismo día del
+PR #2488 "objetivo jul/ago-2027 ya cumplido 5ª vez"); no investigado a fondo esta pasada (carril 2,
+pendiente). `ses_transporte` sigue en rojo por decisión ya aceptada de Alberto (04/09). `canario_lead_web`
+dentro de tolerancia (4,6h de 6h). `sivra_eventos_verificar` cruza el umbral por un fallo puntual de
+búsqueda ya explicado en su propio detalle (OpenRouter vacío). Sin intentos de auto-reparación en curso
+(`agente_reparaciones` vacía en 7 días) — el fix de Smoobu fue manual, no del reparador automático.
+
+### 🛡️ Salud de la correduría (2-quater) — sin 🔴 nuevo
+`correduria_renovaciones`/`correduria_ingesta`/`correduria_siniestros`/`correduria_partes` todos ✅ y
+frescos (<2h). Ingesta reporta "DEGRADADA" pero es el backlog ya conocido (ficheros C0468/M00171,
+pólizas huérfanas arrastradas). §21 sigue pausada a propósito.
+
+### 💰 Salud del precio SIVRA (2bis) — sano
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · `oscilantes=0` · última pasada
+hace 23,6h con 33 noches escritas. Las 4 palancas `enabled`/`apply_enabled` en `true`, `min_price`
+puesto en las 4, `antelacion_k` apagada salvo House Sevillana (=1, con las 3 condiciones exigidas).
+
+### Reconciliación memoria/skills — no completada en profundidad esta pasada
+Presupuesto de esta pasada consumido por el hallazgo del backlog (arriba), que es carril 2 real y
+justifica priorizarlo. No se revisó línea a línea el drift skills↔código ni `HUECOS-ABIERTOS.md`
+este ciclo — queda pendiente para la próxima pasada ligera.
+
+---
+<!-- verificado: 2026-09-12 -->
