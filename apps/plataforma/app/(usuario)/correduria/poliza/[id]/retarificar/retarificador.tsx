@@ -33,6 +33,16 @@ function cotizacionIdDe(guardado: unknown): string | null {
   return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
 }
 
+// La fecha de HOY en local (no `toISOString()`, que es UTC y puede dar el día
+// de ayer/mañana según la hora): es el valor que Allianz acepta siempre — su
+// 400 real es «no puede estar a más de 90 días vista», nunca por ser hoy.
+function hoyISO(): string {
+  const d = new Date()
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mes}-${dia}`
+}
+
 /** Quita tildes y mayúsculas para comparar «Casado» con «CASADO».
  *  Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`. */
 export function normalizarTexto(s: string): string {
@@ -419,12 +429,25 @@ export default function Retarificador({
   const [matriculacion, setMatriculacion] = useState(
     guardadaPrevia?.formulario.fechaMatriculacion ?? fechaMatriculacion ?? '',
   )
-  const [correcciones, setCorrecciones] = useState<Record<string, string>>(
-    guardadaPrevia?.formulario.correcciones ?? {},
-  )
+  const [correcciones, setCorrecciones] = useState<Record<string, string>>(() => ({
+    // La fecha de efecto SIEMPRE arranca con un valor — nunca en blanco (ver
+    // el campo en el Paso 2). Una `guardadaPrevia` sin ese campo (cotizaciones
+    // de antes del 12/09/2026) tampoco lo trae vacío: cae al mismo default.
+    fechaEfecto: hoyISO(),
+    ...(guardadaPrevia?.formulario.correcciones ?? {}),
+  }))
   const [resultado, setResultado] = useState<Resultado>(
     guardadaPrevia ? resultadoDeGuardada(guardadaPrevia) : { estado: 'idle' },
   )
+  // 🚨 `guardadaPrevia` recupera GRATIS el precio de una cotización ya
+  // pagada — pero si ese proyecto quedó con una `effectiveDate` que el
+  // vendor rechaza (>90 días vista) y no se puede corregir (11-12/09/2026,
+  // caso real de Pilar Franco Ruz: `effectiveDate` es de solo lectura tras
+  // el `POST /insurances` inicial), la única salida es descartarlo y pedir
+  // un precio NUEVO. Sin esta vía, la pantalla resuelve `resultado` directo
+  // a `ok` con el proyecto viejo y el botón «Emitir» de la tabla de precios
+  // confirma ESE proyecto sin pasar nunca por el campo de fecha de arriba.
+  const [guardadaDescartada, setGuardadaDescartada] = useState(false)
 
   /**
    * Un catálogo del vendor, por el puerto. **Gratis.**
@@ -822,7 +845,15 @@ export default function Retarificador({
 
   return (
     <>
-      {guardadaPrevia && <BannerRecuperada guardadaPrevia={guardadaPrevia} />}
+      {guardadaPrevia && !guardadaDescartada && (
+        <BannerRecuperada
+          guardadaPrevia={guardadaPrevia}
+          onDescartar={() => {
+            setGuardadaDescartada(true)
+            setResultado({ estado: 'idle' })
+          }}
+        />
+      )}
       {simulacion && <BannerSimulacion />}
 
       {/* ── Paso 1 · el vehículo ───────────────────────────────────────────── */}
@@ -1151,26 +1182,31 @@ export default function Retarificador({
           </div>
         )}
 
-        {/* 🚨 Fecha de efecto — corrección MANUAL, opcional, y NUNCA gated por
-            "falta": el servidor SIEMPRE supone una (el día siguiente al
-            vencimiento de la póliza actual, o mañana si no hay vencimiento),
-            así que nunca aparece en `faltanInicial`. Existe porque ese supuesto
-            se rechaza al confirmar el precio (ReRate) si cae a más de 90 días
-            vista — y para entonces ya se ha pagado el 0,50€ de esta pantalla.
-            Se corrige AQUÍ, antes de pagar, no después: `effectiveDate` no es
+        {/* 🚨 Fecha de efecto — corrección MANUAL, NUNCA gated por "falta": el
+            servidor SIEMPRE supone una (el día siguiente al vencimiento de la
+            póliza actual, o mañana si no hay vencimiento), así que nunca
+            aparece en `faltanInicial`. Existe porque ese supuesto se rechaza
+            al confirmar el precio (ReRate) si cae a más de 90 días vista — y
+            para entonces ya se ha pagado el 0,50€ de esta pantalla. Se
+            corrige AQUÍ, antes de pagar, no después: `effectiveDate` no es
             editable una vez creado el proyecto en el vendor (11-12/09/2026,
-            varios intentos reales sobre el proyecto de Pilar Franco Ruz). */}
+            varios intentos reales sobre el proyecto de Pilar Franco Ruz).
+            🚨 Precargada a HOY (12/09/2026, dictado de Alberto: «tiene que
+            salir por defecto hoy, no puede ser opcional») — nunca en blanco,
+            porque hoy SIEMPRE cumple el límite de 90 días del vendor, al
+            revés que el supuesto automático cuando el vencimiento real está
+            lejos. Se puede cambiar, pero el campo nunca arranca vacío. */}
         <div style={{ marginTop: 16 }}>
           <Campo
             id="c-fechaEfecto"
-            etiqueta="Fecha de efecto (opcional)"
+            etiqueta="Fecha de efecto"
             falta={false}
             ayuda={
               <>
-                Déjalo en blanco para que se calcule solo (el día siguiente al vencimiento actual).
-                Corrígelo a mano <strong>solo</strong> si esa fecha cae a más de 90 días vista — la
-                compañía rechaza la confirmación del precio con esa fecha, y para entonces ya se ha
-                pagado la cotización. No se puede arreglar después: hay que acertarla aquí.
+                Precargada a hoy: es la fecha que se manda al pedir precio. Cámbiala solo si el
+                cliente quiere que la póliza empiece otro día — <strong>siempre a ≤90 días vista</strong>,
+                la compañía rechaza fechas más lejanas al confirmar el precio, y para entonces ya se
+                ha pagado la cotización. No se puede arreglar después: hay que acertarla aquí.
               </>
             }
           >
@@ -1531,7 +1567,13 @@ export function ValorSupuesto({ s }: { s: Supuesto }) {
  * Todo lo prellenado sigue siendo editable: volver a pulsar «Pedir precio»
  * pide una cotización nueva (y esa sí cuesta 0,50€).
  */
-function BannerRecuperada({ guardadaPrevia }: { guardadaPrevia: TarificacionGuardadaAuto }) {
+function BannerRecuperada({
+  guardadaPrevia,
+  onDescartar,
+}: {
+  guardadaPrevia: TarificacionGuardadaAuto
+  onDescartar: () => void
+}) {
   const fecha = new Date(guardadaPrevia.creadaEn)
   const cuando = Number.isNaN(fecha.getTime())
     ? 'antes'
@@ -1549,6 +1591,22 @@ function BannerRecuperada({ guardadaPrevia }: { guardadaPrevia: TarificacionGuar
         Los datos de abajo están precargados; se pueden cambiar y, si hace falta un precio nuevo,
         «Pedir precio» sigue funcionando (y ese sí cuesta 0,50€).
       </p>
+      {/* 🚨 El botón «Emitir» de la tabla de precios de abajo confirma ESTE
+          proyecto recuperado directamente — sin pasar por «Pedir precio» ni
+          por el campo «Fecha de efecto». Si este proyecto quedó con una
+          fecha que la compañía rechaza (>90 días vista) y no hay forma de
+          corregirla (effectiveDate es de solo lectura tras crear el
+          proyecto), pulsar «Emitir» aquí repite el mismo 400 para siempre.
+          «Descartar» oculta el precio recuperado para forzar un «Pedir
+          precio» de cero, con la fecha de efecto ya corregida. */}
+      <button
+        type="button"
+        className="ghost"
+        style={{ marginTop: 8 }}
+        onClick={onDescartar}
+      >
+        Descartar y pedir precio de cero
+      </button>
     </div>
   )
 }
