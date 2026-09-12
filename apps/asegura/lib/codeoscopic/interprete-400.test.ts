@@ -5,6 +5,7 @@ import {
   lineasDelVendor,
   reparosDe,
   aplicarCampoPersona,
+  aplicarCamposPersona,
   leerCampoPersona,
   mismoValor,
   esCampoPersona,
@@ -27,6 +28,31 @@ test('el 11º 400 real se traduce a UN campo (nombreVia) en los tres papeles', (
 test('acepta el `detalle` pelado (JSON sin el prefijo codeoscopic_)', () => {
   const detalle = UNDECIMO.replace(/^codeoscopic_validacion:\s*/, '')
   assert.equal(interpretarError400(detalle).campos[0]?.campo, 'nombreVia')
+})
+
+test('RECORTADO a 300 chars como llega en producción (recortar() de cliente.ts), sigue leyendo las TRES líneas', () => {
+  // Mismo recorte que `cliente.ts::recortar`: colapsa espacios y corta a 300.
+  const detalle = UNDECIMO.replace(/^codeoscopic_validacion:\s*/, '').replace(/\s+/g, ' ').slice(0, 300)
+  assert.ok(detalle.length === 300, 'el fixture real tiene que superar el recorte para que este test valga')
+  const r = interpretarError400(detalle)
+  assert.equal(r.campos.length, 1)
+  assert.equal(r.campos[0].campo, 'nombreVia')
+  assert.deepEqual(r.campos[0].papeles.sort(), ['holder', 'owner', 'primaryDriver'])
+  assert.deepEqual(r.noReconocidos, [])
+})
+
+test('un campo de la PERSONA sin papel NO se acepta: puede ser del riesgo', () => {
+  const r = interpretarError400('{"message":"The postal code is mandatory.\\nThe phone number is mandatory."}')
+  assert.deepEqual(r.campos, [])
+  assert.equal(r.noReconocidos.length, 2)
+})
+
+test('la dirección de CIRCULACIÓN es del riesgo, no del tomador', () => {
+  const r = interpretarError400(
+    '{"message":"The postal code of the circulation address is mandatory.\\nThe town of the circulation address is mandatory."}',
+  )
+  assert.deepEqual(r.campos.map((c) => c.campo).sort(), ['cpCirculacion', 'municipioCirculacionId'])
+  assert.deepEqual(r.noReconocidos, [])
 })
 
 test('una línea que no se reconoce va a noReconocidos ENTERA, nunca se calla', () => {
@@ -91,6 +117,13 @@ test('sin dirección previa, nombreVia NO crea una dirección a medias', () => {
   const p = aplicarCampoPersona({ name: 'X' }, 'nombreVia', 'Calle Betis')
   assert.equal(p.addresses, undefined)
   assert.equal(leerCampoPersona(p, 'nombreVia'), null)
+})
+
+test('sin dirección previa, solo el CP tampoco la crea; CP + municipio JUNTOS sí', () => {
+  const soloCp = aplicarCamposPersona({ name: 'X' }, { cpResidencia: '41003' })
+  assert.equal(soloCp.addresses, undefined)
+  const completa = aplicarCamposPersona({ name: 'X' }, { cpResidencia: '41003', municipioResidenciaId: '41091', nombreVia: 'Betis' })
+  assert.deepEqual(completa.addresses, [{ primary: true, postalCode: '41003', town: { id: 41091 }, roadName: 'Betis' }])
 })
 
 test('el resto de campos usan las mismas claves que construirPersona()', () => {

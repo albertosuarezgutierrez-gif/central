@@ -278,7 +278,7 @@ export async function actualizarFechaEfecto(
 // proyecto y se comprueba campo a campo. Si no ha cuajado, se dice.
 
 import {
-  aplicarCampoPersona,
+  aplicarCamposPersona,
   leerCampoPersona,
   mismoValor,
   type CampoPersona,
@@ -302,10 +302,29 @@ export type ResultadoCompletar =
 
 const PAPELES_RIESGO: readonly Papel[] = ['owner', 'primaryDriver', 'secondaryDriver']
 
+const dniDe = (persona: unknown): string | null => {
+  const id = str(obj(obj(persona).identificationDocument).id)
+  return id === null ? null : id.replace(/\s/g, '').toUpperCase()
+}
+
 /**
- * Escribe `valores` en TODOS los papeles de persona que tenga el proyecto
- * (`holder` y los del `risk` que existan) — el vendor cruza por DNI y rechaza
- * si un campo difiere entre ellos, así que no se puede completar solo uno.
+ * Los papeles del `risk` que son LA MISMA PERSONA que el tomador (mismo DNI).
+ * Un `owner` o `secondaryDriver` con otro DNI es otra persona: escribirle el
+ * teléfono o la fecha de nacimiento del tomador sería falsear sus datos. Sin
+ * DNI en el tomador no se puede afirmar la identidad → solo el tomador.
+ */
+function papelesDeLaMismaPersona(crudo: Json): Papel[] {
+  const dniHolder = dniDe(crudo.holder)
+  if (dniHolder === null) return []
+  const risk = obj(crudo.risk)
+  return PAPELES_RIESGO.filter((papel) => risk[papel] && typeof risk[papel] === 'object' && dniDe(risk[papel]) === dniHolder)
+}
+
+/**
+ * Escribe `valores` en el tomador y en los papeles del `risk` que sean la
+ * misma persona (mismo DNI) — el vendor cruza por DNI y rechaza si un campo
+ * difiere entre ellos, así que no se puede completar solo uno. A otra persona
+ * (otro DNI) no se le toca nada.
  *
  * El PATCH lleva `insuranceLine` (quinto 400 real) y los objetos ENTEROS de
  * `holder` y `risk` tal como se leyeron, con el campo añadido: el vendor
@@ -319,19 +338,17 @@ export async function completarPersonas(
   const campos = (Object.keys(valores) as CampoPersona[]).filter((c) => typeof valores[c] === 'string')
   const crudo = await leerProyectoCrudo(config, projectId)
   const risk = obj(crudo.risk)
-
-  const aplicarTodos = (persona: unknown): Json =>
-    campos.reduce<Json>((p, c) => aplicarCampoPersona(p, c, valores[c] as string), obj(persona))
+  const papeles = papelesDeLaMismaPersona(crudo)
 
   const cuerpo: Json = {
     insuranceLine: { id: str(obj(crudo.insuranceLine).id) },
-    holder: aplicarTodos(crudo.holder),
+    holder: aplicarCamposPersona(crudo.holder, valores),
   }
-  const riskPatched: Json = { ...risk }
-  for (const papel of PAPELES_RIESGO) {
-    if (risk[papel] && typeof risk[papel] === 'object') riskPatched[papel] = aplicarTodos(risk[papel])
+  if (Object.keys(risk).length > 0) {
+    const riskPatched: Json = { ...risk }
+    for (const papel of papeles) riskPatched[papel] = aplicarCamposPersona(risk[papel], valores)
+    cuerpo.risk = riskPatched
   }
-  if (Object.keys(risk).length > 0) cuerpo.risk = riskPatched
 
   await peticion(config, {
     metodo: 'PATCH',
@@ -350,9 +367,7 @@ export async function completarPersonas(
     }
   }
   comprobar(releido.holder, 'holder')
-  for (const papel of PAPELES_RIESGO) {
-    if (riskReleido[papel] && typeof riskReleido[papel] === 'object') comprobar(riskReleido[papel], papel)
-  }
+  for (const papel of papeles) comprobar(riskReleido[papel], papel)
 
   if (sinAplicar.length > 0) return { estado: 'no_aplicado', sinAplicar }
   return { estado: 'aplicado', cotizacion: leerCotizacion(releido) }

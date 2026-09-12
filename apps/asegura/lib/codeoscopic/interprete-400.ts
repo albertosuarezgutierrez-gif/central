@@ -72,8 +72,11 @@ export type Interpretacion = {
 
 // Cada regla casa contra la línea en minúsculas. El orden importa: la primera
 // que casa gana, así que las más específicas van antes («primary driver» antes
-// que «driver», «postal code» antes que «address»).
+// que «driver», «postal code» antes que «address», y la dirección de
+// CIRCULACIÓN —que es del riesgo, no de la persona— antes que la de residencia).
 const REGLAS: ReadonlyArray<readonly [RegExp, keyof DatosAuto]> = [
+  [/circulation address.*postal code|postal code.*circulation address/, 'cpCirculacion'],
+  [/circulation address.*\btown\b|\btown\b.*circulation address/, 'municipioCirculacionId'],
   [/road name/, 'nombreVia'],
   [/postal code|zip code/, 'cpResidencia'],
   [/\btown\b/, 'municipioResidenciaId'],
@@ -102,25 +105,41 @@ const PAPELES: ReadonlyArray<readonly [RegExp, Papel]> = [
 /**
  * Saca las líneas del `message` del vendor. Acepta tanto el `detalle` de
  * `ErrorCodeoscopic` (JSON) como su `message` entero (`codeoscopic_validacion:
- * {...}`). Si no hay JSON legible, el texto entero es una única línea.
+ * {...}`).
+ *
+ * 🚨 En producción el `detalle` viene RECORTADO a 300 caracteres
+ * (`recortar()` en `cliente.ts`, para no arrastrar PII a los logs), así que el
+ * JSON casi nunca cierra: el 11º 400 real medía 334. Por eso, si `JSON.parse`
+ * falla, se extrae `"message":"…"` a mano hasta la comilla de cierre o hasta
+ * donde llegue el texto, y se des-escapan los `\n` — que en el JSON son dos
+ * caracteres y sobreviven al recorte. Si tampoco hay `message`, el texto
+ * entero es una única línea.
  */
 export function lineasDelVendor(mensajeCrudo: string): string[] {
   const sinPrefijo = mensajeCrudo.replace(/^codeoscopic_[a-z-]+:\s*/, '')
   const inicioJson = sinPrefijo.indexOf('{')
   let texto = sinPrefijo
   if (inicioJson !== -1) {
+    const json = sinPrefijo.slice(inicioJson)
     try {
-      const cuerpo = JSON.parse(sinPrefijo.slice(inicioJson)) as { message?: unknown; error?: unknown }
+      const cuerpo = JSON.parse(json) as { message?: unknown; error?: unknown }
       if (typeof cuerpo.message === 'string' && cuerpo.message.trim()) texto = cuerpo.message
       else if (typeof cuerpo.error === 'string' && cuerpo.error.trim()) texto = cuerpo.error
     } catch {
-      // Recortado a media llave (`recortar()`): se interpreta lo que haya.
+      const m = /"message"\s*:\s*"((?:[^"\\]|\\.)*)/.exec(json)
+      if (m) texto = desescapar(m[1])
     }
   }
   return texto
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l !== '')
+}
+
+function desescapar(s: string): string {
+  return s.replace(/\\(n|r|t|"|\\)/g, (_, c: string) =>
+    c === 'n' ? '\n' : c === 'r' ? '\r' : c === 't' ? '\t' : c,
+  )
 }
 
 export function interpretarError400(mensajeCrudo: string): Interpretacion {
@@ -137,6 +156,13 @@ export function interpretarError400(mensajeCrudo: string): Interpretacion {
     }
     const campo = regla[1]
     const papel = PAPELES.find(([re]) => re.test(l))?.[1]
+    // 🚨 Un campo de la PERSONA solo se acepta si el vendor dice DE QUIÉN es.
+    // «The postal code … is mandatory» sin papel puede ser el del riesgo, y
+    // escribirlo en el tomador sería inventar una dirección. Se enseña entero.
+    if (esCampoPersona(campo) && !papel) {
+      noReconocidos.push(linea)
+      continue
+    }
     const actual = porCampo.get(campo) ?? { campo, papeles: [], textos: [] }
     if (papel && !actual.papeles.includes(papel)) actual.papeles.push(papel)
     actual.textos.push(linea)
@@ -161,30 +187,54 @@ const obj = (v: unknown): Json => (v && typeof v === 'object' && !Array.isArray(
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
 
+const CAMPOS_DIRECCION: readonly CampoPersona[] = ['nombreVia', 'cpResidencia', 'municipioResidenciaId']
+
 /**
- * Devuelve la persona con `campo` escrito en la forma del vendor. No muta.
+ * Devuelve la persona con TODOS los `valores` escritos en la forma del vendor.
+ * No muta.
  *
  * 🚨 `nombreVia`/`cpResidencia`/`municipioResidenciaId` viven DENTRO de
- * `addresses[0]`: si la persona no tiene dirección, escribir solo la calle
- * mandaría una dirección sin CP ni municipio, que el vendor rechaza. En ese
- * caso se devuelve la persona sin tocar y lo delata `leerCampoPersona()`.
+ * `addresses[0]`, y una dirección solo es válida con sus DOS mitades (CP +
+ * municipio). Por eso se aplican JUNTOS: si la persona no tenía dirección y
+ * tras aplicar lo que viene no quedan las dos mitades, no se crea ninguna
+ * —mandar media dirección es un 400 seguro— y lo delata `leerCampoPersona()`.
  */
+export function aplicarCamposPersona(persona: unknown, valores: Partial<Record<CampoPersona, string>>): Json {
+  let p: Json = { ...obj(persona) }
+  const campos = (Object.keys(valores) as CampoPersona[]).filter((c) => typeof valores[c] === 'string')
+
+  const deDireccion = campos.filter((c) => CAMPOS_DIRECCION.includes(c))
+  if (deDireccion.length > 0) {
+    const direcciones = arr(p.addresses)
+    const habia = direcciones.length > 0
+    const d0: Json = { ...obj(direcciones[0]), primary: true }
+    for (const c of deDireccion) {
+      const v = (valores[c] as string).trim()
+      if (c === 'nombreVia') d0.roadName = v
+      if (c === 'cpResidencia') d0.postalCode = v
+      if (c === 'municipioResidenciaId') d0.town = { ...obj(d0.town), id: Number(v) }
+    }
+    const completa = str(d0.postalCode) !== null && obj(d0.town).id !== undefined
+    if (habia || completa) p.addresses = [d0, ...direcciones.slice(1)]
+  }
+
+  for (const c of campos) {
+    if (CAMPOS_DIRECCION.includes(c)) continue
+    p = aplicarCampoPersona(p, c, valores[c] as string)
+  }
+  return p
+}
+
+/** Un solo campo. Para los de dirección delega en `aplicarCamposPersona` (misma guarda). */
 export function aplicarCampoPersona(persona: unknown, campo: CampoPersona, valor: string): Json {
+  if (CAMPOS_DIRECCION.includes(campo)) return aplicarCamposPersona(persona, { [campo]: valor })
   const p: Json = { ...obj(persona) }
   const v = valor.trim()
   switch (campo) {
     case 'nombreVia':
     case 'cpResidencia':
-    case 'municipioResidenciaId': {
-      const direcciones = arr(p.addresses)
-      if (direcciones.length === 0 && campo === 'nombreVia') return p
-      const d0: Json = { ...obj(direcciones[0]), primary: true }
-      if (campo === 'nombreVia') d0.roadName = v
-      if (campo === 'cpResidencia') d0.postalCode = v
-      if (campo === 'municipioResidenciaId') d0.town = { ...obj(d0.town), id: Number(v) }
-      p.addresses = [d0, ...direcciones.slice(1)]
+    case 'municipioResidenciaId':
       return p
-    }
     case 'dni':
       p.identificationDocument = { ...obj(p.identificationDocument), type: { id: 'Dni' }, id: v.toUpperCase() }
       return p

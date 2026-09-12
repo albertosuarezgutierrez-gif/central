@@ -757,9 +757,15 @@ export function interpretarOferta(status: number, json: unknown): RespuestaOfert
         if (typeof v === 'string') sugeridos[k] = v
       }
     }
+    const faltan: Reparo[] = Array.isArray(r.faltan)
+      ? r.faltan.flatMap((f): Reparo[] => {
+          const x = (typeof f === 'object' && f !== null ? f : {}) as Record<string, unknown>
+          return typeof x.campo === 'string' ? [{ campo: x.campo, motivo: cadenaONulo(x.motivo) ?? '' }] : []
+        })
+      : []
     return {
       estado: 'faltan_vendor',
-      faltan: Array.isArray(r.faltan) ? (r.faltan as Reparo[]) : [],
+      faltan,
       sugeridos,
       noReconocidos: Array.isArray(r.noReconocidos)
         ? r.noReconocidos.filter((s): s is string => typeof s === 'string')

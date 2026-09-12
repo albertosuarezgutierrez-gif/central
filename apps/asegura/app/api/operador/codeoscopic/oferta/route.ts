@@ -20,6 +20,7 @@ import {
   type CampoPersona,
 } from '@/lib/codeoscopic/interprete-400'
 import { partirDireccion } from '@/lib/codeoscopic/direccion'
+import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -91,13 +92,11 @@ export async function POST(req: Request) {
 
   // Lo que el corredor teclea tras un `faltan_vendor`: solo campos de la PERSONA
   // que sabemos escribir en el proyecto (lista blanca), nunca claves arbitrarias.
-  const correcciones = leerCorrecciones(cuerpo.correcciones)
-  if (correcciones === null) {
-    return NextResponse.json(
-      { estado: 'error', causa: 'otro', mensaje: 'correcciones tiene que ser un objeto {campo: texto} con campos de la persona' },
-      { status: 400 },
-    )
+  const lectura = leerCorrecciones(cuerpo.correcciones)
+  if ('error' in lectura) {
+    return NextResponse.json({ estado: 'error', causa: 'otro', mensaje: lectura.error }, { status: 400 })
   }
+  const correcciones = lectura.valores
 
   const filas = await prisma.$queryRaw<
     { correduria_id: string; project_id_codeoscopic: string | null; poliza_id: string | null; cliente_id: string | null }[]
@@ -195,10 +194,16 @@ export async function POST(req: Request) {
 
     // ── Lo que el corredor ya tecleó (respuesta a un `faltan_vendor` anterior) ──
     // Se escribe en el proyecto ANTES del ReRate, gratis, y se verifica releyendo.
+    // Lo que se ha escrito Y VERIFICADO en el proyecto durante esta petición. Si
+    // el vendor lo vuelve a pedir, no es que falte: es que el PATCH no le vale
+    // (la trampa de `effectiveDate`), y pedírselo otra vez al corredor sería
+    // un bucle sin salida.
+    const aplicados = new Set<CampoPersona>()
     if (Object.keys(correcciones).length > 0) {
       const c = await completarPersonas(r.config, t.project_id_codeoscopic, correcciones)
       if (c.estado === 'no_aplicado') return respuestaNoAplicado(c)
       cotizacion = c.cotizacion
+      for (const k of Object.keys(correcciones) as CampoPersona[]) aplicados.add(k)
     }
 
     // ── El bucle de reparación (12/09/2026) ─────────────────────────────────
@@ -244,6 +249,8 @@ export async function POST(req: Request) {
         if (interp.campos.length === 0) throw e
 
         const pedidos = interp.campos.map((c) => c.campo).filter(esCampoPersona)
+        const yaEscritos = pedidos.filter((c) => aplicados.has(c))
+        if (yaEscritos.length > 0) return respuestaSigueFaltando(yaEscritos, e.message)
         const deFicha = reparadoDesdeFicha ? {} : await valoresDesdeFicha(t, pedidos)
         const cubiertos = Object.keys(deFicha)
         const todosSonDePersona = pedidos.length === interp.campos.length
@@ -267,6 +274,7 @@ export async function POST(req: Request) {
         const c = await completarPersonas(r.config, t.project_id_codeoscopic, deFicha)
         if (c.estado === 'no_aplicado') return respuestaNoAplicado(c)
         cotizacion = c.cotizacion
+        for (const k of Object.keys(deFicha) as CampoPersona[]) aplicados.add(k)
         // Y vuelta al ReRate, una sola vez: si vuelve a fallar por validación,
         // `reparadoDesdeFicha` ya no deja repararlo solo y sale como `faltan_vendor`.
       }
@@ -330,17 +338,62 @@ function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
 }
 
-/** `null` = cuerpo mal formado. `{}` = no venían. Solo claves de la lista blanca. */
-function leerCorrecciones(v: unknown): Partial<Record<CampoPersona, string>> | null {
-  if (v === undefined || v === null) return {}
-  if (typeof v !== 'object' || Array.isArray(v)) return null
-  const salida: Partial<Record<CampoPersona, string>> = {}
-  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-    if (!esCampoPersona(k)) return null
-    const s = cadena(val)
-    if (s !== null) salida[k] = s
+/**
+ * Solo claves de la lista blanca y valores con la forma que el vendor acepta
+ * (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha
+ * en formato español llegarían al PATCH y volverían como un 400 sin pista, o
+ * como un 409 que manda a pagar 0,50€ por un dato mal tecleado.
+ */
+function leerCorrecciones(
+  v: unknown,
+): { valores: Partial<Record<CampoPersona, string>> } | { error: string } {
+  if (v === undefined || v === null) return { valores: {} }
+  if (typeof v !== 'object' || Array.isArray(v)) {
+    return { error: 'correcciones tiene que ser un objeto {campo: texto}' }
   }
-  return salida
+  const valores: Partial<Record<CampoPersona, string>> = {}
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (!esCampoPersona(k)) return { error: `correcciones: «${k}» no es un campo de la persona que se pueda escribir` }
+    const s = cadena(val)
+    if (s === null) continue
+    const mal = valorInvalido(k, s)
+    if (mal) return { error: `correcciones.${k}: ${mal}` }
+    valores[k] = s
+  }
+  return { valores }
+}
+
+function valorInvalido(campo: CampoPersona, s: string): string | null {
+  switch (campo) {
+    case 'municipioResidenciaId':
+      return /^\d+$/.test(s) ? null : 'tiene que ser el id numérico del catálogo de municipios'
+    case 'cpResidencia':
+      return /^\d{5}$/.test(s) ? null : 'tiene que ser un código postal de 5 cifras'
+    case 'fechaNacimiento':
+    case 'fechaCarnet':
+      return RE_FECHA.test(s) ? null : 'la fecha tiene que ser aaaa-mm-dd'
+    case 'telefono':
+      return RE_TELEFONO.test(s.replace(/\s/g, '')) ? null : 'tiene que ser un móvil español de 9 cifras'
+    case 'sexo':
+      return s === 'hombre' || s === 'mujer' ? null : 'tiene que ser «hombre» o «mujer»'
+    default:
+      return null
+  }
+}
+
+function respuestaSigueFaltando(campos: CampoPersona[], mensajeVendor: string) {
+  return NextResponse.json(
+    {
+      estado: 'error',
+      causa: 'patch_no_aplicado',
+      sinAplicar: campos.map((campo) => ({ campo, papel: 'holder' })),
+      mensaje:
+        `El proyecto ya trae ${campos.join(', ')} (escrito y comprobado en esta misma petición) y la compañía ` +
+        `lo sigue pidiendo: el PATCH no le vale para este campo. La única vía segura es pedir precio de cero ` +
+        `(0,50€, puede variar). Mensaje de la compañía: ${mensajeVendor}`,
+    },
+    { status: 409 },
+  )
 }
 
 function respuestaNoAplicado(c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>) {
@@ -391,6 +444,10 @@ async function valoresDesdeFicha(
     } catch {
       return {}
     }
+    // 🚨 Sin `PII_ENCRYPTION_KEY`, `decryptField` devuelve el CIFRADO tal cual
+    // (no lanza). Trocearlo daría «v1:iv:ct:tag» como nombre de calle y se
+    // escribiría en el proyecto del vendor. Ilegible = no se sabe, se pregunta.
+    if (direccion === null || direccion.startsWith('v1:')) return {}
     const nombre = partirDireccion(direccion).nombre
     return nombre ? { nombreVia: nombre } : {}
   } catch {
