@@ -97,6 +97,14 @@ test('RC: con más de tres coberturas se resume el resto sin ocultarlo', () => {
   assert.equal(o.detalle, '+2 coberturas')
 })
 
+test('RC: el desglose entero viaja en `coberturas`, sin truncar a 3 ni comas', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: ['Básica', 'Locativa', 'Patronal', 'Explotación', 'Productos'],
+  })
+  assert.deepEqual(o.coberturas, ['Básica', 'Locativa', 'Patronal', 'Explotación', 'Productos'])
+})
+
 test('RC sin coberturas cargadas es «no informado»', () => {
   assert.equal(objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: [] }).estado, 'no_informado')
 })

@@ -42,6 +42,8 @@ export type ObjetoFicha = {
   titulo: string | null
   detalle: string | null
   nota: string | null
+  /** El desglose entero (RC/comercio/otros); `null` en el resto de ramos. */
+  coberturas: string[] | null
 }
 
 /** El recargo por fraccionar: TRES estados. `sin_datos` nunca se pinta como 0€. */
@@ -250,6 +252,7 @@ export function leerObjeto(v: unknown): ObjetoFicha | null {
     titulo: cadena(o.titulo),
     detalle: cadena(o.detalle),
     nota: cadena(o.nota),
+    coberturas: Array.isArray(o.coberturas) ? o.coberturas.filter((c): c is string => typeof c === 'string') : null,
   }
 }
 

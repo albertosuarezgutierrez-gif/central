@@ -35,6 +35,14 @@ export type ObjetoAsegurado = {
   detalle: string | null
   /** Por qué falta (o por qué está a medias). Va al `title` de la celda. */
   nota: string | null
+  /**
+   * El desglose ENTERO de coberturas cuando el objeto se describe por ellas (RC,
+   * comercio, otros) — a diferencia de `titulo`/`detalle`, que las resumen para
+   * caber en una celda. `null` en cualquier otro ramo o si no hay coberturas.
+   * Con ella la UI puede pintar un "tipo" corto y dejar el desglose completo
+   * detrás de un clic, sin tener que volver a parsear `titulo`.
+   */
+  coberturas?: string[] | null
 }
 
 /** Prefijo del cifrado del CRM de origen (AES-256-GCM, `v1:iv:cipher:tag`). */
@@ -262,6 +270,7 @@ function porCoberturas(coberturas: EntradaObjeto['coberturas'], nota: string | n
     titulo: visibles.join(', '),
     detalle: modalidades.length > visibles.length ? `+${modalidades.length - visibles.length} coberturas` : null,
     nota,
+    coberturas: modalidades,
   }
 }
 
