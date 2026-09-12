@@ -119,3 +119,13 @@ test('`export { x }` local resuelve al símbolo real, incluso si `x` era un impo
   assert.deepEqual(ids, ['apps/a/lib/db.ts#prisma', 'apps/a/lib/tenant.ts#COOKIE'])
   assert.equal(g3.nodos.filter(n => n.tipo === 'simbolo').length, 0, 'sin símbolos fantasma')
 })
+
+test('gitSha: en CI manda GITHUB_SHA (el sha de main), no el HEAD local que la radiografía acaba de commitear', async () => {
+  // El 12/09/2026 grafo_nodos quedó con el sha del commit local «regenerar radiografía» (ea311fe) en vez
+  // del de main (5bf8913): el paso del grafo corre DESPUÉS de que el workflow commitee la radiografía en
+  // una rama, así que `git rev-parse HEAD` ya no es main y la comparación «sha del grafo = origin/main»
+  // de CLAUDE.md fallaba siempre por un commit.
+  const { gitSha } = await import('../scripts/grafo-codigo.mjs')
+  assert.equal(gitSha({ GITHUB_SHA: 'abc123' }), 'abc123')
+  assert.match(gitSha({}), /^[0-9a-f]{40}$/, 'fuera de CI sigue leyendo el HEAD de git')
+})

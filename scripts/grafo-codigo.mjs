@@ -357,7 +357,14 @@ export function extraerGrafo(archivos, alias = {}) {
   return { nodos: [...nodos.values()], aristas: [...aristas.values()] }
 }
 
-function gitSha() {
+/**
+ * SHA que estampa el grafo. En CI manda `GITHUB_SHA` (el commit de main que disparó el run): el
+ * paso del grafo corre DESPUÉS de que auditoria.yml commitee la radiografía en una rama, así que
+ * `git rev-parse HEAD` ya no es main (medido el 12/09/2026: grafo_nodos con ea311fe y main en
+ * 5bf8913, y la comprobación «sha del grafo = origin/main» fallando siempre por un commit).
+ */
+export function gitSha(env = process.env) {
+  if (env.GITHUB_SHA) return env.GITHUB_SHA
   try { return execSync('git rev-parse HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch { return '' }
 }
 

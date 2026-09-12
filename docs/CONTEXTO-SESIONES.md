@@ -37,7 +37,11 @@
   sustituye al `curl --data-binary` del workflow, `grafo-codigo-inyectar.mjs` lo reutiliza. El puerto del mapa acepta
   `lote/total`, estampa el `sha` siempre y borra por `sha` en el último lote (antes: por lista de rutas + WHERE hash
   que dejaba el sha viejo). Paso del grafo con `!cancelled()`. Medido en local: mapa 4 lotes ≤1 MB, grafo 13.
-  Cepos en `test/inyectar-lotes.test.ts` (6, vistos en rojo contra main). Pendiente: mergear y verificar `grafo_nodos`.
+  Cepos en `test/inyectar-lotes.test.ts` (6, vistos en rojo contra main). Mergeado (#2816) y `auditoria.yml` disparado: grafo cargado
+  (17.264 nodos / 59.868 aristas) pero el mapa quedó con **85 filas de 3.265** — el run corrió 25 s después del merge y el puerto viejo
+  (aún desplegándose) borraba por lista de rutas en cada lote: **tras mergear un cambio de un puerto, espera al deploy READY antes de
+  disparar** (segundo disparo hecho). Y el grafo llevaba el sha del commit local de la radiografía (ea311fe), no el de main: `gitSha()`
+  prefiere ahora `GITHUB_SHA` (cepo en `test/grafo-codigo.test.ts`, visto en rojo).
 - **🛡️📲 MCP Sentinel avisa por Telegram cuando el modo sombra intervendría (12/09/2026).**
   `sentinel_alerta.py` envuelve (sin tocar) `sentinel_preflight.py` y, cuando la decisión es
   `allow` pero el motivo contiene `SENTINEL_SHADOW`, dispara `POST /api/internal/alerta`
