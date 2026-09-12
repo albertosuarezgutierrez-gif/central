@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { decryptField } from '@central/module-seguros-pii'
 import { cuentaDeFicha, describirOrigenCuenta } from '@/lib/codeoscopic/cuenta-ficha'
 import { ibanEnmascarado } from '@/lib/codeoscopic/emitir-iban'
 import { operadorAutorizado } from '@/lib/operador'
@@ -21,7 +20,7 @@ import {
   esCampoPersona,
   type CampoPersona,
 } from '@/lib/codeoscopic/interprete-400'
-import { partirDireccion } from '@/lib/codeoscopic/direccion'
+import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
 
 export const runtime = 'nodejs'
@@ -101,12 +100,20 @@ export async function POST(req: Request) {
   const correcciones = lectura.valores
 
   const filas = await prisma.$queryRaw<
-    { correduria_id: string; project_id_codeoscopic: string | null; poliza_id: string | null; cliente_id: string | null }[]
+    {
+      correduria_id: string
+      project_id_codeoscopic: string | null
+      poliza_id: string | null
+      cliente_id: string | null
+      producto: string | null
+    }[]
   >`
-    select correduria_id::text as correduria_id, project_id_codeoscopic,
-           poliza_id::text as poliza_id, cliente_id::text as cliente_id
-    from tarificaciones
-    where id = ${tarificacionId}::uuid and simulado = false
+    select t.correduria_id::text as correduria_id, t.project_id_codeoscopic,
+           t.poliza_id::text as poliza_id, t.cliente_id::text as cliente_id,
+           pol.tipo::text as producto
+    from tarificaciones t
+    left join polizas pol on pol.id = t.poliza_id
+    where t.id = ${tarificacionId}::uuid and t.simulado = false
   `
   const t = filas[0]
   if (!t || !t.project_id_codeoscopic) {
@@ -253,7 +260,7 @@ export async function POST(req: Request) {
         const pedidos = interp.campos.map((c) => c.campo).filter(esCampoPersona)
         const yaEscritos = pedidos.filter((c) => aplicados.has(c))
         if (yaEscritos.length > 0) return respuestaSigueFaltando(yaEscritos, e.message)
-        const deFicha = reparadoDesdeFicha ? {} : await valoresDesdeFicha(t, pedidos)
+        const deFicha = reparadoDesdeFicha ? {} : await valoresPersonaDesdeFicha(t, pedidos)
         const cubiertos = Object.keys(deFicha)
         const todosSonDePersona = pedidos.length === interp.campos.length
         const fichaLoCubreTodo = todosSonDePersona && pedidos.length > 0 && pedidos.every((c) => cubiertos.includes(c))
@@ -306,16 +313,25 @@ export async function POST(req: Request) {
     // Puente hacia `codeoscopic_projects`, que es lo que lee `registrarPolizaEmitida`
     // (D2) al acuñar la póliza. Esta cotización nació en `tarificaciones` (tabla
     // nueva del 03/09), así que hasta este ReRate no tenía fila ahí.
+    //
+    // 🚨 `producto` sale de LA PÓLIZA (`t.producto`, `polizas.tipo`), no de un
+    // literal: hasta el 12/09/2026 esto llevaba `'auto'` fijo, así que un
+    // ReRate de hogar/RC dejaba esta fila de bookkeeping mintiendo sobre el
+    // ramo (nadie la relee hoy para decidir nada, pero es el mismo fallo que
+    // el resto del repo llama «basura con forma de dato»). Sin póliza enlazada
+    // (`t.producto` NULL) cae a `'auto'` — el placeholder de siempre, nunca un
+    // ramo inventado sobre datos que sí existen.
     await prisma.$executeRaw`
       insert into codeoscopic_projects (
         correduria_id, project_id_codeoscopic, producto, poliza_id, aseguradora,
         accepted_offer_id_codeoscopic, estado
       ) values (
-        ${t.correduria_id}::uuid, ${t.project_id_codeoscopic}, 'auto'::tipo_seguro,
+        ${t.correduria_id}::uuid, ${t.project_id_codeoscopic}, ${t.producto ?? 'auto'}::tipo_seguro,
         ${t.poliza_id}::uuid, ${compania}, ${oferta.offerId}, 'preemision'
       )
       on conflict (correduria_id, project_id_codeoscopic) do update
         set poliza_id = coalesce(codeoscopic_projects.poliza_id, excluded.poliza_id),
+            producto = excluded.producto,
             aseguradora = excluded.aseguradora,
             accepted_offer_id_codeoscopic = excluded.accepted_offer_id_codeoscopic,
             estado = 'preemision'
@@ -430,46 +446,3 @@ function respuestaNoAplicado(c: Extract<ResultadoCompletar, { estado: 'no_aplica
   )
 }
 
-/**
- * La cascada ANTES de preguntar al corredor: lo que ya está en la ficha.
- * Hoy solo la calle (`clientes.direccion`, cifrada, troceada con
- * `partirDireccion`): es el único dato que el ReRate pide y la cotización no.
- * El resto de campos de persona ya iban en el proyecto al cotizar, así que si
- * el vendor los echa en falta es que la ficha tampoco los tiene.
- * Nunca lanza: si la ficha no se puede leer, devuelve `{}` y se pregunta.
- */
-async function valoresDesdeFicha(
-  t: { correduria_id: string; poliza_id: string | null; cliente_id: string | null },
-  pedidos: CampoPersona[],
-): Promise<Partial<Record<CampoPersona, string>>> {
-  if (!pedidos.includes('nombreVia')) return {}
-  if (!t.cliente_id && !t.poliza_id) return {}
-  try {
-    const filas = await prisma.$queryRaw<{ direccion: string | null }[]>`
-      select c.direccion
-      from clientes c
-      where c.correduria_id = ${t.correduria_id}::uuid
-        and c.id = coalesce(
-          ${t.cliente_id}::uuid,
-          (select p.cliente_id from polizas p where p.id = ${t.poliza_id}::uuid limit 1)
-        )
-      limit 1
-    `
-    const cifrada = filas[0]?.direccion ?? null
-    if (!cifrada) return {}
-    let direccion: string | null
-    try {
-      direccion = decryptField(cifrada)
-    } catch {
-      return {}
-    }
-    // 🚨 Sin `PII_ENCRYPTION_KEY`, `decryptField` devuelve el CIFRADO tal cual
-    // (no lanza). Trocearlo daría «v1:iv:ct:tag» como nombre de calle y se
-    // escribiría en el proyecto del vendor. Ilegible = no se sabe, se pregunta.
-    if (direccion === null || direccion.startsWith('v1:')) return {}
-    const nombre = partirDireccion(direccion).nombre
-    return nombre ? { nombreVia: nombre } : {}
-  } catch {
-    return {}
-  }
-}

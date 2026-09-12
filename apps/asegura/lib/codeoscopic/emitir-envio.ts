@@ -37,19 +37,24 @@ const MARGEN_EN_VUELO_MIN = 10
  *
  * Upsert sobre `codeoscopic_projects`: si el proyecto no tenía fila todavía
  * (lo normal es que SÍ la tenga: la crea `oferta/route.ts` en el ReRate, antes
- * de llegar aquí), la crea — puente de emergencia con `'auto'` como producto
- * placeholder (hoy el envío real solo está construido para auto).
+ * de llegar aquí), la crea — puente de emergencia con `producto` (el
+ * `polizas.tipo` real que pasa el caller, `emitir/route.ts`) en vez del
+ * literal `'auto'` de antes (12/09/2026): esta rama solo se pisa si el ReRate
+ * nunca llegó a crear la fila, y da igual el ramo — hardcodear el más
+ * frecuente la habría dejado mintiendo sobre hogar/RC igual que el INSERT
+ * gemelo de `oferta/route.ts`.
  */
 async function bloquearEnvio(
   correduriaId: string,
   projectId: string,
   attemptId: string,
+  producto: string,
 ): Promise<boolean> {
   const filas = await prisma.$queryRaw<{ id: string }[]>`
     insert into codeoscopic_projects (
       correduria_id, project_id_codeoscopic, producto, estado, submit_attempt_id, submit_in_flight_at
     ) values (
-      ${correduriaId}::uuid, ${projectId}, 'auto'::tipo_seguro, 'preemision', ${attemptId}::uuid, now()
+      ${correduriaId}::uuid, ${projectId}, ${producto}::tipo_seguro, 'preemision', ${attemptId}::uuid, now()
     )
     on conflict (correduria_id, project_id_codeoscopic) do update
       set submit_attempt_id = excluded.submit_attempt_id, submit_in_flight_at = now()
@@ -104,10 +109,14 @@ export async function enviarEmision(
     projectId: string
     offerId: string
     campos: Record<string, unknown>
+    /** `polizas.tipo` de la póliza enlazada — solo se usa si hay que crear la
+     *  fila de emergencia (ver `bloquearEnvio`); la fila normal ya la trae
+     *  del ReRate. */
+    producto: string
   },
 ): Promise<ResultadoEnvio> {
   const attemptId = randomUUID()
-  const tomado = await bloquearEnvio(entrada.correduriaId, entrada.projectId, attemptId)
+  const tomado = await bloquearEnvio(entrada.correduriaId, entrada.projectId, attemptId, entrada.producto)
   if (!tomado) {
     return {
       ok: false,
