@@ -28,7 +28,7 @@ const aristas = grafo.aristas || []
 if (!sha) { console.error('El JSON no tiene "sha"'); process.exit(1) }
 
 /** Lotes de hasta MAX_FILAS_POR_LOTE filas: primero nodos, después aristas (un lote puede mezclar). */
-export function partirGrafo(nodos, aristas, max = MAX_FILAS_POR_LOTE) {
+function partirGrafo(nodos, aristas, max = MAX_FILAS_POR_LOTE) {
   const lotes = []
   let i = 0, j = 0
   while (i < nodos.length || j < aristas.length) {
