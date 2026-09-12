@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🛣️ `tipoVia` en `faltan_vendor` era una caja de texto que pedía un id de catálogo a ciegas (12/09/2026).**
+  Alberto, sobre el ReRate de Allianz para Pilar Franco Ruz: «no entiendo que pida otra vez poner calle».
+  El panel de Emisión (`retarificar/emision.tsx`, plataforma) pintaba `tipoVia` y `estadoCivil` como
+  `<input>` pidiendo «el id del catálogo /road-types, no el nombre» — un id que nadie tiene a la vista y
+  que la regla de la casa prohíbe inventar. El puerto YA servía ese catálogo gratis (`tipo=vias`,
+  `tipo=estados-civiles`); solo faltaba pintarlo: `CATALOGO_DE_CAMPO` → desplegable por nombre, id real
+  en `correcciones`. Sin catálogo (caído/`sin_configurar`) vuelve la caja de texto —peor que el desplegable,
+  mejor que un callejón—, y el botón no manda un `sugerido` que el corredor aún no puede ver. 4 rondas de
+  `code-review` (una cazó una carrera: el efecto se cancelaba a sí mismo). `municipioResidenciaId` fuera a
+  propósito (su catálogo exige el CP, que esta pantalla no pide). PR abierto y en seguimiento.
+
 - **🔒 `patch_no_aplicado` del Submit: mensaje falso + PII en claro en `crudo` (12/09/2026).**
   Tras el fix del 14º 400, Alberto probó «Emitir» de nuevo: el vendor NO aplicó `email` en holder/owner/
   primaryDriver pese a que sí aplicó nombreVia/numeroVia/tipoVia en el MISMO PATCH — la vía real para
