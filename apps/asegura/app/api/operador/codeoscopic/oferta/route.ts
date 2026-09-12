@@ -114,7 +114,7 @@ export async function POST(req: Request) {
     // GRATIS: recupera el `id` real del precio (el vendor no lo devuelve al
     // guardar la cotización en nuestra BD, solo el precio en euros) y de paso
     // el `insuranceLine` que exige el PATCH de abajo.
-    const cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
+    let cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
 
     if (fechaEfectoCorregida) {
       // GRATIS. El PATCH corrige effectiveDate pero el vendor exige
@@ -126,6 +126,16 @@ export async function POST(req: Request) {
         fechaEfectoCorregida,
         cotizacion.insuranceLineId,
       )
+      // 🚨 Sexto 400 real, mismo proyecto (12/09/2026): con el PATCH ya sin
+      // fallos, el ReRate SIGUIÓ rechazando la fecha con el MISMO mensaje —
+      // en `/insurances/{id}/offers`, no en el PATCH. `docs/CODEOSCOPIC-API-
+      // PORTAL.md` avisa de que tocar un campo del proyecto DESPUÉS de
+      // cotizar «invalida las cotizaciones anteriores (se re-tarifican)»: el
+      // `precio.id` de la lectura de ARRIBA es de ANTES del PATCH, así que
+      // se re-tarificaba una cotización ya invalidada. Se relee (GRATIS,
+      // sigue siendo un `GET`) para que `encontrarPrecio` casé sobre el
+      // proyecto YA corregido.
+      cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
     }
 
     const precio = encontrarPrecio(cotizacion, compania, categoria)
