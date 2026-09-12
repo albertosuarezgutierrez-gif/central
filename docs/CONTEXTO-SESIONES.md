@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 Smoobu SIGUE en 401 tras el fix de HMAC — NO se corrija a "arreglado" (12/09/2026, PR #2731 ya mergeado).**
+  Código desplegado en las 3 apps (verificado por timestamp de deploy, READY 07:57:40Z). Dos pasadas del
+  cron `ialimp_pms` YA con el código nuevo (08:00:06Z y 08:10:06Z) siguen devolviendo `sync_error='Smoobu
+  API 401'` — la firma se calculó, se mandó, y Smoobu la rechazó igual. La firma está verificada byte a
+  byte contra el ejemplo oficial de Smoobu (entrada de abajo), así que el bug NO es de cálculo HMAC.
+  **Sospecha fundada:** el par `smoobu_api_key`/`smoobu_api_secret` guardado en `pms_connections`
+  (ambos 44 chars) no es válido para HMAC en el lado de Smoobu — secret mal copiado, generado para otro
+  key, o revocado. **Pendiente de Alberto:** entrar a Smoobu (Settings → Advanced → API Keys), confirmar/
+  regenerar el par, y volver a guardarlo en la conexión de `pms_connections` (UI de ialimp). Esta sesión
+  no pudo probar contra la API real de Smoobu (el proxy bloquea `*.smoobu.com`).
 - **✅ Smoobu 401 ARREGLADO: HMAC-SHA256 implementado y migradas TODAS las llamadas (12/09/2026).** Causa:
   `pms_connections` ya tenía el par HMAC (`smoobu_api_key`+`smoobu_api_secret`) pero el código seguía
   mandando el header legacy `Api-Key` (Smoobu lo deprecó, sunset 25/09/2026). Alberto trajo la spec exacta
