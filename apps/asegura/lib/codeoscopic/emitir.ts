@@ -362,6 +362,10 @@ const RE_MOVIL_ES = /(?<!\d)(?:\+?34[.\-\s]?)?[67](?:[.\-\s]?\d){8}(?!\d)/g
 //        adyacente en minúscula («1332 ya» → case-insensitive daba «32YA»).
 const RE_IBAN =
   /\b[A-Za-z]{2}\d{2}[A-Za-z0-9]{11,30}\b|\b[A-Z]{2}\d{2}[.\-\s]?(?:[A-Z0-9]{4}[.\-\s]?){2,7}[A-Z0-9]{1,4}\b/g
+// El correo del tomador (12/09/2026: desde que viaja en el POST y el Submit lo
+// exige, un 400 que lo cite es lo esperable). Se deja el dominio: sirve para
+// diagnosticar («el vendor rechaza gmail.com») sin identificar a la persona.
+const RE_EMAIL_EN_TEXTO = /[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g
 
 /**
  * `envio.crudo` (y `envio.mensaje`, el texto del 400/500) son la respuesta
@@ -395,6 +399,7 @@ export function redactarCrudoVendor(v: unknown): unknown {
       .replace(RE_IBAN, (m) => ibanEnmascarado(m))
       .replace(RE_DNI_NIE, (m) => enmascararDni(m.replace(/[.\-\s]/g, '')) ?? m)
       .replace(RE_MOVIL_ES, (m) => `…${m.replace(/\D/g, '').slice(-3)}`)
+      .replace(RE_EMAIL_EN_TEXTO, (m) => `…@${m.slice(m.indexOf('@') + 1)}`)
   }
   if (Array.isArray(v)) return v.map(redactarCrudoVendor)
   if (v && typeof v === 'object') {

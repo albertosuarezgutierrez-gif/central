@@ -49,11 +49,58 @@ test('el sexo se traduce al vocabulario del vendor', () => {
 })
 
 // ─── Lo que NO se manda ──────────────────────────────────────────────────────
-test('no viajan email, calle, ocupación, situación laboral ni país de nacimiento', () => {
+test('no viajan ocupación, situación laboral ni país de nacimiento; y sin email en la ficha, tampoco email', () => {
   const json = JSON.stringify(construirPeticionAuto(BASE))
   for (const prohibido of ['email', 'street', 'address1', 'economicOccupation', 'employmentStatus', 'birthCountry']) {
     assert.ok(!json.includes(prohibido), `${prohibido} no debería viajar a Codeoscopic`)
   }
+})
+
+// ─── El correo SÍ viaja cuando la ficha lo tiene (12/09/2026) ────────────────
+test('con email en la ficha, viaja en la persona (los tres papeles) con la clave del vendor', () => {
+  const c = construirPeticionAuto({ ...BASE, email: ' Cliente@Example.com ' }) as any
+  assert.equal(c.holder.email, 'Cliente@Example.com')
+  assert.equal(c.risk.owner.email, 'Cliente@Example.com')
+  assert.equal(c.risk.primaryDriver.email, 'Cliente@Example.com')
+})
+
+// ─── Para EMITIR se exige antes de pagar lo que el Submit pide después ───────
+test('paraEmitir: sin email es un reparo que avisa de que habría que pagar otra vez', () => {
+  const r = revisarDatosAuto(BASE, { paraEmitir: true })
+  const e = r.find((x) => x.campo === 'email')
+  assert.ok(e, 'email tiene que faltar')
+  assert.match(e!.motivo, /pagar otra vez/)
+  // Sin `paraEmitir` (presupuesto rápido) el correo NO bloquea.
+  assert.ok(!revisarDatosAuto(BASE).some((x) => x.campo === 'email'))
+})
+
+test('paraEmitir: con dirección hacen falta número y tipo de vía; sin dirección, no', () => {
+  const conDir = revisarDatosAuto(
+    { ...BASE, email: 'a@b.es', cpResidencia: '41003', municipioResidenciaId: 999, nombreVia: 'Betis' },
+    { paraEmitir: true },
+  )
+  assert.deepEqual(conDir.map((x) => x.campo).sort(), ['numeroVia', 'tipoVia'])
+  const sinDir = revisarDatosAuto({ ...BASE, email: 'a@b.es' }, { paraEmitir: true })
+  assert.deepEqual(sinDir, [])
+  // Y con los tres, nada falta: la dirección viaja entera.
+  const completa = {
+    ...BASE,
+    email: 'a@b.es',
+    cpResidencia: '41003',
+    municipioResidenciaId: 999,
+    nombreVia: 'Betis',
+    numeroVia: '12',
+    tipoVia: 'Street',
+  }
+  assert.deepEqual(revisarDatosAuto(completa, { paraEmitir: true }), [])
+  assert.deepEqual((construirPeticionAuto(completa) as any).holder.addresses, [
+    { postalCode: '41003', town: { id: 999 }, primary: true, roadName: 'Betis', roadNumber: '12', roadType: { id: 'Street' } },
+  ])
+})
+
+test('paraEmitir: un email sin forma de correo es un reparo (no se paga por una errata)', () => {
+  const r = revisarDatosAuto({ ...BASE, email: 'sin-arroba' }, { paraEmitir: true })
+  assert.match(r.find((x) => x.campo === 'email')!.motivo, /forma de correo/)
 })
 
 // ─── Fecha de compra ─────────────────────────────────────────────────────────

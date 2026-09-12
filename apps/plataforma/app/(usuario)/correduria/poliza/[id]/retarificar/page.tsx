@@ -202,6 +202,11 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
         municipios={pre?.municipios ?? null}
         municipiosMotivo={pre?.municipiosMotivo ?? falloPre}
         estadoCivilAuto={pre?.estadoCivil ?? null}
+        // 🛣️ El tipo de vía se elige ANTES de pagar: el Submit lo exige y el
+        // proyecto no lo admite después (12/09/2026).
+        tiposVia={pre?.tiposVia ?? null}
+        tipoViaAuto={pre?.tipoVia ?? null}
+        tipoViaMotivo={pre?.tipoViaMotivo ?? null}
         fechaMatriculacion={pre?.fechaMatriculacion ?? null}
         // Ver el tipo `VehiculoConocido`: `null` = no se ha podido mirar.
         vehiculo={pre?.vehiculo ?? null}

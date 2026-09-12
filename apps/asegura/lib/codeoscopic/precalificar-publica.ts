@@ -44,6 +44,11 @@ export const CAMPOS_PERSONALES: ReadonlySet<string> = new Set<string>([
   'cpResidencia',
   'cpCirculacion',
   'direccion',
+  // La calle troceada de la ficha (nombre y número) es la dirección del
+  // TOMADOR, que no cruza el puerto: viaja como supuesto con `oculto: true`
+  // (12/09/2026 — `nombreVia` llevaba unas horas saliendo en claro).
+  'nombreVia',
+  'numeroVia',
   'matricula',
 ])
 

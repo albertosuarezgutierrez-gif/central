@@ -38,6 +38,7 @@ import { cotizacionesVivas, historialCliente, type HistorialFila } from './carte
 import { listarDocumentos } from './cartera-documentos'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { emailDeFicha } from './email-ficha'
 import type {
   ClienteCartera,
   PolizaCartera,
@@ -776,12 +777,17 @@ export async function origenRetarificacion(
   // Medido el 01/09/2026: de 500 intervinientes solo los 21 `conductor_habitual`
   // la traen, así que en la mayoría de pólizas seguirá faltando — y faltar es
   // exactamente lo que la pantalla debe decir, en vez de inventarse una.
-  const [siniestros, conductor] = await Promise.all([
+  const [siniestros, conductor, email] = await Promise.all([
     db.siniestro.count({ where: { correduriaId, polizaId: p.id } }),
     db.polizaInterviniente.findFirst({
       where: { polizaId: p.id, correduriaId, rol: 'conductor_habitual' },
       select: { fechaCarnet: true },
     }),
+    // 🚨 Por `emailDeFicha`, no por `p.cliente.email`: la columna es el espejo
+    // y el principal puede vivir solo en `cliente_emails` (5 de las 80 fichas
+    // vivas). Un fallo aquí no tumba la precalificación: `null` = «sin correo
+    // utilizable», que la pantalla pide, nunca inventa.
+    emailDeFicha(correduriaId, p.cliente.id).catch((): string | null => null),
   ])
 
   const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
@@ -824,6 +830,7 @@ export async function origenRetarificacion(
     codigoPostal: p.cliente.codigoPostal ?? null,
     fechaCarnet: normalizarFecha(descifrar(conductor?.fechaCarnet)),
     direccion: descifrar(p.cliente.direccion),
+    email,
   }
 
   const matricula = datos ? texto(datos.matricula) : null
@@ -881,6 +888,7 @@ export async function clienteOrigenDe(
   const c = await db.cliente.findFirst({
     where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
     select: {
+      id: true,
       nombre: true,
       apellidos: true,
       dni: true,
@@ -893,6 +901,7 @@ export async function clienteOrigenDe(
     },
   })
   if (!c) return null
+  const email = await emailDeFicha(correduriaId, c.id).catch((): string | null => null)
 
   const cliente: ClienteCartera = {
     nombre: c.nombre,
@@ -905,6 +914,7 @@ export async function clienteOrigenDe(
     codigoPostal: c.codigoPostal ?? null,
     fechaCarnet: null,
     direccion: descifrar(c.direccion),
+    email,
   }
   return { cliente, etiqueta: `${c.nombre} ${c.apellidos}`.trim() || 'Cliente' }
 }

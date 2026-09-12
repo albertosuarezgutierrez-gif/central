@@ -197,6 +197,7 @@ type DatosBorrador = {
   garaje?: string
   estadoCivilId?: string
   municipioId?: string
+  tipoViaId?: string
   matriculacion?: string
   correcciones?: Record<string, string>
 }
@@ -308,6 +309,9 @@ export default function Retarificador({
   municipios,
   municipiosMotivo,
   estadoCivilAuto,
+  tiposVia,
+  tipoViaAuto,
+  tipoViaMotivo,
   fechaMatriculacion,
   vehiculo,
   consumo,
@@ -342,6 +346,17 @@ export default function Retarificador({
   /** Por qué la lista viene vacía o nula. `null` = no hay nada que explicar. */
   municipiosMotivo: string | null
   estadoCivilAuto: Opcion | null
+  /**
+   * 🛣️ Catálogo `/road-types` del vendor y el tipo emparejado desde la
+   * dirección de la ficha (12/09/2026). El Submit exige `roadType.id`, el
+   * proyecto no lo admite después de creado y el vendor no aplica por PATCH
+   * lo que le falta a la persona — así que se elige AQUÍ, antes de pagar, y
+   * nunca se teclea: es una referencia de catálogo. `tiposVia === null` =
+   * no se pudo leer el catálogo (y `tipoViaMotivo` lo dice).
+   */
+  tiposVia: Opcion[] | null
+  tipoViaAuto: Opcion | null
+  tipoViaMotivo: string | null
   fechaMatriculacion: string | null
   /** Marca, modelo y versiones vistas en otras pólizas de la misma matrícula.
    *  `null` = no se ha podido leer de la ficha (ver el tipo). */
@@ -411,6 +426,10 @@ export default function Retarificador({
   const [estadoCivilId, setEstadoCivilId] = useState(
     guardadaPrevia?.formulario.estadoCivilId ?? estadoCivilAuto?.id ?? '',
   )
+  // Mismo criterio que el estado civil: lo ya pagado manda; si no, el
+  // emparejado desde la ficha; si no, se elige a mano.
+  const listaTiposVia = tiposVia ?? []
+  const [tipoViaId, setTipoViaId] = useState(guardadaPrevia?.formulario.tipoViaId ?? tipoViaAuto?.id ?? '')
   // 🔒 Aquí NO hay caja de código postal, y es deliberado. Durante unas horas la
   // hubo —el puerto no servía la precalificación y se le pedía el CP a Alberto—
   // y eran las dos cosas malas a la vez: hacerle teclear un dato que la ficha ya
@@ -626,6 +645,7 @@ export default function Retarificador({
     if (b.garaje && garajes.some((g) => g.id === b.garaje)) setGaraje(b.garaje)
     if (b.estadoCivilId && civiles.some((c) => c.id === b.estadoCivilId)) setEstadoCivilId(b.estadoCivilId)
     if (b.municipioId && listaMunicipios.some((m) => m.id === b.municipioId)) setMunicipioId(b.municipioId)
+    if (b.tipoViaId && listaTiposVia.some((t) => t.id === b.tipoViaId)) setTipoViaId(b.tipoViaId)
     if (b.matriculacion) setMatriculacion(b.matriculacion)
     if (b.correcciones) setCorrecciones(b.correcciones)
     // Se restaura una sola vez al abrir la pantalla.
@@ -646,6 +666,7 @@ export default function Retarificador({
         garaje,
         estadoCivilId,
         municipioId,
+        tipoViaId,
         matriculacion,
         correcciones,
       })
@@ -660,6 +681,7 @@ export default function Retarificador({
     garaje,
     estadoCivilId,
     municipioId,
+    tipoViaId,
     matriculacion,
     correcciones,
   ])
@@ -738,6 +760,7 @@ export default function Retarificador({
         garaje,
         estadoCivilId,
         municipioId,
+        tipoViaId,
         fechaMatriculacion: matriculacion,
         garajeEsSupuesto: true,
       },
@@ -819,12 +842,33 @@ export default function Retarificador({
   const faltaGaraje = !garaje
   const faltaCivil = !estadoCivilId
   const faltaMunicipio = !municipioId
+  // El tipo de vía solo hace falta si la dirección VIAJA (hay municipio): sin
+  // dirección el vendor no la pide. Con municipio y sin tipo, el servidor lo
+  // rechaza con 422 sin gastar — pero mejor decirlo aquí, en el campo.
+  const faltaTipoVia = !!municipioId && !tipoViaId
   const faltaMatriculacion = !matriculacion
+
+  /**
+   * Los huecos conocidos: los de la precalificación MÁS los que el servidor
+   * haya devuelto en un 422 (sin gastar). Los segundos importan porque la
+   * precalificación solo revisa la dirección si ya sabe el municipio: con un
+   * CP de varios municipios la calle/número/correo no salen en `faltanInicial`
+   * y aparecen por primera vez en el 422 de «Pedir precio» — sin esto no
+   * habría caja donde teclearlos (hallado en `code-review`, 12/09/2026).
+   */
+  const faltanConocidos = useMemo(() => {
+    const porCampo = new Map<string, Reparo>()
+    const delServidor = resultado.estado === 'faltan' ? resultado.faltan : []
+    for (const f of [...(faltanInicial ?? []), ...delServidor]) {
+      if (!porCampo.has(f.campo)) porCampo.set(f.campo, f)
+    }
+    return [...porCampo.values()]
+  }, [faltanInicial, resultado])
 
   /** Los huecos de la ficha que SÍ se teclean aquí (sexo + los de texto). */
   const aMano = useMemo(
-    () => (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo]),
-    [faltanInicial],
+    () => faltanConocidos.filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo]),
+    [faltanConocidos],
   )
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
 
@@ -833,7 +877,7 @@ export default function Retarificador({
    * callan: el servidor los rechazará con un 422 —sin gastar— y quien mire la
    * pantalla tiene que saber por qué antes de pulsar.
    */
-  const huerfanos = (faltanInicial ?? []).filter(
+  const huerfanos = faltanConocidos.filter(
     (f) => !RESUELTOS_EN_PANTALLA.has(f.campo as string) && !CAMPOS_A_MANO[f.campo],
   )
 
@@ -853,6 +897,7 @@ export default function Retarificador({
     faltaGaraje ||
     faltaCivil ||
     faltaMunicipio ||
+    faltaTipoVia ||
     faltaMatriculacion ||
     aManoSinRellenar.length > 0
   // En simulación no se llama al vendor ni se toca el libro, así que el tope no
@@ -1085,7 +1130,7 @@ export default function Retarificador({
         sub={
           aMano.length > 0
             ? 'Los datos personales NUNCA se suponen: los que falten se teclean aquí.'
-            : 'La ficha trae todo lo personal; solo hay que confirmar estos dos.'
+            : 'La ficha trae todo lo personal; solo hay que confirmar estos tres.'
         }
       >
         <div className="form-grid">
@@ -1145,6 +1190,42 @@ export default function Retarificador({
               {listaMunicipios.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.nombre}
+                </option>
+              ))}
+            </select>
+          </Campo>
+
+          {/* 🛣️ Tipo de vía ANTES de pagar (12/09/2026). El Submit lo exige como
+              referencia de catálogo y el proyecto no lo admite después: hasta
+              hoy se pedía DESPUÉS del cargo, en `faltan_vendor`, tecleando un
+              id a ciegas. Es el hueco real de Pilar Franco Ruz («Severo Ochoa
+              12», sin «Calle» delante). */}
+          <Campo
+            id="tipo-via"
+            etiqueta="Tipo de vía"
+            falta={faltaTipoVia}
+            ayuda={
+              tipoViaAuto
+                ? `Viene de la dirección de la ficha («${tipoViaAuto.nombre}»). Se puede cambiar.`
+                : tipoViaMotivo ??
+                  (tiposVia === null
+                    ? 'No se ha podido leer el catálogo de tipos de vía. No es que no haya: no se ha podido mirar.'
+                    : 'La dirección de la ficha no lo dice: elígelo. La compañía lo exige para emitir.')
+            }
+          >
+            <select
+              id="tipo-via"
+              value={tipoViaId}
+              onChange={(e) => setTipoViaId(e.target.value)}
+              disabled={listaTiposVia.length === 0}
+              style={{ minHeight: 44 }}
+            >
+              <option value="">
+                {listaTiposVia.length === 0 ? 'Catálogo no disponible' : 'Elige tipo de vía'}
+              </option>
+              {listaTiposVia.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre}
                 </option>
               ))}
             </select>
@@ -2072,6 +2153,12 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
+  // Lo que el SUBMIT exige y la ficha puede no traer (12/09/2026): se teclea
+  // ANTES de pagar. Hasta hoy `nombreVia` caía en «no se arregla desde esta
+  // pantalla» y el correo/número se descubrían a 0,50€ por campo.
+  nombreVia: { etiqueta: 'Nombre de la calle', tipo: 'text' },
+  numeroVia: { etiqueta: 'Número', tipo: 'text' },
+  email: { etiqueta: 'Correo electrónico', tipo: 'email' },
 }
 
 /**
@@ -2086,4 +2173,5 @@ const RESUELTOS_EN_PANTALLA = new Set<string>([
   'municipioCirculacionId',
   'estadoCivil',
   'sexo',
+  'tipoVia',
 ])
