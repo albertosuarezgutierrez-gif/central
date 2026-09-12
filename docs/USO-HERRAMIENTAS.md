@@ -89,12 +89,9 @@ resolución de imports dinámicos con cadena calculada ni de barriles multi-nive
 ya cubre `grafo_deps_archivo`. `graphify_render_subgraph` (visualización) no se probó porque su
 equivalente (`grafo_subgrafo`) no tiene contraparte de renderizado — uso residual, no bloqueante.
 
-**Lo que el grafo propio sigue sin cubrir, y NO es parte de este trabajo:** `remember`/`recall`/
-`memories_about` (memoria durable de Graphify). Alberto ya decidió (`CLAUDE.md`, 12/09/2026) que
-esas dos siguen en Graphify «mientras haya cuota» — la memoria de este repo vive en
-`docs/CONTEXTO-SESIONES.md`, que es un sustituto funcional pero no el mismo mecanismo (no hace
-recuperación semántica sobre las notas). Cancelar Graphify hoy significaría perder `remember`/`recall`
-sin sustituto, no solo ahorrar cuota de grafo.
+**Lo que este trabajo (grafo de código) no cubría:** `remember`/`recall`/`memories_about` (memoria
+durable de Graphify) — hasta el 12/09/2026 la única pieza sin sustituto propio. Medido más abajo
+("Paridad de MEMORIA"): ya tiene sustituto.
 
 ## Paridad de MEMORIA (`memoria_buscar` vs `recall`/`memories_about`) — medición del 12/09/2026
 

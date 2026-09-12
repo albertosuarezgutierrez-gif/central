@@ -312,10 +312,11 @@ el cuerpo, precisamente para que este paso no se salte.
 Flujo antes de modificar código compartido (función, componente, servicio, API, modelo):
 `GRAFO PROPIO (localizar) → ANALIZAR IMPACTO → LEER CÓDIGO → PLANIFICAR → MODIFICAR → VERIFICAR`.
 
-**Memoria durable** (`memories_about`, `recall`, `remember`, únicos usos que quedan de Graphify):
-decisiones técnicas permanentes, convenciones del proyecto, gotchas y restricciones importantes —
-NO detalles temporales de una tarea concreta ni información obvia que ya está en el código.
-Complementa a `docs/CONTEXTO-SESIONES.md`, no lo sustituye.
+**Memoria durable:** ya NO se usa `memories_about`/`recall`/`remember` de Graphify (medición de
+paridad 12/09/2026, arriba) — usa `memoria_buscar()` sobre `docs/CONTEXTO-SESIONES.md`/
+`docs/memoria/*.md` y anota ahí, al cerrar sesión, decisiones técnicas permanentes, convenciones del
+proyecto, gotchas y restricciones importantes — NO detalles temporales de una tarea concreta ni
+información obvia que ya está en el código.
 
 **Navegación:** no hagas exploraciones masivas con `Grep`/`Glob`/lectura indiscriminada.
 Pregunta primero al grafo propio (dónde vive la funcionalidad, quién la consume, qué depende de
