@@ -30,6 +30,11 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 Smoobu 401 explicado: las credenciales HMAC ya están en BD, el código sigue mandando `Api-Key` legacy (12/09/2026).** `pms_connections` tiene `smoobu_api_key` **Y** `smoobu_api_secret` rellenos (44 chars cada uno, pinta de par HMAC) desde que alguien metió "el nuevo API de Smoobu" — pero `getSmoobuKey()`/`smoobuFetch()` (y ~20 rutas que llaman a `login.smoobu.com` directo, sin pasar por ese helper) solo leen `smoobu_api_key` y lo mandan como header `Api-Key`. Smoobu deprecó ese esquema (sunset 25/09/2026, [soporte](https://support.smoobu.com/hc/en-us/articles/36304895666450-How-do-I-set-up-HMAC-API-authentication)): ahora exige firmar cada petición con HMAC-SHA256 (`X-API-Key`/`X-Timestamp`/`X-Nonce`/`X-Signature`) usando `smoobu_api_secret`. Consecuencias medidas: `smoobu_sync` sin OK desde 11/09 07:52 UTC (22h), `sivra_pricing_apply` corriendo pero escribiendo "0 noches" (precios sin actualizar en Smoobu), y el mensaje de Martine (dúplex, llaves) **ni siquiera llegó a `mensajes_log`/`mensajes_pendientes_tg`** — el agente no puede leer Smoobu, así que no vio el mensaje.
+  **Bloqueo:** el proxy de esta sesión veta todo `*.smoobu.com` (`login.`, `docs.`, `support.`), así que no pude leer la spec exacta del canonical string/firma. Antes de tocar código, Alberto tiene que pegar el contenido de `docs.smoobu.com` (sección HMAC) o confirmar que sirve el resumen de soporte.
+  **Plan una vez haya spec:** implementar la firma HMAC UNA sola vez en `lib/smoobu.ts` (sivra + plataforma) y migrar las ~20 rutas que hacen `fetch('https://login.smoobu.com/...')` a mano para que pasen TODAS por `smoobuFetch()` — hoy la key sí sale de un sitio único pero la construcción de la petición está duplicada en cada ruta, y por eso un cambio de esquema de auth obliga a tocar 20 ficheros en vez de 1.
+  **Mientras tanto:** responder a Martine a mano desde la app de Smoobu (nuestro canal automático no ve su mensaje).
+
 - **🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST (11/09/2026).**
   Tras el fix de `options: []`, el vendor rechazó con «El campo Fenómenos de la naturaleza de Allianz
   es obligatorio». `docs/CODEOSCOPIC-API-PORTAL.md` ya avisaba: qué opciones pide cada producto no se
