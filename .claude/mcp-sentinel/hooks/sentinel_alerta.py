@@ -19,8 +19,17 @@ PREFLIGHT = HERE / "sentinel_preflight.py"
 
 
 def _curl_cfg_quote(value: str) -> str:
-    """Quote a value for curl's -K/--config format (escapes \\ and ")."""
-    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    """Quote a value for curl's -K/--config format.
+
+    Un salto de línea SIN escapar dentro de un valor rompe la línea del
+    fichero de config y el resto se lee como una directiva curl nueva
+    (verificado con curl real: un token con \\n se corta y la segunda mitad
+    se interpreta como una cabecera HTTP más). Se escapan también \\r y \\t
+    porque curl reconoce esas mismas secuencias dentro de comillas.
+    """
+    value = value.replace("\\", "\\\\").replace('"', '\\"')
+    value = value.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
+    return '"' + value + '"'
 
 
 def maybe_alert(raw_input: bytes, out_bytes: bytes) -> None:
@@ -42,6 +51,13 @@ def maybe_alert(raw_input: bytes, out_bytes: bytes) -> None:
         return
     # El token viaja a un endpoint propio: nunca en claro por HTTP.
     if not url.startswith("https://"):
+        return
+    # Un \r o \n crudo en la URL o el token permitiría inyectar una cabecera
+    # HTTP extra: curl decodifica \r/\n dentro de las comillas del fichero de
+    # config y el control byte crudo resultante se manda tal cual en la
+    # cabecera (verificado con curl real: "Authorization: Bearer x\ny: z" se
+    # envía como DOS cabeceras). Ninguno de los dos debería llevarlos nunca.
+    if any(c in url for c in "\r\n") or any(c in token for c in "\r\n"):
         return
 
     # Dedupe: mismo motivo, mismo día -> un solo aviso (evita spam en bucles).
@@ -106,9 +122,13 @@ def main() -> int:
         proc = subprocess.run(
             [sys.executable, str(PREFLIGHT)], input=raw_input, capture_output=True, timeout=8
         )
-    except subprocess.TimeoutExpired:
-        # Degrada como el propio motor ante fallos (fail-open, nunca cuelga la
-        # llamada de la herramienta): sin veredicto, se permite.
+    except Exception:
+        # Degrada como el propio motor ante fallos (fail-open, nunca cuelga ni
+        # rompe la llamada de la herramienta): sin veredicto, se permite. No
+        # solo el timeout: cualquier fallo al lanzar preflight (binario
+        # movido, OSError por límite de recursos, etc.) debe degradar igual,
+        # no propagar una excepción sin capturar que dejaría el hook sin
+        # salida válida.
         sys.stdout.buffer.write(b"{}")
         return 0
     sys.stdout.buffer.write(proc.stdout)
