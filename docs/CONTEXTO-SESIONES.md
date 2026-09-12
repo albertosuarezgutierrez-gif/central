@@ -30,10 +30,23 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
-- **🚨 Smoobu 401 explicado: las credenciales HMAC ya están en BD, el código sigue mandando `Api-Key` legacy (12/09/2026).** `pms_connections` tiene `smoobu_api_key` **Y** `smoobu_api_secret` rellenos (44 chars cada uno, pinta de par HMAC) desde que alguien metió "el nuevo API de Smoobu" — pero `getSmoobuKey()`/`smoobuFetch()` (y ~20 rutas que llaman a `login.smoobu.com` directo, sin pasar por ese helper) solo leen `smoobu_api_key` y lo mandan como header `Api-Key`. Smoobu deprecó ese esquema (sunset 25/09/2026, [soporte](https://support.smoobu.com/hc/en-us/articles/36304895666450-How-do-I-set-up-HMAC-API-authentication)): ahora exige firmar cada petición con HMAC-SHA256 (`X-API-Key`/`X-Timestamp`/`X-Nonce`/`X-Signature`) usando `smoobu_api_secret`. Consecuencias medidas: `smoobu_sync` sin OK desde 11/09 07:52 UTC (22h), `sivra_pricing_apply` corriendo pero escribiendo "0 noches" (precios sin actualizar en Smoobu), y el mensaje de Martine (dúplex, llaves) **ni siquiera llegó a `mensajes_log`/`mensajes_pendientes_tg`** — el agente no puede leer Smoobu, así que no vio el mensaje.
-  **Bloqueo:** el proxy de esta sesión veta todo `*.smoobu.com` (`login.`, `docs.`, `support.`), así que no pude leer la spec exacta del canonical string/firma. Antes de tocar código, Alberto tiene que pegar el contenido de `docs.smoobu.com` (sección HMAC) o confirmar que sirve el resumen de soporte.
-  **Plan una vez haya spec:** implementar la firma HMAC UNA sola vez en `lib/smoobu.ts` (sivra + plataforma) y migrar las ~20 rutas que hacen `fetch('https://login.smoobu.com/...')` a mano para que pasen TODAS por `smoobuFetch()` — hoy la key sí sale de un sitio único pero la construcción de la petición está duplicada en cada ruta, y por eso un cambio de esquema de auth obliga a tocar 20 ficheros en vez de 1.
-  **Mientras tanto:** responder a Martine a mano desde la app de Smoobu (nuestro canal automático no ve su mensaje).
+- **✅ Smoobu 401 ARREGLADO: HMAC-SHA256 implementado y migradas TODAS las llamadas (12/09/2026).** Causa:
+  `pms_connections` ya tenía el par HMAC (`smoobu_api_key`+`smoobu_api_secret`) pero el código seguía
+  mandando el header legacy `Api-Key` (Smoobu lo deprecó, sunset 25/09/2026). Alberto trajo la spec exacta
+  de `docs.smoobu.com` vía Claude en Chrome (bloqueado por el proxy de esta sesión). Fix: módulo puro nuevo
+  **`lib/smoobu-firma.ts`** (idéntico en sivra/plataforma/ialimp) con la firma HMAC-SHA256 sobre el
+  canonical `METHOD\nPATH\nQUERY\nTIMESTAMP\nNONCE\nBODY_HASH\nAPI_KEY`, contrastada BYTE A BYTE contra el
+  ejemplo oficial de Smoobu (firma esperada verificada dos veces, agente + sesión principal, mismo resultado).
+  `smoobuFetch()` (sivra+plataforma) firma sola — las ~24 rutas que hacían `fetch('login.smoobu.com/...')`
+  a mano quedaron migradas para pasar TODAS por ahí (antes la key salía de un sitio único pero la petición
+  HTTP se construía 20 veces). `apps/ialimp/app/api/pms/sync` (fuera del helper compartido, app aislada)
+  firma con su propia copia. Sin `smoobu_api_secret`, `smoobuFetch` devuelve un 401 con la causa exacta
+  en vez de dejar un 401 mudo indistinguible de credencial mala.
+  **Verificado:** `tsc` 0 en sivra/plataforma/ialimp, 11/11 tests de la firma, suite completa de las 3 apps
+  en verde (2741+11+33 tests), cepo visto en ROJO en 4 mutaciones deliberadas (hex vs base64, query sin
+  ordenar, línea de query omitida, nonce fijo). Sin llamar a la API real (proxy bloquea `*.smoobu.com`).
+  **Pendiente de Alberto:** revisar el PR y confirmar en producción que `smoobu_sync`/`sivra_pricing_apply`
+  vuelven a OK y que Martine recibe respuesta (su mensaje no llegó a `mensajes_log` mientras esto estuvo roto).
 
 - **🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST (11/09/2026).**
   Tras el fix de `options: []`, el vendor rechazó con «El campo Fenómenos de la naturaleza de Allianz

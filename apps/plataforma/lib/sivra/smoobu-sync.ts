@@ -3,7 +3,7 @@
 // y desde el cron (red de seguridad). Es IDEMPOTENTE: upsert por reservationId, borra en cancelación.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { getSmoobuCredenciales, smoobuFetch } from '@/lib/smoobu'
 import { PORTAL_MAP } from '@/lib/portales'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { filaCancelacion } from '@/lib/sivra/cancelaciones'
@@ -40,16 +40,14 @@ function nights(ci: Date | null, co: Date | null): number {
   return ci && co ? Math.round((co.getTime() - ci.getTime()) / 86400000) : 0
 }
 
-async function fetchPage(p: number, from: string, apiKey: string, arrFrom?: string, arrTo?: string) {
+async function fetchPage(p: number, from: string, arrFrom?: string, arrTo?: string) {
   // showCancellation=1 es OBLIGATORIO: sin este flag Smoobu OCULTA las reservas canceladas del
   // listado, así que la rama `isCancel` de runSync nunca las veía y el DELETE nunca se ejecutaba
   // → cada cancelación dejaba un registro fantasma en `incomes` (calendario/ingresos inflados).
   const q = new URLSearchParams({ pageSize: '100', page: String(p), modifiedFrom: from, showCancellation: '1' })
   if (arrFrom) q.set('from', arrFrom)
   if (arrTo) q.set('to', arrTo)
-  const res = await fetch(`https://login.smoobu.com/api/reservations?${q}`, {
-    headers: { 'Api-Key': apiKey }, cache: 'no-store',
-  })
+  const res = await smoobuFetch(`/api/reservations?${q}`, { cache: 'no-store' })
   if (!res.ok) throw new Error(`Smoobu ${res.status}`)
   const d = await res.json()
   return { bookings: d.bookings || [], pageCount: d.page_count || 1 }
@@ -64,13 +62,16 @@ async function fetchPage(p: number, from: string, apiKey: string, arrFrom?: stri
  * cazar es justo la que el sync incremental no vio en su día (caso Feria 2027, 24/08/2026).
  */
 export async function listarReservasVentana(arrFrom: string, arrTo: string, modifiedDays = 800, maxPages = 10) {
-  const API_KEY = await getSmoobuKey()
-  if (!API_KEY) throw new Error('SMOOBU_API_KEY no configurada')
+  // Key Y secreto: sin el segundo no se puede FIRMAR (HMAC), y el 401 que devolvería Smoobu es
+  // indistinguible del de una credencial mala. Decirlo aquí ahorra el diagnóstico equivocado.
+  const { key, secret } = await getSmoobuCredenciales()
+  if (!key) throw new Error('SMOOBU_API_KEY no configurada')
+  if (!secret) throw new Error('SMOOBU_API_SECRET no configurada (pms_connections.smoobu_api_secret): no se puede firmar HMAC')
   const from = new Date(Date.now() - modifiedDays * 86400000).toISOString().slice(0, 10)
   let page = 1, total = 1
   const all: any[] = []
   do {
-    const { bookings, pageCount } = await fetchPage(page, from, API_KEY, arrFrom, arrTo)
+    const { bookings, pageCount } = await fetchPage(page, from, arrFrom, arrTo)
     all.push(...bookings)
     total = pageCount
     page++
@@ -85,15 +86,18 @@ export async function runSync(days: number, maxPages = 20, arrFrom?: string, arr
   // huella (solo escribe cuando entra una reserva); el Check 4 del health-check lee ultimo_ok_at.
   await registrarLatido('smoobu_sync', false, 'inicio de pasada')
 
-  const API_KEY = await getSmoobuKey()
-  if (!API_KEY) throw new Error('SMOOBU_API_KEY no configurada')
+  // Key Y secreto: sin el segundo no se puede FIRMAR (HMAC), y el 401 que devolvería Smoobu es
+  // indistinguible del de una credencial mala. Decirlo aquí ahorra el diagnóstico equivocado.
+  const { key, secret } = await getSmoobuCredenciales()
+  if (!key) throw new Error('SMOOBU_API_KEY no configurada')
+  if (!secret) throw new Error('SMOOBU_API_SECRET no configurada (pms_connections.smoobu_api_secret): no se puede firmar HMAC')
 
   const from = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
   let page = 1, total = 1
   const all: any[] = []
 
   do {
-    const { bookings, pageCount } = await fetchPage(page, from, API_KEY, arrFrom, arrTo)
+    const { bookings, pageCount } = await fetchPage(page, from, arrFrom, arrTo)
     all.push(...bookings)
     total = pageCount
     page++

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { smoobuFetch } from "@/lib/smoobu"
 
 const BASE = "https://login.smoobu.com/api"
 
@@ -13,10 +13,9 @@ export async function GET(req: NextRequest) {
   if (!propertyId || !startDate || !endDate)
     return NextResponse.json({ error: "Missing params" }, { status: 400 })
 
-  const SMOOBU_KEY = await getSmoobuKey()
-  const res = await fetch(
+  const res = await smoobuFetch(
     `${BASE}/rates?apartments[]=${propertyId}&start_date=${startDate}&end_date=${endDate}`,
-    { headers: { "Api-Key": SMOOBU_KEY, "Cache-Control": "no-cache" }, next: { revalidate: 0 } }
+    { next: { revalidate: 0 } }
   )
 
   if (!res.ok) return NextResponse.json({ error: "Smoobu error", status: res.status }, { status: 502 })
@@ -36,10 +35,9 @@ export async function POST(req: NextRequest) {
   if (!propertyId || !operations?.length)
     return NextResponse.json({ error: "Missing params" }, { status: 400 })
 
-  const SMOOBU_KEY = await getSmoobuKey()
-  const res = await fetch(`${BASE}/rates`, {
+  const res = await smoobuFetch(`${BASE}/rates`, {
     method: "POST",
-    headers: { "Api-Key": SMOOBU_KEY, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ apartment_id: parseInt(propertyId), operations }),
   })
 
