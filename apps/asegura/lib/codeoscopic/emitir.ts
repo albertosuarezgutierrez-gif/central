@@ -284,6 +284,8 @@ import {
   type CampoPersona,
   type Papel,
 } from './interprete-400.ts'
+import { enmascararDni } from '@central/module-seguros'
+import { ibanEnmascarado } from './emitir-iban.ts'
 
 /** El proyecto tal cual lo devuelve el vendor (GET). Gratis. */
 export async function leerProyectoCrudo(config: ConfigCodeoscopic, projectId: string): Promise<Json> {
@@ -297,8 +299,111 @@ export async function leerProyectoCrudo(config: ConfigCodeoscopic, projectId: st
 
 export type ResultadoCompletar =
   | { estado: 'aplicado'; cotizacion: Cotizacion }
-  /** El PATCH no lanzó, pero al releer el proyecto los campos siguen sin estar. */
-  | { estado: 'no_aplicado'; sinAplicar: { campo: CampoPersona; papel: Papel }[] }
+  /**
+   * El PATCH no lanzó, pero al releer el proyecto los campos siguen sin estar.
+   * `crudo` es la persona RELEÍDA (holder + risk), no lo que se mandó: es lo
+   * único que dice si el vendor lo guardó con otra forma/clave (p. ej. un
+   * `emails[]` en vez de `email`) en vez de haberlo descartado sin más — sin
+   * esto, «no aplicó X» es una afirmación sin cómo comprobarla.
+   */
+  | { estado: 'no_aplicado'; sinAplicar: { campo: CampoPersona; papel: Papel }[]; crudo: Json }
+
+/**
+ * `crudo` viaja a la respuesta HTTP del puerto para que se pueda ver DÓNDE
+ * puso el vendor el dato (o que no lo puso en ningún sitio) — pero es la
+ * persona releída ENTERA, con DNI y teléfono dentro. Se enmascaran los dos
+ * antes de que salgan de aquí, igual que `ibanEnmascarado()` con la cuenta:
+ * un diagnóstico no es excusa para que un DNI o un móvil viajen en claro por
+ * un log o una pantalla de error.
+ */
+export function redactarPersona(persona: unknown): Json {
+  const p: Json = { ...obj(persona) }
+  const idDoc = obj(p.identificationDocument)
+  if (typeof idDoc.id === 'string') p.identificationDocument = { ...idDoc, id: enmascararDni(idDoc.id) }
+  const phones = arr(p.phones)
+  if (phones.length > 0) {
+    p.phones = phones.map((ph) => {
+      if (typeof ph !== 'object' || ph === null) return ph
+      const phone = ph as Json
+      const num = str(phone.number)
+      return num ? { ...phone, number: `…${num.slice(-3)}` } : phone
+    })
+  }
+  return p
+}
+
+// Toleran separador (espacio/punto/guion) entre grupos: un vendor que escribe
+// «12345678-Z» o «ES91-2100-...» en un mensaje de texto libre no es un caso
+// exótico. El match se limpia de separadores ANTES de enmascarar (por eso
+// `enmascararDni`/el móvil reciben los dígitos ya juntos, no el string tal
+// cual): un separador colado en los últimos caracteres no debe dejar dígitos
+// identificativos a la vista.
+const RE_DNI_NIE = /\b\d{2}[.\-\s]?\d{3}[.\-\s]?\d{3}[.\-\s]?[A-Za-z]\b|\b[XYZxyz][.\-\s]?\d{7}[.\-\s]?[A-Za-z]\b/g
+const RE_MOVIL_ES = /(?<!\d)(?:\+?34[.\-\s]?)?[67](?:[.\-\s]?\d){8}(?!\d)/g
+// Cualquier país, no solo España: `ibanValido()` (mismo fichero de origen,
+// `emitir-iban.ts`) es deliberadamente agnóstica — «un cliente puede
+// domiciliar en una cuenta extranjera y eso lo decide la compañía, no
+// nosotros» — así que la máscara tiene que cubrir las mismas letras de país
+// de ISO 3166, no solo `ES`.
+// Dos ramas, porque una sola regla no cubre los dos casos sin reabrir el
+// mismo agujero por el otro lado (probado y descartado dos veces):
+//   1ª — PEGADO, sin separador (`ES9121000418450200051332`, la forma real de
+//        un valor de campo JSON): sin separador que confundir con un hueco
+//        entre palabras, es seguro admitir mayúsculas/minúsculas.
+//   2ª — AGRUPADO de 4 en 4 con separador (`ES91 2100 0418…`, la forma
+//        humana/escrita a mano, igual que ya hace
+//        `apps/plataforma/lib/sivra/agente-huesped/reglas.ts`): el separador
+//        SOLO puede ir entre grupos completos —permitirlo carácter a
+//        carácter hace que el patrón «coma» frases enteras detrás de un
+//        IBAN («DE89370400440532013000 ya en uso» → engullía «ya en
+//        uso»)— y esta rama va en MAYÚSCULAS FIJAS: un IBAN escrito a mano
+//        es por convención mayúscula, y esa restricción es lo que de
+//        verdad frena que el grupo final de 1-4 se trague una palabra
+//        adyacente en minúscula («1332 ya» → case-insensitive daba «32YA»).
+const RE_IBAN =
+  /\b[A-Za-z]{2}\d{2}[A-Za-z0-9]{11,30}\b|\b[A-Z]{2}\d{2}[.\-\s]?(?:[A-Z0-9]{4}[.\-\s]?){2,7}[A-Z0-9]{1,4}\b/g
+
+/**
+ * `envio.crudo` (y `envio.mensaje`, el texto del 400/500) son la respuesta
+ * ENTERA del vendor al Submit — sin sandbox ni fixture, no se sabe de
+ * antemano si traen los mismos `holder`/`risk` con DNI/teléfono que
+ * `redactarPersona()` ya protege en el camino de reparación, ni si un
+ * mensaje de error cita un valor real (p. ej. «el titular 12345678Z ya
+ * tiene otra cuenta»). En vez de asumir una forma que no está confirmada,
+ * esto camina CUALQUIER JSON o texto y enmascara por PATRÓN (DNI/NIE, móvil
+ * español, IBAN) esté donde esté — protege igual si el vendor cambia de
+ * forma mañana.
+ *
+ * 🚨 Es heurística, no una garantía criptográfica, y hay dos huecos
+ * CONOCIDOS y aceptados a propósito (probados, no se persigue más porque
+ * cada intento de cerrarlos reabría el de "engulle palabras sueltas" por
+ * otro lado — ver el comentario de `RE_IBAN`):
+ *   - un IBAN escrito en minúscula CON separadores («es91 2100 0418…») no
+ *     se enmascara (solo el pegado admite minúscula, por la razón de
+ *     arriba); si el vendor cambia a mayúsculas o lo manda pegado, sí cae.
+ *   - un valor PEGADO sin ningún espacio al texto vecino
+ *     («titular12345678Z…») tampoco, porque las tres reglas exigen `\b`.
+ * Los 14 400 reales catalogados en este repo NUNCA han citado un valor real
+ * (DNI/IBAN/móvil) — siempre nombran el CAMPO que falta, en inglés — así que
+ * esto es defensa en profundidad sobre un caso no observado, no la única
+ * barrera: la fuga estructural de verdad (el `holder`/`risk` con forma
+ * conocida) la tapa `redactarPersona()`, no esto.
+ */
+export function redactarCrudoVendor(v: unknown): unknown {
+  if (typeof v === 'string') {
+    return v
+      .replace(RE_IBAN, (m) => ibanEnmascarado(m))
+      .replace(RE_DNI_NIE, (m) => enmascararDni(m.replace(/[.\-\s]/g, '')) ?? m)
+      .replace(RE_MOVIL_ES, (m) => `…${m.replace(/\D/g, '').slice(-3)}`)
+  }
+  if (Array.isArray(v)) return v.map(redactarCrudoVendor)
+  if (v && typeof v === 'object') {
+    const out: Json = {}
+    for (const [k, val] of Object.entries(v as Json)) out[k] = redactarCrudoVendor(val)
+    return out
+  }
+  return v
+}
 
 const PAPELES_RIESGO: readonly Papel[] = ['owner', 'primaryDriver', 'secondaryDriver']
 
@@ -375,7 +480,11 @@ export async function completarPersonas(
   comprobar(releido.holder, 'holder')
   for (const papel of papeles) comprobar(riskReleido[papel], papel)
 
-  if (sinAplicar.length > 0) return { estado: 'no_aplicado', sinAplicar }
+  if (sinAplicar.length > 0) {
+    const crudoPersonas: Json = { holder: redactarPersona(releido.holder) }
+    for (const papel of papeles) crudoPersonas[papel] = redactarPersona(riskReleido[papel])
+    return { estado: 'no_aplicado', sinAplicar, crudo: crudoPersonas }
+  }
   return { estado: 'aplicado', cotizacion: leerCotizacion(releido) }
 }
 

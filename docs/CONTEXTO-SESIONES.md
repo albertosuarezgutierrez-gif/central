@@ -30,6 +30,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔒 `patch_no_aplicado` del Submit: mensaje falso + PII en claro en `crudo` (12/09/2026).**
+  Tras el fix del 14º 400, Alberto probó «Emitir» de nuevo: el vendor NO aplicó `email` en holder/owner/
+  primaryDriver pese a que sí aplicó nombreVia/numeroVia/tipoVia en el MISMO PATCH — la vía real para
+  meter email en un proyecto ya creado sigue siendo re-cotizar de cero, como con `effectiveDate`.
+  Arreglado, aparte, dos fallos reales que la revisión encontró en el propio código de diagnóstico:
+  (1) el 409 decía «no se ha llamado al Submit (0 intentos gastados)» siendo FALSO — el Submit real ya
+  se había enviado y rechazado antes de este bloque; (2) `crudo` (holder/risk releídos) y `envio.crudo`/
+  `envio.mensaje` (la respuesta ENTERA del Submit, sin fixture) viajaban con DNI/teléfono/IBAN en claro
+  en la respuesta 409/422/502 — nuevas `redactarPersona()` (campos conocidos) y `redactarCrudoVendor()`
+  (regex DNI/NIE/móvil/IBAN sobre cualquier JSON, agnóstica de país) lo tapan. 6 rondas de
+  revisión/tests encontraron y cerraron 3 bugs de sobre-captura del regex (engullía palabras vecinas)
+  antes de asentarse; 2 huecos residuales conocidos quedan documentados y aceptados (ver comentario en
+  `emitir.ts`) — nunca se ha visto un valor real en los 14 400 catalogados, solo nombres de campo.
+  16 tests nuevos, suites completas verdes (asegura 396, plataforma 2785, raíz 812).
+
 - **🧾 Diagnóstico de «subida de póliza trae poca información» + spec de tercero (12/09/2026, PR
   #2843).** Prueba real en `asegura-portal` (Mapfre hogar de Alberto): la 1ª pasada de extracción
   funciona (compañía/nº/ramo/vencimiento correctos), la 2ª falló esta vez (`no_leidos`, ya
@@ -41,16 +56,14 @@
   vía una tabla hermana de `portal_invitacion` (esta exige ficha de cartera como otorgante). Falta
   el plan de implementación.
 
-- **📮 14º 400 real de Codeoscopic — el Submit trocea la calle en TRES campos (12/09/2026).**
-  Tras el fix del 13º (email+nombreVia), el Submit volvió a rechazar pidiendo TAMBIÉN «road number» y
-  «road type» de holder/owner/primaryDriver — el vendor exige `roadNumber` (texto libre) y `roadType.id`
-  (referencia de CATÁLOGO `/road-types`, nunca inventado). `interprete-400.ts` aprendió `numeroVia`/
-  `tipoVia`; `valoresPersonaDesdeFicha` ganó un 3er parámetro OPCIONAL `config` (solo para `tipoVia`:
-  empareja el tipo de vía de la ficha —`partirDireccion`— contra el catálogo vivo con `emparejar()`
-  exacto; sin match no se manda nada). `emitir/route.ts` y `oferta/route.ts` ya pasan `r.config`.
-  Plataforma ganó los dos inputs manuales en `ETIQUETAS_HUECO`. Tests con el 14º 400 real, verificados
-  en rojo→verde. Suites completas verdes (asegura 386, plataforma 2785, raíz 812). PR abierto y en
-  seguimiento hasta merge.
+- **📮 14º 400 real de Codeoscopic — el Submit trocea la calle en TRES campos (12/09/2026, PR #2838,
+  mergeado).** Tras el fix del 13º (email+nombreVia), el Submit volvió a rechazar pidiendo TAMBIÉN
+  «road number» y «road type» de holder/owner/primaryDriver — el vendor exige `roadNumber` (texto
+  libre) y `roadType.id` (referencia de CATÁLOGO `/road-types`, nunca inventado). `interprete-400.ts`
+  aprendió `numeroVia`/`tipoVia`; `valoresPersonaDesdeFicha` ganó un 3er parámetro OPCIONAL `config`
+  (solo para `tipoVia`: empareja el tipo de vía de la ficha —`partirDireccion`— contra el catálogo
+  vivo con `emparejar()` exacto; sin match no se manda nada). `emitir/route.ts` y `oferta/route.ts`
+  ya pasan `r.config`. Plataforma ganó los dos inputs manuales en `ETIQUETAS_HUECO`.
 
 - **🔀 Comentarios de `decidir.ts` (agente huéspedes) corregidos: OpenRouter primario, no NIM
   (12/09/2026, PR #2836, mergeado).** Diagnóstico de un «IA no disponible» (reserva 155000541,

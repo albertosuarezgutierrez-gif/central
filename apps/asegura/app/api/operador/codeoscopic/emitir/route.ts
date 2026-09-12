@@ -9,6 +9,7 @@ import {
   completarPersonas,
   leerProyectoCrudo,
   papelesDeLaMismaPersona,
+  redactarCrudoVendor,
 } from '@/lib/codeoscopic/emitir'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
 import {
@@ -303,13 +304,19 @@ export async function POST(req: Request) {
       if (fichaLoCubreTodo && todosCubribles) {
         const c = await completarPersonas(r.config, projectId, deFicha)
         if (c.estado === 'no_aplicado') {
+          const lista = c.sinAplicar.map((x) => `${x.campo} (${x.papel})`).join(', ')
           return NextResponse.json(
             {
               estado: 'error',
               causa: 'patch_no_aplicado',
+              sinAplicar: c.sinAplicar,
               mensaje:
-                `El vendor no aplicó ${c.sinAplicar.map((x) => `${x.campo} (${x.papel})`).join(', ')} tras el PATCH: ` +
-                'no se ha llamado al Submit. Repite la emisión desde cero.',
+                `El PATCH al proyecto no ha dado error pero, al releerlo, sigue sin traer: ${lista}. ` +
+                'El Submit que dio pie a esta reparación YA se envió y la compañía lo rechazó (ese intento ' +
+                'real está gastado); esta reparación gratuita no ha cuajado, así que NO se ha reintentado un ' +
+                'segundo Submit. Es la misma trampa que effectiveDate: el PATCH no vale para este campo — la ' +
+                'única vía segura es pedir precio de cero (0,50€, puede variar).',
+              crudo: c.crudo,
             },
             { status: 409 },
           )
@@ -357,7 +364,7 @@ export async function POST(req: Request) {
           faltan: ['iban'],
           campos: null,
           cuenta: cuentaRespuesta ?? (ficha.aviso ? { aviso: ficha.aviso } : null),
-          crudo: envio.crudo ?? null,
+          crudo: redactarCrudoVendor(envio.crudo) ?? null,
         },
         { status: 422 },
       )
@@ -386,18 +393,23 @@ export async function POST(req: Request) {
           {
             estado: 'error',
             causa: 'faltan_vendor',
-            mensaje: envio.mensaje,
+            mensaje: redactarCrudoVendor(envio.mensaje),
             faltan: reparosDe(interp),
             sugeridos,
             noReconocidos: interp.noReconocidos,
-            crudo: envio.crudo ?? null,
+            crudo: redactarCrudoVendor(envio.crudo) ?? null,
           },
           { status: 422 },
         )
       }
     }
     return NextResponse.json(
-      { estado: 'error', causa: envio.razon, mensaje: envio.mensaje, crudo: envio.crudo ?? null },
+      {
+        estado: 'error',
+        causa: envio.razon,
+        mensaje: redactarCrudoVendor(envio.mensaje),
+        crudo: redactarCrudoVendor(envio.crudo) ?? null,
+      },
       { status: envio.razon === 'en-vuelo' ? 409 : 502 },
     )
   }
@@ -415,7 +427,7 @@ export async function POST(req: Request) {
         `Codeoscopic aceptó la emisión pero «${p.aseguradora}» no tiene código DGS en companias_dgs: ` +
         'la póliza NO se ha acuñado sola. Añade el código y acúñala a mano con este `crudo`.',
       referenciaVendor: envio.referenciaVendor,
-      crudo: envio.crudo,
+      crudo: redactarCrudoVendor(envio.crudo),
     })
   }
 
@@ -441,7 +453,7 @@ export async function POST(req: Request) {
     // Con qué cuenta se ha emitido (enmascarada) y de dónde salió: la póliza
     // nueva se cobrará ahí, y eso tiene que verse sin abrir el `crudo`.
     cuenta: cuentaRespuesta,
-    crudo: envio.crudo,
+    crudo: redactarCrudoVendor(envio.crudo),
   })
 }
 
