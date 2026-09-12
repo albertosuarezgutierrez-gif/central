@@ -87,6 +87,7 @@ const ETIQUETAS_HUECO: Record<string, { etiqueta: string; tipo: string; pista?: 
   estadoCivil: { etiqueta: 'Estado civil (id del catálogo)', tipo: 'text' },
   telefono: { etiqueta: 'Teléfono móvil', tipo: 'tel' },
   fechaCarnet: { etiqueta: 'Fecha del carnet de conducir', tipo: 'date' },
+  email: { etiqueta: 'Email', tipo: 'email' },
 }
 
 /**

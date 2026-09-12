@@ -24,6 +24,15 @@ export type DatosPersona = {
    * auto, así que lo teclea el corredor — nunca se supone un dato personal.
    */
   nombreVia?: string | null
+  /**
+   * Optativo AQUÍ por la misma razón que `nombreVia`: no lo pide la cotización
+   * inicial (`construirPersona` lo deja fuera a propósito), pero el SUBMIT de
+   * auto sí (13º 400 real, 12/09/2026, `POST …/policy-applications` del
+   * proyecto 40684860): «The e-mail of the holder/owner/primaryDriver is
+   * mandatory». Se repara desde la ficha del cliente cuando el vendor lo pide
+   * (`valoresPersonaDesdeFicha`), nunca inventado.
+   */
+  email?: string | null
 }
 
 export const RE_TELEFONO = /^[67][0-9]{8}$/

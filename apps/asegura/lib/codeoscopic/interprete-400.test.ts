@@ -154,3 +154,34 @@ test('esCampoPersona es la lista blanca: fechaEfecto o matricula NO son de la pe
   assert.equal(esCampoPersona('matricula'), false)
   assert.equal(esCampoPersona('__proto__'), false)
 })
+
+// El 13º 400 real (12/09/2026, proyecto 40684860), tal cual lo devolvió el
+// Submit (`POST .../policy-applications`) — no el ReRate: confirma que el
+// vendor pide MÁS para emitir de lo que pedía para cotizar.
+const DECIMOTERCERO =
+  'codeoscopic_validacion: {"error":"Bad Request","message":"The road name of the address of the owner is mandatory.\\nThe e-mail of the holder is mandatory.\\nThe road name of the address of the holder is mandatory.\\nThe road name of the address of the primary driver is mandatory.\\nThe e-mail of the primary driver is mandatory.\\nThe e-mail of the owner is mandatory.","path":"/insurances/40684860/policy-applications","requestId":"45ced270-119226","status":400,"timestamp":"2026-09-12T14:40:57.972Z"}'
+
+test('el 13º 400 real (Submit) se traduce a DOS campos (nombreVia + email), cada uno en tres papeles', () => {
+  const r = interpretarError400(DECIMOTERCERO)
+  assert.equal(r.campos.length, 2)
+  assert.equal(r.noReconocidos.length, 0)
+  const nombreVia = r.campos.find((c) => c.campo === 'nombreVia')
+  const email = r.campos.find((c) => c.campo === 'email')
+  assert.deepEqual(new Set(nombreVia?.papeles), new Set(['owner', 'holder', 'primaryDriver']))
+  assert.deepEqual(new Set(email?.papeles), new Set(['holder', 'primaryDriver', 'owner']))
+})
+
+test('email se escribe como STRING plano en la persona y se lee de vuelta', () => {
+  const p = aplicarCampoPersona(PERSONA, 'email', ' pilar@example.com ')
+  assert.equal(leerCampoPersona(p, 'email'), 'pilar@example.com')
+  assert.equal(leerCampoPersona(PERSONA, 'email'), null)
+})
+
+test('mismoValor compara el email sin distinguir mayúsculas ni espacios sobrantes', () => {
+  assert.equal(mismoValor('email', ' Pilar@Example.com ', 'PILAR@EXAMPLE.COM'), true)
+  assert.equal(mismoValor('email', 'pilar@example.com', 'otra@example.com'), false)
+})
+
+test('esCampoPersona acepta email', () => {
+  assert.equal(esCampoPersona('email'), true)
+})

@@ -41,6 +41,14 @@
   `memories_about`/`recall`/`remember` (sin sustituto propio) — cancelarlo hoy perdería la memoria
   durable, no solo cuota de grafo. **No se ha dado de baja nada**, es decisión de Alberto.
 
+- **📧 13º 400 real de Codeoscopic — el Submit exige email+calle, y ya se repara solo (12/09/2026).**
+  Tras el fix del IBAN (#2815), el Submit (no el ReRate) rechazó con «e-mail/road name of the
+  holder/owner/primaryDriver is mandatory». `interprete-400.ts` aprendió `email`; `valoresPersonaDesdeFicha`
+  (nuevo, compartido con `/oferta`) la saca de la ficha; `emitir/route.ts` repara con PATCH+relectura y
+  repite el Submit UNA vez. Alberto pidió que sirva para todos los ramos: la reparación ya era agnóstica
+  por construcción; lo que SÍ mentía por ramo era `codeoscopic_projects.producto` hardcodeado a `'auto'`
+  en dos sitios — ahora usa `polizas.tipo` real. Tests nuevos en `interprete-400.test.ts`. PENDIENTE: PR,
+  y que Alberto pruebe hogar.
 - **📱 Portal del cliente, seguimiento del móvil compactado (12/09/2026, II).** Alberto probó el
   PR #2810 en su móvil real (incógnito): el wordmark ya se esconde, pero seguían dos fallos. (1)
   «Sigue apareciendo MIS seguros dos veces»: no era el titular de sección que ya se había quitado,
