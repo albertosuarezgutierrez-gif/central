@@ -270,12 +270,20 @@ cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el u
   agrega las 6 declaraciones homónimas) y **búsqueda semántica** (`query_graph` confundió «autorización
   de cron» con «autorización de cliente de seguros» por la palabra compartida; `grafo_buscar` acertó
   el archivo correcto). Detalle completo, tabla por tabla, en `docs/USO-HERRAMIENTAS.md`.
-- **Graphify queda EXCLUSIVAMENTE para `memories_about`/`recall`/`remember`** (memoria durable) mientras
-  haya cuota — es la única pieza sin sustituto propio: `docs/CONTEXTO-SESIONES.md` guarda memoria pero
-  no hace recuperación semántica sobre las notas. **Ya NO se usan** `graphify_find/node/callers/callees/
-  file_neighbors/tests_for/impact/trace/shortest_path/references/imports_exports/rank_files/
-  render_subgraph` ni `query_graph` para código — usa siempre su equivalente `grafo_*`. Cancelar
-  Graphify hoy perdería `remember`/`recall` sin sustituto: no es solo una cuestión de cuota de grafo.
+- **Medición de paridad de MEMORIA (12/09/2026, `docs/USO-HERRAMIENTAS.md`):** `memoria_buscar()`
+  (embeddings sobre `docs/CONTEXTO-SESIONES.md`+`docs/memoria/*.md`, PR #2848) probado contra
+  `recall`/`memories_about` de Graphify en 4 preguntas reales sobre decisiones/gotchas documentados
+  (Serper, pantalla de Vanesa, incidente Smoobu 401, capitalización «Grupo ASegura»): **4 de 4**
+  `memoria_buscar` igualó o superó a Graphify, nunca al revés — en 3 Graphify no encontró nada
+  relevante, y en el caso Smoobu SÍ era relevante pero **desfasado** (congelado en un estado
+  intermedio ya resuelto), mientras `memoria_buscar` devolvió la línea de tiempo completa y vigente.
+  **Ya NO se usan** `graphify_find/node/callers/callees/file_neighbors/tests_for/impact/trace/
+  shortest_path/references/imports_exports/rank_files/render_subgraph` ni `query_graph` para código
+  (sustituidos por `grafo_*`), **ni `remember`/`recall`/`memories_about`** (sustituidos por
+  `memoria_buscar` + el hábito ya existente de anotar `docs/CONTEXTO-SESIONES.md` al cerrar sesión).
+  Con esto se cumple la condición de Alberto («que lo creado sea 100% igual») sobre las 4 preguntas
+  medidas — muestra pequeña, no exhaustiva, pero consistente y sin ningún caso peor. Decisión de
+  cancelar Graphify: de Alberto.
 - **📏 Todo uso de herramienta se MIDE solo** (hook `PostToolUse` → `scripts/uso-herramientas.mjs`, un
   JSON por sesión en `docs/uso-herramientas/AAAA-MM/`; en vivo se escribe en `.git/uso-herramientas/` y
   el `Stop` hook lo copia y commitea solo con la memoria o cada 30 min — persistirlo en cada `Stop` era
@@ -285,7 +293,9 @@ cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el u
   `docs/AGENTE-MECANICO-BITACORA.md`. Antes de declarar obligatoria (o retirar) una herramienta, mira
   esa tabla: es la regla «mide el ahorro, no lo supongas» con denominador de verdad.
 
-El MCP de **Graphify** sigue instalado solo por `memories_about`/`recall`/`remember`. Workspace
+El MCP de **Graphify** sigue instalado (pendiente de que Alberto decida darlo de baja — ver medición
+de paridad de memoria arriba) pero ya no tiene uso exclusivo: no uses ninguna de sus herramientas,
+código o memoria, salvo para volver a medir paridad. Workspace
 `grupo-asegura`; `repository_id` principal **`albertosuarezgutierrez-gif/central`** — el workspace
 también tiene indexados como repos SUELTOS `asegura`, `sivra`, `ialimp`, `house-sevillana-landing`
 (restos de cuando esas apps vivían fuera, o el CRM externo de Manuel): **pasa siempre `repository_id:
