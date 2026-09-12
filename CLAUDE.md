@@ -249,9 +249,30 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
-## 🗺️ Graphify — mapa arquitectónico, regla de uso obligatoria
-Este proyecto usa el MCP de **Graphify** como mapa arquitectónico principal del monorepo.
-Workspace `grupo-asegura`; `repository_id` principal **`albertosuarezgutierrez-gif/central`**.
+## 🗺️ Grafo de código PROPIO primero; Graphify solo para lo semántico (12/09/2026)
+**La cuota gratis de Graphify se agota, y a los tres días de hacerlo obligatorio nadie había medido
+cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el uso de cada herramienta.
+- **Callers, callees, impacto, vecinos, tests que cubren un archivo, buscar símbolo → grafo propio**
+  (`grafo_nodos`/`grafo_aristas` en la Supabase compartida, funciones `grafo_callers/callees/impacto/
+  vecinos/tests_de/find`, por `mcp__Supabase__execute_sql`). Recetas en la skill **`code-map`**. Lo
+  genera `scripts/grafo-codigo.mjs` (regex, Node puro, 1,8 s) en cada push a `main` y lo carga por lotes
+  `scripts/grafo-codigo-inyectar.mjs` → `/api/internal/grafo-codigo`. Precisión contra Graphify el
+  12/09: callers idénticos en el símbolo probado (`docs/USO-HERRAMIENTAS.md`). Consciente de barriles.
+  ⚠️ Un push a `main` con token de App NO dispara el workflow (ver sección CI): si el `sha` de
+  `grafo_nodos` va por detrás de `origin/main`, dispara `auditoria.yml` a mano (`workflow_dispatch`).
+- **Graphify queda para `query_graph` (semántico) y `remember`/`recall`** mientras haya cuota. El
+  resto de esta sección describe ese MCP y sigue valiendo para esos dos usos.
+- **📏 Todo uso de herramienta se MIDE solo** (hook `PostToolUse` → `scripts/uso-herramientas.mjs`, un
+  JSON por sesión en `docs/uso-herramientas/AAAA-MM/`; en vivo se escribe en `.git/uso-herramientas/` y
+  el `Stop` hook lo copia y commitea solo con la memoria o cada 30 min — persistirlo en cada `Stop` era
+  un push por turno = CI + 12 deployments de Vercel por turno, medido el 12/09/2026). Agregado con
+  `node scripts/ahorro-herramientas.mjs --md docs/USO-HERRAMIENTAS.md`. Mide llamadas, tokens pagados
+  y **cota superior** del ahorro (archivos citados); **no mide utilidad** — eso sigue en
+  `docs/AGENTE-MECANICO-BITACORA.md`. Antes de declarar obligatoria (o retirar) una herramienta, mira
+  esa tabla: es la regla «mide el ahorro, no lo supongas» con denominador de verdad.
+
+Este proyecto usa el MCP de **Graphify** como mapa semántico del monorepo (ver arriba qué parte sigue
+siendo suya). Workspace `grupo-asegura`; `repository_id` principal **`albertosuarezgutierrez-gif/central`**.
 Es la fuente de verdad del grafo para este repo — el workspace también tiene indexados como
 repos SUELTOS `asegura`, `sivra`, `ialimp`, `house-sevillana-landing` (restos de cuando esas
 apps vivían fuera, o el CRM externo de Manuel): **pasa siempre `repository_id:
