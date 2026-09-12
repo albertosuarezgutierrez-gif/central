@@ -89,17 +89,18 @@
   Diagnóstico previo del corte de las 09:41:54 (proyecto `40684815`) confirmó que Codeoscopic NUNCA
   procesó ese Submit — sin duplicado que conciliar. Pendiente: que Alberto reintente con el fix ya
   desplegado.
-- **MCP Sentinel instalado en modo solo-auditoría (12/09/2026), PR #2780 MERGEADO.** Hook de
-  terceros (carpeta Drive «Sentinel V3») que evalúa cada llamada a herramienta contra IOCs (rutas
-  sensibles, comandos peligrosos, red sospechosa) con `SENTINEL_SHADOW=on`: nunca bloquea, solo
-  cuenta en `~/.claude/sentinel/stats.json` cuántas veces habría intervenido. `code-review`
-  obligatorio corrido antes del merge: 5 hallazgos, 1 corregido (`SENTINEL_ALLOWLIST_PATH` no es
-  secreto) y 4 documentados en `.claude/mcp-sentinel/README.md` sin tocar el motor vendor.
-  **Verificado en vivo tras el merge** (no solo simulado): el hook se disparó de verdad en esta
-  misma sesión y `stats.json` registró `would_block` reales — confirma además, en producción, el
-  falso positivo conocido (#3): un string literal con `.ssh/id_rsa` dentro de un script de prueba
-  dispara detección aunque no toque nada. Pendiente antes de activar bloqueo real: probar qué pasa
-  con un `ask` sin humano delante en una rutina desatendida (sigue sin confirmar).
+- **MCP Sentinel instalado en modo solo-auditoría, PR #2780 MERGEADO (12/09/2026) — CERRADO.** Hook
+  de terceros («Sentinel V3») que evalúa cada llamada contra IOCs con `SENTINEL_SHADOW=on`: nunca
+  bloquea, solo cuenta en `stats.json`. `code-review` obligatorio: 5 hallazgos, 1 corregido y 4
+  documentados en el README sin tocar el motor vendor. Verificado en vivo (el hook se disparó de
+  verdad y confirmó el falso positivo #3: `.ssh/id_rsa` como string literal). **Última pregunta
+  abierta CONFIRMADA con prueba real** (dos sesiones nuevas con un hook que fuerza `ask`, sin
+  responderles nunca): un `ask` sin humano delante NO se auto-deniega — **la sesión se queda
+  colgada para siempre** (`BLOCKED`/`need_input`), invalidando la inferencia anterior. Conclusión:
+  `SENTINEL_SHADOW` se queda en `on` de forma indefinida salvo que se añada un timeout que degrade
+  `ask` a `deny` en sesiones no interactivas. Detalle en `.claude/mcp-sentinel/README.md`. Cabo
+  suelto menor: la rama `test/ask-unattended-experiment` (nunca mergeada, solo el hook de prueba)
+  no se pudo borrar por falta de permiso de borrado de rama — inofensiva, sin PR ni automatización.
 - **🔒 Aviso de phishing solo en la confirmación (12/09/2026, PR #2787).** Se investigó por qué la
   última reserva de House Sevillana recibió dos mensajes (uno en español, otro en su idioma): caso ya
   documentado del 05/09 (reserva 154375571, deriva-a-español, ya arreglado por `idioma-salida.ts`).

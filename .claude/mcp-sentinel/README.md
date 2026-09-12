@@ -11,10 +11,10 @@ manipulación del propio `.claude/settings.json`).
 **No bloquea nada.** Evalúa cada llamada como siempre, pero cuando detectaría
 `ask`/`deny` la deja pasar igualmente y solo lo anota en
 `~/.claude/sentinel/stats.json` (contador `would_block`) y añade una nota
-`[SOMBRA]` al contexto de la conversación. Es deliberado: antes de dejar que
-bloquee algo de verdad hay que resolver un punto abierto (ver "Pendiente"
-más abajo), y este repo tiene mucha automatización desatendida (Routines,
-GitHub Actions) donde un `ask` real sin nadie delante sería un riesgo.
+`[SOMBRA]` al contexto de la conversación. Es deliberado y **confirmado
+necesario** (ver "Confirmado" más abajo): este repo tiene mucha automatización
+desatendida (Routines, GitHub Actions) donde un `ask` real sin nadie delante
+NO se resuelve solo — se queda la sesión colgada esperando para siempre.
 
 Este contador **no persiste entre contenedores** (el entorno cloud es efímero):
 solo sirve para ver, dentro de una sesión larga, si Sentinel habría intervenido.
@@ -66,10 +66,11 @@ de terceros con cambios propios sin forma de volver a verificar la fuente):
    un comando Bash que solo contiene, como texto literal (p. ej. dentro de
    un heredoc de documentación o de un test), un patrón como `curl | sh` o
    el nombre de una variable sensible, dispara detección aunque no se
-   ejecute nada peligroso. Reproducido durante esta misma revisión. Es una
-   limitación heredada del motor original (coincide por patrón de texto, no
-   analiza sintaxis de shell) — aceptable en modo sombra, y otro motivo más
-   para no activar bloqueo real sin revisar antes cuánto ruido genera.
+   ejecute nada peligroso. Reproducido durante esta misma revisión, y
+   confirmado otra vez en vivo tras el merge (ver `docs/CONTEXTO-SESIONES.md`,
+   12/09/2026: un `.ssh/id_rsa` dentro de un script de prueba disparó el hook
+   de verdad). Es una limitación heredada del motor original (coincide por
+   patrón de texto, no analiza sintaxis de shell) — aceptable en modo sombra.
 4. **Precisión del «0 falsos positivos» del test plan**: la batería de 15
    casos cubre `.env` a secas, pero `sensitive_paths.regex_patterns`
    (`\.env(\.[a-z]+)?$`) también marca `.env.local`/`.env.production` como
@@ -84,15 +85,31 @@ de terceros con cambios propios sin forma de volver a verificar la fuente):
    que dispare la misma alarma que `DATABASE_URL` o un token. Al ser
    fichero propio (no copia exacta del vendor), se corrigió sin más.
 
-## Pendiente antes de desactivar el modo sombra
+## Confirmado (12/09/2026): un `ask` sin humano se QUEDA COLGADO, no se auto-deniega
 
-**Confirmar con una prueba real qué pasa cuando un hook devuelve `ask` y no hay
-ningún humano delante** (una Routine programada, un trigger, una sesión
-desatendida). La investigación hecha apunta a que se resuelve como denegación
-del tool call (no se queda colgado), pero no está confirmado con una prueba
-empírica en esta plataforma concreta — solo inferido de documentación general
-y de issues de GitHub. Mientras eso no se confirme, no tiene sentido pasar
-`SENTINEL_SHADOW` a `off` en nada que corra sin supervisión.
+Prueba real hecha con `mcp__Claude_Code_Remote__create_session`: una rama
+descartable (`test/ask-unattended-experiment`, nunca mergeada) con un hook
+`PreToolUse` de prueba que fuerza `permissionDecision: "ask"` sobre un
+comando marcador (`ASK_TEST_MARKER_XYZ`), lanzada en dos sesiones nuevas
+—una con `permission_mode: "default"`, otra heredando `"auto"`— con un
+prompt normal (no adversarial) pidiendo ejecutar ese comando, sin responder
+nunca a ninguna de las dos.
+
+**Resultado, igual en ambas:** la sesión pasa a `status_bucket: BLOCKED` /
+`need_input` ("¿Qué necesitas?") y se queda así indefinidamente — no hay
+timeout, no se auto-deniega, no continúa. Si esto ocurriera en una Routine
+real desatendida, la Routine se quedaría colgada para siempre, sin error ni
+aviso, hasta que alguien la mire y responda a mano.
+
+**Esto invalida la inferencia anterior** ("se resuelve como denegación,
+solo inferido de documentación general") — la realidad en esta plataforma
+concreta es la contraria y más severa. Conclusión: `SENTINEL_SHADOW` debe
+seguir en `on` para siempre en cualquier categoría de detección que pueda
+disparar `ask` sobre una llamada que una Routine desatendida podría hacer,
+salvo que se añada primero un mecanismo de timeout/aviso en el propio hook
+(p. ej. que `ask` sin sesión interactiva degrade a `deny` con log, nunca a
+esperar). Activar bloqueo real sin eso convertiría cualquier falso positivo
+(ver punto 3 de arriba) en una Routine muerta y silenciosa.
 
 ## Nota de plataforma (para quien retome esto)
 
