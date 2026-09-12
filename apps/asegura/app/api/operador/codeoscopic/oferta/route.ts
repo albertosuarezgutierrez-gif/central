@@ -116,6 +116,17 @@ export async function POST(req: Request) {
     // el `insuranceLine` que exige el PATCH de abajo.
     let cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
 
+    // 🔬 Diagnóstico GRATIS (12/09/2026, octavo fallo real, mismo mensaje otra
+    // vez): con el PATCH+reread ya en producción, el ReRate volvió a rechazar
+    // por fecha. Antes de suponer un fallo nuevo hay que saber CUÁL de las dos
+    // ramas se ejecutó — si `fechaEfectoCorregida` llegó vacía (p. ej. una
+    // pestaña de plataforma abierta desde antes del PR #2732), esta rama ni
+    // se entra y se re-tarifica sobre la fecha original sin tocar. Log, no
+    // cambia comportamiento: se borra en cuanto de la respuesta.
+    console.log(
+      `[oferta] fechaEfectoCorregida recibida: ${fechaEfectoCorregida ? fechaEfectoCorregida : '(vacía — no se corrige nada)'}`,
+    )
+
     if (fechaEfectoCorregida) {
       // GRATIS. El PATCH corrige effectiveDate pero el vendor exige
       // `insuranceLine` en el mismo cuerpo (quinto 400 real, 12/09/2026) —
@@ -136,6 +147,9 @@ export async function POST(req: Request) {
       // sigue siendo un `GET`) para que `encontrarPrecio` casé sobre el
       // proyecto YA corregido.
       cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
+      console.log(
+        `[oferta] fechaEfecto del proyecto tras PATCH+reread: ${cotizacion.fechaEfecto ?? '(el vendor no la trae)'}`,
+      )
     }
 
     const precio = encontrarPrecio(cotizacion, compania, categoria)
