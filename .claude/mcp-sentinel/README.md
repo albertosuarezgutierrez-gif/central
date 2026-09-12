@@ -41,6 +41,49 @@ Deliberadamente NO se instaló (para mantener el primer paso mínimo):
 integridad de `SessionStart`). Ninguno de ellos hace falta para medir en modo
 sombra — se pueden añadir después si el trial demuestra que merece la pena.
 
+## Revisión de código (`code-review`, previa a sacar el PR de draft)
+
+Cinco hallazgos, uno corregido y cuatro documentados en vez de parcheados
+(para no tocar el motor `sentinel_preflight.py`, cuya fidelidad byte a byte
+contra el vendor original ya está verificada — parchearlo mezclaría código
+de terceros con cambios propios sin forma de volver a verificar la fuente):
+
+1. **El anti-tamper de `check_config_write` no cubre borrar
+   `.claude/mcp-sentinel/` en sí** (su regex solo mira
+   `.claude/settings*.json|.claude.json|.mcp.json|.claude/hooks`, no la
+   carpeta propia de Sentinel). Alguien podría desinstalarlo sin que el
+   propio hook lo detecte como manipulación. Inofensivo mientras está en
+   modo sombra (no hay bloqueo real que perder); si se activa bloqueo de
+   verdad, este hueco pasa a ser relevante y merece revisarse entonces.
+2. **`check_dangerous_commands` tiene un allowlist por substring sobre el
+   comando completo** (línea ~462 de `sentinel_preflight.py`): si algo de la
+   lista aparece en cualquier parte del comando, se salta TODA la detección
+   de esa llamada, no solo la parte permitida. Dormido hoy porque
+   `allowlist.paths`/`allowlist.domains` están vacíos en `iocs.json` — el
+   día que se añada algo a esa lista, revisar este comportamiento antes de
+   confiar en él para nada estricto.
+3. **Falsos positivos conocidos sobre heredocs con strings de ejemplo**:
+   un comando Bash que solo contiene, como texto literal (p. ej. dentro de
+   un heredoc de documentación o de un test), un patrón como `curl | sh` o
+   el nombre de una variable sensible, dispara detección aunque no se
+   ejecute nada peligroso. Reproducido durante esta misma revisión. Es una
+   limitación heredada del motor original (coincide por patrón de texto, no
+   analiza sintaxis de shell) — aceptable en modo sombra, y otro motivo más
+   para no activar bloqueo real sin revisar antes cuánto ruido genera.
+4. **Precisión del «0 falsos positivos» del test plan**: la batería de 15
+   casos cubre `.env` a secas, pero `sensitive_paths.regex_patterns`
+   (`\.env(\.[a-z]+)?$`) también marca `.env.local`/`.env.production` como
+   `[CRITICAL]` — variantes muy comunes en este monorepo (ver
+   `CLAUDE.md` sobre rotación de secretos). No es un fallo: es el
+   comportamiento correcto para un escáner de credenciales, pero la
+   cobertura probada no incluía esas variantes explícitamente. Se deja
+   constancia aquí en vez de inflar la cifra del test plan.
+5. **Corregido**: `SENTINEL_ALLOWLIST_PATH` estaba metida en
+   `sensitive_env_vars.patterns` de `iocs.json`. Es la ruta al fichero de
+   configuración del propio allowlist, no una credencial — no tiene sentido
+   que dispare la misma alarma que `DATABASE_URL` o un token. Al ser
+   fichero propio (no copia exacta del vendor), se corrigió sin más.
+
 ## Pendiente antes de desactivar el modo sombra
 
 **Confirmar con una prueba real qué pasa cuando un hook devuelve `ask` y no hay
