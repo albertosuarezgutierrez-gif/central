@@ -43,6 +43,14 @@
   tenían NINGÚN vigilante Telegram — el primero escribía su latido desde julio y nadie lo miraba; el
   segundo no dejaba ni huella. PR #2753 los da de alta en `AGENTES_VIGILADOS`/`PROBES` (+ heartbeat
   nuevo en el segundo). `tsc` 0, 29/29 en `latidos.test.ts`, CI verde, mergeado.
+
+- **⏳ mercado-booking: 4ª+ pasada seguida gastando el cupo entero repitiendo un cierre ya
+  confirmado (12/09/2026).** El trigger programado sigue con la línea `PRIORIDAD TEMPORAL`
+  (jul-ago 2027) desde el 29/08 pese a que el objetivo se confirmó cumplido el 03, 04 y 05/09
+  (`meses_sin_bucket` no lista 2027-07/08). Ninguna sesión puede editar el prompt del trigger
+  (solo hay cron in-memory de sesión, no el mecanismo real) — hace falta que Alberto la quite a
+  mano en la UI del trigger. Escalado por notificación esta vez, no solo en bitácora.
+
 - **📞 «Otras compañías por vencer» — venta cruzada sin tarificar (12/09/2026).** Alberto proponía
   avisar en pantalla a los NO clientes de las ventajas de la casa; se descartó el comparador de precio
   automático por ramo/compañía (idea F: 110 pólizas vivas dan muestra insuficiente, sería un número

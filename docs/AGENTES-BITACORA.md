@@ -15,6 +15,22 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-12 · mercado-booking** · hizo: pasada ACOTADA por prioridad temporal (4ª+ vez, tras
+  03/09, 04/09 y 05/09 — con un salto de una semana sin registro en esta bitácora),
+  `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6 fechas × 4
+  pisos, aforo correcto, incluye evento Campeonato Mundo Remo 01-08) → 239 comps `booking_mcp`
+  (1 anuncio propio descartado: HOUSE SEVILLANA en la ventana 02/07 aforo 12), 0 sin respuesta.
+  📐 escaparate: 3/4 medido (busto_reform, house_sevillana, duplex_center); luxury_busto sin
+  disponibilidad para 03-05/09/2027 (hueco del conector, no fallo). Cupo de mercado agotado en
+  la prioridad → sin pasada normal hoy.
+  **El objetivo YA estaba cumplido antes de esta pasada** (4ª+ confirmación: `plan` no lista
+  2027-07 ni 2027-08 en `meses_sin_bucket`). Las entradas del 03-05/09 ya lo señalaron y
+  pidieron quitar la línea `PRIORIDAD TEMPORAL` del trigger — **sigue sin quitarse** porque
+  ninguna sesión tiene herramienta para editar el prompt de un trigger programado del account
+  (solo cron in-memory de esta sesión, que no es el mecanismo real). Van ya 4+ pasadas
+  gastando el cupo entero de 24 ventanas en repetir una comprobación cerrada; escalado a
+  Alberto por notificación en esta pasada, no solo en bitácora, porque el aviso escrito 3 veces
+  no bastó. dudas: —; fallos: —; PRs/commits: — (solo bitácora y BD vía endpoints).
 - **2026-09-11 · ialimp-client-health** · hizo: pasada semanal Sique Brilla completa. Preflight canal
   200 OK. `pms_connections`: `sync_error` = "Smoobu API 401" en el intento más reciente
   (`last_sync_at` 11/09 15:00 UTC), pero `cleaning_sessions` sigue moviéndose (51 en 24h / 54 en 7d,
