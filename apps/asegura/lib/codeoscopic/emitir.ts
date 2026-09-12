@@ -205,25 +205,34 @@ export async function reRate(
 
 /**
  * `PATCH /insurances/{id}` — corrige un campo del proyecto YA creado, GRATIS
- * (solo `POST /insurances` está documentado como facturable). Es **incremental**
- * (`docs/CODEOSCOPIC-API-PORTAL.md`: «descarta lo que no esté en el esquema»),
- * así que solo se manda `effectiveDate`.
+ * (solo `POST /insurances` está documentado como facturable).
  *
  * 🚨 **Nace el 11/09/2026 tras el cuarto 400 real** (proyecto 40681298, Pilar
  * Franco Ruz): «Fecha de Efecto no puede estar más de 90 días en el futuro».
  * La fecha la tecleó el corredor al cotizar (`peticion-auto.ts`); corregirla
  * es una decisión de negocio (qué fecha quiere el cliente), nunca una
  * suposición del código — la decide quien pide el ReRate.
+ *
+ * 🚨 **Y NO es tan «incremental» como decía aquí (quinto 400 real,
+ * 12/09/2026, mismo proyecto): «The `insuranceLine` field is missing or
+ * invalid.»** `docs/CODEOSCOPIC-API-PORTAL.md` describe el PATCH como
+ * «descarta lo que no esté en el esquema», pero el backend valida el
+ * objeto ENTERO contra el esquema del ramo y `insuranceLine` es obligatorio
+ * en él aunque no se esté tocando. Por eso `insuranceLineId` es un parámetro
+ * obligatorio, no opcional: el caller lo relee del propio proyecto
+ * (`Cotizacion.insuranceLineId`) en vez de suponerlo por ramo — un 'Car'
+ * a fuego habría colado en auto pero roto hogar/vida/decesos/moto/salud.
  */
 export async function actualizarFechaEfecto(
   config: ConfigCodeoscopic,
   projectId: string,
   fechaEfecto: string,
+  insuranceLineId: string | null,
 ): Promise<void> {
   await peticion(config, {
     metodo: 'PATCH',
     path: `/insurances/${encodeURIComponent(projectId)}`,
-    cuerpo: { effectiveDate: fechaEfecto },
+    cuerpo: { effectiveDate: fechaEfecto, insuranceLine: { id: insuranceLineId } },
     timeoutMs: config.timeoutGenericoMs,
   })
 }

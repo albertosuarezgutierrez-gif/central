@@ -111,15 +111,23 @@ export async function POST(req: Request) {
   }
 
   try {
+    // GRATIS: recupera el `id` real del precio (el vendor no lo devuelve al
+    // guardar la cotización en nuestra BD, solo el precio en euros) y de paso
+    // el `insuranceLine` que exige el PATCH de abajo.
+    const cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
+
     if (fechaEfectoCorregida) {
-      // GRATIS: PATCH incremental, antes de leer el proyecto para que el
-      // refresco de abajo ya vea la fecha corregida.
-      await actualizarFechaEfecto(r.config, t.project_id_codeoscopic, fechaEfectoCorregida)
+      // GRATIS. El PATCH corrige effectiveDate pero el vendor exige
+      // `insuranceLine` en el mismo cuerpo (quinto 400 real, 12/09/2026) —
+      // se relee del proyecto, nunca se supone por ramo.
+      await actualizarFechaEfecto(
+        r.config,
+        t.project_id_codeoscopic,
+        fechaEfectoCorregida,
+        cotizacion.insuranceLineId,
+      )
     }
 
-    // GRATIS: recupera el `id` real del precio (el vendor no lo devuelve al
-    // guardar la cotización en nuestra BD, solo el precio en euros).
-    const cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
     const precio = encontrarPrecio(cotizacion, compania, categoria)
     if (!precio) {
       return NextResponse.json(

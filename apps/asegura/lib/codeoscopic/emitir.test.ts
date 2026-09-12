@@ -43,6 +43,7 @@ test('encontrarPrecio: casa por compañía y categoría, sin distinguir mayúscu
   const cotizacion: Cotizacion = {
     projectId: '1',
     fechaEfecto: null,
+    insuranceLineId: 'Car',
     fallos: [],
     precios: [
       {
