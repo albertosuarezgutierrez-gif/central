@@ -37,7 +37,8 @@
   de barriles). Recetas en skill `code-map`; `CLAUDE.md` § Graphify reescrita: grafo propio primero, Graphify solo `query_graph`/`remember`.
   Medido contra Graphify: callers de `esCarteraViva` idénticos. **Medición:** hook `PostToolUse` → `scripts/uso-herramientas.mjs` (JSON por
   sesión en `docs/uso-herramientas/`, persistido por el `Stop`), agregado `scripts/ahorro-herramientas.mjs` → `docs/USO-HERRAMIENTAS.md`.
-  ⚠️ Pendiente: tras mergear, disparar `auditoria.yml` (workflow_dispatch) para la primera carga del grafo — el push de App no dispara workflows.
+  ⚠️ El JSON en vivo va a `.git/uso-herramientas/` y el `Stop` lo commitea solo con la memoria o cada 30 min: persistirlo en cada Stop
+  era un push por turno = CI + 12 deployments de Vercel (4 pushes en 40 s). Pendiente: tras mergear, disparar `auditoria.yml` (primera carga).
 - **🤖 El 400 del ReRate deja de ser un error: es una lista de huecos (12/09/2026).** Alberto: «un
   agente interlocutor entre Codeoscopic y nosotros». Codeoscopic no pregunta, devuelve un 400
   semi-estructurado («The <campo> of the <papel> is mandatory», una línea por campo), así que el

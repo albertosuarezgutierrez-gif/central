@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { clasificar, textoDe, archivosCitados, acumular, esError, rutaResumen } from '../scripts/uso-herramientas.mjs'
+import { clasificar, textoDe, archivosCitados, acumular, esError, rutaResumen, rutaStaging } from '../scripts/uso-herramientas.mjs'
 import { agregar, tablaMarkdown, inyectarBloque } from '../scripts/ahorro-herramientas.mjs'
 
 test('clasificar(): cada "cosa de las que tenemos" tiene su categoría, y la SQL se separa por lo que consulta', () => {
@@ -51,6 +51,16 @@ test('rutaResumen(): un fichero por sesión y mes, con el id saneado', () => {
   assert.equal(r, '/repo/docs/uso-herramientas/2026-09/session_abc.json')
 })
 
+test('rutaStaging(): mientras la sesión vive se escribe FUERA del árbol (dentro de .git/), nunca en docs/', () => {
+  // Si escribiera en docs/ en cada tool call, el Stop lo commitearía y empujaría en cada turno
+  // (CI + 12 deployments de Vercel por turno; medido el 12/09/2026).
+  const r = rutaStaging('session_ab/../c', new Date('2026-09-12T10:00:00Z'), '/repo', () => true)
+  assert.equal(r, '/repo/.git/uso-herramientas/2026-09/session_abc.json')
+  assert.doesNotMatch(r, /\/docs\//)
+  // Sin .git como directorio (worktree), cae al tmpdir: tampoco docs/.
+  assert.doesNotMatch(rutaStaging('s', new Date('2026-09-12T10:00:00Z'), '/repo', () => false), /\/repo\//)
+})
+
 test('agregar(): sesiones, llamadas y tokens (≈ chars/4) por categoría, ordenado por llamadas', () => {
   const ag = agregar([
     { categorias: { graphify: { llamadas: 3, chars_out: 4000, chars_citados: 40000, errores: 0, tools: { a: 3 } }, 'lectura-directa': { llamadas: 10, chars_out: 80000, chars_citados: 0, errores: 0, tools: { Read: 10 } } } },
@@ -79,4 +89,9 @@ test('el hook está registrado como PostToolUse para TODAS las tools y el Stop p
   assert.ok(nuestro, 'falta el hook PostToolUse con matcher "" hacia scripts/uso-herramientas.mjs')
   const stop = readFileSync(new URL('../.claude/hooks/persist-memoria.sh', import.meta.url), 'utf8')
   assert.match(stop, /docs\/uso-herramientas/, 'persist-memoria.sh debe commitear docs/uso-herramientas')
+  // Y con CADENCIA: copia el staging a docs/ solo con la memoria o cada USO_CADA_S segundos (≥ 30 min).
+  assert.match(stop, /uso-herramientas"\s*$/m, 'persist-memoria.sh debe leer el staging de $GITDIR/uso-herramientas')
+  const cada = /USO_CADA_S=(\d+)/.exec(stop)
+  assert.ok(cada && Number(cada[1]) >= 1800, 'USO_CADA_S debe existir y ser ≥ 1800 s: sin cadencia, un push por turno')
+  assert.match(stop, /uso_vencido\(\)/, 'persist-memoria.sh debe consultar uso_vencido() antes de copiar el staging')
 })

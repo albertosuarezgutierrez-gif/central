@@ -13,8 +13,12 @@
   Por cada llamada a cualquier tool acumula en **un JSON por sesión y mes**
   (`docs/uso-herramientas/AAAA-MM/<sesión>.json`): llamadas, chars de entrada, chars de respuesta,
   errores y **archivos del repo citados** en la respuesta (con su tamaño en disco).
-- El hook `Stop` (`persist-memoria.sh`) lo commitea junto a la memoria. Para el guardián de cierre
-  NO cuenta como «trabajo real».
+- Mientras la sesión vive, el hook escribe en un **staging fuera del árbol** (`.git/uso-herramientas/`),
+  no en `docs/`. El hook `Stop` (`persist-memoria.sh`) lo copia a `docs/` y lo commitea **solo junto a
+  la memoria o, como mucho, una vez cada 30 min** (`USO_CADA_S`). Para el guardián de cierre NO cuenta
+  como «trabajo real». ⚠️ Por qué la cadencia (medido el 12/09/2026, el día que nació): el JSON cambia
+  con cada tool call; persistirlo en cada `Stop` era un push por turno, y cada push dispara el CI y
+  12 deployments de Vercel — cuatro pushes en 40 s con la sesión despierta por eventos del PR.
 - Agregado: `node scripts/ahorro-herramientas.mjs [--mes AAAA-MM] [--md docs/USO-HERRAMIENTAS.md]`
   reescribe el bloque de abajo. La auditoría mensual lo corre al rotar la memoria.
 

@@ -17,6 +17,13 @@
 // en docs/uso-herramientas/AAAA-MM/<sesión>.json — el hook `Stop` (persist-memoria.sh) lo commitea
 // con la memoria. Agregado: `node scripts/ahorro-herramientas.mjs`.
 //
+// 🔁 DÓNDE SE ESCRIBE MIENTRAS LA SESIÓN VIVE (12/09/2026): en un STAGING fuera del árbol
+// (`<repo>/.git/uso-herramientas/…`), NO en docs/. Medido el mismo día que nació: el JSON cambia
+// con cada tool call, el `Stop` lo commiteaba y empujaba en cada turno, y cada push dispara el CI
+// y 12 deployments de Vercel — cuatro pushes en 40 s en una sesión despierta por eventos del PR
+// (la cuota `api-deployments-paid-per-hour` de CLAUDE.md). El `Stop` copia el staging a docs/ y
+// lo commitea SOLO junto a la memoria o, como mucho, una vez cada 30 min.
+//
 // Lo que NO mide (y no se afirma): si la respuesta fue ÚTIL. Eso sigue en la bitácora a mano.
 //
 // FAIL-OPEN: nunca bloquea ni escribe en stdout (un hook PostToolUse que falla no debe frenar a la
@@ -26,6 +33,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, renameSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { tmpdir } from 'node:os'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -106,10 +114,25 @@ export function esError(resp) {
   return /^\s*(Error|error:|\{"error")/.test(t)
 }
 
+/** Ruta COMMITEADA del resumen (docs/uso-herramientas/AAAA-MM/<sesión>.json). */
 export function rutaResumen(sessionId, fecha = new Date(), root = ROOT) {
   const mes = fecha.toISOString().slice(0, 7)
-  return join(root, 'docs', 'uso-herramientas', mes, `${String(sessionId).replace(/[^\w-]/g, '').slice(0, 40)}.json`)
+  return join(root, 'docs', 'uso-herramientas', mes, `${nombreSesion(sessionId)}.json`)
 }
+
+/**
+ * Ruta de STAGING, fuera del árbol de trabajo: `<root>/.git/uso-herramientas/AAAA-MM/<sesión>.json`.
+ * Ahí escribe el hook en cada tool call sin ensuciar `git status`; el Stop lo copia a docs/ cuando toca.
+ * Si `.git` no es un directorio (worktree) o no existe, cae al tmpdir del sistema.
+ */
+export function rutaStaging(sessionId, fecha = new Date(), root = ROOT, gitDirEsDirectorio = esDirectorio) {
+  const mes = fecha.toISOString().slice(0, 7)
+  const base = gitDirEsDirectorio(join(root, '.git')) ? join(root, '.git', 'uso-herramientas') : join(tmpdir(), 'uso-herramientas')
+  return join(base, mes, `${nombreSesion(sessionId)}.json`)
+}
+
+function nombreSesion(sessionId) { return String(sessionId).replace(/[^\w-]/g, '').slice(0, 40) }
+function esDirectorio(p) { try { return statSync(p).isDirectory() } catch { return false } }
 
 function main() {
   let raw = ''
@@ -126,9 +149,12 @@ function main() {
     ? new Map() // leer/editar un archivo no "cita" nada: ES la lectura
     : archivosCitados(salida)
 
-  const ruta = rutaResumen(sessionId)
+  const ruta = rutaStaging(sessionId)
   let resumen = { sesion: String(sessionId), inicio: new Date().toISOString(), fin: null, llamadas: 0, categorias: {} }
-  try { if (existsSync(ruta)) resumen = JSON.parse(readFileSync(ruta, 'utf8')) } catch { /* se reinicia */ }
+  // Arranca del staging; si no existe aún, continúa el JSON ya commiteado de esta sesión (si lo hay).
+  for (const candidata of [ruta, rutaResumen(sessionId)]) {
+    try { if (existsSync(candidata)) { resumen = JSON.parse(readFileSync(candidata, 'utf8')); break } } catch { /* se reinicia */ }
+  }
   resumen.categorias ??= {}
   acumular(resumen, { categoria, tool: ev.tool_name, charsIn: entrada.length, charsOut: salida.length, error: esError(ev.tool_response), citados })
   resumen.fin = new Date().toISOString()

@@ -263,7 +263,9 @@ cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el u
 - **Graphify queda para `query_graph` (semántico) y `remember`/`recall`** mientras haya cuota. El
   resto de esta sección describe ese MCP y sigue valiendo para esos dos usos.
 - **📏 Todo uso de herramienta se MIDE solo** (hook `PostToolUse` → `scripts/uso-herramientas.mjs`, un
-  JSON por sesión en `docs/uso-herramientas/AAAA-MM/`, persistido por el `Stop` hook). Agregado con
+  JSON por sesión en `docs/uso-herramientas/AAAA-MM/`; en vivo se escribe en `.git/uso-herramientas/` y
+  el `Stop` hook lo copia y commitea solo con la memoria o cada 30 min — persistirlo en cada `Stop` era
+  un push por turno = CI + 12 deployments de Vercel por turno, medido el 12/09/2026). Agregado con
   `node scripts/ahorro-herramientas.mjs --md docs/USO-HERRAMIENTAS.md`. Mide llamadas, tokens pagados
   y **cota superior** del ahorro (archivos citados); **no mide utilidad** — eso sigue en
   `docs/AGENTE-MECANICO-BITACORA.md`. Antes de declarar obligatoria (o retirar) una herramienta, mira
