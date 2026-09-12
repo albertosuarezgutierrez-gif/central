@@ -2899,6 +2899,25 @@ h1 em {
   background: var(--surface);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
 }
+/* 🚨 Va colgado del BOTÓN (`right: 0` de arriba), y el botón de sugerencia NO
+ * está en el borde derecho de la barra: van instalar, sugerencia, campana,
+ * tema y salir detrás. Con `right: 0` a secas, el panel — hasta 320 px de
+ * ancho — se abre hacia la izquierda desde un botón que en un móvil normal
+ * está a mitad de la barra, y con «Alberto: sugerencia no se abre bien» es
+ * justo lo que se veía: la mitad se sale por la izquierda o queda debajo de
+ * los otros botones. Es el MISMO fallo que ya se corrigió en `.campana-panel`
+ * (05/09/2026) y aquí no se había portado. Por debajo de 480 px se ancla a la
+ * pantalla, no al botón: es la única forma de que cuepa un panel de 320 px en
+ * una pantalla de 320. */
+@media (max-width: 480px) {
+  .sugerencia-panel {
+    position: fixed;
+    top: calc(var(--alto-barra) + 4px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
 .sugerencia-titulo { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
 .sugerencia-intro { font-size: 13px; line-height: 1.5; color: var(--muted); margin: 0 0 10px; }
 .sugerencia-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }

@@ -30,6 +30,20 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📱 Portal del cliente, seguimiento del móvil compactado (12/09/2026, II).** Alberto probó el
+  PR #2810 en su móvil real (incógnito): el wordmark ya se esconde, pero seguían dos fallos. (1)
+  «Sigue apareciendo MIS seguros dos veces»: no era el titular de sección que ya se había quitado,
+  era la pestaña «Mis seguros» y el h1 «Mis seguros» diciendo la frase EXACTA uno encima del otro —
+  las pestañas «Seguros»/«Datos» pierden el posesivo (el h1 lo sigue diciendo), como ya pasaba sin
+  querer en «Mi QR»/«Mis QR». (2) «Sugerencia no se abre bien»: su panel colgaba `position:absolute`
+  de un botón que NO está en el borde derecho de la barra (van instalar, sugerencia, campana, tema,
+  salir detrás) — se salía por la izquierda en móvil. Mismo fallo ya corregido en la campana
+  (05/09/2026) y no portado al añadir la sugerencia (09/09/2026); ahora lleva el mismo
+  `@media (max-width:480px)` anclado a la pantalla. 458+291+180 tests y typecheck en verde. PR #2817 (draft).
+  **Pendiente sin tocar (Alberto lo señaló de pasada):** el teléfono de cada compañía en
+  `companias_dgs` se actualiza a mano, un SQL por compañía tras mirar su web — no hay cron ni
+  agente que lo repase. Sin decisión de cadencia/mecanismo, no se ha construido nada.
+
 - **🧠 Grafo propio, parte 2: búsqueda SEMÁNTICA + lo estructural que faltaba para dar de baja Graphify (12/09/2026).**
   Condición de Alberto: baja solo si lo propio es «100 % igual». Faltaban `query_graph`/`rank_files`, `trace`/`shortest_path`,
   `references`, `imports_exports`, `node`, `render_subgraph` y la memoria. Migración `2026-09-12_grafo_semantico.sql` (APLICADA):
