@@ -269,6 +269,95 @@ export async function actualizarFechaEfecto(
   })
 }
 
+// ─── 2-bis. Completar la PERSONA de un proyecto ya creado (GRATIS) ──────────
+//
+// El ReRate exige campos que la cotización inicial no pedía (11º 400 real: la
+// calle). Cotizar de nuevo cuesta 0,50€ y puede mover el precio; un
+// `PATCH /insurances/{id}` es gratis. Pero por la lección de `effectiveDate`
+// (que el PATCH «acepta» y no aplica) aquí NUNCA se da por hecho: se relee el
+// proyecto y se comprueba campo a campo. Si no ha cuajado, se dice.
+
+import {
+  aplicarCampoPersona,
+  leerCampoPersona,
+  mismoValor,
+  type CampoPersona,
+  type Papel,
+} from './interprete-400.ts'
+
+/** El proyecto tal cual lo devuelve el vendor (GET). Gratis. */
+export async function leerProyectoCrudo(config: ConfigCodeoscopic, projectId: string): Promise<Json> {
+  const crudo = await peticion(config, {
+    metodo: 'GET',
+    path: `/insurances/${encodeURIComponent(projectId)}`,
+    timeoutMs: config.timeoutGenericoMs,
+  })
+  return obj(crudo)
+}
+
+export type ResultadoCompletar =
+  | { estado: 'aplicado'; cotizacion: Cotizacion }
+  /** El PATCH no lanzó, pero al releer el proyecto los campos siguen sin estar. */
+  | { estado: 'no_aplicado'; sinAplicar: { campo: CampoPersona; papel: Papel }[] }
+
+const PAPELES_RIESGO: readonly Papel[] = ['owner', 'primaryDriver', 'secondaryDriver']
+
+/**
+ * Escribe `valores` en TODOS los papeles de persona que tenga el proyecto
+ * (`holder` y los del `risk` que existan) — el vendor cruza por DNI y rechaza
+ * si un campo difiere entre ellos, así que no se puede completar solo uno.
+ *
+ * El PATCH lleva `insuranceLine` (quinto 400 real) y los objetos ENTEROS de
+ * `holder` y `risk` tal como se leyeron, con el campo añadido: el vendor
+ * valida el objeto completo contra el esquema del ramo.
+ */
+export async function completarPersonas(
+  config: ConfigCodeoscopic,
+  projectId: string,
+  valores: Partial<Record<CampoPersona, string>>,
+): Promise<ResultadoCompletar> {
+  const campos = (Object.keys(valores) as CampoPersona[]).filter((c) => typeof valores[c] === 'string')
+  const crudo = await leerProyectoCrudo(config, projectId)
+  const risk = obj(crudo.risk)
+
+  const aplicarTodos = (persona: unknown): Json =>
+    campos.reduce<Json>((p, c) => aplicarCampoPersona(p, c, valores[c] as string), obj(persona))
+
+  const cuerpo: Json = {
+    insuranceLine: { id: str(obj(crudo.insuranceLine).id) },
+    holder: aplicarTodos(crudo.holder),
+  }
+  const riskPatched: Json = { ...risk }
+  for (const papel of PAPELES_RIESGO) {
+    if (risk[papel] && typeof risk[papel] === 'object') riskPatched[papel] = aplicarTodos(risk[papel])
+  }
+  if (Object.keys(risk).length > 0) cuerpo.risk = riskPatched
+
+  await peticion(config, {
+    metodo: 'PATCH',
+    path: `/insurances/${encodeURIComponent(projectId)}`,
+    cuerpo,
+    timeoutMs: config.timeoutGenericoMs,
+  })
+
+  // 🔎 La verificación es la pieza, no el PATCH.
+  const releido = await leerProyectoCrudo(config, projectId)
+  const riskReleido = obj(releido.risk)
+  const sinAplicar: { campo: CampoPersona; papel: Papel }[] = []
+  const comprobar = (persona: unknown, papel: Papel) => {
+    for (const c of campos) {
+      if (!mismoValor(c, valores[c] as string, leerCampoPersona(persona, c))) sinAplicar.push({ campo: c, papel })
+    }
+  }
+  comprobar(releido.holder, 'holder')
+  for (const papel of PAPELES_RIESGO) {
+    if (riskReleido[papel] && typeof riskReleido[papel] === 'object') comprobar(riskReleido[papel], papel)
+  }
+
+  if (sinAplicar.length > 0) return { estado: 'no_aplicado', sinAplicar }
+  return { estado: 'aplicado', cotizacion: leerCotizacion(releido) }
+}
+
 // ─── 3. Qué exige la emisión (GRATIS): lo dice el vendor, no se adivina ─────
 
 export type CampoEmision = {

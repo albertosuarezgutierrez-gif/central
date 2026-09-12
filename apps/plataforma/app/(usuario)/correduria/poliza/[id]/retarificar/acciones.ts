@@ -105,6 +105,8 @@ export async function pedirOferta(entrada: {
   compania: string
   categoria: string
   fechaEfectoCorregida?: string
+  /** Respuesta del corredor a un `faltan_vendor` anterior (campo nuestro → valor). */
+  correcciones?: Record<string, string>
 }): Promise<RespuestaOferta> {
   return ofertaAsegura(entrada)
 }

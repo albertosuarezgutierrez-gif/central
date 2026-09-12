@@ -701,6 +701,16 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   contrato de un cliente. Cuando exista entorno de pruebas: transporte multipart nuevo, candado
   `submit_in_flight_at`, y ampliar la excepción del guardián de gasto (hoy tumba cualquier `metodo: 'POST'`
   fuera de `cotizar.ts`).
+- **🤖 El 400 del ReRate se TRADUCE, no se enseña (12/09/2026).** Once 400 reales, cada uno un PR.
+  Ahora `lib/codeoscopic/interprete-400.ts` (puro) mapea las líneas del vendor («The <campo> of the
+  <papel> is mandatory») a nuestros campos y `POST /api/operador/codeoscopic/oferta` hace la cascada:
+  ficha (hoy la calle de `clientes.direccion`, con `partirDireccion`) → `completarPersonas()` (PATCH
+  gratis a `holder`+`risk.*` **con relectura y comprobación campo a campo**, porque el PATCH de
+  `effectiveDate` «acepta» y no aplica) → repite el ReRate UNA vez → lo que no está en ningún sitio sale
+  como **422 `faltan_vendor`** (`faltan` nuestros, `sugeridos` de la ficha, `noReconocidos` íntegros)
+  y vuelve con `correcciones` (lista blanca `CampoPersona`, nunca claves libres). 409
+  `patch_no_aplicado` = cotizar de cero. Un mensaje que el intérprete no reconoce **se enseña entero**:
+  es el siguiente mapeo que falta, no ruido. Nada personal se supone; el Submit no entra en esto.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo
