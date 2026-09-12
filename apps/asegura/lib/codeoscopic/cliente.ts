@@ -222,7 +222,14 @@ export async function peticion(
     throw new ErrorCodeoscopic('servidor', `respuesta ${res.status}`, res.status)
   }
 
-  return res.json()
+  // 🚨 Un 200/204 con cuerpo VACÍO es la norma REST para un PATCH que confirma
+  // sin devolver nada — y es justo lo que hace este PATCH (11/09/2026, sexto
+  // fallo real, `actualizarFechaEfecto()`): `res.json()` sobre '' lanza
+  // `Unexpected end of JSON input`, que ni siquiera es un `ErrorCodeoscopic`
+  // (se cuela como 500 "otro" en vez de como el éxito que fue). El texto vacío
+  // se lee como "sin cuerpo", nunca como un fallo de parseo.
+  const texto = await res.text()
+  return texto.trim() === '' ? null : JSON.parse(texto)
 }
 
 /** Recorta el cuerpo de error: puede traer eco de datos del tomador (PII). */
