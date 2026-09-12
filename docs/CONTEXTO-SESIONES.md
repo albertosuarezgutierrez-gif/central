@@ -104,14 +104,6 @@
   `companias_dgs` se actualiza a mano, un SQL por compañía tras mirar su web — no hay cron ni
   agente que lo repase. Sin decisión de cadencia/mecanismo, no se ha construido nada.
 
-- **🧠 Grafo propio, parte 2: búsqueda SEMÁNTICA + lo estructural que faltaba para dar de baja Graphify (12/09/2026).**
-  Condición de Alberto: baja solo si lo propio es «100 % igual». Faltaban `query_graph`/`rank_files`, `trace`/`shortest_path`,
-  `references`, `imports_exports`, `node`, `render_subgraph` y la memoria. Migración `2026-09-12_grafo_semantico.sql` (APLICADA):
-  `grafo_embeddings` (pgvector 768, hnsw) desde `mapa_arquitectura` (13.350 textos; el que cambia pierde su vector), embeddings por
-  SQL (`http` → OpenRouter `text-embedding-3-small`, clave en Vault) y `grafo_buscar/rank_files/camino/referencias/imports_exports/nodo/subgrafo`
-  (las estructurales verificadas contra la BD). Puerto `/api/internal/grafo-codigo/embeddings` + paso nuevo en `auditoria.yml`;
-  key `GRAFO_OPENROUTER_API_KEY` (dedicada, recomendada) con caída a `OPENROUTER_API_KEY`. Cepo `test/grafo-semantico.test.ts` (9, rojo brazo a brazo).
-  PENDIENTE: merge → deploy READY → dispatch → `pendientes 0` → MEDIR paridad vs Graphify (`docs/USO-HERRAMIENTAS.md`) → PR de docs → baja.
 - **🏦 Duodécimo 400 real de Codeoscopic — el Submit exige IBAN, y el IBAN SIEMPRE se confirma (12/09/2026).**
   «The bank account is mandatory according to the selected companies and payment types.» Aquí se
   escribió primero que Pilar «no tiene cuenta»: **falso** — está en **`poliza_recibos.iban`** (CIMA; 121/187
@@ -122,14 +114,6 @@
   ficha solo viaja si plataforma devuelve la MÁSCARA que enseñó (`cuentaConfirmada`), si no 422 `confirmar`
   ANTES de llamar al vendor; tecleada > JSON > ficha confirmada. Cepos vistos en rojo. Pendiente: pintar las
   cuentas (varias, por póliza) en la ficha del cliente y escribir el IBAN tecleado de vuelta.
-- **🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel (12/09/2026).**
-  Al mergear el #2807 y disparar `auditoria.yml`, el paso «Inyectar mapa» murió con **413 FUNCTION_PAYLOAD_TOO_LARGE**
-  (4.492.854 → 4.493.847 bytes: un kilobyte de más) y el del grafo se saltó por dependencia. Helper compartido
-  `scripts/inyectar-lotes.mjs` (`partirEnLotes` por bytes + reintentos), `scripts/mapa-arquitectura-inyectar.mjs`
-  sustituye al `curl --data-binary` del workflow, `grafo-codigo-inyectar.mjs` lo reutiliza. El puerto del mapa acepta
-  `lote/total`, estampa el `sha` siempre y borra por `sha` en el último lote (antes: por lista de rutas + WHERE hash
-  que dejaba el sha viejo). Paso del grafo con `!cancelled()`. Medido en local: mapa 4 lotes ≤1 MB, grafo 13.
-  Cepos en `test/inyectar-lotes.test.ts` (6, vistos en rojo contra main). Pendiente: mergear y verificar `grafo_nodos`.
 - **🛡️📲 MCP Sentinel avisa por Telegram cuando el modo sombra intervendría (12/09/2026).**
   `sentinel_alerta.py` envuelve (sin tocar) `sentinel_preflight.py` y, cuando la decisión es
   `allow` pero el motivo contiene `SENTINEL_SHADOW`, dispara `POST /api/internal/alerta`
