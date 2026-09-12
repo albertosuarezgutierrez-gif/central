@@ -55,14 +55,32 @@ nuevo ni en claro aquí**, solo el `ALERTA_TOKEN` que ya abre ese endpoint).
 - **Best-effort de verdad**: cualquier excepción (JSON raro, red caída, faltan
   `PLATAFORMA_URL`/`ALERTA_TOKEN`) se traga en silencio — nunca cambia la
   decisión del hook ni hace fallar la llamada de la herramienta.
-- **Deduplicado por hash del motivo + día** (`~/.claude/sentinel/alertas/`):
-  el mismo `[SOMBRA]` repetido en bucle solo avisa una vez por día, no satura
-  el Telegram de Alberto.
+- **El aviso NUNCA bloquea la llamada de la herramienta**: el POST se hace con
+  `curl` en un `subprocess.Popen` desatendido (`start_new_session=True`), no
+  con `urlopen` síncrono — el hook devuelve su veredicto de inmediato (medido:
+  ~76 ms) aunque `PLATAFORMA_URL` esté caído o lento; el aviso llega después,
+  fuera del ciclo de vida del hook. La primera versión hacía el POST síncrono
+  dentro del propio hook (hasta 5 s extra por llamada, con riesgo de superar
+  el `timeout: 10` de `.claude/settings.json`) — corregido en `code-review`
+  antes de sacar el PR de draft.
+- Si `sentinel_preflight.py` se cuelga más de 8 s, el envoltorio degrada a
+  `{}` (permite) en vez de propagar la excepción sin capturar que tenía la
+  primera versión — mismo criterio fail-open que ya usa el motor ante otros
+  fallos (base de firmas ausente, etc.).
+- **Deduplicado por hash del motivo + día** (`~/.claude/sentinel/alertas/`),
+  con creación atómica del marcador (`O_CREAT|O_EXCL`) para que dos llamadas
+  concurrentes con el mismo motivo no disparen las dos el aviso: el mismo
+  `[SOMBRA]`/`[SHADOW]` repetido en bucle solo avisa una vez por día. Los
+  marcadores no se purgan nunca, pero son ficheros de texto de bytes y el
+  contenedor cloud es efímero (ver cabecera de `CLAUDE.md` sobre memoria entre
+  sesiones) — no hay proceso de larga duración donde esto llegue a pesar.
 - **Probado funcionalmente** (no solo `py_compile`) en un entorno aislado que
   replica `hooks/`+`references/`: dispara el aviso con las credenciales
-  puestas, NO dispara nada sin `PLATAFORMA_URL`/`ALERTA_TOKEN`, NO repite aviso
-  en la segunda llamada idéntica el mismo día, y NO dispara nada ante un
-  comando inocuo. Detalle completo de los cuatro casos en el PR de este cambio.
+  puestas y el proceso desatendido sobrevive a la salida del padre, NO dispara
+  nada sin `PLATAFORMA_URL`/`ALERTA_TOKEN`, NO repite aviso en la segunda
+  llamada idéntica el mismo día, NO dispara nada ante un comando inocuo, y
+  degrada a `{}`/exit 0 si `sentinel_preflight.py` se cuelga. Detalle completo
+  de los cinco casos en el PR de este cambio.
 
 Deliberadamente NO se instaló (para mantener el primer paso mínimo):
 `sentinel_postflight.py` ("remember on approve"), `sentinel_quarantine.py`,
