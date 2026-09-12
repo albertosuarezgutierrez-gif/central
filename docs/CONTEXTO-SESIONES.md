@@ -30,6 +30,19 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **✅ Smoobu 401 REALMENTE resuelto — no era el HMAC, era la credencial (12/09/2026, PR #2753).**
+  Tras el fix de firma (PR #2731) el 401 seguía (entrada de abajo, "SIGUE en 401"): dos pasadas reales
+  del cron con el código ya desplegado confirmaron que la firma llegaba bien y Smoobu la rechazaba
+  igual. Causa real: el par `smoobu_api_key`/`smoobu_api_secret` de `pms_connections` no era válido en
+  Smoobu. Alberto lo regeneró desde el panel de Smoobu (vía Claude en Chrome, el proxy de esta sesión
+  bloquea `*.smoobu.com`) y se actualizó **directo en Supabase** — **corrijo aquí una afirmación falsa
+  de la entrada de abajo: NO existe ninguna "UI de ialimp" para editar esas credenciales**, hoy el
+  único camino es un UPDATE en BD. Confirmado con la pasada de las 08:20:06Z: `sync_error=NULL`,
+  89 sesiones. **Y se encontró el motivo de que nadie lo viera antes:** `smoobu_sync` (el sync) y el
+  agente que responde a los huéspedes (`sivra/mensajes/auto-reply`, cada 3 min, MISMA credencial) no
+  tenían NINGÚN vigilante Telegram — el primero escribía su latido desde julio y nadie lo miraba; el
+  segundo no dejaba ni huella. PR #2753 los da de alta en `AGENTES_VIGILADOS`/`PROBES` (+ heartbeat
+  nuevo en el segundo). `tsc` 0, 29/29 en `latidos.test.ts`, CI verde, mergeado.
 - **📞 «Otras compañías por vencer» — venta cruzada sin tarificar (12/09/2026).** Alberto proponía
   avisar en pantalla a los NO clientes de las ventajas de la casa; se descartó el comparador de precio
   automático por ramo/compañía (idea F: 110 pólizas vivas dan muestra insuficiente, sería un número
