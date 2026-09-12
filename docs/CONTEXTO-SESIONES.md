@@ -39,7 +39,24 @@
   plantillas. Probado funcionalmente en aislado (dispara, dedup, sin credenciales no hace nada,
   comando inocuo no dispara), y confirmado en real: un aviso llegó solo cuando el propio
   `git checkout` de esta rama activó el wrapper en la sesión y detectó su propio `curl`.
-  Detalle en `.claude/mcp-sentinel/README.md`.
+  Revisión de Graphify encontró el token viajando en el argv de `curl` (visible por
+  `ps`/`/proc`): corregido pasándolo por el fichero de config que `curl -K -` lee de stdin,
+  más HTTPS-only y liberar el marcador de dedupe si `curl` no arranca. Detalle en
+  `.claude/mcp-sentinel/README.md`.
+- **📱 Portal del cliente, móvil compactado (12/09/2026).** Alberto, con la captura de su móvil: «dos
+  veces mis seguros, Grupo ASegura quitarlo, ocupa mucho». La sección de cartera pintaba «Tu cartera /
+  Tus seguros» bajo el h1 «Mis seguros» y la pestaña activa «Mis seguros»: se quita el titular de esa
+  sección (el `aria-labelledby` apunta al h1); el wordmark de la barra se esconde a ≤639 px (queda el
+  monograma con `aria-label`); bloque «móvil compacto» al FINAL de `globals.css` (barra 52 px, sección
+  16 px, la tarjeta anidada del alta 14 px, h1 28 px). Sin medir con Playwright: la bóveda exige BD.
+  Typecheck + 470 tests en verde. PR #2810, mergeado.
+- **💬 Bienvenida sin teléfono, pero diciendo que el chat vale de noche (12/09/2026).** Alberto:
+  «¿pongo el tlf del portal por si pasa algo?». No: el portal no abre puertas y una llamada suya abre un
+  caso contra el anfitrión; el «por si pasa algo» ya lo cubre el modo noche (`agente-huesped/noche.ts`:
+  acuse → Telegram → portal a los 15 min). El hueco real era que la bienvenida decía «respondemos 9-21» a
+  secas y un huésped a las 2:00 saltaría al portal sin darle al modo noche su oportunidad. Ahora lo dice
+  («urgencia a cualquier hora, escríbenos por este chat: nos llega un aviso») y repite el WIFI (pregunta
+  nº 1 del día de llegada; no es código de acceso). Cepo en `plantillas.test.ts`, visto rojo 3 veces.
 - **🔘 «Pedir precio» se APAGA mientras haya un precio vigente en pantalla (12/09/2026).** Alberto,
   con la póliza de Pilar: el guardián de reutilización de asegura (PR #2790) respondía 409 «ya hay un
   proyecto vigente… manda `forzarNuevo: true`», y su pregunta fue la correcta: «si es así, ¿por qué

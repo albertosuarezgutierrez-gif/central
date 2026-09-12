@@ -250,7 +250,7 @@ export default async function Boveda({
       {/* El h1 dice en qué pestaña estás. Antes decía siempre «Mis seguros»,
           también dentro de «Mis datos»: el titular contradecía a la nav justo
           debajo (09/09/2026, aviso de Alberto). */}
-      <h1>
+      <h1 id="titulo-vista">
         Mis <em>{TITULO_VISTA[vista]}</em>
       </h1>
 
@@ -272,13 +272,16 @@ export default async function Boveda({
           Por eso el título ya NO dice «en {correduria}»: en esta lista hay
           ahora pólizas que la correduría no lleva. Lo que dice de dónde sale
           cada una es el cartel de su FILA, que va con ella cuando se hace
-          scroll — un encabezado de sección no. */}
-      <section className="seccion" aria-labelledby="cartera-titulo">
-        {/* El rótulo sobre el titular, como en `grupoasegura.es`. Dice de dónde
-            sale la lista, que es la pregunta que el título («Tus seguros») ya no
-            responde desde que conviven las de la correduría y las añadidas. */}
-        <p className="antetitulo">Tu cartera</p>
-        <h2 id="cartera-titulo">Tus seguros</h2>
+          scroll — un encabezado de sección no.
+
+          🚨 Y la sección NO lleva titular propio (12/09/2026). Tenía «Tu
+          cartera / Tus seguros» justo debajo del h1 «Mis seguros» y de la
+          pestaña activa «Mis seguros»: tres veces lo mismo en la primera
+          pantalla del móvil (Alberto: «dos veces mis seguros»). El h1 es el
+          nombre de la sección, y por eso `aria-labelledby` apunta a él. Los
+          demás cajones (sociedades, autorizadas) sí conservan el suyo: ahí el
+          título dice algo que el h1 no dice. */}
+      <section className="seccion" aria-labelledby="titulo-vista">
         {!cartera.vinculada ? (
           cartera.vinculo === 'ambiguo' ? (
             // 🚨 A este NO se le puede decir que no le hemos encontrado nada: sí
