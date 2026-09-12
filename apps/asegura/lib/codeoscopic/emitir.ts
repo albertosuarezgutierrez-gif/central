@@ -223,28 +223,37 @@ export async function reRate(
  * (`Cotizacion.insuranceLineId`) en vez de suponerlo por ramo — un 'Car'
  * a fuego habría colado en auto pero roto hogar/vida/decesos/moto/salud.
  *
- * 🚨 **[Seguro, medido 12/09/2026, octavo fallo real, mismo proyecto]: el
- * PATCH devuelve éxito (sin lanzar) y el vendor NO CORRIGE `effectiveDate`.**
- * Log de diagnóstico en `route.ts` (PR #2749) capturó el ciclo completo:
- * `fechaEfectoCorregida` llegó bien formada (`2026-09-12`, no vacía — se
- * descartó que el frontend no la mandara), el PATCH no lanzó ningún
- * `ErrorCodeoscopic`, y el reread INMEDIATO tras el PATCH seguía devolviendo
- * la fecha ORIGINAL sin tocar (`2027-09-10`). Se probó una 2ª relectura tras
- * una pausa corta por si el vendor procesa el PATCH de forma asíncrona
- * (`route.ts`, mismo PR); mira el resultado de esa prueba en el commit/PR
- * que lo resolvió antes de repetir esta investigación desde cero.
- * [Probable] el campo `effectiveDate` simplemente NO es mutable por este
- * PATCH pese a lo que sugiere `docs/CODEOSCOPIC-API-PORTAL.md` sobre
- * «modificar campos tras cotizar invalida las cotizaciones anteriores» — esa
- * frase viene de `person-roles` y puede no aplicar a `effectiveDate`. Si se
- * confirma, la ÚNICA vía real para cambiar la fecha de efecto es volver a
- * cotizar desde cero (`POST /insurances`, con coste real de 0,50€): el
- * campo «Fecha de efecto» de `emision.tsx` dejaría de servir para nada
- * mientras el PATCH sea la única vía de corrección.
- * **Al portar esto a hogar/vida/decesos/moto/salud: probar la misma secuencia
- * (PATCH+reread) ANTES de asumir que funciona igual que en auto — la validez
- * de `insuranceLine` en el PATCH es genérica, pero la mutabilidad real de
- * `effectiveDate` no está confirmada para NINGÚN ramo.**
+ * 🚨🚨 **[SEGURO, CONFIRMADO 12/09/2026 — octavo y noveno fallo real, mismo
+ * proyecto]: `effectiveDate` NO es mutable por este PATCH. Punto.** Dos
+ * lecturas independientes de diagnóstico (PR #2749 y #2756) lo prueban:
+ * `fechaEfectoCorregida` llegó bien formada (`2026-09-12`, no vacía), el
+ * PATCH no lanzó ningún `ErrorCodeoscopic` (200 limpio), y NI la relectura
+ * INMEDIATA ni una SEGUNDA relectura tras 2,5s de pausa (para descartar
+ * proceso asíncrono) mostraron el cambio — las dos siguieron devolviendo la
+ * fecha ORIGINAL (`2027-09-10`). La hipótesis async queda descartada. La
+ * frase de `docs/CODEOSCOPIC-API-PORTAL.md` sobre «modificar campos tras
+ * cotizar invalida las cotizaciones anteriores» viene de `person-roles` y
+ * NO aplica a `effectiveDate`: este campo, una vez fijado en el `POST
+ * /insurances` inicial, es de solo lectura para el resto de la vida del
+ * proyecto.
+ *
+ * **Consecuencia práctica: esta función y el campo «Fecha de efecto» de
+ * `emision.tsx` NO SIRVEN PARA NADA tal y como están.** Sirven para
+ * corregir `insuranceLine` si algún día hiciera falta (eso sí se valida),
+ * pero el PATCH nunca va a cambiar la fecha con la que se re-tarifica. La
+ * ÚNICA vía real para cambiar la fecha de efecto de una cotización ya
+ * creada es volver a cotizar desde cero (`POST /insurances`, con coste
+ * real de 0,50€, no idempotente) con la fecha correcta desde el principio.
+ * Mientras no se implemente ese flujo de re-cotización, un proyecto
+ * cotizado con una fecha de efecto rechazable (>90 días vista) queda
+ * ATASCADO sin remedio vía ReRate — la única salida es descartarlo.
+ *
+ * **Al portar esto a hogar/vida/decesos/moto/salud: NO uses este PATCH
+ * para corregir la fecha de efecto — está confirmado que no funciona en
+ * auto y no hay ninguna razón para esperar que difiera por ramo** (el
+ * campo y el mecanismo de PATCH son genéricos a todos los ramos). Si
+ * aparece el mismo 400 en otro ramo, la solución es re-cotizar, no repetir
+ * esta investigación.
  */
 export async function actualizarFechaEfecto(
   config: ConfigCodeoscopic,
