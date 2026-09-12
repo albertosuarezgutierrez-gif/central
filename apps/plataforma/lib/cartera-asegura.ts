@@ -233,3 +233,79 @@ export async function vencimientosAsegura(dias = 90): Promise<VencimientosAsegur
     return { estado: 'error', motivo: 'red' }
   }
 }
+
+// ── Declaradas por vencer (venta cruzada) ───────────────────────────────────
+// Pólizas que un cliente tiene con OTRA compañía y ha declarado en su bóveda
+// del portal. Sin muestra suficiente para comparar precio (ver
+// docs/CORREDURIA-INTRANET-IDEAS.md, idea F), la jugada es que Alberto llame
+// antes de que se renueven solas — no un precio automático.
+
+export type DeclaradaPorVencer = {
+  id: string
+  clienteId: string
+  cliente: string
+  compania: string | null
+  ramo: string | null
+  numeroPoliza: string | null
+  fechaVencimiento: string
+  dias: number
+  contacto: Contacto | null
+}
+
+export type DeclaradasVencerAsegura =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoErrorCartera; causa?: string }
+  | { estado: 'ok'; dias: number; declaradas: DeclaradaPorVencer[]; sinVincular: number }
+
+/** Interpretación PURA de la respuesta del puerto. Una fila con forma
+ *  inesperada invalida la lista entera, igual que `interpretarVencimientos`. */
+export function interpretarDeclaradasVencer(status: number, json: unknown): DeclaradasVencerAsegura {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  const r = json as Record<string, unknown>
+  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (r.estado === 'error') return conCausa({ estado: 'error', motivo: 'asegura_error' }, r.causa)
+  if (r.estado !== 'ok' || !Array.isArray(r.declaradas)) return { estado: 'error', motivo: 'respuesta_ilegible' }
+  const declaradas: DeclaradaPorVencer[] = []
+  for (const fila of r.declaradas) {
+    if (typeof fila !== 'object' || fila === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const f = fila as Record<string, unknown>
+    if (typeof f.id !== 'string' || typeof f.clienteId !== 'string' || typeof f.cliente !== 'string') {
+      return { estado: 'error', motivo: 'respuesta_ilegible' }
+    }
+    if (typeof f.fechaVencimiento !== 'string' || typeof f.dias !== 'number' || !Number.isFinite(f.dias)) {
+      return { estado: 'error', motivo: 'respuesta_ilegible' }
+    }
+    declaradas.push({
+      id: f.id,
+      clienteId: f.clienteId,
+      cliente: f.cliente,
+      compania: typeof f.compania === 'string' ? f.compania : null,
+      ramo: typeof f.ramo === 'string' ? f.ramo : null,
+      numeroPoliza: typeof f.numeroPoliza === 'string' ? f.numeroPoliza : null,
+      fechaVencimiento: f.fechaVencimiento,
+      dias: f.dias,
+      contacto: interpretarContacto(f.contacto),
+    })
+  }
+  const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 60
+  const sinVincular = typeof r.sinVincular === 'number' && Number.isFinite(r.sinVincular) ? r.sinVincular : 0
+  return { estado: 'ok', dias, declaradas, sinVincular }
+}
+
+export async function declaradasVencerAsegura(dias = 60): Promise<DeclaradasVencerAsegura> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/declaradas-vencer?dias=${dias}`, {
+      headers: { Authorization: `Bearer ${secret}` },
+      cache: 'no-store', signal: AbortSignal.timeout(8000),
+    })
+    const json = await res.json().catch(() => null)
+    return interpretarDeclaradasVencer(res.status, json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
