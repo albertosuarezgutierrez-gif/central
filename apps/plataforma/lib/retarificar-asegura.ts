@@ -755,7 +755,37 @@ export type RespuestaOferta =
       firmeza: string
       caducaEn: string | null
       avisos: string[]
+      /** La cuenta de cargo que asegura YA conoce del cliente (enmascarada, con
+       *  su origen), para enseñarla ANTES del Submit. `null` = no hay ninguna
+       *  legible; `cuentaAviso` dice por qué (clave PII, CCC inválido, consulta caída). */
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
     }
+
+/** Por qué no hay cuenta utilizable, cuando asegura lo sabe. `no_comprobada`
+ *  = la consulta falló: NO es «no tiene». */
+export type AvisoCuenta = 'ilegible' | 'invalida' | 'no_comprobada'
+
+export function leerAvisoCuenta(v: unknown): AvisoCuenta | null {
+  if (typeof v !== 'object' || v === null) return null
+  const a = (v as Record<string, unknown>).aviso
+  return a === 'ilegible' || a === 'invalida' || a === 'no_comprobada' ? a : null
+}
+
+/** La cuenta de cargo tal como cruza el puerto: SIEMPRE enmascarada (`ES91…1332`),
+ *  con su origen y la frase que lo explica. El IBAN entero no sale de asegura. */
+export type CuentaConocida = { enmascarada: string; origen: string; descripcion: string | null }
+
+function leerCuenta(v: unknown): CuentaConocida | null {
+  if (typeof v !== 'object' || v === null) return null
+  const x = v as Record<string, unknown>
+  if (typeof x.enmascarada !== 'string' || x.enmascarada === '') return null
+  return {
+    enmascarada: x.enmascarada,
+    origen: typeof x.origen === 'string' ? x.origen : 'ficha',
+    descripcion: typeof x.descripcion === 'string' && x.descripcion !== '' ? x.descripcion : null,
+  }
+}
 
 /** Hasta 60 s: es una llamada de red al vendor, sin duración documentada. */
 export const TIMEOUT_OFERTA_MS = 60_000
@@ -784,7 +814,13 @@ export function interpretarOferta(status: number, json: unknown): RespuestaOfert
     if (!oferta || typeof r.projectId !== 'string') {
       return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible }
     }
-    return { estado: 'ok', projectId: r.projectId, ...oferta }
+    return {
+      estado: 'ok',
+      projectId: r.projectId,
+      ...oferta,
+      cuenta: leerCuenta(r.cuenta),
+      cuentaAviso: leerAvisoCuenta(r.cuenta),
+    }
   }
   if (r.estado === 'sin_configurar' || (status === 503 && r.causa === 'apagado')) {
     return {
@@ -879,10 +915,22 @@ export async function ofertaAsegura(p: {
 
 export type RespuestaEmitir =
   | { estado: 'sin_configurar'; mensaje: string }
-  | { estado: 'faltan_campos'; faltan: string[]; campos: unknown }
+  /** 422 · la compañía pide datos antes de emitir. `faltan` lleva `'iban'` cuando
+   *  exige cuenta bancaria (12/09/2026). `cuenta` es la que asegura YA conoce del
+   *  cliente (enmascarada) y `confirmar` que no viajó porque nadie la confirmó:
+   *  se confirma o se teclea otra — nunca se manda sola. */
+  | {
+      estado: 'faltan_campos'
+      faltan: string[]
+      campos: unknown
+      mensaje: string | null
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
+      confirmar: boolean
+    }
   | { estado: 'en_vuelo'; mensaje: string }
   | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown }
-  | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown }
+  | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null }
   | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
 
 /** Hasta 90 s: es el Submit, la llamada más pesada del flujo y sin duración documentada. */
@@ -899,6 +947,10 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
       estado: 'faltan_campos',
       faltan: Array.isArray(r.faltan) ? r.faltan.filter((f): f is string => typeof f === 'string') : [],
       campos: r.campos ?? null,
+      mensaje: cadenaONulo(r.mensaje),
+      cuenta: leerCuenta(r.cuenta),
+      cuentaAviso: leerAvisoCuenta(r.cuenta),
+      confirmar: r.confirmar === true,
     }
   }
   if (status === 409 && r.causa === 'en-vuelo') {
@@ -913,7 +965,7 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
       }
     }
     if (r.estado === 'ok') {
-      return { estado: 'ok', referenciaVendor: cadenaONulo(r.referenciaVendor), acunado: r.acunado ?? null }
+      return { estado: 'ok', referenciaVendor: cadenaONulo(r.referenciaVendor), acunado: r.acunado ?? null, cuenta: leerCuenta(r.cuenta) }
     }
     return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible, crudo: r }
   }
@@ -943,6 +995,10 @@ export async function emitirAsegura(p: {
   campos: Record<string, unknown>
   actor?: string
   primaAnual?: number | null
+  /** La máscara (`ES91…1332`) de la cuenta de la ficha que el corredor ha visto y
+   *  aprobado. Sin ella asegura no manda la cuenta de la ficha: contesta
+   *  `faltan_campos` con `confirmar: true`. Un IBAN tecleado en `campos.iban` manda. */
+  cuentaConfirmada?: string | null
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -956,6 +1012,7 @@ export async function emitirAsegura(p: {
           actor: p.actor ?? 'plataforma',
           primaAnual: p.primaAnual ?? null,
           confirmado: true,
+          ...(p.cuentaConfirmada ? { cuentaConfirmada: p.cuentaConfirmada } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,

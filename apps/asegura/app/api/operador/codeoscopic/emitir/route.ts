@@ -5,6 +5,17 @@ import { correduriaUnica } from '@/lib/cartera'
 import { catalogoCompanias, registrarPolizaEmitida } from '@/lib/emision'
 import { resolverConfigEmision, camposDeEmision } from '@/lib/codeoscopic/emitir'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
+import {
+  conCuentaBancaria,
+  decidirCuentaEnvio,
+  describirOrigenCuenta,
+  esFalloDeCuentaBancaria,
+  extraerIbanTecleado,
+  ibanEnCampos,
+  ibanEnmascarado,
+  ibanValido,
+} from '@/lib/codeoscopic/emitir-iban'
+import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -23,7 +34,13 @@ export const maxDuration = 60
  * de un solo intento por proyecto (`lib/codeoscopic/emitir.ts::enviarEmision`).
  *
  * ── Cuerpo ──────────────────────────────────────────────────────────────────
- *   { projectId, confirmado: true, campos?: Record<string, unknown> }
+ *   { projectId, confirmado: true, campos?: Record<string, unknown>, cuentaConfirmada?: string }
+ *
+ * `cuentaConfirmada` es la MÁSCARA (`ES91…1332`) de la cuenta de cargo que la
+ * pantalla enseñó tras el ReRate (`/oferta` → `cuenta`). Sin ella, una cuenta
+ * que la ficha ya conoce NO viaja: se contesta 422 pidiendo confirmarla o
+ * teclear otra (`campos.iban`), ANTES de llamar al vendor. Dictado de Alberto
+ * (12/09/2026): «iban importante siempre confirmar».
  *
  * `projectId` tiene que tener ya una oferta confirmada por
  * `POST .../oferta` (ReRate) — si no, se corta con 409 antes de llamar a
@@ -110,6 +127,71 @@ export async function POST(req: Request) {
     )
   }
 
+  // ── La cuenta bancaria del Submit (duodécimo 400 real, 12/09/2026) ────────
+  // Orden: lo tecleado en plataforma (`campos.iban`) > lo que ya viniera en
+  // `payment.bankAccount.iban` > lo que YA sabemos del cliente (`cuentaDeFicha`:
+  // póliza, recibos de CIMA, ficha, recibos de otras pólizas). Nunca se
+  // inventa: si no está en ningún sitio, se manda sin ella y, si la compañía
+  // la exige, su 400 vuelve como hueco `iban` (más abajo).
+  const { iban: ibanTecleado, resto: camposBase } = extraerIbanTecleado(camposCliente)
+  const ibanJson = ibanEnCampos(camposBase)
+  // Lo que venga de una persona se valida ANTES de gastar el único intento de
+  // Submit: el tecleado en la caja y también el del JSON avanzado.
+  const ibanHumano = ibanTecleado ?? ibanJson
+  if (ibanHumano !== null && !ibanValido(ibanHumano)) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'faltan_campos',
+        mensaje: `El IBAN ${ibanTecleado !== null ? 'tecleado' : 'del JSON avanzado'} (${ibanEnmascarado(ibanHumano)}) no pasa los dígitos de control: revísalo.`,
+        faltan: ['iban'],
+        campos: null,
+      },
+      { status: 422 },
+    )
+  }
+  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, p.poliza_id, poliza.cliente_id) : SIN_CUENTA
+  const decision = decidirCuentaEnvio({ ibanTecleado, ibanJson, ficha, cuentaConfirmada: cuerpo.cuentaConfirmada })
+  if (decision.tipo === 'confirmar') {
+    // La ficha tiene cuenta y nadie la ha confirmado: se pide ANTES de gastar
+    // el único intento de Submit. No es un fallo del vendor ni un hueco
+    // vacío: es un dato que existe y que el corredor tiene que ver y aprobar.
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'faltan_campos',
+        mensaje:
+          `Confirma la cuenta de cargo ${ibanEnmascarado(decision.iban)} (${describirOrigenCuenta(decision.origen)}) ` +
+          'o teclea otra: la cuenta del recibo no se manda sin confirmarla. No se ha emitido nada.',
+        faltan: ['iban'],
+        campos: null,
+        cuenta: {
+          enmascarada: ibanEnmascarado(decision.iban),
+          origen: decision.origen,
+          descripcion: describirOrigenCuenta(decision.origen),
+        },
+        confirmar: true,
+      },
+      { status: 422 },
+    )
+  }
+  const ibanEnvio = decision.tipo === 'enviar' ? decision.iban : null
+  const cuentaRespuesta =
+    decision.tipo === 'enviar'
+      ? {
+          enmascarada: ibanEnmascarado(decision.iban),
+          origen: decision.origen,
+          descripcion:
+            decision.origen === 'tecleada'
+              ? 'la cuenta tecleada en plataforma'
+              : decision.origen === 'json_avanzado'
+                ? 'la cuenta del JSON avanzado'
+                : describirOrigenCuenta(decision.origen),
+        }
+      : null
+  // `forzar`: la precedencia ya está decidida aquí, y así lo que viaja va normalizado.
+  const camposEnvio = ibanEnvio ? conCuentaBancaria(camposBase, ibanEnvio, true) : camposBase
+
   const r = resolverConfigEmision()
   if (r.estado !== 'lista') {
     return NextResponse.json(
@@ -129,8 +211,18 @@ export async function POST(req: Request) {
   const campos = await camposDeEmision(r.config, projectId, p.accepted_offer_id_codeoscopic).catch(
     () => null,
   )
+  // Sin fixture del fabricante para esta lectura: se deja constancia de qué
+  // devuelve (ids y si son obligatorios, nunca valores) para saber si algún
+  // día puede pintar los huecos ella sola en vez de descubrirlos por 400.
+  console.log(
+    `[emitir] policy-application-fields de ${projectId}: ` +
+      (campos === null ? 'no se pudo leer' : campos.map((c) => `${c.id}${c.obligatorio ? '*' : ''}`).join(', ') || '(vacío)'),
+  )
+  // `iban` ya no es una clave de primer nivel (viaja en `payment.bankAccount`):
+  // si el vendor lo listara con ese id, contarlo como ausente dejaría la
+  // pantalla pidiendo un IBAN que ya está puesto, sin salida.
   const faltan = (campos ?? [])
-    .filter((c) => c.obligatorio && !(c.id in camposCliente))
+    .filter((c) => c.obligatorio && !(c.id in camposEnvio) && !(c.id === 'iban' && ibanEnvio))
     .map((c) => c.id)
   if (faltan.length > 0) {
     return NextResponse.json(
@@ -149,10 +241,44 @@ export async function POST(req: Request) {
     correduriaId: correduria.id,
     projectId,
     offerId: p.accepted_offer_id_codeoscopic,
-    campos: camposCliente,
+    campos: camposEnvio,
   })
 
   if (!envio.ok) {
+    // «The bank account is mandatory according to the selected companies and
+    // payment types.» — no es un fallo del vendor: es un dato que falta. Se
+    // devuelve como hueco para que plataforma pinte la caja del IBAN. Si YA se
+    // mandó una cuenta y la compañía sigue pidiéndola, se dice cuál (enmascarada)
+    // para que nadie crea que no viajó.
+    if (envio.razon === 'vendor' && esFalloDeCuentaBancaria(envio.mensaje)) {
+      return NextResponse.json(
+        {
+          estado: 'error',
+          causa: 'faltan_campos',
+          mensaje: ibanEnvio
+            ? `La compañía exige cuenta bancaria para esta forma de pago y se le mandó ${ibanEnmascarado(ibanEnvio)}` +
+              `${cuentaRespuesta ? ` (${cuentaRespuesta.descripcion})` : ''}, ` +
+              'pero la sigue pidiendo: revisa la respuesta completa (`crudo`) antes de repetir.'
+            : ficha.aviso === 'ilegible'
+              ? 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago. La ficha TIENE una cuenta ' +
+                'guardada pero no se ha podido descifrar (clave PII de central-asegura): tecléala aquí para emitir, ' +
+                'y revisa la clave — no se ha emitido nada.'
+              : ficha.aviso === 'invalida'
+                ? 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago. La ficha tiene una cuenta ' +
+                  'guardada que no es un IBAN válido (CCC antiguo o errata): tecléala y vuelve a emitir — no se ha emitido nada.'
+                : ficha.aviso === 'no_comprobada'
+                  ? 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago y NO se ha podido leer la ficha ' +
+                    'del cliente para buscarla: tecléala y vuelve a emitir — no se ha emitido nada.'
+                  : 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago, y ni la póliza ni la ficha ' +
+                    'del cliente la tienen. Tecléala y vuelve a emitir: no se ha emitido nada.',
+          faltan: ['iban'],
+          campos: null,
+          cuenta: cuentaRespuesta ?? (ficha.aviso ? { aviso: ficha.aviso } : null),
+          crudo: envio.crudo ?? null,
+        },
+        { status: 422 },
+      )
+    }
     return NextResponse.json(
       { estado: 'error', causa: envio.razon, mensaje: envio.mensaje, crudo: envio.crudo ?? null },
       { status: envio.razon === 'en-vuelo' ? 409 : 502 },
@@ -195,6 +321,9 @@ export async function POST(req: Request) {
     estado: acunado.ok ? 'ok' : 'emitido_sin_acunar',
     referenciaVendor: envio.referenciaVendor,
     acunado,
+    // Con qué cuenta se ha emitido (enmascarada) y de dónde salió: la póliza
+    // nueva se cobrará ahí, y eso tiene que verse sin abrir el `crudo`.
+    cuenta: cuentaRespuesta,
     crudo: envio.crudo,
   })
 }
@@ -202,6 +331,7 @@ export async function POST(req: Request) {
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
 }
+
 
 function numero(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null

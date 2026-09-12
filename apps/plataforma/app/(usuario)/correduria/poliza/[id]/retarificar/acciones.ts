@@ -123,11 +123,14 @@ export async function pedirEmision(entrada: {
   projectId: string
   campos: Record<string, unknown>
   primaAnual?: number | null
+  /** Máscara de la cuenta de la ficha que el corredor confirmó en pantalla (o nada). */
+  cuentaConfirmada?: string | null
 }): Promise<RespuestaEmitir> {
   return emitirAsegura({
     projectId: entrada.projectId,
     campos: entrada.campos,
     actor: 'plataforma/correduria',
     primaAnual: entrada.primaAnual ?? null,
+    cuentaConfirmada: entrada.cuentaConfirmada ?? null,
   })
 }
