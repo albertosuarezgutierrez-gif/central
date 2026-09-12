@@ -15,12 +15,13 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 const LOTE = 96              // textos por llamada a OpenRouter (~50 tokens cada uno)
-const MARGEN_MS = 45_000     // se para antes del maxDuration para devolver el recuento
+const MARGEN_MS = 95_000     // ≥ el CURLOPT_TIMEOUT_MS (90 s) de grafo_embed_textos: el último lote tiene que caber entero antes del maxDuration
 
 export async function POST(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const clave = process.env.GRAFO_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY
+  const usandoClavePrincipal = !process.env.GRAFO_OPENROUTER_API_KEY && !!clave // se declara en la respuesta: la principal en Vault es un riesgo que hay que ver en el log
   if (!clave) {
     return NextResponse.json({ error: 'Sin GRAFO_OPENROUTER_API_KEY ni OPENROUTER_API_KEY: no se pueden calcular embeddings' }, { status: 503 })
   }
@@ -34,14 +35,14 @@ export async function POST(req: NextRequest) {
     let embebidas = 0
     let llamadas = 0
     while (Date.now() < limite) {
-      const [r] = await prisma.$queryRaw<Array<{ n: number }>>`SELECT grafo_embed_lote(${LOTE}) AS n`
+      const [r] = await prisma.$queryRaw<Array<{ n: number }>>`SELECT grafo_embed_lote(${LOTE}::int) AS n /* ::int: Prisma manda INT8 y grafo_embed_lote(int) no resolvería (42883) */`
       llamadas++
       if (!r || r.n <= 0) break
       embebidas += r.n
     }
     const [p] = await prisma.$queryRaw<Array<{ n: bigint }>>`SELECT count(*) AS n FROM grafo_embeddings WHERE embedding IS NULL`
     const pendientes = Number(p?.n ?? 0)
-    return NextResponse.json({ ok: true, sync, embebidas, llamadas, pendientes, ms: Date.now() - inicio })
+    return NextResponse.json({ ok: true, sync, embebidas, llamadas, pendientes, usandoClavePrincipal, ms: Date.now() - inicio })
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 400) : 'error'
     return NextResponse.json({ error: 'fallo al calcular embeddings', detalle: msg }, { status: 500 })

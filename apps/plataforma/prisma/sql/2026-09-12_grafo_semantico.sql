@@ -70,15 +70,19 @@ BEGIN
       sha = EXCLUDED.sha, texto = EXCLUDED.texto, hash = EXCLUDED.hash,
       embedding  = CASE WHEN grafo_embeddings.hash IS DISTINCT FROM EXCLUDED.hash THEN NULL  ELSE grafo_embeddings.embedding  END,
       updated_at = CASE WHEN grafo_embeddings.hash IS DISTINCT FROM EXCLUDED.hash THEN now() ELSE grafo_embeddings.updated_at END
-    RETURNING (xmax = 0) AS insertada, (embedding IS NULL) AS pendiente
+    -- updated_at solo se toca cuando cambia el hash (now() es constante en la transacción): eso es «cambiada».
+    -- Contar `embedding IS NULL` mezclaría lo que cambió con lo que aún no se ha embebido.
+    RETURNING (xmax = 0) AS insertada, (updated_at = now()) AS cambiada
   )
-  SELECT count(*) FILTER (WHERE insertada)::int, count(*) FILTER (WHERE NOT insertada AND pendiente)::int
+  SELECT count(*) FILTER (WHERE insertada)::int, count(*) FILTER (WHERE NOT insertada AND cambiada)::int
   INTO ins, cam FROM up;
 
   DELETE FROM grafo_embeddings e WHERE NOT EXISTS (SELECT 1 FROM _grafo_src s WHERE s.id = e.id);
   GET DIAGNOSTICS bor = ROW_COUNT;
   RETURN QUERY SELECT ins, cam, bor;
 END $$;
+REVOKE ALL ON FUNCTION public.grafo_embeddings_sync() FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.grafo_embeddings_sync() TO prisma_plataforma;
 
 -- La clave de OpenRouter la guarda la app (desde su env) en Vault; nunca viaja en el repo ni en CI.
 CREATE OR REPLACE FUNCTION public.grafo_guardar_clave(clave text)
@@ -162,6 +166,9 @@ BEGIN
     ORDER BY e.embedding <=> qv
     LIMIT lim;
 END $$;
+-- SECURITY DEFINER + EXECUTE por defecto a anon = RPC público que gasta OpenRouter y devuelve el índice: se cierra.
+REVOKE ALL ON FUNCTION public.grafo_buscar(text, int) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.grafo_buscar(text, int) TO prisma_plataforma;
 
 -- Archivos relevantes para una tarea (rank_files): agrega los k nodos más parecidos por archivo.
 CREATE OR REPLACE FUNCTION public.grafo_rank_files(q text, lim int DEFAULT 10, k int DEFAULT 40)
@@ -174,6 +181,8 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public, extensions AS $$
   ORDER BY 2 DESC
   LIMIT lim
 $$;
+REVOKE ALL ON FUNCTION public.grafo_rank_files(text, int, int) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.grafo_rank_files(text, int, int) TO prisma_plataforma;
 
 -- ── Consultas estructurales que faltaban ─────────────────────────────────────────────────────
 -- Camino dirigido más corto entre dos ARCHIVOS por dependencias (importa/reexporta/llama/usa,

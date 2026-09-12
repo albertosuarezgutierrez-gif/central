@@ -36,7 +36,9 @@ test('un texto que cambia PIERDE su embedding (vuelve a NULL) — si no, la bús
 test('la clave de OpenRouter vive en Vault: ni literal en el SQL ni accesible por anon/authenticated', () => {
   assert.doesNotMatch(sql, /sk-or-/)
   assert.match(sql, /vault\.decrypted_secrets WHERE name = 'grafo_openrouter_api_key'/)
-  for (const f of ['grafo_guardar_clave\\(text\\)', 'grafo_embed_textos\\(text\\[\\]\\)', 'grafo_embed_lote\\(int\\)']) {
+  // Las SECURITY DEFINER SIN REVOKE son RPC público por PostgREST con la anon key: gasto de OpenRouter y el índice entero.
+  for (const f of ['grafo_guardar_clave\\(text\\)', 'grafo_embed_textos\\(text\\[\\]\\)', 'grafo_embed_lote\\(int\\)',
+                   'grafo_embeddings_sync\\(\\)', 'grafo_buscar\\(text, int\\)', 'grafo_rank_files\\(text, int, int\\)']) {
     assert.match(sql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${f} FROM public, anon, authenticated`), `${f} sin REVOKE`)
   }
   assert.match(sql, /REVOKE ALL ON public\.grafo_embeddings FROM anon, authenticated/)
@@ -57,6 +59,11 @@ test('el puerto exige CRON_SECRET, prefiere la key DEDICADA y responde 503 (no 5
   assert.match(route, /grafo_embeddings_sync\(\)/)
   assert.match(route, /grafo_embed_lote\(/)
   assert.match(route, /export const maxDuration = 300/)
+  assert.match(route, /grafo_embed_lote\(\$\{LOTE\}::int\)/, 'Prisma manda INT8: sin ::int la función int no resuelve (42883)')
+  const margen = Number(/const MARGEN_MS = ([\d_]+)/.exec(route)![1].replace(/_/g, ''))
+  const curl = Number(/'CURLOPT_TIMEOUT_MS', '(\d+)'/.exec(sql)![1])
+  assert.ok(margen >= curl, `el margen (${margen} ms) tiene que cubrir el timeout HTTP de un lote (${curl} ms) o Vercel mata la función a mitad`)
+  assert.match(route, /usandoClavePrincipal/, 'usar la key principal se declara en la respuesta, no en silencio')
 })
 
 test('auditoria.yml calcula los embeddings DESPUÉS del mapa y del grafo, solo en main, y no depende de que el grafo haya ido bien', () => {
@@ -82,6 +89,21 @@ test('inyectarEmbeddings(): repite hasta pendientes 0; un HTTP ≠ 200 o agotar 
 
   const eterno = await inyectarEmbeddings({ url: 'u', secret: 's', log, maxPasadas: 2, fetchImpl: async () => resp(200, { embebidas: 1, pendientes: 5 }) })
   assert.deepEqual(eterno, { ok: false, total: 2, pendientes: -1 })
+
+  // Un 200 sin `pendientes` NO es «al día» (regla NULL ≠ 0).
+  const sinDato = await inyectarEmbeddings({ url: 'u', secret: 's', log, fetchImpl: async () => resp(200, { ok: true }) })
+  assert.equal(sinDato.ok, false)
+
+  // Un 5xx transitorio (deploy aún no READY, 429 aguas arriba) se reintenta con espera; 401/503 no.
+  const esperas: number[] = []
+  const cola2 = [resp(404, 'not found'), resp(500, { error: 'x' }), resp(200, { embebidas: 3, pendientes: 0 })]
+  const r5 = await inyectarEmbeddings({ url: 'u', secret: 's', log, esperar: async (s: number) => { esperas.push(s) }, fetchImpl: async () => cola2.shift() })
+  assert.deepEqual(r5, { ok: true, total: 3, pendientes: 0 })
+  assert.deepEqual(esperas, [15, 30])
+  let llamadas503 = 0
+  const r503 = await inyectarEmbeddings({ url: 'u', secret: 's', log, esperar: async () => {}, fetchImpl: async () => { llamadas503++; return resp(503, { error: 'sin key' }) } })
+  assert.equal(r503.ok, false)
+  assert.equal(llamadas503, 1, '503 = sin key en Vercel: reintentar no lo arregla')
 })
 
 test('el medidor de uso clasifica las funciones nuevas como grafo-propio (si no, no se mide el ahorro frente a Graphify)', () => {
