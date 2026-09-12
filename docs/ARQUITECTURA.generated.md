@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-12T12:01:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-12T12:26:14Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -262,6 +262,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (12/09/2026) 📮 Y si la ficha SÍ trae la calle, no se vuelve a pedir
+- (12/09/2026) 🚨 Undécimo 400 real de Codeoscopic — ReRate exige la calle del tomador
 - (12/09/2026) 🛑 No crear proyecto por proyecto en Codeoscopic — guardián de reutilización
 - (12/09/2026) 🚨 Décimo 400 real de Codeoscopic — Submit sin el body part `policyApplications`
 - (12/09/2026) MCP Sentinel instalado en modo solo-auditoría (12/09/2026), PR #2780 MERGEADO.
@@ -270,6 +272,4 @@
 - (12/09/2026) 📬 Pasada diaria `facturas-correo`
 - (12/09/2026) 🎯 Retarificar: fecha de efecto corregible ANTES de pagar, no después
 - (12/09/2026) ✏️ Correduría: RC en "Pólizas vivas" ya no vuelca las coberturas en la celda
-- (12/09/2026) ✅ Smoobu 401 REALMENTE resuelto — no era el HMAC, era la credencial
-- (12/09/2026) 📞 «Otras compañías por vencer» — venta cruzada sin tarificar
 

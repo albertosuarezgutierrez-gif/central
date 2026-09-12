@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T12:01:02Z",
-  "sha": "cd05babfd039a58cb71f8fc6fae5b71bb6bf234e",
+  "generadoEn": "2026-09-12T12:26:14Z",
+  "sha": "8b58ec289e48c59ddf1a2c9621a29b238958826c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8935,7 +8935,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "eab95dfa1d6c"
+      "hash": "21c7a9236438"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/subir/page.tsx",
@@ -12218,7 +12218,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<ClienteOrigen | null>",
-          "linea": 870,
+          "linea": 872,
           "resumen": "La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no desde una póliza de la cartera). Misma discipl"
         },
         {
@@ -12227,7 +12227,7 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 913,
+          "linea": 917,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
@@ -12235,7 +12235,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "feaa33ccbe1e"
+      "hash": "fcd4b802efe6"
     },
     {
       "ruta": "apps/asegura/lib/cartera-filtro.ts",
@@ -13979,8 +13979,6 @@
       "exporta": [
         "precalificarHogarCartera",
         "habitacionesPorSuperficie",
-        "direccionDesdeCatastro",
-        "partirDireccion",
         "hogarDeDatos",
         "elegirRiesgo"
       ],
@@ -13991,7 +13989,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 118
+          "linea": 119
         },
         {
           "nombre": "precalificarHogarCartera",
@@ -13999,7 +13997,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaHogarCartera, resueltos: ResueltosHogar, hoy: string, catastro: CatastroHogar | null = null,",
           "retorno": "PrecalificacionHogar",
-          "linea": 141
+          "linea": 142
         },
         {
           "nombre": "habitacionesPorSuperficie",
@@ -14007,7 +14005,7 @@
           "exportada": true,
           "params": "m2: number",
           "retorno": "number",
-          "linea": 330,
+          "linea": 331,
           "resumen": "Habitaciones (dormitorios) estimadas por superficie construida. Es un supuesto declarado, no un dato: el vendor exige el número y la ficha no lo tiene. Tramos típicos de vivienda española."
         },
         {
@@ -14016,33 +14014,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 339
-        },
-        {
-          "nombre": "direccionDesdeCatastro",
-          "kind": "function",
-          "exportada": true,
-          "params": "p: { sigla: string calle: string numero: string planta?: string | null puerta?: string | null } | null",
-          "retorno": "DireccionPartida",
-          "linea": 386,
-          "resumen": "De `paramsDnploc()` (`@central/core-catastro`, que sí entiende «Es:1 Pl:01 Pt:IZ») a `DireccionPartida`. Existe porque `partirDireccion()` de aquí abajo está pensado para el texto libre de la ficha de"
-        },
-        {
-          "nombre": "normalizarToken",
-          "kind": "function",
-          "exportada": false,
-          "params": "t: string",
-          "retorno": "string",
-          "linea": 410
-        },
-        {
-          "nombre": "partirDireccion",
-          "kind": "function",
-          "exportada": true,
-          "params": "direccion: string | null",
-          "retorno": "DireccionPartida",
-          "linea": 425,
-          "resumen": "Trocea «CL SOCORRO 24 3º IZQ» en tipo de vía / nombre / número / planta / puerta. Best-effort y CONSERVADOR: lo que no se reconoce queda a `null` (y la pantalla lo pide), nunca se inventa un número. S"
+          "linea": 340
         },
         {
           "nombre": "hogarDeDatos",
@@ -14050,7 +14022,7 @@
           "exportada": true,
           "params": "datos: Record<string, unknown> | null, fuente: 'poliza' | 'gemela', direccionDescifrada: string | null = null,",
           "retorno": "HogarCartera | null",
-          "linea": 483,
+          "linea": 357,
           "resumen": "Lee el riesgo de hogar de un `datos_especificos` (póliza o gemela). Los números del volcado vienen como TEXTO («76», «61000»): se convierten, y lo que no es número queda a `null` — nunca a 0."
         },
         {
@@ -14059,7 +14031,7 @@
           "exportada": true,
           "params": "propio: HogarCartera | null, gemela: HogarCartera | null",
           "retorno": "HogarCartera | null",
-          "linea": 504,
+          "linea": 378,
           "resumen": "El riesgo que se usa: el de la póliza si está completa; si no, la gemela; si ninguna, lo que haya."
         },
         {
@@ -14068,7 +14040,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 511
+          "linea": 385
         },
         {
           "nombre": "entero",
@@ -14076,7 +14048,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 515
+          "linea": 389
         },
         {
           "nombre": "cpDe",
@@ -14084,12 +14056,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 519
+          "linea": 393
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cc734a652e41"
+      "hash": "8b459225ae1a"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera-salud.ts",
@@ -14188,7 +14160,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 157
+          "linea": 166
         },
         {
           "nombre": "nombreUtil",
@@ -14196,7 +14168,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 163
+          "linea": 172
         },
         {
           "nombre": "partirApellidos",
@@ -14204,7 +14176,7 @@
           "exportada": true,
           "params": "apellidos: string | null",
           "retorno": "",
-          "linea": 170,
+          "linea": 179,
           "resumen": "«Pérez García» → ['Pérez', 'García']. El vendor quiere los dos por separado."
         },
         {
@@ -14213,7 +14185,7 @@
           "exportada": true,
           "params": "saludo: string | null",
           "retorno": "'hombre' | 'mujer' | null",
-          "linea": 186,
+          "linea": 195,
           "resumen": "Sexo a partir del tratamiento del CRM. Medido el 01/09/2026 sobre las 32.600 fichas: con `saludo='1'` los nombres de pila más frecuentes son Jose, Juan, Antonio, Francisco y Manuel; con `'2'`, María. "
         },
         {
@@ -14222,7 +14194,7 @@
           "exportada": true,
           "params": "desde: string | null, hasta: string",
           "retorno": "number | null",
-          "linea": 198,
+          "linea": 207,
           "resumen": "Años completos entre dos fechas aaaa-mm-dd. `null` si alguna no es fecha."
         },
         {
@@ -14231,7 +14203,7 @@
           "exportada": true,
           "params": "f: string",
           "retorno": "string",
-          "linea": 207,
+          "linea": 216,
           "resumen": "El día siguiente a una fecha aaaa-mm-dd."
         },
         {
@@ -14240,7 +14212,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, poliza: PolizaCartera, resueltos: Resueltos, hoy: string,",
           "retorno": "Precalificacion",
-          "linea": 219,
+          "linea": 228,
           "resumen": "Construye la precalificación. `hoy` entra por parámetro para que la función sea pura y los tests no dependan del calendario."
         },
         {
@@ -14249,7 +14221,7 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, resueltos: ResueltosAutoNueva, hoy: string,",
           "retorno": "Precalificacion",
-          "linea": 360
+          "linea": 387
         },
         {
           "nombre": "sePuedeCotizar",
@@ -14257,7 +14229,7 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "boolean",
-          "linea": 439,
+          "linea": 481,
           "resumen": "¿Se puede cotizar ya? Azúcar para la pantalla y para el puerto, que tienen que decidir lo mismo y no deben hacerlo cada uno a su manera."
         },
         {
@@ -14266,7 +14238,7 @@
           "exportada": true,
           "params": "p: Precalificacion",
           "retorno": "Supuesto[]",
-          "linea": 448,
+          "linea": 490,
           "resumen": "Los supuestos que cambian el precio a mejor. La pantalla los enseña aparte porque son los que pueden decepcionar luego: si el cliente sí tuvo siniestros, la prima real sube respecto a lo que se le ha "
         },
         {
@@ -14275,12 +14247,60 @@
           "exportada": true,
           "params": "cliente: ClienteCartera, resueltos: ResueltosMotoNueva, hoy: string,",
           "retorno": "PrecalificacionMoto",
-          "linea": 490
+          "linea": 532
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "870722086ba7"
+      "hash": "d04cdc72e50d"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/direccion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Trocear una dirección de texto libre (CRM) o del Catastro en tipo de vía / nombre / número / planta / puerta, que es como Codeoscopic la exige. PURO: sin red, sin BD. Extraído de `desde-cartera-hogar.ts` el 12/09/2026 para que `desde-cartera.ts` (auto) pueda usarlo también sin crear un import circul",
+      "exporta": [
+        "direccionDesdeCatastro",
+        "partirDireccion"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 7
+        },
+        {
+          "nombre": "direccionDesdeCatastro",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { sigla: string calle: string numero: string planta?: string | null puerta?: string | null } | null",
+          "retorno": "DireccionPartida",
+          "linea": 52,
+          "resumen": "De `paramsDnploc()` (`@central/core-catastro`, que sí entiende «Es:1 Pl:01 Pt:IZ») a `DireccionPartida`. Existe porque `partirDireccion()` de aquí abajo está pensado para el texto libre de la ficha de"
+        },
+        {
+          "nombre": "normalizarToken",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 76
+        },
+        {
+          "nombre": "partirDireccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "direccion: string | null",
+          "retorno": "DireccionPartida",
+          "linea": 91,
+          "resumen": "Trocea «CL SOCORRO 24 3º IZQ» en tipo de vía / nombre / número / planta / puerta. Best-effort y CONSERVADOR: lo que no se reconoce queda a `null` (y la pantalla lo pide), nunca se inventa un número. S"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1b7769a4dbc6"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emitir-envio.ts",
@@ -14694,7 +14714,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 23
+          "linea": 32
         },
         {
           "nombre": "numero",
@@ -14702,7 +14722,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 26
+          "linea": 35
         },
         {
           "nombre": "revisarPersona",
@@ -14710,7 +14730,7 @@
           "exportada": true,
           "params": "d: Partial<DatosPersona>",
           "retorno": "ReparoPersona[]",
-          "linea": 34,
+          "linea": 43,
           "resumen": "Las reglas del tomador que valen para cualquier ramo."
         },
         {
@@ -14719,13 +14739,13 @@
           "exportada": true,
           "params": "d: DatosPersona, extra: { fechaCarnet?: string | null } = {}",
           "retorno": "Record<string, unknown>",
-          "linea": 56,
+          "linea": 65,
           "resumen": "Construye la persona. `fechaCarnet` solo la lleva auto: es el carnet B del conductor. Hogar no lo manda — no hace falta para el precio."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c289a524abd3"
+      "hash": "45836c91f0b4"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/peticion-auto.ts",
@@ -14752,7 +14772,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 115
+          "linea": 125
         },
         {
           "nombre": "numero",
@@ -14760,7 +14780,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 118
+          "linea": 128
         },
         {
           "nombre": "construirPeticionAuto",
@@ -14768,7 +14788,7 @@
           "exportada": true,
           "params": "d: DatosAuto",
           "retorno": "Record<string, unknown>",
-          "linea": 128,
+          "linea": 138,
           "resumen": "Construye el cuerpo `CreateInsuranceRequest_V1`. Lanza si los datos no pasan `revisarDatosAuto`: preferimos fallar aquí, gratis, a mandar una petición que el vendor rechazará después de facturarla."
         },
         {
@@ -14777,13 +14797,13 @@
           "exportada": true,
           "params": "d: Partial<DatosAuto>",
           "retorno": "boolean",
-          "linea": 188,
+          "linea": 198,
           "resumen": "¿El vendor exige el detalle de siniestros de los últimos 5 años?"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "53a1a99780ed"
+      "hash": "5e30aa41e266"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/peticion-decesos.ts",
@@ -132420,7 +132440,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3252,
-    "funciones": 9993
+    "archivos": 3253,
+    "funciones": 9994
   }
 }
