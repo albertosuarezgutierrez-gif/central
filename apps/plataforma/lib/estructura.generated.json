@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-12T09:36:30Z",
+  "generadoEn": "2026-09-12T10:58:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2084,7 +2084,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 63
+        "evidencias": 66
       },
       "asegura-web": {
         "estado": "usado",
@@ -2192,7 +2192,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 55
       },
       "asegura-web": {
         "estado": "usado",
@@ -3880,6 +3880,7 @@
       "/api/operador/codeoscopic/precalificar-moto-nuevo",
       "/api/operador/codeoscopic/precalificar-salud-nuevo",
       "/api/operador/codeoscopic/precalificar-vida-nuevo",
+      "/api/operador/codeoscopic/proyecto",
       "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
@@ -3933,6 +3934,8 @@
       "/api/siniestros/[id]/adjuntos",
       "/api/siniestros/[id]/adjuntos/[documentoId]",
       "/api/sugerencia",
+      "/api/sugerencias",
+      "/api/sugerencias/pedir",
       "/api/supresion"
     ],
     "asegura-web": [
@@ -4753,6 +4756,7 @@
       "/api/correduria/cliente/relaciones",
       "/api/correduria/cliente/relaciones/aviso",
       "/api/correduria/clientes",
+      "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/declaradas-vencer",
@@ -6227,7 +6231,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1330,
+    "apis": 1334,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
