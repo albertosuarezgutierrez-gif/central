@@ -21,6 +21,7 @@ on:
       - 'packages/**'
       - '.claude/skills/**'
       - 'docs/CONTEXTO-SESIONES.md'
+      - 'docs/memoria/**'
       - 'scripts/auditar-estructura.mjs'
       - '.github/workflows/auditoria.yml'
   # A mano. Hace falta de verdad, no es un adorno: un push a `main` hecho con el token de una
@@ -48,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     # 5 → 15 min (12/09/2026): la inyección del grafo son ~13 POSTs secuenciales con reintentos, y un
     # corte a mitad deja las tablas con dos `sha` mezclados hasta la siguiente pasada completa.
-    timeout-minutes: 15
+    timeout-minutes: 25 # 15→25 el 12/09/2026: la memoria semántica añade otra pasada de hasta 8×300s tras la del grafo
     steps:
       - name: Checkout
         uses: actions/checkout@v4

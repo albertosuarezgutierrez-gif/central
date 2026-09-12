@@ -37,15 +37,15 @@ export async function POST(req: NextRequest) {
       const values = chunk.map((e) =>
         Prisma.sql`(${e.id}, ${e.fuente}, ${e.fecha}, ${e.texto}, md5(${e.texto}), ${sha}, now())`
       )
+      // id = 'fuente#md5(texto)' (memoria-parsear.mjs): a diferencia de grafo_embeddings (id =
+      // ruta, estable aunque el texto cambie), aquí un conflicto de id YA garantiza que
+      // fuente/texto/hash son idénticos — un texto editado genera un id nuevo, no un conflicto.
+      // Por eso el UPDATE solo toca `sha` (para que el DELETE del último lote no lo borre):
+      // tocar embedding/hash aquí sería código muerto que nunca se ejecuta.
       upsertadas += await prisma.$executeRaw(Prisma.sql`
         INSERT INTO memoria_embeddings (id, fuente, fecha, texto, hash, sha, updated_at)
         VALUES ${Prisma.join(values)}
-        ON CONFLICT (id) DO UPDATE SET
-          fuente = EXCLUDED.fuente, fecha = EXCLUDED.fecha, texto = EXCLUDED.texto,
-          sha = EXCLUDED.sha,
-          embedding  = CASE WHEN memoria_embeddings.hash IS DISTINCT FROM EXCLUDED.hash THEN NULL  ELSE memoria_embeddings.embedding  END,
-          hash       = EXCLUDED.hash,
-          updated_at = CASE WHEN memoria_embeddings.hash IS DISTINCT FROM EXCLUDED.hash THEN now() ELSE memoria_embeddings.updated_at END
+        ON CONFLICT (id) DO UPDATE SET sha = EXCLUDED.sha
       `)
     }
 

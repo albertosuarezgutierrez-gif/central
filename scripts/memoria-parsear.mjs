@@ -26,8 +26,12 @@ function parsearArchivo(rutaAbs, fuente) {
   const entradas = trocear(lineas.slice(primeraEntrada))
   return entradas.map((lineasEntrada) => {
     const cuerpo = lineasEntrada.join('\n').replace(/\n+$/, '')
+    // Sin año en la cabecera (p. ej. «(30/06)») no se INVENTA: `clasificar()` de rotar-memoria.mjs
+    // sabe inferirlo heredándolo de la entrada de arriba, pero aquí `fecha` es metadato accesorio
+    // de búsqueda, no una clave de troceo — mejor NULL ("no se pudo extraer", como dice la
+    // columna) que un valor a medias tipo '30/06/' que parece fecha y no lo es.
     const m = ultimaFecha(textoFechaDe(lineasEntrada))
-    const fecha = m ? `${m[1].padStart(2, '0')}/${m[2]}/${m[3] ?? ''}` : null
+    const fecha = m && m[3] ? `${m[1].padStart(2, '0')}/${m[2]}/${m[3]}` : null
     const hash = createHash('md5').update(cuerpo).digest('hex').slice(0, 16)
     return { id: `${fuente}#${hash}`, fuente, fecha, texto: cuerpo }
   })
