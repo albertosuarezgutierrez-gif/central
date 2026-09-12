@@ -61,6 +61,17 @@ test('vispera_salida del Dúplex manda las llaves a la mesa de la cocina; en Lux
   assert.ok(lux.includes('MISMO sitio donde se recogieron'))
 })
 
+test('la bienvenida repite el wifi (no los códigos de acceso), dice que el chat vale de noche y no da ningún teléfono', () => {
+  const t = renderPlantilla('bienvenida', BASE)
+  assert.ok(t.includes('sercommBB1119') && t.includes('PWDEMO'))
+  assert.ok(!t.includes('7272'))
+  assert.ok(/urgencia .* a cualquier hora/.test(t) && /nos llega un aviso/.test(t))
+  assert.ok(!/\+34|\b[69]\d{2}[ .]?\d{3}[ .]?\d{3}\b|whatsapp|booking|airbnb/i.test(t))
+  const sinWifi = renderPlantilla('bienvenida', { ...BASE, codigos: { caja: '7272', wifiSsid: null, wifiPass: null } })
+  assert.ok(!/wifi/i.test(sinWifi))
+  assert.ok(!/\n\n\n/.test(sinWifi))
+})
+
 test('estancia y post_salida no contienen códigos ni piden datos de pago', () => {
   for (const tipo of ['estancia', 'post_salida'] as const) {
     const t = renderPlantilla(tipo, BASE)

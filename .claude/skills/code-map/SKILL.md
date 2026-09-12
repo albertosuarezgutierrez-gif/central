@@ -49,6 +49,32 @@ escribe en `movimientos_bancarios`?") y NO sepas ya el archivo. Salta este paso 
   la verdad es el archivo real, que sí lees entero.
 - El coste real que ahorras se registra: el endpoint equivalente escribe en `ai_usos` (`endpoint='codigo'`).
 
+## Grafo propio — callers, impacto, vecinos, tests (12/09/2026)
+
+Lo que Graphify servía como tools vive ahora en dos tablas de la MISMA Supabase (`grafo_nodos`,
+`grafo_aristas`; lo genera `scripts/grafo-codigo.mjs` en cada push a `main`) y se consulta por
+`mcp__Supabase__execute_sql` (`project_id='wswbehlcuxqxyinousql'`). Una llamada, filas planas:
+
+| Pregunta | SQL |
+|---|---|
+| ¿Quién llama/usa a `X`? (prof 2 = quién llama a quien lo llama) | `SELECT * FROM grafo_callers('X', 2)` |
+| ¿A qué llama `X` (o un archivo entero)? | `SELECT * FROM grafo_callees('apps/asegura/lib/cartera-ficha.ts')` |
+| Radio de impacto de un archivo (quién depende de él, 2 saltos, sin tests) | `SELECT * FROM grafo_impacto('packages/module-seguros/src/cartera-viva.ts')` |
+| Vecinos directos (de quién depende / quién depende de él, con símbolos) | `SELECT * FROM grafo_vecinos('<ruta>')` |
+| ¿Qué tests cubren un archivo? | `SELECT * FROM grafo_tests_de('<ruta>')` |
+| Buscar símbolo por subcadena | `SELECT * FROM grafo_find('cartera', 20)` |
+| Frescura | `SELECT sha, max(updated_at) FROM grafo_nodos GROUP BY 1` — compáralo con `git rev-parse origin/main` |
+
+- `X` puede ser el nombre (`esCarteraViva`) o el id completo (`ruta#nombre`). Los ids de símbolo son
+  siempre `ruta#nombre`; los de archivo, la ruta.
+- **Consciente de barriles:** `grafo_impacto`/`grafo_vecinos` cuentan como dependiente a quien importó el
+  símbolo desde `@central/<pkg>` (el `index.ts`), no solo a quien importó el archivo literal.
+- **Lo que NO ve** (regex, sin compilador): llamadas por variable intermedia, imports dinámicos con cadena
+  calculada, alias encadenados raros. Un «0 callers» aquí es «no encontré ninguno», no «nadie lo llama»:
+  antes de borrar algo, `Grep`. Precisión medida contra Graphify: `docs/USO-HERRAMIENTAS.md`.
+- **Graphify** sigue conectado mientras dure la cuota: úsalo solo para `query_graph` (semántico) y
+  `remember`/`recall`. Para callers/impacto/vecinos/tests, primero esto.
+
 ## Relación con el resto
 - Mismo índice que consume el **Director de código** (`apps/plataforma/lib/ia-director-codigo.ts`,
   endpoint `/api/ai/codigo`) para orquestadores externos. Ver `docs/DIRECTOR-CODIGO.md`.

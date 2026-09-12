@@ -44,6 +44,15 @@
   `companias_dgs` se actualiza a mano, un SQL por compañía tras mirar su web — no hay cron ni
   agente que lo repase. Sin decisión de cadencia/mecanismo, no se ha construido nada.
 
+- **🗺️ Grafo de código PROPIO (sustituto de Graphify para callers/impacto/vecinos/tests) + medición automática del uso de cada herramienta (12/09/2026).**
+  Alberto: «se acaba el free de Graphify, ¿creamos el nuestro?» → «Hazlo […] controlar el uso como bien dices». `scripts/grafo-codigo.mjs`
+  (regex, Node puro, 4.128 archivos → 17k nodos / 60k aristas en 1,8 s) → `/api/internal/grafo-codigo` por lotes → tablas `grafo_nodos`/
+  `grafo_aristas` + funciones `grafo_callers/callees/impacto/vecinos/tests_de/find` (migración aplicada; vista `grafo_deps_archivo` consciente
+  de barriles). Recetas en skill `code-map`; `CLAUDE.md` § Graphify reescrita: grafo propio primero, Graphify solo `query_graph`/`remember`.
+  Medido contra Graphify: callers de `esCarteraViva` idénticos. **Medición:** hook `PostToolUse` → `scripts/uso-herramientas.mjs` (JSON por
+  sesión en `docs/uso-herramientas/`, persistido por el `Stop`), agregado `scripts/ahorro-herramientas.mjs` → `docs/USO-HERRAMIENTAS.md`.
+  ⚠️ El JSON en vivo va a `.git/uso-herramientas/` y el `Stop` lo commitea solo con la memoria o cada 30 min: persistirlo en cada Stop
+  era un push por turno = CI + 12 deployments de Vercel (4 pushes en 40 s). Pendiente: tras mergear, disparar `auditoria.yml` (primera carga).
 - **📱 Portal del cliente, móvil compactado (12/09/2026).** Alberto, con la captura de su móvil: «dos
   veces mis seguros, Grupo ASegura quitarlo, ocupa mucho». La sección de cartera pintaba «Tu cartera /
   Tus seguros» bajo el h1 «Mis seguros» y la pestaña activa «Mis seguros»: se quita el titular de esa
@@ -51,7 +60,13 @@
   monograma con `aria-label`); bloque «móvil compacto» al FINAL de `globals.css` (barra 52 px, sección
   16 px, la tarjeta anidada del alta 14 px, h1 28 px). Sin medir con Playwright: la bóveda exige BD.
   Typecheck + 470 tests en verde. PR #2810, mergeado.
-
+- **💬 Bienvenida sin teléfono, pero diciendo que el chat vale de noche (12/09/2026).** Alberto:
+  «¿pongo el tlf del portal por si pasa algo?». No: el portal no abre puertas y una llamada suya abre un
+  caso contra el anfitrión; el «por si pasa algo» ya lo cubre el modo noche (`agente-huesped/noche.ts`:
+  acuse → Telegram → portal a los 15 min). El hueco real era que la bienvenida decía «respondemos 9-21» a
+  secas y un huésped a las 2:00 saltaría al portal sin darle al modo noche su oportunidad. Ahora lo dice
+  («urgencia a cualquier hora, escríbenos por este chat: nos llega un aviso») y repite el WIFI (pregunta
+  nº 1 del día de llegada; no es código de acceso). Cepo en `plantillas.test.ts`, visto rojo 3 veces.
 - **🔘 «Pedir precio» se APAGA mientras haya un precio vigente en pantalla (12/09/2026).** Alberto,
   con la póliza de Pilar: el guardián de reutilización de asegura (PR #2790) respondía 409 «ya hay un
   proyecto vigente… manda `forzarNuevo: true`», y su pregunta fue la correcta: «si es así, ¿por qué
