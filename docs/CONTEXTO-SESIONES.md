@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **MCP Sentinel instalado en modo solo-auditoría (12/09/2026), PR #2780 MERGEADO.** Hook de
+  terceros (carpeta Drive «Sentinel V3») que evalúa cada llamada a herramienta contra IOCs (rutas
+  sensibles, comandos peligrosos, red sospechosa) con `SENTINEL_SHADOW=on`: nunca bloquea, solo
+  cuenta en `~/.claude/sentinel/stats.json` cuántas veces habría intervenido. `code-review`
+  obligatorio corrido antes del merge: 5 hallazgos, 1 corregido (`SENTINEL_ALLOWLIST_PATH` no es
+  secreto) y 4 documentados en `.claude/mcp-sentinel/README.md` sin tocar el motor vendor.
+  **Verificado en vivo tras el merge** (no solo simulado): el hook se disparó de verdad en esta
+  misma sesión y `stats.json` registró `would_block` reales — confirma además, en producción, el
+  falso positivo conocido (#3): un string literal con `.ssh/id_rsa` dentro de un script de prueba
+  dispara detección aunque no toque nada. Pendiente antes de activar bloqueo real: probar qué pasa
+  con un `ask` sin humano delante en una rutina desatendida (sigue sin confirmar).
 - **🌐 IONOS quitó por error el dominio de grupoasegura.es/.com — repuesto (12/09/2026).** Sin
   código: se hizo vía Claude en Chrome (el proxy de esta sesión bloquea egress a esos hosts). Se
   repuso DNS en IONOS (`grupoasegura.es`/`www` → `asegura-web`; `clientes.grupoasegura.es` →
