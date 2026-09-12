@@ -85,8 +85,11 @@ REVOKE ALL ON FUNCTION public.grafo_embeddings_sync() FROM public, anon, authent
 GRANT EXECUTE ON FUNCTION public.grafo_embeddings_sync() TO prisma_plataforma;
 
 -- La clave de OpenRouter la guarda la app (desde su env) en Vault; nunca viaja en el repo ni en CI.
+-- RETURNS boolean, no void: Prisma ($queryRaw, node-postgres) no sabe deserializar una columna
+-- de tipo `void` — probado en runtime (auditoria.yml, 12/09/2026): `Failed to deserialize column
+-- of type 'void'`. El MCP de Supabase (driver distinto) no lo detectó al probarlo a mano.
 CREATE OR REPLACE FUNCTION public.grafo_guardar_clave(clave text)
-RETURNS void
+RETURNS boolean
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, vault AS $$
 DECLARE sid uuid;
 BEGIN
@@ -97,6 +100,7 @@ BEGIN
   ELSE
     PERFORM vault.update_secret(sid, clave);
   END IF;
+  RETURN true;
 END $$;
 REVOKE ALL ON FUNCTION public.grafo_guardar_clave(text) FROM public, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.grafo_guardar_clave(text) TO prisma_plataforma;
