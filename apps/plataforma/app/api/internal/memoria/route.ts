@@ -21,8 +21,10 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null)
   const sha: string = typeof body?.sha === 'string' ? body.sha : ''
-  const lote: number = typeof body?.lote === 'number' ? body.lote : 0
-  const total: number = typeof body?.total === 'number' ? body.total : 0
+  // Number.isInteger descarta NaN/Infinity de un tirón (typeof x==='number' los deja pasar: NaN<1 y
+  // NaN>total son ambos false, así que un lote/total no numérico burlaba la validación de abajo).
+  const lote: number = Number.isInteger(body?.lote) ? body.lote : 0
+  const total: number = Number.isInteger(body?.total) ? body.total : 0
   const entradas: Entrada[] = Array.isArray(body?.entradas) ? body.entradas : []
 
   if (!sha || lote < 1 || total < 1 || lote > total) {
