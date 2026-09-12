@@ -14,3 +14,4 @@
 ## Usos (lo más reciente arriba)
 
 - (12/09/2026) endpoint `/api/internal/grafo-codigo` + `scripts/grafo-codigo-inyectar.mjs` + step de `auditoria.yml`, calcados del patrón `mapa-arquitectura` — agente-mecanico — ok (typecheck 0 errores; solo se retocó un comentario de cabecera)
+- (12/09/2026) `case 'proyecto_vigente'` + guarda `never` en los 6 `switch` de los flujos «nuevo» de plataforma (PR #2806) — agente-mecanico — ok (tsc limpio, 6/6 ficheros, 123k tokens del subagente)

@@ -742,6 +742,12 @@ export default function Retarificador({
         garajeEsSupuesto: true,
       },
       correcciones,
+      // 🚨 asegura no deja pedir precio mientras haya un proyecto vigente sin
+      // emitir (409 `proyecto_vigente`, PR #2790). El único gesto que lo
+      // levanta es haber DESCARTADO ese precio aquí, a la vista de su importe:
+      // por eso `forzarNuevo` es exactamente `guardadaDescartada`, y no un
+      // `true` fijo que volvería a permitir el doble cargo por accidente.
+      forzarNuevo: guardadaDescartada,
     })
 
     switch (r.estado) {
@@ -751,6 +757,24 @@ export default function Retarificador({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'proyecto_vigente':
+        // El guardián de asegura ha cortado SIN cobrar: ya hay un precio pagado
+        // y vigente. Normalmente no se llega aquí (el botón está apagado con la
+        // cotización recuperada en pantalla); si se llega es que la pantalla
+        // no la tenía cargada — recargar la trae.
+        setResultado({
+          estado: 'error',
+          mensaje:
+            `Ya hay un precio pagado y vigente para esta póliza${r.proyecto.compania ? ` (${r.proyecto.compania}` : ''}` +
+            `${r.proyecto.primaEur !== null ? `${r.proyecto.compania ? ', ' : ' ('}${eur(r.proyecto.primaEur)}` : ''}` +
+            `${r.proyecto.compania || r.proyecto.primaEur !== null ? ')' : ''}` +
+            `${r.proyecto.caducaEn ? `, válido hasta ${r.proyecto.caducaEn}` : ''}. ` +
+            'No se ha cobrado nada. Recarga la pantalla: ese precio sale arriba como «Cotización ' +
+            'recuperada» y se confirma con «Emitir» sin pagar. Si de verdad hace falta otro precio, ' +
+            'primero «Descartar y pedir precio de cero».',
+          gastoDesconocido: false,
+        })
         return
       case 'ramo':
       case 'no_encontrada':
@@ -835,7 +859,22 @@ export default function Retarificador({
   // pinta nada: bloquear por él sería impedir algo que no cuesta. Lo que NO
   // cambia es el resto de la guarda: los datos siguen haciendo falta porque el
   // cuerpo se revisa igual antes de responder.
-  const puedePulsar = !deshabilitado && !cotizando && !faltaAlgo && (simulacion || consumoPermite)
+  // 🚨 Con un precio REAL ya pagado en pantalla, «Pedir precio» está APAGADO —
+  // sea la cotización recuperada al abrir (y no descartada) o la que se acaba
+  // de pagar en esta misma visita. Si asegura la considera vigente (oferta
+  // confirmada y sin caducar) rechazaría la petición igualmente (409
+  // `proyecto_vigente`, sin cobrar), así que ofrecer el botón era ofrecer un
+  // callejón sin salida — medido por Alberto el 12/09/2026 con la póliza de
+  // Pilar Franco Ruz. Y si NO la considera vigente (sin ReRate, caducada), el
+  // botón encendido era justo el doble cargo por accidente que creó los
+  // proyectos 40684815 → 40684860. Se apaga ante la duda: el camino es
+  // «Emitir» (gratis) o, si hace falta otro precio, «Descartar» antes — que es
+  // el único gesto que manda `forzarNuevo`.
+  const precioPagadoEnPantalla =
+    (guardadaPrevia !== null && !guardadaDescartada) ||
+    (resultado.estado === 'ok' && !resultado.simulado && cotizacionIdDe(resultado.guardado) !== null)
+  const puedePulsar =
+    !deshabilitado && !cotizando && !faltaAlgo && !precioPagadoEnPantalla && (simulacion || consumoPermite)
 
   // El código Base7 vino de una cotización guardada (no del desplegable en
   // vivo) mientras no aparezca entre las versiones ya cargadas: marca/modelo/
@@ -1247,6 +1286,15 @@ export default function Retarificador({
 
         <Contador consumo={consumo} simulacion={simulacion} />
 
+        {precioPagadoEnPantalla && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Botón apagado a propósito: ya hay un precio <strong>pagado</strong> en esta pantalla, y
+            pedir otro sería otro cargo (y puede salir otra cifra). Para confirmarlo, «Emitir» en la
+            tabla de precios (gratis). Si de verdad hace falta otro precio, primero «Descartar y pedir
+            precio de cero».
+          </p>
+        )}
+
         {faltaAlgo && !deshabilitado && (
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
             El botón se enciende cuando no quede ningún <span className="badge warn">falta</span> de
@@ -1564,8 +1612,10 @@ export function ValorSupuesto({ s }: { s: Supuesto }) {
 /**
  * Avisa de que la pantalla ha arrancado con una cotización YA PAGADA, para
  * que no se lea como si el precio de abajo fuera gratis o recién pedido.
- * Todo lo prellenado sigue siendo editable: volver a pulsar «Pedir precio»
- * pide una cotización nueva (y esa sí cuesta 0,50€).
+ * Todo lo prellenado sigue siendo editable, pero «Pedir precio» queda apagado
+ * mientras este precio esté en pantalla: asegura lo rechazaría (409
+ * `proyecto_vigente`). «Descartar» lo enciende y manda `forzarNuevo: true`
+ * (esa cotización sí cuesta 0,50€).
  */
 function BannerRecuperada({
   guardadaPrevia,
@@ -1588,8 +1638,8 @@ function BannerRecuperada({
       </p>
       <p style={{ margin: '4px 0 0' }}>
         Ya se pidió precio para esta póliza y sigue guardado — <strong>no se ha vuelto a cobrar</strong>.
-        Los datos de abajo están precargados; se pueden cambiar y, si hace falta un precio nuevo,
-        «Pedir precio» sigue funcionando (y ese sí cuesta 0,50€).
+        Se confirma con «Emitir» en la tabla de precios de abajo, sin pagar. Mientras siga vigente,
+        «Pedir precio» está apagado: para pedir otro (0,50€) hay que descartar este primero.
       </p>
       {/* 🚨 El botón «Emitir» de la tabla de precios de abajo confirma ESTE
           proyecto recuperado directamente — sin pasar por «Pedir precio» ni
