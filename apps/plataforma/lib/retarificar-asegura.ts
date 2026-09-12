@@ -751,6 +751,10 @@ export async function ofertaAsegura(p: {
   tarificacionId: string
   compania: string
   categoria: string
+  /** Corrige la fecha de efecto del proyecto (aaaa-mm-dd) ANTES del ReRate,
+   *  vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha
+   *  rechazado — ver `apps/asegura/lib/codeoscopic/emitir.ts::actualizarFechaEfecto`. */
+  fechaEfectoCorregida?: string
 }): Promise<RespuestaOferta> {
   try {
     const r = await pedir(
