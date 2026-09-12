@@ -74,13 +74,33 @@ nuevo ni en claro aquí**, solo el `ALERTA_TOKEN` que ya abre ese endpoint).
   marcadores no se purgan nunca, pero son ficheros de texto de bytes y el
   contenedor cloud es efímero (ver cabecera de `CLAUDE.md` sobre memoria entre
   sesiones) — no hay proceso de larga duración donde esto llegue a pesar.
+- **El token NUNCA viaja como argumento de `curl`**: va en el fichero de
+  configuración que `curl -K -` lee de stdin, no en el argv del proceso — un
+  argv es visible para cualquiera en la máquina vía `ps`/`/proc/<pid>/cmdline`
+  mientras el proceso vive. La primera versión lo pasaba en un `-H
+  "Authorization: Bearer …"` directo (y una segunda versión intermedia, en un
+  `bash -c "...exec curl..."`, que tampoco lo escondía: `exec` sustituye la
+  imagen del proceso por la de curl con las variables ya expandidas, así que
+  el secreto acababa igual en el argv de curl — probado y descartado en este
+  mismo cambio). Verificado con un `curl` de mentira que vuelca argv+stdin:
+  el argv real es solo `curl -K -`, el token solo aparece dentro del bloque
+  que llega por stdin.
+- **`PLATAFORMA_URL` no-HTTPS se rechaza** antes de construir nada: el token
+  no sale en claro por http aunque alguien lo configure mal.
+- **El marcador de dedupe se libera si `curl` ni siquiera arranca** (p.ej.
+  binario ausente): antes se escribía el marcador ANTES de intentar lanzar
+  el proceso, así que un fallo de arranque dejaba el aviso "dado por hecho"
+  sin haberse enviado nunca, y no se reintentaba el resto del día.
 - **Probado funcionalmente** (no solo `py_compile`) en un entorno aislado que
   replica `hooks/`+`references/`: dispara el aviso con las credenciales
   puestas y el proceso desatendido sobrevive a la salida del padre, NO dispara
-  nada sin `PLATAFORMA_URL`/`ALERTA_TOKEN`, NO repite aviso en la segunda
-  llamada idéntica el mismo día, NO dispara nada ante un comando inocuo, y
-  degrada a `{}`/exit 0 si `sentinel_preflight.py` se cuelga. Detalle completo
-  de los cinco casos en el PR de este cambio.
+  nada sin `PLATAFORMA_URL`/`ALERTA_TOKEN`, NO dispara nada si la URL no es
+  HTTPS, NO repite aviso en la segunda llamada idéntica el mismo día, NO
+  dispara nada ante un comando inocuo, degrada a `{}`/exit 0 si
+  `sentinel_preflight.py` se cuelga, y libera el marcador de dedupe si `curl`
+  no está en el PATH. Los tres primeros hallazgos de seguridad (token en argv,
+  URL no-HTTPS, marcador huérfano) los sacó una revisión de Graphify sobre
+  este mismo PR — verificados y corregidos, no solo documentados.
 
 Deliberadamente NO se instaló (para mantener el primer paso mínimo):
 `sentinel_postflight.py` ("remember on approve"), `sentinel_quarantine.py`,

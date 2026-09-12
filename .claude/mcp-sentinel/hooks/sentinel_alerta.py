@@ -18,6 +18,11 @@ HERE = Path(__file__).resolve().parent
 PREFLIGHT = HERE / "sentinel_preflight.py"
 
 
+def _curl_cfg_quote(value: str) -> str:
+    """Quote a value for curl's -K/--config format (escapes \\ and ")."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
 def maybe_alert(raw_input: bytes, out_bytes: bytes) -> None:
     if not out_bytes.strip():
         return
@@ -34,6 +39,9 @@ def maybe_alert(raw_input: bytes, out_bytes: bytes) -> None:
     url = os.environ.get("PLATAFORMA_URL")
     token = os.environ.get("ALERTA_TOKEN")
     if not url or not token:
+        return
+    # El token viaja a un endpoint propio: nunca en claro por HTTP.
+    if not url.startswith("https://"):
         return
 
     # Dedupe: mismo motivo, mismo día -> un solo aviso (evita spam en bucles).
@@ -59,23 +67,37 @@ def maybe_alert(raw_input: bytes, out_bytes: bytes) -> None:
 
     # Fire-and-forget con curl en un proceso desatendido: este hook nunca
     # espera a la red, así que un PLATAFORMA_URL lento/caído no añade latencia
-    # a la llamada de la herramienta que sí importa.
+    # a la llamada de la herramienta que sí importa. El token va por el
+    # fichero de configuración de curl (-K -, leído de stdin), NUNCA como
+    # argumento de la línea de comandos: un argv es visible para cualquiera
+    # en la máquina vía `ps`/`/proc/<pid>/cmdline` mientras el proceso vive
+    # (incluso metiéndolo dentro de un `bash -c "...exec curl..."`, porque
+    # `exec` sustituye la imagen del proceso por la de curl con las
+    # variables ya expandidas — probado y descartado en este mismo cambio).
+    config = (
+        f"url = {_curl_cfg_quote(url.rstrip('/') + '/api/internal/alerta')}\n"
+        f"header = {_curl_cfg_quote(f'Authorization: Bearer {token}')}\n"
+        f"header = {_curl_cfg_quote('Content-Type: application/json')}\n"
+        f"data = {_curl_cfg_quote(body)}\n"
+        'request = "POST"\n'
+        "silent\nshow-error\nfail\n"
+        "max-time = 5\n"
+    )
     try:
-        subprocess.Popen(
-            [
-                "curl", "-fsS", "--max-time", "5",
-                "-X", "POST", f"{url.rstrip('/')}/api/internal/alerta",
-                "-H", f"Authorization: Bearer {token}",
-                "-H", "Content-Type: application/json",
-                "-d", body,
-            ],
+        proc = subprocess.Popen(
+            ["curl", "-K", "-"],
+            stdin=subprocess.PIPE,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL,
             start_new_session=True,
         )
+        proc.stdin.write(config.encode())
+        proc.stdin.close()
     except Exception:
-        pass
+        # No se pudo ni arrancar curl (p.ej. binario ausente): libera el
+        # marcador para que un motivo idéntico más tarde el mismo día
+        # pueda reintentarlo, en vez de darlo por avisado sin haberlo hecho.
+        marker.unlink(missing_ok=True)
 
 
 def main() -> int:
