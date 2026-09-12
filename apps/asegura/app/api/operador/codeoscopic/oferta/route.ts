@@ -441,6 +441,7 @@ function respuestaNoAplicado(c: Extract<ResultadoCompletar, { estado: 'no_aplica
       mensaje:
         `El PATCH al proyecto no ha dado error pero, al releerlo, sigue sin traer: ${lista}. ` +
         'Es la misma trampa que effectiveDate: la única vía segura es pedir precio de cero (0,50€, puede variar).',
+      crudo: c.crudo,
     },
     { status: 409 },
   )
