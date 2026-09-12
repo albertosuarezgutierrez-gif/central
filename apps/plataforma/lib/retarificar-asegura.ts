@@ -416,6 +416,14 @@ export type Fallo = {
  * red caída, respuesta ilegible, fallo del vendor a media llamada— es `true`,
  * porque el cargo puede existir y nadie lo ha comprobado.
  */
+/** El proyecto que asegura manda reutilizar en vez de dejar pagar otro. */
+export type ProyectoVigente = {
+  projectId: string
+  compania: string | null
+  primaEur: number | null
+  caducaEn: string | null
+}
+
 export type RespuestaRetarificar =
   | { estado: 'sin_configurar'; mensaje: string }
   /** 422 · faltan datos. Corta ANTES del vendor: no se ha gastado nada. */
@@ -424,6 +432,14 @@ export type RespuestaRetarificar =
   | { estado: 'tope'; mensaje: string }
   /** 409 · el ramo no se retarifica todavía (hoy solo auto y hogar). */
   | { estado: 'ramo'; mensaje: string }
+  /**
+   * 409 · ya hay un proyecto de Codeoscopic con oferta confirmada y sin caducar
+   * para esta póliza (guardián de reutilización de asegura, PR #2790). NO es un
+   * fallo: es el precio que ya está pagado, y se confirma con «Emitir», no
+   * pidiendo otro. Solo `forzarNuevo: true` (el corredor ha DESCARTADO ese
+   * precio a propósito) pasa por encima.
+   */
+  | { estado: 'proyecto_vigente'; mensaje: string; proyecto: ProyectoVigente }
   /** 404 · la póliza no es de esta correduría, o no existe. */
   | { estado: 'no_encontrada'; mensaje: string }
   | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; gastoDesconocido: boolean }
@@ -511,6 +527,23 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
     return { estado: 'tope', mensaje: mensajeDe('Se ha alcanzado el tope de cotizaciones.') }
   }
   if (status === 409) {
+    // Dos 409 distintos con el mismo código: el ramo que no se retarifica y el
+    // proyecto vigente que hay que reutilizar. Los separa `proyectoExistente`,
+    // que solo pone el guardián de reutilización.
+    const pe = r.proyectoExistente
+    if (typeof pe === 'object' && pe !== null && typeof (pe as Record<string, unknown>).projectId === 'string') {
+      const x = pe as Record<string, unknown>
+      return {
+        estado: 'proyecto_vigente',
+        mensaje: mensajeDe('Ya hay un precio vigente para esta póliza: no se pide otro.'),
+        proyecto: {
+          projectId: x.projectId as string,
+          compania: typeof x.compania === 'string' ? x.compania : null,
+          primaEur: typeof x.primaEur === 'number' ? x.primaEur : null,
+          caducaEn: typeof x.caducaEn === 'string' ? x.caducaEn : null,
+        },
+      }
+    }
     return { estado: 'ramo', mensaje: mensajeDe('Este ramo no se retarifica todavía.') }
   }
   if (status === 404) {
@@ -627,6 +660,13 @@ export type PeticionRetarificar = {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  /**
+   * Pasa por encima del guardián de reutilización de asegura (409
+   * `proyecto_vigente`). Solo `true` cuando el corredor ha DESCARTADO a
+   * propósito el precio recuperado («Descartar y pedir precio de cero»): sin
+   * ese gesto, pedir precio con un proyecto vigente se rechaza sin cobrar.
+   */
+  forzarNuevo?: boolean
 }
 
 /**
@@ -660,6 +700,8 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
           ...(p.resueltos ? { resueltos: p.resueltos } : {}),
           ...(p.correcciones ? { correcciones: p.correcciones } : {}),
           ...(p.catastro ? { catastro: p.catastro } : {}),
+          // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
+          ...(p.forzarNuevo === true ? { forzarNuevo: true } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,
