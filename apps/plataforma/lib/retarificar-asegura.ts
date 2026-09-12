@@ -757,10 +757,20 @@ export type RespuestaOferta =
       avisos: string[]
       /** La cuenta de cargo que asegura YA conoce del cliente (enmascarada, con
        *  su origen), para enseñarla ANTES del Submit. `null` = no hay ninguna
-       *  legible; `ilegible` = hay una guardada que la clave PII no abre. */
+       *  legible; `cuentaAviso` dice por qué (clave PII, CCC inválido, consulta caída). */
       cuenta: CuentaConocida | null
-      cuentaIlegible: boolean
+      cuentaAviso: AvisoCuenta | null
     }
+
+/** Por qué no hay cuenta utilizable, cuando asegura lo sabe. `no_comprobada`
+ *  = la consulta falló: NO es «no tiene». */
+export type AvisoCuenta = 'ilegible' | 'invalida' | 'no_comprobada'
+
+export function leerAvisoCuenta(v: unknown): AvisoCuenta | null {
+  if (typeof v !== 'object' || v === null) return null
+  const a = (v as Record<string, unknown>).aviso
+  return a === 'ilegible' || a === 'invalida' || a === 'no_comprobada' ? a : null
+}
 
 /** La cuenta de cargo tal como cruza el puerto: SIEMPRE enmascarada (`ES91…1332`),
  *  con su origen y la frase que lo explica. El IBAN entero no sale de asegura. */
@@ -809,7 +819,7 @@ export function interpretarOferta(status: number, json: unknown): RespuestaOfert
       projectId: r.projectId,
       ...oferta,
       cuenta: leerCuenta(r.cuenta),
-      cuentaIlegible: typeof r.cuenta === 'object' && r.cuenta !== null && (r.cuenta as Record<string, unknown>).ilegible === true,
+      cuentaAviso: leerAvisoCuenta(r.cuenta),
     }
   }
   if (r.estado === 'sin_configurar' || (status === 503 && r.causa === 'apagado')) {
@@ -915,6 +925,7 @@ export type RespuestaEmitir =
       campos: unknown
       mensaje: string | null
       cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
       confirmar: boolean
     }
   | { estado: 'en_vuelo'; mensaje: string }
@@ -938,6 +949,7 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
       campos: r.campos ?? null,
       mensaje: cadenaONulo(r.mensaje),
       cuenta: leerCuenta(r.cuenta),
+      cuentaAviso: leerAvisoCuenta(r.cuenta),
       confirmar: r.confirmar === true,
     }
   }

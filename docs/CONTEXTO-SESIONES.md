@@ -34,7 +34,8 @@
   «The bank account is mandatory according to the selected companies and payment types.» Aquí se
   escribió primero que Pilar «no tiene cuenta»: **falso** — está en **`poliza_recibos.iban`** (CIMA; 121/187
   recibos, 69 de 110 vivas). `lib/codeoscopic/cuenta-ficha.ts` la busca en póliza → recibos → ficha → recibos
-  de otras vivas (cifrada = `ilegible`, no «no tiene»); `/oferta` la devuelve ENMASCARADA con su origen.
+  de otras vivas; sin cuenta utilizable dice POR QUÉ (`ilegible` clave PII · `invalida` CCC/errata · `no_comprobada`
+  consulta caída — ninguno es «no tiene»); `/oferta` la devuelve ENMASCARADA con su origen. SQL ejecutado en la BD real.
   Dictado de Alberto: **«iban importante siempre confirmar»** → `decidirCuentaEnvio()` (puro): la cuenta de la
   ficha solo viaja si plataforma devuelve la MÁSCARA que enseñó (`cuentaConfirmada`), si no 422 `confirmar`
   ANTES de llamar al vendor; tecleada > JSON > ficha confirmada. Cepos vistos en rojo. Pendiente: pintar las

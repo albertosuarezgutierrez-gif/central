@@ -15,7 +15,7 @@ import {
   ibanEnmascarado,
   ibanValido,
 } from '@/lib/codeoscopic/emitir-iban'
-import { cuentaDeFicha } from '@/lib/codeoscopic/cuenta-ficha'
+import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -150,7 +150,7 @@ export async function POST(req: Request) {
       { status: 422 },
     )
   }
-  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, p.poliza_id, poliza.cliente_id) : { iban: null, origen: null, ilegible: false }
+  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, p.poliza_id, poliza.cliente_id) : SIN_CUENTA
   const decision = decidirCuentaEnvio({ ibanTecleado, ibanJson, ficha, cuentaConfirmada: cuerpo.cuentaConfirmada })
   if (decision.tipo === 'confirmar') {
     // La ficha tiene cuenta y nadie la ha confirmado: se pide ANTES de gastar
@@ -259,15 +259,21 @@ export async function POST(req: Request) {
             ? `La compañía exige cuenta bancaria para esta forma de pago y se le mandó ${ibanEnmascarado(ibanEnvio)}` +
               `${cuentaRespuesta ? ` (${cuentaRespuesta.descripcion})` : ''}, ` +
               'pero la sigue pidiendo: revisa la respuesta completa (`crudo`) antes de repetir.'
-            : ficha.ilegible
+            : ficha.aviso === 'ilegible'
               ? 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago. La ficha TIENE una cuenta ' +
                 'guardada pero no se ha podido descifrar (clave PII de central-asegura): tecléala aquí para emitir, ' +
                 'y revisa la clave — no se ha emitido nada.'
-              : 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago, y ni la póliza ni la ficha ' +
-                'del cliente la tienen. Tecléala y vuelve a emitir: no se ha emitido nada.',
+              : ficha.aviso === 'invalida'
+                ? 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago. La ficha tiene una cuenta ' +
+                  'guardada que no es un IBAN válido (CCC antiguo o errata): tecléala y vuelve a emitir — no se ha emitido nada.'
+                : ficha.aviso === 'no_comprobada'
+                  ? 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago y NO se ha podido leer la ficha ' +
+                    'del cliente para buscarla: tecléala y vuelve a emitir — no se ha emitido nada.'
+                  : 'La compañía exige una cuenta bancaria (IBAN) para esta forma de pago, y ni la póliza ni la ficha ' +
+                    'del cliente la tienen. Tecléala y vuelve a emitir: no se ha emitido nada.',
           faltan: ['iban'],
           campos: null,
-          cuenta: cuentaRespuesta,
+          cuenta: cuentaRespuesta ?? (ficha.aviso ? { aviso: ficha.aviso } : null),
           crudo: envio.crudo ?? null,
         },
         { status: 422 },

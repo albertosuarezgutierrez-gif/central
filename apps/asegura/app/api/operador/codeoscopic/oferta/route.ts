@@ -330,10 +330,13 @@ export async function POST(req: Request) {
       estado: 'ok',
       projectId: t.project_id_codeoscopic,
       oferta,
+      // TRES formas, no dos: la cuenta (enmascarada) · un aviso de por qué no
+      // hay una utilizable (`ilegible` / `invalida` / `no_comprobada`) · null =
+      // se miró y no hay ninguna guardada.
       cuenta: cuenta.iban
         ? { enmascarada: ibanEnmascarado(cuenta.iban), origen: cuenta.origen, descripcion: cuenta.origen ? describirOrigenCuenta(cuenta.origen) : null }
-        : cuenta.ilegible
-          ? { ilegible: true }
+        : cuenta.aviso
+          ? { aviso: cuenta.aviso }
           : null,
     })
   } catch (e) {

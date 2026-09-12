@@ -21,7 +21,7 @@
 import { useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { pedirOferta, pedirEmision } from './acciones'
-import type { CuentaConocida } from '@/lib/retarificar-asegura'
+import type { AvisoCuenta, CuentaConocida } from '@/lib/retarificar-asegura'
 
 type EstadoPanel =
   | { paso: 'inicio' }
@@ -38,7 +38,7 @@ type EstadoPanel =
       // La cuenta de cargo que asegura YA conoce del cliente, enmascarada. Se
       // enseña ANTES de emitir y no viaja sin confirmarla (Alberto, 12/09/2026).
       cuenta: CuentaConocida | null
-      cuentaIlegible: boolean
+      cuentaAviso: AvisoCuenta | null
     }
   | { paso: 'emitiendo' }
   | {
@@ -48,7 +48,7 @@ type EstadoPanel =
       projectId: string
       mensaje: string | null
       cuenta: CuentaConocida | null
-      confirmar: boolean
+      cuentaAviso: AvisoCuenta | null
     }
   /**
    * La compañía pide, al confirmar el precio, un dato que el proyecto no tiene y
@@ -62,7 +62,7 @@ type EstadoPanel =
       noReconocidos: string[]
       mensaje: string
     }
-  | { paso: 'emitido'; referenciaVendor: string | null }
+  | { paso: 'emitido'; referenciaVendor: string | null; cuenta: CuentaConocida | null }
   | { paso: 'emitido_sin_acunar'; mensaje: string }
   | { paso: 'error'; mensaje: string }
 
@@ -109,7 +109,7 @@ function cuentaDecidida(cuenta: CuentaConocida | null, cuentaOk: boolean, iban: 
  */
 function CuentaCargo({
   cuenta,
-  ilegible,
+  aviso,
   obligatoria,
   cuentaOk,
   onCuentaOk,
@@ -117,7 +117,7 @@ function CuentaCargo({
   onIban,
 }: {
   cuenta: CuentaConocida | null
-  ilegible: boolean
+  aviso: AvisoCuenta | null
   obligatoria: boolean
   cuentaOk: boolean
   onCuentaOk: (v: boolean) => void
@@ -146,10 +146,19 @@ function CuentaCargo({
             </span>
           </span>
         </label>
-      ) : ilegible ? (
+      ) : aviso === 'ilegible' ? (
         <p className="err" style={{ margin: 0, fontSize: 12 }}>
           La ficha TIENE una cuenta guardada pero central-asegura no la puede descifrar (clave PII): revisa la
           clave en Vercel, o tecléala aquí.
+        </p>
+      ) : aviso === 'invalida' ? (
+        <p className="err" style={{ margin: 0, fontSize: 12 }}>
+          La ficha tiene una cuenta guardada que no es un IBAN válido (CCC antiguo o errata): tecléala aquí.
+        </p>
+      ) : aviso === 'no_comprobada' ? (
+        <p className="err" style={{ margin: 0, fontSize: 12 }}>
+          No se ha podido leer la ficha para buscar la cuenta (fallo de consulta en asegura): no es que no la
+          tenga. Vuelve a confirmar el precio para reintentar, o tecléala aquí.
         </p>
       ) : (
         <p className="muted" style={{ margin: 0, fontSize: 12 }}>
@@ -222,7 +231,7 @@ export function Emision({
         avisos: r.avisos,
         projectId: r.projectId,
         cuenta: r.cuenta,
-        cuentaIlegible: r.cuentaIlegible,
+        cuentaAviso: r.cuentaAviso,
       })
       // Una oferta nueva puede traer otra cuenta: la confirmación anterior no vale.
       setCuentaOk(false)
@@ -253,7 +262,7 @@ export function Emision({
     setEstado({ paso: 'error', mensaje: r.mensaje })
   }
 
-  async function emitir(projectId: string, cuenta: CuentaConocida | null) {
+  async function emitir(projectId: string, cuenta: CuentaConocida | null, aviso: AvisoCuenta | null) {
     let campos: Record<string, unknown>
     try {
       campos = JSON.parse(camposJson || '{}')
@@ -276,12 +285,16 @@ export function Emision({
         projectId,
         mensaje: r.mensaje,
         cuenta: r.cuenta,
-        confirmar: r.confirmar,
+        // Si asegura no trae cuenta ahora, vale lo que se supo al confirmar el precio.
+        cuentaAviso: r.cuentaAviso ?? (r.cuenta ? null : aviso),
       })
+      // La cuenta que se enseña puede ser OTRA (la ficha cambió, o llegó por el
+      // 400 del vendor): la casilla marcada antes no confirma esta.
+      setCuentaOk(false)
       return
     }
     if (r.estado === 'ok') {
-      setEstado({ paso: 'emitido', referenciaVendor: r.referenciaVendor })
+      setEstado({ paso: 'emitido', referenciaVendor: r.referenciaVendor, cuenta: r.cuenta })
       return
     }
     if (r.estado === 'emitido_sin_acunar') {
@@ -450,7 +463,7 @@ export function Emision({
           )}
           <CuentaCargo
             cuenta={estado.cuenta}
-            ilegible={estado.cuentaIlegible}
+            aviso={estado.cuentaAviso}
             obligatoria={false}
             cuentaOk={cuentaOk}
             onCuentaOk={setCuentaOk}
@@ -483,7 +496,7 @@ export function Emision({
               className="primary"
               style={{ minHeight: 44 }}
               disabled={!cuentaDecidida(estado.cuenta, cuentaOk, iban)}
-              onClick={() => emitir(estado.projectId, estado.cuenta)}
+              onClick={() => emitir(estado.projectId, estado.cuenta, estado.cuentaAviso)}
             >
               Emitir la póliza
             </button>
@@ -512,7 +525,7 @@ export function Emision({
           {estado.faltan.includes('iban') && (
             <CuentaCargo
               cuenta={estado.cuenta}
-              ilegible={false}
+              aviso={estado.cuentaAviso}
               obligatoria
               cuentaOk={cuentaOk}
               onCuentaOk={setCuentaOk}
@@ -551,7 +564,7 @@ export function Emision({
                 estado.faltan.includes('iban') &&
                 !(iban.trim() !== '' || (estado.cuenta !== null && cuentaOk))
               }
-              onClick={() => emitir(estado.projectId, estado.cuenta)}
+              onClick={() => emitir(estado.projectId, estado.cuenta, estado.cuentaAviso)}
             >
               Reintentar la emisión
             </button>
@@ -562,6 +575,14 @@ export function Emision({
       {estado.paso === 'emitido' && (
         <div className="ok" style={{ marginTop: 14 }}>
           ✅ Emitida. {estado.referenciaVendor && <>Referencia de la compañía: {estado.referenciaVendor}. </>}
+          {estado.cuenta ? (
+            <>
+              Recibo domiciliado en <code>{estado.cuenta.enmascarada}</code>
+              {estado.cuenta.descripcion ? ` (${estado.cuenta.descripcion})` : ''}.{' '}
+            </>
+          ) : (
+            <>Sin cuenta de cargo en el envío (la compañía no la exigió). </>
+          )}
           Queda como «pendiente de confirmación por CIMA» en la ficha de la póliza.
         </div>
       )}
