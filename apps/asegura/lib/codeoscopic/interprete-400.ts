@@ -35,6 +35,7 @@ export type CampoPersona =
   | 'estadoCivil'
   | 'telefono'
   | 'fechaCarnet'
+  | 'email'
 
 export const CAMPOS_PERSONA: readonly CampoPersona[] = [
   'nombreVia',
@@ -48,6 +49,7 @@ export const CAMPOS_PERSONA: readonly CampoPersona[] = [
   'estadoCivil',
   'telefono',
   'fechaCarnet',
+  'email',
 ]
 
 export function esCampoPersona(v: unknown): v is CampoPersona {
@@ -78,6 +80,7 @@ const REGLAS: ReadonlyArray<readonly [RegExp, keyof DatosAuto]> = [
   [/circulation address.*postal code|postal code.*circulation address/, 'cpCirculacion'],
   [/circulation address.*\btown\b|\btown\b.*circulation address/, 'municipioCirculacionId'],
   [/road name/, 'nombreVia'],
+  [/e-?mail/, 'email'],
   [/postal code|zip code/, 'cpResidencia'],
   [/\btown\b/, 'municipioResidenciaId'],
   [/identification document|\bnif\b|\bdni\b|document number/, 'dni'],
@@ -259,6 +262,14 @@ export function aplicarCampoPersona(persona: unknown, campo: CampoPersona, valor
     case 'fechaCarnet':
       p.drivingLicenses = [{ type: { id: 'B' }, date: v, issuingZone: { id: 'Spain' } }]
       return p
+    case 'email':
+      // 🚨 Sin fixture: el portal solo confirma que `email` es un campo de la
+      // persona (`docs/CODEOSCOPIC-API-PORTAL.md`, roles de hogar), no su forma
+      // exacta. Se manda como STRING plano, coherente con esa doc — la
+      // verificación de `completarPersonas` (releer + comparar) es la que
+      // delata si el vendor esperaba otra cosa, en vez de darlo por bueno.
+      p.email = v
+      return p
   }
 }
 
@@ -291,6 +302,8 @@ export function leerCampoPersona(persona: unknown, campo: CampoPersona): string 
       return str(obj(arr(p.phones)[0]).number)
     case 'fechaCarnet':
       return str(obj(arr(p.drivingLicenses)[0]).date)
+    case 'email':
+      return str(p.email)
   }
 }
 
