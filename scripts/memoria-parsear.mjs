@@ -18,13 +18,66 @@ import { gitSha } from './git-sha.mjs'
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..')
 
+// Tope de caracteres por trozo embebible: generoso bajo el límite de contexto del modelo de
+// embeddings (text-embedding-3-small, 8191 tokens ≈ 30.000+ caracteres incluso en el peor caso),
+// pero deliberadamente bajo — sin margen no haría falta.
+//
+// 🐛 Por qué existe (medido 12/09/2026): `trocear` de rotar-memoria.mjs NO separa por `## ` a
+// propósito (es un límite ya documentado y probado ahí, para la rotación mensual — no se toca
+// aquí). Cuando el mes vivo tiene una racha de encabezados `## ` seguidos, esas "entradas" se
+// funden en UNA sola al archivarse, y `docs/memoria/2026-08.md` quedó con un bloque de 40.518
+// caracteres mezclando temas sin relación. Mandado tal cual a `grafo_embed_textos`, el modelo
+// devuelve HTTP 400 (excede su contexto) — y como el lote entero (hasta 96 filas) se manda en UNA
+// llamada, el 400 tumba TAMBIÉN a las ~95 filas sanas del mismo lote, y como el lote se repite
+// (mismo `ORDER BY id LIMIT n` con la fila envenenada siempre primera) los 6 reintentos gastan su
+// presupuesto entero contra la MISMA fila sin avanzar nunca. Un solo bloque mal troceado basta
+// para dejar la búsqueda semántica de la memoria sin ningún embedding.
+export const MAX_LEN_TROZO = 8000
+
+// Divide un cuerpo demasiado largo en trozos embebibles. NO reimplementa `trocear`
+// (`esInicioEntrada` rechaza `## ` a propósito, ver rotar-memoria.mjs) — actúa DESPUÉS, solo sobre
+// lo que de verdad revienta el embedding, con degradación en cascada y sin descartar texto nunca:
+// 1) por la cabecera secundaria real que causó el fundido (`## `, línea a línea);
+// 2) si un trozo AÚN excede el tope, por párrafo (línea en blanco);
+// 3) si un párrafo suelto AÚN excede el tope (caso patológico sin ninguna separación), corte duro.
+export function partirGrande(cuerpo, maxLen = MAX_LEN_TROZO) {
+  if (cuerpo.length <= maxLen) return [cuerpo]
+  const porH2 = cuerpo.split(/\n(?=## )/)
+  const piezas = porH2.length > 1 ? porH2 : [cuerpo]
+  const trozos = []
+  for (const pieza of piezas) {
+    if (pieza.length <= maxLen) {
+      trozos.push(pieza)
+      continue
+    }
+    const parrafos = pieza.split(/\n\n+/)
+    let actual = ''
+    for (const p of parrafos) {
+      const candidato = actual ? `${actual}\n\n${p}` : p
+      if (candidato.length > maxLen && actual) {
+        trozos.push(actual)
+        actual = p
+      } else {
+        actual = candidato
+      }
+    }
+    if (actual) trozos.push(actual)
+  }
+  return trozos.flatMap((t) => {
+    if (t.length <= maxLen) return [t]
+    const partes = []
+    for (let i = 0; i < t.length; i += maxLen) partes.push(t.slice(i, i + maxLen))
+    return partes
+  })
+}
+
 function parsearArchivo(rutaAbs, fuente) {
   const texto = readFileSync(rutaAbs, 'utf8')
   const lineas = texto.split('\n')
   const primeraEntrada = lineas.findIndex(esInicioEntrada)
   if (primeraEntrada === -1) return []
   const entradas = trocear(lineas.slice(primeraEntrada))
-  return entradas.map((lineasEntrada) => {
+  return entradas.flatMap((lineasEntrada) => {
     const cuerpo = lineasEntrada.join('\n').replace(/\n+$/, '')
     // Sin año en la cabecera (p. ej. «(30/06)») no se INVENTA: `clasificar()` de rotar-memoria.mjs
     // sabe inferirlo heredándolo de la entrada de arriba, pero aquí `fecha` es metadato accesorio
@@ -33,7 +86,9 @@ function parsearArchivo(rutaAbs, fuente) {
     const m = ultimaFecha(textoFechaDe(lineasEntrada))
     const fecha = m && m[3] ? `${m[1].padStart(2, '0')}/${m[2]}/${m[3]}` : null
     const hash = createHash('md5').update(cuerpo).digest('hex').slice(0, 16)
-    return { id: `${fuente}#${hash}`, fuente, fecha, texto: cuerpo }
+    const trozos = partirGrande(cuerpo)
+    if (trozos.length === 1) return [{ id: `${fuente}#${hash}`, fuente, fecha, texto: cuerpo }]
+    return trozos.map((texto, i) => ({ id: `${fuente}#${hash}-p${i + 1}`, fuente, fecha, texto }))
   })
 }
 
@@ -60,4 +115,8 @@ function main() {
   console.log(`Memoria parseada: ${resultado.entradas.length} entradas (de ${entradas.length} brutas) → ${salida}`)
 }
 
-main()
+// Solo ejecuta el CLI si se invoca directamente, no cuando memoria-parsear.test.mjs importa
+// las funciones puras de aquí (mismo patrón que rotar-memoria.mjs).
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main()
+}
