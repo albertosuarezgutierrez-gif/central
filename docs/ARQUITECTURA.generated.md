@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (12/09/2026) 📬 Pasada diaria `facturas-correo`
 - (12/09/2026) 🎯 Retarificar: fecha de efecto corregible ANTES de pagar, no después
 - (12/09/2026) ✏️ Correduría: RC en "Pólizas vivas" ya no vuelca las coberturas en la celda
 - (12/09/2026) ✅ Smoobu 401 REALMENTE resuelto — no era el HMAC, era la credencial
@@ -271,5 +272,4 @@
 - (12/09/2026) 🐛 Quinto 400 del ReRate real, mismo campo: la fecha corregida seguía naciendo vacía
 - (11/09/2026) 🐛 Cuarto 400 del ReRate real: fecha de efecto a >90 días
 - (12/09/2026) 🐛 «Qué asegura» de una RC seguía «sin informar» con coberturas REALES de CIMA
-- (11/09/2026) 🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST
 
