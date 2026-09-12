@@ -40,6 +40,12 @@
   Plataforma ganó los dos inputs manuales en `ETIQUETAS_HUECO`. Tests con el 14º 400 real, verificados
   en rojo→verde. Suites completas verdes (asegura 386, plataforma 2785, raíz 812). PR abierto y en
   seguimiento hasta merge.
+
+- **🔀 Comentarios de `decidir.ts` (agente huéspedes) corregidos: OpenRouter primario, no NIM
+  (12/09/2026, PR #2836, mergeado).** Diagnóstico de un «IA no disponible» (reserva 155000541,
+  Martine) citó la cadena vieja NIM→Groq→Cerebras→Gemini→Kimi como si fuera el camino real —
+  Alberto corrigió: OpenRouter manda desde el 24/08 y NIM está apagado por defecto desde el 28/08.
+  Actualizados los comentarios de `decidir.ts` para que no se repita. Sin cambio de comportamiento.
 - **🗺️ Paridad grafo propio vs Graphify: medida, y gana en 2 de 10 (12/09/2026, III).** PR #2827
   (fix `grafo_guardar_clave` void→boolean) mergeado y embeddings ya en producción (13.352 nodos,
   `pendientes:0`, coste ≈0,01$). Con eso corrí la medición de paridad pendiente: 12 categorías de
