@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 Décimo 400 real de Codeoscopic — Submit sin el body part `policyApplications` (12/09/2026).**
+  Reintento de emisión de Pilar (proyecto nuevo `40684860`, Allianz) rechazado: «The
+  `policyApplications` body part is required.» `enviarEmision()` mandaba `offerId` + campos sueltos
+  como partes multipart independientes; el vendor exige UNA parte `policyApplications` con un JSON
+  ARRAY dentro (`quote.id` + campos), según `docs/CODEOSCOPIC-TRASPASO-MANUEL.md` (única referencia
+  con la forma real). Corregido en `lib/codeoscopic/emitir-envio.ts`; 340/340 tests + tsc limpios.
+  Diagnóstico previo del corte de las 09:41:54 (proyecto `40684815`) confirmó que Codeoscopic NUNCA
+  procesó ese Submit — sin duplicado que conciliar. Pendiente: que Alberto reintente con el fix ya
+  desplegado.
 - **MCP Sentinel instalado en modo solo-auditoría (12/09/2026), PR #2780 MERGEADO.** Hook de
   terceros (carpeta Drive «Sentinel V3») que evalúa cada llamada a herramienta contra IOCs (rutas
   sensibles, comandos peligrosos, red sospechosa) con `SENTINEL_SHADOW=on`: nunca bloquea, solo

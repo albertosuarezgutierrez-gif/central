@@ -119,12 +119,19 @@ export async function enviarEmision(
   }
 
   try {
-    const form = new FormData()
-    form.append('offerId', entrada.offerId)
+    // 🚨 Décimo fallo real (12/09/2026, proyecto 40684860): «The `policyApplications`
+    // body part is required.» — el vendor NO acepta campos multipart sueltos: exige
+    // UNA sola parte llamada `policyApplications` con un JSON ARRAY dentro
+    // (`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`, la única referencia con la forma real
+    // de esta llamada). `entrada.offerId` es aquí el `mainQuote.id` del ReRate
+    // (p.ej. "Q2018406592"), que es lo que el vendor llama `quote.id`.
+    const policyApplication: Record<string, unknown> = { quote: { id: entrada.offerId } }
     for (const [k, v] of Object.entries(entrada.campos)) {
       if (v === null || v === undefined) continue
-      form.append(k, typeof v === 'string' || v instanceof Blob ? v : JSON.stringify(v))
+      policyApplication[k] = v
     }
+    const form = new FormData()
+    form.append('policyApplications', JSON.stringify([policyApplication]))
 
     const token = await obtenerToken(config)
     const res = await fetch(
