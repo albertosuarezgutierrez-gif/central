@@ -21,6 +21,7 @@ on:
       - 'packages/**'
       - '.claude/skills/**'
       - 'docs/CONTEXTO-SESIONES.md'
+      - 'docs/memoria/**'
       - 'scripts/auditar-estructura.mjs'
       - '.github/workflows/auditoria.yml'
   # A mano. Hace falta de verdad, no es un adorno: un push a `main` hecho con el token de una
@@ -48,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     # 5 → 15 min (12/09/2026): la inyección del grafo son ~13 POSTs secuenciales con reintentos, y un
     # corte a mitad deja las tablas con dos `sha` mezclados hasta la siguiente pasada completa.
-    timeout-minutes: 15
+    timeout-minutes: 25 # 15→25 el 12/09/2026: la memoria semántica añade otra pasada de hasta 8×300s tras la del grafo
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -219,3 +220,22 @@ jobs:
           PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: node scripts/grafo-embeddings-inyectar.mjs
+
+      # Memoria semántica propia (memoria_buscar: sustituto de recall/memories_about de Graphify).
+      # Corpus: docs/CONTEXTO-SESIONES.md + docs/memoria/*.md. Independiente del grafo de código
+      # (!cancelled()): un fallo del grafo no debe dejar la memoria sin su carga del día.
+      - name: Inyectar memoria semántica en Supabase
+        if: github.ref_name == 'main' && !cancelled()
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          node scripts/memoria-parsear.mjs --out /tmp/memoria.json
+          node scripts/memoria-inyectar.mjs /tmp/memoria.json
+
+      - name: Calcular embeddings de la memoria (búsqueda semántica)
+        if: github.ref_name == 'main' && !cancelled()
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: node scripts/memoria-embeddings-inyectar.mjs
