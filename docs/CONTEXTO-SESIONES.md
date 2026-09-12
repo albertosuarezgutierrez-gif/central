@@ -36,7 +36,7 @@
   sección (el `aria-labelledby` apunta al h1); el wordmark de la barra se esconde a ≤639 px (queda el
   monograma con `aria-label`); bloque «móvil compacto» al FINAL de `globals.css` (barra 52 px, sección
   16 px, la tarjeta anidada del alta 14 px, h1 28 px). Sin medir con Playwright: la bóveda exige BD.
-  Typecheck + 470 tests en verde. PR pendiente de nº al cerrar.
+  Typecheck + 470 tests en verde. PR #2810 (draft).
 
 - **🤖 El 400 del ReRate deja de ser un error: es una lista de huecos (12/09/2026).** Alberto: «un
   agente interlocutor entre Codeoscopic y nosotros». Codeoscopic no pregunta, devuelve un 400
