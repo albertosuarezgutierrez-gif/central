@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🌐 IONOS quitó por error el dominio de grupoasegura.es/.com — repuesto (12/09/2026).** Sin
+  código: se hizo vía Claude en Chrome (el proxy de esta sesión bloquea egress a esos hosts). Se
+  repuso DNS en IONOS (`grupoasegura.es`/`www` → `asegura-web`; `clientes.grupoasegura.es` →
+  `asegura-portal` con registro A, no CNAME, porque el subdominio tiene MX de correo) y se verificó
+  que los deployments de ambos proyectos en Vercel estaban `Ready` en producción (los `Canceled`
+  posteriores eran el `ignoreCommand` del monorepo funcionando bien, no un fallo). Confirmado con
+  curl externo (200, cert Let's Encrypt válido) y por Alberto en su propio navegador. `app.grupoasegura.com`
+  y el apex `.com` no se tocaron.
 - **✅ Smoobu 401 REALMENTE resuelto — no era el HMAC, era la credencial (12/09/2026, PR #2753).**
   Tras el fix de firma (PR #2731) el 401 seguía (entrada de abajo, "SIGUE en 401"): dos pasadas reales
   del cron con el código ya desplegado confirmaron que la firma llegaba bien y Smoobu la rechazaba
