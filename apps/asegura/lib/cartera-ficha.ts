@@ -765,6 +765,7 @@ export async function origenRetarificacion(
           estadoCivil: true,
           saludo: true,
           codigoPostal: true,
+          direccion: true,
         },
       },
     },
@@ -822,6 +823,7 @@ export async function origenRetarificacion(
     saludo: p.cliente.saludo ?? null,
     codigoPostal: p.cliente.codigoPostal ?? null,
     fechaCarnet: normalizarFecha(descifrar(conductor?.fechaCarnet)),
+    direccion: descifrar(p.cliente.direccion),
   }
 
   const matricula = datos ? texto(datos.matricula) : null
@@ -887,6 +889,7 @@ export async function clienteOrigenDe(
       estadoCivil: true,
       saludo: true,
       codigoPostal: true,
+      direccion: true,
     },
   })
   if (!c) return null
@@ -901,6 +904,7 @@ export async function clienteOrigenDe(
     saludo: c.saludo ?? null,
     codigoPostal: c.codigoPostal ?? null,
     fechaCarnet: null,
+    direccion: descifrar(c.direccion),
   }
   return { cliente, etiqueta: `${c.nombre} ${c.apellidos}`.trim() || 'Cliente' }
 }

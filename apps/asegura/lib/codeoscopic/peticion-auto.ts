@@ -63,6 +63,16 @@ export function revisarDatosAuto(d: Partial<DatosAuto>): Reparo[] {
   // ── La persona: reglas compartidas con hogar ──
   for (const x of revisarPersona(d)) r.push(x)
 
+  // 🚨 Solo auto, no hogar, y solo cuando SE MANDA dirección de residencia: el
+  // ReRate exige el nombre de la calle DENTRO de esa dirección (11º 400 real,
+  // 12/09/2026, proyecto 40684860) — «The road name of the address of the
+  // holder/primary driver/owner is mandatory». La cotización inicial NO lo
+  // pedía (por eso la ficha nunca lo trae), y sin cp/municipio la dirección ni
+  // siquiera viaja — exigirlo siempre inventaría un requisito que no existe.
+  if (texto(d.cpResidencia) && numero(d.municipioResidenciaId) && !texto(d.nombreVia)) {
+    falta('nombreVia', 'la compañía lo exige para poder confirmar el precio (ReRate) cuando hay dirección')
+  }
+
   // ── Obligatorios sin matiz ──
   for (const c of ['codigoVehiculo', 'matricula', 'garaje'] as const) {
     if (!texto(d[c])) falta(c)

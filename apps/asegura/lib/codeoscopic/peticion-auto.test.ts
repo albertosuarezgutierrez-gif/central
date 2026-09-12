@@ -73,14 +73,32 @@ test('sin las dos mitades de la residencia, la dirección NO viaja', () => {
   assert.equal(c.holder.addresses, undefined)
 })
 
-test('con CP y municipio, la dirección viaja completa', () => {
-  const c = construirPeticionAuto({ ...BASE, cpResidencia: '41003', municipioResidenciaId: 999 }) as any
-  assert.deepEqual(c.holder.addresses, [{ postalCode: '41003', town: { id: 999 }, primary: true }])
+test('con CP, municipio y calle, la dirección viaja completa (con roadName)', () => {
+  const c = construirPeticionAuto({
+    ...BASE,
+    cpResidencia: '41003',
+    municipioResidenciaId: 999,
+    nombreVia: 'Calle Betis',
+  }) as any
+  assert.deepEqual(c.holder.addresses, [
+    { postalCode: '41003', town: { id: 999 }, primary: true, roadName: 'Calle Betis' },
+  ])
 })
 
 test('mandar municipio sin código postal es un reparo, no se cuela', () => {
   const r = revisarDatosAuto({ ...BASE, municipioResidenciaId: 999 })
   assert.ok(r.some((x) => x.campo === 'cpResidencia'))
+})
+
+// ─── El nombre de la vía: solo lo exige el ReRate cuando SÍ se manda dirección ──
+test('sin dirección de residencia, nombreVia NO se echa en falta', () => {
+  const r = revisarDatosAuto(BASE)
+  assert.ok(!r.some((x) => x.campo === 'nombreVia'))
+})
+
+test('con dirección de residencia pero sin nombreVia, es un reparo (11º 400 real)', () => {
+  const r = revisarDatosAuto({ ...BASE, cpResidencia: '41003', municipioResidenciaId: 999 })
+  assert.ok(r.some((x) => x.campo === 'nombreVia'))
 })
 
 // ─── Historial ───────────────────────────────────────────────────────────────

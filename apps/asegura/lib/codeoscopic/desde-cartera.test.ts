@@ -59,10 +59,32 @@ function pre(
 
 // ─── El caso feliz: una póliza de la cartera se cotiza sin pedir nada ────────
 
-test('con la ficha completa no falta nada: el botón puede cotizar', () => {
+test('con la ficha completa solo falta el nombre de la calle (11º 400 real, ReRate)', () => {
+  // La ficha no trae la calle de residencia (nunca se ha necesitado hasta el
+  // ReRate) y no se inventa: es el único hueco que queda tras precalificar.
   const r = pre()
+  assert.deepEqual(r.faltan, [
+    { campo: 'nombreVia', motivo: 'la compañía lo exige para poder confirmar el precio (ReRate) cuando hay dirección' },
+  ])
+  assert.equal(sePuedeCotizar(r), false)
+})
+
+// ─── Si ya la tenemos, no se vuelve a pedir (Alberto, 12/09/2026) ────────────
+
+test('si la ficha SÍ trae dirección, la calle sale sola y ya no falta nada', () => {
+  const r = pre({ direccion: 'CL SAN VICENTE, 40 2º-14' })
+  assert.equal(r.datos.nombreVia, 'SAN VICENTE')
   assert.deepEqual(r.faltan, [])
-  assert.ok(sePuedeCotizar(r))
+  assert.equal(sePuedeCotizar(r), true)
+  assert.ok(
+    r.supuestos.some((s) => s.campo === 'nombreVia' && s.valor === 'SAN VICENTE'),
+    'la calle troceada de la ficha tiene que verse como supuesto, no colarse en silencio',
+  )
+})
+
+test('si la ficha no trae ninguna dirección reconocible, sigue siendo un reparo', () => {
+  const r = pre({ direccion: null })
+  assert.ok(r.faltan.some((f) => f.campo === 'nombreVia'))
 })
 
 test('la póliza actual pasa a ser la ANTERIOR de la cotización', () => {
@@ -139,7 +161,9 @@ test('presumir cero siniestros iguala los años y evita el 400 del detalle de si
   // coinciden — y el 400 (ya pagado) no llega.
   const r = pre({}, { fechaEfectoInicial: '2024-03-01' })
   assert.equal(r.datos.aniosAsegurado, r.datos.aniosSinSiniestros)
-  assert.deepEqual(r.faltan, [])
+  // `nombreVia` es un hueco aparte (11º 400 real, la ficha nunca trae la calle);
+  // lo que este test vigila es que NO aparezca el reparo de siniestros.
+  assert.deepEqual(r.faltan.filter((f) => f.campo !== 'nombreVia'), [])
 })
 
 // ─── Los supuestos que NO son optimistas tiran a la baja ─────────────────────
@@ -248,9 +272,13 @@ function preNueva(c: Partial<ClienteCartera> = {}, r: Partial<ResueltosAutoNueva
   return precalificarAutoNueva({ ...CLIENTE, ...c }, { ...RESUELTOS_NUEVA, ...r }, HOY)
 }
 
-test('sin póliza previa, con todo resuelto no falta nada', () => {
+test('sin póliza previa, con todo resuelto solo falta el nombre de la calle', () => {
+  // Mismo hueco que en la póliza existente: la ficha no trae la calle de
+  // residencia (11º 400 real, ReRate) y no se inventa.
   const r = preNueva()
-  assert.deepEqual(r.faltan, [])
+  assert.deepEqual(r.faltan, [
+    { campo: 'nombreVia', motivo: 'la compañía lo exige para poder confirmar el precio (ReRate) cuando hay dirección' },
+  ])
   assert.equal(r.datos.matricula, '1234ABC')
 })
 
