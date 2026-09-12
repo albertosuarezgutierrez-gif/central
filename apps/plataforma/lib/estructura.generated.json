@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-12T13:05:44Z",
+  "generadoEn": "2026-09-12T14:02:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4861,6 +4861,7 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
+      "/api/internal/grafo-codigo",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
       "/api/internal/reclamar-reparacion",
@@ -5453,6 +5454,8 @@
       "empresas_ficha",
       "facturas_proveedor",
       "fiscal_ayudas",
+      "grafo_aristas",
+      "grafo_nodos",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
@@ -6234,7 +6237,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1337,
+    "apis": 1338,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
