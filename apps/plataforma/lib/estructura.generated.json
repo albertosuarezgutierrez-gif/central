@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-11T13:48:09Z",
+  "generadoEn": "2026-09-12T08:09:42Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2080,7 +2080,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 45
+        "evidencias": 46
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 45
+        "evidencias": 46
       },
       "rrhh": {
         "estado": "no",
@@ -4762,6 +4762,7 @@
       "/api/correduria/intervinientes",
       "/api/correduria/leads",
       "/api/correduria/partes",
+      "/api/correduria/poliza",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
       "/api/correduria/supresiones",
@@ -6224,7 +6225,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1327,
+    "apis": 1328,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
