@@ -33,6 +33,24 @@ export type DatosPersona = {
    * (`valoresPersonaDesdeFicha`), nunca inventado.
    */
   email?: string | null
+  /**
+   * Número de la calle de residencia. 14º 400 real (12/09/2026, mismo
+   * proyecto): el Submit, además de `nombreVia` y `email`, pide TAMBIÉN «road
+   * number» — el vendor trocea la dirección en tres campos, no dos. Texto
+   * libre, igual que `nombreVia`.
+   */
+  numeroVia?: string | null
+  /**
+   * `roadType.id` del catálogo `/road-types` — mismo 14º 400 real: «road
+   * type» de la dirección también es obligatorio. 🚨 A diferencia de
+   * `nombreVia`/`numeroVia`/`email`, esto es una referencia de CATÁLOGO, no
+   * texto libre: nunca se manda un id que no haya salido de `GET
+   * /road-types` (misma regla que el resto de catálogos de hogar,
+   * `docs/CODEOSCOPIC-API-PORTAL.md`). Lo resuelve `valoresPersonaDesdeFicha`
+   * emparejando el tipo de vía de la ficha (`partirDireccion`) contra el
+   * catálogo vivo — si no hay match, no se manda nada inventado.
+   */
+  tipoVia?: string | null
 }
 
 export const RE_TELEFONO = /^[67][0-9]{8}$/
@@ -94,10 +112,13 @@ export function construirPersona(d: DatosPersona, extra: { fechaCarnet?: string 
       town: { id: d.municipioResidenciaId },
       primary: true,
     }
-    // `roadName`: el ReRate de auto lo exige (ver el comentario del campo en el
-    // tipo); la cotización inicial NO lo pedía, así que hasta ahora nadie lo echaba
-    // en falta. Se manda si lo hay, nunca inventado.
+    // `roadName`/`roadNumber`/`roadType`: el ReRate/Submit de auto los exige (ver
+    // el comentario de cada campo en el tipo); la cotización inicial NO los pedía,
+    // así que hasta ahora nadie los echaba en falta. Se mandan si los hay, nunca
+    // inventados — `roadType` es además una referencia de catálogo, nunca texto.
     if (texto(d.nombreVia)) direccion.roadName = d.nombreVia!.trim()
+    if (texto(d.numeroVia)) direccion.roadNumber = d.numeroVia!.trim()
+    if (texto(d.tipoVia)) direccion.roadType = { id: d.tipoVia!.trim() }
     persona.addresses = [direccion]
   }
 

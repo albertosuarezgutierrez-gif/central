@@ -25,6 +25,8 @@ export type Papel = 'holder' | 'owner' | 'primaryDriver' | 'secondaryDriver'
  */
 export type CampoPersona =
   | 'nombreVia'
+  | 'numeroVia'
+  | 'tipoVia'
   | 'cpResidencia'
   | 'municipioResidenciaId'
   | 'dni'
@@ -39,6 +41,8 @@ export type CampoPersona =
 
 export const CAMPOS_PERSONA: readonly CampoPersona[] = [
   'nombreVia',
+  'numeroVia',
+  'tipoVia',
   'cpResidencia',
   'municipioResidenciaId',
   'dni',
@@ -80,6 +84,8 @@ const REGLAS: ReadonlyArray<readonly [RegExp, keyof DatosAuto]> = [
   [/circulation address.*postal code|postal code.*circulation address/, 'cpCirculacion'],
   [/circulation address.*\btown\b|\btown\b.*circulation address/, 'municipioCirculacionId'],
   [/road name/, 'nombreVia'],
+  [/road number/, 'numeroVia'],
+  [/road type/, 'tipoVia'],
   [/e-?mail/, 'email'],
   [/postal code|zip code/, 'cpResidencia'],
   [/\btown\b/, 'municipioResidenciaId'],
@@ -190,7 +196,13 @@ const obj = (v: unknown): Json => (v && typeof v === 'object' && !Array.isArray(
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
 
-const CAMPOS_DIRECCION: readonly CampoPersona[] = ['nombreVia', 'cpResidencia', 'municipioResidenciaId']
+const CAMPOS_DIRECCION: readonly CampoPersona[] = [
+  'nombreVia',
+  'numeroVia',
+  'tipoVia',
+  'cpResidencia',
+  'municipioResidenciaId',
+]
 
 /**
  * Devuelve la persona con TODOS los `valores` escritos en la forma del vendor.
@@ -214,6 +226,11 @@ export function aplicarCamposPersona(persona: unknown, valores: Partial<Record<C
     for (const c of deDireccion) {
       const v = (valores[c] as string).trim()
       if (c === 'nombreVia') d0.roadName = v
+      if (c === 'numeroVia') d0.roadNumber = v
+      // 🚨 `v` ya tiene que ser el id del catálogo `/road-types` en este punto
+      // (lo resuelve `valoresPersonaDesdeFicha`, emparejando contra el catálogo
+      // vivo): esta función es PURA y no valida catálogos, solo coloca el valor.
+      if (c === 'tipoVia') d0.roadType = { id: v }
       if (c === 'cpResidencia') d0.postalCode = v
       if (c === 'municipioResidenciaId') d0.town = { ...obj(d0.town), id: Number(v) }
     }
@@ -235,6 +252,8 @@ export function aplicarCampoPersona(persona: unknown, campo: CampoPersona, valor
   const v = valor.trim()
   switch (campo) {
     case 'nombreVia':
+    case 'numeroVia':
+    case 'tipoVia':
     case 'cpResidencia':
     case 'municipioResidenciaId':
       return p
@@ -280,6 +299,12 @@ export function leerCampoPersona(persona: unknown, campo: CampoPersona): string 
   switch (campo) {
     case 'nombreVia':
       return str(d0.roadName)
+    case 'numeroVia':
+      return str(d0.roadNumber)
+    case 'tipoVia': {
+      const id = obj(d0.roadType).id
+      return typeof id === 'number' ? String(id) : str(id)
+    }
     case 'cpResidencia':
       return str(d0.postalCode)
     case 'municipioResidenciaId': {

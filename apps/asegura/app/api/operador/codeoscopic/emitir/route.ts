@@ -282,6 +282,7 @@ export async function POST(req: Request) {
       const deFicha = await valoresPersonaDesdeFicha(
         { correduria_id: correduria.id, poliza_id: p.poliza_id, cliente_id: poliza.cliente_id },
         pedidos,
+        r.config,
       )
       deFichaPrevio = deFicha
       const fichaLoCubreTodo = pedidos.every((c) => Object.prototype.hasOwnProperty.call(deFicha, c))
@@ -379,6 +380,7 @@ export async function POST(req: Request) {
           (await valoresPersonaDesdeFicha(
             { correduria_id: correduria.id, poliza_id: p.poliza_id, cliente_id: poliza.cliente_id },
             pedidos,
+            r.config,
           ))
         return NextResponse.json(
           {

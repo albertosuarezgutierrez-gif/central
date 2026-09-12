@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📮 14º 400 real de Codeoscopic — el Submit trocea la calle en TRES campos (12/09/2026).**
+  Tras el fix del 13º (email+nombreVia), el Submit volvió a rechazar pidiendo TAMBIÉN «road number» y
+  «road type» de holder/owner/primaryDriver — el vendor exige `roadNumber` (texto libre) y `roadType.id`
+  (referencia de CATÁLOGO `/road-types`, nunca inventado). `interprete-400.ts` aprendió `numeroVia`/
+  `tipoVia`; `valoresPersonaDesdeFicha` ganó un 3er parámetro OPCIONAL `config` (solo para `tipoVia`:
+  empareja el tipo de vía de la ficha —`partirDireccion`— contra el catálogo vivo con `emparejar()`
+  exacto; sin match no se manda nada). `emitir/route.ts` y `oferta/route.ts` ya pasan `r.config`.
+  Plataforma ganó los dos inputs manuales en `ETIQUETAS_HUECO`. Tests con el 14º 400 real, verificados
+  en rojo→verde. Suites completas verdes (asegura 386, plataforma 2785, raíz 812). PR abierto y en
+  seguimiento hasta merge.
 - **🗺️ Paridad grafo propio vs Graphify: medida, y gana en 2 de 10 (12/09/2026, III).** PR #2827
   (fix `grafo_guardar_clave` void→boolean) mergeado y embeddings ya en producción (13.352 nodos,
   `pendientes:0`, coste ≈0,01$). Con eso corrí la medición de paridad pendiente: 12 categorías de

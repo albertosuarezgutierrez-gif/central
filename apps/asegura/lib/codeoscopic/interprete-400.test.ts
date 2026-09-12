@@ -185,3 +185,55 @@ test('mismoValor compara el email sin distinguir mayúsculas ni espacios sobrant
 test('esCampoPersona acepta email', () => {
   assert.equal(esCampoPersona('email'), true)
 })
+
+// El 14º 400 real (12/09/2026, mismo proyecto 40684860, mismo Submit tras
+// arreglar el email): el vendor trocea la dirección en TRES campos, no dos —
+// pide TAMBIÉN «road number» y «road type», y repite «e-mail» para los tres
+// papeles porque la ficha aún no lo había reparado en ese intento.
+const DECIMOCUARTO =
+  'codeoscopic_validacion: {"error":"Bad Request","message":"The road type of the address of the primary driver is mandatory.\\nThe e-mail of the primary driver is mandatory.\\nThe road number of the address of the owner is mandatory.\\nThe road type of the address of the owner is mandatory.\\nThe e-mail of the owner is mandatory.\\nThe road number of the address of the holder is mandatory.\\nThe road type of the address of the holder is mandatory.\\nThe road number of the address of the primary driver is mandatory.\\nThe e-mail of the holder is mandatory.","path":"/insurances/40684860/policy-applications","requestId":"ac44128d-475333","status":400,"timestamp":"2026-09-12T15:47:12.277Z"}'
+
+test('el 14º 400 real (Submit) se traduce a TRES campos (numeroVia + tipoVia + email), cada uno en tres papeles', () => {
+  const r = interpretarError400(DECIMOCUARTO)
+  assert.equal(r.campos.length, 3)
+  assert.equal(r.noReconocidos.length, 0)
+  const numeroVia = r.campos.find((c) => c.campo === 'numeroVia')
+  const tipoVia = r.campos.find((c) => c.campo === 'tipoVia')
+  const email = r.campos.find((c) => c.campo === 'email')
+  assert.deepEqual(new Set(numeroVia?.papeles), new Set(['owner', 'holder', 'primaryDriver']))
+  assert.deepEqual(new Set(tipoVia?.papeles), new Set(['owner', 'holder', 'primaryDriver']))
+  assert.deepEqual(new Set(email?.papeles), new Set(['owner', 'holder', 'primaryDriver']))
+})
+
+test('numeroVia se escribe DENTRO de addresses[0] (roadNumber) y se lee de vuelta', () => {
+  const p = aplicarCampoPersona(PERSONA, 'numeroVia', ' 40 ')
+  assert.equal(leerCampoPersona(p, 'numeroVia'), '40')
+  assert.equal(leerCampoPersona(PERSONA, 'numeroVia'), null)
+  assert.equal(leerCampoPersona(p, 'cpResidencia'), '41003')
+})
+
+test('sin dirección previa, numeroVia NO crea una dirección a medias', () => {
+  const p = aplicarCampoPersona({ name: 'X' }, 'numeroVia', '40')
+  assert.equal(p.addresses, undefined)
+  assert.equal(leerCampoPersona(p, 'numeroVia'), null)
+})
+
+test('tipoVia se escribe como roadType.id (referencia de CATÁLOGO, no texto) y se lee de vuelta', () => {
+  const p = aplicarCampoPersona(PERSONA, 'tipoVia', ' 3 ')
+  assert.equal(leerCampoPersona(p, 'tipoVia'), '3')
+  assert.equal(leerCampoPersona(PERSONA, 'tipoVia'), null)
+  const q = p as Record<string, unknown>
+  const direccion = (q.addresses as Array<Record<string, unknown>>)[0]
+  assert.deepEqual(direccion.roadType, { id: '3' })
+})
+
+test('mismoValor compara numeroVia/tipoVia con la misma tolerancia que el resto', () => {
+  assert.equal(mismoValor('numeroVia', ' 40 ', '40'), true)
+  assert.equal(mismoValor('numeroVia', '40', '41'), false)
+  assert.equal(mismoValor('tipoVia', ' 3 ', '3'), true)
+})
+
+test('esCampoPersona acepta numeroVia y tipoVia', () => {
+  assert.equal(esCampoPersona('numeroVia'), true)
+  assert.equal(esCampoPersona('tipoVia'), true)
+})

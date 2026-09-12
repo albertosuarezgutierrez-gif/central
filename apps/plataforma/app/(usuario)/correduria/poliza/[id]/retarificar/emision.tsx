@@ -77,6 +77,8 @@ function euroODash(n: number | null): string {
  */
 const ETIQUETAS_HUECO: Record<string, { etiqueta: string; tipo: string; pista?: string }> = {
   nombreVia: { etiqueta: 'Calle (nombre de la vía)', tipo: 'text', pista: 'Solo el nombre: «San Vicente», sin número ni piso' },
+  numeroVia: { etiqueta: 'Número de la calle', tipo: 'text' },
+  tipoVia: { etiqueta: 'Tipo de vía (id del catálogo)', tipo: 'text', pista: 'Id del catálogo /road-types del vendor, no el nombre (p. ej. «Calle»)' },
   cpResidencia: { etiqueta: 'Código postal de residencia', tipo: 'text' },
   municipioResidenciaId: { etiqueta: 'Municipio (id del catálogo)', tipo: 'text' },
   dni: { etiqueta: 'DNI/NIE', tipo: 'text' },
