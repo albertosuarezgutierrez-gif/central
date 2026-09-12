@@ -30,6 +30,13 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📱 Portal del cliente, móvil compactado (12/09/2026).** Alberto, con la captura de su móvil: «dos
+  veces mis seguros, Grupo ASegura quitarlo, ocupa mucho». La sección de cartera pintaba «Tu cartera /
+  Tus seguros» bajo el h1 «Mis seguros» y la pestaña activa «Mis seguros»: se quita el titular de esa
+  sección (el `aria-labelledby` apunta al h1); el wordmark de la barra se esconde a ≤639 px (queda el
+  monograma con `aria-label`); bloque «móvil compacto» al FINAL de `globals.css` (barra 52 px, sección
+  16 px, la tarjeta anidada del alta 14 px, h1 28 px). Sin medir con Playwright: la bóveda exige BD.
+  Typecheck + 470 tests en verde. PR #2810, mergeado.
 - **💬 Bienvenida sin teléfono, pero diciendo que el chat vale de noche (12/09/2026).** Alberto:
   «¿pongo el tlf del portal por si pasa algo?». No: el portal no abre puertas y una llamada suya abre un
   caso contra el anfitrión; el «por si pasa algo» ya lo cubre el modo noche (`agente-huesped/noche.ts`:
