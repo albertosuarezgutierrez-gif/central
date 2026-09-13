@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-13T13:48:09Z",
-  "sha": "b26c7cdfdd3169a9cb1fa55d4e77fa0f40a2488a",
+  "generadoEn": "2026-09-13T14:18:06Z",
+  "sha": "3527f0cc710cb99dee951bcd601eceb28834dd4e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11344,6 +11344,32 @@
       "hash": "82c2ccbf59e1"
     },
     {
+      "ruta": "apps/asegura/app/api/webhooks/codeoscopic/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "POST /api/webhooks/codeoscopic — el webhook que Codeoscopic tiene dado de alta (HTTP Basic). Hoy apunta al CRM de Manuel (`app.grupoasegura.com`), que DESCARTA sin persistir el payload real (raíz arra"
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "codeoscopic_webhook_events",
+        "next",
+        "set"
+      ],
+      "rutaApi": "/api/webhooks/codeoscopic",
+      "hash": "40304e596db4"
+    },
+    {
       "ruta": "apps/asegura/app/api/webhooks/resend/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -16547,6 +16573,109 @@
       "hash": "dca777a108e2"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/webhook.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Receptor del webhook de Codeoscopic — la parte PURA (sin Prisma, sin red). 13/09/2026, respuesta de Manuel: Codeoscopic tiene el webhook dado de alta (confirmado por JM el 15/06, LOO-322) hacia `POST app.grupoasegura.com/api/ webhooks/codeoscopic` con HTTP Basic. El emisor REAL (UA Apache-HttpAsyncC",
+      "exporta": [
+        "hashPayload",
+        "autorizacionBasica",
+        "idProyectoValido",
+        "tipoEvento",
+        "leerEventoWebhook",
+        "filasWebhook"
+      ],
+      "funciones": [
+        {
+          "nombre": "hashPayload",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpoCrudo: string",
+          "retorno": "string",
+          "linea": 34,
+          "resumen": "sha256 hex del cuerpo CRUDO (bytes, no el JSON re-serializado): así dos envíos idénticos del vendor colapsan y uno reordenado no."
+        },
+        {
+          "nombre": "digest",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "autorizacionBasica",
+          "kind": "function",
+          "exportada": true,
+          "params": "cabecera: string | null | undefined, usuario: string | undefined, contrasena: string | undefined",
+          "retorno": "boolean",
+          "linea": 46,
+          "resumen": "`true` solo si la cabecera es `Basic <base64(user:pass)>` y coincide con las credenciales configuradas. Comparación en tiempo constante sobre digests (misma longitud siempre: la comparación no filtra "
+        },
+        {
+          "nombre": "idProyectoValido",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "id: string | null",
+          "retorno": "string | null",
+          "linea": 69
+        },
+        {
+          "nombre": "texto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 71
+        },
+        {
+          "nombre": "tipoEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown",
+          "retorno": "TipoEventoWebhook",
+          "linea": 78,
+          "resumen": "`status`/`type`/`event`/`eventType` del vendor → el enum del CRM. Lo que no se reconoce es `otro`, nunca `emision_ok`."
+        },
+        {
+          "nombre": "leerObjeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: Record<string, unknown>",
+          "retorno": "",
+          "linea": 90
+        },
+        {
+          "nombre": "leerUno",
+          "kind": "function",
+          "exportada": false,
+          "params": "crudo: unknown, raiz: RaizWebhook, elementos: number",
+          "retorno": "EventoWebhook",
+          "linea": 110
+        },
+        {
+          "nombre": "leerEventoWebhook",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown",
+          "retorno": "EventoWebhook",
+          "linea": 118,
+          "resumen": "Interpreta UN objeto (o algo que no lo es) como evento."
+        },
+        {
+          "nombre": "filasWebhook",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpoCrudo: string, parseado: unknown",
+          "retorno": "FilaWebhook[]",
+          "linea": 132,
+          "resumen": "Las filas que se persisten para un cuerpo. Un objeto es una fila. **Un array es una fila POR ELEMENTO** (hash `<sha256(cuerpo)>:<i>`), porque mezclar dos elementos en una fila atribuiría el estado del"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cf5669c5f5e4"
+    },
+    {
       "ruta": "apps/asegura/lib/comisiones.ts",
       "ambito": "apps/asegura",
       "resumen": "Comisiones de la correduría leídas de la cartera real (schema `seguros` de la BD compartida; `ASEGURA_FUENTE=origen` vuelve al Supabase de Manuel). Esta app es la ÚNICA que toca esas tablas; plataforma las consume por el puerto `/api/operador/comisiones`. 🚨 Tres estados, nunca dos: sin la env es `s",
@@ -18080,12 +18209,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 14
+          "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "80c8e2e2da40"
+      "hash": "028e7e7dc60a"
     },
     {
       "ruta": "apps/housesevillana/app/barrio/route.ts",
@@ -134972,7 +135101,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3305,
-    "funciones": 10197
+    "archivos": 3307,
+    "funciones": 10208
   }
 }

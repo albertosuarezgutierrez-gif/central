@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-13T13:48:09Z",
+  "generadoEn": "2026-09-13T14:18:06Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3915,6 +3915,7 @@
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
       "/api/portal/nota",
+      "/api/webhooks/codeoscopic",
       "/api/webhooks/resend"
     ],
     "asegura-portal": [
@@ -6258,7 +6259,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1355,
+    "apis": 1356,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
