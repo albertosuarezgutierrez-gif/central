@@ -469,7 +469,7 @@ export default async function Boveda({
         </>
       )}
 
-      {vista === 'recordatorios' && <Recordatorios recordatorios={recordatorios} />}
+      {vista === 'recordatorios' && <Recordatorios recordatorios={recordatorios} polizas={polizasParte} />}
 
     </>
   )

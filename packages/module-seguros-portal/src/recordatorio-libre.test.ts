@@ -81,6 +81,58 @@ test('siguienteOcurrencia ajusta al último día cuando el mes destino es más c
   assert.equal(siguienteOcurrencia(base, 1).toISOString(), '2027-02-28T00:00:00.000Z')
 })
 
+test('normalizarRecordatorio acepta que se asigne a una póliza de la cartera', () => {
+  const r = normalizarRecordatorio({ titulo: 'ITV del Ibiza', fechaEvento: '2027-01-01', polizaId: 'p1' })
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.equal(r.datos.polizaId, 'p1')
+    assert.equal(r.datos.polizaDeclaradaId, null)
+  }
+})
+
+test('normalizarRecordatorio acepta que se asigne a una póliza declarada', () => {
+  const r = normalizarRecordatorio({ titulo: 'ITV', fechaEvento: '2027-01-01', polizaDeclaradaId: 'd1' })
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.equal(r.datos.polizaId, null)
+    assert.equal(r.datos.polizaDeclaradaId, 'd1')
+  }
+})
+
+test('normalizarRecordatorio rechaza los dos ids de póliza a la vez', () => {
+  const r = normalizarRecordatorio({ titulo: 'ITV', fechaEvento: '2027-01-01', polizaId: 'p1', polizaDeclaradaId: 'd1' })
+  assert.deepEqual(r, { ok: false, error: 'poliza_ambigua' })
+})
+
+test('normalizarRecordatorio sin póliza deja los dos ids a null', () => {
+  const r = normalizarRecordatorio({ titulo: 'Algo', fechaEvento: '2027-01-01' })
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.equal(r.datos.polizaId, null)
+    assert.equal(r.datos.polizaDeclaradaId, null)
+  }
+})
+
+test('normalizarRecordatorio rechaza un tipo que no es texto en vez de colarlo como libre', () => {
+  // Hallazgo de code-review (Graphify): un `tipo` que SÍ viaja pero no es una
+  // cadena (número, booleano…) caía a `'libre'` en silencio.
+  assert.deepEqual(normalizarRecordatorio({ titulo: 'ITV', fechaEvento: '2027-01-01', tipo: 5 }), {
+    ok: false,
+    error: 'tipo_invalido',
+  })
+  assert.deepEqual(normalizarRecordatorio({ titulo: 'ITV', fechaEvento: '2027-01-01', tipo: true }), {
+    ok: false,
+    error: 'tipo_invalido',
+  })
+})
+
+test('normalizarRecordatorio rechaza un repiteCadaMeses booleano', () => {
+  // Hallazgo de code-review (Graphify): `Number(true) === 1` colaba un
+  // booleano como «se repite cada mes».
+  const r = normalizarRecordatorio({ titulo: 'ITV', fechaEvento: '2027-01-01', repiteCadaMeses: true })
+  assert.deepEqual(r, { ok: false, error: 'repeticion_invalida' })
+})
+
 test('SUGERENCIAS_RECORDATORIO usa solo tipos del enum de BD', () => {
   const tiposValidos = new Set(['itv', 'carnet', 'mantenimiento', 'revision_gas', 'libre'])
   for (const s of SUGERENCIAS_RECORDATORIO) assert.ok(tiposValidos.has(s.tipo), `tipo desconocido: ${s.tipo}`)

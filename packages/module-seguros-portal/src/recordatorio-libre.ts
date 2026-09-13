@@ -54,6 +54,11 @@ export type EntradaRecordatorio = {
   titulo?: unknown
   fechaEvento?: unknown
   repiteCadaMeses?: unknown
+  /** De qué PÓLIZA de la cartera es este recordatorio (para poder decir «ITV
+   *  del Ibiza» en vez de «ITV» a secas). Excluyente con `polizaDeclaradaId`. */
+  polizaId?: unknown
+  /** La misma idea, para una póliza que aportó el propio cliente. */
+  polizaDeclaradaId?: unknown
 }
 
 export type RecordatorioNormalizado = {
@@ -61,11 +66,16 @@ export type RecordatorioNormalizado = {
   titulo: string
   fechaEvento: Date
   repiteCadaMeses: number | null
+  polizaId: string | null
+  polizaDeclaradaId: string | null
 }
 
 export type ResultadoRecordatorio =
   | { ok: true; datos: RecordatorioNormalizado }
-  | { ok: false; error: 'titulo_invalido' | 'fecha_invalida' | 'tipo_invalido' | 'repeticion_invalida' }
+  | {
+      ok: false
+      error: 'titulo_invalido' | 'fecha_invalida' | 'tipo_invalido' | 'repeticion_invalida' | 'poliza_ambigua'
+    }
 
 const TIPOS_VALIDOS: readonly TipoRecordatorio[] = ['itv', 'carnet', 'mantenimiento', 'revision_gas', 'libre']
 
@@ -76,7 +86,13 @@ const TIPOS_VALIDOS: readonly TipoRecordatorio[] = ['itv', 'carnet', 'mantenimie
  * regla de negocio que esta pieza no tiene por qué imponer.
  */
 export function normalizarRecordatorio(entrada: EntradaRecordatorio): ResultadoRecordatorio {
-  const tipo = typeof entrada.tipo === 'string' ? entrada.tipo : 'libre'
+  // 🚨 `undefined` (el campo no viaja) es el ÚNICO caso que cae a `'libre'` por
+  // defecto. Un `tipo` que SÍ viaja pero no es una cadena del catálogo (un
+  // número, un booleano, `null` explícito) se rechaza — antes se colaba como
+  // `'libre'` en silencio, que es la misma familia de fallo que un `NULL`
+  // colapsado a un valor de cajón.
+  if (entrada.tipo !== undefined && typeof entrada.tipo !== 'string') return { ok: false, error: 'tipo_invalido' }
+  const tipo = entrada.tipo === undefined ? 'libre' : entrada.tipo
   if (!(TIPOS_VALIDOS as readonly string[]).includes(tipo)) return { ok: false, error: 'tipo_invalido' }
 
   const tituloBruto = typeof entrada.titulo === 'string' ? entrada.titulo.trim() : ''
@@ -96,14 +112,31 @@ export function normalizarRecordatorio(entrada: EntradaRecordatorio): ResultadoR
 
   let repiteCadaMeses: number | null = null
   if (entrada.repiteCadaMeses !== null && entrada.repiteCadaMeses !== undefined && entrada.repiteCadaMeses !== '') {
-    const n = Number(entrada.repiteCadaMeses)
+    // 🚨 `Number(true) === 1`: sin este filtro de tipo, un booleano cuela como
+    // «cada 1 mes» y un array de un elemento también se deja convertir. Solo
+    // un `number` o un `string` (lo que manda el `<input type="number">`, que
+    // en el DOM siempre es texto) son formas legítimas de mandar esto.
+    const bruto = entrada.repiteCadaMeses
+    if (typeof bruto !== 'number' && typeof bruto !== 'string') return { ok: false, error: 'repeticion_invalida' }
+    const n = Number(bruto)
     if (!Number.isInteger(n) || n < REPITE_CADA_MESES_MIN || n > REPITE_CADA_MESES_MAX) {
       return { ok: false, error: 'repeticion_invalida' }
     }
     repiteCadaMeses = n
   }
 
-  return { ok: true, datos: { tipo: tipo as TipoRecordatorio, titulo: tituloBruto, fechaEvento, repiteCadaMeses } }
+  // Igual que `normalizarParte()`: los dos ids viajan del mismo formulario,
+  // uno u otro, nunca los dos — un recordatorio no puede ser a la vez de una
+  // póliza de la cartera Y de una que el cliente aportó.
+  const polizaId = typeof entrada.polizaId === 'string' && entrada.polizaId !== '' ? entrada.polizaId : null
+  const polizaDeclaradaId =
+    typeof entrada.polizaDeclaradaId === 'string' && entrada.polizaDeclaradaId !== '' ? entrada.polizaDeclaradaId : null
+  if (polizaId !== null && polizaDeclaradaId !== null) return { ok: false, error: 'poliza_ambigua' }
+
+  return {
+    ok: true,
+    datos: { tipo: tipo as TipoRecordatorio, titulo: tituloBruto, fechaEvento, repiteCadaMeses, polizaId, polizaDeclaradaId },
+  }
 }
 
 /** Último día del mes `y`-`m` (0-indexado), en UTC. */

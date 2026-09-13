@@ -125,7 +125,7 @@ export async function sincronizarObligacionesDeIdentidad(
       const accionable = fechaAccionable(evento)
       ops.push(
         prisma.portalObligacion.upsert({
-          where: { identidadId_polizaId: { identidadId, polizaId: p.id } },
+          where: { identidadId_polizaId_tipo: { identidadId, polizaId: p.id, tipo: 'poliza' } },
           create: {
             identidadId,
             polizaId: p.id,
@@ -157,9 +157,15 @@ export async function sincronizarObligacionesDeIdentidad(
   // cliente: sería la misma mentira que un semáforo verde sin datos. Solo se
   // podan las que vinieron de la CARTERA (`polizaId` no nulo): las declaradas
   // por la persona son suyas y no se borran solas.
+  //
+  // 🚨 `tipo: 'poliza'` es OBLIGATORIO aquí desde el 13/09/2026: un
+  // recordatorio PROPIO (ITV…) puede colgar del MISMO `polizaId` (ver el
+  // `@@unique` del schema). Sin este filtro, la póliza que cae de la cartera
+  // —vendida, cancelada— se llevaría por delante el recordatorio que el
+  // cliente puso él mismo, que sigue siendo suyo y sigue siendo verdad.
   ops.push(
     prisma.portalObligacion.deleteMany({
-      where: { identidadId, polizaId: { not: null, notIn: vivas } },
+      where: { identidadId, tipo: 'poliza', polizaId: { not: null, notIn: vivas } },
     }),
   )
 

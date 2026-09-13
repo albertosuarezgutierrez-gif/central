@@ -7,6 +7,8 @@ import { SUGERENCIAS_RECORDATORIO, type TipoRecordatorio } from '@central/module
 import { fechaEs } from '@/lib/fechas'
 import type { RecordatorioVista } from '@/lib/recordatorios'
 
+import type { PolizaOpcionParte } from './ParteSiniestro'
+
 /**
  * «Tus recordatorios» — la pestaña de recordatorios que el CLIENTE se pone a
  * sí mismo (ITV, carnet, caldera, extintores… o texto libre), sin que haga
@@ -42,13 +44,31 @@ function opcionRepiteDe(meses: number | null): string {
   return conocida ? conocida.valor : 'otro'
 }
 
-type Formulario = { tipo: TipoRecordatorio; titulo: string; fecha: string; repite: string; repiteOtro: string }
+type Formulario = {
+  tipo: TipoRecordatorio
+  titulo: string
+  fecha: string
+  repite: string
+  repiteOtro: string
+  /** `''` = sin asignar. Si no, `cartera:<id>` / `declarada:<id>` — el mismo
+   *  `valor` que ya usa `ParteSiniestro`. */
+  poliza: string
+}
 
-const VACIO: Formulario = { tipo: 'libre', titulo: '', fecha: '', repite: 'nunca', repiteOtro: '' }
+const VACIO: Formulario = { tipo: 'libre', titulo: '', fecha: '', repite: 'nunca', repiteOtro: '', poliza: '' }
 
 type Estado = { tipo: 'listo' } | { tipo: 'guardando' } | { tipo: 'error'; texto: string }
 
-export function Recordatorios({ recordatorios }: { recordatorios: RecordatorioVista[] }) {
+export function Recordatorios({
+  recordatorios,
+  polizas,
+}: {
+  recordatorios: RecordatorioVista[]
+  /** Para poder decir «ITV del Ibiza» en vez de «ITV»: Alberto, 13/09/2026
+   *  («lo lógico es asignarlo al bien asegurado»). La MISMA lista que ya arma
+   *  `page.tsx` para `ParteSiniestro` — matrícula/dirección, no nº de póliza. */
+  polizas: readonly PolizaOpcionParte[]
+}) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
   const [form, setForm] = useState<Formulario>(VACIO)
@@ -59,7 +79,14 @@ export function Recordatorios({ recordatorios }: { recordatorios: RecordatorioVi
     const s = SUGERENCIAS_RECORDATORIO.find((x) => x.clave === clave)
     setForm(
       s
-        ? { tipo: s.tipo, titulo: s.titulo, fecha: '', repite: opcionRepiteDe(s.repiteCadaMesesPorDefecto), repiteOtro: '' }
+        ? {
+            tipo: s.tipo,
+            titulo: s.titulo,
+            fecha: '',
+            repite: opcionRepiteDe(s.repiteCadaMesesPorDefecto),
+            repiteOtro: '',
+            poliza: '',
+          }
         : VACIO,
     )
     setEstado({ tipo: 'listo' })
@@ -84,18 +111,31 @@ export function Recordatorios({ recordatorios }: { recordatorios: RecordatorioVi
       repiteCadaMeses = n
     }
 
+    const [tipoPoliza, idPoliza] = form.poliza ? form.poliza.split(':') : [null, null]
+
     setEstado({ tipo: 'guardando' })
     try {
       const r = await fetch('/api/recordatorios', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tipo: form.tipo, titulo, fechaEvento: form.fecha, repiteCadaMeses }),
+        body: JSON.stringify({
+          tipo: form.tipo,
+          titulo,
+          fechaEvento: form.fecha,
+          repiteCadaMeses,
+          polizaId: tipoPoliza === 'cartera' ? idPoliza : null,
+          polizaDeclaradaId: tipoPoliza === 'declarada' ? idPoliza : null,
+        }),
       })
       if (r.ok) {
         setForm(VACIO)
         setAbierto(false)
         setEstado({ tipo: 'listo' })
         router.refresh()
+        return
+      }
+      if (r.status === 403) {
+        setEstado({ tipo: 'error', texto: 'Esa póliza no es tuya, así que no podemos colgarle el recordatorio. Elige otra o déjalo en «No asignar».' })
         return
       }
       setEstado({ tipo: 'error', texto: 'No hemos podido guardarlo. Revisa el título y la fecha e inténtalo otra vez.' })
@@ -152,6 +192,19 @@ export function Recordatorios({ recordatorios }: { recordatorios: RecordatorioVi
             <span>Cuándo quieres que te avisemos</span>
             <input type="date" value={form.fecha} onChange={(e) => setForm((p) => ({ ...p, fecha: e.target.value }))} />
           </label>
+          {polizas.length > 0 && (
+            <label className="mi-direccion-campo">
+              <span>De qué seguro es (opcional)</span>
+              <select value={form.poliza} onChange={(e) => setForm((p) => ({ ...p, poliza: e.target.value }))}>
+                <option value="">No asignar a ningún seguro</option>
+                {polizas.map((p) => (
+                  <option key={p.valor} value={p.valor}>
+                    {p.etiqueta}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="mi-direccion-campo">
             <span>Se repite</span>
             <select value={form.repite} onChange={(e) => setForm((p) => ({ ...p, repite: e.target.value }))}>
@@ -209,26 +262,33 @@ export function Recordatorios({ recordatorios }: { recordatorios: RecordatorioVi
 
       {recordatorios.length > 0 && (
         <ul className="lista-recordatorios">
-          {recordatorios.map((r) => (
-            <li key={r.id} className="recordatorio-fila">
-              <div>
-                <strong>{r.titulo}</strong>
-                <div className="suave" style={{ fontSize: 13 }}>
-                  {fechaEs(r.fechaEvento)}
-                  {r.repiteCadaMeses !== null && ` · se repite cada ${etiquetaMeses(r.repiteCadaMeses)}`}
-                  {r.avisada && ' · ya avisado'}
+          {recordatorios.map((r) => {
+            // `r.poliza` puede apuntar a una póliza que ya no está en la lista
+            // (se canceló, se revocó la autorización…): el recordatorio sigue
+            // siendo válido, solo deja de poder decir de cuál era.
+            const bien = r.poliza ? polizas.find((p) => p.valor === r.poliza)?.etiqueta : null
+            return (
+              <li key={r.id} className="recordatorio-fila">
+                <div>
+                  <strong>{r.titulo}</strong>
+                  <div className="suave" style={{ fontSize: 13 }}>
+                    {fechaEs(r.fechaEvento)}
+                    {bien && ` · ${bien}`}
+                    {r.repiteCadaMeses !== null && ` · se repite cada ${etiquetaMeses(r.repiteCadaMeses)}`}
+                    {r.avisada && ' · ya avisado'}
+                  </div>
                 </div>
-              </div>
-              <button
-                type="button"
-                className="boton-tenue"
-                onClick={() => void borrar(r.id)}
-                disabled={borrandoId === r.id}
-              >
-                {borrandoId === r.id ? 'Quitando…' : 'Quitar'}
-              </button>
-            </li>
-          ))}
+                <button
+                  type="button"
+                  className="boton-tenue"
+                  onClick={() => void borrar(r.id)}
+                  disabled={borrandoId === r.id}
+                >
+                  {borrandoId === r.id ? 'Quitando…' : 'Quitar'}
+                </button>
+              </li>
+            )
+          })}
         </ul>
       )}
     </section>

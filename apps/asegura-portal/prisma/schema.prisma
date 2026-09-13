@@ -284,7 +284,13 @@ model PortalObligacion {
   identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
   bien      PortalBien?     @relation(fields: [bienId], references: [id])
 
-  @@unique([identidadId, polizaId])
+  /// 🚨 Incluye `tipo` desde el 13/09/2026 (antes era solo `identidadId` +
+  /// `polizaId`, `portal_obligacion_una_por_poliza`): un recordatorio PROPIO
+  /// (`itv`, `mantenimiento`…) se puede colgar de la MISMA póliza de cartera
+  /// que ya genera su obligación `poliza` — «se renueva el 15» y «la ITV es
+  /// el 3» son dos filas del mismo seguro, no una. Con la clave vieja, crear
+  /// el recordatorio habría pisado (o chocado contra) la obligación derivada.
+  @@unique([identidadId, polizaId, tipo], map: "portal_obligacion_una_por_poliza_tipo")
   /// Su gemela para las pólizas que sube la persona. Existe para poder hacer
   /// `upsert` y NO perder `avisadaAt` en cada sincronización: sin ella habría
   /// que borrar y recrear, y el sello del envío se iría con el borrado — o sea,

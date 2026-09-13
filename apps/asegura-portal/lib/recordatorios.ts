@@ -6,9 +6,8 @@
 // 🔒 Mismo aislamiento por CÓDIGO que `lib/obligaciones.ts`: toda consulta
 // filtra por `identidadId`, que sale SIEMPRE de `lib/session`.
 import {
-  normalizarRecordatorio,
   siguienteOcurrencia,
-  type EntradaRecordatorio,
+  type RecordatorioNormalizado,
   type TipoRecordatorio,
 } from '@central/module-seguros-portal'
 
@@ -23,38 +22,52 @@ export type RecordatorioVista = {
   fechaAccionable: Date
   repiteCadaMeses: number | null
   avisada: boolean
+  /** `cartera:<id>` / `declarada:<id>` de la póliza a la que está colgado este
+   *  recordatorio, o `null` si no está asignado a ninguna. Mismo formato que
+   *  `PolizaOpcionParte.valor` en `ParteSiniestro.tsx`, para que la pantalla
+   *  pueda buscar su matrícula/dirección en la MISMA lista sin otra vuelta al
+   *  servidor. */
+  poliza: string | null
 }
 
-/** Lo que distingue un recordatorio PROPIO de una obligación derivada: sin
- *  bien, sin póliza de cartera y sin póliza declarada detrás. */
-const FILTRO_PROPIOS = { bienId: null, polizaId: null, polizaDeclaradaId: null } as const
-
-export type ResultadoCrear = { ok: true; id: string } | { ok: false; error: string }
+/** Los CINCO tipos que son «recordatorio propio»; el resto (`poliza`, `recibo`)
+ *  los deriva `sincronizarObligacionesDeIdentidad()` de la cartera/declaradas.
+ *  Es el discriminador correcto desde el 13/09/2026: un recordatorio propio SÍ
+ *  puede llevar `polizaId`/`polizaDeclaradaId` (para decir de qué seguro es),
+ *  así que esos dos campos ya no sirven para distinguirlo de una obligación
+ *  derivada — el `tipo` sí, porque `sincronizarObligacionesDeIdentidad()`
+ *  nunca escribe estos cinco. */
+const TIPOS_PROPIOS: TipoRecordatorio[] = ['itv', 'carnet', 'mantenimiento', 'revision_gas', 'libre']
+const FILTRO_PROPIOS = { tipo: { in: TIPOS_PROPIOS } }
 
 /**
  * Da de alta un recordatorio propio. La fecha que teclea la persona ES la
  * fecha en la que quiere que le avisen — `fechaAccionable` es la MISMA, sin
  * restarle los 30 días del art. 22 LCS (eso es de una renovación de póliza,
  * un plazo que el cliente no elige; esto lo elige él).
+ *
+ * 🚨 Recibe el `valor` ya NORMALIZADO (`normalizarRecordatorio()`) Y con la
+ * PERTENENCIA de `polizaId`/`polizaDeclaradaId` ya comprobada por quien llama
+ * — esta función no vuelve a mirarlo, igual que `crearParte()` con un
+ * `ParteNormalizado`. La comprobación vive en la ruta (mismo orden de
+ * `POST /api/siniestros`: identidad → validación → PERTENENCIA → escritura).
  */
-export async function crearRecordatorio(identidadId: string, entrada: EntradaRecordatorio): Promise<ResultadoCrear> {
-  const normalizado = normalizarRecordatorio(entrada)
-  if (!normalizado.ok) return { ok: false, error: normalizado.error }
-  const { tipo, titulo, fechaEvento, repiteCadaMeses } = normalizado.datos
-
+export async function crearRecordatorio(identidadId: string, valor: RecordatorioNormalizado): Promise<{ id: string }> {
   const fila = await prisma.portalObligacion.create({
     data: {
       identidadId,
-      tipo,
-      titulo,
-      fechaEvento,
-      fechaAccionable: fechaEvento,
-      repiteCadaMeses,
+      tipo: valor.tipo,
+      titulo: valor.titulo,
+      fechaEvento: valor.fechaEvento,
+      fechaAccionable: valor.fechaEvento,
+      repiteCadaMeses: valor.repiteCadaMeses,
+      polizaId: valor.polizaId,
+      polizaDeclaradaId: valor.polizaDeclaradaId,
       procedencia: 'declarado',
     },
     select: { id: true },
   })
-  return { ok: true, id: fila.id }
+  return fila
 }
 
 /** Solo borra lo suyo: el `where` lleva `identidadId` Y `...FILTRO_PROPIOS`,
@@ -84,6 +97,7 @@ export async function recordatoriosDeIdentidad(identidadId: string): Promise<Rec
     // `avanzarRecordatoriosRecurrentesDeIdentidad`) — así que «ya avisado»
     // aquí solo puede leerse del push.
     avisada: f.avisadaPushAt !== null,
+    poliza: f.polizaId ? `cartera:${f.polizaId}` : f.polizaDeclaradaId ? `declarada:${f.polizaDeclaradaId}` : null,
   }))
 }
 
@@ -121,15 +135,34 @@ export async function recordatoriosDeSesion(): Promise<RecordatorioVista[]> {
  * Se llama desde el mismo sitio que sincroniza las obligaciones de póliza
  * (`sincronizarObligacionesDeIdentidad`, en cada carga de la bóveda) para que
  * comparta el único punto de entrada que ya lee la campana de avisos.
+ *
+ * 🚨 Dos cepos que se vieron morder en `code-review` (Graphify) antes de
+ * mergear:
+ *  1. `fechaEvento` es medianoche UTC del día, pero `hoy` (el `new Date()` por
+ *     defecto) lleva la HORA actual — comparar `fechaEvento < hoy` a pelo
+ *     adelanta el ciclo el MISMO día del evento, en cuanto pasa la
+ *     medianoche, antes de que la persona haya tenido ocasión de hacer nada
+ *     ese día. Se compara contra la medianoche de HOY (`diaUtc()`), el mismo
+ *     criterio que ya usan `obligacion.ts` y `cobro-declarado.ts`.
+ *  2. Un solo `siguienteOcurrencia()` solo avanza UN ciclo. Alguien que no
+ *     abre el portal en varios ciclos (una ITV mensual, tres meses sin
+ *     entrar) se quedaría con una fecha que sigue en el pasado hasta que
+ *     visite la bóveda tantas veces como ciclos se le hayan escapado. Se
+ *     avanza en bucle hasta que la fecha vuelve a ser de hoy en adelante.
  */
+function diaUtc(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+}
+
 export async function avanzarRecordatoriosRecurrentesDeIdentidad(identidadId: string, hoy: Date = new Date()): Promise<void> {
+  const hoyUtc = diaUtc(hoy)
   const pendientes = await prisma.portalObligacion.findMany({
     where: {
       identidadId,
       ...FILTRO_PROPIOS,
       repiteCadaMeses: { not: null },
       OR: [{ avisadaAt: { not: null } }, { avisadaPushAt: { not: null } }],
-      fechaEvento: { lt: hoy },
+      fechaEvento: { lt: hoyUtc },
     },
     select: { id: true, fechaEvento: true, repiteCadaMeses: true },
   })
@@ -138,7 +171,9 @@ export async function avanzarRecordatoriosRecurrentesDeIdentidad(identidadId: st
   await prisma.$transaction(
     pendientes.map((p) => {
       // El `where` de arriba ya garantiza `repiteCadaMeses !== null`.
-      const siguiente = siguienteOcurrencia(p.fechaEvento, p.repiteCadaMeses as number)
+      const meses = p.repiteCadaMeses as number
+      let siguiente = siguienteOcurrencia(p.fechaEvento, meses)
+      while (siguiente.getTime() < hoyUtc.getTime()) siguiente = siguienteOcurrencia(siguiente, meses)
       return prisma.portalObligacion.update({
         where: { id: p.id },
         data: {
