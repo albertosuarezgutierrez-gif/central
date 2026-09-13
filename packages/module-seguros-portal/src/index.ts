@@ -87,6 +87,7 @@ export {
   DESCRIPCION_MIN,
   DESCRIPCION_MAX,
   LUGAR_MAX,
+  CAMPO_VEHICULO_MAX,
   ANIOS_MAXIMOS_ATRAS,
   comunicadoACompania,
   parsearFechaHecho,

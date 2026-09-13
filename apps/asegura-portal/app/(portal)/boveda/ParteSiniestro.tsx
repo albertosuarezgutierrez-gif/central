@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { useId, useRef, useState } from 'react'
 
 import {
+  CAMPO_VEHICULO_MAX,
   DESCRIPCION_MAX,
   DESCRIPCION_MIN,
   DIAS_COMUNICACION_LCS,
@@ -1193,6 +1194,7 @@ function VehiculoOtro({
           onChange={(e) => onCambio('matriculaPropia', e.target.value)}
           placeholder="1234 ABC"
           autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
           disabled={deshabilitado}
         />
       </div>
@@ -1207,6 +1209,7 @@ function VehiculoOtro({
           onChange={(e) => onCambio('matriculaTercero', e.target.value)}
           placeholder="9999 XYZ"
           autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
           disabled={deshabilitado}
         />
       </div>
@@ -1220,6 +1223,7 @@ function VehiculoOtro({
           value={valor.conductorTercero}
           onChange={(e) => onCambio('conductorTercero', e.target.value)}
           autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
           disabled={deshabilitado}
         />
       </div>
@@ -1233,6 +1237,7 @@ function VehiculoOtro({
           value={valor.aseguradoraTercero}
           onChange={(e) => onCambio('aseguradoraTercero', e.target.value)}
           autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
           disabled={deshabilitado}
         />
       </div>
@@ -1246,6 +1251,7 @@ function VehiculoOtro({
           value={valor.telefonoTercero}
           onChange={(e) => onCambio('telefonoTercero', e.target.value)}
           autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
           disabled={deshabilitado}
         />
       </div>
@@ -1306,6 +1312,12 @@ function CroquisDibujo({ onGuardar, onCancelar }: { onGuardar: (blob: Blob) => v
 
   function empezar(e: React.PointerEvent<HTMLCanvasElement>) {
     dibujandoRef.current = true
+    // 🚨 Sin esto, el trazo se corta en cuanto el dedo/ratón sale del
+    // rectángulo del lienzo (frecuente: son solo 260 px de alto) y NO se
+    // reanuda al volver a entrar — `pointerdown` no se repite con el botón ya
+    // pulsado. `setPointerCapture` sigue mandando los eventos de ESTE puntero
+    // al lienzo pase lo que pase; mismo patrón que ya usa `apps/ia-rest`.
+    e.currentTarget.setPointerCapture(e.pointerId)
     const ctx = contexto()
     const p = punto(e)
     if (ctx === null) return
@@ -1326,8 +1338,12 @@ function CroquisDibujo({ onGuardar, onCancelar }: { onGuardar: (blob: Blob) => v
     setVacio(false)
   }
 
-  function soltar() {
+  function soltar(e: React.PointerEvent<HTMLCanvasElement>) {
     dibujandoRef.current = false
+    // Suelta la captura explícitamente: dejarla viva no rompe nada (el
+    // navegador la libera solo al soltar el puntero), pero soltarla aquí deja
+    // claro que el trazo ha terminado y no depende de ese comportamiento implícito.
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
   }
 
   function borrar() {

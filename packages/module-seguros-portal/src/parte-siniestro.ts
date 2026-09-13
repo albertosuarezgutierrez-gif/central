@@ -60,6 +60,15 @@ export { DIAS_COMUNICACION_LCS } from '@central/module-seguros'
 export const DESCRIPCION_MIN = 15
 export const DESCRIPCION_MAX = 2000
 export const LUGAR_MAX = 200
+/**
+ * Tope de CADA campo de «datos del otro vehículo» (matrícula, conductor,
+ * aseguradora, teléfono). Sin tope, uno de estos campos —que no tienen la
+ * validación del backend que sí tiene `descripcion`— podía por sí solo
+ * empujar `componerDescripcion()` por encima de `DESCRIPCION_MAX` y el error
+ * de «te has pasado de largo» saldría pegado al campo equivocado (la
+ * descripción, no el que de verdad sobra).
+ */
+export const CAMPO_VEHICULO_MAX = 60
 /** Más atrás no se abre un parte por el portal: eso es una conversación con Alberto. */
 export const ANIOS_MAXIMOS_ATRAS = 5
 
