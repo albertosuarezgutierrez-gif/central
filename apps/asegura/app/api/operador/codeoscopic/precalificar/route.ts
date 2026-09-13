@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { hoyEnMadrid } from '@/lib/codeoscopic/fecha-efecto'
 import { operadorAutorizado } from '@/lib/operador'
 import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion } from '@/lib/cartera-ficha'
@@ -386,5 +387,7 @@ function error(status: number, causa: string, mensaje: string) {
 }
 
 function hoyIso(): string {
-  return new Date().toISOString().slice(0, 10)
+  // En hora de Madrid, que es la que usa el vendor para «hoy»: en UTC, entre las
+  // 22:00 y las 00:00 la fecha va un día por detrás.
+  return hoyEnMadrid()
 }

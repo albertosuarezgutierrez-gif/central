@@ -1,4 +1,5 @@
 import { test } from 'node:test'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
 import assert from 'node:assert/strict'
 import {
   construirPeticionAuto,
@@ -24,7 +25,8 @@ const BASE: DatosAuto = {
   cpCirculacion: '41003',
   municipioCirculacionId: 12345,
   garaje: 'CommunalParking',
-  fechaEfecto: '2026-09-15',
+  // Relativa a hoy: la regla [hoy, hoy+90] la volvería roja un mes después de escribirla.
+  fechaEfecto: sumarDias(hoyEnMadrid(), 7),
 }
 
 // ─── La regla que más cotizaciones tumba ─────────────────────────────────────
@@ -253,4 +255,17 @@ test('el ramo va como «Car» y la referencia nuestra solo si la hay', () => {
   assert.equal(sin.externalId, undefined)
   const con = construirPeticionAuto({ ...BASE, referenciaExterna: 'cot-000000' }) as any
   assert.equal(con.externalId, 'cot-000000')
+})
+
+// ─── La fecha de efecto: ni antes de hoy ni a más de 90 días (13/09/2026) ────
+test('revisarDatosAuto: la fecha de efecto de AYER se reprocha antes de pagar (proyecto 40685666)', () => {
+  const r = revisarDatosAuto({ ...BASE, fechaEfecto: '2026-09-12' }, { hoy: '2026-09-13' })
+  assert.ok(r.some((x) => x.campo === 'fechaEfecto' && /anterior a hoy/.test(x.motivo)))
+})
+
+test('revisarDatosAuto: hoy y hoy+90 valen; hoy+91 se reprocha', () => {
+  assert.equal(revisarDatosAuto({ ...BASE, fechaEfecto: '2026-09-13' }, { hoy: '2026-09-13' }).filter((x) => x.campo === 'fechaEfecto').length, 0)
+  assert.equal(revisarDatosAuto({ ...BASE, fechaEfecto: '2026-12-12' }, { hoy: '2026-09-13' }).filter((x) => x.campo === 'fechaEfecto').length, 0)
+  const r = revisarDatosAuto({ ...BASE, fechaEfecto: '2026-12-13' }, { hoy: '2026-09-13' })
+  assert.ok(r.some((x) => x.campo === 'fechaEfecto' && /90 días/.test(x.motivo)))
 })

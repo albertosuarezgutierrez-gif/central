@@ -37,11 +37,24 @@ function cotizacionIdDe(guardado: unknown): string | null {
 // de ayer/mañana según la hora): es el valor que Allianz acepta siempre — su
 // 400 real es «no puede estar a más de 90 días vista», nunca por ser hoy.
 function hoyISO(): string {
+  return fechaLocalISO(new Date())
+}
+
+/** Hoy + `n` días, en local (mismo criterio que `hoyISO`). */
+function masDiasISO(n: number): string {
   const d = new Date()
+  d.setDate(d.getDate() + n)
+  return fechaLocalISO(d)
+}
+
+function fechaLocalISO(d: Date): string {
   const mes = String(d.getMonth() + 1).padStart(2, '0')
   const dia = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${mes}-${dia}`
 }
+
+/** Lo más lejos que la compañía admite la fecha de efecto (misma constante que asegura). */
+const MAX_DIAS_VISTA_EFECTO = 90
 
 /** Quita tildes y mayúsculas para comparar «Casado» con «CASADO».
  *  Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`. */
@@ -1309,12 +1322,15 @@ export default function Retarificador({
           </div>
         )}
 
-        {/* 🚨 Fecha de efecto — corrección MANUAL, NUNCA gated por "falta": el
-            servidor SIEMPRE supone una (el día siguiente al vencimiento de la
-            póliza actual, o mañana si no hay vencimiento), así que nunca
-            aparece en `faltanInicial`. Existe porque ese supuesto se rechaza
-            al confirmar el precio (ReRate) si cae a más de 90 días vista — y
-            para entonces ya se ha pagado el 0,50€ de esta pantalla. Se
+        {/* 🚨 Fecha de efecto — corrección MANUAL, resuelta SIEMPRE en pantalla
+            (`RESUELTOS_EN_PANTALLA`): el servidor supone una (el día siguiente al
+            vencimiento de la póliza actual, o mañana si no hay vencimiento) y
+            desde el 13/09/2026 la reprocha en `faltanInicial` si cae fuera de
+            [hoy, hoy+90] — pero este campo va precargado y se manda como
+            corrección, así que ese reparo nunca bloquea. Existe porque ese
+            supuesto se rechaza al confirmar el precio (ReRate) si cae a más de
+            90 días vista o ya ha pasado — y para entonces ya se ha pagado el
+            0,50€ de esta pantalla. Se
             corrige AQUÍ, antes de pagar, no después: `effectiveDate` no es
             editable una vez creado el proyecto en el vendor (11-12/09/2026,
             varios intentos reales sobre el proyecto de Pilar Franco Ruz).
@@ -1343,6 +1359,8 @@ export default function Retarificador({
               id="c-fechaEfecto"
               type="date"
               value={correcciones.fechaEfecto ?? ''}
+              min={hoyISO()}
+              max={masDiasISO(MAX_DIAS_VISTA_EFECTO)}
               onChange={(e) => setCorrecciones((c) => ({ ...c, fechaEfecto: e.target.value }))}
               style={{ minHeight: 44 }}
             />
@@ -2196,6 +2214,7 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
  * en vez de desaparecer: un hueco que no se ve es el peor de los estados.
  */
 const RESUELTOS_EN_PANTALLA = new Set<string>([
+  'fechaEfecto',
   'codigoVehiculo',
   'garaje',
   'fechaMatriculacion',

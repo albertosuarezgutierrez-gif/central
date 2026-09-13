@@ -15,6 +15,16 @@
 
 export const RE_FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/
 
+/** Lo más lejos que la compañía admite la fecha de efecto (cepo 1, medido 11-12/09/2026). */
+export const MAX_DIAS_VISTA = 90
+
+/** `f` (aaaa-mm-dd) más `n` días, en aaaa-mm-dd. Aritmética en UTC a propósito: sin horas no hay DST. */
+export function sumarDias(f: string, n: number): string {
+  const d = new Date(`${f}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
 /** Hoy en Madrid, `YYYY-MM-DD`. El vendor decide «hoy» en hora española; el
  *  servidor corre en UTC y entre las 22:00 y las 00:00 UTC ya es mañana aquí. */
 export function hoyEnMadrid(ahora: Date = new Date()): string {
@@ -48,4 +58,21 @@ export function mensajeFechaCaducada(fechaEfecto: string, projectId: string, hoy
     'No se ha gastado nada. Hay que descartarla y pedir precio de cero (0,50€) con la fecha de efecto correcta — ' +
     'y confirmar y emitir antes de que pase ese día.'
   )
+}
+
+/**
+ * La regla ENTERA de la fecha de efecto, para aplicarla ANTES de pagar (`revisarDatosAuto`)
+ * y no descubrirla a 0,50€ en el ReRate: `null` si vale; si no, el motivo en castellano.
+ * Una fecha sin forma ISO no es asunto de esta función (`revisarDatosAuto` ya la reprocha).
+ */
+export function motivoFechaEfectoInvalida(fechaEfecto: string, hoy: string = hoyEnMadrid()): string | null {
+  if (!RE_FECHA_ISO.test(fechaEfecto)) return null
+  if (fechaEfecto < hoy) {
+    return `no puede ser anterior a hoy (${hoy}): la compañía no confirma ni emite con una fecha de efecto pasada`
+  }
+  const tope = sumarDias(hoy, MAX_DIAS_VISTA)
+  if (fechaEfecto > tope) {
+    return `no puede estar a más de ${MAX_DIAS_VISTA} días vista (como muy tarde el ${tope}): la compañía la rechaza al confirmar el precio`
+  }
+  return null
 }

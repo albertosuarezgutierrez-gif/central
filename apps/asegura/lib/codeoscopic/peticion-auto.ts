@@ -10,6 +10,7 @@
 // contra el entorno real, y están transcritas en docs/CODEOSCOPIC-TRASPASO-MANUEL.md §3.
 
 import { construirPersona, revisarPersona, RE_EMAIL, type DatosPersona } from './persona.ts'
+import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
 
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
 export type DatosAuto = DatosPersona & {
@@ -62,7 +63,11 @@ const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
  * campo. Una oportunidad NUEVA (presupuesto rápido, fase 1) no lo pone: ahí un
  * dato que no hace falta para el precio no bloquea.
  */
-export type OpcionesRevision = { paraEmitir?: boolean }
+export type OpcionesRevision = {
+  paraEmitir?: boolean
+  /** «Hoy» para la regla de la fecha de efecto (aaaa-mm-dd). Por defecto, hoy en Madrid; inyectable en tests. */
+  hoy?: string
+}
 
 /**
  * Comprueba los datos ANTES de gastar los 0,50€.
@@ -116,6 +121,14 @@ export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevisi
   for (const c of ['fechaCarnet', 'fechaMatriculacion', 'fechaEfecto'] as const) {
     if (!texto(d[c])) falta(c)
     else if (!RE_FECHA.test(String(d[c]))) r.push({ campo: c, motivo: 'la fecha tiene que ser aaaa-mm-dd' })
+  }
+  // La fecha de efecto tiene DOS cepos en el vendor y ninguno se arregla después
+  // de pagar (`effectiveDate` es de solo lectura): ni anterior a hoy (13/09/2026,
+  // proyecto 40685666) ni a más de 90 días vista (11-12/09/2026). Se reprocha
+  // AQUÍ, gratis, con el mismo `campo` que la pantalla ya sabe pintar.
+  if (texto(d.fechaEfecto) && RE_FECHA.test(String(d.fechaEfecto))) {
+    const mal = motivoFechaEfectoInvalida(String(d.fechaEfecto), opciones.hoy)
+    if (mal) r.push({ campo: 'fechaEfecto', motivo: mal })
   }
 
   // Kilómetros: obligatorio para el vendor aunque parezca un detalle.
