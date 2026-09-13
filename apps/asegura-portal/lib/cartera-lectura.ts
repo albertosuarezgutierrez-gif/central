@@ -717,6 +717,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           cosa: ve.bien ? b.cosa : null,
           ubicacion: ve.direccionRiesgo ? b.ubicacion : null,
           detalles: ve.bien ? b.detalles : [],
+          // Mismo nivel que `cosa`: es el mismo dato de contrato, solo que
+          // suelto para poder autorrellenar un campo sin parsear el texto.
+          matricula: ve.bien ? b.matricula : null,
         }
       })(),
       // Una sola lectura y una sola guarda: los abiertos se DERIVAN del

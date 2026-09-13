@@ -535,6 +535,7 @@ function opcionCartera(p: PolizaPortal, companias: readonly FilaCompania[], titu
     // esperar a una petición.
     canal: canalDeCompania(p.compania, companias),
     ramo: p.ramo,
+    matriculaPropia: p.bien.matricula,
     etiqueta: [
       p.compania,
       RAMO[p.ramo] ?? p.ramo,

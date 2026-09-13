@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 
 import {
   CAMPO_VEHICULO_MAX,
@@ -88,6 +88,14 @@ export type PolizaOpcionParte = {
    * la descripción libre.
    */
   ramo?: string | null
+  /**
+   * La matrícula de ESTA póliza, si la conocemos (`bien.matricula` de
+   * `@central/module-seguros-portal`). Solo sirve para AUTORRELLENAR «Tu
+   * matrícula» — nunca se muestra sola, y el campo sigue siendo editable:
+   * es una sugerencia, no un dato impuesto. `null`/`undefined` = no la
+   * sabemos (no es de auto, o la compañía no la ha informado).
+   */
+  matriculaPropia?: string | null
 }
 
 /**
@@ -516,6 +524,9 @@ export function ParteSiniestro({
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null)
   const [recibido, setRecibido] = useState<Plazo | null>(null)
   const [ficheros, setFicheros] = useState<Elegido[]>([])
+  /** Estado del botón «Ha pasado ahora mismo»: solo afecta a la geolocalización
+   *  (fecha y hora se rellenan siempre, al instante, sin esperar al GPS). */
+  const [geo, setGeo] = useState<'reposo' | 'buscando' | 'ok' | 'error'>('reposo')
   /**
    * El parte YA creado. Se guarda porque los adjuntos cuelgan de él: si alguno
    * falla, «Reintentar» tiene que poder volver a subirlo SIN crear otro parte.
@@ -523,6 +534,14 @@ export function ParteSiniestro({
    * cerrar a mano.
    */
   const [parteId, setParteId] = useState<string | null>(null)
+  /**
+   * Cuenta cada `abrir()`/`cerrar()`. La geolocalización puede tardar hasta 8 s
+   * (el `timeout`), y si entre el clic y la respuesta el cliente cierra el
+   * formulario y lo reabre para OTRO siniestro, la respuesta tardía no puede
+   * escribir sobre el formulario nuevo: sería la ubicación de un accidente
+   * distinto colándose en «Dónde», sin que nada avise.
+   */
+  const sesionRef = useRef(0)
 
   const enviando = estado === 'enviando'
   const subidos = ficheros.filter((f) => f.estado === 'ok')
@@ -537,6 +556,26 @@ export function ParteSiniestro({
   const polizaSeleccionada = polizas.find((p) => p.valor === form.poliza) ?? null
   const mostrarVehiculo = esAuto(polizaSeleccionada?.ramo) && form.hayTerceros === 'si'
 
+  /**
+   * Al elegir póliza, autorrellena «Tu matrícula» si la tenemos (dictado de
+   * Alberto: rellenar lo más rápido posible con lo que ya tenemos, para
+   * tarificar). Solo si el campo sigue VACÍO: si la persona ya había escrito
+   * algo —antes de elegir póliza, o corrigiendo lo que pusimos al cambiar de
+   * póliza— no se lo pisamos. No es un valor de solo lectura: sigue siendo un
+   * `<input>` normal, así que si la matrícula que tenemos está mal (el coche
+   * ha cambiado, p. ej.) se puede corregir sin más. Se hace al SELECCIONAR,
+   * no en un efecto sobre `polizaSeleccionada`: así el autorrelleno es un
+   * único cambio de estado, no un segundo render disparado desde un efecto.
+   */
+  function seleccionarPoliza(valor: string) {
+    setForm((f) => {
+      const matricula = polizas.find((p) => p.valor === valor)?.matriculaPropia
+      const vehiculo = matricula && f.vehiculo.matriculaPropia === '' ? { ...f.vehiculo, matriculaPropia: matricula } : f.vehiculo
+      return { ...f, poliza: valor, vehiculo }
+    })
+    setErrores((e) => ({ ...e, poliza: undefined }))
+  }
+
   function escribirVehiculo(campo: Exclude<keyof FormVehiculo, 'zonasDano'>, valor: string) {
     setForm((f) => ({ ...f, vehiculo: { ...f.vehiculo, [campo]: valor } }))
   }
@@ -550,13 +589,64 @@ export function ParteSiniestro({
     setFicheros([])
     setParteId(null)
     setEstado('reposo')
+    setGeo('reposo')
     setAbierto(true)
+    sesionRef.current += 1
+  }
+
+  /**
+   * «Ha pasado ahora mismo»: rellena fecha, hora y —si el navegador lo
+   * permite— el sitio, de un toque. Dictado de Alberto: rellenar lo más
+   * rápido posible con lo que ya sabemos, para poder tarificar cuanto antes.
+   *
+   * 🚨 Fecha y hora se ponen YA, síncronas: no dependen del GPS, que puede
+   * tardar segundos o no llegar nunca (denegado, sin señal, sin HTTPS). Si el
+   * GPS fallara y esos dos campos esperasen a él, el botón dejaría de hacer
+   * lo único que SIEMPRE puede hacer.
+   *
+   * 🚨 El sitio NO se convierte en una dirección: se escribe la coordenada
+   * cruda con su precisión. Inventar «Avenida de la Constitución» a partir de
+   * un lat/lon sin geocodificar sería el mismo fallo que el resto del parte
+   * persigue — un dato con aspecto de haberlo dicho la persona, y no es así.
+   * Alberto puede pegar la coordenada en un mapa; el cliente puede corregirla
+   * por la calle si la sabe, el campo sigue siendo un `<input>` normal.
+   */
+  function marcarAhoraMismo() {
+    const ahora = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const fechaHoy = `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(ahora.getDate())}`
+    const horaAhora = `${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`
+    setForm((f) => ({ ...f, fechaHecho: fechaHoy, horaAproximada: horaAhora }))
+    setErrores((e) => ({ ...e, fechaHecho: undefined, horaAproximada: undefined }))
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGeo('error')
+      return
+    }
+    setGeo('buscando')
+    const sesion = sesionRef.current
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (sesionRef.current !== sesion) return // el formulario se cerró/reabrió mientras se buscaba
+        const lat = pos.coords.latitude.toFixed(5)
+        const lon = pos.coords.longitude.toFixed(5)
+        const precision = Math.round(pos.coords.accuracy)
+        setForm((f) => ({ ...f, lugar: `Ubicación GPS: ${lat}, ${lon} (±${precision} m)`.slice(0, LUGAR_MAX) }))
+        setGeo('ok')
+      },
+      // Denegado, sin señal, o sin HTTPS: no se inventa nada, se dice que no se pudo.
+      () => {
+        if (sesionRef.current === sesion) setGeo('error')
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+    )
   }
 
   function cerrar() {
     setAbierto(false)
     setErrores({})
     setErrorGeneral(null)
+    sesionRef.current += 1
   }
 
   /** Un campo con error: al tocarlo se le quita el mensaje, que ya no describe
@@ -929,6 +1019,25 @@ export function ParteSiniestro({
             {errores.descripcion && <p className="editor-error">{errores.descripcion}</p>}
           </div>
 
+          {/* Rellena fecha, hora y sitio de un toque, para quien avisa
+              mientras el golpe acaba de pasar — dictado de Alberto: lo más
+              rápido posible con lo que ya sabemos, para tarificar cuanto
+              antes. Fuera del propio campo de fecha porque también toca la
+              hora y el sitio, que están más abajo. */}
+          <div className="editor-campo">
+            <button type="button" className="boton secundario" onClick={marcarAhoraMismo} disabled={enviando}>
+              Ha pasado ahora mismo
+            </button>
+            {geo === 'buscando' && <p className="editor-ayuda">Buscando tu ubicación…</p>}
+            {geo === 'ok' && <p className="editor-ayuda">Fecha, hora y ubicación rellenadas. Revísalas.</p>}
+            {geo === 'error' && (
+              <p className="editor-ayuda">
+                Fecha y hora rellenadas. No hemos podido situarte (revisa el permiso de ubicación) — escribe el
+                sitio a mano si lo sabes.
+              </p>
+            )}
+          </div>
+
           {/* La fecha SÍ es obligatoria aquí, y es la única que lo es. Ojo al
               contraste con `EditarPoliza.tsx`, donde el vencimiento se destaca
               pero NO se exige: allí el dato lo tiene la compañía y se puede
@@ -1038,7 +1147,7 @@ export function ParteSiniestro({
               id={`${uid}-poliza`}
               className="campo"
               value={form.poliza}
-              onChange={(e) => escribir('poliza', e.target.value)}
+              onChange={(e) => seleccionarPoliza(e.target.value)}
               aria-describedby={`${uid}-poliza-ayuda`}
               aria-invalid={errores.poliza ? true : undefined}
               disabled={enviando}
