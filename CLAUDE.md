@@ -281,9 +281,14 @@ cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el u
   shortest_path/references/imports_exports/rank_files/render_subgraph` ni `query_graph` para código
   (sustituidos por `grafo_*`), **ni `remember`/`recall`/`memories_about`** (sustituidos por
   `memoria_buscar` + el hábito ya existente de anotar `docs/CONTEXTO-SESIONES.md` al cerrar sesión).
-  Con esto se cumple la condición de Alberto («que lo creado sea 100% igual») sobre las 4 preguntas
-  medidas — muestra pequeña, no exhaustiva, pero consistente y sin ningún caso peor. Decisión de
-  cancelar Graphify: de Alberto.
+  **Ronda 2 (13/09/2026, sin el sesgo de elegir preguntas sabiendo ya la respuesta):** 5 preguntas
+  sobre desarrollo real (2 de código con `grafo_impacto`/`grafo_callers`, 3 de memoria) — **5 de 5**
+  para el grafo propio/`memoria_buscar`, **0 de 5** para Graphify, con dos fallos duros nuevos:
+  `graphify_callers` no resolvió el símbolo, y `graphify_impact` mezcló el archivo real con 8
+  ficheros de OTRA app. Total acumulado: **9 de 9** para el grafo propio/`memoria_buscar`, **0 de 9**
+  limpios para Graphify. Con esto se cumple la condición de Alberto («que lo creado sea 100% igual»)
+  sobre las 9 preguntas medidas — ya no es solo "consistente", es sin un solo caso a favor de
+  Graphify. Decisión de cancelar Graphify: de Alberto.
 - **📏 Todo uso de herramienta se MIDE solo** (hook `PostToolUse` → `scripts/uso-herramientas.mjs`, un
   JSON por sesión en `docs/uso-herramientas/AAAA-MM/`; en vivo se escribe en `.git/uso-herramientas/` y
   el `Stop` hook lo copia y commitea solo con la memoria o cada 30 min — persistirlo en cada `Stop` era

@@ -132,6 +132,32 @@ pequeña, no una prueba exhaustiva — pero es consistente y en la única direcc
 peor). Con esto, la sección de Graphify en `CLAUDE.md` deja de marcar `remember`/`recall`/
 `memories_about` como pieza sin sustituto.
 
+## Ronda 2 — desarrollo real, sin sesgo (13/09/2026)
+
+La ronda anterior tiene un sesgo de método: las 4 preguntas las elegí yo sabiendo ya la respuesta
+correcta. Para corregirlo, esta ronda usa **5 preguntas sobre trabajo real** (2 de código, 3 de
+memoria) tomadas directamente de commits/decisiones recientes del repo — no fabricadas para la
+prueba — consultando primero el grafo propio/`memoria_buscar` (como manda `CLAUDE.md`) y **después**
+Graphify, sin haber visto ya el resultado correcto al preguntarle.
+
+| Caso | Grafo propio / `memoria_buscar` | Graphify |
+|---|---|---|
+| Impacto de `apps/asegura-web/lib/companias.ts` | `grafo_impacto`: **1 archivo**, el consumidor real (`asegura-web/app/page.tsx`) | `graphify_impact`: 11 nodos — mezcla el archivo real con **8 ficheros de OTRA app** (`asegura-portal`: session.ts, auth.ts, dinero.ts, hojas.ts, canal.ts, rate-limit.ts...) sin relación, y **no incluye** el consumidor real |
+| Callers de `requireSecret` (`@central/core-identity`) | `grafo_callers`: **5 llamadas reales** correctas (asegura-portal, ialimp, plataforma, test) | `graphify_callers`: **`error: unresolved symbol`** — no lo encuentra |
+| ¿Por qué `asegura-web` no tiene BD propia? | `memoria_buscar`: acierta como **#1** (sim 0,541), motivo completo (reenvío por servidor + `x-forwarded-for`) | `recall`: nada relevante — devuelve hechos sobre el bug de Smoobu HMAC del día anterior |
+| ¿Por qué `clientes.grupoasegura.es` lleva registro A y no CNAME? | `memoria_buscar`: acierta como **#1** (sim 0,577), motivo exacto (MX de IONOS) | `recall`: nada relevante — mismos hechos de Smoobu |
+| ¿Qué decidió Alberto sobre el logo de Occident? | `memoria_buscar`: acierta como **#1** (sim 0,563), cita literal («es el de Catalana Occidente, la marca vieja») | `recall`: nada relevante — mismos hechos de Smoobu + reviews de PRs genéricas |
+
+**Resultado: 5 de 5 — grafo propio/`memoria_buscar` acertó las cinco; Graphify falló las cinco, dos
+de ellas con fallos duros** (símbolo no resuelto; impacto contaminado con archivos de otra app). Las
+3 de `recall` no son "poco relevantes": son **la misma respuesta de Smoobu para las tres preguntas
+distintas** — la memoria de Graphify parece anclada a lo último que tiene, no a lo que se le pregunta.
+
+**Total acumulado (dos rondas, 9 preguntas de memoria/código reales): grafo propio/`memoria_buscar`
+9 de 9, Graphify 0 de 9 sin fallo total y 1 de 9 relevante-pero-desfasado.** Ya no es "muestra
+pequeña, consistente" — es una muestra pequeña **sin ni un solo caso a favor de Graphify**, con dos
+fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ronda 1 no había tocado.
+
 ## Agregado
 
 <!-- ahorro:inicio -->
