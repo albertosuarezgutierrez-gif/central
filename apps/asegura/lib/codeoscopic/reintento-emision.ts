@@ -85,3 +85,136 @@ export function rastroSolicitudEmision(crudo: unknown, profundidadMax = 4): Rast
   anda(crudo, '', 0)
   return out
 }
+
+// ── Lo que el portal SÍ documenta (leído el 13/09/2026, tras el 500 del 40685793) ──
+//
+// `GET /insurances/{id}` trae `policyApplications[]` («The insurance policy
+// applications that have been submitted»), cada una `PolicyApplication_V1`:
+// `id`, `creationDateTime`, `status: {id, name, description}`, `policyNumber`
+// («The policy number assigned by the issuer»), `quote`, `payment`… Y existe
+// `GET /insurances/{id}/policy-applications/{policyApplicationId}`. No hay
+// webhooks ni idempotencia: ESTA lectura es la única reconciliación posible.
+// El único `status.id` con ejemplo en el portal es `Approved`; el resto se
+// infiere de la prosa («approved or rejected… held pending for eligibility
+// review or in need for manual intervention»), así que lo que no se reconoce
+// se enseña tal cual, nunca se colapsa a «aprobada» ni a «rechazada».
+
+export type VeredictoSolicitud = 'aprobada' | 'rechazada' | 'pendiente' | 'desconocido'
+
+export type SolicitudEmision = {
+  id: string | null
+  creadaEn: string | null
+  estadoId: string | null
+  estadoNombre: string | null
+  numeroPoliza: string | null
+  veredicto: VeredictoSolicitud
+}
+
+const texto = (v: unknown): string | null => {
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v)
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+/** `status.id` del vendor → qué significa para nosotros. `Approved` es el único
+ *  valor documentado con ejemplo; los demás patrones vienen de la prosa. */
+export function veredictoSolicitud(estadoId: string | null | undefined): VeredictoSolicitud {
+  if (!estadoId) return 'desconocido'
+  const s = estadoId.trim().toLowerCase()
+  if (/^(approved|accepted|issued|emitida?)$/.test(s)) return 'aprobada'
+  if (/^(rejected|denied|refused|cancel+ed|rechazada?)$/.test(s)) return 'rechazada'
+  if (/pending|review|held|hold|manual|revised|waiting|process/.test(s)) return 'pendiente'
+  return 'desconocido'
+}
+
+function leerSolicitud(v: unknown): SolicitudEmision | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  const status = typeof o.status === 'object' && o.status !== null ? (o.status as Record<string, unknown>) : null
+  const estadoId = texto(status?.id) ?? texto(o.status)
+  const s: SolicitudEmision = {
+    id: texto(o.id),
+    creadaEn: texto(o.creationDateTime),
+    estadoId,
+    estadoNombre: texto(status?.name),
+    numeroPoliza: texto(o.policyNumber),
+    veredicto: veredictoSolicitud(estadoId),
+  }
+  // Un `id` o una fecha solos no bastan (el propio proyecto los tiene): hace
+  // falta una señal PROPIA de PolicyApplication_V1 — el estado o el nº de póliza.
+  if (!s.estadoId && !s.numeroPoliza) return null
+  return s
+}
+
+/**
+ * Las solicitudes de emisión que cuenta el vendor, con la forma que documenta
+ * el portal. Acepta el proyecto entero (`GET /insurances/{id}` →
+ * `policyApplications[]`), la respuesta del Submit (array de solicitudes, o un
+ * objeto con `policyApplications`) o una solicitud suelta.
+ * `[]` = «el vendor no cuenta ninguna», que NO es «la compañía no emitió» si
+ * además el último intento acabó sin respuesta: ahí manda Avant2.
+ */
+export function solicitudesEmision(crudo: unknown): SolicitudEmision[] {
+  if (Array.isArray(crudo)) return crudo.map(leerSolicitud).filter((s): s is SolicitudEmision => s !== null)
+  if (typeof crudo !== 'object' || crudo === null) return []
+  const o = crudo as Record<string, unknown>
+  if (Array.isArray(o.policyApplications)) return solicitudesEmision(o.policyApplications)
+  // Un PROYECTO (tiene `effectiveDate`/`mainQuotes`/`offers`) sin `policyApplications`
+  // no cuenta ninguna solicitud: nunca se lee el objeto raíz como si lo fuera.
+  if ('effectiveDate' in o || 'mainQuotes' in o || 'offers' in o || 'insuranceLine' in o) return []
+  const suelta = leerSolicitud(o)
+  return suelta ? [suelta] : []
+}
+
+/** Una solicitud APROBADA o PENDIENTE sigue viva en la compañía: reenviar
+ *  sería la segunda póliza (o la segunda solicitud) del mismo riesgo. */
+export function solicitudViva(solicitudes: readonly SolicitudEmision[]): SolicitudEmision | null {
+  return solicitudes.find((s) => s.veredicto === 'aprobada') ?? solicitudes.find((s) => s.veredicto === 'pendiente') ?? null
+}
+
+/** El buzón que enlaza la fila del 500 en la tabla de errores del portal
+ *  («report the issue, including the full response, to the API support team»).
+ *  La cabecera del spec dice `soporteapi@codeoscopic.com`; el portal no aclara cuál. */
+export const SOPORTE_API_CODEOSCOPIC = 'soporteapi@avant2.es'
+
+export type ConsejoTrasFallo = { tipo: 'reportar' | 'reintentar_en_minutos'; texto: string }
+
+/** El `requestId` que Codeoscopic pone en el cuerpo de cada error, para el parte a soporte. */
+export function requestIdDe(errorMensaje: string | null | undefined): string | null {
+  const m = errorMensaje?.match(/"requestId"\s*:\s*"([^"]+)"/)
+  return m ? m[1] : null
+}
+
+/**
+ * Qué manda hacer el PORTAL con cada 5xx (`#overview--errors`, literal):
+ * 500 → «report the issue, including the full response, to the API support
+ * team»; 502/503/504 → «try again the operation in a few minutes». No es lo
+ * mismo, y hasta hoy la pantalla los trataba igual. `null` si no es un 5xx.
+ */
+export function consejoTrasFallo(errorMensaje: string | null | undefined): ConsejoTrasFallo | null {
+  if (!errorMensaje) return null
+  const m = errorMensaje.trim().match(RE_QUIZA_EMITIDO_5XX)
+  if (!m) return null
+  const status = Number(m[0])
+  if (status === 502 || status === 503 || status === 504) {
+    const que = status === 502 ? 'un error de comunicación con la compañía' : status === 504 ? 'un timeout con la compañía' : 'que la API está temporalmente fuera de servicio'
+    return {
+      tipo: 'reintentar_en_minutos',
+      texto: `El portal de Codeoscopic documenta el ${status} como ${que} y pide «try again the operation in a few minutes» — pero SIN garantía de que no duplique: antes de reintentar, mira si el proyecto ya cuenta una solicitud.`,
+    }
+  }
+  const rid = requestIdDe(errorMensaje)
+  const conRid = rid ? ` (requestId ${rid})` : ''
+  if (status === 500) {
+    return {
+      tipo: 'reportar',
+      texto:
+        `El portal de Codeoscopic documenta el 500 como «an unhandled exception» y NO pide reintentar: pide reportarlo a ${SOPORTE_API_CODEOSCOPIC} con la respuesta completa${conRid}. ` +
+        'Solo 502/503/504 llevan «try again in a few minutes».',
+    }
+  }
+  // Un 5xx que el portal no documenta (501, 505…): no se le atribuye ninguna cita.
+  return {
+    tipo: 'reportar',
+    texto: `El portal de Codeoscopic no documenta el ${status}; repórtalo a ${SOPORTE_API_CODEOSCOPIC} con la respuesta completa${conRid} antes de reintentar.`,
+  }
+}

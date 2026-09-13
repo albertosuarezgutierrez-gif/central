@@ -393,6 +393,21 @@ ya cuenta una `policyApplication*` con contenido → 409 `solicitud_existente` (
 corredor mande `reintentoConfirmado: true`. El 502 del Submit lleva `quizaEmitido`. Un 400/422 NO cuenta
 como quizá-emitido: ahí el vendor rechazó. `policyApplicationSupported` de un precio es una capacidad, no
 una solicitud (el filtro la excluye).
+  ✅ **Y el mismo día el portal dio la forma exacta (leído con Claude en Chrome, `docs/CODEOSCOPIC-API-PORTAL.md`
+  § Policy application):** `GET /insurances/{id}` trae **`policyApplications[]`** con `status.id`
+  (`Approved` es el único con ejemplo) y **`policyNumber`** — o sea, SÍ hay reconciliación sin webhook.
+  `solicitudesEmision()` la lee (solo `policyApplications[]`: el objeto raíz del proyecto NUNCA se lee como
+  solicitud, tiene `creationDateTime` propio); el 409 lleva `solicitudes[]` + `consejo`; una **aprobada se
+  ACUÑA** (`acunarExistente: true`, mismo `registrarPolizaEmitida`, sin Submit, con o sin número aún), y
+  **con cualquier solicitud viva —aprobada o pendiente— el servidor niega el reintento aunque llegue
+  `reintentoConfirmado`**: solo sin ninguna viva decide el corredor. Ese bloque va ANTES de las puertas
+  del IBAN y de `policy-application-fields` (son del Submit, no del registro). Un `status.id` no reconocido
+  es `desconocido`, nunca aprobada. 🚨 **Y el `code-review` de ese PR destapó que NADA podía acuñarse:**
+  `registrarPolizaEmitida` decía `conflicto` si `codeoscopic_projects.poliza_id` estaba puesto — y
+  `/oferta` lo pone SIEMPRE (es la póliza RETARIFICADA). Ahora «ya acuñada» = `estado='emitida'`, y al
+  acuñar el proyecto pasa a apuntar a la póliza EMITIDA. Y el portal distingue los 5xx: **500 = «report the issue… to the API
+  support team» (`soporteapi@avant2.es`, con el `requestId`), 502/503/504 = «try again in a few minutes»**
+  (`consejoTrasFallo`). En la web de Allianz Alberto no vio póliza del 40685793 esa mañana.
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 

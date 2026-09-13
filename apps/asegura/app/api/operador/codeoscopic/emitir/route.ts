@@ -13,7 +13,7 @@ import {
   redactarCrudoVendor,
 } from '@/lib/codeoscopic/emitir'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada } from '@/lib/codeoscopic/fecha-efecto'
-import { intentoQuizaEmitido, rastroSolicitudEmision } from '@/lib/codeoscopic/reintento-emision'
+import { consejoTrasFallo, intentoQuizaEmitido, rastroSolicitudEmision, solicitudViva, solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
 import {
   conCuentaBancaria,
@@ -49,6 +49,8 @@ export const maxDuration = 60
  *   { projectId, confirmado: true, campos?: Record<string, unknown>, cuentaConfirmada?: string }
  *   `reintentoConfirmado: true` solo tras un intento que acabó en 5xx/corte de red (ver 409
  *   `reintento_sin_confirmar`): el corredor ha mirado el proyecto y no hay póliza.
+ *   `acunarExistente: true` cuando el proyecto YA cuenta una `policyApplication` aprobada con
+ *   nº de póliza (`solicitudes[]` del 409): se acuña ESA en la cartera y NO se envía nada.
  *
  * `cuentaConfirmada` es la MÁSCARA (`ES91…1332`) de la cuenta de cargo que la
  * pantalla enseñó tras el ReRate (`/oferta` → `cuenta`). Sin ella, una cuenta
@@ -148,6 +150,131 @@ export async function POST(req: Request) {
     )
   }
 
+  const r = resolverConfigEmision()
+  if (r.estado !== 'lista') {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'apagado',
+        mensaje: r.estado === 'apagado' ? r.motivo : `faltan variables: ${r.faltan.join(', ')}`,
+      },
+      { status: 503 },
+    )
+  }
+
+
+  const crudoPrevio = await leerProyectoCrudo(r.config, projectId).catch((e: unknown) => {
+    console.log(`[emitir] no se pudo leer el proyecto ${projectId} antes del Submit —`, e instanceof Error ? e.message : String(e))
+    return null
+  })
+  // ── Fail-closed ante un «quizá emitido» (13/09/2026, proyecto 40685793) ──
+  // Si el proyecto YA cuenta una solicitud de emisión, no se manda otra: el
+  // vendor no deduplica y un segundo Submit puede ser la segunda póliza del
+  // mismo coche. Y si el ÚLTIMO intento acabó en 5xx o en corte de red —
+  // «Unknown error while waiting for the operation to complete» — tampoco se
+  // reenvía a ciegas: el corredor tiene que mirar el estado (aquí va el
+  // proyecto crudo, gratis) y decirlo con `reintentoConfirmado: true`.
+  const rastro = crudoPrevio ? rastroSolicitudEmision(crudoPrevio) : []
+  // La forma que el portal SÍ documenta: `policyApplications[]` con `status.id` y
+  // `policyNumber`. Es la única reconciliación posible (no hay webhook real).
+  const solicitudes = crudoPrevio ? solicitudesEmision(crudoPrevio) : []
+  const viva = solicitudViva(solicitudes)
+  const quizaEmitidoAntes = intentoQuizaEmitido(p.error_mensaje)
+  const consejo = quizaEmitidoAntes ? consejoTrasFallo(p.error_mensaje) : null
+  const cargaReintento = () => ({
+    ultimoError: quizaEmitidoAntes ? p.error_mensaje : null,
+    consejo: consejo?.texto ?? null,
+    solicitudes,
+    rastro: redactarCrudoVendor(rastro),
+    proyectoLegible: crudoPrevio !== null,
+    crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
+  })
+
+  // ── La compañía YA aprobó una solicitud: se acuña ESA, no se envía otra ──
+  // Es el caso del 500 «Unknown error while waiting»: Codeoscopic dejó de
+  // esperar pero la solicitud siguió su curso en la compañía. Con nº de póliza
+  // en `policyApplications[]` no hay nada que reenviar — se registra en la
+  // cartera con ese número (mismo acuñado que el camino normal, sin Submit).
+  if (cuerpo.acunarExistente === true) {
+    const aprobada = solicitudes.find((s) => s.veredicto === 'aprobada')
+    if (!aprobada) {
+      return NextResponse.json(
+        {
+          estado: 'error',
+          causa: 'sin_solicitud_aprobada',
+          mensaje: crudoPrevio
+            ? 'El proyecto no cuenta ninguna solicitud APROBADA: no hay nada que acuñar.'
+            : 'No se ha podido leer el proyecto en Codeoscopic: no se puede acuñar lo que no se ve.',
+          ...cargaReintento(),
+        },
+        { status: 409 },
+      )
+    }
+    const catalogoAc = await catalogoCompanias()
+    const codigoDgsAc = catalogoAc?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
+    if (!codigoDgsAc) {
+      return NextResponse.json(
+        { estado: 'emitido_sin_acunar', mensaje: `«${p.aseguradora}» no tiene código DGS en companias_dgs: acúñala a mano${aprobada.numeroPoliza ? ` con el nº ${aprobada.numeroPoliza}` : ' (la compañía aún no ha dado número)'}.`, referenciaVendor: aprobada.numeroPoliza },
+        { status: 200 },
+      )
+    }
+    const acunadoAc = await registrarPolizaEmitida(correduria.id, {
+      clienteId: poliza.cliente_id,
+      actor,
+      catalogo: catalogoAc ?? undefined,
+      proyecto: {
+        projectIdCodeoscopic: projectId,
+        producto: poliza.tipo,
+        codigoDgs: codigoDgsAc,
+        numeroPoliza: aprobada.numeroPoliza,
+        primaAnual: numero(cuerpo.primaAnual),
+        emitidaEn: aprobada.creadaEn ?? new Date().toISOString(),
+        riesgo: esObjeto(poliza.datos_especificos) ? poliza.datos_especificos : null,
+        fraccionamiento: poliza.fraccionamiento,
+      },
+    })
+    console.log(
+      `[emitir] proyecto ${projectId}: solicitud ${aprobada.id ?? '?'} ya aprobada por la compañía (póliza ${aprobada.numeroPoliza ?? 'sin número'}) — ` +
+        (acunadoAc.ok ? 'acuñada sin reenviar' : `NO acuñada: ${acunadoAc.motivo}`),
+    )
+    return NextResponse.json({
+      estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
+      // Aquí no se ha enviado nada: si no se acuña, el motivo real es lo único útil.
+      ...(acunadoAc.ok ? {} : { mensaje: `La compañía ya tiene la póliza${aprobada.numeroPoliza ? ` nº ${aprobada.numeroPoliza}` : ''} pero no se ha podido registrar en la cartera: ${acunadoAc.motivo}` }),
+      referenciaVendor: aprobada.numeroPoliza,
+      acunado: acunadoAc,
+      cuenta: null,
+      crudo: redactarCrudoVendor(crudoPrevio),
+    })
+  }
+
+  // Con una solicitud VIVA en la compañía no hay reintento que valga: ni con
+  // `reintentoConfirmado` (un cliente viejo, o un POST directo al puerto, no
+  // pueden mandar la «segunda póliza del mismo coche»). Solo sin ninguna viva
+  // decide el corredor.
+  if (viva !== null || ((rastro.length > 0 || quizaEmitidoAntes) && cuerpo.reintentoConfirmado !== true)) {
+    console.log(
+      `[emitir] proyecto ${projectId}: ${rastro.length > 0 ? `ya cuenta una solicitud (${rastro.map((r) => r.ruta).join(', ')})` : 'el último Submit acabó sin respuesta clara'} y no hay confirmación de reintento — no se envía`,
+    )
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'reintento_sin_confirmar',
+        mensaje:
+          (viva
+            ? `La compañía ya tiene una solicitud ${viva.veredicto === 'aprobada' ? 'APROBADA' : 'en curso'} de este proyecto${viva.numeroPoliza ? ` (póliza ${viva.numeroPoliza})` : ''}. `
+            : rastro.length > 0
+              ? 'El proyecto YA cuenta una solicitud de emisión en Codeoscopic. '
+              : 'El último envío de este proyecto acabó sin respuesta clara del vendor, así que NO se sabe si la compañía llegó a emitir. ') +
+          'No se reenvía a ciegas: comprueba el estado del proyecto (abajo va tal cual lo devuelve Codeoscopic; ' +
+          'si no cuenta ninguna solicitud, mira también Avant2) y, solo si no hay póliza, confirma el reintento.',
+        ...cargaReintento(),
+      },
+      { status: 409 },
+    )
+  }
+
+
   // ── La cuenta bancaria del Submit (duodécimo 400 real, 12/09/2026) ────────
   // Orden: lo tecleado en plataforma (`campos.iban`) > lo que ya viniera en
   // `payment.bankAccount.iban` > lo que YA sabemos del cliente (`cuentaDeFicha`:
@@ -213,18 +340,6 @@ export async function POST(req: Request) {
   // `forzar`: la precedencia ya está decidida aquí, y así lo que viaja va normalizado.
   const camposEnvio = ibanEnvio ? conCuentaBancaria(camposBase, ibanEnvio, true) : camposBase
 
-  const r = resolverConfigEmision()
-  if (r.estado !== 'lista') {
-    return NextResponse.json(
-      {
-        estado: 'error',
-        causa: 'apagado',
-        mensaje: r.estado === 'apagado' ? r.motivo : `faltan variables: ${r.faltan.join(', ')}`,
-      },
-      { status: 503 },
-    )
-  }
-
   // GRATIS: lo que el vendor dice que hace falta. Informativo — no bloquea el
   // Submit si no se pudo leer (un endpoint sin fixture puede tener otra forma
   // de la que se ha adivinado); lo que sí decide si algo faltaba de verdad es
@@ -273,42 +388,6 @@ export async function POST(req: Request) {
         estado: 'error',
         causa: 'ya_emitida',
         mensaje: `El proyecto ${projectId} ya consta como EMITIDO en nuestra BD: no se envía otro Submit.`,
-      },
-      { status: 409 },
-    )
-  }
-
-  const crudoPrevio = await leerProyectoCrudo(r.config, projectId).catch((e: unknown) => {
-    console.log(`[emitir] no se pudo leer el proyecto ${projectId} antes del Submit —`, e instanceof Error ? e.message : String(e))
-    return null
-  })
-  // ── Fail-closed ante un «quizá emitido» (13/09/2026, proyecto 40685793) ──
-  // Si el proyecto YA cuenta una solicitud de emisión, no se manda otra: el
-  // vendor no deduplica y un segundo Submit puede ser la segunda póliza del
-  // mismo coche. Y si el ÚLTIMO intento acabó en 5xx o en corte de red —
-  // «Unknown error while waiting for the operation to complete» — tampoco se
-  // reenvía a ciegas: el corredor tiene que mirar el estado (aquí va el
-  // proyecto crudo, gratis) y decirlo con `reintentoConfirmado: true`.
-  const rastro = crudoPrevio ? rastroSolicitudEmision(crudoPrevio) : []
-  const quizaEmitidoAntes = intentoQuizaEmitido(p.error_mensaje)
-  if ((rastro.length > 0 || quizaEmitidoAntes) && cuerpo.reintentoConfirmado !== true) {
-    console.log(
-      `[emitir] proyecto ${projectId}: ${rastro.length > 0 ? `ya cuenta una solicitud (${rastro.map((r) => r.ruta).join(', ')})` : 'el último Submit acabó sin respuesta clara'} y no hay confirmación de reintento — no se envía`,
-    )
-    return NextResponse.json(
-      {
-        estado: 'error',
-        causa: 'reintento_sin_confirmar',
-        mensaje:
-          (rastro.length > 0
-            ? 'El proyecto YA cuenta una solicitud de emisión en Codeoscopic. '
-            : 'El último envío de este proyecto acabó sin respuesta clara del vendor, así que NO se sabe si la compañía llegó a emitir. ') +
-          'No se reenvía a ciegas: comprueba el estado del proyecto (abajo va tal cual lo devuelve Codeoscopic; ' +
-          'si no cuenta ninguna solicitud, mira también Avant2) y, solo si no hay póliza, confirma el reintento.',
-        ultimoError: quizaEmitidoAntes ? p.error_mensaje : null,
-        rastro: redactarCrudoVendor(rastro),
-        proyectoLegible: crudoPrevio !== null,
-        crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
       },
       { status: 409 },
     )
@@ -556,16 +635,12 @@ export async function POST(req: Request) {
         // compañía y no se sabe si emitió. La pantalla lo dice y el siguiente
         // intento exige `reintentoConfirmado` (ver arriba).
         quizaEmitido: envio.razon === 'vendor' && intentoQuizaEmitido(envio.mensaje),
+        // Lo que el portal manda hacer con ESE código: 500 → reportar; 502/503/504 → reintentar.
+        consejo: envio.razon === 'vendor' ? (consejoTrasFallo(envio.mensaje)?.texto ?? null) : null,
         // El candado en SQL (`bloquearEnvio`) ha visto lo que la lectura de
         // arriba no pudo (carrera entre dos peticiones): mismo contrato de 409.
         ...(envio.razon === 'quiza-emitido'
-          ? {
-              causa: 'reintento_sin_confirmar',
-              ultimoError: p.error_mensaje,
-              rastro: redactarCrudoVendor(rastro),
-              proyectoLegible: crudoPrevio !== null,
-              crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
-            }
+          ? { causa: 'reintento_sin_confirmar', ...cargaReintento(), ultimoError: p.error_mensaje }
           : {}),
         ...(envio.razon === 'ya-emitida' ? { causa: 'ya_emitida' } : {}),
       },
@@ -593,6 +668,7 @@ export async function POST(req: Request) {
   const acunado = await registrarPolizaEmitida(correduria.id, {
     clienteId: poliza.cliente_id,
     actor,
+    catalogo: catalogo ?? undefined,
     proyecto: {
       projectIdCodeoscopic: projectId,
       producto: poliza.tipo,

@@ -32,7 +32,7 @@ export type ResultadoEmision =
 
 export async function registrarPolizaEmitida(
   correduriaId: string,
-  entrada: { clienteId: string; proyecto: ProyectoEmitido; actor: string },
+  entrada: { clienteId: string; proyecto: ProyectoEmitido; actor: string; catalogo?: readonly CompaniaDgs[] },
 ): Promise<ResultadoEmision> {
   const db = prismaAsegura()
   const cliente = await db.cliente.findFirst({ where: { id: entrada.clienteId, correduriaId, mergedIntoClienteId: null }, select: { id: true, dniLookupHash: true } })
@@ -41,16 +41,20 @@ export async function registrarPolizaEmitida(
   // verificación al emitir»): sin DNI, CIMA resolverá otro cliente y la póliza se irá a review.
   if (!cliente.dniLookupHash) return { ok: false, estado: 'invalido', motivo: 'El tomador no tiene DNI en la ficha: CIMA no podrá casarlo. Pídelo documentado antes de emitir.', status: 422 }
 
-  const catalogo = await catalogoCompanias()
+  const catalogo = entrada.catalogo ?? (await catalogoCompanias())
   if (catalogo === null) return { ok: false, estado: 'error', motivo: 'No se pudo leer companias_dgs.', status: 500 }
   const r = prepararPolizaEmitida({ correduriaId, clienteId: cliente.id, proyecto: entrada.proyecto, catalogo })
   if (!r.ok) return { ok: false, estado: 'invalido', motivo: r.motivo, status: 422 }
 
-  const yaAcunada = await db.$queryRaw<{ poliza_id: string | null }[]>`
-    select poliza_id from codeoscopic_projects
+  // «Ya acuñada» = el proyecto está `emitida`. NO se mira `poliza_id`: desde el
+  // 12/09/2026 `/oferta` deja ahí la póliza que se RETARIFICA, así que con esa
+  // guarda ningún proyecto de la cartera podía acuñarse jamás (medido el
+  // 13/09/2026 en `code-review`: `conflicto` en el 100 % de los casos).
+  const yaAcunada = await db.$queryRaw<{ estado: string }[]>`
+    select estado::text as estado from codeoscopic_projects
     where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${entrada.proyecto.projectIdCodeoscopic}
-    limit 1`.catch(() => [] as { poliza_id: string | null }[])
-  if (yaAcunada[0]?.poliza_id) return { ok: false, estado: 'conflicto', motivo: 'Ese proyecto ya tiene póliza acuñada.', status: 409 }
+    limit 1`.catch(() => [] as { estado: string }[])
+  if (yaAcunada[0]?.estado === 'emitida') return { ok: false, estado: 'conflicto', motivo: 'Ese proyecto ya tiene póliza acuñada.', status: 409 }
 
   const f = r.fila
   const polizaId = await db.$transaction(async (tx) => {
@@ -74,14 +78,14 @@ export async function registrarPolizaEmitida(
       },
       select: { id: true },
     })
-    // Si el proyecto existe en la tabla del CRM, se marca EMITIDO (y se enlaza si
-    // aún no tenía póliza); si no, no pasa nada (0 filas). Hasta el 13/09/2026
-    // solo se marcaba `where poliza_id is null`, y como `/oferta` ya pone la
-    // póliza retarificada, un proyecto emitido se quedaba en `preemision` y un
-    // segundo `/emitir` lo habría reenviado.
+    // El proyecto pasa a apuntar a la póliza EMITIDA y se marca `emitida`. Hasta
+    // aquí `poliza_id` era la póliza RETARIFICADA (la pone `/oferta`); una vez
+    // emitido, la fila es de la póliza nueva — que es lo que la conciliación con
+    // CIMA (`emparejarConCima`) y el historial necesitan encontrar. El enlace con
+    // la retarificada queda en `historial_interno` de la ficha.
     await tx.$executeRaw`
       update codeoscopic_projects
-      set poliza_id = coalesce(poliza_id, ${creada.id}::uuid), estado = 'emitida', error_mensaje = null, updated_at = now()
+      set poliza_id = ${creada.id}::uuid, estado = 'emitida', error_mensaje = null, updated_at = now()
       where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${entrada.proyecto.projectIdCodeoscopic}`
     await tx.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)

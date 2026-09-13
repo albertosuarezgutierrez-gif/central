@@ -22,7 +22,7 @@ import { randomUUID } from 'node:crypto'
 import type { ConfigCodeoscopic } from './config.ts'
 import { obtenerToken } from './cliente.ts'
 import { redactarCrudoVendor } from './emitir.ts'
-import { FRASE_SIN_CONFIRMACION } from './reintento-emision.ts'
+import { FRASE_SIN_CONFIRMACION, solicitudesEmision } from './reintento-emision.ts'
 import { prisma } from '../tenant.ts'
 
 const str = (v: unknown): string | null =>
@@ -244,7 +244,14 @@ export async function enviarEmision(
       return { ok: false, razon: 'vendor', mensaje, crudo }
     }
 
-    const referenciaVendor = str((crudo as Record<string, unknown> | null)?.referenceFromVendor)
+    // `referenceFromVendor` es la forma del traspaso de Manuel; el portal (13/09/2026)
+    // documenta la respuesta como PolicyApplication_V1[] con `policyNumber` («the
+    // policy number assigned by the issuer»). Se leen las dos: sin fixture real no
+    // se sabe cuál llega.
+    const referenciaVendor =
+      str((crudo as Record<string, unknown> | null)?.referenceFromVendor) ??
+      solicitudesEmision(crudo).find((s) => s.numeroPoliza)?.numeroPoliza ??
+      null
     await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'preemision')
     return { ok: true, referenciaVendor, crudo }
   } catch (e) {
