@@ -39,6 +39,46 @@
   `PUBLIC` del middleware (Resend también recibía el login). **Pendiente de Alberto:** copiar
   `CODEOSCOPIC_WEBHOOK_USER/PASSWORD` del proyecto Vercel `asegura` a `central-asegura` y pedir a JM repuntar la URL.
   `issuedDocuments[]`: forma en `GET {BASE_URL}/openapi.json` (host bloqueado desde el contenedor). Escalado: Ángel Blesa.
+- **🛡️ Sentinel [SOMBRA] permitía en silencio un exfil crítico en sesión desatendida — corregido (13/09/2026).** `SENTINEL_SHADOW` degradaba TODO `deny`/`ask` a `allow`-con-log por igual, incluidos los `deny` duros (`known_malicious`/`feed_blocklist`) y un `ask` CRITICAL de `sensitive_env` (secreto exfiltrado por `curl`) — el aviso de Telegram llegaba después de que el `curl` ya hubiera salido. Añadido `_session_attended()` en `sentinel_preflight.py` (lee `CLAUDE_CODE_SESSION_ATTENDED`; desconocido = no atendida, criterio conservador): `deny` duro nunca se toca; `ask` con humano delante llega real; `ask` CRITICAL desatendido → **deniega** (no cuelga, no permite); `ask` HIGH desatendido → sigue igual que antes. `sentinel_alerta.py` avisa por Telegram también en el nuevo caso de `deny`. Probado con 4 casos locales (`py_compile` + ejecución). Además, un hallazgo de `graphify-labs[bot]` en el PR destapó un bypass real: la escalada opcional por IA (`SENTINEL_AI=on`) podía rebajar un `ask` CRITICAL+desatendido a `allow` antes de llegar al nuevo deny — corregido calculando la condición crítica+desatendida ANTES de invocar la IA y saltándola en ese caso. Detalle en `.claude/mcp-sentinel/README.md` § "Ask crítico + desatendido". **Pendiente:** confirmar que `CLAUDE_CODE_SESSION_ATTENDED` refleja de verdad "sin humano" en una Routine real (solo se ha observado `=1` en sesión propia interactiva).
+- **📇 Directorio de contactos por compañía en `/correduria` + teléfonos minados de Gmail (13/09/2026, PR #2893).**
+  Nueva pestaña "Contactos por compañía" en la sección Datos: nombre, cargo, email, teléfono y clave de
+  mediador por aseguradora, leído de `seguros.companias_dgs` (columnas de contacto ya pobladas en sesión
+  anterior). Como plataforma no tiene grant sobre `seguros`, se sirve por un puerto nuevo
+  `GET /api/operador/companias` en `apps/asegura` + proxy `GET /api/correduria/companias`. Se añadió además
+  `contacto_telefono` (Mapfre, Occident, Helvetia — minados de firmas de correo). `tsc` limpio en ambas apps.
+- **🔎 Diagnóstico (sin código): botón WhatsApp/Invitar ausente en Pablo Franco Ruz — no era el móvil
+  (13/09/2026).** Alberto reportó el botón ausente; se confirmó por BD que teléfono (móvil válido) y
+  email de la ficha (`1e831058-…`) están bien y el email resuelve de forma ÚNICA a su propia ficha
+  (sin ambigüedad, sin `resuelve_a_otra`). El bloque entero (✉️ Invitar + WhatsApp) solo se oculta
+  si `explicarPortal()` recibe el estado **`no_comprobado`** (fallo de la consulta plataforma↔asegura,
+  ver `apps/asegura/lib/invitacion-portal.ts`) — no un dato que falte en el cliente. Pendiente: si
+  persiste tras «Volver a comprobar», mirar logs de `central-asegura` (`PII_LOOKUP_KEY`/conexión).
+- **🚨 CIMA caído 12-13/09 por DNS de `app.grupoasegura.com` — arreglado + mapper corregido + cuarentena desatascada 42→20 (13/09/2026).**
+  Causa: el registro DNS de `app` en IONOS (`grupoasegura.com`) faltaba/se rompió al tocar `grupoasegura.es` un día antes
+  (`curl: Could not resolve host`, 3 runs seguidos desde 12/09 09:29 UTC). Alberto lo arregló en IONOS (CNAME `app` →
+  `*.vercel-dns-*.com`); Vercel ya tenía el dominio bien asignado. Nada se perdió (cola TIREA no dequeue hasta confirmar).
+  Aparte, desatascando la cuarentena con `reconcile=1` se vio que `mapOnePoliza` solo clasificaba `riesgos[0]` — si el
+  bloque reconocible no iba primero en un array multi-riesgo, nunca se miraba (2 POL de Occident seguían en review pese
+  al fix LOO-807 de agosto). Corregido y mergeado en `asegura` (repo separado, PR #821). Se vio además que `reconcile`
+  reprocesaba siempre los mismos 10 primeros de la cola (`CIMA_PULL_BATCH_SIZE=10` en prod) sin llegar al resto: PR #823
+  añade `?batchSize=` opcional (mismo clamp [1,50], sin tocar la env var) y PR #824 lo expone en el `workflow_dispatch`.
+  Con `batchSize=40` se barrieron las 6 páginas de la cola: **42→20 ficheros en review** (22 resueltos solos). Los 20 que
+  quedan son de dos causas conocidas, no bugs nuevos: 3 SIN de C0109 por `art14_asegurado_distinto` (decisión de negocio,
+  quién es el asegurado real) y 17 de C0468 (1 POL + 6 REC + 10 SIN) que cuelgan de una única póliza (`M00171_20260522`)
+  cuyo bloque de riesgo real no se puede ver sin el XML crudo (no se persiste, Art.5) — requeriría instrumentar más
+  diagnóstico si se quiere cerrar del todo.
+  **Ojo: `apps/asegura` de `central` lee de `seguros.*` en la Supabase compartida (`wswbehlcuxqxyinousql`), NO del
+  proyecto original de Manuel (`uijsgeocgdaxkhvwtjqs`, congelado desde el 31/08) — verificar SIEMPRE contra ese primero.**
+- **🔒 Login de plataforma sin rate limit — fuerza bruta viable, cerrado (13/09/2026, #2884 mergeado).**
+  `/api/auth/login` no tenía ningún tope de intentos. Añadido doble límite (IP 20/15min + email
+  5/15min) reutilizando `lib/rate-limit.ts` (mismo limitador en memoria del lead público de la
+  correduría) → `429` + `Retry-After`. De paso: contraseña de la cuenta de Alberto rotada a mano
+  (hash bcrypt cost 12 vía Supabase MCP, `session_jti` limpiado para invalidar sesiones viejas) —
+  **sin endpoint de cambio de contraseña en la app** (solo existen `register`/`login`); si hace
+  falta rotar otra vez, la vía es directa por SQL hasta que se construya ese endpoint. 2FA queda
+  como pendiente, no urgente.
+- **🔎 Buscador de la cartera (asegura) no encontraba «Alberto Suarez» sin tilde — dos bugs apilados, el segundo escondido detrás del primero (13/09/2026, #2879 + fix directo tras probar en real).** Primero: `porNombre`/`porCiudad` usaban `contains/insensitive` de Prisma (ignora mayúsculas, NO acentos) → reescritos a SQL crudo con `unaccent()`. Segundo, y el que de verdad bloqueaba: `unaccent` vive en el schema `extensions`, y la conexión de `apps/asegura` fija `search_path=seguros` (vía `?schema=seguros` de `asegura-url.ts`) — `unaccent()` SIN CUALIFICAR no resuelve (`42883 function unaccent(unknown) does not exist`, verificado con `SET search_path TO seguros`), la consulta lanza y cae al `.catch` de reintento sin acentos. Consecuencia: Manuel Suárez (sin tilde en su ficha) SÍ salía por ILIKE plano y Alberto (con tilde) no — el fallback silencioso se veía indistinguible de «no hay nadie». Mismo bug latente en `porRiesgo`, ya desde antes. Los tres, cualificados a `extensions.unaccent(...)`; verificado en la BD real bajo el mismo `search_path` restringido que devuelve las dos fichas. **Lección: probar un fix de acentos con datos SIN acento (Manuel) no lo prueba — hace falta un dato con tilde real.** Aparte, guardar la dirección de un cliente daba 500: `seguros.clientes.contacto_confirmado_at` estaba en el schema Prisma y en un SQL de migración («NO se aplica desde el repo») nunca ejecutado contra la BD real — aplicada vía Supabase MCP.
+- **🔌 `sivra_rates_snapshot` en 401 desde el 11/09 — NO es la credencial HMAC, es el endpoint `/api/rates` de Smoobu (13/09/2026).** El monitor de latidos avisó del 401 en las 4 propiedades; `smoobu_sync`/`reservas_booking_vigia` (mismo key/secret, mismo día) funcionan bien → descarta credencial rota. Prueba de fuego: `pricing_applied.dry_run=false` (escrituras REALES a Smoobu) se cortó en seco el **11/09 08:30**, exactamente cuando el snapshot dejó de leer — lectura Y escritura de `/api/rates` rotas a la vez, mientras `/api/reservations` sigue viva. Apunta a un permiso/scope de la API key de Smoobu ("Rates & Availability") desactivado, no arreglado por la regeneración de credenciales del PR #2753 (esa solo tocó el HMAC general). **Pendiente de Alberto:** revisar en el panel de Smoobu que la API key `usr_live_ed2a936…` tenga marcado el permiso de tarifas/disponibilidad. No se tocó código: no hay bug de repo que corregir.
 - **📮 El portal de Codeoscopic SÍ documenta cómo reconciliar un Submit sin respuesta (13/09/2026, tras el 500 del 40685793).**
   Leído con Claude en Chrome: `GET /insurances/{id}` trae `policyApplications[]` con `status.id` (`Approved`) y
   `policyNumber`; 500 = «report to support» (`soporteapi@avant2.es`), 502/503/504 = «try again». Sin webhooks ni

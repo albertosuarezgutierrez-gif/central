@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-13T05:28:37Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-13T12:29:43Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1351 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1353 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
 - **Tablas (61):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones, seguros.cotizaciones_anonimas…
-- **Rutas API:** 70
+- **Rutas API:** 71
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-push, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** Notificaciones (push)
@@ -56,7 +56,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (139):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_dni_otp, correduria_reglas…
-- **Rutas API:** 369
+- **Rutas API:** 370
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -262,14 +262,14 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (13/09/2026) 📇 Directorio de contactos por compañía en `/correduria` + teléfonos minados de Gmail
+- (13/09/2026) 🔎 Diagnóstico (sin código): botón WhatsApp/Invitar ausente en Pablo Franco Ruz — no era el móvil
+- (13/09/2026) 🚨 CIMA caído 12-13/09 por DNS de `app.grupoasegura.com` — arreglado + mapper corregido + cuarentena desatascada 42→20
+- (13/09/2026) 🔒 Login de plataforma sin rate limit — fuerza bruta viable, cerrado
+- (13/09/2026) 🔎 Buscador de la cartera (asegura) no encontraba «Alberto Suarez» sin tilde — dos bugs apilados, el segundo escondido detrás del primero
+- (13/09/2026) 🔌 `sivra_rates_snapshot` en 401 desde el 11/09 — NO es la credencial HMAC, es el endpoint `/api/rates` de Smoobu
+- (13/09/2026) 📮 El portal de Codeoscopic SÍ documenta cómo reconciliar un Submit sin respuesta
 - (13/09/2026) 🛑 Primer Submit que LLEGA a la compañía… y Codeoscopic contesta 500 «Unknown error while waiting for the operation to complete»
 - (13/09/2026) ⏳ La fecha de efecto CADUCA: el proyecto 40685666 murió al cambiar de día
 - (12/09/2026) 🔔 Avisos por Web Push en `apps/asegura-portal`
-- (13/09/2026) 📧 El vendor devuelve `emails: []`, no `email` — medido, y reparación GRATIS antes del Submit
-- (12/09/2026) 📞 Recaptación de leads sin vencimiento — completo
-- (12/09/2026) 🕵️ Pólizas "zombi" del volcado + revertido un arreglo propio equivocado
-- (12/09/2026) 💸 Causa de fondo del día de emisión fallida: el `POST /insurances` mandaba la persona SIN email ni calle completa
-- (12/09/2026) 🛣️ `tipoVia` en `faltan_vendor` era una caja de texto que pedía un id de catálogo a ciegas
-- (12/09/2026) 🔒 `patch_no_aplicado` del Submit: mensaje falso + PII en claro en `crudo`
-- (12/09/2026) 🧾 Diagnóstico de «subida de póliza trae poca información» + spec de tercero
 
