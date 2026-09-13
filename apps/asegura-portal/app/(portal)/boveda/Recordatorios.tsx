@@ -76,6 +76,11 @@ export function Recordatorios({
   const [borrandoId, setBorrandoId] = useState<string | null>(null)
 
   function abrirConSugerencia(clave: string) {
+    // Con un guardado en curso, abrir otra sugerencia pisaría `form`/`estado` con datos de
+    // OTRO recordatorio mientras el `fetch` del primero sigue volando: al resolver, su
+    // `then` sobrescribiría en silencio lo que la persona acaba de teclear en el segundo
+    // formulario. Hallazgo de code-review (Graphify).
+    if (estado.tipo === 'guardando') return
     const s = SUGERENCIAS_RECORDATORIO.find((x) => x.clave === clave)
     setForm(
       s
@@ -166,11 +171,22 @@ export function Recordatorios({
 
       <div className="recordatorio-sugerencias">
         {SUGERENCIAS_RECORDATORIO.map((s) => (
-          <button key={s.clave} type="button" className="boton-tenue" onClick={() => abrirConSugerencia(s.clave)}>
+          <button
+            key={s.clave}
+            type="button"
+            className="boton-tenue"
+            onClick={() => abrirConSugerencia(s.clave)}
+            disabled={estado.tipo === 'guardando'}
+          >
             + {s.titulo}
           </button>
         ))}
-        <button type="button" className="boton-tenue" onClick={() => abrirConSugerencia('')}>
+        <button
+          type="button"
+          className="boton-tenue"
+          onClick={() => abrirConSugerencia('')}
+          disabled={estado.tipo === 'guardando'}
+        >
           + Personalizado
         </button>
       </div>

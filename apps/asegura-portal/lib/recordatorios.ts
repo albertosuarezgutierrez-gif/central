@@ -156,6 +156,11 @@ function diaUtc(d: Date): Date {
 
 export async function avanzarRecordatoriosRecurrentesDeIdentidad(identidadId: string, hoy: Date = new Date()): Promise<void> {
   const hoyUtc = diaUtc(hoy)
+  // `orderBy: id` es a propósito: dos llamadas concurrentes para la MISMA identidad (dos
+  // pestañas abiertas a la vez) que tocaran las mismas filas en orden distinto podrían
+  // bloquearse la una a la otra dentro del `$transaction` (deadlock de Postgres). Sin un
+  // orden determinista, Postgres no garantiza en qué orden devuelve las filas de un
+  // `findMany` sin `ORDER BY` — hallazgo de code-review (Graphify).
   const pendientes = await prisma.portalObligacion.findMany({
     where: {
       identidadId,
@@ -165,6 +170,7 @@ export async function avanzarRecordatoriosRecurrentesDeIdentidad(identidadId: st
       fechaEvento: { lt: hoyUtc },
     },
     select: { id: true, fechaEvento: true, repiteCadaMeses: true },
+    orderBy: { id: 'asc' },
   })
   if (pendientes.length === 0) return
 
