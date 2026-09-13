@@ -508,17 +508,37 @@ function ViaCanalEnlace({ via }: { via: ViaCanal }) {
 export function ParteSiniestro({
   polizas,
   partes,
+  polizaInicial,
 }: {
   polizas: readonly PolizaOpcionParte[]
   partes: readonly ParteEnviado[]
+  /**
+   * El `valor` (`cartera:<id>`) de la póliza desde cuya ficha se llegó aquí
+   * (botón «Dar parte de esta póliza»), o `null`/`undefined` si se entró por
+   * la pestaña de siniestros a secas. Solo cuenta si sigue estando en
+   * `polizas` —la lista ya acotada a esta identidad—, así que un valor
+   * manipulado en la URL simplemente no preselecciona nada; nunca abre una
+   * póliza que esta sesión no tuviera ya delante.
+   */
+  polizaInicial?: string | null
 }) {
   const router = useRouter()
   // Prefijo único para los `id`/`name`: puede haber más de un grupo de radios en
   // la página y dos grupos con el mismo `name` se pisan (marcar «Sí» en heridos
   // desmarcaría el de terceros).
   const uid = useId()
-  const [abierto, setAbierto] = useState(false)
-  const [form, setForm] = useState<Formulario>(VACIO)
+  // Se decide UNA vez, al montar (con inicializadores perezosos): si viene de
+  // la ficha de una póliza, el formulario nace ABIERTO y con esa póliza ya
+  // puesta, incluida su matrícula autorrellenada — el mismo camino que
+  // `seleccionarPoliza()`, para no duplicar esa regla.
+  const polizaValida = polizaInicial && polizas.some((p) => p.valor === polizaInicial) ? polizaInicial : null
+  const [abierto, setAbierto] = useState(() => polizaValida !== null)
+  const [form, setForm] = useState<Formulario>(() => {
+    if (polizaValida === null) return VACIO
+    const matricula = polizas.find((p) => p.valor === polizaValida)?.matriculaPropia
+    const vehiculo = matricula ? { ...VEHICULO_VACIO, matriculaPropia: matricula } : VEHICULO_VACIO
+    return { ...VACIO, poliza: polizaValida, vehiculo }
+  })
   const [estado, setEstado] = useState<Estado>('reposo')
   const [errores, setErrores] = useState<Partial<Record<Campo, string>>>({})
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null)

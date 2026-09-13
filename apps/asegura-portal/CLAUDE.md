@@ -576,6 +576,25 @@ compañía no lo ha informado», y la pantalla **calla**: no pinta «Matrícula:
 Cepos: `bien-asegurado.test.ts` (11, con dos mutaciones vistas morder: quitar la dirección del suelo
 de terceros → 1 fallo; colar la dirección por `cosa` → 3).
 
+### 🚨 Regla permanente: el nº de póliza NUNCA identifica una póliza para el cliente
+
+**Nadie se sabe su número de póliza de memoria, y menos aún cuando hay que ELEGIR entre varias**
+(caso visto el 13/09/2026: el selector de «A qué póliza» del parte de siniestro los listaba como
+«Occident · Responsabilidad civil · nº 548238086», y Alberto, mirándolo en su propio móvil: *«casi
+nadie sabe el número de póliza»*). Lo que identifica una póliza para una PERSONA es el BIEN, no el
+contrato:
+
+- **Motor** → marca, modelo y **matrícula** (`bien.cosa` de `describirBien()`).
+- **Inmueble** → la **dirección** (`bien.ubicacion`).
+- El nº de póliza queda de **último recurso**, solo cuando no se conoce ni lo uno ni lo otro.
+
+Esto no es solo la regla de la FICHA (arriba): es la regla de **cualquier sitio donde el portal
+identifique o liste pólizas ante el cliente** — filas (`FilaPoliza.tsx`, ya la seguía), y también
+selectores/etiquetas de formularios. El parte de siniestro (`opcionCartera()`/`page.tsx`) se corrigió
+el 13/09/2026 para usar `bien.cosa ?? bien.ubicacion ?? nº de póliza` en vez de `nº de póliza` a
+secas — antes de esa fecha lo incumplía. **Al montar cualquier lista o desplegable nuevo de pólizas,
+sigue este mismo orden**; no reinventar el criterio caso por caso.
+
 ### Lo TUYO frente a lo que te DEJAN ver
 
 Hasta ese día la única diferencia entre una póliza propia y una ajena era el `<h2>` de la sección.
