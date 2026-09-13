@@ -113,6 +113,12 @@ export const AVISOS: AvisoTelegram[] = [
     que: 'Qué ha reescrito el agente SEO en la web de House Sevillana.',
     cuando: 'Lunes',
   },
+  {
+    id: 'sistema.acceso-intranet', categoria: 'sistema',
+    titulo: 'Alguien ha entrado en la intranet',
+    que: 'Nombre y email de la cuenta que acaba de iniciar sesión en /login.',
+    cuando: 'Al iniciar sesión',
+  },
 
   // ── 🏦 Banca y contable ───────────────────────────────────────────────────
   {
