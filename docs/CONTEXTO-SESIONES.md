@@ -38,7 +38,10 @@
   al vendor, `tarificacion` devuelve `caducada` y plataforma enseña banner rojo con «Pedir precio» encendido.
   Cepo visto en rojo (2+1 brazos). Alberto: «ni antes de hoy ni a más de 90 días» → la regla entera se valida antes de
   pagar (`revisarDatosAuto`, `min`/`max` en pantalla) y la fecha se precarga a MAÑANA. La clave de `emails[]` sigue sin
-  descubrir (el ReRate murió antes por la fecha). PR #2863.
+  descubrir (el ReRate murió antes por la fecha). PR #2863 (mergeado). **Secuela (misma mañana):** las `correcciones`
+  guardadas traen la `fechaEfecto` vieja y pisaban el default MAÑANA → la caducada reaparecía precargada y «Pedir
+  precio» moría en el 422. Helper puro `apps/plataforma/lib/fecha-efecto-inicial.ts` (solo se reutiliza si está en
+  [hoy, hoy+90]); lo destapó la review de Graphify, brazo visto en rojo; misma guarda en el borrador de localStorage (lo cazó `code-review`). PR #2867.
 - **🔔 Avisos por Web Push en `apps/asegura-portal` (12/09/2026).** Nuevo canal, hermano del correo
   de vencimientos de `apps/asegura` pero SIN compartir sello ni sitio: la suscripción push no es un
   dato descifrable, así que vive en el portal, sobre `seguros.portal_obligacion` (sello propio
