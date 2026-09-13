@@ -583,13 +583,39 @@ model CompaniaDgs {
   telefonoVerificadoEn  DateTime? @map("telefono_verificado_en") @db.Timestamptz(6)
   whatsappSiniestros    String?   @map("whatsapp_siniestros")
   horarioSiniestros     String?   @map("horario_siniestros")
-  contactoNombre    String?   @map("contacto_nombre")
-  contactoCargo     String?   @map("contacto_cargo")
-  contactoEmail     String?   @map("contacto_email")
-  contactoTelefono  String?   @map("contacto_telefono")
   claveMediador     String?   @map("clave_mediador")
+  contactos         CompaniaContacto[]
 
   @@map("companias_dgs")
+}
+
+enum AreaContacto {
+  comercial
+  siniestros
+  administracion
+  tecnico
+  general
+
+  @@map("area_contacto")
+}
+
+model CompaniaContacto {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companiaCodigoDgs   String        @map("compania_codigo_dgs") @db.VarChar(16)
+  compania            CompaniaDgs   @relation(fields: [companiaCodigoDgs], references: [codigoDgs])
+  nombre              String
+  cargo               String?
+  area                AreaContacto?
+  email               String?
+  telefono            String?
+  notas               String?
+  orden               Int           @default(0)
+  activo              Boolean       @default(true)
+  ultimoContactoEn    DateTime?     @map("ultimo_contacto_en") @db.Timestamptz(6)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("compania_contactos")
 }
 
 model Documento {
