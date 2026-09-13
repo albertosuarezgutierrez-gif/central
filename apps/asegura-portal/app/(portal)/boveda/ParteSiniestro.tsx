@@ -1,13 +1,17 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 
 import {
+  CAMPO_VEHICULO_MAX,
   DESCRIPCION_MAX,
   DESCRIPCION_MIN,
   DIAS_COMUNICACION_LCS,
   LUGAR_MAX,
+  ZONAS_VEHICULO,
+  bloqueDatosVehiculo,
   canalesDeLasPolizas,
+  componerDescripcion,
   TEXTO_SIN_CANAL,
   type CanalCompania,
   type ViaCanal,
@@ -75,6 +79,23 @@ export type PolizaOpcionParte = {
    * peor posible para esperar a una petición.
    */
   canal: CanalCompania
+  /**
+   * El código de ramo tal cual lo guarda la BD (`'auto'`, `'hogar'`…), no la
+   * etiqueta traducida. `null`/`undefined` = no se conoce (pasa con alguna
+   * declarada mal leída). Solo se usa para decidir si se ofrecen los campos
+   * del OTRO vehículo: mostrarlos en una póliza de hogar no tiene sentido, y
+   * ocultarlos en una de auto deja a alguien tecleando la matrícula dentro de
+   * la descripción libre.
+   */
+  ramo?: string | null
+  /**
+   * La matrícula de ESTA póliza, si la conocemos (`bien.matricula` de
+   * `@central/module-seguros-portal`). Solo sirve para AUTORRELLENAR «Tu
+   * matrícula» — nunca se muestra sola, y el campo sigue siendo editable:
+   * es una sugerencia, no un dato impuesto. `null`/`undefined` = no la
+   * sabemos (no es de auto, o la compañía no la ha informado).
+   */
+  matriculaPropia?: string | null
 }
 
 /**
@@ -132,6 +153,24 @@ type Campo = 'descripcion' | 'fechaHecho' | 'horaAproximada' | 'lugar' | 'poliza
 type Triestado = 'si' | 'no' | 'nolose'
 type Estado = 'reposo' | 'enviando' | 'enviado' | 'error'
 
+/**
+ * La forma del formulario, con strings de verdad — a diferencia de
+ * `DatosVehiculo` (del módulo puro), que declara sus campos `unknown` porque
+ * es un tipo de ENTRADA sin validar todavía. Un `string` de aquí encaja sin
+ * casts en `DatosVehiculo` cuando se le pasa a `componerDescripcion`.
+ */
+type FormVehiculo = {
+  matriculaPropia: string
+  matriculaTercero: string
+  conductorTercero: string
+  aseguradoraTercero: string
+  telefonoTercero: string
+  /** Códigos de `ZONAS_VEHICULO`, en el orden en que se tocaron — el orden
+   *  no importa para el texto final (`textoZonas` lo fija), solo aquí para
+   *  que React tenga algo estable con lo que iterar si hiciera falta. */
+  zonasDano: string[]
+}
+
 type Formulario = {
   descripcion: string
   fechaHecho: string
@@ -140,6 +179,22 @@ type Formulario = {
   poliza: string
   hayHeridos: Triestado
   hayTerceros: Triestado
+  /**
+   * Solo se enseñan y solo viajan si el ramo es auto y `hayTerceros === 'si'`
+   * (ver `esAuto`/`mostrarVehiculo` en el componente). Van SIEMPRE en el
+   * formulario, aunque no se enseñen, para no perder lo que alguien ya había
+   * escrito si cambia de póliza o de respuesta y vuelve atrás.
+   */
+  vehiculo: FormVehiculo
+}
+
+const VEHICULO_VACIO: FormVehiculo = {
+  matriculaPropia: '',
+  matriculaTercero: '',
+  conductorTercero: '',
+  aseguradoraTercero: '',
+  telefonoTercero: '',
+  zonasDano: [],
 }
 
 const VACIO: Formulario = {
@@ -152,6 +207,12 @@ const VACIO: Formulario = {
   poliza: '',
   hayHeridos: 'nolose',
   hayTerceros: 'nolose',
+  vehiculo: VEHICULO_VACIO,
+}
+
+/** `'auto'` bajo cualquier variante de caja; el resto (`null`, otro ramo) es «no». */
+function esAuto(ramo: string | null | undefined): boolean {
+  return typeof ramo === 'string' && ramo.trim().toLowerCase() === 'auto'
 }
 
 /**
@@ -463,6 +524,9 @@ export function ParteSiniestro({
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null)
   const [recibido, setRecibido] = useState<Plazo | null>(null)
   const [ficheros, setFicheros] = useState<Elegido[]>([])
+  /** Estado del botón «Ha pasado ahora mismo»: solo afecta a la geolocalización
+   *  (fecha y hora se rellenan siempre, al instante, sin esperar al GPS). */
+  const [geo, setGeo] = useState<'reposo' | 'buscando' | 'ok' | 'error'>('reposo')
   /**
    * El parte YA creado. Se guarda porque los adjuntos cuelgan de él: si alguno
    * falla, «Reintentar» tiene que poder volver a subirlo SIN crear otro parte.
@@ -470,12 +534,51 @@ export function ParteSiniestro({
    * cerrar a mano.
    */
   const [parteId, setParteId] = useState<string | null>(null)
+  /**
+   * Cuenta cada `abrir()`/`cerrar()`. La geolocalización puede tardar hasta 8 s
+   * (el `timeout`), y si entre el clic y la respuesta el cliente cierra el
+   * formulario y lo reabre para OTRO siniestro, la respuesta tardía no puede
+   * escribir sobre el formulario nuevo: sería la ubicación de un accidente
+   * distinto colándose en «Dónde», sin que nada avise.
+   */
+  const sesionRef = useRef(0)
 
   const enviando = estado === 'enviando'
   const subidos = ficheros.filter((f) => f.estado === 'ok')
   const fallidos = ficheros.filter((f) => f.estado === 'error')
   /** Los que fallaron por el camino (no por ser un fichero que no admitimos). */
   const recuperables = fallidos.filter(reintentable)
+
+  // El bloque de «datos del otro vehículo» (matrículas, zona del daño) solo
+  // tiene sentido con terceros de por medio, y solo se sabe pedir una
+  // matrícula si la póliza elegida es de auto. Con «No lo sé» en la póliza NO
+  // se enseña: saber el ramo es justo lo que el cliente está diciendo que no sabe.
+  const polizaSeleccionada = polizas.find((p) => p.valor === form.poliza) ?? null
+  const mostrarVehiculo = esAuto(polizaSeleccionada?.ramo) && form.hayTerceros === 'si'
+
+  /**
+   * Al elegir póliza, autorrellena «Tu matrícula» si la tenemos (dictado de
+   * Alberto: rellenar lo más rápido posible con lo que ya tenemos, para
+   * tarificar). Solo si el campo sigue VACÍO: si la persona ya había escrito
+   * algo —antes de elegir póliza, o corrigiendo lo que pusimos al cambiar de
+   * póliza— no se lo pisamos. No es un valor de solo lectura: sigue siendo un
+   * `<input>` normal, así que si la matrícula que tenemos está mal (el coche
+   * ha cambiado, p. ej.) se puede corregir sin más. Se hace al SELECCIONAR,
+   * no en un efecto sobre `polizaSeleccionada`: así el autorrelleno es un
+   * único cambio de estado, no un segundo render disparado desde un efecto.
+   */
+  function seleccionarPoliza(valor: string) {
+    setForm((f) => {
+      const matricula = polizas.find((p) => p.valor === valor)?.matriculaPropia
+      const vehiculo = matricula && f.vehiculo.matriculaPropia === '' ? { ...f.vehiculo, matriculaPropia: matricula } : f.vehiculo
+      return { ...f, poliza: valor, vehiculo }
+    })
+    setErrores((e) => ({ ...e, poliza: undefined }))
+  }
+
+  function escribirVehiculo(campo: Exclude<keyof FormVehiculo, 'zonasDano'>, valor: string) {
+    setForm((f) => ({ ...f, vehiculo: { ...f.vehiculo, [campo]: valor } }))
+  }
 
   function abrir() {
     // El formulario se monta SOLO al abrirlo (regla de rendimiento de UI del
@@ -486,13 +589,64 @@ export function ParteSiniestro({
     setFicheros([])
     setParteId(null)
     setEstado('reposo')
+    setGeo('reposo')
     setAbierto(true)
+    sesionRef.current += 1
+  }
+
+  /**
+   * «Ha pasado ahora mismo»: rellena fecha, hora y —si el navegador lo
+   * permite— el sitio, de un toque. Dictado de Alberto: rellenar lo más
+   * rápido posible con lo que ya sabemos, para poder tarificar cuanto antes.
+   *
+   * 🚨 Fecha y hora se ponen YA, síncronas: no dependen del GPS, que puede
+   * tardar segundos o no llegar nunca (denegado, sin señal, sin HTTPS). Si el
+   * GPS fallara y esos dos campos esperasen a él, el botón dejaría de hacer
+   * lo único que SIEMPRE puede hacer.
+   *
+   * 🚨 El sitio NO se convierte en una dirección: se escribe la coordenada
+   * cruda con su precisión. Inventar «Avenida de la Constitución» a partir de
+   * un lat/lon sin geocodificar sería el mismo fallo que el resto del parte
+   * persigue — un dato con aspecto de haberlo dicho la persona, y no es así.
+   * Alberto puede pegar la coordenada en un mapa; el cliente puede corregirla
+   * por la calle si la sabe, el campo sigue siendo un `<input>` normal.
+   */
+  function marcarAhoraMismo() {
+    const ahora = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const fechaHoy = `${ahora.getFullYear()}-${pad(ahora.getMonth() + 1)}-${pad(ahora.getDate())}`
+    const horaAhora = `${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`
+    setForm((f) => ({ ...f, fechaHecho: fechaHoy, horaAproximada: horaAhora }))
+    setErrores((e) => ({ ...e, fechaHecho: undefined, horaAproximada: undefined }))
+
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGeo('error')
+      return
+    }
+    setGeo('buscando')
+    const sesion = sesionRef.current
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (sesionRef.current !== sesion) return // el formulario se cerró/reabrió mientras se buscaba
+        const lat = pos.coords.latitude.toFixed(5)
+        const lon = pos.coords.longitude.toFixed(5)
+        const precision = Math.round(pos.coords.accuracy)
+        setForm((f) => ({ ...f, lugar: `Ubicación GPS: ${lat}, ${lon} (±${precision} m)`.slice(0, LUGAR_MAX) }))
+        setGeo('ok')
+      },
+      // Denegado, sin señal, o sin HTTPS: no se inventa nada, se dice que no se pudo.
+      () => {
+        if (sesionRef.current === sesion) setGeo('error')
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+    )
   }
 
   function cerrar() {
     setAbierto(false)
     setErrores({})
     setErrorGeneral(null)
+    sesionRef.current += 1
   }
 
   /** Un campo con error: al tocarlo se le quita el mensaje, que ya no describe
@@ -517,9 +671,7 @@ export function ParteSiniestro({
    * fichero que no vale se queda en la lista **marcado y con su motivo** en vez
    * de desaparecer. Desaparecer se lee como «ya está subido».
    */
-  function elegir(e: React.ChangeEvent<HTMLInputElement>) {
-    const nuevos = Array.from(e.target.files ?? [])
-    e.target.value = '' // permite volver a elegir el mismo fichero
+  function agregarFicheros(nuevos: File[]) {
     if (nuevos.length === 0) return
 
     // El hueco se calcula con el estado que ya hay en pantalla, FUERA del
@@ -546,6 +698,26 @@ export function ParteSiniestro({
           'de los que has elegido. Si falta algo importante, dínoslo y lo vemos.',
       )
     }
+  }
+
+  function elegir(e: React.ChangeEvent<HTMLInputElement>) {
+    const nuevos = Array.from(e.target.files ?? [])
+    e.target.value = '' // permite volver a elegir el mismo fichero
+    agregarFicheros(nuevos)
+  }
+
+  /** Toca/destoca una zona del selector. Multi-selección: un golpe puede
+   *  afectar a dos zonas a la vez (p. ej. delantera + lateral derecho). */
+  function alternarZonaVehiculo(codigo: string) {
+    setForm((f) => ({
+      ...f,
+      vehiculo: {
+        ...f.vehiculo,
+        zonasDano: f.vehiculo.zonasDano.includes(codigo)
+          ? f.vehiculo.zonasDano.filter((z) => z !== codigo)
+          : [...f.vehiculo.zonasDano, codigo],
+      },
+    }))
   }
 
   /** Quitar uno de la lista ANTES de enviar. Después ya no: lo enviado es una comunicación. */
@@ -638,13 +810,31 @@ export function ParteSiniestro({
     const tipo = corte === -1 ? '' : form.poliza.slice(0, corte)
     const id = corte === -1 ? '' : form.poliza.slice(corte + 1)
 
+    // 🚨 Los datos del otro vehículo SOLO viajan si el bloque está VISIBLE en
+    // este envío. Sin este corte, cambiar de una póliza de auto (con terceros
+    // y una matrícula ya escrita) a una de hogar mandaría esa matrícula igual
+    // — un dato que la persona ya no ve en pantalla, colado en el texto.
+    const bloqueVehiculo = mostrarVehiculo ? bloqueDatosVehiculo(form.vehiculo) : null
+    const descripcionFinal = bloqueVehiculo === null ? descripcion : componerDescripcion(descripcion, form.vehiculo)
+    // 🚨 El aviso solo dispara si de verdad HABRÍA recorte (por eso se mide
+    // ANTES de componer, no el resultado ya recortado — `componerDescripcion`
+    // siempre cabe en `DESCRIPCION_MAX` por construcción). Comparar el
+    // resultado final contra el máximo confundiría «cabe justo» con «se ha
+    // cortado»: una descripción de exactamente 2000 caracteres sin vehículo
+    // (el propio `maxLength` del textarea ya lo permite) se rechazaría sin
+    // haberse recortado nada.
+    if (bloqueVehiculo !== null && descripcion.length + 2 + bloqueVehiculo.length > DESCRIPCION_MAX) {
+      setErrores({ descripcion: mensaje('descripcion', 'larga') })
+      return
+    }
+
     setEstado('enviando')
     try {
       const r = await fetch('/api/siniestros', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          descripcion,
+          descripcion: descripcionFinal,
           fechaHecho: form.fechaHecho,
           horaAproximada: form.horaAproximada || null,
           lugar: form.lugar.trim() || null,
@@ -829,6 +1019,25 @@ export function ParteSiniestro({
             {errores.descripcion && <p className="editor-error">{errores.descripcion}</p>}
           </div>
 
+          {/* Rellena fecha, hora y sitio de un toque, para quien avisa
+              mientras el golpe acaba de pasar — dictado de Alberto: lo más
+              rápido posible con lo que ya sabemos, para tarificar cuanto
+              antes. Fuera del propio campo de fecha porque también toca la
+              hora y el sitio, que están más abajo. */}
+          <div className="editor-campo">
+            <button type="button" className="boton secundario" onClick={marcarAhoraMismo} disabled={enviando}>
+              Ha pasado ahora mismo
+            </button>
+            {geo === 'buscando' && <p className="editor-ayuda">Buscando tu ubicación…</p>}
+            {geo === 'ok' && <p className="editor-ayuda">Fecha, hora y ubicación rellenadas. Revísalas.</p>}
+            {geo === 'error' && (
+              <p className="editor-ayuda">
+                Fecha y hora rellenadas. No hemos podido situarte (revisa el permiso de ubicación) — escribe el
+                sitio a mano si lo sabes.
+              </p>
+            )}
+          </div>
+
           {/* La fecha SÍ es obligatoria aquí, y es la única que lo es. Ojo al
               contraste con `EditarPoliza.tsx`, donde el vencimiento se destaca
               pero NO se exige: allí el dato lo tiene la compañía y se puede
@@ -938,7 +1147,7 @@ export function ParteSiniestro({
               id={`${uid}-poliza`}
               className="campo"
               value={form.poliza}
-              onChange={(e) => escribir('poliza', e.target.value)}
+              onChange={(e) => seleccionarPoliza(e.target.value)}
               aria-describedby={`${uid}-poliza-ayuda`}
               aria-invalid={errores.poliza ? true : undefined}
               disabled={enviando}
@@ -954,6 +1163,16 @@ export function ParteSiniestro({
             </select>
             {errores.poliza && <p className="editor-error">{errores.poliza}</p>}
           </div>
+
+          {mostrarVehiculo && (
+            <VehiculoOtro
+              uid={uid}
+              valor={form.vehiculo}
+              deshabilitado={enviando}
+              onCambio={escribirVehiculo}
+              onZona={alternarZonaVehiculo}
+            />
+          )}
 
           {errorGeneral && (
             <p className="editor-error" role="alert">
@@ -1032,6 +1251,177 @@ function Triple({
         ))}
       </div>
     </fieldset>
+  )
+}
+
+/**
+ * «Datos del otro vehículo» — solo para auto, y solo con terceros de por
+ * medio (ver `mostrarVehiculo` en `ParteSiniestro`).
+ *
+ * 🚨 Los cinco campos son OPCIONALES: ninguno lleva `required`. Con el coche
+ * todavía en la cuneta, lo normal es saber la matrícula del otro y no su
+ * aseguradora, o al revés. Exigir los cinco para poder enviar el parte sería
+ * el mismo fallo que un checkbox de heridos, un piso más abajo — convertir
+ * «no lo sé todavía» en un obstáculo para avisar.
+ *
+ * No tienen su propio `editor-error`: no hay nada que validar aquí (cualquier
+ * texto vale, `componerDescripcion` los pliega tal cual), así que un error de
+ * formato no puede aparecer.
+ */
+function VehiculoOtro({
+  uid,
+  valor,
+  deshabilitado,
+  onCambio,
+  onZona,
+}: {
+  uid: string
+  valor: FormVehiculo
+  deshabilitado: boolean
+  onCambio: (campo: Exclude<keyof FormVehiculo, 'zonasDano'>, valor: string) => void
+  onZona: (codigo: string) => void
+}) {
+  return (
+    <fieldset className="editor-campo grupo">
+      <legend>Datos del otro vehículo</legend>
+      <p className="editor-ayuda">
+        Si los tienes a mano, nos ayuda a tramitarlo — pero nada de esto es obligatorio: el parte se
+        manda igual con lo que sepas.
+      </p>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-propia`}>Tu matrícula</label>
+        <input
+          id={`${uid}-veh-propia`}
+          className="campo"
+          type="text"
+          value={valor.matriculaPropia}
+          onChange={(e) => onCambio('matriculaPropia', e.target.value)}
+          placeholder="1234 ABC"
+          autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-tercero`}>Matrícula del otro vehículo</label>
+        <input
+          id={`${uid}-veh-tercero`}
+          className="campo"
+          type="text"
+          value={valor.matriculaTercero}
+          onChange={(e) => onCambio('matriculaTercero', e.target.value)}
+          placeholder="9999 XYZ"
+          autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-conductor`}>Conductor del otro vehículo</label>
+        <input
+          id={`${uid}-veh-conductor`}
+          className="campo"
+          type="text"
+          value={valor.conductorTercero}
+          onChange={(e) => onCambio('conductorTercero', e.target.value)}
+          autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-aseguradora`}>Su aseguradora</label>
+        <input
+          id={`${uid}-veh-aseguradora`}
+          className="campo"
+          type="text"
+          value={valor.aseguradoraTercero}
+          onChange={(e) => onCambio('aseguradoraTercero', e.target.value)}
+          autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-telefono`}>Su teléfono</label>
+        <input
+          id={`${uid}-veh-telefono`}
+          className="campo"
+          type="tel"
+          value={valor.telefonoTercero}
+          onChange={(e) => onCambio('telefonoTercero', e.target.value)}
+          autoComplete="off"
+          maxLength={CAMPO_VEHICULO_MAX}
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label id={`${uid}-veh-zonas-titulo`}>Zona del daño</label>
+        <p className="editor-ayuda">
+          Toca las zonas dañadas de tu vehículo. Puedes marcar varias.
+        </p>
+        <ZonasVehiculo
+          seleccion={valor.zonasDano}
+          deshabilitado={deshabilitado}
+          onCambio={onZona}
+          etiquetaId={`${uid}-veh-zonas-titulo`}
+        />
+      </div>
+    </fieldset>
+  )
+}
+
+/**
+ * El selector de zonas: nueve botones reales en un grid con forma de coche
+ * (delantera arriba, trasera abajo), no una silueta dibujada a mano — mismo
+ * patrón que usan las apps de las aseguradoras (Mapfre, Allianz, Línea
+ * Directa) para «dónde está el daño».
+ *
+ * 🚨 Por qué botones y no una silueta SVG con zonas clicables: un `<button>`
+ * de verdad es accesible por teclado y lector de pantalla sin nada extra, y
+ * los 44 px táctiles de la regla de la casa se dan solos. Una silueta con
+ * regiones recortadas a mano es más «bonita» pero exige hit-testing propio
+ * en SVG, que en un móvil con el dedo grande falla justo donde el usuario
+ * más lo necesita — en el borde entre dos zonas.
+ *
+ * `aria-pressed`, no una clase visual sola: sin el atributo, un lector de
+ * pantalla no puede decir qué zonas están ya marcadas.
+ */
+function ZonasVehiculo({
+  seleccion,
+  deshabilitado,
+  onCambio,
+  etiquetaId,
+}: {
+  seleccion: readonly string[]
+  deshabilitado: boolean
+  onCambio: (codigo: string) => void
+  etiquetaId: string
+}) {
+  return (
+    <div className="zonas-grid" role="group" aria-labelledby={etiquetaId}>
+      {ZONAS_VEHICULO.map(([codigo, etiqueta]) => {
+        const marcada = seleccion.includes(codigo)
+        return (
+          <button
+            key={codigo}
+            type="button"
+            className={`zonas-boton${marcada ? ' sel' : ''}`}
+            aria-pressed={marcada}
+            onClick={() => onCambio(codigo)}
+            disabled={deshabilitado}
+          >
+            {etiqueta}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

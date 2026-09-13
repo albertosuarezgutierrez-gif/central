@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚑 Parte de siniestro: zona del daño tocable + autorrelleno + «ha pasado ahora mismo»
+  (13/09/2026, PR #2908).** Se adaptó el parte genérico para auto: datos del tercero + **zona del
+  daño con 9 botones tocables** (como Mapfre/Allianz, no un canvas libre), todo plegado en
+  `descripcion` sin migración. Al elegir póliza, «Tu matrícula» se autorrellena desde
+  `BienAsegurado.matricula` (campo nuevo) si sigue vacía. Botón «Ha pasado ahora mismo»: fecha/hora
+  al instante + GPS crudo (nunca dirección inventada); una respuesta tardía de geolocalización no
+  pisa un formulario ya cerrado/reabierto. Idea de Alberto («única app para abrir siniestros»)
+  aparcada en `docs/CORREDURIA-INTRANET-IDEAS.md` §P, sin construir.
+
 - **🔔 Aviso Telegram al iniciar sesión en la intranet (13/09/2026).** `POST /api/auth/login` emite
   `sistema.acceso-intranet` (catálogo `lib/telegram/catalogo.ts`) con nombre y email de la `cuenta`
   que ha entrado — único dato disponible en ese punto. Silenciable desde `/telegram`. PR #2904 mergeado.
