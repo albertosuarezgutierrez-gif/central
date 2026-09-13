@@ -73,15 +73,22 @@ type EstadoPanel =
       paso: 'reintento_sin_confirmar'
       mensaje: string
       ultimoError: string | null
+      /** No vacío = el proyecto YA cuenta una solicitud de emisión. */
+      rastro: unknown[]
       proyectoLegible: boolean
       crudo: unknown
       projectId: string
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
     }
-  /** El proyecto YA cuenta una solicitud de emisión: no se envía otra. */
-  | { paso: 'solicitud_existente'; mensaje: string; rastro: unknown; crudo: unknown }
-  | { paso: 'error'; mensaje: string; quizaEmitido?: boolean }
+  /** `reintento`: con qué volver a llamar a asegura (sin confirmar) para que
+   *  enseñe el estado del proyecto en vez de mandar al ReRate. */
+  | {
+      paso: 'error'
+      mensaje: string
+      quizaEmitido?: boolean
+      reintento?: { projectId: string; cuenta: CuentaConocida | null; cuentaAviso: AvisoCuenta | null }
+    }
 
 function euroODash(n: number | null): string {
   return n === null || !Number.isFinite(n) ? '—' : eur(n)
@@ -375,16 +382,13 @@ export function Emision({
         paso: 'reintento_sin_confirmar',
         mensaje: r.mensaje,
         ultimoError: r.ultimoError,
+        rastro: r.rastro,
         proyectoLegible: r.proyectoLegible,
         crudo: r.crudo,
         projectId,
         cuenta,
         cuentaAviso: aviso,
       })
-      return
-    }
-    if (r.estado === 'solicitud_existente') {
-      setEstado({ paso: 'solicitud_existente', mensaje: r.mensaje, rastro: r.rastro, crudo: r.crudo })
       return
     }
     if (r.estado === 'faltan_campos') {
@@ -415,7 +419,13 @@ export function Emision({
       setEstado({ paso: 'error', mensaje: r.mensaje })
       return
     }
-    setEstado({ paso: 'error', mensaje: r.mensaje, quizaEmitido: r.estado === 'error' && r.quizaEmitido === true })
+    const quizaEmitido = r.estado === 'error' && r.quizaEmitido === true
+    setEstado({
+      paso: 'error',
+      mensaje: r.mensaje,
+      quizaEmitido,
+      ...(quizaEmitido ? { reintento: { projectId, cuenta, cuentaAviso: aviso } } : {}),
+    })
   }
 
   return (
@@ -774,39 +784,46 @@ export function Emision({
         <div className="err" style={{ marginTop: 14 }}>
           {estado.mensaje}
           {estado.quizaEmitido && (
-            <p style={{ margin: '8px 0 0', fontWeight: 700 }}>
-              ⚠️ Esto NO es un rechazo: Codeoscopic dejó de esperar a la compañía y no se sabe si llegó a
-              emitir. No se ha cobrado nada por el envío. Si vuelves a pulsar «Emitir», antes se te
-              enseñará el estado del proyecto y tendrás que confirmar el reintento.
-            </p>
+            <>
+              <p style={{ margin: '8px 0 0', fontWeight: 700 }}>
+                ⚠️ Esto NO es un rechazo: Codeoscopic dejó de esperar a la compañía y no se sabe si llegó a
+                emitir. No se ha cobrado nada por el envío.
+              </p>
+              {estado.reintento && (
+                <button
+                  type="button"
+                  className="primary"
+                  style={{ marginTop: 8, minHeight: 44 }}
+                  onClick={() => emitir(estado.reintento!.projectId, estado.reintento!.cuenta, estado.reintento!.cuentaAviso)}
+                >
+                  Ver el estado del proyecto y decidir (gratis)
+                </button>
+              )}
+            </>
           )}
-        </div>
-      )}
-
-      {estado.paso === 'solicitud_existente' && (
-        <div className="err" style={{ marginTop: 14 }}>
-          <p style={{ margin: 0, fontWeight: 800 }}>🛑 {estado.mensaje}</p>
-          <details style={{ marginTop: 8 }}>
-            <summary>Lo que el proyecto cuenta de esa solicitud</summary>
-            <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, maxHeight: 320, overflow: 'auto' }}>
-              {JSON.stringify(estado.rastro, null, 2)}
-            </pre>
-          </details>
-          <details style={{ marginTop: 4 }}>
-            <summary>Proyecto entero (tal cual lo devuelve Codeoscopic)</summary>
-            <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, maxHeight: 320, overflow: 'auto' }}>
-              {JSON.stringify(estado.crudo, null, 2)}
-            </pre>
-          </details>
         </div>
       )}
 
       {estado.paso === 'reintento_sin_confirmar' && (
         <div style={{ marginTop: 14, border: '2px solid var(--warn)', borderRadius: 10, padding: 12 }}>
-          <p style={{ margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
-            ⚠️ El último envío acabó sin respuesta clara — no se sabe si la compañía emitió
-          </p>
+          {estado.rastro.length > 0 ? (
+            <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+              🛑 El proyecto YA cuenta una solicitud de emisión en Codeoscopic
+            </p>
+          ) : (
+            <p style={{ margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
+              ⚠️ El último envío acabó sin respuesta clara — no se sabe si la compañía emitió
+            </p>
+          )}
           <p style={{ margin: '6px 0 0' }}>{estado.mensaje}</p>
+          {estado.rastro.length > 0 && (
+            <details open style={{ marginTop: 8 }}>
+              <summary>Lo que el proyecto cuenta de esa solicitud</summary>
+              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, maxHeight: 240, overflow: 'auto' }}>
+                {JSON.stringify(estado.rastro, null, 2)}
+              </pre>
+            </details>
+          )}
           {estado.ultimoError && (
             <p className="muted" style={{ margin: '6px 0 0', fontSize: 12, wordBreak: 'break-word' }}>
               Último error: <code>{estado.ultimoError}</code>

@@ -267,6 +267,17 @@ export async function POST(req: Request) {
   // como `faltan_vendor` SIN haber enviado nada: el corredor lo teclea, el
   // ReRate lo escribe (`/oferta` aplica `correcciones`) y se vuelve a Emitir.
   // Es también donde se fija la forma de `emails[]` (ver `completarPersonas`).
+  if (p.estado === 'emitida') {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'ya_emitida',
+        mensaje: `El proyecto ${projectId} ya consta como EMITIDO en nuestra BD: no se envía otro Submit.`,
+      },
+      { status: 409 },
+    )
+  }
+
   const crudoPrevio = await leerProyectoCrudo(r.config, projectId).catch((e: unknown) => {
     console.log(`[emitir] no se pudo leer el proyecto ${projectId} antes del Submit —`, e instanceof Error ? e.message : String(e))
     return null
@@ -279,34 +290,23 @@ export async function POST(req: Request) {
   // reenvía a ciegas: el corredor tiene que mirar el estado (aquí va el
   // proyecto crudo, gratis) y decirlo con `reintentoConfirmado: true`.
   const rastro = crudoPrevio ? rastroSolicitudEmision(crudoPrevio) : []
-  if (rastro.length > 0) {
-    console.log(`[emitir] proyecto ${projectId} ya cuenta una solicitud de emisión (${rastro.map((r) => r.ruta).join(', ')}): no se envía otra`)
-    return NextResponse.json(
-      {
-        estado: 'error',
-        causa: 'solicitud_existente',
-        mensaje:
-          'El proyecto ya tiene una solicitud de emisión en Codeoscopic: NO se ha enviado otra. ' +
-          'Mira su estado (aquí va lo que cuenta el proyecto) y en Avant2 antes de nada — un segundo ' +
-          'envío podría ser una segunda póliza.',
-        rastro: redactarCrudoVendor(rastro),
-        crudo: redactarCrudoVendor(crudoPrevio),
-      },
-      { status: 409 },
+  const quizaEmitidoAntes = intentoQuizaEmitido(p.error_mensaje)
+  if ((rastro.length > 0 || quizaEmitidoAntes) && cuerpo.reintentoConfirmado !== true) {
+    console.log(
+      `[emitir] proyecto ${projectId}: ${rastro.length > 0 ? `ya cuenta una solicitud (${rastro.map((r) => r.ruta).join(', ')})` : 'el último Submit acabó sin respuesta clara'} y no hay confirmación de reintento — no se envía`,
     )
-  }
-  if (intentoQuizaEmitido(p.estado, p.error_mensaje) && cuerpo.reintentoConfirmado !== true) {
-    console.log(`[emitir] proyecto ${projectId}: el último Submit acabó sin respuesta clara y no hay confirmación de reintento — no se envía`)
     return NextResponse.json(
       {
         estado: 'error',
         causa: 'reintento_sin_confirmar',
         mensaje:
-          'El último envío de este proyecto acabó sin respuesta clara del vendor, así que NO se sabe si la ' +
-          'compañía llegó a emitir. No se reenvía a ciegas: comprueba el estado del proyecto (abajo va tal ' +
-          'cual lo devuelve Codeoscopic; si no cuenta ninguna solicitud, mira también Avant2) y, si no hay ' +
-          'póliza, confirma el reintento.',
-        ultimoError: p.error_mensaje,
+          (rastro.length > 0
+            ? 'El proyecto YA cuenta una solicitud de emisión en Codeoscopic. '
+            : 'El último envío de este proyecto acabó sin respuesta clara del vendor, así que NO se sabe si la compañía llegó a emitir. ') +
+          'No se reenvía a ciegas: comprueba el estado del proyecto (abajo va tal cual lo devuelve Codeoscopic; ' +
+          'si no cuenta ninguna solicitud, mira también Avant2) y, solo si no hay póliza, confirma el reintento.',
+        ultimoError: quizaEmitidoAntes ? p.error_mensaje : null,
+        rastro: redactarCrudoVendor(rastro),
         proyectoLegible: crudoPrevio !== null,
         crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
       },
@@ -392,6 +392,7 @@ export async function POST(req: Request) {
     offerId: p.accepted_offer_id_codeoscopic,
     campos: camposEnvio,
     producto: poliza.tipo,
+    reintentoConfirmado: cuerpo.reintentoConfirmado === true,
   })
 
   // ── 13º 400 real (12/09/2026): el Submit exige campos de PERSONA (email,
@@ -467,6 +468,9 @@ export async function POST(req: Request) {
           offerId: p.accepted_offer_id_codeoscopic,
           campos: camposEnvio,
           producto: poliza.tipo,
+          // El primer intento acabó en 400 (rechazo, no «quizá emitido»), así
+          // que el candado deja pasar; el flag viaja igual por coherencia.
+          reintentoConfirmado: cuerpo.reintentoConfirmado === true,
         })
         interpPrevio = null
         deFichaPrevio = null
@@ -551,10 +555,21 @@ export async function POST(req: Request) {
         // Un 5xx del Submit no es un rechazo: Codeoscopic dejó de esperar a la
         // compañía y no se sabe si emitió. La pantalla lo dice y el siguiente
         // intento exige `reintentoConfirmado` (ver arriba).
-        quizaEmitido: envio.razon === 'vendor' && intentoQuizaEmitido('error', envio.mensaje),
-        crudo: redactarCrudoVendor(envio.crudo) ?? null,
+        quizaEmitido: envio.razon === 'vendor' && intentoQuizaEmitido(envio.mensaje),
+        // El candado en SQL (`bloquearEnvio`) ha visto lo que la lectura de
+        // arriba no pudo (carrera entre dos peticiones): mismo contrato de 409.
+        ...(envio.razon === 'quiza-emitido'
+          ? {
+              causa: 'reintento_sin_confirmar',
+              ultimoError: p.error_mensaje,
+              rastro: redactarCrudoVendor(rastro),
+              proyectoLegible: crudoPrevio !== null,
+              crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
+            }
+          : {}),
+        ...(envio.razon === 'ya-emitida' ? { causa: 'ya_emitida' } : {}),
       },
-      { status: envio.razon === 'en-vuelo' ? 409 : 502 },
+      { status: envio.razon === 'vendor' ? 502 : 409 },
     )
   }
 

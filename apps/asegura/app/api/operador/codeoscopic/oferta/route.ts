@@ -359,7 +359,8 @@ export async function POST(req: Request) {
             producto = excluded.producto,
             aseguradora = excluded.aseguradora,
             accepted_offer_id_codeoscopic = excluded.accepted_offer_id_codeoscopic,
-            estado = 'preemision'
+            estado = case when codeoscopic_projects.estado = 'emitida' then codeoscopic_projects.estado
+                          else 'preemision'::codeoscopic_project_estado end
     `
 
     // La cuenta de cargo que YA conocemos del cliente (póliza, recibos de CIMA,

@@ -103,31 +103,47 @@ test('un 502 del Submit con quizaEmitido llega a la pantalla como tal, y sin el 
   assert.equal(s.estado === 'error' ? s.quizaEmitido : 'x', undefined)
 })
 
-test('el 409 reintento_sin_confirmar trae el último error y el proyecto para mirarlo; crudo ausente ≠ legible', () => {
+test('el 409 reintento_sin_confirmar trae el último error, el rastro y el proyecto; crudo ausente ≠ legible', () => {
   const r = interpretarEmitir(409, {
     estado: 'error',
     causa: 'reintento_sin_confirmar',
     mensaje: 'El último envío…',
     ultimoError: '500: {"message":"Unknown error while waiting for the operation to complete."}',
+    rastro: [],
     proyectoLegible: true,
     crudo: { id: 40685793 },
   })
   assert.equal(r.estado, 'reintento_sin_confirmar')
   if (r.estado !== 'reintento_sin_confirmar') return
   assert.match(r.ultimoError ?? '', /Unknown error/)
+  assert.deepEqual(r.rastro, [])
   assert.equal(r.proyectoLegible, true)
   assert.deepEqual(r.crudo, { id: 40685793 })
   const sin = interpretarEmitir(409, { causa: 'reintento_sin_confirmar', proyectoLegible: false })
   assert.equal(sin.estado === 'reintento_sin_confirmar' ? sin.proyectoLegible : 'x', false)
   assert.equal(sin.estado === 'reintento_sin_confirmar' ? sin.crudo : 'x', null)
+  assert.deepEqual(sin.estado === 'reintento_sin_confirmar' ? sin.rastro : 'x', [])
 })
 
-test('el 409 solicitud_existente se distingue de en-vuelo y conserva el rastro', () => {
-  const r = interpretarEmitir(409, { estado: 'error', causa: 'solicitud_existente', mensaje: 'Ya hay…', rastro: [{ ruta: 'policyApplication', valor: { id: 'PA-1' } }], crudo: {} })
-  assert.equal(r.estado, 'solicitud_existente')
-  if (r.estado !== 'solicitud_existente') return
-  assert.equal(Array.isArray(r.rastro) ? r.rastro.length : 0, 1)
+test('el mismo 409 con rastro (el proyecto YA cuenta una solicitud) lo conserva, y en-vuelo sigue aparte', () => {
+  const r = interpretarEmitir(409, {
+    estado: 'error',
+    causa: 'reintento_sin_confirmar',
+    mensaje: 'Ya cuenta…',
+    ultimoError: null,
+    rastro: [{ ruta: 'policyApplication', valor: { id: 'PA-1' } }],
+    proyectoLegible: true,
+    crudo: {},
+  })
+  assert.equal(r.estado, 'reintento_sin_confirmar')
+  if (r.estado !== 'reintento_sin_confirmar') return
+  assert.equal(r.rastro.length, 1)
+  assert.equal(r.ultimoError, null)
   assert.equal(interpretarEmitir(409, { causa: 'en-vuelo' }).estado, 'en_vuelo')
+  // `ya_emitida` no es reintentable: cae al error genérico con el mensaje de asegura.
+  const ya = interpretarEmitir(409, { estado: 'error', causa: 'ya_emitida', mensaje: 'ya consta como EMITIDO' })
+  assert.equal(ya.estado, 'error')
+  assert.match(ya.estado === 'error' ? ya.mensaje : '', /EMITIDO/)
 })
 
 test('emitirAsegura solo manda reintentoConfirmado cuando es true (lee el fuente)', () => {

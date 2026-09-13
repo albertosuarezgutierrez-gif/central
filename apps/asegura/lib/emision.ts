@@ -74,10 +74,15 @@ export async function registrarPolizaEmitida(
       },
       select: { id: true },
     })
-    // Si el proyecto existe en la tabla del CRM, se enlaza; si no, no pasa nada (0 filas).
+    // Si el proyecto existe en la tabla del CRM, se marca EMITIDO (y se enlaza si
+    // aún no tenía póliza); si no, no pasa nada (0 filas). Hasta el 13/09/2026
+    // solo se marcaba `where poliza_id is null`, y como `/oferta` ya pone la
+    // póliza retarificada, un proyecto emitido se quedaba en `preemision` y un
+    // segundo `/emitir` lo habría reenviado.
     await tx.$executeRaw`
-      update codeoscopic_projects set poliza_id = ${creada.id}::uuid, estado = 'emitida', updated_at = now()
-      where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${entrada.proyecto.projectIdCodeoscopic} and poliza_id is null`
+      update codeoscopic_projects
+      set poliza_id = coalesce(poliza_id, ${creada.id}::uuid), estado = 'emitida', error_mensaje = null, updated_at = now()
+      where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${entrada.proyecto.projectIdCodeoscopic}`
     await tx.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
       values (${correduriaId}::uuid, ${cliente.id}::uuid, ${creada.id}::uuid, cast('gestion' as tipo_historial_interno),

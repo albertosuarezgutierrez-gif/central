@@ -941,17 +941,16 @@ export type RespuestaEmitir =
       confirmar: boolean
     }
   | { estado: 'en_vuelo'; mensaje: string }
-  /** 409 · el proyecto YA cuenta una solicitud de emisión en Codeoscopic: asegura
-   *  no ha enviado otra (13/09/2026). `rastro` es lo que el proyecto dice de ella. */
-  | { estado: 'solicitud_existente'; mensaje: string; rastro: unknown; crudo: unknown }
-  /** 409 · el último Submit acabó en 5xx o corte de red («quizá emitido») y nadie
-   *  ha confirmado el reintento: asegura no reenvía a ciegas. `crudo` es el
-   *  proyecto tal cual lo devuelve el vendor (gratis) para mirarlo; `null` si no
-   *  se pudo leer — que NO es «no hay póliza». */
+  /** 409 · asegura no reenvía a ciegas (13/09/2026): o el proyecto YA cuenta una
+   *  solicitud de emisión (`rastro` no vacío) o el último Submit acabó en 5xx /
+   *  corte de red («quizá emitido», `ultimoError`). `crudo` es el proyecto tal
+   *  cual lo devuelve el vendor (gratis) para mirarlo; `null` si no se pudo leer
+   *  — que NO es «no hay póliza». */
   | {
       estado: 'reintento_sin_confirmar'
       mensaje: string
       ultimoError: string | null
+      rastro: unknown[]
       proyectoLegible: boolean
       crudo: unknown
     }
@@ -984,16 +983,6 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
   if (status === 409 && r.causa === 'en-vuelo') {
     return { estado: 'en_vuelo', mensaje: cadenaONulo(r.mensaje) ?? 'Ya hay un envío de este proyecto en curso.' }
   }
-  if (status === 409 && r.causa === 'solicitud_existente') {
-    return {
-      estado: 'solicitud_existente',
-      mensaje:
-        cadenaONulo(r.mensaje) ??
-        'El proyecto ya tiene una solicitud de emisión en Codeoscopic: no se ha enviado otra.',
-      rastro: r.rastro ?? null,
-      crudo: r.crudo ?? null,
-    }
-  }
   if (status === 409 && r.causa === 'reintento_sin_confirmar') {
     return {
       estado: 'reintento_sin_confirmar',
@@ -1001,6 +990,7 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
         cadenaONulo(r.mensaje) ??
         'El último envío acabó sin respuesta clara del vendor: comprueba el proyecto antes de reintentar.',
       ultimoError: cadenaONulo(r.ultimoError),
+      rastro: Array.isArray(r.rastro) ? r.rastro : [],
       proyectoLegible: r.proyectoLegible === true,
       crudo: r.crudo ?? null,
     }
