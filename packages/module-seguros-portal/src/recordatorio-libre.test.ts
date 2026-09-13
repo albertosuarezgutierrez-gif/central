@@ -40,6 +40,14 @@ test('normalizarRecordatorio rechaza fecha ausente o mal formada', () => {
   })
 })
 
+test('normalizarRecordatorio rechaza un 30 de febrero en vez de normalizarlo al 2 de marzo', () => {
+  // `new Date('2027-02-30T00:00:00Z')` no lanza: JS lo normaliza en silencio.
+  // Un `<input type="date">` nunca deja elegir esa fecha, pero la API también
+  // se puede llamar a pelo, así que este cepo es el que de verdad protege.
+  const r = normalizarRecordatorio({ titulo: 'ITV', fechaEvento: '2027-02-30' })
+  assert.deepEqual(r, { ok: false, error: 'fecha_invalida' })
+})
+
 test('normalizarRecordatorio rechaza un tipo que no está en el catálogo', () => {
   const r = normalizarRecordatorio({ titulo: 'ITV', fechaEvento: '2027-01-01', tipo: 'inventado' })
   assert.deepEqual(r, { ok: false, error: 'tipo_invalido' })

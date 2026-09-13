@@ -82,9 +82,17 @@ export function normalizarRecordatorio(entrada: EntradaRecordatorio): ResultadoR
   const tituloBruto = typeof entrada.titulo === 'string' ? entrada.titulo.trim() : ''
   if (tituloBruto.length === 0 || tituloBruto.length > TITULO_MAX) return { ok: false, error: 'titulo_invalido' }
 
+  // 🚨 `new Date('2027-02-30T00:00:00Z')` NO da inválido: `Date` normaliza en
+  // silencio al 2 de marzo. El `<input type="date">` del formulario nunca deja
+  // elegir un 30 de febrero, pero esta función también la llama la API a
+  // pelo — así que se comprueba que la fecha construida DEVUELVE el mismo
+  // día/mes/año que se le pidió, no solo que sea un `Date` válido.
   const fechaBruta = typeof entrada.fechaEvento === 'string' ? entrada.fechaEvento : null
-  const fechaEvento = fechaBruta !== null ? new Date(`${fechaBruta}T00:00:00Z`) : null
-  if (fechaEvento === null || Number.isNaN(fechaEvento.getTime())) return { ok: false, error: 'fecha_invalida' }
+  const coincideFormato = fechaBruta !== null && /^\d{4}-\d{2}-\d{2}$/.test(fechaBruta)
+  const fechaEvento = coincideFormato ? new Date(`${fechaBruta}T00:00:00Z`) : new Date(NaN)
+  if (Number.isNaN(fechaEvento.getTime()) || fechaEvento.toISOString().slice(0, 10) !== fechaBruta) {
+    return { ok: false, error: 'fecha_invalida' }
+  }
 
   let repiteCadaMeses: number | null = null
   if (entrada.repiteCadaMeses !== null && entrada.repiteCadaMeses !== undefined && entrada.repiteCadaMeses !== '') {
