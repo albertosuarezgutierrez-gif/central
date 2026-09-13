@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (13/09/2026) 📮 El portal de Codeoscopic SÍ documenta cómo reconciliar un Submit sin respuesta
 - (13/09/2026) 🛑 Primer Submit que LLEGA a la compañía… y Codeoscopic contesta 500 «Unknown error while waiting for the operation to complete»
 - (13/09/2026) ⏳ La fecha de efecto CADUCA: el proyecto 40685666 murió al cambiar de día
 - (12/09/2026) 🔔 Avisos por Web Push en `apps/asegura-portal`
@@ -271,5 +272,4 @@
 - (12/09/2026) 💸 Causa de fondo del día de emisión fallida: el `POST /insurances` mandaba la persona SIN email ni calle completa
 - (12/09/2026) 🛣️ `tipoVia` en `faltan_vendor` era una caja de texto que pedía un id de catálogo a ciegas
 - (12/09/2026) 🔒 `patch_no_aplicado` del Submit: mensaje falso + PII en claro en `crudo`
-- (12/09/2026) 🧾 Diagnóstico de «subida de póliza trae poca información» + spec de tercero
 
