@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-12T22:03:04Z",
-  "sha": "38467c4a797b5f862bb79d266ceb0266e6d6505c",
+  "generadoEn": "2026-09-13T05:09:31Z",
+  "sha": "0376f8b3082ad1d8b4aa347a043596f5806dc7c2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10820,6 +10820,81 @@
       "hash": "b5f6330f2d33"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/recaptacion/email/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "POST /api/operador/recaptacion/email — envía de verdad por Resend (con tracking de apertura/clic) y deja el registro en `recaptacion_envios` + `historial_interno`. `{ clienteId, polizaId, email, asunt"
+        },
+        {
+          "nombre": "escaparHtml",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 68
+        }
+      ],
+      "tablas": [
+        "historial_interno",
+        "next",
+        "recaptacion_envios"
+      ],
+      "rutaApi": "/api/operador/recaptacion/email",
+      "hash": "3f4611f6ba08"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/recaptacion/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "GET /api/operador/recaptacion — la cola de recaptación: leads del volcado sin vencimiento, con contacto disponible, que no son ya cliente vivo por CIMA. Read-only. Ver docs/superpowers/specs/2026-09-1"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/recaptacion",
+      "hash": "1c19e93a461c"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/recaptacion/whatsapp/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "POST /api/operador/recaptacion/whatsapp — registra que Alberto pulsó el botón de WhatsApp (el envío en sí lo hace su propio WhatsApp: sin WABA no hay forma de mandarlo desde aquí). `{ clienteId, poliz"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/recaptacion/whatsapp",
+      "hash": "9057ef74a2c3"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/resumen/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -11069,6 +11144,30 @@
       "tablas": [],
       "rutaApi": "/api/portal/nota",
       "hash": "82c2ccbf59e1"
+    },
+    {
+      "ruta": "apps/asegura/app/api/webhooks/resend/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "POST /api/webhooks/resend — recibe los eventos de apertura/clic de Resend sobre los emails de recaptación. Verifica la firma (svix) antes de fiarse de nada del cuerpo; sin `RESEND_WEBHOOK_SECRET` se r"
+        }
+      ],
+      "tablas": [
+        "next",
+        "recaptacion_envios"
+      ],
+      "rutaApi": "/api/webhooks/resend",
+      "hash": "6c727f72f0a4"
     },
     {
       "ruta": "apps/asegura/app/layout.tsx",
@@ -12783,6 +12882,95 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6a201f27a150"
+    },
+    {
+      "ruta": "apps/asegura/lib/cartera-recaptacion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/cartera-recaptacion.ts La cola de recaptación: leads del volcado sin fecha de vencimiento, con contacto, que NO son ya cliente vivo por CIMA. Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md. No hay tabla de cola: se calcula en cada GET, como `polizasSinRecibo()` de",
+      "exporta": [
+        "colaRecaptacion",
+        "textoWhatsappPara",
+        "textoEmailPara",
+        "registrarEnvioWhatsapp"
+      ],
+      "funciones": [
+        {
+          "nombre": "ramoLegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipo: string",
+          "retorno": "string",
+          "linea": 35
+        },
+        {
+          "nombre": "descifrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 40,
+          "resumen": "Descifra sin convertir un fallo en \"no tiene contacto\". Mismo patrón que `cartera-impagados.ts`."
+        },
+        {
+          "nombre": "colaRecaptacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<ColaRecaptacion>",
+          "linea": 91
+        },
+        {
+          "nombre": "contadoresSemana",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<Omit<ContadoresRecaptacion, 'totalCandidatos'>>",
+          "linea": 170
+        },
+        {
+          "nombre": "textoWhatsappPara",
+          "kind": "function",
+          "exportada": true,
+          "params": "lead: Pick<LeadRecaptacion, 'cliente' | 'ramoLegible' | 'aseguradoraAnterior'>",
+          "retorno": "string",
+          "linea": 185,
+          "resumen": "El texto sugerido para un lead concreto (WhatsApp), antes de que la IA lo pula."
+        },
+        {
+          "nombre": "textoEmailPara",
+          "kind": "function",
+          "exportada": true,
+          "params": "lead: Pick<LeadRecaptacion, 'cliente' | 'ramoLegible' | 'aseguradoraAnterior'>",
+          "retorno": "",
+          "linea": 190,
+          "resumen": "Ídem para email."
+        },
+        {
+          "nombre": "registrarEnvioWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, entrada: { clienteId: string; polizaId: string; mensaje: string; actor: string },",
+          "retorno": "Promise<",
+          "linea": 195,
+          "resumen": "Registra que Alberto abrió el enlace de WhatsApp de un lead. Deja fila en `historial_interno`."
+        },
+        {
+          "nombre": "anotar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 210
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "historial_interno",
+        "polizas",
+        "recaptacion_envios"
+      ],
+      "rutaApi": null,
+      "hash": "23bbd9f95a11"
     },
     {
       "ruta": "apps/asegura/lib/cartera-relaciones.ts",
@@ -16960,6 +17148,99 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a81bf2dd5398"
+    },
+    {
+      "ruta": "apps/asegura/lib/recaptacion-email.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Envío de email de recaptación por la API HTTP de Resend (NO por SMTP como el resto de correos de esta app — ver `@central/core-email` / `correo-aviso-acceso.ts`). El transporte SMTP no da tracking de apertura/clic; la API sí, activando `open`/`click` en la petición. Solo ESTE flujo usa la API direct",
+      "exporta": [
+        "construirPeticionResend",
+        "enviarEmailResend"
+      ],
+      "funciones": [
+        {
+          "nombre": "construirPeticionResend",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { apiKey: string from: string to: string asunto: string texto: string html: string }",
+          "retorno": "PeticionResend",
+          "linea": 25
+        },
+        {
+          "nombre": "enviarEmailResend",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { from: string; to: string; asunto: string; texto: string; html: string }, fetchImpl: typeof fetch = fetch,",
+          "retorno": "Promise<ResultadoEnvioResend>",
+          "linea": 61,
+          "resumen": "Envía de verdad. `fetchImpl` se inyecta para poder probar sin red (por defecto, `fetch` global). El apellido \"resend\" en vez de reusar `@central/core-email` es deliberado: ese paquete construye un tra"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "039837a33a78"
+    },
+    {
+      "ruta": "apps/asegura/lib/recaptacion-ia.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Remata el texto base de recaptación con un modelo barato. NUNCA bloquea el envío: si la IA falla o tarda, se manda el texto base determinista (ver `@central/module-seguros/recaptacion.ts`), que ya es un mensaje completo y correcto por sí solo. ⚠️ Ajuste respecto al plan (verificado en `packages/core",
+      "exporta": [
+        "pulirConIA"
+      ],
+      "funciones": [
+        {
+          "nombre": "pulirConIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "textoBase: string, llamar: (prompt: string) => Promise<ResultadoIA> = llamarPasarela,",
+          "retorno": "Promise<string>",
+          "linea": 20,
+          "resumen": "`llamar` se inyecta para poder probar sin red (por defecto, `aiComplete` de la pasarela). Separado así en vez de importar `aiComplete` arriba: el `import` de `@central/core-ai` no rompe `node --test` "
+        },
+        {
+          "nombre": "llamarPasarela",
+          "kind": "function",
+          "exportada": false,
+          "params": "prompt: string",
+          "retorno": "Promise<ResultadoIA>",
+          "linea": 37
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1a8e02aac628"
+    },
+    {
+      "ruta": "apps/asegura/lib/recaptacion-webhook.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Interpreta y verifica los eventos que manda Resend cuando alguien abre o pincha un email de recaptación. La firma es tipo svix (cabeceras `svix-id`/`svix-timestamp`/`svix-signature`), verificada con `RESEND_WEBHOOK_SECRET` (se obtiene al crear el endpoint en el dashboard de Resend — es un secreto NU",
+      "exporta": [
+        "interpretarEventoResend",
+        "verificarWebhookResend"
+      ],
+      "funciones": [
+        {
+          "nombre": "interpretarEventoResend",
+          "kind": "function",
+          "exportada": true,
+          "params": "payload: unknown",
+          "retorno": "EventoUtilResend | null",
+          "linea": 12,
+          "resumen": "Puro: no verifica firma, solo interpreta el payload ya autenticado."
+        },
+        {
+          "nombre": "verificarWebhookResend",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpoCrudo: string, cabeceras: { 'svix-id': string; 'svix-timestamp': string; 'svix-signature': string },",
+          "retorno": "VerificacionWebhook",
+          "linea": 32,
+          "resumen": "Verifica la firma con el secreto de Resend antes de fiarse de nada del cuerpo. Sin `RESEND_WEBHOOK_SECRET` el webhook se rechaza siempre — nunca se procesa un evento sin verificar, ni siquiera en desa"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6ea848b26031"
     },
     {
       "ruta": "apps/asegura/lib/retarificar-cartera.ts",
@@ -63073,7 +63354,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 64
+          "linea": 65
         },
         {
           "nombre": "fmtFecha",
@@ -63081,7 +63362,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 69,
+          "linea": 70,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -63090,7 +63371,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 119
+          "linea": 120
         },
         {
           "nombre": "CorreduriaClient",
@@ -63098,7 +63379,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 121
+          "linea": 122
         },
         {
           "nombre": "CarteraResumen",
@@ -63106,7 +63387,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 516
+          "linea": 525
         },
         {
           "nombre": "btnMini",
@@ -63114,7 +63395,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 633,
+          "linea": 642,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -63123,12 +63404,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 651
+          "linea": 660
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "28e2b9d7734c"
+      "hash": "9ec620bcf7be"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -64516,6 +64797,68 @@
       ],
       "rutaApi": null,
       "hash": "7228414f91a2"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/Recaptacion.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Recaptacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "Recaptacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ onContador }: { onContador?: (n: number | null) => void }",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "🎯 Cola de recaptación: leads del volcado sin fecha de vencimiento, con teléfono o email, que NO son ya cliente vivo por CIMA (esos se trabajan desde su ficha, no aquí). WhatsApp es un enlace manual ("
+        },
+        {
+          "nombre": "FilaLead",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ l }: { l: LeadRecaptacion }",
+          "retorno": null,
+          "linea": 131
+        },
+        {
+          "nombre": "mensajeSugerido",
+          "kind": "function",
+          "exportada": false,
+          "params": "l: LeadRecaptacion",
+          "retorno": "string",
+          "linea": 163
+        },
+        {
+          "nombre": "textoEscritura",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: EscrituraRecaptacion",
+          "retorno": "string",
+          "linea": 168
+        },
+        {
+          "nombre": "BotonWhatsappRecaptacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ lead }: { lead: LeadRecaptacion }",
+          "retorno": null,
+          "linea": 186,
+          "resumen": "Abre WhatsApp con el mensaje sugerido — texto DETERMINISTA, sin pasar por IA: pulirlo significaría esperar una llamada a un modelo antes de poder pulsar el enlace, que rompe el \"un clic, se abre Whats"
+        },
+        {
+          "nombre": "BotonEmailRecaptacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ lead }: { lead: LeadRecaptacion }",
+          "retorno": null,
+          "linea": 209
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "40a4e708588b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Redes.tsx",
@@ -72519,6 +72862,69 @@
       "tablas": [],
       "rutaApi": "/api/correduria/poliza",
       "hash": "22cd12a29e12"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/recaptacion/email/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "POST /api/correduria/recaptacion/email — envía de verdad el email de recaptación (Resend, con tracking). `{ clienteId, polizaId, email, asunto, texto }`. El `actor` lo pone el servidor, nunca el cuerp"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/recaptacion/email",
+      "hash": "e913c0faa5b0"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/recaptacion/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/correduria/recaptacion — la cola de leads sin vencimiento a recaptar. Read-only, reenvía al puerto de asegura."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/recaptacion",
+      "hash": "2d7e40322816"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/recaptacion/whatsapp/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "POST /api/correduria/recaptacion/whatsapp — registra que Alberto abrió el enlace de WhatsApp de un lead (el envío en sí lo hace su propio WhatsApp). `{ clienteId, polizaId, mensaje }`. El `actor` lo p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/recaptacion/whatsapp",
+      "hash": "59e7df88287b"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/route.ts",
@@ -93259,6 +93665,137 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e1e41dbf55c6"
+    },
+    {
+      "ruta": "apps/plataforma/lib/recaptacion-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "La cola de recaptación de leads sin vencimiento (12/09/2026), leída del puerto de asegura (`/api/operador/recaptacion*`). Mismo patrón que `correduria-puerto.ts`: interpretación PURA (sin red, la prueba el client component) + las llamadas de red, que solo se invocan desde las rutas API. Ver docs/sup",
+      "exporta": [
+        "interpretarCola",
+        "textoMotivoCola",
+        "interpretarEscrituraRecaptacion",
+        "colaRecaptacionAsegura",
+        "enviarWhatsappRecaptacionAsegura",
+        "enviarEmailRecaptacionAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 8
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 12
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 16
+        },
+        {
+          "nombre": "booleano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 20
+        },
+        {
+          "nombre": "leerLead",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "LeadRecaptacion | null",
+          "linea": 60
+        },
+        {
+          "nombre": "leerContadores",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "ContadoresRecaptacion",
+          "linea": 83
+        },
+        {
+          "nombre": "interpretarCola",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "Cola",
+          "linea": 92
+        },
+        {
+          "nombre": "textoMotivoCola",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red', causa: string | null",
+          "retorno": "string",
+          "linea": 116,
+          "resumen": "El motivo del puerto, en castellano de pantalla."
+        },
+        {
+          "nombre": "interpretarEscrituraRecaptacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "EscrituraRecaptacion",
+          "linea": 140
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 161
+        },
+        {
+          "nombre": "pedirCon",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string, init: RequestInit",
+          "retorno": "Promise<",
+          "linea": 165
+        },
+        {
+          "nombre": "colaRecaptacionAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Cola>",
+          "linea": 180
+        },
+        {
+          "nombre": "enviarWhatsappRecaptacionAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: { clienteId: string polizaId: string mensaje: string actor: string }",
+          "retorno": "Promise<EscrituraRecaptacion>",
+          "linea": 190
+        },
+        {
+          "nombre": "enviarEmailRecaptacionAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: { clienteId: string polizaId: string email: string asunto: string texto: string actor: string }",
+          "retorno": "Promise<EscrituraRecaptacion>",
+          "linea": 205
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6c35ba7c68c6"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",
@@ -127932,6 +128469,48 @@
       "hash": "cfa47a354570"
     },
     {
+      "ruta": "packages/module-seguros/src/recaptacion.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "packages/module-seguros/src/recaptacion.ts Cola de recaptación de leads sin vencimiento (12/09/2026). Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md. La cola es SOLO leads del volcado, sin vencimiento, con contacto, y EXCLUYENDO a quien ya es cliente vivo por CIMA en otro ramo (re",
+      "exporta": [
+        "enCooldown",
+        "textoBaseRecaptacionWhatsapp",
+        "textoBaseRecaptacionEmail"
+      ],
+      "funciones": [
+        {
+          "nombre": "enCooldown",
+          "kind": "function",
+          "exportada": true,
+          "params": "ultimoEnvio: EnvioRecienteRecaptacion | null, hoy: Date = new Date(), dias: number = COOLDOWN_DIAS,",
+          "retorno": "boolean",
+          "linea": 26,
+          "resumen": "`true` si el lead sigue en cooldown desde su último envío/apertura de enlace. El límite se calcula sumando días de calendario, no horas exactas: un envío de las 23:50 y una comprobación a las 00:05 de"
+        },
+        {
+          "nombre": "textoBaseRecaptacionWhatsapp",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: PersonalizacionRecaptacion",
+          "retorno": "string",
+          "linea": 52,
+          "resumen": "Firma igual que `mensaje-whatsapp.ts` (mismo `FIRMA`, mismo portal como ÚNICO enlace — dos URLs en un mensaje corto compiten). Esta es la base DETERMINISTA que `apps/asegura` manda a pulir a la IA; si"
+        },
+        {
+          "nombre": "textoBaseRecaptacionEmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: PersonalizacionRecaptacion",
+          "retorno": "",
+          "linea": 70,
+          "resumen": "Misma redacción, adaptada a un asunto+cuerpo de correo (sin el saludo de WhatsApp)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1cc90f65357a"
+    },
+    {
       "ruta": "packages/module-seguros/src/recibos.ts",
       "ambito": "packages/module-seguros",
       "resumen": "El estado de cobro de una póliza, que es la pregunta que Alberto hace antes de llamar a nadie: ¿este cliente está al corriente? 🚨 Esa pregunta tiene TRES respuestas, no dos, y la tercera es la que más se pierde: «no lo sé». Medido el 01/09/2026, 18 de las 109 pólizas vivas no tienen NI UN recibo en",
@@ -133618,7 +134197,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3272,
-    "funciones": 10092
+    "archivos": 3286,
+    "funciones": 10137
   }
 }
