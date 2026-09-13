@@ -56,6 +56,7 @@ import {
   computeTelefonoLookupHash,
   decryptField,
 } from '@central/module-seguros-pii'
+import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 
@@ -303,55 +304,109 @@ function bloque(
   }
 }
 
+/**
+ * Nombre y apellidos, SIN ACENTOS (08/09/2026 → corregido: se buscaba con
+ * `contains` de Prisma, que es un `ILIKE` normal — insensible a mayúsculas,
+ * pero NO a acentos. Buscar «Alberto Suarez» no encontraba «Alberto Suárez»:
+ * el buscador debe ser lo más amplio posible y encontrar lo más parecido, no
+ * exigir la tilde exacta. Mismo patrón que `porRiesgo`: `unaccent()` en los
+ * dos lados, con reintento sin ella si la extensión no está instalada — un
+ * «no se encuentra a nadie» falso por eso sería peor que perder el filtro.
+ */
 async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
   const palabras = c.valor.split(/\s+/).slice(0, 4)
-  const filas = await db.cliente.findMany({
-    where: {
-      correduriaId,
-      mergedIntoClienteId: null,
-      // Las DESCARTADAS no salen: descartar es quitarlas de donde se mira.
-      activo: true,
-      AND: palabras.map((p) => ({
-        OR: [
-          { nombre: { contains: p, mode: 'insensitive' as const } },
-          { apellidos: { contains: p, mode: 'insensitive' as const } },
-        ],
-      })),
-    },
-    select: SELECT_CLIENTE,
-    orderBy: [{ apellidos: 'asc' }, { nombre: 'asc' }],
-    take: LIMITE,
+
+  const condicionUnaccent = Prisma.join(
+    palabras.map(
+      (p) =>
+        Prisma.sql`(unaccent(cl.nombre) ilike unaccent(${'%' + p + '%'}) or unaccent(cl.apellidos) ilike unaccent(${'%' + p + '%'}))`,
+    ),
+    ' and ',
+  )
+  const condicionSimple = Prisma.join(
+    palabras.map((p) => Prisma.sql`(cl.nombre ilike ${'%' + p + '%'} or cl.apellidos ilike ${'%' + p + '%'})`),
+    ' and ',
+  )
+
+  const filas = await db.$queryRaw<
+    { id: string; nombre: string; apellidos: string; tipo: string }[]
+  >`
+    select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
+    from clientes cl
+    where cl.correduria_id = ${correduriaId}::uuid
+      and cl.merged_into_cliente_id is null
+      and cl.activo
+      and ${condicionUnaccent}
+    order by cl.apellidos asc, cl.nombre asc
+    limit ${LIMITE}
+  `.catch(async () => {
+    return db.$queryRaw<{ id: string; nombre: string; apellidos: string; tipo: string }[]>`
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
+      from clientes cl
+      where cl.correduria_id = ${correduriaId}::uuid
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and ${condicionSimple}
+      order by cl.apellidos asc, cl.nombre asc
+      limit ${LIMITE}
+    `
   })
+
+  const conteos = await polizasDe(filas.map((f) => f.id))
+  const hallazgos: Hallazgo[] = filas.map((f) =>
+    hallazgoSinEnriquecer({
+      clienteId: f.id,
+      nombre: `${f.nombre} ${f.apellidos}`.trim(),
+      tipo: f.tipo,
+      polizas: conteos.get(f.id) ?? 0,
+      porque: 'nombre o apellidos',
+    }),
+  )
   // El nombre está en claro en las 32.600: alcanza a toda la cartera.
   const total = await db.cliente
     .count({ where: { correduriaId, mergedIntoClienteId: null, activo: true } })
     .catch(() => null)
-  return bloque(
-    c,
-    filas.map((f) => aHallazgo(f, 'nombre o apellidos')),
-    total === null ? null : { alcanzables: total, total },
-  )
+  return bloque(c, hallazgos, total === null ? null : { alcanzables: total, total })
 }
 
+/** Igual trampa que `porNombre`: `contains` de Prisma no ignora acentos. */
 async function porCiudad(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
-  const filas = await db.cliente.findMany({
-    where: {
-      correduriaId,
-      mergedIntoClienteId: null,
-      activo: true,
-      ciudad: { contains: c.valor, mode: 'insensitive' },
-    },
-    select: SELECT_CLIENTE,
-    orderBy: [{ apellidos: 'asc' }],
-    take: LIMITE,
+  const filas = await db.$queryRaw<
+    { id: string; nombre: string; apellidos: string; tipo: string }[]
+  >`
+    select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
+    from clientes cl
+    where cl.correduria_id = ${correduriaId}::uuid
+      and cl.merged_into_cliente_id is null
+      and cl.activo
+      and unaccent(cl.ciudad) ilike unaccent(${'%' + c.valor + '%'})
+    order by cl.apellidos asc
+    limit ${LIMITE}
+  `.catch(async () => {
+    return db.$queryRaw<{ id: string; nombre: string; apellidos: string; tipo: string }[]>`
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
+      from clientes cl
+      where cl.correduria_id = ${correduriaId}::uuid
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and cl.ciudad ilike ${'%' + c.valor + '%'}
+      order by cl.apellidos asc
+      limit ${LIMITE}
+    `
   })
-  return bloque(
-    c,
-    filas.map((f) => aHallazgo(f, `ciudad «${c.valor}»`)),
-    await cobertura(correduriaId, { ciudad: { not: null } }),
+  const conteos = await polizasDe(filas.map((f) => f.id))
+  const hallazgos: Hallazgo[] = filas.map((f) =>
+    hallazgoSinEnriquecer({
+      clienteId: f.id,
+      nombre: `${f.nombre} ${f.apellidos}`.trim(),
+      tipo: f.tipo,
+      polizas: conteos.get(f.id) ?? 0,
+      porque: `ciudad «${c.valor}»`,
+    }),
   )
+  return bloque(c, hallazgos, await cobertura(correduriaId, { ciudad: { not: null } }))
 }
 
 async function porCodigoPostal(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
