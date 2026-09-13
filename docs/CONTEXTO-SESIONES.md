@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔴 Auditoría PROFUNDA 13/09/2026 (PR en revisión — este entorno no permite push a `main`):**
+  Next.js RCE crítica en las 13 apps (`GHSA-2xp9-vwfh-vxw4`, Image Optimization/AVIF) corregida —
+  bump a `^15.5.25`/`^16.3.5`, typecheck+tests+build verificados, `pnpm audit` 29→14 vulns (0 críticas).
+  Dos incidentes operativos sin cerrar: **CIMA sin un evento en 35+h** (posible Fly de Manuel caído) y
+  **pricing SIVRA sin aplicar un precio real en 42+h** (motor encendido, sin causa confirmada). El
+  propio canal de registro de la auditoría lleva 8 días atascado (#2318 dirty, #2483/#2741 blocked,
+  checks nunca arrancan) — detalle y acciones manuales en `docs/AUDITORIA-2026-09.md`.
+
 - **💸 Causa de fondo del día de emisión fallida: el `POST /insurances` mandaba la persona SIN email ni calle completa (12/09/2026).**
   Medido en `codeoscopic_consumo`: 7 cargos de 0,50€ (11-12/09) sobre la póliza de Pilar Franco Ruz, los 7 con la misma
   persona incompleta — `persona.ts` los omitía a propósito («no hacen falta para el precio»), el Submit los exige y el

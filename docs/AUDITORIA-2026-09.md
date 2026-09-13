@@ -127,3 +127,116 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 
 ---
 <!-- verificado: 2026-09-04 -->
+
+## 🔴 Pasada PROFUNDA — 13/09/2026
+
+**Rango:** desde la profunda anterior (23/08/2026, `docs/AUDITORIA-2026-08.md`) — casi 3 semanas sin
+que una pasada profunda llegara a `main` (las ligeras del 05→12/09 sí corrieron, pero sus PRs de
+registro se atascaron, ver más abajo). **Nota sobre el entorno:** esta sesión corre bajo el harness de
+tareas de GitHub con una rama fija asignada (no permite push a `main` ni abrir una segunda rama para
+separar carriles), así que todo — texto y código — va en este único PR, contra la guía habitual de
+"dos carriles" del prompt.
+
+### 🔴🔒 SEGURIDAD — Next.js: RCE no autenticada en las 13 apps (CORREGIDO en este PR)
+`pnpm audit --prod` partía de **29 vulnerabilidades: 4 críticas, 9 high, 16 moderadas** (subida desde
+las 12/0-críticas de la pasada del 02/08). Las 4 críticas eran **Next.js** (`GHSA-p293-qw3h-jr36` RCE
+en Windows y **`GHSA-2xp9-vwfh-vxw4` RCE no autenticada en la API de Image Optimization con AVIF —
+esta SÍ aplica en Linux/Vercel**), con las 13 apps resueltas en versiones vulnerables: 12 en
+`15.5.18-15.5.22` (parche en `15.5.24`) e `ia-rest` en `16.2.12` (parche en `16.3.3`).
+- **Aplicado:** bump de parche a `^15.5.25` (las 12 apps 15.x) y `^16.3.5` (ia-rest) — mismo patrón que
+  el bump del 02/08 (PR #1215). Sin cambios de API.
+- **Verificado tras el bump:** `pnpm install`, typecheck de las **13** apps (0 errores, incl. `asegura`
+  con sus 2 schemas Prisma), `pnpm test` + `pnpm test:guardia` (0 fallos, 3.149+ tests), `next build`
+  en `ia-rest` (el bump de major 16.2→16.3) y `sivra` (next-auth beta.32) — los dos con build OK.
+  `pnpm audit` re-ejecutado: **29 → 14 vulns, 0 críticas**. Las 14 restantes (xlsx, browserslist,
+  nodemailer, qs, sharp, file-type, deepmerge-ts, baseline-browser-mapping) son moderadas/high sin
+  parche disponible hoy o de exposición indirecta (dev-time/parsers); no se tocan en este PR.
+
+### 🔴 Correduría — CIMA lleva 35+ horas sin entregar un solo evento (2-quater c)
+`seguros.operational_events` (`cima_pull_*`): el último `cima_pull_completed` es de **11/09 15:08 UTC**
+(hace **35,4 h** en el momento de la consulta) — supera el umbral de 30 h de "CIMA parada". La cola
+seguía en **135 pendientes / 0 procesados** en ese último evento, y `seguros.cima_ficheros` no tiene
+ningún fichero nuevo desde el **10/09 09:56**. Sin `agente_reparaciones` en curso (tabla vacía en los
+últimos 7 días) — nadie lo está arreglando solo. Por el histórico documentado en `apps/asegura/CLAUDE.md`
+(el adaptador Java corre en el Fly de Manuel; si él lo apaga, CIMA deja de entrar SIN error), la
+sospecha razonable es esa, pero **no se ha podido confirmar desde aquí** (sin acceso a Fly). **Acción
+manual:** comprobar el estado de `asegura-app-cima-adapter` en Fly y los crons de `apps/asegura`
+(05:30/11:30 UTC) en Vercel.
+
+### 🔴 Pricing SIVRA — sin una sola aplicación REAL de precio en 42+ horas (2bis, obligatorio)
+La consulta del bloque 2bis: `horas_desde_ultima_pasada = 42,1 h` (umbral 🔴 > 10 h). Confirmado con
+detalle: el último `pricing_applied` con `dry_run=false` es de **11/09 08:30 UTC**; las pasadas
+posteriores (11/09 14:30 y 20:30, 12/09 08:30/14:30/20:30 — 5 pasadas reales) escribieron **0 noches**
+cada una según el propio latido `sivra_pricing_apply` ("0 noche(s) escritas en 4 piso(s)"). Palancas
+revisadas: los 4 pisos con `enabled=true`, `apply_enabled=true`, `min_price` puesto, `antelacion_k=0` —
+nada apagado en silencio. `rail_baja_roto=0`, `bajo_minimo=0`, `rail_alza_sin_justificar=0`,
+`oscilantes=0`: cuando SÍ escribe, escribe sano. Coincide en el tiempo con el episodio de abajo
+(Smoobu 401 rompiendo `sivra_rates_snapshot` desde el 12/09 07:00), pero **la ventana sin escritura
+empieza ANTES de ese fallo** (11/09 14:30), así que el Smoobu 401 no explica el hueco completo — se
+declara como "no lo sé" en vez de cerrarlo con una causa no verificada. **Acción manual:** abrir
+`/sivra/pricing` y mirar por qué el motor no encuentra ningún cambio ≥3% que aplicar desde el 11/09 por
+la tarde (10 alertas de "reserva muy por debajo de mercado" siguen abiertas en el resumen diario, lo
+que no encaja con un motor sano que no necesita mover nada).
+
+### 🟡 Heartbeat de crons/agentes (2-bis) — un episodio ya en vías de arreglo, y uno sin seguimiento
+- **Smoobu 401 (12/09 07:00-07:31 UTC):** tumbó `sivra_rates_snapshot` (0/4 pisos, todos HTTP 401),
+  `sivra_pricing_guard` (check #10 sin evaluar) y dejó `sivra_pilot_track` avisando de snapshot viejo.
+  Según el PR #2741 (pasada ligera de ayer, aún sin mergear — ver hallazgo de abajo), otra sesión ya lo
+  atribuyó a un cambio de firma (HMAC-SHA256) y lo corrigió en PR #2731 (mergeado esa misma mañana).
+  `smoobu_sync` ya volvió a leer bien Smoobu a las 22:15 del 12/09. **Sin confirmar todavía**: el
+  siguiente `sivra_rates_snapshot` (~07:00 UTC hoy) no había corrido aún al cerrar esta pasada — revisar
+  en la próxima pasada que vuelva a ✅.
+- **`sivra_eventos_verificar`** ⛔ 45 h (fallos intermitentes de búsqueda OpenRouter, patrón ya conocido
+  de pasadas anteriores — dentro de lo esperado, no un incidente nuevo).
+- **Familia `trading_*` (h10, paper-tracker, operaciones, analizar, puntuar)** sin una pasada OK desde
+  el **07/09 ~20:45 UTC** (125-138 h). `trading_operaciones` tiene umbral 80 h — **superado**. Coincide
+  con que el último PR de la rutina `trading-analista` es del 07/09 (#2573); no hay ninguno posterior.
+  **No confirmado si la rutina dejó de dispararse o simplemente no se ha registrado** — carril 2, sin
+  investigar a fondo por presupuesto de esta pasada.
+
+### 🔴 Backlog de PRs de rutinas — el propio canal de entrega de la auditoría lleva 8 días atascado (2-ter)
+Confirmado y agravado desde que otra sesión ya lo señaló ayer (PR #2741, aún sin mergear): los PRs de
+**registro** de la propia `/auditoria-diaria` se acumulan sin mergear pese a que `rutinas-automerge.yml`
+está vivo (miles de runs, éxitos constantes hoy mismo en PRs de OTRAS sesiones — #2848/#2853/#2855/#2856
+mergeados en las últimas horas). Estado verificado ahora mismo:
+- **#2318** (05/09, registro) — `mergeable_state: dirty` (conflicto real). 8 días.
+- **#2483** (07/09, registro) — `mergeable_state: blocked` (los 12 checks requeridos nunca arrancan —
+  push con token de App, ver sección CI de `CLAUDE.md`; Vercel-only en `get_status`). 6 días.
+- **#2741** (12/09, registro, de la sesión que ya diagnosticó este mismo problema) — también `blocked`.
+  1 día, pero ya empieza a acumular el mismo destino.
+- Consecuencia medible: **este documento llevaba desde el 04/09 sin una entrada nueva** pese a que la
+  rutina sí corrió los días 05, 07, 08 y 12 — la impresión de "rutina muerta" era falsa (los PRs
+  existen), pero el efecto práctico (nadie ve el informe en `main`) es el mismo.
+- **Esta pasada NO añade un PR de registro nuevo** (dado el punto anterior, apilar uno más sin resolver
+  los existentes no ayuda): todo el contenido de esta pasada — texto y código — va en el único PR que
+  este entorno permite.
+- **Acción manual recomendada a Alberto:** revisar y resolver a mano #2318 (conflicto real: traer
+  `main` a la rama) y decidir sobre #2483 (aplicar el procedimiento de la sección CI — sacar de draft
+  ya está hecho, así que el siguiente paso es un push con contenido real, p.ej. el propio merge de
+  `main`) antes de que seguir apilando PRs de registro sea contraproducente.
+- **8 drafts de carril 2 sin actividad 4-9 días** (#2262, #2319, #2327, #2412, #2413, #2414, #2484,
+  #2534, #2548, #2573, #2627 — lista ampliada desde los 8 que ya señalaba #2741): ninguno pasa el
+  umbral de 7 días salvo #2262 (04/09, 9 días) y #2319 (05/09, 8 días). Revisar/cerrar en lote.
+
+### Correduría — resto de 2-quater sin novedad
+Latidos `correduria_renovaciones`/`correduria_siniestros`/`correduria_partes` ✅. `correduria_ingesta`
+sigue "DEGRADADA" con el mismo backlog ya documentado (ficheros C0468/M00171, pólizas huérfanas,
+Occident C0058 81 días sin mandar nada). Codeoscopic: 13 cotizaciones / 6,50€ en 7 días, gasto normal,
+sin anomalía de importe. Cepos de aislamiento no re-verificados línea a línea esta pasada (sin cambios
+en `seguros.*`/`lib/tenant*`/el puerto en el rango). §21 sigue pausada a propósito.
+
+### Typecheck + tests + build — 0 errores (aparte del bump de seguridad)
+Las 13 apps typechecan limpio (incl. `asegura` con sus 2 schemas Prisma, generados en el orden correcto
+para no pisar el cliente Prisma por defecto compartido). `pnpm test` (packages + guardián, 2.785+53
+tests) y `pnpm test:guardia` (821 tests) en verde. Tests de `packages/module-seguros{,-pii,-portal}`
+(cifrado + índice ciego de la correduría): 1.056 tests, 0 fallos. `ia-rest`: lint 0 errores (1.225
+warnings preexistentes), QA-check 818 archivos sin problemas, build OK.
+
+### Lo que esta pasada NO cubrió (declarado, no olvidado)
+Por el volumen ya encontrado (seguridad crítica + 2 incidentes operativos + backlog de PRs), esta
+pasada NO hizo la reconciliación completa del paso 4 (skills-maestro, `docs/SKILLS.md`,
+`docs/HUECOS-ABIERTOS.md` línea a línea, manuales de usuario, `docs/FUENTES-DE-VERDAD.md`). Queda para
+la próxima pasada — que además debería confirmar si `sivra_rates_snapshot` volvió a ✅ y si el motor de
+pricing volvió a aplicar precios reales.
+
+<!-- verificado: 2026-09-13 -->
