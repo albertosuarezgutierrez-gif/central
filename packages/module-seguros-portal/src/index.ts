@@ -92,6 +92,8 @@ export {
   parsearFechaHecho,
   plazoComunicacion,
   normalizarParte,
+  bloqueDatosVehiculo,
+  componerDescripcion,
 } from './parte-siniestro.ts'
 export type {
   ParteEstado,
@@ -99,6 +101,7 @@ export type {
   ParteNormalizado,
   ResultadoParte,
   PlazoComunicacion,
+  DatosVehiculo,
 } from './parte-siniestro.ts'
 export {
   ALCANCES,

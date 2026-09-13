@@ -1632,6 +1632,23 @@ h1 em {
 .boton.secundario { background: var(--surface); color: var(--primary); }
 .boton.secundario:hover { background: var(--primary-light); border-color: var(--primary-hover); }
 .boton:disabled { opacity: 0.6; cursor: progress; }
+
+/* El lienzo del croquis (ParteSiniestro.tsx). Fondo BLANCO fijo, no del tema:
+   un trazo negro sobre `--surface` oscuro sería invisible al dibujar, y el
+   PNG que sale (blanco de verdad, no solo en pantalla) es el que lee Alberto
+   en la ficha, que puede abrirlo desde cualquier tema. Alto fijo y no
+   `aspect-ratio`: a 320 px de ancho un ratio 640×420 dejaría un lienzo de
+   ~210 px de alto, demasiado poco para trazar con el dedo. */
+.croquis-caja { display: grid; gap: 10px; }
+.croquis-lienzo {
+  width: 100%;
+  height: 260px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  touch-action: none;
+  cursor: crosshair;
+}
 .aviso-linea .boton { margin-top: 10px; }
 
 /* ── Parte de siniestro ──────────────────────────────────────────────────

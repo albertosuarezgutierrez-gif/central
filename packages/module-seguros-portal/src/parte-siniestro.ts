@@ -188,6 +188,66 @@ function texto(v: unknown): string | null {
 }
 
 /**
+ * Los datos del OTRO vehículo/conductor, para un parte de auto con terceros.
+ *
+ * 🚨 No son columnas nuevas, a propósito: son texto libre igual que
+ * `descripcion`, solo que ESTRUCTURADO por la pantalla. Añadir una columna
+ * (matrícula, aseguradora del tercero…) exige migrar la BD compartida de la
+ * cartera real, y eso pide spec + OK de Alberto antes de código (regla de la
+ * casa). Plegarlo en `descripcion` no pierde nada — Alberto ya lee esa
+ * descripción entera en la ficha del corredor — y no toca el esquema.
+ *
+ * Todos los campos son opcionales: pedirlos obligatorios con el coche
+ * todavía en la cuneta es la misma trampa que ya evita el resto del parte.
+ */
+export type DatosVehiculo = {
+  matriculaPropia?: unknown
+  matriculaTercero?: unknown
+  conductorTercero?: unknown
+  aseguradoraTercero?: unknown
+  telefonoTercero?: unknown
+}
+
+/** `''`/`undefined`/no-string → `null`. Las matrículas se guardan en MAYÚSCULAS: es como se leen en un parte. */
+function textoVehiculo(v: unknown, mayusculas = false): string | null {
+  const t = texto(v)
+  if (t === null) return null
+  return mayusculas ? t.toUpperCase() : t
+}
+
+/**
+ * `null` si no hay NINGÚN dato: un bloque de cabecera sin una sola línea
+ * debajo es peor que no añadir nada — parece un desperfecto del texto.
+ */
+export function bloqueDatosVehiculo(d: DatosVehiculo): string | null {
+  const filas: Array<[string, string | null]> = [
+    ['Matrícula propia', textoVehiculo(d.matriculaPropia, true)],
+    ['Matrícula del otro vehículo', textoVehiculo(d.matriculaTercero, true)],
+    ['Conductor del otro vehículo', textoVehiculo(d.conductorTercero)],
+    ['Aseguradora del otro vehículo', textoVehiculo(d.aseguradoraTercero)],
+    ['Teléfono de contacto', textoVehiculo(d.telefonoTercero)],
+  ]
+  const conDato = filas.filter((f): f is [string, string] => f[1] !== null)
+  if (conDato.length === 0) return null
+  return ['Datos del otro vehículo:', ...conDato.map(([k, v]) => `- ${k}: ${v}`)].join('\n')
+}
+
+/**
+ * Compone la descripción final que viaja al backend: lo que ha escrito el
+ * cliente, y DEBAJO —si hay algo— el bloque de datos del otro vehículo.
+ *
+ * Se recorta a `DESCRIPCION_MAX` desde aquí, NUNCA en el backend: si el
+ * backend recortara, el bloque de matrículas (que va al final) sería lo
+ * primero en desaparecer sin que la persona lo viera venir. Aquí, en cambio,
+ * la pantalla puede avisar ANTES de enviar (ver `ParteSiniestro.tsx`).
+ */
+export function componerDescripcion(descripcion: string, vehiculo: DatosVehiculo): string {
+  const bloque = bloqueDatosVehiculo(vehiculo)
+  if (bloque === null) return descripcion
+  return `${descripcion}\n\n${bloque}`.slice(0, DESCRIPCION_MAX)
+}
+
+/**
  * Valida y normaliza lo que llega del formulario. Devuelve TODOS los errores a
  * la vez (uno por campo): corregir de uno en uno en el móvil, con un accidente
  * recién ocurrido delante, es la forma más rápida de que alguien abandone.

@@ -150,6 +150,7 @@ export default async function Boveda({
       // correcto: una coincidencia aproximada acertaría casi siempre y alguna
       // vez daría el teléfono de urgencias de OTRA compañía.
       canal: canalDeCompania(p.compania, companias),
+      ramo: p.ramo,
       etiqueta: [
         p.compania ?? 'Compañía sin identificar',
         p.ramo ? RAMO[p.ramo] ?? p.ramo : null,
@@ -533,6 +534,7 @@ function opcionCartera(p: PolizaPortal, companias: readonly FilaCompania[], titu
     // servidor: el momento en el que alguien abre esto es justo el peor para
     // esperar a una petición.
     canal: canalDeCompania(p.compania, companias),
+    ramo: p.ramo,
     etiqueta: [
       p.compania,
       RAMO[p.ramo] ?? p.ramo,

@@ -1,13 +1,15 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 
 import {
   DESCRIPCION_MAX,
   DESCRIPCION_MIN,
   DIAS_COMUNICACION_LCS,
   LUGAR_MAX,
+  bloqueDatosVehiculo,
   canalesDeLasPolizas,
+  componerDescripcion,
   TEXTO_SIN_CANAL,
   type CanalCompania,
   type ViaCanal,
@@ -75,6 +77,15 @@ export type PolizaOpcionParte = {
    * peor posible para esperar a una petición.
    */
   canal: CanalCompania
+  /**
+   * El código de ramo tal cual lo guarda la BD (`'auto'`, `'hogar'`…), no la
+   * etiqueta traducida. `null`/`undefined` = no se conoce (pasa con alguna
+   * declarada mal leída). Solo se usa para decidir si se ofrecen los campos
+   * del OTRO vehículo: mostrarlos en una póliza de hogar no tiene sentido, y
+   * ocultarlos en una de auto deja a alguien tecleando la matrícula dentro de
+   * la descripción libre.
+   */
+  ramo?: string | null
 }
 
 /**
@@ -132,6 +143,20 @@ type Campo = 'descripcion' | 'fechaHecho' | 'horaAproximada' | 'lugar' | 'poliza
 type Triestado = 'si' | 'no' | 'nolose'
 type Estado = 'reposo' | 'enviando' | 'enviado' | 'error'
 
+/**
+ * La forma del formulario, con strings de verdad — a diferencia de
+ * `DatosVehiculo` (del módulo puro), que declara sus campos `unknown` porque
+ * es un tipo de ENTRADA sin validar todavía. Un `string` de aquí encaja sin
+ * casts en `DatosVehiculo` cuando se le pasa a `componerDescripcion`.
+ */
+type FormVehiculo = {
+  matriculaPropia: string
+  matriculaTercero: string
+  conductorTercero: string
+  aseguradoraTercero: string
+  telefonoTercero: string
+}
+
 type Formulario = {
   descripcion: string
   fechaHecho: string
@@ -140,6 +165,21 @@ type Formulario = {
   poliza: string
   hayHeridos: Triestado
   hayTerceros: Triestado
+  /**
+   * Solo se enseñan y solo viajan si el ramo es auto y `hayTerceros === 'si'`
+   * (ver `esAuto`/`mostrarVehiculo` en el componente). Van SIEMPRE en el
+   * formulario, aunque no se enseñen, para no perder lo que alguien ya había
+   * escrito si cambia de póliza o de respuesta y vuelve atrás.
+   */
+  vehiculo: FormVehiculo
+}
+
+const VEHICULO_VACIO: FormVehiculo = {
+  matriculaPropia: '',
+  matriculaTercero: '',
+  conductorTercero: '',
+  aseguradoraTercero: '',
+  telefonoTercero: '',
 }
 
 const VACIO: Formulario = {
@@ -152,6 +192,12 @@ const VACIO: Formulario = {
   poliza: '',
   hayHeridos: 'nolose',
   hayTerceros: 'nolose',
+  vehiculo: VEHICULO_VACIO,
+}
+
+/** `'auto'` bajo cualquier variante de caja; el resto (`null`, otro ramo) es «no». */
+function esAuto(ramo: string | null | undefined): boolean {
+  return typeof ramo === 'string' && ramo.trim().toLowerCase() === 'auto'
 }
 
 /**
@@ -288,6 +334,10 @@ type Elegido = {
 }
 
 let contadorClaves = 0
+/** A nivel de MÓDULO, como `contadorClaves` — no dentro del componente: ahí se
+ *  reinicia a 0 en cada render y deja de distinguir dos croquis guardados en
+ *  el mismo milisegundo (plausible en un móvil rápido con dos toques seguidos). */
+let contadorCroquis = 0
 
 /** ¿Merece la pena reintentarlo? Solo si el fichero en sí vale: lo que falló fue el viaje. */
 function reintentable(e: Elegido): boolean {
@@ -477,6 +527,17 @@ export function ParteSiniestro({
   /** Los que fallaron por el camino (no por ser un fichero que no admitimos). */
   const recuperables = fallidos.filter(reintentable)
 
+  // El bloque de «datos del otro vehículo» (matrículas, croquis) solo tiene
+  // sentido con terceros de por medio, y solo se sabe pedir una matrícula si
+  // la póliza elegida es de auto. Con «No lo sé» en la póliza NO se enseña:
+  // saber el ramo es justo lo que el cliente está diciendo que no sabe.
+  const polizaSeleccionada = polizas.find((p) => p.valor === form.poliza) ?? null
+  const mostrarVehiculo = esAuto(polizaSeleccionada?.ramo) && form.hayTerceros === 'si'
+
+  function escribirVehiculo(campo: keyof FormVehiculo, valor: string) {
+    setForm((f) => ({ ...f, vehiculo: { ...f.vehiculo, [campo]: valor } }))
+  }
+
   function abrir() {
     // El formulario se monta SOLO al abrirlo (regla de rendimiento de UI del
     // monorepo): la bóveda ya trae hasta 50 tarjetas con su propio editor.
@@ -517,9 +578,14 @@ export function ParteSiniestro({
    * fichero que no vale se queda en la lista **marcado y con su motivo** en vez
    * de desaparecer. Desaparecer se lee como «ya está subido».
    */
-  function elegir(e: React.ChangeEvent<HTMLInputElement>) {
-    const nuevos = Array.from(e.target.files ?? [])
-    e.target.value = '' // permite volver a elegir el mismo fichero
+  /**
+   * El corazón de «elegir fichero» y de «guardar croquis»: los dos acaban
+   * siendo un `File` más en la MISMA lista de adjuntos, con el MISMO tope y la
+   * MISMA revisión — un croquis de 15 MB (no debería pasar, pero un móvil
+   * viejo puede tardar en comprimir el PNG) se rechaza igual que una foto de
+   * ese tamaño, con su motivo, nunca en silencio.
+   */
+  function agregarFicheros(nuevos: File[]) {
     if (nuevos.length === 0) return
 
     // El hueco se calcula con el estado que ya hay en pantalla, FUERA del
@@ -546,6 +612,23 @@ export function ParteSiniestro({
           'de los que has elegido. Si falta algo importante, dínoslo y lo vemos.',
       )
     }
+  }
+
+  function elegir(e: React.ChangeEvent<HTMLInputElement>) {
+    const nuevos = Array.from(e.target.files ?? [])
+    e.target.value = '' // permite volver a elegir el mismo fichero
+    agregarFicheros(nuevos)
+  }
+
+  /**
+   * El croquis dibujado se guarda como el `File` que ya sabe manejar
+   * `agregarFicheros`: NO es un dato nuevo ni una tabla nueva, es una foto que
+   * en vez de haberse hecho con la cámara se ha dibujado con el dedo. Mismo
+   * tope, misma revisión, mismo viaje a `/api/siniestros/{id}/adjuntos`.
+   */
+  function añadirCroquis(blob: Blob) {
+    const f = new File([blob], `croquis-${Date.now()}-${contadorCroquis++}.png`, { type: 'image/png' })
+    agregarFicheros([f])
   }
 
   /** Quitar uno de la lista ANTES de enviar. Después ya no: lo enviado es una comunicación. */
@@ -638,13 +721,31 @@ export function ParteSiniestro({
     const tipo = corte === -1 ? '' : form.poliza.slice(0, corte)
     const id = corte === -1 ? '' : form.poliza.slice(corte + 1)
 
+    // 🚨 Los datos del otro vehículo SOLO viajan si el bloque está VISIBLE en
+    // este envío. Sin este corte, cambiar de una póliza de auto (con terceros
+    // y una matrícula ya escrita) a una de hogar mandaría esa matrícula igual
+    // — un dato que la persona ya no ve en pantalla, colado en el texto.
+    const bloqueVehiculo = mostrarVehiculo ? bloqueDatosVehiculo(form.vehiculo) : null
+    const descripcionFinal = bloqueVehiculo === null ? descripcion : componerDescripcion(descripcion, form.vehiculo)
+    // 🚨 El aviso solo dispara si de verdad HABRÍA recorte (por eso se mide
+    // ANTES de componer, no el resultado ya recortado — `componerDescripcion`
+    // siempre cabe en `DESCRIPCION_MAX` por construcción). Comparar el
+    // resultado final contra el máximo confundiría «cabe justo» con «se ha
+    // cortado»: una descripción de exactamente 2000 caracteres sin vehículo
+    // (el propio `maxLength` del textarea ya lo permite) se rechazaría sin
+    // haberse recortado nada.
+    if (bloqueVehiculo !== null && descripcion.length + 2 + bloqueVehiculo.length > DESCRIPCION_MAX) {
+      setErrores({ descripcion: mensaje('descripcion', 'larga') })
+      return
+    }
+
     setEstado('enviando')
     try {
       const r = await fetch('/api/siniestros', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          descripcion,
+          descripcion: descripcionFinal,
           fechaHecho: form.fechaHecho,
           horaAproximada: form.horaAproximada || null,
           lugar: form.lugar.trim() || null,
@@ -955,6 +1056,16 @@ export function ParteSiniestro({
             {errores.poliza && <p className="editor-error">{errores.poliza}</p>}
           </div>
 
+          {mostrarVehiculo && (
+            <VehiculoOtro
+              uid={uid}
+              valor={form.vehiculo}
+              deshabilitado={enviando}
+              onCambio={escribirVehiculo}
+              onCroquis={añadirCroquis}
+            />
+          )}
+
           {errorGeneral && (
             <p className="editor-error" role="alert">
               {errorGeneral}
@@ -1032,6 +1143,244 @@ function Triple({
         ))}
       </div>
     </fieldset>
+  )
+}
+
+/**
+ * «Datos del otro vehículo» — solo para auto, y solo con terceros de por
+ * medio (ver `mostrarVehiculo` en `ParteSiniestro`).
+ *
+ * 🚨 Los cinco campos son OPCIONALES: ninguno lleva `required`. Con el coche
+ * todavía en la cuneta, lo normal es saber la matrícula del otro y no su
+ * aseguradora, o al revés. Exigir los cinco para poder enviar el parte sería
+ * el mismo fallo que un checkbox de heridos, un piso más abajo — convertir
+ * «no lo sé todavía» en un obstáculo para avisar.
+ *
+ * No tienen su propio `editor-error`: no hay nada que validar aquí (cualquier
+ * texto vale, `componerDescripcion` los pliega tal cual), así que un error de
+ * formato no puede aparecer.
+ */
+function VehiculoOtro({
+  uid,
+  valor,
+  deshabilitado,
+  onCambio,
+  onCroquis,
+}: {
+  uid: string
+  valor: FormVehiculo
+  deshabilitado: boolean
+  onCambio: (campo: keyof FormVehiculo, valor: string) => void
+  onCroquis: (blob: Blob) => void
+}) {
+  const [dibujando, setDibujando] = useState(false)
+
+  return (
+    <fieldset className="editor-campo grupo">
+      <legend>Datos del otro vehículo</legend>
+      <p className="editor-ayuda">
+        Si los tienes a mano, nos ayuda a tramitarlo — pero nada de esto es obligatorio: el parte se
+        manda igual con lo que sepas.
+      </p>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-propia`}>Tu matrícula</label>
+        <input
+          id={`${uid}-veh-propia`}
+          className="campo"
+          type="text"
+          value={valor.matriculaPropia}
+          onChange={(e) => onCambio('matriculaPropia', e.target.value)}
+          placeholder="1234 ABC"
+          autoComplete="off"
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-tercero`}>Matrícula del otro vehículo</label>
+        <input
+          id={`${uid}-veh-tercero`}
+          className="campo"
+          type="text"
+          value={valor.matriculaTercero}
+          onChange={(e) => onCambio('matriculaTercero', e.target.value)}
+          placeholder="9999 XYZ"
+          autoComplete="off"
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-conductor`}>Conductor del otro vehículo</label>
+        <input
+          id={`${uid}-veh-conductor`}
+          className="campo"
+          type="text"
+          value={valor.conductorTercero}
+          onChange={(e) => onCambio('conductorTercero', e.target.value)}
+          autoComplete="off"
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-aseguradora`}>Su aseguradora</label>
+        <input
+          id={`${uid}-veh-aseguradora`}
+          className="campo"
+          type="text"
+          value={valor.aseguradoraTercero}
+          onChange={(e) => onCambio('aseguradoraTercero', e.target.value)}
+          autoComplete="off"
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`${uid}-veh-telefono`}>Su teléfono</label>
+        <input
+          id={`${uid}-veh-telefono`}
+          className="campo"
+          type="tel"
+          value={valor.telefonoTercero}
+          onChange={(e) => onCambio('telefonoTercero', e.target.value)}
+          autoComplete="off"
+          disabled={deshabilitado}
+        />
+      </div>
+
+      <div className="editor-campo">
+        <label>Croquis</label>
+        <p className="editor-ayuda">
+          Un dibujo rápido de cómo estaban los vehículos ayuda más que una descripción — se adjunta
+          como una foto más.
+        </p>
+        {!dibujando ? (
+          <button type="button" className="boton secundario" onClick={() => setDibujando(true)} disabled={deshabilitado}>
+            Dibujar croquis
+          </button>
+        ) : (
+          <CroquisDibujo
+            onGuardar={(blob) => {
+              onCroquis(blob)
+              setDibujando(false)
+            }}
+            onCancelar={() => setDibujando(false)}
+          />
+        )}
+      </div>
+    </fieldset>
+  )
+}
+
+/**
+ * Un lienzo táctil para dibujar el croquis del accidente. Al guardar, se
+ * convierte a PNG y sube por el MISMO camino que cualquier foto (ver
+ * `añadirCroquis` en `ParteSiniestro`) — no hay tabla ni endpoint propios.
+ *
+ * `touch-action: none` en el `<canvas>` es lo que impide que dibujar con el
+ * dedo desplace la página en vez de trazar la línea: sin eso, el primer trazo
+ * en un móvil hace scroll y el segundo dibuja, y nadie entiende por qué.
+ *
+ * `Pointer Events` (no `touch`+`mouse` por separado) cubre dedo, lápiz y
+ * ratón con el mismo código — dos manejadores duplicarían la lógica de trazo
+ * y solo uno de los dos se probaría de verdad en un dispositivo con los dos.
+ */
+function CroquisDibujo({ onGuardar, onCancelar }: { onGuardar: (blob: Blob) => void; onCancelar: () => void }) {
+  const lienzo = useRef<HTMLCanvasElement | null>(null)
+  const dibujandoRef = useRef(false)
+  const [vacio, setVacio] = useState(true)
+
+  function contexto() {
+    return lienzo.current?.getContext('2d') ?? null
+  }
+
+  /** Traduce la posición del puntero a coordenadas del lienzo, sea cual sea su tamaño en pantalla. */
+  function punto(e: React.PointerEvent<HTMLCanvasElement>) {
+    const c = lienzo.current
+    if (c === null) return { x: 0, y: 0 }
+    const r = c.getBoundingClientRect()
+    return { x: ((e.clientX - r.left) / r.width) * c.width, y: ((e.clientY - r.top) / r.height) * c.height }
+  }
+
+  function empezar(e: React.PointerEvent<HTMLCanvasElement>) {
+    dibujandoRef.current = true
+    const ctx = contexto()
+    const p = punto(e)
+    if (ctx === null) return
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y)
+  }
+
+  function trazar(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!dibujandoRef.current) return
+    const ctx = contexto()
+    if (ctx === null) return
+    const p = punto(e)
+    ctx.lineTo(p.x, p.y)
+    ctx.lineWidth = 4
+    ctx.lineCap = 'round'
+    ctx.strokeStyle = '#1a1a1a'
+    ctx.stroke()
+    setVacio(false)
+  }
+
+  function soltar() {
+    dibujandoRef.current = false
+  }
+
+  function borrar() {
+    const c = lienzo.current
+    const ctx = contexto()
+    if (c === null || ctx === null) return
+    ctx.clearRect(0, 0, c.width, c.height)
+    setVacio(true)
+  }
+
+  function guardar() {
+    const c = lienzo.current
+    if (c === null || vacio) return
+    // `toBlob` es async y no lanza: si el navegador no puede componer el PNG
+    // (lienzo corrupto, memoria), `blob` llega `null` y aquí simplemente no
+    // se llama a `onGuardar` — el croquis no desaparece, la persona sigue
+    // viéndolo en pantalla y puede intentarlo otra vez o hacer una foto.
+    c.toBlob((blob) => {
+      if (blob !== null) onGuardar(blob)
+    }, 'image/png')
+  }
+
+  return (
+    <div className="croquis-caja">
+      {/* Fondo blanco fijo, NO transparente: un PNG con fondo transparente
+          sobre el tema oscuro de la app dejaría el trazo negro invisible en
+          la ficha del corredor, que abre el adjunto sin saber de qué tema
+          venía. `width`/`height` son la resolución REAL del lienzo — el CSS
+          solo la estira en pantalla; `punto()` deshace ese estiramiento. */}
+      <canvas
+        ref={lienzo}
+        width={640}
+        height={420}
+        className="croquis-lienzo"
+        style={{ touchAction: 'none' }}
+        onPointerDown={empezar}
+        onPointerMove={trazar}
+        onPointerUp={soltar}
+        onPointerLeave={soltar}
+        aria-label="Lienzo para dibujar el croquis del accidente"
+      />
+      <div className="editor-acciones">
+        <button type="button" className="boton" onClick={guardar} disabled={vacio}>
+          Guardar croquis
+        </button>
+        <button type="button" className="boton secundario" onClick={borrar} disabled={vacio}>
+          Borrar
+        </button>
+        <button type="button" className="boton secundario" onClick={onCancelar}>
+          Cancelar
+        </button>
+      </div>
+    </div>
   )
 }
 
