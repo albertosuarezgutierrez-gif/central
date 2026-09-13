@@ -1,8 +1,8 @@
 {
  "sesion": "16e7bd71-a27b-5903-99f5-d4e89bbe5b86",
  "inicio": "2026-09-13T11:39:57.335Z",
- "fin": "2026-09-13T11:40:40.109Z",
- "llamadas": 8,
+ "fin": "2026-09-13T11:52:48.358Z",
+ "llamadas": 12,
  "categorias": {
   "otro": {
    "llamadas": 1,
@@ -38,14 +38,25 @@
    }
   },
   "sql": {
-   "llamadas": 5,
-   "chars_in": 1086,
-   "chars_out": 16697,
+   "llamadas": 7,
+   "chars_in": 1570,
+   "chars_out": 26583,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 5
+    "mcp__Supabase__execute_sql": 7
+   }
+  },
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 292,
+   "chars_out": 541,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
    }
   }
  }
