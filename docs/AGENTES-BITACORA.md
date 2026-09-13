@@ -15,6 +15,21 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-13 · mercado-booking** · hizo: pasada ACOTADA por prioridad temporal (agosto 2026),
+  `?desde=2027-07-01&hasta=2027-08-31&max=24`, tras un hueco de 8 días sin pasadas de este agente
+  (última el 05/09). 24 ventanas de mercado medidas (6 fechas × 4 pisos, aforo correcto, incluye
+  evento Campeonato Mundo Remo 01-03/08) → 233 comps `booking_mcp`, 0 sin respuesta, 1 anuncio
+  propio (HOUSE SEVILLANA) descartado de comparables en la ventana 02-04/07 (colado por Booking al
+  buscar aforo 12). 📐 escaparate: 3/4 medido (house_sevillana 511,50€/noche, busto_reform
+  126,66€/noche, duplex_center 137,89€/noche) — luxury_busto sin disponibilidad del conector para
+  03-05/09/2027 (hueco, no fallo).
+  **Objetivo YA estaba cumplido antes de esta pasada** (igual que confirmaron las entradas del
+  03/09, 04/09 y 05/09): `plan` no listaba 2027-07 ni 2027-08 en `meses_sin_bucket`. Van **4
+  pasadas** gastando el cupo diario entero repitiendo una comprobación cerrada hace más de una
+  semana, porque el disparador programado sigue llevando la línea `PRIORIDAD TEMPORAL` en su
+  prompt y ninguna sesión tiene forma de editarlo — solo Alberto puede quitarla desde la UI del
+  trigger. dudas: —; fallos: — (el hueco de escaparate es del conector); PRs/commits: — (solo
+  bitácora y BD vía endpoints, sin tocar código).
 - **2026-09-12 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
   Vía B sana (`_buzon_pdf` copió hoy mismo, `dias_caido=0`); sin backlog en
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, `agente_salud`
