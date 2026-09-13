@@ -337,8 +337,11 @@ utilizable). Reglas que no se negocian al tocar esto:
   elementos `{ insurance: {...} }` desde ANTES de que nadie emitiera nada — huele a sonda o a volcado
   periódico de estado, no a notificación de emisión, pero el cuerpo no lo ha visto nadie. Por eso existe
   `POST /api/webhooks/codeoscopic` en ESTA app (`lib/codeoscopic/webhook.ts`, puro + `route.ts`):
-  guarda TODO cuerpo autenticado tal cual en `codeoscopic_webhook_events` (raíz objeto o array,
-  dedupe por hash como el CRM), y **no acuña ni toca ningún proyecto** — la reconciliación sigue en
+  guarda TODO cuerpo autenticado tal cual en `codeoscopic_webhook_events` — **un array, una fila por
+  elemento** (mezclar dos en una atribuiría el estado del segundo al proyecto del primero); dedupe por
+  hash como el CRM pero **un repetido SUMA `veces` y mueve `ultimo_at`** (migración
+  `2026-09-13_codeoscopic_webhook_events_veces.sql`, aplicada; con `do nothing` «dejó de mandar» y
+  «manda lo mismo cada 30 min» serían la misma fila) — y **no acuña ni toca ningún proyecto** — la reconciliación sigue en
   `GET /insurances/{id}`. Envs `CODEOSCOPIC_WEBHOOK_USER`/`CODEOSCOPIC_WEBHOOK_PASSWORD` (sin ellas
   503, nunca 200). ⏸️ **Para que reciba algo hacen falta dos pasos que NO son código:** copiar esas
   dos envs del proyecto `asegura` a `central-asegura`, y que Codeoscopic (JM) repunte la URL a

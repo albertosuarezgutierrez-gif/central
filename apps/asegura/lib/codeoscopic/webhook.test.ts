@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { autorizacionBasica, hashPayload, leerEventoWebhook, tipoEvento } from './webhook.ts'
+import { autorizacionBasica, filasWebhook, hashPayload, leerEventoWebhook, tipoEvento } from './webhook.ts'
 
 const basic = (u: string, p: string) => `Basic ${Buffer.from(`${u}:${p}`).toString('base64')}`
 
@@ -20,26 +20,55 @@ test('autorizacionBasica: sin credenciales configuradas NUNCA autoriza (fail-clo
   assert.equal(autorizacionBasica(basic('a', ''), 'a', ''), false)
 })
 
-test('leerEventoWebhook: la raíz ARRAY (lo que manda el emisor real) se lee y se cuenta', () => {
-  const e = leerEventoWebhook([{ insurance: { id: 40685793 }, status: { id: 'Approved' }, policyNumber: 'ALZ-1' }, { foo: 1 }])
-  assert.equal(e.raiz, 'array')
-  assert.equal(e.elementos, 2)
-  assert.equal(e.proyectoId, '40685793')
-  assert.equal(e.tipo, 'emision_ok')
-  assert.equal(e.numeroPoliza, 'ALZ-1')
+test('filasWebhook: la raíz ARRAY (lo que manda el emisor real) se parte en una fila POR ELEMENTO', () => {
+  const cuerpo = JSON.stringify([
+    { insurance: { id: 111 }, status: { id: 'Pending' } },
+    { insurance: { id: 222 }, status: { id: 'Rejected' }, policyNumber: 'P-222' },
+  ])
+  const filas = filasWebhook(cuerpo, JSON.parse(cuerpo))
+  assert.equal(filas.length, 2)
+  // El estado del segundo NO se atribuye al proyecto del primero.
+  assert.equal(filas[0].evento.proyectoId, '111')
+  assert.equal(filas[0].evento.tipo, 'otro')
+  assert.equal(filas[0].evento.numeroPoliza, null)
+  assert.equal(filas[1].evento.proyectoId, '222')
+  assert.equal(filas[1].evento.tipo, 'rechazada')
+  assert.equal(filas[1].evento.numeroPoliza, 'P-222')
+  assert.deepEqual(filas.map((f) => f.evento.elementos), [2, 2])
+  assert.deepEqual(filas.map((f) => f.evento.raiz), ['array', 'array'])
+  // El contenido persistido es el elemento TAL CUAL; los hashes caben en varchar(64) y son distintos.
+  assert.deepEqual(filas[1].contenido, JSON.parse(cuerpo)[1])
+  assert.notEqual(filas[0].hash, filas[1].hash)
+  for (const f of filas) assert.match(f.hash, /^[0-9a-f]{64}$/)
 })
 
-test('leerEventoWebhook: objeto del CRM (project_id + event_type) y raíz rara', () => {
-  const o = leerEventoWebhook({ project_id: '999999', event_type: 'emision_ok' })
-  assert.deepEqual(o, { raiz: 'objeto', elementos: 1, tipo: 'emision_ok', proyectoId: '999999', numeroPoliza: null })
+test('filasWebhook: objeto del CRM = una fila con el hash del cuerpo; array vacío y raíz rara = una fila tal cual', () => {
+  const cuerpo = '{"project_id":"999999","event_type":"emision_ok"}'
+  const [f] = filasWebhook(cuerpo, JSON.parse(cuerpo))
+  assert.equal(f.hash, hashPayload(cuerpo))
+  assert.deepEqual(f.evento, { raiz: 'objeto', elementos: 1, tipo: 'emision_ok', proyectoId: '999999', numeroPoliza: null })
+  assert.equal(filasWebhook('[]', []).length, 1)
+  assert.deepEqual(filasWebhook('[]', [])[0].evento, { raiz: 'array', elementos: 0, tipo: 'otro', proyectoId: null, numeroPoliza: null })
   assert.deepEqual(leerEventoWebhook('hola'), { raiz: 'otro', elementos: 0, tipo: 'otro', proyectoId: null, numeroPoliza: null })
-  assert.equal(leerEventoWebhook([]).elementos, 0)
 })
 
-test('tipoEvento: lo que no se reconoce es «otro», nunca emision_ok', () => {
+test('leerEventoWebhook: el status manda sobre el discriminador `type`, y un id más largo que la columna es null', () => {
+  const e = leerEventoWebhook({ type: 'insurance', status: { id: 'Approved' }, insurance: { id: 40685793 } })
+  assert.equal(e.tipo, 'emision_ok')
+  assert.equal(e.proyectoId, '40685793')
+  assert.equal(leerEventoWebhook({ id: 'x'.repeat(80) }).proyectoId, null)
+  assert.equal(leerEventoWebhook({ id: 'x'.repeat(50) }).proyectoId, 'x'.repeat(50))
+})
+
+test('tipoEvento: negativos primero, positivo por coincidencia exacta; lo demás es «otro», nunca emision_ok', () => {
+  assert.equal(tipoEvento('Approved'), 'emision_ok')
+  assert.equal(tipoEvento('emision_ok'), 'emision_ok')
   assert.equal(tipoEvento('Rejected'), 'rechazada')
   assert.equal(tipoEvento('expired'), 'vencida')
   assert.equal(tipoEvento('Failed'), 'error')
+  assert.equal(tipoEvento('No emitida'), 'otro')
+  assert.equal(tipoEvento('NotApproved'), 'otro')
+  assert.equal(tipoEvento('IssuedWithErrors'), 'error')
   assert.equal(tipoEvento('PendingReview'), 'otro')
   assert.equal(tipoEvento(undefined), 'otro')
 })
@@ -60,8 +89,12 @@ test('cepo: la ruta autentica ANTES de leer el cuerpo y de tocar la BD, y nunca 
   const iCuerpo = ruta.indexOf('await req.text()')
   const iBd = ruta.indexOf('prismaAsegura()')
   assert.ok(iAuth > 0 && iAuth < iCuerpo && iCuerpo < iBd, 'orden: auth → cuerpo → BD')
-  assert.match(ruta, /on conflict \(payload_hash\) do nothing/)
   assert.doesNotMatch(ruta, /registrarPolizaEmitida|update codeoscopic_projects/)
+})
+
+test('cepo: un cuerpo repetido SUMA (veces/ultimo_at), no se descarta — si no, «dejó de mandar» y «manda lo mismo» se ven igual', () => {
+  assert.match(ruta, /on conflict \(payload_hash\) do update\s+set veces = codeoscopic_webhook_events\.veces \+ 1, ultimo_at = now\(\)/)
+  assert.doesNotMatch(ruta, /do nothing/)
 })
 
 test('cepo: /api/webhooks está exento del gate de sesión (si no, Codeoscopic recibe el HTML del login)', () => {

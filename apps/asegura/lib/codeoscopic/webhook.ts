@@ -62,6 +62,12 @@ export function autorizacionBasica(cabecera: string | null | undefined, usuario:
   return okU && okP
 }
 
+/** `project_id_codeoscopic` es `varchar(50)`: un id más largo no es un id del
+ *  vendor (los reales tienen 8 dígitos) y meterlo tal cual tiraría el INSERT
+ *  entero — y con él el cuerpo, que es lo que hay que guardar. */
+export const MAX_ID_PROYECTO = 50
+export const idProyectoValido = (id: string | null): string | null => (id !== null && id.length <= MAX_ID_PROYECTO ? id : null)
+
 const texto = (v: unknown): string | null => {
   if (typeof v === 'number' && Number.isFinite(v)) return String(v)
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
@@ -72,43 +78,62 @@ const texto = (v: unknown): string | null => {
 export function tipoEvento(valor: unknown): TipoEventoWebhook {
   const s = texto(valor)?.toLowerCase() ?? ''
   if (!s) return 'otro'
-  if (/emision_ok|issued|approved|accepted|emitid/.test(s)) return 'emision_ok'
+  // Negativos PRIMERO y el positivo por coincidencia EXACTA: «No emitida»,
+  // «NotApproved» o «IssuedWithErrors» no pueden acabar en `emision_ok`.
   if (/rechaz|reject|denied|refused|cancel/.test(s)) return 'rechazada'
   if (/venci|expir/.test(s)) return 'vencida'
   if (/error|fail/.test(s)) return 'error'
+  if (/^(emision_ok|issued|approved|accepted|emitida?)$/.test(s)) return 'emision_ok'
   return 'otro'
 }
 
 function leerObjeto(o: Record<string, unknown>): { tipo: TipoEventoWebhook; proyectoId: string | null; numeroPoliza: string | null } {
   const insurance = typeof o.insurance === 'object' && o.insurance !== null ? (o.insurance as Record<string, unknown>) : null
   const status = typeof o.status === 'object' && o.status !== null ? (o.status as Record<string, unknown>) : null
-  const proyectoId =
-    texto(o.project_id) ?? texto(o.projectId) ?? texto(o.insuranceId) ?? texto(o.insurance_id) ?? texto(insurance?.id) ?? texto(o.id)
-  const tipo = tipoEvento(o.event_type ?? o.eventType ?? o.type ?? o.event ?? status?.id ?? o.status)
+  const proyectoId = idProyectoValido(
+    texto(o.project_id) ?? texto(o.projectId) ?? texto(o.insuranceId) ?? texto(o.insurance_id) ?? texto(insurance?.id) ?? texto(o.id),
+  )
+  // El ESTADO manda sobre el discriminador de recurso: `{type:'insurance', status:{id:'Approved'}}`
+  // es una aprobada, no un «otro». El objeto del CRM (`event_type`) no trae status.
+  const tipo = tipoEvento(status?.id ?? o.status ?? o.event_type ?? o.eventType ?? o.type ?? o.event)
   return { tipo, proyectoId, numeroPoliza: texto(o.policyNumber) ?? texto(o.policy_number) }
 }
 
-/**
- * Interpreta el cuerpo YA PARSEADO. Un array se lee elemento a elemento y se
- * queda con el primer id/tipo que aparezca; el conteo de elementos viaja aparte
- * para que la fila diga «array de 2» y no «un evento».
- */
+export type FilaWebhook = {
+  /** Hash de dedupe (64 hex): el del cuerpo entero, o sha256(`<hash>:<i>`) por elemento de un array. */
+  hash: string
+  /** Lo que se persiste en `raw_payload`: el objeto, o el elemento i del array TAL CUAL. */
+  contenido: unknown
+  evento: EventoWebhook
+}
+
+function leerUno(crudo: unknown, raiz: RaizWebhook, elementos: number): EventoWebhook {
+  if (typeof crudo === 'object' && crudo !== null && !Array.isArray(crudo)) {
+    return { raiz, elementos, ...leerObjeto(crudo as Record<string, unknown>) }
+  }
+  return { raiz, elementos, tipo: 'otro', proyectoId: null, numeroPoliza: null }
+}
+
+/** Interpreta UN objeto (o algo que no lo es) como evento. */
 export function leerEventoWebhook(crudo: unknown): EventoWebhook {
-  if (Array.isArray(crudo)) {
-    let tipo: TipoEventoWebhook = 'otro'
-    let proyectoId: string | null = null
-    let numeroPoliza: string | null = null
-    for (const el of crudo) {
-      if (typeof el !== 'object' || el === null || Array.isArray(el)) continue
-      const r = leerObjeto(el as Record<string, unknown>)
-      if (tipo === 'otro') tipo = r.tipo
-      proyectoId ??= r.proyectoId
-      numeroPoliza ??= r.numeroPoliza
-    }
-    return { raiz: 'array', elementos: crudo.length, tipo, proyectoId, numeroPoliza }
-  }
-  if (typeof crudo === 'object' && crudo !== null) {
-    return { raiz: 'objeto', elementos: 1, ...leerObjeto(crudo as Record<string, unknown>) }
-  }
+  if (Array.isArray(crudo)) return { raiz: 'array', elementos: crudo.length, tipo: 'otro', proyectoId: null, numeroPoliza: null }
+  if (typeof crudo === 'object' && crudo !== null) return leerUno(crudo, 'objeto', 1)
   return { raiz: 'otro', elementos: 0, tipo: 'otro', proyectoId: null, numeroPoliza: null }
+}
+
+/**
+ * Las filas que se persisten para un cuerpo. Un objeto es una fila. **Un array
+ * es una fila POR ELEMENTO** (hash `<sha256(cuerpo)>:<i>`), porque mezclar dos
+ * elementos en una fila atribuiría el estado del segundo al proyecto del
+ * primero — y el emisor real manda justo arrays de 2 `{insurance}`. Un array
+ * vacío o una raíz que no es JSON-objeto se guarda como una sola fila con el
+ * cuerpo tal cual: lo raro también se conserva.
+ */
+export function filasWebhook(cuerpoCrudo: string, parseado: unknown): FilaWebhook[] {
+  const hash = hashPayload(cuerpoCrudo)
+  if (Array.isArray(parseado) && parseado.length > 0) {
+    // `payload_hash` es varchar(64): el hash por elemento es sha256 de `<hash>:<i>`, no la concatenación.
+    return parseado.map((el, i) => ({ hash: hashPayload(`${hash}:${i}`), contenido: el, evento: leerUno(el, 'array', parseado.length) }))
+  }
+  return [{ hash, contenido: parseado, evento: leerEventoWebhook(parseado) }]
 }
