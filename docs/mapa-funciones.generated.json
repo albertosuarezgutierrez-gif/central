@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-13T14:18:06Z",
-  "sha": "3527f0cc710cb99dee951bcd601eceb28834dd4e",
+  "generadoEn": "2026-09-13T14:56:52Z",
+  "sha": "6598eb6b90cec9dd9fb3d3ae7fbc844a60a2d07f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -71166,7 +71166,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [
@@ -71174,7 +71174,7 @@
         "zod"
       ],
       "rutaApi": "/api/auth/login",
-      "hash": "fe36afc90869"
+      "hash": "f9bff687dd70"
     },
     {
       "ruta": "apps/plataforma/app/api/auth/logout/route.ts",
@@ -105143,7 +105143,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 619
+          "linea": 625
         },
         {
           "nombre": "avisosDe",
@@ -105151,7 +105151,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 624,
+          "linea": 630,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -105160,13 +105160,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 634,
+          "linea": 640,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4c28c89bccef"
+      "hash": "59088b819f52"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
