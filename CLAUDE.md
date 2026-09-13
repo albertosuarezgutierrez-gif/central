@@ -249,7 +249,7 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
-## 🗺️ Grafo de código PROPIO — Graphify queda solo para memoria (12/09/2026, ampliado el mismo día)
+## 🗺️ Grafo de código PROPIO — Graphify sin uso exclusivo (12-13/09/2026, medido en dos rondas)
 **La cuota gratis de Graphify se agota, y a los tres días de hacerlo obligatorio nadie había medido
 cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el uso de cada herramienta.
 - **Callers, callees, impacto, vecinos, tests que cubren un archivo, buscar símbolo, camino entre
@@ -270,7 +270,7 @@ cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el u
   agrega las 6 declaraciones homónimas) y **búsqueda semántica** (`query_graph` confundió «autorización
   de cron» con «autorización de cliente de seguros» por la palabra compartida; `grafo_buscar` acertó
   el archivo correcto). Detalle completo, tabla por tabla, en `docs/USO-HERRAMIENTAS.md`.
-- **Medición de paridad de MEMORIA (12/09/2026, `docs/USO-HERRAMIENTAS.md`):** `memoria_buscar()`
+- **Medición de paridad de MEMORIA (12-13/09/2026, dos rondas, `docs/USO-HERRAMIENTAS.md`):** `memoria_buscar()`
   (embeddings sobre `docs/CONTEXTO-SESIONES.md`+`docs/memoria/*.md`, PR #2848) probado contra
   `recall`/`memories_about` de Graphify en 4 preguntas reales sobre decisiones/gotchas documentados
   (Serper, pantalla de Vanesa, incidente Smoobu 401, capitalización «Grupo ASegura»): **4 de 4**
@@ -288,7 +288,8 @@ cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el u
   ficheros de OTRA app. Total acumulado: **9 de 9** para el grafo propio/`memoria_buscar`, **0 de 9**
   limpios para Graphify. Con esto se cumple la condición de Alberto («que lo creado sea 100% igual»)
   sobre las 9 preguntas medidas — ya no es solo "consistente", es sin un solo caso a favor de
-  Graphify. Decisión de cancelar Graphify: de Alberto.
+  Graphify. **Cancelarlo sigue siendo decisión de Alberto** (ver más abajo: el MCP sigue instalado
+  a la espera de que él la tome).
 - **📏 Todo uso de herramienta se MIDE solo** (hook `PostToolUse` → `scripts/uso-herramientas.mjs`, un
   JSON por sesión en `docs/uso-herramientas/AAAA-MM/`; en vivo se escribe en `.git/uso-herramientas/` y
   el `Stop` hook lo copia y commitea solo con la memoria o cada 30 min — persistirlo en cada `Stop` era
