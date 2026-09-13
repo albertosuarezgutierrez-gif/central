@@ -465,7 +465,10 @@ export default function Retarificador({
     // La fecha de efecto SIEMPRE arranca con un valor — nunca en blanco (ver
     // el campo en el Paso 2). Una `guardadaPrevia` sin ese campo (cotizaciones
     // de antes del 12/09/2026) tampoco lo trae vacío: cae al mismo default.
-    fechaEfecto: hoyISO(),
+    // MAÑANA, no hoy (Alberto, 13/09/2026): con efecto HOY la cotización moría
+    // a medianoche si no se emitía ese mismo día (proyecto 40685666). Un día
+    // de margen a coste cero; el mismo default que el supuesto de asegura.
+    fechaEfecto: masDiasISO(1),
     ...(guardadaPrevia?.formulario.correcciones ?? {}),
   }))
   // Una cotización recuperada con la fecha de efecto ya PASADA (13/09/2026,
@@ -1334,11 +1337,13 @@ export default function Retarificador({
             corrige AQUÍ, antes de pagar, no después: `effectiveDate` no es
             editable una vez creado el proyecto en el vendor (11-12/09/2026,
             varios intentos reales sobre el proyecto de Pilar Franco Ruz).
-            🚨 Precargada a HOY (12/09/2026, dictado de Alberto: «tiene que
-            salir por defecto hoy, no puede ser opcional») — nunca en blanco,
-            porque hoy SIEMPRE cumple el límite de 90 días del vendor, al
+            🚨 Precargada a MAÑANA (13/09/2026, Alberto; hasta entonces HOY por
+            su dictado del 12/09 «no puede ser opcional») — nunca en blanco,
+            porque mañana SIEMPRE cumple la ventana [hoy, hoy+90] del vendor, al
             revés que el supuesto automático cuando el vencimiento real está
-            lejos. Se puede cambiar, pero el campo nunca arranca vacío. */}
+            lejos, y da un día de margen para confirmar y emitir (con HOY, la
+            cotización moría a medianoche). Se puede cambiar, pero el campo
+            nunca arranca vacío. */}
         <div style={{ marginTop: 16 }}>
           <Campo
             id="c-fechaEfecto"
@@ -1346,7 +1351,7 @@ export default function Retarificador({
             falta={false}
             ayuda={
               <>
-                Precargada a hoy: es la fecha que se manda al pedir precio. Cámbiala solo si el
+                Precargada a mañana: es la fecha que se manda al pedir precio. Cámbiala solo si el
                 cliente quiere que la póliza empiece otro día — <strong>siempre a ≤90 días vista</strong>,
                 la compañía rechaza fechas más lejanas al confirmar el precio, y para entonces ya se
                 ha pagado la cotización. No se puede arreglar después: hay que acertarla aquí.{' '}
