@@ -30,6 +30,12 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📇 Directorio de contactos por compañía en `/correduria` + teléfonos minados de Gmail (13/09/2026, PR #2893).**
+  Nueva pestaña "Contactos por compañía" en la sección Datos: nombre, cargo, email, teléfono y clave de
+  mediador por aseguradora, leído de `seguros.companias_dgs` (columnas de contacto ya pobladas en sesión
+  anterior). Como plataforma no tiene grant sobre `seguros`, se sirve por un puerto nuevo
+  `GET /api/operador/companias` en `apps/asegura` + proxy `GET /api/correduria/companias`. Se añadió además
+  `contacto_telefono` (Mapfre, Occident, Helvetia — minados de firmas de correo). `tsc` limpio en ambas apps.
 - **🔎 Diagnóstico (sin código): botón WhatsApp/Invitar ausente en Pablo Franco Ruz — no era el móvil
   (13/09/2026).** Alberto reportó el botón ausente; se confirmó por BD que teléfono (móvil válido) y
   email de la ficha (`1e831058-…`) están bien y el email resuelve de forma ÚNICA a su propia ficha

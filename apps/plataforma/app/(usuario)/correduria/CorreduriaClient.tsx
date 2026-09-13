@@ -12,6 +12,7 @@ import Retencion from './Retencion'
 import Actividad from './Actividad'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
+import Companias from './Companias'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
 import Bloque from './Bloque'
@@ -494,6 +495,10 @@ export default function CorreduriaClient() {
             vencimiento se pierde y no pueden entrar al portal—, así que el
             trabajo es pedir el correo la próxima vez que se hable con ellos. */}
         <SinCanal onContador={setNSinCanal} />
+
+        {/* Directorio de contacto por compañía, minado del correo. Sin
+            contador: es referencia, no trabajo pendiente. */}
+        <Companias />
       </div>
 
       {/* ══ REDES ════════════════════════════════════════════════════════════
