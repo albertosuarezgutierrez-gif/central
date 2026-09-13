@@ -816,8 +816,9 @@ export function Emision({
       )}
 
       {estado.paso === 'reintento_sin_confirmar' && (() => {
-        const aprobada = estado.solicitudes.find((s) => s.veredicto === 'aprobada' && s.numeroPoliza) ?? null
-        const viva = aprobada ?? estado.solicitudes.find((s) => s.veredicto === 'aprobada' || s.veredicto === 'pendiente') ?? null
+        // Mismo orden que `solicitudViva` en asegura: una aprobada manda sobre una pendiente.
+        const aprobada = estado.solicitudes.find((s) => s.veredicto === 'aprobada') ?? null
+        const viva = aprobada ?? estado.solicitudes.find((s) => s.veredicto === 'pendiente') ?? null
         return (
         <div style={{ marginTop: 14, border: '2px solid var(--warn)', borderRadius: 10, padding: 12 }}>
           {viva ? (
@@ -906,7 +907,9 @@ export function Emision({
                   emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { acunarExistente: true })
                 }
               >
-                Registrar en la cartera la póliza {aprobada.numeroPoliza} ya emitida (no reenvía nada)
+                {aprobada.numeroPoliza
+                  ? `Registrar en la cartera la póliza ${aprobada.numeroPoliza} ya emitida (no reenvía nada)`
+                  : 'Registrar en la cartera la póliza ya aprobada (sin número todavía; no reenvía nada)'}
               </button>
             )}
             {!viva && (

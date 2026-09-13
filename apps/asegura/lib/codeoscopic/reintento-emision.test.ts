@@ -103,6 +103,12 @@ test('solicitudesEmision: lee policyApplications[] del proyecto con id, estado, 
 test('solicitudesEmision: sin policyApplications (o vacío) devuelve [], y un objeto sin señales no es una solicitud', () => {
   assert.deepEqual(solicitudesEmision({ id: 1, policyApplications: [] }), [])
   assert.deepEqual(solicitudesEmision({ id: 1 }), [])
+  // El PROYECTO real del fixture (con `creationDateTime` y sin `policyApplications`)
+  // NO es una solicitud: leerlo como tal pintaría una fila fantasma en la pantalla.
+  const proyecto = JSON.parse(readFileSync(fileURLToPath(new URL('../../fixtures/codeoscopic/2026-06-10-sandbox-quote-response.json', import.meta.url)), 'utf8'))
+  assert.deepEqual(solicitudesEmision(proyecto), [])
+  assert.deepEqual(solicitudesEmision({ id: 1, creationDateTime: '2026-09-13T06:00:00Z', effectiveDate: '2026-09-14', status: { id: 'PendingReview' } }), [])
+  assert.deepEqual(solicitudesEmision([{ id: 'x', creationDateTime: '2026-09-13T06:00:00Z' }]), [])
   assert.deepEqual(solicitudesEmision(null), [])
   assert.deepEqual(solicitudesEmision([{ premium: 12 }]), [])
 })
@@ -131,7 +137,24 @@ test('consejoTrasFallo: el 500 manda REPORTAR con el requestId; 502/503/504 «tr
   assert.match(con?.texto ?? '', /soporteapi@/)
   assert.equal(consejoTrasFallo('502: Bad Gateway')?.tipo, 'reintentar_en_minutos')
   assert.equal(consejoTrasFallo('504: Gateway Timeout')?.tipo, 'reintentar_en_minutos')
+  // Un 505 no lleva la cita del 500: el portal no lo documenta.
+  const raro = consejoTrasFallo('505: HTTP Version Not Supported')
+  assert.equal(raro?.tipo, 'reportar')
+  assert.doesNotMatch(raro?.texto ?? '', /unhandled exception/)
+  assert.match(raro?.texto ?? '', /no documenta el 505/)
   assert.equal(consejoTrasFallo('400: {"message":"mandatory"}'), null)
   assert.equal(consejoTrasFallo(null), null)
   assert.equal(requestIdDe('sin json'), null)
+})
+
+// La regla «con una solicitud viva no hay reintento» vive en el SERVIDOR, no solo
+// en un botón de plataforma: un cliente viejo o un POST directo al puerto no
+// pueden colar `reintentoConfirmado` sobre una póliza que la compañía ya aprobó.
+// Y el bloque de acuñar/guardas va ANTES de las puertas del IBAN y de los campos,
+// que son del Submit y no del registro de una póliza ya emitida.
+test('la ruta /emitir niega el reintento con una solicitud viva y acuña antes de las puertas del Submit (lee el fuente)', () => {
+  const src = readFileSync(fileURLToPath(new URL('../../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url)), 'utf8')
+  assert.match(src, /if \(viva !== null \|\| \(\(rastro\.length > 0 \|\| quizaEmitidoAntes\) && cuerpo\.reintentoConfirmado !== true\)\)/)
+  assert.ok(src.indexOf("cuerpo.acunarExistente === true") < src.indexOf('extraerIbanTecleado(camposCliente)'))
+  assert.ok(src.indexOf('const crudoPrevio = await leerProyectoCrudo') < src.indexOf('camposDeEmision(r.config'))
 })

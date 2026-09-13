@@ -139,9 +139,9 @@ function leerSolicitud(v: unknown): SolicitudEmision | null {
     numeroPoliza: texto(o.policyNumber),
     veredicto: veredictoSolicitud(estadoId),
   }
-  // Un `id` solo no basta (el propio proyecto tiene `id`): hace falta alguna
-  // señal propia de PolicyApplication_V1 — estado, nº de póliza o fecha de alta.
-  if (!s.estadoId && !s.numeroPoliza && !s.creadaEn) return null
+  // Un `id` o una fecha solos no bastan (el propio proyecto los tiene): hace
+  // falta una señal PROPIA de PolicyApplication_V1 — el estado o el nº de póliza.
+  if (!s.estadoId && !s.numeroPoliza) return null
   return s
 }
 
@@ -158,6 +158,9 @@ export function solicitudesEmision(crudo: unknown): SolicitudEmision[] {
   if (typeof crudo !== 'object' || crudo === null) return []
   const o = crudo as Record<string, unknown>
   if (Array.isArray(o.policyApplications)) return solicitudesEmision(o.policyApplications)
+  // Un PROYECTO (tiene `effectiveDate`/`mainQuotes`/`offers`) sin `policyApplications`
+  // no cuenta ninguna solicitud: nunca se lee el objeto raíz como si lo fuera.
+  if ('effectiveDate' in o || 'mainQuotes' in o || 'offers' in o || 'insuranceLine' in o) return []
   const suelta = leerSolicitud(o)
   return suelta ? [suelta] : []
 }
@@ -200,11 +203,18 @@ export function consejoTrasFallo(errorMensaje: string | null | undefined): Conse
     }
   }
   const rid = requestIdDe(errorMensaje)
+  const conRid = rid ? ` (requestId ${rid})` : ''
+  if (status === 500) {
+    return {
+      tipo: 'reportar',
+      texto:
+        `El portal de Codeoscopic documenta el 500 como «an unhandled exception» y NO pide reintentar: pide reportarlo a ${SOPORTE_API_CODEOSCOPIC} con la respuesta completa${conRid}. ` +
+        'Solo 502/503/504 llevan «try again in a few minutes».',
+    }
+  }
+  // Un 5xx que el portal no documenta (501, 505…): no se le atribuye ninguna cita.
   return {
     tipo: 'reportar',
-    texto:
-      `El portal de Codeoscopic documenta el ${status} como «an unhandled exception» y NO pide reintentar: pide reportarlo a ${SOPORTE_API_CODEOSCOPIC} con la respuesta completa` +
-      (rid ? ` (requestId ${rid})` : '') +
-      '. Solo 502/503/504 llevan «try again in a few minutes».',
+    texto: `El portal de Codeoscopic no documenta el ${status}; repórtalo a ${SOPORTE_API_CODEOSCOPIC} con la respuesta completa${conRid} antes de reintentar.`,
   }
 }
