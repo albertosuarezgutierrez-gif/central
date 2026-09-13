@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-13T12:29:43Z",
-  "sha": "a2cb01936e3e14a1f8636a74b4ade14e36a5591d",
+  "generadoEn": "2026-09-13T13:01:42Z",
+  "sha": "37503c204715ded733e2b33e45615b738071de28",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -62163,13 +62163,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 31,
-          "resumen": "Las acciones de la cabecera de /correduria: UNA visible y el resto en un menú. 🚨 Por qué existe este componente en vez de tres `BtnLink` sueltos en el `PageHeader`: en móvil `.page-header-acciones` e"
+          "linea": 37,
+          "resumen": "Las acciones de la cabecera de /correduria: UNA visible y el resto en un menú. 🚨 Por qué existe este componente en vez de varios `BtnLink` sueltos en el `PageHeader`: en móvil `.page-header-acciones`"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "66c9b8fa016a"
+      "hash": "ef81db5d7b42"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/AccionesContacto.tsx",
@@ -63676,7 +63676,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": null,
-          "linea": 21
+          "linea": 22
         },
         {
           "nombre": "Companias",
@@ -63684,12 +63684,49 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 25
+          "linea": 26
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "26844d3d899a"
+      "hash": "5667210a8e21"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/companias/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CompaniasPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "CompaniasPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Directorio de contacto por compañía, como página propia (12/09/2026): Alberto quería llegar a esto desde el `+` de la cabecera, no buscarlo dentro de la pestaña Datos. Misma fuente que `Companias.tsx`"
+        },
+        {
+          "nombre": "ListaCompanias",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ companias }: { companias: Compania[] }",
+          "retorno": null,
+          "linea": 53
+        },
+        {
+          "nombre": "TarjetaCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ c }: { c: Compania }",
+          "retorno": null,
+          "linea": 81
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "23099a9c941d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/ContactosFicha.tsx",
@@ -134770,7 +134807,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3300,
-    "funciones": 10181
+    "archivos": 3301,
+    "funciones": 10184
   }
 }
