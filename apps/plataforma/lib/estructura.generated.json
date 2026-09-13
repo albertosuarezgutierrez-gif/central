@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-13T05:28:37Z",
+  "generadoEn": "2026-09-13T12:29:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3888,6 +3888,7 @@
       "/api/operador/codeoscopic/tarificacion",
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
+      "/api/operador/companias",
       "/api/operador/declaradas-vencer",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
@@ -4768,6 +4769,7 @@
       "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
+      "/api/correduria/companias",
       "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
       "/api/correduria/documentos",
@@ -6253,7 +6255,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1351,
+    "apis": 1353,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
