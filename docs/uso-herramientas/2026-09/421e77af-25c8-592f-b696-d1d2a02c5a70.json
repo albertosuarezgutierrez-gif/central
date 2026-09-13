@@ -1,20 +1,20 @@
 {
  "sesion": "421e77af-25c8-592f-b696-d1d2a02c5a70",
  "inicio": "2026-09-13T09:06:44.667Z",
- "fin": "2026-09-13T10:16:02.953Z",
- "llamadas": 151,
+ "fin": "2026-09-13T10:49:28.935Z",
+ "llamadas": 161,
  "categorias": {
   "otro": {
-   "llamadas": 7,
-   "chars_in": 2659,
-   "chars_out": 31223,
+   "llamadas": 12,
+   "chars_in": 2669,
+   "chars_out": 42008,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
     "AskUserQuestion": 2,
-    "ReadNotifications": 3,
+    "ReadNotifications": 8,
     "ScheduleWakeup": 1
    }
   },
@@ -66,23 +66,23 @@
    }
   },
   "mcp:github": {
-   "llamadas": 21,
-   "chars_in": 6065,
-   "chars_out": 203082,
+   "llamadas": 26,
+   "chars_in": 7574,
+   "chars_out": 257369,
    "errores": 0,
-   "archivos_citados": 2,
-   "chars_citados": 2248,
+   "archivos_citados": 3,
+   "chars_citados": 3372,
    "tools": {
     "mcp__github__actions_list": 6,
     "mcp__github__get_file_contents": 2,
     "mcp__github__list_commits": 1,
     "mcp__github__actions_run_trigger": 1,
-    "mcp__github__get_job_logs": 4,
+    "mcp__github__get_job_logs": 5,
     "mcp__github__search_code": 1,
     "mcp__github__create_pull_request": 1,
     "mcp__github__subscribe_pr_activity": 1,
-    "mcp__github__pull_request_read": 3,
-    "mcp__github__add_issue_comment": 1
+    "mcp__github__pull_request_read": 6,
+    "mcp__github__add_issue_comment": 2
    }
   },
   "mcp:Vercel": {
