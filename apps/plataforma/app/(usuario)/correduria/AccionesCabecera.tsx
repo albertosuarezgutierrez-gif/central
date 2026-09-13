@@ -1,27 +1,33 @@
 'use client'
-import { Plus, House, Wrench, Building2, MoreHorizontal } from 'lucide-react'
+import { Plus, Wrench, Building2, MoreHorizontal } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 
 /**
  * Las acciones de la cabecera de /correduria: UNA visible y el resto en un menú.
  *
- * 🚨 Por qué existe este componente en vez de tres `BtnLink` sueltos en el
+ * 🚨 Por qué existe este componente en vez de varios `BtnLink` sueltos en el
  * `PageHeader`: en móvil `.page-header-acciones` es `width:100%` + `flex-wrap`,
- * y tres botones `md` (44px de alto) con rótulos largos —«Presupuesto de hogar»
- * mide ~200px con su icono— caben a uno y medio por fila. Resultado medido
- * sobre la captura de Alberto (03/09/2026, móvil de ~390px): **tres filas de
- * botones, ~176px de alto**, encima del buscador y de todo lo que es trabajo.
- * La pantalla que abre cada mañana empezaba con 520px de cabecera sobre 740 de
- * pantalla.
+ * y varios botones `md` (44px de alto) con rótulos largos apenas caben a uno y
+ * medio por fila. Resultado medido sobre la captura de Alberto (03/09/2026,
+ * móvil de ~390px): **tres filas de botones, ~176px de alto**, encima del
+ * buscador y de todo lo que es trabajo. La pantalla que abre cada mañana
+ * empezaba con 520px de cabecera sobre 740 de pantalla.
  *
  * Ninguna otra pantalla de la app pone tres acciones en la cabecera (el máximo
  * del resto son dos), y la única que llegó a tener siete —`/banca`— las colapsó
  * en un desplegable por este mismo motivo. Esto es esa misma decisión.
  *
  * Qué se queda fuera del menú y por qué: **«Nuevo cliente» es lo único que se
- * hace a diario**. Presupuesto de hogar y Mantenimiento son de cuando toca, y
+ * hace a diario**. Compañías y Mantenimiento son de consulta/de cuando toca, y
  * el segundo ni siquiera es trabajo comercial: es una pasada de limpieza de
  * datos. Un botón permanente por una tarea de una tarde es ruido.
+ *
+ * ⚠️ **«Presupuesto de hogar» se quitó de aquí el 12/09/2026** (Alberto: no
+ * tiene sentido ofrecerlo suelto — `/correduria/hogar` solo consulta el
+ * Catastro, no genera ninguna propuesta; una propuesta real de verdad exige
+ * tener antes el cliente creado y se pide desde su ficha con «Retarificar
+ * hogar ↗»). La página sigue viva por si algo la enlaza, pero ya no tiene
+ * entrada desde esta cabecera.
  *
  * Se usa `<details>` nativo y no un `useState` a propósito: cierra solo al
  * navegar y no arrastra el fallo que documenta `AccionesBanca` en banca
@@ -72,12 +78,6 @@ export default function AccionesCabecera() {
             boxShadow: 'var(--shadow)',
           }}
         >
-          <a
-            href="/correduria/hogar"
-            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
-          >
-            <House size={15} strokeWidth={1.75} aria-hidden /> Presupuesto de hogar
-          </a>
           <a
             href="/correduria/companias"
             style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
