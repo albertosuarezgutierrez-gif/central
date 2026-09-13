@@ -359,10 +359,18 @@ Ahora: (1) `construirPersona` manda lo que la FICHA ya tiene (email por `emailDe
 con `partirDireccion`, `roadType` emparejado contra `/road-types`); (2) `revisarDatosAuto(d, { paraEmitir:
 true })` —solo defensa de cartera, NO oportunidad nueva— exige correo y calle completa **antes de pagar**,
 y la pantalla de plataforma los pide (tipo de vía como desplegable del catálogo, `CAMPOS_A_MANO` para
-nombre/número/correo); (3) la clave del correo es UNA constante, `CLAVE_EMAIL_VENDOR` (`persona.ts`),
-porque sigue siendo una SUPOSICIÓN: `/precalificar` registra `estructuraPersonaVendor` (solo nombres
-de campo del último proyecto real, gratis) para fijarla con un dato — mira ese log ANTES del próximo
-cargo; (4) `codeoscopic_projects.error_mensaje` guarda ya el 400 del Submit (antes quedaba NULL).
+nombre/número/correo); (3) **el correo va como `emails[]`, NO `email`** — MEDIDO el 13/09/2026 leyendo la
+persona que devuelve el vendor del proyecto 40685666 (`holder.emails: array(0)`, ninguna clave `email`):
+el vendor descarta en silencio la clave que no conoce, por eso el PATCH del 12/09 «no aplicaba». La
+forma vive en UN sitio (`CLAVE_EMAIL_VENDOR` + `elementoEmail()`, `persona.ts`); la clave del ELEMENTO
+(`address`/`email`/`value`) sigue sin fixture y `completarPersonas` la descubre gratis (PATCH + relectura
+por orden, `CLAVES_ELEMENTO_EMAIL`) y la deja en el log — **cuando salga en el log, fija la constante y
+quita las otras**; (4) **reparación PREVIA al Submit** (`emitir/route.ts` + `huecosPersonaParaEmitir`):
+antes de gastar el intento se lee el proyecto (gratis), se completa por PATCH lo que el Submit exige y
+falta (correo, calle) desde la ficha, y lo que la ficha no tiene sale como `faltan_vendor` **sin haber
+enviado nada** — así un proyecto ya pagado que nació sin correo (los 7 de Pilar) se emite sin otro 0,50€;
+(5) `codeoscopic_projects.error_mensaje` guarda ya el 400 del Submit (antes quedaba NULL). El log
+`[precalificar] estructura de la persona que devuelve el vendor` es temporal: quitarlo al fijar la clave.
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 
