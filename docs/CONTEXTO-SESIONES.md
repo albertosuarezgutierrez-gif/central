@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real (13/09/2026).**
+  Dado de alta el 15/06 (LOO-322) → `app.grupoasegura.com/api/webhooks/codeoscopic`, HTTP Basic; el emisor real manda un
+  **array de 2 elementos `{insurance}` cada ~30 min** (1.671 rechazos en `operational_events` desde el 25/06, antes de emitir
+  nada) y el CRM lo acepta con 200 sin guardar el cuerpo. Manuel nunca cerró una emisión (ni
+  sandbox); su Submit ya era «un intento + quizá-emitido + GET /insurances». Cableado: `POST /api/webhooks/codeoscopic`
+  en `apps/asegura` (guarda TODO crudo en `codeoscopic_webhook_events`, dedupe por hash, no acuña) + `/api/webhooks` en
+  `PUBLIC` del middleware (Resend también recibía el login). **Pendiente de Alberto:** copiar
+  `CODEOSCOPIC_WEBHOOK_USER/PASSWORD` del proyecto Vercel `asegura` a `central-asegura` y pedir a JM repuntar la URL.
+  `issuedDocuments[]`: forma en `GET {BASE_URL}/openapi.json` (host bloqueado desde el contenedor). Escalado: Ángel Blesa.
 - **📮 El portal de Codeoscopic SÍ documenta cómo reconciliar un Submit sin respuesta (13/09/2026, tras el 500 del 40685793).**
   Leído con Claude en Chrome: `GET /insurances/{id}` trae `policyApplications[]` con `status.id` (`Approved`) y
   `policyNumber`; 500 = «report to support» (`soporteapi@avant2.es`), 502/503/504 = «try again». Sin webhooks ni

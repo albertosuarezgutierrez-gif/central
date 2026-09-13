@@ -324,9 +324,29 @@ utilizable). Reglas que no se negocian al tocar esto:
 - ⚠️ **`expires_at` llegó a NULL en los 15 precios reales: no sabemos cuánto vale una cotización.**
   Mientras siga así, **un precio ya pagado NO se puede reutilizar** para ahorrarse los 0,50€ — no hay
   forma de saber si sigue vigente. Capturar la caducidad es requisito de cualquier plan de caché.
-- 🔬 **El webhook está SIN ESTRENAR, no roto.** Los dos eventos con `project_not_found` de la BD de
-  Manuel son smoke tests con ids inventados (`999999`, `smoke-fix-webhook`); Codeoscopic no ha
-  enviado nunca uno real, porque solo los dispara al emitir. No se pierda tiempo «arreglando» eso.
+- 🔬 **El webhook EXISTE, apunta al CRM de Manuel y DESCARTA el payload real (13/09/2026, medido
+  por Manuel en su prod).** Codeoscopic lo tiene dado de alta desde el 15/06 (LOO-322) hacia
+  `POST https://app.grupoasegura.com/api/webhooks/codeoscopic`, **HTTP Basic** (credenciales pasadas
+  por Bitwarden Send; viven en las envs del proyecto Vercel `asegura`). Los dos eventos
+  `project_not_found` de la tabla son smoke tests (`999999`, `smoke-fix-webhook`). Pero el emisor REAL
+  (UA `Apache-HttpAsyncClient`/Java, Basic válida, **cada 30-90 min**) manda un **array JSON de 2
+  elementos**, y el receptor del CRM solo entiende un objeto con `project_id`: **acepta con 200 y no
+  persiste el cuerpo**. Lo que sí deja es metadato en `seguros.operational_events`
+  (`codeoscopic_webhook_invalid_payload`, medido el 13/09: **1.671 rechazos desde el 25/06/2026**, uno
+  cada ~30 min, `rootType: array`, `rootLength: 2`, `rootKeys: ["insurance"]`, misma IP): o sea, dos
+  elementos `{ insurance: {...} }` desde ANTES de que nadie emitiera nada — huele a sonda o a volcado
+  periódico de estado, no a notificación de emisión, pero el cuerpo no lo ha visto nadie. Por eso existe
+  `POST /api/webhooks/codeoscopic` en ESTA app (`lib/codeoscopic/webhook.ts`, puro + `route.ts`):
+  guarda TODO cuerpo autenticado tal cual en `codeoscopic_webhook_events` (raíz objeto o array,
+  dedupe por hash como el CRM), y **no acuña ni toca ningún proyecto** — la reconciliación sigue en
+  `GET /insurances/{id}`. Envs `CODEOSCOPIC_WEBHOOK_USER`/`CODEOSCOPIC_WEBHOOK_PASSWORD` (sin ellas
+  503, nunca 200). ⏸️ **Para que reciba algo hacen falta dos pasos que NO son código:** copiar esas
+  dos envs del proyecto `asegura` a `central-asegura`, y que Codeoscopic (JM) repunte la URL a
+  `central-asegura.vercel.app/api/webhooks/codeoscopic` — eso lo pide Alberto, no un agente.
+  ⚠️ `/api/webhooks` **no estaba en `PUBLIC` del middleware**: el webhook de Resend (`/api/webhooks/resend`)
+  recibía el HTML del login desde que existe. Hay cepo (`webhook.test.ts`). Modelo de JM (vía Manuel):
+  emitiendo por API la respuesta del Submit ya trae el estado final; webhook y polling son para
+  emisiones externas o riesgo condicionado. Manuel nunca cerró una emisión, ni en sandbox.
 
 ### El cuerpo de la petición se valida GRATIS antes de gastar
 
