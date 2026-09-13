@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-13T12:29:43Z",
+  "generadoEn": "2026-09-13T13:45:53Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2108,7 +2108,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 50
+        "evidencias": 53
       },
       "rrhh": {
         "estado": "no",
@@ -3889,6 +3889,7 @@
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
       "/api/operador/companias",
+      "/api/operador/companias/contacto/[id]",
       "/api/operador/declaradas-vencer",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
@@ -4770,6 +4771,7 @@
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
+      "/api/correduria/companias/contactado",
       "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
       "/api/correduria/documentos",
@@ -5238,6 +5240,7 @@
       "seguros.codeoscopic_product_forms",
       "seguros.codeoscopic_projects",
       "seguros.codeoscopic_webhook_events",
+      "seguros.compania_contactos",
       "seguros.companias_dgs",
       "seguros.consent_logs",
       "seguros.conversaciones",
@@ -6255,7 +6258,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1353,
+    "apis": 1355,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
