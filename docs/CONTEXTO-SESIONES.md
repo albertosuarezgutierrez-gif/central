@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 CIMA caído 12-13/09 por DNS de `app.grupoasegura.com` — arreglado + mapper corregido (13/09/2026).**
+  Causa: el registro DNS de `app` en IONOS (`grupoasegura.com`) faltaba/se rompió al tocar `grupoasegura.es` un día antes
+  (`curl: Could not resolve host`, 3 runs seguidos desde 12/09 09:29 UTC). Alberto lo arregló en IONOS (CNAME `app` →
+  `*.vercel-dns-*.com`); Vercel ya tenía el dominio bien asignado. Nada se perdió (cola TIREA no dequeue hasta confirmar).
+  Aparte, desatascando la cuarentena con `reconcile=1` se vio que `mapOnePoliza` solo clasificaba `riesgos[0]` — si el
+  bloque reconocible no iba primero en un array multi-riesgo, nunca se miraba (2 POL de Occident seguían en review pese
+  al fix LOO-807 de agosto). Corregido y mergeado en `asegura` (repo separado, PR #821): ahora prueba todos los riesgos.
+  **Ojo: `apps/asegura` de `central` lee de `seguros.*` en la Supabase compartida (`wswbehlcuxqxyinousql`), NO del
+  proyecto original de Manuel (`uijsgeocgdaxkhvwtjqs`, congelado desde el 31/08) — verificar SIEMPRE contra ese primero.**
 - **📮 El portal de Codeoscopic SÍ documenta cómo reconciliar un Submit sin respuesta (13/09/2026, tras el 500 del 40685793).**
   Leído con Claude en Chrome: `GET /insurances/{id}` trae `policyApplications[]` con `status.id` (`Approved`) y
   `policyNumber`; 500 = «report to support» (`soporteapi@avant2.es`), 502/503/504 = «try again». Sin webhooks ni
