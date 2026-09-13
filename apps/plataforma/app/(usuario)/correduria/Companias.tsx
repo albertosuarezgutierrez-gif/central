@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Building2 } from 'lucide-react'
+import { Building2, Mail } from 'lucide-react'
 import Bloque from './Bloque'
+import BotonWhatsapp from './BotonWhatsapp'
 import { interpretarCompanias, type Compania, type RespuestaCompanias } from '@/lib/companias-asegura'
 
 /**
@@ -64,6 +65,7 @@ export default function Companias() {
               <th style={{ padding: '4px 8px' }}>Contacto</th>
               <th style={{ padding: '4px 8px' }}>Email</th>
               <th style={{ padding: '4px 8px' }}>Teléfono</th>
+              <th style={{ padding: '4px 8px', width: 1 }} />
               <th style={{ padding: '4px 8px' }}>Clave mediador</th>
             </tr>
           </thead>
@@ -80,6 +82,25 @@ export default function Companias() {
                 </td>
                 <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
                   {c.contactoTelefono ? <a href={`tel:${c.contactoTelefono.replace(/[^0-9+]/g, '')}`}>{c.contactoTelefono}</a> : celda(null)}
+                </td>
+                <td style={{ padding: '6px 8px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {c.contactoTelefono && <BotonWhatsapp telefono={c.contactoTelefono} compacto />}
+                    {c.contactoEmail && (
+                      <a
+                        href={`mailto:${c.contactoEmail}`}
+                        aria-label={`Escribir a ${c.nombreComun}`}
+                        title={`Escribir a ${c.nombreComun}`}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          width: 32, height: 32, borderRadius: 8,
+                          border: '1px solid var(--border)', color: 'var(--text)',
+                        }}
+                      >
+                        <Mail size={15} strokeWidth={1.75} aria-hidden />
+                      </a>
+                    )}
+                  </div>
                 </td>
                 <td style={{ padding: '6px 8px' }}>{celda(c.claveMediador)}</td>
               </tr>
