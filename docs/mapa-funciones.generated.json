@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-13T08:31:06Z",
-  "sha": "38cf661fa9a8c0eee713f18ce6dd1a6b56000500",
+  "generadoEn": "2026-09-13T09:13:55Z",
+  "sha": "3cb601925c0b07aee6831876d71d4309bf43164d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11936,8 +11936,8 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 316,
-          "resumen": "Nombre y apellidos, SIN ACENTOS (08/09/2026 → corregido: se buscaba con `contains` de Prisma, que es un `ILIKE` normal — insensible a mayúsculas, pero NO a acentos. Buscar «Alberto Suarez» no encontra"
+          "linea": 320,
+          "resumen": "Nombre y apellidos, SIN ACENTOS (13/09/2026 → corregido dos veces el mismo día: primero se cambió `contains` de Prisma —un `ILIKE` normal, insensible a mayúsculas pero NO a acentos— por `unaccent()`; "
         },
         {
           "nombre": "porCiudad",
@@ -11945,8 +11945,8 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 374,
-          "resumen": "Igual trampa que `porNombre`: `contains` de Prisma no ignora acentos."
+          "linea": 378,
+          "resumen": "Igual trampa que `porNombre` (y su misma corrección: `extensions.unaccent`)."
         },
         {
           "nombre": "porCodigoPostal",
@@ -11954,7 +11954,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 412
+          "linea": 416
         },
         {
           "nombre": "porMatricula",
@@ -11962,7 +11962,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 431,
+          "linea": 435,
           "resumen": "La matrícula vive EN CLARO dentro de `datos_especificos`, así que se busca con SQL crudo sobre el JSON — Prisma no filtra por `->>` con `contains`."
         },
         {
@@ -11971,7 +11971,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 468,
+          "linea": 479,
           "resumen": "Localidad o CP del RIESGO: viven en claro en `datos_especificos` de la póliza (`localidad`, `cp`), no en la ficha del cliente. Es lo que hace que la casa de la playa salga buscando el pueblo, aunque e"
         },
         {
@@ -11980,7 +11980,7 @@
           "exportada": false,
           "params": "correduriaId: string, campo: 'cp' | 'localidad',",
           "retorno": "Promise<",
-          "linea": 520
+          "linea": 531
         },
         {
           "nombre": "porDireccion",
@@ -11988,7 +11988,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 552,
+          "linea": 563,
           "resumen": "La calle del riesgo, DESCIFRADA EN MEMORIA. Por SQL es imposible (cifrado autenticado, sin índice ciego), pero son ~170 pólizas y la app tiene la clave: se traen todas, se descifran y se comparan sin "
         },
         {
@@ -11997,7 +11997,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string | null",
-          "linea": 599,
+          "linea": 610,
           "resumen": "`null` = no se ha podido leer (sin clave, o cifrado corrupto). Nunca se inventa."
         },
         {
@@ -12006,7 +12006,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio",
           "retorno": "Promise<BloqueResultados>",
-          "linea": 610
+          "linea": 621
         },
         {
           "nombre": "porHash",
@@ -12014,7 +12014,7 @@
           "exportada": false,
           "params": "correduriaId: string, c: Criterio, campo: 'dniLookupHash' | 'telefonoLookupHash' | 'emailLookupHash' | 'emailDominioHash' | 'emailUsuarioHash', hash: string | null,",
           "retorno": "Promise<BloqueResultados | null>",
-          "linea": 637,
+          "linea": 648,
           "resumen": "Búsqueda por índice ciego. `hash === null` significa que la clave no está configurada: NO se consulta y NO se devuelve una lista vacía, porque eso se leería como «ese DNI no está en la cartera»."
         },
         {
@@ -12023,7 +12023,7 @@
           "exportada": false,
           "params": "ids: string[]",
           "retorno": "Promise<Map<string, number>>",
-          "linea": 691
+          "linea": 702
         },
         {
           "nombre": "coberturaMatricula",
@@ -12031,7 +12031,7 @@
           "exportada": false,
           "params": "correduriaId: string,",
           "retorno": "Promise<",
-          "linea": 702
+          "linea": 713
         },
         {
           "nombre": "coberturaPolizas",
@@ -12039,7 +12039,7 @@
           "exportada": false,
           "params": "correduriaId: string, where: Record<string, unknown>,",
           "retorno": "Promise<",
-          "linea": 721
+          "linea": 732
         },
         {
           "nombre": "senalesDe",
@@ -12047,7 +12047,7 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[],",
           "retorno": "Promise<Map<string, Senales> | null>",
-          "linea": 753,
+          "linea": 764,
           "resumen": "`null` = la consulta falló. Un Map vacío = se miró y no hay nada."
         },
         {
@@ -12056,7 +12056,7 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<HermanaCruda[] | null>",
-          "linea": 820,
+          "linea": 831,
           "resumen": "Otras fichas SIN fusionar que son, o pueden ser, la misma persona. Dos vínculos, y no pesan igual: - **Póliza común** (mismo número normalizado y mismo ramo, **y una de las dos entra por CIMA**): es u"
         },
         {
@@ -12065,7 +12065,7 @@
           "exportada": true,
           "params": "correduriaId: string, ids: string[],",
           "retorno": "Promise<Map<string, Contacto> | null>",
-          "linea": 889,
+          "linea": 900,
           "resumen": "Teléfono y email principales de cada ficha, en UNA consulta. `null` (toda la consulta) = no se ha podido preguntar: aguas arriba eso se pinta como «no comprobado», nunca como «no tiene». Se EXPORTA (0"
         },
         {
@@ -12074,7 +12074,7 @@
           "exportada": false,
           "params": "correduriaId: string, mapa: Map<string, Contacto>,",
           "retorno": "Promise<void>",
-          "linea": 938,
+          "linea": 949,
           "resumen": "Para las fichas SIN email en `clientes.email`, el primero de `cliente_emails`. 🚨 No es un adorno, y por eso vale una consulta: medido el 04/09/2026, **57 fichas tienen email solo en esa tabla, y 5 de"
         },
         {
@@ -12083,7 +12083,7 @@
           "exportada": false,
           "params": "correduriaId: string, bloques: BloqueResultados[]",
           "retorno": "Promise<void>",
-          "linea": 965
+          "linea": 976
         }
       ],
       "tablas": [
@@ -12091,7 +12091,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "f88b7d09c33e"
+      "hash": "501b4bbc31a3"
     },
     {
       "ruta": "apps/asegura/lib/cartera-declaradas.ts",
