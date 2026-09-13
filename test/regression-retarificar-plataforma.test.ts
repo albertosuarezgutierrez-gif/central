@@ -655,6 +655,10 @@ test('la fecha de efecto guardada pasa por fechaEfectoInicial() antes de precarg
   // en el 422 de asegura. El helper (lib/fecha-efecto-inicial.ts) la descarta
   // si cae fuera de [hoy, hoy+90].
   const src = leer(PANTALLA)
-  assert.match(src, /fechaEfecto:\s*fechaEfectoInicial\(/, 'el initializer de `correcciones` debe pasar la fecha guardada por fechaEfectoInicial()')
+  const usos = src.match(/fechaEfecto:\s*fechaEfectoInicial\(/g) ?? []
+  // Dos puntos de entrada: el initializer (cotización guardada en asegura) y
+  // la restauración del borrador de localStorage — el borrador también trae
+  // la fecha del día en que se tecleó.
+  assert.ok(usos.length >= 2, `las dos precargas de correcciones (guardada + borrador) deben pasar por fechaEfectoInicial(); hay ${usos.length}`)
   assert.match(src, /from '@\/lib\/fecha-efecto-inicial'/)
 })

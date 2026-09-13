@@ -41,7 +41,7 @@
   descubrir (el ReRate murió antes por la fecha). PR #2863 (mergeado). **Secuela (misma mañana):** las `correcciones`
   guardadas traen la `fechaEfecto` vieja y pisaban el default MAÑANA → la caducada reaparecía precargada y «Pedir
   precio» moría en el 422. Helper puro `apps/plataforma/lib/fecha-efecto-inicial.ts` (solo se reutiliza si está en
-  [hoy, hoy+90]); lo destapó la review de Graphify, brazo visto en rojo. PR de seguimiento de #2863.
+  [hoy, hoy+90]); lo destapó la review de Graphify, brazo visto en rojo; misma guarda en el borrador de localStorage (lo cazó `code-review`). PR #2867.
 - **🔔 Avisos por Web Push en `apps/asegura-portal` (12/09/2026).** Nuevo canal, hermano del correo
   de vencimientos de `apps/asegura` pero SIN compartir sello ni sitio: la suscripción push no es un
   dato descifrable, así que vive en el portal, sobre `seguros.portal_obligacion` (sello propio

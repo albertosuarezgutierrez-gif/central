@@ -678,7 +678,19 @@ export default function Retarificador({
     if (b.municipioId && listaMunicipios.some((m) => m.id === b.municipioId)) setMunicipioId(b.municipioId)
     if (b.tipoViaId && listaTiposVia.some((t) => t.id === b.tipoViaId)) setTipoViaId(b.tipoViaId)
     if (b.matriculacion) setMatriculacion(b.matriculacion)
-    if (b.correcciones) setCorrecciones(b.correcciones)
+    // El borrador guarda la fecha de efecto del día en que se tecleó: a los
+    // dos días ya puede ser pasada, y restaurarla tal cual repetiría el 422.
+    if (b.correcciones) {
+      setCorrecciones({
+        ...b.correcciones,
+        fechaEfecto: fechaEfectoInicial(
+          b.correcciones.fechaEfecto,
+          hoyISO(),
+          masDiasISO(1),
+          MAX_DIAS_VISTA_EFECTO,
+        ),
+      })
+    }
     // Se restaura una sola vez al abrir la pantalla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
