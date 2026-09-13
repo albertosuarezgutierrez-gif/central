@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-13T13:01:42Z",
-  "sha": "37503c204715ded733e2b33e45615b738071de28",
+  "generadoEn": "2026-09-13T13:48:09Z",
+  "sha": "b26c7cdfdd3169a9cb1fa55d4e77fa0f40a2488a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10634,6 +10634,27 @@
       "hash": "f11a31f0b9d1"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/companias/contacto/[id]/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request, ctx: Ctx",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "PATCH /api/operador/companias/contacto/[id] — marca `ultimo_contacto_en` a AHORA. Lo dispara plataforma cuando Alberto pulsa el botón de WhatsApp o de correo sobre un contacto (best-effort: si esto fa"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/companias/contacto/[id]",
+      "hash": "842a754179c2"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/companias/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -10646,13 +10667,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 14,
-          "resumen": "GET /api/operador/companias — el directorio de contacto por compañía (`seguros.companias_dgs`), que ya mantiene la skill `agente-correduria`. No es cartera de cliente: no hace falta `correduriaId` ni "
+          "linea": 18,
+          "resumen": "GET /api/operador/companias — el directorio de contacto por compañía (`seguros.companias_dgs` + `seguros.compania_contactos`), que mantiene la skill `agente-correduria`. No es cartera de cliente: no h"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/companias",
-      "hash": "1b4d7ab586bf"
+      "hash": "c621a3bd1fcf"
     },
     {
       "ruta": "apps/asegura/app/api/operador/declaradas-vencer/route.ts",
@@ -63676,7 +63697,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": null,
-          "linea": 22
+          "linea": 27
         },
         {
           "nombre": "Companias",
@@ -63684,12 +63705,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 26
+          "linea": 31
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5667210a8e21"
+      "hash": "da212beb0bee"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/companias/page.tsx",
@@ -63704,7 +63725,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 16,
+          "linea": 18,
           "resumen": "Directorio de contacto por compañía, como página propia (12/09/2026): Alberto quería llegar a esto desde el `+` de la cabecera, no buscarlo dentro de la pestaña Datos. Misma fuente que `Companias.tsx`"
         },
         {
@@ -63713,7 +63734,7 @@
           "exportada": false,
           "params": "{ companias }: { companias: Compania[] }",
           "retorno": null,
-          "linea": 53
+          "linea": 55
         },
         {
           "nombre": "TarjetaCompania",
@@ -63721,12 +63742,41 @@
           "exportada": false,
           "params": "{ c }: { c: Compania }",
           "retorno": null,
-          "linea": 81
+          "linea": 83
+        },
+        {
+          "nombre": "TarjetaContacto",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ ct }: { ct: Contacto }",
+          "retorno": null,
+          "linea": 102
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "23099a9c941d"
+      "hash": "e0919ef0a0f6"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/ContactoAcciones.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ContactoAcciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "ContactoAcciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ contactoId, nombre, telefono, email, compacto = false, }: { contactoId: string nombre: string telefono: string | null email: string | null compacto?: boolean }",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "Botones de WhatsApp y correo para UN contacto de compañía, compartidos entre `Companias.tsx` (tabla, pestaña Datos) y `/correduria/companias` (tarjetas). Al pulsar cualquiera, marca `ultimo_contacto_e"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ebb53e7237eb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/ContactosFicha.tsx",
@@ -73084,6 +73134,27 @@
       ],
       "rutaApi": "/api/correduria/comisiones",
       "hash": "ff20b329d895"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/companias/contactado/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "best-effort, sin bloquear la apertura del enlace."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/companias/contactado",
+      "hash": "c9cbbb10c7fc"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/companias/route.ts",
@@ -84935,11 +85006,12 @@
     {
       "ruta": "apps/plataforma/lib/companias-asegura.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Directorio de contacto por compañía aseguradora (`seguros.companias_dgs`), servido por asegura en `GET /api/operador/companias`. Mismo patrón de dos partes que `duplicados-asegura.ts`: lo PURO (interpretar la respuesta) y la RED (solo desde la ruta API de plataforma). Es una tabla de REFERENCIA, no ",
+      "resumen": "Directorio de contacto por compañía aseguradora (`seguros.companias_dgs` + `seguros.compania_contactos`), servido por asegura en `GET /api/operador/companias`. Mismo patrón de dos partes que `duplicados-asegura.ts`: lo PURO (interpretar la respuesta) y la RED (solo desde la ruta API de plataforma). ",
       "exporta": [
         "leerCompanias",
         "interpretarCompanias",
-        "companiasAsegura"
+        "companiasAsegura",
+        "marcarContactoAsegura"
       ],
       "funciones": [
         {
@@ -84948,7 +85020,32 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 29
+          "linea": 44
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number",
+          "linea": 48
+        },
+        {
+          "nombre": "leerContacto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Contacto | null",
+          "linea": 52
+        },
+        {
+          "nombre": "leerContactos",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Contacto[]",
+          "linea": 72,
+          "resumen": "Lista de contactos, o `[]` si no hay array — un contacto individual mal formado se descarta, no tumba la lista."
         },
         {
           "nombre": "leerCompania",
@@ -84956,7 +85053,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Compania | null",
-          "linea": 33
+          "linea": 77
         },
         {
           "nombre": "leerCompanias",
@@ -84964,7 +85061,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Compania[] | null",
-          "linea": 54,
+          "linea": 95,
           "resumen": "Lista de compañías, o `null` si no llega o no es lista — nunca `[]` por defecto."
         },
         {
@@ -84973,7 +85070,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaCompanias",
-          "linea": 59
+          "linea": 100
         },
         {
           "nombre": "urlAsegura",
@@ -84981,7 +85078,15 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 73
+          "linea": 114
+        },
+        {
+          "nombre": "cabeceras",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Record<string, string> | null",
+          "linea": 118
         },
         {
           "nombre": "companiasAsegura",
@@ -84989,12 +85094,21 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 79
+          "linea": 125
+        },
+        {
+          "nombre": "marcarContactoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "contactoId: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 141,
+          "resumen": "Marca un contacto como recién contactado. Best-effort: el llamador no bloquea el WhatsApp/mail por esto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5eff90a05d03"
+      "hash": "e04d9b557a08"
     },
     {
       "ruta": "apps/plataforma/lib/comparativa-declaracion.ts",
@@ -127413,6 +127527,57 @@
       "hash": "0e00b8146ebe"
     },
     {
+      "ruta": "packages/module-seguros/src/compania-contactos.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Varios contactos por compañía aseguradora (docs/superpowers/specs/ 2026-09-13-companias-contactos-multiples-design.md). `area` es una lista CERRADA a propósito: si fuera texto libre, el minado de correo acabaría escribiendo \"ventas\"/\"comercial\"/\"vendedor\" como si fueran tres cosas distintas, y no se",
+      "exporta": [
+        "areaContacto",
+        "etiquetaArea",
+        "ordenarContactos",
+        "contactoDestacado"
+      ],
+      "funciones": [
+        {
+          "nombre": "areaContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "AreaContacto | null",
+          "linea": 26,
+          "resumen": "`null` = no está en la lista cerrada (o no se ha clasificado) — nunca se inventa un valor."
+        },
+        {
+          "nombre": "etiquetaArea",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AreaContacto | null",
+          "retorno": "string | null",
+          "linea": 32
+        },
+        {
+          "nombre": "ordenarContactos",
+          "kind": "function",
+          "exportada": true,
+          "params": "contactos: ContactoCompania[]",
+          "retorno": "ContactoCompania[]",
+          "linea": 52,
+          "resumen": "Orden de pintado: por `orden` ascendente (el migrado desde el contacto único nace en 0 y sale primero salvo que se reordene a mano)."
+        },
+        {
+          "nombre": "contactoDestacado",
+          "kind": "function",
+          "exportada": true,
+          "params": "contactos: ContactoCompania[], area: AreaContacto,",
+          "retorno": "ContactoCompania | null",
+          "linea": 62,
+          "resumen": "El contacto a DESTACAR cuando el llamador ya sabe el motivo (p. ej. una ficha de siniestro abierto). Si hay uno con esa `area`, el primero por orden; si no hay ninguno clasificado así, `null` — nunca "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0b18cfbafe62"
+    },
+    {
       "ruta": "packages/module-seguros/src/copy-regulado.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Lo que la correduría NO puede decir en una comunicación pública, en UN sitio. ─── Por qué existe este módulo ──────────────────────────────────────────── La regla regulatoria es la misma escriba donde escriba: RDL 3/2020 (arts. 173-178) distingue INFORMAR de ASESORAR, y en cuanto un texto promete un",
@@ -134807,7 +134972,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3301,
-    "funciones": 10184
+    "archivos": 3305,
+    "funciones": 10197
   }
 }
