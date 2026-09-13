@@ -39,6 +39,26 @@
   0,50€; lo que la ficha no tenga sale como `faltan_vendor` sin enviar nada. Pendiente: leer en el log qué clave
   del elemento cuajó y fijarla; quitar el log temporal de `/precalificar`. PR #2853 mergeado; este es el siguiente.
 
+- **📞 Recaptación de leads sin vencimiento — completo (12/09/2026).** Cola de los 669 leads del
+  volcado sin fecha de vencimiento, con contacto y excluyendo a quien ya es cliente vivo por CIMA
+  (`/api/operador/recaptacion` en asegura, proxy + pantalla en `plataforma` → `/correduria` →
+  Clientes). WhatsApp manual (enlace `wa.me`, solo se registra que Alberto lo abrió) + email por la
+  API HTTP de Resend con tracking de apertura/clic (webhook `/api/webhooks/resend`), cooldown de 14
+  días tras cualquier envío, texto base determinista pulido opcionalmente por IA. El "no interesado"
+  reutiliza el descarte de ficha ya existente, sin estado nuevo. Detalle en `apps/asegura/CLAUDE.md`.
+  **Pendiente de Alberto:** configurar `RESEND_WEBHOOK_SECRET` en Vercel (`central-asegura`) + crear
+  el endpoint `email.opened`/`email.clicked` en el dashboard de Resend, y probar un envío real.
+
+- **🕵️ Pólizas "zombi" del volcado + revertido un arreglo propio equivocado (12/09/2026).** Alberto
+  reportó BIDP023227 (Comunidades, Plus Ultra) «no aparece, es de catalana»: corregí su
+  `codigo_entidad_dgs` de C0468→C0517 pensando que era un fallo puntual, y era un error — **215
+  pólizas "Plus Ultra" + 101 "Catalana Occidente" + 21 "Occident" (337 en total) usan TODAS C0468**
+  en el volcado: así registra el grupo, no la entidad legal exacta. Revertido. Criterio útil que
+  queda para reusar: **134 pólizas / 64 clientes "zombi"** (volcado sin CIMA, `activa` sin
+  vencimiento, del cliente que YA tiene otra póliza confirmada por CIMA) — candidatas a revisar una
+  a una, no a fusionar en bloque. Dato de Alberto: **"en vigor" = confirmado por CIMA siempre; solo
+  falta Generali, que se conecta la semana del 15/09/2026** (hoy sin acceso, ver `apps/asegura/CLAUDE.md`).
+
 - **💸 Causa de fondo del día de emisión fallida: el `POST /insurances` mandaba la persona SIN email ni calle completa (12/09/2026).**
   Medido en `codeoscopic_consumo`: 7 cargos de 0,50€ (11-12/09) sobre la póliza de Pilar Franco Ruz, los 7 con la misma
   persona incompleta — `persona.ts` los omitía a propósito («no hacen falta para el precio»), el Submit los exige y el
