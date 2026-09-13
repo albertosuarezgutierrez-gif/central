@@ -262,6 +262,8 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (13/09/2026) 🇮🇹 `detectLang` marcaba italiano correcto como "deriva al español"
+- (13/09/2026) 🚑 Parte de siniestro: zona del daño tocable + autorrelleno + «ha pasado ahora mismo»
 - (13/09/2026) 🔔 Aviso Telegram al iniciar sesión en la intranet
 - (13/09/2026) 📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real
 - (13/09/2026) 🛡️ Sentinel [SOMBRA] permitía en silencio un exfil crítico en sesión desatendida — corregido
@@ -270,6 +272,4 @@
 - (13/09/2026) 🔎 Diagnóstico (sin código): botón WhatsApp/Invitar ausente en Pablo Franco Ruz — no era el móvil
 - (13/09/2026) 🚨 CIMA caído 12-13/09 por DNS de `app.grupoasegura.com` — arreglado + mapper corregido + cuarentena desatascada 42→20
 - (13/09/2026) 🔒 Login de plataforma sin rate limit — fuerza bruta viable, cerrado
-- (13/09/2026) 🔎 Buscador de la cartera (asegura) no encontraba «Alberto Suarez» sin tilde — dos bugs apilados, el segundo escondido detrás del primero
-- (13/09/2026) 🔌 `sivra_rates_snapshot` en 401 desde el 11/09 — NO es la credencial HMAC, es el endpoint `/api/rates` de Smoobu
 
