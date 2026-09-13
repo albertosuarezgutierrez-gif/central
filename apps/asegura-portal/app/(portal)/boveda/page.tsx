@@ -13,6 +13,7 @@ import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { leerMisDatos } from '@/lib/mis-datos'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
+import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
@@ -35,6 +36,7 @@ import {
 
 import { AvisoContacto } from './AvisoContacto'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
+import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
 import { MisDatos } from './MisDatos'
 import { TusDatos } from './TusDatos'
@@ -55,6 +57,7 @@ const TITULO_VISTA: Record<VistaBoveda, string> = {
   hoja: 'QR',
   recibos: 'recibos',
   siniestro: 'siniestros',
+  recordatorios: 'recordatorios',
   datos: 'datos',
 }
 
@@ -110,6 +113,12 @@ export default async function Boveda({
   // pero se siguen sincronizando: es lo que lee la campana de avisos
   // (`/api/avisos`) para el chip «puedes actuar hasta…».
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
+
+  // Los recordatorios PROPIOS solo se leen para la pestaña que los pinta —
+  // misma regla de rendimiento que el resto de la página (el servidor manda
+  // solo lo que se pide). El array vacío en las demás vistas no se enseña en
+  // ningún sitio, así que no hace falta que sea correcto, solo que exista.
+  const recordatorios = vista === 'recordatorios' ? await recordatoriosDeIdentidad(identidad.id) : []
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo ASegura'
@@ -459,6 +468,8 @@ export default async function Boveda({
           <ParteSiniestro polizas={polizasParte} partes={partesEnviados} polizaInicial={polizaInicial} />
         </>
       )}
+
+      {vista === 'recordatorios' && <Recordatorios recordatorios={recordatorios} />}
 
     </>
   )

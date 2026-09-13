@@ -1,0 +1,118 @@
+/**
+ * Recordatorios que el CLIENTE se pone a sí mismo — ITV, carnet, caldera,
+ * extintores, o cualquier otra cosa en texto libre. Es la mitad del motor de
+ * `portal_obligacion` que hasta el 13/09/2026 solo alimentaban las pólizas
+ * (ver `2026-09-03_portal_obligacion.sql`: «el enum nace con sitio para el
+ * resto porque una obligación cuelga del BIEN y el motor es el mismo para la
+ * ITV de un coche que para el vencimiento de su seguro»). Aquí no hay bien ni
+ * póliza detrás: la persona escribe qué y cuándo, y ya está.
+ *
+ * 🚨 A propósito NO reutiliza `fechaAccionable()` de `obligacion.ts`: aquella
+ * resta 30 días porque es un plazo LEGAL (art. 22 LCS) que el cliente no
+ * elige. Aquí la fecha que el cliente teclea YA ES la fecha en la que quiere
+ * que le avisen — restarle algo sería avisarle antes de lo que pidió.
+ */
+
+export type TipoRecordatorio = 'itv' | 'carnet' | 'mantenimiento' | 'revision_gas' | 'libre'
+
+export interface SugerenciaRecordatorio {
+  clave: string
+  tipo: TipoRecordatorio
+  titulo: string
+  /** Cada cuántos meses se repite por defecto. `null` = de una sola vez. La
+   *  persona puede cambiarlo al crearlo: esto es solo el valor de partida. */
+  repiteCadaMesesPorDefecto: number | null
+}
+
+/**
+ * El catálogo de accesos rápidos. Todas caen en uno de los CUATRO tipos que ya
+ * tenía el enum (`itv`, `carnet`, `mantenimiento`, `revision_gas`) — varias
+ * sugerencias pueden compartir tipo (p. ej. «Extintores» y «Boletín
+ * eléctrico» son las dos `mantenimiento`): el tipo es para agrupar/iconizar,
+ * el título es lo que de verdad las distingue.
+ */
+export const SUGERENCIAS_RECORDATORIO: readonly SugerenciaRecordatorio[] = [
+  { clave: 'itv', tipo: 'itv', titulo: 'ITV', repiteCadaMesesPorDefecto: 12 },
+  { clave: 'carnet', tipo: 'carnet', titulo: 'Carnet de conducir', repiteCadaMesesPorDefecto: 120 },
+  { clave: 'caldera', tipo: 'revision_gas', titulo: 'Revisión de caldera', repiteCadaMesesPorDefecto: 12 },
+  { clave: 'gas', tipo: 'revision_gas', titulo: 'Revisión de gas butano', repiteCadaMesesPorDefecto: 60 },
+  { clave: 'extintores', tipo: 'mantenimiento', titulo: 'Revisión de extintores', repiteCadaMesesPorDefecto: 12 },
+  {
+    clave: 'electrica',
+    tipo: 'mantenimiento',
+    titulo: 'Boletín de instalación eléctrica (OCA)',
+    repiteCadaMesesPorDefecto: 60,
+  },
+] as const
+
+export const TITULO_MAX = 80
+export const REPITE_CADA_MESES_MIN = 1
+export const REPITE_CADA_MESES_MAX = 120
+
+export type EntradaRecordatorio = {
+  tipo?: unknown
+  titulo?: unknown
+  fechaEvento?: unknown
+  repiteCadaMeses?: unknown
+}
+
+export type RecordatorioNormalizado = {
+  tipo: TipoRecordatorio
+  titulo: string
+  fechaEvento: Date
+  repiteCadaMeses: number | null
+}
+
+export type ResultadoRecordatorio =
+  | { ok: true; datos: RecordatorioNormalizado }
+  | { ok: false; error: 'titulo_invalido' | 'fecha_invalida' | 'tipo_invalido' | 'repeticion_invalida' }
+
+const TIPOS_VALIDOS: readonly TipoRecordatorio[] = ['itv', 'carnet', 'mantenimiento', 'revision_gas', 'libre']
+
+/**
+ * Valida lo que manda el formulario. NO impone que la fecha sea futura: un
+ * recordatorio con fecha pasada simplemente no cae dentro de la ventana de
+ * aviso (`entraEnVentana()`) y no molesta a nadie — rechazarlo sería una
+ * regla de negocio que esta pieza no tiene por qué imponer.
+ */
+export function normalizarRecordatorio(entrada: EntradaRecordatorio): ResultadoRecordatorio {
+  const tipo = typeof entrada.tipo === 'string' ? entrada.tipo : 'libre'
+  if (!(TIPOS_VALIDOS as readonly string[]).includes(tipo)) return { ok: false, error: 'tipo_invalido' }
+
+  const tituloBruto = typeof entrada.titulo === 'string' ? entrada.titulo.trim() : ''
+  if (tituloBruto.length === 0 || tituloBruto.length > TITULO_MAX) return { ok: false, error: 'titulo_invalido' }
+
+  const fechaBruta = typeof entrada.fechaEvento === 'string' ? entrada.fechaEvento : null
+  const fechaEvento = fechaBruta !== null ? new Date(`${fechaBruta}T00:00:00Z`) : null
+  if (fechaEvento === null || Number.isNaN(fechaEvento.getTime())) return { ok: false, error: 'fecha_invalida' }
+
+  let repiteCadaMeses: number | null = null
+  if (entrada.repiteCadaMeses !== null && entrada.repiteCadaMeses !== undefined && entrada.repiteCadaMeses !== '') {
+    const n = Number(entrada.repiteCadaMeses)
+    if (!Number.isInteger(n) || n < REPITE_CADA_MESES_MIN || n > REPITE_CADA_MESES_MAX) {
+      return { ok: false, error: 'repeticion_invalida' }
+    }
+    repiteCadaMeses = n
+  }
+
+  return { ok: true, datos: { tipo: tipo as TipoRecordatorio, titulo: tituloBruto, fechaEvento, repiteCadaMeses } }
+}
+
+/** Último día del mes `y`-`m` (0-indexado), en UTC. */
+function ultimoDiaDelMes(y: number, m: number): number {
+  return new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+}
+
+/**
+ * `base` + `meses`, conservando el DÍA salvo que el mes destino sea más corto
+ * (31 de enero + 1 mes = 28/29 de febrero) — el mismo criterio que
+ * `sumarMesesClamp()` de `cobro-declarado.ts`, para que un recordatorio anual
+ * puesto un 31 no se vaya corriendo de mes con `setUTCMonth()`.
+ */
+export function siguienteOcurrencia(fechaEvento: Date, repiteCadaMeses: number): Date {
+  const dia = fechaEvento.getUTCDate()
+  const indice = fechaEvento.getUTCFullYear() * 12 + fechaEvento.getUTCMonth() + repiteCadaMeses
+  const anio = Math.floor(indice / 12)
+  const mes = indice - anio * 12
+  return new Date(Date.UTC(anio, mes, Math.min(dia, ultimoDiaDelMes(anio, mes))))
+}

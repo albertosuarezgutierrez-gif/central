@@ -60,7 +60,7 @@
  * que Alberto pensó para llevar encima, no para enterrar. Pasa a su propia
  * pestaña por la misma razón que ya sacó «Mis datos» de ahí abajo.
  */
-export const VISTAS_BOVEDA = ['seguros', 'hoja', 'recibos', 'siniestro', 'datos'] as const
+export const VISTAS_BOVEDA = ['seguros', 'hoja', 'recibos', 'siniestro', 'recordatorios', 'datos'] as const
 
 export type VistaBoveda = (typeof VISTAS_BOVEDA)[number]
 
@@ -148,6 +148,15 @@ export function pestanasPortal(): PestanaPortal[] {
     // palabra en la barra: «Siniestros» + «Un parte» serían dos puertas para
     // lo mismo, que es exactamente lo que mató a «Mis pólizas».
     { vista: 'siniestro', etiqueta: 'Siniestros', href: '/boveda?vista=siniestro' },
+    // 13/09/2026: recordatorios propios (ITV, carnet, caldera, extintores…),
+    // sobre el mismo motor de `portal_obligacion` que las pólizas pero sin
+    // póliza detrás. Va justo después de «Siniestros» porque es la misma
+    // familia — «cosas con fecha» — y antes de «Contactos»/«Datos», que son
+    // sobre la relación y la persona, no sobre vencimientos.
+    // 🚨 NO «Avisos»: ya es la palabra de la campana de notificaciones
+    // (`Campana.tsx` → `/api/avisos`), que es otra cosa — lo que la
+    // correduría te avisa, no lo que tú te apuntas.
+    { vista: 'recordatorios', etiqueta: 'Recordatorios', href: '/boveda?vista=recordatorios' },
     // 08/09/2026: «Quién me ve» → «Contactos». Alberto pidió «una pestaña de
     // contactos» y la pantalla ya era eso: la gente a la que das acceso, la que
     // te lo da y la que invitas. La ruta NO cambia: los enlaces guardados a

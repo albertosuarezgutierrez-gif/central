@@ -21,6 +21,7 @@ import {
 
 import { carteraDeIdentidad, type CarteraPortal } from './cartera-lectura'
 import { prisma } from './db'
+import { avanzarRecordatoriosRecurrentesDeIdentidad } from './recordatorios'
 import { getIdentidad } from './session'
 
 export type ObligacionVista = {
@@ -66,6 +67,12 @@ export async function sincronizarObligacionesDeIdentidad(
   //    filas distintas (`poliza_declarada_id` contra `poliza_id`) y una no
   //    tiene por qué caerse porque falle la otra.
   await prisma.$transaction(await opsDeDeclaradas(identidadId))
+
+  // 3) Los recordatorios PROPIOS (ITV, carnet, caldera…) que sean recurrentes
+  //    y ya hayan avisado una vez: se empujan al ciclo siguiente. No tocan
+  //    nada de la cartera, así que van antes y fuera de esa rama —no dependen
+  //    de si la identidad está vinculada o no, al revés que lo de abajo.
+  await avanzarRecordatoriosRecurrentesDeIdentidad(identidadId)
 
   const c = cartera ?? (await carteraDeIdentidad(identidadId))
 
