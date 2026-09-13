@@ -15,6 +15,7 @@
 // decide la cascada del caller (ficha → corredor), y nada personal se supone.
 
 import type { DatosAuto, Reparo } from './peticion-auto.ts'
+import { CLAVE_EMAIL_VENDOR } from './persona.ts'
 
 /** Los papeles en los que va la persona. `holder` siempre; el resto según ramo. */
 export type Papel = 'holder' | 'owner' | 'primaryDriver' | 'secondaryDriver'
@@ -282,12 +283,12 @@ export function aplicarCampoPersona(persona: unknown, campo: CampoPersona, valor
       p.drivingLicenses = [{ type: { id: 'B' }, date: v, issuingZone: { id: 'Spain' } }]
       return p
     case 'email':
-      // 🚨 Sin fixture: el portal solo confirma que `email` es un campo de la
-      // persona (`docs/CODEOSCOPIC-API-PORTAL.md`, roles de hogar), no su forma
-      // exacta. Se manda como STRING plano, coherente con esa doc — la
+      // 🚨 Sin fixture: la clave es una suposición compartida con el POST
+      // inicial — ver `CLAVE_EMAIL_VENDOR` en `persona.ts` (y por qué el
+      // 12/09/2026 se sospecha que no es la que el vendor espera). La
       // verificación de `completarPersonas` (releer + comparar) es la que
       // delata si el vendor esperaba otra cosa, en vez de darlo por bueno.
-      p.email = v
+      p[CLAVE_EMAIL_VENDOR] = v
       return p
   }
 }
@@ -327,8 +328,16 @@ export function leerCampoPersona(persona: unknown, campo: CampoPersona): string 
       return str(obj(arr(p.phones)[0]).number)
     case 'fechaCarnet':
       return str(obj(arr(p.drivingLicenses)[0]).date)
-    case 'email':
-      return str(p.email)
+    case 'email': {
+      // Se lee TOLERANTE a propósito: si el vendor guarda el correo con otra
+      // forma (`emails[0].address`/`.email`/`.value`), la relectura lo ve
+      // igual y `completarPersonas` no declara «no aplicado» un valor que sí
+      // está — y de paso queda constancia de la forma real en `crudo`.
+      const plano = str(p[CLAVE_EMAIL_VENDOR]) ?? str(p.email)
+      if (plano) return plano
+      const primero = obj(arr(p.emails)[0])
+      return str(primero.address) ?? str(primero.email) ?? str(primero.value)
+    }
   }
 }
 

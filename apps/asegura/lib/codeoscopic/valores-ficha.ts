@@ -8,9 +8,8 @@
 import { decryptField } from '@central/module-seguros-pii'
 import { prisma } from '../tenant'
 import { emailDeFicha } from '../email-ficha'
-import { partirDireccion } from './direccion'
+import { partirDireccion, tipoViaDeFicha } from './direccion'
 import { tiposDeVia } from './catalogos'
-import { emparejar } from './opciones'
 import type { ConfigCodeoscopic } from './config'
 import type { CampoPersona } from './interprete-400'
 
@@ -75,8 +74,8 @@ export async function valoresPersonaDesdeFicha(
     if (pedidosSoportados.includes('numeroVia') && partida?.numero) resultado.numeroVia = partida.numero
     if (pedidosSoportados.includes('tipoVia') && partida?.tipoVia && config) {
       try {
-        const catalogo = await tiposDeVia(config)
-        const match = emparejar(catalogo, partida.tipoVia)
+        // La MISMA regla que la precalificación y el pre-vuelo (`tipoViaDeFicha`).
+        const match = tipoViaDeFicha(direccion, await tiposDeVia(config))
         if (match) resultado.tipoVia = match.id
       } catch {
         // Catálogo caído o inalcanzable: no se resuelve, nunca se inventa el id.

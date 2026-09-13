@@ -42,7 +42,14 @@
 
 import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion, clienteOrigenDe, type OrigenRetarificacion } from '@/lib/cartera-ficha'
-import { precalificarAuto, precalificarAutoNueva, type Resueltos, type ResueltosAutoNueva } from '@/lib/codeoscopic/desde-cartera'
+import {
+  precalificarAuto,
+  precalificarAutoNueva,
+  tipoViaDelTomador,
+  tipoViaTextoDelTomador,
+  type Resueltos,
+  type ResueltosAutoNueva,
+} from '@/lib/codeoscopic/desde-cartera'
 import type { ClienteCartera } from '@/lib/codeoscopic/desde-cartera'
 import {
   precalificarHogarCartera,
@@ -294,7 +301,7 @@ export async function prepararRetarificacion(entrada: {
   // ── El cuerpo que viaja, según el ramo. Todo lo de aquí es GRATIS ─────────
   let preparado: Preparado
   if (origen.tipo === 'auto') {
-    preparado = prepararAuto(origen, cuerpo, polizaId)
+    preparado = await prepararAuto(origen, cuerpo, polizaId)
   } else if (origen.tipo === 'hogar') {
     preparado = await prepararHogar(origen, cuerpo, polizaId)
   } else {
@@ -421,11 +428,11 @@ function paraPreparado(cuerpo: Record<string, unknown>, status: number): { respu
 
 // ─── AUTO ────────────────────────────────────────────────────────────────────
 
-function prepararAuto(
+async function prepararAuto(
   origen: OrigenRetarificacion,
   cuerpo: CuerpoRetarificacion,
   polizaId: string,
-): Preparado {
+): Promise<Preparado> {
   const resueltos: Resueltos = {
     municipioId: numero(cuerpo.resueltos?.municipioId),
     estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
@@ -433,6 +440,23 @@ function prepararAuto(
     codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
     garaje: cadena(cuerpo.resueltos?.garaje),
     garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
+    tipoViaId: cadena(cuerpo.resueltos?.tipoViaId),
+  }
+
+  // 🛣️ El tipo de vía es una referencia de catálogo (`/road-types`), nunca
+  // texto. Si la pantalla no lo manda, se empareja aquí el que trocea la
+  // dirección de la ficha contra el catálogo VIVO (gratis) — el mismo
+  // emparejamiento que hace la precalificación; si no casa, queda a `null` y
+  // `revisarDatosAuto(..., { paraEmitir })` lo declara como hueco SIN gastar.
+  if (resueltos.tipoViaId === null && resueltos.municipioId !== null && tipoViaTextoDelTomador(origen.cliente) !== null) {
+    const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+    if (cfg.estado === 'lista') {
+      try {
+        resueltos.tipoViaId = tipoViaDelTomador(origen.cliente, await tiposDeVia(cfg.config))?.id ?? null
+      } catch {
+        // Catálogo caído: no se inventa el id; saldrá como hueco.
+      }
+    }
   }
 
   const pre = precalificarAuto(origen.cliente, origen.poliza, resueltos, hoyIso())
@@ -444,7 +468,9 @@ function prepararAuto(
     ...pre.datos,
     ...limpiarCorrecciones<DatosAuto>(cuerpo.correcciones),
   }
-  const faltan = revisarDatosAuto(datos)
+  // 🎯 Defensa de cartera = para EMITIR: correo y calle completa se exigen
+  // aquí, gratis, no a 0,50€ por campo después (12/09/2026).
+  const faltan = revisarDatosAuto(datos, { paraEmitir: true })
 
   if (faltan.length > 0) {
     // 422 y NI UN CÉNTIMO gastado. Es el caso normal la primera vez.

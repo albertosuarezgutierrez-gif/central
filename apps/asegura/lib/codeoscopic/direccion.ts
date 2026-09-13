@@ -66,6 +66,29 @@ export function direccionDesdeCatastro(p: {
   }
 }
 
+/**
+ * El `roadType` del vendor para la dirección de una ficha: el tipo que trocea
+ * `partirDireccion()` («CL» → Calle), emparejado EXACTO contra el catálogo
+ * vivo `/road-types`. `null` = la dirección no empieza por un tipo reconocible
+ * (el caso de Pilar Franco Ruz, «Severo Ochoa 12») o el catálogo no lo tiene
+ * con ese nombre: entonces lo elige el corredor, nunca se inventa un id.
+ *
+ * UNA implementación para los tres sitios que la necesitan (precalificación,
+ * pre-vuelo de `prepararAuto` y la reparación de `valoresPersonaDesdeFicha`):
+ * tres copias de la misma regla divergen sin que nada falle. PURA: el catálogo
+ * lo trae quien tiene red.
+ */
+export function tipoViaDeFicha(
+  direccion: string | null | undefined,
+  catalogo: ReadonlyArray<{ id: string; nombre: string }>,
+): { id: string; nombre: string } | null {
+  const tipo = partirDireccion(direccion ?? null).tipoVia
+  if (tipo === null) return null
+  const buscado = normalizarToken(tipo)
+  const coincidencias = catalogo.filter((o) => normalizarToken(o.nombre) === buscado)
+  return coincidencias.length === 1 ? coincidencias[0] : null
+}
+
 const RE_NUMERO = /^\d{1,4}[a-z]?$/i
 const RE_ORDINAL = /^(\d{1,2})[ºª°o]?$/i
 const RE_PLANTA_PALABRA = /^(bajo|bj|bajos|entlo|entresuelo|entreplanta|atico|ático|pb|sotano|sótano|principal|ppal)$/i

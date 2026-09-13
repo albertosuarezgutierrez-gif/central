@@ -50,6 +50,27 @@
   a una, no a fusionar en bloque. Dato de Alberto: **"en vigor" = confirmado por CIMA siempre; solo
   falta Generali, que se conecta la semana del 15/09/2026** (hoy sin acceso, ver `apps/asegura/CLAUDE.md`).
 
+- **💸 Causa de fondo del día de emisión fallida: el `POST /insurances` mandaba la persona SIN email ni calle completa (12/09/2026).**
+  Medido en `codeoscopic_consumo`: 7 cargos de 0,50€ (11-12/09) sobre la póliza de Pilar Franco Ruz, los 7 con la misma
+  persona incompleta — `persona.ts` los omitía a propósito («no hacen falta para el precio»), el Submit los exige y el
+  vendor NO aplica el correo por PATCH (`roadName` sí). Cada capa de la cascada descubría un campo por cargo.
+  Fix (PR de esta rama): `construirPersona` manda lo que la ficha tiene (email por `emailDeFicha`, calle troceada, `roadType`
+  emparejado); `revisarDatosAuto(d,{paraEmitir:true})` exige correo + calle completa ANTES de pagar (solo cartera, no
+  oportunidad nueva); plataforma pide tipo de vía (desplegable) y nombre/número/correo en el formulario; `/precalificar`
+  registra `estructuraPersonaVendor` (solo claves, gratis) para fijar `CLAVE_EMAIL_VENDOR` con un dato — mirar ese log
+  antes del próximo cargo; `error_mensaje` ya guarda el 400 del Submit. PR #2847 (desplegable post-pago) mergeado.
+
+- **🛣️ `tipoVia` en `faltan_vendor` era una caja de texto que pedía un id de catálogo a ciegas (12/09/2026).**
+  Alberto, sobre el ReRate de Allianz para Pilar Franco Ruz: «no entiendo que pida otra vez poner calle».
+  El panel de Emisión (`retarificar/emision.tsx`, plataforma) pintaba `tipoVia` y `estadoCivil` como
+  `<input>` pidiendo «el id del catálogo /road-types, no el nombre» — un id que nadie tiene a la vista y
+  que la regla de la casa prohíbe inventar. El puerto YA servía ese catálogo gratis (`tipo=vias`,
+  `tipo=estados-civiles`); solo faltaba pintarlo: `CATALOGO_DE_CAMPO` → desplegable por nombre, id real
+  en `correcciones`. Sin catálogo (caído/`sin_configurar`) vuelve la caja de texto —peor que el desplegable,
+  mejor que un callejón—, y el botón no manda un `sugerido` que el corredor aún no puede ver. 4 rondas de
+  `code-review` (una cazó una carrera: el efecto se cancelaba a sí mismo). `municipioResidenciaId` fuera a
+  propósito (su catálogo exige el CP, que esta pantalla no pide). PR abierto y en seguimiento.
+
 - **🔒 `patch_no_aplicado` del Submit: mensaje falso + PII en claro en `crudo` (12/09/2026).**
   Tras el fix del 14º 400, Alberto probó «Emitir» de nuevo: el vendor NO aplicó `email` en holder/owner/
   primaryDriver pese a que sí aplicó nombreVia/numeroVia/tipoVia en el MISMO PATCH — la vía real para
@@ -124,14 +145,6 @@
   `companias_dgs` se actualiza a mano, un SQL por compañía tras mirar su web — no hay cron ni
   agente que lo repase. Sin decisión de cadencia/mecanismo, no se ha construido nada.
 
-- **🧠 Grafo propio, parte 2: búsqueda SEMÁNTICA + lo estructural que faltaba para dar de baja Graphify (12/09/2026).**
-  Condición de Alberto: baja solo si lo propio es «100 % igual». Faltaban `query_graph`/`rank_files`, `trace`/`shortest_path`,
-  `references`, `imports_exports`, `node`, `render_subgraph` y la memoria. Migración `2026-09-12_grafo_semantico.sql` (APLICADA):
-  `grafo_embeddings` (pgvector 768, hnsw) desde `mapa_arquitectura` (13.350 textos; el que cambia pierde su vector), embeddings por
-  SQL (`http` → OpenRouter `text-embedding-3-small`, clave en Vault) y `grafo_buscar/rank_files/camino/referencias/imports_exports/nodo/subgrafo`
-  (las estructurales verificadas contra la BD). Puerto `/api/internal/grafo-codigo/embeddings` + paso nuevo en `auditoria.yml`;
-  key `GRAFO_OPENROUTER_API_KEY` (dedicada, recomendada) con caída a `OPENROUTER_API_KEY`. Cepo `test/grafo-semantico.test.ts` (9, rojo brazo a brazo).
-  PENDIENTE: merge → deploy READY → dispatch → `pendientes 0` → MEDIR paridad vs Graphify (`docs/USO-HERRAMIENTAS.md`) → PR de docs → baja.
 - **🏦 Duodécimo 400 real de Codeoscopic — el Submit exige IBAN, y el IBAN SIEMPRE se confirma (12/09/2026).**
   «The bank account is mandatory according to the selected companies and payment types.» Aquí se
   escribió primero que Pilar «no tiene cuenta»: **falso** — está en **`poliza_recibos.iban`** (CIMA; 121/187
@@ -142,14 +155,6 @@
   ficha solo viaja si plataforma devuelve la MÁSCARA que enseñó (`cuentaConfirmada`), si no 422 `confirmar`
   ANTES de llamar al vendor; tecleada > JSON > ficha confirmada. Cepos vistos en rojo. Pendiente: pintar las
   cuentas (varias, por póliza) en la ficha del cliente y escribir el IBAN tecleado de vuelta.
-- **🧩 El mapa de funciones se inyecta por LOTES: el JSON entero cruzó el corte de 4,5 MB de Vercel (12/09/2026).**
-  Al mergear el #2807 y disparar `auditoria.yml`, el paso «Inyectar mapa» murió con **413 FUNCTION_PAYLOAD_TOO_LARGE**
-  (4.492.854 → 4.493.847 bytes: un kilobyte de más) y el del grafo se saltó por dependencia. Helper compartido
-  `scripts/inyectar-lotes.mjs` (`partirEnLotes` por bytes + reintentos), `scripts/mapa-arquitectura-inyectar.mjs`
-  sustituye al `curl --data-binary` del workflow, `grafo-codigo-inyectar.mjs` lo reutiliza. El puerto del mapa acepta
-  `lote/total`, estampa el `sha` siempre y borra por `sha` en el último lote (antes: por lista de rutas + WHERE hash
-  que dejaba el sha viejo). Paso del grafo con `!cancelled()`. Medido en local: mapa 4 lotes ≤1 MB, grafo 13.
-  Cepos en `test/inyectar-lotes.test.ts` (6, vistos en rojo contra main). Pendiente: mergear y verificar `grafo_nodos`.
 - **🛡️📲 MCP Sentinel avisa por Telegram cuando el modo sombra intervendría (12/09/2026).**
   `sentinel_alerta.py` envuelve (sin tocar) `sentinel_preflight.py` y, cuando la decisión es
   `allow` pero el motivo contiene `SENTINEL_SHADOW`, dispara `POST /api/internal/alerta`

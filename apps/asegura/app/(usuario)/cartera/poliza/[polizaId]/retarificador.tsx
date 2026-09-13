@@ -1371,6 +1371,13 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   // eso la ficha nunca lo trae y hay que teclearlo aquí, como el resto de datos
   // personales que no se suponen.
   nombreVia: { etiqueta: 'Calle (nombre de la vía)', tipo: 'text' },
+  // 12/09/2026: el pre-vuelo de cartera exige ANTES de pagar lo que el Submit
+  // pide después (correo, número). Esta pantalla es el RESPALDO (la de Alberto
+  // es plataforma) y no crece: el tipo de vía, que es un desplegable del
+  // catálogo, aquí sigue saliendo como «no se arregla desde esta pantalla»
+  // cuando la ficha no lo trae reconocible.
+  numeroVia: { etiqueta: 'Número de la calle', tipo: 'text' },
+  email: { etiqueta: 'Correo electrónico', tipo: 'email' },
 }
 
 /**

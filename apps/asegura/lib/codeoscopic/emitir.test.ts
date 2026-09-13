@@ -139,6 +139,12 @@ test('redactarCrudoVendor: también con separadores (guion, punto, espacio) y pr
   assert.match(r, /…344/)
 })
 
+test('redactarCrudoVendor: enmascara el correo y deja el dominio (va a `error_mensaje` y a la pantalla)', () => {
+  const r = redactarCrudoVendor("400: The e-mail 'pilar.franco@gmail.com' of the holder is invalid") as string
+  assert.doesNotMatch(r, /pilar\.franco/)
+  assert.match(r, /…@gmail\.com/)
+})
+
 test('redactarCrudoVendor: enmascara IBAN de cualquier país, no solo ES', () => {
   // `ibanValido()` es deliberadamente agnóstica de país; la máscara tiene que
   // cubrir lo mismo — un cliente con cuenta alemana no puede salir en claro.
