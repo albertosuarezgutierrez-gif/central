@@ -1,20 +1,20 @@
 {
  "sesion": "421e77af-25c8-592f-b696-d1d2a02c5a70",
  "inicio": "2026-09-13T09:06:44.667Z",
- "fin": "2026-09-13T11:22:58.469Z",
- "llamadas": 217,
+ "fin": "2026-09-13T12:59:25.921Z",
+ "llamadas": 229,
  "categorias": {
   "otro": {
-   "llamadas": 15,
-   "chars_in": 3620,
-   "chars_out": 44739,
+   "llamadas": 16,
+   "chars_in": 3622,
+   "chars_out": 69169,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
     "AskUserQuestion": 3,
-    "ReadNotifications": 9,
+    "ReadNotifications": 10,
     "ScheduleWakeup": 1,
     "ToolSearch": 1
    }
@@ -31,26 +31,26 @@
    }
   },
   "sql": {
-   "llamadas": 33,
-   "chars_in": 7455,
-   "chars_out": 35618,
+   "llamadas": 41,
+   "chars_in": 10449,
+   "chars_out": 53236,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 33
+    "mcp__Supabase__execute_sql": 41
    }
   },
   "lectura-directa": {
-   "llamadas": 24,
-   "chars_in": 2216,
-   "chars_out": 78752,
+   "llamadas": 25,
+   "chars_in": 2298,
+   "chars_out": 79999,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 5,
-    "Read": 19
+    "Read": 20
    }
   },
   "mcp:Claude_Code_Remote": {
@@ -104,25 +104,25 @@
    }
   },
   "bash": {
-   "llamadas": 72,
-   "chars_in": 16813,
-   "chars_out": 50940,
+   "llamadas": 73,
+   "chars_in": 17237,
+   "chars_out": 51554,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 72
+    "Bash": 73
    }
   },
   "escritura": {
-   "llamadas": 20,
-   "chars_in": 11095,
-   "chars_out": 1081182,
+   "llamadas": 21,
+   "chars_in": 11976,
+   "chars_out": 1575061,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 20
+    "Edit": 21
    }
   }
  }
