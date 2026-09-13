@@ -625,6 +625,32 @@ def _shadow_enabled():
     return os.environ.get("SENTINEL_SHADOW", "").strip().lower() in ("1", "on", "true", "yes")
 
 
+def _session_attended():
+    """Whether a human is actually watching this session and could answer a real
+    `ask` prompt. SENTINEL_ATTENDED overrides (tests); otherwise reads the
+    platform-provided CLAUDE_CODE_SESSION_ATTENDED env var, which this hook's
+    subprocess inherits from Claude Code.
+
+    Unknown/missing is treated as UNATTENDED, not attended: the conservative-
+    default rule this repo already applies elsewhere ("ante la duda, el estado
+    conservador, nunca el que tranquiliza") holds here too — a false
+    "unattended" only costs an extra deny a human can retry via the allowlist,
+    while a false "attended" would let a critical exfiltration finding through
+    unnoticed on a run we failed to recognise as unattended.
+
+    This is a project-specific addition on top of the vendor engine (see
+    README's "Confirmado" section, 12/09/2026): it is what lets shadow mode
+    stop being a blanket allow-with-log for every ambiguous finding and start
+    telling apart "nobody could answer this" from "someone is right here"."""
+    override = os.environ.get("SENTINEL_ATTENDED", "").strip().lower()
+    if override in ("1", "on", "true", "yes"):
+        return True
+    if override in ("0", "off", "false", "no"):
+        return False
+    return os.environ.get("CLAUDE_CODE_SESSION_ATTENDED", "").strip().lower() in (
+        "1", "true", "yes", "on")
+
+
 # ---------------------------------------------------------------------------
 # Localisation. Messages are shown in Spanish when the user writes in Spanish,
 # English otherwise. Detection runs only when a message is actually emitted
@@ -754,6 +780,16 @@ _MSG = {
                "audit-only mode (SENTINEL_SHADOW) is on, so it is allowed.\nReason: {reason}"),
         "es": ("🛡️ MCP Sentinel [SOMBRA]: esta llamada de {tool} normalmente sería {decision}, pero el "
                "modo solo-auditoría (SENTINEL_SHADOW) está activo, así que se permite.\nMotivo: {reason}"),
+    },
+    "shadow_deny": {
+        "en": ("🛡️ MCP Sentinel [SHADOW]: this {tool} call is CRITICAL and this session is "
+               "unattended (no one could answer an ask prompt), so under audit-only mode "
+               "(SENTINEL_SHADOW) it was DENIED instead of hung forever or silently "
+               "allowed.\nReason: {reason}"),
+        "es": ("🛡️ MCP Sentinel [SOMBRA]: esta llamada de {tool} es CRÍTICA y la sesión está "
+               "desatendida (nadie podría responder a un aviso), así que en modo solo-auditoría "
+               "(SENTINEL_SHADOW) se ha DENEGADO en vez de quedarse colgada para siempre o "
+               "permitirse en silencio.\nMotivo: {reason}"),
     },
     "deny_tamper": {
         "en": ("🛡️ MCP Sentinel BLOCKED a {tool} call that would modify Sentinel's own "
@@ -1033,14 +1069,35 @@ def main():
         # adding any message to the conversation context.
         return
 
-    # Audit-only / shadow mode: never block. Record the would-be deny/ask as a
-    # 'would_block', then let the call through with a non-blocking note. This is
-    # how Sentinel can run alongside autonomous work without ever stopping it
-    # while still measuring how often it WOULD have intervened.
-    if _shadow_enabled() and decision in ("deny", "ask"):
-        record_event(payload, decision, category, would_block=True, entity=entity)
+    # Audit-only / shadow mode. Never touches a hard `deny` (known-malicious /
+    # feed hit are non-overrideable by design, see HARD_DENY_CATEGORIES — shadow
+    # mode exists to avoid hanging on an ambiguous `ask`, not to let confirmed-
+    # malicious calls through) and never touches an `ask` when a human is
+    # actually attending the session (a real `ask` can just be answered there,
+    # so the whole justification for shadow — an unanswerable `ask` hangs
+    # forever, confirmed experimentally, see README's "Confirmado" section —
+    # does not apply). Only an `ask` on an UNATTENDED session is shadow-handled:
+    # critical findings (secret exfiltration, dangerous commands, credential
+    # reads) are denied outright instead of hung on or silently allowed — a
+    # failed job is recoverable, an exfiltrated secret is not; high-severity
+    # findings (the more ambiguous IMDS/config-write/suspicious-network checks)
+    # keep the original allow-with-log behaviour and are still tallied as
+    # 'would_block' for the audit.
+    if _shadow_enabled() and decision == "ask" and not _session_attended():
         tool_name = payload.get("tool_name") or payload.get("tool", "<unknown>")
         lang = detect_language(payload)
+        if reason and reason.startswith("[CRITICAL]"):
+            record_event(payload, "deny", category, entity=entity)
+            message = render("shadow_deny", lang, tool=tool_name, reason=reason)
+            print(json.dumps({
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": message,
+                },
+            }))
+            return
+        record_event(payload, decision, category, would_block=True, entity=entity)
         message = render("shadow", lang, tool=tool_name, reason=reason, decision=decision)
         print(json.dumps({
             "hookSpecificOutput": {
