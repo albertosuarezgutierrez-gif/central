@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 
 import {
   CAMPO_VEHICULO_MAX,
@@ -8,6 +8,7 @@ import {
   DESCRIPCION_MIN,
   DIAS_COMUNICACION_LCS,
   LUGAR_MAX,
+  ZONAS_VEHICULO,
   bloqueDatosVehiculo,
   canalesDeLasPolizas,
   componerDescripcion,
@@ -156,6 +157,10 @@ type FormVehiculo = {
   conductorTercero: string
   aseguradoraTercero: string
   telefonoTercero: string
+  /** Códigos de `ZONAS_VEHICULO`, en el orden en que se tocaron — el orden
+   *  no importa para el texto final (`textoZonas` lo fija), solo aquí para
+   *  que React tenga algo estable con lo que iterar si hiciera falta. */
+  zonasDano: string[]
 }
 
 type Formulario = {
@@ -181,6 +186,7 @@ const VEHICULO_VACIO: FormVehiculo = {
   conductorTercero: '',
   aseguradoraTercero: '',
   telefonoTercero: '',
+  zonasDano: [],
 }
 
 const VACIO: Formulario = {
@@ -335,10 +341,6 @@ type Elegido = {
 }
 
 let contadorClaves = 0
-/** A nivel de MÓDULO, como `contadorClaves` — no dentro del componente: ahí se
- *  reinicia a 0 en cada render y deja de distinguir dos croquis guardados en
- *  el mismo milisegundo (plausible en un móvil rápido con dos toques seguidos). */
-let contadorCroquis = 0
 
 /** ¿Merece la pena reintentarlo? Solo si el fichero en sí vale: lo que falló fue el viaje. */
 function reintentable(e: Elegido): boolean {
@@ -528,14 +530,14 @@ export function ParteSiniestro({
   /** Los que fallaron por el camino (no por ser un fichero que no admitimos). */
   const recuperables = fallidos.filter(reintentable)
 
-  // El bloque de «datos del otro vehículo» (matrículas, croquis) solo tiene
-  // sentido con terceros de por medio, y solo se sabe pedir una matrícula si
-  // la póliza elegida es de auto. Con «No lo sé» en la póliza NO se enseña:
-  // saber el ramo es justo lo que el cliente está diciendo que no sabe.
+  // El bloque de «datos del otro vehículo» (matrículas, zona del daño) solo
+  // tiene sentido con terceros de por medio, y solo se sabe pedir una
+  // matrícula si la póliza elegida es de auto. Con «No lo sé» en la póliza NO
+  // se enseña: saber el ramo es justo lo que el cliente está diciendo que no sabe.
   const polizaSeleccionada = polizas.find((p) => p.valor === form.poliza) ?? null
   const mostrarVehiculo = esAuto(polizaSeleccionada?.ramo) && form.hayTerceros === 'si'
 
-  function escribirVehiculo(campo: keyof FormVehiculo, valor: string) {
+  function escribirVehiculo(campo: Exclude<keyof FormVehiculo, 'zonasDano'>, valor: string) {
     setForm((f) => ({ ...f, vehiculo: { ...f.vehiculo, [campo]: valor } }))
   }
 
@@ -579,13 +581,6 @@ export function ParteSiniestro({
    * fichero que no vale se queda en la lista **marcado y con su motivo** en vez
    * de desaparecer. Desaparecer se lee como «ya está subido».
    */
-  /**
-   * El corazón de «elegir fichero» y de «guardar croquis»: los dos acaban
-   * siendo un `File` más en la MISMA lista de adjuntos, con el MISMO tope y la
-   * MISMA revisión — un croquis de 15 MB (no debería pasar, pero un móvil
-   * viejo puede tardar en comprimir el PNG) se rechaza igual que una foto de
-   * ese tamaño, con su motivo, nunca en silencio.
-   */
   function agregarFicheros(nuevos: File[]) {
     if (nuevos.length === 0) return
 
@@ -621,15 +616,18 @@ export function ParteSiniestro({
     agregarFicheros(nuevos)
   }
 
-  /**
-   * El croquis dibujado se guarda como el `File` que ya sabe manejar
-   * `agregarFicheros`: NO es un dato nuevo ni una tabla nueva, es una foto que
-   * en vez de haberse hecho con la cámara se ha dibujado con el dedo. Mismo
-   * tope, misma revisión, mismo viaje a `/api/siniestros/{id}/adjuntos`.
-   */
-  function añadirCroquis(blob: Blob) {
-    const f = new File([blob], `croquis-${Date.now()}-${contadorCroquis++}.png`, { type: 'image/png' })
-    agregarFicheros([f])
+  /** Toca/destoca una zona del selector. Multi-selección: un golpe puede
+   *  afectar a dos zonas a la vez (p. ej. delantera + lateral derecho). */
+  function alternarZonaVehiculo(codigo: string) {
+    setForm((f) => ({
+      ...f,
+      vehiculo: {
+        ...f.vehiculo,
+        zonasDano: f.vehiculo.zonasDano.includes(codigo)
+          ? f.vehiculo.zonasDano.filter((z) => z !== codigo)
+          : [...f.vehiculo.zonasDano, codigo],
+      },
+    }))
   }
 
   /** Quitar uno de la lista ANTES de enviar. Después ya no: lo enviado es una comunicación. */
@@ -1063,7 +1061,7 @@ export function ParteSiniestro({
               valor={form.vehiculo}
               deshabilitado={enviando}
               onCambio={escribirVehiculo}
-              onCroquis={añadirCroquis}
+              onZona={alternarZonaVehiculo}
             />
           )}
 
@@ -1166,16 +1164,14 @@ function VehiculoOtro({
   valor,
   deshabilitado,
   onCambio,
-  onCroquis,
+  onZona,
 }: {
   uid: string
   valor: FormVehiculo
   deshabilitado: boolean
-  onCambio: (campo: keyof FormVehiculo, valor: string) => void
-  onCroquis: (blob: Blob) => void
+  onCambio: (campo: Exclude<keyof FormVehiculo, 'zonasDano'>, valor: string) => void
+  onZona: (codigo: string) => void
 }) {
-  const [dibujando, setDibujando] = useState(false)
-
   return (
     <fieldset className="editor-campo grupo">
       <legend>Datos del otro vehículo</legend>
@@ -1257,145 +1253,65 @@ function VehiculoOtro({
       </div>
 
       <div className="editor-campo">
-        <label>Croquis</label>
+        <label id={`${uid}-veh-zonas-titulo`}>Zona del daño</label>
         <p className="editor-ayuda">
-          Un dibujo rápido de cómo estaban los vehículos ayuda más que una descripción — se adjunta
-          como una foto más.
+          Toca las zonas dañadas de tu vehículo. Puedes marcar varias.
         </p>
-        {!dibujando ? (
-          <button type="button" className="boton secundario" onClick={() => setDibujando(true)} disabled={deshabilitado}>
-            Dibujar croquis
-          </button>
-        ) : (
-          <CroquisDibujo
-            onGuardar={(blob) => {
-              onCroquis(blob)
-              setDibujando(false)
-            }}
-            onCancelar={() => setDibujando(false)}
-          />
-        )}
+        <ZonasVehiculo
+          seleccion={valor.zonasDano}
+          deshabilitado={deshabilitado}
+          onCambio={onZona}
+          etiquetaId={`${uid}-veh-zonas-titulo`}
+        />
       </div>
     </fieldset>
   )
 }
 
 /**
- * Un lienzo táctil para dibujar el croquis del accidente. Al guardar, se
- * convierte a PNG y sube por el MISMO camino que cualquier foto (ver
- * `añadirCroquis` en `ParteSiniestro`) — no hay tabla ni endpoint propios.
+ * El selector de zonas: nueve botones reales en un grid con forma de coche
+ * (delantera arriba, trasera abajo), no una silueta dibujada a mano — mismo
+ * patrón que usan las apps de las aseguradoras (Mapfre, Allianz, Línea
+ * Directa) para «dónde está el daño».
  *
- * `touch-action: none` en el `<canvas>` es lo que impide que dibujar con el
- * dedo desplace la página en vez de trazar la línea: sin eso, el primer trazo
- * en un móvil hace scroll y el segundo dibuja, y nadie entiende por qué.
+ * 🚨 Por qué botones y no una silueta SVG con zonas clicables: un `<button>`
+ * de verdad es accesible por teclado y lector de pantalla sin nada extra, y
+ * los 44 px táctiles de la regla de la casa se dan solos. Una silueta con
+ * regiones recortadas a mano es más «bonita» pero exige hit-testing propio
+ * en SVG, que en un móvil con el dedo grande falla justo donde el usuario
+ * más lo necesita — en el borde entre dos zonas.
  *
- * `Pointer Events` (no `touch`+`mouse` por separado) cubre dedo, lápiz y
- * ratón con el mismo código — dos manejadores duplicarían la lógica de trazo
- * y solo uno de los dos se probaría de verdad en un dispositivo con los dos.
+ * `aria-pressed`, no una clase visual sola: sin el atributo, un lector de
+ * pantalla no puede decir qué zonas están ya marcadas.
  */
-function CroquisDibujo({ onGuardar, onCancelar }: { onGuardar: (blob: Blob) => void; onCancelar: () => void }) {
-  const lienzo = useRef<HTMLCanvasElement | null>(null)
-  const dibujandoRef = useRef(false)
-  const [vacio, setVacio] = useState(true)
-
-  function contexto() {
-    return lienzo.current?.getContext('2d') ?? null
-  }
-
-  /** Traduce la posición del puntero a coordenadas del lienzo, sea cual sea su tamaño en pantalla. */
-  function punto(e: React.PointerEvent<HTMLCanvasElement>) {
-    const c = lienzo.current
-    if (c === null) return { x: 0, y: 0 }
-    const r = c.getBoundingClientRect()
-    return { x: ((e.clientX - r.left) / r.width) * c.width, y: ((e.clientY - r.top) / r.height) * c.height }
-  }
-
-  function empezar(e: React.PointerEvent<HTMLCanvasElement>) {
-    dibujandoRef.current = true
-    // 🚨 Sin esto, el trazo se corta en cuanto el dedo/ratón sale del
-    // rectángulo del lienzo (frecuente: son solo 260 px de alto) y NO se
-    // reanuda al volver a entrar — `pointerdown` no se repite con el botón ya
-    // pulsado. `setPointerCapture` sigue mandando los eventos de ESTE puntero
-    // al lienzo pase lo que pase; mismo patrón que ya usa `apps/ia-rest`.
-    e.currentTarget.setPointerCapture(e.pointerId)
-    const ctx = contexto()
-    const p = punto(e)
-    if (ctx === null) return
-    ctx.beginPath()
-    ctx.moveTo(p.x, p.y)
-  }
-
-  function trazar(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (!dibujandoRef.current) return
-    const ctx = contexto()
-    if (ctx === null) return
-    const p = punto(e)
-    ctx.lineTo(p.x, p.y)
-    ctx.lineWidth = 4
-    ctx.lineCap = 'round'
-    ctx.strokeStyle = '#1a1a1a'
-    ctx.stroke()
-    setVacio(false)
-  }
-
-  function soltar(e: React.PointerEvent<HTMLCanvasElement>) {
-    dibujandoRef.current = false
-    // Suelta la captura explícitamente: dejarla viva no rompe nada (el
-    // navegador la libera solo al soltar el puntero), pero soltarla aquí deja
-    // claro que el trazo ha terminado y no depende de ese comportamiento implícito.
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
-  }
-
-  function borrar() {
-    const c = lienzo.current
-    const ctx = contexto()
-    if (c === null || ctx === null) return
-    ctx.clearRect(0, 0, c.width, c.height)
-    setVacio(true)
-  }
-
-  function guardar() {
-    const c = lienzo.current
-    if (c === null || vacio) return
-    // `toBlob` es async y no lanza: si el navegador no puede componer el PNG
-    // (lienzo corrupto, memoria), `blob` llega `null` y aquí simplemente no
-    // se llama a `onGuardar` — el croquis no desaparece, la persona sigue
-    // viéndolo en pantalla y puede intentarlo otra vez o hacer una foto.
-    c.toBlob((blob) => {
-      if (blob !== null) onGuardar(blob)
-    }, 'image/png')
-  }
-
+function ZonasVehiculo({
+  seleccion,
+  deshabilitado,
+  onCambio,
+  etiquetaId,
+}: {
+  seleccion: readonly string[]
+  deshabilitado: boolean
+  onCambio: (codigo: string) => void
+  etiquetaId: string
+}) {
   return (
-    <div className="croquis-caja">
-      {/* Fondo blanco fijo, NO transparente: un PNG con fondo transparente
-          sobre el tema oscuro de la app dejaría el trazo negro invisible en
-          la ficha del corredor, que abre el adjunto sin saber de qué tema
-          venía. `width`/`height` son la resolución REAL del lienzo — el CSS
-          solo la estira en pantalla; `punto()` deshace ese estiramiento. */}
-      <canvas
-        ref={lienzo}
-        width={640}
-        height={420}
-        className="croquis-lienzo"
-        style={{ touchAction: 'none' }}
-        onPointerDown={empezar}
-        onPointerMove={trazar}
-        onPointerUp={soltar}
-        onPointerLeave={soltar}
-        aria-label="Lienzo para dibujar el croquis del accidente"
-      />
-      <div className="editor-acciones">
-        <button type="button" className="boton" onClick={guardar} disabled={vacio}>
-          Guardar croquis
-        </button>
-        <button type="button" className="boton secundario" onClick={borrar} disabled={vacio}>
-          Borrar
-        </button>
-        <button type="button" className="boton secundario" onClick={onCancelar}>
-          Cancelar
-        </button>
-      </div>
+    <div className="zonas-grid" role="group" aria-labelledby={etiquetaId}>
+      {ZONAS_VEHICULO.map(([codigo, etiqueta]) => {
+        const marcada = seleccion.includes(codigo)
+        return (
+          <button
+            key={codigo}
+            type="button"
+            className={`zonas-boton${marcada ? ' sel' : ''}`}
+            aria-pressed={marcada}
+            onClick={() => onCambio(codigo)}
+            disabled={deshabilitado}
+          >
+            {etiqueta}
+          </button>
+        )
+      })}
     </div>
   )
 }

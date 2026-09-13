@@ -95,6 +95,7 @@ export {
   normalizarParte,
   bloqueDatosVehiculo,
   componerDescripcion,
+  ZONAS_VEHICULO,
 } from './parte-siniestro.ts'
 export type {
   ParteEstado,
@@ -103,6 +104,7 @@ export type {
   ResultadoParte,
   PlazoComunicacion,
   DatosVehiculo,
+  ZonaVehiculo,
 } from './parte-siniestro.ts'
 export {
   ALCANCES,

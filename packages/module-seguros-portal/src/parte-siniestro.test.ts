@@ -7,6 +7,7 @@ import {
   DIAS_COMUNICACION_LCS,
   LUGAR_MAX,
   PARTE_ESTADOS,
+  ZONAS_VEHICULO,
   bloqueDatosVehiculo,
   comunicadoACompania,
   componerDescripcion,
@@ -364,4 +365,29 @@ test('🚨 componerDescripcion recorta a DESCRIPCION_MAX aquí, no lo deja para 
   const larga = 'a'.repeat(DESCRIPCION_MAX - 5)
   const salida = componerDescripcion(larga, { matriculaTercero: 'AAAA000' })
   assert.equal(salida.length, DESCRIPCION_MAX)
+})
+
+// ── Zonas del daño: orden FIJO, nunca el orden de toque ─────────────────────
+
+test('sin zonas (undefined, vacío, o solo códigos desconocidos) el bloque no lleva línea de zona', () => {
+  assert.equal(bloqueDatosVehiculo({}), null)
+  assert.equal(bloqueDatosVehiculo({ zonasDano: [] }), null)
+  assert.equal(bloqueDatosVehiculo({ zonasDano: ['motor_no_existe', 42, null] }), null)
+})
+
+test('las zonas salen en el orden FIJO de ZONAS_VEHICULO, no en el orden en que se tocaron', () => {
+  const b = bloqueDatosVehiculo({ zonasDano: ['trasera', 'delantera_izquierda', 'techo'] })
+  assert.match(b ?? '', /Zona del daño: Delantera izquierda, Techo, Trasera/)
+})
+
+test('un código repetido no duplica la etiqueta', () => {
+  const b = bloqueDatosVehiculo({ zonasDano: ['techo', 'techo'] })
+  const ocurrencias = (b?.match(/Techo/g) ?? []).length
+  assert.equal(ocurrencias, 1)
+})
+
+test('ZONAS_VEHICULO tiene exactamente 9 zonas y ningún código repetido', () => {
+  assert.equal(ZONAS_VEHICULO.length, 9)
+  const codigos = ZONAS_VEHICULO.map(([c]) => c)
+  assert.equal(new Set(codigos).size, codigos.length)
 })

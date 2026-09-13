@@ -215,13 +215,47 @@ export type DatosVehiculo = {
   conductorTercero?: unknown
   aseguradoraTercero?: unknown
   telefonoTercero?: unknown
+  /** Códigos de `ZONAS_VEHICULO`. Cualquier valor que no esté en la lista se ignora, no se rechaza el parte por él. */
+  zonasDano?: unknown
 }
+
+/**
+ * Las nueve zonas que ofrece el selector, en el orden en que se pintan (fila
+ * delantera → fila central → fila trasera) y en el que se listan en el texto
+ * final — el orden de TOQUE del cliente no importa, dos partes con las
+ * mismas zonas tienen que producir la MISMA línea de texto.
+ */
+export const ZONAS_VEHICULO = [
+  ['delantera_izquierda', 'Delantera izquierda'],
+  ['delantera', 'Delantera'],
+  ['delantera_derecha', 'Delantera derecha'],
+  ['lateral_izquierdo', 'Lateral izquierdo'],
+  ['techo', 'Techo'],
+  ['lateral_derecho', 'Lateral derecho'],
+  ['trasera_izquierda', 'Trasera izquierda'],
+  ['trasera', 'Trasera'],
+  ['trasera_derecha', 'Trasera derecha'],
+] as const
+export type ZonaVehiculo = (typeof ZONAS_VEHICULO)[number][0]
 
 /** `''`/`undefined`/no-string → `null`. Las matrículas se guardan en MAYÚSCULAS: es como se leen en un parte. */
 function textoVehiculo(v: unknown, mayusculas = false): string | null {
   const t = texto(v)
   if (t === null) return null
   return mayusculas ? t.toUpperCase() : t
+}
+
+/**
+ * `zonas` puede traer cualquier cosa (viene del cliente): solo cuentan los
+ * códigos que están en `ZONAS_VEHICULO`, y salen en el orden FIJO de esa
+ * lista — nunca en el orden en que el cliente tocó, que no es determinista
+ * ni comparable entre dos partes.
+ */
+function textoZonas(zonas: unknown): string | null {
+  if (!Array.isArray(zonas)) return null
+  const presentes = new Set(zonas.filter((z): z is string => typeof z === 'string'))
+  const etiquetas = ZONAS_VEHICULO.filter(([codigo]) => presentes.has(codigo)).map(([, etiqueta]) => etiqueta)
+  return etiquetas.length === 0 ? null : etiquetas.join(', ')
 }
 
 /**
@@ -235,6 +269,7 @@ export function bloqueDatosVehiculo(d: DatosVehiculo): string | null {
     ['Conductor del otro vehículo', textoVehiculo(d.conductorTercero)],
     ['Aseguradora del otro vehículo', textoVehiculo(d.aseguradoraTercero)],
     ['Teléfono de contacto', textoVehiculo(d.telefonoTercero)],
+    ['Zona del daño', textoZonas(d.zonasDano)],
   ]
   const conDato = filas.filter((f): f is [string, string] => f[1] !== null)
   if (conDato.length === 0) return null
