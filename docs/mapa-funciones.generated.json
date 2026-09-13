@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-13T06:18:17Z",
-  "sha": "bff795cc80266359666426dbc8f532d80f659e5d",
+  "generadoEn": "2026-09-13T06:56:44Z",
+  "sha": "51ffe50ee20117b2bb13b8a6107a2fc1bb706f09",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -9976,7 +9976,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 61,
+          "linea": 64,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — el Submit de verdad (`POST /insurances/{id}/policy-applications`), y el acuñado en nuestra BD si el vendor lo acepta. 🚨 **Construida el 11/09/2026, sin sandb"
         },
         {
@@ -9985,7 +9985,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 547
+          "linea": 619
         },
         {
           "nombre": "numero",
@@ -9993,7 +9993,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 552
+          "linea": 624
         },
         {
           "nombre": "esObjeto",
@@ -10001,7 +10001,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 556
+          "linea": 628
         },
         {
           "nombre": "coincideCompania",
@@ -10009,7 +10009,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 560
+          "linea": 632
         }
       ],
       "tablas": [
@@ -10018,7 +10018,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "98caff870374"
+      "hash": "3533ddec3c87"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
@@ -10121,7 +10121,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 397
+          "linea": 398
         },
         {
           "nombre": "leerCorrecciones",
@@ -10129,7 +10129,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 407,
+          "linea": 408,
           "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
         },
         {
@@ -10138,7 +10138,7 @@
           "exportada": false,
           "params": "campo: CampoPersona, s: string",
           "retorno": "string | null",
-          "linea": 426
+          "linea": 427
         },
         {
           "nombre": "respuestaSigueFaltando",
@@ -10146,7 +10146,7 @@
           "exportada": false,
           "params": "campos: CampoPersona[], mensajeVendor: string",
           "retorno": null,
-          "linea": 444
+          "linea": 445
         },
         {
           "nombre": "respuestaNoAplicado",
@@ -10154,7 +10154,7 @@
           "exportada": false,
           "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
           "retorno": null,
-          "linea": 459
+          "linea": 460
         }
       ],
       "tablas": [
@@ -10165,7 +10165,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "1ecf0925c69e"
+      "hash": "c6ebd36a5838"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -14858,15 +14858,15 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 27
+          "linea": 28
         },
         {
           "nombre": "bloquearEnvio",
           "kind": "function",
           "exportada": false,
-          "params": "correduriaId: string, projectId: string, attemptId: string, producto: string,",
-          "retorno": "Promise<boolean>",
-          "linea": 48,
+          "params": "correduriaId: string, projectId: string, attemptId: string, producto: string, permitirQuizaEmitido: boolean,",
+          "retorno": "Promise<'tomado' | 'en-vuelo' | 'quiza-emitido' | 'ya-emitida'>",
+          "linea": 49,
           "resumen": "Toma el candado ANTES de llamar al vendor. `false` = ya había un intento en vuelo (o reciente) para este proyecto: no se llama, para no arriesgar un segundo Submit sobre el mismo contrato mientras no "
         },
         {
@@ -14875,7 +14875,7 @@
           "exportada": false,
           "params": "correduriaId: string, projectId: string, attemptId: string, // `codeoscopic_project_estado` no tiene un valor «enviada»: el éxito del // Submit se refleja aparte, cuando `registrarPolizaEmitida` (module-seguros) // pone `estado='emitida'` a",
           "retorno": "Promise<void>",
-          "linea": 72,
+          "linea": 94,
           "resumen": "`submit_in_flight_at` se limpia siempre, se haya enviado o no, porque un candado que no se suelta deja el proyecto bloqueado para siempre."
         },
         {
@@ -14884,7 +14884,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, entrada: { correduriaId: string projectId: string offerId: string campos: Record<string, unknown> /** `polizas.tipo` de la póliza enlazada — solo se usa si hay que crear la * fila de emergencia (ver `bloquearEnvio",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 119,
+          "linea": 141,
           "resumen": "`POST /insurances/{projectId}/policy-applications`, multipart. Un solo intento, con CANDADO antes de llamar (ver `bloquearEnvio`). El transporte NO reutiliza `peticion()` de `cliente.ts` (JSON puro): "
         }
       ],
@@ -14894,7 +14894,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "07b497509ec8"
+      "hash": "68e024abd674"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emitir-iban.ts",
@@ -16016,6 +16016,46 @@
       "hash": "272b99e3a5db"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/reintento-emision.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Qué hacer con un proyecto cuyo ÚLTIMO Submit acabó sin respuesta clara. 13/09/2026, proyecto 40685793 (Pilar Franco Ruz, Allianz): la persona iba completa, el Submit llegó al vendor y Codeoscopic contestó `500 «Unknown error while waiting for the operation to complete»` a los 8 s. Eso NO dice que la",
+      "exporta": [
+        "intentoQuizaEmitido",
+        "rastroSolicitudEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "intentoQuizaEmitido",
+          "kind": "function",
+          "exportada": true,
+          "params": "errorMensaje: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 34,
+          "resumen": "`true` cuando el último intento registrado en `codeoscopic_projects.error_mensaje` terminó SIN saber qué hizo el vendor: un 5xx o el corte de red que `enviarEmision` describe con `FRASE_SIN_CONFIRMACI"
+        },
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 42
+        },
+        {
+          "nombre": "rastroSolicitudEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown, profundidadMax = 4",
+          "retorno": "RastroSolicitud[]",
+          "linea": 67,
+          "resumen": "Busca en el proyecto CRUDO del vendor (`GET /insurances/{id}`) cualquier clave que hable de una solicitud de emisión (`policyApplication`, `policyApplications`, `policyApplicationStatus`…) con conteni"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d92e7b872416"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/respuesta.ts",
       "ambito": "apps/asegura",
       "resumen": "Lectura de la respuesta de `POST /insurances`. PURO: entra JSON, sale modelo. ─── Por qué esto no es «coger premium y pintarlo» ────────────────────────── El fixture real que entregó Manuel (fixtures/codeoscopic/, cotización del 10/06/2026) enseña lo que el documento de traspaso no decía: de los 18 ",
@@ -16859,7 +16899,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "30bf2a8d2d6e"
+      "hash": "94ae45e74ede"
     },
     {
       "ruta": "apps/asegura/lib/error-cartera.ts",
@@ -64704,7 +64744,7 @@
           "nombre": "pedirEmision",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null /** Máscara de la cuenta de la ficha que el corredor confirmó en pantalla (o nada). */ cuentaConfirmada?: string | null }",
+          "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null /** Máscara de la cuenta de la ficha que el corredor confirmó en pantalla (o nada). */ cuentaConfirmada?: string | null reintentoConfirmado?: boolean }",
           "retorno": "Promise<RespuestaEmitir>",
           "linea": 122,
           "resumen": "🚨 **EL SUBMIT REAL. Compromete un contrato de verdad, no solo dinero.** Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin reintento: un fallo de red aquí NO dice que la póliza no se "
@@ -64712,7 +64752,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "192f8b1d7d73"
+      "hash": "0c827623e24b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx",
@@ -64727,7 +64767,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 69
+          "linea": 93
         },
         {
           "nombre": "cuentaDecidida",
@@ -64735,7 +64775,7 @@
           "exportada": false,
           "params": "cuenta: CuentaConocida | null, cuentaOk: boolean, iban: string",
           "retorno": "boolean",
-          "linea": 114,
+          "linea": 138,
           "resumen": "sin cuenta conocida no hay nada que confirmar (si la compañía la exige, su 400 vuelve como hueco y entonces sí se teclea). PURO, para poder verlo fallar."
         },
         {
@@ -64744,7 +64784,7 @@
           "exportada": false,
           "params": "{ cuenta, aviso, obligatoria, cuentaOk, onCuentaOk, iban, onIban, }: { cuenta: CuentaConocida | null aviso: AvisoCuenta | null obligatoria: boolean cuentaOk: boolean onCuentaOk: (v: boolean) => void iban: string onIban: (v: string) => void ",
           "retorno": null,
-          "linea": 127,
+          "linea": 151,
           "resumen": "La cuenta de cargo del recibo. 🚨 «iban importante siempre confirmar» (Alberto, 12/09/2026): la que la ficha ya conoce se pinta ENMASCARADA con su origen y una casilla que el corredor marca a mano; la"
         },
         {
@@ -64753,14 +64793,14 @@
           "exportada": true,
           "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
           "retorno": null,
-          "linea": 206
+          "linea": 230
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "6332429e043a"
+      "hash": "d2eee27cbdbf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -94662,7 +94702,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaEmitir",
-          "linea": 952,
+          "linea": 967,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -94671,7 +94711,7 @@
           "exportada": true,
           "params": "p: { projectId: string campos: Record<string, unknown> actor?: string primaAnual?: number | null /** La máscara (`ES91…1332`) de la cuenta de la ficha que el corredor ha visto y * aprobado. Sin ella asegura no manda la cuenta de la ficha: c",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 1005,
+          "linea": 1033,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO reintenta: un fallo de red aquí no dice que no se haya emitid"
         },
         {
@@ -94680,7 +94720,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FormularioGuardado | null",
-          "linea": 1099
+          "linea": 1131
         },
         {
           "nombre": "leerPreciosGuardados",
@@ -94688,7 +94728,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Precio[] | null",
-          "linea": 1119
+          "linea": 1151
         },
         {
           "nombre": "interpretarTarificacionGuardada",
@@ -94696,7 +94736,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaTarificacionGuardada",
-          "linea": 1136,
+          "linea": 1168,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -94705,13 +94745,13 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 1179,
+          "linea": 1211,
           "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "075320ab9cdd"
+      "hash": "ddddede0a361"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -134518,7 +134558,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3295,
-    "funciones": 10160
+    "archivos": 3296,
+    "funciones": 10163
   }
 }
