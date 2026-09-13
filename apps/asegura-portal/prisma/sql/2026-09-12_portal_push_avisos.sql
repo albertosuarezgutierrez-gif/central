@@ -22,4 +22,6 @@ CREATE TABLE IF NOT EXISTS seguros.portal_push_suscripcion (
 );
 CREATE INDEX IF NOT EXISTS idx_portal_push_suscripcion_identidad ON seguros.portal_push_suscripcion (identidad_id);
 
-GRANT SELECT, INSERT, DELETE ON seguros.portal_push_suscripcion TO prisma_asegura_portal;
+-- UPDATE hace falta: `suscribirDeSesion` (lib/push-suscripcion.ts) hace `upsert` por `endpoint`
+-- para que el mismo navegador no duplique fila al re-suscribirse, y esa rama es un UPDATE.
+GRANT SELECT, INSERT, UPDATE, DELETE ON seguros.portal_push_suscripcion TO prisma_asegura_portal;
