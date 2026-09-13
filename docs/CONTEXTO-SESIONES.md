@@ -34,13 +34,22 @@
   de vencimientos de `apps/asegura` pero SIN compartir sello ni sitio: la suscripción push no es un
   dato descifrable, así que vive en el portal, sobre `seguros.portal_obligacion` (sello propio
   `avisada_push_at`) + tabla nueva `seguros.portal_push_suscripcion` (migración aplicada en la BD
-  real). Interruptor en el panel de la campana (`ActivarPush.tsx`); `sw.js` ganó `push`/
-  `notificationclick` sin tocar el guardián «no cachea nada». Cron `/api/cron/avisos-push`
-  (`vercel.json`), 32 tests nuevos en verde; su lectura de cartera pasa por `portal_vinculo`
-  (no solo por el estado de la póliza) y el borrado de suscripciones muertas va por `deleteMany`
-  con `identidadId`, para pasar los guardianes de aislamiento/borrado del portal. **Pendiente de
-  Alberto:** poner `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` + `CRON_SECRET` en Vercel
-  `asegura-portal` (detalle en su `CLAUDE.md`). PR #2850.
+  real, GRANT UPDATE incluido para el `upsert` de suscripción). Interruptor en el panel de la
+  campana (`ActivarPush.tsx`); `sw.js` ganó `push`/`notificationclick` sin tocar el guardián «no
+  cachea nada». Cron `/api/cron/avisos-push` (`vercel.json`), 32 tests nuevos en verde; su lectura
+  de cartera pasa por `portal_vinculo` (no solo por el estado de la póliza) y el borrado de
+  suscripciones muertas va por `deleteMany` con `identidadId`, para pasar los guardianes de
+  aislamiento/borrado del portal. **Pendiente de Alberto:** poner `NEXT_PUBLIC_VAPID_PUBLIC_KEY` +
+  `VAPID_PRIVATE_KEY` + `CRON_SECRET` en Vercel `asegura-portal` (detalle en su `CLAUDE.md`). PR #2850.
+
+- **📧 El vendor devuelve `emails: []`, no `email` — medido, y reparación GRATIS antes del Submit (13/09/2026).**
+  Alberto abrió «Retarificar» de Pilar y el log de `/precalificar` enseñó la persona real del proyecto 40685666:
+  `holder.emails` array vacío, sin clave `email` → el PATCH del 12/09 «no aplicaba» porque el vendor tira la clave
+  desconocida en silencio. `CLAVE_EMAIL_VENDOR='emails'` + `elementoEmail()`; la clave del elemento
+  (`address`/`email`/`value`) la descubre `completarPersonas` (PATCH+relectura por orden, log). Y `emitir/route.ts`
+  repara la persona ANTES del Submit (`huecosPersonaParaEmitir`, gratis): el proyecto ya pagado se emite sin otro
+  0,50€; lo que la ficha no tenga sale como `faltan_vendor` sin enviar nada. Pendiente: leer en el log qué clave
+  del elemento cuajó y fijarla; quitar el log temporal de `/precalificar`. PR #2853 mergeado; este es el siguiente.
 
 - **📞 Recaptación de leads sin vencimiento — completo (12/09/2026).** Cola de los 669 leads del
   volcado sin fecha de vencimiento, con contacto y excluyendo a quien ya es cliente vivo por CIMA

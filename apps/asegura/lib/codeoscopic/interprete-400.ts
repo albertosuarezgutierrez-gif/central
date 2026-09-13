@@ -15,7 +15,7 @@
 // decide la cascada del caller (ficha → corredor), y nada personal se supone.
 
 import type { DatosAuto, Reparo } from './peticion-auto.ts'
-import { CLAVE_EMAIL_VENDOR } from './persona.ts'
+import { CLAVE_EMAIL_VENDOR, elementoEmail, type ClaveElementoEmail } from './persona.ts'
 
 /** Los papeles en los que va la persona. `holder` siempre; el resto según ramo. */
 export type Papel = 'holder' | 'owner' | 'primaryDriver' | 'secondaryDriver'
@@ -215,7 +215,17 @@ const CAMPOS_DIRECCION: readonly CampoPersona[] = [
  * tras aplicar lo que viene no quedan las dos mitades, no se crea ninguna
  * —mandar media dirección es un 400 seguro— y lo delata `leerCampoPersona()`.
  */
-export function aplicarCamposPersona(persona: unknown, valores: Partial<Record<CampoPersona, string>>): Json {
+/** Cómo escribir los campos cuya forma exacta en el vendor aún se está fijando. */
+export type OpcionesAplicar = {
+  /** Clave del elemento de `emails[]` (ver `CLAVES_ELEMENTO_EMAIL` en `persona.ts`). */
+  claveEmail?: ClaveElementoEmail
+}
+
+export function aplicarCamposPersona(
+  persona: unknown,
+  valores: Partial<Record<CampoPersona, string>>,
+  opciones: OpcionesAplicar = {},
+): Json {
   let p: Json = { ...obj(persona) }
   const campos = (Object.keys(valores) as CampoPersona[]).filter((c) => typeof valores[c] === 'string')
 
@@ -241,14 +251,19 @@ export function aplicarCamposPersona(persona: unknown, valores: Partial<Record<C
 
   for (const c of campos) {
     if (CAMPOS_DIRECCION.includes(c)) continue
-    p = aplicarCampoPersona(p, c, valores[c] as string)
+    p = aplicarCampoPersona(p, c, valores[c] as string, opciones)
   }
   return p
 }
 
 /** Un solo campo. Para los de dirección delega en `aplicarCamposPersona` (misma guarda). */
-export function aplicarCampoPersona(persona: unknown, campo: CampoPersona, valor: string): Json {
-  if (CAMPOS_DIRECCION.includes(campo)) return aplicarCamposPersona(persona, { [campo]: valor })
+export function aplicarCampoPersona(
+  persona: unknown,
+  campo: CampoPersona,
+  valor: string,
+  opciones: OpcionesAplicar = {},
+): Json {
+  if (CAMPOS_DIRECCION.includes(campo)) return aplicarCamposPersona(persona, { [campo]: valor }, opciones)
   const p: Json = { ...obj(persona) }
   const v = valor.trim()
   switch (campo) {
@@ -283,12 +298,12 @@ export function aplicarCampoPersona(persona: unknown, campo: CampoPersona, valor
       p.drivingLicenses = [{ type: { id: 'B' }, date: v, issuingZone: { id: 'Spain' } }]
       return p
     case 'email':
-      // 🚨 Sin fixture: la clave es una suposición compartida con el POST
-      // inicial — ver `CLAVE_EMAIL_VENDOR` en `persona.ts` (y por qué el
-      // 12/09/2026 se sospecha que no es la que el vendor espera). La
-      // verificación de `completarPersonas` (releer + comparar) es la que
-      // delata si el vendor esperaba otra cosa, en vez de darlo por bueno.
-      p[CLAVE_EMAIL_VENDOR] = v
+      // 🚨 `emails[]`, medido el 13/09/2026 sobre el proyecto 40685666 (el
+      // vendor devuelve `emails: []`; con `email` a secas el PATCH daba 200 y
+      // no aplicaba). La clave del ELEMENTO sigue sin fixture: la elige el
+      // caller (`completarPersonas` prueba `CLAVES_ELEMENTO_EMAIL` en orden y
+      // comprueba releyendo). Ver `persona.ts`.
+      p[CLAVE_EMAIL_VENDOR] = [elementoEmail(v, opciones.claveEmail)]
       return p
   }
 }

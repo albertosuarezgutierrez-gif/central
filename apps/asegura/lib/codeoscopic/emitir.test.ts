@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { leerOferta, encontrarPrecio, redactarPersona, redactarCrudoVendor } from './emitir.ts'
+import { leerOferta, encontrarPrecio, redactarPersona, redactarCrudoVendor, huecosPersonaParaEmitir } from './emitir.ts'
 import type { Cotizacion } from './respuesta.ts'
 
 // `leerOferta` es defensiva a propósito: la forma de `POST .../offers` no
@@ -187,4 +187,35 @@ test('redactarCrudoVendor: valores no-string y null/undefined pasan intactos', (
   assert.equal(redactarCrudoVendor(undefined), undefined)
   assert.equal(redactarCrudoVendor(42), 42)
   assert.deepEqual(redactarCrudoVendor([1, 'ok', null]), [1, 'ok', null])
+})
+
+// ─── Lo que le falta a la persona del proyecto ANTES del Submit (13/09/2026) ──
+
+const DIRECCION_COMPLETA = { postalCode: '41940', town: { id: 34345 }, primary: true, roadName: 'Severo Ochoa', roadNumber: '12', roadType: { id: 'Street' } }
+const PILAR = { identificationDocument: { id: '00000000T' }, name: 'Pilar', emails: [], addresses: [DIRECCION_COMPLETA] }
+
+test('huecosPersonaParaEmitir: el caso real de Pilar — dirección completa y `emails: []` → falta SOLO el correo, en los tres papeles', () => {
+  const crudo = { holder: PILAR, risk: { owner: PILAR, primaryDriver: PILAR } }
+  assert.deepEqual(huecosPersonaParaEmitir(crudo), [{ campo: 'email', papeles: ['holder', 'owner', 'primaryDriver'] }])
+})
+
+test('huecosPersonaParaEmitir: con correo y calle completa no falta nada', () => {
+  const p = { ...PILAR, emails: [{ address: 'p@x.es', primary: true }] }
+  assert.deepEqual(huecosPersonaParaEmitir({ holder: p, risk: { owner: p } }), [])
+})
+
+test('huecosPersonaParaEmitir: la calle solo se exige si la persona YA lleva dirección; sin dirección, solo el correo', () => {
+  const sinDir = { identificationDocument: { id: '00000000T' }, name: 'X' }
+  assert.deepEqual(huecosPersonaParaEmitir({ holder: sinDir }), [{ campo: 'email', papeles: ['holder'] }])
+  const dirAMedias = { ...sinDir, emails: [{ address: 'a@b.es' }], addresses: [{ postalCode: '41003', town: { id: 1 }, roadName: 'Betis' }] }
+  assert.deepEqual(
+    huecosPersonaParaEmitir({ holder: dirAMedias }).map((h) => h.campo),
+    ['numeroVia', 'tipoVia'],
+  )
+})
+
+test('huecosPersonaParaEmitir: a un papel con OTRO DNI no se le mira nada (no se le puede escribir)', () => {
+  const otro = { identificationDocument: { id: '11111111H' }, name: 'Otro', emails: [] }
+  const completa = { ...PILAR, emails: [{ address: 'p@x.es' }] }
+  assert.deepEqual(huecosPersonaParaEmitir({ holder: completa, risk: { owner: otro } }), [])
 })

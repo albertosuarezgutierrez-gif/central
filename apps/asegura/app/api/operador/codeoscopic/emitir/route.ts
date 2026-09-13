@@ -9,6 +9,7 @@ import {
   completarPersonas,
   leerProyectoCrudo,
   papelesDeLaMismaPersona,
+  huecosPersonaParaEmitir,
   redactarCrudoVendor,
 } from '@/lib/codeoscopic/emitir'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
@@ -244,6 +245,71 @@ export async function POST(req: Request) {
       },
       { status: 422 },
     )
+  }
+
+  // ── Reparación PREVIA de la persona (13/09/2026) — GRATIS, antes del intento ─
+  // Los 7 proyectos pagados de Pilar Franco Ruz nacieron sin correo, y por el
+  // camino de los 400 el correo solo se descubría DESPUÉS de gastar el Submit.
+  // Aquí se lee el proyecto (`GET`, gratis), se mira qué le falta a la persona
+  // de lo que el Submit exige (`huecosPersonaParaEmitir`) y se completa por
+  // PATCH desde la ficha (gratis, con relectura). Lo que la ficha no tenga sale
+  // como `faltan_vendor` SIN haber enviado nada: el corredor lo teclea, el
+  // ReRate lo escribe (`/oferta` aplica `correcciones`) y se vuelve a Emitir.
+  // Es también donde se fija la forma de `emails[]` (ver `completarPersonas`).
+  const crudoPrevio = await leerProyectoCrudo(r.config, projectId).catch((e: unknown) => {
+    console.log(`[emitir] no se pudo leer el proyecto ${projectId} antes del Submit —`, e instanceof Error ? e.message : String(e))
+    return null
+  })
+  if (crudoPrevio) {
+    const huecos = huecosPersonaParaEmitir(crudoPrevio)
+    if (huecos.length > 0) {
+      const pedidos = huecos.map((h) => h.campo)
+      console.log(`[emitir] a la persona del proyecto ${projectId} le falta para emitir: ${pedidos.join(', ')}`)
+      const deFicha = await valoresPersonaDesdeFicha(
+        { correduria_id: correduria.id, poliza_id: p.poliza_id, cliente_id: poliza.cliente_id },
+        pedidos,
+        r.config,
+      )
+      const sinCubrir = pedidos.filter((c) => !Object.prototype.hasOwnProperty.call(deFicha, c))
+      if (sinCubrir.length > 0) {
+        return NextResponse.json(
+          {
+            estado: 'error',
+            causa: 'faltan_vendor',
+            mensaje:
+              'Antes de enviar: al proyecto le faltan datos de la persona que la compañía exige para emitir ' +
+              `(${sinCubrir.join(', ')}) y la ficha no los tiene. NO se ha enviado nada. Rellénalos y confirma el ` +
+              'precio otra vez: se escriben en el proyecto sin coste.',
+            faltan: huecos.map((h) => ({
+              campo: h.campo,
+              motivo: `la compañía lo exige para emitir (${h.papeles.join(', ')}) y el proyecto no lo tiene`,
+            })),
+            sugeridos: deFicha,
+            noReconocidos: [],
+            crudo: null,
+          },
+          { status: 422 },
+        )
+      }
+      const c = await completarPersonas(r.config, projectId, deFicha)
+      if (c.estado === 'no_aplicado') {
+        const lista = c.sinAplicar.map((x) => `${x.campo} (${x.papel})`).join(', ')
+        return NextResponse.json(
+          {
+            estado: 'error',
+            causa: 'patch_no_aplicado',
+            sinAplicar: c.sinAplicar,
+            mensaje:
+              `Antes de enviar: el PATCH al proyecto no ha dado error pero, al releerlo, sigue sin traer: ${lista}. ` +
+              'NO se ha enviado nada (el intento de Submit no se ha gastado). El vendor no acepta ese campo por ' +
+              'PATCH con ninguna de las formas conocidas: `crudo` enseña cómo devuelve la persona.',
+            crudo: c.crudo,
+          },
+          { status: 409 },
+        )
+      }
+      console.log(`[emitir] persona del proyecto ${projectId} completada antes del Submit: ${Object.keys(deFicha).join(', ')}`)
+    }
   }
 
   let envio = await enviarEmision(r.config, {

@@ -36,6 +36,7 @@
 import { resolverConfig, type ConfigCodeoscopic, type ResolucionConfig } from './config.ts'
 import { peticion } from './cliente.ts'
 import { leerCotizacion, type Cotizacion, type Precio } from './respuesta.ts'
+import { CLAVES_ELEMENTO_EMAIL, type ClaveElementoEmail } from './persona.ts'
 
 /**
  * Config de EMISIÓN. Gate PROPIO, `CODEOSCOPIC_EMISION_ACTIVA`, distinto del
@@ -451,18 +452,46 @@ export async function completarPersonas(
   projectId: string,
   valores: Partial<Record<CampoPersona, string>>,
 ): Promise<ResultadoCompletar> {
+  // 📧 La forma del ELEMENTO de `emails[]` no tiene fixture (ver `persona.ts`):
+  // si hay correo que escribir, se prueban las claves en orden — cada intento
+  // es PATCH + relectura, gratis— y se para en la primera que el vendor
+  // devuelve. Si lo que no cuaja es OTRO campo, no se insiste: eso ya no es
+  // una cuestión de forma del correo.
+  const claves: (ClaveElementoEmail | undefined)[] =
+    typeof valores.email === 'string' ? [...CLAVES_ELEMENTO_EMAIL] : [undefined]
+  let ultimo: ResultadoCompletar | null = null
+  for (const claveEmail of claves) {
+    const r = await intentarCompletar(config, projectId, valores, claveEmail)
+    if (r.estado === 'aplicado') {
+      if (claveEmail) console.log(`[completarPersonas] correo aplicado en ${projectId} con emails[].${claveEmail}`)
+      return r
+    }
+    if (!r.sinAplicar.every((x) => x.campo === 'email')) return r
+    if (claveEmail) console.log(`[completarPersonas] emails[].${claveEmail} NO aplicó en ${projectId}; se prueba la siguiente`)
+    ultimo = r
+  }
+  return ultimo!
+}
+
+async function intentarCompletar(
+  config: ConfigCodeoscopic,
+  projectId: string,
+  valores: Partial<Record<CampoPersona, string>>,
+  claveEmail: ClaveElementoEmail | undefined,
+): Promise<ResultadoCompletar> {
   const campos = (Object.keys(valores) as CampoPersona[]).filter((c) => typeof valores[c] === 'string')
   const crudo = await leerProyectoCrudo(config, projectId)
   const risk = obj(crudo.risk)
   const papeles = papelesDeLaMismaPersona(crudo)
+  const opciones = claveEmail ? { claveEmail } : {}
 
   const cuerpo: Json = {
     insuranceLine: { id: str(obj(crudo.insuranceLine).id) },
-    holder: aplicarCamposPersona(crudo.holder, valores),
+    holder: aplicarCamposPersona(crudo.holder, valores, opciones),
   }
   if (Object.keys(risk).length > 0) {
     const riskPatched: Json = { ...risk }
-    for (const papel of papeles) riskPatched[papel] = aplicarCamposPersona(risk[papel], valores)
+    for (const papel of papeles) riskPatched[papel] = aplicarCamposPersona(risk[papel], valores, opciones)
     cuerpo.risk = riskPatched
   }
 
@@ -491,6 +520,44 @@ export async function completarPersonas(
     return { estado: 'no_aplicado', sinAplicar, crudo: crudoPersonas }
   }
   return { estado: 'aplicado', cotizacion: leerCotizacion(releido) }
+}
+
+// ─── 2b. Lo que el SUBMIT va a exigir de la persona, mirado ANTES de enviar ──
+
+/**
+ * Los campos de persona que el Submit de auto ha exigido en los 400 reales
+ * (13º y 14º, 12/09/2026) y que el ReRate no pedía. Se comprueban en el
+ * proyecto ANTES de gastar el intento.
+ */
+export const CAMPOS_PERSONA_SUBMIT: readonly CampoPersona[] = ['email', 'nombreVia', 'numeroVia', 'tipoVia']
+
+/**
+ * Qué le falta a la persona del proyecto (holder + papeles con el mismo DNI)
+ * de lo que el Submit exige. PURO sobre el `GET /insurances/{id}` ya leído.
+ *
+ * Por qué (13/09/2026): los 7 proyectos pagados de Pilar Franco Ruz nacieron
+ * sin correo, y el correo no se puede añadir por el camino de los 400 sin
+ * gastar antes el intento de Submit. Con esto, un proyecto ya pagado se
+ * completa por PATCH (gratis) y se emite sin otro 0,50€.
+ *
+ * Los campos de la CALLE solo se exigen si la persona ya lleva dirección: sin
+ * dirección no se sabe si la compañía la pide, y crear una a medias sería
+ * inventar. Si la pide, su 400 sigue saliendo como hasta ahora.
+ */
+export function huecosPersonaParaEmitir(crudo: Json): { campo: CampoPersona; papeles: Papel[] }[] {
+  const papeles: Papel[] = ['holder', ...papelesDeLaMismaPersona(crudo)]
+  const risk = obj(crudo.risk)
+  const personaDe = (papel: Papel): unknown => (papel === 'holder' ? crudo.holder : risk[papel])
+  const huecos: { campo: CampoPersona; papeles: Papel[] }[] = []
+  for (const campo of CAMPOS_PERSONA_SUBMIT) {
+    const faltaEn = papeles.filter((papel) => {
+      const persona = personaDe(papel)
+      if (campo !== 'email' && arr(obj(persona).addresses).length === 0) return false
+      return leerCampoPersona(persona, campo) === null
+    })
+    if (faltaEn.length > 0) huecos.push({ campo, papeles: faltaEn })
+  }
+  return huecos
 }
 
 // ─── 3. Qué exige la emisión (GRATIS): lo dice el vendor, no se adivina ─────

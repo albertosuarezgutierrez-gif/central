@@ -57,11 +57,12 @@ test('no viajan ocupación, situación laboral ni país de nacimiento; y sin ema
 })
 
 // ─── El correo SÍ viaja cuando la ficha lo tiene (12/09/2026) ────────────────
-test('con email en la ficha, viaja en la persona (los tres papeles) con la clave del vendor', () => {
+test('con email en la ficha, viaja como emails[] (la forma medida del vendor) en los tres papeles', () => {
   const c = construirPeticionAuto({ ...BASE, email: ' Cliente@Example.com ' }) as any
-  assert.equal(c.holder.email, 'Cliente@Example.com')
-  assert.equal(c.risk.owner.email, 'Cliente@Example.com')
-  assert.equal(c.risk.primaryDriver.email, 'Cliente@Example.com')
+  assert.deepEqual(c.holder.emails, [{ address: 'Cliente@Example.com', primary: true }])
+  assert.deepEqual(c.risk.owner.emails, c.holder.emails)
+  assert.deepEqual(c.risk.primaryDriver.emails, c.holder.emails)
+  assert.equal('email' in c.holder, false, 'la clave plana `email` el vendor la ignora (12/09/2026)')
 })
 
 // ─── Para EMITIR se exige antes de pagar lo que el Submit pide después ───────
