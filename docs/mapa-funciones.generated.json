@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-13T09:17:32Z",
-  "sha": "50f783ffbb98730e8f3247ee72f7ddd520ae9517",
+  "generadoEn": "2026-09-13T12:29:43Z",
+  "sha": "a2cb01936e3e14a1f8636a74b4ade14e36a5591d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10632,6 +10632,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/comisiones",
       "hash": "f11a31f0b9d1"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/companias/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "GET /api/operador/companias — el directorio de contacto por compañía (`seguros.companias_dgs`), que ya mantiene la skill `agente-correduria`. No es cartera de cliente: no hace falta `correduriaId` ni "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/companias",
+      "hash": "1b4d7ab586bf"
     },
     {
       "ruta": "apps/asegura/app/api/operador/declaradas-vencer/route.ts",
@@ -63643,6 +63664,34 @@
       "hash": "17559bd4b76b"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/Companias.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Companias"
+      ],
+      "funciones": [
+        {
+          "nombre": "celda",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "Companias",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "26844d3d899a"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/ContactosFicha.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -63716,7 +63765,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 65
+          "linea": 66
         },
         {
           "nombre": "fmtFecha",
@@ -63724,7 +63773,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 70,
+          "linea": 71,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -63733,7 +63782,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 120
+          "linea": 121
         },
         {
           "nombre": "CorreduriaClient",
@@ -63741,7 +63790,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 122
+          "linea": 123
         },
         {
           "nombre": "CarteraResumen",
@@ -63749,7 +63798,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 525
+          "linea": 530
         },
         {
           "nombre": "btnMini",
@@ -63757,7 +63806,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 642,
+          "linea": 647,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -63766,12 +63815,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 660
+          "linea": 665
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9ec620bcf7be"
+      "hash": "27c79f61cce4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -72998,6 +73047,27 @@
       ],
       "rutaApi": "/api/correduria/comisiones",
       "hash": "ff20b329d895"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/companias/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "/api/correduria/companias — directorio de contacto por compañía (`seguros.companias_dgs`). Reenvía al puerto de asegura (`/api/operador/companias`) con el secreto de operador, mismo patrón que `/api/c"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/companias",
+      "hash": "01c12ffd56aa"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/declaradas-vencer/route.ts",
@@ -84824,6 +84894,70 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f0db9004dee1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/companias-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Directorio de contacto por compañía aseguradora (`seguros.companias_dgs`), servido por asegura en `GET /api/operador/companias`. Mismo patrón de dos partes que `duplicados-asegura.ts`: lo PURO (interpretar la respuesta) y la RED (solo desde la ruta API de plataforma). Es una tabla de REFERENCIA, no ",
+      "exporta": [
+        "leerCompanias",
+        "interpretarCompanias",
+        "companiasAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 29
+        },
+        {
+          "nombre": "leerCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Compania | null",
+          "linea": 33
+        },
+        {
+          "nombre": "leerCompanias",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "Compania[] | null",
+          "linea": 54,
+          "resumen": "Lista de compañías, o `null` si no llega o no es lista — nunca `[]` por defecto."
+        },
+        {
+          "nombre": "interpretarCompanias",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaCompanias",
+          "linea": 59
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 73
+        },
+        {
+          "nombre": "companiasAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 79
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5eff90a05d03"
     },
     {
       "ruta": "apps/plataforma/lib/comparativa-declaracion.ts",
@@ -134636,7 +134770,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3296,
-    "funciones": 10171
+    "archivos": 3300,
+    "funciones": 10181
   }
 }
