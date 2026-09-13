@@ -39,6 +39,14 @@
   (`reglas.test.ts` + `idioma-salida.test.ts`) con el texto real. De paso se corrigió en BD el
   borrador pendiente de esa reserva ("l'alojamiento" → "l'alloggio", español colado en el italiano).
 
+- **🚗 Identificar pólizas por matrícula/dirección, no por nº de póliza — regla permanente
+  (13/09/2026, PR #2912).** Probando en directo, Alberto: «casi nadie sabe el número de póliza».
+  El selector del parte y la fila de una aportada lo usaban como identificador; ahora es
+  `bien.cosa` (matrícula) `?? bien.ubicacion` (dirección) `?? nº de póliza`, mismo criterio que ya
+  seguía `FilaPoliza.tsx`. Documentado en `apps/asegura-portal/CLAUDE.md` para el próximo
+  selector/lista de pólizas. De paso, «Dar parte» desde la ficha de una póliza llega con ella
+  YA preseleccionada (`?poliza=`), sin volver a buscarla entre las demás.
+
 - **🚑 Parte de siniestro: zona del daño tocable + autorrelleno + «ha pasado ahora mismo»
   (13/09/2026, PR #2908).** Se adaptó el parte genérico para auto: datos del tercero + **zona del
   daño con 9 botones tocables** (como Mapfre/Allianz, no un canvas libre), todo plegado en
