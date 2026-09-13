@@ -1,8 +1,8 @@
 {
  "sesion": "cb6d1450-ed58-5258-9ad2-d55a8d5889f9",
  "inicio": "2026-09-12T13:08:36.222Z",
- "fin": "2026-09-13T06:10:18.749Z",
- "llamadas": 1013,
+ "fin": "2026-09-13T09:01:00.541Z",
+ "llamadas": 1016,
  "categorias": {
   "bash": {
    "llamadas": 410,
@@ -28,16 +28,16 @@
    }
   },
   "otro": {
-   "llamadas": 185,
-   "chars_in": 22922,
-   "chars_out": 5207712,
+   "llamadas": 187,
+   "chars_in": 23030,
+   "chars_out": 5208621,
    "errores": 0,
    "archivos_citados": 54,
    "chars_citados": 7601476,
    "tools": {
-    "ToolSearch": 47,
+    "ToolSearch": 48,
     "Skill": 10,
-    "ReadNotifications": 115,
+    "ReadNotifications": 116,
     "ScheduleWakeup": 13
    }
   },
@@ -172,6 +172,17 @@
    "tools": {
     "mcp__Context7__resolve-library-id": 1,
     "mcp__Context7__query-docs": 1
+   }
+  },
+  "mcp:Google_Calendar": {
+   "llamadas": 1,
+   "chars_in": 462,
+   "chars_out": 929,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 14576,
+   "tools": {
+    "mcp__Google_Calendar__create_event": 1
    }
   }
  }
