@@ -22,7 +22,7 @@
     "@central/module-seguros-portal": "workspace:*",
     "@prisma/client": "^5.22.0",
     "jose": "^5.9.3",
-    "next": "^15.5.18",
+    "next": "^15.5.25",
     "pdf-parse": "^1.1.1",
     "prisma": "^5.22.0",
     "qrcode": "^1.5.4",
