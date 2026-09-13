@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (13/09/2026) 🔔 Aviso Telegram al iniciar sesión en la intranet
 - (13/09/2026) 📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real
 - (13/09/2026) 🛡️ Sentinel [SOMBRA] permitía en silencio un exfil crítico en sesión desatendida — corregido
 - (13/09/2026) docs(memoria): PR #2882 (fix Sentinel [SOMBRA]) mergeado
@@ -271,5 +272,4 @@
 - (13/09/2026) 🔒 Login de plataforma sin rate limit — fuerza bruta viable, cerrado
 - (13/09/2026) 🔎 Buscador de la cartera (asegura) no encontraba «Alberto Suarez» sin tilde — dos bugs apilados, el segundo escondido detrás del primero
 - (13/09/2026) 🔌 `sivra_rates_snapshot` en 401 desde el 11/09 — NO es la credencial HMAC, es el endpoint `/api/rates` de Smoobu
-- (13/09/2026) 📮 El portal de Codeoscopic SÍ documenta cómo reconciliar un Submit sin respuesta
 
