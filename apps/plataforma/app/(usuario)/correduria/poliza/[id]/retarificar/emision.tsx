@@ -64,7 +64,31 @@ type EstadoPanel =
     }
   | { paso: 'emitido'; referenciaVendor: string | null; cuenta: CuentaConocida | null }
   | { paso: 'emitido_sin_acunar'; mensaje: string }
-  | { paso: 'error'; mensaje: string }
+  /**
+   * El último Submit acabó en 5xx o corte de red («quizá emitido», 13/09/2026,
+   * proyecto 40685793): asegura no reenvía a ciegas. Se enseña el proyecto tal
+   * cual lo devuelve el vendor (gratis) y el corredor decide, mirándolo y Avant2.
+   */
+  | {
+      paso: 'reintento_sin_confirmar'
+      mensaje: string
+      ultimoError: string | null
+      /** No vacío = el proyecto YA cuenta una solicitud de emisión. */
+      rastro: unknown[]
+      proyectoLegible: boolean
+      crudo: unknown
+      projectId: string
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
+    }
+  /** `reintento`: con qué volver a llamar a asegura (sin confirmar) para que
+   *  enseñe el estado del proyecto en vez de mandar al ReRate. */
+  | {
+      paso: 'error'
+      mensaje: string
+      quizaEmitido?: boolean
+      reintento?: { projectId: string; cuenta: CuentaConocida | null; cuentaAviso: AvisoCuenta | null }
+    }
 
 function euroODash(n: number | null): string {
   return n === null || !Number.isFinite(n) ? '—' : eur(n)
@@ -327,7 +351,12 @@ export function Emision({
     setEstado({ paso: 'error', mensaje: r.mensaje })
   }
 
-  async function emitir(projectId: string, cuenta: CuentaConocida | null, aviso: AvisoCuenta | null) {
+  async function emitir(
+    projectId: string,
+    cuenta: CuentaConocida | null,
+    aviso: AvisoCuenta | null,
+    opciones: { reintentoConfirmado?: boolean } = {},
+  ) {
     let campos: Record<string, unknown>
     try {
       campos = JSON.parse(camposJson || '{}')
@@ -341,7 +370,27 @@ export function Emision({
     // asegura a mandar la cuenta de la ficha. Un IBAN tecleado la sustituye.
     const cuentaConfirmada = !otraCuenta && cuentaOk && cuenta ? cuenta.enmascarada : null
     setEstado({ paso: 'emitiendo' })
-    const r = await pedirEmision({ projectId, campos, primaAnual: primaEur, cuentaConfirmada })
+    const r = await pedirEmision({
+      projectId,
+      campos,
+      primaAnual: primaEur,
+      cuentaConfirmada,
+      reintentoConfirmado: opciones.reintentoConfirmado === true,
+    })
+    if (r.estado === 'reintento_sin_confirmar') {
+      setEstado({
+        paso: 'reintento_sin_confirmar',
+        mensaje: r.mensaje,
+        ultimoError: r.ultimoError,
+        rastro: r.rastro,
+        proyectoLegible: r.proyectoLegible,
+        crudo: r.crudo,
+        projectId,
+        cuenta,
+        cuentaAviso: aviso,
+      })
+      return
+    }
     if (r.estado === 'faltan_campos') {
       setEstado({
         paso: 'faltan_campos',
@@ -370,7 +419,13 @@ export function Emision({
       setEstado({ paso: 'error', mensaje: r.mensaje })
       return
     }
-    setEstado({ paso: 'error', mensaje: r.mensaje })
+    const quizaEmitido = r.estado === 'error' && r.quizaEmitido === true
+    setEstado({
+      paso: 'error',
+      mensaje: r.mensaje,
+      quizaEmitido,
+      ...(quizaEmitido ? { reintento: { projectId, cuenta, cuentaAviso: aviso } } : {}),
+    })
   }
 
   return (
@@ -728,6 +783,84 @@ export function Emision({
       {estado.paso === 'error' && (
         <div className="err" style={{ marginTop: 14 }}>
           {estado.mensaje}
+          {estado.quizaEmitido && (
+            <>
+              <p style={{ margin: '8px 0 0', fontWeight: 700 }}>
+                ⚠️ Esto NO es un rechazo: Codeoscopic dejó de esperar a la compañía y no se sabe si llegó a
+                emitir. No se ha cobrado nada por el envío.
+              </p>
+              {estado.reintento && (
+                <button
+                  type="button"
+                  className="primary"
+                  style={{ marginTop: 8, minHeight: 44 }}
+                  onClick={() => emitir(estado.reintento!.projectId, estado.reintento!.cuenta, estado.reintento!.cuentaAviso)}
+                >
+                  Ver el estado del proyecto y decidir (gratis)
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {estado.paso === 'reintento_sin_confirmar' && (
+        <div style={{ marginTop: 14, border: '2px solid var(--warn)', borderRadius: 10, padding: 12 }}>
+          {estado.rastro.length > 0 ? (
+            <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+              🛑 El proyecto YA cuenta una solicitud de emisión en Codeoscopic
+            </p>
+          ) : (
+            <p style={{ margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
+              ⚠️ El último envío acabó sin respuesta clara — no se sabe si la compañía emitió
+            </p>
+          )}
+          <p style={{ margin: '6px 0 0' }}>{estado.mensaje}</p>
+          {estado.rastro.length > 0 && (
+            <details open style={{ marginTop: 8 }}>
+              <summary>Lo que el proyecto cuenta de esa solicitud</summary>
+              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, maxHeight: 240, overflow: 'auto' }}>
+                {JSON.stringify(estado.rastro, null, 2)}
+              </pre>
+            </details>
+          )}
+          {estado.ultimoError && (
+            <p className="muted" style={{ margin: '6px 0 0', fontSize: 12, wordBreak: 'break-word' }}>
+              Último error: <code>{estado.ultimoError}</code>
+            </p>
+          )}
+          {estado.proyectoLegible ? (
+            <details style={{ marginTop: 8 }}>
+              <summary>Proyecto tal cual lo devuelve Codeoscopic ahora (lectura gratis)</summary>
+              <p className="muted" style={{ margin: '4px 0', fontSize: 12 }}>
+                Si aquí no aparece ninguna «policyApplication», el proyecto no cuenta ninguna solicitud —
+                eso NO demuestra que la compañía no emitiera: compruébalo también en Avant2.
+              </p>
+              <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, maxHeight: 320, overflow: 'auto' }}>
+                {JSON.stringify(estado.crudo, null, 2)}
+              </pre>
+            </details>
+          ) : (
+            <p className="err" style={{ margin: '8px 0 0' }}>
+              No se ha podido leer el proyecto en Codeoscopic ahora mismo: compruébalo en Avant2 antes de
+              reintentar.
+            </p>
+          )}
+          <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="primary"
+              style={{ minHeight: 44 }}
+              onClick={() =>
+                emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { reintentoConfirmado: true })
+              }
+            >
+              Lo he comprobado y no hay póliza: reintentar la emisión
+            </button>
+            <button type="button" className="ghost" style={{ minHeight: 44 }} onClick={onCerrar}>
+              No reintentar
+            </button>
+          </div>
         </div>
       )}
     </div>

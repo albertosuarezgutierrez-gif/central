@@ -87,3 +87,66 @@ test('la cuenta de la ficha solo viaja con la máscara confirmada a mano: ni por
   assert.match(ruta, /confirmar: true,/, 'diciéndole a plataforma que es una confirmación, no un hueco vacío.')
   assert.doesNotMatch(ruta, /ibanEnvio = ibanHumano \?\? ficha\.iban/, 'la ficha ya no cae al envío por su cuenta.')
 })
+
+// 13/09/2026, proyecto 40685793: el Submit llegó al vendor con la persona
+// completa y Codeoscopic contestó «500 Unknown error while waiting for the
+// operation to complete». Eso no es un rechazo: no se sabe si la compañía
+// emitió. asegura lo declara (`quizaEmitido`) y el siguiente intento exige
+// confirmación (409 `reintento_sin_confirmar`) o se corta si el proyecto ya
+// cuenta una solicitud (409 `solicitud_existente`).
+test('un 502 del Submit con quizaEmitido llega a la pantalla como tal, y sin el flag no', () => {
+  const r = interpretarEmitir(502, { estado: 'error', causa: 'vendor', mensaje: '500: {…}', quizaEmitido: true, crudo: null })
+  assert.equal(r.estado, 'error')
+  if (r.estado !== 'error') return
+  assert.equal(r.quizaEmitido, true)
+  const s = interpretarEmitir(502, { estado: 'error', causa: 'vendor', mensaje: '400: {…}', crudo: null })
+  assert.equal(s.estado === 'error' ? s.quizaEmitido : 'x', undefined)
+})
+
+test('el 409 reintento_sin_confirmar trae el último error, el rastro y el proyecto; crudo ausente ≠ legible', () => {
+  const r = interpretarEmitir(409, {
+    estado: 'error',
+    causa: 'reintento_sin_confirmar',
+    mensaje: 'El último envío…',
+    ultimoError: '500: {"message":"Unknown error while waiting for the operation to complete."}',
+    rastro: [],
+    proyectoLegible: true,
+    crudo: { id: 40685793 },
+  })
+  assert.equal(r.estado, 'reintento_sin_confirmar')
+  if (r.estado !== 'reintento_sin_confirmar') return
+  assert.match(r.ultimoError ?? '', /Unknown error/)
+  assert.deepEqual(r.rastro, [])
+  assert.equal(r.proyectoLegible, true)
+  assert.deepEqual(r.crudo, { id: 40685793 })
+  const sin = interpretarEmitir(409, { causa: 'reintento_sin_confirmar', proyectoLegible: false })
+  assert.equal(sin.estado === 'reintento_sin_confirmar' ? sin.proyectoLegible : 'x', false)
+  assert.equal(sin.estado === 'reintento_sin_confirmar' ? sin.crudo : 'x', null)
+  assert.deepEqual(sin.estado === 'reintento_sin_confirmar' ? sin.rastro : 'x', [])
+})
+
+test('el mismo 409 con rastro (el proyecto YA cuenta una solicitud) lo conserva, y en-vuelo sigue aparte', () => {
+  const r = interpretarEmitir(409, {
+    estado: 'error',
+    causa: 'reintento_sin_confirmar',
+    mensaje: 'Ya cuenta…',
+    ultimoError: null,
+    rastro: [{ ruta: 'policyApplication', valor: { id: 'PA-1' } }],
+    proyectoLegible: true,
+    crudo: {},
+  })
+  assert.equal(r.estado, 'reintento_sin_confirmar')
+  if (r.estado !== 'reintento_sin_confirmar') return
+  assert.equal(r.rastro.length, 1)
+  assert.equal(r.ultimoError, null)
+  assert.equal(interpretarEmitir(409, { causa: 'en-vuelo' }).estado, 'en_vuelo')
+  // `ya_emitida` no es reintentable: cae al error genérico con el mensaje de asegura.
+  const ya = interpretarEmitir(409, { estado: 'error', causa: 'ya_emitida', mensaje: 'ya consta como EMITIDO' })
+  assert.equal(ya.estado, 'error')
+  assert.match(ya.estado === 'error' ? ya.mensaje : '', /EMITIDO/)
+})
+
+test('emitirAsegura solo manda reintentoConfirmado cuando es true (lee el fuente)', () => {
+  const src = readFileSync(fileURLToPath(new URL('./retarificar-asegura.ts', import.meta.url)), 'utf8')
+  assert.match(src, /p\.reintentoConfirmado === true \? \{ reintentoConfirmado: true \} : \{\}/)
+})
