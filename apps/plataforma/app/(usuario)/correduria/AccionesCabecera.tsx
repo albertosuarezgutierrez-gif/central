@@ -1,5 +1,5 @@
 'use client'
-import { Plus, House, Wrench, MoreHorizontal } from 'lucide-react'
+import { Plus, House, Wrench, Building2, MoreHorizontal } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 
 /**
@@ -77,6 +77,12 @@ export default function AccionesCabecera() {
             style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
           >
             <House size={15} strokeWidth={1.75} aria-hidden /> Presupuesto de hogar
+          </a>
+          <a
+            href="/correduria/companias"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <Building2 size={15} strokeWidth={1.75} aria-hidden /> Compañías
           </a>
           <a
             href="/correduria/mantenimiento"
