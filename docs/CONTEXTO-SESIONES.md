@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real (13/09/2026).**
+  Dado de alta el 15/06 (LOO-322) → `app.grupoasegura.com/api/webhooks/codeoscopic`, HTTP Basic; el emisor real manda un
+  **array de 2 elementos `{insurance}` cada ~30 min** (1.671 rechazos en `operational_events` desde el 25/06, antes de emitir
+  nada) y el CRM lo acepta con 200 sin guardar el cuerpo. Manuel nunca cerró una emisión (ni
+  sandbox); su Submit ya era «un intento + quizá-emitido + GET /insurances». Cableado: `POST /api/webhooks/codeoscopic`
+  en `apps/asegura` (guarda TODO crudo en `codeoscopic_webhook_events`, dedupe por hash, no acuña) + `/api/webhooks` en
+  `PUBLIC` del middleware (Resend también recibía el login). **Pendiente de Alberto:** copiar
+  `CODEOSCOPIC_WEBHOOK_BASIC_USER/PASSWORD` del proyecto Vercel `asegura` a `central-asegura` y pedir a JM repuntar la URL.
+  `issuedDocuments[]`: forma en `GET {BASE_URL}/openapi.json` (host bloqueado desde el contenedor). Escalado: Ángel Blesa.
 - **🛡️ Sentinel [SOMBRA] permitía en silencio un exfil crítico en sesión desatendida — corregido (13/09/2026).** `SENTINEL_SHADOW` degradaba TODO `deny`/`ask` a `allow`-con-log por igual, incluidos los `deny` duros (`known_malicious`/`feed_blocklist`) y un `ask` CRITICAL de `sensitive_env` (secreto exfiltrado por `curl`) — el aviso de Telegram llegaba después de que el `curl` ya hubiera salido. Añadido `_session_attended()` en `sentinel_preflight.py` (lee `CLAUDE_CODE_SESSION_ATTENDED`; desconocido = no atendida, criterio conservador): `deny` duro nunca se toca; `ask` con humano delante llega real; `ask` CRITICAL desatendido → **deniega** (no cuelga, no permite); `ask` HIGH desatendido → sigue igual que antes. `sentinel_alerta.py` avisa por Telegram también en el nuevo caso de `deny`. Probado con 4 casos locales (`py_compile` + ejecución). Además, un hallazgo de `graphify-labs[bot]` en el PR destapó un bypass real: la escalada opcional por IA (`SENTINEL_AI=on`) podía rebajar un `ask` CRITICAL+desatendido a `allow` antes de llegar al nuevo deny — corregido calculando la condición crítica+desatendida ANTES de invocar la IA y saltándola en ese caso. Detalle en `.claude/mcp-sentinel/README.md` § "Ask crítico + desatendido". **Pendiente:** confirmar que `CLAUDE_CODE_SESSION_ATTENDED` refleja de verdad "sin humano" en una Routine real (solo se ha observado `=1` en sesión propia interactiva).
 - **docs(memoria): PR #2882 (fix Sentinel [SOMBRA]) mergeado (13/09/2026).** Verificados en review 3 findings de `graphify-labs[bot]` (ninguno era real: el `reason` de las categorías CRITICAL nunca lleva el valor del secreto, solo etiqueta/patrón/ruta) y mergeado tras 19 checks en verde.
 - **📇 Directorio de contactos por compañía en `/correduria` + teléfonos minados de Gmail (13/09/2026, PR #2893).**

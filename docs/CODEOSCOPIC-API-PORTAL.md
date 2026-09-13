@@ -586,6 +586,30 @@ requestId `0d65134e-161833`). Lo que cambia lo que dábamos por sabido:
 (`acunarExistente: true`, sin reenviar); con una pendiente no ofrece reintento; solo sin ninguna viva
 se puede reenviar con `reintentoConfirmado: true`. Y el 500 se reporta a soporte con el `requestId`.
 
+## 📞 Lo que NO está en el portal y sí sabía Manuel (13/09/2026)
+
+Respuesta de Manuel (su Claude, medido contra su BD de producción) a las cinco preguntas de Alberto:
+
+- **Nunca se completó una emisión por API en su lado**, ni en sandbox ni en prod: el único proyecto
+  (40058158, auto) se quedó en `cotizacion`. El 500 «Unknown error while waiting…» no lo vieron nunca.
+  Su `submit.ts` hacía lo mismo que hoy `/emitir`: un solo intento, 5xx = «quizá emitido», congelar,
+  reconciliar por `GET /insurances/{id}` (+ polling con backoff 5 min·2ⁿ, tope 60 min, 7 días).
+- **Webhook:** dado de alta por Codeoscopic el 15/06 (LOO-322) → `POST app.grupoasegura.com/api/webhooks/codeoscopic`,
+  HTTP Basic. El emisor real manda **array de 2 elementos cada ~30 min** y el CRM lo descarta con 200
+  sin persistir el cuerpo — solo metadato en `operational_events` (`rootKeys: ["insurance"]`, 1.671
+  rechazos desde el 25/06/2026, anteriores a cualquier emisión nuestra). Receptor nuevo en
+  `apps/asegura` (ver su `CLAUDE.md`).
+- **`issuedDocuments[]`:** su código lo ignoraba a propósito (solo persistía `policyNumber`);
+  `codeoscopic_documents` nunca tuvo writer (épica LOO-151). **La forma exacta del tag `File` se lee del
+  OpenAPI vivo, autenticado con nuestro token OAuth2: `GET {CODEOSCOPIC_BASE_URL}/openapi.json`**
+  (108 paths). ⚠️ Ese host está bloqueado desde el contenedor de Claude (403 del proxy): se lee desde
+  Vercel o con Claude en Chrome.
+- **Contactos y tiempos:** Juan Manuel Fernández (PM API, `juan.fernandez@codeoscopic.com`) — preciso
+  en reunión, **latencia alta por email (hasta 14 días)**; `soporteapi@codeoscopic.com` — SLA de facto
+  mismo día laborable, 2 días máximo; sin status page (los cortes van por email a integradores).
+  **Escalado:** Ángel Blesa Jarque, Director General (`comercial@codeoscopic.com`), firmante del
+  contrato — si hay silencio dos días. DPO: `dpd@codeoscopic.com`.
+
 ## Cabeceras y detalles de cableado que faltaban
 
 - `Accept: application/vnd.codeoscopic.v1+json` es **obligatoria en todas las peticiones**: ahí se
