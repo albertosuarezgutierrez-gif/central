@@ -30,6 +30,22 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 CIMA caído 12-13/09 por DNS de `app.grupoasegura.com` — arreglado + mapper corregido + cuarentena desatascada 42→20 (13/09/2026).**
+  Causa: el registro DNS de `app` en IONOS (`grupoasegura.com`) faltaba/se rompió al tocar `grupoasegura.es` un día antes
+  (`curl: Could not resolve host`, 3 runs seguidos desde 12/09 09:29 UTC). Alberto lo arregló en IONOS (CNAME `app` →
+  `*.vercel-dns-*.com`); Vercel ya tenía el dominio bien asignado. Nada se perdió (cola TIREA no dequeue hasta confirmar).
+  Aparte, desatascando la cuarentena con `reconcile=1` se vio que `mapOnePoliza` solo clasificaba `riesgos[0]` — si el
+  bloque reconocible no iba primero en un array multi-riesgo, nunca se miraba (2 POL de Occident seguían en review pese
+  al fix LOO-807 de agosto). Corregido y mergeado en `asegura` (repo separado, PR #821). Se vio además que `reconcile`
+  reprocesaba siempre los mismos 10 primeros de la cola (`CIMA_PULL_BATCH_SIZE=10` en prod) sin llegar al resto: PR #823
+  añade `?batchSize=` opcional (mismo clamp [1,50], sin tocar la env var) y PR #824 lo expone en el `workflow_dispatch`.
+  Con `batchSize=40` se barrieron las 6 páginas de la cola: **42→20 ficheros en review** (22 resueltos solos). Los 20 que
+  quedan son de dos causas conocidas, no bugs nuevos: 3 SIN de C0109 por `art14_asegurado_distinto` (decisión de negocio,
+  quién es el asegurado real) y 17 de C0468 (1 POL + 6 REC + 10 SIN) que cuelgan de una única póliza (`M00171_20260522`)
+  cuyo bloque de riesgo real no se puede ver sin el XML crudo (no se persiste, Art.5) — requeriría instrumentar más
+  diagnóstico si se quiere cerrar del todo.
+  **Ojo: `apps/asegura` de `central` lee de `seguros.*` en la Supabase compartida (`wswbehlcuxqxyinousql`), NO del
+  proyecto original de Manuel (`uijsgeocgdaxkhvwtjqs`, congelado desde el 31/08) — verificar SIEMPRE contra ese primero.**
 - **🔒 Login de plataforma sin rate limit — fuerza bruta viable, cerrado (13/09/2026, #2884 mergeado).**
   `/api/auth/login` no tenía ningún tope de intentos. Añadido doble límite (IP 20/15min + email
   5/15min) reutilizando `lib/rate-limit.ts` (mismo limitador en memoria del lead público de la
