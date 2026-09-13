@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔴 Auditoría ligera 13/09/2026 — causa raíz del backlog de PRs de registro: `action_required` tras resolver conflicto.**
+  El carril 1 de `/auditoria-diaria` lleva desde el 05/09 sin poder autoentregarse (`#2318`/`#2322`/`#2483`/`#2741`
+  atascados en `dirty`/`blocked`). Encontrado hoy: `rutinas-automerge.yml` SÍ resuelve el conflicto de inserción pura,
+  pero los 4 checks requeridos sobre el commit resultante (autor `github-actions[bot]`) quedan en
+  `conclusion: action_required` — GitHub pide aprobación humana para correr workflows de un commit de bot, y ningún
+  agente puede pulsar "Approve and run" por API. **Pendiente de Alberto:** aprobar esos runs en Actions o revisar
+  Settings → Actions → General → aprobación de workflows. Sin esto, cualquier PR de registro que choque con otro se
+  queda huérfano igual. Además: pricing SIVRA sin escritura real 47,6h (empeora desde `#2857`, esta madrugada) y CIMA
+  sin ningún pull desde el 11/09 15:08 (3 ciclos perdidos, no solo "vacío") — ambos ya conocidos, sin fix de código
+  posible desde aquí. Detalle en `docs/AUDITORIA-2026-09.md` (13/09).
 - **📮 El portal de Codeoscopic SÍ documenta cómo reconciliar un Submit sin respuesta (13/09/2026, tras el 500 del 40685793).**
   Leído con Claude en Chrome: `GET /insurances/{id}` trae `policyApplications[]` con `status.id` (`Approved`) y
   `policyNumber`; 500 = «report to support» (`soporteapi@avant2.es`), 502/503/504 = «try again». Sin webhooks ni
