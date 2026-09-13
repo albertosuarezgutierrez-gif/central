@@ -15,11 +15,13 @@ export const dynamic = 'force-dynamic'
 // NO acuña ni cambia el estado de ningún proyecto — la reconciliación sigue en
 // `GET /insurances/{id}`.
 //
-// Envs: CODEOSCOPIC_WEBHOOK_USER + CODEOSCOPIC_WEBHOOK_PASSWORD (las mismas
-// credenciales Basic que Codeoscopic tiene del CRM). Sin ellas: 503, nunca 200.
+// Envs: CODEOSCOPIC_WEBHOOK_BASIC_USER + CODEOSCOPIC_WEBHOOK_BASIC_PASS — los MISMOS
+// nombres que el CRM de Manuel (proyecto Vercel `asegura`), para copiarlas 1:1 sin
+// renombrar nada. `CODEOSCOPIC_WEBHOOK_SECRET` (el HMAC anterior a LOO-322) no se usa.
+// Sin ellas: 503, nunca 200.
 export async function POST(req: Request) {
-  const usuario = process.env.CODEOSCOPIC_WEBHOOK_USER
-  const contrasena = process.env.CODEOSCOPIC_WEBHOOK_PASSWORD
+  const usuario = process.env.CODEOSCOPIC_WEBHOOK_BASIC_USER
+  const contrasena = process.env.CODEOSCOPIC_WEBHOOK_BASIC_PASS
   if (!usuario || !contrasena) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
   if (!autorizacionBasica(req.headers.get('authorization'), usuario, contrasena)) {
     return new NextResponse(JSON.stringify({ estado: 'no_autorizado' }), {
