@@ -72,3 +72,66 @@ test('rastroSolicitudEmision: una clave vacía o un proyecto sin ella NO es rast
   // Pero un estado con contenido SÍ es rastro.
   assert.equal(rastroSolicitudEmision({ policyApplicationStatus: 'Pending' }).length, 1)
 })
+
+// ── PolicyApplication_V1, la forma que el portal documenta (13/09/2026) ──
+import { solicitudesEmision, solicitudViva, veredictoSolicitud, consejoTrasFallo, requestIdDe } from './reintento-emision.ts'
+
+const PROYECTO_CON_SOLICITUD = {
+  id: 40685793,
+  effectiveDate: '2026-09-14',
+  policyApplications: [
+    { id: 'P63', creationDateTime: '2026-09-13T06:27:29Z', status: { id: 'Approved', name: 'Aprobada' }, policyNumber: '849651', quote: { id: 'Q1' }, payment: {} },
+  ],
+}
+
+test('solicitudesEmision: lee policyApplications[] del proyecto con id, estado, nº de póliza y fecha', () => {
+  const s = solicitudesEmision(PROYECTO_CON_SOLICITUD)
+  assert.equal(s.length, 1)
+  assert.deepEqual(s[0], {
+    id: 'P63',
+    creadaEn: '2026-09-13T06:27:29Z',
+    estadoId: 'Approved',
+    estadoNombre: 'Aprobada',
+    numeroPoliza: '849651',
+    veredicto: 'aprobada',
+  })
+  // La respuesta del Submit (array) y una solicitud suelta también.
+  assert.equal(solicitudesEmision(PROYECTO_CON_SOLICITUD.policyApplications).length, 1)
+  assert.equal(solicitudesEmision(PROYECTO_CON_SOLICITUD.policyApplications[0]).length, 1)
+})
+
+test('solicitudesEmision: sin policyApplications (o vacío) devuelve [], y un objeto sin señales no es una solicitud', () => {
+  assert.deepEqual(solicitudesEmision({ id: 1, policyApplications: [] }), [])
+  assert.deepEqual(solicitudesEmision({ id: 1 }), [])
+  assert.deepEqual(solicitudesEmision(null), [])
+  assert.deepEqual(solicitudesEmision([{ premium: 12 }]), [])
+})
+
+test('veredictoSolicitud: solo Approved está documentado; lo raro es desconocido, nunca aprobada', () => {
+  assert.equal(veredictoSolicitud('Approved'), 'aprobada')
+  assert.equal(veredictoSolicitud('Rejected'), 'rechazada')
+  assert.equal(veredictoSolicitud('PendingReview'), 'pendiente')
+  assert.equal(veredictoSolicitud('ManualIntervention'), 'pendiente')
+  assert.equal(veredictoSolicitud('Foo'), 'desconocido')
+  assert.equal(veredictoSolicitud(null), 'desconocido')
+})
+
+test('solicitudViva: aprobada manda sobre pendiente; una rechazada sola no bloquea el reintento', () => {
+  const mk = (estadoId: string) => solicitudesEmision([{ id: 'x', status: { id: estadoId } }])[0]
+  assert.equal(solicitudViva([mk('Rejected'), mk('PendingReview'), mk('Approved')])?.estadoId, 'Approved')
+  assert.equal(solicitudViva([mk('Rejected'), mk('PendingReview')])?.estadoId, 'PendingReview')
+  assert.equal(solicitudViva([mk('Rejected')]), null)
+  assert.equal(solicitudViva([]), null)
+})
+
+test('consejoTrasFallo: el 500 manda REPORTAR con el requestId; 502/503/504 «try again»; un 400 nada', () => {
+  const con = consejoTrasFallo(ERROR_500.replace('"status":500', '"requestId":"0d65134e-161833","status":500'))
+  assert.equal(con?.tipo, 'reportar')
+  assert.match(con?.texto ?? '', /0d65134e-161833/)
+  assert.match(con?.texto ?? '', /soporteapi@/)
+  assert.equal(consejoTrasFallo('502: Bad Gateway')?.tipo, 'reintentar_en_minutos')
+  assert.equal(consejoTrasFallo('504: Gateway Timeout')?.tipo, 'reintentar_en_minutos')
+  assert.equal(consejoTrasFallo('400: {"message":"mandatory"}'), null)
+  assert.equal(consejoTrasFallo(null), null)
+  assert.equal(requestIdDe('sin json'), null)
+})

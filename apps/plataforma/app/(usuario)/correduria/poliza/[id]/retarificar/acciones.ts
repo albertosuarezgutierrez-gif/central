@@ -126,6 +126,7 @@ export async function pedirEmision(entrada: {
   /** Máscara de la cuenta de la ficha que el corredor confirmó en pantalla (o nada). */
   cuentaConfirmada?: string | null
   reintentoConfirmado?: boolean
+  acunarExistente?: boolean
 }): Promise<RespuestaEmitir> {
   return emitirAsegura({
     projectId: entrada.projectId,
@@ -134,5 +135,6 @@ export async function pedirEmision(entrada: {
     primaAnual: entrada.primaAnual ?? null,
     cuentaConfirmada: entrada.cuentaConfirmada ?? null,
     reintentoConfirmado: entrada.reintentoConfirmado === true,
+    acunarExistente: entrada.acunarExistente === true,
   })
 }

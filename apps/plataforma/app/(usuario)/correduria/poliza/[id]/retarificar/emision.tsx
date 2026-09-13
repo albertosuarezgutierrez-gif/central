@@ -21,7 +21,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { pedirOferta, pedirEmision, pedirCatalogo } from './acciones'
-import type { AvisoCuenta, CuentaConocida, Opcion } from '@/lib/retarificar-asegura'
+import type { AvisoCuenta, CuentaConocida, Opcion, SolicitudEmisionVista } from '@/lib/retarificar-asegura'
 
 type EstadoPanel =
   | { paso: 'inicio' }
@@ -73,6 +73,9 @@ type EstadoPanel =
       paso: 'reintento_sin_confirmar'
       mensaje: string
       ultimoError: string | null
+      consejo: string | null
+      /** `policyApplications[]` tal cual las documenta el portal (con veredicto). */
+      solicitudes: SolicitudEmisionVista[]
       /** No vacío = el proyecto YA cuenta una solicitud de emisión. */
       rastro: unknown[]
       proyectoLegible: boolean
@@ -87,6 +90,7 @@ type EstadoPanel =
       paso: 'error'
       mensaje: string
       quizaEmitido?: boolean
+      consejo?: string
       reintento?: { projectId: string; cuenta: CuentaConocida | null; cuentaAviso: AvisoCuenta | null }
     }
 
@@ -355,7 +359,7 @@ export function Emision({
     projectId: string,
     cuenta: CuentaConocida | null,
     aviso: AvisoCuenta | null,
-    opciones: { reintentoConfirmado?: boolean } = {},
+    opciones: { reintentoConfirmado?: boolean; acunarExistente?: boolean } = {},
   ) {
     let campos: Record<string, unknown>
     try {
@@ -376,12 +380,15 @@ export function Emision({
       primaAnual: primaEur,
       cuentaConfirmada,
       reintentoConfirmado: opciones.reintentoConfirmado === true,
+      acunarExistente: opciones.acunarExistente === true,
     })
     if (r.estado === 'reintento_sin_confirmar') {
       setEstado({
         paso: 'reintento_sin_confirmar',
         mensaje: r.mensaje,
         ultimoError: r.ultimoError,
+        consejo: r.consejo,
+        solicitudes: r.solicitudes,
         rastro: r.rastro,
         proyectoLegible: r.proyectoLegible,
         crudo: r.crudo,
@@ -424,6 +431,7 @@ export function Emision({
       paso: 'error',
       mensaje: r.mensaje,
       quizaEmitido,
+      ...(r.estado === 'error' && r.consejo ? { consejo: r.consejo } : {}),
       ...(quizaEmitido ? { reintento: { projectId, cuenta, cuentaAviso: aviso } } : {}),
     })
   }
@@ -789,6 +797,9 @@ export function Emision({
                 ⚠️ Esto NO es un rechazo: Codeoscopic dejó de esperar a la compañía y no se sabe si llegó a
                 emitir. No se ha cobrado nada por el envío.
               </p>
+              {estado.consejo && (
+                <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>{estado.consejo}</p>
+              )}
               {estado.reintento && (
                 <button
                   type="button"
@@ -804,9 +815,17 @@ export function Emision({
         </div>
       )}
 
-      {estado.paso === 'reintento_sin_confirmar' && (
+      {estado.paso === 'reintento_sin_confirmar' && (() => {
+        const aprobada = estado.solicitudes.find((s) => s.veredicto === 'aprobada' && s.numeroPoliza) ?? null
+        const viva = aprobada ?? estado.solicitudes.find((s) => s.veredicto === 'aprobada' || s.veredicto === 'pendiente') ?? null
+        return (
         <div style={{ marginTop: 14, border: '2px solid var(--warn)', borderRadius: 10, padding: 12 }}>
-          {estado.rastro.length > 0 ? (
+          {viva ? (
+            <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+              🛑 La compañía ya tiene una solicitud {viva.veredicto === 'aprobada' ? 'APROBADA' : 'en curso'}
+              {viva.numeroPoliza ? ` · póliza ${viva.numeroPoliza}` : ''} — NO se reenvía
+            </p>
+          ) : estado.rastro.length > 0 ? (
             <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
               🛑 El proyecto YA cuenta una solicitud de emisión en Codeoscopic
             </p>
@@ -816,6 +835,37 @@ export function Emision({
             </p>
           )}
           <p style={{ margin: '6px 0 0' }}>{estado.mensaje}</p>
+          {estado.consejo && (
+            <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>{estado.consejo}</p>
+          )}
+          {estado.solicitudes.length > 0 && (
+            <div style={{ marginTop: 8, overflowX: 'auto' }}>
+              <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 420 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '4px 8px' }}>Solicitud</th>
+                    <th style={{ textAlign: 'left', padding: '4px 8px' }}>Estado (vendor)</th>
+                    <th style={{ textAlign: 'left', padding: '4px 8px' }}>Nº póliza</th>
+                    <th style={{ textAlign: 'left', padding: '4px 8px' }}>Enviada</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {estado.solicitudes.map((s, i) => (
+                    <tr key={s.id ?? i}>
+                      <td style={{ padding: '4px 8px' }}><code>{s.id ?? '—'}</code></td>
+                      <td style={{ padding: '4px 8px' }}>
+                        {s.veredicto === 'aprobada' ? '🟢 ' : s.veredicto === 'rechazada' ? '🔴 ' : s.veredicto === 'pendiente' ? '🟠 ' : '❔ '}
+                        {s.estadoNombre ?? s.estadoId ?? 'sin estado'}
+                        {s.veredicto === 'desconocido' && s.estadoId ? ' (estado no reconocido: míralo en Avant2)' : ''}
+                      </td>
+                      <td style={{ padding: '4px 8px' }}>{s.numeroPoliza ?? '—'}</td>
+                      <td style={{ padding: '4px 8px' }}>{s.creadaEn ? new Date(s.creadaEn).toLocaleString('es-ES') : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           {estado.rastro.length > 0 && (
             <details open style={{ marginTop: 8 }}>
               <summary>Lo que el proyecto cuenta de esa solicitud</summary>
@@ -847,22 +897,43 @@ export function Emision({
             </p>
           )}
           <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="primary"
-              style={{ minHeight: 44 }}
-              onClick={() =>
-                emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { reintentoConfirmado: true })
-              }
-            >
-              Lo he comprobado y no hay póliza: reintentar la emisión
-            </button>
+            {aprobada && (
+              <button
+                type="button"
+                className="primary"
+                style={{ minHeight: 44 }}
+                onClick={() =>
+                  emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { acunarExistente: true })
+                }
+              >
+                Registrar en la cartera la póliza {aprobada.numeroPoliza} ya emitida (no reenvía nada)
+              </button>
+            )}
+            {!viva && (
+              <button
+                type="button"
+                className={aprobada ? 'ghost' : 'primary'}
+                style={{ minHeight: 44 }}
+                onClick={() =>
+                  emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { reintentoConfirmado: true })
+                }
+              >
+                Lo he comprobado y no hay póliza: reintentar la emisión
+              </button>
+            )}
+            {viva && !aprobada && (
+              <p className="muted" style={{ margin: 0, fontSize: 13, alignSelf: 'center' }}>
+                Hay una solicitud en curso en la compañía: no se ofrece reintento. Cuando pase a aprobada,
+                vuelve aquí para registrarla; si la compañía la rechaza, se podrá reenviar.
+              </p>
+            )}
             <button type="button" className="ghost" style={{ minHeight: 44 }} onClick={onCerrar}>
-              No reintentar
+              {viva ? 'Cerrar' : 'No reintentar'}
             </button>
           </div>
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

@@ -150,3 +150,44 @@ test('emitirAsegura solo manda reintentoConfirmado cuando es true (lee el fuente
   const src = readFileSync(fileURLToPath(new URL('./retarificar-asegura.ts', import.meta.url)), 'utf8')
   assert.match(src, /p\.reintentoConfirmado === true \? \{ reintentoConfirmado: true \} : \{\}/)
 })
+
+test('el 409 trae `solicitudes` (PolicyApplication del portal) y `consejo`; un veredicto raro cae a desconocido', () => {
+  const r = interpretarEmitir(409, {
+    estado: 'error',
+    causa: 'reintento_sin_confirmar',
+    mensaje: 'La compañía ya tiene una solicitud APROBADA.',
+    ultimoError: '500: {"requestId":"0d65134e-161833"}',
+    consejo: 'El portal documenta el 500 como «an unhandled exception»…',
+    solicitudes: [
+      { id: 'P63', creadaEn: '2026-09-13T06:27:29Z', estadoId: 'Approved', estadoNombre: null, numeroPoliza: '849651', veredicto: 'aprobada' },
+      { id: 'P64', creadaEn: null, estadoId: 'Weird', estadoNombre: null, numeroPoliza: null, veredicto: 'lo-que-sea' },
+      'basura',
+    ],
+    rastro: [],
+    proyectoLegible: true,
+    crudo: {},
+  })
+  assert.equal(r.estado, 'reintento_sin_confirmar')
+  if (r.estado !== 'reintento_sin_confirmar') return
+  assert.equal(r.solicitudes.length, 2)
+  assert.equal(r.solicitudes[0].veredicto, 'aprobada')
+  assert.equal(r.solicitudes[0].numeroPoliza, '849651')
+  assert.equal(r.solicitudes[1].veredicto, 'desconocido')
+  assert.match(r.consejo ?? '', /unhandled exception/)
+  // Sin los campos (asegura vieja): listas vacías y consejo null, nunca un reventón.
+  const viejo = interpretarEmitir(409, { causa: 'reintento_sin_confirmar' })
+  assert.equal(viejo.estado === 'reintento_sin_confirmar' ? viejo.solicitudes.length : -1, 0)
+  assert.equal(viejo.estado === 'reintento_sin_confirmar' ? viejo.consejo : 'x', null)
+})
+
+test('el 502 del Submit lleva el consejo del portal a la pantalla, y sin él no aparece', () => {
+  const con = interpretarEmitir(502, { estado: 'error', causa: 'vendor', mensaje: '500: …', quizaEmitido: true, consejo: 'repórtalo a soporte' })
+  assert.equal(con.estado === 'error' ? con.consejo : null, 'repórtalo a soporte')
+  const sin = interpretarEmitir(502, { estado: 'error', causa: 'vendor', mensaje: '500: …', quizaEmitido: true })
+  assert.equal(sin.estado === 'error' ? 'consejo' in sin : true, false)
+})
+
+test('emitirAsegura solo manda acunarExistente cuando es true (lee el fuente)', () => {
+  const src = readFileSync(fileURLToPath(new URL('./retarificar-asegura.ts', import.meta.url)), 'utf8')
+  assert.match(src, /p\.acunarExistente === true \? \{ acunarExistente: true \} : \{\}/)
+})

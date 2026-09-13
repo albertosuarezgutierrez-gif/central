@@ -13,7 +13,7 @@ import {
   redactarCrudoVendor,
 } from '@/lib/codeoscopic/emitir'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada } from '@/lib/codeoscopic/fecha-efecto'
-import { intentoQuizaEmitido, rastroSolicitudEmision } from '@/lib/codeoscopic/reintento-emision'
+import { consejoTrasFallo, intentoQuizaEmitido, rastroSolicitudEmision, solicitudViva, solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
 import {
   conCuentaBancaria,
@@ -49,6 +49,8 @@ export const maxDuration = 60
  *   { projectId, confirmado: true, campos?: Record<string, unknown>, cuentaConfirmada?: string }
  *   `reintentoConfirmado: true` solo tras un intento que acabó en 5xx/corte de red (ver 409
  *   `reintento_sin_confirmar`): el corredor ha mirado el proyecto y no hay póliza.
+ *   `acunarExistente: true` cuando el proyecto YA cuenta una `policyApplication` aprobada con
+ *   nº de póliza (`solicitudes[]` del 409): se acuña ESA en la cartera y NO se envía nada.
  *
  * `cuentaConfirmada` es la MÁSCARA (`ES91…1332`) de la cuenta de cargo que la
  * pantalla enseñó tras el ReRate (`/oferta` → `cuenta`). Sin ella, una cuenta
@@ -290,7 +292,73 @@ export async function POST(req: Request) {
   // reenvía a ciegas: el corredor tiene que mirar el estado (aquí va el
   // proyecto crudo, gratis) y decirlo con `reintentoConfirmado: true`.
   const rastro = crudoPrevio ? rastroSolicitudEmision(crudoPrevio) : []
+  // La forma que el portal SÍ documenta: `policyApplications[]` con `status.id` y
+  // `policyNumber`. Es la única reconciliación posible (no hay webhook real).
+  const solicitudes = crudoPrevio ? solicitudesEmision(crudoPrevio) : []
+  const viva = solicitudViva(solicitudes)
   const quizaEmitidoAntes = intentoQuizaEmitido(p.error_mensaje)
+  const consejo = quizaEmitidoAntes ? consejoTrasFallo(p.error_mensaje) : null
+  const cargaReintento = () => ({
+    ultimoError: quizaEmitidoAntes ? p.error_mensaje : null,
+    consejo: consejo?.texto ?? null,
+    solicitudes,
+    rastro: redactarCrudoVendor(rastro),
+    proyectoLegible: crudoPrevio !== null,
+    crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
+  })
+
+  // ── La compañía YA aprobó una solicitud: se acuña ESA, no se envía otra ──
+  // Es el caso del 500 «Unknown error while waiting»: Codeoscopic dejó de
+  // esperar pero la solicitud siguió su curso en la compañía. Con nº de póliza
+  // en `policyApplications[]` no hay nada que reenviar — se registra en la
+  // cartera con ese número (mismo acuñado que el camino normal, sin Submit).
+  if (cuerpo.acunarExistente === true) {
+    const aprobada = solicitudes.find((s) => s.veredicto === 'aprobada' && s.numeroPoliza)
+    if (!aprobada) {
+      return NextResponse.json(
+        {
+          estado: 'error',
+          causa: 'sin_solicitud_aprobada',
+          mensaje: crudoPrevio
+            ? 'El proyecto no cuenta ninguna solicitud APROBADA con número de póliza: no hay nada que acuñar.'
+            : 'No se ha podido leer el proyecto en Codeoscopic: no se puede acuñar lo que no se ve.',
+          ...cargaReintento(),
+        },
+        { status: 409 },
+      )
+    }
+    const catalogoAc = await catalogoCompanias()
+    const codigoDgsAc = catalogoAc?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
+    if (!codigoDgsAc) {
+      return NextResponse.json(
+        { estado: 'emitido_sin_acunar', mensaje: `«${p.aseguradora}» no tiene código DGS en companias_dgs: acúñala a mano con el nº ${aprobada.numeroPoliza}.`, referenciaVendor: aprobada.numeroPoliza },
+        { status: 200 },
+      )
+    }
+    const acunadoAc = await registrarPolizaEmitida(correduria.id, {
+      clienteId: poliza.cliente_id,
+      actor,
+      proyecto: {
+        projectIdCodeoscopic: projectId,
+        producto: poliza.tipo,
+        codigoDgs: codigoDgsAc,
+        numeroPoliza: aprobada.numeroPoliza,
+        primaAnual: numero(cuerpo.primaAnual),
+        emitidaEn: aprobada.creadaEn ?? new Date().toISOString(),
+        riesgo: esObjeto(poliza.datos_especificos) ? poliza.datos_especificos : null,
+        fraccionamiento: poliza.fraccionamiento,
+      },
+    })
+    console.log(`[emitir] proyecto ${projectId}: acuñada la solicitud ${aprobada.id ?? '?'} ya aprobada por la compañía (póliza ${aprobada.numeroPoliza}) sin reenviar`)
+    return NextResponse.json({
+      estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
+      referenciaVendor: aprobada.numeroPoliza,
+      acunado: acunadoAc,
+      cuenta: null,
+      crudo: redactarCrudoVendor(crudoPrevio),
+    })
+  }
+
   if ((rastro.length > 0 || quizaEmitidoAntes) && cuerpo.reintentoConfirmado !== true) {
     console.log(
       `[emitir] proyecto ${projectId}: ${rastro.length > 0 ? `ya cuenta una solicitud (${rastro.map((r) => r.ruta).join(', ')})` : 'el último Submit acabó sin respuesta clara'} y no hay confirmación de reintento — no se envía`,
@@ -300,15 +368,14 @@ export async function POST(req: Request) {
         estado: 'error',
         causa: 'reintento_sin_confirmar',
         mensaje:
-          (rastro.length > 0
-            ? 'El proyecto YA cuenta una solicitud de emisión en Codeoscopic. '
-            : 'El último envío de este proyecto acabó sin respuesta clara del vendor, así que NO se sabe si la compañía llegó a emitir. ') +
+          (viva
+            ? `La compañía ya tiene una solicitud ${viva.veredicto === 'aprobada' ? 'APROBADA' : 'en curso'} de este proyecto${viva.numeroPoliza ? ` (póliza ${viva.numeroPoliza})` : ''}. `
+            : rastro.length > 0
+              ? 'El proyecto YA cuenta una solicitud de emisión en Codeoscopic. '
+              : 'El último envío de este proyecto acabó sin respuesta clara del vendor, así que NO se sabe si la compañía llegó a emitir. ') +
           'No se reenvía a ciegas: comprueba el estado del proyecto (abajo va tal cual lo devuelve Codeoscopic; ' +
           'si no cuenta ninguna solicitud, mira también Avant2) y, solo si no hay póliza, confirma el reintento.',
-        ultimoError: quizaEmitidoAntes ? p.error_mensaje : null,
-        rastro: redactarCrudoVendor(rastro),
-        proyectoLegible: crudoPrevio !== null,
-        crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
+        ...cargaReintento(),
       },
       { status: 409 },
     )
@@ -556,16 +623,12 @@ export async function POST(req: Request) {
         // compañía y no se sabe si emitió. La pantalla lo dice y el siguiente
         // intento exige `reintentoConfirmado` (ver arriba).
         quizaEmitido: envio.razon === 'vendor' && intentoQuizaEmitido(envio.mensaje),
+        // Lo que el portal manda hacer con ESE código: 500 → reportar; 502/503/504 → reintentar.
+        consejo: envio.razon === 'vendor' ? (consejoTrasFallo(envio.mensaje)?.texto ?? null) : null,
         // El candado en SQL (`bloquearEnvio`) ha visto lo que la lectura de
         // arriba no pudo (carrera entre dos peticiones): mismo contrato de 409.
         ...(envio.razon === 'quiza-emitido'
-          ? {
-              causa: 'reintento_sin_confirmar',
-              ultimoError: p.error_mensaje,
-              rastro: redactarCrudoVendor(rastro),
-              proyectoLegible: crudoPrevio !== null,
-              crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
-            }
+          ? { causa: 'reintento_sin_confirmar', ...cargaReintento(), ultimoError: p.error_mensaje }
           : {}),
         ...(envio.razon === 'ya-emitida' ? { causa: 'ya_emitida' } : {}),
       },

@@ -950,15 +950,53 @@ export type RespuestaEmitir =
       estado: 'reintento_sin_confirmar'
       mensaje: string
       ultimoError: string | null
+      /** Lo que el portal de Codeoscopic manda hacer con ese código (500 → reportar
+       *  a soporte; 502/503/504 → reintentar en unos minutos). `null` si no aplica. */
+      consejo: string | null
+      /** `policyApplications[]` del proyecto, la forma que documenta el portal:
+       *  una `aprobada` con `numeroPoliza` es una póliza que YA existe en la
+       *  compañía — se acuña (`acunarExistente`), no se reenvía. */
+      solicitudes: SolicitudEmisionVista[]
       rastro: unknown[]
       proyectoLegible: boolean
       crudo: unknown
     }
   /** `quizaEmitido`: el Submit acabó en 5xx — Codeoscopic dejó de esperar a la
    *  compañía y NO se sabe si emitió. No es un rechazo. */
-  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown; quizaEmitido?: boolean }
+  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown; quizaEmitido?: boolean; consejo?: string }
   | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null }
   | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
+
+export type SolicitudEmisionVista = {
+  id: string | null
+  creadaEn: string | null
+  estadoId: string | null
+  estadoNombre: string | null
+  numeroPoliza: string | null
+  veredicto: 'aprobada' | 'rechazada' | 'pendiente' | 'desconocido'
+}
+
+/** PURO. Una entrada que no tenga forma de solicitud se descarta; un veredicto
+ *  que no se reconoce cae a `desconocido`, nunca a `aprobada`. */
+export function leerSolicitudes(v: unknown): SolicitudEmisionVista[] {
+  if (!Array.isArray(v)) return []
+  const out: SolicitudEmisionVista[] = []
+  for (const x of v) {
+    if (typeof x !== 'object' || x === null) continue
+    const o = x as Record<string, unknown>
+    const veredicto = o.veredicto
+    out.push({
+      id: cadenaONulo(o.id),
+      creadaEn: cadenaONulo(o.creadaEn),
+      estadoId: cadenaONulo(o.estadoId),
+      estadoNombre: cadenaONulo(o.estadoNombre),
+      numeroPoliza: cadenaONulo(o.numeroPoliza),
+      veredicto:
+        veredicto === 'aprobada' || veredicto === 'rechazada' || veredicto === 'pendiente' ? veredicto : 'desconocido',
+    })
+  }
+  return out
+}
 
 /** Hasta 90 s: es el Submit, la llamada más pesada del flujo y sin duración documentada. */
 export const TIMEOUT_EMITIR_MS = 90_000
@@ -990,6 +1028,8 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
         cadenaONulo(r.mensaje) ??
         'El último envío acabó sin respuesta clara del vendor: comprueba el proyecto antes de reintentar.',
       ultimoError: cadenaONulo(r.ultimoError),
+      consejo: cadenaONulo(r.consejo),
+      solicitudes: leerSolicitudes(r.solicitudes),
       rastro: Array.isArray(r.rastro) ? r.rastro : [],
       proyectoLegible: r.proyectoLegible === true,
       crudo: r.crudo ?? null,
@@ -1021,6 +1061,7 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
     mensaje: [cadenaONulo(r.mensaje), detalle].filter((s): s is string => !!s).join(' — ') || `error ${status}`,
     crudo: r.crudo ?? null,
     ...(r.quizaEmitido === true ? { quizaEmitido: true } : {}),
+    ...(cadenaONulo(r.consejo) ? { consejo: cadenaONulo(r.consejo)! } : {}),
   }
 }
 
@@ -1042,6 +1083,9 @@ export async function emitirAsegura(p: {
   /** El corredor ha mirado el proyecto tras un intento «quizá emitido» y no hay
    *  póliza: solo así asegura reenvía (409 `reintento_sin_confirmar` si falta). */
   reintentoConfirmado?: boolean
+  /** El proyecto YA cuenta una solicitud APROBADA con nº de póliza: asegura la
+   *  acuña en la cartera y NO manda ningún Submit. */
+  acunarExistente?: boolean
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1057,6 +1101,7 @@ export async function emitirAsegura(p: {
           confirmado: true,
           ...(p.cuentaConfirmada ? { cuentaConfirmada: p.cuentaConfirmada } : {}),
           ...(p.reintentoConfirmado === true ? { reintentoConfirmado: true } : {}),
+          ...(p.acunarExistente === true ? { acunarExistente: true } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,
