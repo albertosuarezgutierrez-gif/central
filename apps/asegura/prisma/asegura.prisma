@@ -949,3 +949,40 @@ model PortalVistaCorredor {
   @@index([clienteId, creadoEn])
   @@map("portal_vista_corredor")
 }
+
+enum CanalRecaptacion {
+  whatsapp
+  email
+
+  @@map("canal_recaptacion")
+}
+
+enum EstadoEnvioRecaptacion {
+  enviado
+  enlace_abierto
+  abierto
+  pinchado
+
+  @@map("estado_envio_recaptacion")
+}
+
+/// Registro de cada intento de recaptación (WhatsApp manual o email por Resend)
+/// sobre un lead del volcado sin vencimiento. No hay tabla de "cola calculada":
+/// se deriva en cada GET (patrón `polizasSinRecibo()` de lib/cartera-impagados.ts).
+/// Esta tabla es solo el HISTORIAL de contactos, que alimenta el cooldown y el
+/// contador semanal. Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md.
+model RecaptacionEnvio {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String                 @map("correduria_id") @db.Uuid
+  clienteId        String                 @map("cliente_id") @db.Uuid
+  polizaId         String                 @map("poliza_id") @db.Uuid
+  canal            CanalRecaptacion
+  estado           EstadoEnvioRecaptacion
+  mensaje          String
+  resendMessageId  String?                @map("resend_message_id")
+  creadoPor        String                 @map("creado_por")
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime               @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  @@map("recaptacion_envios")
+}

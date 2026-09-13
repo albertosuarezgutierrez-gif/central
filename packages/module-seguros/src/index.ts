@@ -552,3 +552,6 @@ export {
 } from './normas.ts'
 export type { NormaCitable } from './normas.ts'
 export { nombreDePila } from './nombre-de-pila.ts'
+
+export { COOLDOWN_DIAS, enCooldown, textoBaseRecaptacionWhatsapp, textoBaseRecaptacionEmail } from './recaptacion.ts'
+export type { EnvioRecienteRecaptacion, PersonalizacionRecaptacion } from './recaptacion.ts'
