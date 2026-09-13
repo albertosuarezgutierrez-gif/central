@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📧 El vendor devuelve `emails: []`, no `email` — medido, y reparación GRATIS antes del Submit (13/09/2026).**
+  Alberto abrió «Retarificar» de Pilar y el log de `/precalificar` enseñó la persona real del proyecto 40685666:
+  `holder.emails` array vacío, sin clave `email` → el PATCH del 12/09 «no aplicaba» porque el vendor tira la clave
+  desconocida en silencio. `CLAVE_EMAIL_VENDOR='emails'` + `elementoEmail()`; la clave del elemento
+  (`address`/`email`/`value`) la descubre `completarPersonas` (PATCH+relectura por orden, log). Y `emitir/route.ts`
+  repara la persona ANTES del Submit (`huecosPersonaParaEmitir`, gratis): el proyecto ya pagado se emite sin otro
+  0,50€; lo que la ficha no tenga sale como `faltan_vendor` sin enviar nada. Pendiente: leer en el log qué clave
+  del elemento cuajó y fijarla; quitar el log temporal de `/precalificar`. PR #2853 mergeado; este es el siguiente.
+
 - **💸 Causa de fondo del día de emisión fallida: el `POST /insurances` mandaba la persona SIN email ni calle completa (12/09/2026).**
   Medido en `codeoscopic_consumo`: 7 cargos de 0,50€ (11-12/09) sobre la póliza de Pilar Franco Ruz, los 7 con la misma
   persona incompleta — `persona.ts` los omitía a propósito («no hacen falta para el precio»), el Submit los exige y el

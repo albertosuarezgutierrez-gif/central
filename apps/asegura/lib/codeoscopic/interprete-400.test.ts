@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { CLAVE_EMAIL_VENDOR } from './persona.ts'
+import { CLAVE_EMAIL_VENDOR, CLAVES_ELEMENTO_EMAIL } from './persona.ts'
 import {
   interpretarError400,
   lineasDelVendor,
@@ -120,17 +120,22 @@ test('sin dirección previa, nombreVia NO crea una dirección a medias', () => {
   assert.equal(leerCampoPersona(p, 'nombreVia'), null)
 })
 
-test('email: se escribe con la MISMA clave que el POST inicial y se lee de vuelta', () => {
+test('email: se escribe como emails[] (medido 13/09/2026) con la clave del elemento elegida, y se lee de vuelta', () => {
   const p = aplicarCampoPersona(PERSONA, 'email', 'a@b.es') as Record<string, unknown>
-  assert.equal(p[CLAVE_EMAIL_VENDOR], 'a@b.es')
+  assert.deepEqual(p[CLAVE_EMAIL_VENDOR], [{ address: 'a@b.es', primary: true }])
+  assert.equal('email' in p, false, 'la clave plana `email` NO existe en el vendor: fue lo que hizo que el PATCH del 12/09 no aplicara')
   assert.equal(leerCampoPersona(p, 'email'), 'a@b.es')
+  // El caller puede probar otra clave del elemento (descubrimiento de forma).
+  const q = aplicarCampoPersona(PERSONA, 'email', 'a@b.es', { claveEmail: 'email' }) as Record<string, unknown>
+  assert.deepEqual(q.emails, [{ email: 'a@b.es', primary: true }])
+  assert.equal(leerCampoPersona(q, 'email'), 'a@b.es')
+  assert.deepEqual(CLAVES_ELEMENTO_EMAIL, ['address', 'email', 'value'])
 })
 
-test('email: la relectura es tolerante a que el vendor lo guarde como emails[]', () => {
-  // Si el vendor lo devuelve con otra forma, «no aplicado» sería una mentira:
-  // el valor está. La forma real se fija con `estructuraPersonaVendor`.
+test('email: la relectura tolera las tres claves del elemento y un array vacío es «no está»', () => {
   assert.equal(leerCampoPersona({ emails: [{ address: 'a@b.es', primary: true }] }, 'email'), 'a@b.es')
   assert.equal(leerCampoPersona({ emails: [{ email: 'c@d.es' }] }, 'email'), 'c@d.es')
+  assert.equal(leerCampoPersona({ emails: [{ value: 'e@f.es' }] }, 'email'), 'e@f.es')
   assert.equal(leerCampoPersona({ emails: [] }, 'email'), null)
   assert.equal(leerCampoPersona({ name: 'X' }, 'email'), null)
 })

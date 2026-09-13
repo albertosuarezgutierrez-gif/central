@@ -59,19 +59,35 @@ export const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 export const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
- * 🚨 La CLAVE con la que viaja el correo en la persona del vendor. UNA constante
- * para el `POST /insurances` (`construirPersona`), el PATCH de reparación
- * (`aplicarCampoPersona`) y la relectura (`leerCampoPersona`), porque hoy es
- * una SUPOSICIÓN: el portal solo confirma que `email` es un campo de persona
- * (`docs/CODEOSCOPIC-API-PORTAL.md`, roles de hogar), no su forma exacta — y
- * el 12/09/2026 un PATCH con `email` devolvió 200 y al releer el proyecto
- * (40685666) el correo no estaba, mientras que `roadName` por el mismo PATCH
- * SÍ se aplicó. Eso apunta a que la clave (o la forma: ¿`emails[]`?) no es la
- * que el vendor espera. La precalificación registra la estructura de la
- * persona que devuelve el vendor (`estructuraPersonaVendor`) para fijarla con
- * un dato y no con otro 0,50€. Si cambia, cambia AQUÍ y en ningún otro sitio.
+ * 🚨 La forma con la que viaja el correo en la persona del vendor. UN sitio para
+ * el `POST /insurances` (`construirPersona`), el PATCH de reparación
+ * (`aplicarCampoPersona`) y la relectura (`leerCampoPersona`).
+ *
+ * MEDIDO el 13/09/2026 (04:55 UTC) sobre el proyecto real 40685666, leyendo la
+ * persona que devuelve el propio vendor (`registrarEstructuraPersonaVendor`):
+ * `holder` trae `emails` como ARRAY (vacío) — no existe ninguna clave `email`.
+ * Por eso el 12/09 un PATCH con `email: "…"` devolvió 200 y no aplicó: el
+ * vendor descarta la clave que no conoce sin quejarse, mientras que `roadName`
+ * (clave correcta) sí se aplicó por el mismo PATCH. Es la misma familia que
+ * `phones: [{ number, primary }]`.
+ *
+ * Lo que sigue SIN fixture es la clave del ELEMENTO (`address`? `email`?
+ * `value`?): `CLAVES_ELEMENTO_EMAIL` es el orden en que `completarPersonas`
+ * las prueba —PATCH + relectura, gratis— hasta que una cuaja, y lo registra en
+ * el log. El POST usa la primera; si el vendor la ignorase, la reparación
+ * previa al Submit lo repara igual sin otro cargo.
  */
-export const CLAVE_EMAIL_VENDOR = 'email'
+export const CLAVE_EMAIL_VENDOR = 'emails'
+export const CLAVES_ELEMENTO_EMAIL = ['address', 'email', 'value'] as const
+export type ClaveElementoEmail = (typeof CLAVES_ELEMENTO_EMAIL)[number]
+
+/** Un elemento de `emails[]` con la clave elegida (por defecto, la más probable). */
+export function elementoEmail(
+  email: string,
+  clave: ClaveElementoEmail = CLAVES_ELEMENTO_EMAIL[0],
+): Record<string, unknown> {
+  return { [clave]: email.trim(), primary: true }
+}
 
 export function texto(v: unknown): boolean {
   return typeof v === 'string' && v.trim() !== ''
@@ -120,8 +136,8 @@ export function construirPersona(d: DatosPersona, extra: { fechaCarnet?: string 
     persona.drivingLicenses = [{ type: { id: 'B' }, date: extra.fechaCarnet, issuingZone: { id: 'Spain' } }]
   }
   if (texto(d.apellido2)) persona.surname2 = d.apellido2!.trim()
-  // El correo, si la ficha lo tiene. Ver `CLAVE_EMAIL_VENDOR` para la clave.
-  if (texto(d.email)) persona[CLAVE_EMAIL_VENDOR] = d.email!.trim()
+  // El correo, si la ficha lo tiene — como `emails[]`, igual que `phones[]`.
+  if (texto(d.email)) persona[CLAVE_EMAIL_VENDOR] = [elementoEmail(d.email!)]
 
   // La dirección solo viaja si están las DOS mitades: el vendor rechaza el
   // municipio sin código postal. Cuatro productos del grupo de salida la exigen.
