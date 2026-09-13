@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-12T22:03:04Z",
+  "generadoEn": "2026-09-13T05:17:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -352,7 +352,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "usado",
@@ -460,7 +460,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2080,7 +2080,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 55
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2134,7 +2134,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 17
+        "evidencias": 18
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3901,6 +3901,9 @@
       "/api/operador/poliza",
       "/api/operador/poliza/emitida",
       "/api/operador/poliza/intervinientes",
+      "/api/operador/recaptacion",
+      "/api/operador/recaptacion/email",
+      "/api/operador/recaptacion/whatsapp",
       "/api/operador/resumen",
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
@@ -3909,7 +3912,8 @@
       "/api/operador/vencimientos",
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
-      "/api/portal/nota"
+      "/api/portal/nota",
+      "/api/webhooks/resend"
     ],
     "asegura-portal": [
       "/api/acceso/solicitar",
@@ -4771,6 +4775,9 @@
       "/api/correduria/leads",
       "/api/correduria/partes",
       "/api/correduria/poliza",
+      "/api/correduria/recaptacion",
+      "/api/correduria/recaptacion/email",
+      "/api/correduria/recaptacion/whatsapp",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
       "/api/correduria/supresiones",
@@ -6242,7 +6249,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1341,
+    "apis": 1348,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
