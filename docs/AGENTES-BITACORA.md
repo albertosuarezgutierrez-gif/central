@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-13 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
+  Vía B sana (`_buzon_pdf` última copia 12/09, `dias_caido=1`); sin backlog en
+  `PDF-pendiente`/`Revisar` (confirmado por `search_threads`); `agente_salud` actualizado ok=true.
+  Candidatos Gmail (7, todos ya cerrados en pasadas previas o sin ser factura): 5 hilos de mensajes
+  de huésped de Booking (no son liquidaciones) + 1 reenvío del colegio (ClickEdu, ACPA/Plan Lector,
+  sin importe) → descartados, etiquetados `Facturas/Procesada`. Ninguna factura nueva que archivar.
+  `_subir_aqui` y raíz `FACTURAS Apartamentos/2026` sin subidas manuales nuevas (últimos ficheros
+  sueltos en raíz son de jul-ago, ya conocidos). Paso 4.0 (`v_facturas_sin_cargo`): 1 `sin_revisar`
+  (OpenRouter sept., 25,64 USD, archivada 12/09) — sin cargo aún porque el feed bancario llega solo
+  hasta 10/09, no es `sin_cargo` real, queda pendiente para la próxima pasada; 9 `revisada_sin_cargo`
+  sin cambios (motivo ya fijado). Papelera `_DUPLICADOS_BORRAR`: 9+ avisos históricos, no
+  re-verificados hoy (sin duplicados nuevos que añadir). dudas: —; fallos: —; PRs/commits: SHA de
+  este commit.
 - **2026-09-12 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
   Vía B sana (`_buzon_pdf` copió hoy mismo, `dias_caido=0`); sin backlog en
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, `agente_salud`
