@@ -21,6 +21,7 @@ import LeadsPortal from './LeadsPortal'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
 import DeclaradasVencer from './DeclaradasVencer'
 import ListaCartera from './ListaCartera'
+import Recaptacion from './Recaptacion'
 import Secciones, { type ContadoresSeccion } from './Secciones'
 import { MOTIVOS, type MotivoError } from './estado-puerto'
 import {
@@ -144,6 +145,7 @@ export default function CorreduriaClient() {
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
+  const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
   const [nDeclaradas, setNDeclaradas] = useState<number | null | undefined>(undefined)
 
@@ -208,11 +210,11 @@ export default function CorreduriaClient() {
       title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra y declaradas de otra compañía a punto de renovar',
     },
     clientes: {
-      // Aquí el número NO es trabajo pendiente, es cuántos clientes cumplen el
-      // filtro. Por eso va en tono neutro: pintarlo de alarma como los demás
-      // haría que una cartera sana pareciera una cola de trabajo.
-      contador: agregarContadores([nClientes]),
-      title: 'Clientes que cumplen el filtro actual',
+      // El listado NO es trabajo pendiente (cuántos clientes cumplen el
+      // filtro), pero la recaptación SÍ lo es (leads a los que contactar) —
+      // igual que «Hoy» suma varias colas de una sección en un solo número.
+      contador: agregarContadores([nClientes, nRecaptacion]),
+      title: 'Clientes que cumplen el filtro actual y leads pendientes de recaptar',
     },
     comisiones: {
       contador: agregarContadores([nCuadre]),
@@ -336,6 +338,13 @@ export default function CorreduriaClient() {
           Es la herramienta de trabajo; «Cartera» es la foto. */}
       <div role="tabpanel" aria-label="Clientes" className="corr-panel" style={panel('clientes')}>
         <ListaCartera onContador={setNClientes} />
+
+        {/* Leads del volcado sin vencimiento, con contacto, que hoy no son
+            cliente vivo por CIMA: recaptarlos es venta, no mantenimiento de
+            cartera, pero comparte pestaña con el listado de clientes porque
+            ambos parten de la misma base y compiten por el mismo hueco de
+            atención comercial. */}
+        <Recaptacion onContador={setNRecaptacion} />
       </div>
 
       {/* ══ CARTERA ══════════════════════════════════════════════════════════ */}
