@@ -20,6 +20,7 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto 
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
+import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
 
 /**
  * Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el
@@ -461,16 +462,24 @@ export default function Retarificador({
   const [matriculacion, setMatriculacion] = useState(
     guardadaPrevia?.formulario.fechaMatriculacion ?? fechaMatriculacion ?? '',
   )
-  const [correcciones, setCorrecciones] = useState<Record<string, string>>(() => ({
-    // La fecha de efecto SIEMPRE arranca con un valor — nunca en blanco (ver
-    // el campo en el Paso 2). Una `guardadaPrevia` sin ese campo (cotizaciones
-    // de antes del 12/09/2026) tampoco lo trae vacío: cae al mismo default.
-    // MAÑANA, no hoy (Alberto, 13/09/2026): con efecto HOY la cotización moría
-    // a medianoche si no se emitía ese mismo día (proyecto 40685666). Un día
-    // de margen a coste cero; el mismo default que el supuesto de asegura.
-    fechaEfecto: masDiasISO(1),
-    ...(guardadaPrevia?.formulario.correcciones ?? {}),
-  }))
+  const [correcciones, setCorrecciones] = useState<Record<string, string>>(() => {
+    const guardadas = guardadaPrevia?.formulario.correcciones ?? {}
+    return {
+      ...guardadas,
+      // La fecha de efecto SIEMPRE arranca con un valor — nunca en blanco (ver
+      // el campo en el Paso 2). MAÑANA, no hoy (Alberto, 13/09/2026): con efecto
+      // HOY la cotización moría a medianoche si no se emitía ese mismo día
+      // (proyecto 40685666). La guardada solo se reutiliza si sigue dentro de
+      // [hoy, hoy+90]: la de una cotización caducada volvía aquí tal cual y
+      // «Pedir precio» moría en el 422 de asegura hasta cambiarla a mano.
+      fechaEfecto: fechaEfectoInicial(
+        guardadas.fechaEfecto,
+        hoyISO(),
+        masDiasISO(1),
+        MAX_DIAS_VISTA_EFECTO,
+      ),
+    }
+  })
   // Una cotización recuperada con la fecha de efecto ya PASADA (13/09/2026,
   // proyecto 40685666: cotizado el 12/09 con efecto 12/09, al día siguiente la
   // compañía contestó «The effective date cannot be before today») no se

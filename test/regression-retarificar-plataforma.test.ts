@@ -648,3 +648,13 @@ test('los detectores de la precalificación reconocen lo que buscan', () => {
   assert.match('<input id="cp" maxLength={5} />', /id="cp"/, 'el detector de la caja de código postal no funciona')
   assert.match('vehiculo={null}', /vehiculo=\{null\}/, 'el detector del vehículo clavado no funciona')
 })
+
+test('la fecha de efecto guardada pasa por fechaEfectoInicial() antes de precargar el campo (13/09/2026)', () => {
+  // Las `correcciones` guardadas traen la fechaEfecto de la cotización anterior;
+  // volcarlas tal cual precargaba una fecha ya caducada y «Pedir precio» moría
+  // en el 422 de asegura. El helper (lib/fecha-efecto-inicial.ts) la descarta
+  // si cae fuera de [hoy, hoy+90].
+  const src = leer(PANTALLA)
+  assert.match(src, /fechaEfecto:\s*fechaEfectoInicial\(/, 'el initializer de `correcciones` debe pasar la fecha guardada por fechaEfectoInicial()')
+  assert.match(src, /from '@\/lib\/fecha-efecto-inicial'/)
+})
