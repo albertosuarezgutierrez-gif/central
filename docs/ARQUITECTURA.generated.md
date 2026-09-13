@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (13/09/2026) 🚨 CIMA caído 12-13/09 por DNS de `app.grupoasegura.com` — arreglado + mapper corregido + cuarentena desatascada 42→20
 - (13/09/2026) 🔒 Login de plataforma sin rate limit — fuerza bruta viable, cerrado
 - (13/09/2026) 🔎 Buscador de la cartera (asegura) no encontraba «Alberto Suarez» sin tilde — dos bugs apilados, el segundo escondido detrás del primero
 - (13/09/2026) 🔌 `sivra_rates_snapshot` en 401 desde el 11/09 — NO es la credencial HMAC, es el endpoint `/api/rates` de Smoobu
@@ -271,5 +272,4 @@
 - (12/09/2026) 🔔 Avisos por Web Push en `apps/asegura-portal`
 - (13/09/2026) 📧 El vendor devuelve `emails: []`, no `email` — medido, y reparación GRATIS antes del Submit
 - (12/09/2026) 📞 Recaptación de leads sin vencimiento — completo
-- (12/09/2026) 🕵️ Pólizas "zombi" del volcado + revertido un arreglo propio equivocado
 
