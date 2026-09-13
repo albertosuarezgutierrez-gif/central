@@ -35,7 +35,11 @@
   `policyNumber`; 500 = «report to support» (`soporteapi@avant2.es`), 502/503/504 = «try again». Sin webhooks ni
   idempotencia. Cableado: `solicitudesEmision()`/`consejoTrasFallo()` (`reintento-emision.ts`), 409 con `solicitudes`,
   **aprobada con nº → se acuña (`acunarExistente`) sin reenviar**, pendiente → sin reintento. Literal en
-  `docs/CODEOSCOPIC-API-PORTAL.md` § Policy application. #2870 mergeado antes (fail-closed base).
+  `docs/CODEOSCOPIC-API-PORTAL.md` § Policy application. #2870 mergeado antes (fail-closed base). #2872 mergeado y
+  probado: el 40685793 sale con `policyApplications[]` VACÍO (Codeoscopic no registró la solicitud). **Alberto escribió a
+  Juan Manuel Fernández (Product Manager API, cc soporteapi@avant2.es) con el requestId** — pendiente de respuesta; el
+  hilo de Manuel del 03/06 (sandbox + Basic Auth del webhook) sigue sin contestar. Hueco siguiente: al acuñar, bajar
+  `issuedDocuments[]` (`InsuranceFile_V1`) a `seguros.documentos` — falta la forma del tag `File` del portal.
 - **🛑 Primer Submit que LLEGA a la compañía… y Codeoscopic contesta 500 «Unknown error while waiting for the operation to complete» (13/09/2026).**
   Proyecto 40685793 (Pilar, Allianz; 0,50€ del ReRate, el Submit no cobra): la persona iba completa (ya no hay 400 de
   email/calle — el `POST /insurances` de #2859 la manda entera) y el 500 es del vendor esperando a la compañía, a las
