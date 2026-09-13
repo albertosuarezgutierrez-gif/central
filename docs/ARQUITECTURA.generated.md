@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (13/09/2026) ⏳ La fecha de efecto CADUCA: el proyecto 40685666 murió al cambiar de día
 - (12/09/2026) 🔔 Avisos por Web Push en `apps/asegura-portal`
 - (13/09/2026) 📧 El vendor devuelve `emails: []`, no `email` — medido, y reparación GRATIS antes del Submit
 - (12/09/2026) 📞 Recaptación de leads sin vencimiento — completo
@@ -271,5 +272,4 @@
 - (12/09/2026) 🔒 `patch_no_aplicado` del Submit: mensaje falso + PII en claro en `crudo`
 - (12/09/2026) 🧾 Diagnóstico de «subida de póliza trae poca información» + spec de tercero
 - (12/09/2026) 📮 14º 400 real de Codeoscopic — el Submit trocea la calle en TRES campos
-- (12/09/2026) 🔀 Comentarios de `decidir.ts` (agente huéspedes) corregidos: OpenRouter primario, no NIM
 
