@@ -1,0 +1,66 @@
+{
+ "sesion": "8a381aa6-7e09-5a27-8215-50f481efa12e",
+ "inicio": "2026-09-13T08:34:41.691Z",
+ "fin": "2026-09-13T08:44:38.398Z",
+ "llamadas": 47,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 1238,
+   "chars_out": 1219,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 547031,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1,
+    "PushNotification": 1
+   }
+  },
+  "bash": {
+   "llamadas": 12,
+   "chars_in": 60668,
+   "chars_out": 15208,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 12
+   }
+  },
+  "mcp:Booking-com": {
+   "llamadas": 27,
+   "chars_in": 5643,
+   "chars_out": 462326,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking-com__accommodations_search": 27
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 3,
+   "chars_in": 294,
+   "chars_out": 17235,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1,
+    "Read": 2
+   }
+  },
+  "escritura": {
+   "llamadas": 2,
+   "chars_in": 2774,
+   "chars_out": 548538,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 2
+   }
+  }
+ }
+}
