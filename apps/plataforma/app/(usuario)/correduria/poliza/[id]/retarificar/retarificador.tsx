@@ -455,8 +455,14 @@ export default function Retarificador({
     fechaEfecto: hoyISO(),
     ...(guardadaPrevia?.formulario.correcciones ?? {}),
   }))
+  // Una cotización recuperada con la fecha de efecto ya PASADA (13/09/2026,
+  // proyecto 40685666: cotizado el 12/09 con efecto 12/09, al día siguiente la
+  // compañía contestó «The effective date cannot be before today») no se
+  // ofrece: su «Emitir» sería un botón sin salida. Arranca como descartada
+  // (`forzarNuevo` verdadero, «Pedir precio» encendido) y se explica arriba.
+  const guardadaViva = guardadaPrevia !== null && !guardadaPrevia.caducada
   const [resultado, setResultado] = useState<Resultado>(
-    guardadaPrevia ? resultadoDeGuardada(guardadaPrevia) : { estado: 'idle' },
+    guardadaViva ? resultadoDeGuardada(guardadaPrevia) : { estado: 'idle' },
   )
   // 🚨 `guardadaPrevia` recupera GRATIS el precio de una cotización ya
   // pagada — pero si ese proyecto quedó con una `effectiveDate` que el
@@ -466,7 +472,7 @@ export default function Retarificador({
   // un precio NUEVO. Sin esta vía, la pantalla resuelve `resultado` directo
   // a `ok` con el proyecto viejo y el botón «Emitir» de la tabla de precios
   // confirma ESE proyecto sin pasar nunca por el campo de fecha de arriba.
-  const [guardadaDescartada, setGuardadaDescartada] = useState(false)
+  const [guardadaDescartada, setGuardadaDescartada] = useState(!guardadaViva && guardadaPrevia !== null)
 
   /**
    * Un catálogo del vendor, por el puerto. **Gratis.**
@@ -929,6 +935,7 @@ export default function Retarificador({
 
   return (
     <>
+      {guardadaPrevia?.caducada && <BannerCaducada guardadaPrevia={guardadaPrevia} />}
       {guardadaPrevia && !guardadaDescartada && (
         <BannerRecuperada
           guardadaPrevia={guardadaPrevia}
@@ -1326,7 +1333,9 @@ export default function Retarificador({
                 Precargada a hoy: es la fecha que se manda al pedir precio. Cámbiala solo si el
                 cliente quiere que la póliza empiece otro día — <strong>siempre a ≤90 días vista</strong>,
                 la compañía rechaza fechas más lejanas al confirmar el precio, y para entonces ya se
-                ha pagado la cotización. No se puede arreglar después: hay que acertarla aquí.
+                ha pagado la cotización. No se puede arreglar después: hay que acertarla aquí.{' '}
+                <strong>Y hay que confirmar el precio y emitir antes de que pase ese día</strong>: con la
+                fecha de efecto ya pasada la compañía tampoco acepta (13/09/2026), y la cotización se pierde.
               </>
             }
           >
@@ -1738,6 +1747,26 @@ function BannerRecuperada({
       >
         Descartar y pedir precio de cero
       </button>
+    </div>
+  )
+}
+
+function BannerCaducada({ guardadaPrevia }: { guardadaPrevia: TarificacionGuardadaAuto }) {
+  const fecha = new Date(guardadaPrevia.creadaEn)
+  const cuando = Number.isNaN(fecha.getTime())
+    ? 'antes'
+    : fecha.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return (
+    <div className="card" style={{ borderColor: 'var(--danger)', borderWidth: 2, background: 'rgba(220, 38, 38, 0.06)' }}>
+      <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+        ⏳ La cotización del {cuando} ha caducado
+      </p>
+      <p style={{ margin: '4px 0 0' }}>
+        Se pidió con fecha de efecto <strong>{guardadaPrevia.fechaEfecto ?? '(sin fecha)'}</strong>, que ya ha
+        pasado: la compañía no confirma ni emite una póliza con efecto anterior a hoy, y esa fecha no se puede
+        cambiar en un proyecto ya creado. <strong>No se ha cobrado nada.</strong> Hay que pedir precio de cero
+        (0,50€) con la fecha de efecto de abajo, y confirmar y emitir <strong>antes de que pase ese día</strong>.
+      </p>
     </div>
   )
 }

@@ -22,6 +22,7 @@ import {
 } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
+import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada } from '@/lib/codeoscopic/fecha-efecto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -144,6 +145,30 @@ export async function POST(req: Request) {
     // guardar la cotización en nuestra BD, solo el precio en euros) y de paso
     // el `insuranceLine` que exige el PATCH de abajo.
     let cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
+
+    // ── Fecha de efecto ya PASADA (13/09/2026, décimo 400 real) ────────────
+    // El proyecto 40685666 se cotizó el 12/09 con efecto 12/09; al día
+    // siguiente la compañía contestó al ReRate «The effective date cannot be
+    // before today.» y `effectiveDate` es de solo lectura (ver
+    // `actualizarFechaEfecto`): ese proyecto está muerto y ningún PATCH lo
+    // resucita. Se detecta AQUÍ, sobre la relectura gratis de arriba y sin
+    // llamar al ReRate, con el mismo 422 `faltan_vendor` que la pantalla ya
+    // sabe pintar como «hay que descartar y pedir precio de cero». Si el
+    // vendor no trae la fecha no se afirma nada: sigue el camino normal.
+    if (fechaEfectoCaducada(cotizacion.fechaEfecto)) {
+      return NextResponse.json(
+        {
+          estado: 'error',
+          causa: 'faltan_vendor',
+          projectId: t.project_id_codeoscopic,
+          faltan: [reparoFechaCaducada(cotizacion.fechaEfecto!)],
+          sugeridos: {},
+          noReconocidos: [],
+          mensaje: mensajeFechaCaducada(cotizacion.fechaEfecto!, t.project_id_codeoscopic),
+        },
+        { status: 422 },
+      )
+    }
 
     // 🔬 Diagnóstico GRATIS (12/09/2026, octavo fallo real, mismo mensaje otra
     // vez): con el PATCH+reread ya en producción, el ReRate volvió a rechazar

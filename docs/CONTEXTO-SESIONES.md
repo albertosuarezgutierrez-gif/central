@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **⏳ La fecha de efecto CADUCA: el proyecto 40685666 murió al cambiar de día (13/09/2026).**
+  Con #2859 desplegado, Alberto pulsó «Confirmar precio» y la compañía contestó «The effective date cannot be
+  before today»: se cotizó el 12/09 con efecto 12/09 (la pantalla precarga HOY) y `effectiveDate` es de solo
+  lectura → proyecto muerto, 0€ gastados (medido en `codeoscopic_consumo`). Nuevo `fechaEfectoCaducada()`
+  (`apps/asegura/lib/codeoscopic/fecha-efecto.ts`, hoy en Madrid): `/oferta` y `/emitir` cortan con 422 sin llamar
+  al vendor, `tarificacion` devuelve `caducada` y plataforma enseña banner rojo con «Pedir precio» encendido.
+  Cepo visto en rojo (2 brazos). Pendiente: Alberto decide si la fecha precargada pasa de HOY a MAÑANA; la clave de
+  `emails[]` sigue sin descubrir (el ReRate murió antes por la fecha). PR de esta entrada: el siguiente a #2859.
 - **📧 El vendor devuelve `emails: []`, no `email` — medido, y reparación GRATIS antes del Submit (13/09/2026).**
   Alberto abrió «Retarificar» de Pilar y el log de `/precalificar` enseñó la persona real del proyecto 40685666:
   `holder.emails` array vacío, sin clave `email` → el PATCH del 12/09 «no aplicaba» porque el vendor tira la clave

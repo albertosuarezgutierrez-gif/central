@@ -1077,6 +1077,11 @@ export type TarificacionGuardadaAuto = {
   cotizacionId: string
   projectId: string
   creadaEn: string
+  /** `effectiveDate` con la que se cotizó; null si asegura no la trae. */
+  fechaEfecto: string | null
+  /** Fecha de efecto ya pasada (lo decide asegura, en hora de Madrid): el
+   *  proyecto está muerto y la pantalla no debe ofrecer su precio. */
+  caducada: boolean
   precios: Precio[]
   formulario: FormularioGuardado
 }
@@ -1146,6 +1151,8 @@ export function interpretarTarificacionGuardada(status: number, json: unknown): 
         cotizacionId: r.cotizacionId,
         projectId: r.projectId,
         creadaEn: cadenaONulo(r.creadaEn) ?? '',
+        fechaEfecto: cadenaONulo(r.fechaEfecto),
+        caducada: r.caducada === true,
         precios,
         formulario,
       },
