@@ -1,0 +1,66 @@
+{
+ "sesion": "9ce547e3-ec55-5952-ad6c-aa0e5b0fb976",
+ "inicio": "2026-09-13T18:03:19.138Z",
+ "fin": "2026-09-13T18:11:55.071Z",
+ "llamadas": 32,
+ "categorias": {
+  "otro": {
+   "llamadas": 6,
+   "chars_in": 2413,
+   "chars_out": 2502,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 19303,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 1,
+    "AskUserQuestion": 2,
+    "SendUserFile": 1
+   }
+  },
+  "bash": {
+   "llamadas": 21,
+   "chars_in": 2901,
+   "chars_out": 22344,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 21
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 105,
+   "chars_out": 6210,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 3,
+   "chars_in": 284,
+   "chars_out": 641672,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 3
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1652,
+   "chars_out": 3514,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 1
+   }
+  }
+ }
+}
