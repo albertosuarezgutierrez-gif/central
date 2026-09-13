@@ -48,21 +48,43 @@ export async function GET(req: Request) {
   })
   const enVentana = filas.filter((o) => debeAvisarPush({ fechaAccionable: o.fechaAccionable, avisadaPushAt: null }, hoy))
 
-  // 🚨 Re-comprobar que la póliza SIGUE viva: una obligación se deriva cuando el cliente entra en
-  // su bóveda (`sincronizarObligacionesDeIdentidad`) y puede no volver a entrar nunca — si CIMA
-  // cancela la póliza después, la fila de obligación se queda huérfana y este cron mandaría un
-  // push diciéndole a alguien que decida sobre un seguro que ya no tiene. Mismo filtro que el
-  // correo: cartera viva, no fusionada y en un estado vigente. Una obligación SIN póliza
-  // (declarada por la persona) no pasa por aquí: sigue siendo candidata igual.
+  // 🚨 Re-comprobar que la póliza SIGUE viva Y sigue siendo DE ESA IDENTIDAD: una obligación se
+  // deriva cuando el cliente entra en su bóveda (`sincronizarObligacionesDeIdentidad`) y puede no
+  // volver a entrar nunca — si CIMA cancela la póliza después, o el vínculo se revoca, la fila de
+  // obligación se queda huérfana y este cron mandaría un push diciéndole a alguien que decida
+  // sobre un seguro que ya no es suyo. La comprobación pasa por `portal_vinculo` (la única costura
+  // identidad↔cliente, igual que `lib/cartera-lectura.ts`), no solo por el estado de la póliza:
+  // un `polizaId` correcto pero de un cliente que esta identidad ya no tiene vinculado no cuenta.
+  // Una obligación SIN póliza (declarada por la persona) no pasa por aquí: sigue siendo candidata igual.
+  const identidadIds = [...new Set(enVentana.map((o) => o.identidadId))]
+  const vinculos = identidadIds.length
+    ? await prisma.portalVinculo.findMany({
+        where: { identidadId: { in: identidadIds } },
+        select: { identidadId: true, clienteId: true },
+      })
+    : []
+  const clientesPorIdentidad = new Map<string, Set<string>>()
+  for (const v of vinculos) {
+    const set = clientesPorIdentidad.get(v.identidadId) ?? new Set<string>()
+    set.add(v.clienteId)
+    clientesPorIdentidad.set(v.identidadId, set)
+  }
+
   const polizaIds = [...new Set(enVentana.map((o) => o.polizaId).filter((id): id is string => id !== null))]
   const polizasVivas = polizaIds.length
     ? await prisma.poliza.findMany({
         where: { id: { in: polizaIds }, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null, estado: { in: [...POLIZA_ESTADOS_VIGENTES] } },
-        select: { id: true },
+        select: { id: true, clienteId: true },
       })
     : []
-  const idsVivos = new Set(polizasVivas.map((p) => p.id))
-  const debidas = enVentana.filter((o) => o.polizaId === null || idsVivos.has(o.polizaId))
+  const clientePorPoliza = new Map(polizasVivas.map((p) => [p.id, p.clienteId]))
+
+  const debidas = enVentana.filter((o) => {
+    if (o.polizaId === null) return true
+    const clienteId = clientePorPoliza.get(o.polizaId)
+    if (!clienteId) return false
+    return clientesPorIdentidad.get(o.identidadId)?.has(clienteId) ?? false
+  })
 
   let avisadas = 0
   let sinSuscripcion = 0
@@ -87,7 +109,11 @@ export async function GET(req: Request) {
       const res = await sendWebPush(vapid, { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.authKey } }, payload)
       if (res.ok) algunaOk = true
       // Suscripción muerta (404/410): se borra para no seguir intentando en cada pasada.
-      if (res.gone) await prisma.portalPushSuscripcion.delete({ where: { id: s.id } }).catch(() => {})
+      // `deleteMany` con `identidadId` (no `delete({ id })`): `s` sale de una consulta ya
+      // acotada a `o.identidadId`, pero la forma segura es la misma pase lo que pase después.
+      if (res.gone) {
+        await prisma.portalPushSuscripcion.deleteMany({ where: { id: s.id, identidadId: o.identidadId } }).catch(() => {})
+      }
     }
 
     // Se sella SOLO si al menos un envío se aceptó (mismo criterio que `avisada_at` del correo):
