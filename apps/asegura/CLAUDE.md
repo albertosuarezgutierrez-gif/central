@@ -371,6 +371,15 @@ falta (correo, calle) desde la ficha, y lo que la ficha no tiene sale como `falt
 enviado nada** — así un proyecto ya pagado que nació sin correo (los 7 de Pilar) se emite sin otro 0,50€;
 (5) `codeoscopic_projects.error_mensaje` guarda ya el 400 del Submit (antes quedaba NULL). El log
 `[precalificar] estructura de la persona que devuelve el vendor` es temporal: quitarlo al fijar la clave.
+(6) ⏳ **La fecha de efecto también CADUCA (décimo 400 real, 13/09/2026):** el 40685666 se cotizó el 12/09
+con efecto 12/09 (la pantalla precargaba HOY; desde el 13/09 precarga MAÑANA, con `min`=hoy y `max`=hoy+90) y al día siguiente el ReRate contestó
+«The effective date cannot be before today.» Como `effectiveDate` es de solo lectura, ese proyecto está
+MUERTO: una cotización hay que confirmarla y emitirla ANTES de que pase su fecha de efecto. La regla
+entera ([hoy, hoy+90]) la aplica `revisarDatosAuto` antes de pagar (`motivoFechaEfectoInvalida`), y la caducidad la detecta gratis
+`fechaEfectoCaducada()` (`lib/codeoscopic/fecha-efecto.ts`, hoy en hora de Madrid): `/oferta` y
+`/emitir` devuelven 422 `faltan_vendor` con `fechaEfecto` SIN llamar al vendor, `tarificacion` marca la
+guardada como `caducada` y plataforma no la ofrece (banner rojo + «Pedir precio» encendido con
+`forzarNuevo`). Sin fecha no se afirma nada (`false`): que hable el ReRate.
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 

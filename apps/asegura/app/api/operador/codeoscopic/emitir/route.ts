@@ -12,6 +12,7 @@ import {
   huecosPersonaParaEmitir,
   redactarCrudoVendor,
 } from '@/lib/codeoscopic/emitir'
+import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada } from '@/lib/codeoscopic/fecha-efecto'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
 import {
   conCuentaBancaria,
@@ -261,6 +262,26 @@ export async function POST(req: Request) {
     return null
   })
   if (crudoPrevio) {
+    // Fecha de efecto ya PASADA (13/09/2026): la compañía no emite con una
+    // fecha de efecto anterior a hoy y el proyecto no la deja cambiar — el
+    // mismo cepo que `/oferta`, aquí sobre la lectura gratis previa al Submit.
+    // El intento NO se gasta.
+    const fechaEfectoProyecto = cadena(crudoPrevio.effectiveDate)
+    if (fechaEfectoCaducada(fechaEfectoProyecto)) {
+      console.log(`[emitir] proyecto ${projectId} con fecha de efecto pasada (${fechaEfectoProyecto}): no se envía nada`)
+      return NextResponse.json(
+        {
+          estado: 'error',
+          causa: 'faltan_vendor',
+          mensaje: `Antes de enviar: ${mensajeFechaCaducada(fechaEfectoProyecto!, projectId)} NO se ha enviado nada.`,
+          faltan: [reparoFechaCaducada(fechaEfectoProyecto!)],
+          sugeridos: {},
+          noReconocidos: [],
+          crudo: null,
+        },
+        { status: 422 },
+      )
+    }
     const huecos = huecosPersonaParaEmitir(crudoPrevio)
     if (huecos.length > 0) {
       const pedidos = huecos.map((h) => h.campo)

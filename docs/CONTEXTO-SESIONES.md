@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **⏳ La fecha de efecto CADUCA: el proyecto 40685666 murió al cambiar de día (13/09/2026).**
+  Con #2859 desplegado, Alberto pulsó «Confirmar precio» y la compañía contestó «The effective date cannot be
+  before today»: se cotizó el 12/09 con efecto 12/09 (la pantalla precarga HOY) y `effectiveDate` es de solo
+  lectura → proyecto muerto, 0€ gastados (medido en `codeoscopic_consumo`). Nuevo `fechaEfectoCaducada()`
+  (`apps/asegura/lib/codeoscopic/fecha-efecto.ts`, hoy en Madrid): `/oferta` y `/emitir` cortan con 422 sin llamar
+  al vendor, `tarificacion` devuelve `caducada` y plataforma enseña banner rojo con «Pedir precio» encendido.
+  Cepo visto en rojo (2+1 brazos). Alberto: «ni antes de hoy ni a más de 90 días» → la regla entera se valida antes de
+  pagar (`revisarDatosAuto`, `min`/`max` en pantalla) y la fecha se precarga a MAÑANA. La clave de `emails[]` sigue sin
+  descubrir (el ReRate murió antes por la fecha). PR #2863.
 - **🔔 Avisos por Web Push en `apps/asegura-portal` (12/09/2026).** Nuevo canal, hermano del correo
   de vencimientos de `apps/asegura` pero SIN compartir sello ni sitio: la suscripción push no es un
   dato descifrable, así que vive en el portal, sobre `seguros.portal_obligacion` (sello propio

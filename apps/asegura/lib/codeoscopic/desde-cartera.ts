@@ -406,7 +406,7 @@ export function precalificarAuto(
   // 🎯 Retarificar una póliza de la cartera es para EMITIR: se exige ya lo que
   // el Submit pedirá después y el proyecto no admite añadir (correo, calle
   // completa). Ver `OpcionesRevision` en `peticion-auto.ts`.
-  return { datos, supuestos, faltan: revisarDatosAuto(datos, { paraEmitir: true }) }
+  return { datos, supuestos, faltan: revisarDatosAuto(datos, { paraEmitir: true, hoy }) }
 }
 
 // ─── AUTO, oportunidad nueva (sin póliza) ────────────────────────────────────
@@ -519,7 +519,7 @@ export function precalificarAutoNueva(
     })
   }
 
-  return { datos, supuestos, faltan: revisarDatosAuto(datos) }
+  return { datos, supuestos, faltan: revisarDatosAuto(datos, { hoy }) }
 }
 
 /**
