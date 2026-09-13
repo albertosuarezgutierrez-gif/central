@@ -15,6 +15,7 @@
 // decide la cascada del caller (ficha → corredor), y nada personal se supone.
 
 import type { DatosAuto, Reparo } from './peticion-auto.ts'
+import { CLAVE_EMAIL_VENDOR } from './persona.ts'
 
 /** Los papeles en los que va la persona. `holder` siempre; el resto según ramo. */
 export type Papel = 'holder' | 'owner' | 'primaryDriver' | 'secondaryDriver'
@@ -25,6 +26,8 @@ export type Papel = 'holder' | 'owner' | 'primaryDriver' | 'secondaryDriver'
  */
 export type CampoPersona =
   | 'nombreVia'
+  | 'numeroVia'
+  | 'tipoVia'
   | 'cpResidencia'
   | 'municipioResidenciaId'
   | 'dni'
@@ -35,9 +38,12 @@ export type CampoPersona =
   | 'estadoCivil'
   | 'telefono'
   | 'fechaCarnet'
+  | 'email'
 
 export const CAMPOS_PERSONA: readonly CampoPersona[] = [
   'nombreVia',
+  'numeroVia',
+  'tipoVia',
   'cpResidencia',
   'municipioResidenciaId',
   'dni',
@@ -48,6 +54,7 @@ export const CAMPOS_PERSONA: readonly CampoPersona[] = [
   'estadoCivil',
   'telefono',
   'fechaCarnet',
+  'email',
 ]
 
 export function esCampoPersona(v: unknown): v is CampoPersona {
@@ -78,6 +85,9 @@ const REGLAS: ReadonlyArray<readonly [RegExp, keyof DatosAuto]> = [
   [/circulation address.*postal code|postal code.*circulation address/, 'cpCirculacion'],
   [/circulation address.*\btown\b|\btown\b.*circulation address/, 'municipioCirculacionId'],
   [/road name/, 'nombreVia'],
+  [/road number/, 'numeroVia'],
+  [/road type/, 'tipoVia'],
+  [/e-?mail/, 'email'],
   [/postal code|zip code/, 'cpResidencia'],
   [/\btown\b/, 'municipioResidenciaId'],
   [/identification document|\bnif\b|\bdni\b|document number/, 'dni'],
@@ -187,7 +197,13 @@ const obj = (v: unknown): Json => (v && typeof v === 'object' && !Array.isArray(
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
 
-const CAMPOS_DIRECCION: readonly CampoPersona[] = ['nombreVia', 'cpResidencia', 'municipioResidenciaId']
+const CAMPOS_DIRECCION: readonly CampoPersona[] = [
+  'nombreVia',
+  'numeroVia',
+  'tipoVia',
+  'cpResidencia',
+  'municipioResidenciaId',
+]
 
 /**
  * Devuelve la persona con TODOS los `valores` escritos en la forma del vendor.
@@ -211,6 +227,11 @@ export function aplicarCamposPersona(persona: unknown, valores: Partial<Record<C
     for (const c of deDireccion) {
       const v = (valores[c] as string).trim()
       if (c === 'nombreVia') d0.roadName = v
+      if (c === 'numeroVia') d0.roadNumber = v
+      // 🚨 `v` ya tiene que ser el id del catálogo `/road-types` en este punto
+      // (lo resuelve `valoresPersonaDesdeFicha`, emparejando contra el catálogo
+      // vivo): esta función es PURA y no valida catálogos, solo coloca el valor.
+      if (c === 'tipoVia') d0.roadType = { id: v }
       if (c === 'cpResidencia') d0.postalCode = v
       if (c === 'municipioResidenciaId') d0.town = { ...obj(d0.town), id: Number(v) }
     }
@@ -232,6 +253,8 @@ export function aplicarCampoPersona(persona: unknown, campo: CampoPersona, valor
   const v = valor.trim()
   switch (campo) {
     case 'nombreVia':
+    case 'numeroVia':
+    case 'tipoVia':
     case 'cpResidencia':
     case 'municipioResidenciaId':
       return p
@@ -259,6 +282,14 @@ export function aplicarCampoPersona(persona: unknown, campo: CampoPersona, valor
     case 'fechaCarnet':
       p.drivingLicenses = [{ type: { id: 'B' }, date: v, issuingZone: { id: 'Spain' } }]
       return p
+    case 'email':
+      // 🚨 Sin fixture: la clave es una suposición compartida con el POST
+      // inicial — ver `CLAVE_EMAIL_VENDOR` en `persona.ts` (y por qué el
+      // 12/09/2026 se sospecha que no es la que el vendor espera). La
+      // verificación de `completarPersonas` (releer + comparar) es la que
+      // delata si el vendor esperaba otra cosa, en vez de darlo por bueno.
+      p[CLAVE_EMAIL_VENDOR] = v
+      return p
   }
 }
 
@@ -269,6 +300,12 @@ export function leerCampoPersona(persona: unknown, campo: CampoPersona): string 
   switch (campo) {
     case 'nombreVia':
       return str(d0.roadName)
+    case 'numeroVia':
+      return str(d0.roadNumber)
+    case 'tipoVia': {
+      const id = obj(d0.roadType).id
+      return typeof id === 'number' ? String(id) : str(id)
+    }
     case 'cpResidencia':
       return str(d0.postalCode)
     case 'municipioResidenciaId': {
@@ -291,6 +328,16 @@ export function leerCampoPersona(persona: unknown, campo: CampoPersona): string 
       return str(obj(arr(p.phones)[0]).number)
     case 'fechaCarnet':
       return str(obj(arr(p.drivingLicenses)[0]).date)
+    case 'email': {
+      // Se lee TOLERANTE a propósito: si el vendor guarda el correo con otra
+      // forma (`emails[0].address`/`.email`/`.value`), la relectura lo ve
+      // igual y `completarPersonas` no declara «no aplicado» un valor que sí
+      // está — y de paso queda constancia de la forma real en `crudo`.
+      const plano = str(p[CLAVE_EMAIL_VENDOR]) ?? str(p.email)
+      if (plano) return plano
+      const primero = obj(arr(p.emails)[0])
+      return str(primero.address) ?? str(primero.email) ?? str(primero.value)
+    }
   }
 }
 

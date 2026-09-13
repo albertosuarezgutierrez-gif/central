@@ -64,15 +64,18 @@ export type Decision = {
 
 const LANG_NAME: Record<string, string> = { es: 'español', en: 'English', fr: 'français', de: 'Deutsch', it: 'italiano' }
 
-// Modelo del agente de huéspedes. Por defecto VACÍO = usa el modelo por defecto de la pasarela
-// (`meta/llama-3.1-70b-instruct` desde el 22/08/2026 — `z-ai/glm-5.2` murió por EOL real el
-// 21/08/2026), que es el que de verdad sirve NIM y produce los borradores.
+// Modelo del agente de huéspedes. Por defecto VACÍO = sin `model` pinneado, así que
+// `aiComplete` (`@central/core-ai`) entra por **OpenRouter como PRIMARIO** (regla permanente
+// del 24/08/2026: "todo lo que PUEDA ir por OpenRouter, va por OpenRouter") y solo si eso falla
+// cae a la cadena clásica — que además, desde el 28/08/2026, tiene **NIM APAGADO por defecto**
+// (`NVIDIA_TEXTO` sin poner), así que ese eslabón ni se intenta: Groq → Cerebras → Gemini → Kimi.
 // El id "fuerte" `meta/llama-3.1-405b-instruct` que poníamos antes fue RETIRADO del catálogo de
 // NVIDIA NIM → devolvía `HTTP 404: 404 page not found` en CADA mensaje (verificado en logs de
-// producción el 06/07/2026). Quedaba enmascarado porque el reintento con el 70B por defecto
-// respondía; el día que el 70B también falló (timeout) el agente cayó a "IA no disponible".
-// Si en el futuro se quiere un modelo más capaz, poner en AGENTE_HUESPED_MODEL un id VERIFICADO
-// como vivo en NIM: si está puesto, se intenta primero y, si falla, se reintenta con el 70B.
+// producción el 06/07/2026), de la época en que NIM sí era el primario — mantenido como historia,
+// ya no aplica al camino real. Poner un `model` aquí PINEA NIM y SALTA OpenRouter salvo que NIM
+// esté inactivo (ver landmine en `client.ts::aiCompleteConProveedor`): no fijar nada a la ligera.
+// Si en el futuro se quiere un modelo más capaz, usar `OPENROUTER_MODEL`/`OPENROUTER_FALLBACK_MODELS`
+// (el camino real), no `AGENTE_HUESPED_MODEL` — eso reintroduciría el salto de OpenRouter.
 const MODELO_HUESPED = process.env.AGENTE_HUESPED_MODEL || ''
 
 // Timeout por proveedor de la cadena de IA (NIM→Groq→Gemini→Kimi). Más corto que el default (30s)
@@ -299,10 +302,10 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar, ES
 
   let reply = ''
   try {
-    // Por defecto una sola llamada al modelo por defecto de la pasarela (70B), que YA trae su
-    // propia cadena de fallback NIM→Groq→Gemini→Kimi. Si hay un modelo "fuerte" configurado en
-    // AGENTE_HUESPED_MODEL, se intenta ese primero y, si falla, se reintenta con el 70B por
-    // defecto (el modelo fuerte es ADITIVO: nunca debe dejarnos sin respuesta).
+    // Por defecto una sola llamada SIN modelo pinneado → entra por OpenRouter (primario real) y,
+    // si falla, cadena clásica Groq→Cerebras→Gemini→Kimi (NIM inactivo por defecto). Si hay un
+    // modelo "fuerte" en AGENTE_HUESPED_MODEL (pinnea NIM), se intenta ese primero y, si falla, se
+    // reintenta SIN pin (el modelo fuerte es ADITIVO: nunca debe dejarnos sin respuesta).
     reply = limpiarReply((await generar(system)) || '')
   } catch (e: any) {
     console.error('[decidir] aiComplete error:', e?.message)

@@ -43,7 +43,7 @@ export function clasificar(toolName, toolInput = {}) {
   if (/^mcp__Graphify__/.test(t)) return 'graphify'
   if (/^mcp__Supabase(_[\w-]+)?__execute_sql$/.test(t)) {
     const q = String(toolInput?.query ?? '')
-    if (/\bgrafo_(nodos|aristas|callers|callees|impacto|vecinos|tests_de|find|deps_archivo)\b/.test(q)) return 'grafo-propio'
+    if (/\bgrafo_(nodos|aristas|embeddings|callers|callees|impacto|vecinos|tests_de|find|deps_archivo|buscar|rank_files|camino|referencias|imports_exports|nodo|subgrafo)\b/.test(q)) return 'grafo-propio'
     if (/\bmapa_arquitectura\b/.test(q)) return 'code-map'
     return 'sql'
   }

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-12T13:05:44Z",
+  "generadoEn": "2026-09-12T22:03:04Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2080,7 +2080,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 50
+        "evidencias": 52
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4861,8 +4861,12 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
+      "/api/internal/grafo-codigo",
+      "/api/internal/grafo-codigo/embeddings",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
+      "/api/internal/memoria",
+      "/api/internal/memoria/embeddings",
       "/api/internal/reclamar-reparacion",
       "/api/internal/reparacion-resultado",
       "/api/inversion/underwrite",
@@ -5453,6 +5457,9 @@
       "empresas_ficha",
       "facturas_proveedor",
       "fiscal_ayudas",
+      "grafo_aristas",
+      "grafo_embeddings",
+      "grafo_nodos",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
@@ -5464,6 +5471,7 @@
       "limpieza_partes",
       "limpieza_tareas",
       "mapa_arquitectura",
+      "memoria_embeddings",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_conflictos_guia",
@@ -6234,7 +6242,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1337,
+    "apis": 1341,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

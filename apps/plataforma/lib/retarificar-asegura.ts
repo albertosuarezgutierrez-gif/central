@@ -185,6 +185,15 @@ export type Precalificacion = {
   municipiosMotivo: string | null
   estadoCivil: Opcion | null
   estadoCivilMotivo: string | null
+  /**
+   * Catálogo `/road-types` del vendor (12/09/2026). El Submit exige
+   * `roadType.id` y no se puede añadir al proyecto después, así que se elige
+   * ANTES de pagar. `null` = no se pudo leer el catálogo.
+   */
+  tiposVia: Opcion[] | null
+  /** El tipo de vía emparejado desde la dirección de la ficha; `null` = elígelo a mano. */
+  tipoVia: Opcion | null
+  tipoViaMotivo: string | null
   consumo: ConsumoPuerto
   /** ¿Tiene el servidor de asegura `CODEOSCOPIC_SIMULACION` puesta?
    *  ⚠️ Es solo el rótulo previo: que un precio CONCRETO sea simulado lo decide
@@ -308,6 +317,9 @@ export function interpretarPrecalificacion(status: number, json: unknown): Respu
       municipiosMotivo: cadenaONulo(r.municipiosMotivo),
       estadoCivil: leerOpcion(r.estadoCivil),
       estadoCivilMotivo: cadenaONulo(r.estadoCivilMotivo),
+      tiposVia: leerOpcionesONulo(r.tiposVia),
+      tipoVia: leerOpcion(r.tipoVia),
+      tipoViaMotivo: cadenaONulo(r.tipoViaMotivo),
       consumo: leerConsumo(r.consumo),
       // Solo el booleano exacto enciende el rótulo de simulación: ante la duda,
       // esto CUESTA dinero.
@@ -1054,8 +1066,10 @@ export type FormularioGuardado = {
   garaje: string | null
   estadoCivilId: string | null
   municipioId: number | null
+  /** Id del catálogo de tipos de vía que viajó en la dirección del tomador. */
+  tipoViaId: string | null
   /** Mismas claves que `CAMPOS_A_MANO` de la pantalla (dni, nombre,
-   *  apellido1, telefono, fechaNacimiento, fechaCarnet). */
+   *  apellido1, telefono, fechaNacimiento, fechaCarnet, nombreVia, numeroVia, email). */
   correcciones: Record<string, string>
 }
 
@@ -1092,6 +1106,7 @@ function leerFormularioGuardado(v: unknown): FormularioGuardado | null {
     garaje: cadenaONulo(x.garaje),
     estadoCivilId: cadenaONulo(x.estadoCivilId),
     municipioId: typeof x.municipioId === 'number' ? x.municipioId : null,
+    tipoViaId: cadenaONulo(x.tipoViaId),
     correcciones,
   }
 }

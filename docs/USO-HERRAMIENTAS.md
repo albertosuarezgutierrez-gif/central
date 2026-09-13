@@ -48,10 +48,89 @@ Mismo símbolo, mismas preguntas, el día que se construyó (HEAD `f85f137`):
 | Vecinos de `cartera-viva.ts` | 15 archivos (por símbolo, atraviesa el barril `index.ts`) | vista `grafo_deps_archivo`: importa/reexporta **+ archivo donde vive cada símbolo usado** → mismos archivos |
 | Coste de generar | reindexado remoto | 4.124 archivos → 17.215 nodos / 61.925 aristas en **1,8 s**, sin dependencias |
 
-Lo que el grafo propio **NO da** y Graphify sí: `query_graph` semántico (embeddings), `remember`/`recall`
-(la memoria vive en `docs/CONTEXTO-SESIONES.md`), y resolución de llamadas por variable intermedia o
-imports dinámicos con cadena calculada. Antes de afirmar «nadie llama a X», leer el código — regla que ya
-valía con Graphify.
+## Paridad SEMÁNTICA (embeddings) — medición del 12/09/2026
+
+Con los embeddings ya calculados en producción (13.352 nodos, `pendientes: 0`), se repitió la
+comparación con las 12 categorías de herramienta de Graphify, sobre un símbolo elegido A PROPÓSITO
+por ser ambiguo (`isCronAuthorized` existe, con ese nombre exacto, en `apps/asegura`, `apps/sivra` y
+tres sitios de `apps/plataforma` — el patrón más común del repo: cada app tiene su propio helper
+homónimo):
+
+| Herramienta | Graphify | Grafo propio (`grafo_*`) |
+|---|---|---|
+| `find` | 6 símbolos | **los mismos 6** |
+| `callers` | **1** (resolvió a UNA declaración arbitraria — la de `apps/asegura`— y calló las demás) | **80** archivos, agregando las 6 declaraciones homónimas |
+| `callees` | **1** (`autorizaCron` de asegura, mismo sesgo) | **4** (una por declaración real) |
+| `file_neighbors`/`vecinos` (archivo concreto, sin ambigüedad) | 77 archivos | **77 archivos** — igual |
+| `tests_for`/`tests_de` | 1 (`cron-auth.test.ts`) | **1**, mismo archivo |
+| `trace`/`shortest_path` vs `camino` | camino de **6 saltos**, confuso, por la misma resolución ambigua | `camino` (a nivel archivo, sin ambigüedad): **1 salto**, correcto |
+| `query_graph` semántico (pregunta: «¿cómo se decide si una petición de cron está autorizada?») | **Falló**: devolvió `apps/asegura-portal/lib/autorizaciones.ts` — el consentimiento del cliente para VER sus seguros, un significado de «autorización» totalmente distinto | `grafo_buscar`: acertó — top resultado `apps/plataforma/lib/cron-auth.ts` (similitud 0,63-0,67) |
+| `rank_files` (misma pregunta) | Top archivo: el mismo falso positivo de seguros (score 7,2) | Top archivo: `apps/plataforma/lib/cron-auth.ts` (correcto) |
+| `impact` | ~60 nodos, sembrando las 6 declaraciones (fanout multi-archivo) | `impacto` (un solo archivo): 85 archivos a 2 saltos — **forma distinta, no comparable cifra a cifra** (fanout multi-símbolo vs radio de un archivo), magnitud similar |
+| `node` | incluye el CUERPO inline | `nodo` da línea+tipo, no cuerpo — **diferencia de diseño a propósito** (ver abajo), no un déficit |
+| `references` | **0** (mismo sesgo de resolución arbitraria) | **156** filas, agregando las 6 declaraciones |
+
+**Cuenta verificable (12 filas de la tabla):** `find`, `file_neighbors`/`vecinos`, `tests_for`/`tests_de`
+e `imports_exports` — **igual** (4). `callers`, `callees`, `trace`/`shortest_path` vs `camino`,
+`query_graph`, `rank_files` y `references` — **grafo propio mejor, con datos objetivamente más
+completos o correctos** (6). `impact` y `node` — **forma distinta, no comparable directamente** (2,
+ninguno es un déficit: uno es fanout multi-símbolo vs radio de un archivo, el otro es una diferencia
+de diseño deliberada). **Total: 10 de 12 categorías igualadas o superadas, 2 con forma distinta y
+ninguna perdida.** El caso `query_graph` es el más serio: Graphify devolvió un resultado plausible
+pero **equivocado de dominio** (confundió
+«autorización de cron» con «autorización de cliente de seguros» por la palabra compartida), mientras
+que la búsqueda propia acertó. La única diferencia real de diseño: `grafo_nodo` da línea y tipo, no el
+cuerpo — a propósito («el CUERPO se lee del archivo, el grafo da la línea, no sustituye leer el
+código», que es la misma regla que este documento ya exigía con Graphify).
+
+**Lo que esta medición NO cubre** [Seguro que es una limitación, no una garantía de que no existan
+casos peor]: un solo símbolo/archivo, elegido por su ambigüedad real pero no exhaustivo. No prueba
+resolución de imports dinámicos con cadena calculada ni de barriles multi-nivel más allá de lo que
+ya cubre `grafo_deps_archivo`. `graphify_render_subgraph` (visualización) no se probó porque su
+equivalente (`grafo_subgrafo`) no tiene contraparte de renderizado — uso residual, no bloqueante.
+
+**Lo que este trabajo (grafo de código) no cubría:** `remember`/`recall`/`memories_about` (memoria
+durable de Graphify) — hasta el 12/09/2026 la única pieza sin sustituto propio. Medido más abajo
+("Paridad de MEMORIA"): ya tiene sustituto.
+
+## Paridad de MEMORIA (`memoria_buscar` vs `recall`/`memories_about`) — medición del 12/09/2026
+
+Última pieza sin sustituto propio (ver `CLAUDE.md`, sección Graphify): la memoria DURABLE entre
+sesiones. `memoria_buscar()` (embeddings sobre `docs/CONTEXTO-SESIONES.md` + `docs/memoria/*.md`,
+PR #2848) frente a `recall`/`memories_about` de Graphify (memoria construida a partir de llamadas
+`remember()` de sesiones pasadas). **No son el mismo corpus**: el de Graphify es lo que alguna sesión
+decidió explícitamente recordar (dominado por notas automáticas «PR pasó el gate de revisión» y un
+resto menor de gotchas/decisiones reales); el de `memoria_buscar` es el `docs/CONTEXTO-SESIONES.md` +
+`docs/memoria/*.md` completo, que ya es el hábito de cierre de cada sesión (`persist-memoria.sh`) — la
+pregunta no es «¿leen la misma fuente?» sino «¿`memoria_buscar` encuentra decisiones reales al menos
+tan bien como `recall`?». Cuatro preguntas reales, ambas herramientas con `repository_id`/consulta
+explícitos:
+
+| Pregunta | Graphify (`recall`) | `memoria_buscar` |
+|---|---|---|
+| Barrido de precios/cuota de Serper | Nada relevante (solo ruido genérico «PR pasó el gate») | Acierta la entrada correcta (rank 4/5, similitud 0,518) |
+| Qué pantalla mira Vanesa (limpieza) | Nada relevante | Acierta como **#1** (similitud 0,597) |
+| Incidente Smoobu 401/HMAC | **Relevante pero DESFASADO**: hechos bien descompuestos, pero congelados en el estado intermedio 07:07-08:01 UTC del 23/06 — describe el problema como aún bloqueado, y ya está resuelto (PR #2753) | Devuelve la línea de tiempo **completa y vigente**: 5 resultados desde el diagnóstico inicial (23/06) hasta la resolución final (12/09, PR #2753) |
+| Por qué «Grupo ASegura» lleva la S en mayúscula | Nada relevante (devuelve hechos de otro tema: ASegura single-tenant, el mismo Smoobu desfasado, arquitectura Supabase, WhatsApp, autodescripción de Graphify) | Acierta como **#1** (similitud 0,691), exactamente la decisión documentada |
+
+**Resultado: 4 de 4 — en ninguna `memoria_buscar` fue peor, en 3 Graphify no encontró nada relevante y
+en la 4ª (Smoobu) Graphify SÍ era relevante pero factualmente desfasado** (la clase de fallo más cara:
+un dato que parece bueno y no lo es — ver la regla global de `CLAUDE.md` sobre datos leídos mal). La
+causa del caso Smoobu no es un defecto de `memoria_buscar`: es que la memoria de Graphify no se
+actualiza sola cuando el hecho cambia, mientras que `docs/CONTEXTO-SESIONES.md` se reescribe cada vez
+que hay novedad y el cron de embeddings la recoge a diario.
+
+**Lo que esta medición NO cubre** [es una limitación, no una garantía de que no existan casos peor]:
+4 preguntas, elegidas por tocar decisiones/gotchas reales y dispersas en el tiempo, no un muestreo
+exhaustivo. No prueba memoria sobre proyectos con muy poco historial documentado, ni el caso de una
+pregunta cuya respuesta NO esté en ningún `.md` de memoria (ninguna herramienta la encontraría, pero
+no se ha verificado que ambas fallen igual de "limpio").
+
+**Veredicto sobre la condición de Alberto («100% igual» para dar de baja Graphify, 12/09/2026):** en
+las 4 preguntas medidas `memoria_buscar` igualó o superó a `recall`, nunca al revés. Es una muestra
+pequeña, no una prueba exhaustiva — pero es consistente y en la única dirección que importa (nunca
+peor). Con esto, la sección de Graphify en `CLAUDE.md` deja de marcar `remember`/`recall`/
+`memories_about` como pieza sin sustituto.
 
 ## Agregado
 

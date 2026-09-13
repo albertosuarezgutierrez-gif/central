@@ -63,6 +63,12 @@ Lo que Graphify servía como tools vive ahora en dos tablas de la MISMA Supabase
 | Vecinos directos (de quién depende / quién depende de él, con símbolos) | `SELECT * FROM grafo_vecinos('<ruta>')` |
 | ¿Qué tests cubren un archivo? | `SELECT * FROM grafo_tests_de('<ruta>')` |
 | Buscar símbolo por subcadena | `SELECT * FROM grafo_find('cartera', 20)` |
+| Camino de dependencias entre dos archivos | `SELECT * FROM grafo_camino('apps/x/route.ts', 'packages/y/lib.ts')` |
+| Quién referencia un símbolo (llamadas + imports) | `SELECT * FROM grafo_referencias('esCarteraViva')` |
+| Imports/exports de un archivo | `SELECT * FROM grafo_imports_exports('<ruta>')` |
+| Ficha de un nodo (tipo, línea, exportado) | `SELECT * FROM grafo_nodo('esCarteraViva')` |
+| Pregunta en lenguaje natural → símbolos parecidos (semántico, embeddings) | `SELECT id, ruta, similitud FROM grafo_buscar('¿dónde se decide la cartera viva?', 15)` |
+| Pregunta en lenguaje natural → archivos relevantes para una tarea | `SELECT * FROM grafo_rank_files('¿dónde se decide la cartera viva?', 10)` |
 | Frescura | `SELECT sha, max(updated_at) FROM grafo_nodos GROUP BY 1` — compáralo con `git rev-parse origin/main` |
 
 - `X` puede ser el nombre (`esCarteraViva`) o el id completo (`ruta#nombre`). Los ids de símbolo son
@@ -71,9 +77,14 @@ Lo que Graphify servía como tools vive ahora en dos tablas de la MISMA Supabase
   símbolo desde `@central/<pkg>` (el `index.ts`), no solo a quien importó el archivo literal.
 - **Lo que NO ve** (regex, sin compilador): llamadas por variable intermedia, imports dinámicos con cadena
   calculada, alias encadenados raros. Un «0 callers» aquí es «no encontré ninguno», no «nadie lo llama»:
-  antes de borrar algo, `Grep`. Precisión medida contra Graphify: `docs/USO-HERRAMIENTAS.md`.
-- **Graphify** sigue conectado mientras dure la cuota: úsalo solo para `query_graph` (semántico) y
-  `remember`/`recall`. Para callers/impacto/vecinos/tests, primero esto.
+  antes de borrar algo, `Grep`.
+- **`grafo_buscar`/`grafo_nodo` dan línea y tipo, no el cuerpo** — a propósito, para no saltarse el paso
+  de leer el código real. Precisión (12 categorías de Graphify, incluida la búsqueda semántica) medida
+  contra un símbolo real y ambiguo el 12/09/2026: `docs/USO-HERRAMIENTAS.md` — el grafo propio igualó o
+  superó a Graphify en 10 de 12 categorías (2 con forma distinta, ninguna perdida).
+- **Graphify ya NO se usa para código** (ni estructural ni semántico) — solo sigue conectado para
+  `memories_about`/`recall`/`remember` (memoria durable), mientras dure la cuota. Para
+  callers/impacto/vecinos/tests/camino/referencias/búsqueda semántica, usa siempre esto.
 
 ## Relación con el resto
 - Mismo índice que consume el **Director de código** (`apps/plataforma/lib/ia-director-codigo.ts`,

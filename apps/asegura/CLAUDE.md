@@ -345,8 +345,24 @@ Las tres reglas que más cotizaciones tumban, todas con test:
   los años asegurado.** Es la condición anidada que se incumple sin enterarse. Ojo: `0` siniestros
   es una respuesta válida, no un hueco (regla NULL≠0).
 
-Y lo que NO se manda, a propósito: email, calle, ocupación, situación laboral y país de nacimiento.
-No hacen falta para el precio.
+Y lo que NO se manda, a propósito: ocupación, situación laboral y país de nacimiento. No hacen
+falta ni para el precio ni para emitir.
+
+🚨 **Hasta el 12/09/2026 tampoco se mandaban el email ni la calle completa («no hacen falta para el
+precio»), y ESA era la causa de fondo de un día entero de emisión fallida.** Cierto para el precio,
+falso para EMITIR: el Submit exige email + tipo/nombre/número de vía en `holder`/`owner`/
+`primaryDriver`, y **el vendor NO aplica el correo por PATCH** (proyecto 40685666: 200 y al releer no
+está; `roadName` por el mismo PATCH sí). Consecuencia medida en `codeoscopic_consumo`: **7 cargos de
+0,50€ (11-12/09) sobre la póliza de Pilar Franco Ruz, los 7 con la misma persona incompleta**, y cada
+capa de la cascada `interpretarError400 → completarPersonas → reintento` descubría UN campo por cargo.
+Ahora: (1) `construirPersona` manda lo que la FICHA ya tiene (email por `emailDeFicha`, calle troceada
+con `partirDireccion`, `roadType` emparejado contra `/road-types`); (2) `revisarDatosAuto(d, { paraEmitir:
+true })` —solo defensa de cartera, NO oportunidad nueva— exige correo y calle completa **antes de pagar**,
+y la pantalla de plataforma los pide (tipo de vía como desplegable del catálogo, `CAMPOS_A_MANO` para
+nombre/número/correo); (3) la clave del correo es UNA constante, `CLAVE_EMAIL_VENDOR` (`persona.ts`),
+porque sigue siendo una SUPOSICIÓN: `/precalificar` registra `estructuraPersonaVendor` (solo nombres
+de campo del último proyecto real, gratis) para fijarla con un dato — mira ese log ANTES del próximo
+cargo; (4) `codeoscopic_projects.error_mensaje` guarda ya el 400 del Submit (antes quedaba NULL).
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 
@@ -695,12 +711,14 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `emparejarConCima` (D4), `conciliarConCima` (D3). `lib/emision.ts` → `registrarPolizaEmitida` acuña la
   fila + `codeoscopic_projects.poliza_id` + historial en UNA transacción y exige DNI en la ficha del tomador.
   Puerto **`POST /api/operador/poliza/emitida`, cerrado tras `CODEOSCOPIC_EMISION_ACTIVA=true`** (503
-  `emision_desactivada`). 🚫 **El envío al vendor (`POST /insurances/{id}/policy-applications`, multipart)
-  NO está construido a propósito**: el gate de la spec (mismo `attempt_id` dos veces contra un sandbox) no se
-  puede correr porque no hay sandbox; escribirlo a ciegas es estrenarlo en producción con dinero y con el
-  contrato de un cliente. Cuando exista entorno de pruebas: transporte multipart nuevo, candado
-  `submit_in_flight_at`, y ampliar la excepción del guardián de gasto (hoy tumba cualquier `metodo: 'POST'`
-  fuera de `cotizar.ts`).
+  `emision_desactivada`). ✅ **Y desde el 11/09/2026 SÍ está construido: `POST /insurances/{id}/policy-
+  applications`** (multipart, `lib/codeoscopic/emitir-envio.ts::enviarEmision`), sin sandbox ni fixture del
+  fabricante, sobre el caso real de Pilar Franco Ruz con OK explícito de Alberto — se estrenó en producción
+  a propósito, no en un entorno de pruebas que nunca llegó. Candado `submit_in_flight_at` de un solo intento
+  en vuelo por proyecto (`bloquearEnvio`/`cerrarEnvio`); el gate de «mismo `attempt_id` dos veces» de la
+  spec sigue sin correrse (sigue sin haber sandbox), así que el vendor podría no deduplicar un reintento tras
+  una respuesta perdida. Ver las dos entradas de más abajo (12/09/2026) para la cascada de reparación de 400s
+  del ReRate y del propio Submit.
 - **🤖 El 400 del ReRate se TRADUCE, no se enseña (12/09/2026).** Once 400 reales, cada uno un PR.
   Ahora `lib/codeoscopic/interprete-400.ts` (puro) mapea las líneas del vendor («The <campo> of the
   <papel> is mandatory») a nuestros campos y `POST /api/operador/codeoscopic/oferta` hace la cascada:
@@ -710,7 +728,18 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   como **422 `faltan_vendor`** (`faltan` nuestros, `sugeridos` de la ficha, `noReconocidos` íntegros)
   y vuelve con `correcciones` (lista blanca `CampoPersona`, nunca claves libres). 409
   `patch_no_aplicado` = cotizar de cero. Un mensaje que el intérprete no reconoce **se enseña entero**:
-  es el siguiente mapeo que falta, no ruido. Nada personal se supone; el Submit no entra en esto.
+  es el siguiente mapeo que falta, no ruido. Nada personal se supone.
+- **📧 Y el SUBMIT tiene su PROPIA cascada — 13º 400 real (12/09/2026): «el vendor pide MÁS para EMITIR
+  que para cotizar».** Tras el fix del IBAN (12º), Alberto probó «Emitir» de verdad y `policy-applications`
+  rechazó pidiendo `email` (nuevo `CampoPersona`) y `roadName` en `holder`/`owner`/`primaryDriver` — campos
+  que el ReRate nunca había pedido. `POST /api/operador/codeoscopic/emitir` hace la MISMA cascada que
+  `/oferta` (mismo `interpretarError400`/`completarPersonas`, y `valoresPersonaDesdeFicha` — antes
+  duplicada solo para la calle, ahora compartida) y repite el Submit UNA vez; el candado ya libera
+  `submit_in_flight_at` en el fallo, así que el reintento no es un segundo envío a ciegas. 🌐 **Es agnóstica
+  de ramo por diseño** (opera sobre `holder`/`risk.*` genéricamente, sin ramificar por auto/hogar/RC), así
+  que ya vale para hogar sin tocarla — lo que SÍ ramificaba mal era el bookkeeping: `codeoscopic_projects.
+  producto` llevaba `'auto'` a fuego en el INSERT del ReRate y en el puente de emergencia del Submit
+  (`bloquearEnvio`); los dos usan ahora `polizas.tipo` real.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo

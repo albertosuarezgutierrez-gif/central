@@ -3,7 +3,14 @@ import { operadorAutorizado } from '@/lib/operador'
 import { prisma } from '@/lib/tenant'
 import { correduriaUnica } from '@/lib/cartera'
 import { catalogoCompanias, registrarPolizaEmitida } from '@/lib/emision'
-import { resolverConfigEmision, camposDeEmision } from '@/lib/codeoscopic/emitir'
+import {
+  resolverConfigEmision,
+  camposDeEmision,
+  completarPersonas,
+  leerProyectoCrudo,
+  papelesDeLaMismaPersona,
+  redactarCrudoVendor,
+} from '@/lib/codeoscopic/emitir'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
 import {
   conCuentaBancaria,
@@ -16,6 +23,8 @@ import {
   ibanValido,
 } from '@/lib/codeoscopic/emitir-iban'
 import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
+import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -237,12 +246,93 @@ export async function POST(req: Request) {
     )
   }
 
-  const envio = await enviarEmision(r.config, {
+  let envio = await enviarEmision(r.config, {
     correduriaId: correduria.id,
     projectId,
     offerId: p.accepted_offer_id_codeoscopic,
     campos: camposEnvio,
+    producto: poliza.tipo,
   })
+
+  // ── 13º 400 real (12/09/2026): el Submit exige campos de PERSONA (email,
+  // calle) que el ReRate no pedía — «policy-application-fields devuelve lo que
+  // hace falta PARA COTIZAR, no para EMITIR» (docs/CODEOSCOPIC-API-PORTAL.md).
+  // Se repara UNA vez, igual que `/oferta` con la calle: interpreta el 400 →
+  // si TODO lo que falta es un campo de persona, la ficha lo tiene Y
+  // `completarPersonas` va a poder escribirlo en TODOS los papeles que el
+  // vendor pidió → PATCH gratis (que relee y comprueba campo a campo) →
+  // repite el Submit. El candado ya libera `submit_in_flight_at` en el fallo
+  // (`cerrarEnvio`), así que este segundo intento no choca con el «un solo
+  // intento en vuelo»: es la reparación de un 400 ya resuelto, no un segundo
+  // envío a ciegas. Si la ficha no cubre algo, algún papel pedido no es
+  // reparable, o el PATCH no cuaja, se rinde en el siguiente bloque — NUNCA
+  // un tercer intento.
+  //
+  // `interp`/`deFicha` se guardan para el bloque de abajo: si NO se reintenta
+  // (nada cambió), recalcularlos ahí sería la misma consulta a la ficha (con
+  // descifrado PII) dos veces por el mismo motivo. Se invalidan si SÍ hay
+  // reintento, porque entonces `envio.mensaje` puede ser un 400 distinto.
+  let interpPrevio: Interpretacion | null = null
+  let deFichaPrevio: Partial<Record<CampoPersona, string>> | null = null
+  if (!envio.ok && envio.razon === 'vendor' && !esFalloDeCuentaBancaria(envio.mensaje)) {
+    const interp = interpretarError400(envio.mensaje)
+    interpPrevio = interp
+    const pedidos = interp.campos.map((c) => c.campo).filter(esCampoPersona)
+    const todosSonDePersona = interp.campos.length > 0 && pedidos.length === interp.campos.length
+    if (todosSonDePersona) {
+      const deFicha = await valoresPersonaDesdeFicha(
+        { correduria_id: correduria.id, poliza_id: p.poliza_id, cliente_id: poliza.cliente_id },
+        pedidos,
+        r.config,
+      )
+      deFichaPrevio = deFicha
+      const fichaLoCubreTodo = pedidos.every((c) => Object.prototype.hasOwnProperty.call(deFicha, c))
+      // 🚨 `completarPersonas` solo escribe en `holder` + los papeles del
+      // `risk` con el MISMO DNI que el tomador (`papelesDeLaMismaPersona`).
+      // Si el vendor pide el campo para un `owner`/`primaryDriver` con OTRO
+      // DNI (coche de empresa, vehículo familiar…), el PATCH ni lo intenta y
+      // el Submit fallaría IGUAL una segunda vez — comprobarlo antes evita
+      // gastar un segundo intento real (no sandboxed) en algo que ya se sabe
+      // que no puede funcionar.
+      const todosCubribles =
+        fichaLoCubreTodo &&
+        (await (async () => {
+          const crudo = await leerProyectoCrudo(r.config, projectId)
+          const cubribles = new Set(['holder', ...papelesDeLaMismaPersona(crudo)])
+          return interp.campos.every((c) => c.papeles.every((papel) => cubribles.has(papel)))
+        })())
+      if (fichaLoCubreTodo && todosCubribles) {
+        const c = await completarPersonas(r.config, projectId, deFicha)
+        if (c.estado === 'no_aplicado') {
+          const lista = c.sinAplicar.map((x) => `${x.campo} (${x.papel})`).join(', ')
+          return NextResponse.json(
+            {
+              estado: 'error',
+              causa: 'patch_no_aplicado',
+              sinAplicar: c.sinAplicar,
+              mensaje:
+                `El PATCH al proyecto no ha dado error pero, al releerlo, sigue sin traer: ${lista}. ` +
+                'El Submit que dio pie a esta reparación YA se envió y la compañía lo rechazó (ese intento ' +
+                'real está gastado); esta reparación gratuita no ha cuajado, así que NO se ha reintentado un ' +
+                'segundo Submit. Es la misma trampa que effectiveDate: el PATCH no vale para este campo — la ' +
+                'única vía segura es pedir precio de cero (0,50€, puede variar).',
+              crudo: c.crudo,
+            },
+            { status: 409 },
+          )
+        }
+        envio = await enviarEmision(r.config, {
+          correduriaId: correduria.id,
+          projectId,
+          offerId: p.accepted_offer_id_codeoscopic,
+          campos: camposEnvio,
+          producto: poliza.tipo,
+        })
+        interpPrevio = null
+        deFichaPrevio = null
+      }
+    }
+  }
 
   if (!envio.ok) {
     // «The bank account is mandatory according to the selected companies and
@@ -274,13 +364,52 @@ export async function POST(req: Request) {
           faltan: ['iban'],
           campos: null,
           cuenta: cuentaRespuesta ?? (ficha.aviso ? { aviso: ficha.aviso } : null),
-          crudo: envio.crudo ?? null,
+          crudo: redactarCrudoVendor(envio.crudo) ?? null,
         },
         { status: 422 },
       )
     }
+    // El resto de campos de persona que el 400 pida y la ficha NO tenga (o
+    // que el intérprete no reconozca) se enseñan enteros — es un hallazgo,
+    // como en `/oferta`, no un fallo que se calle. `sugeridos` es lo que la
+    // ficha SÍ pudo dar (aunque no cubriera todo): ahorra teclear lo que ya
+    // se sabe. No hay reintento automático de aquí en adelante.
+    if (envio.razon === 'vendor') {
+      // Reutiliza lo ya calculado arriba si no hubo reintento (mismo mensaje):
+      // sin esto se repetiría la consulta a la ficha —con descifrado PII— por
+      // el mismo motivo. Si SÍ hubo reintento, `envio.mensaje` es un 400
+      // distinto y `interpPrevio`/`deFichaPrevio` ya se invalidaron arriba.
+      const interp = interpPrevio ?? interpretarError400(envio.mensaje)
+      if (interp.campos.length > 0) {
+        const pedidos = interp.campos.map((c) => c.campo).filter(esCampoPersona)
+        const sugeridos =
+          deFichaPrevio ??
+          (await valoresPersonaDesdeFicha(
+            { correduria_id: correduria.id, poliza_id: p.poliza_id, cliente_id: poliza.cliente_id },
+            pedidos,
+            r.config,
+          ))
+        return NextResponse.json(
+          {
+            estado: 'error',
+            causa: 'faltan_vendor',
+            mensaje: redactarCrudoVendor(envio.mensaje),
+            faltan: reparosDe(interp),
+            sugeridos,
+            noReconocidos: interp.noReconocidos,
+            crudo: redactarCrudoVendor(envio.crudo) ?? null,
+          },
+          { status: 422 },
+        )
+      }
+    }
     return NextResponse.json(
-      { estado: 'error', causa: envio.razon, mensaje: envio.mensaje, crudo: envio.crudo ?? null },
+      {
+        estado: 'error',
+        causa: envio.razon,
+        mensaje: redactarCrudoVendor(envio.mensaje),
+        crudo: redactarCrudoVendor(envio.crudo) ?? null,
+      },
       { status: envio.razon === 'en-vuelo' ? 409 : 502 },
     )
   }
@@ -298,7 +427,7 @@ export async function POST(req: Request) {
         `Codeoscopic aceptó la emisión pero «${p.aseguradora}» no tiene código DGS en companias_dgs: ` +
         'la póliza NO se ha acuñado sola. Añade el código y acúñala a mano con este `crudo`.',
       referenciaVendor: envio.referenciaVendor,
-      crudo: envio.crudo,
+      crudo: redactarCrudoVendor(envio.crudo),
     })
   }
 
@@ -324,7 +453,7 @@ export async function POST(req: Request) {
     // Con qué cuenta se ha emitido (enmascarada) y de dónde salió: la póliza
     // nueva se cobrará ahí, y eso tiene que verse sin abrir el `crudo`.
     cuenta: cuentaRespuesta,
-    crudo: envio.crudo,
+    crudo: redactarCrudoVendor(envio.crudo),
   })
 }
 

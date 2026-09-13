@@ -122,10 +122,20 @@ export interface PestanaPortal {
  *
  * «Contactos» no es un panel, es la otra ruta (`/autorizaciones`). Va en la
  * misma barra porque para quien la usa es «otra sección», no «otra página web».
+ *
+ * 🚨 **«Seguros» y «Datos», no «Mis seguros» ni «Mis datos» (12/09/2026).**
+ * El h1 de la bóveda es «Mis <em>X</em>» — la pestaña activa da el nombre y el
+ * h1 da el «mis» (Alberto: «sigue apareciendo mis seguros dos veces»). Con la
+ * etiqueta completa, la pestaña de «seguros» y el h1 de esa misma pantalla
+ * decían la frase EXACTA una encima de la otra; en «hoja»/«recibos»/
+ * «siniestro» ya no pasaba porque la pestaña usa una palabra distinta a la del
+ * h1 («Mi QR» / «Mis QR», «Recibos» / «Mis recibos»). Se corrige quitando el
+ * posesivo de la pestaña en los dos únicos casos donde coincidía letra por
+ * letra, no añadiendo uno a las demás.
  */
 export function pestanasPortal(): PestanaPortal[] {
   return [
-    { vista: 'seguros', etiqueta: 'Mis seguros', href: '/boveda' },
+    { vista: 'seguros', etiqueta: 'Seguros', href: '/boveda' },
     // 09/09/2026: acceso directo a la hoja/QR de la nevera, antes enterrada
     // al final de «Mis seguros». «Mi QR» y no «Hoja» ni «QR de acceso»: es la
     // palabra que ya usa el propio botón de crearla, y no compite con
@@ -146,7 +156,7 @@ export function pestanasPortal(): PestanaPortal[] {
     // 09/09/2026: «Mis datos», la última. Es sobre la persona, no sobre sus
     // seguros, y por eso va al final: quien entra viene a mirar pólizas, y su
     // ficha es lo que se toca una vez al mudarse o cambiar de número.
-    { vista: 'datos', etiqueta: 'Mis datos', href: '/boveda?vista=datos' },
+    { vista: 'datos', etiqueta: 'Datos', href: '/boveda?vista=datos' },
   ]
 }
 
