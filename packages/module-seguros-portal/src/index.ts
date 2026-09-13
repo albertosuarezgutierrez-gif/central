@@ -87,11 +87,15 @@ export {
   DESCRIPCION_MIN,
   DESCRIPCION_MAX,
   LUGAR_MAX,
+  CAMPO_VEHICULO_MAX,
   ANIOS_MAXIMOS_ATRAS,
   comunicadoACompania,
   parsearFechaHecho,
   plazoComunicacion,
   normalizarParte,
+  bloqueDatosVehiculo,
+  componerDescripcion,
+  ZONAS_VEHICULO,
 } from './parte-siniestro.ts'
 export type {
   ParteEstado,
@@ -99,6 +103,8 @@ export type {
   ParteNormalizado,
   ResultadoParte,
   PlazoComunicacion,
+  DatosVehiculo,
+  ZonaVehiculo,
 } from './parte-siniestro.ts'
 export {
   ALCANCES,

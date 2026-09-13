@@ -1632,7 +1632,36 @@ h1 em {
 .boton.secundario { background: var(--surface); color: var(--primary); }
 .boton.secundario:hover { background: var(--primary-light); border-color: var(--primary-hover); }
 .boton:disabled { opacity: 0.6; cursor: progress; }
+
 .aviso-linea .boton { margin-top: 10px; }
+
+/* El selector de zonas del daño (ParteSiniestro.tsx). 3 columnas × 3 filas con
+   forma de coche (delantera arriba, trasera abajo): la misma disposición que
+   ya usan Mapfre/Allianz/Línea Directa. Botones REALES, no una silueta con
+   regiones recortadas a mano — ver la cabecera de `ZonasVehiculo` en el
+   componente sobre por qué. `aspect-ratio` en vez de alto fijo: a 320 px de
+   ancho los botones siguen siendo cuadrados y táctiles sin desbordar. */
+.zonas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  max-width: 320px;
+}
+.zonas-boton {
+  aspect-ratio: 1;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 6px;
+  cursor: pointer;
+}
+.zonas-boton:hover { background: var(--primary-light); border-color: var(--primary-hover); }
+.zonas-boton.sel { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
+.zonas-boton:disabled { opacity: 0.6; cursor: progress; }
 
 /* ── Parte de siniestro ──────────────────────────────────────────────────
  * Lo abre gente desde el móvil justo después del golpe, así que aquí no hay
