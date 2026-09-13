@@ -1,29 +1,93 @@
 {
  "sesion": "ac7a26b0-f1d5-5009-b017-981e5893d914",
  "inicio": "2026-09-13T08:02:31.389Z",
- "fin": "2026-09-13T08:03:04.037Z",
- "llamadas": 6,
+ "fin": "2026-09-13T08:26:44.515Z",
+ "llamadas": 50,
  "categorias": {
   "otro": {
-   "llamadas": 1,
-   "chars_in": 26,
-   "chars_out": 47,
+   "llamadas": 4,
+   "chars_in": 254,
+   "chars_out": 1146,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Skill": 1
+    "Skill": 1,
+    "ToolSearch": 3
    }
   },
   "sql": {
-   "llamadas": 5,
-   "chars_in": 906,
-   "chars_out": 8838,
+   "llamadas": 15,
+   "chars_in": 3038,
+   "chars_out": 33273,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase_asegura__execute_sql": 5
+    "mcp__Supabase_asegura__execute_sql": 15
+   }
+  },
+  "bash": {
+   "llamadas": 9,
+   "chars_in": 1409,
+   "chars_out": 10206,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 9
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 6,
+   "chars_in": 794,
+   "chars_out": 64744,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 2,
+    "Grep": 4
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 3,
+   "chars_in": 178,
+   "chars_out": 4379,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__list_repos": 1,
+    "mcp__Claude_Code_Remote__add_repo": 1,
+    "mcp__Claude_Code_Remote__register_repo_root": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 7,
+   "chars_in": 798,
+   "chars_out": 26853,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__actions_run_trigger": 1,
+    "mcp__github__actions_list": 3,
+    "mcp__github__get_job_logs": 3
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 6,
+   "chars_in": 396,
+   "chars_out": 45417,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__list_projects": 1,
+    "mcp__Vercel__get_project": 3,
+    "mcp__Vercel__list_deployments": 1
    }
   }
  }
