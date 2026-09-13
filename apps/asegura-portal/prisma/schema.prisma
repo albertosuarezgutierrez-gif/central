@@ -94,14 +94,15 @@ model PortalIdentidad {
   ultimoVinculo   String?   @map("ultimo_vinculo")
   ultimoVinculoEn DateTime? @map("ultimo_vinculo_en") @db.Timestamptz(6)
 
-  canales      PortalCanal[]
-  accesos      PortalAcceso[]
-  bienes       PortalBien[]
-  polizas      PortalPolizaDeclarada[]
-  vinculos     PortalVinculo[]
-  obligaciones PortalObligacion[]
-  partes       PortalParteSiniestro[]
-  hojas        PortalHojaQr[]
+  canales           PortalCanal[]
+  accesos           PortalAcceso[]
+  bienes            PortalBien[]
+  polizas           PortalPolizaDeclarada[]
+  vinculos          PortalVinculo[]
+  obligaciones      PortalObligacion[]
+  partes            PortalParteSiniestro[]
+  hojas             PortalHojaQr[]
+  pushSuscripciones PortalPushSuscripcion[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -265,8 +266,12 @@ model PortalObligacion {
   fechaAccionable   DateTime             @map("fecha_accionable") @db.Date
   procedencia       PortalProcedencia
   confirmadaAt      DateTime?            @map("confirmada_at") @db.Timestamptz(6)
-  /// Sello del envío. Que exista es lo que impide avisar dos veces.
+  /// Sello del envío por CORREO (lo sella `apps/asegura`, que es quien tiene el email en claro).
+  /// Que exista es lo que impide avisar dos veces.
   avisadaAt         DateTime?            @map("avisada_at") @db.Timestamptz(6)
+  /// Sello del envío por PUSH. Independiente de `avisadaAt`: son dos canales que fallan por
+  /// separado (sin suscripción, endpoint muerto…) y compartir sello taparía el envío del otro.
+  avisadaPushAt     DateTime?            @map("avisada_push_at") @db.Timestamptz(6)
   creadaAt          DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
   actualizadaAt     DateTime             @default(now()) @map("actualizada_at") @db.Timestamptz(6)
 
@@ -288,6 +293,24 @@ model PortalObligacion {
   @@unique([identidadId, polizaDeclaradaId, tipo], map: "portal_obligacion_una_por_declarada_tipo")
   @@index([identidadId])
   @@map("portal_obligacion")
+  @@schema("seguros")
+}
+
+/// Una suscripción de Web Push del navegador (12/09/2026). NO es un dato descifrable como el email
+/// hasheado de `PortalCanal`: `endpoint`+claves son opacos y solo sirven para mandar UNA notificación
+/// a ESE navegador. Varias filas por identidad = varios dispositivos.
+model PortalPushSuscripcion {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId String   @map("identidad_id") @db.Uuid
+  endpoint    String   @unique
+  p256dh      String
+  authKey     String   @map("auth_key")
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@index([identidadId])
+  @@map("portal_push_suscripcion")
   @@schema("seguros")
 }
 

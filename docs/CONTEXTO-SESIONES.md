@@ -39,6 +39,18 @@
   Cepo visto en rojo (2+1 brazos). Alberto: «ni antes de hoy ni a más de 90 días» → la regla entera se valida antes de
   pagar (`revisarDatosAuto`, `min`/`max` en pantalla) y la fecha se precarga a MAÑANA. La clave de `emails[]` sigue sin
   descubrir (el ReRate murió antes por la fecha). PR #2863.
+- **🔔 Avisos por Web Push en `apps/asegura-portal` (12/09/2026).** Nuevo canal, hermano del correo
+  de vencimientos de `apps/asegura` pero SIN compartir sello ni sitio: la suscripción push no es un
+  dato descifrable, así que vive en el portal, sobre `seguros.portal_obligacion` (sello propio
+  `avisada_push_at`) + tabla nueva `seguros.portal_push_suscripcion` (migración aplicada en la BD
+  real, GRANT UPDATE incluido para el `upsert` de suscripción). Interruptor en el panel de la
+  campana (`ActivarPush.tsx`); `sw.js` ganó `push`/`notificationclick` sin tocar el guardián «no
+  cachea nada». Cron `/api/cron/avisos-push` (`vercel.json`), 32 tests nuevos en verde; su lectura
+  de cartera pasa por `portal_vinculo` (no solo por el estado de la póliza) y el borrado de
+  suscripciones muertas va por `deleteMany` con `identidadId`, para pasar los guardianes de
+  aislamiento/borrado del portal. **Pendiente de Alberto:** poner `NEXT_PUBLIC_VAPID_PUBLIC_KEY` +
+  `VAPID_PRIVATE_KEY` + `CRON_SECRET` en Vercel `asegura-portal` (detalle en su `CLAUDE.md`). PR #2850.
+
 - **📧 El vendor devuelve `emails: []`, no `email` — medido, y reparación GRATIS antes del Submit (13/09/2026).**
   Alberto abrió «Retarificar» de Pilar y el log de `/precalificar` enseñó la persona real del proyecto 40685666:
   `holder.emails` array vacío, sin clave `email` → el PATCH del 12/09 «no aplicaba» porque el vendor tira la clave

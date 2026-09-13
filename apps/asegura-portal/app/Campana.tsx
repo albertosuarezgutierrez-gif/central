@@ -3,6 +3,8 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import type { Avisos } from '@/lib/avisos'
 
+import { ActivarPush } from './ActivarPush'
+
 /**
  * La campana de la cabecera: lo que la persona tiene pendiente, en un solo
  * sitio, con un número encima.
@@ -126,6 +128,7 @@ export function Campana() {
       {abierto && (
         <div className="campana-panel" id={idPanel} role="region" aria-label="Avisos">
           <Contenido datos={datos} reintentar={cargar} cerrar={() => setAbierto(false)} />
+          <ActivarPush />
         </div>
       )}
     </div>

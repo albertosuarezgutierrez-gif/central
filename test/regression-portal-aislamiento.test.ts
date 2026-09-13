@@ -59,6 +59,12 @@ const EXENTOS = new Set([
   // recibe de `verificar/route.ts` (recién resuelta o creada); todavía no hay
   // cookie de la que sacarla. Solo escribe el vínculo de ESA identidad.
   'apps/asegura-portal/lib/vinculo.ts',
+  // Cron de avisos push (12/09/2026): autenticado por `CRON_SECRET`
+  // (`lib/cron-auth.ts`), no por la cookie de un visitante — no hay sesión de
+  // la que sacar una identidad porque no hay una identidad, hay muchas. Cada
+  // fila que toca ya lleva su `identidadId` propio (de `portal_obligacion`) y
+  // el cruce con la cartera pasa por `portal_vinculo`, igual que el resto.
+  'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
 ])
 
 /**
@@ -69,8 +75,15 @@ const USA_PRISMA_CARTERA =
   /prisma\s*\.\s*(cliente|clienteEmail|poliza|polizaCobertura|polizaRecibo|siniestro|polizaInterviniente|clienteRelacion|correduria)\b/
 /** La costura: el vínculo identidad ↔ ficha. Sin nombrarlo, la lectura no parte de la identidad. */
 const NOMBRA_VINCULO = /portalVinculo/
-/** Lee cartera sin sesión porque corre ANTES de que exista: el canje del código. */
-const CARTERA_SIN_SESION = new Set(['apps/asegura-portal/lib/vinculo.ts'])
+/**
+ * Lee cartera sin sesión: `vinculo.ts` porque corre ANTES de que exista (el canje del
+ * código); el cron de avisos push porque no hay visitante — se autentica por `CRON_SECRET`
+ * y resuelve cada fila por su propio `identidadId`, no por una cookie.
+ */
+const CARTERA_SIN_SESION = new Set([
+  'apps/asegura-portal/lib/vinculo.ts',
+  'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+])
 
 /** `prisma.portalPoliza…`, `prisma.portalBien…`, `prisma.portalIdentidad…` */
 const USA_PRISMA_PORTAL = /prisma\s*\.\s*portal[A-Z]/
