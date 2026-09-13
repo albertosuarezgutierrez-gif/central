@@ -31,6 +31,29 @@
 > registro de qué se hizo y qué queda.
 
 - **🛡️ Sentinel [SOMBRA] permitía en silencio un exfil crítico en sesión desatendida — corregido (13/09/2026).** `SENTINEL_SHADOW` degradaba TODO `deny`/`ask` a `allow`-con-log por igual, incluidos los `deny` duros (`known_malicious`/`feed_blocklist`) y un `ask` CRITICAL de `sensitive_env` (secreto exfiltrado por `curl`) — el aviso de Telegram llegaba después de que el `curl` ya hubiera salido. Añadido `_session_attended()` en `sentinel_preflight.py` (lee `CLAUDE_CODE_SESSION_ATTENDED`; desconocido = no atendida, criterio conservador): `deny` duro nunca se toca; `ask` con humano delante llega real; `ask` CRITICAL desatendido → **deniega** (no cuelga, no permite); `ask` HIGH desatendido → sigue igual que antes. `sentinel_alerta.py` avisa por Telegram también en el nuevo caso de `deny`. Probado con 4 casos locales (`py_compile` + ejecución). Detalle en `.claude/mcp-sentinel/README.md` § "Ask crítico + desatendido". **Pendiente:** confirmar que `CLAUDE_CODE_SESSION_ATTENDED` refleja de verdad "sin humano" en una Routine real (solo se ha observado `=1` en sesión propia interactiva).
+- **🔎 Diagnóstico (sin código): botón WhatsApp/Invitar ausente en Pablo Franco Ruz — no era el móvil
+  (13/09/2026).** Alberto reportó el botón ausente; se confirmó por BD que teléfono (móvil válido) y
+  email de la ficha (`1e831058-…`) están bien y el email resuelve de forma ÚNICA a su propia ficha
+  (sin ambigüedad, sin `resuelve_a_otra`). El bloque entero (✉️ Invitar + WhatsApp) solo se oculta
+  si `explicarPortal()` recibe el estado **`no_comprobado`** (fallo de la consulta plataforma↔asegura,
+  ver `apps/asegura/lib/invitacion-portal.ts`) — no un dato que falte en el cliente. Pendiente: si
+  persiste tras «Volver a comprobar», mirar logs de `central-asegura` (`PII_LOOKUP_KEY`/conexión).
+- **🚨 CIMA caído 12-13/09 por DNS de `app.grupoasegura.com` — arreglado + mapper corregido + cuarentena desatascada 42→20 (13/09/2026).**
+  Causa: el registro DNS de `app` en IONOS (`grupoasegura.com`) faltaba/se rompió al tocar `grupoasegura.es` un día antes
+  (`curl: Could not resolve host`, 3 runs seguidos desde 12/09 09:29 UTC). Alberto lo arregló en IONOS (CNAME `app` →
+  `*.vercel-dns-*.com`); Vercel ya tenía el dominio bien asignado. Nada se perdió (cola TIREA no dequeue hasta confirmar).
+  Aparte, desatascando la cuarentena con `reconcile=1` se vio que `mapOnePoliza` solo clasificaba `riesgos[0]` — si el
+  bloque reconocible no iba primero en un array multi-riesgo, nunca se miraba (2 POL de Occident seguían en review pese
+  al fix LOO-807 de agosto). Corregido y mergeado en `asegura` (repo separado, PR #821). Se vio además que `reconcile`
+  reprocesaba siempre los mismos 10 primeros de la cola (`CIMA_PULL_BATCH_SIZE=10` en prod) sin llegar al resto: PR #823
+  añade `?batchSize=` opcional (mismo clamp [1,50], sin tocar la env var) y PR #824 lo expone en el `workflow_dispatch`.
+  Con `batchSize=40` se barrieron las 6 páginas de la cola: **42→20 ficheros en review** (22 resueltos solos). Los 20 que
+  quedan son de dos causas conocidas, no bugs nuevos: 3 SIN de C0109 por `art14_asegurado_distinto` (decisión de negocio,
+  quién es el asegurado real) y 17 de C0468 (1 POL + 6 REC + 10 SIN) que cuelgan de una única póliza (`M00171_20260522`)
+  cuyo bloque de riesgo real no se puede ver sin el XML crudo (no se persiste, Art.5) — requeriría instrumentar más
+  diagnóstico si se quiere cerrar del todo.
+  **Ojo: `apps/asegura` de `central` lee de `seguros.*` en la Supabase compartida (`wswbehlcuxqxyinousql`), NO del
+  proyecto original de Manuel (`uijsgeocgdaxkhvwtjqs`, congelado desde el 31/08) — verificar SIEMPRE contra ese primero.**
 - **🔒 Login de plataforma sin rate limit — fuerza bruta viable, cerrado (13/09/2026, #2884 mergeado).**
   `/api/auth/login` no tenía ningún tope de intentos. Añadido doble límite (IP 20/15min + email
   5/15min) reutilizando `lib/rate-limit.ts` (mismo limitador en memoria del lead público de la
