@@ -82,7 +82,12 @@ description: Agente PROGRAMADO semanal (domingo) que mejora los prompts de los a
 
 6. **Mantenimiento y cierre.**
    - Poda de `AGENTES-BITACORA.md`: elimina las entradas procesadas y actualiza "Última
-     poda" (fecha + nº de entradas del rango).
+     poda" (fecha + nº de entradas del rango). **Verifica que se aplicó de verdad**: relee
+     el archivo (o cuenta las entradas del rango) DESPUÉS de editar y ANTES de dar la
+     pasada por cerrada — las podas del 23/08 y 30/08 se declararon hechas en su propio
+     texto pero las entradas seguían ahí (42 sin podar, cazado el 06/09); no se sabe si se
+     perdieron en un merge o si el borrado nunca se commiteó, así que la única defensa es
+     comprobar el resultado, no confiar en la propia narración de la pasada.
    - `FEEDBACK-AGENTES.md`: mueve las pendientes atendidas a "Procesadas" con su marca
      (`✅ procesado <fecha> → PR #xxx` o `→ sin acción: <motivo>`).
    - Añade TU PROPIA entrada de auto-informe en la bitácora (el entrenador también es un

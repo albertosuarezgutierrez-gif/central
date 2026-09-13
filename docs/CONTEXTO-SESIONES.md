@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🤖 agentes-entrenador: la poda quedó DOS semanas atascada en un PR draft sin mergear
+  (13/09/2026).** La pasada del 06/09 (PR #2413) diagnosticó bien el rango 24/08→05/09 pero se
+  quedó en draft y `mergeable_state:dirty`; esta pasada incorpora su diagnóstico, poda TODO
+  24/08→12/09 (verificado releyendo el archivo — nuevo guardarraíl en la skill) y cierra #2413
+  como superado. Único hallazgo sin arreglo de código posible: `mercado-booking` lleva **10+
+  pasadas** desde el 29/08 repitiendo "PRIORIDAD TEMPORAL" sobre un objetivo cumplido desde el
+  31/08 — vive en el prompt de un trigger externo que ninguna sesión puede editar; escalado por
+  Telegram (van ya varios avisos). Backlog de PRs abiertos: **19** (antes 7 el 06/09, 2 el 30/08).
+
 - **🔔 Avisos por Web Push en `apps/asegura-portal` (12/09/2026).** Nuevo canal, hermano del correo
   de vencimientos de `apps/asegura` pero SIN compartir sello ni sitio: la suscripción push no es un
   dato descifrable, así que vive en el portal, sobre `seguros.portal_obligacion` (sello propio
