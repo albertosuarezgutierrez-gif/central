@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { Building2, Mail } from 'lucide-react'
-import { companiasAsegura, interpretarCompanias, type Compania } from '@/lib/companias-asegura'
+import { Building2 } from 'lucide-react'
+import { companiasAsegura, interpretarCompanias, type Compania, type Contacto } from '@/lib/companias-asegura'
+import { etiquetaArea } from '@central/module-seguros'
 import { PageHeader } from '@/components/ui'
-import BotonWhatsapp from '../BotonWhatsapp'
+import ContactoAcciones from '../ContactoAcciones'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,8 @@ export const dynamic = 'force-dynamic'
  * quería llegar a esto desde el `+` de la cabecera, no buscarlo dentro de la
  * pestaña Datos. Misma fuente que `Companias.tsx` (que se queda montado ahí,
  * como referencia rápida); aquí se pinta en tarjetas, una por compañía, con
- * los botones de WhatsApp y correo a mano.
+ * TODOS sus contactos (desde el 13/09/2026 una compañía puede tener varios)
+ * y los botones de WhatsApp y correo a mano.
  */
 export default async function CompaniasPage() {
   const { status, json } = await companiasAsegura()
@@ -51,13 +53,13 @@ const tarjeta: React.CSSProperties = {
 }
 
 function ListaCompanias({ companias }: { companias: Compania[] }) {
-  const conContacto = companias.filter((c) => c.contactoNombre || c.contactoEmail || c.contactoTelefono)
-  const sinContacto = companias.filter((c) => !c.contactoNombre && !c.contactoEmail && !c.contactoTelefono)
+  const conContacto = companias.filter((c) => c.contactos.length > 0)
+  const sinContacto = companias.filter((c) => c.contactos.length === 0)
 
   return (
     <>
       <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-        {conContacto.length} de {companias.length} compañías con un contacto conocido.
+        {conContacto.length} de {companias.length} compañías con al menos un contacto conocido.
       </p>
 
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
@@ -80,7 +82,7 @@ function ListaCompanias({ companias }: { companias: Compania[] }) {
 
 function TarjetaCompania({ c }: { c: Compania }) {
   return (
-    <div style={{ ...tarjeta, display: 'grid', gap: 8 }}>
+    <div style={{ ...tarjeta, display: 'grid', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{c.nombreComun}</h2>
         {c.claveMediador && (
@@ -90,43 +92,33 @@ function TarjetaCompania({ c }: { c: Compania }) {
         )}
       </div>
 
-      {c.contactoNombre && (
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>{c.contactoNombre}</div>
-          {c.contactoCargo && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{c.contactoCargo}</div>}
-        </div>
-      )}
+      {c.contactos.map((ct) => (
+        <TarjetaContacto key={ct.id} ct={ct} />
+      ))}
+    </div>
+  )
+}
 
-      {(c.contactoEmail || c.contactoTelefono) && (
+function TarjetaContacto({ ct }: { ct: Contacto }) {
+  return (
+    <div style={{ display: 'grid', gap: 6, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>{ct.nombre}</div>
+        {(ct.cargo || ct.area) && (
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            {[ct.cargo, etiquetaArea(ct.area)].filter(Boolean).join(' · ')}
+          </div>
+        )}
+      </div>
+
+      {(ct.email || ct.telefono) && (
         <div style={{ display: 'grid', gap: 4, fontSize: 13 }}>
-          {c.contactoEmail && (
-            <a href={`mailto:${c.contactoEmail}`} style={{ overflowWrap: 'anywhere' }}>{c.contactoEmail}</a>
-          )}
-          {c.contactoTelefono && (
-            <a href={`tel:${c.contactoTelefono.replace(/[^0-9+]/g, '')}`}>{c.contactoTelefono}</a>
-          )}
+          {ct.email && <a href={`mailto:${ct.email}`} style={{ overflowWrap: 'anywhere' }}>{ct.email}</a>}
+          {ct.telefono && <a href={`tel:${ct.telefono.replace(/[^0-9+]/g, '')}`}>{ct.telefono}</a>}
         </div>
       )}
 
-      {(c.contactoTelefono || c.contactoEmail) && (
-        <div style={{ display: 'flex', gap: 6 }}>
-          {c.contactoTelefono && <BotonWhatsapp telefono={c.contactoTelefono} />}
-          {c.contactoEmail && (
-            <a
-              href={`mailto:${c.contactoEmail}`}
-              aria-label={`Escribir a ${c.nombreComun}`}
-              title={`Escribir a ${c.nombreComun}`}
-              style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 44, height: 44, borderRadius: 10,
-                border: '1px solid var(--border)', color: 'var(--text)',
-              }}
-            >
-              <Mail size={18} strokeWidth={1.75} aria-hidden />
-            </a>
-          )}
-        </div>
-      )}
+      <ContactoAcciones contactoId={ct.id} nombre={ct.nombre} telefono={ct.telefono} email={ct.email} />
     </div>
   )
 }

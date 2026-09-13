@@ -555,3 +555,13 @@ export { nombreDePila } from './nombre-de-pila.ts'
 
 export { COOLDOWN_DIAS, enCooldown, textoBaseRecaptacionWhatsapp, textoBaseRecaptacionEmail } from './recaptacion.ts'
 export type { EnvioRecienteRecaptacion, PersonalizacionRecaptacion } from './recaptacion.ts'
+
+export {
+  AREAS_CONTACTO,
+  areaContacto,
+  etiquetaArea,
+  ordenarContactos,
+  contactoDestacado,
+  type AreaContacto,
+  type ContactoCompania,
+} from './compania-contactos.ts'
