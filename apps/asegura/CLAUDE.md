@@ -381,6 +381,19 @@ entera ([hoy, hoy+90]) la aplica `revisarDatosAuto` antes de pagar (`motivoFecha
 guardada como `caducada` y plataforma no la ofrece (banner rojo + «Pedir precio» encendido con
 `forzarNuevo`). Sin fecha no se afirma nada (`false`): que hable el ReRate.
 
+(7) 🛑 **El primer Submit que LLEGÓ a la compañía acabó en 500 del vendor — y eso NO es un rechazo
+(13/09/2026, proyecto 40685793):** persona completa (sin 400 de email/calle), y a los 8 s Codeoscopic
+contestó «Unknown error while waiting for the operation to complete» — dejó de esperar a Allianz (08:27
+de un domingo). **No se sabe si la compañía emitió**, el vendor no deduplica y no tenemos ni webhook real
+(la tabla `codeoscopic_webhook_events` solo tiene smoke tests de junio) ni fixture del proyecto DESPUÉS de
+un Submit. Fail-closed en `/emitir` (`lib/codeoscopic/reintento-emision.ts`, puro): si el proyecto crudo
+ya cuenta una `policyApplication*` con contenido → 409 `solicitud_existente` (no se envía otra); si el
+último intento acabó en 5xx o corte de red (`intentoQuizaEmitido` sobre `codeoscopic_projects.estado` +
+`error_mensaje`) → 409 `reintento_sin_confirmar` con el proyecto crudo (lectura gratis) hasta que el
+corredor mande `reintentoConfirmado: true`. El 502 del Submit lleva `quizaEmitido`. Un 400/422 NO cuenta
+como quizá-emitido: ahí el vendor rechazó. `policyApplicationSupported` de un precio es una capacidad, no
+una solicitud (el filtro la excluye).
+
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 
 `/cartera` → buscar cliente → su ficha → **Retarificar** en una póliza de auto. Es la forma en que

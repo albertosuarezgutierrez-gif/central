@@ -13,6 +13,7 @@ import {
   redactarCrudoVendor,
 } from '@/lib/codeoscopic/emitir'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada } from '@/lib/codeoscopic/fecha-efecto'
+import { intentoQuizaEmitido, rastroSolicitudEmision } from '@/lib/codeoscopic/reintento-emision'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
 import {
   conCuentaBancaria,
@@ -46,6 +47,8 @@ export const maxDuration = 60
  *
  * ── Cuerpo ──────────────────────────────────────────────────────────────────
  *   { projectId, confirmado: true, campos?: Record<string, unknown>, cuentaConfirmada?: string }
+ *   `reintentoConfirmado: true` solo tras un intento que acabó en 5xx/corte de red (ver 409
+ *   `reintento_sin_confirmar`): el corredor ha mirado el proyecto y no hay póliza.
  *
  * `cuentaConfirmada` es la MÁSCARA (`ES91…1332`) de la cuenta de cargo que la
  * pantalla enseñó tras el ReRate (`/oferta` → `cuenta`). Sin ella, una cuenta
@@ -94,9 +97,16 @@ export async function POST(req: Request) {
   }
 
   const filas = await prisma.$queryRaw<
-    { poliza_id: string | null; aseguradora: string | null; accepted_offer_id_codeoscopic: string | null }[]
+    {
+      poliza_id: string | null
+      aseguradora: string | null
+      accepted_offer_id_codeoscopic: string | null
+      estado: string | null
+      error_mensaje: string | null
+    }[]
   >`
-    select poliza_id::text as poliza_id, aseguradora, accepted_offer_id_codeoscopic
+    select poliza_id::text as poliza_id, aseguradora, accepted_offer_id_codeoscopic,
+           estado::text as estado, error_mensaje
     from codeoscopic_projects
     where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
   `
@@ -261,6 +271,49 @@ export async function POST(req: Request) {
     console.log(`[emitir] no se pudo leer el proyecto ${projectId} antes del Submit —`, e instanceof Error ? e.message : String(e))
     return null
   })
+  // ── Fail-closed ante un «quizá emitido» (13/09/2026, proyecto 40685793) ──
+  // Si el proyecto YA cuenta una solicitud de emisión, no se manda otra: el
+  // vendor no deduplica y un segundo Submit puede ser la segunda póliza del
+  // mismo coche. Y si el ÚLTIMO intento acabó en 5xx o en corte de red —
+  // «Unknown error while waiting for the operation to complete» — tampoco se
+  // reenvía a ciegas: el corredor tiene que mirar el estado (aquí va el
+  // proyecto crudo, gratis) y decirlo con `reintentoConfirmado: true`.
+  const rastro = crudoPrevio ? rastroSolicitudEmision(crudoPrevio) : []
+  if (rastro.length > 0) {
+    console.log(`[emitir] proyecto ${projectId} ya cuenta una solicitud de emisión (${rastro.map((r) => r.ruta).join(', ')}): no se envía otra`)
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'solicitud_existente',
+        mensaje:
+          'El proyecto ya tiene una solicitud de emisión en Codeoscopic: NO se ha enviado otra. ' +
+          'Mira su estado (aquí va lo que cuenta el proyecto) y en Avant2 antes de nada — un segundo ' +
+          'envío podría ser una segunda póliza.',
+        rastro: redactarCrudoVendor(rastro),
+        crudo: redactarCrudoVendor(crudoPrevio),
+      },
+      { status: 409 },
+    )
+  }
+  if (intentoQuizaEmitido(p.estado, p.error_mensaje) && cuerpo.reintentoConfirmado !== true) {
+    console.log(`[emitir] proyecto ${projectId}: el último Submit acabó sin respuesta clara y no hay confirmación de reintento — no se envía`)
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'reintento_sin_confirmar',
+        mensaje:
+          'El último envío de este proyecto acabó sin respuesta clara del vendor, así que NO se sabe si la ' +
+          'compañía llegó a emitir. No se reenvía a ciegas: comprueba el estado del proyecto (abajo va tal ' +
+          'cual lo devuelve Codeoscopic; si no cuenta ninguna solicitud, mira también Avant2) y, si no hay ' +
+          'póliza, confirma el reintento.',
+        ultimoError: p.error_mensaje,
+        proyectoLegible: crudoPrevio !== null,
+        crudo: crudoPrevio ? redactarCrudoVendor(crudoPrevio) : null,
+      },
+      { status: 409 },
+    )
+  }
+
   if (crudoPrevio) {
     // Fecha de efecto ya PASADA (13/09/2026): la compañía no emite con una
     // fecha de efecto anterior a hoy y el proyecto no la deja cambiar — el
@@ -495,6 +548,10 @@ export async function POST(req: Request) {
         estado: 'error',
         causa: envio.razon,
         mensaje: redactarCrudoVendor(envio.mensaje),
+        // Un 5xx del Submit no es un rechazo: Codeoscopic dejó de esperar a la
+        // compañía y no se sabe si emitió. La pantalla lo dice y el siguiente
+        // intento exige `reintentoConfirmado` (ver arriba).
+        quizaEmitido: envio.razon === 'vendor' && intentoQuizaEmitido('error', envio.mensaje),
         crudo: redactarCrudoVendor(envio.crudo) ?? null,
       },
       { status: envio.razon === 'en-vuelo' ? 409 : 502 },

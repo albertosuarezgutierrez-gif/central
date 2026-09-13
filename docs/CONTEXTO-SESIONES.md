@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🛑 Primer Submit que LLEGA a la compañía… y Codeoscopic contesta 500 «Unknown error while waiting for the operation to complete» (13/09/2026).**
+  Proyecto 40685793 (Pilar, Allianz; 0,50€ del ReRate, el Submit no cobra): la persona iba completa (ya no hay 400 de
+  email/calle — el `POST /insurances` de #2859 la manda entera) y el 500 es del vendor esperando a la compañía, a las
+  08:27 de un domingo. **No es un rechazo: no se sabe si Allianz emitió**, y el vendor no deduplica. Fail-closed en
+  `/emitir` (`lib/codeoscopic/reintento-emision.ts`, puro): si el proyecto ya cuenta una `policyApplication` → 409
+  `solicitud_existente`; si el último intento acabó en 5xx/corte → 409 `reintento_sin_confirmar` con el proyecto crudo
+  (gratis) hasta que el corredor mande `reintentoConfirmado`. Plataforma pinta los dos y el 502 lleva `quizaEmitido`.
+  Sin webhook real de Codeoscopic (la tabla solo tiene smoke tests de junio) ni fixture del proyecto post-Submit. PR pendiente.
 - **⏳ La fecha de efecto CADUCA: el proyecto 40685666 murió al cambiar de día (13/09/2026).**
   Con #2859 desplegado, Alberto pulsó «Confirmar precio» y la compañía contestó «The effective date cannot be
   before today»: se cotizó el 12/09 con efecto 12/09 (la pantalla precarga HOY) y `effectiveDate` es de solo

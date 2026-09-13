@@ -87,3 +87,50 @@ test('la cuenta de la ficha solo viaja con la máscara confirmada a mano: ni por
   assert.match(ruta, /confirmar: true,/, 'diciéndole a plataforma que es una confirmación, no un hueco vacío.')
   assert.doesNotMatch(ruta, /ibanEnvio = ibanHumano \?\? ficha\.iban/, 'la ficha ya no cae al envío por su cuenta.')
 })
+
+// 13/09/2026, proyecto 40685793: el Submit llegó al vendor con la persona
+// completa y Codeoscopic contestó «500 Unknown error while waiting for the
+// operation to complete». Eso no es un rechazo: no se sabe si la compañía
+// emitió. asegura lo declara (`quizaEmitido`) y el siguiente intento exige
+// confirmación (409 `reintento_sin_confirmar`) o se corta si el proyecto ya
+// cuenta una solicitud (409 `solicitud_existente`).
+test('un 502 del Submit con quizaEmitido llega a la pantalla como tal, y sin el flag no', () => {
+  const r = interpretarEmitir(502, { estado: 'error', causa: 'vendor', mensaje: '500: {…}', quizaEmitido: true, crudo: null })
+  assert.equal(r.estado, 'error')
+  if (r.estado !== 'error') return
+  assert.equal(r.quizaEmitido, true)
+  const s = interpretarEmitir(502, { estado: 'error', causa: 'vendor', mensaje: '400: {…}', crudo: null })
+  assert.equal(s.estado === 'error' ? s.quizaEmitido : 'x', undefined)
+})
+
+test('el 409 reintento_sin_confirmar trae el último error y el proyecto para mirarlo; crudo ausente ≠ legible', () => {
+  const r = interpretarEmitir(409, {
+    estado: 'error',
+    causa: 'reintento_sin_confirmar',
+    mensaje: 'El último envío…',
+    ultimoError: '500: {"message":"Unknown error while waiting for the operation to complete."}',
+    proyectoLegible: true,
+    crudo: { id: 40685793 },
+  })
+  assert.equal(r.estado, 'reintento_sin_confirmar')
+  if (r.estado !== 'reintento_sin_confirmar') return
+  assert.match(r.ultimoError ?? '', /Unknown error/)
+  assert.equal(r.proyectoLegible, true)
+  assert.deepEqual(r.crudo, { id: 40685793 })
+  const sin = interpretarEmitir(409, { causa: 'reintento_sin_confirmar', proyectoLegible: false })
+  assert.equal(sin.estado === 'reintento_sin_confirmar' ? sin.proyectoLegible : 'x', false)
+  assert.equal(sin.estado === 'reintento_sin_confirmar' ? sin.crudo : 'x', null)
+})
+
+test('el 409 solicitud_existente se distingue de en-vuelo y conserva el rastro', () => {
+  const r = interpretarEmitir(409, { estado: 'error', causa: 'solicitud_existente', mensaje: 'Ya hay…', rastro: [{ ruta: 'policyApplication', valor: { id: 'PA-1' } }], crudo: {} })
+  assert.equal(r.estado, 'solicitud_existente')
+  if (r.estado !== 'solicitud_existente') return
+  assert.equal(Array.isArray(r.rastro) ? r.rastro.length : 0, 1)
+  assert.equal(interpretarEmitir(409, { causa: 'en-vuelo' }).estado, 'en_vuelo')
+})
+
+test('emitirAsegura solo manda reintentoConfirmado cuando es true (lee el fuente)', () => {
+  const src = readFileSync(fileURLToPath(new URL('./retarificar-asegura.ts', import.meta.url)), 'utf8')
+  assert.match(src, /p\.reintentoConfirmado === true \? \{ reintentoConfirmado: true \} : \{\}/)
+})

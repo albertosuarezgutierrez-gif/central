@@ -941,7 +941,23 @@ export type RespuestaEmitir =
       confirmar: boolean
     }
   | { estado: 'en_vuelo'; mensaje: string }
-  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown }
+  /** 409 · el proyecto YA cuenta una solicitud de emisión en Codeoscopic: asegura
+   *  no ha enviado otra (13/09/2026). `rastro` es lo que el proyecto dice de ella. */
+  | { estado: 'solicitud_existente'; mensaje: string; rastro: unknown; crudo: unknown }
+  /** 409 · el último Submit acabó en 5xx o corte de red («quizá emitido») y nadie
+   *  ha confirmado el reintento: asegura no reenvía a ciegas. `crudo` es el
+   *  proyecto tal cual lo devuelve el vendor (gratis) para mirarlo; `null` si no
+   *  se pudo leer — que NO es «no hay póliza». */
+  | {
+      estado: 'reintento_sin_confirmar'
+      mensaje: string
+      ultimoError: string | null
+      proyectoLegible: boolean
+      crudo: unknown
+    }
+  /** `quizaEmitido`: el Submit acabó en 5xx — Codeoscopic dejó de esperar a la
+   *  compañía y NO se sabe si emitió. No es un rechazo. */
+  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown; quizaEmitido?: boolean }
   | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null }
   | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
 
@@ -968,6 +984,27 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
   if (status === 409 && r.causa === 'en-vuelo') {
     return { estado: 'en_vuelo', mensaje: cadenaONulo(r.mensaje) ?? 'Ya hay un envío de este proyecto en curso.' }
   }
+  if (status === 409 && r.causa === 'solicitud_existente') {
+    return {
+      estado: 'solicitud_existente',
+      mensaje:
+        cadenaONulo(r.mensaje) ??
+        'El proyecto ya tiene una solicitud de emisión en Codeoscopic: no se ha enviado otra.',
+      rastro: r.rastro ?? null,
+      crudo: r.crudo ?? null,
+    }
+  }
+  if (status === 409 && r.causa === 'reintento_sin_confirmar') {
+    return {
+      estado: 'reintento_sin_confirmar',
+      mensaje:
+        cadenaONulo(r.mensaje) ??
+        'El último envío acabó sin respuesta clara del vendor: comprueba el proyecto antes de reintentar.',
+      ultimoError: cadenaONulo(r.ultimoError),
+      proyectoLegible: r.proyectoLegible === true,
+      crudo: r.crudo ?? null,
+    }
+  }
   if (status === 200) {
     if (r.estado === 'emitido_sin_acunar') {
       return {
@@ -993,6 +1030,7 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
     motivo: 'asegura_error',
     mensaje: [cadenaONulo(r.mensaje), detalle].filter((s): s is string => !!s).join(' — ') || `error ${status}`,
     crudo: r.crudo ?? null,
+    ...(r.quizaEmitido === true ? { quizaEmitido: true } : {}),
   }
 }
 
@@ -1011,6 +1049,9 @@ export async function emitirAsegura(p: {
    *  aprobado. Sin ella asegura no manda la cuenta de la ficha: contesta
    *  `faltan_campos` con `confirmar: true`. Un IBAN tecleado en `campos.iban` manda. */
   cuentaConfirmada?: string | null
+  /** El corredor ha mirado el proyecto tras un intento «quizá emitido» y no hay
+   *  póliza: solo así asegura reenvía (409 `reintento_sin_confirmar` si falta). */
+  reintentoConfirmado?: boolean
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1025,6 +1066,7 @@ export async function emitirAsegura(p: {
           primaAnual: p.primaAnual ?? null,
           confirmado: true,
           ...(p.cuentaConfirmada ? { cuentaConfirmada: p.cuentaConfirmada } : {}),
+          ...(p.reintentoConfirmado === true ? { reintentoConfirmado: true } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,
