@@ -305,13 +305,17 @@ function bloque(
 }
 
 /**
- * Nombre y apellidos, SIN ACENTOS (08/09/2026 → corregido: se buscaba con
- * `contains` de Prisma, que es un `ILIKE` normal — insensible a mayúsculas,
- * pero NO a acentos. Buscar «Alberto Suarez» no encontraba «Alberto Suárez»:
- * el buscador debe ser lo más amplio posible y encontrar lo más parecido, no
- * exigir la tilde exacta. Mismo patrón que `porRiesgo`: `unaccent()` en los
- * dos lados, con reintento sin ella si la extensión no está instalada — un
- * «no se encuentra a nadie» falso por eso sería peor que perder el filtro.
+ * Nombre y apellidos, SIN ACENTOS (13/09/2026 → corregido dos veces el mismo
+ * día: primero se cambió `contains` de Prisma —un `ILIKE` normal, insensible
+ * a mayúsculas pero NO a acentos— por `unaccent()`; buscar «Alberto Suarez»
+ * SEGUÍA sin encontrar «Alberto Suárez». La extensión `unaccent` vive en el
+ * schema `extensions`, y esta conexión fija `search_path=seguros` (vía
+ * `?schema=seguros` de `asegura-url.ts`): `unaccent()` sin cualificar no
+ * resuelve, la consulta lanza y cae al `.catch` — que es el ILIKE simple, el
+ * mismo bug de acentos por otra puerta. Verificado en la BD real con
+ * `SET search_path TO seguros` + `SELECT unaccent(...)`: `42883 function
+ * unaccent(unknown) does not exist`. Se cualifica `extensions.unaccent(...)`
+ * a propósito; NO usar `unaccent()` a secas en ninguna consulta de esta app.
  */
 async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
@@ -320,7 +324,7 @@ async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResul
   const condicionUnaccent = Prisma.join(
     palabras.map(
       (p) =>
-        Prisma.sql`(unaccent(cl.nombre) ilike unaccent(${'%' + p + '%'}) or unaccent(cl.apellidos) ilike unaccent(${'%' + p + '%'}))`,
+        Prisma.sql`(extensions.unaccent(cl.nombre) ilike extensions.unaccent(${'%' + p + '%'}) or extensions.unaccent(cl.apellidos) ilike extensions.unaccent(${'%' + p + '%'}))`,
     ),
     ' and ',
   )
@@ -370,7 +374,7 @@ async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResul
   return bloque(c, hallazgos, total === null ? null : { alcanzables: total, total })
 }
 
-/** Igual trampa que `porNombre`: `contains` de Prisma no ignora acentos. */
+/** Igual trampa que `porNombre` (y su misma corrección: `extensions.unaccent`). */
 async function porCiudad(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
   const filas = await db.$queryRaw<
@@ -381,7 +385,7 @@ async function porCiudad(correduriaId: string, c: Criterio): Promise<BloqueResul
     where cl.correduria_id = ${correduriaId}::uuid
       and cl.merged_into_cliente_id is null
       and cl.activo
-      and unaccent(cl.ciudad) ilike unaccent(${'%' + c.valor + '%'})
+      and extensions.unaccent(cl.ciudad) ilike extensions.unaccent(${'%' + c.valor + '%'})
     order by cl.apellidos asc
     limit ${LIMITE}
   `.catch(async () => {
@@ -464,6 +468,13 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
  * póliza (`localidad`, `cp`), no en la ficha del cliente. Es lo que hace que
  * la casa de la playa salga buscando el pueblo, aunque el cliente viva en
  * Sevilla. Un CP de 5 dígitos se compara exacto; un texto, por fragmento.
+ *
+ * 🚨 `unaccent()` va CUALIFICADO (`extensions.unaccent`, 13/09/2026): la
+ * extensión vive en el schema `extensions` y esta conexión fija
+ * `search_path=seguros`, así que sin cualificar la consulta lanzaba y SIEMPRE
+ * caía al `.catch` sin acentos — mismo bug que en `porNombre`/`porCiudad`,
+ * aquí escondido porque el reintento sin `unaccent` no se distingue de un
+ * «no hay resultados» normal.
  */
 async function porRiesgo(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
@@ -483,7 +494,7 @@ async function porRiesgo(correduriaId: string, c: Criterio): Promise<BloqueResul
       and cl.activo
       and (
         ${esCp} and p.datos_especificos->>'cp' = ${c.valor}
-        or (not ${esCp}) and unaccent(p.datos_especificos->>'localidad') ilike unaccent(${'%' + c.valor + '%'})
+        or (not ${esCp}) and extensions.unaccent(p.datos_especificos->>'localidad') ilike extensions.unaccent(${'%' + c.valor + '%'})
       )
     limit ${LIMITE}
   `.catch(async () => {
