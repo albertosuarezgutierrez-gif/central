@@ -30,6 +30,10 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔔 Aviso Telegram al iniciar sesión en la intranet (13/09/2026).** `POST /api/auth/login` emite
+  `sistema.acceso-intranet` (catálogo `lib/telegram/catalogo.ts`) con nombre y email de la `cuenta`
+  que ha entrado — único dato disponible en ese punto. Silenciable desde `/telegram`. PR #2904 mergeado.
+
 - **📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real (13/09/2026).**
   Dado de alta el 15/06 (LOO-322) → `app.grupoasegura.com/api/webhooks/codeoscopic`, HTTP Basic; el emisor real manda un
   **array de 2 elementos `{insurance}` cada ~30 min** (1.671 rechazos en `operational_events` desde el 25/06, antes de emitir
