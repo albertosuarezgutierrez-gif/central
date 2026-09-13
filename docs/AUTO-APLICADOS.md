@@ -13,6 +13,15 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-13** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`, este archivo · pasada
+  ligera del día: causa raíz del backlog de PRs de registro (`action_required` en los checks tras la
+  resolución de conflicto de `rutinas-automerge.yml` — pendiente de aprobación humana en Actions),
+  confirmación de que pricing SIVRA sigue sin escritura real (47,6h, empeora) y de que CIMA no ha
+  hecho un solo pull desde el 11/09 15:08 (3 ciclos perdidos) · sin código nuevo: los 3 hallazgos ya
+  tenían diagnóstico en curso por otras sesiones hoy (`#2857`, `#2868`, `#2875`) y esta pasada solo
+  confirma/consolida sin duplicar · entregado por PR (harness de tarea de GitHub, rama única asignada,
+  sin push directo a `main`) — commit de esta auditoría.
+
 - **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40
