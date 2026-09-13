@@ -30,6 +30,18 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔔 Avisos por Web Push en `apps/asegura-portal` (12/09/2026).** Nuevo canal, hermano del correo
+  de vencimientos de `apps/asegura` pero SIN compartir sello ni sitio: la suscripción push no es un
+  dato descifrable, así que vive en el portal, sobre `seguros.portal_obligacion` (sello propio
+  `avisada_push_at`) + tabla nueva `seguros.portal_push_suscripcion` (migración aplicada en la BD
+  real, GRANT UPDATE incluido para el `upsert` de suscripción). Interruptor en el panel de la
+  campana (`ActivarPush.tsx`); `sw.js` ganó `push`/`notificationclick` sin tocar el guardián «no
+  cachea nada». Cron `/api/cron/avisos-push` (`vercel.json`), 32 tests nuevos en verde; su lectura
+  de cartera pasa por `portal_vinculo` (no solo por el estado de la póliza) y el borrado de
+  suscripciones muertas va por `deleteMany` con `identidadId`, para pasar los guardianes de
+  aislamiento/borrado del portal. **Pendiente de Alberto:** poner `NEXT_PUBLIC_VAPID_PUBLIC_KEY` +
+  `VAPID_PRIVATE_KEY` + `CRON_SECRET` en Vercel `asegura-portal` (detalle en su `CLAUDE.md`). PR #2850.
+
 - **📧 El vendor devuelve `emails: []`, no `email` — medido, y reparación GRATIS antes del Submit (13/09/2026).**
   Alberto abrió «Retarificar» de Pilar y el log de `/precalificar` enseñó la persona real del proyecto 40685666:
   `holder.emails` array vacío, sin clave `email` → el PATCH del 12/09 «no aplicaba» porque el vendor tira la clave

@@ -61,6 +61,7 @@ export {
   declaradaGeneraObligacion,
 } from './obligacion.ts'
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
+export { debeAvisarPush } from './push.ts'
 export {
   PERIODICIDADES_PAGO,
   DIAS_PREAVISO_RECIBO,
