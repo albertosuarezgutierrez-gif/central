@@ -1,40 +1,82 @@
 {
  "sesion": "4b7e5f59-c208-5a62-843f-86369ebbc312",
  "inicio": "2026-09-13T08:35:53.840Z",
- "fin": "2026-09-13T08:36:43.845Z",
- "llamadas": 9,
+ "fin": "2026-09-13T10:09:29.648Z",
+ "llamadas": 71,
  "categorias": {
   "otro": {
-   "llamadas": 1,
-   "chars_in": 819,
-   "chars_out": 819,
+   "llamadas": 7,
+   "chars_in": 929,
+   "chars_out": 39596,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "AskUserQuestion": 1
+    "AskUserQuestion": 1,
+    "ToolSearch": 1,
+    "ReadNotifications": 5
    }
   },
   "bash": {
-   "llamadas": 6,
-   "chars_in": 1133,
-   "chars_out": 22033,
+   "llamadas": 27,
+   "chars_in": 11991,
+   "chars_out": 42044,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 6
+    "Bash": 27
    }
   },
   "lectura-directa": {
-   "llamadas": 2,
-   "chars_in": 163,
-   "chars_out": 57660,
+   "llamadas": 10,
+   "chars_in": 932,
+   "chars_out": 151892,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 2
+    "Read": 10
+   }
+  },
+  "mcp:github": {
+   "llamadas": 18,
+   "chars_in": 84988,
+   "chars_out": 102647,
+   "errores": 1,
+   "archivos_citados": 5,
+   "chars_citados": 2046785,
+   "tools": {
+    "mcp__github__get_file_contents": 4,
+    "mcp__github__create_or_update_file": 3,
+    "mcp__github__list_pull_requests": 2,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 6,
+    "mcp__github__update_pull_request": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 6,
+   "chars_in": 79990,
+   "chars_out": 1556129,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 3,
+    "Edit": 3
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 3,
+   "chars_in": 1869,
+   "chars_out": 237,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 3
    }
   }
  }
