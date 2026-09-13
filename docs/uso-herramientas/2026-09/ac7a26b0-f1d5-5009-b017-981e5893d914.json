@@ -1,61 +1,61 @@
 {
  "sesion": "ac7a26b0-f1d5-5009-b017-981e5893d914",
  "inicio": "2026-09-13T08:02:31.389Z",
- "fin": "2026-09-13T11:00:09.035Z",
- "llamadas": 384,
+ "fin": "2026-09-13T11:34:00.207Z",
+ "llamadas": 502,
  "categorias": {
   "otro": {
-   "llamadas": 21,
-   "chars_in": 699,
-   "chars_out": 254567,
+   "llamadas": 36,
+   "chars_in": 729,
+   "chars_out": 356941,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
     "ToolSearch": 9,
-    "ReadNotifications": 11
+    "ReadNotifications": 26
    }
   },
   "sql": {
-   "llamadas": 57,
-   "chars_in": 11269,
-   "chars_out": 119667,
+   "llamadas": 78,
+   "chars_in": 16461,
+   "chars_out": 159983,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 19,
-    "mcp__Supabase__execute_sql": 38
+    "mcp__Supabase__execute_sql": 59
    }
   },
   "bash": {
-   "llamadas": 68,
-   "chars_in": 15824,
-   "chars_out": 47745,
+   "llamadas": 83,
+   "chars_in": 21456,
+   "chars_out": 55504,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 68
+    "Bash": 83
    }
   },
   "lectura-directa": {
-   "llamadas": 50,
-   "chars_in": 6553,
-   "chars_out": 151340,
+   "llamadas": 67,
+   "chars_in": 8397,
+   "chars_out": 198052,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 25,
-    "Grep": 25
+    "Read": 35,
+    "Grep": 32
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 12,
-   "chars_in": 1524,
-   "chars_out": 7773,
+   "llamadas": 23,
+   "chars_in": 5765,
+   "chars_out": 16541,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -63,44 +63,45 @@
     "mcp__Claude_Code_Remote__list_repos": 1,
     "mcp__Claude_Code_Remote__add_repo": 1,
     "mcp__Claude_Code_Remote__register_repo_root": 1,
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 4,
-    "mcp__Claude_Code_Remote__send_later": 2,
-    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 2,
-    "mcp__Claude_Code_Remote__delete_trigger": 1
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 5,
+    "mcp__Claude_Code_Remote__send_later": 7,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 4,
+    "mcp__Claude_Code_Remote__delete_trigger": 4
    }
   },
   "mcp:github": {
-   "llamadas": 130,
-   "chars_in": 20012,
-   "chars_out": 276643,
+   "llamadas": 153,
+   "chars_in": 29597,
+   "chars_out": 393990,
    "errores": 2,
    "archivos_citados": 1,
    "chars_citados": 493697,
    "tools": {
-    "mcp__github__actions_run_trigger": 11,
+    "mcp__github__actions_run_trigger": 13,
     "mcp__github__actions_list": 21,
-    "mcp__github__get_job_logs": 9,
+    "mcp__github__get_job_logs": 13,
     "mcp__github__actions_get": 67,
     "mcp__github__list_pull_requests": 3,
     "mcp__github__search_pull_requests": 4,
-    "mcp__github__pull_request_read": 6,
-    "mcp__github__add_issue_comment": 1,
-    "mcp__github__merge_pull_request": 4,
-    "mcp__github__create_pull_request": 4
+    "mcp__github__pull_request_read": 14,
+    "mcp__github__add_issue_comment": 5,
+    "mcp__github__merge_pull_request": 6,
+    "mcp__github__create_pull_request": 5,
+    "mcp__github__update_pull_request": 2
    }
   },
   "mcp:Vercel": {
-   "llamadas": 30,
-   "chars_in": 2487,
-   "chars_out": 206677,
+   "llamadas": 32,
+   "chars_in": 2612,
+   "chars_out": 254565,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__list_teams": 2,
     "mcp__Vercel__list_projects": 1,
     "mcp__Vercel__get_project": 3,
-    "mcp__Vercel__list_deployments": 3,
+    "mcp__Vercel__list_deployments": 4,
     "mcp__Vercel__get_deployment": 21,
     "mcp__Vercel__get_deployment_build_logs": 1
    }
@@ -117,14 +118,14 @@
    }
   },
   "escritura": {
-   "llamadas": 15,
-   "chars_in": 21082,
-   "chars_out": 2753432,
+   "llamadas": 29,
+   "chars_in": 40878,
+   "chars_out": 2915713,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 15
+    "Edit": 29
    }
   }
  }
