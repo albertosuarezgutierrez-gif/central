@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/09/2026)** Alberto pidió plan comercial ampliado para Grupo ASegura (agente comercial, ROI
+tipo CEO, redes). Añadida §7 a `docs/ASEGURA-MARKETING-PLAN.md`: se descarta reutilizar el
+cold-outreach de ia-rest (sin base de legitimación, 0 consent_logs/wa_opt_in en las 32.600 fichas
+— la consulta al abogado sigue sin enviarse); se prioriza cross-sell a los 80 clientes,
+comunidades y PyME/flota del grupo sobre "ir a todo el mundo"; tabla de decisión coste/retorno con
+las cifras ya medidas (48,37€/68,74€ comisión); recomendación de NO pagar estudio externo ahora.
+Sin código tocado, solo doc.
+
 > **🔄 Rotación mensual:** aquí vive SOLO el mes corriente. Los meses cerrados se
 > archivan en `docs/memoria/AAAA-MM.md` con `node scripts/rotar-memoria.mjs`
 > (idempotente; lo dispara `/auditoria-diaria` a primeros de mes). La historia no
