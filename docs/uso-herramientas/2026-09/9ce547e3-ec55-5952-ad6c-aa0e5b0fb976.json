@@ -1,65 +1,65 @@
 {
  "sesion": "9ce547e3-ec55-5952-ad6c-aa0e5b0fb976",
  "inicio": "2026-09-13T18:03:19.138Z",
- "fin": "2026-09-14T09:48:14.280Z",
- "llamadas": 826,
+ "fin": "2026-09-14T15:40:03.463Z",
+ "llamadas": 858,
  "categorias": {
   "otro": {
-   "llamadas": 82,
-   "chars_in": 14723,
-   "chars_out": 1822735,
+   "llamadas": 88,
+   "chars_in": 15467,
+   "chars_out": 2007952,
    "errores": 0,
    "archivos_citados": 15,
    "chars_citados": 620632,
    "tools": {
     "Skill": 8,
     "ToolSearch": 7,
-    "AskUserQuestion": 4,
+    "AskUserQuestion": 5,
     "SendUserFile": 3,
-    "ReadNotifications": 46,
+    "ReadNotifications": 51,
     "ScheduleWakeup": 14
    }
   },
   "bash": {
-   "llamadas": 379,
-   "chars_in": 82689,
-   "chars_out": 430757,
+   "llamadas": 388,
+   "chars_in": 83983,
+   "chars_out": 441140,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 379
+    "Bash": 388
    }
   },
   "mcp:github": {
-   "llamadas": 52,
-   "chars_in": 20845,
-   "chars_out": 295255,
-   "errores": 0,
+   "llamadas": 57,
+   "chars_in": 21860,
+   "chars_out": 299637,
+   "errores": 1,
    "archivos_citados": 25,
    "chars_citados": 4399681,
    "tools": {
     "mcp__github__list_pull_requests": 2,
-    "mcp__github__create_pull_request": 3,
-    "mcp__github__actions_list": 6,
-    "mcp__github__pull_request_read": 28,
+    "mcp__github__create_pull_request": 4,
+    "mcp__github__actions_list": 7,
+    "mcp__github__pull_request_read": 30,
     "mcp__github__update_pull_request": 4,
-    "mcp__github__merge_pull_request": 3,
+    "mcp__github__merge_pull_request": 4,
     "mcp__github__add_issue_comment": 4,
     "mcp__github__unsubscribe_pr_activity": 1,
     "mcp__github__subscribe_pr_activity": 1
    }
   },
   "lectura-directa": {
-   "llamadas": 158,
-   "chars_in": 17706,
-   "chars_out": 4372395,
+   "llamadas": 165,
+   "chars_in": 18590,
+   "chars_out": 4397144,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 128,
-    "Grep": 30
+    "Read": 130,
+    "Grep": 35
    }
   },
   "escritura": {
@@ -111,6 +111,17 @@
    "tools": {
     "mcp__Gmail__search_threads": 1,
     "mcp__Gmail__get_message": 2
+   }
+  },
+  "sql": {
+   "llamadas": 5,
+   "chars_in": 1262,
+   "chars_out": 3337,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 5
    }
   }
  }
