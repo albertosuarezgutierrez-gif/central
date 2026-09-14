@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/09/2026)** Cerrado el consentimiento unificado (#2925): aplicada la migración
+`consentimiento_registro` y creado `POST /api/publico/correduria/consentimiento` en plataforma
+(#2934) — asegura-web/ia-rest/housesevillana dejan de reenviar a un 404. **Retirado Serper del
+cron `seo-correduria`** (#2936, política «todo por OpenRouter» + SERP-tracking innecesario en esta
+fase): queda en 2 fuentes (GSC+PostHog); el sweep de SIVRA sigue igual de inerte. El agente
+autónomo `seo-correduria-agente` se queda dormido sin cambiar de comportamiento (kill switch
+default OFF, sin evidencia de haberse activado nunca). Pendiente: prompts para Claude en Chrome
+para cancelar/degradar la cuenta de serper.dev (fuera del repo).
+
 **(14/09/2026)** Alberto pidió plan comercial ampliado para Grupo ASegura (agente comercial, ROI
 tipo CEO, redes). Añadida §7 a `docs/ASEGURA-MARKETING-PLAN.md`: se prioriza cross-sell a los 80
 clientes, comunidades y PyME/flota del grupo sobre "ir a todo el mundo"; tabla de decisión
