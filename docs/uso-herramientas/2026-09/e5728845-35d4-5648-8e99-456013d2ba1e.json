@@ -1,20 +1,20 @@
 {
  "sesion": "e5728845-35d4-5648-8e99-456013d2ba1e",
  "inicio": "2026-09-14T10:46:12.151Z",
- "fin": "2026-09-14T13:33:22.222Z",
- "llamadas": 124,
+ "fin": "2026-09-14T13:33:32.058Z",
+ "llamadas": 125,
  "categorias": {
   "otro": {
-   "llamadas": 57,
-   "chars_in": 4355,
-   "chars_out": 1110355,
+   "llamadas": 58,
+   "chars_in": 4357,
+   "chars_out": 1111059,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 38424,
    "tools": {
     "Skill": 2,
     "ScheduleWakeup": 7,
-    "ReadNotifications": 45,
+    "ReadNotifications": 46,
     "AskUserQuestion": 2,
     "ToolSearch": 1
    }
