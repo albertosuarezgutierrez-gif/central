@@ -33,8 +33,9 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    silencio. Reglas completas en `references/copiloto-ordenes.md`. Sigue siendo solo
    lectura; la pasada programada JAMÁS crea instrucciones de orden.
 1c. **💼 Empujar la cartera real al panel (17/08/2026):** con las MISMAS posiciones del paso 1b,
-   `bash scripts/canal-aviso.sh POST /api/trading/cartera '{ posiciones: [{ simbolo, descripcion, cantidad, precioMedio, precioActual, valorMercado,
-   pnlNoRealizado, pnlDiario, divisa }] }'` — mapeo desde IBKR: `position`→cantidad,
+   `bash scripts/canal-aviso.sh POST /api/trading/cartera '{ "posiciones": [{ "simbolo": "<simbolo>", "descripcion": "<descripcion>",
+   "cantidad": <cantidad>, "precioMedio": <precioMedio>, "precioActual": <precioActual>, "valorMercado": <valorMercado>,
+   "pnlNoRealizado": <pnlNoRealizado>, "pnlDiario": <pnlDiario>, "divisa": "<divisa>" }] }'` — mapeo desde IBKR: `position`→cantidad,
    `average_price`→precioMedio, `market_price`→precioActual, `market_value`→valorMercado,
    `unrealized_pnl`→pnlNoRealizado, `daily_pnl`→pnlDiario, `currency`→divisa; el símbolo se saca
    de `contract_description` (p. ej. «VWCE @IBIS2» → `VWCE`) y la descripción lleva el nombre

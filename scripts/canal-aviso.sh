@@ -51,6 +51,32 @@ case "$PLATAFORMA_URL" in
     ;;
 esac
 
+# RUTA se concatena directamente detrás de PLATAFORMA_URL para formar la URL final
+# ("url = \"$PLATAFORMA_URL$RUTA\""). Un RUTA que empiece por "@" reescribe
+# PLATAFORMA_URL como userinfo de una URL con OTRO host — "https://plataforma...@evil:port/x"
+# resuelve a host evil, puerto port — y un RUTA con "://" mete un esquema/host nuevo dentro
+# del path. Cualquiera de los dos manda la cabecera Authorization ya puesta a un destino
+# arbitrario, que es exactamente lo que este script existe para evitar (probado en local:
+# RUTA="@127.0.0.1:PUERTO/pwn" hace que curl conecte a 127.0.0.1:PUERTO en vez de al host
+# real). Por eso RUTA se exige como un path que empieza por una sola "/" y no lleva "@" ni "://".
+case "$RUTA" in
+  //*)
+    echo "HTTP_STATUS:000 (RUTA no puede empezar por // — sería una URL sin esquema, no un path)"
+    exit 0
+    ;;
+  /*) ;;
+  *)
+    echo "HTTP_STATUS:000 (RUTA debe empezar por / — se rechaza antes de construir nada)"
+    exit 0
+    ;;
+esac
+case "$RUTA" in
+  *@*|*://*)
+    echo "HTTP_STATUS:000 (RUTA no puede contener @ ni :// — cambiaría el host de destino)"
+    exit 0
+    ;;
+esac
+
 # PLATAFORMA_URL/RUTA/ALERTA_TOKEN se escriben dentro de valores entre comillas
 # de un fichero -K de curl. Sin escapar, una comilla o un salto de línea en
 # cualquiera de los tres rompe la comilla y el resto de la línea se parsea
