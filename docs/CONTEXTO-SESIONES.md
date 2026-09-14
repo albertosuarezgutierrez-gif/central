@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📭 Caso José Manuel (reserva 155602026, Luxury Busto) cerrado — Expedia SÍ recibe el mensaje
+  (14/09/2026, sin PR, solo diagnóstico).** El aviso de cobertura marcaba huésped sin instrucciones;
+  se comprobó a mano: los mensajes automáticos a huéspedes de Expedia llegan como adjunto
+  `adjunto-correo.html` en vez de burbuja de chat (Partner Central los envuelve así, no es un bloqueo
+  ni un fallo de Smoobu), pero el contenido dentro llega ÍNTEGRO y correcto. Riesgo residual: el
+  huésped tiene que hacer clic para leerlo. **Pendiente (idea de Alberto, sin implementar):** que el
+  agente de huéspedes, cuando detecte canal Expedia y haya un problema/escalado, incluya el teléfono
+  de atención al huésped de Expedia en el mensaje para que pueda llamar directamente. Falta decidir
+  dónde vive ese teléfono (no está en `acceso.ts` ni en BD) y cuándo se dispara (¿todo mensaje a
+  Expedia, o solo needs_human?).
+
 - **🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN` (14/09/2026, PR #2928).** Fix pedido por
   Alberto ("resuelve para que no vuelva a pasar") tras el bloqueo de `facturas-correo` ese mismo día.
   Nuevo `scripts/canal-aviso.sh`: lee `PLATAFORMA_URL`/`ALERTA_TOKEN` del entorno DENTRO del script,
