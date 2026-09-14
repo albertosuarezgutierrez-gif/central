@@ -185,6 +185,15 @@ export type Precalificacion = {
   municipiosMotivo: string | null
   estadoCivil: Opcion | null
   estadoCivilMotivo: string | null
+  /**
+   * Catálogo `/road-types` del vendor (12/09/2026). El Submit exige
+   * `roadType.id` y no se puede añadir al proyecto después, así que se elige
+   * ANTES de pagar. `null` = no se pudo leer el catálogo.
+   */
+  tiposVia: Opcion[] | null
+  /** El tipo de vía emparejado desde la dirección de la ficha; `null` = elígelo a mano. */
+  tipoVia: Opcion | null
+  tipoViaMotivo: string | null
   consumo: ConsumoPuerto
   /** ¿Tiene el servidor de asegura `CODEOSCOPIC_SIMULACION` puesta?
    *  ⚠️ Es solo el rótulo previo: que un precio CONCRETO sea simulado lo decide
@@ -308,6 +317,9 @@ export function interpretarPrecalificacion(status: number, json: unknown): Respu
       municipiosMotivo: cadenaONulo(r.municipiosMotivo),
       estadoCivil: leerOpcion(r.estadoCivil),
       estadoCivilMotivo: cadenaONulo(r.estadoCivilMotivo),
+      tiposVia: leerOpcionesONulo(r.tiposVia),
+      tipoVia: leerOpcion(r.tipoVia),
+      tipoViaMotivo: cadenaONulo(r.tipoViaMotivo),
       consumo: leerConsumo(r.consumo),
       // Solo el booleano exacto enciende el rótulo de simulación: ante la duda,
       // esto CUESTA dinero.
@@ -416,6 +428,14 @@ export type Fallo = {
  * red caída, respuesta ilegible, fallo del vendor a media llamada— es `true`,
  * porque el cargo puede existir y nadie lo ha comprobado.
  */
+/** El proyecto que asegura manda reutilizar en vez de dejar pagar otro. */
+export type ProyectoVigente = {
+  projectId: string
+  compania: string | null
+  primaEur: number | null
+  caducaEn: string | null
+}
+
 export type RespuestaRetarificar =
   | { estado: 'sin_configurar'; mensaje: string }
   /** 422 · faltan datos. Corta ANTES del vendor: no se ha gastado nada. */
@@ -424,6 +444,14 @@ export type RespuestaRetarificar =
   | { estado: 'tope'; mensaje: string }
   /** 409 · el ramo no se retarifica todavía (hoy solo auto y hogar). */
   | { estado: 'ramo'; mensaje: string }
+  /**
+   * 409 · ya hay un proyecto de Codeoscopic con oferta confirmada y sin caducar
+   * para esta póliza (guardián de reutilización de asegura, PR #2790). NO es un
+   * fallo: es el precio que ya está pagado, y se confirma con «Emitir», no
+   * pidiendo otro. Solo `forzarNuevo: true` (el corredor ha DESCARTADO ese
+   * precio a propósito) pasa por encima.
+   */
+  | { estado: 'proyecto_vigente'; mensaje: string; proyecto: ProyectoVigente }
   /** 404 · la póliza no es de esta correduría, o no existe. */
   | { estado: 'no_encontrada'; mensaje: string }
   | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; gastoDesconocido: boolean }
@@ -511,6 +539,23 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
     return { estado: 'tope', mensaje: mensajeDe('Se ha alcanzado el tope de cotizaciones.') }
   }
   if (status === 409) {
+    // Dos 409 distintos con el mismo código: el ramo que no se retarifica y el
+    // proyecto vigente que hay que reutilizar. Los separa `proyectoExistente`,
+    // que solo pone el guardián de reutilización.
+    const pe = r.proyectoExistente
+    if (typeof pe === 'object' && pe !== null && typeof (pe as Record<string, unknown>).projectId === 'string') {
+      const x = pe as Record<string, unknown>
+      return {
+        estado: 'proyecto_vigente',
+        mensaje: mensajeDe('Ya hay un precio vigente para esta póliza: no se pide otro.'),
+        proyecto: {
+          projectId: x.projectId as string,
+          compania: typeof x.compania === 'string' ? x.compania : null,
+          primaEur: typeof x.primaEur === 'number' ? x.primaEur : null,
+          caducaEn: typeof x.caducaEn === 'string' ? x.caducaEn : null,
+        },
+      }
+    }
     return { estado: 'ramo', mensaje: mensajeDe('Este ramo no se retarifica todavía.') }
   }
   if (status === 404) {
@@ -627,6 +672,13 @@ export type PeticionRetarificar = {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  /**
+   * Pasa por encima del guardián de reutilización de asegura (409
+   * `proyecto_vigente`). Solo `true` cuando el corredor ha DESCARTADO a
+   * propósito el precio recuperado («Descartar y pedir precio de cero»): sin
+   * ese gesto, pedir precio con un proyecto vigente se rechaza sin cobrar.
+   */
+  forzarNuevo?: boolean
 }
 
 /**
@@ -660,6 +712,8 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
           ...(p.resueltos ? { resueltos: p.resueltos } : {}),
           ...(p.correcciones ? { correcciones: p.correcciones } : {}),
           ...(p.catastro ? { catastro: p.catastro } : {}),
+          // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
+          ...(p.forzarNuevo === true ? { forzarNuevo: true } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,
@@ -689,6 +743,22 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
 export type RespuestaOferta =
   | { estado: 'sin_configurar'; mensaje: string }
   | { estado: 'error'; motivo: MotivoPuerto; mensaje: string }
+  /**
+   * 422 · la compañía pide datos que el proyecto no tiene y la ficha tampoco.
+   * `faltan` son NUESTROS campos (ya traducidos por asegura), `sugeridos` lo
+   * que asegura ha podido sacar de la ficha para prerrellenar, y
+   * `noReconocidos` las líneas del vendor que asegura no supo mapear — se
+   * enseñan enteras, porque son un hallazgo. No se ha gastado nada.
+   */
+  | {
+      estado: 'faltan_vendor'
+      faltan: Reparo[]
+      sugeridos: Record<string, string>
+      noReconocidos: string[]
+      mensaje: string
+    }
+  /** 409 · el PATCH al proyecto «tuvo éxito» pero al releerlo el dato no está. Toca cotizar de cero. */
+  | { estado: 'patch_no_aplicado'; mensaje: string }
   | {
       estado: 'ok'
       projectId: string
@@ -697,7 +767,37 @@ export type RespuestaOferta =
       firmeza: string
       caducaEn: string | null
       avisos: string[]
+      /** La cuenta de cargo que asegura YA conoce del cliente (enmascarada, con
+       *  su origen), para enseñarla ANTES del Submit. `null` = no hay ninguna
+       *  legible; `cuentaAviso` dice por qué (clave PII, CCC inválido, consulta caída). */
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
     }
+
+/** Por qué no hay cuenta utilizable, cuando asegura lo sabe. `no_comprobada`
+ *  = la consulta falló: NO es «no tiene». */
+export type AvisoCuenta = 'ilegible' | 'invalida' | 'no_comprobada'
+
+export function leerAvisoCuenta(v: unknown): AvisoCuenta | null {
+  if (typeof v !== 'object' || v === null) return null
+  const a = (v as Record<string, unknown>).aviso
+  return a === 'ilegible' || a === 'invalida' || a === 'no_comprobada' ? a : null
+}
+
+/** La cuenta de cargo tal como cruza el puerto: SIEMPRE enmascarada (`ES91…1332`),
+ *  con su origen y la frase que lo explica. El IBAN entero no sale de asegura. */
+export type CuentaConocida = { enmascarada: string; origen: string; descripcion: string | null }
+
+function leerCuenta(v: unknown): CuentaConocida | null {
+  if (typeof v !== 'object' || v === null) return null
+  const x = v as Record<string, unknown>
+  if (typeof x.enmascarada !== 'string' || x.enmascarada === '') return null
+  return {
+    enmascarada: x.enmascarada,
+    origen: typeof x.origen === 'string' ? x.origen : 'ficha',
+    descripcion: typeof x.descripcion === 'string' && x.descripcion !== '' ? x.descripcion : null,
+  }
+}
 
 /** Hasta 60 s: es una llamada de red al vendor, sin duración documentada. */
 export const TIMEOUT_OFERTA_MS = 60_000
@@ -726,12 +826,49 @@ export function interpretarOferta(status: number, json: unknown): RespuestaOfert
     if (!oferta || typeof r.projectId !== 'string') {
       return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible }
     }
-    return { estado: 'ok', projectId: r.projectId, ...oferta }
+    return {
+      estado: 'ok',
+      projectId: r.projectId,
+      ...oferta,
+      cuenta: leerCuenta(r.cuenta),
+      cuentaAviso: leerAvisoCuenta(r.cuenta),
+    }
   }
   if (r.estado === 'sin_configurar' || (status === 503 && r.causa === 'apagado')) {
     return {
       estado: 'sin_configurar',
       mensaje: cadenaONulo(r.mensaje) ?? 'La emisión real está apagada en central-asegura (CODEOSCOPIC_EMISION_ACTIVA).',
+    }
+  }
+  if (status === 422 && r.estado === 'faltan_vendor') {
+    const sugeridos: Record<string, string> = {}
+    if (typeof r.sugeridos === 'object' && r.sugeridos !== null) {
+      for (const [k, v] of Object.entries(r.sugeridos as Record<string, unknown>)) {
+        if (typeof v === 'string') sugeridos[k] = v
+      }
+    }
+    const faltan: Reparo[] = Array.isArray(r.faltan)
+      ? r.faltan.flatMap((f): Reparo[] => {
+          const x = (typeof f === 'object' && f !== null ? f : {}) as Record<string, unknown>
+          return typeof x.campo === 'string' ? [{ campo: x.campo, motivo: cadenaONulo(x.motivo) ?? '' }] : []
+        })
+      : []
+    return {
+      estado: 'faltan_vendor',
+      faltan,
+      sugeridos,
+      noReconocidos: Array.isArray(r.noReconocidos)
+        ? r.noReconocidos.filter((s): s is string => typeof s === 'string')
+        : [],
+      mensaje: cadenaONulo(r.mensaje) ?? 'La compañía pide datos que faltan en el proyecto.',
+    }
+  }
+  if (status === 409 && r.causa === 'patch_no_aplicado') {
+    return {
+      estado: 'patch_no_aplicado',
+      mensaje:
+        cadenaONulo(r.mensaje) ??
+        'El proyecto de Codeoscopic no ha aceptado el dato: hay que pedir precio de cero (0,50€).',
     }
   }
   const detalle = describirCausaAsegura(typeof r.causa === 'string' ? r.causa : undefined)
@@ -751,6 +888,13 @@ export async function ofertaAsegura(p: {
   tarificacionId: string
   compania: string
   categoria: string
+  /** Corrige la fecha de efecto del proyecto (aaaa-mm-dd) ANTES del ReRate,
+   *  vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha
+   *  rechazado — ver `apps/asegura/lib/codeoscopic/emitir.ts::actualizarFechaEfecto`. */
+  fechaEfectoCorregida?: string
+  /** Lo que el corredor teclea tras un `faltan_vendor` (campo nuestro → valor).
+   *  Asegura lo escribe en el proyecto (PATCH, gratis) y vuelve a pedir el ReRate. */
+  correcciones?: Record<string, string>
 }): Promise<RespuestaOferta> {
   try {
     const r = await pedir(
@@ -783,11 +927,76 @@ export async function ofertaAsegura(p: {
 
 export type RespuestaEmitir =
   | { estado: 'sin_configurar'; mensaje: string }
-  | { estado: 'faltan_campos'; faltan: string[]; campos: unknown }
+  /** 422 · la compañía pide datos antes de emitir. `faltan` lleva `'iban'` cuando
+   *  exige cuenta bancaria (12/09/2026). `cuenta` es la que asegura YA conoce del
+   *  cliente (enmascarada) y `confirmar` que no viajó porque nadie la confirmó:
+   *  se confirma o se teclea otra — nunca se manda sola. */
+  | {
+      estado: 'faltan_campos'
+      faltan: string[]
+      campos: unknown
+      mensaje: string | null
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
+      confirmar: boolean
+    }
   | { estado: 'en_vuelo'; mensaje: string }
-  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown }
-  | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown }
+  /** 409 · asegura no reenvía a ciegas (13/09/2026): o el proyecto YA cuenta una
+   *  solicitud de emisión (`rastro` no vacío) o el último Submit acabó en 5xx /
+   *  corte de red («quizá emitido», `ultimoError`). `crudo` es el proyecto tal
+   *  cual lo devuelve el vendor (gratis) para mirarlo; `null` si no se pudo leer
+   *  — que NO es «no hay póliza». */
+  | {
+      estado: 'reintento_sin_confirmar'
+      mensaje: string
+      ultimoError: string | null
+      /** Lo que el portal de Codeoscopic manda hacer con ese código (500 → reportar
+       *  a soporte; 502/503/504 → reintentar en unos minutos). `null` si no aplica. */
+      consejo: string | null
+      /** `policyApplications[]` del proyecto, la forma que documenta el portal:
+       *  una `aprobada` con `numeroPoliza` es una póliza que YA existe en la
+       *  compañía — se acuña (`acunarExistente`), no se reenvía. */
+      solicitudes: SolicitudEmisionVista[]
+      rastro: unknown[]
+      proyectoLegible: boolean
+      crudo: unknown
+    }
+  /** `quizaEmitido`: el Submit acabó en 5xx — Codeoscopic dejó de esperar a la
+   *  compañía y NO se sabe si emitió. No es un rechazo. */
+  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown; quizaEmitido?: boolean; consejo?: string }
+  | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null }
   | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
+
+export type SolicitudEmisionVista = {
+  id: string | null
+  creadaEn: string | null
+  estadoId: string | null
+  estadoNombre: string | null
+  numeroPoliza: string | null
+  veredicto: 'aprobada' | 'rechazada' | 'pendiente' | 'desconocido'
+}
+
+/** PURO. Una entrada que no tenga forma de solicitud se descarta; un veredicto
+ *  que no se reconoce cae a `desconocido`, nunca a `aprobada`. */
+export function leerSolicitudes(v: unknown): SolicitudEmisionVista[] {
+  if (!Array.isArray(v)) return []
+  const out: SolicitudEmisionVista[] = []
+  for (const x of v) {
+    if (typeof x !== 'object' || x === null) continue
+    const o = x as Record<string, unknown>
+    const veredicto = o.veredicto
+    out.push({
+      id: cadenaONulo(o.id),
+      creadaEn: cadenaONulo(o.creadaEn),
+      estadoId: cadenaONulo(o.estadoId),
+      estadoNombre: cadenaONulo(o.estadoNombre),
+      numeroPoliza: cadenaONulo(o.numeroPoliza),
+      veredicto:
+        veredicto === 'aprobada' || veredicto === 'rechazada' || veredicto === 'pendiente' ? veredicto : 'desconocido',
+    })
+  }
+  return out
+}
 
 /** Hasta 90 s: es el Submit, la llamada más pesada del flujo y sin duración documentada. */
 export const TIMEOUT_EMITIR_MS = 90_000
@@ -803,10 +1012,28 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
       estado: 'faltan_campos',
       faltan: Array.isArray(r.faltan) ? r.faltan.filter((f): f is string => typeof f === 'string') : [],
       campos: r.campos ?? null,
+      mensaje: cadenaONulo(r.mensaje),
+      cuenta: leerCuenta(r.cuenta),
+      cuentaAviso: leerAvisoCuenta(r.cuenta),
+      confirmar: r.confirmar === true,
     }
   }
   if (status === 409 && r.causa === 'en-vuelo') {
     return { estado: 'en_vuelo', mensaje: cadenaONulo(r.mensaje) ?? 'Ya hay un envío de este proyecto en curso.' }
+  }
+  if (status === 409 && r.causa === 'reintento_sin_confirmar') {
+    return {
+      estado: 'reintento_sin_confirmar',
+      mensaje:
+        cadenaONulo(r.mensaje) ??
+        'El último envío acabó sin respuesta clara del vendor: comprueba el proyecto antes de reintentar.',
+      ultimoError: cadenaONulo(r.ultimoError),
+      consejo: cadenaONulo(r.consejo),
+      solicitudes: leerSolicitudes(r.solicitudes),
+      rastro: Array.isArray(r.rastro) ? r.rastro : [],
+      proyectoLegible: r.proyectoLegible === true,
+      crudo: r.crudo ?? null,
+    }
   }
   if (status === 200) {
     if (r.estado === 'emitido_sin_acunar') {
@@ -817,7 +1044,7 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
       }
     }
     if (r.estado === 'ok') {
-      return { estado: 'ok', referenciaVendor: cadenaONulo(r.referenciaVendor), acunado: r.acunado ?? null }
+      return { estado: 'ok', referenciaVendor: cadenaONulo(r.referenciaVendor), acunado: r.acunado ?? null, cuenta: leerCuenta(r.cuenta) }
     }
     return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible, crudo: r }
   }
@@ -833,6 +1060,8 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
     motivo: 'asegura_error',
     mensaje: [cadenaONulo(r.mensaje), detalle].filter((s): s is string => !!s).join(' — ') || `error ${status}`,
     crudo: r.crudo ?? null,
+    ...(r.quizaEmitido === true ? { quizaEmitido: true } : {}),
+    ...(cadenaONulo(r.consejo) ? { consejo: cadenaONulo(r.consejo)! } : {}),
   }
 }
 
@@ -847,6 +1076,16 @@ export async function emitirAsegura(p: {
   campos: Record<string, unknown>
   actor?: string
   primaAnual?: number | null
+  /** La máscara (`ES91…1332`) de la cuenta de la ficha que el corredor ha visto y
+   *  aprobado. Sin ella asegura no manda la cuenta de la ficha: contesta
+   *  `faltan_campos` con `confirmar: true`. Un IBAN tecleado en `campos.iban` manda. */
+  cuentaConfirmada?: string | null
+  /** El corredor ha mirado el proyecto tras un intento «quizá emitido» y no hay
+   *  póliza: solo así asegura reenvía (409 `reintento_sin_confirmar` si falta). */
+  reintentoConfirmado?: boolean
+  /** El proyecto YA cuenta una solicitud APROBADA con nº de póliza: asegura la
+   *  acuña en la cartera y NO manda ningún Submit. */
+  acunarExistente?: boolean
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -860,6 +1099,9 @@ export async function emitirAsegura(p: {
           actor: p.actor ?? 'plataforma',
           primaAnual: p.primaAnual ?? null,
           confirmado: true,
+          ...(p.cuentaConfirmada ? { cuentaConfirmada: p.cuentaConfirmada } : {}),
+          ...(p.reintentoConfirmado === true ? { reintentoConfirmado: true } : {}),
+          ...(p.acunarExistente === true ? { acunarExistente: true } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,
@@ -901,8 +1143,10 @@ export type FormularioGuardado = {
   garaje: string | null
   estadoCivilId: string | null
   municipioId: number | null
+  /** Id del catálogo de tipos de vía que viajó en la dirección del tomador. */
+  tipoViaId: string | null
   /** Mismas claves que `CAMPOS_A_MANO` de la pantalla (dni, nombre,
-   *  apellido1, telefono, fechaNacimiento, fechaCarnet). */
+   *  apellido1, telefono, fechaNacimiento, fechaCarnet, nombreVia, numeroVia, email). */
   correcciones: Record<string, string>
 }
 
@@ -910,6 +1154,11 @@ export type TarificacionGuardadaAuto = {
   cotizacionId: string
   projectId: string
   creadaEn: string
+  /** `effectiveDate` con la que se cotizó; null si asegura no la trae. */
+  fechaEfecto: string | null
+  /** Fecha de efecto ya pasada (lo decide asegura, en hora de Madrid): el
+   *  proyecto está muerto y la pantalla no debe ofrecer su precio. */
+  caducada: boolean
   precios: Precio[]
   formulario: FormularioGuardado
 }
@@ -939,6 +1188,7 @@ function leerFormularioGuardado(v: unknown): FormularioGuardado | null {
     garaje: cadenaONulo(x.garaje),
     estadoCivilId: cadenaONulo(x.estadoCivilId),
     municipioId: typeof x.municipioId === 'number' ? x.municipioId : null,
+    tipoViaId: cadenaONulo(x.tipoViaId),
     correcciones,
   }
 }
@@ -978,6 +1228,8 @@ export function interpretarTarificacionGuardada(status: number, json: unknown): 
         cotizacionId: r.cotizacionId,
         projectId: r.projectId,
         creadaEn: cadenaONulo(r.creadaEn) ?? '',
+        fechaEfecto: cadenaONulo(r.fechaEfecto),
+        caducada: r.caducada === true,
         precios,
         formulario,
       },

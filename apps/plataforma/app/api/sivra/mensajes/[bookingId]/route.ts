@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { smoobuFetch } from '@/lib/smoobu'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
 import { listarOrdenes } from '@/lib/sivra/extras/orden-limpieza'
 
@@ -25,10 +25,9 @@ export async function GET(
 
   const { bookingId } = await context.params
   try {
-    const API_KEY = await getSmoobuKey()
-    const res = await fetch(
-      `https://login.smoobu.com/api/reservations/${bookingId}/messages`,
-      { headers: { 'Api-Key': API_KEY }, cache: 'no-store' }
+    const res = await smoobuFetch(
+      `/api/reservations/${bookingId}/messages`,
+      { cache: 'no-store' }
     )
     if (!res.ok) return NextResponse.json({ messages: [] })
     const data = await res.json()
@@ -41,9 +40,9 @@ export async function GET(
       ts: m.created_at || new Date().toISOString(),
     })).filter((m: any) => m.text)
 
-    const guest = await fetch(
-      `https://login.smoobu.com/api/reservations/${bookingId}`,
-      { headers: { 'Api-Key': API_KEY }, cache: 'no-store' }
+    const guest = await smoobuFetch(
+      `/api/reservations/${bookingId}`,
+      { cache: 'no-store' }
     ).then(r => r.json()).catch(() => ({}))
 
     // 🧹 Órdenes a la limpieza de ESTA reserva (colocar cuna…). `null` viaja tal cual hasta la UI:

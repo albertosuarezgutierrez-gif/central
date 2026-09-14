@@ -1,7 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { renderPlantilla, renderAsunto, TIPOS_MENSAJE, type DatosPlantilla } from './plantillas.ts'
-import { AVISO_CANAL } from '../acceso.ts'
+import { renderPlantilla, renderAsunto, TIPOS_MENSAJE, AVISO_CANAL, type DatosPlantilla } from './plantillas.ts'
 
 const BASE: DatosPlantilla = {
   guestName: 'Grégory Acobez',
@@ -62,6 +61,17 @@ test('vispera_salida del Dúplex manda las llaves a la mesa de la cocina; en Lux
   assert.ok(lux.includes('MISMO sitio donde se recogieron'))
 })
 
+test('la bienvenida repite el wifi (no los códigos de acceso), dice que el chat vale de noche y no da ningún teléfono', () => {
+  const t = renderPlantilla('bienvenida', BASE)
+  assert.ok(t.includes('sercommBB1119') && t.includes('PWDEMO'))
+  assert.ok(!t.includes('7272'))
+  assert.ok(/urgencia .* a cualquier hora/.test(t) && /nos llega un aviso/.test(t))
+  assert.ok(!/\+34|\b[69]\d{2}[ .]?\d{3}[ .]?\d{3}\b|whatsapp|booking|airbnb/i.test(t))
+  const sinWifi = renderPlantilla('bienvenida', { ...BASE, codigos: { caja: '7272', wifiSsid: null, wifiPass: null } })
+  assert.ok(!/wifi/i.test(sinWifi))
+  assert.ok(!/\n\n\n/.test(sinWifi))
+})
+
 test('estancia y post_salida no contienen códigos ni piden datos de pago', () => {
   for (const tipo of ['estancia', 'post_salida'] as const) {
     const t = renderPlantilla(tipo, BASE)
@@ -70,10 +80,12 @@ test('estancia y post_salida no contienen códigos ni piden datos de pago', () =
   }
 })
 
-test('el aviso de phishing sale en el primer contacto y en el mensaje con códigos; NO en el de 7 días sin códigos', () => {
+test('el aviso de phishing sale SOLO en el primer contacto (confirmación)', () => {
   assert.ok(renderPlantilla('confirmacion', BASE).includes(AVISO_CANAL))
-  assert.ok(!renderPlantilla('acceso', BASE).includes(AVISO_CANAL))         // 7 días, conCodigos:false
-  assert.ok(renderPlantilla('vispera_llegada', BASE).includes(AVISO_CANAL)) // el momento real del incidente
+  for (const tipo of TIPOS_MENSAJE) {
+    if (tipo === 'confirmacion') continue
+    assert.ok(!renderPlantilla(tipo, BASE).includes(AVISO_CANAL), `no debería salir en «${tipo}»`)
+  }
 })
 
 test('el asunto solo existe en los hitos con contenido de email', () => {

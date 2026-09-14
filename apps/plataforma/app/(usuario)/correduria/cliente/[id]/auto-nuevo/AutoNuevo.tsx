@@ -218,6 +218,7 @@ export default function AutoNuevo({
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
         return
+      case 'proyecto_vigente':
       case 'ramo':
       case 'no_encontrada':
       case 'sin_configurar':
@@ -239,6 +240,10 @@ export default function AutoNuevo({
           supuestos: r.supuestos,
         })
         return
+      default: {
+        const _exhaustivo: never = r
+        return _exhaustivo
+      }
     }
   }
 

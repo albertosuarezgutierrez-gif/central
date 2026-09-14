@@ -174,6 +174,19 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
       </span>
     )
   }
+  // RC/comercio/otros: el objeto se describe por coberturas contratadas, que
+  // pueden ser muchas — la celda enseña el TIPO (cuántas) y el desglose entero
+  // va detrás de un clic, en vez de volcar la lista entera en la tabla.
+  if (p.objeto.coberturas && p.objeto.coberturas.length > 1) {
+    return (
+      <details title={p.objeto.nota ?? undefined}>
+        <summary style={{ cursor: 'pointer' }}>{p.objeto.coberturas.length} coberturas contratadas</summary>
+        <ul style={{ margin: '4px 0 0', paddingLeft: 16, fontSize: 12, color: 'var(--muted)' }}>
+          {p.objeto.coberturas.map((c, i) => <li key={i}>{c}</li>)}
+        </ul>
+      </details>
+    )
+  }
   return (
     <span title={p.objeto.nota ?? undefined}>
       {p.objeto.titulo}

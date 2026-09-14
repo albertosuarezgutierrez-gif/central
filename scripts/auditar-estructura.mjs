@@ -19,6 +19,7 @@ import {
   estableMapa as stableMapa,
 } from './auditar-comparacion.mjs'
 import { extraerNovedades } from './auditar-novedades.mjs'
+import { gitSha } from './git-sha.mjs'
 
 const ROOT = join(fileURLToPath(import.meta.url), '..', '..')
 const APPS_DIR = join(ROOT, 'apps')
@@ -229,11 +230,6 @@ function tablasReferenciadas(text) {
   return [...t].sort()
 }
 
-/** SHA de git del checkout (stdlib, sin NPM). Cinturón: GITHUB_SHA de CI o '' fuera de git. */
-function gitSha() {
-  try { return execSync('git rev-parse HEAD', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() }
-  catch { return process.env.GITHUB_SHA ?? '' }
-}
 
 /** Recorre `apps/*` + `packages/*` y construye el índice a nivel de función (rutas repo-relativas). */
 function construirMapaFunciones() {
@@ -434,7 +430,7 @@ const out = {
 const mfArchivos = construirMapaFunciones()
 const mapaFunciones = {
   generadoEn: out.generadoEn,
-  sha: gitSha(),
+  sha: gitSha(process.env, ROOT),
   archivos: mfArchivos,
   resumen: {
     archivos: mfArchivos.length,

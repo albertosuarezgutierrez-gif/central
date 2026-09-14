@@ -1568,9 +1568,10 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ciclo, variación). TRES cosas distintas en pantalla: `null` (asegura vieja no lo manda) ≠ `sin_datos` (se
   miró: CIMA no da la anualidad anterior) ≠ `igual`. «Sube sin siniestro» por encima del 5 % enlaza a
   retarificar. Lectores puros en `lib/poliza-asegura.ts` / `lib/ficha-asegura.ts`.
-- **🧲 Canal de leads web (02/09/2026, noche).** `app/seguros/page.tsx` es la **landing pública de Grupo
-  Asegura** (no existía ninguna: la frase de la visión «existe la landing de plataforma» era falsa). Fuera de
-  `(usuario)`, en `PUBLIC` del middleware. Su formulario postea a `POST /api/publico/correduria/lead`
+- **🧲 Canal de leads web (02/09/2026, noche — `app/seguros/page.tsx` BORRADA el 14/09/2026, ver más
+  abajo).** Nació aquí: `app/seguros/page.tsx` fue la primera **landing pública de Grupo ASegura**
+  (no existía ninguna: la frase de la visión «existe la landing de plataforma» era falsa). Lo que
+  sigue vivo es el endpoint que recibía su formulario, `POST /api/publico/correduria/lead`
   (sin sesión): rate limit 6/h por IP (`lib/rate-limit.ts`, en memoria, best-effort), honeypot `web` que
   responde 200 sin hacer nada, consentimiento RGPD obligatorio. Con datos válidos SIEMPRE pasan dos cosas:
   alta por el puerto de asegura con `fuente: 'web'` / `actor: 'web'` (historial tipo `contacto`) y Telegram
@@ -1579,6 +1580,14 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   `POST /api/operador/cliente/historial`). Tres estados internos (nueva · existente · no registrado); al
   usuario `{ok:true}` en los dos primeros y 502 en el tercero — y en el tercero el Telegram lleva los datos
   del formulario porque es el único rastro. Reglas puras y tests en `lib/leads-web.ts`.
+- **🚫 `app/seguros/page.tsx` y su `Formulario.tsx` YA NO EXISTEN (14/09/2026).** Desde el
+  05/09/2026 esta correduría tiene web de marca propia (`apps/asegura-web`, `grupoasegura.es`), y las
+  dos páginas competían por la misma consulta desde dos dominios del mismo negocio. Decisión de
+  Alberto: `/seguros` **301 (308 en realidad — App Router)** hacia `grupoasegura.es`, en vez de
+  quedarse noindex y viva. El redirect vive en `next.config.ts::redirects()` (corre ANTES que el
+  middleware, así que la exención de `/seguros` en `middleware.ts::PUBLIC` se retiró: no protegía ya
+  ninguna ruta alcanzable). El endpoint `/api/publico/correduria/lead` de arriba sigue vivo — hoy lo
+  alimenta `apps/asegura-web` (`POST /api/lead`, que reenvía aquí), no una página de esta app.
 - **🗑️ Supresiones RGPD — el reloj del art. 12.3 se contesta AQUÍ (05/09/2026).** Desde el bloque legal
   0.5, un cliente puede pedir la supresión de sus datos desde `apps/asegura-portal` (`/boveda`). Eso
   arranca un plazo legal de **30 días** (prorrogable a 60 **motivando la prórroga**, art. 12.3 RGPD), y
@@ -1657,6 +1666,48 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ningún recibo informado (18 de 109) y los pendientes que aún no han vencido.
 - **El único salto a asegura es «Retarificar ↗»**, porque cuesta 0,50€ reales y tiene que pasar por su
   pantalla de confirmación. `urlRetarificar()` en `lib/ficha-asegura.ts`.
+
+### 📡 Sección «Actividad» — el muro de toda la cartera (12/09/2026)
+Alberto: *«una genérica donde ver resumen de todo, y controlar todo lo que hacen los clientes, incluso
+el acceso a la intranet»*. El historial existía **por ficha**: para saber qué había hecho alguien
+había que entrar en su ficha, y para saber qué había hecho *alguien* había que entrar en las ochenta.
+
+`Actividad.tsx` (sección propia, la 2ª de la barra) sobre `/api/correduria/actividad` → puerto
+`GET /api/operador/actividad`. Lector puro `lib/actividad-asegura.ts` (+ 9 cepos); el vocabulario
+—tipos, rótulos, ventanas, embudo— vive en `@central/module-seguros/actividad.ts` y lo comparten las
+DOS apps, como el filtro de cartera.
+
+🚨 **El embudo va ARRIBA y la cronología debajo, y no es estética.** Medido contra la BD antes de
+escribir la pantalla: **80 clientes → 52 con correo → 5 con acceso → 4 han entrado → 4 activos**. Con
+esas cifras un muro cronológico enseña sobre todo SILENCIO, que no dice qué hacer; el embudo sí, y
+además señala solo dónde está el cuello — que **no es el correo** (28 sin él) sino los **47 clientes
+con correo a los que nadie ha invitado**. `mayorCaidaEmbudo` lo calcula, y devuelve `null` en vez de
+señalar un escalón cuando le falta alguno de los dos extremos.
+
+🚨 **De `historial_interno` NO se afirma autor.** La columna `actor_user_id` existe y **no la escribe
+nadie**: el autor viaja dentro del texto. Así que sus filas se pintan como «anotación en la ficha»
+con su texto entero (que ya nombra a quien la hizo), y solo las dos que compone el portal —cambio de
+dirección y sugerencia— constan como del cliente, reconocidas por los **prefijos constantes** de
+`@central/module-seguros-portal`, no adivinando sobre texto libre. El filtro «Solo el cliente» quita
+la tabla de la ficha pero **conserva esas dos**: si no, escondería justo el cambio de dirección.
+
+🚨 **Un cambio de dirección NO es una notificación, es un aviso de riesgo**: el domicilio tarifica en
+hogar y auto, y si el cliente se muda y la compañía no se entera el problema aparece en el siniestro.
+Sale con su frase (`riesgoActividad`), igual que la supresión con su plazo del art. 17 RGPD.
+
+**Lo que NO sale: ni un dato de contacto.** El puerto no los manda — el muro dice QUÉ pasó y de QUIÉN
+es la ficha, y el dato se mira en la ficha. Una lista cronológica se abre con gente delante.
+
+⚠️ **No reporta contador a la pestaña, a propósito:** no es una cola de trabajo. Lo que sí lo es
+—partes, supresiones, leads— ya tiene su badge en «Hoy», y contarlo dos veces haría que atender un
+parte no bajara el número de aquí, que es como se deja de creer un badge. Lo nuevo desde la última
+visita se marca con un punto, contra un `localStorage` (`nuevosDesde` devuelve **`null`** —no
+`eventos.length`— cuando no hay marca, para no gritar «¡novedades!» en un navegador limpio).
+
+⏸️ **PENDIENTE y declarado, no olvidado:** la lista accionable de «clientes con correo que no han
+entrado» con botón de invitar en la propia fila. El endpoint de invitación ya existe
+(`/api/correduria/cliente/portal`); falta la consulta que los liste. Hoy el embudo enseña el hueco y
+manda a la ficha. Y marcar como visto de verdad (tabla) en vez de por navegador.
 
 🎨 **Rediseño: de una tira de ocho bloques a CINCO SECCIONES (03/09/2026).** Alberto: *«minimalista,
 óptima y productiva»*. La pantalla era un scroll único con ocho bloques del MISMO peso visual —los

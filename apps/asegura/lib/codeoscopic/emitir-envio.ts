@@ -21,6 +21,8 @@
 import { randomUUID } from 'node:crypto'
 import type { ConfigCodeoscopic } from './config.ts'
 import { obtenerToken } from './cliente.ts'
+import { redactarCrudoVendor } from './emitir.ts'
+import { FRASE_SIN_CONFIRMACION, solicitudesEmision } from './reintento-emision.ts'
 import { prisma } from '../tenant.ts'
 
 const str = (v: unknown): string | null =>
@@ -37,27 +39,53 @@ const MARGEN_EN_VUELO_MIN = 10
  *
  * Upsert sobre `codeoscopic_projects`: si el proyecto no tenía fila todavía
  * (lo normal es que SÍ la tenga: la crea `oferta/route.ts` en el ReRate, antes
- * de llegar aquí), la crea — puente de emergencia con `'auto'` como producto
- * placeholder (hoy el envío real solo está construido para auto).
+ * de llegar aquí), la crea — puente de emergencia con `producto` (el
+ * `polizas.tipo` real que pasa el caller, `emitir/route.ts`) en vez del
+ * literal `'auto'` de antes (12/09/2026): esta rama solo se pisa si el ReRate
+ * nunca llegó a crear la fila, y da igual el ramo — hardcodear el más
+ * frecuente la habría dejado mintiendo sobre hogar/RC igual que el INSERT
+ * gemelo de `oferta/route.ts`.
  */
 async function bloquearEnvio(
   correduriaId: string,
   projectId: string,
   attemptId: string,
-): Promise<boolean> {
+  producto: string,
+  permitirQuizaEmitido: boolean,
+): Promise<'tomado' | 'en-vuelo' | 'quiza-emitido' | 'ya-emitida'> {
+  // La condición «quizá emitido» va DENTRO del upsert, no solo en la lectura
+  // previa de `emitir/route.ts` (13/09/2026): dos peticiones casi simultáneas
+  // leen ambas un proyecto sano, la primera muere en 5xx y suelta el candado,
+  // y la segunda —que ya había pasado la lectura— lo tomaría y mandaría el
+  // segundo Submit a ciegas. Aquí la fila se decide en la misma sentencia.
+  // La regex es la misma que `intentoQuizaEmitido()` (`reintento-emision.ts`).
   const filas = await prisma.$queryRaw<{ id: string }[]>`
     insert into codeoscopic_projects (
       correduria_id, project_id_codeoscopic, producto, estado, submit_attempt_id, submit_in_flight_at
     ) values (
-      ${correduriaId}::uuid, ${projectId}, 'auto'::tipo_seguro, 'preemision', ${attemptId}::uuid, now()
+      ${correduriaId}::uuid, ${projectId}, ${producto}::tipo_seguro, 'preemision', ${attemptId}::uuid, now()
     )
     on conflict (correduria_id, project_id_codeoscopic) do update
       set submit_attempt_id = excluded.submit_attempt_id, submit_in_flight_at = now()
-      where codeoscopic_projects.submit_in_flight_at is null
-         or codeoscopic_projects.submit_in_flight_at < now() - (${MARGEN_EN_VUELO_MIN}::int * interval '1 minute')
+      where (codeoscopic_projects.submit_in_flight_at is null
+             or codeoscopic_projects.submit_in_flight_at < now() - (${MARGEN_EN_VUELO_MIN}::int * interval '1 minute'))
+        and codeoscopic_projects.estado <> 'emitida'
+        and (${permitirQuizaEmitido}::boolean
+             or codeoscopic_projects.error_mensaje is null
+             or not (codeoscopic_projects.error_mensaje ~ '^5[0-9]{2}([^0-9]|$)'
+                     or codeoscopic_projects.error_mensaje ilike ${'%' + FRASE_SIN_CONFIRMACION + '%'}))
     returning id::text as id
   `
-  return filas.length > 0
+  if (filas.length > 0) return 'tomado'
+  const fila = await prisma.$queryRaw<{ estado: string | null; en_vuelo: boolean }[]>`
+    select estado::text as estado,
+           (submit_in_flight_at is not null
+            and submit_in_flight_at >= now() - (${MARGEN_EN_VUELO_MIN}::int * interval '1 minute')) as en_vuelo
+    from codeoscopic_projects
+    where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${projectId}
+  `
+  if (fila[0]?.estado === 'emitida') return 'ya-emitida'
+  return fila[0]?.en_vuelo ? 'en-vuelo' : 'quiza-emitido'
 }
 
 /** Libera el candado. `estado` queda como rastro de qué pasó con el intento;
@@ -73,10 +101,23 @@ async function cerrarEnvio(
   // enlaza esta fila. Aquí solo se libera el candado; `'preemision'` mantiene
   // el estado de «ya tiene oferta confirmada, aún sin póliza acuñada».
   estado: 'preemision' | 'error',
+  /**
+   * El texto del vendor (ya enmascarado por el caller) cuando `estado` es
+   * `error`. Hasta el 12/09/2026 `error_mensaje` quedaba a NULL en cada
+   * Submit rechazado: el 400 solo vivía en la respuesta HTTP y en el chat, y
+   * al día siguiente no había forma de saber POR QUÉ falló un proyecto. Un
+   * Submit que SÍ cuaja (`preemision`) la deja a NULL: nadie más escribe esta
+   * columna, así que un error viejo se quedaría pegado a un proyecto ya
+   * emitido si no se limpiara aquí.
+   */
+  mensaje: string | null = null,
 ): Promise<void> {
+  const errorMensaje = estado === 'error' && mensaje ? mensaje.slice(0, 2000) : null
   await prisma.$executeRaw`
     update codeoscopic_projects
-    set estado = ${estado}, submit_in_flight_at = null
+    set estado = ${estado}::codeoscopic_project_estado,
+        submit_in_flight_at = null,
+        error_mensaje = ${errorMensaje}::text
     where correduria_id = ${correduriaId}::uuid
       and project_id_codeoscopic = ${projectId}
       and submit_attempt_id = ${attemptId}::uuid
@@ -87,7 +128,7 @@ async function cerrarEnvio(
 
 export type ResultadoEnvio =
   | { ok: true; referenciaVendor: string | null; crudo: unknown }
-  | { ok: false; razon: 'en-vuelo' | 'vendor'; mensaje: string; crudo?: unknown }
+  | { ok: false; razon: 'en-vuelo' | 'quiza-emitido' | 'ya-emitida' | 'vendor'; mensaje: string; crudo?: unknown }
 
 /**
  * `POST /insurances/{projectId}/policy-applications`, multipart. Un solo
@@ -104,11 +145,24 @@ export async function enviarEmision(
     projectId: string
     offerId: string
     campos: Record<string, unknown>
+    /** `polizas.tipo` de la póliza enlazada — solo se usa si hay que crear la
+     *  fila de emergencia (ver `bloquearEnvio`); la fila normal ya la trae
+     *  del ReRate. */
+    producto: string
+    /** El corredor ha mirado el proyecto tras un intento «quizá emitido» y no
+     *  hay póliza: solo así se pasa por encima de ese candado. */
+    reintentoConfirmado: boolean
   },
 ): Promise<ResultadoEnvio> {
   const attemptId = randomUUID()
-  const tomado = await bloquearEnvio(entrada.correduriaId, entrada.projectId, attemptId)
-  if (!tomado) {
+  const candado = await bloquearEnvio(
+    entrada.correduriaId,
+    entrada.projectId,
+    attemptId,
+    entrada.producto,
+    entrada.reintentoConfirmado,
+  )
+  if (candado === 'en-vuelo') {
     return {
       ok: false,
       razon: 'en-vuelo',
@@ -117,16 +171,46 @@ export async function enviarEmision(
         `${MARGEN_EN_VUELO_MIN} min. No se manda un segundo Submit mientras no se aclare el primero.`,
     }
   }
+  if (candado === 'ya-emitida') {
+    return { ok: false, razon: 'ya-emitida', mensaje: `El proyecto ${entrada.projectId} ya consta como emitido: no se envía otro Submit.` }
+  }
+  if (candado === 'quiza-emitido') {
+    return {
+      ok: false,
+      razon: 'quiza-emitido',
+      mensaje:
+        `El último envío del proyecto ${entrada.projectId} acabó sin respuesta clara del vendor y nadie ha ` +
+        'confirmado el reintento: no se reenvía a ciegas.',
+    }
+  }
 
+  // El token y el cuerpo se preparan FUERA del try de la llamada: si fallan,
+  // el POST no ha salido y NO puede quedar registrado como «quizá emitido»
+  // (eso bloquearía el siguiente intento legítimo con una falsa alarma).
+  let token: string
+  let form: FormData
   try {
-    const form = new FormData()
-    form.append('offerId', entrada.offerId)
+    const policyApplication: Record<string, unknown> = { quote: { id: entrada.offerId } }
     for (const [k, v] of Object.entries(entrada.campos)) {
       if (v === null || v === undefined) continue
-      form.append(k, typeof v === 'string' || v instanceof Blob ? v : JSON.stringify(v))
+      policyApplication[k] = v
     }
+    form = new FormData()
+    form.append('policyApplications', JSON.stringify([policyApplication]))
+    token = await obtenerToken(config)
+  } catch (e) {
+    const mensaje = `antes de enviar: ${e instanceof Error ? e.message : String(e)} (el Submit NO ha salido)`
+    await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'error', String(redactarCrudoVendor(mensaje))).catch(() => {})
+    return { ok: false, razon: 'vendor', mensaje }
+  }
 
-    const token = await obtenerToken(config)
+  try {
+    // 🚨 Décimo fallo real (12/09/2026, proyecto 40684860): «The `policyApplications`
+    // body part is required.» — el vendor NO acepta campos multipart sueltos: exige
+    // UNA sola parte llamada `policyApplications` con un JSON ARRAY dentro
+    // (`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`, la única referencia con la forma real
+    // de esta llamada). `entrada.offerId` es aquí el `mainQuote.id` del ReRate
+    // (p.ej. "Q2018406592"), que es lo que el vendor llama `quote.id`.
     const res = await fetch(
       `${config.baseUrl}/insurances/${encodeURIComponent(entrada.projectId)}/policy-applications`,
       {
@@ -149,11 +233,25 @@ export async function enviarEmision(
     }
 
     if (!res.ok) {
-      await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'error')
-      return { ok: false, razon: 'vendor', mensaje: `${res.status}: ${texto.slice(0, 1000)}`, crudo }
+      const mensaje = `${res.status}: ${texto.slice(0, 1000)}`
+      await cerrarEnvio(
+        entrada.correduriaId,
+        entrada.projectId,
+        attemptId,
+        'error',
+        String(redactarCrudoVendor(mensaje)),
+      )
+      return { ok: false, razon: 'vendor', mensaje, crudo }
     }
 
-    const referenciaVendor = str((crudo as Record<string, unknown> | null)?.referenceFromVendor)
+    // `referenceFromVendor` es la forma del traspaso de Manuel; el portal (13/09/2026)
+    // documenta la respuesta como PolicyApplication_V1[] con `policyNumber` («the
+    // policy number assigned by the issuer»). Se leen las dos: sin fixture real no
+    // se sabe cuál llega.
+    const referenciaVendor =
+      str((crudo as Record<string, unknown> | null)?.referenceFromVendor) ??
+      solicitudesEmision(crudo).find((s) => s.numeroPoliza)?.numeroPoliza ??
+      null
     await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'preemision')
     return { ok: true, referenciaVendor, crudo }
   } catch (e) {
@@ -161,13 +259,12 @@ export async function enviarEmision(
     // cortara la conexión: el candado se libera igual (para no dejar el
     // proyecto bloqueado para siempre), pero el `estado: 'error'` deja
     // constancia de que este intento NO terminó con una respuesta clara.
-    await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'error').catch(() => {})
-    return {
-      ok: false,
-      razon: 'vendor',
-      mensaje:
-        `${e instanceof Error ? e.message : String(e)} — no hay confirmación de qué hizo el ` +
-        'vendor con esta petición: antes de reintentar, consultar `GET /insurances/{id}` para ver si ya emitió.',
-    }
+    const mensaje =
+      `${e instanceof Error ? e.message : String(e)} — ${FRASE_SIN_CONFIRMACION} con esta petición: ` +
+      'antes de reintentar, consultar `GET /insurances/{id}` para ver si ya emitió.'
+    await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'error', String(redactarCrudoVendor(mensaje))).catch(
+      () => {},
+    )
+    return { ok: false, razon: 'vendor', mensaje }
   }
 }

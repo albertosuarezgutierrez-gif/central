@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { MOTOR_RESERVAS } from './reservas';
 import { CALENDARIO_HTML, CALENDARIO_PLANTILLAS, CALENDARIO_CSS, CALENDARIO_JS } from './calendario';
+import { montarBannerHtml } from '@central/core-consent';
 
 export const HTML = `<!DOCTYPE html>
 <html lang="es">
@@ -10,8 +11,8 @@ export const HTML = `<!DOCTYPE html>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNSIgZmlsbD0iI0IwNEUyQSIvPjx0ZXh0IHg9IjE2IiB5PSIyMS41IiBmb250LWZhbWlseT0iR2VvcmdpYSxzZXJpZiIgZm9udC1zaXplPSIxNC41IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgbGV0dGVyLXNwYWNpbmc9IjAuNSI+SFM8L3RleHQ+PC9zdmc+"/>
 
 <!-- SEO Primary -->
-<title>Casa vacacional Sevilla centro | 6 dormitorios, parking</title>
-<meta name="description" content="Alquiler exclusivo en Sevilla centro: casa señorial de 290m², 6 dormitorios, 4 baños, parking privado y patio andaluz. Ideal para grupos hasta 12 personas."/>
+<title>Casa vacacional Sevilla centro | 6 dorm. parking privado</title>
+<meta name="description" content="Casa señorial de 290m² en Sevilla centro con 6 dormitorios, 4 baños, parking privado y patio andaluz. Ideal para grupos hasta 12 personas. Reserva directa sin comisiones."/>
 <link rel="canonical" href="https://www.housesevillana.es/"/>
 <link rel="alternate" hreflang="es" href="https://www.housesevillana.es/"/>
 <link rel="alternate" hreflang="en" href="https://www.housesevillana.es/en"/>
@@ -22,21 +23,17 @@ export const HTML = `<!DOCTYPE html>
 <meta property="og:type" content="website"/>
 <meta property="og:locale" content="es_ES"/>
 <meta property="og:url" content="https://www.housesevillana.es/"/>
-<meta property="og:title" content="Casa vacacional Sevilla centro | 6 dormitorios, parking"/>
-<meta property="og:description" content="Casa histórica en Sevilla centro con 6 dormitorios, parking y terraza. Perfecta para grupos familiares o amigos."/>
+<meta property="og:title" content="Casa vacacional Sevilla centro | 6 dorm. parking privado"/>
+<meta property="og:description" content="Casa señorial en Sevilla centro: 6 dormitorios, parking privado, patio andaluz. Hasta 12 personas. Reserva directa."/>
 <meta property="og:image" content="https://lh3.googleusercontent.com/d/1rDXs-fjAmmDQFTfZ7fTutPZvosAV2GMo"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:image" content="https://lh3.googleusercontent.com/d/1rDXs-fjAmmDQFTfZ7fTutPZvosAV2GMo"/>
 
 <!-- Schema: LodgingBusiness -->
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"VacationRental","name":"House Sevillana","description":"Casa histórica en Sevilla centro con 6 dormitorios, parking privado y patio andaluz. Certificado VFT/SE/01179."}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VacationRental","name":"House Sevillana","description":"Casa señorial de 290m² en Sevilla centro con 6 dormitorios, 4 baños, parking privado y patio andaluz. Ideal para grupos hasta 12 personas. Reserva directa sin comisiones."}</script>
 
 <!-- Schema: FAQPage -->
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿Tiene parking privado House Sevillana?","acceptedAnswer":{"@type":"Answer","text":"Sí. House Sevillana dispone de una plaza de garaje privado en el mismo edificio, reservable junto a tu estancia. Es una de las pocas casas turísticas del casco antiguo de Sevilla con parking propio."}},{"@type":"Question","name":"¿Para cuántas personas es House Sevillana?","acceptedAnswer":{"@type":"Answer","text":"House Sevillana tiene 6 dormitorios dobles y capacidad para hasta 12 personas. Es ideal para grupos de amigos, familias numerosas o varias parejas que viajan juntas."}},{"@type":"Question","name":"¿A qué distancia está la Catedral de Sevilla?","acceptedAnswer":{"@type":"Answer","text":"La Catedral de Sevilla está a unos 10 minutos andando desde House Sevillana. El Real Alcázar está a 12 minutos, la Torre del Oro a 14 minutos y la Plaza de España a 15 minutos a pie."}},{"@type":"Question","name":"¿Se admiten niños en House Sevillana?","acceptedAnswer":{"@type":"Answer","text":"Sí, se admiten niños de todas las edades. House Sevillana es perfecta para familias multigeneracionales gracias a sus 6 dormitorios y 4 baños. No se admiten mascotas."}},{"@type":"Question","name":"¿Se permiten despedidas de soltero en House Sevillana?","acceptedAnswer":{"@type":"Answer","text":"No. Las despedidas de soltero y eventos similares no están permitidos en House Sevillana. Hay silencio obligatorio de 21:00 a 09:00 y se aplica un depósito por daños de hasta 150€."}},{"@type":"Question","name":"¿Cuál es el horario de check-in y check-out?","acceptedAnswer":{"@type":"Answer","text":"El check-in es a partir de las 15:00 h y el check-out hasta las 12:00 h. Consulta directamente con el propietario si necesitas horario flexible."}},{"@type":"Question","name":"¿Cómo llego desde el aeropuerto de Sevilla a House Sevillana?","acceptedAnswer":{"@type":"Answer","text":"El aeropuerto de Sevilla (SVQ) está a unos 11 km. En taxi o VTC tarda aproximadamente 16-20 minutos. También puedes llegar en autobús (línea EA) hasta el centro en unos 35 minutos."}},{"@type":"Question","name":"¿Hay supermercados y restaurantes cerca?","acceptedAnswer":{"@type":"Answer","text":"Sí. A pocos metros encontrarás La Parcería Café, Ojalá Tapas y Vinos y el Restaurante Condendê (a 200 m). Hay varios supermercados en el barrio y el Mercado de la Encarnación está a 10 minutos andando."}},{"@type":"Question","name":"¿Cuál es la política de cancelación de House Sevillana?","acceptedAnswer":{"@type":"Answer","text":"La política de cancelación se detalla en el motor de reservas. Reservando directamente puedes consultar condiciones flexibles directamente con el propietario, algo que no es posible a través de portales como Booking."}},{"@type":"Question","name":"¿Por qué reservar en housesevillana.es y no en Booking.com?","acceptedAnswer":{"@type":"Answer","text":"Booking.com cobra entre un 15% y un 22% de comisión que repercute en el precio final. Reservando directamente en housesevillana.es obtienes el mejor precio garantizado, trato directo con el propietario y confirmación inmediata."}}]}</script>
-
-<!-- GA4 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-N5CMQL9C4M"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-N5CMQL9C4M');</script>
 
 <!-- Performance -->
 <link rel="dns-prefetch" href="//lh3.googleusercontent.com"/>
@@ -369,10 +366,34 @@ footer{background:var(--night);color:rgba(255,255,255,.65);padding:4rem 2.5rem 2
 }
 ${CALENDARIO_CSS}
 </style>
-<!-- Meta Pixel retargeting -->
+<!-- Consentimiento (vanilla-cookieconsent): GA4 y Meta Pixel NO cargan hasta que el
+     visitante decide. Ver apps/housesevillana/CLAUDE.md y packages/core-consent. -->
+${montarBannerHtml('es')}
 <script>
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init','12124662686780882173');fbq('track','PageView');
+window.addEventListener('cc:onConsent', cargarProveedoresConsentidos);
+window.addEventListener('cc:onChange', cargarProveedoresConsentidos);
+function cargarProveedoresConsentidos(e) {
+  var cats = (e.detail && e.detail.cookie && e.detail.cookie.categories) || [];
+  if (cats.indexOf('statistics') > -1 && !window.__ga4Cargado) {
+    window.__ga4Cargado = true;
+    var s1 = document.createElement('script');
+    s1.async = true; s1.src = 'https://www.googletagmanager.com/gtag/js?id=G-N5CMQL9C4M';
+    document.head.appendChild(s1);
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){window.dataLayer.push(arguments);}
+    gtag('js', new Date()); gtag('config', 'G-N5CMQL9C4M');
+  }
+  if (cats.indexOf('marketing') > -1 && !window.__fbqCargado) {
+    window.__fbqCargado = true;
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','12124662686780882173');fbq('track','PageView');
+  }
+  // Registro de consentimiento: fire-and-forget, DIRECTO al puerto público de plataforma
+  // (mismo patrón que el calendario de disponibilidad, ver app/calendario.ts) — esta app
+  // no tiene servidor propio ni BD, así que no monta un proxy /api/consentimiento local.
+  // 404 hasta que plataforma exponga ese endpoint (fuera del alcance de este cambio).
+  fetch('https://plataforma-ten-flame.vercel.app/api/publico/correduria/consentimiento', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({app:'housesevillana', categorias: cats})}).catch(function(){});
+}
 </script>
 </head>
 <body>

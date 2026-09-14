@@ -81,6 +81,16 @@ const PROBES: Record<string, Prisma.Sql> = {
   // rellena). Solo cuentan las conexiones activas: una desactivada a mano no es
   // una avería.
   ialimp_pms: Prisma.sql`SELECT max(last_sync_at) AS ultimo FROM pms_connections WHERE activa = true`,
+  // Sync de Smoobu de sivra (reservas/cancelaciones). La huella es la de la PASADA, escrita desde el
+  // 31/07/2026 pero sin sonda hasta hoy — exactamente el hueco que dejó pasar el 401 de septiembre.
+  smoobu_sync: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'smoobu_sync'`,
+  // Agente que responde a los huéspedes por Smoobu (cada 3 min). Mismas credenciales que
+  // `smoobu_sync`: si una cae, la otra suele caer con ella, pero cada una avisa por su cuenta.
+  sivra_mensajes_huesped: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_mensajes_huesped'`,
   // Facturas: la frescura se mide sobre la ÚLTIMA PASADA BUENA, no sobre la
   // última ejecución — así un cron que corre y falla siempre también salta.
   // Se traen además `ultimo_at` y `detalle` para poder decir CUÁL de las dos

@@ -183,9 +183,12 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
             interfaz aquí quedaría fuera de esos cepos el día que alguien toque
             una de las dos — y el fallo sería alguien marcando el número de
             urgencias de otra compañía a las tres de la mañana.
-            Se enlaza, que además es donde se elige la póliza del parte. */}
+            Se enlaza, que además es donde se elige la póliza del parte — con
+            esta YA preseleccionada (`?poliza=`): quien llega desde la ficha de
+            un seguro concreto no debería tener que volver a encontrarlo en un
+            desplegable con las demás. */}
         <p style={{ margin: 0 }}>
-          <Link className="boton auto" href="/boveda?vista=siniestro">
+          <Link className="boton auto" href={`/boveda?vista=siniestro&poliza=cartera:${p.id}`}>
             Ver los teléfonos de {p.compania} y dar parte
           </Link>
         </p>

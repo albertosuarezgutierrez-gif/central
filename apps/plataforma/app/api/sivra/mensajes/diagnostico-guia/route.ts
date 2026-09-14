@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { smoobuFetch } from '@/lib/smoobu'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -12,29 +12,25 @@ export const maxDuration = 30
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const key = await getSmoobuKey()
   const reservationId = req.nextUrl.searchParams.get('reservationId')
 
   // 1) Si no pasan reserva, coge la primera reciente para tener un guest-app-url real.
   let resId = reservationId
   if (!resId) {
-    const list = await fetch('https://login.smoobu.com/api/reservations?pageSize=1', {
-      headers: { 'Api-Key': key }, cache: 'no-store',
-    }).then(r => r.json()).catch(() => null)
+    const list = await smoobuFetch('/api/reservations?pageSize=1', { cache: 'no-store' })
+      .then(r => r.json()).catch(() => null)
     resId = String(list?.bookings?.[0]?.id ?? list?.[0]?.id ?? '')
   }
   if (!resId) return NextResponse.json({ error: 'sin reservas para sondear' }, { status: 404 })
 
   // 2) Reserva (campos + guest-app-url) y apartamento (campos estructurados).
-  const reserva = await fetch(`https://login.smoobu.com/api/reservations/${resId}`, {
-    headers: { 'Api-Key': key }, cache: 'no-store',
-  }).then(r => r.json()).catch(() => ({} as any))
+  const reserva = await smoobuFetch(`/api/reservations/${resId}`, { cache: 'no-store' })
+    .then(r => r.json()).catch(() => ({} as any))
 
   const apartmentId = reserva?.apartment?.id ?? reserva?.apartmentId
   const apartamento = apartmentId
-    ? await fetch(`https://login.smoobu.com/api/apartments/${apartmentId}`, {
-        headers: { 'Api-Key': key }, cache: 'no-store',
-      }).then(r => r.json()).catch(() => ({} as any))
+    ? await smoobuFetch(`/api/apartments/${apartmentId}`, { cache: 'no-store' })
+        .then(r => r.json()).catch(() => ({} as any))
     : null
 
   // 3) Descarga la guest-app-url y mide si trae texto o es cascarón JS.

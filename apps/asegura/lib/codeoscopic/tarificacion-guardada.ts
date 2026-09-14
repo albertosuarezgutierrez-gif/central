@@ -10,6 +10,7 @@
 
 import { prisma } from '../tenant.ts'
 import { extraerFormularioAuto, type FormularioAutoGuardado } from './formulario-guardado.ts'
+import { fechaEfectoCaducada } from './fecha-efecto.ts'
 
 export type PrecioGuardado = {
   compania: string | null
@@ -27,6 +28,12 @@ export type TarificacionGuardada = {
   cotizacionId: string
   projectId: string
   creadaEn: string
+  /** `effectiveDate` con la que se cotizó (`peticion`); null si no consta. */
+  fechaEfecto: string | null
+  /** Fecha de efecto ya PASADA (13/09/2026): el proyecto está muerto — la
+   *  compañía no confirma ni emite con efecto anterior a hoy y la fecha no se
+   *  puede cambiar. Recuperar su precio sería ofrecer un botón sin salida. */
+  caducada: boolean
   precios: PrecioGuardado[]
   formulario: FormularioAutoGuardado
 }
@@ -74,10 +81,15 @@ export async function ultimaTarificacionRealAuto(
     order by prima_eur asc nulls last
   `
 
+  const peticion = t.peticion && typeof t.peticion === 'object' ? (t.peticion as Record<string, unknown>) : {}
+  const fechaEfecto = typeof peticion.effectiveDate === 'string' && peticion.effectiveDate.trim() !== '' ? peticion.effectiveDate.trim() : null
+
   return {
     cotizacionId: t.id,
     projectId: t.project_id_codeoscopic,
     creadaEn: t.creado_at.toISOString(),
+    fechaEfecto,
+    caducada: fechaEfectoCaducada(fechaEfecto),
     precios: filasPrecios.map((p) => ({
       compania: p.compania,
       producto: p.producto,

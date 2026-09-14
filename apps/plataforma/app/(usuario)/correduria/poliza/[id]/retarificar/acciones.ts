@@ -83,6 +83,8 @@ export async function pedirCotizacion(entrada: {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetarificar.forzarNuevo`. */
+  forzarNuevo?: boolean
 }): Promise<RespuestaRetarificar> {
   return retarificarAsegura({
     polizaId: entrada.polizaId,
@@ -91,6 +93,7 @@ export async function pedirCotizacion(entrada: {
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
     catastro: entrada.catastro ?? null,
+    forzarNuevo: entrada.forzarNuevo === true,
   })
 }
 
@@ -104,6 +107,9 @@ export async function pedirOferta(entrada: {
   tarificacionId: string
   compania: string
   categoria: string
+  fechaEfectoCorregida?: string
+  /** Respuesta del corredor a un `faltan_vendor` anterior (campo nuestro → valor). */
+  correcciones?: Record<string, string>
 }): Promise<RespuestaOferta> {
   return ofertaAsegura(entrada)
 }
@@ -117,11 +123,18 @@ export async function pedirEmision(entrada: {
   projectId: string
   campos: Record<string, unknown>
   primaAnual?: number | null
+  /** Máscara de la cuenta de la ficha que el corredor confirmó en pantalla (o nada). */
+  cuentaConfirmada?: string | null
+  reintentoConfirmado?: boolean
+  acunarExistente?: boolean
 }): Promise<RespuestaEmitir> {
   return emitirAsegura({
     projectId: entrada.projectId,
     campos: entrada.campos,
     actor: 'plataforma/correduria',
     primaAnual: entrada.primaAnual ?? null,
+    cuentaConfirmada: entrada.cuentaConfirmada ?? null,
+    reintentoConfirmado: entrada.reintentoConfirmado === true,
+    acunarExistente: entrada.acunarExistente === true,
   })
 }

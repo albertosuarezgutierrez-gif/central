@@ -91,6 +91,15 @@ para cuando el usuario dice «quiero el precio de verdad».
 ⚠️ [Suposición] Las primas del volcado son de 2013-2018: sirven para ordenar, no para cotizar. Hay
 que medir la dispersión antes de enseñar una horquilla, o será un número plausible y falso.
 
+**✅ Desenlace parcial (12/09/2026):** al revisitarla, Alberto confirmó la sospecha de la muestra
+—110 pólizas vivas repartidas en 4 ramos dan casi siempre 1-2 comparables por celda compañía/ramo—
+y decidió NO automatizar el precio todavía: **«datos minúsculos, mejor avisarme dos meses antes
+para yo venderle… luego será automático»**. Se construyó el aviso a Alberto (no al cliente): bloque
+«Otras compañías por vencer» en `/correduria` → Hoy, sobre las pólizas DECLARADAS (de otra compañía)
+que vencen en ≤60 días — ver `apps/asegura/lib/cartera-declaradas.ts` +
+`apps/plataforma/app/(usuario)/correduria/DeclaradasVencer.tsx`. El comparador de precio con umbral
+mínimo de muestra (≥5 por celda) sigue pendiente y sin medir.
+
 ### G. Botón de «quiero el precio de verdad» (Avant2) 🔴 el que gasta
 Retarificación real. **Nunca automático, nunca en lote.** Cupo, motivo y `intento_id` contra
 `seguros.codeoscopic_consumo`, que ya existe justo para esto. Se dispara **una vez**, al acercarse el
@@ -225,6 +234,32 @@ contaba en el desglose por ramo. No se corrige aquí en cada sitio (es un barrid
 deja anotado para que no se repita la cifra vieja sin medirla. Sigue siendo cierto que hoy es una cola
 pequeña, así que antes de construir un ramo entero conviene que Alberto diga si quiere crecer ahí —
 pero ya no es una apuesta a ciegas: hay un cliente real de ese tipo y un libro histórico detrás.
+
+### P. «La única app para abrir un siniestro» — posicionamiento, NO construido 🟡 (13/09/2026)
+
+Alberto, mientras se construía el selector de zonas del daño del parte: *«idea es la única app para
+apertura siniestros, puede ser buena opción para posicionarse»*. Anotado para más adelante —
+*«añade idea ya apañaremos publicidad, SEO etc.»*: no se toca código ni copy de marketing hoy.
+
+🚨 **Choca de frente con una decisión ya escrita, y hay que resolver esa tensión ANTES de vender
+la idea, no después.** El dictado de Alberto del 05/09/2026 (`apps/asegura-portal/CLAUDE.md`, «Los
+DOS caminos del parte») es que el parte del portal **no abre nada en la compañía** — es mediación,
+no comunicación directa, y la pantalla lo dice con todas las letras («todavía NO está comunicado a
+tu compañía»). Posicionarse como «LA app para abrir tu siniestro» solo es honesto si el parte
+**dispara de verdad** la apertura (integración con la compañía — EIAC, API del ramo, WhatsApp
+propio verificado…), no si sigue siendo «nos enteramos nosotros y te hacemos seguimiento». Vender
+la promesa sin el mecanismo real es la misma familia de fallo que el resto de este documento: un
+titular que no se sostiene en el dato.
+
+Qué haría falta para que la promesa fuera cierta (sin construir nada de esto todavía):
+- Un canal directo y automatizable hacia cada compañía (hoy son teléfonos y un WhatsApp de Occident,
+  verificados a mano uno a uno — ver `apps/asegura-portal/CLAUDE.md`, sección de canales).
+- O una integración EIAC de siniestros (hoy CIMA solo trae pólizas y recibos, no hay ingesta de
+  siniestros automatizada — ver `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`).
+- Sin uno de los dos, «la única app para abrir tu siniestro» sería SEO sobre una promesa vacía.
+
+📌 Pendiente: decidir con Alberto si el mecanismo real se persigue (y con qué coste/plazo) antes de
+que `seo-asegura` o cualquier campaña use este ángulo.
 
 ## Preguntas abiertas para Alberto
 

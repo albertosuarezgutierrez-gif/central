@@ -24,6 +24,7 @@ function sin(id: string, entradoEn: string, extra: Partial<SiniestroEntrante> = 
     compania: 'Allianz',
     poliza: '058325150',
     referencia: '670760710',
+    estado: 'abierto',
     ...extra,
   }
 }
@@ -141,11 +142,39 @@ test('sin_datos dice que NO se ha mirado, y no se parece a «ninguno»', () => {
 
 // ── M4 · lo que el aviso NO puede decir ──────────────────────────────────────
 
-test('el aviso dice que YA está abierto en la compañía y que hay que LLAMAR', () => {
+test('el aviso dice que la compañía YA tiene el parte y que hay que LLAMAR a los que siguen abiertos', () => {
   const t = textoAvisoSiniestros([sin('a', '2026-09-05T05:00:00.000Z')])
-  assert.match(t, /ya están abiertos en la compañía/i)
+  assert.match(t, /la compañía ya tiene el parte/i)
   assert.match(t, /llamar al cliente/i)
   assert.match(t, /seguimiento/i)
+})
+
+// ── El caso real del 14/09/2026: 11 de 12 «nuevos» ya venían cerrados ────────
+
+test('un siniestro CERRADO no pide llamada y se marca como resuelto', () => {
+  const t = textoAvisoSiniestros([sin('a', '2026-09-05T05:00:00.000Z', { estado: 'cerrado' })])
+  assert.match(t, /✅ cerrado/)
+  assert.match(t, /1 de estos ya constan resueltos/)
+  assert.doesNotMatch(t, /toca llamar al cliente/i)
+  assert.match(t, /no hay ninguna llamada pendiente/i)
+})
+
+test('mezcla de abiertos y cerrados: cada uno se marca y solo se pide llamar por los abiertos', () => {
+  const t = textoAvisoSiniestros([
+    sin('a', '2026-09-05T05:00:00.000Z', { estado: 'cerrado' }),
+    sin('b', '2026-09-05T06:00:00.000Z', { estado: 'abierto' }),
+  ])
+  assert.match(t, /✅ cerrado/)
+  assert.match(t, / · abierto/)
+  assert.match(t, /1 de estos ya constan resueltos/)
+  assert.match(t, /toca llamar al cliente/i)
+})
+
+test('estado no informado (versión vieja de asegura) se declara, no se calla', () => {
+  const t = textoAvisoSiniestros([sin('a', '2026-09-05T05:00:00.000Z', { estado: null })])
+  assert.match(t, /estado no informado/)
+  // Conservador: sin dato se sigue pidiendo la llamada.
+  assert.match(t, /toca llamar al cliente/i)
 })
 
 test('CEPO: el aviso NUNCA insinúa que haya que abrirlo o comunicarlo', () => {

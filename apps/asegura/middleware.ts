@@ -9,7 +9,9 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // del portal del cliente (asegura-portal → asegura): auth propia por Bearer
 // ASEGURA_PORTAL_PUENTE_SECRET (lib/puente-portal.ts); sin la exención la
 // llamada servidor→servidor recibía el HTML del login en vez del JSON.
-const PUBLIC = ['/login', '/api/auth', '/api/operador', '/api/portal']
+// Y /api/webhooks: los receptores de Resend y de Codeoscopic traen su propia auth
+// (firma svix / HTTP Basic); sin la exención el vendor recibía el HTML del login.
+const PUBLIC = ['/login', '/api/auth', '/api/operador', '/api/portal', '/api/webhooks']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

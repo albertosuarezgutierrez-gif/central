@@ -1,0 +1,55 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+export const dynamic = 'force-dynamic'
+
+// POST /api/consentimiento — reenvío fire-and-forget del registro de qué se
+// aceptó/rechazó en el banner de cookies (@central/core-consent).
+//
+// 🚨 DESVIACIÓN respecto al plan (docs/superpowers/plans/2026-09-14-consentimiento-unificado.md,
+// Task B2): el plan asumía un `import { prisma } from '@/lib/prisma'` y un INSERT
+// directo. Esta app NO TIENE Prisma, ni rol de BD, ni secreto de sesión — es una
+// decisión de arquitectura A PROPÓSITO (ver `lib/sitio.ts` y `CLAUDE.md` de
+// asegura-web: "si algún día esta app necesita credenciales de BD, la decisión
+// correcta casi siempre es mover esa función a apps/asegura, no traer la BD al
+// sitio público"). Meter Prisma aquí para esto habría sido la primera excepción
+// a esa regla, y por una tabla de auditoría sin PII no compensa.
+//
+// Se sigue el MISMO patrón que `/api/lead`: reenvío desde el servidor a un
+// puerto de plataforma. Aquí el reenvío es fire-and-forget de verdad — a
+// diferencia de `/api/lead`, nadie espera una respuesta útil de este endpoint
+// (el banner ya decidió y ya arrancó/apagó lo que tocaba), así que un fallo de
+// red o un 404 del lado de plataforma no debe bloquear ni reintentarse desde
+// el navegador.
+//
+// ⚠️ PENDIENTE, fuera del alcance de este Task Group (solo apps/asegura-web):
+// `apps/plataforma` todavía NO expone `/api/publico/correduria/consentimiento`.
+// Hasta que exista (y hasta que Alberto autorice aplicar
+// `apps/plataforma/prisma/sql/2026-09-14_consentimiento_registro.sql`), este
+// endpoint reenvía a una ruta que responde 404 — inerte, como el plan
+// anticipaba para la migración, solo que por un motivo distinto. No cambia el
+// comportamiento visible: el banner funciona igual, solo que sin dejar rastro
+// en `consentimiento_registro` todavía.
+const PLATAFORMA_URL = (process.env.PLATAFORMA_URL || 'https://plataforma-ten-flame.vercel.app').replace(/\/+$/, '')
+
+export async function POST(req: NextRequest) {
+  const { categorias } = await req.json().catch(() => ({ categorias: null }))
+  if (!categorias || typeof categorias !== 'object') {
+    return NextResponse.json({ error: 'categorias inválidas' }, { status: 400 })
+  }
+
+  // Fire-and-forget de verdad: no se espera el resultado del reenvío ni se
+  // propaga su fallo al visitante — el registro es una prueba de auditoría,
+  // nunca una condición para que el banner funcione.
+  fetch(`${PLATAFORMA_URL}/api/publico/correduria/consentimiento`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ app: 'asegura-web', categorias }),
+    signal: AbortSignal.timeout(5_000),
+  }).catch(() => {
+    // Sin log del cuerpo (solo categorías booleanas, sin PII) pero tampoco hace
+    // falta: un fallo aquí no es accionable en caliente, es una fila menos en
+    // el registro de auditoría.
+  })
+
+  return NextResponse.json({ ok: true })
+}

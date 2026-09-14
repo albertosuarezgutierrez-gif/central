@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
 import type { CapitalAsegurado } from '@central/module-seguros'
 import Documentos from '../../Documentos'
+import EditarModalidadRc from './EditarModalidadRc'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
@@ -63,6 +64,12 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         <Objeto p={p} />
         {/* Solo en hogar, y solo si asegura los manda: `null` no es «no tiene capital». */}
         {p.capitalesHogar && <CapitalesHogar caps={p.capitalesHogar} />}
+        {p.tipo === 'responsabilidad_civil' && (
+          <EditarModalidadRc
+            polizaId={p.id}
+            informadoPorCima={p.objeto !== null && p.objeto.estado === 'conocido' && !(p.objeto.nota ?? '').includes('a mano')}
+          />
+        )}
       </Tarjeta>
 
       {/* ── Fechas, prima y pago ─────────────────────────────────────────── */}

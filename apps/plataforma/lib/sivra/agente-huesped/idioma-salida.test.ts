@@ -49,3 +49,14 @@ test('si la traducción vuelve en español, cuenta como fallo (no como correcci�
   assert.equal(res.corregido, false)
   assert.equal(res.fallo, true)
 })
+
+// Caso real (reserva 147382671, Daniela — Luxury Busto, 12/09/2026): un borrador CORRECTO en
+// italiano se marcaba como deriva al español (falso positivo de `pareceEspanol`/`detectLang`,
+// ver reglas.test.ts) y el aviso decía «ha salido en ESPAÑOL» sobre un texto que ya era italiano.
+test('un borrador correcto en italiano no se marca como deriva al español', () => {
+  const borradorIT = 'Buonasera, Daniela! Hai fatto benissimo a chiedere. Sì, quelle richieste su ' +
+    'WhatsApp non vengono da noi: la comunicazione ufficiale con l’alojamiento si fa solo ' +
+    'tramite il chat di Booking o via email, mai su WhatsApp. Ti consiglio di ignorare quei ' +
+    'messaggi e non cliccare su nessun link che ti mandano.'
+  assert.equal(derivaAEspanol(borradorIT, 'it'), false)
+})

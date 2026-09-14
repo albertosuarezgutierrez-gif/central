@@ -13,6 +13,7 @@ import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { leerMisDatos } from '@/lib/mis-datos'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
+import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
@@ -35,6 +36,7 @@ import {
 
 import { AvisoContacto } from './AvisoContacto'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
+import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
 import { MisDatos } from './MisDatos'
 import { TusDatos } from './TusDatos'
@@ -55,6 +57,7 @@ const TITULO_VISTA: Record<VistaBoveda, string> = {
   hoja: 'QR',
   recibos: 'recibos',
   siniestro: 'siniestros',
+  recordatorios: 'recordatorios',
   datos: 'datos',
 }
 
@@ -66,7 +69,13 @@ export default async function Boveda({
   // raro aquí solo elige otra pestaña, nunca otros datos.
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const vista = vistaDeBoveda((await searchParams).vista)
+  const parametros = await searchParams
+  const vista = vistaDeBoveda(parametros.vista)
+  // El botón «Dar parte de esta póliza» de la ficha llega con esto en la URL.
+  // Es solo una SUGERENCIA de selección dentro de `polizasParte`, que ya está
+  // acotada a esta identidad — nunca una clave de consulta: `ParteSiniestro`
+  // la ignora si no está en esa lista.
+  const polizaInicial = typeof parametros.poliza === 'string' ? parametros.poliza : null
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
 
@@ -104,6 +113,12 @@ export default async function Boveda({
   // pero se siguen sincronizando: es lo que lee la campana de avisos
   // (`/api/avisos`) para el chip «puedes actuar hasta…».
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
+
+  // Los recordatorios PROPIOS solo se leen para la pestaña que los pinta —
+  // misma regla de rendimiento que el resto de la página (el servidor manda
+  // solo lo que se pide). El array vacío en las demás vistas no se enseña en
+  // ningún sitio, así que no hace falta que sea correcto, solo que exista.
+  const recordatorios = vista === 'recordatorios' ? await recordatoriosDeIdentidad(identidad.id) : []
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo ASegura'
@@ -150,10 +165,16 @@ export default async function Boveda({
       // correcto: una coincidencia aproximada acertaría casi siempre y alguna
       // vez daría el teléfono de urgencias de OTRA compañía.
       canal: canalDeCompania(p.compania, companias),
+      ramo: p.ramo,
+      matriculaPropia: p.matricula,
       etiqueta: [
         p.compania ?? 'Compañía sin identificar',
         p.ramo ? RAMO[p.ramo] ?? p.ramo : null,
-        p.numeroPoliza ? `nº ${p.numeroPoliza}` : null,
+        // La matrícula (si es auto) identifica mejor que el nº de póliza, que
+        // casi nadie se sabe de memoria. Para las declaradas no hay una
+        // dirección propia que leer aquí (vive, si acaso, dentro de
+        // `datosRamo`), así que el nº de póliza sigue de último recurso.
+        p.matricula ?? (p.numeroPoliza ? `nº ${p.numeroPoliza}` : null),
         // Se dice de dónde sale para que no parezca otra póliza de la
         // correduría: esta la aportó la propia persona y puede que nosotros no
         // la tengamos contratada.
@@ -250,7 +271,7 @@ export default async function Boveda({
       {/* El h1 dice en qué pestaña estás. Antes decía siempre «Mis seguros»,
           también dentro de «Mis datos»: el titular contradecía a la nav justo
           debajo (09/09/2026, aviso de Alberto). */}
-      <h1>
+      <h1 id="titulo-vista">
         Mis <em>{TITULO_VISTA[vista]}</em>
       </h1>
 
@@ -272,13 +293,16 @@ export default async function Boveda({
           Por eso el título ya NO dice «en {correduria}»: en esta lista hay
           ahora pólizas que la correduría no lleva. Lo que dice de dónde sale
           cada una es el cartel de su FILA, que va con ella cuando se hace
-          scroll — un encabezado de sección no. */}
-      <section className="seccion" aria-labelledby="cartera-titulo">
-        {/* El rótulo sobre el titular, como en `grupoasegura.es`. Dice de dónde
-            sale la lista, que es la pregunta que el título («Tus seguros») ya no
-            responde desde que conviven las de la correduría y las añadidas. */}
-        <p className="antetitulo">Tu cartera</p>
-        <h2 id="cartera-titulo">Tus seguros</h2>
+          scroll — un encabezado de sección no.
+
+          🚨 Y la sección NO lleva titular propio (12/09/2026). Tenía «Tu
+          cartera / Tus seguros» justo debajo del h1 «Mis seguros» y de la
+          pestaña activa «Mis seguros»: tres veces lo mismo en la primera
+          pantalla del móvil (Alberto: «dos veces mis seguros»). El h1 es el
+          nombre de la sección, y por eso `aria-labelledby` apunta a él. Los
+          demás cajones (sociedades, autorizadas) sí conservan el suyo: ahí el
+          título dice algo que el h1 no dice. */}
+      <section className="seccion" aria-labelledby="titulo-vista">
         {!cartera.vinculada ? (
           cartera.vinculo === 'ambiguo' ? (
             // 🚨 A este NO se le puede decir que no le hemos encontrado nada: sí
@@ -441,9 +465,11 @@ export default async function Boveda({
             bloque={(p) => <HistorialSiniestros p={p} />}
             vacio="No nos consta ningún siniestro en tus seguros. No significa que no hayas tenido ninguno: nos los informa tu compañía. Si acabas de tener uno, cuéntanoslo aquí abajo."
           />
-          <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+          <ParteSiniestro polizas={polizasParte} partes={partesEnviados} polizaInicial={polizaInicial} />
         </>
       )}
+
+      {vista === 'recordatorios' && <Recordatorios recordatorios={recordatorios} polizas={polizasParte} />}
 
     </>
   )
@@ -530,10 +556,17 @@ function opcionCartera(p: PolizaPortal, companias: readonly FilaCompania[], titu
     // servidor: el momento en el que alguien abre esto es justo el peor para
     // esperar a una petición.
     canal: canalDeCompania(p.compania, companias),
+    ramo: p.ramo,
+    matriculaPropia: p.bien.matricula,
     etiqueta: [
       p.compania,
       RAMO[p.ramo] ?? p.ramo,
-      p.numeroPoliza ? `nº ${p.numeroPoliza}` : null,
+      // Lo que identifica la póliza para QUIEN la elige, no para nosotros:
+      // casi nadie se sabe su número de póliza de memoria, pero sí su
+      // matrícula o su dirección — el mismo `cosa ?? ubicacion` que ya usa
+      // `FilaPoliza.tsx` en la lista. El nº de póliza queda de último
+      // recurso, solo si no conocemos ni una cosa ni la otra.
+      p.bien.cosa ?? p.bien.ubicacion ?? (p.numeroPoliza ? `nº ${p.numeroPoliza}` : null),
       titular ? `de ${titular}` : null,
     ]
       .filter(Boolean)

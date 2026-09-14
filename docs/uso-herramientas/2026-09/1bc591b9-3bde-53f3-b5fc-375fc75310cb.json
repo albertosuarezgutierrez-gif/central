@@ -1,0 +1,121 @@
+{
+ "sesion": "1bc591b9-3bde-53f3-b5fc-375fc75310cb",
+ "inicio": "2026-09-14T05:11:49.714Z",
+ "fin": "2026-09-14T05:54:39.265Z",
+ "llamadas": 204,
+ "categorias": {
+  "otro": {
+   "llamadas": 29,
+   "chars_in": 2949,
+   "chars_out": 241257,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 5,
+    "ToolSearch": 10,
+    "PushNotification": 1,
+    "ReadNotifications": 13
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 9,
+   "chars_in": 750,
+   "chars_out": 149089,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 9
+   }
+  },
+  "bash": {
+   "llamadas": 35,
+   "chars_in": 12550,
+   "chars_out": 33757,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 35
+   }
+  },
+  "sql": {
+   "llamadas": 43,
+   "chars_in": 103551,
+   "chars_out": 79503,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 43
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 4,
+   "chars_in": 14110,
+   "chars_out": 14958,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 4
+   }
+  },
+  "mcp:Booking-com": {
+   "llamadas": 48,
+   "chars_in": 11976,
+   "chars_out": 901352,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking-com__accommodations_search": 48
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 8,
+   "chars_in": 790,
+   "chars_out": 45810,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 164537,
+   "tools": {
+    "mcp__Vercel__list_projects": 2,
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__get_runtime_logs": 3,
+    "mcp__Vercel__list_deployments": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 20,
+   "chars_in": 8913,
+   "chars_out": 49652,
+   "errores": 1,
+   "archivos_citados": 8,
+   "chars_citados": 1159997,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__pull_request_read": 11,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__subscribe_pr_activity": 2,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__get_commit": 1,
+    "mcp__github__list_commits": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 8,
+   "chars_in": 11364,
+   "chars_out": 689344,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 4,
+    "Write": 4
+   }
+  }
+ }
+}

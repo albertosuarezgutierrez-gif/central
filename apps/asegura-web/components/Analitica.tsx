@@ -1,112 +1,105 @@
 'use client'
-// Puente entre el consentimiento (Cookiebot) y la medición (PostHog).
+// Puente entre el consentimiento (nuestro propio banner, vanilla-cookieconsent
+// vía @central/core-consent) y la medición (PostHog).
 //
-// La regla que gobierna este archivo está en `lib/analitica.ts` y es una
-// función pura y testeada, `puedeMedir()`. Aquí no se decide nada: aquí se
-// obedece. Si alguna vez hay que cambiar cuándo se mide, se cambia allí y el
-// cepo de `lib/analitica.test.ts` lo valida — no se añade una condición suelta
-// en un `useEffect`, que es donde estas cosas se pudren sin que nada falle.
+// La regla que gobierna este archivo está en `lib/analitica.ts` — que ahora
+// reexporta `puedeCargar()` de `@central/core-consent` — y es una función pura
+// y testeada. Aquí no se decide nada: aquí se obedece. Si alguna vez hay que
+// cambiar cuándo se mide, se cambia allí (o en el paquete) y el cepo de
+// `lib/analitica.test.ts` lo valida — no se añade una condición suelta en un
+// `useEffect`, que es donde estas cosas se pudren sin que nada falle.
 //
 // 🚨 PostHog NO viaja en el bundle. El script se descarga de su CDN **solo**
-// cuando el visitante ya ha aceptado. Un `import posthog from 'posthog-js'`
-// habría metido ~50 KB en cada carga de una web de captación y, sobre todo,
-// habría dejado la librería lista para arrancar por accidente: lo que no está
-// descargado no se puede disparar por un `if` mal escrito.
+// cuando el visitante ya ha aceptado (lo hace `arrancarPostHog()` del
+// paquete). Un `import posthog from 'posthog-js'` habría metido ~50 KB en cada
+// carga de una web de captación y, sobre todo, habría dejado la librería lista
+// para arrancar por accidente: lo que no está descargado no se puede disparar
+// por un `if` mal escrito.
+//
+// 🔁 Ya NO depende de Cookiebot ni de su credencial: el CMP es nuestro
+// (`CookieConsent.run()`), así que la única forma de que esta web no pida
+// consentimiento sería no montar <Analitica /> — y eso lo vigila el guardián
+// de fuente `test/regression-analitica-fail-closed.test.ts`, no una env.
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { COOKIEBOT_ID, POSTHOG_HOST, POSTHOG_KEY, puedeMedir, scriptPostHog, type Consentimiento } from '@/lib/analitica'
+import * as CookieConsent from 'vanilla-cookieconsent'
+import 'vanilla-cookieconsent/dist/cookieconsent.css'
+import {
+  puedeCargar,
+  configBanner,
+  arrancarPostHog,
+  apagarPostHog,
+  cargarGa4,
+  POSTHOG_KEY,
+  POSTHOG_HOST,
+} from '@/lib/analitica'
 
-type PostHogMin = {
-  init: (key: string, opciones: Record<string, unknown>) => void
-  capture: (evento: string, props?: Record<string, unknown>) => void
-  opt_out_capturing: () => void
-  reset: (borrarId?: boolean) => void
-}
+const CONFIG = { categoria: 'statistics' as const, credencial: POSTHOG_KEY }
 
-declare global {
-  interface Window {
-    Cookiebot?: { consent?: Consentimiento; renew?: () => void }
-    posthog?: PostHogMin
-  }
-}
-
-const CONFIG = { cookiebotId: COOKIEBOT_ID, posthogKey: POSTHOG_KEY }
-
-/** Eventos con los que Cookiebot avisa de que el consentimiento cambió. */
-const EVENTOS = ['CookiebotOnConsentReady', 'CookiebotOnAccept', 'CookiebotOnDecline'] as const
+// GA4 (14/09/2026, a petición de Alberto): «todo en la misma app» — quiere ver
+// grupoasegura.es en el mismo Google Analytics donde ya están housesevillana e
+// ia-rest, sin dejar de tener PostHog (de ahí sale el informe semanal
+// automático por Telegram del cron `seo-correduria`). Mismo patrón que
+// `apps/ia-rest/src/components/ConsentimientoAnalitica.tsx`: ID literal (es
+// público, viaja al navegador, no es un secreto) y sin `apagarGa4()` — GA4 no
+// tiene parada limpia por script suelto, así que retirar el consentimiento
+// deja de cargarlo en la SIGUIENTE visita, no en caliente.
+const GA4_ID = 'G-QP5DTDLJ5F'
+const CONFIG_GA4 = { categoria: 'statistics' as const, credencial: GA4_ID }
 
 export default function Analitica() {
   const pathname = usePathname()
-  // `arrancado` distingue «nunca se inició» de «se inició y ahora lo retiran»:
-  // en el segundo caso hay que apagarlo explícitamente, no basta con no medir.
+  // Distingue «nunca se inició» de «se inició y ahora lo retiran»: en el
+  // segundo caso hay que apagarlo explícitamente, no basta con no medir.
   const arrancado = useRef(false)
-  const cargando = useRef(false)
+  const arrancadoGa4 = useRef(false)
 
   useEffect(() => {
-    // Sin gestor de consentimiento o sin clave no hay nada que hacer, y esta es
-    // la puerta que en la otra web estaba abierta.
-    if (!CONFIG.cookiebotId || !CONFIG.posthogKey) return
-
-    function arrancar() {
-      if (arrancado.current || cargando.current) return
-      cargando.current = true
-      const s = document.createElement('script')
-      s.src = scriptPostHog(POSTHOG_HOST)
-      s.async = true
-      s.onload = () => {
-        cargando.current = false
-        if (!window.posthog || !puedeMedir(window.Cookiebot?.consent, CONFIG)) return
-        window.posthog.init(POSTHOG_KEY, {
-          api_host: POSTHOG_HOST,
-          // Los pageviews los manda esta misma componente al cambiar de ruta:
-          // con el App Router, la navegación no recarga la página y el captador
-          // automático se pierde las visitas a partir de la segunda.
-          capture_pageview: false,
-          capture_pageleave: true,
-          // Una web pública se visita de forma anónima. Sin esto, PostHog crea
-          // un perfil de persona por cada visitante y acabaríamos guardando
-          // datos personales de gente que solo miró la página de hogar.
-          person_profiles: 'identified_only',
-          // 🚨 Nunca: el formulario de leads pide nombre, teléfono y correo, y
-          // una grabación de sesión los captura tecleados aunque el campo se
-          // enmascare mal. No compensa para lo que esta web necesita medir.
-          disable_session_recording: true,
-        })
-        arrancado.current = true
-        window.posthog.capture('$pageview')
-      }
-      s.onerror = () => {
-        cargando.current = false
-      }
-      document.head.appendChild(s)
-    }
-
-    function apagar() {
-      if (!arrancado.current || !window.posthog) return
-      window.posthog.opt_out_capturing()
-      // `true` borra también el id del dispositivo: retirar el consentimiento
-      // tiene que dejar de identificar, no solo dejar de enviar.
-      window.posthog.reset(true)
-      arrancado.current = false
-    }
+    // Sin NINGUNA credencial (ni PostHog ni GA4) no hay nada que arrancar — y
+    // sin banner tampoco hay forma de pedir permiso, así que ni se monta el
+    // CMP. `puedeCargar()` ya gatea cada proveedor por SU credencial (ver
+    // consentimiento.ts): este guard solo decide si se monta el banner, y NO
+    // puede mirar solo `POSTHOG_KEY` — eso dejaría a GA4 sin banner que lo
+    // arranque el día que falte esa clave en Vercel. `GA4_ID` es hoy un
+    // literal (siempre hay valor), así que en la práctica el banner se monta
+    // siempre; si `GA4_ID` pasara a ser una env algún día, esta condición
+    // seguiría siendo la correcta sin tocarla.
+    if (!POSTHOG_KEY && !GA4_ID) return
 
     function revisar() {
-      if (puedeMedir(window.Cookiebot?.consent, CONFIG)) arrancar()
-      else apagar()
+      const acepta = CookieConsent.acceptedCategory('statistics')
+      if (puedeCargar({ statistics: acepta }, CONFIG) && !arrancado.current) {
+        arrancarPostHog(POSTHOG_KEY, POSTHOG_HOST, () => {
+          arrancado.current = true
+        })
+      } else if (!acepta && arrancado.current) {
+        apagarPostHog()
+        arrancado.current = false
+      }
+
+      if (puedeCargar({ statistics: acepta }, CONFIG_GA4) && !arrancadoGa4.current) {
+        cargarGa4(GA4_ID)
+        arrancadoGa4.current = true
+      }
+
+      // Registro de auditoría, fire-and-forget: un fallo de red aquí nunca
+      // bloquea la navegación ni el banner, por eso el `.catch(() => {})` sin
+      // más. Sin PII: solo qué categorías se aceptaron.
+      fetch('/api/consentimiento', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categorias: CookieConsent.getUserPreferences().acceptedCategories }),
+      }).catch(() => {})
     }
 
-    // El evento `CookiebotOnConsentReady` puede haber saltado antes de que React
-    // hidratara, así que además de suscribirse hay que mirar el estado actual.
-    revisar()
-    for (const e of EVENTOS) window.addEventListener(e, revisar)
-    return () => {
-      for (const e of EVENTOS) window.removeEventListener(e, revisar)
-    }
+    CookieConsent.run({
+      ...configBanner('es'),
+      onFirstConsent: revisar,
+      onConsent: revisar,
+      onChange: revisar,
+    })
   }, [])
 
-  // Pageview por navegación. `$current_url` lo lee PostHog de `location.href`,
-  // así que los UTM de la query entran solos sin tener que leer searchParams
-  // (que en el App Router obligaría a envolver esto en un Suspense).
   useEffect(() => {
     if (!arrancado.current || !window.posthog) return
     window.posthog.capture('$pageview')
@@ -116,10 +109,10 @@ export default function Analitica() {
 }
 
 /**
- * Reabre el diálogo de Cookiebot. Lo usa la página de cookies para que el
+ * Reabre el diálogo de preferencias. Lo usa la página de cookies para que el
  * visitante pueda cambiar de opinión: sin una forma visible de retirar el
  * consentimiento, pedirlo no vale (art. 7.3 RGPD).
  */
 export function renovarConsentimiento() {
-  window.Cookiebot?.renew?.()
+  CookieConsent.showPreferences()
 }

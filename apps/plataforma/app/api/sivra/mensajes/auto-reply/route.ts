@@ -9,6 +9,7 @@ import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
 import { barrerUltimoRecurso } from '@/lib/sivra/agente-huesped/noche-guardia'
 import { barrerPendientesRancios } from '@/lib/sivra/agente-huesped/rancio-guardia'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 export const dynamic = 'force-dynamic'
 // El agente hace varias llamadas a IA por mensaje (decisión + traducciones), y el sondeo recorre
@@ -47,6 +48,7 @@ export async function GET(req: NextRequest) {
   }
   // Sin Telegram configurado no consumimos mensajes (se quedan pendientes en Smoobu).
   if (!process.env.TELEGRAM_BOT_TOKEN) {
+    await registrarLatido('sivra_mensajes_huesped', false, 'sin TELEGRAM_BOT_TOKEN — agente en espera')
     return NextResponse.json({ ok: true, skipped: 'sin TELEGRAM_BOT_TOKEN — agente en espera' })
   }
 
@@ -97,6 +99,14 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Latido de INTENTO antes de tocar Smoobu (mismo patrón que `smoobu_sync`, landmine 31/07/2026):
+  // si la pasada muere a medias (504, Smoobu caído), queda constancia de que SE DISPARÓ y no
+  // terminó. Sin esto, «el agente que responde a los huéspedes lleva días mudo» y «no ha habido
+  // preguntas» eran el mismo silencio — el 401 de Smoobu de septiembre de 2026 lo demostró: este
+  // cron corre cada 3 min y no tenía NINGÚN vigilante, pese a ser el que decide si un huésped recibe
+  // respuesta o no.
+  await registrarLatido('sivra_mensajes_huesped', false, 'inicio de pasada')
+
   // MODO NOCHE — barrido del último recurso. Va ANTES de sondear los hilos y fuera del try grande a
   // propósito: si Smoobu falla al listar hilos, un huésped que lleva 15 min esperando de madrugada
   // seguiría sin salida. No corre en el simulacro (`dry=1`), que promete no enviar nada.
@@ -109,6 +119,7 @@ export async function GET(req: NextRequest) {
 
   const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {
+    await registrarLatido('sivra_mensajes_huesped', false, 'Missing SMOOBU_API_KEY')
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })
   }
 
@@ -149,8 +160,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    await registrarLatido('sivra_mensajes_huesped', true,
+      `${threads.length} hilo(s), ${results.procesados} procesado(s), ${results.trivial} trivial(es), ` +
+      `${results.skipped} omitido(s), ${results.errors} error(es)`)
     return NextResponse.json({ ok: true, results, threads: threads.length, ultimoRecurso, rancios, ...(debug ? { detalle } : {}) })
   } catch (e: any) {
+    await registrarLatido('sivra_mensajes_huesped', false, `error: ${String(e?.message ?? e).slice(0, 200)}`)
     return NextResponse.json({ error: e.message, results }, { status: 500 })
   }
 }

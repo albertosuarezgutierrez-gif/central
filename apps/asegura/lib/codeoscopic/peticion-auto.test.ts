@@ -1,4 +1,5 @@
 import { test } from 'node:test'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
 import assert from 'node:assert/strict'
 import {
   construirPeticionAuto,
@@ -24,7 +25,8 @@ const BASE: DatosAuto = {
   cpCirculacion: '41003',
   municipioCirculacionId: 12345,
   garaje: 'CommunalParking',
-  fechaEfecto: '2026-09-15',
+  // Relativa a hoy: la regla [hoy, hoy+90] la volvería roja un mes después de escribirla.
+  fechaEfecto: sumarDias(hoyEnMadrid(), 7),
 }
 
 // ─── La regla que más cotizaciones tumba ─────────────────────────────────────
@@ -49,11 +51,59 @@ test('el sexo se traduce al vocabulario del vendor', () => {
 })
 
 // ─── Lo que NO se manda ──────────────────────────────────────────────────────
-test('no viajan email, calle, ocupación, situación laboral ni país de nacimiento', () => {
+test('no viajan ocupación, situación laboral ni país de nacimiento; y sin email en la ficha, tampoco email', () => {
   const json = JSON.stringify(construirPeticionAuto(BASE))
   for (const prohibido of ['email', 'street', 'address1', 'economicOccupation', 'employmentStatus', 'birthCountry']) {
     assert.ok(!json.includes(prohibido), `${prohibido} no debería viajar a Codeoscopic`)
   }
+})
+
+// ─── El correo SÍ viaja cuando la ficha lo tiene (12/09/2026) ────────────────
+test('con email en la ficha, viaja como emails[] (la forma medida del vendor) en los tres papeles', () => {
+  const c = construirPeticionAuto({ ...BASE, email: ' Cliente@Example.com ' }) as any
+  assert.deepEqual(c.holder.emails, [{ address: 'Cliente@Example.com', primary: true }])
+  assert.deepEqual(c.risk.owner.emails, c.holder.emails)
+  assert.deepEqual(c.risk.primaryDriver.emails, c.holder.emails)
+  assert.equal('email' in c.holder, false, 'la clave plana `email` el vendor la ignora (12/09/2026)')
+})
+
+// ─── Para EMITIR se exige antes de pagar lo que el Submit pide después ───────
+test('paraEmitir: sin email es un reparo que avisa de que habría que pagar otra vez', () => {
+  const r = revisarDatosAuto(BASE, { paraEmitir: true })
+  const e = r.find((x) => x.campo === 'email')
+  assert.ok(e, 'email tiene que faltar')
+  assert.match(e!.motivo, /pagar otra vez/)
+  // Sin `paraEmitir` (presupuesto rápido) el correo NO bloquea.
+  assert.ok(!revisarDatosAuto(BASE).some((x) => x.campo === 'email'))
+})
+
+test('paraEmitir: con dirección hacen falta número y tipo de vía; sin dirección, no', () => {
+  const conDir = revisarDatosAuto(
+    { ...BASE, email: 'a@b.es', cpResidencia: '41003', municipioResidenciaId: 999, nombreVia: 'Betis' },
+    { paraEmitir: true },
+  )
+  assert.deepEqual(conDir.map((x) => x.campo).sort(), ['numeroVia', 'tipoVia'])
+  const sinDir = revisarDatosAuto({ ...BASE, email: 'a@b.es' }, { paraEmitir: true })
+  assert.deepEqual(sinDir, [])
+  // Y con los tres, nada falta: la dirección viaja entera.
+  const completa = {
+    ...BASE,
+    email: 'a@b.es',
+    cpResidencia: '41003',
+    municipioResidenciaId: 999,
+    nombreVia: 'Betis',
+    numeroVia: '12',
+    tipoVia: 'Street',
+  }
+  assert.deepEqual(revisarDatosAuto(completa, { paraEmitir: true }), [])
+  assert.deepEqual((construirPeticionAuto(completa) as any).holder.addresses, [
+    { postalCode: '41003', town: { id: 999 }, primary: true, roadName: 'Betis', roadNumber: '12', roadType: { id: 'Street' } },
+  ])
+})
+
+test('paraEmitir: un email sin forma de correo es un reparo (no se paga por una errata)', () => {
+  const r = revisarDatosAuto({ ...BASE, email: 'sin-arroba' }, { paraEmitir: true })
+  assert.match(r.find((x) => x.campo === 'email')!.motivo, /forma de correo/)
 })
 
 // ─── Fecha de compra ─────────────────────────────────────────────────────────
@@ -73,14 +123,32 @@ test('sin las dos mitades de la residencia, la dirección NO viaja', () => {
   assert.equal(c.holder.addresses, undefined)
 })
 
-test('con CP y municipio, la dirección viaja completa', () => {
-  const c = construirPeticionAuto({ ...BASE, cpResidencia: '41003', municipioResidenciaId: 999 }) as any
-  assert.deepEqual(c.holder.addresses, [{ postalCode: '41003', town: { id: 999 }, primary: true }])
+test('con CP, municipio y calle, la dirección viaja completa (con roadName)', () => {
+  const c = construirPeticionAuto({
+    ...BASE,
+    cpResidencia: '41003',
+    municipioResidenciaId: 999,
+    nombreVia: 'Calle Betis',
+  }) as any
+  assert.deepEqual(c.holder.addresses, [
+    { postalCode: '41003', town: { id: 999 }, primary: true, roadName: 'Calle Betis' },
+  ])
 })
 
 test('mandar municipio sin código postal es un reparo, no se cuela', () => {
   const r = revisarDatosAuto({ ...BASE, municipioResidenciaId: 999 })
   assert.ok(r.some((x) => x.campo === 'cpResidencia'))
+})
+
+// ─── El nombre de la vía: solo lo exige el ReRate cuando SÍ se manda dirección ──
+test('sin dirección de residencia, nombreVia NO se echa en falta', () => {
+  const r = revisarDatosAuto(BASE)
+  assert.ok(!r.some((x) => x.campo === 'nombreVia'))
+})
+
+test('con dirección de residencia pero sin nombreVia, es un reparo (11º 400 real)', () => {
+  const r = revisarDatosAuto({ ...BASE, cpResidencia: '41003', municipioResidenciaId: 999 })
+  assert.ok(r.some((x) => x.campo === 'nombreVia'))
 })
 
 // ─── Historial ───────────────────────────────────────────────────────────────
@@ -187,4 +255,17 @@ test('el ramo va como «Car» y la referencia nuestra solo si la hay', () => {
   assert.equal(sin.externalId, undefined)
   const con = construirPeticionAuto({ ...BASE, referenciaExterna: 'cot-000000' }) as any
   assert.equal(con.externalId, 'cot-000000')
+})
+
+// ─── La fecha de efecto: ni antes de hoy ni a más de 90 días (13/09/2026) ────
+test('revisarDatosAuto: la fecha de efecto de AYER se reprocha antes de pagar (proyecto 40685666)', () => {
+  const r = revisarDatosAuto({ ...BASE, fechaEfecto: '2026-09-12' }, { hoy: '2026-09-13' })
+  assert.ok(r.some((x) => x.campo === 'fechaEfecto' && /anterior a hoy/.test(x.motivo)))
+})
+
+test('revisarDatosAuto: hoy y hoy+90 valen; hoy+91 se reprocha', () => {
+  assert.equal(revisarDatosAuto({ ...BASE, fechaEfecto: '2026-09-13' }, { hoy: '2026-09-13' }).filter((x) => x.campo === 'fechaEfecto').length, 0)
+  assert.equal(revisarDatosAuto({ ...BASE, fechaEfecto: '2026-12-12' }, { hoy: '2026-09-13' }).filter((x) => x.campo === 'fechaEfecto').length, 0)
+  const r = revisarDatosAuto({ ...BASE, fechaEfecto: '2026-12-13' }, { hoy: '2026-09-13' })
+  assert.ok(r.some((x) => x.campo === 'fechaEfecto' && /90 días/.test(x.motivo)))
 })

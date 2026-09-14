@@ -64,6 +64,14 @@ export type Precio = {
    * `emitir.ts` para qué se manda cuando falta.
    */
   productOptions: unknown
+  /**
+   * `expirationDate` del precio. Solo lo trae un precio ya CONFIRMADO por
+   * ReRate (`Q2018406592` en el caso real de Pilar Franco Ruz, 12/09/2026);
+   * el resto de precios de una cotización inicial no lo declaran. Existe para
+   * poder decidir si un proyecto ya cotizado sigue vigente ANTES de pedir uno
+   * nuevo — ver `proyectoVigenteDePoliza` en `retarificar-cartera.ts`.
+   */
+  expiraEn: string | null
 }
 
 /**
@@ -95,6 +103,15 @@ export type Cotizacion = {
    *  (el `project_not_found` de 2026 fue justo no haberlo guardado). */
   projectId: string
   fechaEfecto: string | null
+  /**
+   * `insuranceLine.id` de raíz (`"Car"`, `"Home"`…). Hace falta para el
+   * `PATCH /insurances/{id}` de `actualizarFechaEfecto()`: el cuarto 400 real
+   * decía «incremental» y el quinto demostró que NO lo es del todo — el
+   * vendor exige `insuranceLine` en el cuerpo aunque solo se corrija
+   * `effectiveDate` («The `insuranceLine` field is missing or invalid.»,
+   * 12/09/2026). Se relee del proyecto en vez de suponerse por ramo.
+   */
+  insuranceLineId: string | null
   precios: Precio[]
   fallos: FalloProducto[]
 }
@@ -161,6 +178,7 @@ function leerPrecio(raw: unknown): Precio | null {
     requiereReRate: acciones.some((a) => str(obj(a).id)?.toLowerCase() === 'rerate'),
     productId: producto.id ?? null,
     productOptions: producto.options ?? null,
+    expiraEn: str(q.expirationDate),
   }
 }
 
@@ -205,6 +223,7 @@ export function leerCotizacion(raw: unknown): Cotizacion {
   return {
     projectId: String(idRaiz),
     fechaEfecto: str(r.effectiveDate),
+    insuranceLineId: str(obj(r.insuranceLine).id),
     precios,
     fallos: arr(r.errors)
       .map((e) => leerFallo(e, companiasConPrecio))

@@ -293,4 +293,13 @@ export const TRADUCCIONES: Record<string, string> = {
     'Casa con parcheggio in centro',
   'Comprobar disponibilidad':
     'Verifica disponibilità',
+
+  // ── Banner de consentimiento ─────────────────────────────────────────────────
+  // No es un texto suelto: `montarBannerHtml('es')` (packages/core-consent) ya
+  // incrusta las traducciones de los tres idiomas en `language.translations`, y lo
+  // único que cambia entre variantes es qué idioma queda seleccionado por defecto.
+  // Esta clave es ese substring literal del JSON embebido — ver Task D2 del plan
+  // de consentimiento unificado.
+  '"default":"es"':
+    '"default":"it"',
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { smoobuFetch } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
@@ -24,15 +24,14 @@ export async function GET(req: NextRequest) {
   today.setHours(0, 0, 0, 0)
 
   try {
-    const SMOOBU_KEY = await getSmoobuKey()
     const dateFrom = today.toISOString().split('T')[0]
     const dateTo = new Date(today.getTime() + days * 86400000).toISOString().split('T')[0]
 
     const [res1, res2] = await Promise.all([
-      fetch(`https://login.smoobu.com/api/reservations?pageSize=100&departureFrom=${dateFrom}&departureTo=${dateTo}`,
-        { headers: { 'Api-Key': SMOOBU_KEY }, cache: 'no-store' }),
-      fetch(`https://login.smoobu.com/api/reservations?pageSize=100&arrivalFrom=${dateFrom}&arrivalTo=${dateTo}`,
-        { headers: { 'Api-Key': SMOOBU_KEY }, cache: 'no-store' }),
+      smoobuFetch(`/api/reservations?pageSize=100&departureFrom=${dateFrom}&departureTo=${dateTo}`,
+        { cache: 'no-store' }),
+      smoobuFetch(`/api/reservations?pageSize=100&arrivalFrom=${dateFrom}&arrivalTo=${dateTo}`,
+        { cache: 'no-store' }),
     ])
     if (!res1.ok) throw new Error(`Smoobu departures ${res1.status}`)
     const data1 = await res1.json()
