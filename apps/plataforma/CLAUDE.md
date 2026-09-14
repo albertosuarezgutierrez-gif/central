@@ -1569,7 +1569,7 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   miró: CIMA no da la anualidad anterior) ≠ `igual`. «Sube sin siniestro» por encima del 5 % enlaza a
   retarificar. Lectores puros en `lib/poliza-asegura.ts` / `lib/ficha-asegura.ts`.
 - **🧲 Canal de leads web (02/09/2026, noche — `app/seguros/page.tsx` BORRADA el 14/09/2026, ver más
-  abajo).** Nació aquí: `app/seguros/page.tsx` fue la primera **landing pública de Grupo Asegura**
+  abajo).** Nació aquí: `app/seguros/page.tsx` fue la primera **landing pública de Grupo ASegura**
   (no existía ninguna: la frase de la visión «existe la landing de plataforma» era falsa). Lo que
   sigue vivo es el endpoint que recibía su formulario, `POST /api/publico/correduria/lead`
   (sin sesión): rate limit 6/h por IP (`lib/rate-limit.ts`, en memoria, best-effort), honeypot `web` que
