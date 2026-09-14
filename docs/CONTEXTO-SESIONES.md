@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/09/2026)** GA4 (`G-QP5DTDLJ5F`) añadido a `apps/asegura-web` junto a PostHog, gateado por el
+mismo banner (PR #2942) — petición explícita de Alberto para ver las tres webs (housesevillana,
+ia-rest, grupoasegura.es) en la misma cuenta de Google Analytics; revierte la decisión del 07/09
+"GA4 NO se añade" sin resolver el riesgo legal que esa decisión señalaba (transferencia
+internacional). Después, PR #2944 cerró 3 ideas del backlog SEO: JSON-LD `logo`/`image`/`WebSite`
+en `lib/seo.ts`; **301 permanente** de `apps/plataforma/app/seguros` → `grupoasegura.es` (página y
+formulario borrados; decisión de Alberto); bots de IA se dejan pasar (sin cambio de código, solo
+decisión escrita). `geo` en la ficha del negocio sigue bloqueada — falta la URL de Maps del GBP.
 **(14/09/2026)** Corregido `companias_dgs` (C0468, Occident): `telefono_siniestros` estaba a `NULL`
 porque el 05/09 el 917 83 83 83 se cargó SOLO como WhatsApp (9-21h L-V), leyendo el badge de WhatsApp
 Business. Alberto confirmó que es la MISMA línea también para voz, 24h/365 días — contrastado además
