@@ -49,6 +49,11 @@ export const RUTAS_RUTINA: string[] = [
   // BD a mano. Idempotente (upsert por reservationId); lo peor que permite un token filtrado es
   // forzar re-sincronizaciones (gasto de cuota Smoobu), no borrar ni exponer datos del huésped.
   '/api/sivra/updates/sync',
+  // Foto semanal de SEO de la correduría (GSC/SERP/PostHog) para la rutina `seo-asegura`: una
+  // Routine no puede llevar conectores MCP en esta organización (14/09/2026), así que lee esta
+  // tabla por HTTP en vez de por Supabase MCP. Solo LECTURA, sin PII (posiciones/comparables/
+  // contadores agregados, nunca datos de un cliente).
+  '/api/internal/seo-correduria/semana',
 ]
 
 /** ¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`). */
