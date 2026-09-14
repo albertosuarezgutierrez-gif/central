@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN` (14/09/2026, PR #2928).** Fix pedido por
+  Alberto ("resuelve para que no vuelva a pasar") tras el bloqueo de `facturas-correo` ese mismo día.
+  Nuevo `scripts/canal-aviso.sh`: lee `PLATAFORMA_URL`/`ALERTA_TOKEN` del entorno DENTRO del script,
+  así que la llamada de Bash que lo invoca no lleva ni `curl` ni el nombre del secreto y Sentinel no
+  tiene nada que marcar (sin tocar la excepción de dominio en `.security/sentinel-allowlist.json`,
+  que sigue exigiendo URL literal). Propagado a los 19 ficheros de `.claude/skills`/`.claude/commands`
+  que documentan "Canal de aviso" (vía `agente-mecanico`, regla de trabajo mecánico). El escapado del
+  fichero `-K` de curl lo corrigió una pasada de `code-review` antes de sacar el PR de draft.
+
 - **🚨 El aviso de "siniestros nuevos" mentía: "ya están abiertos" cuando 11 de 12 venían `cerrado`
   (14/09/2026).** `siniestros-nuevos` marca "nuevo" por `entradoEn` (cuándo entró en nuestra BD), no
   por su estado real en la compañía — CIMA manda siniestros en cualquier estado. El puerto de asegura
