@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/09/2026)** Revisado el parte de siniestro del portal (`asegura-portal`) a petición de Alberto:
+`esAuto()` solo miraba `ramo === 'auto'`, así que un parte de MOTO con terceros nunca mostraba el
+bloque «Datos del otro vehículo» (matrícula/aseguradora/zona del daño) — `moto` es un ramo distinto
+de `auto` en `RAMOS_POLIZA`. Corregido a `esVehiculoAMotor()` (auto ∪ moto). Confirmado además que
+`hayHeridos`/`hayTerceros` universal para todo ramo es correcto (no es un resto de CIMA: es triaje
+propio, y hogar sí puede tener heridos por RC). PR #2938.
+
 **(14/09/2026)** Alberto pidió plan comercial ampliado para Grupo ASegura (agente comercial, ROI
 tipo CEO, redes). Añadida §7 a `docs/ASEGURA-MARKETING-PLAN.md`: se prioriza cross-sell a los 80
 clientes, comunidades y PyME/flota del grupo sobre "ir a todo el mundo"; tabla de decisión
