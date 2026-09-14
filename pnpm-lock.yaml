@@ -1111,6 +1111,12 @@ importers:
 
   packages/core-catastro: {}
 
+  packages/core-consent:
+    dependencies:
+      vanilla-cookieconsent:
+        specifier: ^3.1.0
+        version: 3.1.0
+
   packages/core-email:
     dependencies:
       nodemailer:
@@ -5816,6 +5822,9 @@ packages:
   uuid@14.0.1:
     resolution: {integrity: sha512-6ZxzVpzDXDa3bJWaHilVayA+BH/1zmxCJoVgvmqJnid/gPoKHxUrS/aC/T6LGQtNHT+XHG9fXPJB4d+IrU30Ew==}
     hasBin: true
+
+  vanilla-cookieconsent@3.1.0:
+    resolution: {integrity: sha512-/McNRtm/3IXzb9dhqMIcbquoU45SzbN2VB+To4jxEPqMmp7uVniP6BhGLjU8MC7ZCDsNQVOp27fhQTM/ruIXAA==}
 
   victory-vendor@36.9.2:
     resolution: {integrity: sha512-PnpQQMuxlwYdocC8fIJqVXvkeViHYzotI+NJrCuav0ZYFoq912ZHBk3mCeuj+5/VpodOjPe1z0Fk2ihgzlXqjQ==}
@@ -10971,6 +10980,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   uuid@14.0.1: {}
+
+  vanilla-cookieconsent@3.1.0: {}
 
   victory-vendor@36.9.2:
     dependencies:
