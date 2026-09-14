@@ -40,12 +40,20 @@
   borrador pendiente de esa reserva ("l'alojamiento" → "l'alloggio", español colado en el italiano).
 
 - **🚗 Identificar pólizas por matrícula/dirección, no por nº de póliza — regla permanente
-  (13/09/2026, PR #2912).** Probando en directo, Alberto: «casi nadie sabe el número de póliza».
-  El selector del parte y la fila de una aportada lo usaban como identificador; ahora es
+  (13-14/09/2026, PR #2912, MERGEADO).** Probando en directo, Alberto: «casi nadie sabe el número
+  de póliza». El selector del parte y la fila de una aportada lo usaban como identificador; ahora es
   `bien.cosa` (matrícula) `?? bien.ubicacion` (dirección) `?? nº de póliza`, mismo criterio que ya
   seguía `FilaPoliza.tsx`. Documentado en `apps/asegura-portal/CLAUDE.md` para el próximo
   selector/lista de pólizas. De paso, «Dar parte» desde la ficha de una póliza llega con ella
   YA preseleccionada (`?poliza=`), sin volver a buscarla entre las demás.
+  **Mismo PR sumó los «Recordatorios» propios del cliente** (ITV, carnet, caldera…) sobre
+  `portal_obligacion`, con opción de colgarlos de una póliza propia (mismo patrón `polizaId`/
+  `polizaDeclaradaId`; exigió ampliar `UNIQUE(identidad_id, poliza_id)` con `tipo`). Cuatro rondas
+  de `code-review` (Graphify), 8 hallazgos reales corregidos (fecha 30-feb colada, avance de
+  recurrentes en el mismo día/de un solo ciclo, `tipo`/`repiteCadaMeses` sin validar, formulario
+  pisado en guardado concurrente, `findMany` sin `orderBy`). Pendiente sin decidir: ITV por
+  antigüedad del vehículo y recordatorio sin fecha para el carnet (choca con `fecha_evento
+  NOT NULL`) — luz verde genérica del usuario, diseño técnico sin cerrar.
 
 - **🚑 Parte de siniestro: zona del daño tocable + autorrelleno + «ha pasado ahora mismo»
   (13/09/2026, PR #2908).** Se adaptó el parte genérico para auto: datos del tercero + **zona del
