@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-14T10:25:39Z",
-  "sha": "73202da1985fafc0340c21d540078528134b9651",
+  "generadoEn": "2026-09-14T13:47:36Z",
+  "sha": "f25e206828e0fd461f4c6d8c8a0765d23b0c0f54",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -76685,6 +76685,38 @@
       "hash": "0268b7637632"
     },
     {
+      "ruta": "apps/plataforma/app/api/publico/correduria/consentimiento/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "OPTIONS",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "OPTIONS",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [
+        "consentimiento_registro",
+        "next"
+      ],
+      "rutaApi": "/api/publico/correduria/consentimiento",
+      "hash": "4839266401f0"
+    },
+    {
       "ruta": "apps/plataforma/app/api/publico/correduria/lead/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -135554,7 +135586,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3318,
-    "funciones": 10243
+    "archivos": 3319,
+    "funciones": 10245
   }
 }

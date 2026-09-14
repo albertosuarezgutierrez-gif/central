@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-14T10:25:39Z",
+  "generadoEn": "2026-09-14T13:47:36Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -493,7 +493,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -4954,6 +4954,7 @@
       "/api/operador/agente-consulta",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
+      "/api/publico/correduria/consentimiento",
       "/api/publico/correduria/lead",
       "/api/publico/disponibilidad",
       "/api/sivra/conciliar-booking",
@@ -6324,7 +6325,7 @@
     "packages": 41,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1360,
+    "apis": 1361,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
