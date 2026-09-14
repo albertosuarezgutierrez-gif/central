@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-14T05:38:07Z",
+  "generadoEn": "2026-09-14T10:25:39Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -26,6 +26,11 @@
       "id": "core-catastro",
       "tipo": "core",
       "npm": "@central/core-catastro"
+    },
+    {
+      "id": "core-consent",
+      "tipo": "core",
+      "npm": "@central/core-consent"
     },
     {
       "id": "core-email",
@@ -435,6 +440,60 @@
       "plataforma": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-consent": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "housesevillana": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 1
       },
       "rrhh": {
         "estado": "no",
@@ -3751,6 +3810,7 @@
     "core-catastro": [
       "module-subastas"
     ],
+    "core-consent": [],
     "core-email": [],
     "core-firma": [],
     "core-fiscal": [],
@@ -3952,6 +4012,7 @@
       "/api/supresion"
     ],
     "asegura-web": [
+      "/api/consentimiento",
       "/api/lead"
     ],
     "housesevillana": [],
@@ -4051,6 +4112,7 @@
       "/api/comanda/[id]/pedir-cuenta",
       "/api/comanda/[id]/ticket-alias",
       "/api/comandas/activas",
+      "/api/consentimiento",
       "/api/contrato/aceptar",
       "/api/contrato/firmar",
       "/api/contrato/publico",
@@ -5455,6 +5517,7 @@
       "comunicacion_nodos",
       "comunicacion_reglas",
       "conexiones_banco",
+      "consentimiento_registro",
       "contable_accion",
       "contable_feedback",
       "contable_log",
@@ -6258,10 +6321,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 40,
+    "packages": 41,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1358,
+    "apis": 1360,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

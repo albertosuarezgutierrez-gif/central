@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-14T08:05:05Z",
-  "sha": "44f46cd746d50459eb5e77202750da3c0c2a938f",
+  "generadoEn": "2026-09-14T10:25:39Z",
+  "sha": "73202da1985fafc0340c21d540078528134b9651",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7982,6 +7982,26 @@
       "hash": "f13d024b7387"
     },
     {
+      "ruta": "apps/asegura-web/app/api/consentimiento/route.ts",
+      "ambito": "apps/asegura-web",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 34
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/consentimiento",
+      "hash": "ad14524a89e5"
+    },
+    {
       "ruta": "apps/asegura-web/app/api/lead/route.ts",
       "ambito": "apps/asegura-web",
       "exporta": [
@@ -8150,12 +8170,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 113
+          "linea": 112
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0b7464c3cc45"
+      "hash": "60ba4ccd93fd"
     },
     {
       "ruta": "apps/asegura-web/app/legal/aviso-legal/page.tsx",
@@ -8181,7 +8201,7 @@
     {
       "ruta": "apps/asegura-web/app/legal/cookies/page.tsx",
       "ambito": "apps/asegura-web",
-      "resumen": "Política de cookies. El listado de cookies NO se escribe a mano: lo publica Cookiebot a partir de lo que su rastreo encuentra de verdad en el dominio (`cd.js`). Una lista escrita a mano envejece el día que se añade una herramienta y entonces dice algo falso sobre datos personales, que es peor que no",
+      "resumen": "Política de cookies. El listado de abajo son las CATEGORÍAS que declara nuestro propio banner (`@central/core-consent`), no un rastreo automático del dominio — Cookiebot generaba esa tabla sola a partir de `cd.js`; nuestro CMP no lo hace, así que aquí se describe a mano lo que cada categoría cubre. ",
       "exporta": [
         "Cookies"
       ],
@@ -8192,12 +8212,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 23
+          "linea": 25
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c7c8299ecbb9"
+      "hash": "f4655937f3c1"
     },
     {
       "ruta": "apps/asegura-web/app/legal/informacion-mediador/page.tsx",
@@ -8239,7 +8259,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "430afe0944f9"
+      "hash": "441c4fd7c358"
     },
     {
       "ruta": "apps/asegura-web/app/opengraph-image.tsx",
@@ -8449,13 +8469,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 123,
-          "resumen": "Reabre el diálogo de Cookiebot. Lo usa la página de cookies para que el visitante pueda cambiar de opinión: sin una forma visible de retirar el consentimiento, pedirlo no vale (art. 7.3 RGPD)."
+          "linea": 91,
+          "resumen": "Reabre el diálogo de preferencias. Lo usa la página de cookies para que el visitante pueda cambiar de opinión: sin una forma visible de retirar el consentimiento, pedirlo no vale (art. 7.3 RGPD)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5889d4b1b97a"
+      "hash": "97b9cc4902cd"
     },
     {
       "ruta": "apps/asegura-web/components/BotonCookies.tsx",
@@ -8637,38 +8657,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "83fcebf00689"
-    },
-    {
-      "ruta": "apps/asegura-web/lib/analitica.ts",
-      "ambito": "apps/asegura-web",
-      "resumen": "Analítica de la web pública: PostHog SOLO con consentimiento, gestionado por Cookiebot. 🚨 Esto existe por un fallo MEDIDO en la otra web de la correduría (el CRM de Manuel, 04/09/2026): allí `posthog-browser.ts` hace *fail-open* — si falta `NEXT_PUBLIC_COOKIEBOT_ID` no pinta banner y **arranca Post",
-      "exporta": [
-        "scriptPostHog",
-        "puedeMedir"
-      ],
-      "funciones": [
-        {
-          "nombre": "scriptPostHog",
-          "kind": "function",
-          "exportada": true,
-          "params": "host: string = POSTHOG_HOST",
-          "retorno": "string",
-          "linea": 32,
-          "resumen": "URL del script de PostHog. No se descarga hasta que hay consentimiento."
-        },
-        {
-          "nombre": "puedeMedir",
-          "kind": "function",
-          "exportada": true,
-          "params": "consentimiento: Consentimiento | null | undefined, config: ConfigAnalitica",
-          "retorno": "boolean",
-          "linea": 63,
-          "resumen": "¿Se puede medir AHORA MISMO? Única fuente de la decisión. Devuelve `true` solo si se cumplen las tres cosas a la vez, y **el orden importa menos que el hecho de que ninguna se pueda omitir**: 1. Hay g"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "9b058960943c"
     },
     {
       "ruta": "apps/asegura-web/lib/articulos.ts",
@@ -18471,13 +18459,13 @@
           "exportada": true,
           "params": "html: string",
           "retorno": "string",
-          "linea": 229,
+          "linea": 237,
           "resumen": "Traduce el HTML español al inglés. Sustituye de la cadena más larga a la más corta a propósito: si «La casa» se aplicase antes que «La casa por dentro», la segunda quedaría medio traducida."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bb295f237b99"
+      "hash": "9c3bcfaeb524"
     },
     {
       "ruta": "apps/housesevillana/app/i18n/motor.ts",
@@ -18652,12 +18640,20 @@
       ],
       "funciones": [
         {
+          "nombre": "cargarProveedoresConsentidos",
+          "kind": "function",
+          "exportada": false,
+          "params": "e",
+          "retorno": null,
+          "linea": 375
+        },
+        {
           "nombre": "cm",
           "kind": "function",
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 771
+          "linea": 792
         },
         {
           "nombre": "GET",
@@ -18665,14 +18661,14 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 910
+          "linea": 931
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "5f988b6b2d18"
+      "hash": "e694b924b0ec"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
@@ -22341,6 +22337,26 @@
       ],
       "rutaApi": "/api/comandas/activas",
       "hash": "6f4988bc62c7"
+    },
+    {
+      "ruta": "apps/ia-rest/src/app/api/consentimiento/route.ts",
+      "ambito": "apps/ia-rest",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 34
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/consentimiento",
+      "hash": "708ff2e2c915"
     },
     {
       "ruta": "apps/ia-rest/src/app/api/contrato/aceptar/route.ts",
@@ -36900,12 +36916,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 180
+          "linea": 181
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "034ca172bd4b"
+      "hash": "10fe6ea49e18"
     },
     {
       "ruta": "apps/ia-rest/src/app/login/page.tsx",
@@ -40559,6 +40575,26 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d5e6a76ce7a2"
+    },
+    {
+      "ruta": "apps/ia-rest/src/components/ConsentimientoAnalitica.tsx",
+      "ambito": "apps/ia-rest",
+      "exporta": [
+        "ConsentimientoAnalitica"
+      ],
+      "funciones": [
+        {
+          "nombre": "ConsentimientoAnalitica",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 28
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "19e8bfb648d7"
     },
     {
       "ruta": "apps/ia-rest/src/components/edge/CobrarSheet.tsx",
@@ -120883,6 +120919,156 @@
       "hash": "59957d131ca8"
     },
     {
+      "ruta": "packages/core-consent/src/adaptadores.ts",
+      "ambito": "packages/core-consent",
+      "resumen": "Adaptadores por proveedor. Las funciones `urlScript*` son puras (testeadas); las `cargar*`/`apagar*` tocan el DOM y solo se llaman cuando puedeCargar() ya dio verde — nunca al importar este módulo, para que no quepa la posibilidad de dispararse por un `if` mal escrito en otro sitio.",
+      "exporta": [
+        "urlScriptGa4",
+        "urlScriptPostHog",
+        "urlScriptMetaPixel",
+        "cargarGa4",
+        "cargarMetaPixel",
+        "arrancarPostHog",
+        "apagarPostHog"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlScriptGa4",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "string",
+          "linea": 6
+        },
+        {
+          "nombre": "urlScriptPostHog",
+          "kind": "function",
+          "exportada": true,
+          "params": "host: string = 'https://eu.i.posthog.com'",
+          "retorno": "string",
+          "linea": 12,
+          "resumen": "Host de ingesta de PostHog. Por defecto la nube EUROPEA: un defecto EE.UU. sacaría datos de visitantes del EEE fuera sin que nada fallara."
+        },
+        {
+          "nombre": "urlScriptMetaPixel",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 16
+        },
+        {
+          "nombre": "cargarGa4",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "void",
+          "linea": 49,
+          "resumen": "Carga GA4. Sin función de parada: gtag.js no ofrece un opt_out limpio por script suelto, así que el gate real es no cargar el script — igual que ya asumía asegura-web con PostHog."
+        },
+        {
+          "nombre": "cargarMetaPixel",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "void",
+          "linea": 64,
+          "resumen": "Carga Meta Pixel. Mismo criterio que GA4: sin parada limpia, el gate es no cargar."
+        },
+        {
+          "nombre": "arrancarPostHog",
+          "kind": "function",
+          "exportada": true,
+          "params": "key: string, host: string, alTerminar: () => void",
+          "retorno": "void",
+          "linea": 84,
+          "resumen": "Arranca PostHog. Refleja components/Analitica.tsx de asegura-web tal cual: pageview manual (App Router no recarga en la navegación), perfiles anónimos, sin grabación de sesión (los formularios de esta"
+        },
+        {
+          "nombre": "apagarPostHog",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "void",
+          "linea": 103
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "94484371d514"
+    },
+    {
+      "ruta": "packages/core-consent/src/banner.ts",
+      "ambito": "packages/core-consent",
+      "resumen": "Construye la config de vanilla-cookieconsent (https://cookieconsent.orestbida.com) a partir de nuestros textos. Función pura: no llama a CookieConsent.run() aquí, eso lo hace quien consuma el paquete (ver ConsentBanner.tsx de cada app, o el snippet vanilla de housesevillana) — así esta pieza se pued",
+      "exporta": [
+        "configBanner"
+      ],
+      "funciones": [
+        {
+          "nombre": "traduccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: TextosIdioma",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "configBanner",
+          "kind": "function",
+          "exportada": true,
+          "params": "idioma: Idioma",
+          "retorno": null,
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "080abcdfe24d"
+    },
+    {
+      "ruta": "packages/core-consent/src/consentimiento.ts",
+      "ambito": "packages/core-consent",
+      "resumen": "Núcleo puro del consentimiento. Generaliza puedeMedir() de asegura-web (una sola categoría, statistics) a un mapa de categorías — housesevillana necesita `marketing` para el Meta Pixel de retargeting, que no es medición interna. La regla de fondo no cambia: sin credencial no hay nada que arrancar, y",
+      "exporta": [
+        "puedeCargar"
+      ],
+      "funciones": [
+        {
+          "nombre": "puedeCargar",
+          "kind": "function",
+          "exportada": true,
+          "params": "consentimiento: Consentimiento | null | undefined, config: ConfigProveedor",
+          "retorno": "boolean",
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "94e3949ff4e6"
+    },
+    {
+      "ruta": "packages/core-consent/src/snippetVanilla.ts",
+      "ambito": "packages/core-consent",
+      "resumen": "housesevillana sirve su HTML entero como un template literal (app/route.ts) — no hay árbol de componentes React ahí. Esta función devuelve el bloque <script> como STRING, para interpolarlo en ese template exactamente como hoy se interpolan los scripts sueltos de GA4 y Meta Pixel. Sin comillas invert",
+      "exporta": [
+        "montarBannerHtml"
+      ],
+      "funciones": [
+        {
+          "nombre": "montarBannerHtml",
+          "kind": "function",
+          "exportada": true,
+          "params": "idioma: 'es' | 'en' | 'it'",
+          "retorno": "string",
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "304360fc0271"
+    },
+    {
       "ruta": "packages/core-email/src/transporter.ts",
       "ambito": "packages/core-email",
       "exporta": [
@@ -135368,7 +135554,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3312,
-    "funciones": 10230
+    "archivos": 3318,
+    "funciones": 10243
   }
 }
