@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic"
 
 // GET /api/internal/seo-correduria/semana
 //
-// La foto MÁS RECIENTE de `seo_correduria_semana` (GSC/SERP/PostHog), en JSON. Es el mismo dato y
+// La foto MÁS RECIENTE de `seo_correduria_semana` (GSC + PostHog; Serper se retiró de esta tabla
+// el 14/09/2026, ver `app/api/cron/seo-correduria/route.ts`), en JSON. Es el mismo dato y
 // la misma consulta que la skill `seo-asegura` pide por Supabase MCP («Cómo se lee la foto»), pero
 // por HTTP con el token de bajo privilegio de las rutinas — porque una Routine programada
 // (`create_trigger`) NO puede llevar conectores MCP en esta organización (comprobado 14/09/2026:
