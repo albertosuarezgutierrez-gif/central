@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-14T14:42:45Z",
+  "generadoEn": "2026-09-14T17:32:00Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2143,7 +2143,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 70
+        "evidencias": 71
       },
       "asegura-web": {
         "estado": "usado",
@@ -4948,6 +4948,7 @@
       "/api/internal/memoria/embeddings",
       "/api/internal/reclamar-reparacion",
       "/api/internal/reparacion-resultado",
+      "/api/internal/seo-correduria/semana",
       "/api/inversion/underwrite",
       "/api/negocios",
       "/api/negocios/[id]",
@@ -6325,7 +6326,7 @@
     "packages": 41,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1361,
+    "apis": 1362,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

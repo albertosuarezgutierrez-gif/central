@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-14T15:20:10Z",
-  "sha": "9f7c67815e21af5b10f0b4735e8a480d2156139e",
+  "generadoEn": "2026-09-14T17:32:00Z",
+  "sha": "f18157d27217a13facd85c7507c56c89f06215c3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5445,12 +5445,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 52
+          "linea": 53
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1480a62bd7b2"
+      "hash": "42f7e943c830"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/condiciones/page.tsx",
@@ -5766,6 +5766,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9af06a393707"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/WhatsappFlotante.tsx",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Botón flotante de WhatsApp — el mismo patrón que `apps/asegura-web` (`components/Whatsapp.tsx`), aquí para el cliente ya identificado. El número NO se escribe aquí: sale de `MEDIADOR`, la fuente única del mediador en todo el monorepo (el mismo que usa la web pública), y el enlace lo compone `whatsap",
+      "exporta": [
+        "WhatsappFlotante"
+      ],
+      "funciones": [
+        {
+          "nombre": "WhatsappFlotante",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "29e6378b4caa"
     },
     {
       "ruta": "apps/asegura-portal/lib/adjuntos-parte.ts",
@@ -76515,6 +76536,29 @@
       "hash": "04ace2ee8d8d"
     },
     {
+      "ruta": "apps/plataforma/app/api/internal/seo-correduria/semana/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "GET /api/internal/seo-correduria/semana La foto MÁS RECIENTE de `seo_correduria_semana` (GSC + PostHog; Serper se retiró de esta tabla el 14/09/2026, ver `app/api/cron/seo-correduria/route.ts`), en JS"
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/internal/seo-correduria/semana",
+      "hash": "044a88b34973"
+    },
+    {
       "ruta": "apps/plataforma/app/api/inversion/underwrite/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── POST /api/inversion/underwrite — analiza si comprar un inmueble concreto renta. Vive FUERA de `/api/sivra/*` a propósito: esto no es de la vertical de Sevilla (el primer caso analizado es Conil de la Frontera). El cálculo e",
@@ -95504,13 +95548,13 @@
           "exportada": true,
           "params": "pathname: string",
           "retorno": "boolean",
-          "linea": 55,
+          "linea": 60,
           "resumen": "¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1e88fdae670"
+      "hash": "5ad5a52ee9bc"
     },
     {
       "ruta": "apps/plataforma/lib/rutina-tokens.ts",
@@ -135479,7 +135523,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3316,
-    "funciones": 10237
+    "archivos": 3318,
+    "funciones": 10239
   }
 }
