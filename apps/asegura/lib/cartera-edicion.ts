@@ -295,7 +295,7 @@ function esUnicoViolado(e: unknown): boolean {
  *
  * `null` = adelante. Un `Fallo` = el 409 con quién lo tiene y si es forzable.
  */
-async function duplicadoContacto(
+export async function duplicadoContacto(
   correduriaId: string,
   clienteId: string,
   tipo: TipoContacto,

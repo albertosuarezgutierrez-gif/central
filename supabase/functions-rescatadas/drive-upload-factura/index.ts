@@ -13,6 +13,7 @@
 // ⚠️ El mensaje de error dice «no configurada en Vercel» — copiado de otra app; esta
 //    función lee sus envs de los **secrets de Supabase**, no de Vercel.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { resolverClaveSecreta } from "../_shared/clave-supabase.ts";
 
 // Google Drive upload edge function
 // Recibe: multipart/form-data con { file, fileName, fecha, propiedad, concepto, total, categoria, notas }
@@ -23,7 +24,8 @@ const FOLDER_ID = Deno.env.get('GASTOS_DRIVE_FOLDER_ID') || '10fj31nrvi4b4Q7X-PD
 const SA_KEY_JSON = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_KEY') || '';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
-const SUPABASE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+// Ver nota en inject-ga4: sin lanzar, para no convertir «falta la clave» en «la función no arranca».
+const SUPABASE_KEY = resolverClaveSecreta()?.clave ?? '';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 

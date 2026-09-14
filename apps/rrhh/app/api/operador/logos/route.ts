@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
+import { cabecerasClave } from '@/lib/claves-supabase'
 
 const BUCKET = 'rrhh-logos'
 
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
 
   const r = await fetch(`${supabaseUrl}/storage/v1/object/${BUCKET}/${path}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': contentType, 'x-upsert': 'true' },
+    headers: { ...cabecerasClave(serviceKey), 'Content-Type': contentType, 'x-upsert': 'true' },
     body: bytes,
   })
   if (!r.ok) return NextResponse.json({ error: `Upload error ${r.status}` }, { status: 500 })

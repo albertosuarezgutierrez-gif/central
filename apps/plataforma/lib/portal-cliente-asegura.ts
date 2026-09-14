@@ -412,6 +412,55 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
 }
 
 /** `GET /api/operador/cliente/portal?clienteId=` — qué se puede hacer hoy con esa ficha. Gratis. */
+/**
+ * La «vista de corredor» (08/09/2026): pide a asegura un enlace de UN solo uso
+ * (10 min) que abre el portal como lo ve ese cliente. Vuelve aquí y lo abre
+ * Alberto en su navegador: no se manda a nadie.
+ */
+export function vistaCorredorAsegura(entrada: { clienteId: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/portal/vista', { method: 'POST', body: JSON.stringify(entrada) })
+}
+
+export type RespuestaVista =
+  | { estado: 'ok'; url: string }
+  | { estado: 'no_encontrado' | 'sin_portal' | 'sin_configurar' | 'invalido' | 'error'; motivo: string }
+
+export function interpretarVista(status: number, json: unknown): RespuestaVista {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar', motivo: 'ASEGURA_OPERADOR_SECRET' }
+  if (status === 200 && o.estado === 'ok') {
+    const url = cadena(o.url)
+    // Solo https y solo hacia una URL entera: un `javascript:` o una ruta
+    // relativa aquí abriría cualquier cosa en la pestaña nueva.
+    if (url !== null && /^https:\/\//.test(url)) return { estado: 'ok', url }
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  if (o.estado === 'no_encontrado' || status === 404) return { estado: 'no_encontrado', motivo: cadena(o.motivo) ?? 'ficha no encontrada' }
+  if (o.estado === 'sin_portal') return { estado: 'sin_portal', motivo: cadena(o.motivo) ?? 'sin ASEGURA_PORTAL_URL' }
+  if (o.estado === 'invalido' || status === 422) return { estado: 'invalido', motivo: cadena(o.motivo) ?? 'datos no válidos' }
+  return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
+}
+
+export function textoVista(r: Exclude<RespuestaVista, { estado: 'ok' }>, nombre: string): string {
+  switch (r.estado) {
+    case 'no_encontrado':
+      return 'asegura dice que esta ficha ya no está en la correduría: no hay portal que abrir.'
+    case 'sin_portal':
+      return 'asegura no tiene configurada la dirección del portal (ASEGURA_PORTAL_URL): no sabe a dónde abrir.'
+    case 'sin_configurar':
+      return 'El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET).'
+    case 'invalido':
+      return `No se ha podido pedir la vista: ${r.motivo}`
+    case 'error':
+      return r.motivo === 'secreto_rechazado'
+        ? 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos).'
+        : r.motivo === 'red'
+          ? `No se ha podido hablar con asegura para abrir el portal de ${nombre}. Vuelve a intentarlo.`
+          : `No se ha podido abrir el portal de ${nombre}: ${r.motivo}`
+  }
+}
+
 export function portalAsegura(clienteId: string): Promise<Reenvio> {
   return llamar(`/api/operador/cliente/portal?clienteId=${encodeURIComponent(clienteId)}`, { method: 'GET' })
 }

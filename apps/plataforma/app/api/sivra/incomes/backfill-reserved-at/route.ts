@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { getSession } from "@/lib/session"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { getSmoobuKey, smoobuFetch } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -92,8 +92,8 @@ export async function GET(req: NextRequest) {
         const q = new URLSearchParams({
           pageSize: String(PAGE_SIZE), page: String(page), from, to, showCancellation: "1",
         })
-        const res = await fetch(`https://login.smoobu.com/api/reservations?${q}`, {
-          headers: { "Api-Key": apiKey }, cache: "no-store",
+        const res = await smoobuFetch(`/api/reservations?${q}`, {
+          cache: "no-store",
           signal: AbortSignal.timeout(20_000),
         })
         if (!res.ok) { errores.push(`${from}: Smoobu ${res.status}`); break }

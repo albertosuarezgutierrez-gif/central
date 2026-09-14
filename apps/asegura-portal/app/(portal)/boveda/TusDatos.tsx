@@ -115,70 +115,80 @@ export function TusDatos({ inicial }: { inicial: Solicitud[] }) {
           </button>
         </div>
       ) : (
-        <>
-          <p className="supresion-intro">
-            Puedes pedirnos que suprimamos tus datos. Antes de pulsar, lee qué se puede suprimir y qué no:
-            hay documentación que la ley nos obliga a conservar, y preferimos decírtelo ahora y no dentro de
-            un mes.
-          </p>
+        // Plegado por defecto y con voz más baja que el resto de la pantalla
+        // (09/09/2026, Alberto): a quien no quiere borrar nada — la inmensa
+        // mayoría, un derecho que se ejerce una vez en la vida y no algo que se
+        // ofrece como una acción más de la pantalla — no hace falta ponerle
+        // delante las dos listas ni un botón del mismo peso que «Guardar mis
+        // datos». Quien SÍ lo busca lo encuentra por el título; no hace falta
+        // gritarlo al resto.
+        <details className="supresion-plegable">
+          <summary>Solicitar la supresión de mis datos</summary>
+          <div className="supresion-plegable-cuerpo">
+            <p className="supresion-intro">
+              Puedes pedirnos que suprimamos tus datos. Antes de pulsar, lee qué se puede suprimir y qué no:
+              hay documentación que la ley nos obliga a conservar, y preferimos decírtelo ahora y no dentro
+              de un mes.
+            </p>
 
-          {/* Las dos listas van juntas y a la vista. Enseñar solo la primera
-              dejaría creer que lo demás también desaparece. */}
-          <div className="supresion-alcance">
-            <div>
-              <h3>Lo que se suprime</h3>
-              <ul>
-                {loQueSeSuprime().map((a) => (
-                  <li key={a.que}>
-                    <strong>{a.que}.</strong> {a.motivo}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3>Lo que tenemos que conservar</h3>
-              <ul>
-                {loQueSeConserva().map((a) => (
-                  <li key={a.que}>
-                    <strong>{a.que}.</strong> {a.motivo}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {abierto ? (
-            <div className="supresion-form">
-              <label className="editor-campo" htmlFor="supresion-motivo">
-                Si quieres, cuéntanos por qué <span className="opcional">(opcional)</span>
-              </label>
-              {/* Opcional de verdad: el art. 17 no exige motivar la solicitud, y
-                  pedirlo como obligatorio sería un peaje al ejercicio de un derecho. */}
-              <textarea
-                id="supresion-motivo"
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                rows={3}
-                maxLength={1000}
-              />
-              <div className="editor-acciones">
-                <button type="button" className="boton" onClick={pedir} disabled={enviando}>
-                  {enviando ? 'Registrando…' : 'Registrar mi solicitud'}
-                </button>
-                <button type="button" className="boton boton-secundario" onClick={() => setAbierto(false)}>
-                  Cancelar
-                </button>
+            {/* Las dos listas van juntas y a la vista. Enseñar solo la primera
+                dejaría creer que lo demás también desaparece. */}
+            <div className="supresion-alcance">
+              <div>
+                <h3>Lo que se suprime</h3>
+                <ul>
+                  {loQueSeSuprime().map((a) => (
+                    <li key={a.que}>
+                      <strong>{a.que}.</strong> {a.motivo}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3>Lo que tenemos que conservar</h3>
+                <ul>
+                  {loQueSeConserva().map((a) => (
+                    <li key={a.que}>
+                      <strong>{a.que}.</strong> {a.motivo}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
-          ) : (
-            <button type="button" className="boton" onClick={() => setAbierto(true)}>
-              Solicitar la supresión de mis datos
-            </button>
-          )}
-          <p className="supresion-plazo">
-            Te contestaremos en el plazo de un mes ({DIAS_RESPUESTA} días) desde que la recibimos.
-          </p>
-        </>
+
+            {abierto ? (
+              <div className="supresion-form">
+                <label className="editor-campo" htmlFor="supresion-motivo">
+                  Si quieres, cuéntanos por qué <span className="opcional">(opcional)</span>
+                </label>
+                {/* Opcional de verdad: el art. 17 no exige motivar la solicitud, y
+                    pedirlo como obligatorio sería un peaje al ejercicio de un derecho. */}
+                <textarea
+                  id="supresion-motivo"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                />
+                <div className="editor-acciones">
+                  <button type="button" className="boton" onClick={pedir} disabled={enviando}>
+                    {enviando ? 'Registrando…' : 'Registrar mi solicitud'}
+                  </button>
+                  <button type="button" className="boton boton-secundario" onClick={() => setAbierto(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="boton boton-secundario" onClick={() => setAbierto(true)}>
+                Confirmar que quiero pedirla
+              </button>
+            )}
+            <p className="supresion-plazo">
+              Te contestaremos en el plazo de un mes ({DIAS_RESPUESTA} días) desde que la recibimos.
+            </p>
+          </div>
+        </details>
       )}
 
       {error && <p className="editor-error">{error}</p>}

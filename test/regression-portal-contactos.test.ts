@@ -76,8 +76,8 @@ test('la pantalla pide nombre y relación, los manda, y promete que la relación
 
 test('la pestaña se llama «Contactos» y sigue apuntando a /autorizaciones', () => {
   const p = pestanasPortal()
-  const ultima = p[p.length - 1]
-  assert.equal(ultima.etiqueta, 'Contactos')
-  assert.equal(ultima.href, '/autorizaciones', 'la RUTA no cambia: los enlaces guardados tienen que seguir llegando')
-  assert.equal(ultima.vista, null)
+  const contactos = p.find((x) => x.href === '/autorizaciones')
+  assert.ok(contactos, 'la barra tiene que seguir llevando a /autorizaciones')
+  assert.equal(contactos.etiqueta, 'Contactos')
+  assert.equal(contactos.vista, null)
 })

@@ -51,6 +51,7 @@ test('solo compañia basta, y el resto sale a null (no ausente)', () => {
     numeroPoliza: null,
     ramo: null,
     primaAnual: null,
+    periodicidadPago: null,
     fechaVencimiento: null,
     matricula: null,
     bastidor: null,
@@ -59,7 +60,7 @@ test('solo compañia basta, y el resto sale a null (no ausente)', () => {
     datosRamo: null,
     datosRamoOrigen: null,
   })
-  // Las once claves EXISTEN: en un alta «no lo toques» no significa nada, así
+  // Las doce claves EXISTEN: en un alta «no lo toques» no significa nada, así
   // que un campo que no se rellenó vale `null` y está presente, nunca ausente.
   assert.deepEqual(Object.keys(d).sort(), [
     'bastidor',
@@ -70,6 +71,7 @@ test('solo compañia basta, y el resto sale a null (no ausente)', () => {
     'fechaVencimiento',
     'matricula',
     'numeroPoliza',
+    'periodicidadPago',
     'primaAnual',
     'ramo',
     'referenciaCatastral',
@@ -190,7 +192,7 @@ test('la fecha de matriculacion mira al PASADO, al reves que el vencimiento', ()
   assert.equal(falloP(normalizarParche({ fechaVencimiento: '1970-01-01' }, HOY)), 'fecha_fuera_de_rango')
 })
 
-test('el alta a mano tiene ONCE campos: la poliza, el bien, los del ramo y su origen', () => {
+test('el alta a mano tiene DOCE campos: la poliza, el bien, los del ramo y su origen', () => {
   // La forma de `DatosAlta` la fija `test/regression-portal-poliza-editable.test.ts`
   // (raíz) con un `deepEqual` del objeto entero, y los dos se actualizan a la vez:
   // ese cepo existe para que añadir un campo al alta sea una decisión y no un
@@ -202,6 +204,8 @@ test('el alta a mano tiene ONCE campos: la poliza, el bien, los del ramo y su or
   // entraron `referenciaCatastral` (el identificador del inmueble, de donde sale
   // el autorrelleno del Catastro) y `datosRamoOrigen` (de dónde salió cada campo:
   // los metros que se aceptan del Catastro no son los que se estiman a ojo).
+  // `periodicidadPago` entró el 09/09/2026: cada cuánto se paga el recibo, para
+  // poder avisar del PRÓXIMO cobro y no solo de la renovación anual.
   const d = ok(normalizarAlta({ compania: 'Axa', matricula: '1234BCD', bastidor: 'WVWZZZ1KZAW123456' }, HOY))
   assert.deepEqual(Object.keys(d).sort(), [
     'bastidor',
@@ -212,6 +216,7 @@ test('el alta a mano tiene ONCE campos: la poliza, el bien, los del ramo y su or
     'fechaVencimiento',
     'matricula',
     'numeroPoliza',
+    'periodicidadPago',
     'primaAnual',
     'ramo',
     'referenciaCatastral',

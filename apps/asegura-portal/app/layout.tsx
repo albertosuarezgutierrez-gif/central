@@ -2,11 +2,14 @@ import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 
 import './globals.css'
 import type { ReactNode } from 'react'
+import { CampanaAvisos } from './CampanaAvisos'
+import { InstalarEnBarra } from './InstalarEnBarra'
 import { InterruptorTema } from './InterruptorTema'
 import { MarcaAsegura } from './MarcaAsegura'
 import { PieLegal } from './PieLegal'
 import { RegistrarSW } from './RegistrarSW'
 import { SalirDelPortal } from './SalirDelPortal'
+import { SugerenciaBarra } from './SugerenciaBarra'
 import { SCRIPT_TEMA } from './tema'
 
 // Marca activa del portal. Es la de `app.grupoasegura.com` medida del CSS
@@ -87,17 +90,30 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </span>
           <span className="marca-nombre">{MARCA.logos.wordmark}</span>
           <span className="marca-coletilla">Correduría de seguros</span>
-          {/* Las dos acciones de la cabecera van sueltas y no en un menú:
-              esconder dos cosas detrás de un botón cuesta un toque más, un
+          {/* Las acciones de la cabecera van sueltas y no en un menú:
+              esconder cosas detrás de un botón cuesta un toque más, un
               componente más y, en esta pantalla, que gente de 50-70 años no
-              encuentre la salida. El ORDEN importa: `Salir` tiene que ser el
-              hermano inmediatamente anterior al interruptor, porque de eso
-              depende que el CSS junte los dos a la derecha en vez de repartir
-              el hueco entre ellos.
-              🚨 Y `SalirDelPortal` devuelve `null` cuando no hay sesión: quien
-              todavía no ha entrado no ve un botón de salir. */}
-          <SalirDelPortal />
-          <InterruptorTema />
+              encuentre la salida. Van dentro de UN contenedor con el único
+              `margin-left:auto` de la derecha (`.marca-acciones`): con el
+              `auto` repartido entre botones, cada uno que se añadía o se
+              quitaba (instalar solo existe si el navegador lo ofrece, y la
+              sugerencia y la campana solo con sesión) cambiaba el reparto
+              del hueco y los separaba sin que nada fallara.
+              Orden (Alberto, 08-09/09/2026): instalar «en el banner fijo de
+              arriba» → sugerencia (junto a la campana, el otro desplegable)
+              → avisos → tema → salir, que va «a la derecha del todo, es lo
+              lógico».
+              🚨 `InstalarEnBarra`, `SugerenciaBarra`, `SalirDelPortal` y
+              `CampanaAvisos` devuelven `null` cuando no hay sesión: quien
+              todavía no ha entrado no ve ni instalar, ni sugerencia, ni
+              salir, ni avisos. */}
+          <div className="marca-acciones">
+            <InstalarEnBarra />
+            <SugerenciaBarra />
+            <CampanaAvisos />
+            <InterruptorTema />
+            <SalirDelPortal />
+          </div>
         </header>
         {children}
         {/* Registra el service worker que Chrome exige para ofrecer instalar la

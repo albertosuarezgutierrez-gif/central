@@ -7,11 +7,12 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { serialize } from '@/lib/serialize'
 import { createClient } from '@supabase/supabase-js'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 const BUCKET = 'documentos-propiedad'
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  clavePublicable()
 )
 
 const CATEGORIAS = ['contrato','licencia_vft','seguro','escritura','impuestos','cee','suministros','otros']

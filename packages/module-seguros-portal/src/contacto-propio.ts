@@ -52,8 +52,23 @@ export function decidirFichaPropia(clienteIds: readonly string[]): FichaPropia {
   return { estado: 'ok', clienteId: unicos[0]! }
 }
 
-/** Los campos de contacto que el cliente puede tocar. La calle y su sitio, nada más. */
-export const CAMPOS_CONTACTO_PROPIO = ['direccion', 'codigoPostal', 'ciudad', 'provincia'] as const
+/**
+ * Los campos de contacto que el cliente puede tocar: su dirección de contacto
+ * y sus dos canales (teléfono y correo). Desde el 09/09/2026 —Alberto: «una
+ * pestaña "Mis datos" donde el cliente pueda ver sus datos de contacto (tlf,
+ * mail y dirección) pudiendo modificarlos»— ya no es solo la calle.
+ *
+ * Se parten en DOS listas porque en la ficha viven en dos sitios distintos: la
+ * dirección son columnas de `clientes` (van por `editarCliente`), y el
+ * teléfono y el correo son filas de `cliente_telefonos` / `cliente_emails` con
+ * su principal espejado en la ficha (van por `anadirContacto`, que es lo que
+ * detecta que ese número ya está en OTRA ficha).
+ */
+export const CAMPOS_DIRECCION_PROPIA = ['direccion', 'codigoPostal', 'ciudad', 'provincia'] as const
+export const CAMPOS_CANAL_PROPIO = ['telefono', 'email'] as const
+export const CAMPOS_CONTACTO_PROPIO = [...CAMPOS_DIRECCION_PROPIA, ...CAMPOS_CANAL_PROPIO] as const
+export type CampoDireccionPropia = (typeof CAMPOS_DIRECCION_PROPIA)[number]
+export type CampoCanalPropio = (typeof CAMPOS_CANAL_PROPIO)[number]
 export type CampoContactoPropio = (typeof CAMPOS_CONTACTO_PROPIO)[number]
 
 /**
@@ -90,7 +105,69 @@ export function textoHistorialContactoPropio(campos: readonly string[]): string 
   const lista = [...campos].sort()
   const que = lista.length === 0 ? 'sus datos de contacto' : lista.join(', ')
   return (
-    `El cliente actualizó desde el portal: ${que}. ` +
-    'No se ha comunicado a ninguna compañía: esto es su dirección de contacto, no la de sus pólizas.'
+    `${PREFIJO_HISTORIAL_CONTACTO_PROPIO} ${que}. ` +
+    'No se ha comunicado a ninguna compañía: son sus datos de contacto con nosotros, no los de sus pólizas.'
   )
 }
+
+// ─── «Comprueba tus datos de contacto» (08/09/2026, adaptado 09/09/2026) ─────
+//
+// Nace pensado como aviso con datos ENMASCARADOS (el portal no descifraba
+// PII). Desde el 09/09/2026 la pestaña «Mis datos» ya lee y enseña el dato en
+// claro por su propio puente (`leerContactoPropio`/`leerMisDatos`), así que el
+// enmascarado sobra: lo que queda de esta pieza es solo el RECORDATORIO
+// periódico — la confirmación tiene tres estados, no dos: `nunca` (NULL: todo
+// el volcado nace así) NO es `caducada` — un «no se sabe» no se disfraza de
+// «se supo y ya es viejo».
+
+/** Cada cuánto se le vuelve a preguntar. */
+export const DIAS_VIGENCIA_CONFIRMACION_CONTACTO = 365
+
+export type EstadoConfirmacionContacto = 'nunca' | 'vigente' | 'caducada'
+
+/**
+ * `nunca` = NULL (no consta que lo haya mirado jamás) · `vigente` = sello de
+ * hace menos de 365 días · `caducada` = sello más viejo. Un sello en el FUTURO
+ * (reloj mal puesto) se trata como vigente: no se le pide confirmar dos veces
+ * por un fallo nuestro.
+ */
+export function estadoConfirmacion(confirmadoEn: Date | null, hoy: Date): EstadoConfirmacionContacto {
+  if (!confirmadoEn || Number.isNaN(confirmadoEn.getTime())) return 'nunca'
+  const dias = (hoy.getTime() - confirmadoEn.getTime()) / 86_400_000
+  return dias < DIAS_VIGENCIA_CONFIRMACION_CONTACTO ? 'vigente' : 'caducada'
+}
+
+/** `true` solo si hay sello y tiene menos de 365 días. NULL → `false`. */
+export function confirmacionContactoVigente(confirmadoEn: Date | null, hoy: Date): boolean {
+  return estadoConfirmacion(confirmadoEn, hoy) === 'vigente'
+}
+
+/**
+ * La línea de `historial_interno` cuando el cliente dice «siguen igual». Sin
+ * valores, por la misma razón que `textoHistorialContactoPropio`: el historial
+ * no es sitio para repetir el teléfono de nadie.
+ */
+export function textoHistorialConfirmacionContacto(): string {
+  return 'El cliente confirmó desde el portal que sus datos de contacto siguen siendo correctos.'
+}
+
+/**
+ * Con qué empieza esa línea, como CONSTANTE y no como una cadena escrita dos
+ * veces.
+ *
+ * 🚨 Existe porque el muro de actividad de `/correduria` tiene que distinguir
+ * lo que hizo el cliente de lo que anotó la casa, y `historial_interno` **no
+ * guarda el autor como dato**: la columna `actor_user_id` no la escribe nadie y
+ * el autor viaja dentro del texto. Con el prefijo compartido, esa clasificación
+ * es un acuerdo entre dos sitios del repo; escrito a mano en la consulta sería
+ * una adivinanza sobre texto libre que se rompe en silencio el día que alguien
+ * retoque la frase — y entonces el cambio de dirección de un cliente dejaría de
+ * salir como suyo sin que fallara nada.
+ */
+export const PREFIJO_HISTORIAL_CONTACTO_PROPIO = 'El cliente actualizó desde el portal:'
+
+/**
+ * Y el de la sugerencia, por la misma razón. Lo compone quien la recibe
+ * (`apps/asegura-portal/lib/sugerencia.ts`) antes de mandarla por el puente.
+ */
+export const PREFIJO_HISTORIAL_SUGERENCIA = '💡 Sugerencia del cliente desde el portal:'

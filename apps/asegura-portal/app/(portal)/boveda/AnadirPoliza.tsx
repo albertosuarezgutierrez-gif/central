@@ -7,6 +7,7 @@ import {
   FORMULARIO_VACIO,
   MENSAJE_400,
   MENSAJE_PRIMA_CERO,
+  MENSAJE_RAMO_OBLIGATORIO,
   campoDelError,
   primaDesdeTexto,
   type Campo,
@@ -83,6 +84,13 @@ export function AnadirPoliza({
     setErrores({})
     setErrorGeneral(null)
 
+    // El único campo obligatorio del formulario: ver la cabecera de
+    // `CamposPoliza.tsx` sobre por qué este sí y el resto no.
+    if (form.ramo === '') {
+      setErrores({ ramo: MENSAJE_RAMO_OBLIGATORIO })
+      return
+    }
+
     const prima = primaDesdeTexto(form.primaAnual)
     if (prima === 'invalida' || prima === 'cero') {
       setErrores({ primaAnual: prima === 'cero' ? MENSAJE_PRIMA_CERO : MENSAJE_400.primaAnual })
@@ -113,6 +121,7 @@ export function AnadirPoliza({
           numeroPoliza,
           ramo: form.ramo || null,
           primaAnual: prima,
+          periodicidadPago: form.periodicidadPago || null,
           fechaVencimiento: form.fechaVencimiento || null,
           // Los tres del vehículo se mandan SIEMPRE, aunque el bloque no esté
           // desplegado: si el ramo elegido no los pinta van vacíos y viajan como

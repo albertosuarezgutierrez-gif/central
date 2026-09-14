@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { gmailTransporter } from '@central/core-email'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { smoobuFetch } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
@@ -11,13 +11,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const SMOOBU_KEY = await getSmoobuKey()
     const hoy = new Date().toISOString().split('T')[0]
     const d7 = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
 
-    const res = await fetch(
-      `https://login.smoobu.com/api/reservations?arrival_from=${hoy}&arrival_to=${d7}&pageSize=50`,
-      { headers: { 'Api-Key': SMOOBU_KEY } }
+    const res = await smoobuFetch(
+      `/api/reservations?arrival_from=${hoy}&arrival_to=${d7}&pageSize=50`
     )
     const { bookings = [] } = await res.json()
 

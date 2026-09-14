@@ -459,6 +459,99 @@ export async function lineasCodeoscopic(): Promise<LineasCodeoscopic> {
   }
 }
 
+// ─── Diagnóstico puntual de un proyecto Codeoscopic (12/09/2026) ────────────
+//
+// El Submit real de las 09:41:54 sobre el proyecto 40684815 murió a mitad de
+// ejecución (el candado `submit_in_flight_at` quedó puesto y `cerrarEnvio`
+// nunca corrió), así que no hay confirmación de si Codeoscopic llegó a
+// procesar el `POST .../policy-applications` antes del corte. Reenvía al
+// `GET /api/operador/codeoscopic/proyecto` de asegura (gratis, lectura) para
+// comprobarlo desde AQUÍ — la pantalla de Alberto — en vez de un curl suelto
+// o el portal del vendor.
+
+export type DiagnosticoProyecto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; crudo: unknown }
+
+export function interpretarDiagnosticoProyecto(status: number, json: unknown): DiagnosticoProyecto {
+  if (status === 401) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado !== 'ok') {
+    const mensaje = cadena(o.mensaje) ?? cadena(o.error) ?? `HTTP ${status}`
+    return { estado: 'error', motivo: mensaje }
+  }
+  return { estado: 'ok', crudo: o.crudo ?? null }
+}
+
+export async function diagnosticoProyectoCodeoscopic(projectId: string): Promise<DiagnosticoProyecto> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/proyecto?projectId=${encodeURIComponent(projectId)}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarDiagnosticoProyecto(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ─── Compañías abiertas en Avant2 (¿nos han incluido a Fidelidade?) ─────────
+
+export type CompaniaBuscada =
+  | { estado: 'presente'; id: string; nombre: string; ramos: string[] }
+  | { estado: 'ausente'; companias: string[]; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export type CompaniasCodeoscopic =
+  | { estado: 'sin_configurar'; mensaje: string | null }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; companias: string[]; buscada: CompaniaBuscada }
+
+/**
+ * Puro. Como `interpretarLineas`: `buscada` degrada a `desconocido` ante
+ * cualquier forma rara. Decir «Fidelidade ausente» sobre un JSON que no se
+ * entiende sería afirmar una ausencia sin haberla medido.
+ */
+export function interpretarCompanias(status: number, json: unknown): CompaniasCodeoscopic {
+  if (status === 401) return { estado: 'error', motivo: 'secreto' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje: cadena(o.mensaje) }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: cadena(o.mensaje) ?? `HTTP ${status}` }
+  const companias = Array.isArray(o.companias)
+    ? o.companias.map((c) => cadena((c as Record<string, unknown>)?.nombre)).filter((x): x is string => x !== null)
+    : []
+  return { estado: 'ok', companias, buscada: leerBuscada(o.buscada) }
+}
+
+function leerBuscada(v: unknown): CompaniaBuscada {
+  if (typeof v !== 'object' || v === null) return { estado: 'desconocido' }
+  const b = v as Record<string, unknown>
+  const ramos = Array.isArray(b.ramos) ? b.ramos.map(cadena).filter((x): x is string => x !== null) : []
+  if (b.estado === 'presente') {
+    const id = cadena(b.id)
+    if (id === null) return { estado: 'desconocido' }
+    return { estado: 'presente', id, nombre: cadena(b.nombre) ?? id, ramos }
+  }
+  if (b.estado === 'ausente') {
+    const companias = Array.isArray(b.companias)
+      ? b.companias.map(cadena).filter((x): x is string => x !== null)
+      : []
+    return { estado: 'ausente', companias, ramos }
+  }
+  return { estado: 'desconocido' }
+}
+
+export async function companiasCodeoscopic(buscar: string): Promise<CompaniasCodeoscopic> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/companias?buscar=${encodeURIComponent(buscar)}`)
+    if (r === null) return { estado: 'sin_configurar', mensaje: null }
+    return interpretarCompanias(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
 export async function impagadosAsegura(): Promise<Impagados> {
   try {
     const r = await pedir('/api/operador/impagados')

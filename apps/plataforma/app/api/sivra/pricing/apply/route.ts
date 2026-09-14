@@ -24,7 +24,7 @@ import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/l
 import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/lib/sivra/pricing-ancla-global"
 import { avisoSmoobuRechaza, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { smoobuFetch } from "@/lib/smoobu"
 import { tgAviso } from '@/lib/telegram'
 import { eur } from "@/lib/dinero"
 import { anclaRail, anclaRailCon, type OrigenAncla, avisoRailCiego, type LecturaAncla } from "@/lib/sivra/pricing-ancla-rail"
@@ -99,7 +99,6 @@ export async function POST(req: NextRequest) {
   } catch { /* sin tabla aún: no pausado */ }
   if (paused && !dryRun) dryRun = true
 
-  const SMOOBU_KEY = await getSmoobuKey()
 
   const MIN_SAMPLE = 5
   const MAX_MARKET_AGE_DAYS = 7
@@ -806,8 +805,8 @@ export async function POST(req: NextRequest) {
 
     let plRates: Record<string, { price: number | null; available: number }> = {}
     try {
-      const res = await fetch(`${BASE}/rates?apartments[]=${smoobuId}&start_date=${startDate}&end_date=${endDate}`,
-        { headers: { "Api-Key": SMOOBU_KEY, "Cache-Control": "no-cache" }, next: { revalidate: 0 } })
+      const res = await smoobuFetch(`${BASE}/rates?apartments[]=${smoobuId}&start_date=${startDate}&end_date=${endDate}`,
+        { next: { revalidate: 0 } })
       if (!res.ok) { results.push({ property: r.property_id, error: `Smoobu GET ${res.status}` }); continue }
       plRates = (await res.json()).data?.[smoobuId] ?? {}
     } catch (e) {
@@ -1326,9 +1325,9 @@ export async function POST(req: NextRequest) {
     let written = false
     if (!dryRun && ops.length > 0) {
       try {
-        const res = await fetch(`${BASE}/rates`, {
+        const res = await smoobuFetch(`${BASE}/rates`, {
           method: "POST",
-          headers: { "Api-Key": SMOOBU_KEY, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ apartments: [smoobuId], operations: ops }),
         })
         written = res.ok

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { storageObjectPath, signStorageObject, publicStorageUrl } from '@central/core-storage'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_ANON = clavePublicable()
 const BUCKET = 'cleaning-photos'
 const EXPIRES = 3600 // 1h
 

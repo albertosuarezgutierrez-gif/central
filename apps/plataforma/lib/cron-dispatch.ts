@@ -168,6 +168,10 @@ export const CRON_JOBS: CronJob[] = [
   // el top-10 de cada consulta objetivo) y PostHog (visitas medidas) → seo_correduria_semana +
   // informe por Telegram con UNA acción propuesta. Spec: docs/superpowers/specs/2026-09-08-seo-correduria-conectores-design.md
   { path: '/api/cron/seo-correduria', schedule: '30 8 * * 1' },
+  // Agente AUTÓNOMO de SEO de asegura-web, 30 min detrás del informe: propone metadata nueva
+  // para ramos sin top-10 y abre PR DRAFT (nunca escribe a main ni mergea). Kill switch
+  // SEO_ASEGURA_AGENT_ENABLED, default OFF. Ver apps/plataforma/lib/seo-correduria/agente-guardrails.ts.
+  { path: '/api/cron/seo-correduria-agente', schedule: '0 9 * * 1' },
   { path: '/api/cron/health-check', schedule: '0 7 * * *' },
   // Canario del formulario público de la correduría, CADA HORA. Un diario no valdría: ese
   // formulario es el único canal de venta de asegura-web y, cuando se rompe, no deja rastro

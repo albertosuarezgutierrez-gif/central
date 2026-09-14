@@ -66,20 +66,23 @@ test('🚨 la cookie se borra con las MISMAS opciones con las que se puso', () =
   )
 })
 
-test('🚨 el botón sale del layout RAÍZ y va pegado al interruptor', () => {
-  // El `margin-left:auto` de `.salir-form` solo junta los dos botones si el
-  // interruptor es su hermano ADYACENTE. Si alguien mete algo entre medias, la
-  // regla `+` deja de aplicar, el interruptor recupera su propio `auto` y el
-  // hueco se reparte a tres bandas: los dos botones se separan solos.
+test('🚨 el botón sale del layout RAÍZ y va a la derecha del todo', () => {
+  // Desde el 08/09/2026 los botones de la derecha (instalar, salir, avisos,
+  // tema) viven en UN contenedor, `.marca-acciones`, que es quien lleva el
+  // único `margin-left:auto`. Antes lo llevaba `.salir-form` y se le quitaba
+  // al interruptor con una regla de hermano; cada botón nuevo la rompía y el
+  // hueco se repartía separándolos sin que nada fallara.
   assert.ok(/<SalirDelPortal\s*\/>/.test(LAYOUT), 'falta <SalirDelPortal /> en la barra')
-  assert.ok(
-    /<SalirDelPortal\s*\/>\s*<InterruptorTema\s*\/>/.test(LAYOUT),
-    'SalirDelPortal tiene que ir INMEDIATAMENTE antes de InterruptorTema (la regla CSS es de hermano adyacente)',
-  )
-  assert.ok(
-    /\.salir-form\s*\+\s*\.tema-boton/.test(CSS),
-    'falta la regla que le quita el margin-left:auto al interruptor cuando está el botón de salir',
-  )
+  // Y Salir es el ÚLTIMO del grupo: «a la derecha del todo, es lo lógico»
+  // (Alberto, 08/09/2026).
+  const acciones = LAYOUT.indexOf('className="marca-acciones"')
+  const salir = LAYOUT.indexOf('<SalirDelPortal')
+  const tema = LAYOUT.indexOf('<InterruptorTema')
+  assert.ok(acciones > 0 && acciones < tema && tema < salir, 'SalirDelPortal tiene que ir dentro de .marca-acciones y el último: a la derecha del todo')
+  const bloque = CSS.match(/\.marca-acciones\s*\{[^}]*\}/)?.[0] ?? ''
+  assert.ok(/margin-left:\s*auto/.test(bloque), 'falta el margin-left:auto de .marca-acciones: los botones dejan de ir a la derecha')
+  const salirCss = CSS.match(/\.salir-form\s*\{[^}]*\}/)?.[0] ?? ''
+  assert.ok(!/margin-left:\s*auto/.test(salirCss), '.salir-form volvió a llevar margin-left:auto: reparte el hueco y separa los botones')
 })
 
 test('🚨 el botón no se pinta sin sesión, y la sesión se VERIFICA', () => {

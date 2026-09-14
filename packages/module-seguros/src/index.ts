@@ -50,6 +50,15 @@ export {
 } from './objeto.ts'
 
 export {
+  MODALIDADES_RC,
+  etiquetaModalidadRc,
+  tituloModalidadRc,
+  validarModalidadRc,
+  type ModalidadRc,
+  type ValidacionRc,
+} from './rc-modalidad.ts'
+
+export {
   saludIngesta,
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
@@ -91,6 +100,14 @@ export {
   camposLeidos,
 } from './documento-auto.ts'
 export type { AutoLeido } from './documento-auto.ts'
+export {
+  CAMPOS_PERSONALES_HOGAR,
+  hogarLeidoVacio,
+  normalizarHogarLeido,
+  seLeyoAlgoHogar,
+  camposLeidosHogar,
+} from './documento-hogar.ts'
+export type { HogarLeido } from './documento-hogar.ts'
 
 export { importeEiac, sumarImportesEiac } from './importe-eiac.ts'
 export {
@@ -258,6 +275,7 @@ export {
   type RelacionFila,
   type RelacionFicha,
 } from './relaciones.ts'
+export { mensajePresentacionWhatsapp } from './mensaje-whatsapp.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -395,6 +413,28 @@ export {
 } from './filtro-cartera.ts'
 
 export {
+  ACTIVIDADES,
+  PASOS_EMBUDO,
+  VENTANAS_ACTIVIDAD,
+  DIAS_ACTIVIDAD_DEFECTO,
+  POR_PAGINA_ACTIVIDAD,
+  POR_PAGINA_ACTIVIDAD_MAX,
+  definicionActividad,
+  etiquetaActividad,
+  riesgoActividad,
+  parseFiltroActividad,
+  mayorCaidaEmbudo,
+  nuevosDesde,
+  type OrigenActividad,
+  type TipoActividad,
+  type EventoActividad,
+  type QuienActividad,
+  type FiltroActividad,
+  type EmbudoPortal,
+  type PasoEmbudo,
+} from './actividad.ts'
+
+export {
   planBackfillDni,
   tokensNombre,
   type FichaDni,
@@ -512,3 +552,16 @@ export {
 } from './normas.ts'
 export type { NormaCitable } from './normas.ts'
 export { nombreDePila } from './nombre-de-pila.ts'
+
+export { COOLDOWN_DIAS, enCooldown, textoBaseRecaptacionWhatsapp, textoBaseRecaptacionEmail } from './recaptacion.ts'
+export type { EnvioRecienteRecaptacion, PersonalizacionRecaptacion } from './recaptacion.ts'
+
+export {
+  AREAS_CONTACTO,
+  areaContacto,
+  etiquetaArea,
+  ordenarContactos,
+  contactoDestacado,
+  type AreaContacto,
+  type ContactoCompania,
+} from './compania-contactos.ts'

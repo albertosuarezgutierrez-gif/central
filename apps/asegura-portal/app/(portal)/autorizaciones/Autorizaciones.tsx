@@ -12,6 +12,8 @@ import {
   type AlcanceInvitacion,
 } from '@central/module-seguros-portal'
 
+import { SugerenciasContactos } from './SugerenciasContactos'
+
 /**
  * «Quién puede ver mis seguros» — la parte viva de la pantalla.
  *
@@ -693,6 +695,7 @@ export function Autorizaciones() {
     <>
       <Otorgadas uid={uid} lista={datos.otorgadas} onCambio={cargar} />
       <Recibidas uid={uid} lista={datos.recibidas} onCambio={cargar} />
+      <SugerenciasContactos />
       <Conceder
         uid={uid}
         puedeAutorizar={datos.puedeAutorizar}

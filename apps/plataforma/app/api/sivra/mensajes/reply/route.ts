@@ -3,7 +3,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { aiComplete } from '@central/core-ai'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { smoobuFetch } from '@/lib/smoobu'
 import { registrarAvisoHuesped } from '@/lib/limpiadoras-early'
 import { PARKING_SPOTS, extractEarlyTime, detectCategory, detectLang } from '@/lib/sivra/agente-huesped/reglas'
 
@@ -22,10 +22,7 @@ async function notifyCleaningSession(propertyId: string, checkoutDate: string, t
 async function getSmoobuGuestUrl(reservationId: string | null): Promise<string | null> {
   if (!reservationId) return null
   try {
-    const SMOOBU_KEY = await getSmoobuKey()
-    const res = await fetch(`https://login.smoobu.com/api/reservations/${reservationId}`, {
-      headers: { 'Api-Key': SMOOBU_KEY, 'Cache-Control': 'no-cache' }
-    })
+    const res = await smoobuFetch(`/api/reservations/${reservationId}`)
     if (!res.ok) return null
     const d = await res.json()
     return d['guest-app-url'] || null

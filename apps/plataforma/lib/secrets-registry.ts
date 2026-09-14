@@ -82,6 +82,7 @@ export const SECRETS_REGISTRY: SecretEntry[] = [
 
   // ── PMS / reservas ────────────────────────────────────────────────────────────
   { name: 'SMOOBU_API_KEY', tipo: 'api-externa', proposito: 'PMS de pisos turísticos (reservas, mensajes, rates).', verticales: ['sivra', 'ialimp', 'plataforma'], dondeVive: 'bd-hash', nota: 'Fuente única = BD pms_connections.smoobu_api_key; la env es solo respaldo.' },
+  { name: 'SMOOBU_API_SECRET', tipo: 'api-externa', proposito: 'Secreto con el que se FIRMA cada petición a Smoobu (HMAC-SHA256; el header legacy `Api-Key` está deprecado, sunset 25/09/2026).', verticales: ['sivra', 'ialimp', 'plataforma'], dondeVive: 'bd-hash', nota: 'Fuente única = BD pms_connections.smoobu_api_secret; la env es solo respaldo. Va SIEMPRE en pareja con SMOOBU_API_KEY: rotar uno sin el otro deja todas las llamadas en 401.' },
 
   // ── Email saliente ────────────────────────────────────────────────────────────
   { name: 'RESEND_API_KEY', tipo: 'api-externa', proposito: 'Email transaccional/aviso (Resend).', verticales: ['ialimp', 'ia-rest', 'ialimp-landing'], dondeVive: 'vercel-proyecto', proyecto: 'cada proyecto el suyo' },

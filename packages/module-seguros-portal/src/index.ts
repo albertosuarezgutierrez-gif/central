@@ -2,7 +2,7 @@ export { NIVELES, camposVisibles } from './acceso.ts'
 // Qué COSA está asegurada (el coche, el piso). Lee `bien-asegurado.ts` antes de
 // tocarlo: `cosa` y `ubicacion` salen separados porque la dirección de un hogar
 // es un dato de la PERSONA y no la ve un tercero.
-export { describirBien, describirBienConGemela, bienTieneAlgo, BIEN_VACIO } from './bien-asegurado.ts'
+export { describirBien, describirBienConGemela, componerUbicacion, bienTieneAlgo, BIEN_VACIO } from './bien-asegurado.ts'
 export type { BienAsegurado } from './bien-asegurado.ts'
 export type { Nivel, CamposVisibles } from './acceso.ts'
 export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar, debeSustituir } from './procedencia.ts'
@@ -18,6 +18,7 @@ export {
   RAMOS_POLIZA,
   ETIQUETA_RAMO,
   etiquetaRamo,
+  coberturaEspecificaDeRamo,
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
@@ -60,6 +61,30 @@ export {
   declaradaGeneraObligacion,
 } from './obligacion.ts'
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
+export { debeAvisarPush } from './push.ts'
+export {
+  normalizarRecordatorio,
+  siguienteOcurrencia,
+  SUGERENCIAS_RECORDATORIO,
+  TITULO_MAX,
+  REPITE_CADA_MESES_MIN,
+  REPITE_CADA_MESES_MAX,
+} from './recordatorio-libre.ts'
+export type {
+  TipoRecordatorio,
+  SugerenciaRecordatorio,
+  EntradaRecordatorio,
+  RecordatorioNormalizado,
+  ResultadoRecordatorio,
+} from './recordatorio-libre.ts'
+export {
+  PERIODICIDADES_PAGO,
+  DIAS_PREAVISO_RECIBO,
+  esPeriodicidadPagoValida,
+  fechaAccionableRecibo,
+  proximoCobroDeclarado,
+} from './cobro-declarado.ts'
+export type { PeriodicidadPago } from './cobro-declarado.ts'
 export {
   DIAS_LEAD_URGENTE,
   estadoLead,
@@ -77,11 +102,15 @@ export {
   DESCRIPCION_MIN,
   DESCRIPCION_MAX,
   LUGAR_MAX,
+  CAMPO_VEHICULO_MAX,
   ANIOS_MAXIMOS_ATRAS,
   comunicadoACompania,
   parsearFechaHecho,
   plazoComunicacion,
   normalizarParte,
+  bloqueDatosVehiculo,
+  componerDescripcion,
+  ZONAS_VEHICULO,
 } from './parte-siniestro.ts'
 export type {
   ParteEstado,
@@ -89,6 +118,8 @@ export type {
   ParteNormalizado,
   ResultadoParte,
   PlazoComunicacion,
+  DatosVehiculo,
+  ZonaVehiculo,
 } from './parte-siniestro.ts'
 export {
   ALCANCES,
@@ -275,6 +306,8 @@ export {
   estadoHoja,
   seleccionHoja,
   polizasDeLaHoja,
+  polizaEnVigorParaHoja,
+  declaradaEnVigorParaHoja,
   loQueVeQuienEscanea,
 } from './hoja-qr.ts'
 export type { EstadoHoja, SeleccionHoja, ErrorSeleccion } from './hoja-qr.ts'
@@ -297,10 +330,26 @@ export type { Candidato, FichaElegida, PrediccionVinculo } from './vinculo-elegi
 export {
   decidirFichaPropia,
   textoHistorialContactoPropio,
+  PREFIJO_HISTORIAL_CONTACTO_PROPIO,
+  PREFIJO_HISTORIAL_SUGERENCIA,
   CAMPOS_CONTACTO_PROPIO,
+  CAMPOS_DIRECCION_PROPIA,
+  CAMPOS_CANAL_PROPIO,
   CAMPOS_VETADOS_AL_CLIENTE,
+  // «Comprueba tus datos de contacto»: confirmación con TRES estados (nunca ≠
+  // caducada), sobre la pestaña «Mis datos» que ya enseña el dato en claro.
+  DIAS_VIGENCIA_CONFIRMACION_CONTACTO,
+  estadoConfirmacion,
+  confirmacionContactoVigente,
+  textoHistorialConfirmacionContacto,
 } from './contacto-propio.ts'
-export type { FichaPropia, CampoContactoPropio } from './contacto-propio.ts'
+export type {
+  FichaPropia,
+  CampoContactoPropio,
+  CampoDireccionPropia,
+  CampoCanalPropio,
+  EstadoConfirmacionContacto,
+} from './contacto-propio.ts'
 // El botón de sugerencias del portal (08/09/2026). Lee su cabecera: aquí
 // Telegram NO es un aviso, es el ÚNICO registro — y por eso «enviada» es lo
 // único que promete algo, y el texto de la persona se ESCAPA antes de componer.
@@ -313,3 +362,26 @@ export {
   resultadoSugerencia,
 } from './sugerencia.ts'
 export type { ContextoSugerencia, ResultadoSugerencia } from './sugerencia.ts'
+// La «vista de corredor» (08/09/2026): Alberto abre el portal como lo ve un
+// cliente. Lee su cabecera: identidad REAL dedicada + vínculo temporal con
+// `origen = 'corredor'`, que asegura tiene que EXCLUIR al decir «ya entra».
+export {
+  IDENTIDAD_CORREDOR_ID,
+  ORIGEN_VINCULO_CORREDOR,
+  VIGENCIA_ENLACE_CORREDOR_MS,
+  SESION_CORREDOR,
+  SESION_CORREDOR_SEGUNDOS,
+  RUTA_VISTA_CORREDOR,
+  formatoTokenVistaValido,
+  generarTokenVista,
+  hashTokenVista,
+  estadoEnlaceVista,
+  enlaceVistaCorredor,
+} from './vista-corredor.ts'
+export type { EstadoEnlaceVista } from './vista-corredor.ts'
+
+// Sugerir pedir acceso a partir de relaciones YA CONOCIDAS (12/09/2026). Lee
+// su cabecera: sugerir no es conceder, y una relación «Sin vínculo» no se
+// sugiere nunca — misma guarda que ya usa `clientesVisiblesPara()`.
+export { relacionesSugeribles } from './sugerencia-relacion.ts'
+export type { SugerenciaRelacion } from './sugerencia-relacion.ts'

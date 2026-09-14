@@ -95,7 +95,7 @@ export type PolizaVencimiento = {
  * describen por las coberturas contratadas. Se consultan solo para esos, que
  * son pocos — un auto trae 25 coberturas que no dicen nada del vehículo.
  */
-const RAMOS_DESCRITOS_POR_COBERTURAS = ['responsabilidad_civil', 'comercio', 'otros'] as const
+export const RAMOS_DESCRITOS_POR_COBERTURAS = ['responsabilidad_civil', 'comercio', 'otros'] as const
 
 function hoyUtc(): Date {
   const d = new Date()

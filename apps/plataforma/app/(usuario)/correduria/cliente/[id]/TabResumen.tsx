@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ResumenFicha } from '@central/module-seguros'
-import type { IntervinienteFicha, PolizaFicha } from '@/lib/ficha-asegura'
+import { urlAutoNuevo, type IntervinienteFicha, type PolizaFicha } from '@/lib/ficha-asegura'
+import { BtnLink } from '@/components/ui'
 import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
 
 /**
@@ -24,7 +25,17 @@ export default function TabResumen({ resumen, porClase, intervinientes, clienteI
         <PideAccion resumen={resumen} vivas={porClase.viva} clienteId={clienteId} />
       </Tarjeta>
 
-      <Polizas titulo="Pólizas vivas" polizas={porClase.viva} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={intervinientes} />
+      <Polizas
+        titulo="Pólizas vivas"
+        polizas={porClase.viva}
+        vacio="Ninguna póliza activa entra hoy por CIMA."
+        intervinientes={intervinientes}
+        accion={
+          <BtnLink href={urlAutoNuevo(clienteId)} variante="secundario" tam="sm">
+            ➕ Presupuestar auto
+          </BtnLink>
+        }
+      />
 
       {porClase.pendiente_cima.length > 0 && (
         <Polizas

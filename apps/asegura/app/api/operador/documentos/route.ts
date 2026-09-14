@@ -19,7 +19,8 @@ export const maxDuration = 60
  *   POST json      ({ pedir: true, tipo, destino, notas }) → deja constancia de un PEDIDO
  *
  * 🚨 Esta ruta NO gasta cotizaciones y NO lee el documento con IA: eso es
- * `/api/cartera/documentos` (solo auto), que sigue siendo aparte a propósito.
+ * `/api/cartera/documentos` (cualquier ramo, con lectura extendida en
+ * auto/moto y hogar), que sigue siendo aparte a propósito.
  * Cuatro estados en la lista: `sin_configurar` · `error` · `ok`. Un `ok` con
  * `documentos: []` es «se miró y no hay», y solo se emite si la consulta fue bien.
  */

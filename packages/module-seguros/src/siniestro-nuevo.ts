@@ -14,12 +14,19 @@
 // del cliente por casualidad.
 //
 // 🚨 Lo que este aviso NO puede decir, y es la trampa de este dominio: un
-// siniestro que llega por CIMA **ya está abierto en la compañía**. Es lo
+// siniestro que llega por CIMA **ya está comunicado a la compañía**. Es lo
 // CONTRARIO del parte del portal del cliente (`apps/asegura-portal`), donde
 // «enviado» NO es «comunicado» y hay que abrirlo a mano. Confundirlos aquí
 // mandaría a Alberto a comunicar algo que la entidad ya está tramitando, y
-// —peor— sugeriría que el cliente está desprotegido cuando no lo está. Aquí la
-// acción es UNA: **llamar al cliente para hacerle seguimiento.**
+// —peor— sugeriría que el cliente está desprotegido cuando no lo está.
+//
+// 🚨 Y lo que SÍ hay que decir, descubierto el 14/09/2026: «ya está en la
+// compañía» NO es «sigue abierto». El eje del aviso es `entradoEn` (cuándo
+// LLEGÓ a nuestra base), y CIMA manda siniestros en CUALQUIER estado —medido
+// ese día, 11 de 12 «nuevos» ya estaban `cerrado` en el mismo pull—. Un
+// siniestro cerrado no necesita seguimiento: llamar por él es la llamada que
+// sobra. El aviso separa abiertos de cerrados y solo pide llamar por los
+// primeros.
 //
 // Y lo que tampoco sale: tramitador y perito. Son gestión interna (regla de
 // visibilidad del 03/09/2026) y no hacen falta para coger el teléfono. No están
@@ -51,6 +58,14 @@ export interface SiniestroEntrante {
   poliza: string | null
   /** La referencia del siniestro en la compañía, si consta. */
   referencia: string | null
+  /**
+   * `'abierto' | 'en_tramitacion' | 'cerrado' | 'rechazado'`, tal cual lo
+   * guarda `seguros.siniestros`. `null` = una versión de asegura anterior a
+   * esta columna no lo manda — se trata como «sigue abierto» (conservador:
+   * decir «llama» de más cuesta un minuto; decir «ya está resuelto» de un
+   * siniestro que sigue vivo deja a un cliente sin su llamada).
+   */
+  estado: string | null
 }
 
 /**
@@ -166,7 +181,12 @@ function fechaEs(iso: string): string {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : iso
 }
 
-/** Una línea del aviso: quién, con quién, qué póliza, cuándo y con qué referencia. */
+/** `true` si el siniestro ya está resuelto en la compañía y no necesita llamada. */
+function estaCerrado(s: SiniestroEntrante): boolean {
+  return s.estado === 'cerrado' || s.estado === 'rechazado'
+}
+
+/** Una línea del aviso: quién, con quién, qué póliza, cuándo, con qué referencia y su estado. */
 function lineaSiniestro(s: SiniestroEntrante): string {
   const quien = s.cliente ?? 'cliente sin nombre en la ficha'
   const con = s.compania ?? 'compañía no informada'
@@ -175,15 +195,24 @@ function lineaSiniestro(s: SiniestroEntrante): string {
   // se rellena con un hueco mudo ni con un 0.
   const cuando = s.ocurridoEn ? ` · ocurrió el ${fechaEs(s.ocurridoEn)}` : ' · fecha del hecho no informada'
   const ref = s.referencia ? ` · ref. ${s.referencia}` : ''
-  return `• <b>${quien}</b> — ${con}${poliza}${cuando}${ref}`
+  // El estado se dice tal cual, nunca se calla: `null` es «no informado», NO
+  // «abierto» — aunque a efectos de la llamada se trate igual (conservador).
+  const estado = s.estado === 'cerrado' ? ' · ✅ cerrado'
+    : s.estado === 'rechazado' ? ' · 🚫 rechazado'
+    : s.estado === 'en_tramitacion' ? ' · en tramitación'
+    : s.estado === 'abierto' ? ' · abierto'
+    : ' · estado no informado'
+  return `• <b>${quien}</b> — ${con}${poliza}${cuando}${ref}${estado}`
 }
 
 /**
  * El Telegram.
  *
- * 🚨 El texto dice explícitamente que el siniestro YA está abierto en la
- * compañía y que lo que toca es LLAMAR al cliente. No puede insinuar que haya
- * que abrirlo, comunicarlo ni que esté sin comunicar: eso es el parte del
+ * 🚨 El texto YA NO afirma que todos «siguen abiertos»: medido el 14/09/2026,
+ * CIMA manda siniestros de cualquier estado, incluidos ya cerrados. Solo se
+ * pide llamar por los que de verdad lo necesitan; el resto se lista igual
+ * (para que la referencia quede a mano) pero marcado como resuelto. Sigue sin
+ * poder insinuar que haya que abrirlo o comunicarlo — eso es el parte del
  * portal, no esto. Hay cepo en el test.
  */
 export function textoAvisoSiniestros(nuevos: readonly SiniestroEntrante[], restantes = 0): string {
@@ -193,12 +222,21 @@ export function textoAvisoSiniestros(nuevos: readonly SiniestroEntrante[], resta
   const cola = restantes > 0
     ? `\n\nY ${restantes} más esperando: entran en el aviso de mañana, ninguno se pierde.`
     : ''
+  const abiertos = nuevos.filter(s => !estaCerrado(s)).length
+  const cerrados = nuevos.length - abiertos
+  const pieCerrados = cerrados > 0
+    ? `\n\n✅ ${cerrados} de estos ya constan resueltos en la compañía (marcados abajo) — no hace falta llamar por esos.`
+    : ''
+  const pieLlamada = abiertos > 0
+    ? '\n\n📞 Para los que siguen <b>abiertos</b>, toca llamar al cliente y hacerle seguimiento.'
+    : '\n\n✅ Todos entraron ya resueltos: no hay ninguna llamada pendiente por este aviso.'
   return (
     `${titulo}\n` +
-    'Han entrado por CIMA, así que <b>ya están abiertos en la compañía</b>: el cliente dio el parte.\n\n' +
+    'Han entrado por CIMA: la compañía ya tiene el parte del cliente.\n\n' +
     nuevos.map(lineaSiniestro).join('\n') +
+    pieCerrados +
     cola +
-    '\n\n📞 Lo que toca es <b>llamar al cliente</b> para hacerle seguimiento y preguntar cómo va.'
+    pieLlamada
   )
 }
 

@@ -22,6 +22,7 @@
 //  11. Cada curación exitosa → ia_training_log (fuente: auto_healer, calidad: 4)
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { cabecerasServicio, claveSecreta } from "../_shared/clave-supabase.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-  const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const SERVICE_KEY  = claveSecreta()
   const supabase     = createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'iarest' } })
 
   const resultados: Record<string, unknown> = {}
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
 
     await fetch(`${SUPABASE_URL}/functions/v1/notify-error`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
+      headers: { ...cabecerasServicio(), 'Content-Type': 'application/json' },
       body: JSON.stringify(inc),
     })
   }
@@ -106,7 +107,7 @@ Deno.serve(async (req) => {
     // 4. Notificar resolución a Telegram (verde)
     await fetch(`${SUPABASE_URL}/functions/v1/notify-error`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
+      headers: { ...cabecerasServicio(), 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...params,
         tipo: params.tipo + '_resuelto',

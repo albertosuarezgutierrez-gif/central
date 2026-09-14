@@ -237,6 +237,75 @@ export function hogarDisponible(lineas: Opcion[]): DisponibilidadHogar {
   return { estado: 'ausente', ramos: lineas.map((l) => l.nombre) }
 }
 
+// ─── Compañías abiertas para NUESTRA organización (gratis) ──────────────────
+
+/**
+ * `GET /insurance-vendors`: las compañías que Avant2 tiene dadas de alta para
+ * esta organización. Es la respuesta a «¿ya nos han incluido a Fidelidade?»
+ * sin email y sin gastar. ⚠️ El catálogo comercial (`avant2.pdf`) NO vale
+ * para esto: dice lo que Integra soporta, no lo que tenemos abierto.
+ */
+export async function vendoresDeSeguro(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/insurance-vendors'))
+}
+
+/**
+ * `GET /insurance-lines/{id}/products`: los productos (compañía + `config`)
+ * que tarifican en un ramo para esta organización. Devuelve el JSON crudo
+ * además de la lista normalizada porque la forma del producto no está
+ * documentada (la compañía puede venir anidada) y la búsqueda por nombre
+ * necesita mirar dentro.
+ */
+export async function productosDeLinea(
+  config: ConfigCodeoscopic,
+  lineaId: string,
+): Promise<{ productos: Opcion[]; crudo: unknown }> {
+  const crudo = await catalogo(config, `/insurance-lines/${encodeURIComponent(lineaId)}/products`)
+  return { productos: normalizarOpciones(crudo), crudo }
+}
+
+/**
+ * ¿Aparece una compañía (por nombre, sin tildes ni mayúsculas) en cualquier
+ * cadena de un JSON? Recorre objetos y arrays; NO mira claves, solo valores.
+ * Sirve para buscar «fidelidade» en un producto cuya compañía viene anidada
+ * (`vendor.name`, `company.description`…) sin adivinar la forma.
+ */
+export function mencionaCompania(raw: unknown, compania: string): boolean {
+  const buscada = normalizarTexto(compania)
+  if (buscada === '') return false
+  const visitar = (v: unknown, prof: number): boolean => {
+    if (prof > 8) return false
+    if (typeof v === 'string') return normalizarTexto(v).includes(buscada)
+    if (Array.isArray(v)) return v.some((x) => visitar(x, prof + 1))
+    if (typeof v === 'object' && v !== null) {
+      return Object.values(v as Record<string, unknown>).some((x) => visitar(x, prof + 1))
+    }
+    return false
+  }
+  return visitar(raw, 0)
+}
+
+/**
+ * ¿Está una compañía entre las abiertas? TRES estados, por la misma razón que
+ * `hogarDisponible`: «no está en la lista» y «no se ha podido mirar» no son
+ * lo mismo, y confundirlos es afirmar una ausencia sin haberla medido.
+ */
+export type DisponibilidadCompania =
+  | { estado: 'presente'; id: string; nombre: string }
+  | { estado: 'ausente'; companias: string[] }
+  | { estado: 'desconocido' }
+
+export function companiaDisponible(vendores: Opcion[], compania: string): DisponibilidadCompania {
+  if (vendores.length === 0) return { estado: 'desconocido' }
+  const buscada = normalizarTexto(compania)
+  if (buscada === '') return { estado: 'desconocido' }
+  const v = vendores.find(
+    (x) => normalizarTexto(x.nombre).includes(buscada) || normalizarTexto(x.id).includes(buscada),
+  )
+  if (v) return { estado: 'presente', id: v.id, nombre: v.nombre }
+  return { estado: 'ausente', companias: vendores.map((x) => x.nombre) }
+}
+
 // ─── Matrícula → fecha de matriculación (gratis) ─────────────────────────────
 
 /**

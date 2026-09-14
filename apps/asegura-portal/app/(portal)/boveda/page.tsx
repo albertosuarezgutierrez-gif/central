@@ -9,18 +9,16 @@ import {
 import { companiasConCanal } from '@/lib/canales-compania'
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
-import {
-  obligacionesDeIdentidad,
-  polizasSinFechaDeVencimiento,
-  sincronizarObligacionesDeIdentidad,
-} from '@/lib/obligaciones'
+import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
+import { leerMisDatos } from '@/lib/mis-datos'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
+import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
-import Calendario from './Calendario'
 import { FilaDeclarada } from './FilaDeclarada'
+import { FiltroVigencia } from './FiltroVigencia'
 import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
 import { HistorialSiniestros, RAMO, RecibosDePoliza } from './PolizaVista'
@@ -33,12 +31,14 @@ import {
   saludoPorHora,
   vistaDeBoveda,
   type GrupoCartera,
+  type VistaBoveda,
 } from '@central/module-seguros-portal'
 
+import { AvisoContacto } from './AvisoContacto'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
+import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
-import { MiDireccion } from './MiDireccion'
-import { Sugerencia } from './Sugerencia'
+import { MisDatos } from './MisDatos'
 import { TusDatos } from './TusDatos'
 
 export const dynamic = 'force-dynamic'
@@ -49,6 +49,18 @@ export const dynamic = 'force-dynamic'
  *  `EditarPoliza` y `SubirPoliza` (alta a mano) son componentes de cliente. */
 const RAMOS_OPCIONES = Object.entries(RAMO).map(([valor, etiqueta]) => ({ valor, etiqueta }))
 
+/** La palabra en cursiva del h1, una por pestaña. Mismo criterio que
+ *  `pestanasPortal()` (que da el texto de la nav), pero en singular con «Mis»
+ *  delante en vez del texto exacto de la pestaña. */
+const TITULO_VISTA: Record<VistaBoveda, string> = {
+  seguros: 'seguros',
+  hoja: 'QR',
+  recibos: 'recibos',
+  siniestro: 'siniestros',
+  recordatorios: 'recordatorios',
+  datos: 'datos',
+}
+
 export default async function Boveda({
   searchParams,
 }: {
@@ -57,7 +69,13 @@ export default async function Boveda({
   // raro aquí solo elige otra pestaña, nunca otros datos.
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const vista = vistaDeBoveda((await searchParams).vista)
+  const parametros = await searchParams
+  const vista = vistaDeBoveda(parametros.vista)
+  // El botón «Dar parte de esta póliza» de la ficha llega con esto en la URL.
+  // Es solo una SUGERENCIA de selección dentro de `polizasParte`, que ya está
+  // acotada a esta identidad — nunca una clave de consulta: `ParteSiniestro`
+  // la ignora si no está en esa lista.
+  const polizaInicial = typeof parametros.poliza === 'string' ? parametros.poliza : null
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
 
@@ -68,7 +86,14 @@ export default async function Boveda({
   // La cuarta es de otra naturaleza y por eso no lleva identidad: `companias_dgs`
   // es un catálogo público (códigos DGS y teléfonos que publican las propias
   // compañías), no la cartera de nadie. Ver `lib/canales-compania.ts`.
-  const [cartera, declaradas, partes, companias, hojas, elegibles] = await Promise.all([
+  //
+  // La séptima tampoco lee BD: es el puente a asegura (`lib/mis-datos.ts`) que
+  // devuelve el contacto ya descifrado y si la confirmación está vigente. Va
+  // en el mismo `Promise.all` porque tiene un tope de 8 s y en serie se lo
+  // cargaría a la página entera; se lee UNA vez y la usan tanto el aviso
+  // automático de «Mis seguros» (`AvisoContacto`) como la pestaña «Mis datos»
+  // — el portal no calcula la vigencia (ver la cabecera de ese módulo).
+  const [cartera, declaradas, partes, companias, hojas, elegibles, contacto] = await Promise.all([
     carteraDeIdentidad(identidad.id),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id },
@@ -79,13 +104,21 @@ export default async function Boveda({
     companiasConCanal(),
     hojasDeIdentidad(identidad.id),
     polizasElegibles(identidad.id),
+    leerMisDatos(identidad.id),
   ])
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
-  // vuelve a leer) y se releen después: el `upsert` es idempotente, así que
-  // recargar la bóveda no duplica nada.
+  // vuelve a leer). Ya no se pintan aquí (el calendario se quitó de la bóveda
+  // el 09/09/2026: no aportaba nada que la ficha de cada póliza no dijera ya),
+  // pero se siguen sincronizando: es lo que lee la campana de avisos
+  // (`/api/avisos`) para el chip «puedes actuar hasta…».
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
-  const obligaciones = await obligacionesDeIdentidad(identidad.id)
+
+  // Los recordatorios PROPIOS solo se leen para la pestaña que los pinta —
+  // misma regla de rendimiento que el resto de la página (el servidor manda
+  // solo lo que se pide). El array vacío en las demás vistas no se enseña en
+  // ningún sitio, así que no hace falta que sea correcto, solo que exista.
+  const recordatorios = vista === 'recordatorios' ? await recordatoriosDeIdentidad(identidad.id) : []
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo ASegura'
@@ -132,10 +165,16 @@ export default async function Boveda({
       // correcto: una coincidencia aproximada acertaría casi siempre y alguna
       // vez daría el teléfono de urgencias de OTRA compañía.
       canal: canalDeCompania(p.compania, companias),
+      ramo: p.ramo,
+      matriculaPropia: p.matricula,
       etiqueta: [
         p.compania ?? 'Compañía sin identificar',
         p.ramo ? RAMO[p.ramo] ?? p.ramo : null,
-        p.numeroPoliza ? `nº ${p.numeroPoliza}` : null,
+        // La matrícula (si es auto) identifica mejor que el nº de póliza, que
+        // casi nadie se sabe de memoria. Para las declaradas no hay una
+        // dirección propia que leer aquí (vive, si acaso, dentro de
+        // `datosRamo`), así que el nº de póliza sigue de último recurso.
+        p.matricula ?? (p.numeroPoliza ? `nº ${p.numeroPoliza}` : null),
         // Se dice de dónde sale para que no parezca otra póliza de la
         // correduría: esta la aportó la propia persona y puede que nosotros no
         // la tengamos contratada.
@@ -160,7 +199,10 @@ export default async function Boveda({
   // vuelve a pedirlo — y aquí lo que corre por debajo es un plazo legal. El
   // `?? []` solo cubre el «no hay sesión», que en esta página es inalcanzable:
   // más arriba ya se redirigió a `/` si no la había.
-  const supresiones = ((await supresionesDelUsuario()) ?? []).map((s) => ({
+  //
+  // Solo se leen en la vista «Mis datos» (09/09/2026), que es donde se pintan:
+  // leerlas para quien entra a mirar el coche es una consulta que no se usa.
+  const supresiones = vista !== 'datos' ? [] : ((await supresionesDelUsuario()) ?? []).map((s) => ({
     id: s.id,
     recibidaEn: s.recibidaEn.toISOString(),
     estado: s.estado,
@@ -226,13 +268,20 @@ export default async function Boveda({
       <p className="saludo">
         {pila ? `${saludo}, ${pila}` : saludo} <span aria-hidden="true">👋</span>
       </p>
-      <h1>
-        Mis <em>seguros</em>
+      {/* El h1 dice en qué pestaña estás. Antes decía siempre «Mis seguros»,
+          también dentro de «Mis datos»: el titular contradecía a la nav justo
+          debajo (09/09/2026, aviso de Alberto). */}
+      <h1 id="titulo-vista">
+        Mis <em>{TITULO_VISTA[vista]}</em>
       </h1>
 
       {vista === 'seguros' && (
         <>
-          <Calendario obligaciones={obligaciones} sinFecha={polizasSinFechaDeVencimiento(cartera)} />
+          {/* Es el aviso más urgente porque no lo genera ninguna póliza, lo
+              genera que nadie haya vuelto a mirar la cartera desde el volcado.
+              Reutiliza la MISMA lectura de arriba (`contacto`): sin ella, cada
+              visita a «Mis seguros» pagaría una segunda llamada al puente. */}
+          <AvisoContacto lectura={contacto} />
 
       {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
           su portal: «mis seguros y mis pólizas es lo mismo… que venga de CIMA,
@@ -244,13 +293,16 @@ export default async function Boveda({
           Por eso el título ya NO dice «en {correduria}»: en esta lista hay
           ahora pólizas que la correduría no lleva. Lo que dice de dónde sale
           cada una es el cartel de su FILA, que va con ella cuando se hace
-          scroll — un encabezado de sección no. */}
-      <section className="seccion" aria-labelledby="cartera-titulo">
-        {/* El rótulo sobre el titular, como en `grupoasegura.es`. Dice de dónde
-            sale la lista, que es la pregunta que el título («Tus seguros») ya no
-            responde desde que conviven las de la correduría y las añadidas. */}
-        <p className="antetitulo">Tu cartera</p>
-        <h2 id="cartera-titulo">Tus seguros</h2>
+          scroll — un encabezado de sección no.
+
+          🚨 Y la sección NO lleva titular propio (12/09/2026). Tenía «Tu
+          cartera / Tus seguros» justo debajo del h1 «Mis seguros» y de la
+          pestaña activa «Mis seguros»: tres veces lo mismo en la primera
+          pantalla del móvil (Alberto: «dos veces mis seguros»). El h1 es el
+          nombre de la sección, y por eso `aria-labelledby` apunta a él. Los
+          demás cajones (sociedades, autorizadas) sí conservan el suyo: ahí el
+          título dice algo que el h1 no dice. */}
+      <section className="seccion" aria-labelledby="titulo-vista">
         {!cartera.vinculada ? (
           cartera.vinculo === 'ambiguo' ? (
             // 🚨 A este NO se le puede decir que no le hemos encontrado nada: sí
@@ -338,30 +390,38 @@ export default async function Boveda({
         </section>
       ))}
 
-      {/* El derecho de supresión (art. 17). Va aquí, dentro de la vista que la
-          persona abre por defecto y con el nombre que la política de privacidad
-          le da («Mis seguros → Tus datos»), y NO como una pestaña quinta: la
-          barra son cuatro por decisión de diseño. Y va en la pantalla, no solo
-          enlazado desde un texto legal: un derecho que solo se ejerce
-          escribiendo un correo es un derecho con peaje. */}
-      {/* La hoja para imprimir va DESPUÉS de la lista y antes de «Tus datos»:
-          se crea a partir de lo que se acaba de mirar, así que tiene sentido
-          justo debajo — y no es una quinta pestaña, que es lo que Alberto acaba
-          de quitar de la barra. */}
-      <section className="seccion" aria-labelledby="hojas-titulo">
-        <p className="antetitulo">Para llevar encima</p>
-        <h2 id="hojas-titulo">Tu hoja para imprimir</h2>
-        <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
-      </section>
+        </>
+      )}
 
-      {/* Va ANTES de «Tus datos» (la supresión) a propósito: corregir una calle
-          es lo que viene a hacer la gente; pedir el borrado de sus datos, no. */}
-      <MiDireccion />
+      {/* ── Mi QR (09/09/2026) ─────────────────────────────────────────────
+          Vivía embebida al final de «Mis seguros»: se crea a partir de la
+          cartera, pero es una pieza para llevar encima (la nevera, la
+          guantera), no una fila más de la lista de pólizas — y ahí abajo solo
+          la encontraba quien bajara del todo. Pasa a su propia pestaña por la
+          misma razón que ya sacó «Mis datos» de ese mismo sitio. */}
+      {vista === 'hoja' && (
+        <section className="seccion" aria-labelledby="hojas-titulo">
+          <p className="antetitulo">Para llevar encima</p>
+          <h2 id="hojas-titulo">Tu hoja para imprimir</h2>
+          <HojasQr hojas={hojas} cartera={elegibles.cartera} declaradas={elegibles.declaradas} />
+        </section>
+      )}
 
-      <TusDatos inicial={supresiones} />
+      {/* ── Mis datos (09/09/2026) ─────────────────────────────────────────
+          Alberto: «añadiría pestaña mis datos, donde el cliente puede ver sus
+          datos de contacto (tlf, mail y dirección) pudiendo modificarlos». Lo
+          que hasta hoy colgaba al final de «Mis seguros» —la dirección de
+          contacto y el derecho de supresión— vive aquí, con su pestaña. Y la
+          sugerencia («¿Echas algo de menos?») subió a la barra de la cabecera.
 
-      {/* La última, porque no es de sus seguros: es sobre la pantalla. */}
-      <Sugerencia />
+          La lectura de la ficha va por el puente de asegura, que es quien
+          descifra: esta app sigue sin clave de PII. Si no se puede leer, la
+          pantalla lo DICE (ver `MisDatos`), no deja un hueco. Reutiliza la
+          MISMA `contacto` leída arriba, junto al aviso automático. */}
+      {vista === 'datos' && (
+        <>
+          <MisDatos lectura={contacto} />
+          <TusDatos inicial={supresiones} />
         </>
       )}
 
@@ -405,9 +465,11 @@ export default async function Boveda({
             bloque={(p) => <HistorialSiniestros p={p} />}
             vacio="No nos consta ningún siniestro en tus seguros. No significa que no hayas tenido ninguno: nos los informa tu compañía. Si acabas de tener uno, cuéntanoslo aquí abajo."
           />
-          <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+          <ParteSiniestro polizas={polizasParte} partes={partesEnviados} polizaInicial={polizaInicial} />
         </>
       )}
+
+      {vista === 'recordatorios' && <Recordatorios recordatorios={recordatorios} polizas={polizasParte} />}
 
     </>
   )
@@ -464,11 +526,17 @@ function Titular({
           lo fuera. Lo que sí necesita quien mira ahí es la fila, que ya lleva su
           chip de póliza ajena. */}
       {grupo !== 'autorizadas' && <ResumenTitular polizas={titular.polizas} hoy={hoy} />}
-      <ul className="polizas">
-        {titular.polizas.map((p) => (
-          <FilaPoliza key={p.id} p={p} deOtro={grupo === 'autorizadas' ? titular.nombre : null} />
-        ))}
-      </ul>
+      {/* Por defecto solo las EN VIGOR, con el filtro y el contador de las
+          escondidas por titular (09/09/2026; Alberto: «ocultar las canceladas
+          porque da confusión… un filtro por cada panel»). `pendiente` (sin
+          fecha, no se sabe) se enseña: lo que no se sabe no se esconde. */}
+      <FiltroVigencia
+        filas={titular.polizas.map((p) => ({
+          key: p.id,
+          enVigor: p.vigencia !== 'no_vigente',
+          nodo: <FilaPoliza key={p.id} p={p} deOtro={grupo === 'autorizadas' ? titular.nombre : null} />,
+        }))}
+      />
     </>
   )
 }
@@ -488,10 +556,17 @@ function opcionCartera(p: PolizaPortal, companias: readonly FilaCompania[], titu
     // servidor: el momento en el que alguien abre esto es justo el peor para
     // esperar a una petición.
     canal: canalDeCompania(p.compania, companias),
+    ramo: p.ramo,
+    matriculaPropia: p.bien.matricula,
     etiqueta: [
       p.compania,
       RAMO[p.ramo] ?? p.ramo,
-      p.numeroPoliza ? `nº ${p.numeroPoliza}` : null,
+      // Lo que identifica la póliza para QUIEN la elige, no para nosotros:
+      // casi nadie se sabe su número de póliza de memoria, pero sí su
+      // matrícula o su dirección — el mismo `cosa ?? ubicacion` que ya usa
+      // `FilaPoliza.tsx` en la lista. El nº de póliza queda de último
+      // recurso, solo si no conocemos ni una cosa ni la otra.
+      p.bien.cosa ?? p.bien.ubicacion ?? (p.numeroPoliza ? `nº ${p.numeroPoliza}` : null),
       titular ? `de ${titular}` : null,
     ]
       .filter(Boolean)

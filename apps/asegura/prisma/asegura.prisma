@@ -26,6 +26,7 @@ enum TipoSeguro {
   responsabilidad_civil
   comercio
   comunidades
+  accidentes
   otros
 
   @@map("tipo_seguro")
@@ -270,6 +271,9 @@ model Cliente {
   ciudadFiscal        String?            @map("ciudad_fiscal") @db.VarChar(100)
   provinciaFiscal     String?            @map("provincia_fiscal") @db.VarChar(100)
   mergedIntoClienteId String?            @map("merged_into_cliente_id") @db.Uuid // lápida de fusión
+  /// NULL = el cliente nunca ha confirmado sus datos de contacto desde el portal
+  /// (todo el volcado nace así). Se sella al confirmar «siguen igual» o al corregir.
+  contactoConfirmadoAt DateTime?         @map("contacto_confirmado_at") @db.Timestamptz(6)
 
   correduria     Correduria            @relation(fields: [correduriaId], references: [id])
   mergedInto     Cliente?              @relation("FusionCliente", fields: [mergedIntoClienteId], references: [id])
@@ -561,16 +565,57 @@ model Liquidacion {
 // `nombreCima` NULL = no se ha visto ninguna póliza de CIMA de esa compañía: no se
 // inventa. SQL en prisma/sql/2026-09-02_seguros_companias_dgs.sql.
 model CompaniaDgs {
-  codigoDgs   String   @id @map("codigo_dgs") @db.VarChar(16)
-  nombreComun String   @map("nombre_comun") @db.VarChar(255)
-  nombreCima  String?  @map("nombre_cima") @db.VarChar(255)
-  enCima      Boolean  @default(false) @map("en_cima")
-  activa      Boolean  @default(true)
-  notas       String?
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  codigoDgs        String    @id @map("codigo_dgs") @db.VarChar(16)
+  nombreComun      String    @map("nombre_comun") @db.VarChar(255)
+  nombreCima       String?   @map("nombre_cima") @db.VarChar(255)
+  enCima           Boolean   @default(false) @map("en_cima")
+  activa           Boolean   @default(true)
+  notas            String?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  // Contacto humano de la compañía (13/09/2026, minado de Gmail — solo metadatos
+  // de negocio, nunca credenciales). `contactoTelefono` es el DIRECTO de la
+  // persona; `telefonoSiniestros`/`telefonoAsistencia` (ya existían) son líneas
+  // de atención al cliente, cosa distinta.
+  telefonoSiniestros    String?   @map("telefono_siniestros")
+  telefonoAsistencia    String?   @map("telefono_asistencia")
+  telefonoFuente        String?   @map("telefono_fuente")
+  telefonoVerificadoEn  DateTime? @map("telefono_verificado_en") @db.Timestamptz(6)
+  whatsappSiniestros    String?   @map("whatsapp_siniestros")
+  horarioSiniestros     String?   @map("horario_siniestros")
+  claveMediador     String?   @map("clave_mediador")
+  contactos         CompaniaContacto[]
 
   @@map("companias_dgs")
+}
+
+enum AreaContacto {
+  comercial
+  siniestros
+  administracion
+  tecnico
+  general
+
+  @@map("area_contacto")
+}
+
+model CompaniaContacto {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companiaCodigoDgs   String        @map("compania_codigo_dgs") @db.VarChar(16)
+  compania            CompaniaDgs   @relation(fields: [companiaCodigoDgs], references: [codigoDgs])
+  nombre              String
+  cargo               String?
+  area                AreaContacto?
+  email               String?
+  telefono            String?
+  notas               String?
+  orden               Int           @default(0)
+  activo              Boolean       @default(true)
+  ultimoContactoEn    DateTime?     @map("ultimo_contacto_en") @db.Timestamptz(6)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("compania_contactos")
 }
 
 model Documento {
@@ -928,4 +973,57 @@ model PortalSupresion {
 
   @@index([estado, recibidaEn])
   @@map("portal_supresion")
+}
+
+/// El enlace de un solo uso con el que el corredor abre el portal como lo ve un
+/// cliente (`seguros.portal_vista_corredor`). Aquí se CREA (puerto
+/// `/api/operador/cliente/portal/vista`); el portal lo consume.
+model PortalVistaCorredor {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  clienteId    String    @map("cliente_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  actor        String
+  creadoEn     DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  usadoEn      DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@index([clienteId, creadoEn])
+  @@map("portal_vista_corredor")
+}
+
+enum CanalRecaptacion {
+  whatsapp
+  email
+
+  @@map("canal_recaptacion")
+}
+
+enum EstadoEnvioRecaptacion {
+  enviado
+  enlace_abierto
+  abierto
+  pinchado
+
+  @@map("estado_envio_recaptacion")
+}
+
+/// Registro de cada intento de recaptación (WhatsApp manual o email por Resend)
+/// sobre un lead del volcado sin vencimiento. No hay tabla de "cola calculada":
+/// se deriva en cada GET (patrón `polizasSinRecibo()` de lib/cartera-impagados.ts).
+/// Esta tabla es solo el HISTORIAL de contactos, que alimenta el cooldown y el
+/// contador semanal. Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md.
+model RecaptacionEnvio {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String                 @map("correduria_id") @db.Uuid
+  clienteId        String                 @map("cliente_id") @db.Uuid
+  polizaId         String                 @map("poliza_id") @db.Uuid
+  canal            CanalRecaptacion
+  estado           EstadoEnvioRecaptacion
+  mensaje          String
+  resendMessageId  String?                @map("resend_message_id")
+  creadoPor        String                 @map("creado_por")
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime               @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  @@map("recaptacion_envios")
 }

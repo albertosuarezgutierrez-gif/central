@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { createHmac } from 'node:crypto'
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 // ─── Selector de secretos (robusto: live + test a la vez) ────────────────
 // Antes dependía de STRIPE_MODE: si el flag no estaba en "live", validaba los
@@ -40,7 +41,7 @@ Deno.serve(async (req: Request) => {
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    claveSecreta(),
     { db: { schema: 'iarest' } },
   )
 

@@ -14,3 +14,7 @@ tsconfig.tsbuildinfo
 # Worktrees efímeros de subagentes (Claude Code)
 .claude/worktrees/
 .superpowers/
+
+# Cache de bytecode Python (generado, p.ej. al probar hooks .py)
+__pycache__/
+*.pyc

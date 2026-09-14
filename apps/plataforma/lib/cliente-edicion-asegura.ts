@@ -315,3 +315,13 @@ export function restaurarClienteAsegura(body: Record<string, unknown>): Promise<
 export function historialClienteAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/cliente/historial', { method: 'POST', body: JSON.stringify(body) })
 }
+
+/**
+ * `POST /api/operador/cliente/dni` — el DNI COMPLETO, sin enmascarar.
+ *
+ * Solo se llama tras verificar el código de un solo uso (ver `lib/correduria/dni-otp.ts`);
+ * este helper no sabe nada de esa comprobación, confía en que la ruta ya la hizo.
+ */
+export function revelarDniAsegura(body: { id: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/dni', { method: 'POST', body: JSON.stringify(body) })
+}

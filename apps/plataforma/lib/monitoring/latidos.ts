@@ -394,6 +394,39 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     nota: 'El cursor de correo no avanza. Revisa el cron correo-triaje en Vercel (¿IMAP/auth caídos?).',
   },
   {
+    id: 'smoobu_sync',
+    vigiladoDesde: '2026-09-12',
+    etiqueta: '🔄 Sincronización Smoobu de sivra (reservas/cancelaciones, diario 05:00·05:15)',
+    // Diario → 30 h, el umbral estándar de los diarios: tolera un día saltado y caza dos.
+    maxHoras: 30,
+    nota:
+      '🚨 Este vigía nació de una avería que YA existía sin él: el 401 de Smoobu de septiembre de ' +
+      '2026 (Api-Key legacy deprecada, migración a HMAC) dejó este sync roto varios días — y aunque ' +
+      'escribe su latido desde el 31/07/2026 (landmine de esa fecha), NADIE lo vigilaba: no estaba en ' +
+      'este registro. `incomes` alimenta la intranet de limpieza de Vanesa (/invitado/limpieza), el ' +
+      'calendario, el pricing y el agente que responde a los huéspedes — un sync mudo los deja a TODOS ' +
+      'trabajando con la reserva de ayer sin que nada lo diga. Lee el `detalle`: «inicio de pasada» ' +
+      'sin pasar a ok=true es que arrancó y murió a medias (mira si Smoobu devuelve 401/403 en los ' +
+      'logs: la clave/secreto de `pms_connections` puede estar mal o revocada). ' +
+      'Huella: agente_latidos.smoobu_sync.',
+  },
+  {
+    id: 'sivra_mensajes_huesped',
+    vigiladoDesde: '2026-09-12',
+    etiqueta: '💬 Agente que responde a los huéspedes (Smoobu, cron cada 3 min)',
+    // Cada 3 min → 2 h son 40 pasadas perdidas: no es un tropiezo, está muda.
+    maxHoras: 2,
+    nota:
+      '🚨 Igual que `smoobu_sync`: este cron usa las MISMAS credenciales de `pms_connections` y no ' +
+      'tenía NINGÚN vigilante hasta el incidente del 401 de septiembre de 2026 — durante esos días un ' +
+      'huésped que preguntaba algo por el chat de Booking/Airbnb no recibía respuesta y nada lo avisaba. ' +
+      'Lee el `detalle`: «Missing SMOOBU_API_KEY» o un error con «401/403» es la credencial de Smoobu; ' +
+      '«error:» con otro texto es el propio agente (IA, contexto, guía del piso). ' +
+      '⚠️ «sin TELEGRAM_BOT_TOKEN» significa que el agente está DELIBERADAMENTE en espera (no hay ' +
+      'forma de proponer por Telegram): revisa si es esperado antes de tratarlo como avería. ' +
+      'Huella: agente_latidos.sivra_mensajes_huesped.',
+  },
+  {
     id: 'ialimp_pms',
     vigiladoDesde: '2026-07-31',
     etiqueta: '🧹 Sincronización del PMS de ialimp (Smoobu/iCal, cron cada 10 min)',

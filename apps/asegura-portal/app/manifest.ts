@@ -17,7 +17,7 @@ import { MEDIADOR } from '@central/module-seguros'
  * registra `app/RegistrarSW.tsx`). Y en iOS no hay oferta ninguna: Safari no
  * implementa `beforeinstallprompt` y el usuario tiene que ir a Compartir →
  * Añadir a pantalla de inicio, así que la UI se lo explica a mano
- * (`app/(portal)/InstalarApp.tsx`). Lo vigila `lib/pwa.test.ts`.
+ * (`app/Campana.tsx`, entrada «Instalar»). Lo vigila `lib/pwa.test.ts`.
  *
  * ⚠️ Los colores tienen que ser HEX: de la paleta de marca, los neutros van en
  * `oklch()` y el manifiesto lo consumen navegadores y lanzadores de Android que

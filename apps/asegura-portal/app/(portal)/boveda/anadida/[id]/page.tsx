@@ -126,6 +126,7 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
             numeroPoliza: p.numeroPoliza,
             ramo: p.ramo,
             primaAnual: p.primaAnual == null ? null : Number(p.primaAnual),
+            periodicidadPago: p.periodicidadPago,
             referenciaCatastral: p.referenciaCatastral ?? null,
             // Un jsonb puede traer cualquier cosa; si no es un objeto plano se
             // degrada a `null` en vez de reventar el render. Un origen ilegible

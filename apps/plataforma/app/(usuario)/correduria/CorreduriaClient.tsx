@@ -9,8 +9,10 @@ import CuadreComisiones from './CuadreComisiones'
 import BuscadorCartera from './BuscadorCartera'
 import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
+import Actividad from './Actividad'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
+import Companias from './Companias'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
 import Bloque from './Bloque'
@@ -18,7 +20,9 @@ import Redes from './Redes'
 import Blog from './Blog'
 import LeadsPortal from './LeadsPortal'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
+import DeclaradasVencer from './DeclaradasVencer'
 import ListaCartera from './ListaCartera'
+import Recaptacion from './Recaptacion'
 import Secciones, { type ContadoresSeccion } from './Secciones'
 import { MOTIVOS, type MotivoError } from './estado-puerto'
 import {
@@ -142,7 +146,9 @@ export default function CorreduriaClient() {
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
+  const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
+  const [nDeclaradas, setNDeclaradas] = useState<number | null | undefined>(undefined)
 
   // La sección inicial viaja en la URL (`?s=`), y los cambios la reescriben con
   // `history.replaceState`: un enlace sigue llevando donde debe, pero cambiar
@@ -200,16 +206,16 @@ export default function CorreduriaClient() {
 
   const contadores: ContadoresSeccion = {
     hoy: {
-      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads]),
+      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nDeclaradas]),
       tono: 'malo',
-      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso y pólizas de otras compañías cuya ventana se cierra',
+      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra y declaradas de otra compañía a punto de renovar',
     },
     clientes: {
-      // Aquí el número NO es trabajo pendiente, es cuántos clientes cumplen el
-      // filtro. Por eso va en tono neutro: pintarlo de alarma como los demás
-      // haría que una cartera sana pareciera una cola de trabajo.
-      contador: agregarContadores([nClientes]),
-      title: 'Clientes que cumplen el filtro actual',
+      // El listado NO es trabajo pendiente (cuántos clientes cumplen el
+      // filtro), pero la recaptación SÍ lo es (leads a los que contactar) —
+      // igual que «Hoy» suma varias colas de una sección en un solo número.
+      contador: agregarContadores([nClientes, nRecaptacion]),
+      title: 'Clientes que cumplen el filtro actual y leads pendientes de recaptar',
     },
     comisiones: {
       contador: agregarContadores([nCuadre]),
@@ -291,6 +297,11 @@ export default function CorreduriaClient() {
             teléfono en la mano. */}
         <Retencion onContador={setNRetencion} />
 
+        {/* Pólizas que el cliente declaró de OTRA compañía y vencen pronto:
+            la venta cruzada, con el teléfono en la mano en vez de un precio
+            automático que la muestra no soporta (idea F del banco de ideas). */}
+        <DeclaradasVencer onContador={setNDeclaradas} />
+
         <Bloque
           titulo="Renovaciones en plazo de preaviso"
           Icono={CalendarClock}
@@ -307,12 +318,34 @@ export default function CorreduriaClient() {
         <LeadsPortal onContador={setNLeads} />
       </div>
 
+      {/* ══ ACTIVIDAD ════════════════════════════════════════════════════════
+          Qué hacen los clientes, incluida su entrada en la intranet. Es la única
+          sección que mira al PORTAL en conjunto: el resto de la pantalla mira la
+          cartera, y lo que hace un cliente por su cuenta solo se veía entrando
+          en su ficha de una en una.
+
+          🚨 No reporta contador a la pestaña, a propósito: esto NO es una cola
+          de trabajo. Lo que sí lo es —partes, supresiones, leads— ya tiene su
+          badge en «Hoy», y contarlo dos veces haría que atender un parte no
+          bajara el número de aquí, que es como se deja de creer un badge. Lo
+          nuevo desde la última visita se marca dentro, con un punto. */}
+      <div role="tabpanel" aria-label="Actividad" className="corr-panel" style={panel('actividad')}>
+        <Actividad />
+      </div>
+
       {/* ══ CLIENTES ═════════════════════════════════════════════════════════
           El listado FILTRABLE de la cartera: filtrar por ramo, compañía,
           provincia, vencimiento o hueco de venta cruzada, y sacar la lista.
           Es la herramienta de trabajo; «Cartera» es la foto. */}
       <div role="tabpanel" aria-label="Clientes" className="corr-panel" style={panel('clientes')}>
         <ListaCartera onContador={setNClientes} />
+
+        {/* Leads del volcado sin vencimiento, con contacto, que hoy no son
+            cliente vivo por CIMA: recaptarlos es venta, no mantenimiento de
+            cartera, pero comparte pestaña con el listado de clientes porque
+            ambos parten de la misma base y compiten por el mismo hueco de
+            atención comercial. */}
+        <Recaptacion onContador={setNRecaptacion} />
       </div>
 
       {/* ══ CARTERA ══════════════════════════════════════════════════════════ */}
@@ -462,6 +495,10 @@ export default function CorreduriaClient() {
             vencimiento se pierde y no pueden entrar al portal—, así que el
             trabajo es pedir el correo la próxima vez que se hable con ellos. */}
         <SinCanal onContador={setNSinCanal} />
+
+        {/* Directorio de contacto por compañía, minado del correo. Sin
+            contador: es referencia, no trabajo pendiente. */}
+        <Companias />
       </div>
 
       {/* ══ REDES ════════════════════════════════════════════════════════════

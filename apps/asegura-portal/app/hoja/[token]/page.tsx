@@ -1,7 +1,9 @@
 import {
+  declaradaEnVigorParaHoja,
   etiquetaRamo,
   loQueVeQuienEscanea,
   normalizarTokenHoja,
+  polizaEnVigorParaHoja,
   polizasDeLaHoja,
 } from '@central/module-seguros-portal'
 
@@ -117,13 +119,22 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
   let visibles: PolizaPortal[] = []
   let declaradas: DeclaradaEnHoja[] = []
   if (hoja && hoja.anuladaEn === null) {
+    const hoy = new Date()
     const [cartera, misDeclaradas] = await Promise.all([
       carteraDeIdentidad(hoja.identidadId),
       declaradasDeIdentidad(hoja.identidadId),
     ])
-    const suyas = [...cartera.propias, ...cartera.autorizadas].flatMap((t) => t.polizas)
+    // 🚨 Regla 5 de `hoja-qr.ts`: solo lo que sigue en vigor. «Todas mis
+    // pólizas» arrastra las FUTURAS (regla 3), no las que ya vencieron. Se
+    // filtra AQUÍ, en vivo, con el mismo criterio que el selector de crear —
+    // así una póliza que vence DESPUÉS de crear el QR desaparece sola, igual
+    // que la que deja de ser suya.
+    const suyas = [...cartera.propias, ...cartera.autorizadas]
+      .flatMap((t) => t.polizas)
+      .filter(polizaEnVigorParaHoja)
+    const declaradasEnVigor = misDeclaradas.filter((d) => declaradaEnVigorParaHoja(d, hoy))
     visibles = polizasDeLaHoja(suyas, hoja.seleccion)
-    declaradas = polizasDeLaHoja(misDeclaradas, hoja.seleccion)
+    declaradas = polizasDeLaHoja(declaradasEnVigor, hoja.seleccion)
   }
 
   const total = visibles.length + declaradas.length

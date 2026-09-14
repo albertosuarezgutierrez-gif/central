@@ -265,6 +265,7 @@ test('normalizarAlta hereda las reglas del parche y exige compañia o numero', a
     numeroPoliza: null,
     ramo: null,
     primaAnual: null,
+    periodicidadPago: null,
     fechaVencimiento: null,
     matricula: null,
     bastidor: null,
@@ -272,6 +273,42 @@ test('normalizarAlta hereda las reglas del parche y exige compañia o numero', a
     referenciaCatastral: null,
     datosRamo: null,
     datosRamoOrigen: null,
+  })
+})
+
+// `ramo` NO es obligatorio AQUÍ, y no es una contradicción con que la pantalla
+// (`CamposPoliza.tsx`) sí lo exija: esta validación la comparte el alta a mano
+// con la lectura por IA de un documento (`altaConDocumento`, que ni siquiera
+// pasa por `normalizarAlta`), donde un ramo sin identificar es un estado
+// legítimo — «no lo hemos sabido leer», no un hueco de formulario.
+test('«forma de pago» sigue la misma gramática que el resto: null o centinela borra, NINGUNA es obligatoria', async () => {
+  const { normalizarParche, normalizarAlta } = await import('../apps/asegura-portal/lib/poliza-editable.ts')
+
+  const alta = normalizarAlta({ compania: 'Axa', periodicidadPago: 'mensual' }, HOY)
+  assert.equal(alta.ok, true)
+  assert.equal((alta as { ok: true; datos: { periodicidadPago: string | null } }).datos.periodicidadPago, 'mensual')
+
+  // Mayúsculas y espacios no deberían importar: se normaliza igual que el resto.
+  assert.deepEqual(normalizarParche({ periodicidadPago: ' MENSUAL ' }, HOY), {
+    ok: true,
+    parche: { periodicidadPago: 'mensual' },
+  })
+
+  // «No lo sé» con forma de centinela borra, igual que en cualquier otro campo.
+  assert.deepEqual(normalizarParche({ periodicidadPago: 'no consta' }, HOY), {
+    ok: true,
+    parche: { periodicidadPago: null },
+  })
+  assert.deepEqual(normalizarParche({ periodicidadPago: null }, HOY), {
+    ok: true,
+    parche: { periodicidadPago: null },
+  })
+
+  // Una quinta palabra inventada (o una del vocabulario equivocado, como el
+  // `CC`/`OF`/`TA` de la cartera real) es un error, no un `null` silencioso.
+  assert.deepEqual(normalizarParche({ periodicidadPago: 'quincenal' }, HOY), {
+    ok: false,
+    error: 'periodicidad_pago_invalida',
   })
 })
 

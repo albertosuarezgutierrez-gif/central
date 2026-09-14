@@ -12,6 +12,35 @@
 > `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md` (producto completo) y
 > `docs/superpowers/plans/2026-09-01-asegura-portal-fase-1.md` (lo que se construyó de verdad).
 
+## 🔔 Avisos por Web Push (12/09/2026) — canal nuevo, sin pasar por el email
+
+`GET /api/cron/avisos-push` (diario 08:00 UTC, `vercel.json`), hermano de
+`apps/asegura` → `/api/cron/avisos-vencimiento` pero **sin compartir sello ni sitio**: ese cron
+necesita el email en CLARO (`prisma_seguros`, BYPASSRLS) y por eso vive allí; el push no tiene ese
+problema —`endpoint`+claves del navegador no son un dato descifrable— así que vive aquí, sobre la
+misma tabla `seguros.portal_obligacion` que ya sincroniza `lib/obligaciones.ts`.
+
+- **Sello independiente: `avisadaPushAt`, no `avisadaAt`.** Dos canales que fallan por separado
+  (sin suscripción, endpoint muerto, proveedor de correo caído…); compartir sello dejaría que el
+  fallo de uno tapara el envío del otro. Se sella solo si `sendWebPush` acepta al menos un envío
+  —mismo criterio que el correo—; si todos fallan, se reintenta en la siguiente pasada.
+- **Tabla nueva `seguros.portal_push_suscripcion`** (`identidad_id`, `endpoint` UNIQUE, `p256dh`,
+  `auth_key`), aplicada el 12/09/2026 (`prisma/sql/2026-09-12_portal_push_avisos.sql`). Varias
+  filas por identidad = varios dispositivos; un endpoint muerto (404/410 de `sendWebPush`) se borra
+  en el propio cron.
+- **`packages/module-seguros-portal/src/push.ts` (`debeAvisarPush`)** reutiliza la MISMA ventana que
+  el correo (`entraEnVentana`/`DIAS_VENTANA_AVISO` de `obligacion.ts`): un vencimiento entra en
+  ventana una vez, y los dos canales lo ven a la vez.
+- **Cliente:** `app/ActivarPush.tsx`, un interruptor dentro del panel de la campana (`Campana.tsx`)
+  — no se pinta sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` ni sin soporte del navegador, para no ofrecer un
+  botón que no puede funcionar. `public/sw.js` añadió `push`/`notificationclick` (sigue SIN
+  `caches`: el guardián `lib/pwa.test.ts` lo sigue vigilando).
+- **Envs que faltan, de Alberto (Vercel `asegura-portal`):** `NEXT_PUBLIC_VAPID_PUBLIC_KEY` +
+  `VAPID_PRIVATE_KEY` (par VAPID propio de esta app, generado con `npx web-push generate-vapid-keys`
+  o `webpush.generateVAPIDKeys()`) y `CRON_SECRET` (puede ser el mismo valor que el de `asegura`,
+  o uno propio — este cron no lo comparte con nadie). Sin las claves VAPID el endpoint responde 503
+  `sin_vapid` en vez de fingir un `{avisadas:0}`.
+
 ## Estado (03/09/2026): DESPLEGADA en Vercel; Fase 1 mergeada + Fase 4 en código; DDL aplicado
 
 Fase 1 entró en `main` el 01/09/2026 con el PR **#1965** (`f12b7b46`): entrar con un código de un solo
@@ -547,6 +576,25 @@ compañía no lo ha informado», y la pantalla **calla**: no pinta «Matrícula:
 Cepos: `bien-asegurado.test.ts` (11, con dos mutaciones vistas morder: quitar la dirección del suelo
 de terceros → 1 fallo; colar la dirección por `cosa` → 3).
 
+### 🚨 Regla permanente: el nº de póliza NUNCA identifica una póliza para el cliente
+
+**Nadie se sabe su número de póliza de memoria, y menos aún cuando hay que ELEGIR entre varias**
+(caso visto el 13/09/2026: el selector de «A qué póliza» del parte de siniestro los listaba como
+«Occident · Responsabilidad civil · nº 548238086», y Alberto, mirándolo en su propio móvil: *«casi
+nadie sabe el número de póliza»*). Lo que identifica una póliza para una PERSONA es el BIEN, no el
+contrato:
+
+- **Motor** → marca, modelo y **matrícula** (`bien.cosa` de `describirBien()`).
+- **Inmueble** → la **dirección** (`bien.ubicacion`).
+- El nº de póliza queda de **último recurso**, solo cuando no se conoce ni lo uno ni lo otro.
+
+Esto no es solo la regla de la FICHA (arriba): es la regla de **cualquier sitio donde el portal
+identifique o liste pólizas ante el cliente** — filas (`FilaPoliza.tsx`, ya la seguía), y también
+selectores/etiquetas de formularios. El parte de siniestro (`opcionCartera()`/`page.tsx`) se corrigió
+el 13/09/2026 para usar `bien.cosa ?? bien.ubicacion ?? nº de póliza` en vez de `nº de póliza` a
+secas — antes de esa fecha lo incumplía. **Al montar cualquier lista o desplegable nuevo de pólizas,
+sigue este mismo orden**; no reinventar el criterio caso por caso.
+
 ### Lo TUYO frente a lo que te DEJAN ver
 
 Hasta ese día la única diferencia entre una póliza propia y una ajena era el `<h2>` de la sección.
@@ -974,6 +1022,14 @@ es «todavía NO está comunicado a tu compañía» y contiene la frase prohibid
 
 ## 📅 El calendario de vencimientos (02/09/2026) — y por qué el aviso NO sale de aquí
 
+🚨 **La sección visible («Lo que vence · Tu calendario») se QUITÓ de `/boveda` el 09/09/2026**
+(Alberto: «no aporta nada» — cada póliza ya dice su vencimiento en su propia fila, `FilaPoliza.tsx`).
+`boveda/Calendario.tsx` se borró y con él la franja `.seccion.acento` del CSS (era su único usuario).
+**Lo de abajo sigue vigente**: la tabla, el derivador y `sincronizarObligacionesDeIdentidad` (llamado
+en `page.tsx` en cada visita) siguen vivos porque los lee la campana de avisos (`lib/avisos.ts` →
+`GET /api/avisos`, chip «puedes actuar hasta…»); su enlace ya no lleva a un ancla (`#calendario-titulo`
+no existe) y apunta a `/boveda` a secas.
+
 La tabla es **`seguros.portal_obligacion`** (`prisma/sql/2026-09-03_portal_obligacion.sql`, aplicada
 el 02/09/2026). Cuelga del **bien**, no de la póliza: `poliza_id` es opcional a propósito para que el
 mismo motor sirva luego a ITV, carnet o revisión de gas de alguien que no tiene ninguna póliza con la
@@ -1007,6 +1063,46 @@ con el aviso **en pantalla** y nunca toca un dato personal. Lo vigila
 `test/regression-portal-obligaciones.test.ts` (ningún fichero del portal importa un transporte de
 correo), para que la corrección no se deshaga sola dentro de tres meses.
 
+## 🔔 Recordatorios propios del cliente (13/09/2026) — la mitad de `portal_obligacion` sin póliza detrás
+
+Dictado de Alberto: «añade [ITV, mantenimiento, caldera, extintores…] todo, inclusive alguno abierto
+para que pueda añadir recordatorios? Texto libre y cuándo quiera que le avise, todo modular 100%.
+Nuestro objetivo es que usen lo máximo nuestra intranet». Pestaña nueva **«Recordatorios»**
+(`?vista=recordatorios`, `Recordatorios.tsx`), sobre el MISMO motor de arriba: la tabla ya nació con
+sitio para esto (`poliza_id` opcional «para que el mismo motor sirva luego a ITV, carnet o revisión de
+gas de alguien que no tiene ninguna póliza con la correduría»), y el enum de tipo ya traía `itv`,
+`carnet`, `mantenimiento`, `revision_gas` y `libre` sin que nadie los usara todavía.
+
+- **Un único mecanismo, no cinco.** `título + fecha + repetir cada X meses (o nunca)`
+  (`lib/recordatorios.ts` + el módulo puro `packages/module-seguros-portal/src/recordatorio-libre.ts`).
+  Las «sugerencias» (`SUGERENCIAS_RECORDATORIO`: ITV, carnet, caldera, gas butano, extintores, boletín
+  eléctrico) son solo atajos que RELLENAN ese mismo formulario — el título sigue siendo editable (dos
+  coches → «ITV del Ibiza» y «ITV de la furgoneta») y «Personalizado» abre el formulario en blanco.
+- **La fecha NO se recorta.** A propósito NO usa `fechaAccionable()` (los 30 días del art. 22 LCS de la
+  sección de arriba): esos son un plazo LEGAL que el cliente no elige; aquí la fecha que teclea la
+  persona YA ES la fecha en la que quiere que le avisen, así que `fechaAccionable = fechaEvento` sin
+  restar nada.
+- **`repite_cada_meses`** (`prisma/sql/2026-09-13_portal_obligacion_recordatorio.sql`, `smallint`, CHECK
+  1-120, aplicada) es la ÚNICA columna nueva — el resto ya existía. `siguienteOcurrencia()` suma meses
+  con clamp de fin de mes (31 de enero + 1 mes → 28/29 de febrero, nunca un 3 de marzo inventado por
+  `setUTCMonth`), mismo criterio que `sumarMesesClamp()` de `cobro-declarado.ts`.
+- 🚨 **`avanzarRecordatoriosRecurrentesDeIdentidad()` mira `avisadaAt` O `avisadaPushAt`, nunca solo
+  `avisadaAt`.** El cron de CORREO (`apps/asegura/lib/avisos-vencimiento.ts`) resuelve el destinatario a
+  través de la PÓLIZA (`o.polizaId ? destinatarioDeCliente(...) : null`); un recordatorio propio no
+  tiene póliza, así que ESE cron lo cuenta `sinCanal` SIEMPRE y `avisadaAt` no se pone jamás en estas
+  filas, tenga o no la persona push activado. Exigir solo `avisadaAt` habría dejado el «se repite solo»
+  sin efecto para SIEMPRE — se vio morder en `code-review` antes de mergear. El único canal que de
+  verdad puede avisar de un recordatorio propio es el push (`/api/cron/avisos-push`); por lo mismo,
+  `RecordatorioVista.avisada` (lo que pinta «ya avisado» en la pantalla) lee `avisadaPushAt`, no
+  `avisadaAt`.
+- **Aislamiento:** `crearRecordatorio`/`borrarRecordatorio` (`app/api/recordatorios/`) filtran SIEMPRE
+  por `identidadId` de la cookie, nunca del cuerpo ni de la URL — mismo patrón que `polizas/[id]`.
+  `borrarRecordatorio` exige además `bienId`/`polizaId`/`polizaDeclaradaId` NULL: ese botón no puede
+  tocar una obligación derivada de póliza aunque alguien mande su id.
+- **Pestaña «Recordatorios», no «Avisos»:** «Avisos» ya es la campana de notificaciones
+  (`Campana.tsx` → `/api/avisos`) — lo que la correduría te avisa a ti, no lo que tú te apuntas. Mismo
+  cepo de sinónimos que mató a «Mis pólizas» el 05/09.
+
 ## 🔑 Entrar de un clic: el enlace del correo NO canjea
 
 El correo del código lleva además un enlace `https://<PORTAL_PUBLIC_URL>/?d=<email>&c=<código>` que
@@ -1034,7 +1130,7 @@ entra directo — la sesión dura 30 días y `/` ya manda a la bóveda si sigue 
 | `app/icono-app/route.tsx` | El icono de **512 px**. Con menos de 192 Chrome NO ofrece instalar, y no lo dice. El monograma ocupa ~52 % porque Android recorta los `maskable` a la forma del sistema. `force-static` |
 | `lib/monograma.ts` | El dibujo se LEE de `public/brand/marca-asegura.svg`; lo comparten la pestaña (128) y la app instalada (512) |
 | `public/sw.js` + `app/RegistrarSW.tsx` | El service worker que Chrome exige, registrado en el layout raíz |
-| `app/(portal)/InstalarApp.tsx` | La oferta, dentro de la sesión |
+| `app/InstalarBoton.tsx` + `app/InstalarEnBarra.tsx` + `app/instalacion.tsx` | El **botón «Instalar» de la barra** (desde el 08/09/2026), su **puerta de sesión** (solo con token VERIFICADO, como `SalirDelPortal`) y el **almacén compartido** del evento `beforeinstallprompt` |
 
 🚨 **El service worker NO CACHEA NADA, y eso es la decisión.** Aquí dentro hay pólizas, recibos y
 partes de siniestro de personas identificadas: una respuesta guardada en el almacén del navegador
@@ -1049,9 +1145,17 @@ falle. Allí se enseñan las instrucciones y se **dibuja** el glifo de Compartir
 abre gente de 50-70 años. Tampoco hay API para hacerlo por él: en iOS lo único posible es explicar
 el gesto.
 
-📌 La oferta va **al final del contenido y en el flujo**, no flotando: un `position: fixed` no
-desborda, se pone encima, y taparía la última fila del móvil sin que ninguna medida de ancho lo
-delatara.
+📌 **Desde el 08/09/2026 instalar es un BOTÓN de la barra fija**, el primero de `.marca-acciones`
+(instalar → avisos → tema → salir). La primera versión fue una franja «Tenlo a mano» al final del
+contenido y la segunda le añadió una entrada en la campana; Alberto, viendo las dos en producción:
+*«el instalador moverlo en el banner fijo de arriba»*. Las dos se borraron (`app/(portal)/InstalarApp.tsx`
+y la entrada de `Campana.tsx`): un solo sitio para instalar es uno menos que se descoordina. Por
+debajo de **480 px** queda solo el icono (44×44 con `aria-label`); en iOS el botón abre un globo
+`role="dialog"` con el gesto y el glifo, que se cierra con «Entendido», fuera o Escape (≤ 480 px va
+`position: fixed` anclado a los bordes). Y **a 320 px cuatro botones no caben al lado del nombre**:
+la barra se salía 28 px (medido con Playwright), así que hasta 380 px los huecos bajan a 6 px y por
+debajo de **340 px se esconde `.marca-nombre`** — queda el monograma, que lleva el `aria-label`. Entre
+341 y ~405 px el nombre va en dos líneas y la barra sigue en 64 px.
 
 ⛔ **Sin push todavía**: hacen falta VAPID, permiso del usuario y decidir qué se avisa. Y en iOS las
 notificaciones web solo funcionan si la app está añadida a la pantalla de inicio.
@@ -1059,6 +1163,53 @@ notificaciones web solo funcionan si la app está añadida a la pantalla de inic
 Lo vigila `lib/pwa.test.ts` (manifiesto, icono ≥192 en TODAS sus entradas, SW con `fetch` y sin
 caché, registro montado, rama de iOS con su glifo). Se rompió a mano una por una: 16 mutaciones, 16
 rojos. PR #2581.
+
+## 🔔 La campana de avisos (08/09/2026) — una campana esconde; el globo es lo que la salva
+
+Idea de Alberto, mirando el `confirm()` de «nace pendiente: no abre nada hasta que Gabriel la acepte
+en su portal»: *«un icono de campana de avisos, para autorizaciones, vencimientos, etc.»*. Hasta ese
+día una autorización recibida solo se veía entrando en «Quién me ve»; quien venía a mirar su póliza
+no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`.
+
+| Pieza | Qué hace |
+|---|---|
+| `lib/avisos.ts` | **Puro.** Compone la lista y el globo: autorizaciones pendientes recibidas Y otorgadas (→ `/autorizaciones`), obligaciones en la ventana del módulo (→ `/boveda#calendario-titulo`) |
+| `app/api/avisos/route.ts` | `requireIdentidad()`; **`allSettled`**, no `all`: una fuente caída se declara en `fuentesIlegibles` y la otra se sirve |
+| `app/CampanaAvisos.tsx` → `app/Campana.tsx` | La puerta (sesión VERIFICADA, como `SalirDelPortal`) y la campana. En la cabecera, **entre instalar y el tema**; Salir va a la derecha del todo |
+| `app/instalacion.tsx` | El almacén compartido de la instalación (`beforeinstallprompt` se dispara UNA vez). Desde el 08/09/2026 lo lee solo `InstalarBoton`: la campana ya NO ofrece instalar |
+
+🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
+`!` (ninguna legible, o fallo de red). Este portal renunció a la hamburguesa porque un botón que
+esconde hace las cosas menos visibles que enseñarlas, y la campana es exactamente ese botón: sin
+número, una autorización detrás de ella es lo mismo que hoy en `/autorizaciones`. Y «sin avisos»
+sobre una fuente que no se leyó es la mentira que el `CLAUDE.md` de la raíz persigue.
+
+🚨 **Desde la campana NO se acepta ni se revoca nada.** Cada aviso es un enlace a la pantalla donde
+se resuelve, con el alcance y el texto delante. Un «Aceptar» en el panel sería aceptar sin leer y
+duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. Cepo: un solo `fetch` en
+`Campana.tsx`, y es el GET.
+
+📌 **Sin tabla de «visto», a propósito**: el aviso desaparece al resolverse. Lo que necesita saber
+qué vio ya el cliente (siniestro que cambia de estado, petición respondida, recibo devuelto) es v2 y
+está en `docs/CORREDURIA-INTRANET-IDEAS.md` §N con su bloqueo. Y el número va también al icono de
+la app instalada (`setAppBadge`), que es lo que hace que instalar sirva de algo.
+
+⚠️ **El CSS de la cabecera evolucionó `+` → `~` → contenedor.** Primero `.salir-form + .tema-boton`;
+con la campana en medio el adyacente dejaba al interruptor sin casar, recuperaba su `margin-left:auto`
+y se iba solo al extremo, y pasó a `~`. Y con instalar (que solo existe si el navegador lo ofrece) el
+reparto del hueco cambiaba según el dispositivo sin que nada fallara. Desde el 08/09/2026 (mismo día,
+segunda vuelta) los cuatro botones van dentro de **`.marca-acciones`, que lleva el ÚNICO
+`margin-left:auto`** y los separa por `gap`: la regla `.salir-form ~ .tema-boton` ya no existe. Orden
+(dictado de Alberto): instalar → avisos → tema → **Salir a la derecha del todo** («es lo lógico»). El
+orden en `layout.tsx` sigue sin ser cosmético. El panel del móvil (≤ 480 px) va `position: fixed`
+anclado a los bordes, y es un desplegable que se cierra con Escape o clic fuera: se mide que quepa,
+no que no tape.
+
+Lo vigilan `lib/avisos.test.ts` (9) y `lib/campana.test.ts` (7); `lib/pwa.test.ts` se repuntó al
+almacén. **27 mutaciones, 27 rojos**: dos cepos salieron verdes a la primera porque buscaban la
+PALABRA (`clearAppBadge`, `display-mode: standalone`) y la encontraban en un tipo o en un comentario;
+se endurecieron a la LLAMADA. Medido con Playwright a 320/390/1024 con sesión firmada y BD
+inalcanzable: sin desbordes, 44 px, y con la API caída el globo es `!`.
 
 ## Infraestructura
 
@@ -1109,6 +1260,12 @@ rojos. PR #2581.
 ⚠️ **No existen envs `PORTAL_SMTP_*`**: `createMailTransporter()` no recibe credenciales por parámetro,
 las lee él del entorno. Lo único que pone el portal es el `from`.
 
+✅ **`ASEGURA_PORTAL_PUENTE_SECRET` rotado el 09/09/2026** (mismo valor nuevo en las dos apps, tras un
+401 en el primer valor puesto). Este commit es el que fuerza el rebuild de producción de esta app: el
+`Redeploy` del panel reutiliza el último commit de `main`, y si ese commit no toca `apps/asegura-portal/`
+el `ignoreCommand` lo salta — pasó justo con el commit que arregló `central-asegura` (solo tocaba
+`apps/asegura/`), así que esta app se quedó sirviendo el build viejo con el secreto viejo.
+
 ## 🤖 Leer una póliza subida: HOY NO LEE NADA, y no es por el PDF (04/09/2026)
 
 `POST /api/polizas` acaba en `fuente: 'none'` («No hemos podido leer el documento») para **todos** los
@@ -1144,8 +1301,36 @@ además `PATCH /api/polizas/[id]` (corregir una póliza), `POST /api/siniestros`
 | `POST /api/catastro` | `{ direccion, municipio, provincia }` **o** `{ referencia }` (zod, con topes) | `200 ok` · **`300 elegir`** (varios inmuebles) · `401 sin_sesion` · `400 datos_invalidos` · `404 no_encontrado` · `409 via_ambigua` · `422 direccion_ilegible\|referencia_invalida` · **`502 catastro_no_responde`** | **Exige sesión**: sin ella sería un proxy anónimo contra el Catastro con nuestra IP. Solo CONSULTA (no escribe en la BD) y **no registra la dirección en ningún log**. Mira el `estado`, no el número |
 
 Pantallas: `/` (pedir + verificar código) y `/boveda` (`force-dynamic`, redirige a `/` sin sesión).
-**No hay `middleware.ts`**: cada ruta y cada página resuelve la sesión por su cuenta — que es
-precisamente lo que vigila el guardián.
+**El `middleware.ts` NO resuelve sesión**: cada ruta y cada página la resuelve por su cuenta — que es
+precisamente lo que vigila el guardián. El middleware (08/09/2026) solo veta escrituras en la sesión
+del corredor (sección «Vista de corredor», abajo).
+
+## 👁 Vista de corredor (08/09/2026) — Alberto abre el portal como lo ve un cliente
+
+Dictado: *«el corredor puede acceder a cualquier cosa»* (tras pedir acceso a la intranet de un cliente
+para revisarla antes de invitarle). Desde la ficha en plataforma (Contactos → «👁 Ver su portal») sale
+un enlace de **UN solo uso y 10 minutos** que crea `apps/asegura`
+(`POST /api/operador/cliente/portal/vista`, tabla `seguros.portal_vista_corredor`, token hasheado
+SHA-256 sin pimienta porque las dos apps no la comparten) y consume `GET /corredor/[token]` aquí.
+
+🚨 **Cómo se ve «lo mismo» sin tocar ninguna lectura:** una identidad REAL dedicada al corredor
+(`IDENTIDAD_CORREDOR_ID` de `@central/module-seguros-portal`, sembrada por la migración, **sin
+canales**: nadie entra como ella con un código) recibe un vínculo TEMPORAL con la ficha
+(`portal_vinculo.origen = 'corredor'`), y las diez lecturas que filtran por identidad hacen el resto.
+Solo hay un vínculo de corredor a la vez; `Salir` lo suelta. La sesión lleva el claim `corredor`
+(`lib/auth.ts`, 4 h) y `getIdentidad()` lo devuelve.
+
+Los dos filos, con cepo en `test/regression-portal-vista-corredor.test.ts` (4 mutaciones vistas morder):
+- **asegura EXCLUYE ese origen** en `estadoPortalDeFicha` — si lo contara, mirar una ficha la
+  convertiría en «Ya entra al portal», que es el titular con el que se decide si invitar.
+- **La sesión del corredor NO escribe como el cliente**: `middleware.ts` responde `403 modo_corredor` a
+  todo `POST/PATCH/DELETE` de `/api/*` salvo `/api/salir` y `/api/acceso/*`. Decodifica el JWT sin
+  verificar firma a propósito (protege de un clic de Alberto, no de un atacante; un token falso solo
+  se veta a sí mismo) y por eso importa `lib/auth-cookie.ts` y no `lib/auth.ts` (`node:crypto` no
+  arranca en edge — y el veto desaparecería sin error).
+
+Migración `prisma/sql/2026-09-08_portal_vista_corredor.sql`, **APLICADA el 08/09/2026** en el mismo
+paso que el código (regla de `portal_supresion`).
 
 ## 🧩 Los campos PROPIOS de cada tipo de seguro (04/09/2026)
 
@@ -1189,6 +1374,50 @@ Y los cinco estados de la respuesta están separados a propósito —no responde
 dirección no se entiende ≠ la calle es ambigua ≠ hay quince pisos y no sabemos cuál es el suyo—
 porque colapsarlos convierte un «no lo sé» en un «no hay».
 
+## 📇 «Mis datos», filtro «en vigor» por panel, y sugerencia a la cabecera (09/09/2026)
+
+Tres pedidos de Alberto sobre la pantalla del cliente, en la misma sesión que ampliaron lo del
+apartado siguiente (que sigue siendo la fuente para la dirección de contacto y el derecho de
+supresión: esto lo REVISA, no lo sustituye).
+
+1. **Nueva pestaña «Mis datos» (5ª), donde el cliente VE y corrige teléfono, correo y dirección.**
+   Hasta hoy `MiDireccion.tsx` (renombrado `MisDatos.tsx`) solo ESCRIBÍA a ciegas y la pantalla salía
+   vacía «porque no podemos descifrar». Ahora hay lectura: `GET /api/portal/contacto?identidadId=` en
+   `apps/asegura` (`leerContactoPropio` en `lib/contacto-portal.ts`) descifra con SU clave —el portal
+   sigue SIN `PII_ENCRYPTION_KEY`— y sirve solo esos seis campos de la ficha vinculada por
+   `portal_vinculo`. Con varias fichas o sin ninguna, no se inventa nada: se dice.
+2. **El cliente ahora edita también SU teléfono y correo, no solo la calle.**
+   `CAMPOS_CONTACTO_PROPIO` (`packages/module-seguros-portal/src/contacto-propio.ts`) se partió en
+   `CAMPOS_DIRECCION_PROPIA` (columnas de `clientes`, vía `editarCliente`) y `CAMPOS_CANAL_PROPIO`
+   (filas de `cliente_telefonos`/`cliente_emails`, vía `anadirContacto` como PRINCIPAL). 🚨 Un canal
+   **se cambia, nunca se borra** desde el portal: sin teléfono ni correo no habría por dónde avisar. Y
+   si el valor ya es el principal de OTRA ficha, `anadirContacto` lo detecta como conflicto y la
+   respuesta es `en_otra_ficha` (409) — no se le quita el número a nadie desde aquí, lo resuelve
+   Alberto. `aplicarContactoPropio` valida TODO antes de escribir NADA: un correo mal escrito no deja
+   la dirección a medio guardar.
+3. **Cada panel de pólizas filtra por defecto a EN VIGOR** (Alberto, mirando el panel de un cliente al
+   que le han dado acceso: «lo suyo es ver solo las pólizas en vigor y ocultar las canceladas porque
+   da confusión… un filtro por cada panel»). `FiltroVigencia.tsx` es un filtro POR TITULAR (no
+   global): dos pastillas «En vigor / Todas» y, mientras el filtro esconde algo, su contador — nunca
+   se esconde sin decir cuánto. `pendiente` (sin fecha, no se sabe) **se enseña**: esconder lo que no
+   se sabe sería decidir por la persona que su póliza caducó.
+4. **«¿Echas algo de menos?» sube de «Mis seguros» a la cabecera**, como botón junto a la campana y
+   Salir (Alberto: «arriba del todo, donde está la campanita, la luna y salir»). Mismo mecanismo que
+   `Campana.tsx` (desplegable, cierra con clic fuera o Escape) y misma puerta que `SalirDelPortal`
+   (sesión VERIFICADA, no solo cookie presente): `app/SugerenciaBarra.tsx`.
+
+🚨 **Pendiente ABIERTO, sin decidir — no tocar `autorizacion.ts` sin el OK de Alberto.** Sobre el aviso
+legal de «cada acceso caduca al año», Alberto primero pidió que NO caduque, y después él mismo lo
+matizó: «o mejor que en la invitación autorice… ejemplo: padre mayor y que el hijo le lleva todo, eso
+hay que darle una vuelta». Es una decisión de las que exige negociar con él (regla de la casa de
+`Task`), no un ajuste mecánico: `DIAS_VIGENCIA = 365` (`packages/module-seguros-portal/src/
+autorizacion.ts`) existe porque el consentimiento tiene que poder demostrarse (art. 7.1 RGPD) y
+renovarse, y el caso que lo empujó a existir es justo el que el propio Alberto cita ahora (el
+divorcio: nadie entra a revocar ese día). Una vía a explorar sin tocar código todavía: que la
+DURACIÓN se declare al invitar (una petición «para gestionar de por vida a mi padre» pide un
+alcance/plazo distinto de «para que mi mujer vea el coche este año»), en vez de un valor fijo para
+todo el mundo. Sin código hasta que Alberto elija.
+
 ## 📍 El cliente cambia SU dirección de contacto, y sugiere (08/09/2026)
 
 Dictado de Alberto: *«que el cliente pueda modificar su dirección y tlf»* y, al preguntarle si eso
@@ -1223,6 +1452,33 @@ tiene portal — y queda en su historial.
   el domicilio nuevo de una persona en la ficha de su sociedad es un dato falso escrito en silencio.
 - **Las reglas de validación son las MISMAS** que cuando lo corrige Alberto (`revisarEdicion` de
   `@central/module-seguros`): con dos vocabularios, el portal aceptaría lo que la ficha rechaza.
+
+### ✅ «Comprueba tus datos de contacto» (08/09/2026, integrado con «Mis datos» el 09/09/2026)
+
+Dictado de Alberto: *«tiene que ser automático, un aviso en la intranet; yo no intervengo»*. La
+cartera es un volcado de jun/2026: solo el propio cliente sabe si su contacto sigue siendo el suyo.
+
+🚨 **Nació pensado con datos ENMASCARADOS y se REDISEÑÓ el mismo 09/09/2026, en el mismo momento en
+que otra sesión añadía la pestaña «Mis datos»** (ver el apartado de arriba): esa pestaña ya lee y
+enseña el contacto EN CLARO por su propio puente (`GET /api/portal/contacto`, `leerContactoPropio`),
+así que el enmascarado quedó redundante y se retiró — de aquella pieza solo sobrevive el
+RECORDATORIO. Las dos capas ahora se reparten así:
+
+- **`AvisoContacto.tsx`** (nuevo, en `boveda/`) — el empujón AUTOMÁTICO, arriba del todo en «Mis
+  seguros» (antes que el calendario): solo se pinta si `confirmacion` es `nunca` o `caducada`, con
+  **«Sí, siguen igual»** (sella por `POST /api/mis-datos/confirmar` → `POST
+  /api/portal/contacto-confirmar`, sin leer el cuerpo — la identidad es la de la cookie) y un enlace a
+  `?vista=datos`. No enseña ningún dato ni edita nada: reutiliza la MISMA lectura que ya se pidió para
+  «Mis datos» (una sola llamada al puente por visita), así que si esa lectura falla (`sin_ficha`,
+  `sin_puente`, `error`…) el aviso simplemente no se pinta — el fallo ya lo dice «Mis datos» cuando la
+  persona entra a corregir.
+- **`MisDatos.tsx`** — donde de verdad se corrige (teléfono, correo y dirección, en claro).
+
+`contacto_confirmado_at` (`clientes`) se sella tanto al decir «siguen igual» como al corregir algo
+desde «Mis datos» (`aplicarContactoPropio`): quien acaba de escribir un dato acaba de verificarlo.
+`estadoConfirmacion()` de `@central/module-seguros-portal` decide `nunca`/`vigente`/`caducada` — NUNCA
+en el navegador, para que un «hoy» de aquí y otro del servidor no den dos respuestas. Cepos en
+`test/regression-portal-contacto-propio.test.ts`.
 
 ### 💡 El botón de sugerencias
 
@@ -1853,8 +2109,14 @@ bloque del canal), y el de las `sinDatos` dejaba pasar un `.filter()` posterior 
 que no se ha visto morder es una suposición.
 
 📌 Cartera viva al 05/09/2026: Mapfre `C0058` (64 pólizas, 900 122 122) · Allianz `C0109` (26,
-900 101 920; **asistencia a NULL a propósito** porque depende del ramo y la columna admite uno solo) ·
-Occident `C0468` (19, **solo WhatsApp**) · Reale `C0613` (1, 900 365 900).
+**900 300 250, L-V 9-19** — corregido el 08/09/2026: el 900 101 920 que se cargó el 05/09 es la línea
+especial de DANA/catástrofes según `prensa.allianz.es`; **asistencia a NULL a propósito** porque depende
+del ramo —900 117 115 vehículos / 913 255 258 hogar— y la columna admite uno solo) · Occident `C0468`
+(19, **solo WhatsApp**) · Reale `C0613` (1, 900 365 900). Y **Generali `C0072`** (sin pólizas vivas;
+una declarada en el portal como «GeneraliSegurosy Reaseguros,S.A.U.», que NO cruza por nombre exacto):
+900 903 433 para dar parte y asistencia, horario NULL; su grúa por WhatsApp (+34 654 033 629) **no se
+pinta** porque es asistencia y `whatsapp_siniestros` se rotula «Dar parte». SQL:
+`prisma/sql/2026-09-08_companias_telefonos_generali_allianz.sql`.
 
 🔗 **Y el QR de esa hoja lleva un ENLACE, no los datos.** Un QR no caduca —es una imagen con un texto
 dentro— pero lo que se mete dentro sí: con los datos escritos, la imagen miente en cuanto cambie la

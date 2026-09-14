@@ -30,6 +30,7 @@ import {
 import { decryptField } from '@central/module-seguros-pii'
 import { DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
+import { RAMOS_DESCRITOS_POR_COBERTURAS } from './cartera'
 import { ordenPolizasFicha } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
@@ -37,6 +38,7 @@ import { cotizacionesVivas, historialCliente, type HistorialFila } from './carte
 import { listarDocumentos } from './cartera-documentos'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { emailDeFicha } from './email-ficha'
 import type {
   ClienteCartera,
   PolizaCartera,
@@ -396,6 +398,32 @@ export async function fichaCliente(
         .then((filas) => new Map(filas.map((f) => [f.numeroPoliza as string, f.datosEspecificos])))
         .catch(() => new Map<string, unknown>())
 
+  // Coberturas SOLO de los ramos que las necesitan para identificarse (RC,
+  // comercio, otros): una RC no tiene bien, tiene MODALIDAD, y esa modalidad
+  // vive en `poliza_coberturas`, no en `datos_especificos`. Sin esto la
+  // columna «Qué asegura» decía «sin informar» en pólizas de RC con
+  // coberturas reales de CIMA — el mismo patrón que ya resolvía `cartera.ts`
+  // para el listado de vencimientos, aquí faltaba.
+  const idsPorCoberturas = c.polizas
+    .filter((p) => (RAMOS_DESCRITOS_POR_COBERTURAS as readonly string[]).includes(String(p.tipo)))
+    .map((p) => p.id)
+  const coberturasPorPoliza = new Map<string, string[]>()
+  if (idsPorCoberturas.length > 0) {
+    const cobs = await db.polizaCobertura
+      .findMany({
+        where: { correduriaId, polizaId: { in: idsPorCoberturas } },
+        select: { polizaId: true, descripcion: true },
+        orderBy: { numeroOrden: 'asc' },
+      })
+      .catch(() => [])
+    for (const c2 of cobs) {
+      if (!c2.descripcion) continue
+      const lista = coberturasPorPoliza.get(c2.polizaId) ?? []
+      lista.push(c2.descripcion)
+      coberturasPorPoliza.set(c2.polizaId, lista)
+    }
+  }
+
   const recibosPorPoliza = new Map<string, typeof recibos>()
   for (const r of recibos) {
     const lista = recibosPorPoliza.get(r.polizaId) ?? []
@@ -477,7 +505,7 @@ export async function fichaCliente(
           primaBruta: p.primaBruta === null ? null : Number(p.primaBruta),
         }),
         fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
-        objeto: objetoConGemela(String(p.tipo), datos, esCarteraViva(p) && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined),
+        objeto: objetoConGemela(String(p.tipo), datos, esCarteraViva(p) && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined, coberturasPorPoliza.get(p.id) ?? null),
         matricula,
         viva: esCarteraViva(p),
         confirmadaCima: esCarteraViva(p) && p.idPolizaEntidad !== null,
@@ -531,8 +559,8 @@ export async function fichaCliente(
  * el de la gemela con una nota que dice de dónde sale. «Cifrado» manda sobre
  * «no informado» (la dirección existe, solo que no se puede leer aquí).
  */
-function objetoConGemela(tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown): ObjetoAsegurado {
-  const propio = objetoAsegurado({ tipo, datos, coberturas: null })
+function objetoConGemela(tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown, coberturas: string[] | null = null): ObjetoAsegurado {
+  const propio = objetoAsegurado({ tipo, datos, coberturas })
   if (propio.estado !== 'no_informado' || datosGemela === undefined) return propio
   const dg = esObjetoPlano(datosGemela) ? datosGemela : null
   if (dg === null) return propio
@@ -738,6 +766,7 @@ export async function origenRetarificacion(
           estadoCivil: true,
           saludo: true,
           codigoPostal: true,
+          direccion: true,
         },
       },
     },
@@ -748,12 +777,17 @@ export async function origenRetarificacion(
   // Medido el 01/09/2026: de 500 intervinientes solo los 21 `conductor_habitual`
   // la traen, así que en la mayoría de pólizas seguirá faltando — y faltar es
   // exactamente lo que la pantalla debe decir, en vez de inventarse una.
-  const [siniestros, conductor] = await Promise.all([
+  const [siniestros, conductor, email] = await Promise.all([
     db.siniestro.count({ where: { correduriaId, polizaId: p.id } }),
     db.polizaInterviniente.findFirst({
       where: { polizaId: p.id, correduriaId, rol: 'conductor_habitual' },
       select: { fechaCarnet: true },
     }),
+    // 🚨 Por `emailDeFicha`, no por `p.cliente.email`: la columna es el espejo
+    // y el principal puede vivir solo en `cliente_emails` (5 de las 80 fichas
+    // vivas). Un fallo aquí no tumba la precalificación: `null` = «sin correo
+    // utilizable», que la pantalla pide, nunca inventa.
+    emailDeFicha(correduriaId, p.cliente.id).catch((): string | null => null),
   ])
 
   const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
@@ -795,6 +829,8 @@ export async function origenRetarificacion(
     saludo: p.cliente.saludo ?? null,
     codigoPostal: p.cliente.codigoPostal ?? null,
     fechaCarnet: normalizarFecha(descifrar(conductor?.fechaCarnet)),
+    direccion: descifrar(p.cliente.direccion),
+    email,
   }
 
   const matricula = datos ? texto(datos.matricula) : null
@@ -852,6 +888,7 @@ export async function clienteOrigenDe(
   const c = await db.cliente.findFirst({
     where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
     select: {
+      id: true,
       nombre: true,
       apellidos: true,
       dni: true,
@@ -860,9 +897,11 @@ export async function clienteOrigenDe(
       estadoCivil: true,
       saludo: true,
       codigoPostal: true,
+      direccion: true,
     },
   })
   if (!c) return null
+  const email = await emailDeFicha(correduriaId, c.id).catch((): string | null => null)
 
   const cliente: ClienteCartera = {
     nombre: c.nombre,
@@ -874,6 +913,8 @@ export async function clienteOrigenDe(
     saludo: c.saludo ?? null,
     codigoPostal: c.codigoPostal ?? null,
     fechaCarnet: null,
+    direccion: descifrar(c.direccion),
+    email,
   }
   return { cliente, etiqueta: `${c.nombre} ${c.apellidos}`.trim() || 'Cliente' }
 }

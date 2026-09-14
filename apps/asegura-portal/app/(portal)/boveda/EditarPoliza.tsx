@@ -10,6 +10,7 @@ import {
   CamposPoliza,
   MENSAJE_400,
   MENSAJE_PRIMA_CERO,
+  MENSAJE_RAMO_OBLIGATORIO,
   campoDelError,
   primaDesdeTexto,
   type Campo,
@@ -36,6 +37,13 @@ export type PolizaEditable = {
   numeroPoliza: string | null
   ramo: string | null
   primaAnual: number | null
+  /**
+   * Cada cuánto le pasan el recibo (`anual`/`semestral`/`trimestral`/`mensual`)
+   * o `null` si no se sabe. Con esto se puede avisar del PRÓXIMO cobro y no
+   * solo de la renovación anual — ver `proximoCobroDeclarado()` de
+   * `@central/module-seguros-portal`.
+   */
+  periodicidadPago: string | null
   /** `YYYY-MM-DD` o null: es lo que come `<input type="date">` y lo que espera el PATCH. */
   fechaVencimiento: string | null
   /**
@@ -86,6 +94,7 @@ type Cambios = {
   numeroPoliza?: string | null
   ramo?: string | null
   primaAnual?: number | null
+  periodicidadPago?: string | null
   fechaVencimiento?: string | null
   matricula?: string | null
   bastidor?: string | null
@@ -118,6 +127,7 @@ function aFormulario(v: Valores): Formulario {
     // En el input se teclea un número plano (320.5); el formato español
     // `320,50€` es para MOSTRAR, no para escribir.
     primaAnual: v.primaAnual == null ? '' : String(v.primaAnual),
+    periodicidadPago: v.periodicidadPago ?? '',
     matricula: v.matricula ?? '',
     bastidor: v.bastidor ?? '',
     fechaMatriculacion: v.fechaMatriculacion ?? '',
@@ -171,6 +181,8 @@ function calcularCambios(
   const ramo = form.ramo || null
   if (ramo !== base.ramo) c.ramo = ramo
   if (prima !== base.primaAnual) c.primaAnual = prima
+  const periodicidadPago = form.periodicidadPago || null
+  if (periodicidadPago !== base.periodicidadPago) c.periodicidadPago = periodicidadPago
   const fechaVencimiento = form.fechaVencimiento || null
   if (fechaVencimiento !== base.fechaVencimiento) c.fechaVencimiento = fechaVencimiento
   // Matrícula y bastidor se mandan en MAYÚSCULAS y sin espacios porque así es
@@ -210,6 +222,7 @@ function aplicar(base: Valores, c: Cambios): Valores {
     numeroPoliza: c.numeroPoliza !== undefined ? c.numeroPoliza : base.numeroPoliza,
     ramo: c.ramo !== undefined ? c.ramo : base.ramo,
     primaAnual: c.primaAnual !== undefined ? c.primaAnual : base.primaAnual,
+    periodicidadPago: c.periodicidadPago !== undefined ? c.periodicidadPago : base.periodicidadPago,
     fechaVencimiento: c.fechaVencimiento !== undefined ? c.fechaVencimiento : base.fechaVencimiento,
     matricula: c.matricula !== undefined ? c.matricula : base.matricula,
     bastidor: c.bastidor !== undefined ? c.bastidor : base.bastidor,
@@ -238,6 +251,7 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
     numeroPoliza: poliza.numeroPoliza,
     ramo: poliza.ramo,
     primaAnual: poliza.primaAnual,
+    periodicidadPago: poliza.periodicidadPago,
     fechaVencimiento: poliza.fechaVencimiento,
     matricula: poliza.matricula,
     bastidor: poliza.bastidor,
@@ -316,6 +330,14 @@ export function EditarPoliza({ poliza, ramos }: { poliza: PolizaEditable; ramos:
     e.preventDefault()
     setErrores({})
     setErrorGeneral(null)
+
+    // El único campo obligatorio del formulario: ver la cabecera de
+    // `CamposPoliza.tsx`. Se aplica también al corregir una póliza vieja sin
+    // ramo — no se puede guardar NADA de ella hasta que se elija uno.
+    if (form.ramo === '') {
+      setErrores({ ramo: MENSAJE_RAMO_OBLIGATORIO })
+      return
+    }
 
     const prima = primaDesdeTexto(form.primaAnual)
     if (prima === 'invalida' || prima === 'cero') {

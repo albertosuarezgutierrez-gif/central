@@ -4,6 +4,7 @@ import EvolucionPrima from '../../EvolucionPrima'
 import { urlRetarificar, type IntervinienteFicha, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
+import { Badge, type Tono } from '@/components/ui'
 
 /**
  * Piezas compartidas por las pestañas de la ficha del cliente.
@@ -24,15 +25,28 @@ export const TIPOS: Record<string, string> = {
   comunidades: '🏢 Comunidad', otros: '📄 Otros',
 }
 
-export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
+/** Semáforo del estado de una póliza: la FORMA dice vigente/cancelada antes de
+ *  leer la palabra (convención de Occident, capturas Drive 11/09/2026). */
+const TONO_ESTADO: Record<string, Tono> = {
+  activa: 'positivo', en_vigor: 'positivo', en_renovacion: 'info',
+  recibo_devuelto: 'negativo', cancelada: 'negativo', vencida: 'negativo',
+  fin_riesgo: 'negativo', anula_al_vencimiento: 'aviso', cambio_clave: 'neutral',
+  competencia: 'neutral',
+}
+
+export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes, accion }: {
   titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean
   intervinientes: IntervinienteFicha[] | null
+  /** CTA para el estado vacío ("+ Presupuestar auto") en vez de solo texto —
+   *  avant2/Occident no dejan un hueco mudo, ofrecen la acción ahí mismo. */
+  accion?: React.ReactNode
 }) {
   if (polizas.length === 0) {
     if (!vacio) return null
     return (
       <Tarjeta titulo={titulo}>
         <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>{vacio}</p>
+        {accion && <div style={{ marginTop: 10 }}>{accion}</div>}
       </Tarjeta>
     )
   }
@@ -72,7 +86,9 @@ export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes 
                     // NULL = no se sabe cuándo vence, no «no vence».
                     <span style={{ color: 'var(--muted)' }} title="La compañía no ha informado el vencimiento">sin fecha</span>
                   )}
-                  <div style={sub}>{p.estado.replace(/_/g, ' ')}</div>
+                  <div style={{ marginTop: 3 }}>
+                    <Badge tono={TONO_ESTADO[p.estado] ?? 'neutral'}>{p.estado.replace(/_/g, ' ')}</Badge>
+                  </div>
                   <Anulacion vencimiento={p.fechaVencimiento} viva={p.viva} />
                 </td>
                 <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -156,6 +172,19 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
       <span style={{ color: 'var(--muted)', fontStyle: 'italic' }} title={p.objeto.nota ?? undefined}>
         {p.objeto.estado === 'sin_objeto' ? 'seguro de personas' : 'sin informar'}
       </span>
+    )
+  }
+  // RC/comercio/otros: el objeto se describe por coberturas contratadas, que
+  // pueden ser muchas — la celda enseña el TIPO (cuántas) y el desglose entero
+  // va detrás de un clic, en vez de volcar la lista entera en la tabla.
+  if (p.objeto.coberturas && p.objeto.coberturas.length > 1) {
+    return (
+      <details title={p.objeto.nota ?? undefined}>
+        <summary style={{ cursor: 'pointer' }}>{p.objeto.coberturas.length} coberturas contratadas</summary>
+        <ul style={{ margin: '4px 0 0', paddingLeft: 16, fontSize: 12, color: 'var(--muted)' }}>
+          {p.objeto.coberturas.map((c, i) => <li key={i}>{c}</li>)}
+        </ul>
+      </details>
     )
   }
   return (

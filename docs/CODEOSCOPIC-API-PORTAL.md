@@ -317,6 +317,14 @@ Asegura son **Reale y Fidelidade**, y **Fidelidade no aparece en el catálogo**.
 un mapa de lo posible, no una fuente de verdad. La fuente de verdad sigue siendo `GET /insurance-lines`
 (gratis, ya cableado en `lib/codeoscopic/catalogos.ts`). **No sustituir la llamada por esta tabla.**
 
+✅ **Y para las COMPAÑÍAS (09/09/2026): `GET /insurance-vendors` + `GET /insurance-lines/{id}/products`,
+cableados en `catalogos.ts` (`vendoresDeSeguro`, `productosDeLinea`, `companiaDisponible`) y servidos
+por `GET /api/operador/codeoscopic/companias?buscar=<nombre>` (gratis, con el interruptor apagado).
+Plataforma lo pinta en `/correduria/hogar`: presente (con id y ramos con producto) · ausente (con la
+lista de las que sí hay) · desconocido (lista vacía o no leída — NO se afirma ausencia). Es la forma de
+comprobar «me dicen que ya nos han incluido a X» sin gastar ni preguntar. ⚠️ La forma del producto no
+está documentada: la búsqueda recorre los valores del JSON (`mencionaCompania`), no adivina campos.
+
 ### La matriz, tal cual la publica el fabricante
 
 18 aseguradoras × 7 columnas: AUTOS · HOGAR · MOTOS · DECESOS · VIDA · SALUD · COMPLEMENTARIOS.
@@ -532,6 +540,75 @@ Lo más cercano, en literal:
 portal** y hay que preguntarla a `soporteapi@codeoscopic.com` (comercial, para créditos:
 `comercial@codeoscopic.com`). Mientras tanto: un intento, `externalId` siempre puesto, y consultar
 antes de gastar.
+
+## 📮 Policy application: lo que el portal SÍ dice, leído tras el 500 del 40685793 (13/09/2026)
+
+Lectura hecha por Claude en Chrome sobre el portal con sesión, solo lectura, la mañana del 500 «Unknown
+error while waiting for the operation to complete» (`POST /insurances/40685793/policy-applications`,
+requestId `0d65134e-161833`). Lo que cambia lo que dábamos por sabido:
+
+- **SÍ existe una lectura del estado de una solicitud** — y por tanto una reconciliación sin webhook:
+  `GET /insurances/{id}` trae **`policyApplications[]`** («The insurance policy applications that have
+  been submitted», `PolicyApplicationWithRefs`) y `GET /insurances/{id}/policy-applications/{policyApplicationId}`
+  devuelve `PolicyApplication_V1`: `id`, `creationDateTime`, **`status: {id, name, description}`**,
+  **`policyNumber`** («The policy number assigned by the issuer»), `quote`, `revisedQuote`, `product`,
+  `payment`, `issuedDocuments[]`, `messages[]`, `appUrls[]`. Ejemplo del portal: `status.id = "Approved"`,
+  `policyNumber = "849651"`. Literal de la descripción: «applications will be approved or rejected
+  depending on whether they meet some final validations performed by insurance vendors. However,
+  applications can also be accepted but held pending for eligibility review or in need for manual
+  intervention by the broker (via ASM or the vendor's web)». **No hay enum cerrado de `status.id`**:
+  solo `Approved` tiene ejemplo; `GET /policy-application-statuses` lista los que existan (gratis).
+  Cableado en `apps/asegura/lib/codeoscopic/reintento-emision.ts` (`solicitudesEmision`,
+  `veredictoSolicitud`: lo no reconocido es `desconocido`, nunca aprobada).
+- **El 500 NO es «reintenta»: es «repórtalo».** Tabla `#overview--errors`, literal: 500 → «An unhandled
+  exception occurred. Please, report the issue, including the full response, to the API support team so
+  we can tackle it»; 502 → «There was a communication error with an insurance vendor. Please, try again
+  the operation in a few minutes»; 503 → «The API is temporarily out of service. Please, try again…»;
+  504 → «There was a timeout error with an insurance vendor. Please, try again…». Para el POST de
+  policy-applications solo están documentados **200 y 403**. `consejoTrasFallo()` traduce cada código.
+- **Soporte:** los enlaces «API support team» del cuerpo apuntan a `mailto:soporteapi@avant2.es`; la
+  cabecera del spec (`info.contact.email`) dice `soporteapi@codeoscopic.com`. El portal no aclara cuál;
+  el esquema de error que piden adjuntar es `{path, requestId, error, message, status, timestamp}`.
+- **`#overview--request-timeouts`, literal:** «Some operations may take a while to complete because they
+  require communication with third party services or perform long duration tasks. You may need to
+  configure the timeouts of your HTTP client accordingly.» Sin cifra, sin 202, sin polling documentado.
+- **Idempotencia: cero.** `Idempotency`, `attemptId`, `duplicate`, `retry` → 0 resultados en todo el spec.
+  `externalId` existe solo en `POST /insurance-drafts`, para buscar después. **Webhooks: cero** (`webhook`,
+  `callback`, `notification`, `subscri` → 0; el único «callback» es el del Product Form embebido).
+  **Allianz** y los horarios por compañía: **0 menciones**.
+- **Los 5 endpoints con `policy-application` en el path:** `POST …/policy-application-documents` (Check
+  policy application documents) · `GET …/policy-application-fields` · `POST …/policy-applications`
+  (Submit) · `GET …/policy-applications/{policyApplicationId}` (Retrieve) · `GET /policy-application-statuses`.
+  No hay reintento, cancelación ni idempotencia entre ellos.
+
+**Consecuencia operativa (cableada el 13/09/2026):** tras un 5xx del Submit, `/emitir` lee el proyecto
+(gratis) y, si `policyApplications[]` trae una `Approved` con `policyNumber`, ofrece **acuñarla**
+(`acunarExistente: true`, sin reenviar); con una pendiente no ofrece reintento; solo sin ninguna viva
+se puede reenviar con `reintentoConfirmado: true`. Y el 500 se reporta a soporte con el `requestId`.
+
+## 📞 Lo que NO está en el portal y sí sabía Manuel (13/09/2026)
+
+Respuesta de Manuel (su Claude, medido contra su BD de producción) a las cinco preguntas de Alberto:
+
+- **Nunca se completó una emisión por API en su lado**, ni en sandbox ni en prod: el único proyecto
+  (40058158, auto) se quedó en `cotizacion`. El 500 «Unknown error while waiting…» no lo vieron nunca.
+  Su `submit.ts` hacía lo mismo que hoy `/emitir`: un solo intento, 5xx = «quizá emitido», congelar,
+  reconciliar por `GET /insurances/{id}` (+ polling con backoff 5 min·2ⁿ, tope 60 min, 7 días).
+- **Webhook:** dado de alta por Codeoscopic el 15/06 (LOO-322) → `POST app.grupoasegura.com/api/webhooks/codeoscopic`,
+  HTTP Basic. El emisor real manda **array de 2 elementos cada ~30 min** y el CRM lo descarta con 200
+  sin persistir el cuerpo — solo metadato en `operational_events` (`rootKeys: ["insurance"]`, 1.671
+  rechazos desde el 25/06/2026, anteriores a cualquier emisión nuestra). Receptor nuevo en
+  `apps/asegura` (ver su `CLAUDE.md`).
+- **`issuedDocuments[]`:** su código lo ignoraba a propósito (solo persistía `policyNumber`);
+  `codeoscopic_documents` nunca tuvo writer (épica LOO-151). **La forma exacta del tag `File` se lee del
+  OpenAPI vivo, autenticado con nuestro token OAuth2: `GET {CODEOSCOPIC_BASE_URL}/openapi.json`**
+  (108 paths). ⚠️ Ese host está bloqueado desde el contenedor de Claude (403 del proxy): se lee desde
+  Vercel o con Claude en Chrome.
+- **Contactos y tiempos:** Juan Manuel Fernández (PM API, `juan.fernandez@codeoscopic.com`) — preciso
+  en reunión, **latencia alta por email (hasta 14 días)**; `soporteapi@codeoscopic.com` — SLA de facto
+  mismo día laborable, 2 días máximo; sin status page (los cortes van por email a integradores).
+  **Escalado:** Ángel Blesa Jarque, Director General (`comercial@codeoscopic.com`), firmante del
+  contrato — si hay silencio dos días. DPO: `dpd@codeoscopic.com`.
 
 ## Cabeceras y detalles de cableado que faltaban
 

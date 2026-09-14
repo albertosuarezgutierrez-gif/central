@@ -324,9 +324,35 @@ utilizable). Reglas que no se negocian al tocar esto:
 - ⚠️ **`expires_at` llegó a NULL en los 15 precios reales: no sabemos cuánto vale una cotización.**
   Mientras siga así, **un precio ya pagado NO se puede reutilizar** para ahorrarse los 0,50€ — no hay
   forma de saber si sigue vigente. Capturar la caducidad es requisito de cualquier plan de caché.
-- 🔬 **El webhook está SIN ESTRENAR, no roto.** Los dos eventos con `project_not_found` de la BD de
-  Manuel son smoke tests con ids inventados (`999999`, `smoke-fix-webhook`); Codeoscopic no ha
-  enviado nunca uno real, porque solo los dispara al emitir. No se pierda tiempo «arreglando» eso.
+- 🔬 **El webhook EXISTE, apunta al CRM de Manuel y DESCARTA el payload real (13/09/2026, medido
+  por Manuel en su prod).** Codeoscopic lo tiene dado de alta desde el 15/06 (LOO-322) hacia
+  `POST https://app.grupoasegura.com/api/webhooks/codeoscopic`, **HTTP Basic** (credenciales pasadas
+  por Bitwarden Send; viven en las envs del proyecto Vercel `asegura`). Los dos eventos
+  `project_not_found` de la tabla son smoke tests (`999999`, `smoke-fix-webhook`). Pero el emisor REAL
+  (UA `Apache-HttpAsyncClient`/Java, Basic válida, **cada 30-90 min**) manda un **array JSON de 2
+  elementos**, y el receptor del CRM solo entiende un objeto con `project_id`: **acepta con 200 y no
+  persiste el cuerpo**. Lo que sí deja es metadato en `seguros.operational_events`
+  (`codeoscopic_webhook_invalid_payload`, medido el 13/09: **1.671 rechazos desde el 25/06/2026**, uno
+  cada ~30 min, `rootType: array`, `rootLength: 2`, `rootKeys: ["insurance"]`, misma IP): o sea, dos
+  elementos `{ insurance: {...} }` desde ANTES de que nadie emitiera nada — huele a sonda o a volcado
+  periódico de estado, no a notificación de emisión, pero el cuerpo no lo ha visto nadie. Por eso existe
+  `POST /api/webhooks/codeoscopic` en ESTA app (`lib/codeoscopic/webhook.ts`, puro + `route.ts`):
+  guarda TODO cuerpo autenticado tal cual en `codeoscopic_webhook_events` — **un array, una fila por
+  elemento** (mezclar dos en una atribuiría el estado del segundo al proyecto del primero); dedupe por
+  hash como el CRM pero **un repetido SUMA `veces` y mueve `ultimo_at`** (migración
+  `2026-09-13_codeoscopic_webhook_events_veces.sql`, aplicada; con `do nothing` «dejó de mandar» y
+  «manda lo mismo cada 30 min» serían la misma fila) — y **no acuña ni toca ningún proyecto** — la reconciliación sigue en
+  `GET /insurances/{id}`. Envs `CODEOSCOPIC_WEBHOOK_BASIC_USER`/`CODEOSCOPIC_WEBHOOK_BASIC_PASS` — **los
+  mismos nombres que el CRM** (medido en el `contraseñas CODEOSCOPIC.docx` de Drive; la primera versión
+  de este PR las llamó `_USER`/`_PASSWORD` y Alberto lo corrigió), así que se copian 1:1 del proyecto
+  Vercel `asegura`; `CODEOSCOPIC_WEBHOOK_SECRET` es el HMAC anterior a LOO-322 y no se usa (sin ellas
+  503, nunca 200). ⏸️ **Para que reciba algo hacen falta dos pasos que NO son código:** copiar esas
+  dos envs del proyecto `asegura` a `central-asegura`, y que Codeoscopic (JM) repunte la URL a
+  `central-asegura.vercel.app/api/webhooks/codeoscopic` — eso lo pide Alberto, no un agente.
+  ⚠️ `/api/webhooks` **no estaba en `PUBLIC` del middleware**: el webhook de Resend (`/api/webhooks/resend`)
+  recibía el HTML del login desde que existe. Hay cepo (`webhook.test.ts`). Modelo de JM (vía Manuel):
+  emitiendo por API la respuesta del Submit ya trae el estado final; webhook y polling son para
+  emisiones externas o riesgo condicionado. Manuel nunca cerró una emisión, ni en sandbox.
 
 ### El cuerpo de la petición se valida GRATIS antes de gastar
 
@@ -345,8 +371,69 @@ Las tres reglas que más cotizaciones tumban, todas con test:
   los años asegurado.** Es la condición anidada que se incumple sin enterarse. Ojo: `0` siniestros
   es una respuesta válida, no un hueco (regla NULL≠0).
 
-Y lo que NO se manda, a propósito: email, calle, ocupación, situación laboral y país de nacimiento.
-No hacen falta para el precio.
+Y lo que NO se manda, a propósito: ocupación, situación laboral y país de nacimiento. No hacen
+falta ni para el precio ni para emitir.
+
+🚨 **Hasta el 12/09/2026 tampoco se mandaban el email ni la calle completa («no hacen falta para el
+precio»), y ESA era la causa de fondo de un día entero de emisión fallida.** Cierto para el precio,
+falso para EMITIR: el Submit exige email + tipo/nombre/número de vía en `holder`/`owner`/
+`primaryDriver`, y **el vendor NO aplica el correo por PATCH** (proyecto 40685666: 200 y al releer no
+está; `roadName` por el mismo PATCH sí). Consecuencia medida en `codeoscopic_consumo`: **7 cargos de
+0,50€ (11-12/09) sobre la póliza de Pilar Franco Ruz, los 7 con la misma persona incompleta**, y cada
+capa de la cascada `interpretarError400 → completarPersonas → reintento` descubría UN campo por cargo.
+Ahora: (1) `construirPersona` manda lo que la FICHA ya tiene (email por `emailDeFicha`, calle troceada
+con `partirDireccion`, `roadType` emparejado contra `/road-types`); (2) `revisarDatosAuto(d, { paraEmitir:
+true })` —solo defensa de cartera, NO oportunidad nueva— exige correo y calle completa **antes de pagar**,
+y la pantalla de plataforma los pide (tipo de vía como desplegable del catálogo, `CAMPOS_A_MANO` para
+nombre/número/correo); (3) **el correo va como `emails[]`, NO `email`** — MEDIDO el 13/09/2026 leyendo la
+persona que devuelve el vendor del proyecto 40685666 (`holder.emails: array(0)`, ninguna clave `email`):
+el vendor descarta en silencio la clave que no conoce, por eso el PATCH del 12/09 «no aplicaba». La
+forma vive en UN sitio (`CLAVE_EMAIL_VENDOR` + `elementoEmail()`, `persona.ts`); la clave del ELEMENTO
+(`address`/`email`/`value`) sigue sin fixture y `completarPersonas` la descubre gratis (PATCH + relectura
+por orden, `CLAVES_ELEMENTO_EMAIL`) y la deja en el log — **cuando salga en el log, fija la constante y
+quita las otras**; (4) **reparación PREVIA al Submit** (`emitir/route.ts` + `huecosPersonaParaEmitir`):
+antes de gastar el intento se lee el proyecto (gratis), se completa por PATCH lo que el Submit exige y
+falta (correo, calle) desde la ficha, y lo que la ficha no tiene sale como `faltan_vendor` **sin haber
+enviado nada** — así un proyecto ya pagado que nació sin correo (los 7 de Pilar) se emite sin otro 0,50€;
+(5) `codeoscopic_projects.error_mensaje` guarda ya el 400 del Submit (antes quedaba NULL). El log
+`[precalificar] estructura de la persona que devuelve el vendor` es temporal: quitarlo al fijar la clave.
+(6) ⏳ **La fecha de efecto también CADUCA (décimo 400 real, 13/09/2026):** el 40685666 se cotizó el 12/09
+con efecto 12/09 (la pantalla precargaba HOY; desde el 13/09 precarga MAÑANA, con `min`=hoy y `max`=hoy+90) y al día siguiente el ReRate contestó
+«The effective date cannot be before today.» Como `effectiveDate` es de solo lectura, ese proyecto está
+MUERTO: una cotización hay que confirmarla y emitirla ANTES de que pase su fecha de efecto. La regla
+entera ([hoy, hoy+90]) la aplica `revisarDatosAuto` antes de pagar (`motivoFechaEfectoInvalida`), y la caducidad la detecta gratis
+`fechaEfectoCaducada()` (`lib/codeoscopic/fecha-efecto.ts`, hoy en hora de Madrid): `/oferta` y
+`/emitir` devuelven 422 `faltan_vendor` con `fechaEfecto` SIN llamar al vendor, `tarificacion` marca la
+guardada como `caducada` y plataforma no la ofrece (banner rojo + «Pedir precio» encendido con
+`forzarNuevo`). Sin fecha no se afirma nada (`false`): que hable el ReRate.
+
+(7) 🛑 **El primer Submit que LLEGÓ a la compañía acabó en 500 del vendor — y eso NO es un rechazo
+(13/09/2026, proyecto 40685793):** persona completa (sin 400 de email/calle), y a los 8 s Codeoscopic
+contestó «Unknown error while waiting for the operation to complete» — dejó de esperar a Allianz (08:27
+de un domingo). **No se sabe si la compañía emitió**, el vendor no deduplica y no tenemos ni webhook real
+(la tabla `codeoscopic_webhook_events` solo tiene smoke tests de junio) ni fixture del proyecto DESPUÉS de
+un Submit. Fail-closed en `/emitir` (`lib/codeoscopic/reintento-emision.ts`, puro): si el proyecto crudo
+ya cuenta una `policyApplication*` con contenido → 409 `solicitud_existente` (no se envía otra); si el
+último intento acabó en 5xx o corte de red (`intentoQuizaEmitido` sobre `codeoscopic_projects.estado` +
+`error_mensaje`) → 409 `reintento_sin_confirmar` con el proyecto crudo (lectura gratis) hasta que el
+corredor mande `reintentoConfirmado: true`. El 502 del Submit lleva `quizaEmitido`. Un 400/422 NO cuenta
+como quizá-emitido: ahí el vendor rechazó. `policyApplicationSupported` de un precio es una capacidad, no
+una solicitud (el filtro la excluye).
+  ✅ **Y el mismo día el portal dio la forma exacta (leído con Claude en Chrome, `docs/CODEOSCOPIC-API-PORTAL.md`
+  § Policy application):** `GET /insurances/{id}` trae **`policyApplications[]`** con `status.id`
+  (`Approved` es el único con ejemplo) y **`policyNumber`** — o sea, SÍ hay reconciliación sin webhook.
+  `solicitudesEmision()` la lee (solo `policyApplications[]`: el objeto raíz del proyecto NUNCA se lee como
+  solicitud, tiene `creationDateTime` propio); el 409 lleva `solicitudes[]` + `consejo`; una **aprobada se
+  ACUÑA** (`acunarExistente: true`, mismo `registrarPolizaEmitida`, sin Submit, con o sin número aún), y
+  **con cualquier solicitud viva —aprobada o pendiente— el servidor niega el reintento aunque llegue
+  `reintentoConfirmado`**: solo sin ninguna viva decide el corredor. Ese bloque va ANTES de las puertas
+  del IBAN y de `policy-application-fields` (son del Submit, no del registro). Un `status.id` no reconocido
+  es `desconocido`, nunca aprobada. 🚨 **Y el `code-review` de ese PR destapó que NADA podía acuñarse:**
+  `registrarPolizaEmitida` decía `conflicto` si `codeoscopic_projects.poliza_id` estaba puesto — y
+  `/oferta` lo pone SIEMPRE (es la póliza RETARIFICADA). Ahora «ya acuñada» = `estado='emitida'`, y al
+  acuñar el proyecto pasa a apuntar a la póliza EMITIDA. Y el portal distingue los 5xx: **500 = «report the issue… to the API
+  support team» (`soporteapi@avant2.es`, con el `requestId`), 502/503/504 = «try again in a few minutes»**
+  (`consejoTrasFallo`). En la web de Allianz Alberto no vio póliza del 40685793 esa mañana.
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 
@@ -695,12 +782,35 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `emparejarConCima` (D4), `conciliarConCima` (D3). `lib/emision.ts` → `registrarPolizaEmitida` acuña la
   fila + `codeoscopic_projects.poliza_id` + historial en UNA transacción y exige DNI en la ficha del tomador.
   Puerto **`POST /api/operador/poliza/emitida`, cerrado tras `CODEOSCOPIC_EMISION_ACTIVA=true`** (503
-  `emision_desactivada`). 🚫 **El envío al vendor (`POST /insurances/{id}/policy-applications`, multipart)
-  NO está construido a propósito**: el gate de la spec (mismo `attempt_id` dos veces contra un sandbox) no se
-  puede correr porque no hay sandbox; escribirlo a ciegas es estrenarlo en producción con dinero y con el
-  contrato de un cliente. Cuando exista entorno de pruebas: transporte multipart nuevo, candado
-  `submit_in_flight_at`, y ampliar la excepción del guardián de gasto (hoy tumba cualquier `metodo: 'POST'`
-  fuera de `cotizar.ts`).
+  `emision_desactivada`). ✅ **Y desde el 11/09/2026 SÍ está construido: `POST /insurances/{id}/policy-
+  applications`** (multipart, `lib/codeoscopic/emitir-envio.ts::enviarEmision`), sin sandbox ni fixture del
+  fabricante, sobre el caso real de Pilar Franco Ruz con OK explícito de Alberto — se estrenó en producción
+  a propósito, no en un entorno de pruebas que nunca llegó. Candado `submit_in_flight_at` de un solo intento
+  en vuelo por proyecto (`bloquearEnvio`/`cerrarEnvio`); el gate de «mismo `attempt_id` dos veces» de la
+  spec sigue sin correrse (sigue sin haber sandbox), así que el vendor podría no deduplicar un reintento tras
+  una respuesta perdida. Ver las dos entradas de más abajo (12/09/2026) para la cascada de reparación de 400s
+  del ReRate y del propio Submit.
+- **🤖 El 400 del ReRate se TRADUCE, no se enseña (12/09/2026).** Once 400 reales, cada uno un PR.
+  Ahora `lib/codeoscopic/interprete-400.ts` (puro) mapea las líneas del vendor («The <campo> of the
+  <papel> is mandatory») a nuestros campos y `POST /api/operador/codeoscopic/oferta` hace la cascada:
+  ficha (hoy la calle de `clientes.direccion`, con `partirDireccion`) → `completarPersonas()` (PATCH
+  gratis a `holder`+`risk.*` **con relectura y comprobación campo a campo**, porque el PATCH de
+  `effectiveDate` «acepta» y no aplica) → repite el ReRate UNA vez → lo que no está en ningún sitio sale
+  como **422 `faltan_vendor`** (`faltan` nuestros, `sugeridos` de la ficha, `noReconocidos` íntegros)
+  y vuelve con `correcciones` (lista blanca `CampoPersona`, nunca claves libres). 409
+  `patch_no_aplicado` = cotizar de cero. Un mensaje que el intérprete no reconoce **se enseña entero**:
+  es el siguiente mapeo que falta, no ruido. Nada personal se supone.
+- **📧 Y el SUBMIT tiene su PROPIA cascada — 13º 400 real (12/09/2026): «el vendor pide MÁS para EMITIR
+  que para cotizar».** Tras el fix del IBAN (12º), Alberto probó «Emitir» de verdad y `policy-applications`
+  rechazó pidiendo `email` (nuevo `CampoPersona`) y `roadName` en `holder`/`owner`/`primaryDriver` — campos
+  que el ReRate nunca había pedido. `POST /api/operador/codeoscopic/emitir` hace la MISMA cascada que
+  `/oferta` (mismo `interpretarError400`/`completarPersonas`, y `valoresPersonaDesdeFicha` — antes
+  duplicada solo para la calle, ahora compartida) y repite el Submit UNA vez; el candado ya libera
+  `submit_in_flight_at` en el fallo, así que el reintento no es un segundo envío a ciegas. 🌐 **Es agnóstica
+  de ramo por diseño** (opera sobre `holder`/`risk.*` genéricamente, sin ramificar por auto/hogar/RC), así
+  que ya vale para hogar sin tocarla — lo que SÍ ramificaba mal era el bookkeeping: `codeoscopic_projects.
+  producto` llevaba `'auto'` a fuego en el INSERT del ReRate y en el puente de emergencia del Submit
+  (`bloquearEnvio`); los dos usan ahora `polizas.tipo` real.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo
@@ -775,6 +885,32 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `string | null` (sin clave, o si lo guardado no tiene forma de correo) y **lanza** si la clave está
   mal formada. Normalizar antes a mano crea una segunda ruta de normalización, que es justo el contrato
   de sincronía que el paquete PII declara en su cabecera. Se le pasa el correo crudo.
+- **📡 `GET /api/operador/actividad` (12/09/2026) — el muro de TODA la cartera.** `?quien=todo|cliente
+  &dias=1|7|30|90&pagina=` → `{estado:'ok', eventos, total, embudo, descartados}`. Lo pinta
+  `plataforma` → `/correduria` → sección «Actividad». `lib/actividad-cartera.ts`.
+  **Seis fuentes que YA existían y nadie leía juntas**, en un solo `UNION ALL` (seis consultas y
+  ordenar en JS no sabría paginar): `portal_acceso` —creada el 07/09 con sus dos índices puestos
+  literalmente para esto y **sin un solo consumidor hasta hoy**—, `portal_codigo` sin canjear (= «pidió
+  entrar y no pudo»), `portal_parte_siniestro`, `portal_poliza_declarada`, `portal_supresion` e
+  `historial_interno`.
+  🚨 **De `historial_interno` no se afirma autor**: `actor_user_id` no la escribe nadie y el autor va
+  dentro del texto. Solo las dos líneas que compone el portal se clasifican como del cliente, por los
+  **prefijos constantes** de `@central/module-seguros-portal` — escritos a mano en el SQL, el día que
+  alguien retoque la frase el cambio de dirección de un cliente dejaría de constar como suyo sin que
+  fallara nada. Hay cepo.
+  🚨 **No devuelve NI UN dato de contacto** (ni email, ni teléfono, ni dirección): solo qué pasó, la
+  fecha y el `cliente_id` para enlazar. El muro se mira con gente delante.
+  🚨 **El embudo son cinco cuentas INDEPENDIENTES y cada una vale `number | null`** (`contar()` captura
+  por separado): que una reviente no puede tumbar las otras cuatro ni, peor, pintar un escalón a 0 que
+  se leería como «nadie ha entrado». Cuenta **cartera viva** (`sqlCarteraViva`), jamás `clientes.tipo`.
+  📊 Medido el 12/09/2026: **80 clientes · 52 con correo · 5 con acceso · 4 han entrado · 4 activos en
+  30 días**. El cuello son los **47 con correo y sin invitar**, no los 28 sin correo.
+  ⚠️ El código recién pedido no cuenta como intento fallido (`MINUTOS_GRACIA_CODIGO = 60`): si no, el
+  que alguien está tecleando ahora mismo saldría como avería.
+  Guardián `lib/actividad-cartera.test.ts`, que lee el **FUENTE** con `readFileSync` — lo que vigila
+  vive dentro de un `Prisma.sql`, donde ni `tsc` ni el build miran, y además importar el módulo
+  arrastraría el cliente generado y tumbaría el job `Tests (packages + guardián)`, que corre sin
+  `prisma generate`. El SQL se ejecutó contra la BD real antes de mergear.
 - **📍 `POST /api/portal/contacto` y `POST /api/portal/nota` (08/09/2026) — el puerto ESTRECHO del
   portal del cliente.** No cuelgan de `/api/operador/*` a propósito: van con **`ASEGURA_PORTAL_PUENTE_SECRET`,
   un secreto distinto**. El de operador abre la cartera entera y lo tiene plataforma, que es la
@@ -798,6 +934,10 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   - ⚠️ Env nueva: **`ASEGURA_PORTAL_PUENTE_SECRET`**, con el MISMO valor en el proyecto Vercel del
     portal (que además necesita `ASEGURA_PUENTE_URL` apuntando aquí). Cerrado por defecto: sin la env
     no se autoriza a nadie, tampoco en desarrollo.
+  - ✅ **Puesta por Alberto en los dos proyectos Vercel el 09/09/2026** (mismo valor de 64 hex en
+    `asegura-portal` y en `central-asegura`). Este commit es el que desatasca el redeploy de
+    producción de `central-asegura`: los commits recientes no tocaban `apps/asegura/` y el
+    `ignoreCommand` los saltaba, así que un simple «Redeploy» del panel repetía el mismo salto.
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en
@@ -1223,6 +1363,18 @@ Envs: `ASEGURA_MAIL_FROM` (ya usada por el cron de avisos) + un proveedor de cor
 `ASEGURA_MAIL_REPLY_TO` (el buzón al que escribir si no reconoce a quien le da el acceso) y
 `ASEGURA_PORTAL_URL` (por defecto `https://asegura-portal.vercel.app`, que es donde el portal sirve
 HOY; cuando `clientes.grupoasegura.es` esté repuntado a Vercel se cambia la env y no se toca código).
+
+## 🎯 Recaptación de leads sin vencimiento (12/09/2026)
+
+`/api/operador/recaptacion` sirve la cola de leads del volcado sin fecha de vencimiento,
+con teléfono o email, EXCLUYENDO a quien ya es cliente vivo por CIMA en otro ramo (esos se
+trabajan desde su ficha). WhatsApp es un enlace manual (`wa.me`, sin WABA — solo se registra
+que Alberto lo abrió, no que el cliente lo leyó); el email SÍ lo manda el servidor por la
+**API HTTP de Resend** (no SMTP, para poder trackear apertura/clic vía webhook
+`/api/webhooks/resend`, verificado con `RESEND_WEBHOOK_SECRET`). Cooldown de 14 días tras
+cualquier envío (`seguros.recaptacion_envios`). El "no interesado" reutiliza el descarte de
+ficha YA EXISTENTE (`descartarCliente`, `DELETE /api/operador/cliente`) — no se construyó
+un estado de descarte nuevo. Spec: `docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md`.
 
 ## Lo que falta y de quién depende
 - **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se

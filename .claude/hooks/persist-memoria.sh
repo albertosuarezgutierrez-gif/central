@@ -14,16 +14,46 @@ set +e
 cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
 
 DOC="docs/CONTEXTO-SESIONES.md"
-MARKER="$(git rev-parse --git-dir 2>/dev/null)/.central-session-base"
+# Resúmenes de uso de herramientas por sesión (los escribe el hook PostToolUse
+# scripts/uso-herramientas.mjs). Se persisten junto a la memoria y NO cuentan como
+# "trabajo real" para el guardián: son medición, no trabajo.
+USO="docs/uso-herramientas"
+GITDIR="$(git rev-parse --git-dir 2>/dev/null)"
+MARKER="$GITDIR/.central-session-base"
+# El hook PostToolUse escribe en STAGING (fuera del árbol, dentro de .git/) en cada tool call. Aquí
+# se copia a docs/ y se commitea SOLO junto a la memoria o, como mucho, una vez cada USO_CADA_S.
+# Medido el 12/09/2026: persistirlo en cada Stop = un push por turno = CI + 12 deployments de Vercel
+# por turno (cuatro pushes en 40 s con la sesión despierta por eventos del PR).
+USO_STAGING="$GITDIR/uso-herramientas"
+USO_STAMP="$GITDIR/.central-uso-last-persist"
+USO_CADA_S=1800
 
-# --- Persist: commitea+pushea la memoria si cambió (solo ese archivo). ---
+uso_vencido() {
+  [ -f "$USO_STAMP" ] || return 0
+  local ultimo; ultimo="$(cat "$USO_STAMP" 2>/dev/null)"
+  [ -z "$ultimo" ] && return 0
+  [ $(( $(date +%s) - ultimo )) -ge "$USO_CADA_S" ]
+}
+
+copiar_uso() {
+  [ -d "$USO_STAGING" ] || return 0
+  mkdir -p "$USO" 2>/dev/null
+  cp -r "$USO_STAGING"/. "$USO"/ 2>/dev/null
+}
+
+# --- Persist: commitea+pushea la memoria si cambió (y el uso, con cadencia). ---
 persist_memoria() {
-  if [ -n "$(git status --porcelain -- "$DOC" 2>/dev/null)" ]; then
+  if [ -n "$(git status --porcelain -- "$DOC" 2>/dev/null)" ] || uso_vencido; then
+    copiar_uso
+  fi
+  if [ -n "$(git status --porcelain -- "$DOC" "$USO" 2>/dev/null)" ]; then
     git add -- "$DOC" 2>/dev/null
-    git commit -q -m "chore(memoria): actualizar contexto de sesión" -- "$DOC" 2>/dev/null
+    [ -d "$USO" ] && git add -- "$USO" 2>/dev/null
+    git commit -q -m "chore(memoria): actualizar contexto de sesión" -- "$DOC" "$USO" 2>/dev/null
     # Empuje al branch actual; si falla (offline / non-fast-forward) no pasa nada,
     # el commit queda local y se empujará en el próximo cierre.
     git push -q origin HEAD 2>/dev/null
+    date +%s > "$USO_STAMP" 2>/dev/null
   fi
 }
 
@@ -50,7 +80,7 @@ if [ -f "$MARKER" ]; then
 
     # ¿Hay commits que toquen algo distinto de la memoria? = trabajo real.
     TRABAJO_REAL=""
-    if [ -n "$(printf '%s\n' "$CHANGED" | grep -v -e '^$' -e "^${DOC}\$" 2>/dev/null)" ]; then
+    if [ -n "$(printf '%s\n' "$CHANGED" | grep -v -e '^$' -e "^${DOC}\$" -e "^${USO}/" 2>/dev/null)" ]; then
       TRABAJO_REAL="1"
     fi
 

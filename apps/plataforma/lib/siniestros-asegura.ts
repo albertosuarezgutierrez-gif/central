@@ -121,9 +121,9 @@ export function leerSiniestros(v: unknown): SiniestroCartera[] | null {
 //
 // `TIPOS_SINIESTRO` (en `@central/module-seguros`) agrupa por ramo
 // auto/hogar/general/salud/vida; las pólizas de la cartera llevan `tipo`, que
-// es el enum `TipoSeguro` de asegura y tiene DIEZ valores exactos:
+// es el enum `TipoSeguro` de asegura y tiene ONCE valores exactos:
 // auto · moto · hogar · vida · salud · decesos · responsabilidad_civil ·
-// comercio · comunidades · otros. A cada uno se le ofrece su ramo MÁS
+// comercio · comunidades · accidentes · otros. A cada uno se le ofrece su ramo MÁS
 // `general` (RC, defensa jurídica y «otro»), que vale para cualquier póliza.
 //
 // 🚨 Por qué está aquí escrito el enum ENTERO y no solo «los que se sabían»
@@ -165,6 +165,9 @@ const RAMOS_POR_TIPO_POLIZA: Record<string, readonly string[]> = {
   salud: ['salud', 'general'],
   vida: ['vida', 'general'],
   decesos: ['vida', 'general'],
+  // Accidentes (convenio/colectivo): cubre asistencia sanitaria, fallecimiento
+  // e invalidez por accidente — no hay coche ni inmueble que dañar.
+  accidentes: ['salud', 'vida', 'general'],
 }
 
 /**
