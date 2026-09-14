@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🛡️ Sentinel bloquea TODAS las rutinas programadas que usan `ALERTA_TOKEN` por curl (14/09/2026).**
+  Nuevo hook `.claude/mcp-sentinel/` (`sentinel_preflight.py`) deniega en modo sombra cualquier
+  Bash/curl que dereferencia una env var `_TOKEN`/`_SECRET` en sesión desatendida (categoría
+  `sensitive_env`, crítica, sin distinguir dominio propio) — bloqueó el Paso 4 y 6 del ciclo semanal
+  de `pricing-agente` (aplicar-propuesta + Telegram) y bloqueará lo mismo en `psd2-health-check`,
+  `ialimp-client-health` y cualquier rutina que siga el protocolo "Canal de aviso" de este CLAUDE.md.
+  Pendiente decisión de Alberto: excepción de Sentinel para el dominio propio o cambio de protocolo.
+  Aparte: `sivra_rates_snapshot` lleva HTTP 401 en los 4 pisos desde 12-13/09 y el repricing en vivo
+  de Busto Reform está parado ~3 días (`sivra_pricing_apply` escribió 0 noches el 13/09) — sin
+  diagnosticar del todo (logs Vercel 1 día, no se pudo probar el endpoint por el mismo bloqueo).
+  Avisado por PushNotification. Detalle en `pricing_aprendizaje` (`ciclo_14_09_2026`) y bitácora.
 - **🇮🇹 `detectLang` marcaba italiano correcto como "deriva al español" (13/09/2026, reserva
   147382671, Daniela).** Un borrador BUENO en italiano (sin `ciao/grazie/prego`, solo "con" como
   señal) puntuaba `es>en` y `pareceEspanol()`/`derivaAEspanol()` (PR #2378, 05/09) lo declaraba
