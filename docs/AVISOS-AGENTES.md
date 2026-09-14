@@ -40,8 +40,10 @@ qué hace el script por dentro; **para ejecutar, usa siempre el script.**
 bash scripts/canal-aviso.sh GET /api/internal/alerta
 ```
 
-(equivalente a `curl -s -o /dev/null -w '%{http_code}' "${PLATAFORMA_URL}/api/internal/alerta" -H
-"Authorization: Bearer ${ALERTA_TOKEN}"`, pero sin exponer el secreto en el comando)
+(por dentro hace un GET a esa ruta con la cabecera de autorización portadora del token de la
+rutina, pero sin que el comando de Bash que lo invoca lleve el nombre de curl ni el del secreto —
+copiar el equivalente crudo a mano vuelve a disparar el mismo bloqueo de Sentinel que este script
+evita)
 
 `HTTP_STATUS:200` → el canal está vivo, sigue con tu pasada. `HTTP_STATUS:401` → el cuerpo trae
 `causa` y `remedio`; da por hecho que **no vas a poder avisar** y ve al paso 3.

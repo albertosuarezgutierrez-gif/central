@@ -51,12 +51,37 @@ case "$PLATAFORMA_URL" in
     ;;
 esac
 
+# PLATAFORMA_URL/RUTA/ALERTA_TOKEN se escriben dentro de valores entre comillas
+# de un fichero -K de curl. Sin escapar, una comilla o un salto de línea en
+# cualquiera de los tres rompe la comilla y el resto de la línea se parsea
+# como una nueva directiva de curl (p.ej. un "url = ..." que reenvíe la
+# cabecera Authorization ya puesta a un host distinto). Ninguno de los tres
+# puede llevar salto de línea (se rechaza), y las comillas/backslashes se
+# escapan antes de escribirlos.
+case "$PLATAFORMA_URL$RUTA$ALERTA_TOKEN" in
+  *$'\n'*)
+    echo "HTTP_STATUS:000 (PLATAFORMA_URL, RUTA o ALERTA_TOKEN llevan un salto de línea)"
+    exit 0
+    ;;
+esac
+
+escapar_valor_curl_cfg() {
+  local v="$1"
+  v="${v//\\/\\\\}"
+  v="${v//\"/\\\"}"
+  printf '%s' "$v"
+}
+
+PLATAFORMA_URL_ESC="$(escapar_valor_curl_cfg "$PLATAFORMA_URL")"
+RUTA_ESC="$(escapar_valor_curl_cfg "$RUTA")"
+ALERTA_TOKEN_ESC="$(escapar_valor_curl_cfg "$ALERTA_TOKEN")"
+
 CONFIG="$(mktemp)"
 trap 'rm -f "$CONFIG"' EXIT
 
 {
-  printf 'url = "%s%s"\n' "$PLATAFORMA_URL" "$RUTA"
-  printf 'header = "Authorization: Bearer %s"\n' "$ALERTA_TOKEN"
+  printf 'url = "%s%s"\n' "$PLATAFORMA_URL_ESC" "$RUTA_ESC"
+  printf 'header = "Authorization: Bearer %s"\n' "$ALERTA_TOKEN_ESC"
   printf 'silent\n'
   printf 'show-error\n'
   printf 'write-out = "\\nHTTP_STATUS:%%{http_code}\\n"\n'
