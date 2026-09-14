@@ -51,11 +51,11 @@ ciudad en los encabezados de la página nacional.
 | Consulta | Página | Estado |
 |---|---|---|
 | cómo cambiar de correduría sin cambiar de seguro | `/cambiar-de-correduria` | cubierta, y con «Sevilla» en title y H1 desde el 07/09/2026 |
-| preaviso de un mes para cancelar el seguro (art. 22 LCS) | — | **sin página** |
-| me han subido el seguro del coche en la renovación | — | **sin página** |
+| preaviso de un mes para cancelar el seguro (art. 22 LCS) | `/blog/preaviso-un-mes-no-renovar-seguro` | cubierta (07/09/2026, PR #2487/#2500) |
+| me han subido el seguro del coche en la renovación | `/blog/me-han-subido-el-seguro-en-la-renovacion` | cubierta (07/09/2026, PR #2487/#2500) |
 | qué cubre de verdad mi seguro de hogar | parcialmente `/seguros/hogar` | merece página propia |
 | qué es un corredor de seguros y en qué se diferencia de un agente | `/quienes-somos` | parcial |
-| cómo reclamar un siniestro que me han denegado | — | **sin página** |
+| cómo reclamar un siniestro que me han denegado | `/blog/siniestro-denegado-que-hacer` | cubierta (07/09/2026, PR #2487/#2500) |
 
 ## 3. Marca — hay que vigilarla, no ganarla
 
