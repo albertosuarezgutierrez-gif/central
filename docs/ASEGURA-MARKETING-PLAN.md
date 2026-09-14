@@ -34,7 +34,14 @@ Definición de «viva» (fuente única, no reimplementar):
 el canal más lento que existe para un negocio que necesita pólizas ahora. El SEO va en el
 plan, pero **no primero**.
 
-**(b) Los 32.520 leads no son una lista de marketing. Vía cerrada.**
+**(b) Los 32.520 leads no eran una lista de marketing. Vía CERRADA → ABIERTA el 14/09/2026.**
+
+> ✅ **Actualización 14/09/2026.** Alberto consultó al abogado (`docs/ASEGURA-CONSULTA-ABOGADO.md`
+> §1): base jurídica **interés legítimo (art. 6.1.f RGPD)**, autoriza **email y teléfono**, sin
+> condición especial más allá de identificación del mediador + opt-out. **WhatsApp sigue
+> bloqueado** (no por RGPD: falta WABA propia, `wa_opt_in=0`). El párrafo de abajo describía el
+> problema legal ya resuelto; el problema de **contactabilidad real** (17,2 %) sigue vigente y
+> es ahora la única restricción — no legal, de datos.
 
 | | |
 |---|---|
@@ -430,13 +437,33 @@ limitado, entre cinco frentes a la vez cuando cuatro de ellos ya están medidos 
 
 ### 7.1 Agente comercial — qué se puede automatizar de verdad, y qué no
 
-**Lo incómodo primero:** no hay ningún canal legal para escribir en frío, ni a las 32.520 fichas
-históricas ni a una lista de empresas comprada/scrapeada, sin resolver antes la pregunta 1 de
-`docs/ASEGURA-CONSULTA-ABOGADO.md` (borrador ya escrito, **nunca enviado**). Es tu propio repo
-diciendo que hace falta un abogado antes de un CRM. Antes de diseñar cualquier "agente comercial"
-para ASegura, **esa consulta se manda**. Es gratis compararla con lo que ya hace ia-rest (cold
-email automático sin ese análisis) — pero eso es una vertical de hostelería sin regulador
-sectorial; una correduría con clave DGSFP no tiene ese margen.
+> ✅ **Actualización 14/09/2026 — la consulta ya se mandó y se resolvió.** El abogado autoriza
+> escribir/llamar a las 32.520 fichas históricas por **interés legítimo** (art. 6.1.f RGPD),
+> canales **email y teléfono** (`docs/ASEGURA-CONSULTA-ABOGADO.md` §1). El párrafo original de
+> abajo describe el estado ANTERIOR a la consulta — se deja porque explica por qué hacía falta
+> preguntar antes de construir nada, pero **ya no es el bloqueo vigente**. El bloqueo real hoy es
+> de datos, no legal: de las 32.520, solo **5.594 (17,2 %)** tienen algún email o teléfono — ese
+> es el universo real de un "agente comercial" sobre la base histórica, no las 32.520. Y sigue
+> aplicando siempre, con o sin interés legítimo: identificación del mediador en el primer contacto
+> y opt-out/baja fácil en cada envío (RGPD art. 21, derecho de oposición — no se agota por la base
+> de legitimación).
+
+**Lo que decía este apartado antes de la consulta, para que quede el porqué:** no había ningún
+canal legal para escribir en frío, ni a las 32.520 fichas históricas ni a una lista de empresas
+comprada/scrapeada, sin resolver antes la pregunta 1 de `docs/ASEGURA-CONSULTA-ABOGADO.md`
+(entonces sin enviar). Es gratis comparar con lo que ya hace ia-rest (cold email automático sin
+ese análisis) — pero eso es una vertical de hostelería sin regulador sectorial; una correduría con
+clave DGSFP no tenía ese margen **hasta tener la respuesta del abogado por escrito**, que ya existe.
+
+🚨 **Lo que NO cambia con la respuesta del abogado:**
+- **Una lista de empresas comprada/scrapeada de fuera del grupo sigue sin base propia** — el
+  interés legítimo autorizado es específico de la relación previa con ESTAS 32.520 fichas
+  (antiguos clientes/leads de la propia correduría), no una autorización genérica para comprar
+  datos de terceros.
+- **WhatsApp sigue bloqueado**, y no por RGPD: falta WABA propia de Grupo ASegura y `wa_opt_in=0`
+  en las 32.600 fichas — Meta exige su propio opt-in con independencia de la base legal.
+- El copy sigue sin poder prometer ahorro/precio (RDL 3/2020, `lib/ramos.test.ts`), y cualquier
+  primer contacto sigue necesitando la info precontractual del mediador antes de pedir datos.
 
 **Lo que SÍ es automatizable ya, sin esperar al abogado, porque no es prospección fría:**
 
@@ -525,7 +552,8 @@ la base histórica se puede usar y cómo, que es la pregunta que condiciona todo
 
 | Semana | Acción | Quién |
 |---|---|---|
-| 1 | Enviar la consulta al abogado (§7.1) | Alberto |
+| 1 | ~~Enviar la consulta al abogado~~ ✅ **Hecho y resuelto 14/09/2026** — interés legítimo autorizado (§7.1) | Alberto |
+| 1-2 | Diseñar el primer envío de email a los **5.594 contactos con dato real** de la base histórica: identificación del mediador + opt-out visible, sin promesa de precio | Claude + Alberto (OK antes de enviar) |
 | 1 | Llamar a los 57 auto-sin-hogar + las 17 que vencen en 90 días | Alberto |
 | 1 | Google Business Profile + pedir reseña a los 80 | Alberto |
 | 1-2 | Fase 1: SLA de contacto + estado del lead en el CRM | Claude |

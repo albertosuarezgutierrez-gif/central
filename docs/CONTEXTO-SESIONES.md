@@ -13,12 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 **(14/09/2026)** Alberto pidió plan comercial ampliado para Grupo ASegura (agente comercial, ROI
-tipo CEO, redes). Añadida §7 a `docs/ASEGURA-MARKETING-PLAN.md`: se descarta reutilizar el
-cold-outreach de ia-rest (sin base de legitimación, 0 consent_logs/wa_opt_in en las 32.600 fichas
-— la consulta al abogado sigue sin enviarse); se prioriza cross-sell a los 80 clientes,
-comunidades y PyME/flota del grupo sobre "ir a todo el mundo"; tabla de decisión coste/retorno con
-las cifras ya medidas (48,37€/68,74€ comisión); recomendación de NO pagar estudio externo ahora.
-Sin código tocado, solo doc.
+tipo CEO, redes). Añadida §7 a `docs/ASEGURA-MARKETING-PLAN.md`: se prioriza cross-sell a los 80
+clientes, comunidades y PyME/flota del grupo sobre "ir a todo el mundo"; tabla de decisión
+coste/retorno con las cifras ya medidas (48,37€/68,74€ comisión); recomendación de NO pagar
+estudio externo ahora. **Mismo día, Alberto consultó al abogado y desbloqueó la pregunta 1 de
+`docs/ASEGURA-CONSULTA-ABOGADO.md`**: interés legítimo (art. 6.1.f RGPD) autoriza email y
+teléfono sobre las 32.520 fichas históricas (universo real contactable: 5.594, 17,2 %).
+**WhatsApp sigue bloqueado** (falta WABA propia, no es tema legal). Actualizados ambos docs.
+PR #2933. Sin código tocado, solo doc.
 
 > **🔄 Rotación mensual:** aquí vive SOLO el mes corriente. Los meses cerrados se
 > archivan en `docs/memoria/AAAA-MM.md` con `node scripts/rotar-memoria.mjs`
