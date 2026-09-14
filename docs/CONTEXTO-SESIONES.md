@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/09/2026)** Revisado el parte de siniestro del portal (`asegura-portal`) a petición de Alberto:
+`esAuto()` solo miraba `ramo === 'auto'`, así que un parte de MOTO con terceros nunca mostraba el
+bloque «Datos del otro vehículo» (matrícula/aseguradora/zona del daño) — `moto` es un ramo distinto
+de `auto` en `RAMOS_POLIZA`. Corregido a `esVehiculoAMotor()` (auto ∪ moto). Confirmado además que
+`hayHeridos`/`hayTerceros` universal para todo ramo es correcto (no es un resto de CIMA: es triaje
+propio, y hogar sí puede tener heridos por RC). PR #2938.
+
 **(14/09/2026)** Cerrado el consentimiento unificado (#2925): aplicada la migración
 `consentimiento_registro` y creado `POST /api/publico/correduria/consentimiento` en plataforma
 (#2934) — asegura-web/ia-rest/housesevillana dejan de reenviar a un 404. **Retirado Serper del
