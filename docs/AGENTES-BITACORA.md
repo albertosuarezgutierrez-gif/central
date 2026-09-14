@@ -15,6 +15,33 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-14 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (`_buzon_pdf` copió
+  12/09, `dias_caido=2`); `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacías (confirmado por
+  `search_threads`); `agente_salud` actualizado ok=true (vía Supabase MCP, sin curl). Paso 4.0:
+  11 filas `facturas_drive` ya `revisada_sin_cargo` (sin tocar), 1 `sin_revisar` (OpenRouter
+  25,64$, archivada 12/09) sin cargo aún — normal a 2 días. Paso 1: ventana de 2 días solo trajo
+  2 hilos no-factura; ampliando a mano hasta 05/09 encontré HUECO real: 4 recibos Anthropic
+  ("Prepaid extra usage" 76,50€ 08/09 · 170€×2 09/09 · 170€ 11/09), factura IONOS (1,21€ 09/09,
+  vía PayPal) y PriceLabs (34,98$ 08/09, disputa de Alberto por cobro con piso desactivado ya
+  resuelta por soporte — cargo correcto, factura por sincronización activa en el ciclo) tenían el
+  PDF en `_buzon_pdf` y el hilo YA `Facturas/Procesada` de una pasada anterior, pero nunca se
+  archivaron en Drive ni se registraron en `facturas_drive` — archivados ahora en
+  `09-Septiembre-2026` + 6 filas nuevas insertadas. Ningún cargo bancario casa exacto (búsqueda
+  amplia ±7 días): las 6 quedan pendientes de que entre el movimiento, salvo el recibo de 76,50€
+  que tiene DOS candidatos ambiguos sin conciliar en banco (07/09 y 10/09) — no auto-confirmado.
+  IKEA reenviado por Pilar (9,46€, KALAS/SKUBB/PRUTA) ya estaba `Procesada` sin archivar de antes
+  (correcto: pinta a hogar/niños, ambiguo, no se auto-clasifica). dudas: recibo Anthropic 76,50€
+  — qué cargo de los dos le corresponde (falta un recibo que explique el otro). fallos: **(1)
+  MISMO bloqueo que `pricing-agente` hoy mismo** — `.claude/mcp-sentinel/` deniega en sombra
+  cualquier Bash/curl con `Authorization: Bearer ${ALERTA_TOKEN}` en sesión desatendida →
+  preflight del canal de aviso y el latido final (`/api/internal/latido`) INEJECUTABLES; no se
+  intentó rodear (confirma que el bloqueo es transversal a toda rutina con el protocolo "Canal de
+  aviso"). **(2) gap de proceso**: varios hilos con gasto real llevaban `Facturas/Procesada` sin
+  archivar+registrar — el label no garantiza archivo hecho, y el barrido 4.0 no lo detecta porque
+  el hilo nunca llegó a `facturas_drive`; para `agentes-entrenador`: quizá convenga que Paso 1
+  también barra `label:Facturas/Procesada` reciente contra `_buzon_pdf` sin fila en
+  `facturas_drive`, no solo lo no-procesado. PRs/commits: — (solo bitácora + Drive + Supabase, sin
+  tocar código).
 - **2026-09-14 · pricing-agente** · hizo: Paso 0/1 OK (fundación sana, ciclo anterior 07/09 cruzado
   con incomes, 0/48 fechas muestreadas con income aún — normal). Paso 2 (mercado) completo vía 4
   agentes en paralelo + Supabase directo (fallback de la skill): 120/120/120/114 comps nuevos
