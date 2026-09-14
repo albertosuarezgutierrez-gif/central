@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-14T14:42:45Z",
-  "sha": "13e62470ebc038177902f446fdc5f138943eb2a7",
+  "generadoEn": "2026-09-14T15:10:54Z",
+  "sha": "dd7426b2720a7efe726325cc1fa927045df23893",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8175,7 +8175,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "60ba4ccd93fd"
+      "hash": "460203d12047"
     },
     {
       "ruta": "apps/asegura-web/app/legal/aviso-legal/page.tsx",
@@ -8778,6 +8778,7 @@
       "resumen": "Constructores de JSON-LD. Puros y testeados: devuelven objetos, no `<script>`. Por qué vive aquí y no incrustado en cada página: el mismo dato del mediador (clave DGSFP, domicilio, correo) aparece en la ficha del negocio, en las migas y en el pie. Escribirlo en cada `page.tsx` garantiza que un día t",
       "exporta": [
         "fichaNegocio",
+        "fichaWebSite",
         "fichaServicio",
         "migas",
         "fichaFaq",
@@ -8803,12 +8804,21 @@
           "linea": 54
         },
         {
+          "nombre": "fichaWebSite",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Record<string, unknown>",
+          "linea": 131,
+          "resumen": "Ficha `WebSite`. Es el tipo que le dice a un buscador «este dominio es un sitio», por oposición a `InsuranceAgency` («este NEGOCIO existe»): son entidades distintas que Google enlaza por `publisher`, "
+        },
+        {
           "nombre": "fichaServicio",
           "kind": "function",
           "exportada": true,
           "params": "ramo: Ramo",
           "retorno": "Record<string, unknown>",
-          "linea": 127,
+          "linea": 162,
           "resumen": "Ficha de SERVICIO por ramo (`Service`). Qué añade sobre lo que ya había: la ficha `InsuranceAgency` dice quién es el negocio, y el `FAQPage` dice qué preguntas responde una página. Faltaba el dato del"
         },
         {
@@ -8817,7 +8827,7 @@
           "exportada": true,
           "params": "items: readonly { nombre: string; ruta: string }[]",
           "retorno": "Record<string, unknown> | null",
-          "linea": 145,
+          "linea": 180,
           "resumen": "Migas de pan. Se emiten SOLO cuando hay jerarquía de verdad (home → sección → página); una miga de un solo nivel no aporta nada y ensucia."
         },
         {
@@ -8826,7 +8836,7 @@
           "exportada": true,
           "params": "ramo: Ramo",
           "retorno": "Record<string, unknown> | null",
-          "linea": 166,
+          "linea": 201,
           "resumen": "`FAQPage` a partir del FAQ del ramo. Devuelve `null` si no hay preguntas: un `FAQPage` vacío es marcado inválido, y aquí el hueco («este ramo aún no tiene FAQ») se respeta en vez de emitir un esquelet"
         },
         {
@@ -8835,7 +8845,7 @@
           "exportada": true,
           "params": "a: Articulo",
           "retorno": "Record<string, unknown>",
-          "linea": 197,
+          "linea": 232,
           "resumen": "Ficha de ARTÍCULO (`Article`). Los seguros son un tema YMYL —de los que afectan al dinero de quien lee—, y ahí lo que un buscador pondera es quién firma. Por eso el `author` no es la marca: es la PERS"
         },
         {
@@ -8844,12 +8854,12 @@
           "exportada": true,
           "params": "obj: Record<string, unknown>",
           "retorno": "string",
-          "linea": 225
+          "linea": 260
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c7e639106fa4"
+      "hash": "014bb09a1c62"
     },
     {
       "ruta": "apps/asegura-web/lib/sitio.ts",
@@ -81533,49 +81543,6 @@
       "hash": "cc5875622343"
     },
     {
-      "ruta": "apps/plataforma/app/seguros/Formulario.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "Formulario"
-      ],
-      "funciones": [
-        {
-          "nombre": "Formulario",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 17
-        }
-      ],
-      "tablas": [
-        "react"
-      ],
-      "rutaApi": null,
-      "hash": "84448c19d2d3"
-    },
-    {
-      "ruta": "apps/plataforma/app/seguros/page.tsx",
-      "ambito": "apps/plataforma",
-      "resumen": "Landing PÚBLICA de Grupo ASegura (correduría de seguros). Fuera del grupo `(usuario)` → sin sidebar ni sesión (el middleware la tiene en PUBLIC). Es la puerta del canal de leads web: el formulario entra por `POST /api/publico/correduria/lead` → puerto de asegura → Telegram a Alberto. Honesta a propó",
-      "exporta": [
-        "SegurosPage"
-      ],
-      "funciones": [
-        {
-          "nombre": "SegurosPage",
-          "kind": "function",
-          "exportada": true,
-          "params": "",
-          "retorno": null,
-          "linea": 41
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "d5c9d9899a5c"
-    },
-    {
       "ruta": "apps/plataforma/components/ui.tsx",
       "ambito": "apps/plataforma",
       "resumen": "Sistema de diseño de plataforma. Server-safe (sin hooks): lo pueden usar tanto los Server Components como los client. Solo presentación — cero lógica de negocio. ─── Por qué vive AQUÍ y no en app/(usuario)/dashboard/ui.tsx ──────────────────────────────── Nació en `dashboard/ui.tsx` (02/07/2026), pe",
@@ -108587,12 +108554,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 61
+          "linea": 62
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "682c4ec6704f"
+      "hash": "a9d416d54be3"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -135512,7 +135479,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3318,
-    "funciones": 10238
+    "archivos": 3316,
+    "funciones": 10237
   }
 }
