@@ -5,7 +5,7 @@
 // competidores»: es la regla «dato que NO hay ≠ dato que NO se ha mirado» de CLAUDE.md.
 // Spec: docs/superpowers/specs/2026-09-08-seo-correduria-conectores-design.md
 
-export type Fuente = 'gsc' | 'serp' | 'posthog'
+export type Fuente = 'gsc' | 'posthog'
 export type Estado = 'ok' | 'error' | 'no_configurado'
 
 export type ResultadoFuente<T> =
@@ -24,6 +24,12 @@ export type DatosGsc = {
   anterior: { ventana: VentanaGsc; total: TotalGsc } | null
 }
 
+// ResultadoSerp/ConsultaSerp/DatosSerp — RETIRADO el cliente Serper que las llenaba (14/09/2026,
+// decisión de Alberto: política «todo lo que pueda ir por OpenRouter, va por OpenRouter» +
+// SERP-position-tracking innecesario en esta fase). Los tipos se QUEDAN porque
+// `agente-decidir.ts` (agente autónomo de metadata de asegura-web) sigue tipado sobre
+// `ConsultaSerp[]` — sin fuente que lo alimente, ese agente queda dormido (su kill switch
+// `SEO_ASEGURA_AGENT_ENABLED` ya es default OFF y no hay evidencia de que se activara nunca).
 export type ResultadoSerp = { posicion: number; dominio: string; url: string; titulo: string }
 /** `propia` = posición de grupoasegura.es en el top-10; null = no está (que no es posición 0). */
 export type ConsultaSerp = { consulta: string; pagina: string | null; top: ResultadoSerp[]; propia: number | null }
@@ -39,7 +45,6 @@ export type DatosPosthog = {
 
 export type Resultados = {
   gsc: ResultadoFuente<DatosGsc>
-  serp: ResultadoFuente<DatosSerp>
   posthog: ResultadoFuente<DatosPosthog>
 }
 

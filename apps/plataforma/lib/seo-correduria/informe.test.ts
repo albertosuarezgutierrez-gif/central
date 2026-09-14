@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { accionPropuesta, redactarInforme, normalizarConsulta, type ConsultaObjetivo } from './informe.ts'
-import type { DatosGsc, DatosPosthog, DatosSerp, FilaGsc, Resultados } from './tipos.ts'
+import type { DatosGsc, DatosPosthog, FilaGsc, Resultados } from './tipos.ts'
 
 // Lista propia y pequeña: NO se importa `CONSULTAS` (la escribe otro agente en paralelo).
 const CONSULTAS: ConsultaObjetivo[] = [
@@ -31,24 +31,6 @@ function gscOk(consultas: FilaGsc[], anterior: DatosGsc['anterior'] = { ventana:
   }
 }
 
-function serpOk(n: number): Resultados['serp'] {
-  const consultas: DatosSerp['consultas'] = []
-  for (let i = 0; i < n; i++) {
-    consultas.push({
-      consulta: i === 0 ? 'seguro de hogar' : `consulta objetivo número ${i} bastante larga para ocupar sitio`,
-      pagina: i % 3 === 0 ? null : '/seguros/hogar',
-      propia: i % 2 === 0 ? null : 7,
-      top: [1, 2, 3, 4].map((p) => ({
-        posicion: p,
-        dominio: `competidor-${i}-${p}.es`,
-        url: `https://competidor-${i}-${p}.es/seguros`,
-        titulo: `Título ${p} de la consulta ${i}`,
-      })),
-    })
-  }
-  return { estado: 'ok', datos: { dominio: 'grupoasegura.es', consultas } }
-}
-
 const posthogOk: Resultados['posthog'] = {
   estado: 'ok',
   datos: {
@@ -62,11 +44,10 @@ const posthogOk: Resultados['posthog'] = {
 
 const todoOk = (consultasGsc: FilaGsc[] = [fila('Seguro de Hogar ', 340, 12.4, 5), fila('correduría sevilla', 900, 3.1, 40), fila('seguro comunidad', 50, 45, 0)]): Resultados => ({
   gsc: gscOk(consultasGsc),
-  serp: serpOk(3),
   posthog: posthogOk,
 })
 
-test('tres fuentes ok + consulta en posición 12 con página → mejorar_pagina (casa normalizando tildes/mayúsculas/trim)', () => {
+test('dos fuentes ok + consulta en posición 12 con página → mejorar_pagina (casa normalizando tildes/mayúsculas/trim)', () => {
   const a = accionPropuesta(todoOk(), CONSULTAS)
   assert.equal(a.tipo, 'mejorar_pagina')
   assert.match(a.texto, /\/seguros\/hogar/)
@@ -74,7 +55,7 @@ test('tres fuentes ok + consulta en posición 12 con página → mejorar_pagina 
   assert.match(a.texto, /12,4/)
 })
 
-test('gsc en error → arreglar_fuente AUNQUE haya datos de SERP, y nombra fuente y detalle', () => {
+test('gsc en error → arreglar_fuente, y nombra fuente y detalle', () => {
   const r: Resultados = { ...todoOk(), gsc: { estado: 'error', detalle: 'HTTP 403 del API de Search Console' } }
   const a = accionPropuesta(r, CONSULTAS)
   assert.equal(a.tipo, 'arreglar_fuente')
@@ -121,36 +102,30 @@ test('con anterior → deltas en formato español y posición a 1 decimal', () =
   assert.match(txt, /pos\. 12,4 · 340 impr\./)
 })
 
-test('serp en error → ni «fuera del top-10» ni un 0 en todo el informe', () => {
+test('ambas fuentes en error → ningún 0 en el informe', () => {
   // Entradas sin ningún «0» a propósito: si aparece uno, lo ha inventado el redactor.
   const r: Resultados = {
     gsc: { estado: 'no_configurado', detalle: 'falta GSC_SA_JSON' },
-    serp: { estado: 'error', detalle: 'Serper respondió cuatrocientos veintinueve' },
     posthog: { estado: 'error', detalle: 'HogQL sin respuesta' },
   }
   const txt = redactarInforme('S36', r, accionPropuesta(r, CONSULTAS), 'grupoasegura.es')
-  assert.doesNotMatch(txt, /fuera del top-10/)
   assert.doesNotMatch(txt, /0/)
-  assert.match(txt, /SERP \(Serper\) con error: Serper respondió cuatrocientos veintinueve/)
+  assert.match(txt, /PostHog con error: HogQL sin respuesta/)
   assert.match(txt, /Search Console sin configurar: falta GSC_SA_JSON/)
 })
 
-test('escapeHtml en todo texto externo: consulta de GSC, dominio de SERP, ruta de PostHog y detalle', () => {
+test('escapeHtml en todo texto externo: consulta de GSC, ruta de PostHog y detalle', () => {
   const r = todoOk([fila('<script>alert(1)</script> hogar', 340, 12.4, 5)])
-  const serp = serpOk(1)
-  if (serp.estado === 'ok') serp.datos.consultas[0].top[0].dominio = 'mal<b>o.es'
-  r.serp = serp
   r.posthog = { estado: 'ok', datos: { ...posthogOk.estado === 'ok' ? posthogOk.datos : ({} as DatosPosthog), topPaginas: [{ ruta: '/a&b<c>', vistas: 2 }] } }
   const txt = redactarInforme('2026-W36', r, { tipo: 'arreglar_fuente', texto: 'x < y & z' }, 'grupo<asegura>.es')
   assert.doesNotMatch(txt, /<script>/)
   assert.match(txt, /&lt;script&gt;alert\(1\)&lt;\/script&gt; hogar/)
-  assert.match(txt, /mal&lt;b&gt;o\.es/)
   assert.match(txt, /\/a&amp;b&lt;c&gt;/)
   assert.match(txt, /Acción<\/b>: x &lt; y &amp; z/)
   assert.match(txt, /SEO grupo&lt;asegura&gt;\.es<\/b>/)
 })
 
-test('informe completo con las tres fuentes ok: bloques, etiqueta literal de PostHog, top 3 páginas y orígenes', () => {
+test('informe completo con las dos fuentes ok: bloques, etiqueta literal de PostHog, top 3 páginas y orígenes', () => {
   const r = todoOk()
   const txt = redactarInforme('2026-W36', r, accionPropuesta(r, CONSULTAS), 'grupoasegura.es')
   assert.match(txt, /^🔎 <b>SEO grupoasegura\.es<\/b> · semana 2026-W36/)
@@ -159,25 +134,7 @@ test('informe completo con las tres fuentes ok: bloques, etiqueta literal de Pos
   assert.match(txt, /\/quienes-somos \(9\)/)
   assert.doesNotMatch(txt, /\/legal/) // top 3, no 4
   assert.match(txt, /google\.com \(30\)/)
-  assert.match(txt, /«seguro de hogar» — fuera del top-10 · competidor-0-1\.es, competidor-0-2\.es, competidor-0-3\.es/)
-  assert.doesNotMatch(txt, /competidor-0-4/) // 3 primeros dominios
-  assert.match(txt, /— posición 7 · /)
   assert.match(txt, /➡️ <b>Acción<\/b>: Mejorar \/seguros\/hogar/)
-})
-
-test('longitud < 3.500 con 14 consultas de SERP', () => {
-  const r: Resultados = { ...todoOk(), serp: serpOk(14) }
-  const txt = redactarInforme('2026-W36', r, accionPropuesta(r, CONSULTAS), 'grupoasegura.es')
-  assert.ok(txt.length < 3500, `mide ${txt.length}`)
-})
-
-test('si el SERP se pasa de largo, se recorta a 8 consultas y se dice cuántas quedan en BD', () => {
-  const r: Resultados = { ...todoOk(), serp: serpOk(60) }
-  const txt = redactarInforme('2026-W36', r, accionPropuesta(r, CONSULTAS), 'grupoasegura.es')
-  assert.ok(txt.length < 3500, `mide ${txt.length}`)
-  assert.match(txt, /\(\+52 consultas en BD\)/)
-  assert.match(txt, /60 consultas\)/)
-  assert.doesNotMatch(txt, /consulta objetivo número 8 /)
 })
 
 test('normalizarConsulta: minúsculas, sin tildes, trim y espacios colapsados', () => {

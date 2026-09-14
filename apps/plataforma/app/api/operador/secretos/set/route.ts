@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Los secretos de firma de sesión se editan en Vercel' }, { status: 400 })
   }
 
-  // Lista de proyectos destino: el primario + los adicionales (ej: SERPER_API_KEY → sivra + plataforma).
+  // Lista de proyectos destino: el primario + los adicionales (ej: GITHUB_TOKEN → sivra + plataforma).
   const allProjects = [entry.vercelProject, ...(entry.vercelProjects ?? [])]
 
   for (const projectName of allProjects) {
