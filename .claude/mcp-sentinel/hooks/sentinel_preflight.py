@@ -351,13 +351,34 @@ def check_sensitive_env(tool_name, tool_input, iocs, allowlist):
     """Flag a secret env var ONLY when it is exfiltrated: dereferenced (or env is
     dumped) AND piped/sent to a network egress tool. Mentioning a var name (code,
     docs, `rg 'GITHUB_TOKEN'`) is not flagged, that was the biggest false-positive
-    source. entity is None (never auto-trusted)."""
+    source. entity is None (never auto-trusted).
+
+    Domain-scoped exemption (14/09/2026, OK explícito de Alberto): a command whose
+    egress destination(s) are ALL first-party hosts on the allowlist is not
+    exfiltration by definition (e.g. curl with Authorization: Bearer ${ALERTA_TOKEN}
+    to our own plataforma endpoint, the documented pattern in every scheduled
+    routine's "Canal de aviso" protocol). Deliberately narrower than
+    check_suspicious_network's extract_hosts(): here we require an explicit
+    http(s):// URL (via _URL_HOST_RE), never the bare-word host guess that also
+    matches unrelated dotted tokens elsewhere in the command (an `-o /tmp/out.json`
+    output path, a `package.json` mention) — those aren't network destinations and
+    would wrongly veto the exemption if treated as one. A command whose destination
+    is built from a shell variable (`"${PLATAFORMA_URL}/x"`, no literal host in the
+    text) has no extractable URL either, so it is NOT exempted: the destination
+    can't be verified statically, which is the conservative/correct outcome. Only
+    exempts when at least one URL host is found AND every one clears the allowlist
+    boundary check (_is_allowlisted_host)."""
     names = iocs.get("sensitive_env_vars", {}).get("patterns", [])
+    allowed_domains = allowlist.get("domains", []) + iocs.get("allowlist", {}).get("domains", [])
     for cmd in command_strings(tool_input):
         if not _EGRESS_RE.search(cmd):
             continue
         named = any(re.search(rf"\$\{{?{re.escape(v)}\}}?", cmd) for v in names)
         if named or _SECRET_DEREF_RE.search(cmd) or _ENV_DUMP_RE.search(cmd):
+            url_hosts = {m.group("host").split("@")[-1].split(":")[0].lower().rstrip(".")
+                         for m in _URL_HOST_RE.finditer(cmd)}
+            if url_hosts and all(_is_allowlisted_host(h, allowed_domains) for h in url_hosts):
+                continue
             return ("environment secret piped to network (exfiltration)",
                     "critical", "sensitive_env", None)
     return (None, None, None, None)
