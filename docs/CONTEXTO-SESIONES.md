@@ -30,6 +30,12 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📉 trading-analista llevaba 6 días hábiles sin correr (14/09/2026).** Última pasada previa: 07/09;
+  hueco 08→13/09 sin refrescar NAV/cartera/precios. Repesca ejecutada completa (24 símbolos, `/analizar`+
+  `/puntuar` OK, Telegram enviado). Pendiente: revisar por qué el trigger programado no disparó esos días.
+  De paso, el servidor vetó RBLX por sospecha de suplantación de precio (su referencia interna 43,31 vs.
+  cierre real IBKR 50,41) — mis datos de IBKR no estaban mezclados; revisar esa referencia.
+
 - **🐛 Tercer 400 del ReRate real: Allianz exige `naturalPhenomena` y no hay catálogo REST (11/09/2026).**
   Tras el fix de `options: []`, el vendor rechazó con «El campo Fenómenos de la naturaleza de Allianz
   es obligatorio». `docs/CODEOSCOPIC-API-PORTAL.md` ya avisaba: qué opciones pide cada producto no se
