@@ -3113,3 +3113,51 @@ h1 em {
     margin-bottom: 12px;
   }
 }
+
+/* Botón flotante de WhatsApp (14/09/2026) — el mismo `.wsp` de `asegura-web`,
+ * copiado aquí porque las dos apps no comparten CSS. Es "clic para
+ * chatear", no el canal de login: no hace falta WABA, solo un número que
+ * alguien conteste (el mismo que ya usa la web pública). */
+.wsp-flotante {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 6px 20px -4px rgb(37 211 102 / 0.5), 0 2px 6px rgb(0 0 0 / 0.18);
+  transition: transform 0.2s var(--curva), box-shadow 0.2s;
+}
+
+.wsp-flotante:hover {
+  transform: scale(1.06);
+  box-shadow: 0 10px 26px -4px rgb(37 211 102 / 0.6), 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+.wsp-flotante:active {
+  transform: scale(0.96);
+}
+
+@media (max-width: 639px) {
+  .wsp-flotante {
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wsp-flotante {
+    transition: none;
+  }
+  .wsp-flotante:hover,
+  .wsp-flotante:active {
+    transform: none;
+  }
+}
