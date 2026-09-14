@@ -180,8 +180,8 @@ type Formulario = {
   hayHeridos: Triestado
   hayTerceros: Triestado
   /**
-   * Solo se enseñan y solo viajan si el ramo es auto y `hayTerceros === 'si'`
-   * (ver `esAuto`/`mostrarVehiculo` en el componente). Van SIEMPRE en el
+   * Solo se enseñan y solo viajan si el ramo es auto o moto y `hayTerceros === 'si'`
+   * (ver `esVehiculoAMotor`/`mostrarVehiculo` en el componente). Van SIEMPRE en el
    * formulario, aunque no se enseñen, para no perder lo que alguien ya había
    * escrito si cambia de póliza o de respuesta y vuelve atrás.
    */
@@ -210,9 +210,16 @@ const VACIO: Formulario = {
   vehiculo: VEHICULO_VACIO,
 }
 
-/** `'auto'` bajo cualquier variante de caja; el resto (`null`, otro ramo) es «no». */
-function esAuto(ramo: string | null | undefined): boolean {
-  return typeof ramo === 'string' && ramo.trim().toLowerCase() === 'auto'
+/**
+ * `'auto'` o `'moto'` bajo cualquier variante de caja; el resto (`null`, otro
+ * ramo) es «no». Los datos del otro vehículo («matrícula, aseguradora…») valen
+ * igual para un choque en moto que en coche — son los dos ramos con vehículo a
+ * motor del catálogo (`RAMOS_POLIZA` de `poliza-leida.ts`); no hay un tercero.
+ */
+function esVehiculoAMotor(ramo: string | null | undefined): boolean {
+  if (typeof ramo !== 'string') return false
+  const r = ramo.trim().toLowerCase()
+  return r === 'auto' || r === 'moto'
 }
 
 /**
@@ -571,10 +578,10 @@ export function ParteSiniestro({
 
   // El bloque de «datos del otro vehículo» (matrículas, zona del daño) solo
   // tiene sentido con terceros de por medio, y solo se sabe pedir una
-  // matrícula si la póliza elegida es de auto. Con «No lo sé» en la póliza NO
-  // se enseña: saber el ramo es justo lo que el cliente está diciendo que no sabe.
+  // matrícula si la póliza elegida es de auto o moto. Con «No lo sé» en la
+  // póliza NO se enseña: saber el ramo es justo lo que el cliente está diciendo que no sabe.
   const polizaSeleccionada = polizas.find((p) => p.valor === form.poliza) ?? null
-  const mostrarVehiculo = esAuto(polizaSeleccionada?.ramo) && form.hayTerceros === 'si'
+  const mostrarVehiculo = esVehiculoAMotor(polizaSeleccionada?.ramo) && form.hayTerceros === 'si'
 
   /**
    * Al elegir póliza, autorrellena «Tu matrícula» si la tenemos (dictado de
