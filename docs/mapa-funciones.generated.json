@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-14T10:25:39Z",
-  "sha": "73202da1985fafc0340c21d540078528134b9651",
+  "generadoEn": "2026-09-14T14:02:14Z",
+  "sha": "b6a679ad23a4b6c0678aeb31382cd97a72207ebf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -74938,7 +74938,7 @@
     {
       "ruta": "apps/plataforma/app/api/cron/seo-correduria/route.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Cron SEO de la correduría — lunes 08:30 UTC (registrado en lib/cron-dispatch.ts). Lee las tres fuentes que el agente `seo-asegura` necesitaba y hasta hoy le pegaba una persona: - Google Search Console: por qué consultas aparece grupoasegura.es y con qué posición. - Serper: quién ocupa el top-10 de c",
+      "resumen": "Cron SEO de la correduría — lunes 08:30 UTC (registrado en lib/cron-dispatch.ts). Lee las DOS fuentes que el agente `seo-asegura` necesitaba y hasta hoy le pegaba una persona: - Google Search Console: por qué consultas aparece grupoasegura.es y con qué posición. - PostHog EU: visitas medidas (solo q",
       "exporta": [],
       "funciones": [
         {
@@ -74947,7 +74947,7 @@
           "exportada": false,
           "params": "faltan: string[], leer: () => Promise<T>",
           "retorno": "Promise<ResultadoFuente<T>>",
-          "linea": 43,
+          "linea": 47,
           "resumen": "Envuelve una lectura en el tri-estado: secreto ausente → no_configurado; excepción → error."
         },
         {
@@ -74956,7 +74956,7 @@
           "exportada": false,
           "params": "nombres: string[]",
           "retorno": "string[]",
-          "linea": 53
+          "linea": 57
         },
         {
           "nombre": "handler",
@@ -74964,12 +74964,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 57
+          "linea": 61
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/seo-correduria",
-      "hash": "ca23b4cf62cd"
+      "hash": "3e49b430767d"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ses-latido/route.ts",
@@ -76682,7 +76682,39 @@
         "secrets_audit"
       ],
       "rutaApi": "/api/operador/secretos/set",
-      "hash": "0268b7637632"
+      "hash": "354cf3f1d385"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/publico/correduria/consentimiento/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "OPTIONS",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "OPTIONS",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [
+        "consentimiento_registro",
+        "next"
+      ],
+      "rutaApi": "/api/publico/correduria/consentimiento",
+      "hash": "4839266401f0"
     },
     {
       "ruta": "apps/plataforma/app/api/publico/correduria/lead/route.ts",
@@ -93139,7 +93171,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fd586ef7fc07"
+      "hash": "b1f15538390e"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -95969,7 +96001,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 27,
+          "linea": 22,
           "resumen": "minúsculas, sin tildes, trim, espacios colapsados — para casar consultas de GSC con las objetivo."
         },
         {
@@ -95978,7 +96010,7 @@
           "exportada": true,
           "params": "r: Resultados, consultas: ConsultaObjetivo[]",
           "retorno": "Accion",
-          "linea": 38
+          "linea": 33
         },
         {
           "nombre": "num",
@@ -95986,7 +96018,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 94,
+          "linea": 89,
           "resumen": "Formato español, con miles también en 4 cifras (`1.543`): `es-ES` a secas no agrupa hasta 5."
         },
         {
@@ -95995,7 +96027,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 97
+          "linea": 92
         },
         {
           "nombre": "delta",
@@ -96003,7 +96035,7 @@
           "exportada": false,
           "params": "actual: number, anterior: number, decimales = 0",
           "retorno": "string",
-          "linea": 101,
+          "linea": 96,
           "resumen": "«+12» / «−3» / «±0» en formato español."
         },
         {
@@ -96012,7 +96044,7 @@
           "exportada": false,
           "params": "fuente: Fuente, res: { estado: 'error' | 'no_configurado'; detalle: string }",
           "retorno": "string",
-          "linea": 112
+          "linea": 107
         },
         {
           "nombre": "bloqueGsc",
@@ -96020,23 +96052,7 @@
           "exportada": false,
           "params": "res: Resultados['gsc']",
           "retorno": "string[]",
-          "linea": 117
-        },
-        {
-          "nombre": "lineaSerp",
-          "kind": "function",
-          "exportada": false,
-          "params": "c: ConsultaSerp",
-          "retorno": "string",
-          "linea": 146
-        },
-        {
-          "nombre": "bloqueSerp",
-          "kind": "function",
-          "exportada": false,
-          "params": "res: Resultados['serp'], maxConsultas: number | null",
-          "retorno": "string[]",
-          "linea": 155
+          "linea": 112
         },
         {
           "nombre": "bloquePosthog",
@@ -96044,15 +96060,7 @@
           "exportada": false,
           "params": "res: Resultados['posthog']",
           "retorno": "string[]",
-          "linea": 166
-        },
-        {
-          "nombre": "montar",
-          "kind": "function",
-          "exportada": false,
-          "params": "semana: string, r: Resultados, accion: Accion, dominio: string, maxSerp: number | null",
-          "retorno": "string",
-          "linea": 181
+          "linea": 141
         },
         {
           "nombre": "redactarInforme",
@@ -96060,13 +96068,13 @@
           "exportada": true,
           "params": "semana: string, r: Resultados, accion: Accion, dominio: string",
           "retorno": "string",
-          "linea": 193,
+          "linea": 157,
           "resumen": "HTML de Telegram (`parse_mode: 'HTML'`). Todo texto externo pasa por `escapeHtml`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0fabad04d8ff"
+      "hash": "f5d8e660c131"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/posthog.ts",
@@ -96129,56 +96137,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f4d4f6a48e06"
-    },
-    {
-      "ruta": "apps/plataforma/lib/seo-correduria/serp.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "lib/seo-correduria/serp.ts — top-10 de Google por consulta, vía Serper. Mismo cliente que `app/api/sivra/mercado/search/route.ts` (header `X-API-KEY`, `gl:'es'`, `hl:'es'`, `num:10`, timeout de 10 s). En `!res.ok` el cuerpo va en el error a propósito: es donde Serper dice «Not enough credits», y un ",
-      "exporta": [
-        "dominioDe",
-        "posicionPropia",
-        "consultarSerp",
-        "leerSerp"
-      ],
-      "funciones": [
-        {
-          "nombre": "dominioDe",
-          "kind": "function",
-          "exportada": true,
-          "params": "url: string",
-          "retorno": "string",
-          "linea": 19,
-          "resumen": "Hostname de la URL sin el `www.` inicial. Si no parsea, devuelve la cadena tal cual en minúsculas."
-        },
-        {
-          "nombre": "posicionPropia",
-          "kind": "function",
-          "exportada": true,
-          "params": "top: ResultadoSerp[], dominio: string",
-          "retorno": "number | null",
-          "linea": 33,
-          "resumen": "Posición del primer resultado del dominio propio (o de un subdominio suyo, `.${dominio}`). `null` = no está en el top: NO es la posición 0, y el informe tiene que poder decir «no aparece». `grupoasegu"
-        },
-        {
-          "nombre": "consultarSerp",
-          "kind": "function",
-          "exportada": true,
-          "params": "apiKey: string, consulta: string, fetch: FetchLike",
-          "retorno": "Promise<ResultadoSerp[]>",
-          "linea": 43
-        },
-        {
-          "nombre": "leerSerp",
-          "kind": "function",
-          "exportada": true,
-          "params": "cfg: { apiKey: string; dominio: string; consultas: { consulta: string; pagina: string | null }[] }, fetch: FetchLike,",
-          "retorno": "Promise<DatosSerp>",
-          "linea": 67
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "e48e0022f9ce"
     },
     {
       "ruta": "apps/plataforma/lib/ses/cifrado.ts",
@@ -135555,6 +135513,6 @@
   ],
   "resumen": {
     "archivos": 3318,
-    "funciones": 10243
+    "funciones": 10238
   }
 }
