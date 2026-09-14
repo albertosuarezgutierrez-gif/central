@@ -58,10 +58,12 @@ export default function Analitica() {
     // Sin NINGUNA credencial (ni PostHog ni GA4) no hay nada que arrancar — y
     // sin banner tampoco hay forma de pedir permiso, así que ni se monta el
     // CMP. `puedeCargar()` ya gatea cada proveedor por SU credencial (ver
-    // consentimiento.ts): este guard solo evita montar el banner cuando
-    // ninguno de los dos tiene nada que medir — no basta con mirar
-    // `POSTHOG_KEY` a secas, o GA4_ID se quedaría sin banner que lo arranque
-    // el día que falte la clave de PostHog en Vercel.
+    // consentimiento.ts): este guard solo decide si se monta el banner, y NO
+    // puede mirar solo `POSTHOG_KEY` — eso dejaría a GA4 sin banner que lo
+    // arranque el día que falte esa clave en Vercel. `GA4_ID` es hoy un
+    // literal (siempre hay valor), así que en la práctica el banner se monta
+    // siempre; si `GA4_ID` pasara a ser una env algún día, esta condición
+    // seguiría siendo la correcta sin tocarla.
     if (!POSTHOG_KEY && !GA4_ID) return
 
     function revisar() {
