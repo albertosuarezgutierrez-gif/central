@@ -7,14 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test lib/*.test.ts"
+    "test": "node --test lib/*.test.ts test/*.test.ts"
   },
   "dependencies": {
     "@central/brand": "workspace:*",
+    "@central/core-consent": "workspace:*",
     "@central/module-seguros": "workspace:*",
     "next": "^15.5.18",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "vanilla-cookieconsent": "^3.1.0"
   },
   "devDependencies": {
     "@types/node": "^20",

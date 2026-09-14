@@ -218,6 +218,14 @@ export const TRADUCCIONES: Record<string, string> = {
   'El barrio de la Macarena': 'The Macarena quarter',
   'Casa con parking en el centro': 'House with parking in the centre',
   'Comprobar disponibilidad': 'Check availability',
+
+  // ── Banner de consentimiento ─────────────────────────────────────────────────
+  // No es un texto suelto: `montarBannerHtml('es')` (packages/core-consent) ya
+  // incrusta las traducciones de los tres idiomas en `language.translations`, y lo
+  // único que cambia entre variantes es qué idioma queda seleccionado por defecto.
+  // Esta clave es ese substring literal del JSON embebido — ver Task D2 del plan
+  // de consentimiento unificado.
+  '"default":"es"': '"default":"en"',
 }
 
 /**

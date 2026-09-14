@@ -371,10 +371,10 @@ export default function Privacidad() {
               siguiendo nuestras instrucciones.
             </li>
             <li>
-              <strong>Cookiebot y PostHog</strong>, y solo si aceptas las cookies de medición: el
-              primero guarda tu respuesta al aviso de cookies, el segundo cuenta las visitas. PostHog
-              trata los datos en servidores de la Unión Europea. Los dos son encargados nuestros, con
-              contrato del art. 28 RGPD. Si no aceptas, ninguno de los dos recibe nada tuyo.
+              <strong>PostHog</strong>, y solo si aceptas las cookies de medición: cuenta las visitas
+              de forma anónima y trata los datos en servidores de la Unión Europea. Es un encargado
+              nuestro, con contrato del art. 28 RGPD. Si no aceptas, no recibe nada tuyo. Tu respuesta
+              al aviso de cookies la guardamos nosotros mismos, en tu propio navegador.
             </li>
             <li>
               <strong>La Administración</strong> y los tribunales, cuando una norma nos obligue a
@@ -484,7 +484,7 @@ export default function Privacidad() {
             saber qué páginas se visitan y por dónde se abandona el formulario, y nada más: no hay
             publicidad, no hay perfilado, no se graba tu sesión ni se comparte con redes sociales. La
             herramienta es <strong>PostHog</strong>, alojada en la Unión Europea, y el permiso lo
-            gestiona <strong>Cookiebot</strong>. Mientras no aceptes, PostHog{' '}
+            gestiona el banner de esta misma web. Mientras no aceptes, PostHog{' '}
             <strong>ni siquiera se descarga</strong> a tu navegador.
           </p>
           <p style={parrafoUltimo}>
