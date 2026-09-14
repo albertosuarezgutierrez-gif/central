@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-13T14:18:06Z",
+  "generadoEn": "2026-09-14T05:09:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2084,7 +2084,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 67
+        "evidencias": 70
       },
       "asegura-web": {
         "estado": "usado",
@@ -2192,7 +2192,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 56
+        "evidencias": 59
       },
       "asegura-web": {
         "estado": "usado",
@@ -3940,6 +3940,8 @@
       "/api/polizas/[id]",
       "/api/push/desuscribir",
       "/api/push/suscribir",
+      "/api/recordatorios",
+      "/api/recordatorios/[id]",
       "/api/salir",
       "/api/siniestros",
       "/api/siniestros/[id]/adjuntos",
@@ -6259,7 +6261,7 @@
     "packages": 40,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1356,
+    "apis": 1358,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
