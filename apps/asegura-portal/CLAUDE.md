@@ -2112,7 +2112,11 @@ que no se ha visto morder es una suposición.
 **900 300 250, L-V 9-19** — corregido el 08/09/2026: el 900 101 920 que se cargó el 05/09 es la línea
 especial de DANA/catástrofes según `prensa.allianz.es`; **asistencia a NULL a propósito** porque depende
 del ramo —900 117 115 vehículos / 913 255 258 hogar— y la columna admite uno solo) · Occident `C0468`
-(19, **solo WhatsApp**) · Reale `C0613` (1, 900 365 900). Y **Generali `C0072`** (sin pólizas vivas;
+(19, **voz + WhatsApp, 917 83 83 83, 24h/365 días** — corregido el 14/09/2026: el 05/09 se cargó ese
+mismo número SOLO como WhatsApp con horario 9-21h L-V, leyendo el badge de WhatsApp Business; Alberto
+confirmó que es la MISMA línea también para voz y 24h/365, contrastado además con tres comparadores
+—Selectra, numeroservicioalcliente.com, segurosmarina.es—, que coinciden en «asistencia en carretera y
+siniestros, 24h/365 días». `telefono_siniestros` ya no es `NULL`) · Reale `C0613` (1, 900 365 900). Y **Generali `C0072`** (sin pólizas vivas;
 una declarada en el portal como «GeneraliSegurosy Reaseguros,S.A.U.», que NO cruza por nombre exacto):
 900 903 433 para dar parte y asistencia, horario NULL; su grúa por WhatsApp (+34 654 033 629) **no se
 pinta** porque es asistencia y `whatsapp_siniestros` se rotula «Dar parte». SQL:
