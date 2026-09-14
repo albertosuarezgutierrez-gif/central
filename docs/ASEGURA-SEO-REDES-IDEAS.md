@@ -328,12 +328,17 @@ pueden hacer en la misma sentada.
 
 Donde está el dinero y casi no hay competencia. No «seguro de coche barato»: esa SERP no se gana.
 
-- «me han subido el seguro del coche en la renovación»
-- «preaviso de un mes para cancelar el seguro» (art. 22 LCS)
+- ✅ «me han subido el seguro del coche en la renovación» → `/blog/me-han-subido-el-seguro-en-la-renovacion` (07/09/2026, PR #2487/#2500)
+- ✅ «preaviso de un mes para cancelar el seguro» (art. 22 LCS) → `/blog/preaviso-un-mes-no-renovar-seguro` (07/09/2026, PR #2487/#2500)
+- ✅ «cómo reclamar un siniestro que me han denegado» → `/blog/siniestro-denegado-que-hacer` (07/09/2026, PR #2487/#2500)
 - «cómo cambiar de correduría sin cambiar de seguro»
 - «qué cubre de verdad mi seguro de hogar»
 - «seguro de comunidad de propietarios Sevilla» · «seguro de local comercial Sevilla» ·
   «seguro de flota Sevilla»
+
+Corregido 14/09/2026: el hueco de arriba llevaba desde el 07/09 sin cerrarse pese a que los 3
+artículos ya existían — el agente SEO lo detectó (misma sesión que confirmó GSC+PostHog OK vía el
+puerto HTTP), lo anotó porque no tenía escritura en el repo, y esta sesión aplicó el cierre.
 
 **Ritmo:** un artículo por ciclo, no cinco a medias.
 ⚠️ **Lección del agente SEO de ia-rest, que no aplicó ni un cambio en toda su vida:** su umbral de
