@@ -30,6 +30,15 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📅 mercado-booking: jul/ago-2027 SIGUEN cumpliendo y la línea PRIORIDAD sigue sin quitarse, van
+  ya ≥8 pasadas desde 31/08 (14/09/2026).** Pasada acotada: 224 comps en 24 ventanas (0 sin
+  respuesta) + 2/4 escaparate (`prop_duplex_center` dio un match erróneo de Booking en Vlorë/Albania
+  — nombre de portal demasiado genérico, a corregir en `NOMBRE_PORTAL`; `prop_luxury_busto` sin
+  disponibilidad). `/mercado/plan` confirma otra vez que jul y ago-2027 no están en
+  `meses_sin_bucket`. Sigue pendiente de Alberto quitar la línea "PRIORIDAD TEMPORAL" del trigger
+  desde su UI (la sesión no tiene herramienta para editarlo) — cada pasada gasta el cupo de 24
+  ventanas repitiendo una comprobación cerrada desde el 31/08.
+
 - **🚨 El aviso de "siniestros nuevos" mentía: "ya están abiertos" cuando 11 de 12 venían `cerrado`
   (14/09/2026).** `siniestros-nuevos` marca "nuevo" por `entradoEn` (cuándo entró en nuestra BD), no
   por su estado real en la compañía — CIMA manda siniestros en cualquier estado. El puerto de asegura
