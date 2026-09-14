@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-14T07:40:09Z",
-  "sha": "6164c50c2c9514888dc4f1f7f43a4a2b89dfef5c",
+  "generadoEn": "2026-09-14T08:05:05Z",
+  "sha": "44f46cd746d50459eb5e77202750da3c0c2a938f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -97001,12 +97001,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 163
+          "linea": 173
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4f90b5ee86b2"
+      "hash": "186f75116487"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/destilar.ts",
