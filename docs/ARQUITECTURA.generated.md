@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-13T14:18:06Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-14T05:03:09Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1356 rutas API.
+**Resumen:** 13 apps · 40 packages · 23 capacidades · 40 skills · 1358 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-push, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** Notificaciones (push)
 - **Tablas (20):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_push_suscripcion, seguros.portal_supresion, seguros.portal_vinculo, seguros.portal_vista_corredor
-- **Rutas API:** 29
+- **Rutas API:** 31
 ### asegura-web
 - **Módulos que usa:** module-seguros, module-seguros-portal
 - **Capacidades:** —
@@ -263,6 +263,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (13/09/2026) 🇮🇹 `detectLang` marcaba italiano correcto como "deriva al español"
+- (13/09/2026) 🚗 Identificar pólizas por matrícula/dirección, no por nº de póliza — regla permanente
 - (13/09/2026) 🚑 Parte de siniestro: zona del daño tocable + autorrelleno + «ha pasado ahora mismo»
 - (13/09/2026) 🔔 Aviso Telegram al iniciar sesión en la intranet
 - (13/09/2026) 📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real
@@ -271,5 +272,4 @@
 - (13/09/2026) 📇 Directorio de contactos por compañía en `/correduria` + teléfonos minados de Gmail
 - (13/09/2026) 🔎 Diagnóstico (sin código): botón WhatsApp/Invitar ausente en Pablo Franco Ruz — no era el móvil
 - (13/09/2026) 🚨 CIMA caído 12-13/09 por DNS de `app.grupoasegura.com` — arreglado + mapper corregido + cuarentena desatascada 42→20
-- (13/09/2026) 🔒 Login de plataforma sin rate limit — fuerza bruta viable, cerrado
 

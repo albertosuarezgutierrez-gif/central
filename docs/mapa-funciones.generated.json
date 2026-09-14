@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-13T19:34:48Z",
-  "sha": "ee1f8be5c2d18cd51e1c15a7a65184a45e71945a",
+  "generadoEn": "2026-09-14T05:03:09Z",
+  "sha": "792869c022fe67be675b05ceef3dffa61e5badc0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3654,7 +3654,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 61
+          "linea": 64
         },
         {
           "nombre": "Titular",
@@ -3662,7 +3662,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date }",
           "retorno": null,
-          "linea": 480,
+          "linea": 502,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -3671,13 +3671,13 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], titular?: string",
           "retorno": "PolizaOpcionParte",
-          "linea": 529,
+          "linea": 551,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5e825141cf4b"
+      "hash": "fcf9fd6d61ef"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -3805,7 +3805,7 @@
           "nombre": "ParteSiniestro",
           "kind": "function",
           "exportada": true,
-          "params": "{ polizas, partes, }: { polizas: readonly PolizaOpcionParte[] partes: readonly ParteEnviado[] }",
+          "params": "{ polizas, partes, polizaInicial, }: { polizas: readonly PolizaOpcionParte[] partes: readonly ParteEnviado[] /** * El `valor` (`cartera:<id>`) de la póliza desde cuya ficha se llegó aquí * (botón «Dar parte de esta póliza»), o `null`/`undef",
           "retorno": null,
           "linea": 508
         },
@@ -3815,7 +3815,7 @@
           "exportada": false,
           "params": "{ uid, nombre, etiqueta, ayuda, valor, deshabilitado, onCambio, }: { uid: string nombre: string etiqueta: string ayuda: string valor: Triestado deshabilitado: boolean onCambio: (v: Triestado) => void }",
           "retorno": null,
-          "linea": 1206,
+          "linea": 1226,
           "resumen": "Un tri-estado pintado como tres radios. Radios y no un `<select>`: las tres respuestas tienen que verse a la vez para que «No lo sé» sea visiblemente la que está marcada de salida. Y no un checkbox, n"
         },
         {
@@ -3824,7 +3824,7 @@
           "exportada": false,
           "params": "{ uid, valor, deshabilitado, onCambio, onZona, }: { uid: string valor: FormVehiculo deshabilitado: boolean onCambio: (campo: Exclude<keyof FormVehiculo, 'zonasDano'>, valor: string) => void onZona: (codigo: string) => void }",
           "retorno": null,
-          "linea": 1271,
+          "linea": 1291,
           "resumen": "«Datos del otro vehículo» — solo para auto, y solo con terceros de por medio (ver `mostrarVehiculo` en `ParteSiniestro`). 🚨 Los cinco campos son OPCIONALES: ninguno lleva `required`. Con el coche tod"
         },
         {
@@ -3833,7 +3833,7 @@
           "exportada": false,
           "params": "{ seleccion, deshabilitado, onCambio, etiquetaId, }: { seleccion: readonly string[] deshabilitado: boolean onCambio: (codigo: string) => void etiquetaId: string }",
           "retorno": null,
-          "linea": 1396,
+          "linea": 1416,
           "resumen": "El selector de zonas: nueve botones reales en un grid con forma de coche (delantera arriba, trasera abajo), no una silueta dibujada a mano — mismo patrón que usan las apps de las aseguradoras (Mapfre,"
         },
         {
@@ -3842,7 +3842,7 @@
           "exportada": false,
           "params": "{ uid, ficheros, deshabilitado, onElegir, onQuitar, }: { uid: string ficheros: readonly Elegido[] deshabilitado: boolean onElegir: (e: React.ChangeEvent<HTMLInputElement>) => void onQuitar: (clave: string) => void }",
           "retorno": null,
-          "linea": 1451,
+          "linea": 1471,
           "resumen": "«Adjunta fotos o documentos» — el bloque del formulario que elige ficheros. ─── Varios ficheros y de varios tipos ─────────────────────────────────────── `multiple` a propósito: de un golpe salen cuat"
         },
         {
@@ -3851,7 +3851,7 @@
           "exportada": false,
           "params": "{ ficheros, onQuitar, }: { ficheros: readonly Elegido[] onQuitar: ((clave: string) => void) | null }",
           "retorno": null,
-          "linea": 1532,
+          "linea": 1552,
           "resumen": "Los ficheros elegidos, uno por línea, CADA UNO con su estado. 🚨 Es el corazón de «subir 5 y que fallen 2 deja 3 subidos y 2 explicados». Un fichero rechazado —por la revisión local o por el servidor—"
         },
         {
@@ -3860,7 +3860,7 @@
           "exportada": false,
           "params": "{ parteId, adjuntos, }: { parteId: string adjuntos: AdjuntoEnviado[] | null | undefined }",
           "retorno": null,
-          "linea": 1595,
+          "linea": 1615,
           "resumen": "Los ficheros que ya viajaron con un parte enviado, con su enlace de descarga. 🚨 CUATRO estados, y la diferencia entre los tres primeros es toda la regla de la casa («dato que NO hay ≠ dato que NO se "
         },
         {
@@ -3869,7 +3869,7 @@
           "exportada": false,
           "params": "{ partes }: { partes: readonly ParteEnviado[] }",
           "retorno": null,
-          "linea": 1642,
+          "linea": 1662,
           "resumen": "Los partes que ya ha mandado esta persona."
         }
       ],
@@ -3878,7 +3878,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "8b64e7ec3b67"
+      "hash": "dfc38f578d60"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/poliza/[id]/page.tsx",
@@ -3902,13 +3902,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 199,
+          "linea": 202,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "05e34530b828"
+      "hash": "1526164a0aa5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -4017,6 +4017,45 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6ecde2fcd6bb"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/Recordatorios.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Recordatorios"
+      ],
+      "funciones": [
+        {
+          "nombre": "opcionRepiteDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "meses: number | null",
+          "retorno": "string",
+          "linea": 41
+        },
+        {
+          "nombre": "Recordatorios",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ recordatorios, polizas, }: { recordatorios: RecordatorioVista[] /** Para poder decir «ITV del Ibiza» en vez de «ITV»: Alberto, 13/09/2026 * («lo lógico es asignarlo al bien asegurado»). La MISMA lista que ya arma * `page.tsx` para `ParteS",
+          "retorno": null,
+          "linea": 62
+        },
+        {
+          "nombre": "etiquetaMeses",
+          "kind": "function",
+          "exportada": false,
+          "params": "meses: number",
+          "retorno": "string",
+          "linea": 314
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "5609f18cbeb5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ResumenTitular.tsx",
@@ -4701,6 +4740,50 @@
       "tablas": [],
       "rutaApi": "/api/push/suscribir",
       "hash": "f0f82be52ff0"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/recordatorios/[id]/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Borra un recordatorio PROPIO. El aislamiento lo da este código, no RLS (`prisma_asegura_portal` no tiene políticas que resuelvan `auth.uid()`): `borrarRecordatorio()` filtra por `identidadId` ADEMÁS d"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/recordatorios/[id]",
+      "hash": "2b246104e582"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/recordatorios/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "Alta de un recordatorio PROPIO (ITV, carnet, caldera… o texto libre), y opcionalmente colgado de UNA póliza (para poder decir «ITV del Ibiza» en vez de «ITV» a secas — Alberto, 13/09/2026: «lo lógico "
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/recordatorios",
+      "hash": "1de1ba45114e"
     },
     {
       "ruta": "apps/asegura-portal/app/api/salir/route.ts",
@@ -7022,7 +7105,7 @@
           "exportada": true,
           "params": "identidadId: string, cartera?: CarteraPortal,",
           "retorno": "Promise<void>",
-          "linea": 54,
+          "linea": 55,
           "resumen": "Idempotente: `upsert` sobre `(identidad_id, poliza_id)`. Se puede llamar en cada carga de la bóveda sin duplicar nada. `cartera` es opcional para no leer la cartera dos veces en el mismo render: la pá"
         },
         {
@@ -7031,7 +7114,7 @@
           "exportada": false,
           "params": "identidadId: string, hoy: Date = new Date()",
           "retorno": null,
-          "linea": 178,
+          "linea": 191,
           "resumen": "Las obligaciones que salen de las pólizas que la PERSONA ha subido. Qué genera obligación y qué no lo decide `reparoDeclarada()`, que vive en `@central/module-seguros-portal` con su test: una póliza s"
         },
         {
@@ -7040,7 +7123,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<ReparosDeclaradas>",
-          "linea": 331
+          "linea": 344
         },
         {
           "nombre": "reparosDeclaradasDeSesion",
@@ -7048,7 +7131,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<ReparosDeclaradas>",
-          "linea": 347,
+          "linea": 360,
           "resumen": "Envoltura que resuelve la identidad por la puerta única."
         },
         {
@@ -7057,7 +7140,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 354,
+          "linea": 367,
           "resumen": "Envoltura que resuelve la identidad por la puerta única."
         },
         {
@@ -7066,7 +7149,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<ObligacionVista[]>",
-          "linea": 360
+          "linea": 373
         },
         {
           "nombre": "obligacionesDeSesion",
@@ -7074,7 +7157,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<ObligacionVista[]>",
-          "linea": 377,
+          "linea": 390,
           "resumen": "Envoltura que resuelve la identidad por la puerta única."
         },
         {
@@ -7083,13 +7166,13 @@
           "exportada": true,
           "params": "cartera: CarteraPortal",
           "retorno": "number",
-          "linea": 394,
+          "linea": 407,
           "resumen": "Cuántas pólizas vivas de la cartera NO han podido entrar al calendario porque la compañía no ha informado su fecha de vencimiento. No se descartan en silencio: cero obligaciones y «no tienes vencimien"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ac35b9237e47"
+      "hash": "2071cd83c8e3"
     },
     {
       "ruta": "apps/asegura-portal/lib/partes-siniestro.ts",
@@ -7535,6 +7618,75 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "028ff5341446"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/recordatorios.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Recordatorios que el propio cliente se pone (ITV, carnet, caldera, extintores, o texto libre) — la mitad de `portal_obligacion` que no cuelga de ninguna póliza ni bien de la cartera. Ver la cabecera de `packages/module-seguros-portal/src/recordatorio-libre.ts` para el porqué. 🔒 Mismo aislamiento po",
+      "exporta": [
+        "crearRecordatorio",
+        "borrarRecordatorio",
+        "recordatoriosDeIdentidad",
+        "recordatoriosDeSesion",
+        "avanzarRecordatoriosRecurrentesDeIdentidad"
+      ],
+      "funciones": [
+        {
+          "nombre": "crearRecordatorio",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, valor: RecordatorioNormalizado",
+          "retorno": "Promise<",
+          "linea": 55,
+          "resumen": "Da de alta un recordatorio propio. La fecha que teclea la persona ES la fecha en la que quiere que le avisen — `fechaAccionable` es la MISMA, sin restarle los 30 días del art. 22 LCS (eso es de una re"
+        },
+        {
+          "nombre": "borrarRecordatorio",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, id: string",
+          "retorno": "Promise<boolean>",
+          "linea": 76,
+          "resumen": "Solo borra lo suyo: el `where` lleva `identidadId` Y `...FILTRO_PROPIOS`, así que ni una petición con el id de la obligación de OTRO ni el id de una obligación derivada de póliza (que no tiene dueño d"
+        },
+        {
+          "nombre": "recordatoriosDeIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<RecordatorioVista[]>",
+          "linea": 83
+        },
+        {
+          "nombre": "recordatoriosDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<RecordatorioVista[]>",
+          "linea": 105,
+          "resumen": "Envoltura que resuelve la identidad por la puerta única."
+        },
+        {
+          "nombre": "diaUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "Date",
+          "linea": 153,
+          "resumen": "Empuja al ciclo siguiente los recordatorios RECURRENTES cuyo aviso ya salió y cuya fecha ya pasó. Es lo que hace que un «ITV cada 12 meses» no se quede mudo para siempre tras el primer aviso: sin este"
+        },
+        {
+          "nombre": "avanzarRecordatoriosRecurrentesDeIdentidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, hoy: Date = new Date()",
+          "retorno": "Promise<void>",
+          "linea": 157
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c34782589a49"
     },
     {
       "ruta": "apps/asegura-portal/lib/representacion.ts",
@@ -126571,6 +126723,47 @@
       "hash": "984827f267ff"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/recordatorio-libre.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Recordatorios que el CLIENTE se pone a sí mismo — ITV, carnet, caldera, extintores, o cualquier otra cosa en texto libre. Es la mitad del motor de `portal_obligacion` que hasta el 13/09/2026 solo alimentaban las pólizas (ver `2026-09-03_portal_obligacion.sql`: «el enum nace con sitio para el resto p",
+      "exporta": [
+        "normalizarRecordatorio",
+        "siguienteOcurrencia"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarRecordatorio",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: EntradaRecordatorio",
+          "retorno": "ResultadoRecordatorio",
+          "linea": 88,
+          "resumen": "Valida lo que manda el formulario. NO impone que la fecha sea futura: un recordatorio con fecha pasada simplemente no cae dentro de la ventana de aviso (`entraEnVentana()`) y no molesta a nadie — rech"
+        },
+        {
+          "nombre": "ultimoDiaDelMes",
+          "kind": "function",
+          "exportada": false,
+          "params": "y: number, m: number",
+          "retorno": "number",
+          "linea": 143,
+          "resumen": "Último día del mes `y`-`m` (0-indexado), en UTC."
+        },
+        {
+          "nombre": "siguienteOcurrencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaEvento: Date, repiteCadaMeses: number",
+          "retorno": "Date",
+          "linea": 153,
+          "resumen": "`base` + `meses`, conservando el DÍA salvo que el mes destino sea más corto (31 de enero + 1 mes = 28/29 de febrero) — el mismo criterio que `sumarMesesClamp()` de `cobro-declarado.ts`, para que un re"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2d70850cf01e"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/resumen-cartera.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "Las tres cifras de cabecera de la bóveda: cuántas pólizas, cuánto al año y cuál vence antes. Puro y sin BD. ── Por qué existe (07/09/2026) ───────────────────────────────────────────── Alberto, viendo el panel de ejemplo de `grupoasegura.es`: «lo ideal es que sea igual la intranet, y ese diseño que ",
@@ -127095,13 +127288,13 @@
           "exportada": true,
           "params": "vista: VistaBoveda",
           "retorno": "string",
-          "linea": 170,
+          "linea": 179,
           "resumen": "La vista por defecto se enlaza como `/boveda` a secas, sin `?vista=seguros`. No es cosmética: si la pestaña activa llevara el parámetro, `/boveda` y `/boveda?vista=seguros` serían la misma pantalla co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cc532bafb7bb"
+      "hash": "6ba1ed12321a"
     },
     {
       "ruta": "packages/module-seguros/src/actividad.ts",
@@ -135166,7 +135359,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3307,
-    "funciones": 10215
+    "archivos": 3312,
+    "funciones": 10229
   }
 }
