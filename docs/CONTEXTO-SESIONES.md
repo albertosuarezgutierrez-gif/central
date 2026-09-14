@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/09/2026)** Corregido `companias_dgs` (C0468, Occident): `telefono_siniestros` estaba a `NULL`
+porque el 05/09 el 917 83 83 83 se cargó SOLO como WhatsApp (9-21h L-V), leyendo el badge de WhatsApp
+Business. Alberto confirmó que es la MISMA línea también para voz, 24h/365 días — contrastado además
+con tres comparadores (Selectra, numeroservicioalcliente.com, segurosmarina.es). Actualizado en BD
+(`telefono_siniestros` + `horario_siniestros` a "24h, 365 días") y en `apps/asegura-portal/CLAUDE.md`.
+Sin PR de código — solo doc + datos.
+
 **(14/09/2026)** Revisado el parte de siniestro del portal (`asegura-portal`) a petición de Alberto:
 `esAuto()` solo miraba `ramo === 'auto'`, así que un parte de MOTO con terceros nunca mostraba el
 bloque «Datos del otro vehículo» (matrícula/aseguradora/zona del daño) — `moto` es un ramo distinto
