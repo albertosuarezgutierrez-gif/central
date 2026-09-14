@@ -1,0 +1,78 @@
+{
+ "sesion": "0fdb94d0-80b1-5ff9-8fac-699183796b94",
+ "inicio": "2026-09-14T08:34:30.456Z",
+ "fin": "2026-09-14T08:43:42.849Z",
+ "llamadas": 64,
+ "categorias": {
+  "otro": {
+   "llamadas": 5,
+   "chars_in": 1199,
+   "chars_out": 1240,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 3,
+    "PushNotification": 1
+   }
+  },
+  "bash": {
+   "llamadas": 17,
+   "chars_in": 5686,
+   "chars_out": 43808,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 17
+   }
+  },
+  "escritura": {
+   "llamadas": 10,
+   "chars_in": 41378,
+   "chars_out": 599540,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 8,
+    "Edit": 2
+   }
+  },
+  "mcp:Booking-com": {
+   "llamadas": 27,
+   "chars_in": 5550,
+   "chars_out": 456328,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking-com__accommodations_search": 27
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 3,
+   "chars_in": 246,
+   "chars_out": 2853,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 3
+   }
+  },
+  "mcp:github": {
+   "llamadas": 2,
+   "chars_in": 1852,
+   "chars_out": 93,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  }
+ }
+}
