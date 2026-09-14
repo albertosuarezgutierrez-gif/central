@@ -23,8 +23,8 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
 ## Pasada (orden exacto)
 1. Leer NAV: `get_account_summary` → `net_liquidation` (EUR). **Empújalo también a la vista 💶 Dinero**
    de plataforma para que el saldo del bróker salga como una tarjeta más (junto a BBVA/Kutxabank) y sume
-   al «Saldo total del grupo»: `POST {PLATAFORMA_URL}/api/trading/saldo` con `{ saldo: <net_liquidation>,
-   divisa: 'EUR' }` (Bearer `ALERTA_TOKEN`). La app en Vercel no habla con IBKR, así que este empujón del
+   al «Saldo total del grupo»: `bash scripts/canal-aviso.sh POST /api/trading/saldo '{ "saldo": <net_liquidation>,
+   "divisa": "EUR" }'`. La app en Vercel no habla con IBKR, así que este empujón del
    agente es la ÚNICA vía por la que ese saldo se refresca. Es solo lectura de IBKR → no rompe la regla de oro.
 1b. **💼 Cartera real (15/08/2026):** leer `get_account_positions` y preparar el bloque
    «💼 Cartera real» del resumen (núcleo ETF: valor/peso/P&L; liquidez >20% sin desplegar =
@@ -33,9 +33,8 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    silencio. Reglas completas en `references/copiloto-ordenes.md`. Sigue siendo solo
    lectura; la pasada programada JAMÁS crea instrucciones de orden.
 1c. **💼 Empujar la cartera real al panel (17/08/2026):** con las MISMAS posiciones del paso 1b,
-   `POST {PLATAFORMA_URL}/api/trading/cartera` (Bearer `ALERTA_TOKEN`) con
-   `{ posiciones: [{ simbolo, descripcion, cantidad, precioMedio, precioActual, valorMercado,
-   pnlNoRealizado, pnlDiario, divisa }] }` — mapeo desde IBKR: `position`→cantidad,
+   `bash scripts/canal-aviso.sh POST /api/trading/cartera '{ posiciones: [{ simbolo, descripcion, cantidad, precioMedio, precioActual, valorMercado,
+   pnlNoRealizado, pnlDiario, divisa }] }'` — mapeo desde IBKR: `position`→cantidad,
    `average_price`→precioMedio, `market_price`→precioActual, `market_value`→valorMercado,
    `unrealized_pnl`→pnlNoRealizado, `daily_pnl`→pnlDiario, `currency`→divisa; el símbolo se saca
    de `contract_description` (p. ej. «VWCE @IBIS2» → `VWCE`) y la descripción lleva el nombre
@@ -53,9 +52,8 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
 1d. **📒 Empujar las OPERACIONES ejecutadas al libro (19/08/2026):** leer
    `get_account_trades` con `period: 'DAYS_7'` (solapar a propósito: pedir de más y dejar que el
    endpoint descarte los duplicados es lo que evita perder ejecuciones si una pasada falla un día)
-   y `POST {PLATAFORMA_URL}/api/trading/operaciones` (Bearer `ALERTA_TOKEN`) con
-   `{ operaciones: [{ tradeId, orderId, simbolo, descripcion, tipoActivo, lado, cantidad, precio,
-   divisa, comision, importeNeto, tipoOrden, ejecutadoEn, pnlBroker }] }` — mapeo desde IBKR:
+   y `bash scripts/canal-aviso.sh POST /api/trading/operaciones '{ operaciones: [{ tradeId, orderId, simbolo, descripcion, tipoActivo, lado, cantidad, precio,
+   divisa, comision, importeNeto, tipoOrden, ejecutadoEn, pnlBroker }] }'` — mapeo desde IBKR:
    `trade_id`→tradeId, `order_id`→orderId, `symbol`→simbolo, `company_name`→descripcion,
    `sec_type`→tipoActivo, `side`→lado, `size`→cantidad, `price`→precio, `currency`→divisa,
    `commission`→comision, `net_amount`→importeNeto, `order_type`→tipoOrden,
