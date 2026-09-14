@@ -262,6 +262,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (14/09/2026) 🚨 El aviso de "siniestros nuevos" mentía: "ya están abiertos" cuando 11 de 12 venían `cerrado`
 - (14/09/2026) 🛡️ Sentinel bloquea TODAS las rutinas programadas que usan `ALERTA_TOKEN` por curl
 - (13/09/2026) 🇮🇹 `detectLang` marcaba italiano correcto como "deriva al español"
 - (14/09/2026) 🚗 Identificar pólizas por matrícula/dirección, no por nº de póliza — regla permanente (13-14/09/2026, PR #2912, MERGEADO).
@@ -271,5 +272,4 @@
 - (13/09/2026) 🛡️ Sentinel [SOMBRA] permitía en silencio un exfil crítico en sesión desatendida — corregido
 - (13/09/2026) docs(memoria): PR #2882 (fix Sentinel [SOMBRA]) mergeado
 - (13/09/2026) 📇 Directorio de contactos por compañía en `/correduria` + teléfonos minados de Gmail
-- (13/09/2026) 🔎 Diagnóstico (sin código): botón WhatsApp/Invitar ausente en Pablo Franco Ruz — no era el móvil
 

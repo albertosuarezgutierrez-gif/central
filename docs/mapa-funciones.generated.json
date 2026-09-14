@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-14T05:38:07Z",
-  "sha": "e452dd58db9615cd267678efc11a88fd0cf1b2a6",
+  "generadoEn": "2026-09-14T07:40:09Z",
+  "sha": "6164c50c2c9514888dc4f1f7f43a4a2b89dfef5c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11381,7 +11381,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 34,
+          "linea": 39,
           "resumen": "Los siniestros que han ENTRADO en la cartera desde un instante dado, para el vigía `correduria-siniestros` de plataforma (que avisa a Alberto por Telegram para que llame al cliente y le haga seguimien"
         }
       ],
@@ -11389,7 +11389,7 @@
         "next"
       ],
       "rutaApi": "/api/operador/siniestros-nuevos",
-      "hash": "a9e64aed0a3f"
+      "hash": "8666fca8dd28"
     },
     {
       "ruta": "apps/asegura/app/api/operador/supresiones/route.ts",
@@ -74428,7 +74428,7 @@
           "exportada": false,
           "params": "desde: string | null, limite: number",
           "retorno": "Promise<Lectura>",
-          "linea": 103,
+          "linea": 106,
           "resumen": "Lee el puerto de `central-asegura`. 🚨 CUALQUIER duda acaba en `sin_datos`, nunca en una lista vacía. «Hoy no ha entrado ningún siniestro» y «hoy no se ha podido comprobar» son cosas distintas, y aquí"
         },
         {
@@ -74437,7 +74437,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 142
+          "linea": 145
         }
       ],
       "tablas": [
@@ -74445,7 +74445,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/correduria-siniestros",
-      "hash": "188f31519d75"
+      "hash": "848fce697d50"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correo-digest/route.ts",
@@ -129964,7 +129964,7 @@
           "exportada": false,
           "params": "lista: readonly SiniestroEntrante[]",
           "retorno": "string",
-          "linea": 102
+          "linea": 117
         },
         {
           "nombre": "marcaDe",
@@ -129972,7 +129972,7 @@
           "exportada": false,
           "params": "lista: readonly SiniestroEntrante[]",
           "retorno": "MarcaSiniestros",
-          "linea": 107,
+          "linea": 122,
           "resumen": "Marca que cubre EXACTAMENTE esta lista: su instante mayor + los ids de ese instante."
         },
         {
@@ -129981,7 +129981,7 @@
           "exportada": false,
           "params": "s: SiniestroEntrante, marca: MarcaSiniestros",
           "retorno": "boolean",
-          "linea": 113,
+          "linea": 128,
           "resumen": "¿Está este siniestro por encima de la marca? El empate lo rompe el id."
         },
         {
@@ -129990,7 +129990,7 @@
           "exportada": true,
           "params": "e: { marca: MarcaSiniestros | null siniestros: readonly SiniestroEntrante[] hoy: Date tope?: number }",
           "retorno": "DecisionSiniestros",
-          "linea": 133,
+          "linea": 148,
           "resumen": "¿Hay que avisar hoy, y de qué? `siniestros` es lo que ha devuelto el puerto para `>= marca.instante` (o la cartera entera en la primera pasada). Esta función NO decide si la marca se guarda: solo dice"
         },
         {
@@ -129999,8 +129999,17 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 164,
+          "linea": 179,
           "resumen": "`YYYY-MM-DD` → `dd/mm/aaaa`. Cualquier otra cosa se devuelve tal cual."
+        },
+        {
+          "nombre": "estaCerrado",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SiniestroEntrante",
+          "retorno": "boolean",
+          "linea": 185,
+          "resumen": "`true` si el siniestro ya está resuelto en la compañía y no necesita llamada."
         },
         {
           "nombre": "lineaSiniestro",
@@ -130008,8 +130017,8 @@
           "exportada": false,
           "params": "s: SiniestroEntrante",
           "retorno": "string",
-          "linea": 170,
-          "resumen": "Una línea del aviso: quién, con quién, qué póliza, cuándo y con qué referencia."
+          "linea": 190,
+          "resumen": "Una línea del aviso: quién, con quién, qué póliza, cuándo, con qué referencia y su estado."
         },
         {
           "nombre": "textoAvisoSiniestros",
@@ -130017,8 +130026,8 @@
           "exportada": true,
           "params": "nuevos: readonly SiniestroEntrante[], restantes = 0",
           "retorno": "string",
-          "linea": 189,
-          "resumen": "El Telegram. 🚨 El texto dice explícitamente que el siniestro YA está abierto en la compañía y que lo que toca es LLAMAR al cliente. No puede insinuar que haya que abrirlo, comunicarlo ni que esté sin"
+          "linea": 218,
+          "resumen": "El Telegram. 🚨 El texto YA NO afirma que todos «siguen abiertos»: medido el 14/09/2026, CIMA manda siniestros de cualquier estado, incluidos ya cerrados. Solo se pide llamar por los que de verdad lo "
         },
         {
           "nombre": "detalleSiniestros",
@@ -130026,7 +130035,7 @@
           "exportada": true,
           "params": "d: DecisionSiniestros | { avisar: false; motivo: 'sin_datos'; causa?: string | null },",
           "retorno": "string",
-          "linea": 212,
+          "linea": 250,
           "resumen": "La línea del latido. Los cuatro desenlaces se dicen distinto A PROPÓSITO: «no se ha podido mirar» NO es «hoy no ha entrado ninguno», y «primera pasada» tampoco. Colapsarlos dejaría un cliente sin su l"
         },
         {
@@ -130035,7 +130044,7 @@
           "exportada": true,
           "params": "marca: MarcaSiniestros, detalle: string",
           "retorno": "string",
-          "linea": 236,
+          "linea": 274,
           "resumen": "`<instante>|<id,id,…>` + ` · ` + el texto humano."
         },
         {
@@ -130044,13 +130053,13 @@
           "exportada": true,
           "params": "detalle: string | null | undefined",
           "retorno": "MarcaSiniestros | null",
-          "linea": 247,
+          "linea": 285,
           "resumen": "Lee la marca del `detalle` guardado. `null` = no consta. 🚨 Un `detalle` ilegible (formato viejo, texto a mano) se lee como `null` = «primera vez», que ancla sin avisar. Es lo conservador en la direcc"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "71e5ee835997"
+      "hash": "b15053cf656d"
     },
     {
       "ruta": "packages/module-seguros/src/siniestros.ts",
@@ -135360,6 +135369,6 @@
   ],
   "resumen": {
     "archivos": 3312,
-    "funciones": 10229
+    "funciones": 10230
   }
 }
