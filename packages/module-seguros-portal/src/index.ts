@@ -63,6 +63,21 @@ export {
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
 export { debeAvisarPush } from './push.ts'
 export {
+  normalizarRecordatorio,
+  siguienteOcurrencia,
+  SUGERENCIAS_RECORDATORIO,
+  TITULO_MAX,
+  REPITE_CADA_MESES_MIN,
+  REPITE_CADA_MESES_MAX,
+} from './recordatorio-libre.ts'
+export type {
+  TipoRecordatorio,
+  SugerenciaRecordatorio,
+  EntradaRecordatorio,
+  RecordatorioNormalizado,
+  ResultadoRecordatorio,
+} from './recordatorio-libre.ts'
+export {
   PERIODICIDADES_PAGO,
   DIAS_PREAVISO_RECIBO,
   esPeriodicidadPagoValida,

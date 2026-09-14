@@ -2894,6 +2894,27 @@ h1 em {
 }
 .mi-direccion-ok { font-size: 13px; line-height: 1.5; color: var(--positive); margin: 12px 0 0; }
 .mi-direccion-aviso { font-size: 13px; line-height: 1.5; color: var(--warning); margin: 12px 0 0; }
+/* El `<select>` de «Se repite» comparte campo con los `<input>` de arriba: sin
+   esto heredaría el estilo nativo del navegador y desentonaría a su lado. */
+.mi-direccion-campo select {
+  width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit;
+}
+
+/* ── Recordatorios propios (13/09/2026) ─────────────────────────────────────
+ * Los atajos son BOTONES de verdad (`.boton-tenue`, 44px), no `.chip`: ese
+ * es un badge de estado en toda la app y nunca se toca — usarlo aquí para algo
+ * clicable dejaría un elemento por debajo del tamaño táctil de la casa. */
+.recordatorio-sugerencias { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.lista-recordatorios { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.recordatorio-fila {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface);
+}
 
 /* ─── «¿Echas algo de menos?»: la sugerencia del cliente ─────────────────────
    Vive en la cabecera (09/09/2026), al lado de la campana: mismo tamaño y

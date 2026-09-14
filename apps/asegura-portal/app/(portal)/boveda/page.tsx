@@ -13,6 +13,7 @@ import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { leerMisDatos } from '@/lib/mis-datos'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
+import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 
@@ -35,6 +36,7 @@ import {
 
 import { AvisoContacto } from './AvisoContacto'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
+import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
 import { MisDatos } from './MisDatos'
 import { TusDatos } from './TusDatos'
@@ -55,6 +57,7 @@ const TITULO_VISTA: Record<VistaBoveda, string> = {
   hoja: 'QR',
   recibos: 'recibos',
   siniestro: 'siniestros',
+  recordatorios: 'recordatorios',
   datos: 'datos',
 }
 
@@ -66,7 +69,13 @@ export default async function Boveda({
   // raro aquí solo elige otra pestaña, nunca otros datos.
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const vista = vistaDeBoveda((await searchParams).vista)
+  const parametros = await searchParams
+  const vista = vistaDeBoveda(parametros.vista)
+  // El botón «Dar parte de esta póliza» de la ficha llega con esto en la URL.
+  // Es solo una SUGERENCIA de selección dentro de `polizasParte`, que ya está
+  // acotada a esta identidad — nunca una clave de consulta: `ParteSiniestro`
+  // la ignora si no está en esa lista.
+  const polizaInicial = typeof parametros.poliza === 'string' ? parametros.poliza : null
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
 
@@ -104,6 +113,12 @@ export default async function Boveda({
   // pero se siguen sincronizando: es lo que lee la campana de avisos
   // (`/api/avisos`) para el chip «puedes actuar hasta…».
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
+
+  // Los recordatorios PROPIOS solo se leen para la pestaña que los pinta —
+  // misma regla de rendimiento que el resto de la página (el servidor manda
+  // solo lo que se pide). El array vacío en las demás vistas no se enseña en
+  // ningún sitio, así que no hace falta que sea correcto, solo que exista.
+  const recordatorios = vista === 'recordatorios' ? await recordatoriosDeIdentidad(identidad.id) : []
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo ASegura'
@@ -151,10 +166,15 @@ export default async function Boveda({
       // vez daría el teléfono de urgencias de OTRA compañía.
       canal: canalDeCompania(p.compania, companias),
       ramo: p.ramo,
+      matriculaPropia: p.matricula,
       etiqueta: [
         p.compania ?? 'Compañía sin identificar',
         p.ramo ? RAMO[p.ramo] ?? p.ramo : null,
-        p.numeroPoliza ? `nº ${p.numeroPoliza}` : null,
+        // La matrícula (si es auto) identifica mejor que el nº de póliza, que
+        // casi nadie se sabe de memoria. Para las declaradas no hay una
+        // dirección propia que leer aquí (vive, si acaso, dentro de
+        // `datosRamo`), así que el nº de póliza sigue de último recurso.
+        p.matricula ?? (p.numeroPoliza ? `nº ${p.numeroPoliza}` : null),
         // Se dice de dónde sale para que no parezca otra póliza de la
         // correduría: esta la aportó la propia persona y puede que nosotros no
         // la tengamos contratada.
@@ -445,9 +465,11 @@ export default async function Boveda({
             bloque={(p) => <HistorialSiniestros p={p} />}
             vacio="No nos consta ningún siniestro en tus seguros. No significa que no hayas tenido ninguno: nos los informa tu compañía. Si acabas de tener uno, cuéntanoslo aquí abajo."
           />
-          <ParteSiniestro polizas={polizasParte} partes={partesEnviados} />
+          <ParteSiniestro polizas={polizasParte} partes={partesEnviados} polizaInicial={polizaInicial} />
         </>
       )}
+
+      {vista === 'recordatorios' && <Recordatorios recordatorios={recordatorios} polizas={polizasParte} />}
 
     </>
   )
@@ -539,7 +561,12 @@ function opcionCartera(p: PolizaPortal, companias: readonly FilaCompania[], titu
     etiqueta: [
       p.compania,
       RAMO[p.ramo] ?? p.ramo,
-      p.numeroPoliza ? `nº ${p.numeroPoliza}` : null,
+      // Lo que identifica la póliza para QUIEN la elige, no para nosotros:
+      // casi nadie se sabe su número de póliza de memoria, pero sí su
+      // matrícula o su dirección — el mismo `cosa ?? ubicacion` que ya usa
+      // `FilaPoliza.tsx` en la lista. El nº de póliza queda de último
+      // recurso, solo si no conocemos ni una cosa ni la otra.
+      p.bien.cosa ?? p.bien.ubicacion ?? (p.numeroPoliza ? `nº ${p.numeroPoliza}` : null),
       titular ? `de ${titular}` : null,
     ]
       .filter(Boolean)

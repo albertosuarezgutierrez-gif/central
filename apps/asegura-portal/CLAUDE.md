@@ -576,6 +576,25 @@ compañía no lo ha informado», y la pantalla **calla**: no pinta «Matrícula:
 Cepos: `bien-asegurado.test.ts` (11, con dos mutaciones vistas morder: quitar la dirección del suelo
 de terceros → 1 fallo; colar la dirección por `cosa` → 3).
 
+### 🚨 Regla permanente: el nº de póliza NUNCA identifica una póliza para el cliente
+
+**Nadie se sabe su número de póliza de memoria, y menos aún cuando hay que ELEGIR entre varias**
+(caso visto el 13/09/2026: el selector de «A qué póliza» del parte de siniestro los listaba como
+«Occident · Responsabilidad civil · nº 548238086», y Alberto, mirándolo en su propio móvil: *«casi
+nadie sabe el número de póliza»*). Lo que identifica una póliza para una PERSONA es el BIEN, no el
+contrato:
+
+- **Motor** → marca, modelo y **matrícula** (`bien.cosa` de `describirBien()`).
+- **Inmueble** → la **dirección** (`bien.ubicacion`).
+- El nº de póliza queda de **último recurso**, solo cuando no se conoce ni lo uno ni lo otro.
+
+Esto no es solo la regla de la FICHA (arriba): es la regla de **cualquier sitio donde el portal
+identifique o liste pólizas ante el cliente** — filas (`FilaPoliza.tsx`, ya la seguía), y también
+selectores/etiquetas de formularios. El parte de siniestro (`opcionCartera()`/`page.tsx`) se corrigió
+el 13/09/2026 para usar `bien.cosa ?? bien.ubicacion ?? nº de póliza` en vez de `nº de póliza` a
+secas — antes de esa fecha lo incumplía. **Al montar cualquier lista o desplegable nuevo de pólizas,
+sigue este mismo orden**; no reinventar el criterio caso por caso.
+
 ### Lo TUYO frente a lo que te DEJAN ver
 
 Hasta ese día la única diferencia entre una póliza propia y una ajena era el `<h2>` de la sección.
@@ -1043,6 +1062,46 @@ corredor corre con `prisma_seguros` (BYPASSRLS) y sí lee `cliente_emails` cifra
 con el aviso **en pantalla** y nunca toca un dato personal. Lo vigila
 `test/regression-portal-obligaciones.test.ts` (ningún fichero del portal importa un transporte de
 correo), para que la corrección no se deshaga sola dentro de tres meses.
+
+## 🔔 Recordatorios propios del cliente (13/09/2026) — la mitad de `portal_obligacion` sin póliza detrás
+
+Dictado de Alberto: «añade [ITV, mantenimiento, caldera, extintores…] todo, inclusive alguno abierto
+para que pueda añadir recordatorios? Texto libre y cuándo quiera que le avise, todo modular 100%.
+Nuestro objetivo es que usen lo máximo nuestra intranet». Pestaña nueva **«Recordatorios»**
+(`?vista=recordatorios`, `Recordatorios.tsx`), sobre el MISMO motor de arriba: la tabla ya nació con
+sitio para esto (`poliza_id` opcional «para que el mismo motor sirva luego a ITV, carnet o revisión de
+gas de alguien que no tiene ninguna póliza con la correduría»), y el enum de tipo ya traía `itv`,
+`carnet`, `mantenimiento`, `revision_gas` y `libre` sin que nadie los usara todavía.
+
+- **Un único mecanismo, no cinco.** `título + fecha + repetir cada X meses (o nunca)`
+  (`lib/recordatorios.ts` + el módulo puro `packages/module-seguros-portal/src/recordatorio-libre.ts`).
+  Las «sugerencias» (`SUGERENCIAS_RECORDATORIO`: ITV, carnet, caldera, gas butano, extintores, boletín
+  eléctrico) son solo atajos que RELLENAN ese mismo formulario — el título sigue siendo editable (dos
+  coches → «ITV del Ibiza» y «ITV de la furgoneta») y «Personalizado» abre el formulario en blanco.
+- **La fecha NO se recorta.** A propósito NO usa `fechaAccionable()` (los 30 días del art. 22 LCS de la
+  sección de arriba): esos son un plazo LEGAL que el cliente no elige; aquí la fecha que teclea la
+  persona YA ES la fecha en la que quiere que le avisen, así que `fechaAccionable = fechaEvento` sin
+  restar nada.
+- **`repite_cada_meses`** (`prisma/sql/2026-09-13_portal_obligacion_recordatorio.sql`, `smallint`, CHECK
+  1-120, aplicada) es la ÚNICA columna nueva — el resto ya existía. `siguienteOcurrencia()` suma meses
+  con clamp de fin de mes (31 de enero + 1 mes → 28/29 de febrero, nunca un 3 de marzo inventado por
+  `setUTCMonth`), mismo criterio que `sumarMesesClamp()` de `cobro-declarado.ts`.
+- 🚨 **`avanzarRecordatoriosRecurrentesDeIdentidad()` mira `avisadaAt` O `avisadaPushAt`, nunca solo
+  `avisadaAt`.** El cron de CORREO (`apps/asegura/lib/avisos-vencimiento.ts`) resuelve el destinatario a
+  través de la PÓLIZA (`o.polizaId ? destinatarioDeCliente(...) : null`); un recordatorio propio no
+  tiene póliza, así que ESE cron lo cuenta `sinCanal` SIEMPRE y `avisadaAt` no se pone jamás en estas
+  filas, tenga o no la persona push activado. Exigir solo `avisadaAt` habría dejado el «se repite solo»
+  sin efecto para SIEMPRE — se vio morder en `code-review` antes de mergear. El único canal que de
+  verdad puede avisar de un recordatorio propio es el push (`/api/cron/avisos-push`); por lo mismo,
+  `RecordatorioVista.avisada` (lo que pinta «ya avisado» en la pantalla) lee `avisadaPushAt`, no
+  `avisadaAt`.
+- **Aislamiento:** `crearRecordatorio`/`borrarRecordatorio` (`app/api/recordatorios/`) filtran SIEMPRE
+  por `identidadId` de la cookie, nunca del cuerpo ni de la URL — mismo patrón que `polizas/[id]`.
+  `borrarRecordatorio` exige además `bienId`/`polizaId`/`polizaDeclaradaId` NULL: ese botón no puede
+  tocar una obligación derivada de póliza aunque alguien mande su id.
+- **Pestaña «Recordatorios», no «Avisos»:** «Avisos» ya es la campana de notificaciones
+  (`Campana.tsx` → `/api/avisos`) — lo que la correduría te avisa a ti, no lo que tú te apuntas. Mismo
+  cepo de sinónimos que mató a «Mis pólizas» el 05/09.
 
 ## 🔑 Entrar de un clic: el enlace del correo NO canjea
 
