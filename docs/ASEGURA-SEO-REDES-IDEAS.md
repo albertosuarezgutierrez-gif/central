@@ -151,33 +151,30 @@ explícitamente que es una página secundaria.
 
 </details>
 
-## D. Canibalización con `apps/plataforma/seguros` — 🟡 mitigada, falta LA decisión
+## ✅ D. Canibalización con `apps/plataforma/seguros` — cerrada (14/09/2026)
 
-> 🟡 **07/09/2026: la sangría está tapada, la decisión no.** `apps/plataforma/app/seguros/page.tsx`
-> exporta ya `robots: { index: false, follow: true }`, así que deja de competir por «correduría de
-> seguros Sevilla» contra `grupoasegura.es`. **La página sigue viva y su formulario sigue entrando**
-> por el mismo endpoint: quien tenga el enlace la usa igual. No se puso `canonical` además del
-> noindex a propósito (son señales contradictorias y Google desaconseja combinarlas).
+> ✅ **Decisión de Alberto: 301 a `grupoasegura.es`, no dejarla noindex y viva.** Implementado:
+> `apps/plataforma/next.config.ts::redirects()` (`{ source: '/seguros', destination:
+> 'https://grupoasegura.es', permanent: true }` — `permanent: true` = 308, el equivalente actual del
+> 301, no un capricho). La página y su formulario (`app/seguros/{page,Formulario}.tsx`) se BORRARON:
+> con el redirect delante, seguían existiendo pero se volvían código muerto, y el repo no guarda
+> páginas que ningún visitante puede alcanzar (`git log` conserva el texto si hace falta consultarlo).
+> Se limpió también la exención `/seguros` de `middleware.ts` (el redirect de `next.config` corre
+> ANTES que el middleware, así que la exención ya no protegía nada alcanzable).
 >
-> ❓ **Lo que sigue siendo de Alberto:** ¿se retira del todo (301 hacia `grupoasegura.es`, o
-> borrarla) o se queda como está? Medido esta sesión: la página son **198 líneas**, **no la enlaza
-> nadie** en todo el monorepo, y hace lo mismo que la web nueva con seis páginas de ramo menos.
-> Mientras no se decida, el noindex la deja inofensiva.
+> ⚠️ **`public/mockup-correduria.html` sigue público y rastreable** — no lo tocaba esta decisión
+> (es un archivo estático, no una ruta de Next) y queda fuera de este cierre.
 
-`apps/plataforma/app/seguros/page.tsx` **existe, es pública** (middleware la lista en `PUBLIC`,
-`middleware.ts:59`), **es indexable** (exporta `metadata` sin `robots`, y plataforma **no tiene
-`robots.ts` ni `sitemap.ts`**), tiene H1 «Correduría de seguros» y **manda los leads al mismo
-endpoint** que la web nueva (`/api/publico/correduria/lead`).
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
 
-Dos webs distintas compitiendo por la misma consulta, y la vieja vive bajo
-`plataforma-ten-flame.vercel.app`.
+`apps/plataforma/app/seguros/page.tsx` **existía, era pública** (middleware la listaba en `PUBLIC`),
+**era indexable** (exportaba `metadata` sin `robots`, y plataforma **no tiene `robots.ts` ni
+`sitemap.ts`**), tenía H1 «Correduría de seguros» y **mandaba los leads al mismo endpoint** que la
+web nueva (`/api/publico/correduria/lead`). Dos webs distintas compitiendo por la misma consulta, y
+la vieja vivía bajo `plataforma-ten-flame.vercel.app`. El 07/09/2026 se le puso
+`robots: { index: false, follow: true }` como parche mientras se decidía el destino final.
 
-**La trampa:** no hay bloque `redirects()` en **ningún** `next.config.*` del monorepo. El 301 hay
-que escribirlo desde cero, y hay que decidir si la página muere o queda como redirección
-permanente. Y además `public/mockup-correduria.html` **se sirve público y es rastreable**.
-
-**Coste:** pequeño. **Bloqueo:** decidir si `/seguros` de plataforma se retira del todo. **Riesgo
-si se deja:** el que ya hay, dilución.
+</details>
 
 ## ✅ E. Sitemap que declara frescura falsa — 🟠
 
@@ -200,24 +197,30 @@ que se sube a mano) y sacar las legales o dejarlas con prioridad mínima.
 
 </details>
 
-## F. Huecos de JSON-LD — 🟠
+## F. Huecos de JSON-LD — ✅ cerrada salvo `geo` (14/09/2026)
 
-`lib/seo.ts` ya emite `InsuranceAgency` bien construido (con `areaServed`, `identifier` DGSFP y
-`knowsAbout`), más `BreadcrumbList` y `FAQPage` en las 7 páginas comerciales. Lo que falta:
+`lib/seo.ts` emite `InsuranceAgency` (con `areaServed`, `identifier` DGSFP, `knowsAbout`, `logo`,
+`image` y `sameAs`), `Service` por ramo, `WebSite`, `BreadcrumbList` y `FAQPage`.
 
-- **`Service` por ramo** — nada liga cada ramo con el `provider` y su zona. Es el hueco más claro.
-- **`logo`/`image`** — la ficha no declara ninguna, teniendo `brand/marca-asegura.svg`.
-- **`geo`** — hay dirección postal completa y ninguna coordenada. Sin justificar.
-- **`sameAs`** — cero perfiles enlazados. Es **la señal con la que Google casa la ficha con el
-  Google Business Profile**, así que esta queda bloqueada por la idea I.
-- **`WebSite`** (y con él `SearchAction`).
+> ✅ **`Service` por ramo — YA ESTABA HECHO** cuando se releyó este backlog el 14/09/2026 (no consta
+> en qué PR; el guardián `seo-servicio.test.ts` lo cubre desde antes de esa fecha). Este apartado
+> seguía listándolo como pendiente: backlog desactualizado, no trabajo por hacer.
+> ✅ **`sameAs` — YA ESTABA HECHO** (la idea I cerró el GBP el 07/09 y `PERFILES` ya llevaba el canal
+> de YouTube). Mismo caso: el backlog no se había releído tras cerrarse la idea I.
+> ✅ **`logo`/`image`** cerrado el 14/09/2026: `logo` apunta a `/icon` (el monograma en azul de marca
+> que ya genera `app/icon.tsx`) e `image` a `/opengraph-image` (la tarjeta 1200×630 de la idea A) —
+> las dos rutas YA EXISTÍAN, esto solo las declara en la ficha. Ningún fichero nuevo.
+> ✅ **`WebSite`** cerrado el 14/09/2026 (`fichaWebSite()`, sin `SearchAction`: el sitio no tiene
+> buscador interno, y declarar uno inventado es la misma mentira que un horario sin confirmar).
+> 🔴 **`geo` SIGUE bloqueada**, y ahora de verdad: la idea I dejó dicho que faltaba «la URL canónica
+> de Maps de la ficha ya verificada» — eso no se ha resuelto. Sin coordenadas medidas contra el panel
+> de Google Business, no se inventan.
 
 ✅ **El bug de NAP que había aquí YA ESTÁ ARREGLADO** (05/09/2026, en `main`). Decía que
 `seo.ts:45` tecleaba `'San Juan de La Palma, 28'` a mano mientras `MEDIADOR.identidad.domicilio`
 decía otra cosa. Ahora `streetAddress` se deriva de `MEDIADOR` y el propio fichero explica por qué.
 Se deja escrito porque el motivo sigue valiendo: una dirección que no coincide entre el JSON-LD y
 el pie es lo que rompe la correspondencia con el Business Profile.
-**Coste:** el bug, minutos. El resto, una tarde. **Bloqueo:** `sameAs` y `geo` esperan al GBP.
 
 ## ✅ G. `/legal/cookies` sin canonical — 🟢 minutos
 
@@ -233,14 +236,23 @@ detalle de estilo.
 
 </details>
 
-## H. Los bots de IA pasan por omisión, no por decisión — 🟢 decisión, no código
+## ✅ H. Los bots de IA — decidido (14/09/2026): se dejan pasar
 
-`app/robots.ts` permite todo salvo `/api/`. No hay ninguna regla para `GPTBot`, `ClaudeBot`,
-`PerplexityBot`, `CCBot` ni `Google-Extended`.
+> ✅ **Decisión de Alberto: dejarlos pasar.** `app/robots.ts` ya permitía todo salvo `/api/` — así
+> que esta idea se cierra **sin ningún cambio de código**, solo dejando escrita la decisión que
+> faltaba (era justo lo que pedía el apartado de abajo). Motivo, confirmado: para una correduría
+> local, aparecer en la respuesta de un asistente cuando alguien pregunta «cómo cambio de correduría
+> en Sevilla» es tráfico cualificado gratis. Si algún día se quisiera matizar (bloquear solo
+> entrenamiento — `Google-Extended`, `CCBot` — y dejar los de respuesta en vivo), es una reapertura
+> explícita de esta idea, no algo que se cuele por descuido.
 
-**No propongo bloquearlos.** Para una correduría local, aparecer en la respuesta de un asistente
-cuando alguien pregunta «cómo cambio de correduría en Sevilla» es tráfico cualificado gratis. Pero
-que sea **una decisión escrita** y no un descuido. **Decide Alberto.**
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se miró)</summary>
+
+`app/robots.ts` permite todo salvo `/api/`. No había ninguna regla para `GPTBot`, `ClaudeBot`,
+`PerplexityBot`, `CCBot` ni `Google-Extended` — ni bloqueo ni permiso explícito, un descuido, no una
+decisión.
+
+</details>
 
 ## ✅ I. Google Business Profile — ya existía, y con dos incumplimientos dentro
 
@@ -388,9 +400,22 @@ o accidentes. **Relación ya abierta, coste de captación cero**, y encima son q
   «dato que NO hay ≠ dato que NO se ha mirado» (PR #2618).
 - ⏳ **Cookiebot en Premium Trial, 12 días restantes** (a 07/09/2026), y el trial solo admite 1
   dominio. Cuando caduque, mirar qué pasa con el banner.
-- ❌ **Google Analytics NO se añade** (decidido 07/09/2026). Ya hay medición —PostHog EU detrás de
-  Cookiebot— y con 0 clics en tres meses GA4 diría exactamente lo mismo. Además duplicaría la
-  superficie legal: PostHog está en la UE a propósito, y GA4 arrastra transferencia internacional.
-  Lo que falta no es una segunda herramienta: es que la que hay deje de estar «Not live».
+- 🔁 **Google Analytics SÍ se añadió, y es una REVERSIÓN explícita de la decisión de abajo
+  (14/09/2026, PR #2942).** Alberto pidió verlo «en la misma app que housesevillana e ia-rest» — no
+  es un descuido, es información nueva (quiere las tres webs en la MISMA cuenta de GA) que no existía
+  el 07/09. Cableado igual que `apps/ia-rest` (ID literal `G-QP5DTDLJ5F`, gateado por el mismo banner
+  de consentimiento que PostHog, sin sustituirlo). ⚠️ **Lo que la decisión del 07/09 señalaba —GA4
+  arrastra transferencia internacional, PostHog está en la UE a propósito— NO se ha revisado ni
+  resuelto**: sigue siendo verdad que GA4 añade esa superficie legal de más; simplemente Alberto la
+  aceptó a cambio de tener las tres webs en el mismo sitio. Si el asunto vuelve a salir, este es el
+  hueco real, no una duda ya cerrada. Texto original de la decisión revertida, se conserva por lo que
+  explica:
+  <details><summary>❌ «Google Analytics NO se añade» (07/09/2026, REVERTIDO 14/09/2026)</summary>
+
+  Ya hay medición —PostHog EU detrás de Cookiebot— y con 0 clics en tres meses GA4 diría exactamente
+  lo mismo. Además duplicaría la superficie legal: PostHog está en la UE a propósito, y GA4 arrastra
+  transferencia internacional. Lo que falta no es una segunda herramienta: es que la que hay deje de
+  estar «Not live».
+  </details>
 - **Redespliegue de `asegura`** (el CRM de Manuel): su build vivo sigue mandando `distinctId` a
   PostHog sin comprobar consentimiento, aunque las envs ya se borraron.

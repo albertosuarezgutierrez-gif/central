@@ -13,7 +13,7 @@ import Link from 'next/link'
 import { MARCA_ASEGURA, emitirRootCss, emitirVariables, emitirVariablesOscuras } from '@central/brand'
 import { MEDIADOR, lineaIdentificacion, telefonoLegible, whatsappUrl } from '@central/module-seguros'
 import { NAV, SITIO_URL } from '@/lib/sitio'
-import { fichaNegocio, jsonLd } from '@/lib/seo'
+import { fichaNegocio, fichaWebSite, jsonLd } from '@/lib/seo'
 import Analitica from '@/components/Analitica'
 import Cabecera from '@/components/Cabecera'
 import Whatsapp from '@/components/Whatsapp'
@@ -121,6 +121,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             colores por defecto antes de que cargue el CSS de la app. */}
         <style dangerouslySetInnerHTML={{ __html: CSS_MARCA }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaNegocio()) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaWebSite()) }} />
       </head>
       <body>
         {/* Gestor de consentimiento propio (vanilla-cookieconsent, vía
