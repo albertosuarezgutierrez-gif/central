@@ -1,0 +1,106 @@
+{
+ "sesion": "8251f5fb-1a3d-5111-9551-cb5e202a3125",
+ "inicio": "2026-09-14T09:04:56.762Z",
+ "fin": "2026-09-14T09:15:55.017Z",
+ "llamadas": 84,
+ "categorias": {
+  "otro": {
+   "llamadas": 9,
+   "chars_in": 1966,
+   "chars_out": 2761,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 7,
+    "PushNotification": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 4,
+   "chars_in": 397,
+   "chars_out": 60168,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 4
+   }
+  },
+  "bash": {
+   "llamadas": 10,
+   "chars_in": 2397,
+   "chars_out": 7447,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 10
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 17,
+   "chars_in": 1402,
+   "chars_out": 30794,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 13,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__get_thread": 1,
+    "mcp__Gmail__label_thread": 2
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 25,
+   "chars_in": 2208,
+   "chars_out": 42673,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 6,
+    "mcp__Google-Drive__read_file_content": 12,
+    "mcp__Google-Drive__get_file_metadata": 1,
+    "mcp__Google-Drive__copy_file": 6
+   }
+  },
+  "sql": {
+   "llamadas": 15,
+   "chars_in": 6401,
+   "chars_out": 23365,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 15
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 2826,
+   "chars_out": 64613,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 2254,
+   "chars_out": 332,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1
+   }
+  }
+ }
+}
