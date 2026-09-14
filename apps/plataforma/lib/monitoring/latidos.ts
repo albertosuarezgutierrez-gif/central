@@ -787,10 +787,11 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     // Semanal → 8 días: una semana perdida salta.
     maxHoras: 192,
     nota:
-      'El cron que lee Search Console, Serper y PostHog para el agente SEO de grupoasegura.es no ha ' +
+      'El cron que lee Search Console y PostHog para el agente SEO de grupoasegura.es no ha ' +
       'dejado huella, o la dejó con ok=false. `ok=false` con detalle «no_configurado» = falta un ' +
-      'secreto (GSC_SA_*, POSTHOG_PERSONAL_API_KEY, SERPER_API_KEY): el cron corre pero el agente ' +
-      'sigue a ciegas en esa fuente. Sin latido: el dispatcher no lo dispara. Huella: agente_latidos.seo_correduria.',
+      'secreto (GSC_SA_*, POSTHOG_PERSONAL_API_KEY): el cron corre pero el agente ' +
+      'sigue a ciegas en esa fuente. Sin latido: el dispatcher no lo dispara. Huella: agente_latidos.seo_correduria. ' +
+      '(Serper, tercera fuente hasta el 14/09/2026, retirada — ver docs/CONTEXTO-SESIONES.md.)',
   },
   {
     id: 'psd2_health_check',
