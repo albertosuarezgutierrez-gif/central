@@ -1,106 +1,106 @@
 {
  "sesion": "fe9edd40-d8f8-5f1b-8e5f-fff4a66946f7",
  "inicio": "2026-09-14T10:00:12.280Z",
- "fin": "2026-09-14T17:19:24.103Z",
- "llamadas": 502,
+ "fin": "2026-09-14T18:53:22.862Z",
+ "llamadas": 591,
  "categorias": {
   "bash": {
-   "llamadas": 176,
-   "chars_in": 35045,
-   "chars_out": 299189,
+   "llamadas": 233,
+   "chars_in": 44646,
+   "chars_out": 393039,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 176
+    "Bash": 233
    }
   },
   "lectura-directa": {
-   "llamadas": 121,
-   "chars_in": 12593,
-   "chars_out": 433382,
+   "llamadas": 127,
+   "chars_in": 13151,
+   "chars_out": 482814,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 65,
+    "Read": 71,
     "Grep": 52,
     "Glob": 4
    }
   },
   "escritura": {
-   "llamadas": 45,
-   "chars_in": 67643,
-   "chars_out": 4274121,
+   "llamadas": 49,
+   "chars_in": 71656,
+   "chars_out": 4296694,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 41,
-    "Write": 4
+    "Edit": 44,
+    "Write": 5
    }
   },
   "mcp:github": {
-   "llamadas": 70,
-   "chars_in": 17950,
-   "chars_out": 261010,
+   "llamadas": 75,
+   "chars_in": 20143,
+   "chars_out": 266337,
    "errores": 3,
-   "archivos_citados": 20,
-   "chars_citados": 1192977,
+   "archivos_citados": 24,
+   "chars_citados": 1205213,
    "tools": {
-    "mcp__github__pull_request_read": 38,
-    "mcp__github__update_pull_request": 6,
-    "mcp__github__merge_pull_request": 7,
+    "mcp__github__pull_request_read": 40,
+    "mcp__github__update_pull_request": 7,
+    "mcp__github__merge_pull_request": 8,
     "mcp__github__list_pull_requests": 2,
     "mcp__github__search_pull_requests": 2,
-    "mcp__github__create_pull_request": 6,
+    "mcp__github__create_pull_request": 7,
     "mcp__github__subscribe_pr_activity": 3,
     "mcp__github__get_job_logs": 4,
     "mcp__github__get_check_run": 2
    }
   },
   "otro": {
-   "llamadas": 73,
-   "chars_in": 12442,
-   "chars_out": 1919580,
+   "llamadas": 84,
+   "chars_in": 13636,
+   "chars_out": 2246524,
    "errores": 0,
-   "archivos_citados": 6,
-   "chars_citados": 781874,
+   "archivos_citados": 10,
+   "chars_citados": 1302180,
    "tools": {
-    "ToolSearch": 18,
-    "ReadNotifications": 41,
-    "Monitor": 7,
+    "ToolSearch": 20,
+    "ReadNotifications": 48,
+    "Monitor": 8,
     "ScheduleWakeup": 1,
-    "Skill": 3,
+    "Skill": 4,
     "SendUserFile": 2,
     "AskUserQuestion": 1
    }
   },
   "mcp:Supabase": {
-   "llamadas": 2,
-   "chars_in": 594,
-   "chars_out": 407,
+   "llamadas": 3,
+   "chars_in": 596,
+   "chars_out": 798,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__list_projects": 2,
     "mcp__Supabase__apply_migration": 1
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 7,
-   "chars_in": 1564,
-   "chars_out": 7902,
+   "llamadas": 11,
+   "chars_in": 3213,
+   "chars_out": 60777,
    "errores": 1,
-   "archivos_citados": 1,
-   "chars_citados": 26060,
+   "archivos_citados": 10,
+   "chars_citados": 714923,
    "tools": {
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 3,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 4,
     "mcp__Claude_Code_Remote__send_later": 1,
-    "mcp__Claude_Code_Remote__delete_trigger": 1,
-    "mcp__Claude_Code_Remote__list_triggers": 1,
-    "mcp__Claude_Code_Remote__create_trigger": 1
+    "mcp__Claude_Code_Remote__delete_trigger": 2,
+    "mcp__Claude_Code_Remote__list_triggers": 2,
+    "mcp__Claude_Code_Remote__create_trigger": 2
    }
   },
   "mcp:Vercel": {
@@ -125,6 +125,17 @@
    "chars_citados": 0,
    "tools": {
     "mcp__posthog__exec": 5
+   }
+  },
+  "mcp:Supabase_asegura": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 50,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__get_project_url": 1
    }
   }
  }
