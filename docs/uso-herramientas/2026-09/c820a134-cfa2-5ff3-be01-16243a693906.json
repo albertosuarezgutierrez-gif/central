@@ -1,0 +1,30 @@
+{
+ "sesion": "c820a134-cfa2-5ff3-be01-16243a693906",
+ "inicio": "2026-09-14T08:35:55.602Z",
+ "fin": "2026-09-14T08:36:58.252Z",
+ "llamadas": 3,
+ "categorias": {
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 356,
+   "chars_out": 2996,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
+   }
+  },
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 853,
+   "chars_out": 853,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 14576,
+   "tools": {
+    "AskUserQuestion": 1
+   }
+  }
+ }
+}
