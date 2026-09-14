@@ -29,22 +29,42 @@ import {
   configBanner,
   arrancarPostHog,
   apagarPostHog,
+  cargarGa4,
   POSTHOG_KEY,
   POSTHOG_HOST,
 } from '@/lib/analitica'
 
 const CONFIG = { categoria: 'statistics' as const, credencial: POSTHOG_KEY }
 
+// GA4 (14/09/2026, a petición de Alberto): «todo en la misma app» — quiere ver
+// grupoasegura.es en el mismo Google Analytics donde ya están housesevillana e
+// ia-rest, sin dejar de tener PostHog (de ahí sale el informe semanal
+// automático por Telegram del cron `seo-correduria`). Mismo patrón que
+// `apps/ia-rest/src/components/ConsentimientoAnalitica.tsx`: ID literal (es
+// público, viaja al navegador, no es un secreto) y sin `apagarGa4()` — GA4 no
+// tiene parada limpia por script suelto, así que retirar el consentimiento
+// deja de cargarlo en la SIGUIENTE visita, no en caliente.
+const GA4_ID = 'G-QP5DTDLJ5F'
+const CONFIG_GA4 = { categoria: 'statistics' as const, credencial: GA4_ID }
+
 export default function Analitica() {
   const pathname = usePathname()
   // Distingue «nunca se inició» de «se inició y ahora lo retiran»: en el
   // segundo caso hay que apagarlo explícitamente, no basta con no medir.
   const arrancado = useRef(false)
+  const arrancadoGa4 = useRef(false)
 
   useEffect(() => {
-    // Sin clave de PostHog no hay nada que arrancar — y sin banner tampoco hay
-    // forma de pedir permiso, así que ni se monta el CMP.
-    if (!POSTHOG_KEY) return
+    // Sin NINGUNA credencial (ni PostHog ni GA4) no hay nada que arrancar — y
+    // sin banner tampoco hay forma de pedir permiso, así que ni se monta el
+    // CMP. `puedeCargar()` ya gatea cada proveedor por SU credencial (ver
+    // consentimiento.ts): este guard solo decide si se monta el banner, y NO
+    // puede mirar solo `POSTHOG_KEY` — eso dejaría a GA4 sin banner que lo
+    // arranque el día que falte esa clave en Vercel. `GA4_ID` es hoy un
+    // literal (siempre hay valor), así que en la práctica el banner se monta
+    // siempre; si `GA4_ID` pasara a ser una env algún día, esta condición
+    // seguiría siendo la correcta sin tocarla.
+    if (!POSTHOG_KEY && !GA4_ID) return
 
     function revisar() {
       const acepta = CookieConsent.acceptedCategory('statistics')
@@ -55,6 +75,11 @@ export default function Analitica() {
       } else if (!acepta && arrancado.current) {
         apagarPostHog()
         arrancado.current = false
+      }
+
+      if (puedeCargar({ statistics: acepta }, CONFIG_GA4) && !arrancadoGa4.current) {
+        cargarGa4(GA4_ID)
+        arrancadoGa4.current = true
       }
 
       // Registro de auditoría, fire-and-forget: un fallo de red aquí nunca

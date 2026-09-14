@@ -17,7 +17,7 @@
 // consentimiento explícito no hay medición**, y `puedeCargar()` (del paquete
 // compartido) es la única fuente de esa decisión, igual que antes lo era
 // `puedeMedir()` aquí.
-export { puedeCargar, configBanner, arrancarPostHog, apagarPostHog } from '@central/core-consent'
+export { puedeCargar, configBanner, arrancarPostHog, apagarPostHog, cargarGa4 } from '@central/core-consent'
 
 /** Clave de proyecto de PostHog (pública por diseño: viaja al navegador). */
 export const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY || ''
