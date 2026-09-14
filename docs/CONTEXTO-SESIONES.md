@@ -30,6 +30,17 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **Matrícula→vehículo para la correduría: decisión de ir por dato abierto antes que proveedor de
+  pago (14/09/2026).** Sesión de solo charla (sin código): se evaluaron packs de pago (15-52€/mes
+  por consultas, ~0,12-0,30€/consulta — Codeoscopic-style, APIVehículo, RapidAPI) para resolver
+  marca/modelo/versión + ITV de un vehículo por matrícula, uso principal `asegura` (tarificación),
+  extensible a cualquier vertical. Se solicitó a `datos.gob.es` (formulario oficial de apertura de
+  datos) publicar como API abierta la ficha técnica NIVE + estado ITV — enviado, pendiente de
+  confirmación. **Multas descartadas a propósito de la misma solicitud**: es dato sancionador ligado
+  a persona, no dato técnico del vehículo; no es "dato abierto" viable por esta vía (RGPD/Ley de
+  Tráfico). Si sale adelante, ahorra el gasto recurrente; si no, evaluar proveedor real (candidatos:
+  APIVehículo, InfoCoche) detrás de un adaptador propio `@central/core-vehiculos` — NO construido aún.
+
 - **🚨 El aviso de "siniestros nuevos" mentía: "ya están abiertos" cuando 11 de 12 venían `cerrado`
   (14/09/2026).** `siniestros-nuevos` marca "nuevo" por `entradoEn` (cuándo entró en nuestra BD), no
   por su estado real en la compañía — CIMA manda siniestros en cualquier estado. El puerto de asegura
