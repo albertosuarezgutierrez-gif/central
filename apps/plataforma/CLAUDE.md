@@ -1568,9 +1568,10 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ciclo, variación). TRES cosas distintas en pantalla: `null` (asegura vieja no lo manda) ≠ `sin_datos` (se
   miró: CIMA no da la anualidad anterior) ≠ `igual`. «Sube sin siniestro» por encima del 5 % enlaza a
   retarificar. Lectores puros en `lib/poliza-asegura.ts` / `lib/ficha-asegura.ts`.
-- **🧲 Canal de leads web (02/09/2026, noche).** `app/seguros/page.tsx` es la **landing pública de Grupo
-  Asegura** (no existía ninguna: la frase de la visión «existe la landing de plataforma» era falsa). Fuera de
-  `(usuario)`, en `PUBLIC` del middleware. Su formulario postea a `POST /api/publico/correduria/lead`
+- **🧲 Canal de leads web (02/09/2026, noche — `app/seguros/page.tsx` BORRADA el 14/09/2026, ver más
+  abajo).** Nació aquí: `app/seguros/page.tsx` fue la primera **landing pública de Grupo Asegura**
+  (no existía ninguna: la frase de la visión «existe la landing de plataforma» era falsa). Lo que
+  sigue vivo es el endpoint que recibía su formulario, `POST /api/publico/correduria/lead`
   (sin sesión): rate limit 6/h por IP (`lib/rate-limit.ts`, en memoria, best-effort), honeypot `web` que
   responde 200 sin hacer nada, consentimiento RGPD obligatorio. Con datos válidos SIEMPRE pasan dos cosas:
   alta por el puerto de asegura con `fuente: 'web'` / `actor: 'web'` (historial tipo `contacto`) y Telegram
@@ -1579,6 +1580,14 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   `POST /api/operador/cliente/historial`). Tres estados internos (nueva · existente · no registrado); al
   usuario `{ok:true}` en los dos primeros y 502 en el tercero — y en el tercero el Telegram lleva los datos
   del formulario porque es el único rastro. Reglas puras y tests en `lib/leads-web.ts`.
+- **🚫 `app/seguros/page.tsx` y su `Formulario.tsx` YA NO EXISTEN (14/09/2026).** Desde el
+  05/09/2026 esta correduría tiene web de marca propia (`apps/asegura-web`, `grupoasegura.es`), y las
+  dos páginas competían por la misma consulta desde dos dominios del mismo negocio. Decisión de
+  Alberto: `/seguros` **301 (308 en realidad — App Router)** hacia `grupoasegura.es`, en vez de
+  quedarse noindex y viva. El redirect vive en `next.config.ts::redirects()` (corre ANTES que el
+  middleware, así que la exención de `/seguros` en `middleware.ts::PUBLIC` se retiró: no protegía ya
+  ninguna ruta alcanzable). El endpoint `/api/publico/correduria/lead` de arriba sigue vivo — hoy lo
+  alimenta `apps/asegura-web` (`POST /api/lead`, que reenvía aquí), no una página de esta app.
 - **🗑️ Supresiones RGPD — el reloj del art. 12.3 se contesta AQUÍ (05/09/2026).** Desde el bloque legal
   0.5, un cliente puede pedir la supresión de sus datos desde `apps/asegura-portal` (`/boveda`). Eso
   arranca un plazo legal de **30 días** (prorrogable a 60 **motivando la prórroga**, art. 12.3 RGPD), y
