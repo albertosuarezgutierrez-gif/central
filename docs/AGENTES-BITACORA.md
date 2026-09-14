@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-14 · auditoria-diaria (ligera)** · hizo: heartbeat 2-bis (35 agentes, 4 en rojo, todos
+  ya conocidos), correduría 2-quater (sano salvo backlog CIMA conocido + C0058 83 días sin mandar
+  nada, dato nuevo), pricing 2bis (🔴 71,6h sin escribir precio real, progresión 42h→47,6h→71,6h
+  en 3 pasadas — ya reportado hoy por `pricing-agente`, no se duplica). Hallazgo propio nuevo:
+  causa raíz de por qué 11 PRs de auditoría llevan desde el 05/09 sin mergear — GitHub exige
+  aprobación humana para los checks de un commit `github-actions[bot]`, y `rutinas-automerge.yml`
+  nunca llega a intentar el merge. dudas: —; fallos: preflight Telegram (`curl` a
+  `/api/internal/alerta`) denegado por Sentinel `[CRITICAL] environment secret piped to network` —
+  mismo bloqueo que registró `pricing-agente` hoy; avisado por PushNotification en su lugar (solo
+  el hallazgo nuevo del automerge, para no duplicar el aviso ya enviado sobre pricing/Sentinel).
+  PRs/commits: rama `claude/great-maxwell-vifqid` (PR de registro pendiente de abrir).
 - **2026-09-14 · pricing-agente** · hizo: Paso 0/1 OK (fundación sana, ciclo anterior 07/09 cruzado
   con incomes, 0/48 fechas muestreadas con income aún — normal). Paso 2 (mercado) completo vía 4
   agentes en paralelo + Supabase directo (fallback de la skill): 120/120/120/114 comps nuevos

@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **📋 Auditoría diaria (ligera) 14/09/2026: el automerge de carril 1 lleva 9 días bloqueado —
+  causa raíz confirmada, pendiente de Alberto.** `rutinas-automerge.yml` resuelve el conflicto de
+  inserción de los PRs de registro, pero los checks que corren sobre su commit resultante
+  (`github-actions[bot]`) quedan en `action_required` — GitHub exige aprobar workflows de commits
+  de bot y ningún agente puede hacerlo por API. Resultado: **11 PRs de auditoría abiertos sin
+  mergear** desde el 05/09 (`#2318`…`#2877`), aunque la rutina SÍ corre cada día. Acción manual:
+  Settings → Actions → General, revisar aprobación de workflows. Pricing SIVRA (71,6h sin escribir
+  precio real) y el bloqueo de Sentinel al Telegram por curl ya los reportó hoy `pricing-agente`
+  (misma bitácora) — no se duplica el aviso. Detalle en `docs/AUDITORIA-2026-09.md`.
+
 - **🚨 El aviso de "siniestros nuevos" mentía: "ya están abiertos" cuando 11 de 12 venían `cerrado`
   (14/09/2026).** `siniestros-nuevos` marca "nuevo" por `entradoEn` (cuándo entró en nuestra BD), no
   por su estado real en la compañía — CIMA manda siniestros en cualquier estado. El puerto de asegura
