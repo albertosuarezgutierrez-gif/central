@@ -85,6 +85,9 @@ function leerFila(v: unknown): SiniestroEntrante | null {
     compania: texto(s.compania),
     poliza: texto(s.poliza),
     referencia: texto(s.referencia),
+    // `null` = una versión vieja de asegura no lo manda; `textoAvisoSiniestros`
+    // lo trata como «sigue abierto» (conservador). No inventar un valor aquí.
+    estado: texto(s.estado),
   }
 }
 
