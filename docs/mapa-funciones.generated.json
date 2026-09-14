@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-14T15:20:10Z",
-  "sha": "9f7c67815e21af5b10f0b4735e8a480d2156139e",
+  "generadoEn": "2026-09-14T17:19:00Z",
+  "sha": "214478a1c4736db92431c4f207ae05fe86e0bb5f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -5445,12 +5445,12 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 52
+          "linea": 53
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1480a62bd7b2"
+      "hash": "42f7e943c830"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/condiciones/page.tsx",
@@ -5766,6 +5766,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "9af06a393707"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/WhatsappFlotante.tsx",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Botón flotante de WhatsApp — el mismo patrón que `apps/asegura-web` (`components/Whatsapp.tsx`), aquí para el cliente ya identificado. El número NO se escribe aquí: sale de `MEDIADOR`, la fuente única del mediador en todo el monorepo (el mismo que usa la web pública), y el enlace lo compone `whatsap",
+      "exporta": [
+        "WhatsappFlotante"
+      ],
+      "funciones": [
+        {
+          "nombre": "WhatsappFlotante",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "29e6378b4caa"
     },
     {
       "ruta": "apps/asegura-portal/lib/adjuntos-parte.ts",
@@ -135479,7 +135500,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3316,
-    "funciones": 10237
+    "archivos": 3317,
+    "funciones": 10238
   }
 }
