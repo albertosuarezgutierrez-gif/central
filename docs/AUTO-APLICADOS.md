@@ -13,6 +13,14 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-14** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`, `docs/AGENTES-BITACORA.md`
+  · pasada ligera 14/09: sección nueva en el informe (2 hallazgos 🔴: automerge de carril 1
+  bloqueado 9 días — causa raíz confirmada; pricing SIVRA 71,6h sin escribir, ya reportado hoy por
+  `pricing-agente`) + entrada de memoria + entrada de bitácora · **NO empujado directo a `main`**:
+  el entorno de esta sesión asigna la rama `claude/great-maxwell-vifqid` y prohíbe pushear a otra
+  (plan B del apartado "Dos carriles" de la skill) — va en PR de solo-registro, a la espera de que
+  `rutinas-automerge.yml` lo mergee (bloqueado por el propio Hallazgo 1 de esta pasada) · commit de
+  esta auditoría
 - **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40
