@@ -30,6 +30,16 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🍪 Consentimiento unificado: asegura-web, ia-rest y housesevillana migradas a `@central/core-consent`
+  (14/09/2026, PR #2925).** Paquete nuevo (vanilla-cookieconsent puro TS). asegura-web sustituye a
+  Cookiebot (trial expiraba ~19/09); ia-rest gatea GA4 (cargaba sin condición); housesevillana gatea
+  GA4+Meta Pixel vía `cc:onConsent`/`cc:onChange` (eventos verificados contra el paquete real) y traduce
+  también el idioma del banner en `/en`/`/it`. Guardián visto rojo→verde en las 3 apps. Efecto colateral
+  arreglado: `test/vercel-ignore-build.test.ts` usaba housesevillana como «app sin @central/*» (ya no
+  queda ninguna) → fixture sintética. Root `pnpm test` 745/745. **Pendiente:** aplicar
+  `consentimiento_registro.sql` (necesita "ok" de Alberto) y construir el endpoint de plataforma que
+  hoy hace 404 (banner funciona igual, solo sin dejar rastro de auditoría todavía).
+
 - **👥 Portal del cliente: pestaña «Contactos» + invitación sin compartir nada (08/09/2026).** Alberto
   pidió «pestaña de contactos: nombre, relación y mail, un mail de presentación… y regalos por traer
   gente». Lo primero ya existía en `/autorizaciones` (invitar por correo, 04/09); se añadió lo que
