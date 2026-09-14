@@ -1,42 +1,46 @@
 {
  "sesion": "8251f5fb-1a3d-5111-9551-cb5e202a3125",
  "inicio": "2026-09-14T09:04:56.762Z",
- "fin": "2026-09-14T09:15:55.017Z",
- "llamadas": 84,
+ "fin": "2026-09-14T09:46:13.467Z",
+ "llamadas": 140,
  "categorias": {
   "otro": {
-   "llamadas": 9,
-   "chars_in": 1966,
-   "chars_out": 2761,
+   "llamadas": 16,
+   "chars_in": 2783,
+   "chars_out": 275687,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 7,
-    "PushNotification": 1
+    "ToolSearch": 8,
+    "PushNotification": 1,
+    "ReadNotifications": 5,
+    "ScheduleWakeup": 1
    }
   },
   "lectura-directa": {
-   "llamadas": 4,
-   "chars_in": 397,
-   "chars_out": 60168,
+   "llamadas": 30,
+   "chars_in": 2533,
+   "chars_out": 342473,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 4
+    "Read": 22,
+    "Glob": 3,
+    "Grep": 5
    }
   },
   "bash": {
-   "llamadas": 10,
-   "chars_in": 2397,
-   "chars_out": 7447,
+   "llamadas": 20,
+   "chars_in": 5232,
+   "chars_out": 9630,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 10
+    "Bash": 20
    }
   },
   "mcp:Gmail": {
@@ -79,27 +83,40 @@
    }
   },
   "escritura": {
-   "llamadas": 1,
-   "chars_in": 2826,
-   "chars_out": 64613,
+   "llamadas": 6,
+   "chars_in": 16976,
+   "chars_out": 169495,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 1
+    "Edit": 5,
+    "Write": 1
    }
   },
   "mcp:github": {
-   "llamadas": 3,
-   "chars_in": 2254,
-   "chars_out": 332,
+   "llamadas": 10,
+   "chars_in": 2920,
+   "chars_out": 20756,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 2,
+   "chars_citados": 117418,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 1,
-    "mcp__github__subscribe_pr_activity": 1
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 7
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 6879,
+   "chars_out": 7101,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 10552,
+   "tools": {
+    "Agent": 1
    }
   }
  }
