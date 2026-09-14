@@ -17,11 +17,24 @@ export function urlScriptMetaPixel(): string {
   return 'https://connect.facebook.net/en_US/fbevents.js'
 }
 
+/** Forma del `fbq` global de Meta Pixel. Con nombre propio (en vez de inline en
+ * `Window`) porque `Object.assign(fn, {...})` tipado contra `typeof window.fbq`
+ * —un tipo UNIÓN con `undefined`— confundía al checker de TS (TS2322/TS18048/
+ * TS2722 en un consumidor con `strict:true`); con un tipo nombrado, sin unión,
+ * `Object.assign` infiere bien y no hace falta ningún `as`. */
+type FbqFn = ((...args: unknown[]) => void) & {
+  callMethod?: unknown
+  queue?: unknown[]
+  loaded?: boolean
+  version?: string
+  push?: unknown
+}
+
 declare global {
   interface Window {
     dataLayer?: unknown[]
     gtag?: (...args: unknown[]) => void
-    fbq?: ((...args: unknown[]) => void) & { callMethod?: unknown; queue?: unknown[]; loaded?: boolean; version?: string; push?: unknown }
+    fbq?: FbqFn
     posthog?: {
       init: (key: string, opciones: Record<string, unknown>) => void
       capture: (evento: string, props?: Record<string, unknown>) => void
@@ -50,9 +63,9 @@ export function cargarGa4(id: string): void {
 /** Carga Meta Pixel. Mismo criterio que GA4: sin parada limpia, el gate es no cargar. */
 export function cargarMetaPixel(id: string): void {
   if (window.fbq) return
-  const n: typeof window.fbq = Object.assign(
+  const n: FbqFn = Object.assign(
     function (...args: unknown[]) {
-      ;(n.queue as unknown[]).push(args)
+      n.queue!.push(args)
     },
     { queue: [] as unknown[], loaded: true, version: '2.0' }
   )

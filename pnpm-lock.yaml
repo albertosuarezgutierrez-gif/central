@@ -294,6 +294,9 @@ importers:
       '@central/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@central/core-consent':
+        specifier: workspace:*
+        version: link:../../packages/core-consent
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros
@@ -306,6 +309,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
+      vanilla-cookieconsent:
+        specifier: ^3.1.0
+        version: 3.1.0
     devDependencies:
       '@types/node':
         specifier: ^20
