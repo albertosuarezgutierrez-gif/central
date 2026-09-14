@@ -1,8 +1,8 @@
 {
  "sesion": "62fb554d-2f35-511d-903f-4434de8b6df8",
  "inicio": "2026-09-14T10:51:02.668Z",
- "fin": "2026-09-14T10:53:30.087Z",
- "llamadas": 21,
+ "fin": "2026-09-14T11:26:15.158Z",
+ "llamadas": 37,
  "categorias": {
   "otro": {
    "llamadas": 5,
@@ -17,14 +17,14 @@
    }
   },
   "mcp:Gmail": {
-   "llamadas": 5,
-   "chars_in": 305,
-   "chars_out": 46492,
+   "llamadas": 17,
+   "chars_in": 925,
+   "chars_out": 128101,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Gmail__search_threads": 4,
+    "mcp__Gmail__search_threads": 16,
     "mcp__Gmail__get_thread": 1
    }
   },
@@ -63,14 +63,14 @@
    }
   },
   "sql": {
-   "llamadas": 6,
-   "chars_in": 3351,
-   "chars_out": 21099,
+   "llamadas": 10,
+   "chars_in": 6729,
+   "chars_out": 30177,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 6
+    "mcp__Supabase__execute_sql": 10
    }
   }
  }
