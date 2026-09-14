@@ -402,8 +402,10 @@ lanzamiento de la web**. Lo que queda abierto es un asunto de ia-rest, no de la 
 1. ¿Titular del registrador de `grupoasegura.com` / `.es`?
 2. ¿Número de pólizas nuevas a 6 meses que define el éxito?
 3. ¿Se pide permiso a Mapfre / Allianz / Occident / Reale para usar sus logos?
-4. ¿Base de legitimación y plazo de conservación de las 32.520 fichas históricas? (pregunta ya
-   abierta en `CORREDURIA-INTRANET-IDEAS.md`, sigue sin respuesta)
+4. ~~¿Base de legitimación de las 32.520 fichas históricas?~~ ✅ **Resuelto 14/09/2026** —
+   interés legítimo (art. 6.1.f RGPD), ver §1.2(b) y §7.1. **Sigue abierto el plazo de
+   conservación** (cuánto tiempo se pueden guardar con esa finalidad, art. 5.1.e RGPD) —
+   no se le preguntó al abogado en esta consulta.
 
 ---
 
