@@ -30,6 +30,13 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🚨 El aviso de "siniestros nuevos" mentía: "ya están abiertos" cuando 11 de 12 venían `cerrado`
+  (14/09/2026).** `siniestros-nuevos` marca "nuevo" por `entradoEn` (cuándo entró en nuestra BD), no
+  por su estado real en la compañía — CIMA manda siniestros en cualquier estado. El puerto de asegura
+  no exponía `estado`, así que el Telegram pedía llamar por los 12 sin distinguir. Fix: `estado` viaja
+  ahora por el puerto → cron de plataforma → `textoAvisoSiniestros` (`@central/module-seguros`), que
+  separa abiertos/cerrados y solo pide llamar por los abiertos. Sin PR aún (por hacer).
+
 - **🛡️ Sentinel bloquea TODAS las rutinas programadas que usan `ALERTA_TOKEN` por curl (14/09/2026).**
   Nuevo hook `.claude/mcp-sentinel/` (`sentinel_preflight.py`) deniega en modo sombra cualquier
   Bash/curl que dereferencia una env var `_TOKEN`/`_SECRET` en sesión desatendida (categoría
