@@ -23,6 +23,7 @@ import { simboloValido } from '@/lib/trading/cantera'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
 import { esPreguntaPatrimonio, esComandoPatrimonio } from '@/lib/patrimonio-chat'
+import { decidirBlogPr } from '@/lib/correduria/blog-pr'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -800,6 +801,41 @@ export async function POST(req: NextRequest) {
       await tgAnswerCallback(cb.id, r.ok ? (r.sinCambio ? 'Ya estaba bien' : 'Ventana repuesta ✅') : 'No se pudo')
       await tgSend(`🔑 <b>Acceso</b>\n${escapeHtml(textoResultadoReponer(reservaRef, r))}`).catch(() => {})
       return NextResponse.json({ ok: true })
+    }
+
+    // ── Blog de la correduría: publicar/descartar el artículo directamente desde el chat
+    // (ablg_ok/ablg_no:<nºPR>). Misma `decidirBlogPr` que usa /correduria → Redes, así
+    // que el resultado es idéntico apruebe Alberto desde donde apruebe.
+    if (prefix === 'ablg') {
+      const numeroPr = Number(args[0] || 0)
+      if (!numeroPr) { await tgAnswerCallback(cb.id, 'PR no reconocido'); return NextResponse.json({ ok: true }) }
+      // 🚨 Validación EXPLÍCITA de las dos acciones que existen — nunca "lo que
+      // no sea 'no' es publicar". Un action desconocido (entrega duplicada,
+      // dato corrupto, un tercer botón futuro) se rechaza sin tocar GitHub: el
+      // valor por defecto de un botón que mezcla a producción no puede ser
+      // publicar.
+      if (action !== 'ok' && action !== 'no') {
+        await tgAnswerCallback(cb.id, 'Botón no reconocido')
+        return NextResponse.json({ ok: true })
+      }
+      const tokenGh = process.env.GITHUB_TOKEN
+      if (!tokenGh) {
+        await tgAnswerCallback(cb.id, 'Falta GITHUB_TOKEN')
+        await tgSend('🛑 No puedo mezclar/cerrar el PR: falta `GITHUB_TOKEN` en Vercel.', { html: true }).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+      const accionBlog = action === 'no' ? 'descartar' : 'publicar'
+      const r = await decidirBlogPr(numeroPr, accionBlog, tokenGh)
+      await tgAnswerCallback(cb.id, r.ok ? (accionBlog === 'publicar' ? 'Publicado ✅' : 'Descartado 🗑️') : 'No se pudo')
+      const midBlog = cb.message?.message_id
+      const textoBlog = r.ok
+        ? (accionBlog === 'publicar'
+            ? `✅ <b>Publicado.</b> PR #${numeroPr} mezclado — el artículo ya está en la web.`
+            : `🗑️ <i>Descartado.</i> PR #${numeroPr} cerrado sin publicar.`)
+        : `🛑 <b>No se pudo ${accionBlog === 'publicar' ? 'publicar' : 'descartar'} el PR #${numeroPr}.</b>\n${escapeHtml(r.motivo)}`
+      if (midBlog) await tgEditMessage(midBlog, textoBlog).catch(() => {})
+      else await tgSend(textoBlog).catch(() => {})
+      return NextResponse.json({ ok: r.ok })
     }
 
     if (prefix !== 'hsp') return NextResponse.json({ ok: true }) // no es de este agente (bot compartido)

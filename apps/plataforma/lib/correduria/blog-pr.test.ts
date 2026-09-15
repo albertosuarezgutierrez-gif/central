@@ -7,7 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  extraerArticuloDePr, estadoPr, explicarEstadoPr, motivoMerge, MARCA_INI, MARCA_FIN,
+  extraerArticuloDePr, estadoPr, explicarEstadoPr, motivoMerge, decidirBlogPr, MARCA_INI, MARCA_FIN,
 } from './blog-pr.ts'
 
 test('el texto del artículo se extrae de entre las marcas', () => {
@@ -71,4 +71,83 @@ test('el rechazo de GitHub dice DÓNDE mirar', () => {
     motivoMerge(403, 'x'),
   ]
   assert.equal(new Set(todos).size, 3, 'dos rechazos distintos dicen lo mismo')
+})
+
+// 🚨 `decidirBlogPr` es la única puerta de mezcla/cierre, la comparten /correduria
+// y el botón de Telegram. Su guarda (¿es un PR DE `claude/blog-asegura`?) es lo
+// que impide que este endpoint compartido mezcle cualquier PR abierto del repo
+// por número — se comprueba que de verdad frena, no solo que exista la rama del
+// código feliz.
+function conFetchSimulado<T>(respuestas: Record<string, () => { ok: boolean; status: number; json?: unknown; text?: string }>, fn: () => Promise<T>): Promise<T> {
+  const original = globalThis.fetch
+  // @ts-expect-error — stub deliberado para el test
+  globalThis.fetch = async (url: string, init?: { method?: string }) => {
+    const metodo = init?.method || 'GET'
+    const clave = `${metodo} ${url}`
+    const entrada = Object.entries(respuestas).find(([k]) => clave.includes(k))
+    if (!entrada) throw new Error(`fetch no simulado: ${clave}`)
+    const r = entrada[1]()
+    return {
+      ok: r.ok,
+      status: r.status,
+      json: async () => r.json,
+      text: async () => r.text ?? '',
+    } as Response
+  }
+  return fn().finally(() => { globalThis.fetch = original })
+}
+
+test('decidirBlogPr RECHAZA un PR que no es de la rama del agente (no lo mezcla ni lo cierra)', async () => {
+  let tocoMerge = false
+  const r = await conFetchSimulado(
+    {
+      'GET https://api.github.com/repos/albertosuarezgutierrez-gif/central/pulls/999': () => ({
+        ok: true, status: 200, json: { head: { ref: 'otra-rama-cualquiera' }, title: 'PR ajeno' },
+      }),
+      'PUT https://api.github.com/repos/albertosuarezgutierrez-gif/central/pulls/999/merge': () => {
+        tocoMerge = true
+        return { ok: true, status: 200, json: {} }
+      },
+    },
+    () => decidirBlogPr(999, 'publicar', 'token-falso'),
+  )
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.motivo, /no es del agente del blog/i)
+  assert.equal(tocoMerge, false, 'la guarda no frenó: llegó a intentar mezclar un PR ajeno')
+})
+
+test('decidirBlogPr PUBLICA con squash cuando el PR sí es de la rama del agente', async () => {
+  const r = await conFetchSimulado(
+    {
+      'GET https://api.github.com/repos/albertosuarezgutierrez-gif/central/pulls/123': () => ({
+        ok: true, status: 200, json: { head: { ref: 'claude/blog-asegura' }, title: 'blog: artículo' },
+      }),
+      'PUT https://api.github.com/repos/albertosuarezgutierrez-gif/central/pulls/123/merge': () => ({
+        ok: true, status: 200, json: { merged: true },
+      }),
+    },
+    () => decidirBlogPr(123, 'publicar', 'token-falso'),
+  )
+  assert.deepEqual(r, { ok: true, accion: 'publicar' })
+})
+
+test('decidirBlogPr DESCARTA cerrando el PR, sin tocar el endpoint de merge', async () => {
+  let tocoMerge = false
+  const r = await conFetchSimulado(
+    {
+      'GET https://api.github.com/repos/albertosuarezgutierrez-gif/central/pulls/123': () => ({
+        ok: true, status: 200, json: { head: { ref: 'claude/blog-asegura' }, title: 'blog: artículo' },
+      }),
+      'PATCH https://api.github.com/repos/albertosuarezgutierrez-gif/central/pulls/123': () => ({
+        ok: true, status: 200, json: { state: 'closed' },
+      }),
+      'PUT https://api.github.com/repos/albertosuarezgutierrez-gif/central/pulls/123/merge': () => {
+        tocoMerge = true
+        return { ok: true, status: 200, json: {} }
+      },
+    },
+    () => decidirBlogPr(123, 'descartar', 'token-falso'),
+  )
+  assert.deepEqual(r, { ok: true, accion: 'descartar' })
+  assert.equal(tocoMerge, false)
 })
