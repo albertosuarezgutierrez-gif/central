@@ -6,9 +6,10 @@ import { mapearRespuesta } from './apivehiculo.ts'
 const EJEMPLO_DOC = {
   plate: '1234ABC', country: 'ES', brand: 'Volkswagen', model: 'Golf',
   version: '2.0 TDI 150 CV', firstRegistrationDate: '2018-03-15',
-  fuelType: 'Diesel', powerKW: '110', powerHP: '150',
+  fuelType: 'Diesel', powerKW: '110', powerHP: '150', fiscalPower: '7',
   vin: 'WVWZZZ1KZAM123456', transmissionType: 'FWD',
   passengerCount: 5, doorCount: 5, displacementCcm: '1968',
+  vehicleType: 'Passenger Car', bodyType: 'Hatchback (3 or 5 doors)',
 }
 
 test('mapearRespuesta traduce los campos reales del proveedor', () => {
@@ -25,6 +26,9 @@ test('mapearRespuesta traduce los campos reales del proveedor', () => {
   assert.equal(d.transmision, 'FWD')
   assert.equal(d.numeroPlazas, 5)
   assert.equal(d.numeroPuertas, 5)
+  assert.equal(d.potenciaFiscal, 7)
+  assert.equal(d.tipoVehiculo, 'Passenger Car')
+  assert.equal(d.tipoCarroceria, 'Hatchback (3 or 5 doors)')
 })
 
 test('mapearRespuesta no revienta con campos ausentes', () => {

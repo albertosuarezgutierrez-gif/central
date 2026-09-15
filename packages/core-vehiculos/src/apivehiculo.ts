@@ -20,6 +20,7 @@ export function mapearRespuesta(matricula: string, data: Record<string, unknown>
     version: str(data.version),
     potenciaCv: num(data.powerHP),
     potenciaKw: num(data.powerKW),
+    potenciaFiscal: num(data.fiscalPower),
     cilindradaCc: num(data.displacementCcm),
     combustible: str(data.fuelType),
     fechaMatriculacion: str(data.firstRegistrationDate),
@@ -27,6 +28,8 @@ export function mapearRespuesta(matricula: string, data: Record<string, unknown>
     transmision: str(data.transmissionType),
     numeroPlazas: num(data.passengerCount),
     numeroPuertas: num(data.doorCount),
+    tipoVehiculo: str(data.vehicleType),
+    tipoCarroceria: str(data.bodyType),
     bruto: data,
   }
 }
