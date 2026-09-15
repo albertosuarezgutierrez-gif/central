@@ -112,6 +112,55 @@ export function interpretarCola(status: number, json: unknown): Cola {
   return { estado: 'ok', leads, contadores: leerContadores(r.contadores) }
 }
 
+// ── Agrupación por cliente ──────────────────────────────────────────────────
+//
+// El puerto da una fila por PÓLIZA: el mismo cliente con varios seguros
+// (distintos ramos, o el mismo ramo repetido en el volcado) sale como varias
+// filas con el mismo contacto. Alberto: «leads puede haber tenido varios
+// seguros pero contacto es solo uno» — se agrupa por `clienteId` (la ficha,
+// que YA es la identidad correcta: regla «por NIF/ficha, nunca por nombre»
+// del CLAUDE.md — aquí no hay NIF en este feed, pero `clienteId` es la misma
+// idea) para que el contacto (llamada/WhatsApp/email) sea uno por cliente, no
+// uno por póliza. Dos `clienteId` distintos NUNCA se funden aquí, aunque
+// compartan teléfono (podría ser un negocio con varios titulares).
+
+export type GrupoLeadRecaptacion = {
+  clienteId: string
+  cliente: string
+  telefono: string | null
+  email: string | null
+  polizas: LeadRecaptacion[]
+  enCooldown: boolean
+  ultimoContactoEn: string | null
+}
+
+export function agruparLeadsPorCliente(leads: readonly LeadRecaptacion[]): GrupoLeadRecaptacion[] {
+  const mapa = new Map<string, GrupoLeadRecaptacion>()
+  for (const l of leads) {
+    const existente = mapa.get(l.clienteId)
+    if (existente) {
+      existente.polizas.push(l)
+      if (l.enCooldown) existente.enCooldown = true
+      if (existente.telefono === null && l.telefono !== null) existente.telefono = l.telefono
+      if (existente.email === null && l.email !== null) existente.email = l.email
+      if (l.ultimoContactoEn !== null && (existente.ultimoContactoEn === null || l.ultimoContactoEn > existente.ultimoContactoEn)) {
+        existente.ultimoContactoEn = l.ultimoContactoEn
+      }
+      continue
+    }
+    mapa.set(l.clienteId, {
+      clienteId: l.clienteId,
+      cliente: l.cliente,
+      telefono: l.telefono,
+      email: l.email,
+      polizas: [l],
+      enCooldown: l.enCooldown,
+      ultimoContactoEn: l.ultimoContactoEn,
+    })
+  }
+  return [...mapa.values()]
+}
+
 /** El motivo del puerto, en castellano de pantalla. */
 export function textoMotivoCola(motivo: 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red', causa: string | null): string {
   switch (motivo) {
