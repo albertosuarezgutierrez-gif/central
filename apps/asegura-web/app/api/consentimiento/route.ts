@@ -35,7 +35,11 @@ export const dynamic = 'force-dynamic'
 const PLATAFORMA_URL = (process.env.PLATAFORMA_URL || 'https://plataforma-ten-flame.vercel.app').replace(/\/+$/, '')
 
 export async function POST(req: NextRequest) {
-  const { categorias } = await req.json().catch(() => ({ categorias: null }))
+  // Un cuerpo `null` es JSON VÁLIDO, así que `req.json()` lo resuelve sin entrar
+  // en el `.catch` — y desestructurar `null` lanza, devolviendo un 500 donde
+  // toca un 400. Por eso se lee el cuerpo entero y se accede con `?.`.
+  const cuerpo = await req.json().catch(() => null)
+  const categorias = (cuerpo as { categorias?: unknown } | null)?.categorias
   if (!categorias || typeof categorias !== 'object') {
     return NextResponse.json({ error: 'categorias inválidas' }, { status: 400 })
   }
