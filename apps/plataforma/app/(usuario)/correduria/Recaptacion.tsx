@@ -248,7 +248,7 @@ function BotonEmailRecaptacion({ grupo }: { grupo: GrupoLeadRecaptacion }) {
       onClick={async () => {
         setEstado('enviando')
         const primera = grupo.polizas[0]
-        const asunto = `¿Sigues con tu seguro de ${ramosTexto(grupo)}?`
+        const asunto = `${grupo.cliente.split(' ')[0]}, ¿sigues con tu seguro de ${ramosTexto(grupo)}?`
         const texto = mensajeSugerido(grupo)
         try {
           const res = await fetch('/api/correduria/recaptacion/email', {
