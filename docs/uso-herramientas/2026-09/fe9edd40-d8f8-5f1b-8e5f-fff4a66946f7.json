@@ -1,81 +1,83 @@
 {
  "sesion": "fe9edd40-d8f8-5f1b-8e5f-fff4a66946f7",
  "inicio": "2026-09-14T10:00:12.280Z",
- "fin": "2026-09-15T08:29:51.568Z",
- "llamadas": 782,
+ "fin": "2026-09-15T08:59:41.554Z",
+ "llamadas": 1069,
  "categorias": {
   "bash": {
-   "llamadas": 302,
-   "chars_in": 60585,
-   "chars_out": 470221,
+   "llamadas": 385,
+   "chars_in": 143546,
+   "chars_out": 530181,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 302
+    "Bash": 385
    }
   },
   "lectura-directa": {
-   "llamadas": 147,
-   "chars_in": 15755,
-   "chars_out": 517027,
+   "llamadas": 169,
+   "chars_in": 17967,
+   "chars_out": 683486,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 76,
-    "Grep": 67,
+    "Read": 91,
+    "Grep": 74,
     "Glob": 4
    }
   },
   "escritura": {
-   "llamadas": 51,
-   "chars_in": 74194,
-   "chars_out": 4336013,
+   "llamadas": 54,
+   "chars_in": 115298,
+   "chars_out": 4439037,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 46,
-    "Write": 5
+    "Edit": 47,
+    "Write": 7
    }
   },
   "mcp:github": {
-   "llamadas": 107,
-   "chars_in": 28634,
-   "chars_out": 371092,
+   "llamadas": 122,
+   "chars_in": 31649,
+   "chars_out": 489394,
    "errores": 4,
-   "archivos_citados": 37,
-   "chars_citados": 2236302,
+   "archivos_citados": 39,
+   "chars_citados": 3253362,
    "tools": {
-    "mcp__github__pull_request_read": 53,
-    "mcp__github__update_pull_request": 10,
-    "mcp__github__merge_pull_request": 13,
+    "mcp__github__pull_request_read": 62,
+    "mcp__github__update_pull_request": 11,
+    "mcp__github__merge_pull_request": 14,
     "mcp__github__list_pull_requests": 4,
     "mcp__github__search_pull_requests": 2,
-    "mcp__github__create_pull_request": 13,
+    "mcp__github__create_pull_request": 15,
     "mcp__github__subscribe_pr_activity": 3,
     "mcp__github__get_job_logs": 4,
     "mcp__github__get_check_run": 2,
-    "mcp__github__actions_list": 2,
+    "mcp__github__actions_list": 4,
     "mcp__github__actions_get": 1
    }
   },
   "otro": {
-   "llamadas": 125,
-   "chars_in": 17272,
-   "chars_out": 3105912,
+   "llamadas": 151,
+   "chars_in": 28273,
+   "chars_out": 3593030,
    "errores": 0,
    "archivos_citados": 10,
    "chars_citados": 1302180,
    "tools": {
-    "ToolSearch": 28,
-    "ReadNotifications": 71,
+    "ToolSearch": 33,
+    "ReadNotifications": 83,
     "Monitor": 8,
-    "ScheduleWakeup": 10,
-    "Skill": 5,
+    "ScheduleWakeup": 12,
+    "Skill": 6,
     "SendUserFile": 2,
-    "AskUserQuestion": 1
+    "AskUserQuestion": 1,
+    "WebSearch": 2,
+    "SubagentHandback": 4
    }
   },
   "mcp:Supabase": {
@@ -91,35 +93,36 @@
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 19,
-   "chars_in": 5052,
-   "chars_out": 95232,
+   "llamadas": 23,
+   "chars_in": 5344,
+   "chars_out": 96075,
    "errores": 3,
    "archivos_citados": 14,
    "chars_citados": 807679,
    "tools": {
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 5,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 8,
     "mcp__Claude_Code_Remote__send_later": 1,
     "mcp__Claude_Code_Remote__delete_trigger": 3,
     "mcp__Claude_Code_Remote__list_triggers": 5,
     "mcp__Claude_Code_Remote__create_trigger": 3,
     "mcp__Claude_Code_Remote__list_environments": 1,
-    "mcp__Claude_Code_Remote__get_session": 1
+    "mcp__Claude_Code_Remote__get_session": 1,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1
    }
   },
   "mcp:Vercel": {
-   "llamadas": 16,
-   "chars_in": 1605,
-   "chars_out": 39041,
+   "llamadas": 21,
+   "chars_in": 1968,
+   "chars_out": 44436,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Vercel__get_project": 2,
-    "mcp__Vercel__list_teams": 2,
+    "mcp__Vercel__list_teams": 3,
     "mcp__Vercel__get_deployment": 2,
-    "mcp__Vercel__get_runtime_logs": 9,
-    "mcp__Vercel__list_projects": 1
+    "mcp__Vercel__get_runtime_logs": 12,
+    "mcp__Vercel__list_projects": 2
    }
   },
   "mcp:posthog": {
@@ -158,14 +161,69 @@
    }
   },
   "sql": {
-   "llamadas": 1,
-   "chars_in": 163,
-   "chars_out": 968,
+   "llamadas": 26,
+   "chars_in": 11325,
+   "chars_out": 51542,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 26
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 4,
+   "chars_in": 16611,
+   "chars_out": 17359,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 1
+    "Agent": 4
+   }
+  },
+  "mcp:Booking_com": {
+   "llamadas": 48,
+   "chars_in": 14100,
+   "chars_out": 687121,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking_com__accommodations_search": 48
+   }
+  },
+  "mcp:Trivago": {
+   "llamadas": 38,
+   "chars_in": 5938,
+   "chars_out": 24654769,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Trivago__trivago-accommodation-radius-search": 38
+   }
+  },
+  "mcp:Tripadvisor": {
+   "llamadas": 2,
+   "chars_in": 455,
+   "chars_out": 76602,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Tripadvisor__search_hotels": 2
+   }
+  },
+  "mcp:Expedia": {
+   "llamadas": 12,
+   "chars_in": 2592,
+   "chars_out": 119180,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Expedia__search_hotels": 12
    }
   }
  }
