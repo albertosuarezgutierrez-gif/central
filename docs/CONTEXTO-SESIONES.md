@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** Pasada de PRIORIDAD de `mercado-booking` (pedida por Alberto, plan acotado
+`?desde=2027-07-01&hasta=2027-08-31&max=24`): julio y agosto 2027 ya tienen ≥3 comparables reales
+de Booking en ≥3 fechas distintas por piso (jul 02/10/27, ago 01/06/24 — esta última con el
+Campeonato Mundial de Remo, factor 1,55). **La línea de prioridad del disparo diario ya se puede
+quitar.** Escaparate propio: solo Dúplex center tenía disponibilidad para medir su canal (1/4);
+House Sevillana/Busto Reform/Luxury Busto sin disponibilidad en Booking para sus fechas de
+refresco — hueco, no fallo. Detalle en `docs/AGENTES-BITACORA.md`.
+
 **(14/09/2026)** GA4 (`G-QP5DTDLJ5F`) añadido a `apps/asegura-web` junto a PostHog, gateado por el
 mismo banner (PR #2942) — petición explícita de Alberto para ver las tres webs (housesevillana,
 ia-rest, grupoasegura.es) en la misma cuenta de Google Analytics; revierte la decisión del 07/09
