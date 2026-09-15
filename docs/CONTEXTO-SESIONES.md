@@ -22,7 +22,63 @@ martes 23 con el mercado 4p del casco en ~440€. `EDAD_MERCADO_RANCIO` comparti
 `/mercado/plan`. **NO se borró nada**: el error fue de lectura, no datos corruptos. 🚨 Y
 `rate_snapshots.price_ours` es el **motor sombra RETIRADO de sivra**, no «nuestro precio» —
 leerlo como el motor vivo hizo informar 612€/575€ donde la última decisión real era 358€; ahora
-lleva `COMMENT` (aplicado en Supabase). PR #2988 (draft).
+lleva `COMMENT` (aplicado en Supabase). PR #2988.
+
+**(15/09/2026)** 💸 **Sacar un PR de draft cuesta una ronda NUEVA de 12 deployments de Vercel.**
+`CLAUDE.md` ya avisa de que cada push a una rama de PR crea ~12 deployments (cuota
+`api-deployments-paid-per-hour`, 450/h **de cuenta**), pero no de que el evento `ready_for_review`
+dispara otra ronda entera con IDs nuevos — medido hoy en el PR #2983. **Gasto de build: cero**
+(12 × `Canceled by Ignored Build Step` en `get_status`, confirmado sobre el estado FINAL, no sobre
+los «Building» intermedios del comentario del bot). O sea: no toca la factura de Build CPU Minutes,
+sí la cuota de deployments — el mismo matiz del 04/09. Consecuencia práctica: **abrir el PR ya fuera
+de draft** en vez de abrirlo draft y des-draftearlo después ahorra una ronda de 12.
+
+**(15/09/2026)** 🚨 **El registro de consentimiento de cookies de las TRES webs llevaba
+rechazándose entero desde que existe (14/09), y la tabla vacía se leía como «no ha aceptado nadie».**
+Las tres mandan `acceptedCategories` de vanilla-cookieconsent, que es un **ARRAY**, y el receptor
+`/api/publico/correduria/consentimiento` lo rechazaba con un 400 por un guard `Array.isArray`. Como el
+reenvío es fire-and-forget con `.catch()`, el 400 moría en el navegador: cero filas, cero errores, cero
+pistas. Lo destapó cruzar dos fuentes: **PostHog registraba visitas de ESE MISMO DÍA** (12:43, 10:42…)
+contra una tabla de auditoría a cero — o sea gente aceptando el banner sin que quedara la prueba que
+exige el RGPD (art. 7.1). Arreglado normalizando en el receptor (`lib/consentimiento-categorias.ts` +
+cepo visto en rojo), no en los tres emisores: un solo punto y sin redesplegar tres webs.
+
+**(15/09/2026)** 📊 **Y el «cero visitas» de Alberto tenía una causa de fondo: hay DOS proyectos
+PostHog y el conector apuntaba al que no es.** `Grupo ASegura App` (167360, org LOOR) recibe los
+eventos del CRM (`cima_pull_*`) y **ni un solo `$pageview`**; la web vive en **`Default project`
+(266897, org «Grupo ASegura»)**, con tráfico diario de `grupoasegura.es` (11 días seguidos medidos).
+Mismo patrón que con GA4, donde los tres sitios usan IDs distintos: **el panel correcto existe y no es
+el que se abre por defecto.** Antes de decir «no hay datos», comprobar en qué proyecto se está mirando.
+
+**(15/09/2026)** 🪤 **El cepo del nombre comercial barre también `docs/`, y una CONSULTA de Google
+citada literal lo pone rojo.** `test/regression-nombre-comercial-asegura.test.ts` tumbó el CI del PR
+#2983 por escribir en la memoria la query de Search Console tal y como la teclea la gente (en
+minúsculas). El cepo tiene razón y el texto estaba mal: la consulta se describe («la consulta de
+marca»), no se transcribe. Y la lección de método: `node --test lib/*.test.ts` de UNA app no
+sustituye a `pnpm test` de la raíz — el check requerido `Tests (packages + guardián)` son los 831 de
+la raíz, y los guardianes transversales viven ahí.
+
+**(15/09/2026)** 🪤 **El guardián de rama tiene un falso positivo con el clon SHALLOW del contenedor.**
+`scripts/guardian-rama.mjs` bloqueó abrir un PR con «50 commits locales que NO están en ningún
+remoto» — eran los squash-merges de los PRs #2546→#2639, ya en `main` desde el 08/09. La causa es
+que el contenedor clona con profundidad ~65 commits: `origin/main` solo alcanzaba al 14/09, así que
+todo lo anterior «no existía» para el guardián. **No se borra nada ni se fuerza el push: se arregla
+con `git fetch origin main --deepen=250`** (0 commits sueltos después). Antes de creerse que hay
+trabajo local sin empujar, mirar `.git/shallow`.
+
+**(15/09/2026)** `grupoasegura.es` · revisión de estado pedida por Alberto («0 visitas en Google
+Analytics»). **La web está sana**: producción READY en `36e25f1` (GA4 del PR #2942 SÍ desplegado),
+SEO técnico completo (13 rutas en sitemap, canonical en todas, 301 de `/mejoramos-tu-seguro`) y
+**GSC midiendo: 147 impresiones 05-11/09 contra 31 la semana anterior**, con la consulta de marca en pos. 2.
+Lo que NO va: (1) el cron `seo-correduria` lleva `ultimo_ok_at = NULL` —nunca en verde— pero por
+**Serper sin créditos en el run del 14/09, y Serper YA se retiró del cron ese mismo día (PR #2936)**:
+se cura solo el lunes 21/09, no es acción de Alberto; (2) el agente autónomo (`seo-correduria-agente`) está **apagado**
+(`SEO_ASEGURA_AGENT_ENABLED` default OFF, `seo_correduria_cambios` 0 filas): **no optimiza nada**;
+(3) GA4 solo carga tras aceptar el banner y su ID (`G-QP5DTDLJ5F`) es DISTINTO de housesevillana
+(`G-N5CMQL9C4M`) e ia-rest (`G-EN2YQLRLEX`) — verificación en vivo delegada a Claude en Chrome (el
+proxy de la sesión bloquea el dominio). Corregido el comentario de `app/api/consentimiento/route.ts`
+que decía que plataforma «todavía NO expone» el receptor: existe desde el PR #2934 y responde 405 a
+un GET.
 
 **(15/09/2026)** Correduría · **el correo GENÉRICO de la intranet**. Alberto: «todo lo que sea la
 intranet de un cliente… mandarle un correo cortito, educado, con acceso a la intranet directamente»,
