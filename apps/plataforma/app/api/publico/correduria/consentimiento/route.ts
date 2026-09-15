@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getIp, rateLimit } from '@/lib/rate-limit'
+import { normalizarCategorias } from '@/lib/consentimiento-categorias'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,14 +46,20 @@ export async function POST(req: NextRequest) {
   if (!APPS.has(app)) {
     return NextResponse.json({ ok: false, motivo: 'app desconocida' }, { status: 400, headers: CORS })
   }
-  if (!categorias || typeof categorias !== 'object' || Array.isArray(categorias)) {
+  // 🚨 El guard anterior rechazaba ARRAYS, que es justo lo que mandan las tres webs
+  // (`acceptedCategories` de vanilla-cookieconsent). Resultado medido el 15/09/2026: 400 en
+  // todos los envíos, tabla vacía desde el día que se creó, y nadie se enteraba porque el
+  // reenvío es fire-and-forget. La normalización vive en `lib/consentimiento-categorias.ts`
+  // con su cepo, visto en rojo antes de darlo por bueno.
+  const normalizadas = normalizarCategorias(categorias)
+  if (!normalizadas) {
     return NextResponse.json({ ok: false, motivo: 'categorias inválidas' }, { status: 400, headers: CORS })
   }
 
   try {
     await prisma.$executeRaw`
       INSERT INTO consentimiento_registro (app, categorias)
-      VALUES (${app}, ${JSON.stringify(categorias)}::jsonb)
+      VALUES (${app}, ${JSON.stringify(normalizadas)}::jsonb)
     `
   } catch {
     // Sin log del cuerpo ni del motivo: es una fila de auditoría, no un flujo que nadie vigila en

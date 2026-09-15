@@ -21,18 +21,28 @@ export const dynamic = 'force-dynamic'
 // red o un 404 del lado de plataforma no debe bloquear ni reintentarse desde
 // el navegador.
 //
-// ⚠️ PENDIENTE, fuera del alcance de este Task Group (solo apps/asegura-web):
-// `apps/plataforma` todavía NO expone `/api/publico/correduria/consentimiento`.
-// Hasta que exista (y hasta que Alberto autorice aplicar
-// `apps/plataforma/prisma/sql/2026-09-14_consentimiento_registro.sql`), este
-// endpoint reenvía a una ruta que responde 404 — inerte, como el plan
-// anticipaba para la migración, solo que por un motivo distinto. No cambia el
-// comportamiento visible: el banner funciona igual, solo que sin dejar rastro
-// en `consentimiento_registro` todavía.
+// ✅ YA NO ESTÁ PENDIENTE (medido 15/09/2026): `apps/plataforma` expone
+// `/api/publico/correduria/consentimiento` desde el PR #2934 (14/09 15:47 CEST)
+// — un GET contra él devuelve 405, o sea la ruta existe y solo acepta POST — y
+// la tabla `consentimiento_registro` está creada en la Supabase compartida. Este
+// reenvío ya no cae en un 404.
+//
+// 🚨 Y la tabla estuvo a cero por un BUG, no por falta de visitantes (medido el
+// 15/09/2026). Se leyó ese cero como «todavía no ha aceptado nadie» y era falso:
+// abajo se manda `acceptedCategories`, que es un ARRAY, y el receptor lo rechazaba
+// con un 400 por un guard `Array.isArray`. Como este reenvío es fire-and-forget,
+// el 400 moría en el `.catch()` y no se veía en ninguna parte. Lo destapó cruzar
+// las dos fuentes: PostHog registraba visitas de ESE MISMO DÍA (gente aceptando el
+// banner) contra una tabla de auditoría vacía. Arreglado en el receptor
+// (`apps/plataforma/lib/consentimiento-categorias.ts`).
 const PLATAFORMA_URL = (process.env.PLATAFORMA_URL || 'https://plataforma-ten-flame.vercel.app').replace(/\/+$/, '')
 
 export async function POST(req: NextRequest) {
-  const { categorias } = await req.json().catch(() => ({ categorias: null }))
+  // Un cuerpo `null` es JSON VÁLIDO, así que `req.json()` lo resuelve sin entrar
+  // en el `.catch` — y desestructurar `null` lanza, devolviendo un 500 donde
+  // toca un 400. Por eso se lee el cuerpo entero y se accede con `?.`.
+  const cuerpo = await req.json().catch(() => null)
+  const categorias = (cuerpo as { categorias?: unknown } | null)?.categorias
   if (!categorias || typeof categorias !== 'object') {
     return NextResponse.json({ error: 'categorias inválidas' }, { status: 400 })
   }
