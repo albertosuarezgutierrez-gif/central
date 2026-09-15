@@ -68,6 +68,11 @@ export type ContadoresRecaptacion = {
   totalCandidatos: number
   contactadosSemana: number
   conAperturaORespuestaSemana: number
+  /** Acumulado TOTAL de emails de recaptación (no solo la semana): con envío manual
+   *  y bajo volumen, el contador semanal se resetea antes de tener muestra suficiente
+   *  para juzgar si el asunto/mensaje funciona. `null` = no se pudo calcular. */
+  emailEnviadosTotal: number | null
+  emailAbiertosTotal: number | null
 }
 
 export type ColaRecaptacion = { leads: LeadRecaptacion[]; contadores: ContadoresRecaptacion }
@@ -89,7 +94,10 @@ type FilaCruda = {
 }
 
 export async function colaRecaptacion(correduriaId: string): Promise<ColaRecaptacion> {
-  const vacia: ColaRecaptacion = { leads: [], contadores: { totalCandidatos: 0, contactadosSemana: 0, conAperturaORespuestaSemana: 0 } }
+  const vacia: ColaRecaptacion = {
+    leads: [],
+    contadores: { totalCandidatos: 0, contactadosSemana: 0, conAperturaORespuestaSemana: 0, emailEnviadosTotal: null, emailAbiertosTotal: null },
+  }
   if (!aseguraConfigurada()) return vacia
   const db = prismaAsegura()
 
@@ -163,11 +171,11 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
     }
   })
 
-  const contadores = await contadoresSemana(correduriaId)
-  return { leads, contadores: { ...contadores, totalCandidatos: leads.length } }
+  const [semana, historicoEmail] = await Promise.all([contadoresSemana(correduriaId), contadoresEmailHistorico(correduriaId)])
+  return { leads, contadores: { ...semana, ...historicoEmail, totalCandidatos: leads.length } }
 }
 
-async function contadoresSemana(correduriaId: string): Promise<Omit<ContadoresRecaptacion, 'totalCandidatos'>> {
+async function contadoresSemana(correduriaId: string): Promise<{ contactadosSemana: number; conAperturaORespuestaSemana: number }> {
   const db = prismaAsegura()
   const filas = await db.$queryRaw<{ contactados: bigint; conRespuesta: bigint }[]>(Prisma.sql`
     select
@@ -179,6 +187,32 @@ async function contadoresSemana(correduriaId: string): Promise<Omit<ContadoresRe
   `)
   const f = filas[0]
   return { contactadosSemana: Number(f?.contactados ?? 0), conAperturaORespuestaSemana: Number(f?.conRespuesta ?? 0) }
+}
+
+/**
+ * Acumulado TOTAL (sin ventana) de emails de recaptación: enviados y
+ * abiertos-o-pinchados. Solo `canal = 'email'` — el WhatsApp manual nunca
+ * avanza a 'abierto'/'pinchado' (no hay WABA, solo se registra "se abrió el
+ * enlace"), así que mezclarlo aquí falsearía la tasa de apertura del email.
+ * `null` en caso de fallo de lectura: NUNCA se sustituye por 0, que se leería
+ * como "0% de apertura" en vez de "no se ha podido comprobar".
+ */
+async function contadoresEmailHistorico(correduriaId: string): Promise<{ emailEnviadosTotal: number | null; emailAbiertosTotal: number | null }> {
+  try {
+    const db = prismaAsegura()
+    const filas = await db.$queryRaw<{ enviados: bigint; abiertos: bigint }[]>(Prisma.sql`
+      select
+        count(*)::bigint as enviados,
+        count(*) filter (where estado in ('abierto', 'pinchado'))::bigint as abiertos
+      from recaptacion_envios
+      where correduria_id = ${correduriaId}::uuid
+        and canal = 'email'
+    `)
+    const f = filas[0]
+    return { emailEnviadosTotal: Number(f?.enviados ?? 0), emailAbiertosTotal: Number(f?.abiertos ?? 0) }
+  } catch {
+    return { emailEnviadosTotal: null, emailAbiertosTotal: null }
+  }
 }
 
 /** El texto sugerido para un lead concreto (WhatsApp), antes de que la IA lo pula. */

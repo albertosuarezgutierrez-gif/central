@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-14T17:32:00Z",
-  "sha": "f18157d27217a13facd85c7507c56c89f06215c3",
+  "generadoEn": "2026-09-15T07:25:03Z",
+  "sha": "283e8918f3eeaf4e2aa3a38605236907d861153f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8696,7 +8696,7 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Articulo | null",
-          "linea": 295
+          "linea": 370
         },
         {
           "nombre": "textoArticulo",
@@ -8704,7 +8704,7 @@
           "exportada": true,
           "params": "a: Articulo",
           "retorno": "string",
-          "linea": 300,
+          "linea": 375,
           "resumen": "Todo el texto visible de un artículo, en una cadena, para barrerlo."
         },
         {
@@ -8713,7 +8713,7 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Articulo[]",
-          "linea": 312,
+          "linea": 387,
           "resumen": "Los artículos que enlazan con un ramo. Alimenta el enlazado de su página."
         },
         {
@@ -8722,13 +8722,13 @@
           "exportada": true,
           "params": "articulos: readonly Articulo[] = ARTICULOS",
           "retorno": "",
-          "linea": 336,
+          "linea": 411,
           "resumen": "Entradas de sitemap del blog: el índice más una fila por artículo. 🚨 Vive aquí, y no dentro de `app/sitemap.ts`, por una razón de VERIFICACIÓN: el sitemap de Next no se puede ejecutar desde `node --t"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9e3b1caf1be0"
+      "hash": "a50ee093519b"
     },
     {
       "ruta": "apps/asegura-web/lib/panel-demo.ts",
