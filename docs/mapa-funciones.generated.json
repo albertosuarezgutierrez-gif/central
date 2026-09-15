@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T16:44:50Z",
-  "sha": "157f4c67c52b763104cfee01aa96a6eb77151d14",
+  "generadoEn": "2026-09-15T17:58:49Z",
+  "sha": "375ceabd31906a17473d5aa7e3bc585abae9165b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11102,6 +11102,27 @@
       "hash": "4f4c1daff309"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/leads-web/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "GET /api/operador/leads-web — cuántos leads captados por apps/asegura-web (`clientes.fuente='web'`) son hoy cartera viva, y quién queda por trabajar. Read-only. `estado:'ok'` con `total:0` es un estad"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/leads-web",
+      "hash": "5313c5698de1"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/leads/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -17891,6 +17912,32 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a6fbb682d2e1"
+    },
+    {
+      "ruta": "apps/asegura/lib/leads-web-conversion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Conversión de leads WEB (`clientes.fuente='web'`) a cartera VIVA. ─── Por qué hace falta ───────────────────────────────────────────────────── `apps/asegura-web` capta leads desde el 05/09/2026; el formulario los da de alta con `fuente:'web'` (`apps/plataforma/lib/leads-web.ts`). Hasta hoy nadie cru",
+      "exporta": [
+        "conversionLeadsWeb"
+      ],
+      "funciones": [
+        {
+          "nombre": "conversionLeadsWeb",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<ConversionLeadsWeb | null>",
+          "linea": 64
+        }
+      ],
+      "tablas": [
+        "cliente_emails",
+        "cliente_telefonos",
+        "clientes",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "919e7e99308c"
     },
     {
       "ruta": "apps/asegura/lib/migracion-decision.ts",
@@ -64556,7 +64603,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 66
+          "linea": 67
         },
         {
           "nombre": "fmtFecha",
@@ -64564,7 +64611,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 71,
+          "linea": 72,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -64573,7 +64620,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 121
+          "linea": 122
         },
         {
           "nombre": "CorreduriaClient",
@@ -64581,7 +64628,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 123
+          "linea": 124
         },
         {
           "nombre": "CarteraResumen",
@@ -64589,7 +64636,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 530
+          "linea": 537
         },
         {
           "nombre": "btnMini",
@@ -64597,7 +64644,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 647,
+          "linea": 654,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -64606,12 +64653,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 665
+          "linea": 672
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "27c79f61cce4"
+      "hash": "33796e15ae04"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -65052,6 +65099,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "04342b113624"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/LeadsWebConversion.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "LeadsWebConversion"
+      ],
+      "funciones": [
+        {
+          "nombre": "LeadsWebConversion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 28,
+          "resumen": "Conversión de leads de `apps/asegura-web` (el formulario público, `grupoasegura.es`) a cartera viva. Alberto lo pidió como paso previo a gastar en Ads: «necesito saber que convierte antes de meterle p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e6568009289b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/ListaCartera.tsx",
@@ -74077,6 +74145,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/intervinientes",
       "hash": "5b40afa0a0a1"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/leads-web/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/correduria/leads-web — de los leads captados por apps/asegura-web, cuántos son hoy cartera viva. Read-only."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/leads-web",
+      "hash": "4afa2418f1b4"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/leads/route.ts",
@@ -93282,6 +93371,85 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "803268e36c86"
+    },
+    {
+      "ruta": "apps/plataforma/lib/leads-web-conversion-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lectura del puerto `GET /api/operador/leads-web` de asegura: de los leads captados por la web pública de la correduría (`apps/asegura-web`), cuántos son hoy cartera viva. Es el prerrequisito que Alberto pidió antes de gastar en Ads («necesito saber que convierte antes de meterle presupuesto»). Mismo",
+      "exporta": [
+        "interpretarConversionLeadsWeb",
+        "conversionLeadsWebAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 32
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 36
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 40
+        },
+        {
+          "nombre": "booleano",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 44
+        },
+        {
+          "nombre": "leerPendientes",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "LeadWebPendiente[]",
+          "linea": 48
+        },
+        {
+          "nombre": "interpretarConversionLeadsWeb",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "ConversionLeadsWeb",
+          "linea": 74,
+          "resumen": "Puro: interpreta la respuesta cruda del puerto. Nunca inventa un total ni una tasa."
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 99
+        },
+        {
+          "nombre": "conversionLeadsWebAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<ConversionLeadsWeb>",
+          "linea": 103
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fe324e5e81da"
     },
     {
       "ruta": "apps/plataforma/lib/leads-web.ts",
@@ -136136,7 +136304,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3332,
-    "funciones": 10287
+    "archivos": 3337,
+    "funciones": 10299
   }
 }
