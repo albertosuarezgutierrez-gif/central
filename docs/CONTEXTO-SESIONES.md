@@ -21,6 +21,16 @@ visto rojo brazo a brazo; la revisión previa lo pilló comparando solo la HORA 
 09:00) y sin mirar los días. ⏳ Pendiente de Alberto: poner ese mismo horario en Google Business,
 que hoy no tiene ninguno.
 
+**(15/09/2026)** SIVRA · pricing: **el motor revivió tras 4 días de 401 y lo primero que hizo fue arrasar**.
+El puente legacy de Smoobu funciona (427 noches en 4 pisos a las 14:30 UTC), pero esa misma pasada bajó
+**269 de 427** noches, 109 más de un 15%. En el Dúplex arrastraba el Jueves Santo (25/03/2027) de 672€
+hacia `target_crudo=112€` / `clamp_ceil=170€` a −20% por pasada (3/día): en 2 días quedaba a 170€. Es el
+MISMO bug del PR #2988 visto desde el otro lado — `base_fuente='mes'`: sin barrido que mida el evento, el
+motor no sabe que es Semana Santa y usa la base de un marzo normal. El 28/03 ya hizo ese recorrido entero
+(535→180, 28/08–03/09). **Motor PAUSADO** (`pricing_config.paused=true`, 14:44 UTC) hasta que el snapshot
+de mañana 07:00 UTC traiga mercado fresco y el barrido arreglado mida Semana Santa. Rutina de despausa
+programada (07:30 UTC) con la condición explícita: NO despausar si el barrido no midió el evento.
+
 **(15/09/2026)** SIVRA · pricing: **una fecha de EVENTO medida una vez no volvía a subir NUNCA
 en la cola del barrido** (`planDeVentanas` ordenaba «virgen antes que medida» y, dentro de las
 medidas, solo por antigüedad; en un plan de 12 meses siempre hay vírgenes). El motor exige corpus
