@@ -8,8 +8,10 @@ import { firmarPeticion } from '@/lib/smoobu-firma'
 // de ialimp) y todos los proyectos la recogen sin tocar envs ni redeploys.
 //
 // 🔑 AUTENTICACIÓN: **HMAC-SHA256** (`X-API-Key` + `X-Timestamp` + `X-Nonce` + `X-Signature`).
-// El esquema legacy (header `Api-Key` con la key plana) lo deprecó Smoobu y ya devuelve 401 en
-// producción; su sunset es el 25/09/2026. El par key+secret vive en `pms_connections`
+// El esquema legacy (header `Api-Key` con la key plana) está deprecado y su sunset es el
+// 25/09/2026, pero SIGUE FUNCIONANDO hasta esa fecha (verificado a mano 15/09/2026, ver el
+// puente temporal más abajo — la nota anterior de este comentario, que decía «ya devuelve 401 en
+// producción», estaba equivocada). El par key+secret vive en `pms_connections`
 // (`smoobu_api_key` / `smoobu_api_secret`). La construcción del canonical y la firma están en el
 // módulo PURO `lib/smoobu-firma.ts`, contrastado con el ejemplo oficial de Smoobu.
 //
@@ -67,6 +69,23 @@ export async function smoobuFetch(pathOrUrl: string, init: RequestInit = {}): Pr
   const url = pathOrUrl.startsWith('http') ? pathOrUrl : BASE + pathOrUrl
   const method = (init.method ?? 'GET').toUpperCase()
   const body = typeof init.body === 'string' ? init.body : undefined
+
+  // 🌉 PUENTE TEMPORAL — GET /api/rates da 401 con HMAC (ticket Smoobu #1864141, sin resolver):
+  // la firma es correcta y funciona en /reservations, pero /rates la rechaza con parámetros
+  // array (apartments[]). Confirmado a mano el 15/09/2026: legacy 200, HMAC 401, mismo endpoint,
+  // misma propiedad. El esquema legacy no firma con HMAC, así que es inmune a ese fallo concreto.
+  // Vence con el legacy el 25/09/2026 — quitar esta rama en cuanto Smoobu resuelva el ticket o el
+  // legacy deje de aceptarse. Solo se activa con SMOOBU_LEGACY_API_KEY puesta (fail-safe: sin esa
+  // env, sigue como siempre por HMAC).
+  const legacyKey = process.env.SMOOBU_LEGACY_API_KEY
+  if (legacyKey && method === 'GET' && new URL(url).pathname === '/api/rates') {
+    const headers: Record<string, string> = {
+      ...(init.headers as Record<string, string> | undefined),
+      'Api-Key': legacyKey,
+      'Cache-Control': 'no-cache',
+    }
+    return fetch(url, { ...init, method, headers })
+  }
 
   if (!secret) {
     // Sin secreto no se puede firmar, y el esquema legacy ya no lo acepta Smoobu. Se devuelve un
