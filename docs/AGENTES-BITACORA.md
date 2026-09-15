@@ -35,6 +35,19 @@
   los 3× 170€ y el 25,64$/1,21€ siguen sin cargo, puede que tarden más en liquidar o no entren
   nunca — vigilar próxima pasada. fallos: —; el canal de aviso SÍ funcionó hoy (preflight 200 vía
   `canal-aviso.sh`, a diferencia del bloqueo de MCP Sentinel del 14/09). PRs/commits: (este commit).
+- **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
+  continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
+  Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
+  Busto — `smoobu_sync` (mismo credencial, /api/reservations) funcionó igual de hoy, así que no
+  es credencial rota sino scope "Rates" ausente en la key. Corrigió dirección de House Sevillana
+  en `pricing_piso_zona` (Bustos Tavera → Calle Socorro 24, landmine ya documentada en CLAUDE.md).
+  Paso 2: 4 agentes en paralelo, comps house=143/busto=229/luxury=212/duplex=293, ningún piso a 0.
+  Paso 4: 48 propuestas (p50 mercado) enviadas a `aplicar-propuesta`, confirmado bloqueo Smoobu 401
+  en los 4 pisos, 0 filas en `pricing_decisiones` (nada fabricado a mano). Paso 5/6 completos
+  (`pricing_aprendizaje` id 80, Telegram enviado). dudas: pico sin explicar en 2027-06-11 en los
+  4 pisos (2-5x temporada normal, más caro que Semana Santa en 3/4) — preguntado a Alberto si hay
+  evento esa semana; fallos: Paso 4 bloqueado 2 ciclos seguidos (14/09 Sentinel, 15/09 Smoobu 401,
+  aviso Telegram enviado por umbral del skill); PRs/commits: este commit.
 - **2026-09-14 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (`_buzon_pdf` copió
   12/09, `dias_caido=2`); `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacías (confirmado por
   `search_threads`); `agente_salud` actualizado ok=true (vía Supabase MCP, sin curl). Paso 4.0:
