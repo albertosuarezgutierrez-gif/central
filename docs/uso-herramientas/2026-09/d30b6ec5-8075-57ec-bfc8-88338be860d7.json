@@ -1,20 +1,20 @@
 {
  "sesion": "d30b6ec5-8075-57ec-bfc8-88338be860d7",
  "inicio": "2026-09-15T07:13:09.103Z",
- "fin": "2026-09-15T09:12:58.974Z",
- "llamadas": 215,
+ "fin": "2026-09-15T10:05:33.635Z",
+ "llamadas": 240,
  "categorias": {
   "otro": {
-   "llamadas": 36,
-   "chars_in": 556,
-   "chars_out": 748855,
+   "llamadas": 46,
+   "chars_in": 641,
+   "chars_out": 1057432,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 5,
-    "ReadNotifications": 30
+    "ToolSearch": 6,
+    "ReadNotifications": 39
    }
   },
   "lectura-directa": {
@@ -43,44 +43,45 @@
    }
   },
   "bash": {
-   "llamadas": 71,
-   "chars_in": 15502,
-   "chars_out": 101754,
+   "llamadas": 72,
+   "chars_in": 15665,
+   "chars_out": 102099,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 71
+    "Bash": 72
    }
   },
   "mcp:github": {
-   "llamadas": 25,
-   "chars_in": 5611,
-   "chars_out": 97007,
+   "llamadas": 35,
+   "chars_in": 6520,
+   "chars_out": 125404,
    "errores": 0,
-   "archivos_citados": 8,
-   "chars_citados": 50622,
+   "archivos_citados": 11,
+   "chars_citados": 57660,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 2,
-    "mcp__github__pull_request_read": 19,
-    "mcp__github__update_pull_request": 1,
-    "mcp__github__merge_pull_request": 1,
-    "mcp__github__subscribe_pr_activity": 1
+    "mcp__github__pull_request_read": 26,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__merge_pull_request": 2,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__unsubscribe_pr_activity": 1
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 6,
-   "chars_in": 1221,
-   "chars_out": 2576,
+   "llamadas": 10,
+   "chars_in": 2852,
+   "chars_out": 4801,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
-    "mcp__Claude_Code_Remote__send_later": 3,
+    "mcp__Claude_Code_Remote__send_later": 6,
     "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1,
-    "mcp__Claude_Code_Remote__delete_trigger": 1
+    "mcp__Claude_Code_Remote__delete_trigger": 2
    }
   }
  }
