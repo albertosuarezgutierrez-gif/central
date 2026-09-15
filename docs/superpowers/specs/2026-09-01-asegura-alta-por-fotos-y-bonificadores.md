@@ -158,6 +158,35 @@ más → **decide una persona**, la misma regla ya escrita en §1 y que no se to
    gratis, pero aquí el gasto es real desde el primer paso. Poner un límite/rate-limit por
    IP o sesión antes de abrirlo en la web pública, no después.
 
+### 2 ter. 💡 Segunda idea de Alberto (15/09/2026): venta cruzada de HOGAR al tarificar/emitir AUTO
+
+> *«Al igual que al emitir póliza auto ya sabemos dirección, podemos sacar hasta precio del hogar
+> ¿entiendes la idea?»*
+
+Sí — y es la MISMA jugada que la del §2 bis (cruzar un dato que ya se tiene con un servicio
+gratuito), aplicada al ramo hogar en vez de al vehículo. Al tarificar auto de un cliente de
+cartera ya se conoce su dirección (`clientes.direccion` + CP), y esa dirección es EXACTAMENTE
+la entrada de `precalificarHogar()` de `@central/core-catastro` — ya construida y en producción
+desde el 02/09/2026 para `/correduria/hogar` (verificada contra el 2º-14 de San Vicente 40: 76
+m²/1994, igual que la póliza real del CRM). Con eso:
+
+1. Se cruza la dirección del cliente de auto con el Catastro → m², año, uso, CP (gratis).
+2. Se completa el resto de `HomeRisk` con los mismos supuestos conservadores que ya usa
+   `desde-cartera-hogar.ts` (habitaciones por m², protecciones a `false`, joyas/perros a 0,
+   marcados `optimista` donde corresponda — nada personal ni ningún capital se inventa).
+3. Sale un segundo presupuesto (hogar) sin haber pedido NADA nuevo al cliente.
+
+**Ni siquiera hace falta esperar a nada de lo del §2 bis**: esta pieza ya existe completa hoy
+(precalificación de hogar + Catastro), lo único que falta es EL DISPARADOR — ofrecer el
+presupuesto de hogar automáticamente en el momento de tarificar/emitir auto, en vez de que el
+corredor tenga que ir a `/correduria/hogar` a pedirlo aparte. Es una decisión de UX/flujo, no de
+integración de datos: la integración ya está.
+
+⚠️ **Un matiz que no hay que perderse**: el disparador debería mirar primero si el cliente YA
+tiene una póliza de hogar viva (`retarificabilidad()` ya distingue esto) — cruzar auto→hogar
+tiene sentido para quien NO tiene hogar asegurado con nosotros, no para volver a ofrecérselo a
+quien ya lo tiene.
+
 🔒 **Estas fotos son PII sensible de verdad.** Antes de implementar hay que decidir dónde se guardan
 (Vercel Blob privado, como los EIAC) y **cuánto tiempo**. La ficha de cliente ya tiene el hueco
 documentado: `cliente_documentos` **no existe** todavía y `poliza_documentos.poliza_id` es NOT NULL,
