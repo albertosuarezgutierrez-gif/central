@@ -106,6 +106,14 @@ test('queryCanonica reescribe claves array[] a array[N] indexado, por orden de a
   )
 })
 
+test('queryCanonica ordena numéricamente los índices, no como texto (10 antes que 2)', () => {
+  const sp = new URLSearchParams()
+  for (let i = 0; i < 12; i++) sp.append('apartments[]', String(1000 + i))
+  const out = queryCanonica(sp)
+  const claves = out.split('&').map((par) => par.split('=')[0])
+  assert.deepEqual(claves, Array.from({ length: 12 }, (_, i) => `apartments[${i}]`))
+})
+
 test('firmarPeticion firma /api/rates con apartments[] reescrito a apartments[0] en el canonical', () => {
   const { canonical } = firmarPeticion({
     method: 'GET',

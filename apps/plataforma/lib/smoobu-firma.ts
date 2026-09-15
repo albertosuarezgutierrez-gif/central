@@ -62,7 +62,10 @@ export function queryCanonica(params: URLSearchParams | string): string {
       pares.push([clave, valor])
     }
   })
-  pares.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+  // `numeric: true` para que `clave[2]` ordene antes que `clave[10]` (alfabético
+  // puro los invertiría a partir del 10º valor array — hoy inalcanzable, los 3
+  // callers mandan un único `apartments[]`, pero no debe quedar como una bomba).
+  pares.sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
   return pares.map(([k, v]) => `${k}=${v}`).join('&')
 }
 
