@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db'
 import { firmarPeticion } from '@/lib/smoobu-firma'
+import { debeUsarPuenteLegacy } from '@/lib/smoobu-puente-legacy'
 
 // Fuente ÚNICA de credenciales de Smoobu para plataforma.
 //
@@ -78,7 +79,7 @@ export async function smoobuFetch(pathOrUrl: string, init: RequestInit = {}): Pr
   // legacy deje de aceptarse. Solo se activa con SMOOBU_LEGACY_API_KEY puesta (fail-safe: sin esa
   // env, sigue como siempre por HMAC).
   const legacyKey = process.env.SMOOBU_LEGACY_API_KEY
-  if (legacyKey && method === 'GET' && new URL(url).pathname === '/api/rates') {
+  if (legacyKey && debeUsarPuenteLegacy(method, url, true)) {
     const headers: Record<string, string> = {
       ...(init.headers as Record<string, string> | undefined),
       'Api-Key': legacyKey,
@@ -88,9 +89,10 @@ export async function smoobuFetch(pathOrUrl: string, init: RequestInit = {}): Pr
   }
 
   if (!secret) {
-    // Sin secreto no se puede firmar, y el esquema legacy ya no lo acepta Smoobu. Se devuelve un
-    // 401 con la CAUSA en vez de mandar una petición que va a fallar con un 401 indistinguible de
-    // «la credencial es mala»: el sitio donde tocar es `pms_connections.smoobu_api_secret`.
+    // Sin secreto no se puede firmar HMAC. El puente legacy de arriba no salva este caso: solo
+    // cubre GET /api/rates, y solo si SMOOBU_LEGACY_API_KEY está puesta. Se devuelve un 401 con
+    // la CAUSA en vez de mandar una petición que va a fallar con un 401 indistinguible de «la
+    // credencial es mala»: el sitio donde tocar es `pms_connections.smoobu_api_secret`.
     return new Response(
       JSON.stringify({ error: 'smoobu_sin_secreto', detail: 'Falta smoobu_api_secret (pms_connections / SMOOBU_API_SECRET): no se puede firmar HMAC.' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } },

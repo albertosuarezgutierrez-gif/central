@@ -1533,7 +1533,11 @@ export async function POST(req: NextRequest) {
   // 🛑 Un escalón MÁS arriba que el rechazo: Smoobu ni siquiera dejó LEER el precio actual, así que
   // no hay propuesta que revisar para esos pisos. SIN dedupe, igual que el rechazo de escritura: si
   // sigue caído a las 14:30 y a las 20:30, hay que oírlo las tres veces.
-  const avisoLectura = avisoSmoobuLecturaFalla(fallosLectura)
+  // 🚨 SOLO en `!dryRun` — a diferencia de `fallosSmoobu` (que nace vacío en simulacro porque la
+  // escritura ni se intenta), la LECTURA de /rates se hace SIEMPRE, también al pulsar «Simular».
+  // Sin este guarda, un blip transitorio durante una exploración manual mandaría un 🛑 real a
+  // Telegram por un clic que no tocaba nada en Smoobu (hallazgo de la revisión, 15/09/2026).
+  const avisoLectura = !dryRun ? avisoSmoobuLecturaFalla(fallosLectura) : null
   if (avisoLectura) {
     try {
       await tgAviso('pisos.pricing-aplicado', avisoLectura)
@@ -1586,7 +1590,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     // 🛑 Un rechazo de Smoobu invalida la pasada: el precio no ha llegado al huésped, que es lo
     // único que este endpoint existe para conseguir. Hasta el 23/08/2026 esto salía `ok:true`.
-    ok: !eventosIlegibles && fallosSmoobu.length === 0 && fallosLectura.length === 0 && lecturasCaidas.length === 0,
+    // `fallosLectura` solo invalida la pasada en `!dryRun` — en simulacro la lectura se hace igual
+    // (hace falta para calcular la propuesta) pero un blip transitorio no debe marcar la pasada como
+    // rota: `apply-auto` (el cron real) manda SIEMPRE `dryRun=false`, así que esta condición no
+    // cambia nada en producción, solo evita ruido en el botón «Simular».
+    ok: !eventosIlegibles && fallosSmoobu.length === 0 && (dryRun || fallosLectura.length === 0) && lecturasCaidas.length === 0,
     // Escrituras rechazadas por el canal, con las noches que se quedaron sin aplicar. Las lee
     // `apply-auto` para teñir su latido; van en la respuesta para que el camino manual las vea igual.
     smoobu_rechazos: fallosSmoobu.length > 0 ? fallosSmoobu : undefined,
