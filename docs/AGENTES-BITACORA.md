@@ -14,6 +14,15 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-14 · buscador-ia** · hizo: watch semanal; detectó que DeepSeek retiró
+  `deepseek/deepseek-v4-flash` (10/09/2026) — enrutaba a v4.1-flash a casi el doble de precio,
+  silencioso, en el default de `core-ai`/Director/cron; swap directo a `deepseek/deepseek-v4.1-flash`
+  en las 4 referencias + test actualizado, verificado (`pnpm test` core-ai 45/45, `tsc` plataforma
+  limpio); anotó riesgo ABIERTO (no descartado) de EOL de la visión NIM y candidato Qwen3.7 Flash
+  para próxima pasada; dudas: sin `NVIDIA_API_KEY`/`OPENROUTER_API_KEY` en sesión, todo por
+  WebSearch/catálogo público, sin mini-eval en vivo; fallos: —; PRs/commits: PR de esta pasada
+  (`claude/buscador-ia-2026-09-14`).
+
 ## Entradas pendientes de procesar (lo más reciente arriba)
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
