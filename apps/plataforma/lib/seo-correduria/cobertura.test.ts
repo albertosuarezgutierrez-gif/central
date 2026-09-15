@@ -128,6 +128,30 @@ test('leerCobertura: una URL en error no impide leer las demás', async () => {
   assert.equal(datos.paginas[1].estado, 'error')
 })
 
+test('inspeccionarUrl: manda un AbortSignal — una petición colgada no puede saltarse el tope', async () => {
+  const { fetch, llamadas } = fetchFalso(() => ({
+    status: 200,
+    body: { inspectionResult: { indexStatusResult: { verdict: 'PASS' } } },
+  }))
+  await inspeccionarUrl('tok', 'sc-domain:grupoasegura.es', 'https://grupoasegura.es/', fetch, 5_000)
+  const signal = llamadas[0].init?.signal as AbortSignal | undefined
+  assert.ok(signal instanceof AbortSignal, 'la petición lleva señal de aborto, no queda sin tope')
+})
+
+test('leerCobertura: cada petición recibe un timeout que nunca supera el presupuesto restante', async () => {
+  const señales: (AbortSignal | undefined)[] = []
+  const fetch: FetchLike = async (_url, init) => {
+    señales.push(init?.signal as AbortSignal | undefined)
+    return new Response(JSON.stringify({ inspectionResult: { indexStatusResult: { verdict: 'PASS' } } }), { status: 200 })
+  }
+  const datos = await leerCobertura(
+    { token: 'tok', propiedad: 'sc-domain:grupoasegura.es', urls: ['https://a/', 'https://b/'], presupuestoMs: 5_000 },
+    fetch,
+  )
+  assert.equal(datos.paginas.length, 2)
+  assert.ok(señales.every((s) => s instanceof AbortSignal), 'las dos peticiones llevan señal de aborto')
+})
+
 test('leerCobertura: sin presupuesto de tiempo, las URLs restantes se declaran (no se omiten)', async () => {
   let llamadas = 0
   const fetch: FetchLike = async () => {

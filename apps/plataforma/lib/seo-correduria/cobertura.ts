@@ -13,6 +13,11 @@ import type { DatosCobertura, FetchLike, FilaCobertura, VerdictoCobertura } from
 
 export const URL_INSPECTION_API = 'https://searchconsole.googleapis.com/v1/urlInspection/index:inspect'
 const PRESUPUESTO_MS_DEFECTO = 20_000
+// Igual que posthog.ts: un `fetch` sin `signal` puede colgarse más allá de lo que `presupuestoMs`
+// promete comprobar ENTRE peticiones — una sola URL lenta se comería el resto del presupuesto sin
+// que el bucle pudiera cortarla. Cada petición lleva su propio tope, acotado además al tiempo que
+// de verdad queda (ver `leerCobertura`).
+const TIMEOUT_PETICION_MS_DEFECTO = 20_000
 
 const VERDICTOS: readonly string[] = ['PASS', 'PARTIAL', 'FAIL', 'NEUTRAL']
 
@@ -52,12 +57,14 @@ export async function inspeccionarUrl(
   propiedad: string,
   url: string,
   fetch: FetchLike,
+  timeoutMs: number = TIMEOUT_PETICION_MS_DEFECTO,
 ): Promise<FilaCobertura> {
   try {
     const res = await fetch(URL_INSPECTION_API, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ inspectionUrl: url, siteUrl: propiedad }),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     const cuerpo = await res.text()
     if (!res.ok) return { url, estado: 'error', detalle: `${res.status}: ${cuerpo.slice(0, 200)}` }
@@ -98,11 +105,15 @@ export async function leerCobertura(
   const presupuesto = cfg.presupuestoMs ?? PRESUPUESTO_MS_DEFECTO
   const paginas: FilaCobertura[] = []
   for (const url of cfg.urls) {
-    if (Date.now() - inicio > presupuesto) {
+    const restante = presupuesto - (Date.now() - inicio)
+    if (restante <= 0) {
       paginas.push({ url, estado: 'error', detalle: 'sin tiempo: presupuesto del cron agotado' })
       continue
     }
-    paginas.push(await inspeccionarUrl(cfg.token, cfg.propiedad, url, fetch))
+    // El tope de ESTA petición nunca supera lo que queda del presupuesto: sin esto, una URL colgada
+    // se comería el resto del lote entero antes de que el bucle pudiera volver a comprobar el reloj.
+    const timeoutMs = Math.min(TIMEOUT_PETICION_MS_DEFECTO, restante)
+    paginas.push(await inspeccionarUrl(cfg.token, cfg.propiedad, url, fetch, timeoutMs))
   }
   return { paginas }
 }
