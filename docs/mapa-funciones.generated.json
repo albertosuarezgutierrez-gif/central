@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T07:25:03Z",
-  "sha": "283e8918f3eeaf4e2aa3a38605236907d861153f",
+  "generadoEn": "2026-09-15T08:49:43Z",
+  "sha": "04051d5f6ca6fe906f99e69a3c487fecb7663e07",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -13341,15 +13341,24 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ColaRecaptacion>",
-          "linea": 91
+          "linea": 96
         },
         {
           "nombre": "contadoresSemana",
           "kind": "function",
           "exportada": false,
           "params": "correduriaId: string",
-          "retorno": "Promise<Omit<ContadoresRecaptacion, 'totalCandidatos'>>",
-          "linea": 170
+          "retorno": "Promise<",
+          "linea": 178
+        },
+        {
+          "nombre": "contadoresEmailHistorico",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<",
+          "linea": 200,
+          "resumen": "Acumulado TOTAL (sin ventana) de emails de recaptación: enviados y abiertos-o-pinchados. Solo `canal = 'email'` — el WhatsApp manual nunca avanza a 'abierto'/'pinchado' (no hay WABA, solo se registra "
         },
         {
           "nombre": "textoWhatsappPara",
@@ -13357,7 +13366,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadRecaptacion, 'cliente' | 'ramoLegible' | 'aseguradoraAnterior'>",
           "retorno": "string",
-          "linea": 185,
+          "linea": 219,
           "resumen": "El texto sugerido para un lead concreto (WhatsApp), antes de que la IA lo pula."
         },
         {
@@ -13366,7 +13375,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadRecaptacion, 'cliente' | 'ramoLegible' | 'aseguradoraAnterior'>",
           "retorno": "",
-          "linea": 190,
+          "linea": 224,
           "resumen": "Ídem para email."
         },
         {
@@ -13375,7 +13384,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { clienteId: string; polizaId: string; mensaje: string; actor: string },",
           "retorno": "Promise<",
-          "linea": 195,
+          "linea": 229,
           "resumen": "Registra que Alberto abrió el enlace de WhatsApp de un lead. Deja fila en `historial_interno`."
         },
         {
@@ -13384,7 +13393,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 210
+          "linea": 244
         }
       ],
       "tablas": [
@@ -13394,7 +13403,7 @@
         "recaptacion_envios"
       ],
       "rutaApi": null,
-      "hash": "23bbd9f95a11"
+      "hash": "d6eee2154558"
     },
     {
       "ruta": "apps/asegura/lib/cartera-relaciones.ts",
@@ -65713,20 +65722,38 @@
           "resumen": "🎯 Cola de recaptación: leads del volcado sin fecha de vencimiento, con teléfono o email, que NO son ya cliente vivo por CIMA (esos se trabajan desde su ficha, no aquí). WhatsApp es un enlace manual ("
         },
         {
-          "nombre": "FilaLead",
+          "nombre": "FilaGrupo",
           "kind": "function",
           "exportada": false,
-          "params": "{ l }: { l: LeadRecaptacion }",
+          "params": "{ g }: { g: GrupoLeadRecaptacion }",
           "retorno": null,
-          "linea": 131
+          "linea": 147
+        },
+        {
+          "nombre": "textoTasaAperturaEmail",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: { emailEnviadosTotal: number | null; emailAbiertosTotal: number | null }",
+          "retorno": "string",
+          "linea": 190,
+          "resumen": "Tasa de apertura ACUMULADA de email (no solo la semana): con envío manual y bajo volumen, el contador semanal se resetea antes de tener muestra para juzgar si el asunto/mensaje funciona. Bajo umbral ("
+        },
+        {
+          "nombre": "ramosTexto",
+          "kind": "function",
+          "exportada": false,
+          "params": "g: GrupoLeadRecaptacion",
+          "retorno": "string",
+          "linea": 199,
+          "resumen": "Lista de ramos legible: \"auto\", \"auto y hogar\", \"auto, hogar y moto\"."
         },
         {
           "nombre": "mensajeSugerido",
           "kind": "function",
           "exportada": false,
-          "params": "l: LeadRecaptacion",
+          "params": "g: GrupoLeadRecaptacion",
           "retorno": "string",
-          "linea": 163
+          "linea": 208
         },
         {
           "nombre": "textoEscritura",
@@ -65734,29 +65761,29 @@
           "exportada": false,
           "params": "r: EscrituraRecaptacion",
           "retorno": "string",
-          "linea": 168
+          "linea": 214
         },
         {
           "nombre": "BotonWhatsappRecaptacion",
           "kind": "function",
           "exportada": false,
-          "params": "{ lead }: { lead: LeadRecaptacion }",
+          "params": "{ grupo }: { grupo: GrupoLeadRecaptacion }",
           "retorno": null,
-          "linea": 186,
+          "linea": 232,
           "resumen": "Abre WhatsApp con el mensaje sugerido — texto DETERMINISTA, sin pasar por IA: pulirlo significaría esperar una llamada a un modelo antes de poder pulsar el enlace, que rompe el \"un clic, se abre Whats"
         },
         {
           "nombre": "BotonEmailRecaptacion",
           "kind": "function",
           "exportada": false,
-          "params": "{ lead }: { lead: LeadRecaptacion }",
+          "params": "{ grupo }: { grupo: GrupoLeadRecaptacion }",
           "retorno": null,
-          "linea": 209
+          "linea": 256
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "40a4e708588b"
+      "hash": "d8f20c0e08fd"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Redes.tsx",
@@ -94752,6 +94779,7 @@
       "resumen": "La cola de recaptación de leads sin vencimiento (12/09/2026), leída del puerto de asegura (`/api/operador/recaptacion*`). Mismo patrón que `correduria-puerto.ts`: interpretación PURA (sin red, la prueba el client component) + las llamadas de red, que solo se invocan desde las rutas API. Ver docs/sup",
       "exporta": [
         "interpretarCola",
+        "agruparLeadsPorCliente",
         "textoMotivoCola",
         "interpretarEscrituraRecaptacion",
         "colaRecaptacionAsegura",
@@ -94797,7 +94825,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "LeadRecaptacion | null",
-          "linea": 60
+          "linea": 63
         },
         {
           "nombre": "leerContadores",
@@ -94805,7 +94833,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "ContadoresRecaptacion",
-          "linea": 83
+          "linea": 86
         },
         {
           "nombre": "interpretarCola",
@@ -94813,7 +94841,15 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Cola",
-          "linea": 92
+          "linea": 97
+        },
+        {
+          "nombre": "agruparLeadsPorCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "leads: readonly LeadRecaptacion[]",
+          "retorno": "GrupoLeadRecaptacion[]",
+          "linea": 142
         },
         {
           "nombre": "textoMotivoCola",
@@ -94821,7 +94857,7 @@
           "exportada": true,
           "params": "motivo: 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red', causa: string | null",
           "retorno": "string",
-          "linea": 116,
+          "linea": 170,
           "resumen": "El motivo del puerto, en castellano de pantalla."
         },
         {
@@ -94830,7 +94866,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "EscrituraRecaptacion",
-          "linea": 140
+          "linea": 194
         },
         {
           "nombre": "urlAsegura",
@@ -94838,7 +94874,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 161
+          "linea": 215
         },
         {
           "nombre": "pedirCon",
@@ -94846,7 +94882,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit",
           "retorno": "Promise<",
-          "linea": 165
+          "linea": 219
         },
         {
           "nombre": "colaRecaptacionAsegura",
@@ -94854,7 +94890,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Cola>",
-          "linea": 180
+          "linea": 234
         },
         {
           "nombre": "enviarWhatsappRecaptacionAsegura",
@@ -94862,7 +94898,7 @@
           "exportada": true,
           "params": "body: { clienteId: string polizaId: string mensaje: string actor: string }",
           "retorno": "Promise<EscrituraRecaptacion>",
-          "linea": 190
+          "linea": 244
         },
         {
           "nombre": "enviarEmailRecaptacionAsegura",
@@ -94870,12 +94906,12 @@
           "exportada": true,
           "params": "body: { clienteId: string polizaId: string email: string asunto: string texto: string actor: string }",
           "retorno": "Promise<EscrituraRecaptacion>",
-          "linea": 205
+          "linea": 259
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6c35ba7c68c6"
+      "hash": "2e86570686cb"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",
@@ -135524,6 +135560,6 @@
   ],
   "resumen": {
     "archivos": 3318,
-    "funciones": 10239
+    "funciones": 10243
   }
 }
