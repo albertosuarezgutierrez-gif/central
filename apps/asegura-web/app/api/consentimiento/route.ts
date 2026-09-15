@@ -27,11 +27,14 @@ export const dynamic = 'force-dynamic'
 // la tabla `consentimiento_registro` está creada en la Supabase compartida. Este
 // reenvío ya no cae en un 404.
 //
-// 🚨 Lo que SÍ sigue a cero es la tabla: 0 filas desde que el receptor vive. Eso
-// NO autoriza a decir que nadie acepta el banner — es el «todavía no se sabe»
-// que `CLAUDE.md` prohíbe colapsar. Para distinguir «nadie ha aceptado» de «el
-// reenvío no llega» hay que mirar el POST en el navegador (pestaña Red), no esta
-// tabla.
+// 🚨 Y la tabla estuvo a cero por un BUG, no por falta de visitantes (medido el
+// 15/09/2026). Se leyó ese cero como «todavía no ha aceptado nadie» y era falso:
+// abajo se manda `acceptedCategories`, que es un ARRAY, y el receptor lo rechazaba
+// con un 400 por un guard `Array.isArray`. Como este reenvío es fire-and-forget,
+// el 400 moría en el `.catch()` y no se veía en ninguna parte. Lo destapó cruzar
+// las dos fuentes: PostHog registraba visitas de ESE MISMO DÍA (gente aceptando el
+// banner) contra una tabla de auditoría vacía. Arreglado en el receptor
+// (`apps/plataforma/lib/consentimiento-categorias.ts`).
 const PLATAFORMA_URL = (process.env.PLATAFORMA_URL || 'https://plataforma-ten-flame.vercel.app').replace(/\/+$/, '')
 
 export async function POST(req: NextRequest) {

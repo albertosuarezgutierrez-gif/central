@@ -12,6 +12,23 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** 🚨 **El registro de consentimiento de cookies de las TRES webs llevaba
+rechazándose entero desde que existe (14/09), y la tabla vacía se leía como «no ha aceptado nadie».**
+Las tres mandan `acceptedCategories` de vanilla-cookieconsent, que es un **ARRAY**, y el receptor
+`/api/publico/correduria/consentimiento` lo rechazaba con un 400 por un guard `Array.isArray`. Como el
+reenvío es fire-and-forget con `.catch()`, el 400 moría en el navegador: cero filas, cero errores, cero
+pistas. Lo destapó cruzar dos fuentes: **PostHog registraba visitas de ESE MISMO DÍA** (12:43, 10:42…)
+contra una tabla de auditoría a cero — o sea gente aceptando el banner sin que quedara la prueba que
+exige el RGPD (art. 7.1). Arreglado normalizando en el receptor (`lib/consentimiento-categorias.ts` +
+cepo visto en rojo), no en los tres emisores: un solo punto y sin redesplegar tres webs.
+
+**(15/09/2026)** 📊 **Y el «cero visitas» de Alberto tenía una causa de fondo: hay DOS proyectos
+PostHog y el conector apuntaba al que no es.** `Grupo ASegura App` (167360, org LOOR) recibe los
+eventos del CRM (`cima_pull_*`) y **ni un solo `$pageview`**; la web vive en **`Default project`
+(266897, org «Grupo ASegura»)**, con tráfico diario de `grupoasegura.es` (11 días seguidos medidos).
+Mismo patrón que con GA4, donde los tres sitios usan IDs distintos: **el panel correcto existe y no es
+el que se abre por defecto.** Antes de decir «no hay datos», comprobar en qué proyecto se está mirando.
+
 **(15/09/2026)** 🪤 **El cepo del nombre comercial barre también `docs/`, y una CONSULTA de Google
 citada literal lo pone rojo.** `test/regression-nombre-comercial-asegura.test.ts` tumbó el CI del PR
 #2983 por escribir en la memoria la query de Search Console tal y como la teclea la gente (en
