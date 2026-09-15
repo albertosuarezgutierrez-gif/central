@@ -3056,6 +3056,13 @@ h1 em {
    lo ve un cliente. En el flujo, encima de la navegación; el ámbar es el tono
    de «ojo», no el de error: no ha fallado nada, es que no eres quien parece. */
 .banda-corredor {
+  /* `.portal-shell` es un grid de 2 columnas desde 1024px (256px nav + resto).
+   * Sin esto, esta banda es un TERCER hijo sin columna asignada y el
+   * auto-placement de CSS Grid descoloca todo lo demás: el nav se cuela en la
+   * columna del contenido y el contenido acaba aplastado en la del nav (visto
+   * en producción el 15/09/2026, vista de corredor de Juan Manuel López
+   * Benjumea). La banda tiene que ocupar su propia fila entera siempre. */
+  grid-column: 1 / -1;
   padding: 10px 16px;
   font-size: 13px;
   line-height: 1.45;
