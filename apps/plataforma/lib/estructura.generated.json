@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-14T17:32:00Z",
+  "generadoEn": "2026-09-15T10:32:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3965,6 +3965,7 @@
       "/api/operador/poliza/intervinientes",
       "/api/operador/recaptacion",
       "/api/operador/recaptacion/email",
+      "/api/operador/recaptacion/email-lote",
       "/api/operador/recaptacion/whatsapp",
       "/api/operador/resumen",
       "/api/operador/sin-canal",
@@ -3975,6 +3976,7 @@
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
       "/api/portal/nota",
+      "/api/publico/recaptacion/baja",
       "/api/webhooks/codeoscopic",
       "/api/webhooks/resend"
     ],
@@ -4885,6 +4887,7 @@
       "/api/cron/pre-renta",
       "/api/cron/prevision-pisos",
       "/api/cron/psd2-sync",
+      "/api/cron/recaptacion-email-lote",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/cron/seo-correduria",
@@ -6326,7 +6329,7 @@
     "packages": 41,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1362,
+    "apis": 1365,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
