@@ -1,8 +1,8 @@
 {
  "sesion": "5a456669-308d-5f6d-875c-39fbd7d30c61",
  "inicio": "2026-09-14T10:05:23.625Z",
- "fin": "2026-09-15T13:51:28.433Z",
- "llamadas": 29,
+ "fin": "2026-09-15T14:35:46.232Z",
+ "llamadas": 59,
  "categorias": {
   "otro": {
    "llamadas": 8,
@@ -17,39 +17,39 @@
    }
   },
   "bash": {
-   "llamadas": 5,
-   "chars_in": 905,
-   "chars_out": 2496,
+   "llamadas": 13,
+   "chars_in": 3462,
+   "chars_out": 7726,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 5
+    "Bash": 13
    }
   },
   "lectura-directa": {
-   "llamadas": 6,
-   "chars_in": 448,
-   "chars_out": 18192,
+   "llamadas": 11,
+   "chars_in": 972,
+   "chars_out": 72167,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 4,
+    "Read": 7,
     "Glob": 1,
-    "Grep": 1
+    "Grep": 3
    }
   },
   "escritura": {
-   "llamadas": 5,
-   "chars_in": 5567,
-   "chars_out": 508837,
+   "llamadas": 15,
+   "chars_in": 16963,
+   "chars_out": 1548361,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 1,
-    "Write": 4
+    "Edit": 8,
+    "Write": 7
    }
   },
   "mcp:Claude_Code_Remote": {
@@ -74,6 +74,28 @@
     "mcp__Gmail__search_threads": 2,
     "mcp__Gmail__get_message": 1,
     "mcp__Gmail__create_draft": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 1209,
+   "chars_out": 15607,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
    }
   }
  }
