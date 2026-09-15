@@ -553,6 +553,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:30',
   },
   {
+    id: 'correduria.recaptacion-lote', categoria: 'correduria',
+    titulo: 'Recaptación por email · lote diario',
+    que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',
+    cuando: 'Todos los días a las 07:00, y solo si hubo candidatos o el envío falló',
+  },
+  {
     id: 'correduria.ingesta', categoria: 'correduria',
     titulo: 'Se pierden datos de CIMA',
     que: 'Recibos, siniestros o pólizas que las compañías mandan y no llegan a guardarse.',

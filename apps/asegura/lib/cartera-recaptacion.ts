@@ -15,10 +15,15 @@
 // de `test/regression-asegura-aislamiento.test.ts`, que solo mira SQL que
 // nombre el schema explícitamente.
 
-import { enCooldown, COOLDOWN_DIAS, textoBaseRecaptacionWhatsapp, textoBaseRecaptacionEmail, sqlCarteraViva, sqlVolcadoHistorico } from '@central/module-seguros'
+import { enCooldown, COOLDOWN_DIAS, textoBaseRecaptacionWhatsapp, textoBaseRecaptacionEmail, sqlCarteraViva, sqlVolcadoHistorico, remitenteCorreo } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { enviarEmailResend } from './recaptacion-email'
+import { urlBaja, urlPublicaAsegura } from './recaptacion-baja'
+import { candidatosLoteEmail, LIMITE_LOTE_POR_DEFECTO } from './recaptacion-lote'
+
+export { candidatosLoteEmail } from './recaptacion-lote'
 
 const RAMOS_LEGIBLES: Record<string, string> = {
   hogar: 'hogar',
@@ -215,6 +220,46 @@ async function contadoresEmailHistorico(correduriaId: string): Promise<{ emailEn
   }
 }
 
+export type ResultadoBaja =
+  | { estado: 'ok'; yaEstaba: boolean }
+  | { estado: 'no_encontrado' }
+  | { estado: 'error'; motivo: string }
+
+/**
+ * Resuelve el token de baja (el `id` de un `recaptacion_envios`) contra la
+ * ficha del cliente y le pone `email_opt_out_at`. Idempotente: pulsar el
+ * enlace dos veces (un cliente de correo que prefetchea, o el propio cliente
+ * dudando) no falla ni pisa la fecha ya puesta.
+ *
+ * Solo da de baja el CANAL EMAIL — un WhatsApp abierto desde el mismo lead
+ * sigue siendo válido; son opt-out independientes, como ya lee `colaRecaptacion`.
+ */
+export async function aplicarBajaEmail(envioId: string): Promise<ResultadoBaja> {
+  if (!aseguraConfigurada()) return { estado: 'error', motivo: 'sin_configurar' }
+  try {
+    const db = prismaAsegura()
+    const envio = await db.$queryRaw<{ clienteId: string; correduriaId: string; emailOptOutAt: Date | null }[]>(Prisma.sql`
+      select c.id as "clienteId", c.correduria_id as "correduriaId", c.email_opt_out_at as "emailOptOutAt"
+      from recaptacion_envios r
+      join clientes c on c.id = r.cliente_id
+      where r.id = ${envioId}::uuid
+      limit 1
+    `)
+    const fila = envio[0]
+    if (!fila) return { estado: 'no_encontrado' }
+    if (fila.emailOptOutAt) return { estado: 'ok', yaEstaba: true }
+
+    await db.$executeRaw(Prisma.sql`
+      update clientes set email_opt_out_at = now() where id = ${fila.clienteId}::uuid and email_opt_out_at is null
+    `)
+    await anotar(fila.correduriaId, fila.clienteId, 'Recaptación: baja de email por el propio cliente (enlace del correo)')
+    return { estado: 'ok', yaEstaba: false }
+  } catch (e) {
+    console.error('[cartera-recaptacion] fallo aplicando la baja:', e instanceof Error ? e.message : e)
+    return { estado: 'error', motivo: 'fallo_bd' }
+  }
+}
+
 /** El texto sugerido para un lead concreto (WhatsApp), antes de que la IA lo pula. */
 export function textoWhatsappPara(lead: Pick<LeadRecaptacion, 'cliente' | 'ramoLegible' | 'aseguradoraAnterior'>): string {
   return textoBaseRecaptacionWhatsapp({ nombre: lead.cliente, ramoLegible: lead.ramoLegible, aseguradoraAnterior: lead.aseguradoraAnterior })
@@ -239,6 +284,80 @@ export async function registrarEnvioWhatsapp(
   `)
   await anotar(correduriaId, entrada.clienteId, `Recaptación: se abrió el enlace de WhatsApp (mensaje ya escrito) por ${entrada.actor}`)
   return { ok: true }
+}
+
+// ── Envío en LOTE por email (cron diario) ─────────────────────────────────
+//
+// `candidatosLoteEmail` (selección pura) vive en `recaptacion-lote.ts` para
+// poder testearse sin arrastrar Prisma. Tope de N por pasada (la volumetría
+// del diseño: ~20-25/día) para no quemar cooldown ni reputación de envío.
+
+export type ResumenLoteEmail = {
+  candidatos: number
+  enviados: number
+  fallidos: number
+  detalleFallos: string[]
+}
+
+/**
+ * Manda el lote de verdad. Sin IA (a diferencia del envío manual, que sí
+ * pule con `pulirConIA`): con 25 llamadas seguidas a la pasarela, sumar hasta
+ * 12s de timeout cada una se comería el `maxDuration` del cron; el texto base
+ * determinista ya es un mensaje completo y correcto por sí solo (misma
+ * garantía que si la IA fallara en el envío manual).
+ *
+ * Cada envío genera su propio `recaptacion_envios.id` ANTES de mandar el
+ * correo, para poder embeber la URL de baja dentro del cuerpo — el mismo
+ * truco que usa un webhook idempotente: el id existe antes del efecto.
+ */
+export async function enviarLoteEmail(
+  correduriaId: string,
+  opts: { limite?: number; actor: string },
+): Promise<ResumenLoteEmail> {
+  const vacio: ResumenLoteEmail = { candidatos: 0, enviados: 0, fallidos: 0, detalleFallos: [] }
+  if (!aseguraConfigurada()) return vacio
+
+  const cola = await colaRecaptacion(correduriaId)
+  const candidatos = candidatosLoteEmail(cola.leads, opts.limite ?? LIMITE_LOTE_POR_DEFECTO)
+  if (candidatos.length === 0) return { ...vacio, candidatos: 0 }
+
+  const db = prismaAsegura()
+  const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
+  const baseUrl = urlPublicaAsegura()
+
+  let enviados = 0
+  const detalleFallos: string[] = []
+  for (const lead of candidatos) {
+    if (!lead.email) continue
+    const envioId = crypto.randomUUID()
+    const bajaUrl = urlBaja(baseUrl, envioId)
+    const { asunto, texto } = textoBaseRecaptacionEmail(
+      { nombre: lead.cliente, ramoLegible: lead.ramoLegible, aseguradoraAnterior: lead.aseguradoraAnterior },
+      { bajaUrl },
+    )
+    const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;white-space:pre-line">${escaparHtmlLote(texto)}</div>`
+    try {
+      const resultado = await enviarEmailResend({ from, to: lead.email, asunto, texto, html })
+      if (!resultado.ok) {
+        detalleFallos.push(`${lead.cliente}: ${resultado.motivo}`)
+        continue
+      }
+      await db.$executeRaw(Prisma.sql`
+        insert into recaptacion_envios (id, correduria_id, cliente_id, poliza_id, canal, estado, mensaje, resend_message_id, creado_por)
+        values (${envioId}::uuid, ${correduriaId}::uuid, ${lead.clienteId}::uuid, ${lead.polizaId}::uuid, 'email', 'enviado', ${texto}, ${resultado.resendMessageId}, ${opts.actor})
+      `)
+      await anotar(correduriaId, lead.clienteId, `Recaptación: email de lote enviado por ${opts.actor}`)
+      enviados++
+    } catch (e) {
+      detalleFallos.push(`${lead.cliente}: ${e instanceof Error ? e.message : 'error'}`)
+    }
+  }
+
+  return { candidatos: candidatos.length, enviados, fallidos: candidatos.length - enviados, detalleFallos }
+}
+
+function escaparHtmlLote(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 async function anotar(correduriaId: string, clienteId: string, texto: string): Promise<void> {

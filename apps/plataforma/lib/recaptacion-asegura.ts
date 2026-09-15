@@ -216,7 +216,7 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-async function pedirCon(path: string, init: RequestInit): Promise<{ status: number; json: unknown } | null> {
+async function pedirCon(path: string, init: RequestInit, timeoutMs: number = 8000): Promise<{ status: number; json: unknown } | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
@@ -226,7 +226,7 @@ async function pedirCon(path: string, init: RequestInit): Promise<{ status: numb
       ...(init.body ? { 'content-type': 'application/json' } : {}),
     },
     cache: 'no-store',
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
 }
@@ -268,6 +268,46 @@ export async function enviarEmailRecaptacionAsegura(body: {
     const r = await pedirCon('/api/operador/recaptacion/email', { method: 'POST', body: JSON.stringify(body) })
     if (r === null) return { estado: 'sin_configurar' }
     return interpretarEscrituraRecaptacion(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Envío en LOTE (cron diario) ───────────────────────────────────────────
+
+export type LoteEmail =
+  | { estado: 'ok'; candidatos: number; enviados: number; fallidos: number; detalleFallos: string[] }
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+
+export function interpretarLoteEmail(status: number, json: unknown): LoteEmail {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (o.estado === 'sin_configurar' || status === 503) return { estado: 'sin_configurar' }
+  if (status === 200 && o.estado === 'ok') {
+    return {
+      estado: 'ok',
+      candidatos: entero(o.candidatos) ?? 0,
+      enviados: entero(o.enviados) ?? 0,
+      fallidos: entero(o.fallidos) ?? 0,
+      detalleFallos: Array.isArray(o.detalleFallos) ? o.detalleFallos.filter((x): x is string => typeof x === 'string') : [],
+    }
+  }
+  const motivo = cadena(o.motivo) ?? cadena(o.causa) ?? cadena(o.error)
+  return { estado: 'error', motivo: motivo ?? `HTTP ${status}` }
+}
+
+// Timeout largo a propósito: hasta ~25 envíos secuenciales por Resend, cada
+// uno con su propio timeout interno de 15s en `enviarEmailResend` (asegura).
+// Por encima del `maxDuration=120` de la ruta de asegura, para no cortar la
+// petición antes de que la propia plataforma la corte por su cuenta.
+const TIMEOUT_LOTE_MS = 130_000
+
+export async function enviarLoteEmailRecaptacionAsegura(limite?: number): Promise<LoteEmail> {
+  try {
+    const r = await pedirCon('/api/operador/recaptacion/email-lote', { method: 'POST', body: JSON.stringify({ limite }) }, TIMEOUT_LOTE_MS)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarLoteEmail(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }
