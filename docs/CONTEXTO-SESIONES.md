@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** Recaptación de leads: baja de un clic (LSSI art. 21) en el email base
+(`textoBaseRecaptacionEmail(..., {bajaUrl})`), endpoint público `apps/asegura` →
+`/api/publico/recaptacion/baja?t=<recaptacion_envios.id>` (token = uuid generado ANTES de mandar,
+para poder embeberlo), y el cron diario `recaptacion-email-lote` (07:00 UTC) que manda hasta 25
+correos/día a leads solo-email (sin teléfono usable) vía `enviarLoteEmail` — sin IA a propósito
+(latencia), catálogo Telegram `correduria.recaptacion-lote`. Selección pura testeable en
+`recaptacion-lote.ts` (evita arrastrar Prisma al test). Pendiente: nada bloqueante; observar el
+primer envío real.
+
 **(14/09/2026)** GA4 (`G-QP5DTDLJ5F`) añadido a `apps/asegura-web` junto a PostHog, gateado por el
 mismo banner (PR #2942) — petición explícita de Alberto para ver las tres webs (housesevillana,
 ia-rest, grupoasegura.es) en la misma cuenta de Google Analytics; revierte la decisión del 07/09
