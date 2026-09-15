@@ -6,7 +6,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { DIAS_VENTANA_AVISO } from '@central/module-seguros-portal'
+import { DIAS_VENTANA_AVISO } from './obligacion.ts'
 
 import { avisosDe, HREF_POR_TIPO, textoGlobo, type AutorizacionParaAviso, type ObligacionParaAviso } from './avisos.ts'
 
@@ -27,7 +27,7 @@ const obl = (x: Partial<ObligacionParaAviso> & { id: string }): ObligacionParaAv
 const vacias = { otorgadas: [], recibidas: [] }
 
 test('una autorización RECIBIDA pendiente es un aviso que lleva a «Quién me ve», nunca a una acción', () => {
-  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [auto({ id: 'a1' })] }, obligaciones: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [auto({ id: 'a1' })] }, obligaciones: [], peticiones: [], datos: [], hoy: HOY })
   assert.equal(r.avisos.length, 1)
   const a = r.avisos[0]!
   assert.equal(a.tipo, 'autorizacion_pendiente')
@@ -39,14 +39,14 @@ test('una autorización RECIBIDA pendiente es un aviso que lleva a «Quién me v
 
 test('solo cuentan las PENDIENTES: una vigente, caducada o revocada no es un aviso', () => {
   const recibidas = [auto({ id: 'v', estado: 'vigente' }), auto({ id: 'c', estado: 'caducada' }), auto({ id: 'r', estado: 'revocada' })]
-  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas }, obligaciones: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas }, obligaciones: [], peticiones: [], datos: [], hoy: HOY })
   assert.deepEqual(r.avisos, [])
   assert.equal(r.globo, null, 'todo leído y nada pendiente = sin globo, no «0»')
 })
 
 test('una autorización que YO di y no han aceptado es el aviso espejo, y sin nombre no se inventa uno', () => {
   const otorgadas = [auto({ id: 'o1' }), auto({ id: 'o2', autorizadoNombre: null })]
-  const r = avisosDe({ autorizaciones: { otorgadas, recibidas: [] }, obligaciones: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: { otorgadas, recibidas: [] }, obligaciones: [], peticiones: [], datos: [], hoy: HOY })
   assert.equal(r.avisos.length, 2)
   assert.equal(r.avisos[0]!.tipo, 'autorizacion_sin_aceptar')
   assert.match(r.avisos[0]!.titulo, /^Gabriel Durán Martínez aún no ha aceptado/)
@@ -61,7 +61,7 @@ test('las obligaciones entran solo en la VENTANA del módulo (0..7 días antes d
     obl({ id: 'fuera', fechaAccionable: dias(DIAS_VENTANA_AVISO + 1) }),
     obl({ id: 'pasada', fechaAccionable: dias(-1) }),
   ]
-  const r = avisosDe({ autorizaciones: vacias, obligaciones, hoy: HOY })
+  const r = avisosDe({ autorizaciones: vacias, obligaciones, peticiones: [], datos: [], hoy: HOY })
   assert.deepEqual(
     r.avisos.map((a) => a.id),
     ['hoy', 'borde'],
@@ -72,36 +72,36 @@ test('las obligaciones entran solo en la VENTANA del módulo (0..7 días antes d
 })
 
 test('una fuente ilegible NO colapsa a «sin avisos»: se declara y el globo lleva «+»', () => {
-  const r = avisosDe({ autorizaciones: null, obligaciones: [obl({ id: 'o' })], hoy: HOY })
+  const r = avisosDe({ autorizaciones: null, obligaciones: [obl({ id: 'o' })], peticiones: [], datos: [], hoy: HOY })
   assert.deepEqual(r.fuentesIlegibles, ['autorizaciones'])
   assert.equal(r.avisos.length, 1, 'la fuente que SÍ se leyó se sirve igual')
   assert.equal(r.globo, '1+')
 
-  const cero = avisosDe({ autorizaciones: vacias, obligaciones: null, hoy: HOY })
+  const cero = avisosDe({ autorizaciones: vacias, obligaciones: null, peticiones: [], datos: [], hoy: HOY })
   assert.deepEqual(cero.fuentesIlegibles, ['obligaciones'])
   assert.equal(cero.globo, '0+', 'cero leídos con una fuente sin leer NO es «nada pendiente»')
 })
 
 test('ninguna fuente legible = «!»: no se sabe nada y se dice', () => {
-  const r = avisosDe({ autorizaciones: null, obligaciones: null, hoy: HOY })
+  const r = avisosDe({ autorizaciones: null, obligaciones: null, peticiones: null, datos: null, hoy: HOY })
   assert.deepEqual(r.avisos, [])
-  assert.deepEqual(r.fuentesIlegibles, ['autorizaciones', 'obligaciones'])
+  assert.deepEqual(r.fuentesIlegibles, ['peticiones', 'autorizaciones', 'obligaciones', 'datos'])
   assert.equal(r.globo, '!')
 })
 
 test('textoGlobo: los tres desenlaces, y ninguno es «0»', () => {
-  assert.equal(textoGlobo(0, 0, 2), null)
-  assert.equal(textoGlobo(3, 0, 2), '3')
-  assert.equal(textoGlobo(3, 1, 2), '3+')
-  assert.equal(textoGlobo(0, 1, 2), '0+')
-  assert.equal(textoGlobo(0, 2, 2), '!')
-  assert.equal(textoGlobo(5, 2, 2), '!', 'con todo ilegible no puede haber avisos; si los hay, algo cuenta mal')
+  assert.equal(textoGlobo(0, 0, 4), null)
+  assert.equal(textoGlobo(3, 0, 4), '3')
+  assert.equal(textoGlobo(3, 1, 4), '3+')
+  assert.equal(textoGlobo(0, 1, 4), '0+')
+  assert.equal(textoGlobo(0, 4, 4), '!')
+  assert.equal(textoGlobo(5, 4, 4), '!', 'con todo ilegible no puede haber avisos; si los hay, algo cuenta mal')
 })
 
 test('todo ilegible manda sobre el «+» aunque haya avisos de relleno', () => {
   // `textoGlobo` decide por el número de fuentes, no por si la lista viene
   // vacía: así un `[]` de consuelo aguas arriba no convierte «!» en «0+».
-  assert.equal(textoGlobo(0, 2, 2), '!')
+  assert.equal(textoGlobo(0, 4, 4), '!')
 })
 
 test('cada tipo tiene destino, y es una pantalla del portal', () => {
@@ -109,4 +109,45 @@ test('cada tipo tiene destino, y es una pantalla del portal', () => {
     assert.match(href, /^\/(autorizaciones|boveda)/, `${tipo} lleva a ${href}, que no es una pantalla del portal`)
     assert.ok(!/\/api\//.test(href), `${tipo} apunta a una API: la campana enlaza pantallas, no ejecuta acciones`)
   }
+})
+
+test('una petición de acceso PENDIENTE produce un aviso que sale primero', () => {
+  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [] }, obligaciones: [], peticiones: [{ id: 'p1', estado: 'pendiente', solicitanteNombre: 'Juan García' }], datos: [], hoy: HOY })
+  assert.equal(r.avisos.length, 1)
+  const p = r.avisos[0]!
+  assert.equal(p.tipo, 'peticion_recibida')
+  assert.equal(p.id, 'p1')
+  assert.match(p.titulo, /Juan García te ha pedido acceso/)
+  assert.equal(p.href, '/autorizaciones')
+  assert.equal(r.globo, '1')
+})
+
+test('peticiones: null mete «peticiones» en fuentesIlegibles y el globo lleva «+»', () => {
+  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [] }, obligaciones: [], peticiones: null, datos: [], hoy: HOY })
+  assert.deepEqual(r.fuentesIlegibles, ['peticiones'])
+  assert.equal(r.globo, '0+')
+})
+
+test('un reparo de los datos de contacto avisa, y dice DÓNDE se corrige', () => {
+  const r = avisosDe({
+    autorizaciones: vacias,
+    obligaciones: [],
+    peticiones: [],
+    datos: [{ tipo: 'cp_invalido', texto: 'El código postal guardado («0812») no es un código postal español de 5 dígitos.' }],
+    hoy: HOY,
+  })
+  assert.equal(r.avisos.length, 1)
+  const a = r.avisos[0]!
+  assert.equal(a.tipo, 'datos_por_revisar')
+  assert.equal(a.id, 'cp_invalido', 'el id es el TIPO de reparo: es la clave con la que el correo sella lo ya enviado')
+  assert.match(a.detalle, /0812/, 'dice qué dato no cuadra, no solo que hay algo mal')
+  assert.match(a.detalle, /Mis datos/, 'y dónde se corrige: sin eso, el cliente tiene que escribirnos para saberlo')
+  assert.equal(a.href, '/boveda?vista=datos')
+  assert.equal(r.globo, '1')
+})
+
+test('datos: null se declara ilegible — «tus datos están bien» no se afirma sin mirarlos', () => {
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: null, hoy: HOY })
+  assert.deepEqual(r.fuentesIlegibles, ['datos'])
+  assert.equal(r.globo, '0+')
 })

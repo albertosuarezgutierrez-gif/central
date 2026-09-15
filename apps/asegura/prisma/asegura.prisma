@@ -991,6 +991,57 @@ model PortalVistaCorredor {
   @@map("portal_vista_corredor")
 }
 
+/// La PETICIÓN de acceso que un cliente le hace a otro desde el portal
+/// («papá, ¿me dejas ver tu seguro del coche?»). La escribe y la resuelve
+/// `apps/asegura-portal`; aquí se lee SOLO para avisar por correo a quien la ha
+/// recibido — desde el portal no hay a quién escribir, porque allí el
+/// destinatario es un hash.
+///
+/// 🚨 El estado NO es una columna: se deriva de las cuatro fechas con
+/// `estadoPeticion()` de `@central/module-seguros-portal`. Reimplementar esa
+/// derivación aquí es cómo se acaba avisando de una petición ya rechazada.
+model PortalPeticionAcceso {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  solicitanteIdentidadId String    @map("solicitante_identidad_id") @db.Uuid
+  /// Ficha de quien pide. `null` = no se resolvió a una ficha de la cartera, y
+  /// entonces el correo no dice quién es: no se inventa un nombre.
+  solicitanteClienteId   String?   @map("solicitante_cliente_id") @db.Uuid
+  /// Ficha a la que le piden acceso. `null` = el correo del destinatario no
+  /// casó con ninguna ficha; esa petición no tiene a quién avisar.
+  destinatarioClienteId  String?   @map("destinatario_cliente_id") @db.Uuid
+  alcance                String
+  creadaEn               DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  concedidaEn            DateTime? @map("concedida_en") @db.Timestamptz(6)
+  rechazadaEn            DateTime? @map("rechazada_en") @db.Timestamptz(6)
+  retiradaEn             DateTime? @map("retirada_en") @db.Timestamptz(6)
+
+  @@index([destinatarioClienteId])
+  @@map("portal_peticion_acceso")
+}
+
+/// Sello de los avisos de la intranet que YA se han mandado por correo
+/// (`seguros.portal_aviso_enviado`, DDL en
+/// `apps/asegura-portal/prisma/sql/2026-09-15_portal_aviso_enviado.sql`).
+///
+/// El emisor no tiene cola: deriva lo que hay que avisar del mismo catálogo que
+/// pinta la campana del portal. Sin este sello, cada pasada del cron mandaría
+/// otra vez lo mismo. `clave` es `${tipo}:${id}` — nunca el título del aviso,
+/// que lleva matrícula, número de póliza o el nombre de un tercero.
+model PortalAvisoEnviado {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  clave        String
+  tipo         String
+  enviadoEn    DateTime @default(now()) @map("enviado_en") @db.Timestamptz(6)
+
+  @@unique([clienteId, clave], map: "portal_aviso_enviado_unico")
+  @@index([clienteId])
+  @@map("portal_aviso_enviado")
+}
+
 enum CanalRecaptacion {
   whatsapp
   email
