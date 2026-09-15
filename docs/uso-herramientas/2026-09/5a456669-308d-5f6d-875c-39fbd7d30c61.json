@@ -1,18 +1,18 @@
 {
  "sesion": "5a456669-308d-5f6d-875c-39fbd7d30c61",
  "inicio": "2026-09-14T10:05:23.625Z",
- "fin": "2026-09-15T17:28:05.255Z",
- "llamadas": 202,
+ "fin": "2026-09-15T19:07:55.279Z",
+ "llamadas": 209,
  "categorias": {
   "otro": {
-   "llamadas": 36,
-   "chars_in": 810,
-   "chars_out": 1104496,
+   "llamadas": 38,
+   "chars_in": 984,
+   "chars_out": 1104830,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 3,
+    "ToolSearch": 5,
     "WebSearch": 6,
     "ReadNotifications": 27
    }
@@ -29,14 +29,14 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 14,
-   "chars_in": 1236,
-   "chars_out": 83436,
+   "llamadas": 15,
+   "chars_in": 1299,
+   "chars_out": 84031,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 10,
+    "Read": 11,
     "Glob": 1,
     "Grep": 3
    }
@@ -117,6 +117,19 @@
     "mcp__github__subscribe_pr_activity": 1,
     "mcp__github__update_pull_request": 2,
     "mcp__github__merge_pull_request": 2
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 4,
+   "chars_in": 158,
+   "chars_out": 43725,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_projects": 2,
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__list_deployments": 1
    }
   }
  }
