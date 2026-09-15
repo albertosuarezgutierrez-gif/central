@@ -1,7 +1,7 @@
 // packages/module-seguros/src/recaptacion.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { COOLDOWN_DIAS, enCooldown, textoBaseRecaptacionWhatsapp } from './recaptacion.ts'
+import { COOLDOWN_DIAS, enCooldown, textoBaseRecaptacionEmail, textoBaseRecaptacionWhatsapp } from './recaptacion.ts'
 
 test('sin envío previo, nunca está en cooldown', () => {
   assert.equal(enCooldown(null), false)
@@ -39,4 +39,18 @@ test('el mensaje base nombra el ramo y, si se conoce, la aseguradora anterior', 
 test('sin aseguradora anterior conocida, no se inventa ninguna', () => {
   const t = textoBaseRecaptacionWhatsapp({ nombre: 'Pablo', ramoLegible: 'auto', aseguradoraAnterior: null })
   assert.doesNotMatch(t, /con null/i)
+})
+
+test('el email sin bajaUrl pide responder para no insistir', () => {
+  const { texto } = textoBaseRecaptacionEmail({ nombre: 'Pablo', ramoLegible: 'auto', aseguradoraAnterior: null })
+  assert.match(texto, /respóndeme/i)
+})
+
+test('el email con bajaUrl enlaza la baja en vez de pedir respuesta', () => {
+  const { texto } = textoBaseRecaptacionEmail(
+    { nombre: 'Pablo', ramoLegible: 'auto', aseguradoraAnterior: null },
+    { bajaUrl: 'https://central-asegura.vercel.app/api/publico/recaptacion/baja?t=abc123' },
+  )
+  assert.match(texto, /darte de baja aquí: https:\/\/central-asegura\.vercel\.app\/api\/publico\/recaptacion\/baja\?t=abc123/)
+  assert.doesNotMatch(texto, /respóndeme/i)
 })
