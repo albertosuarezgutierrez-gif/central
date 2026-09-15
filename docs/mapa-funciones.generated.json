@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T12:05:38Z",
-  "sha": "43424102879120792762cca1171980327c60d62f",
+  "generadoEn": "2026-09-15T12:51:09Z",
+  "sha": "d60a59069af3a80eb6c6f7a90cd1eb4d71c7efa1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8004,12 +8004,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 34
+          "linea": 40
         }
       ],
       "tablas": [],
       "rutaApi": "/api/consentimiento",
-      "hash": "ad14524a89e5"
+      "hash": "40200bf8b7ff"
     },
     {
       "ruta": "apps/asegura-web/app/api/lead/route.ts",
@@ -77099,7 +77099,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "POST",
@@ -77107,7 +77107,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         }
       ],
       "tablas": [
@@ -77115,7 +77115,7 @@
         "next"
       ],
       "rutaApi": "/api/publico/correduria/consentimiento",
-      "hash": "4839266401f0"
+      "hash": "484f7bc0f7cc"
     },
     {
       "ruta": "apps/plataforma/app/api/publico/correduria/lead/route.ts",
@@ -79673,7 +79673,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 67,
+          "linea": 68,
           "resumen": "· `escaparate` — NUESTRO propio anuncio, ventana a ventana (19/08/2026). Hasta hoy esto pasaba por casualidad —el piso propio aparecía a veces en una búsqueda de comparables— y por eso el motor llevab"
         }
       ],
@@ -79686,7 +79686,7 @@
         "rate_snapshots"
       ],
       "rutaApi": "/api/sivra/mercado/plan",
-      "hash": "4acfcd9898f4"
+      "hash": "7d1f1c4db871"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mercado/search/route.ts",
@@ -80047,7 +80047,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 53
+          "linea": 54
         },
         {
           "nombre": "fmt",
@@ -80055,7 +80055,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 54
+          "linea": 55
         },
         {
           "nombre": "GET",
@@ -80063,7 +80063,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 73,
+          "linea": 74,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -80072,7 +80072,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 77
+          "linea": 78
         }
       ],
       "tablas": [
@@ -80095,7 +80095,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "cdd17f41c57e"
+      "hash": "62cd57401004"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -86245,6 +86245,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8631dce1aa3c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/consentimiento-categorias.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Normaliza el campo `categorias` que llega a /api/publico/correduria/consentimiento. 🚨 Existe por un fallo MEDIDO el 15/09/2026: la tabla `consentimiento_registro` llevaba vacía desde que se creó (14/09) y eso se leyó como «todavía no ha aceptado nadie». Era falso. Las tres webs mandan `CookieConsen",
+      "exporta": [
+        "normalizarCategorias"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarCategorias",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown",
+          "retorno": "CategoriasNormalizadas | null",
+          "linea": 30,
+          "resumen": "Devuelve el objeto a guardar, o `null` si el valor no es una forma aceptable. - **Array de strings** (lo que mandan hoy las tres webs) → `{ aceptadas: [...] }`. Se envuelve en vez de expandirse a `{ne"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "81d07fcf9099"
     },
     {
       "ruta": "apps/plataforma/lib/contable/acciones-tipos.ts",
@@ -101043,6 +101065,7 @@
       "exporta": [
         "parsearParametrosPlan",
         "mesesSinBucket",
+        "eventosCaducados",
         "planDeVentanas",
         "conReservas",
         "conReservaAltoValor",
@@ -101057,7 +101080,7 @@
           "exportada": true,
           "params": "qs: URLSearchParams,",
           "retorno": "",
-          "linea": 128,
+          "linea": 156,
           "resumen": "Lee los parámetros del plan (`max`, `rondas`, `desde`, `hasta`) de una query string. Vive AQUÍ y no en el route handler para poder testearlo: el handler necesita Prisma y el alias `@/`, así que su lóg"
         },
         {
@@ -101066,7 +101089,7 @@
           "exportada": true,
           "params": "cobertura: CoberturaVentana[], fechasEvento: ReadonlySet<string>, mesesEnPlan: Iterable<string>, minFechas = MIN_FECHAS_BUCKET,",
           "retorno": "Set<string>",
-          "linea": 207,
+          "linea": 235,
           "resumen": "· así que esos meses acumulaban mediciones que NO podían hacer elegible su bucket, y el salto de evento seguía multiplicando el ancla global — la que se mueve sola (ver el serrucho de `pricing-base-ev"
         },
         {
@@ -101075,7 +101098,7 @@
           "exportada": false,
           "params": "desdeIso: string, hastaIso: string",
           "retorno": "number",
-          "linea": 242
+          "linea": 270
         },
         {
           "nombre": "clave",
@@ -101083,7 +101106,25 @@
           "exportada": false,
           "params": "checkin: string, aforo: number",
           "retorno": "string",
-          "linea": 248
+          "linea": 276
+        },
+        {
+          "nombre": "esEventoCaducado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: VentanaPedida, maxEdad = EDAD_MERCADO_RANCIO",
+          "retorno": "boolean",
+          "linea": 312,
+          "resumen": "Ventana de evento CONFIRMADO ya medida pero con el corpus fuera del plazo que acepta el motor. No es «sin medir» (tiene comps) ni «cubierta» (el motor la rechaza): es el tercer estado que la cola no d"
+        },
+        {
+          "nombre": "eventosCaducados",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedidas: VentanaPedida[], maxEdad = EDAD_MERCADO_RANCIO,",
+          "retorno": "",
+          "linea": 325,
+          "resumen": "Fechas de evento CONFIRMADO cuyo corpus el motor ya NO acepta, agregadas por fecha. Existe para que el salto se pueda declarar POR FECHA. Hoy el único aviso es `avisoPisosSinTarifar`, que es por PISO "
         },
         {
           "nombre": "planDeVentanas",
@@ -101091,8 +101132,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {}, bucket?: ContextoBucket,",
           "retorno": "PlanPedido",
-          "linea": 279,
-          "resumen": "Cruza el plan de ventanas (fechas) con los aforos de los pisos y la cobertura fiable ya medida, y devuelve las `max` que más falta hacen. Orden de urgencia, y el porqué de cada nivel: 1. **Nunca medid"
+          "linea": 350
         },
         {
           "nombre": "conReservas",
@@ -101100,7 +101140,7 @@
           "exportada": true,
           "params": "pedidas: VentanaPedida[], tope: number, reservas: { altoValor?: number; mesCorto?: number } = {},",
           "retorno": "VentanaPedida[]",
-          "linea": 410,
+          "linea": 491,
           "resumen": "Reparte el tope de la pasada entre la cola de urgencia y DOS reservas de suelo. Las dos existen por el mismo motivo —la cola de urgencia, siendo correcta, deja fuera para siempre a un grupo que import"
         },
         {
@@ -101109,7 +101149,7 @@
           "exportada": true,
           "params": "pedidas: VentanaPedida[], tope: number, reserva = RESERVA_ALTO_VALOR,",
           "retorno": "VentanaPedida[]",
-          "linea": 450
+          "linea": 531
         },
         {
           "nombre": "ventanasQuePedir",
@@ -101117,7 +101157,7 @@
           "exportada": true,
           "params": "plan: Ventana[], aforos: Map<number, string[]>, cobertura: CoberturaVentana[], hoyIso: string, max = 12, filtro: FiltroVentanas = {}, bucket?: ContextoBucket,",
           "retorno": "VentanaPedida[]",
-          "linea": 478,
+          "linea": 559,
           "resumen": "Envoltura histórica: solo la lista. Nuevos usos, mejor `planDeVentanas` (declara el recorte)."
         },
         {
@@ -101126,7 +101166,7 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number sinPrecio: number errores: string[] /** * Anuncios NUESTROS que el portal devolvió y se descartaron (ver `mercado-propios.ts`). Se * declara aunque sea un descarte correcto: un compar",
           "retorno": "string",
-          "linea": 495,
+          "linea": 576,
           "resumen": "Parte de la pasada para el latido. Igual que en el barrido por búsqueda, **lo que NO se pudo medir va primero**: una ventana que el conector no contestó es «no lo sé», no «no hay mercado», y confundir"
         },
         {
@@ -101135,13 +101175,13 @@
           "exportada": true,
           "params": "r: { ventanas: number comps: number sinRespuesta: number errores: string[] }",
           "retorno": "boolean",
-          "linea": 528,
+          "linea": 609,
           "resumen": "¿Vale la pasada? Conservador igual que `barridoFiable`: hace falta haber MEDIDO algo y que la mayoría de lo intentado haya respondido. Una pasada que pide 12 ventanas y solo contesta 1 no es «poco mer"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "03051db0658a"
+      "hash": "3ddd2de7e28b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-propios.ts",
@@ -135989,7 +136029,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3328,
-    "funciones": 10276
+    "archivos": 3329,
+    "funciones": 10279
   }
 }
