@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T10:32:45Z",
-  "sha": "39cd953db19ca283f94682b66e973c526c97d652",
+  "generadoEn": "2026-09-15T11:37:15Z",
+  "sha": "a6a03f48dc907b0fb6181550d593751700f63949",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -74196,7 +74196,7 @@
           "exportada": false,
           "params": "ag: { id: string; etiqueta: string; maxHoras: number; nota: string }, evaluadoAt: Date, alerta: boolean, horas: number | null, motivo: string, sondaError: string | null,",
           "retorno": "Promise<void>",
-          "linea": 234,
+          "linea": 243,
           "resumen": "Persiste el veredicto de UN agente en `agente_veredicto` para que lo pueda leer una pantalla. 🚨 NO es `agente_salud` (05/09/2026): esa tabla ya existía desde julio con otro esquema —el badge que el p"
         },
         {
@@ -74205,7 +74205,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 255
+          "linea": 264
         }
       ],
       "tablas": [
@@ -74220,7 +74220,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "31e9698ccc82"
+      "hash": "ccce024228fe"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -78068,12 +78068,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/limpiadoras/alerta-ventana",
-      "hash": "3664dd3f7499"
+      "hash": "0b0243225eb3"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpiadoras/asignacion/route.ts",
@@ -78193,7 +78193,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 17
+          "linea": 18
         }
       ],
       "tablas": [
@@ -78202,7 +78202,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/limpiadoras/auto-sessions",
-      "hash": "4f95c26dd830"
+      "hash": "862b5c248055"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/limpiadoras/checklist/route.ts",
@@ -79880,7 +79880,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/pricing/apply-auto",
-      "hash": "9bd2505536f8"
+      "hash": "e97dcbed6cd6"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/apply/route.ts",
@@ -79944,7 +79944,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "8bad1d0c8439"
+      "hash": "cdd17f41c57e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -93378,7 +93378,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b1f15538390e"
+      "hash": "a0d7f845c2f5"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -102494,7 +102494,8 @@
       "exporta": [
         "pasadaFiable",
         "detalleApply",
-        "avisoSmoobuRechaza"
+        "avisoSmoobuRechaza",
+        "avisoSmoobuLecturaFalla"
       ],
       "funciones": [
         {
@@ -102503,7 +102504,7 @@
           "exportada": true,
           "params": "p: ParteApply",
           "retorno": "boolean",
-          "linea": 63,
+          "linea": 78,
           "resumen": "¿Vale esta pasada como «buena» para el vigía de latidos? Rojo si el motor tarificó degradado (ya era `ok:false` en la respuesta) **o si alguna escritura fue rechazada**: un precio que no llega a Smoob"
         },
         {
@@ -102512,7 +102513,7 @@
           "exportada": true,
           "params": "p: ParteApply",
           "retorno": "string",
-          "linea": 71,
+          "linea": 86,
           "resumen": "Parte legible para `agente_latidos.detalle`. Lo lee un humano a las 07:45 con el Telegram del vigía delante, así que antepone lo que exige acción y dice SIEMPRE de cuántos pisos habla."
         },
         {
@@ -102521,13 +102522,22 @@
           "exportada": true,
           "params": "fallos: FalloEscritura[]",
           "retorno": "string | null",
-          "linea": 100,
+          "linea": 121,
           "resumen": "Aviso de Telegram cuando Smoobu rechaza la escritura. `null` si no hay ninguno. El texto tiene que dejar claro lo que separa este fallo de todos los demás de la cadena: aquí el precio NO cambió en el "
+        },
+        {
+          "nombre": "avisoSmoobuLecturaFalla",
+          "kind": "function",
+          "exportada": true,
+          "params": "fallos: FalloLectura[]",
+          "retorno": "string | null",
+          "linea": 143,
+          "resumen": "Aviso de Telegram cuando Smoobu no responde a la LECTURA de `/rates`. `null` si no hay ninguno. Un escalón MÁS grave que `avisoSmoobuRechaza`: ahí el motor al menos llegó a decidir un precio. Aquí ni "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a3378f0fba3a"
+      "hash": "213929f6be8b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-lecturas.ts",
@@ -103375,6 +103385,28 @@
       "hash": "ec38f3fa72a3"
     },
     {
+      "ruta": "apps/plataforma/lib/smoobu-puente-legacy.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Decisión pura del puente legacy de Smoobu (ver el comentario 🌉 en `lib/smoobu.ts`). GET /api/rates da 401 con HMAC (ticket Smoobu #1864141, sin resolver) pero el esquema legacy (header `Api-Key` plano) sigue funcionando hasta su sunset del 25/09/2026 — confirmado a mano el 15/09/2026 (legacy 200, H",
+      "exporta": [
+        "debeUsarPuenteLegacy"
+      ],
+      "funciones": [
+        {
+          "nombre": "debeUsarPuenteLegacy",
+          "kind": "function",
+          "exportada": true,
+          "params": "method: string, url: string, legacyKeyPresente: boolean,",
+          "retorno": "boolean",
+          "linea": 14,
+          "resumen": "¿Esta petición debe ir por el puente legacy en vez de HMAC? Solo GET a /api/rates, y solo si hay key legacy puesta (fail-safe: sin `SMOOBU_LEGACY_API_KEY`, todo sigue por HMAC como siempre)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "25acdb369153"
+    },
+    {
       "ruta": "apps/plataforma/lib/smoobu.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -103389,7 +103421,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Credenciales>",
-          "linea": 26
+          "linea": 29
         },
         {
           "nombre": "getSmoobuKey",
@@ -103397,7 +103429,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string>",
-          "linea": 55,
+          "linea": 58,
           "resumen": "Sigue exportada porque varias rutas la usan solo para comprobar «¿hay key configurada?» antes de seguir. Para HABLAR con Smoobu, `smoobuFetch`."
         },
         {
@@ -103406,7 +103438,7 @@
           "exportada": true,
           "params": "pathOrUrl: string, init: RequestInit = {}",
           "retorno": "Promise<Response>",
-          "linea": 65,
+          "linea": 68,
           "resumen": "fetch a Smoobu firmado con HMAC-SHA256. `pathOrUrl` puede ser ruta ('/api/...') o URL completa. Se firma el METHOD, el PATH, la query ORDENADA, el sello de tiempo, un nonce único y el hash del cuerpo "
         }
       ],
@@ -103414,7 +103446,7 @@
         "pms_connections"
       ],
       "rutaApi": null,
-      "hash": "d44b36d5b528"
+      "hash": "0d94469b21a7"
     },
     {
       "ruta": "apps/plataforma/lib/subastas-ingesta.ts",
@@ -135775,7 +135807,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3323,
-    "funciones": 10260
+    "archivos": 3324,
+    "funciones": 10262
   }
 }
