@@ -39,6 +39,9 @@ export async function POST(req: Request) {
     if (vehiculo === null) {
       return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
     }
+    // Log temporal (14-15/09/2026): ver el crudo real de APIVehículo para diseñar
+    // el emparejamiento con el catálogo de Codeoscopic. Quitar tras verificarlo.
+    console.log('[vehiculo/matricula] respuesta APIVehículo', JSON.stringify(vehiculo))
     return NextResponse.json({ estado: 'ok', vehiculo })
   } catch (e) {
     const mensaje = String((e as Error)?.message ?? e)
