@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T13:16:47Z",
-  "sha": "ad5a8dbbf830be8c7f3ff5896cb35c2de427259f",
+  "generadoEn": "2026-09-15T13:48:13Z",
+  "sha": "cf63de51a76c7d6454d42df13a17f7191e0f49ff",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8185,7 +8185,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "460203d12047"
+      "hash": "b66c82370ca0"
     },
     {
       "ruta": "apps/asegura-web/app/legal/aviso-legal/page.tsx",
@@ -8802,7 +8802,7 @@
           "exportada": false,
           "params": "",
           "retorno": "",
-          "linea": 47,
+          "linea": 48,
           "resumen": "Parte el domicilio del mediador en calle y código postal. `MEDIADOR.identidad.domicilio` es una línea («San Juan de La Palma, nº 28, 41003 Sevilla») porque es como se lee en una web; schema.org los qu"
         },
         {
@@ -8811,7 +8811,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Record<string, unknown>",
-          "linea": 54
+          "linea": 55
         },
         {
           "nombre": "fichaWebSite",
@@ -8819,7 +8819,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Record<string, unknown>",
-          "linea": 131,
+          "linea": 132,
           "resumen": "Ficha `WebSite`. Es el tipo que le dice a un buscador «este dominio es un sitio», por oposición a `InsuranceAgency` («este NEGOCIO existe»): son entidades distintas que Google enlaza por `publisher`, "
         },
         {
@@ -8828,7 +8828,7 @@
           "exportada": true,
           "params": "ramo: Ramo",
           "retorno": "Record<string, unknown>",
-          "linea": 162,
+          "linea": 163,
           "resumen": "Ficha de SERVICIO por ramo (`Service`). Qué añade sobre lo que ya había: la ficha `InsuranceAgency` dice quién es el negocio, y el `FAQPage` dice qué preguntas responde una página. Faltaba el dato del"
         },
         {
@@ -8837,7 +8837,7 @@
           "exportada": true,
           "params": "items: readonly { nombre: string; ruta: string }[]",
           "retorno": "Record<string, unknown> | null",
-          "linea": 180,
+          "linea": 181,
           "resumen": "Migas de pan. Se emiten SOLO cuando hay jerarquía de verdad (home → sección → página); una miga de un solo nivel no aporta nada y ensucia."
         },
         {
@@ -8846,7 +8846,7 @@
           "exportada": true,
           "params": "ramo: Ramo",
           "retorno": "Record<string, unknown> | null",
-          "linea": 201,
+          "linea": 202,
           "resumen": "`FAQPage` a partir del FAQ del ramo. Devuelve `null` si no hay preguntas: un `FAQPage` vacío es marcado inválido, y aquí el hueco («este ramo aún no tiene FAQ») se respeta en vez de emitir un esquelet"
         },
         {
@@ -8855,7 +8855,7 @@
           "exportada": true,
           "params": "a: Articulo",
           "retorno": "Record<string, unknown>",
-          "linea": 232,
+          "linea": 233,
           "resumen": "Ficha de ARTÍCULO (`Article`). Los seguros son un tema YMYL —de los que afectan al dinero de quien lee—, y ahí lo que un buscador pondera es quién firma. Por eso el `author` no es la marca: es la PERS"
         },
         {
@@ -8864,12 +8864,12 @@
           "exportada": true,
           "params": "obj: Record<string, unknown>",
           "retorno": "string",
-          "linea": 260
+          "linea": 261
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "014bb09a1c62"
+      "hash": "942e88e1de19"
     },
     {
       "ruta": "apps/asegura-web/lib/sitio.ts",
@@ -8891,7 +8891,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d94fe7faca50"
+      "hash": "d14b59094205"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/hogar-nuevo/page.tsx",
