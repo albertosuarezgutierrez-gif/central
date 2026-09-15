@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T19:13:37Z",
-  "sha": "ccd4feb57ba45f64459a4beb6bd1b120a18d5216",
+  "generadoEn": "2026-09-15T20:24:25Z",
+  "sha": "28aac3bb8a13592a1217bc8b7bad1a949df88eb8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -8335,7 +8335,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1eee6aa85224"
+      "hash": "b80a5085f5ed"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
@@ -8415,7 +8415,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f9283f84eeb0"
+      "hash": "10dc7d21a941"
     },
     {
       "ruta": "apps/asegura-web/app/siniestro/page.tsx",
@@ -8774,13 +8774,13 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Ramo | null",
-          "linea": 462,
+          "linea": 545,
           "resumen": "Devuelve un ramo por su slug, o `null` si no existe (nunca un ramo de relleno)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "176f98ca0022"
+      "hash": "68a5059d007d"
     },
     {
       "ruta": "apps/asegura-web/lib/seo.ts",
@@ -8891,7 +8891,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d14b59094205"
+      "hash": "a5261abec75b"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/hogar-nuevo/page.tsx",
@@ -11511,7 +11511,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/operador/vehiculo/matricula",
-      "hash": "d526d6ba8d9a"
+      "hash": "b7e71939ec25"
     },
     {
       "ruta": "apps/asegura/app/api/operador/vencimientos/route.ts",
