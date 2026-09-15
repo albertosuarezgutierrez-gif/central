@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
-import { RAMOS } from '@/lib/ramos'
+import { RAMOS, RAMOS_PRODUCTO } from '@/lib/ramos'
 import { COMPANIAS, COMPANIAS_EN_CARTERA } from '@/lib/companias'
 import { PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
@@ -467,7 +467,10 @@ export default function Home() {
         }
         cifras={[
           { valor: COMPANIAS_EN_CARTERA.length, texto: 'Compañías con pólizas en cartera' },
-          { valor: RAMOS.length, texto: 'Ramos que revisamos' },
+          // RAMOS_PRODUCTO, no RAMOS: una página de INTENCIÓN de oficio (RC
+          // fontaneros) comparte ramo real con otra entrada y no es un
+          // producto distinto — contarla aquí infla la cifra pública.
+          { valor: RAMOS_PRODUCTO.length, texto: 'Ramos que revisamos' },
           { valor: 0, estatico: '0 €', texto: 'Lo que te cuesta el servicio' },
         ]}
         nota="La comisión la paga la aseguradora, no tú: no cobramos honorarios por el servicio de mediación."

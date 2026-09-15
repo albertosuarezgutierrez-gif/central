@@ -136,6 +136,10 @@ export const NAV = [
   // el peso interno de un sitio viaja por sus enlaces. Va aquí, que es la lista
   // del PIE (la cabecera se recorta abajo, y por medida, no por gusto).
   { href: '/seguros/responsabilidad-civil', texto: 'Responsabilidad civil' },
+  // Página de intención de oficio (15/09/2026, ver `lib/ramos.ts`): mismo
+  // motivo que RC y flota para ir al pie y no a la cabecera — está medida al
+  // límite, ver `FUERA_DE_CABECERA` más abajo.
+  { href: '/seguros/responsabilidad-civil-fontaneros', texto: 'RC de fontaneros' },
   { href: '/cambiar-de-correduria', texto: 'Cambiar de correduría' },
   // Recuperada del sitio anterior el 07/09/2026. No es un ramo: es la página de
   // más intención de problema que tiene el negocio, y la ÚNICA consulta en la
@@ -168,7 +172,11 @@ export const NAV = [
  * del negocio decide el de las furgonetas—, así que el enlace encaja mejor ahí
  * que en una cabecera que no cabe.
  */
-const FUERA_DE_CABECERA: readonly string[] = ['/seguros/responsabilidad-civil', '/seguros/flota']
+const FUERA_DE_CABECERA: readonly string[] = [
+  '/seguros/responsabilidad-civil',
+  '/seguros/flota',
+  '/seguros/responsabilidad-civil-fontaneros',
+]
 
 export const NAV_CABECERA = NAV.filter(
   (n) => n.href.startsWith('/seguros/') && !FUERA_DE_CABECERA.includes(n.href),

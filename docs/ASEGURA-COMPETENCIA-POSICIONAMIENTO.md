@@ -310,12 +310,24 @@ tiene que decidir algo. Pero esto se decide mirándote a ti: es tu voz, no la m�
 | 5 | **Google Business Profile + reseñas de los 80** | Gratis, y es lo que sale al buscar «correduría Sevilla» | Alberto |
 | 6 | **301 de `/seguros` de plataforma → `grupoasegura.es`** | Hoy compites contigo mismo por tus propias consultas | Claude |
 | 7 | **Reescribir el hero + página de hogar** | Cuando 1-6 estén en marcha y sepamos hacia dónde inclinar | Claude |
-| 9 | 🆕 **Página de RC profesional de oficios (electricista/fontanero/instalador)** | §2.6, 15/09 — el único hueco de SEO puro confirmado hoy: los grandes no lo venden, decide una persona, ticket ya conocido | Claude, tras validar el oficio con Alberto |
-| 8 | **Ads** | Con 48,37€ de comisión media, cualquier CAC de dos dígitos altos se come el primer año y el segundo. **No, todavía** | — |
+| 8 | ✅ **Página de RC profesional para fontaneros** (`/seguros/responsabilidad-civil-fontaneros`) | §2.6, 15/09 — el único hueco de SEO puro confirmado hoy: los grandes no lo venden, decide una persona, ticket ya conocido. Oficio elegido: ver nota abajo | Claude — **hecho, PR pendiente de mergear** |
+| 9 | **Ads** | Con 48,37€ de comisión media, cualquier CAC de dos dígitos altos se come el primer año y el segundo. **No, todavía** | — |
 
 **Lo que este orden dice, y no gusta:** de las nueve acciones, **cinco las tienes que hacer tú y
-solo tres son de software** (más la nº 9, pendiente de tu validación del oficio). La web ya está
-hecha; lo que falta es cartera y territorio — con una excepción nueva (§2.6).
+solo tres son de software** (la 9, Ads, no la lleva nadie: sigue aparcada). La web ya está hecha;
+lo que falta es cartera y territorio.
+
+🚨 **Por qué fontanero, y con qué confianza (15/09/2026):** Alberto delegó la elección («el oficio
+que veas mejor, menos competencia») pidiendo antes si había un repo/conector que ayudara — **no lo
+hay**: esto es investigación de mercado, no código, y la herramienta que daría la respuesta con
+datos reales (volumen/CPC de Google Keyword Planner, SEMrush o Ahrefs) no está conectada a esta
+sesión. Con `WebSearch` (SERP puntual, sin volumen) se comparó el número de sitios ESPECIALIZADOS
+que ya compiten por la consulta en electricista (8), fontanero (6) y climatización/gas (7):
+fontanero salió con menos, y comparte la misma obligación legal (REBT/RITE) que los otros dos —
+manda a la persona a contratar rápido, sin depender de un comité. **[Suposición]**: la diferencia
+de 6 contra 8 es una muestra de una sola búsqueda por oficio, no una medición de dificultad real;
+si en unos meses (con Search Console dando datos) fontanero no acompaña, el mismo molde
+(`lib/ramos.ts` de `apps/asegura-web`) sirve para electricista o climatización sin rehacer nada.
 
 ---
 
@@ -342,6 +354,14 @@ hecha; lo que falta es cartera y territorio — con una excepción nueva (§2.6)
   visita/relación (no SEO): ciberseguro pyme, seguro de accidentes de convenio, decenal de
   construcción, D&O de administradores. Acción nº 9 añadida al plan, pendiente de que Alberto
   valide el oficio antes de escribir contenido.
+- **15/09/2026 (mismo día, 2ª pasada)** — Alberto delegó el oficio («el que veas mejor, menos
+  competencia») y preguntó por un repo/conector: no existe ninguno para esto (es investigación de
+  mercado, no código; sin Keyword Planner/SEMrush/Ahrefs conectados). Comparativa de SERP con
+  `WebSearch` entre electricista/fontanero/climatización-gas → fontanero con menos sitios
+  especialistas compitiendo (6 vs 8 y 7). Construida `/seguros/responsabilidad-civil-fontaneros`
+  en `apps/asegura-web` (mismo molde `RAMOS`, sin ramo nuevo en BD), enlazada en el pie,
+  formulario, sitemap, JSON-LD y mapa de consultas del cron SEO — todo verificado (105 tests +
+  tsc en asegura-web, tests de `consultas.ts` en plataforma).
 - **06/09/2026** — Documento creado. Mediciones nuevas de esta sesión: reparto de multi-póliza
   (57 auto-sin-hogar, 1,38 pólizas/cliente), concentración por entidad (Mapfre 58 %) y ventana de
   vencimientos (17 a 90 días). Las cifras de comisión se reutilizan del plan de marketing, no se
