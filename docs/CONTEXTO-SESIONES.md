@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** SEO correduria · cron `seo-correduria` gana 3ª fuente **cobertura de indexación**
+(`lib/seo-correduria/cobertura.ts`, URL Inspection API — reusa la cuenta de servicio de GSC, sin
+secreto nuevo) para el 404/no-indexado de `asegura-web` que Alberto pedía como prerrequisito de Ads.
+Nueva acción `arreglar_indexacion` (se antepone a proponer contenido si una página propia está fuera
+del índice o no se pudo comprobar). Migración `2026-09-15_seo_correduria_semana_cobertura.sql`
+(CHECK de `fuente`) **aplicada en Supabase**. PR #3010, code-review con 3 hallazgos corregidos
+(estado `error` no se trataba como PASS por omisión; token de Google duplicado; motivo mal atribuido
+en el informe). 66/66 tests seo-correduria, tsc limpio.
+
 **(15/09/2026)** ASegura · `@central/core-vehiculos` + `POST /api/operador/vehiculo/matricula`
 **mergeados** (PR #2998, `resolverMatricula()` sobre APIVehículo, adaptador intercambiable). Pendiente
 el curl real con matrícula de cartera para validar el mapeo en producción (falta que Alberto saque
