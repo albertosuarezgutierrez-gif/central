@@ -310,11 +310,12 @@ tiene que decidir algo. Pero esto se decide mirándote a ti: es tu voz, no la m�
 | 5 | **Google Business Profile + reseñas de los 80** | Gratis, y es lo que sale al buscar «correduría Sevilla» | Alberto |
 | 6 | **301 de `/seguros` de plataforma → `grupoasegura.es`** | Hoy compites contigo mismo por tus propias consultas | Claude |
 | 7 | **Reescribir el hero + página de hogar** | Cuando 1-6 estén en marcha y sepamos hacia dónde inclinar | Claude |
-| 9 | ✅ **Página de RC profesional para fontaneros** (`/seguros/responsabilidad-civil-fontaneros`) | §2.6, 15/09 — el único hueco de SEO puro confirmado hoy: los grandes no lo venden, decide una persona, ticket ya conocido. Oficio elegido: ver nota abajo | Claude — **hecho, PR pendiente de mergear** |
-| 8 | **Ads** | Con 48,37€ de comisión media, cualquier CAC de dos dígitos altos se come el primer año y el segundo. **No, todavía** | — |
+| 8 | ✅ **Página de RC profesional para fontaneros** (`/seguros/responsabilidad-civil-fontaneros`) | §2.6, 15/09 — el único hueco de SEO puro confirmado hoy: los grandes no lo venden, decide una persona, ticket ya conocido. Oficio elegido: ver nota abajo | Claude — **hecho, PR pendiente de mergear** |
+| 9 | **Ads** | Con 48,37€ de comisión media, cualquier CAC de dos dígitos altos se come el primer año y el segundo. **No, todavía** | — |
 
 **Lo que este orden dice, y no gusta:** de las nueve acciones, **cinco las tienes que hacer tú y
-solo cuatro son de software**. La web ya está hecha; lo que falta es cartera y territorio.
+solo tres son de software** (la 9, Ads, no la lleva nadie: sigue aparcada). La web ya está hecha;
+lo que falta es cartera y territorio.
 
 🚨 **Por qué fontanero, y con qué confianza (15/09/2026):** Alberto delegó la elección («el oficio
 que veas mejor, menos competencia») pidiendo antes si había un repo/conector que ayudara — **no lo

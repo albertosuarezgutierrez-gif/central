@@ -525,6 +525,22 @@ export const RAMOS: readonly Ramo[] = [
   },
 ]
 
+/**
+ * Slugs que son página de INTENCIÓN de oficio, no un producto distinto de la
+ * cartera: comparten ramo real (BD y formulario) con otra entrada de este
+ * array. `responsabilidad-civil-fontaneros` es la MISMA responsabilidad
+ * civil que `responsabilidad-civil`, con un enfoque de contenido distinto
+ * para una consulta distinta — no una línea de negocio nueva.
+ */
+const SOLO_INTENCION: readonly string[] = ['responsabilidad-civil-fontaneros']
+
+/**
+ * Los RAMOS que son un producto real y distinto entre sí. Úsalo para contar
+ * «cuántos ramos revisamos» (portada): `RAMOS.length` a secas contaría dos
+ * veces la responsabilidad civil el día que haya una página de intención más.
+ */
+export const RAMOS_PRODUCTO: readonly Ramo[] = RAMOS.filter((r) => !SOLO_INTENCION.includes(r.slug))
+
 /** Devuelve un ramo por su slug, o `null` si no existe (nunca un ramo de relleno). */
 export function ramoPorSlug(slug: string): Ramo | null {
   return RAMOS.find((r) => r.slug === slug) ?? null
