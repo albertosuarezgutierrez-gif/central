@@ -355,6 +355,57 @@ export const ARTICULOS: readonly Articulo[] = [
       },
     ],
   },
+  {
+    slug: 'cuando-empieza-a-cubrir-un-seguro',
+    h1: '¿Desde cuándo cubre un seguro recién contratado?',
+    title: '¿Desde cuándo cubre un seguro contratado?',
+    description: 'Un seguro no cubre desde que lo firmas ni desde que lo pagas. Te explicamos cuándo empieza la cobertura real y por qué importa.',
+    fecha: '2026-09-15',
+    resumen: 'Un seguro empieza a cubrir desde la fecha de efecto que marca el contrato, no desde que lo firmas ni pagas. Firmar y pagar son pasos previos necesarios, pero la cobertura arranca cuando el contrato dice, y un siniestro antes de esa fecha no está cubierto.',
+    consulta: 'desde cuándo cubre un seguro recién contratado',
+    ramos: ['hogar', 'auto'],
+    secciones: [
+      {
+        titulo: 'Firmar, pagar y que empiece a cubrir: tres momentos distintos',
+        parrafos: [
+          'Contratas un seguro hoy y crees que ya estás protegido. Pero si tienes un siniestro esta misma tarde, puede que te lleves una sorpresa: el seguro no cubre todavía.',
+          'Hay tres momentos que no coinciden en el tiempo. Primero firmas la póliza, o aceptas la propuesta. Después pagas la primera prima, o al menos la fracción inicial. Y solo entonces empieza la cobertura, en la fecha de efecto que marca el contrato.',
+          'La fecha de efecto es la que cuenta. Puede ser el mismo día que firmas, el día siguiente, o varios días después. Depende de cómo se haya acordado y de cuándo se complete el pago. Pero hasta que no llega esa fecha, el seguro no responde.',
+        ],
+      },
+      {
+        titulo: 'Por qué un siniestro del mismo día puede quedar fuera',
+        parrafos: [
+          'Imagina que contratas un seguro de hogar por la mañana y por la tarde se te inunda la cocina. Si la fecha de efecto es mañana a las cero horas, ese siniestro no está cubierto. El contrato no estaba en vigor cuando ocurrió.',
+          'Esto no es mala fe de la aseguradora. Es que el contrato funciona como cualquier otro: tiene una fecha de inicio. Antes de esa fecha, no hay obligación de cubrir nada.',
+          'Por eso es importante preguntar cuándo empieza la cobertura antes de firmar. Si necesitas protección inmediata, hay que asegurarse de que la fecha de efecto sea hoy mismo, y de que el pago esté hecho antes de esa hora.',
+          'En algunos seguros, sobre todo los obligatorios como el de coche, la cobertura puede empezar en el momento en que se completa el pago y se emite el certificado. Pero en otros, como los de hogar o salud, lo habitual es que haya un desfase de al menos un día.',
+        ],
+      },
+      {
+        titulo: 'Qué pasa si pagas tarde o el recibo se devuelve',
+        parrafos: [
+          'Si firmas pero no pagas, el seguro no empieza. La fecha de efecto queda en suspenso hasta que se complete el pago. Y si el primer recibo se devuelve, la aseguradora puede anular el contrato desde el principio, como si nunca hubiera existido.',
+          'Esto significa que si tienes un siniestro antes de que se regularice el pago, no hay cobertura. Aunque hayas firmado, aunque tengas el número de póliza, aunque te hayan enviado el documento.',
+          'En renovaciones es distinto. Si ya eres cliente y se te devuelve un recibo, la aseguradora suele darte un plazo para pagarlo antes de suspender la cobertura. Pero en la primera contratación no hay margen: sin pago, no hay seguro.',
+        ],
+      },
+      {
+        titulo: 'Cómo asegurarte de que la cobertura empieza cuando la necesitas',
+        parrafos: [
+          'Antes de firmar, pregunta cuándo empieza la cobertura. Pide que te lo pongan por escrito en la propuesta o en el correo de confirmación.',
+          'Si necesitas que empiece hoy, dilo claramente. A veces es posible adelantar la fecha de efecto si el pago se hace al momento, por ejemplo con tarjeta o transferencia inmediata.',
+          'Guarda el justificante de pago y el documento de la póliza. Si hay un siniestro justo después de contratar, vas a necesitar demostrar que el contrato estaba en vigor.',
+          'Y si tienes dudas, pregúntanos. Como corredores, podemos coordinar con la aseguradora para que la fecha de efecto se ajuste a lo que necesitas, y evitar que te quedes sin cobertura en el momento crítico.',
+        ],
+      },
+    ],
+    faq: [
+      { pregunta: '¿Puedo contratar un seguro con efecto retroactivo?', respuesta: 'No. Un seguro no puede cubrir algo que ya ha pasado. La fecha de efecto siempre es presente o futura. Si ya has tenido un siniestro, no puedes contratar un seguro para cubrirlo después.' },
+      { pregunta: '¿Qué pasa si tengo un siniestro el mismo día que contrato pero antes de pagar?', respuesta: 'No está cubierto. Sin pago no hay cobertura, aunque hayas firmado la propuesta. El contrato solo surte efecto cuando se completa el pago y llega la fecha de efecto acordada.' },
+      { pregunta: '¿Puedo cancelar un seguro antes de que empiece a cubrir?', respuesta: 'Sí. Si te arrepientes antes de la fecha de efecto, puedes cancelarlo sin penalización. Una vez que el contrato entra en vigor, ya aplican las condiciones de cancelación normales.' },
+    ],
+  },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
   //
   // El agente quincenal de `apps/plataforma` (`lib/correduria/blog-agente.ts`)
