@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T19:13:37Z",
-  "sha": "ccd4feb57ba45f64459a4beb6bd1b120a18d5216",
+  "generadoEn": "2026-09-15T20:04:25Z",
+  "sha": "2c4f9e5ba2f4d3953e89c0dd76f94256df58063d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11511,7 +11511,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/operador/vehiculo/matricula",
-      "hash": "d526d6ba8d9a"
+      "hash": "b7e71939ec25"
     },
     {
       "ruta": "apps/asegura/app/api/operador/vencimientos/route.ts",
