@@ -1,0 +1,106 @@
+{
+ "sesion": "743e6d1a-c6b3-50e7-9e18-5a405c74fb86",
+ "inicio": "2026-09-15T11:11:03.483Z",
+ "fin": "2026-09-15T12:22:19.025Z",
+ "llamadas": 172,
+ "categorias": {
+  "otro": {
+   "llamadas": 22,
+   "chars_in": 1946,
+   "chars_out": 644732,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 3,
+    "ToolSearch": 6,
+    "AskUserQuestion": 1,
+    "ReadNotifications": 12
+   }
+  },
+  "bash": {
+   "llamadas": 83,
+   "chars_in": 38007,
+   "chars_out": 176309,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 83
+   }
+  },
+  "sql": {
+   "llamadas": 34,
+   "chars_in": 9510,
+   "chars_out": 62905,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 34
+   }
+  },
+  "mcp:Booking_com": {
+   "llamadas": 4,
+   "chars_in": 1376,
+   "chars_out": 76648,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking_com__accommodations_search": 4
+   }
+  },
+  "escritura": {
+   "llamadas": 11,
+   "chars_in": 10270,
+   "chars_out": 476256,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 11
+   }
+  },
+  "mcp:github": {
+   "llamadas": 13,
+   "chars_in": 6330,
+   "chars_out": 86087,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2490,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 4,
+    "mcp__github__actions_list": 5,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__get_commit": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 3,
+   "chars_in": 1926,
+   "chars_out": 397,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 2
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 2,
+   "chars_in": 124,
+   "chars_out": 42361,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_deployments": 1,
+    "mcp__Vercel__list_teams": 1
+   }
+  }
+ }
+}

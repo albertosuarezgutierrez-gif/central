@@ -12,6 +12,18 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** SIVRA · pricing: **una fecha de EVENTO medida una vez no volvía a subir NUNCA
+en la cola del barrido** (`planDeVentanas` ordenaba «virgen antes que medida» y, dentro de las
+medidas, solo por antigüedad; en un plan de 12 meses siempre hay vírgenes). El motor exige corpus
+≤7 d, así que esas noches caían en `datos_insuficientes` y las tarificaba el canal externo. Medido en
+Semana Santa 2027 del Dúplex: 23, 24 y 28/03 con 18 días y 29/03 sin corpus → publicado 286€ el
+martes 23 con el mercado 4p del casco en ~440€. `EDAD_MERCADO_RANCIO` compartida con
+`pricing/apply` + escalón en la cola (solo evento CONFIRMADO) + `eventos_caducados` en
+`/mercado/plan`. **NO se borró nada**: el error fue de lectura, no datos corruptos. 🚨 Y
+`rate_snapshots.price_ours` es el **motor sombra RETIRADO de sivra**, no «nuestro precio» —
+leerlo como el motor vivo hizo informar 612€/575€ donde la última decisión real era 358€; ahora
+lleva `COMMENT` (aplicado en Supabase). PR #2988.
+
 **(15/09/2026)** 💸 **Sacar un PR de draft cuesta una ronda NUEVA de 12 deployments de Vercel.**
 `CLAUDE.md` ya avisa de que cada push a una rama de PR crea ~12 deployments (cuota
 `api-deployments-paid-per-hour`, 450/h **de cuenta**), pero no de que el evento `ready_for_review`

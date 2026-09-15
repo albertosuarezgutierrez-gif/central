@@ -21,6 +21,7 @@ import {
 } from "@/lib/sivra/pricing-comps-liga"
 import { aplicarTechoAdr } from "@/lib/sivra/pricing-techo-adr"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
+import { EDAD_MERCADO_RANCIO } from "@/lib/sivra/mercado-cobertura"
 import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/lib/sivra/pricing-ancla-global"
 import { avisoSmoobuRechaza, avisoSmoobuLecturaFalla, type FalloEscritura, type FalloLectura } from "@/lib/sivra/pricing-latido-apply"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
@@ -108,7 +109,11 @@ export async function POST(req: NextRequest) {
 
 
   const MIN_SAMPLE = 5
-  const MAX_MARKET_AGE_DAYS = 7
+  // Importado, no un 7 escrito otra vez: la cola del barrido (`planDeVentanas`) usa este MISMO
+  // número para decidir qué fecha de evento hay que remedir. Si divergieran, el barrido daría por
+  // cubierta una ventana que este motor rechaza por vieja, y el desajuste solo se vería como una
+  // noche tarificada por el canal externo. Ver `EDAD_MERCADO_RANCIO` (15/09/2026).
+  const MAX_MARKET_AGE_DAYS = EDAD_MERCADO_RANCIO
 
   const recs = await prisma.$queryRaw<{
     property_id: string
