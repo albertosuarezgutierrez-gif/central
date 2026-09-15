@@ -1,43 +1,44 @@
 {
  "sesion": "9421d1ca-b243-574e-9c23-1605d2bf2194",
  "inicio": "2026-09-15T08:47:36.900Z",
- "fin": "2026-09-15T08:53:14.015Z",
- "llamadas": 44,
+ "fin": "2026-09-15T09:25:11.516Z",
+ "llamadas": 91,
  "categorias": {
   "otro": {
-   "llamadas": 4,
-   "chars_in": 1973,
-   "chars_out": 2129,
+   "llamadas": 14,
+   "chars_in": 2339,
+   "chars_out": 49124,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 2,
-    "AskUserQuestion": 1
+    "ToolSearch": 7,
+    "AskUserQuestion": 1,
+    "ReadNotifications": 5
    }
   },
   "bash": {
-   "llamadas": 10,
-   "chars_in": 1232,
-   "chars_out": 17495,
+   "llamadas": 18,
+   "chars_in": 2787,
+   "chars_out": 20404,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 10
+    "Bash": 18
    }
   },
   "lectura-directa": {
-   "llamadas": 16,
-   "chars_in": 1844,
-   "chars_out": 77877,
+   "llamadas": 20,
+   "chars_in": 2292,
+   "chars_out": 89415,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 10,
-    "Read": 6
+    "Grep": 11,
+    "Read": 9
    }
   },
   "mcp:Supabase": {
@@ -60,6 +61,58 @@
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase__execute_sql": 13
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1051,
+   "chars_out": 116847,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 18,
+   "chars_in": 3730,
+   "chars_out": 104787,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 35683,
+   "tools": {
+    "mcp__github__pull_request_read": 7,
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__actions_list": 5,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__unsubscribe_pr_activity": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 4,
+   "chars_in": 1937,
+   "chars_out": 316,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 4
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 2,
+   "chars_in": 91,
+   "chars_out": 38237,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__list_deployments": 1
    }
   }
  }
