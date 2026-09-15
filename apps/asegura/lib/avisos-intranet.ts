@@ -84,11 +84,29 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
   const db = prismaAsegura()
   const limiteVentana = new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA)
 
-  const [autorizaciones, peticiones, obligaciones] = await Promise.all([
+  const pendienteSinAceptar = { correduriaId, aceptadoEn: null, revocadoEn: null, caducaEn: { gt: hoy } }
+
+  const [autorizaciones, aInvitados, peticiones, obligaciones] = await Promise.all([
     // Solo las que la campana puede llegar a enseñar: sin aceptar y sin revocar.
+    //
+    // 🚨 `autorizado_cliente_id` es NULLABLE en la BD desde el 04/09/2026 (se
+    // puede autorizar a una IDENTIDAD del portal que no es cliente de nadie),
+    // pero el modelo Prisma lo declara obligatorio — leer una de esas filas
+    // aquí reventaría la pasada ENTERA y ese día no se avisaría a nadie. Hoy
+    // son 0 filas, así que el fallo sería el día que Alberto invite al primer
+    // no-cliente. Se parte en dos consultas en vez de arreglar el modelo
+    // porque `lib/cartera-relaciones.ts` también lo lee como obligatorio y eso
+    // es otro cambio; aquí NO se lee esa columna cuando es nula.
     db.portalAutorizacion.findMany({
-      where: { correduriaId, aceptadoEn: null, revocadoEn: null, caducaEn: { gt: hoy } },
+      where: { ...pendienteSinAceptar, autorizadoClienteId: { not: null } },
       select: { id: true, otorganteClienteId: true, autorizadoClienteId: true },
+    }),
+    // Las que apuntan a una identidad invitada: del otorgante sí hay que avisar
+    // («X aún no ha aceptado tu acceso»). Al invitado no: no tiene ficha en la
+    // cartera, o sea no hay correo al que escribirle desde aquí.
+    db.portalAutorizacion.findMany({
+      where: { ...pendienteSinAceptar, autorizadoClienteId: null },
+      select: { id: true, otorganteClienteId: true },
     }),
     db.portalPeticionAcceso.findMany({
       where: {
@@ -126,8 +144,9 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
   const ids = new Set<string>()
   for (const a of autorizaciones) {
     ids.add(a.otorganteClienteId)
-    ids.add(a.autorizadoClienteId)
+    if (a.autorizadoClienteId) ids.add(a.autorizadoClienteId)
   }
+  for (const a of aInvitados) ids.add(a.otorganteClienteId)
   for (const p of peticiones) {
     if (p.destinatarioClienteId) ids.add(p.destinatarioClienteId)
     if (p.solicitanteClienteId) ids.add(p.solicitanteClienteId)
@@ -200,7 +219,7 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
   for (const a of autorizaciones) {
     // Solo fichas de ESTA correduría y no fusionadas: una lápida no recibe correo.
     const otorgante = fichaPorId.get(a.otorganteClienteId)
-    const autorizado = fichaPorId.get(a.autorizadoClienteId)
+    const autorizado = a.autorizadoClienteId === null ? undefined : fichaPorId.get(a.autorizadoClienteId)
     const comun = {
       id: a.id,
       estado: 'pendiente' as const,
@@ -208,7 +227,19 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
       autorizadoNombre: nombreDe(autorizado),
     }
     if (otorgante) dame(a.otorganteClienteId).autorizaciones.otorgadas.push(comun)
-    if (autorizado) dame(a.autorizadoClienteId).autorizaciones.recibidas.push(comun)
+    if (autorizado && a.autorizadoClienteId) dame(a.autorizadoClienteId).autorizaciones.recibidas.push(comun)
+  }
+
+  for (const a of aInvitados) {
+    if (!fichaPorId.has(a.otorganteClienteId)) continue
+    dame(a.otorganteClienteId).autorizaciones.otorgadas.push({
+      id: a.id,
+      estado: 'pendiente',
+      otorganteNombre: nombreDe(fichaPorId.get(a.otorganteClienteId)),
+      // Sin ficha no hay nombre, y el catálogo dice «La persona invitada». No
+      // se inventa uno: el correo del invitado vive hasheado en el portal.
+      autorizadoNombre: null,
+    })
   }
 
   for (const p of peticiones) {
@@ -283,11 +314,12 @@ export async function avisarIntranet(
       where: { clienteId: p.clienteId },
       select: { clave: true },
     })
-    const nuevos = avisosNuevos(p, hoy, new Set(sellos.map((s) => s.clave)))
-    if (nuevos === null) {
+    const cuenta = avisosNuevos(p, hoy, new Set(sellos.map((s) => s.clave)))
+    if (cuenta === null) {
       resumen.ilegibles += 1
       continue
     }
+    const { nuevos, total } = cuenta
     if (nuevos.length === 0) continue
 
     resumen.clientes += 1
@@ -313,6 +345,10 @@ export async function avisarIntranet(
     const resultado = await enviarAvisosIntranet(destino, {
       nombre: p.nombre,
       avisos: nuevos.map((a) => ({ tipo: a.tipo })),
+      // El TOTAL de su campana, no el de los nuevos: si no, un correo que dice
+      // «tienes 1 aviso» sobre una campana que marca 4 manda a resolver uno y
+      // deja los otros tres donde estaban.
+      total,
       enlace,
     })
     if (resultado === 'sin_proveedor') throw new Error('sin_correo_configurado')

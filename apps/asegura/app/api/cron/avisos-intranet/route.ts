@@ -10,6 +10,13 @@ const AVERIAS_PROPIAS = ['cartera_sin_conexion', 'sin_correduria', 'sin_portal',
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+/**
+ * La pasada recorre los clientes vivos de uno en uno (dos consultas y un envío
+ * SMTP cada uno). Con el defecto de 10 s se cortaría a la mitad, y eso deja
+ * clientes sin correo Y correos entregados sin sellar — o sea, duplicado
+ * mañana. Mismo valor que la otra ruta de correo en lote de esta app.
+ */
+export const maxDuration = 120
 
 /**
  * GET /api/cron/avisos-intranet — «tienes algo esperándote en tu área de

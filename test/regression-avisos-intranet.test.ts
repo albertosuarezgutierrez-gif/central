@@ -55,9 +55,10 @@ test('el correo dice CUÁNTAS cosas hay y de qué clase, y lleva el enlace', () 
   const c = cuerpoAvisosIntranet({
     nombre: 'Manuel',
     avisos: [{ tipo: 'datos_por_revisar' }, { tipo: 'obligacion_en_ventana' }, { tipo: 'obligacion_en_ventana' }],
+    total: 3,
     enlace: 'https://clientes.grupoasegura.es/',
   })
-  assert.match(c.asunto, /3 avisos/)
+  assert.match(c.asunto, /3 novedades/)
   assert.match(c.texto, /^Hola, Manuel:/)
   assert.match(c.texto, /2 vencimientos próximos/)
   assert.match(c.texto, /https:\/\/clientes\.grupoasegura\.es\//)
@@ -65,9 +66,30 @@ test('el correo dice CUÁNTAS cosas hay y de qué clase, y lleva el enlace', () 
 })
 
 test('sin nombre se saluda sin nombre, y no se inventa uno', () => {
-  const c = cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'peticion_recibida' }], enlace: 'https://x.es/' })
+  const c = cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'peticion_recibida' }], total: 1, enlace: 'https://x.es/' })
   assert.match(c.texto, /^Hola:/)
-  assert.match(c.asunto, /un aviso/, 'uno es «un aviso», no «1 avisos»')
+  assert.match(c.asunto, /^Novedades/, 'una es «Novedades», no «1 novedades»')
+})
+
+test('🚨 el correo habla de lo NUEVO, y lo que ya estaba lo dice APARTE', () => {
+  // El fallo que esto evita: «tienes un aviso» sobre una campana que marca 4.
+  // El cliente entra, resuelve el nuevo y se va con tres sin tocar.
+  const c = cuerpoAvisosIntranet({
+    nombre: 'Manuel',
+    avisos: [{ tipo: 'datos_por_revisar' }],
+    total: 4,
+    enlace: 'https://x.es/',
+  })
+  assert.match(c.texto, /otros 3 avisos sin resolver/)
+  assert.match(c.html, /otros 3 avisos sin resolver/)
+
+  const igual = cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'datos_por_revisar' }], total: 1, enlace: 'https://x.es/' })
+  assert.ok(!/sin resolver/.test(igual.texto), 'sin nada de antes no se inventa una segunda frase')
+
+  // `total` por debajo de los nuevos (algo se resolvió entre medias) no puede
+  // dar «otros -1 avisos».
+  const raro = cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'datos_por_revisar' }], total: 0, enlace: 'https://x.es/' })
+  assert.ok(!/sin resolver/.test(raro.texto))
 })
 
 test('el resumen va en el orden del CATÁLOGO, no en el de llegada', () => {
@@ -110,16 +132,21 @@ test('lo ya sellado NO se vuelve a mandar; lo nuevo sí', () => {
     ],
   })
   const todos = avisosNuevos(p, HOY, new Set())
-  assert.equal(todos?.length, 2)
+  assert.equal(todos?.nuevos.length, 2)
+  assert.equal(todos?.total, 2)
 
   const solo = avisosNuevos(p, HOY, new Set(['datos_por_revisar:cp_invalido']))
   assert.deepEqual(
-    solo?.map((a) => a.id),
+    solo?.nuevos.map((a) => a.id),
     ['ciudad_sin_letras'],
     'un aviso se manda UNA vez: el sello del anterior no puede llevarse por delante al nuevo',
   )
+  assert.equal(solo?.total, 2, 'el TOTAL cuenta también lo ya sellado: es lo que marca su campana')
 
-  assert.deepEqual(avisosNuevos(p, HOY, new Set(['datos_por_revisar:cp_invalido', 'datos_por_revisar:ciudad_sin_letras'])), [])
+  assert.deepEqual(
+    avisosNuevos(p, HOY, new Set(['datos_por_revisar:cp_invalido', 'datos_por_revisar:ciudad_sin_letras']))?.nuevos,
+    [],
+  )
 })
 
 test('🚨 una fuente ilegible deja al cliente SIN correo esa pasada, no con un total a medias', () => {
@@ -128,6 +155,15 @@ test('🚨 una fuente ilegible deja al cliente SIN correo esa pasada, no con un 
   // resuelve uno y se va tranquilo.
   const p = { ...pendiente(), datos: null as unknown as Pendiente['datos'] }
   assert.equal(avisosNuevos(p, HOY, new Set()), null)
+})
+
+test('el botón manual de «Invitar por correo» SELLA lo que avisa, o el cron lo repite mañana', () => {
+  const src = fuente('apps/asegura/lib/aviso-acceso.ts')
+  assert.match(
+    src,
+    /portalAvisoEnviado\.createMany[\s\S]{0,300}autorizacion_pendiente:\$\{f\.id\}/,
+    'sin el sello, a quien Alberto acaba de avisar a mano le llega por la mañana el mismo aviso otra vez',
+  )
 })
 
 test('el cron está declarado, va DESPUÉS del de vencimientos y pide su secreto', () => {
@@ -142,6 +178,7 @@ test('el cron está declarado, va DESPUÉS del de vencimientos y pide su secreto
   const ruta = fuente('apps/asegura/app/api/cron/avisos-intranet/route.ts')
   assert.match(ruta, /isCronAuthorized\(req\)/, 'detrás de esta puerta se escribe a clientes reales')
   assert.match(ruta, /status: 503/, '«no he podido mirar» no puede responder 200')
+  assert.match(ruta, /export const maxDuration = \d+/, 'un corte a mitad del bucle deja correos entregados y sin sellar')
 })
 
 test('🚨 el emisor solo mira la CARTERA VIVA: 32.520 leads no reciben «revisa tu dirección»', () => {
@@ -152,4 +189,20 @@ test('🚨 el emisor solo mira la CARTERA VIVA: 32.520 leads no reciben «revisa
     'los titulares se sacan de las pólizas vivas; sobre `clientes` a secas esto sería un mailing a todo el volcado',
   )
   assert.match(src, /if \(!titularesVivos\.has\(f\.id\)\) continue/, 'y la ficha que no es de la cartera viva no genera reparo')
+})
+
+test('🚨 `autorizado_cliente_id` se declara NULLABLE: la BD lo es desde el 04/09/2026', () => {
+  // La divergencia costaba caro y era invisible: el modelo lo declaraba
+  // obligatorio, así que la PRIMERA autorización a alguien invitado (identidad
+  // del portal, sin ficha) reventaba TODA lectura de la tabla — la ficha del
+  // corredor y este cron incluidos. Hoy son 0 filas: esperaba a la primera
+  // invitación. El emisor además lo lee en dos consultas, para no traerse
+  // nunca un `null` en esa columna.
+  const schema = fuente('apps/asegura/prisma/asegura.prisma')
+  const modelo = schema.slice(schema.indexOf('model PortalAutorizacion'))
+  assert.match(modelo.slice(0, 2000), /autorizadoClienteId\s+String\?/)
+  assert.match(modelo.slice(0, 2000), /autorizadoIdentidadId\s+String\?/, 'la otra rama del destinatario también existe en la BD')
+
+  const src = fuente('apps/asegura/lib/avisos-intranet.ts')
+  assert.match(src, /autorizadoClienteId: \{ not: null \}/, 'la consulta principal no puede traerse filas de invitado')
 })

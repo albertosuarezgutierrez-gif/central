@@ -75,8 +75,16 @@ export type AvisoParaCorreo = { tipo: TipoAviso }
 export type DatosAvisosIntranet = {
   /** Nombre de pila de la persona. `null` = no consta; se saluda sin nombre. */
   nombre: string | null
-  /** Lo pendiente, tal y como lo pinta su campana. Nunca vacío: sin avisos no se escribe. */
+  /** Lo NUEVO, lo que todavía no se le ha contado. Nunca vacío: sin eso no se escribe. */
   avisos: readonly AvisoParaCorreo[]
+  /**
+   * 🚨 Cuántos avisos tiene en total su campana ahora mismo, que NO es
+   * `avisos.length`: puede llevar semanas con tres sin resolver y hoy haberle
+   * salido uno nuevo. Decir «tienes un aviso» cuando la campana marca 4 es
+   * exactamente la mentira que este correo existe para no contar — así que el
+   * cuerpo habla de lo NUEVO y, si hay más esperando, lo dice aparte.
+   */
+  total: number
   /** A dónde entra. Siempre https y siempre presente: sin enlace no se manda nada. */
   enlace: string
 }
@@ -119,12 +127,23 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
   const saludo = d.nombre?.trim() ? `Hola, ${d.nombre.trim()}:` : 'Hola:'
   const n = d.avisos.length
   const resumen = resumirAvisos(d.avisos)
-  const asunto = n === 1 ? 'Tienes un aviso en tu área de clientes' : `Tienes ${n} avisos en tu área de clientes`
+  const asunto = n === 1 ? 'Novedades en tu área de clientes' : `${n} novedades en tu área de clientes`
+  // Lo que ya estaba ahí de antes se nombra como lo que es: no se suma al «nuevo»
+  // ni se calla. `total` puede venir por debajo si algo se resolvió entre medias,
+  // y entonces esta frase no sale — nunca sale un número negativo de «además».
+  const antes = Math.max(0, d.total - n)
+  const ademas =
+    antes === 0
+      ? null
+      : antes === 1
+        ? 'Además, tenías ya otro aviso sin resolver.'
+        : `Además, tenías ya otros ${antes} avisos sin resolver.`
 
   const texto = [
     saludo,
     '',
     `Te escribimos para avisarte de que tienes ${resumen} en tu área de clientes.`,
+    ...(ademas ? ['', ademas] : []),
     '',
     `Puedes verlo aquí: ${d.enlace}`,
     '',
@@ -138,6 +157,7 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
     '<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.5;color:#111">',
     `<p>${escapar(saludo)}</p>`,
     `<p>Te escribimos para avisarte de que tienes <strong>${escapar(resumen)}</strong> en tu área de clientes.</p>`,
+    ...(ademas ? [`<p>${escapar(ademas)}</p>`] : []),
     `<p><a href="${escapar(d.enlace)}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none">Entrar en mi área de clientes</a></p>`,
     '<p style="color:#555;font-size:13px">Se entra con tu correo y un código de un solo uso; no hay contraseña que recordar.</p>',
     '<p>Un saludo,<br>Grupo ASegura</p>',

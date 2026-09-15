@@ -20,8 +20,11 @@
 --
 -- 📌 Las OBLIGACIONES tienen además su propio sello histórico en
 -- `portal_obligacion.avisada_at` (correo) y `avisada_push_at` (Web Push), de
--- cuando cada canal tenía su emisor. El emisor genérico respeta los dos: una
--- obligación con `avisada_at` no se vuelve a avisar aunque no esté aquí.
+-- cuando cada canal tenía su emisor. El emisor genérico respeta el del CORREO
+-- (`avisada_at`): una obligación ya avisada por el cron de vencimientos no se
+-- vuelve a contar aunque no esté aquí. El de PUSH no se mira, y es a propósito:
+-- son dos canales distintos, y haber salido por la campana del móvil no es
+-- haberlo recibido por correo.
 SET search_path = seguros, public;
 
 CREATE TABLE IF NOT EXISTS seguros.portal_aviso_enviado (

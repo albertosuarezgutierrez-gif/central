@@ -792,7 +792,18 @@ model PortalAutorizacion {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId           String    @map("correduria_id") @db.Uuid
   otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
-  autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
+  /// 🚨 NULLABLE desde el 04/09/2026: una autorización apunta **o** a una ficha
+  /// **o** a una IDENTIDAD del portal (alguien invitado que no es cliente de
+  /// nadie), y el CHECK `portal_autorizacion_destinatario_unico` obliga a que
+  /// sea exactamente una de las dos. Este modelo lo declaraba obligatorio, así
+  /// que la PRIMERA fila de invitado reventaba toda lectura de la tabla —
+  /// `/correduria/cliente/[id]` y el cron de avisos incluidos. Hoy son 0 filas:
+  /// era un fallo esperando a la primera invitación (visto en `code-review`,
+  /// 15/09/2026). Quien lo lea tiene que mirar el `null`, no darlo por hecho.
+  autorizadoClienteId    String?   @map("autorizado_cliente_id") @db.Uuid
+  /// La otra rama: la identidad del portal a la que se autorizó. Una de las dos
+  /// va con valor y la otra a `null`, nunca las dos.
+  autorizadoIdentidadId  String?   @map("autorizado_identidad_id") @db.Uuid
   alcance                String
   /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
   /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta;
@@ -1023,7 +1034,7 @@ model PortalPeticionAcceso {
 
 /// Sello de los avisos de la intranet que YA se han mandado por correo
 /// (`seguros.portal_aviso_enviado`, DDL en
-/// `apps/asegura-portal/prisma/sql/2026-09-15_portal_aviso_enviado.sql`).
+/// `apps/asegura/prisma/sql/2026-09-15_portal_aviso_enviado.sql`).
 ///
 /// El emisor no tiene cola: deriva lo que hay que avisar del mismo catálogo que
 /// pinta la campana del portal. Sin este sello, cada pasada del cron mandaría

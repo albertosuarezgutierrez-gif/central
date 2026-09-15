@@ -60,14 +60,20 @@ export type Pendiente = {
 }
 
 /**
- * Los avisos de un cliente que TODAVÍA no se le han mandado.
+ * Los avisos de un cliente que TODAVÍA no se le han mandado, **y cuántos tiene
+ * en total**. Las dos cosas salen de la misma llamada a propósito: con dos
+ * cuentas separadas, el correo podría decir un total que no es el de su campana.
  *
  * `null` = alguna fuente suya no se pudo leer; a ese cliente no se le escribe en
  * esta pasada. Con `avisosDe` eso no puede pasar hoy (las listas llegan ya
  * resueltas), pero la rama existe para que el día que una fuente degrade a
  * `null` el correo no afirme un total incompleto.
  */
-export function avisosNuevos(p: Pendiente, hoy: Date, yaEnviadas: ReadonlySet<string>): Aviso[] | null {
+export function avisosNuevos(
+  p: Pendiente,
+  hoy: Date,
+  yaEnviadas: ReadonlySet<string>,
+): { nuevos: Aviso[]; total: number } | null {
   const { avisos, fuentesIlegibles } = avisosDe({
     autorizaciones: p.autorizaciones,
     obligaciones: p.obligaciones,
@@ -76,5 +82,5 @@ export function avisosNuevos(p: Pendiente, hoy: Date, yaEnviadas: ReadonlySet<st
     hoy,
   })
   if (fuentesIlegibles.length > 0) return null
-  return avisos.filter((a) => !yaEnviadas.has(claveAviso(a)))
+  return { nuevos: avisos.filter((a) => !yaEnviadas.has(claveAviso(a))), total: avisos.length }
 }
