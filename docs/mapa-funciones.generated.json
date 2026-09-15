@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T12:51:09Z",
-  "sha": "d60a59069af3a80eb6c6f7a90cd1eb4d71c7efa1",
+  "generadoEn": "2026-09-15T13:16:47Z",
+  "sha": "ad5a8dbbf830be8c7f3ff5896cb35c2de427259f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -121416,7 +121416,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "void",
-          "linea": 64,
+          "linea": 73,
           "resumen": "Carga Meta Pixel. Mismo criterio que GA4: sin parada limpia, el gate es no cargar."
         },
         {
@@ -121425,7 +121425,7 @@
           "exportada": true,
           "params": "key: string, host: string, alTerminar: () => void",
           "retorno": "void",
-          "linea": 84,
+          "linea": 93,
           "resumen": "Arranca PostHog. Refleja components/Analitica.tsx de asegura-web tal cual: pageview manual (App Router no recarga en la navegación), perfiles anónimos, sin grabación de sesión (los formularios de esta"
         },
         {
@@ -121434,12 +121434,12 @@
           "exportada": true,
           "params": "",
           "retorno": "void",
-          "linea": 103
+          "linea": 112
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "94484371d514"
+      "hash": "f0c4cbe345e8"
     },
     {
       "ruta": "packages/core-consent/src/banner.ts",
