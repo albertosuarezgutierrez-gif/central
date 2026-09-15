@@ -146,7 +146,10 @@
   convertiría en asesoramiento y arrastraría análisis objetivo e IPID, RDL 3/2020) y
   `lib/contrato-lead.test.ts` (lee el fuente de plataforma y compara la lista de ramos: si
   divergen, el visitante elegiría uno que plataforma rechaza con 422 y el lead se pierde en
-  silencio). `HORARIO` y el teléfono están **ausentes a propósito** mientras no se confirmen.
+  silencio). El teléfono y el **horario** (lunes a viernes, 9:00-18:00, confirmado el 15/09/2026) salen de
+  una sola constante cada uno y se publican en dos sitios a la vez — el horario, en el pie y en el
+  `openingHours` del JSON-LD, los dos desde `HORARIO` de `lib/sitio.ts`, que sigue admitiendo `null`
+  como «no se sabe». No se teclea una segunda copia: la vigila `lib/seo-horario.test.ts`.
   📊 **Analítica CON consentimiento, y fail-CLOSED a propósito (05/09/2026).** PostHog detrás de
   Cookiebot: la regla vive en una función pura, `puedeMedir()` de `lib/analitica.ts`, y **sin
   `NEXT_PUBLIC_COOKIEBOT_ID` no se mide nada**. Es la decisión CONTRARIA a la web de Manuel, donde

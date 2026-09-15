@@ -177,17 +177,35 @@ export const NAV_CABECERA = NAV.filter(
 /**
  * Horario de atención.
  *
- * 🚨 `null` a propósito: **no se ha confirmado con Alberto**, y en una ficha de
- * negocio local el horario es de los datos sobre los que la gente decide si
- * llamar ahora o no llamar. Inventárselo es peor que no publicarlo: un cliente
- * que llama a una hora que la web dice que atendemos y no coge nadie no vuelve.
+ * Estuvo a `null` a propósito hasta el 15/09/2026: en una ficha de negocio local
+ * el horario es de los datos sobre los que la gente decide si llamar ahora o no
+ * llamar, e inventárselo es peor que no publicarlo — un cliente que llama a una
+ * hora que la web dice que atendemos y no coge nadie no vuelve. El tipo sigue
+ * admitiendo `null` por eso: es el estado «no se sabe», y con él la ficha
+ * JSON-LD omite `openingHours` y el pie no anuncia ninguna hora.
  *
- * Mientras siga a `null`, la ficha JSON-LD **omite `openingHours`** (ausente,
- * que es la verdad) y la web dice «horario de oficina» sin concretar. En cuanto
- * haya horario real se rellena aquí y aparece solo en los dos sitios.
+ * 🚨 Esta constante es la ÚNICA copia del horario en la web. De aquí salen las
+ * dos publicaciones —el texto del pie y el `openingHours` del JSON-LD— y
+ * ninguna de las dos se teclea aparte: una segunda copia se queda vieja sin que
+ * nada falle. Lo vigila `seo-horario.test.ts`, que compara las horas del texto
+ * con las del schema y lee el fuente del pie.
  *
  * ⚠️ Tiene que coincidir con el que se declare en el perfil de Google Business:
  * dos horarios distintos para el mismo negocio es la clase de contradicción que
  * Google penaliza y que además cabrea a quien se presenta en la puerta.
+ *
+ * ✅ CONFIRMADO POR ALBERTO el 15/09/2026: «de 9 a 18h de lunes a viernes».
+ * Jornada continua, sin pausa de mediodía, y fines de semana cerrado — por eso
+ * el `schema` es UN solo rango `Mo-Fr 09:00-18:00` y no dos tramos. Sábado y
+ * domingo no se declaran: en schema.org lo que no aparece es cerrado, y
+ * declararlos con horas vacías sería peor que omitirlos.
+ * ⏳ El perfil de Google Business seguía SIN horario cuando esto se escribió
+ * (medido ese mismo día): ponérselo es tarea de Alberto y está pendiente. O sea
+ * que hoy la web concreta y el perfil no — el riesgo no es que se contradigan,
+ * es que Google no tenga el dato donde más se mira. Cuando se ponga allí, tiene
+ * que ser ESTE horario; y si algún día cambia uno, se cambian los dos.
  */
-export const HORARIO: { schema: readonly string[]; texto: string } | null = null
+export const HORARIO: { schema: readonly string[]; texto: string } | null = {
+  schema: ['Mo-Fr 09:00-18:00'],
+  texto: 'Lunes a viernes, de 9:00 a 18:00',
+}
