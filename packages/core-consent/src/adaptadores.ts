@@ -53,8 +53,17 @@ export function cargarGa4(id: string): void {
   document.head.appendChild(s1)
 
   window.dataLayer = window.dataLayer || []
-  window.gtag = function gtag(...args: unknown[]) {
-    window.dataLayer!.push(args)
+  // 🚨 `arguments`, NO un array por rest params (`...args`). gtag.js solo procesa las
+  // entradas del dataLayer que son objetos `Arguments`; un array plano lo IGNORA **en
+  // silencio**: el script carga con 200, el dataLayer parece correcto y no sale ni una
+  // sola petición a `/g/collect`. Es el fallo más caro de esta familia — todo verde y
+  // cero datos. Medido el 15/09/2026 contra grupoasegura.es: propiedad correcta, tag
+  // servido 200 OK, `config` en el dataLayer, y Tiempo real a 0 usuarios.
+  // Por eso esto es el snippet OFICIAL de Google, copiado tal cual, y no una versión
+  // "moderna" con rest params. Lo vigila `adaptadores.test.ts`.
+  window.gtag = function gtag() {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer!.push(arguments)
   }
   window.gtag('js', new Date())
   window.gtag('config', id)
