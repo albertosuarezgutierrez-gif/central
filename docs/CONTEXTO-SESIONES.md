@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** ASegura · **el blog se aprueba también desde Telegram** (PR #3003, mergeado). Alberto
+pidió botones (no solo el link a `/correduria → Redes`): nueva `decidirBlogPr()` en
+`lib/correduria/blog-pr.ts` es la ÚNICA fuente de mezcla/cierre del PR del agente del blog, usada por
+la pantalla y por el nuevo prefijo `ablg` del webhook compartido (`ablg_ok`/`ablg_no:<nºPR>` —
+evita `blog_`/`ig_`/`briefing_`, que se reenvían a ia-rest). `code-review` antes de sacar de borrador
+encontró y corrigió: default inseguro (action desconocido → publicaba), `RAMA` duplicada en 3 sitios
+(ahora se exporta una vez), y un cambio de status HTTP no intencionado. Sigue sin publicarse nada
+solo — el clic es de Alberto, ahora también desde el chat.
+
 **(15/09/2026)** ASegura · **el horario ya se publica** (PR #2994). Alberto lo confirmó —L-V de
 9:00 a 18:00— y `HORARIO` (`apps/asegura-web/lib/sitio.ts`) deja de ser `null`: de esa constante
 salen las DOS publicaciones, el pie de la web y el `openingHours` del JSON-LD. `null` sigue siendo
