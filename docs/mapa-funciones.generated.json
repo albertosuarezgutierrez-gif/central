@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T14:55:28Z",
-  "sha": "f793d9a876f3f3d42866efdd11bedbc94bd7171a",
+  "generadoEn": "2026-09-15T16:06:57Z",
+  "sha": "2b06725ed466324c796927a109b9bccdd92e88e6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11470,6 +11470,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/supresiones",
       "hash": "a2d0b699f333"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/vehiculo/matricula/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "`POST /api/operador/vehiculo/matricula` — consulta de datos técnicos de un vehículo por matrícula (marca, modelo, versión, potencia fiscal…) contra APIVehículo, para rellenar lo que la ficha del clien"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/vehiculo/matricula",
+      "hash": "d526d6ba8d9a"
     },
     {
       "ruta": "apps/asegura/app/api/operador/vencimientos/route.ts",
@@ -122288,6 +122309,74 @@
       "hash": "4b7ae46bb16e"
     },
     {
+      "ruta": "packages/core-vehiculos/src/apivehiculo.ts",
+      "ambito": "packages/core-vehiculos",
+      "resumen": "Adaptador del proveedor APIVehículo (apivehiculo.com/docs). Confirmado contra su documentación oficial (OpenAPI) el 15/09/2026.",
+      "exporta": [
+        "mapearRespuesta",
+        "consultarApiVehiculo"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 7
+        },
+        {
+          "nombre": "str",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 11
+        },
+        {
+          "nombre": "mapearRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "matricula: string, data: Record<string, unknown>",
+          "retorno": "DatosVehiculo",
+          "linea": 15
+        },
+        {
+          "nombre": "consultarApiVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "matricula: string, pais: 'ES' | 'PT' = 'ES'",
+          "retorno": "Promise<DatosVehiculo | null>",
+          "linea": 38,
+          "resumen": "`null` si el proveedor no encuentra la matrícula (404). Lanza en cualquier otro fallo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3f334c46b1a3"
+    },
+    {
+      "ruta": "packages/core-vehiculos/src/index.ts",
+      "ambito": "packages/core-vehiculos",
+      "resumen": "Punto único de entrada: quien consuma este paquete solo conoce `resolverMatricula`, nunca el proveedor real detrás. Cambiar de proveedor es cambiar esta función, no las apps que la llaman.",
+      "exporta": [
+        "resolverMatricula"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "matricula: string, pais: 'ES' | 'PT' = 'ES'",
+          "retorno": "Promise<DatosVehiculo | null>",
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7053dca5c12c"
+    },
+    {
       "ruta": "packages/module-agenda/src/disponibilidad.ts",
       "ambito": "packages/module-agenda",
       "resumen": "Lógica de disponibilidad de la agenda: detección de solapes y filtrado de recursos disponibles en un intervalo. Funciones puras (sin BD).",
@@ -136029,7 +136118,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3329,
-    "funciones": 10279
+    "archivos": 3332,
+    "funciones": 10285
   }
 }
