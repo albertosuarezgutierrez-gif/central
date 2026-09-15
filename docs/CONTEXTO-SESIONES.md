@@ -192,6 +192,20 @@ PR #2933. Sin código tocado, solo doc.
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo
+  (15/09/2026).** DGT rechazó la vía de dato abierto (datos.gob.es, 15/09: "no disponemos de API REST
+  para este fin", remite a "informes de vehículos en lote" — Web Service para empresas colaboradoras,
+  requiere alta + certificado, no confirmado que una correduría encaje). Mientras se resuelve esa vía
+  y la consulta a soporte CIMA (¿ya trae estos datos por TIREA? — sin responder aún), se ha creado el
+  adaptador `packages/core-vehiculos` (contrato `resolverMatricula()`) sobre APIVehículo (6€/mes, 50
+  consultas, Bearer token). `APIVEHICULO_API_KEY` ya en Vercel (`asegura`). **Endpoint y mapeo
+  confirmados contra su documentación OpenAPI real** (`GET /v1/vehicles/lookup?plate=&country=`,
+  respuesta `{code,message,data}`) — test `apivehiculo.test.ts` fija el contrato con el ejemplo
+  literal de su doc. **Pendiente real:** aún no se ha probado contra el servicio real (solo contra el
+  ejemplo estático de la doc) — falta una consulta real con la key ya puesta en Vercel para confirmar
+  que el JSON en producción coincide. Multas descartadas a propósito de cualquier vía "dato abierto":
+  dato sancionador ligado a persona, no dato técnico (RGPD/Ley de Tráfico).
+
 - **🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN` (14/09/2026, PR #2928).** Fix pedido por
   Alberto ("resuelve para que no vuelva a pasar") tras el bloqueo de `facturas-correo` ese mismo día.
   Nuevo `scripts/canal-aviso.sh`: lee `PLATAFORMA_URL`/`ALERTA_TOKEN` del entorno DENTRO del script,

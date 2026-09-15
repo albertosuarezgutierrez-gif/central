@@ -151,6 +151,9 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-vehiculos':
+        specifier: workspace:*
+        version: link:../../packages/core-vehiculos
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros
@@ -1179,6 +1182,8 @@ importers:
   packages/core-storage: {}
 
   packages/core-telegram: {}
+
+  packages/core-vehiculos: {}
 
   packages/legal-templates: {}
 

@@ -1,0 +1,118 @@
+{
+ "sesion": "5a456669-308d-5f6d-875c-39fbd7d30c61",
+ "inicio": "2026-09-14T10:05:23.625Z",
+ "fin": "2026-09-15T15:45:58.518Z",
+ "llamadas": 93,
+ "categorias": {
+  "otro": {
+   "llamadas": 13,
+   "chars_in": 669,
+   "chars_out": 161511,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2,
+    "WebSearch": 6,
+    "ReadNotifications": 5
+   }
+  },
+  "bash": {
+   "llamadas": 27,
+   "chars_in": 6566,
+   "chars_out": 23669,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 27
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 13,
+   "chars_in": 1152,
+   "chars_out": 79531,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 9,
+    "Glob": 1,
+    "Grep": 3
+   }
+  },
+  "escritura": {
+   "llamadas": 17,
+   "chars_in": 19521,
+   "chars_out": 1555739,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 9,
+    "Write": 8
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 3,
+   "chars_in": 1557,
+   "chars_out": 237,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 3
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 4,
+   "chars_in": 1352,
+   "chars_out": 56749,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 2,
+    "mcp__Gmail__get_message": 1,
+    "mcp__Gmail__create_draft": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 1209,
+   "chars_out": 15607,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
+   }
+  },
+  "mcp:github": {
+   "llamadas": 9,
+   "chars_in": 2917,
+   "chars_out": 28969,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 35683,
+   "tools": {
+    "mcp__github__pull_request_read": 5,
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__get_file_contents": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1
+   }
+  }
+ }
+}

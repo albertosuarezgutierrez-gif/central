@@ -15,6 +15,7 @@
     "@central/core-catastro": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-identity": "workspace:*",
+    "@central/core-vehiculos": "workspace:*",
     "@central/module-seguros": "workspace:*",
     "@central/module-seguros-pii": "workspace:*",
     "@central/module-seguros-portal": "workspace:*",
