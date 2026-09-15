@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T13:48:13Z",
-  "sha": "cf63de51a76c7d6454d42df13a17f7191e0f49ff",
+  "generadoEn": "2026-09-15T14:41:42Z",
+  "sha": "04a43ea27c87bfe5d055f254a318096682c7ce3e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -87958,7 +87958,7 @@
           "exportada": true,
           "params": "publicados: readonly string[]",
           "retorno": "TemaBlog | null",
-          "linea": 148,
+          "linea": 156,
           "resumen": "lo que no hace es inventarse el siguiente, que es exactamente el fallo que esta cola existe para evitar."
         },
         {
@@ -87967,13 +87967,13 @@
           "exportada": true,
           "params": "publicados: readonly string[]",
           "retorno": "number",
-          "linea": 154,
+          "linea": 162,
           "resumen": "Cuántos temas quedan. Para avisar antes de agotar la cola, no después."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b60f4c6e4658"
+      "hash": "d11a67b4e7f8"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/cuadre.ts",
