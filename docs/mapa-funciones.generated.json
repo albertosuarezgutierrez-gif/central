@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T09:33:23Z",
-  "sha": "dd1fe6adf477dd3ae5059b5305436149b001854f",
+  "generadoEn": "2026-09-15T10:32:45Z",
+  "sha": "39cd953db19ca283f94682b66e973c526c97d652",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -2928,7 +2928,7 @@
           "exportada": false,
           "params": "tabla: Record<string, string>, codigo: unknown, mensaje: unknown",
           "retorno": "string",
-          "linea": 312
+          "linea": 320
         },
         {
           "nombre": "fichasPropias",
@@ -2936,7 +2936,7 @@
           "exportada": false,
           "params": "candidatos: readonly Candidato[]",
           "retorno": "FichaPropia[]",
-          "linea": 397,
+          "linea": 405,
           "resumen": "Las fichas propias, sin repetir. Dos candidatos de la MISMA ficha traen la misma ficha (lo que cambia entre ellos es el destinatario), así que gana el primero: no se funden listas de pólizas ni se mez"
         },
         {
@@ -2945,7 +2945,7 @@
           "exportada": false,
           "params": "f: FichaPropia",
           "retorno": "readonly Alcance[]",
-          "linea": 424,
+          "linea": 432,
           "resumen": "Qué se puede ofrecer a alguien que todavía NO ha entrado al portal: solo MIRAR, aunque la ficha que invita sea una sociedad. No es una restricción de estilo. `partes` y `documentos` son actuar en nomb"
         },
         {
@@ -2954,7 +2954,7 @@
           "exportada": false,
           "params": "tabla: Record<string, string>, codigo: unknown, mensaje: unknown",
           "retorno": "string",
-          "linea": 483,
+          "linea": 491,
           "resumen": "🚨 Al revés que `textoError`: aquí manda el `mensaje` del SERVIDOR. En la invitación el porqué lo sabe el puerto y no la pantalla —si un correo ya estaba invitado, si el enlace no se puede generar, cu"
         },
         {
@@ -2963,7 +2963,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 500,
+          "linea": 508,
           "resumen": "Fecha en español legible («3 de septiembre de 2026»), nunca en ISO. Un `YYYY-MM-DD` es un DÍA, sin hora ni zona: se fuerza medianoche UTC y se formatea en UTC para que el 3 no salga como el 2. Una mar"
         },
         {
@@ -2972,7 +2972,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Date | null",
-          "linea": 519,
+          "linea": 527,
           "resumen": "Un día de acceso → `Date`. Acepta las dos formas en que puede venir el mismo dato: `YYYY-MM-DD` y el ISO completo de `Date.toJSON()` (que es lo que manda hoy la ruta). `null` si no es ninguna de las d"
         },
         {
@@ -2981,7 +2981,7 @@
           "exportada": false,
           "params": "v: string, anioActual: number",
           "retorno": "string",
-          "linea": 525,
+          "linea": 533,
           "resumen": "«3 de septiembre» (con el año solo si no es este, que sería ruido)."
         },
         {
@@ -2990,7 +2990,7 @@
           "exportada": false,
           "params": "usos: readonly Uso[], anioActual: number",
           "retorno": "string",
-          "linea": 538,
+          "linea": 546,
           "resumen": "«el 3 y el 12 de septiembre» cuando todo cae en el mismo mes; si no, cada día entero."
         },
         {
@@ -2999,7 +2999,7 @@
           "exportada": false,
           "params": "v: string | null, porDefecto: string",
           "retorno": "string",
-          "linea": 566
+          "linea": 574
         },
         {
           "nombre": "nombreAutorizado",
@@ -3007,7 +3007,7 @@
           "exportada": false,
           "params": "a: AutorizacionVista",
           "retorno": "string",
-          "linea": 589,
+          "linea": 597,
           "resumen": "Cómo se llama en pantalla quien recibe el acceso. 🚨 Los dos huecos NO son el mismo hueco, y por eso no se dicen igual: - Con `autorizadoIdentidadId` sabemos POR QUÉ no hay nombre: esa persona no es c"
         },
         {
@@ -3016,7 +3016,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 596,
+          "linea": 604,
           "resumen": "Mayúscula inicial, para cuando la etiqueta abre un encabezado. Un nombre real no se toca."
         },
         {
@@ -3025,7 +3025,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 600
+          "linea": 608
         },
         {
           "nombre": "Otorgadas",
@@ -3033,7 +3033,7 @@
           "exportada": false,
           "params": "{ uid, lista, onCambio, }: { uid: string lista: readonly AutorizacionVista[] onCambio: () => Promise<void> }",
           "retorno": null,
-          "linea": 724
+          "linea": 732
         },
         {
           "nombre": "TarjetaOtorgada",
@@ -3041,7 +3041,7 @@
           "exportada": false,
           "params": "{ a, onCambio }: { a: AutorizacionVista; onCambio: () => Promise<void> }",
           "retorno": null,
-          "linea": 754
+          "linea": 762
         },
         {
           "nombre": "Ambito",
@@ -3049,7 +3049,7 @@
           "exportada": false,
           "params": "{ a, mias, quien }: { a: AutorizacionVista; mias: boolean; quien: string }",
           "retorno": null,
-          "linea": 866,
+          "linea": 874,
           "resumen": "🚨 SOBRE QUÉ va esta autorización, que hasta el 04/09/2026 no se podía elegir y por eso no se decía. `polizaId === null` **no es «no lo sabemos»**: es TODAS las pólizas del otorgante, y además las que"
         },
         {
@@ -3058,7 +3058,7 @@
           "exportada": false,
           "params": "{ a, quien }: { a: AutorizacionVista; quien: string }",
           "retorno": null,
-          "linea": 888,
+          "linea": 896,
           "resumen": "🚨 El estado CON su consecuencia. Nunca la palabra suelta: lo que el otorgante necesita saber es si esa persona está viendo sus seguros ahora o no."
         },
         {
@@ -3067,7 +3067,7 @@
           "exportada": false,
           "params": "{ a, quien }: { a: AutorizacionVista; quien: string }",
           "retorno": null,
-          "linea": 939,
+          "linea": 947,
           "resumen": "🚨 EL registro de accesos, que es lo que hace demostrable el consentimiento. Tres estados, no dos: - `usos === null` → «no lo sabemos». NO se pinta como que no entró. - `usos` vacío → «no ha entrado t"
         },
         {
@@ -3076,7 +3076,7 @@
           "exportada": false,
           "params": "{ uid, lista, onCambio, }: { uid: string lista: readonly AutorizacionVista[] onCambio: () => Promise<void> }",
           "retorno": null,
-          "linea": 976
+          "linea": 984
         },
         {
           "nombre": "TarjetaRecibida",
@@ -3084,7 +3084,7 @@
           "exportada": false,
           "params": "{ a, onCambio }: { a: AutorizacionVista; onCambio: () => Promise<void> }",
           "retorno": null,
-          "linea": 1003
+          "linea": 1011
         },
         {
           "nombre": "LoQuePuedes",
@@ -3092,7 +3092,7 @@
           "exportada": false,
           "params": "{ a }: { a: AutorizacionVista }",
           "retorno": null,
-          "linea": 1185,
+          "linea": 1193,
           "resumen": "🚨 Qué puedes hacer TÚ con lo que te han dado — y las TRES versiones, porque las tres son verdad en casos distintos y decir la de otro es mentir: - Cede una PERSONA → solo mirar, y nunca su DNI, su IB"
         },
         {
@@ -3101,7 +3101,7 @@
           "exportada": false,
           "params": "c: Candidato",
           "retorno": "string",
-          "linea": 1216,
+          "linea": 1224,
           "resumen": "La clave de un candidato: el par de fichas, que es lo que identifica la relación."
         },
         {
@@ -3110,7 +3110,7 @@
           "exportada": false,
           "params": "{ uid, puedeAutorizar, candidatos, onConcedida, }: { uid: string puedeAutorizar: boolean candidatos: readonly Candidato[] onConcedida: () => Promise<void> }",
           "retorno": null,
-          "linea": 1220
+          "linea": 1228
         },
         {
           "nombre": "EstadoInvitacionLinea",
@@ -3118,7 +3118,7 @@
           "exportada": false,
           "params": "{ i }: { i: InvitacionVista }",
           "retorno": null,
-          "linea": 1567,
+          "linea": 1575,
           "resumen": "El estado, dicho con su CONSECUENCIA. Nunca la palabra suelta."
         },
         {
@@ -3127,7 +3127,7 @@
           "exportada": false,
           "params": "{ i, onCambio }: { i: InvitacionVista; onCambio: () => Promise<void> }",
           "retorno": null,
-          "linea": 1619
+          "linea": 1627
         },
         {
           "nombre": "Invitaciones",
@@ -3135,7 +3135,7 @@
           "exportada": false,
           "params": "{ uid, carga, lista, error, onCambio, }: { uid: string carga: Carga lista: readonly InvitacionVista[] error: string | null onCambio: () => Promise<void> }",
           "retorno": null,
-          "linea": 1749
+          "linea": 1757
         },
         {
           "nombre": "Invitar",
@@ -3143,14 +3143,14 @@
           "exportada": false,
           "params": "{ uid, puedeAutorizar, candidatos, onInvitada, }: { uid: string puedeAutorizar: boolean candidatos: readonly Candidato[] onInvitada: () => Promise<void> }",
           "retorno": null,
-          "linea": 1800
+          "linea": 1808
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "20d802576559"
+      "hash": "27a37f50c343"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/autorizaciones/page.tsx",
@@ -8000,7 +8000,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f13d024b7387"
+      "hash": "d3b16a40a92d"
     },
     {
       "ruta": "apps/asegura-web/app/api/consentimiento/route.ts",
@@ -11216,6 +11216,27 @@
       "hash": "b5f6330f2d33"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/recaptacion/email-lote/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "POST /api/operador/recaptacion/email-lote — el envío AUTOMÁTICO diario de recaptación por email (leads solo-email, sin teléfono usable). Lo dispara el cron `recaptacion-email-lote` de plataforma. `{ l"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/recaptacion/email-lote",
+      "hash": "e6f8b321e99d"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/recaptacion/email/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -11540,6 +11561,43 @@
       "tablas": [],
       "rutaApi": "/api/portal/nota",
       "hash": "82c2ccbf59e1"
+    },
+    {
+      "ruta": "apps/asegura/app/api/publico/recaptacion/baja/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "GET /api/publico/recaptacion/baja?t=<recaptacion_envios.id> — sin sesión, a propósito: lo abre el propio cliente desde el correo (LSSI art. 21, baja de un solo clic). Está en `PUBLIC` de `middleware.t"
+        },
+        {
+          "nombre": "pagina",
+          "kind": "function",
+          "exportada": false,
+          "params": "mensaje: string, status: number",
+          "retorno": "NextResponse",
+          "linea": 21
+        },
+        {
+          "nombre": "escaparHtml",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 29
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/publico/recaptacion/baja",
+      "hash": "ff49c67043de"
     },
     {
       "ruta": "apps/asegura/app/api/webhooks/codeoscopic/route.ts",
@@ -13313,9 +13371,11 @@
       "resumen": "apps/asegura/lib/cartera-recaptacion.ts La cola de recaptación: leads del volcado sin fecha de vencimiento, con contacto, que NO son ya cliente vivo por CIMA. Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md. No hay tabla de cola: se calcula en cada GET, como `polizasSinRecibo()` de",
       "exporta": [
         "colaRecaptacion",
+        "aplicarBajaEmail",
         "textoWhatsappPara",
         "textoEmailPara",
-        "registrarEnvioWhatsapp"
+        "registrarEnvioWhatsapp",
+        "enviarLoteEmail"
       ],
       "funciones": [
         {
@@ -13324,7 +13384,7 @@
           "exportada": false,
           "params": "tipo: string",
           "retorno": "string",
-          "linea": 35
+          "linea": 40
         },
         {
           "nombre": "descifrar",
@@ -13332,7 +13392,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 40,
+          "linea": 45,
           "resumen": "Descifra sin convertir un fallo en \"no tiene contacto\". Mismo patrón que `cartera-impagados.ts`."
         },
         {
@@ -13341,7 +13401,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ColaRecaptacion>",
-          "linea": 96
+          "linea": 101
         },
         {
           "nombre": "contadoresSemana",
@@ -13349,7 +13409,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 178
+          "linea": 183
         },
         {
           "nombre": "contadoresEmailHistorico",
@@ -13357,8 +13417,17 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 200,
+          "linea": 205,
           "resumen": "Acumulado TOTAL (sin ventana) de emails de recaptación: enviados y abiertos-o-pinchados. Solo `canal = 'email'` — el WhatsApp manual nunca avanza a 'abierto'/'pinchado' (no hay WABA, solo se registra "
+        },
+        {
+          "nombre": "aplicarBajaEmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "envioId: string",
+          "retorno": "Promise<ResultadoBaja>",
+          "linea": 237,
+          "resumen": "Resuelve el token de baja (el `id` de un `recaptacion_envios`) contra la ficha del cliente y le pone `email_opt_out_at`. Idempotente: pulsar el enlace dos veces (un cliente de correo que prefetchea, o"
         },
         {
           "nombre": "textoWhatsappPara",
@@ -13366,7 +13435,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadRecaptacion, 'cliente' | 'ramoLegible' | 'aseguradoraAnterior'>",
           "retorno": "string",
-          "linea": 219,
+          "linea": 264,
           "resumen": "El texto sugerido para un lead concreto (WhatsApp), antes de que la IA lo pula."
         },
         {
@@ -13375,7 +13444,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadRecaptacion, 'cliente' | 'ramoLegible' | 'aseguradoraAnterior'>",
           "retorno": "",
-          "linea": 224,
+          "linea": 269,
           "resumen": "Ídem para email."
         },
         {
@@ -13384,8 +13453,25 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { clienteId: string; polizaId: string; mensaje: string; actor: string },",
           "retorno": "Promise<",
-          "linea": 229,
+          "linea": 274,
           "resumen": "Registra que Alberto abrió el enlace de WhatsApp de un lead. Deja fila en `historial_interno`."
+        },
+        {
+          "nombre": "enviarLoteEmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opts: { limite?: number; actor: string },",
+          "retorno": "Promise<ResumenLoteEmail>",
+          "linea": 313,
+          "resumen": "Manda el lote de verdad. Sin IA (a diferencia del envío manual, que sí pule con `pulirConIA`): con 25 llamadas seguidas a la pasarela, sumar hasta 12s de timeout cada una se comería el `maxDuration` d"
+        },
+        {
+          "nombre": "escaparHtmlLote",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 359
         },
         {
           "nombre": "anotar",
@@ -13393,7 +13479,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 244
+          "linea": 363
         }
       ],
       "tablas": [
@@ -13403,7 +13489,7 @@
         "recaptacion_envios"
       ],
       "rutaApi": null,
-      "hash": "d6eee2154558"
+      "hash": "3b20dde8a187"
     },
     {
       "ruta": "apps/asegura/lib/cartera-relaciones.ts",
@@ -13451,7 +13537,7 @@
           "exportada": false,
           "params": "otorgante: string, autorizado: string",
           "retorno": "string",
-          "linea": 147
+          "linea": 161
         },
         {
           "nombre": "resumirAutorizacion",
@@ -13459,7 +13545,7 @@
           "exportada": true,
           "params": "filas: readonly FilaAutorizacion[], hoy: Date",
           "retorno": "AutorizacionRelacion | null",
-          "linea": 159,
+          "linea": 173,
           "resumen": "Resume las autorizaciones de un par en la que gobierna. Puro (recibe `hoy`). Si hay varias en el mismo estado —la BD permite un alcance por fila— se juntan sus alcances y se toma la caducidad más leja"
         },
         {
@@ -13468,7 +13554,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<Map<string, FilaAutorizacion[]>>",
-          "linea": 185,
+          "linea": 199,
           "resumen": "Las autorizaciones en las que interviene `clienteId`, indexadas por par. Lanza si la consulta falla — a propósito: quien llama degrada a `null`, que es «no se pudo leer», y NUNCA a «no hay autorizació"
         },
         {
@@ -13477,7 +13563,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 215,
+          "linea": 229,
           "resumen": "Las filas de relación de una ficha, con `puedeVerPolizas` CALCULADO desde `portal_autorizacion` (la columna homónima de la tabla ya no se lee)."
         },
         {
@@ -13486,7 +13572,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<RelacionFila[]>",
-          "linea": 241
+          "linea": 255
         },
         {
           "nombre": "listarRelaciones",
@@ -13494,7 +13580,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<RelacionCartera[] | null>",
-          "linea": 246,
+          "linea": 260,
           "resumen": "Las relaciones de una ficha con nombre y pólizas vivas del otro. `null` = no se pudo consultar."
         },
         {
@@ -13503,7 +13589,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string[] | null>",
-          "linea": 296,
+          "linea": 311,
           "resumen": "Para un portal: ids de clientes cuyas pólizas puede ver `clienteId`. `null` = no se pudo consultar."
         },
         {
@@ -13512,7 +13598,7 @@
           "exportada": false,
           "params": "correduriaId: string, a: string, b: string",
           "retorno": "Promise<boolean>",
-          "linea": 306
+          "linea": 321
         },
         {
           "nombre": "devolver",
@@ -13520,7 +13606,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 311
+          "linea": 326
         },
         {
           "nombre": "crearRelacion",
@@ -13528,7 +13614,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { relacionadoId: string; tipo: unknown; observaciones?: unknown; actor: string },",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 318,
+          "linea": 333,
           "resumen": "Crea el vínculo en los DOS sentidos (tipo y su inverso)."
         },
         {
@@ -13537,7 +13623,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { relacionadoId: string; tipo: unknown; actor: string },",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 365,
+          "linea": 380,
           "resumen": "Cambia el TIPO de un vínculo que ya existe, en los dos sentidos. 🚨 Por qué existe (Alberto, 04/09/2026, «¿cómo podría cambiar la relación?»): hasta hoy solo se podía CREAR y BORRAR. Corregir un víncu"
         },
         {
@@ -13546,7 +13632,7 @@
           "exportada": false,
           "params": "tipo: TipoOtorgante",
           "retorno": "string",
-          "linea": 437,
+          "linea": 452,
           "resumen": "Por qué no se puede anotar ese alcance, y la razón depende de QUIÉN cede. 🚨 Desde el 03/09/2026 esto ya no es una regla sobre el alcance: es una regla sobre el otorgante. Una PERSONA solo delega mira"
         },
         {
@@ -13555,7 +13641,7 @@
           "exportada": false,
           "params": "estado: EstadoAutorizacion",
           "retorno": "string",
-          "linea": 447,
+          "linea": 462,
           "resumen": "Texto del estado en el que ya está una autorización, para el motivo del 409."
         },
         {
@@ -13564,7 +13650,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { relacionadoId: string; autoriza: boolean; alcance?: unknown; tituloRepresentacion?: unknown; actor: string },",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 481,
+          "linea": 496,
           "resumen": "`clienteId` AUTORIZA (o revoca) a `relacionadoId` a ver sus pólizas. 🚨 Lo que se escribe es una fila de `portal_autorizacion` con `origen = 'corredor'`: Alberto **no autoriza en nombre del cliente**,"
         },
         {
@@ -13573,7 +13659,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 614
+          "linea": 629
         },
         {
           "nombre": "borrarRelacion",
@@ -13581,7 +13667,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { relacionadoId: string; actor: string },",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 619,
+          "linea": 634,
           "resumen": "Borra el vínculo entero (los dos sentidos)."
         },
         {
@@ -13590,14 +13676,14 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 651
+          "linea": 666
         }
       ],
       "tablas": [
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "49e85f7f9367"
+      "hash": "4787115bfebc"
     },
     {
       "ruta": "apps/asegura/lib/cartera-siniestros.ts",
@@ -17890,6 +17976,47 @@
       "hash": "a81bf2dd5398"
     },
     {
+      "ruta": "apps/asegura/lib/recaptacion-baja.ts",
+      "ambito": "apps/asegura",
+      "resumen": "La baja de un email de recaptación (LSSI art. 21: todo envío comercial automatizado necesita una baja de un clic). El token es el propio `recaptacion_envios.id`, generado en el CLIENTE antes de mandar el correo (ver `enviarLoteEmail` en `cartera-recaptacion.ts`) precisamente para poder embeber la UR",
+      "exporta": [
+        "esTokenBajaValido",
+        "urlBaja",
+        "urlPublicaAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "esTokenBajaValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string | null | undefined",
+          "retorno": "t is string",
+          "linea": 13,
+          "resumen": "`true` solo si `t` tiene FORMA de uuid — no dice si existe en la BD."
+        },
+        {
+          "nombre": "urlBaja",
+          "kind": "function",
+          "exportada": true,
+          "params": "base: string, envioId: string",
+          "retorno": "string",
+          "linea": 17
+        },
+        {
+          "nombre": "urlPublicaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Partial<Record<string, string | undefined>> = process.env",
+          "retorno": "string",
+          "linea": 29,
+          "resumen": "URL pública en la que sirve ESTA app, para construir enlaces que van dentro de un correo (la baja, hoy; cualquier otro enlace propio mañana). No hay env dedicada: se deriva de la que ya pone Vercel au"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2f377cc651c3"
+    },
+    {
       "ruta": "apps/asegura/lib/recaptacion-email.ts",
       "ambito": "apps/asegura",
       "resumen": "Envío de email de recaptación por la API HTTP de Resend (NO por SMTP como el resto de correos de esta app — ver `@central/core-email` / `correo-aviso-acceso.ts`). El transporte SMTP no da tracking de apertura/clic; la API sí, activando `open`/`click` en la petición. Solo ESTE flujo usa la API direct",
@@ -17949,6 +18076,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "1a8e02aac628"
+    },
+    {
+      "ruta": "apps/asegura/lib/recaptacion-lote.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Selección de candidatos del envío en LOTE de recaptación por email — lógica PURA, sin BD (`import type` se borra al compilar, así que este fichero no arrastra el cliente Prisma de `cartera-recaptacion.ts` y `node --test` lo puede correr sin `prisma generate`, igual que el resto de `lib/*.test.ts` de",
+      "exporta": [
+        "candidatosLoteEmail"
+      ],
+      "funciones": [
+        {
+          "nombre": "candidatosLoteEmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "leads: readonly LeadRecaptacion[], limite: number = LIMITE_LOTE_POR_DEFECTO,",
+          "retorno": "LeadRecaptacion[]",
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fa15a3cfbf14"
     },
     {
       "ruta": "apps/asegura/lib/recaptacion-webhook.ts",
@@ -18416,12 +18564,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 16
+          "linea": 19
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "028e7e7dc60a"
+      "hash": "d641687f2bc2"
     },
     {
       "ruta": "apps/housesevillana/app/barrio/route.ts",
@@ -65818,7 +65966,7 @@
           "exportada": true,
           "params": "{ clienteId, nombreFicha, inicial, personas = null, renderPapeles, tipoPersona = null, }: { clienteId: string nombreFicha: string inicial: RelacionCartera[] | null /** Qué es la ficha de la que cuelga el contacto. Solo ordena los tipos que ",
           "retorno": null,
-          "linea": 75,
+          "linea": 78,
           "resumen": "Relaciones de un cliente de la correduría (cónyuge, hijos, empresa…) y la AUTORIZACIÓN para ver los seguros del otro, desde la ficha de plataforma. Semántica (fijada en `@central/module-seguros/relaci"
         },
         {
@@ -65827,17 +65975,26 @@
           "exportada": false,
           "params": "{ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: { p: PersonaFicha<RelacionCartera> nombreFicha: string ocupado: string | null renderPapeles?: (p: PersonaFicha<Rela",
           "retorno": null,
-          "linea": 394,
+          "linea": 407,
           "resumen": "UNA persona, con sus dos caras: lo que dice CIMA (en qué pólizas sale y como qué) y lo que hemos anotado nosotros (qué es de la ficha, si está autorizada). Antes eran dos tarjetas separadas y la misma"
         },
         {
           "nombre": "Vinculo",
           "kind": "function",
           "exportada": false,
-          "params": "{ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo }: { r: RelacionCartera nombreFicha: string ocupado: string | null onAvisar: (r: RelacionCartera) => void aviso: { fichaId: string; texto: string; ok: boolean ",
+          "params": "{ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo }: { r: RelacionCartera nombreFicha: string ocupado: string | null onAvisar: (r: RelacionCartera, invertido: boolean) => void aviso: { clave: string; texto: st",
           "retorno": null,
-          "linea": 509,
+          "linea": 522,
           "resumen": "Lo que hemos anotado NOSOTROS sobre esa persona: qué es de la ficha y si está autorizada a ver sus seguros. Ya no pinta el nombre ni su propio `<li>`: vive dentro de la fila de la persona, debajo de l"
+        },
+        {
+          "nombre": "Sentido",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar, onAvisar, formulario, pie }: { /** Quién cede SUS seguros. */ otorga: string /** Quién los ve (o los vería). */ recibe: string /** ¿Los ve HOY? Lo dice el puerto, y manda sobre",
+          "retorno": null,
+          "linea": 662,
+          "resumen": "UN sentido del acceso: quién ve los seguros de quién, con su insignia, su frase y sus botones — nunca los del otro sentido. 🚨 La insignia y la frase salen de `insigniaAcceso` / `explicarSentidoAcceso"
         },
         {
           "nombre": "CambiarTipo",
@@ -65845,7 +66002,7 @@
           "exportada": false,
           "params": "{ r, enCurso, onCambiarTipo }: { r: RelacionCartera enCurso: boolean onCambiarTipo: (r: RelacionCartera, tipo: string) => void }",
           "retorno": null,
-          "linea": 669,
+          "linea": 781,
           "resumen": "«Cambiar el tipo» de un vínculo que ya existe. Va PLEGADO y en tono sutil a propósito: corregir una etiqueta es raro comparado con autorizar o quitar, y un desplegable abierto en cada vínculo conviert"
         },
         {
@@ -65854,17 +66011,8 @@
           "exportada": false,
           "params": "{ r, nombreFicha, enCurso, onAutorizar }: { r: RelacionCartera nombreFicha: string enCurso: boolean onAutorizar: ( r: RelacionCartera, autoriza: boolean, extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | n",
           "retorno": null,
-          "linea": 723,
+          "linea": 835,
           "resumen": "El alta de una autorización cuando la ficha es una SOCIEDAD. Lo que se delega no es consentimiento de datos personales —una sociedad no los tiene— sino REPRESENTACIÓN mercantil, y por eso aquí sí cabe"
-        },
-        {
-          "nombre": "EstadoAutorizacion",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ a, nombreOtro, nombreFicha }: { a: AutorizacionCartera | null nombreOtro: string nombreFicha: string }",
-          "retorno": null,
-          "linea": 798,
-          "resumen": "🚨 Los TRES estados en pantalla. El titular sale de `explicarEstadoAutorizacion` (puro y con test) para que la frase que decide Alberto no viva dentro del JSX, que es donde «pendiente» se convertiría "
         },
         {
           "nombre": "Anadir",
@@ -65872,7 +66020,7 @@
           "exportada": false,
           "params": "{ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: { clienteId: string nombreFicha: string yaRelacionados: string[] ocupado: boolean onCrear: (body: Record<string, unknown>) => Promise<Respuesta",
           "retorno": null,
-          "linea": 835
+          "linea": 906
         },
         {
           "nombre": "AltaPersona",
@@ -65880,7 +66028,7 @@
           "exportada": false,
           "params": "{ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta, onCrear, onCancelar, onBuscar }: { nombreFicha: string tipoPersona: 'fisica' | 'juridica' | null ocupado: boolean /** Lo que se tecleó en el buscador, para no escribir el nombre d",
           "retorno": null,
-          "linea": 1041,
+          "linea": 1112,
           "resumen": "Crear la ficha de la persona que lleva los seguros de esta otra (el administrador de una sociedad, típicamente) y vincularla, sin salir de aquí. Por qué una ficha propia y no un campo «persona de cont"
         },
         {
@@ -65889,7 +66037,7 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaRelaciones, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 1268
+          "linea": 1339
         },
         {
           "nombre": "Campo",
@@ -65897,7 +66045,7 @@
           "exportada": false,
           "params": "{ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1285
+          "linea": 1356
         }
       ],
       "tablas": [
@@ -65905,7 +66053,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b11b946ebdaa"
+      "hash": "e4bc674e2ce6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Renovaciones.tsx",
@@ -74916,6 +75064,27 @@
       "tablas": [],
       "rutaApi": "/api/cron/psd2-sync",
       "hash": "25c8f8557021"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/recaptacion-email-lote/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Envío AUTOMÁTICO diario de recaptación por email (leads del volcado sin vencimiento, solo-email —sin teléfono usable—, no en cooldown, no dados de baja). A quien tiene teléfono se le sigue trabajando a mano por WhatsApp des",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/recaptacion-email-lote",
+      "hash": "244ae8e181ae"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/resumen-mensual/route.ts",
@@ -88679,7 +88848,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 193,
+          "linea": 198,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -88688,7 +88857,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 223,
+          "linea": 228,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -88697,7 +88866,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 245
+          "linea": 250
         },
         {
           "nombre": "ventanaMinutos",
@@ -88705,7 +88874,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 253,
+          "linea": 258,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -88714,13 +88883,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 265,
+          "linea": 270,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ab7955c9ceef"
+      "hash": "8c6304701266"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -94784,7 +94953,9 @@
         "interpretarEscrituraRecaptacion",
         "colaRecaptacionAsegura",
         "enviarWhatsappRecaptacionAsegura",
-        "enviarEmailRecaptacionAsegura"
+        "enviarEmailRecaptacionAsegura",
+        "interpretarLoteEmail",
+        "enviarLoteEmailRecaptacionAsegura"
       ],
       "funciones": [
         {
@@ -94880,7 +95051,7 @@
           "nombre": "pedirCon",
           "kind": "function",
           "exportada": false,
-          "params": "path: string, init: RequestInit",
+          "params": "path: string, init: RequestInit, timeoutMs: number = 8000",
           "retorno": "Promise<",
           "linea": 219
         },
@@ -94907,11 +95078,27 @@
           "params": "body: { clienteId: string polizaId: string email: string asunto: string texto: string actor: string }",
           "retorno": "Promise<EscrituraRecaptacion>",
           "linea": 259
+        },
+        {
+          "nombre": "interpretarLoteEmail",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LoteEmail",
+          "linea": 283
+        },
+        {
+          "nombre": "enviarLoteEmailRecaptacionAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "limite?: number",
+          "retorno": "Promise<LoteEmail>",
+          "linea": 306
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2e86570686cb"
+      "hash": "f77fe0ea8675"
     },
     {
       "ruta": "apps/plataforma/lib/reclamacion.ts",
@@ -94978,6 +95165,9 @@
         "leerAutorizacion",
         "fechaLarga",
         "explicarEstadoAutorizacion",
+        "insigniaAcceso",
+        "explicarSentidoAcceso",
+        "autorizacionViva",
         "leerRelacion",
         "leerRelaciones",
         "interpretarRelaciones",
@@ -95032,7 +95222,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "AutorizacionCartera | null",
-          "linea": 155,
+          "linea": 166,
           "resumen": "Una autorización del puerto, o `null` si no viene o no tiene forma. Un estado desconocido NO se inventa: se devuelve `null`, y entonces la pantalla dice «sin autorización», que es lo conservador (nunc"
         },
         {
@@ -95041,7 +95231,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 174,
+          "linea": 185,
           "resumen": "Una fecha ISO en castellano de pantalla: «12 de marzo de 2027»."
         },
         {
@@ -95050,8 +95240,34 @@
           "exportada": true,
           "params": "a: AutorizacionCartera | null, nombreOtro: string, nombreFicha: string",
           "retorno": "string",
-          "linea": 185,
+          "linea": 196,
           "resumen": "Qué se enseña de una autorización, en una frase. Vive aquí (puro, con test) y no en el JSX: es el titular que Alberto lee para decidir, y el sitio donde «pendiente» se convertiría en «ve» por descuido"
+        },
+        {
+          "nombre": "insigniaAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AutorizacionCartera | null | undefined, ve: boolean",
+          "retorno": "InsigniaAcceso",
+          "linea": 238
+        },
+        {
+          "nombre": "explicarSentidoAcceso",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AutorizacionCartera | null | undefined, recibe: string, otorga: string, ve: boolean,",
+          "retorno": "string",
+          "linea": 263,
+          "resumen": "La frase de un sentido. Igual que `explicarEstadoAutorizacion`, pero sabiendo decir el hueco: con `undefined` no se afirma que no haya autorización."
+        },
+        {
+          "nombre": "autorizacionViva",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AutorizacionCartera | null | undefined",
+          "retorno": "boolean",
+          "linea": 288,
+          "resumen": "Hay algo que retirar mientras la autorización no esté ya cerrada."
         },
         {
           "nombre": "cadena",
@@ -95059,7 +95275,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 210
+          "linea": 292
         },
         {
           "nombre": "enteroONull",
@@ -95067,7 +95283,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 214
+          "linea": 296
         },
         {
           "nombre": "leerRelacion",
@@ -95075,7 +95291,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "RelacionCartera | null",
-          "linea": 219,
+          "linea": 301,
           "resumen": "Una fila del puerto → `RelacionCartera`, o `null` si no tiene forma de relación."
         },
         {
@@ -95084,7 +95300,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "RelacionCartera[] | null",
-          "linea": 249,
+          "linea": 333,
           "resumen": "El bloque de relaciones, o `null` si no llega o llega sin forma de lista. Una fila rara se salta (no tumba el bloque); una LISTA que no es lista degrada a `null` entero — jamás a `[]`, que diría «no t"
         },
         {
@@ -95093,7 +95309,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaRelaciones",
-          "linea": 270
+          "linea": 354
         },
         {
           "nombre": "interpretarAviso",
@@ -95101,7 +95317,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaAviso",
-          "linea": 318
+          "linea": 402
         },
         {
           "nombre": "textoAviso",
@@ -95109,7 +95325,7 @@
           "exportada": true,
           "params": "r: RespuestaAviso, nombre: string",
           "retorno": "string",
-          "linea": 343,
+          "linea": 427,
           "resumen": "La frase de pantalla, PURA y con test, para que «se ha enviado» no pueda salir de un desenlace que no envió nada."
         },
         {
@@ -95118,7 +95334,7 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 370,
+          "linea": 454,
           "resumen": "El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
@@ -95127,7 +95343,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 387
+          "linea": 471
         },
         {
           "nombre": "cabeceras",
@@ -95135,7 +95351,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Record<string, string> | null",
-          "linea": 391
+          "linea": 475
         },
         {
           "nombre": "llamar",
@@ -95143,7 +95359,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit",
           "retorno": "Promise<Reenvio>",
-          "linea": 398
+          "linea": 482
         },
         {
           "nombre": "relacionesAsegura",
@@ -95151,7 +95367,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 415,
+          "linea": 499,
           "resumen": "`GET /api/operador/cliente/relaciones?id=` — las relaciones de una ficha."
         },
         {
@@ -95160,7 +95376,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 420,
+          "linea": 504,
           "resumen": "`POST` — alta de un vínculo `{clienteId, relacionadoId, tipo, observaciones?, actor}`."
         },
         {
@@ -95169,7 +95385,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 425,
+          "linea": 509,
           "resumen": "`PATCH` — `{clienteId, relacionadoId, autoriza, actor}`: la ficha autoriza/revoca al relacionado."
         },
         {
@@ -95178,7 +95394,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 430,
+          "linea": 514,
           "resumen": "`DELETE` — `{clienteId, relacionadoId, actor}`: quita el vínculo (los dos sentidos)."
         },
         {
@@ -95187,13 +95403,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 441,
+          "linea": 525,
           "resumen": "`POST …/relaciones/aviso` — `{clienteId, relacionadoId, actor}`: escribe al relacionado para que confirme el acceso que la ficha le ha dado. 🚨 Manda un correo a un TERCERO, así que no es un `PATCH` m"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "937b87d5a0d3"
+      "hash": "b3fd582d4758"
     },
     {
       "ruta": "apps/plataforma/lib/resumen-mensual.ts",
@@ -105363,7 +105579,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 625
+          "linea": 631
         },
         {
           "nombre": "avisosDe",
@@ -105371,7 +105587,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 630,
+          "linea": 636,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -105380,13 +105596,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 640,
+          "linea": 646,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "59088b819f52"
+      "hash": "186b71463c72"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -129853,7 +130069,7 @@
           "nombre": "textoBaseRecaptacionEmail",
           "kind": "function",
           "exportada": true,
-          "params": "d: PersonalizacionRecaptacion",
+          "params": "d: PersonalizacionRecaptacion, opts?: { bajaUrl?: string },",
           "retorno": "",
           "linea": 70,
           "resumen": "Misma redacción, adaptada a un asunto+cuerpo de correo (sin el saludo de WhatsApp)."
@@ -129861,7 +130077,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1cc90f65357a"
+      "hash": "ed82cd0151c4"
     },
     {
       "ruta": "packages/module-seguros/src/recibos.ts",
@@ -135559,7 +135775,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3318,
-    "funciones": 10243
+    "archivos": 3323,
+    "funciones": 10260
   }
 }
