@@ -1,32 +1,32 @@
 {
  "sesion": "9421d1ca-b243-574e-9c23-1605d2bf2194",
  "inicio": "2026-09-15T08:47:36.900Z",
- "fin": "2026-09-15T09:25:11.516Z",
- "llamadas": 91,
+ "fin": "2026-09-15T10:10:26.229Z",
+ "llamadas": 102,
  "categorias": {
   "otro": {
-   "llamadas": 14,
-   "chars_in": 2339,
-   "chars_out": 49124,
+   "llamadas": 19,
+   "chars_in": 2456,
+   "chars_out": 52919,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 7,
+    "ToolSearch": 9,
     "AskUserQuestion": 1,
-    "ReadNotifications": 5
+    "ReadNotifications": 8
    }
   },
   "bash": {
-   "llamadas": 18,
-   "chars_in": 2787,
-   "chars_out": 20404,
+   "llamadas": 21,
+   "chars_in": 3289,
+   "chars_out": 22764,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 18
+    "Bash": 21
    }
   },
   "lectura-directa": {
@@ -104,15 +104,17 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 2,
-   "chars_in": 91,
-   "chars_out": 38237,
+   "llamadas": 5,
+   "chars_in": 340,
+   "chars_out": 110167,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Vercel__list_teams": 1,
-    "mcp__Vercel__list_deployments": 1
+    "mcp__Vercel__list_deployments": 1,
+    "mcp__Vercel__get_deployment": 1,
+    "mcp__Vercel__web_fetch_vercel_url": 2
    }
   }
  }
