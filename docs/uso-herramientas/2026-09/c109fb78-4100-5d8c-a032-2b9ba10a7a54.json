@@ -1,0 +1,91 @@
+{
+ "sesion": "c109fb78-4100-5d8c-a032-2b9ba10a7a54",
+ "inicio": "2026-09-15T08:01:49.433Z",
+ "fin": "2026-09-15T08:07:49.276Z",
+ "llamadas": 54,
+ "categorias": {
+  "otro": {
+   "llamadas": 6,
+   "chars_in": 347,
+   "chars_out": 644,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 5
+   }
+  },
+  "bash": {
+   "llamadas": 21,
+   "chars_in": 4097,
+   "chars_out": 37649,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 21
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 9,
+   "chars_in": 1149,
+   "chars_out": 24256,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 6,
+    "Read": 3
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 3566,
+   "chars_out": 17206,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 5,
+   "chars_in": 440,
+   "chars_out": 4921,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_projects": 2,
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__get_runtime_logs": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 5,
+   "chars_in": 2919,
+   "chars_out": 9326,
+   "errores": 2,
+   "archivos_citados": 3,
+   "chars_citados": 572067,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__pull_request_read": 3,
+    "mcp__github__create_pull_request": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 2,
+   "chars_in": 7276,
+   "chars_out": 531040,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 2
+   }
+  }
+ }
+}
