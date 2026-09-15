@@ -149,7 +149,8 @@ type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | '
 
 type FilaAutorizacion = {
   otorganteClienteId: string
-  autorizadoClienteId: string
+  /** `null` = se autorizó a una IDENTIDAD del portal (alguien invitado, sin ficha). */
+  autorizadoClienteId: string | null
   alcance: string
   tituloRepresentacion: string | null
   origen: string
@@ -212,6 +213,10 @@ async function autorizacionesDe(correduriaId: string, clienteId: string): Promis
   })
   const por = new Map<string, FilaAutorizacion[]>()
   for (const f of filas) {
+    // Una autorización a alguien INVITADO (identidad del portal, sin ficha) no
+    // es un par entre dos fichas: no tiene sitio en este mapa, que es lo que
+    // la pantalla usa para pintar cada relación. Se ve en «Contactos».
+    if (f.autorizadoClienteId === null) continue
     const k = clavePar(f.otorganteClienteId, f.autorizadoClienteId)
     const ya = por.get(k)
     if (ya) ya.push(f)

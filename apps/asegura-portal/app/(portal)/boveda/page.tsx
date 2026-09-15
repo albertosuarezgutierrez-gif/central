@@ -11,7 +11,7 @@ import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib
 import { prisma } from '@/lib/db'
 import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
-import { leerMisDatos } from '@/lib/mis-datos'
+import { leerMisDatos, reparosDeContacto } from '@/lib/mis-datos'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
@@ -420,7 +420,7 @@ export default async function Boveda({
           MISMA `contacto` leída arriba, junto al aviso automático. */}
       {vista === 'datos' && (
         <>
-          <MisDatos lectura={contacto} />
+          <MisDatos lectura={contacto} reparos={contacto.estado === 'ok' ? reparosDeContacto(contacto.contacto) : []} />
           <TusDatos inicial={supresiones} />
         </>
       )}
