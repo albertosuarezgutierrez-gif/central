@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** 💸 **Sacar un PR de draft cuesta una ronda NUEVA de 12 deployments de Vercel.**
+`CLAUDE.md` ya avisa de que cada push a una rama de PR crea ~12 deployments (cuota
+`api-deployments-paid-per-hour`, 450/h **de cuenta**), pero no de que el evento `ready_for_review`
+dispara otra ronda entera con IDs nuevos — medido hoy en el PR #2983. **Gasto de build: cero**
+(12 × `Canceled by Ignored Build Step` en `get_status`, confirmado sobre el estado FINAL, no sobre
+los «Building» intermedios del comentario del bot). O sea: no toca la factura de Build CPU Minutes,
+sí la cuota de deployments — el mismo matiz del 04/09. Consecuencia práctica: **abrir el PR ya fuera
+de draft** en vez de abrirlo draft y des-draftearlo después ahorra una ronda de 12.
+
 **(15/09/2026)** 🚨 **El registro de consentimiento de cookies de las TRES webs llevaba
 rechazándose entero desde que existe (14/09), y la tabla vacía se leía como «no ha aceptado nadie».**
 Las tres mandan `acceptedCategories` de vanilla-cookieconsent, que es un **ARRAY**, y el receptor
