@@ -68,6 +68,19 @@ proxy de la sesión bloquea el dominio). Corregido el comentario de `app/api/con
 que decía que plataforma «todavía NO expone» el receptor: existe desde el PR #2934 y responde 405 a
 un GET.
 
+**(15/09/2026)** Correduría · **el correo GENÉRICO de la intranet**. Alberto: «todo lo que sea la
+intranet de un cliente… mandarle un correo cortito, educado, con acceso a la intranet directamente»,
+y sobre el reparo del CP de un cliente: «es lo que quiero que notifique por mail e intranet,
+explicándole cómo modificar su dirección». **Sin cola**: el emisor DERIVA lo que avisar del MISMO
+catálogo que pinta la campana (`avisosDe`, ahora en `@central/module-seguros-portal`), así que un
+tipo nuevo sale por correo sin tocar el emisor — y `ETIQUETA_POR_TIPO` es un `Record<TipoAviso,…>`,
+o sea que sin etiqueta **no compila** (cazó que `peticion_recibida` no la tenía). Cron
+`/api/cron/avisos-intranet` 08:15 UTC (15 min DESPUÉS del de vencimientos: si no, dos correos del
+mismo vencimiento), sello `seguros.portal_aviso_enviado` con clave `tipo:id` —**nunca el título**,
+que lleva matrícula o nº de póliza—, DDL aplicada y su UNIQUE visto morder (23505). Estrena
+`datos_por_revisar`: los reparos de `leerSitio()` los veía SOLO Alberto desde el 05/09. Acotado a
+**cartera viva** (medido: 97 titulares, 1 CP inválido + 3 ciudades sin letras) — sobre `clientes`
+serían 32.600 correos. Sigue apagado (`ASEGURA_AVISOS_ACTIVOS`). PR pendiente.
 **(15/09/2026)** Correduría · relaciones: **las autorizaciones SÍ se guardaban, pero quedan
 `pendiente` y eso no se pintaba**. Alberto anotó Esquiansa→Juan Manuel y Francisca→Juan Manuel
 (BD, 09:55) y la pantalla seguía diciendo «no» con el mismo botón: del sentido de VUELTA solo

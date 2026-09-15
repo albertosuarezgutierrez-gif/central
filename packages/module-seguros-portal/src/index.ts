@@ -61,6 +61,24 @@ export {
   declaradaGeneraObligacion,
 } from './obligacion.ts'
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
+export {
+  TIPOS_AVISO,
+  FUENTES_AVISO,
+  HREF_POR_TIPO,
+  textoGlobo,
+  avisosDe,
+} from './avisos.ts'
+export type {
+  TipoAviso,
+  Aviso,
+  FuenteAviso,
+  AutorizacionParaAviso,
+  ObligacionParaAviso,
+  PeticionParaAviso,
+  ReparoParaAviso,
+  EntradaAvisos,
+  Avisos,
+} from './avisos.ts'
 export { debeAvisarPush } from './push.ts'
 export {
   normalizarRecordatorio,

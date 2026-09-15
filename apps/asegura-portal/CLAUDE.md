@@ -1189,6 +1189,25 @@ se resuelve, con el alcance y el texto delante. Un «Aceptar» en el panel serí
 duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. Cepo: un solo `fetch` en
 `Campana.tsx`, y es el GET.
 
+### 🏠 Cuarta fuente: «Revisa tu dirección» (15/09/2026), y el correo que sale de ella
+
+`datos_por_revisar` → `/boveda?vista=datos`. Los reparos de la dirección guardada (`leerSitio()` de
+`@central/module-seguros`: CP que no es un CP español, ciudad sin letras, provincia que contradice al
+CP) se veían **solo en la ficha del corredor** desde el 05/09/2026 — o sea, el único que podía
+corregirlos era el único que no se enteraba. Alberto, 15/09/2026: *«es lo que quiero que notifique por
+mail e intranet, explicándole cómo modificar su dirección»*.
+
+- **Sale por el PUENTE**, no de la BD de aquí: la dirección va cifrada y esta app no tiene la clave.
+  `reparosDeMisDatos()` (`lib/mis-datos.ts`) reusa `leerMisDatos()`, que ya se pedía en cada visita a
+  la bóveda. Es la fuente que más fácil falla, razón de más para ir en el `allSettled`.
+- **Lanza si no se pudo mirar** (puente caído, sin configurar, varias fichas) → `fuentesIlegibles`
+  y globo con `+`. `sin_ficha` sí devuelve `[]`: no es que no se sepa, es que no hay ficha nuestra.
+- **Y se ve también DENTRO de «Mis datos»**, encima del formulario, con el valor guardado y qué
+  hacer. El cálculo va en el SERVIDOR (`reparosDeContacto`, prop `reparos`): importar
+  `@central/module-seguros` en un componente de cliente arrastraría la cartera entera al bundle.
+- El **id del aviso es el TIPO de reparo**, no un uuid: es la clave con la que el emisor de correo de
+  `apps/asegura` sella lo ya enviado (ver su `CLAUDE.md`, «El emisor GENÉRICO de la intranet»).
+
 📌 **Sin tabla de «visto», a propósito**: el aviso desaparece al resolverse. Lo que necesita saber
 qué vio ya el cliente (siniestro que cambia de estado, petición respondida, recibo devuelto) es v2 y
 está en `docs/CORREDURIA-INTRANET-IDEAS.md` §N con su bloqueo. Y el número va también al icono de
