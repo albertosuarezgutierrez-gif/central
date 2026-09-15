@@ -22,7 +22,7 @@ import {
 import { aplicarTechoAdr } from "@/lib/sivra/pricing-techo-adr"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
 import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/lib/sivra/pricing-ancla-global"
-import { avisoSmoobuRechaza, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
+import { avisoSmoobuRechaza, avisoSmoobuLecturaFalla, type FalloEscritura, type FalloLectura } from "@/lib/sivra/pricing-latido-apply"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { smoobuFetch } from "@/lib/smoobu"
 import { tgAviso } from '@/lib/telegram'
@@ -779,6 +779,10 @@ export async function POST(req: NextRequest) {
   // eslabón que pone el precio delante del huésped fallaba en silencio — solo se apuntaba en
   // `results`, que no lee nadie. Ahora sale por Telegram, marca `ok:false` y tiñe el latido.
   const fallosSmoobu: FalloEscritura[] = []
+  // 🛑 Lecturas de /rates que fallaron ANTES de poder calcular nada (hallazgo del 15/09/2026): el
+  // 401 de HMAC en /rates llevaba 4+ días saliendo `ok:true` porque solo se apuntaba en `results`,
+  // igual que `fallosSmoobu` antes del 23/08 pero un eslabón más arriba. Ver pricing-latido-apply.ts.
+  const fallosLectura: FalloLectura[] = []
   // Noches que SÍ entraron en el canal. Sin este contador, el latido no puede distinguir «corrió y
   // nada cruzó el umbral del 3%» de «corrió y Smoobu lo rechazó todo».
   let fechasEscritas = 0
@@ -807,10 +811,16 @@ export async function POST(req: NextRequest) {
     try {
       const res = await smoobuFetch(`${BASE}/rates?apartments[]=${smoobuId}&start_date=${startDate}&end_date=${endDate}`,
         { next: { revalidate: 0 } })
-      if (!res.ok) { results.push({ property: r.property_id, error: `Smoobu GET ${res.status}` }); continue }
+      if (!res.ok) {
+        results.push({ property: r.property_id, error: `Smoobu GET ${res.status}` })
+        fallosLectura.push({ property: r.property_id, motivo: `GET ${res.status}` })
+        continue
+      }
       plRates = (await res.json()).data?.[smoobuId] ?? {}
     } catch (e) {
-      results.push({ property: r.property_id, error: `Smoobu GET ${String(e).slice(0, 80)}` }); continue
+      results.push({ property: r.property_id, error: `Smoobu GET ${String(e).slice(0, 80)}` })
+      fallosLectura.push({ property: r.property_id, motivo: String(e).slice(0, 80) })
+      continue
     }
 
     // 🚨 CÓMO SE PASA DE MERCADO (lo que paga el huésped) A BASE (lo que se pone en Smoobu).
@@ -1520,6 +1530,16 @@ export async function POST(req: NextRequest) {
     } catch { /* best-effort: el fallo ya va en la respuesta y en el latido de apply-auto */ }
   }
 
+  // 🛑 Un escalón MÁS arriba que el rechazo: Smoobu ni siquiera dejó LEER el precio actual, así que
+  // no hay propuesta que revisar para esos pisos. SIN dedupe, igual que el rechazo de escritura: si
+  // sigue caído a las 14:30 y a las 20:30, hay que oírlo las tres veces.
+  const avisoLectura = avisoSmoobuLecturaFalla(fallosLectura)
+  if (avisoLectura) {
+    try {
+      await tgAviso('pisos.pricing-aplicado', avisoLectura)
+    } catch { /* best-effort: el fallo ya va en la respuesta y en el latido de apply-auto */ }
+  }
+
   // 🚨 Si no se pudieron leer los eventos, esta pasada tarificó Semana Santa como un martes de
   // febrero. Hasta el 01/08/2026 eso salía como `ok:true` y nadie se enteraba nunca: el `.catch`
   // devolvía un mapa vacío, que es indistinguible de «no hay eventos». Ahora la pasada se declara
@@ -1566,10 +1586,14 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     // 🛑 Un rechazo de Smoobu invalida la pasada: el precio no ha llegado al huésped, que es lo
     // único que este endpoint existe para conseguir. Hasta el 23/08/2026 esto salía `ok:true`.
-    ok: !eventosIlegibles && fallosSmoobu.length === 0 && lecturasCaidas.length === 0,
+    ok: !eventosIlegibles && fallosSmoobu.length === 0 && fallosLectura.length === 0 && lecturasCaidas.length === 0,
     // Escrituras rechazadas por el canal, con las noches que se quedaron sin aplicar. Las lee
     // `apply-auto` para teñir su latido; van en la respuesta para que el camino manual las vea igual.
     smoobu_rechazos: fallosSmoobu.length > 0 ? fallosSmoobu : undefined,
+    // Lecturas de /rates que fallaron ANTES de calcular nada (hallazgo 15/09/2026). Mismo circuito
+    // que `smoobu_rechazos`: lo lee `apply-auto` para teñir el latido, en la respuesta para el
+    // camino manual. Ver `lib/sivra/pricing-latido-apply.ts::FalloLectura`.
+    smoobu_lecturas_fallidas: fallosLectura.length > 0 ? fallosLectura : undefined,
     // Noches que SÍ entraron. Un 0 aquí es «nada cruzó el umbral del 3%», no «no corrió»: eso
     // último lo dice la AUSENCIA de latido, no este número.
     fechas_escritas: fechasEscritas,
