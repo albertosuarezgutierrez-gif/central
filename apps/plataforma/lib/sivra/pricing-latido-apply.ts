@@ -27,6 +27,19 @@ export const PASADAS_POR_DIA_APPLY = 3
 /** Un piso cuya escritura a Smoobu no entró. `fechas` = cuántas noches se quedaron sin aplicar. */
 export type FalloEscritura = { property: string; motivo: string; fechas: number }
 
+/**
+ * Un piso cuya LECTURA de `/rates` falló (GET, no POST): el motor ni siquiera pudo mirar el
+ * precio/disponibilidad actual, así que no propuso nada para ese piso en esta pasada.
+ *
+ * 🚨 Hasta el 15/09/2026 esto solo se apuntaba en `results[].error` de la respuesta HTTP —
+ * indistinguible del `smoobu_rechazos` (que SÍ tiñe el latido) para quien no lee el JSON entero.
+ * Es el mismo patrón que el hallazgo del 23/08 pero un paso más arriba: allí Smoobu rechazaba la
+ * ESCRITURA con el precio ya decidido; aquí ni se llega a decidir porque la LECTURA previa falla.
+ * El caso real que lo destapó: 4+ días de 401 en `/rates` (HMAC, ticket Smoobu #1864141) con
+ * `ok:true` en cada pasada y el latido en verde — exactamente el silencio que este repo prohíbe.
+ */
+export type FalloLectura = { property: string; motivo: string }
+
 export type ParteApply = {
   /** Pisos con recomendación que el motor ha recorrido en esta pasada. */
   pisos: number
@@ -35,6 +48,8 @@ export type ParteApply = {
   /** Pisos que la pasada no llegó a tarificar (corpus insuficiente o mercado viejo). */
   sinTarifar: number
   fallos: FalloEscritura[]
+  /** Pisos cuya lectura de `/rates` falló antes de poder calcular nada. */
+  fallosLectura: FalloLectura[]
   /** Degradaciones ya declaradas por el motor (eventos ilegibles, ocupación…). */
   degradaciones: string[]
   dryRun: boolean
@@ -61,7 +76,7 @@ export type ParteApply = {
  * color.
  */
 export function pasadaFiable(p: ParteApply): boolean {
-  return p.fallos.length === 0 && p.degradaciones.length === 0
+  return p.fallos.length === 0 && p.fallosLectura.length === 0 && p.degradaciones.length === 0
 }
 
 /**
@@ -70,6 +85,12 @@ export function pasadaFiable(p: ParteApply): boolean {
  */
 export function detalleApply(p: ParteApply): string {
   const partes: string[] = []
+  if (p.fallosLectura.length > 0) {
+    partes.push(
+      `🛑 Smoobu no respondió al LEER ${p.fallosLectura.length} piso(s), sin poder ni comparar precio ` +
+      `(${p.fallosLectura.map(f => `${f.property.replace('prop_', '')}: ${f.motivo}`).join(' · ')})`,
+    )
+  }
   if (p.fallos.length > 0) {
     const noches = p.fallos.reduce((s, f) => s + f.fechas, 0)
     partes.push(
@@ -108,6 +129,25 @@ export function avisoSmoobuRechaza(fallos: FalloEscritura[]): string | null {
     `\n\nEsas ${noches} noche(s) siguen con el precio ANTERIOR en el canal: el motor calculó uno ` +
     `nuevo y no ha llegado. No se ha anotado en \`pricing_applied\` a propósito — una fila ahí ` +
     `diría que se aplicó, y además sería el ancla del raíl de mañana.\n\n` +
+    `Revisa la API key de Smoobu y los logs de \`/api/sivra/pricing/apply\`.`
+  )
+}
+
+/**
+ * Aviso de Telegram cuando Smoobu no responde a la LECTURA de `/rates`. `null` si no hay ninguno.
+ *
+ * Un escalón MÁS grave que `avisoSmoobuRechaza`: ahí el motor al menos llegó a decidir un precio.
+ * Aquí ni eso — la avería es previa, así que el texto tiene que dejarlo claro: no hay propuesta
+ * que revisar, solo un canal que no contesta.
+ */
+export function avisoSmoobuLecturaFalla(fallos: FalloLectura[]): string | null {
+  if (fallos.length === 0) return null
+  const lineas = fallos.map(f => `• ${f.property.replace('prop_', '')}: ${f.motivo}`)
+  return (
+    `🛑 *Pricing: Smoobu no responde al leer precios de ${fallos.length} piso(s)*\n\n` +
+    lineas.join('\n') +
+    `\n\nEsta pasada NO ha podido ni comparar el precio actual para esos pisos — no se ha propuesto ` +
+    `ningún cambio, siguen con el precio de la última pasada que sí funcionó.\n\n` +
     `Revisa la API key de Smoobu y los logs de \`/api/sivra/pricing/apply\`.`
   )
 }

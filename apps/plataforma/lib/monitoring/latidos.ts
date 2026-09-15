@@ -427,6 +427,32 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.sivra_mensajes_huesped.',
   },
   {
+    id: 'sivra_limpiadoras_auto',
+    vigiladoDesde: '2026-09-15',
+    etiqueta: '🧹 Calendario de limpiezas de sivra (Smoobu, cron diario 05:00)',
+    // Diario → 30 h, el umbral estándar de los diarios: tolera un día saltado y caza dos.
+    maxHoras: 30,
+    nota:
+      '🚨 Igual que `smoobu_sync` y `sivra_mensajes_huesped`, pero un piso más abajo: este cron ' +
+      'llama a Smoobu directo (no pasa por `smoobu-sync.ts`) para crear las filas de ' +
+      '`cleaning_sessions` — el calendario que ve Vanesa. Hasta el 15/09/2026 no tenía NINGÚN ' +
+      'vigilante: un fallo de Smoobu en /api/reservations dejaba el día sin sesiones creadas y ' +
+      'nadie se enteraba hasta que Vanesa llegaba a un piso sin tarea. Lee el `detalle`: un error ' +
+      'con «401/403» es la credencial de Smoobu; «Smoobu departures <status>» es el propio endpoint. ' +
+      'Huella: agente_latidos.sivra_limpiadoras_auto.',
+  },
+  {
+    id: 'sivra_limpiadoras_alerta_ventana',
+    vigiladoDesde: '2026-09-15',
+    etiqueta: '⏱️ Aviso de ventana de limpieza ajustada (Smoobu, cron diario 08:00)',
+    maxHoras: 30,
+    nota:
+      '🚨 Hasta el 15/09/2026 esta ruta ni siquiera comprobaba `res.ok`: un 401 de Smoobu dejaba ' +
+      '`bookings` vacío por el valor por defecto de la desestructuración, y la ruta respondía ' +
+      '`{ok:true, alertas:[]}` — un fallo del canal disfrazado de «no hay ventanas ajustadas». ' +
+      'Huella: agente_latidos.sivra_limpiadoras_alerta_ventana.',
+  },
+  {
     id: 'ialimp_pms',
     vigiladoDesde: '2026-07-31',
     etiqueta: '🧹 Sincronización del PMS de ialimp (Smoobu/iCal, cron cada 10 min)',
