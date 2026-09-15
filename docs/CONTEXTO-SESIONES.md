@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** trading-analista · pasada 20:15 completa en NAV/cartera/latido, pero `/analizar` y
+`/puntuar` se ABORTARON a propósito: `get_price_history` del conector IBKR devolvió series de velas
+IDÉNTICAS para `contract_id` distintos al re-pedirlas una a una (BKNG=SPOT, incl. redondeos raros
+idénticos) — confirmado con 4 re-fetches, no es error de transcripción. Cero tesis abiertas, cero
+payload de velas mandado. Pendiente: revisar el conector IBKR (¿caché/límite de llamadas por
+sesión?) antes de la próxima pasada. Detalle en `AGENTES-BITACORA.md`.
+
 **(15/09/2026)** SEO correduria · cron `seo-correduria` gana 3ª fuente **cobertura de indexación**
 (`lib/seo-correduria/cobertura.ts`, URL Inspection API — reusa la cuenta de servicio de GSC, sin
 secreto nuevo) para el 404/no-indexado de `asegura-web` que Alberto pedía como prerrequisito de Ads.
