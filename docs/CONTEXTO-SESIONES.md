@@ -23,7 +23,7 @@ debajo de su frase — antes los dos botones gemelos estaban juntos al final y e
 corredor** daba «No hemos podido hacerlo (modo_corredor). Inténtalo otra vez dentro de un momento»:
 un 403 permanente con cara de fallo pasajero — el middleware mandaba `motivo` y las pantallas leen
 `mensaje`. **La acepta el cliente, no el corredor** (doble aceptación = la prueba del art. 7.1
-RGPD): desde la ficha se le invita por correo, en los dos sentidos. PR #PENDIENTE.
+RGPD): desde la ficha se le invita por correo, en los dos sentidos. PR #2979.
 
 **(14/09/2026)** GA4 (`G-QP5DTDLJ5F`) añadido a `apps/asegura-web` junto a PostHog, gateado por el
 mismo banner (PR #2942) — petición explícita de Alberto para ver las tres webs (housesevillana,
