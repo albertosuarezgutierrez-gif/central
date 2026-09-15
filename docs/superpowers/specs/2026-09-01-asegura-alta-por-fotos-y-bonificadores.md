@@ -120,7 +120,43 @@ trae cilindrada, potencia y combustible exactos, que es justo lo que separa vers
 | **Carnet de conducir** | `fechaCarnet` (campo 4a = fecha de expedición del permiso B, en el reverso por categorías) | Ojo: la fecha del carnet **B** es la del reverso, no la de la tarjeta |
 | **Ficha técnica** | `matricula`, `fechaMatriculacion`, marca/modelo/versión, plazas | Ver §1 |
 | **Póliza actual** | `polizaAnterior`, `companiaAnteriorCodigo`, `aniosAsegurado`, bonus declarado | Para un cliente NUEVO es la única fuente; para uno de cartera ya lo tenemos |
-| 💡 **Matrícula (foto de la propia placa, no de la ficha técnica)** | `marca`/`modelo`/`version`/`potenciaFiscal` vía `resolverMatricula()` (camino 4, ya contratado) | Idea de Alberto (15/09/2026): «que el cliente mande foto de la matrícula del coche y con esto sabemos ya datos del vehículo, y si es cliente ya tenemos datos para tarificar». Foto más barata de pedir que la ficha técnica (una placa se fotografía en 2 segundos; la ficha técnica hay que ir a buscarla). Para un cliente YA en cartera esto podría cerrar el presupuesto de auto con UNA sola foto: vehículo por `resolverMatricula()` + persona/dirección/póliza anterior que ya están en su ficha (`desde-cartera.ts`) — sin ficha técnica ni catálogo a mano. **Sin diseñar**: falta decidir OCR de matrícula desde la foto (Vision de `@central/core-ai`, no hay proveedor elegido) y si el `version` en texto libre de APIVehículo entra en el mismo emparejamiento por candidatos de §1 (regla de "2 o más candidatos → decide una persona" se mantiene igual). No confundir con el camino 2 (foto de la ficha técnica): esta foto es solo la placa, más rápida pero con datos más pobres (sin cilindrada/potencia exactas). |
+| **Matrícula (foto de la propia placa)** | `marca`/`modelo`/`version`/`potenciaCv`/`potenciaKw`/`cilindradaCc`/`combustible` vía `resolverMatricula()` (camino 4, ya contratado) | Ver §2 bis — más pobre que la ficha técnica pero muchísimo más barata de pedir |
+
+### 2 bis. 💡 Idea de Alberto (15/09/2026): tarificar con SOLO la foto de la matrícula
+
+> *«1) Cliente ya existe: coger datos de APIVehículo y con eso localizar en Codeoscopic datos y
+> tarificar porque ya tenemos todos los datos, si no tenemos algún dato preguntarle solo los
+> necesarios. 2) Cliente web o nuevo: los datos justos y necesarios para dar precio, teniendo
+> APIVehículo con matrícula adelantamos mucho. Lo que habrá que buscar es forma de conectar
+> APIVehículo con los datos de Codeoscopic, ¿no?»*
+
+**Dos flujos, mismo dato de entrada:**
+
+| | Flujo 1 — cliente YA en cartera | Flujo 2 — lead nuevo / web pública |
+|---|---|---|
+| Falta el vehículo | Foto de la matrícula → `resolverMatricula()` | Foto de la matrícula → `resolverMatricula()` |
+| El resto de datos | Ya están en su ficha (`desde-cartera.ts`: persona, dirección, póliza anterior) | No existen — se piden **solo los mínimos que Codeoscopic exige para PRESUPUESTAR** (no los de emitir; ver el principio de §0: fase 1 = mínima fricción) |
+| Qué falta preguntar | Nada, salvo que la precalificación marque un `supuesto` que el cliente quiera corregir | Nombre, DNI/fecha nacimiento, dirección, código postal — lo que hoy `precalificarAuto()` ya no puede suponer sin mentir |
+
+**La pregunta de fondo («¿cómo se conecta APIVehículo con Codeoscopic?») ya tiene respuesta y no
+hace falta inventar nada nuevo: es el MISMO problema que §1 ya resolvió para la ficha técnica, con
+la MISMA función.** `emparejar()` (`lib/codeoscopic/catalogos.ts`) filtra el catálogo
+`GET car/brands/{id}/models/{id}/vehicles` por marca → modelo → cilindrada + potencia + combustible
++ año. APIVehículo devuelve esos mismos cuatro ejes (`cilindradaCc`, `potenciaCv`/`potenciaKw`,
+`combustible`, `fechaMatriculacion` → año) — así que `resolverMatricula()` es sencillamente OTRA
+fuente de entrada a `emparejar()`, no un camino nuevo. Sale 1 candidato → se tarifica; salen 2 o
+más → **decide una persona**, la misma regla ya escrita en §1 y que no se toca.
+
+**Lo único que falta diseñar de verdad:**
+1. **OCR de la matrícula desde la foto** — no hay proveedor Vision elegido (candidato natural:
+   `@central/core-ai`, que ya centraliza el fallback de LLMs del monorepo).
+2. **El listado mínimo de campos de "solo presupuesto"** para el flujo 2 (lead nuevo): hoy
+   `revisarDatosAuto()` sin `{ paraEmitir: true }` ya es esa lista para el resto de datos —
+   comprobar que basta, no reinventarla.
+3. **Coste**: cada foto de matrícula en el flujo 2 (lead sin identidad verificada) cuesta 0,12€
+   de un desconocido que puede no volver — mismo riesgo que ya asume Codeoscopic con el precio
+   gratis, pero aquí el gasto es real desde el primer paso. Poner un límite/rate-limit por
+   IP o sesión antes de abrirlo en la web pública, no después.
 
 🔒 **Estas fotos son PII sensible de verdad.** Antes de implementar hay que decidir dónde se guardan
 (Vercel Blob privado, como los EIAC) y **cuánto tiempo**. La ficha de cliente ya tiene el hueco
