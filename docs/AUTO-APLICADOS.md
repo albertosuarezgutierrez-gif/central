@@ -13,6 +13,11 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-12** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · pasada ligera 12/09:
+  registrado el hallazgo del backlog de PRs de rutinas atascado (registro carril 1 en conflicto desde
+  el 05/09 sin que `rutinas-automerge.yml` lo señalizara) + heartbeat (Smoobu 401 ya arreglado por otra
+  sesión, `mercado-booking` mudo 119h) + pricing sano · commit de esta auditoría.
+
 - **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40
