@@ -44,6 +44,9 @@ export type ContadoresRecaptacion = {
   totalCandidatos: number
   contactadosSemana: number
   conAperturaORespuestaSemana: number
+  /** Acumulado total de emails (no solo la semana). `null` = no se pudo leer. */
+  emailEnviadosTotal: number | null
+  emailAbiertosTotal: number | null
 }
 
 /**
@@ -86,6 +89,8 @@ function leerContadores(v: unknown): ContadoresRecaptacion {
     totalCandidatos: entero(o.totalCandidatos) ?? 0,
     contactadosSemana: entero(o.contactadosSemana) ?? 0,
     conAperturaORespuestaSemana: entero(o.conAperturaORespuestaSemana) ?? 0,
+    emailEnviadosTotal: entero(o.emailEnviadosTotal),
+    emailAbiertosTotal: entero(o.emailAbiertosTotal),
   }
 }
 

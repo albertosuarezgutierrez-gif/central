@@ -92,6 +92,8 @@ export default function Recaptacion({ onContador }: {
           {cola.contadores.contactadosSemana} contactado(s) esta semana
           {' · '}
           {cola.contadores.conAperturaORespuestaSemana} con apertura o respuesta
+          {' · '}
+          {textoTasaAperturaEmail(cola.contadores)}
         </span>
       }
     >
@@ -176,6 +178,21 @@ function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {
       </td>
     </tr>
   )
+}
+
+/**
+ * Tasa de apertura ACUMULADA de email (no solo la semana): con envío manual y
+ * bajo volumen, el contador semanal se resetea antes de tener muestra para
+ * juzgar si el asunto/mensaje funciona. Bajo umbral (<10 envíos) se avisa de
+ * que la muestra es pequeña en vez de mostrar un % que parece más sólido de
+ * lo que es. `null` = no se pudo leer — nunca se pinta como 0%.
+ */
+function textoTasaAperturaEmail(c: { emailEnviadosTotal: number | null; emailAbiertosTotal: number | null }): string {
+  if (c.emailEnviadosTotal === null || c.emailAbiertosTotal === null) return 'apertura email: no se pudo comprobar'
+  if (c.emailEnviadosTotal === 0) return 'aún sin emails enviados'
+  const pct = Math.round((c.emailAbiertosTotal / c.emailEnviadosTotal) * 100)
+  const muestra = c.emailEnviadosTotal < 10 ? ' (muestra pequeña)' : ''
+  return `${pct}% apertura email de ${c.emailEnviadosTotal} enviados${muestra}`
 }
 
 /** Lista de ramos legible: "auto", "auto y hogar", "auto, hogar y moto". */
