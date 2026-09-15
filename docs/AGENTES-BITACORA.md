@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-14 · trading-analista** · hizo: repesca tras un hueco de 6 días hábiles sin correr (última
+  pasada previa: 07/09). Preflight OK. NAV 32.804,23€ empujado sin salto anómalo. Cartera real (CVX+VWCE)
+  y libro de operaciones (0 nuevas) empujados sin descartes. 24 símbolos bajados de IBKR uno a uno (sin
+  paralelismo, protocolo anti-suplantación respetado). `/analizar`: top 5 ideas, ninguna operada (LLY bajo
+  SMA50, META/CHT sin operar, SQM con posición ya abierta, CVX excede concentración 20%). `/puntuar`: 460
+  puntuadas, 3 cerradas por ventana. Satélite lunes sin cambios de cabeza (PRAX/ORKA/SYRE confirmados,
+  AAOI no). Resumen completo por Telegram (messageId 4588). dudas: por qué la rutina no disparó entre el
+  08/09 y el 13/09 (revisar el trigger programado); por qué la referencia interna de plataforma para RBLX
+  (43,31) no cuadra con el cierre real de IBKR (50,41) — vetado como suplantación por el servidor, pero
+  mis datos de IBKR no estaban mezclados. fallos: —; PRs/commits: (memoria, este commit).
 - **2026-09-14 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (`_buzon_pdf` copió
   12/09, `dias_caido=2`); `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacías (confirmado por
   `search_threads`); `agente_salud` actualizado ok=true (vía Supabase MCP, sin curl). Paso 4.0:
