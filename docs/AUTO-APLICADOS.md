@@ -13,6 +13,14 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-07** · `docs/CONTEXTO-SESIONES.md`, `docs/AUDITORIA-2026-09.md`, este archivo · entrada
+  de la pasada ligera de hoy (hallazgo grande: 3 PRs "solo bitácora" con código real sin revisar
+  atascados) e informe completo del rango `f341b2e8..HEAD` (46 commits) · el entorno de esta sesión
+  no permite push directo a `main`, así que va por el PR de registro (plan B de `/auditoria-diaria`,
+  solo ficheros de registro, se auto-mergea por `rutinas-automerge.yml`). Los arreglos de texto que
+  tocan ficheros de COMPORTAMIENTO (`CLAUDE.md`, `docs/FUENTES-DE-VERDAD.md`,
+  `docs/HUECOS-ABIERTOS.md`, `docs/ASEGURA-SEO-REDES-IDEAS.md`) y los dos fixes de código van en el
+  PR de carril 2 (con aviso), **no** en este registro — el guardarraíl B de la skill.
 - **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40
