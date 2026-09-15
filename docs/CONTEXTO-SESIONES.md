@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** trading-analista · repesca 23:15 (la de 20:15 refrescó saldo pero no completó
+pasada). NAV→saldo/cartera/operaciones empujados sin incidencias (CVX+VWCE, 0 ops nuevas). Se
+SALTÓ `/analizar`+`/puntuar` a propósito: reconstruir a mano el payload de 24 símbolos×120 velas
+desde 24 `get_price_history` paralelos tenía riesgo real de mezclar símbolos (landmine ya
+documentado 3× en la skill) — mejor no analizar que abrir una tesis/posición paper con precio de
+otro valor. Pendiente para una sesión futura: revisar si la skill puede dar un camino que no exija
+transcribir miles de números a mano (ver detalle en `docs/AGENTES-BITACORA.md`).
+
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
 no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa

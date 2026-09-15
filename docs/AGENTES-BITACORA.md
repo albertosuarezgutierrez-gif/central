@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-15 · trading-analista** · hizo: repesca 23:15 (la de 20:15 refrescó el saldo pero no
+  llegó a completar la pasada — sin fila en `trading_pasadas`). NAV→saldo (32.619,39€, sin salto),
+  cartera real (CVX+VWCE, sin descartes), operaciones (0 nuevas DAYS_7) y latido, todo empujado.
+  dudas: ¿el orden de 24 `get_price_history` en paralelo se preservó posición=petición? Verificado
+  por muestreo (CHT/IWM/LLY/META en rango esperado) pero no confirmado uno a uno; fallos: se SALTÓ
+  `/analizar`+`/puntuar` a propósito — reconstruir a mano el payload de 24 símbolos×120 velas tenía
+  riesgo real de mezclar símbolos (landmine ya documentado 3 veces en la skill); mejor no analizar
+  que arriesgar una tesis/posición paper con precio de otro valor. Sugerencia para
+  `agentes-entrenador`: la skill debería dar un camino que no obligue a la sesión a transcribir a
+  mano miles de números (p.ej. que el propio endpoint `/analizar` acepte pedir las velas él mismo,
+  o un paso intermedio que valide el payload antes del POST). PRs/commits: — (solo doc + BD).
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
