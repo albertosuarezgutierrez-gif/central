@@ -1,52 +1,55 @@
 {
  "sesion": "5a456669-308d-5f6d-875c-39fbd7d30c61",
  "inicio": "2026-09-14T10:05:23.625Z",
- "fin": "2026-09-15T11:49:22.429Z",
- "llamadas": 18,
+ "fin": "2026-09-15T13:51:28.433Z",
+ "llamadas": 29,
  "categorias": {
   "otro": {
-   "llamadas": 7,
-   "chars_in": 568,
-   "chars_out": 15015,
+   "llamadas": 8,
+   "chars_in": 659,
+   "chars_out": 17304,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "ToolSearch": 2,
-    "WebSearch": 5
+    "WebSearch": 6
    }
   },
   "bash": {
-   "llamadas": 4,
-   "chars_in": 780,
-   "chars_out": 2411,
+   "llamadas": 5,
+   "chars_in": 905,
+   "chars_out": 2496,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 4
+    "Bash": 5
    }
   },
   "lectura-directa": {
-   "llamadas": 1,
-   "chars_in": 83,
-   "chars_out": 1090,
+   "llamadas": 6,
+   "chars_in": 448,
+   "chars_out": 18192,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 1
+    "Read": 4,
+    "Glob": 1,
+    "Grep": 1
    }
   },
   "escritura": {
-   "llamadas": 1,
-   "chars_in": 1526,
-   "chars_out": 500033,
+   "llamadas": 5,
+   "chars_in": 5567,
+   "chars_out": 508837,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 1
+    "Edit": 1,
+    "Write": 4
    }
   },
   "mcp:Claude_Code_Remote": {
