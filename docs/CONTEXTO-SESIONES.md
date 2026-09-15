@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** ASegura · **el horario ya se publica** (PR #2994). Alberto lo confirmó —L-V de
+9:00 a 18:00— y `HORARIO` (`apps/asegura-web/lib/sitio.ts`) deja de ser `null`: de esa constante
+salen las DOS publicaciones, el pie de la web y el `openingHours` del JSON-LD. `null` sigue siendo
+el estado «no se sabe» y omite las dos. `HORARIO.texto` existía sin que nadie lo pintara: el dato
+llegaba a Google y no a la página, y Google contrasta uno con otra. Cepo `lib/seo-horario.test.ts`,
+visto rojo brazo a brazo; la revisión previa lo pilló comparando solo la HORA (9:30 pasaba por
+09:00) y sin mirar los días. ⏳ Pendiente de Alberto: poner ese mismo horario en Google Business,
+que hoy no tiene ninguno.
+
 **(15/09/2026)** SIVRA · pricing: **una fecha de EVENTO medida una vez no volvía a subir NUNCA
 en la cola del barrido** (`planDeVentanas` ordenaba «virgen antes que medida» y, dentro de las
 medidas, solo por antigüedad; en un plan de 12 meses siempre hay vírgenes). El motor exige corpus
