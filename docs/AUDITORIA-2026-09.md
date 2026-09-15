@@ -126,4 +126,71 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 (septiembre sigue abierto).
 
 ---
-<!-- verificado: 2026-09-04 -->
+
+## ✅ Pasada ligera — 15/09/2026
+
+**Rango:** desde la última entrada de este informe (04/09) hasta hoy — pero **sí corrieron pasadas
+diarias intermedias** (PRs de registro `#2318`/`#2319`/`#2322`/`#2327`/`#2412`-`#2414`/`#2483`/`#2484`/
+`#2488`/`#2534`/`#2548`/`#2573`/`#2627`/`#2741`/`#2757`/`#2864`/`#2868`/`#2877`/`#2883`/`#2916`/`#2924`/
+`#2926`/`#2957`/`#2958`/`#2962`): este doc solo se toca cuando hay hallazgo de carril 2, así que su
+silencio del 05 al 14/09 **no significa que la rutina no corriera** (ya aclarado en `#2741`, 12/09).
+
+### 🔴 Hallazgo NUEVO: `sivra_rates_snapshot` sigue en HTTP 401 en los 4 pisos — el fix de Smoobu del
+### 12/09 (#2731) NO lo resolvió
+`agente_latidos.sivra_rates_snapshot`: `ok=false`, **97 h sin una pasada buena** (última OK 11/09
+07:00 UTC), detalle idéntico cada día: `prop_house_sevillana/busto_reform/duplex_center/luxury_busto:
+HTTP 401`. El PR #2731 (12/09 07:56 UTC, migración a HMAC-SHA256) declaró resuelto el 401 de Smoobu y
+**sí tocó este mismo fichero** (`apps/plataforma/app/api/sivra/rates/snapshot/route.ts` está en su
+diff) — pero el cron corre a las 07:00 UTC y las pasadas del 13, 14 y **15/09** (posteriores al merge)
+siguen fallando con el mismo síntoma, mientras `smoobu_sync`/`sivra_pricing_apply`/`sivra_canal`
+(mismo `smoobuFetch`, mismas credenciales en `pms_connections`) llevan desde el 12/09 en verde. Las
+credenciales existen y están activas (`pms_connections`: key 41 chars, secret 44 chars, `activa=true`)
+— no es el problema que #2731 arregló. Hipótesis no verificada (no se pudo consultar el panel de
+Smoobu desde esta sesión): el endpoint `GET /api/rates` puede requerir un scope/plan que el resto de
+endpoints no necesita. **Consecuencia medida:** `rate_snapshots` (precio vivo + ocupación, "el job que
+más pesa" según el propio comentario del route) sin refrescar en 4 días; `sivra_pilot_track` degradado
+por «snapshot viejo (3d)»; y el motor de pricing **no ha escrito una tarifa real (no-dry-run) desde
+hace 95,6 h** (`pricing_applied`, ver bloque 2bis) pese a que su latido diario sigue en `ok=true` con
+«0 noches escritas» — consistente con que sin precio vivo fresco el comparador no encuentra nada que
+mover, no con que no haga falta mover nada. **Acción manual de Alberto:** abrir el panel de Smoobu
+(developers/API) y confirmar si la cuenta tiene habilitado el endpoint de tarifas para esta API key: si
+no, es un tema de plan/permiso, no de firma.
+
+### 💰 Salud del precio SIVRA (2bis, obligatorio) — 🔴 por lo anterior
+`horas_desde_ultima_pasada=95,6` (**> 10h → 🔴** por umbral) con `noches_ultima_pasada=33` (de la
+última pasada real, hace 4 días). `rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` ·
+`oscilantes=0`. Palancas: los 4 pisos `enabled`/`apply_enabled=true`, `min_price` puesto, `antelacion_k=0`
+— nada apagado en silencio. El 🔴 es el mismo hallazgo de arriba visto desde el otro bloque: la causa
+es `sivra_rates_snapshot`, no el motor de `apply` en sí.
+
+### Heartbeat de crons/agentes (2-bis) — resto ✅, 2 conocidos
+`seo_correduria` en rojo (14/09 09:18, «Serper 400: Not enough credits») pero es **anterior** al PR
+`#2936` (14/09 16:01, retirada de Serper de este cron) — se revisa en la próxima pasada (lunes,
+cadencia semanal) para confirmar que ya no reaparece. `ses_transporte` sigue `ok=false`, ya conocido
+desde el 21/08 (pendiente de Alberto en el portal SES). Resto de los 34 agentes en `agente_latidos` ✅.
+`agente_reparaciones`: sin intentos en 7 días.
+
+### 🛡️ Salud de la correduría (2-quater, obligatorio) — sin 🔴
+Latidos `correduria_renovaciones`/`correduria_ingesta`/`correduria_siniestros`/`correduria_partes` ✅.
+Ingesta reporta «degradada» con el mismo backlog ya conocido (Occident M00171/8-92361 pendientes de
+pedir a la compañía, C0058 con 84 días sin mandar nada — hueco ya señalado antes). Codeoscopic y
+aislamiento no revisados línea a línea esta pasada ligera.
+
+### Backlog de PRs de rutinas + salud del automerge (2-ter) — 🟡 ya reportado, sigue sin resolverse
+**28 PRs abiertos.** El bloqueo estructural ya lo documentó `#2741` (12/09): varios PRs de **registro**
+(solo `docs/**`) quedan con `mergeable_state:blocked` — no por conflicto, sino porque los checks
+requeridos nunca arrancan (los pushes con el token de la App no disparan Actions, ver `CLAUDE.md` §CI)
+y el ruleset no tiene *bypass* concedido. `#2741` (12/09), `#2877` (13/09) y `#2924` (14/09) — las tres
+son PRs de registro, no-draft, >24h — siguen abiertas hoy. Es la misma causa raíz ya conocida y
+**pendiente de decisión de Alberto** (no tocar el ruleset sin su OK, per nota del 26-27/08 en
+`CLAUDE.md`); no se reabre como hallazgo nuevo, solo se deja constancia de que el backlog sigue
+creciendo (16 PRs de registro/rutinas + 12 drafts de carril 2, varios con +5 días).
+
+### Reconciliación memoria/skills — pasada acotada
+Foco de esta pasada en los bloques obligatorios (heartbeat, pricing, correduría) por el hallazgo 🔴; no
+se hizo reconciliación línea a línea de skills-maestro/CLAUDE.md de apps ni barrido de sesiones sin
+commit. Sin drift de texto detectado en lo revisado. `docs/HUECOS-ABIERTOS.md` y manuales: sin cambios
+en el rango que los afecten (ningún commit toca `apps/ia-rest/**` con superficie de usuario nueva).
+
+---
+<!-- verificado: 2026-09-15 -->

@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** Auditoría diaria (ligera): 🔴 `sivra_rates_snapshot` lleva 97h en HTTP 401 en los 4
+pisos — el fix de Smoobu del 12/09 (#2731, HMAC-SHA256) **no lo resolvió** (mismo fichero tocado, sigue
+fallando en las pasadas del 13/14/15-09 mientras el resto de consumidores de `smoobuFetch` van bien).
+Consecuencia: el motor de pricing lleva 95,6h sin aplicar una tarifa real (`pricing_applied`) pese a
+latido `ok=true`. Hipótesis: el endpoint `GET /api/rates` puede necesitar un scope/plan de Smoobu
+distinto — pendiente de que Alberto lo mire en el panel de Smoobu (no es un problema de firma/credencial:
+`pms_connections` tiene key+secret activos). Backlog de PRs de registro (28 abiertos, causa ya conocida
+en #2741) sigue sin resolverse — sin acción nueva, pendiente de decisión de Alberto sobre el ruleset.
+Detalle en `docs/AUDITORIA-2026-09.md` (sección 15/09).
+
 **(14/09/2026)** GA4 (`G-QP5DTDLJ5F`) añadido a `apps/asegura-web` junto a PostHog, gateado por el
 mismo banner (PR #2942) — petición explícita de Alberto para ver las tres webs (housesevillana,
 ia-rest, grupoasegura.es) en la misma cuenta de Google Analytics; revierte la decisión del 07/09
