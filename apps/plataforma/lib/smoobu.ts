@@ -79,7 +79,7 @@ export async function smoobuFetch(pathOrUrl: string, init: RequestInit = {}): Pr
   // legacy deje de aceptarse. Solo se activa con SMOOBU_LEGACY_API_KEY puesta (fail-safe: sin esa
   // env, sigue como siempre por HMAC).
   const legacyKey = process.env.SMOOBU_LEGACY_API_KEY
-  if (legacyKey && debeUsarPuenteLegacy(method, url, true)) {
+  if (legacyKey && debeUsarPuenteLegacy(method, url, !!legacyKey)) {
     const headers: Record<string, string> = {
       ...(init.headers as Record<string, string> | undefined),
       'Api-Key': legacyKey,
