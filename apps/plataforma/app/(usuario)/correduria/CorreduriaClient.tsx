@@ -23,6 +23,7 @@ import Renovaciones, { type RespVencimientos } from './Renovaciones'
 import DeclaradasVencer from './DeclaradasVencer'
 import ListaCartera from './ListaCartera'
 import Recaptacion from './Recaptacion'
+import LeadsWebConversion from './LeadsWebConversion'
 import Secciones, { type ContadoresSeccion } from './Secciones'
 import { MOTIVOS, type MotivoError } from './estado-puerto'
 import {
@@ -499,6 +500,12 @@ export default function CorreduriaClient() {
         {/* Directorio de contacto por compañía, minado del correo. Sin
             contador: es referencia, no trabajo pendiente. */}
         <Companias />
+
+        {/* De los leads captados por apps/asegura-web, cuántos son hoy cartera
+            viva. Sin contador: con 1 lead medido el 15/09/2026 es infraestructura
+            de medición que necesita acumular datos, no un aviso accionable hoy
+            (ver LeadsWebConversion.tsx). */}
+        <LeadsWebConversion />
       </div>
 
       {/* ══ REDES ════════════════════════════════════════════════════════════
