@@ -12,6 +12,19 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** `grupoasegura.es` · revisión de estado pedida por Alberto («0 visitas en Google
+Analytics»). **La web está sana**: producción READY en `36e25f1` (GA4 del PR #2942 SÍ desplegado),
+SEO técnico completo (13 rutas en sitemap, canonical en todas, 301 de `/mejoramos-tu-seguro`) y
+**GSC midiendo: 147 impresiones 05-11/09 contra 31 la semana anterior**, «grupo asegura» en pos. 2.
+Lo que NO va: (1) el cron `seo-correduria` lleva `ultimo_ok_at = NULL` —nunca en verde— por **Serper
+sin créditos**; (2) el agente autónomo (`seo-correduria-agente`) está **apagado**
+(`SEO_ASEGURA_AGENT_ENABLED` default OFF, `seo_correduria_cambios` 0 filas): **no optimiza nada**;
+(3) GA4 solo carga tras aceptar el banner y su ID (`G-QP5DTDLJ5F`) es DISTINTO de housesevillana
+(`G-N5CMQL9C4M`) e ia-rest (`G-EN2YQLRLEX`) — verificación en vivo delegada a Claude en Chrome (el
+proxy de la sesión bloquea el dominio). Corregido el comentario de `app/api/consentimiento/route.ts`
+que decía que plataforma «todavía NO expone» el receptor: existe desde el PR #2934 y responde 405 a
+un GET.
+
 **(15/09/2026)** Correduría · relaciones: **las autorizaciones SÍ se guardaban, pero quedan
 `pendiente` y eso no se pintaba**. Alberto anotó Esquiansa→Juan Manuel y Francisca→Juan Manuel
 (BD, 09:55) y la pantalla seguía diciendo «no» con el mismo botón: del sentido de VUELTA solo

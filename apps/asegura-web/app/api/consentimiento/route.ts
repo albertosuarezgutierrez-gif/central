@@ -21,14 +21,17 @@ export const dynamic = 'force-dynamic'
 // red o un 404 del lado de plataforma no debe bloquear ni reintentarse desde
 // el navegador.
 //
-// ⚠️ PENDIENTE, fuera del alcance de este Task Group (solo apps/asegura-web):
-// `apps/plataforma` todavía NO expone `/api/publico/correduria/consentimiento`.
-// Hasta que exista (y hasta que Alberto autorice aplicar
-// `apps/plataforma/prisma/sql/2026-09-14_consentimiento_registro.sql`), este
-// endpoint reenvía a una ruta que responde 404 — inerte, como el plan
-// anticipaba para la migración, solo que por un motivo distinto. No cambia el
-// comportamiento visible: el banner funciona igual, solo que sin dejar rastro
-// en `consentimiento_registro` todavía.
+// ✅ YA NO ESTÁ PENDIENTE (medido 15/09/2026): `apps/plataforma` expone
+// `/api/publico/correduria/consentimiento` desde el PR #2934 (14/09 15:47 CEST)
+// — un GET contra él devuelve 405, o sea la ruta existe y solo acepta POST — y
+// la tabla `consentimiento_registro` está creada en la Supabase compartida. Este
+// reenvío ya no cae en un 404.
+//
+// 🚨 Lo que SÍ sigue a cero es la tabla: 0 filas desde que el receptor vive. Eso
+// NO autoriza a decir que nadie acepta el banner — es el «todavía no se sabe»
+// que `CLAUDE.md` prohíbe colapsar. Para distinguir «nadie ha aceptado» de «el
+// reenvío no llega» hay que mirar el POST en el navegador (pestaña Red), no esta
+// tabla.
 const PLATAFORMA_URL = (process.env.PLATAFORMA_URL || 'https://plataforma-ten-flame.vercel.app').replace(/\/+$/, '')
 
 export async function POST(req: NextRequest) {
