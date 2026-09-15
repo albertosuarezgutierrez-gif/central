@@ -1098,6 +1098,47 @@ silencio en el mismo eslabón: **el que pone el precio delante del huésped**.
 - Lógica en el módulo PURO `lib/sivra/pricing-latido-apply.ts` (`pasadaFiable`/`detalleApply`/
   `avisoSmoobuRechaza`, 15 tests), no incrustada en el route.
 
+## 🛑 El mismo silencio un eslabón más arriba: la LECTURA de `/rates` (15/09/2026)
+Encontrado al responder «avisarme si Smoobu se cae» (ticket Smoobu #1864141: `GET /api/rates`
+llevaba 4+ días dando 401 con HMAC — ver el puente legacy de `lib/smoobu.ts` más abajo). El fallo
+de escritura de arriba (23/08) ya teñía el latido; el de LECTURA, un paso ANTES de que el motor
+llegue a decidir un precio, seguía viviendo solo en `results[].error` con `ok:true` y latido verde
+— exactamente el mismo patrón, un eslabón más arriba.
+- **`FalloLectura`** (`lib/sivra/pricing-latido-apply.ts`) es el nuevo hermano de `FalloEscritura`:
+  `pasadaFiable()` también se pone roja, `detalleApply()` lo antepone incluso al rechazo de
+  escritura (es el fallo más arriba de la cadena) y `avisoSmoobuLecturaFalla()` manda el 🛑 de
+  Telegram. Va en la respuesta como `smoobu_lecturas_fallidas` y lo lee `apply-auto` igual que
+  `smoobu_rechazos`.
+- **🚨 El gate `dryRun` NO vale aquí sin matiz — hay DOS `dryRun` distintos.** El de arriba
+  (`fallosSmoobu`) nace vacío en simulacro porque la escritura ni se intenta; la LECTURA de
+  `/rates`, en cambio, se hace SIEMPRE, también con «Simular». Sin gate, un blip transitorio en una
+  exploración manual mandaría un 🛑 real. Pero gatear por el `dryRun` que ve el resto del motor
+  (que la pausa global puede forzar a `true`, línea `if (paused && !dryRun) dryRun = true`) callaba
+  el aviso INMEDIATO cuando una pasada REAL de `apply-auto` caía en pausa — Smoobu caído de verdad,
+  con el aviso 3×/día suprimido hasta el latido de las 07:45 del día siguiente. Se distingue
+  `dryRunManual` (el parámetro tal como llegó, ANTES de la pausa) de `dryRun` (después): el aviso y
+  el `ok:` de `fallosLectura` usan `dryRunManual`, no `dryRun`.
+- **`pasadaFiable()` NO usa `dryRunManual`, usa el flujo normal del latido** de `apply-auto`, que
+  ya extrae `fallosLectura` sin gate ninguno — el latido diario se tiñe SIEMPRE que haya un fallo de
+  lectura real, pausa o no. El gate por `dryRunManual` es solo del aviso INMEDIATO de Telegram y del
+  campo `ok:` que ve quien llama a mano.
+
+## 🌉 Puente legacy temporal para `GET /api/rates` (15/09/2026 → 25/09/2026)
+Diagnóstico en vivo (curl manual de Alberto, mismo endpoint/propiedad/parámetros): **legacy `200`,
+HMAC `401`**. La firma HMAC es correcta y funciona en `/reservations`; Smoobu la rechaza solo en
+`/rates` con parámetros array (`apartments[]`) — ticket #1864141 abierto, sin resolver.
+- **`debeUsarPuenteLegacy(method, url, legacyKeyPresente)`** (`lib/smoobu-puente-legacy.ts`, módulo
+  PURO con test propio) decide: solo `GET` a `/api/rates`, y solo si `SMOOBU_LEGACY_API_KEY` está
+  puesta. `smoobuFetch` (`lib/smoobu.ts`) lo llama antes de firmar — fail-safe: sin esa env, todo
+  sigue por HMAC como siempre. Se extrajo a módulo aparte porque `smoobu.ts` importa `@/lib/db` y no
+  es testeable directamente con `node --test`.
+- La env, qué clave usar y cuándo quitarlo: ver la fila `SMOOBU_LEGACY_API_KEY` en la tabla de envs
+  de este mismo archivo.
+- **Vence con el legacy el 25/09/2026.** El check-in programado del 26/09 (ver
+  `docs/CONTEXTO-SESIONES.md`) verifica si el ticket #1864141 se resolvió; si no, el puente deja de
+  funcionar y `/rates` vuelve a 401 — esta vez SIN el aviso mudo de antes, porque el latido de
+  lectura de arriba ya está en pie.
+
 ## 🛑 El raíl CIEGO: si no se puede leer el ancla, NO se tarifa (23/08/2026)
 Hallazgo 🔴 3 de la auditoría. Las dos lecturas que alimentan el ancla (`ref24` = último precio
 aplicado ANTES de hoy; `anclaHoy` = con qué precio empezó el día la fecha) colgaban de un
