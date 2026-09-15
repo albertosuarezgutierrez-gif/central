@@ -7,7 +7,7 @@
 // Plan: docs/superpowers/plans/2026-09-08-seo-correduria-conectores.md Task 5
 
 import { escapeHtml } from '@central/core-telegram'
-import type { Accion, DatosGsc, DatosPosthog, Fuente, Resultados } from './tipos.ts'
+import type { Accion, DatosGsc, DatosPosthog, Fuente, Resultados, VerdictoCobertura } from './tipos.ts'
 
 /** Misma forma que `CONSULTAS` de `./consultas.ts`; se recibe por parámetro para no acoplar. */
 export type ConsultaObjetivo = { consulta: string; pagina: string | null; grupo: 'ramo' | 'problema' }
@@ -15,8 +15,9 @@ export type ConsultaObjetivo = { consulta: string; pagina: string | null; grupo:
 const NOMBRE_FUENTE: Record<Fuente, string> = {
   gsc: 'Search Console',
   posthog: 'PostHog',
+  cobertura: 'Cobertura de indexación',
 }
-const ORDEN_FUENTES: Fuente[] = ['gsc', 'posthog']
+const ORDEN_FUENTES: Fuente[] = ['gsc', 'posthog', 'cobertura']
 
 /** minúsculas, sin tildes, trim, espacios colapsados — para casar consultas de GSC con las objetivo. */
 export function normalizarConsulta(s: string): string {
@@ -39,6 +40,30 @@ export function accionPropuesta(r: Resultados, consultas: ConsultaObjetivo[]): A
       return {
         tipo: 'arreglar_fuente',
         texto: `Arreglar la fuente ${NOMBRE_FUENTE[f]} (${motivo}): ${res.detalle}`,
+      }
+    }
+  }
+
+  // (1.5) Una página PROPIA que Search Console marca fuera del índice (404, bloqueada, no indexada
+  // por Google...) se arregla antes que escribir nada nuevo: no tiene sentido perseguir una consulta
+  // nueva mientras la página que ya la cubre ni siquiera está en el índice.
+  if (r.cobertura.estado === 'ok') {
+    const conProblema = r.cobertura.datos.paginas.find(p => p.estado === 'ok' && p.verdicto !== 'PASS')
+    if (conProblema) {
+      return {
+        tipo: 'arreglar_indexacion',
+        texto:
+          `Arreglar la indexación de ${conProblema.url}: Search Console la marca ` +
+          `«${conProblema.cobertura ?? conProblema.verdicto ?? 'sin cobertura'}»`,
+      }
+    }
+    // Una página que NO se ha podido inspeccionar no es una página sin problema: es una que no se
+    // ha mirado. Tratarla como PASS por omisión sería la regla NULL≠0 incumplida en este mismo sitio.
+    const sinComprobar = r.cobertura.datos.paginas.find(p => p.estado === 'error')
+    if (sinComprobar) {
+      return {
+        tipo: 'arreglar_indexacion',
+        texto: `Comprobar la indexación de ${sinComprobar.url}: no se pudo inspeccionar (${sinComprobar.detalle ?? 'motivo desconocido'})`,
       }
     }
   }
@@ -153,12 +178,47 @@ function bloquePosthog(res: Resultados['posthog']): string[] {
   return lineas
 }
 
+const ETIQUETA_VERDICTO: Record<VerdictoCobertura, string> = {
+  PASS: '✅ indexada',
+  PARTIAL: '🟡 indexada con reparos',
+  FAIL: '🔴 fuera del índice',
+  NEUTRAL: '⚪ neutral',
+  DESCONOCIDO: '❔ desconocido',
+}
+
+function bloqueCobertura(res: Resultados['cobertura']): string[] {
+  const lineas = ['<b>Indexación de páginas propias</b>']
+  if (res.estado !== 'ok') {
+    lineas.push(lineaFuenteNoOk('cobertura', res))
+    return lineas
+  }
+  const leidas = res.datos.paginas.filter(p => p.estado === 'ok')
+  const sinLeer = res.datos.paginas.filter(p => p.estado === 'error')
+  const conProblema = leidas.filter(p => p.verdicto !== 'PASS')
+
+  if (!conProblema.length && !sinLeer.length) {
+    lineas.push(`${leidas.length} página(s) comprobadas, todas indexadas.`)
+    return lineas
+  }
+  for (const p of conProblema) {
+    const etiqueta = ETIQUETA_VERDICTO[p.verdicto ?? 'DESCONOCIDO']
+    lineas.push(`${etiqueta} ${escapeHtml(p.url)}${p.cobertura ? ` — ${escapeHtml(p.cobertura)}` : ''}`)
+  }
+  // Una línea POR página sin comprobar, con su propio motivo — un recuento con un solo motivo
+  // citado le atribuiría a todas la causa de la primera aunque cada una fallara por algo distinto.
+  for (const p of sinLeer) {
+    lineas.push(`❔ ${escapeHtml(p.url)} — sin comprobar (${escapeHtml(p.detalle ?? 'motivo desconocido')})`)
+  }
+  return lineas
+}
+
 /** HTML de Telegram (`parse_mode: 'HTML'`). Todo texto externo pasa por `escapeHtml`. */
 export function redactarInforme(semana: string, r: Resultados, accion: Accion, dominio: string): string {
   const partes = [
     `🔎 <b>SEO ${escapeHtml(dominio)}</b> · semana ${escapeHtml(semana)}`,
     bloqueGsc(r.gsc).join('\n'),
     bloquePosthog(r.posthog).join('\n'),
+    bloqueCobertura(r.cobertura).join('\n'),
     `➡️ <b>Acción</b>: ${escapeHtml(accion.texto)}`,
   ]
   return partes.join('\n\n')
