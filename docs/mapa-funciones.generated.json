@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T11:37:15Z",
-  "sha": "a6a03f48dc907b0fb6181550d593751700f63949",
+  "generadoEn": "2026-09-15T12:05:38Z",
+  "sha": "43424102879120792762cca1171980327c60d62f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3592,15 +3592,15 @@
           "exportada": false,
           "params": "",
           "retorno": "Valores",
-          "linea": 80
+          "linea": 81
         },
         {
           "nombre": "MisDatos",
           "kind": "function",
           "exportada": true,
-          "params": "{ lectura }: { lectura: LecturaMisDatos }",
+          "params": "{ lectura, reparos = [], }: { lectura: LecturaMisDatos /** Lo guardado que no cuadra, calculado en el SERVIDOR (`reparosDeContacto`). */ reparos?: readonly ReparoParaAviso[] }",
           "retorno": null,
-          "linea": 84
+          "linea": 85
         },
         {
           "nombre": "campo",
@@ -3608,7 +3608,7 @@
           "exportada": false,
           "params": "c: Campo, f: Valores, setF: React.Dispatch<React.SetStateAction<Valores>>",
           "retorno": null,
-          "linea": 168
+          "linea": 197
         },
         {
           "nombre": "cambiosRespectoA",
@@ -3616,7 +3616,7 @@
           "exportada": true,
           "params": "original: Valores, actual: Valores, leido: boolean",
           "retorno": "Partial<Record<CampoMisDatos, string | null>>",
-          "linea": 189,
+          "linea": 218,
           "resumen": "Qué viaja. Puro y exportado para el guardián: es la regla de «solo lo que cambió», y la de que un canal no viaja vacío."
         },
         {
@@ -3625,7 +3625,7 @@
           "exportada": false,
           "params": "l: Exclude<LecturaMisDatos, { estado: 'ok' }>",
           "retorno": "string",
-          "linea": 208
+          "linea": 237
         },
         {
           "nombre": "desenlace",
@@ -3633,13 +3633,13 @@
           "exportada": true,
           "params": "estado: string | undefined, motivo?: string, campo?: string | null, campos?: string[]",
           "retorno": "Estado",
-          "linea": 226,
+          "linea": 255,
           "resumen": "El desenlace, en las palabras de quien lo lee. Está fuera del componente y es puro para que el guardián pueda comprobar lo único que no se puede equivocar: que **ningún camino que no haya guardado dig"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "419f6db1cfcb"
+      "hash": "4c4271974a01"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/page.tsx",
@@ -3677,7 +3677,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fcf9fd6d61ef"
+      "hash": "985dc1f3ac08"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -4353,13 +4353,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 26,
+          "linea": 28,
           "resumen": "GET /api/avisos — lo que la campana de la cabecera pinta: las autorizaciones pendientes (recibidas y otorgadas) y los vencimientos en ventana de la persona que tiene la sesión. La identidad SIEMPRE sa"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/avisos",
-      "hash": "a092538d5c6f"
+      "hash": "92a9c091ced7"
     },
     {
       "ruta": "apps/asegura-portal/app/api/catastro/route.ts",
@@ -6109,37 +6109,6 @@
       "hash": "fb15396b045c"
     },
     {
-      "ruta": "apps/asegura-portal/lib/avisos.ts",
-      "ambito": "apps/asegura-portal",
-      "resumen": "Los AVISOS de la campana: qué tiene pendiente la persona que ha entrado, en una sola lista, con un enlace al sitio donde cada cosa se resuelve. Esto es PURO a propósito: recibe lo que ya leyeron `lib/autorizaciones.ts` y `lib/obligaciones.ts` (cada uno con su frontera de identidad) y no toca la BD. ",
-      "exporta": [
-        "textoGlobo",
-        "avisosDe"
-      ],
-      "funciones": [
-        {
-          "nombre": "textoGlobo",
-          "kind": "function",
-          "exportada": true,
-          "params": "n: number, ilegibles: number, fuentes: number",
-          "retorno": "string | null",
-          "linea": 84,
-          "resumen": "· ninguna legible → `!` (no se sabe nada)."
-        },
-        {
-          "nombre": "avisosDe",
-          "kind": "function",
-          "exportada": true,
-          "params": "x: EntradaAvisos",
-          "retorno": "Avisos",
-          "linea": 90
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "26ccf138cbca"
-    },
-    {
       "ruta": "apps/asegura-portal/lib/canal-email.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [],
@@ -7043,7 +7012,9 @@
       "exporta": [
         "guardarMisDatos",
         "leerMisDatos",
-        "confirmarMisDatos"
+        "confirmarMisDatos",
+        "reparosDeMisDatos",
+        "reparosDeContacto"
       ],
       "funciones": [
         {
@@ -7052,7 +7023,7 @@
           "exportada": false,
           "params": "",
           "retorno": "",
-          "linea": 86
+          "linea": 87
         },
         {
           "nombre": "guardarMisDatos",
@@ -7060,7 +7031,7 @@
           "exportada": true,
           "params": "identidadId: string, libre: EntradaMisDatos",
           "retorno": "Promise<ResultadoMisDatos>",
-          "linea": 95
+          "linea": 96
         },
         {
           "nombre": "leerMisDatos",
@@ -7068,7 +7039,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<LecturaMisDatos>",
-          "linea": 150,
+          "linea": 151,
           "resumen": "Lo que la ficha tiene de contacto de esta identidad. `ilegibles` son campos que EXISTEN pero asegura no pudo descifrar: la pantalla los dice como «no hemos podido leerlo», nunca como «no consta»."
         },
         {
@@ -7077,13 +7048,31 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<ResultadoConfirmarMisDatos>",
-          "linea": 203,
+          "linea": 204,
           "resumen": "«Siguen igual»: confirma sin cambiar nada. Es el gesto de UN toque que hace que el aviso automático no dependa de que la persona entre a corregir algo."
+        },
+        {
+          "nombre": "reparosDeMisDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string",
+          "retorno": "Promise<ReparoParaAviso[]>",
+          "linea": 258,
+          "resumen": "Lo que NO cuadra en la dirección guardada de esta persona, para la campana. 🚨 Existe porque el reparo lo veía SOLO Alberto. `leerSitio()` se estrenó el 05/09/2026 en la ficha del corredor (`/corredur"
+        },
+        {
+          "nombre": "reparosDeContacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "contacto: Record<CampoMisDatos, string | null>",
+          "retorno": "ReparoParaAviso[]",
+          "linea": 272,
+          "resumen": "Los reparos de un contacto ya leído. Puro y en el SERVIDOR: lo llaman la campana (arriba) y la propia pantalla de «Mis datos», que lo recibe como prop en vez de importar `@central/module-seguros` en e"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c5128c0c296"
+      "hash": "c1fe11f33b8c"
     },
     {
       "ruta": "apps/asegura-portal/lib/monograma.ts",
@@ -9540,6 +9529,27 @@
       "hash": "da38545e7a74"
     },
     {
+      "ruta": "apps/asegura/app/api/cron/avisos-intranet/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 38,
+          "resumen": "GET /api/cron/avisos-intranet — «tienes algo esperándote en tu área de clientes»: UN correo por cliente con lo que su campana tiene pendiente y todavía no se le ha contado. Diario a las 08:15 UTC (`ve"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/avisos-intranet",
+      "hash": "7b903c213884"
+    },
+    {
       "ruta": "apps/asegura/app/api/cron/avisos-vencimiento/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -11950,14 +11960,96 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 137
+          "linea": 157
         }
       ],
       "tablas": [
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "209823da808f"
+      "hash": "f54734095d71"
+    },
+    {
+      "ruta": "apps/asegura/lib/avisos-intranet-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Las reglas PURAS del emisor genérico de la intranet: a dónde entra el cliente, cómo se llama cada aviso ya enviado, y cuáles de los suyos son nuevos. 🚨 Están en su propio fichero para que su cepo pueda EJECUTARLAS. Aquí no se importa nada de Prisma: `avisos-intranet.ts` sí, y por eso `node --test` ",
+      "exporta": [
+        "enlacePortal",
+        "claveAviso",
+        "avisosNuevos"
+      ],
+      "funciones": [
+        {
+          "nombre": "enlacePortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es',",
+          "retorno": "string | null",
+          "linea": 27,
+          "resumen": "lo que cambia es el destino: la RAÍZ del portal, porque este correo puede llevar avisos de sitios distintos y la campana está en la cabecera."
+        },
+        {
+          "nombre": "claveAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: Pick<Aviso, 'tipo' | 'id'>",
+          "retorno": "string",
+          "linea": 48,
+          "resumen": "`${tipo}:${id}` — la misma clave que la campana usa de `key`. Nunca el título."
+        },
+        {
+          "nombre": "avisosNuevos",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Pendiente, hoy: Date, yaEnviadas: ReadonlySet<string>,",
+          "retorno": "",
+          "linea": 72,
+          "resumen": "Los avisos de un cliente que TODAVÍA no se le han mandado, **y cuántos tiene en total**. Las dos cosas salen de la misma llamada a propósito: con dos cuentas separadas, el correo podría decir un total"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "256291c4e476"
+    },
+    {
+      "ruta": "apps/asegura/lib/avisos-intranet.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El emisor GENÉRICO de la intranet: un correo cuando el cliente tiene algo esperándole en su área de clientes. ── 🚨 La decisión de diseño que lo hace genérico ─────────────────────────── **No hay cola de notificaciones.** Este emisor no espera a que nadie encole nada: DERIVA lo que hay que avisar de",
+      "exporta": [
+        "reunirPendientes",
+        "avisarIntranet"
+      ],
+      "funciones": [
+        {
+          "nombre": "nombreDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: { nombre: string | null; apellidos: string | null } | null | undefined",
+          "retorno": "string | null",
+          "linea": 68
+        },
+        {
+          "nombre": "reunirPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, hoy: Date",
+          "retorno": "Promise<Pendiente[]>",
+          "linea": 83,
+          "resumen": "Reúne, por cliente, las fuentes del catálogo. Una consulta por fuente (no una por cliente): con 80 clientes vivos el bucle N+1 sería gratuito igual, pero el día que la cartera crezca esto ya está bien"
+        },
+        {
+          "nombre": "avisarIntranet",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, opciones: { hoy?: Date; forzarContar?: boolean } = {},",
+          "retorno": "Promise<ResumenAvisosIntranet>",
+          "linea": 289,
+          "resumen": "Una pasada. Devuelve el resumen; **lanza** si falta el proveedor de correo o el portal, porque «no he podido» no puede leerse como «hoy no tocaba nadie»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e151d7ad4abb"
     },
     {
       "ruta": "apps/asegura/lib/avisos-vencimiento.ts",
@@ -13537,7 +13629,7 @@
           "exportada": false,
           "params": "otorgante: string, autorizado: string",
           "retorno": "string",
-          "linea": 161
+          "linea": 162
         },
         {
           "nombre": "resumirAutorizacion",
@@ -13545,7 +13637,7 @@
           "exportada": true,
           "params": "filas: readonly FilaAutorizacion[], hoy: Date",
           "retorno": "AutorizacionRelacion | null",
-          "linea": 173,
+          "linea": 174,
           "resumen": "Resume las autorizaciones de un par en la que gobierna. Puro (recibe `hoy`). Si hay varias en el mismo estado —la BD permite un alcance por fila— se juntan sus alcances y se toma la caducidad más leja"
         },
         {
@@ -13554,7 +13646,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<Map<string, FilaAutorizacion[]>>",
-          "linea": 199,
+          "linea": 200,
           "resumen": "Las autorizaciones en las que interviene `clienteId`, indexadas por par. Lanza si la consulta falla — a propósito: quien llama degrada a `null`, que es «no se pudo leer», y NUNCA a «no hay autorizació"
         },
         {
@@ -13563,7 +13655,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 229,
+          "linea": 234,
           "resumen": "Las filas de relación de una ficha, con `puedeVerPolizas` CALCULADO desde `portal_autorizacion` (la columna homónima de la tabla ya no se lee)."
         },
         {
@@ -13572,7 +13664,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<RelacionFila[]>",
-          "linea": 255
+          "linea": 260
         },
         {
           "nombre": "listarRelaciones",
@@ -13580,7 +13672,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<RelacionCartera[] | null>",
-          "linea": 260,
+          "linea": 265,
           "resumen": "Las relaciones de una ficha con nombre y pólizas vivas del otro. `null` = no se pudo consultar."
         },
         {
@@ -13589,7 +13681,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string[] | null>",
-          "linea": 311,
+          "linea": 316,
           "resumen": "Para un portal: ids de clientes cuyas pólizas puede ver `clienteId`. `null` = no se pudo consultar."
         },
         {
@@ -13598,7 +13690,7 @@
           "exportada": false,
           "params": "correduriaId: string, a: string, b: string",
           "retorno": "Promise<boolean>",
-          "linea": 321
+          "linea": 326
         },
         {
           "nombre": "devolver",
@@ -13606,7 +13698,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 326
+          "linea": 331
         },
         {
           "nombre": "crearRelacion",
@@ -13614,7 +13706,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { relacionadoId: string; tipo: unknown; observaciones?: unknown; actor: string },",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 333,
+          "linea": 338,
           "resumen": "Crea el vínculo en los DOS sentidos (tipo y su inverso)."
         },
         {
@@ -13623,7 +13715,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { relacionadoId: string; tipo: unknown; actor: string },",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 380,
+          "linea": 385,
           "resumen": "Cambia el TIPO de un vínculo que ya existe, en los dos sentidos. 🚨 Por qué existe (Alberto, 04/09/2026, «¿cómo podría cambiar la relación?»): hasta hoy solo se podía CREAR y BORRAR. Corregir un víncu"
         },
         {
@@ -13632,7 +13724,7 @@
           "exportada": false,
           "params": "tipo: TipoOtorgante",
           "retorno": "string",
-          "linea": 452,
+          "linea": 457,
           "resumen": "Por qué no se puede anotar ese alcance, y la razón depende de QUIÉN cede. 🚨 Desde el 03/09/2026 esto ya no es una regla sobre el alcance: es una regla sobre el otorgante. Una PERSONA solo delega mira"
         },
         {
@@ -13641,7 +13733,7 @@
           "exportada": false,
           "params": "estado: EstadoAutorizacion",
           "retorno": "string",
-          "linea": 462,
+          "linea": 467,
           "resumen": "Texto del estado en el que ya está una autorización, para el motivo del 409."
         },
         {
@@ -13650,7 +13742,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { relacionadoId: string; autoriza: boolean; alcance?: unknown; tituloRepresentacion?: unknown; actor: string },",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 496,
+          "linea": 501,
           "resumen": "`clienteId` AUTORIZA (o revoca) a `relacionadoId` a ver sus pólizas. 🚨 Lo que se escribe es una fila de `portal_autorizacion` con `origen = 'corredor'`: Alberto **no autoriza en nombre del cliente**,"
         },
         {
@@ -13659,7 +13751,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "boolean",
-          "linea": 629
+          "linea": 634
         },
         {
           "nombre": "borrarRelacion",
@@ -13667,7 +13759,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { relacionadoId: string; actor: string },",
           "retorno": "Promise<ResultadoRelacion>",
-          "linea": 634,
+          "linea": 639,
           "resumen": "Borra el vínculo entero (los dos sentidos)."
         },
         {
@@ -13676,14 +13768,14 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 666
+          "linea": 671
         }
       ],
       "tablas": [
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "4787115bfebc"
+      "hash": "334989d4c461"
     },
     {
       "ruta": "apps/asegura/lib/cartera-siniestros.ts",
@@ -17175,6 +17267,65 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b4c539486c33"
+    },
+    {
+      "ruta": "apps/asegura/lib/correo-avisos-intranet.ts",
+      "ambito": "apps/asegura",
+      "resumen": "«Tienes algo esperándote en tu área de clientes» — el correo GENÉRICO de la intranet del portal. ── Por qué existe ────────────────────────────────────────────────────────── El portal ya sabe decirle a cada cliente lo que tiene pendiente: es la campana (`avisosDe()`, en `@central/module-seguros-port",
+      "exporta": [
+        "resumirAvisos",
+        "cuerpoAvisosIntranet",
+        "enviarAvisosIntranet"
+      ],
+      "funciones": [
+        {
+          "nombre": "enumerar",
+          "kind": "function",
+          "exportada": false,
+          "params": "partes: readonly string[]",
+          "retorno": "string",
+          "linea": 95,
+          "resumen": "`['a','b','c']` → `a, b y c`. Vacío no ocurre (quien llama no escribe sin avisos)."
+        },
+        {
+          "nombre": "resumirAvisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: readonly AvisoParaCorreo[]",
+          "retorno": "string",
+          "linea": 104,
+          "resumen": "Las clases presentes, contadas y nombradas, en el orden del catálogo (no en el de llegada: así dos correos con lo mismo se leen igual)."
+        },
+        {
+          "nombre": "escapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 116
+        },
+        {
+          "nombre": "cuerpoAvisosIntranet",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosAvisosIntranet",
+          "retorno": "CuerpoCorreo",
+          "linea": 126,
+          "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta, para que su cepo pueda recorrer el texto entero. Mismo motivo que en `correo-aviso-acceso.ts`: un guardián que neces"
+        },
+        {
+          "nombre": "enviarAvisosIntranet",
+          "kind": "function",
+          "exportada": true,
+          "params": "destino: string, d: DatosAvisosIntranet",
+          "retorno": "Promise<ResultadoEnvio>",
+          "linea": 186,
+          "resumen": "El envío. Devuelve el desenlace en vez de lanzar, por lo mismo que el resto de correos de esta app: «no hay proveedor» es una variable de Vercel que falta, y un reintento no la pone."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6015a738704f"
     },
     {
       "ruta": "apps/asegura/lib/correo-invitacion-portal.ts",
@@ -125705,6 +125856,37 @@
       "hash": "9701813dd7b5"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/avisos.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Los AVISOS de la campana: qué tiene pendiente la persona que ha entrado, en una sola lista, con un enlace al sitio donde cada cosa se resuelve. Esto es PURO a propósito: recibe lo que ya leyeron `lib/autorizaciones.ts` y `lib/obligaciones.ts` (cada uno con su frontera de identidad) y no toca la BD. ",
+      "exporta": [
+        "textoGlobo",
+        "avisosDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "textoGlobo",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number, ilegibles: number, fuentes: number",
+          "retorno": "string | null",
+          "linea": 125,
+          "resumen": "· ninguna legible → `!` (no se sabe nada)."
+        },
+        {
+          "nombre": "avisosDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: EntradaAvisos",
+          "retorno": "Avisos",
+          "linea": 131
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ee72e36c91bf"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/bien-asegurado.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "Qué cosa está asegurada: el coche, el piso, la moto. 🚨 POR QUÉ EXISTE ESTE FICHERO (05/09/2026). La bóveda enseñaba compañía, ramo, número de póliza y prima — y nada más. Alberto, con su propia pantalla delante: «poca informacion... ni direccion en hogar, ni datos coche en auto». Sus DOS pólizas de",
@@ -135807,7 +135989,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3324,
-    "funciones": 10262
+    "archivos": 3328,
+    "funciones": 10276
   }
 }

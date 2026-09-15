@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-15T10:32:45Z",
+  "generadoEn": "2026-09-15T12:05:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -519,7 +519,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2139,7 +2139,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 55
+        "evidencias": 58
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2247,7 +2247,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 18
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3910,6 +3910,7 @@
       "/api/cartera/cliente/[clienteId]/hogar-nuevo",
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
+      "/api/cron/avisos-intranet",
       "/api/cron/avisos-vencimiento",
       "/api/operador/actividad",
       "/api/operador/backfill-contacto",
@@ -5337,6 +5338,7 @@
       "seguros.poliza_merge_log",
       "seguros.poliza_recibos",
       "seguros.polizas",
+      "seguros.portal_aviso_enviado",
       "seguros.recordatorios",
       "seguros.siniestro_contrarios",
       "seguros.siniestro_lesionados",
@@ -6329,7 +6331,7 @@
     "packages": 41,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1365,
+    "apis": 1366,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
