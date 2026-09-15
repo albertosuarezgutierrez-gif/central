@@ -18,8 +18,15 @@ COMMENT ON COLUMN rate_snapshots.price_ours IS
   'MOTOR SOMBRA LEGACY (sivra, retirado 18/07/2026). NO es el precio del motor vivo: ese vive en '
   'pricing_decisiones (apps/plataforma /api/sivra/pricing/apply). El precio publicado es price_live.';
 
+-- 🚨 Corregido el mismo 15/09/2026, a instancia de Alberto («pricelabs ya no estamos conectado»).
+-- La primera versión de este COMMENT decía «hoy lo fija PriceLabs»: FALSO. PriceLabs se desconectó
+-- el 10/08/2026 y no queda ni un cliente HTTP suyo en el repo. Quien fija el precio publicado es
+-- NUESTRO motor (`/api/sivra/pricing/apply` → Smoobu). El error es el mismo que provocó este
+-- fichero —leer el nombre de una columna como si fuera su contenido— cometido al redactar el
+-- arreglo. El nombre `price_pricelabs` es un fósil: hoy guarda el precio VIVO leído de Smoobu.
 COMMENT ON COLUMN rate_snapshots.price_live IS
-  'Precio PUBLICADO en el canal esa noche (hoy lo fija PriceLabs). Es lo que ve el huésped.';
+  'Precio PUBLICADO en el canal esa noche. Lo fija NUESTRO motor (/api/sivra/pricing/apply -> '
+  'Smoobu); PriceLabs se desconecto el 10/08/2026 y ya no escribe nada. Es lo que ve el huesped.';
 
 COMMENT ON TABLE pricing_decisiones IS
   'Decisiones del motor de pricing VIVO. dry_run=true significa que NO se aplicó al canal: una fila '
