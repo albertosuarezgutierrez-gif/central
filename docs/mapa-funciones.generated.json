@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T14:55:28Z",
-  "sha": "f793d9a876f3f3d42866efdd11bedbc94bd7171a",
+  "generadoEn": "2026-09-15T16:44:50Z",
+  "sha": "157f4c67c52b763104cfee01aa96a6eb77151d14",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11470,6 +11470,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/supresiones",
       "hash": "a2d0b699f333"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/vehiculo/matricula/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "`POST /api/operador/vehiculo/matricula` — consulta de datos técnicos de un vehículo por matrícula (marca, modelo, versión, potencia fiscal…) contra APIVehículo, para rellenar lo que la ficha del clien"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/vehiculo/matricula",
+      "hash": "d526d6ba8d9a"
     },
     {
       "ruta": "apps/asegura/app/api/operador/vencimientos/route.ts",
@@ -73351,7 +73372,7 @@
           "exportada": false,
           "params": "token: string",
           "retorno": null,
-          "linea": 24
+          "linea": 22
         },
         {
           "nombre": "GET",
@@ -73359,7 +73380,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 44
+          "linea": 42
         },
         {
           "nombre": "POST",
@@ -73367,12 +73388,12 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 89
+          "linea": 87
         }
       ],
       "tablas": [],
       "rutaApi": "/api/correduria/blog",
-      "hash": "779becace5ed"
+      "hash": "f503213ac5eb"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/buscar/route.ts",
@@ -74436,12 +74457,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 110
+          "linea": 113
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/blog-asegura",
-      "hash": "a13ca3917ac8"
+      "hash": "7f7343be7e98"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/borme-ingesta/route.ts",
@@ -79456,7 +79477,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 47,
+          "linea": 48,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -79465,7 +79486,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 64,
+          "linea": 65,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -79474,7 +79495,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 90
+          "linea": 91
         },
         {
           "nombre": "getPendiente",
@@ -79482,7 +79503,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 120
+          "linea": 121
         },
         {
           "nombre": "POST",
@@ -79490,7 +79511,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 125
+          "linea": 126
         }
       ],
       "tablas": [
@@ -79515,7 +79536,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "a753759e1b8d"
+      "hash": "2098d121e3b3"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -87902,7 +87923,8 @@
         "extraerArticuloDePr",
         "estadoPr",
         "explicarEstadoPr",
-        "motivoMerge"
+        "motivoMerge",
+        "decidirBlogPr"
       ],
       "funciones": [
         {
@@ -87937,11 +87959,28 @@
           "retorno": "string",
           "linea": 81,
           "resumen": "Qué ha pasado cuando GitHub rechaza el merge. Un «no se ha podido publicar» a secas obliga a abrir GitHub para saber si falta un check, si hay conflicto o si el token no tiene permiso — tres cosas que"
+        },
+        {
+          "nombre": "cabeceras",
+          "kind": "function",
+          "exportada": false,
+          "params": "token: string",
+          "retorno": null,
+          "linea": 105
+        },
+        {
+          "nombre": "decidirBlogPr",
+          "kind": "function",
+          "exportada": true,
+          "params": "numero: number, accion: 'publicar' | 'descartar', token: string,",
+          "retorno": "Promise<DecisionBlogPr>",
+          "linea": 123,
+          "resumen": "Mezcla o cierra el PR del agente del blog. Verifica que el PR es de `claude/blog-asegura`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8e7080940a17"
+      "hash": "f0ed916c4a30"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/blog-temas.ts",
@@ -122288,6 +122327,74 @@
       "hash": "4b7ae46bb16e"
     },
     {
+      "ruta": "packages/core-vehiculos/src/apivehiculo.ts",
+      "ambito": "packages/core-vehiculos",
+      "resumen": "Adaptador del proveedor APIVehículo (apivehiculo.com/docs). Confirmado contra su documentación oficial (OpenAPI) el 15/09/2026.",
+      "exporta": [
+        "mapearRespuesta",
+        "consultarApiVehiculo"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 7
+        },
+        {
+          "nombre": "str",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 11
+        },
+        {
+          "nombre": "mapearRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "matricula: string, data: Record<string, unknown>",
+          "retorno": "DatosVehiculo",
+          "linea": 15
+        },
+        {
+          "nombre": "consultarApiVehiculo",
+          "kind": "function",
+          "exportada": true,
+          "params": "matricula: string, pais: 'ES' | 'PT' = 'ES'",
+          "retorno": "Promise<DatosVehiculo | null>",
+          "linea": 38,
+          "resumen": "`null` si el proveedor no encuentra la matrícula (404). Lanza en cualquier otro fallo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3f334c46b1a3"
+    },
+    {
+      "ruta": "packages/core-vehiculos/src/index.ts",
+      "ambito": "packages/core-vehiculos",
+      "resumen": "Punto único de entrada: quien consuma este paquete solo conoce `resolverMatricula`, nunca el proveedor real detrás. Cambiar de proveedor es cambiar esta función, no las apps que la llaman.",
+      "exporta": [
+        "resolverMatricula"
+      ],
+      "funciones": [
+        {
+          "nombre": "resolverMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "matricula: string, pais: 'ES' | 'PT' = 'ES'",
+          "retorno": "Promise<DatosVehiculo | null>",
+          "linea": 9
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7053dca5c12c"
+    },
+    {
       "ruta": "packages/module-agenda/src/disponibilidad.ts",
       "ambito": "packages/module-agenda",
       "resumen": "Lógica de disponibilidad de la agenda: detección de solapes y filtrado de recursos disponibles en un intervalo. Funciones puras (sin BD).",
@@ -136029,7 +136136,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3329,
-    "funciones": 10279
+    "archivos": 3332,
+    "funciones": 10287
   }
 }
