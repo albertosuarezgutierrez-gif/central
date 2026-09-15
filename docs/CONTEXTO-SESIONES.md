@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
+oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
+no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
+por `WebSearch` (SERP, sin volumen real) → fontanero con menos sitios especialistas que electricista
+y climatización/gas. Mismo molde `RAMOS`, sin ramo nuevo en BD (sigue `responsabilidad_civil`).
+Verificado: 105 tests + tsc en asegura-web, tests de `consultas.ts` en plataforma. PR abierto.
+
 **(15/09/2026)** SEO correduria · cron `seo-correduria` gana 3ª fuente **cobertura de indexación**
 (`lib/seo-correduria/cobertura.ts`, URL Inspection API — reusa la cuenta de servicio de GSC, sin
 secreto nuevo) para el 404/no-indexado de `asegura-web` que Alberto pedía como prerrequisito de Ads.

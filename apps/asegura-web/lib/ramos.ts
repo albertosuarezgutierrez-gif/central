@@ -456,6 +456,73 @@ export const RAMOS: readonly Ramo[] = [
       },
     ],
   },
+  // 📌 Página de INTENCIÓN de oficio, no un ramo nuevo en el sentido de la
+  // cartera: en BD sigue siendo `responsabilidad_civil` (por eso comparte
+  // opción de formulario con la RC general, ver `contrato-lead.test.ts` y el
+  // `ramoPorDefecto` de `app/seguros/[ramo]/page.tsx`). Nace de la
+  // investigación de competencia del 15/09/2026
+  // (`docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`, §2.6): los grandes
+  // comparadores (Rastreator/Acierto/Kelisto) no venden RC de oficios, y entre
+  // electricista/fontanero/instalador de gas y climatización —los tres con la
+  // misma obligación legal (REBT/RITE)— fontanero salió con menos sitios
+  // específicos compitiendo por la consulta en el muestreo de esa fecha. Es
+  // una hipótesis razonada sobre una muestra pequeña de SERP, no un dato de
+  // volumen o competencia publicitaria real: no hay conector de Keyword
+  // Planner/SEMrush/Ahrefs en este repo. Si el resultado no acompaña en unos
+  // meses (Search Console, cuando haya tráfico), se prueba electricista o
+  // climatización/gas con el mismo molde.
+  {
+    slug: 'responsabilidad-civil-fontaneros',
+    nombre: 'Fontaneros e instaladores',
+    h1: 'Seguro de responsabilidad civil para fontaneros e instaladores en toda España',
+    title: 'Seguro de RC para fontaneros en España',
+    description:
+      'Correduría de seguros en toda España. Seguro de RC para fontaneros e instaladores: capital mínimo, retroactividad y alta como instalador autorizado.',
+    intro: [
+      'Somos correduría, no aseguradora: trabajamos con varias compañías a la vez, así que el análisis de tu actividad lo hacemos nosotros, no una marca que solo vende su propio catálogo.',
+      'Para darte de alta como instalador autorizado de fontanería, calefacción, climatización o gas, el reglamento exige acreditar un seguro de responsabilidad civil. Sin ese seguro en vigor no puedes inscribirte como empresa instaladora ni firmar el boletín o el certificado de la instalación.',
+    ],
+    cubre: [
+      'El capital mínimo que exige tu categoría de instalador, y si el que tienes contratado hoy sigue siendo suficiente para el tipo de instalaciones que haces.',
+      'La cobertura posterior al trabajo: una fuga o una avería que aparece semanas después de cerrar la instalación, cuando el expediente ya está facturado y cerrado.',
+      'La retroactividad al cambiar de compañía: qué pasa con una instalación de hace años si la reclamación llega ahora, con la póliza ya en otra aseguradora.',
+      'Si la actividad declarada en la póliza cubre lo que haces de verdad: fontanería, calefacción, climatización y gas no siempre caben en la misma descripción.',
+      'Empleados y subcontratas, si trabajas con oficiales a tu cargo o subcontratas parte de la instalación bajo tu boletín.',
+    ],
+    paraQuien: [
+      'Eres fontanero o instalador autónomo y necesitas el seguro para darte de alta o renovar tu condición de instalador autorizado.',
+      'Ya tienes el seguro pero no has vuelto a mirar si el capital asegurado cubre el tipo de instalaciones que haces ahora.',
+      'Trabajas con gas y quieres que la póliza distingue esa actividad de la fontanería general, porque no siempre llevan el mismo capital exigido.',
+      'Facturas a través de una pyme o cooperativa de instaladores y necesitas una póliza que cubra a todos los que trabajan bajo ese número.',
+    ],
+    faq: [
+      {
+        pregunta: '¿Es obligatorio el seguro de responsabilidad civil para darte de alta como instalador?',
+        respuesta:
+          'Sí. El reglamento que regula tu actividad —instalaciones de fontanería y calefacción, climatización o gas— exige acreditar un seguro de responsabilidad civil con un capital mínimo para poder inscribirte como empresa instaladora autorizada ante el organismo competente. Sin esa inscripción no puedes firmar boletines ni certificados.',
+      },
+      {
+        pregunta: '¿Qué diferencia hay entre la cobertura durante la obra y la posterior al trabajo?',
+        respuesta:
+          'La póliza responde de los daños que causas mientras trabajas, pero también de los que aparecen después: una fuga que se manifiesta semanas o meses más tarde de terminar la instalación. Esa cobertura posterior sigue vigente un tiempo determinado tras la cancelación de la póliza, y ese plazo es distinto según la actividad.',
+      },
+      {
+        pregunta: '¿Cuánto capital tengo que tener asegurado?',
+        respuesta:
+          'Depende de tu categoría de instalador y de la actividad —no es lo mismo fontanería y calefacción que gas—, y lo fija el reglamento que te aplica. Lo revisamos con tu inscripción actual delante para confirmar que el capital contratado sigue siendo el que te corresponde.',
+      },
+      {
+        pregunta: '¿Pierdo cobertura de instalaciones antiguas si cambio de compañía?',
+        respuesta:
+          'Depende de la retroactividad que pacte la póliza nueva. Si no cubre hacia atrás, una reclamación por un trabajo hecho antes de cambiar de aseguradora puede quedar fuera aunque hoy tengas seguro en vigor. Es de los primeros datos que comprobamos antes de mover una póliza de instalador.',
+      },
+      {
+        pregunta: '¿Cobráis honorarios por revisar el seguro de mi actividad?',
+        respuesta:
+          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
+      },
+    ],
+  },
 ]
 
 /** Devuelve un ramo por su slug, o `null` si no existe (nunca un ramo de relleno). */

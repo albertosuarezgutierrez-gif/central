@@ -21,6 +21,7 @@ export const CONSULTAS: Consulta[] = [
   { consulta: 'seguro de vida / salud', pagina: '/seguros/vida-y-salud', grupo: 'ramo' },
   { consulta: 'seguro de responsabilidad civil', pagina: '/seguros/responsabilidad-civil', grupo: 'ramo' },
   { consulta: 'seguro de flota', pagina: '/seguros/flota', grupo: 'ramo' },
+  { consulta: 'seguro de responsabilidad civil para fontaneros', pagina: '/seguros/responsabilidad-civil-fontaneros', grupo: 'ramo' },
 
   // §2 Intención de problema — donde está el dinero y casi no hay competencia
   { consulta: 'cómo cambiar de correduría sin cambiar de seguro', pagina: '/cambiar-de-correduria', grupo: 'problema' },
