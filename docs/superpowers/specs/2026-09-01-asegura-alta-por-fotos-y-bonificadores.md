@@ -41,7 +41,7 @@ la pieza más difícil —la versión del vehículo— los caminos son, de más 
 | 1 | **La ficha ya lo trae** (`marca`/`modelo`/`version` en texto: 1.422/1.416/1.325 pólizas, medido 01/09) | Gratis, instantáneo | ⬜ por hacer |
 | 2 | **Foto de la ficha técnica** → filtrar por cilindrada + potencia + combustible | Gratis | ⬜ diseñado (§1) |
 | 3 | **Catálogo a mano** marca→modelo→versión | Gratis, 3 clics | ✅ **hecho** (PR #1996) |
-| 4 | **Matrícula** → `GET /vehicles` | Créditos de pago | ⬜ sin contratar |
+| 4 | **Matrícula** → `GET /vehicles` | Créditos de pago (0,12€/consulta) | ✅ **contratado 15/09/2026** — `@central/core-vehiculos` + `POST /api/operador/vehiculo/matricula` (PR #2998), pendiente la prueba real con una matrícula de cartera |
 
 ⚠️ Ojo con el 1: las **80 pólizas de auto VIVAS (CIMA) no lo traen** (solo matrícula). Ese camino
 sirve para el volcado histórico, no para la cartera viva — que es justo la que Alberto quiere
@@ -120,6 +120,7 @@ trae cilindrada, potencia y combustible exactos, que es justo lo que separa vers
 | **Carnet de conducir** | `fechaCarnet` (campo 4a = fecha de expedición del permiso B, en el reverso por categorías) | Ojo: la fecha del carnet **B** es la del reverso, no la de la tarjeta |
 | **Ficha técnica** | `matricula`, `fechaMatriculacion`, marca/modelo/versión, plazas | Ver §1 |
 | **Póliza actual** | `polizaAnterior`, `companiaAnteriorCodigo`, `aniosAsegurado`, bonus declarado | Para un cliente NUEVO es la única fuente; para uno de cartera ya lo tenemos |
+| 💡 **Matrícula (foto de la propia placa, no de la ficha técnica)** | `marca`/`modelo`/`version`/`potenciaFiscal` vía `resolverMatricula()` (camino 4, ya contratado) | Idea de Alberto (15/09/2026): «que el cliente mande foto de la matrícula del coche y con esto sabemos ya datos del vehículo, y si es cliente ya tenemos datos para tarificar». Foto más barata de pedir que la ficha técnica (una placa se fotografía en 2 segundos; la ficha técnica hay que ir a buscarla). Para un cliente YA en cartera esto podría cerrar el presupuesto de auto con UNA sola foto: vehículo por `resolverMatricula()` + persona/dirección/póliza anterior que ya están en su ficha (`desde-cartera.ts`) — sin ficha técnica ni catálogo a mano. **Sin diseñar**: falta decidir OCR de matrícula desde la foto (Vision de `@central/core-ai`, no hay proveedor elegido) y si el `version` en texto libre de APIVehículo entra en el mismo emparejamiento por candidatos de §1 (regla de "2 o más candidatos → decide una persona" se mantiene igual). No confundir con el camino 2 (foto de la ficha técnica): esta foto es solo la placa, más rápida pero con datos más pobres (sin cilindrada/potencia exactas). |
 
 🔒 **Estas fotos son PII sensible de verdad.** Antes de implementar hay que decidir dónde se guardan
 (Vercel Blob privado, como los EIAC) y **cuánto tiempo**. La ficha de cliente ya tiene el hueco
