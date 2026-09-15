@@ -6,6 +6,6 @@ import type { DatosVehiculo } from './tipos.ts'
 
 export type { DatosVehiculo }
 
-export async function resolverMatricula(matricula: string): Promise<DatosVehiculo | null> {
-  return consultarApiVehiculo(matricula)
+export async function resolverMatricula(matricula: string, pais: 'ES' | 'PT' = 'ES'): Promise<DatosVehiculo | null> {
+  return consultarApiVehiculo(matricula, pais)
 }

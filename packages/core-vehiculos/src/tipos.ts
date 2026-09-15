@@ -4,9 +4,14 @@ export interface DatosVehiculo {
   modelo: string | null
   version: string | null
   potenciaCv: number | null
+  potenciaKw: number | null
   cilindradaCc: number | null
   combustible: string | null
   fechaMatriculacion: string | null
-  /** Campo crudo del proveedor, para no perder nada de lo que sí trae. */
+  vin: string | null
+  transmision: string | null
+  numeroPlazas: number | null
+  numeroPuertas: number | null
+  /** Respuesta cruda de APIVehículo (`data`), para no perder ningún campo. */
   bruto: Record<string, unknown>
 }
