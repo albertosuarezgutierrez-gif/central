@@ -1,30 +1,75 @@
 {
  "sesion": "5a456669-308d-5f6d-875c-39fbd7d30c61",
  "inicio": "2026-09-14T10:05:23.625Z",
- "fin": "2026-09-14T10:26:44.288Z",
- "llamadas": 5,
+ "fin": "2026-09-15T11:42:19.666Z",
+ "llamadas": 13,
  "categorias": {
   "otro": {
-   "llamadas": 3,
-   "chars_in": 151,
-   "chars_out": 2959,
+   "llamadas": 4,
+   "chars_in": 266,
+   "chars_out": 6465,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "ToolSearch": 2,
-    "WebSearch": 1
+    "WebSearch": 2
    }
   },
   "bash": {
-   "llamadas": 2,
-   "chars_in": 241,
-   "chars_out": 322,
+   "llamadas": 4,
+   "chars_in": 780,
+   "chars_out": 2411,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 2
+    "Bash": 4
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 83,
+   "chars_out": 1090,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1526,
+   "chars_out": 500033,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 1,
+   "chars_in": 509,
+   "chars_out": 79,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 1
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 2,
+   "chars_in": 111,
+   "chars_out": 24305,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 1,
+    "mcp__Gmail__get_message": 1
    }
   }
  }
