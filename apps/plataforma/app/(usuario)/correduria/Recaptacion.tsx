@@ -186,7 +186,7 @@ function ramosTexto(g: GrupoLeadRecaptacion): string {
 }
 
 const PLUG_PORTAL =
-  'Por cierto: ahora tenemos una intranet gratuita en grupoasegura.es donde puedes controlar todos tus seguros, aunque no estés con nosotros. Échale un vistazo, es gratis.'
+  'Por cierto: ahora tenemos una intranet gratuita en grupoasegura.es donde puedes controlar todos tus seguros, aunque no estés con nosotros. Si más adelante te toca renovar, ahí verás la fecha para que no se te pase. Y si tienes un siniestro, lo abres directamente desde ahí, sin papeleo — funciona en el navegador del móvil, no hace falta instalar nada.'
 
 function mensajeSugerido(g: GrupoLeadRecaptacion): string {
   const primera = g.polizas[0]
