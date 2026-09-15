@@ -93,8 +93,8 @@ if (!changed.length) build('diff vacío → construir por seguridad');
 //
 //    Antes, CUALQUIER cambio en packages/* reconstruía TODAS las apps. Era la regla
 //    conservadora del primer día (evitaba derivar el cierre de dependencias), pero se
-//    pasa de frenada: `apps/housesevillana` no declara ni un solo `@central/*` —solo
-//    Next y React— y aun así se reconstruía cada vez que alguien tocaba, por ejemplo,
+//    pasa de frenada: `apps/housesevillana` no declaraba ni un solo `@central/*` en su día
+//    —solo Next y React— y aun así se reconstruía cada vez que alguien tocaba, por ejemplo,
 //    `packages/module-subastas`, que solo consume `plataforma`. Medido sobre 30 días:
 //    6 de 92 commits tocaron packages/ y NINGUNO tocó la landing → 6 builds regalados
 //    en esa app, y otros tantos en cada una de las que tampoco consumían el paquete.

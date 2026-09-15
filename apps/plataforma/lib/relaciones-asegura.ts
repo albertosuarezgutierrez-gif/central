@@ -145,6 +145,17 @@ export type RelacionCartera = RelacionFicha & {
   polizasVivas: number | null
   /** La autorización de la ficha hacia el relacionado. `null` = no hay ninguna. */
   autorizacion: AutorizacionCartera | null
+  /**
+   * La del sentido CONTRARIO (el relacionado deja que la ficha vea LO SUYO).
+   *
+   * Tres valores, y el tercero no es un adorno:
+   *   · una autorización → la que gobierna ese sentido, con su estado.
+   *   · `null` → se miró y no hay ninguna anotada.
+   *   · `undefined` → **el puerto no manda el dato** (asegura sin desplegar
+   *     todavía). No es «no hay»: la pantalla lo dice como lo que es, porque
+   *     pintarlo como «no hay» es exactamente el fallo que esto viene a cerrar.
+   */
+  autorizacionInversa: AutorizacionCartera | null | undefined
 }
 
 /**
@@ -207,6 +218,77 @@ export function explicarEstadoAutorizacion(a: AutorizacionCartera | null, nombre
   }
 }
 
+/**
+ * La INSIGNIA de un sentido: el «sí ve / aún no ve / no ve» que Alberto lee de
+ * un vistazo, antes que ninguna frase.
+ *
+ * 🚨 Existe porque el estado vivía solo dentro de un párrafo largo y de un
+ * botón azul, y los dos sentidos de un vínculo se pintaban con dos frases casi
+ * idénticas: el 15/09/2026 Alberto anotó el sentido contrario al que quería,
+ * lo revocó 12 segundos después, y luego anotó los dos correctos sin que la
+ * pantalla cambiara de aspecto (quedaban `pendiente`). Una insignia por sentido
+ * hace imposibles las dos cosas.
+ *
+ * `ve` manda sobre todo lo demás: si el puerto dice que hoy los ve, la insignia
+ * no puede decir «no ve» aunque el resumen de la autorización venga raro.
+ */
+export type TonoAcceso = 've' | 'espera' | 'no' | 'duda'
+export type InsigniaAcceso = { icono: string; etiqueta: string; tono: TonoAcceso }
+
+export function insigniaAcceso(a: AutorizacionCartera | null | undefined, ve: boolean): InsigniaAcceso {
+  if (ve) return { icono: '🔓', etiqueta: 'SÍ VE', tono: 've' }
+  // `undefined` = asegura no manda el dato. No es «no hay autorización»: es que
+  // desde aquí no se sabe, y decirlo es la diferencia entre un hueco y una
+  // afirmación falsa.
+  if (a === undefined) return { icono: '❔', etiqueta: 'NO CONSTA', tono: 'duda' }
+  if (a === null) return { icono: '🔒', etiqueta: 'NO VE', tono: 'no' }
+  switch (a.estado) {
+    // El estado que no existía en pantalla: hay consentimiento anotado y aun
+    // así NO ve nada. Ni «sí» ni «no»: su propio color y su propia acción.
+    case 'pendiente':
+      return { icono: '🕐', etiqueta: 'ANOTADA · AÚN NO VE', tono: 'espera' }
+    case 'vigente':
+      return { icono: '🔓', etiqueta: 'SÍ VE', tono: 've' }
+    case 'caducada':
+      return { icono: '🔒', etiqueta: 'NO VE · CADUCADA', tono: 'no' }
+    case 'revocada':
+      return { icono: '🔒', etiqueta: 'NO VE · REVOCADA', tono: 'no' }
+  }
+}
+
+/**
+ * La frase de un sentido. Igual que `explicarEstadoAutorizacion`, pero sabiendo
+ * decir el hueco: con `undefined` no se afirma que no haya autorización.
+ */
+export function explicarSentidoAcceso(
+  a: AutorizacionCartera | null | undefined,
+  recibe: string,
+  otorga: string,
+  ve: boolean,
+): string {
+  // 🚨 `ve` manda, igual que en la insignia. Si el puerto dice que hoy los ve y
+  // el resumen dice otra cosa, la frase NO puede desmentir al puerto debajo de
+  // una insignia que pone «SÍ VE»: se dice que los ve y se dice qué falla.
+  if (ve && a?.estado !== 'vigente') {
+    const detalle =
+      a === undefined
+        ? 'asegura no manda el detalle de la autorización'
+        : a === null
+          ? 'aquí no consta ninguna anotada'
+          : `la que consta figura ${a.estado}`
+    return `${recibe} ve los seguros de ${otorga} (${detalle}).`
+  }
+  if (a === undefined) {
+    return `${recibe} no ve hoy los seguros de ${otorga}. No consta desde aquí si hay alguna autorización anotada esperando confirmación: asegura no manda ese dato.`
+  }
+  return explicarEstadoAutorizacion(a, recibe, otorga)
+}
+
+/** Hay algo que retirar mientras la autorización no esté ya cerrada. */
+export function autorizacionViva(a: AutorizacionCartera | null | undefined): boolean {
+  return a?.estado === 'vigente' || a?.estado === 'pendiente'
+}
+
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v : null
 }
@@ -238,6 +320,8 @@ export function leerRelacion(v: unknown): RelacionCartera | null {
         : null,
     polizasVivas: enteroONull(o.polizasVivas),
     autorizacion: leerAutorizacion(o.autorizacion),
+    // `undefined` a propósito cuando la clave no viene: ese hueco es «no lo sé».
+    autorizacionInversa: 'autorizacionInversa' in o ? leerAutorizacion(o.autorizacionInversa) : undefined,
   }
 }
 

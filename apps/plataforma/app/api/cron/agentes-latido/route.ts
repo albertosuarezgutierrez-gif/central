@@ -91,6 +91,15 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_mensajes_huesped: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_mensajes_huesped'`,
+  // Calendario de limpiezas (auditoría 15/09/2026): llama a Smoobu directo para crear
+  // `cleaning_sessions`, y no tenía vigía — el mismo hueco que dejó pasar el 401 de septiembre,
+  // un piso más abajo.
+  sivra_limpiadoras_auto: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_limpiadoras_auto'`,
+  sivra_limpiadoras_alerta_ventana: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_limpiadoras_alerta_ventana'`,
   // Facturas: la frescura se mide sobre la ÚLTIMA PASADA BUENA, no sobre la
   // última ejecución — así un cron que corre y falla siempre también salta.
   // Se traen además `ultimo_at` y `detalle` para poder decir CUÁL de las dos

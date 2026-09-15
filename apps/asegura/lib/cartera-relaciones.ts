@@ -127,6 +127,20 @@ export type RelacionCartera = RelacionFicha & {
    * entera devuelve `null` y la pantalla lo dice.
    */
   autorizacion: AutorizacionRelacion | null
+  /**
+   * La del sentido CONTRARIO: la que el relacionado da a la ficha.
+   *
+   * 🚨 Antes solo cruzaba el puerto `puedeVer` (un booleano de «hay una
+   * VIGENTE»), y eso borraba el estado que más falta hace: una anotada y
+   * pendiente de aceptar se veía exactamente igual que no haber ninguna. Medido
+   * el 15/09/2026 con las dos de Juan Manuel (Esquiansa→él y Francisca→él):
+   * anotadas a las 09:55, pendientes, y la pantalla seguía diciendo «no» con el
+   * mismo botón debajo, así que parecía que el clic no había hecho nada.
+   *
+   * Las filas ya se leen (`autorizacionesDe` trae los dos sentidos): esto solo
+   * deja de tirarlas.
+   */
+  autorizacionInversa: AutorizacionRelacion | null
 }
 
 type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; status: 404 | 409 | 422 | 500 }
@@ -135,7 +149,8 @@ type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | '
 
 type FilaAutorizacion = {
   otorganteClienteId: string
-  autorizadoClienteId: string
+  /** `null` = se autorizó a una IDENTIDAD del portal (alguien invitado, sin ficha). */
+  autorizadoClienteId: string | null
   alcance: string
   tituloRepresentacion: string | null
   origen: string
@@ -198,6 +213,10 @@ async function autorizacionesDe(correduriaId: string, clienteId: string): Promis
   })
   const por = new Map<string, FilaAutorizacion[]>()
   for (const f of filas) {
+    // Una autorización a alguien INVITADO (identidad del portal, sin ficha) no
+    // es un par entre dos fichas: no tiene sitio en este mapa, que es lo que
+    // la pantalla usa para pintar cada relación. Se ve en «Contactos».
+    if (f.autorizadoClienteId === null) continue
     const k = clavePar(f.otorganteClienteId, f.autorizadoClienteId)
     const ya = por.get(k)
     if (ya) ya.push(f)
@@ -284,6 +303,7 @@ export async function listarRelaciones(correduriaId: string, clienteId: string):
           tipoOtorgante,
           polizasVivas: nVivas.get(o.id) ?? 0,
           autorizacion: resumirAutorizacion(autorizaciones.get(clavePar(clienteId, r.relacionadoId)) ?? [], hoy),
+          autorizacionInversa: resumirAutorizacion(autorizaciones.get(clavePar(r.relacionadoId, clienteId)) ?? [], hoy),
         }
       })
       .filter((r): r is RelacionCartera => r !== null)

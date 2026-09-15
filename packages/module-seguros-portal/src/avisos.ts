@@ -1,0 +1,220 @@
+// Los AVISOS de la campana: qué tiene pendiente la persona que ha entrado, en
+// una sola lista, con un enlace al sitio donde cada cosa se resuelve.
+//
+// Esto es PURO a propósito: recibe lo que ya leyeron `lib/autorizaciones.ts` y
+// `lib/obligaciones.ts` (cada uno con su frontera de identidad) y no toca la BD.
+// Así el test lo rompe a mano sin Prisma, y la ruta `/api/avisos` no decide nada.
+//
+// 🚨 Un aviso NO se acepta desde aquí ni desde la campana. La autorización se
+// acepta en `/autorizaciones`, con su alcance y su texto delante; la obligación
+// se mira en el calendario. La campana ENSEÑA y ENLAZA. Duplicar el «aceptar»
+// en dos pantallas es cómo se acaba aceptando sin leer.
+//
+// 🚨 Y tres desenlaces para el número, ninguno es «0» por defecto. Si una de las
+// dos fuentes no se ha podido leer, «no tienes avisos» es una mentira sobre la
+// que el cliente decide no mirar. Es la regla del `CLAUDE.md` de la raíz (dato
+// que NO hay ≠ dato que NO se ha mirado), un piso más abajo.
+import { entraEnVentana } from './obligacion.ts'
+import type { EstadoAutorizacion } from './autorizacion.ts'
+
+export const TIPOS_AVISO = [
+  'peticion_recibida',
+  'autorizacion_pendiente',
+  'autorizacion_sin_aceptar',
+  'obligacion_en_ventana',
+  'datos_por_revisar',
+] as const
+export type TipoAviso = (typeof TIPOS_AVISO)[number]
+
+export type Aviso = {
+  tipo: TipoAviso
+  /** El id de la fila de origen, para que la pantalla tenga `key` estable. */
+  id: string
+  titulo: string
+  detalle: string
+  /** A dónde lleva: SIEMPRE la pantalla donde se resuelve, nunca una acción. */
+  href: string
+}
+
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos'] as const
+export type FuenteAviso = (typeof FUENTES_AVISO)[number]
+
+/** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
+export type AutorizacionParaAviso = {
+  id: string
+  estado: EstadoAutorizacion
+  otorganteNombre: string | null
+  autorizadoNombre: string | null
+}
+
+/** Lo mínimo de una obligación del calendario. */
+export type ObligacionParaAviso = {
+  id: string
+  titulo: string
+  fechaAccionable: Date
+}
+
+/** Lo mínimo de una petición de acceso recibida; el resto de `PeticionRecibida` no se mira. */
+export type PeticionParaAviso = {
+  id: string
+  /** Solo se avisa de las `pendiente`. */
+  estado: string
+  /** Quién pide. `null` = no se sabe el nombre — NUNCA se inventa uno. */
+  solicitanteNombre: string | null
+}
+
+/**
+ * Un reparo de los datos de contacto guardados, ya traducido a una frase.
+ *
+ * 🚨 `tipo` es lo que IDENTIFICA al aviso (`datos_por_revisar:cp_invalido`), así
+ * que tiene que ser estable: es la clave con la que el emisor de correo sella lo
+ * ya enviado. El `texto` es la explicación para la pantalla y puede cambiar sin
+ * que eso vuelva a avisar de lo mismo.
+ */
+export type ReparoParaAviso = {
+  tipo: string
+  texto: string
+}
+
+export type EntradaAvisos = {
+  /** `null` = esa fuente NO se ha podido leer. No es lo mismo que `{ otorgadas: [], recibidas: [] }`. */
+  autorizaciones: { otorgadas: AutorizacionParaAviso[]; recibidas: AutorizacionParaAviso[] } | null
+  /** `null` = no se ha podido leer. `[]` = leído, no hay. */
+  obligaciones: ObligacionParaAviso[] | null
+  /** `null` = no se ha podido leer. `[]` = leído, no hay. */
+  peticiones: PeticionParaAviso[] | null
+  /**
+   * Lo que no cuadra en los datos de contacto guardados (`leerSitio()` de
+   * `@central/module-seguros`). `null` = no se ha podido mirar — con la ficha
+   * ilegible, «tus datos están bien» sería una afirmación que nadie ha comprobado.
+   */
+  datos: ReparoParaAviso[] | null
+  hoy: Date
+}
+
+export type Avisos = {
+  avisos: Aviso[]
+  /** Las fuentes que fallaron. Vacío = todo leído; con algo, el número lleva `+`. */
+  fuentesIlegibles: FuenteAviso[]
+  /** Lo que pinta el globo de la campana. `null` = sin globo (todo leído y nada pendiente). */
+  globo: string | null
+}
+
+/** A dónde manda cada tipo. Un mapa, no un `switch` en la pantalla: el que añada un tipo lo ve aquí. */
+export const HREF_POR_TIPO: Record<TipoAviso, string> = {
+  peticion_recibida: '/autorizaciones',
+  autorizacion_pendiente: '/autorizaciones',
+  autorizacion_sin_aceptar: '/autorizaciones',
+  // El calendario de la bóveda se quitó el 09/09/2026 (no aportaba nada que la
+  // fila de cada póliza no dijera ya); el aviso sigue existiendo y enlaza a la
+  // bóveda a secas, sin ancla.
+  obligacion_en_ventana: '/boveda',
+  // «Mis datos», que es donde se corrige: el aviso lleva a la pantalla donde se
+  // resuelve, no a una explicación de lo que hay que hacer en otro sitio.
+  datos_por_revisar: '/boveda?vista=datos',
+}
+
+const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
+
+/**
+ * El texto del globo. Tres desenlaces, y «0» no es uno de ellos:
+ *  · todas las fuentes leídas y `n` pendientes → `n` (o sin globo si `n` = 0);
+ *  · alguna fuente ilegible → `n+` (hay AL MENOS `n`; puede haber más);
+ *  · ninguna legible → `!` (no se sabe nada).
+ */
+export function textoGlobo(n: number, ilegibles: number, fuentes: number): string | null {
+  if (fuentes > 0 && ilegibles >= fuentes) return '!'
+  if (ilegibles > 0) return `${n}+`
+  return n > 0 ? String(n) : null
+}
+
+export function avisosDe(x: EntradaAvisos): Avisos {
+  const avisos: Aviso[] = []
+  const fuentesIlegibles: FuenteAviso[] = []
+
+  if (x.peticiones === null) {
+    fuentesIlegibles.push('peticiones')
+  } else {
+    for (const p of x.peticiones) {
+      if (p.estado !== 'pendiente') continue
+      avisos.push({
+        tipo: 'peticion_recibida',
+        id: p.id,
+        titulo: `${p.solicitanteNombre ?? 'Alguien'} te ha pedido acceso a tus seguros`,
+        detalle: 'Puedes aceptarlo o rechazarlo.',
+        href: HREF_POR_TIPO.peticion_recibida,
+      })
+    }
+  }
+
+  if (x.autorizaciones === null) {
+    fuentesIlegibles.push('autorizaciones')
+  } else {
+    // Las que me han concedido y aún no he aceptado: es lo que la campana
+    // existe para enseñar. Hasta el 08/09/2026 solo se veía entrando en la
+    // pestaña «Quién me ve», y quien no entraba no se enteraba.
+    for (const a of x.autorizaciones.recibidas) {
+      if (a.estado !== 'pendiente') continue
+      avisos.push({
+        tipo: 'autorizacion_pendiente',
+        id: a.id,
+        titulo: `${a.otorganteNombre ?? 'Alguien'} te ha dado acceso a sus seguros`,
+        detalle: 'Falta que lo aceptes para poder verlos.',
+        href: HREF_POR_TIPO.autorizacion_pendiente,
+      })
+    }
+    // El espejo: las que YO concedí y la otra persona no ha aceptado. «La
+    // persona invitada» cuando no es cliente: de ella no hay ficha ni nombre, y
+    // la pantalla no inventa uno.
+    for (const a of x.autorizaciones.otorgadas) {
+      if (a.estado !== 'pendiente') continue
+      avisos.push({
+        tipo: 'autorizacion_sin_aceptar',
+        id: a.id,
+        titulo: `${a.autorizadoNombre ?? 'La persona invitada'} aún no ha aceptado tu acceso`,
+        detalle: 'Hasta que acepte no ve nada. Puedes recordárselo o retirarlo.',
+        href: HREF_POR_TIPO.autorizacion_sin_aceptar,
+      })
+    }
+  }
+
+  if (x.obligaciones === null) {
+    fuentesIlegibles.push('obligaciones')
+  } else {
+    for (const o of x.obligaciones) {
+      // La ventana la decide el módulo (7 días antes de la fecha ACCIONABLE, que
+      // ya lleva descontado el preaviso del art. 22 LCS). No se reimplementa.
+      if (!entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy: x.hoy })) continue
+      avisos.push({
+        tipo: 'obligacion_en_ventana',
+        id: o.id,
+        titulo: o.titulo,
+        detalle: `Puedes actuar hasta el ${FECHA.format(o.fechaAccionable)}.`,
+        href: HREF_POR_TIPO.obligacion_en_ventana,
+      })
+    }
+  }
+
+  if (x.datos === null) {
+    fuentesIlegibles.push('datos')
+  } else {
+    for (const r of x.datos) {
+      avisos.push({
+        tipo: 'datos_por_revisar',
+        id: r.tipo,
+        titulo: 'Revisa tu dirección de contacto',
+        // El texto del reparo dice QUÉ columna no cuadra y con qué valor; la
+        // segunda frase dice DÓNDE se arregla. Las dos juntas, porque un aviso
+        // que solo dice que algo está mal obliga a escribirnos para saber qué.
+        detalle: `${r.texto} Puedes corregirlo tú mismo en «Mis datos».`,
+        href: HREF_POR_TIPO.datos_por_revisar,
+      })
+    }
+  }
+
+  return {
+    avisos,
+    fuentesIlegibles,
+    globo: textoGlobo(avisos.length, fuentesIlegibles.length, FUENTES_AVISO.length),
+  }
+}

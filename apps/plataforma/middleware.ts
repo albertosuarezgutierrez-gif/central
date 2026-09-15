@@ -53,10 +53,11 @@ const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/ap
   // Desde el 02/09/2026 el prefijo cubre también `/api/publico/correduria/lead` (formulario de
   // la correduría): POST sin sesión, con honeypot + rate limit por IP en el handler; solo crea
   // un lead por el puerto de asegura y avisa a Alberto. No lee nada de la cartera.
-  '/api/publico',
-  // Landing pública de Grupo ASegura (correduría): la ÚNICA pantalla pública de la correduría.
-  // Server component sin sesión ni sidebar (vive fuera de `(usuario)`); no toca la BD.
-  '/seguros']
+  '/api/publico']
+// 🚨 `/seguros` (landing vieja de la correduría, previa a `apps/asegura-web`) SALIÓ de esta
+// lista el 14/09/2026: la página se borró y el sitio 301 hacia grupoasegura.es vive en
+// `next.config.ts::redirects()`, que Next resuelve ANTES de que el middleware corra — dejarla
+// aquí habría sido una exención muerta para una ruta que ya no llega a este archivo.
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
