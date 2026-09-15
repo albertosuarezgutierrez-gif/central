@@ -331,14 +331,30 @@ Donde está el dinero y casi no hay competencia. No «seguro de coche barato»: 
 - ✅ «me han subido el seguro del coche en la renovación» → `/blog/me-han-subido-el-seguro-en-la-renovacion` (07/09/2026, PR #2487/#2500)
 - ✅ «preaviso de un mes para cancelar el seguro» (art. 22 LCS) → `/blog/preaviso-un-mes-no-renovar-seguro` (07/09/2026, PR #2487/#2500)
 - ✅ «cómo reclamar un siniestro que me han denegado» → `/blog/siniestro-denegado-que-hacer` (07/09/2026, PR #2487/#2500)
-- «cómo cambiar de correduría sin cambiar de seguro»
-- «qué cubre de verdad mi seguro de hogar»
-- «seguro de comunidad de propietarios Sevilla» · «seguro de local comercial Sevilla» ·
-  «seguro de flota Sevilla»
+- ✅ «cómo cambiar de correduría sin cambiar de seguro» → **ya cubierta**, no era un hueco: la
+  página `/cambiar-de-correduria` existe desde antes de escribirse este banco (ver
+  `references/keywords.md`, §2). Este bullet describía trabajo ya hecho.
+- ✅ «qué cubre de verdad mi seguro de hogar» → `/blog/que-cubre-de-verdad-el-seguro-de-hogar`
+  (15/09/2026, PR de esta sesión). Continente/contenido, sublímites de objetos de valor,
+  exclusiones habituales (deterioro progresivo vs. daño súbito) y capital de reconstrucción vs.
+  reposición. Sin citar ningún artículo de ley: no hay ninguno en `NORMAS_CITABLES` que respalde
+  el infraseguro o los sublímites, y una cita sin verificar es peor que no citar (regla del propio
+  fichero `articulos.ts`).
+- ✅ «seguro de comunidad de propietarios» · «seguro de local comercial» · «seguro de flota» → **ya
+  cubiertas sin el sufijo "Sevilla"**, que este bullet seguía llevando pese al cambio a ámbito
+  nacional del 07/09/2026 (PR #2464): `/seguros/comunidades`, `/seguros/comercio` y
+  `/seguros/flota` existen y enlazan entre sí desde esa misma fecha (ver `references/keywords.md`,
+  §1). El bullet de aquí no se había releído tras el cierre de las ideas B y C — mismo patrón que
+  ya corrigió esta sección el 14/09/2026 con `Service`/`sameAs`/`WebSite`.
 
 Corregido 14/09/2026: el hueco de arriba llevaba desde el 07/09 sin cerrarse pese a que los 3
 artículos ya existían — el agente SEO lo detectó (misma sesión que confirmó GSC+PostHog OK vía el
 puerto HTTP), lo anotó porque no tenía escritura en el repo, y esta sesión aplicó el cierre.
+
+**15/09/2026:** con el artículo de hogar cerrado, la cola de esta idea K queda VACÍA — todas las
+consultas de intención de problema y las tres de ramo con sufijo obsoleto tienen página. El
+siguiente contenido de blog sale de la cola curada `apps/plataforma/lib/correduria/blog-temas.ts`
+(agente quincenal), no de este banco: no dupliques ahí un tema que ya está en `TEMAS`.
 
 **Ritmo:** un artículo por ciclo, no cinco a medias.
 ⚠️ **Lección del agente SEO de ia-rest, que no aplicó ni un cambio en toda su vida:** su umbral de
@@ -360,6 +376,26 @@ Por orden de retorno para una correduría local:
    **empresas y flota**, y ahí la relación es de persona a persona. El contenido es el mismo de la
    idea K, en corto.
 3. **Instagram/Facebook solo si hay quien alimente el calendario.** Una cuenta muerta resta.
+
+### Borrador — post de LinkedIn (15/09/2026, sin publicar: no hay perfil ni cuenta abierta)
+
+Pasó el cepo de `revisarCopy` (sin precio, sin superlativos, sin acotar a Sevilla) a mano, con la
+misma lista de `packages/module-seguros/src/copy-regulado.ts`. **No se publica sin que Alberto lo
+lea y decida** — regla 2 de este documento.
+
+> Un cliente me preguntó la semana pasada si podía cambiar de correduría sin tocar su póliza de
+> flota. Sí se puede: la compañía y las condiciones siguen igual, lo que cambia es quién la
+> gestiona y quién representa al tomador cuando hay un siniestro o una renovación que revisar.
+>
+> Lo digo porque es la duda que más me repiten las empresas con vehículos: piensan que revisar la
+> correduría implica volver a empezar de cero con la aseguradora, y no es así.
+>
+> Si gestionas la flota de un negocio y nunca te lo han explicado, con gusto te lo cuento.
+
+**Por qué este ángulo:** enlaza con la idea K (intención de problema, sin competencia de
+comparadores) y con el nicho de mayor retorno que señala la skill (empresas y flota, relación
+persona a persona). No menciona ninguna compañía ni cifra. **Bloqueo:** el perfil de LinkedIn y la
+decisión de publicar son de Alberto.
 
 **Regla propia de redes:** un post publicado **no se edita como una página**. Si promete precio, ya
 está publicado. Por eso los borradores pasan por el mismo cepo del copy antes de proponerlos.

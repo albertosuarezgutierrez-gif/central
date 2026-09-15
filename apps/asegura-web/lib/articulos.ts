@@ -280,6 +280,81 @@ export const ARTICULOS: readonly Articulo[] = [
       },
     ],
   },
+  {
+    slug: 'que-cubre-de-verdad-el-seguro-de-hogar',
+    h1: 'Qué cubre de verdad tu seguro de hogar (y qué no)',
+    title: 'Qué cubre de verdad tu seguro de hogar',
+    description:
+      'Continente, contenido y los límites que nadie lee hasta el siniestro: qué cubre un seguro de hogar estándar, qué queda fuera y qué capital declarar.',
+    fecha: '2026-09-15',
+    consulta: 'qué cubre de verdad mi seguro de hogar',
+    resumen:
+      'Un seguro de hogar no cubre "la casa": cubre lo que has declarado, del modo en que lo has declarado. La mayoría de sorpresas en un siniestro salen de dos sitios: confundir continente con contenido, y un capital que no se revisó desde que se contrató.',
+    ramos: ['hogar', 'comunidades'],
+    secciones: [
+      {
+        titulo: 'Continente y contenido no son el mismo seguro',
+        parrafos: [
+          'El continente es la vivienda en sí: paredes, suelos, techos, instalaciones fijas y la cocina que viene empotrada. El contenido es todo lo que te llevarías si te mudaras: muebles, electrodomésticos, ropa, menaje.',
+          'Si eres propietario y vives en la vivienda, normalmente necesitas los dos. Si vives de alquiler, el continente suele ser cosa de quien te alquila, y lo tuyo es el contenido —además de la responsabilidad civil, para lo que puedas causar sin querer a un vecino—.',
+          'La confusión más cara pasa al revés de lo que parece: alguien asegura bien el continente y dice "ya está protegido", y el día que se estropea el sofá, el frigorífico o el portátil descubre que eso vivía en la otra póliza, la que no contrató.',
+        ],
+      },
+      {
+        titulo: 'Los objetos que llevan límite propio, aunque la póliza diga "todo riesgo"',
+        parrafos: [
+          'Joyas, relojes, dinero en efectivo, obras de arte, instrumentos musicales, bicicletas o el portátil que sacas de casa todos los días: casi ninguna póliza los cubre por su valor real sin más. Llevan un sublímite —una cantidad tope, mucho más baja que el capital general del contenido— salvo que se declaren aparte.',
+          '"Todo riesgo" describe el tipo de cobertura —cualquier daño accidental, no solo una lista cerrada de causas—, no el importe. Un anillo de herencia o una cámara profesional pueden superar ese sublímite sin que nadie se haya dado cuenta hasta que hace falta reclamarlo.',
+          'Si tienes algo así en casa, es una pregunta concreta que hacer antes de firmar, no una duda para el día del siniestro: cuál es el límite para esa categoría y si compensa declararlo aparte.',
+        ],
+      },
+      {
+        titulo: 'Lo que casi ninguna póliza cubre sin más',
+        parrafos: [
+          'Un seguro de hogar cubre daños accidentales y súbitos: una tubería que revienta, una tormenta, un incendio. Lo que no suele cubrir es el deterioro progresivo: una humedad que lleva meses filtrando por falta de mantenimiento, una grieta que avanza poco a poco, una instalación vieja que nunca se revisó.',
+          'La diferencia entre las dos cosas no siempre es obvia desde fuera —una mancha de humedad puede venir de una avería puntual o de un problema que arrastra años—, y es exactamente lo que un perito viene a determinar. Por eso el informe de la aseguradora, cuando deniega algo, tiene que decir cuál de las dos cosas ha visto.',
+          'También suelen quedar fuera los daños en una vivienda desocupada más allá de cierto tiempo seguido, y cualquier daño causado a propósito. Y el capital de contenido no cubre lo que ya estaba roto antes de contratar: un seguro protege contra lo que puede pasar, no repara lo que ya había pasado.',
+        ],
+      },
+      {
+        titulo: 'El capital asegurado: por qué "de menos" sale más caro que "de más"',
+        parrafos: [
+          'El continente se asegura por el valor de reconstrucción —lo que costaría volver a levantar la vivienda—, no por el precio al que se vendería ni por lo que se pagó al comprarla: el suelo no hay que reconstruirlo. El contenido se asegura por el valor de reposición: lo que costaría comprar hoy algo equivalente a lo que tienes.',
+          'Un capital que se queda corto no solo limita lo que se cobra en un siniestro total: en muchas pólizas, si el capital declarado es menor que el valor real, la indemnización de un daño PARCIAL también se reduce en la misma proporción, no solo la de un siniestro que se lo lleve todo.',
+          'Y un capital revisado hace años suele quedarse corto sin que nadie lo note: una reforma, una cocina nueva, un salón que se ha ido llenando. Es de las pocas cosas de la póliza que conviene mirar aunque no haya pasado nada, no solo cuando cambia de vencimiento.',
+        ],
+      },
+      {
+        titulo: 'Dónde entra revisarlo antes, y no después',
+        parrafos: [
+          'Casi todo lo de arriba está escrito en las condiciones particulares del contrato: los sublímites por categoría, qué se entiende por vivienda desocupada, cómo se calcula el capital. Es un documento largo y técnico, y es normal que nadie lo lea entero hasta que hace falta.',
+          'Como corredores, eso es justo lo que miramos antes de que firmes: qué capital tiene sentido para tu vivienda, qué objetos merecen declararse aparte y qué exclusiones son razonables y cuáles no. La diferencia no se nota el día que contratas, se nota el día que necesitas usarlo.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Mi seguro de hogar cubre las humedades?',
+        respuesta:
+          'Depende de la causa. Una avería puntual y accidental —una tubería que revienta— suele estar cubierta. Una humedad que avanza despacio por falta de mantenimiento o por un problema estructural de fondo, normalmente no. Lo determina el informe del perito.',
+      },
+      {
+        pregunta: 'Vivo de alquiler, ¿tengo que asegurar el continente?',
+        respuesta:
+          'Habitualmente no: el continente suele ser responsabilidad de quien te alquila la vivienda. Lo tuyo como inquilino es el contenido —tus muebles y pertenencias— y la responsabilidad civil por lo que puedas causar sin querer.',
+      },
+      {
+        pregunta: 'Tengo joyas de valor en casa, ¿están cubiertas por el todo riesgo?',
+        respuesta:
+          'Probablemente hasta un límite, no por su valor completo. Las joyas, el efectivo y otros objetos de valor suelen llevar un sublímite propio dentro del capital de contenido. Merece la pena preguntarlo y, si hace falta, declararlos aparte antes de que ocurra algo, no después.',
+      },
+      {
+        pregunta: '¿Y lo que pasa en las zonas comunes del edificio?',
+        respuesta:
+          'Eso lo cubre el seguro de la comunidad, no el tuyo. Cuándo interviene uno y cuándo el otro —por ejemplo, en una fuga que empieza en una tubería comunitaria— depende de dónde esté el origen del daño.',
+      },
+    ],
+  },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
   //
   // El agente quincenal de `apps/plataforma` (`lib/correduria/blog-agente.ts`)
