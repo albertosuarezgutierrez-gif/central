@@ -22,7 +22,8 @@ import type { Articulo } from './articulos.ts'
  * local en dos negocios distintos y hunde el posicionamiento que se pretendía.
  *
  * 📌 Lo que NO se declara, y es a propósito:
- *   · `openingHours` mientras `HORARIO` sea `null` (no se ha confirmado).
+ *   · `openingHours` mientras `HORARIO` sea `null`, o sea mientras el horario
+ *     no esté confirmado. Desde el 15/09/2026 SÍ lo está y se declara.
  *   · `aggregateRating`: ver abajo.
  *
  * ✅ `telephone` SÍ se declara desde el 05/09/2026: Alberto confirmó su móvil

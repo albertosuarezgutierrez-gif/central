@@ -177,9 +177,12 @@ Antes de escribir contenido nuevo, comprueba que lo que ya existe se puede index
 - **`app/sitemap.ts`**: que estén todas las páginas reales y ninguna que no deba indexarse.
 - **`app/robots.ts`**: que declare el sitemap y no bloquee lo que quieres posicionar.
 - **JSON-LD** (`lib/seo.ts`): `InsuranceAgency`/`LocalBusiness` con dirección y `areaServed`.
-  🚨 **`HORARIO` sigue ausente A PROPÓSITO** mientras no se confirme: publicar un horario
-  inventado hace que alguien llame y no le cojan. **No lo rellenes tú**; si hace falta para el
-  JSON-LD, es una pregunta para Alberto, no un valor por defecto.
+  ✅ **`HORARIO` ya está confirmado (15/09/2026): lunes a viernes, de 9:00 a 18:00.** Sale de
+  `lib/sitio.ts` y de ahí se publica en DOS sitios —el pie de la web y el `openingHours` del
+  JSON-LD—; no lo teclees en ningún otro, que la segunda copia se queda vieja sin que nada falle.
+  Lo vigila `lib/seo-horario.test.ts`. Si algún día cambia, lo dice Alberto: nunca un valor por
+  defecto, porque publicar un horario inventado hace que alguien llame y no le cojan.
+  ⏳ Pendiente de Alberto: ponerlo también en el perfil de Google Business, que ese día no tenía.
   ✅ **El teléfono SÍ existe desde el 05/09/2026** (`MEDIADOR.identidad.telefono`), con
   `telefonoLegible()` y `whatsappUrl()` en `@central/module-seguros`. O sea que `telephone` en la
   ficha JSON-LD ya se puede rellenar, y **leyéndolo de ahí**, nunca tecleándolo.
