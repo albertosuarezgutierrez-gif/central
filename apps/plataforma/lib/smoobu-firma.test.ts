@@ -90,8 +90,29 @@ test('GET: la query se ordena ALFABÉTICAMENTE, no como llegó en la URL', () =>
 test('queryCanonica ordena por clave y deja los valores tal cual', () => {
   assert.equal(queryCanonica('to=2026-04-10&from=2026-04-01'), 'from=2026-04-01&to=2026-04-10')
   assert.equal(queryCanonica(''), '')
-  // Las rutas de rates llaman con `apartments[]`: el corchete no se re-codifica.
-  assert.equal(queryCanonica('apartments[]=12&start_date=2026-01-01'), 'apartments[]=12&start_date=2026-01-01')
+})
+
+// 15/09/2026: `apartments[]=X` se reescribe a `apartments[0]=X` SOLO en el canonical
+// (la URL real que se envía sigue llevando el corchete vacío, sin tocar). Es la
+// hipótesis de trabajo del 401 de /api/rates — ver el comentario de queryCanonica.
+test('queryCanonica reescribe claves array[] a array[N] indexado, por orden de aparición', () => {
+  assert.equal(
+    queryCanonica('apartments[]=352418&start_date=2026-01-01'),
+    'apartments[0]=352418&start_date=2026-01-01',
+  )
+  assert.equal(
+    queryCanonica('apartments[]=398&apartments[]=401'),
+    'apartments[0]=398&apartments[1]=401',
+  )
+})
+
+test('firmarPeticion firma /api/rates con apartments[] reescrito a apartments[0] en el canonical', () => {
+  const { canonical } = firmarPeticion({
+    method: 'GET',
+    url: 'https://login.smoobu.com/api/rates?apartments[]=352418&start_date=2026-01-01&end_date=2026-01-31',
+    apiKey: API_KEY, apiSecret: API_SECRET, timestamp: TIMESTAMP, nonce: NONCE,
+  })
+  assert.match(canonical, /^GET\n\/api\/rates\napartments\[0\]=352418&end_date=2026-01-31&start_date=2026-01-01\n/)
 })
 
 test('una ruta relativa se firma igual que su URL absoluta', () => {
