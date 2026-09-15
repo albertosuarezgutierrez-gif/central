@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T17:58:49Z",
-  "sha": "375ceabd31906a17473d5aa7e3bc585abae9165b",
+  "generadoEn": "2026-09-15T19:13:37Z",
+  "sha": "ccd4feb57ba45f64459a4beb6bd1b120a18d5216",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -75435,7 +75435,7 @@
           "exportada": false,
           "params": "faltan: string[], leer: () => Promise<T>",
           "retorno": "Promise<ResultadoFuente<T>>",
-          "linea": 47,
+          "linea": 50,
           "resumen": "Envuelve una lectura en el tri-estado: secreto ausente → no_configurado; excepción → error."
         },
         {
@@ -75444,7 +75444,7 @@
           "exportada": false,
           "params": "nombres: string[]",
           "retorno": "string[]",
-          "linea": 57
+          "linea": 60
         },
         {
           "nombre": "handler",
@@ -75452,12 +75452,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 61
+          "linea": 64
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/seo-correduria",
-      "hash": "3e49b430767d"
+      "hash": "9adc09dd4c47"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ses-latido/route.ts",
@@ -96537,6 +96537,56 @@
       "hash": "f76a12f5606a"
     },
     {
+      "ruta": "apps/plataforma/lib/seo-correduria/cobertura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/cobertura.ts — indexación REAL de las páginas propias (URL Inspection API). gsc.ts (Search Analytics) dice CÓMO rinde una página que YA está en el índice; esto dice si una página SIGUE en el índice — es la única API de Google para «¿esta URL da 404 / se cayó del índice / la bloque",
+      "exporta": [
+        "urlsPropias",
+        "inspeccionarUrl",
+        "leerCobertura"
+      ],
+      "funciones": [
+        {
+          "nombre": "verdicto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "VerdictoCobertura",
+          "linea": 24
+        },
+        {
+          "nombre": "urlsPropias",
+          "kind": "function",
+          "exportada": true,
+          "params": "consultas: { pagina: string | null }[], dominio: string",
+          "retorno": "string[]",
+          "linea": 44,
+          "resumen": "Las rutas ÚNICAS que `consultas.ts` ya cita como página objetivo, como URLs completas."
+        },
+        {
+          "nombre": "inspeccionarUrl",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, propiedad: string, url: string, fetch: FetchLike, timeoutMs: number = TIMEOUT_PETICION_MS_DEFECTO,",
+          "retorno": "Promise<FilaCobertura>",
+          "linea": 55,
+          "resumen": "Inspecciona UNA url. Nunca lanza: un fallo de red o un cuerpo inesperado se declara en la fila (`estado:'error'`) para que una URL rota no tumbe el resto del lote — es el mismo criterio que `leerGsc` "
+        },
+        {
+          "nombre": "leerCobertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "cfg: { token: string; propiedad: string; urls: string[]; presupuestoMs?: number }, fetch: FetchLike,",
+          "retorno": "Promise<DatosCobertura>",
+          "linea": 100,
+          "resumen": "Inspecciona una lista de URLs EN SERIE — la API no ofrece lote — dentro de un presupuesto de tiempo (el cron reparte `maxDuration` entre GSC/PostHog/esto). Lo que no llega a tiempo se declara `error:'"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cdeba8fd5ef0"
+    },
+    {
       "ruta": "apps/plataforma/lib/seo-correduria/google-sa.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/seo-correduria/google-sa.ts — token OAuth de una cuenta de servicio de Google (flujo JWT bearer, RS256) para leer Search Console sin usuario delante. El patrón de carga tolerante de la clave privada está copiado de `lib/enablebanking.ts` a propósito: allí no está exportada y compartirla acoplarí",
@@ -96644,7 +96694,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 22,
+          "linea": 23,
           "resumen": "minúsculas, sin tildes, trim, espacios colapsados — para casar consultas de GSC con las objetivo."
         },
         {
@@ -96653,7 +96703,7 @@
           "exportada": true,
           "params": "r: Resultados, consultas: ConsultaObjetivo[]",
           "retorno": "Accion",
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "num",
@@ -96661,7 +96711,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 89,
+          "linea": 114,
           "resumen": "Formato español, con miles también en 4 cifras (`1.543`): `es-ES` a secas no agrupa hasta 5."
         },
         {
@@ -96670,7 +96720,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 92
+          "linea": 117
         },
         {
           "nombre": "delta",
@@ -96678,7 +96728,7 @@
           "exportada": false,
           "params": "actual: number, anterior: number, decimales = 0",
           "retorno": "string",
-          "linea": 96,
+          "linea": 121,
           "resumen": "«+12» / «−3» / «±0» en formato español."
         },
         {
@@ -96687,7 +96737,7 @@
           "exportada": false,
           "params": "fuente: Fuente, res: { estado: 'error' | 'no_configurado'; detalle: string }",
           "retorno": "string",
-          "linea": 107
+          "linea": 132
         },
         {
           "nombre": "bloqueGsc",
@@ -96695,7 +96745,7 @@
           "exportada": false,
           "params": "res: Resultados['gsc']",
           "retorno": "string[]",
-          "linea": 112
+          "linea": 137
         },
         {
           "nombre": "bloquePosthog",
@@ -96703,7 +96753,15 @@
           "exportada": false,
           "params": "res: Resultados['posthog']",
           "retorno": "string[]",
-          "linea": 141
+          "linea": 166
+        },
+        {
+          "nombre": "bloqueCobertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "res: Resultados['cobertura']",
+          "retorno": "string[]",
+          "linea": 189
         },
         {
           "nombre": "redactarInforme",
@@ -96711,13 +96769,13 @@
           "exportada": true,
           "params": "semana: string, r: Resultados, accion: Accion, dominio: string",
           "retorno": "string",
-          "linea": 157,
+          "linea": 216,
           "resumen": "HTML de Telegram (`parse_mode: 'HTML'`). Todo texto externo pasa por `escapeHtml`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f5d8e660c131"
+      "hash": "b0d01251c185"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/posthog.ts",
@@ -136304,7 +136362,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3337,
-    "funciones": 10299
+    "archivos": 3338,
+    "funciones": 10304
   }
 }
