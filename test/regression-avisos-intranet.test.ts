@@ -109,6 +109,16 @@ test('🚨 el correo NO copia el título del aviso: solo viaja la CLASE', () => 
   assert.ok(!/\btitulo\b/.test(correo.replace(/\/\*[\s\S]*?\*\//g, '')), 'el cuerpo del correo no puede mirar el título de un aviso')
 })
 
+test('🚨 el CUERPO también exige https, no solo quien construye el enlace', () => {
+  // `enlacePortal()` ya lo filtra, pero el cuerpo se re-exporta para el ensayo
+  // sin enviar: la guarda tiene que estar donde no se pueda rodear.
+  const con = (enlace: string) =>
+    cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'datos_por_revisar' }], total: 1, enlace })
+  assert.throws(() => con('http://clientes.grupoasegura.es/'), /enlace_no_https/)
+  assert.throws(() => con('clientes.grupoasegura.es'), /enlace_no_https/)
+  assert.doesNotThrow(() => con('https://clientes.grupoasegura.es/'))
+})
+
 test('el enlace del correo es https o no hay correo', () => {
   assert.equal(enlacePortal('https://clientes.grupoasegura.es/boveda'), 'https://clientes.grupoasegura.es/')
   assert.equal(enlacePortal('http://clientes.grupoasegura.es'), null, 'http no: el enlace lleva a una sesión')

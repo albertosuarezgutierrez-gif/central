@@ -124,6 +124,15 @@ function escapar(s: string): string {
  * nadie.
  */
 export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
+  // 🚨 El enlace se valida AQUÍ además de en `enlacePortal()`, que es quien lo
+  // construye hoy. No es redundancia: este cuerpo se re-exporta para que una
+  // pantalla pueda enseñar el ensayo sin enviar, así que mañana puede llamarlo
+  // alguien que no pase por aquella guarda. Un `http://` en un correo que lleva
+  // a una sesión es justo lo que no puede salir de aquí, y el error es de
+  // PROGRAMACIÓN (el enlace no lo teclea nadie): se lanza, no se degrada.
+  if (!/^https:\/\//.test(d.enlace)) {
+    throw new Error('enlace_no_https')
+  }
   const saludo = d.nombre?.trim() ? `Hola, ${d.nombre.trim()}:` : 'Hola:'
   const n = d.avisos.length
   const resumen = resumirAvisos(d.avisos)
