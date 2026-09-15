@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T08:49:43Z",
-  "sha": "04051d5f6ca6fe906f99e69a3c487fecb7663e07",
+  "generadoEn": "2026-09-15T09:33:23Z",
+  "sha": "dd1fe6adf477dd3ae5059b5305436149b001854f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -103116,7 +103116,7 @@
           "exportada": true,
           "params": "params: URLSearchParams | string",
           "retorno": "string",
-          "linea": 32,
+          "linea": 51,
           "resumen": "Query canónica: `clave=valor` ordenado alfabéticamente por clave, tal cual (sin URL-encode extra). Sin parámetros devuelve `''` — pero la LÍNEA sigue existiendo en el canonical (por eso el ejemplo POS"
         },
         {
@@ -103125,7 +103125,7 @@
           "exportada": true,
           "params": "p: PartesCanonical",
           "retorno": "string",
-          "linea": 50
+          "linea": 82
         },
         {
           "nombre": "firmarCanonical",
@@ -103133,7 +103133,7 @@
           "exportada": true,
           "params": "canonical: string, apiSecret: string",
           "retorno": "string",
-          "linea": 62
+          "linea": 94
         },
         {
           "nombre": "selloTiempo",
@@ -103141,7 +103141,7 @@
           "exportada": true,
           "params": "ahora: Date = new Date()",
           "retorno": "string",
-          "linea": 67,
+          "linea": 99,
           "resumen": "ISO 8601 UTC con segundos y `Z` (`2026-04-01T12:00:00Z`). Smoobu rechaza >5 min de desfase."
         },
         {
@@ -103150,13 +103150,13 @@
           "exportada": true,
           "params": "p: PeticionFirmable",
           "retorno": "",
-          "linea": 87,
+          "linea": 119,
           "resumen": "Devuelve los 4 headers de auth. Faltando uno, Smoobu responde 401 aunque la firma sea correcta; el nonce NO se reutiliza jamás (401 aunque todo lo demás cuadre)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e95f2f21155e"
+      "hash": "ec38f3fa72a3"
     },
     {
       "ruta": "apps/plataforma/lib/smoobu.ts",
