@@ -1,18 +1,18 @@
 {
  "sesion": "fe9edd40-d8f8-5f1b-8e5f-fff4a66946f7",
  "inicio": "2026-09-14T10:00:12.280Z",
- "fin": "2026-09-15T07:21:11.498Z",
- "llamadas": 750,
+ "fin": "2026-09-15T08:29:51.568Z",
+ "llamadas": 782,
  "categorias": {
   "bash": {
-   "llamadas": 290,
-   "chars_in": 57412,
-   "chars_out": 463095,
+   "llamadas": 302,
+   "chars_in": 60585,
+   "chars_out": 470221,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 290
+    "Bash": 302
    }
   },
   "lectura-directa": {
@@ -41,19 +41,19 @@
    }
   },
   "mcp:github": {
-   "llamadas": 98,
-   "chars_in": 27320,
-   "chars_out": 339409,
+   "llamadas": 107,
+   "chars_in": 28634,
+   "chars_out": 371092,
    "errores": 4,
-   "archivos_citados": 35,
-   "chars_citados": 2187522,
+   "archivos_citados": 37,
+   "chars_citados": 2236302,
    "tools": {
-    "mcp__github__pull_request_read": 48,
-    "mcp__github__update_pull_request": 9,
-    "mcp__github__merge_pull_request": 11,
+    "mcp__github__pull_request_read": 53,
+    "mcp__github__update_pull_request": 10,
+    "mcp__github__merge_pull_request": 13,
     "mcp__github__list_pull_requests": 4,
     "mcp__github__search_pull_requests": 2,
-    "mcp__github__create_pull_request": 12,
+    "mcp__github__create_pull_request": 13,
     "mcp__github__subscribe_pr_activity": 3,
     "mcp__github__get_job_logs": 4,
     "mcp__github__get_check_run": 2,
@@ -62,17 +62,17 @@
    }
   },
   "otro": {
-   "llamadas": 115,
-   "chars_in": 16243,
-   "chars_out": 2859859,
+   "llamadas": 125,
+   "chars_in": 17272,
+   "chars_out": 3105912,
    "errores": 0,
    "archivos_citados": 10,
    "chars_citados": 1302180,
    "tools": {
     "ToolSearch": 28,
-    "ReadNotifications": 64,
+    "ReadNotifications": 71,
     "Monitor": 8,
-    "ScheduleWakeup": 7,
+    "ScheduleWakeup": 10,
     "Skill": 5,
     "SendUserFile": 2,
     "AskUserQuestion": 1
@@ -108,9 +108,9 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 15,
-   "chars_in": 1444,
-   "chars_out": 37355,
+   "llamadas": 16,
+   "chars_in": 1605,
+   "chars_out": 39041,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -118,7 +118,7 @@
     "mcp__Vercel__get_project": 2,
     "mcp__Vercel__list_teams": 2,
     "mcp__Vercel__get_deployment": 2,
-    "mcp__Vercel__get_runtime_logs": 8,
+    "mcp__Vercel__get_runtime_logs": 9,
     "mcp__Vercel__list_projects": 1
    }
   },
