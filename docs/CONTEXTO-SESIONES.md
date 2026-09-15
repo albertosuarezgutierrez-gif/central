@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/09/2026)** ASegura · `@central/core-vehiculos` + `POST /api/operador/vehiculo/matricula`
+**mergeados** (PR #2998, `resolverMatricula()` sobre APIVehículo, adaptador intercambiable). Pendiente
+el curl real con matrícula de cartera para validar el mapeo en producción (falta que Alberto saque
+`ASEGURA_OPERADOR_SECRET` del panel de Vercel). Idea suya anotada en el spec de alta por fotos
+(`docs/superpowers/specs/2026-09-01-asegura-alta-por-fotos-y-bonificadores.md`, §2): foto de la
+MATRÍCULA (no de la ficha técnica) + cliente ya en cartera podría cerrar un presupuesto de auto con
+una sola foto — sin diseñar (falta OCR de matrícula y el emparejamiento del `version` libre).
+
 **(15/09/2026)** ASegura · **el blog se aprueba también desde Telegram** (PR #3003, mergeado). Alberto
 pidió botones (no solo el link a `/correduria → Redes`): nueva `decidirBlogPr()` en
 `lib/correduria/blog-pr.ts` es la ÚNICA fuente de mezcla/cierre del PR del agente del blog, usada por
