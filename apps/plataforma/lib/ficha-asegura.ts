@@ -215,9 +215,72 @@ export type Ficha = {
   historial: AnotacionHistorial[] | null
   /** Presupuestos recientes sin póliza. `null` = no se pudo contar, NO es 0. */
   cotizacionesVivas: number | null
+  /**
+   * Pólizas que el cliente ha APORTADO desde el portal, casi siempre de otra
+   * compañía. `null` = asegura no manda el bloque o no pudo consultarlo — NO
+   * es «no ha aportado ninguna» (eso es `[]`).
+   */
+  declaradas: PolizaDeclaradaFicha[] | null
 }
 
 export type AnotacionHistorial = { id: string; tipo: string; texto: string; fecha: string }
+
+/**
+ * Una póliza aportada por el cliente desde el portal (`portal_poliza_declarada`),
+ * casi siempre de OTRA compañía: la correduría no la gestiona, solo consta que
+ * existe. Nunca se enseña en la tabla de «Pólizas vivas» — es de otro alcance.
+ */
+export type PolizaDeclaradaFicha = {
+  id: string
+  compania: string | null
+  numeroPoliza: string | null
+  ramo: string | null
+  primaAnual: number | null
+  fechaVencimiento: string | null
+  matricula: string | null
+  procedencia: string
+  confirmadaPorUsuario: boolean
+  titularTipo: string | null
+  titularEmpresaNombre: string | null
+  /**
+   * `true` = esta ficha ya tiene una póliza con ese número: no es una
+   * oportunidad, es la misma póliza subida dos veces. `null` = no se ha
+   * podido cotejar (sin número, o declarada a nombre de una empresa —
+   * cotejar eso exige la ficha de esa sociedad, que aquí no se mira).
+   */
+  yaEnCartera: boolean | null
+}
+
+/**
+ * Las declaradas, o `null` si el bloque no llega o llega con forma rara —
+ * NUNCA `[]`, que diría «se ha mirado y no ha aportado ninguna» cuando en
+ * realidad es que la versión de asegura desplegada aún no manda el campo.
+ * Una fila individual con forma rara se salta, no tumba el bloque.
+ */
+export function leerDeclaradas(v: unknown): PolizaDeclaradaFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: PolizaDeclaradaFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const d = fila as Record<string, unknown>
+    if (typeof d.id !== 'string') continue
+    out.push({
+      id: d.id,
+      compania: cadena(d.compania),
+      numeroPoliza: cadena(d.numeroPoliza),
+      ramo: cadena(d.ramo),
+      primaAnual: numero(d.primaAnual),
+      fechaVencimiento: cadena(d.fechaVencimiento),
+      matricula: cadena(d.matricula),
+      procedencia: cadena(d.procedencia) ?? 'declarado',
+      confirmadaPorUsuario: d.confirmadaPorUsuario === true,
+      titularTipo: cadena(d.titularTipo),
+      titularEmpresaNombre: cadena(d.titularEmpresaNombre),
+      yaEnCartera: typeof d.yaEnCartera === 'boolean' ? d.yaEnCartera : null,
+    })
+  }
+  return out
+}
 
 export type RespuestaFicha =
   | { estado: 'sin_configurar' }
@@ -590,6 +653,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       estado: leerEstadoCliente(f.estado),
       historial: leerHistorial(f.historial),
       cotizacionesVivas: entero(f.cotizacionesVivas),
+      declaradas: leerDeclaradas(f.declaradas),
       piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }

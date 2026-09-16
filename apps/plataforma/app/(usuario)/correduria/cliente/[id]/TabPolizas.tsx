@@ -1,5 +1,5 @@
-import type { IntervinienteFicha, PolizaFicha } from '@/lib/ficha-asegura'
-import { Polizas } from './piezas'
+import type { IntervinienteFicha, PolizaDeclaradaFicha, PolizaFicha } from '@/lib/ficha-asegura'
+import { Polizas, PolizasDeclaradas } from './piezas'
 
 /**
  * Todo lo que el cliente tiene contratado, en cuatro bloques que NO son lo
@@ -11,13 +11,16 @@ import { Polizas } from './piezas'
  *   canceladas     → CIMA las manda canceladas: ya no aseguran nada;
  *   históricas     → volcado de junio de 2026, para saber qué tuvo.
  */
-export default function TabPolizas({ porClase, intervinientes }: {
+export default function TabPolizas({ porClase, intervinientes, declaradas }: {
   porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]>
   intervinientes: IntervinienteFicha[] | null
+  declaradas: PolizaDeclaradaFicha[] | null
 }) {
   return (
     <>
       <Polizas titulo="Pólizas vivas" polizas={porClase.viva} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={intervinientes} />
+
+      <PolizasDeclaradas declaradas={declaradas} />
 
       {porClase.pendiente_cima.length > 0 && (
         <Polizas
