@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(16/09/2026)** asegura-portal/asegura · `POST /api/polizas` del portal ya archiva el FICHERO de
+la póliza subida (antes solo guardaba lo leído): nuevo puente `POST /api/portal/documento` en
+`apps/asegura`, guarda en `seguros.documentos` con `subidoPor:'cliente'` para que Alberto lo vea y
+verifique desde `plataforma` → Documentos. Dictado de Alberto tras revisar el gap de verificación
+(coberturas no capturadas, dirección/DNI sin confirmar): DNI/nombre/fecha nacimiento **nunca** se
+tocan desde este flujo, los confirma él. PR #3033, mergeado. Pendiente (siguiente iteración, con su
+OK): coberturas para tarificar + flujo de confirmación cliente → actualiza dirección/teléfono.
+
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
 no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
