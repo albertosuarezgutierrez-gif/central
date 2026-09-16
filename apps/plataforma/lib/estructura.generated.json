@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-16T12:20:34Z",
+  "generadoEn": "2026-09-16T15:44:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 59
+        "evidencias": 61
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 6
       },
       "asegura-portal": {
         "presente": false,
@@ -4038,6 +4038,7 @@
       "/api/operador/vencimientos",
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
+      "/api/portal/documento",
       "/api/portal/nota",
       "/api/publico/recaptacion/baja",
       "/api/webhooks/codeoscopic",
@@ -6395,7 +6396,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1370,
+    "apis": 1371,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
