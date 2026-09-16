@@ -80,16 +80,25 @@ Detalle paso a paso en `references/pasada-diaria.md`.
   salen MUCHAS divergencias, el dato a revisar es **a qué hora corrió la pasada**: con el mercado abierto
   IBKR da precio vivo y Stooq el cierre anterior, y mezclar intradía con cierres es el error de periodo
   de siempre.
-- **🔀 El fallo más caro NO es un precio absurdo: es un precio REAL de OTRA empresa (08/08/2026).**
-  Los `get_price_history` que pides en paralelo vuelven en orden de FINALIZACIÓN, y transcribirlos por
+- **🔀 El fallo más caro NO es un precio absurdo: es un precio REAL de OTRA empresa — protocolo
+  endurecido a SERIE OBLIGATORIA el 16/09/2026, sin opción de paralelo "y luego verificas".**
+  Los `get_price_history` pedidos en paralelo vuelven en orden de FINALIZACIÓN, y transcribirlos por
   posición baraja los símbolos. Ha pasado TRES veces (verificado contra IBKR): `17/07` META←MSFT,
   MSFT←SPOT, SPOT←NFLX, NFLX←LLY · `03/08` LLY←CVX, META←LLY · `04/08` NFLX←PLTR. Ningún umbral de
-  plausibilidad lo ve, porque el número es un cierre verdadero. Ahora lo veta `detectarSuplantaciones()`
-  (precio idéntico a otro de la misma pasada, o que cuadra con la referencia de otro y no con la suya) y
-  viaja en `suplantados` — **cántalo en el Telegram y arregla tu transcripción, no es un fallo del
-  servidor**. Guarda cada respuesta con el nombre de su símbolo NADA MÁS recibirla; nunca acumules
-  respuestas paralelas para transcribirlas al final. Hueco conocido: la PRIMERA pasada de un símbolo
-  (sin referencia) barajada sin duplicar a nadie solo la ve el contraste con la 2ª fuente.
+  plausibilidad lo ve, porque el número es un cierre verdadero. **Pide UN símbolo por turno de
+  herramienta y guarda cada respuesta con el nombre de su símbolo NADA MÁS recibirla** — nunca
+  acumules respuestas paralelas para transcribirlas al final. Detalle del protocolo completo (a/b/c)
+  en `references/pasada-diaria.md`, paso 3.
+  **🚨 Y el servidor YA VETA lo que se cuele — `detectarSuplantaciones()` (precio idéntico a otro de
+  la misma pasada, o que cuadra con la referencia de otro y no con la suya) más el contraste con 2ª
+  fuente. Es DEFENSA EN PROFUNDIDAD, no licencia para relajar el protocolo, y TAMPOCO motivo para
+  abstenerte de correr `/analizar` entero un día** (error real del 15/09/2026: una sesión, al no
+  poder verificar el payload de 24 símbolos al 100%, decidió NO ejecutar el torneo — tiró ~20
+  símbolos buenos por un riesgo de 1-2 que el servidor ya vigila). Si algo se cuela pese al
+  protocolo, esos símbolos concretos salen en `suplantados`/`divergentes`/`vetados` y NO se
+  analizan — **cántalo en el Telegram y sigue con el resto de la pasada**, nunca la saltes entera.
+  Hueco conocido: la PRIMERA pasada de un símbolo (sin referencia) barajada sin duplicar a nadie
+  solo la ve el contraste con la 2ª fuente.
 - **📅 La fecha de EARNINGS se persiste desde el 27/08/2026 — y hay que seguir mandándola.** Nuevas
   columnas `trading_tesis.proximo_earnings`/`earnings_estado`, las mismas en `trading_paper_posicion`
   (congeladas al abrir) y `evento_dentro` en las SELL de `trading_paper_orden` (única huella que
