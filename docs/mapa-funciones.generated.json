@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-15T20:24:25Z",
-  "sha": "28aac3bb8a13592a1217bc8b7bad1a949df88eb8",
+  "generadoEn": "2026-09-16T10:53:00Z",
+  "sha": "587e67206baf82d3aaac0b80f5053ce59c977fca",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -79566,7 +79566,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 48,
+          "linea": 49,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -79575,7 +79575,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 65,
+          "linea": 66,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -79584,7 +79584,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 91
+          "linea": 92
         },
         {
           "nombre": "getPendiente",
@@ -79592,7 +79592,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 121
+          "linea": 122
         },
         {
           "nombre": "POST",
@@ -79600,7 +79600,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 126
+          "linea": 127
         }
       ],
       "tablas": [
@@ -79625,7 +79625,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "2098d121e3b3"
+      "hash": "fb2534b0d1a1"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -97791,22 +97791,32 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/agente-huesped/enviar.ts — responder en el hilo de Smoobu.",
       "exporta": [
+        "enviarAlHuespedDetallado",
         "enviarAlHuesped"
       ],
       "funciones": [
+        {
+          "nombre": "enviarAlHuespedDetallado",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservationId: string, messageBody: string, subject = '',",
+          "retorno": "Promise<ResultadoEnvio>",
+          "linea": 12,
+          "resumen": "solo se incluye `subject` si se pasa explícitamente (algunos canales de email lo aprovechan)."
+        },
         {
           "nombre": "enviarAlHuesped",
           "kind": "function",
           "exportada": true,
           "params": "reservationId: string, messageBody: string, subject = ''",
           "retorno": "Promise<boolean>",
-          "linea": 7,
-          "resumen": "solo se incluye `subject` si se pasa explícitamente (algunos canales de email lo aprovechan)."
+          "linea": 37,
+          "resumen": "Envoltura booleana para los llamadores automáticos (crons, guardias) que solo reintentan."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b80390eb83df"
+      "hash": "4e4e309c154d"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/equipaje.ts",
@@ -98466,6 +98476,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "fe1e460e8f72"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/motivo-envio.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Clasificador PURO del fallo al enviar un mensaje al huésped por Smoobu. Por qué existe: el aviso de Telegram decía siempre lo mismo («no se pudo enviar, reintenta en un momento»), así que una caída de Smoobu (503, página «System Outage» — caso real 16/09/2026, reserva 155333446: tres pulsaciones seg",
+      "exporta": [
+        "motivoFalloEnvio",
+        "avisoFalloEnvio"
+      ],
+      "funciones": [
+        {
+          "nombre": "motivoFalloEnvio",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, cuerpo = ''",
+          "retorno": "MotivoFallo",
+          "linea": 27,
+          "resumen": "`status` 0 = no hubo respuesta (excepción). `cuerpo` es la respuesta CRUDA de Smoobu: solo se usa para clasificar, nunca se propaga al aviso (llega HTML y rompería el parse_mode de Telegram)."
+        },
+        {
+          "nombre": "avisoFalloEnvio",
+          "kind": "function",
+          "exportada": true,
+          "params": "m: MotivoFallo",
+          "retorno": "string",
+          "linea": 57,
+          "resumen": "Aviso de Telegram completo (HTML). El motivo va en texto propio: nunca el cuerpo de Smoobu."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cce8b9a0e081"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/noche-guardia.ts",
@@ -136362,7 +136404,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3338,
-    "funciones": 10304
+    "archivos": 3339,
+    "funciones": 10307
   }
 }
