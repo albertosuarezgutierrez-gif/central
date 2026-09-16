@@ -183,3 +183,79 @@ test('un recorte no declarado se asume recortado, nunca completo', () => {
   assert.equal(v.huerfanasTruncadas, true)
   assert.equal(v.huerfanasSinAmbito, null)
 })
+
+// ── Señales nuevas en la pantalla (cron, crudo, caja negra, cobertura) ───────
+
+const saludBase = {
+  estado: 'ok' as const,
+  total: 0, recientes: 0, porEntidad: [], porClave: [],
+  huerfanas: 0, huerfanasResolubles: 0, huerfanasReparto: null,
+  primaPerdida: null, rechazos: [], silencio: [], motivos: [],
+  crudo: null, cobertura: null, cajaNegra: null, ultimoPull: null,
+}
+
+test('🚨 el cron mudo se lee ANTES que nada: lo demás está a cero por su culpa', () => {
+  const s = senalesIngesta({ ...saludBase, ultimoPull: { horas: 40, procesados: 0 } })
+  assert.equal(s[0].clave, 'cron')
+  assert.equal(s[0].tipo, 'perdida')
+  assert.match(s[0].detalle, /no porque todo vaya bien/)
+})
+
+test('la purga inminente es la única señal con fecha límite y sale como pérdida', () => {
+  const s = senalesIngesta({
+    ...saludBase,
+    crudo: { pendientes: 5, purgaInminente: 2, masAntiguaHoras: 2000 },
+  })
+  const x = s.find(v => v.clave === 'crudo')
+  assert.equal(x?.tipo, 'perdida')
+  assert.match(x!.titulo, /se BORRAN/)
+})
+
+test('crudo sin purga inminente NO se pinta como pérdida', () => {
+  const s = senalesIngesta({
+    ...saludBase,
+    crudo: { pendientes: 5, purgaInminente: 0, masAntiguaHoras: 48 },
+  })
+  assert.equal(s.find(v => v.clave === 'crudo')?.tipo, 'hueco')
+})
+
+test('la cobertura NUNCA es pérdida: sería un rojo perpetuo', () => {
+  const s = senalesIngesta({
+    ...saludBase,
+    cobertura: { hojas: 300, hojasNuncaLeidas: 120, porTipo: [{ tipoObjeto: 'POL', hojas: 300, nuncaLeidas: 120 }] },
+  })
+  const x = s.find(v => v.clave === 'cobertura')
+  assert.equal(x?.tipo, 'hueco')
+  assert.ok(!s.some(v => v.clave === 'cobertura' && v.tipo === 'perdida'))
+})
+
+test('captura puesta y sin cuerpos: se dice, no se calla ni se cuenta como sana', () => {
+  const s = senalesIngesta({
+    ...saludBase,
+    cajaNegra: { capturaActiva: false, cuerpos: 0, posts: 0, horasDesdeUltimo: null, sinCuerpo: 0 },
+  })
+  const x = s.find(v => v.clave === 'caja_negra')
+  assert.equal(x?.tipo, 'hueco')
+  assert.match(x!.detalle, /todavía no ha pasado ninguno/)
+})
+
+test('🚨 una salud SIN los campos nuevos (asegura viejo) no revienta la pantalla', () => {
+  // Plataforma y asegura se despliegan por separado. Antes de normalizar en la
+  // frontera, `undefined !== null` entraba en la rama y `.purgaInminente`
+  // lanzaba: pantalla en blanco en vez de panel.
+  const viejo = { ...saludBase }
+  delete (viejo as Record<string, unknown>).crudo
+  delete (viejo as Record<string, unknown>).cobertura
+  delete (viejo as Record<string, unknown>).cajaNegra
+  delete (viejo as Record<string, unknown>).ultimoPull
+
+  const v = interpretarVistaIngesta(200, { estado: 'ok', salud: viejo, huerfanasTruncadas: false })
+  assert.equal(v.estado, 'ok')
+  assert.equal(v.estado, 'ok')
+  const salud = (v as Extract<typeof v, { estado: 'ok' }>).salud
+  assert.doesNotThrow(() => senalesIngesta(salud))
+  const s = senalesIngesta(salud)
+  // Y además lo declara como hueco, en vez de aparentar que está comprobado.
+  assert.ok(s.some(x => x.clave === 'cron' && x.tipo === 'hueco'))
+  assert.ok(s.some(x => x.clave === 'cobertura' && x.tipo === 'hueco'))
+})

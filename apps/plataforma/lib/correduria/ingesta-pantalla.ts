@@ -24,7 +24,7 @@
 // vive en `ingesta-cima.ts` (servidor) y la pinta `Ingesta.tsx` (cliente).
 // ────────────────────────────────────────────────────────────────────────────
 import type { SaludIngesta, SilencioEntidad } from '@central/module-seguros'
-import { HORAS_RECHAZO_RECIENTE } from '@central/module-seguros'
+import { DIAS_AVISO_PURGA, HORAS_PULL_MUDO, HORAS_RECHAZO_RECIENTE } from '@central/module-seguros'
 
 // ⚠️ Aquí NO se importa `MotivoError` de `app/(usuario)/correduria/estado-puerto`
 // aunque los motivos sean los mismos: ese fichero se alcanza por el alias `@/`,
@@ -77,6 +77,33 @@ function esSalud(v: unknown): v is SaludIngesta {
 }
 
 /**
+ * 🚨 La frontera donde el tipo MIENTE, y hay que rehacerlo.
+ *
+ * `SaludIngesta` declara `crudo: CrudoPendiente | null`, pero esto viene de un
+ * JSON por red: si `apps/asegura` está desplegada con una versión anterior a
+ * las señales nuevas, esas claves no vienen y llegan como `undefined`, no como
+ * `null`. Y `undefined !== null` es `true`, así que la guarda
+ * `s.crudo !== null && s.crudo.purgaInminente` entraría en la rama y reventaría
+ * al leer la propiedad — pantalla en blanco en vez de panel.
+ *
+ * No es hipotético: plataforma y asegura se despliegan por separado, así que la
+ * ventana en la que una va por delante de la otra existe en cada release.
+ *
+ * `esSalud` no lo cubre a propósito (tolera campos nuevos para no romperse con
+ * versiones futuras), así que la normalización va aquí: ausente se convierte en
+ * `null`, que es exactamente lo que significa — «no me lo han contado».
+ */
+function normalizarSenalesNuevas(s: SaludIngesta): SaludIngesta {
+  return {
+    ...s,
+    crudo: s.crudo ?? null,
+    cobertura: s.cobertura ?? null,
+    cajaNegra: s.cajaNegra ?? null,
+    ultimoPull: s.ultimoPull ?? null,
+  }
+}
+
+/**
  * Interpretación PURA de lo que devuelve `GET /api/correduria/ingesta`.
  *
  * Cualquier duda cae del lado conservador: `error`, nunca `ok`. Es la misma
@@ -102,7 +129,7 @@ export function interpretarVistaIngesta(status: number, json: unknown): VistaIng
   if (r.salud.estado === 'sin_datos') return { estado: 'error', motivo: 'respuesta_ilegible' }
   return {
     estado: 'ok',
-    salud: r.salud,
+    salud: normalizarSenalesNuevas(r.salud),
     // Ante la duda, el estado conservador: si no consta que NO se recortó, se
     // asume que sí. Un total presentado como completo sin serlo es peor que
     // una nota de más.
@@ -132,7 +159,16 @@ export type VeredictoPantalla =
  * más — y al revés, que es peor.
  */
 export type SenalIngesta = {
-  clave: 'cuarentena' | 'huerfanas' | 'rechazos' | 'silencio' | 'backlog'
+  clave:
+    | 'cuarentena'
+    | 'huerfanas'
+    | 'rechazos'
+    | 'silencio'
+    | 'backlog'
+    | 'cron'
+    | 'crudo'
+    | 'caja_negra'
+    | 'cobertura'
   tipo: 'perdida' | 'hueco'
   titulo: string
   detalle: string
@@ -161,6 +197,21 @@ function rechazosRecientes(s: SaludIngesta) {
  */
 export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
   const out: SenalIngesta[] = []
+
+  // 🚨 EL PRIMERO, y por delante de todo lo demás: si el cron no ha corrido,
+  // ninguna de las otras señales significa nada. No hay ficheros atascados
+  // porque no se ha ido a buscar ninguno, no hay rechazos porque no se ha
+  // pedido nada — todas saldrían a cero y la pantalla diría «va bien» con la
+  // ingesta parada. Leer las demás antes que esta es leerlas al revés.
+  if (s.ultimoPull !== null && s.ultimoPull.horas > HORAS_PULL_MUDO) {
+    out.push({
+      clave: 'cron', tipo: 'perdida', n: s.ultimoPull.horas,
+      titulo: `La ingesta de CIMA lleva ${s.ultimoPull.horas} h sin correr`,
+      detalle:
+        'No es que no haya datos: es que no se ha ido a buscarlos. Mientras siga así, ' +
+        'el resto de esta pantalla está en cero porque no ha entrado nada, no porque todo vaya bien.',
+    })
+  }
 
   const mudas = companiasMudas(s.silencio)
   if (mudas.length > 0) {
@@ -206,6 +257,31 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
     })
   }
 
+  // ⏳ Lo único con FECHA LÍMITE de toda la pantalla: cuando el TTL pase, la
+  // última copia de ese fichero se borra y CIMA no lo reenvía (ya lo confirmó
+  // a TIREA). Las demás señales esperan; esta caduca.
+  if (s.crudo !== null && s.crudo.purgaInminente > 0) {
+    out.push({
+      clave: 'crudo', tipo: 'perdida', n: s.crudo.purgaInminente,
+      titulo: `${s.crudo.purgaInminente} fichero(s) guardados se BORRAN en menos de ${DIAS_AVISO_PURGA} días`,
+      detalle:
+        'Es la última copia que queda: CIMA ya los dio por entregados y no los vuelve a mandar. ' +
+        'Reprocesarlos ahora o se pierden.',
+    })
+  }
+
+  if (s.cajaNegra !== null && s.cajaNegra.cuerpos > 0) {
+    out.push({
+      clave: 'caja_negra', tipo: 'perdida', n: s.cajaNegra.cuerpos,
+      titulo: `${s.cajaNegra.cuerpos} envío(s) distintos de Codeoscopic rechazados y guardados`,
+      detalle:
+        `${s.cajaNegra.posts} envíos en total. Ya se puede mirar su forma para arreglar el validador` +
+        (s.cajaNegra.sinCuerpo > 0
+          ? `; ${s.cajaNegra.sinCuerpo} de ellos SIN cuerpo guardado, y esos no se pueden reprocesar.`
+          : '.'),
+    })
+  }
+
   // Los huecos de conocimiento van APARTE y se dicen igual: callarlos los
   // convierte en un «va bien» que nadie ha comprobado.
   if (s.silencio === null) {
@@ -227,6 +303,69 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       clave: 'huerfanas', tipo: 'hueco', n: null,
       titulo: 'Sin la lista de pólizas huérfanas',
       detalle: 'Se sabe cuántas son, no cuáles: no se le puede pedir a la compañía una lista que no se tiene.',
+    })
+  }
+
+  // Huecos de las señales nuevas. `null` aquí no es «no hay»: es que la
+  // consulta no pudo mirarlo, y son dos trabajos distintos.
+  if (s.ultimoPull === null) {
+    out.push({
+      clave: 'cron', tipo: 'hueco', n: null,
+      titulo: 'No consta ninguna corrida del cron de CIMA',
+      detalle: 'Puede que nunca haya corrido o que no se haya podido leer. No significa que vaya bien.',
+    })
+  }
+  if (s.crudo === null) {
+    out.push({
+      clave: 'crudo', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar la cuarentena de ficheros guardados',
+      detalle: 'No se ha podido mirar si hay crudo esperando reproceso ni si algo está a punto de caducar.',
+    })
+  }
+  if (s.cajaNegra === null) {
+    out.push({
+      clave: 'caja_negra', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar la caja negra del webhook',
+      detalle: 'No se sabe si Codeoscopic ha mandado algo que hayamos rechazado.',
+    })
+  } else if (!s.cajaNegra.capturaActiva) {
+    // Tercer estado explícito: la captura existe y todavía no ha entrado nada.
+    // Sin decirlo, un cero recién estrenado se leería como «no llega nada».
+    out.push({
+      clave: 'caja_negra', tipo: 'hueco', n: 0,
+      titulo: 'La captura de envíos rechazados aún no ha recogido ninguno',
+      detalle: 'Está puesta y esperando. Que esté a cero no quiere decir que no llegue nada: quiere decir que todavía no ha pasado ninguno.',
+    })
+  }
+
+  // Cobertura: se informa SIEMPRE como hueco, nunca como pérdida. El EIAC trae
+  // cientos de campos y siempre habrá alguno sin leer; si esto fuera una
+  // alarma, estaría encendida para siempre y se dejaría de mirar.
+  if (s.cobertura === null) {
+    out.push({
+      clave: 'cobertura', tipo: 'hueco', n: null,
+      titulo: 'Todavía no se ha medido qué campos manda CIMA y no leemos',
+      detalle: 'Hace falta que pase un pull con ficheros. Sin medir NO equivale a «los leemos todos».',
+    })
+  } else if (s.cobertura.hojasNuncaLeidas > 0) {
+    const peor = [...s.cobertura.porTipo].sort((a, b) => b.nuncaLeidas - a.nuncaLeidas)[0]
+    out.push({
+      clave: 'cobertura', tipo: 'hueco', n: s.cobertura.hojasNuncaLeidas,
+      titulo: `${s.cobertura.hojasNuncaLeidas} de ${s.cobertura.hojas} campos que manda CIMA no se leen nunca`,
+      detalle:
+        (peor ? `Sobre todo en ${peor.tipoObjeto} (${peor.nuncaLeidas}). ` : '') +
+        'No es una avería: es lo que se está dejando sin aprovechar.',
+    })
+  }
+
+  if (s.crudo !== null && s.crudo.pendientes > 0 && s.crudo.purgaInminente === 0) {
+    out.push({
+      clave: 'crudo', tipo: 'hueco', n: s.crudo.pendientes,
+      titulo: `${s.crudo.pendientes} fichero(s) guardados esperando reproceso`,
+      detalle:
+        (s.crudo.masAntiguaHoras !== null
+          ? `El más viejo lleva ${Math.floor(s.crudo.masAntiguaHoras / 24)} días. `
+          : '') + 'Sin prisa: ninguno caduca dentro de la ventana de aviso.',
     })
   }
 
