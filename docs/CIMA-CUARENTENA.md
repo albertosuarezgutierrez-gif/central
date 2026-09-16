@@ -1,5 +1,7 @@
 # La cuarentena de CIMA — por qué se llena y qué la vacía (06/09/2026)
 
+> 🔌 **Router: skill `cima-ingesta`** — la cadena entera, el diagnóstico de «la ingesta está muda» y qué no se toca.
+
 > Investigación pedida por Alberto («míralo») tras detectarse que el último siniestro de la
 > cartera era del **02/07/2026** mientras la ingesta seguía viva. Lo que sigue está **medido**
 > contra la Supabase compartida y contra el código del CRM (`albertosuarezgutierrez-gif/asegura`),

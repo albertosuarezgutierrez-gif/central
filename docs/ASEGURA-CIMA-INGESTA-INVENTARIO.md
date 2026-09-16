@@ -1,5 +1,7 @@
 # Inventario de la ingesta de CIMA del CRM (repo `asegura`) — referencia para el port APARCADO
 
+> 🔌 **Router: skill `cima-ingesta`** — la cadena entera, el diagnóstico de «la ingesta está muda» y qué no se toca.
+
 > Medido el 02/09/2026 sobre el repo `albertosuarezgutierrez-gif/asegura` (el CRM de Manuel, ya de Alberto).
 > **Decisión de Alberto ese mismo día: el port a `apps/asegura` queda APARCADO** («fly es barato y ya está
 > hecho, hay otras prioridades»). Este documento existe para que, el día que toque, no haya que volver a
