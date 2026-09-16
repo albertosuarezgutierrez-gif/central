@@ -81,42 +81,37 @@ antes, dilo en el resumen de Telegram — esa pasada mide contra el cierre de ay
    (lleva meses sin créditos, $0): `/api/trading/analizar` rellena por su cuenta lo que falte
    —PER/PB/deuda-EBITDA/margen y fecha de earnings— desde Yahoo (`lib/trading/earnings-yahoo.ts`),
    así que NO trates un fallo de FMP como bloqueo ni lo esperes.** Lo que sí aportes nunca se pisa.
-   **🚨 LANDMINE (04/08/2026) — NUNCA lances los `get_price_history` de los 13 símbolos en un
-   único mensaje paralelo y des por hecho que el resultado N-ésimo corresponde a la llamada
-   N-ésima.** Los `<result>` de tool calls paralelas NO garantizan devolver en el mismo orden
-   en que se invocaron (llegan en orden de FINALIZACIÓN). La primera vez que se corrió esta
-   pasada a mano se pidieron los 13 en paralelo y se transcribieron por posición → el histórico
-   de NFLX y PLTR se intercambió (mismo bug two veces: un array además salió con una vela de
-   menos por un corte manual), y la mezcla llegó hasta `/api/trading/analizar`, que reventó con
-   `PrismaClientValidationError` (`precioRef` undefined, todos los indicadores `NaN`) — visible
-   en `mcp__Vercel__get_runtime_errors` del proyecto `plataforma`. **Protocolo obligatorio:**
-   (a) pide cada `get_price_history` **etiquetado por `contract_id`** y guarda el JSON con el
-   nombre del símbolo INMEDIATAMENTE tras recibir esa respuesta concreta — nunca acumules N
-   respuestas paralelas para transcribirlas todas al final; (b) si por rapidez SÍ lanzas varias
-   en paralelo, verifica cada bloque de resultado contra el `contract_id`/símbolo que pediste
-   antes de guardarlo (los precios de compañías distintas no se parecen, es una comprobación
-   barata); (c) antes de construir el payload de `/analizar`, valida que `time`/`open`/`close`/
-   `high`/`low`/`volumen` tengan la MISMA longitud para cada símbolo — un array corto por una
-   vela desalinea el resto y `precioRef`/`indicadoresDe` salen `undefined`/`NaN` en silencio
-   (Prisma es quien finalmente lo caza, pero entonces ya reventó la pasada completa, no solo
-   el símbolo malo). Esto es lectura pura de IBKR (no rompe la regla de oro), pero un payload
-   corrupto SÍ puede llegar a abrir una posición paper con precioRef basura — por eso es
-   bloqueante, no cosmético.
-   **🚨 EL LANDMINE DE ARRIBA SE INCUMPLIÓ TRES VECES — ahora lo vigila el servidor (08/08/2026).**
-   La auditoría del corpus encontró, verificados uno a uno contra IBKR: `17/07` META←MSFT,
-   MSFT←SPOT, SPOT←NFLX, NFLX←LLY · `03/08` LLY←CVX, META←LLY · `04/08` NFLX←PLTR. Las dos
-   últimas ocurrieron DESPUÉS de escribir el protocolo, así que la lección de método es que
-   **una regla de disciplina del que llama no basta: tiene que comprobarlo el que recibe.**
-   `/analizar` y `/puntuar` ejecutan ahora `detectarSuplantaciones()`
-   (`apps/plataforma/lib/trading/precios-guardia.ts`), que veta un símbolo cuando su precio es
-   idéntico al de otro de la misma pasada, o cuando cuadra con la referencia de ayer de OTRO
-   símbolo y no con la suya. **Consecuencia práctica para ti:** si barajas el payload, esos
-   símbolos NO se analizan y lo verás en el aviso de Telegram y en `suplantados` de la respuesta —
-   no es un fallo del servidor, es tu transcripción. Y lo que la guardia NO puede ver: la primera
-   pasada de un símbolo (sin referencia) barajada sin duplicar a nadie. Ahí solo estás tú y el
-   contraste con la 2ª fuente. Sigue el protocolo igual.
-   28 tesis y 16 resultados quedaron anulados por esto (`trading_tesis.anulado`); las tesis
-   anuladas ni se puntúan, ni sirven de referencia de precio, ni salen en el panel.
+   **🚨 LANDMINE (04/08/2026, endurecido 16/09/2026) — el `get_price_history` de cada símbolo se
+   pide EN SERIE, UNO CADA VEZ. Ya NO hay opción (b) de "si por rapidez lanzas varios en paralelo,
+   verifica después": esa opción se ofreció el 04/08 y el mismo bug volvió a pasar DOS VECES más
+   (03/08 y 04/08) con la gente siguiendo "verifica después" a medias. Los `<result>` de tool calls
+   paralelas NO garantizan devolver en el mismo orden en que se invocaron (llegan en orden de
+   FINALIZACIÓN), y un histórico intercambiado (NFLX↔PLTR, META↔MSFT, LLY↔CVX…) revienta
+   `/api/trading/analizar` con `PrismaClientValidationError` o, peor, contamina EMA/MACD/RSI/ADX/
+   ATR de un símbolo con las velas de otro sin que nada reviente. **Protocolo único, sin atajos:**
+   (a) UN `get_price_history` por turno de herramienta — nunca dos o más en el mismo mensaje; (b)
+   en cuanto vuelve la respuesta, guárdala INMEDIATAMENTE bajo el nombre del símbolo que acabas de
+   pedir (nunca acumules resultados "para transcribir al final"); (c) antes de construir el
+   payload de `/analizar`, valida que `time`/`open`/`close`/`high`/`low`/`volumen` tengan la MISMA
+   longitud para cada símbolo. Sí, son 20-25 llamadas secuenciales en vez de un batch — es una
+   rutina nocturna sin presión de latencia, el tiempo extra (~1-2 min) es gratis comparado con el
+   coste de una tesis mal fundada. Esto es lectura pura de IBKR (no rompe la regla de oro).
+   **🚨 Y EL SERVIDOR YA VIGILA POR SI ALGO SE CUELA (08/08/2026) — esto es DEFENSA EN
+   PROFUNDIDAD, no una excusa para relajar (a)/(b)/(c).** `/analizar` y `/puntuar` ejecutan
+   `detectarSuplantaciones()` (`apps/plataforma/lib/trading/precios-guardia.ts`), que veta un
+   símbolo cuando su precio es idéntico al de otro de la misma pasada, o cuando cuadra con la
+   referencia de ayer de OTRO símbolo y no con la suya; y el contraste con 2ª fuente (Stooq/Yahoo)
+   caza además lo que no cuadra aunque no haya suplantación. **Consecuencia práctica, y ESTO ES LO
+   QUE SE LEYÓ MAL EL 15/09/2026:** si pese al protocolo algo se cuela, esos símbolos concretos NO
+   se analizan (lo verás en `suplantados`/`divergentes`/`vetados` de la respuesta y en el aviso de
+   Telegram) — el resto de la pasada SIGUE SIENDO VÁLIDA. **NO es motivo para abstenerte de correr
+   `/analizar` entero.** Un agente que, por no poder verificar el payload al 100%, decide NO
+   ejecutar el torneo ese día está tirando el trabajo de ~20 símbolos buenos por el riesgo acotado
+   (y ya vigilado en servidor) de 1-2 símbolos malos. Sigue (a)/(b)/(c), manda el payload, y deja
+   que el servidor haga su parte — cántalo si vetó algo, pero EJECUTA la pasada.
+   28 tesis y 16 resultados quedaron anulados por el incumplimiento original de este protocolo
+   (`trading_tesis.anulado`); las tesis anuladas ni se puntúan, ni sirven de referencia de precio,
+   ni salen en el panel.
 4. `POST {PLATAFORMA_URL}/api/trading/analizar` con `{ fecha, nav, simbolos: [...] }`
    (Bearer `ALERTA_TOKEN`). Devuelve el `top` de ideas.
 5. `POST {PLATAFORMA_URL}/api/trading/puntuar` con `{ hoy, precios }` (snapshot de cada símbolo con
