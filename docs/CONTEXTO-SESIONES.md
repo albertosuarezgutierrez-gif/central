@@ -12,6 +12,17 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(16/09/2026)** CIMA · skill `cima-ingesta` (router de la tubería EIAC/TIREA: cadena, cuarentena,
+cobertura de campos, caja negra del webhook y diagnóstico), y se mata el duplicado en
+`agente-correduria`/`correduria-crm`. **Generali SÍ vuelca por CIMA desde el 14/09** (1er POL, único
+fichero de la serie con avisos: 12 leves) — la skill lo daba por fuera y era cierto el 01/09: una
+afirmación que caducó sola, ahora con cepo. **Mapfre lleva desde el 23/06 sin mandar nada** y el
+export del portal confirma que CIMA no generó ficheros suyos: es aguas arriba, llamada a Mapfre.
+`cima_cobertura_campos`/`cima_cuarentena_crudo` a 0 **NO es avería**: el PR se desplegó a las 12:19
+y el último fichero entró a las 10:10 — no medido todavía. Caja negra: 1ª captura real, raíz `array`
+de 2 donde el esquema espera objeto (deriva de contrato, no secreto). Panel de ingesta: PR #3037
+mergeado. Docs NO movidos a propósito (8 enlaces, dos en esta memoria). PR abierto.
+
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
 no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
