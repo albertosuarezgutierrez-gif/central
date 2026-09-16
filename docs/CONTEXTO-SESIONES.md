@@ -37,15 +37,25 @@ del índice o no se pudo comprobar). Migración `2026-09-15_seo_correduria_seman
 (estado `error` no se trataba como PASS por omisión; token de Google duplicado; motivo mal atribuido
 en el informe). 66/66 tests seo-correduria, tsc limpio.
 
-**(16/09/2026)** ASegura · **CIMA: la carga masiva 199 de Occident llegó, pero 4 de 44 pólizas se
-perdieron en review y ya no vuelven** (BIDP023227 entre ellas; código en `asegura`, PR #829 draft).
-Occident («ya está descargada») y CIMA (SAU-24103) tenían razón: el fichero `C0468_M00171_POL_199_1_20260915…`
-consta `confirmed`/`review_parcial` (40/44). Las 4 (`RiesgoComunidades` ×3, `RiesgoEmbarcaciones` ×1) cayeron
-en `tipo_seguro_no_clasificable` — el `idPolizaEntidad` SÍ queda en `source_event_id` (`<hash>:BIDP023227:review`).
-Gotcha: **un POL confirmado como parcial no se re-entrega** (`confirmado_at` puesto → `requiere_accion`), así
-que un ramo sin clasificar = póliza perdida hasta que la compañía la reenvíe. Fix: mapper reconoce
-comunidades→`comunidades` y embarcaciones→`otros`. Pendiente: mergear #829 y pedir a Occident el reenvío
-de las 4 (BIDP019061, BIDP023227, BIDQ020971, BIDP036783); Generali C0072 tiene 1 igual (6E-G-475000053).
+**(16/09/2026)** ASegura · **CIMA: carga masiva de Occident con 4/44 pólizas perdidas en review —
+causa, fix Y red de seguridad, los tres en `asegura`** (BIDP023227 entre ellas; PRs #829 y #830,
+mergeados). Occident («ya está descargada») y CIMA (SAU-24103) tenían razón: el fichero
+`C0468_M00171_POL_199_1_20260915…` consta `confirmed`/`review_parcial` (40/44); las 4
+(`RiesgoComunidades` ×3, `RiesgoEmbarcaciones` ×1) cayeron en `tipo_seguro_no_clasificable` — el
+`idPolizaEntidad` SÍ queda en `source_event_id` del evento (`<hash>:BIDP023227:review`), no hace
+falta descifrar nada para identificarlas. **Gotcha estructural**: el pipeline confirma el fichero a
+TIREA en cuanto ≥1 póliza persiste (aquí 40 de 44), y confirmar saca el fichero de la cola de CIMA
+**para siempre** — con 0 copia propia del crudo, lo que cae en review solo se recupera pidiéndole a
+la compañía que reenvíe a mano. #829: mapper reconoce comunidades→`comunidades`,
+embarcaciones→`otros` (44 casos análogos ya vistos: `RiesgoComercios` LOO-807, `RiesgoAccidentes`).
+#830 (la red de seguridad, para que esto no vuelva a pasar): `cima_cuarentena_crudo` — guarda
+`datos`+`rawXml` cifrados (AES-256-GCM, TTL 90 días) justo ANTES de `confirm`, y
+`POST /api/internal/cima/reprocesar-cuarentena` los reinyecta al pipeline con `opts.reprocess=true`
+en cuanto se arregla un gap del mapeador, sin depender de la compañía. **Migración 0096 SIN
+APLICAR** (gate DDL de AGENTS.md: PR-review + 2-eyes antes de `apply_migration` contra Supabase
+Frankfurt) — desplegar #830 sin aplicarla antes rompería el pull de CIMA. Dos borradores en Gmail
+(sin enviar, a la espera de que Alberto los revise): reenvío a Occident de las 4 pólizas y cierre
+del SAU-24103. Generali C0072 tiene 1 caso igual (6E-G-475000053) que se resolverá solo con #829.
 
 **(15/09/2026)** ASegura · `@central/core-vehiculos` + `POST /api/operador/vehiculo/matricula`
 **mergeados** (PR #2998, `resolverMatricula()` sobre APIVehículo, adaptador intercambiable). Pendiente
