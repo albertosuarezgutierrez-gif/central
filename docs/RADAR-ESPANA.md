@@ -5,7 +5,7 @@
 > `.claude/skills/radar-espana/SKILL.md`. Diseño:
 > `docs/superpowers/specs/2026-08-22-patrimonio-cfo-design.md`.
 
-**Última pasada: 01/09/2026** (primera pasada real vía trigger).
+**Última pasada: 16/09/2026.**
 
 ## 🌡️ Termómetro de ciclo por zona
 
@@ -13,18 +13,21 @@
 
 | Zona | Estado | Señales (con fuente) | Medido |
 |---|---|---|---|
-| Sevilla capital (municipal) | acelerando | `mercado_zonas` p50 2.635→2.869€/m² (+8,9% en un mes, 29/07→29/08). Consistente con prensa: [récord histórico en julio 2026](https://www.elespanol.com/sevilla/20260824/vivienda-sevilla-no-toma-respiro-verano-precio-bate-record-pese-frenazo-estival/1003744359756_0.html), casas/villas +10% interanual en agosto ([Idealista/BrainsRE](https://brainsre.news/precio-vivienda-sevilla/)). Matiz: el ritmo MENSUAL se modera según otra lectura de la misma fuente (+0,1% m/m) — los expertos anticipan subidas anuales del 2-7% "de madurez" en próximos meses. | 01/09/2026 |
-| Sevilla capital / casco antiguo | estable | `mercado_zonas` p50 4.390→4.444€/m² (+1,2% en un mes, muestra 24) — mucho más moderado que el municipal. Sin señal de agotamiento ni de aceleración propia. | 01/09/2026 |
+| Sevilla capital (municipal) | **posible agotamiento (vigilar)** | Idealista agosto 2026: **2.924€/m², −0,3% m/m** (primera lectura mensual negativa de esta serie) frente a +11,5% interanual ([idealista/news 08/09/2026](https://www.idealista.com/news/inmobiliario/vivienda/2026/09/08/912292-el-precio-de-la-vivienda-en-sevilla-en-agosto-ya-es-un-11-5-mas-caro-que-hace-un)). `mercado_zonas` sigue con el snapshot de 29/08 (p50 2.869€/m², sin refresco nuevo esta quincena). Aún 12% por debajo del máximo histórico de 2007 — no se declara agotamiento confirmado con un solo mes, pero es la señal a las que apunta el Paso 2: primera desaceleración m/m tras meses de aceleración. | 16/09/2026 |
+| Sevilla capital / casco antiguo | estable | Sin refresco: `mercado_zonas` sigue en el snapshot de 29/08 (p50 4.444€/m², muestra 24, +1,2% respecto a 29/07). No se ha encontrado prensa con dato de barrio para septiembre. | 16/09/2026 (sin dato nuevo) |
 | Sevilla provincia | sin datos | No medido esta pasada (solo capital). | — |
-| Asturias | acelerando | 1.878€/m² en julio 2026, **+15,4% interanual** ([Idealista](https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/venta/asturias/asturias/)). | 01/09/2026 |
-| Cantabria | acelerando | 2.377€/m² en julio 2026, **+18,2% interanual** — líder nacional ([Idealista](https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/venta/cantabria/cantabria/)). | 01/09/2026 |
-| Huelva | sin datos | Señal heterogénea sin agregado provincial fiable: algún municipio en caída (Ayamonte −15,3% interanual) mientras Andalucía en conjunto sube +10,8%. No se afirma tendencia provincial con esto. | 01/09/2026 |
-| Cádiz | sin datos | No se encontró dato específico de provincia esta pasada (solo el agregado autonómico Andalucía +10,8%, que no es Cádiz). | 01/09/2026 |
+| Asturias | acelerando | 1.887€/m² en agosto 2026, **+14,1% interanual** ([Idealista](https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/venta/asturias/asturias/)) — ritmo altísimo pero algo menor que el +15,4% de julio. Oviedo +16,6% interanual. | 16/09/2026 |
+| Cantabria | acelerando | 2.392€/m² en agosto 2026, **+17,2% interanual** (+0,6% m/m) — sigue líder nacional aunque algo por debajo del +18,2% de julio ([Idealista vía ifomo.es](https://www.ifomo.es/articulo/economia22/cantabria-cantabria-lidera-agosto-subida-vivienda-usada-172-rozar-2400-euro-m2/20260902114414357807.html)). | 16/09/2026 |
+| Huelva | acelerando | **Primer dato provincial fiable**: 1.794€/m² en julio 2026, **+12,7% interanual** ([Idealista](https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/venta/andalucia/huelva-provincia/)) — sustituye la lectura heterogénea de la pasada anterior (Ayamonte a la baja no representaba a la provincia). | 16/09/2026 |
+| Cádiz | sin datos | Sigue sin agregado provincial limpio: Idealista provincia solo trae mayo 2026 (2.340€/m², m/m); la ciudad de Cádiz sí tiene julio (3.310€/m², +8,1% interanual) pero no es la provincia. No se afirma tendencia provincial con esto. | 16/09/2026 |
 
 ## 🏠 Últimas valoraciones escritas por el agente
 
-**Refresco 01/09/2026 (`fuente='agente:m2zona'`, enfoque `vivienda`)** — la zona `mercado_zonas` se
-actualizó el 29/08/2026 (dato nuevo respecto al snapshot del 29/07 que usaba la pasada anterior):
+**Esta pasada (16/09/2026): SIN escritura nueva.** `mercado_zonas` sigue en el snapshot de
+29/08/2026 (mismos p50: sevilla-capital 2.869€/m², casco-antiguo 4.444€/m² — 18 días sin refresco,
+no hay dato nuevo) y la fila vigente de `patrimonio_valoraciones` es del 01/09/2026 (15 días, no
+>30). Por regla del Paso 1 (solo se escribe con dato nuevo o vigente >30 días), no se inserta fila.
+Sigue vigente lo escrito el 01/09/2026:
 
 - **Socorro 24** (275 m² Catastro): **1.222.100€** (antes 1.207.250€, +1,2%) — p50 casco-antiguo
   subió de 4.390 a 4.444€/m². Sigue sin testigos en `mercado_comparables` de Sevilla capital
@@ -63,48 +66,48 @@ Referencia disponible en BD (`mercado_zonas`, 29/08/2026): `sevilla-capital` p50
 
 ## 🏷️ Regulación VUT — vigilancia
 
-**Hallazgo nuevo y directamente relevante para Alberto: el barrio de Socorro 24 (San Julián,
-Casco Antiguo) ya tiene su cupo de VUT AGOTADO.** Confirmado por prensa (no visto en pasadas
-anteriores de este radar):
+**Sin cambios respecto a la pasada anterior — sigue vigente el hallazgo del 01/09/2026 (San Julián
+con cupo AGOTADO), confirmado de nuevo esta pasada sin novedad de plazo:**
 - Sevilla capital limita las VUT al 10% del parque residencial por barrio desde el
   29/10/2024 ([Gerencia de Urbanismo de Sevilla](https://www.urbanismosevilla.org/noticias/limite-a-las-viviendas-de-uso-turistico)).
-- **San Julián es uno de los barrios de crecimiento restringido** (junto a Museo, en el Casco
-  Antiguo): su cupo se fijó en **7 viviendas turísticas** y **ya se agotó** en el primer año de
-  vigencia de la norma ([hosteltur](https://www.hosteltur.com/166233_sevilla-pone-coto-a-la-vivienda-turistica-un-maximo-del-10-por-barrio.html)).
-  Sevilla capital tiene 11 barrios ya saturados en total (Casco Antiguo + Triana).
-- **Y desde el registro autonómico, más presión todavía:** ni en abril ni en mayo de 2026 se ha
-  inscrito NINGUNA vivienda turística nueva en Sevilla capital en el Registro de Turismo de
-  Andalucía — bloqueo administrativo de facto por revisiones más estrictas
-  ([andaluciainformacion.es](https://www.andaluciainformacion.es/articulo/sevilla/viviendas-turisticas-sevilla-ha-inscrito-ninguna-nueva/202606090923193399192.html)).
-- **Lectura para el patrimonio:** exactamente el patrón que describe la skill — la restricción es
-  escasez que sube el valor de la licencia VIVA de Socorro 24 (no se puede replicar; nadie más va a
-  poder abrir un VUT nuevo en San Julián). Pendiente cuantificarlo el día que se resuelva el enfoque
-  `vut` (ver huecos). No hay plazo/fecha límite que accione nada nuevo — es información de fondo, no
-  una ventana.
+  San Julián (Socorro 24) es uno de los barrios con crecimiento cerrado (cupo agotado), junto a
+  Museo y todo el Casco Antiguo + Triana.
+- **El bloqueo del Registro de Turismo de Andalucía sigue activo**: la búsqueda de esta pasada no
+  encontró dato posterior a abril-mayo 2026 (última cifra confirmada: 0 altas nuevas en Sevilla
+  capital esos dos meses) — no hay fuente que confirme si se ha desbloqueado en junio-agosto, así
+  que se mantiene como `sin dato más reciente`, no como «sigue igual» dado por hecho.
+  ([andaluciainformacion.es](https://www.andaluciainformacion.es/articulo/sevilla/viviendas-turisticas-sevilla-ha-inscrito-ninguna-nueva/202606090923193399192.html))
+- Sin novedad de moratoria ampliada ni de cambios al 10%/barrio esta pasada.
+- **Lectura para el patrimonio:** sin cambios — la restricción sigue siendo escasez que sostiene el
+  valor de la licencia VIVA de Socorro 24. Pendiente de cuantificar cuando se resuelva el enfoque
+  `vut` (ver huecos). No hay plazo/fecha límite que accione nada nuevo.
 
 ## 📈 Coyuntura económica
 
-- **Tipos al alza, giro relevante:** el euríbor cerró julio 2026 en 2,855%, su nivel más alto desde
-  septiembre de 2024. El mercado da ~85% de probabilidad a que el BCE suba 25 p.b. en su reunión del
-  10/09/2026 (depósito 2,25%→2,50%), por inflación de la eurozona en 2,9% en julio
-  ([infobae](https://www.infobae.com/espana/2026/08/27/el-bce-prepara-el-terreno-para-una-subida-de-tipos-de-interes-en-septiembre-ante-el-riesgo-de-que-la-inflacion-se-dispare/)).
-  Primera subida tras el ciclo de bajadas — afecta directamente al coste de oportunidad de mantener
-  patrimonio inmobiliario frente a otras alternativas.
-- **Esfuerzo hipotecario por encima del umbral de riesgo del Banco de España:** 36,1% de la renta en
-  el 1T-2026 ([Vozpópuli](https://www.vozpopuli.com/economia/inmobiliario/el-esfuerzo-para-comprar-vivienda-supera-el-umbral-de-riesgo-del-banco-de-espana.html)); precio medio ≈8x la renta bruta anual de un hogar. Presión de demanda con
-  tipos subiendo simultáneamente: dos fuerzas en direcciones opuestas sobre el ciclo — la señal a
-  vigilar la próxima pasada.
+- **El giro de tipos que se anticipaba el 01/09 SE MATERIALIZÓ:** el BCE subió los tres tipos
+  oficiales 25 p.b. en su reunión del 9-10/09/2026 — depósito **2,25%→2,50%**, principal
+  **2,65%**, marginal **2,90%** ([BCE, comunicado oficial](https://www.ecb.europa.eu/press/pr/date/2026/html/ecb.mp260910~314e508016.es.html)).
+  Primera subida confirmada tras el ciclo de bajadas.
+- **Y el euríbor se ha acelerado más de lo esperado:** media de agosto 2026 = 2,954%; media
+  provisional de septiembre (a 7/09) = **3,08%**, con el dato diario del 15/09 ya en **3,147%**
+  ([euribordiario.es](https://www.euribordiario.es/); [gibobs.com](https://www.gibobs.com/blog/euribor/)) —
+  primera vez que cruza el 3% en esta serie. Encarece directamente cualquier hipoteca variable en
+  revisión (~1.000€/año más de media) y sube el coste de oportunidad de mantener patrimonio
+  inmobiliario frente a otras alternativas. **Señal accionable: aviso por Telegram esta pasada.**
+- **Esfuerzo hipotecario:** sin dato más reciente que el 36,1% (1T-2026) de la pasada anterior — no
+  se ha encontrado actualización esta quincena.
 - Sin novedad normativa fiscal detectada (eso lo vigila `fiscal-novedades`; no se pisa aquí).
 
 ## Huecos conocidos
 
-- **Enfoque `vut` de Socorro 24 y Dúplex Center: sigue pendiente** (ver arriba el detalle del
-  bloqueo real de esta pasada — reparto de gastos compartidos entre los 4 pisos, no reconciliable
-  con SQL suelto sin riesgo de fabricar la cifra). Próxima pasada: pedir un endpoint interno que
-  exponga `getPLMensual()` en vez de reimplementarlo.
+- **Enfoque `vut` de Socorro 24 y Dúplex Center: sigue pendiente**, sin avance esta pasada (no se ha
+  montado el endpoint interno sobre `getPLMensual()` que pedía la pasada anterior). Próxima pasada:
+  seguir pendiente de ese endpoint antes de reintentar.
 - No hay zona `los-remedios` en `mercado_zonas`: Monte Carmelo se sigue valorando con el proxy
   municipal (infravalorado, y la brecha con el AVM de BBVA se mantiene ancha).
-- Sevilla provincia, Huelva y Cádiz: sin termómetro propio esta pasada (solo agregados
-  autonómicos/nacionales, insuficientes para afirmar tendencia local).
+- Sevilla provincia y Cádiz: sin termómetro propio esta pasada (agregados provinciales limpios no
+  encontrados o desfasados). Huelva SÍ se resolvió esta pasada (ver tabla).
+- `mercado_zonas` lleva 18 días sin refresco nuevo (último snapshot 29/08/2026) — las valoraciones
+  del agente y el estado de casco-antiguo en la tabla de zonas siguen con ese dato, no uno nuevo.
 - Los dos Busto (subarrendados) siguen en `estado='baja'`: no son propiedad, fuera del patrimonio;
   su negocio sigue en SIVRA.

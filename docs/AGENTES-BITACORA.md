@@ -15,6 +15,16 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-16 · radar-espana** · hizo: pasada quincenal completa. Paso 0/1: `mercado_zonas` sin
+  refresco desde 29/08 (18 días) y valoración vigente de 01/09 con solo 15 días → sin escritura
+  nueva en `patrimonio_valoraciones` (regla >30 días/dato nuevo). Paso 2: termómetro actualizado con
+  Idealista agosto — Sevilla capital municipal primera lectura m/m NEGATIVA (−0,3%, posible señal de
+  agotamiento a vigilar) tras meses de aceleración; Asturias/Cantabria siguen acelerando (algo por
+  debajo del mes previo); Huelva resuelto con agregado provincial limpio (+12,7% interanual, ya no
+  `sin datos`); Cádiz sigue `sin datos` (fuentes desfasadas/inconsistentes). Paso 3: sin novedad
+  regulatoria VUT con plazo (San Julián sigue con cupo agotado, sin cambios). Paso 4: BCE subió tipos
+  25pb el 10/09 (confirmando lo anticipado el 01/09) y euríbor cruzó el 3% (3,147% el 15/09) — aviso
+  Telegram enviado por señal accionable. dudas: —; fallos: —; PRs/commits: este commit.
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
