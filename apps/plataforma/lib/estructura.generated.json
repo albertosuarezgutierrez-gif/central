@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-16T16:13:14Z",
+  "generadoEn": "2026-09-16T17:09:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5778,6 +5778,11 @@
       "description": ">"
     },
     {
+      "id": "cima-ingesta",
+      "name": "cima-ingesta",
+      "description": ">"
+    },
+    {
       "id": "code-map",
       "name": "code-map",
       "description": "Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico."
@@ -6395,7 +6400,7 @@
     "verticales": 13,
     "packages": 42,
     "capacidades": 23,
-    "skills": 40,
+    "skills": 41,
     "apis": 1371,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
