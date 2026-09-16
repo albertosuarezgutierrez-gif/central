@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(16/09/2026)** radar-espana · pasada quincenal: termómetro actualizado (Sevilla capital
+municipal primera lectura mensual NEGATIVA −0,3% en agosto tras meses acelerando — posible
+agotamiento a vigilar; Huelva resuelto con dato provincial limpio +12,7% interanual; Cádiz sigue
+sin datos). Sin valoraciones nuevas en `patrimonio_valoraciones` (mercado_zonas sin refresco, dato
+vigente <30 días). BCE subió tipos 25pb el 10/09 y el euríbor ya cruzó el 3% (3,147% el 15/09) —
+aviso enviado por Telegram. PR #3019 (draft, docs/**, sin código). Pendiente: enfoque `vut` de
+Socorro 24/Dúplex sigue bloqueado por falta de endpoint sobre `getPLMensual()`.
+
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
 no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
