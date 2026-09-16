@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-16T12:20:34Z",
-  "sha": "3b735bc4c5c5d9d7e3546497fd925bb341859695",
+  "generadoEn": "2026-09-16T15:30:43Z",
+  "sha": "a0536f9a06cbbf5d737da21d6586a0830fe4ce52",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4100,13 +4100,13 @@
           "exportada": true,
           "params": "{ ramos }: { ramos: readonly RamoOpcion[] }",
           "retorno": null,
-          "linea": 41,
+          "linea": 50,
           "resumen": "La entrada a la bóveda de aportadas: dos caminos para la misma fila. - Subir el PDF o una foto: lo lee la IA y lo que salga se enseña como «leído por nosotros», para que la persona lo revise. - Añadir"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "521419d3e8eb"
+      "hash": "8c8d5fb8f47b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/TusDatos.tsx",
@@ -4664,7 +4664,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 27,
+          "linea": 28,
           "resumen": "Alta de una póliza en la bóveda del cliente. Dos caminos, una sola ruta: - `multipart/form-data` con `documento` → sube un PDF/foto, lo lee la IA y la fila nace SIN confirmar (los datos los ha adivina"
         },
         {
@@ -4673,7 +4673,7 @@
           "exportada": false,
           "params": "t: TitularDeclarado",
           "retorno": null,
-          "linea": 50,
+          "linea": 51,
           "resumen": "Lo que se guarda de la pregunta «¿es tuya o de tu empresa?». 🚨 `sin_preguntar` se guarda como NULL y NO como `'propio'`. Es la diferencia entre «ha dicho que es suya» y «no consta», y de ella depende"
         },
         {
@@ -4682,7 +4682,7 @@
           "exportada": false,
           "params": "req: Request, identidadId: string",
           "retorno": null,
-          "linea": 58
+          "linea": 59
         },
         {
           "nombre": "altaAMano",
@@ -4690,14 +4690,14 @@
           "exportada": false,
           "params": "req: Request, identidadId: string",
           "retorno": null,
-          "linea": 137
+          "linea": 150
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/polizas",
-      "hash": "2cba0418d289"
+      "hash": "cc94848cc533"
     },
     {
       "ruta": "apps/asegura-portal/app/api/push/desuscribir/route.ts",
@@ -6536,6 +6536,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "18da6173ecea"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/documento-portal.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Manda a `apps/asegura` (por el puente, `/api/portal/documento`) el fichero que el cliente acaba de subir, para que quede en SU ficha y Alberto lo vea y lo verifique desde `plataforma` → Documentos. 🚨 Esto es DISTINTO de `portal_poliza_declarada`: aquella tabla es la bóveda del cliente y solo guarda",
+      "exporta": [
+        "guardarDocumentoPropio"
+      ],
+      "funciones": [
+        {
+          "nombre": "puente",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "",
+          "linea": 24
+        },
+        {
+          "nombre": "guardarDocumentoPropio",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, entrada: { tipo: string; nombre: string; mime: string; contenido: Buffer },",
+          "retorno": "Promise<ResultadoDocumentoPropio>",
+          "linea": 31
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dd78ac6c98d7"
     },
     {
       "ruta": "apps/asegura-portal/lib/enlace-acceso.ts",
@@ -11592,6 +11621,27 @@
       "tablas": [],
       "rutaApi": "/api/portal/contacto",
       "hash": "aa36229cf464"
+    },
+    {
+      "ruta": "apps/asegura/app/api/portal/documento/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 27,
+          "resumen": "POST /api/portal/documento — el CLIENTE sube un fichero (hoy, la póliza que acaba de leer el portal) para que quede en SU ficha y Alberto lo vea y lo verifique desde `plataforma` → Documentos. Multipa"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/portal/documento",
+      "hash": "1ae0334e9778"
     },
     {
       "ruta": "apps/asegura/app/api/portal/nota/route.ts",
@@ -17147,6 +17197,7 @@
       "ambito": "apps/asegura",
       "resumen": "Aplicar a la cartera los datos de CONTACTO que corrige el propio cliente desde `apps/asegura-portal` (dirección; y desde el 09/09/2026 teléfono y correo), y leérselos de vuelta para que los vea. ─── Por qué esto vive aquí y no en el portal ──────────────────────────────── `clientes.direccion` va CIF",
       "exporta": [
+        "fichaPropiaDe",
         "aplicarContactoPropio",
         "leerContactoPropio",
         "confirmarContactoPropio",
@@ -17174,11 +17225,11 @@
         {
           "nombre": "fichaPropiaDe",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "correduriaId: string, identidadId: string,",
           "retorno": "Promise<",
-          "linea": 104,
-          "resumen": "Resuelve la ficha de la identidad; el error de vínculos NO se colapsa con `sin_ficha`."
+          "linea": 110,
+          "resumen": "Resuelve la ficha de la identidad; el error de vínculos NO se colapsa con `sin_ficha`. Exportada: `lib/documento-portal.ts` la reutiliza para saber en qué ficha cuelga un documento que sube el cliente"
         },
         {
           "nombre": "aplicarContactoPropio",
@@ -17186,7 +17237,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, entrada: EntradaContactoPropio,",
           "retorno": "Promise<ResultadoContactoPropio>",
-          "linea": 153,
+          "linea": 159,
           "resumen": "- el TELÉFONO y el CORREO son filas de `cliente_telefonos` / `cliente_emails` → `anadirContacto` como principal, que es lo que baja el anterior a secundario (no se pierde: sigue en la ficha) y lo que "
         },
         {
@@ -17195,7 +17246,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string",
           "retorno": "Promise<LecturaContactoPropio>",
-          "linea": 279,
+          "linea": 285,
           "resumen": "Lo que la ficha tiene de contacto de ESA identidad, para que pueda verlo y corregirlo (09/09/2026; Alberto: «ver sus datos de contacto… pudiendo modificarlos»). 🚨 Esto REVISA la decisión del 08/09/20"
         },
         {
@@ -17204,7 +17255,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string",
           "retorno": "Promise<ResultadoConfirmarContacto>",
-          "linea": 335,
+          "linea": 341,
           "resumen": "«Siguen igual»: el cliente dice que su contacto sigue siendo correcto SIN cambiar nada. Sella `contacto_confirmado_at = now()` y lo deja en el historial — sin valores, como toda anotación de esta puer"
         },
         {
@@ -17213,7 +17264,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<Date>",
-          "linea": 349,
+          "linea": 355,
           "resumen": "`contacto_confirmado_at = now()`: el cliente acaba de mirar (o corregir) sus datos."
         },
         {
@@ -17222,7 +17273,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, texto: string,",
           "retorno": "Promise<'ok' | 'sin_ficha' | 'varias_fichas' | 'error'>",
-          "linea": 368,
+          "linea": 374,
           "resumen": "Anota en el historial de la ficha de esa identidad algo que ha HECHO el cliente en el portal (hoy: una sugerencia). Es lo que hace que «todo lo que haga el cliente» acabe en la pantalla donde Alberto "
         },
         {
@@ -17231,7 +17282,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 385,
+          "linea": 391,
           "resumen": "La línea de bitácora. Best-effort a propósito, como el resto de anotaciones del repo: el dato YA está guardado, y tumbar la respuesta porque no se pudo escribir el renglón le diría al cliente que no s"
         }
       ],
@@ -17240,7 +17291,7 @@
         "portal_vinculo"
       ],
       "rutaApi": null,
-      "hash": "a034939d6e8f"
+      "hash": "47e2406c9ad0"
     },
     {
       "ruta": "apps/asegura/lib/correo-aviso-acceso.ts",
@@ -17497,6 +17548,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "96d636df29e6"
+    },
+    {
+      "ruta": "apps/asegura/lib/documento-portal.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El CLIENTE sube un documento desde `apps/asegura-portal` (hoy, la póliza que acaba de leer el portal) y queda en SU ficha para que Alberto lo vea y lo verifique desde `plataforma` → Documentos — el mismo flujo pedido/recibido/ revisado que ya usa para lo que sube él. Mismo patrón que `lib/contacto-p",
+      "exporta": [
+        "guardarDocumentoPropio"
+      ],
+      "funciones": [
+        {
+          "nombre": "guardarDocumentoPropio",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, identidadId: string, entrada: { tipo: TipoDocumento; nombre: string; mime: string; contenido: Buffer },",
+          "retorno": "Promise<ResultadoDocumentoPropio>",
+          "linea": 26
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6b501088a880"
     },
     {
       "ruta": "apps/asegura/lib/documentos/extraer-poliza.ts",
@@ -136659,7 +136731,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3342,
-    "funciones": 10332
+    "archivos": 3345,
+    "funciones": 10336
   }
 }
