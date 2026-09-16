@@ -1,8 +1,8 @@
 {
  "sesion": "fe9edd40-d8f8-5f1b-8e5f-fff4a66946f7",
  "inicio": "2026-09-14T10:00:12.280Z",
- "fin": "2026-09-16T07:21:43.957Z",
- "llamadas": 1535,
+ "fin": "2026-09-16T09:02:01.086Z",
+ "llamadas": 1541,
  "categorias": {
   "bash": {
    "llamadas": 595,
@@ -41,14 +41,14 @@
    }
   },
   "mcp:github": {
-   "llamadas": 174,
-   "chars_in": 45572,
-   "chars_out": 608408,
+   "llamadas": 175,
+   "chars_in": 45659,
+   "chars_out": 613382,
    "errores": 5,
    "archivos_citados": 48,
    "chars_citados": 4581777,
    "tools": {
-    "mcp__github__pull_request_read": 90,
+    "mcp__github__pull_request_read": 91,
     "mcp__github__update_pull_request": 17,
     "mcp__github__merge_pull_request": 21,
     "mcp__github__list_pull_requests": 5,
@@ -62,15 +62,15 @@
    }
   },
   "otro": {
-   "llamadas": 213,
-   "chars_in": 43731,
-   "chars_out": 5152824,
+   "llamadas": 214,
+   "chars_in": 43733,
+   "chars_out": 5155191,
    "errores": 0,
    "archivos_citados": 17,
    "chars_citados": 1550560,
    "tools": {
     "ToolSearch": 43,
-    "ReadNotifications": 123,
+    "ReadNotifications": 124,
     "Monitor": 8,
     "ScheduleWakeup": 17,
     "Skill": 12,
@@ -93,9 +93,9 @@
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 39,
-   "chars_in": 12012,
-   "chars_out": 122591,
+   "llamadas": 42,
+   "chars_in": 13371,
+   "chars_out": 131595,
    "errores": 4,
    "archivos_citados": 26,
    "chars_citados": 3102421,
@@ -104,11 +104,12 @@
     "mcp__Claude_Code_Remote__send_later": 3,
     "mcp__Claude_Code_Remote__delete_trigger": 4,
     "mcp__Claude_Code_Remote__list_triggers": 6,
-    "mcp__Claude_Code_Remote__create_trigger": 5,
+    "mcp__Claude_Code_Remote__create_trigger": 6,
     "mcp__Claude_Code_Remote__list_environments": 1,
     "mcp__Claude_Code_Remote__get_session": 1,
     "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 5,
-    "mcp__Claude_Code_Remote__update_trigger": 1
+    "mcp__Claude_Code_Remote__update_trigger": 2,
+    "mcp__Claude_Code_Remote__add_repo": 1
    }
   },
   "mcp:Vercel": {
@@ -163,14 +164,14 @@
    }
   },
   "sql": {
-   "llamadas": 30,
-   "chars_in": 12157,
-   "chars_out": 60086,
+   "llamadas": 31,
+   "chars_in": 12322,
+   "chars_out": 61073,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 30
+    "mcp__Supabase__execute_sql": 31
    }
   },
   "agente:general-purpose": {
