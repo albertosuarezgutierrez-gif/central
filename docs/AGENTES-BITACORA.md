@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-16 · trading-analista** · hizo (sesión interactiva, a petición de Alberto tras
+  "reparar de forma definitiva" la entrada de abajo): reescribió el protocolo en `SKILL.md` +
+  `references/pasada-diaria.md` — `get_price_history` pasa a ser SIEMPRE secuencial (1 símbolo
+  por turno, se elimina el fallback paralelo que ya había fallado dos veces) y queda PROHIBIDO
+  abstenerse del torneo por incertidumbre en el payload (las vetoes de servidor son la defensa,
+  no una excusa). Con el protocolo nuevo rehizo la pasada del 15/09 (backfill: a las 04:56 UTC del
+  16/09 el mercado US aún no había cerrado sesión nueva) símbolo a símbolo, y ejecutó
+  `/analizar`+`/puntuar`: HTTP 200 ambos, 24/24 símbolos limpios (0 vetados/descartados/
+  suplantados/divergentes), top ideas CHT/LLY/META/NVO/SQM (ninguna operada). Telegram enviado.
+  dudas: —; fallos: un error propio de transcripción en el volumen de SNDK, autodetectado y
+  corregido antes de enviar nada; PRs/commits: PR #3018 (mismo PR que la entrada de abajo).
 - **2026-09-15 · trading-analista** · hizo: repesca 23:15 (la de 20:15 refrescó el saldo pero no
   llegó a completar la pasada — sin fila en `trading_pasadas`). NAV→saldo (32.619,39€, sin salto),
   cartera real (CVX+VWCE, sin descartes), operaciones (0 nuevas DAYS_7) y latido, todo empujado.

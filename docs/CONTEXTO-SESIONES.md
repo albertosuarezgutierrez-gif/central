@@ -12,13 +12,21 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(16/09/2026)** trading-analista · **reparado y cerrado el ciclo de la entrada de abajo.** Alberto
+pidió arreglarlo de forma definitiva. Se reescribió el landmine en `SKILL.md` +
+`references/pasada-diaria.md`: protocolo de precios ahora **secuencial obligatorio** (1
+`get_price_history` por turno, sin fallback paralelo) y **prohibido abstenerse del torneo** por
+incertidumbre — las vetoes de servidor (`detectarSuplantaciones`, contraste 2ª fuente) son la
+defensa, no una excusa. Con el protocolo nuevo se rehizo la pasada del 15/09 (backfill, mercado
+aún no abría el 16/09): `/analizar` y `/puntuar` OK, 24/24 símbolos limpios, top ideas
+CHT/LLY/META/NVO/SQM (ninguna operada). Telegram enviado. PR #3018.
+
 **(15/09/2026)** trading-analista · repesca 23:15 (la de 20:15 refrescó saldo pero no completó
 pasada). NAV→saldo/cartera/operaciones empujados sin incidencias (CVX+VWCE, 0 ops nuevas). Se
 SALTÓ `/analizar`+`/puntuar` a propósito: reconstruir a mano el payload de 24 símbolos×120 velas
 desde 24 `get_price_history` paralelos tenía riesgo real de mezclar símbolos (landmine ya
 documentado 3× en la skill) — mejor no analizar que abrir una tesis/posición paper con precio de
-otro valor. Pendiente para una sesión futura: revisar si la skill puede dar un camino que no exija
-transcribir miles de números a mano (ver detalle en `docs/AGENTES-BITACORA.md`).
+otro valor. **Reparado al día siguiente, ver entrada de arriba.**
 
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
