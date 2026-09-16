@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-16T10:53:00Z",
-  "sha": "587e67206baf82d3aaac0b80f5053ce59c977fca",
+  "generadoEn": "2026-09-16T12:20:34Z",
+  "sha": "3b735bc4c5c5d9d7e3546497fd925bb341859695",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -64603,7 +64603,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 67
+          "linea": 71
         },
         {
           "nombre": "fmtFecha",
@@ -64611,7 +64611,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 72,
+          "linea": 76,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -64620,7 +64620,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 122
+          "linea": 126
         },
         {
           "nombre": "CorreduriaClient",
@@ -64628,7 +64628,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 124
+          "linea": 128
         },
         {
           "nombre": "CarteraResumen",
@@ -64636,7 +64636,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 537
+          "linea": 592
         },
         {
           "nombre": "btnMini",
@@ -64644,7 +64644,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 654,
+          "linea": 709,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -64653,12 +64653,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 672
+          "linea": 727
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "33796e15ae04"
+      "hash": "599fba39abaf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -65039,6 +65039,108 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "12a6e1549941"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/Ingesta.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AvisoIngesta",
+        "PanelIngesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "textoMotivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "motivo: string",
+          "retorno": "string",
+          "linea": 36,
+          "resumen": "El motivo del puerto, en cristiano. Uno desconocido se enseña crudo."
+        },
+        {
+          "nombre": "BadgeEstado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ datos }: { datos: VistaIngesta | null }",
+          "retorno": null,
+          "linea": 40
+        },
+        {
+          "nombre": "AvisoIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ datos }: { datos: VistaIngesta | null }",
+          "retorno": null,
+          "linea": 50
+        },
+        {
+          "nombre": "PanelIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ datos }: { datos: VistaIngesta | null }",
+          "retorno": null,
+          "linea": 96
+        },
+        {
+          "nombre": "Estado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ salud, datos }: { salud: SaludIngesta; datos: VistaIngesta }",
+          "retorno": null,
+          "linea": 137
+        },
+        {
+          "nombre": "Cuarentena",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ salud }: { salud: SaludIngesta }",
+          "retorno": null,
+          "linea": 177
+        },
+        {
+          "nombre": "Huerfanas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ salud, truncadas, sinAmbito }: { salud: SaludIngesta truncadas: boolean sinAmbito: number | null }",
+          "retorno": null,
+          "linea": 221
+        },
+        {
+          "nombre": "GruposHuerfanas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, nota, grupos }: { titulo: string nota: string grupos: GrupoHuerfanas[] }",
+          "retorno": null,
+          "linea": 292
+        },
+        {
+          "nombre": "Grupo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ g }: { g: GrupoHuerfanas }",
+          "retorno": null,
+          "linea": 310
+        },
+        {
+          "nombre": "Rechazos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ salud }: { salud: SaludIngesta }",
+          "retorno": null,
+          "linea": 376
+        },
+        {
+          "nombre": "Companias",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ salud }: { salud: SaludIngesta }",
+          "retorno": null,
+          "linea": 439
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6f6073efa6f7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/layout.tsx",
@@ -66409,7 +66511,7 @@
           "exportada": true,
           "params": "v: string | string[] | undefined",
           "retorno": "Seccion",
-          "linea": 56,
+          "linea": 67,
           "resumen": "Un `?s=` desconocido (o ausente) no deja la pantalla en blanco: cae a «Hoy»."
         },
         {
@@ -66418,7 +66520,7 @@
           "exportada": true,
           "params": "urgencia: string",
           "retorno": "boolean",
-          "linea": 76
+          "linea": 87
         },
         {
           "nombre": "contarAccionables",
@@ -66426,7 +66528,7 @@
           "exportada": true,
           "params": "polizas: readonly { urgencia: string }[] | null | undefined,",
           "retorno": "number | null",
-          "linea": 87,
+          "linea": 98,
           "resumen": "Cuántas renovaciones son trabajo de hoy. `null` entra y sale: si el puerto no ha contestado no se sabe cuántas hay, y decir 0 sería afirmar «no vence nada», que es justo la mentira que la regla «dato "
         },
         {
@@ -66435,13 +66537,13 @@
           "exportada": true,
           "params": "partes: readonly (number | null | undefined)[],",
           "retorno": "Contador | null",
-          "linea": 112,
+          "linea": 123,
           "resumen": "Agrega los contadores de las colas que viven en una sección. Tres desenlaces, no dos, y la diferencia es la que decide si Alberto abre la pestaña o no: - todas las colas legibles → `{ n, parcial:false"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7b7dd6106cf0"
+      "hash": "1e7c7b7cd438"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Secciones.tsx",
@@ -66456,7 +66558,7 @@
           "exportada": true,
           "params": "{ activa, contadores, onCambiar }: { activa: Seccion contadores: ContadoresSeccion onCambiar: (s: Seccion) => void }",
           "retorno": null,
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "Insignia",
@@ -66464,12 +66566,12 @@
           "exportada": false,
           "params": "{ contador, tono, title }: { contador: Contador | null tono?: 'aviso' | 'malo' title?: string }",
           "retorno": null,
-          "linea": 104
+          "linea": 105
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7abf87452799"
+      "hash": "2625e1c077db"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/SinCanal.tsx",
@@ -74124,6 +74226,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/impagados",
       "hash": "4e472275c6d0"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/ingesta/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "GET — la salud de la INGESTA de CIMA para la pantalla de la correduría. Es el MISMO lector que usa el cron `correduria-ingesta` (`leerIngestaCima`), no una segunda implementación: si la pantalla y el "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/ingesta",
+      "hash": "48b2eda1b0d5"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/intervinientes/route.ts",
@@ -88335,6 +88458,138 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "71c6ca089a49"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/ingesta-pantalla.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── La salud de la INGESTA de CIMA, tal y como la ve ALBERTO. 🚨 Por qué existe esta capa, si el vigía ya estaba escrito. El cron `correduria-ingesta` lleva desde el 01/09/2026 midiendo esto bien y avisando por Telegram, y el p",
+      "exporta": [
+        "interpretarVistaIngesta",
+        "senalesIngesta",
+        "hayPerdida",
+        "hayHuecos",
+        "veredictoIngesta",
+        "hayQueEnsenar",
+        "tituloIngesta",
+        "contadorIngesta"
+      ],
+      "funciones": [
+        {
+          "nombre": "esNumero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is number",
+          "linea": 53
+        },
+        {
+          "nombre": "numeroONulo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 57
+        },
+        {
+          "nombre": "esSalud",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is SaludIngesta",
+          "linea": 69,
+          "resumen": "¿Tiene forma de `SaludIngesta`? Se exige lo que la pantalla PINTA y nada más: si mañana el puerto añade un campo (hay otra sesión ampliándolo), esta comprobación tiene que seguir pasando — rechazar la"
+        },
+        {
+          "nombre": "interpretarVistaIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "VistaIngesta",
+          "linea": 88,
+          "resumen": "Interpretación PURA de lo que devuelve `GET /api/correduria/ingesta`. Cualquier duda cae del lado conservador: `error`, nunca `ok`. Es la misma regla de `interpretarIngesta`, un piso más abajo — aquí "
+        },
+        {
+          "nombre": "companiasMudas",
+          "kind": "function",
+          "exportada": false,
+          "params": "silencio: SilencioEntidad[] | null",
+          "retorno": "SilencioEntidad[]",
+          "linea": 143
+        },
+        {
+          "nombre": "rechazosRecientes",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SaludIngesta",
+          "retorno": null,
+          "linea": 147
+        },
+        {
+          "nombre": "senalesIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SaludIngesta",
+          "retorno": "SenalIngesta[]",
+          "linea": 162,
+          "resumen": "Las señales de la pantalla, en el orden en que se atienden. Primero lo que se está perdiendo AHORA (fichero atascado reciente, compañía que enmudeció, envío rechazado, huérfana), después los huecos de"
+        },
+        {
+          "nombre": "hayPerdida",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SaludIngesta",
+          "retorno": "boolean",
+          "linea": 246,
+          "resumen": "¿Hay pérdida MEDIDA? Es lo único que autoriza a decir «se está perdiendo»."
+        },
+        {
+          "nombre": "hayHuecos",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: SaludIngesta",
+          "retorno": "boolean",
+          "linea": 251,
+          "resumen": "¿Hay algo que no se ha podido comprobar dentro de una lectura que sí llegó?"
+        },
+        {
+          "nombre": "veredictoIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: VistaIngesta | null",
+          "retorno": "VeredictoPantalla | null",
+          "linea": 256
+        },
+        {
+          "nombre": "hayQueEnsenar",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: VistaIngesta | null",
+          "retorno": "boolean",
+          "linea": 273,
+          "resumen": "¿Se pinta la tarjeta de «Hoy»? Solo cuando hay algo que decir. «Todo bien» no ocupa sitio — que es literalmente lo que pidió Alberto («que solo salgan errores»). Y lo que NO se ha podido comprobar SÍ "
+        },
+        {
+          "nombre": "tituloIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: VistaIngesta | null",
+          "retorno": "string",
+          "linea": 279,
+          "resumen": "El titular de la tarjeta. Nunca promete calma sobre algo que no se ha mirado."
+        },
+        {
+          "nombre": "contadorIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: VistaIngesta | null",
+          "retorno": "",
+          "linea": 292,
+          "resumen": "El contador de la pestaña: `{n, parcial}` o `null` («!»), jamás un 0 de relleno."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3b998cd167b9"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/pdf-allianz.ts",
@@ -136404,7 +136659,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3339,
-    "funciones": 10307
+    "archivos": 3342,
+    "funciones": 10332
   }
 }

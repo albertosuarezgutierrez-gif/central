@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-15T17:58:49Z",
+  "generadoEn": "2026-09-16T12:20:34Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 53
+        "evidencias": 56
       },
       "rrhh": {
         "estado": "no",
@@ -4908,6 +4908,7 @@
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
       "/api/correduria/impagados",
+      "/api/correduria/ingesta",
       "/api/correduria/intervinientes",
       "/api/correduria/leads",
       "/api/correduria/leads-web",
@@ -6394,7 +6395,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 40,
-    "apis": 1369,
+    "apis": 1370,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
