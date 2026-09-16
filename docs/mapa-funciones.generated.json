@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-16T15:44:08Z",
-  "sha": "412df7151e5ae98997cf70faa514fdc30a634e62",
+  "generadoEn": "2026-09-16T16:10:33Z",
+  "sha": "562368204862eeca6ce0f4ddedc818a19fe9aafd",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -88575,12 +88575,21 @@
           "resumen": "¿Tiene forma de `SaludIngesta`? Se exige lo que la pantalla PINTA y nada más: si mañana el puerto añade un campo (hay otra sesión ampliándolo), esta comprobación tiene que seguir pasando — rechazar la"
         },
         {
+          "nombre": "normalizarSenalesNuevas",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: SaludIngesta",
+          "retorno": "SaludIngesta",
+          "linea": 96,
+          "resumen": "🚨 La frontera donde el tipo MIENTE, y hay que rehacerlo. `SaludIngesta` declara `crudo: CrudoPendiente | null`, pero esto viene de un JSON por red: si `apps/asegura` está desplegada con una versión a"
+        },
+        {
           "nombre": "interpretarVistaIngesta",
           "kind": "function",
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "VistaIngesta",
-          "linea": 88,
+          "linea": 115,
           "resumen": "Interpretación PURA de lo que devuelve `GET /api/correduria/ingesta`. Cualquier duda cae del lado conservador: `error`, nunca `ok`. Es la misma regla de `interpretarIngesta`, un piso más abajo — aquí "
         },
         {
@@ -88589,7 +88598,7 @@
           "exportada": false,
           "params": "silencio: SilencioEntidad[] | null",
           "retorno": "SilencioEntidad[]",
-          "linea": 143
+          "linea": 179
         },
         {
           "nombre": "rechazosRecientes",
@@ -88597,7 +88606,7 @@
           "exportada": false,
           "params": "s: SaludIngesta",
           "retorno": null,
-          "linea": 147
+          "linea": 183
         },
         {
           "nombre": "senalesIngesta",
@@ -88605,7 +88614,7 @@
           "exportada": true,
           "params": "s: SaludIngesta",
           "retorno": "SenalIngesta[]",
-          "linea": 162,
+          "linea": 198,
           "resumen": "Las señales de la pantalla, en el orden en que se atienden. Primero lo que se está perdiendo AHORA (fichero atascado reciente, compañía que enmudeció, envío rechazado, huérfana), después los huecos de"
         },
         {
@@ -88614,7 +88623,7 @@
           "exportada": true,
           "params": "s: SaludIngesta",
           "retorno": "boolean",
-          "linea": 246,
+          "linea": 385,
           "resumen": "¿Hay pérdida MEDIDA? Es lo único que autoriza a decir «se está perdiendo»."
         },
         {
@@ -88623,7 +88632,7 @@
           "exportada": true,
           "params": "s: SaludIngesta",
           "retorno": "boolean",
-          "linea": 251,
+          "linea": 390,
           "resumen": "¿Hay algo que no se ha podido comprobar dentro de una lectura que sí llegó?"
         },
         {
@@ -88632,7 +88641,7 @@
           "exportada": true,
           "params": "v: VistaIngesta | null",
           "retorno": "VeredictoPantalla | null",
-          "linea": 256
+          "linea": 395
         },
         {
           "nombre": "hayQueEnsenar",
@@ -88640,7 +88649,7 @@
           "exportada": true,
           "params": "v: VistaIngesta | null",
           "retorno": "boolean",
-          "linea": 273,
+          "linea": 412,
           "resumen": "¿Se pinta la tarjeta de «Hoy»? Solo cuando hay algo que decir. «Todo bien» no ocupa sitio — que es literalmente lo que pidió Alberto («que solo salgan errores»). Y lo que NO se ha podido comprobar SÍ "
         },
         {
@@ -88649,7 +88658,7 @@
           "exportada": true,
           "params": "v: VistaIngesta | null",
           "retorno": "string",
-          "linea": 279,
+          "linea": 418,
           "resumen": "El titular de la tarjeta. Nunca promete calma sobre algo que no se ha mirado."
         },
         {
@@ -88658,13 +88667,13 @@
           "exportada": true,
           "params": "v: VistaIngesta | null",
           "retorno": "",
-          "linea": 292,
+          "linea": 431,
           "resumen": "El contador de la pestaña: `{n, parcial}` o `null` («!»), jamás un 0 de relleno."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3b998cd167b9"
+      "hash": "4d97739c7f47"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/pdf-allianz.ts",
@@ -130124,7 +130133,7 @@
           "exportada": false,
           "params": "f: FicheroEnCuarentena",
           "retorno": "string | null",
-          "linea": 164,
+          "linea": 231,
           "resumen": "Un valor de cajón (vacío, guiones, «desconocido») es ausencia, no dato."
         },
         {
@@ -130133,7 +130142,7 @@
           "exportada": false,
           "params": "cuarentena: FicheroEnCuarentena[],",
           "retorno": "Array<",
-          "linea": 170
+          "linea": 237
         },
         {
           "nombre": "reparto",
@@ -130141,7 +130150,7 @@
           "exportada": false,
           "params": "cuarentena: FicheroEnCuarentena[]",
           "retorno": "Array<",
-          "linea": 186
+          "linea": 253
         },
         {
           "nombre": "saludIngesta",
@@ -130149,7 +130158,7 @@
           "exportada": true,
           "params": "e: EntradaSalud, diasRecientes: number = DIAS_CUARENTENA_RECIENTE,",
           "retorno": "SaludIngesta",
-          "linea": 203,
+          "linea": 270,
           "resumen": "Veredicto sobre la ingesta. `degradada` exige una señal MEDIDA de pérdida: un fichero atascado en la ventana reciente, o pólizas huérfanas. El backlog viejo por sí solo no alarma (se informa, pero no "
         },
         {
@@ -130158,7 +130167,7 @@
           "exportada": true,
           "params": "s: SaludIngesta",
           "retorno": "string",
-          "linea": 344,
+          "linea": 488,
           "resumen": "Una línea para el latido/Telegram. Nunca dice «todo bien» sin haberlo mirado."
         },
         {
@@ -130167,7 +130176,7 @@
           "exportada": true,
           "params": "e: { firmaAnterior: string | null firmaActual: string ultimoAvisoEn: Date | null /** Desde cuándo consta abierta esta misma avería. `null` = no se sabe. */ abiertaDesde?: Date | null hoy: Date diasRecordatorio?: number }",
           "retorno": "DecisionAviso",
-          "linea": 404,
+          "linea": 548,
           "resumen": "¿Hay que sonar hoy? - `primera` — no consta que se haya avisado nunca. Suena siempre: perder un aviso es peor que duplicarlo. - `cambio` — el estado ha cambiado (entró otro fichero, apareció otra huér"
         },
         {
@@ -130176,7 +130185,7 @@
           "exportada": false,
           "params": "g: { entidad: string; entidadNombre: string | null; clave: string | null },",
           "retorno": "string",
-          "linea": 539,
+          "linea": 683,
           "resumen": "Etiqueta de a quién se le pide: compañía + CLAVE DE MEDIADOR, nunca solo la compañía. Occident manda por tres claves y el atasco no está repartido igual: decir «Occident» manda a revisar una cartera q"
         },
         {
@@ -130185,7 +130194,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 546
+          "linea": 690
         },
         {
           "nombre": "agrupar",
@@ -130193,7 +130202,7 @@
           "exportada": false,
           "params": "filas: PolizaHuerfana[]",
           "retorno": "GrupoHuerfanas[]",
-          "linea": 554
+          "linea": 698
         },
         {
           "nombre": "repartirHuerfanas",
@@ -130201,7 +130210,7 @@
           "exportada": true,
           "params": "filas: PolizaHuerfana[] | null",
           "retorno": "RepartoHuerfanas | null",
-          "linea": 612,
+          "linea": 756,
           "resumen": "Reparte las huérfanas por lo que hay que HACER con cada una. 🚨 `null` entra, `null` sale: no haber podido listarlas no es «no hay ninguna». Un `[]` aquí significa «se miró y no hay», y la diferencia "
         },
         {
@@ -130210,7 +130219,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string",
-          "linea": 629,
+          "linea": 773,
           "resumen": "Los números vienen de un XML de la compañía: se escapan antes de ir a HTML."
         },
         {
@@ -130219,13 +130228,13 @@
           "exportada": true,
           "params": "r: RepartoHuerfanas | null, opciones: { tope?: number; donde?: string } = {},",
           "retorno": "string",
-          "linea": 641,
+          "linea": 785,
           "resumen": "El bloque del Telegram, en HTML. Cadena vacía cuando no hay nada que decir. Dice QUÉ HACER, no cuántas hay: «pídele a Occident el volcado de estas 12 pólizas de la clave M00171» y la lista detrás, par"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "47b4bde12118"
+      "hash": "331c328a5753"
     },
     {
       "ruta": "packages/module-seguros/src/intervinientes.ts",
@@ -136735,6 +136744,6 @@
   ],
   "resumen": {
     "archivos": 3345,
-    "funciones": 10336
+    "funciones": 10337
   }
 }
