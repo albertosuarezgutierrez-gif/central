@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
-import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
+import { enviarAlHuespedDetallado } from '@/lib/sivra/agente-huesped/enviar'
+import { avisoFalloEnvio } from '@/lib/sivra/agente-huesped/motivo-envio'
 import { detectarExtra, mencionaImporte } from '@/lib/sivra/agente-huesped/extras'
 import { extraDeCatalogo, nombreEnIdioma } from '@/lib/sivra/extras/catalogo'
 import { registrarOferta } from '@/lib/sivra/extras/reserva'
@@ -871,12 +872,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'send' || action === 'grant') {
-      const ok = await enviarAlHuesped(bookingId, pend.borrador || '')
-      await tgAnswerCallback(cb.id, ok ? 'Enviado ✅' : 'No se pudo enviar — reintenta')
+      const res = await enviarAlHuespedDetallado(bookingId, pend.borrador || '')
+      await tgAnswerCallback(cb.id, res.ok ? 'Enviado ✅' : (res.motivo.reintentable ? 'No se pudo enviar — reintenta' : 'No se pudo enviar — mira el aviso'))
       // Si el envío FALLA, NO tocamos nada (dejamos el pendiente y los botones para reintentar).
-      if (!ok) {
-        await tgSend('❌ No se pudo enviar al huésped. Vuelve a darle a ✅ Enviar en un momento.')
-        return NextResponse.json({ ok: false, sent: false })
+      // El aviso dice la CAUSA: con Smoobu caído (503) reintentar no puede funcionar, y sin eso
+      // Alberto pulsa ✅ Enviar una y otra vez (caso real 16/09/2026, reserva 155333446).
+      if (!res.ok) {
+        await tgSend(avisoFalloEnvio(res.motivo), { html: true })
+        return NextResponse.json({ ok: false, sent: false, motivo: res.motivo.clase })
       }
       await confirmarEnviado(pend.tg_message_id, pend.borrador || '')
       // Aprobado tal cual (sin corregir): la fila de mensajes_log ya está con edited=false.
@@ -972,10 +975,10 @@ export async function POST(req: NextRequest) {
       // aprobación: se envía el borrador existente (ya en el idioma del huésped).
       const esAprobacion = /^(ok(ay)?|vale|s[ií]|dale|adelante|perfecto|correcto|env[ií]a(lo)?|enviar|de acuerdo|👍|👌|✅)\.?$/i.test(idea)
       if (esAprobacion) {
-        const ok = await enviarAlHuesped(bookingId!, pend.borrador || '')
-        if (!ok) {
-          await tgSend('❌ No se pudo enviar al huésped. Inténtalo de nuevo (o pulsa ✅ Enviar en el mensaje original).')
-          return NextResponse.json({ ok: false, sent: false })
+        const res = await enviarAlHuespedDetallado(bookingId!, pend.borrador || '')
+        if (!res.ok) {
+          await tgSend(avisoFalloEnvio(res.motivo), { html: true })
+          return NextResponse.json({ ok: false, sent: false, motivo: res.motivo.clase })
         }
         await prisma.$executeRaw(Prisma.sql`
           UPDATE mensajes_log SET auto_sent = true

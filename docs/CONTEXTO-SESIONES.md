@@ -19,6 +19,15 @@ por `WebSearch` (SERP, sin volumen real) → fontanero con menos sitios especial
 y climatización/gas. Mismo molde `RAMOS`, sin ramo nuevo en BD (sigue `responsabilidad_civil`).
 Verificado: 105 tests + tsc en asegura-web, tests de `consultas.ts` en plataforma. PR abierto.
 
+**(16/09/2026)** Agente huéspedes · «no se pudo enviar al huésped» ×3 en la reserva 155333446:
+era **Smoobu caído** (503, página «System Outage», medido en los logs de runtime de plataforma
+06:06-06:24 UTC), no el borrador ni el código. Lo nuestro era el aviso, que decía siempre
+«reintenta en un momento» — una caída del proveedor se veía igual que una credencial mala o una
+reserva desconocida. Nuevo módulo puro `lib/sivra/agente-huesped/motivo-envio.ts` (7 clases, dice
+si reintentar sirve; el cuerpo HTML de Smoobu nunca viaja al aviso) + `enviarAlHuespedDetallado()`,
+con `enviarAlHuesped()` como envoltura booleana para los 9 llamadores automáticos. PR draft #3021;
+9 cepos vistos en ROJO antes de darlos por buenos, tsc 0 y 336 tests del agente en verde.
+
 **(15/09/2026)** SEO correduria · cron `seo-correduria` gana 3ª fuente **cobertura de indexación**
 (`lib/seo-correduria/cobertura.ts`, URL Inspection API — reusa la cuenta de servicio de GSC, sin
 secreto nuevo) para el 404/no-indexado de `asegura-web` que Alberto pedía como prerrequisito de Ads.
