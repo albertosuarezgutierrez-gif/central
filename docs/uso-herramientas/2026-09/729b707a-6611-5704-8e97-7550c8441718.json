@@ -1,8 +1,8 @@
 {
  "sesion": "729b707a-6611-5704-8e97-7550c8441718",
  "inicio": "2026-09-16T08:34:21.202Z",
- "fin": "2026-09-16T08:43:50.439Z",
- "llamadas": 53,
+ "fin": "2026-09-16T08:44:10.026Z",
+ "llamadas": 55,
  "categorias": {
   "otro": {
    "llamadas": 5,
@@ -18,14 +18,14 @@
    }
   },
   "bash": {
-   "llamadas": 18,
-   "chars_in": 52934,
-   "chars_out": 25861,
+   "llamadas": 20,
+   "chars_in": 53219,
+   "chars_out": 26476,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 18
+    "Bash": 20
    }
   },
   "mcp:Booking-com": {
