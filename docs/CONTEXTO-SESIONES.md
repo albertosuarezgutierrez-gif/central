@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(16/09/2026)** sivra/agente-huesped · «el agente no responde»: NO estaba mudo — procesó el mensaje
+de Hsiang Lu Kung (Dúplex Center, 155333446) a las 08:06 y lo dejó de BORRADOR en Telegram (msg 4642),
+así que el huésped no vio nada. Causa de fondo: **ninguna fuente sabe las camas de ningún piso** (las 4
+guías de `mensajes_guia_cache` no dicen «cama/bed» y la ficha solo leía `rooms.maxOccupancy`), y el
+agente contestó a «¿hay dos camas dobles?» con la capacidad («caben 4, estáis cubiertos») — el landmine
+NULL≠0 del CLAUDE.md. Fix: `camas.ts` (puro, 7 cepos vistos en rojo) + distribución de `properties` en
+la ficha + guardián que escala y lo registra como hueco de guía. PENDIENTE DE ALBERTO: contestar el
+borrador y enseñar el tipo de cama de los 4 pisos (dato que solo tiene él). Tests 334 + tsc 0.
+
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
 no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
