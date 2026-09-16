@@ -1,29 +1,78 @@
 {
  "sesion": "807c8433-3aa2-5bda-a6b6-60c9d31bb9eb",
  "inicio": "2026-09-16T11:58:31.141Z",
- "fin": "2026-09-16T11:58:35.363Z",
- "llamadas": 3,
+ "fin": "2026-09-16T12:29:05.005Z",
+ "llamadas": 32,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 2,
-   "chars_in": 213,
-   "chars_out": 302,
+   "llamadas": 6,
+   "chars_in": 570,
+   "chars_out": 22509,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 2
+    "Grep": 2,
+    "Read": 4
    }
   },
   "bash": {
-   "llamadas": 1,
-   "chars_in": 169,
-   "chars_out": 5314,
+   "llamadas": 11,
+   "chars_in": 1912,
+   "chars_out": 13847,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1
+    "Bash": 11
+   }
+  },
+  "escritura": {
+   "llamadas": 7,
+   "chars_in": 5090,
+   "chars_out": 337189,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 7
+   }
+  },
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 688,
+   "chars_out": 50589,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "ReadNotifications": 1,
+    "ScheduleWakeup": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 4,
+   "chars_in": 1414,
+   "chars_out": 9364,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 2
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 1,
+   "chars_in": 73,
+   "chars_out": 239,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1
    }
   }
  }
