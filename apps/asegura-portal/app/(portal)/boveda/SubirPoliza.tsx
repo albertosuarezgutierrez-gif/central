@@ -24,6 +24,8 @@ type Resultado = {
   fuente: 'texto' | 'vision' | 'none'
   /** Cómo fue la 2ª pasada, la de los campos propios del ramo. Ver `EstadoCamposRamo`. */
   camposRamo?: 'leidos' | 'no_leidos' | 'no_aplica'
+  /** Si el FICHERO llegó a la ficha del corredor. `undefined` = alta a mano, no aplica. */
+  documentoGuardado?: 'ok' | 'invalido' | 'sin_ficha' | 'varias_fichas' | 'sin_puente' | 'error'
 }
 
 /**
@@ -35,8 +37,15 @@ type Resultado = {
  *    tiene el documento. Lo que teclea es lo que se guarda.
  *
  * Lo que NO hace ninguno de los dos, y el texto no debe insinuar: meter la
- * póliza en la cartera de la correduría, ni verificarla nadie. Es el apunte de
- * la persona; con la fecha de vencimiento se le puede avisar antes de que venza.
+ * póliza en la cartera de la correduría. Es el apunte de la persona; con la
+ * fecha de vencimiento se le puede avisar antes de que venza.
+ *
+ * 🚨 Y desde el 16/09/2026 SÍ cambia una cosa: si sube el FICHERO (no el alta a
+ * mano), el documento en sí —no solo lo leído— llega a la ficha del corredor
+ * (`seguros.documentos`, `lib/documento-portal.ts` → `apps/asegura`) para que
+ * Alberto lo revise. Eso NO convierte la póliza en gestionada: sigue siendo su
+ * apunte, y lo que cambia es que el papel queda guardado donde antes se
+ * descartaba. El texto lo dice.
  */
 export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   const router = useRouter()
@@ -129,7 +138,8 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
       <p className="suave" style={{ fontSize: 14, marginTop: 0 }}>
         Sube el PDF o una foto, o añádela a mano si no tienes el documento. Da igual que no sea nuestra:
         la guardamos en tu bóveda y, si nos dices cuándo vence, podemos avisarte antes. Es tu apunte: no la
-        contratamos ni la gestionamos por ti.
+        contratamos ni la gestionamos por ti. Si subes el fichero, además queda archivado para que podamos
+        revisarlo.
       </p>
 
       <div className="de-quien">
@@ -257,6 +267,15 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
 
       {estado === 'listo' && resultado && (
         <div style={{ marginTop: 12 }}>
+          {/* 🚨 Solo se avisa cuando NO se pudo archivar: decirlo siempre sería
+              ruido, y callarlo cuando falla dejaría a la persona creyendo que
+              Alberto va a revisar un documento que nunca le llegó. */}
+          {resultado.documentoGuardado && resultado.documentoGuardado !== 'ok' && (
+            <p className="pendiente" style={{ fontSize: 13 }}>
+              El documento en sí no se ha podido archivar para que lo revisemos (los datos que hemos leído
+              sí están guardados). Puedes escribirnos si hace falta.
+            </p>
+          )}
           {resultado.fuente === 'none' ? (
             // NO decimos «no tiene esos datos»: decimos que no hemos podido
             // leerlos. Es la diferencia entre un dato ausente y uno no mirado.
