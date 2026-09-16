@@ -1,31 +1,78 @@
 {
  "sesion": "afcd0a1a-bc97-5f02-b126-380759000e7f",
  "inicio": "2026-09-16T14:43:48.555Z",
- "fin": "2026-09-16T14:45:01.707Z",
- "llamadas": 13,
+ "fin": "2026-09-16T15:17:45.407Z",
+ "llamadas": 158,
  "categorias": {
   "otro": {
-   "llamadas": 2,
-   "chars_in": 116,
-   "chars_out": 216,
+   "llamadas": 5,
+   "chars_in": 8996,
+   "chars_out": 1205,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 1
+    "ToolSearch": 1,
+    "SubagentHandback": 2,
+    "AskUserQuestion": 1
    }
   },
   "lectura-directa": {
-   "llamadas": 11,
-   "chars_in": 1384,
-   "chars_out": 33177,
+   "llamadas": 78,
+   "chars_in": 10002,
+   "chars_out": 255666,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 7,
-    "Read": 4
+    "Grep": 40,
+    "Read": 37,
+    "Glob": 1
+   }
+  },
+  "bash": {
+   "llamadas": 46,
+   "chars_in": 8233,
+   "chars_out": 103278,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 46
+   }
+  },
+  "escritura": {
+   "llamadas": 27,
+   "chars_in": 29194,
+   "chars_out": 786563,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 27
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 3338,
+   "chars_out": 3525,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 49630,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 4065,
+   "chars_out": 4253,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 92980,
+   "tools": {
+    "Agent": 1
    }
   }
  }
