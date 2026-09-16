@@ -15,6 +15,7 @@ import { bloqueParking } from './parking'
 import { bloqueEquipaje } from './equipaje'
 import { bloqueLlegada } from './llegada'
 import { bloqueSalida } from './salida'
+import { bloqueCamas } from './camas'
 
 export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string }
 export type Aprendizaje = { categoria: string; pregunta_norm: string; respuesta_final: string }
@@ -196,6 +197,14 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     }
   }
 
+  // Distribución del piso (dormitorios / camas / baños). Vive en `properties` de la BD compartida,
+  // NO en Smoobu: de `/api/apartments` el agente solo leía `rooms.maxOccupancy`, y con la capacidad
+  // como único dato de dormir acabó contestando «caben 4» a «¿hay dos camas dobles?» (16/09/2026).
+  // `null` = no se pudo leer o no consta → `bloqueCamas` no escribe línea (nunca un 0 que afirme).
+  const distrib = await prisma.$queryRaw<{ bedrooms: number | null; beds: number | null; bathrooms: number | null }[]>(Prisma.sql`
+    SELECT bedrooms, beds, bathrooms FROM properties WHERE id = ${propertyId} LIMIT 1
+  `).catch(() => [])
+
   const direccion = [apt?.location?.street, apt?.location?.zip, apt?.location?.city]
     .map((x: any) => (x ? String(x).trim() : '')).filter(Boolean).join(', ')
 
@@ -207,6 +216,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
     (horaCheckIn || horaCheckOut) &&
       `Horario: entrada a partir de las ${horaCheckIn || '—'}, salida hasta las ${horaCheckOut || '—'}`,
     apt?.rooms?.maxOccupancy && `Capacidad máxima: ${apt.rooms.maxOccupancy} huéspedes`,
+    bloqueCamas({ dormitorios: distrib[0]?.bedrooms ?? null, camas: distrib[0]?.beds ?? null, banos: distrib[0]?.bathrooms ?? null }),
     amenities.length && `Equipamiento: ${amenities.join(', ')}`,
     bloqueLlegada(horaCheckIn),
     bloqueParking(),

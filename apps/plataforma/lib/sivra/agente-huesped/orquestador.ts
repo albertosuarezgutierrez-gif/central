@@ -13,6 +13,7 @@ import { logMensaje, registrarGap } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
 import { esEcoPropio } from './atribucion'
 import { importeSospechoso, hablaDePago } from './extras'
+import { preguntaPorCamas, declaraTipoDeCama } from './camas'
 import { intentarCobroAutomatico } from '@/lib/sivra/extras/cobro-auto'
 import { preciosVigentes } from '@/lib/sivra/extras/catalogo'
 import { prisma } from '@/lib/db'
@@ -140,6 +141,24 @@ export async function procesarMensajeHuesped(
       dec = await decidir(ctx, pregunta, categoria)
     }
 
+    // 2-bis) 🚨 GUARDRAIL DE LAS CAMAS (16/09/2026, reserva 155333446). Si el huésped pregunta por
+    // las camas y NINGUNA fuente declara el TIPO de cama, la respuesta no sale sola — venga con la
+    // confianza que venga. Sin esto, el dato de dormir más cercano que el agente tiene es la
+    // capacidad máxima, y lo que contestó fue «caben 4, así que estáis cubiertos» a «¿hay al menos
+    // dos camas dobles?»: la capacidad no dice si son dos dobles, una doble y un sofá cama o una
+    // litera. Se mira la guía y los hechos, NO la ficha: la línea de distribución que ésta pinta
+    // desde `properties` es un NÚMERO de camas, y hacerla pasar por una respuesta sobre camas
+    // dobles es el mismo error un piso más abajo (ver `camas.ts`).
+    //
+    // Va ANTES del registro del hueco y con el `motivo` redactado a propósito para que `tipoHueco`
+    // lo clasifique como hueco de guía: así la respuesta de Alberto se aprende como hecho del piso
+    // y el siguiente huésped que pregunte lo mismo ya la recibe solo.
+    if (preguntaPorCamas(pregunta) && !declaraTipoDeCama([ctx.guia || '', ...ctx.hechos].join('\n'))) {
+      dec.needs_human = true
+      dec.apoyada_en_fuente = false
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}Pregunta por las camas y el tipo de cama no está en la guía del piso — la capacidad máxima NO lo responde.`
+    }
+
     // Hueco de conocimiento: escalamos porque la respuesta no queda cubierta por las fuentes. Antes
     // solo se anotaba cuando NO había ni ficha ni guía, así que con la guía leída no se anotaría
     // nunca — y el hueco es justo lo que hay que enseñarle. No se anota lo sensible (queja/dinero),
@@ -150,7 +169,7 @@ export async function procesarMensajeHuesped(
       await registrarGap(ctx.propertyId, pregunta)
     }
 
-    // 2-bis) 🚨 GUARDRAIL DEL IMPORTE. El precio de un extra sale del catálogo y de ningún otro
+    // 2-ter) 🚨 GUARDRAIL DEL IMPORTE. El precio de un extra sale del catálogo y de ningún otro
     // sitio; si el borrador menciona una cifra en euros que no cuadra con él, es una cifra que se ha
     // inventado el modelo (o que arrastra de una guía desactualizada) y NO puede salir sola.
     if (dec.reply) {
@@ -167,7 +186,7 @@ export async function procesarMensajeHuesped(
       }
     }
 
-    // 2-ter) 🚨 GUARDRAIL DEL PAGO (29/08/2026, dictado por Alberto tras el caso Raquel): coordinar
+    // 2-quater) 🚨 GUARDRAIL DEL PAGO (29/08/2026, dictado por Alberto tras el caso Raquel): coordinar
     // un cobro —cómo pagar, con qué método, a qué cuenta— NUNCA sale solo, ni aunque el importe sea
     // el del catálogo y la respuesta esté apoyada en fuente. El único cobro automático es el enlace
     // de `intentarCobroAutomatico` (paso 1-bis), atado por código; aquí el agente llegó a auto-enviar
