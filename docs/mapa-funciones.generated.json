@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-16T16:13:14Z",
-  "sha": "3a8446152a1f3333c55cf29843185117a6f58f18",
+  "generadoEn": "2026-09-16T17:09:09Z",
+  "sha": "908a7fbcbce5899fa08760ea6707700c759f72e2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -88450,7 +88450,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is FicheroEnCuarentena",
-          "linea": 42
+          "linea": 46
         },
         {
           "nombre": "esRechazo",
@@ -88458,7 +88458,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is EntradaRechazada",
-          "linea": 61,
+          "linea": 65,
           "resumen": "Un envío rechazado tal y como lo manda el puerto. 🚨 `rechazos` ausente NO es `[]`: un `central-asegura` desplegado ANTES del 04/09/2026 no informa el campo, y convertir esa versión vieja en «se miró "
         },
         {
@@ -88467,7 +88467,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is EntidadIngesta",
-          "linea": 80,
+          "linea": 84,
           "resumen": "El ritmo de envío de una compañía tal y como lo manda el puerto. 🚨 Misma regla que `esRechazo`: un `central-asegura` anterior al 05/09/2026 no informa `entidades`, y tratar esa versión vieja como «se"
         },
         {
@@ -88476,7 +88476,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is PolizaEnCartera",
-          "linea": 110
+          "linea": 114
         },
         {
           "nombre": "esHuerfana",
@@ -88484,7 +88484,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is PolizaHuerfana",
-          "linea": 121,
+          "linea": 125,
           "resumen": "Una póliza huérfana tal y como la manda el puerto. `enCartera` se EXIGE y no tiene valor por defecto: es lo que decide si hay que pedírsela a la compañía o reprocesarla en casa, y suponerlo mandaría a"
         },
         {
@@ -88493,7 +88493,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Huerfanas",
-          "linea": 142,
+          "linea": 146,
           "resumen": "Interpretación PURA de la respuesta del puerto de huérfanas. Todo-o-nada, igual que con los rechazos y el silencio por compañía: si una sola fila viene rara, la lista entera se degrada a `sin_datos`. "
         },
         {
@@ -88502,8 +88502,56 @@
           "exportada": true,
           "params": "h: Huerfanas",
           "retorno": "PolizaHuerfana[] | null",
-          "linea": 174,
+          "linea": 178,
           "resumen": "La lista tal cual la quiere el módulo puro: `null` = no se ha podido mirar."
+        },
+        {
+          "nombre": "entero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 207
+        },
+        {
+          "nombre": "enteroONulo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 208
+        },
+        {
+          "nombre": "esCrudo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 210
+        },
+        {
+          "nombre": "esCobertura",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 216
+        },
+        {
+          "nombre": "esCajaNegra",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 226
+        },
+        {
+          "nombre": "esUltimoPull",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 233
         },
         {
           "nombre": "interpretarIngesta",
@@ -88511,7 +88559,7 @@
           "exportada": true,
           "params": "status: number, json: unknown, huerfanas: Huerfanas = { estado: 'sin_datos', motivo: 'no_consultado' },",
           "retorno": "RespuestaIngesta",
-          "linea": 185,
+          "linea": 246,
           "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Una forma inesperada NO se degrada a «no hay nada atascado»: se degrada a `sin_datos`. Es la diferencia entre «he mirado y está limp"
         },
         {
@@ -88520,7 +88568,7 @@
           "exportada": true,
           "params": "r: RespuestaIngesta",
           "retorno": "SaludIngesta",
-          "linea": 239,
+          "linea": 308,
           "resumen": "La salud tal cual la ve el vigía: un fallo de red ya llega como `sin_datos`."
         },
         {
@@ -88529,7 +88577,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 243
+          "linea": 312
         },
         {
           "nombre": "pedir",
@@ -88537,7 +88585,7 @@
           "exportada": false,
           "params": "ruta: string, secret: string",
           "retorno": "Promise<",
-          "linea": 248,
+          "linea": 317,
           "resumen": "Una llamada al puerto. `null` = ni siquiera se pudo hablar con él."
         },
         {
@@ -88546,12 +88594,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<RespuestaIngesta>",
-          "linea": 260
+          "linea": 329
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "71c6ca089a49"
+      "hash": "9c69cfcbbaa2"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/ingesta-pantalla.ts",
@@ -136773,6 +136821,6 @@
   ],
   "resumen": {
     "archivos": 3345,
-    "funciones": 10340
+    "funciones": 10346
   }
 }
