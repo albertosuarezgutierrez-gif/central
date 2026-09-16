@@ -28,6 +28,16 @@ del índice o no se pudo comprobar). Migración `2026-09-15_seo_correduria_seman
 (estado `error` no se trataba como PASS por omisión; token de Google duplicado; motivo mal atribuido
 en el informe). 66/66 tests seo-correduria, tsc limpio.
 
+**(16/09/2026)** ASegura · **CIMA: la carga masiva 199 de Occident llegó, pero 4 de 44 pólizas se
+perdieron en review y ya no vuelven** (BIDP023227 entre ellas; código en `asegura`, PR #829 draft).
+Occident («ya está descargada») y CIMA (SAU-24103) tenían razón: el fichero `C0468_M00171_POL_199_1_20260915…`
+consta `confirmed`/`review_parcial` (40/44). Las 4 (`RiesgoComunidades` ×3, `RiesgoEmbarcaciones` ×1) cayeron
+en `tipo_seguro_no_clasificable` — el `idPolizaEntidad` SÍ queda en `source_event_id` (`<hash>:BIDP023227:review`).
+Gotcha: **un POL confirmado como parcial no se re-entrega** (`confirmado_at` puesto → `requiere_accion`), así
+que un ramo sin clasificar = póliza perdida hasta que la compañía la reenvíe. Fix: mapper reconoce
+comunidades→`comunidades` y embarcaciones→`otros`. Pendiente: mergear #829 y pedir a Occident el reenvío
+de las 4 (BIDP019061, BIDP023227, BIDQ020971, BIDP036783); Generali C0072 tiene 1 igual (6E-G-475000053).
+
 **(15/09/2026)** ASegura · `@central/core-vehiculos` + `POST /api/operador/vehiculo/matricula`
 **mergeados** (PR #2998, `resolverMatricula()` sobre APIVehículo, adaptador intercambiable). Pendiente
 el curl real con matrícula de cartera para validar el mapeo en producción (falta que Alberto saque

@@ -1,58 +1,58 @@
 {
  "sesion": "ac7a26b0-f1d5-5009-b017-981e5893d914",
  "inicio": "2026-09-13T08:02:31.389Z",
- "fin": "2026-09-13T13:27:48.578Z",
- "llamadas": 747,
+ "fin": "2026-09-16T09:44:13.543Z",
+ "llamadas": 908,
  "categorias": {
   "otro": {
-   "llamadas": 69,
-   "chars_in": 6113,
-   "chars_out": 743404,
+   "llamadas": 81,
+   "chars_in": 7118,
+   "chars_out": 782582,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 5,
-    "ToolSearch": 17,
-    "ReadNotifications": 41,
-    "ScheduleWakeup": 3,
+    "ToolSearch": 25,
+    "ReadNotifications": 44,
+    "ScheduleWakeup": 4,
     "AskUserQuestion": 3
    }
   },
   "sql": {
-   "llamadas": 108,
-   "chars_in": 26127,
-   "chars_out": 204781,
+   "llamadas": 131,
+   "chars_in": 35628,
+   "chars_out": 249043,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 19,
-    "mcp__Supabase__execute_sql": 89
+    "mcp__Supabase__execute_sql": 112
    }
   },
   "bash": {
-   "llamadas": 156,
-   "chars_in": 36971,
-   "chars_out": 90375,
+   "llamadas": 207,
+   "chars_in": 47998,
+   "chars_out": 161690,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 156
+    "Bash": 207
    }
   },
   "lectura-directa": {
-   "llamadas": 109,
-   "chars_in": 12579,
-   "chars_out": 322764,
+   "llamadas": 133,
+   "chars_in": 15256,
+   "chars_out": 599523,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 64,
-    "Grep": 42,
-    "Glob": 3
+    "Read": 80,
+    "Grep": 48,
+    "Glob": 5
    }
   },
   "mcp:Claude_Code_Remote": {
@@ -73,26 +73,26 @@
    }
   },
   "mcp:github": {
-   "llamadas": 180,
-   "chars_in": 34747,
-   "chars_out": 490606,
+   "llamadas": 188,
+   "chars_in": 37632,
+   "chars_out": 502079,
    "errores": 3,
-   "archivos_citados": 1,
-   "chars_citados": 493697,
+   "archivos_citados": 3,
+   "chars_citados": 543129,
    "tools": {
     "mcp__github__actions_run_trigger": 14,
     "mcp__github__actions_list": 26,
     "mcp__github__get_job_logs": 13,
     "mcp__github__actions_get": 67,
-    "mcp__github__list_pull_requests": 5,
+    "mcp__github__list_pull_requests": 6,
     "mcp__github__search_pull_requests": 4,
-    "mcp__github__pull_request_read": 25,
+    "mcp__github__pull_request_read": 27,
     "mcp__github__add_issue_comment": 5,
-    "mcp__github__merge_pull_request": 8,
-    "mcp__github__create_pull_request": 7,
-    "mcp__github__update_pull_request": 4,
-    "mcp__github__subscribe_pr_activity": 1,
-    "mcp__github__unsubscribe_pr_activity": 1
+    "mcp__github__merge_pull_request": 9,
+    "mcp__github__create_pull_request": 8,
+    "mcp__github__update_pull_request": 5,
+    "mcp__github__subscribe_pr_activity": 2,
+    "mcp__github__unsubscribe_pr_activity": 2
    }
   },
   "mcp:Vercel": {
@@ -112,38 +112,54 @@
    }
   },
   "mcp:Supabase": {
-   "llamadas": 1,
-   "chars_in": 2,
-   "chars_out": 391,
+   "llamadas": 3,
+   "chars_in": 2712,
+   "chars_out": 798,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__list_projects": 1
+    "mcp__Supabase__list_projects": 2,
+    "mcp__Supabase__apply_migration": 1
    }
   },
   "escritura": {
-   "llamadas": 51,
-   "chars_in": 121911,
-   "chars_out": 3768697,
+   "llamadas": 64,
+   "chars_in": 162071,
+   "chars_out": 3945815,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 44,
-    "Write": 7
+    "Edit": 48,
+    "Write": 16
    }
   },
   "mcp:Gmail": {
-   "llamadas": 11,
-   "chars_in": 1189,
-   "chars_out": 142518,
-   "errores": 0,
+   "llamadas": 30,
+   "chars_in": 27687,
+   "chars_out": 361109,
+   "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Gmail__search_threads": 9,
-    "mcp__Gmail__get_message": 2
+    "mcp__Gmail__search_threads": 18,
+    "mcp__Gmail__get_message": 5,
+    "mcp__Gmail__reply": 1,
+    "mcp__Gmail__send_message": 2,
+    "mcp__Gmail__get_thread": 3,
+    "mcp__Gmail__trash_message": 1
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 9,
+   "chars_in": 36432,
+   "chars_out": 38205,
+   "errores": 0,
+   "archivos_citados": 10,
+   "chars_citados": 68567,
+   "tools": {
+    "Agent": 9
    }
   }
  }
