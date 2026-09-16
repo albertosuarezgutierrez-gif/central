@@ -15,6 +15,60 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
+  continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
+  Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
+  Busto — `smoobu_sync` (mismo credencial, /api/reservations) funcionó igual de hoy, así que no
+  es credencial rota sino scope "Rates" ausente en la key. Corrigió dirección de House Sevillana
+  en `pricing_piso_zona` (Bustos Tavera → Calle Socorro 24, landmine ya documentada en CLAUDE.md).
+  Paso 2: 4 agentes en paralelo, comps house=143/busto=229/luxury=212/duplex=293, ningún piso a 0.
+  Paso 4: 48 propuestas (p50 mercado) enviadas a `aplicar-propuesta`, confirmado bloqueo Smoobu 401
+  en los 4 pisos, 0 filas en `pricing_decisiones` (nada fabricado a mano). Paso 5/6 completos
+  (`pricing_aprendizaje` id 80, Telegram enviado). dudas: pico sin explicar en 2027-06-11 en los
+  4 pisos (2-5x temporada normal, más caro que Semana Santa en 3/4) — preguntado a Alberto si hay
+  evento esa semana; fallos: Paso 4 bloqueado 2 ciclos seguidos (14/09 Sentinel, 15/09 Smoobu 401,
+  aviso Telegram enviado por umbral del skill); PRs/commits: este commit.
+- **2026-09-14 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (`_buzon_pdf` copió
+  12/09, `dias_caido=2`); `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacías (confirmado por
+  `search_threads`); `agente_salud` actualizado ok=true (vía Supabase MCP, sin curl). Paso 4.0:
+  11 filas `facturas_drive` ya `revisada_sin_cargo` (sin tocar), 1 `sin_revisar` (OpenRouter
+  25,64$, archivada 12/09) sin cargo aún — normal a 2 días. Paso 1: ventana de 2 días solo trajo
+  2 hilos no-factura; ampliando a mano hasta 05/09 encontré HUECO real: 4 recibos Anthropic
+  ("Prepaid extra usage" 76,50€ 08/09 · 170€×2 09/09 · 170€ 11/09), factura IONOS (1,21€ 09/09,
+  vía PayPal) y PriceLabs (34,98$ 08/09, disputa de Alberto por cobro con piso desactivado ya
+  resuelta por soporte — cargo correcto, factura por sincronización activa en el ciclo) tenían el
+  PDF en `_buzon_pdf` y el hilo YA `Facturas/Procesada` de una pasada anterior, pero nunca se
+  archivaron en Drive ni se registraron en `facturas_drive` — archivados ahora en
+  `09-Septiembre-2026` + 6 filas nuevas insertadas. Ningún cargo bancario casa exacto (búsqueda
+  amplia ±7 días): las 6 quedan pendientes de que entre el movimiento, salvo el recibo de 76,50€
+  que tiene DOS candidatos ambiguos sin conciliar en banco (07/09 y 10/09) — no auto-confirmado.
+  IKEA reenviado por Pilar (9,46€, KALAS/SKUBB/PRUTA) ya estaba `Procesada` sin archivar de antes
+  (correcto: pinta a hogar/niños, ambiguo, no se auto-clasifica). dudas: recibo Anthropic 76,50€
+  — qué cargo de los dos le corresponde (falta un recibo que explique el otro). fallos: **(1)
+  MISMO bloqueo que `pricing-agente` hoy mismo** — `.claude/mcp-sentinel/` deniega en sombra
+  cualquier Bash/curl con `Authorization: Bearer ${ALERTA_TOKEN}` en sesión desatendida →
+  preflight del canal de aviso y el latido final (`/api/internal/latido`) INEJECUTABLES; no se
+  intentó rodear (confirma que el bloqueo es transversal a toda rutina con el protocolo "Canal de
+  aviso"). **(2) gap de proceso**: varios hilos con gasto real llevaban `Facturas/Procesada` sin
+  archivar+registrar — el label no garantiza archivo hecho, y el barrido 4.0 no lo detecta porque
+  el hilo nunca llegó a `facturas_drive`; para `agentes-entrenador`: quizá convenga que Paso 1
+  también barra `label:Facturas/Procesada` reciente contra `_buzon_pdf` sin fila en
+  `facturas_drive`, no solo lo no-procesado. PRs/commits: — (solo bitácora + Drive + Supabase, sin
+  tocar código).
+- **2026-09-14 · pricing-agente** · hizo: Paso 0/1 OK (fundación sana, ciclo anterior 07/09 cruzado
+  con incomes, 0/48 fechas muestreadas con income aún — normal). Paso 2 (mercado) completo vía 4
+  agentes en paralelo + Supabase directo (fallback de la skill): 120/120/120/114 comps nuevos
+  (busto/duplex/luxury/house), 12/12 ventanas cada uno, ningún piso a 0. Paso 3/4/6 NO ejecutados.
+  dudas: —; fallos: **(1) BLOQUEO NUEVO Y GRAVE** — el hook `.claude/mcp-sentinel/` deniega en modo
+  sombra cualquier Bash/curl con `Authorization: Bearer ${ALERTA_TOKEN}` en sesión desatendida
+  (`sensitive_env`, crítico) → Paso 4 (aplicar-propuesta) y Paso 6 (Telegram) inejecutables. Afecta
+  a TODA rutina programada que siga el protocolo "Canal de aviso" de `CLAUDE.md` (psd2-health-check,
+  ialimp-client-health, etc.), no solo a este agente. No se intentó rodear. **(2) hallazgo aparte**:
+  `sivra_rates_snapshot` falla HTTP 401 en los 4 pisos desde 12-13/09 (`agente_latidos`), `sivra_pilot_track`
+  ok:false por snapshot viejo, `sivra_pricing_apply` escribió 0 noches en su última pasada (13/09
+  23:22 UTC) — repricing en vivo de Busto Reform parado ~3 días. No diagnosticado del todo (logs
+  Vercel Pro solo 1 día, no se pudo probar el endpoint por (1)). Avisado a Alberto por PushNotification
+  (no Telegram, por (1)). PRs/commits: — (solo bitácora + `pricing_aprendizaje` + memoria).
 - **2026-09-12 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
   Vía B sana (`_buzon_pdf` copió hoy mismo, `dias_caido=0`); sin backlog en
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, `agente_salud`

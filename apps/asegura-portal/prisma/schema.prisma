@@ -272,13 +272,25 @@ model PortalObligacion {
   /// Sello del envío por PUSH. Independiente de `avisadaAt`: son dos canales que fallan por
   /// separado (sin suscripción, endpoint muerto…) y compartir sello taparía el envío del otro.
   avisadaPushAt     DateTime?            @map("avisada_push_at") @db.Timestamptz(6)
+  /// Solo para los recordatorios PROPIOS del cliente (13/09/2026): cada cuántos
+  /// meses se repite, o NULL si es de una sola vez. Las obligaciones derivadas
+  /// de una póliza (`tipo: 'poliza'`/`'recibo'`) no la usan — su ciclo lo
+  /// recalcula `sincronizarObligacionesDeIdentidad()` desde la fuente real en
+  /// cada visita, no desde este número.
+  repiteCadaMeses   Int?                 @map("repite_cada_meses") @db.SmallInt
   creadaAt          DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
   actualizadaAt     DateTime             @default(now()) @map("actualizada_at") @db.Timestamptz(6)
 
   identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
   bien      PortalBien?     @relation(fields: [bienId], references: [id])
 
-  @@unique([identidadId, polizaId])
+  /// 🚨 Incluye `tipo` desde el 13/09/2026 (antes era solo `identidadId` +
+  /// `polizaId`, `portal_obligacion_una_por_poliza`): un recordatorio PROPIO
+  /// (`itv`, `mantenimiento`…) se puede colgar de la MISMA póliza de cartera
+  /// que ya genera su obligación `poliza` — «se renueva el 15» y «la ITV es
+  /// el 3» son dos filas del mismo seguro, no una. Con la clave vieja, crear
+  /// el recordatorio habría pisado (o chocado contra) la obligación derivada.
+  @@unique([identidadId, polizaId, tipo], map: "portal_obligacion_una_por_poliza_tipo")
   /// Su gemela para las pólizas que sube la persona. Existe para poder hacer
   /// `upsert` y NO perder `avisadaAt` en cada sincronización: sin ella habría
   /// que borrar y recrear, y el sello del envío se iría con el borrado — o sea,

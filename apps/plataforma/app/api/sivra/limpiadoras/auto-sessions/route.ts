@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { smoobuFetch } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -22,6 +23,13 @@ export async function GET(req: NextRequest) {
   const days = parseInt(new URL(req.url).searchParams.get('days') || '14')
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+
+  // 🚨 Sin latido hasta el 15/09/2026 (auditoría del 401 de HMAC en pricing): este cron llama a
+  // Smoobu directo y, si falla, el `catch` de abajo solo devolvía un 500 sin dejar ni rastro en
+  // `agente_latidos` — el mismo silencio que tenía `sivra_pricing_apply` antes de teñirse. Es el
+  // cron que crea `cleaning_sessions`, el calendario que ve Vanesa: un día sin sesiones creadas y
+  // nadie se entera hasta que llega a un piso sin tarea.
+  await registrarLatido('sivra_limpiadoras_auto', false, 'inicio de pasada')
 
   try {
     const dateFrom = today.toISOString().split('T')[0]
@@ -93,8 +101,11 @@ export async function GET(req: NextRequest) {
       created++
     }
 
+    await registrarLatido('sivra_limpiadoras_auto', true,
+      `${created} sesión(es) creada(s), ${skipped} omitida(s) de ${unique.length} reserva(s)`)
     return NextResponse.json({ ok: true, created, skipped, total: unique.length })
   } catch (e: any) {
+    await registrarLatido('sivra_limpiadoras_auto', false, `error: ${String(e?.message ?? e).slice(0, 200)}`)
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

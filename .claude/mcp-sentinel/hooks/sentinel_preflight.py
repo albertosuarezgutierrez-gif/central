@@ -351,13 +351,34 @@ def check_sensitive_env(tool_name, tool_input, iocs, allowlist):
     """Flag a secret env var ONLY when it is exfiltrated: dereferenced (or env is
     dumped) AND piped/sent to a network egress tool. Mentioning a var name (code,
     docs, `rg 'GITHUB_TOKEN'`) is not flagged, that was the biggest false-positive
-    source. entity is None (never auto-trusted)."""
+    source. entity is None (never auto-trusted).
+
+    Domain-scoped exemption (14/09/2026, OK explícito de Alberto): a command whose
+    egress destination(s) are ALL first-party hosts on the allowlist is not
+    exfiltration by definition (e.g. curl with Authorization: Bearer ${ALERTA_TOKEN}
+    to our own plataforma endpoint, the documented pattern in every scheduled
+    routine's "Canal de aviso" protocol). Deliberately narrower than
+    check_suspicious_network's extract_hosts(): here we require an explicit
+    http(s):// URL (via _URL_HOST_RE), never the bare-word host guess that also
+    matches unrelated dotted tokens elsewhere in the command (an `-o /tmp/out.json`
+    output path, a `package.json` mention) — those aren't network destinations and
+    would wrongly veto the exemption if treated as one. A command whose destination
+    is built from a shell variable (`"${PLATAFORMA_URL}/x"`, no literal host in the
+    text) has no extractable URL either, so it is NOT exempted: the destination
+    can't be verified statically, which is the conservative/correct outcome. Only
+    exempts when at least one URL host is found AND every one clears the allowlist
+    boundary check (_is_allowlisted_host)."""
     names = iocs.get("sensitive_env_vars", {}).get("patterns", [])
+    allowed_domains = allowlist.get("domains", []) + iocs.get("allowlist", {}).get("domains", [])
     for cmd in command_strings(tool_input):
         if not _EGRESS_RE.search(cmd):
             continue
         named = any(re.search(rf"\$\{{?{re.escape(v)}\}}?", cmd) for v in names)
         if named or _SECRET_DEREF_RE.search(cmd) or _ENV_DUMP_RE.search(cmd):
+            url_hosts = {m.group("host").split("@")[-1].split(":")[0].lower().rstrip(".")
+                         for m in _URL_HOST_RE.finditer(cmd)}
+            if url_hosts and all(_is_allowlisted_host(h, allowed_domains) for h in url_hosts):
+                continue
             return ("environment secret piped to network (exfiltration)",
                     "critical", "sensitive_env", None)
     return (None, None, None, None)
@@ -625,6 +646,32 @@ def _shadow_enabled():
     return os.environ.get("SENTINEL_SHADOW", "").strip().lower() in ("1", "on", "true", "yes")
 
 
+def _session_attended():
+    """Whether a human is actually watching this session and could answer a real
+    `ask` prompt. SENTINEL_ATTENDED overrides (tests); otherwise reads the
+    platform-provided CLAUDE_CODE_SESSION_ATTENDED env var, which this hook's
+    subprocess inherits from Claude Code.
+
+    Unknown/missing is treated as UNATTENDED, not attended: the conservative-
+    default rule this repo already applies elsewhere ("ante la duda, el estado
+    conservador, nunca el que tranquiliza") holds here too — a false
+    "unattended" only costs an extra deny a human can retry via the allowlist,
+    while a false "attended" would let a critical exfiltration finding through
+    unnoticed on a run we failed to recognise as unattended.
+
+    This is a project-specific addition on top of the vendor engine (see
+    README's "Confirmado" section, 12/09/2026): it is what lets shadow mode
+    stop being a blanket allow-with-log for every ambiguous finding and start
+    telling apart "nobody could answer this" from "someone is right here"."""
+    override = os.environ.get("SENTINEL_ATTENDED", "").strip().lower()
+    if override in ("1", "on", "true", "yes"):
+        return True
+    if override in ("0", "off", "false", "no"):
+        return False
+    return os.environ.get("CLAUDE_CODE_SESSION_ATTENDED", "").strip().lower() in (
+        "1", "true", "yes", "on")
+
+
 # ---------------------------------------------------------------------------
 # Localisation. Messages are shown in Spanish when the user writes in Spanish,
 # English otherwise. Detection runs only when a message is actually emitted
@@ -754,6 +801,16 @@ _MSG = {
                "audit-only mode (SENTINEL_SHADOW) is on, so it is allowed.\nReason: {reason}"),
         "es": ("🛡️ MCP Sentinel [SOMBRA]: esta llamada de {tool} normalmente sería {decision}, pero el "
                "modo solo-auditoría (SENTINEL_SHADOW) está activo, así que se permite.\nMotivo: {reason}"),
+    },
+    "shadow_deny": {
+        "en": ("🛡️ MCP Sentinel [SHADOW]: this {tool} call is CRITICAL and this session is "
+               "unattended (no one could answer an ask prompt), so under audit-only mode "
+               "(SENTINEL_SHADOW) it was DENIED instead of hung forever or silently "
+               "allowed.\nReason: {reason}"),
+        "es": ("🛡️ MCP Sentinel [SOMBRA]: esta llamada de {tool} es CRÍTICA y la sesión está "
+               "desatendida (nadie podría responder a un aviso), así que en modo solo-auditoría "
+               "(SENTINEL_SHADOW) se ha DENEGADO en vez de quedarse colgada para siempre o "
+               "permitirse en silencio.\nMotivo: {reason}"),
     },
     "deny_tamper": {
         "en": ("🛡️ MCP Sentinel BLOCKED a {tool} call that would modify Sentinel's own "
@@ -1001,10 +1058,26 @@ def main():
 
     decision, reason, category, entity = decide(payload)
 
+    # A critical finding on an unattended session is about to be hard-denied
+    # below (shadow branch) regardless of what an optional AI classifier
+    # thinks — computed BEFORE escalation runs, from the reason `decide()`
+    # produced, so escalation can't rewrite `reason` first and dodge it.
+    _critical_unattended = (
+        decision == "ask"
+        and _shadow_enabled()
+        and not _session_attended()
+        and bool(reason)
+        and reason.startswith("[CRITICAL]")
+    )
+
     # Optional AI escalation for AMBIGUOUS (ask) calls only. Opt-in
     # (SENTINEL_AI=on), off by default, never on the allow hot path. Sharpens a
     # vague "ask" into allow/ask/deny. Fail-open: any issue keeps the local "ask".
-    if decision == "ask":
+    # Skipped for `_critical_unattended`: letting a model downgrade a
+    # confirmed secret-exfiltration/dangerous-command finding to `allow` would
+    # silently defeat the hard-deny below — a network-dependent classifier
+    # doesn't get a vote on a call that's already deterministically critical.
+    if decision == "ask" and not _critical_unattended:
         try:
             import sentinel_ai
             if sentinel_ai.enabled():
@@ -1033,14 +1106,35 @@ def main():
         # adding any message to the conversation context.
         return
 
-    # Audit-only / shadow mode: never block. Record the would-be deny/ask as a
-    # 'would_block', then let the call through with a non-blocking note. This is
-    # how Sentinel can run alongside autonomous work without ever stopping it
-    # while still measuring how often it WOULD have intervened.
-    if _shadow_enabled() and decision in ("deny", "ask"):
-        record_event(payload, decision, category, would_block=True, entity=entity)
+    # Audit-only / shadow mode. Never touches a hard `deny` (known-malicious /
+    # feed hit are non-overrideable by design, see HARD_DENY_CATEGORIES — shadow
+    # mode exists to avoid hanging on an ambiguous `ask`, not to let confirmed-
+    # malicious calls through) and never touches an `ask` when a human is
+    # actually attending the session (a real `ask` can just be answered there,
+    # so the whole justification for shadow — an unanswerable `ask` hangs
+    # forever, confirmed experimentally, see README's "Confirmado" section —
+    # does not apply). Only an `ask` on an UNATTENDED session is shadow-handled:
+    # critical findings (secret exfiltration, dangerous commands, credential
+    # reads) are denied outright instead of hung on or silently allowed — a
+    # failed job is recoverable, an exfiltrated secret is not; high-severity
+    # findings (the more ambiguous IMDS/config-write/suspicious-network checks)
+    # keep the original allow-with-log behaviour and are still tallied as
+    # 'would_block' for the audit.
+    if _shadow_enabled() and decision == "ask" and not _session_attended():
         tool_name = payload.get("tool_name") or payload.get("tool", "<unknown>")
         lang = detect_language(payload)
+        if reason and reason.startswith("[CRITICAL]"):
+            record_event(payload, "deny", category, entity=entity)
+            message = render("shadow_deny", lang, tool=tool_name, reason=reason)
+            print(json.dumps({
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": message,
+                },
+            }))
+            return
+        record_event(payload, decision, category, would_block=True, entity=entity)
         message = render("shadow", lang, tool=tool_name, reason=reason, decision=decision)
         print(json.dumps({
             "hookSpecificOutput": {

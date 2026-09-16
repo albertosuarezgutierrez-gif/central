@@ -36,6 +36,7 @@ publicada y el perfil de Google Business, no por la palabra en el h1.
 | seguro de vida / salud | `/seguros/vida-y-salud` | cubierta |
 | seguro de responsabilidad civil | `/seguros/responsabilidad-civil` | cubierta y **ya enlazada** (pie + las 5 páginas de ramo hermanas, 07/09/2026). Fuera de la cabecera a propósito: sería la sexta entrada y desborda |
 | seguro de flota | `/seguros/flota` | ✅ **cubierta desde el 07/09/2026**. Es el nicho «empresas y flota». Enlazada desde el pie y desde comercio, NO desde la cabecera (cabe medido: 6 entradas desbordan) |
+| seguro de responsabilidad civil para fontaneros | `/seguros/responsabilidad-civil-fontaneros` | ✅ **cubierta desde el 15/09/2026** (`docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`, §2.6). Página de INTENCIÓN de oficio, no ramo nuevo en BD — sigue siendo `responsabilidad_civil` en la cartera. Fuera de la cabecera, igual que RC y flota |
 
 ⚠️ **El precio de este cambio, dicho como es:** sin el modificador geográfico estas consultas se
 disputan con comparadores nacionales y con las propias aseguradoras, así que la posición esperable
@@ -51,11 +52,11 @@ ciudad en los encabezados de la página nacional.
 | Consulta | Página | Estado |
 |---|---|---|
 | cómo cambiar de correduría sin cambiar de seguro | `/cambiar-de-correduria` | cubierta, y con «Sevilla» en title y H1 desde el 07/09/2026 |
-| preaviso de un mes para cancelar el seguro (art. 22 LCS) | — | **sin página** |
-| me han subido el seguro del coche en la renovación | — | **sin página** |
+| preaviso de un mes para cancelar el seguro (art. 22 LCS) | `/blog/preaviso-un-mes-no-renovar-seguro` | cubierta (07/09/2026, PR #2487/#2500) |
+| me han subido el seguro del coche en la renovación | `/blog/me-han-subido-el-seguro-en-la-renovacion` | cubierta (07/09/2026, PR #2487/#2500) |
 | qué cubre de verdad mi seguro de hogar | parcialmente `/seguros/hogar` | merece página propia |
 | qué es un corredor de seguros y en qué se diferencia de un agente | `/quienes-somos` | parcial |
-| cómo reclamar un siniestro que me han denegado | — | **sin página** |
+| cómo reclamar un siniestro que me han denegado | `/blog/siniestro-denegado-que-hacer` | cubierta (07/09/2026, PR #2487/#2500) |
 
 ## 3. Marca — hay que vigilarla, no ganarla
 

@@ -113,6 +113,12 @@ export const AVISOS: AvisoTelegram[] = [
     que: 'Qué ha reescrito el agente SEO en la web de House Sevillana.',
     cuando: 'Lunes',
   },
+  {
+    id: 'sistema.acceso-intranet', categoria: 'sistema',
+    titulo: 'Alguien ha entrado en la intranet',
+    que: 'Nombre y email de la cuenta que acaba de iniciar sesión en /login.',
+    cuando: 'Al iniciar sesión',
+  },
 
   // ── 🏦 Banca y contable ───────────────────────────────────────────────────
   {
@@ -545,6 +551,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Pólizas que vencen',
     que: 'Las pólizas de la cartera que renuevan pronto (aviso legal de 1 mes).',
     cuando: 'Todos los días a las 08:30',
+  },
+  {
+    id: 'correduria.recaptacion-lote', categoria: 'correduria',
+    titulo: 'Recaptación por email · lote diario',
+    que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',
+    cuando: 'Todos los días a las 07:00, y solo si hubo candidatos o el envío falló',
   },
   {
     id: 'correduria.ingesta', categoria: 'correduria',

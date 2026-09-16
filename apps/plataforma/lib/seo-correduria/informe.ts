@@ -7,21 +7,17 @@
 // Plan: docs/superpowers/plans/2026-09-08-seo-correduria-conectores.md Task 5
 
 import { escapeHtml } from '@central/core-telegram'
-import type { Accion, ConsultaSerp, DatosGsc, DatosPosthog, DatosSerp, Fuente, Resultados } from './tipos.ts'
+import type { Accion, DatosGsc, DatosPosthog, Fuente, Resultados, VerdictoCobertura } from './tipos.ts'
 
 /** Misma forma que `CONSULTAS` de `./consultas.ts`; se recibe por parámetro para no acoplar. */
 export type ConsultaObjetivo = { consulta: string; pagina: string | null; grupo: 'ramo' | 'problema' }
 
-/** Telegram corta en 4.096; nos quedamos con margen. */
-export const MAX_CARACTERES_INFORME = 3500
-const MAX_CONSULTAS_SERP_RECORTADO = 8
-
 const NOMBRE_FUENTE: Record<Fuente, string> = {
   gsc: 'Search Console',
-  serp: 'SERP (Serper)',
   posthog: 'PostHog',
+  cobertura: 'Cobertura de indexación',
 }
-const ORDEN_FUENTES: Fuente[] = ['gsc', 'serp', 'posthog']
+const ORDEN_FUENTES: Fuente[] = ['gsc', 'posthog', 'cobertura']
 
 /** minúsculas, sin tildes, trim, espacios colapsados — para casar consultas de GSC con las objetivo. */
 export function normalizarConsulta(s: string): string {
@@ -44,6 +40,30 @@ export function accionPropuesta(r: Resultados, consultas: ConsultaObjetivo[]): A
       return {
         tipo: 'arreglar_fuente',
         texto: `Arreglar la fuente ${NOMBRE_FUENTE[f]} (${motivo}): ${res.detalle}`,
+      }
+    }
+  }
+
+  // (1.5) Una página PROPIA que Search Console marca fuera del índice (404, bloqueada, no indexada
+  // por Google...) se arregla antes que escribir nada nuevo: no tiene sentido perseguir una consulta
+  // nueva mientras la página que ya la cubre ni siquiera está en el índice.
+  if (r.cobertura.estado === 'ok') {
+    const conProblema = r.cobertura.datos.paginas.find(p => p.estado === 'ok' && p.verdicto !== 'PASS')
+    if (conProblema) {
+      return {
+        tipo: 'arreglar_indexacion',
+        texto:
+          `Arreglar la indexación de ${conProblema.url}: Search Console la marca ` +
+          `«${conProblema.cobertura ?? conProblema.verdicto ?? 'sin cobertura'}»`,
+      }
+    }
+    // Una página que NO se ha podido inspeccionar no es una página sin problema: es una que no se
+    // ha mirado. Tratarla como PASS por omisión sería la regla NULL≠0 incumplida en este mismo sitio.
+    const sinComprobar = r.cobertura.datos.paginas.find(p => p.estado === 'error')
+    if (sinComprobar) {
+      return {
+        tipo: 'arreglar_indexacion',
+        texto: `Comprobar la indexación de ${sinComprobar.url}: no se pudo inspeccionar (${sinComprobar.detalle ?? 'motivo desconocido'})`,
       }
     }
   }
@@ -143,26 +163,6 @@ function bloqueGsc(res: Resultados['gsc']): string[] {
   return lineas
 }
 
-function lineaSerp(c: ConsultaSerp): string {
-  const propia = c.propia === null ? 'fuera del top-10' : `posición ${num(c.propia)}`
-  const podio = c.top
-    .slice(0, 3)
-    .map((t) => escapeHtml(t.dominio))
-    .join(', ')
-  return `· «${escapeHtml(c.consulta)}» — ${propia}${podio ? ` · ${podio}` : ''}`
-}
-
-function bloqueSerp(res: Resultados['serp'], maxConsultas: number | null): string[] {
-  if (res.estado !== 'ok') return ['<b>SERP</b>', lineaFuenteNoOk('serp', res)]
-  const d: DatosSerp = res.datos
-  const todas = d.consultas
-  const visibles = maxConsultas === null ? todas : todas.slice(0, maxConsultas)
-  const lineas = [`<b>SERP</b> (top-10 de Google para ${escapeHtml(d.dominio)}, ${num(todas.length)} consultas)`]
-  for (const c of visibles) lineas.push(lineaSerp(c))
-  if (visibles.length < todas.length) lineas.push(`(+${num(todas.length - visibles.length)} consultas en BD)`)
-  return lineas
-}
-
 function bloquePosthog(res: Resultados['posthog']): string[] {
   const titulo = '<b>Visitas medidas, sobre quien consintió</b>'
   if (res.estado !== 'ok') return [titulo, lineaFuenteNoOk('posthog', res)]
@@ -178,21 +178,48 @@ function bloquePosthog(res: Resultados['posthog']): string[] {
   return lineas
 }
 
-function montar(semana: string, r: Resultados, accion: Accion, dominio: string, maxSerp: number | null): string {
-  const partes = [
-    `🔎 <b>SEO ${escapeHtml(dominio)}</b> · semana ${escapeHtml(semana)}`,
-    bloqueGsc(r.gsc).join('\n'),
-    bloqueSerp(r.serp, maxSerp).join('\n'),
-    bloquePosthog(r.posthog).join('\n'),
-    `➡️ <b>Acción</b>: ${escapeHtml(accion.texto)}`,
-  ]
-  return partes.join('\n\n')
+const ETIQUETA_VERDICTO: Record<VerdictoCobertura, string> = {
+  PASS: '✅ indexada',
+  PARTIAL: '🟡 indexada con reparos',
+  FAIL: '🔴 fuera del índice',
+  NEUTRAL: '⚪ neutral',
+  DESCONOCIDO: '❔ desconocido',
+}
+
+function bloqueCobertura(res: Resultados['cobertura']): string[] {
+  const lineas = ['<b>Indexación de páginas propias</b>']
+  if (res.estado !== 'ok') {
+    lineas.push(lineaFuenteNoOk('cobertura', res))
+    return lineas
+  }
+  const leidas = res.datos.paginas.filter(p => p.estado === 'ok')
+  const sinLeer = res.datos.paginas.filter(p => p.estado === 'error')
+  const conProblema = leidas.filter(p => p.verdicto !== 'PASS')
+
+  if (!conProblema.length && !sinLeer.length) {
+    lineas.push(`${leidas.length} página(s) comprobadas, todas indexadas.`)
+    return lineas
+  }
+  for (const p of conProblema) {
+    const etiqueta = ETIQUETA_VERDICTO[p.verdicto ?? 'DESCONOCIDO']
+    lineas.push(`${etiqueta} ${escapeHtml(p.url)}${p.cobertura ? ` — ${escapeHtml(p.cobertura)}` : ''}`)
+  }
+  // Una línea POR página sin comprobar, con su propio motivo — un recuento con un solo motivo
+  // citado le atribuiría a todas la causa de la primera aunque cada una fallara por algo distinto.
+  for (const p of sinLeer) {
+    lineas.push(`❔ ${escapeHtml(p.url)} — sin comprobar (${escapeHtml(p.detalle ?? 'motivo desconocido')})`)
+  }
+  return lineas
 }
 
 /** HTML de Telegram (`parse_mode: 'HTML'`). Todo texto externo pasa por `escapeHtml`. */
 export function redactarInforme(semana: string, r: Resultados, accion: Accion, dominio: string): string {
-  const completo = montar(semana, r, accion, dominio, null)
-  if (completo.length < MAX_CARACTERES_INFORME) return completo
-  // Si se pasa, lo que crece con la BD es el bloque SERP: se recorta a 8 consultas y se dice cuántas quedan.
-  return montar(semana, r, accion, dominio, MAX_CONSULTAS_SERP_RECORTADO)
+  const partes = [
+    `🔎 <b>SEO ${escapeHtml(dominio)}</b> · semana ${escapeHtml(semana)}`,
+    bloqueGsc(r.gsc).join('\n'),
+    bloquePosthog(r.posthog).join('\n'),
+    bloqueCobertura(r.cobertura).join('\n'),
+    `➡️ <b>Acción</b>: ${escapeHtml(accion.texto)}`,
+  ]
+  return partes.join('\n\n')
 }

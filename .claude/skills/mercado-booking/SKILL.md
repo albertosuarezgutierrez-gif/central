@@ -71,8 +71,7 @@ rutina y no un `CRON_JOBS`.
 
 ### 1. Pide el plan
 ```
-GET {PLATAFORMA_URL}/api/sivra/mercado/plan?max=24
-Authorization: Bearer {ALERTA_TOKEN}
+bash scripts/canal-aviso.sh GET '/api/sivra/mercado/plan?max=24'
 ```
 Devuelve `{ventanas:[{checkin, checkout, aforo, pisos[], motivo, etiqueta, ronda, diasSinMedir,
 comps}], escaparate:[…], escaparate_huecos:[…], plan_total, filtro, candidatas, recortadas, pedidas,
@@ -144,21 +143,17 @@ calculas nada de eso: solo mides.
 ### 3. Escribe los comparables
 Una llamada por ventana **y por piso** (los pisos del aforo comparten los mismos comps):
 ```
-POST {PLATAFORMA_URL}/api/sivra/mercado/ingest
-Authorization: Bearer {ALERTA_TOKEN}
-{ "portal":"booking", "fuente":"booking_mcp", "scenario":"<piso>",
+bash scripts/canal-aviso.sh POST /api/sivra/mercado/ingest '{ "portal":"booking", "fuente":"booking_mcp", "scenario":"<piso>",
   "checkin":"YYYY-MM-DD", "checkout":"YYYY-MM-DD", "guests":<aforo>,
   "apartments":[{"name":"…","price_night":129,"price_total":258,"score":8.9,
-                 "review_count":121,"location":"Centro histórico de Sevilla"}] }
+                 "review_count":121,"location":"Centro histórico de Sevilla"}] }'
 ```
 Es idempotente por día (upsert por `search_date+portal+scenario+comp_name+checkin_date`): repetir
 una ventana no duplica nada.
 
 ### 4. Deja huella del latido (OBLIGATORIO, incluso si fue mal)
 ```
-POST {PLATAFORMA_URL}/api/internal/latido
-Authorization: Bearer {ALERTA_TOKEN}
-{ "agente":"sivra_mercado_booking", "ok":<true|false>, "detalle":"<parte>" }
+bash scripts/canal-aviso.sh POST /api/internal/latido '{ "agente":"sivra_mercado_booking", "ok":<true|false>, "detalle":"<parte>" }'
 ```
 `ok = true` **solo si** escribiste comps y **menos de la mitad** de las ventanas se quedaron sin
 respuesta. El `detalle` dice, en este orden: comps escritos y ventanas medidas · **ventanas de
@@ -176,7 +171,7 @@ se lee como «no se dispara» y manda a mirar al sitio equivocado (lección del 
 - Auto-informe corto en `docs/AGENTES-BITACORA.md` (qué ventanas mediste, medianas por fecha/aforo,
   qué falló).
 - Si la pasada fue mala **dos días seguidos**, avisa a Alberto por
-  `POST /api/internal/alerta` con `ALERTA_TOKEN` (un fallo suelto no merece Telegram: el latido ya
+  `bash scripts/canal-aviso.sh POST /api/internal/alerta '<aviso>'` (un fallo suelto no merece Telegram: el latido ya
   lo cuenta).
 - Anota en `docs/CONTEXTO-SESIONES.md` solo si hubo algo digno de recordar (máx ~8 líneas).
 

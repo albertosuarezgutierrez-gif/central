@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@central/core-ai": "workspace:*",
+    "@central/core-consent": "workspace:*",
     "@central/core-fiscal": "workspace:*",
     "@central/core-payments": "workspace:*",
     "@central/core-push": "workspace:*",
@@ -42,7 +43,8 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "resend": "^6.12.3"
+    "resend": "^6.12.3",
+    "vanilla-cookieconsent": "^3.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

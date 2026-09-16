@@ -5,7 +5,7 @@ import { Target } from 'lucide-react'
 import Bloque from './Bloque'
 import { Badge, btnStyle } from '@/components/ui'
 import { enlaceWhatsappConMensaje } from '@/lib/invitacion-whatsapp'
-import { textoMotivoCola, type Cola, type EscrituraRecaptacion, type LeadRecaptacion } from '@/lib/recaptacion-asegura'
+import { agruparLeadsPorCliente, textoMotivoCola, type Cola, type EscrituraRecaptacion, type GrupoLeadRecaptacion } from '@/lib/recaptacion-asegura'
 
 /**
  * 🎯 Cola de recaptación: leads del volcado sin fecha de vencimiento, con
@@ -24,6 +24,7 @@ export default function Recaptacion({ onContador }: {
 }) {
   const [cola, setCola] = useState<Cola | { estado: 'cargando' }>({ estado: 'cargando' })
   const [ocultarCooldown, setOcultarCooldown] = useState(true)
+  const [soloWhatsapp, setSoloWhatsapp] = useState(false)
 
   const avisar = useRef(onContador)
   useEffect(() => { avisar.current = onContador }, [onContador])
@@ -75,36 +76,51 @@ export default function Recaptacion({ onContador }: {
     )
   }
 
-  const visibles = ocultarCooldown ? cola.leads.filter((l) => !l.enCooldown) : cola.leads
+  const grupos = agruparLeadsPorCliente(cola.leads)
+  const visibles = grupos
+    .filter((g) => !ocultarCooldown || !g.enCooldown)
+    .filter((g) => !soloWhatsapp || g.telefono !== null)
   const hayTrabajo = visibles.length > 0
 
   return (
     <Bloque
       titulo={`Recaptación · ${cola.contadores.totalCandidatos} lead(s) sin vencimiento`}
       Icono={Target}
-      sub="Leads del volcado histórico, sin fecha de vencimiento y con contacto, que hoy NO son cliente vivo por CIMA en ningún ramo."
+      sub="Leads del volcado histórico, sin fecha de vencimiento y con contacto, que hoy NO son cliente vivo por CIMA en ningún ramo. Agrupados por cliente: puede haber tenido varios seguros, el contacto es uno solo."
       accion={
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
           {cola.contadores.contactadosSemana} contactado(s) esta semana
           {' · '}
           {cola.contadores.conAperturaORespuestaSemana} con apertura o respuesta
+          {' · '}
+          {textoTasaAperturaEmail(cola.contadores)}
         </span>
       }
     >
-      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 10 }}>
-        <input
-          type="checkbox"
-          checked={ocultarCooldown}
-          onChange={(e) => setOcultarCooldown(e.target.checked)}
-        />
-        Ocultar los contactados en los últimos 14 días
-      </label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 10 }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+          <input
+            type="checkbox"
+            checked={ocultarCooldown}
+            onChange={(e) => setOcultarCooldown(e.target.checked)}
+          />
+          Ocultar los contactados en los últimos 14 días
+        </label>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+          <input
+            type="checkbox"
+            checked={soloWhatsapp}
+            onChange={(e) => setSoloWhatsapp(e.target.checked)}
+          />
+          Solo con WhatsApp (el resto, solo mail, se trabaja aparte)
+        </label>
+      </div>
 
       {!hayTrabajo ? (
         <p style={pMuted}>
-          {cola.leads.length === 0
+          {grupos.length === 0
             ? 'No hay ningún lead sin vencimiento con contacto pendiente de recaptar.'
-            : 'Todos los leads con contacto están en cooldown (contactados en los últimos 14 días).'}
+            : 'No queda ningún lead con contacto que cumpla los filtros de arriba.'}
         </p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -119,7 +135,7 @@ export default function Recaptacion({ onContador }: {
               </tr>
             </thead>
             <tbody>
-              {visibles.map((l) => <FilaLead key={l.polizaId} l={l} />)}
+              {visibles.map((g) => <FilaGrupo key={g.clienteId} g={g} />)}
             </tbody>
           </table>
         </div>
@@ -128,30 +144,34 @@ export default function Recaptacion({ onContador }: {
   )
 }
 
-function FilaLead({ l }: { l: LeadRecaptacion }) {
+function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {
   return (
     <tr style={{ borderBottom: '1px solid var(--border)' }}>
       <td style={{ padding: '6px 8px' }}>
-        <Link href={`/correduria/cliente/${l.clienteId}`}>{l.cliente}</Link>
-        {l.enCooldown && (
+        <Link href={`/correduria/cliente/${g.clienteId}`}>{g.cliente}</Link>
+        {g.enCooldown && (
           <>
             {' '}
-            <Badge tono="neutral">contactado {l.ultimoContactoEn ?? ''}</Badge>
+            <Badge tono="neutral">contactado {g.ultimoContactoEn ?? ''}</Badge>
           </>
         )}
       </td>
-      <td style={{ padding: '6px 8px' }}>{l.ramoLegible}</td>
-      <td style={{ padding: '6px 8px' }}>{l.aseguradoraAnterior ?? '—'}</td>
       <td style={{ padding: '6px 8px' }}>
-        {l.telefono && <span>📞 {l.telefono}</span>}
-        {l.email && <span style={{ marginLeft: l.telefono ? 8 : 0 }}>✉️ {l.email}</span>}
-        {!l.telefono && !l.email && '—'}
+        {g.polizas.map((p) => <div key={p.polizaId}>{p.ramoLegible}</div>)}
+      </td>
+      <td style={{ padding: '6px 8px' }}>
+        {g.polizas.map((p) => <div key={p.polizaId}>{p.aseguradoraAnterior ?? '—'}</div>)}
+      </td>
+      <td style={{ padding: '6px 8px' }}>
+        {g.telefono && <span>📞 {g.telefono}</span>}
+        {g.email && <span style={{ marginLeft: g.telefono ? 8 : 0 }}>✉️ {g.email}</span>}
+        {!g.telefono && !g.email && '—'}
       </td>
       <td style={{ padding: '6px 8px' }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {l.telefono && <BotonWhatsappRecaptacion lead={l} />}
-          {l.email && <BotonEmailRecaptacion lead={l} />}
-          <Link href={`/correduria/cliente/${l.clienteId}`} style={btnStyle('sutil', 'sm')}>
+          {g.telefono && <BotonWhatsappRecaptacion grupo={g} />}
+          {g.email && <BotonEmailRecaptacion grupo={g} />}
+          <Link href={`/correduria/cliente/${g.clienteId}`} style={btnStyle('sutil', 'sm')}>
             Ficha
           </Link>
         </div>
@@ -160,9 +180,35 @@ function FilaLead({ l }: { l: LeadRecaptacion }) {
   )
 }
 
-function mensajeSugerido(l: LeadRecaptacion): string {
-  const conQuien = l.aseguradoraAnterior ? ` que tuviste con ${l.aseguradoraAnterior}` : ''
-  return `Hola ${l.cliente.split(' ')[0]}, ¿sigues con tu seguro de ${l.ramoLegible}${conQuien}? Si quieres te paso un precio actualizado sin compromiso.`
+/**
+ * Tasa de apertura ACUMULADA de email (no solo la semana): con envío manual y
+ * bajo volumen, el contador semanal se resetea antes de tener muestra para
+ * juzgar si el asunto/mensaje funciona. Bajo umbral (<10 envíos) se avisa de
+ * que la muestra es pequeña en vez de mostrar un % que parece más sólido de
+ * lo que es. `null` = no se pudo leer — nunca se pinta como 0%.
+ */
+function textoTasaAperturaEmail(c: { emailEnviadosTotal: number | null; emailAbiertosTotal: number | null }): string {
+  if (c.emailEnviadosTotal === null || c.emailAbiertosTotal === null) return 'apertura email: no se pudo comprobar'
+  if (c.emailEnviadosTotal === 0) return 'aún sin emails enviados'
+  const pct = Math.round((c.emailAbiertosTotal / c.emailEnviadosTotal) * 100)
+  const muestra = c.emailEnviadosTotal < 10 ? ' (muestra pequeña)' : ''
+  return `${pct}% apertura email de ${c.emailEnviadosTotal} enviados${muestra}`
+}
+
+/** Lista de ramos legible: "auto", "auto y hogar", "auto, hogar y moto". */
+function ramosTexto(g: GrupoLeadRecaptacion): string {
+  const unicos = [...new Set(g.polizas.map((p) => p.ramoLegible))]
+  if (unicos.length === 1) return unicos[0]
+  return `${unicos.slice(0, -1).join(', ')} y ${unicos[unicos.length - 1]}`
+}
+
+const PLUG_PORTAL =
+  'Por cierto: ahora tenemos una intranet gratuita en grupoasegura.es donde puedes controlar todos tus seguros, aunque no estés con nosotros. Si más adelante te toca renovar, ahí verás la fecha para que no se te pase. Y si tienes un siniestro, lo abres directamente desde ahí, sin papeleo — funciona en el navegador del móvil, no hace falta instalar nada.'
+
+function mensajeSugerido(g: GrupoLeadRecaptacion): string {
+  const primera = g.polizas[0]
+  const conQuien = primera.aseguradoraAnterior ? ` que tuviste con ${primera.aseguradoraAnterior}` : ''
+  return `Hola ${g.cliente.split(' ')[0]}, ¿sigues con tu seguro de ${ramosTexto(g)}${conQuien}? Si quieres te paso un precio actualizado sin compromiso.\n\n${PLUG_PORTAL}`
 }
 
 function textoEscritura(r: EscrituraRecaptacion): string {
@@ -183,10 +229,11 @@ function textoEscritura(r: EscrituraRecaptacion): string {
  * note. El enlace sigue abriendo en pestaña nueva aunque el registro tarde o
  * falle (sin `preventDefault`).
  */
-function BotonWhatsappRecaptacion({ lead }: { lead: LeadRecaptacion }) {
-  const mensaje = mensajeSugerido(lead)
-  const url = enlaceWhatsappConMensaje(lead.telefono!, mensaje)
+function BotonWhatsappRecaptacion({ grupo }: { grupo: GrupoLeadRecaptacion }) {
+  const mensaje = mensajeSugerido(grupo)
+  const url = enlaceWhatsappConMensaje(grupo.telefono!, mensaje)
   if (url === null) return null
+  const primera = grupo.polizas[0]
   return (
     <a
       href={url}
@@ -197,7 +244,7 @@ function BotonWhatsappRecaptacion({ lead }: { lead: LeadRecaptacion }) {
         fetch('/api/correduria/recaptacion/whatsapp', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ clienteId: lead.clienteId, polizaId: lead.polizaId, mensaje }),
+          body: JSON.stringify({ clienteId: grupo.clienteId, polizaId: primera.polizaId, mensaje }),
         }).catch(() => {})
       }}
     >
@@ -206,7 +253,7 @@ function BotonWhatsappRecaptacion({ lead }: { lead: LeadRecaptacion }) {
   )
 }
 
-function BotonEmailRecaptacion({ lead }: { lead: LeadRecaptacion }) {
+function BotonEmailRecaptacion({ grupo }: { grupo: GrupoLeadRecaptacion }) {
   const [estado, setEstado] = useState<'idle' | 'enviando' | EscrituraRecaptacion>('idle')
 
   return (
@@ -217,13 +264,14 @@ function BotonEmailRecaptacion({ lead }: { lead: LeadRecaptacion }) {
       title={typeof estado === 'object' && estado.estado !== 'ok' ? textoEscritura(estado) : undefined}
       onClick={async () => {
         setEstado('enviando')
-        const asunto = `¿Sigues con tu seguro de ${lead.ramoLegible}?`
-        const texto = mensajeSugerido(lead)
+        const primera = grupo.polizas[0]
+        const asunto = `${grupo.cliente.split(' ')[0]}, ¿sigues con tu seguro de ${ramosTexto(grupo)}?`
+        const texto = mensajeSugerido(grupo)
         try {
           const res = await fetch('/api/correduria/recaptacion/email', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ clienteId: lead.clienteId, polizaId: lead.polizaId, email: lead.email, asunto, texto }),
+            body: JSON.stringify({ clienteId: grupo.clienteId, polizaId: primera.polizaId, email: grupo.email, asunto, texto }),
           })
           const j = (await res.json().catch(() => null)) as EscrituraRecaptacion | null
           setEstado(j ?? { estado: 'error', motivo: `HTTP ${res.status}` })

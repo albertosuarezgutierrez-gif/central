@@ -29,6 +29,28 @@ export type FuenteComparable = 'serper' | 'booking_mcp' | 'manual'
  */
 export const FUENTES_FIABLES: FuenteComparable[] = ['booking_mcp', 'manual']
 
+/**
+ * A partir de cuántos días el corpus de una ventana es RANCIO para el motor.
+ *
+ * Es el MISMO número que `MAX_MARKET_AGE_DAYS` de `pricing/apply` —que lo importa de aquí— y no una
+ * copia: si divergieran, esta cola daría por «cubierta» una fecha que el motor va a rechazar por
+ * vieja, y el desajuste solo se vería como un precio de PriceLabs donde debería haber uno del motor.
+ *
+ * 🚨 POR QUÉ SE AÑADE (15/09/2026, Semana Santa 2027 del Dúplex). La cola ordenaba «virgen antes que
+ * medida» y, dentro de las medidas, solo por antigüedad — sin mirar si la ventana era de evento. Con
+ * ~12 meses de plan × 3 muestras × 4 aforos siempre hay vírgenes, así que una noche de evento
+ * CONFIRMADO medida una sola vez no volvía a subir nunca. Medido ese día: de las 7 noches de Semana
+ * Santa 2027, las del 23, 24 y 28 de marzo llevaban 18 días sin remedir (n=10 del 28/08) y la del 29
+ * no se había medido jamás, mientras 25, 26 y 27 sí se habían refrescado. Consecuencia: el motor
+ * saltaba esas fechas por `datos_insuficientes` y las tarificaba PriceLabs — publicando 286€ el
+ * martes 23 y 298€ el sábado 27 con el mercado de la zona entre 420€ y 600€.
+ *
+ * Y el fallo era MUDO en las dos direcciones: el salto del motor se avisa por PISO
+ * (`avisoPisosSinTarifar`), nunca por fecha, así que un piso tarificado «bien» podía tener sus
+ * noches más caras del año sin tocar.
+ */
+export const EDAD_MERCADO_RANCIO = 7
+
 /** Última medición fiable de una ventana (fecha × aforo). `null` = nunca se ha medido. */
 export type CoberturaVentana = {
   /** YYYY-MM-DD */
@@ -103,6 +125,12 @@ export type PlanPedido = {
    * «esto era todo lo que había», que es la misma mentira que un `?? []` sobre un dato sin mirar.
    */
   recortadas: number
+  /**
+   * Fechas de evento CONFIRMADO cuyo corpus el motor ya rechaza por viejo, de TODAS las candidatas
+   * (no solo de las que caben en esta pasada). Es el estado que no se declaraba en ningún sitio:
+   * medidas, pero caducadas. Ver `eventosCaducados`.
+   */
+  caducadas: ReturnType<typeof eventosCaducados>
 }
 
 /** Tope por defecto de ventanas por pasada, y techo duro (cada consulta cuesta contexto). */
@@ -276,6 +304,49 @@ function clave(checkin: string, aforo: number): string {
  * exactamente como antes. `bucket` es OPCIONAL: sin él ninguna ventana se marca `mesCorto` y el
  * orden es el de siempre — un consumidor que no sepa qué meses están cortos no debe adivinarlo.
  */
+/**
+ * Ventana de evento CONFIRMADO ya medida pero con el corpus fuera del plazo que acepta el motor.
+ * No es «sin medir» (tiene comps) ni «cubierta» (el motor la rechaza): es el tercer estado que la
+ * cola no distinguía. Ver `EDAD_MERCADO_RANCIO`.
+ */
+function esEventoCaducado(v: VentanaPedida, maxEdad = EDAD_MERCADO_RANCIO): boolean {
+  return v.eventoConfirmado === true && v.diasSinMedir !== null && v.diasSinMedir > maxEdad
+}
+
+/**
+ * Fechas de evento CONFIRMADO cuyo corpus el motor ya NO acepta, agregadas por fecha.
+ *
+ * Existe para que el salto se pueda declarar POR FECHA. Hoy el único aviso es
+ * `avisoPisosSinTarifar`, que es por PISO y solo salta cuando el piso ENTERO se queda sin tarifar:
+ * un piso tarificado con normalidad puede tener sus noches más caras del año corriendo con el precio
+ * del canal externo sin que nadie se entere. Un array vacío aquí significa «ninguna caducada», no
+ * «no se ha mirado»: `pedidas` siempre trae las de evento del plan.
+ */
+export function eventosCaducados(
+  pedidas: VentanaPedida[],
+  maxEdad = EDAD_MERCADO_RANCIO,
+): { checkin: string; etiqueta?: string; diasSinMedir: number; aforos: number[] }[] {
+  const porFecha = new Map<string, { checkin: string; etiqueta?: string; diasSinMedir: number; aforos: number[] }>()
+  for (const v of pedidas) {
+    if (!esEventoCaducado(v, maxEdad)) continue
+    const previa = porFecha.get(v.checkin)
+    if (!previa) {
+      porFecha.set(v.checkin, {
+        checkin: v.checkin, etiqueta: v.etiqueta,
+        diasSinMedir: v.diasSinMedir as number, aforos: [v.aforo],
+      })
+      continue
+    }
+    previa.aforos.push(v.aforo)
+    // La edad que cuenta es la PEOR del grupo: si un aforo lleva 18 días, esa fecha está a ciegas
+    // para el piso de ese aforo por mucho que otro aforo se midiera ayer.
+    previa.diasSinMedir = Math.max(previa.diasSinMedir, v.diasSinMedir as number)
+  }
+  return [...porFecha.values()]
+    .map(f => ({ ...f, aforos: [...f.aforos].sort((a, b) => a - b) }))
+    .sort((a, b) => a.checkin.localeCompare(b.checkin))
+}
+
 export function planDeVentanas(
   plan: Ventana[],
   aforos: Map<number, string[]>,
@@ -340,7 +411,16 @@ export function planDeVentanas(
       if (a.ronda !== b.ronda) return a.ronda - b.ronda
       return a.checkin.localeCompare(b.checkin)
     }
-    // Ambas medidas: la más vieja primero; empate → la fecha más cercana.
+    // Ambas medidas. Primero el EVENTO CONFIRMADO cuyo corpus ya pasó de `EDAD_MERCADO_RANCIO`:
+    // esa ventana no está «cubierta», está caducada — el motor la va a rechazar por vieja y la
+    // noche se la queda PriceLabs. Y como siempre hay vírgenes en un plan de 12 meses, sin este
+    // escalón no volvía a subir jamás (ver EDAD_MERCADO_RANCIO: Semana Santa 2027 del Dúplex).
+    // Solo CONFIRMADO, igual que las dos reservas de `conReservas`: un evento previsto es una
+    // apuesta y no puede desplazar a una fecha que el motor tiene realmente a ciegas.
+    const aCaducada = esEventoCaducado(a)
+    const bCaducada = esEventoCaducado(b)
+    if (aCaducada !== bCaducada) return aCaducada ? -1 : 1
+    // La más vieja primero; empate → la fecha más cercana.
     if (a.diasSinMedir !== b.diasSinMedir) return (b.diasSinMedir ?? 0) - (a.diasSinMedir ?? 0)
     return a.checkin.localeCompare(b.checkin)
   })
@@ -351,6 +431,7 @@ export function planDeVentanas(
     ventanas,
     candidatas: pedidas.length,
     recortadas: Math.max(0, pedidas.length - ventanas.length),
+    caducadas: eventosCaducados(pedidas),
   }
 }
 

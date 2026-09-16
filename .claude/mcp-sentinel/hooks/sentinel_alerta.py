@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Sentinel: forwards PreToolUse to sentinel_preflight.py unchanged, and fires a
 Telegram alert via plataforma's /api/internal/alerta when SENTINEL_SHADOW
-downgraded a real ask/deny to allow. Best-effort: never blocks (the alert is
-sent by a detached subprocess so this hook never waits on the network), never
-alters the hook's own decision, fails silently if PLATAFORMA_URL/ALERTA_TOKEN
-are missing or the endpoint is unreachable.
+downgraded a real ask/deny to allow, OR when it hard-denied a critical finding
+on an unattended session (see sentinel_preflight.py's shadow_deny path). Best-
+effort: never blocks (the alert is sent by a detached subprocess so this hook
+never waits on the network), never alters the hook's own decision, fails
+silently if PLATAFORMA_URL/ALERTA_TOKEN are missing or the endpoint is
+unreachable.
 """
 import hashlib
 import json
@@ -37,11 +39,21 @@ def maybe_alert(raw_input: bytes, out_bytes: bytes) -> None:
         return
     data = json.loads(out_bytes)
     hso = data.get("hookSpecificOutput", {})
-    if hso.get("permissionDecision") != "allow":
-        return
-    ctx = hso.get("additionalContext", "") or ""
+    decision = hso.get("permissionDecision")
     # El aviso de sombra es bilingüe (es/en); "SENTINEL_SHADOW" es el único
-    # literal común a las dos plantillas (ver sentinel_preflight.py render("shadow", ...)).
+    # literal común a las plantillas "shadow"/"shadow_deny" de
+    # sentinel_preflight.py (render("shadow"/"shadow_deny", ...)). El texto
+    # vive en additionalContext cuando la decisión es allow (shadow clásico) y
+    # en permissionDecisionReason cuando es deny (shadow_deny: crítico +
+    # desatendido, ver sentinel_preflight.py) — cualquier otro deny real
+    # (deny_known/deny_feed/deny_tamper) nunca lleva ese literal, así que no
+    # dispara este aviso.
+    if decision == "allow":
+        ctx = hso.get("additionalContext", "") or ""
+    elif decision == "deny":
+        ctx = hso.get("permissionDecisionReason", "") or ""
+    else:
+        return
     if "SENTINEL_SHADOW" not in ctx:
         return
 
@@ -78,7 +90,8 @@ def maybe_alert(raw_input: bytes, out_bytes: bytes) -> None:
         tool_name = json.loads(raw_input).get("tool_name", "?")
     except Exception:
         tool_name = "?"
-    text = f"\U0001F6E1️ Sentinel [SOMBRA] habría intervenido ({tool_name})\n{ctx[:500]}"
+    prefix = "Sentinel [SOMBRA] denegó" if decision == "deny" else "Sentinel [SOMBRA] habría intervenido"
+    text = f"\U0001F6E1️ {prefix} ({tool_name})\n{ctx[:500]}"
     body = json.dumps({"text": text})
 
     # Fire-and-forget con curl en un proceso desatendido: este hook nunca
