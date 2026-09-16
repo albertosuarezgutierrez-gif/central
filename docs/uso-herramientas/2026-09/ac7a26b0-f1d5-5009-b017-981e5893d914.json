@@ -1,58 +1,58 @@
 {
  "sesion": "ac7a26b0-f1d5-5009-b017-981e5893d914",
  "inicio": "2026-09-13T08:02:31.389Z",
- "fin": "2026-09-16T07:48:52.537Z",
- "llamadas": 858,
+ "fin": "2026-09-16T08:55:48.095Z",
+ "llamadas": 903,
  "categorias": {
   "otro": {
-   "llamadas": 76,
-   "chars_in": 6778,
-   "chars_out": 781562,
+   "llamadas": 80,
+   "chars_in": 7058,
+   "chars_out": 782471,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 5,
-    "ToolSearch": 20,
+    "ToolSearch": 24,
     "ReadNotifications": 44,
     "ScheduleWakeup": 4,
     "AskUserQuestion": 3
    }
   },
   "sql": {
-   "llamadas": 123,
-   "chars_in": 33531,
-   "chars_out": 222571,
+   "llamadas": 131,
+   "chars_in": 35628,
+   "chars_out": 249043,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 19,
-    "mcp__Supabase__execute_sql": 104
+    "mcp__Supabase__execute_sql": 112
    }
   },
   "bash": {
-   "llamadas": 196,
-   "chars_in": 45727,
-   "chars_out": 142363,
+   "llamadas": 207,
+   "chars_in": 47998,
+   "chars_out": 161690,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 196
+    "Bash": 207
    }
   },
   "lectura-directa": {
-   "llamadas": 118,
-   "chars_in": 13443,
-   "chars_out": 402634,
+   "llamadas": 133,
+   "chars_in": 15256,
+   "chars_out": 599523,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 71,
-    "Grep": 44,
-    "Glob": 3
+    "Read": 80,
+    "Grep": 48,
+    "Glob": 5
    }
   },
   "mcp:Claude_Code_Remote": {
@@ -112,14 +112,14 @@
    }
   },
   "mcp:Supabase": {
-   "llamadas": 2,
-   "chars_in": 2710,
-   "chars_out": 407,
+   "llamadas": 3,
+   "chars_in": 2712,
+   "chars_out": 798,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__list_projects": 2,
     "mcp__Supabase__apply_migration": 1
    }
   },
@@ -136,16 +136,18 @@
    }
   },
   "mcp:Gmail": {
-   "llamadas": 20,
-   "chars_in": 1936,
-   "chars_out": 289212,
-   "errores": 0,
+   "llamadas": 26,
+   "chars_in": 26431,
+   "chars_out": 360411,
+   "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Gmail__search_threads": 16,
-    "mcp__Gmail__get_message": 3,
-    "mcp__Gmail__reply": 1
+    "mcp__Gmail__search_threads": 17,
+    "mcp__Gmail__get_message": 5,
+    "mcp__Gmail__reply": 1,
+    "mcp__Gmail__send_message": 1,
+    "mcp__Gmail__get_thread": 2
    }
   },
   "agente:agente-mecanico": {
