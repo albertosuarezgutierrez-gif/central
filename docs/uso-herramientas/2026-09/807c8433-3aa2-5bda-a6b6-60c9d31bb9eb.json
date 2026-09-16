@@ -1,8 +1,8 @@
 {
  "sesion": "807c8433-3aa2-5bda-a6b6-60c9d31bb9eb",
  "inicio": "2026-09-16T11:58:31.141Z",
- "fin": "2026-09-16T12:29:05.005Z",
- "llamadas": 32,
+ "fin": "2026-09-16T13:00:15.203Z",
+ "llamadas": 42,
  "categorias": {
   "lectura-directa": {
    "llamadas": 6,
@@ -39,29 +39,29 @@
    }
   },
   "otro": {
-   "llamadas": 3,
-   "chars_in": 688,
-   "chars_out": 50589,
+   "llamadas": 9,
+   "chars_in": 741,
+   "chars_out": 217870,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1,
-    "ReadNotifications": 1,
+    "ToolSearch": 2,
+    "ReadNotifications": 6,
     "ScheduleWakeup": 1
    }
   },
   "mcp:github": {
-   "llamadas": 4,
-   "chars_in": 1414,
-   "chars_out": 9364,
+   "llamadas": 8,
+   "chars_in": 1803,
+   "chars_out": 28123,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 2
+    "mcp__github__pull_request_read": 6
    }
   },
   "mcp:Claude_Code_Remote": {
