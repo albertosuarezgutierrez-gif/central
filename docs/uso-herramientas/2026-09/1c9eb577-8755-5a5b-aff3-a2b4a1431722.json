@@ -1,8 +1,8 @@
 {
  "sesion": "1c9eb577-8755-5a5b-aff3-a2b4a1431722",
  "inicio": "2026-09-15T23:15:29.580Z",
- "fin": "2026-09-15T23:22:48.718Z",
- "llamadas": 86,
+ "fin": "2026-09-15T23:23:04.150Z",
+ "llamadas": 88,
  "categorias": {
   "otro": {
    "llamadas": 5,
@@ -41,14 +41,14 @@
    }
   },
   "bash": {
-   "llamadas": 14,
-   "chars_in": 4233,
-   "chars_out": 6597,
+   "llamadas": 16,
+   "chars_in": 4541,
+   "chars_out": 7238,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 14
+    "Bash": 16
    }
   },
   "mcp:Interactive-Brokers--IBKR-": {
