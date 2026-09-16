@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(16/09/2026)** Trading · pasada 20:15 de `trading-analista` completa (NAV/cartera/operaciones
+empujados, 24 símbolos analizados+puntuados, 0 compras nuevas). Nuevo `scripts/canal-aviso-archivo.sh`
+(cuerpo por FICHERO en vez de argv — el payload de velas de 24 símbolos, ~288 KB, reventaba "Argument
+list too long" en `canal-aviso.sh`). Confirmado EN VIVO el landmine de la skill: un lote de 6
+`get_price_history` en paralelo devolvió resultados desordenados vs. los `contract_id` pedidos;
+descartado y repetido secuencial, uno a uno. Detalle en `docs/AGENTES-BITACORA.md`.
+
 **(16/09/2026)** CIMA · skill `cima-ingesta` (router de la tubería EIAC/TIREA: cadena, cuarentena,
 cobertura de campos, caja negra del webhook y diagnóstico), y se mata el duplicado en
 `agente-correduria`/`correduria-crm`. **Generali SÍ vuelca por CIMA desde el 14/09** (1er POL, único
