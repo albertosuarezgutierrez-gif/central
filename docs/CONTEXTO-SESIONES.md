@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+## 16/09/2026 — Alerta PSD2 sync: sesión BBVA cerrada en Enable Banking
+- Frescura agregada OK (último mov. 15/09, 45 mov/30d vs 59 previos) — el SQL simple no lo detecta.
+- La conexión BBVA **vinculada** (activa) trae en su sync de hoy (16/09 06:00 UTC) un aviso SIN
+  prefijo ℹ️: `estado CLOSED en Enable Banking` / HTTP 401 `Session is closed` en `/accounts`.
+- Confirmado contra `semaforoFeed()` de `apps/plataforma/lib/psd2-semaforo.ts`: `criticos.length > 0`
+  → nivel **`roto`**, "El banco no está entregando movimientos". Kutxabank (la otra vinculada) sigue OK.
+- Causa probable: sesión PSD2 de BBVA caducada/cerrada (no es el token EB en general, es esta cuenta).
+- Acción: re-vincular BBVA desde `/banca` → "➕ Añadir → Conectar banco". Alerta ya enviada por Telegram.
+
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
 no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
