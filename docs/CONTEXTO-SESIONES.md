@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(16/09/2026)** facturas-correo · pasada diaria sana (Vía B al día, sin backlog). 3 e-facturas
+EMASESA nuevas (Socorro/Reform/Luxury, ciclo bimestral) sin cargo bancario todavía → pendientes de
+conciliar en próxima pasada (portal-only, no llega PDF). Barrido `v_facturas_sin_cargo`: 9 en
+`sin_revisar` de septiembre (vercel/openrouter/pricelabs/ionos/anthropic-credit) sin cargo aún, lag
+normal de extracto. Duda para Alberto: 2 cargos ANTHROPIC IRELAND de 76,50€ (07 y 10/09) para 1
+sola factura archivada de 76,50€. Detalle en `docs/AGENTES-BITACORA.md`.
+
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
 no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
