@@ -126,4 +126,44 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 (septiembre sigue abierto).
 
 ---
-<!-- verificado: 2026-09-04 -->
+
+## 🔴 Pasada 16/09/2026 — RCE de Next.js seguía sin llegar a `main` 3 días después
+
+**Por qué esta entrada no tiene "rango de commits":** este documento en `main` seguía terminando en
+el `<!-- verificado: 2026-09-04 -->` de abajo pese a que las pasadas ligeras SÍ corrieron los días
+05, 07, 08, 12, 13, 14 y 15/09 — todas dejaron su PR de "registro" abierto y sin mergear (ver más
+abajo). El contenido de esas 7 pasadas sigue solo en sus PRs; esta entrada no lo repite.
+
+### 🔴🔒 SEGURIDAD — la RCE crítica de Next.js (#2857, 13/09) seguía viva en `main`
+El PR #2857 (13/09/2026) ya había diagnosticado y parcheado 4 CVEs críticas de Next.js —incluida
+`GHSA-2xp9-vwfh-vxw4`, RCE **no autenticada** en la API de Image Optimization con AVIF, que aplica en
+Linux/Vercel— en las 13 apps. Ese PR lleva **3 días en draft con conflicto de rama sin resolver**
+(`mergeable_state: dirty`), así que el fix nunca llegó a producción. Comprobado en `main` (16/09,
+08:00 UTC): las 13 apps seguían en las versiones vulnerables (12 en `15.5.18-15.5.22`, `ia-rest` en
+`16.2.12`). **Corregido en este PR** (mismo bump verificado por #2857: `^15.5.25` / `^16.3.5`) —
+ver PR #3023, no draft, pide merge urgente. `pnpm audit --prod`: 4 críticas → 0. Verificado con
+typecheck limpio en las 13 apps, `pnpm test` (2847+53, 0 fallos), `pnpm test:guardia` (846, 0
+fallos), build OK en `ia-rest` y `sivra`.
+
+### 🟡 Backlog de PRs de registro — sigue sin resolverse, ya van 4 pasadas señalándolo
+`rutinas-automerge.yml` **está vivo** (miles de runs, éxito constante en PRs de código normales,
+p. ej. #3021/#3022 mergeados esta misma mañana) — el problema NO es el workflow, es que cada PR de
+"registro" de `/auditoria-diaria` entra en conflicto con `main` casi al nacer (main se mueve varias
+veces por hora) y nadie lo refresca después. Verificado en dos muestras: **#2318** (05/09) y **#2967**
+(15/09) siguen `mergeable_state: dirty`, sin ninguna actividad desde su creación. Ya lo señalaron
+#2741 (12/09), #2857 (13/09) y el propio #2967 (15/09, "28 abiertos hoy"): es una decisión pendiente
+de Alberto (bypass de ruleset o cambio de flujo), no algo que un agente deba resolver por su cuenta —
+no se repite el diagnóstico completo aquí, ver el cuerpo de esos PRs.
+
+### Pricing SIVRA / correduría CIMA — dentro de umbral, sin 🔴 nuevo
+`pricing_applied` (dry_run=false): última pasada real hace 17,8 h, 427 noches escritas en las
+últimas 48 h — se recuperó del episodio Smoobu 401 que documentó #2967 (15/09). `cima_pull_*`:
+último evento 15/09 15:38 UTC (hace ~16,7 h, dentro del umbral de 30 h), cola en 142 pendientes /
+0 procesados — mismo backlog ya conocido, sin empeorar. Heartbeat (`agente_latidos`): sin `⛔`
+nuevos aparte de los ya conocidos (`ses_transporte`, `seo_correduria` sin crédito de Serper).
+
+### Lo que esta pasada NO cubrió
+Reconciliación completa de memoria/skills (paso 4), manuales de usuario y `docs/HUECOS-ABIERTOS.md`
+línea a línea — priorizado el hallazgo de seguridad. Queda para la próxima pasada.
+
+<!-- verificado: 2026-09-16 -->

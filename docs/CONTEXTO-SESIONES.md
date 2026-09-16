@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(16/09/2026)** 🔴 auditoría diaria · la RCE crítica de Next.js que #2857 (13/09) ya había parcheado
+seguía viva en `main` 3 días después — ese PR quedó atascado en draft con conflicto sin resolver.
+Reproducido el mismo bump (`^15.5.25`/`^16.3.5`, 13 apps) sobre `main` actual en PR #3023 (no
+draft, pide merge urgente): `pnpm audit` 4 críticas → 0, typecheck+tests+build verificados. El
+backlog de PRs "de registro" de esta misma rutina sigue sin resolverse (≥2 confirmados en
+conflicto desde su creación, 05/09 y 15/09) — ya señalado 3 veces antes (#2741, #2857, #2967);
+pendiente de decisión de Alberto sobre el ruleset/flujo, no se toca sin su OK. Detalle en
+`docs/AUDITORIA-2026-09.md`.
+
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
 no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
