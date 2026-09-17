@@ -265,6 +265,14 @@ PR #2933. Sin código tocado, solo doc.
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔓 Causa real de los 500 del Submit (proyecto 40685793): un `product.options` que nunca se mandaba (17/09/2026).**
+  Codeoscopic (Juan Manuel Fernández) contestó al correo del 13/09: nunca llegó a Allianz — faltaban 4
+  consentimientos obligatorios del formulario de Allianz (`insuredFamilyInAllianz`, `publicityConsent`,
+  `allianzGroupProductsConsent`, `commercialProfilingConsent`) en `product.options` del propio Submit, DISTINTO
+  del `product.options` del ReRate que ya existía (`opciones-producto.ts`). Arreglado: `conProductoPorDefecto()`
+  (puro, los 4 en `false`, no pisa el JSON avanzado del corredor), cableado en `emitir/route.ts`. Cepo visto
+  en rojo (2 tests) antes de restaurar. 463/463 tests asegura + tsc 0 + code-review (2 hallazgos, los 2
+  aplicados). El 40685793 sigue muerto (fecha de efecto caducada); el arreglo es para el SIGUIENTE Submit.
 - **Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo
   (15/09/2026).** DGT rechazó la vía de dato abierto (datos.gob.es, 15/09: "no disponemos de API REST
   para este fin", remite a "informes de vehículos en lote" — Web Service para empresas colaboradoras,

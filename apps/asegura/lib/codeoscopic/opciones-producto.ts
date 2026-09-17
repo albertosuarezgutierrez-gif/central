@@ -63,3 +63,58 @@ export function opcionesPorDefecto(compania: string): OpcionProducto[] | null {
   if (c.includes('allianz')) return ALLIANZ_AUTO_320200.map((o) => ({ ...o }))
   return null
 }
+
+// ── Consentimientos del Submit (17/09/2026) — DISTINTO del catálogo de arriba ──
+//
+// El de arriba (`ALLIANZ_AUTO_320200`) es para `mainQuote.product.options` en el
+// ReRate (`POST /insurances/{id}/offers`). Este es para `product.options` en el
+// SUBMIT (`POST /insurances/{id}/policy-applications`), y son campos DISTINTOS:
+// no técnicos/comerciales sino consentimientos legales del tomador.
+//
+// Confirmado por Juan Manuel Fernández (Product Manager API Codeoscopic, correo
+// del 17/09/2026, proyecto 40685793): el 500 «Unknown error while waiting for
+// the operation to complete» de dos Submits reales (13/09/2026, 06:27 y 14:41
+// UTC) NO era un fallo del vendor — nuestro cuerpo no incluía este bloque en
+// absoluto: `[{ quote: { id }, payment: { bankAccount: { iban } } }]`. Adjuntó
+// captura del formulario de Allianz con los 4 campos marcados obligatorios y
+// dijo explícitamente que hay que enviar un valor «aunque visualmente tenga un
+// valor por defecto que es NO».
+//
+// Los 4 en `false`: es el valor por defecto que el propio formulario de Allianz
+// enseña, y ninguno se decide a favor del cliente sin que él lo diga — ni family
+// (no hay dato para afirmar que SÍ hay un familiar asegurado en Allianz) ni los
+// tres consentimientos de marketing/perfilado (opt-out es el default seguro:
+// nunca se firma un consentimiento comercial en su nombre).
+const ALLIANZ_SUBMIT_CONSENTIMIENTOS: OpcionProducto[] = [
+  { id: 'insuredFamilyInAllianz', type: 'boolean', value: false },
+  { id: 'publicityConsent', type: 'boolean', value: false },
+  { id: 'allianzGroupProductsConsent', type: 'boolean', value: false },
+  { id: 'commercialProfilingConsent', type: 'boolean', value: false },
+]
+
+/**
+ * Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate:
+ * ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo
+ * Allianz auto tiene esta captura.
+ */
+export function opcionesEmisionPorDefecto(compania: string): OpcionProducto[] | null {
+  const c = compania.trim().toLowerCase()
+  if (c.includes('allianz')) return ALLIANZ_SUBMIT_CONSENTIMIENTOS.map((o) => ({ ...o }))
+  return null
+}
+
+/**
+ * Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO
+ * si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre
+ * cualquier default. Puro y testeable aparte de la ruta: la ruta solo llama.
+ */
+export function conProductoPorDefecto(
+  campos: Record<string, unknown>,
+  compania: string,
+): Record<string, unknown> {
+  if (typeof campos.product === 'object' && campos.product !== null && !Array.isArray(campos.product)) {
+    return campos
+  }
+  const opciones = opcionesEmisionPorDefecto(compania)
+  return opciones ? { ...campos, product: { options: opciones } } : campos
+}

@@ -158,3 +158,17 @@ test('la ruta /emitir niega el reintento con una solicitud viva y acuña antes d
   assert.ok(src.indexOf("cuerpo.acunarExistente === true") < src.indexOf('extraerIbanTecleado(camposCliente)'))
   assert.ok(src.indexOf('const crudoPrevio = await leerProyectoCrudo') < src.indexOf('camposDeEmision(r.config'))
 })
+
+// La lección del 14º 500 real (17/09/2026): un `product.options` que el
+// caller olvida rellenar no da un error legible — da un 500 del vendor que
+// PARECE un fallo suyo. `conProductoPorDefecto()` en sí la prueba
+// `opciones-producto.test.ts`; aquí solo se fija que la ruta la USA en los
+// DOS envíos (primer intento y el reintento sin confirmar) — si uno se
+// quedara en el `camposEnvio` sin producto, ese camino repetiría el 500.
+test('emitir/route.ts: el Submit rellena product.options por defecto y lo usa en TODOS los envíos (lee el fuente)', () => {
+  const src = readFileSync(fileURLToPath(new URL('../../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url)), 'utf8')
+  assert.match(src, /camposConProducto = conProductoPorDefecto\(camposEnvio, p\.aseguradora\)/)
+  const usos = [...src.matchAll(/campos: camposConProducto,/g)]
+  assert.equal(usos.length, 2)
+  assert.doesNotMatch(src, /campos: camposEnvio,/)
+})
