@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-17T11:02:40Z",
-  "sha": "0614b3ea6743d2c35ccf94d63a227dca5e8ba22c",
+  "generadoEn": "2026-09-17T11:34:57Z",
+  "sha": "e9a6f49562e4fac4e0ec64f0a632836aedb2ea30",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10201,6 +10201,30 @@
       "hash": "3fe6a55f35cb"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/documentos/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 26,
+          "resumen": "`GET ?projectId=` — lo que Codeoscopic devuelve de la SOLICITUD DE EMISIÓN de un proyecto, en crudo, incluido `issuedDocuments[]` si lo manda. 🚨 17/09/2026: la forma exacta del tag `File` dentro de `"
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "next"
+      ],
+      "rutaApi": "/api/operador/codeoscopic/documentos",
+      "hash": "0a94dcea07b3"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/emitir/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -10222,7 +10246,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 705
+          "linea": 724
         },
         {
           "nombre": "numero",
@@ -10230,7 +10254,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 710
+          "linea": 729
         },
         {
           "nombre": "esObjeto",
@@ -10238,7 +10262,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 714
+          "linea": 733
         },
         {
           "nombre": "coincideCompania",
@@ -10246,7 +10270,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 718
+          "linea": 737
         }
       ],
       "tablas": [
@@ -10255,7 +10279,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "acffc9c2abd2"
+      "hash": "08572d506fe3"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
@@ -16123,15 +16147,15 @@
           "nombre": "conProductoPorDefecto",
           "kind": "function",
           "exportada": true,
-          "params": "campos: Record<string, unknown>, compania: string,",
+          "params": "campos: Record<string, unknown>, compania: string, opts?: { familiaAllianz?: boolean },",
           "retorno": "Record<string, unknown>",
-          "linea": 111,
+          "linea": 119,
           "resumen": "Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre cualquier default. Puro y testeable aparte de la ru"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0bcffe0bbef"
+      "hash": "2555712a087b"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -65944,7 +65968,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "85ba40a24caf"
+      "hash": "2acacf5d93da"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx",
@@ -65992,7 +66016,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b8eb8a0c262f"
+      "hash": "c048287ba4d3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -96538,7 +96562,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FormularioGuardado | null",
-          "linea": 1176
+          "linea": 1181
         },
         {
           "nombre": "leerPreciosGuardados",
@@ -96546,7 +96570,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Precio[] | null",
-          "linea": 1196
+          "linea": 1201
         },
         {
           "nombre": "interpretarTarificacionGuardada",
@@ -96554,7 +96578,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaTarificacionGuardada",
-          "linea": 1213,
+          "linea": 1218,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -96563,13 +96587,13 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 1256,
+          "linea": 1261,
           "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d57819f19cf8"
+      "hash": "854e2d1099a8"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -136840,7 +136864,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3345,
-    "funciones": 10348
+    "archivos": 3346,
+    "funciones": 10349
   }
 }
