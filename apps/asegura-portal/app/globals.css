@@ -2893,6 +2893,19 @@ h1 em {
   background: var(--surface);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
 }
+@media (max-width: 480px) {
+  .sugerencia-panel {
+    /* Igual que `.campana-panel`: anclado a la PANTALLA, no al botón. El
+       botón puede estar lejos del borde derecho (aquí no es el último de la
+       barra), así que colgar el panel de él con `right: 0` lo saca por la
+       izquierda en vez de encajarlo en el viewport. */
+    position: fixed;
+    top: calc(var(--alto-barra) + 4px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
 .sugerencia-titulo { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
 .sugerencia-intro { font-size: 13px; line-height: 1.5; color: var(--muted); margin: 0 0 10px; }
 .sugerencia-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
