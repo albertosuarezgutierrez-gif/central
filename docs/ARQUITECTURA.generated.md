@@ -269,6 +269,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (17/09/2026) 🔓 Causa real de los 500 del Submit (proyecto 40685793): un `product.options` que nunca se mandaba
 - (15/09/2026) Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo
 - (14/09/2026) 🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN`
 - (14/09/2026) 🍪 Consentimiento unificado: asegura-web, ia-rest y housesevillana migradas a `@central/core-consent`
@@ -278,5 +279,4 @@
 - (14/09/2026) 🚗 Identificar pólizas por matrícula/dirección, no por nº de póliza — regla permanente (13-14/09/2026, PR #2912, MERGEADO).
 - (13/09/2026) 🚑 Parte de siniestro: zona del daño tocable + autorrelleno + «ha pasado ahora mismo»
 - (13/09/2026) 🔔 Aviso Telegram al iniciar sesión en la intranet
-- (13/09/2026) 📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real
 
