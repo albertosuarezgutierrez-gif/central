@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-16T17:09:09Z",
-  "sha": "908a7fbcbce5899fa08760ea6707700c759f72e2",
+  "generadoEn": "2026-09-17T11:02:40Z",
+  "sha": "0614b3ea6743d2c35ccf94d63a227dca5e8ba22c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10213,7 +10213,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 66,
+          "linea": 67,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — el Submit de verdad (`POST /insurances/{id}/policy-applications`), y el acuñado en nuestra BD si el vendor lo acepta. 🚨 **Construida el 11/09/2026, sin sandb"
         },
         {
@@ -10222,7 +10222,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 695
+          "linea": 705
         },
         {
           "nombre": "numero",
@@ -10230,7 +10230,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 700
+          "linea": 710
         },
         {
           "nombre": "esObjeto",
@@ -10238,7 +10238,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 704
+          "linea": 714
         },
         {
           "nombre": "coincideCompania",
@@ -10246,7 +10246,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 708
+          "linea": 718
         }
       ],
       "tablas": [
@@ -10255,7 +10255,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "f583a5854359"
+      "hash": "acffc9c2abd2"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
@@ -16096,7 +16096,9 @@
       "ambito": "apps/asegura",
       "resumen": "Catálogo ESTÁTICO de `product.options` por defecto para el ReRate, para las compañías que exigen campos que la cotización NUNCA devuelve (ver `Precio.productOptions` en `respuesta.ts` — el vendor no los manda al cotizar, así que aquí casi siempre es `null`). Sin sandbox y sin catálogo REST para esto",
       "exporta": [
-        "opcionesPorDefecto"
+        "opcionesPorDefecto",
+        "opcionesEmisionPorDefecto",
+        "conProductoPorDefecto"
       ],
       "funciones": [
         {
@@ -16107,11 +16109,29 @@
           "retorno": "OpcionProducto[] | null",
           "linea": 58,
           "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
+        },
+        {
+          "nombre": "opcionesEmisionPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string",
+          "retorno": "OpcionProducto[] | null",
+          "linea": 100,
+          "resumen": "Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate: ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo Allianz auto tiene esta captura."
+        },
+        {
+          "nombre": "conProductoPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: Record<string, unknown>, compania: string,",
+          "retorno": "Record<string, unknown>",
+          "linea": 111,
+          "resumen": "Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre cualquier default. Puro y testeable aparte de la ru"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bf03a9c4153c"
+      "hash": "a0bcffe0bbef"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -136821,6 +136841,6 @@
   ],
   "resumen": {
     "archivos": 3345,
-    "funciones": 10346
+    "funciones": 10348
   }
 }
