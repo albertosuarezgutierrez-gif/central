@@ -1,0 +1,66 @@
+{
+ "sesion": "ab887e79-1be6-502d-a4fe-13aa27c73385",
+ "inicio": "2026-09-17T12:57:31.573Z",
+ "fin": "2026-09-17T13:03:40.091Z",
+ "llamadas": 37,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 114,
+   "chars_out": 216,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 16,
+   "chars_in": 1835,
+   "chars_out": 61281,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 10,
+    "Read": 6
+   }
+  },
+  "sql": {
+   "llamadas": 4,
+   "chars_in": 1179,
+   "chars_out": 5726,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 4
+   }
+  },
+  "escritura": {
+   "llamadas": 6,
+   "chars_in": 8037,
+   "chars_out": 89059,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 1,
+    "Edit": 5
+   }
+  },
+  "bash": {
+   "llamadas": 9,
+   "chars_in": 906,
+   "chars_out": 18342,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 9
+   }
+  }
+ }
+}
