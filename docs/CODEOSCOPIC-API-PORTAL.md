@@ -1,5 +1,13 @@
 # 📚 La API de Codeoscopic / Avant2 — leída del portal oficial (01/09/2026)
 
+> 🔑 **`https://portal.api-int.codeoscopic.io/` es LA fuente de la configuración de esta API**
+> (confirmado por Alberto, 17/09/2026). Ante cualquier duda sobre un endpoint, un catálogo, un
+> campo obligatorio o el comportamiento de una compañía — antes de suponer, adivinar o pagar un
+> 400/500 real para descubrirlo — se consulta ese portal. Desde este contenedor está bloqueado por
+> el proxy de la sesión; se consulta con **Claude en Chrome** (sesión de Alberto ya autenticada) y
+> se trae la respuesta aquí. Este documento es el acumulado de esas consultas — se AMPLÍA con cada
+> hallazgo nuevo, no se sustituye.
+
 > **Procedencia:** Alberto exportó el portal de documentación
 > (`portal.api-int.codeoscopic.io`, snapshot MHTML del 01/09/2026 a las 22:06) y de ahí se extrajo
 > el índice completo de operaciones. **Es la primera documentación del fabricante que tenemos**:
