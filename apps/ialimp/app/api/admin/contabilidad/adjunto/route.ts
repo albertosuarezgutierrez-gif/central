@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
 import { createClient } from '@supabase/supabase-js'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 const BUCKET = 'documentos-contables'
 
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
     const empresa_id = await requireEmpresaId()
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      clavePublicable()
     )
     const form = await req.formData()
     const tipo = form.get('tipo') as string

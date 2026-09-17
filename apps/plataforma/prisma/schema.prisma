@@ -552,3 +552,19 @@ model SeoCorreduriaSemana {
   @@index([fuente, semana(sort: Desc)])
   @@map("seo_correduria_semana")
 }
+
+/// Auditoría + cooldown del agente autónomo de SEO de la correduría (propone PRs contra
+/// apps/asegura-web, nunca escribe directo). Ver lib/seo-correduria/agente-guardrails.ts.
+model SeoCorreduriaCambio {
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ruta     String
+  campo    String
+  antes    String?
+  despues  String
+  motivo   String
+  prUrl    String?  @map("pr_url")
+  creadoEn DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@index([ruta, creadoEn(sort: Desc)])
+  @@map("seo_correduria_cambios")
+}

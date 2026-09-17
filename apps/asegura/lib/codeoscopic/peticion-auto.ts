@@ -9,7 +9,8 @@
 // Las reglas no son adivinadas: salen del builder de Manuel, verificado por él
 // contra el entorno real, y están transcritas en docs/CODEOSCOPIC-TRASPASO-MANUEL.md §3.
 
-import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
+import { construirPersona, revisarPersona, RE_EMAIL, type DatosPersona } from './persona.ts'
+import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
 
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
 export type DatosAuto = DatosPersona & {
@@ -51,17 +52,67 @@ export type Reparo = { campo: keyof DatosAuto; motivo: string }
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/
 
 /**
+ * Qué exige la revisión además de lo que hace falta para el PRECIO.
+ *
+ * `paraEmitir` = la cotización se pide para llegar a EMITIR (defensa de
+ * cartera: la única puerta que hoy emite). Entonces se exige ANTES de pagar lo
+ * que el Submit pide después y que no se puede añadir al proyecto una vez
+ * creado: el correo y la calle completa (tipo de vía + nombre + número).
+ * Medido el 12/09/2026 (7 cargos sobre la póliza de Pilar Franco Ruz): sin
+ * esto cada cotización nace inemitible y el hueco se descubre a 0,50€ por
+ * campo. Una oportunidad NUEVA (presupuesto rápido, fase 1) no lo pone: ahí un
+ * dato que no hace falta para el precio no bloquea.
+ */
+export type OpcionesRevision = {
+  paraEmitir?: boolean
+  /** «Hoy» para la regla de la fecha de efecto (aaaa-mm-dd). Por defecto, hoy en Madrid; inyectable en tests. */
+  hoy?: string
+}
+
+/**
  * Comprueba los datos ANTES de gastar los 0,50€.
  *
  * Devuelve la lista de reparos: vacía significa que se puede cotizar. No lanza,
  * porque la UI tiene que poder pintar TODOS los problemas a la vez y no uno a uno.
  */
-export function revisarDatosAuto(d: Partial<DatosAuto>): Reparo[] {
+export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevision = {}): Reparo[] {
   const r: Reparo[] = []
   const falta = (c: keyof DatosAuto, m = 'hace falta para poder cotizar') => r.push({ campo: c, motivo: m })
 
   // ── La persona: reglas compartidas con hogar ──
   for (const x of revisarPersona(d)) r.push(x)
+
+  // 🚨 Solo auto, no hogar, y solo cuando SE MANDA dirección de residencia: el
+  // ReRate exige el nombre de la calle DENTRO de esa dirección (11º 400 real,
+  // 12/09/2026, proyecto 40684860) — «The road name of the address of the
+  // holder/primary driver/owner is mandatory». La cotización inicial NO lo
+  // pedía (por eso la ficha nunca lo trae), y sin cp/municipio la dirección ni
+  // siquiera viaja — exigirlo siempre inventaría un requisito que no existe.
+  const viajaDireccion = texto(d.cpResidencia) && numero(d.municipioResidenciaId)
+  if (viajaDireccion && !texto(d.nombreVia)) {
+    falta('nombreVia', 'la compañía lo exige para poder confirmar el precio (ReRate) cuando hay dirección')
+  }
+
+  // ── Lo que el SUBMIT exige y el proyecto ya no admite después ──
+  // 13º y 14º 400 reales (12/09/2026): «The e-mail / road number / road type of
+  // the holder/owner/primaryDriver is mandatory». El correo no se aplica por
+  // PATCH (proyecto 40685666: 200 y al releer no está), así que pedirlo después
+  // de pagar es pedir OTRO pago. Se pide aquí, gratis, antes.
+  if (opciones.paraEmitir) {
+    if (!texto(d.email)) {
+      falta('email', 'la compañía lo exige para emitir y no se puede añadir después: sin él este precio no se podría emitir sin pagar otra vez')
+    } else if (!RE_EMAIL.test(String(d.email).trim())) {
+      r.push({ campo: 'email', motivo: 'no tiene forma de correo (algo@dominio.es)' })
+    }
+    if (viajaDireccion) {
+      if (!texto(d.numeroVia)) {
+        falta('numeroVia', 'la compañía exige el número de la calle para emitir; la ficha no lo trae reconocible')
+      }
+      if (!texto(d.tipoVia)) {
+        falta('tipoVia', 'la compañía exige el tipo de vía (Calle, Avenida…) para emitir; elígelo del catálogo')
+      }
+    }
+  }
 
   // ── Obligatorios sin matiz ──
   for (const c of ['codigoVehiculo', 'matricula', 'garaje'] as const) {
@@ -70,6 +121,14 @@ export function revisarDatosAuto(d: Partial<DatosAuto>): Reparo[] {
   for (const c of ['fechaCarnet', 'fechaMatriculacion', 'fechaEfecto'] as const) {
     if (!texto(d[c])) falta(c)
     else if (!RE_FECHA.test(String(d[c]))) r.push({ campo: c, motivo: 'la fecha tiene que ser aaaa-mm-dd' })
+  }
+  // La fecha de efecto tiene DOS cepos en el vendor y ninguno se arregla después
+  // de pagar (`effectiveDate` es de solo lectura): ni anterior a hoy (13/09/2026,
+  // proyecto 40685666) ni a más de 90 días vista (11-12/09/2026). Se reprocha
+  // AQUÍ, gratis, con el mismo `campo` que la pantalla ya sabe pintar.
+  if (texto(d.fechaEfecto) && RE_FECHA.test(String(d.fechaEfecto))) {
+    const mal = motivoFechaEfectoInvalida(String(d.fechaEfecto), opciones.hoy)
+    if (mal) r.push({ campo: 'fechaEfecto', motivo: mal })
   }
 
   // Kilómetros: obligatorio para el vendor aunque parezca un detalle.

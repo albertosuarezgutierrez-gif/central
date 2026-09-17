@@ -60,7 +60,7 @@
  * que Alberto pensó para llevar encima, no para enterrar. Pasa a su propia
  * pestaña por la misma razón que ya sacó «Mis datos» de ahí abajo.
  */
-export const VISTAS_BOVEDA = ['seguros', 'hoja', 'recibos', 'siniestro', 'datos'] as const
+export const VISTAS_BOVEDA = ['seguros', 'hoja', 'recibos', 'siniestro', 'recordatorios', 'datos'] as const
 
 export type VistaBoveda = (typeof VISTAS_BOVEDA)[number]
 
@@ -122,10 +122,20 @@ export interface PestanaPortal {
  *
  * «Contactos» no es un panel, es la otra ruta (`/autorizaciones`). Va en la
  * misma barra porque para quien la usa es «otra sección», no «otra página web».
+ *
+ * 🚨 **«Seguros» y «Datos», no «Mis seguros» ni «Mis datos» (12/09/2026).**
+ * El h1 de la bóveda es «Mis <em>X</em>» — la pestaña activa da el nombre y el
+ * h1 da el «mis» (Alberto: «sigue apareciendo mis seguros dos veces»). Con la
+ * etiqueta completa, la pestaña de «seguros» y el h1 de esa misma pantalla
+ * decían la frase EXACTA una encima de la otra; en «hoja»/«recibos»/
+ * «siniestro» ya no pasaba porque la pestaña usa una palabra distinta a la del
+ * h1 («Mi QR» / «Mis QR», «Recibos» / «Mis recibos»). Se corrige quitando el
+ * posesivo de la pestaña en los dos únicos casos donde coincidía letra por
+ * letra, no añadiendo uno a las demás.
  */
 export function pestanasPortal(): PestanaPortal[] {
   return [
-    { vista: 'seguros', etiqueta: 'Mis seguros', href: '/boveda' },
+    { vista: 'seguros', etiqueta: 'Seguros', href: '/boveda' },
     // 09/09/2026: acceso directo a la hoja/QR de la nevera, antes enterrada
     // al final de «Mis seguros». «Mi QR» y no «Hoja» ni «QR de acceso»: es la
     // palabra que ya usa el propio botón de crearla, y no compite con
@@ -138,6 +148,15 @@ export function pestanasPortal(): PestanaPortal[] {
     // palabra en la barra: «Siniestros» + «Un parte» serían dos puertas para
     // lo mismo, que es exactamente lo que mató a «Mis pólizas».
     { vista: 'siniestro', etiqueta: 'Siniestros', href: '/boveda?vista=siniestro' },
+    // 13/09/2026: recordatorios propios (ITV, carnet, caldera, extintores…),
+    // sobre el mismo motor de `portal_obligacion` que las pólizas pero sin
+    // póliza detrás. Va justo después de «Siniestros» porque es la misma
+    // familia — «cosas con fecha» — y antes de «Contactos»/«Datos», que son
+    // sobre la relación y la persona, no sobre vencimientos.
+    // 🚨 NO «Avisos»: ya es la palabra de la campana de notificaciones
+    // (`Campana.tsx` → `/api/avisos`), que es otra cosa — lo que la
+    // correduría te avisa, no lo que tú te apuntas.
+    { vista: 'recordatorios', etiqueta: 'Recordatorios', href: '/boveda?vista=recordatorios' },
     // 08/09/2026: «Quién me ve» → «Contactos». Alberto pidió «una pestaña de
     // contactos» y la pantalla ya era eso: la gente a la que das acceso, la que
     // te lo da y la que invitas. La ruta NO cambia: los enlaces guardados a
@@ -146,7 +165,7 @@ export function pestanasPortal(): PestanaPortal[] {
     // 09/09/2026: «Mis datos», la última. Es sobre la persona, no sobre sus
     // seguros, y por eso va al final: quien entra viene a mirar pólizas, y su
     // ficha es lo que se toca una vez al mudarse o cambiar de número.
-    { vista: 'datos', etiqueta: 'Mis datos', href: '/boveda?vista=datos' },
+    { vista: 'datos', etiqueta: 'Datos', href: '/boveda?vista=datos' },
   ]
 }
 

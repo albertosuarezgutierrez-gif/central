@@ -35,6 +35,14 @@ export type ObjetoAsegurado = {
   detalle: string | null
   /** Por qué falta (o por qué está a medias). Va al `title` de la celda. */
   nota: string | null
+  /**
+   * El desglose ENTERO de coberturas cuando el objeto se describe por ellas (RC,
+   * comercio, otros) — a diferencia de `titulo`/`detalle`, que las resumen para
+   * caber en una celda. `null` en cualquier otro ramo o si no hay coberturas.
+   * Con ella la UI puede pintar un "tipo" corto y dejar el desglose completo
+   * detrás de un clic, sin tener que volver a parsear `titulo`.
+   */
+  coberturas?: string[] | null
 }
 
 /** Prefijo del cifrado del CRM de origen (AES-256-GCM, `v1:iv:cipher:tag`). */
@@ -108,7 +116,7 @@ export function objetoAsegurado(entrada: EntradaObjeto): ObjetoAsegurado {
   if (tipo === 'auto' || tipo === 'moto') return objetoVehiculo(d)
   if (tipo === 'hogar' || tipo === 'comunidad') return objetoInmueble(d, tipo)
   if (tipo === 'comercio') return objetoComercio(d, entrada.coberturas)
-  if (tipo === 'responsabilidad_civil') return objetoResponsabilidadCivil(entrada.coberturas)
+  if (tipo === 'responsabilidad_civil') return objetoResponsabilidadCivil(d, entrada.coberturas)
   if (RAMOS_DE_PERSONAS.has(tipo)) {
     return {
       estado: 'sin_objeto',
@@ -215,12 +223,34 @@ function objetoComercio(
  * Una RC no tiene bien: tiene MODALIDAD. Lo que la describe («de qué es») son
  * las coberturas contratadas — locativa, patronal/accidentes de trabajo,
  * explotación… y eso vive en `poliza_coberturas`, no en `datos_especificos`.
+ *
+ * Cuando la compañía no manda coberturas (el caso más frecuente en RC: es un
+ * ramo sin ficha del bien) el corredor puede anotar la modalidad A MANO desde
+ * la ficha de la póliza (`rc-modalidad.ts`, catálogo cerrado). Ese dato vive
+ * en `datos_especificos.rcModalidad`/`rcModalidadNota` y es MANUAL: se dice
+ * como tal en la nota, y nunca sustituye a lo que sí mande CIMA — si llegan
+ * coberturas reales, esas mandan siempre sobre lo escrito a mano.
  */
-function objetoResponsabilidadCivil(coberturas: EntradaObjeto['coberturas']): ObjetoAsegurado {
-  return porCoberturas(
+function objetoResponsabilidadCivil(
+  d: Record<string, unknown>,
+  coberturas: EntradaObjeto['coberturas'],
+): ObjetoAsegurado {
+  const porCiMa = porCoberturas(
     coberturas,
     'Una RC no asegura un bien: lo que la identifica son sus modalidades (coberturas contratadas).',
   )
+  if (porCiMa.estado === 'conocido') return porCiMa
+
+  const idManual = claro(d.rcModalidad)
+  if (idManual === null) return porCiMa
+  const titulo = claro(d.rcModalidadTitulo)
+  if (titulo === null) return porCiMa
+  return {
+    estado: 'conocido',
+    titulo,
+    detalle: null,
+    nota: 'Modalidad anotada a mano por el corredor: la compañía no ha mandado coberturas por CIMA.',
+  }
 }
 
 /** Describe una póliza por las coberturas contratadas, que es lo único que hay
@@ -240,6 +270,7 @@ function porCoberturas(coberturas: EntradaObjeto['coberturas'], nota: string | n
     titulo: visibles.join(', '),
     detalle: modalidades.length > visibles.length ? `+${modalidades.length - visibles.length} coberturas` : null,
     nota,
+    coberturas: modalidades,
   }
 }
 

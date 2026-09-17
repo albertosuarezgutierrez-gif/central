@@ -40,7 +40,60 @@ export type EstadoIngestaPuerto =
       rechazos: EntradaRechazada[]
       /** Ritmo de envío por compañía. `[]` = comprobado y no hay ninguna. */
       entidades: EntidadIngesta[]
+      /**
+       * Crudo EIAC en cuarentena CON incidencia (mig 0096/0097). `null` = no se
+       * pudo leer la tabla —p. ej. leyendo del Supabase de origen, que no la
+       * tiene—, que NO es «no hay nada pendiente».
+       */
+      crudo: CrudoPendiente | null
+      /**
+       * Campos que CIMA manda y el mapper no lee nunca (mig 0097). `null` =
+       * todavía sin medir: hace falta que pase un pull con ficheros. Un 0 aquí
+       * diría «lo leemos todo», que es la mentira que esta medición evita.
+       */
+      cobertura: CoberturaResumen | null
+      /**
+       * Caja negra del webhook de Codeoscopic (mig 0098). `null` = no se pudo
+       * leer. `capturaActiva:false` = la captura existe pero aún no ha entrado
+       * ningún cuerpo: tampoco autoriza a decir que el canal esté sano.
+       */
+      cajaNegra: CajaNegraCodeoscopic | null
+      /** Última corrida del cron CIMA. `null` = no consta ninguna. */
+      ultimoPull: UltimoPullPuerto | null
     }
+
+/** Crudo EIAC guardado por una incidencia y todavía sin reprocesar. */
+export type CrudoPendiente = {
+  pendientes: number
+  /** Filas que el TTL va a borrar pronto: la última oportunidad de reprocesarlas. */
+  purgaInminente: number
+  /** Antigüedad de la más vieja. `null` = no hay ninguna. */
+  masAntiguaHoras: number | null
+}
+
+/** Cuántos campos hoja manda CIMA y cuántos NO se leen jamás. */
+export type CoberturaResumen = {
+  hojas: number
+  hojasNuncaLeidas: number
+  /** Desglose por tipo EIAC, ordenado por lo que más se pierde. */
+  porTipo: Array<{ tipoObjeto: string; hojas: number; nuncaLeidas: number }>
+}
+
+/** Cuerpos que Codeoscopic nos mandó y rechazamos, capturados para poder mirarlos. */
+export type CajaNegraCodeoscopic = {
+  /** true = ha entrado al menos un cuerpo. false = capturado nada AÚN. */
+  capturaActiva: boolean
+  /** Cuerpos DISTINTOS (dedup por hash). La señal: si crece, no es un sondeo. */
+  cuerpos: number
+  /** POSTs totales, contando repeticiones. */
+  posts: number
+  /** Horas desde el último. `null` = no hay ninguno. */
+  horasDesdeUltimo: number | null
+  /** Filas sin cuerpo guardado (faltaba la clave de cifrado): no reprocesables. */
+  sinCuerpo: number
+}
+
+export type UltimoPullPuerto = { horas: number; procesados: number | null }
 
 /** Tipos de objeto EIAC que la ingesta persiste. El evento que lo confirma es
  *  `cima_<objeto>_persisted`; si un tipo lleva mucho sin aparecer, algo pasa. */
@@ -227,8 +280,124 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       }
     })
 
+    // 6. Las tres señales de la ingesta que el panel no tenía. Cada una en su
+    //    PROPIO try: estas tablas son nuevas (mig 0096-0098) y NO existen en el
+    //    Supabase de origen. Si una consulta las tumbara todas, el panel entero
+    //    caería a «no se sabe» y el corredor perdería de vista la cuarentena y
+    //    las huérfanas, que sí se leen. Fallo de lectura → `null` sólo en SU
+    //    bloque, y `null` significa «no se pudo mirar», nunca «no hay».
+    const leerONull = async <T>(fn: () => Promise<T>): Promise<T | null> => {
+      try {
+        return await fn()
+      } catch {
+        return null
+      }
+    }
+
+    const crudo = await leerONull<CrudoPendiente>(async () => {
+      const r = await db.$queryRawUnsafe<
+        Array<{ pendientes: bigint | null; purga: bigint | null; horas: number | null }>
+      >(`
+        SELECT COUNT(*) AS pendientes,
+               COUNT(*) FILTER (WHERE purgar_en <= now() + interval '14 days') AS purga,
+               EXTRACT(EPOCH FROM (now() - MIN(created_at))) / 3600 AS horas
+        FROM cima_cuarentena_crudo
+        WHERE reprocesado_at IS NULL AND con_incidencia
+      `)
+      const f = r[0]
+      return {
+        pendientes: Number(f?.pendientes ?? 0),
+        purgaInminente: Number(f?.purga ?? 0),
+        // Sin filas, MIN(created_at) es NULL: «no hay ninguna», no «0 horas».
+        masAntiguaHoras:
+          f?.horas === null || f?.horas === undefined ? null : Math.floor(Number(f.horas)),
+      }
+    })
+
+    const cobertura = await leerONull<CoberturaResumen | null>(async () => {
+      const r = await db.$queryRawUnsafe<
+        Array<{ tipo: string; hojas: bigint | null; nunca: bigint | null }>
+      >(`
+        SELECT tipo_objeto AS tipo,
+               COUNT(*) AS hojas,
+               COUNT(*) FILTER (WHERE ultima_vez_leido IS NULL) AS nunca
+        FROM cima_cobertura_campos
+        WHERE hoja
+        GROUP BY tipo_objeto
+      `)
+      // Cero filas = todavía no se ha medido NADA. Devolver `{hojas:0,
+      // nuncaLeidas:0}` diría «los leemos todos», que es justo la afirmación
+      // tranquilizadora y falsa que la mig 0097 existe para impedir.
+      if (r.length === 0) return null
+      const porTipo = r
+        .map(f => ({
+          tipoObjeto: f.tipo,
+          hojas: Number(f.hojas ?? 0),
+          nuncaLeidas: Number(f.nunca ?? 0),
+        }))
+        .sort((a, b) => b.nuncaLeidas - a.nuncaLeidas)
+      return {
+        hojas: porTipo.reduce((n, t) => n + t.hojas, 0),
+        hojasNuncaLeidas: porTipo.reduce((n, t) => n + t.nuncaLeidas, 0),
+        porTipo,
+      }
+    })
+
+    const cajaNegra = await leerONull<CajaNegraCodeoscopic>(async () => {
+      const r = await db.$queryRawUnsafe<
+        Array<{
+          cuerpos: bigint | null
+          posts: bigint | null
+          sin_cuerpo: bigint | null
+          horas: number | null
+        }>
+      >(`
+        SELECT COUNT(*) AS cuerpos,
+               COALESCE(SUM(veces), 0) AS posts,
+               COUNT(*) FILTER (WHERE body_cifrado = '') AS sin_cuerpo,
+               EXTRACT(EPOCH FROM (now() - MAX(ultima_vez))) / 3600 AS horas
+        FROM codeoscopic_cuarentena_crudo
+        WHERE reprocesado_at IS NULL
+      `)
+      const f = r[0]
+      const cuerpos = Number(f?.cuerpos ?? 0)
+      return {
+        capturaActiva: cuerpos > 0,
+        cuerpos,
+        posts: Number(f?.posts ?? 0),
+        horasDesdeUltimo:
+          f?.horas === null || f?.horas === undefined ? null : Math.floor(Number(f.horas)),
+        sinCuerpo: Number(f?.sin_cuerpo ?? 0),
+      }
+    })
+
+    const ultimoPull = await leerONull<UltimoPullPuerto | null>(async () => {
+      const r = await db.$queryRawUnsafe<
+        Array<{ horas: number | null; procesados: number | null }>
+      >(`
+        SELECT EXTRACT(EPOCH FROM (now() - occurred_at)) / 3600 AS horas,
+               NULLIF(payload->>'processed', '')::int AS procesados
+        FROM operational_events
+        WHERE event_name = 'cima_pull_completed'
+        ORDER BY occurred_at DESC
+        LIMIT 1
+      `)
+      const f = r[0]
+      if (!f || f.horas === null || f.horas === undefined) return null
+      return {
+        horas: Math.floor(Number(f.horas)),
+        // `null` = el evento no trajo el contador, no «procesó 0».
+        procesados:
+          f.procesados === null || f.procesados === undefined ? null : Number(f.procesados),
+      }
+    })
+
     const fila = huerfanasRaw[0]
     return {
+      crudo,
+      cobertura,
+      cajaNegra,
+      ultimoPull,
       estado: 'ok',
       entidades,
       cuarentena: cuarentenaRaw.map(f => ({

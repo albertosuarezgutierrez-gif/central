@@ -565,16 +565,57 @@ model Liquidacion {
 // `nombreCima` NULL = no se ha visto ninguna póliza de CIMA de esa compañía: no se
 // inventa. SQL en prisma/sql/2026-09-02_seguros_companias_dgs.sql.
 model CompaniaDgs {
-  codigoDgs   String   @id @map("codigo_dgs") @db.VarChar(16)
-  nombreComun String   @map("nombre_comun") @db.VarChar(255)
-  nombreCima  String?  @map("nombre_cima") @db.VarChar(255)
-  enCima      Boolean  @default(false) @map("en_cima")
-  activa      Boolean  @default(true)
-  notas       String?
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  codigoDgs        String    @id @map("codigo_dgs") @db.VarChar(16)
+  nombreComun      String    @map("nombre_comun") @db.VarChar(255)
+  nombreCima       String?   @map("nombre_cima") @db.VarChar(255)
+  enCima           Boolean   @default(false) @map("en_cima")
+  activa           Boolean   @default(true)
+  notas            String?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  // Contacto humano de la compañía (13/09/2026, minado de Gmail — solo metadatos
+  // de negocio, nunca credenciales). `contactoTelefono` es el DIRECTO de la
+  // persona; `telefonoSiniestros`/`telefonoAsistencia` (ya existían) son líneas
+  // de atención al cliente, cosa distinta.
+  telefonoSiniestros    String?   @map("telefono_siniestros")
+  telefonoAsistencia    String?   @map("telefono_asistencia")
+  telefonoFuente        String?   @map("telefono_fuente")
+  telefonoVerificadoEn  DateTime? @map("telefono_verificado_en") @db.Timestamptz(6)
+  whatsappSiniestros    String?   @map("whatsapp_siniestros")
+  horarioSiniestros     String?   @map("horario_siniestros")
+  claveMediador     String?   @map("clave_mediador")
+  contactos         CompaniaContacto[]
 
   @@map("companias_dgs")
+}
+
+enum AreaContacto {
+  comercial
+  siniestros
+  administracion
+  tecnico
+  general
+
+  @@map("area_contacto")
+}
+
+model CompaniaContacto {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companiaCodigoDgs   String        @map("compania_codigo_dgs") @db.VarChar(16)
+  compania            CompaniaDgs   @relation(fields: [companiaCodigoDgs], references: [codigoDgs])
+  nombre              String
+  cargo               String?
+  area                AreaContacto?
+  email               String?
+  telefono            String?
+  notas               String?
+  orden               Int           @default(0)
+  activo              Boolean       @default(true)
+  ultimoContactoEn    DateTime?     @map("ultimo_contacto_en") @db.Timestamptz(6)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("compania_contactos")
 }
 
 model Documento {
@@ -751,7 +792,18 @@ model PortalAutorizacion {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId           String    @map("correduria_id") @db.Uuid
   otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
-  autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
+  /// 🚨 NULLABLE desde el 04/09/2026: una autorización apunta **o** a una ficha
+  /// **o** a una IDENTIDAD del portal (alguien invitado que no es cliente de
+  /// nadie), y el CHECK `portal_autorizacion_destinatario_unico` obliga a que
+  /// sea exactamente una de las dos. Este modelo lo declaraba obligatorio, así
+  /// que la PRIMERA fila de invitado reventaba toda lectura de la tabla —
+  /// `/correduria/cliente/[id]` y el cron de avisos incluidos. Hoy son 0 filas:
+  /// era un fallo esperando a la primera invitación (visto en `code-review`,
+  /// 15/09/2026). Quien lo lea tiene que mirar el `null`, no darlo por hecho.
+  autorizadoClienteId    String?   @map("autorizado_cliente_id") @db.Uuid
+  /// La otra rama: la identidad del portal a la que se autorizó. Una de las dos
+  /// va con valor y la otra a `null`, nunca las dos.
+  autorizadoIdentidadId  String?   @map("autorizado_identidad_id") @db.Uuid
   alcance                String
   /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
   /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta;
@@ -948,4 +1000,92 @@ model PortalVistaCorredor {
 
   @@index([clienteId, creadoEn])
   @@map("portal_vista_corredor")
+}
+
+/// La PETICIÓN de acceso que un cliente le hace a otro desde el portal
+/// («papá, ¿me dejas ver tu seguro del coche?»). La escribe y la resuelve
+/// `apps/asegura-portal`; aquí se lee SOLO para avisar por correo a quien la ha
+/// recibido — desde el portal no hay a quién escribir, porque allí el
+/// destinatario es un hash.
+///
+/// 🚨 El estado NO es una columna: se deriva de las cuatro fechas con
+/// `estadoPeticion()` de `@central/module-seguros-portal`. Reimplementar esa
+/// derivación aquí es cómo se acaba avisando de una petición ya rechazada.
+model PortalPeticionAcceso {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  solicitanteIdentidadId String    @map("solicitante_identidad_id") @db.Uuid
+  /// Ficha de quien pide. `null` = no se resolvió a una ficha de la cartera, y
+  /// entonces el correo no dice quién es: no se inventa un nombre.
+  solicitanteClienteId   String?   @map("solicitante_cliente_id") @db.Uuid
+  /// Ficha a la que le piden acceso. `null` = el correo del destinatario no
+  /// casó con ninguna ficha; esa petición no tiene a quién avisar.
+  destinatarioClienteId  String?   @map("destinatario_cliente_id") @db.Uuid
+  alcance                String
+  creadaEn               DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  concedidaEn            DateTime? @map("concedida_en") @db.Timestamptz(6)
+  rechazadaEn            DateTime? @map("rechazada_en") @db.Timestamptz(6)
+  retiradaEn             DateTime? @map("retirada_en") @db.Timestamptz(6)
+
+  @@index([destinatarioClienteId])
+  @@map("portal_peticion_acceso")
+}
+
+/// Sello de los avisos de la intranet que YA se han mandado por correo
+/// (`seguros.portal_aviso_enviado`, DDL en
+/// `apps/asegura/prisma/sql/2026-09-15_portal_aviso_enviado.sql`).
+///
+/// El emisor no tiene cola: deriva lo que hay que avisar del mismo catálogo que
+/// pinta la campana del portal. Sin este sello, cada pasada del cron mandaría
+/// otra vez lo mismo. `clave` es `${tipo}:${id}` — nunca el título del aviso,
+/// que lleva matrícula, número de póliza o el nombre de un tercero.
+model PortalAvisoEnviado {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  clave        String
+  tipo         String
+  enviadoEn    DateTime @default(now()) @map("enviado_en") @db.Timestamptz(6)
+
+  @@unique([clienteId, clave], map: "portal_aviso_enviado_unico")
+  @@index([clienteId])
+  @@map("portal_aviso_enviado")
+}
+
+enum CanalRecaptacion {
+  whatsapp
+  email
+
+  @@map("canal_recaptacion")
+}
+
+enum EstadoEnvioRecaptacion {
+  enviado
+  enlace_abierto
+  abierto
+  pinchado
+
+  @@map("estado_envio_recaptacion")
+}
+
+/// Registro de cada intento de recaptación (WhatsApp manual o email por Resend)
+/// sobre un lead del volcado sin vencimiento. No hay tabla de "cola calculada":
+/// se deriva en cada GET (patrón `polizasSinRecibo()` de lib/cartera-impagados.ts).
+/// Esta tabla es solo el HISTORIAL de contactos, que alimenta el cooldown y el
+/// contador semanal. Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md.
+model RecaptacionEnvio {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String                 @map("correduria_id") @db.Uuid
+  clienteId        String                 @map("cliente_id") @db.Uuid
+  polizaId         String                 @map("poliza_id") @db.Uuid
+  canal            CanalRecaptacion
+  estado           EstadoEnvioRecaptacion
+  mensaje          String
+  resendMessageId  String?                @map("resend_message_id")
+  creadoPor        String                 @map("creado_por")
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime               @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  @@map("recaptacion_envios")
 }

@@ -1,5 +1,6 @@
 // ia.rest · COURIER-ROUTE v10 · fix nota_general
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
 async function reportarError(supabase: any, params: {
@@ -28,7 +29,7 @@ async function reportarError(supabase: any, params: {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: 'iarest' } });
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, claveSecreta(), { db: { schema: 'iarest' } });
   const inicio = Date.now();
   let restaurante_id: string | undefined;
 

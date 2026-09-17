@@ -50,10 +50,21 @@ export {
 } from './objeto.ts'
 
 export {
+  MODALIDADES_RC,
+  etiquetaModalidadRc,
+  tituloModalidadRc,
+  validarModalidadRc,
+  type ModalidadRc,
+  type ValidacionRc,
+} from './rc-modalidad.ts'
+
+export {
   saludIngesta,
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
   HORAS_RECHAZO_RECIENTE,
+  HORAS_PULL_MUDO,
+  DIAS_AVISO_PURGA,
   DIAS_RECORDATORIO_INGESTA,
   decidirAvisoIngesta,
   repartirHuerfanas,
@@ -64,6 +75,10 @@ export {
   type EntradaSalud,
   type FicheroEnCuarentena,
   type EntradaRechazada,
+  type CrudoPendiente,
+  type CoberturaResumen,
+  type CajaNegraCodeoscopic,
+  type UltimoPullIngesta,
   type MotivoAviso,
   type DecisionAviso,
   type PolizaHuerfana,
@@ -404,6 +419,28 @@ export {
 } from './filtro-cartera.ts'
 
 export {
+  ACTIVIDADES,
+  PASOS_EMBUDO,
+  VENTANAS_ACTIVIDAD,
+  DIAS_ACTIVIDAD_DEFECTO,
+  POR_PAGINA_ACTIVIDAD,
+  POR_PAGINA_ACTIVIDAD_MAX,
+  definicionActividad,
+  etiquetaActividad,
+  riesgoActividad,
+  parseFiltroActividad,
+  mayorCaidaEmbudo,
+  nuevosDesde,
+  type OrigenActividad,
+  type TipoActividad,
+  type EventoActividad,
+  type QuienActividad,
+  type FiltroActividad,
+  type EmbudoPortal,
+  type PasoEmbudo,
+} from './actividad.ts'
+
+export {
   planBackfillDni,
   tokensNombre,
   type FichaDni,
@@ -521,3 +558,16 @@ export {
 } from './normas.ts'
 export type { NormaCitable } from './normas.ts'
 export { nombreDePila } from './nombre-de-pila.ts'
+
+export { COOLDOWN_DIAS, enCooldown, textoBaseRecaptacionWhatsapp, textoBaseRecaptacionEmail } from './recaptacion.ts'
+export type { EnvioRecienteRecaptacion, PersonalizacionRecaptacion } from './recaptacion.ts'
+
+export {
+  AREAS_CONTACTO,
+  areaContacto,
+  etiquetaArea,
+  ordenarContactos,
+  contactoDestacado,
+  type AreaContacto,
+  type ContactoCompania,
+} from './compania-contactos.ts'

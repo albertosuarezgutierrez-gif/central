@@ -1,33 +1,14 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const SUPER_PIN = "9999";
-
 // 🧪 PILOTO de la migración a las claves nuevas de Supabase (`sb_secret_…`), ver
 // docs/ROTACION-SERVICE-ROLE.md. Esta función es el conejillo de indias a propósito:
 // solo lee, está detrás de un PIN y se abre en el navegador, así que si la clave nueva
 // NO sirviera contra PostgREST se ve al instante y no se cae nada que importe.
-//
-// Prefiere la clave nueva y cae a la legacy si aún no estuviera: mientras las dos
-// convivan esto es reversible, y el día que se pulse «Disable JWT-based API keys» las
-// 43 funciones de ia-rest tienen que estar ya en la primera rama.
-//
-// OJO al copiar esto a las demás: aquí NO hay problema de cabeceras porque el cliente
-// habla con PostgREST. En las funciones que INVOCAN a otras funciones con
-// `Authorization: Bearer <service_role>` la clave nueva no vale — no es un JWT — y hay
-// que pasarla en `apikey` con `verify_jwt=false` en la función destino.
-function claveSecreta(): string {
-  const nuevas = Deno.env.get("SUPABASE_SECRET_KEYS");
-  if (nuevas) {
-    try {
-      const porNombre = JSON.parse(nuevas) as Record<string, string>;
-      if (porNombre["default"]) return porNombre["default"];
-    } catch { /* JSON ilegible: cae a la legacy en vez de tumbar la función */ }
-  }
-  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (legacy) return legacy;
-  throw new Error("Sin clave de servicio: ni SUPABASE_SECRET_KEYS['default'] ni SUPABASE_SERVICE_ROLE_KEY");
-}
+// `origen_clave` en la respuesta dice CUÁL de las dos se usó: sin ese dato un 200 no
+// demuestra que la clave nueva funcione (podría estar cayendo a la legacy).
+import { claveSecreta, origenClaveSecreta } from "../_shared/clave-supabase.ts";
+
+const SUPER_PIN = "9999";
 
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
@@ -48,7 +29,9 @@ Deno.serve(async (req: Request) => {
     const calidad_media = total>0?(rows.reduce((s,r)=>s+(r.calidad??0),0)/total).toFixed(2):"0.00";
     return new Response(JSON.stringify({
       stats:a.data??[], recientes:b.data??[], hitos:d.data??[],
-      resumen:{total,corregidos,calidad_media,clientes_activos:e.count??0}
+      resumen:{total,corregidos,calidad_media,clientes_activos:e.count??0},
+      origen_clave: origenClaveSecreta(),
+      error_postgrest: [a,b,c,d,e].map(r=>r.error?.message).find(Boolean) ?? null
     }),{headers:{"Content-Type":"application/json"}});
   }
   return new Response(dashboardPage(pin),{headers:{"Content-Type":"text/html; charset=utf-8"}});
@@ -60,7 +43,7 @@ function authPage():string{
 
 function dashboardPage(pin:string):string{
   const api="?pin="+pin+"&api=1";
-  const css='<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#14110E;color:#F6F1E7;font-family:system-ui;min-height:100vh}header{background:#1F1A15;border-bottom:1px solid #3A332C;padding:16px 24px;display:flex;align-items:center;gap:12px}.logo{font-style:italic;font-size:22px}.badge{background:#D9442B;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.08em}.main{padding:24px;max-width:1100px;margin:0 auto}h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B5F52;margin:28px 0 12px}h2:first-of-type{margin-top:0}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}.kpi{background:#1F1A15;border:1px solid #3A332C;border-radius:12px;padding:20px}.kpi .val{font-style:italic;font-size:34px;color:#F6F1E7;line-height:1}.kpi .lbl{font-size:10px;color:#6B5F52;margin-top:6px;text-transform:uppercase;letter-spacing:.06em}.kpi.g .val{color:#3F7D44}.kpi.r .val{color:#D9442B}table{width:100%;border-collapse:collapse;font-size:13px}th{color:#6B5F52;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:8px 12px;border-bottom:1px solid #3A332C;text-align:left}td{padding:9px 12px;border-bottom:1px solid #1F1A15;color:#F6F1E7;vertical-align:middle}tr:hover td{background:#1F1A15}.tbl{background:#1F1A15;border:1px solid #3A332C;border-radius:12px;overflow:hidden}.empty{text-align:center;padding:40px;color:#3A332C}.refresh{margin-left:auto;background:transparent;border:1px solid #3A332C;color:#6B5F52;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer}.refresh:hover{border-color:#D9442B;color:#D9442B}.ts{font-size:11px;color:#6B5F52}.lat{font-family:monospace;font-size:11px;color:#6B5F52}.raw{font-size:12px;color:#6B5F52;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mesa{font-family:monospace;font-size:12px;background:#14110E;border:1px solid #3A332C;padding:2px 5px;border-radius:4px;color:#D9442B}.intent{font-size:11px;background:#14110E;border:1px solid #3A332C;padding:2px 5px;border-radius:4px;color:#E8A33B}.hito{background:#1F1A15;border-left:3px solid #D9442B;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:8px;font-size:13px;color:#F6F1E7}.hito .ht{font-size:11px;color:#6B5F52;margin-top:4px}.hito.done{border-left-color:#3F7D44}.bar-bg{background:#14110E;border-radius:4px;height:5px;margin-top:4px;overflow:hidden}.bar{height:100%;background:#D9442B;border-radius:4px}.prog-wrap{background:#1F1A15;border:1px solid #3A332C;border-radius:12px;padding:20px;margin-bottom:12px}.prog-label{font-size:11px;color:#6B5F52;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}.prog-val{font-style:italic;font-size:28px;color:#F6F1E7;line-height:1;margin-bottom:4px}</style>';
+  const css='<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#14110E;color:#F6F1E7;font-family:system-ui;min-height:100vh}header{background:#1F1A15;border-bottom:1px solid #3A332C;padding:16px 24px;display:flex;align-items:center;gap:12px}.logo{font-style:italic;font-size:22px}.badge{background:#D9442B;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.08em}.main{padding:24px;max-width:1100px;margin:0 auto}h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B5F52;margin:28px 0 12px}h2:first-of-type{margin-top:0}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}.kpi{background:#1F1A15;border:1px solid #3A332C;border-radius:12px;padding:20px}.kpi .val{font-style:italic;font-size:34px;color:#F6F1E7;line-height:1}.kpi .lbl{font-size:10px;color:#6B5F52;margin-top:6px;text-transform:uppercase;letter-spacing:.06em}.kpi.g .val{color:#3F7D44}.kpi.r .val{color:#D9442B}table{width:100%;border-collapse:collapse;font-size:13px}th{color:#6B5F52;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:8px 12px;border-bottom:1px solid #3A332C;text-align:left}td{padding:9px 12px;border-bottom:1px solid #1F1A15;color:#F6F1E7;vertical-align:middle}tr:hover td{background:#1F1A15}.tbl{background:#1F1A15;border:1px solid #3A332C;border-radius:12px;overflow:hidden}.empty{text-align:center;padding:40px;color:#3A332C}.refresh{margin-left:auto;background:transparent;border:1px solid #3A332C;color:#6B5F52;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer}.refresh:hover{border-color:#D9442B;color:#D9442B}.ts{font-size:11px;color:#6B5F52}.lat{font-family:monospace;font-size:11px;color:#6B5F52}.raw{font-size:12px;color:#6B5F52;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mesa{font-family:monospace;font-size:12px;background:#14110E;border:1px solid #3A332C;padding:2px 5px;border-radius:4px;color:#D9442B}.intent{font-size:11px;background:#14110E;border:1px solid #3A332C;padding:2px 5px;border-radius:4px;color:#E8A33B}.hito{background:#1F1A15;border-left:3px solid #D9442B;border-radius:0 8px 8px 0;padding:14px 16px;margin-bottom:8px;font-size:13px;color:#F6F1E7}.hito .ht{font-size:11px;color:#6B5F52;margin-top:4px}.hito.done{border-left-color:#3F7D44}.bar-bg{background:#14110E;border-radius:4px;height:5px;margin-top:4px;overflow:hidden}.bar{height:100%;background:#D9442B;border-radius:4px}.prog-wrap{background:#1F1A15;border:1px solid #3A332C;border-radius:12px;padding:20px;margin-bottom:12px}.prog-label{font-size:11px;color:#6B5F52;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}.prog-val{font-style:italic;font-size:28px;color:#F6F1E7;line-height:1;margin-bottom:4px}.aviso{background:#2a1a1a;border:1px solid #D9442B;color:#F6F1E7;border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;line-height:1.5}.aviso code{color:#E8A33B;font-size:12px}</style>';
   const js='var API="'+api+'";'+
   'async function load(){try{var r=await fetch(API);var d=await r.json();render(d);}catch(e){document.getElementById("app").innerHTML="<div class=\\"empty\\">Error</div>";}}'+
   'function fmt(n){return n==null?"—":Number(n).toLocaleString("es-ES");}'+
@@ -68,6 +51,9 @@ function dashboardPage(pin:string):string{
   'function cp(c){var m={5:{b:"#1a3320",t:"#3F7D44"},4:{b:"#1a2a33",t:"#4A9EC4"},3:{b:"#2a2a1a",t:"#E8A33B"},2:{b:"#2a1a1a",t:"#D9442B"},1:{b:"#2a1a1a",t:"#D9442B"}};var x=m[Math.min(Math.max(c,1),5)];return "<span style=\\"background:"+x.b+";color:"+x.t+";padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600\\">"+"★".repeat(c)+"</span>";}'+
   'function render(d){'+
   '  var res=d.resumen,s=d.stats,rec=d.recientes,hitos=d.hitos||[];'+
+  // Si PostgREST rechazó alguna consulta, se DICE. Sin esto, un error salía por pantalla como
+  // una sección vacía (el `?? []` de arriba) y era indistinguible de «no hay datos todavía».
+  '  if(d.error_postgrest){h+="<div class=\\"aviso\\">⚠️ Una consulta falló, así que hay secciones que NO están vacías: no se han podido leer.<br><code>"+String(d.error_postgrest).replace(/</g,"&lt;")+"</code></div>";}'+
   '  var pctB=res.total>0?(((res.total-res.corregidos)/res.total)*100).toFixed(1):0;'+
   '  var pct50=Math.min(Math.round((res.clientes_activos/50)*100),100);'+
   '  var h="";'+

@@ -23,6 +23,7 @@ import { tgSend } from '@central/core-telegram'
 import {
   mensajeSugerencia,
   normalizarSugerencia,
+  PREFIJO_HISTORIAL_SUGERENCIA,
   resultadoSugerencia,
   type ContextoSugerencia,
   type ResultadoSugerencia,
@@ -75,7 +76,7 @@ async function anotarEnFicha(identidadId: string, texto: string): Promise<void> 
     const res = await fetch(`${base.replace(/\/+$/, '')}/api/portal/nota`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${secret}` },
-      body: JSON.stringify({ identidadId, texto: `💡 Sugerencia del cliente desde el portal:\n${texto}` }),
+      body: JSON.stringify({ identidadId, texto: `${PREFIJO_HISTORIAL_SUGERENCIA}\n${texto}` }),
       cache: 'no-store',
       signal: control.signal,
     })

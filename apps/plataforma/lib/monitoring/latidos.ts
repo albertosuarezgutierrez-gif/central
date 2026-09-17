@@ -394,6 +394,65 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     nota: 'El cursor de correo no avanza. Revisa el cron correo-triaje en Vercel (¿IMAP/auth caídos?).',
   },
   {
+    id: 'smoobu_sync',
+    vigiladoDesde: '2026-09-12',
+    etiqueta: '🔄 Sincronización Smoobu de sivra (reservas/cancelaciones, diario 05:00·05:15)',
+    // Diario → 30 h, el umbral estándar de los diarios: tolera un día saltado y caza dos.
+    maxHoras: 30,
+    nota:
+      '🚨 Este vigía nació de una avería que YA existía sin él: el 401 de Smoobu de septiembre de ' +
+      '2026 (Api-Key legacy deprecada, migración a HMAC) dejó este sync roto varios días — y aunque ' +
+      'escribe su latido desde el 31/07/2026 (landmine de esa fecha), NADIE lo vigilaba: no estaba en ' +
+      'este registro. `incomes` alimenta la intranet de limpieza de Vanesa (/invitado/limpieza), el ' +
+      'calendario, el pricing y el agente que responde a los huéspedes — un sync mudo los deja a TODOS ' +
+      'trabajando con la reserva de ayer sin que nada lo diga. Lee el `detalle`: «inicio de pasada» ' +
+      'sin pasar a ok=true es que arrancó y murió a medias (mira si Smoobu devuelve 401/403 en los ' +
+      'logs: la clave/secreto de `pms_connections` puede estar mal o revocada). ' +
+      'Huella: agente_latidos.smoobu_sync.',
+  },
+  {
+    id: 'sivra_mensajes_huesped',
+    vigiladoDesde: '2026-09-12',
+    etiqueta: '💬 Agente que responde a los huéspedes (Smoobu, cron cada 3 min)',
+    // Cada 3 min → 2 h son 40 pasadas perdidas: no es un tropiezo, está muda.
+    maxHoras: 2,
+    nota:
+      '🚨 Igual que `smoobu_sync`: este cron usa las MISMAS credenciales de `pms_connections` y no ' +
+      'tenía NINGÚN vigilante hasta el incidente del 401 de septiembre de 2026 — durante esos días un ' +
+      'huésped que preguntaba algo por el chat de Booking/Airbnb no recibía respuesta y nada lo avisaba. ' +
+      'Lee el `detalle`: «Missing SMOOBU_API_KEY» o un error con «401/403» es la credencial de Smoobu; ' +
+      '«error:» con otro texto es el propio agente (IA, contexto, guía del piso). ' +
+      '⚠️ «sin TELEGRAM_BOT_TOKEN» significa que el agente está DELIBERADAMENTE en espera (no hay ' +
+      'forma de proponer por Telegram): revisa si es esperado antes de tratarlo como avería. ' +
+      'Huella: agente_latidos.sivra_mensajes_huesped.',
+  },
+  {
+    id: 'sivra_limpiadoras_auto',
+    vigiladoDesde: '2026-09-15',
+    etiqueta: '🧹 Calendario de limpiezas de sivra (Smoobu, cron diario 05:00)',
+    // Diario → 30 h, el umbral estándar de los diarios: tolera un día saltado y caza dos.
+    maxHoras: 30,
+    nota:
+      '🚨 Igual que `smoobu_sync` y `sivra_mensajes_huesped`, pero un piso más abajo: este cron ' +
+      'llama a Smoobu directo (no pasa por `smoobu-sync.ts`) para crear las filas de ' +
+      '`cleaning_sessions` — el calendario que ve Vanesa. Hasta el 15/09/2026 no tenía NINGÚN ' +
+      'vigilante: un fallo de Smoobu en /api/reservations dejaba el día sin sesiones creadas y ' +
+      'nadie se enteraba hasta que Vanesa llegaba a un piso sin tarea. Lee el `detalle`: un error ' +
+      'con «401/403» es la credencial de Smoobu; «Smoobu departures <status>» es el propio endpoint. ' +
+      'Huella: agente_latidos.sivra_limpiadoras_auto.',
+  },
+  {
+    id: 'sivra_limpiadoras_alerta_ventana',
+    vigiladoDesde: '2026-09-15',
+    etiqueta: '⏱️ Aviso de ventana de limpieza ajustada (Smoobu, cron diario 08:00)',
+    maxHoras: 30,
+    nota:
+      '🚨 Hasta el 15/09/2026 esta ruta ni siquiera comprobaba `res.ok`: un 401 de Smoobu dejaba ' +
+      '`bookings` vacío por el valor por defecto de la desestructuración, y la ruta respondía ' +
+      '`{ok:true, alertas:[]}` — un fallo del canal disfrazado de «no hay ventanas ajustadas». ' +
+      'Huella: agente_latidos.sivra_limpiadoras_alerta_ventana.',
+  },
+  {
     id: 'ialimp_pms',
     vigiladoDesde: '2026-07-31',
     etiqueta: '🧹 Sincronización del PMS de ialimp (Smoobu/iCal, cron cada 10 min)',
@@ -754,10 +813,11 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
     // Semanal → 8 días: una semana perdida salta.
     maxHoras: 192,
     nota:
-      'El cron que lee Search Console, Serper y PostHog para el agente SEO de grupoasegura.es no ha ' +
+      'El cron que lee Search Console y PostHog para el agente SEO de grupoasegura.es no ha ' +
       'dejado huella, o la dejó con ok=false. `ok=false` con detalle «no_configurado» = falta un ' +
-      'secreto (GSC_SA_*, POSTHOG_PERSONAL_API_KEY, SERPER_API_KEY): el cron corre pero el agente ' +
-      'sigue a ciegas en esa fuente. Sin latido: el dispatcher no lo dispara. Huella: agente_latidos.seo_correduria.',
+      'secreto (GSC_SA_*, POSTHOG_PERSONAL_API_KEY): el cron corre pero el agente ' +
+      'sigue a ciegas en esa fuente. Sin latido: el dispatcher no lo dispara. Huella: agente_latidos.seo_correduria. ' +
+      '(Serper, tercera fuente hasta el 14/09/2026, retirada — ver docs/CONTEXTO-SESIONES.md.)',
   },
   {
     id: 'psd2_health_check',

@@ -150,9 +150,11 @@ el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la
 - **NUNCA fabriques `pricing_decisiones` a mano** (sería simular una decisión que nunca pasó por los raíles
   reales — peor que dejarlo en blanco). Con la vía de plataforma + `ALERTA_TOKEN` ya no deberías quedarte
   bloqueado; si aun así el Paso 4 falla **dos ciclos seguidos**, no lo dejes solo como «pendiente» en la
-  bitácora: avisa por Telegram (`POST {PLATAFORMA_URL}/api/internal/alerta`, Bearer `ALERTA_TOKEN`, mismo
-  patrón que `psd2-health-check`) — el bloqueo silencioso repetido es peor que una alerta. **Antes de
-  escalar, comprueba el diagnóstico de 3 patas del 27/07:** (1) ¿el dominio que llamas es el de plataforma?
+  bitácora: avisa por Telegram:
+  ```
+  bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "⚠️ pricing-agente: Paso 4 falla dos ciclos seguidos. Último error: [causa]. Revisar en plataforma." }'
+  ```
+  El bloqueo silencioso repetido es peor que una alerta. **Antes de escalar, comprueba el diagnóstico de 3 patas del 27/07:** (1) ¿el dominio que llamas es el de plataforma?
   (2) ¿mandas `ALERTA_TOKEN` por CABECERA? (es header-only a propósito) (3) ¿el 401 viene del endpoint o el
   403 del proxy? — son fallos distintos con arreglos distintos.
 - **El Paso 2 (mercado) también puede hacerse por Supabase** si el endpoint fallara: replica el

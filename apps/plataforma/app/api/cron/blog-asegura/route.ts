@@ -22,7 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { chatConDirector } from '@/lib/pasarela'
-import { tgAviso } from '@/lib/telegram'
+import { tgAviso, tgAvisoBotones } from '@/lib/telegram'
 import { elegirTema, temasRestantes } from '@/lib/correduria/blog-temas'
 import {
   construirPrompt,
@@ -85,21 +85,24 @@ async function prepararRama(token: string): Promise<void> {
  */
 async function abrirPr(
   token: string, titulo: string, cuerpo: string,
-): Promise<{ url: string } | { error: string }> {
+): Promise<{ url: string; numero: number } | { error: string }> {
   const abiertos = await fetch(
     `${API}/pulls?state=open&head=${REPO.split('/')[0]}:${RAMA}`,
     { headers: cabeceras(token) },
   )
   if (abiertos.ok) {
-    const lista = (await abiertos.json()) as { html_url: string }[]
-    if (lista.length > 0) return { url: lista[0].html_url }
+    const lista = (await abiertos.json()) as { html_url: string; number: number }[]
+    if (lista.length > 0) return { url: lista[0].html_url, numero: lista[0].number }
   }
   const r = await fetch(`${API}/pulls`, {
     method: 'POST',
     headers: cabeceras(token),
     body: JSON.stringify({ title: titulo, head: RAMA, base: 'main', body: cuerpo, draft: false }),
   })
-  if (r.ok) return { url: ((await r.json()) as { html_url: string }).html_url }
+  if (r.ok) {
+    const creado = (await r.json()) as { html_url: string; number: number }
+    return { url: creado.html_url, numero: creado.number }
+  }
   const detalle = (await r.text()).slice(0, 200)
   if (r.status === 403 || r.status === 404) {
     return { error: `GitHub ${r.status}: el token no puede abrir PRs en el repo (mira «Pull requests: Read and write» en el PAT). El artículo está escrito en la rama ${RAMA}.` }
@@ -222,7 +225,7 @@ export async function GET(req: NextRequest) {
     // Sin PR el artículo NO se puede aprobar desde `/correduria` (esa pantalla
     // lista PRs). Así que esto no es «listo con un detalle»: es un fallo, y va
     // por el interruptor de fallos con el motivo delante.
-    if (!url) {
+    if (!url || !('numero' in pr)) {
       await tgAviso(
         'correduria.blog-fallido',
         `📝 Blog ASegura: he escrito «${generado.h1}» y lo he dejado en la rama \`${RAMA}\`, pero NO he podido abrir el PR.\n\n${'error' in pr ? pr.error : ''}\n\nHasta que exista el PR no sale en /correduria → Redes.`,
@@ -230,15 +233,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, slug: tema.slug, motivo: 'error' in pr ? pr.error : 'sin PR' }, { status: 502 })
     }
 
-    await tgAviso(
+    // Botones ✅/🗑️ que mezclan o cierran el PR directamente desde este chat
+    // (prefijo `ablg`, webhook compartido de Telegram) — reutilizan la MISMA
+    // `decidirBlogPr` que la pantalla de /correduria, así que el resultado es
+    // idéntico se apruebe desde donde se apruebe. Sigue sin publicarse nada
+    // solo: el clic sigue siendo de Alberto, solo que puede darlo aquí.
+    await tgAvisoBotones(
       'correduria.blog-listo',
       `📝 <b>Blog ASegura — artículo listo para revisar</b>\n\n` +
         `<b>${generado.h1}</b>\n${generado.resumen}\n\n` +
         `Consulta: «${tema.consulta}»\n` +
-        `PR: ${url}\n` +
-        `Apruébalo en /correduria → Redes. Aquí no se publica nada solo.\n\n` +
+        `PR: ${url}\n\n` +
         (quedan <= 1 ? `⚠️ Quedan ${quedan} temas en la cola.` : `Quedan ${quedan} temas.`),
-      { html: true },
+      [[
+        { texto: '✅ Publicar', callback: `ablg_ok:${pr.numero}` },
+        { texto: '🗑️ Descartar', callback: `ablg_no:${pr.numero}` },
+      ]],
     ).catch(() => {})
 
     return NextResponse.json({ ok: true, slug: tema.slug, pr: url, quedan })

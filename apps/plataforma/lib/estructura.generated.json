@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-09T15:47:05Z",
+  "generadoEn": "2026-09-16T17:09:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -26,6 +26,11 @@
       "id": "core-catastro",
       "tipo": "core",
       "npm": "@central/core-catastro"
+    },
+    {
+      "id": "core-consent",
+      "tipo": "core",
+      "npm": "@central/core-consent"
     },
     {
       "id": "core-email",
@@ -71,6 +76,11 @@
       "id": "core-telegram",
       "tipo": "core",
       "npm": "@central/core-telegram"
+    },
+    {
+      "id": "core-vehiculos",
+      "tipo": "core",
+      "npm": "@central/core-vehiculos"
     },
     {
       "id": "module-agenda",
@@ -352,7 +362,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "usado",
@@ -380,7 +390,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 36
+        "evidencias": 37
       },
       "rrhh": {
         "estado": "usado",
@@ -406,7 +416,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "asegura-portal": {
         "estado": "usado",
@@ -449,6 +459,60 @@
         "evidencias": 0
       }
     },
+    "core-consent": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "housesevillana": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "core-email": {
       "almacen": {
         "estado": "no",
@@ -460,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
@@ -733,8 +797,8 @@
         "evidencias": 0
       },
       "asegura-portal": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "asegura-web": {
         "estado": "no",
@@ -920,11 +984,65 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 11
       },
       "rrhh": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-vehiculos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -2080,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 44
+        "evidencias": 61
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 63
+        "evidencias": 71
       },
       "asegura-web": {
         "estado": "usado",
@@ -2108,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 45
+        "evidencias": 56
       },
       "rrhh": {
         "estado": "no",
@@ -2134,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 18
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2188,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 19
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 59
       },
       "asegura-web": {
         "estado": "usado",
@@ -2730,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 6
       },
       "asegura-portal": {
         "presente": false,
@@ -3597,8 +3715,8 @@
         "evidencias": 0
       },
       "asegura-portal": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 2
       },
       "asegura-web": {
         "presente": false,
@@ -3751,6 +3869,7 @@
     "core-catastro": [
       "module-subastas"
     ],
+    "core-consent": [],
     "core-email": [],
     "core-firma": [],
     "core-fiscal": [],
@@ -3760,6 +3879,7 @@
     "core-receipts": [],
     "core-storage": [],
     "core-telegram": [],
+    "core-vehiculos": [],
     "module-agenda": [],
     "module-alquiler": [
       "module-intercompany",
@@ -3850,13 +3970,16 @@
       "/api/cartera/cliente/[clienteId]/hogar-nuevo",
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
+      "/api/cron/avisos-intranet",
       "/api/cron/avisos-vencimiento",
+      "/api/operador/actividad",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
       "/api/operador/cartera",
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
+      "/api/operador/cliente/dni",
       "/api/operador/cliente/historial",
       "/api/operador/cliente/portal",
       "/api/operador/cliente/portal/vista",
@@ -3867,9 +3990,11 @@
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/hogar-nuevo",
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/moto-nuevo",
+      "/api/operador/codeoscopic/oferta",
       "/api/operador/codeoscopic/precalificar",
       "/api/operador/codeoscopic/precalificar-auto-nuevo",
       "/api/operador/codeoscopic/precalificar-decesos-nuevo",
@@ -3877,11 +4002,16 @@
       "/api/operador/codeoscopic/precalificar-moto-nuevo",
       "/api/operador/codeoscopic/precalificar-salud-nuevo",
       "/api/operador/codeoscopic/precalificar-vida-nuevo",
+      "/api/operador/codeoscopic/proyecto",
       "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
+      "/api/operador/codeoscopic/tarificacion",
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
+      "/api/operador/companias",
+      "/api/operador/companias/contacto/[id]",
+      "/api/operador/declaradas-vencer",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
@@ -3890,19 +4020,29 @@
       "/api/operador/impagados",
       "/api/operador/ingesta",
       "/api/operador/leads",
+      "/api/operador/leads-web",
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza/emitida",
       "/api/operador/poliza/intervinientes",
+      "/api/operador/recaptacion",
+      "/api/operador/recaptacion/email",
+      "/api/operador/recaptacion/email-lote",
+      "/api/operador/recaptacion/whatsapp",
       "/api/operador/resumen",
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
       "/api/operador/siniestros-nuevos",
       "/api/operador/supresiones",
+      "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
-      "/api/portal/nota"
+      "/api/portal/documento",
+      "/api/portal/nota",
+      "/api/publico/recaptacion/baja",
+      "/api/webhooks/codeoscopic",
+      "/api/webhooks/resend"
     ],
     "asegura-portal": [
       "/api/acceso/solicitar",
@@ -3912,6 +4052,7 @@
       "/api/avisos",
       "/api/catastro",
       "/api/catastro/sugerir",
+      "/api/cron/avisos-push",
       "/api/hojas",
       "/api/hojas/[id]",
       "/api/invitaciones",
@@ -3923,14 +4064,21 @@
       "/api/peticiones/[id]",
       "/api/polizas",
       "/api/polizas/[id]",
+      "/api/push/desuscribir",
+      "/api/push/suscribir",
+      "/api/recordatorios",
+      "/api/recordatorios/[id]",
       "/api/salir",
       "/api/siniestros",
       "/api/siniestros/[id]/adjuntos",
       "/api/siniestros/[id]/adjuntos/[documentoId]",
       "/api/sugerencia",
+      "/api/sugerencias",
+      "/api/sugerencias/pedir",
       "/api/supresion"
     ],
     "asegura-web": [
+      "/api/consentimiento",
       "/api/lead"
     ],
     "housesevillana": [],
@@ -4030,6 +4178,7 @@
       "/api/comanda/[id]/pedir-cuenta",
       "/api/comanda/[id]/ticket-alias",
       "/api/comandas/activas",
+      "/api/consentimiento",
       "/api/contrato/aceptar",
       "/api/contrato/firmar",
       "/api/contrato/publico",
@@ -4732,6 +4881,7 @@
       "/api/contable/chat",
       "/api/contable/feedback",
       "/api/correduria",
+      "/api/correduria/actividad",
       "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
       "/api/correduria/blog",
@@ -4740,22 +4890,34 @@
       "/api/correduria/cartera-lista",
       "/api/correduria/catastro",
       "/api/correduria/cliente",
+      "/api/correduria/cliente/[id]/dni-codigo",
+      "/api/correduria/cliente/[id]/dni-revelar",
       "/api/correduria/cliente/contactos",
       "/api/correduria/cliente/portal",
       "/api/correduria/cliente/portal/vista",
       "/api/correduria/cliente/relaciones",
       "/api/correduria/cliente/relaciones/aviso",
       "/api/correduria/clientes",
+      "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
+      "/api/correduria/companias",
+      "/api/correduria/companias/contactado",
+      "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
       "/api/correduria/documentos",
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
       "/api/correduria/impagados",
+      "/api/correduria/ingesta",
       "/api/correduria/intervinientes",
       "/api/correduria/leads",
+      "/api/correduria/leads-web",
       "/api/correduria/partes",
+      "/api/correduria/poliza",
+      "/api/correduria/recaptacion",
+      "/api/correduria/recaptacion/email",
+      "/api/correduria/recaptacion/whatsapp",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
       "/api/correduria/supresiones",
@@ -4791,9 +4953,11 @@
       "/api/cron/pre-renta",
       "/api/cron/prevision-pisos",
       "/api/cron/psd2-sync",
+      "/api/cron/recaptacion-email-lote",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/cron/seo-correduria",
+      "/api/cron/seo-correduria-agente",
       "/api/cron/ses-latido",
       "/api/cron/sivra-extras-impago",
       "/api/cron/subastas-avisos",
@@ -4845,16 +5009,22 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
+      "/api/internal/grafo-codigo",
+      "/api/internal/grafo-codigo/embeddings",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
+      "/api/internal/memoria",
+      "/api/internal/memoria/embeddings",
       "/api/internal/reclamar-reparacion",
       "/api/internal/reparacion-resultado",
+      "/api/internal/seo-correduria/semana",
       "/api/inversion/underwrite",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/operador/agente-consulta",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
+      "/api/publico/correduria/consentimiento",
       "/api/publico/correduria/lead",
       "/api/publico/disponibilidad",
       "/api/sivra/conciliar-booking",
@@ -5206,6 +5376,7 @@
       "seguros.codeoscopic_product_forms",
       "seguros.codeoscopic_projects",
       "seguros.codeoscopic_webhook_events",
+      "seguros.compania_contactos",
       "seguros.companias_dgs",
       "seguros.consent_logs",
       "seguros.conversaciones",
@@ -5232,6 +5403,7 @@
       "seguros.poliza_merge_log",
       "seguros.poliza_recibos",
       "seguros.polizas",
+      "seguros.portal_aviso_enviado",
       "seguros.recordatorios",
       "seguros.siniestro_contrarios",
       "seguros.siniestro_lesionados",
@@ -5261,6 +5433,7 @@
       "seguros.portal_parte_siniestro",
       "seguros.portal_peticion_acceso",
       "seguros.portal_poliza_declarada",
+      "seguros.portal_push_suscripcion",
       "seguros.portal_supresion",
       "seguros.portal_vinculo",
       "seguros.portal_vista_corredor"
@@ -5416,11 +5589,13 @@
       "comunicacion_nodos",
       "comunicacion_reglas",
       "conexiones_banco",
+      "consentimiento_registro",
       "contable_accion",
       "contable_feedback",
       "contable_log",
       "contable_memoria",
       "correduria_avisos_renovacion",
+      "correduria_dni_otp",
       "correduria_reglas",
       "correo_cursor",
       "correo_reglas",
@@ -5436,6 +5611,9 @@
       "empresas_ficha",
       "facturas_proveedor",
       "fiscal_ayudas",
+      "grafo_aristas",
+      "grafo_embeddings",
+      "grafo_nodos",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
@@ -5447,6 +5625,7 @@
       "limpieza_partes",
       "limpieza_tareas",
       "mapa_arquitectura",
+      "memoria_embeddings",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_conflictos_guia",
@@ -5596,6 +5775,11 @@
     {
       "id": "central-maestro",
       "name": "central-maestro",
+      "description": ">"
+    },
+    {
+      "id": "cima-ingesta",
+      "name": "cima-ingesta",
       "description": ">"
     },
     {
@@ -6173,6 +6357,7 @@
         "capacidad": "notificaciones",
         "label": "Notificaciones (push)",
         "tiene": [
+          "asegura-portal",
           "ia-rest",
           "ialimp",
           "rrhh"
@@ -6181,7 +6366,6 @@
           "almacen",
           "alquiler",
           "asegura",
-          "asegura-portal",
           "asegura-web",
           "housesevillana",
           "mariscos",
@@ -6214,10 +6398,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 40,
+    "packages": 42,
     "capacidades": 23,
-    "skills": 40,
-    "apis": 1321,
+    "skills": 41,
+    "apis": 1371,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

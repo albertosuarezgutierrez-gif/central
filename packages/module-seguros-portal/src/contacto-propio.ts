@@ -105,7 +105,7 @@ export function textoHistorialContactoPropio(campos: readonly string[]): string 
   const lista = [...campos].sort()
   const que = lista.length === 0 ? 'sus datos de contacto' : lista.join(', ')
   return (
-    `El cliente actualizó desde el portal: ${que}. ` +
+    `${PREFIJO_HISTORIAL_CONTACTO_PROPIO} ${que}. ` +
     'No se ha comunicado a ninguna compañía: son sus datos de contacto con nosotros, no los de sus pólizas.'
   )
 }
@@ -150,3 +150,24 @@ export function confirmacionContactoVigente(confirmadoEn: Date | null, hoy: Date
 export function textoHistorialConfirmacionContacto(): string {
   return 'El cliente confirmó desde el portal que sus datos de contacto siguen siendo correctos.'
 }
+
+/**
+ * Con qué empieza esa línea, como CONSTANTE y no como una cadena escrita dos
+ * veces.
+ *
+ * 🚨 Existe porque el muro de actividad de `/correduria` tiene que distinguir
+ * lo que hizo el cliente de lo que anotó la casa, y `historial_interno` **no
+ * guarda el autor como dato**: la columna `actor_user_id` no la escribe nadie y
+ * el autor viaja dentro del texto. Con el prefijo compartido, esa clasificación
+ * es un acuerdo entre dos sitios del repo; escrito a mano en la consulta sería
+ * una adivinanza sobre texto libre que se rompe en silencio el día que alguien
+ * retoque la frase — y entonces el cambio de dirección de un cliente dejaría de
+ * salir como suyo sin que fallara nada.
+ */
+export const PREFIJO_HISTORIAL_CONTACTO_PROPIO = 'El cliente actualizó desde el portal:'
+
+/**
+ * Y el de la sugerencia, por la misma razón. Lo compone quien la recibe
+ * (`apps/asegura-portal/lib/sugerencia.ts`) antes de mandarla por el puente.
+ */
+export const PREFIJO_HISTORIAL_SUGERENCIA = '💡 Sugerencia del cliente desde el portal:'

@@ -72,6 +72,14 @@ export const TEMAS: readonly TemaBlog[] = [
     ramos: ['hogar', 'auto'],
   },
   {
+    slug: 'quien-ve-los-seguros-de-mi-empresa',
+    consulta: 'cómo controlar quién ve los seguros de mi empresa',
+    angulo:
+      'Por qué "compartir la carpeta de las pólizas" es la forma más común de perder el control: nadie sabe quién mira qué, y cuando alguien deja la empresa nadie se acuerda de quitarle el acceso. Explica el mecanismo real de delegación por niveles (ver solo la tarjeta de un vehículo, ver también la prima y los recibos, o gestionar y abrir un parte), que el acceso caduca solo si no se renueva y que queda registro de quién ha mirado qué. Sin nombrar el portal como producto que se vende: se explica el problema y cómo se resuelve, y quien quiera verlo en marcha pregunta.',
+    normas: [],
+    ramos: ['comercio', 'flota'],
+  },
+  {
     slug: 'cuanto-tarda-en-pagar-un-seguro-un-siniestro',
     consulta: 'cuánto tarda el seguro en pagar un siniestro',
     angulo:

@@ -12,6 +12,35 @@
 > `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md` (producto completo) y
 > `docs/superpowers/plans/2026-09-01-asegura-portal-fase-1.md` (lo que se construyó de verdad).
 
+## 🔔 Avisos por Web Push (12/09/2026) — canal nuevo, sin pasar por el email
+
+`GET /api/cron/avisos-push` (diario 08:00 UTC, `vercel.json`), hermano de
+`apps/asegura` → `/api/cron/avisos-vencimiento` pero **sin compartir sello ni sitio**: ese cron
+necesita el email en CLARO (`prisma_seguros`, BYPASSRLS) y por eso vive allí; el push no tiene ese
+problema —`endpoint`+claves del navegador no son un dato descifrable— así que vive aquí, sobre la
+misma tabla `seguros.portal_obligacion` que ya sincroniza `lib/obligaciones.ts`.
+
+- **Sello independiente: `avisadaPushAt`, no `avisadaAt`.** Dos canales que fallan por separado
+  (sin suscripción, endpoint muerto, proveedor de correo caído…); compartir sello dejaría que el
+  fallo de uno tapara el envío del otro. Se sella solo si `sendWebPush` acepta al menos un envío
+  —mismo criterio que el correo—; si todos fallan, se reintenta en la siguiente pasada.
+- **Tabla nueva `seguros.portal_push_suscripcion`** (`identidad_id`, `endpoint` UNIQUE, `p256dh`,
+  `auth_key`), aplicada el 12/09/2026 (`prisma/sql/2026-09-12_portal_push_avisos.sql`). Varias
+  filas por identidad = varios dispositivos; un endpoint muerto (404/410 de `sendWebPush`) se borra
+  en el propio cron.
+- **`packages/module-seguros-portal/src/push.ts` (`debeAvisarPush`)** reutiliza la MISMA ventana que
+  el correo (`entraEnVentana`/`DIAS_VENTANA_AVISO` de `obligacion.ts`): un vencimiento entra en
+  ventana una vez, y los dos canales lo ven a la vez.
+- **Cliente:** `app/ActivarPush.tsx`, un interruptor dentro del panel de la campana (`Campana.tsx`)
+  — no se pinta sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` ni sin soporte del navegador, para no ofrecer un
+  botón que no puede funcionar. `public/sw.js` añadió `push`/`notificationclick` (sigue SIN
+  `caches`: el guardián `lib/pwa.test.ts` lo sigue vigilando).
+- **Envs que faltan, de Alberto (Vercel `asegura-portal`):** `NEXT_PUBLIC_VAPID_PUBLIC_KEY` +
+  `VAPID_PRIVATE_KEY` (par VAPID propio de esta app, generado con `npx web-push generate-vapid-keys`
+  o `webpush.generateVAPIDKeys()`) y `CRON_SECRET` (puede ser el mismo valor que el de `asegura`,
+  o uno propio — este cron no lo comparte con nadie). Sin las claves VAPID el endpoint responde 503
+  `sin_vapid` en vez de fingir un `{avisadas:0}`.
+
 ## Estado (03/09/2026): DESPLEGADA en Vercel; Fase 1 mergeada + Fase 4 en código; DDL aplicado
 
 Fase 1 entró en `main` el 01/09/2026 con el PR **#1965** (`f12b7b46`): entrar con un código de un solo
@@ -547,6 +576,25 @@ compañía no lo ha informado», y la pantalla **calla**: no pinta «Matrícula:
 Cepos: `bien-asegurado.test.ts` (11, con dos mutaciones vistas morder: quitar la dirección del suelo
 de terceros → 1 fallo; colar la dirección por `cosa` → 3).
 
+### 🚨 Regla permanente: el nº de póliza NUNCA identifica una póliza para el cliente
+
+**Nadie se sabe su número de póliza de memoria, y menos aún cuando hay que ELEGIR entre varias**
+(caso visto el 13/09/2026: el selector de «A qué póliza» del parte de siniestro los listaba como
+«Occident · Responsabilidad civil · nº 548238086», y Alberto, mirándolo en su propio móvil: *«casi
+nadie sabe el número de póliza»*). Lo que identifica una póliza para una PERSONA es el BIEN, no el
+contrato:
+
+- **Motor** → marca, modelo y **matrícula** (`bien.cosa` de `describirBien()`).
+- **Inmueble** → la **dirección** (`bien.ubicacion`).
+- El nº de póliza queda de **último recurso**, solo cuando no se conoce ni lo uno ni lo otro.
+
+Esto no es solo la regla de la FICHA (arriba): es la regla de **cualquier sitio donde el portal
+identifique o liste pólizas ante el cliente** — filas (`FilaPoliza.tsx`, ya la seguía), y también
+selectores/etiquetas de formularios. El parte de siniestro (`opcionCartera()`/`page.tsx`) se corrigió
+el 13/09/2026 para usar `bien.cosa ?? bien.ubicacion ?? nº de póliza` en vez de `nº de póliza` a
+secas — antes de esa fecha lo incumplía. **Al montar cualquier lista o desplegable nuevo de pólizas,
+sigue este mismo orden**; no reinventar el criterio caso por caso.
+
 ### Lo TUYO frente a lo que te DEJAN ver
 
 Hasta ese día la única diferencia entre una póliza propia y una ajena era el `<h2>` de la sección.
@@ -1015,6 +1063,46 @@ con el aviso **en pantalla** y nunca toca un dato personal. Lo vigila
 `test/regression-portal-obligaciones.test.ts` (ningún fichero del portal importa un transporte de
 correo), para que la corrección no se deshaga sola dentro de tres meses.
 
+## 🔔 Recordatorios propios del cliente (13/09/2026) — la mitad de `portal_obligacion` sin póliza detrás
+
+Dictado de Alberto: «añade [ITV, mantenimiento, caldera, extintores…] todo, inclusive alguno abierto
+para que pueda añadir recordatorios? Texto libre y cuándo quiera que le avise, todo modular 100%.
+Nuestro objetivo es que usen lo máximo nuestra intranet». Pestaña nueva **«Recordatorios»**
+(`?vista=recordatorios`, `Recordatorios.tsx`), sobre el MISMO motor de arriba: la tabla ya nació con
+sitio para esto (`poliza_id` opcional «para que el mismo motor sirva luego a ITV, carnet o revisión de
+gas de alguien que no tiene ninguna póliza con la correduría»), y el enum de tipo ya traía `itv`,
+`carnet`, `mantenimiento`, `revision_gas` y `libre` sin que nadie los usara todavía.
+
+- **Un único mecanismo, no cinco.** `título + fecha + repetir cada X meses (o nunca)`
+  (`lib/recordatorios.ts` + el módulo puro `packages/module-seguros-portal/src/recordatorio-libre.ts`).
+  Las «sugerencias» (`SUGERENCIAS_RECORDATORIO`: ITV, carnet, caldera, gas butano, extintores, boletín
+  eléctrico) son solo atajos que RELLENAN ese mismo formulario — el título sigue siendo editable (dos
+  coches → «ITV del Ibiza» y «ITV de la furgoneta») y «Personalizado» abre el formulario en blanco.
+- **La fecha NO se recorta.** A propósito NO usa `fechaAccionable()` (los 30 días del art. 22 LCS de la
+  sección de arriba): esos son un plazo LEGAL que el cliente no elige; aquí la fecha que teclea la
+  persona YA ES la fecha en la que quiere que le avisen, así que `fechaAccionable = fechaEvento` sin
+  restar nada.
+- **`repite_cada_meses`** (`prisma/sql/2026-09-13_portal_obligacion_recordatorio.sql`, `smallint`, CHECK
+  1-120, aplicada) es la ÚNICA columna nueva — el resto ya existía. `siguienteOcurrencia()` suma meses
+  con clamp de fin de mes (31 de enero + 1 mes → 28/29 de febrero, nunca un 3 de marzo inventado por
+  `setUTCMonth`), mismo criterio que `sumarMesesClamp()` de `cobro-declarado.ts`.
+- 🚨 **`avanzarRecordatoriosRecurrentesDeIdentidad()` mira `avisadaAt` O `avisadaPushAt`, nunca solo
+  `avisadaAt`.** El cron de CORREO (`apps/asegura/lib/avisos-vencimiento.ts`) resuelve el destinatario a
+  través de la PÓLIZA (`o.polizaId ? destinatarioDeCliente(...) : null`); un recordatorio propio no
+  tiene póliza, así que ESE cron lo cuenta `sinCanal` SIEMPRE y `avisadaAt` no se pone jamás en estas
+  filas, tenga o no la persona push activado. Exigir solo `avisadaAt` habría dejado el «se repite solo»
+  sin efecto para SIEMPRE — se vio morder en `code-review` antes de mergear. El único canal que de
+  verdad puede avisar de un recordatorio propio es el push (`/api/cron/avisos-push`); por lo mismo,
+  `RecordatorioVista.avisada` (lo que pinta «ya avisado» en la pantalla) lee `avisadaPushAt`, no
+  `avisadaAt`.
+- **Aislamiento:** `crearRecordatorio`/`borrarRecordatorio` (`app/api/recordatorios/`) filtran SIEMPRE
+  por `identidadId` de la cookie, nunca del cuerpo ni de la URL — mismo patrón que `polizas/[id]`.
+  `borrarRecordatorio` exige además `bienId`/`polizaId`/`polizaDeclaradaId` NULL: ese botón no puede
+  tocar una obligación derivada de póliza aunque alguien mande su id.
+- **Pestaña «Recordatorios», no «Avisos»:** «Avisos» ya es la campana de notificaciones
+  (`Campana.tsx` → `/api/avisos`) — lo que la correduría te avisa a ti, no lo que tú te apuntas. Mismo
+  cepo de sinónimos que mató a «Mis pólizas» el 05/09.
+
 ## 🔑 Entrar de un clic: el enlace del correo NO canjea
 
 El correo del código lleva además un enlace `https://<PORTAL_PUBLIC_URL>/?d=<email>&c=<código>` que
@@ -1100,6 +1188,25 @@ sobre una fuente que no se leyó es la mentira que el `CLAUDE.md` de la raíz pe
 se resuelve, con el alcance y el texto delante. Un «Aceptar» en el panel sería aceptar sin leer y
 duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. Cepo: un solo `fetch` en
 `Campana.tsx`, y es el GET.
+
+### 🏠 Cuarta fuente: «Revisa tu dirección» (15/09/2026), y el correo que sale de ella
+
+`datos_por_revisar` → `/boveda?vista=datos`. Los reparos de la dirección guardada (`leerSitio()` de
+`@central/module-seguros`: CP que no es un CP español, ciudad sin letras, provincia que contradice al
+CP) se veían **solo en la ficha del corredor** desde el 05/09/2026 — o sea, el único que podía
+corregirlos era el único que no se enteraba. Alberto, 15/09/2026: *«es lo que quiero que notifique por
+mail e intranet, explicándole cómo modificar su dirección»*.
+
+- **Sale por el PUENTE**, no de la BD de aquí: la dirección va cifrada y esta app no tiene la clave.
+  `reparosDeMisDatos()` (`lib/mis-datos.ts`) reusa `leerMisDatos()`, que ya se pedía en cada visita a
+  la bóveda. Es la fuente que más fácil falla, razón de más para ir en el `allSettled`.
+- **Lanza si no se pudo mirar** (puente caído, sin configurar, varias fichas) → `fuentesIlegibles`
+  y globo con `+`. `sin_ficha` sí devuelve `[]`: no es que no se sepa, es que no hay ficha nuestra.
+- **Y se ve también DENTRO de «Mis datos»**, encima del formulario, con el valor guardado y qué
+  hacer. El cálculo va en el SERVIDOR (`reparosDeContacto`, prop `reparos`): importar
+  `@central/module-seguros` en un componente de cliente arrastraría la cartera entera al bundle.
+- El **id del aviso es el TIPO de reparo**, no un uuid: es la clave con la que el emisor de correo de
+  `apps/asegura` sella lo ya enviado (ver su `CLAUDE.md`, «El emisor GENÉRICO de la intranet»).
 
 📌 **Sin tabla de «visto», a propósito**: el aviso desaparece al resolverse. Lo que necesita saber
 qué vio ya el cliente (siniestro que cambia de estado, petición respondida, recibo devuelto) es v2 y
@@ -2024,7 +2131,11 @@ que no se ha visto morder es una suposición.
 **900 300 250, L-V 9-19** — corregido el 08/09/2026: el 900 101 920 que se cargó el 05/09 es la línea
 especial de DANA/catástrofes según `prensa.allianz.es`; **asistencia a NULL a propósito** porque depende
 del ramo —900 117 115 vehículos / 913 255 258 hogar— y la columna admite uno solo) · Occident `C0468`
-(19, **solo WhatsApp**) · Reale `C0613` (1, 900 365 900). Y **Generali `C0072`** (sin pólizas vivas;
+(19, **voz + WhatsApp, 917 83 83 83, 24h/365 días** — corregido el 14/09/2026: el 05/09 se cargó ese
+mismo número SOLO como WhatsApp con horario 9-21h L-V, leyendo el badge de WhatsApp Business; Alberto
+confirmó que es la MISMA línea también para voz y 24h/365, contrastado además con tres comparadores
+—Selectra, numeroservicioalcliente.com, segurosmarina.es—, que coinciden en «asistencia en carretera y
+siniestros, 24h/365 días». `telefono_siniestros` ya no es `NULL`) · Reale `C0613` (1, 900 365 900). Y **Generali `C0072`** (sin pólizas vivas;
 una declarada en el portal como «GeneraliSegurosy Reaseguros,S.A.U.», que NO cruza por nombre exacto):
 900 903 433 para dar parte y asistencia, horario NULL; su grúa por WhatsApp (+34 654 033 629) **no se
 pinta** porque es asistencia y `whatsapp_siniestros` se rotula «Dar parte». SQL:

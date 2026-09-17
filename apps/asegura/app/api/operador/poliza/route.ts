@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { fichaPoliza } from '@/lib/cartera-poliza'
+import { establecerModalidadRc } from '@/lib/cartera-poliza-editar'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,5 +28,25 @@ export async function GET(req: Request) {
     return NextResponse.json({ estado: 'ok', poliza })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/poliza', e) })
+  }
+}
+
+// PATCH /api/operador/poliza — ÚNICA escritura de esta ruta: anotar a mano la
+// MODALIDAD de una RC cuando la compañía no manda coberturas por CIMA. Body
+// `{ id, modalidad, nota?, actor }`. Nunca sobre otro campo ni otro ramo.
+export async function PATCH(req: Request) {
+  if (!operadorAutorizado(req)) return NextResponse.json({ estado: 'error', motivo: 'No autorizado' }, { status: 401 })
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
+  const id = typeof body?.id === 'string' ? body.id.trim() : ''
+  const actor = typeof body?.actor === 'string' && body.actor.trim() !== '' ? body.actor.trim() : 'desconocido'
+  if (id === '') return NextResponse.json({ estado: 'invalido', motivo: 'Falta el id de la póliza.' }, { status: 422 })
+  try {
+    if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
+    const correduria = await correduriaUnica()
+    if (!correduria) return NextResponse.json({ estado: 'error' })
+    const r = await establecerModalidadRc(correduria.id, id, { modalidad: body?.modalidad, nota: body?.nota, actor })
+    return NextResponse.json(r, { status: r.status })
+  } catch (e) {
+    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/poliza-patch', e) }, { status: 500 })
   }
 }

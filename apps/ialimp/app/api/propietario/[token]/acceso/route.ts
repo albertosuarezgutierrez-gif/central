@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { serialize } from '@/lib/serialize'
 import { createClient } from '@supabase/supabase-js'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 // Usamos el anon key — el bucket property-access-files tiene políticas abiertas
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  clavePublicable()
 )
 
 async function getCliente(token: string) {

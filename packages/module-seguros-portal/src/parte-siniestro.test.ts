@@ -7,7 +7,10 @@ import {
   DIAS_COMUNICACION_LCS,
   LUGAR_MAX,
   PARTE_ESTADOS,
+  ZONAS_VEHICULO,
+  bloqueDatosVehiculo,
   comunicadoACompania,
+  componerDescripcion,
   normalizarParte,
   parsearFechaHecho,
   plazoComunicacion,
@@ -331,4 +334,60 @@ test('parsearFechaHecho devuelve null para todo lo que no sea un día real', () 
 test('el 29 de febrero existe en año bisiesto y no en el que no lo es', () => {
   assert.equal(parsearFechaHecho('2028-02-29')?.toISOString().slice(0, 10), '2028-02-29')
   assert.equal(parsearFechaHecho('2026-02-29'), null)
+})
+
+// ── 🚨 Datos del otro vehículo: plegados en `descripcion`, nunca columnas ───
+
+test('sin ningún dato del otro vehículo, el bloque es null (no un encabezado vacío)', () => {
+  assert.equal(bloqueDatosVehiculo({}), null)
+  assert.equal(bloqueDatosVehiculo({ matriculaPropia: '', conductorTercero: '   ' }), null)
+})
+
+test('el bloque solo lista los campos CON dato, y las matrículas en mayúsculas', () => {
+  const b = bloqueDatosVehiculo({ matriculaPropia: '1234abc', conductorTercero: 'Juan Pérez' })
+  assert.match(b ?? '', /Matrícula propia: 1234ABC/)
+  assert.match(b ?? '', /Conductor del otro vehículo: Juan Pérez/)
+  assert.doesNotMatch(b ?? '', /Matrícula del otro vehículo/)
+  assert.doesNotMatch(b ?? '', /Aseguradora/)
+})
+
+test('componerDescripcion no toca la descripción si no hay datos de vehículo', () => {
+  assert.equal(componerDescripcion(DESC, {}), DESC)
+})
+
+test('componerDescripcion añade el bloque DEBAJO de lo que escribió el cliente', () => {
+  const salida = componerDescripcion(DESC, { matriculaTercero: '9999xyz' })
+  assert.ok(salida.startsWith(DESC))
+  assert.match(salida, /Matrícula del otro vehículo: 9999XYZ/)
+})
+
+test('🚨 componerDescripcion recorta a DESCRIPCION_MAX aquí, no lo deja para el backend', () => {
+  const larga = 'a'.repeat(DESCRIPCION_MAX - 5)
+  const salida = componerDescripcion(larga, { matriculaTercero: 'AAAA000' })
+  assert.equal(salida.length, DESCRIPCION_MAX)
+})
+
+// ── Zonas del daño: orden FIJO, nunca el orden de toque ─────────────────────
+
+test('sin zonas (undefined, vacío, o solo códigos desconocidos) el bloque no lleva línea de zona', () => {
+  assert.equal(bloqueDatosVehiculo({}), null)
+  assert.equal(bloqueDatosVehiculo({ zonasDano: [] }), null)
+  assert.equal(bloqueDatosVehiculo({ zonasDano: ['motor_no_existe', 42, null] }), null)
+})
+
+test('las zonas salen en el orden FIJO de ZONAS_VEHICULO, no en el orden en que se tocaron', () => {
+  const b = bloqueDatosVehiculo({ zonasDano: ['trasera', 'delantera_izquierda', 'techo'] })
+  assert.match(b ?? '', /Zona del daño: Delantera izquierda, Techo, Trasera/)
+})
+
+test('un código repetido no duplica la etiqueta', () => {
+  const b = bloqueDatosVehiculo({ zonasDano: ['techo', 'techo'] })
+  const ocurrencias = (b?.match(/Techo/g) ?? []).length
+  assert.equal(ocurrencias, 1)
+})
+
+test('ZONAS_VEHICULO tiene exactamente 9 zonas y ningún código repetido', () => {
+  assert.equal(ZONAS_VEHICULO.length, 9)
+  const codigos = ZONAS_VEHICULO.map(([c]) => c)
+  assert.equal(new Set(codigos).size, codigos.length)
 })

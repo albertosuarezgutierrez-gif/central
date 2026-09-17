@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { getSmoobuKey } from '@/lib/smoobu'
+import { getSmoobuKey, smoobuFetch } from '@/lib/smoobu'
 
 export const dynamic   = 'force-dynamic'
 export const maxDuration = 60
@@ -95,9 +95,7 @@ export async function GET() {
   const results = { trivial: 0, auto_replied: 0, alerted: 0, errors: 0, skipped: 0 }
 
   try {
-    const res = await fetch('https://login.smoobu.com/api/threads?pageSize=50&page=1', {
-      headers: { 'Api-Key': SMOOBU_KEY }, cache: 'no-store',
-    })
+    const res = await smoobuFetch('/api/threads?pageSize=50&page=1', { cache: 'no-store' })
     if (!res.ok) throw new Error(`Smoobu threads ${res.status}`)
     const data = await res.json()
     const threads: any[] = data.threads || []
@@ -133,9 +131,7 @@ export async function GET() {
           return 'EN'
         })()
 
-        const resv = await fetch(`https://login.smoobu.com/api/reservations/${bookingId}`, {
-          headers: { 'Api-Key': SMOOBU_KEY }, cache: 'no-store',
-        })
+        const resv = await smoobuFetch(`/api/reservations/${bookingId}`, { cache: 'no-store' })
         if (!resv.ok) { results.errors++; continue }
         const reservation = await resv.json()
         const guestEmail  = reservation.email || ''

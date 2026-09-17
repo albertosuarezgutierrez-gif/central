@@ -84,6 +84,7 @@ import {
 } from './autorizaciones'
 import { enlaceDeInvitacion, enviarInvitacion } from './correo-invitacion'
 import { prisma } from './db'
+import { esRepresentanteDe } from './representacion'
 import { getIdentidad } from './session'
 import { elegirFicha, type Candidato } from './vinculo-elegir'
 
@@ -296,35 +297,50 @@ export async function crearInvitacion(datos: {
     return no('limite_diario', 'Has mandado ya varias invitaciones hoy. Prueba de nuevo mañana.')
   }
 
-  // ── 4. La ficha es MÍA, y mi nivel me deja regalarla ─────────────────────
+  // ── 4. La ficha es MÍA (o soy su Dueño/Administración), y eso me deja
+  //      regalarla ──────────────────────────────────────────────────────────
   // Sin esto, cualquiera con sesión abre los seguros de otro mandando su uuid
-  // en el JSON. `portal_vinculo` filtrado por esta identidad es la ÚNICA
-  // definición de «mis fichas».
+  // en el JSON. `portal_vinculo` filtrado por esta identidad es la definición
+  // de «mis fichas»; la representación societaria (12/09/2026, decisión de
+  // Alberto: «Dueño y Administración») es la SEGUNDA vía, sin `portal_vinculo`
+  // propio a la ficha de la empresa — ver `lib/representacion.ts`.
   const vinculos = await prisma.portalVinculo.findMany({
     where: { identidadId },
     select: { clienteId: true, correduriaId: true, nivel: true },
     orderBy: { creadoEn: 'asc' },
   })
   const mio = vinculos.find((v) => v.clienteId === otorganteClienteId)
-  if (!mio) {
+  if (mio) {
+    // El consentimiento para ceder unos datos es de su dueño: quien solo está
+    // autorizado a VER una ficha no puede regalarla a un tercero. Quién puede
+    // lo decide el módulo puro, no un `if` copiado aquí.
+    if (!puedeAutorizar(nivelDeVinculo(mio.nivel))) {
+      return no(
+        'nivel_insuficiente',
+        'Tu acceso a esa ficha es de consulta: no permite invitar a otras personas a verla.',
+      )
+    }
+  } else if (!(await esRepresentanteDe(identidadId, otorganteClienteId))) {
     return no('ficha_no_tuya', 'Esa ficha no es tuya.')
   }
-  // El consentimiento para ceder unos datos es de su dueño: quien solo está
-  // autorizado a VER una ficha no puede regalarla a un tercero. Quién puede lo
-  // decide el módulo puro, no un `if` copiado aquí.
-  if (!puedeAutorizar(nivelDeVinculo(mio.nivel))) {
-    return no(
-      'nivel_insuficiente',
-      'Tu acceso a esa ficha es de consulta: no permite invitar a otras personas a verla.',
-    )
-  }
+  // 📌 Sin nivel que comprobar en la vía de representación: `ALCANCES_INVITACION`
+  // ya limita CUALQUIER invitación a `ver`/`ver_economico`/`ninguno` — nunca
+  // `partes` ni `documentos` (eso es `APODERAMIENTO` de verdad, fuera de esta
+  // fase) —, así que esta vía nunca amplía lo que se puede compartir, solo
+  // dice QUIÉN puede compartirlo.
 
   // ── 5. La ficha vive, y la póliza es suya ────────────────────────────────
   // Sin `try/catch`: si esta lectura falla, que suba como error. Caer a un
   // valor por defecto convertiría un fallo de BD en una invitación mandada con
   // el texto legal equivocado.
+  // La correduría sale de `mio` cuando existe: es EL vínculo de esta identidad
+  // con `otorganteClienteId`, y `vinculos[0]` (el más antiguo de TODOS sus
+  // vínculos) puede ser uno distinto si la identidad tiene fichas en más de
+  // una correduría. Solo cae a `vinculos[0]` en la vía de representación,
+  // donde no hay vínculo propio a la ficha que se cede.
+  const correduriaId = mio?.correduriaId ?? vinculos[0].correduriaId
   const ficha = await prisma.cliente.findFirst({
-    where: { id: otorganteClienteId, correduriaId: mio.correduriaId, mergedIntoClienteId: null },
+    where: { id: otorganteClienteId, correduriaId, mergedIntoClienteId: null },
     select: { nombre: true, apellidos: true, tipoPersona: true },
   })
   if (ficha === null) {
@@ -405,7 +421,7 @@ export async function crearInvitacion(datos: {
   try {
     const fila = await prisma.portalInvitacion.create({
       data: {
-        correduriaId: mio.correduriaId,
+        correduriaId,
         otorganteClienteId,
         // Una ficha puede tener varias personas detrás: el registro tiene que
         // decir CUÁL de ellas invitó (art. 7.1 RGPD).

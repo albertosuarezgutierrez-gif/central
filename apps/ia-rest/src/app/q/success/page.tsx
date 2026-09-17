@@ -3,9 +3,10 @@ import { SE, SN, SM } from '@/lib/colors'
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const ANON_KEY     = clavePublicable()
 
 const C = {
   bg:'#14110E', bg2:'#1E1A15', bg3:'#2A221A',

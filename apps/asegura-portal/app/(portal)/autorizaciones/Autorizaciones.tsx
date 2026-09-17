@@ -12,6 +12,8 @@ import {
   type AlcanceInvitacion,
 } from '@central/module-seguros-portal'
 
+import { SugerenciasContactos } from './SugerenciasContactos'
+
 /**
  * «Quién puede ver mis seguros» — la parte viva de la pantalla.
  *
@@ -281,6 +283,9 @@ const AYUDA_OPCION: Record<Alcance, string> = {
 
 /** Errores de `POST /api/autorizaciones`. Códigos → lo que la persona puede HACER. */
 const ERROR_CONCEDER: Record<string, string> = {
+  // Mismo veto, misma frase: en vista de corredor tampoco se concede por él.
+  modo_corredor:
+    'Estás viendo el portal como corredor: aquí no se concede nada en nombre del cliente. Tiene que entrar él con su email y hacerlo desde su propio acceso.',
   sin_sesion: 'Se ha cerrado tu sesión. Vuelve a entrar con tu email y lo intentamos otra vez.',
   datos_invalidos: 'Falta algún dato: elige a la persona y marca al menos qué puede ver.',
   alcance_no_disponible:
@@ -299,6 +304,11 @@ const ERROR_CONCEDER: Record<string, string> = {
 
 /** Errores de `POST /api/autorizaciones/[id]`. */
 const ERROR_ACCION: Record<string, string> = {
+  // 🚨 Un 403 del middleware de vista de corredor. NO es pasajero: aceptar en
+  // nombre del cliente es justo lo que ese veto existe para impedir, así que el
+  // texto dice quién tiene que hacerlo, no «inténtalo otra vez».
+  modo_corredor:
+    'Estás viendo el portal como corredor: aquí no se acepta ni se rechaza nada en nombre del cliente. Tiene que entrar él con su email y hacerlo desde su propio acceso.',
   sin_sesion: 'Se ha cerrado tu sesión. Vuelve a entrar con tu email y lo intentamos otra vez.',
   datos_invalidos: 'No hemos entendido la petición. Vuelve a cargar la pantalla e inténtalo otra vez.',
   no_encontrada: 'Esa autorización ya no existe. Vuelve a cargar la pantalla.',
@@ -693,6 +703,7 @@ export function Autorizaciones() {
     <>
       <Otorgadas uid={uid} lista={datos.otorgadas} onCambio={cargar} />
       <Recibidas uid={uid} lista={datos.recibidas} onCambio={cargar} />
+      <SugerenciasContactos />
       <Conceder
         uid={uid}
         puedeAutorizar={datos.puedeAutorizar}

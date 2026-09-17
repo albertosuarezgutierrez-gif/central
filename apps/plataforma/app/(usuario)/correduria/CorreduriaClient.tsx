@@ -9,8 +9,10 @@ import CuadreComisiones from './CuadreComisiones'
 import BuscadorCartera from './BuscadorCartera'
 import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
+import Actividad from './Actividad'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
+import Companias from './Companias'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
 import Bloque from './Bloque'
@@ -18,8 +20,15 @@ import Redes from './Redes'
 import Blog from './Blog'
 import LeadsPortal from './LeadsPortal'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
+import DeclaradasVencer from './DeclaradasVencer'
 import ListaCartera from './ListaCartera'
+import Recaptacion from './Recaptacion'
+import LeadsWebConversion from './LeadsWebConversion'
+import PanelIngesta, { AvisoIngesta } from './Ingesta'
 import Secciones, { type ContadoresSeccion } from './Secciones'
+import {
+  contadorIngesta, interpretarVistaIngesta, type VistaIngesta,
+} from '@/lib/correduria/ingesta-pantalla'
 import { MOTIVOS, type MotivoError } from './estado-puerto'
 import {
   agregarContadores, contarAccionables, seccionDeParametro, type Seccion,
@@ -131,6 +140,11 @@ export default function CorreduriaClient() {
   // ventana entera), y montarlos dos veces serían dos llamadas para lo mismo.
   const [cartera, setCartera] = useState<Cartera | null>(null)
   const [vencimientos, setVencimientos] = useState<RespVencimientos | null>(null)
+  // La salud de la ingesta de CIMA alimenta DOS sitios —la tarjeta de «Hoy»
+  // (solo si hay algo) y la sección «Ingesta»— y por eso se lee aquí una vez:
+  // montarla dos veces serían dos llamadas al puerto para el mismo dato.
+  // `null` = todavía no ha contestado; NO es «no se ha podido comprobar».
+  const [ingesta, setIngesta] = useState<VistaIngesta | null>(null)
 
   // Contadores que los bloques reportan hacia arriba. `undefined` = todavía no
   // ha contestado; `null` = contestó que no se puede saber. No es lo mismo.
@@ -142,7 +156,9 @@ export default function CorreduriaClient() {
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
+  const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
+  const [nDeclaradas, setNDeclaradas] = useState<number | null | undefined>(undefined)
 
   // La sección inicial viaja en la URL (`?s=`), y los cambios la reescriben con
   // `history.replaceState`: un enlace sigue llevando donde debe, pero cambiar
@@ -180,6 +196,12 @@ export default function CorreduriaClient() {
       .then(r => (r.ok ? r.json() : { estado: 'error' }))
       .then(setVencimientos)
       .catch(() => setVencimientos({ estado: 'error' }))
+    // 🚨 La forma se vuelve a validar al llegar: un 500 de Vercel o un HTML de
+    // error no pueden acabar pintados como «la ingesta va bien».
+    fetch('/api/correduria/ingesta')
+      .then(async r => interpretarVistaIngesta(r.status, await r.json().catch(() => null)))
+      .catch((): VistaIngesta => ({ estado: 'error', motivo: 'red' }))
+      .then(setIngesta)
   }, [])
 
   const totalAnual = filas.reduce((s, f) => s + f.total, 0)
@@ -198,18 +220,20 @@ export default function CorreduriaClient() {
       ? contarAccionables(vencimientos.polizas)
       : null
 
+  const cIngesta = contadorIngesta(ingesta)
+
   const contadores: ContadoresSeccion = {
     hoy: {
-      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads]),
+      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nDeclaradas]),
       tono: 'malo',
-      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso y pólizas de otras compañías cuya ventana se cierra',
+      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra y declaradas de otra compañía a punto de renovar',
     },
     clientes: {
-      // Aquí el número NO es trabajo pendiente, es cuántos clientes cumplen el
-      // filtro. Por eso va en tono neutro: pintarlo de alarma como los demás
-      // haría que una cartera sana pareciera una cola de trabajo.
-      contador: agregarContadores([nClientes]),
-      title: 'Clientes que cumplen el filtro actual',
+      // El listado NO es trabajo pendiente (cuántos clientes cumplen el
+      // filtro), pero la recaptación SÍ lo es (leads a los que contactar) —
+      // igual que «Hoy» suma varias colas de una sección en un solo número.
+      contador: agregarContadores([nClientes, nRecaptacion]),
+      title: 'Clientes que cumplen el filtro actual y leads pendientes de recaptar',
     },
     comisiones: {
       contador: agregarContadores([nCuadre]),
@@ -221,6 +245,26 @@ export default function CorreduriaClient() {
       tono: 'aviso',
       title: 'Pólizas duplicadas y clientes a los que no se puede avisar',
     },
+    // 🚨 La ingesta NO suma en «Hoy» aunque su tarjeta se pinte allí: contar lo
+    // mismo en dos badges haría que atender la avería no bajara el número de
+    // ninguno de los dos, que es como se deja de creer un contador. Su cuenta
+    // vive solo aquí, y `{n, parcial}` distingue el total exacto del SUELO
+    // («2+») cuando alguna de las cuatro puertas de la ingesta no se ha podido
+    // mirar. `null` = «!»: la lectura entera falló, que nunca es un 0.
+    // ⚠️ Mientras la lectura está en vuelo, `contadorIngesta` devuelve
+    // `undefined` y la clave NO se pone: un badge no puede gritar «!» durante
+    // el segundo que tarda en contestar, o se aprende a ignorarlo.
+    ...(cIngesta === undefined ? {} : {
+      ingesta: {
+        contador: cIngesta,
+        // Rojo solo cuando hay pérdida MEDIDA. Un «0+» (no se ha podido mirar
+        // alguna de las cuatro puertas) es ámbar: es un hueco de conocimiento,
+        // no una alarma, y pintarlo igual que una pérdida enseña a ignorar el
+        // color.
+        tono: (cIngesta !== null && cIngesta.n > 0 ? 'malo' : 'aviso') as 'malo' | 'aviso',
+        title: 'Señales de que se están perdiendo datos de CIMA: ficheros atascados, pólizas huérfanas, envíos rechazados y compañías que han dejado de mandar',
+      },
+    }),
     // Solo el blog: los borradores de LinkedIn no se pueden contar como
     // pendientes (ver `secciones.ts`). Es lo que impide que un artículo escrito
     // se quede meses esperando en la pestaña que menos se abre.
@@ -286,10 +330,23 @@ export default function CorreduriaClient() {
             que nada fallara ni saliera en ninguna pantalla. */}
         <Supresiones onContador={setNSupresiones} />
 
+        {/* Si lo que mandan las compañías por CIMA NO está entrando. Se pinta
+            SOLO cuando hay algo que decir —incidencia o «no se ha podido
+            comprobar»—: con la ingesta al día no ocupa ni un píxel, que es lo
+            que pidió Alberto. Va aquí arriba porque un recibo o un siniestro
+            que no entra no aparece en ninguna otra pantalla, y su comisión
+            tampoco; el detalle vive en la sección «Ingesta». */}
+        <AvisoIngesta datos={ingesta} />
+
         {/* Recibos devueltos y vencidos sin cobrar, por urgencia real (art. 15
             LCS). Es la pantalla comercial: lo único de aquí que se hace con el
             teléfono en la mano. */}
         <Retencion onContador={setNRetencion} />
+
+        {/* Pólizas que el cliente declaró de OTRA compañía y vencen pronto:
+            la venta cruzada, con el teléfono en la mano en vez de un precio
+            automático que la muestra no soporta (idea F del banco de ideas). */}
+        <DeclaradasVencer onContador={setNDeclaradas} />
 
         <Bloque
           titulo="Renovaciones en plazo de preaviso"
@@ -307,12 +364,34 @@ export default function CorreduriaClient() {
         <LeadsPortal onContador={setNLeads} />
       </div>
 
+      {/* ══ ACTIVIDAD ════════════════════════════════════════════════════════
+          Qué hacen los clientes, incluida su entrada en la intranet. Es la única
+          sección que mira al PORTAL en conjunto: el resto de la pantalla mira la
+          cartera, y lo que hace un cliente por su cuenta solo se veía entrando
+          en su ficha de una en una.
+
+          🚨 No reporta contador a la pestaña, a propósito: esto NO es una cola
+          de trabajo. Lo que sí lo es —partes, supresiones, leads— ya tiene su
+          badge en «Hoy», y contarlo dos veces haría que atender un parte no
+          bajara el número de aquí, que es como se deja de creer un badge. Lo
+          nuevo desde la última visita se marca dentro, con un punto. */}
+      <div role="tabpanel" aria-label="Actividad" className="corr-panel" style={panel('actividad')}>
+        <Actividad />
+      </div>
+
       {/* ══ CLIENTES ═════════════════════════════════════════════════════════
           El listado FILTRABLE de la cartera: filtrar por ramo, compañía,
           provincia, vencimiento o hueco de venta cruzada, y sacar la lista.
           Es la herramienta de trabajo; «Cartera» es la foto. */}
       <div role="tabpanel" aria-label="Clientes" className="corr-panel" style={panel('clientes')}>
         <ListaCartera onContador={setNClientes} />
+
+        {/* Leads del volcado sin vencimiento, con contacto, que hoy no son
+            cliente vivo por CIMA: recaptarlos es venta, no mantenimiento de
+            cartera, pero comparte pestaña con el listado de clientes porque
+            ambos parten de la misma base y compiten por el mismo hueco de
+            atención comercial. */}
+        <Recaptacion onContador={setNRecaptacion} />
       </div>
 
       {/* ══ CARTERA ══════════════════════════════════════════════════════════ */}
@@ -462,6 +541,26 @@ export default function CorreduriaClient() {
             vencimiento se pierde y no pueden entrar al portal—, así que el
             trabajo es pedir el correo la próxima vez que se hable con ellos. */}
         <SinCanal onContador={setNSinCanal} />
+
+        {/* Directorio de contacto por compañía, minado del correo. Sin
+            contador: es referencia, no trabajo pendiente. */}
+        <Companias />
+
+        {/* De los leads captados por apps/asegura-web, cuántos son hoy cartera
+            viva. Sin contador: con 1 lead medido el 15/09/2026 es infraestructura
+            de medición que necesita acumular datos, no un aviso accionable hoy
+            (ver LeadsWebConversion.tsx). */}
+        <LeadsWebConversion />
+      </div>
+
+      {/* ══ INGESTA ══════════════════════════════════════════════════════════
+          El porqué de la tarjeta de «Hoy»: qué ficheros están atascados y de
+          qué clave de mediador, qué pólizas hay que pedirle a cada compañía,
+          qué nos mandan y rechazamos, y quién ha dejado de mandar. Está aquí
+          porque el panel equivalente vive en el CRM de origen, que es una app
+          en la que Alberto no entra. */}
+      <div role="tabpanel" aria-label="Ingesta" className="corr-panel" style={panel('ingesta')}>
+        <PanelIngesta datos={ingesta} />
       </div>
 
       {/* ══ REDES ════════════════════════════════════════════════════════════

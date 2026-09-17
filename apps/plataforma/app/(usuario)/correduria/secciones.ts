@@ -17,6 +17,14 @@
  *   Cartera   → la foto: cuántos hay y qué vence (los 90 días enteros).
  *   Comisiones→ el dinero: devengado, liquidado y lo que entró al banco.
  *   Datos     → la calidad del dato (duplicadas, gente sin canal). No urge.
+ *   Ingesta   → si lo que mandan las compañías por CIMA está ENTRANDO: ficheros
+ *               atascados, pólizas que CIMA nombra y no tenemos, envíos que
+ *               rechazamos y compañías que han dejado de mandar. Va aquí y no
+ *               en el CRM de origen (`app.grupoasegura.com/salud-cima`) porque
+ *               esa app Alberto no la abre, y un aviso que sale por un canal que
+ *               la persona no mira es un aviso que no existe. Lo que URGE de
+ *               esta sección sube solo a «Hoy» como tarjeta, y solo cuando hay
+ *               algo: con la ingesta al día no ocupa ni un píxel.
  *   Redes     → lo que se va a publicar: los artículos del blog que esperan tu
  *               OK y los borradores de LinkedIn. Va la última a propósito: es lo
  *               único de la pantalla que mira hacia FUERA, y no compite con la
@@ -48,9 +56,12 @@
  * exactamente lo que impide que esta pantalla repita aquel fallo.
  */
 
-export type Seccion = 'hoy' | 'clientes' | 'cartera' | 'comisiones' | 'datos' | 'redes'
+export type Seccion =
+  | 'hoy' | 'actividad' | 'clientes' | 'cartera' | 'comisiones' | 'datos' | 'ingesta' | 'redes'
 
-export const SECCIONES: readonly Seccion[] = ['hoy', 'clientes', 'cartera', 'comisiones', 'datos', 'redes']
+export const SECCIONES: readonly Seccion[] = [
+  'hoy', 'actividad', 'clientes', 'cartera', 'comisiones', 'datos', 'ingesta', 'redes',
+]
 
 /** Un `?s=` desconocido (o ausente) no deja la pantalla en blanco: cae a «Hoy». */
 export function seccionDeParametro(v: string | string[] | undefined): Seccion {

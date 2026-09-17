@@ -11,6 +11,7 @@ import { RegistrarSW } from './RegistrarSW'
 import { SalirDelPortal } from './SalirDelPortal'
 import { SugerenciaBarra } from './SugerenciaBarra'
 import { SCRIPT_TEMA } from './tema'
+import { WhatsappFlotante } from './WhatsappFlotante'
 
 // Marca activa del portal. Es la de `app.grupoasegura.com` medida del CSS
 // compilado de la app de Manuel (ver `packages/brand/src/marcas/asegura.ts`):
@@ -116,6 +117,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
         {children}
+        {/* Como en `asegura-web`: "clic para chatear", visible con o sin
+            sesión. No es el canal de login (ese sigue sin WABA). */}
+        <WhatsappFlotante />
         {/* Registra el service worker que Chrome exige para ofrecer instalar la
             app. No cachea nada: ver `public/sw.js`. */}
         <RegistrarSW />

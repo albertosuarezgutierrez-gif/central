@@ -16,15 +16,49 @@
 // aquí para que la copia sea UNA y no dos.
 
 import { useEffect, useMemo, useState } from 'react'
-import type { Opcion, Reparo, Supuesto, Precio, Fallo } from '@/lib/retarificar-asegura'
+import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
-import { PreemisionMock } from './preemision-mock'
+import { Emision } from './emision'
+import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
+
+/**
+ * Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el
+ * embudo de asegura (`Guardado`: `{estado:'guardada', cotizacionId}` |
+ * `{estado:'no_guardada'|'no_intentada', motivo}`). `unknown` a propósito
+ * (viene de la OTRA app): solo se confía en la forma exacta, nunca se adivina.
+ */
+function cotizacionIdDe(guardado: unknown): string | null {
+  if (typeof guardado !== 'object' || guardado === null) return null
+  const g = guardado as Record<string, unknown>
+  return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
+}
+
+// La fecha de HOY en local (no `toISOString()`, que es UTC y puede dar el día
+// de ayer/mañana según la hora): es el valor que Allianz acepta siempre — su
+// 400 real es «no puede estar a más de 90 días vista», nunca por ser hoy.
+function hoyISO(): string {
+  return fechaLocalISO(new Date())
+}
+
+/** Hoy + `n` días, en local (mismo criterio que `hoyISO`). */
+function masDiasISO(n: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return fechaLocalISO(d)
+}
+
+function fechaLocalISO(d: Date): string {
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const dia = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mes}-${dia}`
+}
+
+/** Lo más lejos que la compañía admite la fecha de efecto (misma constante que asegura). */
+const MAX_DIAS_VISTA_EFECTO = 90
 
 /** Quita tildes y mayúsculas para comparar «Casado» con «CASADO».
- *  Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`.
- *  Exportada porque `preemision-mock.tsx` la reutiliza para emparejar el
- *  nombre de compañía del precio con su esquema de maqueta. */
+ *  Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`. */
 export function normalizarTexto(s: string): string {
   return s
     .normalize('NFD')
@@ -100,6 +134,10 @@ type Resultado =
       precios: Precio[]
       fallos: Fallo[]
       supuestos: Supuesto[]
+      /** Qué pasó con la COPIA en `seguros.tarificaciones`. Sin `cotizacionId`
+       *  (dentro, si `estado==='guardada'`) no hay a qué proyecto pedirle el
+       *  ReRate/Submit reales: `cotizacionIdDe()` lo extrae con cuidado. */
+      guardado: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   /**
@@ -118,6 +156,109 @@ type Resultado =
 // contrato lo fija quien interpreta el JSON, no la pantalla. Redefinirlos aquí
 // sería la forma de que las dos copias divergieran sin que nada fallase — que
 // es exactamente lo que pasó con `primaAnual`/`primaEur` en asegura.
+
+/**
+ * El resumen honrado de una cotización, a partir de solo sus precios (sin
+ * fallos: la cotización GUARDADA no los persiste, ver `apps/asegura/lib/
+ * codeoscopic/cotizaciones.ts`). Mismo criterio que `resumirCotizacion()` de
+ * asegura, recortado a lo que hay.
+ */
+function resumenDePrecios(precios: Precio[]): string {
+  const firmes = precios.filter((p) => p.firmeza === 'firme').length
+  const noFirmes = precios.length - firmes
+  return `${precios.length} precios (${firmes} en firme${noFirmes > 0 ? `, ${noFirmes} con reparos)` : ')'}`
+}
+
+/**
+ * Convierte la cotización YA GUARDADA en el mismo `Resultado` que pinta una
+ * cotización recién pedida — para que la pantalla no necesite un camino
+ * aparte para «lo que ya había» frente a «lo que se acaba de pagar».
+ *
+ * 🚨 El `coste` NO dice «0,50€»: sería mentir sobre un cargo que no ha pasado
+ * ahora. Y `fallos`/`supuestos` van vacíos porque no se persisten — es la
+ * letra pequeña de una cotización recuperada, no de una recién pedida.
+ */
+function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
+  return {
+    estado: 'ok',
+    coste: 'recuperada de una cotización anterior — no se ha vuelto a cobrar',
+    restantesHoy: null,
+    simulado: false,
+    avisoSimulacion: null,
+    resumen: resumenDePrecios(g.precios),
+    precios: g.precios,
+    fallos: [],
+    supuestos: [],
+    guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+  }
+}
+
+/**
+ * Borrador LOCAL de esta pantalla — lo que se ha tecleado ANTES de pagar los
+ * 0,50€. Vive en `localStorage` del navegador, no en `seguros.*`: no es una
+ * cotización real, solo la red de seguridad de lo tecleado mientras tanto.
+ * `guardadaPrevia` (cotización YA pagada) SIEMPRE manda sobre este borrador.
+ *
+ * `localStorage` puede fallar (modo privado, cuota, o `window` sin existir
+ * durante el render en servidor): un fallo aquí nunca debe romper la
+ * pantalla, solo perder la comodidad de recuperar lo tecleado.
+ */
+type DatosBorrador = {
+  marcaId?: string
+  modeloId?: string
+  motorId?: string
+  codigoVehiculo?: string
+  garaje?: string
+  estadoCivilId?: string
+  municipioId?: string
+  tipoViaId?: string
+  matriculacion?: string
+  correcciones?: Record<string, string>
+}
+type Borrador = DatosBorrador & { guardadoEn: number }
+
+/** El borrador puede llevar DNI/nombre/teléfono/fecha de nacimiento tecleados
+ *  a mano (`correcciones`): una caducidad corta acota cuánto tiempo se queda
+ *  ese dato personal en el navegador si nunca se llega a pagar la cotización
+ *  (`borrarBorrador` ya lo limpia ANTES, en cuanto eso pasa). */
+const BORRADOR_TTL_MS = 3 * 24 * 60 * 60 * 1000
+
+function leerBorrador(clave: string): DatosBorrador | null {
+  try {
+    if (typeof window === 'undefined') return null
+    const raw = window.localStorage.getItem(clave)
+    if (!raw) return null
+    const b: unknown = JSON.parse(raw)
+    if (!b || typeof b !== 'object') return null
+    const { guardadoEn, ...datos } = b as Borrador
+    if (typeof guardadoEn !== 'number' || Date.now() - guardadoEn > BORRADOR_TTL_MS) {
+      window.localStorage.removeItem(clave)
+      return null
+    }
+    return datos
+  } catch {
+    return null
+  }
+}
+
+function guardarBorrador(clave: string, datos: DatosBorrador) {
+  try {
+    if (typeof window === 'undefined') return
+    const b: Borrador = { ...datos, guardadoEn: Date.now() }
+    window.localStorage.setItem(clave, JSON.stringify(b))
+  } catch {
+    // Ver el comentario del tipo: perder el borrador no puede romper nada.
+  }
+}
+
+function borrarBorrador(clave: string) {
+  try {
+    if (typeof window === 'undefined') return
+    window.localStorage.removeItem(clave)
+  } catch {
+    // Ver el comentario del tipo.
+  }
+}
 
 /**
  * Resultado de buscar un texto de la ficha en un catálogo del vendor.
@@ -182,11 +323,15 @@ export default function Retarificador({
   municipios,
   municipiosMotivo,
   estadoCivilAuto,
+  tiposVia,
+  tipoViaAuto,
+  tipoViaMotivo,
   fechaMatriculacion,
   vehiculo,
   consumo,
   simulacion,
   deshabilitado,
+  guardadaPrevia,
 }: {
   polizaId: string
   /**
@@ -215,6 +360,17 @@ export default function Retarificador({
   /** Por qué la lista viene vacía o nula. `null` = no hay nada que explicar. */
   municipiosMotivo: string | null
   estadoCivilAuto: Opcion | null
+  /**
+   * 🛣️ Catálogo `/road-types` del vendor y el tipo emparejado desde la
+   * dirección de la ficha (12/09/2026). El Submit exige `roadType.id`, el
+   * proyecto no lo admite después de creado y el vendor no aplica por PATCH
+   * lo que le falta a la persona — así que se elige AQUÍ, antes de pagar, y
+   * nunca se teclea: es una referencia de catálogo. `tiposVia === null` =
+   * no se pudo leer el catálogo (y `tipoViaMotivo` lo dice).
+   */
+  tiposVia: Opcion[] | null
+  tipoViaAuto: Opcion | null
+  tipoViaMotivo: string | null
   fechaMatriculacion: string | null
   /** Marca, modelo y versiones vistas en otras pólizas de la misma matrícula.
    *  `null` = no se ha podido leer de la ficha (ver el tipo). */
@@ -233,7 +389,19 @@ export default function Retarificador({
    */
   simulacion: boolean
   deshabilitado: boolean
+  /**
+   * La última cotización REAL ya guardada de esta póliza (11/09/2026),
+   * gratis de leer. `null` = no hay ninguna todavía (normal en la primera
+   * visita). Sirve para no perder el trabajo si se recarga la pantalla: el
+   * formulario se prellena con lo que se tecleó y la tabla de precios sale
+   * directamente, SIN volver a pagar los 0,50€ del `POST /insurances`.
+   */
+  guardadaPrevia: TarificacionGuardadaAuto | null
 }) {
+  // Borrador local (localStorage) de esta póliza — ver `leerBorrador`/
+  // `guardarBorrador`/`borrarBorrador` arriba.
+  const claveBorrador = `asegura_retarificar_borrador_${polizaId}`
+
   // ── Vehículo: marca → modelo → versión, todo del catálogo y todo gratis ────
   const [marcas, setMarcas] = useState<Opcion[]>([])
   const [modelos, setModelos] = useState<Opcion[]>([])
@@ -247,7 +415,12 @@ export default function Retarificador({
   // un código EIAC («1»), de OTRO catálogo — traducirlo a ojo sería inventar el
   // motor de un coche real. Lo elige el corredor.
   const [motorId, setMotorId] = useState('')
-  const [codigoVehiculo, setCodigoVehiculo] = useState('')
+  // 🚨 Si hay cotización guardada, el código Base7 se recupera TAL CUAL —no
+  // el ID de marca/modelo/motor, que el vendor no pide y aquí no se guardan—.
+  // Por eso puede llegar «puesto» sin que marca/modelo/motor lo estén: se
+  // pinta como un chip bloqueado (ver `faltaVersion`/`Campo id="version"`) en
+  // vez de un desplegable con un valor que no está en su lista de opciones.
+  const [codigoVehiculo, setCodigoVehiculo] = useState(guardadaPrevia?.formulario.codigoVehiculo ?? '')
   const [cargando, setCargando] = useState<string | null>(null)
   const [fallo, setFallo] = useState<string | null>(null)
 
@@ -263,8 +436,14 @@ export default function Retarificador({
     porque: 'primero hace falta la marca',
   })
 
-  const [garaje, setGaraje] = useState('')
-  const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
+  const [garaje, setGaraje] = useState(guardadaPrevia?.formulario.garaje ?? '')
+  const [estadoCivilId, setEstadoCivilId] = useState(
+    guardadaPrevia?.formulario.estadoCivilId ?? estadoCivilAuto?.id ?? '',
+  )
+  // Mismo criterio que el estado civil: lo ya pagado manda; si no, el
+  // emparejado desde la ficha; si no, se elige a mano.
+  const listaTiposVia = tiposVia ?? []
+  const [tipoViaId, setTipoViaId] = useState(guardadaPrevia?.formulario.tipoViaId ?? tipoViaAuto?.id ?? '')
   // 🔒 Aquí NO hay caja de código postal, y es deliberado. Durante unas horas la
   // hubo —el puerto no servía la precalificación y se le pedía el CP a Alberto—
   // y eran las dos cosas malas a la vez: hacerle teclear un dato que la ficha ya
@@ -274,11 +453,51 @@ export default function Retarificador({
   // resuelve el CP por dentro y manda la lista ya hecha.
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(
-    listaMunicipios.length === 1 ? listaMunicipios[0].id : '',
+    guardadaPrevia?.formulario.municipioId != null
+      ? String(guardadaPrevia.formulario.municipioId)
+      : listaMunicipios.length === 1
+        ? listaMunicipios[0].id
+        : '',
   )
-  const [matriculacion, setMatriculacion] = useState(fechaMatriculacion ?? '')
-  const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
-  const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
+  const [matriculacion, setMatriculacion] = useState(
+    guardadaPrevia?.formulario.fechaMatriculacion ?? fechaMatriculacion ?? '',
+  )
+  const [correcciones, setCorrecciones] = useState<Record<string, string>>(() => {
+    const guardadas = guardadaPrevia?.formulario.correcciones ?? {}
+    return {
+      ...guardadas,
+      // La fecha de efecto SIEMPRE arranca con un valor — nunca en blanco (ver
+      // el campo en el Paso 2). MAÑANA, no hoy (Alberto, 13/09/2026): con efecto
+      // HOY la cotización moría a medianoche si no se emitía ese mismo día
+      // (proyecto 40685666). La guardada solo se reutiliza si sigue dentro de
+      // [hoy, hoy+90]: la de una cotización caducada volvía aquí tal cual y
+      // «Pedir precio» moría en el 422 de asegura hasta cambiarla a mano.
+      fechaEfecto: fechaEfectoInicial(
+        guardadas.fechaEfecto,
+        hoyISO(),
+        masDiasISO(1),
+        MAX_DIAS_VISTA_EFECTO,
+      ),
+    }
+  })
+  // Una cotización recuperada con la fecha de efecto ya PASADA (13/09/2026,
+  // proyecto 40685666: cotizado el 12/09 con efecto 12/09, al día siguiente la
+  // compañía contestó «The effective date cannot be before today») no se
+  // ofrece: su «Emitir» sería un botón sin salida. Arranca como descartada
+  // (`forzarNuevo` verdadero, «Pedir precio» encendido) y se explica arriba.
+  const guardadaViva = guardadaPrevia !== null && !guardadaPrevia.caducada
+  const [resultado, setResultado] = useState<Resultado>(
+    guardadaViva ? resultadoDeGuardada(guardadaPrevia) : { estado: 'idle' },
+  )
+  // 🚨 `guardadaPrevia` recupera GRATIS el precio de una cotización ya
+  // pagada — pero si ese proyecto quedó con una `effectiveDate` que el
+  // vendor rechaza (>90 días vista) y no se puede corregir (11-12/09/2026,
+  // caso real de Pilar Franco Ruz: `effectiveDate` es de solo lectura tras
+  // el `POST /insurances` inicial), la única salida es descartarlo y pedir
+  // un precio NUEVO. Sin esta vía, la pantalla resuelve `resultado` directo
+  // a `ok` con el proyecto viejo y el botón «Emitir» de la tabla de precios
+  // confirma ESE proyecto sin pasar nunca por el campo de fecha de arriba.
+  const [guardadaDescartada, setGuardadaDescartada] = useState(!guardadaViva && guardadaPrevia !== null)
 
   /**
    * Un catálogo del vendor, por el puerto. **Gratis.**
@@ -319,6 +538,70 @@ export default function Retarificador({
       }
       if (!vivo) return
       setMarcas(lista)
+
+      // 🚨 Un borrador LOCAL (lo que ya se había tecleado, sin pagar todavía)
+      // manda sobre la preselección por ficha: son ids que YA pasaron por el
+      // catálogo la vez anterior, no hay nada que emparejar por texto. Si el
+      // catálogo cambió y el id ya no existe, se cae al flujo normal de abajo.
+      const borradorLocal = guardadaPrevia ? null : leerBorrador(claveBorrador)
+      if (borradorLocal?.codigoVehiculo) setCodigoVehiculo(borradorLocal.codigoVehiculo)
+      if (borradorLocal?.marcaId) {
+        const marcaEncontrada = lista.find((m) => m.id === borradorLocal.marcaId)
+        if (marcaEncontrada) {
+          setMarcaId(marcaEncontrada.id)
+          setAutoMarca({ estado: 'casa', opcion: marcaEncontrada, texto: '(borrador)' })
+
+          setCargando('modelos')
+          let listaModelos: Opcion[] = []
+          try {
+            listaModelos = await catalogo(`tipo=modelos&marcaId=${encodeURIComponent(marcaEncontrada.id)}`)
+          } catch (e) {
+            if (vivo) setFallo((e as Error).message)
+          } finally {
+            if (vivo) setCargando(null)
+          }
+          if (!vivo) return
+          setModelos(listaModelos)
+
+          const modeloEncontrado = borradorLocal.modeloId
+            ? listaModelos.find((m) => m.id === borradorLocal.modeloId)
+            : undefined
+          if (modeloEncontrado) {
+            setModeloId(modeloEncontrado.id)
+            setAutoModelo({ estado: 'casa', opcion: modeloEncontrado, texto: '(borrador)' })
+          } else if (borradorLocal.modeloId) {
+            // El modelo del borrador ya no está en el catálogo (cambió desde
+            // la vez anterior): decirlo, en vez de dejar el mensaje inicial
+            // «primero hace falta la marca» — que ya no es cierto, la marca
+            // SÍ está puesta.
+            setAutoModelo({
+              estado: 'no_buscado',
+              porque: 'el modelo del borrador ya no está en el catálogo del vendor: elígelo de nuevo',
+            })
+          }
+
+          setCargando('motores')
+          let listaMotores: Opcion[] = []
+          try {
+            listaMotores = await catalogo('tipo=motores')
+          } catch (e) {
+            if (vivo) setFallo((e as Error).message)
+          } finally {
+            if (vivo) setCargando(null)
+          }
+          if (!vivo) return
+          setMotores(listaMotores)
+
+          const motorEncontrado = borradorLocal.motorId
+            ? listaMotores.find((m) => m.id === borradorLocal.motorId)
+            : undefined
+          if (modeloEncontrado && motorEncontrado) {
+            setMotorId(motorEncontrado.id)
+            void cargarVersiones(marcaEncontrada.id, modeloEncontrado.id, motorEncontrado.id)
+          }
+          return
+        }
+      }
 
       // 🚨 Sin `vehiculo` NO se llama a `buscarEnCatalogo`: devolvería
       // `sin_dato`, cuyo texto es «la ficha no lo trae» — una ausencia
@@ -382,6 +665,69 @@ export default function Retarificador({
     // Se corre una sola vez por póliza: la ficha no cambia mientras la miras.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deshabilitado])
+
+  // Borrador local — el resto de campos (no dependen de ningún catálogo, así
+  // que no hace falta la cadena async de arriba). Mismo criterio de
+  // prioridad: `guardadaPrevia` (ya pagada) manda si existe.
+  useEffect(() => {
+    if (deshabilitado || guardadaPrevia) return
+    const b = leerBorrador(claveBorrador)
+    if (!b) return
+    if (b.garaje && garajes.some((g) => g.id === b.garaje)) setGaraje(b.garaje)
+    if (b.estadoCivilId && civiles.some((c) => c.id === b.estadoCivilId)) setEstadoCivilId(b.estadoCivilId)
+    if (b.municipioId && listaMunicipios.some((m) => m.id === b.municipioId)) setMunicipioId(b.municipioId)
+    if (b.tipoViaId && listaTiposVia.some((t) => t.id === b.tipoViaId)) setTipoViaId(b.tipoViaId)
+    if (b.matriculacion) setMatriculacion(b.matriculacion)
+    // El borrador guarda la fecha de efecto del día en que se tecleó: a los
+    // dos días ya puede ser pasada, y restaurarla tal cual repetiría el 422.
+    if (b.correcciones) {
+      setCorrecciones({
+        ...b.correcciones,
+        fechaEfecto: fechaEfectoInicial(
+          b.correcciones.fechaEfecto,
+          hoyISO(),
+          masDiasISO(1),
+          MAX_DIAS_VISTA_EFECTO,
+        ),
+      })
+    }
+    // Se restaura una sola vez al abrir la pantalla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Autoguardado: CUALQUIER cambio se guarda en el navegador, aunque nunca se
+  // llegue a pulsar «Pedir precio». Es la red de seguridad de lo tecleado
+  // ANTES de pagar — `guardadaPrevia` sigue siendo la fuente de verdad de lo
+  // YA pagado y siempre manda sobre este borrador al recargar la pantalla.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      guardarBorrador(claveBorrador, {
+        marcaId,
+        modeloId,
+        motorId,
+        codigoVehiculo,
+        garaje,
+        estadoCivilId,
+        municipioId,
+        tipoViaId,
+        matriculacion,
+        correcciones,
+      })
+    }, 400)
+    return () => clearTimeout(t)
+  }, [
+    claveBorrador,
+    marcaId,
+    modeloId,
+    motorId,
+    codigoVehiculo,
+    garaje,
+    estadoCivilId,
+    municipioId,
+    tipoViaId,
+    matriculacion,
+    correcciones,
+  ])
 
   async function alElegirMarca(id: string) {
     setMarcaId(id)
@@ -457,10 +803,17 @@ export default function Retarificador({
         garaje,
         estadoCivilId,
         municipioId,
+        tipoViaId,
         fechaMatriculacion: matriculacion,
         garajeEsSupuesto: true,
       },
       correcciones,
+      // 🚨 asegura no deja pedir precio mientras haya un proyecto vigente sin
+      // emitir (409 `proyecto_vigente`, PR #2790). El único gesto que lo
+      // levanta es haber DESCARTADO ese precio aquí, a la vista de su importe:
+      // por eso `forzarNuevo` es exactamente `guardadaDescartada`, y no un
+      // `true` fijo que volvería a permitir el doble cargo por accidente.
+      forzarNuevo: guardadaDescartada,
     })
 
     switch (r.estado) {
@@ -470,6 +823,24 @@ export default function Retarificador({
         return
       case 'tope':
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
+        return
+      case 'proyecto_vigente':
+        // El guardián de asegura ha cortado SIN cobrar: ya hay un precio pagado
+        // y vigente. Normalmente no se llega aquí (el botón está apagado con la
+        // cotización recuperada en pantalla); si se llega es que la pantalla
+        // no la tenía cargada — recargar la trae.
+        setResultado({
+          estado: 'error',
+          mensaje:
+            `Ya hay un precio pagado y vigente para esta póliza${r.proyecto.compania ? ` (${r.proyecto.compania}` : ''}` +
+            `${r.proyecto.primaEur !== null ? `${r.proyecto.compania ? ', ' : ' ('}${eur(r.proyecto.primaEur)}` : ''}` +
+            `${r.proyecto.compania || r.proyecto.primaEur !== null ? ')' : ''}` +
+            `${r.proyecto.caducaEn ? `, válido hasta ${r.proyecto.caducaEn}` : ''}. ` +
+            'No se ha cobrado nada. Recarga la pantalla: ese precio sale arriba como «Cotización ' +
+            'recuperada» y se confirma con «Emitir» sin pagar. Si de verdad hace falta otro precio, ' +
+            'primero «Descartar y pedir precio de cero».',
+          gastoDesconocido: false,
+        })
         return
       case 'ramo':
       case 'no_encontrada':
@@ -484,6 +855,11 @@ export default function Retarificador({
         setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: r.gastoDesconocido })
         return
       case 'ok':
+        // 🚨 Cotización REAL pagada: a partir de ahora la fuente de verdad es
+        // `seguros.tarificaciones` (vía `guardadaPrevia` en la próxima carga).
+        // El borrador local ya no hace falta y dejarlo podría, en teoría,
+        // resucitar un valor tecleado y luego cambiado antes de pulsar.
+        if (!r.simulado) borrarBorrador(claveBorrador)
         setResultado({
           estado: 'ok',
           coste: r.coste,
@@ -496,6 +872,7 @@ export default function Retarificador({
           precios: r.precios,
           fallos: r.fallos,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
     }
@@ -508,12 +885,33 @@ export default function Retarificador({
   const faltaGaraje = !garaje
   const faltaCivil = !estadoCivilId
   const faltaMunicipio = !municipioId
+  // El tipo de vía solo hace falta si la dirección VIAJA (hay municipio): sin
+  // dirección el vendor no la pide. Con municipio y sin tipo, el servidor lo
+  // rechaza con 422 sin gastar — pero mejor decirlo aquí, en el campo.
+  const faltaTipoVia = !!municipioId && !tipoViaId
   const faltaMatriculacion = !matriculacion
+
+  /**
+   * Los huecos conocidos: los de la precalificación MÁS los que el servidor
+   * haya devuelto en un 422 (sin gastar). Los segundos importan porque la
+   * precalificación solo revisa la dirección si ya sabe el municipio: con un
+   * CP de varios municipios la calle/número/correo no salen en `faltanInicial`
+   * y aparecen por primera vez en el 422 de «Pedir precio» — sin esto no
+   * habría caja donde teclearlos (hallado en `code-review`, 12/09/2026).
+   */
+  const faltanConocidos = useMemo(() => {
+    const porCampo = new Map<string, Reparo>()
+    const delServidor = resultado.estado === 'faltan' ? resultado.faltan : []
+    for (const f of [...(faltanInicial ?? []), ...delServidor]) {
+      if (!porCampo.has(f.campo)) porCampo.set(f.campo, f)
+    }
+    return [...porCampo.values()]
+  }, [faltanInicial, resultado])
 
   /** Los huecos de la ficha que SÍ se teclean aquí (sexo + los de texto). */
   const aMano = useMemo(
-    () => (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo]),
-    [faltanInicial],
+    () => faltanConocidos.filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo]),
+    [faltanConocidos],
   )
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
 
@@ -522,7 +920,7 @@ export default function Retarificador({
    * callan: el servidor los rechazará con un 422 —sin gastar— y quien mire la
    * pantalla tiene que saber por qué antes de pulsar.
    */
-  const huerfanos = (faltanInicial ?? []).filter(
+  const huerfanos = faltanConocidos.filter(
     (f) => !RESUELTOS_EN_PANTALLA.has(f.campo as string) && !CAMPOS_A_MANO[f.campo],
   )
 
@@ -542,16 +940,48 @@ export default function Retarificador({
     faltaGaraje ||
     faltaCivil ||
     faltaMunicipio ||
+    faltaTipoVia ||
     faltaMatriculacion ||
     aManoSinRellenar.length > 0
   // En simulación no se llama al vendor ni se toca el libro, así que el tope no
   // pinta nada: bloquear por él sería impedir algo que no cuesta. Lo que NO
   // cambia es el resto de la guarda: los datos siguen haciendo falta porque el
   // cuerpo se revisa igual antes de responder.
-  const puedePulsar = !deshabilitado && !cotizando && !faltaAlgo && (simulacion || consumoPermite)
+  // 🚨 Con un precio REAL ya pagado en pantalla, «Pedir precio» está APAGADO —
+  // sea la cotización recuperada al abrir (y no descartada) o la que se acaba
+  // de pagar en esta misma visita. Si asegura la considera vigente (oferta
+  // confirmada y sin caducar) rechazaría la petición igualmente (409
+  // `proyecto_vigente`, sin cobrar), así que ofrecer el botón era ofrecer un
+  // callejón sin salida — medido por Alberto el 12/09/2026 con la póliza de
+  // Pilar Franco Ruz. Y si NO la considera vigente (sin ReRate, caducada), el
+  // botón encendido era justo el doble cargo por accidente que creó los
+  // proyectos 40684815 → 40684860. Se apaga ante la duda: el camino es
+  // «Emitir» (gratis) o, si hace falta otro precio, «Descartar» antes — que es
+  // el único gesto que manda `forzarNuevo`.
+  const precioPagadoEnPantalla =
+    (guardadaPrevia !== null && !guardadaDescartada) ||
+    (resultado.estado === 'ok' && !resultado.simulado && cotizacionIdDe(resultado.guardado) !== null)
+  const puedePulsar =
+    !deshabilitado && !cotizando && !faltaAlgo && !precioPagadoEnPantalla && (simulacion || consumoPermite)
+
+  // El código Base7 vino de una cotización guardada (no del desplegable en
+  // vivo) mientras no aparezca entre las versiones ya cargadas: marca/modelo/
+  // motor no se recuperan (el vendor no los pide, así que no se guardan), y
+  // sin ellos el desplegable de versiones no tiene con qué mostrar el nombre.
+  const versionRecuperada = codigoVehiculo !== '' && !versiones.some((v) => v.id === codigoVehiculo)
 
   return (
     <>
+      {guardadaPrevia?.caducada && <BannerCaducada guardadaPrevia={guardadaPrevia} />}
+      {guardadaPrevia && !guardadaDescartada && (
+        <BannerRecuperada
+          guardadaPrevia={guardadaPrevia}
+          onDescartar={() => {
+            setGuardadaDescartada(true)
+            setResultado({ estado: 'idle' })
+          }}
+        />
+      )}
       {simulacion && <BannerSimulacion />}
 
       {/* ── Paso 1 · el vehículo ───────────────────────────────────────────── */}
@@ -647,26 +1077,50 @@ export default function Retarificador({
               </span>
             }
           >
-            <select
-              id="version"
-              value={codigoVehiculo}
-              onChange={(e) => setCodigoVehiculo(e.target.value)}
-              disabled={!modeloId || !motorId || cargando === 'versiones'}
-              style={{ minHeight: 44 }}
-            >
-              <option value="">
-                {cargando === 'versiones'
-                  ? 'Cargando…'
-                  : !motorId
-                    ? 'Elige antes el combustible'
-                    : 'Elige versión'}
-              </option>
-              {versiones.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.nombre}
+            {versionRecuperada ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                  minHeight: 44,
+                  padding: '0 2px',
+                }}
+              >
+                <span className="badge ok">recuperada</span>
+                <code style={{ fontSize: 13 }}>{codigoVehiculo}</code>
+                <button
+                  type="button"
+                  className="ghost"
+                  style={{ minHeight: 32, padding: '4px 10px' }}
+                  onClick={() => setCodigoVehiculo('')}
+                >
+                  Olvidar y elegir otra
+                </button>
+              </div>
+            ) : (
+              <select
+                id="version"
+                value={codigoVehiculo}
+                onChange={(e) => setCodigoVehiculo(e.target.value)}
+                disabled={!modeloId || !motorId || cargando === 'versiones'}
+                style={{ minHeight: 44 }}
+              >
+                <option value="">
+                  {cargando === 'versiones'
+                    ? 'Cargando…'
+                    : !motorId
+                      ? 'Elige antes el combustible'
+                      : 'Elige versión'}
                 </option>
-              ))}
-            </select>
+                {versiones.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.nombre}
+                  </option>
+                ))}
+              </select>
+            )}
           </Campo>
 
           <Campo
@@ -720,7 +1174,7 @@ export default function Retarificador({
         sub={
           aMano.length > 0
             ? 'Los datos personales NUNCA se suponen: los que falten se teclean aquí.'
-            : 'La ficha trae todo lo personal; solo hay que confirmar estos dos.'
+            : 'La ficha trae todo lo personal; solo hay que confirmar estos tres.'
         }
       >
         <div className="form-grid">
@@ -780,6 +1234,42 @@ export default function Retarificador({
               {listaMunicipios.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.nombre}
+                </option>
+              ))}
+            </select>
+          </Campo>
+
+          {/* 🛣️ Tipo de vía ANTES de pagar (12/09/2026). El Submit lo exige como
+              referencia de catálogo y el proyecto no lo admite después: hasta
+              hoy se pedía DESPUÉS del cargo, en `faltan_vendor`, tecleando un
+              id a ciegas. Es el hueco real de Pilar Franco Ruz («Severo Ochoa
+              12», sin «Calle» delante). */}
+          <Campo
+            id="tipo-via"
+            etiqueta="Tipo de vía"
+            falta={faltaTipoVia}
+            ayuda={
+              tipoViaAuto
+                ? `Viene de la dirección de la ficha («${tipoViaAuto.nombre}»). Se puede cambiar.`
+                : tipoViaMotivo ??
+                  (tiposVia === null
+                    ? 'No se ha podido leer el catálogo de tipos de vía. No es que no haya: no se ha podido mirar.'
+                    : 'La dirección de la ficha no lo dice: elígelo. La compañía lo exige para emitir.')
+            }
+          >
+            <select
+              id="tipo-via"
+              value={tipoViaId}
+              onChange={(e) => setTipoViaId(e.target.value)}
+              disabled={listaTiposVia.length === 0}
+              style={{ minHeight: 44 }}
+            >
+              <option value="">
+                {listaTiposVia.length === 0 ? 'Catálogo no disponible' : 'Elige tipo de vía'}
+              </option>
+              {listaTiposVia.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre}
                 </option>
               ))}
             </select>
@@ -855,6 +1345,53 @@ export default function Retarificador({
             </p>
           </div>
         )}
+
+        {/* 🚨 Fecha de efecto — corrección MANUAL, resuelta SIEMPRE en pantalla
+            (`RESUELTOS_EN_PANTALLA`): el servidor supone una (el día siguiente al
+            vencimiento de la póliza actual, o mañana si no hay vencimiento) y
+            desde el 13/09/2026 la reprocha en `faltanInicial` si cae fuera de
+            [hoy, hoy+90] — pero este campo va precargado y se manda como
+            corrección, así que ese reparo nunca bloquea. Existe porque ese
+            supuesto se rechaza al confirmar el precio (ReRate) si cae a más de
+            90 días vista o ya ha pasado — y para entonces ya se ha pagado el
+            0,50€ de esta pantalla. Se
+            corrige AQUÍ, antes de pagar, no después: `effectiveDate` no es
+            editable una vez creado el proyecto en el vendor (11-12/09/2026,
+            varios intentos reales sobre el proyecto de Pilar Franco Ruz).
+            🚨 Precargada a MAÑANA (13/09/2026, Alberto; hasta entonces HOY por
+            su dictado del 12/09 «no puede ser opcional») — nunca en blanco,
+            porque mañana SIEMPRE cumple la ventana [hoy, hoy+90] del vendor, al
+            revés que el supuesto automático cuando el vencimiento real está
+            lejos, y da un día de margen para confirmar y emitir (con HOY, la
+            cotización moría a medianoche). Se puede cambiar, pero el campo
+            nunca arranca vacío. */}
+        <div style={{ marginTop: 16 }}>
+          <Campo
+            id="c-fechaEfecto"
+            etiqueta="Fecha de efecto"
+            falta={false}
+            ayuda={
+              <>
+                Precargada a mañana: es la fecha que se manda al pedir precio. Cámbiala solo si el
+                cliente quiere que la póliza empiece otro día — <strong>siempre a ≤90 días vista</strong>,
+                la compañía rechaza fechas más lejanas al confirmar el precio, y para entonces ya se
+                ha pagado la cotización. No se puede arreglar después: hay que acertarla aquí.{' '}
+                <strong>Y hay que confirmar el precio y emitir antes de que pase ese día</strong>: con la
+                fecha de efecto ya pasada la compañía tampoco acepta (13/09/2026), y la cotización se pierde.
+              </>
+            }
+          >
+            <input
+              id="c-fechaEfecto"
+              type="date"
+              value={correcciones.fechaEfecto ?? ''}
+              min={hoyISO()}
+              max={masDiasISO(MAX_DIAS_VISTA_EFECTO)}
+              onChange={(e) => setCorrecciones((c) => ({ ...c, fechaEfecto: e.target.value }))}
+              style={{ minHeight: 44 }}
+            />
+          </Campo>
+        </div>
       </Paso>
 
       {/* ── Paso 3 · el disparo ────────────────────────────────────────────── */}
@@ -882,6 +1419,15 @@ export default function Retarificador({
         )}
 
         <Contador consumo={consumo} simulacion={simulacion} />
+
+        {precioPagadoEnPantalla && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            Botón apagado a propósito: ya hay un precio <strong>pagado</strong> en esta pantalla, y
+            pedir otro sería otro cargo (y puede salir otra cifra). Para confirmarlo, «Emitir» en la
+            tabla de precios (gratis). Si de verdad hace falta otro precio, primero «Descartar y pedir
+            precio de cero».
+          </p>
+        )}
 
         {faltaAlgo && !deshabilitado && (
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
@@ -949,9 +1495,9 @@ function Precios({
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
 }) {
-  // 🧪 Qué fila tiene la maqueta de pre-emisión abierta (ver preemision-mock.tsx).
-  // `null` = ninguna. Vive aquí, no en el padre: es puro estado de pantalla,
-  // no algo que la póliza necesite recordar entre visitas.
+  // Qué fila tiene abierto el panel de emisión real (ver emision.tsx). `null` =
+  // ninguna. Vive aquí, no en el padre: es puro estado de pantalla, no algo
+  // que la póliza necesite recordar entre visitas.
   const [abierta, setAbierta] = useState<string | null>(null)
   return (
     <div style={{ marginTop: 16 }}>
@@ -1055,15 +1601,24 @@ function Precios({
                   </span>
                 </td>
                 <td>
-                  {/* 🧪 Maqueta de pre-emisión (ver preemision-mock.tsx): NO llama a
-                      Codeoscopic ni gasta nada, es solo para que Alberto pruebe el
-                      diseño de la pantalla siguiente. */}
+                  {/* El botón real (11/09/2026): confirma con la compañía
+                      (ReRate) y, si sale firme, permite el Submit de verdad.
+                      Sin `cotizacionId` (la cotización no quedó guardada) no
+                      hay proyecto al que pedírselo. */}
                   <button
                     type="button"
                     className="ghost"
+                    disabled={r.simulado || cotizacionIdDe(r.guardado) === null}
+                    title={
+                      r.simulado
+                        ? 'Simulado: no hay proyecto real de Codeoscopic'
+                        : cotizacionIdDe(r.guardado) === null
+                          ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
+                          : undefined
+                    }
                     onClick={() => setAbierta(abierta === id ? null : id)}
                   >
-                    {abierta === id ? 'Ocultar' : 'Pre-emitir'}
+                    {abierta === id ? 'Ocultar' : 'Emitir'}
                   </button>
                 </td>
               </tr>
@@ -1076,11 +1631,15 @@ function Precios({
       {r.precios.map((p, i) => {
         const id = `${p.compania}-${p.producto}-${i}`
         if (abierta !== id) return null
+        const cotizacionId = cotizacionIdDe(r.guardado)
+        if (!cotizacionId) return null
         return (
-          <PreemisionMock
+          <Emision
             key={id}
-            compania={p.compania ?? null}
-            producto={p.producto ?? null}
+            tarificacionId={cotizacionId}
+            compania={p.compania ?? ''}
+            categoria={p.categoria ?? ''}
+            primaEur={p.primaEur ?? null}
             onCerrar={() => setAbierta(null)}
           />
         )
@@ -1184,6 +1743,78 @@ export function ValorSupuesto({ s }: { s: Supuesto }) {
  * simulación y va ANTES de mirar `CODEOSCOPIC_TARIFICACION_ACTIVA`, así que el
  * botón SÍ funciona y NO cuesta nada.
  */
+/**
+ * Avisa de que la pantalla ha arrancado con una cotización YA PAGADA, para
+ * que no se lea como si el precio de abajo fuera gratis o recién pedido.
+ * Todo lo prellenado sigue siendo editable, pero «Pedir precio» queda apagado
+ * mientras este precio esté en pantalla: asegura lo rechazaría (409
+ * `proyecto_vigente`). «Descartar» lo enciende y manda `forzarNuevo: true`
+ * (esa cotización sí cuesta 0,50€).
+ */
+function BannerRecuperada({
+  guardadaPrevia,
+  onDescartar,
+}: {
+  guardadaPrevia: TarificacionGuardadaAuto
+  onDescartar: () => void
+}) {
+  const fecha = new Date(guardadaPrevia.creadaEn)
+  const cuando = Number.isNaN(fecha.getTime())
+    ? 'antes'
+    : fecha.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return (
+    <div
+      className="card"
+      style={{ borderColor: 'var(--ok)', borderWidth: 2, background: 'rgba(22, 163, 74, 0.08)' }}
+    >
+      <p style={{ margin: 0, fontWeight: 800, color: 'var(--ok)' }}>
+        📋 Cotización recuperada ({cuando})
+      </p>
+      <p style={{ margin: '4px 0 0' }}>
+        Ya se pidió precio para esta póliza y sigue guardado — <strong>no se ha vuelto a cobrar</strong>.
+        Se confirma con «Emitir» en la tabla de precios de abajo, sin pagar. Mientras siga vigente,
+        «Pedir precio» está apagado: para pedir otro (0,50€) hay que descartar este primero.
+      </p>
+      {/* 🚨 El botón «Emitir» de la tabla de precios de abajo confirma ESTE
+          proyecto recuperado directamente — sin pasar por «Pedir precio» ni
+          por el campo «Fecha de efecto». Si este proyecto quedó con una
+          fecha que la compañía rechaza (>90 días vista) y no hay forma de
+          corregirla (effectiveDate es de solo lectura tras crear el
+          proyecto), pulsar «Emitir» aquí repite el mismo 400 para siempre.
+          «Descartar» oculta el precio recuperado para forzar un «Pedir
+          precio» de cero, con la fecha de efecto ya corregida. */}
+      <button
+        type="button"
+        className="ghost"
+        style={{ marginTop: 8 }}
+        onClick={onDescartar}
+      >
+        Descartar y pedir precio de cero
+      </button>
+    </div>
+  )
+}
+
+function BannerCaducada({ guardadaPrevia }: { guardadaPrevia: TarificacionGuardadaAuto }) {
+  const fecha = new Date(guardadaPrevia.creadaEn)
+  const cuando = Number.isNaN(fecha.getTime())
+    ? 'antes'
+    : fecha.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return (
+    <div className="card" style={{ borderColor: 'var(--danger)', borderWidth: 2, background: 'rgba(220, 38, 38, 0.06)' }}>
+      <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+        ⏳ La cotización del {cuando} ha caducado
+      </p>
+      <p style={{ margin: '4px 0 0' }}>
+        Se pidió con fecha de efecto <strong>{guardadaPrevia.fechaEfecto ?? '(sin fecha)'}</strong>, que ya ha
+        pasado: la compañía no confirma ni emite una póliza con efecto anterior a hoy, y esa fecha no se puede
+        cambiar en un proyecto ya creado. <strong>No se ha cobrado nada.</strong> Hay que pedir precio de cero
+        (0,50€) con la fecha de efecto de abajo, y confirmar y emitir <strong>antes de que pase ese día</strong>.
+      </p>
+    </div>
+  )
+}
+
 function BannerSimulacion() {
   return (
     <div
@@ -1595,6 +2226,12 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
+  // Lo que el SUBMIT exige y la ficha puede no traer (12/09/2026): se teclea
+  // ANTES de pagar. Hasta hoy `nombreVia` caía en «no se arregla desde esta
+  // pantalla» y el correo/número se descubrían a 0,50€ por campo.
+  nombreVia: { etiqueta: 'Nombre de la calle', tipo: 'text' },
+  numeroVia: { etiqueta: 'Número', tipo: 'text' },
+  email: { etiqueta: 'Correo electrónico', tipo: 'email' },
 }
 
 /**
@@ -1603,10 +2240,12 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
  * en vez de desaparecer: un hueco que no se ve es el peor de los estados.
  */
 const RESUELTOS_EN_PANTALLA = new Set<string>([
+  'fechaEfecto',
   'codigoVehiculo',
   'garaje',
   'fechaMatriculacion',
   'municipioCirculacionId',
   'estadoCivil',
   'sexo',
+  'tipoVia',
 ])

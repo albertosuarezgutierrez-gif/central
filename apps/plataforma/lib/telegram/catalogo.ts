@@ -113,6 +113,12 @@ export const AVISOS: AvisoTelegram[] = [
     que: 'Qué ha reescrito el agente SEO en la web de House Sevillana.',
     cuando: 'Lunes',
   },
+  {
+    id: 'sistema.acceso-intranet', categoria: 'sistema',
+    titulo: 'Alguien ha entrado en la intranet',
+    que: 'Nombre y email de la cuenta que acaba de iniciar sesión en /login.',
+    cuando: 'Al iniciar sesión',
+  },
 
   // ── 🏦 Banca y contable ───────────────────────────────────────────────────
   {
@@ -547,6 +553,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:30',
   },
   {
+    id: 'correduria.recaptacion-lote', categoria: 'correduria',
+    titulo: 'Recaptación por email · lote diario',
+    que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',
+    cuando: 'Todos los días a las 07:00, y solo si hubo candidatos o el envío falló',
+  },
+  {
     id: 'correduria.ingesta', categoria: 'correduria',
     titulo: 'Se pierden datos de CIMA',
     que: 'Recibos, siniestros o pólizas que las compañías mandan y no llegan a guardarse.',
@@ -581,6 +593,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Informe SEO semanal de grupoasegura.es',
     que: 'Posiciones reales en Google (Search Console), quién ocupa el top-10 de cada consulta objetivo (Serper) y visitas medidas (PostHog), con UNA acción propuesta. Si una fuente no está conectada lo dice, no pinta un cero.',
     cuando: 'Lunes 08:30 UTC',
+  },
+  {
+    id: 'correduria.seo-agente-cambio', categoria: 'correduria',
+    titulo: 'Propuesta de metadata SEO para un ramo (agente autónomo)',
+    que: 'Un ramo de asegura-web no aparece en el top-10 de su consulta objetivo: la IA propone un title/description nuevo y abre un PR DRAFT contra apps/asegura-web para que lo revises. Nunca escribe a main ni mergea solo.',
+    cuando: 'Lunes 09:00 UTC (detrás del informe semanal), solo si SEO_ASEGURA_AGENT_ENABLED=true',
   },
   {
     id: 'correduria.blog-listo', categoria: 'correduria',

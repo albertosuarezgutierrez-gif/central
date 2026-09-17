@@ -94,10 +94,9 @@ puede servir» a medias:
 - **Acción (solo si la hay):**
   - Algo merece ojo humano (CVE serio, release que desbloquea un pendiente,
     herramienta claramente mejor) → **aviso Telegram**:
-    `POST {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`
-    y `{ "text": "🔭 github-vigia: <resumen con URLs>" }`. Si faltan las envs, omite
-    el aviso (no falles). (`ALERTA_TOKEN` = token estrecho de este endpoint; acepta también el
-    viejo `CRON_SECRET` por compat, pero NO metas la llave maestra en el prompt.)
+    `bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "🔭 github-vigia: <resumen con URLs>" }'`.
+    Si faltan las envs, omite el aviso (no falles). (`ALERTA_TOKEN` = token estrecho de este endpoint;
+    acepta también el viejo `CRON_SECRET` por compat, pero NO metas la llave maestra en el prompt.)
   - El arreglo es un **bump de dependencia pequeño y seguro** (patch/minor con CVE,
     sin breaking changes) → **PR draft** `claude/github-vigia-<fecha>` con el bump y
     el porqué en el cuerpo. Código NUNCA directo a `main`.
@@ -107,9 +106,7 @@ puede servir» a medias:
 ## Paso 5 — Deja huella del latido (OBLIGATORIO, incluso si fue mal)
 
 ```
-POST {PLATAFORMA_URL}/api/internal/latido
-Authorization: Bearer {ALERTA_TOKEN}
-{ "agente":"github_vigia", "ok":<true|false>, "detalle":"<parte>" }
+bash scripts/canal-aviso.sh POST /api/internal/latido '{ "agente":"github_vigia", "ok":<true|false>, "detalle":"<parte>" }'
 ```
 `ok = true` **si recorriste las tres patas (releases vigilados, descubrimiento, npm outdated/audit) y
 actualizaste `docs/VIGIA-OSS.md`** — «sin novedades relevantes» es `ok:true`. `ok = false` si alguna pata
@@ -144,10 +141,10 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 ## Canal de aviso — protocolo común
 
 **Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
-`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+`bash scripts/canal-aviso.sh GET /api/internal/alerta`
 
-- `200` → el canal está vivo, sigue con tu pasada.
-- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+- `HTTP_STATUS:200` → el canal está vivo, sigue con tu pasada.
+- `HTTP_STATUS:401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
   hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
   Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
   `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).

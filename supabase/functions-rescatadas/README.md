@@ -1,5 +1,17 @@
 # Edge Functions rescatadas del panel de Supabase
 
+> ✅ **Actualización 10-11/09/2026 (sesión sidra-guest-data-breach).** Las 12 funciones
+> marcadas 🔴/🚨 en la tabla de abajo (todas las de escritura sin autenticar + `sync-smoobu`)
+> se **redesplegaron desde este repo** con `verify_jwt: true` — mismo código, secretos ya
+> sustituidos por `Deno.env.get()` como en estos ficheros, así que ni siquiera hay un valor
+> real que filtrar aunque alguien colara una sesión. Verificado con `list_edge_functions`.
+> `sync-smoobu` se dejó `verify_jwt: false` (la invoca el cron `pg_cron` sin JWT) pero se le
+> arregló el hallazgo 3 (ya no vacía `incomes` si Smoobu responde 200 vacío). **Esto NO
+> sustituye la rotación de credenciales** — los PAT y la contraseña siguen siendo válidos
+> hasta que Alberto los revoque a mano (ver checklist en `docs/ROTACION-SERVICE-ROLE.md`) — y
+> tampoco activa GitHub Advanced Security (`run_secret_scanning` confirmó que el repo no lo
+> tiene: sin secret scanning ni push protection, así se coló el leak de mayo sin avisar).
+
 > **Qué es esto.** El proyecto Supabase `wswbehlcuxqxyinousql` sirve **67** Edge Functions.
 > El monorepo solo versionaba **45** (`apps/ia-rest/supabase/functions/`). Las **22** restantes
 > se ejecutaban en producción **sin código fuente en ningún repositorio**: solo existían en los
