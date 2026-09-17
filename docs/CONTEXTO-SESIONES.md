@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/09/2026)** Codeoscopic · **primera emisión real con éxito** tras el fix del PR #3045
+(`conProductoPorDefecto`, consentimientos de Allianz en el Submit). Proyecto nuevo 40769244
+(Pilar Franco Ruz) → `estado=emitida`, oferta Q2021593788, sin error. Referencia de compañía
+61048939, recibo domiciliado en su cuenta habitual. Queda "pendiente de confirmación por CIMA"
+(normal, es la ingesta async). El proyecto viejo 40685793 sigue `error` y no se toca — es historia.
+Causa raíz cerrada de verdad: el bug no era del vendor, era el `product.options` del Submit que
+faltaba.
+
 **(17/09/2026)** asegura-portal · `.sugerencia-panel` (el desplegable «¿Echas algo de menos?» de la
 cabecera) no se adaptaba al móvil: colgaba con `right:0` de un botón que no es el último de la barra
 y se salía por la izquierda a ≤480px. Al arreglarlo y traer `main` para resolver el conflicto, salió

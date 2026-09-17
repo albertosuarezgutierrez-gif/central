@@ -127,6 +127,9 @@ export async function pedirEmision(entrada: {
   cuentaConfirmada?: string | null
   reintentoConfirmado?: boolean
   acunarExistente?: boolean
+  /** El corredor confirma que el tomador YA tiene familiares asegurados en
+   *  Allianz (bonificación real). Ver `emitirAsegura`. */
+  familiaEnAllianz?: boolean
 }): Promise<RespuestaEmitir> {
   return emitirAsegura({
     projectId: entrada.projectId,
@@ -136,5 +139,6 @@ export async function pedirEmision(entrada: {
     cuentaConfirmada: entrada.cuentaConfirmada ?? null,
     reintentoConfirmado: entrada.reintentoConfirmado === true,
     acunarExistente: entrada.acunarExistente === true,
+    familiaEnAllianz: entrada.familiaEnAllianz === true,
   })
 }

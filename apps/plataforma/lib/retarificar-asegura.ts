@@ -1086,6 +1086,10 @@ export async function emitirAsegura(p: {
   /** El proyecto YA cuenta una solicitud APROBADA con nº de póliza: asegura la
    *  acuña en la cartera y NO manda ningún Submit. */
   acunarExistente?: boolean
+  /** El corredor confirma que el tomador YA tiene familiares asegurados en
+   *  Allianz (bonificación real de cartera). NUNCA se manda por defecto — ver
+   *  `conProductoPorDefecto` en asegura, que es quien decide el valor final. */
+  familiaEnAllianz?: boolean
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1102,6 +1106,7 @@ export async function emitirAsegura(p: {
           ...(p.cuentaConfirmada ? { cuentaConfirmada: p.cuentaConfirmada } : {}),
           ...(p.reintentoConfirmado === true ? { reintentoConfirmado: true } : {}),
           ...(p.acunarExistente === true ? { acunarExistente: true } : {}),
+          ...(p.familiaEnAllianz === true ? { familiaEnAllianz: true } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,

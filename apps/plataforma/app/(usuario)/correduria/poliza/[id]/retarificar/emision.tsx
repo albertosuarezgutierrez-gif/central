@@ -254,6 +254,12 @@ export function Emision({
   // `payment.bankAccount.iban`. Nunca se inventa ni viaja sin confirmar.
   const [iban, setIban] = useState('')
   const [cuentaOk, setCuentaOk] = useState(false)
+  // 17/09/2026: Alberto — `insuredFamilyInAllianz` no es un consentimiento a
+  // secas, lleva descuento (bonificación de cartera). Por defecto sigue en
+  // `false` en asegura (no se inventa un ahorro sin comprobarlo); esta caja
+  // es la única forma de decirlo cuando el corredor SÍ lo sabe.
+  const [familiaAllianz, setFamiliaAllianz] = useState(false)
+  const esAllianz = compania.trim().toLowerCase().includes('allianz')
 
   // Catálogos de `faltan_vendor` (ver `CATALOGO_DE_CAMPO`): se piden UNA vez
   // por campo —gratis, con el interruptor apagado— y se pintan como
@@ -368,6 +374,20 @@ export function Emision({
       setEstado({ paso: 'error', mensaje: 'Los campos adicionales no son un JSON válido.' })
       return
     }
+    // Si el JSON avanzado ya trae `product`, asegura lo respeta tal cual y la
+    // casilla de familia en Allianz no tiene ningún efecto (`conProductoPorDefecto`
+    // nunca pisa un `product` puesto a mano) — se avisa ANTES de emitir en vez de
+    // dejar creer que se ha pedido un descuento que no se ha pedido.
+    if (esAllianz && familiaAllianz && typeof campos.product === 'object' && campos.product !== null) {
+      setEstado({
+        paso: 'error',
+        mensaje:
+          'Los "Campos adicionales" ya traen un `product` propio: la casilla de familia en Allianz no ' +
+          'tiene efecto sobre él (asegura respeta el JSON avanzado tal cual). Quita esa clave del JSON o ' +
+          'añade `insuredFamilyInAllianz: true` a mano dentro de su `options`.',
+      })
+      return
+    }
     const otraCuenta = iban.trim() !== ''
     if (otraCuenta) campos = { ...campos, iban: iban.trim() }
     // La máscara que el corredor ha visto y marcado: es lo ÚNICO que autoriza a
@@ -381,6 +401,7 @@ export function Emision({
       cuentaConfirmada,
       reintentoConfirmado: opciones.reintentoConfirmado === true,
       acunarExistente: opciones.acunarExistente === true,
+      familiaEnAllianz: esAllianz && familiaAllianz,
     })
     if (r.estado === 'reintento_sin_confirmar') {
       setEstado({
@@ -665,6 +686,18 @@ export function Emision({
             iban={iban}
             onIban={setIban}
           />
+          {esAllianz && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, minHeight: 44 }}>
+              <input
+                type="checkbox"
+                checked={familiaAllianz}
+                onChange={(e) => setFamiliaAllianz(e.target.checked)}
+              />
+              <span style={{ fontSize: 13 }}>
+                El tomador ya tiene familiares asegurados en Allianz (aplica el descuento)
+              </span>
+            </label>
+          )}
           <details style={{ marginTop: 8 }}>
             <summary className="muted" style={{ cursor: 'pointer' }}>
               Campos adicionales (avanzado, opcional)

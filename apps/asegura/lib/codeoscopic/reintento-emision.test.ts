@@ -167,7 +167,7 @@ test('la ruta /emitir niega el reintento con una solicitud viva y acuña antes d
 // quedara en el `camposEnvio` sin producto, ese camino repetiría el 500.
 test('emitir/route.ts: el Submit rellena product.options por defecto y lo usa en TODOS los envíos (lee el fuente)', () => {
   const src = readFileSync(fileURLToPath(new URL('../../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url)), 'utf8')
-  assert.match(src, /camposConProducto = conProductoPorDefecto\(camposEnvio, p\.aseguradora\)/)
+  assert.match(src, /camposConProducto = conProductoPorDefecto\(camposEnvio, p\.aseguradora, \{/)
   const usos = [...src.matchAll(/campos: camposConProducto,/g)]
   assert.equal(usos.length, 2)
   assert.doesNotMatch(src, /campos: camposEnvio,/)
