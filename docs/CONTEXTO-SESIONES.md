@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/09/2026)** asegura-portal · `.sugerencia-panel` (el desplegable «¿Echas algo de menos?» de la
+cabecera) no se adaptaba al móvil: colgaba con `right:0` de un botón que no es el último de la barra
+y se salía por la izquierda a ≤480px. Al arreglarlo y traer `main` para resolver el conflicto, salió
+que **otra sesión en paralelo ya había portado el mismo arreglo** (mismo mecanismo que
+`.campana-panel`): diff contra `main` vacío, PR #3043 cerrado sin mergear. **Recordatorio de la regla
+global «Responsive» del CLAUDE.md raíz: TODA UI nueva o tocada tiene que funcionar en ≥320px, y si un
+cambio toca un componente con problema responsive conocido, se corrige en el mismo PR** — no es
+opcional ni cosa de una vertical.
+
 **(16/09/2026)** CIMA · skill `cima-ingesta` (router de la tubería EIAC/TIREA: cadena, cuarentena,
 cobertura de campos, caja negra del webhook y diagnóstico), y se mata el duplicado en
 `agente-correduria`/`correduria-crm`. **Generali SÍ vuelca por CIMA desde el 14/09** (1er POL, único
