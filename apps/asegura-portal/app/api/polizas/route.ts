@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 
 import { normalizarTitular, type TitularDeclarado } from '@central/module-seguros-portal'
 
+import { avisarPolizaDeclaradaDesdeAlta } from '@/lib/aviso-poliza-declarada'
 import { guardarDocumentoPropio } from '@/lib/documento-portal'
 import { prisma } from '@/lib/db'
 import { extraerPoliza } from '@/lib/extraer-poliza'
@@ -144,6 +145,16 @@ async function altaConDocumento(req: Request, identidadId: string) {
     select: { id: true },
   })
 
+  // Best-effort y no bloqueante: el aviso a Alberto no puede retrasar ni
+  // tumbar la respuesta al cliente que acaba de subir su póliza.
+  void avisarPolizaDeclaradaDesdeAlta({
+    identidadId,
+    compania: datos.compania,
+    ramo: datos.ramo,
+    numeroPoliza: datos.numeroPoliza,
+    fechaVencimiento: datos.fechaVencimiento,
+  })
+
   return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo, documentoGuardado: documentoGuardado.estado })
 }
 
@@ -211,6 +222,17 @@ async function altaAMano(req: Request, identidadId: string) {
     select: { id: true },
   })
 
+  const fechaVencimiento = datos.fechaVencimiento ? datos.fechaVencimiento.toISOString().slice(0, 10) : null
+
+  // Best-effort y no bloqueante, igual que en el alta con documento.
+  void avisarPolizaDeclaradaDesdeAlta({
+    identidadId,
+    compania: datos.compania,
+    ramo: datos.ramo,
+    numeroPoliza: datos.numeroPoliza,
+    fechaVencimiento,
+  })
+
   return NextResponse.json(
     {
       id: poliza.id,
@@ -218,7 +240,7 @@ async function altaAMano(req: Request, identidadId: string) {
         ...datos,
         // Columna `date`: se devuelve como `YYYY-MM-DD`, que es lo que la
         // pantalla pinta y lo que come `<input type="date">`.
-        fechaVencimiento: datos.fechaVencimiento ? datos.fechaVencimiento.toISOString().slice(0, 10) : null,
+        fechaVencimiento,
       },
     },
     { status: 201 },
