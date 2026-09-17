@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/09/2026)** `guardian-rama.mjs` daba un falso "commits huérfanos" al mergear PRs por MCP —
+la causa real: la rama LOCAL `main` de este checkout iba desincronizada de `origin/main` (se
+quedó en un SHA viejo tras squash-merges anteriores), no basura huérfana como se pensó en un
+principio. Arreglo sin tocar el ruleset ni el hook: `git branch -f main origin/main` antes de
+mergear — reconcilia el puntero local sin perder nada (el contenido ya estaba en `origin/main`
+vía squash). Con eso se mergearon asegura#838 (alerta Telegram CIMA) y central#3052 (memoria).
+Probado en real: `cima-pull` disparado a mano tras el merge — `ok:true, processed:0` (nada
+pendiente en ese momento; el aviso se verá la próxima vez que CIMA mande un review/situación real).
 **(17/09/2026)** CIMA · **primera medición real de cobertura de campos** (las tablas de #832 ya escriben:
 640 rutas, 3 crudos, 1 con incidencia). Muestra PARCIAL y hay que decirlo: solo **POL** y solo **Occident
 C0468 + Generali C0072** — ni SIN/REC/CEF ni Mapfre/Allianz/Reale. De **309 rutas hoja** distintas, **268
