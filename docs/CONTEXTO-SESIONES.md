@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/09/2026)** CIMA · **primera medición real de cobertura de campos** (las tablas de #832 ya escriben:
+640 rutas, 3 crudos, 1 con incidencia). Muestra PARCIAL y hay que decirlo: solo **POL** y solo **Occident
+C0468 + Generali C0072** — ni SIN/REC/CEF ni Mapfre/Allianz/Reale. De **309 rutas hoja** distintas, **268
+no se leen nunca** (258 de negocio + las 10 del sobre EIAC, que son metadatos del lote y no son dato
+perdido). 🪤 Casi se reporta «el medidor está roto» porque `Importes.PrimaNeta` sale sin leer teniendo
+prima en la BD: **falso**, la prima se lee de `ImportesDEC.PrimaNetaAnualizada`, que es OTRO campo. El
+medidor acierta. Huecos reales a mirar: `DatosAnulacion.*` (motivo/fecha de anulación), `DatosCargos.*`,
+`DescripcionRamo`/`RamoEntidad`, `ClasePoliza`. Sin ficheros nuevos desde el 16/09 10:10 (Mapfre sigue muda).
+
 **(17/09/2026)** Portal cliente · Alberto reportó que Alejandro José Soler Fernández Gao subió
 pólizas y no se enteró ni por Telegram ni como oportunidad. Medido en BD: solo hay UNA declarada
 (la segunda subida no se guardó, probablemente falló en el cliente), vinculada bien a su ficha,
