@@ -15,6 +15,21 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-16 · trading-analista** · hizo: pasada 20:15 completa (sin huella previa de hoy en
+  Supabase, no era repesca). Preflight OK. NAV 32.676,96€ empujado a `/saldo` (sin salto). Cartera
+  real (CVX+VWCE) y libro de operaciones (0 nuevas) empujados. Watchlist 24 símbolos: velas
+  descargadas de IBKR UNA A UNA y secuenciales tras detectar que un lote en paralelo de 6 llamadas
+  devolvió los resultados DESORDENADOS respecto a los `contract_id` pedidos (el landmine que la
+  skill ya documentaba, visto en vivo: el "QQQ" del lote resultó ser datos de IWM) — descartado ese
+  lote, repetido 1x1, verificado cruzando NVDA/MSFT/CVX contra el precio en vivo de la cartera y
+  contra el ejemplo de `precio_ref` de la propia skill (MSFT 06/08=499,86 exacto). `/analizar`:
+  24/24 sin vetados/suplantados/divergentes, top 5 ideas ninguna operada (concentración/SMA50).
+  `/puntuar`: 0 puntuadas/cerradas, limpio. Resumen enviado por Telegram con stopViable de cada
+  idea. No es lunes: sin paso de radar/satélite. dudas: —; fallos: —;
+  PRs/commits: nuevo `scripts/canal-aviso-archivo.sh` (variante de `canal-aviso.sh` con el body por
+  FICHERO en vez de argv — el payload de 24 símbolos × 120 velas, ~288 KB, reventaba "Argument list
+  too long" al pasarlo inline; mismo patrón de seguridad, -K de curl, sin URL/token en la llamada de
+  Bash) — commit de esta pasada.
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
