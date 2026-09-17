@@ -91,3 +91,28 @@ test('conProductoPorDefecto: un `product` que no es objeto (array/null) SÍ se r
   const r = conProductoPorDefecto({ product: null }, 'Allianz')
   assert.ok((r.product as { options: unknown }).options)
 })
+
+test('conProductoPorDefecto: familiaAllianz=true pone insuredFamilyInAllianz a true, el resto sigue en false', () => {
+  const r = conProductoPorDefecto({ quote: { id: 'Q1' } }, 'Allianz', { familiaAllianz: true })
+  const opciones = (r.product as { options: { id: string; value: unknown }[] }).options
+  assert.deepEqual(
+    Object.fromEntries(opciones.map((o) => [o.id, o.value])),
+    {
+      insuredFamilyInAllianz: true,
+      publicityConsent: false,
+      allianzGroupProductsConsent: false,
+      commercialProfilingConsent: false,
+    },
+  )
+})
+
+test('conProductoPorDefecto: familiaAllianz=true en una compañía sin catálogo no inventa nada', () => {
+  const campos = { quote: { id: 'Q1' } }
+  assert.deepEqual(conProductoPorDefecto(campos, 'Reale', { familiaAllianz: true }), campos)
+})
+
+test('conProductoPorDefecto: familiaAllianz sin marcar (u omitido) sigue en false, como antes', () => {
+  const r = conProductoPorDefecto({ quote: { id: 'Q1' } }, 'Allianz', { familiaAllianz: false })
+  const opciones = (r.product as { options: { id: string; value: unknown }[] }).options
+  assert.equal(opciones.find((o) => o.id === 'insuredFamilyInAllianz')?.value, false)
+})

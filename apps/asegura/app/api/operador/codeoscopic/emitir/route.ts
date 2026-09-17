@@ -348,7 +348,12 @@ export async function POST(req: Request) {
   // error while waiting…» del 13/09 no eran un fallo del vendor, era este
   // hueco (`opciones-producto.ts`, `conProductoPorDefecto`). Solo se rellena
   // si NADIE ya puso `product` (JSON avanzado del corredor manda).
-  const camposConProducto = conProductoPorDefecto(camposEnvio, p.aseguradora)
+  // `familiaEnAllianz`: el corredor confirma explícitamente que el tomador YA
+  // tiene familiares asegurados en Allianz (bonificación real) — nunca se
+  // asume por defecto, ver comentario de `conProductoPorDefecto`.
+  const camposConProducto = conProductoPorDefecto(camposEnvio, p.aseguradora, {
+    familiaAllianz: cuerpo.familiaEnAllianz === true,
+  })
 
   // GRATIS: lo que el vendor dice que hace falta. Informativo — no bloquea el
   // Submit si no se pudo leer (un endpoint sin fixture puede tener otra forma
@@ -659,6 +664,20 @@ export async function POST(req: Request) {
   }
 
   // ── El vendor aceptó: se acuña la póliza en NUESTRA BD ──────────────────
+  // Persiste la respuesta CRUDA del Submit (incluido `issuedDocuments[]`, si
+  // el vendor lo manda aquí) en `quote_data` — hasta el 17/09/2026 se
+  // descartaba tras esta petición y no había forma de saber qué documentos
+  // había devuelto una emisión ya pasada. Best-effort: nunca bloquea el acuñado.
+  // 🚨 SIEMPRE `redactarCrudoVendor` antes de guardar: `crudo` trae IBAN/DNI/
+  // email/teléfono del tomador en texto plano (`quote`/`payment`/persona), y
+  // `quote_data` es jsonb sin cifrar (a diferencia de `clientes.iban/dni`).
+  await prisma.$executeRaw`
+    update codeoscopic_projects set quote_data = ${JSON.stringify(redactarCrudoVendor(envio.crudo))}::jsonb
+    where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
+  `.catch((e: unknown) => {
+    console.log(`[emitir] no se pudo guardar quote_data del proyecto ${projectId} —`, e instanceof Error ? e.message : String(e))
+  })
+
   const catalogo = await catalogoCompanias()
   const codigoDgs = catalogo?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
   if (!codigoDgs) {

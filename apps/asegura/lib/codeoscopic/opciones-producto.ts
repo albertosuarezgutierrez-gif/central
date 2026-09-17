@@ -107,14 +107,27 @@ export function opcionesEmisionPorDefecto(compania: string): OpcionProducto[] | 
  * Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO
  * si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre
  * cualquier default. Puro y testeable aparte de la ruta: la ruta solo llama.
+ *
+ * `opts.familiaAllianz`: 17/09/2026, Alberto — `insuredFamilyInAllianz` NO es
+ * un consentimiento a secas, es una pregunta con DESCUENTO detrás (bonificación
+ * de cartera si el tomador ya tiene familiares asegurados en Allianz). Por eso
+ * el default sigue en `false` (no hay dato para afirmar que SÍ los tiene: no
+ * se inventa un ahorro que no se ha comprobado) pero el corredor puede marcarlo
+ * explícitamente cuando SÍ lo sabe, sin tener que pegar el JSON `product`
+ * completo a mano.
  */
 export function conProductoPorDefecto(
   campos: Record<string, unknown>,
   compania: string,
+  opts?: { familiaAllianz?: boolean },
 ): Record<string, unknown> {
   if (typeof campos.product === 'object' && campos.product !== null && !Array.isArray(campos.product)) {
     return campos
   }
-  const opciones = opcionesEmisionPorDefecto(compania)
-  return opciones ? { ...campos, product: { options: opciones } } : campos
+  const base = opcionesEmisionPorDefecto(compania)
+  if (!base) return campos
+  const opciones = opts?.familiaAllianz
+    ? base.map((o) => (o.id === 'insuredFamilyInAllianz' ? { ...o, value: true } : o))
+    : base
+  return { ...campos, product: { options: opciones } }
 }
