@@ -21,6 +21,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { pedirOferta, pedirEmision, pedirCatalogo } from './acciones'
+import { ProductFormWidget } from './ProductFormWidget'
 import type { AvisoCuenta, CuentaConocida, Opcion, SolicitudEmisionVista } from '@/lib/retarificar-asegura'
 
 type EstadoPanel =
@@ -39,6 +40,10 @@ type EstadoPanel =
       // enseña ANTES de emitir y no viaja sin confirmarla (Alberto, 12/09/2026).
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
+      /** El `mainQuote` del vendor, sin parsear — lo pinta el widget de la
+       *  Product Form Library (`ProductFormWidget`). `null` = asegura no lo
+       *  trajo (respuesta vieja, o el vendor no lo devolvió). */
+      quoteCrudo: unknown
     }
   | { paso: 'emitiendo' }
   | {
@@ -260,6 +265,13 @@ export function Emision({
   // es la única forma de decirlo cuando el corredor SÍ lo sabe.
   const [familiaAllianz, setFamiliaAllianz] = useState(false)
   const esAllianz = compania.trim().toLowerCase().includes('allianz')
+  // Lo que el corredor ha guardado del widget de la Product Form Library (el
+  // formulario REAL de la compañía, ver `ProductFormWidget`). `null` mientras
+  // no se pulse «Guardar»: sin esto no se manda ningún `product.options`
+  // inventado — se deja que `conProductoPorDefecto` (asegura) decida, igual
+  // que hasta ahora.
+  const [productOptions, setProductOptions] = useState<unknown[] | null>(null)
+  const [avisoProductForm, setAvisoProductForm] = useState<string | null>(null)
 
   // Catálogos de `faltan_vendor` (ver `CATALOGO_DE_CAMPO`): se piden UNA vez
   // por campo —gratis, con el interruptor apagado— y se pintan como
@@ -331,9 +343,13 @@ export function Emision({
         projectId: r.projectId,
         cuenta: r.cuenta,
         cuentaAviso: r.cuentaAviso,
+        quoteCrudo: r.quoteCrudo,
       })
       // Una oferta nueva puede traer otra cuenta: la confirmación anterior no vale.
       setCuentaOk(false)
+      // Y otro `quote`: lo que se hubiera guardado del formulario anterior ya no es de esta oferta.
+      setProductOptions(null)
+      setAvisoProductForm(null)
       return
     }
     if (r.estado === 'faltan_vendor') {
@@ -374,11 +390,12 @@ export function Emision({
       setEstado({ paso: 'error', mensaje: 'Los campos adicionales no son un JSON válido.' })
       return
     }
+    const yaTraeProduct = typeof campos.product === 'object' && campos.product !== null
     // Si el JSON avanzado ya trae `product`, asegura lo respeta tal cual y la
     // casilla de familia en Allianz no tiene ningún efecto (`conProductoPorDefecto`
     // nunca pisa un `product` puesto a mano) — se avisa ANTES de emitir en vez de
     // dejar creer que se ha pedido un descuento que no se ha pedido.
-    if (esAllianz && familiaAllianz && typeof campos.product === 'object' && campos.product !== null) {
+    if (esAllianz && familiaAllianz && yaTraeProduct) {
       setEstado({
         paso: 'error',
         mensaje:
@@ -387,6 +404,22 @@ export function Emision({
           'añade `insuredFamilyInAllianz: true` a mano dentro de su `options`.',
       })
       return
+    }
+    // Lo mismo con lo guardado del formulario de la compañía (Product Form
+    // Library): si el JSON avanzado ya trae `product`, manda él — nunca se
+    // pisa lo que el corredor ha tecleado a mano.
+    if (productOptions !== null && yaTraeProduct) {
+      setEstado({
+        paso: 'error',
+        mensaje:
+          'Los "Campos adicionales" ya traen un `product` propio: lo guardado del formulario de la ' +
+          'compañía no se va a mandar (asegura respeta el JSON avanzado tal cual). Quita esa clave del ' +
+          'JSON si quieres que se use lo del formulario.',
+      })
+      return
+    }
+    if (productOptions !== null && !yaTraeProduct) {
+      campos = { ...campos, product: { options: productOptions } }
     }
     const otraCuenta = iban.trim() !== ''
     if (otraCuenta) campos = { ...campos, iban: iban.trim() }
@@ -698,6 +731,34 @@ export function Emision({
               </span>
             </label>
           )}
+
+          <div style={{ marginTop: 12 }}>
+            <p style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>
+              Formulario de {compania || 'la compañía'} (consentimientos para emitir)
+            </p>
+            <p className="muted" style={{ margin: '2px 0 8px', fontSize: 12 }}>
+              Es el formulario REAL de la compañía, servido por Codeoscopic — no una lista adivinada.
+              Rellénalo y pulsa «Guardar»; si no aplica nada, se puede emitir sin tocarlo.
+            </p>
+            <ProductFormWidget
+              quoteCrudo={estado.quoteCrudo}
+              onOptions={(opciones, aviso) => {
+                setProductOptions(opciones)
+                setAvisoProductForm(aviso)
+              }}
+            />
+            {productOptions !== null && (
+              <p className="ok" style={{ fontSize: 12, margin: '6px 0 0' }}>
+                ✅ {productOptions.length} opción(es) guardada(s) del formulario — se mandan con la emisión.
+              </p>
+            )}
+            {avisoProductForm && (
+              <p className="err" style={{ fontSize: 12, margin: '6px 0 0' }}>
+                El formulario no ha dado un resultado válido: {avisoProductForm}
+              </p>
+            )}
+          </div>
+
           <details style={{ marginTop: 8 }}>
             <summary className="muted" style={{ cursor: 'pointer' }}>
               Campos adicionales (avanzado, opcional)

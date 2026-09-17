@@ -40,11 +40,13 @@ import {
   ofertaAsegura,
   emitirAsegura,
   tarificacionGuardadaAsegura,
+  productFormAsegura,
   type RespuestaCatalogo,
   type RespuestaRetarificar,
   type RespuestaOferta,
   type RespuestaEmitir,
   type RespuestaTarificacionGuardada,
+  type RespuestaProductForm,
 } from '@/lib/retarificar-asegura'
 
 /** Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.** */
@@ -119,6 +121,22 @@ export async function pedirOferta(entrada: {
  * Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin
  * reintento: un fallo de red aquí NO dice que la póliza no se haya emitido.
  */
+/**
+ * El `dataCallback` de la Product Form Library (widget de Codeoscopic para
+ * pintar el formulario REAL de consentimiento de cada compañía). **Gratis**:
+ * no cotiza ni confirma nada con el vendor, solo relaya sub-peticiones de
+ * catálogo del propio widget. Ver `productFormAsegura` para el porqué de la
+ * acción de servidor (el Bearer no puede bajar al navegador).
+ */
+export async function pedirProductForm(peticion: {
+  method?: string
+  path: string
+  params?: unknown[]
+  body?: Record<string, unknown>
+}): Promise<RespuestaProductForm> {
+  return productFormAsegura(peticion)
+}
+
 export async function pedirEmision(entrada: {
   projectId: string
   campos: Record<string, unknown>
