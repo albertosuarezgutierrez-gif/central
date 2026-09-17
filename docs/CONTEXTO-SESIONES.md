@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/09/2026)** Codeoscopic · Product Form Library del vendor (widget oficial, no un catálogo
+adivinado) para el `product.options` del Submit — sustituye/generaliza el catálogo estático de
+Allianz (`opciones-producto.ts`) a cualquier compañía/ramo, PR #3050 (draft). `Oferta.quoteCrudo`
+(asegura) expone el `mainQuote` sin parsear; relay gratis `POST /product-form-requests` (tercera
+excepción del guardián de gasto); `ProductFormWidget.tsx` en plataforma pinta el iframe (CSP nueva
+en `next.config.ts`) y lo guardado viaja como `campos.product.options`. Cubre solo el Submit — el
+`product.options` del ReRate sigue estático (Allianz) para el resto de compañías. Pendiente:
+Alberto probar el widget contra un proyecto real (`CODEOSCOPIC_EMISION_ACTIVA`). El email a Juan
+Manuel (Codeoscopic) sobre catálogos por compañía sigue SIN enviar — probablemente ya no hace falta.
+
 **(17/09/2026)** Codeoscopic · **primera emisión real con éxito** tras el fix del PR #3045
 (`conProductoPorDefecto`, consentimientos de Allianz en el Submit). Proyecto nuevo 40769244
 (Pilar Franco Ruz) → `estado=emitida`, oferta Q2021593788, sin error. Referencia de compañía
