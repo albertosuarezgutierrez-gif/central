@@ -60,11 +60,15 @@ export default function Cabecera({ marca }: { marca: string }) {
             </Link>
 
             <div className="hdr-dcha">
-              {/* Único acceso de la web: la intranet del CLIENTE. Es <a> y no
-                  <Link> porque es otro dominio. No hay «acceso corredor» a
-                  propósito: Alberto entra por plataforma. */}
+              {/* Único acceso de la web: la intranet. Es <a> y no <Link>
+                  porque es otro dominio. No hay «acceso corredor» a propósito:
+                  Alberto entra por plataforma.
+
+                  🚨 Se llamaba «Área de clientes» hasta el 07/09/2026. La
+                  palabra «clientes» era una puerta cerrada: se entra con un
+                  correo verificado, se sea cliente o no. */}
               <a href={PORTAL_URL} className="btn btn-brand btn-sm">
-                Área de clientes
+                Mis seguros
               </a>
             </div>
           </div>

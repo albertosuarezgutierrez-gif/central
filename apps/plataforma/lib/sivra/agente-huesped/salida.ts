@@ -17,6 +17,17 @@
 //
 // Que la política es la de siempre lo confirma el histórico de Smoobu: 26/07/2026, a Manuel —
 // «Confirmado que puedes salir a las 12:00 sin problema, ya que no entra nadie después de ti».
+//
+// 🗓️ CUÁNDO SE CONFIRMA (Alberto, 07/09/2026): la salida más tarde de las 11:00 se confirma LA
+// VÍSPERA, no el mismo día. Este archivo decía «se lo confirmáis el mismo día de la salida», que
+// contradecía la política real: la limpieza se cierra el día antes, y para entonces ya se sabe si
+// ha entrado una reserva de última hora. Al huésped hay que darle margen para organizarse.
+//
+// 🚫 Y UNA POSTURA POR MENSAJE (mismo dictado, a raíz de la reserva 154265696). El borrador que lo
+// destapó decía, seguido: «No podemos confirmar hasta el día de antes, si no hay otra entrada el
+// mismo día no habría problema. Así que si os viene bien extenderlo un poco, no hay ningún
+// inconveniente». O sea, retenía y concedía en el mismo párrafo. La política estaba BIEN en el
+// prompt: lo que falló fue redactarla a medias, así que la guarda va aquí y no en la política.
 
 // Hasta esta hora, el día de salida y con el piso libre, la estancia se alarga SIN COSTE.
 export const SALIDA_FLEX_HASTA = '12:00'
@@ -53,6 +64,14 @@ export function bloqueSalida(horaCheckOut = '11:00', propertyId = ''): string {
 // Bloque para el system prompt, según lo que se haya podido verificar de la ocupación del día de
 // salida. Tri-estado, como el early check-in: verificado y libre / verificado y ocupado / sin
 // verificar — porque prometer una hora extra que luego no hay es peor que no ofrecerla.
+// La salida tardía es el caso donde más fácil es contradecirse: hay una condición (que no entre
+// nadie) y una respuesta (que sí se puede), y decir las dos en el mismo mensaje deja al huésped sin
+// saber si tiene permiso o no. Va en las ramas que NO confirman, que son las que pueden resbalar.
+const UNA_POSTURA =
+  'UNA SOLA POSTURA POR MENSAJE: si le dices que aún no puedes confirmárselo, NO añadas después que ' +
+  '«no hay ningún inconveniente», «adelante» o «sin problema». O lo confirmas, o dices cuándo se lo ' +
+  'confirmarás — nunca las dos cosas seguidas, aunque suene más amable.'
+
 export function bloqueSalidaTardia(opts: {
   horaCheckOut?: string
   chequeado: boolean
@@ -66,7 +85,7 @@ export function bloqueSalidaTardia(opts: {
     `NUNCA le des un importe ni se lo des por gratis.`
 
   if (!opts.chequeado) {
-    return `SALIDA TARDÍA: ahora mismo NO hemos podido comprobar si el piso queda libre el día de su salida. Si pide salir más tarde de las ${salida} o pregunta dónde dejar las maletas ese día, NO se lo confirmes NI se lo niegues: dile con amabilidad que lo verificas y se lo confirmas en breve. NUNCA inventes disponibilidad.`
+    return `SALIDA TARDÍA: ahora mismo NO hemos podido comprobar si el piso queda libre el día de su salida. Si pide salir más tarde de las ${salida} o pregunta dónde dejar las maletas ese día, NO se lo confirmes NI se lo niegues: dile con amabilidad que lo verificas y se lo confirmas en breve. NUNCA inventes disponibilidad. ${UNA_POSTURA}`
   }
   if (!opts.posible) {
     return `SALIDA TARDÍA: ese día entra otro huésped al piso, así que NO es posible alargar la salida más allá de las ${salida} (hay que limpiarlo y prepararlo para la siguiente entrada) y tampoco pueden dejar el equipaje dentro. Explícaselo con amabilidad y ofrécele la consigna del bloque CONSIGNAS de la ficha para que pueda dejar las maletas y seguir disfrutando de la ciudad.`
@@ -74,7 +93,7 @@ export function bloqueSalidaTardia(opts: {
   if (opts.esDiaSalida) {
     return `SALIDA TARDÍA: hoy, que es su día de salida, no entra nadie más al piso, así que SÍ puedes confirmarle que pueden quedarse hasta las ${SALIDA_FLEX_HASTA} sin coste —y dejar dentro las maletas hasta esa hora si prefieren salir a dar una vuelta—. ${coste}`
   }
-  return `SALIDA TARDÍA: ahora mismo no hay ninguna entrada programada para el día de su salida, así que EN PRINCIPIO SÍ van a poder quedarse hasta las ${SALIDA_FLEX_HASTA} sin coste (y dejar dentro el equipaje hasta esa hora). Como pueden entrar reservas de última hora, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis el mismo día de la salida. ${coste}`
+  return `SALIDA TARDÍA: ahora mismo no hay ninguna entrada programada para el día de su salida, así que EN PRINCIPIO SÍ van a poder quedarse hasta las ${SALIDA_FLEX_HASTA} sin coste (y dejar dentro el equipaje hasta esa hora). Como pueden entrar reservas de última hora, NO se lo prometas en firme todavía: dile que en principio no hay problema y que se lo confirmáis EL DÍA ANTES de la salida (la víspera), que es cuando se cierra la limpieza y ya no caben reservas de última hora. ${UNA_POSTURA} ${coste}`
 }
 
 // ¿El huésped pide QUEDARSE MÁS ALLÁ de la ventana gratuita? Si nombra una hora posterior a las

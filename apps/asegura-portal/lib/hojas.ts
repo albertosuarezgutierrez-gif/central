@@ -25,7 +25,9 @@ import { randomBytes } from 'node:crypto'
 import {
   BYTES_TOKEN_HOJA,
   MAX_HOJAS_VIVAS,
+  declaradaEnVigorParaHoja,
   normalizarTokenHoja,
+  polizaEnVigorParaHoja,
   type SeleccionHoja,
 } from '@central/module-seguros-portal'
 
@@ -99,32 +101,40 @@ export async function hojasDeIdentidad(identidadId: string): Promise<HojaResumen
   }))
 }
 
-/** Todo lo que esa identidad puede meter hoy en una hoja: su cartera y lo que aportó. */
+/**
+ * Todo lo que esa identidad puede meter hoy en una hoja: su cartera y lo que
+ * aportó — **ya filtrado a lo que está en vigor** (regla 5 de `hoja-qr.ts`).
+ * Una póliza vencida no se ofrece ni con «todas»: no tiene sentido en un papel
+ * pensado para un percance de HOY.
+ */
 export async function polizasElegibles(
   identidadId: string,
 ): Promise<{ cartera: { id: string; etiqueta: string }[]; declaradas: { id: string; etiqueta: string }[] }> {
+  const hoy = new Date()
   const [cartera, declaradas] = await Promise.all([
     carteraDeIdentidad(identidadId),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId },
       orderBy: { creadaEn: 'desc' },
       take: 50,
-      select: { id: true, compania: true, ramo: true, numeroPoliza: true },
+      select: { id: true, compania: true, ramo: true, numeroPoliza: true, fechaVencimiento: true },
     }),
   ])
   const dePoliza = (p: PolizaPortal) =>
     [p.compania, p.ramo, p.numeroPoliza ? `nº ${p.numeroPoliza}` : null].filter(Boolean).join(' · ')
   return {
     cartera: [...cartera.propias, ...cartera.autorizadas].flatMap((t) =>
-      t.polizas.map((p) => ({ id: p.id, etiqueta: dePoliza(p) })),
+      t.polizas.filter(polizaEnVigorParaHoja).map((p) => ({ id: p.id, etiqueta: dePoliza(p) })),
     ),
-    declaradas: declaradas.map((d) => ({
-      id: d.id,
-      etiqueta:
-        [d.compania ?? 'Compañía sin identificar', d.ramo, d.numeroPoliza ? `nº ${d.numeroPoliza}` : null]
-          .filter(Boolean)
-          .join(' · ') + ' · añadida por ti',
-    })),
+    declaradas: declaradas
+      .filter((d) => declaradaEnVigorParaHoja(d, hoy))
+      .map((d) => ({
+        id: d.id,
+        etiqueta:
+          [d.compania ?? 'Compañía sin identificar', d.ramo, d.numeroPoliza ? `nº ${d.numeroPoliza}` : null]
+            .filter(Boolean)
+            .join(' · ') + ' · añadida por ti',
+      })),
   }
 }
 

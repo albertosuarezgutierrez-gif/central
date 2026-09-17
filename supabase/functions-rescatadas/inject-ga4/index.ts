@@ -11,9 +11,12 @@
 //    falla, se queda así. Cuarto endpoint de escritura sin autenticar del panel.
 // 📌 Candidata a borrar junto con `push-route-ga4` y el repo `house-sevillana-landing`.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { resolverClaveSecreta } from "../_shared/clave-supabase.ts";
 
 const U = Deno.env.get('SUPABASE_URL') ?? 'https://wswbehlcuxqxyinousql.supabase.co';
-const K = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+// OJO: se resuelve SIN lanzar. Antes era `?? ''` y la función arrancaba igual; un throw aquí
+// (top level del módulo) la dejaría sin arrancar y devolviendo 500 a TODO.
+const K = resolverClaveSecreta()?.clave ?? '';
 const GA = `<!-- Google tag (gtag.js) -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=G-N5CMQL9C4M"></script>\n<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-N5CMQL9C4M');</script>`;
 
 async function sbFetch(path: string, opts: RequestInit = {}) {

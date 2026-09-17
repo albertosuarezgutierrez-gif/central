@@ -7,6 +7,7 @@ import {
   FORMULARIO_VACIO,
   MENSAJE_400,
   MENSAJE_PRIMA_CERO,
+  MENSAJE_RAMO_OBLIGATORIO,
   campoDelError,
   primaDesdeTexto,
   type Campo,
@@ -39,10 +40,18 @@ const SIN_IDENTIFICACION =
 
 export function AnadirPoliza({
   ramos,
+  titular,
   onCancelar,
   onGuardada,
 }: {
   ramos: readonly RamoOpcion[]
+  /**
+   * De quién es, ya contestado arriba (`SubirPoliza`). Viaja como prop y no se
+   * vuelve a preguntar aquí: dos controles para la misma pregunta acabarían
+   * discrepando, y el que se guardara sería el que estuviera más cerca del
+   * `fetch` — o sea, cuestión de suerte.
+   */
+  titular: { tipo: 'propio' | 'empresa'; nombre: string; cif: string }
   onCancelar: () => void
   onGuardada: (poliza: PolizaGuardada) => void
 }) {
@@ -75,6 +84,13 @@ export function AnadirPoliza({
     setErrores({})
     setErrorGeneral(null)
 
+    // El único campo obligatorio del formulario: ver la cabecera de
+    // `CamposPoliza.tsx` sobre por qué este sí y el resto no.
+    if (form.ramo === '') {
+      setErrores({ ramo: MENSAJE_RAMO_OBLIGATORIO })
+      return
+    }
+
     const prima = primaDesdeTexto(form.primaAnual)
     if (prima === 'invalida' || prima === 'cero') {
       setErrores({ primaAnual: prima === 'cero' ? MENSAJE_PRIMA_CERO : MENSAJE_400.primaAnual })
@@ -94,10 +110,18 @@ export function AnadirPoliza({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          // La misma respuesta que en el alta con documento. Sin esto, todo lo
+          // añadido a mano nacía como «no se preguntó» aunque la persona
+          // acabara de contestar dos centímetros más arriba.
+          titularTipo: titular.tipo,
+          ...(titular.tipo === 'empresa'
+            ? { titularEmpresaNombre: titular.nombre, titularEmpresaCif: titular.cif.trim() || null }
+            : {}),
           compania,
           numeroPoliza,
           ramo: form.ramo || null,
           primaAnual: prima,
+          periodicidadPago: form.periodicidadPago || null,
           fechaVencimiento: form.fechaVencimiento || null,
           // Los tres del vehículo se mandan SIEMPRE, aunque el bloque no esté
           // desplegado: si el ramo elegido no los pinta van vacíos y viajan como

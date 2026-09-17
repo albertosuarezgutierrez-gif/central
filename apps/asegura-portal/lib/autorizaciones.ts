@@ -61,10 +61,27 @@ import { getIdentidad } from './session'
  */
 export const TEXTO_AUTORIZACION_V1 = 'v1-2026-09-03'
 
-/** El texto exacto que corresponde a `TEXTO_AUTORIZACION_V1`. La pantalla lo enseña TAL CUAL. */
+/**
+ * 🚨 **V2 (07/09/2026): la dirección del inmueble asegurado pasó a verse.**
+ *
+ * Hasta esa fecha la dirección de un hogar se le capaba a un tercero SIEMPRE
+ * (`NUNCA_A_UN_TERCERO.direccionRiesgo`), y Alberto decidió abrirla porque en un
+ * hogar la dirección es lo que identifica el bien —el papel de la matrícula en
+ * un auto— y sin ella dos pólizas de la misma compañía son la misma fila.
+ *
+ * El texto tiene que decirlo, y por eso hay una versión nueva: la v1 afirmaba
+ * qué NO se vería y quien la firmó no estaba dando su domicilio. Las filas
+ * viejas siguen selladas con `TEXTO_AUTORIZACION_V1` y siguen diciendo la verdad
+ * sobre lo que se aceptó ENTONCES; el contenido de una versión publicada no se
+ * reescribe jamás (art. 7.1 RGPD).
+ */
+export const TEXTO_AUTORIZACION_V2 = 'v2-2026-09-07'
+
+/** El texto exacto que corresponde a `TEXTO_AUTORIZACION_V2`. La pantalla lo enseña TAL CUAL. */
 export const TEXTO_AUTORIZACION = [
   'Autorizo a esta persona a CONSULTAR los seguros que tengo con Grupo ASegura.',
   'Solo puede verlos: no puede contratar, modificar, dar partes ni actuar en mi nombre.',
+  'Verá qué está asegurado, y eso incluye la dirección del inmueble en un seguro de hogar.',
   'No verá mis datos personales (DNI, cuenta bancaria) ni mis documentos.',
   'La autorización caduca al año y puedo revocarla en cualquier momento desde el portal.',
   'Quedará registrado qué días ha consultado mis seguros, y ese registro lo veo yo.',
@@ -866,7 +883,7 @@ export async function conceder(datos: {
     // Qué texto aceptó. Sin esto el consentimiento no se puede demostrar — y por
     // eso la sociedad guarda OTRA versión: la de la persona afirma «no verá mi
     // IBAN ni podrá dar partes», que de una empresa es sencillamente falso.
-    versionTexto: tipoOtorgante === 'juridica' ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V1,
+    versionTexto: tipoOtorgante === 'juridica' ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V2,
     // `null` cuando la cabecera no vino: no se inventa una IP ni un navegador.
     ip: datos.ip,
     userAgent: datos.userAgent,

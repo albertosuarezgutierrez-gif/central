@@ -44,6 +44,8 @@
 
 import { remitenteCorreo } from '@central/module-seguros'
 
+import type { ResultadoEnvioCorreo } from './correo-invitacion-portal'
+
 /** Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual. */
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -62,12 +64,14 @@ function unaLinea(s: string): string {
  * envía**: un correo que dice «entra aquí» sin el «aquí» no sirve de nada, y
  * adivinar un dominio manda a la persona a ningún sitio.
  *
- * El valor por defecto es donde el portal sirve HOY, igual que en
- * `apps/asegura-web/lib/sitio.ts`; cuando `clientes.grupoasegura.es` esté
- * repuntado a Vercel se cambia la variable y esto no se toca.
+ * El valor por defecto es el dominio de la casa, igual que en
+ * `apps/asegura-web/lib/sitio.ts` y en `correo-invitacion-portal.ts`:
+ * `clientes.grupoasegura.es` está atado al proyecto `asegura-portal` y sirve el
+ * portal (medido el 07/09/2026). El `asegura-portal.vercel.app` de antes sigue
+ * sirviendo, así que esto no arregla nada roto: cambia cuál es el canónico.
  */
 export function enlaceDeAutorizaciones(
-  base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://asegura-portal.vercel.app',
+  base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es',
 ): string | null {
   const limpio = base?.trim()
   if (!limpio) return null
@@ -162,14 +166,18 @@ export function cuerpoAvisoAcceso(d: DatosAvisoAcceso): CuerpoAviso {
 }
 
 /**
- * Manda el correo. `true` = el proveedor lo aceptó.
+ * Manda el correo. El desenlace es el MISMO tipo que la invitación al portal
+ * (`ResultadoEnvioCorreo`), y por la misma razón: «no hay proveedor» es una variable de
+ * Vercel que falta, y decirle a Alberto que reintente un envío que no puede
+ * salir es mandarle a la única acción que no arregla nada (medido en producción
+ * el 07/09/2026).
  *
- * Un `false` NO significa que la autorización no exista: la fila ya estaba
+ * Un `rechazado` NO significa que la autorización no exista: la fila ya estaba
  * escrita mucho antes de llamar aquí. Por eso quien llama contesta
  * `error_envio` y no «no se ha autorizado» — decir lo segundo llevaría a
  * reintentar la anotación, que ya está hecha.
  */
-export async function enviarAvisoAcceso(destino: string, d: DatosAvisoAcceso): Promise<boolean> {
+export async function enviarAvisoAcceso(destino: string, d: DatosAvisoAcceso): Promise<ResultadoEnvioCorreo> {
   // El transporte se carga AQUÍ, no arriba, por lo mismo que en el correo de
   // invitación del portal: el cepo de `cuerpoAvisoAcceso()` corre con
   // `node --test`, que no sabe resolver `@central/core-email` (su `main`
@@ -179,22 +187,18 @@ export async function enviarAvisoAcceso(destino: string, d: DatosAvisoAcceso): P
   const transporter = createMailTransporter()
   if (!transporter) {
     console.error('[asegura/aviso-acceso] no hay proveedor de correo configurado')
-    return false
+    return 'sin_proveedor'
   }
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-  if (!from) {
-    console.error('[asegura/aviso-acceso] falta ASEGURA_MAIL_FROM: no se avisa')
-    return false
-  }
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
 
   const { asunto, texto, html } = cuerpoAvisoAcceso(d)
   try {
     await transporter.sendMail({ from, to: destino, ...(replyTo ? { replyTo } : {}), subject: asunto, text: texto, html })
-    return true
+    return 'enviado'
   } catch (e) {
     // El motivo, nunca el destino: un log es donde un dato personal sobrevive más tiempo.
     console.error('[asegura/aviso-acceso] fallo enviando el aviso:', e instanceof Error ? e.message : e)
-    return false
+    return 'rechazado'
   }
 }

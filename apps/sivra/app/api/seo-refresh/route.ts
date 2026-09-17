@@ -7,7 +7,12 @@ import { tgAlert } from '@/lib/telegram'
 import { fetchLanding, pushToGitHub, extractSeoParams, applySeoReplacements } from '@/lib/seo-landing'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60
+// ⚠️ El techo debe cubrir el PEOR caso de la cadena de análisis, no el caso feliz: Serper 10s +
+// redacción 45s + aiSearch 50s + NIM 25s + GitHub/BD ≈ 140s. Con 60 la función moría en 504 a
+// mitad de cadena SIN pasar por el catch → ni commit, ni fila, ni Telegram (lunes 07/09/2026:
+// el cron no dejó rastro alguno). Un fallo que no puede llegar al catch es un fallo mudo — la
+// lección de facturas-scan (31/07/2026). Guardián: test/regression-seo-refresh-presupuesto.test.ts
+export const maxDuration = 300
 
 // Análisis SEO con búsqueda de competencia en vivo. Mismo patrón endurecido que la ruta del botón en
 // plataforma (apps/plataforma/app/api/sivra/seo-refresh/route.ts). Orden de preferencia (todo GRATIS):
@@ -83,7 +88,7 @@ async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
   }
 
   // 3) ÚLTIMO RECURSO: NIM/Groq texto puro, SIN búsqueda (gratis). SEO desde los datos de la propiedad.
-  const parsed = parseSeoJson(await aiComplete([{ role: 'user', content: user }], { system: SEO_SYSTEM, maxTokens: 2048 }))
+  const parsed = parseSeoJson(await aiComplete([{ role: 'user', content: user }], { system: SEO_SYSTEM, maxTokens: 2048, timeoutMs: 25_000 }))
   if (!parsed) throw new Error('El análisis SEO no devolvió JSON válido (Serper, Gemini y NIM agotados).')
   return parsed
 }

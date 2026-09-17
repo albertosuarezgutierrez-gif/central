@@ -41,13 +41,15 @@ import {
   autorizacionVigente,
   camposDeAlcances,
   camposVisibles,
-  describirBien,
+  describirBienConGemela,
   esAlcance,
   etiquetaNivelAlcances,
   NIVELES,
   type Alcance,
   type BienAsegurado,
   type TipoOtorgante,
+  lugarSiniestro,
+  descripcionSiniestro,
   ordenarRecibos,
   estadoRecibos,
   resumirRecibos,
@@ -58,6 +60,8 @@ import {
   type Nivel,
 } from '@central/module-seguros-portal'
 import { importeEiac, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
+
+import { decryptField } from '@central/module-seguros-pii'
 
 import { prisma } from './db'
 import { getIdentidad } from './session'
@@ -112,6 +116,19 @@ export type SiniestroPortal = {
   estado: string
   referencia: string | null
   fechaHora: Date | null
+  /**
+   * QUÉ pasó, en las palabras de quien lo tramitó (`siniestros.comentario`).
+   * `null` = la compañía no lo contó — que NO es «no pasó nada».
+   *
+   * 🚨 Llega desde el 07/09/2026, con GRANT propio
+   * (`prisma/sql/2026-09-07_portal_siniestro_descripcion.sql`) y decisión
+   * explícita de Alberto con la cartera delante: es texto LIBRE y a veces trae
+   * nombres y teléfonos de terceros. Va con el MISMO permiso que el resto del
+   * historial (`ve.siniestros`), no con uno propio.
+   */
+  descripcion: string | null
+  /** DÓNDE pasó, ya legible («Dos Hermanas (Sevilla)»). `null` = no consta. */
+  lugar: string | null
 }
 
 export type PolizaPortal = {
@@ -137,7 +154,19 @@ export type PolizaPortal = {
    *  03/09/2026 en la 548238086: anual 67,86€, bruta 73,39€, recibo 73,39€. Enseñar solo la neta al
    *  lado de un recibo mayor parece un error de cuentas. */
   prima: { anual: number | null; bruta: number | null; mensual: number | null; fraccionamiento: string | null } | null
-  /** `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel. */
+  /**
+   * `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel.
+   *
+   * 🚨 `lista` va ENTERA, sin recortar (07/09/2026, dictado de Alberto: «que el
+   * cliente vea todas las coberturas que tiene»). Antes se cortaba a 4 aquí, en
+   * la lectura, y la ficha —el único sitio que la pinta— remataba con «y 6 más»:
+   * las coberturas que el cliente paga y no sabe que tiene no las veía nadie.
+   * Cuántas caben en pantalla es cosa de quien pinta, no de quien lee.
+   *
+   * `total > lista.length` significa que hay coberturas informadas SIN
+   * descripción ni código (la fila existe, el texto no): no es que se hayan
+   * escondido.
+   */
   coberturas: { total: number; lista: string[] } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
@@ -249,9 +278,6 @@ const SIN_VINCULO: CarteraPortal = {
   autorizacionesUsadas: [],
 }
 
-/** Coberturas que se listan en la card antes del «y N más». */
-const COBERTURAS_EN_CARD = 4
-
 /** `nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo. */
 function nivelDeVinculo(v: string): Nivel {
   return (NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta'
@@ -261,6 +287,64 @@ export async function carteraDeSesion(): Promise<CarteraPortal | null> {
   const identidad = await getIdentidad()
   if (!identidad) return null
   return carteraDeIdentidad(identidad.id)
+}
+
+/**
+ * La clave con la que se empareja una póliza con su GEMELA duplicada.
+ *
+ * Los CUATRO campos van juntos y ninguno sobra: `clienteId` para que el
+ * emparejamiento no pueda cruzar dos fichas, `numeroPoliza` porque es lo que
+ * identifica el contrato, `tipo` porque el mismo número puede repetirse entre
+ * ramos, y `fechaInicio` porque **la compañía REUTILIZA el número al renovar**.
+ *
+ * 🚨 La fecha no es cinturón y tirantes: medido el 07/09/2026, la póliza
+ * `0732200153700` tiene DOS gemelas del mismo cliente con direcciones DISTINTAS
+ * (41011 con efecto 2016 y 41001 con efecto 2022). Sin la fecha, cuál gana
+ * depende del orden de la consulta, y el resultado sería la dirección de otra
+ * casa: plausible, sin error y equivocada — exactamente el fallo que la regla de
+ * «agrupar por identidad, nunca por la etiqueta» persigue. Con la fecha, 10 de
+ * las 11 huérfanas se emparejan y la ambigua se queda sin dirección, que es la
+ * respuesta correcta.
+ *
+ * Sin número no hay identidad que emparejar: `null`, y esa póliza no busca
+ * gemela. Emparejar «todo lo que no tenga número» juntaría contratos distintos.
+ */
+function claveGemela(
+  clienteId: string,
+  numeroPoliza: string | null,
+  tipo: string | null,
+  fechaInicio: Date | null,
+): string | null {
+  if (numeroPoliza === null || numeroPoliza.trim() === '') return null
+  return `${clienteId}|${numeroPoliza.trim()}|${tipo ?? ''}|${fechaInicio?.toISOString() ?? ''}`
+}
+
+/**
+ * La dirección del riesgo viaja CIFRADA dentro de `datos_especificos`
+ * (`v1:iv:cipher:tag`, `@central/module-seguros-pii`). Se descifra aquí, que es
+ * donde se lee la BD: el módulo puro que describe el bien no sabe de claves.
+ *
+ * 🔑 Con `PII_ENCRYPTION_KEY` puesta en el Vercel de `asegura-portal` sale la
+ * calle en claro. **SIN ella `decryptField` devuelve el sobre tal cual**, y
+ * entonces `describirBien` lo anula (ver su `campo()`): la fila cae a
+ * «compañía · ramo», que es lo que se veía antes. O sea que la app no se rompe
+ * sin la clave — simplemente no enseña la dirección, y eso NO se nota en ningún
+ * log. Es el mismo despiste que dejó `central-asegura` muerta en silencio el
+ * 02/09/2026: la clave y el despliegue van en el mismo paso.
+ *
+ * El `catch` deja el valor intacto en vez de borrarlo, por la misma razón: un
+ * fallo de descifrado tiene que acabar en el cepo de `campo()`, no en un hueco
+ * indistinguible de «la compañía no lo ha informado».
+ */
+function descifrarDireccion(datos: unknown): unknown {
+  if (typeof datos !== 'object' || datos === null || Array.isArray(datos)) return datos
+  const d = datos as Record<string, unknown>
+  if (typeof d.direccion !== 'string' || !d.direccion.startsWith('v1:')) return datos
+  try {
+    return { ...d, direccion: decryptField(d.direccion) }
+  } catch {
+    return datos
+  }
 }
 
 export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPortal> {
@@ -429,6 +513,68 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   ])
 
   const polizaIds = polizas.map((p) => p.id)
+
+  // ── Las GEMELAS del volcado ───────────────────────────────────────────────
+  //
+  // 🚨 En la cartera hay pólizas DUPLICADAS: la misma entró dos veces —una por
+  // el volcado del CRM (`import_ref`, con `datos_especificos` completos) y otra
+  // por CIMA (`eiac_xml_hash`, con las fechas al día pero SIN
+  // `datos_especificos`)— porque el nombre de la aseguradora no coincidía y la
+  // ingesta no las emparejó. `WHERE_CARTERA_VIVA` sirve la de CIMA, que es la
+  // buena en todo menos en el único campo que dice QUÉ CASA es. Medido el
+  // 07/09/2026: le pasa a **11 de las 19 hogar vivas**, y por eso Alberto veía
+  // dos «Occident · Hogar» idénticas.
+  //
+  // Se lee solo para las que no traen nada, y solo del MISMO cliente: la clave
+  // de emparejamiento lleva `clienteId` dentro, así que el `in` cruzado de la
+  // consulta no puede colar la póliza de otro. Quién puede ver luego la calle
+  // sigue decidiéndolo `ve.direccionRiesgo`, igual que antes.
+  //
+  // Esto NO arregla el duplicado: lo tapa para que el dato deje de estar
+  // escondido. El duplicado se arregla en la ingesta.
+  const huerfanas = polizas.filter((p) => p.datosEspecificos == null && p.numeroPoliza !== null)
+  const gemelas =
+    huerfanas.length === 0
+      ? []
+      : await prisma.poliza.findMany({
+          where: {
+            clienteId: { in: [...new Set(huerfanas.map((p) => p.clienteId))] },
+            numeroPoliza: { in: [...new Set(huerfanas.map((p) => p.numeroPoliza as string))] },
+            id: { notIn: polizaIds },
+            mergedIntoPolizaId: null,
+          },
+          select: {
+            clienteId: true,
+            numeroPoliza: true,
+            tipo: true,
+            fechaInicio: true,
+            datosEspecificos: true,
+          },
+        })
+  //
+  // 🚨 Y si DOS gemelas caen en la misma clave, no gana ninguna: se marca la
+  // clave como ambigua y esa póliza se queda sin dirección. Quedarse con «la
+  // última» sería elegir por el orden de la consulta, y equivocarse aquí no
+  // produce un hueco visible sino la dirección de OTRA casa.
+  const datosDeGemela = new Map<string, unknown>()
+  const ambiguas = new Set<string>()
+  for (const g of gemelas) {
+    if (g.datosEspecificos == null) continue
+    const clave = claveGemela(g.clienteId, g.numeroPoliza, g.tipo, g.fechaInicio)
+    if (clave === null) continue
+    if (datosDeGemela.has(clave)) {
+      ambiguas.add(clave)
+      continue
+    }
+    datosDeGemela.set(clave, g.datosEspecificos)
+  }
+  for (const clave of ambiguas) datosDeGemela.delete(clave)
+
+  /** Los `datos_especificos` de la gemela de esta póliza, si hay UNA sola. */
+  const gemelaDe = (p: { clienteId: string; numeroPoliza: string | null; tipo: string; fechaInicio: Date | null }) => {
+    const clave = claveGemela(p.clienteId, p.numeroPoliza, p.tipo, p.fechaInicio)
+    return clave === null ? undefined : datosDeGemela.get(clave)
+  }
   const [coberturas, recibos, siniestros] =
     polizaIds.length === 0
       ? [[], [], []]
@@ -466,6 +612,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               estado: true,
               referencia: true,
               fechaHora: true,
+              // QUÉ pasó y DÓNDE. `comentario` tiene GRANT desde el 07/09/2026;
+              // las tres de lugar lo tenían desde los grants del 02/09 y
+              // sencillamente no se pedían. `lugar_direccion` sigue SIN grant a
+              // propósito: es la casa de alguien.
+              comentario: true,
+              lugarCiudad: true,
+              lugarProvincia: true,
               // 🚨 `tipo` NO se pide, y no es un olvido: en la BD es un CÓDIGO
               // NUMÉRICO de la compañía (`1107`, `1915`, `1312`, `17`…, medido
               // en la cartera viva el 05/09/2026). «Tipo 1107» no le dice nada
@@ -510,6 +663,11 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             estado: x.estado,
             referencia: x.referencia,
             fechaHora: x.fechaHora,
+            // Las dos normalizaciones viven en el módulo puro: la provincia es
+            // un CÓDIGO («41») y la ciudad viene en MAYÚSCULAS. Aquí solo se
+            // traduce la fila.
+            descripcion: descripcionSiniestro(x.comentario),
+            lugar: lugarSiniestro({ ciudad: x.lugarCiudad, provincia: x.lugarProvincia }),
           })),
         )
       : null
@@ -536,10 +694,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       coberturas: ve.coberturas
         ? {
             total: cobs.length,
-            lista: cobs
-              .map((c) => (c.descripcion ?? c.codigo ?? '').trim())
-              .filter(Boolean)
-              .slice(0, COBERTURAS_EN_CARD),
+            // Sin `slice`: la lista va entera. Ver el comentario del tipo.
+            lista: cobs.map((c) => (c.descripcion ?? c.codigo ?? '').trim()).filter(Boolean),
           }
         : null,
       recibos: ve.recibos ? recibosDePoliza(recs) : null,
@@ -552,11 +708,18 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       // titular (nunca a un tercero de una persona física). Un solo `if` aquí
       // regalaría la dirección de una casa a quien solo pidió ver la compañía.
       bien: (() => {
-        const b = describirBien(p.tipo, p.datosEspecificos)
+        const b = describirBienConGemela(
+          p.tipo,
+          descifrarDireccion(p.datosEspecificos),
+          descifrarDireccion(gemelaDe(p)),
+        )
         return {
           cosa: ve.bien ? b.cosa : null,
           ubicacion: ve.direccionRiesgo ? b.ubicacion : null,
           detalles: ve.bien ? b.detalles : [],
+          // Mismo nivel que `cosa`: es el mismo dato de contrato, solo que
+          // suelto para poder autorrellenar un campo sin parsear el texto.
+          matricula: ve.bien ? b.matricula : null,
         }
       })(),
       // Una sola lectura y una sola guarda: los abiertos se DERIVAN del

@@ -237,6 +237,75 @@ export function hogarDisponible(lineas: Opcion[]): DisponibilidadHogar {
   return { estado: 'ausente', ramos: lineas.map((l) => l.nombre) }
 }
 
+// ─── Compañías abiertas para NUESTRA organización (gratis) ──────────────────
+
+/**
+ * `GET /insurance-vendors`: las compañías que Avant2 tiene dadas de alta para
+ * esta organización. Es la respuesta a «¿ya nos han incluido a Fidelidade?»
+ * sin email y sin gastar. ⚠️ El catálogo comercial (`avant2.pdf`) NO vale
+ * para esto: dice lo que Integra soporta, no lo que tenemos abierto.
+ */
+export async function vendoresDeSeguro(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/insurance-vendors'))
+}
+
+/**
+ * `GET /insurance-lines/{id}/products`: los productos (compañía + `config`)
+ * que tarifican en un ramo para esta organización. Devuelve el JSON crudo
+ * además de la lista normalizada porque la forma del producto no está
+ * documentada (la compañía puede venir anidada) y la búsqueda por nombre
+ * necesita mirar dentro.
+ */
+export async function productosDeLinea(
+  config: ConfigCodeoscopic,
+  lineaId: string,
+): Promise<{ productos: Opcion[]; crudo: unknown }> {
+  const crudo = await catalogo(config, `/insurance-lines/${encodeURIComponent(lineaId)}/products`)
+  return { productos: normalizarOpciones(crudo), crudo }
+}
+
+/**
+ * ¿Aparece una compañía (por nombre, sin tildes ni mayúsculas) en cualquier
+ * cadena de un JSON? Recorre objetos y arrays; NO mira claves, solo valores.
+ * Sirve para buscar «fidelidade» en un producto cuya compañía viene anidada
+ * (`vendor.name`, `company.description`…) sin adivinar la forma.
+ */
+export function mencionaCompania(raw: unknown, compania: string): boolean {
+  const buscada = normalizarTexto(compania)
+  if (buscada === '') return false
+  const visitar = (v: unknown, prof: number): boolean => {
+    if (prof > 8) return false
+    if (typeof v === 'string') return normalizarTexto(v).includes(buscada)
+    if (Array.isArray(v)) return v.some((x) => visitar(x, prof + 1))
+    if (typeof v === 'object' && v !== null) {
+      return Object.values(v as Record<string, unknown>).some((x) => visitar(x, prof + 1))
+    }
+    return false
+  }
+  return visitar(raw, 0)
+}
+
+/**
+ * ¿Está una compañía entre las abiertas? TRES estados, por la misma razón que
+ * `hogarDisponible`: «no está en la lista» y «no se ha podido mirar» no son
+ * lo mismo, y confundirlos es afirmar una ausencia sin haberla medido.
+ */
+export type DisponibilidadCompania =
+  | { estado: 'presente'; id: string; nombre: string }
+  | { estado: 'ausente'; companias: string[] }
+  | { estado: 'desconocido' }
+
+export function companiaDisponible(vendores: Opcion[], compania: string): DisponibilidadCompania {
+  if (vendores.length === 0) return { estado: 'desconocido' }
+  const buscada = normalizarTexto(compania)
+  if (buscada === '') return { estado: 'desconocido' }
+  const v = vendores.find(
+    (x) => normalizarTexto(x.nombre).includes(buscada) || normalizarTexto(x.id).includes(buscada),
+  )
+  if (v) return { estado: 'presente', id: v.id, nombre: v.nombre }
+  return { estado: 'ausente', companias: vendores.map((x) => x.nombre) }
+}
+
 // ─── Matrícula → fecha de matriculación (gratis) ─────────────────────────────
 
 /**
@@ -286,6 +355,110 @@ export function leerFecha(raw: unknown): string | null {
   if (typeof v !== 'string') return null
   const m = v.match(/^(\d{4}-\d{2}-\d{2})/)
   return m ? m[1] : null
+}
+
+// ─── Catálogos de MOTO (gratis) ──────────────────────────────────────────────
+//
+// `MotorcycleRisk` comparte casi todo con `CarRisk` (docs/CODEOSCOPIC-API-PORTAL.md
+// § «El ramo MOTO, contrato completo»): mismo catálogo de garajes, catálogo propio
+// de marcas/modelos/versiones bajo `/motorcycle/*`, y dos catálogos que auto no
+// tiene — `driving-experience-options` (obligatorio en el risk) y, dentro de
+// `/vehicles`, el parámetro `engine` es un ENUM cerrado (`Gasoline|Diesel|Others`),
+// no texto libre como en auto.
+
+export async function marcasMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/brands?onlyPopular=false'))
+}
+
+export async function modelosMoto(config: ConfigCodeoscopic, marcaId: string): Promise<Opcion[]> {
+  return normalizarOpciones(
+    await catalogo(config, `/motorcycle/brands/${encodeURIComponent(marcaId)}/models`),
+  )
+}
+
+/** `engine` es un enum cerrado en moto (a diferencia de auto, que es texto libre). */
+export const MOTORES_MOTO = ['Gasoline', 'Diesel', 'Others'] as const
+export type MotorMoto = (typeof MOTORES_MOTO)[number]
+
+export async function versionesMoto(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: MotorMoto,
+): Promise<Opcion[]> {
+  return normalizarOpciones(
+    await catalogo(
+      config,
+      `/motorcycle/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
+        `/vehicles?engine=${encodeURIComponent(motor)}`,
+    ),
+  )
+}
+
+/** `ThisMotorcycle` | `OtherMotorcycle`. Obligatorio en `risk.drivingExperience.id`. */
+export async function experienciaConduccionMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/driving-experience-options'))
+}
+
+/** Ids con los que el vendor podría nombrar el ramo de moto (`insuranceLine.id`). */
+const IDS_MOTO = new Set(['motorcycle', 'moto', 'motorbike'])
+
+/**
+ * ¿Está moto entre los ramos disponibles? Misma forma que `hogarDisponible()` y
+ * por el mismo motivo: `insuranceLine.id` no se escribe a mano nunca — un 'Car'
+ * confirmado no autoriza a adivinar el de moto, y un id equivocado es un 400
+ * pagado en vano (aunque no se cobre, es una vuelta perdida antes de cotizar).
+ */
+export type DisponibilidadMoto =
+  | { estado: 'disponible'; id: string; nombre: string }
+  | { estado: 'ausente'; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export function motoDisponible(lineas: Opcion[]): DisponibilidadMoto {
+  if (lineas.length === 0) return { estado: 'desconocido' }
+  const moto = lineas.find(
+    (l) => IDS_MOTO.has(l.id.toLowerCase()) || IDS_MOTO.has(normalizarTexto(l.nombre)),
+  )
+  if (moto) return { estado: 'disponible', id: moto.id, nombre: moto.nombre }
+  return { estado: 'ausente', ramos: lineas.map((l) => l.nombre) }
+}
+
+// ─── Ramos VIDA / SALUD / DECESOS: solo disponibilidad (gratis) ──────────────
+//
+// A diferencia de auto/hogar/moto, estos tres ramos NO tienen catálogos propios
+// documentados con certeza (el índice del portal cuenta 2 operaciones para vida
+// y 1+1 para salud/decesos EN TOTAL — nada parecido a los 11 de cada uno de los
+// otros tres). Lo único que se puede comprobar sin adivinar es si el ramo
+// tarifica para esta organización, con el mismo `GET /insurance-lines` de
+// siempre. Ver `docs/CODEOSCOPIC-API-PORTAL.md` y la cabecera de
+// `peticion-vida.ts` para el porqué completo.
+
+const IDS_VIDA = new Set(['termlife', 'term-life', 'vida', 'life'])
+const IDS_SALUD = new Set(['health', 'salud'])
+const IDS_DECESOS = new Set(['burial', 'decesos'])
+
+export type DisponibilidadVida =
+  | { estado: 'disponible'; id: string; nombre: string }
+  | { estado: 'ausente'; ramos: string[] }
+  | { estado: 'desconocido' }
+export type DisponibilidadSalud = DisponibilidadVida
+export type DisponibilidadDecesos = DisponibilidadVida
+
+function disponibleDeIds(lineas: Opcion[], ids: Set<string>): DisponibilidadVida {
+  if (lineas.length === 0) return { estado: 'desconocido' }
+  const l = lineas.find((x) => ids.has(x.id.toLowerCase()) || ids.has(normalizarTexto(x.nombre)))
+  if (l) return { estado: 'disponible', id: l.id, nombre: l.nombre }
+  return { estado: 'ausente', ramos: lineas.map((x) => x.nombre) }
+}
+
+export function vidaDisponible(lineas: Opcion[]): DisponibilidadVida {
+  return disponibleDeIds(lineas, IDS_VIDA)
+}
+export function saludDisponible(lineas: Opcion[]): DisponibilidadSalud {
+  return disponibleDeIds(lineas, IDS_SALUD)
+}
+export function decesosDisponible(lineas: Opcion[]): DisponibilidadDecesos {
+  return disponibleDeIds(lineas, IDS_DECESOS)
 }
 
 // ─── Emparejar texto del CRM con el catálogo del vendor ──────────────────────

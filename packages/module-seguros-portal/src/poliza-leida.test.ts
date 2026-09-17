@@ -7,6 +7,7 @@ import {
   RAMOS_POLIZA,
   ETIQUETA_RAMO,
   etiquetaRamo,
+  coberturaEspecificaDeRamo,
 } from './poliza-leida.ts'
 
 test('todo ramo del vocabulario tiene etiqueta, y ninguna es el enum crudo', () => {
@@ -23,6 +24,28 @@ test('un ramo desconocido se devuelve tal cual, no cae a «Otros»; el vacío es
   assert.equal(etiquetaRamo(null), null)
   assert.equal(etiquetaRamo(undefined), null)
   assert.equal(etiquetaRamo(''), null)
+})
+
+test('coberturaEspecificaDeRamo encuentra la cobertura que amplía el ramo genérico (RC de perros)', () => {
+  const lista = ['Responsabilidad civil perros', 'Liberación de gastos', 'Defensa penal y reclamación de daños']
+  assert.equal(coberturaEspecificaDeRamo('responsabilidad_civil', lista), 'Responsabilidad civil perros')
+})
+
+test('coberturaEspecificaDeRamo es null cuando ninguna cobertura amplía el ramo', () => {
+  assert.equal(coberturaEspecificaDeRamo('auto', ['Daños propios', 'Lunas', 'Robo']), null)
+  assert.equal(coberturaEspecificaDeRamo('responsabilidad_civil', []), null)
+  assert.equal(coberturaEspecificaDeRamo(null, ['Responsabilidad civil perros']), null)
+})
+
+test('coberturaEspecificaDeRamo no devuelve la cobertura si es EXACTAMENTE el ramo (no amplía nada)', () => {
+  assert.equal(coberturaEspecificaDeRamo('responsabilidad_civil', ['Responsabilidad civil']), null)
+})
+
+test('coberturaEspecificaDeRamo compara sin distinguir mayúsculas', () => {
+  assert.equal(
+    coberturaEspecificaDeRamo('responsabilidad_civil', ['RESPONSABILIDAD CIVIL PERROS']),
+    'RESPONSABILIDAD CIVIL PERROS',
+  )
 })
 
 test('lo que no es un objeto sale con los cinco campos a null', () => {

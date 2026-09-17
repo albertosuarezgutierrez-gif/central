@@ -367,7 +367,7 @@ async function PantallaHogar({
       {!fallaConfig && estadoRamo}
 
       <RetarificadorHogar
-        polizaId={polizaId}
+        endpoint={`/api/cartera/polizas/${polizaId}/retarificar`}
         resumen={fichaHogar}
         pre={pre}
         defectos={defectos}

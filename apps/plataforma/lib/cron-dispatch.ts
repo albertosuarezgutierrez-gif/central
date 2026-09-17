@@ -41,6 +41,11 @@ export const CRON_JOBS: CronJob[] = [
   // el parte del día lea siempre una huella fresca. Lee la cartera por el puerto
   // de central-asegura; si no puede leerla, lo dice — no se calla.
   { path: '/api/cron/correduria-renovaciones', schedule: '30 6 * * *' },
+  // Recaptación por email de leads solo-email (sin teléfono usable): 07:00,
+  // antes del vigía de latidos de las 07:45. Manda hasta 25/día por Resend con
+  // baja de un clic (LSSI art. 21); a quien tiene teléfono se le sigue
+  // trabajando a mano desde /correduria.
+  { path: '/api/cron/recaptacion-email-lote', schedule: '0 7 * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
   { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },
@@ -164,6 +169,14 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/facturas-resumen-semanal', schedule: '15 9 * * 1' },
   { path: '/api/cron/categorizar-movimientos', schedule: '0 7 * * *' },
   { path: '/api/cron/resumen-semanal', schedule: '30 9 * * 1' },
+  // SEO de la correduría, lunes 08:30: Search Console (posiciones reales), Serper (quién ocupa
+  // el top-10 de cada consulta objetivo) y PostHog (visitas medidas) → seo_correduria_semana +
+  // informe por Telegram con UNA acción propuesta. Spec: docs/superpowers/specs/2026-09-08-seo-correduria-conectores-design.md
+  { path: '/api/cron/seo-correduria', schedule: '30 8 * * 1' },
+  // Agente AUTÓNOMO de SEO de asegura-web, 30 min detrás del informe: propone metadata nueva
+  // para ramos sin top-10 y abre PR DRAFT (nunca escribe a main ni mergea). Kill switch
+  // SEO_ASEGURA_AGENT_ENABLED, default OFF. Ver apps/plataforma/lib/seo-correduria/agente-guardrails.ts.
+  { path: '/api/cron/seo-correduria-agente', schedule: '0 9 * * 1' },
   { path: '/api/cron/health-check', schedule: '0 7 * * *' },
   // Canario del formulario público de la correduría, CADA HORA. Un diario no valdría: ese
   // formulario es el único canal de venta de asegura-web y, cuando se rompe, no deja rastro

@@ -45,7 +45,7 @@
  * que decidirla aparte — saltarse la prueba de identidad desde el panel
  * convertiría un error de tecleo en el correo en un acceso a la cartera de otro.
  */
-import { prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
+import { ORIGEN_VINCULO_CORREDOR, prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
@@ -98,6 +98,21 @@ export type FichaPortal = {
   ultimoAccesoEn: string | null
   /** Cuántas identidades hay vinculadas a esta ficha. `null` = no se pudo contar. */
   identidades: number | null
+  /**
+   * 🚨 **El correo con el que ENTRARÍA**, para poder decírselo por un canal que
+   * no es el correo (el WhatsApp de la ficha, 08/09/2026). No es «un correo
+   * suyo»: es exactamente el que `estadoEmailDeFicha` elegiría y el que el
+   * portal reconocerá, que es la misma regla y el mismo sitio.
+   *
+   * `null` = **no se puede afirmar cuál**, y entonces no se le nombra ninguno.
+   * Nombrar el que no es manda al cliente a teclear una dirección a la que el
+   * portal no le mandará ningún código —o peor, a la de otra ficha—, que es el
+   * mismo daño que esta pantalla lleva evitando desde el 05/09. Solo se rellena
+   * en `invitable` y `ya_entra`: en `ambiguo` y `resuelve_a_otra` hay correo
+   * legible y **no** se devuelve, porque ahí lo que falla no es la dirección
+   * sino a dónde lleva.
+   */
+  emailInvitacion: string | null
 }
 
 export type FalloInvitacion =
@@ -109,6 +124,7 @@ export type FalloInvitacion =
   | 'sin_portal'
   | 'no_comprobado'
   | 'error_envio'
+  | 'sin_correo_configurado'
 
 export type ResultadoInvitacion =
   | { ok: true; yaEntraba: boolean }
@@ -149,8 +165,12 @@ async function accesoDe(
 ): Promise<{ identidades: number; ultimoAccesoEn: Date | null } | null> {
   try {
     const db = prismaAsegura()
+    // 🚨 Sin el vínculo del CORREDOR: es el temporal que deja la «vista de
+    // corredor» (Alberto mirando la ficha desde plataforma). Contarlo diría
+    // «ya entra al portal» de alguien que nunca ha entrado — y ese es el
+    // titular con el que se decide si invitarle.
     const vinculos = await db.portalVinculo.findMany({
-      where: { correduriaId, clienteId },
+      where: { correduriaId, clienteId, origen: { not: ORIGEN_VINCULO_CORREDOR } },
       select: { identidadId: true },
     })
     if (vinculos.length === 0) return { identidades: 0, ultimoAccesoEn: null }
@@ -182,6 +202,11 @@ export async function estadoPortalDeFicha(correduriaId: string, clienteId: strin
       estado: 'ya_entra',
       ultimoAccesoEn: acceso.ultimoAccesoEn ? acceso.ultimoAccesoEn.toISOString() : null,
       identidades: acceso.identidades,
+      // Quien ya entra también puede necesitar que le recuerden CON QUÉ correo
+      // entra. Si no se puede leer, `null`: el reenvío por correo sigue
+      // ofreciéndose (va a esa misma dirección aunque aquí no se sepa nombrar),
+      // pero por WhatsApp no se nombra una dirección que no se ha leído.
+      emailInvitacion: await emailLegibleDe(correduriaId, clienteId),
     }
   }
   const identidades = acceso ? acceso.identidades : null
@@ -191,16 +216,25 @@ export async function estadoPortalDeFicha(correduriaId: string, clienteId: strin
     correo = await estadoEmailDeFicha(correduriaId, clienteId)
   } catch (e) {
     console.error('[invitacion-portal] no se pudo leer el correo de la ficha:', e instanceof Error ? e.message : e)
-    return { estado: 'no_comprobado', ultimoAccesoEn: null, identidades }
+    return { estado: 'no_comprobado', ultimoAccesoEn: null, identidades, emailInvitacion: null }
   }
   if (correo.estado === 'no_encontrado') return null
   if (correo.estado === 'sin_email' || correo.estado === 'baja_de_correo') {
-    return { estado: 'sin_email', ultimoAccesoEn: null, identidades }
+    return { estado: 'sin_email', ultimoAccesoEn: null, identidades, emailInvitacion: null }
   }
-  if (correo.estado === 'ilegible') return { estado: 'ilegible', ultimoAccesoEn: null, identidades }
+  if (correo.estado === 'ilegible') return { estado: 'ilegible', ultimoAccesoEn: null, identidades, emailInvitacion: null }
 
   const prediccion = await prediccionVinculo(correo.email, clienteId)
-  return { estado: prediccion, ultimoAccesoEn: null, identidades }
+  return {
+    estado: prediccion,
+    ultimoAccesoEn: null,
+    identidades,
+    // 🚨 Solo cuando la predicción dice que ese correo trae a ESTA ficha. En
+    // `ambiguo`/`resuelve_a_otra` la dirección es perfectamente legible y aun
+    // así no se devuelve: decírsela al cliente por WhatsApp sería exactamente
+    // la invitación a una bóveda vacía que esos dos estados existen para frenar.
+    emailInvitacion: prediccion === 'invitable' ? correo.email : null,
+  }
 }
 
 /**
@@ -245,6 +279,23 @@ async function prediccionVinculo(
   // lista de contactabilidad: dos copias de esta regla darían dos respuestas
   // distintas sobre el mismo cliente sin que fallara nada.
   return prediccionDeVinculo(candidatos, clienteId)
+}
+
+/**
+ * El correo al que se le escribiría, o `null` si no hay uno legible **por el
+ * motivo que sea**. Aquí los cinco desenlaces de `estadoEmailDeFicha` sí se
+ * colapsan a propósito: quien llama solo necesita saber si puede NOMBRAR una
+ * dirección, y el porqué de que no la haya ya lo dice `estado` en la misma
+ * respuesta.
+ */
+async function emailLegibleDe(correduriaId: string, clienteId: string): Promise<string | null> {
+  try {
+    const r = await estadoEmailDeFicha(correduriaId, clienteId)
+    return r.estado === 'ok' ? r.email : null
+  } catch (e) {
+    console.error('[invitacion-portal] no se pudo leer el correo de la ficha:', e instanceof Error ? e.message : e)
+    return null
+  }
 }
 
 /** El nombre de la ficha, para el saludo. `null` = no hay uno legible. */
@@ -337,7 +388,19 @@ export async function invitarAlPortal(
     enlace,
     yaEntraba,
   })
-  if (!enviado) {
+  // 🚨 «No hay proveedor» y «rechazó el mensaje» NO se colapsan: el primero se
+  // arregla en las variables de Vercel y reintentarlo no lo arregla nunca. Ver
+  // la cabecera de `ResultadoEnvioCorreo` para el caso que lo obligó.
+  if (enviado === 'sin_proveedor') {
+    return {
+      ok: false,
+      estado: 'sin_correo_configurado',
+      motivo:
+        'asegura no tiene ningún proveedor de correo configurado (falta RESEND_API_KEY, SMTP_USER+SMTP_PASSWORD o GMAIL_USER+GMAIL_APP_PASSWORD en Vercel). No es que el envío fallara: no hay por dónde enviar, y reintentarlo no lo arregla.',
+      status: 503,
+    }
+  }
+  if (enviado === 'rechazado') {
     return {
       ok: false,
       estado: 'error_envio',

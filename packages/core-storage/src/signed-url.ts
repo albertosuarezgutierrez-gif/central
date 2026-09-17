@@ -37,7 +37,12 @@ export async function signStorageObject(
   try {
     const r = await fetch(`${config.url}/storage/v1/object/sign/${bucket}/${path}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${config.anonKey}`, 'Content-Type': 'application/json' },
+      // 🚨 `apikey` NO es opcional (medido 11/09/2026, ver docs/ROTACION-SERVICE-ROLE.md): con las
+      // claves nuevas de Supabase (`sb_publishable_…`/`sb_secret_…`, que no son JWT) Storage
+      // responde 403 `Invalid Compact JWS` si la clave va SOLO en `Authorization`. Con la `anon`
+      // legacy —que sí es un JWT— el Bearer a secas funcionaba, así que esto se veía sano hasta el
+      // día de la rotación. Mandando las dos cabeceras funciona con las viejas y con las nuevas.
+      headers: { apikey: config.anonKey, Authorization: `Bearer ${config.anonKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ expiresIn }),
     })
     if (!r.ok) {

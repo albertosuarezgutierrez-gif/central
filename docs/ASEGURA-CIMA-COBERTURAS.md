@@ -1,5 +1,7 @@
 # Coberturas que vuelca CIMA — inventario y semántica (medido el 02/09/2026)
 
+> 🔌 **Router: skill `cima-ingesta`** — la cadena entera, el diagnóstico de «la ingesta está muda» y qué no se toca.
+
 > Sobre `seguros.poliza_coberturas` de central: **1.425 coberturas en 110 pólizas, 182 códigos distintos**.
 > Los códigos son **de cada compañía** (el `00000006` de Mapfre no existe en Occident): no hay catálogo
 > común y no se inventa uno. La ficha de póliza en plataforma (`/correduria/poliza/[id]`) los pinta con

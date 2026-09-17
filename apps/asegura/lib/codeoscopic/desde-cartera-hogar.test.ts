@@ -5,11 +5,13 @@ import {
   hogarDeDatos,
   elegirRiesgo,
   partirDireccion,
+  direccionDesdeCatastro,
   habitacionesPorSuperficie,
   type HogarCartera,
   type ResueltosHogar,
 } from './desde-cartera-hogar.ts'
 import type { ClienteCartera } from './desde-cartera.ts'
+import { paramsDnploc } from '@central/core-catastro'
 
 // Persona inventada. Ningún cliente real aquí.
 const CLIENTE: ClienteCartera = {
@@ -105,6 +107,64 @@ test('🚨 sin riesgo en la póliza ni en la gemela: el Catastro tapa m²/año, 
   assert.ok(campos.includes('nombreVia') && campos.includes('numeroVia'))
   // Sin capitales no se inventa nada: falta.
   assert.ok(campos.includes('capitalContinente'))
+})
+
+test('sin póliza (oportunidad nueva): la dirección OFICIAL del Catastro, ya troceada, tapa la calle, y se dice de dónde sale', () => {
+  const p = precalificarHogarCartera(
+    CLIENTE,
+    { numeroPoliza: null, fechaVencimiento: null, hogar: null },
+    RESUELTOS,
+    '2026-09-02',
+    {
+      metrosCuadrados: 205,
+      anioConstruccion: 1964,
+      codigoPostal: '41011',
+      uso: 'Residencial',
+      direccion: { tipoVia: 'Calle', nombre: 'MONTE CARMELO', numero: '68', planta: '01', puerta: 'IZ' },
+    },
+  )
+  assert.equal(p.datos.tipoViaId, 'Calle')
+  assert.equal(p.datos.nombreVia, 'MONTE CARMELO')
+  assert.equal(p.datos.numeroVia, '68')
+  assert.equal(p.datos.planta, '01')
+  assert.equal(p.datos.puertaVivienda, 'IZ')
+  const campos = p.faltan.map((f) => f.campo)
+  assert.ok(!campos.includes('nombreVia') && !campos.includes('numeroVia'))
+  assert.ok(p.supuestos.some((s) => s.campo === 'nombreVia' && /OFICIAL del Catastro/.test(s.porque)))
+})
+
+test('con póliza Y catastro a la vez: manda la dirección de la FICHA, no la del Catastro', () => {
+  const p = precalificarHogarCartera(
+    CLIENTE,
+    { numeroPoliza: 'X1', fechaVencimiento: null, hogar: GEMELA },
+    RESUELTOS,
+    '2026-09-02',
+    {
+      metrosCuadrados: null,
+      anioConstruccion: null,
+      codigoPostal: null,
+      uso: null,
+      direccion: { tipoVia: 'Calle', nombre: 'OTRA CALLE', numero: '99', planta: null, puerta: null },
+    },
+  )
+  assert.equal(p.datos.nombreVia, 'INVENTADA') // de GEMELA, no «OTRA CALLE»
+  assert.ok(p.supuestos.some((s) => s.campo === 'nombreVia' && /de la ficha/.test(s.porque)))
+})
+
+test('direccionDesdeCatastro: lee el formato propio del Catastro («Es:1 Pl:01 Pt:IZ») que partirDireccion NO reconoce', () => {
+  const p = paramsDnploc('CL MONTE CARMELO 68 Es:1 Pl:01 Pt:IZ 41011 SEVILLA')
+  assert.ok(p !== null)
+  const dir = direccionDesdeCatastro(p)
+  assert.deepEqual(dir, { tipoVia: 'Calle', nombre: 'MONTE CARMELO', numero: '68', planta: '01', puerta: 'IZ' })
+  // Y la prueba de que partirDireccion, en cambio, SE PIERDE ese mismo formato:
+  // «Es:1» no encaja en ninguno de sus patrones de planta/puerta.
+  const conElParserEquivocado = partirDireccion('CL MONTE CARMELO 68 Es:1 Pl:01 Pt:IZ 41011 SEVILLA')
+  assert.equal(conElParserEquivocado.planta, null)
+  assert.equal(conElParserEquivocado.puerta, null)
+})
+
+test('direccionDesdeCatastro sin datos: no inventa nada', () => {
+  assert.deepEqual(direccionDesdeCatastro(null), { tipoVia: null, nombre: null, numero: null, planta: null, puerta: null })
 })
 
 test('nada personal se supone: sin DNI ni teléfono, faltan', () => {

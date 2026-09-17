@@ -110,3 +110,44 @@ test('un error de escritura NO se lee como «escritos: 0»', () => {
     assert.notEqual(r.estado, 'ok', `«${JSON.stringify(json)}» no puede leerse como escritura correcta`)
   }
 })
+
+// ─── Contacto (email + teléfono) ────────────────────────────────────────────
+import { interpretarPlanBackfillContacto } from './correduria-puerto.ts'
+
+test('contacto: el plan del puerto se traduce por campo y cuenta los grupos de email', () => {
+  const p = interpretarPlanBackfillContacto(200, {
+    estado: 'ok',
+    resumen: {
+      email: { total: 10, yaTiene: 5, sinDato: 2, ilegibles: 1, noHasheables: 0, rellenables: 1, enChoque: 1, derivadosPendientes: 7 },
+      telefono: { total: 10, yaTiene: 8, sinDato: 1, ilegibles: 0, noHasheables: 1, rellenables: 0, enChoque: 0, derivadosPendientes: 0 },
+    },
+    choques: [{ fichas: ['a', 'b'], hayPreexistente: false }],
+    restantes: 1,
+    derivadosRestantes: 7,
+  })
+  assert.equal(p.estado, 'ok')
+  if (p.estado !== 'ok') return
+  assert.equal(p.email.rellenables, 1)
+  assert.equal(p.email.enChoque, 1)
+  assert.equal(p.email.ilegibles, 1)
+  assert.equal(p.telefono.noHasheables, 1)
+  assert.equal(p.grupos, 1)
+  assert.equal(p.rellenables, 1)
+  assert.equal(p.email.derivadosPendientes, 7)
+  assert.equal(p.mitadesPendientes, 7)
+})
+
+test('contacto: la escritura suma las mitades del email a escritos/restantes, para que el botón no desaparezca antes de tiempo', () => {
+  const r = interpretarEscrituraBackfill(200, { estado: 'ok', escritos: 0, restantes: 0, derivadosEscritos: 500, derivadosRestantes: 4000, fallidos: [] })
+  assert.deepEqual(r, { estado: 'ok', escritos: 500, restantes: 4000, fallidos: 0 })
+})
+
+test('contacto: sin clave de índice el puerto contesta error con motivo, y se dice — no se pinta «todo indexado»', () => {
+  const p = interpretarPlanBackfillContacto(503, { estado: 'error', motivo: 'PII_LOOKUP_KEY no está configurada' })
+  assert.deepEqual(p, { estado: 'error', motivo: 'PII_LOOKUP_KEY no está configurada' })
+})
+
+test('contacto: un 401 es el secreto, no la cartera', () => {
+  const p = interpretarPlanBackfillContacto(401, null)
+  assert.equal(p.estado, 'error')
+})

@@ -4,7 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { ejecutarAvisosVencimiento } from '@/lib/avisos-vencimiento'
 
 /** Averías de CONFIGURACIÓN de este cron: se dicen por su nombre, no como 'otro'. */
-const AVERIAS_PROPIAS = ['cartera_sin_conexion', 'sin_proveedor_email', 'sin_remitente']
+const AVERIAS_PROPIAS = ['cartera_sin_conexion', 'sin_proveedor_email']
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'

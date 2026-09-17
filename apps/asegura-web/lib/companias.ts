@@ -31,7 +31,13 @@
 export type Compania = {
   nombre: string
   /**
-   * Ruta del SVG bajo `public/`, o `null` cuando NO tenemos su logo.
+   * Ruta del fichero bajo `public/`, o `null` cuando NO tenemos su logo.
+   *
+   * SVG siempre que se pueda; PNG cuando es lo único que hay. Un PNG tiene dos
+   * modos de fallo que un vectorial no tiene, y los dos son silenciosos: sale
+   * borroso si no trae píxeles de sobra para la pantalla retina, y pinta una
+   * CAJA BLANCA sobre el fondo de la banda si no tiene canal alfa. Los vigila
+   * `companias.test.ts` leyendo el fichero.
    *
    * `null` no es un hueco que haya que tapar con un logo parecido ni con uno
    * redibujado a mano: el nombre se pinta como wordmark y ya. Un logo
@@ -76,6 +82,29 @@ export const COMPANIAS: readonly Compania[] = [
   { nombre: 'Occident', logo: '/logos/occident.svg' },
   { nombre: 'Reale', logo: '/logos/reale.svg' },
   { nombre: 'Generali', logo: '/logos/generali.svg', escala: 1.6 },
-  { nombre: 'Fidelidade', logo: null },
-  { nombre: 'Asisa', logo: null },
+  // 🚨 PNG, y de una imagen que venía en JPEG. Alberto subió tres a Drive; las
+  // dos primeras eran JPEG —formato SIN canal alfa, así que habrían pintado una
+  // caja blanca sobre el fondo de la banda— y la tercera, pese a llamarse
+  // `.jpg`, era un PNG de paleta (`mimeType: image/png`, 3.310 bytes). O sea
+  // que la extensión del nombre no decía la verdad y el formato sí: se miró el
+  // `mimeType` y la firma del fichero, no el nombre.
+  //
+  // El alfa NO se sacó recortando el blanco (eso deja un halo claro alrededor
+  // de las letras en cuanto el fondo no es blanco). La marca es un solo color
+  // sobre blanco, así que cada píxel es `a·rojo + (1-a)·blanco` y el alfa se
+  // DESPEJA de ahí por el canal azul, que es el que más separa los dos colores
+  // (236 de 255). Comprobado componiendo sobre claro y sobre oscuro.
+  //
+  // `escala` 0,7 y no 1: con 8,54 de relación de aspecto es la más ancha del
+  // muro (Occident, la siguiente, va por 5,42). A altura completa se pasaría
+  // del `max-width: 11rem` del CSS y el navegador la encogería igual — el
+  // número diría una cosa y la pantalla otra.
+  { nombre: 'Fidelidade', logo: '/logos/fidelidade.png', escala: 0.7 },
+  // 🚨 PNG, no SVG: es el fichero que hay (lo subió Alberto a Drive). Venía en
+  // un lienzo de 640×400 con el dibujo ocupando solo 558×107 —el 74 % era
+  // aire—, así que a la altura del muro habría salido de ~7 px. Se recortó a la
+  // caja del contenido MEDIDA con `Image.getbbox()`, no a ojo. Queda en 5,21 de
+  // relación de aspecto, casi la de Occident (5,42), y por eso no lleva
+  // `escala`: a la misma altura ya casan.
+  { nombre: 'Asisa', logo: '/logos/asisa.png' },
 ] as const

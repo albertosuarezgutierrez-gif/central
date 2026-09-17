@@ -43,7 +43,14 @@ test('PORTAL_URL es https y sin barra final', () => {
 test('la cabecera MONTA el botón al portal del cliente', () => {
   const cab = sinComentarios(readFileSync(join(RAIZ, 'components', 'Cabecera.tsx'), 'utf8'))
   assert.match(cab, /href=\{PORTAL_URL\}/, 'components/Cabecera.tsx ya no enlaza a PORTAL_URL: el cliente no tiene cómo entrar a su intranet desde la web')
-  assert.match(cab, /Área de clientes/, 'el botón perdió su rótulo')
+  // 🚨 «Mis seguros», NO «Área de clientes». El rótulo viejo era una puerta
+  // cerrada: decía «clientes» a una intranet en la que entra cualquiera con un
+  // correo verificado, y ese es el argumento de venta de toda la portada
+  // (Alberto, 07/09/2026). Si alguien lo revierte, el 99 % de los visitantes
+  // vuelve a leer que eso no es para ellos — y nada falla.
+  assert.match(cab, /Mis seguros/, 'el botón perdió su rótulo')
+  // La prohibición de «Área de clientes» NO vive aquí: está en PROHIBIDO, que
+  // se aplica a TODO el fuente. Ver la nota del 07/09/2026 en ese test.
 
   const layout = sinComentarios(readFileSync(join(RAIZ, 'app', 'layout.tsx'), 'utf8'))
   assert.match(layout, /<Cabecera\b/, 'el layout ya no monta <Cabecera>: el botón existiría en un fichero que no renderiza nadie')
@@ -63,6 +70,16 @@ test('NINGÚN enlace de la web lleva a la intranet de la correduría ni a plataf
     /\/correduria\b/,
     /\/operador\b/,
     /\/login\b/,
+    /ya\s+soy\s+cliente/i,
+    // 🚨 Este patrón estaba SOLO en el test de la cabecera, y por eso no cazó
+    // nada: al rediseñar la portada el 07/09/2026 el rótulo viejo sobrevivió en
+    // `components/PanelDemo.tsx` —el simulador de navegador decía «Área de
+    // clientes · Mis seguros»—, se corrigió a mano y ningún cepo lo vigilaba.
+    // Lo vio Alberto en una captura, que es exactamente el modo de fallo que
+    // este fichero existe para evitar: un guardián que mira a UN fichero da
+    // verde sobre los otros veinte. El vocabulario de la puerta se prohíbe en
+    // todo el fuente o no se prohíbe.
+    /área de clientes/i,
     /acceso\s+corredur/i,
     /acceso\s+corredor/i,
     /únete gratis/i,

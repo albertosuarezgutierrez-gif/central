@@ -52,18 +52,31 @@ function unaLinea(s: string): string {
 }
 
 /**
- * A dónde manda el correo: la PORTADA del portal, que es donde se pide el
- * código. `null` = no hay portal utilizable y entonces **no se envía** — un
- * correo que dice «entra aquí» sin el «aquí» no sirve de nada, y adivinar un
- * dominio manda a la persona a ningún sitio.
+ * A dónde manda el correo: **su bóveda**, `/boveda`. `null` = no hay portal
+ * utilizable y entonces **no se envía** — un correo que dice «entra aquí» sin el
+ * «aquí» no sirve de nada, y adivinar un dominio manda a la persona a ningún
+ * sitio.
  *
- * Misma variable y mismo valor por defecto que `enlaceDeAutorizaciones`: el
- * portal sirve HOY en `asegura-portal.vercel.app`, y cuando
- * `clientes.grupoasegura.es` esté repuntado a Vercel se cambia la variable y
- * esto no se toca.
+ * ── Por qué `/boveda` y no la portada (07/09/2026, dictado de Alberto) ──────
+ *
+ * Porque nombra el destino en vez del trámite: quien ya tiene sesión abierta cae
+ * directo en sus seguros, y **quien no la tiene no se pierde nada**. Medido
+ * contra el dominio vivo antes de cambiarlo: `GET https://clientes.grupoasegura.es/boveda`
+ * responde **200** y, sin cookie, `x-matched-path: /` — o sea, la propia página
+ * hace `redirect('/')` a la portada donde se pide el código. No hay 404 ni la
+ * bóveda vacía que este correo existe para evitar.
+ *
+ * ⚠️ Ese `redirect('/')` de `app/(portal)/boveda/page.tsx` es lo que sostiene
+ * esta decisión: si algún día esa página dejara de redirigir al visitante sin
+ * sesión, este enlace pasaría a llevar a una pantalla muerta.
+ *
+ * Misma variable y mismo valor por defecto que `enlaceDeAutorizaciones`:
+ * `clientes.grupoasegura.es` está atado al proyecto `asegura-portal` y sirve el
+ * portal (medido el 07/09/2026), así que el defecto es el dominio de la casa y
+ * no el `asegura-portal.vercel.app` de antes, que sigue sirviendo igual.
  */
 export function enlacePortal(
-  base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://asegura-portal.vercel.app',
+  base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es',
 ): string | null {
   const limpio = base?.trim()
   if (!limpio) return null
@@ -79,7 +92,7 @@ export function enlacePortal(
     console.error('[asegura/invitacion-portal] ASEGURA_PORTAL_URL no es https: no se invita')
     return null
   }
-  url.pathname = '/'
+  url.pathname = '/boveda'
   return url.toString()
 }
 
@@ -127,9 +140,8 @@ export function cuerpoInvitacionPortal(d: DatosInvitacionPortal): CuerpoInvitaci
     'Entras con ESTE mismo correo: el portal te manda un código de un solo uso y listo. ' +
       'No hay contraseña que recordar.',
     '',
-    'Este enlace no abre sesión por sí mismo, así que a quien se lo reenvíes no le sirve de nada.',
-    '',
-    'Si prefieres seguir como hasta ahora, no hagas nada: no cambia nada de tus pólizas.' +
+    'En Grupo ASegura trabajamos para ponértelo cada día más fácil: tus seguros a mano cuando los ' +
+      'necesites, a cualquier hora y sin tener que llamar a nadie.' +
       (contacto ? ` Y si tienes cualquier duda, escríbenos a ${contacto}.` : ''),
   ]
   const texto = lineas.join('\n')
@@ -146,10 +158,8 @@ export function cuerpoInvitacionPortal(d: DatosInvitacionPortal): CuerpoInvitaci
     `color:#fff;text-decoration:none;border-radius:8px">Entrar en Mis Seguros</a></p>` +
     `<p style="color:#666;font-size:13px">Entras con ESTE mismo correo: el portal te manda un código de ` +
     `un solo uso y listo. No hay contraseña que recordar.</p>` +
-    `<p style="color:#666;font-size:13px">Este enlace no abre sesión por sí mismo, así que a quien se lo ` +
-    `reenvíes no le sirve de nada.</p>` +
-    `<p style="color:#666;font-size:13px">Si prefieres seguir como hasta ahora, no hagas nada: no cambia ` +
-    `nada de tus pólizas.` +
+    `<p style="color:#666;font-size:13px">En Grupo ASegura trabajamos para ponértelo cada día más fácil: ` +
+    `tus seguros a mano cuando los necesites, a cualquier hora y sin tener que llamar a nadie.` +
     (contacto ? ` Y si tienes cualquier duda, escríbenos a ${esc(contacto)}.` : '') +
     `</p></div>`
 
@@ -157,14 +167,39 @@ export function cuerpoInvitacionPortal(d: DatosInvitacionPortal): CuerpoInvitaci
 }
 
 /**
- * Manda el correo. `true` = el proveedor lo aceptó.
+ * El desenlace del envío. 🚨 Son TRES y no un booleano, porque «no ha salido»
+ * se arregla en sitios distintos y el que lo lee decide qué hacer después:
  *
- * Un `false` NO significa que el cliente no pueda entrar al portal: puede
+ *   - `enviado`        → el proveedor lo aceptó.
+ *   - `sin_proveedor`  → no hay ninguno configurado (`RESEND_API_KEY` / `SMTP_*`
+ *                        / `GMAIL_*`). Es una variable de Vercel que falta.
+ *   - `rechazado`      → había proveedor, y aun así dijo que no.
+ *
+ * ⚠️ Hubo un cuarto, `sin_remitente`, y se retiró el 07/09/2026: el remitente
+ * ya no puede faltar porque `remitenteCorreo()` tiene uno por defecto
+ * (`hola@grupoasegura.es`). Una rama que no puede ocurrir es ruido.
+ *
+ * ── Por qué esto no es un booleano (07/09/2026) ────────────────────────────
+ *
+ * Lo era, y los tres «no» se leían igual aguas arriba: `error_envio` 502, que
+ * la pantalla traduce a «el proveedor de correo no aceptó el mensaje, vuelve a
+ * intentarlo». Medido en producción ese día: el botón de invitar contestaba eso
+ * mientras el log decía `[mailer] sin proveedor de email configurado`. O sea, la
+ * pantalla mandaba a Alberto a reintentar un envío que **no podía salir nunca**,
+ * y encima culpando a un proveedor que no existe. Es la regla del `CLAUDE.md`
+ * raíz —un «no lo sé» disfrazado de dato— en su versión más cara: la única
+ * acción que ofrecía era la única que no arregla nada.
+ *
+ * Un `rechazado` NO significa que el cliente no pueda entrar al portal: puede
  * hacerlo igual desde la portada con su correo. Lo único que ha fallado es
- * contárselo, y por eso quien llama contesta `error_envio` — que es lo que se
- * reintenta— y no «no tiene acceso».
+ * contárselo.
  */
-export async function enviarInvitacionPortal(destino: string, d: DatosInvitacionPortal): Promise<boolean> {
+export type ResultadoEnvioCorreo = 'enviado' | 'sin_proveedor' | 'rechazado'
+
+export async function enviarInvitacionPortal(
+  destino: string,
+  d: DatosInvitacionPortal,
+): Promise<ResultadoEnvioCorreo> {
   // El transporte se carga AQUÍ, no arriba, por lo mismo que en el aviso de
   // acceso: el cepo de `cuerpoInvitacionPortal()` corre con `node --test`, que
   // no sabe resolver `@central/core-email` (su `main` importa sin extensión).
@@ -174,22 +209,18 @@ export async function enviarInvitacionPortal(destino: string, d: DatosInvitacion
   const transporter = createMailTransporter()
   if (!transporter) {
     console.error('[asegura/invitacion-portal] no hay proveedor de correo configurado')
-    return false
+    return 'sin_proveedor'
   }
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-  if (!from) {
-    console.error('[asegura/invitacion-portal] falta ASEGURA_MAIL_FROM: no se invita')
-    return false
-  }
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
 
   const { asunto, texto, html } = cuerpoInvitacionPortal(d)
   try {
     await transporter.sendMail({ from, to: destino, ...(replyTo ? { replyTo } : {}), subject: asunto, text: texto, html })
-    return true
+    return 'enviado'
   } catch (e) {
     // El motivo, nunca el destino: un log es donde un dato personal sobrevive más tiempo.
     console.error('[asegura/invitacion-portal] fallo enviando la invitación:', e instanceof Error ? e.message : e)
-    return false
+    return 'rechazado'
   }
 }

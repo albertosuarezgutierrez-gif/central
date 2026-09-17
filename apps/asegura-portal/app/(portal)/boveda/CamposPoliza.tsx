@@ -21,9 +21,28 @@
  * buena. Es la regla de la casa «dato que NO hay ≠ dato que NO se ha mirado»:
  * mejor el hueco declarado que el dato inventado. Si alguien viene a ponerle un
  * `required`, esto es el porqué de que no lo tenga.
+ *
+ * 🚨 Y ESA MISMA REGLA ES POR LO QUE «FORMA DE PAGO» Y LOS DEMÁS DESPLEGABLES
+ * DEL RAMO **NO** LLEVAN UN VALOR MARCADO DE SALIDA (08/09/2026, a petición
+ * expresa de Alberto tras plantear defaults de «Particular»/«No»): un
+ * `<select>` que arranca en una opción real se guarda con ESE valor si la
+ * persona no lo toca, indistinguible de una respuesta suya. Siguen en
+ * `value=""` con el rótulo «Selecciona»: el hueco sigue siendo la respuesta,
+ * solo cambia la palabra.
+ *
+ * 🚨 «TIPO DE SEGURO» SÍ ES OBLIGATORIO, y es la ÚNICA excepción (dictado
+ * expreso de Alberto, 08/09/2026). La diferencia con lo de arriba: elegir una
+ * CATEGORÍA no fabrica un hecho sobre el riesgo —no dice «tu coche no duerme en
+ * la calle» ni «el uso es particular»—, así que forzarlo no cuela un dato falso
+ * en la póliza. El bloqueo vive en `AnadirPoliza.tsx`/`EditarPoliza.tsx` (los
+ * dos `<form>` de este componente llevan `noValidate`, así que el `required`
+ * del `<select>` es solo semántico; el guardado real lo impide el JS de cada
+ * formulario) y NO en `poliza-editable.ts`: esa validación la comparte el alta
+ * a mano con la lectura por IA de un documento, donde un ramo sin identificar
+ * SÍ es un estado legítimo («no lo hemos sabido leer»).
  */
 
-import { camposDeRamo, type CampoRamo } from '@central/module-seguros-portal'
+import { camposDeRamo, PERIODICIDADES_PAGO, type CampoRamo, type PeriodicidadPago } from '@central/module-seguros-portal'
 import { BuscarInmueble, type DatosAceptados } from './BuscarInmueble'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 
@@ -35,6 +54,7 @@ export type Campo =
   | 'numeroPoliza'
   | 'ramo'
   | 'primaAnual'
+  | 'periodicidadPago'
   | 'matricula'
   | 'bastidor'
   | 'fechaMatriculacion'
@@ -47,9 +67,23 @@ export const FORMULARIO_VACIO: Formulario = {
   numeroPoliza: '',
   ramo: '',
   primaAnual: '',
+  periodicidadPago: '',
   matricula: '',
   bastidor: '',
   fechaMatriculacion: '',
+}
+
+/**
+ * Rótulos de «Forma de pago» — cada cuánto le pasan el recibo. Es lo que
+ * permite calcular el PRÓXIMO cobro y avisar antes (`proximoCobroDeclarado()`
+ * de `@central/module-seguros-portal`); sin esto solo se puede avisar de la
+ * renovación anual, nunca de un cobro intermedio.
+ */
+const ETIQUETA_PERIODICIDAD_PAGO: Record<PeriodicidadPago, string> = {
+  anual: 'Todo de una vez, una vez al año',
+  semestral: 'Cada 6 meses',
+  trimestral: 'Cada 3 meses',
+  mensual: 'Cada mes',
 }
 
 /**
@@ -63,12 +97,16 @@ export const FORMULARIO_VACIO: Formulario = {
  */
 const RAMOS_CON_VEHICULO: ReadonlySet<string> = new Set(['auto', 'moto'])
 
+/** El aviso cuando se intenta guardar sin elegir «Tipo de seguro». */
+export const MENSAJE_RAMO_OBLIGATORIO = 'Elige un tipo de seguro antes de guardar.'
+
 export const MENSAJE_400: Record<Campo, string> = {
   fechaVencimiento: 'Esa fecha no nos vale. Compruébala en tu póliza; si no la sabes, déjala en blanco.',
   primaAnual: 'Esa prima no nos vale. Escríbela en euros al año, por ejemplo 320,50.',
   compania: 'Ese nombre de compañía no nos vale. Escríbelo tal cual aparece en tu póliza.',
   numeroPoliza: 'Ese número de póliza no nos vale. Cópialo tal cual aparece en tu póliza.',
   ramo: 'Ese tipo de seguro no nos vale. Elige uno de la lista.',
+  periodicidadPago: 'Esa forma de pago no nos vale. Elige una de la lista.',
   matricula: 'Esa matrícula no nos vale. Escríbela tal cual, por ejemplo 1234 BCD.',
   bastidor: 'Ese bastidor no nos vale. Son 17 caracteres y no llevan las letras I, O ni Q.',
   fechaMatriculacion: 'Esa fecha de matriculación no nos vale. Está en tu permiso de circulación.',
@@ -102,6 +140,7 @@ const CAMPO_POR_ERROR: ReadonlyArray<readonly [RegExp, Campo]> = [
   [/prima/i, 'primaAnual'],
   [/compan|compañ/i, 'compania'],
   [/n(u|ú)mero/i, 'numeroPoliza'],
+  [/periodicidad/i, 'periodicidadPago'],
   [/ramo/i, 'ramo'],
   [/matricula|matrícula/i, 'matricula'],
   [/bastidor|vin/i, 'bastidor'],
@@ -237,10 +276,18 @@ export function CamposPoliza({
           onChange={(e) => escribir('ramo', e.target.value)}
           aria-invalid={errores.ramo ? true : undefined}
           disabled={disabled}
+          // El único obligatorio de este formulario (ver la cabecera del
+          // fichero). `required` es solo semántico: los dos `<form>` que usan
+          // este componente llevan `noValidate`, así que quien de verdad
+          // bloquea el guardado sin ramo es el JS de `AnadirPoliza`/`EditarPoliza`.
+          required
         >
-          {/* «No lo sé» es una respuesta válida y explícita, no un hueco a
-              rellenar con el primero de la lista. */}
-          <option value="">No lo sé</option>
+          {/* El hueco sigue siendo una respuesta válida y explícita hasta que
+              se guarda — «Selecciona» es solo el rótulo — pero aquí, a
+              diferencia del resto del formulario, no se puede GUARDAR con él. */}
+          <option value="" disabled>
+            Selecciona
+          </option>
           {ramos.map((r) => (
             <option key={r.valor} value={r.valor}>
               {r.etiqueta}
@@ -302,6 +349,34 @@ export function CamposPoliza({
           disabled={disabled}
         />
         {errores.primaAnual && <p className="editor-error">{errores.primaAnual}</p>}
+      </div>
+
+      <div className="editor-campo">
+        <label htmlFor={`periodicidad-${idPrefix}`}>Forma de pago</label>
+        <p className="editor-ayuda" id={`periodicidad-ayuda-${idPrefix}`}>
+          Cada cuánto te pasan el recibo. Con esto podemos avisarte antes de cada cobro, no solo de la
+          renovación. <strong>Si no lo sabes, déjalo en blanco.</strong>
+        </p>
+        <select
+          id={`periodicidad-${idPrefix}`}
+          className="campo"
+          value={form.periodicidadPago}
+          onChange={(e) => escribir('periodicidadPago', e.target.value)}
+          aria-describedby={`periodicidad-ayuda-${idPrefix}`}
+          aria-invalid={errores.periodicidadPago ? true : undefined}
+          disabled={disabled}
+        >
+          {/* Igual que el resto del formulario (y al revés que «Tipo de
+              seguro»): el hueco es una respuesta válida y no lleva ningún
+              valor marcado de salida. Ver la cabecera del fichero. */}
+          <option value="">Selecciona</option>
+          {PERIODICIDADES_PAGO.map((p) => (
+            <option key={p} value={p}>
+              {ETIQUETA_PERIODICIDAD_PAGO[p]}
+            </option>
+          ))}
+        </select>
+        {errores.periodicidadPago && <p className="editor-error">{errores.periodicidadPago}</p>}
       </div>
 
       {/* Y AL FINAL, lo específico de ESE seguro: el bloque del vehículo (que
@@ -459,7 +534,7 @@ function CampoDelCatalogo({
 
       {campo.tipo === 'opcion' ? (
         <select {...comun} onChange={(e) => escribir(campo.id, e.target.value)}>
-          <option value="">No lo sé</option>
+          <option value="">Selecciona</option>
           {(campo.opciones ?? []).map((o) => (
             <option key={o.valor} value={o.valor}>
               {o.etiqueta}
@@ -467,12 +542,12 @@ function CampoDelCatalogo({
           ))}
         </select>
       ) : campo.tipo === 'triestado' ? (
-        // TRES opciones, no un checkbox, y «No lo sé» de salida. Un checkbox
-        // solo sabe decir sí/no: colapsa «no me lo han preguntado» en «ha
-        // dicho que no», que es un dato falso con forma de respuesta. Mismo
-        // criterio que los tri-estados del parte de siniestro.
+        // TRES opciones, no un checkbox, y sin nada marcado de salida. Un
+        // checkbox solo sabe decir sí/no: colapsa «no me lo han preguntado» en
+        // «ha dicho que no», que es un dato falso con forma de respuesta.
+        // Mismo criterio que los tri-estados del parte de siniestro.
         <select {...comun} onChange={(e) => escribir(campo.id, e.target.value)}>
-          <option value="">No lo sé</option>
+          <option value="">Selecciona</option>
           <option value="si">Sí</option>
           <option value="no">No</option>
         </select>

@@ -47,7 +47,14 @@ export default async function AutorizacionesPage() {
       {/* El `<main>`, el ancho y la navegación los pone el armazón del grupo
           (`app/(portal)/layout.tsx`): esta pantalla es una sección más del
           portal, no una página suelta a la que se llegó por un enlace. */}
-      <h1>Quién puede ver mis seguros</h1>
+      {/* 08/09/2026: «Contactos». La pantalla es la misma —quién ve lo tuyo,
+          qué ves tú, y a quién invitas—; lo que cambió es el nombre, porque
+          Alberto pidió «una pestaña de contactos» y esto ya lo era. */}
+      <h1>Mis contactos</h1>
+      <p className="suave" style={{ marginTop: 0 }}>
+        Las personas a las que dejas ver tus seguros, las que te dejan ver los suyos, y las que invitas
+        al portal — para compartirles algo o solo para presentárselo.
+      </p>
 
       {/* Va en el servidor, fuera del componente que carga los datos, para que
           esto se lea SIEMPRE: aunque la petición falle, aunque no haya nadie a

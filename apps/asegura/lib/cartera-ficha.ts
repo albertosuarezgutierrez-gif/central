@@ -30,6 +30,7 @@ import {
 import { decryptField } from '@central/module-seguros-pii'
 import { DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
+import { RAMOS_DESCRITOS_POR_COBERTURAS } from './cartera'
 import { ordenPolizasFicha } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
@@ -37,6 +38,9 @@ import { cotizacionesVivas, historialCliente, type HistorialFila } from './carte
 import { listarDocumentos } from './cartera-documentos'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { emailDeFicha } from './email-ficha'
+import { identidadesDeCliente } from './vinculos-portal'
+import { normalizarNumeroPoliza } from '@central/module-seguros-portal'
 import type {
   ClienteCartera,
   PolizaCartera,
@@ -45,6 +49,34 @@ import type {
 } from './codeoscopic/desde-cartera.ts'
 import { elegirRiesgo, hogarDeDatos, type HogarCartera } from './codeoscopic/desde-cartera-hogar.ts'
 import { estadoClavePii, type EstadoClavePii } from './pii-estado'
+
+/**
+ * Una póliza que el cliente ha APORTADO desde el portal
+ * (`seguros.portal_poliza_declarada`), casi siempre de OTRA compañía: no la
+ * gestiona la correduría, solo consta que existe.
+ */
+export type PolizaDeclaradaFicha = {
+  id: string
+  compania: string | null
+  numeroPoliza: string | null
+  ramo: string | null
+  primaAnual: number | null
+  fechaVencimiento: string | null
+  matricula: string | null
+  procedencia: string
+  confirmadaPorUsuario: boolean
+  titularTipo: string | null
+  titularEmpresaNombre: string | null
+  /**
+   * `true` = esta MISMA ficha ya tiene una póliza con ese número: es una
+   * declarada de algo que la casa ya gestiona, no una oportunidad de venta.
+   * `null` = sin número que cotejar (no se sabe). El cotejo es solo contra las
+   * pólizas de esta ficha personal — si la declaró a nombre de su empresa
+   * (`titularTipo==='empresa'`), no se coteja contra la ficha de esa sociedad
+   * (eso es lo que ya hace `leads-portal.ts` para la cola de ventas).
+   */
+  yaEnCartera: boolean | null
+}
 
 /** Un resultado de búsqueda: lo justo para elegir a quién abrir. */
 export type ClienteEncontrado = {
@@ -288,6 +320,75 @@ export type FichaCliente = {
    * estado pedido/recibido/revisado. `null` = no se ha podido consultar.
    */
   documentos: DocumentoResumen[] | null
+  /**
+   * Pólizas aportadas por el cliente desde el portal (`portal_poliza_declarada`),
+   * casi siempre de OTRA compañía. Hasta este cambio la ficha no las mostraba
+   * NUNCA: solo salían en la cola de venta «Declaradas por vencer»
+   * (`cartera-declaradas.ts`), y SOLO si vencían dentro de 60 días — así que
+   * subir una póliza no cambiaba nada en la ficha de quien la subió.
+   * `null` = no se pudo leer (`portal_vinculo` o la tabla fallaron). NO es
+   * «no ha aportado ninguna»: eso es `[]`.
+   */
+  declaradas: PolizaDeclaradaFicha[] | null
+}
+
+/**
+ * Las pólizas que esta ficha ha APORTADO desde el portal del cliente.
+ *
+ * El vínculo ficha↔identidad es 1:N por el lado de la identidad (una
+ * identidad puede casar con varias fichas — empresa + su administrador), así
+ * que se reutiliza `identidadesDeCliente()` de `vinculos-portal.ts` —la MISMA
+ * consulta que ya usan `leads-portal.ts`/`partes-portal.ts`— en vez de
+ * reimplementarla: la decisión sobre vínculos múltiples tiene que ser una
+ * sola, y ese fichero ya lo dice en su cabecera.
+ *
+ * `numerosPropios` es el cotejo contra las pólizas de ESTA MISMA ficha
+ * (personal): si el número ya está en su cartera, no es una oportunidad de
+ * venta, es la misma póliza subida dos veces. Solo se coteja contra la ficha
+ * personal — si la declaró a nombre de su empresa (`titularTipo==='empresa'`),
+ * el cotejo bueno contra la ficha de esa sociedad ya lo hace `leads-portal.ts`
+ * para la cola de ventas; aquí, sin ese cruce, se deja `null` (no se sabe).
+ */
+async function listarDeclaradas(
+  correduriaId: string,
+  clienteId: string,
+  numerosPropios: Set<string>,
+): Promise<PolizaDeclaradaFicha[] | null> {
+  try {
+    const identidadIds = await identidadesDeCliente(correduriaId, clienteId)
+    if (identidadIds.length === 0) return []
+    const db = prismaAsegura()
+    const filas = await db.portalPolizaDeclarada.findMany({
+      where: { identidadId: { in: identidadIds } },
+      select: {
+        id: true, compania: true, numeroPoliza: true, ramo: true, primaAnual: true,
+        fechaVencimiento: true, matricula: true, procedencia: true, confirmadaPorUsuario: true,
+        titularTipo: true, titularEmpresaNombre: true,
+      },
+      orderBy: { creadaEn: 'desc' },
+    })
+    return filas.map((f) => {
+      // Empresa declarada: no se coteja contra la ficha personal (sería el
+      // cotejo equivocado). Sin número: no hay nada que cotejar.
+      const numero = f.titularTipo === 'empresa' ? null : normalizarNumeroPoliza(f.numeroPoliza)
+      return {
+        id: f.id,
+        compania: f.compania ?? null,
+        numeroPoliza: f.numeroPoliza ?? null,
+        ramo: f.ramo ?? null,
+        primaAnual: f.primaAnual === null ? null : Number(f.primaAnual),
+        fechaVencimiento: fechaIso(f.fechaVencimiento),
+        matricula: f.matricula ?? null,
+        procedencia: String(f.procedencia),
+        confirmadaPorUsuario: f.confirmadaPorUsuario,
+        titularTipo: f.titularTipo ?? null,
+        titularEmpresaNombre: f.titularEmpresaNombre ?? null,
+        yaEnCartera: numero === null ? null : numerosPropios.has(numero),
+      }
+    })
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -396,6 +497,32 @@ export async function fichaCliente(
         .then((filas) => new Map(filas.map((f) => [f.numeroPoliza as string, f.datosEspecificos])))
         .catch(() => new Map<string, unknown>())
 
+  // Coberturas SOLO de los ramos que las necesitan para identificarse (RC,
+  // comercio, otros): una RC no tiene bien, tiene MODALIDAD, y esa modalidad
+  // vive en `poliza_coberturas`, no en `datos_especificos`. Sin esto la
+  // columna «Qué asegura» decía «sin informar» en pólizas de RC con
+  // coberturas reales de CIMA — el mismo patrón que ya resolvía `cartera.ts`
+  // para el listado de vencimientos, aquí faltaba.
+  const idsPorCoberturas = c.polizas
+    .filter((p) => (RAMOS_DESCRITOS_POR_COBERTURAS as readonly string[]).includes(String(p.tipo)))
+    .map((p) => p.id)
+  const coberturasPorPoliza = new Map<string, string[]>()
+  if (idsPorCoberturas.length > 0) {
+    const cobs = await db.polizaCobertura
+      .findMany({
+        where: { correduriaId, polizaId: { in: idsPorCoberturas } },
+        select: { polizaId: true, descripcion: true },
+        orderBy: { numeroOrden: 'asc' },
+      })
+      .catch(() => [])
+    for (const c2 of cobs) {
+      if (!c2.descripcion) continue
+      const lista = coberturasPorPoliza.get(c2.polizaId) ?? []
+      lista.push(c2.descripcion)
+      coberturasPorPoliza.set(c2.polizaId, lista)
+    }
+  }
+
   const recibosPorPoliza = new Map<string, typeof recibos>()
   for (const r of recibos) {
     const lista = recibosPorPoliza.get(r.polizaId) ?? []
@@ -407,6 +534,12 @@ export async function fichaCliente(
   const documentos = await listarDocumentos(correduriaId, { clienteId: c.id })
   const contactos = await listarContactos(correduriaId, c.id)
   const relaciones = await listarRelaciones(correduriaId, c.id)
+  const numerosPropios = new Set(
+    c.polizas
+      .map((p) => normalizarNumeroPoliza(p.numeroPoliza))
+      .filter((n): n is string => n !== null),
+  )
+  const declaradas = await listarDeclaradas(correduriaId, c.id, numerosPropios)
   const historial = await historialCliente(correduriaId, c.id)
   const presupuestos = await cotizacionesVivas(correduriaId, c.id, DIAS_PRESUPUESTO_VIVO)
   const estado = estadoCliente({
@@ -442,6 +575,7 @@ export async function fichaCliente(
     documentos,
     contactos,
     relaciones,
+    declaradas,
     estado,
     historial,
     cotizacionesVivas: presupuestos,
@@ -477,7 +611,7 @@ export async function fichaCliente(
           primaBruta: p.primaBruta === null ? null : Number(p.primaBruta),
         }),
         fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
-        objeto: objetoConGemela(String(p.tipo), datos, esCarteraViva(p) && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined),
+        objeto: objetoConGemela(String(p.tipo), datos, esCarteraViva(p) && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined, coberturasPorPoliza.get(p.id) ?? null),
         matricula,
         viva: esCarteraViva(p),
         confirmadaCima: esCarteraViva(p) && p.idPolizaEntidad !== null,
@@ -531,8 +665,8 @@ export async function fichaCliente(
  * el de la gemela con una nota que dice de dónde sale. «Cifrado» manda sobre
  * «no informado» (la dirección existe, solo que no se puede leer aquí).
  */
-function objetoConGemela(tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown): ObjetoAsegurado {
-  const propio = objetoAsegurado({ tipo, datos, coberturas: null })
+function objetoConGemela(tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown, coberturas: string[] | null = null): ObjetoAsegurado {
+  const propio = objetoAsegurado({ tipo, datos, coberturas })
   if (propio.estado !== 'no_informado' || datosGemela === undefined) return propio
   const dg = esObjetoPlano(datosGemela) ? datosGemela : null
   if (dg === null) return propio
@@ -738,6 +872,7 @@ export async function origenRetarificacion(
           estadoCivil: true,
           saludo: true,
           codigoPostal: true,
+          direccion: true,
         },
       },
     },
@@ -748,12 +883,17 @@ export async function origenRetarificacion(
   // Medido el 01/09/2026: de 500 intervinientes solo los 21 `conductor_habitual`
   // la traen, así que en la mayoría de pólizas seguirá faltando — y faltar es
   // exactamente lo que la pantalla debe decir, en vez de inventarse una.
-  const [siniestros, conductor] = await Promise.all([
+  const [siniestros, conductor, email] = await Promise.all([
     db.siniestro.count({ where: { correduriaId, polizaId: p.id } }),
     db.polizaInterviniente.findFirst({
       where: { polizaId: p.id, correduriaId, rol: 'conductor_habitual' },
       select: { fechaCarnet: true },
     }),
+    // 🚨 Por `emailDeFicha`, no por `p.cliente.email`: la columna es el espejo
+    // y el principal puede vivir solo en `cliente_emails` (5 de las 80 fichas
+    // vivas). Un fallo aquí no tumba la precalificación: `null` = «sin correo
+    // utilizable», que la pantalla pide, nunca inventa.
+    emailDeFicha(correduriaId, p.cliente.id).catch((): string | null => null),
   ])
 
   const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
@@ -795,6 +935,8 @@ export async function origenRetarificacion(
     saludo: p.cliente.saludo ?? null,
     codigoPostal: p.cliente.codigoPostal ?? null,
     fechaCarnet: normalizarFecha(descifrar(conductor?.fechaCarnet)),
+    direccion: descifrar(p.cliente.direccion),
+    email,
   }
 
   const matricula = datos ? texto(datos.matricula) : null
@@ -823,6 +965,64 @@ export async function origenRetarificacion(
     primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
     retarificacion,
   }
+}
+
+export type ClienteOrigen = {
+  cliente: ClienteCartera
+  /** Para pintar de quién se habla, como `etiqueta` en `OrigenRetarificacion`. */
+  etiqueta: string
+}
+
+/**
+ * La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad
+ * nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no
+ * desde una póliza de la cartera). Misma disciplina que `origenRetarificacion`:
+ * se descifra aquí, y un fallo de descifrado no se convierte en «sin DNI».
+ *
+ * `fechaCarnet` siempre `null`: sale del CONDUCTOR HABITUAL de una póliza, y
+ * aquí no hay ninguna — no aplica a hogar, así que no se echa en falta.
+ */
+export async function clienteOrigenDe(
+  correduriaId: string,
+  clienteId: string,
+): Promise<ClienteOrigen | null> {
+  if (!aseguraConfigurada()) return null
+  const db = prismaAsegura()
+
+  // 🛡️ Aislamiento: SIEMPRE dentro de esta correduría. Con BYPASSRLS un id
+  // ajeno no daría error — daría la ficha de otro.
+  const c = await db.cliente.findFirst({
+    where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
+    select: {
+      id: true,
+      nombre: true,
+      apellidos: true,
+      dni: true,
+      telefono: true,
+      fechaNacimiento: true,
+      estadoCivil: true,
+      saludo: true,
+      codigoPostal: true,
+      direccion: true,
+    },
+  })
+  if (!c) return null
+  const email = await emailDeFicha(correduriaId, c.id).catch((): string | null => null)
+
+  const cliente: ClienteCartera = {
+    nombre: c.nombre,
+    apellidos: c.apellidos,
+    dni: descifrar(c.dni),
+    telefono: descifrar(c.telefono),
+    fechaNacimiento: normalizarFecha(descifrar(c.fechaNacimiento)),
+    estadoCivil: c.estadoCivil ?? null,
+    saludo: c.saludo ?? null,
+    codigoPostal: c.codigoPostal ?? null,
+    fechaCarnet: null,
+    direccion: descifrar(c.direccion),
+    email,
+  }
+  return { cliente, etiqueta: `${c.nombre} ${c.apellidos}`.trim() || 'Cliente' }
 }
 
 /**

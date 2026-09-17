@@ -1,0 +1,48 @@
+-- ✅ APLICADA el 08/09/2026 contra la Supabase compartida (schema `seguros`).
+--
+-- Dos filas de `companias_dgs`, y una de ellas CORRIGE un dato que ya estaba
+-- delante de 26 pólizas vivas. Lo trae Alberto el 08/09/2026 con una tabla de
+-- teléfonos de Generali y Allianz («falta número de compañía»); cada número se
+-- contrastó con buscador restringido al dominio oficial (`generali.es`,
+-- `allianz.es`), porque las webs siguen bloqueadas desde el contenedor.
+--
+-- ── Generali (C0072): entra, no tenía nada ──────────────────────────────────
+--   siniestros = asistencia = 900 903 433  (generali.es/contacto-generali:
+--   «Siniestros y Asistencia en Viaje: 900 90 34 33 / 91 112 34 43»).
+--   HORARIO a NULL: la tabla de Alberto dice 24h, el dominio no lo confirma.
+--   NO entra (no cabe en el esquema): la grúa por WhatsApp +34 654 033 629 —
+--   confirmada en generali.es, pero es ASISTENCIA y `whatsapp_siniestros` se
+--   pinta como «Dar parte por WhatsApp» — ni la dental 915 780 659 (sin confirmar).
+--
+-- ── Allianz (C0109): CORRECCIÓN ─────────────────────────────────────────────
+--   El 05/09 se cargó 900 101 920 como línea de siniestros. prensa.allianz.es
+--   lo publica como línea ESPECIAL para afectados por DANA / catástrofes (la
+--   tabla de Alberto: «urgencias meteorológicas severas»). La general de
+--   atención al cliente y siniestros es 900 300 250, L-V 9-19. Un cliente con
+--   un golpe normal marcando la línea de catástrofes es justo el fallo que
+--   esta tabla existe para evitar.
+--   ASISTENCIA sigue a NULL a propósito: depende del ramo (900 117 115
+--   vehículos / 913 255 258 hogar y comercio, las dos confirmadas en
+--   allianz.es) y la columna admite UNA por compañía. Ese hueco es un límite
+--   del esquema, no un dato que falte: ver «Pendiente» abajo.
+--
+-- Ejecutado (los textos completos de `telefono_fuente` viven en la fila):
+--
+--   UPDATE seguros.companias_dgs
+--      SET telefono_siniestros = '900 903 433', telefono_asistencia = '900 903 433',
+--          horario_siniestros = NULL, telefono_fuente = '…', telefono_verificado_en = current_date
+--    WHERE codigo_dgs = 'C0072';
+--
+--   UPDATE seguros.companias_dgs
+--      SET telefono_siniestros = '900 300 250',
+--          horario_siniestros = '9:00 a 19:00, de lunes a viernes',
+--          telefono_fuente = '…', telefono_verificado_en = current_date
+--    WHERE codigo_dgs = 'C0109';
+--
+-- ── Pendiente (decisión de Alberto, no código) ──────────────────────────────
+-- El esquema es UN canal de cada tipo POR COMPAÑÍA. Allianz (grúa ≠ hogar),
+-- Generali (WhatsApp de grúa, extranjero) y cualquier compañía de salud lo
+-- desbordan. La forma correcta es una tabla `compania_canales` (compañía ×
+-- ramo × uso × tipo, con fuente y fecha por fila) y que el portal enseñe solo
+-- las vías de los ramos que esa persona tiene. Hasta entonces, lo que no cabe
+-- queda anotado en `telefono_fuente` y NO se pinta.

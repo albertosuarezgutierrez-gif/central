@@ -185,6 +185,9 @@ export function EntrarConCodigo() {
  * título se representa a una sociedad, y a quien todavía no ha probado ser esa
  * dirección de correo no se le delega eso.
  */
+/** `ninguno` = solo te presentan el portal (08/09/2026). No hay nada que recibir. */
+const SIN_ACCESO = 'ninguno'
+
 const QUE_RECIBES: Record<string, string> = {
   ver: 'los datos de sus pólizas: la compañía, el número de póliza y las coberturas. No verás lo que paga.',
   ver_economico: 'los datos de sus pólizas y, además, lo que paga: la prima y los recibos.',
@@ -303,13 +306,15 @@ export function ResponderInvitacion({
     }
   }
 
+  const sinAcceso = alcance === SIN_ACCESO
+
   if (hecho === 'rechazada') {
     return (
       <div className="seccion">
         <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>Has rechazado la invitación</h1>
         <p style={{ marginTop: 0 }}>
-          No verás los seguros de {quien} y este enlace ya no vale. Si cambias de idea, pídele que te
-          invite otra vez.
+          {sinAcceso ? 'Este enlace ya no vale.' : `No verás los seguros de ${quien} y este enlace ya no vale.`}{' '}
+          Si cambias de idea, pídele que te invite otra vez.
         </p>
       </div>
     )
@@ -318,7 +323,9 @@ export function ResponderInvitacion({
   return (
     <div className="seccion">
       <h1 style={{ fontSize: '1.5rem', marginTop: 0 }}>
-        {quien} quiere darte acceso a {soloUnaPoliza ? 'una de sus pólizas' : 'sus seguros'}
+        {sinAcceso
+          ? `${quien} te invita a Mis Seguros`
+          : `${quien} quiere darte acceso a ${soloUnaPoliza ? 'una de sus pólizas' : 'sus seguros'}`}
       </h1>
 
       {/* Lo que escribió quien invita. Va como texto (React lo escapa), y
@@ -338,11 +345,18 @@ export function ResponderInvitacion({
         </blockquote>
       )}
 
-      <div className="linea" style={{ marginTop: 12 }}>
-        Si lo aceptas, podrás ver {QUE_RECIBES[alcance] ?? 'los datos de sus pólizas.'}
-      </div>
+      {sinAcceso ? (
+        <div className="linea" style={{ marginTop: 12 }}>
+          Te recomienda el portal para que tengas a mano tus propios seguros y sus fechas.{' '}
+          <strong>No se comparte contigo ningún seguro suyo.</strong>
+        </div>
+      ) : (
+        <div className="linea" style={{ marginTop: 12 }}>
+          Si lo aceptas, podrás ver {QUE_RECIBES[alcance] ?? 'los datos de sus pólizas.'}
+        </div>
+      )}
 
-      {soloUnaPoliza ? (
+      {sinAcceso ? null : soloUnaPoliza ? (
         <div className="linea dicho">
           Alcanza <strong>solo a una de sus pólizas</strong>. El resto de sus seguros no los verás. Cuál
           es en concreto lo verás al entrar, no antes.
@@ -364,12 +378,20 @@ export function ResponderInvitacion({
       {/* 🚨 La mitad que hace que la autorización valga, con las mismas palabras
           que en «Quién puede ver mis seguros»: aceptar no es un trámite, es lo
           que te hace responsable de lo que mires. No se suaviza. */}
-      <div className="aviso-linea">
-        Si lo aceptas, <strong>queda registrado que has accedido a los datos de otra persona</strong>: se
-        guarda quién eres, cuándo lo aceptaste y cada día que entres a mirar. {quien} puede ver ese
-        registro y quitarte el acceso cuando quiera. Solo podrás mirar: no puedes dar partes ni cambiar
-        nada suyo, y no ves su DNI, su IBAN ni sus documentos.
-      </div>
+      {sinAcceso ? (
+        <div className="aviso-linea">
+          Si lo aceptas, <strong>solo queda registrado que {quien} te invitó y que aceptaste</strong>, con
+          la fecha. No accedes a ningún dato suyo y {quien} no ve nada tuyo. Puedes borrar tu cuenta
+          cuando quieras.
+        </div>
+      ) : (
+        <div className="aviso-linea">
+          Si lo aceptas, <strong>queda registrado que has accedido a los datos de otra persona</strong>:
+          se guarda quién eres, cuándo lo aceptaste y cada día que entres a mirar. {quien} puede ver ese
+          registro y quitarte el acceso cuando quiera. Solo podrás mirar: no puedes dar partes ni cambiar
+          nada suyo, y no ves su DNI, su IBAN ni sus documentos.
+        </div>
+      )}
 
       {/* 🚨 Lo que se firma, palabra por palabra. Va delante del botón y no
           detrás de un enlace: es la versión que queda sellada en el registro, y
@@ -377,7 +399,7 @@ export function ResponderInvitacion({
           demostrar. Se parte por líneas porque así lo compone el puerto. */}
       <div className="editor-campo" style={{ marginTop: 12 }}>
         <p className="editor-ayuda" style={{ margin: 0 }}>
-          Esto es exactamente lo que ha autorizado {quien}, y lo que aceptas:
+          {sinAcceso ? 'Esto es exactamente lo que aceptas:' : `Esto es exactamente lo que ha autorizado ${quien}, y lo que aceptas:`}
         </p>
         <ul style={{ margin: '6px 0 0', paddingLeft: 20, fontSize: 14, lineHeight: 1.5 }}>
           {texto
@@ -405,7 +427,7 @@ export function ResponderInvitacion({
           onClick={() => void responder('aceptar')}
           disabled={enviando !== null}
         >
-          {enviando === 'aceptar' ? 'Aceptando…' : 'Aceptar y que quede registrado'}
+          {enviando === 'aceptar' ? 'Aceptando…' : sinAcceso ? 'Aceptar la invitación' : 'Aceptar y que quede registrado'}
         </button>
         <button
           type="button"

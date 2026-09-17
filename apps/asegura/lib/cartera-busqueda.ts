@@ -12,6 +12,8 @@
 //   DNI               CIFRADO     3.904 fichas    → EXACTO por índice ciego
 //   teléfono          CIFRADO     5.377 fichas    → EXACTO por índice ciego
 //   email             CIFRADO     4.308 fichas    → EXACTO por índice ciego
+//   email: dominio    CIFRADO     (mitad)         → EXACTO por índice ciego del DOMINIO («@gmail.com»)
+//   email: usuario    CIFRADO     (mitad)         → EXACTO por índice ciego del USUARIO («alberto.suarez@»)
 //   dirección (calle) CIFRADA     170 pólizas     → se DESCIFRA EN MEMORIA y se filtra
 //
 // 🚨 Las tres búsquedas por índice ciego son la trampa de esta pantalla. Solo
@@ -49,9 +51,12 @@ import {
 import {
   computeDniLookupHash,
   computeEmailLookupHash,
+  computeEmailDominioLookupHash,
+  computeEmailUsuarioLookupHash,
   computeTelefonoLookupHash,
   decryptField,
 } from '@central/module-seguros-pii'
+import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 
@@ -193,6 +198,13 @@ async function ejecutar(correduriaId: string, c: Criterio): Promise<BloqueResult
       return porHash(correduriaId, c, 'telefonoLookupHash', hashSeguro(() => computeTelefonoLookupHash(c.valor)))
     case 'email':
       return porHash(correduriaId, c, 'emailLookupHash', hashSeguro(() => computeEmailLookupHash(c.valor)))
+    // Las MITADES del email (08/09/2026): mismo camino que el email entero,
+    // contra su propio índice. Un dominio devuelve a todos los que lo comparten
+    // (tope LIMITE), y eso es lo que se busca cuando se teclea «@gmail.com».
+    case 'email_dominio':
+      return porHash(correduriaId, c, 'emailDominioHash', hashSeguro(() => computeEmailDominioLookupHash(c.valor)))
+    case 'email_usuario':
+      return porHash(correduriaId, c, 'emailUsuarioHash', hashSeguro(() => computeEmailUsuarioLookupHash(c.valor)))
   }
 }
 
@@ -292,55 +304,113 @@ function bloque(
   }
 }
 
+/**
+ * Nombre y apellidos, SIN ACENTOS (13/09/2026 → corregido dos veces el mismo
+ * día: primero se cambió `contains` de Prisma —un `ILIKE` normal, insensible
+ * a mayúsculas pero NO a acentos— por `unaccent()`; buscar «Alberto Suarez»
+ * SEGUÍA sin encontrar «Alberto Suárez». La extensión `unaccent` vive en el
+ * schema `extensions`, y esta conexión fija `search_path=seguros` (vía
+ * `?schema=seguros` de `asegura-url.ts`): `unaccent()` sin cualificar no
+ * resuelve, la consulta lanza y cae al `.catch` — que es el ILIKE simple, el
+ * mismo bug de acentos por otra puerta. Verificado en la BD real con
+ * `SET search_path TO seguros` + `SELECT unaccent(...)`: `42883 function
+ * unaccent(unknown) does not exist`. Se cualifica `extensions.unaccent(...)`
+ * a propósito; NO usar `unaccent()` a secas en ninguna consulta de esta app.
+ */
 async function porNombre(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
   const palabras = c.valor.split(/\s+/).slice(0, 4)
-  const filas = await db.cliente.findMany({
-    where: {
-      correduriaId,
-      mergedIntoClienteId: null,
-      // Las DESCARTADAS no salen: descartar es quitarlas de donde se mira.
-      activo: true,
-      AND: palabras.map((p) => ({
-        OR: [
-          { nombre: { contains: p, mode: 'insensitive' as const } },
-          { apellidos: { contains: p, mode: 'insensitive' as const } },
-        ],
-      })),
-    },
-    select: SELECT_CLIENTE,
-    orderBy: [{ apellidos: 'asc' }, { nombre: 'asc' }],
-    take: LIMITE,
+
+  const condicionUnaccent = Prisma.join(
+    palabras.map(
+      (p) =>
+        Prisma.sql`(extensions.unaccent(cl.nombre) ilike extensions.unaccent(${'%' + p + '%'}) or extensions.unaccent(cl.apellidos) ilike extensions.unaccent(${'%' + p + '%'}))`,
+    ),
+    ' and ',
+  )
+  const condicionSimple = Prisma.join(
+    palabras.map((p) => Prisma.sql`(cl.nombre ilike ${'%' + p + '%'} or cl.apellidos ilike ${'%' + p + '%'})`),
+    ' and ',
+  )
+
+  const filas = await db.$queryRaw<
+    { id: string; nombre: string; apellidos: string; tipo: string }[]
+  >`
+    select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
+    from clientes cl
+    where cl.correduria_id = ${correduriaId}::uuid
+      and cl.merged_into_cliente_id is null
+      and cl.activo
+      and ${condicionUnaccent}
+    order by cl.apellidos asc, cl.nombre asc
+    limit ${LIMITE}
+  `.catch(async () => {
+    return db.$queryRaw<{ id: string; nombre: string; apellidos: string; tipo: string }[]>`
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
+      from clientes cl
+      where cl.correduria_id = ${correduriaId}::uuid
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and ${condicionSimple}
+      order by cl.apellidos asc, cl.nombre asc
+      limit ${LIMITE}
+    `
   })
+
+  const conteos = await polizasDe(filas.map((f) => f.id))
+  const hallazgos: Hallazgo[] = filas.map((f) =>
+    hallazgoSinEnriquecer({
+      clienteId: f.id,
+      nombre: `${f.nombre} ${f.apellidos}`.trim(),
+      tipo: f.tipo,
+      polizas: conteos.get(f.id) ?? 0,
+      porque: 'nombre o apellidos',
+    }),
+  )
   // El nombre está en claro en las 32.600: alcanza a toda la cartera.
   const total = await db.cliente
     .count({ where: { correduriaId, mergedIntoClienteId: null, activo: true } })
     .catch(() => null)
-  return bloque(
-    c,
-    filas.map((f) => aHallazgo(f, 'nombre o apellidos')),
-    total === null ? null : { alcanzables: total, total },
-  )
+  return bloque(c, hallazgos, total === null ? null : { alcanzables: total, total })
 }
 
+/** Igual trampa que `porNombre` (y su misma corrección: `extensions.unaccent`). */
 async function porCiudad(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
-  const filas = await db.cliente.findMany({
-    where: {
-      correduriaId,
-      mergedIntoClienteId: null,
-      activo: true,
-      ciudad: { contains: c.valor, mode: 'insensitive' },
-    },
-    select: SELECT_CLIENTE,
-    orderBy: [{ apellidos: 'asc' }],
-    take: LIMITE,
+  const filas = await db.$queryRaw<
+    { id: string; nombre: string; apellidos: string; tipo: string }[]
+  >`
+    select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
+    from clientes cl
+    where cl.correduria_id = ${correduriaId}::uuid
+      and cl.merged_into_cliente_id is null
+      and cl.activo
+      and extensions.unaccent(cl.ciudad) ilike extensions.unaccent(${'%' + c.valor + '%'})
+    order by cl.apellidos asc
+    limit ${LIMITE}
+  `.catch(async () => {
+    return db.$queryRaw<{ id: string; nombre: string; apellidos: string; tipo: string }[]>`
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo
+      from clientes cl
+      where cl.correduria_id = ${correduriaId}::uuid
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and cl.ciudad ilike ${'%' + c.valor + '%'}
+      order by cl.apellidos asc
+      limit ${LIMITE}
+    `
   })
-  return bloque(
-    c,
-    filas.map((f) => aHallazgo(f, `ciudad «${c.valor}»`)),
-    await cobertura(correduriaId, { ciudad: { not: null } }),
+  const conteos = await polizasDe(filas.map((f) => f.id))
+  const hallazgos: Hallazgo[] = filas.map((f) =>
+    hallazgoSinEnriquecer({
+      clienteId: f.id,
+      nombre: `${f.nombre} ${f.apellidos}`.trim(),
+      tipo: f.tipo,
+      polizas: conteos.get(f.id) ?? 0,
+      porque: `ciudad «${c.valor}»`,
+    }),
   )
+  return bloque(c, hallazgos, await cobertura(correduriaId, { ciudad: { not: null } }))
 }
 
 async function porCodigoPostal(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
@@ -398,6 +468,13 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
  * póliza (`localidad`, `cp`), no en la ficha del cliente. Es lo que hace que
  * la casa de la playa salga buscando el pueblo, aunque el cliente viva en
  * Sevilla. Un CP de 5 dígitos se compara exacto; un texto, por fragmento.
+ *
+ * 🚨 `unaccent()` va CUALIFICADO (`extensions.unaccent`, 13/09/2026): la
+ * extensión vive en el schema `extensions` y esta conexión fija
+ * `search_path=seguros`, así que sin cualificar la consulta lanzaba y SIEMPRE
+ * caía al `.catch` sin acentos — mismo bug que en `porNombre`/`porCiudad`,
+ * aquí escondido porque el reintento sin `unaccent` no se distingue de un
+ * «no hay resultados» normal.
  */
 async function porRiesgo(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
@@ -417,7 +494,7 @@ async function porRiesgo(correduriaId: string, c: Criterio): Promise<BloqueResul
       and cl.activo
       and (
         ${esCp} and p.datos_especificos->>'cp' = ${c.valor}
-        or (not ${esCp}) and unaccent(p.datos_especificos->>'localidad') ilike unaccent(${'%' + c.valor + '%'})
+        or (not ${esCp}) and extensions.unaccent(p.datos_especificos->>'localidad') ilike extensions.unaccent(${'%' + c.valor + '%'})
       )
     limit ${LIMITE}
   `.catch(async () => {
@@ -571,7 +648,7 @@ async function porNumeroPoliza(correduriaId: string, c: Criterio): Promise<Bloqu
 async function porHash(
   correduriaId: string,
   c: Criterio,
-  campo: 'dniLookupHash' | 'telefonoLookupHash' | 'emailLookupHash',
+  campo: 'dniLookupHash' | 'telefonoLookupHash' | 'emailLookupHash' | 'emailDominioHash' | 'emailUsuarioHash',
   hash: string | null,
 ): Promise<BloqueResultados | null> {
   if (hash === null) return null
@@ -594,7 +671,7 @@ async function porHash(
             take: LIMITE,
           })
         : await db.clienteEmail.findMany({
-            where: { correduriaId, emailLookupHash: hash, cliente: { mergedIntoClienteId: null, activo: true } },
+            where: { correduriaId, [campo]: hash, cliente: { mergedIntoClienteId: null, activo: true } },
             select: { cliente: { select: SELECT_CLIENTE } },
             take: LIMITE,
           })
@@ -606,7 +683,15 @@ async function porHash(
     }
   }
   const etiqueta =
-    c.tipo === 'dni' ? `DNI ${c.valor}` : c.tipo === 'telefono' ? `teléfono ${c.valor}` : `email ${c.valor}`
+    c.tipo === 'dni'
+      ? `DNI ${c.valor}`
+      : c.tipo === 'telefono'
+        ? `teléfono ${c.valor}`
+        : c.tipo === 'email_dominio'
+          ? `email en @${c.valor}`
+          : c.tipo === 'email_usuario'
+            ? `email ${c.valor}@…`
+            : `email ${c.valor}`
   return bloque(
     c,
     filas.map((f) => aHallazgo(f, etiqueta)),

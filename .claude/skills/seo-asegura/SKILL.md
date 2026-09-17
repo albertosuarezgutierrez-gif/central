@@ -84,9 +84,23 @@ canal propio que se toca cada tres semanas no produce nada.
 
 | Fuente | Qué contesta | Estado |
 |---|---|---|
-| **Google Search Console** | Por qué consultas entras y con qué posición. **La única fuente sin sesgo.** | 🟢 **Verificada desde el 17/05/2026** (`sc-domain:grupoasegura.es`), con sitemap enviado. ⚠️ Pero **no hay conector**: los datos existen y hay que pegarlos a mano. Sin ellos delante, la posición se declara «no consultada», nunca 0 |
-| **PostHog** (`eu.i.posthog.com`) | Visitas, páginas, origen | 🟢 Vivo desde 05/09/2026 — **pero solo mide a quien ACEPTA el banner** |
+| **Google Search Console** | Por qué consultas entras y con qué posición. **La única fuente sin sesgo.** | 🟢 **Verificada desde el 17/05/2026** (`sc-domain:grupoasegura.es`), con sitemap enviado. ✅ **Conector desde el 08/09/2026**: el cron `seo-correduria` de plataforma (lunes 08:30 UTC) la lee por API y deja la foto en `seo_correduria_semana` (fila `fuente='gsc'`). Si esa fila dice `estado ≠ ok`, la posición se declara «no consultada» con el motivo, nunca 0 |
+| **SERP en vivo** (Serper) | Quién ocupa el top-10 de cada consulta objetivo (`references/keywords.md` = `CONSULTAS` de plataforma, un cepo los compara) y si estamos | ✅ Desde el 08/09/2026, fila `fuente='serp'`. `propia: null` = fuera del top-10, que NO es posición 0. Sin créditos en Serper la fila sale `error` |
+| **PostHog** (`eu.i.posthog.com`) | Visitas, páginas, origen | 🟢 Vivo desde 05/09/2026 — **pero solo mide a quien ACEPTA el banner**. ✅ Desde el 08/09 el cron la lee por HogQL: fila `fuente='posthog'` |
 | **BD `seguros`** | Leads reales del formulario y su estado | 🟢 Vivo |
+
+**Cómo se lee la foto** (Supabase MCP, `execute_sql`, proyecto `wswbehlcuxqxyinousql`):
+
+```sql
+SELECT fuente, estado, detalle, datos
+FROM seo_correduria_semana
+WHERE semana = (SELECT max(semana) FROM seo_correduria_semana)
+```
+
+Una fuente con `estado = 'no_configurado'` o `'error'` se dice **tal cual** en el informe («GSC sin
+conectar: falta X»), y la acción de la semana es arreglar esa fuente, no escribir contenido a ciegas.
+El cron ya propone una acción (`accionPropuesta` en `apps/plataforma/lib/seo-correduria/informe.ts`,
+regla pura); si la contradices, di por qué.
 
 🚨 **PostHog subestima el tráfico por diseño.** La medición va detrás del consentimiento de
 Cookiebot (`apps/asegura-web/lib/analitica.ts`, `puedeMedir()`), así que quien rechaza no aparece.
@@ -163,9 +177,12 @@ Antes de escribir contenido nuevo, comprueba que lo que ya existe se puede index
 - **`app/sitemap.ts`**: que estén todas las páginas reales y ninguna que no deba indexarse.
 - **`app/robots.ts`**: que declare el sitemap y no bloquee lo que quieres posicionar.
 - **JSON-LD** (`lib/seo.ts`): `InsuranceAgency`/`LocalBusiness` con dirección y `areaServed`.
-  🚨 **`HORARIO` sigue ausente A PROPÓSITO** mientras no se confirme: publicar un horario
-  inventado hace que alguien llame y no le cojan. **No lo rellenes tú**; si hace falta para el
-  JSON-LD, es una pregunta para Alberto, no un valor por defecto.
+  ✅ **`HORARIO` ya está confirmado (15/09/2026): lunes a viernes, de 9:00 a 18:00.** Sale de
+  `lib/sitio.ts` y de ahí se publica en DOS sitios —el pie de la web y el `openingHours` del
+  JSON-LD—; no lo teclees en ningún otro, que la segunda copia se queda vieja sin que nada falle.
+  Lo vigila `lib/seo-horario.test.ts`. Si algún día cambia, lo dice Alberto: nunca un valor por
+  defecto, porque publicar un horario inventado hace que alguien llame y no le cojan.
+  ⏳ Pendiente de Alberto: ponerlo también en el perfil de Google Business, que ese día no tenía.
   ✅ **El teléfono SÍ existe desde el 05/09/2026** (`MEDIADOR.identidad.telefono`), con
   `telefonoLegible()` y `whatsappUrl()` en `@central/module-seguros`. O sea que `telephone` en la
   ficha JSON-LD ya se puede rellenar, y **leyéndolo de ahí**, nunca tecleándolo.

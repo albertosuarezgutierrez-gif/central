@@ -151,6 +151,9 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-vehiculos':
+        specifier: workspace:*
+        version: link:../../packages/core-vehiculos
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros
@@ -184,6 +187,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
+      svix:
+        specifier: ^2.5.0
+        version: 2.5.0
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -227,6 +233,12 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-push':
+        specifier: workspace:*
+        version: link:../../packages/core-push
+      '@central/core-telegram':
+        specifier: workspace:*
+        version: link:../../packages/core-telegram
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros
@@ -291,6 +303,9 @@ importers:
       '@central/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@central/core-consent':
+        specifier: workspace:*
+        version: link:../../packages/core-consent
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros
@@ -303,6 +318,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
+      vanilla-cookieconsent:
+        specifier: ^3.1.0
+        version: 3.1.0
     devDependencies:
       '@types/node':
         specifier: ^20
@@ -325,6 +343,9 @@ importers:
 
   apps/housesevillana:
     dependencies:
+      '@central/core-consent':
+        specifier: workspace:*
+        version: link:../../packages/core-consent
       next:
         specifier: 15.5.21
         version: 15.5.21(@types/node@20.19.42)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -353,6 +374,9 @@ importers:
       '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
+      '@central/core-consent':
+        specifier: workspace:*
+        version: link:../../packages/core-consent
       '@central/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
@@ -446,6 +470,9 @@ importers:
       resend:
         specifier: ^6.12.3
         version: 6.12.4
+      vanilla-cookieconsent:
+        specifier: ^3.1.0
+        version: 3.1.0
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -1108,6 +1135,12 @@ importers:
 
   packages/core-catastro: {}
 
+  packages/core-consent:
+    dependencies:
+      vanilla-cookieconsent:
+        specifier: ^3.1.0
+        version: 3.1.0
+
   packages/core-email:
     dependencies:
       nodemailer:
@@ -1149,6 +1182,8 @@ importers:
   packages/core-storage: {}
 
   packages/core-telegram: {}
+
+  packages/core-vehiculos: {}
 
   packages/legal-templates: {}
 
@@ -1214,6 +1249,9 @@ importers:
 
   packages/module-seguros-portal:
     dependencies:
+      '@central/core-fiscal':
+        specifier: workspace:*
+        version: link:../core-fiscal
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../module-seguros
@@ -5528,6 +5566,9 @@ packages:
   standardwebhooks@1.0.0:
     resolution: {integrity: sha512-BbHGOQK9olHPMvQNHWul6MYlrRTAOKn03rOe4A8O3CLWhNf4YHBqq2HJKKC+sfqpxiBY52pNeesD6jIiLDz8jg==}
 
+  standardwebhooks@1.1.1:
+    resolution: {integrity: sha512-bCbX9ZEyFkWPsRz7Bl3NuQUJohmwGSev/yhr7vhaGPlc4AfIrspIRa6cPTBuI1ItmrTDJ4d/S2hCsfe4+vQGnQ==}
+
   std-env@3.10.0:
     resolution: {integrity: sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==}
 
@@ -5630,6 +5671,10 @@ packages:
 
   svg-arc-to-cubic-bezier@3.2.0:
     resolution: {integrity: sha512-djbJ/vZKZO+gPoSDThGNpKDO+o+bAeA4XQKovvkNCqnIS2t+S4qnLAGQhyyrulhCFRl1WWzAp0wUDV8PpTVU3g==}
+
+  svix@2.5.0:
+    resolution: {integrity: sha512-mqcwCPKL6J5yqC2EQy5ZqE5XEJriCZffy49EGBDCsnrQ7RAYF4kZLJhKfXrB0n21S+3M9qYmQ9YjzrNjRlIuCw==}
+    engines: {node: '>=22'}
 
   tailwind-merge@2.6.1:
     resolution: {integrity: sha512-Oo6tHdpZsGpkKG88HJ8RR1rg/RdnEkQEfMoEk2x1XRI3F1AxeU+ijRXpiVUF4UbLfcxxRGw6TbUINKYdWVsQTQ==}
@@ -5810,6 +5855,9 @@ packages:
   uuid@14.0.1:
     resolution: {integrity: sha512-6ZxzVpzDXDa3bJWaHilVayA+BH/1zmxCJoVgvmqJnid/gPoKHxUrS/aC/T6LGQtNHT+XHG9fXPJB4d+IrU30Ew==}
     hasBin: true
+
+  vanilla-cookieconsent@3.1.0:
+    resolution: {integrity: sha512-/McNRtm/3IXzb9dhqMIcbquoU45SzbN2VB+To4jxEPqMmp7uVniP6BhGLjU8MC7ZCDsNQVOp27fhQTM/ruIXAA==}
 
   victory-vendor@36.9.2:
     resolution: {integrity: sha512-PnpQQMuxlwYdocC8fIJqVXvkeViHYzotI+NJrCuav0ZYFoq912ZHBk3mCeuj+5/VpodOjPe1z0Fk2ihgzlXqjQ==}
@@ -10595,6 +10643,11 @@ snapshots:
       '@stablelib/base64': 1.0.1
       fast-sha256: 1.3.0
 
+  standardwebhooks@1.1.1:
+    dependencies:
+      '@stablelib/base64': 1.0.1
+      fast-sha256: 1.3.0
+
   std-env@3.10.0: {}
 
   stop-iteration-iterator@1.1.0:
@@ -10721,6 +10774,10 @@ snapshots:
   supports-preserve-symlinks-flag@1.0.0: {}
 
   svg-arc-to-cubic-bezier@3.2.0: {}
+
+  svix@2.5.0:
+    dependencies:
+      standardwebhooks: 1.1.1
 
   tailwind-merge@2.6.1: {}
 
@@ -10965,6 +11022,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   uuid@14.0.1: {}
+
+  vanilla-cookieconsent@3.1.0: {}
 
   victory-vendor@36.9.2:
     dependencies:

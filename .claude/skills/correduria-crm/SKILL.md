@@ -21,6 +21,9 @@ real medido, orden de trabajo). Después, según lo que toques:
 - Ideas de producto ya recogidas (con su coste y su bloqueo) → `docs/CORREDURIA-INTRANET-IDEAS.md`.
   **Mira ahí antes de proponer una idea nueva**: probablemente ya está, con lo que la bloquea.
 - Sector y agente semanal → skill `agente-correduria`.
+- **Ingesta de CIMA (EIAC/TIREA, cuarentena, cobertura de campos, caja negra del webhook y el
+  diagnóstico de «la ingesta está muda») → skill `cima-ingesta`.** La regla 6 de aquí abajo dice
+  QUÉ no se hace sin spec; el CÓMO de la tubería está allí.
 
 ## 🚨 No romper
 
@@ -66,6 +69,14 @@ Antes de añadir un bloque, decide en qué sección vive; y si trae una cola de 
 contador al padre** (`onContador?: (n: number|null) => void`, llamado en el `.then` y guardado en un
 `useRef`): una pestaña esconde, y el badge es lo único que impide que esconda TRABAJO. Tres desenlaces
 y ninguno es 0 — `{n}` · `n+` (alguna cola ilegible) · `!` (ninguna legible).
+
+**Las acciones de la ficha de cliente son DOS botones, no una fila por ramo (08/09/2026).** La
+cabecera de `/correduria/cliente/[id]` (`Cabecera.tsx`, `RAMOS_PRESUPUESTO`) lleva «➕ Presupuestar ▾»
+(menú `<details>` nativo con los seis ramos; 🚧 en los de esquema sin verificar) y «📄 Subir póliza»
+con su aviso en el `title`. Un ramo nuevo se AÑADE a la lista del menú, no como botón; y un aviso va
+pegado a lo que avisa, nunca suelto entre botones. El menú va primero porque su desplegable se ancla a
+la izquierda y en segunda posición se salía a 360px. Guardián:
+`test/regression-ficha-cliente-acciones.test.ts` (lee el fuente).
 
 Un bloque **NO pinta caja propia**: se envuelve en `<Bloque>`, que da línea fina + título; `destacado`
 (fondo tintado) se reserva para alarmas con alguien esperando al otro lado.

@@ -32,7 +32,7 @@
 //      Una lectura de `prisma.poliza` que no pase por `portal_vinculo` es la
 //      cartera entera a un `where` de distancia.
 //   4. El `schema.prisma` del portal NO declara las columnas que el rol no
-//      puede leer (DNI, IBAN, teléfono, email, dirección, comentario…). Prisma
+//      puede leer (DNI, IBAN, teléfono, email, dirección…). Prisma
 //      pide cada columna por su nombre: una de más y la consulta ENTERA falla
 //      en la BD. Que el schema no las tenga es la garantía; esto la vigila.
 
@@ -59,6 +59,12 @@ const EXENTOS = new Set([
   // recibe de `verificar/route.ts` (recién resuelta o creada); todavía no hay
   // cookie de la que sacarla. Solo escribe el vínculo de ESA identidad.
   'apps/asegura-portal/lib/vinculo.ts',
+  // Cron de avisos push (12/09/2026): autenticado por `CRON_SECRET`
+  // (`lib/cron-auth.ts`), no por la cookie de un visitante — no hay sesión de
+  // la que sacar una identidad porque no hay una identidad, hay muchas. Cada
+  // fila que toca ya lleva su `identidadId` propio (de `portal_obligacion`) y
+  // el cruce con la cartera pasa por `portal_vinculo`, igual que el resto.
+  'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
 ])
 
 /**
@@ -69,8 +75,15 @@ const USA_PRISMA_CARTERA =
   /prisma\s*\.\s*(cliente|clienteEmail|poliza|polizaCobertura|polizaRecibo|siniestro|polizaInterviniente|clienteRelacion|correduria)\b/
 /** La costura: el vínculo identidad ↔ ficha. Sin nombrarlo, la lectura no parte de la identidad. */
 const NOMBRA_VINCULO = /portalVinculo/
-/** Lee cartera sin sesión porque corre ANTES de que exista: el canje del código. */
-const CARTERA_SIN_SESION = new Set(['apps/asegura-portal/lib/vinculo.ts'])
+/**
+ * Lee cartera sin sesión: `vinculo.ts` porque corre ANTES de que exista (el canje del
+ * código); el cron de avisos push porque no hay visitante — se autentica por `CRON_SECRET`
+ * y resuelve cada fila por su propio `identidadId`, no por una cookie.
+ */
+const CARTERA_SIN_SESION = new Set([
+  'apps/asegura-portal/lib/vinculo.ts',
+  'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+])
 
 /** `prisma.portalPoliza…`, `prisma.portalBien…`, `prisma.portalIdentidad…` */
 const USA_PRISMA_PORTAL = /prisma\s*\.\s*portal[A-Z]/
@@ -201,7 +214,11 @@ test('fase 4: toda lectura de la cartera pasa por lib/session y por portalVincul
 const COLUMNAS_PROHIBIDAS: Record<string, string[]> = {
   Cliente: ['dni', 'telefono', 'email', 'direccion', 'cuentaBancaria', 'fechaNacimiento', 'notas', 'dniLookupHash'],
   PolizaRecibo: ['iban', 'comisionBruta', 'comisionLiquida'],
-  Siniestro: ['lugarDireccion', 'comentario', 'reservaImporte', 'indemnizacionImporte'],
+  // 📌 `comentario` SALIÓ de esta lista el 07/09/2026: se le concedió el GRANT
+  // a propósito para que el cliente vea QUÉ pasó en su siniestro (66 de 69 lo
+  // tienen informado). Los otros tres siguen cerrados: `lugarDireccion` es la
+  // casa de alguien y los dos importes no tienen ni un dato en la cartera.
+  Siniestro: ['lugarDireccion', 'reservaImporte', 'indemnizacionImporte'],
   Poliza: ['cuentaBancaria', 'documentoUrl'],
   PolizaInterviniente: ['nif', 'nombre', 'apellidos', 'telefono', 'email', 'fechaNacimiento', 'fechaCarnet'],
   ClienteEmail: ['email'],

@@ -27,6 +27,7 @@
 
 import { revisarDatosHogar, type DatosHogar, type ReparoHogar } from './peticion-hogar.ts'
 import { partirApellidos, sexoDeSaludo, diaSiguiente, type ClienteCartera } from './desde-cartera.ts'
+import { partirDireccion, direccionDesdeCatastro, type DireccionPartida } from './direccion.ts'
 
 /** El riesgo de hogar tal como lo trae la ficha (póliza o gemela), ya descifrado. */
 export type HogarCartera = {
@@ -48,6 +49,16 @@ export type CatastroHogar = {
   anioConstruccion: number | null
   codigoPostal: string | null
   uso: string | null
+  /**
+   * La dirección oficial del Catastro, YA TROCEADA (con `paramsDnploc` de
+   * `@central/core-catastro`, que entiende el formato propio del Catastro
+   * «Es:1 Pl:01 Pt:IZ» — el `partirDireccion` de aquí abajo está pensado para
+   * el texto libre de la ficha del CRM y NO lo reconoce). Se usa solo cuando
+   * NO hay póliza ni gemela de la que sacar la calle: una oportunidad nueva
+   * sobre un cliente sin riesgo en cartera. Si la póliza SÍ trae dirección,
+   * esta no se usa: manda siempre `h.direccion` (dato de la ficha).
+   */
+  direccion?: DireccionPartida | null
 }
 
 /** Los desplegables de catálogo que la pantalla resuelve (ids del vendor). */
@@ -199,13 +210,19 @@ export function precalificarHogarCartera(
   if (cp === null && limpio(cliente.codigoPostal) !== null) {
     cp = suponer('cp', limpio(cliente.codigoPostal)!, 'la ficha no dice dónde está la vivienda; se supone que es donde vive el tomador')
   }
-  // La calle: troceada de la dirección de la ficha. El vendor la exige entera.
-  const dir = partirDireccion(h?.direccion ?? null)
+  // La calle: troceada de la dirección de la ficha; sin ficha (sin póliza), la
+  // del Catastro, YA troceada por `direccionDesdeCatastro` (`partirDireccion`
+  // no entiende el formato propio del Catastro). El vendor la exige entera.
+  const dirDeFicha = partirDireccion(h?.direccion ?? null)
+  const usaDireccionCatastro = dirDeFicha.nombre === null && Boolean(catastro?.direccion?.nombre)
+  const dir = usaDireccionCatastro ? catastro!.direccion! : dirDeFicha
   if (dir.nombre !== null) {
     supuestos.push({
       campo: 'nombreVia',
       valor: dir.nombre,
-      porque: 'calle y número troceados automáticamente de la dirección de la ficha: comprueba que la calle, el número, la planta y la puerta han quedado bien',
+      porque: usaDireccionCatastro
+        ? 'calle y número troceados automáticamente de la dirección OFICIAL del Catastro (no hay póliza de la que sacarla): comprueba que la calle, el número, la planta y la puerta han quedado bien'
+        : 'calle y número troceados automáticamente de la dirección de la ficha: comprueba que la calle, el número, la planta y la puerta han quedado bien',
     })
   }
 
@@ -327,113 +344,10 @@ function nombreUtil(v: string | null): string | null {
 }
 
 // ─── La dirección, troceada ──────────────────────────────────────────────────
-
-export type DireccionPartida = {
-  /** Nombre canónico del tipo de vía («Calle», «Avenida»…), para emparejar con `/road-types`. */
-  tipoVia: string | null
-  nombre: string | null
-  numero: string | null
-  planta: string | null
-  puerta: string | null
-}
-
-const SIN = { tipoVia: null, nombre: null, numero: null, planta: null, puerta: null } as const
-
-/** Abreviaturas del CRM y del Catastro → nombre canónico del tipo de vía. */
-const TIPOS_VIA: Record<string, string> = {
-  cl: 'Calle', c: 'Calle', calle: 'Calle',
-  av: 'Avenida', avd: 'Avenida', avda: 'Avenida', avenida: 'Avenida',
-  pz: 'Plaza', pza: 'Plaza', plz: 'Plaza', plaza: 'Plaza',
-  ps: 'Paseo', pso: 'Paseo', paseo: 'Paseo',
-  cm: 'Camino', cmno: 'Camino', camino: 'Camino',
-  cr: 'Carretera', ctra: 'Carretera', carretera: 'Carretera',
-  rd: 'Ronda', ronda: 'Ronda',
-  ur: 'Urbanización', urb: 'Urbanización', urbanizacion: 'Urbanización',
-  tr: 'Travesía', trv: 'Travesía', trva: 'Travesía', travesia: 'Travesía',
-  gl: 'Glorieta', glorieta: 'Glorieta',
-  bo: 'Barrio', barrio: 'Barrio', bda: 'Barriada', barriada: 'Barriada',
-  pj: 'Pasaje', psj: 'Pasaje', pasaje: 'Pasaje',
-  cj: 'Callejón', cjon: 'Callejón', callejon: 'Callejón',
-  lg: 'Lugar', lugar: 'Lugar',
-  pg: 'Polígono', poligono: 'Polígono',
-  al: 'Alameda', alameda: 'Alameda',
-  cta: 'Cuesta', cuesta: 'Cuesta',
-}
-
-const RE_NUMERO = /^\d{1,4}[a-z]?$/i
-const RE_ORDINAL = /^(\d{1,2})[ºª°o]?$/i
-const RE_PLANTA_PALABRA = /^(bajo|bj|bajos|entlo|entresuelo|entreplanta|atico|ático|pb|sotano|sótano|principal|ppal)$/i
-const RE_PLANTA_Y_PUERTA = /^(\d{1,2})[ºª°o]?[-\s]?([a-z]{1,4}|\d{1,2})$/i
-const RE_PUERTA = /^([a-z]{1,4}|\d{1,2})$/i
-const RELLENO = /^(piso|pl|planta|pta|puerta|pt|n|nº|no|num|numero|número|esc|escalera|s\/n|sn|bloque|blq|portal)$/i
-
-function normalizarToken(t: string): string {
-  return t
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[./]+$/g, '')
-}
-
-/**
- * Trocea «CL SOCORRO 24 3º IZQ» en tipo de vía / nombre / número / planta /
- * puerta. Best-effort y CONSERVADOR: lo que no se reconoce queda a `null` (y
- * la pantalla lo pide), nunca se inventa un número. Solo se usan los primeros
- * tokens que parecen planta/puerta; el resto se descarta a propósito (una
- * escalera o un bloque no van al vendor).
- */
-export function partirDireccion(direccion: string | null): DireccionPartida {
-  const t = limpio(direccion)
-  if (t === null) return { ...SIN }
-  const tokens = t.replace(/,/g, ' ').split(/\s+/).filter((x) => x !== '')
-  if (tokens.length === 0) return { ...SIN }
-
-  let tipoVia: string | null = null
-  // «C/» pegado al nombre: «C/Socorro».
-  const m = /^c\/(.+)$/i.exec(tokens[0])
-  if (m) {
-    tipoVia = 'Calle'
-    tokens[0] = m[1]
-  } else if (TIPOS_VIA[normalizarToken(tokens[0])]) {
-    tipoVia = TIPOS_VIA[normalizarToken(tokens[0])]
-    tokens.shift()
-  }
-
-  // El número: el primer token numérico que NO es el primero (hace falta nombre).
-  let iNumero = -1
-  for (let i = 1; i < tokens.length; i++) {
-    if (RE_NUMERO.test(tokens[i])) {
-      iNumero = i
-      break
-    }
-  }
-  const nombreTokens = (iNumero === -1 ? tokens : tokens.slice(0, iNumero)).filter((x) => !RELLENO.test(normalizarToken(x)))
-  const nombre = nombreTokens.length > 0 ? nombreTokens.join(' ') : null
-  if (iNumero === -1) return { tipoVia, nombre, numero: null, planta: null, puerta: null }
-
-  const numero = tokens[iNumero]
-  const resto = tokens.slice(iNumero + 1).filter((x) => !RELLENO.test(normalizarToken(x)))
-  let planta: string | null = null
-  let puerta: string | null = null
-  const r0 = resto[0]
-  if (r0 !== undefined) {
-    const pp = RE_PLANTA_Y_PUERTA.exec(r0)
-    const ord = RE_ORDINAL.exec(r0)
-    if (ord) {
-      planta = ord[1]
-      const r1 = resto[1]
-      if (r1 !== undefined && RE_PUERTA.test(r1)) puerta = r1.toUpperCase()
-    } else if (RE_PLANTA_PALABRA.test(r0)) {
-      planta = normalizarToken(r0).toUpperCase()
-      const r1 = resto[1]
-      if (r1 !== undefined && RE_PUERTA.test(r1)) puerta = r1.toUpperCase()
-    } else if (pp) {
-      planta = pp[1]
-      puerta = pp[2].toUpperCase()
-    }
-  }
-  return { tipoVia, nombre, numero, planta, puerta }
-}
+// Movida a `./direccion.ts` el 12/09/2026 para que `desde-cartera.ts` (auto)
+// también pueda usarla sin crear un import circular entre los dos ficheros.
+// Se re-exporta aquí para no tocar a quien ya la importaba desde este fichero.
+export { partirDireccion, direccionDesdeCatastro, type DireccionPartida }
 
 /**
  * Lee el riesgo de hogar de un `datos_especificos` (póliza o gemela). Los

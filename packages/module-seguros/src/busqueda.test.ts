@@ -104,3 +104,33 @@ test('cobertura desconocida NO se pinta como cobertura total', () => {
   assert.match(txt, /no se ha podido comprobar/i)
   assert.doesNotMatch(txt, /toda la cartera/)
 })
+
+test('las MITADES del email: «@gmail.com» busca el dominio y «alberto.suarez@» el usuario', () => {
+  const dom = planBusqueda('@Gmail.com').criterios.find((c) => c.tipo === 'email_dominio')
+  assert.deepEqual(dom, { tipo: 'email_dominio', valor: 'gmail.com', coincidencia: 'exacto' })
+  const usr = planBusqueda('Alberto.Suarez@').criterios.find((c) => c.tipo === 'email_usuario')
+  assert.deepEqual(usr, { tipo: 'email_usuario', valor: 'alberto.suarez', coincidencia: 'exacto' })
+  // Sin arroba: un dominio con TLD conocido, y un usuario con punto/dígito.
+  assert.ok(tipos('gmail.com').includes('email_dominio'))
+  assert.ok(!tipos('gmail.com').includes('email_usuario'))
+  assert.ok(tipos('alberto.suarez').includes('email_usuario'))
+  assert.ok(!tipos('alberto.suarez').includes('email_dominio'))
+  // Sin punto/barra baja/más hace falta la @ al final: «asuarez77» solo es apodo, «asuarez77@» es usuario.
+  assert.ok(!tipos('asuarez77').includes('email_usuario'))
+  assert.ok(tipos('asuarez77@').includes('email_usuario'))
+  assert.ok(!tipos('A-12345').includes('email_usuario'))
+})
+
+test('🚨 un email ENTERO no dispara el dominio: «a@gmail.com» no lista a todo gmail', () => {
+  const t = tipos('alberto@gmail.com')
+  assert.ok(t.includes('email'))
+  assert.ok(!t.includes('email_dominio'))
+  assert.ok(!t.includes('email_usuario'))
+})
+
+test('una palabra suelta NO es un usuario de email: «alberto» sigue siendo solo nombre/ciudad/calle', () => {
+  assert.ok(!tipos('alberto').includes('email_usuario'))
+  assert.ok(!tipos('alberto').includes('email_dominio'))
+  // Con espacios tampoco: «alberto suarez» no es una dirección de correo.
+  assert.ok(!tipos('alberto suarez').includes('email_usuario'))
+})

@@ -42,6 +42,8 @@ export type ObjetoFicha = {
   titulo: string | null
   detalle: string | null
   nota: string | null
+  /** El desglose entero (RC/comercio/otros); `null` en el resto de ramos. */
+  coberturas: string[] | null
 }
 
 /** El recargo por fraccionar: TRES estados. `sin_datos` nunca se pinta como 0€. */
@@ -213,9 +215,72 @@ export type Ficha = {
   historial: AnotacionHistorial[] | null
   /** Presupuestos recientes sin póliza. `null` = no se pudo contar, NO es 0. */
   cotizacionesVivas: number | null
+  /**
+   * Pólizas que el cliente ha APORTADO desde el portal, casi siempre de otra
+   * compañía. `null` = asegura no manda el bloque o no pudo consultarlo — NO
+   * es «no ha aportado ninguna» (eso es `[]`).
+   */
+  declaradas: PolizaDeclaradaFicha[] | null
 }
 
 export type AnotacionHistorial = { id: string; tipo: string; texto: string; fecha: string }
+
+/**
+ * Una póliza aportada por el cliente desde el portal (`portal_poliza_declarada`),
+ * casi siempre de OTRA compañía: la correduría no la gestiona, solo consta que
+ * existe. Nunca se enseña en la tabla de «Pólizas vivas» — es de otro alcance.
+ */
+export type PolizaDeclaradaFicha = {
+  id: string
+  compania: string | null
+  numeroPoliza: string | null
+  ramo: string | null
+  primaAnual: number | null
+  fechaVencimiento: string | null
+  matricula: string | null
+  procedencia: string
+  confirmadaPorUsuario: boolean
+  titularTipo: string | null
+  titularEmpresaNombre: string | null
+  /**
+   * `true` = esta ficha ya tiene una póliza con ese número: no es una
+   * oportunidad, es la misma póliza subida dos veces. `null` = no se ha
+   * podido cotejar (sin número, o declarada a nombre de una empresa —
+   * cotejar eso exige la ficha de esa sociedad, que aquí no se mira).
+   */
+  yaEnCartera: boolean | null
+}
+
+/**
+ * Las declaradas, o `null` si el bloque no llega o llega con forma rara —
+ * NUNCA `[]`, que diría «se ha mirado y no ha aportado ninguna» cuando en
+ * realidad es que la versión de asegura desplegada aún no manda el campo.
+ * Una fila individual con forma rara se salta, no tumba el bloque.
+ */
+export function leerDeclaradas(v: unknown): PolizaDeclaradaFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: PolizaDeclaradaFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const d = fila as Record<string, unknown>
+    if (typeof d.id !== 'string') continue
+    out.push({
+      id: d.id,
+      compania: cadena(d.compania),
+      numeroPoliza: cadena(d.numeroPoliza),
+      ramo: cadena(d.ramo),
+      primaAnual: numero(d.primaAnual),
+      fechaVencimiento: cadena(d.fechaVencimiento),
+      matricula: cadena(d.matricula),
+      procedencia: cadena(d.procedencia) ?? 'declarado',
+      confirmadaPorUsuario: d.confirmadaPorUsuario === true,
+      titularTipo: cadena(d.titularTipo),
+      titularEmpresaNombre: cadena(d.titularEmpresaNombre),
+      yaEnCartera: typeof d.yaEnCartera === 'boolean' ? d.yaEnCartera : null,
+    })
+  }
+  return out
+}
 
 export type RespuestaFicha =
   | { estado: 'sin_configurar' }
@@ -250,6 +315,7 @@ export function leerObjeto(v: unknown): ObjetoFicha | null {
     titulo: cadena(o.titulo),
     detalle: cadena(o.detalle),
     nota: cadena(o.nota),
+    coberturas: Array.isArray(o.coberturas) ? o.coberturas.filter((c): c is string => typeof c === 'string') : null,
   }
 }
 
@@ -587,6 +653,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       estado: leerEstadoCliente(f.estado),
       historial: leerHistorial(f.historial),
       cotizacionesVivas: entero(f.cotizacionesVivas),
+      declaradas: leerDeclaradas(f.declaradas),
       piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }
@@ -705,4 +772,57 @@ export function urlRetarificarHogarAsegura(polizaId: string): string {
  *  porque comparte pantalla con la cotización que sale de lo leído. Gratis. */
 export function urlSubirPoliza(): string {
   return `${urlAsegura()}/cartera/subir`
+}
+
+/**
+ * Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la
+ * cartera), **DENTRO de plataforma** desde el 07/09/2026. El riesgo sale del
+ * Catastro (por dirección o referencia), no de una ficha existente — a
+ * diferencia de `urlRetarificarHogarAsegura` (retarificar una póliza de
+ * hogar existente, que SÍ sigue saltando a asegura), esta oportunidad se
+ * presupuesta y se cotiza entera en `/correduria/cliente/<id>/hogar-nuevo`,
+ * por el mismo puerto de operador (`lib/hogar-nuevo-asegura.ts`).
+ */
+export function urlHogarNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/hogar-nuevo`
+}
+
+/**
+ * Presupuesto de AUTO para una oportunidad nueva (sin ninguna póliza en la
+ * cartera), **dentro de plataforma** desde el 07/09/2026. Hermana de
+ * `urlHogarNuevo()`: aquí el riesgo no sale del Catastro sino del catálogo
+ * del vehículo (marca/modelo/motor/versión, gratis) y de la matrícula que
+ * teclea el corredor — no hay servicio público equivalente al Catastro para
+ * un coche. Se cotiza de calle (sin compañía anterior que declarar).
+ */
+export function urlAutoNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/auto-nuevo`
+}
+
+/**
+ * Presupuesto de MOTO para una oportunidad nueva, hermana de `urlAutoNuevo()`.
+ * La cartera viva tiene 1 sola póliza de moto (03/09/2026): «nueva» es
+ * prácticamente el único caso real de este ramo.
+ */
+export function urlMotoNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/moto-nuevo`
+}
+
+/**
+ * Presupuesto de VIDA para una oportunidad nueva, hermana de `urlMotoNuevo()`.
+ * La cartera viva tiene 0 pólizas de vida (03/09/2026). 🚧 El `risk` que se
+ * manda al vendor no está verificado — ver `apps/asegura/lib/codeoscopic/peticion-vida.ts`.
+ */
+export function urlVidaNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/vida-nuevo`
+}
+
+/** Presupuesto de SALUD para una oportunidad nueva. Mismo aviso 🚧 que `urlVidaNuevo()`. */
+export function urlSaludNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/salud-nuevo`
+}
+
+/** Presupuesto de DECESOS para una oportunidad nueva. Mismo aviso 🚧 que `urlVidaNuevo()`. */
+export function urlDecesosNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/decesos-nuevo`
 }

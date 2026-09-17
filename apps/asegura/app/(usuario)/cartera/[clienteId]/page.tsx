@@ -69,6 +69,17 @@ export default async function FichaClientePage({
           )}
         </>
       )}
+
+      <div className="card">
+        <h2>🏠 Nueva oportunidad de hogar</h2>
+        <p className="muted">
+          Sin póliza previa: el riesgo se tarifica desde el Catastro (dirección o referencia catastral de 20
+          caracteres), no desde la cartera.
+        </p>
+        <Link href={`/cartera/${clienteId}/hogar-nuevo`} className="primary" style={{ display: 'inline-block', minHeight: 44, lineHeight: '44px', padding: '0 16px' }}>
+          Presupuestar hogar →
+        </Link>
+      </div>
     </div>
   )
 }

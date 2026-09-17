@@ -30,6 +30,7 @@ test('cada fallo llega con SU estado, no colapsado en un «no se pudo»', () => 
     [409, 'sin_pendiente'],
     [422, 'sin_email'],
     [503, 'sin_portal'],
+    [503, 'sin_correo_configurado'],
     [502, 'error_envio'],
     [422, 'invalido'],
   ]
@@ -44,6 +45,7 @@ test('NINGUN fallo se puede leer como que el correo salio', () => {
     { estado: 'sin_pendiente', motivo: 'x' },
     { estado: 'sin_email', motivo: 'x' },
     { estado: 'sin_portal', motivo: 'x' },
+    { estado: 'sin_correo_configurado', motivo: 'x' },
     { estado: 'error_envio', motivo: 'x' },
     { estado: 'invalido', motivo: 'x' },
     { estado: 'error', motivo: 'red' },
@@ -79,4 +81,12 @@ test('una respuesta sin forma no se lee como exito', () => {
     assert.notEqual(r.estado, 'ok', JSON.stringify(json))
   }
   assert.equal(interpretarAviso(500, { causa: 'sin_conexion' }).estado, 'error')
+})
+
+/** Mismo cepo que en la invitación al portal, y por el mismo fallo del 07/09/2026. */
+test('🚨 una env de correo que falta NO invita a reintentar; una avería del proveedor SÍ', () => {
+  const falta = textoAviso({ estado: 'sin_correo_configurado', motivo: 'no hay proveedor de correo.' }, 'Pablo')
+  assert.doesNotMatch(falta, /vuelve a intentarlo/i)
+  assert.match(falta, /vercel/i, 'tiene que decir DÓNDE se arregla')
+  assert.match(textoAviso({ estado: 'error_envio', motivo: 'x' }, 'Pablo'), /vuelve a intentarlo/i)
 })

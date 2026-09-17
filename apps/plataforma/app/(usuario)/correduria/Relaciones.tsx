@@ -25,16 +25,19 @@ import {
   TITULOS_REPRESENTACION_PORTAL,
   TITULO_TEXTO_PORTAL,
   alcancesAnotables,
+  autorizacionViva,
   comoTitulo,
   esApoderamientoPortal,
-  explicarEstadoAutorizacion,
+  explicarSentidoAcceso,
   fechaLarga,
+  insigniaAcceso,
   interpretarAviso,
   interpretarRelaciones,
   textoAviso,
   textoMotivoRelaciones,
   type AlcancePortal,
   type AutorizacionCartera,
+  type TonoAcceso,
   type RelacionCartera,
   type RespuestaAviso,
   type RespuestaRelaciones,
@@ -105,14 +108,14 @@ export default function Relaciones({
   // El desenlace del último aviso por correo, atado a la ficha a la que se
   // escribió: es una respuesta sobre UNA persona y colgarla del banner general
   // la dejaría lejos del botón que la produjo.
-  const [aviso, setAviso] = useState<{ fichaId: string; texto: string; ok: boolean } | null>(null)
+  const [aviso, setAviso] = useState<{ clave: string; texto: string; ok: boolean } | null>(null)
 
-  async function llamar(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>): Promise<RespuestaRelaciones> {
+  async function llamar(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>, clienteIdOverride?: string): Promise<RespuestaRelaciones> {
     try {
       const res = await fetch('/api/correduria/cliente/relaciones', {
         method,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ clienteId, ...body }),
+        body: JSON.stringify({ clienteId: clienteIdOverride ?? clienteId, ...body }),
       })
       return interpretarRelaciones(res.status, await res.json().catch(() => null))
     } catch {
@@ -120,19 +123,41 @@ export default function Relaciones({
     }
   }
 
-  async function ejecutar(clave: string, method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>): Promise<RespuestaRelaciones> {
+  /**
+   * Cuando `clienteIdOverride` va puesto (autorización en el SENTIDO INVERSO: la
+   * ficha relacionada es quien otorga), el puerto devuelve las relaciones vistas
+   * DESDE esa otra ficha, no desde la que se está pintando aquí — usarlas
+   * directamente sustituiría la lista de esta pantalla por la de otra persona.
+   * Por eso, en ese caso, se relee la propia lista con un GET aparte.
+   */
+  async function ejecutar(
+    clave: string,
+    method: 'POST' | 'PATCH' | 'DELETE',
+    body: Record<string, unknown>,
+    clienteIdOverride?: string,
+  ): Promise<RespuestaRelaciones> {
     setOcupado(clave)
     setResultado(null)
     try {
-      const r = await llamar(method, body)
-      setResultado(r)
-      if (r.estado === 'ok') {
-        setLista(r.relaciones)
+      const r = await llamar(method, body, clienteIdOverride)
+      const final = r.estado === 'ok' && clienteIdOverride ? await recargarPropias() : r
+      setResultado(final)
+      if (final.estado === 'ok') {
+        setLista(final.relaciones)
         router.refresh()
       }
-      return r
+      return final
     } finally {
       setOcupado(null)
+    }
+  }
+
+  async function recargarPropias(): Promise<RespuestaRelaciones> {
+    try {
+      const res = await fetch(`/api/correduria/cliente/relaciones?clienteId=${encodeURIComponent(clienteId)}`, { cache: 'no-store' })
+      return interpretarRelaciones(res.status, await res.json().catch(() => null))
+    } catch {
+      return { estado: 'error', motivo: 'red' }
     }
   }
 
@@ -142,38 +167,58 @@ export default function Relaciones({
    * una ficha de persona no se manda ninguno de los dos y asegura anota el
    * alcance más pequeño («ver»), que es lo único que una persona puede delegar.
    */
+  /**
+   * `invertido` anota la autorización en el sentido CONTRARIO al de siempre:
+   * en vez de que `nombreFicha` autorice a `r.nombre`, es `r.nombre` quien
+   * autoriza a `nombreFicha` — sin tener que navegar a su ficha y repetir el
+   * mismo formulario allí. El consentimiento lo sigue dando el TITULAR de esa
+   * autorización (aquí, `r.nombre`): esto solo evita el viaje, no cambia quién
+   * consiente. Solo vale para el caso simple (persona a persona, alcance
+   * «ver»): no se sabe desde aquí si `r` es una sociedad, así que un
+   * apoderamiento inverso se sigue anotando desde su propia ficha.
+   */
   function autorizar(
     r: RelacionCartera,
     autoriza: boolean,
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
   ) {
+    const otorga = invertido ? r.nombre : nombreFicha
+    const recibe = invertido ? nombreFicha : r.nombre
     if (!autoriza) {
       // Una PENDIENTE todavía no abría nada: decir «dejará de ver» ahí sería falso.
-      const efecto = r.autorizacion?.estado === 'vigente'
-        ? `${r.nombre} dejará de poder ver los seguros de ${nombreFicha}.`
-        : `Se retira la autorización anotada (${r.nombre} todavía no veía nada).`
+      const efecto = (invertido ? r.autorizacionInversa : r.autorizacion)?.estado === 'vigente'
+        ? `${recibe} dejará de poder ver los seguros de ${otorga}.`
+        : `Se retira la autorización anotada (${recibe} todavía no veía nada).`
       if (!confirm(`¿Revocar la autorización? ${efecto}`)) return
+    } else if (invertido) {
+      if (!confirm(`¿Anotar que ${otorga} autoriza a ${recibe} a ver sus seguros? Nace pendiente: no abre nada hasta que ${recibe} la acepte en su portal.`)) return
     }
     // 🚨 Un apoderamiento se confirma aparte: no es «deja mirar», es que esa
     // persona puede obligar a la sociedad frente a la compañía.
     if (autoriza && extra && esApoderamientoPortal(extra.alcance)) {
       const titulo = comoTitulo(extra.tituloRepresentacion)
       const ok = confirm(
-        `¿Anotar que ${nombreFicha} apodera a ${r.nombre} para ${ALCANCE_TEXTO_PORTAL[extra.alcance]}` +
+        `¿Anotar que ${otorga} apodera a ${recibe} para ${ALCANCE_TEXTO_PORTAL[extra.alcance]}` +
           `${titulo ? ` (${titulo})` : ''}? Lo que declare en nombre de la sociedad la OBLIGA frente a la compañía.`,
       )
       if (!ok) return
     }
-    void ejecutar(`aut-${r.relacionadoId}`, 'PATCH', {
-      relacionadoId: r.relacionadoId,
-      autoriza,
-      ...(autoriza && extra
-        ? {
-            alcance: extra.alcance,
-            ...(extra.tituloRepresentacion ? { tituloRepresentacion: extra.tituloRepresentacion } : {}),
-          }
-        : {}),
-    })
+    void ejecutar(
+      `aut-${r.relacionadoId}${invertido ? '-inv' : ''}`,
+      'PATCH',
+      {
+        relacionadoId: invertido ? clienteId : r.relacionadoId,
+        autoriza,
+        ...(autoriza && extra
+          ? {
+              alcance: extra.alcance,
+              ...(extra.tituloRepresentacion ? { tituloRepresentacion: extra.tituloRepresentacion } : {}),
+            }
+          : {}),
+      },
+      invertido ? r.relacionadoId : undefined,
+    )
   }
 
   /**
@@ -188,17 +233,27 @@ export default function Relaciones({
    * cambia es que la persona se entera de que la tiene, que hasta hoy dependía
    * de que Alberto escribiera el correo a mano.
    */
-  function avisar(r: RelacionCartera) {
-    if (!confirm(`¿Enviar un correo a ${r.nombre} para que confirme el acceso a los seguros de ${nombreFicha}?\n\nSe le escribe a la dirección que tenga en su ficha. El correo dice quién le da el acceso y dónde confirmarlo; nada de sus pólizas.`)) return
+  function avisar(r: RelacionCartera, invertido: boolean) {
+    // El correo va SIEMPRE a quien tiene que aceptar, que es el AUTORIZADO de
+    // ese sentido — y en el inverso ése es la propia ficha, no el relacionado.
+    // El puerto es simétrico (`clienteId` = quien cede, `relacionadoId` = quien
+    // recibe), así que invertir es intercambiar los dos ids, no otra ruta.
+    const otorga = invertido ? r.nombre : nombreFicha
+    const recibe = invertido ? nombreFicha : r.nombre
+    if (!confirm(`¿Enviar un correo a ${recibe} para que confirme el acceso a los seguros de ${otorga}?\n\nSe le escribe a la dirección que tenga en su ficha. El correo dice quién le da el acceso y dónde confirmarlo; nada de sus pólizas.`)) return
+    const clave = `aviso-${r.relacionadoId}${invertido ? '-inv' : ''}`
     void (async () => {
-      setOcupado(`aviso-${r.relacionadoId}`)
+      setOcupado(clave)
       setAviso(null)
       let resp: RespuestaAviso
       try {
         const res = await fetch('/api/correduria/cliente/relaciones/aviso', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ clienteId, relacionadoId: r.relacionadoId }),
+          body: JSON.stringify({
+            clienteId: invertido ? r.relacionadoId : clienteId,
+            relacionadoId: invertido ? clienteId : r.relacionadoId,
+          }),
         })
         resp = interpretarAviso(res.status, await res.json().catch(() => null))
       } catch {
@@ -207,7 +262,7 @@ export default function Relaciones({
         // a ciegas y a que la persona reciba dos.
         resp = { estado: 'error', motivo: 'red' }
       }
-      setAviso({ fichaId: r.relacionadoId, texto: textoAviso(resp, r.nombre), ok: resp.estado === 'ok' })
+      setAviso({ clave, texto: textoAviso(resp, recibe), ok: resp.estado === 'ok' })
       setOcupado(null)
       if (resp.estado === 'ok') router.refresh()
     })()
@@ -358,9 +413,10 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
     r: RelacionCartera,
     autoriza: boolean,
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
   ) => void
-  onAvisar: (r: RelacionCartera) => void
-  aviso: { fichaId: string; texto: string; ok: boolean } | null
+  onAvisar: (r: RelacionCartera, invertido: boolean) => void
+  aviso: { clave: string; texto: string; ok: boolean } | null
   onQuitar: (r: RelacionCartera) => void
   onCambiarTipo: (r: RelacionCartera, tipo: string) => void
   onDeclarar: (cand: Candidato) => void
@@ -467,12 +523,13 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
   r: RelacionCartera
   nombreFicha: string
   ocupado: string | null
-  onAvisar: (r: RelacionCartera) => void
-  aviso: { fichaId: string; texto: string; ok: boolean } | null
+  onAvisar: (r: RelacionCartera, invertido: boolean) => void
+  aviso: { clave: string; texto: string; ok: boolean } | null
   onAutorizar: (
     r: RelacionCartera,
     autoriza: boolean,
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
   ) => void
   onQuitar: (r: RelacionCartera) => void
   onCambiarTipo: (r: RelacionCartera, tipo: string) => void
@@ -480,16 +537,15 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
   const ficha = `/correduria/cliente/${r.relacionadoId}`
   const enCurso =
     ocupado === `aut-${r.relacionadoId}` ||
+    ocupado === `aut-${r.relacionadoId}-inv` ||
     ocupado === `del-${r.relacionadoId}` ||
     ocupado === `tipo-${r.relacionadoId}` ||
-    ocupado === `aviso-${r.relacionadoId}`
-  const avisando = ocupado === `aviso-${r.relacionadoId}`
-  const miAviso = aviso?.fichaId === r.relacionadoId ? aviso : null
+    ocupado === `aviso-${r.relacionadoId}` ||
+    ocupado === `aviso-${r.relacionadoId}-inv`
   // `Sin vínculo` no es un parentesco: es la constancia de que se miró y no hay
   // ninguno. Ni se explica quién ve qué ni se ofrece autorizar (el puerto lo
   // rechaza igualmente con un 422, y el portal ni mira esas filas).
   const revisadoSinVinculo = !permiteAutorizar(r.tipo)
-  const viva = r.autorizacion?.estado === 'vigente' || r.autorizacion?.estado === 'pendiente'
   // `null` (asegura no lo manda o no lo pudo leer) NO cuenta como sociedad: se
   // ofrece solo lo de siempre, que es el lado que no apodera a nadie de más.
   const esSociedad = r.tipoOtorgante === 'juridica'
@@ -523,19 +579,141 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
         <span style={{ fontSize: 13, fontWeight: 600 }}>👪 {r.tipo}</span>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
           {/* null = asegura no las contó: no es «0 pólizas». */}
-          {r.polizasVivas === null ? 'pólizas sin contar' : `${r.polizasVivas} póliza${r.polizasVivas === 1 ? '' : 's'} viva${r.polizasVivas === 1 ? '' : 's'} suyas`}
+          {r.polizasVivas === null ? 'pólizas sin contar' : `${r.polizasVivas} póliza${r.polizasVivas === 1 ? '' : 's'} viva${r.polizasVivas === 1 ? '' : 's'} suya${r.polizasVivas === 1 ? '' : 's'}`}
         </span>
       </div>
 
-      <EstadoAutorizacion a={r.autorizacion} nombreOtro={r.nombre} nombreFicha={nombreFicha} />
+      {/* 🚨 LOS DOS SENTIDOS, SIEMPRE LOS DOS, cada uno con su insignia y con
+          SUS botones debajo. Antes esto era: un párrafo del sentido de ida, una
+          línea suelta de once píxeles para el de vuelta, y tres botones juntos
+          al final — dos de ellos con casi el mismo texto y el menos usado en
+          azul. El 15/09/2026 Alberto anotó el sentido contrario al que quería y
+          lo revocó 12 segundos después; luego anotó los dos correctos y la
+          pantalla NO cambió de aspecto, porque el estado `pendiente` del
+          sentido de vuelta no se pintaba en ninguna parte. Las dos cosas se
+          arreglan igual: una insignia por sentido y el botón pegado a la frase
+          que dice qué hace. */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>🔐 Quién ve los seguros de quién</div>
 
-      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-        ¿{nombreFicha} ve los de {r.nombre}? <strong>{r.puedeVer ? 'sí' : 'no'}</strong> · se decide desde{' '}
-        <Link href={ficha}>la ficha de {r.nombre}</Link>
-      </div>
+      <Sentido
+        otorga={nombreFicha}
+        recibe={r.nombre}
+        ve={r.autorizaVer}
+        a={r.autorizacion}
+        enCurso={enCurso}
+        avisando={ocupado === `aviso-${r.relacionadoId}`}
+        aviso={aviso?.clave === `aviso-${r.relacionadoId}` ? aviso : null}
+        onAutorizar={(autoriza) => onAutorizar(r, autoriza)}
+        onAvisar={() => onAvisar(r, false)}
+        /* 🚨 Desde una ficha de SOCIEDAD no basta un botón: hay que decir QUÉ se
+           delega (mirar o actuar) y con qué TÍTULO se la representa. Solo en el
+           sentido en que cede ELLA; desde una ficha de persona no aparece. */
+        formulario={esSociedad ? <AnotarSociedad r={r} nombreFicha={nombreFicha} enCurso={enCurso} onAutorizar={onAutorizar} /> : null}
+      />
+
+      <Sentido
+        otorga={r.nombre}
+        recibe={nombreFicha}
+        ve={r.puedeVer}
+        a={r.autorizacionInversa}
+        enCurso={enCurso}
+        avisando={ocupado === `aviso-${r.relacionadoId}-inv`}
+        aviso={aviso?.clave === `aviso-${r.relacionadoId}-inv` ? aviso : null}
+        onAutorizar={(autoriza) => onAutorizar(r, autoriza, undefined, true)}
+        onAvisar={() => onAvisar(r, true)}
+        formulario={null}
+        pie={<>Lo consiente {r.nombre}; se anota desde aquí o desde <Link href={ficha}>su ficha</Link>.</>}
+      />
 
       {r.observaciones && (
         <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal', minHeight: 44 }}>
+          Quitar relación
+        </button>
+      </div>
+
+      <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
+    </div>
+  )
+}
+
+/** El color de cada tono. `duda` NO comparte el gris de «no»: un hueco no es un no. */
+const COLOR_ACCESO: Record<TonoAcceso, string> = {
+  ve: 'var(--positive)',
+  espera: 'var(--warning)',
+  no: 'var(--muted)',
+  duda: 'var(--warning)',
+}
+
+/**
+ * UN sentido del acceso: quién ve los seguros de quién, con su insignia, su
+ * frase y sus botones — nunca los del otro sentido.
+ *
+ * 🚨 La insignia y la frase salen de `insigniaAcceso` / `explicarSentidoAcceso`
+ * (puros y con test) para que «anotada pero todavía no ve» no se convierta en
+ * «ve» al tocar un `?:` dentro del JSX. Y el botón de autorizar vive AQUÍ
+ * dentro, debajo de la frase que dice qué pasa al pulsarlo: dos botones de
+ * sentidos distintos, juntos y con el mismo texto salvo el orden de los
+ * nombres, es lo que hizo fallar el clic.
+ */
+function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar, onAvisar, formulario, pie }: {
+  /** Quién cede SUS seguros. */
+  otorga: string
+  /** Quién los ve (o los vería). */
+  recibe: string
+  /** ¿Los ve HOY? Lo dice el puerto, y manda sobre el resumen. */
+  ve: boolean
+  /** `null` = no hay ninguna · `undefined` = asegura no manda el dato. */
+  a: AutorizacionCartera | null | undefined
+  enCurso: boolean
+  avisando: boolean
+  aviso: { texto: string; ok: boolean } | null
+  onAutorizar: (autoriza: boolean) => void
+  onAvisar: () => void
+  /** El formulario de alta cuando quien cede es una sociedad (sustituye al botón). */
+  formulario: React.ReactNode | null
+  /** Una línea extra al pie, si ese sentido necesita explicar de quién es el consentimiento. */
+  pie?: React.ReactNode
+}) {
+  const ins = insigniaAcceso(a, ve)
+  const viva = autorizacionViva(a)
+  const color = COLOR_ACCESO[ins.tono]
+  return (
+    <div style={{ borderLeft: `3px solid ${color}`, paddingLeft: 8, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, minWidth: 0 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}>
+        <span style={{
+          fontSize: 11, fontWeight: 700, color, border: `1px solid ${color}`,
+          borderRadius: 999, padding: '2px 8px', whiteSpace: 'nowrap',
+        }}>
+          {ins.icono} {ins.etiqueta}
+        </span>
+        <span style={{ fontSize: 13, overflowWrap: 'anywhere' }}>
+          <strong>{recibe}</strong> → seguros de <strong>{otorga}</strong>
+        </span>
+      </div>
+
+      <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>
+        {explicarSentidoAcceso(a, recibe, otorga, ve)}
+      </div>
+
+      {a?.estado === 'pendiente' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+          Falta el paso de <strong>{recibe}</strong>: tiene que entrar en su portal y aceptarla. La doble
+          aceptación es lo que deja constancia de que sabe que hay un permiso a su nombre.
+        </div>
+      )}
+      {a?.estado === 'vigente' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+          {a.origen === 'corredor' ? 'La anotó la correduría' : 'La concedió el cliente desde su portal'} · caduca el{' '}
+          {fechaLarga(a.caducaEn)} (no se renueva sola) · puede:{' '}
+          {a.alcances.length > 0 ? a.alcances.map((x) => ALCANCE_TEXTO_PORTAL[x]).join(' · ') : 'sin detallar'}
+          {/* El título solo consta cuando cede una sociedad. `null` ahí es lo
+              normal entre personas: no se representa a nadie, se mira. */}
+          {comoTitulo(a.tituloRepresentacion) ? ` · ${comoTitulo(a.tituloRepresentacion)}` : ''}
+        </div>
       )}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -543,44 +721,40 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
             avisar (ya la aceptó) y en una caducada el correo llevaría a una
             pantalla vacía; el puerto lo rechaza igual, pero un botón que no
             puede funcionar no se pinta. */}
-        {r.autorizacion?.estado === 'pendiente' && (
-          <button type="button" disabled={enCurso} onClick={() => onAvisar(r)} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
-            {avisando ? 'enviando…' : `✉️ Invitar por correo a ${r.nombre} a confirmarlo`}
+        {a?.estado === 'pendiente' && (
+          <button type="button" disabled={enCurso} onClick={onAvisar} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
+            {avisando ? 'enviando…' : `✉️ Invitar a ${recibe} a confirmarlo por correo`}
           </button>
         )}
-        {/* Hay algo que revocar mientras la autorización no esté ya cerrada: una
-            PENDIENTE también se revoca (existe, aunque no abra nada todavía). */}
-        {viva ? (
-          <button type="button" disabled={enCurso} onClick={() => onAutorizar(r, false)} style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
-            🔒 {r.autorizacion?.estado === 'pendiente' ? 'Retirar la autorización anotada' : 'Revocar la autorización'}
+        {/* Hay algo que retirar mientras no esté cerrada: una PENDIENTE también
+            se revoca (existe, aunque no abra nada todavía). */}
+        {/* 🚨 `ve || viva`, no `viva` a secas: con el dato del sentido ausente
+            (asegura sin desplegar) y el puerto diciendo que SÍ ve, `viva` es
+            falso — y entonces la insignia pondría «SÍ VE» con un botón de
+            ANOTAR debajo y sin forma de revocar. Lo que se ofrece se decide por
+            lo que la pantalla acaba de afirmar. */}
+        {ve || viva ? (
+          <button type="button" disabled={enCurso} onClick={() => onAutorizar(false)} style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
+            🔒 {a?.estado === 'pendiente' ? 'Retirar la autorización anotada' : `Revocar: ${recibe} dejará de ver`}
           </button>
-        ) : esSociedad ? null : (
-          <button type="button" disabled={enCurso} onClick={() => onAutorizar(r, true)} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
-            🔓 Anotar que {nombreFicha} autoriza a {r.nombre} a ver sus seguros
+        ) : formulario === null ? (
+          <button type="button" disabled={enCurso} onClick={() => onAutorizar(true)} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
+            🔓 Anotar que {otorga} autoriza a {recibe} a ver sus seguros
           </button>
-        )}
-        <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal', minHeight: 44 }}>
-          Quitar relación
-        </button>
+        ) : null}
       </div>
+
+      {!ve && !viva && formulario}
+
+      {pie && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{pie}</div>}
 
       {/* El desenlace del correo, pegado al botón que lo produjo. El texto sale
           de `textoAviso` (puro y con test): un «enviado» no puede salir de un
           desenlace que no envió nada. */}
-      {miAviso && (
-        <div role="status" style={{ fontSize: 12, color: miAviso.ok ? 'var(--positive)' : 'var(--warning)', overflowWrap: 'anywhere' }}>
-          {miAviso.texto}
+      {aviso && (
+        <div role="status" style={{ fontSize: 12, color: aviso.ok ? 'var(--positive)' : 'var(--warning)', overflowWrap: 'anywhere' }}>
+          {aviso.texto}
         </div>
-      )}
-
-      <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
-
-      {/* 🚨 Desde una ficha de SOCIEDAD no basta un botón: hay que decir QUÉ se
-          delega (mirar o actuar) y con qué TÍTULO se la representa. Desde una
-          ficha de persona esto no aparece — ahí solo se puede dejar mirar, y
-          ofrecer un apoderamiento sería ofrecer algo que el puerto rechaza. */}
-      {!viva && esSociedad && (
-        <AnotarSociedad r={r} nombreFicha={nombreFicha} enCurso={enCurso} onAutorizar={onAutorizar} />
       )}
     </div>
   )
@@ -666,6 +840,7 @@ function AnotarSociedad({ r, nombreFicha, enCurso, onAutorizar }: {
     r: RelacionCartera,
     autoriza: boolean,
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
   ) => void
 }) {
   // `''` = todavía no ha elegido, que NO es haber elegido lo más pequeño.
@@ -720,47 +895,6 @@ function AnotarSociedad({ r, nombreFicha, enCurso, onAutorizar }: {
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
         Nace <strong>pendiente</strong>: no abre nada hasta que {r.nombre} la acepte en su portal.
       </div>
-    </div>
-  )
-}
-
-// ─── El estado de la autorización ────────────────────────────────────────────
-
-/**
- * 🚨 Los TRES estados en pantalla. El titular sale de
- * `explicarEstadoAutorizacion` (puro y con test) para que la frase que decide
- * Alberto no viva dentro del JSX, que es donde «pendiente» se convertiría en
- * «ve» al tocar un `?:`.
- */
-function EstadoAutorizacion({ a, nombreOtro, nombreFicha }: {
-  a: AutorizacionCartera | null
-  nombreOtro: string
-  nombreFicha: string
-}) {
-  const icono = a === null ? '🔒' : a.estado === 'vigente' ? '🔓' : a.estado === 'pendiente' ? '🕐' : '🔒'
-  const color = a?.estado === 'vigente' ? 'var(--positive)' : a?.estado === 'pendiente' ? 'var(--warning)' : 'var(--muted)'
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 4, borderLeft: `3px solid ${color}`, paddingLeft: 8 }}>
-      <div style={{ fontSize: 13, display: 'flex', gap: 6, alignItems: 'flex-start', minWidth: 0 }}>
-        <span aria-hidden>{icono}</span>
-        <span style={{ overflowWrap: 'anywhere' }}>{explicarEstadoAutorizacion(a, nombreOtro, nombreFicha)}</span>
-      </div>
-      {a?.estado === 'pendiente' && (
-        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-          Está anotada y registrada, pero <strong>no abre nada todavía</strong>: la doble aceptación es lo que deja
-          constancia de que {nombreOtro} sabe que hay un permiso a su nombre.
-        </div>
-      )}
-      {a?.estado === 'vigente' && (
-        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-          {a.origen === 'corredor' ? 'La anotó la correduría' : 'La concedió el cliente desde su portal'} · caduca el{' '}
-          {fechaLarga(a.caducaEn)} (no se renueva sola) · puede:{' '}
-          {a.alcances.length > 0 ? a.alcances.map((x) => ALCANCE_TEXTO_PORTAL[x]).join(' · ') : 'sin detallar'}
-          {/* El título solo consta cuando cede una sociedad. `null` ahí es lo
-              normal entre personas: no se representa a nadie, se mira. */}
-          {comoTitulo(a.tituloRepresentacion) ? ` · ${comoTitulo(a.tituloRepresentacion)}` : ''}
-        </div>
-      )}
     </div>
   )
 }

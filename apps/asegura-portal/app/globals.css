@@ -72,6 +72,10 @@
    * `@central/brand` cambia el azul, `--primary` lo sigue solo. */
   --primary: var(--brand);
   --primary-hover: var(--brand-ink);
+  /* La curva de `asegura-web` (`--curva`), copiada al valor exacto: el
+   * movimiento también es marca, y dos curvas distintas hacen que las dos
+   * superficies se noten de dos manos. */
+  --curva: cubic-bezier(0.22, 1, 0.36, 1);
   --primary-light: var(--accent-soft);
   --surface: var(--panel);
   --radius: var(--radio);
@@ -172,8 +176,13 @@ input, select, textarea, button { font: inherit; }
   gap: 10px;
   min-height: var(--alto-barra);
   padding: 8px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  /* 🎨 Tintada, no blanca. Con `--surface` la barra era del mismo blanco que
+   * cualquier panel de administración, y el único gesto de marca era el filete
+   * de 3px de abajo — que a esa altura se lee como cromo del navegador, no como
+   * identidad. Un 4 % de marca sobre el papel basta para que la primera franja
+   * de pantalla ya sea de la correduría sin robarle contraste a nada. */
+  background: color-mix(in oklab, var(--brand) 4%, var(--surface));
+  border-bottom: 1px solid color-mix(in oklab, var(--brand) 12%, var(--border));
   /* Filete de acento: es lo único decorativo del portal y basta para que la
    * primera franja de pantalla ya sea de la correduría. */
   border-top: 3px solid var(--accent);
@@ -260,8 +269,8 @@ input, select, textarea, button { font: inherit; }
   transition: color 150ms, background-color 150ms;
 }
 .portal-nav-item:hover {
-  color: var(--text);
-  background: var(--surface-hover, var(--panel2));
+  color: var(--brand-ink);
+  background: color-mix(in oklab, var(--brand) 8%, transparent);
 }
 /* 📱 En cualquier móvil o tablet las pestañas se REPARTEN el ancho del carril.
  *
@@ -281,6 +290,17 @@ input, select, textarea, button { font: inherit; }
  * pestañas a ~77 px, «Quién me ve» en una sola línea se corta a media palabra
  * (`nowrap` no lo parte: lo esconde). Dos renglones centrados dentro de los
  * 44 px táctiles se leen; media palabra no.
+ *
+ * 🚨 Y con SEIS pestañas (09/09/2026, «Mi QR») el reparto sin suelo vuelve a
+ * partir palabras — pero esta vez ni envolviendo a dos líneas alcanza: a 320
+ * px cada ítem baja a 50 px y una palabra suelta como «Siniestros» o
+ * «Contactos» no tiene espacio ni para envolverse (no hay una segunda palabra
+ * en la que partir), así que `overflow: visible` la deja pintarse ENCIMA del
+ * ítem vecino — texto de dos pestañas distintas literalmente superpuesto,
+ * medido con Playwright. `min-width: 76px` (el ancho natural de «Contactos»,
+ * la más larga de una sola palabra, con margen) es el suelo por debajo del
+ * cual el reparto se rinde: el carril vuelve a su `overflow-x` de base y
+ * pasa a deslizarse, en vez de aplastar el texto hasta que se solape.
  */
 @media (max-width: 1023px) {
   .portal-nav {
@@ -288,7 +308,7 @@ input, select, textarea, button { font: inherit; }
   }
   .portal-nav-item {
     flex: 1 1 0;
-    min-width: 0;
+    min-width: 76px;
     justify-content: center;
     text-align: center;
     padding: 0 4px;
@@ -312,7 +332,10 @@ input, select, textarea, button { font: inherit; }
   bottom: -1px;
   height: 2px;
   border-radius: 2px;
-  background: var(--text);
+  /* De marca y no del color del texto: es el ÚNICO sitio del carril donde se
+   * puede decir «estás aquí» con color sin competir con el semáforo de las
+   * filas, que vive dentro de la isla y no aquí. */
+  background: var(--brand);
   opacity: 0;
   transition: opacity 150ms;
 }
@@ -320,7 +343,7 @@ input, select, textarea, button { font: inherit; }
   opacity: 1;
 }
 .portal-nav-item[data-activa] {
-  color: var(--text);
+  color: var(--brand-ink);
   font-weight: 600;
 }
 
@@ -330,7 +353,13 @@ input, select, textarea, button { font: inherit; }
    * Ese contraste de dos grises es lo que separa las dos zonas sin una línea. */
   .portal-shell {
     grid-template-columns: 256px minmax(0, 1fr);
-    background: var(--panel2);
+    /* 🎨 El suelo del armazón es MARCA, no un gris neutro. Con `--panel2` el
+     * lateral era andamio de administrador y la isla blanca de dentro parecía
+     * otra aplicación metida en un marco ajeno — que es literalmente lo que
+     * dijo Alberto: «un básico fuera de Grupo ASegura y dentro otro diseño».
+     * Con el suelo teñido, el lateral y la isla se leen como UNA superficie con
+     * dos alturas: la marca abajo, el papel encima. */
+    background: color-mix(in oklab, var(--brand) 7%, var(--bg2));
   }
   .portal-nav {
     flex-direction: column;
@@ -363,27 +392,34 @@ input, select, textarea, button { font: inherit; }
     display: none;
   }
   .portal-nav-item[data-activa] {
-    background: var(--surface-active, var(--panel2));
-    color: var(--text);
+    /* El mismo par que la franja del calendario (`--brand-soft`/`--brand-ink`):
+     * un solo vocabulario para «esto es de la casa». Sigue sin ser el azul a
+     * plena carga, que se reserva a las ACCIONES. */
+    background: var(--brand-soft);
+    color: var(--brand-ink);
   }
   /* La ISLA: el contenido flota sobre el tono del lateral. */
   .portal-contenido {
     background: var(--bg);
-    border-radius: calc(var(--radius) * 1.4);
+    /* El mismo radio que las secciones de dentro (×1.8), no ×1.4: con dos
+     * radios distintos la isla y sus tarjetas parecen de dos juegos. */
+    border-radius: calc(var(--radius) * 1.8);
     box-shadow: var(--shadow);
     margin: 8px 8px 8px 0;
-    padding: 28px 32px 56px;
+    padding: 40px 32px 72px;
+    /* La atmósfera de marca es un `::before` absoluto: sin esto se sale por las
+     * esquinas redondeadas de la isla y se ve un rectángulo azul asomando. */
+    overflow: clip;
     min-height: calc(100vh - var(--alto-barra) - 16px);
   }
 }
 
-/* Interruptor de tema. Empujado al extremo con `margin-left:auto`, que lo deja
- * a la derecha sin tener que envolver el resto de la barra en otro contenedor.
+/* Interruptor de tema. Vive dentro de `.marca-acciones`, que es quien lo
+ * empuja al extremo: aquí NO va `margin-left:auto` (ver esa regla).
  *
  * 44px de lado: es el mínimo táctil de la regla de la casa, y esta barra la usa
  * gente mayor desde el móvil. Los 18px del icono viven centrados dentro. */
 .tema-boton {
-  margin-left: auto;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -425,7 +461,10 @@ input, select, textarea, button { font: inherit; }
   color: var(--primary);
 }
 .marca-nombre {
-  font-family: var(--serif);
+  /* 🚨 `--display`, NO `--serif`: en esta marca `--serif` ES Inter y el nombre
+   * engaña (la misma trampa que ya documenta el h1). Con Inter, el nombre de la
+   * correduría se pintaba con la misma letra que un menú de sistema. */
+  font-family: var(--display, var(--serif));
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -445,6 +484,219 @@ input, select, textarea, button { font: inherit; }
   .marca-coletilla { display: none; }
 }
 
+/* ── Las acciones de la barra: UN contenedor con el único `margin-left:auto` ──
+ *
+ * Hasta el 08/09/2026 el `auto` lo llevaba `.salir-form` y se le quitaba al
+ * interruptor con una regla de hermano (`+`, luego `~`). Cada botón que se
+ * añadía (la campana, instalar) obligaba a retocar esa regla, y como instalar
+ * solo existe si el navegador lo ofrece, el reparto del hueco cambiaba según
+ * el dispositivo sin que nada fallara. Ahora el `auto` es del contenedor y los
+ * botones de dentro NO llevan ninguno: los separa el `gap`.
+ *
+ * Los botones NO son de marca a plena carga salvo instalar: salir y el tema
+ * van en contorno sobre papel (acciones de la cabecera, no del contenido); la
+ * única acción azul es la que se invita a pulsar. */
+.marca-acciones {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 📱 Con cuatro botones a la derecha (instalar, avisos, tema, salir: 08/09/2026)
+ * la barra se salía 28 px a 320 px (medido con Playwright). Hasta 380 px los
+ * huecos bajan a 6 px. Un botón menos no es opción: Salir tiene que verse,
+ * instalar es lo que pidió Alberto, y el tema y los avisos ya son solo icono.
+ *
+ * Y en el MÓVIL (≤ 639 px) el NOMBRE no se pinta (12/09/2026; Alberto, con la
+ * captura: «Grupo ASegura quitarlo, ocupa mucho»). Se queda el monograma, que
+ * lleva el `aria-label` de la marca, así que quién es la correduría se sigue
+ * diciendo — a un lector de pantalla y, a dos líneas, en Fraunces, en el
+ * escritorio, donde el sitio sobra. Hasta hoy solo se escondía por debajo de
+ * 340 px: en un móvil normal el wordmark a dos líneas era lo más alto de la
+ * barra y la única pieza que no hacía nada. */
+@media (max-width: 380px) {
+  .marca-barra,
+  .marca-acciones { gap: 6px; }
+}
+@media (max-width: 639px) {
+  .marca-nombre { display: none; }
+}
+.salir-form {
+  flex: 0 0 auto;
+  display: flex;
+}
+.salir-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 44px de alto: el mínimo táctil de la regla de la casa. Esta barra la usa
+   * gente de 50-70 años desde el móvil, y salir de una pantalla que enseña sus
+   * pólizas no puede depender de acertar con el dedo. */
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.salir-boton:hover {
+  background: var(--surface-hover, var(--panel2));
+  color: var(--text);
+}
+.salir-boton:active {
+  background: var(--surface-active, var(--panel2));
+}
+
+/* ── La campana de avisos ──────────────────────────────────────────────────
+ *
+ * Mismo tamaño y familia que el interruptor (44 px, contorno sobre papel): son
+ * acciones de la cabecera, no del contenido. El globo va ENCIMA de la esquina
+ * y en color de acento: es lo único de la barra que pide ser mirado, y tiene
+ * que serlo — sin el número, la campana esconde (ver `app/Campana.tsx`).
+ *
+ * El panel es un desplegable `position:absolute` colgado de la campana, ENCIMA
+ * del contenido a propósito; en el móvil (≤ 480 px) se ancla a los bordes de la
+ * pantalla, que es la única forma de que un panel de 320 px quepa en una de 320. */
+.campana {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+}
+.campana-boton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.campana-boton:hover {
+  background: var(--surface-hover, var(--panel2));
+  color: var(--text);
+}
+.campana-boton[aria-expanded='true'],
+.campana-boton[data-globo] {
+  color: var(--text);
+}
+.campana-globo {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--brand-ink);
+  /* Un filete del color de la barra para que el globo no se funda con el borde
+   * del botón: parece flotar encima, que es lo que es. */
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--brand) 4%, var(--surface));
+}
+.campana-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, calc(100vw - 16px));
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  z-index: 30;
+}
+@media (max-width: 480px) {
+  .campana-panel {
+    /* Anclado a la pantalla, no al botón: a 320 px el botón está a 8 px del
+     * borde y un panel colgado de él se saldría por la izquierda. */
+    position: fixed;
+    top: calc(var(--alto-barra) + 4px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
+.campana-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.campana-aviso {
+  display: block;
+  padding: 10px 12px;
+  border-radius: calc(var(--radius) * 0.6);
+  color: inherit;
+  text-decoration: none;
+}
+.campana-aviso:hover,
+.campana-aviso:focus-visible {
+  background: var(--surface-hover, var(--panel2));
+}
+.campana-aviso-titulo {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.campana-aviso-detalle {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.campana-vacio {
+  margin: 0;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.campana-ilegible {
+  color: var(--text);
+  background: var(--primary-light);
+  border-radius: calc(var(--radius) * 0.6);
+}
+.campana-reintentar {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.campana-push {
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.campana-push .campana-reintentar {
+  font-size: 13px;
+  font-weight: 500;
+}
+
 /* ── Secciones y tarjetas ─────────────────────────────────────────────────
  *
  * 📐 Las medidas salen del fuente de la app de Manuel, no de un ojo: radio
@@ -453,22 +705,81 @@ input, select, textarea, button { font: inherit; }
  * título de página, 18/600 el de sección, 16/500 el de tarjeta, 14 el cuerpo,
  * 12 lo secundario — con `letter-spacing: -0.025em` en lo que pasa de 18px,
  * que es lo que hace que un titular no parezca una etiqueta de formulario. */
+/* ── El aire y la escala de `grupoasegura.es` (07/09/2026) ─────────────────
+ * Alberto: «el diseño no es acorde a las páginas de los seguros», comparando
+ * con la web pública. Medido antes de tocar nada: la paleta y las TRES sombras
+ * son idénticas carácter a carácter en las dos apps (ambas inyectan
+ * `MARCA_ASEGURA`). Lo que separaba a la intranet de la web NO era el color,
+ * era la COMPRESIÓN:
+ *
+ *   sección: web 72px de padding vertical (96 en escritorio) · portal 16 + 24
+ *   h2:      web 32 → 36 → 48px en Fraunces · portal 18px en Inter
+ *
+ * O sea que el h2 del portal era más pequeño que el CUERPO de la web (16px).
+ * Aquí se sube el aire y la escala; lo que NO se copia es el rango entero de la
+ * web (h1 hasta 67px, secciones de 96px): esto es una pantalla de trabajo y
+ * cada píxel de aire es una póliza menos a la vista. */
 .seccion {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 1.4);
+  /* ×1.8 = 28,8px, el mismo radio que `.tarjeta`/`.panel` de la web. Las filas
+   * de dentro se quedan más bajas a propósito: la jerarquía la marca el radio. */
+  border-radius: calc(var(--radius) * 1.8);
   box-shadow: var(--shadow);
-  padding: 16px;
-  margin-bottom: 24px;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+/* 🚨 Va AQUÍ y no en el bloque de escritorio que hay más ARRIBA en el fichero,
+ * donde se escribió primero: aquel está ANTES que la regla base, así que con la
+ * misma especificidad ganaba la última y la media query no hacía NADA. Medido
+ * con Playwright: a 1440px seguía dando 24px. Fallo mudo — el CSS es válido, no
+ * falla ningún test, y solo se ve midiendo con el navegador.
+ *
+ * En escritorio la web usa 96px de padding de sección; aquí 32 dentro de la
+ * tarjeta, que con los 32 de separación entre secciones da un ritmo comparable
+ * sin gastar media pantalla en aire. */
+@media (min-width: 1024px) {
+  .seccion {
+    padding: 32px;
+  }
+}
+/* El RÓTULO sobre el titular de sección. Es el gesto más reconocible de la web
+ * (`.antetitulo`) y aquí cuesta una clase: 12px, versalitas muy espaciadas en
+ * gris, encima del h2. Sin él, el titular arranca en seco. */
+.antetitulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  color: var(--muted);
+  text-transform: uppercase;
 }
 .seccion h2 {
-  font-family: var(--serif);
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.4;
-  margin: 0 0 12px;
+  /* 🚨 `--display` (Fraunces), NO `--serif`: en esta marca `--serif` es Inter y
+   * el nombre engaña — la misma trampa que ya documenta el h1. El h2 era el
+   * último titular del portal que seguía en la fuente de cuerpo. */
+  font-family: var(--display, var(--serif));
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.2;
+  margin: 0 0 16px;
   letter-spacing: -0.025em;
   text-wrap: balance;
+}
+/* La ENTRADILLA de la web (`.lead`): el párrafo que explica una sección antes
+ * de la lista. `max-width: 32rem` no es decorativo — una línea de 1.056px es
+ * ilegible, y ese es justo el ancho útil de la isla en escritorio. */
+.lead {
+  margin: 0 0 16px;
+  font-size: 16px;
+  line-height: 1.625;
+  color: var(--muted);
+  max-width: 32rem;
 }
 
 /* ── El titular de página ──────────────────────────────────────────────────
@@ -496,6 +807,62 @@ h1 {
 /* El acento en itálica de marca, que es la firma del titular de la web. Va
    sobre `<em>` y no sobre una clase: en «Mis <em>seguros</em>» la palabra
    destacada es la que lleva el significado, así que el énfasis es semántico. */
+/* ── La ATMÓSFERA de la web, traída al portal (07/09/2026) ─────────────────
+ * Alberto: «igual la web… debería parecer como la expansión de la web. Todo
+ * corporativo». Es el degradado exacto de `.hero-atmosfera` de `asegura-web`:
+ * `--brand` al 7 % arriba, al 2 % en medio y transparente abajo.
+ *
+ * 🚨 Y aquí está la condición que hace que esto NO estropee la pantalla: el
+ * color de marca entra en FONDOS SUAVES (7 % y 2 %), nunca saturado. En la
+ * bóveda el color saturado ya significa algo —«vencida», «al cobro»— y si la
+ * decoración compitiera con el semáforo, el aviso dejaría de destacar
+ * justamente en la pantalla donde hay que verlo. Un 7 % no compite con nada;
+ * una banda azul plena sí.
+ *
+ * `z-index: -1` y `pointer-events: none`: es fondo, no toca nada.
+ * En la isla de escritorio va recortada por su radio (`overflow: clip`). */
+.portal-contenido {
+  position: relative;
+}
+.portal-contenido::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 26rem;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--brand) 7%, transparent),
+    color-mix(in oklab, var(--brand) 2%, transparent),
+    transparent
+  );
+}
+
+/* El saludo de entrada, encima del titular. Alberto: «que al entrar el cliente
+ * sea más ameno, no tan frío».
+ *
+ * En la fuente de CUERPO y en gris a propósito: si fuera Fraunces competiría
+ * con el h1 que tiene justo debajo, y lo que manda en la pantalla sigue siendo
+ * dónde estás, no que te hayamos saludado. */
+.saludo {
+  margin: 0 0 4px;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* El único salto de escala del titular. La web llega a 60 y 67px; aquí se queda
+ * en 40 a propósito: allí el h1 es el primer golpe de vista de un escaparate, y
+ * aquí es la etiqueta de una pantalla que se abre a diario. */
+@media (min-width: 640px) {
+  h1 {
+    font-size: 40px;
+  }
+}
 h1 em {
   font-style: italic;
   color: var(--brand);
@@ -533,8 +900,8 @@ h1 em {
 .cartera-card {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 1.4);
-  padding: 16px;
+  border-radius: calc(var(--radius) * 1.8);
+  padding: 20px;
   min-width: 0;
   background: var(--surface);
   /* 🔢 `tabular-nums` en toda la tarjeta. No es un pulido: aquí casi todo son
@@ -678,6 +1045,15 @@ h1 em {
   .titular-cabecera {
     position: static;
   }
+  /* Y la fila no se levanta: el color del borde ya dice que está bajo el
+   * puntero, así que no se pierde la señal, solo el movimiento. */
+  .poliza-enlace {
+    transition: background-color 150ms, border-color 150ms;
+  }
+  .poliza-enlace:hover {
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 .polizas {
@@ -699,11 +1075,21 @@ h1 em {
   background: var(--surface);
   color: inherit;
   text-decoration: none;
-  transition: background-color 150ms, border-color 150ms;
+  transition:
+    transform 300ms var(--curva),
+    background-color 300ms var(--curva),
+    border-color 300ms var(--curva),
+    box-shadow 300ms var(--curva);
 }
+/* El hover de la web (`a.tarjeta`) levanta la tarjeta y tiñe el borde de marca.
+ * 🚨 Aquí `scale(1.01)` y no el `1.03` de allí: aquellas son tarjetas de tres
+ * columnas y estas son filas a todo el ancho de la isla — un 3 % sobre 1.056px
+ * son 32px de desplazamiento y la fila pisa a sus vecinas. */
 .poliza-enlace:hover {
   background: var(--surface-hover, var(--panel2));
-  border-color: var(--muted2);
+  border-color: color-mix(in oklab, var(--brand) 40%, transparent);
+  box-shadow: var(--shadow);
+  transform: scale(1.01);
 }
 /* El icono, en su cuadro tintado de marca. Es DECORACIÓN: dos pólizas de hogar
  * de la misma compañía llevan el mismo, así que lo que distingue es el título. */
@@ -746,6 +1132,19 @@ h1 em {
   font-size: 20px;
   line-height: 1;
   color: var(--muted2);
+}
+/* La acción de QUITAR de una póliza aportada, debajo de su tarjeta y fuera del
+ * enlace (un botón dentro de un <a> no es HTML válido y el clic navegaría). Va
+ * alineada a la derecha, con el tamaño táctil de `.boton-tenue` (44px); la
+ * confirmación (`.aviso-linea`) se despliega a todo el ancho de la fila. */
+.poliza-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 6px 4px 0;
+}
+.poliza-acciones .aviso-linea {
+  flex: 1 1 100%;
 }
 /* La ajena, marcada también en la fila: filete de acento + la etiqueta «De X»
  * que pinta el propio componente. Las dos cosas, porque el color solo no le
@@ -888,6 +1287,28 @@ h1 em {
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+/* El LUGAR y la DESCRIPCIÓN del siniestro (07/09/2026). Los dos ocupan su
+ * propio renglón dentro de la fila (`flex-basis: 100%`): la primera línea es el
+ * índice —cuándo, en qué estado, con qué referencia— y debajo va el relato. Con
+ * la descripción metida en esa primera línea, la fila crecía hasta cuatro
+ * renglones y el estado dejaba de encontrarse de un vistazo. */
+.siniestro-lugar {
+  flex-basis: 100%;
+  min-width: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.siniestro-desc {
+  flex-basis: 100%;
+  min-width: 0;
+  margin: 2px 0 0;
+  line-height: 1.45;
+  /* Texto que escribió una persona, no un dato nuestro: va en el color del
+   * texto (se lee) pero sin negrita — no es un titular, es lo que pasó. */
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 419px) {
   /* A 320 px el `margin-left:auto` dejaría la referencia pegada al borde
    * derecho y separada de su fila; mejor que empiece donde empieza todo. */
@@ -895,6 +1316,47 @@ h1 em {
     margin-left: 0;
     flex-basis: 100%;
   }
+}
+
+/* Las COBERTURAS de una póliza, TODAS (07/09/2026). Una por renglón: son la
+ * lista de lo que el cliente ha comprado y en un párrafo con puntos medios
+ * dejan de leerse a partir de la cuarta. Rejilla de una columna en móvil y de
+ * dos a partir de 560 px, que es donde una lista de nueve empieza a hacer una
+ * columna larga y vacía a su derecha. `minmax(0,1fr)` para que un nombre largo
+ * («Responsabilidad Civil Explotación») no ensanche la pista y arrastre la
+ * página entera. */
+.coberturas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px 16px;
+}
+@media (min-width: 560px) {
+  .coberturas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.coberturas li {
+  position: relative;
+  padding-left: 16px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+/* El punto va en el color de marca y no como `list-style`: con `::before` se
+ * queda alineado con la primera línea cuando el nombre ocupa dos. */
+.coberturas li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand, currentColor);
 }
 
 /* ── La FICHA de una póliza ──────────────────────────────────────────────── */
@@ -1170,7 +1632,36 @@ h1 em {
 .boton.secundario { background: var(--surface); color: var(--primary); }
 .boton.secundario:hover { background: var(--primary-light); border-color: var(--primary-hover); }
 .boton:disabled { opacity: 0.6; cursor: progress; }
+
 .aviso-linea .boton { margin-top: 10px; }
+
+/* El selector de zonas del daño (ParteSiniestro.tsx). 3 columnas × 3 filas con
+   forma de coche (delantera arriba, trasera abajo): la misma disposición que
+   ya usan Mapfre/Allianz/Línea Directa. Botones REALES, no una silueta con
+   regiones recortadas a mano — ver la cabecera de `ZonasVehiculo` en el
+   componente sobre por qué. `aspect-ratio` en vez de alto fijo: a 320 px de
+   ancho los botones siguen siendo cuadrados y táctiles sin desbordar. */
+.zonas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  max-width: 320px;
+}
+.zonas-boton {
+  aspect-ratio: 1;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 6px;
+  cursor: pointer;
+}
+.zonas-boton:hover { background: var(--primary-light); border-color: var(--primary-hover); }
+.zonas-boton.sel { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
+.zonas-boton:disabled { opacity: 0.6; cursor: progress; }
 
 /* ── Parte de siniestro ──────────────────────────────────────────────────
  * Lo abre gente desde el móvil justo después del golpe, así que aquí no hay
@@ -1486,6 +1977,19 @@ h1 em {
  * diseño lo que el copy tiene prohibido, dejar creer que se borra todo.
  * A 320 px van apiladas; en cuanto caben, una al lado de la otra. */
 .tus-datos { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); }
+/* Plegado por defecto y con voz baja: no es una acción que se ofrezca al
+   mismo nivel que el resto de la pantalla (09/09/2026). El marcador nativo
+   de <details> ya avisa de que se abre; no se duplica con una flecha propia. */
+.supresion-plegable summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: revert;
+  width: fit-content;
+}
+.supresion-plegable summary:hover { color: var(--text); }
+.supresion-plegable-cuerpo { margin-top: 12px; }
 .supresion-intro { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
 .supresion-alcance { display: grid; gap: 14px; margin-bottom: 14px; }
 @media (min-width: 560px) { .supresion-alcance { grid-template-columns: 1fr 1fr; } }
@@ -2170,5 +2674,497 @@ h1 em {
   .hoja-qr p {
     max-width: none;
     font-size: 11px;
+  }
+}
+
+/* ── «¿De quién es esta póliza?» ───────────────────────────────────────────
+ *
+ * Va ANTES del botón de subir y no después, porque la respuesta viaja en el
+ * mismo envío. Y sin marco de `fieldset` de navegador: el borde por defecto es
+ * lo único de todo el portal que no sigue la marca. */
+.de-quien {
+  margin: 0 0 14px;
+}
+/* Una sola casilla, a la vista pero sin puerta: la mayoría sube pólizas
+ * personales y no tiene que contestar nada. 44px de alto: el mínimo táctil de
+ * la casa — esto lo pulsa gente mayor desde el móvil. */
+.de-quien-casilla {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--panel);
+  cursor: pointer;
+  max-width: 100%;
+}
+.de-quien-casilla input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--brand);
+}
+.de-quien-casilla:has(input:checked) {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+.de-quien-empresa {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.de-quien-empresa label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+@media (min-width: 560px) {
+  /* El nombre pide más sitio que el CIF, y a partir de aquí caben los dos. */
+  .de-quien-empresa {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+  .de-quien-empresa > p {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── El botón «Instalar» de la barra ──────────────────────────────────────
+ *
+ * Hasta el 08/09/2026 era una franja encima de las pólizas (y después, además,
+ * una entrada de la campana). Alberto: «el instalador moverlo en el banner
+ * fijo de arriba». Es el único botón de marca a plena carga de la barra: es la
+ * acción que se invita a pulsar. 44 px de alto (regla de la casa) y, por debajo
+ * de 480 px, solo el icono en 44×44 — a 320 px cuatro botones con texto no
+ * caben al lado de la marca.
+ *
+ * El globo de iOS es un desplegable `position:absolute` colgado del botón,
+ * encima del contenido a propósito (se cierra con Entendido, fuera o Escape);
+ * en el móvil se ancla a los bordes de la pantalla como el panel de la campana. */
+.instalar {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+}
+.instalar-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 1px solid var(--primary);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 150ms, border-color 150ms;
+}
+.instalar-boton:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+@media (max-width: 480px) {
+  .instalar-texto {
+    /* Solo el icono: el nombre accesible lo lleva el `aria-label`. */
+    display: none;
+  }
+  .instalar-boton {
+    width: 44px;
+    padding: 0;
+  }
+}
+.instalar-globo {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, calc(100vw - 16px));
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  z-index: 30;
+  color: var(--text);
+  font-weight: 400;
+  white-space: normal;
+  text-align: left;
+}
+@media (max-width: 480px) {
+  .instalar-globo {
+    /* Anclado a la pantalla, no al botón: a 320 px un globo colgado del botón
+     * se saldría por la izquierda. */
+    position: fixed;
+    top: calc(var(--alto-barra) + 4px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
+.instalar-globo > strong {
+  display: block;
+  font-size: 14px;
+}
+.instalar-globo p {
+  margin: 4px 0 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+/* El glifo de Compartir, dentro de la frase. Sin medidas un `<svg>` se pinta a
+ * 300×150 px y revienta el globo: no hereda el tamaño del texto como una letra.
+ * `vertical-align: -2px` lo sienta en la línea base en vez de dejarlo flotando. */
+.instalar-app-glifo {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  color: var(--primary);
+}
+.instalar-globo-cerrar {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* ─── «Tus datos de contacto»: el cliente comprueba y corrige (08/09/2026) ───
+   El bloque de «Comprueba tus datos» va en el tono de `.confirmacion` (acento,
+   no alarma): es una petición amable al entrar, no un fallo. Los dos botones se
+   apilan a 320px —en una fila quedarían por debajo de los 44px táctiles— y
+   pasan a una fila en cuanto caben. La línea de «confirmados el…» es discreta
+   a propósito: cuando está vigente no hay nada que pedirle.
+   El formulario: una columna siempre (a 320px dos campos por fila dejan el
+   código postal en 140px y la calle sin sitio). El input hereda el tamaño del
+   sistema (16px) para que Safari en iPhone no haga zoom al enfocarlo. */
+.contacto-revisar {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: calc(var(--radius) * 0.8);
+  padding: 14px;
+  margin: 0 0 14px;
+  min-width: 0;
+}
+.contacto-revisar-titulo { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: var(--accent-ink); }
+.contacto-revisar-texto { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: var(--text); }
+.contacto-ficha { margin-bottom: 14px; }
+.contacto-ficha dd { overflow-wrap: anywhere; }
+.contacto-nota { font-size: 12px; color: var(--muted); }
+.contacto-acciones { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+@media (min-width: 420px) {
+  .contacto-acciones { grid-template-columns: repeat(auto-fit, minmax(140px, max-content)); }
+  .contacto-acciones .boton { width: auto; }
+}
+.contacto-vigente {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.contacto-vigente .boton-tenue { min-width: 0; }
+.mi-direccion-form .contacto-acciones { margin-top: 4px; }
+.mi-direccion-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.mi-direccion-campo { display: grid; gap: 4px; min-width: 0; }
+.mi-direccion-campo span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.mi-direccion-campo input {
+  width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit;
+}
+.mi-direccion-ok { font-size: 13px; line-height: 1.5; color: var(--positive); margin: 12px 0 0; }
+.mi-direccion-aviso { font-size: 13px; line-height: 1.5; color: var(--warning); margin: 12px 0 0; }
+/* El `<select>` de «Se repite» comparte campo con los `<input>` de arriba: sin
+   esto heredaría el estilo nativo del navegador y desentonaría a su lado. */
+.mi-direccion-campo select {
+  width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit;
+}
+
+/* ── Recordatorios propios (13/09/2026) ─────────────────────────────────────
+ * Los atajos son BOTONES de verdad (`.boton-tenue`, 44px), no `.chip`: ese
+ * es un badge de estado en toda la app y nunca se toca — usarlo aquí para algo
+ * clicable dejaría un elemento por debajo del tamaño táctil de la casa. */
+.recordatorio-sugerencias { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.lista-recordatorios { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.recordatorio-fila {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/* ─── «¿Echas algo de menos?»: la sugerencia del cliente ─────────────────────
+   Vive en la cabecera (09/09/2026), al lado de la campana: mismo tamaño y
+   familia (44px, contorno sobre papel), mismo mecanismo de panel desplegable.
+   El textarea hereda el tamaño del sistema para que Safari en iPhone no haga
+   zoom al enfocarlo. Los dos botones se apilan en móvil: en una fila de 320px
+   quedarían por debajo de los 44px táctiles. */
+.sugerencia {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+}
+.sugerencia-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.sugerencia-boton:hover,
+.sugerencia-boton[aria-expanded='true'] {
+  background: var(--surface-hover, var(--panel2));
+  color: var(--text);
+}
+.sugerencia-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: min(320px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+/* 🚨 Va colgado del BOTÓN (`right: 0` de arriba), y el botón de sugerencia NO
+ * está en el borde derecho de la barra: van instalar, sugerencia, campana,
+ * tema y salir detrás. Con `right: 0` a secas, el panel — hasta 320 px de
+ * ancho — se abre hacia la izquierda desde un botón que en un móvil normal
+ * está a mitad de la barra, y con «Alberto: sugerencia no se abre bien» es
+ * justo lo que se veía: la mitad se sale por la izquierda o queda debajo de
+ * los otros botones. Es el MISMO fallo que ya se corrigió en `.campana-panel`
+ * (05/09/2026) y aquí no se había portado. Por debajo de 480 px se ancla a la
+ * pantalla, no al botón: es la única forma de que cuepa un panel de 320 px en
+ * una pantalla de 320. */
+@media (max-width: 480px) {
+  .sugerencia-panel {
+    position: fixed;
+    top: calc(var(--alto-barra) + 4px);
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
+.sugerencia-titulo { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+.sugerencia-intro { font-size: 13px; line-height: 1.5; color: var(--muted); margin: 0 0 10px; }
+.sugerencia-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.sugerencia-form textarea {
+  width: 100%; min-width: 0; box-sizing: border-box; min-height: 96px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px; resize: vertical;
+  background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit; line-height: 1.5;
+}
+.sugerencia-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ─── El filtro «En vigor / Todas» por titular (09/09/2026) ──────────────────
+   Alberto: «lo suyo es ver solo las pólizas en vigor y ocultar las canceladas
+   porque da confusión; un filtro por cada panel y que salga por defecto las
+   que están en vigor». Dos pastillas, no un `<select>`: son dos opciones y
+   esta pantalla la usa gente de 50-70 años — un desplegable cuesta un toque
+   más para lo mismo. La nota de lo escondido es lo que impide que «en vigor»
+   se lea como «solo tienes esta»: sin ella, el filtro sería la misma trampa
+   que la casa persigue en otros sitios (esconder sin decir que se esconde). */
+.filtro-vigencia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+.filtro-vigencia-opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+}
+.filtro-vigencia-opcion:hover { color: var(--text); }
+.filtro-vigencia-opcion[aria-pressed='true'] {
+  color: var(--brand-ink, var(--text));
+  background: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--accent) 35%, var(--panel));
+  font-weight: 600;
+}
+.filtro-vigencia-n { font-variant-numeric: tabular-nums; opacity: 0.85; }
+.filtro-vigencia-nota { font-size: 12px; color: var(--muted); }
+
+/* ─── «Mis datos» (09/09/2026): canal + dirección en dos grupos ──────────────
+   Dos `fieldset`, no una lista plana: teléfono/correo son POR DÓNDE se avisa,
+   la dirección es a DÓNDE se escribe, y son dos preguntas distintas para quien
+   lee. El `legend` hereda la tipografía de `.lista-titulo`. */
+.mis-datos-grupo {
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.mis-datos-grupo legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+@media (min-width: 560px) {
+  .mis-datos-grupo:last-of-type { grid-template-columns: 1fr 1fr; }
+}
+
+/* La banda de «vista de corredor» (08/09/2026): Alberto mirando el portal como
+   lo ve un cliente. En el flujo, encima de la navegación; el ámbar es el tono
+   de «ojo», no el de error: no ha fallado nada, es que no eres quien parece. */
+.banda-corredor {
+  /* `.portal-shell` es un grid de 2 columnas desde 1024px (256px nav + resto).
+   * Sin esto, esta banda es un TERCER hijo sin columna asignada y el
+   * auto-placement de CSS Grid descoloca todo lo demás: el nav se cuela en la
+   * columna del contenido y el contenido acaba aplastado en la del nav (visto
+   * en producción el 15/09/2026, vista de corredor de Juan Manuel López
+   * Benjumea). La banda tiene que ocupar su propia fila entera siempre. */
+  grid-column: 1 / -1;
+  padding: 10px 16px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--warning-bg);
+  border-bottom: 2px solid var(--warning-border);
+  overflow-wrap: anywhere;
+}
+
+/* ── Móvil compacto (12/09/2026) ────────────────────────────────────────────
+ *
+ * Alberto, con la captura de su móvil: «ocupa mucho». Medido sobre esa
+ * captura (412 px): antes de la primera póliza iban la barra (60 px), el carril
+ * (45), el saludo + h1 (≈ 90), y la tarjeta gastaba 24 px de padding por lado
+ * más otros 24 de la tarjeta anidada («Añade una póliza» es una `.seccion`
+ * dentro de otra): a 412 px de ancho, 96 px eran solo márgenes.
+ *
+ * Va al FINAL del fichero a propósito: misma especificidad que las reglas base,
+ * así que gana la última — es la misma trampa que ya se documentó en `.seccion`
+ * (una media query escrita ANTES de la regla base no hacía nada).
+ *
+ * Lo que NO se toca: los 44 px táctiles de los botones y del carril, el
+ * saludo (lo pidió Alberto) y el h1, que es lo único que dice en qué pestaña
+ * estás cuando el carril se ha ido con el scroll. */
+@media (max-width: 639px) {
+  :root {
+    --alto-barra: 52px;
+  }
+  .marca-barra {
+    padding: 4px 12px;
+  }
+  .portal-contenido {
+    padding: 12px 16px 40px;
+  }
+  .saludo {
+    font-size: 14px;
+    margin-bottom: 2px;
+  }
+  h1 {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+  .seccion {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  /* La tarjeta anidada (el alta dentro de la cartera): 12 px más y sin el
+   * margen de abajo, que ya lo pone la sección que la contiene. */
+  .seccion .seccion {
+    padding: 14px;
+    margin-bottom: 0;
+  }
+  .seccion h2 {
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+}
+
+/* Botón flotante de WhatsApp (14/09/2026) — el mismo `.wsp` de `asegura-web`,
+ * copiado aquí porque las dos apps no comparten CSS. Es "clic para
+ * chatear", no el canal de login: no hace falta WABA, solo un número que
+ * alguien conteste (el mismo que ya usa la web pública). */
+.wsp-flotante {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 6px 20px -4px rgb(37 211 102 / 0.5), 0 2px 6px rgb(0 0 0 / 0.18);
+  transition: transform 0.2s var(--curva), box-shadow 0.2s;
+}
+
+.wsp-flotante:hover {
+  transform: scale(1.06);
+  box-shadow: 0 10px 26px -4px rgb(37 211 102 / 0.6), 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+.wsp-flotante:active {
+  transform: scale(0.96);
+}
+
+@media (max-width: 639px) {
+  .wsp-flotante {
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wsp-flotante {
+    transition: none;
+  }
+  .wsp-flotante:hover,
+  .wsp-flotante:active {
+    transform: none;
   }
 }

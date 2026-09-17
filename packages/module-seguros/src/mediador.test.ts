@@ -12,6 +12,7 @@ import {
   FECHA_TEXTOS_WEB,
   lineaIdentificacion,
   remitenteCorreo,
+  REMITENTE_CORREDURIA,
 } from './mediador.ts'
 
 // Estos tests no comprueban «que compile»: comprueban que no se pueda borrar en
@@ -135,22 +136,47 @@ test('el nombre del remitente sale del repo, no de la variable de entorno', () =
   assert.equal(remitenteCorreo(`  ${DIR}  `), BUENO)
 })
 
-test('sin dirección utilizable NO se inventa un remitente', () => {
-  // Devolver algo aquí sería peor que no enviar: el correo saldría desde una
-  // dirección que nadie ha verificado, o rebotaría sin que se sepa por qué.
-  // Quien llama ya trata el `null` como avería de configuración.
-  assert.equal(remitenteCorreo(undefined), null)
-  assert.equal(remitenteCorreo(null), null)
-  assert.equal(remitenteCorreo(''), null)
-  assert.equal(remitenteCorreo('   '), null)
-  assert.equal(remitenteCorreo(MEDIADOR.marca), null, 'un nombre sin dirección no es un remitente')
-  assert.equal(remitenteCorreo(`${MEDIADOR.marca} <>`), null)
-  assert.equal(remitenteCorreo('dos direcciones@a.es y@b.es'), null, 'un valor con espacios no es una dirección')
+/**
+ * 🚨 Este cepo dice lo CONTRARIO que hasta el 07/09/2026, y es a propósito.
+ *
+ * Antes, sin env el remitente era `null` y el correo NO salía; la idea era que
+ * inventarse una dirección sería peor. En la práctica el fallo real fue otro:
+ * la variable había que acertarla en cuatro sitios y, cuando faltaba, el botón
+ * de invitar callaba. Dictado de Alberto: «solo hola@grupoasegura.es, ponlo
+ * donde sea para que no vuelva a haber errores».
+ *
+ * Ya no es inventarse nada: `REMITENTE_CORREDURIA` es la dirección real de la
+ * correduría, vive en el repo y está protegida por los cepos de aquí.
+ */
+test('sin env se usa el remitente de la correduría, y NUNCA queda vacío', () => {
+  const PORDEFECTO = `${MEDIADOR.marca} <${REMITENTE_CORREDURIA}>`
+  assert.equal(remitenteCorreo(undefined), PORDEFECTO)
+  assert.equal(remitenteCorreo(null), PORDEFECTO)
+  assert.equal(remitenteCorreo(''), PORDEFECTO)
+  assert.equal(remitenteCorreo('   '), PORDEFECTO)
+  assert.equal(remitenteCorreo(), PORDEFECTO, 'llamarla sin argumento vale')
+
+  // Una env con basura tampoco puede dejar el correo sin salir: cae al defecto.
+  assert.equal(remitenteCorreo(MEDIADOR.marca), PORDEFECTO, 'un nombre sin dirección no es un remitente')
+  assert.equal(remitenteCorreo(`${MEDIADOR.marca} <>`), PORDEFECTO)
+  assert.equal(remitenteCorreo('dos direcciones@a.es y@b.es'), PORDEFECTO, 'con espacios no es una dirección')
+})
+
+test('🚨 el remitente de la correduría es hola@grupoasegura.es y es UNO', () => {
+  // Lo que Alberto pidió: un solo buzón para todo. Si alguien lo cambia aquí,
+  // cambia en asegura y en el portal a la vez, que es el punto.
+  assert.equal(REMITENTE_CORREDURIA, 'hola@grupoasegura.es')
+  assert.doesNotMatch(REMITENTE_CORREDURIA, /envios\./, 'el subdominio de envío no es el remitente')
+})
+
+test('una env válida sigue mandando sobre el defecto', () => {
+  // No es un valor fijo: sirve para probar otro buzón sin tocar código.
+  assert.equal(remitenteCorreo('otra@grupoasegura.es'), `${MEDIADOR.marca} <otra@grupoasegura.es>`)
 })
 
 test('la marca del remitente es la grafía buena', () => {
   // Cinturón y tirantes: si alguien cambiara `MEDIADOR.marca`, el remitente lo
   // seguiría — y este es el sitio donde lo ve un cliente.
   assert.equal(MEDIADOR.marca, 'Grupo ASegura')
-  assert.match(remitenteCorreo('x@y.es') ?? '', /^Grupo ASegura </)
+  assert.match(remitenteCorreo('x@y.es'), /^Grupo ASegura </)
 })

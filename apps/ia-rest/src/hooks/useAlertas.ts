@@ -6,11 +6,15 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 function getSb() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder'
+    // El `'placeholder'` NO es decorativo (y por eso sobrevive a la migración de claves):
+    // `createBrowserClient` LANZA con una clave vacía, así que sin él un render sin env vars
+    // —el caso que ya contemplaba la URL de al lado— pasaría de degradar a reventar.
+    clavePublicable() || 'placeholder'
   )
 }
 

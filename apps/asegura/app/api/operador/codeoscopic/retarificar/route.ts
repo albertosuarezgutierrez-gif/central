@@ -114,6 +114,11 @@ export async function POST(req: Request) {
       resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
       correcciones,
       catastro: esObjeto(cuerpo.catastro) ? cuerpo.catastro : null,
+      // El escape hatch del guardián de reutilización. Solo el booleano exacto:
+      // plataforma lo manda únicamente tras «Descartar y pedir precio de cero».
+      // Hasta el 12/09/2026 esta ruta lo tiraba y el guardián era infranqueable
+      // desde la única pantalla que Alberto abre.
+      forzarNuevo: cuerpo.forzarNuevo === true,
     } satisfies CuerpoRetarificacion,
   })
   // Corta ANTES del vendor (422 faltan datos · 409 ramo · 404 póliza · 503):

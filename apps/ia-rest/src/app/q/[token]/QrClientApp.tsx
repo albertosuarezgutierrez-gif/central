@@ -10,9 +10,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import SelectorIdioma from '@/components/qr/SelectorIdioma'
 import MaitreSheet from '@/components/qr/MaitreSheet'
 import { leerIdioma, guardarIdioma, CodigoIdioma } from '@/lib/useIdiomasCarta'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const ANON_KEY     = clavePublicable()
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   || 'BKLVkE3Cz7RjzFoSqOdmdXQOaRyoh6lNLPEtMNsA-xATgG-6q6MqbwA2NQkcRk5EWQLbpdaagD_o918fWOwmUbc'
 // Opt-in de marketing: oculto hasta que se active (necesita WhatsApp conectado).

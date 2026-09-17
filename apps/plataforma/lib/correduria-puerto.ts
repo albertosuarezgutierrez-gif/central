@@ -459,6 +459,99 @@ export async function lineasCodeoscopic(): Promise<LineasCodeoscopic> {
   }
 }
 
+// ─── Diagnóstico puntual de un proyecto Codeoscopic (12/09/2026) ────────────
+//
+// El Submit real de las 09:41:54 sobre el proyecto 40684815 murió a mitad de
+// ejecución (el candado `submit_in_flight_at` quedó puesto y `cerrarEnvio`
+// nunca corrió), así que no hay confirmación de si Codeoscopic llegó a
+// procesar el `POST .../policy-applications` antes del corte. Reenvía al
+// `GET /api/operador/codeoscopic/proyecto` de asegura (gratis, lectura) para
+// comprobarlo desde AQUÍ — la pantalla de Alberto — en vez de un curl suelto
+// o el portal del vendor.
+
+export type DiagnosticoProyecto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; crudo: unknown }
+
+export function interpretarDiagnosticoProyecto(status: number, json: unknown): DiagnosticoProyecto {
+  if (status === 401) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado !== 'ok') {
+    const mensaje = cadena(o.mensaje) ?? cadena(o.error) ?? `HTTP ${status}`
+    return { estado: 'error', motivo: mensaje }
+  }
+  return { estado: 'ok', crudo: o.crudo ?? null }
+}
+
+export async function diagnosticoProyectoCodeoscopic(projectId: string): Promise<DiagnosticoProyecto> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/proyecto?projectId=${encodeURIComponent(projectId)}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarDiagnosticoProyecto(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ─── Compañías abiertas en Avant2 (¿nos han incluido a Fidelidade?) ─────────
+
+export type CompaniaBuscada =
+  | { estado: 'presente'; id: string; nombre: string; ramos: string[] }
+  | { estado: 'ausente'; companias: string[]; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export type CompaniasCodeoscopic =
+  | { estado: 'sin_configurar'; mensaje: string | null }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; companias: string[]; buscada: CompaniaBuscada }
+
+/**
+ * Puro. Como `interpretarLineas`: `buscada` degrada a `desconocido` ante
+ * cualquier forma rara. Decir «Fidelidade ausente» sobre un JSON que no se
+ * entiende sería afirmar una ausencia sin haberla medido.
+ */
+export function interpretarCompanias(status: number, json: unknown): CompaniasCodeoscopic {
+  if (status === 401) return { estado: 'error', motivo: 'secreto' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje: cadena(o.mensaje) }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: cadena(o.mensaje) ?? `HTTP ${status}` }
+  const companias = Array.isArray(o.companias)
+    ? o.companias.map((c) => cadena((c as Record<string, unknown>)?.nombre)).filter((x): x is string => x !== null)
+    : []
+  return { estado: 'ok', companias, buscada: leerBuscada(o.buscada) }
+}
+
+function leerBuscada(v: unknown): CompaniaBuscada {
+  if (typeof v !== 'object' || v === null) return { estado: 'desconocido' }
+  const b = v as Record<string, unknown>
+  const ramos = Array.isArray(b.ramos) ? b.ramos.map(cadena).filter((x): x is string => x !== null) : []
+  if (b.estado === 'presente') {
+    const id = cadena(b.id)
+    if (id === null) return { estado: 'desconocido' }
+    return { estado: 'presente', id, nombre: cadena(b.nombre) ?? id, ramos }
+  }
+  if (b.estado === 'ausente') {
+    const companias = Array.isArray(b.companias)
+      ? b.companias.map(cadena).filter((x): x is string => x !== null)
+      : []
+    return { estado: 'ausente', companias, ramos }
+  }
+  return { estado: 'desconocido' }
+}
+
+export async function companiasCodeoscopic(buscar: string): Promise<CompaniasCodeoscopic> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/companias?buscar=${encodeURIComponent(buscar)}`)
+    if (r === null) return { estado: 'sin_configurar', mensaje: null }
+    return interpretarCompanias(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
 export async function impagadosAsegura(): Promise<Impagados> {
   try {
     const r = await pedir('/api/operador/impagados')
@@ -886,7 +979,12 @@ export async function escribirBackfillDni(limite?: number): Promise<EscrituraBac
   }
 }
 
-/** Puro: separado para poder probarlo sin red. */
+/**
+ * Puro: separado para poder probarlo sin red. Para el backfill de CONTACTO la
+ * respuesta trae además `derivadosEscritos`/`derivadosRestantes` (las mitades
+ * del email); se suman a `escritos`/`restantes` para que el botón siga
+ * ofreciéndose mientras quede algo, sea el hash principal o una mitad.
+ */
 export function interpretarEscrituraBackfill(status: number, json: unknown): EscrituraBackfillDni {
   if (status === 401 || status === 403) {
     return { estado: 'error', motivo: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos)' }
@@ -900,8 +998,111 @@ export function interpretarEscrituraBackfill(status: number, json: unknown): Esc
   const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
   return {
     estado: 'ok',
-    escritos: n(j.escritos),
-    restantes: n(j.restantes),
+    escritos: n(j.escritos) + n(j.derivadosEscritos),
+    restantes: n(j.restantes) + n(j.derivadosRestantes),
     fallidos: Array.isArray(j.fallidos) ? j.fallidos.length : 0,
+  }
+}
+
+// ─── Backfill del índice de CONTACTO (email + teléfono) ──────────────────────
+// Hermano del de DNI, sin fusiones de por medio: lo único que choca es el email
+// de ficha (el índice de la ficha es UNIQUE), y ésos se cuentan y no
+// se escriben. Por qué existe (08/09/2026): 250 fichas con email y 91 con
+// teléfono tenían el dato y no el hash, y el buscador sólo encuentra por hash.
+
+export type CuentaBackfillContacto = {
+  total: number
+  yaTiene: number
+  sinDato: number
+  /** El valor está guardado pero no descifra. NO es «sin dato». */
+  ilegibles: number
+  /** Descifra pero no produce hash (un teléfono sin dígitos). Tampoco es «sin dato». */
+  noHasheables: number
+  rellenables: number
+  /** Fichas que comparten email con otra. Sólo puede ser > 0 en email. */
+  enChoque: number
+  /** Solo email: filas a las que les falta el índice del dominio o del usuario (búsqueda parcial). */
+  derivadosPendientes: number
+}
+
+export type PlanBackfillContacto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | {
+      estado: 'ok'
+      email: CuentaBackfillContacto
+      telefono: CuentaBackfillContacto
+      /** Grupos de fichas que comparten email. */
+      grupos: number
+      /** Total de filas que se van a escribir (los dos campos, ficha + hijas). */
+      rellenables: number
+      /** Filas de email a las que se les va a escribir alguna mitad. */
+      mitadesPendientes: number
+    }
+
+export async function planBackfillContacto(): Promise<PlanBackfillContacto> {
+  try {
+    const r = await pedir('/api/operador/backfill-contacto')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarPlanBackfillContacto(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** Puro: separado para poder probarlo sin red. */
+export function interpretarPlanBackfillContacto(status: number, json: unknown): PlanBackfillContacto {
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos)' }
+  }
+  const j = (json ?? {}) as Record<string, unknown>
+  if (j.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (j.estado !== 'ok') {
+    const causa = typeof j.causa === 'string' ? j.causa : typeof j.motivo === 'string' ? j.motivo : `respuesta ${status}`
+    return { estado: 'error', motivo: causa }
+  }
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  const cuenta = (v: unknown): CuentaBackfillContacto => {
+    const c = (v ?? {}) as Record<string, unknown>
+    return {
+      total: n(c.total),
+      yaTiene: n(c.yaTiene),
+      sinDato: n(c.sinDato),
+      ilegibles: n(c.ilegibles),
+      noHasheables: n(c.noHasheables),
+      rellenables: n(c.rellenables),
+      enChoque: n(c.enChoque),
+      derivadosPendientes: n(c.derivadosPendientes),
+    }
+  }
+  const resumen = (j.resumen ?? {}) as Record<string, unknown>
+  const email = cuenta(resumen.email)
+  const telefono = cuenta(resumen.telefono)
+  return {
+    estado: 'ok',
+    email,
+    telefono,
+    grupos: Array.isArray(j.choques) ? j.choques.length : 0,
+    rellenables: n(j.restantes),
+    mitadesPendientes: n(j.derivadosRestantes),
+  }
+}
+
+/** Lanza la escritura, por tandas. Misma forma de respuesta que la del DNI. */
+export async function escribirBackfillContacto(limite?: number): Promise<EscrituraBackfillDni> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/backfill-contacto`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ confirmar: 'escribir', limite }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(290_000),
+    })
+    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    return interpretarEscrituraBackfill(res.status, json)
+  } catch {
+    return { estado: 'error', motivo: 'se cortó la conexión antes de recibir el resultado — vuelve a cargar la página para ver cuánto se escribió' }
   }
 }

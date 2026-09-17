@@ -2,10 +2,10 @@
 // Evaluador de reglas + mensajes de voz naturales + push real
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { cabecerasServicio, claveSecreta } from "../_shared/clave-supabase.ts";
 
-const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { db: { schema: 'iarest' } })
+const sb = createClient(Deno.env.get('SUPABASE_URL')!, claveSecreta(), { db: { schema: 'iarest' } })
 const PUSH_URL = Deno.env.get('SUPABASE_URL')!.replace(/\/$/, '') + '/functions/v1/push-send'
-const SRK     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const DEDUP_MIN = 15
 
@@ -253,11 +253,17 @@ async function evaluarRegla(regla: Regla, mesas: Mesa[]): Promise<Match[]> {
 
 async function enviarPush(camarero_ids: string[], title: string, body: string, mensaje_voz: string) {
   if (!camarero_ids.length) return
-  await fetch(PUSH_URL, {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${SRK}` },
-    body: JSON.stringify({ camarero_ids, title, body, mensaje_voz }),
-  }).catch(e => console.error('[push]', e))
+  try {
+    await fetch(PUSH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', ...cabecerasServicio() },
+      body: JSON.stringify({ camarero_ids, title, body, mensaje_voz }),
+    })
+  } catch (e) {
+    // try/catch y no `.catch`: `cabecerasServicio()` se evalúa al construir las cabeceras, o sea
+    // ANTES de que exista la promesa, así que un fallo suyo se escapaba y tumbaba la pasada.
+    console.error('[push]', e)
+  }
 }
 
 Deno.serve(async () => {

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { ResumenFicha } from '@central/module-seguros'
-import type { IntervinienteFicha, PolizaFicha } from '@/lib/ficha-asegura'
+import { urlAutoNuevo, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha } from '@/lib/ficha-asegura'
+import { BtnLink } from '@/components/ui'
 import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
 
 /**
@@ -12,11 +13,12 @@ import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
  * fallo más caro del repo. Aquí, cuando un dato no se ha podido leer se dice
  * —«no se han podido leer los siniestros»— en vez de contarlo como cero.
  */
-export default function TabResumen({ resumen, porClase, intervinientes, clienteId }: {
+export default function TabResumen({ resumen, porClase, intervinientes, clienteId, declaradas }: {
   resumen: ResumenFicha
   porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]>
   intervinientes: IntervinienteFicha[] | null
   clienteId: string
+  declaradas: PolizaDeclaradaFicha[] | null
 }) {
   return (
     <>
@@ -24,7 +26,17 @@ export default function TabResumen({ resumen, porClase, intervinientes, clienteI
         <PideAccion resumen={resumen} vivas={porClase.viva} clienteId={clienteId} />
       </Tarjeta>
 
-      <Polizas titulo="Pólizas vivas" polizas={porClase.viva} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={intervinientes} />
+      <Polizas
+        titulo="Pólizas vivas"
+        polizas={porClase.viva}
+        vacio="Ninguna póliza activa entra hoy por CIMA."
+        intervinientes={intervinientes}
+        accion={
+          <BtnLink href={urlAutoNuevo(clienteId)} variante="secundario" tam="sm">
+            ➕ Presupuestar auto
+          </BtnLink>
+        }
+      />
 
       {porClase.pendiente_cima.length > 0 && (
         <Polizas
@@ -36,11 +48,13 @@ export default function TabResumen({ resumen, porClase, intervinientes, clienteI
         />
       )}
 
-      {(porClase.cancelada.length > 0 || porClase.historica.length > 0) && (
+      {(porClase.cancelada.length > 0 || porClase.historica.length > 0 || (declaradas !== null && declaradas.length > 0)) && (
         <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
           {porClase.cancelada.length > 0 && `${porClase.cancelada.length} cancelada(s) en CIMA`}
           {porClase.cancelada.length > 0 && porClase.historica.length > 0 && ' · '}
           {porClase.historica.length > 0 && `${porClase.historica.length} del volcado histórico`}
+          {(porClase.cancelada.length > 0 || porClase.historica.length > 0) && declaradas !== null && declaradas.length > 0 && ' · '}
+          {declaradas !== null && declaradas.length > 0 && `${declaradas.length} aportada(s) desde el portal, de otra compañía`}
           {' → '}
           <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>ver en Pólizas</Link>
         </p>

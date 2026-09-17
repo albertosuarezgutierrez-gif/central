@@ -10,6 +10,7 @@ import type {
   VersionCandidata,
 } from '@/lib/codeoscopic/desde-cartera'
 import type { Veredicto } from '@/lib/codeoscopic/contador'
+import { formatearErrorVendor } from '@/lib/codeoscopic/error-vendor'
 import { eur } from '@/lib/dinero'
 
 type Consumo = { veredicto: Veredicto; gastadoMes: string } | { error: string }
@@ -802,7 +803,7 @@ export default function Retarificador({
         {resultado.estado === 'error' && (
           <p className="err" style={{ marginTop: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}
-            {resultado.mensaje}
+            {formatearErrorVendor(resultado.mensaje)}
           </p>
         )}
 
@@ -1366,6 +1367,17 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
+  // La compañía lo exige al confirmar el precio (ReRate), no al cotizar — por
+  // eso la ficha nunca lo trae y hay que teclearlo aquí, como el resto de datos
+  // personales que no se suponen.
+  nombreVia: { etiqueta: 'Calle (nombre de la vía)', tipo: 'text' },
+  // 12/09/2026: el pre-vuelo de cartera exige ANTES de pagar lo que el Submit
+  // pide después (correo, número). Esta pantalla es el RESPALDO (la de Alberto
+  // es plataforma) y no crece: el tipo de vía, que es un desplegable del
+  // catálogo, aquí sigue saliendo como «no se arregla desde esta pantalla»
+  // cuando la ficha no lo trae reconocible.
+  numeroVia: { etiqueta: 'Número de la calle', tipo: 'text' },
+  email: { etiqueta: 'Correo electrónico', tipo: 'email' },
 }
 
 /**

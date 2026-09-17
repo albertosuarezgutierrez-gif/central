@@ -60,6 +60,29 @@ export function etiquetaRamo(ramo: string | null | undefined): string | null {
   return (ETIQUETA_RAMO as Record<string, string>)[ramo] ?? ramo
 }
 
+/**
+ * La cobertura que ESPECIALIZA un ramo genérico, cuando la hay.
+ *
+ * «Responsabilidad civil» es un cajón donde caben mil pólizas distintas —de
+ * perros, patronal, profesional...— y para una que no tiene bien físico que la
+ * distinga (no hay coche ni dirección) el título se queda igual para todas:
+ * «Occident · Responsabilidad civil». La cobertura ya trae el texto específico
+ * («Responsabilidad civil perros»); esto la encuentra, y solo cuando de
+ * verdad AMPLÍA el nombre del ramo, no cualquier cobertura suelta de la
+ * póliza (queja de Alberto, 09/09/2026, sobre la RC de perros 548238086).
+ */
+export function coberturaEspecificaDeRamo(ramo: string | null | undefined, coberturas: readonly string[]): string | null {
+  const generico = etiquetaRamo(ramo)?.trim().toLowerCase()
+  if (!generico) return null
+  for (const bruto of coberturas) {
+    const normalizado = bruto.trim()
+    if (normalizado.toLowerCase().startsWith(generico) && normalizado.length > generico.length) {
+      return normalizado
+    }
+  }
+  return null
+}
+
 export type PolizaLeida = {
   compania: string | null
   numeroPoliza: string | null

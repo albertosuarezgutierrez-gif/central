@@ -39,6 +39,8 @@ const ETIQUETAS: Record<string, string> = {
   dni: 'Por DNI',
   telefono: 'Por teléfono',
   email: 'Por email',
+  email_dominio: 'Por dominio del email',
+  email_usuario: 'Por usuario del email',
   codigo_postal: 'Por código postal (del cliente)',
   ciudad: 'Por ciudad (del cliente)',
   riesgo: 'Por localidad o CP del riesgo',

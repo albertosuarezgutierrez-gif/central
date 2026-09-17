@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
-import { RAMOS } from '@/lib/ramos'
+import { RAMOS, RAMOS_PRODUCTO } from '@/lib/ramos'
 import { COMPANIAS, COMPANIAS_EN_CARTERA } from '@/lib/companias'
 import { PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
@@ -148,21 +148,54 @@ export default function Home() {
               Correduría en toda España · Registro DGSFP {MEDIADOR.identidad.claveDgsfp}
             </span>
             {/*
-              🚨 El hero habla de lo que le PASA al visitante, no de lo que la
-              correduría es. Lo anterior («Somos correduría, no compañía…»)
-              explicaba la figura jurídica y enumeraba cinco ramos de un tirón,
-              así que no priorizaba ninguno — diagnóstico de
-              `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`.
+              🚨 El hero vende LO QUE NOS DIFERENCIA, y eso no es la figura
+              jurídica ni el parte: es la intranet, que está abierta a
+              cualquiera. Dictado de Alberto (07/09/2026): «la idea principal
+              que nos diferencia es la intranet donde el cliente puede controlar
+              sus seguros siendo nuestro cliente o no».
 
-              El nombre va en PRIMERA PERSONA y sale de `MEDIADOR`, no tecleado:
-              es un corredor persona física, y decir «yo» es exactamente lo que
-              un comparador no puede copiar. Los cinco ramos ya los prioriza la
-              rejilla de abajo, que abre por hogar y comunidades.
+              Lo anterior («Un seguro se juzga el día del parte. Ese día me
+              llamas a mí») describía el servicio de un corredor cualquiera:
+              cierto, pero copiable por los 90.000 mediadores del registro. Que
+              tus pólizas de OTRAS compañías vivan aquí, no.
+
+              ⚠️ Cada frase de aquí abajo tiene que ser cierta HOY, y estas tres
+              lo son: la intranet crea identidad con solo un correo verificado
+              (`verificar/route.ts`, «El resultado NO bloquea el login»), acepta
+              el PDF de cualquier compañía (`POST /api/polizas`, lo lee la IA) y
+              desde el 07/09/2026 pone su vencimiento en el calendario aunque
+              quien la suba no sea cliente. Lo que NO se dice es «olvídate»: eso
+              promete un aviso saliente que para una póliza subida todavía no
+              tiene por dónde salir, y el propio cron lo cuenta como `sinCanal`.
+
+              El nombre va en PRIMERA PERSONA y sale de `MEDIADOR`, no tecleado.
+
+              ✍️ La palabra es «seguros», no «pólizas» (Alberto, 07/09/2026).
+              Nadie dice en su casa «tengo tres pólizas»: dice «tengo tres
+              seguros». «Póliza» es la palabra del corredor, y el h1 lo lee
+              quien todavía no lo es. Dentro del texto sí se dice «póliza»
+              —cuando se habla del PDF concreto que se sube— porque ahí es el
+              nombre exacto de la cosa.
+
+              🚨 Y la segunda línea ya NO dice «Aunque no sean mías». La quitó
+              Alberto en corto («aunque no sean míos no lo pongas») pese a que
+              era la frase que más nos separaba del resto. Se probó «Y
+              contrólalos todos.», donde el «todos» aún insinuaba lo de las
+              otras compañías, y también lo quitó («quita todos»). Así que el h1
+              ya no dice NADA que no pueda decir cualquier correduría: es un
+              titular de tono, no de argumento.
+
+              Que el diferenciador no se pierda depende entera y únicamente del
+              `lead` de aquí abajo, que es donde vive el «de cualquier
+              compañía». Si alguien recorta ese párrafo por longitud —cosa
+              razonable, tiene siete líneas en móvil—, la portada se queda sin
+              decir en ninguna parte lo único que no puede copiar el corredor de
+              al lado, y no falla nada. Lo ancla `lib/ramos.test.ts`.
             */}
             <h1 className="display">
-              Un seguro se juzga el día del parte.
+              Sube tus seguros.
               <br />
-              <span className="destaca">Ese día me llamas a mí.</span>
+              <span className="destaca">Y contrólalos.</span>
             </h1>
             {/*
               Una línea más corto que la primera versión (06/09/2026), y no por
@@ -173,18 +206,21 @@ export default function Home() {
               el sitio donde el visitante decide.
             */}
             <p className="lead" style={{ marginTop: 28 }}>
-              Soy {MEDIADOR.identidad.nombre}, corredor de seguros en toda España. No trabajo para ninguna
-              aseguradora: comparo entre varias y te digo qué cubre cada una y qué deja fuera.
+              Soy {MEDIADOR.identidad.nombre}, corredor de seguros en toda España. Tu intranet guarda las
+              pólizas de cualquier compañía, te dice qué cubre cada una y te apunta en el calendario hasta
+              cuándo puedes decidir si la renuevas. Sin coste y sin cambiar de correduría.
             </p>
             <div className="hero-cta">
               <a href="#presupuesto" className="btn btn-brand btn-brillo">
                 Que me llamen
                 <Flecha />
               </a>
-              {/* Segundo clic para quien ya es cliente: su intranet, donde
-                  guarda sus pólizas. Va junto al CTA de venta. */}
+              {/* 🚨 El rótulo NO dice «Ya soy cliente». Decía eso hasta el
+                  07/09/2026, y era el fallo de verdad de esta portada: la
+                  intranet acepta a cualquiera, y el botón le estaba diciendo al
+                  99 % de los visitantes que no era para ellos. */}
               <a href={PORTAL_URL} className="btn btn-outline">
-                Ya soy cliente
+                Entrar a mis seguros
               </a>
             </div>
             <ul className="garantias">
@@ -310,7 +346,7 @@ export default function Home() {
             </h2>
             <p className="lead">
               Un PDF o una foto con el móvil. Sacamos la compañía, el número, el vencimiento y las coberturas, y te
-              dejamos la ficha rellena en tu área de clientes para que la revises.
+              dejamos la ficha rellena en tu intranet para que la revises.
             </p>
             <ul className="garantias" style={{ marginTop: 24 }}>
               <li>
@@ -431,7 +467,10 @@ export default function Home() {
         }
         cifras={[
           { valor: COMPANIAS_EN_CARTERA.length, texto: 'Compañías con pólizas en cartera' },
-          { valor: RAMOS.length, texto: 'Ramos que revisamos' },
+          // RAMOS_PRODUCTO, no RAMOS: una página de INTENCIÓN de oficio (RC
+          // fontaneros) comparte ramo real con otra entrada y no es un
+          // producto distinto — contarla aquí infla la cifra pública.
+          { valor: RAMOS_PRODUCTO.length, texto: 'Ramos que revisamos' },
           { valor: 0, estatico: '0 €', texto: 'Lo que te cuesta el servicio' },
         ]}
         nota="La comisión la paga la aseguradora, no tú: no cobramos honorarios por el servicio de mediación."

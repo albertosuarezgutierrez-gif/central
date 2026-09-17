@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { syncPropertyIcal } from '@/lib/ical-sync'
+import { firmarPeticion } from '@/lib/smoobu-firma'
 
 export const dynamic    = 'force-dynamic'
 export const maxDuration = 60
@@ -23,6 +24,10 @@ const SMOOBU_MAP: Record<number, { uuid: string; name: string }> = {
 // reserva ya no existe en Smoobu (cancelada o borrada).
 async function syncSmoobuApi(conn: any, propMap: Map<string, any>): Promise<{ synced: number; cancelled: number; reconciled: number; errors: string[] }> {
   if (!conn.smoobu_api_key) return { synced: 0, cancelled: 0, reconciled: 0, errors: ['No smoobu_api_key'] }
+  // 🔑 Smoobu exige HMAC-SHA256 desde la deprecación del header `Api-Key` (sunset 25/09/2026).
+  // El par vive en la MISMA fila de `pms_connections` que ya se consulta aquí; sin `smoobu_api_secret`
+  // no se puede firmar, y se dice — mandar la petición daría un 401 indistinguible de una key mala.
+  if (!conn.smoobu_api_secret) return { synced: 0, cancelled: 0, reconciled: 0, errors: ['No smoobu_api_secret (HMAC)'] }
 
   const today = new Date().toISOString().split('T')[0]
   const to    = new Date(Date.now() + 150 * 86400000).toISOString().split('T')[0]
@@ -33,9 +38,13 @@ async function syncSmoobuApi(conn: any, propMap: Map<string, any>): Promise<{ sy
   let complete = false
   const errors: string[] = []
   while (true) {
+    const url = 'https://login.smoobu.com/api/reservations?pageSize=100&departureFrom=' + today + '&departureTo=' + to + '&page=' + page
+    const { headers: auth } = firmarPeticion({
+      method: 'GET', url, apiKey: conn.smoobu_api_key, apiSecret: conn.smoobu_api_secret,
+    })
     const res = await fetch(
-      'https://login.smoobu.com/api/reservations?pageSize=100&departureFrom=' + today + '&departureTo=' + to + '&page=' + page,
-      { headers: { 'Api-Key': conn.smoobu_api_key }, cache: 'no-store', signal: AbortSignal.timeout(15000) }
+      url,
+      { headers: { ...auth, 'Cache-Control': 'no-cache' }, cache: 'no-store', signal: AbortSignal.timeout(15000) }
     )
     if (!res.ok) { errors.push('Smoobu API ' + res.status); break }
     const data = await res.json()
@@ -169,7 +178,7 @@ export async function GET(req: Request) {
 
     // 2. Sync Smoobu API — solo conexiones con API key (Alberto)
     const conexiones = await prisma.$queryRaw<any[]>(Prisma.sql`
-      SELECT id::text, empresa_id::text, cliente_id::text, smoobu_api_key
+      SELECT id::text, empresa_id::text, cliente_id::text, smoobu_api_key, smoobu_api_secret
       FROM pms_connections
       WHERE activa = true AND smoobu_api_key IS NOT NULL
         AND (cliente_id IS NULL OR cliente_id IN (SELECT id FROM clientes WHERE activo = true))

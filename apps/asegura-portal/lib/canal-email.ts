@@ -21,17 +21,17 @@ export const canalEmail: Canal = {
     if (!transporter) return false
 
     const from = remitenteCorreo(process.env.PORTAL_MAIL_FROM)
-    if (!from) {
-      console.error('[portal] falta PORTAL_MAIL_FROM: no se envía el código')
-      return false
-    }
 
-    // Se manda DESDE el subdominio de envío (`envios.grupoasegura.es`, el que
-    // está verificado en Resend) pero se responde AL buzón único de la
-    // correduría. Verificar el dominio raíz obligaría a fusionar a mano el SPF
-    // de Resend con el de IONOS —solo puede haber un registro SPF— y un error
-    // ahí deja a la correduría sin correo de trabajo. Con `Reply-To` el cliente
-    // contesta a `hola@grupoasegura.es` sin tocar nada de eso.
+    // 🚨 CORREGIDO el 07/09/2026. Aquí ponía que verificar el dominio raíz
+    // «obligaría a fusionar a mano el SPF de Resend con el de IONOS —solo puede
+    // haber un registro SPF— y un error ahí deja a la correduría sin correo de
+    // trabajo». **Es falso, y por eso se enviaba desde un subdominio.** Medido
+    // al dar de alta `grupoasegura.es` en Resend: los TRES registros que pide
+    // van en SUBDOMINIOS (`resend._domainkey` y `send`), ninguno en el apex. No
+    // hay SPF que fusionar ni MX de IONOS que tocar.
+    // Desde entonces el remitente es `hola@grupoasegura.es` para toda la
+    // correduría (`REMITENTE_CORREDURIA`), que además es un buzón real: el
+    // cliente contesta ahí sin necesidad de `Reply-To`.
     const replyTo = process.env.PORTAL_MAIL_REPLY_TO?.trim() || undefined
 
     // El enlace es una comodidad, no el mecanismo: si no hay dominio

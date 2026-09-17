@@ -28,7 +28,16 @@ import { quedanPorEscribir } from './pendientes'
  * es «no se ha escrito nada» — la escritura del otro lado puede haber terminado.
  * Se dice tal cual y se invita a recargar, que es lo único que sabe la verdad.
  */
-export default function EscribirIndiceDni({ pendientes }: { pendientes: number }) {
+export default function EscribirIndiceDni({
+  pendientes,
+  endpoint = '/api/correduria/backfill-dni',
+  queSeDescifra = 'el DNI de las 32.000 fichas',
+}: {
+  pendientes: number
+  /** El mismo botón sirve al índice de contacto (email + teléfono): cambia sólo a dónde pega. */
+  endpoint?: string
+  queSeDescifra?: string
+}) {
   const router = useRouter()
   const [enviando, setEnviando] = useState(false)
   const [r, setR] = useState<EscrituraBackfillDni | null>(null)
@@ -37,7 +46,7 @@ export default function EscribirIndiceDni({ pendientes }: { pendientes: number }
     setEnviando(true)
     setR(null)
     try {
-      const res = await fetch('/api/correduria/backfill-dni', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ limite: TANDA }),
@@ -70,8 +79,8 @@ export default function EscribirIndiceDni({ pendientes }: { pendientes: number }
       )}
       {enviando && (
         <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
-          Puede tardar un par de minutos: antes de escribir hay que descifrar el DNI de las {' '}
-          32.000 fichas para saber cuál va en cada una.
+          Puede tardar un par de minutos: antes de escribir hay que descifrar {queSeDescifra} para
+          saber cuál va en cada una.
         </p>
       )}
       {r !== null && <Resultado r={r} />}

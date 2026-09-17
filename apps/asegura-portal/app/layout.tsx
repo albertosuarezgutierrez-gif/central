@@ -2,10 +2,16 @@ import { MARCA_ASEGURA, emitirRootCss } from '@central/brand'
 
 import './globals.css'
 import type { ReactNode } from 'react'
+import { CampanaAvisos } from './CampanaAvisos'
+import { InstalarEnBarra } from './InstalarEnBarra'
 import { InterruptorTema } from './InterruptorTema'
 import { MarcaAsegura } from './MarcaAsegura'
 import { PieLegal } from './PieLegal'
+import { RegistrarSW } from './RegistrarSW'
+import { SalirDelPortal } from './SalirDelPortal'
+import { SugerenciaBarra } from './SugerenciaBarra'
 import { SCRIPT_TEMA } from './tema'
+import { WhatsappFlotante } from './WhatsappFlotante'
 
 // Marca activa del portal. Es la de `app.grupoasegura.com` medida del CSS
 // compilado de la app de Manuel (ver `packages/brand/src/marcas/asegura.ts`):
@@ -85,12 +91,38 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </span>
           <span className="marca-nombre">{MARCA.logos.wordmark}</span>
           <span className="marca-coletilla">Correduría de seguros</span>
-          {/* El interruptor va en la barra y no en un menú: es la única acción
-              de la cabecera, y esconder una sola cosa detrás de un menú cuesta
-              un toque más y un componente más. */}
-          <InterruptorTema />
+          {/* Las acciones de la cabecera van sueltas y no en un menú:
+              esconder cosas detrás de un botón cuesta un toque más, un
+              componente más y, en esta pantalla, que gente de 50-70 años no
+              encuentre la salida. Van dentro de UN contenedor con el único
+              `margin-left:auto` de la derecha (`.marca-acciones`): con el
+              `auto` repartido entre botones, cada uno que se añadía o se
+              quitaba (instalar solo existe si el navegador lo ofrece, y la
+              sugerencia y la campana solo con sesión) cambiaba el reparto
+              del hueco y los separaba sin que nada fallara.
+              Orden (Alberto, 08-09/09/2026): instalar «en el banner fijo de
+              arriba» → sugerencia (junto a la campana, el otro desplegable)
+              → avisos → tema → salir, que va «a la derecha del todo, es lo
+              lógico».
+              🚨 `InstalarEnBarra`, `SugerenciaBarra`, `SalirDelPortal` y
+              `CampanaAvisos` devuelven `null` cuando no hay sesión: quien
+              todavía no ha entrado no ve ni instalar, ni sugerencia, ni
+              salir, ni avisos. */}
+          <div className="marca-acciones">
+            <InstalarEnBarra />
+            <SugerenciaBarra />
+            <CampanaAvisos />
+            <InterruptorTema />
+            <SalirDelPortal />
+          </div>
         </header>
         {children}
+        {/* Como en `asegura-web`: "clic para chatear", visible con o sin
+            sesión. No es el canal de login (ese sigue sin WABA). */}
+        <WhatsappFlotante />
+        {/* Registra el service worker que Chrome exige para ofrecer instalar la
+            app. No cachea nada: ver `public/sw.js`. */}
+        <RegistrarSW />
         {/* En el layout raíz y no en el del portal: quien todavía no ha metido
             el código tiene que poder identificar al mediador y leer la política
             de privacidad ANTES de escribir su correo, no después. */}

@@ -91,6 +91,7 @@ de borrar, `smoobu-sync.ts` deja constancia (helper puro y testeado `lib/sivra/c
 | `TELEGRAM_WEBHOOK_SECRET` | Valida que los callbacks de Telegram llegan del servidor de Telegram (no de terceros). |
 | `CRON_SECRET` | **Llave maestra** que autentica los crons de Vercel y las llamadas servidor→servidor. **NO ponerla en prompts de rutinas** (ver `ALERTA_TOKEN`). El endpoint `/api/internal/alerta` la sigue aceptando solo por compatibilidad. |
 | `ALERTA_TOKEN` | Token **dedicado** de bajo privilegio: SOLO abre `/api/internal/alerta` (aviso Telegram de las rutinas de Claude Code). Es el que va en el prompt de las rutinas — si se filtra, solo permite mandar un Telegram. Si no está definido, el endpoint acepta `CRON_SECRET` (compat). |
+| `SMOOBU_LEGACY_API_KEY` | **🌉 PUENTE TEMPORAL (15/09/2026), vence con el legacy el 25/09/2026.** `GET /api/rates` da 401 con HMAC (ticket Smoobu #1864141 sin resolver: la firma es correcta y funciona en `/reservations`, pero `/rates` la rechaza con `apartments[]`). Verificado a mano: legacy `200`, HMAC `401`, mismo endpoint. `smoobuFetch` (`lib/smoobu.ts`) usa esta key SOLO para el GET a `/api/rates` cuando está puesta — fail-safe: sin ella, sigue por HMAC como siempre. Es la clave de la pestaña **"Legacy Api keys"** de Smoobu (Avanzado → Claves API), NO el par key+secret de `pms_connections`. **Quitar esta rama y el env en cuanto Smoobu resuelva el ticket o el legacy deje de aceptarse** — no dejar que caduque en producción sin más (a partir del 25/09 esta key deja de funcionar y `/rates` volvería a 401 sin aviso si no se ha resuelto lo de fondo). |
 | `EINFORMA_CLIENT_ID` / `EINFORMA_CLIENT_SECRET` | **PENDIENTE (Alberto contrata eInforma).** Credenciales OAuth2 client_credentials de la API de eInforma para el **enriquecimiento de «Empresas en dificultad»** (`lib/empresas-einforma.ts`: informe financiero → patrimonio neto, EBITDA, fondo de maniobra, deuda, CNAE, facturación, incidencias RAI/ASNEF). Sin ellas el enriquecimiento degrada con aviso «pendiente de contratar», no rompe. Opcional `EINFORMA_BASE_URL` (default `https://api.einforma.com`). ⚠️ Al activar, CONFIRMAR las rutas/campos del payload marcados en `empresas-einforma.ts` contra la doc/sandbox. |
 | `IDEALISTA_API_KEY` / `IDEALISTA_API_SECRET` | **PENDIENTE (Idealista debe aprobar el alta — solicitada el 30/07/2026).** Credenciales OAuth2 client_credentials de la **API oficial de Idealista** (developers.idealista.com, tramo gratuito ~100 búsquedas/mes) para la ingesta directa de comparables por zona vigilada (`lib/subastas/idealista-api.ts`, paso del cron `subastas-mercado`). Sin ellas la ingesta API queda **inerte** (el corpus sigue nutriéndose de las alertas de correo). Editables desde el god-panel → 🔑 Secretos. Presupuesto vigilado en la tabla `idealista_api_usos` (margen mensual 15, caché 30 días/zona). |
 | `EMPRESAS_ENRIQUECER_TOPE_MENSUAL_EUR` | Tope de gasto mensual € del enriquecimiento de empresas (default `50`; `0` = sin límite). Se compara contra la suma del ledger `empresas_enriquecimiento_coste` del mes. `EMPRESAS_ENRIQUECER_COSTE_EUR` = coste estimado por empresa (default `12`, ~precio del informe financiero en pack). |
@@ -1097,6 +1098,47 @@ silencio en el mismo eslabón: **el que pone el precio delante del huésped**.
 - Lógica en el módulo PURO `lib/sivra/pricing-latido-apply.ts` (`pasadaFiable`/`detalleApply`/
   `avisoSmoobuRechaza`, 15 tests), no incrustada en el route.
 
+## 🛑 El mismo silencio un eslabón más arriba: la LECTURA de `/rates` (15/09/2026)
+Encontrado al responder «avisarme si Smoobu se cae» (ticket Smoobu #1864141: `GET /api/rates`
+llevaba 4+ días dando 401 con HMAC — ver el puente legacy de `lib/smoobu.ts` más abajo). El fallo
+de escritura de arriba (23/08) ya teñía el latido; el de LECTURA, un paso ANTES de que el motor
+llegue a decidir un precio, seguía viviendo solo en `results[].error` con `ok:true` y latido verde
+— exactamente el mismo patrón, un eslabón más arriba.
+- **`FalloLectura`** (`lib/sivra/pricing-latido-apply.ts`) es el nuevo hermano de `FalloEscritura`:
+  `pasadaFiable()` también se pone roja, `detalleApply()` lo antepone incluso al rechazo de
+  escritura (es el fallo más arriba de la cadena) y `avisoSmoobuLecturaFalla()` manda el 🛑 de
+  Telegram. Va en la respuesta como `smoobu_lecturas_fallidas` y lo lee `apply-auto` igual que
+  `smoobu_rechazos`.
+- **🚨 El gate `dryRun` NO vale aquí sin matiz — hay DOS `dryRun` distintos.** El de arriba
+  (`fallosSmoobu`) nace vacío en simulacro porque la escritura ni se intenta; la LECTURA de
+  `/rates`, en cambio, se hace SIEMPRE, también con «Simular». Sin gate, un blip transitorio en una
+  exploración manual mandaría un 🛑 real. Pero gatear por el `dryRun` que ve el resto del motor
+  (que la pausa global puede forzar a `true`, línea `if (paused && !dryRun) dryRun = true`) callaba
+  el aviso INMEDIATO cuando una pasada REAL de `apply-auto` caía en pausa — Smoobu caído de verdad,
+  con el aviso 3×/día suprimido hasta el latido de las 07:45 del día siguiente. Se distingue
+  `dryRunManual` (el parámetro tal como llegó, ANTES de la pausa) de `dryRun` (después): el aviso y
+  el `ok:` de `fallosLectura` usan `dryRunManual`, no `dryRun`.
+- **`pasadaFiable()` NO usa `dryRunManual`, usa el flujo normal del latido** de `apply-auto`, que
+  ya extrae `fallosLectura` sin gate ninguno — el latido diario se tiñe SIEMPRE que haya un fallo de
+  lectura real, pausa o no. El gate por `dryRunManual` es solo del aviso INMEDIATO de Telegram y del
+  campo `ok:` que ve quien llama a mano.
+
+## 🌉 Puente legacy temporal para `GET /api/rates` (15/09/2026 → 25/09/2026)
+Diagnóstico en vivo (curl manual de Alberto, mismo endpoint/propiedad/parámetros): **legacy `200`,
+HMAC `401`**. La firma HMAC es correcta y funciona en `/reservations`; Smoobu la rechaza solo en
+`/rates` con parámetros array (`apartments[]`) — ticket #1864141 abierto, sin resolver.
+- **`debeUsarPuenteLegacy(method, url, legacyKeyPresente)`** (`lib/smoobu-puente-legacy.ts`, módulo
+  PURO con test propio) decide: solo `GET` a `/api/rates`, y solo si `SMOOBU_LEGACY_API_KEY` está
+  puesta. `smoobuFetch` (`lib/smoobu.ts`) lo llama antes de firmar — fail-safe: sin esa env, todo
+  sigue por HMAC como siempre. Se extrajo a módulo aparte porque `smoobu.ts` importa `@/lib/db` y no
+  es testeable directamente con `node --test`.
+- La env, qué clave usar y cuándo quitarlo: ver la fila `SMOOBU_LEGACY_API_KEY` en la tabla de envs
+  de este mismo archivo.
+- **Vence con el legacy el 25/09/2026.** El check-in programado del 26/09 (ver
+  `docs/CONTEXTO-SESIONES.md`) verifica si el ticket #1864141 se resolvió; si no, el puente deja de
+  funcionar y `/rates` vuelve a 401 — esta vez SIN el aviso mudo de antes, porque el latido de
+  lectura de arriba ya está en pie.
+
 ## 🛑 El raíl CIEGO: si no se puede leer el ancla, NO se tarifa (23/08/2026)
 Hallazgo 🔴 3 de la auditoría. Las dos lecturas que alimentan el ancla (`ref24` = último precio
 aplicado ANTES de hoy; `anclaHoy` = con qué precio empezó el día la fecha) colgaban de un
@@ -1568,9 +1610,10 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ciclo, variación). TRES cosas distintas en pantalla: `null` (asegura vieja no lo manda) ≠ `sin_datos` (se
   miró: CIMA no da la anualidad anterior) ≠ `igual`. «Sube sin siniestro» por encima del 5 % enlaza a
   retarificar. Lectores puros en `lib/poliza-asegura.ts` / `lib/ficha-asegura.ts`.
-- **🧲 Canal de leads web (02/09/2026, noche).** `app/seguros/page.tsx` es la **landing pública de Grupo
-  Asegura** (no existía ninguna: la frase de la visión «existe la landing de plataforma» era falsa). Fuera de
-  `(usuario)`, en `PUBLIC` del middleware. Su formulario postea a `POST /api/publico/correduria/lead`
+- **🧲 Canal de leads web (02/09/2026, noche — `app/seguros/page.tsx` BORRADA el 14/09/2026, ver más
+  abajo).** Nació aquí: `app/seguros/page.tsx` fue la primera **landing pública de Grupo ASegura**
+  (no existía ninguna: la frase de la visión «existe la landing de plataforma» era falsa). Lo que
+  sigue vivo es el endpoint que recibía su formulario, `POST /api/publico/correduria/lead`
   (sin sesión): rate limit 6/h por IP (`lib/rate-limit.ts`, en memoria, best-effort), honeypot `web` que
   responde 200 sin hacer nada, consentimiento RGPD obligatorio. Con datos válidos SIEMPRE pasan dos cosas:
   alta por el puerto de asegura con `fuente: 'web'` / `actor: 'web'` (historial tipo `contacto`) y Telegram
@@ -1579,6 +1622,14 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   `POST /api/operador/cliente/historial`). Tres estados internos (nueva · existente · no registrado); al
   usuario `{ok:true}` en los dos primeros y 502 en el tercero — y en el tercero el Telegram lleva los datos
   del formulario porque es el único rastro. Reglas puras y tests en `lib/leads-web.ts`.
+- **🚫 `app/seguros/page.tsx` y su `Formulario.tsx` YA NO EXISTEN (14/09/2026).** Desde el
+  05/09/2026 esta correduría tiene web de marca propia (`apps/asegura-web`, `grupoasegura.es`), y las
+  dos páginas competían por la misma consulta desde dos dominios del mismo negocio. Decisión de
+  Alberto: `/seguros` **301 (308 en realidad — App Router)** hacia `grupoasegura.es`, en vez de
+  quedarse noindex y viva. El redirect vive en `next.config.ts::redirects()` (corre ANTES que el
+  middleware, así que la exención de `/seguros` en `middleware.ts::PUBLIC` se retiró: no protegía ya
+  ninguna ruta alcanzable). El endpoint `/api/publico/correduria/lead` de arriba sigue vivo — hoy lo
+  alimenta `apps/asegura-web` (`POST /api/lead`, que reenvía aquí), no una página de esta app.
 - **🗑️ Supresiones RGPD — el reloj del art. 12.3 se contesta AQUÍ (05/09/2026).** Desde el bloque legal
   0.5, un cliente puede pedir la supresión de sus datos desde `apps/asegura-portal` (`/boveda`). Eso
   arranca un plazo legal de **30 días** (prorrogable a 60 **motivando la prórroga**, art. 12.3 RGPD), y
@@ -1635,8 +1686,12 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ahorra. Bajo «Vence», `ventanaAnulacion()` recuerda que el contrato es anual y solo se deja al
   vencimiento avisando 30 días antes (se pinta cuando faltan ≤60 días).
 - **📄 «Subir póliza o documento ↗»** (botón en la ficha) salta a `asegura/cartera/subir`: el agente lee
-  el PDF/foto y enseña lo leído. Es gratis. **Hoy solo lee pólizas de AUTO y NO guarda el fichero**
-  (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
+  el PDF/foto y enseña lo leído. Es gratis. **Desde el 09/09/2026 lee cualquier ramo**: detecta el ramo
+  y, si es auto/moto o hogar, lee además sus campos propios (vehículo, o dirección/m²/año/capitales de
+  la vivienda — `lib/documentos/extraer-poliza.ts`, `@central/module-seguros` `documento-auto.ts` /
+  `documento-hogar.ts`); en cualquier otro ramo solo lee lo común a toda póliza (compañía, número,
+  vencimiento, prima) y lo dice, porque hoy no se retarifica ningún otro ramo. **Sigue SIN guardar el
+  fichero** (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
 - **🔎 Buscador de TODO (`BuscadorCartera.tsx`)**: nombre, matrícula, nº de póliza, DNI, teléfono,
   email, ciudad o código postal, en un solo cuadro. Un término se busca por **todos** los criterios que
   encaje (`41003` es CP y nº de póliza plausibles a la vez).
@@ -1653,6 +1708,48 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ningún recibo informado (18 de 109) y los pendientes que aún no han vencido.
 - **El único salto a asegura es «Retarificar ↗»**, porque cuesta 0,50€ reales y tiene que pasar por su
   pantalla de confirmación. `urlRetarificar()` en `lib/ficha-asegura.ts`.
+
+### 📡 Sección «Actividad» — el muro de toda la cartera (12/09/2026)
+Alberto: *«una genérica donde ver resumen de todo, y controlar todo lo que hacen los clientes, incluso
+el acceso a la intranet»*. El historial existía **por ficha**: para saber qué había hecho alguien
+había que entrar en su ficha, y para saber qué había hecho *alguien* había que entrar en las ochenta.
+
+`Actividad.tsx` (sección propia, la 2ª de la barra) sobre `/api/correduria/actividad` → puerto
+`GET /api/operador/actividad`. Lector puro `lib/actividad-asegura.ts` (+ 9 cepos); el vocabulario
+—tipos, rótulos, ventanas, embudo— vive en `@central/module-seguros/actividad.ts` y lo comparten las
+DOS apps, como el filtro de cartera.
+
+🚨 **El embudo va ARRIBA y la cronología debajo, y no es estética.** Medido contra la BD antes de
+escribir la pantalla: **80 clientes → 52 con correo → 5 con acceso → 4 han entrado → 4 activos**. Con
+esas cifras un muro cronológico enseña sobre todo SILENCIO, que no dice qué hacer; el embudo sí, y
+además señala solo dónde está el cuello — que **no es el correo** (28 sin él) sino los **47 clientes
+con correo a los que nadie ha invitado**. `mayorCaidaEmbudo` lo calcula, y devuelve `null` en vez de
+señalar un escalón cuando le falta alguno de los dos extremos.
+
+🚨 **De `historial_interno` NO se afirma autor.** La columna `actor_user_id` existe y **no la escribe
+nadie**: el autor viaja dentro del texto. Así que sus filas se pintan como «anotación en la ficha»
+con su texto entero (que ya nombra a quien la hizo), y solo las dos que compone el portal —cambio de
+dirección y sugerencia— constan como del cliente, reconocidas por los **prefijos constantes** de
+`@central/module-seguros-portal`, no adivinando sobre texto libre. El filtro «Solo el cliente» quita
+la tabla de la ficha pero **conserva esas dos**: si no, escondería justo el cambio de dirección.
+
+🚨 **Un cambio de dirección NO es una notificación, es un aviso de riesgo**: el domicilio tarifica en
+hogar y auto, y si el cliente se muda y la compañía no se entera el problema aparece en el siniestro.
+Sale con su frase (`riesgoActividad`), igual que la supresión con su plazo del art. 17 RGPD.
+
+**Lo que NO sale: ni un dato de contacto.** El puerto no los manda — el muro dice QUÉ pasó y de QUIÉN
+es la ficha, y el dato se mira en la ficha. Una lista cronológica se abre con gente delante.
+
+⚠️ **No reporta contador a la pestaña, a propósito:** no es una cola de trabajo. Lo que sí lo es
+—partes, supresiones, leads— ya tiene su badge en «Hoy», y contarlo dos veces haría que atender un
+parte no bajara el número de aquí, que es como se deja de creer un badge. Lo nuevo desde la última
+visita se marca con un punto, contra un `localStorage` (`nuevosDesde` devuelve **`null`** —no
+`eventos.length`— cuando no hay marca, para no gritar «¡novedades!» en un navegador limpio).
+
+⏸️ **PENDIENTE y declarado, no olvidado:** la lista accionable de «clientes con correo que no han
+entrado» con botón de invitar en la propia fila. El endpoint de invitación ya existe
+(`/api/correduria/cliente/portal`); falta la consulta que los liste. Hoy el embudo enseña el hueco y
+manda a la ficha. Y marcar como visto de verdad (tabla) en vez de por navegador.
 
 🎨 **Rediseño: de una tira de ocho bloques a CINCO SECCIONES (03/09/2026).** Alberto: *«minimalista,
 óptima y productiva»*. La pantalla era un scroll único con ocho bloques del MISMO peso visual —los

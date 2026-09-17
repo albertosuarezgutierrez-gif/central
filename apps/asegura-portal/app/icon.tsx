@@ -1,8 +1,8 @@
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
 import { MARCA_ASEGURA } from '@central/brand'
 import { MEDIADOR } from '@central/module-seguros'
+
+import { monogramaTenido } from '@/lib/monograma'
 
 // El icono de la pestaña del navegador.
 //
@@ -21,8 +21,9 @@ import { MEDIADOR } from '@central/module-seguros'
 // El cuadro negro es la variante del CRM de Manuel (`app.grupoasegura.com`), no
 // la de estas apps.
 //
-// 🚨 El dibujo NO se copia aquí: se LEE de `public/brand/marca-asegura.svg`.
-// Copiar el `path` dejaría dos monogramas que se separan el día que uno cambie.
+// 🚨 El dibujo NO se copia aquí: lo sirve `monogramaTenido()`, que lo LEE de
+// `public/brand/marca-asegura.svg`. El helper vive en `lib/` porque el icono de
+// la app instalada (`app/icono-app/route.tsx`) pinta el mismo monograma.
 //
 // ⚠️ Satori (el motor de `next/og`) no entiende `oklch()`, así que de la paleta
 // solo valen los dos tokens que están en hex: `primario` y `acentoSuave`.
@@ -30,21 +31,6 @@ import { MEDIADOR } from '@central/module-seguros'
 export const size = { width: 128, height: 128 }
 export const contentType = 'image/png'
 export const alt = MEDIADOR.marca
-
-/**
- * El monograma con el color ya puesto.
- *
- * El fichero trae `fill="currentColor"` a propósito (el color lo pone el
- * contexto). Dentro de un `<img>` eso resuelve a NEGRO —el icono viejo que se
- * quiere dejar atrás—, así que aquí se sustituye por el azul de marca antes de
- * embeberlo. Si el SVG dejara de traer `currentColor`, la sustitución se
- * volvería un no-op silencioso y el trazo saldría negro sin que fallara nada:
- * lo vigila `lib/icono.test.ts`.
- */
-function monogramaAzul(color: string): string {
-  const svg = readFileSync(join(process.cwd(), 'public/brand/marca-asegura.svg'), 'utf8')
-  return `data:image/svg+xml;base64,${Buffer.from(svg.replaceAll('currentColor', color)).toString('base64')}`
-}
 
 export default function Icono() {
   const { primario, acentoSuave } = MARCA_ASEGURA.paleta
@@ -64,7 +50,7 @@ export default function Icono() {
         {/* El monograma ocupa ~63 % del ancho: es lo que evita que a 16 px
             —el tamaño al que se ve de verdad— se convierta en una mancha. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={monogramaAzul(primario)} alt="" width={81} height={56} />
+        <img src={monogramaTenido(primario)} alt="" width={81} height={56} />
       </div>
     ),
     size,

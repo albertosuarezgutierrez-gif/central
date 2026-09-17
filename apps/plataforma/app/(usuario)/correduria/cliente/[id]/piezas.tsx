@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
 import EvolucionPrima from '../../EvolucionPrima'
-import { urlRetarificar, type IntervinienteFicha, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
+import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
+import { Badge, type Tono } from '@/components/ui'
 
 /**
  * Piezas compartidas por las pestañas de la ficha del cliente.
@@ -24,15 +25,28 @@ export const TIPOS: Record<string, string> = {
   comunidades: '🏢 Comunidad', otros: '📄 Otros',
 }
 
-export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes }: {
+/** Semáforo del estado de una póliza: la FORMA dice vigente/cancelada antes de
+ *  leer la palabra (convención de Occident, capturas Drive 11/09/2026). */
+const TONO_ESTADO: Record<string, Tono> = {
+  activa: 'positivo', en_vigor: 'positivo', en_renovacion: 'info',
+  recibo_devuelto: 'negativo', cancelada: 'negativo', vencida: 'negativo',
+  fin_riesgo: 'negativo', anula_al_vencimiento: 'aviso', cambio_clave: 'neutral',
+  competencia: 'neutral',
+}
+
+export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes, accion }: {
   titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean
   intervinientes: IntervinienteFicha[] | null
+  /** CTA para el estado vacío ("+ Presupuestar auto") en vez de solo texto —
+   *  avant2/Occident no dejan un hueco mudo, ofrecen la acción ahí mismo. */
+  accion?: React.ReactNode
 }) {
   if (polizas.length === 0) {
     if (!vacio) return null
     return (
       <Tarjeta titulo={titulo}>
         <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>{vacio}</p>
+        {accion && <div style={{ marginTop: 10 }}>{accion}</div>}
       </Tarjeta>
     )
   }
@@ -72,7 +86,9 @@ export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes 
                     // NULL = no se sabe cuándo vence, no «no vence».
                     <span style={{ color: 'var(--muted)' }} title="La compañía no ha informado el vencimiento">sin fecha</span>
                   )}
-                  <div style={sub}>{p.estado.replace(/_/g, ' ')}</div>
+                  <div style={{ marginTop: 3 }}>
+                    <Badge tono={TONO_ESTADO[p.estado] ?? 'neutral'}>{p.estado.replace(/_/g, ' ')}</Badge>
+                  </div>
                   <Anulacion vencimiento={p.fechaVencimiento} viva={p.viva} />
                 </td>
                 <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -156,6 +172,19 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
       <span style={{ color: 'var(--muted)', fontStyle: 'italic' }} title={p.objeto.nota ?? undefined}>
         {p.objeto.estado === 'sin_objeto' ? 'seguro de personas' : 'sin informar'}
       </span>
+    )
+  }
+  // RC/comercio/otros: el objeto se describe por coberturas contratadas, que
+  // pueden ser muchas — la celda enseña el TIPO (cuántas) y el desglose entero
+  // va detrás de un clic, en vez de volcar la lista entera en la tabla.
+  if (p.objeto.coberturas && p.objeto.coberturas.length > 1) {
+    return (
+      <details title={p.objeto.nota ?? undefined}>
+        <summary style={{ cursor: 'pointer' }}>{p.objeto.coberturas.length} coberturas contratadas</summary>
+        <ul style={{ margin: '4px 0 0', paddingLeft: 16, fontSize: 12, color: 'var(--muted)' }}>
+          {p.objeto.coberturas.map((c, i) => <li key={i}>{c}</li>)}
+        </ul>
+      </details>
     )
   }
   return (
@@ -251,6 +280,91 @@ function motivoNoRetarificable(p: PolizaFicha): string {
   if (p.retarificacion?.motivo) return p.retarificacion.motivo
   if (p.tipo !== 'auto') return `Hoy solo se retarifica auto (esta es de ${p.tipo}).`
   return 'La compañía no ha informado la matrícula, y sin ella no se puede identificar el vehículo.'
+}
+
+/**
+ * Pólizas que el cliente ha APORTADO desde el portal: NO son de la
+ * correduría (casi siempre son de otra compañía), así que van en su propio
+ * bloque y con «No la gestionamos» en cada fila — el mismo chip que ya usa
+ * el portal del cliente, para que el corredor no las confunda con una viva.
+ *
+ * 🚨 `null` ≠ `[]`: `null` es «no se ha podido leer si aportó algo» (falló
+ * `portal_vinculo` o la tabla), `[]` es «se ha mirado y no ha aportado
+ * ninguna». Colapsarlos en el mismo hueco mudo diría «no hay nada» sobre un
+ * fallo de lectura — la regla NULL≠0 del CLAUDE.md raíz.
+ */
+export function PolizasDeclaradas({ declaradas }: { declaradas: PolizaDeclaradaFicha[] | null }) {
+  if (declaradas === null) {
+    return (
+      <Tarjeta titulo="📥 Aportadas desde el portal">
+        <p style={{ color: 'var(--muted)', fontSize: 12, margin: 0 }}>
+          ⚠️ No se han podido leer. No significa que no haya aportado ninguna.
+        </p>
+      </Tarjeta>
+    )
+  }
+  if (declaradas.length === 0) return null
+  return (
+    <Tarjeta titulo={`📥 Aportadas desde el portal (${declaradas.length})`}>
+      <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>
+        Las ha subido el propio cliente en su portal. No las gestiona Grupo ASegura: sirven para
+        saber con quién tiene el seguro y cuándo le vence, de cara a ofrecerle cambiarse.
+      </p>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
+          <thead>
+            <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+              <th style={th}>Ramo</th>
+              <th style={th}>Compañía</th>
+              <th style={th}>Vence</th>
+              <th style={{ ...th, textAlign: 'right' }}>Prima</th>
+              <th style={th} />
+            </tr>
+          </thead>
+          <tbody>
+            {declaradas.map(d => (
+              <tr key={d.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={td}>{TIPOS[d.ramo ?? ''] ?? d.ramo ?? 'sin ramo'}</td>
+                <td style={td}>
+                  {d.compania ?? <span style={{ color: 'var(--muted)' }}>sin compañía</span>}
+                  <div style={sub}>{d.numeroPoliza ? `nº ${d.numeroPoliza}` : 'sin número'}{d.matricula ? ` · ${d.matricula}` : ''}</div>
+                  {/* La declaró de su EMPRESA, no a título personal — cotejarla contra esta
+                      ficha personal sería el cruce equivocado (ver `yaEnCartera` más abajo). */}
+                  {d.titularTipo === 'empresa' && (
+                    <div style={sub} title="El cliente dijo que esta póliza es de su empresa, no personal">
+                      a nombre de {d.titularEmpresaNombre ?? 'su empresa'}
+                    </div>
+                  )}
+                </td>
+                <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                  {d.fechaVencimiento
+                    ? fmt(d.fechaVencimiento)
+                    : <span style={{ color: 'var(--muted)' }} title="No consta el vencimiento">sin fecha</span>}
+                </td>
+                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {d.primaAnual === null ? <span style={{ color: 'var(--muted)' }}>sin dato</span> : eur(d.primaAnual)}
+                </td>
+                <td style={td}>
+                  {d.yaEnCartera === true ? (
+                    <Badge tono="info" title="Ya tiene una póliza con este número en su cartera: no es una oportunidad, es la misma póliza subida dos veces">
+                      Ya la tienes con ella
+                    </Badge>
+                  ) : (
+                    <Badge tono="neutral">No la gestionamos</Badge>
+                  )}
+                  {!d.confirmadaPorUsuario && (
+                    <div style={sub} title="Datos leídos automáticamente del documento subido: revísalos antes de fiarte de ellos">
+                      sin revisar
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Tarjeta>
+  )
 }
 
 // ── Cosillas ────────────────────────────────────────────────────────────────

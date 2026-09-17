@@ -21,16 +21,18 @@ import BotonWhatsapp from './BotonWhatsapp'
  * Server-safe: son enlaces, no handlers. Se puede montar desde un server
  * component sin arrastrar `'use client'`.
  */
-export default function AccionesContacto({ telefono, email, ilegible, quien, tam = 'sm' }: {
+export default function AccionesContacto({ telefono, email, ilegible, quien, mensaje, tam = 'sm' }: {
   telefono?: string | null
   email?: string | null
   /** El contacto cifrado que asegura no pudo descifrar: no se ofrece nada. */
   ilegible?: boolean
   /** Para el `aria-label`: «Llamar a Jose Suárez». Sin esto son iconos mudos. */
   quien: string
+  /** Texto con el que abrir WhatsApp ya escrito. Ver `BotonWhatsapp`. */
+  mensaje?: string | null
   tam?: 'sm' | 'md'
 }) {
-  const a = accionesContacto({ telefono, email, ilegible })
+  const a = accionesContacto({ telefono, email, ilegible, mensaje })
   if (!a.tel && !a.email) return null
 
   const estilo = { ...btnIcono('sutil', tam), textDecoration: 'none' }
@@ -46,7 +48,7 @@ export default function AccionesContacto({ telefono, email, ilegible, quien, tam
           <Phone size={px} strokeWidth={1.75} aria-hidden />
         </a>
       )}
-      {telefono && !ilegible && <BotonWhatsapp telefono={telefono} compacto />}
+      {telefono && !ilegible && <BotonWhatsapp telefono={telefono} mensaje={mensaje} compacto />}
       {a.email && (
         <a href={a.email} style={estilo} aria-label={`Escribir a ${quien}`} title={`Escribir a ${quien}`}>
           <Mail size={px} strokeWidth={1.75} aria-hidden />

@@ -7,13 +7,16 @@
 // fecha de vencimiento, que nadie se sabe.
 //
 // No era un fallo de datos: es que `tituloDePoliza` se cae a `compañía · ramo`
-// cuando no hay bien que enseñar, y a un TERCERO la dirección del hogar se le
-// capa a propósito (`NUNCA_A_UN_TERCERO.direccionRiesgo`, porque la casa donde
-// duerme quien te autorizó no es un dato del contrato). Con el título y la
-// segunda línea repitiendo lo mismo, la fila deja de identificar nada.
+// cuando no hay bien que enseñar. Con el título y la segunda línea repitiendo
+// lo mismo, la fila deja de identificar nada.
 //
-// El desempate es el número de póliza, que YA se sirve desde el nivel más bajo
-// (`TARJETA.numeroPoliza === true`): no abre ningún dato nuevo.
+// ⚠️ La CAUSA de aquel día ya no existe: entonces la dirección se le capaba a un
+// tercero (`NUNCA_A_UN_TERCERO.direccionRiesgo`) y por eso las dos hogar de
+// Occident salían sin bien. Desde el 07/09/2026 la dirección identifica el
+// inmueble y se sirve desde el nivel más bajo, así que ese caso concreto se
+// resuelve solo. Este cepo sigue haciendo falta para el que queda: la compañía
+// que NO informa el bien. Ahí el desempate es el número de póliza, que ya se
+// sirve desde `TARJETA` y no abre ningún dato nuevo.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -49,12 +52,16 @@ test('🚨 el numero de poliza se sirve desde el nivel MAS BAJO (si no, esto ser
   assert.match(cuerpo, /numeroPoliza:\s*true/, 'el número de póliza es el desempate: no puede caparse')
 })
 
-test('🚨 y el desempate NO puede ser la direccion del riesgo', () => {
-  // Sería lo más legible y es justo lo que NO se puede hacer: a un tercero la
-  // dirección del hogar del otorgante se le capa a propósito.
+test('🚨 la fila no se salta el filtro de nivel para conseguir un titulo', () => {
+  // Lo que sustituye al cepo anterior («el desempate no puede ser la
+  // dirección»), que murió con la decisión del 07/09/2026. Lo que NO puede
+  // cambiar es POR DÓNDE llega el dato: la fila pinta lo que
+  // `cartera-lectura.ts` ya ha filtrado por nivel (`p.bien`), y nunca el jsonb
+  // crudo. Leer `datosEspecificos` aquí serviría la dirección de todos sin
+  // mirar el permiso de nadie, y saldría bien en la pantalla de Alberto.
   assert.doesNotMatch(
     CODIGO,
-    /direccionRiesgo|bien\.ubicacion/,
-    'la fila no puede desempatar con la dirección: está capada para un tercero',
+    /datosEspecificos|datos_especificos|describirBien/,
+    'la fila tiene que pintar `p.bien`, ya filtrado por nivel, no el jsonb crudo',
   )
 })

@@ -247,14 +247,13 @@ export async function ejecutarAvisosVencimiento(opts: {
   const resumen: ResumenAvisos = { candidatas: candidatas.length, enviados: 0, sinCanal: 0, fallidos: 0, soloContar }
   if (candidatas.length === 0) return resumen
 
-  // Sin proveedor o sin remitente no se «envía 0 correos»: es una avería de
-  // configuración y tiene que verse como tal.
+  // Sin proveedor no se «envía 0 correos»: es una avería de configuración y
+  // tiene que verse como tal. El remitente ya no puede faltar (tiene defecto).
   let envio: { transporter: NonNullable<ReturnType<typeof createMailTransporter>>; from: string } | null = null
   if (!soloContar) {
     const transporter = createMailTransporter()
     if (!transporter) throw new Error('sin_proveedor_email')
     const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-    if (!from) throw new Error('sin_remitente')
     envio = { transporter, from }
   }
 

@@ -6,6 +6,8 @@
 // Estos evitan abrirlo.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import {
   construirPrompt,
   revisarGenerado,
@@ -17,10 +19,25 @@ import {
   MARCADOR,
   type ArticuloGenerado,
 } from './blog-agente.ts'
-import { TEMAS, elegirTema, temasRestantes } from './blog-temas.ts'
+import { TEMAS, elegirTema, temasRestantes, type TemaBlog } from './blog-temas.ts'
 import { normaPorId, idsDesconocidos } from '@central/module-seguros'
 
-const TEMA = TEMAS.find((t) => t.normas.includes('lcs-22'))!
+// 🚨 El fixture es SINTÉTICO, no un tema de la cola real.
+//
+// Antes era `TEMAS.find(t => t.normas.includes('lcs-22'))!`, y el día que se
+// retiró de la cola el único tema con esa norma —por canibalizar un artículo ya
+// publicado— siete tests reventaron con «Cannot read properties of undefined».
+// Lo que se comprueba aquí es la VALIDACIÓN de lo que escribe el modelo; eso no
+// puede romperse porque cambie una decisión editorial.
+const TEMA: TemaBlog = {
+  slug: 'tema-de-prueba',
+  consulta: 'me han cobrado el seguro más caro sin avisarme',
+  angulo: 'Ángulo de prueba, suficientemente largo para pasar la validación de la propia cola.',
+  normas: ['lcs-22'],
+  ramos: ['auto'],
+}
+
+const SIN_NORMAS: TemaBlog = { ...TEMA, slug: 'tema-sin-normas', normas: [] }
 
 function articuloValido(): ArticuloGenerado {
   return {
@@ -74,9 +91,11 @@ test('el prompt lleva las normas permitidas con su síntesis', () => {
 })
 
 test('un tema sin normas prohíbe citar explícitamente', () => {
-  const sinNormas = TEMAS.find((t) => t.normas.length === 0)!
-  const p = construirPrompt(sinNormas, '2026-09-21')
-  assert.match(p, /NO CITES NINGUNA NORMA/)
+  assert.match(construirPrompt(SIN_NORMAS, '2026-09-21'), /NO CITES NINGUNA NORMA/)
+  // Y la cola real tiene de los dos tipos: si algún día todos los temas
+  // llevaran norma, esta rama del prompt dejaría de ejercitarse en producción.
+  assert.ok(TEMAS.some((t) => t.normas.length === 0), 'ningún tema se responde sin citar')
+  assert.ok(TEMAS.some((t) => t.normas.length > 0), 'ningún tema cita norma')
 })
 
 test('un artículo correcto no tiene reparos', () => {
@@ -173,4 +192,30 @@ test('parsearRespuesta aguanta lo que devuelven los modelos, y se rinde en voz a
   // vacío pasaría media validación por no tener nada que revisar.
   assert.equal(parsearRespuesta('no hay json aquí'), null)
   assert.equal(parsearRespuesta('{roto'), null)
+})
+
+// 🚨 La cola no puede pedir un artículo que ya existe.
+//
+// `elegirTema` salta lo publicado comparando SLUGS, así que un tema cuyo slug
+// coincide con un artículo vivo no es un duplicado: es un tema que nunca se
+// escribirá, y la cola parece tener un tema más de los que tiene. Al agotarse
+// avisaría antes de tiempo, o —peor— se «arreglaría» renombrando el slug y
+// entonces sí saldrían dos páginas compitiendo por la misma búsqueda.
+//
+// Se lee el FUENTE de la otra app en vez de importarlo: son dos apps separadas
+// (lo vigila `test/regression-retarificar-plataforma.test.ts`) y este test
+// corre sin instalar nada. Mismo patrón que `contrato-lead.test.ts` de
+// asegura-web, que lee el fuente de plataforma para comparar la lista de ramos.
+test('ningún tema de la cola repite un artículo ya publicado', () => {
+  const fuente = readFileSync(
+    fileURLToPath(new URL('../../../asegura-web/lib/articulos.ts', import.meta.url)),
+    'utf8',
+  )
+  const publicados = new Set(slugsPublicados(fuente))
+  // Si el fichero cambia de forma y no se lee ningún slug, esto NO puede pasar
+  // en silencio: sin nada con que comparar, el cepo no está comprobando nada.
+  assert.ok(publicados.size > 0, 'no se ha leído ningún slug publicado: el cepo no vigila nada')
+
+  const chocan = TEMAS.filter(t => publicados.has(t.slug)).map(t => t.slug)
+  assert.deepEqual(chocan, [], `temas en cola que ya están publicados:\n${chocan.join('\n')}`)
 })

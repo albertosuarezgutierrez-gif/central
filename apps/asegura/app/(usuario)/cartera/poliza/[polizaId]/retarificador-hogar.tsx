@@ -16,6 +16,7 @@ import {
   type Resumen,
 } from '@/lib/codeoscopic/resumen-hogar'
 import type { Veredicto } from '@/lib/codeoscopic/contador'
+import { formatearErrorVendor } from '@/lib/codeoscopic/error-vendor'
 import { eur } from '@/lib/dinero'
 
 type Consumo = { veredicto: Veredicto; gastadoMes: string } | { error: string }
@@ -82,7 +83,8 @@ const HUERFANOS: Record<string, { etiqueta: string; tipo: 'texto' | 'sexo' }> = 
  * contrato con el puerto: `resueltos` + `correcciones`.
  */
 export default function RetarificadorHogar({
-  polizaId,
+  endpoint,
+  extra,
   resumen: resumenServidor,
   pre,
   defectos,
@@ -96,7 +98,15 @@ export default function RetarificadorHogar({
   primaActual,
   deshabilitado,
 }: {
-  polizaId: string
+  /**
+   * A dónde manda el POST que gasta 0,50€. La misma pantalla sirve para
+   * retarificar una póliza (`/api/cartera/polizas/{id}/retarificar`) y para
+   * una oportunidad nueva sin póliza (`/api/cartera/cliente/{id}/hogar-nuevo`,
+   * que además exige `referencia` en el cuerpo — ver `extra`).
+   */
+  endpoint: string
+  /** Campos extra que este flujo necesita en el cuerpo del POST (p.ej. `referencia` catastral). */
+  extra?: Record<string, unknown>
   /** La ficha ya armada en el servidor: es lo que se pinta mientras nadie corrija nada. */
   resumen: Resumen
   /** La precalificación entera, para rehacer la ficha al corregir una fila. */
@@ -221,10 +231,10 @@ export default function RetarificadorHogar({
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
     try {
-      const res = await fetch(`/api/cartera/polizas/${polizaId}/retarificar`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ resueltos: cuerpoResueltos(), correcciones: cuerpoCorrecciones() }),
+        body: JSON.stringify({ ...extra, resueltos: cuerpoResueltos(), correcciones: cuerpoCorrecciones() }),
       })
       const j = (await res.json()) as Record<string, unknown>
       if (res.status === 422) {
@@ -451,10 +461,11 @@ export default function RetarificadorHogar({
           <div className="err" style={{ marginTop: 12 }}>
             {resultado.clase === 'tope' && '🛑 Tope alcanzado: '}
             {resultado.clase === 'ramo' && '🚫 Ramo: '}
-            {resultado.clase === 'vendor' &&
-              '⚠️ Respuesta del vendor (entera, porque dice qué campo del contrato sobra o falta): '}
+            {resultado.clase === 'vendor' && '⚠️ El vendor ha rechazado la petición: '}
             {resultado.clase === 'otro' && '⚠️ '}
-            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{resultado.mensaje}</span>
+            <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {resultado.clase === 'vendor' ? formatearErrorVendor(resultado.mensaje) : resultado.mensaje}
+            </span>
             {resultado.clase === 'vendor' && (
               <p className="muted" style={{ fontSize: 12 }}>
                 Si es un 400 de validación, NO se ha cobrado. Un timeout o un 5xx sí cuentan como gastados.

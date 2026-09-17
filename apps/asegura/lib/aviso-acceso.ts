@@ -29,7 +29,13 @@ import { prismaAsegura } from './asegura-db'
 import { emailDeFicha } from './email-ficha'
 import { enlaceDeAutorizaciones, enviarAvisoAcceso } from './correo-aviso-acceso'
 
-export type FalloAviso = 'no_encontrado' | 'sin_pendiente' | 'sin_email' | 'sin_portal' | 'error_envio'
+export type FalloAviso =
+  | 'no_encontrado'
+  | 'sin_pendiente'
+  | 'sin_email'
+  | 'sin_portal'
+  | 'sin_correo_configurado'
+  | 'error_envio'
 
 export type ResultadoAviso =
   | { ok: true; caducaEn: Date }
@@ -72,7 +78,7 @@ export async function avisarAccesoPendiente(
       aceptadoEn: null,
       revocadoEn: null,
     },
-    select: { aceptadoEn: true, caducaEn: true, revocadoEn: true },
+    select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
   })
   const pendientes = filas.filter((f) => estadoAutorizacion(f, ahora) === 'pendiente')
   if (pendientes.length === 0) {
@@ -103,8 +109,39 @@ export async function avisarAccesoPendiente(
 
   const nombre = `${otorgante.nombre} ${otorgante.apellidos}`.trim()
   const enviado = await enviarAvisoAcceso(destino, { otorgante: nombre === '' ? null : nombre, enlace, caducaEn })
-  if (!enviado) {
+  // 🚨 Igual que en la invitación al portal: una env que falta no se cuenta como
+  // «el proveedor lo rechazó», porque reintentar no la pone.
+  if (enviado === 'sin_proveedor') {
+    return {
+      ok: false,
+      estado: 'sin_correo_configurado',
+      motivo:
+        'asegura no tiene ningún proveedor de correo configurado (falta RESEND_API_KEY, SMTP_USER+SMTP_PASSWORD o GMAIL_USER+GMAIL_APP_PASSWORD en Vercel). Reintentarlo no lo arregla.',
+      status: 503,
+    }
+  }
+  if (enviado === 'rechazado') {
     return { ok: false, estado: 'error_envio', motivo: 'El proveedor de correo no aceptó el mensaje. Vuelve a intentarlo.', status: 502 }
+  }
+
+  // 🚨 Y se SELLA como aviso ya contado, con la misma clave que usa el emisor
+  // genérico de la intranet (`lib/avisos-intranet.ts`, `${tipo}:${id}`). Sin
+  // esto, a quien Alberto acaba de avisar a mano le llegaría por la mañana un
+  // segundo correo del cron diciéndole lo mismo. El sello es best-effort: si
+  // falla, se grita y el aviso sigue mandado — lo caro es el duplicado, no la
+  // fila. `skipDuplicates` porque el cron pudo sellarlo ya.
+  try {
+    await db.portalAvisoEnviado.createMany({
+      data: pendientes.map((f) => ({
+        correduriaId,
+        clienteId: entrada.autorizadoId,
+        clave: `autorizacion_pendiente:${f.id}`,
+        tipo: 'autorizacion_pendiente',
+      })),
+      skipDuplicates: true,
+    })
+  } catch (e) {
+    console.error('[aviso-acceso] AVISADO PERO NO SELLADO:', e instanceof Error ? e.message : e)
   }
 
   // Queda en las dos fichas: a un tercero se le ha escrito, y eso se tiene que

@@ -128,3 +128,101 @@ export function resumirHistorialSiniestros(
   }
   return { total: siniestros.length, abiertos, cerrados, rechazados }
 }
+
+// ─── Lo que pasó y dónde (07/09/2026) ────────────────────────────────────────
+//
+// Alberto: «también dar acceso a toda la información de los siniestros». Hasta
+// ese día el historial decía CUÁNDO · EN QUÉ ESTADO · CON QUÉ REFERENCIA, o
+// sea todo menos lo único que a alguien le importa de un siniestro suyo: **qué
+// pasó**.
+//
+// 🚨 Medido en la cartera antes de escribir esto (69 siniestros): `comentario`
+// está informado en 66, y el lugar en 8. Todo lo demás que sonaba a «más
+// información» está VACÍO en las 69 filas — `gravedad`, los dos importes,
+// `se_considera_culpable`, y también `tramitador_*` y `perito_*` (o sea, la
+// regla del 03/09 que los oculta hoy no tapa ningún dato: no hay ninguno).
+//
+// ⚠️ Y `comentario` NO es un campo saneado: lo escribe el tramitador para uso
+// interno y en la cartera real contiene nombres y teléfonos de TERCEROS
+// («Inquilino piso 5: …»). Alberto decidió el 07/09/2026, con esos ejemplos
+// delante, publicarlo a todo el que ya puede ver siniestros. Lo que hace este
+// módulo es lo único que se puede hacer sin inventar: no tocar el texto —
+// recortarlo por la mitad daría un relato falso, y «limpiarlo» con una heurística
+// borraría datos buenos y dejaría pasar los malos.
+
+import { provinciaPorCp } from '@central/module-seguros'
+
+/**
+ * DÓNDE pasó, en una línea legible.
+ *
+ * Dos traducciones, y las dos vienen de mirar la BD:
+ *
+ * - **La provincia es un CÓDIGO** (`41`, `11`), no un nombre. Pintarlo crudo
+ *   daría «SEVILLA · 41», que parece un número de expediente. Se traduce con la
+ *   MISMA tabla que ya usa la ficha del cliente (`provinciaPorCp` de
+ *   `@central/module-seguros`), en vez de escribir aquí una segunda lista de 52
+ *   provincias que divergiría de la primera.
+ * - **La ciudad viene en MAYÚSCULAS** («ALCALA DE GUADAIRA», «DOS HERMANAS»),
+ *   que es como la manda la compañía. Se pasa a capital inicial dejando en
+ *   minúscula las partículas: no se corrigen acentos que la fuente no trae —
+ *   inventarse «Alcalá» es tan fácil como inventarse la provincia equivocada.
+ *
+ * `null` = no consta ninguna de las dos. Un lugar a medias (solo provincia) SÍ
+ * se devuelve: «Sevilla» es menos que «Dos Hermanas (Sevilla)» pero no es falso.
+ */
+export function lugarSiniestro(l: {
+  ciudad?: string | null
+  provincia?: string | null
+}): string | null {
+  const ciudad = nombreDeLugar(l.ciudad)
+  const provincia = nombreDeProvincia(l.provincia)
+  if (ciudad === null) return provincia
+  if (provincia === null || provincia.toLowerCase() === ciudad.toLowerCase()) return ciudad
+  return `${ciudad} (${provincia})`
+}
+
+/** Partículas que se quedan en minúscula dentro de un topónimo. */
+const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'en', 'a'])
+
+function nombreDeLugar(v: string | null | undefined): string | null {
+  const t = (v ?? '').trim()
+  if (t === '') return null
+  // Solo se re-capitaliza lo que viene TODO en mayúsculas, que es lo que manda
+  // la compañía. Un «A Coruña» ya bien escrito se deja como está.
+  if (t !== t.toUpperCase()) return t
+  return t
+    .toLowerCase()
+    .split(/(\s+|-)/)
+    .map((parte, i) =>
+      /^\s+$|^-$/.test(parte) || (i > 0 && PARTICULAS.has(parte))
+        ? parte
+        : parte.charAt(0).toUpperCase() + parte.slice(1),
+    )
+    .join('')
+}
+
+/**
+ * El código de provincia (`41`) → su nombre. Acepta también un nombre ya
+ * escrito, que es lo que traería una póliza aportada.
+ */
+function nombreDeProvincia(v: string | null | undefined): string | null {
+  const t = (v ?? '').trim()
+  if (t === '') return null
+  if (/^\d{1,2}$/.test(t)) return provinciaPorCp(t.padStart(2, '0'))
+  return nombreDeLugar(t)
+}
+
+/**
+ * QUÉ pasó, tal cual lo escribió quien lo tramitó.
+ *
+ * Solo quita el vacío y los valores de cajón: un `''` o un `'-'` que llegue de
+ * la compañía es «no lo contó», y pintado como descripción sería un renglón en
+ * blanco con aspecto de dato. **El texto no se recorta ni se reescribe**: media
+ * frase de un siniestro es un relato distinto, y este es el campo por el que
+ * alguien llama para preguntar.
+ */
+export function descripcionSiniestro(v: string | null | undefined): string | null {
+  const t = (v ?? '').trim()
+  if (t === '') return null
+  return /^[-–—.·_]+$/.test(t) ? null : t
+}

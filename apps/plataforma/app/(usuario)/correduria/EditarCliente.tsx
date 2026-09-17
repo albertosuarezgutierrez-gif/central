@@ -22,18 +22,19 @@ import {
 } from '@/lib/cliente-edicion-asegura'
 
 /**
- * Editar los datos de un cliente de la correduría, desde la ficha de plataforma.
+ * Editar la IDENTIDAD de un cliente de la correduría, desde la ficha de
+ * plataforma: DNI, nombre, apellidos y fecha de nacimiento, y SOLO con un DNI
+ * recibido en la ficha — «se pide documentado» (dictado de Alberto,
+ * 02/09/2026). Sin él, el bloque está deshabilitado y ofrece «Pedir DNI».
  *
- * Dos bloques con dos reglas distintas (dictado de Alberto, 02/09/2026):
- *   · Dirección / CP / ciudad / provincia / notas: libres.
- *   · Identidad (DNI, nombre, apellidos, fecha de nacimiento): SOLO con un DNI
- *     recibido en la ficha — «se pide documentado». Sin él, el bloque está
- *     deshabilitado y ofrece «Pedir DNI».
- *
- * Los teléfonos y correos NO están aquí: se corrigen en la tarjeta de arriba,
- * donde se leen (06/09/2026). Un formulario que repite la lista que ya está
- * media pantalla más arriba es otra cosa que ocupa sitio, no una forma de
- * editarla.
+ * 🚨 Ni los teléfonos y correos ni la DIRECCIÓN están aquí: se corrigen en la
+ * tarjeta de arriba, donde se leen. Los primeros salieron el 06/09/2026 y la
+ * dirección el 08/09, por el mismo motivo y con el mismo aviso de Alberto
+ * («sigo sin poder modificar dirección clientes»): la edición existía, en un
+ * desplegable a pantalla y media del dato, y desde el móvil eso es no existir.
+ * El formulario de la dirección lo sigue sirviendo este fichero
+ * (`EditarDireccion`, exportado), así que sigue habiendo UN solo sitio donde se
+ * escribe — lo que cambia es dónde se pinta.
  *
  * Y dos «no lo sé» que NO se pintan como «no tiene»: `identidad === null`
  * (versión anterior de asegura) y `documentos === null` (no se pudo consultar
@@ -45,23 +46,14 @@ import {
 export default function EditarCliente({
   clienteId,
   identidad,
-  contacto,
   documentos,
 }: {
   clienteId: string
   identidad: IdentidadFicha | null
-  contacto: {
-    direccion: string | null
-    direccionIlegible: boolean
-    codigoPostal: string | null
-    ciudad: string | null
-    provincia: string | null
-  }
   documentos: DocumentoResumen[] | null
 }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
-      <BloqueDireccion clienteId={clienteId} contacto={contacto} />
       <BloqueIdentidad clienteId={clienteId} identidad={identidad} documentos={documentos} />
     </div>
   )
@@ -71,7 +63,7 @@ export default function EditarCliente({
 
 type Libre = { direccion: string; codigoPostal: string; ciudad: string; provincia: string; notas: string }
 
-function BloqueDireccion({ clienteId, contacto }: {
+export function EditarDireccion({ clienteId, contacto }: {
   clienteId: string
   contacto: { direccion: string | null; direccionIlegible: boolean; codigoPostal: string | null; ciudad: string | null; provincia: string | null }
 }) {
@@ -140,7 +132,6 @@ function BloqueDireccion({ clienteId, contacto }: {
 
   return (
     <section style={{ display: 'grid', gap: 10 }}>
-      <h3 style={h3}>Dirección y notas</h3>
       {contacto.direccionIlegible && (
         <div style={pendienteBox}>
           🔒 La dirección está guardada pero cifrada con una clave que asegura no puede abrir: no se

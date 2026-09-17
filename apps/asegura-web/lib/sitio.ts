@@ -41,13 +41,18 @@ export const SITIO_URL = (process.env.NEXT_PUBLIC_SITIO_URL || 'https://grupoase
  * plataforma, no desde aquí. Un «Acceso corredor» en la web pública es una
  * puerta que ningún cliente necesita y que enseña dónde está la trastienda.
  *
- * Sale de `NEXT_PUBLIC_PORTAL_URL`. El valor por defecto es la URL en la que
- * el portal sirve HOY (`asegura-portal.vercel.app`), que funciona: un botón que
- * apuntara al dominio bonito antes de que su DNS llegue a Vercel mandaría al
- * cliente a IONOS. Cuando `clientes.grupoasegura.es` esté repuntado, se cambia
- * la variable en Vercel y el botón sigue a ese dominio sin tocar código.
+ * Sale de `NEXT_PUBLIC_PORTAL_URL`. **Ya pasó lo que esta nota anunciaba**
+ * (07/09/2026): `clientes.grupoasegura.es` está atado al proyecto
+ * `asegura-portal` con «Valid Configuration», sirve el portal (título medido:
+ * «Mis seguros — Grupo ASegura»), y la variable está puesta en los tres
+ * entornos. Así que el defecto pasa a ser ese dominio y no el
+ * `asegura-portal.vercel.app` de antes: si algún día falta la variable, el
+ * botón tiene que llevar al dominio de la casa, no a una URL de Vercel.
+ *
+ * El `.vercel.app` sigue existiendo y sirviendo, así que esto no arregla nada
+ * roto — cambia cuál es el canónico.
  */
-export const PORTAL_URL = (process.env.NEXT_PUBLIC_PORTAL_URL || 'https://asegura-portal.vercel.app').replace(/\/+$/, '')
+export const PORTAL_URL = (process.env.NEXT_PUBLIC_PORTAL_URL || 'https://clientes.grupoasegura.es').replace(/\/+$/, '')
 
 /** URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`). */
 export function url(ruta: string): string {
@@ -131,6 +136,10 @@ export const NAV = [
   // el peso interno de un sitio viaja por sus enlaces. Va aquí, que es la lista
   // del PIE (la cabecera se recorta abajo, y por medida, no por gusto).
   { href: '/seguros/responsabilidad-civil', texto: 'Responsabilidad civil' },
+  // Página de intención de oficio (15/09/2026, ver `lib/ramos.ts`): mismo
+  // motivo que RC y flota para ir al pie y no a la cabecera — está medida al
+  // límite, ver `FUERA_DE_CABECERA` más abajo.
+  { href: '/seguros/responsabilidad-civil-fontaneros', texto: 'RC de fontaneros' },
   { href: '/cambiar-de-correduria', texto: 'Cambiar de correduría' },
   // Recuperada del sitio anterior el 07/09/2026. No es un ramo: es la página de
   // más intención de problema que tiene el negocio, y la ÚNICA consulta en la
@@ -163,7 +172,11 @@ export const NAV = [
  * del negocio decide el de las furgonetas—, así que el enlace encaja mejor ahí
  * que en una cabecera que no cabe.
  */
-const FUERA_DE_CABECERA: readonly string[] = ['/seguros/responsabilidad-civil', '/seguros/flota']
+const FUERA_DE_CABECERA: readonly string[] = [
+  '/seguros/responsabilidad-civil',
+  '/seguros/flota',
+  '/seguros/responsabilidad-civil-fontaneros',
+]
 
 export const NAV_CABECERA = NAV.filter(
   (n) => n.href.startsWith('/seguros/') && !FUERA_DE_CABECERA.includes(n.href),
@@ -172,17 +185,35 @@ export const NAV_CABECERA = NAV.filter(
 /**
  * Horario de atención.
  *
- * 🚨 `null` a propósito: **no se ha confirmado con Alberto**, y en una ficha de
- * negocio local el horario es de los datos sobre los que la gente decide si
- * llamar ahora o no llamar. Inventárselo es peor que no publicarlo: un cliente
- * que llama a una hora que la web dice que atendemos y no coge nadie no vuelve.
+ * Estuvo a `null` a propósito hasta el 15/09/2026: en una ficha de negocio local
+ * el horario es de los datos sobre los que la gente decide si llamar ahora o no
+ * llamar, e inventárselo es peor que no publicarlo — un cliente que llama a una
+ * hora que la web dice que atendemos y no coge nadie no vuelve. El tipo sigue
+ * admitiendo `null` por eso: es el estado «no se sabe», y con él la ficha
+ * JSON-LD omite `openingHours` y el pie no anuncia ninguna hora.
  *
- * Mientras siga a `null`, la ficha JSON-LD **omite `openingHours`** (ausente,
- * que es la verdad) y la web dice «horario de oficina» sin concretar. En cuanto
- * haya horario real se rellena aquí y aparece solo en los dos sitios.
+ * 🚨 Esta constante es la ÚNICA copia del horario en la web. De aquí salen las
+ * dos publicaciones —el texto del pie y el `openingHours` del JSON-LD— y
+ * ninguna de las dos se teclea aparte: una segunda copia se queda vieja sin que
+ * nada falle. Lo vigila `seo-horario.test.ts`, que compara las horas del texto
+ * con las del schema y lee el fuente del pie.
  *
  * ⚠️ Tiene que coincidir con el que se declare en el perfil de Google Business:
  * dos horarios distintos para el mismo negocio es la clase de contradicción que
  * Google penaliza y que además cabrea a quien se presenta en la puerta.
+ *
+ * ✅ CONFIRMADO POR ALBERTO el 15/09/2026: «de 9 a 18h de lunes a viernes».
+ * Jornada continua, sin pausa de mediodía, y fines de semana cerrado — por eso
+ * el `schema` es UN solo rango `Mo-Fr 09:00-18:00` y no dos tramos. Sábado y
+ * domingo no se declaran: en schema.org lo que no aparece es cerrado, y
+ * declararlos con horas vacías sería peor que omitirlos.
+ * ⏳ El perfil de Google Business seguía SIN horario cuando esto se escribió
+ * (medido ese mismo día): ponérselo es tarea de Alberto y está pendiente. O sea
+ * que hoy la web concreta y el perfil no — el riesgo no es que se contradigan,
+ * es que Google no tenga el dato donde más se mira. Cuando se ponga allí, tiene
+ * que ser ESTE horario; y si algún día cambia uno, se cambian los dos.
  */
-export const HORARIO: { schema: readonly string[]; texto: string } | null = null
+export const HORARIO: { schema: readonly string[]; texto: string } | null = {
+  schema: ['Mo-Fr 09:00-18:00'],
+  texto: 'Lunes a viernes, de 9:00 a 18:00',
+}

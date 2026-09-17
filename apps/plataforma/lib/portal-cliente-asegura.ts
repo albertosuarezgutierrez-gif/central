@@ -52,6 +52,14 @@ export type PortalCartera = {
   ultimoAccesoEn: string | null
   /** Identidades vinculadas. `null` = **no se pudo contar**, que NO es 0. */
   identidades: number | null
+  /**
+   * El correo con el que ESTE cliente entraría al portal, tal y como lo elige
+   * asegura. `null` = **no se puede afirmar cuál** (no hay, no se lee, o su
+   * correo no lleva a esta ficha), y entonces la pantalla no nombra ninguno:
+   * decirle al cliente que entre con una dirección equivocada es mandarle a
+   * teclear un correo que no recibirá ningún código.
+   */
+  emailInvitacion: string | null
 }
 
 function cadena(v: unknown): string | null {
@@ -88,6 +96,10 @@ export function leerPortal(v: unknown): PortalCartera | null {
     // se pinta «no consta cuándo». Nunca se inventa un día.
     ultimoAccesoEn: iso !== null && !Number.isNaN(Date.parse(iso)) ? iso : null,
     identidades: enteroONull(o.identidades),
+    // Una versión de asegura anterior al 08/09/2026 no manda este campo, y eso
+    // se lee como `null` —«no se sabe cuál»—, que es justo lo que apaga el
+    // canal de WhatsApp en vez de inventarse una dirección.
+    emailInvitacion: cadena(o.emailInvitacion),
   }
 }
 
@@ -99,7 +111,18 @@ export function leerPortal(v: unknown): PortalCartera | null {
  * colapsan: el primero manda a mirar la conexión, el segundo a mirar el id.
  */
 export type RespuestaPortal =
-  | { estado: 'ok'; portal: PortalCartera }
+  | {
+      estado: 'ok'
+      portal: PortalCartera
+      /**
+       * A dónde lleva la invitación (`ASEGURA_PORTAL_URL` + `/boveda`), dicho
+       * por asegura. `null` = no hay portal configurado, y entonces no se
+       * ofrece ningún canal: un «entra aquí» sin el «aquí» no sirve. Se lee del
+       * puerto en vez de componerlo aquí para que el correo y el WhatsApp no
+       * puedan acabar apuntando a dominios distintos.
+       */
+      enlace: string | null
+    }
   | { estado: 'no_encontrado' }
   | { estado: 'sin_configurar' }
   | { estado: 'invalido'; motivo: string }
@@ -116,14 +139,14 @@ export function interpretarPortal(status: number, json: unknown): RespuestaPorta
     // Un `ok` sin bloque legible no se convierte en «no tiene acceso»: no se ha
     // podido leer, y se dice.
     if (portal === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
-    return { estado: 'ok', portal }
+    return { estado: 'ok', portal, enlace: cadena(o.enlace) }
   }
   return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
 }
 
 // ─── POST: el correo con el enlace ───────────────────────────────────────────
 
-/** Los ocho desenlaces de `invitarAlPortal` (`FalloInvitacion` de asegura). */
+/** Los nueve desenlaces de `invitarAlPortal` (`FalloInvitacion` de asegura). */
 export const FALLOS_INVITACION = [
   'no_encontrado',
   'sin_email',
@@ -133,6 +156,7 @@ export const FALLOS_INVITACION = [
   'sin_portal',
   'no_comprobado',
   'error_envio',
+  'sin_correo_configurado',
 ] as const
 export type FalloInvitacion = (typeof FALLOS_INVITACION)[number]
 
@@ -140,10 +164,17 @@ export type FalloInvitacion = (typeof FALLOS_INVITACION)[number]
  * 🚨 Ninguno de los desenlaces se colapsa con otro, porque se arreglan en
  * sitios distintos y el que los mira decide qué hacer después: `sin_email` es
  * «ponle un correo», `ambiguo`/`resuelve_a_otra` es «resuelve el duplicado»,
- * `ilegible` es «mira Vercel», `no_comprobado` es «vuelve a intentarlo» y
- * `error_envio` es una avería del proveedor que sí se reintenta. Un «no se pudo
- * invitar» genérico dejaría a Alberto llamando al cliente por un problema de
- * una variable de entorno.
+ * `ilegible` es «mira Vercel», `no_comprobado` es «vuelve a intentarlo»,
+ * `error_envio` es una avería del proveedor que sí se reintenta y
+ * `sin_correo_configurado` es una env que falta y que NO se arregla
+ * reintentando. Un «no se pudo invitar» genérico dejaría a Alberto llamando al
+ * cliente por un problema de una variable de entorno.
+ *
+ * 🚨 Los dos últimos se separaron el 07/09/2026 justo por eso: estaban
+ * colapsados, y el botón contestaba «el proveedor de correo no aceptó el
+ * mensaje, vuelve a intentarlo» mientras el log de `central-asegura` decía
+ * `[mailer] sin proveedor de email configurado`. La única acción que ofrecía la
+ * pantalla era la única que no podía funcionar.
  */
 export type RespuestaInvitacion =
   | {
@@ -323,6 +354,11 @@ export function textoInvitacion(r: RespuestaInvitacion, nombre: string): string 
       return '⚙️ No se ha enviado: no hay dirección de portal configurada (ASEGURA_PORTAL_URL), así que el correo no tendría a dónde llevar.'
     case 'error_envio':
       return `⚠️ El proveedor de correo no aceptó el mensaje, así que a ${nombre} NO le ha llegado. Vuelve a intentarlo.`
+    case 'sin_correo_configurado':
+      return (
+        `⚙️ No se ha enviado y NO sirve reintentarlo: ${textoMotivoPortal(r.motivo)} Se arregla en las variables ` +
+        `del proyecto Vercel central-asegura (y hay que redesplegar), no llamando a ${nombre}.`
+      )
     case 'no_encontrado':
       return 'Esa ficha ya no está en la correduría. No se ha enviado nada.'
     case 'sin_configurar':
@@ -376,6 +412,55 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
 }
 
 /** `GET /api/operador/cliente/portal?clienteId=` — qué se puede hacer hoy con esa ficha. Gratis. */
+/**
+ * La «vista de corredor» (08/09/2026): pide a asegura un enlace de UN solo uso
+ * (10 min) que abre el portal como lo ve ese cliente. Vuelve aquí y lo abre
+ * Alberto en su navegador: no se manda a nadie.
+ */
+export function vistaCorredorAsegura(entrada: { clienteId: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/portal/vista', { method: 'POST', body: JSON.stringify(entrada) })
+}
+
+export type RespuestaVista =
+  | { estado: 'ok'; url: string }
+  | { estado: 'no_encontrado' | 'sin_portal' | 'sin_configurar' | 'invalido' | 'error'; motivo: string }
+
+export function interpretarVista(status: number, json: unknown): RespuestaVista {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar', motivo: 'ASEGURA_OPERADOR_SECRET' }
+  if (status === 200 && o.estado === 'ok') {
+    const url = cadena(o.url)
+    // Solo https y solo hacia una URL entera: un `javascript:` o una ruta
+    // relativa aquí abriría cualquier cosa en la pestaña nueva.
+    if (url !== null && /^https:\/\//.test(url)) return { estado: 'ok', url }
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  if (o.estado === 'no_encontrado' || status === 404) return { estado: 'no_encontrado', motivo: cadena(o.motivo) ?? 'ficha no encontrada' }
+  if (o.estado === 'sin_portal') return { estado: 'sin_portal', motivo: cadena(o.motivo) ?? 'sin ASEGURA_PORTAL_URL' }
+  if (o.estado === 'invalido' || status === 422) return { estado: 'invalido', motivo: cadena(o.motivo) ?? 'datos no válidos' }
+  return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
+}
+
+export function textoVista(r: Exclude<RespuestaVista, { estado: 'ok' }>, nombre: string): string {
+  switch (r.estado) {
+    case 'no_encontrado':
+      return 'asegura dice que esta ficha ya no está en la correduría: no hay portal que abrir.'
+    case 'sin_portal':
+      return 'asegura no tiene configurada la dirección del portal (ASEGURA_PORTAL_URL): no sabe a dónde abrir.'
+    case 'sin_configurar':
+      return 'El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET).'
+    case 'invalido':
+      return `No se ha podido pedir la vista: ${r.motivo}`
+    case 'error':
+      return r.motivo === 'secreto_rechazado'
+        ? 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos).'
+        : r.motivo === 'red'
+          ? `No se ha podido hablar con asegura para abrir el portal de ${nombre}. Vuelve a intentarlo.`
+          : `No se ha podido abrir el portal de ${nombre}: ${r.motivo}`
+  }
+}
+
 export function portalAsegura(clienteId: string): Promise<Reenvio> {
   return llamar(`/api/operador/cliente/portal?clienteId=${encodeURIComponent(clienteId)}`, { method: 'GET' })
 }
