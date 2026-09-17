@@ -1,0 +1,20 @@
+{
+ "sesion": "3c2e4778-42a3-5d9f-be61-bd41a703bb7e",
+ "inicio": "2026-09-17T13:04:21.375Z",
+ "fin": "2026-09-17T13:04:25.247Z",
+ "llamadas": 2,
+ "categorias": {
+  "mcp:Gmail": {
+   "llamadas": 2,
+   "chars_in": 92,
+   "chars_out": 27734,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 1,
+    "mcp__Gmail__get_message": 1
+   }
+  }
+ }
+}
