@@ -21,6 +21,9 @@ real medido, orden de trabajo). Después, según lo que toques:
 - Ideas de producto ya recogidas (con su coste y su bloqueo) → `docs/CORREDURIA-INTRANET-IDEAS.md`.
   **Mira ahí antes de proponer una idea nueva**: probablemente ya está, con lo que la bloquea.
 - Sector y agente semanal → skill `agente-correduria`.
+- **Ingesta de CIMA (EIAC/TIREA, cuarentena, cobertura de campos, caja negra del webhook y el
+  diagnóstico de «la ingesta está muda») → skill `cima-ingesta`.** La regla 6 de aquí abajo dice
+  QUÉ no se hace sin spec; el CÓMO de la tubería está allí.
 
 ## 🚨 No romper
 

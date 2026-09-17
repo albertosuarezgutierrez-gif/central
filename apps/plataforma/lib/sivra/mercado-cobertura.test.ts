@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   ventanasQuePedir, planDeVentanas, parsearParametrosPlan, detalleIngesta, ingestaFiable,
   mesesSinBucket, FUENTES_FIABLES, MAX_VENTANAS_DEFECTO, MAX_VENTANAS_TECHO, MIN_FECHAS_BUCKET,
+  EDAD_MERCADO_RANCIO,
 } from './mercado-cobertura.ts'
 import { ventanasDelBarrido } from './mercado-ventanas.ts'
 
@@ -475,4 +476,89 @@ test('sin `bucket` el orden es EXACTAMENTE el de antes', () => {
     planDeVentanas(plan, AFOROS, [], HOY, 20, {}, undefined).ventanas,
   )
   assert.ok(planDeVentanas(plan, AFOROS, [], HOY, 20).ventanas.every(v => v.mesCorto === false))
+})
+
+// ── Evento CONFIRMADO con corpus CADUCADO ────────────────────────────────────────────────────
+// Caso real que los motiva (15/09/2026): Semana Santa 2027 del Dúplex. Las noches 23, 24 y 28 de
+// marzo estaban medidas —n=10 del 28/08, 18 días— y la cola las hundía por debajo de CUALQUIER
+// virgen, que en un plan de 12 meses las hay siempre. El motor las saltaba por `datos_insuficientes`
+// y las tarificaba PriceLabs: 286€ el martes 23 con el mercado de la zona en 420-600€.
+
+const EVENTO_SS: Parameters<typeof ventanasDelBarrido>[1] = [
+  { fecha: '2026-09-25', factor: 3.2, nombre: 'Semana Santa', confirmado: true },
+]
+
+test('un evento CONFIRMADO con corpus caducado adelanta a las medidas recientes', () => {
+  const plan = ventanasDelBarrido(HOY, EVENTO_SS, { mesesBase: 3, maxEventos: 3, fechasPorMes: 1 })
+  const soloCuatro = new Map<number, string[]>([[4, ['prop_duplex_center']]])
+  // TODAS medidas, para caer en el tramo «ambas medidas» del comparador. La de evento es la MÁS
+  // NUEVA de las tres (11 días) — sin el escalón nuevo iría la última por antigüedad.
+  const cobertura = plan.map(v => ({
+    checkin: v.checkin, aforo: 4,
+    ultimaMedicion: v.motivo === 'evento' ? '2026-07-26' : '2026-01-10',
+    comps: 10,
+  }))
+  const pedidas = ventanasQuePedir(plan, soloCuatro, cobertura, HOY, 10)
+  assert.equal(pedidas[0].motivo, 'evento', 'la caducada de evento manda sobre las medidas normales')
+  assert.equal(pedidas[0].diasSinMedir, 11)
+  assert.ok(
+    pedidas[1].diasSinMedir! > pedidas[0].diasSinMedir!,
+    'y lo hace PESE a ser más nueva que las que adelanta: ese es justo el escalón que faltaba',
+  )
+})
+
+test('dentro del plazo NO adelanta: la cola normal manda', () => {
+  const plan = ventanasDelBarrido(HOY, EVENTO_SS, { mesesBase: 3, maxEventos: 3, fechasPorMes: 1 })
+  const soloCuatro = new Map<number, string[]>([[4, ['prop_duplex_center']]])
+  // Evento medido hace 1 día: el motor lo acepta, así que no hay nada que rescatar.
+  const cobertura = plan.map(v => ({
+    checkin: v.checkin, aforo: 4,
+    ultimaMedicion: v.motivo === 'evento' ? '2026-08-05' : '2026-01-10',
+    comps: 10,
+  }))
+  const pedidas = ventanasQuePedir(plan, soloCuatro, cobertura, HOY, 10)
+  assert.notEqual(pedidas[0].motivo, 'evento', 'fresco no urge: vuelve el orden por antigüedad')
+})
+
+test('un evento PREVISTO caducado NO entra en el parte de caducadas', () => {
+  // Ojo al alcance de este cepo: exigir CONFIRMADO no cambia el ORDEN (un previsto caducado ya iba
+  // primero por antigüedad), cambia el PARTE. Y ahí importa: `eventosCaducados` es lo que dice «el
+  // motor está saltando esta fecha», y el motor no congela nada por un evento que solo es un rumor.
+  // Colarlo mandaría a gastar ventanas del conector en una fecha que quizá ni existe.
+  const previsto: Parameters<typeof ventanasDelBarrido>[1] = [
+    { fecha: '2026-09-25', factor: 3.2, nombre: 'Rumor', confirmado: false },
+  ]
+  const plan = ventanasDelBarrido(HOY, previsto, { mesesBase: 1, maxEventos: 1, fechasPorMes: 1 })
+  const fechaEvento = plan.find(v => v.motivo === 'evento')!.checkin
+  const cobertura = plan.map(v => ({
+    checkin: v.checkin, aforo: 4, ultimaMedicion: '2026-06-27', comps: 10,
+  }))
+  const { caducadas } = planDeVentanas(plan, AFOROS, cobertura, HOY, 50)
+  assert.equal(
+    caducadas.find(c => c.checkin === fechaEvento),
+    undefined,
+    'un previsto es una apuesta: su corpus viejo no es una fecha que el motor esté saltando',
+  )
+})
+
+test('eventosCaducados agrega por FECHA y se queda con la PEOR edad de sus aforos', () => {
+  const plan = ventanasDelBarrido(HOY, EVENTO_SS, { mesesBase: 1, maxEventos: 1, fechasPorMes: 1 })
+  const fechaEvento = plan.find(v => v.motivo === 'evento')!.checkin
+  // Mismo día, dos aforos: uno medido ayer y otro hace 40 días. La fecha está a ciegas para el piso
+  // de 12 plazas aunque el de 4 se midiera ayer — colapsarlo a «la más nueva» diría que está bien.
+  const cobertura = [
+    { checkin: fechaEvento, aforo: 4, ultimaMedicion: '2026-08-05', comps: 10 },
+    { checkin: fechaEvento, aforo: 12, ultimaMedicion: '2026-06-27', comps: 10 },
+  ]
+  const { caducadas } = planDeVentanas(plan, AFOROS, cobertura, HOY, 50)
+  const fila = caducadas.find(c => c.checkin === fechaEvento)
+  assert.ok(fila, 'la fecha de evento con un aforo caducado sale en el parte')
+  assert.equal(fila!.diasSinMedir, 40, 'manda la peor edad, no la mejor')
+  assert.deepEqual(fila!.aforos, [12], 'y solo el aforo que de verdad está caducado')
+})
+
+test('el motor y la cola comparten el MISMO plazo de frescura', () => {
+  // Si divergen, el barrido da por cubierta una ventana que `pricing/apply` rechaza por vieja, y
+  // eso solo se ve como una noche tarificada por el canal externo. El 7 del motor se importa de aquí.
+  assert.equal(EDAD_MERCADO_RANCIO, 7)
 })

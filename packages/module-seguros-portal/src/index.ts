@@ -61,7 +61,40 @@ export {
   declaradaGeneraObligacion,
 } from './obligacion.ts'
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
+export {
+  TIPOS_AVISO,
+  FUENTES_AVISO,
+  HREF_POR_TIPO,
+  textoGlobo,
+  avisosDe,
+} from './avisos.ts'
+export type {
+  TipoAviso,
+  Aviso,
+  FuenteAviso,
+  AutorizacionParaAviso,
+  ObligacionParaAviso,
+  PeticionParaAviso,
+  ReparoParaAviso,
+  EntradaAvisos,
+  Avisos,
+} from './avisos.ts'
 export { debeAvisarPush } from './push.ts'
+export {
+  normalizarRecordatorio,
+  siguienteOcurrencia,
+  SUGERENCIAS_RECORDATORIO,
+  TITULO_MAX,
+  REPITE_CADA_MESES_MIN,
+  REPITE_CADA_MESES_MAX,
+} from './recordatorio-libre.ts'
+export type {
+  TipoRecordatorio,
+  SugerenciaRecordatorio,
+  EntradaRecordatorio,
+  RecordatorioNormalizado,
+  ResultadoRecordatorio,
+} from './recordatorio-libre.ts'
 export {
   PERIODICIDADES_PAGO,
   DIAS_PREAVISO_RECIBO,
@@ -87,11 +120,15 @@ export {
   DESCRIPCION_MIN,
   DESCRIPCION_MAX,
   LUGAR_MAX,
+  CAMPO_VEHICULO_MAX,
   ANIOS_MAXIMOS_ATRAS,
   comunicadoACompania,
   parsearFechaHecho,
   plazoComunicacion,
   normalizarParte,
+  bloqueDatosVehiculo,
+  componerDescripcion,
+  ZONAS_VEHICULO,
 } from './parte-siniestro.ts'
 export type {
   ParteEstado,
@@ -99,6 +136,8 @@ export type {
   ParteNormalizado,
   ResultadoParte,
   PlazoComunicacion,
+  DatosVehiculo,
+  ZonaVehiculo,
 } from './parte-siniestro.ts'
 export {
   ALCANCES,

@@ -40,10 +40,18 @@ export function middleware(req: NextRequest) {
     corredor = false
   }
   if (!corredor) return NextResponse.next()
-  return NextResponse.json(
-    { error: 'modo_corredor', motivo: 'Estás viendo el portal como lo ve el cliente: aquí no se escribe en su nombre.' },
-    { status: 403 },
-  )
+  // 🚨 El texto viaja en `mensaje`, no solo en `motivo`: las pantallas del
+  // portal leen `{ error, mensaje }` (`textoError` de `autorizaciones`,
+  // `AnadirPoliza`, `ParteSiniestro`…), así que un `motivo` a secas se caía y
+  // Alberto veía «No hemos podido hacerlo (modo_corredor). Inténtalo otra vez
+  // dentro de un momento» — un 403 PERMANENTE disfrazado de fallo pasajero, que
+  // invita justo a lo único que no sirve: volver a pulsar. Medido el 15/09/2026
+  // intentando aceptar desde la vista de corredor las dos autorizaciones de
+  // Juan Manuel. `motivo` se mantiene por si algo lo leía.
+  const motivo =
+    'Estás viendo el portal como lo ve el cliente: aquí no se escribe en su nombre. ' +
+    'Tiene que hacerlo la persona desde su propio acceso (su email y su código).'
+  return NextResponse.json({ error: 'modo_corredor', motivo, mensaje: motivo }, { status: 403 })
 }
 
 export const config = { matcher: '/api/:path*' }

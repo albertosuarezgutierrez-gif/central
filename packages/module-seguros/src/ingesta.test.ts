@@ -499,3 +499,100 @@ test('saludIngesta cuelga el reparto y saca un motivo por CLAVE', () => {
   assert.match(m, /Occident \(C0468\) \/ clave M00171: 1 póliza\(s\) que hay que pedirle/)
   assert.match(m, /clave 8-92361: 1 póliza\(s\) que hay que pedirle/)
 })
+
+// --- Señales nuevas (crudo, cobertura, caja negra, cron mudo) ---------------
+// Lo que vigilan no es que cuenten: es que NO tranquilicen. Cada una puede
+// mentir en la misma dirección —salir verde porque no hay datos— que es el
+// fallo que este módulo existe para impedir.
+
+test('cron mudo: sin pull no hay nada que atascar, y eso NO es estar sano', () => {
+  // Con la ingesta parada las otras cuatro señales salen a cero. Sin esta
+  // comprobación el vigía diría «ok» con CIMA sin ir a buscar nada.
+  const s = saludIngesta({ cuarentena: [], ultimoPull: { horas: 40, procesados: 0 } })
+  assert.equal(s.estado, 'degradada')
+  assert.ok(s.motivos.some(m => m.includes('sin completar')))
+})
+
+test('cron recién corrido no alarma', () => {
+  const s = saludIngesta({ cuarentena: [], ultimoPull: { horas: 3, procesados: 0 } })
+  assert.equal(s.estado, 'ok')
+})
+
+test('sin constancia de ninguna corrida se DICE, no se calla', () => {
+  const s = saludIngesta({ cuarentena: [], ultimoPull: null })
+  assert.ok(s.motivos.some(m => m.includes('No consta ninguna corrida')))
+})
+
+test('purga inminente del crudo alarma: es la ÚLTIMA copia', () => {
+  // CIMA ya confirmó esos ficheros a TIREA y no los reenvía. Cuando el TTL
+  // pase, la pérdida es definitiva — por eso avisa antes, no después.
+  const s = saludIngesta({
+    cuarentena: [],
+    crudo: { pendientes: 3, purgaInminente: 2, masAntiguaHoras: 2000 },
+  })
+  assert.equal(s.estado, 'degradada')
+  assert.ok(s.motivos.some(m => m.includes('se BORRAN')))
+})
+
+test('crudo pendiente SIN purga inminente informa pero no alarma', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    crudo: { pendientes: 3, purgaInminente: 0, masAntiguaHoras: 48 },
+  })
+  assert.equal(s.estado, 'ok')
+  assert.ok(s.motivos.some(m => m.includes('esperando reproceso')))
+})
+
+test('cuerpos rechazados capturados alarman: nos lo mandaron y lo tiramos', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cajaNegra: { capturaActiva: true, cuerpos: 4, posts: 193, horasDesdeUltimo: 1, sinCuerpo: 0 },
+  })
+  assert.equal(s.estado, 'degradada')
+  assert.ok(s.motivos.some(m => m.includes('rechazados de Codeoscopic')))
+})
+
+test('caja negra activa SIN cuerpos todavía no alarma ni tranquiliza', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cajaNegra: { capturaActiva: false, cuerpos: 0, posts: 0, horasDesdeUltimo: null, sinCuerpo: 0 },
+  })
+  assert.equal(s.estado, 'ok')
+  assert.deepEqual(s.motivos, [])
+})
+
+test('cobertura NO alarma aunque haya campos sin leer: sería un rojo perpetuo', () => {
+  // El EIAC trae cientos de campos y siempre habrá alguno que no leamos. Si
+  // esto pusiera el vigía en rojo, estaría rojo para siempre y dejaría de
+  // mirarse — que es cómo muere una alarma.
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: { hojas: 300, hojasNuncaLeidas: 120, porTipo: [{ tipoObjeto: 'POL', hojas: 300, nuncaLeidas: 120 }] },
+  })
+  assert.equal(s.estado, 'ok')
+  assert.ok(s.motivos.some(m => m.includes('no se leen nunca')))
+})
+
+test('cobertura SIN MEDIR se declara: no equivale a «los leemos todos»', () => {
+  const s = saludIngesta({ cuarentena: [], cobertura: null })
+  assert.ok(s.motivos.some(m => m.includes('SIN MEDIR')))
+})
+
+test('no pedir una señal ≠ pedirla y fallar: `undefined` no inventa un hueco', () => {
+  // Un llamante viejo que no conoce las señales nuevas no puede empezar a
+  // gritar por algo que nunca preguntó.
+  const s = saludIngesta({ cuarentena: [] })
+  assert.equal(s.estado, 'ok')
+  assert.deepEqual(s.motivos, [])
+  assert.equal(s.crudo, null)
+  assert.equal(s.cobertura, null)
+})
+
+test('sin_datos deja las cuatro señales nuevas en null, no en cero', () => {
+  const s = saludIngesta({ cuarentena: null })
+  assert.equal(s.estado, 'sin_datos')
+  assert.equal(s.crudo, null)
+  assert.equal(s.cobertura, null)
+  assert.equal(s.cajaNegra, null)
+  assert.equal(s.ultimoPull, null)
+})

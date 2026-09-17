@@ -11,7 +11,10 @@ import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 // llamada servidor→servidor recibía el HTML del login en vez del JSON.
 // Y /api/webhooks: los receptores de Resend y de Codeoscopic traen su propia auth
 // (firma svix / HTTP Basic); sin la exención el vendor recibía el HTML del login.
-const PUBLIC = ['/login', '/api/auth', '/api/operador', '/api/portal', '/api/webhooks']
+// /api/publico: endpoints sin sesión pensados para que los abra un tercero desde
+// un enlace de email (p.ej. la baja de recaptación) — igual que /api/publico/*
+// en apps/plataforma.
+const PUBLIC = ['/login', '/api/auth', '/api/operador', '/api/portal', '/api/webhooks', '/api/publico']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

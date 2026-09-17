@@ -1309,6 +1309,82 @@ Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), 
 un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
 Guardián: `test/regression-portal-obligaciones.test.ts`.
 
+## 📬 El emisor GENÉRICO de la intranet (15/09/2026) — sin cola, derivado de la campana
+
+`GET /api/cron/avisos-intranet` (diario **08:15** UTC, `vercel.json`): **un** correo por cliente con
+lo que su campana tiene pendiente y todavía no se le ha contado. Dictado de Alberto: *«todo lo que
+sea la intranet de un cliente, que automáticamente hay notificación de algo, modificación, un
+vencimiento, todo, una ITV, una revisión de extintores, lo que sea, eso a esa persona habrá que
+mandarle un correo cortito, educado… con acceso a la intranet directamente»*.
+
+🚨 **La decisión que lo hace genérico: NO hay cola de notificaciones.** El emisor no espera a que
+nadie encole nada — **deriva** lo que hay que avisar del MISMO catálogo que pinta la campana del
+portal (`avisosDe()` de `@central/module-seguros-portal`). Consecuencia buscada: el día que la
+campana aprenda a avisar de algo nuevo, **sale por correo sin tocar `lib/avisos-intranet.ts`**. Con
+una cola habría que acordarse de encolar en cada sitio, y el que se olvidara no rompería nada:
+simplemente ese aviso no saldría nunca. De paso, lo que el cliente ve dentro y lo que le llega por
+correo no pueden divergir, porque es la misma función.
+
+**Y el tipo nuevo no puede colarse sin nombre:** `ETIQUETA_POR_TIPO` (`lib/correo-avisos-intranet.ts`)
+es un `Record<TipoAviso, …>`, así que un tipo sin etiqueta **no compila**. Se vio pasar el 15/09/2026:
+al añadir `datos_por_revisar` el typecheck cazó que `peticion_recibida` llevaba desde el día anterior
+sin etiqueta. Un `switch` con `default: 'algo pendiente'` se lo habría tragado.
+
+🚨 **Lo que el correo NO dice: el TÍTULO del aviso.** La campana dice «ITV de 1234 ABC» o «Renovación
+de la póliza 302…»; eso es justo lo que `CAMPOS_PROHIBIDOS_EN_INVITACION` mantiene fuera de un correo,
+y la dirección la tecleó un humano y puede ser un buzón compartido. Al emisor solo se le pasa
+`{ tipo }`: el cuerpo dice **cuántas cosas hay y de qué CLASE** («un vencimiento próximo», «una
+solicitud de acceso») y el enlace. El detalle se ve DENTRO, cuando la persona ha probado que es ella.
+
+**El sello: `seguros.portal_aviso_enviado`** (`prisma/sql/2026-09-15_portal_aviso_enviado.sql`,
+**APLICADA el 15/09/2026**, cepo del UNIQUE visto morder con `23505` dentro de un bloque revertido).
+Un catálogo derivado no recuerda nada, así que sin sello el cron mandaría lo mismo cada día. La clave
+es `${tipo}:${id_de_la_fila_de_origen}`, **nunca el título**. Un aviso se manda **UNA** vez: no hay
+recordatorio a los N días en la Fase 1 — repetir por defecto es cómo un canal útil se convierte en uno
+que nadie abre. Las obligaciones conservan además su sello viejo (`portal_obligacion.avisada_at`), y
+se respeta.
+
+⏰ **Va 15 minutos DESPUÉS del cron de vencimientos, y no es cosmético:** los dos pueden hablar del
+mismo vencimiento. Con este orden, cuando esta pasada mira, la obligación ya tiene su `avisada_at` y
+aquí ni se cuenta; solapados, serían dos correos a la vez sobre lo mismo.
+
+🚨 **Si una fuente de un cliente no se puede leer, a ESE cliente no se le escribe en esta pasada**
+(`ilegibles` en el resumen). Un correo que dice «tienes 2 avisos» cuando hay 5 es peor que no
+mandarlo: entra, resuelve dos y se va tranquilo.
+
+Mismos cerrojos que el cron de vencimientos: `CRON_SECRET` solo por Bearer, **modo cuenta por
+defecto** (`ASEGURA_AVISOS_ACTIVOS=1`, el mismo interruptor — es UN solo «¿escribimos ya a
+clientes?») y `?contar=1` para el ensayo. Sin portal (`ASEGURA_PORTAL_URL` que no sea https) o sin
+proveedor de correo, **503**, nunca un `enviados: 0` tranquilizador.
+
+### 🏠 «Revisa tu dirección»: el reparo que solo veía Alberto
+
+El primer tipo que estrenó el emisor. `leerSitio()` de `@central/module-seguros` se escribió el
+05/09/2026 para la ficha del corredor, así que un «El código postal guardado («0812») no es un código
+postal español de 5 dígitos» se quedaba **en la pantalla de Alberto** — y el único que puede
+corregirlo es el dueño del dato. Alberto, 15/09/2026, sobre la ficha de un cliente real: *«es lo que
+quiero que notifique por mail e intranet, explicándole cómo modificar su dirección y así tenemos todos
+los datos actualizados»*.
+
+- El aviso lo compone el catálogo (`datos_por_revisar`, → `/boveda?vista=datos`) y **el id es el TIPO
+  de reparo** (`cp_invalido`, `ciudad_sin_letras`, `provincia_no_cuadra`): es la clave del sello, así
+  que tiene que ser estable. El texto puede cambiar sin volver a avisar de lo mismo.
+- 🚨 **Esta fuente no parte de una fila pendiente: hay que IR A MIRAR la ficha.** Por eso se acota a
+  la **cartera viva** (`titularesVivos`, de las pólizas vivas) y no a `clientes`: sobre la tabla
+  entera esto serían 32.600 correos de «revisa tu dirección» a leads de un volcado de 2013-2018. Con
+  cepo.
+- **Medido el 15/09/2026 sobre los 97 titulares vivos: 1 CP inválido y 3 ciudades sin letras.** (El
+  brazo `provincia_no_cuadra` no se midió en SQL: necesita la tabla CP→provincia del código.) O sea,
+  un puñado de correos, no un mailing. Un CP de 4 dígitos **no** es un reparo por sí solo:
+  `cpNormal()` le pone el cero de delante; `0812` sí lo es porque `00` no es ninguna provincia.
+- El MISMO `leerSitio()` juzga la ficha del corredor y la del cliente. Con dos criterios, la pantalla
+  de Alberto marcaría un reparo que la del cliente da por bueno.
+
+Cepos: `test/regression-avisos-intranet.test.ts` (11) y `packages/module-seguros-portal/src/
+avisos.test.ts`. **Seis mutaciones vistas morder**: tipo sin etiqueta, el título colado en el correo,
+el filtro de cartera viva quitado, el sello ignorado, el id del reparo cambiado y la fuente ilegible
+sin declarar.
+
 ## ✉️ «Invitar por correo» — el aviso de acceso pendiente (05/09/2026)
 
 `POST /api/operador/cliente/relaciones/aviso` (Bearer de operador) escribe a la persona que tiene una

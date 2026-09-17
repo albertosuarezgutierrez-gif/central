@@ -12,6 +12,241 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(16/09/2026)** CIMA · skill `cima-ingesta` (router de la tubería EIAC/TIREA: cadena, cuarentena,
+cobertura de campos, caja negra del webhook y diagnóstico), y se mata el duplicado en
+`agente-correduria`/`correduria-crm`. **Generali SÍ vuelca por CIMA desde el 14/09** (1er POL, único
+fichero de la serie con avisos: 12 leves) — la skill lo daba por fuera y era cierto el 01/09: una
+afirmación que caducó sola, ahora con cepo. **Mapfre lleva desde el 23/06 sin mandar nada** y el
+export del portal confirma que CIMA no generó ficheros suyos: es aguas arriba, llamada a Mapfre.
+`cima_cobertura_campos`/`cima_cuarentena_crudo` a 0 **NO es avería**: el PR se desplegó a las 12:19
+y el último fichero entró a las 10:10 — no medido todavía. Caja negra: 1ª captura real, raíz `array`
+de 2 donde el esquema espera objeto (deriva de contrato, no secreto). Panel de ingesta: PR #3037
+mergeado. Docs NO movidos a propósito (8 enlaces, dos en esta memoria). PR abierto.
+
+**(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
+oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
+no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
+por `WebSearch` (SERP, sin volumen real) → fontanero con menos sitios especialistas que electricista
+y climatización/gas. Mismo molde `RAMOS`, sin ramo nuevo en BD (sigue `responsabilidad_civil`).
+Verificado: 105 tests + tsc en asegura-web, tests de `consultas.ts` en plataforma. PR abierto.
+
+**(16/09/2026)** Agente huéspedes · «no se pudo enviar al huésped» ×3 en la reserva 155333446:
+era **Smoobu caído** (503, página «System Outage», medido en los logs de runtime de plataforma
+06:06-06:24 UTC), no el borrador ni el código. Lo nuestro era el aviso, que decía siempre
+«reintenta en un momento» — una caída del proveedor se veía igual que una credencial mala o una
+reserva desconocida. Nuevo módulo puro `lib/sivra/agente-huesped/motivo-envio.ts` (7 clases, dice
+si reintentar sirve; el cuerpo HTML de Smoobu nunca viaja al aviso) + `enviarAlHuespedDetallado()`,
+con `enviarAlHuesped()` como envoltura booleana para los 9 llamadores automáticos. PR draft #3021;
+9 cepos vistos en ROJO antes de darlos por buenos, tsc 0 y 336 tests del agente en verde.
+
+**(15/09/2026)** SEO correduria · cron `seo-correduria` gana 3ª fuente **cobertura de indexación**
+(`lib/seo-correduria/cobertura.ts`, URL Inspection API — reusa la cuenta de servicio de GSC, sin
+secreto nuevo) para el 404/no-indexado de `asegura-web` que Alberto pedía como prerrequisito de Ads.
+Nueva acción `arreglar_indexacion` (se antepone a proponer contenido si una página propia está fuera
+del índice o no se pudo comprobar). Migración `2026-09-15_seo_correduria_semana_cobertura.sql`
+(CHECK de `fuente`) **aplicada en Supabase**. PR #3010, code-review con 3 hallazgos corregidos
+(estado `error` no se trataba como PASS por omisión; token de Google duplicado; motivo mal atribuido
+en el informe). 66/66 tests seo-correduria, tsc limpio.
+
+**(16/09/2026)** ASegura · **CIMA: carga masiva de Occident con 4/44 pólizas perdidas en review —
+causa, fix Y red de seguridad, los tres en `asegura`** (BIDP023227 entre ellas; PRs #829 y #830,
+mergeados). Occident («ya está descargada») y CIMA (SAU-24103) tenían razón: el fichero
+`C0468_M00171_POL_199_1_20260915…` consta `confirmed`/`review_parcial` (40/44); las 4
+(`RiesgoComunidades` ×3, `RiesgoEmbarcaciones` ×1) cayeron en `tipo_seguro_no_clasificable` — el
+`idPolizaEntidad` SÍ queda en `source_event_id` del evento (`<hash>:BIDP023227:review`), no hace
+falta descifrar nada para identificarlas. **Gotcha estructural**: el pipeline confirma el fichero a
+TIREA en cuanto ≥1 póliza persiste (aquí 40 de 44), y confirmar saca el fichero de la cola de CIMA
+**para siempre** — con 0 copia propia del crudo, lo que cae en review solo se recupera pidiéndole a
+la compañía que reenvíe a mano. #829: mapper reconoce comunidades→`comunidades`,
+embarcaciones→`otros` (44 casos análogos ya vistos: `RiesgoComercios` LOO-807, `RiesgoAccidentes`).
+#830 (la red de seguridad, para que esto no vuelva a pasar): `cima_cuarentena_crudo` — guarda
+`datos`+`rawXml` cifrados (AES-256-GCM, TTL 90 días) justo ANTES de `confirm`, y
+`POST /api/internal/cima/reprocesar-cuarentena` los reinyecta al pipeline con `opts.reprocess=true`
+en cuanto se arregla un gap del mapeador, sin depender de la compañía. **Migración 0096 SIN
+APLICAR** (gate DDL de AGENTS.md: PR-review + 2-eyes antes de `apply_migration` contra Supabase
+Frankfurt) — desplegar #830 sin aplicarla antes rompería el pull de CIMA. Dos borradores en Gmail
+(sin enviar, a la espera de que Alberto los revise): reenvío a Occident de las 4 pólizas y cierre
+del SAU-24103. Generali C0072 tiene 1 caso igual (6E-G-475000053) que se resolverá solo con #829.
+
+**(15/09/2026)** ASegura · `@central/core-vehiculos` + `POST /api/operador/vehiculo/matricula`
+**mergeados** (PR #2998, `resolverMatricula()` sobre APIVehículo, adaptador intercambiable). Pendiente
+el curl real con matrícula de cartera para validar el mapeo en producción (falta que Alberto saque
+`ASEGURA_OPERADOR_SECRET` del panel de Vercel). Idea suya anotada en el spec de alta por fotos
+(`docs/superpowers/specs/2026-09-01-asegura-alta-por-fotos-y-bonificadores.md`, §2): foto de la
+MATRÍCULA (no de la ficha técnica) + cliente ya en cartera podría cerrar un presupuesto de auto con
+una sola foto — sin diseñar (falta OCR de matrícula y el emparejamiento del `version` libre).
+
+**(15/09/2026)** ASegura · **el blog se aprueba también desde Telegram** (PR #3003, mergeado). Alberto
+pidió botones (no solo el link a `/correduria → Redes`): nueva `decidirBlogPr()` en
+`lib/correduria/blog-pr.ts` es la ÚNICA fuente de mezcla/cierre del PR del agente del blog, usada por
+la pantalla y por el nuevo prefijo `ablg` del webhook compartido (`ablg_ok`/`ablg_no:<nºPR>` —
+evita `blog_`/`ig_`/`briefing_`, que se reenvían a ia-rest). `code-review` antes de sacar de borrador
+encontró y corrigió: default inseguro (action desconocido → publicaba), `RAMA` duplicada en 3 sitios
+(ahora se exporta una vez), y un cambio de status HTTP no intencionado. Sigue sin publicarse nada
+solo — el clic es de Alberto, ahora también desde el chat.
+
+**(15/09/2026)** ASegura · **el horario ya se publica** (PR #2994). Alberto lo confirmó —L-V de
+9:00 a 18:00— y `HORARIO` (`apps/asegura-web/lib/sitio.ts`) deja de ser `null`: de esa constante
+salen las DOS publicaciones, el pie de la web y el `openingHours` del JSON-LD. `null` sigue siendo
+el estado «no se sabe» y omite las dos. `HORARIO.texto` existía sin que nadie lo pintara: el dato
+llegaba a Google y no a la página, y Google contrasta uno con otra. Cepo `lib/seo-horario.test.ts`,
+visto rojo brazo a brazo; la revisión previa lo pilló comparando solo la HORA (9:30 pasaba por
+09:00) y sin mirar los días. ⏳ Pendiente de Alberto: poner ese mismo horario en Google Business,
+que hoy no tiene ninguno.
+
+**(15/09/2026)** SIVRA · pricing: **el motor revivió tras 4 días de 401 y lo primero que hizo fue arrasar**.
+El puente legacy de Smoobu funciona (427 noches en 4 pisos a las 14:30 UTC), pero esa misma pasada bajó
+**269 de 427** noches, 109 más de un 15%. En el Dúplex arrastraba el Jueves Santo (25/03/2027) de 672€
+hacia `target_crudo=112€` / `clamp_ceil=170€` a −20% por pasada (3/día): en 2 días quedaba a 170€. Es el
+MISMO bug del PR #2988 visto desde el otro lado — `base_fuente='mes'`: sin barrido que mida el evento, el
+motor no sabe que es Semana Santa y usa la base de un marzo normal. El 28/03 ya hizo ese recorrido entero
+(535→180, 28/08–03/09). **Motor PAUSADO** (`pricing_config.paused=true`, 14:44 UTC) hasta que el snapshot
+de mañana 07:00 UTC traiga mercado fresco y el barrido arreglado mida Semana Santa. Rutina de despausa
+programada (07:30 UTC) con la condición explícita: NO despausar si el barrido no midió el evento.
+
+**(15/09/2026)** SIVRA · pricing: **una fecha de EVENTO medida una vez no volvía a subir NUNCA
+en la cola del barrido** (`planDeVentanas` ordenaba «virgen antes que medida» y, dentro de las
+medidas, solo por antigüedad; en un plan de 12 meses siempre hay vírgenes). El motor exige corpus
+≤7 d, así que esas noches caían en `datos_insuficientes` y las tarificaba el canal externo. Medido en
+Semana Santa 2027 del Dúplex: 23, 24 y 28/03 con 18 días y 29/03 sin corpus → publicado 286€ el
+martes 23 con el mercado 4p del casco en ~440€. `EDAD_MERCADO_RANCIO` compartida con
+`pricing/apply` + escalón en la cola (solo evento CONFIRMADO) + `eventos_caducados` en
+`/mercado/plan`. **NO se borró nada**: el error fue de lectura, no datos corruptos. 🚨 Y
+`rate_snapshots.price_ours` es el **motor sombra RETIRADO de sivra**, no «nuestro precio» —
+leerlo como el motor vivo hizo informar 612€/575€ donde la última decisión real era 358€; ahora
+lleva `COMMENT` (aplicado en Supabase). PR #2988.
+
+**(15/09/2026)** 💸 **Sacar un PR de draft cuesta una ronda NUEVA de 12 deployments de Vercel.**
+`CLAUDE.md` ya avisa de que cada push a una rama de PR crea ~12 deployments (cuota
+`api-deployments-paid-per-hour`, 450/h **de cuenta**), pero no de que el evento `ready_for_review`
+dispara otra ronda entera con IDs nuevos — medido hoy en el PR #2983. **Gasto de build: cero**
+(12 × `Canceled by Ignored Build Step` en `get_status`, confirmado sobre el estado FINAL, no sobre
+los «Building» intermedios del comentario del bot). O sea: no toca la factura de Build CPU Minutes,
+sí la cuota de deployments — el mismo matiz del 04/09. Consecuencia práctica: **abrir el PR ya fuera
+de draft** en vez de abrirlo draft y des-draftearlo después ahorra una ronda de 12.
+
+**(15/09/2026)** 🚨 **El registro de consentimiento de cookies de las TRES webs llevaba
+rechazándose entero desde que existe (14/09), y la tabla vacía se leía como «no ha aceptado nadie».**
+Las tres mandan `acceptedCategories` de vanilla-cookieconsent, que es un **ARRAY**, y el receptor
+`/api/publico/correduria/consentimiento` lo rechazaba con un 400 por un guard `Array.isArray`. Como el
+reenvío es fire-and-forget con `.catch()`, el 400 moría en el navegador: cero filas, cero errores, cero
+pistas. Lo destapó cruzar dos fuentes: **PostHog registraba visitas de ESE MISMO DÍA** (12:43, 10:42…)
+contra una tabla de auditoría a cero — o sea gente aceptando el banner sin que quedara la prueba que
+exige el RGPD (art. 7.1). Arreglado normalizando en el receptor (`lib/consentimiento-categorias.ts` +
+cepo visto en rojo), no en los tres emisores: un solo punto y sin redesplegar tres webs.
+
+**(15/09/2026)** 📊 **Y el «cero visitas» de Alberto tenía una causa de fondo: hay DOS proyectos
+PostHog y el conector apuntaba al que no es.** `Grupo ASegura App` (167360, org LOOR) recibe los
+eventos del CRM (`cima_pull_*`) y **ni un solo `$pageview`**; la web vive en **`Default project`
+(266897, org «Grupo ASegura»)**, con tráfico diario de `grupoasegura.es` (11 días seguidos medidos).
+Mismo patrón que con GA4, donde los tres sitios usan IDs distintos: **el panel correcto existe y no es
+el que se abre por defecto.** Antes de decir «no hay datos», comprobar en qué proyecto se está mirando.
+
+**(15/09/2026)** 🪤 **El cepo del nombre comercial barre también `docs/`, y una CONSULTA de Google
+citada literal lo pone rojo.** `test/regression-nombre-comercial-asegura.test.ts` tumbó el CI del PR
+#2983 por escribir en la memoria la query de Search Console tal y como la teclea la gente (en
+minúsculas). El cepo tiene razón y el texto estaba mal: la consulta se describe («la consulta de
+marca»), no se transcribe. Y la lección de método: `node --test lib/*.test.ts` de UNA app no
+sustituye a `pnpm test` de la raíz — el check requerido `Tests (packages + guardián)` son los 831 de
+la raíz, y los guardianes transversales viven ahí.
+
+**(15/09/2026)** 🪤 **El guardián de rama tiene un falso positivo con el clon SHALLOW del contenedor.**
+`scripts/guardian-rama.mjs` bloqueó abrir un PR con «50 commits locales que NO están en ningún
+remoto» — eran los squash-merges de los PRs #2546→#2639, ya en `main` desde el 08/09. La causa es
+que el contenedor clona con profundidad ~65 commits: `origin/main` solo alcanzaba al 14/09, así que
+todo lo anterior «no existía» para el guardián. **No se borra nada ni se fuerza el push: se arregla
+con `git fetch origin main --deepen=250`** (0 commits sueltos después). Antes de creerse que hay
+trabajo local sin empujar, mirar `.git/shallow`.
+
+**(15/09/2026)** `grupoasegura.es` · revisión de estado pedida por Alberto («0 visitas en Google
+Analytics»). **La web está sana**: producción READY en `36e25f1` (GA4 del PR #2942 SÍ desplegado),
+SEO técnico completo (13 rutas en sitemap, canonical en todas, 301 de `/mejoramos-tu-seguro`) y
+**GSC midiendo: 147 impresiones 05-11/09 contra 31 la semana anterior**, con la consulta de marca en pos. 2.
+Lo que NO va: (1) el cron `seo-correduria` lleva `ultimo_ok_at = NULL` —nunca en verde— pero por
+**Serper sin créditos en el run del 14/09, y Serper YA se retiró del cron ese mismo día (PR #2936)**:
+se cura solo el lunes 21/09, no es acción de Alberto; (2) el agente autónomo (`seo-correduria-agente`) está **apagado**
+(`SEO_ASEGURA_AGENT_ENABLED` default OFF, `seo_correduria_cambios` 0 filas): **no optimiza nada**;
+(3) GA4 solo carga tras aceptar el banner y su ID (`G-QP5DTDLJ5F`) es DISTINTO de housesevillana
+(`G-N5CMQL9C4M`) e ia-rest (`G-EN2YQLRLEX`) — verificación en vivo delegada a Claude en Chrome (el
+proxy de la sesión bloquea el dominio). Corregido el comentario de `app/api/consentimiento/route.ts`
+que decía que plataforma «todavía NO expone» el receptor: existe desde el PR #2934 y responde 405 a
+un GET.
+
+**(15/09/2026)** Correduría · **el correo GENÉRICO de la intranet**. Alberto: «todo lo que sea la
+intranet de un cliente… mandarle un correo cortito, educado, con acceso a la intranet directamente»,
+y sobre el reparo del CP de un cliente: «es lo que quiero que notifique por mail e intranet,
+explicándole cómo modificar su dirección». **Sin cola**: el emisor DERIVA lo que avisar del MISMO
+catálogo que pinta la campana (`avisosDe`, ahora en `@central/module-seguros-portal`), así que un
+tipo nuevo sale por correo sin tocar el emisor — y `ETIQUETA_POR_TIPO` es un `Record<TipoAviso,…>`,
+o sea que sin etiqueta **no compila** (cazó que `peticion_recibida` no la tenía). Cron
+`/api/cron/avisos-intranet` 08:15 UTC (15 min DESPUÉS del de vencimientos: si no, dos correos del
+mismo vencimiento), sello `seguros.portal_aviso_enviado` con clave `tipo:id` —**nunca el título**,
+que lleva matrícula o nº de póliza—, DDL aplicada y su UNIQUE visto morder (23505). Estrena
+`datos_por_revisar`: los reparos de `leerSitio()` los veía SOLO Alberto desde el 05/09. Acotado a
+**cartera viva** (medido: 97 titulares, 1 CP inválido + 3 ciudades sin letras) — sobre `clientes`
+serían 32.600 correos. Sigue apagado (`ASEGURA_AVISOS_ACTIVOS`). PR pendiente.
+**(15/09/2026)** Correduría · relaciones: **las autorizaciones SÍ se guardaban, pero quedan
+`pendiente` y eso no se pintaba**. Alberto anotó Esquiansa→Juan Manuel y Francisca→Juan Manuel
+(BD, 09:55) y la pantalla seguía diciendo «no» con el mismo botón: del sentido de VUELTA solo
+cruzaba el puerto `puedeVer` (booleano de «¿lo ve HOY?»), así que «anotada sin aceptar» y «no hay
+ninguna» eran idénticas. Ahora asegura manda `autorizacionInversa` y la ficha pinta **los dos
+sentidos** con insignia (SÍ VE / ANOTADA·AÚN NO VE / NO VE / NO CONSTA) y el botón de cada uno
+debajo de su frase — antes los dos botones gemelos estaban juntos al final y el menos usado en azul
+(a las 08:45 anotó el contrario y lo revocó en 12 s). Y en el portal, aceptar desde la **vista de
+corredor** daba «No hemos podido hacerlo (modo_corredor). Inténtalo otra vez dentro de un momento»:
+un 403 permanente con cara de fallo pasajero — el middleware mandaba `motivo` y las pantallas leen
+`mensaje`. **La acepta el cliente, no el corredor** (doble aceptación = la prueba del art. 7.1
+RGPD): desde la ficha se le invita por correo, en los dos sentidos. PR #2979.
+**(15/09/2026)** Recaptación de leads: baja de un clic (LSSI art. 21) en el email base
+(`textoBaseRecaptacionEmail(..., {bajaUrl})`), endpoint público `apps/asegura` →
+`/api/publico/recaptacion/baja?t=<recaptacion_envios.id>` (token = uuid generado ANTES de mandar,
+para poder embeberlo), y el cron diario `recaptacion-email-lote` (07:00 UTC) que manda hasta 25
+correos/día a leads solo-email (sin teléfono usable) vía `enviarLoteEmail` — sin IA a propósito
+(latencia), catálogo Telegram `correduria.recaptacion-lote`. Selección pura testeable en
+`recaptacion-lote.ts` (evita arrastrar Prisma al test). Pendiente: nada bloqueante; observar el
+primer envío real.
+
+**(14/09/2026)** GA4 (`G-QP5DTDLJ5F`) añadido a `apps/asegura-web` junto a PostHog, gateado por el
+mismo banner (PR #2942) — petición explícita de Alberto para ver las tres webs (housesevillana,
+ia-rest, grupoasegura.es) en la misma cuenta de Google Analytics; revierte la decisión del 07/09
+"GA4 NO se añade" sin resolver el riesgo legal que esa decisión señalaba (transferencia
+internacional). Después, PR #2944 cerró 3 ideas del backlog SEO: JSON-LD `logo`/`image`/`WebSite`
+en `lib/seo.ts`; **301 permanente** de `apps/plataforma/app/seguros` → `grupoasegura.es` (página y
+formulario borrados; decisión de Alberto); bots de IA se dejan pasar (sin cambio de código, solo
+decisión escrita). `geo` en la ficha del negocio sigue bloqueada — falta la URL de Maps del GBP.
+**(14/09/2026)** Corregido `companias_dgs` (C0468, Occident): `telefono_siniestros` estaba a `NULL`
+porque el 05/09 el 917 83 83 83 se cargó SOLO como WhatsApp (9-21h L-V), leyendo el badge de WhatsApp
+Business. Alberto confirmó que es la MISMA línea también para voz, 24h/365 días — contrastado además
+con tres comparadores (Selectra, numeroservicioalcliente.com, segurosmarina.es). Actualizado en BD
+(`telefono_siniestros` + `horario_siniestros` a "24h, 365 días") y en `apps/asegura-portal/CLAUDE.md`.
+Sin PR de código — solo doc + datos.
+
+**(14/09/2026)** Revisado el parte de siniestro del portal (`asegura-portal`) a petición de Alberto:
+`esAuto()` solo miraba `ramo === 'auto'`, así que un parte de MOTO con terceros nunca mostraba el
+bloque «Datos del otro vehículo» (matrícula/aseguradora/zona del daño) — `moto` es un ramo distinto
+de `auto` en `RAMOS_POLIZA`. Corregido a `esVehiculoAMotor()` (auto ∪ moto). Confirmado además que
+`hayHeridos`/`hayTerceros` universal para todo ramo es correcto (no es un resto de CIMA: es triaje
+propio, y hogar sí puede tener heridos por RC). PR #2938.
+
+**(14/09/2026)** Cerrado el consentimiento unificado (#2925): aplicada la migración
+`consentimiento_registro` y creado `POST /api/publico/correduria/consentimiento` en plataforma
+(#2934) — asegura-web/ia-rest/housesevillana dejan de reenviar a un 404. **Retirado Serper del
+cron `seo-correduria`** (#2936, política «todo por OpenRouter» + SERP-tracking innecesario en esta
+fase): queda en 2 fuentes (GSC+PostHog); el sweep de SIVRA sigue igual de inerte. El agente
+autónomo `seo-correduria-agente` se queda dormido sin cambiar de comportamiento (kill switch
+default OFF, sin evidencia de haberse activado nunca). Pendiente: prompts para Claude en Chrome
+para cancelar/degradar la cuenta de serper.dev (fuera del repo).
+
+**(14/09/2026)** Alberto pidió plan comercial ampliado para Grupo ASegura (agente comercial, ROI
+tipo CEO, redes). Añadida §7 a `docs/ASEGURA-MARKETING-PLAN.md`: se prioriza cross-sell a los 80
+clientes, comunidades y PyME/flota del grupo sobre "ir a todo el mundo"; tabla de decisión
+coste/retorno con las cifras ya medidas (48,37€/68,74€ comisión); recomendación de NO pagar
+estudio externo ahora. **Mismo día, Alberto consultó al abogado y desbloqueó la pregunta 1 de
+`docs/ASEGURA-CONSULTA-ABOGADO.md`**: interés legítimo (art. 6.1.f RGPD) autoriza email y
+teléfono sobre las 32.520 fichas históricas (universo real contactable: 5.594, 17,2 %).
+**WhatsApp sigue bloqueado** (falta WABA propia, no es tema legal). Actualizados ambos docs.
+PR #2933. Sin código tocado, solo doc.
+
 > **🔄 Rotación mensual:** aquí vive SOLO el mes corriente. Los meses cerrados se
 > archivan en `docs/memoria/AAAA-MM.md` con `node scripts/rotar-memoria.mjs`
 > (idempotente; lo dispara `/auditoria-diaria` a primeros de mes). La historia no
@@ -38,6 +273,96 @@
   (puro, los 4 en `false`, no pisa el JSON avanzado del corredor), cableado en `emitir/route.ts`. Cepo visto
   en rojo (2 tests) antes de restaurar. 463/463 tests asegura + tsc 0 + code-review (2 hallazgos, los 2
   aplicados). El 40685793 sigue muerto (fecha de efecto caducada); el arreglo es para el SIGUIENTE Submit.
+- **Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo
+  (15/09/2026).** DGT rechazó la vía de dato abierto (datos.gob.es, 15/09: "no disponemos de API REST
+  para este fin", remite a "informes de vehículos en lote" — Web Service para empresas colaboradoras,
+  requiere alta + certificado, no confirmado que una correduría encaje). Mientras se resuelve esa vía
+  y la consulta a soporte CIMA (¿ya trae estos datos por TIREA? — sin responder aún), se ha creado el
+  adaptador `packages/core-vehiculos` (contrato `resolverMatricula()`) sobre APIVehículo (6€/mes, 50
+  consultas, Bearer token). `APIVEHICULO_API_KEY` ya en Vercel (`asegura`). **Endpoint y mapeo
+  confirmados contra su documentación OpenAPI real** (`GET /v1/vehicles/lookup?plate=&country=`,
+  respuesta `{code,message,data}`) — test `apivehiculo.test.ts` fija el contrato con el ejemplo
+  literal de su doc. **Pendiente real:** aún no se ha probado contra el servicio real (solo contra el
+  ejemplo estático de la doc) — falta una consulta real con la key ya puesta en Vercel para confirmar
+  que el JSON en producción coincide. Multas descartadas a propósito de cualquier vía "dato abierto":
+  dato sancionador ligado a persona, no dato técnico (RGPD/Ley de Tráfico).
+
+- **🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN` (14/09/2026, PR #2928).** Fix pedido por
+  Alberto ("resuelve para que no vuelva a pasar") tras el bloqueo de `facturas-correo` ese mismo día.
+  Nuevo `scripts/canal-aviso.sh`: lee `PLATAFORMA_URL`/`ALERTA_TOKEN` del entorno DENTRO del script,
+  así que la llamada de Bash que lo invoca no lleva ni `curl` ni el nombre del secreto y Sentinel no
+  tiene nada que marcar (sin tocar la excepción de dominio en `.security/sentinel-allowlist.json`,
+  que sigue exigiendo URL literal). Propagado a los 19 ficheros de `.claude/skills`/`.claude/commands`
+  que documentan "Canal de aviso" (vía `agente-mecanico`, regla de trabajo mecánico). El escapado del
+  fichero `-K` de curl lo corrigió una pasada de `code-review`, y la review de Graphify del propio PR
+  destapó y se corrigió además un override de host por `RUTA` sin validar (probado con PoC local).
+
+- **🍪 Consentimiento unificado: asegura-web, ia-rest y housesevillana migradas a `@central/core-consent`
+  (14/09/2026, PR #2925).** Paquete nuevo (vanilla-cookieconsent puro TS). asegura-web sustituye a
+  Cookiebot (trial expiraba ~19/09); ia-rest gatea GA4 (cargaba sin condición); housesevillana gatea
+  GA4+Meta Pixel vía `cc:onConsent`/`cc:onChange` (eventos verificados contra el paquete real) y traduce
+  también el idioma del banner en `/en`/`/it`. Guardián visto rojo→verde en las 3 apps. Efecto colateral
+  arreglado: `test/vercel-ignore-build.test.ts` usaba housesevillana como «app sin @central/*» (ya no
+  queda ninguna) → fixture sintética. Root `pnpm test` 745/745. **Pendiente:** aplicar
+  `consentimiento_registro.sql` (necesita "ok" de Alberto) y construir el endpoint de plataforma que
+  hoy hace 404 (banner funciona igual, solo sin dejar rastro de auditoría todavía).
+
+- **🚨 El aviso de "siniestros nuevos" mentía: "ya están abiertos" cuando 11 de 12 venían `cerrado`
+  (14/09/2026).** `siniestros-nuevos` marca "nuevo" por `entradoEn` (cuándo entró en nuestra BD), no
+  por su estado real en la compañía — CIMA manda siniestros en cualquier estado. El puerto de asegura
+  no exponía `estado`, así que el Telegram pedía llamar por los 12 sin distinguir. Fix: `estado` viaja
+  ahora por el puerto → cron de plataforma → `textoAvisoSiniestros` (`@central/module-seguros`), que
+  separa abiertos/cerrados y solo pide llamar por los abiertos. Sin PR aún (por hacer).
+
+- **🛡️ Sentinel bloquea TODAS las rutinas programadas que usan `ALERTA_TOKEN` por curl (14/09/2026).**
+  Nuevo hook `.claude/mcp-sentinel/` (`sentinel_preflight.py`) deniega en modo sombra cualquier
+  Bash/curl que dereferencia una env var `_TOKEN`/`_SECRET` en sesión desatendida (categoría
+  `sensitive_env`, crítica, sin distinguir dominio propio) — bloqueó el Paso 4 y 6 del ciclo semanal
+  de `pricing-agente` (aplicar-propuesta + Telegram) y bloqueará lo mismo en `psd2-health-check`,
+  `ialimp-client-health` y cualquier rutina que siga el protocolo "Canal de aviso" de este CLAUDE.md.
+  **Resuelto el mismo día por PR #2928** (ver entrada de arriba: `scripts/canal-aviso.sh`).
+  Aparte: `sivra_rates_snapshot` lleva HTTP 401 en los 4 pisos desde 12-13/09 y el repricing en vivo
+  de Busto Reform está parado ~3 días (`sivra_pricing_apply` escribió 0 noches el 13/09) — sin
+  diagnosticar del todo (logs Vercel 1 día, no se pudo probar el endpoint por el mismo bloqueo).
+  Avisado por PushNotification. Detalle en `pricing_aprendizaje` (`ciclo_14_09_2026`) y bitácora.
+- **🇮🇹 `detectLang` marcaba italiano correcto como "deriva al español" (13/09/2026, reserva
+  147382671, Daniela).** Un borrador BUENO en italiano (sin `ciao/grazie/prego`, solo "con" como
+  señal) puntuaba `es>en` y `pareceEspanol()`/`derivaAEspanol()` (PR #2378, 05/09) lo declaraba
+  falsamente en español — mismo bug que el de Massimo pero en sentido inverso (falso positivo, no
+  fallo real). Fix: el marcador de IT en `reglas.ts::detectLang` gana `hai/sì/così/però/che/
+  questo/questa/molto/scusa/buonasera` (antes solo 9 palabras "de libro"). 2 tests nuevos
+  (`reglas.test.ts` + `idioma-salida.test.ts`) con el texto real. De paso se corrigió en BD el
+  borrador pendiente de esa reserva ("l'alojamiento" → "l'alloggio", español colado en el italiano).
+
+- **🚗 Identificar pólizas por matrícula/dirección, no por nº de póliza — regla permanente
+  (13-14/09/2026, PR #2912, MERGEADO).** Probando en directo, Alberto: «casi nadie sabe el número
+  de póliza». El selector del parte y la fila de una aportada lo usaban como identificador; ahora es
+  `bien.cosa` (matrícula) `?? bien.ubicacion` (dirección) `?? nº de póliza`, mismo criterio que ya
+  seguía `FilaPoliza.tsx`. Documentado en `apps/asegura-portal/CLAUDE.md` para el próximo
+  selector/lista de pólizas. De paso, «Dar parte» desde la ficha de una póliza llega con ella
+  YA preseleccionada (`?poliza=`), sin volver a buscarla entre las demás.
+  **Mismo PR sumó los «Recordatorios» propios del cliente** (ITV, carnet, caldera…) sobre
+  `portal_obligacion`, con opción de colgarlos de una póliza propia (mismo patrón `polizaId`/
+  `polizaDeclaradaId`; exigió ampliar `UNIQUE(identidad_id, poliza_id)` con `tipo`). Cuatro rondas
+  de `code-review` (Graphify), 8 hallazgos reales corregidos (fecha 30-feb colada, avance de
+  recurrentes en el mismo día/de un solo ciclo, `tipo`/`repiteCadaMeses` sin validar, formulario
+  pisado en guardado concurrente, `findMany` sin `orderBy`). Pendiente sin decidir: ITV por
+  antigüedad del vehículo y recordatorio sin fecha para el carnet (choca con `fecha_evento
+  NOT NULL`) — luz verde genérica del usuario, diseño técnico sin cerrar.
+
+- **🚑 Parte de siniestro: zona del daño tocable + autorrelleno + «ha pasado ahora mismo»
+  (13/09/2026, PR #2908).** Se adaptó el parte genérico para auto: datos del tercero + **zona del
+  daño con 9 botones tocables** (como Mapfre/Allianz, no un canvas libre), todo plegado en
+  `descripcion` sin migración. Al elegir póliza, «Tu matrícula» se autorrellena desde
+  `BienAsegurado.matricula` (campo nuevo) si sigue vacía. Botón «Ha pasado ahora mismo»: fecha/hora
+  al instante + GPS crudo (nunca dirección inventada); una respuesta tardía de geolocalización no
+  pisa un formulario ya cerrado/reabierto. Idea de Alberto («única app para abrir siniestros»)
+  aparcada en `docs/CORREDURIA-INTRANET-IDEAS.md` §P, sin construir.
+
+- **🔔 Aviso Telegram al iniciar sesión en la intranet (13/09/2026).** `POST /api/auth/login` emite
+  `sistema.acceso-intranet` (catálogo `lib/telegram/catalogo.ts`) con nombre y email de la `cuenta`
+  que ha entrado — único dato disponible en ese punto. Silenciable desde `/telegram`. PR #2904 mergeado.
+
 - **📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real (13/09/2026).**
   Dado de alta el 15/06 (LOO-322) → `app.grupoasegura.com/api/webhooks/codeoscopic`, HTTP Basic; el emisor real manda un
   **array de 2 elementos `{insurance}` cada ~30 min** (1.671 rechazos en `operational_events` desde el 25/06, antes de emitir

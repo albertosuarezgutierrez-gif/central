@@ -486,6 +486,16 @@ prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ause
   📌 **El 399 no lo ha mandado NADIE** — de ahí que los 67 siniestros bajen y se congelen. No es
   que las compañías no actualicen: es que la actualización histórica va por un proceso que nadie
   tiene activado.
+
+  ⚠️ **Tabla desactualizada tras el 15/09/2026: Occident SÍ mandó un 199** (`C0468_M00171_POL_199_1_20260915…`,
+  44 pólizas) — y 4 se perdieron en review (ramos `RiesgoComunidades`/`RiesgoEmbarcaciones` que el
+  mapper aún no reconocía). **Gotcha permanente**: el pipeline confirma el fichero a TIREA en cuanto
+  ≥1 póliza persiste, aunque otras caigan en review — y confirmar saca el fichero de la cola de CIMA
+  **para siempre**. Antes de esa fecha no había copia propia del crudo, así que lo perdido solo se
+  recuperaba pidiéndole a la compañía que reenviara a mano. Arreglado en `asegura` PR #829 (ramos) +
+  PR #830 (cuarentena de crudo cifrado con TTL 90d + reproceso vía `POST /api/internal/cima/
+  reprocesar-cuarentena` cuando se arregla un gap del mapeador — ya no hace falta la compañía).
+  Detalle en `docs/CONTEXTO-SESIONES.md` (16/09/2026).
   📌 **Petición que corresponde a cada una:** Occident → 199 + 299 + 399 · Reale → 199 + 299 ·
   Allianz → 299 + 399 · Mapfre → 399.
 

@@ -1632,7 +1632,36 @@ h1 em {
 .boton.secundario { background: var(--surface); color: var(--primary); }
 .boton.secundario:hover { background: var(--primary-light); border-color: var(--primary-hover); }
 .boton:disabled { opacity: 0.6; cursor: progress; }
+
 .aviso-linea .boton { margin-top: 10px; }
+
+/* El selector de zonas del daño (ParteSiniestro.tsx). 3 columnas × 3 filas con
+   forma de coche (delantera arriba, trasera abajo): la misma disposición que
+   ya usan Mapfre/Allianz/Línea Directa. Botones REALES, no una silueta con
+   regiones recortadas a mano — ver la cabecera de `ZonasVehiculo` en el
+   componente sobre por qué. `aspect-ratio` en vez de alto fijo: a 320 px de
+   ancho los botones siguen siendo cuadrados y táctiles sin desbordar. */
+.zonas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  max-width: 320px;
+}
+.zonas-boton {
+  aspect-ratio: 1;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 6px;
+  cursor: pointer;
+}
+.zonas-boton:hover { background: var(--primary-light); border-color: var(--primary-hover); }
+.zonas-boton.sel { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
+.zonas-boton:disabled { opacity: 0.6; cursor: progress; }
 
 /* ── Parte de siniestro ──────────────────────────────────────────────────
  * Lo abre gente desde el móvil justo después del golpe, así que aquí no hay
@@ -2865,6 +2894,27 @@ h1 em {
 }
 .mi-direccion-ok { font-size: 13px; line-height: 1.5; color: var(--positive); margin: 12px 0 0; }
 .mi-direccion-aviso { font-size: 13px; line-height: 1.5; color: var(--warning); margin: 12px 0 0; }
+/* El `<select>` de «Se repite» comparte campo con los `<input>` de arriba: sin
+   esto heredaría el estilo nativo del navegador y desentonaría a su lado. */
+.mi-direccion-campo select {
+  width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit;
+}
+
+/* ── Recordatorios propios (13/09/2026) ─────────────────────────────────────
+ * Los atajos son BOTONES de verdad (`.boton-tenue`, 44px), no `.chip`: ese
+ * es un badge de estado en toda la app y nunca se toca — usarlo aquí para algo
+ * clicable dejaría un elemento por debajo del tamaño táctil de la casa. */
+.recordatorio-sugerencias { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.lista-recordatorios { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.recordatorio-fila {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface);
+}
 
 /* ─── «¿Echas algo de menos?»: la sugerencia del cliente ─────────────────────
    Vive en la cabecera (09/09/2026), al lado de la campana: mismo tamaño y
@@ -3006,6 +3056,13 @@ h1 em {
    lo ve un cliente. En el flujo, encima de la navegación; el ámbar es el tono
    de «ojo», no el de error: no ha fallado nada, es que no eres quien parece. */
 .banda-corredor {
+  /* `.portal-shell` es un grid de 2 columnas desde 1024px (256px nav + resto).
+   * Sin esto, esta banda es un TERCER hijo sin columna asignada y el
+   * auto-placement de CSS Grid descoloca todo lo demás: el nav se cuela en la
+   * columna del contenido y el contenido acaba aplastado en la del nav (visto
+   * en producción el 15/09/2026, vista de corredor de Juan Manuel López
+   * Benjumea). La banda tiene que ocupar su propia fila entera siempre. */
+  grid-column: 1 / -1;
   padding: 10px 16px;
   font-size: 13px;
   line-height: 1.45;
@@ -3061,5 +3118,53 @@ h1 em {
   .seccion h2 {
     font-size: 22px;
     margin-bottom: 12px;
+  }
+}
+
+/* Botón flotante de WhatsApp (14/09/2026) — el mismo `.wsp` de `asegura-web`,
+ * copiado aquí porque las dos apps no comparten CSS. Es "clic para
+ * chatear", no el canal de login: no hace falta WABA, solo un número que
+ * alguien conteste (el mismo que ya usa la web pública). */
+.wsp-flotante {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #fff;
+  box-shadow: 0 6px 20px -4px rgb(37 211 102 / 0.5), 0 2px 6px rgb(0 0 0 / 0.18);
+  transition: transform 0.2s var(--curva), box-shadow 0.2s;
+}
+
+.wsp-flotante:hover {
+  transform: scale(1.06);
+  box-shadow: 0 10px 26px -4px rgb(37 211 102 / 0.6), 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+.wsp-flotante:active {
+  transform: scale(0.96);
+}
+
+@media (max-width: 639px) {
+  .wsp-flotante {
+    right: calc(12px + env(safe-area-inset-right, 0px));
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wsp-flotante {
+    transition: none;
+  }
+  .wsp-flotante:hover,
+  .wsp-flotante:active {
+    transform: none;
   }
 }

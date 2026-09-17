@@ -56,9 +56,16 @@ export interface BienAsegurado {
   ubicacion: string | null
   /** Detalles neutros ya formateados (metros, año de construcción). */
   detalles: string[]
+  /**
+   * SOLO la matrícula, sin marca ni modelo — para AUTORRELLENAR un campo (el
+   * parte de siniestro), no para enseñar la ficha del bien: `cosa` ya la
+   * lleva dentro y es lo que se pinta. `null` = no es un vehículo, o la
+   * compañía no ha informado la matrícula.
+   */
+  matricula: string | null
 }
 
-export const BIEN_VACIO: BienAsegurado = { cosa: null, ubicacion: null, detalles: [] }
+export const BIEN_VACIO: BienAsegurado = { cosa: null, ubicacion: null, detalles: [], matricula: null }
 
 /** ¿Trae algo que enseñar? Para que la pantalla no pinte un hueco. */
 export function bienTieneAlgo(b: BienAsegurado): boolean {
@@ -150,7 +157,7 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
     const marcaModelo = [campo(d, 'marca'), campo(d, 'modelo')].filter(Boolean).join(' ')
     const matricula = campo(d, 'matricula')
     const cosa = [marcaModelo || null, matricula].filter(Boolean).join(' · ')
-    return { cosa: cosa || null, ubicacion: null, detalles }
+    return { cosa: cosa || null, ubicacion: null, detalles, matricula }
   }
 
   // ── Inmueble ──────────────────────────────────────────────────────────────
@@ -159,12 +166,12 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   // trozos es personal, y la respuesta es que los tres lo son juntos.
   if (RAMOS_INMUEBLE.has(r) || campo(d, 'direccion') !== null) {
     const ubicacion = componerUbicacion(campo(d, 'direccion'), campo(d, 'cp'), campo(d, 'localidad'))
-    return { cosa: null, ubicacion, detalles }
+    return { cosa: null, ubicacion, detalles, matricula: null }
   }
 
   // Un ramo sin bien descriptible (vida, decesos, salud…). No es un error: es
   // que no hay una cosa que enseñar, y se dice callando.
-  return { cosa: null, ubicacion: null, detalles }
+  return { cosa: null, ubicacion: null, detalles, matricula: null }
 }
 
 /**

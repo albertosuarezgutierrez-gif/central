@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-13T14:18:06Z",
+  "generadoEn": "2026-09-16T17:09:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -26,6 +26,11 @@
       "id": "core-catastro",
       "tipo": "core",
       "npm": "@central/core-catastro"
+    },
+    {
+      "id": "core-consent",
+      "tipo": "core",
+      "npm": "@central/core-consent"
     },
     {
       "id": "core-email",
@@ -71,6 +76,11 @@
       "id": "core-telegram",
       "tipo": "core",
       "npm": "@central/core-telegram"
+    },
+    {
+      "id": "core-vehiculos",
+      "tipo": "core",
+      "npm": "@central/core-vehiculos"
     },
     {
       "id": "module-agenda",
@@ -449,6 +459,60 @@
         "evidencias": 0
       }
     },
+    "core-consent": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "housesevillana": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "core-email": {
       "almacen": {
         "estado": "no",
@@ -460,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-portal": {
         "estado": "usado",
@@ -925,6 +989,60 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-vehiculos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -2080,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 55
+        "evidencias": 61
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 67
+        "evidencias": 71
       },
       "asegura-web": {
         "estado": "usado",
@@ -2108,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 53
+        "evidencias": 56
       },
       "rrhh": {
         "estado": "no",
@@ -2188,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 19
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 56
+        "evidencias": 59
       },
       "asegura-web": {
         "estado": "usado",
@@ -2730,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 6
       },
       "asegura-portal": {
         "presente": false,
@@ -3751,6 +3869,7 @@
     "core-catastro": [
       "module-subastas"
     ],
+    "core-consent": [],
     "core-email": [],
     "core-firma": [],
     "core-fiscal": [],
@@ -3760,6 +3879,7 @@
     "core-receipts": [],
     "core-storage": [],
     "core-telegram": [],
+    "core-vehiculos": [],
     "module-agenda": [],
     "module-alquiler": [
       "module-intercompany",
@@ -3850,6 +3970,7 @@
       "/api/cartera/cliente/[clienteId]/hogar-nuevo",
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
+      "/api/cron/avisos-intranet",
       "/api/cron/avisos-vencimiento",
       "/api/operador/actividad",
       "/api/operador/backfill-contacto",
@@ -3899,22 +4020,27 @@
       "/api/operador/impagados",
       "/api/operador/ingesta",
       "/api/operador/leads",
+      "/api/operador/leads-web",
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza/emitida",
       "/api/operador/poliza/intervinientes",
       "/api/operador/recaptacion",
       "/api/operador/recaptacion/email",
+      "/api/operador/recaptacion/email-lote",
       "/api/operador/recaptacion/whatsapp",
       "/api/operador/resumen",
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
       "/api/operador/siniestros-nuevos",
       "/api/operador/supresiones",
+      "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
+      "/api/portal/documento",
       "/api/portal/nota",
+      "/api/publico/recaptacion/baja",
       "/api/webhooks/codeoscopic",
       "/api/webhooks/resend"
     ],
@@ -3940,6 +4066,8 @@
       "/api/polizas/[id]",
       "/api/push/desuscribir",
       "/api/push/suscribir",
+      "/api/recordatorios",
+      "/api/recordatorios/[id]",
       "/api/salir",
       "/api/siniestros",
       "/api/siniestros/[id]/adjuntos",
@@ -3950,6 +4078,7 @@
       "/api/supresion"
     ],
     "asegura-web": [
+      "/api/consentimiento",
       "/api/lead"
     ],
     "housesevillana": [],
@@ -4049,6 +4178,7 @@
       "/api/comanda/[id]/pedir-cuenta",
       "/api/comanda/[id]/ticket-alias",
       "/api/comandas/activas",
+      "/api/consentimiento",
       "/api/contrato/aceptar",
       "/api/contrato/firmar",
       "/api/contrato/publico",
@@ -4779,8 +4909,10 @@
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
       "/api/correduria/impagados",
+      "/api/correduria/ingesta",
       "/api/correduria/intervinientes",
       "/api/correduria/leads",
+      "/api/correduria/leads-web",
       "/api/correduria/partes",
       "/api/correduria/poliza",
       "/api/correduria/recaptacion",
@@ -4821,6 +4953,7 @@
       "/api/cron/pre-renta",
       "/api/cron/prevision-pisos",
       "/api/cron/psd2-sync",
+      "/api/cron/recaptacion-email-lote",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/cron/seo-correduria",
@@ -4884,12 +5017,14 @@
       "/api/internal/memoria/embeddings",
       "/api/internal/reclamar-reparacion",
       "/api/internal/reparacion-resultado",
+      "/api/internal/seo-correduria/semana",
       "/api/inversion/underwrite",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/operador/agente-consulta",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
+      "/api/publico/correduria/consentimiento",
       "/api/publico/correduria/lead",
       "/api/publico/disponibilidad",
       "/api/sivra/conciliar-booking",
@@ -5268,6 +5403,7 @@
       "seguros.poliza_merge_log",
       "seguros.poliza_recibos",
       "seguros.polizas",
+      "seguros.portal_aviso_enviado",
       "seguros.recordatorios",
       "seguros.siniestro_contrarios",
       "seguros.siniestro_lesionados",
@@ -5453,6 +5589,7 @@
       "comunicacion_nodos",
       "comunicacion_reglas",
       "conexiones_banco",
+      "consentimiento_registro",
       "contable_accion",
       "contable_feedback",
       "contable_log",
@@ -5638,6 +5775,11 @@
     {
       "id": "central-maestro",
       "name": "central-maestro",
+      "description": ">"
+    },
+    {
+      "id": "cima-ingesta",
+      "name": "cima-ingesta",
       "description": ">"
     },
     {
@@ -6256,10 +6398,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 40,
+    "packages": 42,
     "capacidades": 23,
-    "skills": 40,
-    "apis": 1356,
+    "skills": 41,
+    "apis": 1371,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

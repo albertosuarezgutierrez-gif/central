@@ -13,6 +13,18 @@ const nextConfig: NextConfig = {
   // Deliberado (deuda de tipos heredada): el build de Vercel no bloquea por tipos.
   // El gate REAL de tipos es el job `typecheck` de .github/workflows/tests.yml (tsc --noEmit).
   typescript: { ignoreBuildErrors: true },
+  // `/seguros` era la landing pública de la correduría ANTES de que existiera
+  // `apps/asegura-web` (grupoasegura.es). Desde el 05/09/2026 las dos compiten
+  // por la misma consulta desde dos dominios distintos del mismo negocio —
+  // decisión de Alberto (14/09/2026): 301 hacia la web de marca, no dejarla
+  // noindex y viva. `permanent: true` = 308 (equivalente a 301 para SEO; Next
+  // ya no emite 301 puro desde el App Router). La página y su formulario se
+  // BORRARON (`git log` conserva el código si hiciera falta consultarlo): un
+  // redirect los deja inalcanzables, así que mantenerlos habría sido código
+  // muerto que nadie iba a volver a ejecutar.
+  async redirects() {
+    return [{ source: '/seguros', destination: 'https://grupoasegura.es', permanent: true }]
+  },
 }
 
 export default nextConfig

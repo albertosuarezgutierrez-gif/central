@@ -23,7 +23,12 @@ import Renovaciones, { type RespVencimientos } from './Renovaciones'
 import DeclaradasVencer from './DeclaradasVencer'
 import ListaCartera from './ListaCartera'
 import Recaptacion from './Recaptacion'
+import LeadsWebConversion from './LeadsWebConversion'
+import PanelIngesta, { AvisoIngesta } from './Ingesta'
 import Secciones, { type ContadoresSeccion } from './Secciones'
+import {
+  contadorIngesta, interpretarVistaIngesta, type VistaIngesta,
+} from '@/lib/correduria/ingesta-pantalla'
 import { MOTIVOS, type MotivoError } from './estado-puerto'
 import {
   agregarContadores, contarAccionables, seccionDeParametro, type Seccion,
@@ -135,6 +140,11 @@ export default function CorreduriaClient() {
   // ventana entera), y montarlos dos veces serían dos llamadas para lo mismo.
   const [cartera, setCartera] = useState<Cartera | null>(null)
   const [vencimientos, setVencimientos] = useState<RespVencimientos | null>(null)
+  // La salud de la ingesta de CIMA alimenta DOS sitios —la tarjeta de «Hoy»
+  // (solo si hay algo) y la sección «Ingesta»— y por eso se lee aquí una vez:
+  // montarla dos veces serían dos llamadas al puerto para el mismo dato.
+  // `null` = todavía no ha contestado; NO es «no se ha podido comprobar».
+  const [ingesta, setIngesta] = useState<VistaIngesta | null>(null)
 
   // Contadores que los bloques reportan hacia arriba. `undefined` = todavía no
   // ha contestado; `null` = contestó que no se puede saber. No es lo mismo.
@@ -186,6 +196,12 @@ export default function CorreduriaClient() {
       .then(r => (r.ok ? r.json() : { estado: 'error' }))
       .then(setVencimientos)
       .catch(() => setVencimientos({ estado: 'error' }))
+    // 🚨 La forma se vuelve a validar al llegar: un 500 de Vercel o un HTML de
+    // error no pueden acabar pintados como «la ingesta va bien».
+    fetch('/api/correduria/ingesta')
+      .then(async r => interpretarVistaIngesta(r.status, await r.json().catch(() => null)))
+      .catch((): VistaIngesta => ({ estado: 'error', motivo: 'red' }))
+      .then(setIngesta)
   }, [])
 
   const totalAnual = filas.reduce((s, f) => s + f.total, 0)
@@ -203,6 +219,8 @@ export default function CorreduriaClient() {
     : vencimientos.estado === 'ok'
       ? contarAccionables(vencimientos.polizas)
       : null
+
+  const cIngesta = contadorIngesta(ingesta)
 
   const contadores: ContadoresSeccion = {
     hoy: {
@@ -227,6 +245,26 @@ export default function CorreduriaClient() {
       tono: 'aviso',
       title: 'Pólizas duplicadas y clientes a los que no se puede avisar',
     },
+    // 🚨 La ingesta NO suma en «Hoy» aunque su tarjeta se pinte allí: contar lo
+    // mismo en dos badges haría que atender la avería no bajara el número de
+    // ninguno de los dos, que es como se deja de creer un contador. Su cuenta
+    // vive solo aquí, y `{n, parcial}` distingue el total exacto del SUELO
+    // («2+») cuando alguna de las cuatro puertas de la ingesta no se ha podido
+    // mirar. `null` = «!»: la lectura entera falló, que nunca es un 0.
+    // ⚠️ Mientras la lectura está en vuelo, `contadorIngesta` devuelve
+    // `undefined` y la clave NO se pone: un badge no puede gritar «!» durante
+    // el segundo que tarda en contestar, o se aprende a ignorarlo.
+    ...(cIngesta === undefined ? {} : {
+      ingesta: {
+        contador: cIngesta,
+        // Rojo solo cuando hay pérdida MEDIDA. Un «0+» (no se ha podido mirar
+        // alguna de las cuatro puertas) es ámbar: es un hueco de conocimiento,
+        // no una alarma, y pintarlo igual que una pérdida enseña a ignorar el
+        // color.
+        tono: (cIngesta !== null && cIngesta.n > 0 ? 'malo' : 'aviso') as 'malo' | 'aviso',
+        title: 'Señales de que se están perdiendo datos de CIMA: ficheros atascados, pólizas huérfanas, envíos rechazados y compañías que han dejado de mandar',
+      },
+    }),
     // Solo el blog: los borradores de LinkedIn no se pueden contar como
     // pendientes (ver `secciones.ts`). Es lo que impide que un artículo escrito
     // se quede meses esperando en la pestaña que menos se abre.
@@ -291,6 +329,14 @@ export default function CorreduriaClient() {
             porque hasta que existió este bloque ese plazo se incumplía solo, sin
             que nada fallara ni saliera en ninguna pantalla. */}
         <Supresiones onContador={setNSupresiones} />
+
+        {/* Si lo que mandan las compañías por CIMA NO está entrando. Se pinta
+            SOLO cuando hay algo que decir —incidencia o «no se ha podido
+            comprobar»—: con la ingesta al día no ocupa ni un píxel, que es lo
+            que pidió Alberto. Va aquí arriba porque un recibo o un siniestro
+            que no entra no aparece en ninguna otra pantalla, y su comisión
+            tampoco; el detalle vive en la sección «Ingesta». */}
+        <AvisoIngesta datos={ingesta} />
 
         {/* Recibos devueltos y vencidos sin cobrar, por urgencia real (art. 15
             LCS). Es la pantalla comercial: lo único de aquí que se hace con el
@@ -499,6 +545,22 @@ export default function CorreduriaClient() {
         {/* Directorio de contacto por compañía, minado del correo. Sin
             contador: es referencia, no trabajo pendiente. */}
         <Companias />
+
+        {/* De los leads captados por apps/asegura-web, cuántos son hoy cartera
+            viva. Sin contador: con 1 lead medido el 15/09/2026 es infraestructura
+            de medición que necesita acumular datos, no un aviso accionable hoy
+            (ver LeadsWebConversion.tsx). */}
+        <LeadsWebConversion />
+      </div>
+
+      {/* ══ INGESTA ══════════════════════════════════════════════════════════
+          El porqué de la tarjeta de «Hoy»: qué ficheros están atascados y de
+          qué clave de mediador, qué pólizas hay que pedirle a cada compañía,
+          qué nos mandan y rechazamos, y quién ha dejado de mandar. Está aquí
+          porque el panel equivalente vive en el CRM de origen, que es una app
+          en la que Alberto no entra. */}
+      <div role="tabpanel" aria-label="Ingesta" className="corr-panel" style={panel('ingesta')}>
+        <PanelIngesta datos={ingesta} />
       </div>
 
       {/* ══ REDES ════════════════════════════════════════════════════════════
