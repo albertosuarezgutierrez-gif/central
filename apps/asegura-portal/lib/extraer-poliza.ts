@@ -291,15 +291,27 @@ async function leerDatosRamo(
 
   try {
     const datosRamo = normalizarDatosRamoLeidos(datos.ramo, JSON.parse(cleanJSON(salida)))
+    if (datosRamo === null) {
+      // El JSON parseó pero ningún campo sobrevivió a `normalizarDatosRamoLeidos`
+      // (claves que el catálogo no reconoce, o valores fuera de rango). Es el
+      // mismo «no lo hemos podido leer» que un JSON roto, y sin este log es
+      // indistinguible de él — se pierde justo el dato que diría SI la IA leyó
+      // algo y lo perdimos al validar, o si no leyó nada.
+      console.warn('[portal] 2ª pasada (campos del ramo): JSON válido sin campos reconocidos:', salida.slice(0, 500))
+      return { datos, estado: 'no_leidos' }
+    }
     // Datos y orígenes se reemplazan JUNTOS: los de la 1ª pasada hablaban de los
     // valores de la 1ª pasada, y aquí acaban de cambiar.
     return {
       datos: { ...datos, datosRamo, datosRamoOrigen: origenesDelDocumento(datosRamo) },
       estado: 'leidos',
     }
-  } catch {
+  } catch (e) {
     // El JSON no parsea: se preguntó y no se sacó nada en claro. Es un «no lo
-    // hemos podido leer», no un «no lo trae».
+    // hemos podido leer», no un «no lo trae». Se registra la salida CRUDA
+    // (acotada) porque sin ella este fallo es mudo: no hay forma de saber si la
+    // IA devolvió texto envuelto, un JSON truncado, u otra cosa.
+    console.warn('[portal] 2ª pasada (campos del ramo): la salida no parsea como JSON:', e, salida.slice(0, 500))
     return { datos, estado: 'no_leidos' }
   }
 }
