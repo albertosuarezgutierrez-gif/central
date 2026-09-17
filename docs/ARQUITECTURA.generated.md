@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-17T12:41:03Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-17T14:08:30Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -269,6 +269,7 @@
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, rrhh, sivra; falta en almacen, alquiler, asegura, asegura-portal, asegura-web, housesevillana, mariscos, transporte.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (17/09/2026) 🩹 16 pólizas duplicadas en la cartera CIMA de Occident/Mapfre/Allianz, y por qué
 - (17/09/2026) 🔓 Causa real de los 500 del Submit (proyecto 40685793): un `product.options` que nunca se mandaba
 - (15/09/2026) Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo
 - (14/09/2026) 🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN`
@@ -278,5 +279,4 @@
 - (13/09/2026) 🇮🇹 `detectLang` marcaba italiano correcto como "deriva al español"
 - (14/09/2026) 🚗 Identificar pólizas por matrícula/dirección, no por nº de póliza — regla permanente (13-14/09/2026, PR #2912, MERGEADO).
 - (13/09/2026) 🚑 Parte de siniestro: zona del daño tocable + autorrelleno + «ha pasado ahora mismo»
-- (13/09/2026) 🔔 Aviso Telegram al iniciar sesión en la intranet
 
