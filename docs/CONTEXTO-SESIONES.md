@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/09/2026)** `guardian-rama.mjs` daba un falso "commits huérfanos" al mergear PRs por MCP —
+la causa real: la rama LOCAL `main` de este checkout iba desincronizada de `origin/main` (se
+quedó en un SHA viejo tras squash-merges anteriores), no basura huérfana como se pensó en un
+principio. Arreglo sin tocar el ruleset ni el hook: `git branch -f main origin/main` antes de
+mergear — reconcilia el puntero local sin perder nada (el contenido ya estaba en `origin/main`
+vía squash). Con eso se mergearon asegura#838 (alerta Telegram CIMA) y central#3052 (memoria).
+Probado en real: `cima-pull` disparado a mano tras el merge — `ok:true, processed:0` (nada
+pendiente en ese momento; el aviso se verá la próxima vez que CIMA mande un review/situación real).
 **(17/09/2026)** Portal cliente · Alberto reportó que la póliza de Alejandro Soler no guardó dirección
 ni garantías/capitales, y que el PDF no llegó a su ficha. Medido en logs reales de Vercel:
 `POST /api/portal/documento` y `GET /api/portal/contacto` responden **401** desde `central-asegura`
