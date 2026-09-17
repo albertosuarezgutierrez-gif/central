@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/09/2026)** Correduría · Alberto no podía tarificar hogar («en hogar no me deja tarificar»).
+Causa: `HogarCatastro.tsx` mandaba a un flujo muerto (texto corregido en PR #3054), y retarificar una
+póliza de hogar YA existente seguía saltando a `apps/asegura` (`/cartera/poliza/[id]`, otro dominio/
+login) — solo auto estaba portado. Portado entero: `GET /api/operador/codeoscopic/precalificar-hogar`
+(asegura, nuevo, mismo patrón que `precalificar-hogar-nuevo`) + `lib/hogar-retarificar-asegura.ts` +
+`RetarificadorHogar.tsx` en `poliza/[id]/retarificar/page.tsx` (plataforma). El botón de pagar (0,50€)
+reutiliza `pedirCotizacion` sin cambios: el puerto de asegura ya ramaba por ramo. Se borró
+`urlRetarificarHogarAsegura()` (sin consumidores) y se actualizó su guardián
+(`test/regression-retarificar-plataforma.test.ts`). Probado con la póliza de hogar real de Occident.
+
 **(17/09/2026)** Portal cliente · Alberto reportó que Alejandro José Soler Fernández Gao subió
 pólizas y no se enteró ni por Telegram ni como oportunidad. Medido en BD: solo hay UNA declarada
 (la segunda subida no se guardó, probablemente falló en el cliente), vinculada bien a su ficha,
