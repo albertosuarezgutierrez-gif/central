@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-16T17:09:09Z",
+  "generadoEn": "2026-09-17T11:34:57Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -3990,6 +3990,7 @@
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/documentos",
       "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/hogar-nuevo",
       "/api/operador/codeoscopic/lineas",
@@ -6401,7 +6402,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1371,
+    "apis": 1372,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
