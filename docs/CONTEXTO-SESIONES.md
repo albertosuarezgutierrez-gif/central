@@ -22,6 +22,23 @@ reutiliza `pedirCotizacion` sin cambios: el puerto de asegura ya ramaba por ramo
 `urlRetarificarHogarAsegura()` (sin consumidores) y se actualizó su guardián
 (`test/regression-retarificar-plataforma.test.ts`). Probado con la póliza de hogar real de Occident.
 
+**(17/09/2026)** Portal cliente · Alberto reportó que la póliza de Alejandro Soler no guardó dirección
+ni garantías/capitales, y que el PDF no llegó a su ficha. Medido en logs reales de Vercel:
+`POST /api/portal/documento` y `GET /api/portal/contacto` responden **401** desde `central-asegura`
+(mismo fallo que el 09/09: `ASEGURA_PORTAL_PUENTE_SECRET` desincronizado entre `asegura-portal` y
+`central-asegura`) — pendiente de Alberto, alinear el secreto en los DOS proyectos y redesplegar. La
+2ª pasada de IA (dirección/garantías) fallaba en SILENCIO al no parsear el JSON: añadido logging en
+`apps/asegura-portal/lib/extraer-poliza.ts` para poder diagnosticarlo la próxima vez.
+
+**(17/09/2026)** CIMA · **primera medición real de cobertura de campos** (las tablas de #832 ya escriben:
+640 rutas, 3 crudos, 1 con incidencia). Muestra PARCIAL y hay que decirlo: solo **POL** y solo **Occident
+C0468 + Generali C0072** — ni SIN/REC/CEF ni Mapfre/Allianz/Reale. De **309 rutas hoja** distintas, **268
+no se leen nunca** (258 de negocio + las 10 del sobre EIAC, que son metadatos del lote y no son dato
+perdido). 🪤 Casi se reporta «el medidor está roto» porque `Importes.PrimaNeta` sale sin leer teniendo
+prima en la BD: **falso**, la prima se lee de `ImportesDEC.PrimaNetaAnualizada`, que es OTRO campo. El
+medidor acierta. Huecos reales a mirar: `DatosAnulacion.*` (motivo/fecha de anulación), `DatosCargos.*`,
+`DescripcionRamo`/`RamoEntidad`, `ClasePoliza`. Sin ficheros nuevos desde el 16/09 10:10 (Mapfre sigue muda).
+
 **(17/09/2026)** Portal cliente · Alberto reportó que Alejandro José Soler Fernández Gao subió
 pólizas y no se enteró ni por Telegram ni como oportunidad. Medido en BD: solo hay UNA declarada
 (la segunda subida no se guardó, probablemente falló en el cliente), vinculada bien a su ficha,
@@ -310,6 +327,20 @@ PR #2933. Sin código tocado, solo doc.
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🩹 16 pólizas duplicadas en la cartera CIMA de Occident/Mapfre/Allianz, y por qué (17/09/2026).**
+  Rescate manual de Generali C0072 (PR #835, `POST /api/internal/cima/ingerir-manual`) destapó que
+  `matchIncomingCimaPoliza` comparaba `aseguradora` como texto libre (Plus Ultra/Catalana
+  Occidente/Occident son la MISMA entidad C0468) y que el fallback podía robarle el número a una
+  póliza ya identificada (`549212323`/`549215784` fusionadas en una fila). Arreglado en PR #837
+  (match por `codigoEntidadDgs` + núcleo Occident LOO-973 + fallback nunca pisa un número propio,
+  8 tests verificados en rojo antes del fix). Repuestas las 16 pólizas ya duplicadas (repo `asegura`,
+  `poliza_merge_log`/`cliente_merge_log`, con `verificacion_humana_alberto` cuando hacía falta —
+  incluida una fusión de CLIENTE, mismo María Rocío González García partida por un split de nombre).
+  Cartera CIMA reconciliada 1:1 contra el portal en las 5 entidades (Allianz 26, Generali 14, Reale 1,
+  Mapfre 64, Occident 51). PR #838 (draft): alerta de Telegram en `cima_fichero_review` y
+  `cima_situacion_desconocida` — antes solo quedaban en `operational_events`, invisibles hasta la
+  próxima auditoría manual (así se destapó todo esto). Pendiente: `TELEGRAM_BOT_TOKEN`/`CHAT_ID` en
+  Vercel de `asegura` para que la alerta de #838 funcione en producción.
 - **🔓 Causa real de los 500 del Submit (proyecto 40685793): un `product.options` que nunca se mandaba (17/09/2026).**
   Codeoscopic (Juan Manuel Fernández) contestó al correo del 13/09: nunca llegó a Allianz — faltaban 4
   consentimientos obligatorios del formulario de Allianz (`insuredFamilyInAllianz`, `publicityConsent`,
