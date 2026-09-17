@@ -20,6 +20,14 @@ mergear — reconcilia el puntero local sin perder nada (el contenido ya estaba 
 vía squash). Con eso se mergearon asegura#838 (alerta Telegram CIMA) y central#3052 (memoria).
 Probado en real: `cima-pull` disparado a mano tras el merge — `ok:true, processed:0` (nada
 pendiente en ese momento; el aviso se verá la próxima vez que CIMA mande un review/situación real).
+**(17/09/2026)** Portal cliente · Alberto reportó que la póliza de Alejandro Soler no guardó dirección
+ni garantías/capitales, y que el PDF no llegó a su ficha. Medido en logs reales de Vercel:
+`POST /api/portal/documento` y `GET /api/portal/contacto` responden **401** desde `central-asegura`
+(mismo fallo que el 09/09: `ASEGURA_PORTAL_PUENTE_SECRET` desincronizado entre `asegura-portal` y
+`central-asegura`) — pendiente de Alberto, alinear el secreto en los DOS proyectos y redesplegar. La
+2ª pasada de IA (dirección/garantías) fallaba en SILENCIO al no parsear el JSON: añadido logging en
+`apps/asegura-portal/lib/extraer-poliza.ts` para poder diagnosticarlo la próxima vez.
+
 **(17/09/2026)** CIMA · **primera medición real de cobertura de campos** (las tablas de #832 ya escriben:
 640 rutas, 3 crudos, 1 con incidencia). Muestra PARCIAL y hay que decirlo: solo **POL** y solo **Occident
 C0468 + Generali C0072** — ni SIN/REC/CEF ni Mapfre/Allianz/Reale. De **309 rutas hoja** distintas, **268
