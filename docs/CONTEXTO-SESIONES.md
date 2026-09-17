@@ -30,6 +30,21 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🩹 16 pólizas duplicadas en la cartera CIMA de Occident/Mapfre/Allianz, y por qué (17/09/2026).**
+  Rescate manual de Generali C0072 (PR #835, `POST /api/internal/cima/ingerir-manual`) destapó que
+  `matchIncomingCimaPoliza` comparaba `aseguradora` como texto libre (Plus Ultra/Catalana
+  Occidente/Occident son la MISMA entidad C0468) y que el fallback podía robarle el número a una
+  póliza ya identificada (`549212323`/`549215784` fusionadas en una fila). Arreglado en PR #837
+  (match por `codigoEntidadDgs` + núcleo Occident LOO-973 + fallback nunca pisa un número propio,
+  8 tests verificados en rojo antes del fix). Repuestas las 16 pólizas ya duplicadas (repo `asegura`,
+  `poliza_merge_log`/`cliente_merge_log`, con `verificacion_humana_alberto` cuando hacía falta —
+  incluida una fusión de CLIENTE, mismo María Rocío González García partida por un split de nombre).
+  Cartera CIMA reconciliada 1:1 contra el portal en las 5 entidades (Allianz 26, Generali 14, Reale 1,
+  Mapfre 64, Occident 51). PR #838 (draft): alerta de Telegram en `cima_fichero_review` y
+  `cima_situacion_desconocida` — antes solo quedaban en `operational_events`, invisibles hasta la
+  próxima auditoría manual (así se destapó todo esto). Pendiente: `TELEGRAM_BOT_TOKEN`/`CHAT_ID` en
+  Vercel de `asegura` para que la alerta de #838 funcione en producción.
+
 - **📝 El blog de la correduría se escribe SOLO, pero no se publica solo (07/09/2026).** Cron quincenal
   (días 1 y 15, `CRON_JOBS`) → redacta con `categoria:'redaccion'` → valida → deja **PR**, y Alberto aprueba
   con dos botones en `/correduria` → **Redes** (el badge de la pestaña lo cuenta desde cualquier sección: el
