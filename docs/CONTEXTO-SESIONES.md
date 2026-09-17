@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/09/2026)** Portal cliente · Alberto reportó que Alejandro José Soler Fernández Gao subió
+pólizas y no se enteró ni por Telegram ni como oportunidad. Medido en BD: solo hay UNA declarada
+(la segunda subida no se guardó, probablemente falló en el cliente), vinculada bien a su ficha,
+vence 17/04/2027 — fuera de la ventana de 60 días de `cartera-declaradas.ts`, por eso no era
+oportunidad todavía (diseño correcto, no bug). Lo que SÍ faltaba: ningún aviso Telegram al subir
+una póliza. Añadido `apps/asegura-portal/lib/aviso-poliza-declarada.ts` (mismo patrón que
+`aviso-acceso.ts`, best-effort) enganchado en las dos altas de `app/api/polizas/route.ts`.
+
 **(17/09/2026)** Codeoscopic · Product Form Library del vendor (widget oficial, no un catálogo
 adivinado) para el `product.options` del Submit — sustituye/generaliza el catálogo estático de
 Allianz (`opciones-producto.ts`) a cualquier compañía/ramo, PR #3050 (draft). `Oferta.quoteCrudo`
