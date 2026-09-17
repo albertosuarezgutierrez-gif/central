@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-17T12:41:03Z",
-  "sha": "fe223a6fdf724d8e73bd7cba27fdf4ab59cea510",
+  "generadoEn": "2026-09-17T13:43:08Z",
+  "sha": "072a4210abdfcefd79e38262b44aac6f98745b2c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4664,7 +4664,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 28,
+          "linea": 29,
           "resumen": "Alta de una póliza en la bóveda del cliente. Dos caminos, una sola ruta: - `multipart/form-data` con `documento` → sube un PDF/foto, lo lee la IA y la fila nace SIN confirmar (los datos los ha adivina"
         },
         {
@@ -4673,7 +4673,7 @@
           "exportada": false,
           "params": "t: TitularDeclarado",
           "retorno": null,
-          "linea": 51,
+          "linea": 52,
           "resumen": "Lo que se guarda de la pregunta «¿es tuya o de tu empresa?». 🚨 `sin_preguntar` se guarda como NULL y NO como `'propio'`. Es la diferencia entre «ha dicho que es suya» y «no consta», y de ella depende"
         },
         {
@@ -4682,7 +4682,7 @@
           "exportada": false,
           "params": "req: Request, identidadId: string",
           "retorno": null,
-          "linea": 59
+          "linea": 60
         },
         {
           "nombre": "altaAMano",
@@ -4690,14 +4690,14 @@
           "exportada": false,
           "params": "req: Request, identidadId: string",
           "retorno": null,
-          "linea": 150
+          "linea": 161
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/polizas",
-      "hash": "cc94848cc533"
+      "hash": "53f4e83e9d29"
     },
     {
       "ruta": "apps/asegura-portal/app/api/push/desuscribir/route.ts",
@@ -6107,6 +6107,56 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "fb15396b045c"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/aviso-poliza-declarada.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El aviso de que un cliente ha subido una póliza a su bóveda. 🚨 No existía ningún aviso al subir una póliza declarada (medido 17/09/2026, caso real: Alejandro José Soler Fernández Gao subió dos y Alberto no se enteró por ningún canal). La fila queda en `portal_poliza_declarada` y solo sale como «opo",
+      "exporta": [
+        "mensajePolizaDeclarada",
+        "avisarPolizaDeclarada",
+        "avisarPolizaDeclaradaDesdeAlta"
+      ],
+      "funciones": [
+        {
+          "nombre": "mensajePolizaDeclarada",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContextoPolizaDeclarada",
+          "retorno": "string",
+          "linea": 32
+        },
+        {
+          "nombre": "avisarPolizaDeclarada",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContextoPolizaDeclarada",
+          "retorno": "Promise<ResultadoAviso>",
+          "linea": 44,
+          "resumen": "Nunca lanza: un fallo del aviso no puede impedir que la póliza se guarde."
+        },
+        {
+          "nombre": "nombreClienteVinculado",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 63,
+          "resumen": "El nombre de la ficha vinculada, si la hay. `null` en dos casos distintos (sin vínculo, o la consulta falla) porque el mensaje de Telegram ya trata ambos igual: «sin vincular» — lo que no puede hacer "
+        },
+        {
+          "nombre": "avisarPolizaDeclaradaDesdeAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Omit<ContextoPolizaDeclarada, 'clienteNombre'>,",
+          "retorno": "Promise<ResultadoAviso>",
+          "linea": 86,
+          "resumen": "Punto de entrada desde la ruta: resuelve el nombre y avisa, sin que nada de esto pueda retrasar ni tumbar la respuesta al cliente (se llama con `void`)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dbfbca9acc18"
     },
     {
       "ruta": "apps/asegura-portal/lib/canal-email.ts",
@@ -65159,7 +65209,7 @@
           "exportada": false,
           "params": "{ label, valor }: { label: string; valor: string | null }",
           "retorno": null,
-          "linea": 152
+          "linea": 153
         },
         {
           "nombre": "Caja",
@@ -65167,7 +65217,7 @@
           "exportada": false,
           "params": "{ tono, titulo, children }: { tono: 'ok' | 'aviso' | 'error' | 'neutro'; titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 161
+          "linea": 162
         },
         {
           "nombre": "Pestana",
@@ -65175,12 +65225,12 @@
           "exportada": false,
           "params": "{ activa, onClick, children }: { activa: boolean; onClick: () => void; children: React.ReactNode }",
           "retorno": null,
-          "linea": 171
+          "linea": 172
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0d1f2a68f3f4"
+      "hash": "44b3accbe406"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/hogar/page.tsx",
@@ -136973,7 +137023,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3349,
-    "funciones": 10357
+    "archivos": 3350,
+    "funciones": 10361
   }
 }
