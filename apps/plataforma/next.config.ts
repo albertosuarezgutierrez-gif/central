@@ -25,6 +25,21 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [{ source: '/seguros', destination: 'https://grupoasegura.es', permanent: true }]
   },
+  // La Product Form Library de Codeoscopic (widget de la correduría para
+  // pintar el formulario REAL de consentimiento de cada compañía, en vez de
+  // un catálogo estático adivinado — ver `apps/asegura/lib/codeoscopic/
+  // product-form.ts`) pinta un `<iframe>` propio. Requisito documentado por
+  // el propio fabricante (`overview.md` del portal, capturado 17/09/2026):
+  // `frame-src 'self' *.codeoscopic.io;`. No se toca ninguna otra directiva:
+  // hoy no hay CSP en esta app, así que esta es la única restricción nueva.
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [{ key: 'Content-Security-Policy', value: "frame-src 'self' *.codeoscopic.io;" }],
+      },
+    ]
+  },
 }
 
 export default nextConfig

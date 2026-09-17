@@ -206,5 +206,21 @@ test('emision.tsx avisa si la casilla de familia en Allianz choca con un `produc
     fileURLToPath(new URL('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx', import.meta.url)),
     'utf8',
   )
-  assert.match(src, /familiaAllianz && typeof campos\.product === 'object'/)
+  // `yaTraeProduct` (17/09/2026, widget de la Product Form Library) es el
+  // mismo `typeof campos.product === 'object' && campos.product !== null`
+  // de antes, factorizado porque ahora dos guardas lo comparten (familia en
+  // Allianz Y lo guardado del formulario de la compañía).
+  assert.match(src, /const yaTraeProduct = typeof campos\.product === 'object' && campos\.product !== null/)
+  assert.match(src, /esAllianz && familiaAllianz && yaTraeProduct/)
+})
+
+// El mismo aviso, pero para lo guardado del widget de la Product Form
+// Library: si el JSON avanzado ya trae `product`, lo del formulario no viaja
+// — nunca en silencio.
+test('emision.tsx avisa si lo guardado del formulario de la compañía choca con un `product` del JSON avanzado (lee el fuente)', () => {
+  const src = readFileSync(
+    fileURLToPath(new URL('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx', import.meta.url)),
+    'utf8',
+  )
+  assert.match(src, /productOptions !== null && yaTraeProduct/)
 })
