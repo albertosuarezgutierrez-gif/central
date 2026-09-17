@@ -434,6 +434,19 @@ una solicitud (el filtro la excluye).
   acuñar el proyecto pasa a apuntar a la póliza EMITIDA. Y el portal distingue los 5xx: **500 = «report the issue… to the API
   support team» (`soporteapi@avant2.es`, con el `requestId`), 502/503/504 = «try again in a few minutes»**
   (`consejoTrasFallo`). En la web de Allianz Alberto no vio póliza del 40685793 esa mañana.
+  ✅ **CAUSA REAL, confirmada por Codeoscopic el 17/09/2026: no era un 500 del vendor, era un `product.options`
+  que nunca se mandaba.** Juan Manuel Fernández (Product Manager API): «no ha llegado la petición a la compañía
+  y no ha llegado a emitirse» — Allianz exige un formulario previo con 4 preguntas obligatorias
+  (`insuredFamilyInAllianz`, `publicityConsent`, `allianzGroupProductsConsent`, `commercialProfilingConsent`,
+  cada una con valor explícito **aunque su default visual sea «No»**) dentro de `product.options` del propio
+  Submit, y nuestro cuerpo solo mandaba `{quote:{id}, payment:{bankAccount:{iban}}}`. 🚨 **Es un `product.options`
+  DISTINTO del que ya existía**: el de `opciones-producto.ts` (`ALLIANZ_AUTO_320200`, 14 campos técnicos/
+  comerciales) es para `mainQuote.product.options` en el **ReRate** (`/offers`); este es para `product.options`
+  en el **Submit** (`/policy-applications`) y son consentimientos legales del tomador. Arreglado con
+  `conProductoPorDefecto()` (puro, en el mismo fichero): rellena los 4 en `false` —el default del propio
+  formulario, y ninguno se decide a favor del cliente sin que él lo diga— **solo si nadie ya puso `product`**
+  (el JSON avanzado del corredor manda). El proyecto 40685793 quedó inservible (fecha de efecto caducada el
+  14/09) y no se recuperó; el arreglo es para el SIGUIENTE Submit de Allianz.
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 

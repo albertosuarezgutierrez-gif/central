@@ -30,6 +30,14 @@
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
 
+- **🔓 Causa real de los 500 del Submit (proyecto 40685793): un `product.options` que nunca se mandaba (17/09/2026).**
+  Codeoscopic (Juan Manuel Fernández) contestó al correo del 13/09: nunca llegó a Allianz — faltaban 4
+  consentimientos obligatorios del formulario de Allianz (`insuredFamilyInAllianz`, `publicityConsent`,
+  `allianzGroupProductsConsent`, `commercialProfilingConsent`) en `product.options` del propio Submit, DISTINTO
+  del `product.options` del ReRate que ya existía (`opciones-producto.ts`). Arreglado: `conProductoPorDefecto()`
+  (puro, los 4 en `false`, no pisa el JSON avanzado del corredor), cableado en `emitir/route.ts`. Cepo visto
+  en rojo (2 tests) antes de restaurar. 463/463 tests asegura + tsc 0 + code-review (2 hallazgos, los 2
+  aplicados). El 40685793 sigue muerto (fecha de efecto caducada); el arreglo es para el SIGUIENTE Submit.
 - **📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real (13/09/2026).**
   Dado de alta el 15/06 (LOO-322) → `app.grupoasegura.com/api/webhooks/codeoscopic`, HTTP Basic; el emisor real manda un
   **array de 2 elementos `{insurance}` cada ~30 min** (1.671 rechazos en `operational_events` desde el 25/06, antes de emitir
