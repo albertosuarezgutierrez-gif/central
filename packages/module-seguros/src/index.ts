@@ -59,6 +59,14 @@ export {
 } from './rc-modalidad.ts'
 
 export {
+  RAMOS_CON_DIRECCION_RIESGO,
+  admiteDireccionRiesgo,
+  validarDireccionRiesgo,
+  type DireccionRiesgo,
+  type ValidacionDireccionRiesgo,
+} from './direccion-riesgo.ts'
+
+export {
   saludIngesta,
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,

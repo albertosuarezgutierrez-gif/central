@@ -114,7 +114,8 @@ export function objetoAsegurado(entrada: EntradaObjeto): ObjetoAsegurado {
   const d = entrada.datos && typeof entrada.datos === 'object' ? entrada.datos : {}
 
   if (tipo === 'auto' || tipo === 'moto') return objetoVehiculo(d)
-  if (tipo === 'hogar' || tipo === 'comunidad') return objetoInmueble(d, tipo)
+  // `comunidades` es el valor del enum `tipo_seguro` de la BD; `comunidad` el del portal.
+  if (tipo === 'hogar' || tipo === 'comunidad' || tipo === 'comunidades') return objetoInmueble(d, tipo)
   if (tipo === 'comercio') return objetoComercio(d, entrada.coberturas)
   if (tipo === 'responsabilidad_civil') return objetoResponsabilidadCivil(d, entrada.coberturas)
   if (RAMOS_DE_PERSONAS.has(tipo)) {
@@ -191,10 +192,11 @@ function objetoInmueble(d: Record<string, unknown>, tipo: string): ObjetoAsegura
   }
   return {
     estado: 'conocido',
-    titulo: titulo ?? (tipo === 'comunidad' ? 'Comunidad' : 'Vivienda'),
+    titulo: titulo ?? (tipo.startsWith('comunidad') ? 'Comunidad' : 'Vivienda'),
     detalle,
     nota: direccionClara !== null
-      ? null
+      // Anotada desde /correduria (19/09/2026): se dice que no vino de la compañía.
+      ? (claro(d.direccionOrigen) === 'manual' ? 'Dirección anotada a mano por la correduría; la compañía no la informa por CIMA.' : null)
       : direccionCifrada
         ? 'La calle exacta viene cifrada del CRM de origen: aquí solo se puede mostrar localidad y código postal.'
         : 'Sin dirección informada por la compañía.',
