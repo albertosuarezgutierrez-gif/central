@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** `apps/asegura-portal`: nav a menú hamburguesa en móvil (la decisión de NO
+tenerla era de cuando había 4 pestañas; hoy son 6+ y Alberto lo pidió explícito), «Mis seguros»
+plegado por defecto agrupado por titular con «Añade una póliza» arriba, y el botón de teléfonos
+de compañía desde la ficha de una póliza ahora abre el canal + parte YA con esa póliza
+preseleccionada en vez de la pestaña genérica. `tsc`/`pnpm test`/`lint` en verde; Playwright
+sin correr (proxy del contenedor bloquea la descarga del navegador) — responsive a 320/360/1024
+pendiente de verificación visual.
+
 **(16/09/2026)** CIMA · skill `cima-ingesta` (router de la tubería EIAC/TIREA: cadena, cuarentena,
 cobertura de campos, caja negra del webhook y diagnóstico), y se mata el duplicado en
 `agente-correduria`/`correduria-crm`. **Generali SÍ vuelca por CIMA desde el 14/09** (1er POL, único
