@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-17T14:10:10Z",
+  "generadoEn": "2026-09-19T09:35:27Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 61
+        "evidencias": 62
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 71
+        "evidencias": 74
       },
       "asegura-web": {
         "estado": "usado",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 19
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2310,7 +2310,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 59
+        "evidencias": 62
       },
       "asegura-web": {
         "estado": "usado",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 6
+        "evidencias": 7
       },
       "asegura-portal": {
         "presente": false,
@@ -3999,6 +3999,7 @@
       "/api/operador/codeoscopic/precalificar",
       "/api/operador/codeoscopic/precalificar-auto-nuevo",
       "/api/operador/codeoscopic/precalificar-decesos-nuevo",
+      "/api/operador/codeoscopic/precalificar-hogar",
       "/api/operador/codeoscopic/precalificar-hogar-nuevo",
       "/api/operador/codeoscopic/precalificar-moto-nuevo",
       "/api/operador/codeoscopic/precalificar-salud-nuevo",
@@ -4038,6 +4039,7 @@
       "/api/operador/supresiones",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
+      "/api/portal/carnets",
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
       "/api/portal/documento",
@@ -4066,6 +4068,7 @@
       "/api/peticiones/[id]",
       "/api/polizas",
       "/api/polizas/[id]",
+      "/api/polizas/[id]/reintentar",
       "/api/push/desuscribir",
       "/api/push/suscribir",
       "/api/recordatorios",
@@ -6403,7 +6406,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1373,
+    "apis": 1376,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
