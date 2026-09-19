@@ -15,6 +15,17 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-19 · mercado-booking** · hizo: pasada completa, 24/24 ventanas de mercado pedidas
+  (`?max=24`, plan_total 528, candidatas 528, recortadas 504 — ronda 0 mes-corto 07-may-2027 +
+  ronda 1 eventos 18-abr a 13-jun-2027, aforos 2/4/5/12), 237 comps `booking_mcp` escritos, 0
+  ventanas sin respuesta. Paso 2-bis: 3/4 escaparate medidos (Busto Reform, Dúplex center, House
+  Sevillana — los 3 detectados y filtrados por el endpoint como `propios`); Luxury Busto sin
+  disponibilidad en Booking para 03-05/09/2027 (`escaparateSinRespuesta`, hueco real no relleno).
+  House Sevillana salió además como comparable de sí misma en la ventana aforo-12 del 07-may
+  (`propios`, descartada, 9 comps válidos de 10). Latido `ok:true`. dudas: el plan trae 83 fechas
+  de evento CONFIRMADO con corpus caducado (>7 días, el motor las tarifica genérico) — no se ha
+  medido si el ritmo de 24/día está bajando ese backlog o solo conteniéndolo; fallos: —;
+  PRs/commits: — (solo bitácora + BD).
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
