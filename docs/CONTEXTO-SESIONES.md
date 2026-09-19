@@ -22,6 +22,14 @@
   (10 s) y la causa real (`conexion`) nunca llegaba a la pantalla. Si el log sigue diciendo «limit: 1»
   tras desplegar, está escrito a mano en el `DATABASE_URL` de Vercel.
 
+**(19/09/2026)** Cerrado el pendiente de PR #3068: captura de Alberto del motor (05-07/01/27, 9
+pax) confirma el −20% de larga estancia SIGUE activo (742×0,80+110=703,60€ exacto) y la limpieza real
+son **110€, no 120€** como se asumió. Recalculado con esos números para las fechas disputadas
+(5-7/02/27): directa 834×0,80+110=**777,20€** vs Booking público medido 1.020,90€ (−24%) — el motor
+NO está mal configurado. Hipótesis que sí cuadra con la queja: un Genius+móvil logueado (0,81-0,67 de
+la lista, medido en `pricing-fuga-canal`) puede ver 687-827€ en Booking, por debajo de la directa.
+No verificable sin sesión logueada en Booking.
+
 **(19/09/2026) Cartera viva ≠ en vigor: cancelada = lead.** Alberto vio a Kartenbrot (1 póliza cancelada)
   como «Cartera viva» y «6 vivas» en Víctor De la Fuente (4 en vigor). Nuevo `esCarteraEnVigor()` /
   `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` en `cartera-viva.ts` = viva Y `POLIZA_ESTADOS_VIGENTES`;
