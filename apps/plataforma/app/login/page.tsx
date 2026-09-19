@@ -8,6 +8,8 @@ import LoginForm from './LoginForm'
 export const dynamic = 'force-dynamic'
 
 export default async function LoginPage() {
-  if (await getSession()) redirect('/banca')
+  // Si la BD no responde, mejor el formulario que una pantalla de error: entrar seguirá fallando, pero se ve por qué.
+  const sesion = await getSession().catch(() => null)
+  if (sesion) redirect('/banca')
   return <LoginForm />
 }
