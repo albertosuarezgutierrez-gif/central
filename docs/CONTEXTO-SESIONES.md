@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Cerrado el pendiente de PR #3068: captura de Alberto del motor (05-07/01/27, 9
+pax) confirma el −20% de larga estancia SIGUE activo (742×0,80+110=703,60€ exacto) y la limpieza real
+son **110€, no 120€** como se asumió. Recalculado con esos números para las fechas disputadas
+(5-7/02/27): directa 834×0,80+110=**777,20€** vs Booking público medido 1.020,90€ (−24%) — el motor
+NO está mal configurado. Hipótesis que sí cuadra con la queja: un Genius+móvil logueado (0,81-0,67 de
+la lista, medido en `pricing-fuga-canal`) puede ver 687-827€ en Booking, por debajo de la directa.
+No verificable sin sesión logueada en Booking.
+
 **(19/09/2026)** Portal cliente · «No aparece dirección seguro hogar en ningún lado» (las dos Occident
 de Alberto). Causa medida en BD: **CIMA no manda el riesgo de hogar** y esas pólizas no tienen gemela
 del volcado → sin dirección en ninguna parte (32 hogar solo-CIMA vivas, 2 con dirección). Arreglo:
