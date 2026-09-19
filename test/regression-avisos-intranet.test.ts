@@ -35,6 +35,7 @@ const pendiente = (x: Partial<Pendiente> = {}): Pendiente => ({
   obligaciones: [],
   peticiones: [],
   datos: [],
+  carnets: [],
   ...x,
 })
 

@@ -12,6 +12,17 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Avisos de renovación de carné de conducir (correduría): tras el helper puro
+`caducidadCarnet()` (PR #3076, mergeado), se conectó al aviso EN LA INTRANET del CLIENTE (decisión
+de Alberto, no la del corredor) — nueva fuente `carnets` en el catálogo `avisosDe()` de
+`@central/module-seguros-portal` (ventana propia de 60 días, no los 7 de las obligaciones), servida
+por un puerto estrecho nuevo `GET /api/portal/carnets` en `apps/asegura` (calcula con la clave PII y
+solo cruza el resultado, nunca las fechas cifradas de origen) y consumida por la campana
+(`/api/avisos`) y por el emisor genérico de correo (`avisos-intranet.ts`, sin tocarlo aparte —
+hereda el envío automáticamente). Nueva tabla Prisma `ClienteCarnetConducir`. Suite completa +
+typecheck de asegura/asegura-portal en verde. Pendiente: UI en la ficha del corredor para dar de
+alta/editar carnés (la tabla soporta varios por cliente; hoy nadie los escribe).
+
 **(19/09/2026)** Portal cliente · Las 2 pólizas de Alejandro Soler que salían "sin ramo/sin compañía"
 en `/correduria` son PDFs con contraseña real (no vacía): `pdf-parse` lanza `PasswordException` (medido
 descargando los 2 ficheros de su Drive y probando con `pdf-parse` y `pdfjs-dist` 4.x directo — ninguno

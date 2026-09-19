@@ -20,6 +20,7 @@ export {
   type ObligacionParaAviso,
   type PeticionParaAviso,
   type ReparoParaAviso,
+  type CarnetParaAviso,
   type EntradaAvisos,
   type Avisos,
 } from '@central/module-seguros-portal'

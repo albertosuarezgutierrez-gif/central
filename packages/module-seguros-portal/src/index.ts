@@ -65,7 +65,9 @@ export {
   TIPOS_AVISO,
   FUENTES_AVISO,
   HREF_POR_TIPO,
+  DIAS_VENTANA_AVISO_CARNET,
   textoGlobo,
+  entraEnVentanaCarnet,
   avisosDe,
 } from './avisos.ts'
 export type {
@@ -76,6 +78,7 @@ export type {
   ObligacionParaAviso,
   PeticionParaAviso,
   ReparoParaAviso,
+  CarnetParaAviso,
   EntradaAvisos,
   Avisos,
 } from './avisos.ts'
