@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { COMPANIAS_BAJA, companiasBajaPublicables } from './companias-baja.ts'
+import { COMPANIAS_BAJA, FECHA_VERIFICACION, companiasBajaPublicables, esPublicable } from './companias-baja.ts'
 import { ARTICULOS, textoArticulo } from './articulos.ts'
 
 test('cada compañía declara sus fuentes oficiales y no se publica sin verificación humana con fecha', () => {
@@ -11,7 +11,7 @@ test('cada compañía declara sus fuentes oficiales y no se publica sin verifica
     assert.ok(c.fuentes.length > 0, `${c.slug}: sin fuentes`)
     for (const f of c.fuentes) assert.match(f, /^https:\/\/[a-z0-9.-]+\.(es|com)\//, `${c.slug}: fuente que no es una URL oficial`)
     if (c.verificado) {
-      assert.match(c.verificadoEl ?? '', /^\d{4}-\d{2}-\d{2}$/, `${c.slug}: verificado sin fecha`)
+      assert.match(c.verificadoEl ?? '', FECHA_VERIFICACION, `${c.slug}: verificado sin fecha`)
     } else {
       assert.equal(c.verificadoEl, null, `${c.slug}: fecha de verificación sin verificar`)
     }
@@ -21,9 +21,12 @@ test('cada compañía declara sus fuentes oficiales y no se publica sin verifica
 test('solo entran en `companiasBajaPublicables` las verificadas con fecha', () => {
   const publicables = companiasBajaPublicables()
   for (const c of publicables) assert.ok(c.verificado && c.verificadoEl)
-  // Mutación comprobada: marcar una `verificado: true` sin fecha NO la cuela.
-  const sinFecha = [{ ...COMPANIAS_BAJA[0], verificado: true, verificadoEl: null }]
-  assert.equal(sinFecha.filter((c) => c.verificado && c.verificadoEl !== null).length, 0)
+  // Mutaciones comprobadas sobre el predicado REAL (no una copia): sin fecha
+  // no cuela, con un marcador que no es fecha tampoco, y solo pasa la fecha.
+  assert.equal(esPublicable({ verificado: true, verificadoEl: null }), false)
+  assert.equal(esPublicable({ verificado: true, verificadoEl: 'pendiente' }), false)
+  assert.equal(esPublicable({ verificado: false, verificadoEl: '2026-09-19' }), false)
+  assert.equal(esPublicable({ verificado: true, verificadoEl: '2026-09-19' }), true)
 })
 
 // 🚨 El cepo que importa: ningún dato de contacto de una compañía SIN verificar

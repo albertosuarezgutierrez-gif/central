@@ -125,7 +125,19 @@ export const COMPANIAS_BAJA: readonly CompaniaBaja[] = [
   },
 ] as const
 
+/** Formato obligatorio de `verificadoEl`: la fecha de la verificación humana, no un marcador. */
+export const FECHA_VERIFICACION = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Publicable = verificada Y con fecha con forma de fecha. Un `verificadoEl`
+ * de «pendiente» o «sí» es un «no lo he mirado» disfrazado de dato, y por
+ * eso NO cuela: el filtro exige el mismo formato que el cepo.
+ */
+export function esPublicable(c: Pick<CompaniaBaja, 'verificado' | 'verificadoEl'>): boolean {
+  return c.verificado && c.verificadoEl !== null && FECHA_VERIFICACION.test(c.verificadoEl)
+}
+
 /** Las que se pueden publicar. Hoy: ninguna, y eso es lo correcto hasta que alguien verifique. */
 export function companiasBajaPublicables(): CompaniaBaja[] {
-  return COMPANIAS_BAJA.filter((c) => c.verificado && c.verificadoEl !== null)
+  return COMPANIAS_BAJA.filter(esPublicable)
 }
