@@ -193,6 +193,11 @@ export {
   type PersonaDePolizas,
 } from './intervinientes.ts'
 export {
+  emailAlternativo,
+  type AllegadoConEmail,
+  type EmailAlternativo,
+} from './contacto-alternativo.ts'
+export {
   FRACCIONES,
   etiquetaFraccionamiento,
   etiquetaFormaPago,

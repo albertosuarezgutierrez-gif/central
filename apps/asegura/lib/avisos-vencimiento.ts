@@ -27,13 +27,31 @@
  * filtro se repite aquí porque este es el proceso que gasta la bandeja del
  * cliente. Sin él, un error aguas arriba son 28.729 «se te venció el seguro» de
  * pólizas de 2013-2018.
+ *
+ * 🚨 **Y desde el 19/09/2026, si el TOMADOR no tiene ninguna dirección propia,
+ * el correo se manda a su PERSONA DE REFERENCIA** — dictado de Alberto viendo
+ * «Instituto Studium» y «Grupo ELCA 83» en «Clientes sin canal»: «suele tener
+ * persona de contacto… es la persona de referencia sobre esta póliza». Mismas
+ * dos fuentes que la pantalla `clientes-sin-canal.ts` (su propio dato colgado
+ * de la póliza, un interviniente ajeno de la MISMA póliza, o un allegado
+ * declarado en `cliente_relaciones`), decididas por `emailAlternativo()` de
+ * `@central/module-seguros`. El correo a un tercero SIEMPRE dice de qué
+ * tomador es la póliza y con qué rol se dirige a él — nunca se manda como si
+ * fuera al propio tomador.
  */
 import { createMailTransporter } from '@central/core-email'
 import { decryptField } from '@central/module-seguros-pii'
-import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA, remitenteCorreo } from '@central/module-seguros'
+import {
+  emailAlternativo,
+  etiquetaRol,
+  POLIZA_ESTADOS_VIGENTES,
+  WHERE_CARTERA_VIVA,
+  remitenteCorreo,
+  type IntervinienteFicha,
+} from '@central/module-seguros'
 import { DIAS_VENTANA_AVISO, entraEnVentana } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
-import { eur } from './dinero'
+import { textoAviso, type ParaTercero } from './texto-vencimiento'
 
 const MS_DIA = 86_400_000
 
@@ -42,7 +60,12 @@ export type ResumenAvisos = {
   candidatas: number
   /** Correos aceptados por el proveedor. En modo cuenta es siempre 0. */
   enviados: number
-  /** Candidatas sin dirección utilizable: ni póliza viva, ni email legible, o baja de correo. */
+  /** De los `enviados`, cuántos fueron a la PERSONA DE REFERENCIA porque el
+   *  tomador no tenía ninguna dirección propia. Subconjunto de `enviados`,
+   *  no aparte: sigue siendo un envío aceptado, solo que a otro destinatario. */
+  enviadosATercero: number
+  /** Candidatas sin dirección utilizable: ni póliza viva, ni email legible, ni
+   *  persona de referencia con email, o baja de correo. */
   sinCanal: number
   /** Candidatas con destinatario que el proveedor rechazó. */
   fallidos: number
@@ -67,10 +90,6 @@ export function esSoloContar(p: { activos: boolean; forzarContar: boolean }): bo
 /** Medianoche UTC: las columnas `date` de Postgres llegan así. */
 function diaUtc(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-}
-
-function fechaEs(d: Date): string {
-  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
 }
 
 /**
@@ -119,52 +138,127 @@ export function destinatarioDeCliente(c: ClienteConEmails): string | null {
   return pareceEmail(suelto) ? suelto : null
 }
 
-function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-}
+// ── Persona de referencia (19/09/2026) ───────────────────────────────────────
+// Solo se consultan estas dos fuentes cuando `destinatarioDeCliente()` de la
+// ficha del tomador ya ha dado `null` — es un puñado de candidatas por pasada,
+// no el grueso del cron.
 
-type DatosCorreo = {
-  titulo: string
-  fechaAccionable: Date
-  fechaEvento: Date
-  aseguradora: string | null
-  numeroPoliza: string | null
-  primaAnual: number | null
+/**
+ * Los intervinientes de ESTA póliza, ya descifrados, en la forma que espera
+ * `contactoEfectivo()`. Copia deliberadamente acotada de `leerIntervinientes`
+ * de `cartera-ficha.ts` (no exportada desde allí): aquí solo hace falta email +
+ * quién es, no el resto de la ficha que pinta esa pantalla. `null` = la
+ * consulta falló — se trata como «no se ha podido mirar», nunca como «no hay
+ * nadie más».
+ */
+async function leerIntervinientesDePoliza(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  tomadorId: string,
+  polizaId: string,
+): Promise<IntervinienteFicha[] | null> {
+  try {
+    const filas = await db.polizaInterviniente.findMany({
+      where: { correduriaId, polizaId },
+      // 🚨 Mismo orden que `leerIntervinientes` de `cartera-ficha.ts`, y por el
+      // mismo motivo (02/09/2026): sin él, una póliza con varios intervinientes
+      // del MISMO rol (GLOBAL 2, tres conductores habituales) le pasaba a
+      // `contactoEfectivo` un orden distinto en cada lectura de Postgres, y el
+      // correo podía salir a una persona distinta en cada pasada del cron.
+      orderBy: [{ rol: 'asc' }, { id: 'asc' }],
+      select: {
+        id: true, polizaId: true, rol: true, clienteId: true, origen: true,
+        nombre: true, apellidos: true, email: true,
+        cliente: { select: { nombre: true, apellidos: true, email: true, emailOptOutAt: true } },
+      },
+    })
+    return filas.map((f) => {
+      const propio = [descifrar(f.nombre), descifrar(f.apellidos)].filter(Boolean).join(' ').trim() || null
+      const deFicha = f.cliente ? `${f.cliente.nombre} ${f.cliente.apellidos}`.trim() || null : null
+      // 🚨 `descifrar()` solo comprueba que el cifrado se abrió, no que lo de
+      // dentro TENGA FORMA de email — a diferencia de `destinatarioDeCliente`,
+      // que pasa todo por `pareceEmail()` antes de devolverlo. Esta fila puede
+      // acabar como destinatario de un `sendMail`, así que se valida aquí
+      // también: un valor que no parece email es tan «sin canal» como uno vacío.
+      // Y si el interviniente está enlazado a SU PROPIA ficha de cliente y esa
+      // ficha se dio de baja de correo, su email de ficha no cuenta — la baja
+      // es suya, igual que la del tomador (`destinatarioDeCliente` ya la respeta).
+      // 🚨 El fallback es por VALIDEZ, no por null: un `??` se habría quedado
+      // con un email propio con formato roto (dato sucio, no ausente) y nunca
+      // habría probado el de la ficha, que puede ser el bueno.
+      const emailPropio = descifrar(f.email)
+      const emailDeFicha = f.cliente && !f.cliente.emailOptOutAt ? descifrar(f.cliente.email) : null
+      const email = pareceEmail(emailPropio) ? emailPropio : pareceEmail(emailDeFicha) ? emailDeFicha : null
+      return {
+        id: f.id, polizaId: f.polizaId, rol: String(f.rol),
+        nombre: propio ?? deFicha, nombreIlegible: false,
+        telefono: null, email, telefonoIlegible: false, emailIlegible: false,
+        fichaId: f.clienteId ?? null, personaClave: null,
+        esTomador: f.clienteId === tomadorId, origen: String(f.origen),
+      }
+    })
+  } catch {
+    return null
+  }
 }
 
 /**
- * La fecha que se le dice al cliente es la ACCIONABLE, no la del vencimiento
- * (art. 22 LCS). Decirle «vence el 15 de marzo» le deja creer que tiene hasta el
- * 15, cuando el plazo para oponerse se le pasó 30 días antes.
+ * Las personas de referencia declaradas en `cliente_relaciones` del tomador,
+ * con SU PROPIO email ya resuelto (mismas reglas que `destinatarioDeCliente`:
+ * baja de correo respetada, principal primero). Excluye el tipo `Sin vínculo`
+ * (05/09/2026 — «no tiene vinculación ninguna» no es una persona de
+ * referencia) y las fichas descartadas o fusionadas. `[]` en error: a
+ * diferencia de los intervinientes, un fallo aquí no impide que
+ * `emailAlternativo()` siga probando la vía de la póliza — se degrada, no se
+ * bloquea el cron entero por esta consulta secundaria.
  */
-export function textoAviso(d: DatosCorreo): { asunto: string; texto: string; html: string } {
-  const accionable = fechaEs(d.fechaAccionable)
-  const vence = fechaEs(d.fechaEvento)
-  const detalle = [
-    d.aseguradora ? `Compañía: ${d.aseguradora}` : null,
-    d.numeroPoliza ? `Nº de póliza: ${d.numeroPoliza}` : null,
-    d.primaAnual !== null ? `Prima anual: ${eur(d.primaAnual)}` : null,
-  ].filter((x): x is string => x !== null)
-
-  const asunto = `Tienes hasta el ${accionable} para decidir sobre ${d.titulo}`
-  const texto =
-    `${d.titulo}\n\n` +
-    `Puedes actuar hasta el ${accionable}. Es la última fecha para comunicar que no quieres ` +
-    `renovar; después la póliza se prorroga sola. El seguro vence el ${vence}.\n\n` +
-    (detalle.length ? detalle.join('\n') + '\n\n' : '') +
-    `Si quieres que lo revisemos juntos, responde a este correo.\n\n— Grupo ASegura`
-  const html =
-    `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px">` +
-    `<p style="margin:0 0 12px"><strong>${esc(d.titulo)}</strong></p>` +
-    `<p style="margin:0 0 12px">Puedes actuar hasta el <strong>${esc(accionable)}</strong>. ` +
-    `Es la última fecha para comunicar que no quieres renovar; después la póliza se prorroga sola. ` +
-    `El seguro vence el ${esc(vence)}.</p>` +
-    (detalle.length
-      ? `<ul style="margin:0 0 12px;padding-left:18px;color:#444">${detalle.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`
-      : '') +
-    `<p style="margin:0;color:#666;font-size:13px">Si quieres que lo revisemos juntos, responde a este correo.</p>` +
-    `</div>`
-  return { asunto, texto, html }
+async function leerAllegadosDeTomador(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  tomadorId: string,
+): Promise<{ fichaId: string; nombre: string; parentesco: string; email: string }[]> {
+  try {
+    const vinculos = await db.clienteRelacion.findMany({
+      where: {
+        correduriaId,
+        tipoRelacion: { not: 'Sin vínculo' },
+        OR: [{ clienteAId: tomadorId }, { clienteBId: tomadorId }],
+      },
+      select: { clienteAId: true, clienteBId: true, tipoRelacion: true },
+    })
+    if (vinculos.length === 0) return []
+    const parentescoPorId = new Map<string, string>()
+    for (const v of vinculos) {
+      const otroId = v.clienteAId === tomadorId ? v.clienteBId : v.clienteAId
+      if (!parentescoPorId.has(otroId)) parentescoPorId.set(otroId, v.tipoRelacion)
+    }
+    const fichas = await db.cliente.findMany({
+      where: {
+        id: { in: [...parentescoPorId.keys()] },
+        correduriaId,
+        mergedIntoClienteId: null,
+        activo: true,
+      },
+      select: {
+        id: true, nombre: true, apellidos: true, emailOptOutAt: true, email: true,
+        emails: { select: { email: true, esPrincipal: true, createdAt: true } },
+      },
+    })
+    const out: { fichaId: string; nombre: string; parentesco: string; email: string }[] = []
+    for (const f of fichas) {
+      const destino = destinatarioDeCliente(f)
+      if (!destino) continue
+      out.push({
+        fichaId: f.id,
+        nombre: `${f.nombre} ${f.apellidos}`.trim(),
+        parentesco: parentescoPorId.get(f.id) ?? 'persona de referencia',
+        email: destino,
+      })
+    }
+    return out
+  } catch {
+    return []
+  }
 }
 
 /**
@@ -223,11 +317,15 @@ export async function ejecutarAvisosVencimiento(opts: {
         },
         select: {
           id: true,
+          correduriaId: true,
           aseguradora: true,
           numeroPoliza: true,
           primaAnual: true,
           cliente: {
             select: {
+              id: true,
+              nombre: true,
+              apellidos: true,
               emailOptOutAt: true,
               email: true,
               emails: { select: { email: true, esPrincipal: true, createdAt: true } },
@@ -244,7 +342,9 @@ export async function ejecutarAvisosVencimiento(opts: {
   // que es la verdad, y no se esconde restándola del total.
   const candidatas = enVentana.filter((f) => f.polizaId === null || porId.has(f.polizaId))
 
-  const resumen: ResumenAvisos = { candidatas: candidatas.length, enviados: 0, sinCanal: 0, fallidos: 0, soloContar }
+  const resumen: ResumenAvisos = {
+    candidatas: candidatas.length, enviados: 0, enviadosATercero: 0, sinCanal: 0, fallidos: 0, soloContar,
+  }
   if (candidatas.length === 0) return resumen
 
   // Sin proveedor no se «envía 0 correos»: es una avería de configuración y
@@ -259,10 +359,38 @@ export async function ejecutarAvisosVencimiento(opts: {
 
   for (const o of candidatas) {
     const poliza = o.polizaId ? porId.get(o.polizaId) : undefined
-    const destino = poliza ? destinatarioDeCliente(poliza.cliente) : null
+    let destino = poliza ? destinatarioDeCliente(poliza.cliente) : null
+    let paraTercero: ParaTercero | null = null
+
+    // El tomador no tiene NADA propio en su ficha: antes de darlo por «sin
+    // canal», se mira su póliza (su propio dato mal guardado, o un
+    // interviniente ajeno) y, si tampoco, su persona de referencia declarada.
+    // 🚨 PERO si el tomador se dio de BAJA de correo, no se le rodea escribiendo
+    // a un tercero sobre su póliza: la baja es una decisión suya, no «no tengo
+    // dirección». `sinCanal` ya documenta este caso («...o baja de correo»).
+    if (!destino && poliza && o.polizaId && !poliza.cliente.emailOptOutAt) {
+      const [intervinientes, allegados] = await Promise.all([
+        leerIntervinientesDePoliza(db, poliza.correduriaId, poliza.cliente.id, o.polizaId),
+        leerAllegadosDeTomador(db, poliza.correduriaId, poliza.cliente.id),
+      ])
+      const alt = emailAlternativo(intervinientes, allegados)
+      if (alt) {
+        destino = alt.email
+        if (alt.quien) {
+          paraTercero = {
+            nombreTomador: `${poliza.cliente.nombre} ${poliza.cliente.apellidos}`.trim(),
+            rol: alt.via === 'interviniente' ? etiquetaRol(alt.quien.rol) : alt.quien.rol,
+          }
+        }
+        // `alt.via === 'tomador_en_poliza'` no deja `quien`: es el tomador
+        // mismo, así que `paraTercero` se queda en `null` y el correo se lee
+        // exactamente como si viniera de su propia ficha — porque lo es.
+      }
+    }
+
     if (!destino) {
       resumen.sinCanal += 1
-      console.warn(`[avisos] obligación ${o.id} sin canal (${o.polizaId ? 'email no legible o de baja' : 'sin póliza de cartera'})`)
+      console.warn(`[avisos] obligación ${o.id} sin canal (${o.polizaId ? 'ni ficha, ni póliza, ni persona de referencia' : 'sin póliza de cartera'})`)
       continue
     }
     // El ensayo resuelve el destinatario a propósito (para saber cuántas irían
@@ -276,6 +404,7 @@ export async function ejecutarAvisosVencimiento(opts: {
       aseguradora: poliza?.aseguradora ?? null,
       numeroPoliza: poliza?.numeroPoliza ?? null,
       primaAnual: poliza?.primaAnual != null ? Number(poliza.primaAnual) : null,
+      paraTercero,
     })
 
     try {
@@ -286,6 +415,7 @@ export async function ejecutarAvisosVencimiento(opts: {
       continue
     }
     resumen.enviados += 1
+    if (paraTercero) resumen.enviadosATercero += 1
     // El sello va INMEDIATAMENTE después del envío aceptado. Si esto falla, el
     // correo ya salió: se grita, porque un reintento lo mandaría otra vez.
     try {
