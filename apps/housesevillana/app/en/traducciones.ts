@@ -134,8 +134,8 @@ export const TRADUCCIONES: Record<string, string> = {
   'A pocos metros encontrar&aacute;s La Parcer&iacute;a Caf&eacute;, Ojal&aacute; Tapas y Vinos y el Restaurante Condend&ecirc; (200 m). El Mercado de la Encarnaci&oacute;n (Las Setas) est&aacute; a 10 minutos andando con puestos de frutas, verduras y productos locales.':
     'A few steps away you&#39;ll find La Parcer&iacute;a Caf&eacute;, Ojal&aacute; Tapas y Vinos and Restaurante Condend&ecirc; (200 m). The Encarnaci&oacute;n market (Las Setas) is a 10-minute walk, with fruit, vegetable and local produce stalls.',
   '&iquest;Cu&aacute;l es la pol&iacute;tica de cancelaci&oacute;n?': 'What is the cancellation policy?',
-  'Las condiciones exactas se muestran en el motor de reservas seg&uacute;n las fechas elegidas. Reservando directamente puedes hablar con el propietario para condiciones m&aacute;s flexibles &mdash; algo imposible a trav&eacute;s de las plataformas.':
-    'The exact terms are shown in the booking engine for your chosen dates. Booking direct means you can talk to the owner about more flexible terms &mdash; something the platforms simply don&#39;t allow.',
+  'Cancelaci&oacute;n gratuita hasta 15 d&iacute;as antes de la llegada. Pasado ese plazo, o en caso de no presentarse, se cobra el 100% del importe de la reserva.':
+    'Free cancellation up to 15 days before arrival. After that, or in case of no-show, 100% of the booking amount is charged.',
   '&iquest;Por qu&eacute; reservar aqu&iacute; y no en Booking.com?': 'Why book here instead of Booking.com?',
   'Booking.com cobra entre un 15% y un 22% de comisi&oacute;n que repercute en el precio final. Reservando en esta web obtienes el mejor precio garantizado, confirmaci&oacute;n inmediata y trato directo con el propietario para cualquier necesidad antes o durante tu estancia. Sin intermediarios, sin sorpresas.':
     'Booking.com charges between 15% and 22% commission, and that lands in the final price. Booking on this site gets you the best available rate, instant confirmation and a direct line to the owner for anything you need before or during your stay. No middlemen, no surprises.',
@@ -151,8 +151,8 @@ export const TRADUCCIONES: Record<string, string> = {
   'Trato directo con el propietario': 'Deal directly with the owner',
   'Hablas con Alberto, no con un call center. Flexible con horarios de llegada, parking, peticiones especiales y necesidades del grupo.':
     'You talk to Alberto, not a call centre. Flexible on arrival times, parking, special requests and whatever your group needs.',
-  'Sin esperas ni burocracia. Tu reserva confirmada al instante por WhatsApp o email. Condiciones de cancelaci&oacute;n negociables directamente.':
-    'No waiting, no paperwork. Your booking is confirmed instantly by WhatsApp or email, and cancellation terms can be agreed directly.',
+  'Sin esperas ni burocracia. Tu reserva confirmada al instante por WhatsApp o email. Cancelaci&oacute;n gratuita hasta 15 d&iacute;as antes de la llegada.':
+    'No waiting, no paperwork. Your booking is confirmed instantly by WhatsApp or email. Free cancellation up to 15 days before arrival.',
   'Ver disponibilidad y precios': 'See availability and rates',
   'o ll&aacute;manos al': 'or call us on',
   'Reserva directa': 'Direct booking',
