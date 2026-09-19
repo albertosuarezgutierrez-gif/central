@@ -21,6 +21,15 @@
   (dictado: «es la persona de referencia sobre esta póliza»). Pendiente: el cron de avisos sigue leyendo
   solo la ficha del tomador — avisar por la persona de referencia es un cambio de envío que pide OK.
 
+
+**(19/09/2026)** Portal cliente · «No aparece dirección seguro hogar en ningún lado» (las dos Occident
+de Alberto). Causa medida en BD: **CIMA no manda el riesgo de hogar** y esas pólizas no tienen gemela
+del volcado → sin dirección en ninguna parte (32 hogar solo-CIMA vivas, 2 con dirección). Arreglo:
+el corredor la anota desde `/correduria/poliza/[id]` (`EditarDireccionRiesgo.tsx` → proxy →
+`PATCH /api/operador/poliza` con `campo: 'direccion_riesgo'`, `establecerDireccionRiesgo` en asegura,
+calle cifrada con `encryptField` y claves iguales al volcado: `direccion`/`cp`/`localidad`, 409 si ya
+la trae). Regla pura `validarDireccionRiesgo` en `@central/module-seguros` (7 tests, cepo del CP visto
+morder). El portal ahora DICE que falta la dirección en la ficha propia de un inmueble (`esRamoInmueble`).
 **(17/09/2026)** Correduría · Alberto no podía tarificar hogar («en hogar no me deja tarificar»).
 Causa: `HogarCatastro.tsx` mandaba a un flujo muerto (texto corregido en PR #3054), y retarificar una
 póliza de hogar YA existente seguía saltando a `apps/asegura` (`/cartera/poliza/[id]`, otro dominio/
@@ -344,6 +353,16 @@ PR #2933. Sin código tocado, solo doc.
 >
 > Para arquitectura/módulos completos → skill `ia-rest-maestro`. Esto es solo el
 > registro de qué se hizo y qué queda.
+
+- **💸 Huésped de House (5-7/02/2027, 9-10 pax): «la web sale más cara que Booking» — diagnóstico, sin tocar código (19/09/2026).**
+  Base Smoobu de esas noches 379+455 = 834€ (`rate_snapshots.price_live`, motor sano: floor 245/ceil 612). Booking
+  por el conector: **1.020,90€** a 2 y a 10 adultos (plano por aforo) = Standard 1.000,80 (base×1,20) × 0,90 + 120 limpieza;
+  un Genius ve ~930€ y en la app menos. Web directa = base × descuento del motor de Smoobu («20% desde 2 noches»,
+  medido 19/08) + 120 → 787€ si sigue puesto, **954€ si alguien lo quitó** — y solo así la queja cuadra. NO se pudo
+  medir: `login.smoobu.com` y `booking.com` están bloqueados por el proxy de egreso de la sesión, y `pricing_escaparate`
+  solo mide Booking (65+17 filas, ninguna del canal directo). Pendiente Alberto: abrir el motor con 5-7/02 y 10 pax, y
+  Smoobu → Ajustes del motor (descuentos / precio por persona extra). La FAQ de la landing promete «mejor precio
+  garantizado»: si el directo no es ≤ Booking-Genius, ese texto es falso. Directas en `incomes` desde mayo: 2 (1 manual).
 
 - **🩹 16 pólizas duplicadas en la cartera CIMA de Occident/Mapfre/Allianz, y por qué (17/09/2026).**
   Rescate manual de Generali C0072 (PR #835, `POST /api/internal/cima/ingerir-manual`) destapó que
