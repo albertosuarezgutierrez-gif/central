@@ -23,6 +23,11 @@
   piso RESERVADO, `available=0`: el conector devolvió otro anuncio); sin ella sesgo −1,7 % / error 5 %. Pendiente Alberto:
   despausar (ojo 23/24/27/28-03 del Dúplex con corpus rancio), reponer el barrido, y guardas de escaparate (no medir fechas
   no disponibles + descartar ratios implausibles).
+**(19/09/2026)** House Sevillana · **política de cancelación publicada en la web**: mergeado el PR #3031 (15 días
+  gratis / 100 % después o no-show; FAQ, JSON-LD, bloque de reserva directa, EN/IT) a petición de Alberto tras la
+  pregunta de la huésped de 5-7/02/2027. ⏳ Pendiente Alberto: que el motor de Smoobu muestre la MISMA condición
+  (la web no la impone; la impone lo que el huésped ve al reservar). Directa 5-7/02 con 10 pax = 777,20€ frente
+  a 872€ de su Booking con Genius: la web NO sale más cara para esas fechas.
 
 **(19/09/2026) Cartera viva ≠ en vigor: cancelada = lead.** Alberto vio a Kartenbrot (1 póliza cancelada)
   como «Cartera viva» y «6 vivas» en Víctor De la Fuente (4 en vigor). Nuevo `esCarteraEnVigor()` /
