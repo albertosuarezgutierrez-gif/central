@@ -14,18 +14,23 @@ export default function LoginForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    })
-    if (res.ok) {
-      router.push('/banca')
-    } else {
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      if (res.ok) {
+        router.push('/banca')
+        return // el botón sigue en «Entrando…» hasta que cambia la ruta
+      }
       const data = await res.json().catch(() => ({}))
       setError(data.error || 'Error al iniciar sesión')
-      setLoading(false)
+    } catch {
+      // Sin red (móvil en el ascensor): antes el fetch reventaba y el botón se quedaba en «Entrando…».
+      setError('Sin conexión. Inténtalo de nuevo.')
     }
+    setLoading(false)
   }
 
   return (
