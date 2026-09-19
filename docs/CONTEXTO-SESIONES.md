@@ -20,6 +20,8 @@ compañías protegen el PDF con el DNI/NIF del tomador, que la persona sí sabe.
 `contrasena_incorrecta` (la dada no vale, por el `code` de `PasswordException`). Nueva ruta
 `POST /api/polizas/[id]/reintentar` (mismo aislamiento `id`+`identidadId` que el PATCH) y formulario de
 contraseña en `SubirPoliza.tsx`, con el fichero retenido en memoria del navegador solo mientras hace falta.
+Graphify detectó que un reintento fallido (contraseña otra vez mala) sobrescribía la fila con nulos,
+borrando correcciones manuales previas por PATCH — corregido: si `fuente==='none'` no se toca la BD (PR #3089).
 
 **(19/09/2026)** Portal cliente · Regla nueva de Alberto: un seguro es anual renovable, así que si
 el documento subido no trae vencimiento vigente (p.ej. el contrato original de una póliza plurianual)
@@ -28,6 +30,14 @@ Nuevo `vencimientoDesdeEfecto()` en `module-seguros-portal/poliza-leida.ts` (cal
 ocurrencia del día/mes, clamp 29-feb→28 en año no bisiesto) + `extraerPoliza()` pide `fechaEfecto` a
 la IA y lo usa SOLO si `fechaVencimiento` viene `null`. Aplicado a mano también a la póliza de hogar
 de Alejandro Soler (SegurCaixa, efecto 30/01 → vencimiento 30/01/2027).
+
+**(19/09/2026)** `apps/asegura-portal`: nav a menú hamburguesa en móvil (la decisión de NO
+tenerla era de cuando había 4 pestañas; hoy son 6+ y Alberto lo pidió explícito), «Mis seguros»
+plegado por defecto agrupado por titular con «Añade una póliza» arriba, y el botón de teléfonos
+de compañía desde la ficha de una póliza ahora abre el canal + parte YA con esa póliza
+preseleccionada en vez de la pestaña genérica. `tsc`/`pnpm test`/`lint` en verde; Playwright
+sin correr (proxy del contenedor bloquea la descarga del navegador) — responsive a 320/360/1024
+pendiente de verificación visual.
 
 **(19/09/2026)** SIVRA pricing — House Sevillana: Alberto quitó en el extranet el descuento
 móvil 10% y la tarifa país 10%. Con Basic Deal 12% ya fuera de antes, solo quedaba Genius 10% — y
