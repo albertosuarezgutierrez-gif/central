@@ -13,7 +13,7 @@
     "@central/brand": "workspace:*",
     "@central/core-consent": "workspace:*",
     "@central/module-seguros": "workspace:*",
-    "next": "^15.5.18",
+    "next": "^15.5.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "vanilla-cookieconsent": "^3.1.0"
