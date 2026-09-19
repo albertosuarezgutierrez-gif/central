@@ -68,6 +68,8 @@ test('una fecha que no existe (30 de febrero) no se acepta como el 2 de marzo', 
   assert.equal(parsearFecha('2026-02-30'), null)
   assert.equal(parsearFecha('2026-13-01'), null)
   assert.ok(parsearFecha('2028-02-29'))
+  // `Date.UTC(50, …)` sería 1950: un año de dos cifras no es una fecha, no otra fecha.
+  assert.equal(parsearFecha('0050-01-01'), null)
 })
 
 test('el resumen cuenta con fecha, próximas (90 d), urgentes y pasadas, y no cuenta las vacías', () => {

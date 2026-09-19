@@ -43,8 +43,16 @@ export function parsearFecha(iso: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim())
   if (!m) return null
   const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
-  // «2026-02-31» construye un 3 de marzo sin avisar: se rechaza comparando.
-  if (d.getUTCMonth() !== Number(m[2]) - 1 || d.getUTCDate() !== Number(m[3])) return null
+  // «2026-02-31» construye un 3 de marzo sin avisar, y `Date.UTC` lee un año
+  // 0000-0099 como 1900-1999: las dos cosas se rechazan comparando lo construido
+  // con lo escrito.
+  if (
+    d.getUTCFullYear() !== Number(m[1]) ||
+    d.getUTCMonth() !== Number(m[2]) - 1 ||
+    d.getUTCDate() !== Number(m[3])
+  ) {
+    return null
+  }
   return d
 }
 
