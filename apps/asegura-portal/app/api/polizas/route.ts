@@ -77,6 +77,12 @@ async function altaConDocumento(req: Request, identidadId: string) {
     cif: form.get('titularEmpresaCif'),
   })
 
+  // Casi siempre vacío: nadie sabe de antemano que su PDF pide contraseña.
+  // Viaja por si acaso, para que un cliente que sí lo sepa no tenga que fallar
+  // primero — `extraerPoliza` la ignora sin más si no hace falta.
+  const contrasenaCampo = form.get('contrasena')
+  const contrasena = typeof contrasenaCampo === 'string' && contrasenaCampo !== '' ? contrasenaCampo : undefined
+
   const buffer = Buffer.from(await fichero.arrayBuffer())
   // Las dos van en paralelo: son independientes (una lee con IA, la otra sube
   // bytes) y no hay que esperar a la extracción para archivar el documento.
@@ -85,7 +91,7 @@ async function altaConDocumento(req: Request, identidadId: string) {
   // regla de la casa, «guardar primero, para no perder datos» no puede
   // convertirse en «si no se pudo archivar, no se guarda nada».
   const [{ datos, fuente, camposRamo, motivo }, documentoGuardado] = await Promise.all([
-    extraerPoliza(buffer, fichero.type, fichero.name),
+    extraerPoliza(buffer, fichero.type, fichero.name, contrasena),
     guardarDocumentoPropio(identidadId, { tipo: 'poliza', nombre: fichero.name, mime: fichero.type, contenido: buffer }),
   ])
 

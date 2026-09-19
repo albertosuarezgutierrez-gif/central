@@ -12,6 +12,7 @@ import {
   type AutorizacionParaAviso,
   type ObligacionParaAviso,
   type ReparoParaAviso,
+  type CarnetParaAviso,
   type Aviso,
 } from '@central/module-seguros-portal'
 
@@ -57,6 +58,7 @@ export type Pendiente = {
   obligaciones: ObligacionParaAviso[]
   peticiones: { id: string; estado: string; solicitanteNombre: string | null }[]
   datos: ReparoParaAviso[]
+  carnets: CarnetParaAviso[]
 }
 
 /**
@@ -79,6 +81,7 @@ export function avisosNuevos(
     obligaciones: p.obligaciones,
     peticiones: p.peticiones,
     datos: p.datos,
+    carnets: p.carnets,
     hoy,
   })
   if (fuentesIlegibles.length > 0) return null
