@@ -31,12 +31,33 @@ import test from 'node:test'
 
 const RAIZ = new URL('..', import.meta.url).pathname
 
-/** Sin comentarios: las cabeceras de lo que se vigila explican la prohibición con sus mismas palabras. */
+/**
+ * Sin comentarios: las cabeceras de lo que se vigila explican la prohibición con
+ * sus mismas palabras.
+ *
+ * Escanea en vez de usar un regex de línea completa (`^\s*\/\/.*$`), que deja
+ * pasar un comentario que arranca a mitad de línea (`código(); // nota`) — y
+ * también respeta las cadenas, para no truncar código por un `'https://…'`.
+ */
 function sinComentarios(ruta: string): string {
-  return readFileSync(`${RAIZ}${ruta}`, 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/^\s*\/\/.*$/gm, ' ')
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+  const src = readFileSync(`${RAIZ}${ruta}`, 'utf8')
+  let out = ''
+  let i = 0
+  let comilla: string | null = null
+  while (i < src.length) {
+    const c = src[i]
+    const d = src[i + 1]
+    if (comilla) {
+      if (c === '\\') { out += src.slice(i, i + 2); i += 2; continue }
+      if (c === comilla) comilla = null
+      out += c; i += 1; continue
+    }
+    if (c === "'" || c === '"' || c === '`') { comilla = c; out += c; i += 1; continue }
+    if (c === '/' && d === '/') { while (i < src.length && src[i] !== '\n') i += 1; continue }
+    if (c === '/' && d === '*') { i += 2; while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i += 1; i += 2; continue }
+    out += c; i += 1
+  }
+  return out
 }
 
 const FICHA = sinComentarios('apps/asegura-portal/app/(portal)/boveda/poliza/[id]/page.tsx')
