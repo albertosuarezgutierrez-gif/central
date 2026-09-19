@@ -22,6 +22,7 @@ export {
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
+  vencimientoDesdeEfecto,
 } from './poliza-leida.ts'
 export type { RamoPoliza, PolizaLeida } from './poliza-leida.ts'
 // Quitar de la bóveda una póliza que aportó el CLIENTE. Lee su cabecera: las de
