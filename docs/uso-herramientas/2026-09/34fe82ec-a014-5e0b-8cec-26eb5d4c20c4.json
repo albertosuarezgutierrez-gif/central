@@ -1,0 +1,19 @@
+{
+ "sesion": "34fe82ec-a014-5e0b-8cec-26eb5d4c20c4",
+ "inicio": "2026-09-19T08:50:25.182Z",
+ "fin": "2026-09-19T08:50:25.182Z",
+ "llamadas": 1,
+ "categorias": {
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 415,
+   "chars_out": 44,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1
+   }
+  }
+ }
+}
