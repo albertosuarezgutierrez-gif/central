@@ -12,6 +12,17 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Correduría · el aviso de vencimiento ya avisa a la PERSONA DE REFERENCIA cuando el
+tomador no tiene canal propio (Studium, Grupo ELCA 83), reutilizando `contactoEfectivo()` (póliza) +
+`cliente_relaciones` (excluye «Sin vínculo») vía `emailAlternativo()` nuevo en `@central/module-seguros`.
+El correo a un tercero explica de qué póliza y titular se trata; solo el dato SUYO mal guardado se manda
+tal cual. `ResumenAvisos.enviadosATercero` cuenta el subconjunto. El TEXTO se extrajo a
+`apps/asegura/lib/texto-vencimiento.ts` (puro, sin `asegura-db`) para poder testearlo con `node --test`
+sin arrastrar el cliente Prisma — `code-review` cazó ahí una gramática rota («no quiere renovars» en el
+caso normal) y un email de interviniente sin validar formato antes de usarse como destinatario; los dos
+corregidos y cubiertos. Confirmado: el aviso a Alberto por Telegram (`/api/cron/correduria-renovaciones`,
+plataforma) ya existía, sin cambios.
+
 **(19/09/2026)** SIVRA pricing — House Sevillana: Alberto quitó en el extranet el descuento
 móvil 10% y la tarifa país 10%. Con Basic Deal 12% ya fuera de antes, solo quedaba Genius 10% — y
 **ese SÍ es intocable**: el panel de Booking lo marca «Obligatorio», de cuando la cuenta se unió al
