@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
 
@@ -32,6 +33,23 @@ import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
  * `<noscript>` de más abajo, que devuelve la navegación a su forma de carril
  * cuando no hay JS: sin él, un fallo de script dejaría a esta persona sin
  * ninguna forma de cambiar de sección.
+ *
+ * 🔀 **El botón ☰ vive en la barra de MARCA, no en una segunda franja debajo
+ * (19/09/2026).** Alberto, mirando su propio móvil: «no se podría unificar la
+ * parte de arriba? Hay mucho espacio libre» — dos barras de 56/53px apiladas
+ * (marca + «☰ Menú · Seguros») por debajo de la cual empezaba el contenido de
+ * verdad. La marca vive en el layout RAÍZ (`app/layout.tsx`, fuera de sesión)
+ * y este componente en el del portal (dentro de sesión), así que el botón no
+ * puede ser sencillamente el mismo JSX en el mismo sitio: se porta con
+ * `createPortal` a un `<span id="portal-menu-slot">` que el layout raíz deja
+ * vacío. `mounted` existe porque `document.getElementById` no existe en el
+ * servidor: sin él, la primera pasada de SSR reventaría.
+ *
+ * 📌 **Y la etiqueta «en qué sección estás» se queda solo en el `aria-label`,
+ * no visible.** Con el botón metido en la barra de marca ya no hay sitio para
+ * un texto al lado, y cada pantalla del portal ya lo dice con su propio
+ * `<h1>` — pintar «Seguros» otra vez sería el mismo eco que ya se quitó del
+ * par pestaña/h1 el 12/09/2026.
  *
  * Siguen siendo ENLACES, no botones con estado ni un `tablist`: la sección vive
  * en la URL (ver `vista-portal.ts` del módulo). Por eso la activa se deriva aquí
@@ -92,30 +110,43 @@ export function NavPortal() {
 
   const etiquetaActiva = pestanas.find((p) => esActivaDe(p.vista))?.etiqueta ?? null
 
+  // El slot vive en el layout RAÍZ (`app/layout.tsx`), fuera del árbol de este
+  // componente. `document.getElementById` no existe en el servidor, así que
+  // sin `mounted` la primera pasada (SSR + primer render de cliente) tiraría.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  const slot = mounted ? document.getElementById('portal-menu-slot') : null
+
+  const boton = (
+    <button
+      ref={botonRef}
+      type="button"
+      className="marca-menu-boton"
+      // La sección activa ya no se pinta al lado (no hay sitio en la barra de
+      // marca): viaja en el `aria-label` para que un lector de pantalla la
+      // siga diciendo.
+      aria-label={
+        abierto
+          ? 'Cerrar el menú de secciones'
+          : etiquetaActiva !== null
+            ? `Abrir el menú de secciones — estás en ${etiquetaActiva}`
+            : 'Abrir el menú de secciones'
+      }
+      aria-expanded={abierto}
+      aria-controls={idNav}
+      onClick={() => setAbiertoEn(abierto ? null : clave)}
+    >
+      <span aria-hidden="true">☰</span>
+    </button>
+  )
+
   return (
     <>
-      {/* La barra del móvil. En escritorio no existe (`display:none`): allí la
-          navegación entera está a la vista y un botón para abrirla sobraría. */}
-      <div className="portal-nav-barra">
-        <button
-          ref={botonRef}
-          type="button"
-          className="portal-nav-boton"
-          aria-label={abierto ? 'Cerrar el menú de secciones' : 'Abrir el menú de secciones'}
-          aria-expanded={abierto}
-          aria-controls={idNav}
-          onClick={() => setAbiertoEn(abierto ? null : clave)}
-        >
-          <span className="portal-nav-icono" aria-hidden="true">
-            ☰
-          </span>
-          <span>Menú</span>
-        </button>
-        {/* En qué sección estás, al lado del botón: con el cajón cerrado, la
-            barra sería una hamburguesa sola y la pantalla dejaría de decir
-            dónde está quien la mira. */}
-        {etiquetaActiva !== null && <span className="portal-nav-donde">{etiquetaActiva}</span>}
-      </div>
+      {/* 19/09/2026: el ☰ ya no abre su propia franja debajo de la marca — se
+          porta a la barra de marca del layout raíz, que es la misma franja
+          para las dos cosas. En escritorio el botón se sigue portando igual,
+          es indiferente: lleva su propio `display:none` a partir de 1024px. */}
+      {slot && createPortal(boton, slot)}
 
       {/* El fondo oscuro cierra al tocar fuera. `aria-hidden` porque no aporta
           nada a un lector de pantalla: la salida accesible es el botón de
@@ -165,14 +196,15 @@ export function NavPortal() {
         })}
       </nav>
 
-      {/* 🚨 Sin JavaScript el ☰ no abre nada, así que la navegación vuelve a ser
-          el carril horizontal que era hasta el 19/09/2026: se ve peor con siete
-          pestañas, pero se ve. Un cajón que no se puede abrir es una pantalla
-          sin salida. */}
+      {/* 🚨 Sin JavaScript no hay `createPortal` ni ☰ que abrir (el botón ni
+          siquiera se renderiza: `mounted` se queda en `false`), así que la
+          navegación vuelve a ser el carril horizontal que era hasta el
+          19/09/2026: se ve peor con siete pestañas, pero se ve. Un cajón que
+          no se puede abrir es una pantalla sin salida. */}
       <noscript>
         <style>{`
           @media (max-width: 1023px) {
-            .portal-nav-barra, .portal-nav-cabecera { display: none; }
+            .portal-nav-cabecera { display: none; }
             .portal-nav {
               position: static;
               visibility: visible;
