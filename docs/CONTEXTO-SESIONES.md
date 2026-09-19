@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Plataforma — «el móvil me pide usuario siempre». NO era la cookie (30 días) ni faltaba
+una web app (ya es PWA instalable): `cuentas.session_jti` era UN jti por cuenta y cada login lo pisaba,
+así que entrar desde el PC (o Claude en Chrome) expulsaba al móvil. Ahora **sesiones por dispositivo**:
+`cuentas.session_jtis text[]` (máx. 5, se cae la más antigua; `lib/sesiones.ts` puro + `sesiones-db.ts`),
+login añade, logout revoca SOLO la suya. Migración `prisma/sql/2026-09-19_sesiones_por_dispositivo.sql`
+APLICADA con backfill (`session_jti` se queda: la declaran 5 apps en Prisma sin usarla — borrarla rompería
+sus `SELECT`). Y `/login` con sesión válida → `/banca` (el acceso directo de Alberto apunta a `/login`).
+Pendiente de Alberto: instalar plataforma desde Chrome Android (⋮ → «Instalar aplicación»).
 **(19/09/2026)** Correduría · el aviso de vencimiento ya avisa a la PERSONA DE REFERENCIA cuando el
 tomador no tiene canal propio (Studium, Grupo ELCA 83), reutilizando `contactoEfectivo()` (póliza) +
 `cliente_relaciones` (excluye «Sin vínculo») vía `emailAlternativo()` nuevo en `@central/module-seguros`.
