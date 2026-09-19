@@ -13,6 +13,13 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-19** · `docs/FUENTES-DE-VERDAD.md` · 2 filas nuevas (skill `correduria-crm` +
+  `docs/CORREDURIA-CRM-VISION.md`; skill `cima-ingesta` + sus 4 docs) · faltaban del mapa desde su
+  creación (02-17/09/2026) · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · pasada
+  ligera del día — entregado por PR (harness de tarea de GitHub, rama única asignada, sin push
+  directo a `main`; el fix de seguridad de la RCE de Next.js va en el mismo PR por la misma razón,
+  ver el PR para el detalle de código) · commit de esta auditoría.
+
 - **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40

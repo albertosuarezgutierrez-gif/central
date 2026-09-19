@@ -573,6 +573,16 @@ nunca**, y los valores de cajón se anulan con la MISMA lista que el resto del p
 (`textoConDato`, exportada de `poliza-leida.ts` ese día para no tener dos listas). `null` = «la
 compañía no lo ha informado», y la pantalla **calla**: no pinta «Matrícula: —».
 
+🏠 **Y las hogar que SOLO han entrado por CIMA no tienen dirección en NINGUNA parte (19/09/2026).**
+CIMA no manda el riesgo de hogar; sin gemela del volcado, `datos_especificos` es `NULL` y la fila
+sale «Occident · Hogar» dos veces (las de Alberto). Medido: **32 hogar solo-CIMA vivas, 2 con
+dirección**. El camino es que el corredor la anote desde `/correduria/poliza/[id]` de plataforma
+(`EditarDireccionRiesgo.tsx` → `PATCH /api/operador/poliza` con `campo: 'direccion_riesgo'` →
+`establecerDireccionRiesgo()` en asegura), que la guarda con **las mismas claves y el mismo cifrado
+que el volcado** (`direccion` en sobre `v1:`, `cp`, `localidad`, más `direccionOrigen: 'manual'`), así
+que este portal la lee sin una rama nueva. Mientras falte, la ficha propia de un inmueble lo DICE
+(`esRamoInmueble()`): callar ahí se leía como «no hay nada que ver».
+
 Cepos: `bien-asegurado.test.ts` (11, con dos mutaciones vistas morder: quitar la dirección del suelo
 de terceros → 1 fallo; colar la dirección por `cosa` → 3).
 
