@@ -12,6 +12,18 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** SIVRA · pricing: **diagnóstico del aviso «precio al huésped por encima del mercado» (sin tocar nada).**
+  Causa 1: **motor en PAUSA global desde el 15/09 14:44** (`pricing_config.paused=true`, sesión Semana Santa del Dúplex);
+  la rutina de despausa del 16/09 07:30 corrió y NO despausó ni dejó nota → 12 pasadas en simulacro (House 28/11: propone
+  679→543 y no escribe; 875€ al huésped = 679×1,20+60). Causa 2: aunque se despause, el motor apunta a 428 de base (574€)
+  para el 28/11 con mercado de la fecha a 288€: descarta el corpus por fecha del 25/11 (29 d > `EDAD_MERCADO_RANCIO`) y cae
+  al cubo de noviembre, inflado por los findes de evento; el centinela acepta comps de hasta 120 d — miden cosas distintas.
+  Causa 3: **`sivra_mercado_booking` no corre desde el 16/09** → el 23/09 los 4 pisos caen a `datos_insuficientes`.
+  Busto Reform «desviado»/`inconsistente`: UNA ventana falsa de `pricing_escaparate` (25/03/2027, 3.329€/2 noches con el
+  piso RESERVADO, `available=0`: el conector devolvió otro anuncio); sin ella sesgo −1,7 % / error 5 %. Pendiente Alberto:
+  despausar (ojo 23/24/27/28-03 del Dúplex con corpus rancio), reponer el barrido, y guardas de escaparate (no medir fechas
+  no disponibles + descartar ratios implausibles).
+
 **(19/09/2026) Cartera viva ≠ en vigor: cancelada = lead.** Alberto vio a Kartenbrot (1 póliza cancelada)
   como «Cartera viva» y «6 vivas» en Víctor De la Fuente (4 en vigor). Nuevo `esCarteraEnVigor()` /
   `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` en `cartera-viva.ts` = viva Y `POLIZA_ESTADOS_VIGENTES`;
