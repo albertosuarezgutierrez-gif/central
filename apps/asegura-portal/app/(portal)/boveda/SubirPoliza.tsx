@@ -20,15 +20,17 @@ type DatosLeidos = {
   fechaVencimiento: string | null
 }
 type Resultado = {
+  id?: string
   datos: DatosLeidos & { tipoDocumento?: 'poliza' | 'suplemento' | 'recibo' | 'otro' | null }
   fuente: 'texto' | 'vision' | 'none'
   /** Cómo fue la 2ª pasada, la de los campos propios del ramo. Ver `EstadoCamposRamo`. */
   camposRamo?: 'leidos' | 'no_leidos' | 'no_aplica'
   /** Si el FICHERO llegó a la ficha del corredor. `undefined` = alta a mano, no aplica. */
   documentoGuardado?: 'ok' | 'invalido' | 'sin_ficha' | 'varias_fichas' | 'sin_puente' | 'error'
-  /** `'protegido'` = el PDF pide una contraseña que no tenemos: no es un fallo de
-   *  lectura nuestro, hace falta que la persona quite la protección y lo suba de nuevo. */
-  motivo?: 'protegido'
+  /** `'protegido'` = el PDF pide una contraseña que no tenemos, y todavía no se
+   *  ha probado ninguna. `'contrasena_incorrecta'` = SÍ se probó una y no era —
+   *  la pantalla ofrece escribir otra, nunca la misma. */
+  motivo?: 'protegido' | 'contrasena_incorrecta'
 }
 
 /**
@@ -76,6 +78,13 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   const [empresa, setEmpresa] = useState('')
   const [cif, setCif] = useState('')
   const [guardadaAMano, setGuardadaAMano] = useState<PolizaGuardada | null>(null)
+  // Se guarda el FICHERO (no solo su nombre) porque esta app no conserva los
+  // bytes del PDF: si hace falta reintentar con contraseña, el navegador tiene
+  // que volver a mandarlo. Se limpia en cuanto un intento sale bien o cambia
+  // de fichero, para no reenviar por error uno que ya no toca.
+  const [ficheroProtegido, setFicheroProtegido] = useState<File | null>(null)
+  const [contrasena, setContrasena] = useState('')
+  const [reintentando, setReintentando] = useState(false)
 
   async function subir(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -84,6 +93,8 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     setEstado('subiendo')
     setResultado(null)
     setGuardadaAMano(null)
+    setFicheroProtegido(null)
+    setContrasena('')
     const body = new FormData()
     body.append('documento', f)
     // Siempre viaja: «propio» si no ha marcado la casilla, «empresa» si sí.
@@ -95,13 +106,43 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     try {
       const r = await fetch('/api/polizas', { method: 'POST', body })
       if (!r.ok) return setEstado('error')
-      setResultado((await r.json()) as Resultado)
+      const res = (await r.json()) as Resultado
+      setResultado(res)
+      // Solo se guarda el fichero si hace falta reintentar: el resto de las
+      // veces no tiene sentido conservar un PDF entero en memoria del navegador.
+      if (res.motivo === 'protegido' || res.motivo === 'contrasena_incorrecta') setFicheroProtegido(f)
       setEstado('listo')
       // Refresca la lista de arriba SIN desmontarla ni tapar la pantalla con un
       // loader (regla de rendimiento de UI del monorepo).
       router.refresh()
     } catch {
       setEstado('error')
+    }
+  }
+
+  async function reintentarConContrasena(e: React.FormEvent) {
+    e.preventDefault()
+    if (!ficheroProtegido || !resultado?.id || contrasena.trim() === '') return
+    setReintentando(true)
+    const body = new FormData()
+    body.append('documento', ficheroProtegido)
+    body.append('contrasena', contrasena)
+    try {
+      const r = await fetch(`/api/polizas/${resultado.id}/reintentar`, { method: 'POST', body })
+      if (!r.ok) return
+      const res = (await r.json()) as Resultado
+      setResultado(res)
+      // `contrasena_incorrecta` guarda el fichero para poder probar OTRA; en
+      // cualquier otro desenlace ya no hace falta conservarlo.
+      if (res.motivo === 'contrasena_incorrecta') {
+        setContrasena('')
+      } else {
+        setFicheroProtegido(null)
+        setContrasena('')
+      }
+      router.refresh()
+    } finally {
+      setReintentando(false)
     }
   }
 
@@ -288,14 +329,43 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
               sí están guardados). Puedes escribirnos si hace falta.
             </p>
           )}
-          {resultado.fuente === 'none' && resultado.motivo === 'protegido' ? (
+          {resultado.fuente === 'none' &&
+          (resultado.motivo === 'protegido' || resultado.motivo === 'contrasena_incorrecta') &&
+          ficheroProtegido ? (
             // Distinto del «no hemos podido leer» genérico a propósito: aquí SÍ
-            // sabemos por qué, y decírselo evita que la persona vuelva a subir el
-            // mismo PDF protegido esperando un resultado distinto.
+            // sabemos por qué, y se ofrece la acción que de verdad lo arregla —
+            // escribir la contraseña— en vez de pedirle a la persona que sepa
+            // quitar la protección de un PDF, que la mayoría no sabe hacer.
+            <div>
+              <p style={{ fontSize: 14 }}>
+                <strong>Este documento está protegido con contraseña.</strong>{' '}
+                {resultado.motivo === 'contrasena_incorrecta'
+                  ? 'La que has escrito no es correcta: prueba otra.'
+                  : 'Muchas compañías usan tu DNI o NIF. Si la sabes, escríbela aquí.'}{' '}
+                La póliza está guardada; también puedes completarla a mano.
+              </p>
+              <form onSubmit={reintentarConContrasena} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input
+                  type="password"
+                  value={contrasena}
+                  onChange={(e) => setContrasena(e.target.value)}
+                  placeholder="Contraseña del PDF"
+                  disabled={reintentando}
+                  aria-label="Contraseña del PDF"
+                  style={{ flex: '1 1 200px' }}
+                />
+                <button type="submit" className="boton" disabled={reintentando || contrasena.trim() === ''}>
+                  {reintentando ? 'Comprobando…' : 'Reintentar'}
+                </button>
+              </form>
+            </div>
+          ) : resultado.fuente === 'none' && resultado.motivo === 'protegido' ? (
+            // Se ha perdido el fichero de esta sesión (p.ej. se recargó la
+            // página): ya no se puede reintentar sin que la persona lo vuelva a
+            // elegir, así que se degrada al mensaje genérico de protección.
             <p style={{ fontSize: 14 }}>
-              <strong>Este documento está protegido con contraseña</strong> y no hemos podido abrirlo. La
-              póliza está guardada; quítale la protección (o pídesela a tu compañía) y súbelo de nuevo, o
-              completa los datos a mano mientras tanto.
+              <strong>Este documento está protegido con contraseña</strong> y no hemos podido abrirlo. Vuelve
+              a subirlo para poder escribir la contraseña, o completa los datos a mano mientras tanto.
             </p>
           ) : resultado.fuente === 'none' ? (
             // NO decimos «no tiene esos datos»: decimos que no hemos podido
