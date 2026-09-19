@@ -356,6 +356,21 @@ consultas de intención de problema y las tres de ramo con sufijo obsoleto tiene
 siguiente contenido de blog sale de la cola curada `apps/plataforma/lib/correduria/blog-temas.ts`
 (agente quincenal), no de este banco: no dupliques ahí un tema que ya está en `TEMAS`.
 
+**19/09/2026 — la cola vuelve a tener UNA cosa, y no es un artículo.** Tras valorar el prompt de
+consultoría de Alberto (spec `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`):
+- ✅ «organizar mis seguros en un solo sitio» → `/gestor-de-seguros` (landing del gestor, copy en
+  `lib/gestor.ts` con su cepo, `SoftwareApplication` gratuito, calculadora sin registro).
+- ✅ «cómo dar de baja un seguro» → `/blog/como-dar-de-baja-un-seguro-a-tiempo`, con el primer CTA
+  dentro de un artículo (`Articulo.cta`) hacia la carta de no renovación del portal.
+- ⏳ **Serie «dar de baja en [Compañía]»: BLOQUEADA por verificación humana.** Los canales de Mapfre,
+  Allianz, Occident, Reale y Generali están en `apps/asegura-web/lib/companias-baja.ts` con sus URL
+  oficiales y `verificado: false` — desde el contenedor la red bloquea los cinco dominios y solo hay
+  extractos de buscador. `companias-baja.test.ts` impide publicar un email o domicilio sin verificar.
+  Cuando Alberto abra las cinco URL y ponga la fecha, se escriben los artículos CON datos, uno por
+  compañía y sin plantilla (una página por compañía con el texto cambiado de nombre es doorway).
+- 🚫 Lo que el prompt pedía y no se hace: «semáforo de precio», reseñas automatizadas «de 5
+  estrellas», referidos con premio — ver el spec.
+
 **Ritmo:** un artículo por ciclo, no cinco a medias.
 ⚠️ **Lección del agente SEO de ia-rest, que no aplicó ni un cambio en toda su vida:** su umbral de
 30 impresiones era inalcanzable sin tráfico. **No automatizar el SEO antes de tener tráfico** — al

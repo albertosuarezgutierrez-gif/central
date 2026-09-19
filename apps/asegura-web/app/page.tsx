@@ -377,7 +377,8 @@ export default function Home() {
               </a>
             </div>
             <p className="tenue" style={{ margin: '14px 0 0', fontSize: 14 }}>
-              No hace falta ser cliente todavía: entras con tu correo, te llega un código y ya tienes tu espacio.
+              No hace falta ser cliente todavía: entras con tu correo, te llega un código y ya tienes tu espacio.{' '}
+              <Link href="/gestor-de-seguros">Qué puedes hacer en tu área</Link>.
             </p>
           </Reveal>
           <Reveal delay={0.1}>
