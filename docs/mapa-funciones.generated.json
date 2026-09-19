@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-19T21:03:53Z",
-  "sha": "463bb954ecc73e4762bb099884c8b50269e58b9a",
+  "generadoEn": "2026-09-19T21:31:09Z",
+  "sha": "aa6adc2e1ae29e69f2ae6ca16e8aca20bf01dd27",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12496,8 +12496,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": "string",
-          "linea": 12,
-          "resumen": "Normalización PURA de la URL del pooler de la cartera (ASEGURA_DATABASE_URL). El pooler de transacciones de Supabase (puerto 6543) rompe los prepared statements de Prisma salvo que la URL lleve `pgbou"
+          "linea": 14
         },
         {
           "nombre": "urlFuenteCartera",
@@ -12505,7 +12504,7 @@
           "exportada": true,
           "params": "env: { ASEGURA_FUENTE?: string DATABASE_URL?: string ASEGURA_DATABASE_URL?: string }",
           "retorno": "",
-          "linea": 44
+          "linea": 57
         },
         {
           "nombre": "forzarSchema",
@@ -12513,13 +12512,13 @@
           "exportada": false,
           "params": "url: string, schema: string",
           "retorno": "string",
-          "linea": 72,
+          "linea": 85,
           "resumen": "Fija `schema=<schema>` en la URL **PISANDO el que ya traiga**. Una URL imposible de parsear se devuelve tal cual. 🚨 Aquí no se respeta lo que venga puesto, y es a propósito: `DATABASE_URL` es la MISM"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "23309a86331c"
+      "hash": "604606c2ee25"
     },
     {
       "ruta": "apps/asegura/lib/auth.ts",
@@ -88709,7 +88708,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<Busqueda>",
-          "linea": 398
+          "linea": 404
         },
         {
           "nombre": "interpretarLineas",
@@ -88717,7 +88716,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LineasCodeoscopic",
-          "linea": 425,
+          "linea": 431,
           "resumen": "Puro. `hogar` degrada a `desconocido` ante cualquier forma rara: afirmar «hogar disponible» o «ausente» sobre un JSON que no se entiende sería lo mismo que inventarlo."
         },
         {
@@ -88726,7 +88725,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "HogarCodeoscopic",
-          "linea": 437
+          "linea": 443
         },
         {
           "nombre": "lineasCodeoscopic",
@@ -88734,7 +88733,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<LineasCodeoscopic>",
-          "linea": 452
+          "linea": 458
         },
         {
           "nombre": "interpretarDiagnosticoProyecto",
@@ -88742,7 +88741,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "DiagnosticoProyecto",
-          "linea": 477
+          "linea": 483
         },
         {
           "nombre": "diagnosticoProyectoCodeoscopic",
@@ -88750,7 +88749,7 @@
           "exportada": true,
           "params": "projectId: string",
           "retorno": "Promise<DiagnosticoProyecto>",
-          "linea": 488
+          "linea": 494
         },
         {
           "nombre": "interpretarCompanias",
@@ -88758,7 +88757,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CompaniasCodeoscopic",
-          "linea": 515,
+          "linea": 521,
           "resumen": "Puro. Como `interpretarLineas`: `buscada` degrada a `desconocido` ante cualquier forma rara. Decir «Fidelidade ausente» sobre un JSON que no se entiende sería afirmar una ausencia sin haberla medido."
         },
         {
@@ -88767,7 +88766,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CompaniaBuscada",
-          "linea": 527
+          "linea": 533
         },
         {
           "nombre": "companiasCodeoscopic",
@@ -88775,7 +88774,7 @@
           "exportada": true,
           "params": "buscar: string",
           "retorno": "Promise<CompaniasCodeoscopic>",
-          "linea": 545
+          "linea": 551
         },
         {
           "nombre": "impagadosAsegura",
@@ -88783,7 +88782,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Impagados>",
-          "linea": 555
+          "linea": 561
         },
         {
           "nombre": "estadoPortal",
@@ -88791,7 +88790,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "EstadoPortalCliente | null",
-          "linea": 622,
+          "linea": 628,
           "resumen": "🚨 Un valor que no reconocemos es `null` («no comprobado»), no un estado por defecto. Un asegura más nuevo que esta pantalla mandaría una etiqueta que aquí no existe, y elegir la optimista diría que e"
         },
         {
@@ -88800,7 +88799,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 700,
+          "linea": 706,
           "resumen": "Tri-estado de verdad: un campo ausente es `null` («no se informó»), no `false`. Con `=== true` a secas, un puerto que no manda el campo diría que TODOS están sin email."
         },
         {
@@ -88809,7 +88808,7 @@
           "exportada": true,
           "params": "email: boolean | null, telefono: boolean | null, canalEnPoliza: number | null, contactoDeOtros: number | null, contactoDeAllegados: number | null,",
           "retorno": "EstadoCanal",
-          "linea": 712,
+          "linea": 718,
           "resumen": "El estado se DERIVA de dónde hay contacto; no se cree el que venga en el JSON. Si falta cualquiera de las cuatro medidas, el resultado es `no_comprobado`. 🚨 Ojo al último bloque: sin saber lo de la p"
         },
         {
@@ -88818,7 +88817,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaContacto[]",
-          "linea": 737,
+          "linea": 743,
           "resumen": "Las fichas nombradas. Una entrada sin id o con el nombre cifrado (`v1:`) se descarta: sigue contada en `contactoDeOtros`, pero no se inventa un nombre."
         },
         {
@@ -88827,7 +88826,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaAllegado[]",
-          "linea": 753,
+          "linea": 759,
           "resumen": "Ídem, conservando el parentesco. Sin parentesco legible se descarta: sigue contado en `contactoDeAllegados`, pero no se dice «llama a X» a secas."
         },
         {
@@ -88836,7 +88835,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SinCanal",
-          "linea": 768
+          "linea": 774
         },
         {
           "nombre": "sinCanalAsegura",
@@ -88844,7 +88843,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SinCanal>",
-          "linea": 838
+          "linea": 844
         },
         {
           "nombre": "planBackfillDni",
@@ -88852,7 +88851,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PlanBackfillDni>",
-          "linea": 901
+          "linea": 907
         },
         {
           "nombre": "interpretarPlanBackfill",
@@ -88860,7 +88859,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "PlanBackfillDni",
-          "linea": 912,
+          "linea": 918,
           "resumen": "Puro: separado para poder probarlo sin red."
         },
         {
@@ -88869,7 +88868,7 @@
           "exportada": true,
           "params": "limite?: number",
           "retorno": "Promise<EscrituraBackfillDni>",
-          "linea": 960,
+          "linea": 966,
           "resumen": "Lanza la escritura. `limite` la parte en tandas: descifrar y hashear 32.000 fichas ya consume parte de los 300 s del endpoint de asegura, así que una pasada sin tope puede no llegar. Se vuelve a pulsa"
         },
         {
@@ -88878,7 +88877,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "EscrituraBackfillDni",
-          "linea": 988,
+          "linea": 994,
           "resumen": "Puro: separado para poder probarlo sin red. Para el backfill de CONTACTO la respuesta trae además `derivadosEscritos`/`derivadosRestantes` (las mitades del email); se suman a `escritos`/`restantes` pa"
         },
         {
@@ -88887,7 +88886,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PlanBackfillContacto>",
-          "linea": 1043
+          "linea": 1049
         },
         {
           "nombre": "interpretarPlanBackfillContacto",
@@ -88895,7 +88894,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "PlanBackfillContacto",
-          "linea": 1054,
+          "linea": 1060,
           "resumen": "Puro: separado para poder probarlo sin red."
         },
         {
@@ -88904,13 +88903,13 @@
           "exportada": true,
           "params": "limite?: number",
           "retorno": "Promise<EscrituraBackfillDni>",
-          "linea": 1092,
+          "linea": 1098,
           "resumen": "Lanza la escritura, por tandas. Misma forma de respuesta que la del DNI."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a5c9b7ceab02"
+      "hash": "02b8c258c76e"
     },
     {
       "ruta": "apps/plataforma/lib/correduria.ts",
