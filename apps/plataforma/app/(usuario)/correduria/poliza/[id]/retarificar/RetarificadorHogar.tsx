@@ -94,6 +94,7 @@ export default function RetarificadorHogar({
   const [resueltos, setResueltos] = useState<Record<string, unknown>>({})
   const [correcciones, setCorrecciones] = useState<Record<string, unknown>>({})
   const [recalculando, setRecalculando] = useState(false)
+  const [errorRecalculo, setErrorRecalculo] = useState<string | null>(null)
   const [editando, setEditando] = useState<string | null>(null)
   const [borrador, setBorrador] = useState('')
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
@@ -102,7 +103,18 @@ export default function RetarificadorHogar({
     setRecalculando(true)
     try {
       const r = await pedirPrecalificacionHogar({ polizaId, resueltos: nuevosResueltos, correcciones: nuevasCorrecciones })
-      if (r.estado === 'ok') setPre(r.pre)
+      if (r.estado === 'ok') {
+        setPre(r.pre)
+        setErrorRecalculo(null)
+      } else {
+        // 🚨 El valor SÍ ha quedado guardado en `resueltos`/`correcciones` y viajará al
+        // pedir precio, aunque la ficha en pantalla no se haya podido refrescar con él.
+        // Callar aquí dejaría creer que la corrección no se guardó.
+        setErrorRecalculo(
+          `No se ha podido recalcular la ficha con ese cambio: ${r.mensaje} El valor SÍ ha quedado guardado ` +
+            'y viajará al pedir precio — corrígelo o inténtalo de nuevo antes de pulsar «Pedir precio».',
+        )
+      }
     } finally {
       setRecalculando(false)
     }
@@ -145,14 +157,33 @@ export default function RetarificadorHogar({
     }
   }
 
+  /**
+   * Envía el valor EFECTIVO de cada campo (el de `pre.resumen.filas`, que ya viene recalculado
+   * en el servidor tras cada corrección), no solo los que el corredor ha tocado. Mandar únicamente
+   * `resueltos` (el acumulador de ediciones manuales) dejaba fuera los valores por defecto de los
+   * campos sin tocar — inofensivo en la mayoría (el vendor pide el resto y sale un 422 "faltan
+   * datos"), pero `propietarioEsTomador` tiene un default del SERVIDOR en `true`: si el corredor
+   * corrige otro campo y pulsa «Pedir precio» sin haber tocado ese, la petición se queda sin la
+   * clave y el vendor podría tarificar con el propietario equivocado sin avisar de nada (hallazgo
+   * de `agente-architect`, 17/09/2026).
+   */
   function cuerpoResueltosFinal(): Record<string, unknown> {
     const porCampo = new Map(pre.resumen.filas.map((f) => [f.campo, f]))
     const supuestos: Record<string, boolean> = {}
+    const ids: Record<string, string | null> = {}
     for (const campo of CAMPOS_CATALOGO_9) {
+      ids[campo] = cadena(porCampo.get(campo)?.valor)
       supuestos[campo] = !(campo in resueltos) && porCampo.get(campo)?.procedencia === 'supuesto'
     }
     supuestos.tipoVia = !('tipoViaId' in resueltos) && porCampo.get('tipoViaId')?.procedencia === 'supuesto'
-    return { ...resueltos, supuestos }
+    return {
+      municipioId: entero(porCampo.get('municipioId')?.valor),
+      estadoCivilId: cadena(porCampo.get('estadoCivil')?.valor) ?? '',
+      tipoViaId: cadena(porCampo.get('tipoViaId')?.valor),
+      ...ids,
+      propietarioEsTomador: porCampo.get('propietarioEsTomador')?.valor === true,
+      supuestos,
+    }
   }
 
   async function cotizar() {
@@ -218,6 +249,8 @@ export default function RetarificadorHogar({
           </p>
         </div>
       )}
+
+      {errorRecalculo && <div className="card err">{errorRecalculo}</div>}
 
       {pre.fallosCatalogo.length > 0 && (
         <div className="card err">
@@ -549,6 +582,19 @@ function aTexto(f: Fila): string {
   if (f.control === 'siNoNoSe') return typeof f.valor === 'boolean' ? (f.valor ? 'si' : 'no') : ''
   if (f.valor === null || f.valor === undefined) return ''
   return String(f.valor)
+}
+
+function cadena(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+function entero(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
 }
 
 function deTexto(f: Fila, t: string): unknown {
