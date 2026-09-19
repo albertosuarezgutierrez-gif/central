@@ -36,6 +36,7 @@ import {
   normalizarOrigenes,
   normalizarPolizaLeida,
   polizaLeidaVacia,
+  vencimientoDesdeEfecto,
   type CampoRamo,
   type DatosRamo,
   type OrigenPorCampo,
@@ -113,6 +114,23 @@ export type ResultadoExtraccion = {
   fuente: 'texto' | 'vision' | 'none'
   /** Cómo fue la 2ª pasada. Ver `EstadoCamposRamo`. */
   camposRamo: EstadoCamposRamo
+  /**
+   * Por qué `fuente` es `'none'`, cuando se sabe.
+   *
+   * `'protegido'` = el PDF pide una contraseña que no tenemos: NUNCA es un
+   * fallo nuestro de lectura, es que el documento la lleva de verdad (medido:
+   * `pdf-parse` la exige incluso para un PDF cuya contraseña de USUARIO está
+   * vacía). Dictado de Alberto (19/09/2026): en vez de pedirle a la persona
+   * que «quite la protección» —algo que la mayoría no sabe hacer, y que para
+   * un PDF de un seguro suele ser su propio DNI/NIF— se le ofrece escribir la
+   * contraseña y reintentar (`POST /api/polizas/[id]/reintentar`).
+   *
+   * `'contrasena_incorrecta'` = SÍ se dio una contraseña y el documento la
+   * rechazó. Distinto de `'protegido'` a propósito: la acción que sigue no es
+   * «escribe una contraseña», es «prueba OTRA» — colapsar los dos deja a la
+   * persona reintentando con la misma contraseña que ya falló.
+   */
+  motivo?: 'protegido' | 'contrasena_incorrecta'
 }
 
 // 🚗 `marca` y `modelo` se piden AQUÍ, en la 1ª pasada, además de estar en el
@@ -135,9 +153,10 @@ export type ResultadoExtraccion = {
 // puede volver a leer — hay que pedirle a la persona que lo suba otra vez.
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
+{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"fechaEfecto":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
 Reglas:
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
+- "fechaEfecto": la fecha de EFECTO, ENTRADA EN VIGOR o EMISIÓN de esta póliza o de su periodo actual — el día en que empezó a correr, NO la de vencimiento. Ponla SIEMPRE que aparezca en el documento, aunque también haya "fechaVencimiento": los contratos de seguro son anuales renovables y esta fecha sirve para calcular el vencimiento cuando el documento no traiga uno vigente.
 - "tipoDocumento": qué es este documento. "poliza" = el contrato o sus condiciones particulares. "suplemento" = una MODIFICACIÓN de una póliza que ya existe (cambio de vehículo, de coberturas, de tomador); suele decir "suplemento", "anexo" o "modificación". "recibo" = un justificante de cobro de un periodo. "otro" si no es ninguno de los tres. Si no lo puedes decidir, pon null: NUNCA fuerces "poliza".
 - "primaAnual" en euros, solo el número, con punto decimal. Es lo que se paga AL AÑO por la póliza. Si el documento es un suplemento o un recibo, pon aquí su importe igualmente: nosotros ya sabemos qué hacer con él.
 - "matricula": la matrícula española del vehículo asegurado, tal cual aparece.
@@ -179,11 +198,67 @@ export function origenesDelDocumento(datos: DatosRamo | null): OrigenPorCampo | 
 }
 
 /** Nada leído: TODOS los campos a `null` y `fuente: 'none'`. */
-function nadaLeido(): ResultadoExtraccion {
+function nadaLeido(motivo?: 'protegido' | 'contrasena_incorrecta'): ResultadoExtraccion {
   // `no_aplica` y no `no_leidos`: sin ramo no había 2ª pasada que hacer, así que
   // decir que «no se pudieron leer» los campos del ramo sería inventarse un
   // intento que nunca ocurrió.
-  return { datos: extraidaVacia(), fuente: 'none', camposRamo: 'no_aplica' }
+  return { datos: extraidaVacia(), fuente: 'none', camposRamo: 'no_aplica', ...(motivo ? { motivo } : {}) }
+}
+
+/** `pdf-parse` (pdf.js) lanza esto cuando el PDF exige una contraseña que no le
+ *  hemos dado — incluso cuando la contraseña de usuario está vacía, si el
+ *  documento la exige de verdad pdf.js no la da por buena sola. */
+function esPasswordException(e: unknown): boolean {
+  return e instanceof Error && e.name === 'PasswordException'
+}
+
+/**
+ * `pdf-parse` NUNCA acepta una contraseña: llama a `PDFJS.getDocument(dataBuffer)`
+ * pasando solo el Buffer, así que cualquier `{password}` en sus opciones públicas
+ * se ignora en silencio (medido el 19/09/2026 contra un PDF real: `No password
+ * given` aunque se le pasara la contraseña correcta). Por eso, cuando `pdf-parse`
+ * falla por contraseña, el reintento pasa por `pdfjs-dist` DIRECTO — la única vía
+ * que de verdad la usa — y solo si la persona nos ha dado una.
+ *
+ * Devuelve el texto si la contraseña abre el documento; si no, el motivo exacto
+ * (`code` de `PasswordException`: 1 = hace falta contraseña, 2 = la que se dio
+ * no vale), para que la pantalla no confunda «no sabemos la contraseña» con
+ * «la que has escrito está mal».
+ */
+async function leerPdfConContrasena(
+  buffer: Buffer,
+  password: string | undefined,
+): Promise<{ ok: true; texto: string } | { ok: false; motivo: 'protegido' | 'contrasena_incorrecta' }> {
+  if (!password) return { ok: false, motivo: 'protegido' }
+  try {
+    // Import dinámico: `pdfjs-dist` solo publica ESM, y este fichero es CJS
+    // (como `pdf-parse`, importado con `require` más abajo). Mismo patrón que
+    // `apps/rrhh/lib/distribuir-nominas.ts`: sin worker (no hay hilos en
+    // serverless) y sin eval (lo bloquea el sandbox de Vercel).
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+    const doc = await pdfjsLib.getDocument({
+      data: new Uint8Array(buffer),
+      password,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    }).promise
+    let texto = ''
+    for (let i = 1; i <= doc.numPages; i++) {
+      const pagina = await doc.getPage(i)
+      const contenido = await pagina.getTextContent()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      texto += contenido.items.map((item: any) => ('str' in item ? item.str : '')).join(' ') + '\n'
+    }
+    return { ok: true, texto }
+  } catch (e) {
+    // `code === 2` (INCORRECT_PASSWORD) es la única distinción que importa: el
+    // resto de fallos de este intento (PDF corrupto, etc.) se tratan igual que
+    // «no hemos podido leerlo», no como un problema de contraseña.
+    const codigo = e && typeof e === 'object' && 'code' in e ? (e as { code: unknown }).code : null
+    return { ok: false, motivo: codigo === 2 ? 'contrasena_incorrecta' : 'protegido' }
+  }
 }
 
 /**
@@ -320,19 +395,26 @@ export async function extraerPoliza(
   buffer: Buffer,
   mimeType: string,
   fileName = '',
+  password?: string,
 ): Promise<ResultadoExtraccion> {
   const esPdf = mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')
 
   if (esPdf) {
     let texto = ''
+    let motivoSinTexto: 'protegido' | 'contrasena_incorrecta' | undefined
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParse = require('pdf-parse')
       texto = (await pdfParse(buffer)).text || ''
     } catch (e) {
+      if (esPasswordException(e)) {
+        const resultado = await leerPdfConContrasena(buffer, password)
+        if (resultado.ok) texto = resultado.texto
+        else motivoSinTexto = resultado.motivo
+      }
       console.warn('[portal] pdf-parse falló:', e)
     }
-    if (!texto.trim()) return nadaLeido()
+    if (!texto.trim()) return nadaLeido(motivoSinTexto)
     // Un fallo de IA es «no lo hemos podido mirar», no «no hay datos»: se degrada
     // a `none` y la póliza se guarda igual, para completarla a mano.
     let salida: string
@@ -404,8 +486,16 @@ export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): P
   // tirarlos obligaría a preguntar otra vez por algo que ya está dicho.
   const datosRamo = normalizarDatosRamoLeidos(contrato.ramo, bruto)
   const o = bruto && typeof bruto === 'object' ? (bruto as Record<string, unknown>) : {}
+  // 🚨 Un seguro es anual renovable: si el documento no trae un vencimiento
+  // VIGENTE (el original de una póliza plurianual, por ejemplo, solo trae el
+  // de su primer periodo) pero sí una fecha de EFECTO o emisión, el día y mes
+  // de esa fecha SON los del próximo vencimiento — dictado de Alberto,
+  // 19/09/2026. Solo se calcula cuando `fechaVencimiento` es `null`: si el
+  // documento lo dice, ese manda siempre.
+  const fechaVencimiento = contrato.fechaVencimiento ?? vencimientoDesdeEfecto(o.fechaEfecto, hoy)
   return {
     ...contrato,
+    fechaVencimiento,
     // 🚨 La prima se ANULA cuando consta que el documento no es la póliza. El
     // importe de un suplemento o de un recibo es real, pero no es lo que se
     // paga al año, y guardarlo ahí no falla: sale un número plausible sobre el

@@ -211,6 +211,40 @@ export function canalesDeLasPolizas(canales: readonly CanalCompania[]): CanalCom
 }
 
 /**
+ * Las mismas compañías, con la de UNA póliza concreta delante (19/09/2026).
+ *
+ * ── Por qué ordenar y NO filtrar ────────────────────────────────────────────
+ *
+ * El botón «Ver los teléfonos de {compañía} y dar parte» de la ficha de una
+ * póliza promete un teléfono concreto, y hasta hoy dejaba al cliente en la
+ * pestaña de siniestros con las compañías de TODA su cartera en el mismo orden
+ * de siempre — Alberto: «tiene que aparecer tlf y los campos para apertura
+ * siniestros, ahora mismo me sale página de siniestros». Con cuatro pólizas de
+ * tres compañías, el número prometido podía ser el tercero de la lista.
+ *
+ * 🚨 Pero **las demás no se quitan**, por lo mismo que no se quitan las
+ * `sinDatos`: quien acaba de tener un golpe puede haber llegado aquí desde la
+ * póliza equivocada (el coche de su padre, el piso en vez del local), y una
+ * lista recortada a una sola compañía le diría que no hay más a quien llamar.
+ * Se ordena, que cambia lo que ve primero sin quitarle nada.
+ *
+ * El cruce es por nombre EXACTO —normalizado igual que en `canalDeCompania`—
+ * y un nombre que no está en la lista la deja tal cual: nunca se promueve «la
+ * más parecida», que es la vía por la que alguien acabaría marcando el número
+ * de urgencias de otra compañía.
+ */
+export function canalesConCompaniaPrimero(
+  canales: readonly CanalCompania[],
+  compania: string | null,
+): CanalCompania[] {
+  const clave = textoONull(compania)?.toLowerCase() ?? null
+  if (clave === null) return [...canales]
+  const primero = canales.filter((c) => c.nombre.trim().toLowerCase() === clave)
+  if (primero.length === 0) return [...canales]
+  return [...primero, ...canales.filter((c) => c.nombre.trim().toLowerCase() !== clave)]
+}
+
+/**
  * Lo que la pantalla dice cuando no hay nada. Vive aquí, y no en el JSX, porque
  * es la frase que la regla de la casa protege: **`null` = no lo hemos
  * verificado, nunca «no tiene»**.

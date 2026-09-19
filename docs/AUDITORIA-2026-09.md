@@ -126,4 +126,71 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 (septiembre sigue abierto).
 
 ---
-<!-- verificado: 2026-09-04 -->
+
+## ✅ Pasada ligera — 19/09/2026
+
+**Rango:** 54 commits desde `04a43ea` (15/09 16:41, última auditoría) hasta `0ba45c4`; actividad
+casi entera en la correduría (CIMA, retarificación, portal, asegura-web). Entorno de tarea de
+GitHub con una única rama asignada (`claude/great-maxwell-drrojp`): sin push directo a `main`
+posible, así que texto y código van en el mismo PR (mismo patrón que #2857/#3023).
+
+### 🔴 Next.js RCE crítica (`GHSA-2xp9-vwfh-vxw4`) SIN parchear en `main` desde hace 6 días
+`main` seguía en `next ^15.5.18-22`/`^16.2.12` (RCE no autenticada en la API de Image Optimization
+con AVIF, aplica en Linux/Vercel). Ya diagnosticado y con fix verificado en `#2857` (13/09) y
+`#3023` (16/09) — **ambos siguen en draft con `mergeable_state: dirty` sin resolver**, así que el
+parche nunca llegó a `main`. Reproducido el mismo bump en esta rama (commit `e636afce3`):
+`next` → `^15.5.25` (12 apps) / `^16.3.5` (ia-rest). `pnpm audit --prod`: 29 vulns/10 críticas →
+19 vulns/**0 críticas**. Verificado: typecheck limpio en las 13 apps, `pnpm test`
+(2883+53 tests, 0 fallos), `pnpm test:guardia` (852/852). **Acción de Alberto: mergear este PR ya**
+(o resolver el conflicto de #2857/#3023) — son 6 días con una RCE no autenticada en producción.
+
+### 🔴 Pricing SIVRA: motor en PAUSA global 4 días, con su propia condición de despause ya cumplida
+`pricing_config.paused=true` desde el 15/09 14:44 UTC (decisión deliberada tras el episodio de
+Semana Santa 2027 tarificada sin evento, ver memoria 15/09) y sin tocar desde entonces —
+`horas_desde_ultima_pasada`=89,5h, 0 noches reales escritas en ese tiempo en los 4 pisos. La propia
+nota de esa pausa fijaba la condición de reactivación: «NO despausar si el barrido no midió el
+evento» de Semana Santa. **Esa condición ya se cumplió el mismo 15/09** (`market_rates` pasó de 22
+a 30 comparables en 25/03/2027, Jueves Santo, medido 08:53 UTC) y no hay rastro en memoria ni en
+código de una rutina de despausa que se haya ejecutado desde entonces — parece la misma familia que
+el «cron mudo»: se programó un check para el día siguiente y nadie volvió a mirarlo. **Sin fix de
+código posible desde aquí** (es una fila de config, no un bug): acción de Alberto, revisar
+`/sivra/pricing` y despausar si el barrido de eventos ya cubre Semana Santa 2027 (parece que sí).
+
+### 🟡 Correduría/CIMA — Mapfre (C0058) sigue muda, empeorando (88 días, ya alertado por su propio canal)
+`correduria_ingesta` (latido `ok=true`, detalle DEGRADADA): C0058 lleva **88 días sin mandar nada**
+(era 74-75 el 05-06/09) y ahora **9 renovaciones** vencieron sin fichero (eran 7). No es hallazgo
+nuevo — `silencio-entidad.ts` ya lo detecta y avisa por Telegram desde el propio cron, así que no
+se duplica aquí. Sigue pendiente la decisión de Alberto sobre el borrador de consulta a Codeoscopic
+(`docs/ASEGURA-MAPFRE-C0058.md`, sin enviar). `cima_pull_*`: eventos regulares (17-18/09, cada
+~6h), `queueDepth` estancado en ~145 con `processed` 0-2 — la cola no crece pero tampoco baja.
+Codeoscopic: 8 cotizaciones/4,00€ en 7 días, todas `facturable`/cerradas — volumen normal para la
+semana de desarrollo de retarificación/portal, guardián `regression-asegura-gasto-codeoscopic`
+vigente. `seo_correduria`: `ok=false` desde el 14/09 (Serper sin créditos) — ya conocido y crónico
+desde el 24/08, no se re-escala.
+
+### Backlog de PRs de rutinas + salud del automerge (2-ter) — vigilante vivo, canal de registro sigue atascado
+`rutinas-automerge.yml` corriendo con normalidad (run en curso a las 08:04 UTC de hoy). **30 PRs
+abiertos.** El bloqueo estructural que `#2877` (13/09) ya diagnosticó — los checks requeridos sobre
+un commit de `github-actions[bot]` no arrancan solos y quedan pendientes de aprobación humana en
+Actions — sigue sin resolverse 6 días después: `#2877` (puramente registro, `docs/**`) tiene sus 21
+checks en verde incluido «Ready to merge» pero **sigue sin mergear**, y `#2318`/`#2322`/`#2483`
+llevan más de 2 semanas en el mismo estado. Dos PRs de seguridad crítica (`#2857`, `#3023`) están
+atrapados en el mismo backlog. **Acción de Alberto (repetida, sin cambios desde el 13/09):** revisar
+Settings → Actions → General → aprobación de workflows, o aprobar a mano los runs pendientes — sin
+esto el carril 1 completo de esta rutina seguirá sin poder autoentregarse.
+
+### Reconciliación memoria/skills
+`docs/FUENTES-DE-VERDAD.md` no tenía fila para `correduria-crm`/`docs/CORREDURIA-CRM-VISION.md` ni
+para la skill `cima-ingesta` + sus 4 docs (`ASEGURA-CIMA-INGESTA-INVENTARIO`, `CIMA-CUARENTENA`,
+`ASEGURA-CIMA-COBERTURAS`, `CODEOSCOPIC-API-PORTAL`) — añadidas. `docs/SKILLS.md` ya lista
+`cima-ingesta`; sin huecos ahí. `docs/CONTEXTO-SESIONES.md`: 402 entradas vivas, `rotar-memoria.mjs`
+corrido (idempotente, 0 archivadas — julio/agosto siguen dentro de su ventana de retención). ⚠️ **No
+se pudo listar sesiones remotas** (herramienta no adjunta): no se cruzaron conversaciones de
+solo-charla contra memoria/PR.
+
+### Manuales / HUECOS-ABIERTOS — sin cambios
+Ningún commit del rango toca `apps/ia-rest/**`. `docs/HUECOS-ABIERTOS.md` no revisado línea a línea
+(reservado a la profunda).
+
+---
+<!-- verificado: 2026-09-19 -->
