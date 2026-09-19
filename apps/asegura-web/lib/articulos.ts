@@ -70,8 +70,10 @@ export type Articulo = {
    * cuerpo y las FAQ. Es opcional a propósito: solo la llevan los artículos
    * cuya intención tiene una herramienta detrás (la carta de no renovación
    * del gestor). Un CTA genérico en cada artículo es ruido, no conversión.
-   * `href` es una ruta interna o `PORTAL_URL`; el texto pasa por el mismo cepo
-   * de copy que el resto (`textoArticulo` lo incluye).
+   * `href` es una ruta interna o el centinela `'PORTAL'`, que la página del
+   * artículo resuelve a `PORTAL_URL` (aquí no se importa `lib/sitio` para no
+   * arrastrar la config del sitio al módulo de contenido); el texto pasa por el
+   * mismo cepo de copy que el resto (`textoArticulo` lo incluye).
    */
   cta?: { titulo: string; texto: string; boton: string; href: string }
 }
