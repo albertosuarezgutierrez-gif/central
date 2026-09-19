@@ -77,6 +77,9 @@ export function detectarSolapamientos(polizas: readonly PolizaConCoberturas[]): 
   for (const familia of FAMILIAS_SOLAPAMIENTO) {
     const afectadas: Solapamiento['polizas'] = []
     for (const p of polizas) {
+      // La misma póliza repetida en la entrada (dos vínculos a la misma ficha,
+      // una fusión a medias) cuenta UNA vez: «dos pólizas» son dos ids.
+      if (afectadas.some((a) => a.id === p.id)) continue
       const cobertura = p.coberturas.find((c) => familia.patron.test(c))
       if (cobertura) afectadas.push({ id: p.id, titulo: p.titulo, cobertura: cobertura.trim() })
     }

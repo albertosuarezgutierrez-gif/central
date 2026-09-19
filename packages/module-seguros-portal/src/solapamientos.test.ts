@@ -24,6 +24,10 @@ test('una sola póliza con dos coberturas de la misma familia NO es solapamiento
   assert.deepEqual(detectarSolapamientos([una]), [])
 })
 
+test('la misma póliza dos veces en la entrada NO es solapamiento: dos pólizas son dos ids', () => {
+  assert.deepEqual(detectarSolapamientos([hogar, { ...hogar }]), [])
+})
+
 test('tres pólizas: la familia lista las tres', () => {
   const s = detectarSolapamientos([auto, hogar, rc])
   const rcFam = s.find((x) => x.familia === 'rc_familiar')
