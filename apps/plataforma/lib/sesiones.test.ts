@@ -4,6 +4,8 @@ import { anadirJti, quitarJti, MAX_SESIONES } from './sesiones.ts'
 
 // Lo que motivó esto (19/09/2026): un solo jti por cuenta → cada login expulsaba al resto de
 // dispositivos. El móvil de Alberto pedía usuario "siempre" porque el PC lo echaba, y al revés.
+// OJO: la escritura real es UN UPDATE en SQL (`sesiones-db.ts`), no estas funciones — estas son el
+// contrato; la expresión SQL se probó contra la BD con los mismos tres casos (lleno, dedupe, vacío).
 
 test('un login nuevo NO expulsa a los anteriores', () => {
   assert.deepEqual(anadirJti(['pc'], 'movil'), ['pc', 'movil'])
