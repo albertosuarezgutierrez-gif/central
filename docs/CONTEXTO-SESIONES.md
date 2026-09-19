@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Portal cliente · Alberto: en vez de pedirle a quien sube un PDF protegido que «quite
+la protección» (la mayoría no sabe cómo), se le ofrece escribir la contraseña y reintentar — muchas
+compañías protegen el PDF con el DNI/NIF del tomador, que la persona sí sabe. `extraerPoliza()` acepta
+`password` opcional y usa `pdfjs-dist` DIRECTO (mismo patrón que `apps/rrhh/distribuir-nominas.ts`;
+`pdf-parse` NUNCA acepta contraseña, medido) — distingue `protegido` (falta contraseña) de
+`contrasena_incorrecta` (la dada no vale, por el `code` de `PasswordException`). Nueva ruta
+`POST /api/polizas/[id]/reintentar` (mismo aislamiento `id`+`identidadId` que el PATCH) y formulario de
+contraseña en `SubirPoliza.tsx`, con el fichero retenido en memoria del navegador solo mientras hace falta.
+
 **(19/09/2026)** Portal cliente · Regla nueva de Alberto: un seguro es anual renovable, así que si
 el documento subido no trae vencimiento vigente (p.ej. el contrato original de una póliza plurianual)
 pero sí trae fecha de EFECTO/emisión, el día y mes de esa fecha SON los del próximo vencimiento.

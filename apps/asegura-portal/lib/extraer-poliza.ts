@@ -115,15 +115,22 @@ export type ResultadoExtraccion = {
   /** Cómo fue la 2ª pasada. Ver `EstadoCamposRamo`. */
   camposRamo: EstadoCamposRamo
   /**
-   * Por qué `fuente` es `'none'`, cuando se sabe. `'protegido'` = el PDF pide una
-   * contraseña que no tenemos (medido: el propio `pdf-parse` la exige incluso
-   * para un PDF cuya contraseña de USUARIO está vacía — no es un fallo nuestro
-   * de lectura, es que el documento la lleva de verdad). Sin este dato, «no
-   * hemos podido leer el documento» suena a fallo nuestro cuando la acción que
-   * de verdad hace falta es que la persona quite la protección y lo vuelva a
-   * subir — decirlo genérico deja a alguien reintentando el mismo PDF sin éxito.
+   * Por qué `fuente` es `'none'`, cuando se sabe.
+   *
+   * `'protegido'` = el PDF pide una contraseña que no tenemos: NUNCA es un
+   * fallo nuestro de lectura, es que el documento la lleva de verdad (medido:
+   * `pdf-parse` la exige incluso para un PDF cuya contraseña de USUARIO está
+   * vacía). Dictado de Alberto (19/09/2026): en vez de pedirle a la persona
+   * que «quite la protección» —algo que la mayoría no sabe hacer, y que para
+   * un PDF de un seguro suele ser su propio DNI/NIF— se le ofrece escribir la
+   * contraseña y reintentar (`POST /api/polizas/[id]/reintentar`).
+   *
+   * `'contrasena_incorrecta'` = SÍ se dio una contraseña y el documento la
+   * rechazó. Distinto de `'protegido'` a propósito: la acción que sigue no es
+   * «escribe una contraseña», es «prueba OTRA» — colapsar los dos deja a la
+   * persona reintentando con la misma contraseña que ya falló.
    */
-  motivo?: 'protegido'
+  motivo?: 'protegido' | 'contrasena_incorrecta'
 }
 
 // 🚗 `marca` y `modelo` se piden AQUÍ, en la 1ª pasada, además de estar en el
@@ -191,7 +198,7 @@ export function origenesDelDocumento(datos: DatosRamo | null): OrigenPorCampo | 
 }
 
 /** Nada leído: TODOS los campos a `null` y `fuente: 'none'`. */
-function nadaLeido(motivo?: 'protegido'): ResultadoExtraccion {
+function nadaLeido(motivo?: 'protegido' | 'contrasena_incorrecta'): ResultadoExtraccion {
   // `no_aplica` y no `no_leidos`: sin ramo no había 2ª pasada que hacer, así que
   // decir que «no se pudieron leer» los campos del ramo sería inventarse un
   // intento que nunca ocurrió.
@@ -203,6 +210,55 @@ function nadaLeido(motivo?: 'protegido'): ResultadoExtraccion {
  *  documento la exige de verdad pdf.js no la da por buena sola. */
 function esPasswordException(e: unknown): boolean {
   return e instanceof Error && e.name === 'PasswordException'
+}
+
+/**
+ * `pdf-parse` NUNCA acepta una contraseña: llama a `PDFJS.getDocument(dataBuffer)`
+ * pasando solo el Buffer, así que cualquier `{password}` en sus opciones públicas
+ * se ignora en silencio (medido el 19/09/2026 contra un PDF real: `No password
+ * given` aunque se le pasara la contraseña correcta). Por eso, cuando `pdf-parse`
+ * falla por contraseña, el reintento pasa por `pdfjs-dist` DIRECTO — la única vía
+ * que de verdad la usa — y solo si la persona nos ha dado una.
+ *
+ * Devuelve el texto si la contraseña abre el documento; si no, el motivo exacto
+ * (`code` de `PasswordException`: 1 = hace falta contraseña, 2 = la que se dio
+ * no vale), para que la pantalla no confunda «no sabemos la contraseña» con
+ * «la que has escrito está mal».
+ */
+async function leerPdfConContrasena(
+  buffer: Buffer,
+  password: string | undefined,
+): Promise<{ ok: true; texto: string } | { ok: false; motivo: 'protegido' | 'contrasena_incorrecta' }> {
+  if (!password) return { ok: false, motivo: 'protegido' }
+  try {
+    // Import dinámico: `pdfjs-dist` solo publica ESM, y este fichero es CJS
+    // (como `pdf-parse`, importado con `require` más abajo). Mismo patrón que
+    // `apps/rrhh/lib/distribuir-nominas.ts`: sin worker (no hay hilos en
+    // serverless) y sin eval (lo bloquea el sandbox de Vercel).
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+    const doc = await pdfjsLib.getDocument({
+      data: new Uint8Array(buffer),
+      password,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    }).promise
+    let texto = ''
+    for (let i = 1; i <= doc.numPages; i++) {
+      const pagina = await doc.getPage(i)
+      const contenido = await pagina.getTextContent()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      texto += contenido.items.map((item: any) => ('str' in item ? item.str : '')).join(' ') + '\n'
+    }
+    return { ok: true, texto }
+  } catch (e) {
+    // `code === 2` (INCORRECT_PASSWORD) es la única distinción que importa: el
+    // resto de fallos de este intento (PDF corrupto, etc.) se tratan igual que
+    // «no hemos podido leerlo», no como un problema de contraseña.
+    const codigo = e && typeof e === 'object' && 'code' in e ? (e as { code: unknown }).code : null
+    return { ok: false, motivo: codigo === 2 ? 'contrasena_incorrecta' : 'protegido' }
+  }
 }
 
 /**
@@ -339,21 +395,26 @@ export async function extraerPoliza(
   buffer: Buffer,
   mimeType: string,
   fileName = '',
+  password?: string,
 ): Promise<ResultadoExtraccion> {
   const esPdf = mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')
 
   if (esPdf) {
     let texto = ''
-    let protegido = false
+    let motivoSinTexto: 'protegido' | 'contrasena_incorrecta' | undefined
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParse = require('pdf-parse')
       texto = (await pdfParse(buffer)).text || ''
     } catch (e) {
-      if (esPasswordException(e)) protegido = true
+      if (esPasswordException(e)) {
+        const resultado = await leerPdfConContrasena(buffer, password)
+        if (resultado.ok) texto = resultado.texto
+        else motivoSinTexto = resultado.motivo
+      }
       console.warn('[portal] pdf-parse falló:', e)
     }
-    if (!texto.trim()) return nadaLeido(protegido ? 'protegido' : undefined)
+    if (!texto.trim()) return nadaLeido(motivoSinTexto)
     // Un fallo de IA es «no lo hemos podido mirar», no «no hay datos»: se degrada
     // a `none` y la póliza se guarda igual, para completarla a mano.
     let salida: string
