@@ -12,6 +12,19 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** SIVRA pricing — el corpus de comparables de aforo 12 estaba dominado por
+aparthoteles/hoteles (Overland Suites, Sercotel, Hilton, Meliá…, 59-14 apariciones cada uno) frente
+a 3-8 de las casas enteras reales: el filtro `accommodation_types:["APARTMENT"]` del conector no
+distingue el producto. Nuevo `lib/sivra/pricing-comps-tipo.ts` (`esCasaComparable`/
+`sqlCompEsCasaComparable`, puro, 7 tests con nombres reales) descarta por palabra de marca/
+categoría en el nombre; cableado junto a `sqlCompDeNuestraLiga` en los 3 corpus de
+`pricing/apply` y en `pricing-ancla-global.ts` (mismo patrón, misma guarda de monotonía donde ya
+existía). Probado contra la BD real: para House Sevillana el corpus de 30 días pasa de 1.079 a 292
+filas (87 fechas distintas, por encima de `MIN_FECHAS_ANCLA`=15 — no se queda sin ancla) y la
+mediana sube de 597€ a 702€: el ancla estaba infravalorada por mezclar un producto distinto.
+Limitación conocida y documentada: marcas locales sin palabra de categoría en el nombre (p. ej.
+"atLumbreras16") no se cazan. `pnpm test` 2.890/2.890 + tsc 0.
+
 **(19/09/2026)** Portal cliente · Alberto: en vez de pedirle a quien sube un PDF protegido que «quite
 la protección» (la mayoría no sabe cómo), se le ofrece escribir la contraseña y reintentar — muchas
 compañías protegen el PDF con el DNI/NIF del tomador, que la persona sí sabe. `extraerPoliza()` acepta
