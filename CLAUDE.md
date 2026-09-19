@@ -81,8 +81,8 @@
   `asegura-app-cima-adapter` ya vivía en la organización Fly `grupo-asegura` (de Alberto, tarjeta propia,
   sin cargos pendientes) — no en la cuenta de Manuel, como este documento decía hasta hoy. Manuel se
   eliminó de esa organización y de la organización Fly `Personal` de Alberto (donde figuraba de admin sin
-  motivo). Único pendiente real: que Manuel transfiera/haga fork del **repo del adaptador Java** (mensaje
-  pendiente de que Alberto lo mande). El port de `cima-pull` a `apps/asegura` sigue APARCADO a propósito
+  motivo). Único pendiente real: que Manuel transfiera/haga fork del **repo del adaptador Java** (mensaje YA
+  enviado el 19/09/2026, a la espera de su respuesta). El port de `cima-pull` a `apps/asegura` sigue APARCADO a propósito
   (inventario en `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). 🔑 **Rotar la contraseña de un rol de BD SIN actualizar el `DATABASE_URL` de su proyecto Vercel deja la
   app muerta en silencio (02/09/2026).** `prisma_seguros` se rotó tres veces ese día y `central-asegura` se
   quedó con la vieja: toda la cartera —y con ella el libro de comisiones— moría en `password authentication
