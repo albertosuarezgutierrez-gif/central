@@ -64,6 +64,15 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     contrasenaCampo,
   )
 
+  // 🚨 Si esta pasada tampoco ha leído nada (contraseña otra vez incorrecta, PDF
+  // corrupto…), NO se toca la fila. `datos` vendría con todos los campos a
+  // `null` — escribirlo borraría cualquier corrección manual que la persona ya
+  // hubiera hecho por PATCH mientras el documento seguía sin leerse. Se
+  // devuelve el motivo para que la pantalla lo diga, sin tocar la BD.
+  if (fuente === 'none') {
+    return NextResponse.json({ id, datos, fuente, camposRamo, motivo })
+  }
+
   // Mismas columnas que el alta original: un reintento que SÍ lee el
   // documento tiene que dejar la fila exactamente como habría quedado si la
   // contraseña se hubiera sabido desde el principio.
@@ -90,17 +99,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   })
   if (count === 0) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
 
-  // Best-effort: si esta vez sí se leyó algo, Alberto se entera con el dato
-  // real en vez de con la fila vacía que vio en la subida original.
-  if (fuente !== 'none') {
-    void avisarPolizaDeclaradaDesdeAlta({
-      identidadId: identidad.id,
-      compania: datos.compania,
-      ramo: datos.ramo,
-      numeroPoliza: datos.numeroPoliza,
-      fechaVencimiento: datos.fechaVencimiento,
-    })
-  }
+  // Best-effort: `fuente === 'none'` ya ha vuelto arriba, así que aquí siempre
+  // se ha leído algo — Alberto se entera con el dato real en vez de con la
+  // fila vacía que vio en la subida original.
+  void avisarPolizaDeclaradaDesdeAlta({
+    identidadId: identidad.id,
+    compania: datos.compania,
+    ramo: datos.ramo,
+    numeroPoliza: datos.numeroPoliza,
+    fechaVencimiento: datos.fechaVencimiento,
+  })
 
   return NextResponse.json({ id, datos, fuente, camposRamo, motivo })
 }
