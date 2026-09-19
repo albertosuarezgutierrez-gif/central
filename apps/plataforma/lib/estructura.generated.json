@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-17T14:10:10Z",
+  "generadoEn": "2026-09-19T08:26:36Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2202,7 +2202,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 71
+        "evidencias": 72
       },
       "asegura-web": {
         "estado": "usado",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 19
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2310,7 +2310,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 59
+        "evidencias": 60
       },
       "asegura-web": {
         "estado": "usado",
@@ -3999,6 +3999,7 @@
       "/api/operador/codeoscopic/precalificar",
       "/api/operador/codeoscopic/precalificar-auto-nuevo",
       "/api/operador/codeoscopic/precalificar-decesos-nuevo",
+      "/api/operador/codeoscopic/precalificar-hogar",
       "/api/operador/codeoscopic/precalificar-hogar-nuevo",
       "/api/operador/codeoscopic/precalificar-moto-nuevo",
       "/api/operador/codeoscopic/precalificar-salud-nuevo",
@@ -6403,7 +6404,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1373,
+    "apis": 1374,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
