@@ -19,6 +19,8 @@ Codeoscopic mandaba lotes de 2 emisiones en un array raíz (131 veces/3 días, m
 elemento) y se quedaban en cuarentena; `parseCodeoscopicWebhookBatch` los valida y procesa todo-o-nada.
 **CIMA reconcile** nunca se disparaba solo — los crons `schedule` no llevan `github.event.inputs`; añadido
 3er cron (06:00 UTC) que activa `reconcile=1` por `github.event.schedule`. 3892/3980 tests, tsc/eslint limpios.
+**Mergeado** (12/12 checks propios verdes; `playwright/portal` en rojo también en #838 merged — hueco de
+secrets `E2E_SUPABASE_URL`/`VERCEL_PROTECTION_BYPASS_SECRET` del workflow, no de este diff, comentado en el PR).
 **(17/09/2026)** `guardian-rama.mjs` daba un falso "commits huérfanos" al mergear PRs por MCP —
 la causa real: la rama LOCAL `main` de este checkout iba desincronizada de `origin/main` (se
 quedó en un SHA viejo tras squash-merges anteriores), no basura huérfana como se pensó en un
