@@ -101,5 +101,5 @@ test('el where de Prisma y el SQL de «en vigor» dicen lo mismo que el predicad
     sqlCarteraEnVigor('p'),
     "((p.import_ref is null or p.eiac_xml_hash is not null) and p.estado::text in ('activa', 'en_renovacion', 'en_vigor', 'recibo_devuelto', 'cambio_clave'))",
   )
-  assert.equal(sqlCarteraNoEnVigor('x'), `(not ${sqlCarteraEnVigor('x')})`)
+  assert.equal(sqlCarteraNoEnVigor('x'), `(${sqlCarteraEnVigor('x')} is not true)`)
 })

@@ -127,7 +127,10 @@ export function sqlCarteraEnVigor(alias = 'p'): string {
   return `(${sqlCarteraViva(alias)} and ${alias}.estado::text in (${SQL_ESTADOS_VIGENTES}))`
 }
 
-/** El complementario exacto en SQL crudo (`not (…)`, para que no discrepe). */
+/** El complementario exacto en SQL crudo. `is not true` y no `not (…)`: con
+ *  `estado` NULL el `in (…)` da NULL y `not NULL` sigue siendo NULL, así que esa
+ *  fila no caería en NINGÚN grupo; con `is not true` cae en leads, igual que
+ *  `esCarteraNoEnVigor` en TS. (La columna es NOT NULL hoy; es la red.) */
 export function sqlCarteraNoEnVigor(alias = 'p'): string {
-  return `(not ${sqlCarteraEnVigor(alias)})`
+  return `(${sqlCarteraEnVigor(alias)} is not true)`
 }
