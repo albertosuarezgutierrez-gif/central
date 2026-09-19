@@ -20,8 +20,18 @@ por un puerto estrecho nuevo `GET /api/portal/carnets` en `apps/asegura` (calcul
 solo cruza el resultado, nunca las fechas cifradas de origen) y consumida por la campana
 (`/api/avisos`) y por el emisor genérico de correo (`avisos-intranet.ts`, sin tocarlo aparte —
 hereda el envío automáticamente). Nueva tabla Prisma `ClienteCarnetConducir`. Suite completa +
-typecheck de asegura/asegura-portal en verde. Pendiente: UI en la ficha del corredor para dar de
-alta/editar carnés (la tabla soporta varios por cliente; hoy nadie los escribe).
+typecheck de asegura/asegura-portal en verde. PR #3087, mergeado. Pendiente: UI en la ficha del
+corredor para dar de alta/editar carnés (la tabla soporta varios por cliente; hoy nadie los escribe).
+
+**(19/09/2026)** SIVRA pricing — House Sevillana: Alberto quitó en el extranet el descuento
+móvil 10% y la tarifa país 10%. Con Basic Deal 12% ya fuera de antes, solo quedaba Genius 10% — y
+**ese SÍ es intocable**: el panel de Booking lo marca «Obligatorio», de cuando la cuenta se unió al
+programa el 29/01/2018, sin botón para desactivarlo por esta vía (haría falta el flujo de opt-out
+del Programa Genius completo, no el toggle de descuentos por tarifa). No cambia la conclusión: con
+Genius 10% como único descuento (sin Mobile ni Basic Deal apilados), el suelo de Booking queda en
+~1,08×base — por encima del 0,932×base de la directa — así que el canal directo sigue siendo más
+barato con margen. Medido con el conector: para 12 personas en el centro histórico solo hay 4-5
+casas enteras que compitan de verdad, todas más caras que House incluso a Standard Rate.
 
 **(19/09/2026) Auditoría ligera: RCE de Next.js sin parchear 6 días + pricing pausado 4 días con su condición ya cumplida.**
 `main` seguía con `GHSA-2xp9-vwfh-vxw4` (RCE no autenticada, Image Optimization AVIF) porque los dos
