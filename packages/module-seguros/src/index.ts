@@ -14,7 +14,13 @@ export {
   sqlVolcadoHistorico,
   WHERE_CARTERA_VIVA,
   WHERE_VOLCADO_HISTORICO,
+  esCarteraEnVigor,
+  esCarteraNoEnVigor,
+  sqlCarteraEnVigor,
+  sqlCarteraNoEnVigor,
+  WHERE_CARTERA_EN_VIGOR,
   type EntradaCarteraViva,
+  type EntradaCarteraEnVigor,
 } from './cartera-viva.ts'
 
 export {

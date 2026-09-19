@@ -36,6 +36,12 @@ real medido, orden de trabajo). Después, según lo que toques:
    No lo reimplementes en una consulta. `''` cuenta como volcado: es el valor de cajón que se cuela por
    `IS NULL`, `??` y `COALESCE`. Lo emitido por nosotros es «pendiente de confirmación» hasta que CIMA lo
    trae. El estado del cliente se DERIVA, no se guarda.
+   🚨 **Y CLIENTE = póliza viva EN VIGOR (19/09/2026), no viva a secas.** `esCarteraViva()` responde el
+   ORIGEN (CIMA la trae o la mantiene) e incluye las canceladas: 47 de 157. Alberto: «si es cancelada es
+   leads». Quién es cliente HOY lo decide `esCarteraEnVigor()` / `WHERE_CARTERA_EN_VIGOR` /
+   `sqlCarteraEnVigor()` (mismo fichero) = viva Y estado en `POLIZA_ESTADOS_VIGENTES`. Lo usan el grupo
+   viva/leads del listado, el recuento de pólizas vivas y «clientes sin canal» (67 clientes / 105 pólizas).
+   Gemelas, siniestros y lo que enseña el portal siguen preguntando por el origen.
    🚨 **`import_ref IS NULL` a secas tenía un agujero (medido 03/09/2026).** Cuando CIMA trae una póliza
    que ya estaba en el volcado no crea fila nueva: actualiza la vieja y le deja su `import_ref`, así que
    una póliza que CIMA mantiene al día contaba como lead. El segundo brazo (`eiac_xml_hash`, que solo
