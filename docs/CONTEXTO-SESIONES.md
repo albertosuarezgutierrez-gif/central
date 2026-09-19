@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** `trading-analista`: pasada de sábado (repesca por PASO 0, sin huella previa hoy).
+NAV/cartera real empujados a plataforma, libro sin operaciones nuevas. `/analizar`+`/puntuar` sin
+vetos ni suplantaciones sobre 24 símbolos; META compró en paper (momentum). Resumen por Telegram.
+Solo memoria + bitácora tocados, sin cambios de código.
+
 **(19/09/2026)** Avisos de renovación de carné de conducir (correduría): tras el helper puro
 `caducidadCarnet()` (PR #3076, mergeado), se conectó al aviso EN LA INTRANET del CLIENTE (decisión
 de Alberto, no la del corredor) — nueva fuente `carnets` en el catálogo `avisosDe()` de

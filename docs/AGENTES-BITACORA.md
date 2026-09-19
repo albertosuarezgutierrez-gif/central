@@ -15,6 +15,15 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-19 · trading-analista** · hizo: pasada completa (sábado, sin huella de hoy en
+  `broker_saldos`/`trading_pasadas`, continuó normal). NAV 32.939,71€ empujado a `/trading/saldo`
+  (sin salto). Cartera real (CVX+VWCE) empujada a `/trading/cartera`, sin descartes, track ok.
+  Libro de operaciones: `get_account_trades` DAYS_7 vacío, 0 nuevas, latido ok. 24 símbolos de la
+  watchlist con velas de IBKR (protocolo anti-barajado: una llamada a la vez, guardadas por
+  símbolo antes de la siguiente); `/analizar` y `/puntuar` en verde: 0 vetados/suplantados/
+  divergentes, 96 tesis puntuadas, META compró en paper (momentum, conf 67, stop mín 6,55%).
+  Resumen por Telegram con top 5 ideas y stopViable de cada una. dudas: —; fallos: —;
+  PRs/commits: memoria de esta sesión.
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
