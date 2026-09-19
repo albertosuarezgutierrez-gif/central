@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Portal cliente · Las 2 pólizas de Alejandro Soler que salían "sin ramo/sin compañía"
+en `/correduria` son PDFs con contraseña real (no vacía): `pdf-parse` lanza `PasswordException` (medido
+descargando los 2 ficheros de su Drive y probando con `pdf-parse` y `pdfjs-dist` 4.x directo — ninguno
+abre sin contraseña). No es bug de extracción: el documento la exige de verdad. `extraerPoliza()` ahora
+distingue `motivo: 'protegido'` de un fallo genérico y `SubirPoliza.tsx` se lo dice al cliente
+("quítale la protección y súbelo de nuevo") en vez del "no hemos podido leer" genérico de antes.
+
 **(19/09/2026)** Cerrado el pendiente de PR #3068: captura de Alberto del motor (05-07/01/27, 9
 pax) confirma el −20% de larga estancia SIGUE activo (742×0,80+110=703,60€ exacto) y la limpieza real
 son **110€, no 120€** como se asumió. Recalculado con esos números para las fechas disputadas

@@ -26,6 +26,9 @@ type Resultado = {
   camposRamo?: 'leidos' | 'no_leidos' | 'no_aplica'
   /** Si el FICHERO llegó a la ficha del corredor. `undefined` = alta a mano, no aplica. */
   documentoGuardado?: 'ok' | 'invalido' | 'sin_ficha' | 'varias_fichas' | 'sin_puente' | 'error'
+  /** `'protegido'` = el PDF pide una contraseña que no tenemos: no es un fallo de
+   *  lectura nuestro, hace falta que la persona quite la protección y lo suba de nuevo. */
+  motivo?: 'protegido'
 }
 
 /**
@@ -276,7 +279,16 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
               sí están guardados). Puedes escribirnos si hace falta.
             </p>
           )}
-          {resultado.fuente === 'none' ? (
+          {resultado.fuente === 'none' && resultado.motivo === 'protegido' ? (
+            // Distinto del «no hemos podido leer» genérico a propósito: aquí SÍ
+            // sabemos por qué, y decírselo evita que la persona vuelva a subir el
+            // mismo PDF protegido esperando un resultado distinto.
+            <p style={{ fontSize: 14 }}>
+              <strong>Este documento está protegido con contraseña</strong> y no hemos podido abrirlo. La
+              póliza está guardada; quítale la protección (o pídesela a tu compañía) y súbelo de nuevo, o
+              completa los datos a mano mientras tanto.
+            </p>
+          ) : resultado.fuente === 'none' ? (
             // NO decimos «no tiene esos datos»: decimos que no hemos podido
             // leerlos. Es la diferencia entre un dato ausente y uno no mirado.
             <p style={{ fontSize: 14 }}>
