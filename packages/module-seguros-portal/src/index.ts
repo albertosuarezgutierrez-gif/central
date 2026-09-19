@@ -22,6 +22,7 @@ export {
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
+  vencimientoDesdeEfecto,
 } from './poliza-leida.ts'
 export type { RamoPoliza, PolizaLeida } from './poliza-leida.ts'
 // Quitar de la bóveda una póliza que aportó el CLIENTE. Lee su cabecera: las de
@@ -251,7 +252,7 @@ export type {
 // las que acaban delante de alguien que acaba de tener un golpe.
 export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL } from './canal-compania.ts'
 export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
-export { canalesDeLasPolizas } from './canal-compania.ts'
+export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
 // (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
 // existen en la BD pero NO se escriben: no hay pantalla que los pida.
@@ -332,7 +333,13 @@ export type { EstadoHoja, SeleccionHoja, ErrorSeleccion } from './hoja-qr.ts'
 // En qué cajón va cada titular de la bóveda (mías / de mis empresas / de quien
 // me autoriza). Se agrupa por `clienteId`, nunca por nombre: dos fichas con el
 // mismo nombre son dos titulares, y fundirlas mezcla sus pólizas en silencio.
-export { GRUPOS_CARTERA, TITULO_GRUPO, agruparCartera, grupoDeTitular } from './agrupar-cartera.ts'
+export {
+  GRUPOS_CARTERA,
+  TITULO_GRUPO,
+  agruparCartera,
+  grupoDeTitular,
+  textoCuentaSeguros,
+} from './agrupar-cartera.ts'
 export type { GrupoCartera, TitularAgrupable, BloqueCartera } from './agrupar-cartera.ts'
 
 export { TRAMOS, saludoPorHora, nombreDePila } from './saludo.ts'
