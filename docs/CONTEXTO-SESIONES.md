@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/09/2026)** Correduría · Alberto no podía tarificar hogar («en hogar no me deja tarificar»).
+Causa: `HogarCatastro.tsx` mandaba a un flujo muerto (texto corregido en PR #3054), y retarificar una
+póliza de hogar YA existente seguía saltando a `apps/asegura` (`/cartera/poliza/[id]`, otro dominio/
+login) — solo auto estaba portado. Portado entero: `GET /api/operador/codeoscopic/precalificar-hogar`
+(asegura, nuevo, mismo patrón que `precalificar-hogar-nuevo`) + `lib/hogar-retarificar-asegura.ts` +
+`RetarificadorHogar.tsx` en `poliza/[id]/retarificar/page.tsx` (plataforma). El botón de pagar (0,50€)
+reutiliza `pedirCotizacion` sin cambios: el puerto de asegura ya ramaba por ramo. Se borró
+`urlRetarificarHogarAsegura()` (sin consumidores) y se actualizó su guardián
+(`test/regression-retarificar-plataforma.test.ts`). Probado con la póliza de hogar real de Occident.
+
 **(17/09/2026)** `guardian-rama.mjs` daba un falso "commits huérfanos" al mergear PRs por MCP —
 la causa real: la rama LOCAL `main` de este checkout iba desincronizada de `origin/main` (se
 quedó en un SHA viejo tras squash-merges anteriores), no basura huérfana como se pensó en un
@@ -20,6 +30,7 @@ mergear — reconcilia el puntero local sin perder nada (el contenido ya estaba 
 vía squash). Con eso se mergearon asegura#838 (alerta Telegram CIMA) y central#3052 (memoria).
 Probado en real: `cima-pull` disparado a mano tras el merge — `ok:true, processed:0` (nada
 pendiente en ese momento; el aviso se verá la próxima vez que CIMA mande un review/situación real).
+
 **(17/09/2026)** Portal cliente · Alberto reportó que la póliza de Alejandro Soler no guardó dirección
 ni garantías/capitales, y que el PDF no llegó a su ficha. Medido en logs reales de Vercel:
 `POST /api/portal/documento` y `GET /api/portal/contacto` responden **401** desde `central-asegura`

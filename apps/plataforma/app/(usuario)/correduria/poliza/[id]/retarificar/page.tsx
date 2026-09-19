@@ -9,8 +9,9 @@ import {
   type RespuestaPrecalificacion,
   type TarificacionGuardadaAuto,
 } from '@/lib/retarificar-asegura'
-import { urlRetarificarHogarAsegura } from '@/lib/ficha-asegura'
+import { precalificarHogarRetarificarAsegura } from '@/lib/hogar-retarificar-asegura'
 import Retarificador, { ValorSupuesto } from './retarificador'
+import RetarificadorHogar from './RetarificadorHogar'
 
 export const dynamic = 'force-dynamic'
 
@@ -84,36 +85,32 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
     )
   }
 
-  // 🚨 Hogar TODAVÍA no está portado a plataforma: su retarificador es otro
-  // componente (pide m², año, capitales y Catastro). No se inventa una pantalla
-  // a medias ni se finge que no se puede — se manda al sitio donde SÍ funciona,
-  // que es lo que había antes de este cambio. Lo demás de la correduría ya no
-  // sale de aquí.
+  // ── HOGAR ────────────────────────────────────────────────────────────────
+  //
+  // Portado el 17/09/2026: la precalificación (gratis) se pide aquí, en el
+  // servidor, con `precalificarHogarRetarificarAsegura()` — la ficha entera ya
+  // armada por asegura (`GET /api/operador/codeoscopic/precalificar-hogar`),
+  // igual que hace `hogar-nuevo/page.tsx` para una oportunidad sin póliza. El
+  // botón de pedir precio reutiliza `pedirCotizacion` (la misma acción del
+  // auto de esta pantalla): el puerto de asegura ya rama por ramo con la MISMA
+  // función `prepararRetarificacion()`, así que no hace falta nada nuevo ahí.
   if (ramo === 'hogar') {
+    const preHogar = await precalificarHogarRetarificarAsegura({ polizaId: p.id })
+    if (preHogar.estado !== 'ok') {
+      const tono = preHogar.estado === 'no_encontrado' ? 'muted' : 'err'
+      return (
+        <Marco>
+          <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
+          <div className={`card ${tono}`}>
+            No se ha podido precalificar el hogar: {preHogar.mensaje}
+          </div>
+        </Marco>
+      )
+    }
     return (
       <Marco>
-        <Cabecera sub={sub} polizaId={p.id} />
-        <div className="card">
-          <h2>Hogar se sigue retarificando en asegura</h2>
-          <p>
-            La pantalla de hogar pide datos que esta todavía no sabe pedir (metros, año de
-            construcción, capitales y el Catastro del riesgo). Está{' '}
-            <strong>pendiente de traer</strong>: hasta entonces se hace allí.
-          </p>
-          <p className="muted">
-            Es otro dominio, así que puede pedirte la contraseña de asegura.
-          </p>
-          <p>
-            <a
-              href={urlRetarificarHogarAsegura(p.id)}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ fontWeight: 700 }}
-            >
-              Retarificar hogar en asegura ↗
-            </a>
-          </p>
-        </div>
+        <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
+        <RetarificadorHogar polizaId={p.id} preInicial={preHogar.pre} />
       </Marco>
     )
   }
