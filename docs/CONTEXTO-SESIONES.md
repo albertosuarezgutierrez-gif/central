@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Alberto vio 4 avisos reales en la intranet de ingesta; separados por sistema (Codeoscopic
+≠ CIMA, corregido tras confundirlos): Mapfre/C0058 en silencio es llamada suya (comunicación, no código).
+Arreglados en `asegura` (PR #839, `claude/loo-969-codeoscopic-batch-cima-reconcile`): **LOO-969** —
+Codeoscopic mandaba lotes de 2 emisiones en un array raíz (131 veces/3 días, misma forma LOO-322 por
+elemento) y se quedaban en cuarentena; `parseCodeoscopicWebhookBatch` los valida y procesa todo-o-nada.
+**CIMA reconcile** nunca se disparaba solo — los crons `schedule` no llevan `github.event.inputs`; añadido
+3er cron (06:00 UTC) que activa `reconcile=1` por `github.event.schedule`. 3892/3980 tests, tsc/eslint limpios.
 **(17/09/2026)** `guardian-rama.mjs` daba un falso "commits huérfanos" al mergear PRs por MCP —
 la causa real: la rama LOCAL `main` de este checkout iba desincronizada de `origin/main` (se
 quedó en un SHA viejo tras squash-merges anteriores), no basura huérfana como se pensó en un
