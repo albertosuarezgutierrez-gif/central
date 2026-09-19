@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026) Cartera viva ≠ en vigor: cancelada = lead.** Alberto vio a Kartenbrot (1 póliza cancelada)
+  como «Cartera viva» y «6 vivas» en Víctor De la Fuente (4 en vigor). Nuevo `esCarteraEnVigor()` /
+  `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` en `cartera-viva.ts` = viva Y `POLIZA_ESTADOS_VIGENTES`;
+  lo usan el listado (`cartera-filtro.ts`, leads = complementario exacto), y la base de «clientes sin
+  canal». Medido: 95 → **67 clientes / 105 pólizas**; 9 de los 10 «ilocalizables» eran ex-clientes.
+  `contacto_via_tercero` pasa a «Por su persona de referencia», tono neutro y detrás de «solo teléfono»
+  (dictado: «es la persona de referencia sobre esta póliza»). Pendiente: el cron de avisos sigue leyendo
+  solo la ficha del tomador — avisar por la persona de referencia es un cambio de envío que pide OK.
+
 **(17/09/2026)** `guardian-rama.mjs` daba un falso "commits huérfanos" al mergear PRs por MCP —
 la causa real: la rama LOCAL `main` de este checkout iba desincronizada de `origin/main` (se
 quedó en un SHA viejo tras squash-merges anteriores), no basura huérfana como se pensó en un

@@ -7,7 +7,13 @@ import {
   sqlVolcadoHistorico,
   WHERE_CARTERA_VIVA,
   WHERE_VOLCADO_HISTORICO,
+  esCarteraEnVigor,
+  esCarteraNoEnVigor,
+  sqlCarteraEnVigor,
+  sqlCarteraNoEnVigor,
+  WHERE_CARTERA_EN_VIGOR,
 } from './cartera-viva.ts'
+import { POLIZA_ESTADOS_VIGENTES } from './vigencia.ts'
 
 test('lo que baja de CIMA sin import_ref es cartera viva', () => {
   assert.equal(esCarteraViva({ importRef: null, eiacXmlHash: 'abc123' }), true)
@@ -61,4 +67,39 @@ test('el where de Prisma y el SQL crudo dicen lo mismo que el predicado', () => 
   assert.equal(sqlCarteraViva(), '(p.import_ref is null or p.eiac_xml_hash is not null)')
   assert.equal(sqlCarteraViva('pol'), '(pol.import_ref is null or pol.eiac_xml_hash is not null)')
   assert.equal(sqlVolcadoHistorico('x'), '(x.import_ref is not null and x.eiac_xml_hash is null)')
+})
+
+// ─── Cartera EN VIGOR (19/09/2026) ──────────────────────────────────────────
+
+test('🚨 el caso Kartenbrot: una póliza de CIMA cancelada es viva (origen) pero NO en vigor', () => {
+  const p = { importRef: null, eiacXmlHash: 'abc', estado: 'cancelada' }
+  assert.equal(esCarteraViva(p), true)
+  assert.equal(esCarteraEnVigor(p), false)
+  assert.equal(esCarteraNoEnVigor(p), true)
+})
+
+test('una activa de CIMA está en vigor; una activa del volcado, no', () => {
+  assert.equal(esCarteraEnVigor({ importRef: null, eiacXmlHash: 'abc', estado: 'activa' }), true)
+  assert.equal(esCarteraEnVigor({ importRef: 'intranet:1', eiacXmlHash: null, estado: 'activa' }), false)
+})
+
+test('en vigor = los estados de POLIZA_ESTADOS_VIGENTES, no un «distinto de cancelada»', () => {
+  // El enum tiene DIEZ valores: vencida, fin_riesgo, competencia… tampoco están en vigor.
+  for (const estado of POLIZA_ESTADOS_VIGENTES) {
+    assert.equal(esCarteraEnVigor({ importRef: null, eiacXmlHash: null, estado }), true, estado)
+  }
+  for (const estado of ['cancelada', 'vencida', 'fin_riesgo', 'anula_al_vencimiento', 'competencia', '', null, undefined]) {
+    assert.equal(esCarteraEnVigor({ importRef: null, eiacXmlHash: null, estado }), false, String(estado))
+  }
+})
+
+test('el where de Prisma y el SQL de «en vigor» dicen lo mismo que el predicado', () => {
+  assert.deepEqual(WHERE_CARTERA_EN_VIGOR, {
+    AND: [WHERE_CARTERA_VIVA, { estado: { in: [...POLIZA_ESTADOS_VIGENTES] } }],
+  })
+  assert.equal(
+    sqlCarteraEnVigor('p'),
+    "((p.import_ref is null or p.eiac_xml_hash is not null) and p.estado::text in ('activa', 'en_renovacion', 'en_vigor', 'recibo_devuelto', 'cambio_clave'))",
+  )
+  assert.equal(sqlCarteraNoEnVigor('x'), `(not ${sqlCarteraEnVigor('x')})`)
 })
