@@ -39,8 +39,9 @@ test('topes de longitud', () => {
 
 test('solo los ramos de inmueble admiten dirección de riesgo', () => {
   assert.equal(admiteDireccionRiesgo('hogar'), true)
-  assert.equal(admiteDireccionRiesgo(' Comercio '), true)
-  assert.equal(admiteDireccionRiesgo('comunidades'), true)
+  assert.equal(admiteDireccionRiesgo(' Comunidades '), true)
+  // comercio se describe por actividad: la ficha no pintaría la calle
+  assert.equal(admiteDireccionRiesgo('comercio'), false)
   assert.equal(admiteDireccionRiesgo('auto'), false)
   assert.equal(admiteDireccionRiesgo('vida'), false)
   assert.equal(admiteDireccionRiesgo(null), false)

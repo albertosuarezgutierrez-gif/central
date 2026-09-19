@@ -190,7 +190,15 @@ export type PolizaPortal = {
    * En los dos, `null` = **no informado o no visible**, jamás «no tiene»: la
    * pantalla no pinta nada, que es la regla de visibilidad del portal.
    */
-  bien: BienAsegurado
+  bien: BienAsegurado & {
+    /**
+     * `true` = la fila (o su gemela) TRAE la dirección pero llega cifrada y
+     * aquí no se ha podido abrir (sin `PII_ENCRYPTION_KEY` o con otra). Es
+     * un «no lo puedo leer», no un «no la hay»: la ficha no dice entonces
+     * que la compañía no la ha comunicado.
+     */
+    ubicacionCifrada: boolean
+  }
 }
 
 export type TitularPortal = {
@@ -336,6 +344,14 @@ function claveGemela(
  * fallo de descifrado tiene que acabar en el cepo de `campo()`, no en un hueco
  * indistinguible de «la compañía no lo ha informado».
  */
+/** ¿Queda un sobre `v1:` SIN abrir tras intentar descifrar? Entonces la dirección
+ *  EXISTE y solo no se puede leer aquí: la ficha no puede afirmar que falta. */
+function direccionSigueCifrada(datos: unknown): boolean {
+  if (typeof datos !== 'object' || datos === null || Array.isArray(datos)) return false
+  const d = (datos as Record<string, unknown>).direccion
+  return typeof d === 'string' && d.startsWith('v1:')
+}
+
 function descifrarDireccion(datos: unknown): unknown {
   if (typeof datos !== 'object' || datos === null || Array.isArray(datos)) return datos
   const d = datos as Record<string, unknown>
@@ -720,6 +736,12 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           // Mismo nivel que `cosa`: es el mismo dato de contrato, solo que
           // suelto para poder autorrellenar un campo sin parsear el texto.
           matricula: ve.bien ? b.matricula : null,
+          // Se vuelve a intentar abrir, a propósito: lo que importa es si el
+          // sobre `v1:` SIGUE cerrado después del descifrado, en cualquiera de
+          // las dos filas.
+          ubicacionCifrada:
+            direccionSigueCifrada(descifrarDireccion(p.datosEspecificos)) ||
+            direccionSigueCifrada(descifrarDireccion(gemelaDe(p))),
         }
       })(),
       // Una sola lectura y una sola guarda: los abiertos se DERIVAN del

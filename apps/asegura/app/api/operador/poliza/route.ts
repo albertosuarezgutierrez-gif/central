@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 //   - sin `campo` (o `campo: 'modalidad_rc'`): la MODALIDAD de una RC. Body
 //     `{ id, modalidad, nota?, actor }`.
 //   - `campo: 'direccion_riesgo'`: la DIRECCIÓN DEL RIESGO de un inmueble
-//     (hogar/comercio/comunidades). Body `{ id, direccion, cp?, localidad?, actor }`.
+//     (hogar/comunidades). Body `{ id, direccion, cp?, localidad?, actor }`.
 //     409 `ya_informada` si la póliza ya la trae: no se pisa desde aquí.
 export async function PATCH(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ estado: 'error', motivo: 'No autorizado' }, { status: 401 })

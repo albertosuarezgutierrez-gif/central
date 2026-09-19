@@ -5,7 +5,7 @@ import { btnStyle } from '@/components/ui'
 
 /**
  * «¿Dónde está el inmueble?» — CIMA no manda la dirección del riesgo de
- * hogar/comercio/comunidades, y una póliza que solo ha entrado por CIMA sin
+ * hogar/comunidades, y una póliza que solo ha entrado por CIMA sin
  * gemela en el volcado no la tiene en ninguna parte (19/09/2026: 32 hogar
  * solo-CIMA vivas, 2 con dirección). Este es el único camino para anotarla.
  *

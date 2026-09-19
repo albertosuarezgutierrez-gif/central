@@ -118,8 +118,10 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
           {/* 🏠 En un hogar la dirección hace de matrícula, y CIMA no la manda:
               si falta se DICE (regla «dato que no hay ≠ dato no mirado»), en
               vez de dejar la ficha titulada «Occident · Hogar» sin explicar.
-              Solo en las tuyas: en una ajena `null` también puede ser tu nivel. */}
-          {!deOtro && p.bien.ubicacion === null && esRamoInmueble(p.ramo) && (
+              Solo en las tuyas: en una ajena `null` también puede ser tu nivel.
+              Y nunca si la dirección EXISTE pero llega cifrada sin clave: eso
+              sería afirmar una ausencia que no se ha comprobado. */}
+          {!deOtro && p.bien.ubicacion === null && !p.bien.ubicacionCifrada && esRamoInmueble(p.ramo) && (
             <Dato etiqueta="Dirección del inmueble" valor="La compañía no nos la ha comunicado. Tu correduría puede anotarla." />
           )}
           <Dato etiqueta="Compañía" valor={p.compania} />

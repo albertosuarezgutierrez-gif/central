@@ -67,7 +67,7 @@ export async function establecerModalidadRc(
 
 // ─── Dirección del riesgo (19/09/2026) ───────────────────────────────────────
 //
-// CIMA NO manda los datos del riesgo de hogar/comercio/comunidades: una póliza
+// CIMA NO manda los datos del riesgo de hogar/comunidades: una póliza
 // que solo ha entrado por CIMA y no tiene gemela en el volcado no tiene
 // dirección en ninguna parte, y el portal la titula «Occident · Hogar» dos
 // veces seguidas. Medido el 19/09/2026 sobre la cartera viva: 32 hogar
@@ -113,7 +113,7 @@ export async function establecerDireccionRiesgo(
       return { ok: false, estado: 'no_encontrado', motivo: 'Esa póliza no está en la cartera de esta correduría.', status: 404 }
     }
     if (!admiteDireccionRiesgo(String(poliza.tipo))) {
-      return { ok: false, estado: 'invalido', motivo: 'Solo se anota dirección del riesgo en pólizas de hogar, comercio o comunidades.', status: 422 }
+      return { ok: false, estado: 'invalido', motivo: 'Solo se anota dirección del riesgo en pólizas de hogar o comunidades.', status: 422 }
     }
 
     const previos = poliza.datosEspecificos && typeof poliza.datosEspecificos === 'object' && !Array.isArray(poliza.datosEspecificos)

@@ -14,8 +14,12 @@
  * Misma separación que `rc-modalidad.ts`.
  */
 
-/** Ramos cuyo bien es un INMUEBLE: los únicos donde tiene sentido una dirección de riesgo. */
-export const RAMOS_CON_DIRECCION_RIESGO: ReadonlySet<string> = new Set(['hogar', 'comercio', 'comunidades'])
+/**
+ * Ramos donde la dirección del riesgo IDENTIFICA el bien y la ficha la pinta
+ * (`objetoInmueble` en `objeto.ts`). `comercio` queda fuera a propósito: se
+ * describe por actividad/coberturas y `objetoComercio` no lee `direccion`, así
+ * que lo anotado se guardaría y nunca se vería — y el botón volvería a salir. */
+export const RAMOS_CON_DIRECCION_RIESGO: ReadonlySet<string> = new Set(['hogar', 'comunidades'])
 
 export function admiteDireccionRiesgo(tipo: unknown): boolean {
   return typeof tipo === 'string' && RAMOS_CON_DIRECCION_RIESGO.has(tipo.trim().toLowerCase())

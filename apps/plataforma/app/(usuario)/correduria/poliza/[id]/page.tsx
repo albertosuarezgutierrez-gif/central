@@ -7,6 +7,7 @@ import EditarModalidadRc from './EditarModalidadRc'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
+import type { ObjetoFicha } from '@/lib/ficha-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { eur } from '@/lib/dinero'
@@ -170,6 +171,11 @@ function Objeto({ p }: { p: Poliza }) {
   const conocido = propio !== null && propio.estado === 'conocido' && (propio.titulo || propio.detalle)
   const gem = p.gemela?.objeto
   const gemConocida = gem && gem.estado === 'conocido' && (gem.titulo || gem.detalle)
+  // «Conocido» no es «con calle»: un objeto puede ser conocido solo por
+  // localidad/CP o m² (nota «Sin dirección informada…»). Para decidir si se
+  // ofrece anotar la dirección hay que mirar la CALLE en cada fila.
+  const conCalle = (o: ObjetoFicha | null | undefined) => !!o && o.estado === 'conocido' && !(o.nota ?? '').includes('Sin dirección')
+  const sinCalle = { propia: conCalle(propio), gemela: conCalle(gem), cifrada: propio?.estado === 'cifrado' || gem?.estado === 'cifrado' }
   return (
     <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
       {conocido ? (
@@ -193,8 +199,7 @@ function Objeto({ p }: { p: Poliza }) {
           la gemela la traen, el corredor la anota aquí. `cifrado` NO cuenta como
           falta —la dirección existe, solo que aquí no se lee— y el puerto la
           rechazaría con 409 igualmente. */}
-      {admiteDireccionRiesgo(p.tipo) && !gemConocida && propio?.estado !== 'cifrado' &&
-        (!conocido || (propio.nota ?? '').includes('Sin dirección')) && (
+      {admiteDireccionRiesgo(p.tipo) && !sinCalle.cifrada && !sinCalle.propia && !sinCalle.gemela && (
         <EditarDireccionRiesgo polizaId={p.id} />
       )}
       {!conocido && !gemConocida && p.gemelaInformada && p.gemela === null && (
