@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-19T09:49:28Z",
-  "sha": "25372419d1d58dd220ca20a5a0356b570395016d",
+  "generadoEn": "2026-09-19T20:55:07Z",
+  "sha": "5c77a8e9daa82967efe47a84edd6375ad3d223e4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3243,7 +3243,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ed3169217ffc"
+      "hash": "41d01b7234ef"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/AnadirPoliza.tsx",
@@ -3383,6 +3383,71 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "56967b76ca73"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/carta/[id]/AccionesCarta.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "AccionesCarta"
+      ],
+      "funciones": [
+        {
+          "nombre": "AccionesCarta",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ asunto, cuerpo }: { asunto: string; cuerpo: string }",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "Copiar e imprimir la carta. Son las DOS únicas salidas: al portapapeles y a la impresora del propio navegador. No hay «enviar» — la carta es de la persona a su compañía, y sale por el canal que ella e"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "60fae3648e18"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/carta/[id]/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CartaNoRenovacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "CartaNoRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 37,
+          "resumen": "La carta de NO RENOVACIÓN de una póliza que el cliente AÑADIÓ (otra compañía). Se compone con lo que sabemos, se enseña y la persona la copia o la imprime. Aquí no se envía nada a nadie. 🚨 La identid"
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": null,
+      "hash": "cd3915f8b395"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/ConsentimientoComercial.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "ConsentimientoComercial"
+      ],
+      "funciones": [
+        {
+          "nombre": "ConsentimientoComercial",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ inicial }: { inicial: boolean | null }",
+          "retorno": null,
+          "linea": 26,
+          "resumen": "La casilla INDEPENDIENTE de «quiero que me propongáis alternativas». Es la pieza que faltaba para que el gestor de pólizas pueda ser, además de un servicio, una fuente de leads sin engaño: subir una p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "599077ac5e41"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/EditarPoliza.tsx",
@@ -3675,7 +3740,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 65
+          "linea": 70
         },
         {
           "nombre": "Titular",
@@ -3683,7 +3748,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date }",
           "retorno": null,
-          "linea": 566,
+          "linea": 605,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -3692,13 +3757,15 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], titular?: string",
           "retorno": "PolizaOpcionParte",
-          "linea": 615,
+          "linea": 654,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next"
+      ],
       "rutaApi": null,
-      "hash": "5032ef8bcab8"
+      "hash": "2f28405d7dac"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -4109,6 +4176,27 @@
       "hash": "eb98aa65b482"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/Solapamientos.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Solapamientos"
+      ],
+      "funciones": [
+        {
+          "nombre": "Solapamientos",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ solapamientos }: { solapamientos: readonly Solapamiento[] }",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "«Esta cobertura está en dos de tus pólizas». Componente de servidor: solo pinta lo que `detectarSolapamientos()` ya decidió. 🚨 Informa, no juzga. El texto dice QUÉ cobertura aparece en QUÉ pólizas (c"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "551da8b82186"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -4421,6 +4509,29 @@
       "tablas": [],
       "rutaApi": "/api/catastro/sugerir",
       "hash": "e82ade008c14"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/consentimiento/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 36,
+          "resumen": "La casilla «quiero que me propongáis alternativas» (`comercial`), en las dos direcciones: marcar y retirar. 🚨 Lo que esta ruta NO hace, y por qué: - No actualiza ninguna fila. `portal_consentimiento`"
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/consentimiento",
+      "hash": "81c7b427b5f5"
     },
     {
       "ruta": "apps/asegura-portal/app/api/cron/avisos-push/route.ts",
@@ -5599,7 +5710,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ad46e647b67"
+      "hash": "5ffdcbd9e4d1"
     },
     {
       "ruta": "apps/asegura-portal/app/manifest.ts",
@@ -8264,7 +8375,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bd70a61085c3"
+      "hash": "dff84ea94d3e"
     },
     {
       "ruta": "apps/asegura-web/app/blog/page.tsx",
@@ -8315,6 +8426,43 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "afb0637b78c8"
+    },
+    {
+      "ruta": "apps/asegura-web/app/gestor-de-seguros/page.tsx",
+      "ambito": "apps/asegura-web",
+      "exporta": [
+        "PaginaGestor"
+      ],
+      "funciones": [
+        {
+          "nombre": "Check",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 30
+        },
+        {
+          "nombre": "fichaGestor",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Record<string, unknown>",
+          "linea": 43,
+          "resumen": "Ficha `SoftwareApplication` gratuita. Es lo que le dice a un buscador que esto es una herramienta y no un artículo, y que su precio es 0. El nombre y el operador salen de `MEDIADOR`, no se teclean."
+        },
+        {
+          "nombre": "PaginaGestor",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 58
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c9c85047b563"
     },
     {
       "ruta": "apps/asegura-web/app/icon.tsx",
@@ -8514,7 +8662,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b80a5085f5ed"
+      "hash": "d99a6672e574"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
@@ -8634,7 +8782,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e519b077d696"
+      "hash": "036bda142b99"
     },
     {
       "ruta": "apps/asegura-web/components/Analitica.tsx",
@@ -8706,6 +8854,26 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "39f85796ffe7"
+    },
+    {
+      "ruta": "apps/asegura-web/components/CalculadoraVencimientos.tsx",
+      "ambito": "apps/asegura-web",
+      "exporta": [
+        "CalculadoraVencimientos"
+      ],
+      "funciones": [
+        {
+          "nombre": "CalculadoraVencimientos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 31
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3262fa76e04a"
     },
     {
       "ruta": "apps/asegura-web/components/Cifras.tsx",
@@ -8864,7 +9032,7 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Articulo | null",
-          "linea": 370
+          "linea": 472
         },
         {
           "nombre": "textoArticulo",
@@ -8872,7 +9040,7 @@
           "exportada": true,
           "params": "a: Articulo",
           "retorno": "string",
-          "linea": 375,
+          "linea": 477,
           "resumen": "Todo el texto visible de un artículo, en una cadena, para barrerlo."
         },
         {
@@ -8881,7 +9049,7 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Articulo[]",
-          "linea": 387,
+          "linea": 490,
           "resumen": "Los artículos que enlazan con un ramo. Alimenta el enlazado de su página."
         },
         {
@@ -8890,13 +9058,124 @@
           "exportada": true,
           "params": "articulos: readonly Articulo[] = ARTICULOS",
           "retorno": "",
-          "linea": 411,
+          "linea": 514,
           "resumen": "Entradas de sitemap del blog: el índice más una fila por artículo. 🚨 Vive aquí, y no dentro de `app/sitemap.ts`, por una razón de VERIFICACIÓN: el sitemap de Next no se puede ejecutar desde `node --t"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a50ee093519b"
+      "hash": "c95ec0520f69"
+    },
+    {
+      "ruta": "apps/asegura-web/lib/calculadora-vencimientos.ts",
+      "ambito": "apps/asegura-web",
+      "resumen": "La cuenta del widget «¿Cuándo tienes que decidir?» de `/gestor-de-seguros`. Pura, sin fecha implícita, para que se pueda comprobar. 🚨 Es un GANCHO, no un gestor: no guarda nada, no pide registro, no manda nada a ningún servidor. Lo que hace es enseñar la única cuenta que la gente no hace —vencimien",
+      "exporta": [
+        "parsearFecha",
+        "calcularLinea",
+        "resumirLineas",
+        "fechaCorta"
+      ],
+      "funciones": [
+        {
+          "nombre": "diaUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "Date",
+          "linea": 37
+        },
+        {
+          "nombre": "parsearFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "Date | null",
+          "linea": 42,
+          "resumen": "`AAAA-MM-DD` → medianoche UTC, o `null` si no es una fecha real."
+        },
+        {
+          "nombre": "calcularLinea",
+          "kind": "function",
+          "exportada": true,
+          "params": "linea: LineaVencimiento, hoy: Date",
+          "retorno": "ResultadoLinea",
+          "linea": 59
+        },
+        {
+          "nombre": "resumirLineas",
+          "kind": "function",
+          "exportada": true,
+          "params": "lineas: readonly LineaVencimiento[], hoy: Date",
+          "retorno": null,
+          "linea": 68
+        },
+        {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 81
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ea518f766a9f"
+    },
+    {
+      "ruta": "apps/asegura-web/lib/companias-baja.ts",
+      "ambito": "apps/asegura-web",
+      "resumen": "Qué pide CADA compañía para no renovar una póliza — la materia prima de la serie «cómo dar de baja un seguro en [Compañía]» del plan de contenidos. 🚨 NADA de lo que hay aquí se publica mientras `verificado` sea `false`, y el cepo (`companias-baja.test.ts`) lo obliga. La razón es la regla de la casa",
+      "exporta": [
+        "esPublicable",
+        "companiasBajaPublicables"
+      ],
+      "funciones": [
+        {
+          "nombre": "esPublicable",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Pick<CompaniaBaja, 'verificado' | 'verificadoEl'>",
+          "retorno": "boolean",
+          "linea": 136,
+          "resumen": "Publicable = verificada Y con fecha con forma de fecha. Un `verificadoEl` de «pendiente» o «sí» es un «no lo he mirado» disfrazado de dato, y por eso NO cuela: el filtro exige el mismo formato que el "
+        },
+        {
+          "nombre": "companiasBajaPublicables",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "CompaniaBaja[]",
+          "linea": 141,
+          "resumen": "Las que se pueden publicar. Hoy: ninguna, y eso es lo correcto hasta que alguien verifique."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "999395e28d19"
+    },
+    {
+      "ruta": "apps/asegura-web/lib/gestor.ts",
+      "ambito": "apps/asegura-web",
+      "resumen": "La landing del GESTOR DE SEGUROS (`/gestor-de-seguros`): copy como datos, igual que `ramos.ts` y `articulos.ts`, para que el mismo cepo de copy regulado lo barra en cada commit y el JSON-LD salga de la misma fuente. ─── Qué es esta página y qué NO es ──────────────────────────────────────── Es la pá",
+      "exporta": [
+        "textoGestor"
+      ],
+      "funciones": [
+        {
+          "nombre": "textoGestor",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 158,
+          "resumen": "Todo el texto visible de la landing, en una cadena, para barrerlo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f569e413fe10"
     },
     {
       "ruta": "apps/asegura-web/lib/panel-demo.ts",
@@ -9070,7 +9349,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a5261abec75b"
+      "hash": "3d80a7a18262"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/hogar-nuevo/page.tsx",
@@ -127766,6 +128045,55 @@
       "hash": "aeef2b5eb2d5"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/carta-no-renovacion.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "La carta de NO RENOVACIÓN (oposición a la prórroga, art. 22 LCS), compuesta a partir de una póliza DECLARADA por el cliente — o sea, una de otra compañía que él mismo subió a la bóveda. Puro: sin BD, sin red, sin fecha implícita. La app le pasa la póliza y el «hoy», y de aquí sale el texto y la list",
+      "exporta": [
+        "fechaEnLetra",
+        "estadoPlazoCarta",
+        "componerCartaNoRenovacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "diaUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "Date",
+          "linea": 34
+        },
+        {
+          "nombre": "fechaEnLetra",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 39,
+          "resumen": "Fecha en letra, en UTC (las columnas `date` llegan como medianoche UTC)."
+        },
+        {
+          "nombre": "estadoPlazoCarta",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { fechaVencimiento: Date | null; hoy: Date }",
+          "retorno": "",
+          "linea": 63
+        },
+        {
+          "nombre": "componerCartaNoRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { poliza: PolizaParaCarta; tomador: string | null; hoy: Date }",
+          "retorno": "CartaNoRenovacion",
+          "linea": 105,
+          "resumen": "Compone la carta. `tomador` es el nombre de la identidad si lo sabemos; el NIF y la localidad NUNCA los sabe el portal, así que siempre salen como hueco (y por eso están en la lista aunque no sean par"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1f11b7caf8de"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/cobro-declarado.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "Cuándo le van a pasar el PRÓXIMO recibo a una póliza que el cliente ha declarado él mismo, para poder avisarle antes de que se lo carguen. Solo aplica a las DECLARADAS: la cartera de CIMA ya trae sus propios recibos reales en `poliza_recibos` (ver `@central/module-seguros/recibos.ts`), y ahí NO hace",
@@ -127867,18 +128195,28 @@
       "ambito": "packages/module-seguros-portal",
       "resumen": "Registro de consentimientos y acreditaciones del portal (`seguros.portal_consentimiento`). 🚨 La tabla admite tres tipos, pero NO son la misma cosa y por eso no se escriben igual: - **`lds_art19`** — no es un consentimiento del RGPD: es la **acreditación de que se facilitó la información precontract",
       "exporta": [
+        "consentimientoVigente",
         "necesitaRegistro",
         "normalizarIp",
         "normalizarUserAgent"
       ],
       "funciones": [
         {
+          "nombre": "consentimientoVigente",
+          "kind": "function",
+          "exportada": true,
+          "params": "guardados: readonly ConsentimientoConFecha[], tipo: TipoConsentimiento, versionActual?: string,",
+          "retorno": "boolean | null",
+          "linea": 75,
+          "resumen": "Estado VIGENTE de un consentimiento revocable: lo que dice la fila más reciente de ese tipo. `null` = nunca se le ha preguntado (no es «no»: la pantalla tiene que enseñar la casilla, no dar por hecho "
+        },
+        {
           "nombre": "necesitaRegistro",
           "kind": "function",
           "exportada": true,
           "params": "guardados: readonly ConsentimientoGuardado[], tipo: TipoConsentimiento, versionTexto: string,",
           "retorno": "boolean",
-          "linea": 58,
+          "linea": 110,
           "resumen": "¿Hay que escribir una fila nueva para este tipo y esta versión de texto? Sí cuando no consta ninguna fila otorgada de ese tipo **con esa versión exacta**. Dos consecuencias buscadas: - Entrar cien vec"
         },
         {
@@ -127887,7 +128225,7 @@
           "exportada": true,
           "params": "cabecera: string | null | undefined",
           "retorno": "string | null",
-          "linea": 79,
+          "linea": 131,
           "resumen": "Primera IP utilizable de una cabecera `X-Forwarded-For`, o `null`. La columna es `inet` de Postgres: meterle una cadena que no sea una IP hace fallar el INSERT entero, y con él —al ir en la misma tran"
         },
         {
@@ -127896,7 +128234,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "boolean",
-          "linea": 101
+          "linea": 153
         },
         {
           "nombre": "esIpv6",
@@ -127904,7 +128242,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "boolean",
-          "linea": 107
+          "linea": 159
         },
         {
           "nombre": "normalizarUserAgent",
@@ -127912,12 +128250,12 @@
           "exportada": true,
           "params": "ua: string | null | undefined",
           "retorno": "string | null",
-          "linea": 119
+          "linea": 171
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "027a1aa49baa"
+      "hash": "9266aec24c93"
     },
     {
       "ruta": "packages/module-seguros-portal/src/contacto-propio.ts",
@@ -129244,6 +129582,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "159635a598d7"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/solapamientos.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Coberturas que aparecen en MÁS DE UNA póliza de la misma persona. Puro: recibe las pólizas con su lista de coberturas (texto, tal como las informa la compañía por CIMA) y devuelve las familias que se repiten. 🚨 Lo que esto ES y lo que NO es: - ES un aviso INFORMATIVO: «esta cobertura está en dos pó",
+      "exporta": [
+        "detectarSolapamientos"
+      ],
+      "funciones": [
+        {
+          "nombre": "detectarSolapamientos",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizas: readonly PolizaConCoberturas[]",
+          "retorno": "Solapamiento[]",
+          "linea": 75,
+          "resumen": "Devuelve solo las familias presentes en DOS O MÁS pólizas distintas. Una póliza con dos coberturas que casan (p. ej. «Defensa jurídica» y «Reclamación de daños») cuenta UNA vez: el solapamiento es ent"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "66926695d90f"
     },
     {
       "ruta": "packages/module-seguros-portal/src/sugerencia-relacion.ts",
@@ -131539,7 +131899,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "494036bc0438"
+      "hash": "2f7d80512970"
     },
     {
       "ruta": "packages/module-seguros/src/mensaje-whatsapp.ts",
@@ -137846,7 +138206,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3368,
-    "funciones": 10429
+    "archivos": 3380,
+    "funciones": 10452
   }
 }

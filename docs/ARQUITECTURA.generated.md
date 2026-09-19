@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-19T09:49:28Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-19T20:55:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 42 packages · 23 capacidades · 41 skills · 1376 rutas API.
+**Resumen:** 13 apps · 42 packages · 23 capacidades · 41 skills · 1377 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-push, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** Notificaciones (push)
 - **Tablas (20):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_push_suscripcion, seguros.portal_supresion, seguros.portal_vinculo, seguros.portal_vista_corredor
-- **Rutas API:** 32
+- **Rutas API:** 33
 ### asegura-web
 - **Módulos que usa:** core-consent, module-seguros, module-seguros-portal
 - **Capacidades:** —
