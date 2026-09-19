@@ -41,6 +41,16 @@ test('🚨 el grupo cliente/lead NO se lee de `clientes.tipo`', () => {
   assert.match(FUENTE, /v\.polizas_vivas = 0/)
 })
 
+test('🚨 el grupo se deriva de las pólizas EN VIGOR, no de las «vivas» por origen (19/09/2026)', () => {
+  // Medido: 47 de las 157 pólizas de CIMA están canceladas y 28 clientes solo
+  // tenían canceladas — salían como «Cartera viva» (Kartenbrot) y el recuento
+  // decía «6 póliza(s) viva(s)» a quien tenía 4 en vigor. Cancelada = lead.
+  assert.match(FUENTE, /sqlCarteraEnVigor\('p'\)/)
+  assert.match(FUENTE, /sqlCarteraNoEnVigor\('p'\)/)
+  assert.doesNotMatch(FUENTE, /sqlCarteraViva\(/, 'el origen a secas incluye las canceladas')
+  assert.doesNotMatch(FUENTE, /sqlVolcadoHistorico\(/, 'los leads son el complementario de «en vigor», no solo el volcado')
+})
+
 test('la definición de cartera viva viene del módulo, no se reescribe a mano', () => {
   assert.match(FUENTE, /@central\/module-seguros/)
   // Escribir `import_ref is null` a pelo se salta el segundo brazo

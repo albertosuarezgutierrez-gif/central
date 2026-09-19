@@ -104,7 +104,12 @@ entender la arquitectura.
 🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son 80 clientes /
 110 pólizas** (03/09/2026) — las que entran o mantiene CIMA. ⚠️ De esas 110, **42 están `cancelada`**
 y **68 no** (medido 03/09/2026): CIMA manda también las canceladas y la regla de cartera viva no las
-distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. Los ramos:
+distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. ✅ **Cerrado el
+19/09/2026:** `esCarteraEnVigor()` / `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` (mismo fichero
+`cartera-viva.ts`) = viva Y estado en `POLIZA_ESTADOS_VIGENTES`. Es lo que deriva el grupo del listado
+(`cartera-filtro.ts`), el recuento «N póliza(s) viva(s)» y quién entra en «clientes sin canal»
+(`clientes-sin-canal.ts`). Medido ese día: 157 vivas → **105 en vigor, 67 clientes** (eran 95 con el origen
+a secas; Kartenbrot, con una sola póliza cancelada, pasa a leads). Los ramos:
 **auto 81 · hogar 19 · responsabilidad civil 9 · moto 1**. Las otras 28.728 son volcado histórico cargado en
 jun/2026 (`intranet:` 26.117 con vencimientos 2013-2018 y `asegura_app:` 2.611) y **ninguna** vence en los
 últimos 18 meses. Regla de Alberto: **CIMA = cliente actual; el resto = lead** (32.520).
