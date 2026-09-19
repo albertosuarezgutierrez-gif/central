@@ -40,9 +40,10 @@
  * en la pasada siguiente.
  */
 import { estadoPeticion, DIAS_VENTANA_AVISO } from '@central/module-seguros-portal'
-import { WHERE_CARTERA_VIVA, leerSitio, textoReparoSitio } from '@central/module-seguros'
+import { WHERE_CARTERA_VIVA, leerSitio, textoReparoSitio, caducidadCarnet } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { avisosActivos, destinatarioDeCliente, esSoloContar } from './avisos-vencimiento'
+import { descifrarCampo } from './cartera-edicion'
 import { cuerpoAvisosIntranet, enviarAvisosIntranet } from './correo-avisos-intranet'
 import { avisosNuevos, claveAviso, enlacePortal, type Pendiente } from './avisos-intranet-reglas'
 
@@ -196,6 +197,7 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
             codigoPostal: true,
             ciudad: true,
             provincia: true,
+            fechaNacimiento: true,
           },
         })
   const fichaPorId = new Map(fichas.map((f) => [f.id, f]))
@@ -211,6 +213,7 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
       obligaciones: [],
       peticiones: [],
       datos: [],
+      carnets: [],
     }
     por.set(clienteId, nuevo)
     return nuevo
@@ -277,6 +280,35 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     const { reparos } = leerSitio({ codigoPostal: f.codigoPostal, ciudad: f.ciudad, provincia: f.provincia })
     if (reparos.length === 0) continue
     dame(f.id).datos.push(...reparos.map((r) => ({ tipo: r.tipo, texto: textoReparoSitio(r) })))
+  }
+
+  // Carnés de conducir: misma acotación a CARTERA VIVA que los reparos de
+  // dirección (arriba) y la misma razón — hay que IR A MIRAR la ficha, no
+  // parte de una fila pendiente. Una fecha de carné o de nacimiento ilegible
+  // se omite fila a fila: es un dato de ESA persona que no se ha podido
+  // descifrar, no motivo para no avisar a las demás.
+  if (titularesVivos.size > 0) {
+    const carnets = await db.clienteCarnetConducir.findMany({
+      where: { clienteId: { in: [...titularesVivos] }, correduriaId },
+      select: { id: true, clienteId: true, tipo: true, fechaCarnet: true },
+    })
+    for (const c of carnets) {
+      const f = fichaPorId.get(c.clienteId)
+      if (!f) continue
+      const fechaNacimiento = descifrarCampo(f.fechaNacimiento)
+      if (fechaNacimiento === null) {
+        console.warn(`[asegura/avisos-intranet] fecha de nacimiento ilegible para el cliente ${c.clienteId}; se omite su carné ${c.id}`)
+        continue
+      }
+      const fechaCarnet = descifrarCampo(c.fechaCarnet)
+      if (fechaCarnet === null) {
+        console.warn(`[asegura/avisos-intranet] fecha de carné ilegible en la fila ${c.id}; se omite`)
+        continue
+      }
+      const r = caducidadCarnet({ fechaCarnet, fechaNacimiento, tipo: c.tipo })
+      if (r === null) continue
+      dame(c.clienteId).carnets.push({ id: c.id, tipo: c.tipo, fechaCaducidad: r.fechaCaducidad })
+    }
   }
 
   return [...por.values()]

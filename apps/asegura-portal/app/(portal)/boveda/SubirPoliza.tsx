@@ -179,12 +179,21 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   return (
     <section className="seccion" aria-labelledby="alta-titulo">
       <h2 id="alta-titulo">Añade una póliza</h2>
-      <p className="suave" style={{ fontSize: 14, marginTop: 0 }}>
-        Sube el PDF o una foto, o añádela a mano si no tienes el documento. Da igual que no sea nuestra:
-        la guardamos en tu bóveda y, si nos dices cuándo vence, podemos avisarte antes. Es tu apunte: no la
-        contratamos ni la gestionamos por ti. Si subes el fichero, además queda archivado para que podamos
-        revisarlo.
-      </p>
+      {/* 19/09/2026: el párrafo entero (4 líneas) empujaba los dos botones
+          fuera de la primera pantalla del móvil — justo lo que Alberto pidió
+          reducir. Se pliega, pero no desaparece: sigue siendo información que
+          cambia lo que alguien decide (qué pasa si sube el FICHERO frente a
+          añadirlo a mano), así que un resumen de una línea queda siempre
+          visible y el detalle está a un toque, no escondido del todo. */}
+      <details className="alta-explicacion plegable-suave">
+        <summary>Qué pasa con lo que subas</summary>
+        <p className="suave" style={{ fontSize: 14, margin: '6px 0 0' }}>
+          Sube el PDF o una foto, o añádela a mano si no tienes el documento. Da igual que no sea nuestra:
+          la guardamos en tu bóveda y, si nos dices cuándo vence, podemos avisarte antes. Es tu apunte: no la
+          contratamos ni la gestionamos por ti. Si subes el fichero, además queda archivado para que podamos
+          revisarlo.
+        </p>
+      </details>
 
       <div className="de-quien">
         <label className="de-quien-casilla">
