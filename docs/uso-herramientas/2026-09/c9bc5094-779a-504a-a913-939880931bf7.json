@@ -1,29 +1,82 @@
 {
  "sesion": "c9bc5094-779a-504a-a913-939880931bf7",
  "inicio": "2026-09-19T08:44:26.410Z",
- "fin": "2026-09-19T08:44:37.104Z",
- "llamadas": 3,
+ "fin": "2026-09-19T09:42:22.261Z",
+ "llamadas": 75,
  "categorias": {
   "otro": {
-   "llamadas": 1,
-   "chars_in": 25,
-   "chars_out": 46,
+   "llamadas": 19,
+   "chars_in": 627,
+   "chars_out": 216526,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 5,
+   "chars_citados": 7496,
    "tools": {
-    "Skill": 1
+    "Skill": 2,
+    "ToolSearch": 6,
+    "ReadNotifications": 11
    }
   },
   "bash": {
-   "llamadas": 2,
-   "chars_in": 731,
-   "chars_out": 1912,
+   "llamadas": 43,
+   "chars_in": 27283,
+   "chars_out": 163641,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 2
+    "Bash": 43
+   }
+  },
+  "mcp:github": {
+   "llamadas": 8,
+   "chars_in": 4865,
+   "chars_out": 16792,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__actions_list": 1,
+    "mcp__github__pull_request_read": 1,
+    "mcp__github__add_issue_comment": 2
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 326,
+   "chars_out": 407,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__apply_migration": 1
+   }
+  },
+  "sql": {
+   "llamadas": 2,
+   "chars_in": 568,
+   "chars_out": 1304,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 2
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 1,
+   "chars_in": 341,
+   "chars_out": 108,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 1
    }
   }
  }
