@@ -183,9 +183,12 @@ async function leerIntervinientesDePoliza(
       // Y si el interviniente está enlazado a SU PROPIA ficha de cliente y esa
       // ficha se dio de baja de correo, su email de ficha no cuenta — la baja
       // es suya, igual que la del tomador (`destinatarioDeCliente` ya la respeta).
+      // 🚨 El fallback es por VALIDEZ, no por null: un `??` se habría quedado
+      // con un email propio con formato roto (dato sucio, no ausente) y nunca
+      // habría probado el de la ficha, que puede ser el bueno.
+      const emailPropio = descifrar(f.email)
       const emailDeFicha = f.cliente && !f.cliente.emailOptOutAt ? descifrar(f.cliente.email) : null
-      const crudo = descifrar(f.email) ?? emailDeFicha
-      const email = crudo !== null && pareceEmail(crudo) ? crudo : null
+      const email = pareceEmail(emailPropio) ? emailPropio : pareceEmail(emailDeFicha) ? emailDeFicha : null
       return {
         id: f.id, polizaId: f.polizaId, rol: String(f.rol),
         nombre: propio ?? deFicha, nombreIlegible: false,
