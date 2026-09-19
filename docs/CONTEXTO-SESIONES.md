@@ -13,12 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 **(19/09/2026)** SIVRA pricing — House Sevillana: Alberto quitó en el extranet el descuento
-móvil 10% que aún quedaba activo (visto en la reserva 154638741 y en el análisis de esta sesión) y,
-a continuación, **la tarifa país 10%** también. Con Basic Deal 12%, Mobile y tarifa país fuera, solo
-queda **Genius 10%** — Alberto va a por él a continuación. Medido con el conector: para 12 personas
-en el centro histórico solo hay 4-5 casas enteras que compitan de verdad, todas más caras que House
-incluso a Standard Rate — con competencia tan escasa, el riesgo de perder ranking por bajar Genius
-es menor de lo habitual. Pendiente: ver el efecto en reservas de las próximas semanas.
+móvil 10% y la tarifa país 10%. Con Basic Deal 12% ya fuera de antes, solo quedaba Genius 10% — y
+**ese SÍ es intocable**: el panel de Booking lo marca «Obligatorio», de cuando la cuenta se unió al
+programa el 29/01/2018, sin botón para desactivarlo por esta vía (haría falta el flujo de opt-out
+del Programa Genius completo, no el toggle de descuentos por tarifa). No cambia la conclusión: con
+Genius 10% como único descuento (sin Mobile ni Basic Deal apilados), el suelo de Booking queda en
+~1,08×base — por encima del 0,932×base de la directa — así que el canal directo sigue siendo más
+barato con margen. Medido con el conector: para 12 personas en el centro histórico solo hay 4-5
+casas enteras que compitan de verdad, todas más caras que House incluso a Standard Rate.
 
 **(19/09/2026) Auditoría ligera: RCE de Next.js sin parchear 6 días + pricing pausado 4 días con su condición ya cumplida.**
 `main` seguía con `GHSA-2xp9-vwfh-vxw4` (RCE no autenticada, Image Optimization AVIF) porque los dos
