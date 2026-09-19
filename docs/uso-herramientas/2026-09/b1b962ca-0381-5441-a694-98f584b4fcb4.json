@@ -1,0 +1,104 @@
+{
+ "sesion": "b1b962ca-0381-5441-a694-98f584b4fcb4",
+ "inicio": "2026-09-19T08:56:37.726Z",
+ "fin": "2026-09-19T09:04:42.134Z",
+ "llamadas": 74,
+ "categorias": {
+  "otro": {
+   "llamadas": 7,
+   "chars_in": 1027,
+   "chars_out": 1683,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 5,
+    "PushNotification": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 6,
+   "chars_in": 551,
+   "chars_out": 62756,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 6
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 14,
+   "chars_in": 995,
+   "chars_out": 32575,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 6,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__get_thread": 6,
+    "mcp__Gmail__label_thread": 1
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 6,
+   "chars_in": 732,
+   "chars_out": 17529,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 5,
+    "mcp__Google-Drive__copy_file": 1
+   }
+  },
+  "bash": {
+   "llamadas": 16,
+   "chars_in": 2799,
+   "chars_out": 17875,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 16
+   }
+  },
+  "sql": {
+   "llamadas": 18,
+   "chars_in": 6518,
+   "chars_out": 35312,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 18
+   }
+  },
+  "escritura": {
+   "llamadas": 4,
+   "chars_in": 4531,
+   "chars_out": 1769738,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 4
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 2519,
+   "chars_out": 332,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1
+   }
+  }
+ }
+}

@@ -15,6 +15,24 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-19 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
+  Vía B sana (`_buzon_pdf` copió ayer 18/09, `dias_caido=1`); sin backlog en
+  `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, `agente_salud`
+  actualizado). Paso 1: ventana de 2 días solo trajo ruido (mensaje de huésped Booking, ticket
+  soporte Smoobu) + 1 recibo nuevo real: Anthropic #2391-9945 (170€, 17/09, "Prepaid extra usage")
+  → clasificado `seguros`, archivado en `09-Septiembre-2026`, fila nueva en `facturas_drive`. Paso
+  4.0: revisado el hueco de 5 recibos "Anthropic Ireland — Prepaid extra usage" (76,50€ 08/09 ·
+  170€×3 09/09-11/09-17/09) que llevaban `sin_revisar` desde el 14/09 — búsqueda exhaustiva
+  confirma que NINGÚN cargo de -170€ existe en `movimientos_bancarios` en todo Sept (ninguna
+  cuenta), y tampoco aparecen cargos de Vercel/OpenRouter/IONOS/PriceLabs pese a tener factura de
+  esas fechas: marcados `fuera_del_feed` (igual que Pepephone) — pagan con una tarjeta ("...5332"
+  según los recibos Stripe) que no está en el feed PSD2, así que ese gasto real (510-680€ solo en
+  créditos Anthropic desde el 09/09) es invisible en `/finanzas` hasta que se conecte esa tarjeta.
+  El recibo de 76,50€ SIGUE ambiguo (dos cargos -76,50€ ANTHROPIC IRELAND, 07/09 y 10/09, y solo un
+  recibo que lo explique) — no auto-confirmado, dejado `sin_revisar` para decisión de Alberto.
+  dudas: falta un recibo o hay un cargo duplicado de 76,50€ en el banco (07/09 vs 10/09); qué
+  tarjeta es la "...5332" de Stripe y si conviene conectarla al feed PSD2. fallos: —; PRs/commits:
+  este commit.
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo

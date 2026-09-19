@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** `facturas-correo`: pasada diaria. Archivado recibo Anthropic 170€ (#2391-9945,
+17/09). Barrido backlog: 4 recibos "Anthropic Ireland — Prepaid extra usage" (76,50€+170€×3,
+09-17/09) marcados `fuera_del_feed` — pagan con una tarjeta ("...5332") que NO está en el feed
+PSD2, gasto real 510-680€ invisible en `/finanzas`. Pendiente: conectar esa tarjeta, y decidir a
+cuál de los DOS cargos -76,50€ (07/09 y 10/09) corresponde el único recibo de 76,50€ (sobra uno).
+Detalle en `docs/AGENTES-BITACORA.md`.
+
 **(19/09/2026)** `apps/asegura-portal`, retoque tras el PR #3091 ya mergeado: Alberto en
 producción, «no se podría unificar la parte de arriba? Hay mucho espacio libre» — el ☰ ya no
 abre su propia franja debajo de la marca, se porta con `createPortal` a un slot de
