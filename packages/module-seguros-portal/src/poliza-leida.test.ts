@@ -8,6 +8,7 @@ import {
   ETIQUETA_RAMO,
   etiquetaRamo,
   coberturaEspecificaDeRamo,
+  vencimientoDesdeEfecto,
 } from './poliza-leida.ts'
 
 test('todo ramo del vocabulario tiene etiqueta, y ninguna es el enum crudo', () => {
@@ -109,4 +110,31 @@ test('un ramo fuera de la lista es null; «otros» SI es una respuesta valida', 
 test('seLeyoAlgo distingue «no hemos leido nada» de «hemos leido algo»', () => {
   assert.equal(seLeyoAlgo(polizaLeidaVacia()), false)
   assert.equal(seLeyoAlgo(normalizarPolizaLeida({ compania: 'Axa' })), true)
+})
+
+test('vencimientoDesdeEfecto: mismo día/mes, este año si aún no ha pasado', () => {
+  const hoy = new Date('2026-09-19T00:00:00Z')
+  assert.equal(vencimientoDesdeEfecto('2017-01-30', hoy), '2027-01-30')
+  assert.equal(vencimientoDesdeEfecto('2020-12-01', hoy), '2026-12-01')
+})
+
+test('vencimientoDesdeEfecto: si el aniversario de este año ya pasó, salta al que viene', () => {
+  const hoy = new Date('2026-09-19T00:00:00Z')
+  assert.equal(vencimientoDesdeEfecto('2020-01-30', hoy), '2027-01-30')
+  assert.equal(vencimientoDesdeEfecto('2020-09-18', hoy), '2027-09-18')
+})
+
+test('vencimientoDesdeEfecto: hoy mismo cuenta como vencimiento de este año', () => {
+  assert.equal(vencimientoDesdeEfecto('2020-09-19', new Date('2026-09-19T00:00:00Z')), '2026-09-19')
+})
+
+test('vencimientoDesdeEfecto: un 29 de febrero cae al 28 en año no bisiesto', () => {
+  assert.equal(vencimientoDesdeEfecto('2020-02-29', new Date('2026-01-01T00:00:00Z')), '2026-02-28')
+  assert.equal(vencimientoDesdeEfecto('2020-02-29', new Date('2027-03-01T00:00:00Z')), '2028-02-29')
+})
+
+test('vencimientoDesdeEfecto: sin fecha válida, null', () => {
+  assert.equal(vencimientoDesdeEfecto(null), null)
+  assert.equal(vencimientoDesdeEfecto('no consta'), null)
+  assert.equal(vencimientoDesdeEfecto('30/01/2017'), null)
 })
