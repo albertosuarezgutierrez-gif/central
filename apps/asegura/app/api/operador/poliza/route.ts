@@ -4,7 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { fichaPoliza } from '@/lib/cartera-poliza'
-import { establecerModalidadRc } from '@/lib/cartera-poliza-editar'
+import { establecerDireccionRiesgo, establecerModalidadRc } from '@/lib/cartera-poliza-editar'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,9 +31,13 @@ export async function GET(req: Request) {
   }
 }
 
-// PATCH /api/operador/poliza — ÚNICA escritura de esta ruta: anotar a mano la
-// MODALIDAD de una RC cuando la compañía no manda coberturas por CIMA. Body
-// `{ id, modalidad, nota?, actor }`. Nunca sobre otro campo ni otro ramo.
+// PATCH /api/operador/poliza — anotar a mano lo que la compañía no manda por
+// CIMA. DOS operaciones y ninguna más, elegidas por `campo`:
+//   - sin `campo` (o `campo: 'modalidad_rc'`): la MODALIDAD de una RC. Body
+//     `{ id, modalidad, nota?, actor }`.
+//   - `campo: 'direccion_riesgo'`: la DIRECCIÓN DEL RIESGO de un inmueble
+//     (hogar/comercio/comunidades). Body `{ id, direccion, cp?, localidad?, actor }`.
+//     409 `ya_informada` si la póliza ya la trae: no se pisa desde aquí.
 export async function PATCH(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ estado: 'error', motivo: 'No autorizado' }, { status: 401 })
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
@@ -44,6 +48,15 @@ export async function PATCH(req: Request) {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error' })
+    if (body?.campo === 'direccion_riesgo') {
+      const r = await establecerDireccionRiesgo(correduria.id, id, {
+        direccion: body?.direccion,
+        cp: body?.cp,
+        localidad: body?.localidad,
+        actor,
+      })
+      return NextResponse.json(r, { status: r.status })
+    }
     const r = await establecerModalidadRc(correduria.id, id, { modalidad: body?.modalidad, nota: body?.nota, actor })
     return NextResponse.json(r, { status: r.status })
   } catch (e) {

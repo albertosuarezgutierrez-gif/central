@@ -194,7 +194,8 @@ function objetoInmueble(d: Record<string, unknown>, tipo: string): ObjetoAsegura
     titulo: titulo ?? (tipo === 'comunidad' ? 'Comunidad' : 'Vivienda'),
     detalle,
     nota: direccionClara !== null
-      ? null
+      // Anotada desde /correduria (19/09/2026): se dice que no vino de la compañía.
+      ? (claro(d.direccionOrigen) === 'manual' ? 'Dirección anotada a mano por la correduría; la compañía no la informa por CIMA.' : null)
       : direccionCifrada
         ? 'La calle exacta viene cifrada del CRM de origen: aquí solo se puede mostrar localidad y código postal.'
         : 'Sin dirección informada por la compañía.',

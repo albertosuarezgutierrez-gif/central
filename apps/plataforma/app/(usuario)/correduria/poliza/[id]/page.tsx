@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
 import type { CapitalAsegurado } from '@central/module-seguros'
 import Documentos from '../../Documentos'
+import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
@@ -187,6 +188,14 @@ function Objeto({ p }: { p: Poliza }) {
             ). CIMA no manda la dirección del riesgo.
           </div>
         </div>
+      )}
+      {/* 🏠 CIMA no manda la dirección del riesgo (19/09/2026): si ni la fila ni
+          la gemela la traen, el corredor la anota aquí. `cifrado` NO cuenta como
+          falta —la dirección existe, solo que aquí no se lee— y el puerto la
+          rechazaría con 409 igualmente. */}
+      {admiteDireccionRiesgo(p.tipo) && !gemConocida && propio?.estado !== 'cifrado' &&
+        (!conocido || (propio.nota ?? '').includes('Sin dirección')) && (
+        <EditarDireccionRiesgo polizaId={p.id} />
       )}
       {!conocido && !gemConocida && p.gemelaInformada && p.gemela === null && (
         <div style={muted}>Tampoco hay copia en el volcado con más datos.</div>

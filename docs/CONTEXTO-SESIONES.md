@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Portal cliente · «No aparece dirección seguro hogar en ningún lado» (las dos Occident
+de Alberto). Causa medida en BD: **CIMA no manda el riesgo de hogar** y esas pólizas no tienen gemela
+del volcado → sin dirección en ninguna parte (32 hogar solo-CIMA vivas, 2 con dirección). Arreglo:
+el corredor la anota desde `/correduria/poliza/[id]` (`EditarDireccionRiesgo.tsx` → proxy →
+`PATCH /api/operador/poliza` con `campo: 'direccion_riesgo'`, `establecerDireccionRiesgo` en asegura,
+calle cifrada con `encryptField` y claves iguales al volcado: `direccion`/`cp`/`localidad`, 409 si ya
+la trae). Regla pura `validarDireccionRiesgo` en `@central/module-seguros` (7 tests, cepo del CP visto
+morder). El portal ahora DICE que falta la dirección en la ficha propia de un inmueble (`esRamoInmueble`).
 **(17/09/2026)** `guardian-rama.mjs` daba un falso "commits huérfanos" al mergear PRs por MCP —
 la causa real: la rama LOCAL `main` de este checkout iba desincronizada de `origin/main` (se
 quedó en un SHA viejo tras squash-merges anteriores), no basura huérfana como se pensó en un
