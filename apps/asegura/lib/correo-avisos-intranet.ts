@@ -67,6 +67,10 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
     uno: 'un dato de tu dirección que conviene revisar',
     varios: 'datos de tu dirección que conviene revisar',
   },
+  carnet_en_ventana: {
+    uno: 'un carné de conducir que caduca pronto',
+    varios: 'carnés de conducir que caducan pronto',
+  },
 }
 
 /** Un aviso, reducido a lo único que el correo necesita: su clase. */

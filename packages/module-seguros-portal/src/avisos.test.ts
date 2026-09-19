@@ -27,7 +27,7 @@ const obl = (x: Partial<ObligacionParaAviso> & { id: string }): ObligacionParaAv
 const vacias = { otorgadas: [], recibidas: [] }
 
 test('una autorización RECIBIDA pendiente es un aviso que lleva a «Quién me ve», nunca a una acción', () => {
-  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [auto({ id: 'a1' })] }, obligaciones: [], peticiones: [], datos: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [auto({ id: 'a1' })] }, obligaciones: [], peticiones: [], datos: [], carnets: [], hoy: HOY })
   assert.equal(r.avisos.length, 1)
   const a = r.avisos[0]!
   assert.equal(a.tipo, 'autorizacion_pendiente')
@@ -39,14 +39,14 @@ test('una autorización RECIBIDA pendiente es un aviso que lleva a «Quién me v
 
 test('solo cuentan las PENDIENTES: una vigente, caducada o revocada no es un aviso', () => {
   const recibidas = [auto({ id: 'v', estado: 'vigente' }), auto({ id: 'c', estado: 'caducada' }), auto({ id: 'r', estado: 'revocada' })]
-  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas }, obligaciones: [], peticiones: [], datos: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas }, obligaciones: [], peticiones: [], datos: [], carnets: [], hoy: HOY })
   assert.deepEqual(r.avisos, [])
   assert.equal(r.globo, null, 'todo leído y nada pendiente = sin globo, no «0»')
 })
 
 test('una autorización que YO di y no han aceptado es el aviso espejo, y sin nombre no se inventa uno', () => {
   const otorgadas = [auto({ id: 'o1' }), auto({ id: 'o2', autorizadoNombre: null })]
-  const r = avisosDe({ autorizaciones: { otorgadas, recibidas: [] }, obligaciones: [], peticiones: [], datos: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: { otorgadas, recibidas: [] }, obligaciones: [], peticiones: [], datos: [], carnets: [], hoy: HOY })
   assert.equal(r.avisos.length, 2)
   assert.equal(r.avisos[0]!.tipo, 'autorizacion_sin_aceptar')
   assert.match(r.avisos[0]!.titulo, /^Gabriel Durán Martínez aún no ha aceptado/)
@@ -61,7 +61,7 @@ test('las obligaciones entran solo en la VENTANA del módulo (0..7 días antes d
     obl({ id: 'fuera', fechaAccionable: dias(DIAS_VENTANA_AVISO + 1) }),
     obl({ id: 'pasada', fechaAccionable: dias(-1) }),
   ]
-  const r = avisosDe({ autorizaciones: vacias, obligaciones, peticiones: [], datos: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: vacias, obligaciones, peticiones: [], datos: [], carnets: [], hoy: HOY })
   assert.deepEqual(
     r.avisos.map((a) => a.id),
     ['hoy', 'borde'],
@@ -72,20 +72,20 @@ test('las obligaciones entran solo en la VENTANA del módulo (0..7 días antes d
 })
 
 test('una fuente ilegible NO colapsa a «sin avisos»: se declara y el globo lleva «+»', () => {
-  const r = avisosDe({ autorizaciones: null, obligaciones: [obl({ id: 'o' })], peticiones: [], datos: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: null, obligaciones: [obl({ id: 'o' })], peticiones: [], datos: [], carnets: [], hoy: HOY })
   assert.deepEqual(r.fuentesIlegibles, ['autorizaciones'])
   assert.equal(r.avisos.length, 1, 'la fuente que SÍ se leyó se sirve igual')
   assert.equal(r.globo, '1+')
 
-  const cero = avisosDe({ autorizaciones: vacias, obligaciones: null, peticiones: [], datos: [], hoy: HOY })
+  const cero = avisosDe({ autorizaciones: vacias, obligaciones: null, peticiones: [], datos: [], carnets: [], hoy: HOY })
   assert.deepEqual(cero.fuentesIlegibles, ['obligaciones'])
   assert.equal(cero.globo, '0+', 'cero leídos con una fuente sin leer NO es «nada pendiente»')
 })
 
 test('ninguna fuente legible = «!»: no se sabe nada y se dice', () => {
-  const r = avisosDe({ autorizaciones: null, obligaciones: null, peticiones: null, datos: null, hoy: HOY })
+  const r = avisosDe({ autorizaciones: null, obligaciones: null, peticiones: null, datos: null, carnets: null, hoy: HOY })
   assert.deepEqual(r.avisos, [])
-  assert.deepEqual(r.fuentesIlegibles, ['peticiones', 'autorizaciones', 'obligaciones', 'datos'])
+  assert.deepEqual(r.fuentesIlegibles, ['peticiones', 'autorizaciones', 'obligaciones', 'datos', 'carnets'])
   assert.equal(r.globo, '!')
 })
 
@@ -112,7 +112,7 @@ test('cada tipo tiene destino, y es una pantalla del portal', () => {
 })
 
 test('una petición de acceso PENDIENTE produce un aviso que sale primero', () => {
-  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [] }, obligaciones: [], peticiones: [{ id: 'p1', estado: 'pendiente', solicitanteNombre: 'Juan García' }], datos: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [] }, obligaciones: [], peticiones: [{ id: 'p1', estado: 'pendiente', solicitanteNombre: 'Juan García' }], datos: [], carnets: [], hoy: HOY })
   assert.equal(r.avisos.length, 1)
   const p = r.avisos[0]!
   assert.equal(p.tipo, 'peticion_recibida')
@@ -123,7 +123,7 @@ test('una petición de acceso PENDIENTE produce un aviso que sale primero', () =
 })
 
 test('peticiones: null mete «peticiones» en fuentesIlegibles y el globo lleva «+»', () => {
-  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [] }, obligaciones: [], peticiones: null, datos: [], hoy: HOY })
+  const r = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [] }, obligaciones: [], peticiones: null, datos: [], carnets: [], hoy: HOY })
   assert.deepEqual(r.fuentesIlegibles, ['peticiones'])
   assert.equal(r.globo, '0+')
 })
@@ -134,6 +134,7 @@ test('un reparo de los datos de contacto avisa, y dice DÓNDE se corrige', () =>
     obligaciones: [],
     peticiones: [],
     datos: [{ tipo: 'cp_invalido', texto: 'El código postal guardado («0812») no es un código postal español de 5 dígitos.' }],
+    carnets: [],
     hoy: HOY,
   })
   assert.equal(r.avisos.length, 1)
@@ -147,7 +148,29 @@ test('un reparo de los datos de contacto avisa, y dice DÓNDE se corrige', () =>
 })
 
 test('datos: null se declara ilegible — «tus datos están bien» no se afirma sin mirarlos', () => {
-  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: null, hoy: HOY })
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: null, carnets: [], hoy: HOY })
   assert.deepEqual(r.fuentesIlegibles, ['datos'])
+  assert.equal(r.globo, '0+')
+})
+
+const fecha = (n: number) => dias(n).toISOString().slice(0, 10)
+
+test('un carné entra solo en su ventana (60 días), no en los 7 de las obligaciones', () => {
+  const carnets = [
+    { id: 'c1', tipo: 'B', fechaCaducidad: fecha(0) },
+    { id: 'c2', tipo: 'B', fechaCaducidad: fecha(60) },
+    { id: 'c3', tipo: 'C', fechaCaducidad: fecha(61) },
+    { id: 'c4', tipo: 'B', fechaCaducidad: fecha(-1) },
+  ]
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
+  assert.deepEqual(r.avisos.map((a) => a.id), ['c1', 'c2'])
+  assert.equal(r.avisos[0]!.tipo, 'carnet_en_ventana')
+  assert.equal(r.avisos[0]!.href, '/boveda')
+  assert.match(r.avisos[0]!.titulo, /\(B\) caduca pronto/)
+})
+
+test('carnets: null se declara ilegible, igual que las demás fuentes', () => {
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets: null, hoy: HOY })
+  assert.deepEqual(r.fuentesIlegibles, ['carnets'])
   assert.equal(r.globo, '0+')
 })
