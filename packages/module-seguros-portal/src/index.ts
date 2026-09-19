@@ -258,12 +258,31 @@ export { canalesDeLasPolizas } from './canal-compania.ts'
 export {
   TIPOS_CONSENTIMIENTO,
   TIPOS_QUE_SE_REGISTRAN,
+  TEXTO_CONSENTIMIENTO_COMERCIAL,
+  VERSION_TEXTO_COMERCIAL,
   USER_AGENT_MAX,
+  consentimientoVigente,
   necesitaRegistro,
   normalizarIp,
   normalizarUserAgent,
 } from './consentimiento.ts'
-export type { TipoConsentimiento, ConsentimientoGuardado } from './consentimiento.ts'
+export type { TipoConsentimiento, ConsentimientoGuardado, ConsentimientoConFecha } from './consentimiento.ts'
+
+// La carta de NO RENOVACIÓN (art. 22 LCS) sobre una póliza declarada. Lee su
+// cabecera: se compone y se enseña, NUNCA se envía desde el portal; y lo que
+// no sabemos (NIF, localidad) sale como hueco visible, no como dato inventado.
+export {
+  HUECOS_CARTA,
+  componerCartaNoRenovacion,
+  estadoPlazoCarta,
+  fechaEnLetra,
+} from './carta-no-renovacion.ts'
+export type { CartaNoRenovacion, EstadoPlazoCarta, HuecoCarta, PolizaParaCarta } from './carta-no-renovacion.ts'
+
+// Coberturas repetidas entre pólizas de la MISMA persona. Lee su cabecera: es
+// un aviso informativo («está en dos pólizas»), nunca un juicio («te sobra»).
+export { FAMILIAS_SOLAPAMIENTO, detectarSolapamientos } from './solapamientos.ts'
+export type { FamiliaSolapamiento, PolizaConCoberturas, Solapamiento } from './solapamientos.ts'
 
 // La solicitud de SUPRESIÓN (art. 17). Lee su cabecera antes de tocarla: este
 // módulo NO borra nada, y esa es la mitad del diseño — el art. 17.3.b y el

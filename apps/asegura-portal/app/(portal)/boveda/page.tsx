@@ -27,6 +27,9 @@ import { VistaPorPoliza } from './VistaPorPoliza'
 import {
   agruparCartera,
   avisoPartesConservados,
+  consentimientoVigente,
+  detectarSolapamientos,
+  VERSION_TEXTO_COMERCIAL,
   nombreDePila,
   saludoPorHora,
   vistaDeBoveda,
@@ -35,6 +38,8 @@ import {
 } from '@central/module-seguros-portal'
 
 import { AvisoContacto } from './AvisoContacto'
+import { ConsentimientoComercial } from './ConsentimientoComercial'
+import { Solapamientos } from './Solapamientos'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
@@ -119,6 +124,35 @@ export default async function Boveda({
   // solo lo que se pide). El array vacío en las demás vistas no se enseña en
   // ningún sitio, así que no hace falta que sea correcto, solo que exista.
   const recordatorios = vista === 'recordatorios' ? await recordatoriosDeIdentidad(identidad.id) : []
+
+  // La casilla comercial (19/09/2026): su estado vigente es la ÚLTIMA fila de
+  // `portal_consentimiento` de tipo `comercial`, y `null` = nunca preguntado.
+  // Solo se lee para la pestaña que la pinta.
+  const consentimientoComercial =
+    vista === 'datos'
+      ? consentimientoVigente(
+          await prisma.portalConsentimiento.findMany({
+            where: { identidadId: identidad.id, tipo: 'comercial' },
+            select: { tipo: true, otorgado: true, versionTexto: true, creadoEn: true },
+          }),
+          'comercial',
+          VERSION_TEXTO_COMERCIAL,
+        )
+      : null
+
+  // Coberturas repetidas entre las pólizas PROPIAS (19/09/2026). Solo las
+  // propias: que mi padre y yo tengamos defensa jurídica no es un solapamiento
+  // de nadie. Con `coberturas: null` (nivel sin acceso a ellas) la póliza cuenta
+  // como sin coberturas informadas, que es lo conservador: no se afirma nada.
+  const solapamientos = detectarSolapamientos(
+    cartera.propias.flatMap((t) =>
+      t.polizas.map((p) => ({
+        id: p.id,
+        titulo: `${p.compania} · ${RAMO[p.ramo] ?? p.ramo}`,
+        coberturas: p.coberturas?.lista ?? [],
+      })),
+    ),
+  )
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo ASegura'
@@ -390,6 +424,10 @@ export default async function Boveda({
         </section>
       ))}
 
+      {/* Coberturas que aparecen en más de una póliza propia. Con cero no se
+          pinta nada: ver la cabecera del componente. */}
+      <Solapamientos solapamientos={solapamientos} />
+
         </>
       )}
 
@@ -421,6 +459,7 @@ export default async function Boveda({
       {vista === 'datos' && (
         <>
           <MisDatos lectura={contacto} reparos={contacto.estado === 'ok' ? reparosDeContacto(contacto.contacto) : []} />
+          <ConsentimientoComercial inicial={consentimientoComercial} />
           <TusDatos inicial={supresiones} />
         </>
       )}
