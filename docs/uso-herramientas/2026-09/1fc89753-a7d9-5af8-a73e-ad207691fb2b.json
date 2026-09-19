@@ -1,52 +1,52 @@
 {
  "sesion": "1fc89753-a7d9-5af8-a73e-ad207691fb2b",
  "inicio": "2026-09-19T07:11:33.732Z",
- "fin": "2026-09-19T12:24:03.783Z",
- "llamadas": 208,
+ "fin": "2026-09-19T13:26:01.908Z",
+ "llamadas": 235,
  "categorias": {
   "otro": {
-   "llamadas": 66,
-   "chars_in": 25027,
-   "chars_out": 281491,
+   "llamadas": 75,
+   "chars_in": 25045,
+   "chars_out": 385646,
    "errores": 0,
-   "archivos_citados": 8,
-   "chars_citados": 77307,
+   "archivos_citados": 16,
+   "chars_citados": 121277,
    "tools": {
     "Skill": 3,
     "ToolSearch": 9,
     "WebSearch": 33,
     "SubagentHandback": 1,
     "ReportFindings": 1,
-    "ReadNotifications": 19
+    "ReadNotifications": 28
    }
   },
   "bash": {
-   "llamadas": 95,
-   "chars_in": 85443,
-   "chars_out": 535421,
+   "llamadas": 102,
+   "chars_in": 88923,
+   "chars_out": 540308,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 95
+    "Bash": 102
    }
   },
   "mcp:github": {
-   "llamadas": 23,
-   "chars_in": 8966,
-   "chars_out": 93405,
+   "llamadas": 33,
+   "chars_in": 10511,
+   "chars_out": 126210,
    "errores": 0,
-   "archivos_citados": 11,
-   "chars_citados": 70952,
+   "archivos_citados": 18,
+   "chars_citados": 120372,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 1,
     "mcp__github__subscribe_pr_activity": 1,
-    "mcp__github__pull_request_read": 15,
-    "mcp__github__add_issue_comment": 2,
+    "mcp__github__pull_request_read": 22,
+    "mcp__github__add_issue_comment": 3,
     "mcp__github__actions_list": 1,
     "mcp__github__update_pull_request": 1,
-    "mcp__github__resolve_review_thread": 1
+    "mcp__github__resolve_review_thread": 3
    }
   },
   "agente:general-purpose": {
@@ -73,14 +73,14 @@
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 4,
-   "chars_in": 1968,
-   "chars_out": 432,
+   "llamadas": 5,
+   "chars_in": 2485,
+   "chars_out": 540,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Claude_Code_Remote__send_later": 4
+    "mcp__Claude_Code_Remote__send_later": 5
    }
   }
  }
