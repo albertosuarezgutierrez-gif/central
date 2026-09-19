@@ -22,6 +22,16 @@ Genius 10% como único descuento (sin Mobile ni Basic Deal apilados), el suelo d
 barato con margen. Medido con el conector: para 12 personas en el centro histórico solo hay 4-5
 casas enteras que compitan de verdad, todas más caras que House incluso a Standard Rate.
 
+**(19/09/2026) Alberto pidió mergear y reparar: RCE cerrada en `main`, pricing despausado.**
+PR #3085 mergeado (`2a1b9cb0c`) — `next` parcheado en las 13 apps, `pnpm audit` en 0 críticas.
+Cerrados como duplicados #2857 y #3023 (mismo fix). `pricing_config.paused` puesto a `false`
+(estaba pausado desde el 15/09, su condición de despause ya se había cumplido ese mismo día).
+Sin tocar: el backlog de PRs de registro (#2318/#2322/#2483/#2877, 2+ semanas `dirty`/`blocked`)
+— ninguno es solo-texto (ver aviso de #2483) y no hay forma de aprobar sus checks por API; queda
+para que Alberto los revise a mano. Tampoco se envía la consulta de Mapfre a Codeoscopic (regla de
+comunicaciones salientes). Pendiente: confirmar en la próxima pasada (08:30/14:30/20:30 UTC) que
+el motor de pricing volvió a escribir precios reales.
+
 **(19/09/2026) Auditoría ligera: RCE de Next.js sin parchear 6 días + pricing pausado 4 días con su condición ya cumplida.**
 `main` seguía con `GHSA-2xp9-vwfh-vxw4` (RCE no autenticada, Image Optimization AVIF) porque los dos
 PRs que ya la arreglaban (#2857, #3023) siguen en draft con conflicto sin resolver — parcheado de
