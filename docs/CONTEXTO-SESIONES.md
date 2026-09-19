@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** SIVRA pricing — House Sevillana: Alberto quitó en el extranet el descuento
+móvil 10% que aún quedaba activo (visto en la reserva 154638741 y en el análisis de esta sesión).
+Con Basic Deal 12% y Mobile 15%→10%→0% fuera, queda solo Genius 10% + tarifa país 10% (suelo
+teórico 0,81 de la lista). Medido con el conector: para 12 personas en el centro histórico solo hay
+4-5 casas enteras que compitan de verdad, todas más caras que House incluso a Standard Rate — con
+competencia tan escasa, el riesgo de perder ranking por bajar más Genius es menor de lo habitual.
+Pendiente (Alberto): valorar quitar también la tarifa país 10%, y decidir sobre Genius entero tras
+unas semanas de datos del cambio.
+
 **(19/09/2026)** Portal cliente · Las 2 pólizas de Alejandro Soler que salían "sin ramo/sin compañía"
 en `/correduria` son PDFs con contraseña real (no vacía): `pdf-parse` lanza `PasswordException` (medido
 descargando los 2 ficheros de su Drive y probando con `pdf-parse` y `pdfjs-dist` 4.x directo — ninguno
