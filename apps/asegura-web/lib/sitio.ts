@@ -141,6 +141,10 @@ export const NAV = [
   // límite, ver `FUERA_DE_CABECERA` más abajo.
   { href: '/seguros/responsabilidad-civil-fontaneros', texto: 'RC de fontaneros' },
   { href: '/cambiar-de-correduria', texto: 'Cambiar de correduría' },
+  // La página de intención del gestor (19/09/2026): «organizar mis seguros en
+  // un solo sitio». Va al pie, como todo lo que no es ramo — la cabecera está
+  // medida al límite y `NAV_CABECERA` solo toma `/seguros/*`.
+  { href: '/gestor-de-seguros', texto: 'Gestor de seguros gratis' },
   // Recuperada del sitio anterior el 07/09/2026. No es un ramo: es la página de
   // más intención de problema que tiene el negocio, y la ÚNICA consulta en la
   // que ya competía —posición media 7,7 en Search Console, contra 49,3 de la

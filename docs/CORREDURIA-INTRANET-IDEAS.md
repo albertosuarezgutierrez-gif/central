@@ -261,6 +261,27 @@ Qué haría falta para que la promesa fuera cierta (sin construir nada de esto t
 📌 Pendiente: decidir con Alberto si el mecanismo real se persigue (y con qué coste/plazo) antes de
 que `seo-asegura` o cualquier campaña use este ángulo.
 
+### Q. El gestor como imán de leads — carta de baja, casilla comercial y solapamientos ✅ CONSTRUIDO (19/09/2026)
+
+Sale de valorar un prompt de consultoría SEO que Alberto trajo ese día («Gestor y Agregador de
+Pólizas Gratuito»). Spec: `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`.
+- ✅ **Carta de no renovación** (`/boveda/carta/[id]`, solo pólizas DECLARADAS): plazo por
+  `fechaAccionable()`, huecos visibles para lo que no sabemos (NIF, localidad), copiar/imprimir/
+  `mailto:` sin destinatario. **No se envía desde el portal.** Al lado, la alternativa H (cambio de
+  mediador) como enlace a la explicación de la web; el trámite firmado sigue siendo spec + OK.
+- ✅ **Casilla `comercial`** en «Mis datos» (`ConsentimientoComercial.tsx` + `POST /api/consentimiento`):
+  independiente, nace desmarcada, append-only, `VERSION_TEXTO_COMERCIAL`. Es lo que faltaba para
+  que subir una póliza y pedir una propuesta fueran dos actos distintos. `avisos` sigue sin casilla.
+- ✅ **Coberturas repetidas** (`detectarSolapamientos`, 3 familias, solo pólizas propias): informa
+  («está en dos pólizas»), no juzga («te sobra»). Con cero no se pinta nada.
+- ✅ **Landing `/gestor-de-seguros`** en la web + calculadora de vencimientos sin registro + artículo
+  «cómo dar de baja un seguro a tiempo» con CTA a la carta.
+- 🔴 **Descartado con motivo**: semáforo de precio (idea F, muestra minúscula + asesoramiento),
+  reseñas automatizadas, referidos con premio (§M), «teléfonos de todas las compañías».
+- ⏳ **De Alberto**: encender el aviso de vencimiento (sin él la landing dice «te lo enseña», no «te
+  avisamos») y verificar los canales de baja por compañía (`apps/asegura-web/lib/companias-baja.ts`,
+  todo `verificado: false` porque la red bloquea los cinco dominios).
+
 ## Preguntas abiertas para Alberto
 
 - ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?

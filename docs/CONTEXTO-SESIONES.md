@@ -28,6 +28,11 @@
   pregunta de la huésped de 5-7/02/2027. ⏳ Pendiente Alberto: que el motor de Smoobu muestre la MISMA condición
   (la web no la impone; la impone lo que el huésped ve al reservar). Directa 5-7/02 con 10 pax = 777,20€ frente
   a 872€ de su Booking con Genius: la web NO sale más cara para esas fechas.
+## (19/09/2026) Gestor de pólizas como imán de leads — landing, carta de baja, casilla comercial, solapamientos
+- Prompt de consultoría SEO de Alberto valorado: ~70 % ya existía; descartados semáforo de precio, reseñas automáticas y referidos con premio (motivos en el spec `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`). Después: «Hazlo todo».
+- Portal: `/boveda/carta/[id]` (carta art. 22 LCS, solo declaradas, NUNCA se envía), casilla `comercial` en «Mis datos» (`POST /api/consentimiento`, append-only, nace desmarcada), bloque de coberturas repetidas (3 familias, informa no juzga). Privacidad con fila 6.1.a → `VERSION_TEXTOS_LEGALES` `2026-09-v5`.
+- Web: `/gestor-de-seguros` (copy en `lib/gestor.ts` + cepo), calculadora de vencimientos sin registro, artículo `como-dar-de-baja-un-seguro-a-tiempo` con `Articulo.cta`. `lib/companias-baja.ts` con los 5 canales de baja **sin verificar** (red bloquea los dominios): cepo que impide publicarlos.
+- ⏳ Alberto: encender `ASEGURA_AVISOS_ACTIVOS` tras contar ≤112, y verificar los 5 canales de baja (10 min/compañía) para la serie por compañía.
 
 **(19/09/2026)** Plataforma — «el móvil me pide usuario siempre». NO era la cookie (30 días) ni faltaba
 una web app (ya es PWA instalable): `cuentas.session_jti` era UN jti por cuenta y cada login lo pisaba,
