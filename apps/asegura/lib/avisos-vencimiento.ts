@@ -169,7 +169,7 @@ async function leerIntervinientesDePoliza(
       select: {
         id: true, polizaId: true, rol: true, clienteId: true, origen: true,
         nombre: true, apellidos: true, email: true,
-        cliente: { select: { nombre: true, apellidos: true, email: true } },
+        cliente: { select: { nombre: true, apellidos: true, email: true, emailOptOutAt: true } },
       },
     })
     return filas.map((f) => {
@@ -180,7 +180,11 @@ async function leerIntervinientesDePoliza(
       // que pasa todo por `pareceEmail()` antes de devolverlo. Esta fila puede
       // acabar como destinatario de un `sendMail`, así que se valida aquí
       // también: un valor que no parece email es tan «sin canal» como uno vacío.
-      const crudo = descifrar(f.email) ?? descifrar(f.cliente?.email)
+      // Y si el interviniente está enlazado a SU PROPIA ficha de cliente y esa
+      // ficha se dio de baja de correo, su email de ficha no cuenta — la baja
+      // es suya, igual que la del tomador (`destinatarioDeCliente` ya la respeta).
+      const emailDeFicha = f.cliente && !f.cliente.emailOptOutAt ? descifrar(f.cliente.email) : null
+      const crudo = descifrar(f.email) ?? emailDeFicha
       const email = crudo !== null && pareceEmail(crudo) ? crudo : null
       return {
         id: f.id, polizaId: f.polizaId, rol: String(f.rol),
@@ -358,7 +362,10 @@ export async function ejecutarAvisosVencimiento(opts: {
     // El tomador no tiene NADA propio en su ficha: antes de darlo por «sin
     // canal», se mira su póliza (su propio dato mal guardado, o un
     // interviniente ajeno) y, si tampoco, su persona de referencia declarada.
-    if (!destino && poliza && o.polizaId) {
+    // 🚨 PERO si el tomador se dio de BAJA de correo, no se le rodea escribiendo
+    // a un tercero sobre su póliza: la baja es una decisión suya, no «no tengo
+    // dirección». `sinCanal` ya documenta este caso («...o baja de correo»).
+    if (!destino && poliza && o.polizaId && !poliza.cliente.emailOptOutAt) {
       const [intervinientes, allegados] = await Promise.all([
         leerIntervinientesDePoliza(db, poliza.correduriaId, poliza.cliente.id, o.polizaId),
         leerAllegadosDeTomador(db, poliza.correduriaId, poliza.cliente.id),
