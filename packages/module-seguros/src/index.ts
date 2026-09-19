@@ -411,6 +411,7 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export {
   parseFiltroCartera,
   filtroActivo,

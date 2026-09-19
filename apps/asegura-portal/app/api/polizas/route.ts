@@ -84,7 +84,7 @@ async function altaConDocumento(req: Request, identidadId: string) {
   // asegura caído), la póliza se guarda igual con lo que se pudo leer — es la
   // regla de la casa, «guardar primero, para no perder datos» no puede
   // convertirse en «si no se pudo archivar, no se guarda nada».
-  const [{ datos, fuente, camposRamo }, documentoGuardado] = await Promise.all([
+  const [{ datos, fuente, camposRamo, motivo }, documentoGuardado] = await Promise.all([
     extraerPoliza(buffer, fichero.type, fichero.name),
     guardarDocumentoPropio(identidadId, { tipo: 'poliza', nombre: fichero.name, mime: fichero.type, contenido: buffer }),
   ])
@@ -155,7 +155,7 @@ async function altaConDocumento(req: Request, identidadId: string) {
     fechaVencimiento: datos.fechaVencimiento,
   })
 
-  return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo, documentoGuardado: documentoGuardado.estado })
+  return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo, motivo, documentoGuardado: documentoGuardado.estado })
 }
 
 async function altaAMano(req: Request, identidadId: string) {
