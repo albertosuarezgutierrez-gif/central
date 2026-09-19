@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** `apps/asegura-portal`, retoque tras el PR #3091 ya mergeado: Alberto en
+producción, «no se podría unificar la parte de arriba? Hay mucho espacio libre» — el ☰ ya no
+abre su propia franja debajo de la marca, se porta con `createPortal` a un slot de
+`app/layout.tsx` y vive dentro de `.marca-barra` (icono 44×44, la sección activa pasa al
+`aria-label`). Y en «Añade una póliza», el párrafo largo se pliega tras un resumen de una
+línea (`<details>`) para que los botones de subir no queden fuera de la primera pantalla.
+`tsc`/`pnpm test`/`lint` en verde; cepo de la barra actualizado y visto en rojo→verde.
+
 **(19/09/2026)** `apps/asegura-portal`: nav a menú hamburguesa en móvil (la decisión de NO
 tenerla era de cuando había 4 pestañas; hoy son 6+ y Alberto lo pidió explícito), «Mis seguros»
 plegado por defecto agrupado por titular con «Añade una póliza» arriba, y el botón de teléfonos
