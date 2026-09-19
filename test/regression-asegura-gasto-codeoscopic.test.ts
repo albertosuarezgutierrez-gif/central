@@ -62,8 +62,24 @@ test('nadie llama al vendor por su cuenta: el POST de cotización pasa por cotiz
   // `CODEOSCOPIC_EMISION_ACTIVA` — distinto del de cotizar — y con su propio
   // candado de un solo intento (`submit_in_flight_at`). No es un segundo
   // camino sin control: es un segundo embudo, con guardas propias.
+  //
+  // 🚨 `lib/codeoscopic/product-form.ts` es la TERCERA excepción (17/09/2026):
+  // el relay hacia `POST /product-form-requests` que usa la Product Form
+  // Library (el widget del vendor para pintar el formulario REAL de cada
+  // compañía, en vez del catálogo estático adivinado de `opciones-producto.ts`).
+  // Es una operación DISTINTA de `/insurances*`: `docs/CODEOSCOPIC-API-PORTAL.md`
+  // solo marca `POST /insurances` como facturable, y esta va detrás del mismo
+  // interruptor GRATIS que `/insurance-lines` (`ignorarInterruptor: true`).
+  // Sin confirmación explícita del fabricante de que sea gratis (no hay
+  // fixture ni sandbox), pero no es la operación que cotiza ni la que
+  // compromete un contrato — esas siguen siendo las dos excepciones de arriba.
   const infractores = ficheros(/^apps\/asegura\/(app|lib)\/.*\.tsx?$/)
-    .filter((f) => !f.includes('lib/codeoscopic/cotizar.ts') && !f.includes('lib/codeoscopic/emitir.ts'))
+    .filter(
+      (f) =>
+        !f.includes('lib/codeoscopic/cotizar.ts') &&
+        !f.includes('lib/codeoscopic/emitir.ts') &&
+        !f.includes('lib/codeoscopic/product-form.ts'),
+    )
     .filter((f) => {
       const src = FUENTE(f)
       if (!/from ['"][^'"]*codeoscopic\/cliente(\.ts)?['"]/.test(src)) return false

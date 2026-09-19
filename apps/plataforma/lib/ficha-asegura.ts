@@ -755,19 +755,6 @@ export function urlRetarificar(polizaId: string): string {
   return `/correduria/poliza/${polizaId}/retarificar`
 }
 
-/**
- * El salto a asegura que TODAVÍA queda: **hogar**.
- *
- * Su retarificador es otro componente (metros, año de construcción, capitales y
- * el Catastro del riesgo) y no está portado. No se enlaza desde las fichas: solo
- * lo usa la pantalla interna cuando la póliza resulta ser de hogar, para mandar
- * al único sitio donde hoy funciona en vez de fingir que no se puede.
- * Pública, no es un secreto.
- */
-export function urlRetarificarHogarAsegura(polizaId: string): string {
-  return `${urlAsegura()}/cartera/poliza/${polizaId}`
-}
-
 /** Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura
  *  porque comparte pantalla con la cotización que sale de lo leído. Gratis. */
 export function urlSubirPoliza(): string {
@@ -778,10 +765,11 @@ export function urlSubirPoliza(): string {
  * Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la
  * cartera), **DENTRO de plataforma** desde el 07/09/2026. El riesgo sale del
  * Catastro (por dirección o referencia), no de una ficha existente — a
- * diferencia de `urlRetarificarHogarAsegura` (retarificar una póliza de
- * hogar existente, que SÍ sigue saltando a asegura), esta oportunidad se
- * presupuesta y se cotiza entera en `/correduria/cliente/<id>/hogar-nuevo`,
- * por el mismo puerto de operador (`lib/hogar-nuevo-asegura.ts`).
+ * diferencia de retarificar una póliza de hogar YA existente (portado el
+ * 17/09/2026: `poliza/[id]/retarificar` + `lib/hogar-retarificar-asegura.ts`,
+ * riesgo de la ficha), esta oportunidad se presupuesta y se cotiza entera en
+ * `/correduria/cliente/<id>/hogar-nuevo`, por el mismo puerto de operador
+ * (`lib/hogar-nuevo-asegura.ts`).
  */
 export function urlHogarNuevo(clienteId: string): string {
   return `/correduria/cliente/${clienteId}/hogar-nuevo`

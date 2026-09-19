@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-16T17:09:09Z",
-  "sha": "908a7fbcbce5899fa08760ea6707700c759f72e2",
+  "generadoEn": "2026-09-17T14:10:10Z",
+  "sha": "2d6239395949bd15d8eaaa1c2f59b19d2f63b255",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4664,7 +4664,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 28,
+          "linea": 29,
           "resumen": "Alta de una póliza en la bóveda del cliente. Dos caminos, una sola ruta: - `multipart/form-data` con `documento` → sube un PDF/foto, lo lee la IA y la fila nace SIN confirmar (los datos los ha adivina"
         },
         {
@@ -4673,7 +4673,7 @@
           "exportada": false,
           "params": "t: TitularDeclarado",
           "retorno": null,
-          "linea": 51,
+          "linea": 52,
           "resumen": "Lo que se guarda de la pregunta «¿es tuya o de tu empresa?». 🚨 `sin_preguntar` se guarda como NULL y NO como `'propio'`. Es la diferencia entre «ha dicho que es suya» y «no consta», y de ella depende"
         },
         {
@@ -4682,7 +4682,7 @@
           "exportada": false,
           "params": "req: Request, identidadId: string",
           "retorno": null,
-          "linea": 59
+          "linea": 60
         },
         {
           "nombre": "altaAMano",
@@ -4690,14 +4690,14 @@
           "exportada": false,
           "params": "req: Request, identidadId: string",
           "retorno": null,
-          "linea": 150
+          "linea": 161
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/polizas",
-      "hash": "cc94848cc533"
+      "hash": "53f4e83e9d29"
     },
     {
       "ruta": "apps/asegura-portal/app/api/push/desuscribir/route.ts",
@@ -6109,6 +6109,56 @@
       "hash": "fb15396b045c"
     },
     {
+      "ruta": "apps/asegura-portal/lib/aviso-poliza-declarada.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El aviso de que un cliente ha subido una póliza a su bóveda. 🚨 No existía ningún aviso al subir una póliza declarada (medido 17/09/2026, caso real: Alejandro José Soler Fernández Gao subió dos y Alberto no se enteró por ningún canal). La fila queda en `portal_poliza_declarada` y solo sale como «opo",
+      "exporta": [
+        "mensajePolizaDeclarada",
+        "avisarPolizaDeclarada",
+        "avisarPolizaDeclaradaDesdeAlta"
+      ],
+      "funciones": [
+        {
+          "nombre": "mensajePolizaDeclarada",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContextoPolizaDeclarada",
+          "retorno": "string",
+          "linea": 32
+        },
+        {
+          "nombre": "avisarPolizaDeclarada",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContextoPolizaDeclarada",
+          "retorno": "Promise<ResultadoAviso>",
+          "linea": 44,
+          "resumen": "Nunca lanza: un fallo del aviso no puede impedir que la póliza se guarde."
+        },
+        {
+          "nombre": "nombreClienteVinculado",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 63,
+          "resumen": "El nombre de la ficha vinculada, si la hay. `null` en dos casos distintos (sin vínculo, o la consulta falla) porque el mensaje de Telegram ya trata ambos igual: «sin vincular» — lo que no puede hacer "
+        },
+        {
+          "nombre": "avisarPolizaDeclaradaDesdeAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Omit<ContextoPolizaDeclarada, 'clienteNombre'>,",
+          "retorno": "Promise<ResultadoAviso>",
+          "linea": 86,
+          "resumen": "Punto de entrada desde la ruta: resuelve el nombre y avisa, sin que nada de esto pueda retrasar ni tumbar la respuesta al cliente (se llama con `void`)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dbfbca9acc18"
+    },
+    {
       "ruta": "apps/asegura-portal/lib/canal-email.ts",
       "ambito": "apps/asegura-portal",
       "exporta": [],
@@ -6691,7 +6741,7 @@
           "exportada": true,
           "params": "buffer: Buffer, mimeType: string, fileName = '',",
           "retorno": "Promise<ResultadoExtraccion>",
-          "linea": 307
+          "linea": 319
         },
         {
           "nombre": "parsearPolizaExtraida",
@@ -6699,7 +6749,7 @@
           "exportada": true,
           "params": "bruto: unknown, hoy: Date = new Date()",
           "retorno": "PolizaExtraida",
-          "linea": 385,
+          "linea": 397,
           "resumen": "Un JSON que no parsea devuelve TODOS los campos a `null`, NUNCA campos a medias ni cadenas de cajón. Media extracción pintada como póliza es peor que ninguna: el usuario se cree que está guardada. Las"
         },
         {
@@ -6708,12 +6758,12 @@
           "exportada": false,
           "params": "salida: string",
           "retorno": "PolizaExtraida",
-          "linea": 416
+          "linea": 428
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd7a5f51eda5"
+      "hash": "4a417ca49cd1"
     },
     {
       "ruta": "apps/asegura-portal/lib/fechas.ts",
@@ -10201,6 +10251,30 @@
       "hash": "3fe6a55f35cb"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/documentos/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 26,
+          "resumen": "`GET ?projectId=` — lo que Codeoscopic devuelve de la SOLICITUD DE EMISIÓN de un proyecto, en crudo, incluido `issuedDocuments[]` si lo manda. 🚨 17/09/2026: la forma exacta del tag `File` dentro de `"
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "next"
+      ],
+      "rutaApi": "/api/operador/codeoscopic/documentos",
+      "hash": "0a94dcea07b3"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/emitir/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -10213,7 +10287,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 66,
+          "linea": 67,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — el Submit de verdad (`POST /insurances/{id}/policy-applications`), y el acuñado en nuestra BD si el vendor lo acepta. 🚨 **Construida el 11/09/2026, sin sandb"
         },
         {
@@ -10222,7 +10296,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 695
+          "linea": 724
         },
         {
           "nombre": "numero",
@@ -10230,7 +10304,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 700
+          "linea": 729
         },
         {
           "nombre": "esObjeto",
@@ -10238,7 +10312,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 704
+          "linea": 733
         },
         {
           "nombre": "coincideCompania",
@@ -10246,7 +10320,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 708
+          "linea": 737
         }
       ],
       "tablas": [
@@ -10255,7 +10329,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "f583a5854359"
+      "hash": "08572d506fe3"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
@@ -10698,6 +10772,27 @@
       ],
       "rutaApi": "/api/operador/codeoscopic/precalificar",
       "hash": "8930c4156629"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/product-form/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "`POST /api/operador/codeoscopic/product-form` — el `dataCallback` de la Product Form Library llega hasta aquí (plataforma → asegura) y esto hace la llamada real a `POST /product-form-requests` con las"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/codeoscopic/product-form",
+      "hash": "4b49f779373f"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/proyecto/route.ts",
@@ -15607,7 +15702,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Json",
-          "linea": 105
+          "linea": 116
         },
         {
           "nombre": "arr",
@@ -15615,7 +15710,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "unknown[]",
-          "linea": 106
+          "linea": 117
         },
         {
           "nombre": "str",
@@ -15623,7 +15718,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 107
+          "linea": 118
         },
         {
           "nombre": "num",
@@ -15631,7 +15726,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 109
+          "linea": 120
         },
         {
           "nombre": "leerOferta",
@@ -15639,7 +15734,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "Oferta",
-          "linea": 122,
+          "linea": 133,
           "resumen": "Lee la respuesta de `POST .../offers`. 🚨 Defensivo A PROPÓSITO: la forma exacta NO está verificada contra el fabricante. Se acepta tanto `{ mainQuote: {...} }` como el objeto pelado, porque no se sab"
         },
         {
@@ -15648,7 +15743,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, quoteId: string, productId: unknown, productOptions: unknown,",
           "retorno": "Promise<Oferta>",
-          "linea": 186,
+          "linea": 198,
           "resumen": "`POST /insurances/{projectId}/offers` — confirma el precio elegido (ReRate/preemisión). 🚨 **Corregido el 11/09/2026 tras el primer 400 real** (proyecto 40681298, Pilar Franco Ruz): el vendor exige `m"
         },
         {
@@ -15657,7 +15752,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, fechaEfecto: string, insuranceLineId: string | null,",
           "retorno": "Promise<void>",
-          "linea": 259,
+          "linea": 271,
           "resumen": "`PATCH /insurances/{id}` — corrige un campo del proyecto YA creado, GRATIS (solo `POST /insurances` está documentado como facturable). 🚨 **Nace el 11/09/2026 tras el cuarto 400 real** (proyecto 40681"
         },
         {
@@ -15666,7 +15761,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string",
           "retorno": "Promise<Json>",
-          "linea": 292,
+          "linea": 304,
           "resumen": "El proyecto tal cual lo devuelve el vendor (GET). Gratis."
         },
         {
@@ -15675,7 +15770,7 @@
           "exportada": true,
           "params": "persona: unknown",
           "retorno": "Json",
-          "linea": 320,
+          "linea": 332,
           "resumen": "`crudo` viaja a la respuesta HTTP del puerto para que se pueda ver DÓNDE puso el vendor el dato (o que no lo puso en ningún sitio) — pero es la persona releída ENTERA, con DNI y teléfono dentro. Se en"
         },
         {
@@ -15684,7 +15779,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "unknown",
-          "linea": 397,
+          "linea": 409,
           "resumen": "`envio.crudo` (y `envio.mensaje`, el texto del 400/500) son la respuesta ENTERA del vendor al Submit — sin sandbox ni fixture, no se sabe de antemano si traen los mismos `holder`/`risk` con DNI/teléfo"
         },
         {
@@ -15693,7 +15788,7 @@
           "exportada": false,
           "params": "persona: unknown",
           "retorno": "string | null",
-          "linea": 416
+          "linea": 428
         },
         {
           "nombre": "papelesDeLaMismaPersona",
@@ -15701,7 +15796,7 @@
           "exportada": true,
           "params": "crudo: Json",
           "retorno": "Papel[]",
-          "linea": 433,
+          "linea": 445,
           "resumen": "Los papeles del `risk` que son LA MISMA PERSONA que el tomador (mismo DNI). Un `owner` o `secondaryDriver` con otro DNI es otra persona: escribirle el teléfono o la fecha de nacimiento del tomador ser"
         },
         {
@@ -15710,7 +15805,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, valores: Partial<Record<CampoPersona, string>>,",
           "retorno": "Promise<ResultadoCompletar>",
-          "linea": 450,
+          "linea": 462,
           "resumen": "Escribe `valores` en el tomador y en los papeles del `risk` que sean la misma persona (mismo DNI) — el vendor cruza por DNI y rechaza si un campo difiere entre ellos, así que no se puede completar sol"
         },
         {
@@ -15719,7 +15814,7 @@
           "exportada": false,
           "params": "config: ConfigCodeoscopic, projectId: string, valores: Partial<Record<CampoPersona, string>>, claveEmail: ClaveElementoEmail | undefined,",
           "retorno": "Promise<ResultadoCompletar>",
-          "linea": 476
+          "linea": 488
         },
         {
           "nombre": "huecosPersonaParaEmitir",
@@ -15727,7 +15822,7 @@
           "exportada": true,
           "params": "crudo: Json",
           "retorno": "",
-          "linea": 547,
+          "linea": 559,
           "resumen": "Qué le falta a la persona del proyecto (holder + papeles con el mismo DNI) de lo que el Submit exige. PURO sobre el `GET /insurances/{id}` ya leído. Por qué (13/09/2026): los 7 proyectos pagados de Pi"
         },
         {
@@ -15736,13 +15831,13 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, projectId: string, offerId: string,",
           "retorno": "Promise<CampoEmision[]>",
-          "linea": 577,
+          "linea": 589,
           "resumen": "`GET /insurances/{projectId}/policy-application-fields?offerId=`. Gratis: es una lectura. Existe para no adivinar el cuerpo del Submit: dice de antemano qué va a pedir, así que ese cuerpo se construye"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5e0786f1f8b7"
+      "hash": "8cf96d773098"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -16096,7 +16191,9 @@
       "ambito": "apps/asegura",
       "resumen": "Catálogo ESTÁTICO de `product.options` por defecto para el ReRate, para las compañías que exigen campos que la cotización NUNCA devuelve (ver `Precio.productOptions` en `respuesta.ts` — el vendor no los manda al cotizar, así que aquí casi siempre es `null`). Sin sandbox y sin catálogo REST para esto",
       "exporta": [
-        "opcionesPorDefecto"
+        "opcionesPorDefecto",
+        "opcionesEmisionPorDefecto",
+        "conProductoPorDefecto"
       ],
       "funciones": [
         {
@@ -16107,11 +16204,29 @@
           "retorno": "OpcionProducto[] | null",
           "linea": 58,
           "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
+        },
+        {
+          "nombre": "opcionesEmisionPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string",
+          "retorno": "OpcionProducto[] | null",
+          "linea": 100,
+          "resumen": "Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate: ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo Allianz auto tiene esta captura."
+        },
+        {
+          "nombre": "conProductoPorDefecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "campos: Record<string, unknown>, compania: string, opts?: { familiaAllianz?: boolean },",
+          "retorno": "Record<string, unknown>",
+          "linea": 119,
+          "resumen": "Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre cualquier default. Puro y testeable aparte de la ru"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bf03a9c4153c"
+      "hash": "2555712a087b"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -16570,6 +16685,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "272b99e3a5db"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/product-form.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Relay hacia `POST /product-form-requests` — el recurso GENÉRICO que la Product Form Library (widget JS de Codeoscopic) usa para sus propias sub-peticiones (catálogos de provincias, tipos de documento, sub-formularios de una compañía…). Existe porque el iframe del widget NO puede guardar el `access_t",
+      "exporta": [
+        "reenviarProductForm"
+      ],
+      "funciones": [
+        {
+          "nombre": "reenviarProductForm",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, cuerpo: ProductFormRequest,",
+          "retorno": "Promise<unknown>",
+          "linea": 43,
+          "resumen": "`POST /product-form-requests`. Relay puro: entra el cuerpo del widget, sale la respuesta de Codeoscopic tal cual — sin reshaping."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1a603b5657a4"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/reintento-emision.ts",
@@ -65072,7 +65209,7 @@
           "exportada": false,
           "params": "{ label, valor }: { label: string; valor: string | null }",
           "retorno": null,
-          "linea": 152
+          "linea": 153
         },
         {
           "nombre": "Caja",
@@ -65080,7 +65217,7 @@
           "exportada": false,
           "params": "{ tono, titulo, children }: { tono: 'ok' | 'aviso' | 'error' | 'neutro'; titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 161
+          "linea": 162
         },
         {
           "nombre": "Pestana",
@@ -65088,12 +65225,12 @@
           "exportada": false,
           "params": "{ activa, onClick, children }: { activa: boolean; onClick: () => void; children: React.ReactNode }",
           "retorno": null,
-          "linea": 171
+          "linea": 172
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0d1f2a68f3f4"
+      "hash": "44b3accbe406"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/hogar/page.tsx",
@@ -65873,6 +66010,7 @@
         "pedirTarificacionGuardada",
         "pedirCotizacion",
         "pedirOferta",
+        "pedirProductForm",
         "pedirEmision"
       ],
       "funciones": [
@@ -65882,7 +66020,7 @@
           "exportada": true,
           "params": "params: Record<string, string>",
           "retorno": "Promise<RespuestaCatalogo>",
-          "linea": 51,
+          "linea": 53,
           "resumen": "Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.**"
         },
         {
@@ -65891,7 +66029,7 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 62,
+          "linea": 64,
           "resumen": "La última cotización REAL ya guardada de esta póliza (11/09/2026). **Gratis — no confirma nada con el vendor.** Sirve para \"retomar\" sin volver a pagar los 0,50€ del `POST /insurances` que ya se pagó,"
         },
         {
@@ -65900,7 +66038,7 @@
           "exportada": true,
           "params": "entrada: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> catastro?: Record<string, unknown> | null /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetarificar.forzarNuevo`.",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 81,
+          "linea": 83,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `retarificarAsegura()`, en el servidor y en un solo sitio. No se acepta desde el cliente a propósito: si viajara en el cuerpo, dejaría de ser una"
         },
         {
@@ -65909,8 +66047,17 @@
           "exportada": true,
           "params": "entrada: { tarificacionId: string compania: string categoria: string fechaEfectoCorregida?: string /** Respuesta del corredor a un `faltan_vendor` anterior (campo nuestro → valor). */ correcciones?: Record<string, string> }",
           "retorno": "Promise<RespuestaOferta>",
-          "linea": 106,
+          "linea": 108,
           "resumen": "🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo pone `ofertaAsegura()` en el servidor, y esto NO reintenta"
+        },
+        {
+          "nombre": "pedirProductForm",
+          "kind": "function",
+          "exportada": true,
+          "params": "peticion: { method?: string path: string params?: unknown[] body?: Record<string, unknown> }",
+          "retorno": "Promise<RespuestaProductForm>",
+          "linea": 131,
+          "resumen": "El `dataCallback` de la Product Form Library (widget de Codeoscopic para pintar el formulario REAL de consentimiento de cada compañía). **Gratis**: no cotiza ni confirma nada con el vendor, solo relay"
         },
         {
           "nombre": "pedirEmision",
@@ -65918,13 +66065,12 @@
           "exportada": true,
           "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null /** Máscara de la cuenta de la ficha que el corredor confirmó en pantalla (o nada). */ cuentaConfirmada?: string | null reintentoConfirmado?: boolean ac",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 122,
-          "resumen": "🚨 **EL SUBMIT REAL. Compromete un contrato de verdad, no solo dinero.** Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin reintento: un fallo de red aquí NO dice que la póliza no se "
+          "linea": 140
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "85ba40a24caf"
+      "hash": "c0b8608ab492"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx",
@@ -65939,7 +66085,7 @@
           "exportada": false,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 97
+          "linea": 102
         },
         {
           "nombre": "cuentaDecidida",
@@ -65947,7 +66093,7 @@
           "exportada": false,
           "params": "cuenta: CuentaConocida | null, cuentaOk: boolean, iban: string",
           "retorno": "boolean",
-          "linea": 142,
+          "linea": 147,
           "resumen": "sin cuenta conocida no hay nada que confirmar (si la compañía la exige, su 400 vuelve como hueco y entonces sí se teclea). PURO, para poder verlo fallar."
         },
         {
@@ -65956,7 +66102,7 @@
           "exportada": false,
           "params": "{ cuenta, aviso, obligatoria, cuentaOk, onCuentaOk, iban, onIban, }: { cuenta: CuentaConocida | null aviso: AvisoCuenta | null obligatoria: boolean cuentaOk: boolean onCuentaOk: (v: boolean) => void iban: string onIban: (v: string) => void ",
           "retorno": null,
-          "linea": 155,
+          "linea": 160,
           "resumen": "La cuenta de cargo del recibo. 🚨 «iban importante siempre confirmar» (Alberto, 12/09/2026): la que la ficha ya conoce se pinta ENMASCARADA con su origen y una casilla que el corredor marca a mano; la"
         },
         {
@@ -65965,14 +66111,14 @@
           "exportada": true,
           "params": "{ tarificacionId, compania, categoria, primaEur, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null onCerrar: () => void }",
           "retorno": null,
-          "linea": 234
+          "linea": 239
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "b8eb8a0c262f"
+      "hash": "df2c9a65eec9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -66048,6 +66194,43 @@
       ],
       "rutaApi": null,
       "hash": "188c5bb5e07b"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/ProductFormWidget.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ProductFormWidget"
+      ],
+      "funciones": [
+        {
+          "nombre": "cargarScript",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<void>",
+          "linea": 48
+        },
+        {
+          "nombre": "dataCallback",
+          "kind": "function",
+          "exportada": false,
+          "params": "request: unknown",
+          "retorno": "Promise<unknown>",
+          "linea": 68,
+          "resumen": "El `dataCallback` que exige `AvantProductForm`: reenvía la petición del widget, TAL CUAL, a la acción de servidor — nunca se interpreta aquí."
+        },
+        {
+          "nombre": "ProductFormWidget",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ quoteCrudo, onOptions, }: { quoteCrudo: unknown /** `options` es lo que ha guardado el corredor (o `null` si aún no ha * pulsado «Guardar»); `avisoValidacion` es el texto del widget si * `getProductOptions()` no devolvió un array (`Valida",
+          "retorno": null,
+          "linea": 83
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8a370377b326"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/retarificador.tsx",
@@ -96299,6 +96482,8 @@
         "leerAvisoCuenta",
         "interpretarOferta",
         "ofertaAsegura",
+        "interpretarProductForm",
+        "productFormAsegura",
         "leerSolicitudes",
         "interpretarEmitir",
         "emitirAsegura",
@@ -96449,7 +96634,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "AvisoCuenta | null",
-          "linea": 781
+          "linea": 789
         },
         {
           "nombre": "leerCuenta",
@@ -96457,15 +96642,15 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CuentaConocida | null",
-          "linea": 791
+          "linea": 799
         },
         {
           "nombre": "leerOferta",
           "kind": "function",
           "exportada": false,
-          "params": "v: unknown",
+          "params": "v: unknown,",
           "retorno": "",
-          "linea": 805
+          "linea": 813
         },
         {
           "nombre": "interpretarOferta",
@@ -96473,7 +96658,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaOferta",
-          "linea": 819,
+          "linea": 834,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -96482,8 +96667,26 @@
           "exportada": true,
           "params": "p: { tarificacionId: string compania: string categoria: string /** Corrige la fecha de efecto del proyecto (aaaa-mm-dd) ANTES del ReRate, * vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha * rechazado — ver `apps/aseg",
           "retorno": "Promise<RespuestaOferta>",
-          "linea": 887,
+          "linea": 902,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía el precio de `tarificacionId` (id de `seguros.tarificaciones`) para la `compania`/`categoria` elegidas en pantalla. NO reintenta."
+        },
+        {
+          "nombre": "interpretarProductForm",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaProductForm",
+          "linea": 962,
+          "resumen": "PURO: la respuesta HTTP → los estados del `dataCallback`. Sin red, testeable."
+        },
+        {
+          "nombre": "productFormAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "peticion: { method?: string path: string params?: unknown[] body?: Record<string, unknown> }",
+          "retorno": "Promise<RespuestaProductForm>",
+          "linea": 977,
+          "resumen": "`POST /api/operador/codeoscopic/product-form` — relay del `dataCallback` del widget hacia el proxy gratis de asegura. `peticion` es la petición TAL CUAL la pide el widget (`{method?, path, params?, bo"
         },
         {
           "nombre": "leerSolicitudes",
@@ -96491,7 +96694,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "SolicitudEmisionVista[]",
-          "linea": 981,
+          "linea": 1060,
           "resumen": "PURO. Una entrada que no tenga forma de solicitud se descarta; un veredicto que no se reconoce cae a `desconocido`, nunca a `aprobada`."
         },
         {
@@ -96500,7 +96703,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaEmitir",
-          "linea": 1005,
+          "linea": 1084,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -96509,7 +96712,7 @@
           "exportada": true,
           "params": "p: { projectId: string campos: Record<string, unknown> actor?: string primaAnual?: number | null /** La máscara (`ES91…1332`) de la cuenta de la ficha que el corredor ha visto y * aprobado. Sin ella asegura no manda la cuenta de la ficha: c",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 1074,
+          "linea": 1153,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO reintenta: un fallo de red aquí no dice que no se haya emitid"
         },
         {
@@ -96518,7 +96721,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FormularioGuardado | null",
-          "linea": 1176
+          "linea": 1260
         },
         {
           "nombre": "leerPreciosGuardados",
@@ -96526,7 +96729,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Precio[] | null",
-          "linea": 1196
+          "linea": 1280
         },
         {
           "nombre": "interpretarTarificacionGuardada",
@@ -96534,7 +96737,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaTarificacionGuardada",
-          "linea": 1213,
+          "linea": 1297,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -96543,13 +96746,13 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 1256,
+          "linea": 1340,
           "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d57819f19cf8"
+      "hash": "d4ee97cd93c9"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -136820,7 +137023,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3345,
-    "funciones": 10346
+    "archivos": 3350,
+    "funciones": 10361
   }
 }

@@ -113,6 +113,16 @@ export type ResultadoExtraccion = {
   fuente: 'texto' | 'vision' | 'none'
   /** Cómo fue la 2ª pasada. Ver `EstadoCamposRamo`. */
   camposRamo: EstadoCamposRamo
+  /**
+   * Por qué `fuente` es `'none'`, cuando se sabe. `'protegido'` = el PDF pide una
+   * contraseña que no tenemos (medido: el propio `pdf-parse` la exige incluso
+   * para un PDF cuya contraseña de USUARIO está vacía — no es un fallo nuestro
+   * de lectura, es que el documento la lleva de verdad). Sin este dato, «no
+   * hemos podido leer el documento» suena a fallo nuestro cuando la acción que
+   * de verdad hace falta es que la persona quite la protección y lo vuelva a
+   * subir — decirlo genérico deja a alguien reintentando el mismo PDF sin éxito.
+   */
+  motivo?: 'protegido'
 }
 
 // 🚗 `marca` y `modelo` se piden AQUÍ, en la 1ª pasada, además de estar en el
@@ -179,11 +189,18 @@ export function origenesDelDocumento(datos: DatosRamo | null): OrigenPorCampo | 
 }
 
 /** Nada leído: TODOS los campos a `null` y `fuente: 'none'`. */
-function nadaLeido(): ResultadoExtraccion {
+function nadaLeido(motivo?: 'protegido'): ResultadoExtraccion {
   // `no_aplica` y no `no_leidos`: sin ramo no había 2ª pasada que hacer, así que
   // decir que «no se pudieron leer» los campos del ramo sería inventarse un
   // intento que nunca ocurrió.
-  return { datos: extraidaVacia(), fuente: 'none', camposRamo: 'no_aplica' }
+  return { datos: extraidaVacia(), fuente: 'none', camposRamo: 'no_aplica', ...(motivo ? { motivo } : {}) }
+}
+
+/** `pdf-parse` (pdf.js) lanza esto cuando el PDF exige una contraseña que no le
+ *  hemos dado — incluso cuando la contraseña de usuario está vacía, si el
+ *  documento la exige de verdad pdf.js no la da por buena sola. */
+function esPasswordException(e: unknown): boolean {
+  return e instanceof Error && e.name === 'PasswordException'
 }
 
 /**
@@ -291,15 +308,27 @@ async function leerDatosRamo(
 
   try {
     const datosRamo = normalizarDatosRamoLeidos(datos.ramo, JSON.parse(cleanJSON(salida)))
+    if (datosRamo === null) {
+      // El JSON parseó pero ningún campo sobrevivió a `normalizarDatosRamoLeidos`
+      // (claves que el catálogo no reconoce, o valores fuera de rango). Es el
+      // mismo «no lo hemos podido leer» que un JSON roto, y sin este log es
+      // indistinguible de él — se pierde justo el dato que diría SI la IA leyó
+      // algo y lo perdimos al validar, o si no leyó nada.
+      console.warn('[portal] 2ª pasada (campos del ramo): JSON válido sin campos reconocidos:', salida.slice(0, 500))
+      return { datos, estado: 'no_leidos' }
+    }
     // Datos y orígenes se reemplazan JUNTOS: los de la 1ª pasada hablaban de los
     // valores de la 1ª pasada, y aquí acaban de cambiar.
     return {
       datos: { ...datos, datosRamo, datosRamoOrigen: origenesDelDocumento(datosRamo) },
       estado: 'leidos',
     }
-  } catch {
+  } catch (e) {
     // El JSON no parsea: se preguntó y no se sacó nada en claro. Es un «no lo
-    // hemos podido leer», no un «no lo trae».
+    // hemos podido leer», no un «no lo trae». Se registra la salida CRUDA
+    // (acotada) porque sin ella este fallo es mudo: no hay forma de saber si la
+    // IA devolvió texto envuelto, un JSON truncado, u otra cosa.
+    console.warn('[portal] 2ª pasada (campos del ramo): la salida no parsea como JSON:', e, salida.slice(0, 500))
     return { datos, estado: 'no_leidos' }
   }
 }
@@ -313,14 +342,16 @@ export async function extraerPoliza(
 
   if (esPdf) {
     let texto = ''
+    let protegido = false
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParse = require('pdf-parse')
       texto = (await pdfParse(buffer)).text || ''
     } catch (e) {
+      if (esPasswordException(e)) protegido = true
       console.warn('[portal] pdf-parse falló:', e)
     }
-    if (!texto.trim()) return nadaLeido()
+    if (!texto.trim()) return nadaLeido(protegido ? 'protegido' : undefined)
     // Un fallo de IA es «no lo hemos podido mirar», no «no hay datos»: se degrada
     // a `none` y la póliza se guarda igual, para completarla a mano.
     let salida: string

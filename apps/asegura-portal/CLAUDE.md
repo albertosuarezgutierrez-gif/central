@@ -641,6 +641,16 @@ nunca**, y los valores de cajón se anulan con la MISMA lista que el resto del p
 (`textoConDato`, exportada de `poliza-leida.ts` ese día para no tener dos listas). `null` = «la
 compañía no lo ha informado», y la pantalla **calla**: no pinta «Matrícula: —».
 
+🏠 **Y las hogar que SOLO han entrado por CIMA no tienen dirección en NINGUNA parte (19/09/2026).**
+CIMA no manda el riesgo de hogar; sin gemela del volcado, `datos_especificos` es `NULL` y la fila
+sale «Occident · Hogar» dos veces (las de Alberto). Medido: **32 hogar solo-CIMA vivas, 2 con
+dirección**. El camino es que el corredor la anote desde `/correduria/poliza/[id]` de plataforma
+(`EditarDireccionRiesgo.tsx` → `PATCH /api/operador/poliza` con `campo: 'direccion_riesgo'` →
+`establecerDireccionRiesgo()` en asegura), que la guarda con **las mismas claves y el mismo cifrado
+que el volcado** (`direccion` en sobre `v1:`, `cp`, `localidad`, más `direccionOrigen: 'manual'`), así
+que este portal la lee sin una rama nueva. Mientras falte, la ficha propia de un inmueble lo DICE
+(`esRamoInmueble()`): callar ahí se leía como «no hay nada que ver».
+
 Cepos: `bien-asegurado.test.ts` (11, con dos mutaciones vistas morder: quitar la dirección del suelo
 de terceros → 1 fallo; colar la dirección por `cosa` → 3).
 
@@ -1247,10 +1257,10 @@ no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura
 | `app/instalacion.tsx` | El almacén compartido de la instalación (`beforeinstallprompt` se dispara UNA vez). Desde el 08/09/2026 lo lee solo `InstalarBoton`: la campana ya NO ofrece instalar |
 
 🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
-`!` (ninguna legible, o fallo de red). Este portal renunció a la hamburguesa porque un botón que
-esconde hace las cosas menos visibles que enseñarlas, y la campana es exactamente ese botón: sin
-número, una autorización detrás de ella es lo mismo que hoy en `/autorizaciones`. Y «sin avisos»
-sobre una fuente que no se leyó es la mentira que el `CLAUDE.md` de la raíz persigue.
+`!` (ninguna legible, o fallo de red). Un botón que esconde hace las cosas menos visibles que
+enseñarlas, y la campana es exactamente ese botón: sin número, una autorización detrás de ella es
+lo mismo que hoy en `/autorizaciones`. Y «sin avisos» sobre una fuente que no se leyó es la mentira
+que el `CLAUDE.md` de la raíz persigue.
 
 🚨 **Desde la campana NO se acepta ni se revoca nada.** Cada aviso es un enlace a la pantalla donde
 se resuelve, con el alcance y el texto delante. Un «Aceptar» en el panel sería aceptar sin leer y

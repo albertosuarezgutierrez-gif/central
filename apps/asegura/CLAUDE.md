@@ -104,7 +104,12 @@ entender la arquitectura.
 🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son 80 clientes /
 110 pólizas** (03/09/2026) — las que entran o mantiene CIMA. ⚠️ De esas 110, **42 están `cancelada`**
 y **68 no** (medido 03/09/2026): CIMA manda también las canceladas y la regla de cartera viva no las
-distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. Los ramos:
+distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. ✅ **Cerrado el
+19/09/2026:** `esCarteraEnVigor()` / `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` (mismo fichero
+`cartera-viva.ts`) = viva Y estado en `POLIZA_ESTADOS_VIGENTES`. Es lo que deriva el grupo del listado
+(`cartera-filtro.ts`), el recuento «N póliza(s) viva(s)» y quién entra en «clientes sin canal»
+(`clientes-sin-canal.ts`). Medido ese día: 157 vivas → **105 en vigor, 67 clientes** (eran 95 con el origen
+a secas; Kartenbrot, con una sola póliza cancelada, pasa a leads). Los ramos:
 **auto 81 · hogar 19 · responsabilidad civil 9 · moto 1**. Las otras 28.728 son volcado histórico cargado en
 jun/2026 (`intranet:` 26.117 con vencimientos 2013-2018 y `asegura_app:` 2.611) y **ninguna** vence en los
 últimos 18 meses. Regla de Alberto: **CIMA = cliente actual; el resto = lead** (32.520).
@@ -434,6 +439,19 @@ una solicitud (el filtro la excluye).
   acuñar el proyecto pasa a apuntar a la póliza EMITIDA. Y el portal distingue los 5xx: **500 = «report the issue… to the API
   support team» (`soporteapi@avant2.es`, con el `requestId`), 502/503/504 = «try again in a few minutes»**
   (`consejoTrasFallo`). En la web de Allianz Alberto no vio póliza del 40685793 esa mañana.
+  ✅ **CAUSA REAL, confirmada por Codeoscopic el 17/09/2026: no era un 500 del vendor, era un `product.options`
+  que nunca se mandaba.** Juan Manuel Fernández (Product Manager API): «no ha llegado la petición a la compañía
+  y no ha llegado a emitirse» — Allianz exige un formulario previo con 4 preguntas obligatorias
+  (`insuredFamilyInAllianz`, `publicityConsent`, `allianzGroupProductsConsent`, `commercialProfilingConsent`,
+  cada una con valor explícito **aunque su default visual sea «No»**) dentro de `product.options` del propio
+  Submit, y nuestro cuerpo solo mandaba `{quote:{id}, payment:{bankAccount:{iban}}}`. 🚨 **Es un `product.options`
+  DISTINTO del que ya existía**: el de `opciones-producto.ts` (`ALLIANZ_AUTO_320200`, 14 campos técnicos/
+  comerciales) es para `mainQuote.product.options` en el **ReRate** (`/offers`); este es para `product.options`
+  en el **Submit** (`/policy-applications`) y son consentimientos legales del tomador. Arreglado con
+  `conProductoPorDefecto()` (puro, en el mismo fichero): rellena los 4 en `false` —el default del propio
+  formulario, y ninguno se decide a favor del cliente sin que él lo diga— **solo si nadie ya puso `product`**
+  (el JSON avanzado del corredor manda). El proyecto 40685793 quedó inservible (fecha de efecto caducada el
+  14/09) y no se recuperó; el arreglo es para el SIGUIENTE Submit de Allianz.
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 
@@ -938,6 +956,16 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
     `asegura-portal` y en `central-asegura`). Este commit es el que desatasca el redeploy de
     producción de `central-asegura`: los commits recientes no tocaban `apps/asegura/` y el
     `ignoreCommand` los saltaba, así que un simple «Redeploy» del panel repetía el mismo salto.
+  - 🔁 **Y se repitió idéntico el 17/09/2026: rotado el secreto, `/api/portal/documento` y
+    `/api/portal/contacto` seguían en 401 media hora después.** Medido en `get_runtime_logs`: el PR
+    que arreglaba el síntoma (registrar el fallo de la 2ª pasada de extracción) solo tocaba
+    `apps/asegura-portal/`, así que `central-asegura` se quedó en el deployment de producción
+    ANTERIOR a la rotación — la env nueva estaba puesta en Vercel pero nunca se había desplegado.
+    Este mismo commit (tocando `apps/asegura/CLAUDE.md`) es el que fuerza ese redeploy. **Lección que
+    ya iba por la segunda vez: rotar `ASEGURA_PORTAL_PUENTE_SECRET` no basta con guardarlo en las dos
+    envs — hace falta además un commit que TOQUE `apps/asegura/` (o uno de sus packages) para que
+    `central-asegura` lo recoja, porque un «Redeploy» del panel reutiliza el último commit y el
+    `ignoreCommand` lo vuelve a saltar si ese commit no tocaba la app.**
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en
