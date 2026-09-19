@@ -223,7 +223,7 @@ PASSWORD` sigue rechazando la nueva aunque el host directo `db.<ref>.supabase.co
 el log SIN la URL, así que la pantalla de plataforma dice la causa sin ir a los logs del pooler.
 **Camino de vuelta al origen (solo con `ASEGURA_FUENTE=origen`):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
 (SELECT-only + BYPASSRLS) contra el Supabase congelado de Manuel por el pooler :6543 de eu-central-1; la URL la
-normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` solo). `ASEGURA_OPERADOR_SECRET` — Bearer del
+normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` y, si falta, `connection_limit=5` — **nunca 1**: una instancia de Vercel atiende varias peticiones a la vez con el mismo cliente, y con 1 las ~17 llamadas paralelas de `/correduria` hacían cola hasta el `pool_timeout` y morían en P2024, medido el 19/09/2026). `ASEGURA_OPERADOR_SECRET` — Bearer del
 puerto `/api/operador/resumen` (MISMO valor en el proyecto Vercel `plataforma`). El proyecto sirve
 desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD.
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del

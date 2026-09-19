@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026) «A quién llamar hoy» decía «no se pudo llegar a asegura (timeout, DNS o TLS)» — y no
+  era la red: era el POOL.** Medido en `get_runtime_logs` de central-asegura (07:54:37): 17 llamadas
+  paralelas de `/correduria` al puerto y **13 murieron en su primera consulta con P2024** «Timed out
+  fetching a new connection from the connection pool (limit: 1)». `normalizarUrlPooler` metía
+  `connection_limit=1` a toda URL :6543 (receta para lambdas de una petición; Vercel atiende varias en
+  la misma instancia con el mismo cliente). Ahora 5 por defecto (`POOL_POR_INSTANCIA`), la URL manda si
+  ya lo trae. Y `pedir()` de plataforma pasa de 8 s a 15 s: con 8 s se rendía ANTES del `pool_timeout`
+  (10 s) y la causa real (`conexion`) nunca llegaba a la pantalla. Si el log sigue diciendo «limit: 1»
+  tras desplegar, está escrito a mano en el `DATABASE_URL` de Vercel.
+
 **(19/09/2026) Cartera viva ≠ en vigor: cancelada = lead.** Alberto vio a Kartenbrot (1 póliza cancelada)
   como «Cartera viva» y «6 vivas» en Víctor De la Fuente (4 en vigor). Nuevo `esCarteraEnVigor()` /
   `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` en `cartera-viva.ts` = viva Y `POLIZA_ESTADOS_VIGENTES`;
