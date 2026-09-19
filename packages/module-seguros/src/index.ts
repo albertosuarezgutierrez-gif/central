@@ -193,6 +193,11 @@ export {
   type PersonaDePolizas,
 } from './intervinientes.ts'
 export {
+  emailAlternativo,
+  type AllegadoConEmail,
+  type EmailAlternativo,
+} from './contacto-alternativo.ts'
+export {
   FRACCIONES,
   etiquetaFraccionamiento,
   etiquetaFormaPago,
@@ -411,6 +416,7 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export {
   parseFiltroCartera,
   filtroActivo,

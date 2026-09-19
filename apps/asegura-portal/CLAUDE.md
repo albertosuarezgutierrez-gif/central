@@ -160,8 +160,8 @@ Cada página abría su propio `<main style={{ maxWidth: 720 }}>` y pintaba la na
 a mano la sección activa. En un monitor de 1440 px eso dejaba **~720 px de márgenes vacíos**.
 Ahora el ancho y la navegación son del armazón y la página solo aporta contenido.
 
-- **`app/(portal)/NavPortal.tsx` es UN SOLO `<nav>` con dos formas**, no dos componentes: carril
-  horizontal en el móvil, lateral de **256 px** desde 1024 px. Lo decide `globals.css`. Dos árboles
+- **`app/(portal)/NavPortal.tsx` es UN SOLO `<nav>` con dos formas**, no dos componentes: **cajón
+  (drawer)** en el móvil, lateral de **256 px** desde 1024 px. Lo decide `globals.css`. Dos árboles
   distintos para la misma navegación es cómo se llega a que una sección exista en una pantalla y no
   en la otra sin que nada falle.
 - La activa se deriva de `usePathname()` + `useSearchParams()`, por eso el `layout` lo envuelve en
@@ -169,11 +169,40 @@ Ahora el ancho y la navegación son del armazón y la página solo aporta conten
 - 📌 **Conmuta a 1024 y no a 768, que es donde conmuta la de Manuel.** Con el lateral de 256 px, a
   768 el contenido se queda en ~500: media tablet gastada en cuatro enlaces. Su panel lo aguanta
   porque tiene nueve secciones y tablas de doce columnas.
-- 📱 **No hay hamburguesa en el móvil, a propósito.** Son cuatro secciones; un botón que las
-  esconde detrás de un toque las hace menos visibles que enseñarlas.
-- Medido con Playwright (320 / 768 / 1440): 1 → 2 → 3 columnas de tarjeta, `scrollWidth` igual al
-  viewport en los tres, y el ítem de navegación a 44 px en móvil. El carril de pestañas **se
-  desliza él**, la página no.
+
+#### 📱 La hamburguesa del móvil (19/09/2026) — y por qué se REVIERTE la decisión de no ponerla
+
+Hasta hoy aquí ponía, y en el comentario del propio componente: *«no hay hamburguesa en el móvil, a
+propósito. Son cuatro secciones; un botón que las esconde detrás de un toque las hace menos visibles
+que enseñarlas»*. **La decisión era correcta y su premisa ya no se cumple**: `pestanasPortal()`
+devuelve **siete** entradas (Seguros · Mi QR · Recibos · Siniestros · Recordatorios · Contactos ·
+Datos). Alberto, con la captura de su móvil, pidió el patrón de `apps/plataforma` (☰ + cajón).
+
+El propio historial del carril es el argumento: con cuatro pestañas desbordaba 48 px a 390 (y se
+repartió el ancho), con seis el reparto **superponía el texto de dos pestañas** (y se le puso un
+suelo de 76 px, por debajo del cual vuelve a deslizarse). Con siete no queda ajuste que valga: **una
+sección que solo encuentra quien arrastre por casualidad está más escondida que una detrás de un
+botón que se ve.** El ☰ lleva al lado el nombre de la sección activa, así que la pantalla sigue
+diciendo dónde estás con el cajón cerrado.
+
+- El ☰ mide **44×44** (es ahora la ÚNICA puerta a las secciones en el móvil), cierra al tocar fuera,
+  con **Escape** y con su aspa; el foco entra al cajón al abrirlo y vuelve al ☰ al cerrarlo.
+- 🚨 **El «abierto» se DERIVA de en qué pantalla se abrió** (`abiertoEn === ruta+parámetro`), no es un
+  booleano con un efecto que lo sincronice. Así cualquier navegación lo cierra sola — incluido el
+  **gesto de «atrás» de Android**, que no toca ninguno de los enlaces y dejaba el menú abierto encima
+  de la pantalla nueva.
+- 🚨 **Cerrado no basta con sacarlo de pantalla: lleva `visibility: hidden`.** Un cajón solo
+  desplazado deja sus siete enlaces enfocables con el teclado, y se tabula por un menú invisible.
+- ⚠️ **Lo que se pierde, dicho en voz alta: el carril era CSS puro y funcionaba sin JavaScript.** Por
+  eso `NavPortal` lleva un `<noscript>` que lo devuelve a su forma de carril — se ve peor con siete
+  pestañas, pero se ve. Un cajón que no se puede abrir es una pantalla sin salida.
+- Cepos en `test/regression-portal-cartera-agrupada.test.ts` (sustituyen a los dos del reparto de
+  ancho del carril, que vigilaban algo que ya no existe), con **cinco mutaciones vistas morder**.
+- ⏸️ **PENDIENTE y declarado: no está medido con Playwright.** El contenedor de esta sesión no puede
+  descargar el navegador (el proxy responde **403 a `playwright.azureedge.net`**), así que las
+  medidas a 320/360/1024 están **sin tomar**, no tomadas y bien. Lo que falta por comprobar delante
+  de un navegador: que el cajón no desborde a 320, que el ☰ mantenga sus 44 px y que a 1024 el
+  lateral siga idéntico (allí el ☰, su barra y el fondo van a `display:none`).
 
 🚨 **Los tokens y las medidas salen del FUENTE de la app de Manuel, no de una captura**: radio
 `1.4rem` en tarjetas, 24/600 el título de página, 18/600 el de sección, 16/500 el de tarjeta,
@@ -451,6 +480,45 @@ encontraba quien arrastrara por casualidad. Medido con Playwright: con tres, a 3
 enteras; **a 320 seguían saliéndose 39 px**, así que por debajo de 380 se reparten el ancho a partes
 iguales (`flex: 1 1 0`), con los 44 px táctiles intactos. El `overflow-x` se queda como red por si
 algún día vuelve a haber una cuarta.
+
+### 📂 La bóveda nace PLEGADA, y el alta va arriba (19/09/2026)
+
+Alberto, mirando su portal como lo ve un cliente: *«cuando entra un cliente no ve bien los seguros
+autorizados»* · *«que al cargar la pantalla salga todo plegado por defecto»* · *«“Añade una póliza”
+lo primero que se ve arriba, no enterrado en medio»*.
+
+- **Un `GrupoPlegable` por bloque** (`app/(portal)/boveda/GrupoPlegable.tsx`), cerrado de salida:
+  «Tu cartera» primero y después **uno por TITULAR** —no uno por cajón— con su nombre visible con el
+  bloque cerrado («GLOBAL 2 INSTALACIONES TÉCNICAS») y **cuántos seguros esconde**
+  (`textoCuentaSeguros` de `@central/module-seguros-portal`, puro y con test). Sin la cifra, un
+  plegable obliga a abrirlo para saber si merecía la pena abrirlo; sin el nombre, esconde de quién
+  es la cartera de dentro.
+- 🚨 **La cifra cuenta TODAS las pólizas del bloque**, también las que el filtro de vigencia esconde
+  de salida. Contar solo las vigentes haría que «2 seguros» tapara una cancelada sin decirlo; el
+  filtro de dentro ya declara por su cuenta cuántas oculta, que es donde esa distinción significa
+  algo.
+- 🚨 **Un bloque sin lista que plegar nace ABIERTO** (no eres cliente, tu ficha no tiene pólizas
+  vivas, no hemos podido comprobarlo): plegar el mensaje que explica por qué no ves nada lo convierte
+  en una pantalla vacía sin motivo.
+- **Se usa `<details>` y no un botón con estado**: funciona sin JavaScript y el navegador ya lo
+  anuncia como plegable. El titular va dentro del `<summary>` como `<h2>` —lo único de encabezado que
+  el HTML admite ahí— para no perder la navegación por encabezados. ⚠️ El `<summary>` se maqueta con
+  `display: list-item` a propósito: con `flex` desaparece el marcador ▸, que es la única señal de que
+  aquello se abre, **y no falla nada**.
+- ⚠️ **Un `<details>` cerrado crea igualmente todo su DOM.** Se acepta aquí y está medido: la cartera
+  viva entera son 110 pólizas entre 80 titulares. El día que un bloque traiga cientos, esto pide
+  montaje perezoso de verdad, no un `<details>`.
+- **`SubirPoliza` sube al principio**, justo debajo de `AvisoContacto`. Vivía DENTRO de la sección de
+  la cartera y detrás de todas sus filas, así que en un móvil solo la encontraba quien bajase por
+  delante de sus pólizas — y es la acción que trae aquí a quien todavía no tiene ninguna. El aviso de
+  contacto se queda por encima a propósito: es lo único de la pantalla que pide una corrección con
+  fecha, y un aviso que se baja por debajo de una acción deja de ser un aviso.
+- **El bloque propio vuelve a tener titular** («Tu cartera»), después de que el 12/09 se le quitara
+  por repetir «Mis seguros» tres veces. No es una vuelta atrás: un plegable sin nombre es un
+  triángulo sin más, y por eso el título usa otra palabra que la del h1 y la de la pestaña.
+- **`conNombre` pasa a `false` en los bloques ajenos**: el nombre ya lo dice la cabecera del
+  plegable. Lo que NO cambia es el chip de titular de cada FILA, que dice algo distinto —que esa
+  póliza no es tuya— y viaja con ella.
 
 ### 🚪 La raíz `/` MIRA si ya hay sesión (05/09/2026) — y por qué no hay enlace mágico
 
@@ -1189,10 +1257,10 @@ no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura
 | `app/instalacion.tsx` | El almacén compartido de la instalación (`beforeinstallprompt` se dispara UNA vez). Desde el 08/09/2026 lo lee solo `InstalarBoton`: la campana ya NO ofrece instalar |
 
 🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
-`!` (ninguna legible, o fallo de red). Este portal renunció a la hamburguesa porque un botón que
-esconde hace las cosas menos visibles que enseñarlas, y la campana es exactamente ese botón: sin
-número, una autorización detrás de ella es lo mismo que hoy en `/autorizaciones`. Y «sin avisos»
-sobre una fuente que no se leyó es la mentira que el `CLAUDE.md` de la raíz persigue.
+`!` (ninguna legible, o fallo de red). Un botón que esconde hace las cosas menos visibles que
+enseñarlas, y la campana es exactamente ese botón: sin número, una autorización detrás de ella es
+lo mismo que hoy en `/autorizaciones`. Y «sin avisos» sobre una fuente que no se leyó es la mentira
+que el `CLAUDE.md` de la raíz persigue.
 
 🚨 **Desde la campana NO se acepta ni se revoca nada.** Cada aviso es un enlace a la pantalla donde
 se resuelve, con el alcance y el texto delante. Un «Aceptar» en el panel sería aceptar sin leer y
@@ -2155,3 +2223,43 @@ pinta** porque es asistencia y `whatsapp_siniestros` se rotula «Dar parte». SQ
 dentro— pero lo que se mete dentro sí: con los datos escritos, la imagen miente en cuanto cambie la
 póliza, y además cualquiera que fotografíe la hoja se los lleva. Con una URL, el QR es permanente y
 la página detrás está siempre al día. Es la opción simple, no la complicada.
+
+### 🔗 Llegar al parte DESDE una póliza (19/09/2026) — el botón prometía un teléfono y daba una pestaña
+
+Alberto, pulsando «Ver los teléfonos de Allianz y dar parte» en la ficha de una de sus pólizas:
+*«tiene que aparecer tlf y los campos para apertura siniestros, ahora mismo me sale página de
+siniestros. Que revise agente estructura y diseño, hay que dividir mejor»*.
+
+Lo que **ya funcionaba** y conviene no volver a construir: el enlace de la ficha ya llevaba
+`?vista=siniestro&poliza=cartera:<id>` y `ParteSiniestro` ya nacía ABIERTO con esa póliza puesta (y
+su matrícula autorrellenada). Lo que fallaba era todo lo que se veía ANTES de llegar ahí.
+
+- **El ORDEN de la pantalla depende de con qué intención se llega.** Con `?poliza=` válida, el canal
+  de la compañía y el formulario van PRIMERO y el historial de siniestros detrás; sin él —quien entra
+  por la pestaña— se conserva el orden de siempre, porque mirar es mayoría. Antes, quien acababa de
+  tener un golpe aterrizaba por delante del historial de TODA su cartera.
+- **La compañía de esa póliza se pinta la PRIMERA y marcada** («La compañía de la póliza que traes
+  elegida», con filete de acento — no del rojo de alarma: aquí no ha fallado nada). Lo decide
+  `canalesConCompaniaPrimero()` de `canal-compania.ts`, puro y con test.
+- 🚨 **Ordenar NO es recortar: las demás compañías siguen enteras debajo.** Quien tiene prisa puede
+  haber llegado desde la póliza equivocada —el coche de su padre, el piso en vez del local— y una
+  lista recortada a una sola compañía le diría que no hay nadie más a quien llamar. Es la misma razón
+  por la que las `sinDatos` tampoco se filtran.
+- **La destacada sale de la póliza elegida AHORA** (`form.poliza`), no de la del enlace: cambiar de
+  póliza en el desplegable reordena el bloque. Si saliera de `polizaInicial`, el teléfono de la
+  anterior se quedaría arriba y marcado como «la tuya».
+- **El cruce sigue siendo por nombre EXACTO** (normalizado igual que `canalDeCompania`): un nombre que
+  no está en la lista deja el orden intacto. Nunca se promueve «la más parecida», que es la vía por la
+  que alguien acabaría marcando el número de urgencias de otra compañía.
+- La póliza del enlace se comprueba **dos veces contra la lista ya acotada a la sesión**
+  (`polizasParte`): en la página, porque de ella depende el orden, y dentro del componente, porque de
+  ella depende la preselección. Un id manipulado en la URL no reordena nada ni abre nada.
+- 📌 **Lo que NO se ha tocado, y es deliberado: `ParteSiniestro.tsx` sigue siendo un solo fichero.**
+  «Dividir mejor» se ha resuelto en el ORDEN de la pantalla, no partiendo el componente: sus piezas
+  ya existen como funciones internas (`CanalesCompania`, `BloqueCanal`, `ViaCanalEnlace`,
+  `Adjuntar`, `ListaPartes`…) y **sacarlas a otro fichero las dejaría fuera de los cinco cepos de
+  `test/regression-portal-canal-compania.test.ts`**, que leen ESE fuente y vigilan las cuatro frases
+  que no se pueden decir. Mover el canal de sitio es un PR con sus cepos migrados, no un efecto
+  colateral de reordenar una pantalla.
+- Cepos en `test/regression-portal-parte-desde-poliza.test.ts` (6, con **seis mutaciones vistas
+  morder**) y en `canal-compania.test.ts` del módulo.
