@@ -1,46 +1,47 @@
 {
  "sesion": "37335fbb-cea1-5210-891d-a24accfb595e",
  "inicio": "2026-09-17T13:13:32.599Z",
- "fin": "2026-09-19T07:14:58.987Z",
- "llamadas": 113,
+ "fin": "2026-09-19T07:51:24.120Z",
+ "llamadas": 167,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 7,
-   "chars_in": 546,
-   "chars_out": 16758,
+   "llamadas": 22,
+   "chars_in": 1915,
+   "chars_out": 129736,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 7
+    "Read": 19,
+    "Grep": 3
    }
   },
   "bash": {
-   "llamadas": 31,
-   "chars_in": 8104,
-   "chars_out": 18463,
+   "llamadas": 55,
+   "chars_in": 15852,
+   "chars_out": 42702,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 31
+    "Bash": 55
    }
   },
   "escritura": {
-   "llamadas": 6,
-   "chars_in": 6588,
-   "chars_out": 3703739,
+   "llamadas": 17,
+   "chars_in": 24884,
+   "chars_out": 4427505,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 6
+    "Edit": 17
    }
   },
   "mcp:github": {
-   "llamadas": 30,
-   "chars_in": 4765,
-   "chars_out": 84932,
+   "llamadas": 32,
+   "chars_in": 6840,
+   "chars_out": 85260,
    "errores": 0,
    "archivos_citados": 7,
    "chars_citados": 3732910,
@@ -53,34 +54,35 @@
     "mcp__github__actions_run_trigger": 1,
     "mcp__github__actions_list": 2,
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 1,
+    "mcp__github__create_pull_request": 2,
     "mcp__github__update_pull_request": 1,
-    "mcp__github__search_pull_requests": 2
+    "mcp__github__search_pull_requests": 2,
+    "mcp__github__subscribe_pr_activity": 1
    }
   },
   "otro": {
-   "llamadas": 22,
-   "chars_in": 597,
-   "chars_out": 527682,
+   "llamadas": 23,
+   "chars_in": 699,
+   "chars_out": 527880,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 531431,
    "tools": {
     "ReadNotifications": 15,
-    "ToolSearch": 6,
+    "ToolSearch": 7,
     "Skill": 1
    }
   },
   "sql": {
-   "llamadas": 11,
-   "chars_in": 2539,
-   "chars_out": 11335,
+   "llamadas": 12,
+   "chars_in": 2784,
+   "chars_out": 12384,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 1,
-    "mcp__Supabase__execute_sql": 10
+    "mcp__Supabase__execute_sql": 11
    }
   },
   "mcp:Supabase": {
