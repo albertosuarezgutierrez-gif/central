@@ -77,12 +77,13 @@
   `crm_seguros` y queda **solo como motor de ingesta de CIMA** (cron Actions 05:30/11:30 UTC → CRM → adaptador
   Java en Fly → TIREA → `seguros`). **Su web NO se usa ni se migra su login** (decisión de Alberto 02/09):
   las pantallas de la correduría se montan en `plataforma` → `/correduria`. La Auth de Supabase (9 usuarios,
-  MFA) está copiada a central por si acaso, pero sin uso. ⏸️ **Único cabo suelto: el adaptador Java corre en
-  la cuenta de Fly de Manuel** (`asegura-app-cima-adapter`); si él lo apaga, CIMA deja de entrar SIN error y
-  solo se nota por los heartbeats `cima_pull_*` que vigila la auditoría. Traspaso de esa app a una cuenta
-  de Alberto pendiente (borrador de mensaje v8 en `docs/TRASPASO-CORREDURIA.md`, no se envía sin su OK);
-  el port de `cima-pull` a `apps/asegura` está APARCADO a propósito (inventario en
-  `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). 🔑 **Rotar la contraseña de un rol de BD SIN actualizar el `DATABASE_URL` de su proyecto Vercel deja la
+  MFA) está copiada a central por si acaso, pero sin uso. ✅ **El cabo suelto de Fly se cerró (19/09/2026):**
+  `asegura-app-cima-adapter` ya vivía en la organización Fly `grupo-asegura` (de Alberto, tarjeta propia,
+  sin cargos pendientes) — no en la cuenta de Manuel, como este documento decía hasta hoy. Manuel se
+  eliminó de esa organización y de la organización Fly `Personal` de Alberto (donde figuraba de admin sin
+  motivo). Único pendiente real: que Manuel transfiera/haga fork del **repo del adaptador Java** (mensaje
+  pendiente de que Alberto lo mande). El port de `cima-pull` a `apps/asegura` sigue APARCADO a propósito
+  (inventario en `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). 🔑 **Rotar la contraseña de un rol de BD SIN actualizar el `DATABASE_URL` de su proyecto Vercel deja la
   app muerta en silencio (02/09/2026).** `prisma_seguros` se rotó tres veces ese día y `central-asegura` se
   quedó con la vieja: toda la cartera —y con ella el libro de comisiones— moría en `password authentication
   failed`, y ese texto **solo existía en los logs del pooler de Supabase**. Lo cazó el clasificador de causas

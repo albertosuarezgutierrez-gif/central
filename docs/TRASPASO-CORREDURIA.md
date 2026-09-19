@@ -1,5 +1,15 @@
 # 🛡️ Traspaso del CRM de correduría (Manuel Suárez) → `central`
 
+> ## ✅ FLY.IO CERRADO (19/09/2026) — el último cabo suelto ya no lo era
+>
+> **Medido con Claude Chrome, no supuesto:** `asegura-app-cima-adapter` YA vivía en la organización Fly
+> `grupo-asegura` (de Alberto, admin, tarjeta propia sin cargos fallidos ni pendientes) — no en la cuenta
+> de Manuel, como este documento y `CLAUDE.md` decían desde el 02/09. Manuel se eliminó de `grupo-asegura`
+> y de la organización personal de Alberto (`Personal`, donde figuraba como admin sin motivo). La app
+> sigue `deployed`, 2 máquinas, sin tocarla. **El mensaje v8 de abajo queda OBSOLETO en su punto 1** (Fly
+> ya no hay que pedirlo) — sigue vigente solo el punto 2 (el repo del adaptador Java, transferir o fork).
+> Sin enviar todavía.
+
 > ## ✅ TRASPASO CERRADO (02/09/2026, 06:36 UTC) — el CRM corre sobre NUESTRA base
 >
 > **Medido, no supuesto:** tras poner en el proyecto Vercel `asegura` un `DATABASE_URL` contra la BD

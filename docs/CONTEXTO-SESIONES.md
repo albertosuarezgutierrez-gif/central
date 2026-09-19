@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Cabo suelto de Fly.io cerrado: `asegura-app-cima-adapter` YA vivía en la org Fly
+`grupo-asegura` de Alberto (tarjeta propia, sin cargos pendientes ni fallidos) — el `CLAUDE.md` decía
+"cuenta de Manuel" desde el 02/09 y estaba desactualizado. Por Claude Chrome (Alberto ya con cuenta Fly):
+Manuel eliminado de `grupo-asegura` y de `Personal` (donde era admin sin motivo aparente). Adapter sigue
+`deployed`, 2 máquinas, sin tocar. Pendiente real único: que Manuel transfiera/haga fork del repo del
+adaptador Java (mensaje redactado, no enviado). De paso: las 5 alertas PostHog de CIMA (`cima-pull-*`,
+`auth`, `webhook signature`) solo avisaban a Manuel (`subscribed_users`) pese a que Alberto ya era Owner
+de esa org desde el 08/09 — reapuntadas a Alberto. PostHog en plan free, sin tarjeta: nunca fue el origen
+del cargo de Fly.
 **(19/09/2026)** Alberto vio 4 avisos reales en la intranet de ingesta; separados por sistema (Codeoscopic
 ≠ CIMA, corregido tras confundirlos): Mapfre/C0058 en silencio es llamada suya (comunicación, no código).
 Arreglados en `asegura` (PR #839, `claude/loo-969-codeoscopic-batch-cima-reconcile`): **LOO-969** —
