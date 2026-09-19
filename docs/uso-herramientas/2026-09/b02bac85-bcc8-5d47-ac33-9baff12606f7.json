@@ -1,49 +1,50 @@
 {
  "sesion": "b02bac85-bcc8-5d47-ac33-9baff12606f7",
  "inicio": "2026-09-19T07:11:21.739Z",
- "fin": "2026-09-19T09:07:15.070Z",
- "llamadas": 250,
+ "fin": "2026-09-19T09:35:21.491Z",
+ "llamadas": 344,
  "categorias": {
   "otro": {
-   "llamadas": 21,
-   "chars_in": 2573,
-   "chars_out": 218817,
+   "llamadas": 46,
+   "chars_in": 7799,
+   "chars_out": 417854,
    "errores": 0,
-   "archivos_citados": 3,
-   "chars_citados": 31188,
+   "archivos_citados": 5,
+   "chars_citados": 54433,
    "tools": {
     "Skill": 3,
-    "ToolSearch": 5,
-    "ReadNotifications": 8,
-    "ScheduleWakeup": 5
+    "ToolSearch": 7,
+    "ReadNotifications": 24,
+    "ScheduleWakeup": 12
    }
   },
   "mcp:github": {
-   "llamadas": 30,
-   "chars_in": 9231,
-   "chars_out": 98842,
+   "llamadas": 47,
+   "chars_in": 12245,
+   "chars_out": 169382,
    "errores": 0,
-   "archivos_citados": 6,
-   "chars_citados": 52384,
+   "archivos_citados": 27,
+   "chars_citados": 237504,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 2,
     "mcp__github__subscribe_pr_activity": 2,
-    "mcp__github__pull_request_read": 21,
+    "mcp__github__pull_request_read": 35,
     "mcp__github__update_pull_request": 2,
-    "mcp__github__merge_pull_request": 1,
-    "mcp__github__unsubscribe_pr_activity": 1
+    "mcp__github__merge_pull_request": 2,
+    "mcp__github__unsubscribe_pr_activity": 2,
+    "mcp__github__add_issue_comment": 1
    }
   },
   "bash": {
-   "llamadas": 152,
-   "chars_in": 67825,
-   "chars_out": 393878,
+   "llamadas": 190,
+   "chars_in": 74943,
+   "chars_out": 412288,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 152
+    "Bash": 190
    }
   },
   "mcp:Supabase": {
@@ -80,27 +81,27 @@
    }
   },
   "escritura": {
-   "llamadas": 22,
-   "chars_in": 49758,
-   "chars_out": 2376034,
+   "llamadas": 29,
+   "chars_in": 64076,
+   "chars_out": 4161112,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Write": 3,
-    "Edit": 19
+    "Edit": 26
    }
   },
   "lectura-directa": {
-   "llamadas": 19,
-   "chars_in": 1835,
-   "chars_out": 45265,
+   "llamadas": 26,
+   "chars_in": 2467,
+   "chars_out": 83639,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 15,
-    "Grep": 4
+    "Read": 21,
+    "Grep": 5
    }
   }
  }
