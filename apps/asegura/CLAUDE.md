@@ -951,6 +951,16 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
     `asegura-portal` y en `central-asegura`). Este commit es el que desatasca el redeploy de
     producción de `central-asegura`: los commits recientes no tocaban `apps/asegura/` y el
     `ignoreCommand` los saltaba, así que un simple «Redeploy» del panel repetía el mismo salto.
+  - 🔁 **Y se repitió idéntico el 17/09/2026: rotado el secreto, `/api/portal/documento` y
+    `/api/portal/contacto` seguían en 401 media hora después.** Medido en `get_runtime_logs`: el PR
+    que arreglaba el síntoma (registrar el fallo de la 2ª pasada de extracción) solo tocaba
+    `apps/asegura-portal/`, así que `central-asegura` se quedó en el deployment de producción
+    ANTERIOR a la rotación — la env nueva estaba puesta en Vercel pero nunca se había desplegado.
+    Este mismo commit (tocando `apps/asegura/CLAUDE.md`) es el que fuerza ese redeploy. **Lección que
+    ya iba por la segunda vez: rotar `ASEGURA_PORTAL_PUENTE_SECRET` no basta con guardarlo en las dos
+    envs — hace falta además un commit que TOQUE `apps/asegura/` (o uno de sus packages) para que
+    `central-asegura` lo recoja, porque un «Redeploy» del panel reutiliza el último commit y el
+    `ignoreCommand` lo vuelve a saltar si ese commit no tocaba la app.**
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en
