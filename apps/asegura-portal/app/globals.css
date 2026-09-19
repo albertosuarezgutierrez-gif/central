@@ -3327,3 +3327,84 @@ h1 em {
     transform: none;
   }
 }
+
+/* ── Carta de no renovación (19/09/2026) ──────────────────────────────────
+ * La carta se enseña como texto plano preformateado y se imprime SOLA: todo
+ * lo demás de la página (cabecera del portal, plazo, alternativa, botones)
+ * lleva `.solo-pantalla` y desaparece al imprimir. Es la única pieza del
+ * portal pensada para salir en papel con destino a un tercero. */
+@media print {
+  .solo-pantalla,
+  .portal-nav,
+  .marca-barra,
+  .pie-legal,
+  .wsp-flotante,
+  .campana {
+    display: none !important;
+  }
+  .carta {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+.carta-texto {
+  white-space: pre-wrap;
+  font-family: var(--serif, inherit);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+  padding: 18px;
+  background: var(--bg, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  /* Un texto preformateado sin esto desborda en móvil y se lleva la página. */
+  overflow-wrap: anywhere;
+}
+.carta-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+@media (min-width: 480px) {
+  .carta-acciones .boton {
+    width: auto;
+  }
+}
+
+/* ── Casilla de consentimiento comercial ───────────────────────────────── */
+.consentimiento-casilla {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  line-height: 1.5;
+}
+.consentimiento-casilla input {
+  /* 44 px de objetivo táctil alrededor de la casilla, sin agrandar la casilla. */
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin: 2px 0 0;
+}
+.consentimiento-estado {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+/* ── Coberturas repetidas ───────────────────────────────────────────────── */
+.solapamientos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.solapamiento ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}

@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+## (19/09/2026) Gestor de pólizas como imán de leads — landing, carta de baja, casilla comercial, solapamientos
+- Prompt de consultoría SEO de Alberto valorado: ~70 % ya existía; descartados semáforo de precio, reseñas automáticas y referidos con premio (motivos en el spec `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`). Después: «Hazlo todo».
+- Portal: `/boveda/carta/[id]` (carta art. 22 LCS, solo declaradas, NUNCA se envía), casilla `comercial` en «Mis datos» (`POST /api/consentimiento`, append-only, nace desmarcada), bloque de coberturas repetidas (3 familias, informa no juzga). Privacidad con fila 6.1.a → `VERSION_TEXTOS_LEGALES` `2026-09-v5`.
+- Web: `/gestor-de-seguros` (copy en `lib/gestor.ts` + cepo), calculadora de vencimientos sin registro, artículo `como-dar-de-baja-un-seguro-a-tiempo` con `Articulo.cta`. `lib/companias-baja.ts` con los 5 canales de baja **sin verificar** (red bloquea los dominios): cepo que impide publicarlos.
+- ⏳ Alberto: encender `ASEGURA_AVISOS_ACTIVOS` tras contar ≤112, y verificar los 5 canales de baja (10 min/compañía) para la serie por compañía.
+
 **(19/09/2026)** Plataforma — «el móvil me pide usuario siempre». NO era la cookie (30 días) ni faltaba
 una web app (ya es PWA instalable): `cuentas.session_jti` era UN jti por cuenta y cada login lo pisaba,
 así que entrar desde el PC (o Claude en Chrome) expulsaba al móvil. Ahora **sesiones por dispositivo**:
