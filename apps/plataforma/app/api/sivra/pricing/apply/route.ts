@@ -19,6 +19,7 @@ import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
 import {
   sqlCompDeNuestraLiga, sqlNotaCreible, guardaMonotoniaLiga, guardaMonotoniaLigaMed,
 } from "@/lib/sivra/pricing-comps-liga"
+import { sqlCompEsCasaComparable } from "@/lib/sivra/pricing-comps-tipo"
 import { aplicarTechoAdr } from "@/lib/sivra/pricing-techo-adr"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
 import { EDAD_MERCADO_RANCIO } from "@/lib/sivra/mercado-cobertura"
@@ -141,18 +142,19 @@ export async function POST(req: NextRequest) {
     -- OJO: esta consulta va en un template literal de TS, aqui NO se pueden usar backticks ni $ { }.
     mkt AS (
       SELECT m.scenario,
-        -- Percentiles del corpus EN NUESTRA LIGA, y a continuacion los del corpus completo: el
-        -- consumidor toma el MENOR (guarda de monotonia, ver pricing-comps-liga.ts).
+        -- Percentiles del corpus EN NUESTRA LIGA Y QUE ES CASA ENTERA (no aparthotel/hotel), y a
+        -- continuacion los del corpus completo: el consumidor toma el MENOR (guarda de monotonia,
+        -- ver pricing-comps-liga.ts y pricing-comps-tipo.ts).
         percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))
-          FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::numeric med,
+          FILTER (WHERE ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "s.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)})::numeric med,
         percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))
-          FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::numeric flo,
+          FILTER (WHERE ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "s.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)})::numeric flo,
         percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))
-          FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::numeric cei,
+          FILTER (WHERE ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "s.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)})::numeric cei,
         percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric med_todos,
         percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric flo_todos,
         percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric cei_todos,
-        COUNT(*) FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::int AS sample_liga,
+        COUNT(*) FILTER (WHERE ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "s.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)})::int AS sample_liga,
         -- Solo notas CREIBLES: un 10,0 con 6 resenas no mide nada y movia esta mediana (el caso
         -- real, 68 apariciones en el corpus de Busto). Ver sqlNotaCreible.
         percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)
@@ -459,7 +461,7 @@ export async function POST(req: NextRequest) {
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night,
         -- La liga deja de filtrar en el WHERE y pasa a ser COLUMNA: el mismo scan da entonces el
         -- corpus filtrado Y el completo, que es lo que la guarda de monotonia necesita comparar.
-        ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))} AS en_liga
+        ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "sl.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)} AS en_liga
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       -- LEFT y no JOIN: sin fila de ajustes no sabemos en que liga jugamos, y eso DEJA PASAR al
@@ -573,7 +575,7 @@ export async function POST(req: NextRequest) {
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night,
         -- La liga deja de filtrar en el WHERE y pasa a ser COLUMNA: el mismo scan da entonces el
         -- corpus filtrado Y el completo, que es lo que la guarda de monotonia necesita comparar.
-        ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))} AS en_liga
+        ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "sl.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)} AS en_liga
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       -- LEFT y no JOIN: sin fila de ajustes no sabemos en que liga jugamos, y eso DEJA PASAR al

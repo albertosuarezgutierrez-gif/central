@@ -10,6 +10,7 @@ import {
   LUGAR_MAX,
   ZONAS_VEHICULO,
   bloqueDatosVehiculo,
+  canalesConCompaniaPrimero,
   canalesDeLasPolizas,
   componerDescripcion,
   TEXTO_SIN_CANAL,
@@ -428,12 +429,36 @@ const ESTADO_FICHERO: Record<EstadoFichero, { texto: string; clase: string }> = 
  * lo comunica estuviera detrás de «Dar parte» → desplegar → elegir póliza,
  * estaría escondido justo para quien tiene prisa.
  *
- * Por eso no depende de la póliza elegida: se pintan las compañías de TODAS sus
- * pólizas. Con una sola compañía es un bloque; con cuatro son cuatro.
+ * Por eso el CONTENIDO no depende de la póliza elegida: se pintan las compañías
+ * de TODAS sus pólizas. Con una sola compañía es un bloque; con cuatro son
+ * cuatro.
+ *
+ * 🚨 Lo que sí depende de ella, desde el 19/09/2026, es el ORDEN: la de la
+ * póliza elegida va primera y marcada, porque el botón de la ficha promete un
+ * teléfono concreto («Ver los teléfonos de Allianz y dar parte») y con tres
+ * compañías debajo podía ser el tercero. **Ordenar no es recortar**: quien
+ * tiene prisa puede haber llegado desde la póliza equivocada —el coche de su
+ * padre, el piso en vez del local— y una lista de una sola compañía le diría
+ * que no hay nadie más a quien llamar.
  */
-function CanalesCompania({ polizas }: { polizas: readonly PolizaOpcionParte[] }) {
-  const canales = canalesDeLasPolizas(polizas.map((p) => p.canal))
+function CanalesCompania({
+  polizas,
+  destacada,
+}: {
+  polizas: readonly PolizaOpcionParte[]
+  /**
+   * La compañía de la póliza que hay elegida ahora mismo (o la que venía en el
+   * enlace de su ficha), para ponerla DELANTE. `null` = ninguna elegida, y
+   * entonces el orden es el de siempre.
+   */
+  destacada?: string | null
+}) {
+  // Una compañía en blanco (una póliza aportada de la que la IA no leyó cuál
+  // era) es «no lo sabemos», no una compañía: ni ordena ni marca nada.
+  const quien = typeof destacada === 'string' && destacada.trim() !== '' ? destacada.trim() : null
+  const canales = canalesConCompaniaPrimero(canalesDeLasPolizas(polizas.map((p) => p.canal)), quien)
   if (canales.length === 0) return null
+  const clave = quien === null ? null : quien.toLowerCase()
 
   return (
     <div className="canal-caja">
@@ -447,16 +472,29 @@ function CanalesCompania({ polizas }: { polizas: readonly PolizaOpcionParte[] })
         hacer los dos.
       </p>
       {canales.map((c) => (
-        <BloqueCanal key={c.nombre} canal={c} />
+        <BloqueCanal
+          key={c.nombre}
+          canal={c}
+          // 🚨 Se compara con la MISMA normalización que usó el helper puro
+          // para ordenar. Con dos criterios distintos, el bloque marcado y el
+          // que va primero podrían no ser el mismo, y el cartel señalaría a
+          // otra compañía.
+          deLaElegida={clave !== null && c.nombre.trim().toLowerCase() === clave}
+        />
       ))}
     </div>
   )
 }
 
-function BloqueCanal({ canal }: { canal: CanalCompania }) {
+function BloqueCanal({ canal, deLaElegida }: { canal: CanalCompania; deLaElegida?: boolean }) {
   return (
-    <div className="canal-bloque">
+    <div className="canal-bloque" data-elegida={deLaElegida ? 'si' : undefined}>
       <p className="canal-compania">{canal.nombre}</p>
+      {/* El cartel solo dice de QUÉ póliza es esta compañía; no promete nada
+          del canal (eso lo dicen las vías de abajo, cada una con su horario si
+          lo hay). Va en texto y no solo en color: el filete de la izquierda no
+          se lo lee nadie por teléfono. */}
+      {deLaElegida === true && <p className="canal-elegida">La compañía de la póliza que traes elegida</p>}
       {canal.sinDatos ? (
         // 🚨 «No lo hemos verificado», NUNCA «esta compañía no tiene». El texto
         // vive en el módulo puro con su test para que no se convierta en un
@@ -948,11 +986,17 @@ export function ParteSiniestro({
 
   const restantes = DESCRIPCION_MIN - form.descripcion.trim().length
 
+  // La compañía de la póliza elegida AHORA (la del enlace de su ficha al
+  // entrar, y la que se elija después en el desplegable). Solo decide el ORDEN
+  // del bloque de canales: las demás compañías siguen enteras debajo, porque
+  // quien tiene prisa puede haber llegado desde la póliza equivocada.
+  const companiaElegida = polizas.find((p) => p.valor === form.poliza)?.canal.nombre ?? null
+
   return (
     <section className="seccion" aria-labelledby={`${uid}-titulo`}>
       <h2 id={`${uid}-titulo`}>Un siniestro</h2>
 
-      <CanalesCompania polizas={polizas} />
+      <CanalesCompania polizas={polizas} destacada={companiaElegida} />
 
       {/* La confirmación vive FUERA del formulario, así sigue en pantalla cuando
           el formulario ya se ha cerrado. */}
