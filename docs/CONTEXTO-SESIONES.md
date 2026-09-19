@@ -19,6 +19,17 @@ PSD2, gasto real 510-680€ invisible en `/finanzas`. Pendiente: conectar esa ta
 cuál de los DOS cargos -76,50€ (07/09 y 10/09) corresponde el único recibo de 76,50€ (sobra uno).
 Detalle en `docs/AGENTES-BITACORA.md`.
 
+**(19/09/2026)** Avisos de renovación de carné de conducir (correduría): tras el helper puro
+`caducidadCarnet()` (PR #3076, mergeado), se conectó al aviso EN LA INTRANET del CLIENTE (decisión
+de Alberto, no la del corredor) — nueva fuente `carnets` en el catálogo `avisosDe()` de
+`@central/module-seguros-portal` (ventana propia de 60 días, no los 7 de las obligaciones), servida
+por un puerto estrecho nuevo `GET /api/portal/carnets` en `apps/asegura` (calcula con la clave PII y
+solo cruza el resultado, nunca las fechas cifradas de origen) y consumida por la campana
+(`/api/avisos`) y por el emisor genérico de correo (`avisos-intranet.ts`, sin tocarlo aparte —
+hereda el envío automáticamente). Nueva tabla Prisma `ClienteCarnetConducir`. Suite completa +
+typecheck de asegura/asegura-portal en verde. PR #3087, mergeado. Pendiente: UI en la ficha del
+corredor para dar de alta/editar carnés (la tabla soporta varios por cliente; hoy nadie los escribe).
+
 **(19/09/2026)** SIVRA pricing — el corpus de comparables de aforo 12 estaba dominado por
 aparthoteles/hoteles (Overland Suites, Sercotel, Hilton, Meliá…, 59-14 apariciones cada uno) frente
 a 3-8 de las casas enteras reales: el filtro `accommodation_types:["APARTMENT"]` del conector no
