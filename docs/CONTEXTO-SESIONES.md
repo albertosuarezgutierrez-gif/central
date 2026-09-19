@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/09/2026)** Portal cliente · Regla nueva de Alberto: un seguro es anual renovable, así que si
+el documento subido no trae vencimiento vigente (p.ej. el contrato original de una póliza plurianual)
+pero sí trae fecha de EFECTO/emisión, el día y mes de esa fecha SON los del próximo vencimiento.
+Nuevo `vencimientoDesdeEfecto()` en `module-seguros-portal/poliza-leida.ts` (calcula la próxima
+ocurrencia del día/mes, clamp 29-feb→28 en año no bisiesto) + `extraerPoliza()` pide `fechaEfecto` a
+la IA y lo usa SOLO si `fechaVencimiento` viene `null`. Aplicado a mano también a la póliza de hogar
+de Alejandro Soler (SegurCaixa, efecto 30/01 → vencimiento 30/01/2027).
+
 **(19/09/2026)** Portal cliente · Las 2 pólizas de Alejandro Soler que salían "sin ramo/sin compañía"
 en `/correduria` son PDFs con contraseña real (no vacía): `pdf-parse` lanza `PasswordException` (medido
 descargando los 2 ficheros de su Drive y probando con `pdf-parse` y `pdfjs-dist` 4.x directo — ninguno

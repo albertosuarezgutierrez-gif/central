@@ -36,6 +36,7 @@ import {
   normalizarOrigenes,
   normalizarPolizaLeida,
   polizaLeidaVacia,
+  vencimientoDesdeEfecto,
   type CampoRamo,
   type DatosRamo,
   type OrigenPorCampo,
@@ -145,9 +146,10 @@ export type ResultadoExtraccion = {
 // puede volver a leer — hay que pedirle a la persona que lo suba otra vez.
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
+{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"fechaEfecto":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
 Reglas:
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
+- "fechaEfecto": la fecha de EFECTO, ENTRADA EN VIGOR o EMISIÓN de esta póliza o de su periodo actual — el día en que empezó a correr, NO la de vencimiento. Ponla SIEMPRE que aparezca en el documento, aunque también haya "fechaVencimiento": los contratos de seguro son anuales renovables y esta fecha sirve para calcular el vencimiento cuando el documento no traiga uno vigente.
 - "tipoDocumento": qué es este documento. "poliza" = el contrato o sus condiciones particulares. "suplemento" = una MODIFICACIÓN de una póliza que ya existe (cambio de vehículo, de coberturas, de tomador); suele decir "suplemento", "anexo" o "modificación". "recibo" = un justificante de cobro de un periodo. "otro" si no es ninguno de los tres. Si no lo puedes decidir, pon null: NUNCA fuerces "poliza".
 - "primaAnual" en euros, solo el número, con punto decimal. Es lo que se paga AL AÑO por la póliza. Si el documento es un suplemento o un recibo, pon aquí su importe igualmente: nosotros ya sabemos qué hacer con él.
 - "matricula": la matrícula española del vehículo asegurado, tal cual aparece.
@@ -423,8 +425,16 @@ export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): P
   // tirarlos obligaría a preguntar otra vez por algo que ya está dicho.
   const datosRamo = normalizarDatosRamoLeidos(contrato.ramo, bruto)
   const o = bruto && typeof bruto === 'object' ? (bruto as Record<string, unknown>) : {}
+  // 🚨 Un seguro es anual renovable: si el documento no trae un vencimiento
+  // VIGENTE (el original de una póliza plurianual, por ejemplo, solo trae el
+  // de su primer periodo) pero sí una fecha de EFECTO o emisión, el día y mes
+  // de esa fecha SON los del próximo vencimiento — dictado de Alberto,
+  // 19/09/2026. Solo se calcula cuando `fechaVencimiento` es `null`: si el
+  // documento lo dice, ese manda siempre.
+  const fechaVencimiento = contrato.fechaVencimiento ?? vencimientoDesdeEfecto(o.fechaEfecto, hoy)
   return {
     ...contrato,
+    fechaVencimiento,
     // 🚨 La prima se ANULA cuando consta que el documento no es la póliza. El
     // importe de un suplemento o de un recibo es real, pero no es lo que se
     // paga al año, y guardarlo ahí no falla: sale un número plausible sobre el
