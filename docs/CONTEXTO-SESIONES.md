@@ -78,6 +78,12 @@ asegura. Fix: `describirBien()` de `@central/module-seguros-portal` (mismo helpe
 computa el bien también aquí; la tabla lo pinta como línea principal y el nº de póliza baja a
 referencia secundaria.
 
+**(20/09/2026)** Auditoría ligera (II), ~3h tras la profunda. Rango: 2 commits (#3136 auto-informe
+mercado-booking, #3126 siniestros), ambos ya con su propio commit de memoria — sin reconciliación
+pendiente. Heartbeat/correduría/pricing re-comprobados: sin cambios frente a la profunda de la
+mañana (mismos rojos crónicos `ses_transporte`/`seo_correduria`; CIMA y pricing sanos). No se pudo
+listar sesiones del rango (MCP no adjunto). Sin hallazgo nuevo: sin PR de carril 2, sin Telegram.
+
 **(20/09/2026)** Auditoría PROFUNDA semanal. Código/infra sanos (2.947 tests, 13 typechecks, lint,
 qa, build — todo verde). Heartbeat y correduría sin novedad (rojos ya conocidos: `ses_transporte`,
 `seo_correduria` cura sola el 21/09, BBVA/PSD2 pendiente de Alberto desde el 16/09). Pricing sano.
