@@ -23,8 +23,18 @@ export const TIPOS_AVISO = [
   'autorizacion_sin_aceptar',
   'obligacion_en_ventana',
   'datos_por_revisar',
+  'carnet_en_ventana',
 ] as const
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
+
+/**
+ * Ventana del carné de conducir: 60 días, no los 7 de `DIAS_VENTANA_AVISO`.
+ * Renovar un carné exige cita en la DGT y (a partir de los 65) un
+ * reconocimiento médico — un aviso a una semana vista llega tarde para pedir
+ * hueco. Primer corte razonable (19/09/2026); ajustable sin tocar el resto del
+ * catálogo.
+ */
+export const DIAS_VENTANA_AVISO_CARNET = 60
 
 export type Aviso = {
   tipo: TipoAviso
@@ -36,7 +46,7 @@ export type Aviso = {
   href: string
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -76,6 +86,23 @@ export type ReparoParaAviso = {
   texto: string
 }
 
+/**
+ * Un carné de conducir con su próxima caducidad ya calculada (fuera de aquí:
+ * `caducidadCarnet()` de `@central/module-seguros`, con la fecha de expedición
+ * y de nacimiento, que esta capa nunca ve). Este tipo NO lleva ningún dato de
+ * origen — solo el resultado — porque es lo único que cruza el puente desde
+ * `apps/asegura` (fecha de carné y de nacimiento van cifradas y este paquete no
+ * tiene la clave).
+ */
+export type CarnetParaAviso = {
+  /** Id de la fila `cliente_carnets_conducir`: estable, para la `key` y el sello. */
+  id: string
+  /** 'B', 'C1E'… tal cual lo guarda la DGT. */
+  tipo: string
+  /** `YYYY-MM-DD`. */
+  fechaCaducidad: string
+}
+
 export type EntradaAvisos = {
   /** `null` = esa fuente NO se ha podido leer. No es lo mismo que `{ otorgadas: [], recibidas: [] }`. */
   autorizaciones: { otorgadas: AutorizacionParaAviso[]; recibidas: AutorizacionParaAviso[] } | null
@@ -89,6 +116,8 @@ export type EntradaAvisos = {
    * ilegible, «tus datos están bien» sería una afirmación que nadie ha comprobado.
    */
   datos: ReparoParaAviso[] | null
+  /** `null` = no se ha podido mirar (el puente a `apps/asegura` caído o sin configurar). */
+  carnets: CarnetParaAviso[] | null
   hoy: Date
 }
 
@@ -112,9 +141,27 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   // «Mis datos», que es donde se corrige: el aviso lleva a la pantalla donde se
   // resuelve, no a una explicación de lo que hay que hacer en otro sitio.
   datos_por_revisar: '/boveda?vista=datos',
+  // Renovar el carné se hace en la DGT, no en el portal — igual que un
+  // vencimiento de póliza, el aviso enlaza a la bóveda a secas.
+  carnet_en_ventana: '/boveda',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
+const MS_DIA = 86_400_000
+
+function diaUtc(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+}
+
+/** `YYYY-MM-DD` dentro de la ventana del carné, a fecha `hoy`. Mismo criterio que `entraEnVentana()`: solo futuro. */
+export function entraEnVentanaCarnet(fechaCaducidad: string, hoy: Date): boolean {
+  const dia = fechaCaducidad.trim().slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return false
+  const caduca = new Date(`${dia}T00:00:00Z`)
+  if (Number.isNaN(caduca.getTime())) return false
+  const faltan = Math.round((diaUtc(caduca).getTime() - diaUtc(hoy).getTime()) / MS_DIA)
+  return faltan >= 0 && faltan <= DIAS_VENTANA_AVISO_CARNET
+}
 
 /**
  * El texto del globo. Tres desenlaces, y «0» no es uno de ellos:
@@ -208,6 +255,21 @@ export function avisosDe(x: EntradaAvisos): Avisos {
         // que solo dice que algo está mal obliga a escribirnos para saber qué.
         detalle: `${r.texto} Puedes corregirlo tú mismo en «Mis datos».`,
         href: HREF_POR_TIPO.datos_por_revisar,
+      })
+    }
+  }
+
+  if (x.carnets === null) {
+    fuentesIlegibles.push('carnets')
+  } else {
+    for (const c of x.carnets) {
+      if (!entraEnVentanaCarnet(c.fechaCaducidad, x.hoy)) continue
+      avisos.push({
+        tipo: 'carnet_en_ventana',
+        id: c.id,
+        titulo: `Tu carné de conducir (${c.tipo}) caduca pronto`,
+        detalle: `Caduca el ${FECHA.format(new Date(`${c.fechaCaducidad}T00:00:00Z`))}. Pide cita en la DGT con tiempo.`,
+        href: HREF_POR_TIPO.carnet_en_ventana,
       })
     }
   }

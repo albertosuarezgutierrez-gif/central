@@ -230,6 +230,30 @@ export type AnotacionHistorial = { id: string; tipo: string; texto: string; fech
  * casi siempre de OTRA compañía: la correduría no la gestiona, solo consta que
  * existe. Nunca se enseña en la tabla de «Pólizas vivas» — es de otro alcance.
  */
+/**
+ * QUÉ es el bien asegurado — misma regla que el portal del cliente
+ * (`describirBien()` de `@central/module-seguros-portal`): el nº de póliza
+ * nunca identifica una póliza para una persona. `null` = la IA no lo leyó
+ * del documento, nunca «no tiene».
+ */
+export type BienDeclarada = {
+  cosa: string | null
+  ubicacion: string | null
+  detalles: string[]
+}
+
+export const BIEN_DECLARADA_VACIO: BienDeclarada = { cosa: null, ubicacion: null, detalles: [] }
+
+function leerBienDeclarada(v: unknown): BienDeclarada {
+  if (typeof v !== 'object' || v === null) return BIEN_DECLARADA_VACIO
+  const d = v as Record<string, unknown>
+  return {
+    cosa: cadena(d.cosa),
+    ubicacion: cadena(d.ubicacion),
+    detalles: Array.isArray(d.detalles) ? d.detalles.filter((x): x is string => typeof x === 'string') : [],
+  }
+}
+
 export type PolizaDeclaradaFicha = {
   id: string
   compania: string | null
@@ -249,6 +273,7 @@ export type PolizaDeclaradaFicha = {
    * cotejar eso exige la ficha de esa sociedad, que aquí no se mira).
    */
   yaEnCartera: boolean | null
+  bien: BienDeclarada
 }
 
 /**
@@ -277,6 +302,7 @@ export function leerDeclaradas(v: unknown): PolizaDeclaradaFicha[] | null {
       titularTipo: cadena(d.titularTipo),
       titularEmpresaNombre: cadena(d.titularEmpresaNombre),
       yaEnCartera: typeof d.yaEnCartera === 'boolean' ? d.yaEnCartera : null,
+      bien: leerBienDeclarada(d.bien),
     })
   }
   return out
@@ -755,19 +781,6 @@ export function urlRetarificar(polizaId: string): string {
   return `/correduria/poliza/${polizaId}/retarificar`
 }
 
-/**
- * El salto a asegura que TODAVÍA queda: **hogar**.
- *
- * Su retarificador es otro componente (metros, año de construcción, capitales y
- * el Catastro del riesgo) y no está portado. No se enlaza desde las fichas: solo
- * lo usa la pantalla interna cuando la póliza resulta ser de hogar, para mandar
- * al único sitio donde hoy funciona en vez de fingir que no se puede.
- * Pública, no es un secreto.
- */
-export function urlRetarificarHogarAsegura(polizaId: string): string {
-  return `${urlAsegura()}/cartera/poliza/${polizaId}`
-}
-
 /** Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura
  *  porque comparte pantalla con la cotización que sale de lo leído. Gratis. */
 export function urlSubirPoliza(): string {
@@ -778,10 +791,11 @@ export function urlSubirPoliza(): string {
  * Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la
  * cartera), **DENTRO de plataforma** desde el 07/09/2026. El riesgo sale del
  * Catastro (por dirección o referencia), no de una ficha existente — a
- * diferencia de `urlRetarificarHogarAsegura` (retarificar una póliza de
- * hogar existente, que SÍ sigue saltando a asegura), esta oportunidad se
- * presupuesta y se cotiza entera en `/correduria/cliente/<id>/hogar-nuevo`,
- * por el mismo puerto de operador (`lib/hogar-nuevo-asegura.ts`).
+ * diferencia de retarificar una póliza de hogar YA existente (portado el
+ * 17/09/2026: `poliza/[id]/retarificar` + `lib/hogar-retarificar-asegura.ts`,
+ * riesgo de la ficha), esta oportunidad se presupuesta y se cotiza entera en
+ * `/correduria/cliente/<id>/hogar-nuevo`, por el mismo puerto de operador
+ * (`lib/hogar-nuevo-asegura.ts`).
  */
 export function urlHogarNuevo(clienteId: string): string {
   return `/correduria/cliente/${clienteId}/hogar-nuevo`

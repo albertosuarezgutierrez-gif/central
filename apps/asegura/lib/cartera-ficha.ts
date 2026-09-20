@@ -40,7 +40,7 @@ import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { emailDeFicha } from './email-ficha'
 import { identidadesDeCliente } from './vinculos-portal'
-import { normalizarNumeroPoliza } from '@central/module-seguros-portal'
+import { normalizarNumeroPoliza, describirBien, type BienAsegurado } from '@central/module-seguros-portal'
 import type {
   ClienteCartera,
   PolizaCartera,
@@ -76,6 +76,14 @@ export type PolizaDeclaradaFicha = {
    * (eso es lo que ya hace `leads-portal.ts` para la cola de ventas).
    */
   yaEnCartera: boolean | null
+  /**
+   * QUÉ es el bien asegurado (marca/modelo/matrícula en auto, dirección en
+   * hogar) — misma regla que el propio portal (`describirBien()`): el nº de
+   * póliza NUNCA identifica una póliza para una persona. `datosRamo` es lo que
+   * la IA leyó del documento subido; sin nada que leer, `describirBien`
+   * devuelve el bien vacío, nunca inventa.
+   */
+  bien: BienAsegurado
 }
 
 /** Un resultado de búsqueda: lo justo para elegir a quién abrir. */
@@ -363,7 +371,7 @@ async function listarDeclaradas(
       select: {
         id: true, compania: true, numeroPoliza: true, ramo: true, primaAnual: true,
         fechaVencimiento: true, matricula: true, procedencia: true, confirmadaPorUsuario: true,
-        titularTipo: true, titularEmpresaNombre: true,
+        titularTipo: true, titularEmpresaNombre: true, datosRamo: true,
       },
       orderBy: { creadaEn: 'desc' },
     })
@@ -371,6 +379,11 @@ async function listarDeclaradas(
       // Empresa declarada: no se coteja contra la ficha personal (sería el
       // cotejo equivocado). Sin número: no hay nada que cotejar.
       const numero = f.titularTipo === 'empresa' ? null : normalizarNumeroPoliza(f.numeroPoliza)
+      // La matrícula vive en su propia columna, aparte de `datosRamo` (que trae
+      // marca/modelo desde la 2ª pasada del portal): se funden para que
+      // `describirBien` vea el vehículo entero, sin pisar lo que ya trajera.
+      const datos = esObjetoPlano(f.datosRamo) ? f.datosRamo : {}
+      const datosConMatricula = f.matricula && !datos.matricula ? { ...datos, matricula: f.matricula } : datos
       return {
         id: f.id,
         compania: f.compania ?? null,
@@ -384,6 +397,7 @@ async function listarDeclaradas(
         titularTipo: f.titularTipo ?? null,
         titularEmpresaNombre: f.titularEmpresaNombre ?? null,
         yaEnCartera: numero === null ? null : numerosPropios.has(numero),
+        bien: describirBien(f.ramo, datosConMatricula),
       }
     })
   } catch {

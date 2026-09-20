@@ -14,7 +14,13 @@ export {
   sqlVolcadoHistorico,
   WHERE_CARTERA_VIVA,
   WHERE_VOLCADO_HISTORICO,
+  esCarteraEnVigor,
+  esCarteraNoEnVigor,
+  sqlCarteraEnVigor,
+  sqlCarteraNoEnVigor,
+  WHERE_CARTERA_EN_VIGOR,
   type EntradaCarteraViva,
+  type EntradaCarteraEnVigor,
 } from './cartera-viva.ts'
 
 export {
@@ -57,6 +63,14 @@ export {
   type ModalidadRc,
   type ValidacionRc,
 } from './rc-modalidad.ts'
+
+export {
+  RAMOS_CON_DIRECCION_RIESGO,
+  admiteDireccionRiesgo,
+  validarDireccionRiesgo,
+  type DireccionRiesgo,
+  type ValidacionDireccionRiesgo,
+} from './direccion-riesgo.ts'
 
 export {
   saludIngesta,
@@ -178,6 +192,11 @@ export {
   type FilasIntervinientes,
   type PersonaDePolizas,
 } from './intervinientes.ts'
+export {
+  emailAlternativo,
+  type AllegadoConEmail,
+  type EmailAlternativo,
+} from './contacto-alternativo.ts'
 export {
   FRACCIONES,
   etiquetaFraccionamiento,
@@ -397,6 +416,7 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export {
   parseFiltroCartera,
   filtroActivo,

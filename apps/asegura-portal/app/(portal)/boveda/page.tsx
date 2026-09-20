@@ -19,6 +19,7 @@ import { getIdentidad } from '@/lib/session'
 
 import { FilaDeclarada } from './FilaDeclarada'
 import { FiltroVigencia } from './FiltroVigencia'
+import { GrupoPlegable } from './GrupoPlegable'
 import { HojasQr } from './HojasQr'
 import { FilaPoliza } from './FilaPoliza'
 import { HistorialSiniestros, RAMO, RecibosDePoliza } from './PolizaVista'
@@ -27,6 +28,9 @@ import { VistaPorPoliza } from './VistaPorPoliza'
 import {
   agruparCartera,
   avisoPartesConservados,
+  consentimientoVigente,
+  detectarSolapamientos,
+  VERSION_TEXTO_COMERCIAL,
   nombreDePila,
   saludoPorHora,
   vistaDeBoveda,
@@ -35,6 +39,8 @@ import {
 } from '@central/module-seguros-portal'
 
 import { AvisoContacto } from './AvisoContacto'
+import { ConsentimientoComercial } from './ConsentimientoComercial'
+import { Solapamientos } from './Solapamientos'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
@@ -120,6 +126,35 @@ export default async function Boveda({
   // ningún sitio, así que no hace falta que sea correcto, solo que exista.
   const recordatorios = vista === 'recordatorios' ? await recordatoriosDeIdentidad(identidad.id) : []
 
+  // La casilla comercial (19/09/2026): su estado vigente es la ÚLTIMA fila de
+  // `portal_consentimiento` de tipo `comercial`, y `null` = nunca preguntado.
+  // Solo se lee para la pestaña que la pinta.
+  const consentimientoComercial =
+    vista === 'datos'
+      ? consentimientoVigente(
+          await prisma.portalConsentimiento.findMany({
+            where: { identidadId: identidad.id, tipo: 'comercial' },
+            select: { tipo: true, otorgado: true, versionTexto: true, creadoEn: true },
+          }),
+          'comercial',
+          VERSION_TEXTO_COMERCIAL,
+        )
+      : null
+
+  // Coberturas repetidas entre las pólizas PROPIAS (19/09/2026). Solo las
+  // propias: que mi padre y yo tengamos defensa jurídica no es un solapamiento
+  // de nadie. Con `coberturas: null` (nivel sin acceso a ellas) la póliza cuenta
+  // como sin coberturas informadas, que es lo conservador: no se afirma nada.
+  const solapamientos = detectarSolapamientos(
+    cartera.propias.flatMap((t) =>
+      t.polizas.map((p) => ({
+        id: p.id,
+        titulo: `${p.compania} · ${RAMO[p.ramo] ?? p.ramo}`,
+        coberturas: p.coberturas?.lista ?? [],
+      })),
+    ),
+  )
+
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo ASegura'
 
@@ -142,9 +177,17 @@ export default async function Boveda({
     ...cartera.autorizadas.map((t) => ({ ...t, propia: false })),
   ])
   const bloqueMias = bloques.find((b) => b.grupo === 'mias') ?? null
-  // «Tus seguros» ya tiene su sección propia abajo (con los estados vacíos, las
-  // añadidas a mano y el alta), así que aquí quedan los OTROS cajones.
+  // «Tus seguros» ya tiene su sección propia abajo (con los estados vacíos y
+  // las añadidas a mano), así que aquí quedan los OTROS cajones.
   const bloquesAparte = bloques.filter((b) => b.grupo !== 'mias')
+
+  // Lo que promete la cabecera del bloque propio con el bloque CERRADO. Cuenta
+  // las de la cartera y las que ha añadido la persona porque las dos están en
+  // esa misma lista: contar solo unas dejaría una cifra que no cuadra con lo
+  // que se ve al abrir. Y cuenta TODAS, también las que el filtro de vigencia
+  // esconde de salida — ese filtro ya declara por su cuenta cuántas oculta.
+  const cuentaPropias =
+    (bloqueMias?.titulares ?? []).reduce((n, t) => n + t.polizas.length, 0) + declaradas.length
 
   // Lo que se le ofrece elegir al dar un parte. Incluye las AUTORIZADAS a
   // propósito: la ruta acepta lo mismo (`carteraDeIdentidad` propias +
@@ -184,6 +227,14 @@ export default async function Boveda({
         .join(' · '),
     })),
   ]
+
+  // 🚨 Si la póliza del enlace está DE VERDAD en lo que esta sesión puede
+  // elegir. Es la misma comprobación que vuelve a hacer `ParteSiniestro` por su
+  // cuenta (ahí decide si preselecciona), y se repite aquí porque de esto
+  // depende además el ORDEN de la pantalla: un id inventado en la barra de
+  // direcciones no puede reordenar nada ni sugerir que hay una póliza detrás.
+  const polizaEnLista =
+    polizaInicial !== null && polizasParte.some((p) => p.valor === polizaInicial) ? polizaInicial : null
 
   // El plazo del art. 16 LCS se calcula AQUÍ, en el servidor, y no en el
   // componente de cliente: `plazoComunicacion` necesita un «hoy», y un «hoy»
@@ -280,8 +331,23 @@ export default async function Boveda({
           {/* Es el aviso más urgente porque no lo genera ninguna póliza, lo
               genera que nadie haya vuelto a mirar la cartera desde el volcado.
               Reutiliza la MISMA lectura de arriba (`contacto`): sin ella, cada
-              visita a «Mis seguros» pagaría una segunda llamada al puente. */}
+              visita a «Mis seguros» pagaría una segunda llamada al puente.
+
+              Sigue ARRIBA del todo, por delante del alta (19/09/2026): es lo
+              único de esta pantalla que pide una corrección con fecha, y un
+              aviso que se baja por debajo de una acción deja de ser un aviso.
+              El alta va justo detrás, que es lo que pidió Alberto. */}
           <AvisoContacto lectura={contacto} />
+
+          {/* 🚨 El alta va ARRIBA, no debajo de la lista (19/09/2026). Alberto:
+              «Añade una póliza» tiene que ser lo primero que se vea. Hasta hoy
+              vivía DENTRO de la sección de la cartera y detrás de todas sus
+              filas, así que en un móvil solo la encontraba quien bajase por
+              delante de sus pólizas — y es justo la acción que trae aquí a
+              quien todavía no tiene ninguna. Las opciones de ramo son las
+              MISMAS que ofrece `EditarPoliza`: un alta a mano y una corrección
+              tienen que ofrecer la misma lista. */}
+          <SubirPoliza ramos={RAMOS_OPCIONES} />
 
       {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
           su portal: «mis seguros y mis pólizas es lo mismo… que venga de CIMA,
@@ -295,14 +361,13 @@ export default async function Boveda({
           cada una es el cartel de su FILA, que va con ella cuando se hace
           scroll — un encabezado de sección no.
 
-          🚨 Y la sección NO lleva titular propio (12/09/2026). Tenía «Tu
-          cartera / Tus seguros» justo debajo del h1 «Mis seguros» y de la
-          pestaña activa «Mis seguros»: tres veces lo mismo en la primera
-          pantalla del móvil (Alberto: «dos veces mis seguros»). El h1 es el
-          nombre de la sección, y por eso `aria-labelledby` apunta a él. Los
-          demás cajones (sociedades, autorizadas) sí conservan el suyo: ahí el
-          título dice algo que el h1 no dice. */}
-      <section className="seccion" aria-labelledby="titulo-vista">
+          🚨 Y el bloque vuelve a tener titular propio (19/09/2026), después de
+          que el 12/09 se le quitara por repetir «Mis seguros» tres veces en la
+          misma pantalla. No es una vuelta atrás: ahora el bloque está PLEGADO,
+          y un plegable sin nombre es un triángulo sin más. El titular es «Tu
+          cartera» —no «Mis seguros»— justo para no repetir la palabra del h1 y
+          de la pestaña, y lleva al lado cuántos seguros esconde. */}
+      <GrupoPlegable titulo="Tu cartera" cuenta={cuentaPropias} abierto={cuentaPropias === 0}>
         {!cartera.vinculada ? (
           cartera.vinculo === 'ambiguo' ? (
             // 🚨 A este NO se le puede decir que no le hemos encontrado nada: sí
@@ -370,25 +435,41 @@ export default async function Boveda({
           </ul>
         )}
 
-        {/* El alta va DEBAJO de la lista y dentro de la misma sección: es una
-            acción sobre lo que se está mirando, no otra sección del portal. Las
-            opciones de ramo son las MISMAS que ofrece `EditarPoliza`: un alta a
-            mano y una corrección tienen que ofrecer la misma lista. */}
-        <SubirPoliza ramos={RAMOS_OPCIONES} />
-      </section>
+      </GrupoPlegable>
 
-      {/* Un bloque por cajón, y los vacíos no llegan hasta aquí (`agruparCartera`
-          no los devuelve): una sección con título y nada debajo se lee como una
-          avería, no como «aquí no hay nada». */}
-      {bloquesAparte.map((b) => (
-        <section key={b.grupo} className="seccion" aria-labelledby={`bloque-${b.grupo}-titulo`}>
-          <p className="antetitulo">{b.grupo === 'empresas' ? 'Tus sociedades' : 'Te han dado acceso'}</p>
-          <h2 id={`bloque-${b.grupo}-titulo`}>{b.titulo}</h2>
-          {b.titulares.map((t) => (
-            <Titular key={t.clienteId} titular={t} grupo={b.grupo} conNombre={b.conNombre} hoy={hoy} />
-          ))}
-        </section>
-      ))}
+      {/* 🚨 Un plegable por TITULAR, no por cajón (19/09/2026). Alberto: «luego
+          un grupo plegado “Seguros de Global 2”». Antes era una sección por
+          cajón con todos sus titulares dentro, así que quien tiene acceso a
+          tres carteras ajenas las recorría todas seguidas para llegar a una.
+          El nombre de cada uno queda VISIBLE con el bloque cerrado, que es lo
+          que convierte el plegable en un índice en vez de en una caja.
+
+          Los cajones vacíos no llegan hasta aquí (`agruparCartera` no los
+          devuelve): un título con nada debajo se lee como una avería, no como
+          «aquí no hay nada».
+
+          `conNombre` pasa a `false` a propósito: el nombre ya lo dice la
+          cabecera del plegable, y repetirlo dentro es la duplicación que el
+          12/09 obligó a quitar arriba. Lo que NO cambia es el chip de titular
+          de cada fila, que dice algo distinto —que esa póliza no es tuya— y
+          viaja con la fila. */}
+      {bloquesAparte.flatMap((b) =>
+        b.titulares.map((t) => (
+          <GrupoPlegable
+            key={t.clienteId}
+            antetitulo={b.grupo === 'empresas' ? 'Tu sociedad' : 'Te ha dado acceso'}
+            titulo={t.nombre}
+            cuenta={t.polizas.length}
+            abierto={t.polizas.length === 0}
+          >
+            <Titular titular={t} grupo={b.grupo} conNombre={false} hoy={hoy} />
+          </GrupoPlegable>
+        )),
+      )}
+
+      {/* Coberturas que aparecen en más de una póliza propia. Con cero no se
+          pinta nada: ver la cabecera del componente. */}
+      <Solapamientos solapamientos={solapamientos} />
 
         </>
       )}
@@ -421,6 +502,7 @@ export default async function Boveda({
       {vista === 'datos' && (
         <>
           <MisDatos lectura={contacto} reparos={contacto.estado === 'ok' ? reparosDeContacto(contacto.contacto) : []} />
+          <ConsentimientoComercial inicial={consentimientoComercial} />
           <TusDatos inicial={supresiones} />
         </>
       )}
@@ -457,15 +539,36 @@ export default async function Boveda({
           ⚠️ Medido el 07/09/2026: solo 31 de los 80 titulares tienen algún
           siniestro, así que 6 de cada 10 verán el vacío. Por eso el vacío es
           una frase que dice lo que sabemos y lo que no. */}
+      {/* 🚨 Y el ORDEN depende de con qué intención se ha llegado (19/09/2026).
+          Alberto, pulsando «Ver los teléfonos de Allianz y dar parte» en la
+          ficha de una póliza: «tiene que aparecer tlf y los campos para
+          apertura siniestros, ahora mismo me sale página de siniestros». Tenía
+          razón: el enlace ya traía la póliza preseleccionada, pero aterrizaba
+          por delante del historial de TODA la cartera, así que lo primero que
+          se veía era una lista de lo que ya ha pasado y el teléfono quedaba
+          debajo. Quien llega por ahí acaba de tener un golpe.
+
+          Con `?poliza=` válida, el canal de la compañía y el formulario van
+          PRIMERO y el historial detrás. Sin él —quien entra por la pestaña— se
+          conserva el orden de siempre: mirar es mayoría.
+
+          `polizaEnLista` se comprueba contra `polizasParte`, que ya está
+          acotada a esta identidad: un id manipulado en la URL no cambia el
+          orden de nada ni abre ninguna póliza ajena. */}
       {vista === 'siniestro' && (
         <>
+          {polizaEnLista !== null && (
+            <ParteSiniestro polizas={polizasParte} partes={partesEnviados} polizaInicial={polizaEnLista} />
+          )}
           <VistaPorPoliza
             bloques={bloques}
             incluye={(p) => p.siniestros !== null && p.siniestros.length > 0}
             bloque={(p) => <HistorialSiniestros p={p} />}
-            vacio="No nos consta ningún siniestro en tus seguros. No significa que no hayas tenido ninguno: nos los informa tu compañía. Si acabas de tener uno, cuéntanoslo aquí abajo."
+            vacio="No nos consta ningún siniestro en tus seguros. No significa que no hayas tenido ninguno: nos los informa tu compañía. Si acabas de tener uno, cuéntanoslo desde aquí."
           />
-          <ParteSiniestro polizas={polizasParte} partes={partesEnviados} polizaInicial={polizaInicial} />
+          {polizaEnLista === null && (
+            <ParteSiniestro polizas={polizasParte} partes={partesEnviados} polizaInicial={null} />
+          )}
         </>
       )}
 
