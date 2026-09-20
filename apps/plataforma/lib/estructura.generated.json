@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-19T21:03:53Z",
+  "generadoEn": "2026-09-20T06:10:32Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -524,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 62
+        "evidencias": 63
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2306,7 +2306,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 19
+        "evidencias": 20
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2334,7 +2334,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "no",
@@ -3972,6 +3972,7 @@
       "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/cron/avisos-intranet",
       "/api/cron/avisos-vencimiento",
+      "/api/cron/revision-anual",
       "/api/operador/actividad",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
@@ -4069,6 +4070,7 @@
       "/api/peticiones/[id]",
       "/api/polizas",
       "/api/polizas/[id]",
+      "/api/polizas/[id]/carta",
       "/api/polizas/[id]/reintentar",
       "/api/push/desuscribir",
       "/api/push/suscribir",
@@ -6407,7 +6409,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1377,
+    "apis": 1379,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
