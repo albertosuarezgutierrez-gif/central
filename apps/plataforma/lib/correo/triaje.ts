@@ -17,6 +17,7 @@ import { parsearAvisoMensajesAgoda, textoAvisoAgoda } from './agoda-mensajes'
 import { parsearNotificacionSmoobu } from './smoobu-notificacion'
 import { ACCESO } from '@/lib/sivra/acceso'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
+import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -64,7 +65,7 @@ function etiquetaBonita(categoria: string): string {
 }
 
 export async function pasadaTriaje(): Promise<Record<string, number>> {
-  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0 }
+  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0 }
   const cur = await prisma.$queryRaw<{ last_uid: number; uidvalidity: bigint | null }[]>`
     SELECT last_uid, uidvalidity FROM correo_cursor WHERE buzon = 'INBOX' LIMIT 1
   `
@@ -169,6 +170,26 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             })
             const enviado = avisoId ? await tgAviso(avisoId, texto) : await tgSend(texto)
             if (enviado !== null) stats.avisados++
+          }
+
+          // Enlace con la ficha del cliente en asegura (20/09/2026): solo para correos de
+          // aseguradora (`correduria` / `correduria-recibo`), y DESPUÉS del aviso de arriba
+          // a propósito — este correo es justo el que se separó en su propia categoría
+          // porque un recibo a punto de anular no puede esperar, y dos llamadas de red a
+          // otra app no pueden ser lo que retrase ESE aviso. Si el texto resuelve a una o
+          // varias pólizas VIVAS de la cartera, se anota en la ficha de cada cliente; si no
+          // resuelve ninguna —o no se pudo ni preguntar—, no pasa nada: el aviso/digest de
+          // siempre sigue siendo la única señal, exactamente como hasta hoy.
+          if (ruta.enrutarCorreduria) {
+            const textoParaResolver = `${correo.subject}\n${correo.extracto ?? ''}`.slice(0, 4000)
+            const resueltos = await resolverCorreoAseguradora(textoParaResolver).catch(() => undefined)
+            if (resueltos) {
+              for (const r of resueltos) {
+                const nota = `Correo de aseguradora (${etiquetaBonita(c.categoria)}) de ${correo.fromRaw}: ${correo.subject}`.slice(0, 2000)
+                const anotado = await anotarHistorialDesdeCorreo(r.clienteId, nota).catch(() => false)
+                if (anotado) stats.correduriaResueltos++
+              }
+            }
           }
 
           // Auto-aprendizaje de reglas.

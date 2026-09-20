@@ -438,3 +438,8 @@ export type { SugerenciaRelacion } from './sugerencia-relacion.ts'
 // vencimientos próximos. Puro; el cron de `apps/asegura` lo aplica.
 export { DIAS_ENTRE_REVISIONES, DIAS_HORIZONTE_REVISION, tocaRevisionAnual } from './revision-anual.ts'
 export type { DecisionRevision, EntradaRevision, MotivoNoRevision } from './revision-anual.ts'
+
+// Puente correo de aseguradora → póliza de la cartera (20/09/2026). Puro: extrae
+// candidatos y decide el match EXACTO; la lectura de la BD vive en `apps/asegura`.
+export { candidatosNumeroPoliza, elegirPolizasResueltas } from './correo-aseguradora.ts'
+export type { PolizaResoluble, ResolucionPoliza } from './correo-aseguradora.ts'
