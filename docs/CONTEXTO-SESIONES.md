@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** `/correduria/cliente/[id]` · el 🚧 «esquema sin verificar» de vida/decesos era un
+flag hardcodeado (`sinVerificar: true` en `Cabecera.tsx`), no un chequeo contra la BD: medido en
+`seguros.polizas`, CIMA ya trae 1 póliza viva de vida y 1 de decesos (Generali, actualizadas
+17/09). Quitado el 🚧 de esos dos ramos; Salud lo conserva (sigue en 0). PR #3117.
+
 **(20/09/2026)** SEO Grupo ASegura · opinión sobre una propuesta pegada por Alberto (ChatGPT):
 descartado el enfoque local-por-barrio (contradice el ámbito NACIONAL dictado el 07/09) y el
 "gestor de seguros gratuito abierto a no-clientes" (riesgo RGPD/asesoramiento, es producto nuevo,
