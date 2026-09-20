@@ -840,3 +840,20 @@ export function urlSaludNuevo(clienteId: string): string {
 export function urlDecesosNuevo(clienteId: string): string {
   return `/correduria/cliente/${clienteId}/decesos-nuevo`
 }
+
+/**
+ * Los ramos presupuestables desde una ficha, en el orden del menú «➕
+ * Presupuestar ▾» de `Cabecera.tsx` — FUENTE ÚNICA (20/09/2026): antes de
+ * esto solo existía copiada dentro de `Cabecera.tsx`, y `NuevoCliente.tsx` la
+ * necesita igual para saltar directo al presupuesto del ramo elegido al dar
+ * de alta un lead. Con dos listas, un ramo añadido a una y olvidado en la
+ * otra ofrece una opción que la pantalla hermana no conoce.
+ */
+export const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => string; sinVerificar?: boolean }[] = [
+  { etiqueta: '🚗 Auto', url: urlAutoNuevo },
+  { etiqueta: '🏠 Hogar', url: urlHogarNuevo },
+  { etiqueta: '🏍️ Moto', url: urlMotoNuevo },
+  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo },
+  { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
+  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo },
+]
