@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-20T08:43:11Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-20T10:13:54Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 42 packages · 23 capacidades · 41 skills · 1382 rutas API.
+**Resumen:** 13 apps · 42 packages · 23 capacidades · 41 skills · 1386 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -20,8 +20,8 @@
 ### asegura
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-vehiculos, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
-- **Tablas (64):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.compania_contactos, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones…
-- **Rutas API:** 86
+- **Tablas (65):** if, seguros._volcado_control, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.channel_inbound_messages, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects, seguros.codeoscopic_webhook_events, seguros.compania_contactos, seguros.companias_dgs, seguros.consent_logs, seguros.conversaciones, seguros.corredurias, seguros.cotizaciones…
+- **Rutas API:** 88
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-push, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** Notificaciones (push)
@@ -56,7 +56,7 @@
 - **Módulos que usa:** core-ai, core-catastro, core-consent, core-email, core-identity, core-payments, core-telegram, module-concursos, module-contabilidad, module-intercompany, module-pagos, module-seguros, module-seguros-portal, module-ses, module-subastas, module-trading
 - **Capacidades:** QR / portal cliente, Feedback / propinas, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (140):** agente_latidos, agente_reparaciones, agente_salud, agente_veredicto, ai_usos, ayudas_perfiles, banca_destino_reglas, borme_eventos, broker_saldos, categoria_alertas, categoria_alertas_log, cima_liquidaciones, comisiones_cobertura, comisiones_devengo, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, consentimiento_registro, contable_accion, contable_feedback, contable_log, contable_memoria, correduria_avisos_renovacion, correduria_dni_otp…
-- **Rutas API:** 377
+- **Rutas API:** 379
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, core-telegram, module-chat, module-documental, module-geo, module-horario, module-nominas, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
