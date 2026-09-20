@@ -761,7 +761,12 @@ model PortalObligacion {
   creadaAt          DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
   actualizadaAt     DateTime             @default(now()) @map("actualizada_at") @db.Timestamptz(6)
 
-  @@unique([identidadId, polizaId])
+  // 🚨 Incluye `tipo` desde el 13/09/2026 (antes era solo `identidadId` +
+  // `polizaId`): un recordatorio PROPIO del cliente (`itv`, `mantenimiento`…)
+  // se puede colgar de la MISMA póliza que ya genera su obligación `poliza` —
+  // dos filas del mismo seguro, no una. Ver `apps/asegura-portal/prisma/schema.prisma`,
+  // que es quien manda sobre esta restricción (este modelo es de solo lectura).
+  @@unique([identidadId, polizaId, tipo])
   @@index([identidadId])
   @@map("portal_obligacion")
 }
