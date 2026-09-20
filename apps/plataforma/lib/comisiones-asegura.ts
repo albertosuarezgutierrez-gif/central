@@ -31,6 +31,14 @@ export type DevengoCompania = {
   mes: string
   bruto: number
   recibos: number
+  /**
+   * Recibos cobrados cuya comisión NO se pudo leer. **`null` = una versión
+   * desplegada más vieja de asegura no manda el campo**, que NO es lo mismo que
+   * `0` («se miró y todas se leyeron»). Colapsarlo a 0 diría que el devengo está
+   * completo cuando lo que pasa es que no se ha comprobado — y este número es el
+   * que decide si se reclama a una compañía.
+   */
+  ilegibles: number | null
 }
 
 export type CoberturaCompania = {
@@ -111,6 +119,8 @@ export function interpretarComisiones(status: number, json: unknown): Comisiones
         mes: str(d.mes) ?? '',
         bruto: num(d.bruto) ?? 0,
         recibos: num(d.recibos) ?? 0,
+        // Sin `?? 0` a propósito: ver el comentario del tipo.
+        ilegibles: num(d.ilegibles),
       }))
       .filter(d => d.companiaCodigo && /^\d{4}-\d{2}$/.test(d.mes)),
     cobertura: (com.cobertura as Record<string, unknown>[])

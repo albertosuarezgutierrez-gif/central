@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireSession } from '@/lib/session'
+import { exigirAccesoCartera } from '@/lib/session'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
 import {
   prepararRetarificacionNuevaHogar,
@@ -35,7 +35,15 @@ const RE_REF20 = /^[0-9A-Z]{20}$/
  * divergen, y la que diverge es la que nadie mira.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ clienteId: string }> }) {
-  const session = await requireSession()
+  // 🛡️ Sesión **Y ÁMBITO DE CORREDURÍA**, fail-closed y ANTES de nada.
+  //
+  // `requireSession()` LANZA (500 con traza) en vez de contestar 401, y además
+  // solo acredita «tiene cuenta en la casa de marcas», no «es de esta
+  // correduría»: `public.cuentas` la comparten plataforma, alquiler, transporte,
+  // mariscos, rrhh y almacén. Ver `lib/session.ts`.
+  const acceso = await exigirAccesoCartera()
+  if (!acceso.ok) return NextResponse.json(acceso.cuerpo, { status: acceso.status })
+  const session = acceso.session
   const { clienteId } = await ctx.params
 
   const cuerpo = (await req.json().catch(() => ({}))) as CuerpoRetarificacion & { referencia?: unknown }

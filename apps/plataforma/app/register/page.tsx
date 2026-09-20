@@ -8,6 +8,7 @@ export default function RegisterPage() {
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [invitacion, setInvitacion] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -18,7 +19,7 @@ export default function RegisterPage() {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, email, password }),
+      body: JSON.stringify({ nombre, email, password, invitacion }),
     })
     if (res.ok) {
       router.push('/banca')
@@ -53,6 +54,10 @@ export default function RegisterPage() {
           <p style={{ color: 'var(--muted)', marginTop: '8px', fontSize: '14px' }}>
             Crear cuenta nueva
           </p>
+          <p style={{ color: 'var(--muted)', marginTop: '6px', fontSize: '13px' }}>
+            El alta es <strong>por invitación</strong>: hace falta el código que da el
+            administrador. Sin código no se crea ninguna cuenta.
+          </p>
         </div>
 
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -79,6 +84,17 @@ export default function RegisterPage() {
             <input
               type="password" value={password} onChange={e => setPassword(e.target.value)}
               required autoComplete="new-password"
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
+              Código de invitación
+            </label>
+            <input
+              type="text" value={invitacion} onChange={e => setInvitacion(e.target.value)}
+              required autoComplete="off"
               style={inputStyle}
             />
           </div>

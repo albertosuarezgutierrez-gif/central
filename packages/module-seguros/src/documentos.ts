@@ -116,6 +116,15 @@ export type MimeDocumento = (typeof MIMES_DOCUMENTO)[number]
  * hay aquí —PDF y foto— cubre el 95 % de un parte y de una póliza.
  */
 export function revisarDocumento(f: { type: string; size: number; name?: string }): string | null {
+  // ⚠️ `esPdfPorNombre` deja pasar CUALQUIER `type` si el nombre acaba en
+  // `.pdf`, y eso NO es un descuido: algunos navegadores mandan `''` o
+  // `application/octet-stream` para un PDF de verdad (ver `mimeDocumento`).
+  // Solo es seguro porque quien guarda NO conserva ese `type`: lo reetiqueta
+  // con `mimeDocumento()` a `application/pdf`, y quien sirve lo vuelve a pasar
+  // por `mimeParaServir()`. Un `evil.pdf` con `Content-Type: text/html` entra,
+  // sí, pero se guarda y se devuelve como PDF adjunto — el navegador no lo
+  // ejecuta. Si algún día se guardara el `type` tal cual, esta línea volvería a
+  // ser un bypass: el agujero estaba en el ALMACÉN, no aquí.
   const esPdfPorNombre = (f.name ?? '').toLowerCase().endsWith('.pdf')
   if (!(MIMES_DOCUMENTO as readonly string[]).includes(f.type) && !esPdfPorNombre) {
     // El vídeo se rechaza CON su motivo, no como «tipo raro»: es lo que la
@@ -218,3 +227,24 @@ export function documentosQueFaltan(
 
 /** Lo que hace falta para emitir una póliza de AUTO desde una precalificación. */
 export const NECESARIOS_EMISION_AUTO: readonly TipoDocumento[] = ['dni', 'permiso_circulacion', 'ficha_tecnica']
+
+/**
+ * El `Content-Type` con el que se DEVUELVE un documento ya guardado, resuelto
+ * OTRA VEZ contra la lista cerrada.
+ *
+ * 🚨 No es redundante con `mimeDocumento()`, que normaliza al ESCRIBIR: las
+ * filas anteriores a esa normalización (o cualquiera escrita por una vía que se
+ * la salte mañana) llevan el tipo que eligió quien subió el fichero, y
+ * devolverlo tal cual en la cabecera es lo que convierte un `text/html` guardado
+ * en un XSS en nuestro dominio. Aquí lo que no está en `MIMES_DOCUMENTO` sale
+ * como `application/octet-stream`: el navegador no lo ejecuta, y el fichero
+ * sigue descargándose (no se pierde acceso a nada).
+ *
+ * No hay atajo por nombre, a diferencia de `mimeDocumento()`: ese existe porque
+ * algunos navegadores no saben decir el tipo AL SUBIR. Al servir no hay
+ * navegador que disculpar — hay una fila con un valor que ya se escribió.
+ */
+export function mimeParaServir(mime: string | null | undefined): MimeDocumento | 'application/octet-stream' {
+  const t = (mime ?? '').trim().toLowerCase()
+  return (MIMES_DOCUMENTO as readonly string[]).includes(t) ? (t as MimeDocumento) : 'application/octet-stream'
+}

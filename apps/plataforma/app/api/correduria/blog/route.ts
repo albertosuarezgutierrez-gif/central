@@ -12,7 +12,7 @@
 // se lee el PR abierto y se mezcla o se cierra.
 
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { extraerArticuloDePr, estadoPr, decidirBlogPr, REPO, RAMA } from '@/lib/correduria/blog-pr'
 
 export const dynamic = 'force-dynamic'
@@ -40,8 +40,8 @@ type PrGitHub = {
 }
 
 export async function GET() {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
 
   const token = process.env.GITHUB_TOKEN
   // Sin token no hay lista, y eso NO es «no hay artículos pendientes»: es que
@@ -85,8 +85,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
 
   const token = process.env.GITHUB_TOKEN
   if (!token) return NextResponse.json({ ok: false, motivo: 'Falta GITHUB_TOKEN en Vercel.' }, { status: 503 })

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireSession } from '@/lib/session'
+import { exigirAccesoCartera } from '@/lib/session'
 import { resolverCatalogo } from '@/lib/retarificar-cartera'
 
 export const runtime = 'nodejs'
@@ -15,11 +15,19 @@ export const dynamic = 'force-dynamic'
  * `onlyPopular=false` de las marcas, o sin exigir el combustible en las
  * versiones, no daría error — daría una lista recortada.
  *
- * Aquí solo queda **quién autoriza** (la cookie de sesión de asegura) y la
- * forma exacta de la respuesta que ya consume esta app.
+ * Aquí solo queda **quién autoriza** (la cookie de sesión de asegura, y que esa
+ * cuenta sea de esta correduría) y la forma exacta de la respuesta que ya
+ * consume esta app.
  */
 export async function GET(req: Request) {
-  await requireSession()
+  // 🛡️ Sesión **Y ÁMBITO DE CORREDURÍA**, fail-closed y ANTES de nada.
+  //
+  // `requireSession()` LANZA (500 con traza) en vez de contestar 401, y además
+  // solo acredita «tiene cuenta en la casa de marcas», no «es de esta
+  // correduría»: `public.cuentas` la comparten plataforma, alquiler, transporte,
+  // mariscos, rrhh y almacén. Ver `lib/session.ts`.
+  const acceso = await exigirAccesoCartera()
+  if (!acceso.ok) return NextResponse.json(acceso.cuerpo, { status: acceso.status })
 
   const r = await resolverCatalogo(new URL(req.url).searchParams)
   switch (r.estado) {

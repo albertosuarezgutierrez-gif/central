@@ -46,6 +46,19 @@ const PROBES: Record<string, Prisma.Sql> = {
   correduria_siniestros: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_siniestros'`,
+  // Los tres de la correduría que latían sin que nadie los leyera (o no latían), 20/09/2026.
+  // La huella es siempre la PASADA, nunca su tabla de resultados: `portal_parte_siniestro`,
+  // `recaptacion_envios` y `comisiones_devengo` solo crecen cuando hay algo que hacer, así que
+  // una semana tranquila y un cron muerto darían la misma señal.
+  correduria_partes: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_partes'`,
+  correduria_recaptacion_email_lote: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_recaptacion_email_lote'`,
+  cima_liq: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'cima_liq'`,
   // Pricing: manda el piso MÁS VIEJO, no el max global. Con max(), un solo piso fresco
   // (p.ej. luxury) tapaba que el Dúplex y House Sevillana llevaban 23 días sin estudiar
   // (555 h) → el monitor se callaba. La sonda por-piso (min de los max) delata al rezagado.

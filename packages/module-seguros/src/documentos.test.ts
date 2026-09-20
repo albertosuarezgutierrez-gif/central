@@ -1,10 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  MIMES_DOCUMENTO,
   NECESARIOS_EMISION_AUTO,
   documentosQueFaltan,
   estadoDocumento,
   mimeDocumento,
+  mimeParaServir,
   resumenDocumentos,
   revisarDocumento,
   tipoAdjuntoParte,
@@ -96,4 +98,29 @@ test('valores raros de la base no revientan: caen a otro/recibido', () => {
   assert.equal(tipoDocumento('dni'), 'dni')
   assert.equal(estadoDocumento(null), 'recibido')
   assert.equal(estadoDocumento('pedido'), 'pedido')
+})
+
+test('🚨 `mimeParaServir` no deja volver un tipo ejecutable a la cabecera', () => {
+  // El caso del ataque: una fila escrita antes de que `guardarDocumento`
+  // normalizara (o por cualquier vía futura que se lo salte) lleva el tipo que
+  // eligió quien subió el fichero. Devolverlo tal cual con los bytes es un XSS
+  // en nuestro propio dominio.
+  assert.equal(mimeParaServir('text/html'), 'application/octet-stream')
+  assert.equal(mimeParaServir('image/svg+xml'), 'application/octet-stream')
+  assert.equal(mimeParaServir('application/xhtml+xml'), 'application/octet-stream')
+  // «No se sabe» tampoco se adivina, y no se pierde el acceso al fichero: sale
+  // como descarga opaca.
+  assert.equal(mimeParaServir(null), 'application/octet-stream')
+  assert.equal(mimeParaServir(''), 'application/octet-stream')
+  // Lo que SÍ está en la lista vuelve entero, normalizado.
+  assert.equal(mimeParaServir('  APPLICATION/PDF '), 'application/pdf')
+  for (const m of MIMES_DOCUMENTO) assert.equal(mimeParaServir(m), m)
+})
+
+test('🚨 al servir NO hay atajo por nombre: eso solo vale al subir', () => {
+  // `mimeDocumento` reetiqueta un `.pdf` sin tipo fiable porque el navegador no
+  // sabe decirlo; al leer no hay navegador que disculpar, hay una fila ya
+  // escrita, y fiarse del nombre volvería a meter el tipo del atacante.
+  assert.equal(mimeDocumento({ type: 'text/html', name: 'poliza.pdf' }), 'application/pdf')
+  assert.equal(mimeParaServir('text/html'), 'application/octet-stream')
 })

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { radarRecibos } from '@/lib/correo/radar-recibos'
 import { remitentesConRecibo } from '@/lib/correo/radar-recibos-query'
 
@@ -12,8 +12,8 @@ export const dynamic = 'force-dynamic'
  * plataforma) — no toca la cartera de asegura.
  */
 export async function GET() {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
   const remitentes = await remitentesConRecibo()
   if (remitentes === null) return NextResponse.json({ estado: 'error', motivo: 'no se pudo consultar correo_triaje' })
   return NextResponse.json({ estado: 'ok', dominios: radarRecibos(remitentes) })

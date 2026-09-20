@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
@@ -11,8 +11,9 @@ export const dynamic = 'force-dynamic'
 // Queda marcado `liq_origen='manual'` con su fecha: el libro nunca mezcla en
 // silencio lo tecleado con lo que viene de CIMA.
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
 
   const body = (await req.json().catch(() => null)) as {
     companiaCodigo?: string

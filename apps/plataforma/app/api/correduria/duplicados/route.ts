@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { duplicadosAsegura } from '@/lib/duplicados-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -15,8 +15,8 @@ export const dynamic = 'force-dynamic'
  * pantalla de Alberto.
  */
 export async function GET() {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
   const r = await duplicadosAsegura()
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

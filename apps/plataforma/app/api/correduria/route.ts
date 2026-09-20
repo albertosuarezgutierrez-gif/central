@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { prisma } from '@/lib/db'
 import { detectarCompania, motivoSeguros, claveReferencia, COMPANIA_OTRAS } from '@/lib/correduria'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
 
   const { searchParams } = new URL(req.url)
   const año = parseInt(searchParams.get('año') || '') || new Date().getFullYear()

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { invitarPortalAsegura, portalAsegura } from '@/lib/portal-cliente-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -22,8 +22,8 @@ export const dynamic = 'force-dynamic'
  * el correo, entra y ve una bóveda vacía sin ningún error.
  */
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
   const id = (new URL(req.url).searchParams.get('clienteId') ?? new URL(req.url).searchParams.get('id') ?? '').trim()
   if (id === '') return NextResponse.json({ estado: 'invalido', motivo: 'Falta el id del cliente.' }, { status: 422 })
   const r = await portalAsegura(id)
@@ -39,8 +39,9 @@ export async function GET(req: NextRequest) {
  * se ha validado aquí y quién lo pulsó.
  */
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!body || typeof body.clienteId !== 'string' || body.clienteId.trim() === '') {
     return NextResponse.json({ estado: 'invalido', motivo: 'Falta el id del cliente.' }, { status: 422 })

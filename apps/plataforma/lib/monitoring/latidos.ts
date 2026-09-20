@@ -302,6 +302,56 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       '`correduria_ingesta`, no este: aquí un «ninguno» prolongado es el SÍNTOMA, no la avería. ' +
       'Huella: agente_latidos.correduria_siniestros.',
   },
+  // 🚨 Los tres de aquí abajo se añadieron el 20/09/2026 tras una auditoría que midió el hueco:
+  // `correduria_partes` y `correduria_recaptacion_email_lote` YA escribían su latido desde hacía
+  // semanas —está en `agente_latidos`, fresco— pero NO estaban en esta lista, así que nadie lo
+  // leía. Un latido que se escribe y no se vigila es indistinguible desde fuera de un cron que
+  // funciona: es el mismo «medía lo que no era» del vigía de la ingesta, una capa más arriba.
+  // `cima_liq` ni siquiera lo escribía; se le añadió en el mismo PR.
+  {
+    id: 'correduria_partes',
+    vigiladoDesde: '2026-09-20',
+    etiqueta: '📄 Partes de siniestro del portal — plazo del art. 16 LCS (cron diario 06:55)',
+    // Diario → 30 h, el mismo criterio que sus tres hermanos de la correduría.
+    maxHoras: 30,
+    nota:
+      'Nadie está vigilando los partes que el CLIENTE abre desde el portal. El art. 16 LCS da 7 ' +
+      'días para comunicar el siniestro a la compañía, y el corte de este vigía es ' +
+      '`abierto_en_compania`, no «leído»: un parte que Alberto ha visto pero no ha trasladado ' +
+      'sigue contando. Cada día caído es un plazo corriendo sin que nadie lo mire. Lee el ' +
+      '`detalle`: «sin lectura» es que no se pudo preguntar al puerto de asegura (secreto o BD) ' +
+      'y NO quiere decir que no haya partes pendientes. Huella: agente_latidos.correduria_partes.',
+  },
+  {
+    id: 'correduria_recaptacion_email_lote',
+    vigiladoDesde: '2026-09-20',
+    etiqueta: '✉️ Lote diario de recaptación de leads (cron diario 07:00)',
+    // Diario → 30 h. Ojo: este cron manda correo a TERCEROS, así que su silencio se puede leer
+    // en las dos direcciones y las dos importan — ni deja de mandar sin avisar, ni manda sin que
+    // conste. El latido es lo único que distingue «hoy no tocaba a nadie» de «lleva un mes roto».
+    maxHoras: 30,
+    nota:
+      'El lote de recaptación no ha completado una pasada buena. Lee el `detalle`: «puerto sin ' +
+      'configurar» es que falta ASEGURA_OPERADOR_SECRET; «no se pudo enviar el lote» trae el ' +
+      'motivo de Resend o del puerto. Un lote de 0 envíos con ok NO es un fallo: es que hoy ' +
+      'ningún lead cumplía el filtro (sin teléfono, sin opt-out, fuera del cooldown de 14 días). ' +
+      'Huella: agente_latidos.correduria_recaptacion_email_lote.',
+  },
+  {
+    id: 'cima_liq',
+    vigiladoDesde: '2026-09-20',
+    etiqueta: '💶 Libro de comisiones de la correduría (cron diario 07:30)',
+    // Diario → 30 h.
+    maxHoras: 30,
+    nota:
+      'El libro de comisiones no ha cuadrado hoy. Es el cron que compara DEVENGADO (recibos ' +
+      'cobrados) contra LIQUIDADO (extracto de la compañía) contra COBRADO (BBVA), o sea el que ' +
+      'dice si hay dinero que reclamar. Solo hablaba cuando encontraba un descuadre, así que un ' +
+      'año limpio y un cron muerto eran el mismo silencio. Lee el `detalle`: «puerto sin ' +
+      'configurar» y «no se pudo leer la cartera» son los dos «no se ha podido mirar», que NO ' +
+      'significan que cuadre; una pasada buena dice cuántos periodos se cuadraron y cuántos ' +
+      'quedan sin fuente. Huella: agente_latidos.cima_liq.',
+  },
   {
     id: 'ses_transporte',
     vigiladoDesde: '2026-08-21',

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { describirFiltro, parseFiltroCartera } from '@central/module-seguros'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { construirCsv, interpretarLista, pedirCartera, type ClienteListado } from '@/lib/cartera-lista-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -28,13 +28,9 @@ const POR_PAGINA_CSV = 200
  *  esto es lo que impide el bucle infinito. */
 const MAX_PAGINAS = 12
 
-function sinSesion() {
-  return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-}
-
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return sinSesion()
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
 
   const entrada = new URL(req.url).searchParams
   const csv = entrada.get('formato') === 'csv'

@@ -63,6 +63,39 @@ test('un devengo con mes mal formado se descarta en vez de contaminar el libro',
   }
 })
 
+// 🚨 20/09/2026. `comisionesCartera` sumaba `importeEiac(r.comisionBruta) ?? 0`:
+// un recibo cobrado cuya comisión no se puede leer entraba como 0 € y bajaba el
+// devengado SIN dejar hueco. Es la cifra contra la que se decide si reclamar a
+// una compañía, así que los ilegibles se cuentan aparte — y «asegura todavía no
+// me lo dice» (null) no puede leerse como «los he mirado y se leen todos» (0).
+test('los recibos con comisión ilegible se cuentan aparte, y su ausencia NO es 0', () => {
+  const con = interpretarComisiones(200, {
+    comisiones: {
+      estado: 'ok', periodos: [], cobertura: [],
+      devengos: [{ companiaCodigo: 'C0109', mes: '2026-04', bruto: 120.88, recibos: 4, ilegibles: 2 }],
+    },
+  })
+  assert.equal(con.estado === 'ok' && con.devengos[0].ilegibles, 2)
+
+  // Una versión desplegada más vieja de asegura no manda el campo.
+  const sin = interpretarComisiones(200, {
+    comisiones: {
+      estado: 'ok', periodos: [], cobertura: [],
+      devengos: [{ companiaCodigo: 'C0109', mes: '2026-04', bruto: 120.88, recibos: 4 }],
+    },
+  })
+  assert.equal(sin.estado === 'ok' && sin.devengos[0].ilegibles, null)
+
+  // Y 0 SÍ es una afirmación: se miraron y todas se leyeron.
+  const cero = interpretarComisiones(200, {
+    comisiones: {
+      estado: 'ok', periodos: [], cobertura: [],
+      devengos: [{ companiaCodigo: 'C0109', mes: '2026-04', bruto: 120.88, recibos: 4, ilegibles: 0 }],
+    },
+  })
+  assert.equal(cero.estado === 'ok' && cero.devengos[0].ilegibles, 0)
+})
+
 test('los códigos DGS reales son C0058/C0109, no los numéricos del cima.ts retirado', () => {
   assert.equal(nombreCompania('C0058'), 'Mapfre')
   assert.equal(nombreCompania('C0109'), 'Allianz')
