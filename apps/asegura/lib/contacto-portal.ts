@@ -45,16 +45,19 @@ import {
   type EstadoConfirmacionContacto,
   type FichaPropia,
 } from '@central/module-seguros-portal'
-import { normalizarContacto, revisarEdicion, type EdicionCliente } from '@central/module-seguros'
+import { normalizarContacto, revisarEdicion, type EdicionCliente, type TipoContacto } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
 import {
   anadirContacto,
+  borrarContacto,
   campoIlegible,
+  cambiarContacto,
   descifrarCampo,
   duplicadoContacto,
   editarCliente,
   listarContactos,
+  type Contactos,
 } from './cartera-edicion'
 
 /** Quién figura como autor en `historial_interno`. No es Alberto: fue el cliente. */
@@ -359,6 +362,104 @@ async function sellarConfirmacion(correduriaId: string, clienteId: string): Prom
     data: { contactoConfirmadoAt: ahora },
   })
   return ahora
+}
+
+// ─── Varios teléfonos/emails, no solo el principal (20/09/2026) ─────────────
+//
+// «Mis datos» (arriba) solo deja SUSTITUIR el principal de cada canal — es
+// justo lo que le faltaba a la invitación a la intranet: pedirle al cliente
+// que se autogestione un canal que no puede tener más de uno. Alberto: «botón
+// de configuración, para que el cliente pueda autogestionarse».
+//
+// 🚨 Reutiliza TAL CUAL `anadirContacto`/`cambiarContacto`/`borrarContacto` de
+// `cartera-edicion.ts` — las mismas que usa el corredor desde
+// `/correduria/cliente/contactos` — en vez de reescribir la lógica de
+// duplicados/índice ciego/espejado de principal una segunda vez. Lo único que
+// cambia aquí es CÓMO se llega al `clienteId` (por `portal_vinculo`, nunca
+// del cuerpo) y que `forzar` va SIEMPRE a `false`: el portal nunca le quita a
+// otra ficha un contacto que ya tiene como principal — eso lo decide el
+// corredor, viendo las dos fichas a la vez.
+//
+// El VALOR de un contacto no se cambia desde aquí (eso sigue siendo
+// `aplicarContactoPropio`, que ya hace el `POST /api/portal/contacto` de
+// «Mis datos»): esto es solo AÑADIR uno nuevo, marcar cuál es el principal,
+// re-etiquetarlo o borrarlo — la gestión de la LISTA, no de un valor suelto.
+
+export type ResultadoListaContactosPropios =
+  | { estado: 'ok'; contactos: Contactos }
+  | { estado: 'sin_ficha' }
+  | { estado: 'varias_fichas' }
+  | { estado: 'error'; causa: string }
+
+/** Todos los teléfonos y emails de la ficha de esta identidad, con su id, etiqueta y principal. */
+export async function listarContactosPropios(correduriaId: string, identidadId: string): Promise<ResultadoListaContactosPropios> {
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
+  const contactos = await listarContactos(correduriaId, ficha.clienteId)
+  if (contactos === null) return { estado: 'error', causa: 'contactos_ilegibles' }
+  return { estado: 'ok', contactos }
+}
+
+export type ResultadoEscrituraContactoPropio =
+  | { estado: 'ok'; contactos: Contactos }
+  | { estado: 'invalido'; motivo: string; campo?: string }
+  /** Ese teléfono/correo ya está en OTRA ficha. Nunca forzable desde aquí. */
+  | { estado: 'conflicto'; campo?: string }
+  | { estado: 'no_encontrado' }
+  | { estado: 'sin_ficha' }
+  | { estado: 'varias_fichas' }
+  | { estado: 'error'; causa: string }
+
+function traducirFalloContacto(r: { estado: string; motivo?: string; campo?: string }): ResultadoEscrituraContactoPropio {
+  if (r.estado === 'invalido') return { estado: 'invalido', motivo: r.motivo ?? 'dato no válido', campo: r.campo }
+  if (r.estado === 'conflicto') return { estado: 'conflicto', campo: r.campo }
+  if (r.estado === 'no_encontrado') return { estado: 'no_encontrado' }
+  return { estado: 'error', causa: r.motivo ?? 'error' }
+}
+
+/** Añade un teléfono o un email NUEVO a la ficha (no sustituye ninguno). */
+export async function anadirContactoPropio(
+  correduriaId: string,
+  identidadId: string,
+  entrada: { tipo: TipoContacto; valor: string; etiqueta?: string | null; principal?: boolean },
+): Promise<ResultadoEscrituraContactoPropio> {
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
+  const r = await anadirContacto(correduriaId, ficha.clienteId, { ...entrada, forzar: false, actor: ACTOR })
+  if (!r.ok) return traducirFalloContacto(r)
+  return { estado: 'ok', contactos: r.contactos }
+}
+
+/** Re-etiqueta un contacto ya existente o lo pone como principal. NUNCA cambia el valor. */
+export async function cambiarContactoPropio(
+  correduriaId: string,
+  identidadId: string,
+  entrada: { id: string; etiqueta?: string | null; principal?: boolean },
+): Promise<ResultadoEscrituraContactoPropio> {
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
+  const r = await cambiarContacto(correduriaId, ficha.clienteId, {
+    id: entrada.id,
+    etiqueta: entrada.etiqueta,
+    principal: entrada.principal,
+    forzar: false,
+    actor: ACTOR,
+  })
+  if (!r.ok) return traducirFalloContacto(r)
+  return { estado: 'ok', contactos: r.contactos }
+}
+
+/** Borra un teléfono o email de la lista. Si era el principal, asciende el más antiguo que quede. */
+export async function borrarContactoPropio(
+  correduriaId: string,
+  identidadId: string,
+  entrada: { id: string },
+): Promise<ResultadoEscrituraContactoPropio> {
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
+  const r = await borrarContacto(correduriaId, ficha.clienteId, { id: entrada.id, actor: ACTOR })
+  if (!r.ok) return traducirFalloContacto(r)
+  return { estado: 'ok', contactos: r.contactos }
 }
 
 /**

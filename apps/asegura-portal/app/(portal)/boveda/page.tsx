@@ -8,6 +8,7 @@ import {
 
 import { companiasConCanal } from '@/lib/canales-compania'
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
+import { listarContactosPropios } from '@/lib/contactos-propios'
 import { prisma } from '@/lib/db'
 import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
@@ -42,6 +43,7 @@ import { ConsentimientoComercial } from './ConsentimientoComercial'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
+import { GestionContactos } from './GestionContactos'
 import { MisDatos } from './MisDatos'
 import { TusDatos } from './TusDatos'
 
@@ -127,6 +129,10 @@ export default async function Boveda({
   // La casilla comercial (19/09/2026): su estado vigente es la ÚLTIMA fila de
   // `portal_consentimiento` de tipo `comercial`, y `null` = nunca preguntado.
   // Solo se lee para la pestaña que la pinta.
+  // La lista de TODOS los contactos (no solo el principal) solo se lee para
+  // la pestaña que la pinta — mismo criterio de rendimiento que el resto.
+  const contactosLista = vista === 'datos' ? await listarContactosPropios(identidad.id) : ({ estado: 'sin_puente' } as const)
+
   const consentimientoComercial =
     vista === 'datos'
       ? consentimientoVigente(
@@ -482,6 +488,7 @@ export default async function Boveda({
       {vista === 'datos' && (
         <>
           <MisDatos lectura={contacto} reparos={contacto.estado === 'ok' ? reparosDeContacto(contacto.contacto) : []} />
+          <GestionContactos inicial={contactosLista} />
           <ConsentimientoComercial inicial={consentimientoComercial} />
           <TusDatos inicial={supresiones} />
         </>
