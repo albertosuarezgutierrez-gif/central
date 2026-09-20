@@ -37,6 +37,7 @@
 // Módulo PURO (sin Prisma ni `@/`), testeable con `node --test`.
 import { sqlCompPlausible } from './pricing-comps-plausibles.ts'
 import { sqlCompDeNuestraLiga } from './pricing-comps-liga.ts'
+import { sqlCompEsCasaComparable } from './pricing-comps-tipo.ts'
 
 /** Ventana del corpus acumulado, en días de `search_date`. */
 export const VENTANA_ANCLA_DIAS = 30
@@ -96,6 +97,10 @@ export function sqlCorpusAncla(): string {
             -- Y fuera los que no son competencia nuestra: el corpus de un piso puntuado 6,9 traia
             -- Mercer Residences (9,1) y Palacio Bucarelli (9,1). Ver pricing-comps-liga.ts.
             AND ${sqlCompDeNuestraLiga("m.", "sl.own_score")}
+            -- Y fuera las unidades de aparthotel/hotel vestidas de "apartamento" (19/09/2026): el
+            -- corpus de aforo 12 estaba dominado por Overland Suites/Sercotel/Hilton/Meliá, que no
+            -- compiten con una casa entera. Ver pricing-comps-tipo.ts.
+            AND ${sqlCompEsCasaComparable("m.")}
           ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
         ),
         fiab AS (

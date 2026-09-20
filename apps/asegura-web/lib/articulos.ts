@@ -65,6 +65,17 @@ export type Articulo = {
   base?: readonly string[]
   /** Slugs de `RAMOS` con los que enlaza. El enlazado interno reparte el peso. */
   ramos?: readonly string[]
+  /**
+   * La llamada a la acción DENTRO del artículo (19/09/2026), pintada entre el
+   * cuerpo y las FAQ. Es opcional a propósito: solo la llevan los artículos
+   * cuya intención tiene una herramienta detrás (la carta de no renovación
+   * del gestor). Un CTA genérico en cada artículo es ruido, no conversión.
+   * `href` es una ruta interna o el centinela `'PORTAL'`, que la página del
+   * artículo resuelve a `PORTAL_URL` (aquí no se importa `lib/sitio` para no
+   * arrastrar la config del sitio al módulo de contenido); el texto pasa por el
+   * mismo cepo de copy que el resto (`textoArticulo` lo incluye).
+   */
+  cta?: { titulo: string; texto: string; boton: string; href: string }
 }
 
 export const ARTICULOS: readonly Articulo[] = [
@@ -357,6 +368,97 @@ export const ARTICULOS: readonly Articulo[] = [
   },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
   //
+  {
+    slug: 'como-dar-de-baja-un-seguro-a-tiempo',
+    h1: 'Cómo dar de baja un seguro a tiempo, paso a paso',
+    title: 'Cómo dar de baja un seguro a tiempo, paso a paso',
+    description:
+      'Para no renovar un seguro hay que avisar por escrito un mes antes del vencimiento. Qué lleva la carta, por dónde enviarla y qué hacer después. Vale para todas.',
+    fecha: '2026-09-19',
+    consulta: 'cómo dar de baja un seguro',
+    resumen:
+      'Un seguro no se «da de baja» cuando quieres: se decide no renovarlo, por escrito, con al menos un mes de antelación al vencimiento. Si sigues estos pasos y guardas el justificante, la póliza termina el día que vence y no te llega ningún recibo más.',
+    base: ['lcs-22'],
+    ramos: ['auto', 'hogar', 'vida-y-salud'],
+    cta: {
+      titulo: 'Te preparamos la carta con los datos de tu póliza',
+      texto:
+        'Sube el PDF o una foto de tu póliza a tu área privada: la leemos, te decimos hasta qué día puedes enviarla y te dejamos la carta lista para copiar, imprimir o abrir en tu correo. La envías tú, y queda a tu nombre. Gratis y sin ser cliente.',
+      boton: 'Preparar mi carta',
+      href: 'PORTAL',
+    },
+    secciones: [
+      {
+        titulo: 'Primero: no es una baja, es no renovar',
+        parrafos: [
+          'La mayoría de los seguros —coche, hogar, salud, decesos— son contratos anuales que se prorrogan solos cada año. Por eso lo que haces cuando «das de baja» un seguro no es cancelarlo hoy: es decirle a la compañía que no quieres la prórroga siguiente.',
+          'Eso tiene una consecuencia: no puedes dejar el seguro a mitad de año sin más. Lo normal es que la póliza siga en vigor hasta la fecha de vencimiento y termine ese día. Salvo que la propia póliza prevea otra cosa, o que vendas el bien asegurado, la salida está en el vencimiento.',
+          'Y tiene una ventaja: mientras llega, sigues cubierto. Nadie se queda sin seguro por avisar con tiempo.',
+        ],
+      },
+      {
+        titulo: 'Segundo: calcula tu fecha de verdad',
+        parrafos: [
+          'El artículo 22 de la Ley de Contrato de Seguro exige que el tomador comunique por escrito su oposición a la prórroga con al menos un mes de antelación al vencimiento. La compañía, si es ella la que no quiere renovarte, necesita dos.',
+          'Así que tu fecha no es la del vencimiento: es un mes antes. Si vence el 15 de marzo, el último día para avisar es el 13 de febrero. A partir de ahí la póliza se renueva un año más, aunque no hayas pagado todavía el recibo.',
+          'Es la fecha que más gente se pasa, y no por descuido: el recibo de la renovación llega después de esa fecha, cuando ya no hay nada que decidir.',
+        ],
+      },
+      {
+        titulo: 'Tercero: qué tiene que llevar la carta',
+        parrafos: [
+          'No hay un modelo oficial. Basta un escrito claro con: tu nombre y apellidos y tu NIF como tomador; el número de póliza; la compañía a la que va dirigida; la fecha de vencimiento; y la frase que importa: que comunicas tu voluntad de no prorrogar el contrato a su vencimiento, conforme al artículo 22 de la Ley de Contrato de Seguro.',
+          'Añade la petición de que te confirmen por escrito la recepción y la baja con efectos desde el vencimiento, y de que no emitan recibos por periodos posteriores. Fecha y firma.',
+          'Algunas compañías piden además una copia del DNI del tomador. Si la tuya lo indica en su web o en la póliza, adjúntala: es un motivo habitual para que una solicitud se quede sin tramitar.',
+        ],
+      },
+      {
+        titulo: 'Cuarto: por dónde enviarla, y por dónde no',
+        parrafos: [
+          'Lo que cuenta es poder demostrar cuándo se envió. Sirven: el correo electrónico a la dirección que la compañía tenga señalada para estas comunicaciones, el formulario de baja de su área de cliente, o un burofax con acuse de recibo a su domicilio social. La póliza suele indicar el canal en sus condiciones.',
+          'Guarda el justificante: el correo enviado, el acuse del burofax, la captura del formulario con la fecha. Si más adelante hay discusión, lo que decide es la fecha de envío.',
+          'Lo que no vale: llamar por teléfono sin más, y dejar de pagar el recibo. Una llamada no deja constancia; un impago no es una notificación y tiene consecuencias propias, peores que no renovar en plazo.',
+        ],
+      },
+      {
+        titulo: 'Quinto: qué pasa después',
+        parrafos: [
+          'La compañía debería confirmarte por escrito que la póliza queda sin efecto desde el vencimiento. Si en dos semanas no tienes respuesta, reclama por el mismo canal, adjuntando tu envío anterior.',
+          'Si aun así te giran el recibo de la renovación, no lo devuelvas sin más: contesta por escrito con tu justificante y pide la anulación. Devolver un recibo sin explicar por qué se parece mucho a un impago.',
+          'Y si vas a contratar otro seguro, que empiece el mismo día en que termina el anterior. Un hueco de un día entre los dos es un día sin cobertura, y en el coche, además, una infracción.',
+        ],
+      },
+      {
+        titulo: 'Y una alternativa que casi nadie conoce',
+        parrafos: [
+          'Si lo que te pasa es que nadie te atiende, no hace falta cancelar el seguro para arreglarlo. Puedes cambiar de correduría sin cambiar de compañía: la póliza sigue igual, con el mismo número, las mismas coberturas y el mismo precio, y lo que cambia es quién la gestiona y quién te representa ante la aseguradora.',
+          'Es un trámite aparte, sin esperar al vencimiento y sin preaviso. Lo contamos en detalle en la página de cambio de correduría.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Puedo dar de baja el seguro antes de que venza?',
+        respuesta:
+          'Como norma general, no: el contrato dura hasta el vencimiento y ahí termina si has avisado a tiempo. Hay situaciones concretas —vender el coche o la casa, por ejemplo— que se tratan aparte. Mira las condiciones de tu póliza o pregúntanos.',
+      },
+      {
+        pregunta: '¿Y si se me ha pasado el mes de preaviso?',
+        respuesta:
+          'La póliza se renueva un año más. Anótate la fecha del vencimiento siguiente y su mes de preaviso, y envía la carta con tiempo. Mientras tanto puedes revisar coberturas y capitales por si conviene ajustarlos.',
+      },
+      {
+        pregunta: '¿Tengo que decir por qué me voy?',
+        respuesta:
+          'No. La ley solo pide que comuniques tu oposición a la prórroga por escrito y en plazo. Un motivo no cambia nada y no hace falta darlo.',
+      },
+      {
+        pregunta: '¿Cambiar de correduría es dar de baja el seguro?',
+        respuesta:
+          'No. Son dos cosas distintas: la póliza sigue con su compañía y lo que cambia es quién la gestiona. No exige preaviso ni esperar al vencimiento.',
+      },
+    ],
+  },
   // El agente quincenal de `apps/plataforma` (`lib/correduria/blog-agente.ts`)
   // añade el artículo nuevo JUSTO ENCIMA de esta línea y abre un PR. Es la
   // única forma en que un proceso automático toca este fichero: no reescribe
@@ -380,6 +482,7 @@ export function textoArticulo(a: Articulo): string {
     a.resumen,
     ...a.secciones.flatMap((s) => [s.titulo, ...s.parrafos]),
     ...(a.faq ?? []).flatMap((f) => [f.pregunta, f.respuesta]),
+    ...(a.cta ? [a.cta.titulo, a.cta.texto, a.cta.boton] : []),
   ].join(' ')
 }
 

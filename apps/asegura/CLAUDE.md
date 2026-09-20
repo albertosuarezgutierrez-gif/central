@@ -223,7 +223,7 @@ PASSWORD` sigue rechazando la nueva aunque el host directo `db.<ref>.supabase.co
 el log SIN la URL, así que la pantalla de plataforma dice la causa sin ir a los logs del pooler.
 **Camino de vuelta al origen (solo con `ASEGURA_FUENTE=origen`):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
 (SELECT-only + BYPASSRLS) contra el Supabase congelado de Manuel por el pooler :6543 de eu-central-1; la URL la
-normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` solo). `ASEGURA_OPERADOR_SECRET` — Bearer del
+normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` y, si falta, `connection_limit=5` — **nunca 1**: una instancia de Vercel atiende varias peticiones a la vez con el mismo cliente, y con 1 las ~17 llamadas paralelas de `/correduria` hacían cola hasta el `pool_timeout` y morían en P2024, medido el 19/09/2026). `ASEGURA_OPERADOR_SECRET` — Bearer del
 puerto `/api/operador/resumen` (MISMO valor en el proyecto Vercel `plataforma`). El proyecto sirve
 desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD.
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del
@@ -1319,6 +1319,24 @@ cartera— cuenta como **`sinCanal`**, que es la verdad, en vez de restarse del 
 
 `avisada_at` se sella **inmediatamente** tras el envío aceptado: es lo único que impide que un
 reintento mande el mismo aviso dos veces. Si el sello falla se grita `ENVIADO PERO NO SELLADO`.
+
+🚨 **Y desde el 19/09/2026, sin canal del tomador no es «sin canal» a secas: se prueba su PERSONA DE
+REFERENCIA** (Alberto, viendo «Instituto Studium» y «Grupo ELCA 83» en «Clientes sin canal»: «suele
+tener persona de contacto… es la persona de referencia sobre esta póliza»). `emailAlternativo()` de
+`@central/module-seguros` (`contacto-alternativo.ts`) reutiliza `contactoEfectivo()` para la póliza
+(su propio dato mal guardado, o un interviniente ajeno de esa MISMA póliza) y, si eso tampoco da nada,
+consulta `cliente_relaciones` (excluyendo `Sin vínculo`, la misma fuente que el CUARTO sitio de
+`clientes-sin-canal.ts`). El correo a un tercero **nunca se manda como si fuera al propio tomador**:
+`textoAviso()` recibe `paraTercero` y explica de qué póliza y de qué titular se trata, y con qué rol se
+dirige a esa persona. Solo cuando el dato es SUYO (colgado de la póliza y no de su ficha) el correo se
+manda tal cual, porque literalmente es su dirección. `ResumenAvisos.enviadosATercero` cuenta cuántos de
+los `enviados` fueron por esta vía, como subconjunto — no aparte.
+⚠️ **`textoAviso()` vive en `lib/texto-vencimiento.ts`, aparte de `avisos-vencimiento.ts` — es PURO
+a propósito** (mismo patrón que `renovaciones-aviso.ts` de plataforma): `avisos-vencimiento.ts` importa
+`./asegura-db` sin extensión, que `node --test` no resuelve fuera de un bundler, así que un test que
+importe ese fichero directamente revienta con `ERR_MODULE_NOT_FOUND` — no es un fallo de Prisma. La
+lógica de A QUIÉN y CÓMO se dirige el correo se prueba en `texto-vencimiento.test.ts` sin arrastrar nada
+de BD.
 
 Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), `ASEGURA_MAIL_FROM` y
 un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).

@@ -230,6 +230,30 @@ export type AnotacionHistorial = { id: string; tipo: string; texto: string; fech
  * casi siempre de OTRA compañía: la correduría no la gestiona, solo consta que
  * existe. Nunca se enseña en la tabla de «Pólizas vivas» — es de otro alcance.
  */
+/**
+ * QUÉ es el bien asegurado — misma regla que el portal del cliente
+ * (`describirBien()` de `@central/module-seguros-portal`): el nº de póliza
+ * nunca identifica una póliza para una persona. `null` = la IA no lo leyó
+ * del documento, nunca «no tiene».
+ */
+export type BienDeclarada = {
+  cosa: string | null
+  ubicacion: string | null
+  detalles: string[]
+}
+
+export const BIEN_DECLARADA_VACIO: BienDeclarada = { cosa: null, ubicacion: null, detalles: [] }
+
+function leerBienDeclarada(v: unknown): BienDeclarada {
+  if (typeof v !== 'object' || v === null) return BIEN_DECLARADA_VACIO
+  const d = v as Record<string, unknown>
+  return {
+    cosa: cadena(d.cosa),
+    ubicacion: cadena(d.ubicacion),
+    detalles: Array.isArray(d.detalles) ? d.detalles.filter((x): x is string => typeof x === 'string') : [],
+  }
+}
+
 export type PolizaDeclaradaFicha = {
   id: string
   compania: string | null
@@ -249,6 +273,7 @@ export type PolizaDeclaradaFicha = {
    * cotejar eso exige la ficha de esa sociedad, que aquí no se mira).
    */
   yaEnCartera: boolean | null
+  bien: BienDeclarada
 }
 
 /**
@@ -277,6 +302,7 @@ export function leerDeclaradas(v: unknown): PolizaDeclaradaFicha[] | null {
       titularTipo: cadena(d.titularTipo),
       titularEmpresaNombre: cadena(d.titularEmpresaNombre),
       yaEnCartera: typeof d.yaEnCartera === 'boolean' ? d.yaEnCartera : null,
+      bien: leerBienDeclarada(d.bien),
     })
   }
   return out

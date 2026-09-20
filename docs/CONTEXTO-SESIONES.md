@@ -12,6 +12,113 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026) Presupuesto de auto (avant2/Codeoscopic): propietario y conductor pueden ser distintos
+del tomador.** Hasta ahora `construirPeticionAuto` mandaba SIEMPRE la misma persona como
+`holder`/`owner`/`primaryDriver` — si el dueño era otra persona/empresa o había un conductor
+autorizado distinto, se cotizaba con datos incorrectos. `DatosAuto.propietario`/`.conductor`
+opcionales (persona completa; el conductor lleva su PROPIA `fechaCarnet`); si no se mandan, el
+comportamiento es idéntico a antes. UI en `auto-nuevo/AutoNuevo.tsx` (dos casillas + mini-formulario).
+🚧 Sin verificar contra el vendor real (nunca se ha pagado una cotización con owner/driver distintos
+del holder) y **no cubre propietario EMPRESA** (persona jurídica, sin `estadoCivil`). 9 tests nuevos.
+
+**(20/09/2026)** `/correduria/cliente/[id]` · Alberto: en «Aportadas desde el portal» no había
+dirección de hogar ni marca/modelo de auto, y el nº de póliza no identifica nada (regla que ya regía
+en `asegura-portal` pero no aquí). `datosRamo` de `portal_poliza_declarada` no se leía en el puerto de
+asegura. Fix: `describirBien()` de `@central/module-seguros-portal` (mismo helper del portal) ahora
+computa el bien también aquí; la tabla lo pinta como línea principal y el nº de póliza baja a
+referencia secundaria.
+
+**(20/09/2026)** Auditoría PROFUNDA semanal. Código/infra sanos (2.947 tests, 13 typechecks, lint,
+qa, build — todo verde). Heartbeat y correduría sin novedad (rojos ya conocidos: `ses_transporte`,
+`seo_correduria` cura sola el 21/09, BBVA/PSD2 pendiente de Alberto desde el 16/09). Pricing sano.
+🔴 **Hallazgo nuevo:** de los 46 PRs de rutina abiertos (hasta 16 días), al menos 7 etiquetados como
+"solo registro" traen código real sin revisar (#2318, #2322, #2327, #2573, #2757, #2741, #2488) —
+probable reutilización de rama entre sesiones. Y `docs/uso-herramientas/**.json` saca a ~20 PRs del
+allowlist del auto-merge sin necesidad. Detalle e informe: `docs/AUDITORIA-2026-09.md`. PR de
+registro de esta pasada + PR de carril 2 (fix del allowlist) enlazados por Telegram.
+
+**(19/09/2026) «A quién llamar hoy» decía «no se pudo llegar a asegura (timeout, DNS o TLS)» — y no
+  era la red: era el POOL.** Medido en `get_runtime_logs` de central-asegura (07:54:37): 17 llamadas
+  paralelas de `/correduria` al puerto y **13 murieron en su primera consulta con P2024** «Timed out
+  fetching a new connection from the connection pool (limit: 1)». `normalizarUrlPooler` metía
+  `connection_limit=1` a toda URL :6543 (receta para lambdas de una petición; Vercel atiende varias en
+  la misma instancia con el mismo cliente). Ahora 5 por defecto (`POOL_POR_INSTANCIA`), la URL manda si
+  ya lo trae. Y `pedir()` de plataforma pasa de 8 s a 15 s: con 8 s se rendía ANTES del `pool_timeout`
+  (10 s) y la causa real (`conexion`) nunca llegaba a la pantalla. Si el log sigue diciendo «limit: 1»
+  tras desplegar, está escrito a mano en el `DATABASE_URL` de Vercel.
+**(19/09/2026)** SIVRA · pricing: **diagnóstico del aviso «precio al huésped por encima del mercado» (sin tocar nada).**
+  Causa 1: **motor en PAUSA global desde el 15/09 14:44** (`pricing_config.paused=true`, sesión Semana Santa del Dúplex);
+  la rutina de despausa del 16/09 07:30 corrió y NO despausó ni dejó nota → 12 pasadas en simulacro (House 28/11: propone
+  679→543 y no escribe; 875€ al huésped = 679×1,20+60). Causa 2: aunque se despause, el motor apunta a 428 de base (574€)
+  para el 28/11 con mercado de la fecha a 288€: descarta el corpus por fecha del 25/11 (29 d > `EDAD_MERCADO_RANCIO`) y cae
+  al cubo de noviembre, inflado por los findes de evento; el centinela acepta comps de hasta 120 d — miden cosas distintas.
+  Causa 3: **`sivra_mercado_booking` no corre desde el 16/09** → el 23/09 los 4 pisos caen a `datos_insuficientes`.
+  Busto Reform «desviado»/`inconsistente`: UNA ventana falsa de `pricing_escaparate` (25/03/2027, 3.329€/2 noches con el
+  piso RESERVADO, `available=0`: el conector devolvió otro anuncio); sin ella sesgo −1,7 % / error 5 %. Pendiente Alberto:
+  despausar (ojo 23/24/27/28-03 del Dúplex con corpus rancio), reponer el barrido, y guardas de escaparate (no medir fechas
+  no disponibles + descartar ratios implausibles).
+**(19/09/2026)** House Sevillana · **política de cancelación publicada en la web**: mergeado el PR #3031 (15 días
+  gratis / 100 % después o no-show; FAQ, JSON-LD, bloque de reserva directa, EN/IT) a petición de Alberto tras la
+  pregunta de la huésped de 5-7/02/2027. ⏳ Pendiente Alberto: que el motor de Smoobu muestre la MISMA condición
+  (la web no la impone; la impone lo que el huésped ve al reservar). Directa 5-7/02 con 10 pax = 777,20€ frente
+  a 872€ de su Booking con Genius: la web NO sale más cara para esas fechas.
+## (19/09/2026) Gestor de pólizas como imán de leads — landing, carta de baja, casilla comercial, solapamientos
+- Prompt de consultoría SEO de Alberto valorado: ~70 % ya existía; descartados semáforo de precio, reseñas automáticas y referidos con premio (motivos en el spec `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`). Después: «Hazlo todo».
+- Portal: `/boveda/carta/[id]` (carta art. 22 LCS, solo declaradas, NUNCA se envía), casilla `comercial` en «Mis datos» (`POST /api/consentimiento`, append-only, nace desmarcada), bloque de coberturas repetidas (3 familias, informa no juzga). Privacidad con fila 6.1.a → `VERSION_TEXTOS_LEGALES` `2026-09-v5`.
+- Web: `/gestor-de-seguros` (copy en `lib/gestor.ts` + cepo), calculadora de vencimientos sin registro, artículo `como-dar-de-baja-un-seguro-a-tiempo` con `Articulo.cta`. `lib/companias-baja.ts` con los 5 canales de baja **sin verificar** (red bloquea los dominios): cepo que impide publicarlos.
+- ⏳ Alberto: encender `ASEGURA_AVISOS_ACTIVOS` tras contar ≤112, y verificar los 5 canales de baja (10 min/compañía) para la serie por compañía.
+
+**(19/09/2026)** Plataforma — «el móvil me pide usuario siempre». NO era la cookie (30 días) ni faltaba
+una web app (ya es PWA instalable): `cuentas.session_jti` era UN jti por cuenta y cada login lo pisaba,
+así que entrar desde el PC (o Claude en Chrome) expulsaba al móvil. Ahora **sesiones por dispositivo**:
+`cuentas.session_jtis text[]` (máx. 5, se cae la más antigua; `lib/sesiones.ts` puro + `sesiones-db.ts`),
+login añade, logout revoca SOLO la suya. Migración `prisma/sql/2026-09-19_sesiones_por_dispositivo.sql`
+APLICADA con backfill (`session_jti` se queda: la declaran 5 apps en Prisma sin usarla — borrarla rompería
+sus `SELECT`). Y `/login` con sesión válida → `/banca` (el acceso directo de Alberto apunta a `/login`).
+Pendiente de Alberto: instalar plataforma desde Chrome Android (⋮ → «Instalar aplicación»).
+**(19/09/2026)** Correduría · el aviso de vencimiento ya avisa a la PERSONA DE REFERENCIA cuando el
+tomador no tiene canal propio (Studium, Grupo ELCA 83), reutilizando `contactoEfectivo()` (póliza) +
+`cliente_relaciones` (excluye «Sin vínculo») vía `emailAlternativo()` nuevo en `@central/module-seguros`.
+El correo a un tercero explica de qué póliza y titular se trata; solo el dato SUYO mal guardado se manda
+tal cual. `ResumenAvisos.enviadosATercero` cuenta el subconjunto. El TEXTO se extrajo a
+`apps/asegura/lib/texto-vencimiento.ts` (puro, sin `asegura-db`) para poder testearlo con `node --test`
+sin arrastrar el cliente Prisma — `code-review` cazó ahí una gramática rota («no quiere renovars» en el
+caso normal) y un email de interviniente sin validar formato antes de usarse como destinatario; los dos
+corregidos y cubiertos. Confirmado: el aviso a Alberto por Telegram (`/api/cron/correduria-renovaciones`,
+plataforma) ya existía, sin cambios.
+
+**(19/09/2026)** `apps/asegura-portal`, retoque tras el PR #3091 ya mergeado: Alberto en
+producción, «no se podría unificar la parte de arriba? Hay mucho espacio libre» — el ☰ ya no
+abre su propia franja debajo de la marca, se porta con `createPortal` a un slot de
+`app/layout.tsx` y vive dentro de `.marca-barra` (icono 44×44, la sección activa pasa al
+`aria-label`). Y en «Añade una póliza», el párrafo largo se pliega tras un resumen de una
+línea (`<details>`) para que los botones de subir no queden fuera de la primera pantalla.
+`tsc`/`pnpm test`/`lint` en verde; cepo de la barra actualizado y visto en rojo→verde.
+
+**(19/09/2026)** Avisos de renovación de carné de conducir (correduría): tras el helper puro
+`caducidadCarnet()` (PR #3076, mergeado), se conectó al aviso EN LA INTRANET del CLIENTE (decisión
+de Alberto, no la del corredor) — nueva fuente `carnets` en el catálogo `avisosDe()` de
+`@central/module-seguros-portal` (ventana propia de 60 días, no los 7 de las obligaciones), servida
+por un puerto estrecho nuevo `GET /api/portal/carnets` en `apps/asegura` (calcula con la clave PII y
+solo cruza el resultado, nunca las fechas cifradas de origen) y consumida por la campana
+(`/api/avisos`) y por el emisor genérico de correo (`avisos-intranet.ts`, sin tocarlo aparte —
+hereda el envío automáticamente). Nueva tabla Prisma `ClienteCarnetConducir`. Suite completa +
+typecheck de asegura/asegura-portal en verde. PR #3087, mergeado. Pendiente: UI en la ficha del
+corredor para dar de alta/editar carnés (la tabla soporta varios por cliente; hoy nadie los escribe).
+
+**(19/09/2026)** SIVRA pricing — el corpus de comparables de aforo 12 estaba dominado por
+aparthoteles/hoteles (Overland Suites, Sercotel, Hilton, Meliá…, 59-14 apariciones cada uno) frente
+a 3-8 de las casas enteras reales: el filtro `accommodation_types:["APARTMENT"]` del conector no
+distingue el producto. Nuevo `lib/sivra/pricing-comps-tipo.ts` (`esCasaComparable`/
+`sqlCompEsCasaComparable`, puro, 7 tests con nombres reales) descarta por palabra de marca/
+categoría en el nombre; cableado junto a `sqlCompDeNuestraLiga` en los 3 corpus de
+`pricing/apply` y en `pricing-ancla-global.ts` (mismo patrón, misma guarda de monotonía donde ya
+existía). Probado contra la BD real: para House Sevillana el corpus de 30 días pasa de 1.079 a 292
+filas (87 fechas distintas, por encima de `MIN_FECHAS_ANCLA`=15 — no se queda sin ancla) y la
+mediana sube de 597€ a 702€: el ancla estaba infravalorada por mezclar un producto distinto.
+Limitación conocida y documentada: marcas locales sin palabra de categoría en el nombre (p. ej.
+"atLumbreras16") no se cazan. `pnpm test` 2.890/2.890 + tsc 0.
+
 **(19/09/2026)** Portal cliente · Alberto: en vez de pedirle a quien sube un PDF protegido que «quite
 la protección» (la mayoría no sabe cómo), se le ofrece escribir la contraseña y reintentar — muchas
 compañías protegen el PDF con el DNI/NIF del tomador, que la persona sí sabe. `extraerPoliza()` acepta

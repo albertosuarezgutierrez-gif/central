@@ -30,4 +30,7 @@ export const CONSULTAS: Consulta[] = [
   { consulta: 'qué cubre de verdad mi seguro de hogar', pagina: '/seguros/hogar', grupo: 'problema' },
   { consulta: 'qué es un corredor de seguros y en qué se diferencia de un agente', pagina: '/quienes-somos', grupo: 'problema' },
   { consulta: 'cómo reclamar un siniestro que me han denegado', pagina: null, grupo: 'problema' },
+  // 19/09/2026: el gestor de pólizas y la guía de baja (landing `/gestor-de-seguros` + artículo).
+  { consulta: 'cómo dar de baja un seguro', pagina: '/blog/como-dar-de-baja-un-seguro-a-tiempo', grupo: 'problema' },
+  { consulta: 'organizar mis seguros en un solo sitio', pagina: '/gestor-de-seguros', grupo: 'problema' },
 ]

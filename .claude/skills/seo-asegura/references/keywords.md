@@ -57,6 +57,8 @@ ciudad en los encabezados de la página nacional.
 | qué cubre de verdad mi seguro de hogar | parcialmente `/seguros/hogar` | merece página propia |
 | qué es un corredor de seguros y en qué se diferencia de un agente | `/quienes-somos` | parcial |
 | cómo reclamar un siniestro que me han denegado | `/blog/siniestro-denegado-que-hacer` | cubierta (07/09/2026, PR #2487/#2500) |
+| cómo dar de baja un seguro | `/blog/como-dar-de-baja-un-seguro-a-tiempo` | cubierta (19/09/2026): guía genérica con CTA a la carta del gestor. La serie «en [Compañía]» espera a que se VERIFIQUEN los canales (`apps/asegura-web/lib/companias-baja.ts`, todo `verificado: false`) |
+| organizar mis seguros en un solo sitio | `/gestor-de-seguros` | cubierta (19/09/2026). Landing del gestor gratuito con calculadora de vencimientos sin registro. [Probable] volumen bajo: se mide en GSC antes de escribir variantes («app para controlar vencimientos», «gestor de seguros familiar») |
 
 ## 3. Marca — hay que vigilarla, no ganarla
 

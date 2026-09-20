@@ -187,7 +187,7 @@ input, select, textarea, button { font: inherit; }
    * primera franja de pantalla ya sea de la correduría. */
   border-top: 3px solid var(--accent);
 }
-/* ── Armazón del portal: lateral en escritorio, carril en móvil ────────────
+/* ── Armazón del portal: lateral en escritorio, cajón en móvil ─────────────
  *
  * Medido del fuente de la app de Manuel (`app.grupoasegura.com`), no imitado de
  * una captura: lateral de **256px** (`16rem`), cabecera de **56px**, y el
@@ -196,18 +196,22 @@ input, select, textarea, button { font: inherit; }
  * moderna»: sin ella son dos columnas pegadas.
  *
  * 🚨 Un SOLO `<nav>` (`app/(portal)/NavPortal.tsx`) con dos formas. En el móvil
- * es un carril horizontal; a partir de 1024 px se endereza y pasa a ser el
- * lateral. Dos componentes distintos para la misma navegación es cómo se llega
- * a que una sección exista en una pantalla y no en la otra sin que nada falle.
+ * es un cajón (drawer) que se abre con el ☰; a partir de 1024 px se endereza y
+ * pasa a ser el lateral, siempre a la vista. Dos componentes distintos para la
+ * misma navegación es cómo se llega a que una sección exista en una pantalla y
+ * no en la otra sin que nada falle.
  *
  * 📌 **1024 y no 768, que es donde conmuta la suya.** Con el lateral de 256 px,
  * a 768 el contenido se queda en ~500 px: media tablet gastada en cuatro
  * enlaces. Su panel lo aguanta porque tiene nueve secciones y tablas de doce
  * columnas; aquí son cuatro secciones y una o dos pólizas.
  *
- * 📱 Y en el móvil no hay hamburguesa a propósito: son cuatro secciones, y un
- * botón que las esconde detrás de un toque las hace menos visibles que
- * enseñarlas. Esta pantalla la abre gente de 50-70 años.
+ * 📱 **Esto decía «en el móvil no hay hamburguesa a propósito: son cuatro
+ * secciones»**, y quedó desactualizado sin corregirse cuando se añadió el ☰ el
+ * 19/09/2026 (`pestanasPortal()` devuelve siete entradas desde entonces): la
+ * premisa de «cuatro secciones» ya no se cumplía y este comentario se quedó
+ * describiendo un carril que ya no existía. Ver `NavPortal.tsx` para el
+ * porqué del cambio.
  *
  * 🚨 `grid-template-columns: minmax(0, 1fr)` NO es adorno: sin declarar las
  * pistas, un grid las dimensiona con su contenido más ancho y una tabla o un
@@ -233,52 +237,43 @@ input, select, textarea, button { font: inherit; }
   max-width: 1120px;
 }
 
-/* ── La barra del menú (móvil) ──────────────────────────────────────────────
- * El ☰ y, a su lado, en qué sección estás. Lo segundo no es adorno: con el
- * cajón cerrado, una hamburguesa sola deja la pantalla sin decir dónde está
- * quien la mira — que es lo único bueno que tenía el carril. */
-.portal-nav-barra {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 12px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+/* ── El ☰: portado a la barra de MARCA, no una franja propia debajo ─────────
+ * Hasta el 19/09/2026 esto era `.portal-nav-barra`, una segunda franja de
+ * ~53px pegada bajo la de marca (56px): dos barras de cabecera por el precio
+ * de una. Alberto, mirando su propio móvil: «no se podría unificar la parte
+ * de arriba? Hay mucho espacio libre». El botón vive ahora DENTRO de
+ * `.marca-barra` (portado con `createPortal` desde `NavPortal.tsx` a un
+ * `<span id="portal-menu-slot">` que `app/layout.tsx` deja vacío), con el
+ * mismo lenguaje visual que el resto de acciones de esa barra (`.tema-boton`,
+ * `.campana-boton`): 44×44, icono solo. La etiqueta «en qué sección estás»
+ * que antes iba al lado ya no tiene sitio — vive en el `aria-label`, no
+ * pintada, porque cada pantalla del portal ya lo dice con su propio `<h1>`. */
+.marca-menu-slot {
+  display: contents;
 }
-.portal-nav-boton {
+.marca-menu-boton {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
   /* 44px: el mínimo táctil de la regla de la casa. Esta pantalla la abre gente
-   * de 50-70 años desde el móvil, y este botón es ahora la ÚNICA puerta a las
-   * siete secciones: si falla el toque, la navegación entera falla. */
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0 12px;
-  font-family: var(--sans);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  background: var(--surface);
+   * de 50-70 años desde el móvil, y este botón es la ÚNICA puerta a las siete
+   * secciones: si falla el toque, la navegación entera falla. */
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: calc(var(--radius) * 0.8);
   cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
 }
-.portal-nav-boton:hover {
-  background: color-mix(in oklab, var(--brand) 8%, var(--surface));
-}
-.portal-nav-icono {
-  font-size: 18px;
-  line-height: 1;
-}
-.portal-nav-donde {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.marca-menu-boton:hover {
+  background: var(--surface-hover, var(--panel2));
+  color: var(--text);
 }
 /* El fondo oscuro del cajón. z-index por encima de la cabecera de marca (20) y
  * del botón flotante de WhatsApp (35), y por debajo del propio cajón (50). */
@@ -356,14 +351,13 @@ input, select, textarea, button { font: inherit; }
 .portal-nav-cerrar:hover {
   color: var(--text);
 }
-/* El hueco del `Suspense`: reserva la altura de la barra del menú para que el
- * contenido no salte cuando la navegación se monta. NO lleva `.portal-nav` (lo
- * llevaba cuando esa clase era el carril): ahora esa clase es un cajón fijo,
- * que no ocupa sitio y no reservaría nada. */
+/* El hueco del `Suspense`, mientras `NavPortal` (y con él el ☰ portado)
+ * todavía no se ha montado. 19/09/2026: a 0 en las dos anchuras — antes
+ * reservaba los 53px de `.portal-nav-barra`, que ya no existe; el ☰ vive
+ * ahora en `.marca-barra`, cuya altura no depende de este hueco. Sigue sin
+ * llevar la clase `.portal-nav`: esa es un cajón fijo que no ocupa sitio. */
 .portal-nav-hueco {
-  min-height: 53px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  min-height: 0;
 }
 
 .portal-nav-item {
@@ -430,11 +424,14 @@ input, select, textarea, button { font: inherit; }
      * dos alturas: la marca abajo, el papel encima. */
     background: color-mix(in oklab, var(--brand) 7%, var(--bg2));
   }
-  /* 🚨 El botón ☰, su barra y el fondo oscuro NO existen aquí: el lateral está
-   * siempre a la vista, y un botón para abrir lo que ya se ve es una puerta
-   * de más. Con `display:none` además dejan de ser hijos del grid, que es lo
-   * que evita que descoloquen las dos columnas (ver `.banda-corredor`). */
-  .portal-nav-barra,
+  /* 🚨 El ☰ (ahora en `.marca-barra`), el fondo oscuro y la cabecera del
+   * cajón NO existen aquí: el lateral está siempre a la vista, y un botón
+   * para abrir lo que ya se ve es una puerta de más. `.portal-nav-fondo` y
+   * `.portal-nav-cabecera` además dejan de ser hijos del grid con
+   * `display:none`, que es lo que evita que descoloquen las dos columnas
+   * (ver `.banda-corredor`) — `.marca-menu-boton` no vive en ese grid, así
+   * que a él le basta con no pintarse. */
+  .marca-menu-boton,
   .portal-nav-fondo,
   .portal-nav-cabecera {
     display: none;
@@ -457,11 +454,6 @@ input, select, textarea, button { font: inherit; }
     box-shadow: none;
     max-height: calc(100vh - var(--alto-barra));
     overflow-y: auto;
-  }
-  .portal-nav-hueco {
-    min-height: 0;
-    background: none;
-    border-bottom: 0;
   }
   /* Ítem de lateral, con sus medidas: 34px de alto (44 es el mínimo TÁCTIL, y
    * en escritorio se pincha con ratón), radio 1.4rem, texto de 14. */
@@ -2140,8 +2132,13 @@ h1 em {
 .tus-datos { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border); }
 /* Plegado por defecto y con voz baja: no es una acción que se ofrezca al
    mismo nivel que el resto de la pantalla (09/09/2026). El marcador nativo
-   de <details> ya avisa de que se abre; no se duplica con una flecha propia. */
-.supresion-plegable summary {
+   de <details> ya avisa de que se abre; no se duplica con una flecha propia.
+   19/09/2026: generalizado a `.plegable-suave` para reutilizarlo fuera de la
+   supresión (p.ej. `.alta-explicacion` de «Añade una póliza») — mismo gesto,
+   texto informativo que no hace falta ver siempre pero tampoco hay que
+   esconder del todo. */
+.supresion-plegable summary,
+.plegable-suave summary {
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
@@ -2149,7 +2146,8 @@ h1 em {
   list-style: revert;
   width: fit-content;
 }
-.supresion-plegable summary:hover { color: var(--text); }
+.supresion-plegable summary:hover,
+.plegable-suave summary:hover { color: var(--text); }
 .supresion-plegable-cuerpo { margin-top: 12px; }
 .supresion-intro { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
 .supresion-alcance { display: grid; gap: 14px; margin-bottom: 14px; }
@@ -3328,4 +3326,85 @@ h1 em {
   .wsp-flotante:active {
     transform: none;
   }
+}
+
+/* ── Carta de no renovación (19/09/2026) ──────────────────────────────────
+ * La carta se enseña como texto plano preformateado y se imprime SOLA: todo
+ * lo demás de la página (cabecera del portal, plazo, alternativa, botones)
+ * lleva `.solo-pantalla` y desaparece al imprimir. Es la única pieza del
+ * portal pensada para salir en papel con destino a un tercero. */
+@media print {
+  .solo-pantalla,
+  .portal-nav,
+  .marca-barra,
+  .pie-legal,
+  .wsp-flotante,
+  .campana {
+    display: none !important;
+  }
+  .carta {
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}
+.carta-texto {
+  white-space: pre-wrap;
+  font-family: var(--serif, inherit);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+  padding: 18px;
+  background: var(--bg, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  /* Un texto preformateado sin esto desborda en móvil y se lleva la página. */
+  overflow-wrap: anywhere;
+}
+.carta-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+@media (min-width: 480px) {
+  .carta-acciones .boton {
+    width: auto;
+  }
+}
+
+/* ── Casilla de consentimiento comercial ───────────────────────────────── */
+.consentimiento-casilla {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  line-height: 1.5;
+}
+.consentimiento-casilla input {
+  /* 44 px de objetivo táctil alrededor de la casilla, sin agrandar la casilla. */
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin: 2px 0 0;
+}
+.consentimiento-estado {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+/* ── Coberturas repetidas ───────────────────────────────────────────────── */
+.solapamientos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.solapamiento ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
 }
