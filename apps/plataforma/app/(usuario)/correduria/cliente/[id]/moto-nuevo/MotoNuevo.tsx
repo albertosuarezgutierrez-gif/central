@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
+import type { Compania } from '@/lib/companias-asegura'
 import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
 
 function euroODash(n: number | null | undefined): string {
@@ -73,6 +74,7 @@ export default function MotoNuevo({
   estadoCivilMoto,
   consumo,
   simulacion,
+  companias,
 }: {
   clienteId: string
   etiquetaCliente: string
@@ -85,6 +87,8 @@ export default function MotoNuevo({
   estadoCivilMoto: Opcion | null
   consumo: ConsumoPuerto
   simulacion: boolean
+  /** `null` = no se ha podido leer el directorio de compañías: se teclea el código a mano. */
+  companias: Compania[] | null
 }) {
   // ── Vehículo: marca → modelo → combustible → versión, todo del catálogo ────
   const [marcas, setMarcas] = useState<Opcion[]>([])
@@ -127,6 +131,18 @@ export default function MotoNuevo({
   const [motoAnteriorCodigo, setMotoAnteriorCodigo] = useState('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
+
+  // ── ¿Tiene seguro EN VIGOR ahora mismo? (fallo real de Alberto, 18/09/2026) ──
+  // Igual que en auto: sin esto la compañía cotiza «de calle» y el precio no es
+  // confirmable como real. Opt-in, apagado por defecto.
+  const [tieneSeguroActual, setTieneSeguroActual] = useState(false)
+  const [companiaActualCodigo, setCompaniaActualCodigo] = useState('')
+  const [companiaActualLibre, setCompaniaActualLibre] = useState('')
+  const [polizaActualDigitos, setPolizaActualDigitos] = useState('')
+  const [aniosAsegurado, setAniosAsegurado] = useState('')
+  const [aniosEnCompania, setAniosEnCompania] = useState('')
+  const [aniosSinSiniestros, setAniosSinSiniestros] = useState('')
+  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState('')
 
   useEffect(() => {
     void catalogo('tipo=experiencia-moto')
@@ -205,15 +221,37 @@ export default function MotoNuevo({
     (f) => !RESUELTOS_EN_PANTALLA.has(f.campo as string) && !CAMPOS_A_MANO[f.campo],
   )
 
+  const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
+  const faltaHistorial =
+    tieneSeguroActual &&
+    (!companiaActualElegida ||
+      !polizaActualDigitos.trim() ||
+      aniosAsegurado.trim() === '' ||
+      aniosEnCompania.trim() === '' ||
+      aniosSinSiniestros.trim() === '')
+
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
-    faltaMotoAnterior || aManoSinRellenar.length > 0
+    faltaMotoAnterior || aManoSinRellenar.length > 0 || faltaHistorial
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
+    const correccionesFinal: Record<string, unknown> = {
+      ...correcciones,
+      ...(experienciaConduccion === 'OtherMotorcycle' ? { motoAnteriorCodigo: motoAnteriorCodigo.trim() } : {}),
+    }
+    if (tieneSeguroActual) {
+      correccionesFinal.aseguradoAntes = true
+      correccionesFinal.companiaAnteriorCodigo = companiaActualElegida
+      correccionesFinal.polizaAnterior = polizaActualDigitos.trim()
+      correccionesFinal.aniosAsegurado = Number(aniosAsegurado)
+      correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
+      correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
+      if (siniestrosUltimos5.trim() !== '') correccionesFinal.siniestrosUltimos5 = Number(siniestrosUltimos5)
+    }
     const r = await pedirCotizacionMoto({
       clienteId,
       resueltos: {
@@ -228,10 +266,7 @@ export default function MotoNuevo({
         // `ThisMotorcycle`. Solo se manda un valor real si se ha elegido.
         experienciaConduccion: experienciaConduccion || undefined,
       },
-      correcciones: {
-        ...correcciones,
-        ...(experienciaConduccion === 'OtherMotorcycle' ? { motoAnteriorCodigo: motoAnteriorCodigo.trim() } : {}),
-      },
+      correcciones: correccionesFinal,
     })
     switch (r.estado) {
       case 'faltan':
@@ -414,6 +449,70 @@ export default function MotoNuevo({
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
               Hay que corregirlo en la ficha del cliente. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
             </p>
+          </div>
+        )}
+      </div>
+
+      <div style={cardStyle}>
+        <CardHeader
+          title="2c · ¿Tiene seguro EN VIGOR ahora mismo?"
+          sub="Sin esto la compañía cotiza «de calle»: no puede hacer el control de antecedentes y el precio NO es confirmable como real. Pregúntalo sobre todo en presupuestos importantes."
+        />
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, fontWeight: 600 }}>
+          <input
+            type="checkbox"
+            checked={tieneSeguroActual}
+            onChange={(e) => setTieneSeguroActual(e.target.checked)}
+            style={{ width: 18, height: 18 }}
+          />
+          Sí, tiene un seguro de moto en vigor ahora mismo
+        </label>
+
+        {tieneSeguroActual && (
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
+            <Campo etiqueta="Compañía actual" falta={!companiaActualElegida}>
+              {companias === null ? (
+                <input
+                  value={companiaActualLibre}
+                  onChange={(e) => setCompaniaActualLibre(e.target.value)}
+                  placeholder="Código DGS (p. ej. C0058)"
+                  style={input}
+                />
+              ) : (
+                <select value={companiaActualCodigo} onChange={(e) => setCompaniaActualCodigo(e.target.value)} style={input}>
+                  <option value="">Elige compañía</option>
+                  {companias.map((c) => <option key={c.codigoDgs} value={c.codigoDgs}>{c.nombreComun}</option>)}
+                </select>
+              )}
+            </Campo>
+            <Campo
+              etiqueta="Últimos 5 dígitos de la póliza"
+              falta={!polizaActualDigitos.trim()}
+              ayuda="⚠️ Mapfre y otras compañías a veces dan dígitos con ceros a propósito para que el competidor no pueda consultar la siniestralidad y así no perder al cliente. Si ves varios ceros seguidos, sospecha: la compañía puede rechazar el control de antecedentes con ese número y el precio se quedará en estimado."
+            >
+              <input
+                value={polizaActualDigitos}
+                onChange={(e) => setPolizaActualDigitos(e.target.value)}
+                placeholder="Los 5 últimos, o la póliza entera si el cliente la tiene a mano"
+                style={input}
+              />
+            </Campo>
+            <Campo etiqueta="Años asegurado sin interrupción" falta={aniosAsegurado.trim() === ''}>
+              <input type="number" min={0} value={aniosAsegurado} onChange={(e) => setAniosAsegurado(e.target.value)} style={input} />
+            </Campo>
+            <Campo etiqueta="Años en esta compañía" falta={aniosEnCompania.trim() === ''}>
+              <input type="number" min={0} value={aniosEnCompania} onChange={(e) => setAniosEnCompania(e.target.value)} style={input} />
+            </Campo>
+            <Campo etiqueta="Años sin siniestros" falta={aniosSinSiniestros.trim() === ''}>
+              <input type="number" min={0} value={aniosSinSiniestros} onChange={(e) => setAniosSinSiniestros(e.target.value)} style={input} />
+            </Campo>
+            <Campo
+              etiqueta="Siniestros en los últimos 5 años (si aplica)"
+              falta={false}
+              ayuda="Solo hace falta si lleva menos de 5 años sin siniestros: si falta y la compañía lo exige, lo dirá al pedir el precio, sin cobrar nada."
+            >
+              <input type="number" min={0} value={siniestrosUltimos5} onChange={(e) => setSiniestrosUltimos5(e.target.value)} style={input} />
+            </Campo>
           </div>
         )}
       </div>
