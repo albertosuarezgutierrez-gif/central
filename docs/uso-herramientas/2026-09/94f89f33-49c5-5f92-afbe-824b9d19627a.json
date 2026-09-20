@@ -1,8 +1,8 @@
 {
  "sesion": "94f89f33-49c5-5f92-afbe-824b9d19627a",
  "inicio": "2026-09-20T07:46:45.666Z",
- "fin": "2026-09-20T07:47:09.826Z",
- "llamadas": 5,
+ "fin": "2026-09-20T07:47:48.402Z",
+ "llamadas": 7,
  "categorias": {
   "otro": {
    "llamadas": 1,
@@ -25,6 +25,17 @@
    "tools": {
     "mcp__Gmail__search_threads": 2,
     "mcp__Gmail__get_thread": 2
+   }
+  },
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 425,
+   "chars_out": 6931,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
    }
   }
  }
