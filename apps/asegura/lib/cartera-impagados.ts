@@ -183,7 +183,11 @@ export async function colaRetencion(
       correduriaId,
       situacion: { in: [...SITUACIONES_IMPAGO] },
       // `activo: true`: una ficha descartada no aparece en la lista de impagos.
-      poliza: { mergedIntoPolizaId: null, cliente: { mergedIntoClienteId: null, activo: true } },
+      // `sustituidaAt: null` (20/09/2026): si el cliente ya cambió de compañía
+      // (se retarificó y se emitió), perseguir el impago de la póliza VIEJA no
+      // tiene sentido — no va a volver a ella. El seguimiento de esa
+      // sustitución vive en su propia cola, no en ésta.
+      poliza: { mergedIntoPolizaId: null, sustituidaAt: null, cliente: { mergedIntoClienteId: null, activo: true } },
     },
     select: {
       id: true,

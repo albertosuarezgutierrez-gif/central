@@ -1,0 +1,104 @@
+{
+ "sesion": "24851454-ebf8-5aaf-89f5-b56f8b40e7dc",
+ "inicio": "2026-09-20T19:19:56.110Z",
+ "fin": "2026-09-20T19:50:35.476Z",
+ "llamadas": 179,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 28,
+   "chars_out": 77884,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ReadNotifications": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 66,
+   "chars_in": 8103,
+   "chars_out": 189537,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 28,
+    "Read": 38
+   }
+  },
+  "bash": {
+   "llamadas": 49,
+   "chars_in": 10384,
+   "chars_out": 43875,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 49
+   }
+  },
+  "escritura": {
+   "llamadas": 49,
+   "chars_in": 63346,
+   "chars_out": 1128014,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 41,
+    "Write": 8
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 367,
+   "chars_out": 407,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__apply_migration": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 7,
+   "chars_in": 6465,
+   "chars_out": 18321,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 45782,
+   "tools": {
+    "mcp__github__pull_request_read": 4,
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__update_pull_request": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 494,
+   "chars_out": 347,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 1
+   }
+  },
+  "sql": {
+   "llamadas": 2,
+   "chars_in": 378,
+   "chars_out": 7796,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 2
+   }
+  }
+ }
+}

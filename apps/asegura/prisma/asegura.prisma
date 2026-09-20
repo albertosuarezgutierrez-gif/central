@@ -398,6 +398,11 @@ model Poliza {
   polizaCompetencia       Json?            @map("poliza_competencia")
   polizaSustituida        Json?            @map("poliza_sustituida")
   mergedIntoPolizaId      String?          @map("merged_into_poliza_id") @db.Uuid // lápida de fusión
+  // Sustitución por retarificación (20/09/2026): al EMITIR con otra compañía,
+  // la vieja se marca sustituidaAt y la nueva guarda polizaOrigenId. Ninguna
+  // ingesta externa las toca — el `estado` de CIMA es cosa aparte.
+  polizaOrigenId          String?          @map("poliza_origen_id") @db.Uuid
+  sustituidaAt            DateTime?        @map("sustituida_at") @db.Timestamptz(6)
 
   correduria     Correduria            @relation(fields: [correduriaId], references: [id])
   cliente        Cliente               @relation(fields: [clienteId], references: [id])
@@ -405,6 +410,8 @@ model Poliza {
   renovaciones   Poliza[]              @relation("Renovacion")
   mergedInto     Poliza?               @relation("FusionPoliza", fields: [mergedIntoPolizaId], references: [id])
   absorbidas     Poliza[]              @relation("FusionPoliza")
+  polizaOrigen   Poliza?               @relation("SustitucionPoliza", fields: [polizaOrigenId], references: [id])
+  sustituidas    Poliza[]              @relation("SustitucionPoliza")
   coberturasRel  PolizaCobertura[]
   recibos        PolizaRecibo[]
   intervinientes PolizaInterviniente[]

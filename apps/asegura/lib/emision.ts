@@ -12,7 +12,7 @@
 //
 // Reglas puras en `@central/module-seguros` (`emision.ts`, con tests).
 
-import { prepararPolizaEmitida, type CompaniaDgs, type ProyectoEmitido } from '@central/module-seguros'
+import { prepararPolizaEmitida, validarPolizaOrigen, type CompaniaDgs, type ProyectoEmitido } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { reactivarPorPoliza } from './cartera-edicion'
 
@@ -32,7 +32,19 @@ export type ResultadoEmision =
 
 export async function registrarPolizaEmitida(
   correduriaId: string,
-  entrada: { clienteId: string; proyecto: ProyectoEmitido; actor: string; catalogo?: readonly CompaniaDgs[] },
+  entrada: {
+    clienteId: string
+    proyecto: ProyectoEmitido
+    actor: string
+    catalogo?: readonly CompaniaDgs[]
+    /**
+     * La póliza que se estaba RETARIFICANDO, si esta emisión viene de ahí
+     * (`codeoscopic_projects.poliza_id` leído ANTES de que la transacción lo
+     * sobreescriba con la nueva). `undefined`/`null` = alta sin retarificar
+     * nada — no todo lo que se emite sustituye a otra.
+     */
+    polizaOrigenId?: string | null
+  },
 ): Promise<ResultadoEmision> {
   const db = prismaAsegura()
   const cliente = await db.cliente.findFirst({ where: { id: entrada.clienteId, correduriaId, mergedIntoClienteId: null }, select: { id: true, dniLookupHash: true } })
@@ -56,6 +68,24 @@ export async function registrarPolizaEmitida(
     limit 1`.catch(() => [] as { estado: string }[])
   if (yaAcunada[0]?.estado === 'emitida') return { ok: false, estado: 'conflicto', motivo: 'Ese proyecto ya tiene póliza acuñada.', status: 409 }
 
+  // La sustitución solo cuenta si la póliza de origen es de ESTA correduría, no
+  // es la misma que se va a crear, y no tiene YA otra sustituta (el guardián
+  // anti-duplicado de `validarPolizaOrigen`: dos «hijas» del mismo origen
+  // dejarían la ficha reversa mostrando solo una y la otra huérfana en su
+  // propio sentido). El caller ya la leyó con ese WHERE; aquí se vuelve a
+  // comprobar porque `registrarPolizaEmitida` no puede fiarse de lo que le pasan.
+  const origenCrudo = entrada.polizaOrigenId
+    ? await db.poliza.findFirst({
+        where: { id: entrada.polizaOrigenId, correduriaId },
+        select: { sustituidas: { select: { id: true }, take: 1 } },
+      })
+    : null
+  const validacionOrigen = validarPolizaOrigen(
+    entrada.polizaOrigenId ? { existe: origenCrudo !== null, yaTieneSustituta: (origenCrudo?.sustituidas.length ?? 0) > 0 } : null,
+  )
+  const polizaOrigenId = validacionOrigen.valido && entrada.polizaOrigenId ? entrada.polizaOrigenId : null
+  if (!validacionOrigen.valido) r.avisos.push(validacionOrigen.aviso)
+
   const f = r.fila
   const polizaId = await db.$transaction(async (tx) => {
     const creada = await tx.poliza.create({
@@ -75,6 +105,7 @@ export async function registrarPolizaEmitida(
         primaAnual: f.primaAnual,
         fraccionamiento: f.fraccionamiento as 'anual' | 'semestral' | 'trimestral' | 'mensual' | null,
         datosEspecificos: f.datosEspecificos as object,
+        polizaOrigenId,
       },
       select: { id: true },
     })
@@ -82,7 +113,8 @@ export async function registrarPolizaEmitida(
     // aquí `poliza_id` era la póliza RETARIFICADA (la pone `/oferta`); una vez
     // emitido, la fila es de la póliza nueva — que es lo que la conciliación con
     // CIMA (`emparejarConCima`) y el historial necesitan encontrar. El enlace con
-    // la retarificada queda en `historial_interno` de la ficha.
+    // la retarificada queda ahora ADEMÁS en `poliza_origen_id` (estructurado,
+    // consultable), no solo en el texto de `historial_interno`.
     await tx.$executeRaw`
       update codeoscopic_projects
       set poliza_id = ${creada.id}::uuid, estado = 'emitida', error_mensaje = null, updated_at = now()
@@ -91,6 +123,20 @@ export async function registrarPolizaEmitida(
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
       values (${correduriaId}::uuid, ${cliente.id}::uuid, ${creada.id}::uuid, cast('gestion' as tipo_historial_interno),
               ${`Póliza emitida por Codeoscopic (proyecto ${entrada.proyecto.projectIdCodeoscopic}) en ${f.aseguradora}${f.numeroPoliza ? ` nº ${f.numeroPoliza}` : ''}; pendiente de confirmación por CIMA. ${r.avisos.length ? `Avisos: ${r.avisos.join(' · ')}` : ''} Por ${entrada.actor}`})`
+    // La póliza vieja se marca SUSTITUIDA — es nuestro dato de seguimiento, no
+    // toca `estado` (eso sigue siendo de CIMA) ni lo pisa ninguna ingesta
+    // externa. El historial de esa póliza deja constancia con el cliente_id
+    // correcto (puede ser otro tomador de la misma correduría en un caso raro,
+    // pero aquí siempre es el mismo).
+    if (polizaOrigenId) {
+      await tx.$executeRaw`
+        update polizas set sustituida_at = now(), updated_at = now()
+        where id = ${polizaOrigenId}::uuid and correduria_id = ${correduriaId}::uuid and sustituida_at is null`
+      await tx.$executeRaw`
+        insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
+        values (${correduriaId}::uuid, ${cliente.id}::uuid, ${polizaOrigenId}::uuid, cast('gestion' as tipo_historial_interno),
+                ${`Sustituida por la póliza emitida en ${f.aseguradora}${f.numeroPoliza ? ` nº ${f.numeroPoliza}` : ''} (proyecto ${entrada.proyecto.projectIdCodeoscopic}). Pendiente de que CIMA confirme la nueva — hasta entonces sigue como viva en CIMA. Por ${entrada.actor}`})`
+    }
     return creada.id
   })
   // Una ficha DESCARTADA que vuelve a tener una póliza es un cliente otra vez:
