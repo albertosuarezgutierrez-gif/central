@@ -367,9 +367,16 @@ cada regla conocida del vendor se comprueba aquí. `revisarDatosAuto()` devuelve
 la vez (para que la UI los pinte juntos) y `construirPeticionAuto()` lanza si queda alguno.
 
 Las tres reglas que más cotizaciones tumban, todas con test:
-- **La misma persona va en `holder`, `risk.owner` y `risk.primaryDriver`, e IDÉNTICA.** El vendor
-  cruza por DNI y rechaza si un campo difiere; tampoco deja omitir ninguno. Por eso se construye
-  una vez y se reutiliza el mismo objeto.
+- **Por DEFECTO la misma persona va en `holder`, `risk.owner` y `risk.primaryDriver`, e IDÉNTICA.**
+  El vendor cruza por DNI y rechaza si DOS objetos con el MISMO DNI difieren en un campo; tampoco
+  deja omitir ninguno. Por eso se construye una vez y se reutiliza el mismo objeto cuando
+  tomador=propietario=conductor (el caso normal).
+  🚧 **Desde el 20/09/2026, `DatosAuto.propietario`/`.conductor` opcionales permiten que el
+  propietario o el conductor habitual sean una persona DISTINTA del tomador** (`peticion-auto.ts`):
+  el conductor lleva su propia `fechaCarnet`. **Sin verificar contra el vendor real** — nunca se ha
+  pagado una cotización con `owner`/`primaryDriver` distintos del `holder`, así que el primer intento
+  real puede devolver un 400 nuevo (igual que pasó con `email`/`roadName`). **No cubre propietario
+  EMPRESA** (persona jurídica, sin `estadoCivil`) — queda sin diseñar.
 - **La dirección viaja solo con sus DOS mitades** (CP + id de municipio). El municipio es un ID del
   catálogo, nunca un nombre.
 - **`lastFiveYearsAccidents` es obligatorio si los años sin siniestros son < 5 y no coinciden con

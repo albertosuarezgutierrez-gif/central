@@ -15,6 +15,19 @@
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-19 · facturas-correo** (2ª pasada del día — otra sesión en paralelo ya había abierto
+  #3100 con la primera) · hizo: comprobó PRs abiertos antes de duplicar trabajo (regla global);
+  Paso 0 sano (Vía B copió hoy, sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`,
+  `agente_salud` refrescado); Paso 1/1-bis sin candidatos nuevos (Gmail 2d y `_subir_aqui`
+  vacíos). Paso 4.0: el barrido de #3100 dejó 5 facturas de septiembre (openrouter 25,64$,
+  ionos 1,21€, ionos-servidor 5,69€, pricelabs 34,98$, vercel 106,76$) sin motivo — comprobado
+  contra el banco (Kutxa+BBVA, sin filtro de importe) que NINGUNA tiene cargo en septiembre →
+  marcadas `fuera_del_feed`, mismo patrón que los 4 recibos Anthropic de #3100. Con esto son ya
+  **~680-855€/mes en SaaS de negocio invisibles en `/finanzas`** por la tarjeta "...5332" sin
+  conectar al feed PSD2. dudas: el recibo Anthropic-credit 76,50€ (08/09) sigue con DOS cargos
+  candidatos idénticos (-76,50€ el 07/09 y el 10/09) — no se auto-confirma (regla de varios
+  candidatos), pendiente de que Alberto diga a cuál corresponde o si falta un recibo; fallos: —;
+  PRs/commits: este commit (complementa #3100, sin tocar sus archivos).
 - **2026-09-19 · mercado-booking** · hizo: pasada completa, 24/24 ventanas de mercado pedidas
   (`?max=24`, plan_total 528, candidatas 528, recortadas 504 — ronda 0 mes-corto 07-may-2027 +
   ronda 1 eventos 18-abr a 13-jun-2027, aforos 2/4/5/12), 237 comps `booking_mcp` escritos, 0
