@@ -58,6 +58,7 @@ export const SELECT_SINIESTRO = {
   lugarProvincia: true,
   updatedAt: true,
   datosRamo: true,
+  danosCima: true,
   intervinientes: {
     select: {
       id: true,
@@ -110,6 +111,7 @@ type FilaSiniestro = {
   lugarProvincia: string | null
   updatedAt: Date
   datosRamo: unknown
+  danosCima: unknown
   intervinientes: FilaInterviniente[]
 }
 
@@ -128,6 +130,17 @@ function limpio(v: string | null | undefined): string | null {
 function datosRamoDeFila(v: unknown): Record<string, string | number | boolean> | null {
   if (v === null || v === undefined || typeof v !== 'object' || Array.isArray(v)) return null
   return v as Record<string, string | number | boolean>
+}
+
+/** `danos_cima` (jsonb) → array tipado. `null`/forma rara = «asegura no lo manda», nunca `[]`. */
+function danosCimaDeFila(v: unknown): { descripcion: string | null; valor: string | null }[] | null {
+  if (!Array.isArray(v)) return null
+  return v
+    .filter((d): d is Record<string, unknown> => d !== null && typeof d === 'object')
+    .map((d) => ({
+      descripcion: typeof d.descripcion === 'string' ? d.descripcion : null,
+      valor: typeof d.valor === 'string' ? d.valor : null,
+    }))
 }
 
 function mapInterviniente(i: FilaInterviniente): SiniestroIntervinienteFicha {
@@ -174,6 +187,7 @@ export function mapSiniestro(s: FilaSiniestro): SiniestroFicha {
     abierto: ESTADOS_ABIERTO.has(String(s.estado)),
     actualizado: s.updatedAt.toISOString(),
     datosRamo: datosRamoDeFila(s.datosRamo),
+    danosCima: danosCimaDeFila(s.danosCima),
     terceros: s.intervinientes.map(mapInterviniente),
   }
 }
