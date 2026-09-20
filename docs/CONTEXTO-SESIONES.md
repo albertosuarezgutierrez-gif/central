@@ -29,6 +29,21 @@ renovación); la pérdida de CIMA sigue produciéndose y su causa está en el CR
 `session_jtis`; y RLS (0 de 89 tablas). Índices escritos y SIN aplicar (`2026-09-20_indices_lecturas_cartera.sql`).
 ⚠️ Docs desactualizadas por esto: `apps/asegura/CLAUDE.md`, `apps/asegura-portal/CLAUDE.md`, `docs/CIMA-CUARENTENA.md`.
 
+**(20/09/2026)** Recaptación por email: causa del fallo 9/9 de esta mañana =
+`RESEND_API_KEY` de `central-asegura` restringida a `grupoasegura.es` (apex, sin verificar) en vez de
+`envios.grupoasegura.es` (el dominio real del remitente). Clave nueva creada y puesta, y de paso se
+rotó `ASEGURA_OPERADOR_SECRET` (mismo valor en `plataforma`+`central-asegura`, redeploy de las dos).
+**Lote de 25 disparado a mano ese mismo día con OK de Alberto: 25 enviados / 0 fallidos.** Revisar
+mañana `emailAbiertosTotal` en el panel de recaptación de `/correduria`. Detalle en `apps/asegura/CLAUDE.md`.
+
+**(20/09/2026)** Portal del cliente (asegura-portal): nueva sección «Configuración» en
+`/boveda?vista=datos` — el cliente ya puede añadir VARIOS teléfonos/emails, marcar cuál es el
+principal y borrarlos, no solo sustituir el único principal que dejaba «Mis datos». Reutiliza
+`anadirContacto`/`cambiarContacto`/`borrarContacto` del lado corredor (`apps/asegura`) por un puerto
+nuevo (`/api/portal/contactos`) que nunca fuerza un duplicado. PR #3178, mergeado.
+**Pendiente sin tocar:** el cron `recaptacion-email-lote` falló 9/9 hoy a las 07:00 (0 enviados por
+email); motivo aún sin diagnosticar — mirar `detalleFallos` del Telegram de esa hora antes de reintentar.
+
 **(20/09/2026)** Recaptación de leads, Fase 2: `colaRecaptacion()` ya no exige `estado='activa'`
 cuando hay `fecha_vencimiento` — entra cualquier estado del volcado con fecha (el 89% `vencida`).
 Pool contactable real sube de 424 a 1.399 clientes. Fase 2b (mismo día, aclaración de Alberto):

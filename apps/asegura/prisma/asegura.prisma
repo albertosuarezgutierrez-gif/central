@@ -529,6 +529,10 @@ model Siniestro {
   /// guarda `?? `/`COALESCE`). EXCLUSIVO de siniestros `gestionado_correduria`
   /// — CIMA no manda este detalle (ver `siniestro-ramo.ts`, cabecera).
   datosRamo            Json?              @map("datos_ramo")
+  /// Desglose de daños del EIAC SIN (`ImplicadoDiversos/DanosSiniestro/DanoSiniestro[]`),
+  /// `[{descripcion,valor}]`. NO es PII. EXCLUSIVO de `origen='cima'` — es justo lo
+  /// contrario de `datosRamo` (ese lo aporta el corredor a mano y CIMA no lo trae).
+  danosCima            Json?              @map("danos_cima")
 
   correduria      Correduria               @relation(fields: [correduriaId], references: [id])
   cliente         Cliente                  @relation(fields: [clienteId], references: [id])
