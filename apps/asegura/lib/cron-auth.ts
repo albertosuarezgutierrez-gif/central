@@ -1,5 +1,7 @@
 import type { NextRequest } from 'next/server'
 
+import { secretosIguales } from '@central/module-seguros-pii'
+
 /**
  * Autorización de los endpoints de cron de `apps/asegura`.
  *
@@ -15,7 +17,11 @@ import type { NextRequest } from 'next/server'
  */
 export function autorizaCron(p: { secret?: string | null; bearer?: string | null }): boolean {
   if (!p.secret) return false
-  return p.bearer === p.secret
+  // TIEMPO CONSTANTE, no `===`. El contrato no cambia (sin `CRON_SECRET` no se
+  // autoriza a nadie, tampoco en desarrollo, y solo por `Authorization:
+  // Bearer`); lo único que cambia es CÓMO se compara: `===` corta en el primer
+  // carácter distinto y filtra por tiempo cuánto prefijo se ha acertado.
+  return secretosIguales(p.bearer, p.secret)
 }
 
 export function isCronAuthorized(req: NextRequest | Request): boolean {

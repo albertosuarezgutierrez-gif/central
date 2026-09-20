@@ -155,6 +155,8 @@ model PortalCodigo {
   id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tipo      PortalCanalTipo
   valorHash String          @map("valor_hash")
+  // 🚨 Guarda el HASH del código (`hashCodigo()` de `lib/auth.ts`: SHA-256 con
+  // la pimienta del canal), NO los 6 dígitos. El nombre es histórico.
   codigo    String
   intentos  Int             @default(0)
   creadoEn  DateTime        @default(now()) @map("creado_en") @db.Timestamptz(6)

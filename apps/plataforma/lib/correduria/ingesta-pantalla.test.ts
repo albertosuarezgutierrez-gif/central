@@ -20,10 +20,25 @@ import { saludIngesta, silencioPorEntidad } from '@central/module-seguros'
  * que un «no se ha podido comprobar» acabe pintado como «todo va bien».
  */
 
-/** Una lectura completa y limpia: se miró TODO y no hay nada que contar. */
+/**
+ * Una lectura completa y limpia: se miró TODO y no hay nada que contar.
+ *
+ * 🚨 «Todo» son las OCHO señales, no las cuatro de la primera versión. Hasta el
+ * 20/09/2026 esta constante dejaba `crudo`, `cobertura`, `cajaNegra` y
+ * `ultimoPull` sin pedir, y con ellas fuera el cepo «lectura limpia ⇒ verde»
+ * pasaba sobre una lectura que NO era limpia — que es justo la confusión que
+ * este fichero existe para impedir. Si mañana se añade una señal nueva, va aquí.
+ */
 const LIMPIA = {
   estado: 'ok',
-  salud: saludIngesta({ cuarentena: [], huerfanas: 0, rechazos: [], silencio: silencioPorEntidad([]) }),
+  salud: saludIngesta({
+    cuarentena: [], huerfanas: 0, rechazos: [], silencio: silencioPorEntidad([]),
+    crudo: { pendientes: 0, purgaInminente: 0, masAntiguaHoras: null },
+    cobertura: { rutas: 10, rutasNuncaLeidas: 0, entidadesObservadas: 3, porTipo: [] },
+    cajaNegra: { capturaActiva: true, cuerpos: 0, posts: 0, horasDesdeUltimo: 2, sinCuerpo: 0 },
+    ultimoPull: { horas: 3, procesados: 12 },
+    parciales: [],
+  }),
   huerfanasTruncadas: false,
   huerfanasSinAmbito: 0,
 }
@@ -190,8 +205,9 @@ const saludBase = {
   estado: 'ok' as const,
   total: 0, recientes: 0, porEntidad: [], porClave: [],
   huerfanas: 0, huerfanasResolubles: 0, huerfanasReparto: null,
-  primaPerdida: null, rechazos: [], silencio: [], motivos: [],
+  primaPerdida: null, rechazos: [], silencio: [], motivos: [], huecos: [],
   crudo: null, cobertura: null, cajaNegra: null, ultimoPull: null,
+  parciales: null, objetosEnRevision: null,
 }
 
 test('🚨 el cron mudo se lee ANTES que nada: lo demás está a cero por su culpa', () => {
@@ -222,7 +238,10 @@ test('crudo sin purga inminente NO se pinta como pérdida', () => {
 test('la cobertura NUNCA es pérdida: sería un rojo perpetuo', () => {
   const s = senalesIngesta({
     ...saludBase,
-    cobertura: { hojas: 300, hojasNuncaLeidas: 120, porTipo: [{ tipoObjeto: 'POL', hojas: 300, nuncaLeidas: 120 }] },
+    cobertura: {
+      rutas: 300, rutasNuncaLeidas: 120, entidadesObservadas: 3,
+      porTipo: [{ tipoObjeto: 'POL', rutas: 300, nuncaLeidas: 120 }],
+    },
   })
   const x = s.find(v => v.clave === 'cobertura')
   assert.equal(x?.tipo, 'hueco')
@@ -258,4 +277,68 @@ test('🚨 una salud SIN los campos nuevos (asegura viejo) no revienta la pantal
   // Y además lo declara como hueco, en vez de aparentar que está comprobado.
   assert.ok(s.some(x => x.clave === 'cron' && x.tipo === 'hueco'))
   assert.ok(s.some(x => x.clave === 'cobertura' && x.tipo === 'hueco'))
+})
+
+// ── 🚨 Un hueco NO se puede quedar sin pintar (20/09/2026) ──────────────────
+// `hayHuecos` enumeraba a mano TRES señales, así que una lectura sin cron, sin
+// crudo, sin caja negra y sin cobertura daba veredicto `ok` → la tarjeta de
+// «Hoy» NO se pintaba, aunque `senalesIngesta` sí generaba sus cuatro huecos.
+// El mismo fallo que el módulo puro tenía un piso más abajo.
+
+test('🚨 una salud SIN cron ni cobertura NO es verde: la tarjeta se pinta', () => {
+  const v = interpretarVistaIngesta(200, {
+    ...LIMPIA,
+    salud: saludIngesta({
+      cuarentena: [], huerfanas: 0, rechazos: [], silencio: silencioPorEntidad([]),
+      crudo: null, cobertura: null, cajaNegra: null, ultimoPull: null, parciales: [],
+    }),
+  })
+  assert.equal(veredictoIngesta(v), 'sin_comprobar')
+  assert.equal(hayQueEnsenar(v), true)
+})
+
+test('🚨 la salud de un asegura VIEJO tampoco se pinta en verde', () => {
+  // Mismo caso, pero con las claves AUSENTES en vez de a `null`: es lo que
+  // llega durante una ventana de despliegue, y `normalizarSenalesNuevas` las
+  // convierte en «no me lo han contado».
+  const viejo = { ...saludBase }
+  for (const k of ['crudo', 'cobertura', 'cajaNegra', 'ultimoPull', 'parciales', 'huecos']) {
+    delete (viejo as Record<string, unknown>)[k]
+  }
+  const v = interpretarVistaIngesta(200, { estado: 'ok', salud: viejo, huerfanasTruncadas: false })
+  assert.equal(veredictoIngesta(v), 'sin_comprobar')
+})
+
+test('🚨 un fichero confirmado con objetos sin guardar es PÉRDIDA en la pantalla', () => {
+  const s = senalesIngesta({
+    ...saludBase,
+    parciales: [{
+      fichero: 'C0468_M00171_POL_199.zip', tipo: 'POL', entidad: 'C0468', clave: 'M00171',
+      declarados: 44, persistidos: 40, enRevision: 4, dias: 3,
+    }],
+    objetosEnRevision: 4,
+  })
+  const x = s.find(v => v.clave === 'parciales')
+  assert.equal(x?.tipo, 'perdida')
+  assert.match(x!.detalle, /no los reenvía/)
+})
+
+test('y no haber podido comprobarlo se declara como hueco, nunca como cero', () => {
+  const s = senalesIngesta({ ...saludBase, parciales: null, objetosEnRevision: null })
+  const x = s.find(v => v.clave === 'parciales')
+  assert.equal(x?.tipo, 'hueco')
+  assert.equal(x?.n, null)
+})
+
+test('🚨 la cobertura se rotula como RUTAS distintas y con cuántas compañías', () => {
+  const s = senalesIngesta({
+    ...saludBase,
+    cobertura: {
+      rutas: 563, rutasNuncaLeidas: 457, entidadesObservadas: 3,
+      porTipo: [{ tipoObjeto: 'POL', rutas: 405, nuncaLeidas: 338 }],
+    },
+  })
+  const x = s.find(v => v.clave === 'cobertura')
+  assert.match(x!.titulo, /457 de 563 campos distintos/)
+  assert.match(x!.detalle, /Vistos en 3 compañía\(s\)/)
 })

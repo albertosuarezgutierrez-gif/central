@@ -8,11 +8,42 @@ import { guardarDocumentoPropio } from '@/lib/documento-portal'
 import { prisma } from '@/lib/db'
 import { extraerPoliza } from '@/lib/extraer-poliza'
 import { normalizarAlta } from '@/lib/poliza-editable'
+import { rateLimit } from '@/lib/rate-limit'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
 const MAX_BYTES = 10 * 1024 * 1024
+
+/**
+ * Tope por IDENTIDAD. Cada alta con documento puede encadenar hasta 3 llamadas
+ * a OpenRouter sobre un fichero de 10 MB, o sea gasto de IA de nuestra cuenta.
+ *
+ * 🚨 Exigir sesión NO es un tope: entrar al portal es pedir un código a un
+ * correo cualquiera, así que una sesión la consigue cualquiera con un buzón.
+ * Sin esto, la factura de IA la marcaba quien quisiera.
+ *
+ * Va por IDENTIDAD y no por IP a propósito: varios clientes comparten IP (una
+ * oficina, un CGNAT del móvil) y el mismo cliente cambia de red entre el wifi y
+ * los datos. Por IP se castiga al vecino y se le escapa al mismo abusador.
+ *
+ * ⚠️ Es el limitador EN MEMORIA de `lib/rate-limit.ts`: por instancia, no
+ * global (lo dice su cabecera). Corta el bucle de una identidad contra una
+ * instancia; un abusador repartido necesitaría un contador en BD, como el tope
+ * por destino de `/api/acceso/solicitar`. Se declara aquí en vez de suponerlo.
+ *
+ * 10 a la hora: quien ordena su bóveda sube unas pocas pólizas de golpe y le
+ * sobra; un bucle se corta en la undécima.
+ */
+const MAX_POR_IDENTIDAD = 10
+const VENTANA_MS = 60 * 60 * 1000
+
+function demasiadas(retryAfter: number) {
+  return NextResponse.json(
+    { error: 'demasiadas_peticiones', retryAfter },
+    { status: 429, headers: { 'retry-after': String(retryAfter) } },
+  )
+}
 
 /**
  * Alta de una póliza en la bóveda del cliente. Dos caminos, una sola ruta:
@@ -35,6 +66,11 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+
+  // El tope va ANTES de leer el cuerpo, de llamar a la IA y de escribir fila:
+  // detrás de esta línea ya se ha gastado algo.
+  const porIdentidad = rateLimit(`polizas:${identidad.id}`, MAX_POR_IDENTIDAD, VENTANA_MS)
+  if (!porIdentidad.allowed) return demasiadas(porIdentidad.retryAfter ?? 60)
 
   const tipo = req.headers.get('content-type') ?? ''
   if (tipo.includes('application/json')) return altaAMano(req, identidad.id)

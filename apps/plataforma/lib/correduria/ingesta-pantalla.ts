@@ -69,7 +69,8 @@ function numeroONulo(v: unknown): number | null {
 function esSalud(v: unknown): v is SaludIngesta {
   if (typeof v !== 'object' || v === null) return false
   const s = v as Record<string, unknown>
-  const estadoOk = s.estado === 'ok' || s.estado === 'degradada' || s.estado === 'sin_datos'
+  const estadoOk = s.estado === 'ok' || s.estado === 'degradada'
+    || s.estado === 'parcial' || s.estado === 'sin_datos'
   return estadoOk
     && esNumero(s.total) && esNumero(s.recientes)
     && Array.isArray(s.porEntidad) && Array.isArray(s.porClave)
@@ -100,6 +101,14 @@ function normalizarSenalesNuevas(s: SaludIngesta): SaludIngesta {
     cobertura: s.cobertura ?? null,
     cajaNegra: s.cajaNegra ?? null,
     ultimoPull: s.ultimoPull ?? null,
+    parciales: s.parciales ?? null,
+    objetosEnRevision: s.objetosEnRevision ?? null,
+    // `huecos` ausente = un servidor que no sabe decir QUÉ no pudo comprobar.
+    // El defecto no puede ser `[]` («se miró todo»): eso es justo la afirmación
+    // tranquilizadora que nadie ha hecho. Se declara como hueco en sí mismo.
+    huecos: Array.isArray(s.huecos)
+      ? s.huecos
+      : ['No consta qué comprobaciones se han podido hacer en esta lectura.'],
   }
 }
 
@@ -169,6 +178,7 @@ export type SenalIngesta = {
     | 'crudo'
     | 'caja_negra'
     | 'cobertura'
+    | 'parciales'
   tipo: 'perdida' | 'hueco'
   titulo: string
   detalle: string
@@ -235,6 +245,24 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
     })
   }
 
+  // 🚨 Va por delante de rechazos y huérfanas porque es la ÚNICA de la lista
+  // que no se puede volver a pedir: el fichero ya está confirmado a TIREA.
+  if (s.objetosEnRevision !== null && s.objetosEnRevision > 0) {
+    const n = s.parciales?.length ?? 0
+    const peor = [...(s.parciales ?? [])].sort((a, b) => b.enRevision - a.enRevision)[0]
+    out.push({
+      clave: 'parciales', tipo: 'perdida', n: s.objetosEnRevision,
+      titulo: `${s.objetosEnRevision} objeto(s) no se guardaron de ${n} fichero(s) ya dados por buenos`,
+      detalle:
+        (peor
+          ? `El peor, ${peor.entidad}${peor.clave ? ` / clave ${peor.clave}` : ''} ${peor.tipo}: ` +
+            `${peor.enRevision} de ${peor.declarados} (${peor.fichero}). `
+          : '') +
+        'CIMA ya confirmó esos ficheros a TIREA y no los reenvía: esto no se arregla pidiéndolos otra vez, ' +
+        'sino corrigiendo el mapper en la ingesta de origen y reprocesando el crudo antes de que caduque.',
+    })
+  }
+
   const rechazos = rechazosRecientes(s)
   if (rechazos.length > 0) {
     const total = rechazos.reduce((n, r) => n + r.n, 0)
@@ -298,6 +326,14 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       detalle: 'La puerta por la que entra Codeoscopic no se ha podido mirar en esta lectura.',
     })
   }
+  if (s.parciales === null) {
+    out.push({
+      clave: 'parciales', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar si algún fichero confirmado se dejó objetos sin guardar',
+      detalle:
+        'Es la pérdida que no se puede volver a pedir, así que no saberlo es lo más caro de esta lista.',
+    })
+  }
   if (s.huerfanas !== null && s.huerfanas > 0 && s.huerfanasReparto === null) {
     out.push({
       clave: 'huerfanas', tipo: 'hueco', n: null,
@@ -347,13 +383,19 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       titulo: 'Todavía no se ha medido qué campos manda CIMA y no leemos',
       detalle: 'Hace falta que pase un pull con ficheros. Sin medir NO equivale a «los leemos todos».',
     })
-  } else if (s.cobertura.hojasNuncaLeidas > 0) {
+  } else if (s.cobertura.rutasNuncaLeidas > 0) {
     const peor = [...s.cobertura.porTipo].sort((a, b) => b.nuncaLeidas - a.nuncaLeidas)[0]
+    // El rótulo dice QUÉ se cuenta (rutas distintas) y de cuántas compañías
+    // sale: sin eso, la cifra se lee como el catálogo EIAC entero cuando solo
+    // describe lo que han mandado las tres observadas.
+    const alcance = s.cobertura.entidadesObservadas === null
+      ? 'No consta de cuántas compañías sale esta cuenta. '
+      : `Vistos en ${s.cobertura.entidadesObservadas} compañía(s). `
     out.push({
-      clave: 'cobertura', tipo: 'hueco', n: s.cobertura.hojasNuncaLeidas,
-      titulo: `${s.cobertura.hojasNuncaLeidas} de ${s.cobertura.hojas} campos que manda CIMA no se leen nunca`,
+      clave: 'cobertura', tipo: 'hueco', n: s.cobertura.rutasNuncaLeidas,
+      titulo: `${s.cobertura.rutasNuncaLeidas} de ${s.cobertura.rutas} campos distintos que manda CIMA no se leen nunca`,
       detalle:
-        (peor ? `Sobre todo en ${peor.tipoObjeto} (${peor.nuncaLeidas}). ` : '') +
+        (peor ? `Sobre todo en ${peor.tipoObjeto} (${peor.nuncaLeidas}). ` : '') + alcance +
         'No es una avería: es lo que se está dejando sin aprovechar.',
     })
   }
@@ -386,10 +428,19 @@ export function hayPerdida(s: SaludIngesta): boolean {
   return senalesIngesta(s).some(x => x.tipo === 'perdida')
 }
 
-/** ¿Hay algo que no se ha podido comprobar dentro de una lectura que sí llegó? */
+/**
+ * ¿Hay algo que no se ha podido comprobar dentro de una lectura que sí llegó?
+ *
+ * 🚨 Hasta el 20/09/2026 esto miraba SOLO tres señales, así que una lectura sin
+ * cron, sin crudo, sin caja negra y sin cobertura daba `false` → veredicto `ok`
+ * → **la tarjeta no se pintaba** aunque `senalesIngesta` sí estuviera generando
+ * sus cuatro huecos. Es el mismo fallo que el módulo puro tenía un piso más
+ * abajo: la señal se componía y nadie la leía. Ahora la lista la compone el
+ * módulo (`s.huecos`) y aquí solo se pregunta si está vacía — no hay enumeración
+ * que se quede corta cuando aparezca la séptima señal.
+ */
 export function hayHuecos(s: SaludIngesta): boolean {
-  return s.silencio === null || s.rechazos === null
-    || (s.huerfanas !== null && s.huerfanas > 0 && s.huerfanasReparto === null)
+  return (s.huecos ?? []).length > 0
 }
 
 export function veredictoIngesta(v: VistaIngesta | null): VeredictoPantalla | null {

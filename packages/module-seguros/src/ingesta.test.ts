@@ -10,6 +10,7 @@ import {
   textoHuerfanas,
   TOPE_POLIZAS_TELEGRAM,
   type PolizaHuerfana,
+  type FicheroParcial,
 } from './ingesta.ts'
 
 const f = (tipo: string, entidad: string, dias: number) => ({ tipo, entidad, dias })
@@ -567,7 +568,10 @@ test('cobertura NO alarma aunque haya campos sin leer: sería un rojo perpetuo',
   // mirarse — que es cómo muere una alarma.
   const s = saludIngesta({
     cuarentena: [],
-    cobertura: { hojas: 300, hojasNuncaLeidas: 120, porTipo: [{ tipoObjeto: 'POL', hojas: 300, nuncaLeidas: 120 }] },
+    cobertura: {
+      rutas: 300, rutasNuncaLeidas: 120, entidadesObservadas: 3,
+      porTipo: [{ tipoObjeto: 'POL', rutas: 300, nuncaLeidas: 120 }],
+    },
   })
   assert.equal(s.estado, 'ok')
   assert.ok(s.motivos.some(m => m.includes('no se leen nunca')))
@@ -595,4 +599,148 @@ test('sin_datos deja las cuatro señales nuevas en null, no en cero', () => {
   assert.equal(s.cobertura, null)
   assert.equal(s.cajaNegra, null)
   assert.equal(s.ultimoPull, null)
+})
+
+// ── 🚨 Ficheros CONFIRMADOS que se dejaron objetos sin guardar ──────────────
+// La sexta cara de la avería, y la única IRREVERSIBLE: CIMA confirma el fichero
+// a TIREA y no lo reenvía. Ninguna de las otras señales lo ve — la cuarentena
+// mira `estado <> 'confirmed'`, las huérfanas solo leen los eventos de recibo y
+// siniestro (para POL no existe ese evento) y el crudo mira `reprocesado_at`,
+// que en el caso real de Occident ya estaba sellado con 4 pólizas en revisión.
+
+const parcial = (enRevision: number, extra: Partial<FicheroParcial> = {}): FicheroParcial => ({
+  fichero: 'C0468_M00171_POL_199_1_20260915_20260915095138110626996.zip',
+  tipo: 'POL', entidad: 'C0468', clave: 'M00171',
+  declarados: 44, persistidos: 44 - enRevision, enRevision, dias: 3,
+  ...extra,
+})
+
+test('🚨 un fichero CONFIRMADO con objetos en revisión DEGRADA: es pérdida irreversible', () => {
+  // Caso real del 17/09/2026: polizasCount 44 · polizasPersisted 40 ·
+  // polizasReview 4 · stateTo "confirmed". Antes salía `ok`.
+  const s = saludIngesta({ cuarentena: [], parciales: [parcial(4)] })
+  assert.equal(s.estado, 'degradada')
+})
+
+test('los objetos en revisión se SUMAN entre ficheros y tipos', () => {
+  // Medido el 20/09/2026: 46 objetos en 6 ficheros, y NO son solo pólizas —
+  // el mismo evento cuenta `recibosReview` (29 en un solo fichero de Occident).
+  const s = saludIngesta({
+    cuarentena: [],
+    parciales: [
+      parcial(4),
+      parcial(29, { fichero: 'C0468_M00171_REC_299.zip', tipo: 'REC', declarados: 199, persistidos: 170 }),
+    ],
+  })
+  assert.equal(s.objetosEnRevision, 33)
+})
+
+test('el motivo dice a QUÉ clave de mediador y en qué fichero, no solo cuántos', () => {
+  const s = saludIngesta({ cuarentena: [], parciales: [parcial(4)] })
+  const m = s.motivos.join(' · ')
+  assert.match(m, /clave M00171 POL: 4 de 44 sin guardar/)
+})
+
+test('parciales `[]` es «se miró y no hay»: ni alarma ni hueco', () => {
+  const s = saludIngesta({ cuarentena: [], parciales: [] })
+  assert.equal(s.estado, 'ok')
+  assert.equal(s.objetosEnRevision, 0)
+  assert.deepEqual(s.huecos, [])
+})
+
+test('🚨 parciales `null` NO es cero: es un hueco, y con pérdida irreversible detrás', () => {
+  const s = saludIngesta({ cuarentena: [], parciales: null })
+  assert.equal(s.objetosEnRevision, null)
+  assert.ok(s.huecos.some(h => h.includes('sin guardar')), s.huecos.join(' · '))
+})
+
+test('parciales sin pedir (`undefined`) no inventa un hueco', () => {
+  // Un `apps/asegura` desplegado antes de esta señal no la manda: eso no puede
+  // convertirse en un grito diario por algo que nadie preguntó.
+  const s = saludIngesta({ cuarentena: [] })
+  assert.deepEqual(s.huecos, [])
+})
+
+// ── 🚨 El «no he podido mirar» YA NO SE TIRA A LA BASURA ────────────────────
+// Los motivos existían desde el primer día; lo que no existía era que alguien
+// los leyera. `hayPerdida` no los miraba y `detalleSalud` los descartaba en la
+// rama `ok`, así que una lectura sin constancia del cron decía literalmente
+// «ingesta CIMA: sin ficheros atascados». Estos cepos aseveran el ESTADO y la
+// FRASE, no solo que el texto se componga.
+
+test('🚨 sin constancia del cron y lo demás limpio, el estado es PARCIAL, no ok', () => {
+  const s = saludIngesta({ cuarentena: [], ultimoPull: null })
+  assert.equal(s.estado, 'parcial')
+})
+
+test('🚨 y el parte NO dice «sin ficheros atascados»: dice que no se ha mirado todo', () => {
+  const s = saludIngesta({ cuarentena: [], ultimoPull: null })
+  const d = detalleSalud(s)
+  assert.doesNotMatch(d, /sin ficheros atascados/)
+  assert.match(d, /No consta ninguna corrida del cron/)
+})
+
+test('crudo sin comprobar ⇒ parcial, y lo dice el parte', () => {
+  const s = saludIngesta({ cuarentena: [], crudo: null })
+  assert.equal(s.estado, 'parcial')
+  assert.match(detalleSalud(s), /cuarentena de crudo/)
+})
+
+test('caja negra sin comprobar ⇒ parcial, y lo dice el parte', () => {
+  const s = saludIngesta({ cuarentena: [], cajaNegra: null })
+  assert.equal(s.estado, 'parcial')
+  assert.match(detalleSalud(s), /caja negra del webhook/)
+})
+
+test('cobertura sin medir ⇒ parcial, y lo dice el parte', () => {
+  const s = saludIngesta({ cuarentena: [], cobertura: null })
+  assert.equal(s.estado, 'parcial')
+  assert.match(detalleSalud(s), /SIN MEDIR/)
+})
+
+test('rechazos que se PIDIERON y fallaron ⇒ parcial (antes solo una coletilla)', () => {
+  const s = saludIngesta({ cuarentena: [], rechazos: null })
+  assert.equal(s.estado, 'parcial')
+})
+
+test('🚨 con pérdida MEDIDA manda la pérdida, pero el hueco sigue viajando', () => {
+  // Asimetría deliberada: hay que actuar, no solo mirar. Pero el recuento de
+  // arriba es un SUELO, y quien avisa tiene que poder decirlo.
+  const s = saludIngesta({ cuarentena: [], huerfanas: 3, crudo: null })
+  assert.equal(s.estado, 'degradada')
+  assert.ok(s.huecos.length > 0, 'el hueco se perdió al haber pérdida medida')
+})
+
+test('todo hueco está TAMBIÉN en motivos: no hay dos listas que mantener', () => {
+  const s = saludIngesta({ cuarentena: [], crudo: null, cajaNegra: null, cobertura: null, ultimoPull: null })
+  for (const h of s.huecos) assert.ok(s.motivos.includes(h), `hueco fuera de motivos: ${h}`)
+})
+
+test('sin_datos declara su hueco: no se queda con la lista vacía', () => {
+  const s = saludIngesta({ cuarentena: null })
+  assert.equal(s.huecos.length, 1)
+})
+
+// ── 🚨 Cobertura: RUTAS distintas, y de cuántas compañías salen ─────────────
+
+test('🚨 el motivo de cobertura dice «campo(s) distintos» y cuántas compañías', () => {
+  // Medido el 20/09/2026: 755 filas para 563 rutas, con 3 entidades. Publicar
+  // filas como «campos» multiplica la cifra por el número de compañías vistas,
+  // y es la pantalla sobre la que se decide qué mapear.
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: {
+      rutas: 563, rutasNuncaLeidas: 457, entidadesObservadas: 3,
+      porTipo: [{ tipoObjeto: 'POL', rutas: 405, nuncaLeidas: 338 }],
+    },
+  })
+  assert.match(s.motivos.join(' · '), /563 campo\(s\) distintos \(vistas en 3 compañía\(s\)\) y 457 no se leen nunca/)
+})
+
+test('sin saber de cuántas compañías sale, se DICE en vez de callarlo', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: { rutas: 10, rutasNuncaLeidas: 4, entidadesObservadas: null, porTipo: [] },
+  })
+  assert.match(s.motivos.join(' · '), /no consta de cuántas compañías/)
 })

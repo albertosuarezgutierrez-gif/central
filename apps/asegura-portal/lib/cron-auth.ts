@@ -1,5 +1,7 @@
 import type { NextRequest } from 'next/server'
 
+import { secretosIguales } from '@central/module-seguros-pii'
+
 /**
  * Autorización del cron de avisos por push. Mismo patrón que `apps/asegura/lib/cron-auth.ts`:
  * sin `CRON_SECRET` no se autoriza a NADIE, tampoco en desarrollo. Detrás de esta puerta se manda
@@ -13,5 +15,6 @@ export function isCronAuthorized(req: NextRequest | Request): boolean {
     return false
   }
   const bearer = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  return bearer === secret
+  // TIEMPO CONSTANTE, no `===` (ver `@central/module-seguros-pii`).
+  return secretosIguales(bearer, secret)
 }

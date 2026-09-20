@@ -1,3 +1,5 @@
+import { bearerAutorizado } from '@central/module-seguros-pii'
+
 /**
  * Puerto ESTRECHO del portal del cliente (`apps/asegura-portal` → asegura).
  *
@@ -24,7 +26,7 @@
  * usable publicada en el repo (regla de secretos del CLAUDE.md raíz).
  */
 export function puentePortalAutorizado(req: Request): boolean {
-  const secret = process.env.ASEGURA_PORTAL_PUENTE_SECRET
-  if (!secret) return false
-  return (req.headers.get('authorization') || '') === `Bearer ${secret}`
+  // Comparación en TIEMPO CONSTANTE, no `===`: ver `lib/operador.ts` y la
+  // cabecera de `secretosIguales` en `@central/module-seguros-pii`.
+  return bearerAutorizado(req.headers.get('authorization'), process.env.ASEGURA_PORTAL_PUENTE_SECRET)
 }

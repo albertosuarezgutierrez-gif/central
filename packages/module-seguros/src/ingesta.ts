@@ -120,11 +120,80 @@ export type CrudoPendiente = {
   masAntiguaHoras: number | null
 }
 
-/** Campos hoja que CIMA manda frente a los que el mapper no lee NUNCA (mig 0097). */
+/**
+ * Campos que CIMA manda frente a los que el mapper no lee NUNCA (mig 0097).
+ *
+ * 🚨 La unidad es la RUTA, no la fila. `cima_cobertura_campos` es única por
+ * `(correduria_id, tipo_objeto, codigo_entidad, ruta)`, así que el MISMO campo
+ * mandado por tres compañías son tres filas: contar filas infla la cifra con el
+ * número de compañías observadas. Medido el 20/09/2026: **755 filas para 563
+ * rutas** (POL+REC+SIN) con solo **3** entidades vistas — y el latido publicaba
+ * «659 campos, 524 sin leer», que no es lo que dice ser. Y es la pantalla sobre
+ * la que se decide qué mapear.
+ *
+ * Una ruta cuenta como LEÍDA si alguna compañía la trajo y se leyó: el mapper
+ * lee ese campo. Que otra no lo haya mandado nunca no lo convierte en no leído.
+ *
+ * `entidadesObservadas` viaja al lado a propósito: la cifra solo describe lo que
+ * han mandado ESAS compañías, y con 3 de 10 no se puede leer como el catálogo
+ * EIAC. `null` = no consta, que no es «ninguna».
+ */
 export type CoberturaResumen = {
-  hojas: number
-  hojasNuncaLeidas: number
-  porTipo: Array<{ tipoObjeto: string; hojas: number; nuncaLeidas: number }>
+  /** Rutas DISTINTAS por tipo de objeto. Nunca filas. */
+  rutas: number
+  rutasNuncaLeidas: number
+  /** Cuántas compañías distintas han aportado alguna ruta. `null` = no consta. */
+  entidadesObservadas: number | null
+  porTipo: Array<{ tipoObjeto: string; rutas: number; nuncaLeidas: number }>
+}
+
+/**
+ * 🚨 Un fichero que se dio por BUENO y del que no se guardó todo lo que traía.
+ *
+ * Medido el 20/09/2026, y es la sexta cara de la misma avería — la más cara,
+ * porque es la única IRREVERSIBLE. Ejemplo real: el parte
+ * `cima_fichero_persistido_parcial` del 17/09 dice `polizasCount:44 ·
+ * polizasPersisted:40 · polizasReview:4 · stateTo:"confirmed"`. Cuatro pólizas
+ * de Occident (match ambiguo, la trampa Plus Ultra) que **no están en la
+ * cartera**, dentro de un fichero que se confirmó a TIREA — y TIREA no lo
+ * reenvía jamás.
+ *
+ * Por qué ninguna de las otras cinco señales lo veía:
+ *   - la cuarentena mira `estado <> 'confirmed'`, y este fichero ES `confirmed`;
+ *   - las huérfanas solo leen `cima_*_sin_poliza_review`, y para POL no existe
+ *     ese evento;
+ *   - el crudo mira `reprocesado_at IS NULL`, y esa fila YA está marcada como
+ *     reprocesada… con las 4 pólizas todavía en revisión. **Reprocesado no es
+ *     recuperado.**
+ *
+ * 🚨 Y no se puede vigilar con `cima_ficheros.polizas_count` vs
+ * `polizas_persisted`: esa fila acabó en `44/44` para el mismo fichero cuyo
+ * parte dice 40 de 44 (medido: 1 fila con hueco en 144 ficheros). Un vigía
+ * montado sobre esas dos columnas sería verde el 100 % de las veces. La verdad
+ * vive en el EVENTO, que es el registro que no se reescribe.
+ *
+ * `enRevision` NO tiene ventana temporal a propósito: esto solo se apaga cuando
+ * un parte POSTERIOR del mismo fichero dice que ya no queda nada en revisión, o
+ * sea cuando el dato entra de verdad. Una ventana lo callaría por viejo, que es
+ * precisamente lo que no puede pasar con una pérdida que no se recupera sola.
+ */
+export type FicheroParcial = {
+  /** Nombre EIAC del fichero. */
+  fichero: string
+  /** `POL` | `REC` | `SIN` | `CEF`. */
+  tipo: string
+  /** Código DGS de la entidad emisora. */
+  entidad: string
+  /** Clave de mediador (2º campo del nombre EIAC). `null` = no consta. */
+  clave: string | null
+  /** Objetos que el fichero declaraba. */
+  declarados: number
+  /** Objetos que se guardaron. */
+  persistidos: number
+  /** Los que se quedaron en revisión y NO están en la cartera. */
+  enRevision: number
+  /** Días desde el último parte de ese fichero. `null` = no consta. */
+  dias: number | null
 }
 
 /** Cuerpos que Codeoscopic nos mandó y rechazamos, ya capturados (mig 0098). */
@@ -202,6 +271,12 @@ export type EntradaSalud = {
   cajaNegra?: CajaNegraCodeoscopic | null
   /** Última corrida del cron. `null` = no consta ninguna. */
   ultimoPull?: UltimoPullIngesta | null
+  /**
+   * Ficheros dados por buenos con objetos sin guardar. `[]` = se miró y no hay;
+   * `null` = **no se ha podido mirar**, que con una pérdida irreversible detrás
+   * es el hueco que más caro sale.
+   */
+  parciales?: FicheroParcial[] | null
 }
 
 export type SaludIngesta = {
@@ -240,8 +315,26 @@ export type SaludIngesta = {
   cajaNegra: CajaNegraCodeoscopic | null
   /** Última corrida del cron. `null` = no consta ninguna. */
   ultimoPull: UltimoPullIngesta | null
+  /** Ficheros confirmados con objetos sin guardar. `null` = no comprobado. */
+  parciales: FicheroParcial[] | null
+  /**
+   * Objetos (pólizas, recibos, siniestros) que se quedaron en revisión dentro
+   * de ficheros YA confirmados. `null` = no comprobado, nunca 0.
+   */
+  objetosEnRevision: number | null
   /** Frases listas para el aviso. Vacío cuando no hay nada que decir. */
   motivos: string[]
+  /**
+   * 🚨 El subconjunto de `motivos` que significa «no se ha podido mirar».
+   *
+   * Existe porque antes NO existía y por eso se perdían: `hayPerdida` no los
+   * miraba y `detalleSalud` los descartaba en la rama `ok`. Con esto separado,
+   * quien avisa no tiene que adivinar cuáles de los motivos son huecos — ni
+   * puede olvidarse de imprimirlos, que es lo que pasaba.
+   *
+   * Vacío = todo lo que se pidió se pudo mirar. NO es «no hay nada que mirar».
+   */
+  huecos: string[]
 }
 
 /** Un valor de cajón (vacío, guiones, «desconocido») es ausencia, no dato. */
@@ -305,7 +398,10 @@ export function saludIngesta(
       cobertura: null,
       cajaNegra: null,
       ultimoPull: null,
+      parciales: null,
+      objetosEnRevision: null,
       motivos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
+      huecos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
     }
   }
 
@@ -324,6 +420,16 @@ export function saludIngesta(
   )
 
   const motivos: string[] = []
+  // 🚨 Un hueco se APUNTA en los dos sitios a la vez. Antes se empujaba solo a
+  // `motivos` y quien avisaba tenía que acordarse de cuáles lo eran: no se
+  // acordó, y por eso «No consta ninguna corrida del cron» no llegó nunca a
+  // ninguna pantalla. Con una sola función no hay forma de escribir un hueco
+  // que no cuente como hueco.
+  const huecos: string[] = []
+  const hueco = (texto: string) => {
+    motivos.push(texto)
+    huecos.push(texto)
+  }
   if (recientes > 0) {
     // Se señala la CLAVE, no solo la entidad: «Occident» no dice nada cuando
     // Occident manda por tres claves y solo una está atascada.
@@ -369,7 +475,7 @@ export function saludIngesta(
   } else if (huerfanas !== null && huerfanas > 0) {
     // Saber cuántas y no cuáles es un estado propio, y se declara: si se
     // callara, el aviso parecería completo y no lo está.
-    motivos.push('No se ha podido obtener la lista de esas pólizas: sé cuántas son, no cuáles pedir')
+    hueco('No se ha podido obtener la lista de esas pólizas: sé cuántas son, no cuáles pedir')
   }
 
   if (total > recientes) {
@@ -395,6 +501,12 @@ export function saludIngesta(
       ` (${r.evento}): nos lo mandan y no lo aceptamos`,
     )
   }
+  // Y si NO se pudieron mirar, se dice aquí y no en una coletilla del parte:
+  // vivía solo en `detalleSalud`, así que la pantalla y el Telegram —que leen
+  // `motivos`— nunca se enteraban de que esa puerta se había quedado sin abrir.
+  if (e.rechazos === null) {
+    hueco('No se han podido comprobar los envíos que nos mandan y rechazamos.')
+  }
 
   // 🚨 La CUARTA cara, y la única que no deja rastro: la compañía que
   // sencillamente deja de mandar. No hay cuarentena (nada llegó que atascar),
@@ -403,7 +515,7 @@ export function saludIngesta(
   const silencio = Array.isArray(e.silencio) ? e.silencio : e.silencio === null ? null : null
   if (silencio !== null) motivos.push(...motivosSilencio(silencio))
   else if (e.silencio === null) {
-    motivos.push('No se ha podido comprobar si alguna compañía ha dejado de mandar.')
+    hueco('No se ha podido comprobar si alguna compañía ha dejado de mandar.')
   }
   const mudas = (silencio ?? []).filter(x => x.veredicto === 'silencio')
 
@@ -422,7 +534,7 @@ export function saludIngesta(
     // `undefined` = este llamante no pide la señal; `null` = la pidió y falló.
     // Colapsarlos haría que un llamante viejo empezara a gritar por algo que
     // nunca preguntó — misma distinción que ya usa `silencio`.
-    motivos.push('No consta ninguna corrida del cron de CIMA. Esto NO es «va bien».')
+    hueco('No consta ninguna corrida del cron de CIMA. Esto NO es «va bien».')
   }
 
   // Crudo en cuarentena: lo que se guardó al confirmar a TIREA y sigue sin
@@ -440,7 +552,7 @@ export function saludIngesta(
       (crudo.masAntiguaHoras !== null ? ` (el más viejo, ${Math.floor(crudo.masAntiguaHoras / 24)} días)` : ''),
     )
   }
-  if (e.crudo === null) motivos.push('No se ha podido comprobar la cuarentena de crudo.')
+  if (e.crudo === null) hueco('No se ha podido comprobar la cuarentena de crudo.')
 
   // Caja negra del webhook: cuerpos que nos mandaron y rechazamos. Es la misma
   // avería que `rechazos`, pero con el cuerpo guardado — o sea, ACCIONABLE.
@@ -456,21 +568,57 @@ export function saludIngesta(
       )
     }
   }
-  if (e.cajaNegra === null) motivos.push('No se ha podido comprobar la caja negra del webhook.')
+  if (e.cajaNegra === null) hueco('No se ha podido comprobar la caja negra del webhook.')
 
   // Cobertura de campos: NO entra en `degradada` a propósito. El EIAC trae
   // cientos de campos y siempre habrá alguno que no leamos; si alarmara, el
   // vigía estaría rojo para siempre y dejaría de mirarse. Se informa y punto.
   const cobertura = e.cobertura ?? null
-  if (cobertura !== null && cobertura.hojasNuncaLeidas > 0) {
+  if (cobertura !== null && cobertura.rutasNuncaLeidas > 0) {
     const peor = [...cobertura.porTipo].sort((a, b) => b.nuncaLeidas - a.nuncaLeidas)[0]
+    // Se dice QUÉ se cuenta —rutas distintas, y de cuántas compañías salen—
+    // porque esta cifra es sobre la que se decide qué mapear: publicarla como
+    // «campos» cuando son filas la infla con el número de compañías vistas.
+    const alcance = cobertura.entidadesObservadas === null
+      ? ' (no consta de cuántas compañías)'
+      : ` (vistas en ${cobertura.entidadesObservadas} compañía(s))`
     motivos.push(
-      `CIMA manda ${cobertura.hojas} campos y ${cobertura.hojasNuncaLeidas} no se leen nunca` +
+      `CIMA manda ${cobertura.rutas} campo(s) distintos${alcance} y ${cobertura.rutasNuncaLeidas} no se leen nunca` +
       (peor ? ` (sobre todo ${peor.tipoObjeto}: ${peor.nuncaLeidas})` : ''),
     )
   }
   if (e.cobertura === null) {
-    motivos.push('Cobertura de campos SIN MEDIR todavía: no equivale a «los leemos todos».')
+    hueco('Cobertura de campos SIN MEDIR todavía: no equivale a «los leemos todos».')
+  }
+
+  // 🚨 La SEXTA cara, y la única IRREVERSIBLE: el fichero que se confirmó a
+  // TIREA dejándose objetos sin guardar. Ver `FicheroParcial`.
+  const parciales = Array.isArray(e.parciales) ? e.parciales : null
+  const objetosEnRevision = parciales === null
+    ? null
+    : parciales.reduce((n, f) => n + f.enRevision, 0)
+  if (parciales !== null && objetosEnRevision !== null && objetosEnRevision > 0) {
+    const porTipo = new Map<string, number>()
+    for (const f of parciales) porTipo.set(f.tipo, (porTipo.get(f.tipo) ?? 0) + f.enRevision)
+    const desglose = [...porTipo.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([t, n]) => `${t}: ${n}`)
+      .join(' · ')
+    motivos.push(
+      `${objetosEnRevision} objeto(s) se quedaron en revisión dentro de ${parciales.length} fichero(s) ` +
+      `que CIMA ya dio por entregados (${desglose}): no se pueden volver a pedir`,
+    )
+    // A quién y por qué clave, que es lo único que deja actuar (aunque aquí la
+    // acción sea arreglar el mapper, no escribir a la compañía).
+    for (const f of [...parciales].sort((a, b) => b.enRevision - a.enRevision).slice(0, 5)) {
+      motivos.push(
+        `· ${f.entidad}${f.clave ? ` / clave ${f.clave}` : ' (clave no legible en el nombre)'} ` +
+        `${f.tipo}: ${f.enRevision} de ${f.declarados} sin guardar (${f.fichero})`,
+      )
+    }
+  }
+  if (e.parciales === null) {
+    hueco('No se ha podido comprobar si algún fichero confirmado se dejó objetos sin guardar.')
   }
 
   const hayPerdida =
@@ -480,14 +628,22 @@ export function saludIngesta(
     mudas.length > 0 ||
     cronMudo ||
     (crudo !== null && crudo.purgaInminente > 0) ||
-    (cajaNegra !== null && cajaNegra.cuerpos > 0)
+    (cajaNegra !== null && cajaNegra.cuerpos > 0) ||
+    (objetosEnRevision !== null && objetosEnRevision > 0)
+  // 🚨 El orden importa y no es simétrico: una pérdida MEDIDA manda sobre un
+  // hueco (hay que actuar, no solo mirar), pero un hueco sin pérdida ya NO cae
+  // en `ok` — que es justo por donde se escapaba «no consta ninguna corrida del
+  // cron» hasta el 20/09/2026.
+  const estado: EstadoIngesta = hayPerdida ? 'degradada' : huecos.length > 0 ? 'parcial' : 'ok'
   return {
-    estado: hayPerdida ? 'degradada' : 'ok',
+    estado,
     silencio,
     crudo,
     cobertura,
     cajaNegra,
     ultimoPull,
+    parciales,
+    objetosEnRevision,
     total,
     recientes,
     porEntidad,
@@ -498,24 +654,44 @@ export function saludIngesta(
     primaPerdida,
     rechazos,
     motivos,
+    huecos,
   }
 }
 
-/** Una línea para el latido/Telegram. Nunca dice «todo bien» sin haberlo mirado. */
+/**
+ * Una línea para el latido/Telegram. Nunca dice «todo bien» sin haberlo mirado.
+ *
+ * 🚨 Hasta el 20/09/2026 la rama `ok` DESCARTABA los motivos y solo pegaba una
+ * coletilla cableada para dos señales (rechazos y silencio). Las otras cuatro
+ * —cron, crudo, caja negra, cobertura— componían su frase y se tiraba: con la
+ * cuarentena limpia y sin constancia de ninguna corrida del cron, esto devolvía
+ * «ingesta CIMA: sin ficheros atascados». Cierto y tranquilizador sobre algo
+ * que nadie había mirado. Ahora los huecos vienen ya separados en `s.huecos` y
+ * se imprimen SIEMPRE, en las tres ramas que no son `sin_datos`: no hay lista
+ * que mantener al día, así que una señal nueva no puede volver a quedarse
+ * fuera.
+ */
 export function detalleSalud(s: SaludIngesta): string {
   if (s.estado === 'sin_datos') return 'ingesta CIMA: no se ha podido comprobar'
-  if (s.estado === 'ok') {
-    // Si no se pudieron mirar los rechazos, el «sin novedades» habla SOLO de la
-    // cuarentena y hay que decirlo: prometer calma sobre una puerta que no se ha
-    // abierto es el fallo que este módulo existe para no repetir.
-    const coletilla =
-      (s.rechazos === null ? ' · envíos rechazados: sin comprobar' : '') +
-      (s.silencio === null ? ' · silencio por compañía: sin comprobar' : '')
-    return (s.total === 0
-      ? 'ingesta CIMA: sin ficheros atascados'
-      : `ingesta CIMA: sin novedades (${s.total} en backlog antiguo)`) + coletilla
+  const sinComprobar = s.huecos.length > 0 ? ` · sin comprobar: ${s.huecos.join(' · ')}` : ''
+  if (s.estado === 'degradada') {
+    return `ingesta CIMA DEGRADADA · ${s.motivos.join(' · ')}`
   }
-  return `ingesta CIMA DEGRADADA · ${s.motivos.join(' · ')}`
+  if (s.estado === 'parcial') {
+    // Ni «va bien» ni «se está perdiendo»: se ha mirado a medias, y lo primero
+    // que se dice es QUÉ falta por mirar.
+    return `ingesta CIMA COMPROBADA A MEDIAS${sinComprobar}`
+  }
+  // En `ok` los huecos están vacíos POR CONSTRUCCIÓN (uno solo ya daría
+  // `parcial`), así que `sinComprobar` aquí siempre es ''. Lo que sí puede
+  // quedar es la señal que el llamante NO PIDIÓ —`undefined`, no `null`—, que
+  // no es un hueco medido pero tampoco autoriza a prometer calma sobre ella.
+  const noPedido =
+    (s.rechazos === null ? ' · envíos rechazados: sin comprobar' : '') +
+    (s.silencio === null ? ' · silencio por compañía: sin comprobar' : '')
+  return (s.total === 0
+    ? 'ingesta CIMA: sin ficheros atascados'
+    : `ingesta CIMA: sin novedades (${s.total} en backlog antiguo)`) + noPedido + sinComprobar
 }
 
 // ── El recordatorio: por qué un aviso que se calla es un aviso roto ─────────

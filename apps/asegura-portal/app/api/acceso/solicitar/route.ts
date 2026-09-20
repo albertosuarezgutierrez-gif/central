@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { generarCodigo, destinoValido, MAX_DESTINO } from '@central/module-seguros-portal'
 import { prisma } from '@/lib/db'
-import { hashCanal } from '@/lib/auth'
+import { hashCanal, hashCodigo } from '@/lib/auth'
 import { obtenerCanal, registrarCanal, type TipoCanal } from '@/lib/canal'
 import { canalEmail } from '@/lib/canal-email'
 import { canalConsola } from '@/lib/canal-consola'
@@ -79,8 +79,14 @@ export async function POST(req: Request) {
   if (recientes >= MAX_POR_DESTINO) return demasiadas(Math.ceil(VENTANA_MS / 1000))
 
   const codigo = generarCodigo()
+  // 🚨 A la BD va el HASH, nunca los 6 dígitos. La columna se sigue llamando
+  // `codigo` (renombrarla pedía migración), pero lo que guarda es
+  // `hashCodigo(codigo)` — SHA-256 con la misma pimienta que el canal. El
+  // código en claro solo vive en memoria el tiempo de mandarlo por el canal:
+  // con él en la tabla, una lectura de la BD o un volcado durante esos 10
+  // minutos deja entrar como el cliente que acaba de pedirlo.
   await prisma.portalCodigo.create({
-    data: { tipo, valorHash, codigo },
+    data: { tipo, valorHash, codigo: hashCodigo(codigo) },
   })
 
   const enviado = await canal.enviarCodigo(destino, codigo)

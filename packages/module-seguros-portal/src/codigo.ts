@@ -8,7 +8,16 @@ export const MAX_INTENTOS = 5
 export type EstadoCodigo = 'valido' | 'incorrecto' | 'caducado' | 'ya_usado' | 'bloqueado'
 
 export type CodigoGuardado = {
-  codigo: string
+  /**
+   * 🚨 El HASH del código, nunca los 6 dígitos. Lo calcula `hashCodigo()` de
+   * `apps/asegura-portal/lib/auth.ts` (SHA-256 con la MISMA pimienta de entorno
+   * que el canal): sin pimienta, un espacio de 10^6 se revierte con un bucle.
+   *
+   * La columna de la BD se sigue llamando `codigo` —no se renombró para no
+   * pedir migración— y guarda este hash. Quien lea el schema y suponga que ahí
+   * hay 6 dígitos se equivoca.
+   */
+  codigoHash: string
   creadoEn: Date
   intentos: number
   usadoEn: Date | null
@@ -47,6 +56,34 @@ export function generarCodigo(): string {
   return String(n % TOPE).padStart(6, '0')
 }
 
+/** Forma de lo que `hashCodigo()` produce: SHA-256 en hex minúscula. */
+const FORMA_HASH = /^[0-9a-f]{64}$/
+
+export function esHashCodigo(valor: string): boolean {
+  return FORMA_HASH.test(valor)
+}
+
+/**
+ * Comparación en TIEMPO CONSTANTE de dos hashes hex.
+ *
+ * 🚨 Es JavaScript puro y no `timingSafeEqual` de `node:crypto` a propósito:
+ * este fichero lo re-exporta el barril del paquete y del barril tiran también
+ * los COMPONENTES DE CLIENTE del portal — un `import ... from 'node:crypto'`
+ * aquí revienta el build de producción con `UnhandledSchemeError` mientras el
+ * typecheck y los tests pasan (ver la cabecera de `generarCodigo`).
+ *
+ * El `length` sí se compara de golpe, y no filtra nada: los dos lados son
+ * SIEMPRE un SHA-256 hex de 64 caracteres, así que la longitud no es secreta.
+ * Lo que no se puede filtrar es CUÁNTO se parece la entrada al hash guardado,
+ * y eso es lo que cubre el bucle sin corte anticipado.
+ */
+export function igualEnTiempoConstante(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let dif = 0
+  for (let i = 0; i < a.length; i++) dif |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return dif === 0
+}
+
 /**
  * El orden de las comprobaciones importa y es deliberado: primero «ya usado» y
  * «bloqueado», DESPUÉS la caducidad, y el acierto al final. Comprobar el acierto
@@ -54,12 +91,20 @@ export function generarCodigo(): string {
  */
 export function estadoCodigo(
   guardado: CodigoGuardado,
-  entrada: string,
+  entradaHash: string,
   ahora: Date,
 ): EstadoCodigo {
   if (guardado.usadoEn !== null) return 'ya_usado'
   if (guardado.intentos >= MAX_INTENTOS) return 'bloqueado'
   const caducaEn = guardado.creadoEn.getTime() + VALIDEZ_MINUTOS * 60_000
   if (ahora.getTime() > caducaEn) return 'caducado'
-  return entrada === guardado.codigo ? 'valido' : 'incorrecto'
+  // 🚨 Fila anterior al hasheado del código: guardaba los 6 dígitos en claro y
+  // ya no casa con nada. Se responde `caducado` —«pide otro»— y NUNCA
+  // `incorrecto`: `incorrecto` es lo único que gasta uno de los 5 intentos y
+  // además le echa la culpa a quien ha tecleado bien. **No se aceptan los dos
+  // formatos**: mantener viva la comparación en claro dejaría el agujero
+  // abierto justo para las filas que lo tienen. Son 10 minutos de códigos
+  // vivos; esas personas piden otro.
+  if (!esHashCodigo(guardado.codigoHash)) return 'caducado'
+  return igualEnTiempoConstante(entradaHash, guardado.codigoHash) ? 'valido' : 'incorrecto'
 }

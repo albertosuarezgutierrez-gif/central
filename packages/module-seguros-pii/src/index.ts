@@ -26,3 +26,7 @@ export {
   looksLikeFullTelefono,
   looksLikeDniNieCif,
 } from './blind-index.ts'
+export {
+  secretosIguales,
+  bearerAutorizado,
+} from './secreto.ts'

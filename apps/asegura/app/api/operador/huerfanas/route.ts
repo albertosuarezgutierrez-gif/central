@@ -3,6 +3,7 @@ import type { PolizaHuerfana } from '@central/module-seguros'
 import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
+import { sqlHuerfanasPendientes } from '@/lib/ingesta'
 import { correduriaUnica } from '@/lib/cartera'
 
 export const runtime = 'nodejs'
@@ -77,19 +78,7 @@ export async function GET(req: Request) {
     // quedaríamos sin la lista por culpa de un importe: mejor esa prima a
     // `null` («no se sabe») que ninguna póliza.
     const filas = await db.$queryRawUnsafe<Fila[]>(`
-      WITH citadas AS (
-        SELECT NULLIF(btrim(e.payload->>'idPolizaEntidad'), '') AS id_poliza,
-               NULLIF(btrim(e.payload->>'codigoEntidad'), '') AS entidad,
-               NULLIF(split_part(e.payload->>'nombreFichero', '_', 2), '') AS clave,
-               e.event_name,
-               e.occurred_at,
-               CASE WHEN e.payload->>'primaTotal' ~ '^-?[0-9]+([.,][0-9]+)?$'
-                    THEN REPLACE(e.payload->>'primaTotal', ',', '.')::numeric END AS prima
-        FROM operational_events e
-        WHERE e.event_name IN ('cima_siniestro_sin_poliza_review', 'cima_recibo_sin_poliza_review')
-          AND e.correduria_id = $1::uuid
-          AND NULLIF(btrim(e.payload->>'idPolizaEntidad'), '') IS NOT NULL
-      )
+      ${sqlHuerfanasPendientes('AND e.correduria_id = $1::uuid')}
       SELECT c.entidad,
              c.clave,
              c.id_poliza,
@@ -110,7 +99,7 @@ export async function GET(req: Request) {
                  AND p.id_poliza_entidad = c.id_poliza
                  AND p.merged_into_poliza_id IS NOT NULL
              ) AS lapida
-      FROM citadas c
+      FROM pendientes c
       GROUP BY 1, 2, 3
       ORDER BY COUNT(*) DESC, c.id_poliza ASC
       LIMIT $2

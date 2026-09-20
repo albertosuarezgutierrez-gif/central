@@ -98,6 +98,7 @@ export {
   type CoberturaResumen,
   type CajaNegraCodeoscopic,
   type UltimoPullIngesta,
+  type FicheroParcial,
   type MotivoAviso,
   type DecisionAviso,
   type PolizaHuerfana,
