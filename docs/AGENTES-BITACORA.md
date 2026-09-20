@@ -80,6 +80,17 @@
   23:22 UTC) — repricing en vivo de Busto Reform parado ~3 días. No diagnosticado del todo (logs
   Vercel Pro solo 1 día, no se pudo probar el endpoint por (1)). Avisado a Alberto por PushNotification
   (no Telegram, por (1)). PRs/commits: — (solo bitácora + `pricing_aprendizaje` + memoria).
+
+- **2026-09-13 · psd2-health-check** · hizo: preflight canal 200 OK; consulta de frescura sobre
+  `movimientos_bancarios WHERE origen='psd2'` → último movimiento 2026-09-10 (3 días, >48h) =
+  **anomalía crítica**; `mov_30d`=43 vs `mov_30d_prev`=71 dentro de rango normal (no dispara la
+  regla de volumen); `psd2_sin_fecha`=0. Cruzado con `conexiones_banco`: BBVA trae avisos SIN
+  prefijo ℹ️ del sync de hoy 06:00 UTC (sesión CLOSED en Enable Banking + HTTP 401
+  `CLOSED_SESSION`) — fallo real, no limitación conocida; Kutxabank sincroniza sin avisos. Anotado
+  en `CONTEXTO-SESIONES.md`, alerta enviada por `/api/internal/alerta` (messageId 4469) y latido
+  `ok:true` registrado. dudas: —; fallos: —; PRs/commits: commit directo a `main` (memoria +
+  bitácora, sin código).
+
 - **2026-09-12 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
   Vía B sana (`_buzon_pdf` copió hoy mismo, `dias_caido=0`); sin backlog en
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, `agente_salud`
