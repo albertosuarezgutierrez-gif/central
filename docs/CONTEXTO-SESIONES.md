@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Fix `apps/asegura-portal`: la campana de avisos mostraba «No se han podido leer los
+vencimientos ni los vencimientos» (captura de Alberto). `nombreFuente()` en `Campana.tsx` solo
+distinguía `'autorizaciones'` y colapsaba las otras cuatro fuentes de `FUENTES_AVISO`
+(`obligaciones`/`peticiones`/`datos`/`carnets`) en el mismo texto "los vencimientos"; con dos
+ilegibles a la vez salía la frase duplicada. Completado el `switch` con las 5 fuentes. PR #3169
+(mergeado).
+
 **(20/09/2026)** Correo de aseguradora → historial del cliente (PR #3148) + 3 ideas más de Alberto
 ("añade todo"): contacto de siniestros visible en la ficha, radar de compañías sin canal digital de
 avisos (agrupado por marca) y sugerencia de alta de contacto nuevo desde el triaje (Telegram, nunca
