@@ -1,0 +1,19 @@
+{
+ "sesion": "7e0ddecc-614c-5086-a65a-e750f70f1072",
+ "inicio": "2026-09-20T09:02:01.978Z",
+ "fin": "2026-09-20T09:02:01.978Z",
+ "llamadas": 1,
+ "categorias": {
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 64,
+   "chars_out": 227,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1
+   }
+  }
+ }
+}
