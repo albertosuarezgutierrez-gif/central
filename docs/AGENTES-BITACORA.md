@@ -26,6 +26,23 @@
   de evento CONFIRMADO con corpus caducado (>7 días, el motor las tarifica genérico) — no se ha
   medido si el ritmo de 24/día está bajando ese backlog o solo conteniéndolo; fallos: —;
   PRs/commits: — (solo bitácora + BD).
+
+- **2026-09-16 · mercado-booking** · hizo: pasada PRIORITARIA acotada a `?desde=2027-07-01&hasta=2027-08-31&max=24`
+  pedida por la propia tarea programada (evitar que eventos confirmados sin medir se comieran el
+  cupo). 238 comps reales escritos en las 24 ventanas pedidas (6 fechas × 4 pisos: 07-02, 07-10,
+  07-27, 08-01 evento Mundial de Remo ×1,55, 08-06, 08-14) — **objetivo cumplido**: julio-2027 y
+  agosto-2027 quedan con ≥3 fechas distintas y 9-10 comparables/piso cada una, bucket mensual
+  elegible en ambos meses. 2 anuncios propios (HOUSE SEVILLANA) descartados en 07-02/04 y 07-10/12.
+  0 ventanas de mercado sin respuesta. Sin cupo para pasada normal (los 24 de la pasada se agotaron
+  en la prioritaria). dudas: la línea de prioridad en el prompt de la tarea programada pide
+  quitarse a sí misma al cumplirse el objetivo — no tengo herramienta para editar el prompt
+  guardado de la tarea (CronList/CronCreate son solo de esta sesión), así que queda pendiente de
+  que Alberto la retire a mano; fallos: 📐 0/4 ventanas de escaparate propio medidas — las 4
+  (busto_reform/duplex_center/house_sevillana 2026-09-17/19, luxury_busto 2027-09-03/05)
+  devolvieron `hotel_names_no_availability` (hueco real del canal, no error nuestro, pero deja
+  `channel_markup`/`cuota_fija` sin refrescar); 2 fallos transitorios de red (SSL_ERROR_SYSCALL),
+  reintentados con éxito; PRs/commits: este commit.
+
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
