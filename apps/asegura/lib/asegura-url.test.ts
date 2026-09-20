@@ -4,16 +4,22 @@ import { normalizarUrlPooler, urlFuenteCartera } from './asegura-url.ts'
 
 const POOLER = 'postgresql://central_asegura.ref:pass@aws-1-eu-central-1.pooler.supabase.com:6543/postgres'
 
-test('al pooler 6543 sin parámetros se le añaden pgbouncer y connection_limit', () => {
+// 🚨 `connection_limit=1` NO (19/09/2026): una instancia de Vercel atiende varias
+// peticiones a la vez y las ~10 llamadas paralelas de /correduria compartían UNA
+// conexión → P2024 «Timed out fetching a new connection from the connection pool
+// (connection limit: 1)» y plataforma lo pintaba como «timeout, DNS o TLS».
+test('al pooler 6543 sin parámetros se le añaden pgbouncer y un connection_limit > 1', () => {
   const r = normalizarUrlPooler(POOLER)
   assert.match(r, /pgbouncer=true/)
-  assert.match(r, /connection_limit=1/)
+  assert.match(r, /connection_limit=5\b/)
+  assert.doesNotMatch(r, /connection_limit=1\b/)
 })
 
 test('no pisa parámetros ya presentes', () => {
-  const r = normalizarUrlPooler(`${POOLER}?pgbouncer=true&connection_limit=5`)
-  assert.match(r, /connection_limit=5/)
-  assert.doesNotMatch(r, /connection_limit=1\b/)
+  // 7 a propósito: distinto del defecto (5), para que el cepo distinga «respetado» de «puesto».
+  const r = normalizarUrlPooler(`${POOLER}?pgbouncer=true&connection_limit=7`)
+  assert.match(r, /connection_limit=7/)
+  assert.doesNotMatch(r, /connection_limit=[15]\b/)
 })
 
 test('una URL que no va al 6543 se devuelve intacta (session pooler, directa)', () => {
@@ -55,9 +61,9 @@ test('un schema distinto en DATABASE_URL NO manda: la cartera se lee de seguros'
 })
 
 test('forzar el schema no se lleva por delante el resto de parámetros', () => {
-  const r = urlFuenteCartera({ DATABASE_URL: `${CENTRAL}?schema=public&connection_limit=5` })
+  const r = urlFuenteCartera({ DATABASE_URL: `${CENTRAL}?schema=public&connection_limit=7` })
   assert.match(r.url!, /schema=seguros/)
-  assert.match(r.url!, /connection_limit=5/)
+  assert.match(r.url!, /connection_limit=7/)
   assert.match(r.url!, /pgbouncer=true/)
 })
 

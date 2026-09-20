@@ -61,6 +61,11 @@
   80 clientes / 110 pólizas** (03/09/2026) — las que entran o mantiene CIMA. Qué cuenta como viva lo
   decide una fuente única, `esCarteraViva()` de `@central/module-seguros`
   (`packages/module-seguros/src/cartera-viva.ts`): **`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`**.
+  🚨 **Y «viva» NO es «en vigor» (19/09/2026):** de las 157 vivas, **47 están canceladas** y 28 clientes
+  solo tenían canceladas — salían como clientes (Kartenbrot). Alberto: «si es cancelada es leads». Quién es
+  CLIENTE hoy lo decide `esCarteraEnVigor()` (mismo fichero) = viva Y estado en `POLIZA_ESTADOS_VIGENTES`;
+  el listado, el recuento de pólizas y «clientes sin canal» van por ahí (**67 clientes / 105 pólizas**).
+  `esCarteraViva()` queda para lo que pregunta por el ORIGEN (gemelas, siniestros, portal).
   El segundo brazo tapa un agujero medido el 03/09/2026 — cuando CIMA trae una póliza que YA estaba en el
   volcado no crea fila nueva: actualiza la vieja y le deja su `import_ref`, así que una póliza que CIMA
   mantiene al día contaba como lead (hoy afecta a **1** fila: la `3021700291186` de Reale C0613, auto,

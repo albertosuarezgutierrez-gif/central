@@ -104,7 +104,12 @@ entender la arquitectura.
 🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son 80 clientes /
 110 pólizas** (03/09/2026) — las que entran o mantiene CIMA. ⚠️ De esas 110, **42 están `cancelada`**
 y **68 no** (medido 03/09/2026): CIMA manda también las canceladas y la regla de cartera viva no las
-distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. Los ramos:
+distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. ✅ **Cerrado el
+19/09/2026:** `esCarteraEnVigor()` / `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` (mismo fichero
+`cartera-viva.ts`) = viva Y estado en `POLIZA_ESTADOS_VIGENTES`. Es lo que deriva el grupo del listado
+(`cartera-filtro.ts`), el recuento «N póliza(s) viva(s)» y quién entra en «clientes sin canal»
+(`clientes-sin-canal.ts`). Medido ese día: 157 vivas → **105 en vigor, 67 clientes** (eran 95 con el origen
+a secas; Kartenbrot, con una sola póliza cancelada, pasa a leads). Los ramos:
 **auto 81 · hogar 19 · responsabilidad civil 9 · moto 1**. Las otras 28.728 son volcado histórico cargado en
 jun/2026 (`intranet:` 26.117 con vencimientos 2013-2018 y `asegura_app:` 2.611) y **ninguna** vence en los
 últimos 18 meses. Regla de Alberto: **CIMA = cliente actual; el resto = lead** (32.520).
@@ -218,7 +223,7 @@ PASSWORD` sigue rechazando la nueva aunque el host directo `db.<ref>.supabase.co
 el log SIN la URL, así que la pantalla de plataforma dice la causa sin ir a los logs del pooler.
 **Camino de vuelta al origen (solo con `ASEGURA_FUENTE=origen`):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
 (SELECT-only + BYPASSRLS) contra el Supabase congelado de Manuel por el pooler :6543 de eu-central-1; la URL la
-normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` solo). `ASEGURA_OPERADOR_SECRET` — Bearer del
+normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` y, si falta, `connection_limit=5` — **nunca 1**: una instancia de Vercel atiende varias peticiones a la vez con el mismo cliente, y con 1 las ~17 llamadas paralelas de `/correduria` hacían cola hasta el `pool_timeout` y morían en P2024, medido el 19/09/2026). `ASEGURA_OPERADOR_SECRET` — Bearer del
 puerto `/api/operador/resumen` (MISMO valor en el proyecto Vercel `plataforma`). El proyecto sirve
 desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD.
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del
@@ -362,9 +367,16 @@ cada regla conocida del vendor se comprueba aquí. `revisarDatosAuto()` devuelve
 la vez (para que la UI los pinte juntos) y `construirPeticionAuto()` lanza si queda alguno.
 
 Las tres reglas que más cotizaciones tumban, todas con test:
-- **La misma persona va en `holder`, `risk.owner` y `risk.primaryDriver`, e IDÉNTICA.** El vendor
-  cruza por DNI y rechaza si un campo difiere; tampoco deja omitir ninguno. Por eso se construye
-  una vez y se reutiliza el mismo objeto.
+- **Por DEFECTO la misma persona va en `holder`, `risk.owner` y `risk.primaryDriver`, e IDÉNTICA.**
+  El vendor cruza por DNI y rechaza si DOS objetos con el MISMO DNI difieren en un campo; tampoco
+  deja omitir ninguno. Por eso se construye una vez y se reutiliza el mismo objeto cuando
+  tomador=propietario=conductor (el caso normal).
+  🚧 **Desde el 20/09/2026, `DatosAuto.propietario`/`.conductor` opcionales permiten que el
+  propietario o el conductor habitual sean una persona DISTINTA del tomador** (`peticion-auto.ts`):
+  el conductor lleva su propia `fechaCarnet`. **Sin verificar contra el vendor real** — nunca se ha
+  pagado una cotización con `owner`/`primaryDriver` distintos del `holder`, así que el primer intento
+  real puede devolver un 400 nuevo (igual que pasó con `email`/`roadName`). **No cubre propietario
+  EMPRESA** (persona jurídica, sin `estadoCivil`) — queda sin diseñar.
 - **La dirección viaja solo con sus DOS mitades** (CP + id de municipio). El municipio es un ID del
   catálogo, nunca un nombre.
 - **`lastFiveYearsAccidents` es obligatorio si los años sin siniestros son < 5 y no coinciden con
@@ -1314,6 +1326,24 @@ cartera— cuenta como **`sinCanal`**, que es la verdad, en vez de restarse del 
 
 `avisada_at` se sella **inmediatamente** tras el envío aceptado: es lo único que impide que un
 reintento mande el mismo aviso dos veces. Si el sello falla se grita `ENVIADO PERO NO SELLADO`.
+
+🚨 **Y desde el 19/09/2026, sin canal del tomador no es «sin canal» a secas: se prueba su PERSONA DE
+REFERENCIA** (Alberto, viendo «Instituto Studium» y «Grupo ELCA 83» en «Clientes sin canal»: «suele
+tener persona de contacto… es la persona de referencia sobre esta póliza»). `emailAlternativo()` de
+`@central/module-seguros` (`contacto-alternativo.ts`) reutiliza `contactoEfectivo()` para la póliza
+(su propio dato mal guardado, o un interviniente ajeno de esa MISMA póliza) y, si eso tampoco da nada,
+consulta `cliente_relaciones` (excluyendo `Sin vínculo`, la misma fuente que el CUARTO sitio de
+`clientes-sin-canal.ts`). El correo a un tercero **nunca se manda como si fuera al propio tomador**:
+`textoAviso()` recibe `paraTercero` y explica de qué póliza y de qué titular se trata, y con qué rol se
+dirige a esa persona. Solo cuando el dato es SUYO (colgado de la póliza y no de su ficha) el correo se
+manda tal cual, porque literalmente es su dirección. `ResumenAvisos.enviadosATercero` cuenta cuántos de
+los `enviados` fueron por esta vía, como subconjunto — no aparte.
+⚠️ **`textoAviso()` vive en `lib/texto-vencimiento.ts`, aparte de `avisos-vencimiento.ts` — es PURO
+a propósito** (mismo patrón que `renovaciones-aviso.ts` de plataforma): `avisos-vencimiento.ts` importa
+`./asegura-db` sin extensión, que `node --test` no resuelve fuera de un bundler, así que un test que
+importe ese fichero directamente revienta con `ERR_MODULE_NOT_FOUND` — no es un fallo de Prisma. La
+lógica de A QUIÉN y CÓMO se dirige el correo se prueba en `texto-vencimiento.test.ts` sin arrastrar nada
+de BD.
 
 Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), `ASEGURA_MAIL_FROM` y
 un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).

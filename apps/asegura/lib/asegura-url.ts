@@ -9,12 +9,25 @@
  * pisa parámetros ya presentes; cualquier URL que no se pueda parsear se
  * devuelve tal cual (que falle Prisma con su error real, no nosotros antes).
  */
+export const POOL_POR_INSTANCIA = 5
+
 export function normalizarUrlPooler(url: string): string {
   try {
     const u = new URL(url)
     if (u.port !== '6543') return url
     if (!u.searchParams.has('pgbouncer')) u.searchParams.set('pgbouncer', 'true')
-    if (!u.searchParams.has('connection_limit')) u.searchParams.set('connection_limit', '1')
+    // 🚨 NO `connection_limit=1` (19/09/2026). Ese 1 es la receta de Prisma para
+    // lambdas que atienden UNA petición cada vez; en Vercel una instancia atiende
+    // varias a la vez y todas comparten este mismo cliente. Medido: /correduria
+    // dispara ~17 llamadas paralelas al puerto, y 13 murieron en su PRIMERA
+    // consulta con P2024 «Timed out fetching a new connection from the
+    // connection pool (pool timeout: 10, connection limit: 1)» — una tenía la
+    // única conexión y las demás hicieron cola hasta el pool_timeout. Plataforma
+    // se rendía antes (8 s) y lo pintaba como «timeout, DNS o TLS». Con 5, la
+    // cola de esa ráfaga cabe en un par de segundos. Una URL que ya traiga su
+    // límite manda; y ojo: si el log sigue diciendo «connection limit: 1» tras
+    // desplegar esto, es que la cadena de Vercel lo lleva escrito a mano.
+    if (!u.searchParams.has('connection_limit')) u.searchParams.set('connection_limit', String(POOL_POR_INSTANCIA))
     return u.toString()
   } catch {
     return url

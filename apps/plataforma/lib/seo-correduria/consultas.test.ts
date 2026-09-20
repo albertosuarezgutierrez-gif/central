@@ -49,5 +49,5 @@ test('toda pagina es null o una ruta que empieza por /', () => {
     assert.ok(c.grupo === 'ramo' || c.grupo === 'problema', `grupo raro en «${c.consulta}»: ${c.grupo}`)
   }
   assert.equal(CONSULTAS.filter(c => c.grupo === 'ramo').length, 9)
-  assert.equal(CONSULTAS.filter(c => c.grupo === 'problema').length, 6)
+  assert.equal(CONSULTAS.filter(c => c.grupo === 'problema').length, 8)
 })

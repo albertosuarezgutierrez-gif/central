@@ -72,10 +72,15 @@
 // no un `<> 'cancelada'`: el enum tiene DIEZ valores.
 //
 // ─── Qué se cuenta como cliente (y qué NO) ──────────────────────────────────
-// 🚨 Cartera VIVA = las pólizas que CIMA trae o MANTIENE (regla única en
-// `cartera-viva.ts` de `@central/module-seguros`: `import_ref IS NULL` **o**
-// `eiac_xml_hash IS NOT NULL`, porque una fila del volcado que CIMA actualiza
-// conserva su `import_ref` viejo y también es cartera de hoy).
+// 🚨 Cliente = póliza de CIMA **EN VIGOR** (`sqlCarteraEnVigor` de
+// `cartera-viva.ts`, `@central/module-seguros`: origen CIMA —`import_ref IS
+// NULL` **o** `eiac_xml_hash IS NOT NULL`— Y estado en `POLIZA_ESTADOS_VIGENTES`).
+// Hasta el 19/09/2026 esta lista entraba por el ORIGEN a secas y por eso
+// tenía a 9 «ilocalizables» de 10 cuyas pólizas estaban TODAS canceladas: no
+// eran clientes a los que no se puede avisar, eran ex-clientes. Alberto: «si
+// es cancelada es leads». (La búsqueda de CONTACTOS en las pólizas, más abajo,
+// sigue mirando el origen: un conductor de una póliza cancelada el mes pasado
+// sigue siendo alguien a quien llamar.)
 // Las otras ~28.700 pólizas son el volcado histórico de junio/2026 (`import_ref`
 // `intranet:` / `asegura_app:`, vencimientos 2013-2018) y sus ~32.520 fichas son
 // LEADS, no clientes actuales. Si se mezclaran, esta pantalla diría «32.520
@@ -99,8 +104,9 @@
 // columna con un blob que no se pueda descifrar cuenta como «tiene canal»
 // aunque el envío luego falle. La pantalla lo dice; no se disfraza de garantía.
 
-import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
+import { POLIZA_ESTADOS_VIGENTES, sqlCarteraEnVigor } from '@central/module-seguros'
 import { prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
+import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 /** Tope de filas leídas. La cartera viva son decenas, no miles: si algún día se
@@ -122,11 +128,16 @@ export type EstadoCanal =
    * 🚨 **Esto NO es un contacto de segunda.** Se estuvo a punto de rotularlo
    * como «solo sirve para pedirle el correo», y Alberto lo corrigió el
    * 05/09/2026: «un cliente puede ser muy mayor y no tiene contacto… es mejor
-   * contactar con el familiar». Para media cartera el hijo o la administración
-   * de la empresa ES el canal, no un rodeo.
+   * contactar con el familiar». Y otra vez el 19/09/2026 al verlos bajo el
+   * titular «NO se puede contactar»: «muchos tienen contactos… es la persona
+   * de referencia sobre esta póliza». Para una empresa o un cliente mayor, esa
+   * persona ES el canal: se pinta como localizable (tono neutro, después de
+   * «solo teléfono» en la urgencia), no como alarma.
    *
    * ⚖️ Lo que sí sigue siendo cierto y no es opinión: el preaviso del art. 22
-   * LCS va al TOMADOR. Tener a quién llamar no da por notificada a la empresa.
+   * LCS va al TOMADOR, y el cron de avisos lee la ficha del tomador, así que a
+   * este cliente el aviso automático hoy no le sale: se avisa por su persona
+   * de referencia. Por eso sigue en la lista, sin contar en el titular.
    */
   | 'contacto_via_tercero'
   /** 🚨 Su PROPIO email/teléfono existe, pero colgado de la póliza y no de su
@@ -289,13 +300,14 @@ export function estadoCanal(
 }
 
 /** Los ilocalizables primero; dentro de cada grupo, el que renueva antes.
- *  `contacto_via_tercero` va por delante de `canal_en_poliza` porque el segundo
- *  se arregla copiando un dato y el primero exige llamar a alguien. */
+ *  `contacto_via_tercero` va DESPUÉS de «solo teléfono» (19/09/2026): tener a
+ *  la persona de referencia es tener canal; lo urgente es a quien no se le
+ *  puede llamar de ninguna manera o cuyo dato hay que copiar a la ficha. */
 const ORDEN: Record<EstadoCanal, number> = {
   sin_ninguno: 0,
-  contacto_via_tercero: 1,
-  canal_en_poliza: 2,
-  solo_telefono: 3,
+  canal_en_poliza: 1,
+  solo_telefono: 2,
+  contacto_via_tercero: 3,
   solo_email: 4,
   con_ambos: 5,
 }
@@ -472,7 +484,9 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
         from polizas p
         where p.cliente_id = c.id
           and p.correduria_id = c.correduria_id
-          and (p.import_ref is null or p.eiac_xml_hash is not null)
+          -- EN VIGOR (origen CIMA y estado vigente): la cadena es constante,
+          -- viene del módulo y no lleva nada del usuario.
+          and ${Prisma.raw(sqlCarteraEnVigor('p'))}
           and p.merged_into_poliza_id is null
       ) v on true
       where c.correduria_id = ${correduriaId}::uuid
