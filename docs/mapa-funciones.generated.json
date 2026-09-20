@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-20T18:22:14Z",
-  "sha": "82fe73b589a6f5778fba430dd249e67c3b68a144",
+  "generadoEn": "2026-09-20T19:35:00Z",
+  "sha": "e273f6d1ca11f40781830cf94ff3ced15ab431a0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -15260,7 +15260,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 122
+          "linea": 133
         },
         {
           "nombre": "resumenCartera",
@@ -15268,7 +15268,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResumenCartera>",
-          "linea": 127
+          "linea": 138
         },
         {
           "nombre": "vencimientosProximos",
@@ -15276,7 +15276,7 @@
           "exportada": true,
           "params": "correduriaId: string, dias: number = DIAS_HORIZONTE_RENOVACION, hoyRef: Date = hoyUtc(), diasAtras: number = DIAS_ANUALIDAD,",
           "retorno": "Promise<ListaVencimientos>",
-          "linea": 213,
+          "linea": 224,
           "resumen": "Pólizas vigentes de la ventana de renovación, ordenadas por urgencia real (la fecha, no la etiqueta del estado). Es la lista de llamadas de la semana. 🚨 LA VENTANA EMPIEZA EN EL PASADO, y el día que "
         },
         {
@@ -15285,7 +15285,7 @@
           "exportada": true,
           "params": "correduriaId: string, hoyRef: Date = hoyUtc(), diasAtras: number = DIAS_ANUALIDAD,",
           "retorno": "Promise<number | null>",
-          "linea": 351,
+          "linea": 367,
           "resumen": "Cuántas pólizas de la CARTERA VIVA figuran VIGENTES arrastrando un vencimiento anterior a la ventana de recuperación (más de una anualidad en el pasado). No son trabajo de hoy y por eso no entran en l"
         },
         {
@@ -15294,7 +15294,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 377,
+          "linea": 393,
           "resumen": "La única correduría de la base (medido: 1 fila). Lanza si hubiera más de una."
         },
         {
@@ -15303,7 +15303,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 386,
+          "linea": 402,
           "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null. Solo se mira si de verdad es un objeto."
         },
         {
@@ -15312,13 +15312,13 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 401,
+          "linea": 417,
           "resumen": "- sin clave, o con una clave que no abre ese registro → `objetoAsegurado` verá el `v1:` intacto y lo dirá como **«cifrado»**, que NO es «sin dato». Lo que no puede pasar nunca es que un fallo de desci"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "edb2b67952de"
+      "hash": "a984eed0938d"
     },
     {
       "ruta": "apps/asegura/lib/clientes-sin-canal.ts",
@@ -68444,7 +68444,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 116,
+          "linea": 121,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -68453,7 +68453,7 @@
           "exportada": false,
           "params": "{ objeto }: { objeto: ObjetoAsegurado | null }",
           "retorno": null,
-          "linea": 133,
+          "linea": 138,
           "resumen": "Qué asegura la póliza. Sin esto, «Auto · Mapfre · 431,85€» no dice CUÁL de los tres coches del cliente es, y la llamada empieza preguntando. Cinco casos, y ninguno se pinta como los demás — un hueco v"
         },
         {
@@ -68462,7 +68462,7 @@
           "exportada": false,
           "params": "{ truncado }: { truncado: boolean | null | undefined }",
           "retorno": null,
-          "linea": 178,
+          "linea": 183,
           "resumen": "El techo de la lista. Va ARRIBA, no al pie: si la lista viene recortada, el total de «cartera en juego» y el recuento de vencidas que se leen justo debajo salen más bajos que la realidad, y eso hay qu"
         },
         {
@@ -68471,7 +68471,7 @@
           "exportada": false,
           "params": "{ n }: { n: number | null | undefined }",
           "retorno": null,
-          "linea": 195
+          "linea": 200
         },
         {
           "nombre": "Renovaciones",
@@ -68479,13 +68479,13 @@
           "exportada": true,
           "params": "{ datos, filtro }: { datos: RespVencimientos | null filtro: 'accionables' | 'todas' }",
           "retorno": null,
-          "linea": 207,
+          "linea": 212,
           "resumen": "`todas` = la ventana entera que devolvió el puerto («Cartera»)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "23b685f4dd08"
+      "hash": "f7612356904b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Retencion.tsx",
@@ -87478,7 +87478,7 @@
           "exportada": false,
           "params": "r: { estado: 'error'; motivo: MotivoErrorCartera }, causa: unknown,",
           "retorno": "",
-          "linea": 41,
+          "linea": 42,
           "resumen": "Añade la causa que declara asegura solo si viene: los tests y la UI no ven una clave vacía."
         },
         {
@@ -87487,7 +87487,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CarteraAsegura",
-          "linea": 54,
+          "linea": 55,
           "resumen": "Interpretación PURA de la respuesta del puerto (testeable sin red). Cualquier forma inesperada degrada a `error`, nunca a un resumen inventado."
         },
         {
@@ -87496,7 +87496,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CarteraAsegura>",
-          "linea": 92,
+          "linea": 93,
           "resumen": "Lee la cartera por el puerto de central-asegura. La URL no es un secreto y cae al dominio del proyecto; el secreto NUNCA tiene fallback."
         },
         {
@@ -87505,7 +87505,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 107
+          "linea": 108
         },
         {
           "nombre": "interpretarObjeto",
@@ -87513,7 +87513,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "ObjetoAsegurado | null",
-          "linea": 159,
+          "linea": 167,
           "resumen": "Lectura defensiva del objeto asegurado. Una forma rara NO tumba la fila entera: degrada a `null` («el puerto no lo informa»), que la UI ya sabe decir."
         },
         {
@@ -87522,7 +87522,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "VencimientosAsegura",
-          "linea": 212,
+          "linea": 220,
           "resumen": "Interpretación PURA de la respuesta del puerto de vencimientos. Una fila con forma inesperada invalida la lista entera: media lista de renovaciones es peor que ninguna, porque nadie sabría cuál falta."
         },
         {
@@ -87531,7 +87531,7 @@
           "exportada": true,
           "params": "dias = 90",
           "retorno": "Promise<VencimientosAsegura>",
-          "linea": 265
+          "linea": 274
         },
         {
           "nombre": "interpretarDeclaradasVencer",
@@ -87539,7 +87539,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "DeclaradasVencerAsegura",
-          "linea": 305,
+          "linea": 314,
           "resumen": "Interpretación PURA de la respuesta del puerto. Una fila con forma inesperada invalida la lista entera, igual que `interpretarVencimientos`."
         },
         {
@@ -87548,12 +87548,12 @@
           "exportada": true,
           "params": "dias = 60",
           "retorno": "Promise<DeclaradasVencerAsegura>",
-          "linea": 341
+          "linea": 350
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cc446d13bc55"
+      "hash": "cdbcac1a3945"
     },
     {
       "ruta": "apps/plataforma/lib/cartera-lista-asegura.ts",
