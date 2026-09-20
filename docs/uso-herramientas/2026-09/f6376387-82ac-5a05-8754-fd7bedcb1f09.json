@@ -1,0 +1,19 @@
+{
+ "sesion": "f6376387-82ac-5a05-8754-fd7bedcb1f09",
+ "inicio": "2026-09-20T07:48:25.615Z",
+ "fin": "2026-09-20T07:48:40.238Z",
+ "llamadas": 3,
+ "categorias": {
+  "bash": {
+   "llamadas": 3,
+   "chars_in": 276,
+   "chars_out": 13686,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 3
+   }
+  }
+ }
+}
