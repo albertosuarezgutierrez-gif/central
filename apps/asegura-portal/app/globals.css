@@ -3395,16 +3395,3 @@ h1 em {
   margin: 10px 0 0;
   font-size: 13px;
 }
-
-/* ── Coberturas repetidas ───────────────────────────────────────────────── */
-.solapamientos {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 14px;
-}
-.solapamiento ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
-}
