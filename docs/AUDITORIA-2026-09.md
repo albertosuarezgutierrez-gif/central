@@ -193,4 +193,84 @@ Ningún commit del rango toca `apps/ia-rest/**`. `docs/HUECOS-ABIERTOS.md` no re
 (reservado a la profunda).
 
 ---
-<!-- verificado: 2026-09-19 -->
+
+## 🔍 Pasada PROFUNDA — 20/09/2026
+
+**Entorno de tarea de GitHub, rama asignada `claude/focused-gates-z5vsx6`; sin push directo a
+`main`.** Igual que el 19/09: texto de registro va en un PR propio (este), y el único fix de código
+que salió de esta pasada (infra del auto-merge) va en un PR de carril 2 aparte para que Alberto lo
+mire — no se mete aquí para no sacar a este PR de la lista de "solo registro" que el propio bot exige.
+
+### 🟢 Código e infra: sano
+`pnpm test` (2.947 tests, node --test + vitest) y los 13 typechecks de la matriz (incluidos los DOS
+schemas de `apps/asegura`) en verde; `qa-check.ts` (820 archivos, 0 problemas), lint (0 errores,
+1.224 warnings) y build de `ia-rest` también. Sin regresiones desde la profunda anterior.
+
+### 🟢 Heartbeat de crons/agentes: sano, dos rojos ya conocidos y sin acción nueva
+`agente_latidos` completo revisado. Todo ✅ salvo:
+- `ses_transporte` (`ok=false`, nunca en verde) — **pendiente de siempre**: sin establecimientos
+  dados de alta en `/sivra/partes/establecimientos`; hoy lo cubre Chekin hasta el 06/10. Sin acción.
+- `seo_correduria` (`ok=false` desde el 14/09, "Serper sin créditos") — **ya diagnosticado y curado
+  en origen**: Serper se retiró de ese cron el mismo 14/09 (#2936); se pondrá verde solo en la
+  próxima pasada semanal (lunes 21/09). Sin acción.
+- `psd2_health_check` (semanal, dentro de umbral) reportó el 16/09 una "ANOMALIA CRITICA" —conexión
+  BBVA con `401 Session is closed` en Enable Banking— y **ya avisó por Telegram él mismo ese día**
+  (hay PR de registro #2868/#3022 documentándolo). Sigue sin resolver 4 días después: Alberto tiene
+  que reconectar BBVA en Enable Banking. No se repite el aviso aquí (no es nuevo), pero se deja
+  anotado por si se ha perdido en el ruido del backlog de PRs de abajo.
+
+### 🟢 Correduría (bloque 2-quater): sano
+CIMA sigue entrando (`cima_pull_completed` cada ~5h, último 19/09 14:39, `errorsCount=0`); el hueco
+de 88 días de Mapfre (C0058) y el resto de "ingesta degradada" ya están cubiertos por
+`docs/ASEGURA-MAPFRE-C0058.md` y el propio latido diario — nada nuevo que abrir. Gasto Codeoscopic
+normal: 3 cotizaciones / 7 días, 1,50 €, 0 descartadas sin desenlace. Cepos de aislamiento
+(`regression-asegura-aislamiento`, `regression-portal-aislamiento`, `regression-*-puerto`) verdes en
+el `pnpm test` de arriba.
+
+### 🟢 Salud del precio (bloque 2bis): sano
+`rail_baja_roto=0`, `bajo_minimo=0`, `rail_alza_sin_justificar=0`, `oscilantes=0`, las 4 palancas
+(`enabled`/`apply_enabled`=true, `antelacion_k=0`, `min_price` con valor) para los 4 pisos. Única
+nota menor: `horas_desde_ultima_pasada=11,0h` (umbral 10h) con `noches_ultima_pasada=13` — margen de
+una hora, y con el resto de señales en verde no se interpreta como pasada abortada.
+
+### 🔴 Backlog de PRs de rutinas: 46 abiertos, hasta 16 días — y esta vez con hallazgo NUEVO y accionable
+El vigilante (`rutinas-automerge.yml`) está vivo (corre en verde cada pocos minutos, confirmado por
+sus runs). El problema no es que esté muerto: es que casi ningún PR del backlog cumple sus
+condiciones, por dos motivos medidos con precisión esta pasada (delegado a un agente, 99 llamadas a
+la API de PRs):
+
+1. **`docs/uso-herramientas/<sesión>.json` (telemetría del hook `Stop`) saca del carril 1 a casi
+   todo el lote.** Viaja en ~20 de los 46 PRs "solo bitácora" y **no está en el allowlist**
+   `es_registro()` del workflow — un solo fichero de telemetría, inocuo, deja fuera al PR entero.
+   Es un hueco del propio mecanismo, no un fallo de las rutinas. **Propuesto en el PR de carril 2**
+   de esta pasada: añadir `docs/uso-herramientas/**/*.json` al allowlist.
+2. **Al menos 7 PRs cuyo título/cuerpo dice "solo registro" traen código real sin revisar**, muy
+   probablemente por reutilizar una rama entre sesiones distintas después de escribir el cuerpo del
+   PR (el mismo patrón que ya cazaron #2318/#2322/#2327 el 07-08/09, pero más extenso de lo que se
+   pensaba entonces):
+   - **#2318** (15 días) — módulo `sivra/mensajes-prog/*` + migración SQL completos, sin revisar.
+   - **#2322** (15 días) — feature de parte de siniestro del portal (Prisma + SQL) completa.
+   - **#2327** (15 días) — `module-seguros-portal/consentimiento.ts` + agente-salud + SQL.
+   - **#2573** (13 días) — feature de descripción de siniestro en el portal (prisma + SQL).
+   - **#2757** (8 días) — fixes reales de Codeoscopic / `ficha-asegura.ts`.
+   - **#2741** (8 días) — feature completa "declaradas por vencer" (rutas, UI, lib; 669 líneas).
+   - **#2488** (13 días) — ~32 ficheros: asegura-web, `lib/contable/*`, fuga de canal, portal.
+   **Esto es lo importante de verdad: hay trabajo terminado (no solo texto) esperando desde hace más
+   de una semana sin que nadie lo esté mirando**, camuflado bajo títulos de rutina.
+3. **#2262** (16 días, el más viejo) ya tiene el comentario `<!-- automerge-conflicto -->` del bot
+   desde el 04/09 diciendo que no puede resolver el conflicto solo — sigue esperando mano humana.
+
+**Acción de Alberto:** revisar y mergear/cerrar los 7 PRs de (2) cuanto antes (son features/fixes
+reales, no bitácora); resolver a mano el conflicto de #2262 o rescatar su contenido; el fix de (1)
+va en PR de carril 2 aparte. El backlog general (>2 semanas, causa raíz "aprobación de workflows en
+Actions" per la nota del 19/09) sigue sin resolverse — cuarta vez que esta rutina lo señala.
+
+### Reconciliación memoria/skills
+`docs/CONTEXTO-SESIONES.md` y `docs/AUTO-APLICADOS.md` actualizados con esta pasada. Matriz de apps
+verificada: `ls apps/` (13) == matriz de `tests.yml` (13), sin drift. No se hizo reconciliación
+skill-a-skill exhaustiva de las ~50 skills de agentes contra código (fuera del alcance de esta
+pasada dado el volumen del hallazgo de arriba); queda para la próxima pasada profunda si no hay otro
+hallazgo de radio similar.
+
+---
+<!-- verificado: 2026-09-20 -->

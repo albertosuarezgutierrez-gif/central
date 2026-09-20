@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Auditoría PROFUNDA semanal. Código/infra sanos (2.947 tests, 13 typechecks, lint,
+qa, build — todo verde). Heartbeat y correduría sin novedad (rojos ya conocidos: `ses_transporte`,
+`seo_correduria` cura sola el 21/09, BBVA/PSD2 pendiente de Alberto desde el 16/09). Pricing sano.
+🔴 **Hallazgo nuevo:** de los 46 PRs de rutina abiertos (hasta 16 días), al menos 7 etiquetados como
+"solo registro" traen código real sin revisar (#2318, #2322, #2327, #2573, #2757, #2741, #2488) —
+probable reutilización de rama entre sesiones. Y `docs/uso-herramientas/**.json` saca a ~20 PRs del
+allowlist del auto-merge sin necesidad. Detalle e informe: `docs/AUDITORIA-2026-09.md`. PR de
+registro de esta pasada + PR de carril 2 (fix del allowlist) enlazados por Telegram.
+
 **(19/09/2026) «A quién llamar hoy» decía «no se pudo llegar a asegura (timeout, DNS o TLS)» — y no
   era la red: era el POOL.** Medido en `get_runtime_logs` de central-asegura (07:54:37): 17 llamadas
   paralelas de `/correduria` al puerto y **13 murieron en su primera consulta con P2024** «Timed out
