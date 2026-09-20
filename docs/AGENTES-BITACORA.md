@@ -24,6 +24,19 @@
   (`claude/buscador-ia-2026-09-14`).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-20 · mercado-booking** (2ª pasada del día — otra sesión en paralelo ya había medido
+  jun/sep-2027 antes) · hizo: comprobó el plan fresco antes de medir (no duplicó fechas), salió
+  rondas 2-3 de profundidad sobre 6 fechas nuevas × 4 aforos (03-05/04/2027, 27-29/10/2026,
+  24-26/11/2026, 22-24/12/2026, 26-28/01/2027, 16-18/02/2027), `?max=24` sobre `plan_total 524`
+  (candidatas 524, recortadas 500 — el tope sigue sin agotar lo pedido). 237 comps `booking_mcp`
+  escritos, 0 ventanas sin respuesta. Paso 2-bis: 4/4 escaparate medidos (Busto Reform, Dúplex
+  center, Luxury Busto, House Sevillana — sin huecos hoy). House Sevillana salió como comparable
+  de sí misma en las 3 ventanas de aforo 12 con checkin 27/10, 26/01 y 16/02 — descartada del
+  corpus en las 3 (ver «No romper»); en la ventana de abril y diciembre no apareció. Avisos del
+  plan arrastrados sin cambios: mes 2026-09 sin bucket elegible y 82 fechas de evento confirmado
+  con corpus caducado (>7d) que el motor tariﬁca por canal, no por mercado medido — el mismo
+  aviso que ya traía la 1ª pasada de hoy; dudas: —; fallos: —; PRs/commits: sin PR — solo
+  escritura en `market_rates`/`pricing_escaparate` vía API, este commit solo toca la bitácora.
 - **2026-09-20 · mercado-booking** · hizo: pasada completa, 24/24 ventanas de mercado pedidas
   (`?max=24`, plan_total 524, candidatas 524, recortadas 500 — evento KAROL G 13-jun-2027 aforo 12
   + ronda 0 mes-corto y rondas 2/3 profundidad, jun/sep-2027, aforos 2/4/5/12), 240 comps
