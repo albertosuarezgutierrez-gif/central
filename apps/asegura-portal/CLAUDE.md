@@ -820,6 +820,18 @@ excepción y sin log, del que solo se entera el cliente que no puede entrar. Por
 espacios alrededor se **rechaza**, no se limpia. Y un `600123456` sin `+` se rechaza en vez de
 suponerle `+34`: adivinar el país es inventarse un dato de la persona.
 
+🔐 **La columna `portal_codigo.codigo` guarda el HASH del código, no los 6 dígitos (20/09/2026).**
+Hasta la auditoría de la correduría ahí vivía el código en claro: cualquiera con lectura de esa tabla
+—o una copia de seguridad, o un volcado de soporte— podía entrar como cualquier cliente sin tocar su
+correo, que es exactamente lo que el «un solo uso por email» existe para impedir. Ahora se escribe
+`hashCodigo()` de `lib/auth.ts` (SHA-256 con la pimienta del canal) al emitirlo, y `/api/acceso/verificar`
+compara en **tiempo constante** contra `hashCodigo(entrada)`. **El nombre de la columna es histórico y
+NO se renombró a propósito**: renombrarla obliga a una migración coordinada con el emisor, y una
+columna que se llama `codigo` y guarda un hash se explica con un comentario en el schema (está puesto);
+una migración a medias deja a los clientes sin poder entrar. Una fila anterior al hasheado nunca
+casará —guarda 6 dígitos y se compara contra un SHA-256—, así que caduca sola por su ventana en vez de
+seguir siendo válida. Guardián: `test/regression-portal-codigo-hasheado.test.ts`.
+
 ⏳ **Cabo suelto conocido:** `portal_codigo` **no tiene índice por `valor_hash`**, así que el `count`
 recorre la tabla. Hoy es diminuta y no se nota; el DDL va en su propio paso, no colado aquí.
 

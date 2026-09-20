@@ -124,3 +124,50 @@ Diez pólizas por las que Occident manda siniestros y recibos y que **no existen
 ninguna compañía de la cartera**. Eso no es un bug: o son de otra correduría, o nunca se cargaron.
 Es una llamada a Occident, y hasta que se haga esos ficheros volverán a cuarentena en cada
 reconcile — que es lo correcto: mejor visibles ahí que colgados de la póliza de otro.
+
+## 📏 El residuo, medido fichero a fichero (20/09/2026)
+
+Auditoría de la correduría. Aquí se habían publicado dos cifras mías que eran falsas y se corrigen
+con la medición, no con una estimación mejor:
+
+- «**1 póliza perdida**» → falso, se quedaba corto.
+- «**46 objetos en 6 ficheros, ~37 irrecuperables**» → falso, se pasaba de largo. Ese 46 salía de
+  contar OBJETOS de los ficheros y compararlos con FILAS de cuarentena, que guarda **el fichero**,
+  no cada objeto: peras con manzanas.
+
+**El arreglo hacia delante YA ESTÁ**, y no en este repo: `promoverCrudoAIncidencia()` del
+`ingest-pipeline.ts` del CRM (LOO-826) asciende la copia cruda a incidencia con TTL de 90 días
+**antes** de confirmar el fichero a TIREA, en los cuatro caminos (SIN, REC, CEF, POL) y tanto en la
+rama de «0 persistidos» como en la de `anyReview || anyError`. No está envuelto en `try` a propósito:
+si la promoción falla es preferible NO confirmar —el fichero se queda en la cola de TIREA y se
+reintenta— que confirmarlo y perder los registros en review. Lo demuestra un dato, no la lectura del
+código: `C0468_M00171_POL` (15/09) se promovió, se le extendió el TTL a 16/12 y se reprocesó solo.
+
+Lo que quedó **antes** de ese arreglo, contado contra `operational_events` (total/persisted/review
+por fichero, que es la unidad correcta):
+
+| Fichero | En cuarentena | Crudo guardado | Estado |
+|---|---|---|---|
+| `C0468_M00171_POL` (15/09) | sí | sí | ✅ promovido y reprocesado, purga 16/12 |
+| `C0468_8-92361_POL` (15/09) | sí | **no** | ⏳ 7 objetos / 6 persistidos / **1 en review** → purga 17/10 |
+| `C0072_65792_POL` (13/09) | sí | **no** | ⏳ 14 / 13 / **1 en review** → purga 17/10 |
+| 3 × REC (15/09, 15/09, 12/07) | **no** | — | ❌ sin rastro (≈40 recibos) |
+
+O sea: **2 pólizas en riesgo**, no 46 objetos. Y las dos **no las puede rescatar el reproceso que ya
+existe**: `/api/internal/cima/reprocesar-cuarentena` filtra `conIncidencia = true` y **exige
+`rawXmlCifrado`** (el pipeline lo necesita para recomputar el hash); una fila sin crudo la cuenta como
+`sinRawXml` y lo dice en la respuesta en vez de saltársela en silencio. Montar un camino sin `rawXml`
+para dos pólizas significa tocar un pipeline de ingesta en producción: no compensa.
+
+Las salidas reales son pedir el reenvío a **Occident** (C0468) y **Generali** (C0072) antes del
+17/10, o extender `purgar_en`. Lo segundo **no es una decisión técnica**: ese TTL existe para
+minimizar PII y alargarlo lo decide Alberto, no un agente.
+
+🔍 **Una hipótesis que NO está medida, y se marca como tal:** dos ficheros POL del mismo día
+acabaron distinto (uno promovido, otro no), lo que apunta a un camino de código que confirma por
+`xml_hash` sin volver a mapear —y por tanto sin promover—. Es sospecha, no medición.
+
+Lectura de solo lectura del estado agregado (espejo JSON del panel `/salud-cima`, cero writes salvo
+`?record_run=1`): `GET https://app.grupoasegura.com/api/internal/cima/quarantine` con cabecera
+`x-internal-secret`. Mira `crudoCuarentena.purgaInminente` y `cuarentenaPorRecuperabilidad`: ahí es
+donde esto se ve venir antes de que el TTL lo borre.
