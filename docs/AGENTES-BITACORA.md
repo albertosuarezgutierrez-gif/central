@@ -26,6 +26,22 @@
   de evento CONFIRMADO con corpus caducado (>7 días, el motor las tarifica genérico) — no se ha
   medido si el ritmo de 24/día está bajando ese backlog o solo conteniéndolo; fallos: —;
   PRs/commits: — (solo bitácora + BD).
+
+- **2026-09-16 · facturas-correo** · hizo: Paso 0 sano (Vía B al día, última copia 15/09; sin
+  backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`, verificado por `search_threads` no
+  por `list_labels`) — `agente_salud` actualizado (`ok=true`, `dias_caido=1`). Paso 1: 3 candidatos
+  reales (e-facturas EMASESA sin PDF, solo portal) — Socorro 50,35€, Reform 25,21€, Luxury 42,15€,
+  todas `turistico_pisos`; cargo bancario aún no ha entrado (ciclo bimestral recién emitido
+  15/09) → sin `nombre_archivo` (PE26…) todavía, se registran en `facturas_drive` cuando llegue el
+  cargo. Resto de candidatos del día (Occident, Smoobu, Booking) descartados por no ser factura.
+  Paso 4.0: barrido de `v_facturas_sin_cargo` — 9 `sin_revisar` de septiembre (vercel, openrouter,
+  pricelabs, ionos×2, anthropic-credit×3) sin cargo bancario aún (comprobado, no localizado en
+  ±2026-09-01/20 en ninguna cuenta) → se quedan pendientes de que entre el movimiento, no se marcan
+  `revisada_sin_cargo` porque es lag normal de extracto, no ausencia confirmada. dudas: 2 cargos
+  «ANTHROPIC IRELAND» de 76,50€ (07/09 y 10/09) para 1 sola factura archivada de 76,50€
+  (`anthropic-credit-2791`, 08/09) — ambigüedad real, no auto-confirmado, para decisión de Alberto;
+  fallos: —; PRs/commits: —.
+
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
