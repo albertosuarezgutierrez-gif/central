@@ -96,6 +96,15 @@ test('limite: entero dentro del tope de la API; nada de recortar en silencio', (
   assert.match(error({ limite: '10' }), /limite/)
 })
 
+test('un cuerpo que no es objeto se RECHAZA; ausente sí es «dame el defecto»', () => {
+  assert.match(error(['query']), /objeto JSON/)
+  assert.match(error('query'), /objeto JSON/)
+  assert.match(error(42), /objeto JSON/)
+  // Ausente = defecto explícito (el endpoint manda `null` cuando el cuerpo viene vacío).
+  assert.equal(ok(null).hasta, '2026-09-17')
+  assert.equal(ok(undefined).dimensiones.length, 1)
+})
+
 test('consultarLibre: manda el rango, las dimensiones y el límite pedidos a la propiedad escapada', async () => {
   const { fetch, llamadas } = fetchFalso(() => ({ status: 200, body: { rows: [] } }))
   await consultarLibre('tok', ok({ propiedad: 'sc-domain:housesevillana.es', dimensiones: ['query', 'device'], limite: 7 }), fetch)

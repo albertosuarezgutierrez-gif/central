@@ -78,7 +78,18 @@ export async function POST(req: NextRequest) {
   if (!isRoutineAuthorized(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
 
   const hoy = new Date()
-  const body = await req.json().catch(() => null)
+  // Cuerpo VACÍO = «dame el defecto» (28 días por consulta). Cuerpo con bytes que no son JSON =
+  // 400: tragárselo y responder el defecto le haría creer al caller que está viendo el rango que
+  // pidió. Por eso no vale `req.json().catch(() => null)`, que confunde los dos casos.
+  const crudo = await req.text()
+  let body: unknown = null
+  if (crudo.trim()) {
+    try {
+      body = JSON.parse(crudo)
+    } catch {
+      return NextResponse.json({ ok: false, estado: 'error', detalle: 'el cuerpo no es JSON válido' }, { status: 400 })
+    }
+  }
   const parseo = parsearConsulta(body, hoy)
   // 400 antes de pedir el token: un cuerpo inválido no gasta un round-trip a Google.
   if (!parseo.ok) return NextResponse.json({ ok: false, estado: 'error', detalle: parseo.error }, { status: 400 })

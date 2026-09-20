@@ -78,6 +78,12 @@ export type Parseo = { ok: true; consulta: Consulta } | { ok: false; error: stri
  * `query` devolvería 200 con datos que no son los que se han pedido.
  */
 export function parsearConsulta(body: unknown, hoy: Date): Parseo {
+  // Un cuerpo que no es un objeto (una lista, un número, una cadena) NO se degrada a los valores
+  // por defecto: devolvería 200 con los últimos 28 días y el caller creería estar viendo lo que
+  // pidió. Ausente (`null`/`undefined`) sí significa «dame el defecto», y eso se dice aquí.
+  if (body !== undefined && body !== null && (typeof body !== 'object' || Array.isArray(body))) {
+    return { ok: false, error: 'el cuerpo debe ser un objeto JSON' }
+  }
   const b = (body ?? {}) as Record<string, unknown>
 
   const propiedad = typeof b.propiedad === 'string' && b.propiedad.trim() ? b.propiedad.trim() : PROPIEDAD_GSC
