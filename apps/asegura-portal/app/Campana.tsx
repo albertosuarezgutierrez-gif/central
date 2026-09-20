@@ -190,7 +190,18 @@ function Contenido({
 }
 
 function nombreFuente(f: Avisos['fuentesIlegibles'][number]): string {
-  return f === 'autorizaciones' ? 'las autorizaciones' : 'los vencimientos'
+  switch (f) {
+    case 'autorizaciones':
+      return 'las autorizaciones'
+    case 'obligaciones':
+      return 'los vencimientos'
+    case 'peticiones':
+      return 'las peticiones de acceso'
+    case 'datos':
+      return 'tus datos de contacto'
+    case 'carnets':
+      return 'tu carné de conducir'
+  }
 }
 
 // En línea, no de una librería: es un icono, y el portal lo abre gente desde el
