@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-20T08:43:11Z",
+  "generadoEn": "2026-09-20T09:44:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 64
+        "evidencias": 65
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 78
+        "evidencias": 77
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 56
+        "evidencias": 57
       },
       "rrhh": {
         "estado": "no",
@@ -2306,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 21
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 66
+        "evidencias": 65
       },
       "asegura-web": {
         "estado": "usado",
@@ -4016,6 +4016,7 @@
       "/api/operador/comisiones",
       "/api/operador/companias",
       "/api/operador/companias/contacto/[id]",
+      "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
@@ -4925,6 +4926,7 @@
       "/api/correduria/leads-web",
       "/api/correduria/partes",
       "/api/correduria/poliza",
+      "/api/correduria/radar-recibos",
       "/api/correduria/recaptacion",
       "/api/correduria/recaptacion/email",
       "/api/correduria/recaptacion/whatsapp",
@@ -6413,7 +6415,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1382,
+    "apis": 1384,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
