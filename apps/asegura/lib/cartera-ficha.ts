@@ -28,6 +28,7 @@ import {
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
+import { Prisma } from './generated/asegura-client'
 import { DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { RAMOS_DESCRITOS_POR_COBERTURAS } from './cartera'
@@ -131,6 +132,19 @@ function fechaIso(d: Date | null | undefined): string | null {
  * base, así que esta búsqueda no depende del índice ciego — que es justo lo que
  * la hace fiable: si fallara la clave de lookup, buscar por DNI devolvería
  * «no existe» sobre un cliente que sí está (ver `apps/asegura/CLAUDE.md`).
+ *
+ * 🚨 SIN ACENTOS (20/09/2026): esta era la SEGUNDA copia de la búsqueda por
+ * nombre — la de `porNombre()` en `cartera-busqueda.ts` ya se corrigió el
+ * 13/09/2026 (dos veces el mismo día, ver su comentario) para ignorar tildes
+ * con `extensions.unaccent`, pero esta función («Añadir relación» de la ficha
+ * de plataforma) seguía con el `contains` de Prisma —un ILIKE normal,
+ * insensible a mayúsculas y NO a acentos— y nadie la tocó. Caso real
+ * (20/09/2026): Alberto buscó «Alberto suarez» para relacionar a su madre y no
+ * apareció su propia ficha («Alberto Suárez Gutiérrez»), solo un homónimo sin
+ * tilde («Alberto Suarez Marques»). Mismo arreglo que `porNombre`: primer
+ * intento con `extensions.unaccent()` cualificado (la extensión vive en el
+ * schema `extensions` y esta conexión fija `search_path=seguros`), con
+ * reintento sin `unaccent` si la extensión no está disponible en el origen.
  */
 export async function buscarClientes(
   correduriaId: string,
@@ -142,38 +156,51 @@ export async function buscarClientes(
   const db = prismaAsegura()
 
   const palabras = q.split(/\s+/).slice(0, 4)
-  const filas = await db.cliente.findMany({
-    where: {
-      correduriaId,
-      mergedIntoClienteId: null,
-      // Las fichas DESCARTADAS no salen en ninguna búsqueda: descartar es
-      // justamente quitarlas de donde se mira (`lib/cartera-edicion.ts`).
-      activo: true,
-      // Cada palabra tiene que aparecer en el nombre O en los apellidos: así
-      // «jose suarez» encuentra a José Suárez sin depender del orden.
-      AND: palabras.map((p) => ({
-        OR: [
-          { nombre: { contains: p, mode: 'insensitive' as const } },
-          { apellidos: { contains: p, mode: 'insensitive' as const } },
-        ],
-      })),
-    },
-    select: {
-      id: true,
-      nombre: true,
-      apellidos: true,
-      tipo: true,
-      _count: { select: { polizas: true } },
-    },
-    orderBy: [{ apellidos: 'asc' }, { nombre: 'asc' }],
-    take: limite,
+  const condicionUnaccent = Prisma.join(
+    palabras.map(
+      (p) =>
+        Prisma.sql`(extensions.unaccent(cl.nombre) ilike extensions.unaccent(${'%' + p + '%'}) or extensions.unaccent(cl.apellidos) ilike extensions.unaccent(${'%' + p + '%'}))`,
+    ),
+    ' and ',
+  )
+  const condicionSimple = Prisma.join(
+    palabras.map((p) => Prisma.sql`(cl.nombre ilike ${'%' + p + '%'} or cl.apellidos ilike ${'%' + p + '%'})`),
+    ' and ',
+  )
+
+  const filas = await db.$queryRaw<
+    { id: string; nombre: string; apellidos: string; tipo: string; polizas: bigint }[]
+  >`
+    select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo,
+           (select count(*) from polizas p where p.cliente_id = cl.id and p.merged_into_poliza_id is null)::bigint as polizas
+    from clientes cl
+    where cl.correduria_id = ${correduriaId}::uuid
+      and cl.merged_into_cliente_id is null
+      and cl.activo
+      and ${condicionUnaccent}
+    order by cl.apellidos asc, cl.nombre asc
+    limit ${limite}
+  `.catch(async () => {
+    return db.$queryRaw<
+      { id: string; nombre: string; apellidos: string; tipo: string; polizas: bigint }[]
+    >`
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo,
+             (select count(*) from polizas p where p.cliente_id = cl.id and p.merged_into_poliza_id is null)::bigint as polizas
+      from clientes cl
+      where cl.correduria_id = ${correduriaId}::uuid
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and ${condicionSimple}
+      order by cl.apellidos asc, cl.nombre asc
+      limit ${limite}
+    `
   })
 
   return filas.map((f) => ({
     id: f.id,
     nombre: `${f.nombre} ${f.apellidos}`.trim(),
     tipo: String(f.tipo),
-    polizas: f._count.polizas,
+    polizas: Number(f.polizas),
   }))
 }
 
