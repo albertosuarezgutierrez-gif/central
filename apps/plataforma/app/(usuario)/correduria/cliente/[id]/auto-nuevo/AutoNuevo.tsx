@@ -21,6 +21,8 @@ import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
+import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
+
 import { pedirCatalogo, pedirCotizacionAuto } from './acciones'
 
 function euroODash(n: number | null | undefined): string {
@@ -545,6 +547,12 @@ export default function AutoNuevo({
                   placeholder="Los 5 últimos, o la póliza entera si el cliente la tiene a mano"
                   style={input}
                 />
+                {digitosPolizaSospechosos(polizaActualDigitos) && (
+                  <p style={{ color: 'var(--negative)', fontSize: 12, fontWeight: 600, margin: '4px 0 0' }}>
+                    🚩 Parece relleno (varios ceros seguidos): probablemente la compañía rechace el control de
+                    antecedentes con este número y el precio se quede en estimado.
+                  </p>
+                )}
               </Campo>
               <Campo etiqueta="Años asegurado sin interrupción" falta={aniosAsegurado.trim() === ''}>
                 <input type="number" min={0} value={aniosAsegurado} onChange={(e) => setAniosAsegurado(e.target.value)} style={input} />

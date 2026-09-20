@@ -29,6 +29,9 @@ import {
   type TerceroCartera,
 } from '@/lib/siniestros-asegura'
 import Documentos from './Documentos'
+import type { Compania } from '@/lib/companias-asegura'
+import { companiaDeSiniestro, contactoSiniestroDe, tieneAlgoQueEnsenar } from '@/lib/compania-contacto-siniestro'
+import { useCompanias } from './useCompanias'
 
 /**
  * 🚨 Siniestros DESDE la ficha (cliente o póliza): ver, abrir, anotar el
@@ -74,6 +77,13 @@ export default function Siniestros({
   const [lista, setLista] = useState<SiniestroCartera[] | null>(inicial)
   const [formAbierto, setFormAbierto] = useState(false)
   const [mensaje, setMensaje] = useState<Mensaje | null>(null)
+  // Directorio de compañías (20/09/2026), para poder enseñar el contacto de
+  // siniestros SIN salir de esta pantalla. Mismo hook que `Companias.tsx`
+  // (`useCompanias`, 20/09/2026) — antes cada pantalla repetía su propio
+  // fetch. `null` = no consultado todavía (o no se pudo); nunca bloquea nada
+  // de lo que ya funcionaba sin él.
+  const estadoCompanias = useCompanias()
+  const companias: Compania[] | null = estadoCompanias.fase === 'hecho' && estadoCompanias.r.estado === 'ok' ? estadoCompanias.r.companias : null
 
   // Tras `router.refresh()` el server component manda la lista nueva: se adopta.
   useEffect(() => { setLista(inicial) }, [inicial])
@@ -83,7 +93,8 @@ export default function Siniestros({
   // del siniestro (`camposDeRamoSiniestro`) — NO es el mismo `tipo` que trae el
   // siniestro (ese es la CAUSA: «colisión», «daños por agua», o el código EIAC).
   const ramoPorPoliza: Record<string, string> = {}
-  for (const p of polizas) ramoPorPoliza[p.id] = p.tipo
+  const aseguradoraPorPoliza: Record<string, string> = {}
+  for (const p of polizas) { ramoPorPoliza[p.id] = p.tipo; aseguradoraPorPoliza[p.id] = p.aseguradora }
   const nAbiertos = lista === null ? null : lista.filter((s) => s.abierto).length
   const resumen =
     lista === null ? 'no se ha podido leer'
@@ -204,6 +215,11 @@ export default function Siniestros({
               onAnadirTercero={anadirTercero}
               onQuitarTercero={quitarTercero}
               ramoPoliza={ramoPorPoliza[s.polizaId] ?? null}
+              compania={
+                companias && aseguradoraPorPoliza[s.polizaId]
+                  ? companiaDeSiniestro(aseguradoraPorPoliza[s.polizaId]!, companias)
+                  : null
+              }
             />
           ))}
         </ul>
@@ -457,13 +473,16 @@ function FormTercero({ siniestroId, onAnadir, onHecho }: {
 
 // ─── Una fila (plegada) y su detalle (montaje perezoso) ─────────────────────
 
-function Fila({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza }: {
+function Fila({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza, compania }: {
   s: SiniestroCartera
   documentos: DocumentoResumen[] | null
   onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
   onAnadirTercero: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
   onQuitarTercero: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
   ramoPoliza: string | null
+  /** La compañía del directorio que casa con la aseguradora de la póliza, o `null`
+   *  si no se pudo consultar o el nombre no casa con una única compañía. */
+  compania: Compania | null
 }) {
   const [abierta, setAbierta] = useState(false)
   const propio = s.origen === 'gestionado_correduria'
@@ -527,21 +546,24 @@ function Fila({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoP
           onAnadirTercero={onAnadirTercero}
           onQuitarTercero={onQuitarTercero}
           ramoPoliza={ramoPoliza}
+          compania={compania}
         />
       )}
     </li>
   )
 }
 
-function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza }: {
+function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza, compania }: {
   s: SiniestroCartera
   documentos: DocumentoResumen[] | null
   onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
   onAnadirTercero: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
   onQuitarTercero: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
   ramoPoliza: string | null
+  compania: Compania | null
 }) {
   const propio = s.origen === 'gestionado_correduria'
+  const contactoCia = compania ? contactoSiniestroDe(compania) : null
   return (
     <div style={{ borderTop: '1px solid var(--border)', padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14, fontSize: 13 }}>
       <div>
@@ -552,6 +574,28 @@ function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ra
           <span style={muted}>sin descripción</span>
         )}
       </div>
+
+      {contactoCia && tieneAlgoQueEnsenar(contactoCia) && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+          <div style={etiqueta}>📞 Contacto de siniestros — {compania!.nombreComun}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginTop: 4 }}>
+            {contactoCia.nombre && <Dato label="Persona" valor={contactoCia.nombre} />}
+            {contactoCia.telefono && (
+              <div>
+                <div style={etiqueta}>Teléfono</div>
+                <a href={`tel:${contactoCia.telefono.replace(/\s/g, '')}`}>📞 {contactoCia.telefono}</a>
+              </div>
+            )}
+            {contactoCia.whatsapp && (
+              <div>
+                <div style={etiqueta}>WhatsApp</div>
+                <a href={`https://wa.me/${contactoCia.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">💬 {contactoCia.whatsapp}</a>
+              </div>
+            )}
+            {contactoCia.horario && <Dato label="Horario" valor={contactoCia.horario} />}
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
         <Dato label="Lugar" valor={s.lugar} />

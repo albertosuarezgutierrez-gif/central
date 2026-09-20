@@ -93,6 +93,15 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
 ## Ciclo semanal (rutina programada)
 1. **Cartera:** lee el resumen en vivo (vía plataforma `/api/correduria/cartera` o el
    endpoint operador). Compara con el último informe de la bitácora: altas, bajas, delta.
+   ⚠️ **Sin `ASEGURA_OPERADOR_SECRET` en el entorno de la sesión** (comprobado el
+   20/09/2026: solo estaba `ALERTA_TOKEN`) el puerto `carteraAsegura()`/`vencimientosAsegura()`
+   de `apps/plataforma/lib/cartera-asegura.ts` es inalcanzable y `/api/correduria/cartera`
+   exige sesión de plataforma (`getSession()`, cookie), que este agente tampoco tiene. El
+   fallback es SQL directo contra `seguros.polizas` con el criterio de `esCarteraViva`/
+   `esCarteraEnVigor` (`packages/module-seguros/src/cartera-viva.ts` + `vigencia.ts`) por
+   `mcp__Supabase__execute_sql` — **replica la MISMA regla, no una propia**. Si esto se va
+   a ejecutar sin supervisión (fuera de una sesión con Supabase MCP), `ASEGURA_OPERADOR_SECRET`
+   debe añadirse al entorno de la rutina (pendiente, es tarea de Alberto en Vercel/env, no de código).
 2. **Vencimientos:** pólizas vigentes que vencen en 30/60 días (cuando el dato esté
    expuesto; si aún no, dilo como «pendiente», no como 0). Son LA oportunidad comercial
    de una correduría: renovación = ingreso recurrente. **La fecha que importa no es la del
@@ -100,6 +109,11 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
    LCS): decir «vence el 15 de marzo» hace creer que hay hasta el 15, cuando el plazo se
    pasó el 13 de febrero. La aritmética ya está en `@central/module-seguros-portal`
    (`fechaAccionable`, `entraEnVentana`) y **no se reimplementa**.
+   ⚠️ **Higiene de datos, no vencimiento real:** pólizas en estado vigente
+   (`POLIZA_ESTADOS_VIGENTES`) cuya `fecha_vencimiento` ya pasó son CIMA sin actualizar,
+   no renovaciones — cuéntalas aparte («N pólizas vigentes desfasadas») y compara con la
+   cifra de la bitácora anterior; si sube, es una alerta de ingesta, no una oportunidad
+   comercial. No las mezcles en el recuento de accionables.
    **Di SIEMPRE QUÉ asegura cada una**
    (coche y matrícula, localidad del piso, modalidades de la RC): sin eso, tres pólizas de
    auto del mismo cliente son la misma línea y el aviso no sirve para llamar. El dato ya

@@ -401,6 +401,45 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
   return { status: res.status, json: await res.json().catch(() => null) }
 }
 
+async function pedirPost(path: string, body: Record<string, unknown>): Promise<{ status: number; json: unknown } | null> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return null
+  const res = await fetch(`${urlAsegura()}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+    signal: AbortSignal.timeout(15_000),
+  })
+  return { status: res.status, json: await res.json().catch(() => null) }
+}
+
+export type DescarteRetencion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo?: string }
+
+/**
+ * `POST /api/operador/retencion/descartar` — quita una póliza de "Hay que
+ * llamar" `dias` días (el puerto acota 1-30, por defecto 10). **NO la marca
+ * como resuelta**: si al caducar el plazo el recibo sigue sin cobrar, vuelve a
+ * salir sola. El `actor` lo pone el servidor (`session.email`), nunca la
+ * petición: es quien firma la anotación en el historial de la ficha.
+ */
+export async function descartarRetencionAsegura(
+  polizaId: string,
+  actor: string,
+  motivo: string | null,
+  dias?: number,
+): Promise<DescarteRetencion> {
+  try {
+    const r = await pedirPost('/api/operador/retencion/descartar', { polizaId, actor, motivo, dias })
+    if (r === null) return { estado: 'sin_configurar' }
+    if (r.status === 200) return { estado: 'ok' }
+    const j = (r.json ?? {}) as Record<string, unknown>
+    return { estado: 'error', motivo: typeof j.motivo === 'string' ? j.motivo : `HTTP ${r.status}` }
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
 export async function buscarAsegura(q: string): Promise<Busqueda> {
   try {
     const r = await pedir(`/api/operador/buscar?q=${encodeURIComponent(q)}`)

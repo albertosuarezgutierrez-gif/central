@@ -301,6 +301,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {
+    id: 'correo.contacto-sugerido', categoria: 'correo',
+    titulo: 'Posible contacto nuevo de aseguradora',
+    que: 'Una persona (no un buzón genérico) de una aseguradora escribe por primera vez: sugerencia para añadirla al directorio, nunca un alta automática.',
+    cuando: 'Al llegar (revisión cada 10 min)',
+  },
+  {
     id: 'correo.digest', categoria: 'correo',
     titulo: 'Resumen diario del correo',
     que: 'Recuento por categoría de las últimas 24 h y lo que conviene que mires.',

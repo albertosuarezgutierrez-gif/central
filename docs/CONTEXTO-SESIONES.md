@@ -12,11 +12,59 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Correo de aseguradora → historial del cliente (PR #3148) + 3 ideas más de Alberto
+("añade todo"): contacto de siniestros visible en la ficha, radar de compañías sin canal digital de
+avisos (agrupado por marca) y sugerencia de alta de contacto nuevo desde el triaje (Telegram, nunca
+alta automática). Match de pólizas SIEMPRE exacto, nunca por parecido; multi-cliente resuelto entero
+(no solo el primero). Pendiente de decisión de Alberto: idea 3 ("cierre de círculo con el portal" —
+avisar al portal cuando un recibo-devuelto se resuelve a un cliente) necesita ampliar el
+`@@unique([identidadId, polizaId])` de `PortalObligacion` o una tabla de avisos aparte; no se ha
+tocado el schema sin su OK.
+
+**(20/09/2026)** Corrida la 1ª pasada del agente `agente-correduria` (skill ya existía, no se creó
+otro): cartera 157/100 vivas, 110 pólizas/72 clientes EN VIGOR, 7 vencimientos accionables
+(−30d), ingesta CIMA viva. Informe por Telegram, sin cambio de código. Sin baseline previo en
+`AGENTES-BITACORA.md` para delta de altas/bajas — próxima pasada ya tendrá con qué comparar.
+
+**(20/09/2026)** Cola de retención de `/correduria`: botón "✅ Ya gestionada" que aparta una póliza
+de "Hay que llamar" 10 días (tabla `seguros.retencion_descartes` + puerto de asegura). NO la marca
+como resuelta — si el recibo sigue sin cobrar al caducar el plazo, reaparece sola: la cola es
+derivada en vivo de recibos reales y un descarte permanente convertiría "ya he llamado" en "ya no
+circula sin seguro" sin comprobarlo (riesgo art. 15 LCS). Alberto confirmó ese diseño (reaparece si
+sigue el problema) y que por ahora es solo para retención, no para el resto de "Hoy". PR #3160 mergeada.
+
+**(20/09/2026)** 🚨 Fix producción: pinchar en CUALQUIER cliente de `/correduria` daba error desde
+el commit 5e67cb5 (#3126) — la ficha selecciona `siniestros.datos_ramo` y la relación
+`siniestro_intervinientes`, y la migración `2026-09-20_siniestro_ramo_intervinientes.sql` se
+escribió pero **nunca se aplicó** (el propio commit lo admitía: "pendiente de aplicar en la BD
+real"). Aplicada ahora vía Supabase MCP y verificada (columna + tabla + grant a `prisma_seguros`).
+Lección: un PR que dice "migración escrita, pendiente de aplicar" no puede darse por cerrado sin
+aplicarla — quedó rompiendo la pantalla que Alberto usa a diario durante horas.
+
+**(20/09/2026)** Quitado el bloque "Coberturas que aparecen en más de una póliza" de `/boveda` en
+`apps/asegura-portal` (Alberto: quitarlo para todos los clientes). Aunque el aviso era deliberado
+(RDL 3/2020, "informa no juzga"), se eliminó por completo: componente `Solapamientos.tsx`, lógica
+pura `solapamientos.ts`/`.test.ts` de `@central/module-seguros-portal` (con sus exports), el cálculo
+en `page.tsx` y el CSS asociado. Typecheck limpio, 540/540 tests del módulo. PR #3151, mergeado.
+
+**(20/09/2026)** Añadida al PR #3142 (mismo, sin nuevo): telemetría de `faltan_producto` por
+COMPAÑÍA — cada 422 del ReRate deja fila en `seguros.operational_events` (genérica, sin migración
+nueva) y `GET /api/operador/codeoscopic/faltan-producto` agrega por compañía. Escritura best-effort,
+nunca bloquea el 422. Cepo `test/regression-faltan-producto-telemetria.test.ts`: el primer intento
+pasó en VERDE con la línea comentada (mismo fallo de "el comentario sigue conteniendo la subcadena"
+de `regression-auto-nuevo-historial.test.ts`) — corregido filtrando líneas `//` antes de la aserción.
+
+**(20/09/2026)** Aviso EN VIVO de dígitos de póliza "de relleno" (Mapfre y otras rellenan con ceros
+para bloquear el control de antecedentes de un competidor): `digitosPolizaSospechosos()` (puro, ≥3
+ceros seguidos) + mensaje inline mientras se teclea, en `auto-nuevo` y `moto-nuevo` (antes solo era
+texto de ayuda estático). Cepo `test/regression-digitos-poliza-sospechosos.test.ts` (verificado en
+rojo/verde). tsc 0, `pnpm test` monorepo 2903+53 0 fallos. PR #3142 (draft).
+
 **(20/09/2026)** Mismo fallo de "seguro en vigor" que auto (PR #3129) también en `moto-nuevo`:
 `precalificarMotoNueva()` cotiza de calle a leads sin preguntar si tienen póliza vigente en otra
 compañía. Añadido el mismo bloque opt-in (compañía/póliza/años) a `MotoNuevo.tsx`, cero cambios en
 asegura (mecanismo genérico de `correcciones`). Cepo `test/regression-moto-nuevo-historial.test.ts`
-(verificado en rojo y restaurado). tsc 0, `pnpm test` monorepo completo 0 fallos. PR #3137 (draft).
+(verificado en rojo y restaurado). tsc 0, `pnpm test` monorepo completo 0 fallos. PR #3137 (mergeado).
 
 **(20/09/2026)** Siniestros: campos por ramo + terceros/testigos (PR #3126). `datosRamo` (JSONB, patrón de
 `campos-ramo.ts` de pólizas) sobre `Siniestro` + catálogo puro `siniestro-ramo.ts` (auto/moto/hogar/RC/
@@ -83,6 +131,12 @@ en `asegura-portal` pero no aquí). `datosRamo` de `portal_poliza_declarada` no 
 asegura. Fix: `describirBien()` de `@central/module-seguros-portal` (mismo helper del portal) ahora
 computa el bien también aquí; la tabla lo pinta como línea principal y el nº de póliza baja a
 referencia secundaria.
+
+**(20/09/2026)** Auditoría ligera (II), ~3h tras la profunda. Rango: 2 commits (#3136 auto-informe
+mercado-booking, #3126 siniestros), ambos ya con su propio commit de memoria — sin reconciliación
+pendiente. Heartbeat/correduría/pricing re-comprobados: sin cambios frente a la profunda de la
+mañana (mismos rojos crónicos `ses_transporte`/`seo_correduria`; CIMA y pricing sanos). No se pudo
+listar sesiones del rango (MCP no adjunto). Sin hallazgo nuevo: sin PR de carril 2, sin Telegram.
 
 **(20/09/2026)** Auditoría PROFUNDA semanal. Código/infra sanos (2.947 tests, 13 typechecks, lint,
 qa, build — todo verde). Heartbeat y correduría sin novedad (rojos ya conocidos: `ses_transporte`,
