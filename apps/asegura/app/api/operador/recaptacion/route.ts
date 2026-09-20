@@ -8,8 +8,9 @@ import { colaRecaptacion } from '@/lib/cartera-recaptacion'
 export const dynamic = 'force-dynamic'
 
 // GET /api/operador/recaptacion — la cola de recaptación: leads del volcado
-// sin vencimiento, con contacto disponible, que no son ya cliente vivo por
-// CIMA. Read-only. Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md.
+// histórico con contacto disponible que no son ya cliente vivo por CIMA
+// (`origen`: sin vencimiento o vencimiento antiguo, Fase 2 20/09/2026).
+// Read-only. Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md.
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {

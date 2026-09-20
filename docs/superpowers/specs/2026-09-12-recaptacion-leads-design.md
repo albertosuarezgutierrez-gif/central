@@ -110,7 +110,52 @@ demás).
 
 ## Fuera de alcance de esta primera vuelta
 
-- Leads CON fecha de vencimiento conocida (fase posterior, por vencimiento).
-- Envío automático o por lotes: siempre un lead, un clic, una vez.
+- ~~Leads CON fecha de vencimiento conocida (fase posterior, por vencimiento).~~ **HECHO 20/09/2026,
+  ver Fase 2 abajo.**
+- Envío automático o por lotes: siempre un lead, un clic, una vez. **(El lote automático por email SÍ
+  se construyó después, `enviarLoteEmail`/cron `recaptacion-email-lote` — ver `apps/asegura/CLAUDE.md`.)**
 - WhatsApp Business API / lectura de mensajes de WhatsApp (no hay WABA).
 - Historial completo de eventos de email (solo estado simple).
+
+## Fase 2 — leads CON vencimiento antiguo (20/09/2026)
+
+Alberto: "más importante es ir captando nuevos clientes con leads que tenemos, muchos". Medido antes
+de tocar código: **27.530 de los 28.697 leads del volcado (96%) sí tienen `fecha_vencimiento`**, pero
+son de hace 8-12 años (el 89%, `estado='vencida'`) — el AÑO no sirve para "vence pronto". Filtrando por
+canal de contacto disponible y sin cartera viva, el pool CONTACTABLE de verdad son **1.399 clientes**
+(subiendo desde los 424 de la Fase 1 — un 5% del volcado tocado hasta ahora).
+
+- `colaRecaptacion()` deja de exigir `estado='activa'` cuando SÍ hay `fecha_vencimiento`: entra
+  cualquier estado del volcado con fecha, no solo `activa`.
+- Cada lead lleva `origen` (`sin_vencimiento` | `vencimiento_antiguo`) y, si aplica,
+  `mesVencimientoAntiguo` (1-12) — el MES es la única pista real de cuándo solía renovar cada año.
+- La pantalla lo pinta como columna "Cuándo" (`vencía en <mes>` / `sin vencimiento`) y ya no puede
+  listar todo de golpe (1.399 > el límite de "sin montar miles de filas"): paginación 50 + "Ver más".
+- **No implementado en esta vuelta:** repartir el envío automático (lote) PRIORIZANDO el mes actual
+  (hoy `candidatosLoteEmail` sigue en orden alfabético, agnóstico del origen) — con ~1.000 candidatos
+  solo-email y 25/día, el propio volumen ya reparte el trabajo en varios meses sin necesidad de esa
+  lógica adicional. Revisar si hace falta cuando se vea el ritmo real de contactados/semana.
+
+## Fase 2b — ventana de contacto por aniversario (20/09/2026, mismo día)
+
+Alberto, aclarando la Fase 2: "los que tienen vencimiento aunque hace años, coger mes y día para ir
+mandando WhatsApp mes y medio antes; el resto podemos ir captando ya". Escribir a alguien sobre un
+seguro que renovaba en enero cuando estamos en julio no tiene motivo real detrás — el mes/día solo es
+una pista ACCIONABLE cerca de la fecha.
+
+- `apps/asegura/lib/recaptacion-ventana.ts` (puro, sin BD): `proximoAniversario(mes, dia, hoy)` calcula
+  la próxima fecha real (rueda al año siguiente si ya pasó este año; un 29 de febrero en año no
+  bisiesto se ajusta al 28) y `dentroVentanaAntiguo(...)` decide si hoy cae dentro de los
+  **45 días** previos (`VENTANA_DIAS_ANTIGUO`).
+- `colaRecaptacion()` filtra los `vencimiento_antiguo` por esa ventana ANTES de devolver la cola —
+  `sin_vencimiento` nunca pasa por este filtro (no tiene fecha a la que anclar nada, sigue siempre
+  contactable, que es justo el "el resto ya" de Alberto).
+- Un lead fuera de ventana NO desaparece de la BD ni se pierde: se cuenta aparte
+  (`contadores.enEsperaVentana`) para que la pantalla pueda decir "hay N más esperando su fecha" en
+  vez de dar la sensación de que la cartera se ha quedado corta.
+- **El día también viaja** (`diaVencimientoAntiguo`), aunque la pantalla solo pinte el mes — hace
+  falta para calcular la ventana con precisión (no basta "algún día de ese mes").
+- **Pedir email para dar acceso a la intranet** (mismo mensaje de Alberto): el WhatsApp sugerido
+  (`Recaptacion.tsx`) cambia su remate cuando el lead NO tiene email en ficha — en vez del texto
+  genérico del portal, pide explícitamente que respondan con su correo para darlos de alta. Con email
+  ya en ficha no se pide nada (ya se le puede invitar desde su ficha, botón "Invitar por correo").

@@ -1,8 +1,18 @@
 // apps/asegura/lib/cartera-recaptacion.ts
 //
-// La cola de recaptación: leads del volcado sin fecha de vencimiento, con
-// contacto, que NO son ya cliente vivo por CIMA. Ver
+// La cola de recaptación: leads del volcado histórico con contacto que NO son
+// ya cliente vivo por CIMA. Ver
 // docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md.
+//
+// 🎯 DOS orígenes, medidos el 20/09/2026 antes de ampliar el alcance:
+//   · `sin_vencimiento` (Fase 1, 12/09/2026) — activa sin fecha, 1.167 leads.
+//   · `vencimiento_antiguo` (Fase 2, 20/09/2026) — venció hace años (el 89% en
+//     estado `vencida`, la mayoría 2014-2018): el AÑO no sirve para "vence
+//     pronto", pero el MES/DÍA es la única pista de cuándo solía renovar y
+//     permite repartir el contacto a lo largo del año. Sube el total
+//     recaptable de 424 a 1.399 clientes (medido contra la BD real). Alberto,
+//     20/09/2026: "más importante es ir captando nuevos clientes con leads
+//     que tenemos, muchos" — la Fase 1 sola tocaba menos del 5% del volcado.
 //
 // No hay tabla de cola: se calcula en cada GET, como `polizasSinRecibo()` de
 // `cartera-impagados.ts`. `recaptacion_envios` es solo el HISTORIAL que decide
@@ -22,6 +32,7 @@ import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { enviarEmailResend } from './recaptacion-email'
 import { urlBaja, urlPublicaAsegura } from './recaptacion-baja'
 import { candidatosLoteEmail, LIMITE_LOTE_POR_DEFECTO } from './recaptacion-lote'
+import { dentroVentanaAntiguo } from './recaptacion-ventana'
 
 export { candidatosLoteEmail } from './recaptacion-lote'
 
@@ -52,6 +63,17 @@ function descifrar(v: string | null | undefined): string | null {
   }
 }
 
+/**
+ * `sin_vencimiento` = Fase 1 (12/09/2026): activa y sin fecha, no hay a qué
+ * anclar el contacto. `vencimiento_antiguo` = Fase 2 (20/09/2026): venció hace
+ * años (la mayoría 2014-2018, cualquier estado del volcado) — el AÑO no sirve,
+ * pero el MES/DÍA es la única pista real de cuándo solía renovar, y permite
+ * repartir el contacto a lo largo del año en vez de escribirles a todos de
+ * golpe. Ver `docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md`
+ * ("Fuera de alcance de esta primera vuelta").
+ */
+export type OrigenLeadRecaptacion = 'sin_vencimiento' | 'vencimiento_antiguo'
+
 export type LeadRecaptacion = {
   clienteId: string
   polizaId: string
@@ -67,6 +89,11 @@ export type LeadRecaptacion = {
   /** `true` = ya se contactó hace menos de 14 días; la pantalla ofrece "ver igualmente" para forzar. */
   enCooldown: boolean
   ultimoContactoEn: string | null
+  origen: OrigenLeadRecaptacion
+  /** Mes (1-12) del vencimiento antiguo. `null` cuando `origen==='sin_vencimiento'`. */
+  mesVencimientoAntiguo: number | null
+  /** Día (1-31) del vencimiento antiguo. `null` cuando `origen==='sin_vencimiento'`. */
+  diaVencimientoAntiguo: number | null
 }
 
 export type ContadoresRecaptacion = {
@@ -78,6 +105,14 @@ export type ContadoresRecaptacion = {
    *  para juzgar si el asunto/mensaje funciona. `null` = no se pudo calcular. */
   emailEnviadosTotal: number | null
   emailAbiertosTotal: number | null
+  /**
+   * Leads `vencimiento_antiguo` que existen pero cuya ventana de contacto
+   * (45 días antes de su aniversario) todavía no se ha abierto. NO están
+   * perdidos ni descartados: `totalCandidatos` los excluye a propósito
+   * (mandarles ahora no tendría motivo real detrás) y este número es lo que
+   * evita que esa exclusión se lea como "solo hay esto en toda la cartera".
+   */
+  enEsperaVentana: number
 }
 
 export type ColaRecaptacion = { leads: LeadRecaptacion[]; contadores: ContadoresRecaptacion }
@@ -96,12 +131,18 @@ type FilaCruda = {
   /** `null` si no hay email O si el cliente dio de baja el correo (`email_opt_out_at`). */
   email: string | null
   ultimoEnvioAt: Date | null
+  origen: string
+  mesVencimientoAntiguo: number | null
+  diaVencimientoAntiguo: number | null
 }
 
 export async function colaRecaptacion(correduriaId: string): Promise<ColaRecaptacion> {
   const vacia: ColaRecaptacion = {
     leads: [],
-    contadores: { totalCandidatos: 0, contactadosSemana: 0, conAperturaORespuestaSemana: 0, emailEnviadosTotal: null, emailAbiertosTotal: null },
+    contadores: {
+      totalCandidatos: 0, contactadosSemana: 0, conAperturaORespuestaSemana: 0,
+      emailEnviadosTotal: null, emailAbiertosTotal: null, enEsperaVentana: 0,
+    },
   }
   if (!aseguraConfigurada()) return vacia
   const db = prismaAsegura()
@@ -124,7 +165,14 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
       (
         select max(r.created_at) from recaptacion_envios r
         where r.cliente_id = c.id
-      ) as "ultimoEnvioAt"
+      ) as "ultimoEnvioAt",
+      -- Fase 2 (20/09/2026): un lead SIN vencimiento (Fase 1, activa) es
+      -- distinto de uno CON vencimiento antiguo (venció hace años, cualquier
+      -- estado) — la pantalla los distingue y usa el mes del segundo para
+      -- repartir el contacto a lo largo del año.
+      case when p.fecha_vencimiento is null then 'sin_vencimiento' else 'vencimiento_antiguo' end as origen,
+      extract(month from p.fecha_vencimiento)::int as "mesVencimientoAntiguo",
+      extract(day from p.fecha_vencimiento)::int as "diaVencimientoAntiguo"
     from polizas p
     join clientes c on c.id = p.cliente_id
     where p.correduria_id = ${correduriaId}::uuid
@@ -132,8 +180,13 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
       and c.merged_into_cliente_id is null
       and c.activo
       and ${Prisma.raw(sqlVolcadoHistorico('p'))}
-      and p.estado = 'activa'
-      and p.fecha_vencimiento is null
+      -- Fase 1: activa y sin fecha (nada a lo que anclar el contacto).
+      -- Fase 2: CUALQUIER estado con fecha de vencimiento — el 89% de estos
+      -- están en estado vencida, que es justo lo que significa "dejó de ser cliente".
+      and (
+        (p.estado = 'activa' and p.fecha_vencimiento is null)
+        or p.fecha_vencimiento is not null
+      )
       -- Al menos un canal DISPONIBLE tras aplicar el opt-out (no basta con
       -- tener el dato guardado: si el único canal que tiene está dado de baja,
       -- este lead no entra en la cola).
@@ -153,7 +206,10 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
           and ${Prisma.raw(sqlCarteraViva('v'))}
       )
     order by c.apellidos, c.nombre
-    limit 2000
+    -- Medido el 20/09/2026: la Fase 2 sube el total a ~2.171 filas (1.399
+    -- clientes) — el tope de Fase 1 (2000) se habría quedado corto y habría
+    -- truncado en silencio parte de la cola nueva.
+    limit 4000
   `)
 
   const hoy = new Date()
@@ -173,11 +229,33 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
       prima: f.prima === null || f.prima === undefined ? null : Number(f.prima),
       enCooldown: enCooldown(ultimoEnvio, hoy, COOLDOWN_DIAS),
       ultimoContactoEn: f.ultimoEnvioAt ? f.ultimoEnvioAt.toISOString().slice(0, 10) : null,
+      // Un valor que el SQL no puede dar (nunca debería pasar: el `case`
+      // solo devuelve estas dos cadenas) cae al lado conservador (Fase 1),
+      // no se propaga un string arbitrario a la pantalla.
+      origen: f.origen === 'vencimiento_antiguo' ? 'vencimiento_antiguo' : 'sin_vencimiento',
+      mesVencimientoAntiguo: f.mesVencimientoAntiguo ?? null,
+      diaVencimientoAntiguo: f.diaVencimientoAntiguo ?? null,
     }
   })
 
+  // Fase 2: un `vencimiento_antiguo` solo es candidato dentro de los 45 días
+  // previos a su aniversario — escribirle en cualquier otro momento no tiene
+  // motivo real detrás (ver cabecera del fichero). `sin_vencimiento` no pasa
+  // por este filtro: nunca tuvo fecha a la que anclar una ventana.
+  // 🚨 Si el mes/día no se pudo leer, se trata como CONTACTABLE (el lado que
+  // no esconde trabajo) en vez de exigir un dato que puede faltar.
+  const leadsEnVentana = leads.filter((l) => {
+    if (l.origen !== 'vencimiento_antiguo') return true
+    if (l.mesVencimientoAntiguo === null || l.diaVencimientoAntiguo === null) return true
+    return dentroVentanaAntiguo(l.mesVencimientoAntiguo, l.diaVencimientoAntiguo, hoy)
+  })
+  const enEsperaVentana = leads.length - leadsEnVentana.length
+
   const [semana, historicoEmail] = await Promise.all([contadoresSemana(correduriaId), contadoresEmailHistorico(correduriaId)])
-  return { leads, contadores: { ...semana, ...historicoEmail, totalCandidatos: leads.length } }
+  return {
+    leads: leadsEnVentana,
+    contadores: { ...semana, ...historicoEmail, totalCandidatos: leadsEnVentana.length, enEsperaVentana },
+  }
 }
 
 async function contadoresSemana(correduriaId: string): Promise<{ contactadosSemana: number; conAperturaORespuestaSemana: number }> {

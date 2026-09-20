@@ -5,26 +5,44 @@ import { Target } from 'lucide-react'
 import Bloque from './Bloque'
 import { Badge, btnStyle } from '@/components/ui'
 import { enlaceWhatsappConMensaje } from '@/lib/invitacion-whatsapp'
-import { agruparLeadsPorCliente, textoMotivoCola, type Cola, type EscrituraRecaptacion, type GrupoLeadRecaptacion } from '@/lib/recaptacion-asegura'
+import {
+  agruparLeadsPorCliente, textoMotivoCola,
+  type Cola, type EscrituraRecaptacion, type GrupoLeadRecaptacion, type LeadRecaptacion,
+} from '@/lib/recaptacion-asegura'
 
 /**
- * 🎯 Cola de recaptación: leads del volcado sin fecha de vencimiento, con
- * teléfono o email, que NO son ya cliente vivo por CIMA (esos se trabajan
- * desde su ficha, no aquí). WhatsApp es un enlace manual (sin WABA: solo se
- * registra que Alberto lo abrió, nunca que el cliente lo leyó); el email SÍ
- * lo manda el servidor por Resend, con tracking de apertura/clic.
+ * 🎯 Cola de recaptación: leads del volcado histórico, con teléfono o email,
+ * que NO son ya cliente vivo por CIMA (esos se trabajan desde su ficha, no
+ * aquí). WhatsApp es un enlace manual (sin WABA: solo se registra que Alberto
+ * lo abrió, nunca que el cliente lo leyó); el email SÍ lo manda el servidor
+ * por Resend, con tracking de apertura/clic.
  * Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md.
+ *
+ * 🚨 DOS orígenes desde el 20/09/2026 (Fase 2): "sin vencimiento" (Fase 1,
+ * activa sin fecha) y "vencimiento antiguo" (venció hace años — el AÑO no
+ * sirve, pero el MES es la pista de cuándo solía renovar). Sube el total de
+ * ~1.167 a ~1.399 clientes recaptables — por eso esta pantalla ya NO puede
+ * pintar la lista entera de golpe (regla de rendimiento del CLAUDE.md raíz):
+ * paginación de 50 + "Ver más", igual que `Retencion.tsx`.
  *
  * Mismo patrón que `Duplicadas.tsx`/`Retencion.tsx`: el contador que sube a
  * la sección es SIEMPRE `null` cuando no se ha podido leer la cola, jamás 0
  * — un 0 aquí diría «no queda nadie a quien recaptar».
  */
+const POR_PAGINA = 50
+
+const MESES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+
 export default function Recaptacion({ onContador }: {
   onContador?: (n: number | null) => void
 }) {
   const [cola, setCola] = useState<Cola | { estado: 'cargando' }>({ estado: 'cargando' })
   const [ocultarCooldown, setOcultarCooldown] = useState(true)
   const [soloWhatsapp, setSoloWhatsapp] = useState(false)
+  const [ver, setVer] = useState(POR_PAGINA)
 
   const avisar = useRef(onContador)
   useEffect(() => { avisar.current = onContador }, [onContador])
@@ -77,16 +95,25 @@ export default function Recaptacion({ onContador }: {
   }
 
   const grupos = agruparLeadsPorCliente(cola.leads)
-  const visibles = grupos
+  const filtrados = grupos
     .filter((g) => !ocultarCooldown || !g.enCooldown)
     .filter((g) => !soloWhatsapp || g.telefono !== null)
-  const hayTrabajo = visibles.length > 0
+  const visibles = filtrados.slice(0, ver)
+  const hayTrabajo = filtrados.length > 0
+  const conVencimientoAntiguo = cola.leads.filter((l) => l.origen === 'vencimiento_antiguo').length
+  const enEspera = cola.contadores.enEsperaVentana
 
   return (
     <Bloque
-      titulo={`Recaptación · ${cola.contadores.totalCandidatos} lead(s) sin vencimiento`}
+      titulo={`Recaptación · ${cola.contadores.totalCandidatos} lead(s) recaptables`}
       Icono={Target}
-      sub="Leads del volcado histórico, sin fecha de vencimiento y con contacto, que hoy NO son cliente vivo por CIMA en ningún ramo. Agrupados por cliente: puede haber tenido varios seguros, el contacto es uno solo."
+      sub={
+        conVencimientoAntiguo > 0 || enEspera > 0
+          ? `Leads del volcado histórico con contacto que hoy NO son cliente vivo por CIMA en ningún ramo — ${cola.contadores.totalCandidatos - conVencimientoAntiguo} sin fecha de vencimiento (ya se pueden captar) y ${conVencimientoAntiguo} con vencimiento antiguo dentro de su ventana de 45 días (años atrás; el mes/día es la pista de cuándo solía renovar).`
+            + (enEspera > 0 ? ` Hay ${enEspera} más con vencimiento antiguo esperando a que se acerque su fecha — no han desaparecido, saldrán solos cuando toque.` : '')
+            + ' Agrupados por cliente: puede haber tenido varios seguros, el contacto es uno solo.'
+          : 'Leads del volcado histórico, sin fecha de vencimiento y con contacto, que hoy NO son cliente vivo por CIMA en ningún ramo. Agrupados por cliente: puede haber tenido varios seguros, el contacto es uno solo.'
+      }
       accion={
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
           {cola.contadores.contactadosSemana} contactado(s) esta semana
@@ -102,7 +129,7 @@ export default function Recaptacion({ onContador }: {
           <input
             type="checkbox"
             checked={ocultarCooldown}
-            onChange={(e) => setOcultarCooldown(e.target.checked)}
+            onChange={(e) => { setOcultarCooldown(e.target.checked); setVer(POR_PAGINA) }}
           />
           Ocultar los contactados en los últimos 14 días
         </label>
@@ -110,7 +137,7 @@ export default function Recaptacion({ onContador }: {
           <input
             type="checkbox"
             checked={soloWhatsapp}
-            onChange={(e) => setSoloWhatsapp(e.target.checked)}
+            onChange={(e) => { setSoloWhatsapp(e.target.checked); setVer(POR_PAGINA) }}
           />
           Solo con WhatsApp (el resto, solo mail, se trabaja aparte)
         </label>
@@ -119,29 +146,53 @@ export default function Recaptacion({ onContador }: {
       {!hayTrabajo ? (
         <p style={pMuted}>
           {grupos.length === 0
-            ? 'No hay ningún lead sin vencimiento con contacto pendiente de recaptar.'
+            ? 'No hay ningún lead con contacto pendiente de recaptar.'
             : 'No queda ningún lead con contacto que cumpla los filtros de arriba.'}
         </p>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                <th style={{ padding: '6px 8px' }}>Cliente</th>
-                <th style={{ padding: '6px 8px' }}>Ramo</th>
-                <th style={{ padding: '6px 8px' }}>Antes con</th>
-                <th style={{ padding: '6px 8px' }}>Contacto</th>
-                <th style={{ padding: '6px 8px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibles.map((g) => <FilaGrupo key={g.clienteId} g={g} />)}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '6px 8px' }}>Cliente</th>
+                  <th style={{ padding: '6px 8px' }}>Ramo</th>
+                  <th style={{ padding: '6px 8px' }}>Antes con</th>
+                  <th style={{ padding: '6px 8px' }}>Cuándo</th>
+                  <th style={{ padding: '6px 8px' }}>Contacto</th>
+                  <th style={{ padding: '6px 8px' }}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibles.map((g) => <FilaGrupo key={g.clienteId} g={g} />)}
+              </tbody>
+            </table>
+          </div>
+          {ver < filtrados.length && (
+            <button
+              type="button"
+              onClick={() => setVer((v) => v + POR_PAGINA)}
+              style={{
+                marginTop: 10, minHeight: 44, padding: '0 16px', borderRadius: 8,
+                border: '1px solid var(--border)', background: 'var(--surface)',
+                color: 'var(--text)', cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              Ver {Math.min(POR_PAGINA, filtrados.length - ver)} más
+            </button>
+          )}
+        </>
       )}
     </Bloque>
   )
+}
+
+/** "vencía en marzo" — `null` en Fase 1 (sin fecha) o si el mes no es válido. */
+function textoCuando(p: LeadRecaptacion): React.ReactNode {
+  if (p.origen !== 'vencimiento_antiguo' || p.mesVencimientoAntiguo === null) {
+    return <span style={{ color: 'var(--muted)' }}>sin vencimiento</span>
+  }
+  return <Badge tono="neutral">vencía en {MESES[p.mesVencimientoAntiguo - 1]}</Badge>
 }
 
 function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {
@@ -161,6 +212,9 @@ function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {
       </td>
       <td style={{ padding: '6px 8px' }}>
         {g.polizas.map((p) => <div key={p.polizaId}>{p.aseguradoraAnterior ?? '—'}</div>)}
+      </td>
+      <td style={{ padding: '6px 8px' }}>
+        {g.polizas.map((p) => <div key={p.polizaId}>{textoCuando(p)}</div>)}
       </td>
       <td style={{ padding: '6px 8px' }}>
         {g.telefono && <span>📞 {g.telefono}</span>}
@@ -205,10 +259,19 @@ function ramosTexto(g: GrupoLeadRecaptacion): string {
 const PLUG_PORTAL =
   'Por cierto: ahora tenemos una intranet gratuita en grupoasegura.es donde puedes controlar todos tus seguros, aunque no estés con nosotros. Si más adelante te toca renovar, ahí verás la fecha para que no se te pase. Y si tienes un siniestro, lo abres directamente desde ahí, sin papeleo — funciona en el navegador del móvil, no hace falta instalar nada.'
 
+// Sin email en la ficha, la intranet no se le puede ofrecer todavía: el
+// alta es por correo (código de un solo uso), y esta app no lo tiene para
+// dárselo de alta. Se pide por WhatsApp — que es donde SÍ hay contacto — en
+// vez de dejarlo caer en el aire (Alberto, 20/09/2026: "pidiéndole
+// confirmando mail para darle acceso a la intranet").
+const PLUG_PORTAL_PIDE_EMAIL =
+  'Por cierto: ahora tenemos una intranet gratuita en grupoasegura.es donde puedes controlar todos tus seguros, aunque no estés con nosotros (fechas de renovación, siniestros sin papeleo). Si me pasas tu email por aquí te doy de alta gratis.'
+
 function mensajeSugerido(g: GrupoLeadRecaptacion): string {
   const primera = g.polizas[0]
   const conQuien = primera.aseguradoraAnterior ? ` que tuviste con ${primera.aseguradoraAnterior}` : ''
-  return `Hola ${g.cliente.split(' ')[0]}, ¿sigues con tu seguro de ${ramosTexto(g)}${conQuien}? Si quieres te paso un precio actualizado sin compromiso.\n\n${PLUG_PORTAL}`
+  const plug = g.email === null ? PLUG_PORTAL_PIDE_EMAIL : PLUG_PORTAL
+  return `Hola ${g.cliente.split(' ')[0]}, ¿sigues con tu seguro de ${ramosTexto(g)}${conQuien}? Si quieres te paso un precio actualizado sin compromiso.\n\n${plug}`
 }
 
 function textoEscritura(r: EscrituraRecaptacion): string {

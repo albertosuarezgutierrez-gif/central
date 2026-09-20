@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Recaptación de leads, Fase 2: `colaRecaptacion()` ya no exige `estado='activa'`
+cuando hay `fecha_vencimiento` — entra cualquier estado del volcado con fecha (el 89% `vencida`).
+Pool contactable real sube de 424 a 1.399 clientes. Fase 2b (mismo día, aclaración de Alberto):
+`recaptacion-ventana.ts` (puro) solo hace candidato a un `vencimiento_antiguo` dentro de los 45 días
+previos a su aniversario (mes+día) — fuera de ventana se cuenta aparte (`enEsperaVentana`), no
+desaparece. `sin_vencimiento` sigue siempre contactable ("el resto ya", dijo Alberto). El WhatsApp
+sugerido pide el email cuando falta, para dar de alta en la intranet. PR #3170 (mergeado).
+
 **(20/09/2026)** Fix `apps/asegura-portal`: la campana de avisos mostraba «No se han podido leer los
 vencimientos ni los vencimientos» (captura de Alberto). `nombreFuente()` en `Campana.tsx` solo
 distinguía `'autorizaciones'` y colapsaba las otras cuatro fuentes de `FUENTES_AVISO`
