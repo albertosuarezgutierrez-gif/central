@@ -89,6 +89,16 @@ type EstadoPanel =
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
     }
+  /**
+   * La compañía pide, al confirmar el precio, un campo de SU FORMULARIO
+   * (`product.options` del ReRate: vehículo/producto, no la persona) que el
+   * proyecto no trae — visto real con Occident (leasing/renting, tipo de
+   * adquisición). DISTINTO de `faltan_vendor`: aquí no hay un valor suelto
+   * que teclear, se ofrece el Product Form Library del vendor
+   * (`ProductFormWidget`) montado sobre el `quoteCrudo` de ESTE precio
+   * (antes de que exista ninguna oferta confirmada).
+   */
+  | { paso: 'faltan_producto'; campos: string[]; quoteCrudo: unknown; mensaje: string }
   /** `reintento`: con qué volver a llamar a asegura (sin confirmar) para que
    *  enseñe el estado del proyecto en vez de mandar al ReRate. */
   | {
@@ -272,6 +282,12 @@ export function Emision({
   // que hasta ahora.
   const [productOptions, setProductOptions] = useState<unknown[] | null>(null)
   const [avisoProductForm, setAvisoProductForm] = useState<string | null>(null)
+  // Lo mismo que arriba, pero para el paso ANTERIOR (`faltan_producto` del
+  // ReRate) — estados separados porque son dos formularios de la Product
+  // Form Library sobre dos `quote` distintos (antes y después de confirmar
+  // el precio) y no se pueden confundir.
+  const [productOptionsRerate, setProductOptionsRerate] = useState<unknown[] | null>(null)
+  const [avisoProductFormRerate, setAvisoProductFormRerate] = useState<string | null>(null)
 
   // Catálogos de `faltan_vendor` (ver `CATALOGO_DE_CAMPO`): se piden UNA vez
   // por campo —gratis, con el interruptor apagado— y se pintan como
@@ -321,7 +337,7 @@ export function Emision({
     for (const campo of pendientes) void pedirCatalogoCampo(campo)
   }, [estado])
 
-  async function confirmarPrecio(conCorrecciones?: Record<string, string>) {
+  async function confirmarPrecio(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
     setEstado({ paso: 'confirmando' })
     const limpias = Object.fromEntries(
       Object.entries(conCorrecciones ?? {}).filter(([, v]) => typeof v === 'string' && v.trim() !== ''),
@@ -331,6 +347,7 @@ export function Emision({
       compania,
       categoria,
       ...(Object.keys(limpias).length > 0 ? { correcciones: limpias } : {}),
+      ...(conProductOptions ? { productOptions: conProductOptions } : {}),
     })
     if (r.estado === 'ok') {
       setEstado({
@@ -361,6 +378,19 @@ export function Emision({
         faltan: r.faltan,
         sugeridos: r.sugeridos,
         noReconocidos: r.noReconocidos,
+        mensaje: r.mensaje,
+      })
+      return
+    }
+    if (r.estado === 'faltan_producto') {
+      // Es un formulario nuevo (quote distinto al de la vuelta anterior, si
+      // la hubo): lo guardado antes ya no vale.
+      setProductOptionsRerate(null)
+      setAvisoProductFormRerate(null)
+      setEstado({
+        paso: 'faltan_producto',
+        campos: r.campos,
+        quoteCrudo: r.quoteCrudo,
         mensaje: r.mensaje,
       })
       return
@@ -537,6 +567,52 @@ export function Emision({
       )}
 
       {estado.paso === 'confirmando' && <p style={{ marginTop: 14 }}>Confirmando con la compañía…</p>}
+
+      {estado.paso === 'faltan_producto' && (
+        <div style={{ marginTop: 14 }}>
+          <p className="err" style={{ margin: 0 }}>
+            {compania || 'La compañía'} pide{' '}
+            {estado.campos.length === 1 ? 'un dato de su formulario' : `${estado.campos.length} datos de su formulario`}{' '}
+            para confirmar el precio. No se ha gastado nada.
+          </p>
+          <ul style={{ margin: '6px 0 10px', paddingLeft: 20, fontSize: 13 }}>
+            {estado.campos.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+          <p className="muted" style={{ margin: '0 0 10px', fontSize: 12 }}>
+            No es un campo nuestro que se pueda teclear a ciegas: es el formulario REAL de{' '}
+            {compania || 'la compañía'}, servido por Codeoscopic. Rellénalo y pulsa «Guardar», y se
+            reintenta el precio con esas opciones.
+          </p>
+          <ProductFormWidget
+            quoteCrudo={estado.quoteCrudo}
+            onOptions={(opciones, aviso) => {
+              setProductOptionsRerate(opciones)
+              setAvisoProductFormRerate(aviso)
+            }}
+          />
+          {productOptionsRerate !== null && (
+            <p className="ok" style={{ fontSize: 12, margin: '6px 0 0' }}>
+              ✅ {productOptionsRerate.length} opción(es) guardada(s) — pulsa «Reintentar» para confirmar el precio.
+            </p>
+          )}
+          {avisoProductFormRerate && (
+            <p className="err" style={{ fontSize: 12, margin: '6px 0 0' }}>
+              El formulario no ha dado un resultado válido: {avisoProductFormRerate}
+            </p>
+          )}
+          <button
+            type="button"
+            className="primary"
+            disabled={productOptionsRerate === null}
+            onClick={() => confirmarPrecio(undefined, productOptionsRerate ?? undefined)}
+            style={{ marginTop: 10 }}
+          >
+            Reintentar con esas opciones
+          </button>
+        </div>
+      )}
 
       {estado.paso === 'faltan_vendor' && (
         <div style={{ marginTop: 14 }}>

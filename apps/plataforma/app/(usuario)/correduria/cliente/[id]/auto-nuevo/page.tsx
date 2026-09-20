@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Car } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { precalificarAutoNuevaAsegura, catalogoAsegura } from '@/lib/auto-nuevo-asegura'
+import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import AutoNuevo from './AutoNuevo'
 
@@ -46,11 +47,16 @@ export default async function AutoNuevoPage({ params }: { params: Promise<{ id: 
     </div>
   )
 
-  const [garajes, civiles, pre] = await Promise.all([
+  const [garajes, civiles, pre, companiasResp] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
     precalificarAutoNuevaAsegura({ clienteId }),
+    companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
   ])
+  // `null` = no se ha podido leer el directorio de compañías (puerto caído o sin
+  // configurar): la pantalla lo dice y el corredor teclea el código a mano en
+  // vez de ver un desplegable vacío sin explicación.
+  const companias = companiasResp.estado === 'ok' ? companiasResp.companias : null
 
   if (pre.estado !== 'ok') {
     const tono = pre.estado === 'sin_configurar' ? 'var(--muted)' : 'var(--negative)'
@@ -89,6 +95,7 @@ export default async function AutoNuevoPage({ params }: { params: Promise<{ id: 
         estadoCivilAuto={pre.pre.estadoCivil}
         consumo={pre.pre.consumo}
         simulacion={pre.pre.simulacion}
+        companias={companias}
       />
     </Pagina>
   )

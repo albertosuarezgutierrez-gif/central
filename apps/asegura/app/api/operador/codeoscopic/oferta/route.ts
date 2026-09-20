@@ -16,6 +16,8 @@ import {
 import { opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import {
   interpretarError400,
+  interpretarCamposProducto,
+  lineasDelVendor,
   reparosDe,
   esCampoPersona,
   type CampoPersona,
@@ -99,6 +101,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ estado: 'error', causa: 'otro', mensaje: lectura.error }, { status: 400 })
   }
   const correcciones = lectura.valores
+
+  // Lo que el corredor ha rellenado en el Product Form Library del vendor
+  // (`ProductFormWidget`, montado sobre `precio.quoteCrudo`) tras un
+  // `faltan_producto` anterior — el `product.options` REAL del ReRate, para
+  // cualquier compañía. Sustituye ENTERO a `opcionesPorDefecto(compania)`
+  // cuando llega: es más de fiar que el catálogo estático (solo Allianz, y
+  // adivinado tras 3 errores reales) porque sale del formulario oficial.
+  // Se reenvía TAL CUAL, sin interpretar su forma (igual que `productOptions`
+  // en `respuesta.ts`): es Codeoscopic quien decide qué lleva cada opción.
+  const productOptionsCorredor = Array.isArray(cuerpo.productOptions) ? cuerpo.productOptions : undefined
 
   const filas = await prisma.$queryRaw<
     {
@@ -264,23 +276,44 @@ export async function POST(req: Request) {
 
       try {
         // El vendor nunca devuelve `product.options` al cotizar (ver
-        // `Precio.productOptions`), así que casi siempre hay que rellenarlas con
-        // el catálogo estático por defecto — hoy solo cubre Allianz auto, ver
-        // `opciones-producto.ts`. Para el resto sigue mandándose `[]` (dentro de
-        // `reRate`) hasta que un 400 real diga qué le hace falta.
+        // `Precio.productOptions`). Orden de preferencia: lo que el corredor
+        // ha rellenado en el Product Form Library (el formulario REAL de la
+        // compañía, para cualquiera) > lo que el propio precio ya trajera >
+        // el catálogo estático por defecto (hoy solo Allianz auto, adivinado
+        // tras 3 errores reales — ver `opciones-producto.ts`). Para el resto
+        // sigue mandándose `[]` (dentro de `reRate`) hasta que un 400 real
+        // diga qué le hace falta.
         oferta = await reRate(
           r.config,
           t.project_id_codeoscopic,
           precio.id,
           precio.productId,
-          precio.productOptions ?? opcionesPorDefecto(compania),
+          productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania),
         )
       } catch (e) {
         if (!(e instanceof ErrorCodeoscopic) || e.clase !== 'validacion') throw e
         const interp = interpretarError400(e.detalle)
-        // Nada que reparar (ninguna línea se reconoce): sale como fallo del
-        // vendor, con el texto entero, igual que hasta hoy.
-        if (interp.campos.length === 0) throw e
+        // Nada que reparar como campo de PERSONA. Antes de rendirse, ¿es un
+        // hueco de `product.options` (formulario de la compañía, no de la
+        // persona)? Si el corredor YA mandó unas opciones y el vendor las
+        // sigue rechazando, no se vuelve a ofrecer el mismo formulario en
+        // bucle: sale como fallo del vendor, igual que hasta hoy.
+        if (interp.campos.length === 0) {
+          const deProducto = productOptionsCorredor ? [] : interpretarCamposProducto(interp.lineas)
+          if (deProducto.length > 0) {
+            return NextResponse.json(
+              {
+                estado: 'faltan_producto',
+                projectId: t.project_id_codeoscopic,
+                campos: deProducto.map((c) => c.campo),
+                quoteCrudo: precio.quoteCrudo,
+                mensaje: deProducto.map((c) => c.texto).join('\n'),
+              },
+              { status: 422 },
+            )
+          }
+          throw e
+        }
 
         const pedidos = interp.campos.map((c) => c.campo).filter(esCampoPersona)
         const yaEscritos = pedidos.filter((c) => aplicados.has(c))
@@ -383,8 +416,18 @@ export async function POST(req: Request) {
     })
   } catch (e) {
     if (e instanceof ErrorCodeoscopic) {
+      // El corredor no tiene que leer JSON: si el vendor trae un `message`
+      // legible (aunque sea un rechazo de negocio sin campo que rellenar,
+      // como «Reale: NO SE PERMITEN POLIZAS CON MALUS»), se enseña ESE texto
+      // en vez del `codeoscopic_validacion: {...}` recortado a 300 caracteres.
+      const lineas = lineasDelVendor(e.message)
       return NextResponse.json(
-        { estado: 'error', causa: 'vendor', clase: e.clase, mensaje: e.message },
+        {
+          estado: 'error',
+          causa: 'vendor',
+          clase: e.clase,
+          mensaje: lineas.length > 0 ? lineas.join(' · ') : e.message,
+        },
         { status: 502 },
       )
     }
