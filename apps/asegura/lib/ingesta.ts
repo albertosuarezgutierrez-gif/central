@@ -27,6 +27,7 @@ import type {
   EntidadIngesta,
   FicheroEnCuarentena,
   FicheroParcial,
+  CampoImportanteSinLeer,
 } from '@central/module-seguros'
 import { HORAS_RECHAZO_RECIENTE } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
@@ -71,6 +72,12 @@ export type EstadoIngestaPuerto =
        * lista que NO se puede volver a pedir: CIMA ya los confirmó a TIREA.
        */
       parciales: FicheroParcial[] | null
+      /**
+       * Watchlist curada de campos que CIMA manda de forma constante y nunca
+       * se leen (mig 0099). `null` = no se pudo comprobar; `[]` = se miró y
+       * hoy no hay ninguno conocido.
+       */
+      camposImportantes: CampoImportanteSinLeer[] | null
     }
 
 /** Crudo EIAC guardado por una incidencia y todavía sin reprocesar. */
@@ -453,6 +460,39 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       }
     })
 
+    // 🚨 La watchlist CURADA (mig 0099, 20/09/2026): campos que CIMA manda de
+    // forma CONSTANTE —no una vez suelta, `veces_visto` alto sobre las rutas
+    // recientes— y que el mapper nunca lee. `cobertura` (arriba) cuenta 500+
+    // rutas sin leer A PROPÓSITO sin alarmar —el EIAC trae cientos de campos y
+    // siempre habrá cola—, así que un hallazgo real como este se pierde dentro
+    // de esa cifra. Caso real: `Tomador.PersonaFisica.Domicilio`/
+    // `DatosContacto` (dirección de contacto, email, teléfono del propio
+    // tomador) llega en el 100% de los POL recientes y nunca se ha leído —es
+    // justo el dato que hoy solo se puede corregir a mano desde el portal.
+    //
+    // La lista es CURADA (WHERE ... OR ruta ILIKE ...), no un barrido: crece
+    // cuando alguien decide que un patrón importa, no solo porque algo nuevo
+    // aparezca en el EIAC.
+    const camposImportantes = await leerONull<CampoImportanteSinLeer[]>(async () => {
+      const r = await db.$queryRawUnsafe<Array<{ id: string; visto: bigint | null }>>(`
+        SELECT 'tomador_contacto' AS id, MAX(veces_visto) AS visto
+        FROM cima_cobertura_campos
+        WHERE hoja AND veces_leido = 0 AND veces_visto >= 3
+          AND ruta ~ 'Tomador\\.Persona(Fisica|Juridica)\\.(Domicilio|DatosContacto)'
+      `)
+      const f = r[0]
+      const visto = Number(f?.visto ?? 0)
+      if (visto === 0) return []
+      return [
+        {
+          id: 'tomador_contacto',
+          etiqueta:
+            'la dirección de contacto, el email y el teléfono del TOMADOR (Tomador.Domicilio/DatosContacto)',
+          vecesVisto: visto,
+        },
+      ]
+    })
+
     const cajaNegra = await leerONull<CajaNegraCodeoscopic>(async () => {
       const r = await db.$queryRawUnsafe<
         Array<{
@@ -578,6 +618,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
     return {
       crudo,
       cobertura,
+      camposImportantes,
       cajaNegra,
       ultimoPull,
       parciales,

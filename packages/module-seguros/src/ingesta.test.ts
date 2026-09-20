@@ -15,6 +15,42 @@ import {
 
 const f = (tipo: string, entidad: string, dias: number) => ({ tipo, entidad, dias })
 
+test('un campo importante sin leer se imprime SIEMPRE, aunque no haya ninguna otra avería (ok)', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    camposImportantes: [
+      { id: 'tomador_contacto', etiqueta: 'domicilio y contacto del tomador', vecesVisto: 4 },
+    ],
+  })
+  assert.equal(s.estado, 'ok')
+  assert.equal(s.avisosImportantes.length, 1)
+  assert.match(detalleSalud(s), /CIMA manda y no se lee: domicilio y contacto del tomador/)
+})
+
+test('sin watchlist, no hay ningún aviso importante que imprimir', () => {
+  const s = saludIngesta({ cuarentena: [] })
+  assert.deepEqual(s.avisosImportantes, [])
+  assert.doesNotMatch(detalleSalud(s), /CIMA manda y no se lee/)
+})
+
+test('el aviso importante NO fuerza `degradada`: es una oportunidad, no una avería', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    camposImportantes: [{ id: 'x', etiqueta: 'x', vecesVisto: 4 }],
+  })
+  assert.equal(s.estado, 'ok')
+})
+
+test('el aviso importante también se ve en degradada, además de los motivos de la avería', () => {
+  const s = saludIngesta({
+    cuarentena: [f('SIN', 'C0468', 2)],
+    camposImportantes: [{ id: 'x', etiqueta: 'x importante', vecesVisto: 4 }],
+  })
+  assert.equal(s.estado, 'degradada')
+  assert.match(detalleSalud(s), /DEGRADADA/)
+  assert.match(detalleSalud(s), /CIMA manda y no se lee: x importante/)
+})
+
 test('sin poder leer NO es «está bien»: es sin_datos y lo dice', () => {
   const s = saludIngesta({ cuarentena: null })
   assert.equal(s.estado, 'sin_datos')

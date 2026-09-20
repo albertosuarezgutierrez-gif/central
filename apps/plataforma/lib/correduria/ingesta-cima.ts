@@ -23,6 +23,7 @@ import {
   type CajaNegraCodeoscopic,
   type UltimoPullIngesta,
   type FicheroParcial,
+  type CampoImportanteSinLeer,
 } from '@central/module-seguros'
 
 export type RespuestaIngesta =
@@ -255,6 +256,21 @@ function esListaParciales(v: unknown): boolean {
   return Array.isArray(v) && v.every(esParcial)
 }
 
+/**
+ * Un elemento de la watchlist curada (mig 0099): campos que CIMA manda de
+ * forma constante y nunca se leen. Todo-o-nada como el resto: una fila
+ * ilegible degrada la lista entera, no se descarta ella sola.
+ */
+function esCampoImportante(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.id === 'string' && typeof o.etiqueta === 'string' && entero(o.vecesVisto)
+}
+
+function esListaCamposImportantes(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esCampoImportante)
+}
+
 function esCajaNegra(v: unknown): boolean {
   if (typeof v !== 'object' || v === null) return false
   const o = v as Record<string, unknown>
@@ -331,6 +347,11 @@ export function interpretarIngesta(
       cajaNegra: señal<CajaNegraCodeoscopic>(r, 'cajaNegra', esCajaNegra),
       ultimoPull: señal<UltimoPullIngesta>(r, 'ultimoPull', esUltimoPull),
       parciales: señal<FicheroParcial[]>(r, 'parciales', esListaParciales),
+      // `undefined` = un puerto viejo sin esta señal (no se piden); `null` =
+      // el puerto la tiene y no se pudo leer. Ninguno de los dos es «ninguno
+      // conocido» — `saludIngesta` no distingue: sin lista, no avisa nada, que
+      // es lo correcto: no hay avería que declarar por esto.
+      camposImportantes: señal<CampoImportanteSinLeer[]>(r, 'camposImportantes', esListaCamposImportantes) ?? undefined,
     }),
     huerfanasTruncadas: huerfanas.estado === 'ok' && huerfanas.truncado,
     huerfanasSinAmbito: huerfanas.estado === 'ok' ? huerfanas.ocultasOtroAmbito : null,
