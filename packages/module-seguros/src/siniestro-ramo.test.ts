@@ -71,9 +71,17 @@ test('siniestro-ramo: un dinero fuera de rango es inválido', () => {
 })
 
 test('siniestro-ramo: vida/salud/decesos no piden diagnóstico ni centro médico (art. 9 RGPD)', () => {
-  const camposPersonales = new Set(camposDeRamoSiniestro('vida').map((c) => c.id))
+  const campos = camposDeRamoSiniestro('vida')
+  const ids = new Set(campos.map((c) => c.id))
   for (const prohibido of ['diagnostico', 'centroMedico', 'medicoTratante', 'codigoCie']) {
-    assert.ok(!camposPersonales.has(prohibido), `no debería existir el campo ${prohibido}`)
+    assert.ok(!ids.has(prohibido), `no debería existir el campo ${prohibido}`)
+  }
+  const textoProhibido = /diagn[oó]stic|c[ií]e[- ]?10|centro m[eé]dico|m[eé]dico tratante/i
+  for (const campo of campos) {
+    assert.ok(!textoProhibido.test(campo.etiqueta), `la etiqueta de ${campo.id} sugiere dato de salud: "${campo.etiqueta}"`)
+    if (campo.ayuda) {
+      assert.ok(!textoProhibido.test(campo.ayuda), `la ayuda de ${campo.id} sugiere dato de salud: "${campo.ayuda}"`)
+    }
   }
 })
 

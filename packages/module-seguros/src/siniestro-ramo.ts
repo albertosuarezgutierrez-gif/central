@@ -261,8 +261,8 @@ const CAMPOS_PERSONALES: readonly CampoRamoSiniestro[] = [
   { id: 'tipoEvento', etiqueta: 'Qué ha pasado', tipo: 'opcion', opciones: OPCIONES_TIPO_EVENTO_PERSONAL },
   { id: 'causaOrigen', etiqueta: 'Origen', tipo: 'opcion', opciones: OPCIONES_CAUSA_ORIGEN },
   {
-    id: 'fechaDiagnosticoOFallecimiento',
-    etiqueta: 'Fecha del diagnóstico o del fallecimiento',
+    id: 'fechaInicioEventoOFallecimiento',
+    etiqueta: 'Fecha de inicio del evento o del fallecimiento',
     tipo: 'fecha',
   },
   {
