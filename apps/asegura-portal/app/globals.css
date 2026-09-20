@@ -3211,6 +3211,51 @@ h1 em {
   .mis-datos-grupo:last-of-type { grid-template-columns: 1fr 1fr; }
 }
 
+/* ── Configuración: varios contactos, no solo el principal (20/09/2026) ─────
+   Cada fila es texto + dos botones de 44px táctiles (`.boton-tenue`), nunca un
+   icono suelto para borrar: es una acción irreversible y la regla de la casa
+   («NUNCA a icono para lo destructivo») se cumple con un rótulo legible. */
+.config-contactos-lista {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.config-contactos-fila {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.config-contactos-fila[data-principal] { border-color: var(--primary); }
+.config-contactos-valor { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.config-contactos-etiqueta { color: var(--muted); font-size: 12px; }
+.config-contactos-principal {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  padding: 4px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+}
+.config-contactos-vacio { color: var(--muted); font-size: 13px; padding: 6px 0; }
+.config-contactos-anadir { display: flex; gap: 8px; flex-wrap: wrap; }
+.config-contactos-anadir input {
+  flex: 1 1 200px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
 /* La banda de «vista de corredor» (08/09/2026): Alberto mirando el portal como
    lo ve un cliente. En el flujo, encima de la navegación; el ámbar es el tono
    de «ojo», no el de error: no ha fallado nada, es que no eres quien parece. */
