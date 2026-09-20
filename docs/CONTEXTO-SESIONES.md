@@ -23,7 +23,7 @@ credencial de solo lectura. Ventana que toca los últimos 3 días → `parcial: 
 consolidado; sin eso la latencia se lee como bajada de tráfico). 🪤 **Y el cepo que enseña algo:
 `pnpm test:guardia` daba 948/948 con el endpoint sin registrar en `RUTAS_RUTINA` — el guardián lee
 ficheros TRACKEADOS, y el fichero estaba untracked. Verde por no verlo.** Se puso rojo al commitear
-y lo cazó `code-review`. PR #3195.
+y lo cazó `code-review`. **PR #3195 MERGEADO** (`742cfa996`, 20/20 en CI).
 
 **(20/09/2026)** **PR #3191 MERGEADO** (`15cc7b2e1`, 19/19 en CI): el plegado de «Recibos» y
 «Siniestros» del portal está en `main`. Lo que cambió respecto a lo anotado abajo salió de la pasada
