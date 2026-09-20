@@ -26,6 +26,13 @@ otro): cartera 157/100 vivas, 110 pólizas/72 clientes EN VIGOR, 7 vencimientos 
 (−30d), ingesta CIMA viva. Informe por Telegram, sin cambio de código. Sin baseline previo en
 `AGENTES-BITACORA.md` para delta de altas/bajas — próxima pasada ya tendrá con qué comparar.
 
+**(20/09/2026)** Cola de retención de `/correduria`: botón "✅ Ya gestionada" que aparta una póliza
+de "Hay que llamar" 10 días (tabla `seguros.retencion_descartes` + puerto de asegura). NO la marca
+como resuelta — si el recibo sigue sin cobrar al caducar el plazo, reaparece sola: la cola es
+derivada en vivo de recibos reales y un descarte permanente convertiría "ya he llamado" en "ya no
+circula sin seguro" sin comprobarlo (riesgo art. 15 LCS). Alberto confirmó ese diseño (reaparece si
+sigue el problema) y que por ahora es solo para retención, no para el resto de "Hoy". PR #3160 mergeada.
+
 **(20/09/2026)** 🚨 Fix producción: pinchar en CUALQUIER cliente de `/correduria` daba error desde
 el commit 5e67cb5 (#3126) — la ficha selecciona `siniestros.datos_ramo` y la relación
 `siniestro_intervinientes`, y la migración `2026-09-20_siniestro_ramo_intervinientes.sql` se
