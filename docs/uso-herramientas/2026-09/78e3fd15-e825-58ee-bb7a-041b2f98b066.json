@@ -1,0 +1,20 @@
+{
+ "sesion": "78e3fd15-e825-58ee-bb7a-041b2f98b066",
+ "inicio": "2026-09-20T17:40:39.724Z",
+ "fin": "2026-09-20T17:40:52.059Z",
+ "llamadas": 2,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 249,
+   "chars_out": 3009,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "WebFetch": 1
+   }
+  }
+ }
+}
