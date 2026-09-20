@@ -164,6 +164,19 @@ test('un origen desconocido o ausente cae a sin_vencimiento, nunca inventa venci
   assert.equal(r.leads[0].mesVencimientoAntiguo, null)
 })
 
+test('un puerto inconsistente (sin_vencimiento con mes) no cuela el mes: la invariante se fuerza aquí', () => {
+  const json = {
+    estado: 'ok',
+    leads: [{ clienteId: 'c1', polizaId: 'p1', cliente: 'X', origen: 'sin_vencimiento', mesVencimientoAntiguo: 5 }],
+    contadores: { totalCandidatos: 1, contactadosSemana: 0, conAperturaORespuestaSemana: 0 },
+  }
+  const r = interpretarCola(200, json)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.leads[0].origen, 'sin_vencimiento')
+  assert.equal(r.leads[0].mesVencimientoAntiguo, null)
+})
+
 test('un mes fuera de 1-12 se descarta, no se pinta un mes falso', () => {
   const json = {
     estado: 'ok',

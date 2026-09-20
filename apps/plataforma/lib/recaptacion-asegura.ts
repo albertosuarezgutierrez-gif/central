@@ -107,7 +107,11 @@ function leerLead(v: unknown): LeadRecaptacion | null {
     enCooldown: booleano(o.enCooldown),
     ultimoContactoEn: cadena(o.ultimoContactoEn),
     origen: origenLead(o.origen),
-    mesVencimientoAntiguo: mes(o.mesVencimientoAntiguo),
+    // El mes solo tiene sentido junto a `vencimiento_antiguo`: un puerto que
+    // mandara los dos campos inconsistentes (p. ej. `sin_vencimiento` con un
+    // mes) no debe colar un mes que la UI luego trataría como real. La
+    // invariante se fuerza AQUÍ, no se confía en que el emisor la respete.
+    mesVencimientoAntiguo: origenLead(o.origen) === 'vencimiento_antiguo' ? mes(o.mesVencimientoAntiguo) : null,
   }
 }
 
