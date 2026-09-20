@@ -273,4 +273,30 @@ pasada dado el volumen del hallazgo de arriba); queda para la próxima pasada pr
 hallazgo de radio similar.
 
 ---
+
+## ✅ Pasada ligera — 20/09/2026 (II)
+
+**Rango:** 2 commits desde la profunda de esta mañana (`6dcc590`, 06:57) — #3136 (auto-informe
+mercado-booking, docs) y #3126 (siniestros: campos por ramo + terceros/testigos). Los dos ya traían
+su propio commit de memoria (`chore(memoria): actualizar contexto de sesión`); sin reconciliación
+pendiente.
+
+Heartbeat (2-bis), correduría (2-quater) y salud del precio (2bis) re-comprobados por si algo había
+cambiado en las ~3h: **sin novedad frente a la profunda de la mañana**. `agente_latidos` con los
+mismos dos `ok=false` ya crónicos y documentados (`ses_transporte` sin establecimientos SES;
+`seo_correduria` sin créditos Serper desde el 14/09). CIMA sigue entrando (`cima_pull_completed` a
+las 05:33, `errorsCount=0`, cola estable en 145 — mismo backlog conocido de C0058, ahora 89 días).
+Codeoscopic: 3 cotizaciones/7 días, 1,50 €, 0 descartadas — igual que la mañana. Pricing:
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · `oscilantes=0`, 4 palancas
+activas con `min_price`; `horas_desde_ultima_pasada=16,8h` es el mismo artefacto de "última escritura
+con cambios" ya explicado esta mañana (la pasada de las 20:30 de ayer escribió 0 noches
+legítimamente, confirmado por su propio latido `ok=true`), no una pasada abortada.
+
+No se ha podido listar las sesiones del rango por `list_sessions` (herramienta MCP no adjunta en
+esta pasada) — se dice explícitamente en vez de afirmar que no hay pendientes de conversación.
+
+**Sin hallazgo nuevo. Carril 1 = solo esta entrada + `CONTEXTO-SESIONES.md`; carril 2 vacío: sin PR
+de código ni aviso Telegram** (regla de frugalidad).
+
+---
 <!-- verificado: 2026-09-20 -->

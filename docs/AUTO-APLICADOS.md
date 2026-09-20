@@ -13,6 +13,11 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-20 (II)** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · entrada de la
+  pasada ligera de seguimiento (~3h tras la profunda semanal de esta mañana) · rango de 2 commits
+  ya autoreconciliados, heartbeat/correduría/pricing sin cambios, sin hallazgo nuevo · SHA de esta
+  auditoría (ver commit de este PR)
+
 - **2026-09-20** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`, este archivo · informe
   de la pasada PROFUNDA semanal (código/infra sano; hallazgo del backlog de 46 PRs de rutina, 7 con
   código real sin revisar bajo título de "solo registro", y hueco del allowlist de auto-merge con
