@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, urlVidaNuevo, urlSaludNuevo, urlDecesosNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import { urlSubirPoliza, RAMOS_PRESUPUESTO, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
@@ -286,16 +286,6 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 // El menú va PRIMERO a propósito: su desplegable se ancla a la izquierda del
 // botón, y medido a 360px con Playwright, en segunda posición se salía de la
 // pantalla por la derecha (right=427 > 360). En primera cabe hasta en 320.
-
-/** Los ramos que se pueden presupuestar desde la ficha, en el orden del menú. */
-const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => string; sinVerificar?: boolean }[] = [
-  { etiqueta: '🚗 Auto', url: urlAutoNuevo },
-  { etiqueta: '🏠 Hogar', url: urlHogarNuevo },
-  { etiqueta: '🏍️ Moto', url: urlMotoNuevo },
-  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo },
-  { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
-  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo },
-]
 
 const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para salud no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
 
