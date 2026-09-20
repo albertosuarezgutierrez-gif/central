@@ -25,6 +25,12 @@ real"). Aplicada ahora vía Supabase MCP y verificada (columna + tabla + grant a
 Lección: un PR que dice "migración escrita, pendiente de aplicar" no puede darse por cerrado sin
 aplicarla — quedó rompiendo la pantalla que Alberto usa a diario durante horas.
 
+**(20/09/2026)** Quitado el bloque "Coberturas que aparecen en más de una póliza" de `/boveda` en
+`apps/asegura-portal` (Alberto: quitarlo para todos los clientes). Aunque el aviso era deliberado
+(RDL 3/2020, "informa no juzga"), se eliminó por completo: componente `Solapamientos.tsx`, lógica
+pura `solapamientos.ts`/`.test.ts` de `@central/module-seguros-portal` (con sus exports), el cálculo
+en `page.tsx` y el CSS asociado. Typecheck limpio, 540/540 tests del módulo. PR #3151, mergeado.
+
 **(20/09/2026)** Añadida al PR #3142 (mismo, sin nuevo): telemetría de `faltan_producto` por
 COMPAÑÍA — cada 422 del ReRate deja fila en `seguros.operational_events` (genérica, sin migración
 nueva) y `GET /api/operador/codeoscopic/faltan-producto` agrega por compañía. Escritura best-effort,

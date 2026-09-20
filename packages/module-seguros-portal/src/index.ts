@@ -284,11 +284,6 @@ export {
 } from './carta-no-renovacion.ts'
 export type { CartaNoRenovacion, EstadoPlazoCarta, HuecoCarta, PolizaParaCarta } from './carta-no-renovacion.ts'
 
-// Coberturas repetidas entre pólizas de la MISMA persona. Lee su cabecera: es
-// un aviso informativo («está en dos pólizas»), nunca un juicio («te sobra»).
-export { FAMILIAS_SOLAPAMIENTO, detectarSolapamientos } from './solapamientos.ts'
-export type { FamiliaSolapamiento, PolizaConCoberturas, Solapamiento } from './solapamientos.ts'
-
 // La solicitud de SUPRESIÓN (art. 17). Lee su cabecera antes de tocarla: este
 // módulo NO borra nada, y esa es la mitad del diseño — el art. 17.3.b y el
 // 17.3.e excluyen la supresión cuando hay deber legal de conservar o hace falta
