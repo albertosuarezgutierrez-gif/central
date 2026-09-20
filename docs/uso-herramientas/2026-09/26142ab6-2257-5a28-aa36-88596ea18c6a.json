@@ -1,0 +1,67 @@
+{
+ "sesion": "26142ab6-2257-5a28-aa36-88596ea18c6a",
+ "inicio": "2026-09-20T09:28:24.333Z",
+ "fin": "2026-09-20T09:36:28.021Z",
+ "llamadas": 69,
+ "categorias": {
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 26,
+   "chars_out": 47,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 47,
+   "chars_in": 5245,
+   "chars_out": 137965,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 22,
+    "Read": 21,
+    "Glob": 4
+   }
+  },
+  "escritura": {
+   "llamadas": 12,
+   "chars_in": 22258,
+   "chars_out": 232259,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 3,
+    "Edit": 9
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 650,
+   "chars_out": 407,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__apply_migration": 1
+   }
+  },
+  "bash": {
+   "llamadas": 7,
+   "chars_in": 1225,
+   "chars_out": 5222,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 7
+   }
+  }
+ }
+}
