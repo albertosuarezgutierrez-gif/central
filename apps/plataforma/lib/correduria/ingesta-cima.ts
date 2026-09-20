@@ -22,6 +22,7 @@ import {
   type CoberturaResumen,
   type CajaNegraCodeoscopic,
   type UltimoPullIngesta,
+  type FicheroParcial,
 } from '@central/module-seguros'
 
 export type RespuestaIngesta =
@@ -213,14 +214,45 @@ function esCrudo(v: unknown): boolean {
   return entero(o.pendientes) && entero(o.purgaInminente) && enteroONulo(o.masAntiguaHoras)
 }
 
+/**
+ * 🚨 Exige `rutas`/`rutasNuncaLeidas`, no los viejos `hojas`/`hojasNuncaLeidas`.
+ * El puerto pasó a contar RUTAS distintas el 20/09/2026 (antes contaba filas, y
+ * la cifra venía multiplicada por el número de compañías observadas). Un
+ * `central-asegura` anterior manda la forma vieja y aquí cae a `null` = «sin
+ * medir», que es lo correcto: seguir publicándola sería publicar la cifra
+ * inflada con el rótulo nuevo.
+ */
 function esCobertura(v: unknown): boolean {
   if (typeof v !== 'object' || v === null) return false
   const o = v as Record<string, unknown>
-  return entero(o.hojas) && entero(o.hojasNuncaLeidas) && Array.isArray(o.porTipo) &&
+  return entero(o.rutas) && entero(o.rutasNuncaLeidas) &&
+    enteroONulo(o.entidadesObservadas) && Array.isArray(o.porTipo) &&
     o.porTipo.every(t => typeof t === 'object' && t !== null &&
       typeof (t as Record<string, unknown>).tipoObjeto === 'string' &&
-      entero((t as Record<string, unknown>).hojas) &&
+      entero((t as Record<string, unknown>).rutas) &&
       entero((t as Record<string, unknown>).nuncaLeidas))
+}
+
+/**
+ * Un fichero confirmado que se dejó objetos sin guardar.
+ *
+ * Todo-o-nada como el resto: una fila ilegible degrada la LISTA entera a
+ * `null`. Quedarse con las que se entienden daría un recuento MÁS BAJO que la
+ * realidad sobre la única pérdida de esta pantalla que no se puede volver a
+ * pedir — la forma tranquilizadora de equivocarse, en el peor sitio.
+ */
+function esParcial(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.fichero === 'string' && typeof o.tipo === 'string'
+    && typeof o.entidad === 'string'
+    && (o.clave === null || typeof o.clave === 'string')
+    && entero(o.declarados) && entero(o.persistidos) && entero(o.enRevision)
+    && enteroONulo(o.dias)
+}
+
+function esListaParciales(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esParcial)
 }
 
 function esCajaNegra(v: unknown): boolean {
@@ -298,6 +330,7 @@ export function interpretarIngesta(
       cobertura: señal<CoberturaResumen>(r, 'cobertura', esCobertura),
       cajaNegra: señal<CajaNegraCodeoscopic>(r, 'cajaNegra', esCajaNegra),
       ultimoPull: señal<UltimoPullIngesta>(r, 'ultimoPull', esUltimoPull),
+      parciales: señal<FicheroParcial[]>(r, 'parciales', esListaParciales),
     }),
     huerfanasTruncadas: huerfanas.estado === 'ok' && huerfanas.truncado,
     huerfanasSinAmbito: huerfanas.estado === 'ok' ? huerfanas.ocultasOtroAmbito : null,

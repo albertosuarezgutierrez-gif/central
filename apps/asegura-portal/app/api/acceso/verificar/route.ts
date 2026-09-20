@@ -4,7 +4,7 @@ import { estadoCodigo, necesitaRegistro, normalizarIp, normalizarUserAgent } fro
 import { VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
 import { prisma } from '@/lib/db'
 import { avisarPrimerAcceso } from '@/lib/aviso-acceso'
-import { COOKIE_NAME, COOKIE_OPTS, crearSesion, hashCanal } from '@/lib/auth'
+import { COOKIE_NAME, COOKIE_OPTS, crearSesion, hashCanal, hashCodigo } from '@/lib/auth'
 import { vincularIdentidad } from '@/lib/vinculo'
 
 const Entrada = z.object({
@@ -26,9 +26,14 @@ export async function POST(req: Request) {
   })
   if (!guardado) return NextResponse.json({ error: 'sin_codigo' }, { status: 400 })
 
+  // 🚨 Se comparan HASHES, y la comparación la hace `estadoCodigo` en tiempo
+  // constante. La columna `codigo` de la BD guarda el hash (ver
+  // `/api/acceso/solicitar`): lo que se le pasa aquí es `hashCodigo(entrada)`,
+  // nunca los 6 dígitos tecleados. Una fila anterior al hasheado (código en
+  // claro) sale `caducado` —«pide otro»— y no gasta intento.
   const estado = estadoCodigo(
-    { codigo: guardado.codigo, creadoEn: guardado.creadoEn, intentos: guardado.intentos, usadoEn: guardado.usadoEn },
-    codigo,
+    { codigoHash: guardado.codigo, creadoEn: guardado.creadoEn, intentos: guardado.intentos, usadoEn: guardado.usadoEn },
+    hashCodigo(codigo),
     new Date(),
   )
 

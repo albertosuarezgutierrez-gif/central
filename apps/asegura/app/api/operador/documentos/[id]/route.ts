@@ -10,7 +10,18 @@ export const maxDuration = 60
 
 type Ctx = { params: Promise<{ id: string }> }
 
-/** GET /api/operador/documentos/[id] — el fichero entero (bytes). */
+/**
+ * GET /api/operador/documentos/[id] — el fichero entero (bytes).
+ *
+ * 🚨 SIEMPRE como DESCARGA (`attachment`) y con un mime de la lista cerrada,
+ * nunca con el que mandó quien lo subió (`leerDocumento()` lo pasa por
+ * `mimeParaServir()`). Mismo patrón que la ruta gemela del portal
+ * (`apps/asegura-portal/app/api/siniestros/[id]/adjuntos/[documentoId]`), y por
+ * la misma razón: estos bytes pueden venir del CLIENTE (`/api/portal/documento`
+ * → `guardarDocumentoPropio`), así que servirlos `inline` con un tipo que el
+ * navegador ejecute es un XSS en nuestro dominio, con la cookie de sesión del
+ * corredor que abra el documento desde `/correduria`.
+ */
 export async function GET(req: Request, ctx: Ctx) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { id } = await ctx.params
@@ -24,8 +35,12 @@ export async function GET(req: Request, ctx: Ctx) {
       'content-type': d.mime,
       'content-length': String(d.contenido.length),
       // El nombre va en ASCII plano + UTF-8 codificado: los navegadores viejos leen el primero.
-      'content-disposition': `inline; filename="${d.nombre.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(d.nombre)}`,
+      // Las comillas y la barra invertida se quitan: en esta cabecera son inyección, no acentos.
+      'content-disposition': `attachment; filename="${d.nombre.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '')}"; filename*=UTF-8''${encodeURIComponent(d.nombre)}`,
       'cache-control': 'private, no-store',
+      // Cinturón sobre tirantes: aunque el mime venga de la lista cerrada, el
+      // navegador no debe adivinar otro leyendo los primeros bytes.
+      'x-content-type-options': 'nosniff',
     },
   })
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { leadsAsegura } from '@/lib/leads-asegura'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,8 +19,8 @@ export const dynamic = 'force-dynamic'
  * otra compañía.
  */
 export async function GET() {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
 
   const r = await leadsAsegura()
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })

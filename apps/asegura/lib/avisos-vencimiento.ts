@@ -51,6 +51,13 @@ import {
 } from '@central/module-seguros'
 import { DIAS_VENTANA_AVISO, entraEnVentana } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import {
+  LIMITE_OBLIGACIONES,
+  MARGEN_CANDIDATA_MS,
+  PRESUPUESTO_MS,
+  cribaTruncada,
+  quedaPresupuesto,
+} from './avisos-presupuesto'
 import { textoAviso, type ParaTercero } from './texto-vencimiento'
 
 const MS_DIA = 86_400_000
@@ -71,6 +78,18 @@ export type ResumenAvisos = {
   fallidos: number
   /** true = no se ha enviado nada, solo se ha contado. */
   soloContar: boolean
+  /**
+   * La criba SQL tocó su techo (`LIMITE_OBLIGACIONES`): puede haber MÁS
+   * obligaciones que avisar hoy y esta pasada no las ha visto. NO es «hay
+   * exactamente 500»: es un «no lo sé» que antes viajaba como si fuera el total.
+   */
+  truncado: boolean
+  /**
+   * Candidatas que ni se intentaron porque se agotó el presupuesto de tiempo.
+   * No se pierden —sin `avisada_at` vuelven en la pasada siguiente— pero se
+   * dicen: un `enviados` corto sin esto se lee como «hoy tocaban pocas».
+   */
+  pendientes: number
 }
 
 /**
@@ -270,6 +289,10 @@ async function leerAllegadosDeTomador(
 export async function ejecutarAvisosVencimiento(opts: {
   hoy?: Date
   forzarContar?: boolean
+  /** Presupuesto de envío en ms. Por debajo del `maxDuration` de la ruta. */
+  presupuestoMs?: number
+  /** Reloj inyectable (tests). Por defecto `Date.now`. */
+  ahoraMs?: () => number
 } = {}): Promise<ResumenAvisos> {
   if (!aseguraConfigurada()) throw new Error('cartera_sin_conexion')
 
@@ -285,8 +308,11 @@ export async function ejecutarAvisosVencimiento(opts: {
       fechaAccionable: { gte: hoy, lte: new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA) },
     },
     orderBy: { fechaAccionable: 'asc' },
-    take: 500,
+    take: LIMITE_OBLIGACIONES,
   })
+  // El techo se DECLARA. Antes se recortaba en silencio y el resumen presentaba
+  // el recorte como el total de lo que tocaba avisar hoy.
+  const truncado = cribaTruncada(filas.length)
   const enVentana = filas.filter((f) => entraEnVentana({ fechaAccionable: f.fechaAccionable, hoy }))
 
   // Las pólizas de las obligaciones, EN VIVO y solo las de CIMA (`import_ref IS
@@ -343,7 +369,8 @@ export async function ejecutarAvisosVencimiento(opts: {
   const candidatas = enVentana.filter((f) => f.polizaId === null || porId.has(f.polizaId))
 
   const resumen: ResumenAvisos = {
-    candidatas: candidatas.length, enviados: 0, enviadosATercero: 0, sinCanal: 0, fallidos: 0, soloContar,
+    candidatas: candidatas.length, enviados: 0, enviadosATercero: 0, sinCanal: 0, fallidos: 0,
+    soloContar, truncado, pendientes: 0,
   }
   if (candidatas.length === 0) return resumen
 
@@ -357,7 +384,19 @@ export async function ejecutarAvisosVencimiento(opts: {
     envio = { transporter, from }
   }
 
-  for (const o of candidatas) {
+  const arranque = opts.ahoraMs ?? (() => Date.now())
+  const t0 = arranque()
+  const presupuestoMs = opts.presupuestoMs ?? PRESUPUESTO_MS
+
+  for (const [i, o] of candidatas.entries()) {
+    // 🚨 Antes de nada: ¿da tiempo? Quedarse a medio envío es peor que no
+    // empezarlo (el correo sale, el sello no, y la pasada siguiente lo repite).
+    // El ensayo no consulta ni manda, así que no gasta presupuesto.
+    if (!soloContar && !quedaPresupuesto(arranque() - t0, presupuestoMs, MARGEN_CANDIDATA_MS)) {
+      resumen.pendientes = candidatas.length - i
+      console.warn(`[avisos] presupuesto agotado: ${resumen.pendientes} candidata(s) sin intentar, vuelven mañana`)
+      break
+    }
     const poliza = o.polizaId ? porId.get(o.polizaId) : undefined
     let destino = poliza ? destinatarioDeCliente(poliza.cliente) : null
     let paraTercero: ParaTercero | null = null

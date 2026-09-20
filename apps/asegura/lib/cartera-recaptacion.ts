@@ -29,7 +29,8 @@ import { enCooldown, COOLDOWN_DIAS, textoBaseRecaptacionWhatsapp, textoBaseRecap
 import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
-import { enviarEmailResend } from './recaptacion-email'
+import { decidirDestinatarioRecaptacion, enviarEmailResend } from './recaptacion-email'
+import { estadoEmailDeFicha } from './email-ficha'
 import { urlBaja, urlPublicaAsegura } from './recaptacion-baja'
 import { candidatosLoteEmail, LIMITE_LOTE_POR_DEFECTO } from './recaptacion-lote'
 import { dentroVentanaAntiguo } from './recaptacion-ventana'
@@ -362,6 +363,118 @@ export async function registrarEnvioWhatsapp(
   `)
   await anotar(correduriaId, entrada.clienteId, `Recaptación: se abrió el enlace de WhatsApp (mensaje ya escrito) por ${entrada.actor}`)
   return { ok: true }
+}
+
+// ── Envío MANUAL por email (botón de plataforma) ──────────────────────────
+//
+// 🚨 Lo que este bloque cierra (20/09/2026): la ruta mandaba el correo a
+// `body.email` y firmaba la auditoría con `body.actor`, los dos tal cual venían
+// en el JSON. Comprobaba que el `clienteId` era de esta correduría y no volvía
+// a mirarlo: con el Bearer de operador en la mano se podía escribir a CUALQUIER
+// dirección, con asunto y texto libres, desde `envios.grupoasegura.es` (SPF y
+// DKIM válidos) — o sea, phishing firmado por Grupo ASegura — y dejar la huella
+// a nombre de quien se quisiera.
+//
+// Las tres reglas, y ninguna es cosmética:
+//  1. **El destinatario sale de la FICHA** (`estadoEmailDeFicha`, la única regla
+//     del repo sobre a qué correo se le escribe a un cliente: respeta la baja de
+//     correo y distingue «ilegible» de «sin correo»). El del cuerpo solo
+//     confirma lo que había en pantalla.
+//  2. **El actor lo pone el servidor.** Este puerto se autentica con un secreto
+//     compartido, no con una persona: lo único cierto es POR DÓNDE entró la
+//     escritura. Escribir un nombre que manda el llamante es una pista de
+//     auditoría falsificable, que es peor que no tenerla.
+//  3. **La póliza se valida contra ESE cliente.** `recaptacion_envios` la
+//     guarda, y una póliza de otro cliente ensuciaría el historial de los dos.
+
+/**
+ * Lo que se puede afirmar del autor de una escritura por `/api/operador/*`: el
+ * canal, no la persona. Ver la regla 2 de arriba.
+ */
+export const ACTOR_PUERTO_OPERADOR = 'plataforma (puerto de operador)'
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export type EnvioRecaptacionEmail =
+  | { ok: true; destinatario: string }
+  | {
+      ok: false
+      motivo:
+        | 'ids_invalidos'
+        | 'no_encontrado'
+        | 'poliza_no_encontrada'
+        | 'sin_email'
+        | 'baja_de_correo'
+        | 'ilegible'
+        | 'destinatario_distinto'
+        | 'sin_api_key'
+        | 'rechazado'
+      status: 404 | 422 | 502 | 503
+      /** La dirección que resuelve la ficha, cuando la hay. Nunca la declarada. */
+      resuelto: string | null
+    }
+
+/**
+ * Manda UN correo de recaptación al cliente indicado y deja la huella
+ * (`recaptacion_envios` + `historial_interno`). El texto ya viene pulido por la
+ * ruta; aquí solo se decide A QUIÉN y se registra QUIÉN lo hizo.
+ */
+export async function enviarEmailRecaptacion(
+  correduriaId: string,
+  entrada: { clienteId: string; polizaId: string; emailDeclarado?: string | null; asunto: string; texto: string },
+): Promise<EnvioRecaptacionEmail> {
+  // Los ids se comprueban ANTES de consultar: un uuid mal formado hace que
+  // Prisma lance, y ese 500 se leería como «la cartera no se puede leer»
+  // (`lib/error-cartera.ts`) cuando lo que pasa es que el cuerpo está mal.
+  if (!UUID.test(entrada.clienteId) || !UUID.test(entrada.polizaId)) {
+    return { ok: false, motivo: 'ids_invalidos', status: 422, resuelto: null }
+  }
+  const db = prismaAsegura()
+  const cliente = await db.cliente.findFirst({
+    where: { id: entrada.clienteId, correduriaId, mergedIntoClienteId: null },
+    select: { id: true },
+  })
+  if (!cliente) return { ok: false, motivo: 'no_encontrado', status: 404, resuelto: null }
+
+  const poliza = await db.poliza.findFirst({
+    where: { id: entrada.polizaId, correduriaId, clienteId: entrada.clienteId, mergedIntoPolizaId: null },
+    select: { id: true },
+  })
+  if (!poliza) return { ok: false, motivo: 'poliza_no_encontrada', status: 404, resuelto: null }
+
+  const destino = decidirDestinatarioRecaptacion(
+    await estadoEmailDeFicha(correduriaId, entrada.clienteId),
+    entrada.emailDeclarado,
+  )
+  if (!destino.ok) {
+    // `no_encontrado` de la ficha es 404; el resto son datos del cliente que no
+    // permiten escribirle, y cada uno se arregla en un sitio distinto (pedirle
+    // el correo, respetar su baja, revisar `PII_ENCRYPTION_KEY` en Vercel).
+    const status = destino.motivo === 'no_encontrado' ? 404 : 422
+    return { ok: false, motivo: destino.motivo, status, resuelto: destino.resuelto }
+  }
+
+  const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;white-space:pre-line">${escaparHtmlLote(entrada.texto)}</div>`
+  const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
+  const resultado = await enviarEmailResend({ from, to: destino.to, asunto: entrada.asunto, texto: entrada.texto, html })
+  if (!resultado.ok) {
+    return {
+      ok: false,
+      motivo: resultado.motivo,
+      // Falta la clave del proveedor (se arregla en Vercel) ≠ el proveedor
+      // rechazó el mensaje (reintentar puede tener sentido). Misma separación
+      // que `sin_correo_configurado` / `error_envio` del aviso de acceso.
+      status: resultado.motivo === 'sin_api_key' ? 503 : 502,
+      resuelto: destino.to,
+    }
+  }
+
+  await db.$executeRaw(Prisma.sql`
+    insert into recaptacion_envios (correduria_id, cliente_id, poliza_id, canal, estado, mensaje, resend_message_id, creado_por)
+    values (${correduriaId}::uuid, ${entrada.clienteId}::uuid, ${entrada.polizaId}::uuid, 'email', 'enviado', ${entrada.texto}, ${resultado.resendMessageId}, ${ACTOR_PUERTO_OPERADOR})
+  `)
+  await anotar(correduriaId, entrada.clienteId, `Recaptación: email enviado desde ${ACTOR_PUERTO_OPERADOR}`)
+  return { ok: true, destinatario: destino.to }
 }
 
 // ── Envío en LOTE por email (cron diario) ─────────────────────────────────

@@ -127,6 +127,7 @@ export default function PanelIngesta({ datos }: { datos: VistaIngesta | null }) 
     <>
       <Estado salud={s} datos={datos} />
       <Cuarentena salud={s} />
+      <Parciales salud={s} />
       <Huerfanas salud={s} truncadas={datos.huerfanasTruncadas} sinAmbito={datos.huerfanasSinAmbito} />
       <Rechazos salud={s} />
       <Companias salud={s} />
@@ -208,6 +209,77 @@ function Cuarentena({ salud }: { salud: SaludIngesta }) {
                     {f.clave ?? <Pendiente texto="Clave no legible" definitivo donde="el nombre del fichero EIAC" />}
                   </td>
                   <td style={{ ...celda, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{f.n}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TablaScroll>
+      )}
+    </Bloque>
+  )
+}
+
+/**
+ * Ficheros que se dieron por buenos dejándose objetos sin guardar.
+ *
+ * 🚨 Es la única pérdida de esta pantalla que NO se puede volver a pedir: CIMA
+ * ya confirmó el fichero a TIREA. Por eso se lista fichero a fichero (con su
+ * nombre EIAC, que es lo que hay que citar para reprocesar el crudo en la
+ * ingesta de origen) y no como un contador.
+ */
+function Parciales({ salud }: { salud: SaludIngesta }) {
+  return (
+    <Bloque
+      titulo="Ficheros confirmados con objetos sin guardar"
+      Icono={TriangleAlert}
+      tono={salud.objetosEnRevision !== null && salud.objetosEnRevision > 0 ? 'malo' : 'neutral'}
+      accion={
+        salud.parciales === null
+          ? <Badge tono="aviso">Sin comprobar</Badge>
+          : <Badge tono={salud.objetosEnRevision ? 'negativo' : 'neutral'}>
+              {salud.objetosEnRevision ?? 0} objeto(s)
+            </Badge>
+      }
+      sub="CIMA los dio por entregados a TIREA y no los reenvía. No se arregla pidiéndolos otra vez."
+    >
+      {salud.parciales === null ? (
+        <Pendiente
+          texto="No se ha podido comprobar"
+          donde="el puerto /api/operador/ingesta de asegura"
+        />
+      ) : salud.parciales.length === 0 ? (
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
+          Se ha mirado: todos los ficheros confirmados guardaron lo que traían.
+        </p>
+      ) : (
+        <TablaScroll>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={celdaCab}>Compañía / clave</th>
+                <th style={celdaCab}>Tipo</th>
+                <th style={{ ...celdaCab, textAlign: 'right' }}>Sin guardar</th>
+                <th style={celdaCab}>Fichero</th>
+              </tr>
+            </thead>
+            <tbody>
+              {salud.parciales.map(f => (
+                <tr key={f.fichero}>
+                  <td style={celda}>
+                    {f.entidad}
+                    {f.clave ? ` / ${f.clave}` : ''}
+                  </td>
+                  <td style={celda}>{f.tipo}</td>
+                  <td style={{ ...celda, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    <strong style={{ color: 'var(--negative)' }}>{f.enRevision}</strong>
+                    <span style={{ color: 'var(--muted)' }}> de {f.declarados}</span>
+                  </td>
+                  <td style={{ ...celda, overflowWrap: 'anywhere' }}>
+                    {f.fichero}
+                    {f.dias !== null && (
+                      <span style={{ color: 'var(--muted)' }}> · hace {f.dias} d</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

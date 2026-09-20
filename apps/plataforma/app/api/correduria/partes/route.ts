@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { actualizarParteAsegura, partesAsegura } from '@/lib/partes-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -17,8 +17,8 @@ export const dynamic = 'force-dynamic'
  *   PATCH { id, estado, siniestroId?, motivoDescarte? }
  */
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
 
   const p = new URL(req.url).searchParams
   const limiteTexto = (p.get('limite') ?? '').trim()
@@ -32,8 +32,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!body || typeof body.id !== 'string' || body.id.trim() === '') {

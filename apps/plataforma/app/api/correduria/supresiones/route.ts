@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { resolverSupresionAsegura, supresionesAsegura } from '@/lib/supresiones-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -20,8 +20,8 @@ export const dynamic = 'force-dynamic'
  *   POST { id, estado, respuesta?, prorrogaMotivo? }
  */
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
 
   const todas = new URL(req.url).searchParams.get('todas') === '1'
   const r = await supresionesAsegura(todas)
@@ -29,8 +29,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
 
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!body || typeof body.id !== 'string' || body.id.trim() === '') {

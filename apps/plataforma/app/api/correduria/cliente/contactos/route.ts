@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import {
   anadirContactoAsegura,
   borrarContactoAsegura,
@@ -18,8 +18,8 @@ export const dynamic = 'force-dynamic'
  * obligatoria: es la pantalla de Alberto.
  */
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
   const id = (new URL(req.url).searchParams.get('id') ?? '').trim()
   if (id === '') return NextResponse.json({ estado: 'invalido', motivo: 'Falta el id del cliente.' }, { status: 422 })
   const r = await contactosAsegura(id)
@@ -39,8 +39,9 @@ export async function DELETE(req: NextRequest) {
 }
 
 async function reenviar(req: NextRequest, llamada: (body: Record<string, unknown>) => Promise<{ status: number; json: unknown }>) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!body || typeof body.clienteId !== 'string' || body.clienteId.trim() === '') {
     return NextResponse.json({ estado: 'invalido', motivo: 'Falta el id del cliente.' }, { status: 422 })

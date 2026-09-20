@@ -36,8 +36,36 @@ const SECRET = () => requireSecret('ASEGURA_PORTAL_SESSION_SECRET', 'portal-dev-
  * usable»— es cierta para un secreto que FIRMA y falsa para una pimienta.
  */
 export function hashCanal(valor: string): string {
+  return hashConPimienta(valor.trim().toLowerCase())
+}
+
+/**
+ * La ÚNICA forma de hashear de esta app: SHA-256 sobre `<pimienta>:<valor>`.
+ *
+ * 🚨 No cambiar la forma de esta cadena ni la pimienta: `hashCanal` produce los
+ * hashes que ya están escritos en `portal_canal`, y si dejan de casar cada
+ * usuario crea una identidad nueva vacía (landmine del CLAUDE.md de la app).
+ */
+function hashConPimienta(valor: string): string {
   const pimienta = requireSecret('ASEGURA_PORTAL_CANAL_PEPPER', 'portal-dev-pepper-change-in-prod')
-  return createHash('sha256').update(`${pimienta}:${valor.trim().toLowerCase()}`).digest('hex')
+  return createHash('sha256').update(`${pimienta}:${valor}`).digest('hex')
+}
+
+/**
+ * Hash del código de un solo uso, para que `portal_codigo` NO guarde los 6
+ * dígitos en claro. Una lectura de la BD, un volcado o una copia de seguridad
+ * expuesta dejaban entrar como cualquier cliente que acabara de pedir código.
+ *
+ * 🚨 La pimienta es la que hace que esto sirva de algo, y es la MISMA de
+ * `hashCanal` a propósito (una segunda forma de hashear es una segunda cosa que
+ * se puede desincronizar). Un SHA-256 pelado de 6 dígitos se revierte con un
+ * bucle de 10^6 en un segundo: sin pimienta, el hash sería decorativo.
+ *
+ * El prefijo `codigo:` separa el dominio: el hash de un código nunca puede
+ * coincidir con el de un canal, así que una fila de una tabla no vale en la otra.
+ */
+export function hashCodigo(codigo: string): string {
+  return hashConPimienta(`codigo:${codigo}`)
 }
 
 export async function crearSesion(identidadId: string): Promise<string> {

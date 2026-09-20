@@ -8,6 +8,14 @@ const AVERIAS_PROPIAS = ['cartera_sin_conexion', 'sin_proveedor_email']
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+/**
+ * 🚨 Sin esto la función se queda en el techo por defecto de la plataforma, y
+ * cada candidata puede ser hasta tres consultas y un `sendMail`: la pasada moría
+ * a media lista, con correos ya enviados y sellados y SIN respuesta que lo
+ * contara — indistinguible de «hoy no tocaba nadie». El presupuesto de envío
+ * (`PRESUPUESTO_MS`) va por debajo, para que la respuesta salga siempre.
+ */
+export const maxDuration = 300
 
 /**
  * GET /api/cron/avisos-vencimiento — un aviso por obligación a punto de dejar

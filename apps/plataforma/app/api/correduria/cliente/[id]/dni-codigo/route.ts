@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { crearCodigoDni } from '@/lib/correduria/dni-otp'
 import { tgSend } from '@central/core-telegram'
 
@@ -10,8 +10,9 @@ export const dynamic = 'force-dynamic'
 // Telegram de Alberto (nunca a la respuesta HTTP): sin abrir Telegram no hay
 // forma de completar el segundo paso.
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
   const { id } = await ctx.params
   if (!id) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
 

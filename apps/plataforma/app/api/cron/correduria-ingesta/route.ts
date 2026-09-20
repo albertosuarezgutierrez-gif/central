@@ -155,7 +155,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, estado: salud.estado, detalle })
   }
 
-  if (salud.estado === 'degradada' && cambio) {
+  // 🚨 `parcial` TAMBIÉN suena. Hasta el 20/09/2026 el aviso colgaba de
+  // `degradada` a secas, así que una lectura sin poder comprobar el cron, el
+  // crudo, la caja negra o la cobertura salía por aquí en silencio y el latido
+  // decía «sin ficheros atascados». Hoy no mordía de milagro: el estado ya era
+  // `degradada` por otra cosa.
+  if ((salud.estado === 'degradada' || salud.estado === 'parcial') && cambio) {
+    const soloHuecos = salud.estado === 'parcial'
     const prima = salud.primaPerdida !== null && salud.primaPerdida > 0
       ? `\n💶 Prima en los recibos sin guardar: <b>${eur(salud.primaPerdida)}</b>`
       : ''
@@ -180,14 +186,27 @@ export async function GET(req: NextRequest) {
     // atascado: aquí no hay nada que reprocesar, hay que llamar a la compañía o
     // mirar el adaptador. Por eso lleva su propio titular y su propio recado.
     const mudas = (salud.silencio ?? []).filter(e => e.veredicto === 'silencio')
-    const titular = mudas.length
-      ? `🛡️ <b>${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos</b>`
-      : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
-    const recado = mudas.length
-      ? '\n\nNo hay nada atascado que reprocesar: sencillamente no llega. ' +
-        'Compruébalo en CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.'
-      : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
-        'y su comisión tampoco.'
+    // Un hueco NO se anuncia como una pérdida: mandaría a buscar un dato que
+    // nadie ha dicho que falte, y a la tercera vez se ignora el mensaje entero.
+    const titular = soloHuecos
+      ? '🛡️ <b>La ingesta de CIMA solo se ha podido comprobar a medias</b>'
+      : mudas.length
+        ? `🛡️ <b>${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos</b>`
+        : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
+    const recado = soloHuecos
+      ? '\n\nNo se ha medido ninguna pérdida, pero tampoco se ha podido mirar todo: ' +
+        'esto NO es «va bien», es «no lo sé».'
+      : mudas.length
+        ? '\n\nNo hay nada atascado que reprocesar: sencillamente no llega. ' +
+          'Compruébalo en CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.'
+        : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
+          'y su comisión tampoco.'
+    // Con pérdida medida, los huecos siguen importando: dicen que el recuento
+    // de arriba es un SUELO. Van al final para no tapar lo accionable.
+    const sinComprobar = !soloHuecos && salud.huecos.length > 0
+      ? `\n\n❔ Además, esto no se ha podido comprobar (así que lo de arriba es un mínimo):\n` +
+        salud.huecos.map(h => `• ${h}`).join('\n')
+      : ''
     // 🎯 Y LO ACCIONABLE: los números de póliza concretos, agrupados por clave
     // de mediador, para poder copiarlos a un correo a la compañía. Sin esto el
     // aviso decía «17 no están en la cartera» y no había forma de saber cuáles
@@ -210,7 +229,7 @@ export async function GET(req: NextRequest) {
     await tgAviso('correduria.ingesta',
       titular + '\n' +
       salud.motivos.map(m => `• ${m}`).join('\n') +
-      prima + entidades + pedidos + sinAmbito + recorte + antiguedad + recado,
+      prima + entidades + pedidos + sinAmbito + recorte + sinComprobar + antiguedad + recado,
     ).catch(() => {})
   }
 
@@ -224,7 +243,9 @@ export async function GET(req: NextRequest) {
     // `null` = no se ha podido listar cuáles. Nunca 0.
     pedirACompania: salud.huerfanasReparto?.totalPedir ?? null,
     reprocesables: salud.huerfanasReparto?.totalReprocesar ?? null,
-    avisado: cambio && salud.estado === 'degradada',
+    objetosEnRevision: salud.objetosEnRevision,
+    huecos: salud.huecos.length,
+    avisado: cambio && salud.estado !== 'ok',
     motivoAviso: decision.avisar ? decision.motivo : null,
     detalle,
   })

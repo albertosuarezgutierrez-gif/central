@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
-import { requireSession } from '@/lib/session'
+import { exigirAccesoCartera } from '@/lib/session'
 import { leerPoliza, revisarFichero } from '@/lib/documentos/extraer-poliza'
 import { camposLeidos, seLeyoAlgoAuto, camposLeidosHogar, seLeyoAlgoHogar } from '@central/module-seguros'
 
@@ -29,7 +29,14 @@ export const maxDuration = 120
  *    documento repetido sin conservarlo.
  */
 export async function POST(req: Request) {
-  await requireSession()
+  // 🛡️ Sesión **Y ÁMBITO DE CORREDURÍA**, fail-closed y ANTES de nada.
+  //
+  // `requireSession()` LANZA (500 con traza) en vez de contestar 401, y además
+  // solo acredita «tiene cuenta en la casa de marcas», no «es de esta
+  // correduría»: `public.cuentas` la comparten plataforma, alquiler, transporte,
+  // mariscos, rrhh y almacén. Ver `lib/session.ts`.
+  const acceso = await exigirAccesoCartera()
+  if (!acceso.ok) return NextResponse.json(acceso.cuerpo, { status: acceso.status })
 
   let form: FormData
   try {

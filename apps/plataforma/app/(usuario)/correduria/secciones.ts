@@ -77,6 +77,20 @@ export function seccionDeParametro(v: string | string[] | undefined): Seccion {
  * distintos. `a_tiempo` no entra en «Hoy» — entra en «Cartera», que enseña la
  * ventana entera de 90 días.
  *
+ * 🚨 `'vencida'` lleva aquí desde el principio y hasta el 20/09/2026 NO LA
+ * EMITÍA NADIE: el puerto de asegura consultaba `fechaVencimiento >= hoy`, así
+ * que una póliza vencida sin gestionar no llegaba a esta lista y este contador
+ * no podía sumarla nunca. Era un contador correcto sobre un dato que no existía
+ * — indistinguible de uno que funciona. Con la ventana mirando una anualidad
+ * hacia atrás, esa urgencia ya llega y las vencidas SUMAN en el badge de «Hoy»,
+ * que es para lo que están en esta lista. Lo vigila
+ * `test/regression-vencimientos-vencidas.test.ts`.
+ *
+ * Lo que NO entra en «Hoy» son las vigentes con un vencimiento anterior a esa
+ * anualidad (8 filas de 2013-2019 con prima 0): no son renovaciones de este año
+ * y enterrarían las recuperables. No se esconden — el puerto las cuenta aparte
+ * y `Renovaciones.tsx` las declara al pie de «Cartera».
+ *
  * Los nombres vienen del puerto de asegura (`urgencia` de cada vencimiento) y
  * se replican en `URGENCIAS` de `Renovaciones.tsx`, que es quien los pinta.
  */
@@ -138,4 +152,78 @@ export function agregarContadores(
   }
   if (conocidas === 0) return ilegibles > 0 ? null : { n: 0, parcial: false }
   return { n, parcial: ilegibles > 0 }
+}
+
+/**
+ * Cómo se DICE cuántas pólizas vigentes arrastran un vencimiento anterior a la
+ * ventana de renovación (más de una anualidad: 8 filas de 2013-2019 medidas el
+ * 20/09/2026). No son trabajo de hoy —por eso no entran en la lista ni en el
+ * contador de arriba— pero tampoco se esconden.
+ *
+ * Vive aquí y no en el JSX por la regla global del repo: la lógica del titular
+ * va en un helper puro y testeado. Y lo que hay que testear son justo los TRES
+ * estados, que se arreglan en tres sitios distintos:
+ *
+ *   `undefined` → la versión desplegada de asegura no manda el recuento (se
+ *                 despliega asegura). NO es «no hay ninguna».
+ *   `null`      → se intentó contar y no se pudo (se mira el puerto). Tampoco.
+ *   número      → las que hay. Aquí un `0` SÍ es una afirmación comprobada, y
+ *                 ese es el error simétrico: tratarlo como hueco haría que la
+ *                 pantalla dejara de decir lo que sabe.
+ *
+ * Las tres frases tienen que ser DISTINTAS: colapsar dos manda a Alberto al
+ * sitio equivocado, que es exactamente lo que el bug de las vencidas hacía.
+ */
+export function textoVencidasAntiguas(n: number | null | undefined): string {
+  if (n === undefined) {
+    return 'La versión desplegada de asegura todavía no dice cuántas pólizas figuran vigentes ' +
+      'con un vencimiento anterior a esa ventana. No es que no haya: es que no llega por el puerto.'
+  }
+  if (n === null) {
+    return 'No se ha podido contar cuántas pólizas figuran vigentes con un vencimiento anterior ' +
+      'a esa ventana. No hay que entenderlo como «ninguna».'
+  }
+  if (n === 0) return 'Ninguna póliza vigente arrastra un vencimiento anterior a esa ventana.'
+  const p = n === 1
+    ? '1 póliza figura vigente'
+    : `${n} pólizas figuran vigentes`
+  return `${p} con un vencimiento anterior a esa ventana (más de una anualidad). No son ` +
+    'renovaciones de este año: es dato a depurar, y por eso no entran en la lista ni en el ' +
+    'contador de «Hoy».'
+}
+
+/**
+ * Lo que la pantalla dice cuando una lista del puerto de asegura viene con
+ * TECHO. Tres estados, tres frases distintas, y una de ellas es el silencio:
+ *
+ *   `true`      → la criba tocó su techo: lo que se ve abajo es UNA PARTE.
+ *   `false`     → asegura lo comprobó y no recortó → `null`, no se dice nada
+ *                 (un cartel permanente de «está completa» es ruido que se
+ *                 deja de leer, y entonces el del `true` tampoco se lee).
+ *   `null`/`undefined` → asegura (versión desplegada más vieja) NO manda el
+ *                 campo. **No es `false`.** Se dice que no se sabe, en tono
+ *                 apagado, y se cura solo al desplegar asegura.
+ *
+ * 🚨 El estado que importa es el tercero: colapsarlo con el segundo convierte
+ * un «no lo he comprobado» en «esto es todo», que es exactamente el recorte
+ * mudo que el techo existe para evitar — movido de la consulta a la pantalla.
+ *
+ * Vive aquí y no en el JSX por la regla global del repo (la lógica del titular
+ * va en un helper puro y testeado), y lo comparten las tres listas para que el
+ * mismo hueco no se cuente de tres maneras distintas.
+ *
+ * @param que  El sujeto en plural, tal cual se pinta: «renovaciones»,
+ *             «pólizas sin cobrar»…
+ */
+export function textoListaTruncada(
+  truncado: boolean | null | undefined,
+  que: string,
+): string | null {
+  if (truncado === true) {
+    return `La lista viene RECORTADA: hay más ${que} de las que se ven aquí. Los ` +
+      'totales de arriba salen más bajos que la realidad.'
+  }
+  if (truncado === false) return null
+  return `La versión desplegada de asegura todavía no dice si esta lista viene recortada, ` +
+    `así que no se puede afirmar que estén todas las ${que}.`
 }

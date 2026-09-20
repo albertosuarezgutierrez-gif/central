@@ -30,7 +30,15 @@ import { esRutaDeRutina } from './lib/rutas-rutina'
 //     en vivo y no se toca eso en el mismo PR; sacarlas de aquí (quedándose solo con el pass-through
 //     por token, que es MÁS estrecho: exige el token para siquiera alcanzar el handler) es un
 //     endurecimiento pendiente, seguro de hacer cuando el ciclo semanal confirme que va fino.
-const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
+// 🚨 `/register` SALIÓ de esta lista el 20/09/2026. Estaba aquí desde el día uno y, junto con
+// que ninguna pantalla gateaba por rol, era la mitad del agujero: cualquiera se registraba desde
+// internet, recibía la cookie de sesión en la misma respuesta y se descargaba la cartera entera de
+// la correduría (`/api/correduria/cartera-lista?formato=csv`). Sin esta entrada, la PÁGINA de alta
+// solo es alcanzable con sesión; el alta de cuentas nuevas se hace desde `/admin` (que tiene su
+// propia auth) o con el código de `REGISTRO_INVITACION_CODIGO`, que el handler exige aparte.
+// ⚠️ `/api/auth` SIGUE aquí y no se toca: es el login, y sin él no se puede entrar. El handler de
+// `/api/auth/register` lleva su propia guarda fail-closed, así que el prefijo no lo reabre.
+const PUBLIC = ['/login', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
   '/api/banca/pago/callback', '/api/internal/alerta',
   // 🚨 Webhook de Stripe de los extras del huésped. Stripe POSTea desde SUS servidores, sin cookie

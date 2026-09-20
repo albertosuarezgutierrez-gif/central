@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { enviarEmailRecaptacionAsegura } from '@/lib/recaptacion-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -8,8 +8,9 @@ export const dynamic = 'force-dynamic'
 // recaptación (Resend, con tracking). `{ clienteId, polizaId, email, asunto,
 // texto }`. El `actor` lo pone el servidor, nunca el cuerpo.
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
   const body = (await req.json().catch(() => null)) as
     | { clienteId?: string; polizaId?: string; email?: string; asunto?: string; texto?: string }
     | null

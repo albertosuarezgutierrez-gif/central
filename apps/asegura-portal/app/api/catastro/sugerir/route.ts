@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { MAX_DIRECCION } from '@central/module-seguros-portal'
 
 import { HTTP_POR_ESTADO_SUGERENCIA, sugerirDirecciones } from '@/lib/catastro-sugerencias'
+import { rateLimit } from '@/lib/rate-limit'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -44,8 +45,34 @@ export const maxDuration = 60
  * | 404  | `sin_candidatos`       | se probó todo y el Catastro no confirmó ninguna |
  * | 422  | `direccion_ilegible`   | ni una sola forma llegó a ser consultable |
  * | 502  | `catastro_no_responde` | el servicio se cayó. **NO es «no existe»** |
+ * | 429  | `demasiadas_peticiones`| tope por identidad agotado (+ `retry-after`) |
  * | 503  | `ia_no_disponible`     | hacía falta la IA y no la hubo. **NO es «no hay nada»** |
  */
+
+/**
+ * Tope por IDENTIDAD. Cada llamada gasta UNA de IA y hasta 9 consultas al
+ * Catastro (de ahí el `maxDuration = 60`).
+ *
+ * 🚨 La sesión no es un tope: entrar al portal es pedir un código a un correo
+ * cualquiera. El docblock de arriba decía que la sesión estaba aquí para no
+ * «gastar IA de nuestra cuenta», y para eso sola no basta.
+ *
+ * Por IDENTIDAD y no por IP: varios clientes comparten IP y el mismo cliente
+ * cambia de red. ⚠️ El limitador es EN MEMORIA (`lib/rate-limit.ts`), o sea por
+ * instancia y no global — corta el bucle, no a un abusador repartido.
+ *
+ * 10 a la hora: esto solo se llama cuando `/api/catastro` ya ha fallado con la
+ * dirección tal cual, así que un alta normal lo usa una o dos veces.
+ */
+const MAX_POR_IDENTIDAD = 10
+const VENTANA_MS = 60 * 60 * 1000
+
+function demasiadas(retryAfter: number) {
+  return NextResponse.json(
+    { error: 'demasiadas_peticiones', retryAfter },
+    { status: 429, headers: { 'retry-after': String(retryAfter) } },
+  )
+}
 
 const Entrada = z.object({
   // El mismo tope que `variantesDireccion()`: por encima no es una dirección,
@@ -56,11 +83,16 @@ const Entrada = z.object({
 })
 
 export async function POST(req: Request) {
+  let identidad
   try {
-    await requireIdentidad()
+    identidad = await requireIdentidad()
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+
+  // ANTES de leer el cuerpo, de llamar a la IA y de tocar el Catastro.
+  const porIdentidad = rateLimit(`catastro-sugerir:${identidad.id}`, MAX_POR_IDENTIDAD, VENTANA_MS)
+  if (!porIdentidad.allowed) return demasiadas(porIdentidad.retryAfter ?? 60)
 
   const parsed = Entrada.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 })

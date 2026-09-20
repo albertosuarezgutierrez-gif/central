@@ -1355,9 +1355,31 @@ importe ese fichero directamente revienta con `ERR_MODULE_NOT_FOUND` — no es u
 lógica de A QUIÉN y CÓMO se dirige el correo se prueba en `texto-vencimiento.test.ts` sin arrastrar nada
 de BD.
 
-Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), `ASEGURA_MAIL_FROM` y
-un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
+Envs: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS`, `ASEGURA_MAIL_FROM` y un proveedor de correo
+(`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
 Guardián: `test/regression-portal-obligaciones.test.ts`.
+
+### 🔌 Estado en producción (20/09/2026) — las dos envs YA están puestas
+
+Hasta este día el cron llevaba **desde el 02/09 devolviendo 401 a diario** por falta de `CRON_SECRET`,
+y `portal_aviso_enviado` tenía **0 filas**: ningún cliente ha recibido nunca un aviso de renovación
+por esta vía. Medido, no supuesto. En la auditoría de la correduría se pusieron en `central-asegura`
+`CRON_SECRET` y `ASEGURA_AVISOS_ACTIVOS=1`, **y se forzó el redeploy de producción** — una env creada
+después del último build NO está viva hasta que se reconstruye, y ése es justo el fallo que dejó el
+cron mudo dos semanas sin un solo error visible.
+
+🚨 **Lo que NO está comprobado a fecha de esta línea: el ensayo `?contar=1` contra producción.** En BD
+había **10 obligaciones y 2 candidatas** en la ventana de 30 días, así que lo esperable es
+`"candidatas":2` con `"soloContar":true` mientras no se corra el ensayo. Si sale otra cifra, lo
+correcto es **quitar `ASEGURA_AVISOS_ACTIVOS` y redesplegar antes de las 08:00 UTC**, no dejar que el
+cron decida por su cuenta a quién escribe. El cerrojo 2 sigue siendo el interruptor real.
+
+**Y el cron tiene dos techos desde ese mismo día** (`lib/avisos-presupuesto.ts`, puro y testeado):
+`LIMITE_OBLIGACIONES = 500` en la criba y un presupuesto de **240 s** con 8 s de margen por candidata,
+con `maxDuration = 300` declarado en la ruta. Ninguno de los dos silencia lo que deja fuera:
+`ResumenAvisos` gana `truncado` (la criba topó) y `pendientes` (candidatas sin mirar al agotarse el
+presupuesto). Un cron que se queda a medias y responde `enviados: N` sin decir cuántos faltan es
+indistinguible de uno que terminó.
 
 ## 📬 El emisor GENÉRICO de la intranet (15/09/2026) — sin cola, derivado de la campana
 

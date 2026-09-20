@@ -16,10 +16,21 @@ import { eur } from '@/lib/dinero'
 import { tgAviso } from '@/lib/telegram/avisos'
 import { comisionesAsegura, nombreCompania } from '@/lib/comisiones-asegura'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { estadoCuadre, mesEnPeriodo, finDeMes, ESTADOS_PENDIENTES, type EstadoCuadre } from '@/lib/correduria/cuadre'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
+
+/**
+ * Huella de la pasada. Hace falta porque este cron solo habla cuando ENCUENTRA
+ * algo: un año entero sin descuadres y un cron muerto son el mismo silencio, y
+ * lo que hay detrás es el libro de comisiones (dinero que se reclama o no se
+ * reclama a la compañía). Los dos caminos de «no he podido mirar» —puerto sin
+ * configurar y error de lectura— laten con `ok=false` a propósito: son justo
+ * los que hoy devolvían 200 y se leían como una pasada buena.
+ */
+const AGENTE = 'cima_liq'
 
 /** Días tras el cierre del periodo en los que aún se acepta el ingreso. */
 const VENTANA_COBRO_DIAS = 45
@@ -33,7 +44,10 @@ export async function GET(req: NextRequest) {
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const cuenta = await prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM cuentas LIMIT 1`
-  if (!cuenta.length) return NextResponse.json({ ok: true, msg: 'Sin cuentas' })
+  if (!cuenta.length) {
+    await registrarLatido(AGENTE, false, 'sin ninguna cuenta en la BD: no se ha podido cuadrar nada')
+    return NextResponse.json({ ok: true, msg: 'Sin cuentas' })
+  }
   const cuentaId = cuenta[0].id
 
   const anio = new Date().getFullYear()
@@ -42,6 +56,11 @@ export async function GET(req: NextRequest) {
   if (com.estado === 'sin_configurar') {
     // El puerto no está conectado. NO es «no hay comisiones»: no se escribe nada
     // ni se avisa, porque no hay nada que reclamar todavía.
+    //
+    // Pero SÍ late en falso: «no se ha podido mirar» no es «va bien». Sin esto,
+    // un `ASEGURA_OPERADOR_SECRET` que se caiga deja el libro de comisiones
+    // congelado y la pasada devolviendo 200 para siempre.
+    await registrarLatido(AGENTE, false, 'puerto sin configurar (falta ASEGURA_OPERADOR_SECRET)')
     return NextResponse.json({ ok: true, msg: 'Puerto de asegura sin configurar' })
   }
 
@@ -61,6 +80,7 @@ export async function GET(req: NextRequest) {
         `El libro queda marcado como <b>no comprobado</b>, no a cero.`,
       { html: true },
     )
+    await registrarLatido(AGENTE, false, `no se pudo leer la cartera: ${com.motivo}${com.causa ? ` (${com.causa})` : ''}`)
     return NextResponse.json({ ok: false, motivo: com.motivo, causa: com.causa ?? null }, { status: 502 })
   }
 
@@ -194,17 +214,88 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (avisos.length) {
+  // 🚨 Comisiones que la compañía informó y NO se pudieron leer. Van SIEMPRE,
+  // aunque todo lo demás cuadre: un devengo calculado sobre recibos ilegibles
+  // es más BAJO que el real, así que «cuadra» puede significar «cuadra con una
+  // cifra incompleta» — que es precisamente cuando se deja de reclamar algo.
+  // `null` (una asegura más vieja no manda el campo) NO se cuenta como 0: se
+  // dice que no se sabe.
+  // 🚨 Y el hueco que está POR ENCIMA de todos: la lectura vino RECORTADA.
+  // Un devengo calculado sobre parte de los recibos no es «cuadra con una
+  // cifra incompleta»: es un libro al que le faltan periodos enteros. Por eso
+  // el año se marca `leido_ok = false` —que es el mismo camino que ya existía
+  // para el fallo de lectura, y que `estadoCuadre` pinta como `no-comprobado`—
+  // en vez de dejar filas con cara de comprobadas.
+  //
+  // `truncado === null` (una asegura más vieja no manda el campo) NO se trata
+  // como `false`: no se marca nada, pero tampoco se afirma que el libro esté
+  // completo — se dice en el latido y en la respuesta. El libro se comporta
+  // como antes de que el campo existiera, que es lo único honesto que se puede
+  // hacer sin el dato.
+  if (com.truncado === true) {
+    await prisma.$executeRaw`
+      UPDATE comisiones_devengo SET leido_ok = false, actualizado_at = now()
+      WHERE cuenta_id = ${cuentaId}::uuid
+        AND periodo_inicio >= ${`${anio}-01-01`}::date`
     await tgAviso(
       'correduria.cima-liq',
-      `🔴 <b>Comisiones — hay dinero que no cuadra</b>\n\n${avisos.join('\n\n')}\n\n` +
+      `⚠️ <b>Comisiones</b> — la cartera vino <b>RECORTADA</b>: asegura tocó su techo de lectura, ` +
+        `así que faltan recibos y/o liquidaciones y el devengado de ${anio} sale más BAJO que el real.
+` +
+        `El libro queda marcado como <b>no comprobado</b>, no a cero. Hay que subir el tope en ` +
+        `<code>apps/asegura/lib/cartera-techos.ts</code>.`,
+      { html: true },
+    )
+  }
+
+  const sinDato = com.devengos.some(d => d.ilegibles == null)
+  const ilegibles = com.devengos.reduce((s, d) => s + (d.ilegibles ?? 0), 0)
+  const lineaIlegibles = sinDato
+    ? '⚪ No se sabe cuántos recibos tienen la comisión ilegible (asegura no lo informa).'
+    : ilegibles > 0
+      ? `⚠️ ${ilegibles} recibo(s) cobrados con la comisión ILEGIBLE: el devengado es un suelo, no el total.`
+      : ''
+
+  if (avisos.length || ilegibles > 0 || sinDato) {
+    const cabecera = avisos.length
+      ? `🔴 <b>Comisiones — hay dinero que no cuadra</b>\n\n${avisos.join('\n\n')}\n\n`
+      : `⚠️ <b>Comisiones</b> — los periodos cuadran, pero el devengado está incompleto.\n\n`
+    await tgAviso(
+      'correduria.cima-liq',
+      cabecera +
+        (lineaIlegibles ? `${lineaIlegibles}\n` : '') +
         (pendientes ? `⚪ Y ${pendientes} periodo(s) sin dato o sin fuente todavía.\n` : '') +
         `Revisa en <b>/correduria</b>.`,
       { html: true },
     )
   }
 
-  return NextResponse.json({ ok: true, periodos: filas.length, avisos: avisos.length, pendientes })
+  // Una lectura recortada tiñe el latido: el libro de ese año NO está
+  // comprobado, y un latido verde diría lo contrario. `null` no lo tiñe (no se
+  // sabe, y no saberlo es el estado anterior a que existiera el campo), pero sí
+  // se DICE en el detalle: es donde se mira cuando algo no cuadra.
+  const notaTecho =
+    com.truncado === true
+      ? 'LECTURA RECORTADA: faltan periodos, el libro queda no comprobado'
+      : com.truncado === null
+        ? 'no se sabe si la lectura vino recortada (asegura no lo informa)'
+        : 'lectura completa'
+  await registrarLatido(
+    AGENTE,
+    com.truncado !== true,
+    `${filas.length} periodo(s) cuadrados · ${avisos.length} con dinero que no cuadra · ${pendientes} sin dato o sin fuente · ` +
+      (sinDato ? 'comisiones ilegibles: no se sabe' : `${ilegibles} recibo(s) con comisión ilegible`) +
+      ` · ${notaTecho}`,
+  )
+  return NextResponse.json({
+    ok: com.truncado !== true,
+    periodos: filas.length,
+    avisos: avisos.length,
+    pendientes,
+    // `null` = asegura no lo informa. No es 0. Igual que `recibosComisionIlegible`.
+    lecturaTruncada: com.truncado,
+    recibosComisionIlegible: sinDato ? null : ilegibles,
+  })
 }
 
 const ETIQUETA: Record<string, string> = {

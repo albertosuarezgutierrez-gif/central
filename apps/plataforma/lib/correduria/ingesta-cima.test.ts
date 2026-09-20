@@ -54,8 +54,14 @@ test('cuarentena vacía sí es «comprobado que no hay»', () => {
   const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], huerfanas: 0 })
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
-  assert.equal(r.salud.estado, 'ok')
   assert.equal(r.salud.total, 0)
+  // 🚨 Pero el VEREDICTO es `parcial`, no `ok` (20/09/2026): esta respuesta no
+  // trae `rechazos` ni `entidades`, y este módulo los colapsa a `null` a
+  // propósito —«ausente ⇒ no comprobado»—. Antes eso solo salía como coletilla
+  // del parte mientras el estado seguía diciendo `ok`, así que la pantalla
+  // pintaba «sin comprobar» y el Telegram no sonaba: las dos caras del mismo
+  // hecho diciendo cosas distintas. El total sí está medido; el estado no.
+  assert.equal(r.salud.estado, 'parcial')
 })
 
 test('un fallo de red se convierte en sin_datos, no en silencio', () => {
@@ -128,7 +134,9 @@ test('🚨 un puerto VIEJO que no informa `rechazos` deja null, no lista vacía'
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
   assert.equal(r.salud.rechazos, null)
-  assert.equal(r.salud.estado, 'ok')
+  // Y por eso mismo el veredicto no puede ser `ok`: esa puerta no se ha
+  // abierto. Es lo que este propio test afirma en su comentario de arriba.
+  assert.equal(r.salud.estado, 'parcial')
 })
 
 test('🚨 una fila de rechazo ilegible degrada la lista ENTERA a «no comprobado»', () => {
@@ -156,7 +164,12 @@ test('un rechazo sin hora ni origen se acepta: son huecos declarados, no basura'
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
   assert.equal(r.salud.rechazos?.length, 1)
-  assert.equal(r.salud.estado, 'ok', 'sin hora no se puede afirmar que sea de ahora')
+  // Sin hora no se puede afirmar que el rechazo sea de ahora, así que NO
+  // degrada por pérdida. Lo que sí queda pendiente es el silencio por compañía,
+  // que esta respuesta tampoco trae: por eso `parcial` y no `ok`.
+  assert.equal(r.salud.estado, 'parcial')
+  assert.equal(r.salud.motivos.some(m => /RECHAZADOS/.test(m)), false,
+    'sin hora no se puede afirmar que sea de ahora')
 })
 
 test('un fallo de red sigue dejando los rechazos en «no comprobado»', () => {
@@ -312,7 +325,10 @@ test('🚨 sin listado, la salud lo DICE en vez de callarlo', () => {
 
 const SENALES = {
   crudo: { pendientes: 5, purgaInminente: 2, masAntiguaHoras: 700 },
-  cobertura: { hojas: 300, hojasNuncaLeidas: 42, porTipo: [{ tipoObjeto: 'POL', hojas: 200, nuncaLeidas: 30 }] },
+  cobertura: {
+    rutas: 300, rutasNuncaLeidas: 42, entidadesObservadas: 3,
+    porTipo: [{ tipoObjeto: 'POL', rutas: 200, nuncaLeidas: 30 }],
+  },
   cajaNegra: { capturaActiva: true, cuerpos: 3, posts: 9, horasDesdeUltimo: 1 },
   ultimoPull: { horas: 40, procesados: 0 },
 }
@@ -359,4 +375,46 @@ test('un bloque a medias NO se acepta a trozos', () => {
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
   assert.equal(r.salud.cajaNegra, null)
+})
+
+// ── 🚨 Ficheros confirmados con objetos sin guardar ─────────────────────────
+
+const PARCIAL = {
+  fichero: 'C0468_M00171_POL_199.zip', tipo: 'POL', entidad: 'C0468', clave: 'M00171',
+  declarados: 44, persistidos: 40, enRevision: 4, dias: 3,
+}
+
+test('la lista de ficheros parciales LLEGA a la salud y degrada', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], parciales: [PARCIAL] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.objetosEnRevision, 4)
+  assert.equal(r.salud.estado, 'degradada')
+})
+
+test('🚨 una fila de parcial ilegible degrada la lista ENTERA, no se cuenta a trozos', () => {
+  // Un recuento más bajo que la realidad sobre la única pérdida que no se puede
+  // volver a pedir es la forma tranquilizadora de equivocarse, en el peor sitio.
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [],
+    parciales: [PARCIAL, { ...PARCIAL, enRevision: 'unos cuantos' }],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.parciales, null)
+  assert.equal(r.salud.objetosEnRevision, null)
+})
+
+test('🚨 la cobertura con la forma VIEJA (filas) se rechaza: no se publica inflada', () => {
+  // Un `central-asegura` anterior al 20/09/2026 manda `hojas`/`hojasNuncaLeidas`,
+  // que contaban FILAS (755 para 563 rutas). Aceptarlo publicaría la cifra
+  // multiplicada por el número de compañías bajo el rótulo nuevo.
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [],
+    cobertura: { hojas: 755, hojasNuncaLeidas: 600, porTipo: [] },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.cobertura, null)
+  assert.equal(r.salud.motivos.some(m => /SIN MEDIR/.test(m)), true)
 })

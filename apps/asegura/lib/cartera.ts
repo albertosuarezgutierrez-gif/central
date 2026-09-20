@@ -1,8 +1,11 @@
 import {
+  DIAS_ANUALIDAD,
   DIAS_HORIZONTE_RENOVACION,
   DIAS_PREAVISO_TOMADOR,
   POLIZA_ESTADOS_VIGENTES,
+  WHERE_CARTERA_VIVA,
   diasHastaVencimiento,
+  inicioVentanaRecuperacion,
   objetoAsegurado,
   primaReferencia,
   urgenciaRenovacion,
@@ -13,6 +16,7 @@ import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { registrarErrorCartera, type CausaErrorCartera } from './error-cartera'
 import { contactosDe, type Contacto } from './cartera-busqueda'
+import { LIMITE_VENCIMIENTOS, cribaTruncada } from './cartera-techos.ts'
 
 /**
  * Lecturas de la Fase 1 sobre la cartera real. Reglas que no se negocian:
@@ -91,6 +95,24 @@ export type PolizaVencimiento = {
 }
 
 /**
+ * La lista de renovaciones MÁS su techo.
+ *
+ * 🚨 Devolver un array pelado era el problema: quien lo recibía no tenía forma
+ * de distinguir «estas son todas» de «estas son las primeras N». Ahora el
+ * recorte viaja con la lista, y por eso son un objeto y no dos valores sueltos:
+ * nadie puede leer las filas sin tener delante el campo que dice si están todas.
+ */
+export type ListaVencimientos = {
+  polizas: PolizaVencimiento[]
+  /**
+   * `true` = la criba tocó `LIMITE_VENCIMIENTOS` y puede haber MÁS pólizas que
+   * renovar en la ventana que esta lectura no ha visto. NO significa «hay
+   * exactamente 1.000».
+   */
+  truncado: boolean
+}
+
+/**
  * Ramos cuyo objeto NO vive en `datos_especificos`: una RC o un comercio se
  * describen por las coberturas contratadas. Se consultan solo para esos, que
  * son pocos — un auto trae 25 coberturas que no dicen nada del vehículo.
@@ -164,8 +186,25 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
 }
 
 /**
- * Pólizas vigentes que vencen dentro del horizonte, ordenadas por urgencia real
+ * Pólizas vigentes de la ventana de renovación, ordenadas por urgencia real
  * (la fecha, no la etiqueta del estado). Es la lista de llamadas de la semana.
+ *
+ * 🚨 LA VENTANA EMPIEZA EN EL PASADO, y el día que no lo hizo costó dinero.
+ * Hasta el 20/09/2026 el filtro era `fechaVencimiento >= hoy`: una póliza que
+ * venció ayer sin que nadie la gestionara DEJABA DE EXISTIR para la pantalla,
+ * para el cron de Telegram y para el contador de «Hoy» — justo cuando más
+ * urgía. Y se notaba aguas abajo: la urgencia `'vencida'` de
+ * `@central/module-seguros` y su insignia en `Renovaciones.tsx` no podían
+ * renderizarse NUNCA desde este origen, así que eran código muerto que parecía
+ * cobertura. Medido ese día: 9 pólizas de Mapfre (C0058) vencidas entre el
+ * 05/06 y el 10/08/2026, 4.377,51 € de prima, invisibles.
+ *
+ * Hacia atrás se mira UNA ANUALIDAD (`DIAS_ANUALIDAD`, LCS art. 22) y no más:
+ * una fila cuyo último vencimiento es anterior a eso no describe la anualidad
+ * en curso —aunque se hubiera prorrogado sola, la fecha ya se habría movido— y
+ * meterla en la cola de hoy enterraría las recuperables bajo dato viejo (las
+ * hay: 8 pólizas con vencimiento de 2013 a 2019 y prima 0). Esas NO se
+ * esconden: las cuenta `vencidasFueraDeVentana()` y la pantalla lo declara.
  *
  * Las que tienen `fechaVencimiento` NULL NO salen aquí y eso no significa que no
  * venzan: significa que no se sabe cuándo. El resumen las cuenta aparte
@@ -175,17 +214,23 @@ export async function vencimientosProximos(
   correduriaId: string,
   dias: number = DIAS_HORIZONTE_RENOVACION,
   hoyRef: Date = hoyUtc(),
-): Promise<PolizaVencimiento[]> {
-  if (!aseguraConfigurada()) return []
+  diasAtras: number = DIAS_ANUALIDAD,
+): Promise<ListaVencimientos> {
+  // `truncado: false` aquí es correcto y no es un «no se sabe» disfrazado: sin
+  // conexión no se ha leído NADA, así que no hay recorte del que avisar. Lo que
+  // dice «no hay cartera» es el `estado` de la ruta, no este campo.
+  if (!aseguraConfigurada()) return { polizas: [], truncado: false }
   const db = prismaAsegura()
   const hasta = new Date(hoyRef)
   hasta.setUTCDate(hasta.getUTCDate() + dias)
+  // El borde izquierdo NO es `hoyRef`: es hoy menos una anualidad.
+  const desde = inicioVentanaRecuperacion(hoyRef, diasAtras)
   const filas = await db.poliza.findMany({
     where: {
       correduriaId,
       mergedIntoPolizaId: null,
       estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
-      fechaVencimiento: { gte: hoyRef, lte: hasta },
+      fechaVencimiento: { gte: desde, lte: hasta },
       // Una ficha descartada no genera llamadas de renovación. (Hoy no puede
       // haber ninguna aquí —no se descarta lo que tiene pólizas vivas—, pero
       // «vigente con fecha futura» no es exactamente «cartera viva», así que el
@@ -193,6 +238,10 @@ export async function vencimientosProximos(
       cliente: { activo: true },
     },
     orderBy: { fechaVencimiento: 'asc' },
+    // El techo NO es decorativo aunque hoy sobren 900 filas: sin él, el día que
+    // la cartera crezca esta lista se sirve entera contra el `maxDuration` de
+    // la función y el timeout de 15 s con que plataforma la pide.
+    take: LIMITE_VENCIMIENTOS,
     select: {
       id: true, tipo: true, aseguradora: true, numeroPoliza: true, fechaVencimiento: true,
       primaAnual: true, primaBruta: true, fraccionamiento: true, datosEspecificos: true,
@@ -200,7 +249,20 @@ export async function vencimientosProximos(
     },
   })
 
+  // El techo se DECLARA. Recortar en silencio presentaría el recorte como «todo
+  // lo que hay que renovar», que es la afirmación sobre la que se llama o no se
+  // llama a un cliente antes de que se le prorrogue la póliza sola.
+  const truncado = cribaTruncada(filas.length, LIMITE_VENCIMIENTOS)
+
   // Coberturas SOLO de los ramos que las necesitan para identificarse.
+  //
+  // No lleva techo propio A PROPÓSITO: es una consulta DERIVADA de la lista de
+  // arriba (solo los ids de los 3 ramos que se describen por coberturas), así
+  // que ya está acotada por `LIMITE_VENCIMIENTOS`. Medido el 20/09/2026: 176
+  // filas para 16 pólizas, ≈11 coberturas por póliza. Si algún día se recortara
+  // aquí, el síntoma sería otro (un objeto asegurado incompleto, no una póliza
+  // que falta), y mezclarlo en el mismo `truncado` haría que la pantalla dijera
+  // lo que no es.
   const idsPorCoberturas = filas
     .filter(f => (RAMOS_DESCRITOS_POR_COBERTURAS as readonly string[]).includes(String(f.tipo)))
     .map(f => f.id)
@@ -227,7 +289,7 @@ export async function vencimientosProximos(
     [...new Set(filas.map(f => f.cliente.id))],
   )
 
-  return filas.map(f => {
+  const polizas = filas.map(f => {
     const vencimiento = f.fechaVencimiento as Date
     const diasRestantes = diasHastaVencimiento(vencimiento, hoyRef)
     return {
@@ -254,6 +316,61 @@ export async function vencimientosProximos(
       contacto: contactos?.get(f.cliente.id) ?? null,
     }
   })
+
+  return { polizas, truncado }
+}
+
+/**
+ * Cuántas pólizas de la CARTERA VIVA figuran VIGENTES arrastrando un
+ * vencimiento anterior a la ventana de recuperación (más de una anualidad en el
+ * pasado).
+ *
+ * No son trabajo de hoy y por eso no entran en la lista; pero tampoco se
+ * borran de la pantalla: son dato a depurar, y esconderlas es exactamente el
+ * fallo que este módulo arregla un piso más arriba.
+ *
+ * 🚨 EL FILTRO DE CARTERA VIVA NO ES DECORATIVO — medido el 20/09/2026 contra
+ * la BD real: sin él esta consulta devuelve **979**, y solo **8** son cartera
+ * viva. Las otras 971 son el volcado histórico con el estado sin actualizar
+ * (la más antigua vence el **08/12/1900**). El comentario que había aquí decía
+ * «son 8 filas» y era cierto de la CARTERA, no de lo que contaba la función:
+ * el número que salía por el puerto era 979.
+ *
+ * Y el agujero estaba tapado por CASUALIDAD, no por diseño: su hermana
+ * `vencimientosProximos` tampoco filtra cartera viva, pero su ventana
+ * —[hoy−365, hoy+90]— no alcanza a un volcado que vence entre 2013 y 2018
+ * (medido el mismo día: 29 de 29 en ventana son cartera viva, 0 del volcado).
+ * Esta función no tiene borde derecho, así que se lo lleva todo. El día que el
+ * dato llegue a la pantalla —hasta hoy `interpretarVencimientos` ni lo leía—
+ * habría dicho «979 pólizas figuran vigentes con vencimiento anterior…» sobre
+ * una cartera de 8.
+ *
+ * 🚨 `null` = NO SE HA PODIDO CONTAR, nunca «no hay». Un 0 aquí afirmaría que
+ * la cartera está limpia, que es una afirmación sobre la que se decide.
+ */
+export async function vencidasFueraDeVentana(
+  correduriaId: string,
+  hoyRef: Date = hoyUtc(),
+  diasAtras: number = DIAS_ANUALIDAD,
+): Promise<number | null> {
+  if (!aseguraConfigurada()) return null
+  try {
+    return await prismaAsegura().poliza.count({
+      where: {
+        correduriaId,
+        mergedIntoPolizaId: null,
+        estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
+        fechaVencimiento: { lt: inicioVentanaRecuperacion(hoyRef, diasAtras) },
+        cliente: { activo: true },
+        // El volcado histórico NO es cartera: son leads de 2013-2018 con el
+        // estado sin actualizar. Contarlos aquí multiplica la cifra por 122.
+        ...WHERE_CARTERA_VIVA,
+      },
+    })
+  } catch (e) {
+    registrarErrorCartera('vencidasFueraDeVentana', e)
+    return null
+  }
 }
 
 /** La única correduría de la base (medido: 1 fila). Lanza si hubiera más de una. */

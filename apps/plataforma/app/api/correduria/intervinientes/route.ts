@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { quitarIntervinienteAsegura } from '@/lib/intervinientes-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -19,8 +19,9 @@ export const dynamic = 'force-dynamic'
  * la sesión, nunca del body.
  */
 export async function DELETE(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const intervinienteId = typeof body?.intervinienteId === 'string' ? body.intervinienteId.trim() : ''
   if (intervinienteId === '') {

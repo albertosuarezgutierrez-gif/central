@@ -12,6 +12,7 @@ import Retencion from './Retencion'
 import Actividad from './Actividad'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
+import ExportRgpd from './ExportRgpd'
 import Companias from './Companias'
 import RadarRecibos from './RadarRecibos'
 import PartesPortal from './PartesPortal'
@@ -155,6 +156,7 @@ export default function CorreduriaClient() {
   const [nRetencion, setNRetencion] = useState<number | null | undefined>(undefined)
   const [nSinCanal, setNSinCanal] = useState<number | null | undefined>(undefined)
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
+  const [nExportRgpd, setNExportRgpd] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
   const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
@@ -242,7 +244,7 @@ export default function CorreduriaClient() {
       title: 'Periodos de comisiones sin cuadrar',
     },
     datos: {
-      contador: agregarContadores([nDuplicadas, nSinCanal]),
+      contador: agregarContadores([nDuplicadas, nSinCanal, nExportRgpd]),
       tono: 'aviso',
       title: 'Pólizas duplicadas y clientes a los que no se puede avisar',
     },
@@ -542,6 +544,15 @@ export default function CorreduriaClient() {
             vencimiento se pierde y no pueden entrar al portal—, así que el
             trabajo es pedir el correo la próxima vez que se hable con ellos. */}
         <SinCanal onContador={setNSinCanal} />
+        {/* Derecho de acceso (art. 15) y portabilidad (art. 20). Va en
+            «Datos» y no en «Hoy» a propósito: no es una cola que se vacía —la
+            petición llega por correo o por teléfono, no por una tabla— sino la
+            herramienta para atenderla. Hasta hoy el puerto de asegura existía
+            SIN consumidor: el derecho no lo podía ejercer nadie porque no
+            había dónde atenderlo. El contador solo sube cuando un paquete sale
+            INCOMPLETO (eso es trabajo: no se puede entregar así), y un fallo
+            reporta `null`, nunca 0. */}
+        <ExportRgpd onContador={setNExportRgpd} />
 
         {/* Directorio de contacto por compañía, minado del correo. Sin
             contador: es referencia, no trabajo pendiente. */}

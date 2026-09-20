@@ -272,3 +272,26 @@ test('compañía ausente: se dice cuáles hay, y los errores llevan su motivo', 
     motivo: 'host caído',
   })
 })
+
+// ── El techo de la cola de retención ────────────────────────────────────────
+// Tercer hueco de esa pantalla, junto a `sinRecibosInformados` y
+// `pendientesSinJuzgar`, y de otra clase: aquellos dicen «hay algo que no se
+// sabe», este dice «esto que ves puede no ser todo».
+
+test('🚨 impagados: `truncado` ausente es null («no se sabe»), NUNCA false', () => {
+  // Una asegura desplegada más vieja no manda el campo. Con `=== true` a secas
+  // —que es como lo leía `interpretarSinCanal`— el ausente se colapsa a
+  // «se miró y la lista está completa», que es el recorte mudo movido de sitio.
+  const viejo = interpretarImpagados(200, { estado: 'ok', filas: [] })
+  assert.equal(viejo.estado === 'ok' && viejo.truncado, null)
+
+  const raro = interpretarImpagados(200, { estado: 'ok', filas: [], truncado: 'si' })
+  assert.equal(raro.estado === 'ok' && raro.truncado, null)
+})
+
+test('impagados: `false` y `true` se propagan tal cual', () => {
+  const completa = interpretarImpagados(200, { estado: 'ok', filas: [], truncado: false })
+  assert.equal(completa.estado === 'ok' && completa.truncado, false)
+  const corta = interpretarImpagados(200, { estado: 'ok', filas: [], truncado: true })
+  assert.equal(corta.estado === 'ok' && corta.truncado, true)
+})
