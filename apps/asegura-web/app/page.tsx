@@ -10,6 +10,7 @@ import Reveal from '@/components/Reveal'
 import PanelDemo from '@/components/PanelDemo'
 import Cifras from '@/components/Cifras'
 import Escaneo from '@/components/Escaneo'
+import EnlaceMedido from '@/components/EnlaceMedido'
 
 export const metadata: Metadata = {
   title: 'Correduría de seguros en toda España',
@@ -219,9 +220,9 @@ export default function Home() {
                   07/09/2026, y era el fallo de verdad de esta portada: la
                   intranet acepta a cualquiera, y el botón le estaba diciendo al
                   99 % de los visitantes que no era para ellos. */}
-              <a href={PORTAL_URL} className="btn btn-outline">
+              <EnlaceMedido href={PORTAL_URL} origen="home_cliente" className="btn btn-outline">
                 Entrar a mis seguros
-              </a>
+              </EnlaceMedido>
             </div>
             <ul className="garantias">
               {GARANTIAS.map((g) => (
@@ -371,10 +372,10 @@ export default function Home() {
                 vínculo con la cartera: ve su espacio, no el nuestro. Por eso el
                 texto promete «tu espacio» y no «tus pólizas». */}
             <div className="hero-cta" style={{ marginTop: 28 }}>
-              <a href={PORTAL_URL} className="btn btn-brand">
+              <EnlaceMedido href={PORTAL_URL} origen="home_cta" className="btn btn-brand">
                 Crear mi área con mi correo
                 <Flecha />
-              </a>
+              </EnlaceMedido>
             </div>
             <p className="tenue" style={{ margin: '14px 0 0', fontSize: 14 }}>
               No hace falta ser cliente todavía: entras con tu correo, te llega un código y ya tienes tu espacio.{' '}

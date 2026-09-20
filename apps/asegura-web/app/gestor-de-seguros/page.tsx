@@ -8,6 +8,7 @@ import { PORTAL_URL, url } from '@/lib/sitio'
 import { fichaFaq, migas, jsonLd } from '@/lib/seo'
 import CalculadoraVencimientos from '@/components/CalculadoraVencimientos'
 import Reveal from '@/components/Reveal'
+import EnlaceMedido from '@/components/EnlaceMedido'
 
 // La página de INTENCIÓN del gestor. El copy vive en `lib/gestor.ts` (datos,
 // con su cepo); aquí solo se pinta. Lee la cabecera de ese fichero antes de
@@ -88,9 +89,9 @@ export default function PaginaGestor() {
             ))}
           </ul>
           <div className="hero-cta" style={{ marginTop: 24 }}>
-            <a href={PORTAL_URL} className="btn btn-brand">
+            <EnlaceMedido href={PORTAL_URL} origen="gestor_arriba" className="btn btn-brand">
               Crear mi área con mi correo
-            </a>
+            </EnlaceMedido>
             <a href="#como" className="btn btn-outline">
               Cómo funciona
             </a>
@@ -195,9 +196,9 @@ export default function PaginaGestor() {
       <section style={{ ...panel, marginTop: 40, textAlign: 'center' }}>
         <h2 style={{ marginTop: 0 }}>Empieza con la póliza que tengas más a mano</h2>
         <p style={{ color: 'var(--muted)' }}>Entras con tu correo. Tres minutos, y la primera ya está leída.</p>
-        <a href={PORTAL_URL} className="btn btn-brand" style={{ minHeight: 44 }}>
+        <EnlaceMedido href={PORTAL_URL} origen="gestor_abajo" className="btn btn-brand" style={{ minHeight: 44 }}>
           Entrar a mi área
-        </a>
+        </EnlaceMedido>
       </section>
     </div>
   )

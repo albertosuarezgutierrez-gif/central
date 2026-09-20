@@ -44,6 +44,7 @@ import {
   type TipoDocumento,
 } from '@central/module-seguros-portal'
 
+import { normalizarCoberturasLeidas } from './coberturas-leidas'
 import {
   normalizarReferenciaCatastralLeida,
   normalizarVehiculoLeido,
@@ -86,6 +87,14 @@ export type PolizaExtraida = PolizaLeida &
      * sin su dato es una afirmación sobre algo que no existe.
      */
     datosRamoOrigen: OrigenPorCampo | null
+    /**
+     * Las GARANTÍAS que el documento enumera, como textos cortos y con el
+     * nombre que les da la compañía. Con ellas la póliza declarada entra en el
+     * detector de solapamientos junto a las de cartera. `null` = no se ha
+     * podido leer (fallo, o modelo que no devolvió la clave); `[]` = leído y
+     * el documento no enumera ninguna. Nunca se inventan ni se «traducen».
+     */
+    coberturas: string[] | null
   }
 
 /**
@@ -153,7 +162,7 @@ export type ResultadoExtraccion = {
 // puede volver a leer — hay que pedirle a la persona que lo suba otra vez.
 const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas.
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
-{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"fechaEfecto":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null}
+{"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"fechaEfecto":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null,"coberturas":string[]|null}
 Reglas:
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
 - "fechaEfecto": la fecha de EFECTO, ENTRADA EN VIGOR o EMISIÓN de esta póliza o de su periodo actual — el día en que empezó a correr, NO la de vencimiento. Ponla SIEMPRE que aparezca en el documento, aunque también haya "fechaVencimiento": los contratos de seguro son anuales renovables y esta fecha sirve para calcular el vencimiento cuando el documento no traiga uno vigente.
@@ -165,6 +174,7 @@ Reglas:
 - "bastidor": el número de bastidor o VIN del vehículo, 17 caracteres. Cópialo carácter a carácter; NUNCA lo completes, ni lo corrijas, ni rellenes los que no leas.
 - "fechaMatriculacion": la fecha de PRIMERA MATRICULACIÓN del vehículo, que no es la fecha de efecto ni la de vencimiento de la póliza.
 - "referenciaCatastral": la referencia catastral del inmueble asegurado, tal cual aparece. Cópiala carácter a carácter; NUNCA la completes ni la corrijas.
+- "coberturas": la lista de GARANTÍAS o coberturas contratadas que el documento enumera (por ejemplo "Defensa jurídica", "Asistencia en viaje", "Responsabilidad civil familiar", "Lunas", "Robo"). Cada una un texto corto, con el nombre exacto que le da la compañía, sin importes ni franquicias. Solo las CONTRATADAS: si el documento distingue contratadas y no contratadas, deja fuera las segundas. Si el documento no enumera ninguna, pon [].
 - Si un dato NO aparece en el documento, pon null. NUNCA lo inventes ni lo deduzcas, y NUNCA escribas "N/A", "no consta", "desconocido" ni un guion: eso es null.`
 
 /** Todos los campos a `null`. La forma de un fallo de lectura tiene que ser la
@@ -178,6 +188,7 @@ function extraidaVacia(): PolizaExtraida {
     tipoDocumento: null,
     datosRamo: null,
     datosRamoOrigen: null,
+    coberturas: null,
   }
 }
 
@@ -512,6 +523,7 @@ export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): P
     referenciaCatastral: normalizarReferenciaCatastralLeida(o.referenciaCatastral),
     datosRamo,
     datosRamoOrigen: origenesDelDocumento(datosRamo),
+    coberturas: normalizarCoberturasLeidas(o.coberturas),
   }
 }
 

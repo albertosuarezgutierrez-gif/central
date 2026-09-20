@@ -41,7 +41,7 @@ export default async function CartaNoRenovacion({ params }: { params: Promise<{ 
 
   const p = await prisma.portalPolizaDeclarada.findFirst({
     where: { id, identidadId: identidad.id },
-    select: { id: true, compania: true, numeroPoliza: true, ramo: true, fechaVencimiento: true },
+    select: { id: true, compania: true, numeroPoliza: true, ramo: true, fechaVencimiento: true, cartaEnviadaEn: true },
   })
   if (!p) notFound()
 
@@ -106,7 +106,13 @@ export default async function CartaNoRenovacion({ params }: { params: Promise<{ 
       <section className="seccion carta" aria-labelledby="carta-titulo">
         <h2 id="carta-titulo" className="solo-pantalla">La carta</h2>
         <pre className="carta-texto">{carta.cuerpo}</pre>
-        <AccionesCarta asunto={carta.asunto} cuerpo={carta.cuerpo} />
+        <AccionesCarta
+          polizaId={p.id}
+          asunto={carta.asunto}
+          cuerpo={carta.cuerpo}
+          enviadaEn={p.cartaEnviadaEn?.toISOString() ?? null}
+          soloLectura={identidad.corredor !== null && identidad.corredor !== undefined}
+        />
       </section>
 
       <section className="seccion solo-pantalla" aria-labelledby="alternativa-titulo">

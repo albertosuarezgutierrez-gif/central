@@ -16,14 +16,28 @@ import type { Solapamiento } from '@central/module-seguros-portal'
  * encontrado coberturas repetidas» afirmaría un «revisado, todo bien» que solo
  * vale para las coberturas informadas, no para las que la compañía no manda.
  */
-export function Solapamientos({ solapamientos }: { solapamientos: readonly Solapamiento[] }) {
+export function Solapamientos({
+  solapamientos,
+  declaradas,
+}: {
+  solapamientos: readonly Solapamiento[]
+  /**
+   * Ids de las pólizas DECLARADAS (las que el cliente subió, de otra
+   * compañía): su ficha vive en `/boveda/anadida/…`, no en `/boveda/poliza/…`.
+   * Un enlace a la ruta equivocada no falla: da un 404 que parece «esta
+   * póliza ya no está».
+   */
+  declaradas?: ReadonlySet<string>
+}) {
   if (solapamientos.length === 0) return null
+  const hrefDe = (id: string) => (declaradas?.has(id) ? `/boveda/anadida/${id}` : `/boveda/poliza/${id}`)
   return (
     <section className="seccion" aria-labelledby="solapamientos-titulo">
       <p className="antetitulo">Para que lo compruebes</p>
       <h2 id="solapamientos-titulo">Coberturas que aparecen en más de una póliza</h2>
       <p className="suave" style={{ marginTop: 0 }}>
-        Lo hemos visto en las coberturas que informan tus compañías. No siempre es un duplicado: cada póliza
+        Lo hemos visto en las coberturas que informan tus compañías y en las que leímos de las pólizas que subiste. No
+        siempre es un duplicado: cada póliza
         puede cubrir un asunto distinto con el mismo nombre. Merece mirar las condiciones de cada una.
       </p>
       <ul className="solapamientos">
@@ -33,7 +47,7 @@ export function Solapamientos({ solapamientos }: { solapamientos: readonly Solap
             <ul>
               {s.polizas.map((p) => (
                 <li key={p.id}>
-                  <Link href={`/boveda/poliza/${p.id}`}>{p.titulo}</Link>
+                  <Link href={hrefDe(p.id)}>{p.titulo}</Link>
                   <span className="tenue"> · «{p.cobertura}»</span>
                 </li>
               ))}

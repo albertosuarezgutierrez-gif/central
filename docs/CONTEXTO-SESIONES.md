@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026) Portal → correduría, cinco piezas tras el gestor de pólizas (#3104).** (1) Embudo PostHog en
+`asegura-web` (`lib/medir.ts`: `calculadora_calculo`, `cta_portal_click` con `origen`, `lead_enviado`; sin
+PostHog cargado no hace nada). (2) La carta de no renovación es SEÑAL de lead: `carta_generada_en`/
+`carta_enviada_en`, `POST /api/polizas/[id]/carta`, `senalCarta` en `lead-declarada.ts` — enviada = urgente
+siempre y va primera; badge en `/correduria`. (3) `coberturas` leídas del PDF → las declaradas entran en
+solapamientos (`null` = no leído ≠ `[]`). (4) Cron mensual `revision-anual` (`0 9 1 * *`) **apagado**: cuenta sin
+`ASEGURA_REVISION_ANUAL_ACTIVA=1`; regla pura `tocaRevisionAnual()` (consentimiento vigente, 330 días, vencimiento
+en 90). (5) Tres guías de siniestro. (6) Serie por compañía BLOQUEADA hasta que Alberto verifique canales.
+Migración aplicada. Spec: `docs/superpowers/specs/2026-09-20-portal-carta-lead-coberturas-revision-anual-design.md`.
+
 **(20/09/2026) Presupuesto de auto (avant2/Codeoscopic): propietario y conductor pueden ser distintos
 del tomador.** Hasta ahora `construirPeticionAuto` mandaba SIEMPRE la misma persona como
 `holder`/`owner`/`primaryDriver` — si el dueño era otra persona/empresa o había un conductor

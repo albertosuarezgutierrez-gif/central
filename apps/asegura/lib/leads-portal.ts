@@ -105,6 +105,8 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
         titularTipo: true,
         titularEmpresaNombre: true,
         titularEmpresaCif: true,
+        cartaGeneradaEn: true,
+        cartaEnviadaEn: true,
       },
       orderBy: { creadaEn: 'desc' },
     })
@@ -162,6 +164,10 @@ export async function listarLeads(correduriaId: string, hoy: Date = new Date()):
         ramo: f.ramo,
         fechaVencimiento: f.fechaVencimiento,
         confirmadaPorUsuario: f.confirmadaPorUsuario,
+        // La carta de no renovación que el cliente redactó/envió desde el
+        // portal (20/09/2026): la señal de lead más fuerte que hay.
+        cartaGeneradaEn: f.cartaGeneradaEn,
+        cartaEnviadaEn: f.cartaEnviadaEn,
         // Sin ficha CONTRA LA QUE COTEJAR no hay comprobación: `null`, no
         // `false`. Y eso pasa por dos motivos distintos que aquí dan lo mismo —
         // no lo hemos casado con nadie, o la dijo de su empresa.
