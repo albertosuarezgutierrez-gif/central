@@ -248,6 +248,45 @@ export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
 }
 
 /**
+ * Lo próximo que se paga y lo último que se pagó, en una línea — o `null`
+ * cuando no hay NADA que resumir.
+ *
+ * 🚨 Es el titular de la póliza en la pestaña «Recibos», y por eso vive aquí
+ * suelto: lo pinta el CUERPO (la ficha de una póliza) y lo pinta la CABECERA
+ * del plegable (`VistaPorPoliza`), y con dos copias la cabecera acabaría
+ * diciendo una cosa y el cuerpo otra sobre el mismo recibo.
+ *
+ * 🚨 `null` NO es «no debes nada»: es «de esta póliza no sabemos ni importe ni
+ * fecha», o que su estado es `sin_informar`/`solo_anulados` y lo que hay dentro
+ * es una explicación, no una lista. Quien lo use para decidir si plegar tiene
+ * que dejarla ABIERTA — plegar una explicación tras una cabecera muda es
+ * esconder el motivo por el que no se ve nada.
+ */
+export function lineaRecibos(p: PolizaPortal): string | null {
+  if (p.recibos === null) return null
+  const r = p.recibos
+  if (r.estado !== 'con_recibos') return null
+
+  const partes: string[] = []
+  if (r.proximoAlCobro) {
+    // `importe: null` = el EIAC no traía un importe legible. No es 0€, así que
+    // se cuenta lo que se sabe (la fecha) y se calla lo que no.
+    const cuando = fechaEs(r.proximoAlCobro.fechaVencimiento)
+    const importe = r.proximoAlCobro.importe
+    if (importe !== null) partes.push(`Tu próximo recibo: ${eur(importe)}${cuando ? ` el ${cuando}` : ''}`)
+    else if (cuando) partes.push(`Tu próximo recibo vence el ${cuando}`)
+  }
+  if (r.ultimoCobrado) {
+    const cuando = fechaEs(r.ultimoCobrado.fechaEmision)
+    const importe = r.ultimoCobrado.importe
+    if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
+    else if (cuando) partes.push(`último cobrado el ${cuando}`)
+  }
+
+  return partes.length > 0 ? partes.join(' · ') : null
+}
+
+/**
  * TODO el bloque de recibos de una póliza, en voz NEUTRA. Lo que alarma vive en
  * `<AvisoReciboDevuelto>`.
  *
@@ -266,7 +305,18 @@ export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
  *   (el total contaba los anulados) ni una línea (no quedaba ninguno que
  *   enseñar). Veinte pólizas mudas de ciento diez.
  */
-export function RecibosDePoliza({ p }: { p: PolizaPortal }) {
+export function RecibosDePoliza({
+  p,
+  sinResumen = false,
+}: {
+  p: PolizaPortal
+  /**
+   * `true` cuando quien llama YA pinta la línea de resumen en otro sitio —hoy,
+   * la cabecera del plegable de `VistaPorPoliza`—. No se toca nada más: los
+   * tres estados y la lista siguen decidiéndose aquí.
+   */
+  sinResumen?: boolean
+}) {
   if (p.recibos === null) return null
   const r = p.recibos
 
@@ -291,29 +341,14 @@ export function RecibosDePoliza({ p }: { p: PolizaPortal }) {
     )
   }
 
-  // El titular: lo próximo que se paga y lo último que se pagó.
-  const partes: string[] = []
-  if (r.proximoAlCobro) {
-    // `importe: null` = el EIAC no traía un importe legible. No es 0€, así que
-    // se cuenta lo que se sabe (la fecha) y se calla lo que no.
-    const cuando = fechaEs(r.proximoAlCobro.fechaVencimiento)
-    const importe = r.proximoAlCobro.importe
-    if (importe !== null) partes.push(`Tu próximo recibo: ${eur(importe)}${cuando ? ` el ${cuando}` : ''}`)
-    else if (cuando) partes.push(`Tu próximo recibo vence el ${cuando}`)
-  }
-  if (r.ultimoCobrado) {
-    const cuando = fechaEs(r.ultimoCobrado.fechaEmision)
-    const importe = r.ultimoCobrado.importe
-    if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
-    else if (cuando) partes.push(`último cobrado el ${cuando}`)
-  }
+  const linea = lineaRecibos(p)
 
   return (
     <>
       {/* Ni un solo dato que enseñar (recibos sin importe ni fecha): no se pinta
           una línea vacía, y tampoco «ningún recibo al cobro», que se leería como
           «nada que pagar» sin que nadie lo haya comprobado. */}
-      {partes.length > 0 && <div className="linea">{partes.join(' · ')}</div>}
+      {!sinResumen && linea !== null && <div className="linea">{linea}</div>}
       <ul className="recibos">
         {r.historial.map((rec, i) => {
           const tono = tonoSituacionRecibo(rec.situacion)
@@ -412,6 +447,21 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
 }
 
 /**
+ * Cuántos siniestros hay y cuántos siguen sin cerrar — o `null` cuando no nos
+ * consta ninguno (y entonces lo que hay dentro es la frase de «sin informar»,
+ * que NO es «no has tenido ninguno» y por eso no se pliega).
+ *
+ * Misma razón de existir que `lineaRecibos`: lo dice la ficha y lo dice la
+ * cabecera del plegable, y tiene que decirlo igual.
+ */
+export function lineaSiniestros(p: PolizaPortal): string | null {
+  if (p.siniestros === null || p.siniestros.length === 0) return null
+  const r = resumirHistorialSiniestros(p.siniestros)
+  const total = r.total === 1 ? '1 siniestro' : `${r.total} siniestros`
+  return r.abiertos > 0 ? `${total} · ${r.abiertos} sin cerrar` : total
+}
+
+/**
  * El HISTORIAL de siniestros de una póliza.
  *
  * Alberto: «y los recibos? e historial siniestros?». No existía — la lectura
@@ -434,7 +484,14 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
  * existe — `updated_at` es la última vez que se tocó la fila, no el día que se
  * cerró). Ni tramitador ni perito: gestión del corredor, regla de visibilidad.
  */
-export function HistorialSiniestros({ p }: { p: PolizaPortal }) {
+export function HistorialSiniestros({
+  p,
+  sinResumen = false,
+}: {
+  p: PolizaPortal
+  /** `true` cuando el recuento ya lo dice la cabecera del plegable. Ver `RecibosDePoliza`. */
+  sinResumen?: boolean
+}) {
   if (p.siniestros === null) return null
   const lista = p.siniestros
 
@@ -448,13 +505,14 @@ export function HistorialSiniestros({ p }: { p: PolizaPortal }) {
     )
   }
 
-  const r = resumirHistorialSiniestros(lista)
+  const resumen = lineaSiniestros(p)
   return (
     <>
-      <p className="suave" style={{ margin: '0 0 10px', fontSize: 13 }}>
-        {r.total === 1 ? '1 siniestro' : `${r.total} siniestros`}
-        {r.abiertos > 0 && ` · ${r.abiertos} sin cerrar`}
-      </p>
+      {!sinResumen && resumen !== null && (
+        <p className="suave" style={{ margin: '0 0 10px', fontSize: 13 }}>
+          {resumen}
+        </p>
+      )}
       <ul className="siniestros">
         {lista.map((s) => {
           const cuando = fechaEs(s.fechaHora)

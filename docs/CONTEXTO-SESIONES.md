@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Portal del cliente: **«Recibos» y «Siniestros» nacen PLEGADAS**, una póliza por
+`<details>` (Alberto: «que también salga plegado y siniestro también», sobre su móvil). La cabecera
+dice lo que esconde —próximo/último recibo, o «3 siniestros · 1 sin cerrar»— desde dos helpers puros
+(`lineaRecibos`/`lineaSiniestros`) que comparten la FICHA y la cabecera; el cuerpo se calla con
+`sinResumen` para no decir dos cosas del mismo recibo. Una póliza sin nada que resumir (compañía que
+no informó recibos) **nace abierta**: dentro hay la explicación, no una lista. Cepo nuevo
+`regression-portal-recibos-plegados.test.ts` con 6 mutaciones vistas morder; medido con Chromium a
+320/360/390/1024 sin desbordes. Detalle en el PR y en `apps/asegura-portal/CLAUDE.md`.
+
 **(20/09/2026)** PR #3182 **MERGEADO** (`91cdd3abb`, 21/21 en CI): la auditoría de la correduría está
 en `main`. `/correduria` es ya **fail-closed** — `CORREDURIA_EMAILS` con el correo de Alberto puesta y
 VERIFICADA leyendo la env antes de mergear, porque `prisma_plataforma` no puede leer `seguros.usuarios`.
