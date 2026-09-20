@@ -35,6 +35,33 @@ Skill especializada en SEO para la landing pública de **House Sevillana**, el a
 3. **Mercados internacionales europeos** (EN/FR/DE/IT, además de ES)
 4. **Branding de marca** "House Sevillana"
 
+## Mide antes de opinar: GSC ya está conectado (20/09/2026)
+
+`housesevillana.es` dejó de ser SEO a ciegas. La cuenta de servicio
+`seo-correduria@grupoasegura-seo.iam.gserviceaccount.com` tiene permiso **Restringido** (solo
+lectura) sobre la propiedad de **Dominio** `sc-domain:housesevillana.es`, y se consulta por el
+endpoint de plataforma, con la credencial que ya vive en Vercel:
+
+```bash
+# Propiedades a las que llega la cuenta de servicio (míralo ANTES de decir «no hay datos»)
+curl -s "$PLATAFORMA_URL/api/internal/gsc" -H "Authorization: Bearer $ALERTA_TOKEN"
+
+# Por qué consultas entra la landing (últimos 28 días consolidados)
+curl -s -X POST "$PLATAFORMA_URL/api/internal/gsc" -H "Authorization: Bearer $ALERTA_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"propiedad":"sc-domain:housesevillana.es","dimensiones":["query"],"limite":50}'
+```
+
+Antes de proponer keywords o reescribir copy, **mira qué consultas ya traen impresiones**: subir
+del puesto 12 al 6 en algo que ya te ve Google rinde más que inventar un término desde cero.
+
+🚨 Tres cosas que NO se pueden decir a la ligera:
+- **`parcial: true`** = la ventana toca los ~3 días que GSC aún no ha consolidado. Ese total es un
+  SUELO, no el dato; no lo compares con una semana cerrada ni lo llames «bajada».
+- **`503 no_configurado` / `502 error`** NO son «cero tráfico»: son «no se ha podido mirar».
+- La propiedad es **`sc-domain:`** (Dominio). `https://housesevillana.es/` sería OTRA propiedad
+  distinta, con otros datos. Usa la cadena exacta que devuelva el `GET`.
+
 ## Decision tree: cómo abordar cada petición
 
 Cuando Alberto pida algo, identifica en qué bloque cae y carga **solo** los archivos de referencia necesarios. No cargues todo de golpe.

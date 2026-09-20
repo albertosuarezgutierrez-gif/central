@@ -13,6 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(20/09/2026)** **`housesevillana.es` ya tiene Search Console conectado.** Alberto invitó
+`seo-correduria@grupoasegura-seo.iam.gserviceaccount.com` (la MISMA cuenta de servicio del cron SEO
+de la correduría) a `sc-domain:housesevillana.es` con permiso **Restringido**, hecho con Claude en
+Chrome y verificado en el panel. Con `/api/internal/gsc` (PR #3195) eso significa que la landing
+deja de ser SEO a ciegas: se puede preguntar por qué consultas entra. Ojo con la forma de la
+propiedad: es la de **Dominio** (`sc-domain:`), no el prefijo de URL — son propiedades distintas con
+datos distintos. Anotado en la skill `seo-house-sevillana`.
+
 **(20/09/2026)** Alberto preguntó por el repo `AminForou/mcp-gsc` (MCP de Search Console). **No se
 instaló y la decisión es suya, tomada con el dato delante:** el monorepo YA lee GSC con cuenta de
 servicio (`apps/plataforma/lib/seo-correduria/`, cron de los lunes), así que un MCP de terceros no
