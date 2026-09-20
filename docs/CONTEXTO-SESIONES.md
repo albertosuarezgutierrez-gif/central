@@ -297,6 +297,13 @@ si reintentar sirve; el cuerpo HTML de Smoobu nunca viaja al aviso) + `enviarAlH
 con `enviarAlHuesped()` como envoltura booleana para los 9 llamadores automáticos. PR draft #3021;
 9 cepos vistos en ROJO antes de darlos por buenos, tsc 0 y 336 tests del agente en verde.
 
+**(15/09/2026)** trading-analista · pasada 20:15 completa en NAV/cartera/latido, pero `/analizar` y
+`/puntuar` se ABORTARON a propósito: `get_price_history` del conector IBKR devolvió series de velas
+IDÉNTICAS para `contract_id` distintos al re-pedirlas una a una (BKNG=SPOT, incl. redondeos raros
+idénticos) — confirmado con 4 re-fetches, no es error de transcripción. Cero tesis abiertas, cero
+payload de velas mandado. Pendiente: revisar el conector IBKR (¿caché/límite de llamadas por
+sesión?) antes de la próxima pasada. Detalle en `AGENTES-BITACORA.md`.
+
 **(15/09/2026)** SEO correduria · cron `seo-correduria` gana 3ª fuente **cobertura de indexación**
 (`lib/seo-correduria/cobertura.ts`, URL Inspection API — reusa la cuenta de servicio de GSC, sin
 secreto nuevo) para el 404/no-indexado de `asegura-web` que Alberto pedía como prerrequisito de Ads.

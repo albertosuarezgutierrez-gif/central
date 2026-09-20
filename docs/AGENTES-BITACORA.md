@@ -26,6 +26,21 @@
   de evento CONFIRMADO con corpus caducado (>7 días, el motor las tarifica genérico) — no se ha
   medido si el ritmo de 24/día está bajando ese backlog o solo conteniéndolo; fallos: —;
   PRs/commits: — (solo bitácora + BD).
+
+- **2026-09-15 · trading-analista** · hizo: PASO 0 sin huella de hoy (saldo de ayer 19:06 UTC,
+  sin fila `trading_pasadas`) → pasada normal de las 20:15. NAV 32.619,39€ empujado a `/saldo`
+  (sin salto de NAV), cartera real (CVX+VWCE) y latido `trading_operaciones` (0 nuevas) empujados
+  OK. dudas: —; fallos: `get_price_history` del conector IBKR devolvió SERIES IDÉNTICAS para
+  `contract_id` distintos al re-pedirlas individualmente (BKNG=SPOT byte a byte, incl. decimales
+  raros tipo 170.62040000000002; ORCL=un bloque que en el primer barrido parecía de otro símbolo)
+  — verificado con 4 re-fetches individuales (MSFT y CHT SÍ cuadraron con el barrido paralelo,
+  BKNG y ORCL NO). No es baraje de mi transcripción (ya descartado dos veces): el propio tool
+  devuelve datos repetidos/cacheados entre símbolos distintos en la misma sesión. Por la regla de
+  oro (no fiarse de un precio que no se cree) se ABORTÓ `/analizar` y `/puntuar` enteros — no se
+  mandó ningún payload de velas, cero tesis nuevas, cero riesgo de contaminar
+  `trading_estrategia_stats`. Recomiendo a Alberto revisar el conector IBKR o acotar el nº de
+  `get_price_history` por pasada si se reproduce. PRs/commits: este commit (solo memoria).
+
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
