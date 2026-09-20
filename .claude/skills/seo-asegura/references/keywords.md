@@ -54,7 +54,7 @@ ciudad en los encabezados de la página nacional.
 | cómo cambiar de correduría sin cambiar de seguro | `/cambiar-de-correduria` | cubierta, y con «Sevilla» en title y H1 desde el 07/09/2026 |
 | preaviso de un mes para cancelar el seguro (art. 22 LCS) | `/blog/preaviso-un-mes-no-renovar-seguro` | cubierta (07/09/2026, PR #2487/#2500) |
 | me han subido el seguro del coche en la renovación | `/blog/me-han-subido-el-seguro-en-la-renovacion` | cubierta (07/09/2026, PR #2487/#2500) |
-| qué cubre de verdad mi seguro de hogar | parcialmente `/seguros/hogar` | merece página propia |
+| qué cubre de verdad mi seguro de hogar | `/blog/que-cubre-de-verdad-el-seguro-de-hogar` | cubierta (15/09/2026) |
 | qué es un corredor de seguros y en qué se diferencia de un agente | `/quienes-somos` | parcial |
 | cómo reclamar un siniestro que me han denegado | `/blog/siniestro-denegado-que-hacer` | cubierta (07/09/2026, PR #2487/#2500) |
 | cómo dar de baja un seguro | `/blog/como-dar-de-baja-un-seguro-a-tiempo` | cubierta (19/09/2026): guía genérica con CTA a la carta del gestor. La serie «en [Compañía]» espera a que se VERIFIQUEN los canales (`apps/asegura-web/lib/companias-baja.ts`, todo `verificado: false`) |
