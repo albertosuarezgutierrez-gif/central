@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Correo de aseguradora → historial del cliente (PR #3148) + 3 ideas más de Alberto
+("añade todo"): contacto de siniestros visible en la ficha, radar de compañías sin canal digital de
+avisos (agrupado por marca) y sugerencia de alta de contacto nuevo desde el triaje (Telegram, nunca
+alta automática). Match de pólizas SIEMPRE exacto, nunca por parecido; multi-cliente resuelto entero
+(no solo el primero). Pendiente de decisión de Alberto: idea 3 ("cierre de círculo con el portal" —
+avisar al portal cuando un recibo-devuelto se resuelve a un cliente) necesita ampliar el
+`@@unique([identidadId, polizaId])` de `PortalObligacion` o una tabla de avisos aparte; no se ha
+tocado el schema sin su OK.
+
 **(20/09/2026)** Corrida la 1ª pasada del agente `agente-correduria` (skill ya existía, no se creó
 otro): cartera 157/100 vivas, 110 pólizas/72 clientes EN VIGOR, 7 vencimientos accionables
 (−30d), ingesta CIMA viva. Informe por Telegram, sin cambio de código. Sin baseline previo en
