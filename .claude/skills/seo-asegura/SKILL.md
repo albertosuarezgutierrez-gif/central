@@ -109,6 +109,27 @@ consintió. Nunca digas «tuvimos N visitas»; di «N visitas medidas, sobre las
 **cero visitas medidas no es cero visitas** — es exactamente el `NULL` que `CLAUDE.md` prohíbe
 colapsar. Para tráfico total, la fuente es GSC cuando exista.
 
+**Preguntar a GSC fuera de la foto semanal** (desde el 20/09/2026). La tabla solo guarda lo que
+mira el cron: 7 días cerrados, `query` y `page`, `sc-domain:grupoasegura.es`. Para cualquier otra
+pregunta —otro rango, por dispositivo, por país, la evolución por día— está
+`POST /api/internal/gsc` de plataforma (`Authorization: Bearer $ALERTA_TOKEN`), que usa la MISMA
+cuenta de servicio de solo lectura, sin credencial nueva:
+
+```bash
+curl -s -X POST "$PLATAFORMA_URL/api/internal/gsc" -H "Authorization: Bearer $ALERTA_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"desde":"2026-08-01","hasta":"2026-08-31","dimensiones":["query","device"],"limite":50}'
+```
+
+Sin cuerpo son los últimos 28 días consolidados por consulta. `GET` al mismo sitio lista a qué
+propiedades llega la cuenta de servicio — míralo ANTES de decir que una web «no tiene datos»: si no
+está en esa lista, es que nadie la ha invitado, que no es lo mismo que no tener tráfico.
+
+🚨 **Respeta el `parcial` de la respuesta.** GSC tarda ~3 días en consolidar: si pides hasta hoy,
+`parcial: true` y el total es un SUELO. Un rango que toque esos días NO se compara con uno cerrado —
+la «bajada» que sale es la latencia de Google. Y como el resto del repo: `503 no_configurado` (falta
+el secreto) y `502 error` (Google falló) **no son cero tráfico**; se dicen tal cual.
+
 ### 2. Elige UNA cosa y hazla
 
 No cinco a medias. Por orden de retorno (§3 del plan):

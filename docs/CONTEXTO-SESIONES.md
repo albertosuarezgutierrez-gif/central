@@ -12,6 +12,19 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
+**(20/09/2026)** Alberto preguntó por el repo `AminForou/mcp-gsc` (MCP de Search Console). **No se
+instaló y la decisión es suya, tomada con el dato delante:** el monorepo YA lee GSC con cuenta de
+servicio (`apps/plataforma/lib/seo-correduria/`, cron de los lunes), así que un MCP de terceros no
+traía datos nuevos — traía la clave privada de Google fuera de Vercel y otro servidor MCP arrancando
+en rojo en cada sesión (como `gmail-adjuntos` hoy). En su lugar, **`/api/internal/gsc`**: Search
+Console a demanda (GET = propiedades de la cuenta; POST = rango/dimensiones libres) con la MISMA
+credencial de solo lectura. Ventana que toca los últimos 3 días → `parcial: true` (GSC no ha
+consolidado; sin eso la latencia se lee como bajada de tráfico). 🪤 **Y el cepo que enseña algo:
+`pnpm test:guardia` daba 948/948 con el endpoint sin registrar en `RUTAS_RUTINA` — el guardián lee
+ficheros TRACKEADOS, y el fichero estaba untracked. Verde por no verlo.** Se puso rojo al commitear
+y lo cazó `code-review`. PR #3195.
+
 **(20/09/2026)** **PR #3191 MERGEADO** (`15cc7b2e1`, 19/19 en CI): el plegado de «Recibos» y
 «Siniestros» del portal está en `main`. Lo que cambió respecto a lo anotado abajo salió de la pasada
 obligatoria de `code-review` antes de sacarlo de draft, y era el fallo caro: con la póliza plegada la
