@@ -22,6 +22,11 @@
 //     lista («tu compañía no nos ha informado de ningún recibo», que NO es
 //     «estás al corriente»). Esa frase detrás de una cabecera muda deja una
 //     pantalla en la que no se ve nada y no se dice por qué.
+//  5. 🚨 que un recibo DEVUELTO se quede debajo del pliegue. Es lo único de una
+//     póliza que puede dejar a alguien sin cobertura sin que se entere, y este
+//     portal ya tiene escrito que no se esconde detrás de un clic: con la
+//     póliza plegada, «último cobrado 65,51€» es una frase tranquilizadora
+//     sobre un cobro que falló. Va en la cabecera Y la póliza nace abierta.
 //
 // Y el quinto, que es de CSS y por eso va aquí: el marcador ▸ de un `<summary>`
 // SOLO se pinta con `display: list-item`. Maquetarlo con `flex` lo borra sin
@@ -59,14 +64,15 @@ const CSS = readFileSync(`${RAIZ}apps/asegura-portal/app/globals.css`, 'utf8').r
 
 test('cada póliza se pinta en un <details> y NO nace abierta por defecto', () => {
   assert.match(VISTA, /<details[^>]*className="poliza-bloque"/, 'la póliza va en un <details>')
-  // El único `open` admisible es el derivado del resumen. Un `open` a secas
+  // El único `open` admisible es el que decide el resumen. Un `open` a secas
   // —o `open={true}`— devuelve la pantalla a la tirada de filas de siempre.
   const opens = VISTA.match(/\bopen(=\{[^}]*\})?/g) ?? []
   assert.equal(opens.length, 1, `un solo \`open\`, y derivado; encontrados: ${opens.join(' ')}`)
+  assert.match(opens[0]!, /open=\{\s*abrir\s*\}/, 'lo decide el resumen, no una constante')
   assert.match(
-    opens[0]!,
-    /open=\{\s*linea === null\s*\}/,
-    'abierto SOLO cuando no hay nada que resumir (dentro hay una explicación, no una lista)',
+    VISTA,
+    /const \{ texto, abrir \} = resumen\(p\)/,
+    'y `abrir` sale de `resumen(p)`, que es quien sabe lo que la cabecera no puede sustituir',
   )
 })
 
@@ -77,7 +83,7 @@ test('🚨 la cabecera NO es muda: pinta el resumen con el bloque cerrado', () =
   assert.ok(i !== -1 && j > i, 'la cabecera del plegable es un <summary>')
   const cabecera = VISTA.slice(i, j)
   assert.match(cabecera, /poliza-bloque-linea/, 'el resumen se pinta en la cabecera')
-  assert.match(cabecera, /\{linea\}/, 'y es el valor de `resumen(p)`, no un texto aparte')
+  assert.match(cabecera, /\{texto\}/, 'y es el valor de `resumen(p)`, no un texto aparte')
   assert.match(cabecera, /<h4/, 'el titular sigue siendo un encabezado (navegación por encabezados)')
 })
 
@@ -93,6 +99,39 @@ test('🚨 el resumen NO se pinta dos veces: el cuerpo lo cede a la cabecera', (
     2,
     'las dos piezas se callan el resumen cuando se lo piden',
   )
+  // 🚨 Y el DEFECTO es `false`. Con `true`, callarse pasa a ser lo normal y la
+  // FICHA de la póliza —que no tiene cabecera donde leerlo— pierde «tu próximo
+  // recibo» sin que nadie le pase nada: no falla, desaparece.
+  assert.equal(
+    (PIEZAS.match(/sinResumen = false/g) ?? []).length,
+    2,
+    'el defecto de las dos piezas es pintar el resumen',
+  )
+})
+
+test('🚨 un recibo DEVUELTO no se queda debajo del pliegue', () => {
+  const i = PIEZAS.indexOf('export function lineaRecibos')
+  const cuerpo = PIEZAS.slice(i, PIEZAS.indexOf('\n}\n', i))
+  // En la cabecera: con la póliza cerrada, esta línea es TODO lo que se ve.
+  assert.match(cuerpo, /r\.devueltos > 0/, 'la línea cuenta los devueltos')
+  assert.match(cuerpo, /recibos? devuelt/, 'y los NOMBRA, no solo los cuenta por dentro')
+  // Y abierta: el chip rojo, su explicación y el botón de avisar viven dentro.
+  const k = PIEZAS.indexOf('export function resumenRecibos')
+  assert.notEqual(k, -1, 'quien decide si se pliega es un helper, no el JSX')
+  const cuerpoR = PIEZAS.slice(k, PIEZAS.indexOf('\n}\n', k))
+  assert.match(
+    cuerpoR,
+    /abrir: texto === null \|\| devueltos > 0/,
+    'con un devuelto nace ABIERTA aunque la cabecera lo nombre',
+  )
+})
+
+test('un recibo pendiente ilegible se DICE, no se calla', () => {
+  // `proximoAlCobro` sin importe ni fecha: sin esta rama la línea se queda en
+  // «último cobrado X», que con la póliza plegada se lee como «al corriente».
+  const i = PIEZAS.indexOf('export function lineaRecibos')
+  const cuerpo = PIEZAS.slice(i, PIEZAS.indexOf('\n}\n', i))
+  assert.match(cuerpo, /else partes\.push\('Tienes un recibo pendiente'\)/, 'se dice que lo hay')
 })
 
 test('🚨 sin nada que resumir, `null`: una explicación no se pliega', () => {

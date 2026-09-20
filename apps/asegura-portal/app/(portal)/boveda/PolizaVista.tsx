@@ -248,6 +248,18 @@ export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
 }
 
 /**
+ * Lo que la cabecera de una póliza plegada dice, y si esa póliza se puede
+ * plegar siquiera.
+ *
+ * 🚨 `abrir` NO se deduce de `texto === null`, y por eso es un campo: hay
+ * cabeceras que SÍ dicen algo y aun así no pueden esconder lo de dentro (un
+ * recibo devuelto). Con la apertura derivada del texto, añadir mañana un caso
+ * así obliga a vaciar la cabecera para que se abra — o sea, a elegir entre
+ * enseñar el aviso y explicarlo.
+ */
+export type ResumenPoliza = { texto: string | null; abrir: boolean }
+
+/**
  * Lo próximo que se paga y lo último que se pagó, en una línea — o `null`
  * cuando no hay NADA que resumir.
  *
@@ -268,6 +280,14 @@ export function lineaRecibos(p: PolizaPortal): string | null {
   if (r.estado !== 'con_recibos') return null
 
   const partes: string[] = []
+  // 🚨 El DEVUELTO va primero, delante del próximo y del último cobrado. Es lo
+  // único de una póliza que puede dejar a alguien sin cobertura sin que se
+  // entere, y con la póliza plegada esta línea es TODO lo que se ve: enterrarlo
+  // detrás de «último cobrado 65,51€» convierte la cabecera en una frase
+  // tranquilizadora sobre un cobro que falló.
+  if (r.devueltos > 0) {
+    partes.push(r.devueltos === 1 ? '1 recibo devuelto' : `${r.devueltos} recibos devueltos`)
+  }
   if (r.proximoAlCobro) {
     // `importe: null` = el EIAC no traía un importe legible. No es 0€, así que
     // se cuenta lo que se sabe (la fecha) y se calla lo que no.
@@ -275,6 +295,10 @@ export function lineaRecibos(p: PolizaPortal): string | null {
     const importe = r.proximoAlCobro.importe
     if (importe !== null) partes.push(`Tu próximo recibo: ${eur(importe)}${cuando ? ` el ${cuando}` : ''}`)
     else if (cuando) partes.push(`Tu próximo recibo vence el ${cuando}`)
+    // Ni importe ni fecha legibles. Se dice IGUAL que hay uno pendiente: sin
+    // esta rama la línea se queda en «último cobrado X», que con la póliza
+    // plegada se lee como «estás al corriente» teniendo un recibo al cobro.
+    else partes.push('Tienes un recibo pendiente')
   }
   if (r.ultimoCobrado) {
     const cuando = fechaEs(r.ultimoCobrado.fechaEmision)
@@ -284,6 +308,21 @@ export function lineaRecibos(p: PolizaPortal): string | null {
   }
 
   return partes.length > 0 ? partes.join(' · ') : null
+}
+
+/**
+ * La misma línea, más si la póliza puede nacer plegada.
+ *
+ * 🚨 Con un recibo DEVUELTO nace ABIERTA aunque la cabecera lo nombre: el chip
+ * rojo, su explicación y el botón de avisar a la correduría viven en la lista,
+ * y este portal ya tiene escrito que el devuelto no se esconde detrás de un
+ * clic. Sin texto que enseñar, abierta por la razón de siempre: dentro hay una
+ * explicación, no una lista.
+ */
+export function resumenRecibos(p: PolizaPortal): ResumenPoliza {
+  const texto = lineaRecibos(p)
+  const devueltos = p.recibos?.devueltos ?? 0
+  return { texto, abrir: texto === null || devueltos > 0 }
 }
 
 /**
@@ -459,6 +498,16 @@ export function lineaSiniestros(p: PolizaPortal): string | null {
   const r = resumirHistorialSiniestros(p.siniestros)
   const total = r.total === 1 ? '1 siniestro' : `${r.total} siniestros`
   return r.abiertos > 0 ? `${total} · ${r.abiertos} sin cerrar` : total
+}
+
+/**
+ * Lo mismo para siniestros. Aquí no hay nada que la cabecera no pueda contar
+ * —«1 sin cerrar» ya lo dice—, así que solo nace abierta la que no tiene
+ * historial y lleva dentro la frase de «no nos consta ninguno».
+ */
+export function resumenSiniestros(p: PolizaPortal): ResumenPoliza {
+  const texto = lineaSiniestros(p)
+  return { texto, abrir: texto === null }
 }
 
 /**

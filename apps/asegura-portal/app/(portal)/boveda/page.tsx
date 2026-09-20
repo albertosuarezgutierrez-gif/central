@@ -27,8 +27,8 @@ import {
   HistorialSiniestros,
   RAMO,
   RecibosDePoliza,
-  lineaRecibos,
-  lineaSiniestros,
+  resumenRecibos,
+  resumenSiniestros,
 } from './PolizaVista'
 import { ResumenTitular } from './ResumenTitular'
 import { VistaPorPoliza } from './VistaPorPoliza'
@@ -518,7 +518,7 @@ export default async function Boveda({
         <VistaPorPoliza
           bloques={bloques}
           incluye={(p) => p.recibos !== null}
-          resumen={lineaRecibos}
+          resumen={resumenRecibos}
           bloque={(p) => <RecibosDePoliza p={p} sinResumen />}
           vacio="Aquí verás los recibos de tus seguros cuando tu compañía nos los informe. Que no haya ninguno no significa que estés al corriente: significa que todavía no nos consta nada."
         />
@@ -557,7 +557,7 @@ export default async function Boveda({
           <VistaPorPoliza
             bloques={bloques}
             incluye={(p) => p.siniestros !== null && p.siniestros.length > 0}
-            resumen={lineaSiniestros}
+            resumen={resumenSiniestros}
             bloque={(p) => <HistorialSiniestros p={p} sinResumen />}
             vacio="No nos consta ningún siniestro en tus seguros. No significa que no hayas tenido ninguno: nos los informa tu compañía. Si acabas de tener uno, cuéntanoslo desde aquí."
           />
