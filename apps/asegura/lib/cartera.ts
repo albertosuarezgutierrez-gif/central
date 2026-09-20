@@ -8,8 +8,10 @@ import {
   inicioVentanaRecuperacion,
   objetoAsegurado,
   primaReferencia,
+  retarificabilidad,
   urgenciaRenovacion,
   type ObjetoAsegurado,
+  type Retarificabilidad,
   type UrgenciaRenovacion,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
@@ -80,6 +82,15 @@ export type PolizaVencimiento = {
   /** Qué asegura la póliza, ya derivado y con su propio estado (conocido /
    *  no informado / cifrado / sin objeto). Nunca es una cadena vacía. */
   objeto: ObjetoAsegurado
+  /**
+   * El mismo veredicto que la ficha del cliente y la de la póliza —solo un
+   * helper, `retarificabilidad()`—, para que el botón «Retarificar» pueda salir
+   * ya en la lista de renovaciones y no obligue a abrir la ficha para lo único
+   * que se hace todos los días. Sin `datosGemela` (esta consulta no la trae):
+   * puede subestimar hogar cuando el riesgo solo vive en la copia del volcado,
+   * nunca al revés — es el lado conservador, no un dato inventado.
+   */
+  retarificacion: Retarificabilidad
   /**
    * Para llamar sin abrir la ficha. Es la MISMA pieza que el buscador
    * (`contactosDe` de `cartera-busqueda.ts`), no una copia: el contrato de los
@@ -311,6 +322,11 @@ export async function vencimientosProximos(
         tipo: String(f.tipo),
         datos: descifrarDireccion(f.datosEspecificos),
         coberturas: coberturasPorPoliza.get(f.id) ?? null,
+      }),
+      retarificacion: retarificabilidad({
+        tipo: String(f.tipo),
+        datos: descifrarDireccion(f.datosEspecificos),
+        datosGemela: null,
       }),
       // Si la consulta falló, `null` para todas: «no se ha podido mirar».
       contacto: contactos?.get(f.cliente.id) ?? null,

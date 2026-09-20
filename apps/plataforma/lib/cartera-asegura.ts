@@ -10,8 +10,9 @@
 // arreglan en sitios distintos — un recuadro que solo dice «sin respuesta»
 // obliga a adivinar cuál de los tres es (pasó el 31/08/2026).
 
-import type { ObjetoAsegurado } from '@central/module-seguros'
+import type { ObjetoAsegurado, Retarificabilidad } from '@central/module-seguros'
 import { interpretarContacto, leerTruncado, type Contacto } from './correduria-puerto.ts'
+import { leerRetarificacion } from './ficha-asegura.ts'
 
 export type MotivoErrorCartera =
   | 'secreto_rechazado'   // asegura devolvió 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
@@ -140,6 +141,13 @@ export type PolizaVencimiento = {
    */
   objeto: ObjetoAsegurado | null
   /**
+   * El veredicto de retarificar, o `null` si la versión desplegada de asegura
+   * todavía no lo manda. Misma pieza que `leerRetarificacion` de `ficha-asegura.ts`
+   * (ficha del cliente y de la póliza): un `null` aquí NO pinta «no se puede»,
+   * deja el botón sin ofrecer hasta que se sepa.
+   */
+  retarificacion: Retarificabilidad | null
+  /**
    * Teléfono y email del tomador, para llamar desde la propia lista: esta tabla
    * existe justo para eso (medido el 05/09/2026: de las 15 fichas que vencen en
    * 90 días, 9 tienen teléfono y 8 email).
@@ -241,6 +249,7 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
       prima: typeof f.prima === 'number' && Number.isFinite(f.prima) ? f.prima : null,
       fraccionamiento: typeof f.fraccionamiento === 'string' ? f.fraccionamiento : null,
       objeto: interpretarObjeto(f.objeto),
+      retarificacion: leerRetarificacion(f.retarificacion),
       // Mismo normalizador que el buscador y la cola de retención: dos lecturas
       // del mismo bloque harían que el icono saliera en una pantalla y no en
       // otra para el MISMO cliente.

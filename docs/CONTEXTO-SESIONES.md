@@ -13,6 +13,12 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(20/09/2026)** **Botón «Retarificar» en la lista de Renovaciones de `/correduria`** (PR #3200):
+Alberto no veía sentido a entrar en la ficha del cliente solo para pulsar el botón. El puerto
+`/api/operador/vencimientos` de `apps/asegura` manda ahora el veredicto de retarificabilidad
+(mismo `retarificabilidad()` que ficha/póliza, sin `datosGemela` — puede subestimar hogar, nunca
+al revés) y `Renovaciones.tsx` lo pinta con el mismo `BtnLink`/`rotuloRetarificar` de `Retencion.tsx`.
+
 **(20/09/2026)** **`housesevillana.es` ya tiene Search Console conectado.** Alberto invitó
 `seo-correduria@grupoasegura-seo.iam.gserviceaccount.com` (la MISMA cuenta de servicio del cron SEO
 de la correduría) a `sc-domain:housesevillana.es` con permiso **Restringido**, hecho con Claude en
