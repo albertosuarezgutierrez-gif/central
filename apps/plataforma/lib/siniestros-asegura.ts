@@ -269,7 +269,17 @@ export function abrirSiniestroAsegura(body: Record<string, unknown>): Promise<Re
   return llamar('/api/operador/siniestro', { method: 'POST', body: JSON.stringify(body) })
 }
 
-/** `PATCH` — `{siniestroId, estado, actor}` (cambio de estado) o `{siniestroId, …seguimiento, actor}`. */
+/** `PATCH` — `{siniestroId, estado, actor}` · `{siniestroId, …seguimiento, actor}` · `{siniestroId, datosRamo, actor}`. */
 export function seguirSiniestroAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/siniestro', { method: 'PATCH', body: JSON.stringify(body) })
+}
+
+/** `POST` — añade un tercero/testigo `{siniestroId, tipo, nombre?, telefono?, matricula?, …, actor}`. */
+export function anadirTerceroAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/siniestro/terceros', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/** `DELETE` — quita un tercero/testigo `{siniestroId, intervinienteId, actor}`. */
+export function quitarTerceroAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/siniestro/terceros', { method: 'DELETE', body: JSON.stringify(body) })
 }

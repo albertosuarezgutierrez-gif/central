@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Siniestros: campos por ramo + terceros/testigos. `datosRamo` (JSONB, patrón de
+`campos-ramo.ts` de pólizas) sobre `Siniestro` + catálogo puro `siniestro-ramo.ts` (auto/hogar/RC/
+vida/salud/decesos) y tabla nueva `SiniestroInterviniente` (terceros/testigos, PII cifrada) +
+`siniestro-intervinientes.ts` en `@central/module-seguros`. Backend completo en `apps/asegura`
+(PATCH `datosRamo`, POST/DELETE terceros) y proxies en `apps/plataforma`, EXCLUSIVO de siniestros
+`gestionado_correduria` (CIMA no manda este detalle). Migración SQL escrita, **sin aplicar en la BD
+real todavía**. Typecheck limpio en asegura/asegura-portal/plataforma; 605+ tests en verde.
+**Pendiente:** UI del corredor en `Siniestros.tsx` (delegada a agente en background) y captura desde
+el portal del cliente (`asegura-portal`, queda para otra sesión).
+
 **(16/09/2026)** CIMA · skill `cima-ingesta` (router de la tubería EIAC/TIREA: cadena, cuarentena,
 cobertura de campos, caja negra del webhook y diagnóstico), y se mata el duplicado en
 `agente-correduria`/`correduria-crm`. **Generali SÍ vuelca por CIMA desde el 14/09** (1er POL, único

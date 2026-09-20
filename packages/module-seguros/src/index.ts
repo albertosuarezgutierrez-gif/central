@@ -343,6 +343,28 @@ export {
   descripcionEiacSiniestro,
 } from './eiac-siniestros.ts'
 export {
+  RAMOS_SINIESTRO,
+  RAMOS_SINIESTRO_CON_CATALOGO,
+  CAMPOS_POR_RAMO_SINIESTRO,
+  MAX_TEXTO_RAMO_SINIESTRO,
+  camposDeRamoSiniestro,
+  normalizarDatosRamoSiniestro,
+  type TipoCampo as TipoCampoRamoSiniestro,
+  type OpcionCampo as OpcionCampoRamoSiniestro,
+  type CampoRamoSiniestro,
+  type RamoSiniestro,
+  type DatosRamoSiniestro,
+  type ResultadoDatosRamoSiniestro,
+} from './siniestro-ramo.ts'
+export {
+  TIPOS_INTERVINIENTE,
+  esTipoInterviniente,
+  revisarInterviniente,
+  type TipoInterviniente,
+  type IntervinienteEntrada,
+  type IntervinienteRevisado,
+} from './siniestro-intervinientes.ts'
+export {
   evolucionPrima,
   etiquetaVeredictoPrima,
   inicioCiclo,
