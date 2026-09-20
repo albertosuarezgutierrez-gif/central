@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { cuentaDeFicha, describirOrigenCuenta } from '@/lib/codeoscopic/cuenta-ficha'
 import { ibanEnmascarado } from '@/lib/codeoscopic/emitir-iban'
@@ -21,6 +22,7 @@ import {
   reparosDe,
   esCampoPersona,
   type CampoPersona,
+  type CampoProducto,
 } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
@@ -301,6 +303,7 @@ export async function POST(req: Request) {
         if (interp.campos.length === 0) {
           const deProducto = productOptionsCorredor ? [] : interpretarCamposProducto(interp.lineas)
           if (deProducto.length > 0) {
+            await registrarFaltaProducto(t.correduria_id, tarificacionId, deProducto)
             return NextResponse.json(
               {
                 estado: 'faltan_producto',
@@ -498,6 +501,37 @@ function respuestaSigueFaltando(campos: CampoPersona[], mensajeVendor: string) {
     },
     { status: 409 },
   )
+}
+
+/**
+ * Telemetría de `faltan_producto` por COMPAÑÍA (20/09/2026): saber a qué
+ * compañías les falta cobertura del Product Form Library, no solo que
+ * «alguna vez pasa». Reutiliza `seguros.operational_events` (genérica, ya
+ * escrita por la ingesta de CIMA con `cima_pull_started/completed` y por el
+ * webhook con `codeoscopic_webhook_invalid_payload`): no hace falta tabla ni
+ * migración nueva. `source_event_id` es un UUID por llamada, no por
+ * proyecto — el mismo proyecto puede repetir el mismo hueco.
+ *
+ * 🚨 Best-effort a propósito: un fallo al escribir la telemetría NUNCA puede
+ * tirar el 422 que el corredor está esperando. Si falla, se traga en
+ * silencio (no hay canal de aviso para "no se pudo contar una métrica").
+ */
+async function registrarFaltaProducto(correduriaId: string, tarificacionId: string, campos: CampoProducto[]) {
+  try {
+    await prisma.$executeRaw`
+      insert into operational_events (
+        event_name, source, source_event_id, correduria_id, cotizacion_id,
+        missing_fields_count, payload
+      ) values (
+        'codeoscopic_oferta_faltan_producto', 'codeoscopic-oferta', ${randomUUID()},
+        ${correduriaId}::uuid, ${tarificacionId}::uuid, ${campos.length},
+        ${JSON.stringify({ compania: campos[0]?.compania ?? null, campos: campos.map((c) => c.campo) })}::jsonb
+      )
+    `
+  } catch {
+    // No bloquea nunca la respuesta al corredor. Sin canal de aviso: es una
+    // métrica, no una operación de negocio.
+  }
 }
 
 function respuestaNoAplicado(c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>) {
