@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Recaptación de leads, Fase 2: `colaRecaptacion()` ya no exige `estado='activa'`
+cuando hay `fecha_vencimiento` — entra cualquier estado del volcado con fecha (el 89% `vencida`).
+Medido antes: de 28.697 leads, solo 1.167 entraban en Fase 1; con Fase 2 el pool contactable real
+sube a **1.399 clientes**. Cada lead lleva `origen`/`mesVencimientoAntiguo` (el mes es la pista de
+cuándo solía renovar, el año no sirve). UI con paginación 50+"Ver más" (ya no cabe todo de golpe).
+Spec actualizada (`2026-09-12-recaptacion-leads-design.md`). Pendiente: PR sin abrir todavía.
+
 **(20/09/2026)** Correo de aseguradora → historial del cliente (PR #3148) + 3 ideas más de Alberto
 ("añade todo"): contacto de siniestros visible en la ficha, radar de compañías sin canal digital de
 avisos (agrupado por marca) y sugerencia de alta de contacto nuevo desde el triaje (Telegram, nunca

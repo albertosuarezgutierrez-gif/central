@@ -110,7 +110,28 @@ demás).
 
 ## Fuera de alcance de esta primera vuelta
 
-- Leads CON fecha de vencimiento conocida (fase posterior, por vencimiento).
-- Envío automático o por lotes: siempre un lead, un clic, una vez.
+- ~~Leads CON fecha de vencimiento conocida (fase posterior, por vencimiento).~~ **HECHO 20/09/2026,
+  ver Fase 2 abajo.**
+- Envío automático o por lotes: siempre un lead, un clic, una vez. **(El lote automático por email SÍ
+  se construyó después, `enviarLoteEmail`/cron `recaptacion-email-lote` — ver `apps/asegura/CLAUDE.md`.)**
 - WhatsApp Business API / lectura de mensajes de WhatsApp (no hay WABA).
 - Historial completo de eventos de email (solo estado simple).
+
+## Fase 2 — leads CON vencimiento antiguo (20/09/2026)
+
+Alberto: "más importante es ir captando nuevos clientes con leads que tenemos, muchos". Medido antes
+de tocar código: **27.530 de los 28.697 leads del volcado (96%) sí tienen `fecha_vencimiento`**, pero
+son de hace 8-12 años (el 89%, `estado='vencida'`) — el AÑO no sirve para "vence pronto". Filtrando por
+canal de contacto disponible y sin cartera viva, el pool CONTACTABLE de verdad son **1.399 clientes**
+(subiendo desde los 424 de la Fase 1 — un 5% del volcado tocado hasta ahora).
+
+- `colaRecaptacion()` deja de exigir `estado='activa'` cuando SÍ hay `fecha_vencimiento`: entra
+  cualquier estado del volcado con fecha, no solo `activa`.
+- Cada lead lleva `origen` (`sin_vencimiento` | `vencimiento_antiguo`) y, si aplica,
+  `mesVencimientoAntiguo` (1-12) — el MES es la única pista real de cuándo solía renovar cada año.
+- La pantalla lo pinta como columna "Cuándo" (`vencía en <mes>` / `sin vencimiento`) y ya no puede
+  listar todo de golpe (1.399 > el límite de "sin montar miles de filas"): paginación 50 + "Ver más".
+- **No implementado en esta vuelta:** repartir el envío automático (lote) PRIORIZANDO el mes actual
+  (hoy `candidatosLoteEmail` sigue en orden alfabético, agnóstico del origen) — con ~1.000 candidatos
+  solo-email y 25/día, el propio volumen ya reparte el trabajo en varios meses sin necesidad de esa
+  lógica adicional. Revisar si hace falta cuando se vea el ritmo real de contactados/semana.

@@ -21,6 +21,8 @@ function lead(p: Partial<LeadRecaptacion>): LeadRecaptacion {
     prima: null,
     enCooldown: false,
     ultimoContactoEn: null,
+    origen: 'sin_vencimiento',
+    mesVencimientoAntiguo: null,
     ...p,
   }
 }
@@ -145,4 +147,41 @@ test('el grupo está en cooldown si CUALQUIERA de sus pólizas lo está', () => 
   const [grupo] = agruparLeadsPorCliente(leads)
   assert.equal(grupo.enCooldown, true)
   assert.equal(grupo.ultimoContactoEn, '2026-09-01')
+})
+
+// ── Fase 2: leads con vencimiento antiguo (20/09/2026) ───────────────────────
+
+test('un origen desconocido o ausente cae a sin_vencimiento, nunca inventa vencimiento_antiguo', () => {
+  const json = {
+    estado: 'ok',
+    leads: [{ clienteId: 'c1', polizaId: 'p1', cliente: 'X' }],
+    contadores: { totalCandidatos: 1, contactadosSemana: 0, conAperturaORespuestaSemana: 0 },
+  }
+  const r = interpretarCola(200, json)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.leads[0].origen, 'sin_vencimiento')
+  assert.equal(r.leads[0].mesVencimientoAntiguo, null)
+})
+
+test('un mes fuera de 1-12 se descarta, no se pinta un mes falso', () => {
+  const json = {
+    estado: 'ok',
+    leads: [{ clienteId: 'c1', polizaId: 'p1', cliente: 'X', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 13 }],
+    contadores: { totalCandidatos: 1, contactadosSemana: 0, conAperturaORespuestaSemana: 0 },
+  }
+  const r = interpretarCola(200, json)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.leads[0].origen, 'vencimiento_antiguo')
+  assert.equal(r.leads[0].mesVencimientoAntiguo, null)
+})
+
+test('el grupo marca tieneVencimientoAntiguo si CUALQUIERA de sus pólizas lo es', () => {
+  const leads = [
+    lead({ polizaId: 'p1', origen: 'sin_vencimiento' }),
+    lead({ polizaId: 'p2', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 3 }),
+  ]
+  const [grupo] = agruparLeadsPorCliente(leads)
+  assert.equal(grupo.tieneVencimientoAntiguo, true)
 })

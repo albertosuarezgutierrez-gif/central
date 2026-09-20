@@ -21,7 +21,25 @@ function booleano(v: unknown): boolean {
   return v === true
 }
 
+function origenLead(v: unknown): OrigenLeadRecaptacion {
+  return v === 'vencimiento_antiguo' ? 'vencimiento_antiguo' : 'sin_vencimiento'
+}
+
+/** 1-12, o `null` si no es un mes válido (incluido cuando el origen es `sin_vencimiento`). */
+function mes(v: unknown): number | null {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 12 ? v : null
+}
+
 // ── Cola ─────────────────────────────────────────────────────────────────────
+
+/**
+ * `sin_vencimiento` (Fase 1) = activa sin fecha a la que anclar el contacto.
+ * `vencimiento_antiguo` (Fase 2, 20/09/2026) = venció hace años; el mes/día es
+ * la pista de cuándo solía renovar. Un valor que el puerto no reconozca (o no
+ * lo mande, versión vieja de asegura) cae a `sin_vencimiento`, el lado que ya
+ * se trataba como "sin fecha a la que anclar" — nunca se inventa un mes.
+ */
+export type OrigenLeadRecaptacion = 'sin_vencimiento' | 'vencimiento_antiguo'
 
 export type LeadRecaptacion = {
   clienteId: string
@@ -38,6 +56,9 @@ export type LeadRecaptacion = {
   /** `true` = ya se contactó hace menos de 14 días; la pantalla ofrece "ver igualmente" para forzar. */
   enCooldown: boolean
   ultimoContactoEn: string | null
+  origen: OrigenLeadRecaptacion
+  /** Mes (1-12) del vencimiento antiguo. `null` cuando `origen==='sin_vencimiento'`. */
+  mesVencimientoAntiguo: number | null
 }
 
 export type ContadoresRecaptacion = {
@@ -80,6 +101,8 @@ function leerLead(v: unknown): LeadRecaptacion | null {
     prima: numero(o.prima),
     enCooldown: booleano(o.enCooldown),
     ultimoContactoEn: cadena(o.ultimoContactoEn),
+    origen: origenLead(o.origen),
+    mesVencimientoAntiguo: mes(o.mesVencimientoAntiguo),
   }
 }
 
@@ -137,6 +160,8 @@ export type GrupoLeadRecaptacion = {
   polizas: LeadRecaptacion[]
   enCooldown: boolean
   ultimoContactoEn: string | null
+  /** `true` si ALGUNA de sus pólizas es Fase 2 (vencimiento antiguo). */
+  tieneVencimientoAntiguo: boolean
 }
 
 export function agruparLeadsPorCliente(leads: readonly LeadRecaptacion[]): GrupoLeadRecaptacion[] {
@@ -151,6 +176,7 @@ export function agruparLeadsPorCliente(leads: readonly LeadRecaptacion[]): Grupo
       if (l.ultimoContactoEn !== null && (existente.ultimoContactoEn === null || l.ultimoContactoEn > existente.ultimoContactoEn)) {
         existente.ultimoContactoEn = l.ultimoContactoEn
       }
+      if (l.origen === 'vencimiento_antiguo') existente.tieneVencimientoAntiguo = true
       continue
     }
     mapa.set(l.clienteId, {
@@ -161,6 +187,7 @@ export function agruparLeadsPorCliente(leads: readonly LeadRecaptacion[]): Grupo
       polizas: [l],
       enCooldown: l.enCooldown,
       ultimoContactoEn: l.ultimoContactoEn,
+      tieneVencimientoAntiguo: l.origen === 'vencimiento_antiguo',
     })
   }
   return [...mapa.values()]

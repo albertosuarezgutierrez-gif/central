@@ -8,6 +8,7 @@ function lead(over: Partial<LeadRecaptacion>): LeadRecaptacion {
     clienteId: 'c1', polizaId: 'p1', cliente: 'Alguien', ramo: 'auto', ramoLegible: 'auto',
     aseguradoraAnterior: null, numeroPoliza: null, telefono: null, email: 'x@example.com',
     prima: null, enCooldown: false, ultimoContactoEn: null,
+    origen: 'sin_vencimiento', mesVencimientoAntiguo: null,
     ...over,
   }
 }
