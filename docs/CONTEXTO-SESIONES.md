@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** `agentes-entrenador` · pasada semanal (rango real 24/08→19/09: la poda no se
+ejecutaba de verdad desde el 23/08 pese a que las notas del 30/08 y el PR #2864 la daban por
+hecha). Podadas 52 entradas de `AGENTES-BITACORA.md`, verificado releyendo el archivo tras el
+commit; añadido el mismo guardarraíl a `agentes-entrenador/SKILL.md` (PR draft, cierra #2864).
+Backlog de PRs abiertos: **43** (creció de 19 el 13/09 y 2 el 30/08 — #2262 del 04/09 ya lleva
+16 días, primer cruce del umbral de 2+ semanas). Hallazgos nombrados por Telegram: #2916
+(buscador-ia, fix de modelo retirado, listo desde hace 6 días) y el bucle "PRIORIDAD TEMPORAL"
+de mercado-booking (3+ semanas, 15+ pasadas, solo Alberto puede quitarlo del trigger).
+
 **(20/09/2026)** `/correduria/cliente/[id]` · el 🚧 «esquema sin verificar» de vida/decesos era un
 flag hardcodeado (`sinVerificar: true` en `Cabecera.tsx`), no un chequeo contra la BD: medido en
 `seguros.polizas`, CIMA ya trae 1 póliza viva de vida y 1 de decesos (Generali, actualizadas
