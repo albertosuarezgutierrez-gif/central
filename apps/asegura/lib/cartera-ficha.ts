@@ -291,6 +291,13 @@ export type SiniestroFicha = {
    */
   datosRamo: Record<string, string | number | boolean> | null
   /**
+   * Desglose de daños del EIAC (`ImplicadoDiversos/DanosSiniestro/DanoSiniestro[]`).
+   * `null` = CIMA no trajo ninguno para este siniestro (el persist nunca escribe
+   * un array vacío) o asegura no lo manda (versión anterior). EXCLUSIVO de
+   * `origen='cima'` — es lo contrario de `datosRamo` (ese lo teclea el corredor).
+   */
+  danosCima: { descripcion: string | null; valor: string | null }[] | null
+  /**
    * Terceros y testigos. `null` = no se ha podido consultar (la tabla falló),
    * NUNCA «no hay ninguno» — mismo criterio que `intervinientes` de la ficha.
    */

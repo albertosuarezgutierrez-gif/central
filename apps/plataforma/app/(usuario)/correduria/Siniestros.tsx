@@ -228,6 +228,31 @@ export default function Siniestros({
   )
 }
 
+// ─── Daños (EXCLUSIVO de CIMA) ─────────────────────────────────────────────────
+//
+// Lo contrario de `datosRamo`: esto lo manda la compañía por CIMA y nunca lo
+// teclea el corredor, así que se pinta sin gate de `propio`.
+
+function BloqueDanos({ danos }: { danos: { descripcion: string | null; valor: string | null }[] | null }) {
+  if (danos === null || danos.length === 0) return null
+  return (
+    <div>
+      <div style={etiqueta}>Daños (CIMA)</div>
+      <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
+        {danos.map((d, i) => {
+          const importe = d.valor !== null && Number.isFinite(Number(d.valor)) ? eur(Number(d.valor)) : null
+          return (
+            <li key={i}>
+              {d.descripcion ?? 'Sin descripción'}
+              {importe !== null ? `: ${importe}` : ''}
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 // ─── Campos por ramo ──────────────────────────────────────────────────────────
 //
 // EXCLUSIVO de siniestros `gestionado_correduria`: CIMA no manda este nivel de
@@ -606,6 +631,8 @@ function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ra
         <Dato label="Indemnización" valor={s.indemnizacion === null ? null : eur(s.indemnizacion)} />
         <Dato label="Actualizado" valor={s.actualizado ? fechaHoraEs(s.actualizado) : null} />
       </div>
+
+      <BloqueDanos danos={s.danosCima} />
 
       {propio && (
         <BloqueRamo siniestroId={s.id} ramoPoliza={ramoPoliza} datosRamo={s.datosRamo} onGuardar={onAnotar} />

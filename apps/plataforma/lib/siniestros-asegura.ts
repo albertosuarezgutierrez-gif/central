@@ -69,6 +69,12 @@ export type SiniestroCartera = {
    */
   datosRamo: Record<string, string | number | boolean> | null
   /**
+   * Desglose de daños del EIAC (`ImplicadoDiversos/DanosSiniestro/DanoSiniestro[]`).
+   * `null` = CIMA no trajo ninguno, o asegura no lo manda. EXCLUSIVO de
+   * `origen='cima'` — lo contrario de `datosRamo`.
+   */
+  danosCima: { descripcion: string | null; valor: string | null }[] | null
+  /**
    * Terceros y testigos. `null` = no se ha podido consultar (o asegura no lo
    * manda) — NUNCA «no hay ninguno», que es `[]`. Exclusivo de siniestros
    * `gestionado_correduria`.
@@ -106,6 +112,17 @@ function datosRamoDe(v: unknown): Record<string, string | number | boolean> | nu
     if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') out[k] = val
   }
   return Object.keys(out).length === 0 ? null : out
+}
+
+/** `danosCima` tal cual, o `null` si no tiene forma de array. Nunca `[]` inventado. */
+function danosCimaDe(v: unknown): { descripcion: string | null; valor: string | null }[] | null {
+  if (!Array.isArray(v)) return null
+  return v
+    .filter((d): d is Record<string, unknown> => d !== null && typeof d === 'object')
+    .map((d) => ({
+      descripcion: typeof d.descripcion === 'string' ? d.descripcion : null,
+      valor: typeof d.valor === 'string' ? d.valor : null,
+    }))
 }
 
 function leerTercero(v: unknown): TerceroCartera | null {
@@ -164,6 +181,7 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     abierto: s.abierto === true,
     actualizado: cadena(s.actualizado),
     datosRamo: datosRamoDe(s.datosRamo),
+    danosCima: danosCimaDe(s.danosCima),
     terceros: terceros(s.terceros),
   }
 }
