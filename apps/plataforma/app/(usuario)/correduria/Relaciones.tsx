@@ -605,10 +605,23 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
         aviso={aviso?.clave === `aviso-${r.relacionadoId}` ? aviso : null}
         onAutorizar={(autoriza) => onAutorizar(r, autoriza)}
         onAvisar={() => onAvisar(r, false)}
-        /* 🚨 Desde una ficha de SOCIEDAD no basta un botón: hay que decir QUÉ se
-           delega (mirar o actuar) y con qué TÍTULO se la representa. Solo en el
-           sentido en que cede ELLA; desde una ficha de persona no aparece. */
-        formulario={esSociedad ? <AnotarSociedad r={r} nombreFicha={nombreFicha} enCurso={enCurso} onAutorizar={onAutorizar} /> : null}
+        /* 🚨 El alcance SIEMPRE se elige aquí, también entre dos personas físicas:
+           sin esto el botón simple mandaba autorizar() sin `alcance` y el puerto
+           anotaba el más pequeño («ver», nivel tarjeta) — María Antonia autorizaba
+           a Alberto y este nunca veía sus recibos ni siniestros, sin que nada lo
+           avisara. De una SOCIEDAD además hay que decir con qué TÍTULO se la
+           representa (`esSociedad`); de una persona solo se elige QUÉ mira.
+           Solo en el sentido en que cede ELLA (`nombreFicha`); el sentido inverso
+           es cosa de la ficha del otro y no lleva formulario. */
+        formulario={
+          <AnotarAlcance
+            r={r}
+            nombreFicha={nombreFicha}
+            enCurso={enCurso}
+            onAutorizar={onAutorizar}
+            esSociedad={esSociedad}
+          />
+        }
       />
 
       <Sentido
@@ -824,15 +837,24 @@ function CambiarTipo({ r, enCurso, onCambiarTipo }: {
 }
 
 /**
- * El alta de una autorización cuando la ficha es una SOCIEDAD.
+ * El alta de una autorización, con el ALCANCE siempre elegido a mano.
  *
- * Lo que se delega no es consentimiento de datos personales —una sociedad no los
- * tiene— sino REPRESENTACIÓN mercantil, y por eso aquí sí caben `partes` y
- * `documentos`. El TÍTULO es obligatorio en esos dos (lo exige un CHECK de la BD)
- * y aquí se pide siempre: si quien actúa por la empresa da un parte, la que queda
- * obligada es ella, y «alguien de la empresa» no es un título.
+ * 🚨 Hasta el 20/09/2026 esto solo existía para SOCIEDADES: entre dos personas
+ * físicas el botón simple mandaba `autorizar()` sin `alcance`, y el puerto
+ * anotaba el más pequeño («ver», nivel tarjeta) sin que la pantalla lo dijera
+ * — María Antonia autorizaba a José y este nunca veía recibos ni siniestros.
+ * Ahora el desplegable sale SIEMPRE; lo que cambia con `esSociedad` es qué
+ * opciones ofrece (`alcancesAnotables`, capado en asegura) y si además hace
+ * falta el TÍTULO de representación.
+ *
+ * De una SOCIEDAD no se delega un permiso para mirar sino REPRESENTACIÓN
+ * mercantil (`partes`/`documentos` caben, y el título es obligatorio: si
+ * quien actúa por la empresa da un parte, la que queda obligada es ella, y
+ * «alguien de la empresa» no es un título). De una PERSONA física solo se
+ * elige QUÉ mira (`ver` / `ver_economico`) — sigue siendo un consentimiento
+ * de datos personales, nunca una representación.
  */
-function AnotarSociedad({ r, nombreFicha, enCurso, onAutorizar }: {
+function AnotarAlcance({ r, nombreFicha, enCurso, onAutorizar, esSociedad }: {
   r: RelacionCartera
   nombreFicha: string
   enCurso: boolean
@@ -842,23 +864,34 @@ function AnotarSociedad({ r, nombreFicha, enCurso, onAutorizar }: {
     extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
     invertido?: boolean,
   ) => void
+  esSociedad: boolean
 }) {
   // `''` = todavía no ha elegido, que NO es haber elegido lo más pequeño.
   const [alcance, setAlcance] = useState<AlcancePortal | ''>('')
   const [titulo, setTitulo] = useState<TituloRepresentacionPortal | ''>('')
   const opciones = alcancesAnotables(r.tipoOtorgante)
-  const listo = alcance !== '' && titulo !== ''
+  const listo = alcance !== '' && (!esSociedad || titulo !== '')
 
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-        <strong>{nombreFicha} es una sociedad</strong>, así que aquí no se anota un permiso para mirar:
-        se anota <strong>quién puede representarla</strong>. Quien la represente ve lo que paga, su CIF y
-        su cuenta bancaria —son datos de la empresa— y, con «dar partes», lo que declare{' '}
-        <strong>obliga a la sociedad</strong>. Lo que no puede hacer nunca es autorizar a nadie más.
+        {esSociedad ? (
+          <>
+            <strong>{nombreFicha} es una sociedad</strong>, así que aquí no se anota un permiso para
+            mirar: se anota <strong>quién puede representarla</strong>. Quien la represente ve lo que
+            paga, su CIF y su cuenta bancaria —son datos de la empresa— y, con «dar partes», lo que
+            declare <strong>obliga a la sociedad</strong>. Lo que no puede hacer nunca es autorizar a
+            nadie más.
+          </>
+        ) : (
+          <>
+            Elige qué puede ver {r.nombre}: solo la tarjeta (compañía, ramo, vencimiento) o también{' '}
+            <strong>lo económico</strong> (prima, recibos y siniestros).
+          </>
+        )}
       </div>
 
-      <Campo label={`¿Qué puede hacer ${r.nombre} por ${nombreFicha}?`}>
+      <Campo label={`¿Qué puede ${esSociedad ? 'hacer' : 'ver'} ${r.nombre} ${esSociedad ? `por ${nombreFicha}` : `de ${nombreFicha}`}?`}>
         <select value={alcance} onChange={(e) => setAlcance(e.target.value as AlcancePortal | '')} style={campo} disabled={enCurso}>
           <option value="">Elige qué se delega…</option>
           {opciones.map((a) => (
@@ -867,25 +900,27 @@ function AnotarSociedad({ r, nombreFicha, enCurso, onAutorizar }: {
         </select>
       </Campo>
 
-      <Campo
-        label="¿Con qué título la representa?"
-        ayuda="Queda guardado con la autorización. Obligatorio para dar partes o manejar documentos: sin él, lo que declare no se le puede oponer a la compañía."
-      >
-        <select value={titulo} onChange={(e) => setTitulo(e.target.value as TituloRepresentacionPortal | '')} style={campo} disabled={enCurso}>
-          <option value="">Elige el título…</option>
-          {TITULOS_REPRESENTACION_PORTAL.map((t) => (
-            <option key={t} value={t}>{TITULO_TEXTO_PORTAL[t]}</option>
-          ))}
-        </select>
-      </Campo>
+      {esSociedad && (
+        <Campo
+          label="¿Con qué título la representa?"
+          ayuda="Queda guardado con la autorización. Obligatorio para dar partes o manejar documentos: sin él, lo que declare no se le puede oponer a la compañía."
+        >
+          <select value={titulo} onChange={(e) => setTitulo(e.target.value as TituloRepresentacionPortal | '')} style={campo} disabled={enCurso}>
+            <option value="">Elige el título…</option>
+            {TITULOS_REPRESENTACION_PORTAL.map((t) => (
+              <option key={t} value={t}>{TITULO_TEXTO_PORTAL[t]}</option>
+            ))}
+          </select>
+        </Campo>
+      )}
 
       <div>
         <button
           type="button"
           disabled={enCurso || !listo}
           onClick={() => {
-            if (alcance === '' || titulo === '') return
-            onAutorizar(r, true, { alcance, tituloRepresentacion: titulo })
+            if (alcance === '' || (esSociedad && titulo === '')) return
+            onAutorizar(r, true, { alcance, tituloRepresentacion: esSociedad && titulo !== '' ? titulo : null })
           }}
           style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
         >
