@@ -993,11 +993,30 @@ h1 em {
 .poliza-bloque {
   margin: 0 0 20px;
 }
+/* 🚨 La cabecera es un `<summary>`, y va en `display: list-item` como la del
+   plegable de la bóveda: con `flex` desaparece el marcador ▸ —la única señal
+   de que aquello se abre— y NO falla nada. El flex va dentro, en el `<h4>`.
+   Los 44 px táctiles de la casa, porque esta cabecera es ahora la puerta al
+   historial entero. */
+.poliza-bloque-resumen {
+  display: list-item;
+  list-style: revert;
+  min-height: 44px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.poliza-bloque-resumen::marker {
+  color: var(--muted);
+}
+.poliza-bloque-resumen:hover .poliza-bloque-nombre {
+  color: var(--brand-ink);
+}
 .poliza-bloque-titulo {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 8px;
+  gap: 4px 8px;
+  margin: 0;
   font-family: var(--sans);
   font-size: 15px;
   font-weight: 600;
@@ -1005,6 +1024,23 @@ h1 em {
   /* El nombre de una compañía + el ramo no cabe en una línea a 320 px, y
      partirlo por la mitad de una palabra es peor que dejarlo en dos renglones. */
   overflow-wrap: anywhere;
+}
+.poliza-bloque-nombre {
+  transition: color 150ms;
+}
+/* Lo que la cabecera dice con el bloque CERRADO (el próximo recibo, cuántos
+   siniestros). Va en línea propia a propósito: a 320 px compartir renglón con
+   el nombre de la compañía deja las dos cosas ilegibles. Secundaria en color y
+   tamaño — informa, no compite con qué póliza es. */
+.poliza-bloque-linea {
+  flex: 1 0 100%;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.poliza-bloque-cuerpo {
+  margin-top: 10px;
 }
 
 /* ── La cabecera de un TITULAR dentro de un bloque de la bóveda ────────────
