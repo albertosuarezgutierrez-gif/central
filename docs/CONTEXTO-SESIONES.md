@@ -13,6 +13,17 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(20/09/2026)** **Revisión de `/correduria` (arquitecto+diseño) + alta de lead con oportunidad**
+(PR #3203, mergeado): el KPI «Cartera viva» contaba por `clientes.tipo` (campo sin mantener) en vez de
+`esCarteraEnVigor()` — daba 1.774 clientes/3.302 leads cuando la cartera real es 72/110, contradiciendo
+la pestaña Clientes. Corregido en `resumenCartera()`. También: `LeadsPortal`/`DeclaradasVencer` sumaban
+la misma póliza dos veces en el badge de «Hoy» (misma tabla, ventanas casi iguales) — se retira
+`DeclaradasVencer` de la suma. `LeadsWebConversion` movida de Datos a Clientes. Y `NuevoCliente.tsx`
+gana selector de ramo: al dar de alta un lead con ramo elegido, salta directo a presupuestarlo
+(`RAMOS_PRESUPUESTO` ahora vive en `lib/ficha-asegura.ts`, fuente única con `Cabecera.tsx`).
+Pendiente, fuera de alcance: unificar los 3 criterios de «sin canal», fusionar Companias+RadarRecibos,
+extraer `FilaAviso` común (patrón copiado en 6-7 archivos).
+
 **(20/09/2026)** **Botón «Retarificar» en la lista de Renovaciones de `/correduria`** (PR #3200):
 Alberto no veía sentido a entrar en la ficha del cliente solo para pulsar el botón. El puerto
 `/api/operador/vencimientos` de `apps/asegura` manda ahora el veredicto de retarificabilidad
