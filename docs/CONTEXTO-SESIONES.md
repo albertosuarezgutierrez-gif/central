@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Codeoscopic · Alberto preguntó si el 400 de Occident (leasing/renting, tipo de
+adquisición — 2ª vez, proyectos 40788414/40802035) se podía detectar antes. El Product Form Library
+(17/09) solo cubría el Submit; extendido también al ReRate: `interpretarCamposProducto()` reconoce el
+patrón español de campo-de-producto y devuelve `faltan_producto` (422) con `quoteCrudo` en vez del JSON
+crudo, reutilizando el mismo `ProductFormWidget`. El mismo día llegó un 3er error de Reale ("NO SE
+PERMITEN POLIZAS CON MALUS") — verificado que es un rechazo de negocio, no un campo, y el nuevo
+reconocedor NO lo confunde (test que lo fija). El catch genérico también limpia el mensaje del vendor
+con `lineasDelVendor()` para cualquier 400 no reconocido. PR #3129 (draft). tsc 0, 482+2871 tests OK.
+
 **(17/09/2026)** Correduría · Alberto no podía tarificar hogar («en hogar no me deja tarificar»).
 Causa: `HogarCatastro.tsx` mandaba a un flujo muerto (texto corregido en PR #3054), y retarificar una
 póliza de hogar YA existente seguía saltando a `apps/asegura` (`/cartera/poliza/[id]`, otro dominio/
