@@ -24,6 +24,22 @@
   (`claude/buscador-ia-2026-09-14`).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-20 · facturas-correo** · hizo: pasada diaria completa. Salud Vía B OK (`dias_caido=2`,
+  sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida` — `search_threads` a 0 pese a que
+  `list_labels` mostraba 1 en Extraccion-fallida, quirk conocido). Barrido 4.0: 1 `sin_revisar` en
+  `v_facturas_sin_cargo` (anthropic-credit-2791, 76,50€) — dos candidatos bancarios (09-07 y 09-10)
+  ambos `duplicado_estado='ignorado'`, ambiguo, no auto-concilio. Candidato Gmail nuevo: aviso Endesa
+  Dúplex (PJ Francisco Molina 4 1C, Ref. P26CON039531100, periodo 07/08-08/09/2026) — SIN PDF
+  adjunto (solo enlace al portal); etiquetado Procesada, sin cargo bancario aún (se espera ~24-27/09).
+  De paso, conciliación inversa de un cargo Dúplex antiguo huérfano (-86,62€, 24/08, `ADEUDO DE
+  ENDESA`): encontré su email (Ref. P26CON034750472, periodo 10/07-07/08/2026, ya Procesada de una
+  pasada anterior) y lo concilié (`conciliado=true`, `propiedad_id=prop_duplex_center`,
+  `factura_ref` con el periodo). Resto de candidatos Gmail (6) eran mensajes de huéspedes de
+  Booking/ticket Smoobu, descartados (no factura). `_subir_aqui` y raíz `2026` sin subidas manuales
+  nuevas. Etiqueta `Luz pendiente 2026` con 4 hilos TotalEnergies (abr-jun/2026, contratos viejos SL)
+  sin resolver — backlog preexistente de Alberto, no tocado hoy; dudas: el par de cargos Anthropic
+  76,50€ (para tu decisión — ver arriba); fallos: —; PRs/commits: solo escritura directa en Supabase
+  (`movimientos_bancarios`) + esta entrada, sin PR de código.
 - **2026-09-20 · mercado-booking** (2ª pasada del día — otra sesión en paralelo ya había medido
   jun/sep-2027 antes) · hizo: comprobó el plan fresco antes de medir (no duplicó fechas), salió
   rondas 2-3 de profundidad sobre 6 fechas nuevas × 4 aforos (03-05/04/2027, 27-29/10/2026,
