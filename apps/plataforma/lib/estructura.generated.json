@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-20T18:22:14Z",
+  "generadoEn": "2026-09-20T20:24:24Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4044,6 +4044,7 @@
       "/api/operador/siniestro/terceros",
       "/api/operador/siniestros-nuevos",
       "/api/operador/supresiones",
+      "/api/operador/sustituciones",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/portal/carnets",
@@ -4943,6 +4944,7 @@
       "/api/correduria/siniestro",
       "/api/correduria/siniestro/terceros",
       "/api/correduria/supresiones",
+      "/api/correduria/sustituciones",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -4961,6 +4963,7 @@
       "/api/cron/correduria-partes",
       "/api/cron/correduria-renovaciones",
       "/api/cron/correduria-siniestros",
+      "/api/cron/correduria-sustituciones",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
@@ -6426,7 +6429,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1392,
+    "apis": 1395,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
