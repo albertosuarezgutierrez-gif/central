@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-20T15:43:14Z",
-  "sha": "5e0c1cc10dc62f2f1d91d34d48ec478cf194e985",
+  "generadoEn": "2026-09-20T18:17:10Z",
+  "sha": "742cfa9962ea38e82bbed1dc09c0d3be7e3ac68a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3784,7 +3784,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 70
+          "linea": 76
         },
         {
           "nombre": "Titular",
@@ -3792,7 +3792,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date }",
           "retorno": null,
-          "linea": 592,
+          "linea": 600,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -3801,7 +3801,7 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], titular?: string",
           "retorno": "PolizaOpcionParte",
-          "linea": 641,
+          "linea": 649,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
@@ -3809,7 +3809,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "f43975fdf7a0"
+      "hash": "3251b9d9c3ea"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -4052,8 +4052,12 @@
         "BienDeclarada",
         "Bien",
         "AvisoReciboDevuelto",
+        "lineaRecibos",
+        "resumenRecibos",
         "RecibosDePoliza",
         "Coberturas",
+        "lineaSiniestros",
+        "resumenSiniestros",
         "HistorialSiniestros"
       ],
       "funciones": [
@@ -4119,12 +4123,30 @@
           "linea": 215
         },
         {
+          "nombre": "lineaRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaPortal",
+          "retorno": "string | null",
+          "linea": 277,
+          "resumen": "Lo próximo que se paga y lo último que se pagó, en una línea — o `null` cuando no hay NADA que resumir. 🚨 Es el titular de la póliza en la pestaña «Recibos», y por eso vive aquí suelto: lo pinta el C"
+        },
+        {
+          "nombre": "resumenRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaPortal",
+          "retorno": "ResumenPoliza",
+          "linea": 322,
+          "resumen": "La misma línea, más si la póliza puede nacer plegada. 🚨 Con un recibo DEVUELTO nace ABIERTA aunque la cabecera lo nombre: el chip rojo, su explicación y el botón de avisar a la correduría viven en la"
+        },
+        {
           "nombre": "RecibosDePoliza",
           "kind": "function",
           "exportada": true,
-          "params": "{ p }: { p: PolizaPortal }",
+          "params": "{ p, sinResumen = false, }: { p: PolizaPortal /** * `true` cuando quien llama YA pinta la línea de resumen en otro sitio —hoy, * la cabecera del plegable de `VistaPorPoliza`—. No se toca nada más: los * tres estados y la lista siguen decidi",
           "retorno": null,
-          "linea": 269,
+          "linea": 347,
           "resumen": "TODO el bloque de recibos de una póliza, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`. Es **un solo componente a propósito**: los tres estados de abajo se deciden en un único sitio. Pa"
         },
         {
@@ -4133,22 +4155,40 @@
           "exportada": true,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 369,
+          "linea": 443,
           "resumen": "Coberturas. `null` = el nivel no las enseña (se oculta); `total === 0` = **no nos consta el detalle**, que NO es «no tienes coberturas»: decirle eso a alguien que sí las tiene es empujarle a contratar"
+        },
+        {
+          "nombre": "lineaSiniestros",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaPortal",
+          "retorno": "string | null",
+          "linea": 496,
+          "resumen": "Cuántos siniestros hay y cuántos siguen sin cerrar — o `null` cuando no nos consta ninguno (y entonces lo que hay dentro es la frase de «sin informar», que NO es «no has tenido ninguno» y por eso no s"
+        },
+        {
+          "nombre": "resumenSiniestros",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaPortal",
+          "retorno": "ResumenPoliza",
+          "linea": 508,
+          "resumen": "Lo mismo para siniestros. Aquí no hay nada que la cabecera no pueda contar —«1 sin cerrar» ya lo dice—, así que solo nace abierta la que no tiene historial y lleva dentro la frase de «no nos consta ni"
         },
         {
           "nombre": "HistorialSiniestros",
           "kind": "function",
           "exportada": true,
-          "params": "{ p }: { p: PolizaPortal }",
+          "params": "{ p, sinResumen = false, }: { p: PolizaPortal /** `true` cuando el recuento ya lo dice la cabecera del plegable. Ver `RecibosDePoliza`. */ sinResumen?: boolean }",
           "retorno": null,
-          "linea": 437,
+          "linea": 536,
           "resumen": "El HISTORIAL de siniestros de una póliza. Alberto: «y los recibos? e historial siniestros?». No existía — la lectura filtraba por `abierto|en_tramitacion`, así que de los 67 siniestros de la cartera v"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6ecde2fcd6bb"
+      "hash": "5b3447a096c9"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/Recordatorios.tsx",
@@ -4271,15 +4311,15 @@
           "nombre": "VistaPorPoliza",
           "kind": "function",
           "exportada": true,
-          "params": "{ bloques, incluye, bloque, vacio, }: { bloques: readonly BloqueCartera<TitularConPolizas>[] /** Qué pólizas entran. Las que no, se omiten enteras (ver cabecera). */ incluye: (p: PolizaPortal) => boolean /** Lo que se pinta debajo del títul",
+          "params": "{ bloques, incluye, resumen, bloque, vacio, }: { bloques: readonly BloqueCartera<TitularConPolizas>[] /** Qué pólizas entran. Las que no, se omiten enteras (ver cabecera). */ incluye: (p: PolizaPortal) => boolean /** * Lo que la cabecera di",
           "retorno": null,
-          "linea": 56,
+          "linea": 87,
           "resumen": "El armazón de las pestañas «Recibos» y «Siniestros»: la MISMA lista de pólizas que la bóveda, con el bloque correspondiente debajo de cada una. ── Por qué existen esas pestañas (07/09/2026) ──────────"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "21498d31fedc"
+      "hash": "9bc0a198c160"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/layout.tsx",
@@ -79186,6 +79226,61 @@
       "hash": "f10ff1d2e6d8"
     },
     {
+      "ruta": "apps/plataforma/app/api/internal/gsc/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "/api/internal/gsc — Search Console A DEMANDA (la otra mitad del cron de los lunes). El cron `/api/cron/seo-correduria` lee SIEMPRE lo mismo (7 días cerrados, `query` + `page`, `sc-domain:grupoasegura.es`) y lo guarda en `seo_correduria_semana`. Esto sirve la pregunta suelta —otro rango, otras dimens",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "token",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 41,
+          "resumen": "Token de la cuenta de servicio, o `null` + la lista de secretos que faltan."
+        },
+        {
+          "nombre": "noConfigurado",
+          "kind": "function",
+          "exportada": false,
+          "params": "faltan: string[]",
+          "retorno": null,
+          "linea": 52
+        },
+        {
+          "nombre": "fallo",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": null,
+          "linea": 59
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 64
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 77
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/internal/gsc",
+      "hash": "f0e4be6f6d52"
+    },
+    {
       "ruta": "apps/plataforma/app/api/internal/latido/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -99398,13 +99493,13 @@
           "exportada": true,
           "params": "pathname: string",
           "retorno": "boolean",
-          "linea": 60,
+          "linea": 67,
           "resumen": "¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5ad5a52ee9bc"
+      "hash": "fdb7acf6536e"
     },
     {
       "ruta": "apps/plataforma/lib/rutina-tokens.ts",
@@ -99835,6 +99930,86 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "5bfb62d94936"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seo-correduria/gsc-consulta.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/gsc-consulta.ts — consulta AD-HOC a Google Search Console. El cron de los lunes (`gsc.ts`) lee siempre lo mismo: 7 días cerrados, dimensión `query` y `page`, propiedad de la correduría. Esto es lo otro: preguntar por un rango y unas dimensiones cualesquiera, y saber a qué propieda",
+      "exporta": [
+        "ultimoDiaFiable",
+        "parsearConsulta",
+        "esParcial",
+        "consultarLibre",
+        "listarSitios"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "ms: number",
+          "retorno": "string",
+          "linea": 54,
+          "resumen": "'YYYY-MM-DD' en UTC."
+        },
+        {
+          "nombre": "ultimoDiaFiable",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy: Date",
+          "retorno": "string",
+          "linea": 59,
+          "resumen": "Último día que GSC da por consolidado: hoy − DIAS_LATENCIA (UTC)."
+        },
+        {
+          "nombre": "fechaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "boolean",
+          "linea": 65,
+          "resumen": "Una fecha 'YYYY-MM-DD' que además EXISTE (descarta 2026-02-31, que `new Date` acepta y desplaza)."
+        },
+        {
+          "nombre": "parsearConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: unknown, hoy: Date",
+          "retorno": "Parseo",
+          "linea": 80,
+          "resumen": "Valida el cuerpo de la petición y rellena los huecos. Puro: ni red ni `Date.now()` — `hoy` entra por parámetro para que el test fije la ventana por defecto. Rechazar en vez de corregir en silencio es "
+        },
+        {
+          "nombre": "esParcial",
+          "kind": "function",
+          "exportada": true,
+          "params": "consulta: Pick<Consulta, 'hasta'>, hoy: Date",
+          "retorno": "boolean",
+          "linea": 128,
+          "resumen": "¿La ventana pedida toca días que GSC todavía no ha consolidado? Si sí, los totales son un SUELO, no el dato: quien lo pinte tiene que decirlo."
+        },
+        {
+          "nombre": "consultarLibre",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, consulta: Consulta, fetch: FetchLike",
+          "retorno": "Promise<FilaLibre[]>",
+          "linea": 135,
+          "resumen": "Una consulta a searchAnalytics/query con rango y dimensiones libres. Sin `rows` → `[]`."
+        },
+        {
+          "nombre": "listarSitios",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, fetch: FetchLike",
+          "retorno": "Promise<Sitio[]>",
+          "linea": 166,
+          "resumen": "Propiedades a las que llega la cuenta de servicio (`sites.list`). Responder «no hay datos» sin mirar esto es el fallo caro: una propiedad a la que la cuenta no ha sido invitada devuelve 403, y un domi"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d0cc91f3fd50"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/gsc.ts",
@@ -140342,7 +140517,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3420,
-    "funciones": 10632
+    "archivos": 3422,
+    "funciones": 10648
   }
 }
