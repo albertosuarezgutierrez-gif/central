@@ -12,11 +12,17 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Aviso EN VIVO de dígitos de póliza "de relleno" (Mapfre y otras rellenan con ceros
+para bloquear el control de antecedentes de un competidor): `digitosPolizaSospechosos()` (puro, ≥3
+ceros seguidos) + mensaje inline mientras se teclea, en `auto-nuevo` y `moto-nuevo` (antes solo era
+texto de ayuda estático). Cepo `test/regression-digitos-poliza-sospechosos.test.ts` (verificado en
+rojo/verde). tsc 0, `pnpm test` monorepo 2901+53 0 fallos. PR #3142 (draft).
+
 **(20/09/2026)** Mismo fallo de "seguro en vigor" que auto (PR #3129) también en `moto-nuevo`:
 `precalificarMotoNueva()` cotiza de calle a leads sin preguntar si tienen póliza vigente en otra
 compañía. Añadido el mismo bloque opt-in (compañía/póliza/años) a `MotoNuevo.tsx`, cero cambios en
 asegura (mecanismo genérico de `correcciones`). Cepo `test/regression-moto-nuevo-historial.test.ts`
-(verificado en rojo y restaurado). tsc 0, `pnpm test` monorepo completo 0 fallos. PR #3137 (draft).
+(verificado en rojo y restaurado). tsc 0, `pnpm test` monorepo completo 0 fallos. PR #3137 (mergeado).
 
 **(20/09/2026)** Siniestros: campos por ramo + terceros/testigos (PR #3126). `datosRamo` (JSONB, patrón de
 `campos-ramo.ts` de pólizas) sobre `Siniestro` + catálogo puro `siniestro-ramo.ts` (auto/moto/hogar/RC/
