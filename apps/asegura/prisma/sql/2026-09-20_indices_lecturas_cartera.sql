@@ -2,10 +2,10 @@
 -- Índices para las TRES lecturas de cartera del puerto del operador
 -- (/api/operador/vencimientos · /impagados · /comisiones), schema `seguros`.
 --
--- ⏸️ PENDIENTE DE APLICAR (20/09/2026). Este fichero NO se ha ejecutado contra
---    ninguna base. Se aplica con `CONCURRENTLY`, así que va FUERA de una
---    transacción: el editor SQL de Supabase envuelve cada ejecución en una, de
---    modo que hay que lanzar cada CREATE INDEX por separado (o sin el bloque).
+-- ✅ APLICADO el 20/09/2026 contra wswbehlcuxqxyinousql, schema `seguros`, uno
+--    por uno (CONCURRENTLY va FUERA de transacción). Los tres que quedan están
+--    `indisvalid = true`. El #2 se aplicó, se MIDIÓ que no lo usaba nadie y se
+--    retiró en el acto — ver su bloque.
 --
 -- Todo lo de aquí está medido el 20/09/2026 contra la base real
 -- (wswbehlcuxqxyinousql, schema `seguros`) con EXPLAIN (ANALYZE): las cifras de
@@ -43,20 +43,24 @@ create index concurrently if not exists idx_polizas_cartera_viva
     and (import_ref is null or eiac_xml_hash is not null);
 
 
--- ── 2. La criba de `colaRetencion()` ────────────────────────────────────────
+-- ── 2. RETIRADO: era redundante, y se midió ───────────────────────────────
 -- `correduria_id` + `situacion IN ('devuelto','pendiente')` + ORDER BY
--- `fecha_vencimiento`, ahora con `take: LIMITE_RECIBOS_IMPAGO`.
+-- `fecha_vencimiento`. La idea era que la fecha fuera EN el índice para que el
+-- LIMIT cortara sin ordenar.
 --
--- MEDIDO: 62 ms, pero con `Seq Scan on poliza_recibos` (29 filas de 372) — o
--- sea, el coste crece LINEALMENTE con la tabla de recibos, que engorda con
--- cada mes de CIMA (372 en ~3,5 meses ≈ 106/mes).
+-- 🚨 MEDIDO el 20/09/2026, y NO era así: con los dos índices creados, el
+-- planificador eligió el **#3** (`..._situacion_fecha`) para esta consulta y
+-- dejó el #2 sin usar. Se retiró (`drop index concurrently`) y se repitió el
+-- EXPLAIN: **plan idéntico**, mismo Index Scan por el #3 + un quicksort de 29
+-- filas. Los dos comparten el prefijo `(correduria_id, situacion)`, y con esta
+-- cardinalidad la tercera columna no decide nada.
 --
--- La fecha va EN el índice a propósito: cuando el techo muerda, es lo que deja
--- que el LIMIT corte sin ordenar todo lo que casa. Sin ella, Postgres
--- materializa y ordena el conjunto entero antes de recortar, que es justo el
--- momento en que el tope tiene que costar poco.
-create index concurrently if not exists idx_poliza_recibos_situacion_venc
-  on seguros.poliza_recibos (correduria_id, situacion, fecha_vencimiento);
+-- Vuelve a plantearse cuando el sort deje de ser trivial (hoy 29 filas de 372,
+-- ~106 recibos/mes de CIMA). Mismo criterio que el #5: un índice que el plan no
+-- usa solo paga escrituras. No se deja «por si acaso».
+--
+-- create index concurrently if not exists idx_poliza_recibos_situacion_venc
+--   on seguros.poliza_recibos (correduria_id, situacion, fecha_vencimiento);
 
 
 -- ── 3. Los recibos cobrados de `comisionesCartera()` ────────────────────────
@@ -117,9 +121,14 @@ create index concurrently if not exists idx_retencion_descartes_correduria_vence
 
 
 -- ── Cómo comprobar que sirvieron ────────────────────────────────────────────
--- Repetir los tres EXPLAIN (ANALYZE) y mirar que el plan cambia de `Seq Scan` a
--- `Index Scan`. El de #1 es el que tiene que bajar de ~870 ms; los otros dos ya
--- son rápidos hoy y lo que se busca es que sigan siéndolo con 10× recibos.
+-- Repetir los EXPLAIN (ANALYZE) y mirar que el plan cambia de `Seq Scan` a
+-- `Index Scan`.
+--
+-- ✅ COMPROBADO el 20/09/2026, tras aplicar y hacer ANALYZE de las tres tablas:
+--   · #1 `polizasSinRecibo()`: `Seq Scan on polizas` **870 ms** → `Index Scan
+--     using idx_polizas_cartera_viva`, 157 filas, **0,58 ms**.
+--   · #3: `Index Scan using idx_poliza_recibos_situacion_fecha`, sin Seq Scan.
+--   · #2: se usó el #3 en su lugar → retirado (arriba).
 --
 -- 🚨 Un índice que NO se usa no da error: el plan sigue en Seq Scan y todo
 -- funciona igual, solo que se paga la escritura sin cobrar la lectura. Si tras
