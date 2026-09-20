@@ -9,10 +9,12 @@
 //
 // `hoy` se fija en el cliente tras montar (como en `PanelDemo`) para que el
 // HTML del servidor no lleve una fecha que ya no es «hoy» cuando se sirve.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { fechaCorta, resumirLineas, type LineaVencimiento } from '@/lib/calculadora-vencimientos'
 import { PORTAL_URL } from '@/lib/sitio'
+import { medir } from '@/lib/medir'
+import EnlaceMedido from '@/components/EnlaceMedido'
 
 const INICIALES: LineaVencimiento[] = [
   { etiqueta: 'Coche', vence: '' },
@@ -34,6 +36,17 @@ export default function CalculadoraVencimientos() {
   useEffect(() => setHoy(new Date()), [])
 
   const resumen = hoy ? resumirLineas(lineas, hoy) : null
+
+  // La calculadora no tiene botón «calcular»: calcula al escribir. El evento
+  // del embudo es la PRIMERA vez que hay un resultado (una fecha válida), y
+  // solo una por visita: cada tecla no es un cálculo nuevo.
+  const medido = useRef(false)
+  const conFecha = resumen?.conFecha ?? 0
+  useEffect(() => {
+    if (medido.current || conFecha === 0) return
+    medido.current = true
+    medir('calculadora_calculo', { con_fecha: true, seguros: conFecha })
+  }, [conFecha])
 
   function cambiar(i: number, campo: keyof LineaVencimiento, valor: string) {
     setLineas((prev) => prev.map((l, j) => (j === i ? { ...l, [campo]: valor } : l)))
@@ -124,9 +137,9 @@ export default function CalculadoraVencimientos() {
             )}{' '}
             Aquí esta cuenta se borra al cerrar la página; en tu área la tienes siempre, con la póliza al lado.
           </p>
-          <a href={PORTAL_URL} className="btn btn-brand" style={{ minHeight: 44 }}>
+          <EnlaceMedido href={PORTAL_URL} origen="calculadora" className="btn btn-brand" style={{ minHeight: 44 }}>
             Crear mi área con mi correo
-          </a>
+          </EnlaceMedido>
         </div>
       )}
     </div>

@@ -113,7 +113,7 @@ function pareceEmail(v: string | null): v is string {
   return typeof v === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 }
 
-type ClienteConEmails = {
+export type ClienteConEmails = {
   emailOptOutAt: Date | null
   email: string | null
   emails: { email: string; esPrincipal: boolean; createdAt: Date }[]

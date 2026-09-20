@@ -20,7 +20,9 @@ export type DirectorEstado = {
 }
 
 // Defaults conservadores si la BD no responde o la tabla está vacía.
-const MODELO_DEFAULT = 'deepseek/deepseek-v4-flash'
+// `deepseek/deepseek-v4-flash` fue RETIRADO por DeepSeek el 10/09/2026 (routea a v4.1-flash a
+// su precio, más caro): apunta directo al id vigente (buscador-ia, 14/09/2026).
+const MODELO_DEFAULT = 'deepseek/deepseek-v4.1-flash'
 // Suplentes de OpenRouter cuando el primario falla. FIABLES (de pago, no `:free`):
 // los `:free` (p. ej. llama-3.3-70b:free) devuelven 429 al saturarse y el
 // `google/gemini-2.5-flash` da 404 ("no longer available") → dejaban a las

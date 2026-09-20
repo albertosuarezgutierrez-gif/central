@@ -29,6 +29,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
+import { MAX_COBERTURAS_LEIDAS, normalizarCoberturasLeidas } from './coberturas-leidas.ts'
 import {
   CENTINELAS_SIN_DATO,
   esBastidorValido,
@@ -237,4 +238,38 @@ test('el extractor normaliza el vehiculo con la MISMA funcion que la correccion 
     false,
     'la expresión del VIN vive SOLO en poliza-editable.ts',
   )
+})
+
+// ── Las coberturas leídas del PDF (20/09/2026) ───────────────────────────────
+
+test('INSTRUCCION le pide a la IA las coberturas, o nunca las devolvera', () => {
+  const fuente = readFileSync(new URL('./extraer-poliza.ts', import.meta.url), 'utf8')
+  assert.match(fuente, /"coberturas":string\[\]\|null/, 'el esquema del prompt tiene que declarar "coberturas"')
+  // Solo las contratadas: una lista con las NO contratadas mezcladas fabrica
+  // solapamientos con garantías que la persona no tiene.
+  assert.match(fuente, /Solo las CONTRATADAS/)
+})
+
+test('🚨 coberturas: null es «no leído» y [] es «leído, ninguna» — no se confunden', () => {
+  assert.equal(normalizarCoberturasLeidas(undefined), null)
+  assert.equal(normalizarCoberturasLeidas(null), null)
+  assert.equal(normalizarCoberturasLeidas('Defensa jurídica'), null, 'una cadena suelta no es una lista')
+  assert.deepEqual(normalizarCoberturasLeidas([]), [])
+  assert.deepEqual(normalizarCoberturasLeidas(['', 'N/A', 'no consta', '-']), [], 'solo centinelas = ninguna')
+})
+
+test('coberturas: se limpian espacios, duplicados y textos que no son una garantía', () => {
+  assert.deepEqual(
+    normalizarCoberturasLeidas(['  Defensa   jurídica ', 'defensa jurídica', 42, 'Lunas', 'x'.repeat(81)]),
+    ['Defensa jurídica', 'Lunas'],
+  )
+  const muchas = Array.from({ length: MAX_COBERTURAS_LEIDAS + 10 }, (_, i) => `Garantía ${i}`)
+  assert.equal(normalizarCoberturasLeidas(muchas)?.length, MAX_COBERTURAS_LEIDAS)
+})
+
+test('el extractor pasa las coberturas por el normalizador y la forma vacía las deja en null', () => {
+  const fuente = readFileSync(new URL('./extraer-poliza.ts', import.meta.url), 'utf8')
+  assert.match(fuente, /coberturas: normalizarCoberturasLeidas\(o\.coberturas\)/)
+  // `extraidaVacia()` es la forma de un fallo de lectura: `null`, nunca `[]`.
+  assert.match(fuente, /datosRamoOrigen: null,\n\s*coberturas: null,/)
 })

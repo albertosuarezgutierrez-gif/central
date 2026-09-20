@@ -12,6 +12,7 @@ import { useState, type CSSProperties, type FormEvent } from 'react'
 import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
 import { TIPOS_SEGURO, ETIQUETA_TIPO, CAMPO_HONEYPOT, MAX_COMENTARIO } from '@/lib/contrato-lead'
+import { medir } from '@/lib/medir'
 
 // El aspecto de los campos (alto táctil, anillo de foco, los 16 px exactos que
 // evitan el zoom de Safari en iPhone) vive en `globals.css` como `.f-in` y
@@ -49,8 +50,10 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
         }),
       })
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; motivo?: string; campo?: string | null }
-      if (res.ok && json.ok) setEstado({ fase: 'ok' })
-      else
+      if (res.ok && json.ok) {
+        medir('lead_enviado', { ramo: (fd.get('tipoSeguro') as string) || null })
+        setEstado({ fase: 'ok' })
+      } else
         setEstado({
           fase: 'error',
           motivo: json.motivo || 'No se ha podido enviar. Inténtalo de nuevo.',

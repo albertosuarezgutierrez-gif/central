@@ -43,6 +43,14 @@ export type LeadVista = {
    * verdades sobre qué es urgente. Un valor que no sea `true` es «no urgente».
    */
   urgente: boolean
+  /**
+   * Qué hizo el cliente con la carta de no renovación en el portal
+   * (20/09/2026): `enviada` = le ha dicho a su compañía que se va, `generada`
+   * = la redactó (copiar/imprimir/correo) pero no ha marcado que la enviara.
+   * Cualquier valor que no sea uno de los dos es «ninguna».
+   */
+  senalCarta: 'ninguna' | 'generada' | 'enviada'
+  cartaEnviadaEn: Date | null
   /** `null` = no se ha podido comprobar si ya la lleva la casa. NUNCA colapsar a false. */
   yaEnCartera: false | null
   /** `null` = no se ha casado con ninguna ficha: hay que identificar a la persona. */
@@ -140,6 +148,10 @@ export function interpretarLeads(bruto: unknown): ResultadoLeads {
       diasParaAccionable: numero(f.diasParaAccionable),
       ventanaPasada: f.ventanaPasada === true,
       urgente: f.urgente === true,
+      // Solo los dos valores con significado; lo demás es «ninguna» — un
+      // puerto viejo que no mande la clave no puede inventar una carta.
+      senalCarta: f.senalCarta === 'enviada' || f.senalCarta === 'generada' ? f.senalCarta : 'ninguna',
+      cartaEnviadaEn: fecha(f.cartaEnviadaEn),
       // 🚨 Solo un `false` explícito es «comprobado, no es de la casa».
       // Cualquier otra cosa —`null`, ausente, basura— es «no lo sabemos».
       yaEnCartera: f.yaEnCartera === false ? false : null,

@@ -11,6 +11,7 @@ import { ARTICULOS, articuloPorSlug } from '@/lib/articulos'
 import { ramoPorSlug } from '@/lib/ramos'
 import { PORTAL_URL, url } from '@/lib/sitio'
 import { fichaArticulo, fichaFaq, migas, jsonLd } from '@/lib/seo'
+import EnlaceMedido from '@/components/EnlaceMedido'
 
 export function generateStaticParams() {
   return ARTICULOS.map((a) => ({ slug: a.slug }))
@@ -101,9 +102,15 @@ export default async function ArticuloPagina({ params }: { params: Promise<{ slu
           >
             <h2 id="cta-t" style={{ margin: '0 0 8px', fontSize: 20 }}>{a.cta.titulo}</h2>
             <p style={{ margin: '0 0 14px', lineHeight: 1.6, color: 'var(--muted)' }}>{a.cta.texto}</p>
-            <a href={a.cta.href === 'PORTAL' ? PORTAL_URL : a.cta.href} className="btn btn-brand" style={{ minHeight: 44 }}>
-              {a.cta.boton}
-            </a>
+            {a.cta.href === 'PORTAL' ? (
+              <EnlaceMedido href={PORTAL_URL} origen="blog_cta" className="btn btn-brand" style={{ minHeight: 44 }}>
+                {a.cta.boton}
+              </EnlaceMedido>
+            ) : (
+              <a href={a.cta.href} className="btn btn-brand" style={{ minHeight: 44 }}>
+                {a.cta.boton}
+              </a>
+            )}
           </aside>
         )}
 

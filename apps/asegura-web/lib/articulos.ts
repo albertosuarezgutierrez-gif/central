@@ -459,6 +459,261 @@ export const ARTICULOS: readonly Articulo[] = [
       },
     ],
   },
+  {
+    slug: 'siniestro-coche-que-hacer-paso-a-paso',
+    h1: 'He tenido un accidente con el coche: qué hacer en las primeras horas',
+    title: 'He tenido un accidente: qué hacer ahora',
+    description:
+      'En un accidente, los primeros pasos salvan tiempo después. Desde cómo asegurar el lugar hasta cuándo avisar a la compañía y qué datos guardar.',
+    fecha: '2026-09-20',
+    consulta: 'qué hacer si tengo un accidente de coche parte amistoso',
+    resumen:
+      'Los minutos después de un accidente importan. Lo que hagas en el lugar, cómo rellenar el parte y cuándo avisar a la compañía son los pasos que después reclaman tiempo y dinero.',
+    ramos: ['auto'],
+    cta: {
+      titulo: 'Si ya tienes el parte, nosotros lo tramitamos',
+      texto:
+        'Sube tu parte amistoso o el justificante del accidente a tu área privada y nos encargaremos de comunicarlo a la compañía. Sin esperas, sin fax ni correos de un lado a otro.',
+      boton: 'Comunicar mi accidente',
+      href: '/siniestro',
+    },
+    secciones: [
+      {
+        titulo: 'Los primeros minutos: seguridad antes que pruebas',
+        parrafos: [
+          'El primer paso es asegurarse de que todos están ilesos y que no hay un riesgo mayor. Si hay heridos, lesión o peligro —por ejemplo, un coche boca abajo o tráfico peligroso—, avisa a emergencias sin esperar.',
+          'Cuando todos estén seguros, si es posible, coloca un chaleco reflectante y los triángulos de preseñalización a una distancia suficiente del lugar, siguiendo las indicaciones de la póliza o el código de circulación de tu comunidad. Si no puedes hacerlo —por peligro o porque hay que ayudar a alguien— no lo hagas.',
+          'No muevas los vehículos de su posición a menos que impidan la circulación y sea seguro hacerlo. Un desplazamiento pequeño puede cambiar toda la versión de cómo pasó el accidente.',
+        ],
+      },
+      {
+        titulo: 'Fotografías: tu registro del accidente',
+        parrafos: [
+          'Con el móvil, haz fotos del lugar completo: los dos vehículos en su posición, los daños, la señalización del lugar, el estado del asfalto, el tráfico alrededor. Haz varias desde ángulos distintos.',
+          'Si hay señales de tráfico relevantes —una curva, una salida o una limitación de velocidad— fotografía también esas. Son contexto que después importa.',
+          'Guarda las fotos. Muchas compañías las piden, y son la prueba más rápida de cómo estaban las cosas.',
+        ],
+      },
+      {
+        titulo: 'El parte amistoso: a dónde van los datos',
+        parrafos: [
+          'Es un documento que rellenan los dos conductores juntos en el lugar del accidente. Lleva los datos de los dos vehículos, de los conductores, de las aseguradoras y una descripción de cómo pasó. Ambos lo firman.',
+          'Importante: no admitas culpa por escrito en el parte. Una descripción es «salí de un garaje» o «venía en el carril derecho». Lo que NO es: «fue culpa mía» o «no vi venir el coche». Lo segundo acaba la discusión sobre responsabilidad antes de que empiece.',
+          'Si el otro conductor no quiere firmar o no quiere hacer un parte amistoso, anota en tu móvil: su matrícula, su nombre, su teléfono, la de su aseguradora si la tienes a mano, el número de su póliza si lo dice. Busca testigos que vieron el accidente y anota también sus datos. Eso sustituye al parte cuando no lo hay.',
+        ],
+      },
+      {
+        titulo: 'Cuándo avisar a la aseguradora',
+        parrafos: [
+          'La ley obliga a comunicar el accidente a la compañía en el plazo que figure en tu póliza. Como regla general, ese plazo es de siete días desde el accidente, aunque muchas pólizas dan más tiempo. Comprueba el tuyo en el condicionado.',
+          'No esperes a que te lo pidan: envía un correo con el parte y las fotos tan pronto como puedas, aunque sea el mismo día. Es beneficioso para ti: cuanto antes la compañía tenga la información, antes puede actuar.',
+          'Guarda el comprobante de que lo has enviado: la captura del correo, el acuse de recibo, lo que sea que demuestre CUÁNDO se lo comunicaste.',
+        ],
+      },
+      {
+        titulo: 'Documentos que tienes que guardar',
+        parrafos: [
+          'El parte amistoso, si lo hay. Si no lo hay, tus notas de datos y testigos. Las fotos del lugar y los vehículos. El informe de la policía, si la policía fue. El comprobante de que comunicaste el accidente a la aseguradora.',
+          'Si la compañía te pide el certificado de antecedentes de tráfico (tu histórico de partes), puedes solicitarlo en la Dirección General de Tráfico con un justificante de identidad.',
+          'Todo esto junto es lo que va después a la aseguradora, así que guardarlo en una carpeta de tu correo o en el móvil te evita un viaje cuando la compañía lo pide.',
+        ],
+      },
+      {
+        titulo: 'Cómo entra un corredor en la tramitación',
+        parrafos: [
+          'Tu correduría es el intermediario entre tú y la compañía: lo que comunicas a tu corredor cuenta como comunicado a la aseguradora. Así que el parte y las fotos los puedes mandar a la correduría primero, y la compañía los recibe igual.',
+          'Un corredor también ve el expediente de la aseguradora y puede gestionar los tiempos de peritación, las llamadas y los pasos siguientes sin que tengas que estar encima de cada correo.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Tengo que rellenar un parte si no hay culpa clara?',
+        respuesta:
+          'Sí. El parte amistoso es lo que describe qué pasó según lo que los dos vieron. Que no haya culpa clara no significa que no haya parte: solo que los dos conductores describen su versión sin echarle la culpa al otro. La compañía y el seguro del otro es quien decide después qué fue de verdad.',
+      },
+      {
+        pregunta: '¿Qué pasa si paso el plazo de los siete días sin avisar a la compañía?',
+        respuesta:
+          'Depende de lo que diga tu póliza y de cuánto tiempo después avises. Si el retraso ha impedido a la compañía investigar o actuar, puede justificar una reducción en la indemnización. Por eso vale la pena avisar rápido, aunque sea por correo.',
+      },
+      {
+        pregunta: '¿Los datos de tráfico se usan para subirme la prima?',
+        respuesta:
+          'Un siniestro declarado y resuelto entra en tu histórico de siniestralidad, y eso es lo que consulta la compañía al renovar la póliza. Si el otro fue culpable y la compañía es la suya quien paga, muchas pólizas no penalizan tu renovación. Si no hay culpable claro, tu prima puede verse afectada.',
+      },
+    ],
+  },
+  {
+    slug: 'siniestro-hogar-fuga-agua-que-hacer',
+    h1: 'Tienes una fuga de agua en casa: qué hacer y qué cubre el seguro',
+    title: 'Fuga de agua: qué hacer y qué cubre',
+    description:
+      'Una fuga de agua puede ser un gasto enorme o estar cubierto. Qué pasos dar, a quién avisar y cómo saber si la póliza lo cubre.',
+    fecha: '2026-09-20',
+    consulta: 'fuga de agua daños por agua en casa qué hacer seguro hogar',
+    resumen:
+      'Antes de llamar al fontanero, el primer paso es cortar el agua y documentar el daño. Luego avisar a la compañía. Si es tubería común interviene el seguro de la comunidad; si es privativa, el tuyo. Lo que no cubre casi nunca es la falta de mantenimiento.',
+    ramos: ['hogar', 'comunidades'],
+    cta: {
+      titulo: 'Si tienes una fuga, nosotros la tramitamos con la compañía',
+      texto:
+        'Sube las fotos del daño y el presupuesto de reparación a tu área privada, y nos encargamos de gestionar la reclamación con la aseguradora. Tú solo tienes que reparar; nosotros miramos si lo paga la póliza.',
+      boton: 'Comunicar mi fuga',
+      href: '/siniestro',
+    },
+    secciones: [
+      {
+        titulo: 'Los primeros pasos: cortar y documentar',
+        parrafos: [
+          'Nada de correr al reparador todavía. El primer paso es cortar el agua en la llave de paso, para que la fuga deje de hacer daño mientras decides qué hacer. La válvula suele estar en el sótano, bajo el fregadero o donde entra el agua en la vivienda.',
+          'Una vez cortada el agua, abre un grifo para que salga la presión residual. Luego, con el móvil, haz fotos de toda la zona afectada: qué está mojado, dónde está el daño, las manchas en las paredes y los techos. Estas fotos son tu comprobante de que el daño es real y de dónde está.',
+          'Si hay agua acumulada —en un falso techo, dentro de un armario—, hazlo saber. El daño suele no estar solo donde se ve la mancha: está en todo lo que mojó el agua, y la aseguradora necesita saberlo.',
+        ],
+      },
+      {
+        titulo: 'Avisar a la compañía',
+        parrafos: [
+          'Contacta con tu aseguradora o con la correduría para avisar de la fuga. Muchas pólizas tienen un teléfono de urgencias para esto, así que mira el dorso de tu póliza antes de llamar.',
+          'Lo que tienen que saber: dónde está la fuga, cómo la descubriste, qué daño hay a la vista y si el origen es una tubería de la vivienda o de la comunidad (si lo sabes). Si no lo sabes, no adivines: la aseguradora mandará a un perito para saberlo.',
+          'La compañía responde en un plazo que depende de tu póliza y de la urgencia del daño. Mientras tanto, puedes adoptar medidas razonables para evitar que el daño empeore —secar, ventilar—, pero no repares nada sin que la aseguradora lo apruebe primero.',
+        ],
+      },
+      {
+        titulo: 'Quién repara: reparador de la compañía o el tuyo',
+        parrafos: [
+          'Muchas pólizas de hogar tienen un acuerdo con reparadores de su red: la aseguradora llama a uno de ellos, que viene sin presupuesto previo y repara todo. Tú no pagas nada en el momento; el coste se carga a la póliza.',
+          'Si tu póliza no tiene esa red, o si prefieres tu reparador de confianza, puedes contratar uno tú mismo. Entonces sí tienes que presupuestar, enviarle el presupuesto a la aseguradora para que lo apruebe, y cuando esté arreglado, presentar la factura para el reembolso.',
+          'Lo importante: que antes de reparar la compañía haya visto el daño o haya dado su visto bueno. Una reparación sin avisar puede quedar fuera de cobertura.',
+        ],
+      },
+      {
+        titulo: 'Daños a un vecino: responsabilidad civil del hogar',
+        parrafos: [
+          'Si el agua llegó al piso de abajo o mojó algo del vecino, aquí entra la cobertura de responsabilidad civil de tu hogar. Es la garantía que responde si causas un daño sin querer a un tercero.',
+          'Lo que tiene que saber tu aseguradora es que el agua mojó el piso de abajo, qué le hizo daño exactamente y si el vecino ya tiene una factura de reparación. Eso va en la reclamación: es daño indirecto que tu fuga causó.',
+          'Si el vecino presenta la factura, puede reclamar a tu aseguradora directamente. La responsabilidad civil es para eso: para que el tercero damnificado no tenga que litigar contigo, sino que la aseguradora lo resuelve.',
+        ],
+      },
+      {
+        titulo: 'La comunidad y sus tuberías: dónde termina tu responsabilidad',
+        parrafos: [
+          'Si la fuga salió de una tubería común —la bajante que sube por el edificio, la acometida general—, es responsabilidad de la comunidad y su seguro. Si salió de una instalación dentro de tu vivienda —tus tuberías, tu grifo—, es cosa tuya.',
+          'El problema es que a menudo no está claro: el agua viene de un elemento común pero el daño que causa es en una vivienda privada. Ahí es donde se pone complejo y es justo lo que vigila un perito.',
+          'Cuando avises a la aseguradora de tu fuga, menciona si crees que el origen es común o privativo. Si es común, la aseguradora hablará con la de la comunidad. No es tu problema resolver entre las dos: es cosa de seguros.',
+        ],
+      },
+      {
+        titulo: 'Qué no suele cubrir una póliza de hogar',
+        parrafos: [
+          'Una humedad que viene de una fuga puntual casi siempre está cubierta. Una humedad que lleva meses o años filtrando por una mala impermeabilización o por falta de mantenimiento casi nunca: es deterioro progresivo, no un siniestro accidental.',
+          'La diferencia no siempre es obvia desde fuera. Un perito viene a determinar si lo que ve es una avería repentina —una tubería que revienta— o un problema que arrastra tiempo. Eso es lo que decide si la compañía paga.',
+          'También está fuera generalmente lo que pasó por negligencia: una tubería que sabías que estaba rota y no reparaste, un grifo que goteaba hace meses. El seguro protege contra lo que puede pasar, no contra lo que ya había pasado sin que lo arreglaras.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Debo arreglar la fuga ya o esperar a que la aseguradora lo apruebe?',
+        respuesta:
+          'Si es una fuga activa —sigue saliendo agua—, corta la llave y no hagas nada más hasta que la aseguradora la vea o la apruebe. Una reparación que hiciste sin avisar puede quedar fuera de cobertura. Si tienes que actuar por urgencia —por ejemplo, hay riesgo de inundación— hazlo, pero comunícaselo a la aseguradora en el acto y guarda la factura.',
+      },
+      {
+        pregunta: '¿Cómo sé si es tubería de la comunidad o mía?',
+        respuesta:
+          'En la mayoría de los casos, lo que está dentro de tu vivienda es tuyo; lo que está en zonas comunes es de la comunidad. Pero hay excepciones: bajantes verticales a veces son comunes aunque pasen por tu vivienda, y a veces son privativas si la reforma las pasó por dentro. La única forma segura es que venga un técnico a mirarlo. Eso es precisamente lo que hace el perito.',
+      },
+      {
+        pregunta: '¿Tengo que pagar algo de mi bolsillo si se aprueba el daño?',
+        respuesta:
+          'Depende de tu póliza. La mayoría tienen una franquicia —una cantidad que pagas tú como participación en el daño—. Eso lo descubre la aseguradora cuando valora el daño. Si la factura es por debajo de la franquicia, sales al 100 % de tu bolsillo; si es por encima, tú pagas la franquicia y la aseguradora el resto.',
+      },
+      {
+        pregunta: '¿Se me puede subir la prima por una fuga?',
+        respuesta:
+          'Un siniestro de agua que paga la aseguradora entra en tu histórico. Eso puede influir en la prima al renovar, pero depende de cómo lo interprete cada compañía y de tu histórico anterior. Si es el primero y la culpa fue de una avería puntual, muchas aseguradoras no penalizan. Si es el tercero en dos años, sí puede influir.',
+      },
+    ],
+  },
+  {
+    slug: 'siniestro-salud-autorizacion-y-reembolso',
+    h1: 'Seguro de salud: cómo pedir una autorización y qué hacer si te la deniegan',
+    title: 'Cómo pedir autorización en el seguro de salud',
+    description:
+      'La autorización no siempre es automática. Qué pruebas la necesitan, cómo pedirla, en qué plazo responden y qué hacer si te la deniegan.',
+    fecha: '2026-09-20',
+    consulta: 'cómo pedir autorización seguro de salud reembolso',
+    resumen:
+      'No todas las pruebas y tratamientos de un seguro de salud son automáticos. Algunas necesitan aprobación previa de la aseguradora. Aquí está cómo se pide, qué tiempo tarda, y qué hacer si te dicen que no.',
+    base: ['orden-ecc-2502-2012'],
+    ramos: ['vida-y-salud'],
+    cta: {
+      titulo: 'Si tu aseguradora te deniega, nosotros te ayudamos a reclamar',
+      texto:
+        'Una denegación de autorización o reembolso no es la última palabra. Reclamar ante la aseguradora es el primer paso, y si no responden en plazo, hay vías ante la DGSFP. Cuéntanos qué pasó.',
+      boton: 'He recibido una denegación',
+      href: '/siniestro',
+    },
+    secciones: [
+      {
+        titulo: 'Cuadro médico y reembolso: cómo se autoriza cada uno',
+        parrafos: [
+          'En el cuadro médico, el médico es de la red de la aseguradora y ya está acreditado. No necesitas autorización para cada visita, aunque sí para algunas pruebas o cirugías especiales. Tu médico pide la autorización directamente a la aseguradora; la mayoría de las veces es automática.',
+          'En reembolso, tú eliges el médico y el centro donde quieras. Luego presentas la factura a la aseguradora para que te devuelva el importe. Esto también puede necesitar aprobación previa en algunos tratamientos.',
+          'La diferencia importa: en cuadro médico no sacas dinero del bolsillo; en reembolso adelantas tú y luego esperas a que te lo devuelvan. Por eso vale la pena entender cuándo hace falta autorización.',
+        ],
+      },
+      {
+        titulo: 'Qué pruebas necesitan autorización previa',
+        parrafos: [
+          'Casi nunca una consulta con el médico. Muchas veces una prueba que cuesta dinero: resonancia magnética, tomografía, análisis genéticos, algunas cirugías. Carencias y preexistencias también pueden necesitar comprobación.',
+          'Cada aseguradora tiene su lista: lo que cubre directamente y lo que primero hay que autorizar. Eso sale en tu póliza, en el condicionado o en el apartado de «pruebas que necesitan autorización».',
+          'Si no está claro si tu prueba necesita autorización, llama a la aseguradora ANTES de hacerla. Una prueba hecha sin autorización puede quedar fuera de cobertura.',
+        ],
+      },
+      {
+        titulo: 'Cómo se pide y en qué plazo responden',
+        parrafos: [
+          'La forma depende de la aseguradora: a veces tu médico llama por teléfono y obtiene respuesta en el acto, a veces hay que presentar un formulario escrito, a veces el médico la pide por una plataforma en línea.',
+          'El plazo suele ser de unos pocos días para algo urgente, o de una o dos semanas para algo más rutinario. Si no tienes respuesta en el plazo que dice la póliza, insiste: una autorización que no llega es lo mismo que si te la negaran.',
+          'Lo importante es que cuando vaya a hacerse la prueba, ya tengas el sí por escrito. Una autorización verbal puede ser un "no se aprobó" cuando después reclamas.',
+        ],
+      },
+      {
+        titulo: 'Qué hacer si te la deniegan',
+        parrafos: [
+          'Primero, pide por escrito al servicio de atención al cliente de la aseguradora que te explique por escrito por qué la deniegan. La razón puede ser: no entra en tu póliza, está en período de carencia, es una preexistencia que excluye, o no reúne los requisitos. Sin la razón por escrito, no puedes reclamar de verdad.',
+          'Luego, contesta a esa denegación con los argumentos que creas que tienes: si necesitas la prueba por urgencia médica, si el médico cree que es necesaria, si ha habido un cambio en tu situación médica desde que contrató la póliza. Eso va al servicio de atención al cliente de la aseguradora.',
+          'Si la aseguradora no te contesta en dos meses, o si su respuesta sigue siendo no y tú no estás de acuerdo, puedes acudir al Servicio de Reclamaciones de la Dirección General de Seguros y Fondos de Pensiones. Es gratis, no necesitas abogado, y la aseguradora tiene que responder. Su informe no te vincula a ganar, pero pesa, y muchas veces acaba en acuerdo.',
+        ],
+      },
+      {
+        titulo: 'Períodos de carencia y preexistencias',
+        parrafos: [
+          'Carencia es el tiempo que tienes que esperar desde que entra en vigor la póliza hasta poder usar ciertas prestaciones. Varían: hay algunos servicios que puedes usar ya, otros necesitan de tres a seis meses. Eso depende de la aseguradora y del tipo de póliza.',
+          'Si tienes una enfermedad anterior a contratar la póliza, hay que declararla en el cuestionario de salud. La aseguradora decide entonces si la acepta, la excluye o aplica un recargo. Eso queda por escrito en tu póliza. No declararla no la convierte en cubierta después: es justo el motivo más frecuente de denegación de una prestación.',
+          'Si tu carencia todavía está en curso, o si tienes una preexistencia excluida y pides cobertura para eso, la denegación es probable que sea automática. Ahí la vía de reclamación es más corta porque la respuesta es casi segura. Mejor revisarlo antes de pedir la autorización.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Por qué mi médico dice que es urgente pero la aseguradora dice que espere?',
+        respuesta:
+          'La urgencia médica (lo que tú necesitas ahora) no siempre coincide con la cobertura de la póliza (lo que la aseguradora está obligada a pagar). Si el médico cree que es urgente, cuéntaselo por escrito a la aseguradora: una situación urgente puede justificar saltarse la carencia o acelerar la autorización. Pero sin decirles que es urgente, eso no lo saben.',
+      },
+      {
+        pregunta: '¿Cuánto tiempo debo esperar el reembolso después de la autorización?',
+        respuesta:
+          'Depende de la aseguradora, pero lo normal es entre dos y cuatro semanas desde que presentas la factura con la autorización. Si pasan más de seis semanas sin noticias, reclama. Un reembolso que tarda demasiado es una demora que tiene consecuencias en la normativa de seguros.',
+      },
+      {
+        pregunta: '¿Una preexistencia me deja fuera de toda cobertura o solo de esa enfermedad?',
+        respuesta:
+          'Depende de cómo la aseguradora la haya resuelto. A veces es una exclusión total: esa enfermedad no se cubre. A veces es una exclusión parcial: solo dentro de un plazo, o solo ciertos tratamientos. Eso tiene que estar escrito en tu póliza. Revísalo antes de pedir una autorización para algo relacionado.',
+      },
+    ],
+  },
   // El agente quincenal de `apps/plataforma` (`lib/correduria/blog-agente.ts`)
   // añade el artículo nuevo JUSTO ENCIMA de esta línea y abre un PR. Es la
   // única forma en que un proceso automático toca este fichero: no reescribe

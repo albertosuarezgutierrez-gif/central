@@ -885,6 +885,8 @@ model PortalIdentidad {
   nombre         String?
   creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
   ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
+  /// Última «revisión anual» enviada por `app/api/cron/revision-anual`. NULL = nunca.
+  revisionAnualEnviadaEn DateTime? @map("revision_anual_enviada_en") @db.Timestamptz(6)
 
   @@map("portal_identidad")
 }
@@ -943,6 +945,12 @@ model PortalPolizaDeclarada {
   titularEmpresaNombre String?           @map("titular_empresa_nombre")
   /// Puede faltar aunque haya empresa: mucha gente no se lo sabe de memoria.
   titularEmpresaCif    String?           @map("titular_empresa_cif")
+  /// Garantías leídas del PDF por el portal. NULL = no leídas.
+  coberturas           Json?
+  /// El cliente redactó / envió la carta de no renovación desde el portal.
+  /// La señal de lead más fuerte que hay: la lee `lib/leads-portal.ts`.
+  cartaGeneradaEn      DateTime?         @map("carta_generada_en") @db.Timestamptz(6)
+  cartaEnviadaEn       DateTime?         @map("carta_enviada_en") @db.Timestamptz(6)
   creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
   actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
 

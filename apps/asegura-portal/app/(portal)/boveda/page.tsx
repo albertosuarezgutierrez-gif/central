@@ -145,15 +145,29 @@ export default async function Boveda({
   // propias: que mi padre y yo tengamos defensa jurídica no es un solapamiento
   // de nadie. Con `coberturas: null` (nivel sin acceso a ellas) la póliza cuenta
   // como sin coberturas informadas, que es lo conservador: no se afirma nada.
-  const solapamientos = detectarSolapamientos(
-    cartera.propias.flatMap((t) =>
+  //
+  // Y las DECLARADAS entran también (20/09/2026): son las pólizas de otras
+  // compañías, y el solapamiento que más se da es justo entre una de cartera y
+  // una de fuera (la defensa jurídica del coche de Generali y la del hogar de
+  // Mapfre). `coberturas` es lo que la IA leyó del PDF; `null` (alta a mano,
+  // o subida anterior) = no informadas, que es lo conservador. Sus ids van
+  // aparte para que el enlace lleve a SU ficha (`/boveda/anadida/…`).
+  const declaradasConCoberturas = declaradas.map((d) => ({
+    id: d.id,
+    titulo: `${d.compania ?? 'Compañía sin identificar'} · ${(d.ramo && RAMO[d.ramo]) || d.ramo || 'ramo sin identificar'}`,
+    coberturas: Array.isArray(d.coberturas) ? d.coberturas.filter((c): c is string => typeof c === 'string') : [],
+  }))
+  const solapamientos = detectarSolapamientos([
+    ...cartera.propias.flatMap((t) =>
       t.polizas.map((p) => ({
         id: p.id,
         titulo: `${p.compania} · ${RAMO[p.ramo] ?? p.ramo}`,
         coberturas: p.coberturas?.lista ?? [],
       })),
     ),
-  )
+    ...declaradasConCoberturas,
+  ])
+  const idsDeclaradas = new Set(declaradas.map((d) => d.id))
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
   const correduria = cartera.correduria ?? 'Grupo ASegura'
@@ -469,7 +483,7 @@ export default async function Boveda({
 
       {/* Coberturas que aparecen en más de una póliza propia. Con cero no se
           pinta nada: ver la cabecera del componente. */}
-      <Solapamientos solapamientos={solapamientos} />
+      <Solapamientos solapamientos={solapamientos} declaradas={idsDeclaradas} />
 
         </>
       )}

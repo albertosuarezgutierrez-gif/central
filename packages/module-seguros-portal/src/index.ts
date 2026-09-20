@@ -114,8 +114,9 @@ export {
   leadUrgente,
   normalizarNumeroPoliza,
   ordenarLeads,
+  senalCarta,
 } from './lead-declarada.ts'
-export type { EntradaLead, EstadoLead, Lead } from './lead-declarada.ts'
+export type { EntradaLead, EstadoLead, Lead, SenalCarta } from './lead-declarada.ts'
 export { cifParaBuscarFicha, etiquetaTitular, fichaParaCotejar, normalizarTitular } from './titular-declarado.ts'
 export type { TipoTitular, TitularDeclarado } from './titular-declarado.ts'
 export {
@@ -432,3 +433,8 @@ export type { EstadoEnlaceVista } from './vista-corredor.ts'
 // sugiere nunca — misma guarda que ya usa `clientesVisiblesPara()`.
 export { relacionesSugeribles } from './sugerencia-relacion.ts'
 export type { SugerenciaRelacion } from './sugerencia-relacion.ts'
+
+// La revisión anual (20/09/2026): a quién se le escribe UNA vez al año con sus
+// vencimientos próximos. Puro; el cron de `apps/asegura` lo aplica.
+export { DIAS_ENTRE_REVISIONES, DIAS_HORIZONTE_REVISION, tocaRevisionAnual } from './revision-anual.ts'
+export type { DecisionRevision, EntradaRevision, MotivoNoRevision } from './revision-anual.ts'
