@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { PhoneCall } from 'lucide-react'
 import { eur } from '@/lib/dinero'
@@ -8,6 +8,14 @@ import { urlRetarificar } from '@/lib/ficha-asegura'
 import { BtnLink, Badge, type Tono } from '@/components/ui'
 import Bloque from './Bloque'
 import AccionesContacto from './AccionesContacto'
+
+/**
+ * Días que un "✅ Ya he llamado" la quita de la vista. NO es un "resuelto":
+ * es "ya lo sé, no me lo repitas todavía" — si el recibo sigue sin cobrar
+ * cuando pase este plazo, la fila vuelve a salir sola (lo decide el puerto,
+ * `retencion_descartes.vence_at`, no esta pantalla).
+ */
+const DIAS_DESCARTE = 10
 
 /**
  * 📞 A quién hay que llamar hoy: los recibos devueltos y los vencidos sin
@@ -84,7 +92,11 @@ export default function Retencion({
   const avisar = useRef(onContador)
   avisar.current = onContador
 
-  useEffect(() => {
+  // Extraída para poder recargar tras un descarte: recargar entero (no un
+  // filtro local) es lo que mantiene `resumen` (suspendidas/sinConfirmar)
+  // coherente con la lista, en vez de arrastrar un recuento que se queda
+  // viejo en cuanto una fila desaparece.
+  const cargar = useCallback(() => {
     fetch('/api/correduria/impagados')
       .then((r) => r.json())
       .then((d: Impagados) => {
@@ -97,6 +109,10 @@ export default function Retencion({
         avisar.current?.(null)
       })
   }, [])
+
+  useEffect(() => {
+    cargar()
+  }, [cargar])
 
   if (datos === null) {
     return (
@@ -205,7 +221,7 @@ export default function Retencion({
               contenido más ancho y arrastra la página entera en móvil. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
             {visibles.map((f) => (
-              <Fila key={f.polizaId} f={f} />
+              <Fila key={f.polizaId} f={f} onDescartada={cargar} />
             ))}
           </div>
           {ver < filas.length && (
@@ -228,8 +244,47 @@ export default function Retencion({
   )
 }
 
-function Fila({ f }: { f: EnRiesgo }) {
+function Fila({ f, onDescartada }: { f: EnRiesgo; onDescartada: () => void }) {
   const e = ESTILO[f.estado]
+  const [obrando, setObrando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const descartar = async () => {
+    // Confirmación explícita y con el texto correcto: esto NO es «resuelto»,
+    // es «no me la enseñes unos días» — el aviso lo dice para que nadie lo
+    // use como si marcara el impago como cobrado.
+    if (
+      !window.confirm(
+        `¿Quitar a ${f.cliente} de "Hay que llamar" ${DIAS_DESCARTE} días?\n\n` +
+          'Esto NO significa que haya pagado: si el recibo sigue sin cobrar cuando ' +
+          'pasen esos días, vuelve a aparecer sola.',
+      )
+    ) {
+      return
+    }
+    setObrando(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/correduria/retencion/descartar', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ polizaId: f.polizaId, dias: DIAS_DESCARTE }),
+      })
+      const j = await res.json().catch(() => null)
+      if (!res.ok || j?.estado !== 'ok') {
+        setError('No se ha podido guardar. La fila sigue aquí.')
+        setObrando(false)
+        return
+      }
+      onDescartada()
+      // No hace falta `setObrando(false)`: `onDescartada` recarga la lista
+      // entera y este componente se desmonta con la fila.
+    } catch {
+      setError('No se ha podido guardar (sin conexión). La fila sigue aquí.')
+      setObrando(false)
+    }
+  }
+
   return (
     <div
       style={{
@@ -270,10 +325,7 @@ function Fila({ f }: { f: EnRiesgo }) {
 
       <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{f.accion}</div>
 
-      {/* La fila solo existe si tiene algo dentro: un div vacío son 10px de
-          margen por ficha, y la cola de retención son muchas fichas. */}
-      {(!f.telefono || f.retarificable) && (
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
         {/* Con teléfono, los iconos están junto al nombre. Sin él NO se calla:
             «cifrado» y «no consta» se arreglan en sitios distintos. */}
         {!f.telefono && (
@@ -301,7 +353,28 @@ function Fila({ f }: { f: EnRiesgo }) {
             {f.retarificacion?.ramo === 'hogar' ? 'Precio de hogar en otra compañía' : 'Precio en otra compañía'}
           </BtnLink>
         )}
+
+        {/* NO borra el impago: lo aparta `DIAS_DESCARTE` días. Si el recibo
+            sigue sin cobrar al caducar el plazo, la fila vuelve sola (la
+            decide el puerto, no el navegador). Ver `DIAS_DESCARTE` arriba. */}
+        <button
+          type="button"
+          onClick={descartar}
+          disabled={obrando}
+          title="Ya la he llamado/gestionado: no la vuelvas a enseñar unos días (salvo que el recibo siga sin cobrar)"
+          style={{
+            minHeight: 44, padding: '0 14px', borderRadius: 8, marginLeft: 'auto',
+            border: '1px solid var(--border)', background: 'var(--surface)',
+            color: 'var(--text)', cursor: obrando ? 'default' : 'pointer',
+            fontWeight: 600, fontSize: 13, opacity: obrando ? 0.6 : 1,
+          }}
+        >
+          {obrando ? 'Guardando…' : `✅ Ya gestionada · ${DIAS_DESCARTE}d`}
+        </button>
       </div>
+
+      {error && (
+        <p style={{ fontSize: 12, color: 'var(--negative)', marginTop: 6 }}>{error}</p>
       )}
     </div>
   )
