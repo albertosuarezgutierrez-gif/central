@@ -13,6 +13,7 @@ import Actividad from './Actividad'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
 import Companias from './Companias'
+import RadarRecibos from './RadarRecibos'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
 import Bloque from './Bloque'
@@ -545,6 +546,10 @@ export default function CorreduriaClient() {
         {/* Directorio de contacto por compañía, minado del correo. Sin
             contador: es referencia, no trabajo pendiente. */}
         <Companias />
+
+        {/* Qué compañías reconocidas nunca han avisado de un recibo por correo
+            (20/09/2026). Sin contador: es radar, no trabajo pendiente. */}
+        <RadarRecibos />
 
         {/* De los leads captados por apps/asegura-web, cuántos son hoy cartera
             viva. Sin contador: con 1 lead medido el 15/09/2026 es infraestructura

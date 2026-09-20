@@ -18,6 +18,8 @@ import { parsearNotificacionSmoobu } from './smoobu-notificacion'
 import { ACCESO } from '@/lib/sivra/acceso'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
+import { pareceContactoPersonal } from './contacto-sugerido'
+import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -189,6 +191,18 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
                 const anotado = await anotarHistorialDesdeCorreo(r.clienteId, nota).catch(() => false)
                 if (anotado) stats.correduriaResueltos++
               }
+            }
+
+            // Sugerencia de alta de contacto (20/09/2026): NUNCA da de alta —
+            // solo avisa la primera vez que ve escribir a una persona (no un
+            // buzón genérico) de una aseguradora, para que Alberto decida si
+            // la añade al directorio (`compania_contactos`). Best-effort: un
+            // fallo aquí no toca ni el aviso ni la anotación de arriba.
+            if (pareceContactoPersonal(correo.from) && (await esPrimerCorreoDeCorreduria(correo.from).catch(() => false))) {
+              await tgAviso(
+                'correo.contacto-sugerido',
+                `👤 <b>Posible contacto nuevo de aseguradora</b>\n${escapeHtml(correo.fromRaw)}\n${escapeHtml(correo.subject)}\n➡️ Si es una persona real, añádela en /correduria → Directorio de compañías.`,
+              ).catch(() => null)
             }
           }
 

@@ -31,7 +31,7 @@ const sinTildes = (s: string) => (s || '').normalize('NFD').replace(/[\u0300-\u0
 // se mira ANTES que el dominio y con dos condiciones a la vez: remitente de aseguradora Y asunto
 // de recibo. Un «Recibo de su pago a IONOS» de PayPal no pasa la primera; un «Nueva oferta de
 // Salud» de Mapfre no pasa la segunda.
-const ASEGURADORAS = [
+export const ASEGURADORAS = [
   'occidentinforma.com', 'comunicacionesoccident.com', 'newsoccident.com', 'occident.com',
   'mapfre.com', 'allianz.es', 'reale.es', 'generali.com', 'tugenerali.es', 'fidelidade.pt',
   'zurich.es', 'axa.es', 'catalanaoccidente.com', 'libertyseguros.es', 'plusultra.es', 'caser.es',
