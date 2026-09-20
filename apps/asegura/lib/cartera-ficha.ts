@@ -257,6 +257,30 @@ export type SiniestroFicha = {
   confirmadoCima: boolean
   abierto: boolean
   actualizado: string
+  /**
+   * Campos propios del ramo de la póliza (`@central/module-seguros/siniestro-ramo.ts`).
+   * `null` = sin datos. Solo se escribe/edita en `gestionado_correduria` — ver
+   * la cabecera de ese módulo.
+   */
+  datosRamo: Record<string, string | number | boolean> | null
+  /**
+   * Terceros y testigos. `null` = no se ha podido consultar (la tabla falló),
+   * NUNCA «no hay ninguno» — mismo criterio que `intervinientes` de la ficha.
+   */
+  terceros: SiniestroIntervinienteFicha[] | null
+}
+
+/** Un tercero o testigo de un siniestro, ya descifrado para la pantalla del corredor. */
+export type SiniestroIntervinienteFicha = {
+  id: string
+  tipo: 'tercero' | 'testigo'
+  esConductor: boolean | null
+  nombre: string | null
+  telefono: string | null
+  matricula: string | null
+  marcaModelo: string | null
+  companiaNombre: string | null
+  numeroPoliza: string | null
 }
 
 /** Lo que hace falta para LLAMAR al cliente. El DNI y el IBAN no salen de aquí. */

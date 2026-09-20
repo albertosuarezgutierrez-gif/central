@@ -12,6 +12,20 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Siniestros: campos por ramo + terceros/testigos (PR #3126). `datosRamo` (JSONB, patrón de
+`campos-ramo.ts` de pólizas) sobre `Siniestro` + catálogo puro `siniestro-ramo.ts` (auto/moto/hogar/RC/
+vida/salud/decesos/accidentes) y tabla nueva `SiniestroInterviniente` (terceros/testigos, PII cifrada) +
+`siniestro-intervinientes.ts` en `@central/module-seguros`. Backend completo en `apps/asegura`
+(PATCH `datosRamo`, POST/DELETE terceros), proxies y UI editable en `apps/plataforma`
+(`Siniestros.tsx`), EXCLUSIVO de siniestros `gestionado_correduria` (CIMA no manda este detalle).
+Revisión previa (agente-architect) encontró y corrigió 2 bloqueantes: PII en claro en el JSONB
+(`conductorNombre`, retirado — ese dato va como tercero/`esConductor`) y el ramo `accidentes`
+faltaba del catálogo (un PATCH lo borraba en silencio); `RAMOS_SINIESTRO` ahora se deriva de
+`TIPOS_SEGURO`. **Migración SQL escrita, sin aplicar en la BD real todavía.** Typecheck limpio en
+asegura/asegura-portal/plataforma; suite completa en verde.
+**Pendiente:** aplicar la migración SQL en Supabase (schema `seguros`) y la captura desde el portal
+del cliente (`asegura-portal`, queda para otra sesión).
+
 **(20/09/2026)** Codeoscopic · Alberto preguntó si el 400 de Occident (leasing/renting, tipo de
 adquisición — 2ª vez, proyectos 40788414/40802035) se podía detectar antes. El Product Form Library
 (17/09) solo cubría el Submit; extendido también al ReRate: `interpretarCamposProducto()` reconoce el

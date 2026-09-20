@@ -522,12 +522,51 @@ model Siniestro {
   gravedad             SiniestroGravedad?
   reservaImporte       Decimal?           @map("reserva_importe") @db.Decimal(12, 2)
   indemnizacionImporte Decimal?           @map("indemnizacion_importe") @db.Decimal(12, 2)
+  /// Campos PROPIOS del ramo (`@central/module-seguros/siniestro-ramo.ts`), p.
+  /// ej. tipo de colisión, gremio requerido, subramo de RC. `Prisma.DbNull`
+  /// cuando no hay datos, NUNCA `Prisma.JsonNull` (regla ya vigente en el
+  /// `datos_ramo` de pólizas: un `null` DENTRO del JSON se colaría por toda
+  /// guarda `?? `/`COALESCE`). EXCLUSIVO de siniestros `gestionado_correduria`
+  /// — CIMA no manda este detalle (ver `siniestro-ramo.ts`, cabecera).
+  datosRamo            Json?              @map("datos_ramo")
 
-  correduria Correduria @relation(fields: [correduriaId], references: [id])
-  cliente    Cliente    @relation(fields: [clienteId], references: [id])
-  poliza     Poliza     @relation(fields: [polizaId], references: [id])
+  correduria      Correduria               @relation(fields: [correduriaId], references: [id])
+  cliente         Cliente                  @relation(fields: [clienteId], references: [id])
+  poliza          Poliza                   @relation(fields: [polizaId], references: [id])
+  intervinientes  SiniestroInterviniente[]
 
   @@map("siniestros")
+}
+
+/// Terceros y testigos de un siniestro — el hueco que faltaba frente al CRM
+/// viejo de Manuel (`siniestro_contrarios`/`siniestro_testigos`). 1:N a
+/// propósito: puede haber varios testigos, o un tercero y su propio testigo.
+///
+/// 🚨 EXCLUSIVO de siniestros `gestionado_correduria` (ver `siniestro-ramo.ts`
+/// y `siniestro-intervinientes.ts` de `@central/module-seguros`): CIMA no
+/// manda terceros ni testigos.
+///
+/// PII cifrada con el MISMO mecanismo que `Cliente` (`@central/module-seguros-pii`,
+/// `encryptField`/`decryptField`) — nombre, teléfono y matrícula viajan como
+/// texto plano en el tipo Prisma porque el cifrado es de aplicación, no de
+/// columna (igual que `Siniestro.lugarDireccion`).
+model SiniestroInterviniente {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  siniestroId    String    @map("siniestro_id") @db.Uuid
+  tipo           String    @db.VarChar(20) // 'tercero' | 'testigo' — ver TIPOS_INTERVINIENTE
+  esConductor    Boolean?  @map("es_conductor")
+  nombre         String?   // cifrado
+  telefono       String?   // cifrado
+  matricula      String?   // cifrado; solo 'tercero'
+  marcaModelo    String?   @map("marca_modelo") @db.VarChar(150)
+  companiaNombre String?   @map("compania_nombre") @db.VarChar(150)
+  numeroPoliza   String?   @map("numero_poliza") @db.VarChar(50)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  siniestro Siniestro @relation(fields: [siniestroId], references: [id])
+
+  @@index([siniestroId])
+  @@map("siniestro_intervinientes")
 }
 
 /// Cuenta de efectivo EIAC: el extracto de liquidación de una compañía para un
