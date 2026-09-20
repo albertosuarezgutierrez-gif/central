@@ -4,16 +4,20 @@ import {
   DIAS_PREAVISO_TOMADOR,
   POLIZA_ESTADOS_VIGENTES,
   WHERE_CARTERA_VIVA,
+  sqlCarteraEnVigor,
   diasHastaVencimiento,
   inicioVentanaRecuperacion,
   objetoAsegurado,
   primaReferencia,
+  retarificabilidad,
   urgenciaRenovacion,
   type ObjetoAsegurado,
+  type Retarificabilidad,
   type UrgenciaRenovacion,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { Prisma } from './generated/asegura-client'
 import { registrarErrorCartera, type CausaErrorCartera } from './error-cartera'
 import { contactosDe, type Contacto } from './cartera-busqueda'
 import { LIMITE_VENCIMIENTOS, cribaTruncada } from './cartera-techos.ts'
@@ -81,6 +85,15 @@ export type PolizaVencimiento = {
    *  no informado / cifrado / sin objeto). Nunca es una cadena vacía. */
   objeto: ObjetoAsegurado
   /**
+   * El mismo veredicto que la ficha del cliente y la de la póliza —solo un
+   * helper, `retarificabilidad()`—, para que el botón «Retarificar» pueda salir
+   * ya en la lista de renovaciones y no obligue a abrir la ficha para lo único
+   * que se hace todos los días. Sin `datosGemela` (esta consulta no la trae):
+   * puede subestimar hogar cuando el riesgo solo vive en la copia del volcado,
+   * nunca al revés — es el lado conservador, no un dato inventado.
+   */
+  retarificacion: Retarificabilidad
+  /**
    * Para llamar sin abrir la ficha. Es la MISMA pieza que el buscador
    * (`contactosDe` de `cartera-busqueda.ts`), no una copia: el contrato de los
    * tres estados —dato / «no consta» / «cifrado y no abre»— tiene que ser uno
@@ -130,22 +143,41 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
     const db = prismaAsegura()
     const hoy = hoyUtc()
     const estadosVigentes = [...POLIZA_ESTADOS_VIGENTES]
-    const basePoliza = { correduriaId, mergedIntoPolizaId: null }
+    // «Vigente» aquí exige ADEMÁS ser cartera VIVA (origen CIMA): sin esto, una
+    // póliza del volcado histórico con estado 'vigente' (aunque su vencimiento
+    // ya haya pasado hace años) podría colarse en los recuentos de abajo.
+    const basePoliza = { correduriaId, mergedIntoPolizaId: null, ...WHERE_CARTERA_VIVA }
     const limite = (dias: number) => {
       const d = new Date(hoy)
       d.setUTCDate(d.getUTCDate() + dias)
       return d
     }
     const [
-      clientes, leads, polizasVigentes, polizasPendientesFecha, totalPolizas, siniestrosAbiertos,
+      clientesGrupos, polizasVigentes, polizasPendientesFecha, totalPolizas, siniestrosAbiertos,
       vence30, vence60,
     ] =
       await Promise.all([
-        // Las fichas DESCARTADAS (`activo = false`) no se cuentan: si contaran,
-        // el titular seguiría diciendo «80 clientes» después de quitar una de
-        // la vista, y el número no cuadraría con la lista que hay debajo.
-        db.cliente.count({ where: { correduriaId, mergedIntoClienteId: null, activo: true, tipo: 'cliente' } }),
-        db.cliente.count({ where: { correduriaId, mergedIntoClienteId: null, activo: true, tipo: 'lead' } }),
+        // 🚨 «Cliente» / «lead» NO es `clientes.tipo` (campo del volcado que nadie
+        // mantiene: 2.742 «cliente» / 29.860 «lead» sobre una cartera viva de 72).
+        // Es la MISMA pregunta que `cartera-filtro.ts` (LATERAL_VIVAS): un cliente
+        // es cartera EN VIGOR si tiene ≥1 póliza que cumple `esCarteraEnVigor()`.
+        db.$queryRaw<{ clientes: bigint; leads: bigint }[]>(Prisma.sql`
+          select
+            count(*) filter (where v.polizas_en_vigor > 0)::bigint as clientes,
+            count(*) filter (where v.polizas_en_vigor = 0)::bigint as leads
+          from clientes c
+          join lateral (
+            select count(*)::int as polizas_en_vigor
+            from polizas p
+            where p.cliente_id = c.id
+              and p.correduria_id = c.correduria_id
+              and p.merged_into_poliza_id is null
+              and ${Prisma.raw(sqlCarteraEnVigor('p'))}
+          ) v on true
+          where c.correduria_id = ${correduriaId}
+            and c.merged_into_cliente_id is null
+            and c.activo = true
+        `),
         db.poliza.count({
           where: { ...basePoliza, estado: { in: estadosVigentes }, fechaVencimiento: { gte: hoy } },
         }),
@@ -167,10 +199,11 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
           },
         }),
       ])
+    const { clientes, leads } = clientesGrupos[0] ?? { clientes: BigInt(0), leads: BigInt(0) }
     return {
       estado: 'ok',
-      clientes,
-      leads,
+      clientes: Number(clientes),
+      leads: Number(leads),
       polizasVigentes,
       polizasPendientesFecha,
       polizasNoVigentes: totalPolizas - polizasVigentes - polizasPendientesFecha,
@@ -311,6 +344,11 @@ export async function vencimientosProximos(
         tipo: String(f.tipo),
         datos: descifrarDireccion(f.datosEspecificos),
         coberturas: coberturasPorPoliza.get(f.id) ?? null,
+      }),
+      retarificacion: retarificabilidad({
+        tipo: String(f.tipo),
+        datos: descifrarDireccion(f.datosEspecificos),
+        datosGemela: null,
       }),
       // Si la consulta falló, `null` para todas: «no se ha podido mirar».
       contacto: contactos?.get(f.cliente.id) ?? null,

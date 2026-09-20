@@ -163,7 +163,9 @@ export default function CorreduriaClient() {
   const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
   const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
-  const [nDeclaradas, setNDeclaradas] = useState<number | null | undefined>(undefined)
+  // Su contador ya NO se suma en «Hoy» (ver el comentario junto a `agregarContadores`
+  // de la sección `hoy`, más abajo): el valor no hace falta, solo la función.
+  const [, setNDeclaradas] = useState<number | null | undefined>(undefined)
 
   // La sección inicial viaja en la URL (`?s=`), y los cambios la reescriben con
   // `history.replaceState`: un enlace sigue llevando donde debe, pero cambiar
@@ -229,7 +231,14 @@ export default function CorreduriaClient() {
 
   const contadores: ContadoresSeccion = {
     hoy: {
-      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nDeclaradas, nSustituciones]),
+      // 🚨 `nDeclaradas` NO entra aquí. `DeclaradasVencer` y `LeadsPortal` leen
+      // la MISMA tabla (`portal_poliza_declarada`) con ventanas casi idénticas:
+      // una póliza que cumple las dos se pintaba (y se contaba) dos veces. El
+      // criterio de urgencia real es el de `LeadsPortal` (preaviso LCS art. 22,
+      // `nLeads`); `DeclaradasVencer` se conserva SOLO como vista de llamada
+      // rápida (teléfono/email en claro) para las ya vinculadas ≤60 días, pero
+      // ya no suma un segundo aviso de lo mismo.
+      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nSustituciones]),
       tono: 'malo',
       title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra, declaradas de otra compañía a punto de renovar y sustituciones pendientes de que CIMA confirme la nueva',
     },
@@ -402,6 +411,14 @@ export default function CorreduriaClient() {
             ambos parten de la misma base y compiten por el mismo hueco de
             atención comercial. */}
         <Recaptacion onContador={setNRecaptacion} />
+
+        {/* De los leads captados por apps/asegura-web, cuántos son hoy cartera
+            viva. Sin contador: con 1 lead medido el 15/09/2026 es infraestructura
+            de medición que necesita acumular datos, no un aviso accionable hoy
+            (ver LeadsWebConversion.tsx). Movido de «Datos» aquí (20/09/2026):
+            es un embudo COMERCIAL, no calidad de dato, y comparte pestaña con
+            Recaptación por el mismo motivo que ella. */}
+        <LeadsWebConversion />
       </div>
 
       {/* ══ CARTERA ══════════════════════════════════════════════════════════ */}
@@ -568,12 +585,6 @@ export default function CorreduriaClient() {
         {/* Qué compañías reconocidas nunca han avisado de un recibo por correo
             (20/09/2026). Sin contador: es radar, no trabajo pendiente. */}
         <RadarRecibos />
-
-        {/* De los leads captados por apps/asegura-web, cuántos son hoy cartera
-            viva. Sin contador: con 1 lead medido el 15/09/2026 es infraestructura
-            de medición que necesita acumular datos, no un aviso accionable hoy
-            (ver LeadsWebConversion.tsx). */}
-        <LeadsWebConversion />
       </div>
 
       {/* ══ INGESTA ══════════════════════════════════════════════════════════

@@ -1,10 +1,12 @@
 'use client'
 import Link from 'next/link'
-import { descripcionDias } from '@central/module-seguros'
+import { descripcionDias, type Retarificabilidad } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
-import { TablaScroll, Badge, type Tono } from '@/components/ui'
+import { TablaScroll, Badge, BtnLink, type Tono } from '@/components/ui'
 import { esAccionable, textoListaTruncada, textoVencidasAntiguas } from './secciones'
 import AccionesContacto from './AccionesContacto'
+import { urlRetarificar } from '@/lib/ficha-asegura'
+import { rotuloRetarificar } from './rotulo-retarificar'
 
 /**
  * Las pólizas que vencen: la máquina comercial de una correduría.
@@ -75,6 +77,9 @@ export type Vencimiento = {
   numeroPoliza: string | null; fechaVencimiento: string; dias: number
   urgencia: string; prima: number | null; fraccionamiento: string | null
   objeto: ObjetoAsegurado | null
+  /** `null` = la versión desplegada de asegura todavía no manda el veredicto:
+   *  entonces no se ofrece el botón en vez de suponer que sí se puede. */
+  retarificacion: Retarificabilidad | null
   /** `null` = asegura no manda el bloque de contacto (versión anterior o
    *  consulta caída). NO es «no hay forma de llamarle»: por eso no se pinta
    *  nada en vez de un icono apagado o un «sin teléfono». */
@@ -305,6 +310,7 @@ export default function Renovaciones({ datos, filtro }: {
               <th style={{ padding: '6px 8px', fontWeight: 600 }}>Compañía</th>
               <th style={{ padding: '6px 8px', fontWeight: 600, textAlign: 'right' }}>Prima</th>
               <th style={{ padding: '6px 8px', fontWeight: 600 }}>Estado</th>
+              <th style={{ padding: '6px 8px', fontWeight: 600 }} />
             </tr>
           </thead>
           <tbody>
@@ -376,6 +382,25 @@ export default function Renovaciones({ datos, filtro }: {
                   </td>
                   <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
                     <Badge tono={u.tono}>{u.label}</Badge>
+                  </td>
+                  <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
+                    {/* El botón que Alberto pedía sin tener que entrar en la
+                        ficha del cliente: retarificar gasta 0,50€ reales, así
+                        que sigue habiendo pantalla de confirmación detrás —
+                        aquí solo se ahorra el salto a la ficha. `null` = la
+                        versión desplegada de asegura no manda el veredicto
+                        todavía: no se ofrece un botón que podría prometer algo
+                        que no se puede cumplir. */}
+                    {p.retarificacion?.retarificable && (
+                      <BtnLink
+                        href={urlRetarificar(p.id)}
+                        variante="secundario"
+                        tam="sm"
+                        nuevaPestana={p.retarificacion.ramo === 'hogar'}
+                      >
+                        {rotuloRetarificar(p.retarificacion)}
+                      </BtnLink>
+                    )}
                   </td>
                 </tr>
               )
