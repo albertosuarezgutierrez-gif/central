@@ -759,6 +759,16 @@ export type RespuestaOferta =
     }
   /** 409 · el PATCH al proyecto «tuvo éxito» pero al releerlo el dato no está. Toca cotizar de cero. */
   | { estado: 'patch_no_aplicado'; mensaje: string }
+  /**
+   * 422 · el ReRate pide un campo de `product.options` (el formulario de la
+   * compañía: vehículo/producto, no la persona) que el proyecto no trae.
+   * DISTINTO de `faltan_vendor`: ahí se teclea un valor suelto; aquí se
+   * ofrece el Product Form Library del vendor (`ProductFormWidget`) montado
+   * sobre `quoteCrudo` — no hay una lista cerrada de campos ni se inventa su
+   * id, es el formulario real de la compañía. `campos` es solo para mostrar
+   * QUÉ pide (nombres tal cual los usa la compañía), no para rellenarlos.
+   */
+  | { estado: 'faltan_producto'; campos: string[]; quoteCrudo: unknown; mensaje: string }
   | {
       estado: 'ok'
       projectId: string
@@ -878,6 +888,14 @@ export function interpretarOferta(status: number, json: unknown): RespuestaOfert
       mensaje: cadenaONulo(r.mensaje) ?? 'La compañía pide datos que faltan en el proyecto.',
     }
   }
+  if (status === 422 && r.estado === 'faltan_producto') {
+    return {
+      estado: 'faltan_producto',
+      campos: Array.isArray(r.campos) ? r.campos.filter((c): c is string => typeof c === 'string') : [],
+      quoteCrudo: 'quoteCrudo' in r ? r.quoteCrudo ?? null : null,
+      mensaje: cadenaONulo(r.mensaje) ?? 'La compañía pide un dato del formulario que el proyecto no tiene.',
+    }
+  }
   if (status === 409 && r.causa === 'patch_no_aplicado') {
     return {
       estado: 'patch_no_aplicado',
@@ -910,6 +928,10 @@ export async function ofertaAsegura(p: {
   /** Lo que el corredor teclea tras un `faltan_vendor` (campo nuestro → valor).
    *  Asegura lo escribe en el proyecto (PATCH, gratis) y vuelve a pedir el ReRate. */
   correcciones?: Record<string, string>
+  /** Lo que el corredor ha guardado del Product Form Library del vendor tras
+   *  un `faltan_producto` anterior (`ProductFormWidget::getProductOptions()`,
+   *  reenviado TAL CUAL — ver `apps/asegura/.../oferta/route.ts`). */
+  productOptions?: unknown[]
 }): Promise<RespuestaOferta> {
   try {
     const r = await pedir(

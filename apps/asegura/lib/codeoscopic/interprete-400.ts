@@ -182,6 +182,35 @@ export function interpretarError400(mensajeCrudo: string): Interpretacion {
   return { campos: [...porCampo.values()], noReconocidos, lineas }
 }
 
+// ─── Campos de PRODUCTO (product.options del ReRate), no de persona ────────
+//
+// El vendor los rechaza con un patrón DISTINTO al de `REGLAS` (que es inglés,
+// «The X of the Y is mandatory» y solo conoce campos de persona): este es
+// español, «<Compañía>: El campo <nombre> de <Compañía> es obligatorio.» —
+// visto 2 veces real con Occident, mismo patrón las dos (19-20/09/2026):
+// «Occident: El campo ¿El vehículo se encuentra en situación de leasing o
+// renting? de Occident es obligatorio.» / «Occident: El campo Tipo de
+// adquisición del vehículo de Occident es obligatorio.»
+//
+// A propósito NO se traduce a un campo nuestro (no hay lista cerrada: el
+// nombre es el que la compañía use en su formulario, cambia por compañía y
+// por producto) — solo se detecta QUE es un hueco de `product.options`, para
+// que el caller pueda ofrecer el Product Form Library del vendor en vez de
+// tirar el JSON crudo. Ver `ProductFormWidget` (plataforma).
+
+export type CampoProducto = { compania: string; campo: string; texto: string }
+
+const RE_CAMPO_PRODUCTO = /^(.+?):\s*el campo\s+(.+?)\s+de\s+\1\s+es obligatorio\.?$/i
+
+export function interpretarCamposProducto(lineas: string[]): CampoProducto[] {
+  const out: CampoProducto[] = []
+  for (const linea of lineas) {
+    const m = RE_CAMPO_PRODUCTO.exec(linea.trim())
+    if (m) out.push({ compania: m[1].trim(), campo: m[2].trim(), texto: linea })
+  }
+  return out
+}
+
 /** Los campos interpretados como `Reparo`, que es lo que la pantalla ya sabe pintar. */
 export function reparosDe(interp: Interpretacion): Reparo[] {
   return interp.campos.map((c) => ({

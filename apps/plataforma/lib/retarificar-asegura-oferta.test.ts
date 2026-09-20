@@ -115,3 +115,31 @@ test('el aviso de la cuenta se lee tal cual y lo desconocido no se convierte en 
   const pantalla = readFileSync(fileURLToPath(new URL('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx', import.meta.url)), 'utf8')
   for (const a of ['ilegible', 'invalida', 'no_comprobada']) assert.match(pantalla, new RegExp(`aviso === '${a}'`), a)
 })
+
+// El 422 que asegura devuelve cuando el ReRate pide un campo del FORMULARIO
+// de la compañía (`product.options`, visto real con Occident: leasing/renting,
+// tipo de adquisición) — DISTINTO de `faltan_vendor` (eso es un valor suelto
+// de persona; esto es el Product Form Library montado sobre `quoteCrudo`).
+const FALTAN_PRODUCTO = {
+  estado: 'faltan_producto',
+  campos: ['¿El vehículo se encuentra en situación de leasing o renting?', 'Tipo de adquisición del vehículo'],
+  quoteCrudo: { id: 'Q9', product: { id: 20, options: null } },
+  mensaje: 'Occident: El campo Tipo de adquisición del vehículo de Occident es obligatorio.',
+}
+
+test('un 422 faltan_producto llega a la pantalla con sus campos y el quoteCrudo, sin tocarlo', () => {
+  const r = interpretarOferta(422, FALTAN_PRODUCTO)
+  assert.equal(r.estado, 'faltan_producto')
+  if (r.estado !== 'faltan_producto') return
+  assert.deepEqual(r.campos, FALTAN_PRODUCTO.campos)
+  assert.deepEqual(r.quoteCrudo, FALTAN_PRODUCTO.quoteCrudo)
+  assert.match(r.mensaje, /Tipo de adquisición/)
+})
+
+test('faltan_producto sin campos reconocibles no revienta: lista vacía, no undefined', () => {
+  const r = interpretarOferta(422, { estado: 'faltan_producto', campos: 'no-es-un-array', mensaje: 'x' })
+  assert.equal(r.estado, 'faltan_producto')
+  if (r.estado !== 'faltan_producto') return
+  assert.deepEqual(r.campos, [])
+  assert.equal(r.quoteCrudo, null)
+})
