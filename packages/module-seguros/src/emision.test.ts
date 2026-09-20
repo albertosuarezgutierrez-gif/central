@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { conciliarConCima, emparejarConCima, prepararPolizaEmitida, sanearPrima, seguimientoSustitucion, type CompaniaDgs, type ProyectoEmitido } from './emision.ts'
+import { conciliarConCima, emparejarConCima, prepararPolizaEmitida, sanearPrima, seguimientoSustitucion, validarPolizaOrigen, type CompaniaDgs, type ProyectoEmitido } from './emision.ts'
 
 const catalogo: CompaniaDgs[] = [
   { codigoDgs: 'C0058', nombreComun: 'Mapfre', nombreCima: 'Mapfre', enCima: true, activa: true },
@@ -104,4 +104,24 @@ test('seguimientoSustitucion: emitida pero CIMA aún no la ha confirmado → esp
 
 test('seguimientoSustitucion: solo cuenta CONFIRMADA con id_poliza_entidad de CIMA, no con «se ha emitido»', () => {
   assert.equal(seguimientoSustitucion({ polizaOrigenId: 'p-vieja', idPolizaEntidad: 'ENT-99' }), 'confirmada')
+})
+
+test('validarPolizaOrigen: sin origen declarado, válido (no es una sustitución)', () => {
+  assert.deepEqual(validarPolizaOrigen(null), { valido: true })
+})
+
+test('validarPolizaOrigen: origen que no existe en esta correduría → se registra sin enlazar', () => {
+  const r = validarPolizaOrigen({ existe: false, yaTieneSustituta: false })
+  assert.equal(r.valido, false)
+  assert.ok(!r.valido && r.aviso.includes('no es de esta correduría'))
+})
+
+test('validarPolizaOrigen: origen que YA tiene otra sustituta → guardián anti-duplicado, no se enlaza dos veces', () => {
+  const r = validarPolizaOrigen({ existe: true, yaTieneSustituta: true })
+  assert.equal(r.valido, false)
+  assert.ok(!r.valido && r.aviso.includes('ya tenía otra sustituta'))
+})
+
+test('validarPolizaOrigen: origen normal (existe, sin sustituta previa) → válido', () => {
+  assert.deepEqual(validarPolizaOrigen({ existe: true, yaTieneSustituta: false }), { valido: true })
 })

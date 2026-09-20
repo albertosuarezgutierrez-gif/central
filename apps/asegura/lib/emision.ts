@@ -12,7 +12,7 @@
 //
 // Reglas puras en `@central/module-seguros` (`emision.ts`, con tests).
 
-import { prepararPolizaEmitida, type CompaniaDgs, type ProyectoEmitido } from '@central/module-seguros'
+import { prepararPolizaEmitida, validarPolizaOrigen, type CompaniaDgs, type ProyectoEmitido } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { reactivarPorPoliza } from './cartera-edicion'
 
@@ -68,15 +68,23 @@ export async function registrarPolizaEmitida(
     limit 1`.catch(() => [] as { estado: string }[])
   if (yaAcunada[0]?.estado === 'emitida') return { ok: false, estado: 'conflicto', motivo: 'Ese proyecto ya tiene póliza acuñada.', status: 409 }
 
-  // La sustitución solo cuenta si la póliza de origen es de ESTA correduría y
-  // no es la misma que se va a crear (un projectId no puede retarificarse a sí
-  // mismo). El caller ya la leyó con ese WHERE; aquí se vuelve a comprobar
-  // porque `registrarPolizaEmitida` no puede fiarse de lo que le pasan.
-  const polizaOrigenId =
-    entrada.polizaOrigenId &&
-    (await db.poliza.findFirst({ where: { id: entrada.polizaOrigenId, correduriaId }, select: { id: true } }))
-      ? entrada.polizaOrigenId
-      : null
+  // La sustitución solo cuenta si la póliza de origen es de ESTA correduría, no
+  // es la misma que se va a crear, y no tiene YA otra sustituta (el guardián
+  // anti-duplicado de `validarPolizaOrigen`: dos «hijas» del mismo origen
+  // dejarían la ficha reversa mostrando solo una y la otra huérfana en su
+  // propio sentido). El caller ya la leyó con ese WHERE; aquí se vuelve a
+  // comprobar porque `registrarPolizaEmitida` no puede fiarse de lo que le pasan.
+  const origenCrudo = entrada.polizaOrigenId
+    ? await db.poliza.findFirst({
+        where: { id: entrada.polizaOrigenId, correduriaId },
+        select: { sustituidas: { select: { id: true }, take: 1 } },
+      })
+    : null
+  const validacionOrigen = validarPolizaOrigen(
+    entrada.polizaOrigenId ? { existe: origenCrudo !== null, yaTieneSustituta: (origenCrudo?.sustituidas.length ?? 0) > 0 } : null,
+  )
+  const polizaOrigenId = validacionOrigen.valido && entrada.polizaOrigenId ? entrada.polizaOrigenId : null
+  if (!validacionOrigen.valido) r.avisos.push(validacionOrigen.aviso)
 
   const f = r.fila
   const polizaId = await db.$transaction(async (tx) => {

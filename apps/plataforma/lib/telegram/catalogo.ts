@@ -559,6 +559,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:30',
   },
   {
+    id: 'correduria.sustitucion-seguimiento', categoria: 'correduria',
+    titulo: 'Seguimiento de sustituciones (cambio de compañía)',
+    que: 'Pólizas retarificadas y emitidas en otra compañía que llevan ≥3 días sin que CIMA confirme que el cliente la paga.',
+    cuando: 'Todos los días a las 06:35, y solo si hay alguna pendiente',
+  },
+  {
     id: 'correduria.recaptacion-lote', categoria: 'correduria',
     titulo: 'Recaptación por email · lote diario',
     que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',
