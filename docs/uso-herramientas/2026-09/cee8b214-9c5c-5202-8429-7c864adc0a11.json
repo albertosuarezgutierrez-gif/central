@@ -1,0 +1,43 @@
+{
+ "sesion": "cee8b214-9c5c-5202-8429-7c864adc0a11",
+ "inicio": "2026-09-20T17:28:05.628Z",
+ "fin": "2026-09-20T17:30:42.758Z",
+ "llamadas": 23,
+ "categorias": {
+  "bash": {
+   "llamadas": 14,
+   "chars_in": 3759,
+   "chars_out": 26892,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 14
+   }
+  },
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 149,
+   "chars_out": 296,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 8,
+   "chars_in": 716,
+   "chars_out": 54141,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__filter_project_envs": 3,
+    "mcp__Vercel__get_project": 2,
+    "mcp__Vercel__get_runtime_logs": 3
+   }
+  }
+ }
+}
