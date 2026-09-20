@@ -21,6 +21,13 @@ comportamiento es idéntico a antes. UI en `auto-nuevo/AutoNuevo.tsx` (dos casil
 🚧 Sin verificar contra el vendor real (nunca se ha pagado una cotización con owner/driver distintos
 del holder) y **no cubre propietario EMPRESA** (persona jurídica, sin `estadoCivil`). 9 tests nuevos.
 
+**(20/09/2026)** `/correduria/cliente/[id]` · Alberto: en «Aportadas desde el portal» no había
+dirección de hogar ni marca/modelo de auto, y el nº de póliza no identifica nada (regla que ya regía
+en `asegura-portal` pero no aquí). `datosRamo` de `portal_poliza_declarada` no se leía en el puerto de
+asegura. Fix: `describirBien()` de `@central/module-seguros-portal` (mismo helper del portal) ahora
+computa el bien también aquí; la tabla lo pinta como línea principal y el nº de póliza baja a
+referencia secundaria.
+
 **(20/09/2026)** Auditoría PROFUNDA semanal. Código/infra sanos (2.947 tests, 13 typechecks, lint,
 qa, build — todo verde). Heartbeat y correduría sin novedad (rojos ya conocidos: `ses_transporte`,
 `seo_correduria` cura sola el 21/09, BBVA/PSD2 pendiente de Alberto desde el 16/09). Pricing sano.
