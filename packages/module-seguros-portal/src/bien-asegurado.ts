@@ -178,6 +178,14 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
     return { cosa: null, ubicacion, detalles, matricula: null }
   }
 
+  // ── RC de mascotas ────────────────────────────────────────────────────────
+  // La raza es el bien: distingue CUÁL animal, el mismo papel que la matrícula
+  // en auto (dos RC-perros de la misma compañía, sin esto, salían idénticas).
+  const raza = campo(d, 'animalRaza')
+  if (raza !== null) {
+    return { cosa: raza, ubicacion: null, detalles, matricula: null }
+  }
+
   // Un ramo sin bien descriptible (vida, decesos, salud…). No es un error: es
   // que no hay una cosa que enseñar, y se dice callando.
   return { cosa: null, ubicacion: null, detalles, matricula: null }

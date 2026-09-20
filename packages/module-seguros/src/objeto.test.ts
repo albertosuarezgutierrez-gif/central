@@ -134,6 +134,48 @@ test('RC con `rcModalidad` pero sin título guardado (dato a medias): no se inve
   assert.equal(o.estado, 'no_informado')
 })
 
+test('RC de mascotas: la raza se añade al detalle sin pisar el título de coberturas', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: ['Básica'],
+    datos: { animalRaza: 'Labrador Retriever' },
+  })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'Básica')
+  assert.equal(o.detalle, 'Labrador Retriever')
+})
+
+test('RC de mascotas: sin coberturas, la raza identifica sola la póliza (como la matrícula en auto)', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: [],
+    datos: { animalRaza: 'Bulldog Francés' },
+  })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'Bulldog Francés')
+  assert.match(o.nota ?? '', /mascotas/i)
+})
+
+test('RC de mascotas: la raza manda sobre la modalidad manual (misma jerarquía que las coberturas de CIMA)', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: [],
+    datos: {
+      animalRaza: 'Pastor Alemán',
+      rcModalidad: 'locativa',
+      rcModalidadTitulo: 'RC Locativa (inmueble alquilado)',
+    },
+  })
+  assert.equal(o.titulo, 'Pastor Alemán')
+})
+
+test('RC sin animal ni coberturas ni modalidad manual: sigue siendo «no informado»', () => {
+  assert.equal(
+    objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: [], datos: {} }).estado,
+    'no_informado',
+  )
+})
+
 test('comercio: manda la actividad', () => {
   const o = objetoAsegurado({ tipo: 'comercio', datos: { actividad: 'Bar-cafetería', localidad: 'DOS HERMANAS' } })
   assert.equal(o.titulo, 'Bar-cafetería')
