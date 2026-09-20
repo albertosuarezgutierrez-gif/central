@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-20T10:45:19Z",
+  "generadoEn": "2026-09-20T15:43:14Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 65
+        "evidencias": 68
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 77
+        "evidencias": 78
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 57
+        "evidencias": 60
       },
       "rrhh": {
         "estado": "no",
@@ -2252,11 +2252,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 19
+        "evidencias": 22
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-web": {
         "estado": "no",
@@ -3914,7 +3914,9 @@
       "module-seguros-pii",
       "module-seguros-portal"
     ],
-    "module-seguros-pii": [],
+    "module-seguros-pii": [
+      "core-identity"
+    ],
     "module-seguros-portal": [
       "core-catastro",
       "core-fiscal",
@@ -4924,6 +4926,7 @@
       "/api/correduria/documentos",
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
+      "/api/correduria/export-rgpd",
       "/api/correduria/impagados",
       "/api/correduria/ingesta",
       "/api/correduria/intervinientes",
@@ -6422,7 +6425,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1390,
+    "apis": 1391,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
