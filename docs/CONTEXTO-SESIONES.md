@@ -12,6 +12,23 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Auditoría integral de Grupo ASegura y su EJECUCIÓN (PR #3182, draft). P0 cerrado:
+las 45 rutas de `/api/correduria/*` no comprobaban quién entraba (`exigirCorreduria()` + allow-list
+`CORREDURIA_EMAILS`, puesta en Vercel — la decisión de Alberto fue «a correduría solo entro yo»);
+renovación vencida que se evaporaba al día siguiente; ingesta CIMA perdiendo objetos en ficheros
+`confirmed` (**46 objetos en 6 ficheros**, no 1 póliza como dije primero); `importeEiac` duplicado con
+el bug de ORCL. P1: código del portal hasheado, tope por identidad en las rutas de IA, secretos en
+tiempo constante, techos declarados en las tres lecturas de cartera, y el export RGPD ya tiene dónde
+atenderse (vive en `asegura` a propósito: hay cepo que prohíbe dárselo al portal).
+🚨 **`vencidasFueraDeVentana` contaba el volcado: 979 medidas, 8 de cartera** (la más antigua vence en
+1900), y el lector de plataforma no leía el campo — arreglar solo el passthrough habría encendido la
+cifra falsa en pantalla. Tapado por casualidad en su hermana: la ventana no alcanza a 2013-2018.
+⏸️ **4 decisiones de Alberto, sin tocar:** `CRON_SECRET` falta en `central-asegura` → los 3 crons dan
+401 a diario y `portal_aviso_enviado` tiene **0 filas** (ningún cliente ha recibido jamás un aviso de
+renovación); la pérdida de CIMA sigue produciéndose y su causa está en el CRM de Manuel; el GRANT de
+`session_jtis`; y RLS (0 de 89 tablas). Índices escritos y SIN aplicar (`2026-09-20_indices_lecturas_cartera.sql`).
+⚠️ Docs desactualizadas por esto: `apps/asegura/CLAUDE.md`, `apps/asegura-portal/CLAUDE.md`, `docs/CIMA-CUARENTENA.md`.
+
 **(20/09/2026)** Recaptación de leads, Fase 2: `colaRecaptacion()` ya no exige `estado='activa'`
 cuando hay `fecha_vencimiento` — entra cualquier estado del volcado con fecha (el 89% `vencida`).
 Pool contactable real sube de 424 a 1.399 clientes. Fase 2b (mismo día, aclaración de Alberto):
