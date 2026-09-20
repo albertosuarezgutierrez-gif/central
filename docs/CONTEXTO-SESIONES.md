@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Fix: «Añadir relación» de la ficha de cliente (`/correduria`) no encontraba
+homónimos con tilde («Alberto Suarez» no daba con «Alberto Suárez Gutiérrez»). `buscarClientes()`
+(`apps/asegura/lib/cartera-ficha.ts`) usaba `ilike` simple sin `unaccent`; se corrigió con el mismo
+patrón SQL (`extensions.unaccent` cualificado + reintento sin él) que ya llevaba `porNombre()` de
+`cartera-busqueda.ts` desde el 13/09. PR #3152, mergeado.
+
 **(20/09/2026)** 🚨 Fix producción: pinchar en CUALQUIER cliente de `/correduria` daba error desde
 el commit 5e67cb5 (#3126) — la ficha selecciona `siniestros.datos_ramo` y la relación
 `siniestro_intervinientes`, y la migración `2026-09-20_siniestro_ramo_intervinientes.sql` se
