@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Recaptación por email: causa del fallo 9/9 de esta mañana =
+`RESEND_API_KEY` de `central-asegura` restringida a `grupoasegura.es` (apex, sin verificar) en vez de
+`envios.grupoasegura.es` (el dominio real del remitente). Clave nueva creada y puesta, y de paso se
+rotó `ASEGURA_OPERADOR_SECRET` (mismo valor en `plataforma`+`central-asegura`, redeploy de las dos).
+**Lote de 25 disparado a mano ese mismo día con OK de Alberto: 25 enviados / 0 fallidos.** Revisar
+mañana `emailAbiertosTotal` en el panel de recaptación de `/correduria`. Detalle en `apps/asegura/CLAUDE.md`.
+
 **(20/09/2026)** Portal del cliente (asegura-portal): nueva sección «Configuración» en
 `/boveda?vista=datos` — el cliente ya puede añadir VARIOS teléfonos/emails, marcar cuál es el
 principal y borrarlos, no solo sustituir el único principal que dejaba «Mis datos». Reutiliza

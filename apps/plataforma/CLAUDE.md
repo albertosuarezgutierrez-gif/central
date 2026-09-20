@@ -103,6 +103,11 @@ vender, no como su herramienta. 🚨 **Todo lo que ella tenga que hacer aparece 
 el email a `limpiezascruzz@gmail.com` y la ficha de `/sivra/mensajes` no los abre (ver
 `sivra_ordenes_limpieza.tarea_id`). Cómo funciona: `…/invitado/limpieza?token=<valor>` → lo canjea `/api/sivra/limpieza-intranet/invitado` (cookie httpOnly `limpieza_invitado`, 180 días) → `lib/limpieza-acceso.ts::accesoLimpieza` valida contra BD (acepta también sesión = preview de Alberto). Ve calendario de reservas de los 4 slugs (`incomes`: ocupación + aforo `adults+children`, **NULL = «no se sabe», no 0**; SIN nombres ni importes), limpiezas (`cleaning_sessions` de los 4 slugs, con `nota_propietario` 📌) y **tareas sueltas** (`limpieza_tareas`; solo puede marcar `hecha`). El CRUD de tareas y el enlace con token viven en la pestaña **«Tareas»** de `/sivra/limpiadoras` (sesión). **Revocar/rotar:** `UPDATE limpieza_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
 
+🚨 **`ASEGURA_OPERADOR_SECRET` ROTADO el 20/09/2026** (junto con la `RESEND_API_KEY` de `central-asegura`,
+ver su CLAUDE.md): mismo valor nuevo en los dos proyectos Vercel (`plataforma` y `central-asegura`), y
+los dos redesplegados en el mismo paso — la lección de `prisma_seguros` del 02/09 (rotar sin actualizar
+el otro lado deja el puente muerto en `secreto_rechazado`).
+
 > **Sobre la "BD unificada" de ia-rest:** la unificación quedó **a medias**. El schema
 > El schema `iarest` de la BD compartida ES la producción de ia-rest (runtime POS, Edge Functions
 > y crons) desde el cierre del 19/08/2026; el proyecto Supabase viejo (`efncqyvhniaxsirhdxaa`)

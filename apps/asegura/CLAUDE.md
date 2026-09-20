@@ -229,6 +229,16 @@ desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del
 proyecto de Vercel de Manuel — **no se piden por mensaje**.
 
+🚨 **`RESEND_API_KEY` restringida por dominio: la clave tiene que apuntar al dominio del REMITENTE,
+no a cualquier dominio de la cuenta (20/09/2026).** El cron de recaptación por email (ver más abajo)
+falló 9/9 con «The associated domain with your API key is not verified»: la clave puesta era una
+restringida a `grupoasegura.es` (el apex, dado de alta el 07/09 y **nunca verificado** — SPF/DKIM en
+`failed`), mientras `ASEGURA_MAIL_FROM` manda desde `envios.grupoasegura.es` (otro dominio, verificado
+desde el 03/09). Arreglado: clave nueva restringida a `envios.grupoasegura.es`, redeploy, lote de 25
+verificado en producción (25 enviados / 0 fallidos). Al crear una API key de Resend restringida a un
+dominio, comprobar SIEMPRE que es el MISMO dominio del `_MAIL_FROM` que la va a usar — dos dominios
+verificados en la cuenta no es lo mismo que la clave apuntando al correcto.
+
 🔑 **`PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY` — las DOS claves de datos personales, copiadas a
 `central-asegura` el 02/09/2026 (a mano por Alberto, desde Vercel `asegura`; nombres confirmados en el
 código del CRM: 92 y 40 usos).** Sin la primera, teléfono/email/DNI/dirección salen «cifrado»; sin la
