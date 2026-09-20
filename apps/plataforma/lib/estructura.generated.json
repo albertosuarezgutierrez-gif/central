@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-20T15:43:14Z",
+  "generadoEn": "2026-09-20T18:22:14Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5033,6 +5033,7 @@
       "/api/internal/alerta",
       "/api/internal/grafo-codigo",
       "/api/internal/grafo-codigo/embeddings",
+      "/api/internal/gsc",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
       "/api/internal/memoria",
@@ -6425,7 +6426,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1391,
+    "apis": 1392,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
