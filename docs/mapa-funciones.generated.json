@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-20T06:10:32Z",
-  "sha": "00545dd6b86065424fc2e0fba61116f46e8ce7ad",
+  "generadoEn": "2026-09-20T08:11:21Z",
+  "sha": "fb99de57dea198c3761313ce540973bcd4f0c71e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12063,7 +12063,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 28,
+          "linea": 38,
           "resumen": "Siniestros desde la ficha, por el puerto de operador (plataforma → asegura). GET ?id=<siniestroId> → { estado:'ok', siniestro } POST { polizaId, tipo, fechaHora, descripcion, lugar*?, seConsideraCulpa"
         },
         {
@@ -12072,7 +12072,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 44
+          "linea": 54
         },
         {
           "nombre": "PATCH",
@@ -12080,7 +12080,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 68
+          "linea": 78
         },
         {
           "nombre": "escribir",
@@ -12088,7 +12088,7 @@
           "exportada": false,
           "params": "req: Request, accion: (correduriaId: string, body: Record<string, unknown>) => Promise<ResultadoSiniestro>",
           "retorno": null,
-          "linea": 84
+          "linea": 95
         },
         {
           "nombre": "cadena",
@@ -12096,12 +12096,58 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 104
+          "linea": 115
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/siniestro",
-      "hash": "1622bd0b767d"
+      "hash": "600d2c49f4f8"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/siniestro/terceros/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "Terceros y testigos de un siniestro, por el puerto de operador. POST { siniestroId, tipo, esConductor?, nombre?, telefono?, matricula?, marcaModelo?, companiaNombre?, numeroPoliza?, actor } → añade un"
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "escribir",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request, accion: (correduriaId: string, body: Record<string, unknown>) => Promise<ResultadoSiniestro>",
+          "retorno": null,
+          "linea": 48
+        },
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 68
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/siniestro/terceros",
+      "hash": "4a2fb1606783"
     },
     {
       "ruta": "apps/asegura/app/api/operador/siniestros-nuevos/route.ts",
@@ -13740,7 +13786,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, numerosPropios: Set<string>,",
           "retorno": "Promise<PolizaDeclaradaFicha[] | null>",
-          "linea": 360,
+          "linea": 384,
           "resumen": "Las pólizas que esta ficha ha APORTADO desde el portal del cliente. El vínculo ficha↔identidad es 1:N por el lado de la identidad (una identidad puede casar con varias fichas — empresa + su administra"
         },
         {
@@ -13749,7 +13795,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<FichaCliente | null>",
-          "linea": 417,
+          "linea": 441,
           "resumen": "La ficha entera de un cliente en UNA consulta: quién es, cómo se le llama, qué tiene contratado, cómo va de recibos y qué siniestros arrastra. Es el corazón del «pincho en el nombre y lo tengo todo». "
         },
         {
@@ -13758,7 +13804,7 @@
           "exportada": false,
           "params": "tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown, coberturas: string[] | null = null",
           "retorno": "ObjetoAsegurado",
-          "linea": 682,
+          "linea": 706,
           "resumen": "El objeto de la póliza; si CIMA no lo informa y la gemela del volcado sí, el de la gemela con una nota que dice de dónde sale. «Cifrado» manda sobre «no informado» (la dirección existe, solo que no se"
         },
         {
@@ -13767,7 +13813,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, idsPolizas: string[],",
           "retorno": "Promise<IntervinienteFicha[] | null>",
-          "linea": 708,
+          "linea": 732,
           "resumen": "Los intervinientes de las pólizas del cliente, ya descifrados. Nombre, teléfono y email del interviniente van cifrados (95 de 95 en las pólizas vivas). Cuando CIMA lo enlaza a su PROPIA ficha (`client"
         },
         {
@@ -13776,7 +13822,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 765,
+          "linea": 789,
           "resumen": "`true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío."
         },
         {
@@ -13785,7 +13831,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, polizaId: string, matricula: string | null, datos: Record<string, unknown> | null, datosGemela: Record<string, unknown> | null,",
           "retorno": "Promise<VehiculoConocido>",
-          "linea": 794,
+          "linea": 818,
           "resumen": "- por eso cada una viaja con su procedencia y NUNCA se elige sola. Si la consulta falla, `versiones` queda `[]` y marca/modelo siguen valiendo: no se tumba la pantalla por no haber podido mirar el his"
         },
         {
@@ -13794,7 +13840,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<OrigenRetarificacion | null>",
-          "linea": 855
+          "linea": 879
         },
         {
           "nombre": "clienteOrigenDe",
@@ -13802,7 +13848,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<ClienteOrigen | null>",
-          "linea": 999,
+          "linea": 1023,
           "resumen": "La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no desde una póliza de la cartera). Misma discipl"
         },
         {
@@ -13811,7 +13857,7 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 1047,
+          "linea": 1071,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
@@ -13819,7 +13865,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "cd4e0848ab61"
+      "hash": "4944a7a5d014"
     },
     {
       "ruta": "apps/asegura/lib/cartera-filtro.ts",
@@ -14565,7 +14611,10 @@
         "leerSiniestro",
         "abrirSiniestro",
         "cambiarEstadoSiniestro",
-        "seguirSiniestro"
+        "seguirSiniestro",
+        "actualizarDatosRamoSiniestro",
+        "anadirTercero",
+        "quitarTercero"
       ],
       "funciones": [
         {
@@ -14574,7 +14623,7 @@
           "exportada": false,
           "params": "d: unknown",
           "retorno": "number | null",
-          "linea": 86
+          "linea": 118
         },
         {
           "nombre": "limpio",
@@ -14582,7 +14631,23 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 92
+          "linea": 124
+        },
+        {
+          "nombre": "datosRamoDeFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, string | number | boolean> | null",
+          "linea": 128
+        },
+        {
+          "nombre": "mapInterviniente",
+          "kind": "function",
+          "exportada": false,
+          "params": "i: FilaInterviniente",
+          "retorno": "SiniestroIntervinienteFicha",
+          "linea": 133
         },
         {
           "nombre": "mapSiniestro",
@@ -14590,7 +14655,7 @@
           "exportada": true,
           "params": "s: FilaSiniestro",
           "retorno": "SiniestroFicha",
-          "linea": 97,
+          "linea": 149,
           "resumen": "Fila de Prisma → `SiniestroFicha`. `null` en reserva/indemnización = no informada, nunca 0."
         },
         {
@@ -14599,7 +14664,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "Fallo",
-          "linea": 132
+          "linea": 186
         },
         {
           "nombre": "noEncontrado",
@@ -14607,7 +14672,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "Fallo",
-          "linea": 133
+          "linea": 187
         },
         {
           "nombre": "anotarHistorial",
@@ -14615,7 +14680,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 135
+          "linea": 189
         },
         {
           "nombre": "leerSiniestro",
@@ -14623,7 +14688,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<SiniestroFicha | null>",
-          "linea": 148,
+          "linea": 202,
           "resumen": "Un siniestro de la correduría, o `null` si no existe en ella."
         },
         {
@@ -14632,7 +14697,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: AperturaSiniestro & { actor: string },",
           "retorno": "Promise<ResultadoSiniestro>",
-          "linea": 155
+          "linea": 209
         },
         {
           "nombre": "cambiarEstadoSiniestro",
@@ -14640,7 +14705,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { siniestroId: string; estado: string; actor: string },",
           "retorno": "Promise<ResultadoSiniestro>",
-          "linea": 206
+          "linea": 260
         },
         {
           "nombre": "seguirSiniestro",
@@ -14648,14 +14713,46 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: SeguimientoSiniestro & { siniestroId: string; actor: string },",
           "retorno": "Promise<ResultadoSiniestro>",
-          "linea": 231
+          "linea": 285
+        },
+        {
+          "nombre": "actualizarDatosRamoSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, entrada: { siniestroId: string; datosRamo: unknown; actor: string },",
+          "retorno": "Promise<ResultadoSiniestro>",
+          "linea": 324
+        },
+        {
+          "nombre": "siniestroPropio",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, siniestroId: string",
+          "retorno": null,
+          "linea": 351
+        },
+        {
+          "nombre": "anadirTercero",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, entrada: IntervinienteEntrada & { siniestroId: string; actor: string },",
+          "retorno": "Promise<ResultadoSiniestro>",
+          "linea": 357
+        },
+        {
+          "nombre": "quitarTercero",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, entrada: { siniestroId: string; intervinienteId: string; actor: string },",
+          "retorno": "Promise<ResultadoSiniestro>",
+          "linea": 389
         }
       ],
       "tablas": [
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "c576d7126b7f"
+      "hash": "555415c99c44"
     },
     {
       "ruta": "apps/asegura/lib/cartera.ts",
@@ -64698,15 +64795,15 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "MotoNuevo",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, }: { clienteId: string etiquetaCliente: string /** `null` = no se ha podido precalificar la persona · `[]` = ",
+          "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, }: { clienteId: string etiquetaCliente: string /** `null` = no se ha podido precalificar la person",
           "retorno": null,
-          "linea": 65
+          "linea": 66
         },
         {
           "nombre": "Campo",
@@ -64714,7 +64811,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 464
+          "linea": 563
         },
         {
           "nombre": "Contador",
@@ -64722,7 +64819,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 477
+          "linea": 576
         },
         {
           "nombre": "Precios",
@@ -64730,14 +64827,14 @@
           "exportada": false,
           "params": "{ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }",
           "retorno": null,
-          "linea": 496
+          "linea": 595
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "b1ede0eceb1d"
+      "hash": "1d0cb1bbca76"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/page.tsx",
@@ -64752,13 +64849,13 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 37,
+          "linea": 38,
           "resumen": "**Presupuesto de moto SIN póliza, DENTRO de `/correduria`.** Hermana de `.../auto-nuevo`, construida el mismo día por el mismo motivo: Alberto no quiere saltar de pantalla para presupuestar una oportu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "43daf71ff872"
+      "hash": "401fc79cbd35"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/page.tsx",
@@ -67796,23 +67893,65 @@
           "exportada": true,
           "params": "{ lista: inicial, polizas, documentos, }: { lista: SiniestroCartera[] | null polizas: PolizaParaSiniestro[] /** Documentos de la ficha/póliza (los del siniestro se filtran por `siniestroId`). `null`/ausente = no consultados. */ documentos?:",
           "retorno": null,
-          "linea": 58
+          "linea": 63
+        },
+        {
+          "nombre": "BloqueRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ siniestroId, ramoPoliza, datosRamo, onGuardar }: { siniestroId: string ramoPoliza: string | null datosRamo: Record<string, string | number | boolean> | null onGuardar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
+          "retorno": null,
+          "linea": 221
+        },
+        {
+          "nombre": "valoresIniciales",
+          "kind": "function",
+          "exportada": false,
+          "params": "campos: readonly CampoRamoSiniestro[], datosRamo: Record<string, string | number | boolean> | null",
+          "retorno": "Record<string, string>",
+          "linea": 269,
+          "resumen": "`datosRamo` (valores tipados) → strings de formulario. `si`/`no` para triestado."
+        },
+        {
+          "nombre": "CampoDelRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ def, valor, onCambiar }: { def: CampoRamoSiniestro; valor: string; onCambiar: (v: string) => void }",
+          "retorno": null,
+          "linea": 280,
+          "resumen": "Un campo del catálogo, pintado según su `tipo`. Mismo criterio que el catálogo de pólizas: sin valor marcado de salida en opción/triestado."
+        },
+        {
+          "nombre": "BloqueTerceros",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ siniestroId, terceros, onAnadir, onQuitar }: { siniestroId: string terceros: TerceroCartera[] | null onAnadir: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> onQuitar: (body: Record<string, unknown>) => Promise<RespuestaSi",
+          "retorno": null,
+          "linea": 313
+        },
+        {
+          "nombre": "FormTercero",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ siniestroId, onAnadir, onHecho }: { siniestroId: string onAnadir: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> onHecho: () => void }",
+          "retorno": null,
+          "linea": 384
         },
         {
           "nombre": "Fila",
           "kind": "function",
           "exportada": false,
-          "params": "{ s, documentos, onAnotar }: { s: SiniestroCartera documentos: DocumentoResumen[] | null onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
+          "params": "{ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza }: { s: SiniestroCartera documentos: DocumentoResumen[] | null onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> onAnadirTercero: (body: Record<s",
           "retorno": null,
-          "linea": 172
+          "linea": 460
         },
         {
           "nombre": "Detalle",
           "kind": "function",
           "exportada": false,
-          "params": "{ s, documentos, onAnotar }: { s: SiniestroCartera documentos: DocumentoResumen[] | null onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
+          "params": "{ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza }: { s: SiniestroCartera documentos: DocumentoResumen[] | null onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> onAnadirTercero: (body: Record<s",
           "retorno": null,
-          "linea": 236
+          "linea": 536
         },
         {
           "nombre": "Seguimiento",
@@ -67820,7 +67959,7 @@
           "exportada": false,
           "params": "{ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
           "retorno": null,
-          "linea": 289
+          "linea": 600
         },
         {
           "nombre": "FormSeguimiento",
@@ -67828,7 +67967,7 @@
           "exportada": false,
           "params": "{ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
           "retorno": null,
-          "linea": 301
+          "linea": 612
         },
         {
           "nombre": "CambioEstado",
@@ -67836,7 +67975,7 @@
           "exportada": false,
           "params": "{ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> }",
           "retorno": null,
-          "linea": 409
+          "linea": 720
         },
         {
           "nombre": "esEstadoConocido",
@@ -67844,7 +67983,7 @@
           "exportada": false,
           "params": "e: string",
           "retorno": "e is EstadoSiniestro",
-          "linea": 444
+          "linea": 755
         },
         {
           "nombre": "FormAbrir",
@@ -67852,7 +67991,7 @@
           "exportada": false,
           "params": "{ polizas, onAbrir, onCancelar }: { polizas: PolizaParaSiniestro[] onAbrir: (body: Record<string, unknown>) => Promise<RespuestaSiniestro> onCancelar: () => void }",
           "retorno": null,
-          "linea": 462
+          "linea": 773
         },
         {
           "nombre": "textoRespuesta",
@@ -67860,7 +67999,7 @@
           "exportada": false,
           "params": "r: Exclude<RespuestaSiniestro, { estado: 'ok' }>",
           "retorno": "string",
-          "linea": 587
+          "linea": 898
         },
         {
           "nombre": "etiquetaGravedad",
@@ -67868,7 +68007,7 @@
           "exportada": false,
           "params": "g: string",
           "retorno": "string",
-          "linea": 596
+          "linea": 907
         },
         {
           "nombre": "nombreCampo",
@@ -67876,7 +68015,7 @@
           "exportada": false,
           "params": "k: string",
           "retorno": "string",
-          "linea": 601
+          "linea": 912
         },
         {
           "nombre": "Celda",
@@ -67884,7 +68023,7 @@
           "exportada": false,
           "params": "{ label, children }: { label: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 607
+          "linea": 918
         },
         {
           "nombre": "Dato",
@@ -67892,7 +68031,7 @@
           "exportada": false,
           "params": "{ label, valor }: { label: string; valor: string | null }",
           "retorno": null,
-          "linea": 616
+          "linea": 927
         },
         {
           "nombre": "Persona",
@@ -67900,7 +68039,7 @@
           "exportada": false,
           "params": "{ label, nombre, telefono, email }: { label: string; nombre: string | null; telefono: string | null; email: string | null }",
           "retorno": null,
-          "linea": 625
+          "linea": 936
         },
         {
           "nombre": "Campo",
@@ -67908,7 +68047,7 @@
           "exportada": false,
           "params": "{ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 636
+          "linea": 947
         },
         {
           "nombre": "cajaMensaje",
@@ -67916,7 +68055,7 @@
           "exportada": false,
           "params": "tono: Mensaje['tono']",
           "retorno": "React.CSSProperties",
-          "linea": 646
+          "linea": 957
         }
       ],
       "tablas": [
@@ -67924,7 +68063,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "2339037af609"
+      "hash": "373a8b4e4ae9"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Supresiones.tsx",
@@ -75663,6 +75802,44 @@
       "tablas": [],
       "rutaApi": "/api/correduria/siniestro",
       "hash": "eaaeb63fd35e"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/siniestro/terceros/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "/api/correduria/siniestro/terceros — terceros y testigos de un siniestro. Reenvía al puerto de asegura (`/api/operador/siniestro/terceros`) con el secreto de operador; mismo contrato que `/api/corredu"
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 20
+        },
+        {
+          "nombre": "reenviar",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest, llamada: (body: Record<string, unknown>) => Promise<{ status: number; json: unknown }>, motivoFalta: string,",
+          "retorno": null,
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/siniestro/terceros",
+      "hash": "8135c71cb392"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/supresiones/route.ts",
@@ -98735,7 +98912,9 @@
         "textoMotivoSiniestro",
         "siniestroAsegura",
         "abrirSiniestroAsegura",
-        "seguirSiniestroAsegura"
+        "seguirSiniestroAsegura",
+        "anadirTerceroAsegura",
+        "quitarTerceroAsegura"
       ],
       "funciones": [
         {
@@ -98744,7 +98923,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 67
+          "linea": 92
         },
         {
           "nombre": "numero",
@@ -98752,8 +98931,34 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 72,
+          "linea": 97,
           "resumen": "Número o `null`. Un `null` del puerto se QUEDA en null: «no informado» no es 0."
+        },
+        {
+          "nombre": "datosRamoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, string | number | boolean> | null",
+          "linea": 102,
+          "resumen": "El `datos_ramo` tal cual, o `null` si no tiene forma de objeto. Nunca `{}`."
+        },
+        {
+          "nombre": "leerTercero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "TerceroCartera | null",
+          "linea": 111
+        },
+        {
+          "nombre": "terceros",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "TerceroCartera[] | null",
+          "linea": 130,
+          "resumen": "`terceros` del puerto → lista, o `null` si no llega o no tiene forma de lista."
         },
         {
           "nombre": "leerSiniestro",
@@ -98761,7 +98966,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "SiniestroCartera | null",
-          "linea": 77,
+          "linea": 136,
           "resumen": "Una fila del puerto → `SiniestroCartera`, o `null` si no tiene forma de siniestro."
         },
         {
@@ -98770,7 +98975,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "SiniestroCartera[] | null",
-          "linea": 115,
+          "linea": 176,
           "resumen": "La lista de siniestros, o `null` si no llega o llega sin forma de lista. Una fila rara se salta (no tumba el bloque); una LISTA que no es lista degrada a `null` entero — jamás a `[]`, que diría «sin s"
         },
         {
@@ -98779,7 +98984,7 @@
           "exportada": true,
           "params": "tipoPoliza: string | null | undefined",
           "retorno": "readonly string[] | null",
-          "linea": 180,
+          "linea": 241,
           "resumen": "Los ramos de `TIPOS_SINIESTRO` a ofrecer para una póliza; `null` = todos. `null` se devuelve en dos casos que son el MISMO «no se sabe de qué es esta póliza»: sin tipo (una póliza que asegura no clasi"
         },
         {
@@ -98788,7 +98993,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaSiniestro",
-          "linea": 201
+          "linea": 262
         },
         {
           "nombre": "textoMotivoSiniestro",
@@ -98796,7 +99001,7 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 218,
+          "linea": 279,
           "resumen": "El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
@@ -98805,7 +99010,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 235
+          "linea": 296
         },
         {
           "nombre": "cabeceras",
@@ -98813,7 +99018,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Record<string, string> | null",
-          "linea": 239
+          "linea": 300
         },
         {
           "nombre": "llamar",
@@ -98821,7 +99026,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit",
           "retorno": "Promise<Reenvio>",
-          "linea": 246
+          "linea": 307
         },
         {
           "nombre": "siniestroAsegura",
@@ -98829,7 +99034,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 263,
+          "linea": 324,
           "resumen": "`GET /api/operador/siniestro?id=` — un siniestro."
         },
         {
@@ -98838,7 +99043,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 268,
+          "linea": 329,
           "resumen": "`POST` — apertura `{polizaId, tipo, fechaHora, descripcion, lugar*?, seConsideraCulpable?, gravedad?, referencia?, actor}`."
         },
         {
@@ -98847,13 +99052,31 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 273,
-          "resumen": "`PATCH` — `{siniestroId, estado, actor}` (cambio de estado) o `{siniestroId, …seguimiento, actor}`."
+          "linea": 334,
+          "resumen": "`PATCH` — `{siniestroId, estado, actor}` · `{siniestroId, …seguimiento, actor}` · `{siniestroId, datosRamo, actor}`."
+        },
+        {
+          "nombre": "anadirTerceroAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 339,
+          "resumen": "`POST` — añade un tercero/testigo `{siniestroId, tipo, nombre?, telefono?, matricula?, …, actor}`."
+        },
+        {
+          "nombre": "quitarTerceroAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 344,
+          "resumen": "`DELETE` — quita un tercero/testigo `{siniestroId, intervinienteId, actor}`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b553a503b7b0"
+      "hash": "d89cad3857da"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/acceso.ts",
@@ -133060,6 +133283,45 @@
       "hash": "0a903aed3cb7"
     },
     {
+      "ruta": "packages/module-seguros/src/siniestro-intervinientes.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Terceros y testigos de un siniestro — el hueco que `central` no tenía y el CRM viejo de Manuel sí (`siniestro_contrarios`/`siniestro_testigos`). Reglas puras, SIN cifrado: el cifrado de nombre/teléfono/matrícula vive en la capa de datos de `apps/asegura` (mismo mecanismo que ya usa `Cliente`), igual",
+      "exporta": [
+        "esTipoInterviniente",
+        "revisarInterviniente"
+      ],
+      "funciones": [
+        {
+          "nombre": "esTipoInterviniente",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is TipoInterviniente",
+          "linea": 20
+        },
+        {
+          "nombre": "limpia",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 54
+        },
+        {
+          "nombre": "revisarInterviniente",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: IntervinienteEntrada,",
+          "retorno": "",
+          "linea": 68,
+          "resumen": "Valida un interviniente antes de cifrarlo y guardarlo. Un `testigo` no lleva datos de vehículo (matrícula/marca/compañía/póliza): si llegan, se DESCARTAN en silencio en vez de rechazar la petición ent"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "be711d8eca81"
+    },
+    {
       "ruta": "packages/module-seguros/src/siniestro-nuevo.ts",
       "ambito": "packages/module-seguros",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Siniestros NUEVOS de la cartera: la regla pura del aviso a Alberto. De dónde sale (dictado de Alberto, 05/09/2026): «Los siniestros, mejor intentar que llamen a la compañía. Nosotros nos enteraremos por CIMA, me avisas y ll",
@@ -133173,6 +133435,55 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b15053cf656d"
+    },
+    {
+      "ruta": "packages/module-seguros/src/siniestro-ramo.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Qué campos PROPIOS pide cada ramo al abrir/editar un SINIESTRO — no la póliza. Hermano de `campos-ramo.ts` de `@central/module-seguros-portal` (mismo contrato: `CampoRamo`, `TipoCampo`, `Readonly<Record<Ramo, readonly CampoRamo[]>>`, `normalizarDatosRamo()`), pero para siniestros: lo que hace falta ",
+      "exporta": [
+        "camposDeRamoSiniestro",
+        "normalizarDatosRamoSiniestro"
+      ],
+      "funciones": [
+        {
+          "nombre": "camposDeRamoSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined",
+          "retorno": "readonly CampoRamoSiniestro[]",
+          "linea": 298,
+          "resumen": "Los campos de un ramo, o lista vacía si el ramo no se reconoce. Nunca lanza."
+        },
+        {
+          "nombre": "esCajon",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 335
+        },
+        {
+          "nombre": "normalizarValor",
+          "kind": "function",
+          "exportada": false,
+          "params": "campo: CampoRamoSiniestro, valor: unknown",
+          "retorno": "string | number | boolean | undefined | 'invalido'",
+          "linea": 342,
+          "resumen": "`undefined` = no se escribe la clave · `'invalido'` = error con nombre del campo."
+        },
+        {
+          "nombre": "normalizarDatosRamoSiniestro",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined, entrada: unknown",
+          "retorno": "ResultadoDatosRamoSiniestro",
+          "linea": 386,
+          "resumen": "Normaliza lo que llega de la pantalla contra el catálogo del ramo. Mismas reglas que `normalizarDatosRamo()` de pólizas — ver su cabecera."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "68540d3f4cdf"
     },
     {
       "ruta": "packages/module-seguros/src/siniestros.ts",
@@ -138481,7 +138792,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3388,
-    "funciones": 10472
+    "archivos": 3392,
+    "funciones": 10502
   }
 }
