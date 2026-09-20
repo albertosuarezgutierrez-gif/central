@@ -38,6 +38,19 @@
   fallos: 1 timeout SSL puntual en el POST de la ventana 2027-06-22/24 aforo 5 (reintentado con
   éxito, sin pérdida de datos por idempotencia); PRs/commits: sin PR — solo escritura en
   `market_rates`/`pricing_escaparate` vía API, este commit solo toca la bitácora.
+
+- **2026-09-20 · mercado-booking** · hizo: pasada completa, 24/24 ventanas de mercado pedidas
+  (`?max=24`, plan_total 524, candidatas 524, recortadas 500 — ronda 0 mes-corto 2027-06/09,
+  ronda 1 evento Karol G 13-jun-2027, rondas 2-3 profundidad, aforos 2/4/5/12), 239 comps
+  `booking_mcp` escritos, 0 ventanas sin respuesta del conector. Paso 2-bis: 3/4 escaparate
+  medidos (Busto Reform, Dúplex center, House Sevillana); Luxury Busto sin disponibilidad en
+  Booking para 2027-09-03/05 (`escaparateSinRespuesta`, hueco real no relleno). House Sevillana
+  salió además como comparable de sí misma en la ventana aforo-12 del 2027-06-19 — descartada del
+  ingest de mercado (9 comps válidos de 10 en esa ventana). Latido `ok:true`. dudas: el plan
+  reporta 82 fechas de evento CONFIRMADO con corpus caducado (>7 días) y 3 meses sin bucket
+  elegible (2026-09, 2027-06, 2027-09) — no se ha medido si el ritmo de 24/día reduce ese
+  backlog; fallos: —; PRs/commits: — (solo bitácora + BD).
+
 - **2026-09-19 · facturas-correo** (2ª pasada del día — otra sesión en paralelo ya había abierto
   #3100 con la primera) · hizo: comprobó PRs abiertos antes de duplicar trabajo (regla global);
   Paso 0 sano (Vía B copió hoy, sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`,
