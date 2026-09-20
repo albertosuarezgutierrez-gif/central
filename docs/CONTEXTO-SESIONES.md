@@ -12,6 +12,20 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** PR #3182 **MERGEADO** (`91cdd3abb`, 21/21 en CI): la auditoría de la correduría está
+en `main`. `/correduria` es ya **fail-closed** — `CORREDURIA_EMAILS` con el correo de Alberto puesta y
+VERIFICADA leyendo la env antes de mergear, porque `prisma_plataforma` no puede leer `seguros.usuarios`.
+Aplicado además contra la BD, fuera del PR: **`GRANT UPDATE (session_jtis)`** (habilita pasar de sesión
+de 12 h a sesión revocable; el código va aparte, y este orden es el seguro) y los **índices de cartera**
+con `CONCURRENTLY` — `polizasSinRecibo()`, que corre en cada carga de la cola de retención, baja de
+**870 ms a 0,58 ms** (`Seq Scan` descartando 28.725 filas → `Index Scan`). 🚨 Uno de los cuatro índices
+**se retiró tras medirlo**: con los dos creados el planificador eligió el otro, se borró y el EXPLAIN dio
+plan idéntico. Es la regla del propio fichero aplicada a sí mismo — un índice que el plan no usa solo
+paga escrituras. ⏸️ **Sin tocar y sigue siendo de Alberto:** RLS (89 tablas, 0 políticas — en bloque con
+BYPASSRLS no daría error, VACIARÍA el portal en silencio) y las 2 pólizas de CIMA que purgan el 17/10
+(`C0468_8-92361_POL`, `C0072_65792_POL`): el arreglo hacia delante ya existe en el CRM (LOO-826), pero
+esas dos solo se recuperan pidiendo el reenvío a Occident y Generali. Borradores escritos, **no enviados**.
+
 **(20/09/2026)** Auditoría integral de Grupo ASegura y su EJECUCIÓN (PR #3182, draft). P0 cerrado:
 las 45 rutas de `/api/correduria/*` no comprobaban quién entraba (`exigirCorreduria()` + allow-list
 `CORREDURIA_EMAILS`, puesta en Vercel — la decisión de Alberto fue «a correduría solo entro yo»);
