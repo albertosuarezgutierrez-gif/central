@@ -27,9 +27,14 @@ test('Fase 2: un lead CON vencimiento entra en cualquier estado, no solo activa'
   assert.match(FUENTE, /fecha_vencimiento is not null/)
 })
 
-test('Fase 2: el origen y el mes viajan en el SELECT, no se adivinan después', () => {
+test('Fase 2: el origen, el mes y el día viajan en el SELECT, no se adivinan después', () => {
   assert.match(FUENTE, /vencimiento_antiguo/)
   assert.match(FUENTE, /extract\(month from p\.fecha_vencimiento\)/i)
+  assert.match(FUENTE, /extract\(day from p\.fecha_vencimiento\)/i)
+})
+
+test('Fase 2: un vencimiento_antiguo se filtra por la ventana de 45 días, sin_vencimiento no', () => {
+  assert.match(FUENTE, /dentroVentanaAntiguo/)
 })
 
 test('el opt-out de WhatsApp y de email se respetan cada uno por su canal', () => {

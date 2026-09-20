@@ -101,14 +101,17 @@ export default function Recaptacion({ onContador }: {
   const visibles = filtrados.slice(0, ver)
   const hayTrabajo = filtrados.length > 0
   const conVencimientoAntiguo = cola.leads.filter((l) => l.origen === 'vencimiento_antiguo').length
+  const enEspera = cola.contadores.enEsperaVentana
 
   return (
     <Bloque
       titulo={`Recaptación · ${cola.contadores.totalCandidatos} lead(s) recaptables`}
       Icono={Target}
       sub={
-        conVencimientoAntiguo > 0
-          ? `Leads del volcado histórico con contacto que hoy NO son cliente vivo por CIMA en ningún ramo — ${cola.contadores.totalCandidatos - conVencimientoAntiguo} sin fecha de vencimiento y ${conVencimientoAntiguo} con vencimiento antiguo (años atrás; el mes es la pista de cuándo solía renovar). Agrupados por cliente: puede haber tenido varios seguros, el contacto es uno solo.`
+        conVencimientoAntiguo > 0 || enEspera > 0
+          ? `Leads del volcado histórico con contacto que hoy NO son cliente vivo por CIMA en ningún ramo — ${cola.contadores.totalCandidatos - conVencimientoAntiguo} sin fecha de vencimiento (ya se pueden captar) y ${conVencimientoAntiguo} con vencimiento antiguo dentro de su ventana de 45 días (años atrás; el mes/día es la pista de cuándo solía renovar).`
+            + (enEspera > 0 ? ` Hay ${enEspera} más con vencimiento antiguo esperando a que se acerque su fecha — no han desaparecido, saldrán solos cuando toque.` : '')
+            + ' Agrupados por cliente: puede haber tenido varios seguros, el contacto es uno solo.'
           : 'Leads del volcado histórico, sin fecha de vencimiento y con contacto, que hoy NO son cliente vivo por CIMA en ningún ramo. Agrupados por cliente: puede haber tenido varios seguros, el contacto es uno solo.'
       }
       accion={
@@ -256,10 +259,19 @@ function ramosTexto(g: GrupoLeadRecaptacion): string {
 const PLUG_PORTAL =
   'Por cierto: ahora tenemos una intranet gratuita en grupoasegura.es donde puedes controlar todos tus seguros, aunque no estés con nosotros. Si más adelante te toca renovar, ahí verás la fecha para que no se te pase. Y si tienes un siniestro, lo abres directamente desde ahí, sin papeleo — funciona en el navegador del móvil, no hace falta instalar nada.'
 
+// Sin email en la ficha, la intranet no se le puede ofrecer todavía: el
+// alta es por correo (código de un solo uso), y esta app no lo tiene para
+// dárselo de alta. Se pide por WhatsApp — que es donde SÍ hay contacto — en
+// vez de dejarlo caer en el aire (Alberto, 20/09/2026: "pidiéndole
+// confirmando mail para darle acceso a la intranet").
+const PLUG_PORTAL_PIDE_EMAIL =
+  'Por cierto: ahora tenemos una intranet gratuita en grupoasegura.es donde puedes controlar todos tus seguros, aunque no estés con nosotros (fechas de renovación, siniestros sin papeleo). Si me pasas tu email por aquí te doy de alta gratis.'
+
 function mensajeSugerido(g: GrupoLeadRecaptacion): string {
   const primera = g.polizas[0]
   const conQuien = primera.aseguradoraAnterior ? ` que tuviste con ${primera.aseguradoraAnterior}` : ''
-  return `Hola ${g.cliente.split(' ')[0]}, ¿sigues con tu seguro de ${ramosTexto(g)}${conQuien}? Si quieres te paso un precio actualizado sin compromiso.\n\n${PLUG_PORTAL}`
+  const plug = g.email === null ? PLUG_PORTAL_PIDE_EMAIL : PLUG_PORTAL
+  return `Hola ${g.cliente.split(' ')[0]}, ¿sigues con tu seguro de ${ramosTexto(g)}${conQuien}? Si quieres te paso un precio actualizado sin compromiso.\n\n${plug}`
 }
 
 function textoEscritura(r: EscrituraRecaptacion): string {

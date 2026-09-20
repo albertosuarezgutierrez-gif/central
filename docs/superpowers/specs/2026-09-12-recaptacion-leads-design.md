@@ -135,3 +135,27 @@ canal de contacto disponible y sin cartera viva, el pool CONTACTABLE de verdad s
   (hoy `candidatosLoteEmail` sigue en orden alfabético, agnóstico del origen) — con ~1.000 candidatos
   solo-email y 25/día, el propio volumen ya reparte el trabajo en varios meses sin necesidad de esa
   lógica adicional. Revisar si hace falta cuando se vea el ritmo real de contactados/semana.
+
+## Fase 2b — ventana de contacto por aniversario (20/09/2026, mismo día)
+
+Alberto, aclarando la Fase 2: "los que tienen vencimiento aunque hace años, coger mes y día para ir
+mandando WhatsApp mes y medio antes; el resto podemos ir captando ya". Escribir a alguien sobre un
+seguro que renovaba en enero cuando estamos en julio no tiene motivo real detrás — el mes/día solo es
+una pista ACCIONABLE cerca de la fecha.
+
+- `apps/asegura/lib/recaptacion-ventana.ts` (puro, sin BD): `proximoAniversario(mes, dia, hoy)` calcula
+  la próxima fecha real (rueda al año siguiente si ya pasó este año; un 29 de febrero en año no
+  bisiesto se ajusta al 28) y `dentroVentanaAntiguo(...)` decide si hoy cae dentro de los
+  **45 días** previos (`VENTANA_DIAS_ANTIGUO`).
+- `colaRecaptacion()` filtra los `vencimiento_antiguo` por esa ventana ANTES de devolver la cola —
+  `sin_vencimiento` nunca pasa por este filtro (no tiene fecha a la que anclar nada, sigue siempre
+  contactable, que es justo el "el resto ya" de Alberto).
+- Un lead fuera de ventana NO desaparece de la BD ni se pierde: se cuenta aparte
+  (`contadores.enEsperaVentana`) para que la pantalla pueda decir "hay N más esperando su fecha" en
+  vez de dar la sensación de que la cartera se ha quedado corta.
+- **El día también viaja** (`diaVencimientoAntiguo`), aunque la pantalla solo pinte el mes — hace
+  falta para calcular la ventana con precisión (no basta "algún día de ese mes").
+- **Pedir email para dar acceso a la intranet** (mismo mensaje de Alberto): el WhatsApp sugerido
+  (`Recaptacion.tsx`) cambia su remate cuando el lead NO tiene email en ficha — en vez del texto
+  genérico del portal, pide explícitamente que respondan con su correo para darlos de alta. Con email
+  ya en ficha no se pide nada (ya se le puede invitar desde su ficha, botón "Invitar por correo").

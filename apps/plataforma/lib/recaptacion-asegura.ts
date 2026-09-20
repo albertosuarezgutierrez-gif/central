@@ -68,6 +68,11 @@ export type ContadoresRecaptacion = {
   /** Acumulado total de emails (no solo la semana). `null` = no se pudo leer. */
   emailEnviadosTotal: number | null
   emailAbiertosTotal: number | null
+  /** Leads `vencimiento_antiguo` cuya ventana de 45 días aún no se ha abierto:
+   *  existen, pero `totalCandidatos` no los cuenta a propósito. `0` si el
+   *  puerto es viejo y no lo manda — no se puede distinguir de "ninguno en
+   *  espera", pero tampoco se inventa un número mayor. */
+  enEsperaVentana: number
 }
 
 /**
@@ -114,6 +119,7 @@ function leerContadores(v: unknown): ContadoresRecaptacion {
     conAperturaORespuestaSemana: entero(o.conAperturaORespuestaSemana) ?? 0,
     emailEnviadosTotal: entero(o.emailEnviadosTotal),
     emailAbiertosTotal: entero(o.emailAbiertosTotal),
+    enEsperaVentana: entero(o.enEsperaVentana) ?? 0,
   }
 }
 
