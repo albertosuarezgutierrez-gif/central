@@ -50,6 +50,7 @@ export {
 export {
   objetoAsegurado,
   pareceMatricula,
+  formatCapitales,
   type ObjetoAsegurado,
   type EstadoObjeto,
   type EntradaObjeto,

@@ -47,6 +47,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { textoConDato } from './poliza-leida.ts'
+import { formatCapitales } from '@central/module-seguros'
 
 /** La cosa asegurada, ya legible y ya troceada por quién puede ver cada parte. */
 export interface BienAsegurado {
@@ -160,6 +161,11 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   // Un año de cuatro cifras o no es un año. Sin esto, un `1` de una columna mal
   // migrada saldría como «Construido en 1».
   if (anio !== null && anio >= 1000 && anio <= 2999) detalles.push(`Construido en ${anio}`)
+  // Desglose de `Riesgo.Capitales.Capital[]` (Continente, Contenido, Joyas…):
+  // MISMA función que `/correduria` (`formatCapitales` de `@central/module-seguros`,
+  // ya dependencia de este paquete) — una sola lógica de parseo/formato, no dos
+  // copias que puedan divergir (p.ej. en si aceptan coma decimal).
+  detalles.push(...(formatCapitales(d) ?? []))
 
   // ── Vehículo ──────────────────────────────────────────────────────────────
   if (RAMOS_VEHICULO.has(r) || campo(d, 'matricula') !== null) {
