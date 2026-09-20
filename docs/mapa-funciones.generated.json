@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-20T08:11:21Z",
-  "sha": "fb99de57dea198c3761313ce540973bcd4f0c71e",
+  "generadoEn": "2026-09-20T08:40:13Z",
+  "sha": "080af9529679036840a83062970c0fc5d7c94e78",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10819,6 +10819,30 @@
       "hash": "08572d506fe3"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/faltan-producto/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "GET /api/operador/codeoscopic/faltan-producto — telemetría (20/09/2026) de cuántas veces el ReRate ha rechazado por un hueco de `product.options` (el caso que resuelve el Product Form Library, ver `of"
+        }
+      ],
+      "tablas": [
+        "next",
+        "operational_events"
+      ],
+      "rutaApi": "/api/operador/codeoscopic/faltan-producto",
+      "hash": "ebd518ec54c4"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/hogar-nuevo/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -10910,7 +10934,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 55,
+          "linea": 57,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate) el precio que ya se enseñó en pantalla desde una cotización REAL de `seguros.tarificaciones`. 🚨 **Construida el 11/09/2026,"
         },
         {
@@ -10919,7 +10943,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 441
+          "linea": 444
         },
         {
           "nombre": "leerCorrecciones",
@@ -10927,7 +10951,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 451,
+          "linea": 454,
           "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
         },
         {
@@ -10936,7 +10960,7 @@
           "exportada": false,
           "params": "campo: CampoPersona, s: string",
           "retorno": "string | null",
-          "linea": 470
+          "linea": 473
         },
         {
           "nombre": "respuestaSigueFaltando",
@@ -10944,7 +10968,16 @@
           "exportada": false,
           "params": "campos: CampoPersona[], mensajeVendor: string",
           "retorno": null,
-          "linea": 488
+          "linea": 491
+        },
+        {
+          "nombre": "registrarFaltaProducto",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, tarificacionId: string, campos: CampoProducto[]",
+          "retorno": null,
+          "linea": 519,
+          "resumen": "Telemetría de `faltan_producto` por COMPAÑÍA (20/09/2026): saber a qué compañías les falta cobertura del Product Form Library, no solo que «alguna vez pasa». Reutiliza `seguros.operational_events` (ge"
         },
         {
           "nombre": "respuestaNoAplicado",
@@ -10952,18 +10985,20 @@
           "exportada": false,
           "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
           "retorno": null,
-          "linea": 503
+          "linea": 537
         }
       ],
       "tablas": [
         "codeoscopic_projects",
         "next",
+        "node",
+        "operational_events",
         "polizas",
         "set",
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "5746a49f17f0"
+      "hash": "e8d78045cb2f"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -64254,7 +64289,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 26
+          "linea": 28
         },
         {
           "nombre": "personaCompleta",
@@ -64262,7 +64297,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "boolean",
-          "linea": 64,
+          "linea": 66,
           "resumen": "¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor."
         },
         {
@@ -64271,7 +64306,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "Record<string, unknown>",
-          "linea": 78,
+          "linea": 80,
           "resumen": "La forma que espera `DatosAuto.propietario`/`conductor` en el puerto de asegura."
         },
         {
@@ -64280,7 +64315,7 @@
           "exportada": true,
           "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, consumo, simulacion, companias, }: { clienteId: string etiquetaCliente: string /** `null` = no se ha podido precalificar la person",
           "retorno": null,
-          "linea": 110
+          "linea": 112
         },
         {
           "nombre": "BloquePersona",
@@ -64288,7 +64323,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onActivo, persona, onPersona, civiles, conCarnet, }: { etiqueta: string activo: boolean onActivo: (v: boolean) => void persona: PersonaForm onPersona: (p: PersonaForm) => void civiles: Opcion[] conCarnet: boolean }",
           "retorno": null,
-          "linea": 614,
+          "linea": 622,
           "resumen": "El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador."
         },
         {
@@ -64297,7 +64332,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 684
+          "linea": 692
         },
         {
           "nombre": "Contador",
@@ -64305,7 +64340,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 697
+          "linea": 705
         },
         {
           "nombre": "Precios",
@@ -64313,14 +64348,14 @@
           "exportada": false,
           "params": "{ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }",
           "retorno": null,
-          "linea": 716
+          "linea": 724
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "28b33c96e9b7"
+      "hash": "2fcd5d69364d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/page.tsx",
@@ -64795,7 +64830,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 23
+          "linea": 24
         },
         {
           "nombre": "MotoNuevo",
@@ -64803,7 +64838,7 @@
           "exportada": true,
           "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, }: { clienteId: string etiquetaCliente: string /** `null` = no se ha podido precalificar la person",
           "retorno": null,
-          "linea": 66
+          "linea": 67
         },
         {
           "nombre": "Campo",
@@ -64811,7 +64846,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 563
+          "linea": 570
         },
         {
           "nombre": "Contador",
@@ -64819,7 +64854,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 576
+          "linea": 583
         },
         {
           "nombre": "Precios",
@@ -64827,14 +64862,14 @@
           "exportada": false,
           "params": "{ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }",
           "retorno": null,
-          "linea": 595
+          "linea": 602
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "1d0cb1bbca76"
+      "hash": "cc2d2c575da1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/page.tsx",
@@ -96528,6 +96563,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "752bb92b0575"
+    },
+    {
+      "ruta": "apps/plataforma/lib/poliza-digitos-sospechosos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Detector PURO, sin BD, de un patrón que ya se avisaba solo en texto de ayuda: algunas compañías (Mapfre sobre todo) rellenan los últimos dígitos de la póliza con ceros a propósito para que un competidor no pueda pedir el control de antecedentes con ese número. El aviso estático ya existía en AutoNue",
+      "exporta": [
+        "digitosPolizaSospechosos"
+      ],
+      "funciones": [
+        {
+          "nombre": "digitosPolizaSospechosos",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string",
+          "retorno": "boolean",
+          "linea": 9,
+          "resumen": "≥3 ceros seguidos en los dígitos tecleados: el patrón real de relleno."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e0ec704af73e"
     },
     {
       "ruta": "apps/plataforma/lib/poliza-edicion-asegura.ts",
@@ -138792,7 +138849,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3392,
-    "funciones": 10502
+    "archivos": 3394,
+    "funciones": 10505
   }
 }
