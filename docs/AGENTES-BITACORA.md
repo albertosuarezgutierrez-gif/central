@@ -24,6 +24,20 @@
   (`claude/buscador-ia-2026-09-14`).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-20 · mercado-booking** · hizo: pasada completa, 24/24 ventanas de mercado pedidas
+  (`?max=24`, plan_total 524, candidatas 524, recortadas 500 — evento KAROL G 13-jun-2027 aforo 12
+  + ronda 0 mes-corto y rondas 2/3 profundidad, jun/sep-2027, aforos 2/4/5/12), 240 comps
+  `booking_mcp` escritos, 0 ventanas sin respuesta. Paso 2-bis: 3/4 escaparate medidos (Busto
+  Reform, Dúplex center, House Sevillana — los 3 detectados y filtrados por el endpoint como
+  `propios`); Luxury Busto sin disponibilidad en Booking para 03-05/09/2027
+  (`escaparateSinRespuesta`, hueco real no relleno, mismo piso que ya falló el 19/09). House
+  Sevillana salió además como comparable de sí misma en la ventana aforo-12 del 19-21/06/2027 —
+  descartada del corpus (9/10 comps escritos, ver «No romper»). Avisos del plan arrastrados: 3
+  meses sin bucket elegible (2026-09, 2027-06, 2027-09) y 82 fechas de evento confirmado con
+  corpus caducado (>7d) que el motor está tarificando por canal, no por mercado medido; dudas: —;
+  fallos: 1 timeout SSL puntual en el POST de la ventana 2027-06-22/24 aforo 5 (reintentado con
+  éxito, sin pérdida de datos por idempotencia); PRs/commits: sin PR — solo escritura en
+  `market_rates`/`pricing_escaparate` vía API, este commit solo toca la bitácora.
 - **2026-09-19 · facturas-correo** (2ª pasada del día — otra sesión en paralelo ya había abierto
   #3100 con la primera) · hizo: comprobó PRs abiertos antes de duplicar trabajo (regla global);
   Paso 0 sano (Vía B copió hoy, sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`,
