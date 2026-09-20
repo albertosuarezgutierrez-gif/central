@@ -160,6 +160,20 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   // Un año de cuatro cifras o no es un año. Sin esto, un `1` de una columna mal
   // migrada saldría como «Construido en 1».
   if (anio !== null && anio >= 1000 && anio <= 2999) detalles.push(`Construido en ${anio}`)
+  // Desglose de `Riesgo.Capitales.Capital[]` (Continente, Contenido, Joyas…):
+  // mismo dato que `capitalAsegurado` de `@central/module-seguros`, formateado
+  // igual (formato de dinero español, regla global).
+  for (const capital of Array.isArray(d.capitales) ? d.capitales : []) {
+    if (capital === null || typeof capital !== 'object') continue
+    const o = capital as Record<string, unknown>
+    const etiqueta = campo(o, 'bien') ?? campo(o, 'descripcion')
+    const importeNum = typeof o.importe === 'number' ? o.importe : Number(campo(o, 'importe'))
+    const importe = Number.isFinite(importeNum) && importeNum > 0
+      ? `${importeNum.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`
+      : null
+    const linea = etiqueta !== null && importe !== null ? `${etiqueta}: ${importe}` : (etiqueta ?? importe)
+    if (linea !== null) detalles.push(linea)
+  }
 
   // ── Vehículo ──────────────────────────────────────────────────────────────
   if (RAMOS_VEHICULO.has(r) || campo(d, 'matricula') !== null) {

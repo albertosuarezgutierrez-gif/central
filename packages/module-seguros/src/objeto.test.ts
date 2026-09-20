@@ -182,6 +182,56 @@ test('comercio: manda la actividad', () => {
   assert.equal(o.detalle, 'DOS HERMANAS')
 })
 
+// ── Capital asegurado por partida (Riesgo.Capitales.Capital[]) ─────────────
+
+test('hogar: el capital por partida se desglosa con importe en formato español', () => {
+  const o = objetoAsegurado({
+    tipo: 'hogar',
+    datos: {
+      direccion: 'Calle Falsa 1',
+      capitales: [
+        { bien: 'Continente', importe: 150000 },
+        { bien: 'Contenido', importe: 30000.5 },
+      ],
+    },
+  })
+  assert.deepEqual(o.capitalAsegurado, ['Continente: 150.000,00 €', 'Contenido: 30.000,50 €'])
+})
+
+test('sin partida con dato real, capitalAsegurado es null (no un array vacío pintado)', () => {
+  const o = objetoAsegurado({ tipo: 'hogar', datos: { direccion: 'Calle Falsa 1', capitales: [] } })
+  assert.equal(o.capitalAsegurado, undefined)
+  const o2 = objetoAsegurado({
+    tipo: 'hogar',
+    datos: { direccion: 'Calle Falsa 1', capitales: [{ modalidadValoracion: 'RV' }] },
+  })
+  assert.equal(o2.capitalAsegurado, undefined)
+})
+
+test('capitalAsegurado nunca se pinta si el estado no es «conocido» (no hay bien que acompañar)', () => {
+  const o = objetoAsegurado({ tipo: 'hogar', datos: { capitales: [{ bien: 'Continente', importe: 150000 }] } })
+  assert.equal(o.estado, 'no_informado')
+  assert.equal(o.capitalAsegurado, undefined)
+})
+
+test('una partida sin importe pero con descripción se pinta solo con el texto', () => {
+  const o = objetoAsegurado({
+    tipo: 'hogar',
+    datos: { direccion: 'Calle Falsa 1', capitales: [{ descripcion: 'Joyas y objetos de valor' }] },
+  })
+  assert.deepEqual(o.capitalAsegurado, ['Joyas y objetos de valor'])
+})
+
+test('RC de mascotas: el capital (p.ej. gastos veterinarios) también se desglosa', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: [],
+    datos: { animalRaza: 'Labrador Retriever', capitales: [{ bien: 'Gastos veterinarios', importe: 3000 }] },
+  })
+  assert.equal(o.titulo, 'Labrador Retriever')
+  assert.deepEqual(o.capitalAsegurado, ['Gastos veterinarios: 3.000,00 €'])
+})
+
 // ── Seguros de personas ─────────────────────────────────────────────────────
 
 test('vida/salud/decesos: ausencia DEFINITIVA, no «pendiente»', () => {

@@ -43,6 +43,14 @@ export type ObjetoAsegurado = {
    * detrás de un clic, sin tener que volver a parsear `titulo`.
    */
   coberturas?: string[] | null
+  /**
+   * Desglose del capital asegurado por partida (p.ej. «Continente: 150.000,00 €»,
+   * «Contenido: 30.000,00 €») cuando la compañía lo informa así
+   * (`Riesgo.Capitales.Capital[]` del EIAC, distinto del `CapitalAsegurado` de
+   * una cobertura concreta). `null`/ausente si el ramo no trae esta lista o si
+   * el estado no es `conocido` (no se enseña un desglose sin bien identificado).
+   */
+  capitalAsegurado?: string[] | null
 }
 
 /** Prefijo del cifrado del CRM de origen (AES-256-GCM, `v1:iv:cipher:tag`). */
@@ -109,15 +117,53 @@ export type EntradaObjeto = {
   coberturas?: Array<string | null | undefined> | null
 }
 
+/**
+ * El desglose de `Riesgo.Capitales.Capital[]` del EIAC (hogar/comercio/
+ * comunidades/RC), ya formateado en líneas listas para pintar. NO es el mismo
+ * dato que `Cobertura.CapitalAsegurado` (que ya usa `casos.ts` de Codeoscopic
+ * vía `poliza_coberturas`): este es el desglose POR PARTIDA del bien, y viene
+ * en un bloque EIAC distinto. `null` si no hay partidas con dato real.
+ */
+function formatCapitales(d: Record<string, unknown>): string[] | null {
+  const raw = d.capitales
+  if (!Array.isArray(raw)) return null
+  const out: string[] = []
+  for (const item of raw) {
+    if (item === null || typeof item !== 'object') continue
+    const o = item as Record<string, unknown>
+    const etiqueta = claro(o.bien) ?? claro(o.descripcion)
+    const importe = numero(o.importe)
+    // Formato de dinero español (regla global): miles con punto SIEMPRE
+    // (`useGrouping: 'always'`, si no Node no agrupa por debajo de 5 cifras),
+    // decimales con coma, € detrás.
+    const importeTxt = importe !== null
+      ? `${importe.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`
+      : null
+    const linea = etiqueta !== null && importeTxt !== null ? `${etiqueta}: ${importeTxt}` : (etiqueta ?? importeTxt)
+    if (linea !== null) out.push(linea)
+  }
+  return out.length > 0 ? out : null
+}
+
 export function objetoAsegurado(entrada: EntradaObjeto): ObjetoAsegurado {
   const tipo = (entrada.tipo || '').toLowerCase()
   const d = entrada.datos && typeof entrada.datos === 'object' ? entrada.datos : {}
+  const resultado = calcularObjeto(tipo, d, entrada.coberturas)
+  if (resultado.estado !== 'conocido') return resultado
+  const capitalAsegurado = formatCapitales(d)
+  return capitalAsegurado === null ? resultado : { ...resultado, capitalAsegurado }
+}
 
+function calcularObjeto(
+  tipo: string,
+  d: Record<string, unknown>,
+  coberturas: EntradaObjeto['coberturas'],
+): ObjetoAsegurado {
   if (tipo === 'auto' || tipo === 'moto') return objetoVehiculo(d)
   // `comunidades` es el valor del enum `tipo_seguro` de la BD; `comunidad` el del portal.
   if (tipo === 'hogar' || tipo === 'comunidad' || tipo === 'comunidades') return objetoInmueble(d, tipo)
-  if (tipo === 'comercio') return objetoComercio(d, entrada.coberturas)
-  if (tipo === 'responsabilidad_civil') return objetoResponsabilidadCivil(d, entrada.coberturas)
+  if (tipo === 'comercio') return objetoComercio(d, coberturas)
+  if (tipo === 'responsabilidad_civil') return objetoResponsabilidadCivil(d, coberturas)
   if (RAMOS_DE_PERSONAS.has(tipo)) {
     return {
       estado: 'sin_objeto',
@@ -126,7 +172,7 @@ export function objetoAsegurado(entrada: EntradaObjeto): ObjetoAsegurado {
       nota: 'Es un seguro de personas: no hay bien asegurado que listar.',
     }
   }
-  return objetoGenerico(d, entrada.coberturas)
+  return objetoGenerico(d, coberturas)
 }
 
 function objetoVehiculo(d: Record<string, unknown>): ObjetoAsegurado {
