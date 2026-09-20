@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-20T08:43:11Z",
-  "sha": "c8a854fc5ea2ed4550a5f9eae357501fe77cdbd4",
+  "generadoEn": "2026-09-20T09:32:54Z",
+  "sha": "b9f6b976563ad99141168487d995ed1d43fb2e35",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3740,7 +3740,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 70
+          "linea": 68
         },
         {
           "nombre": "Titular",
@@ -3748,7 +3748,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date }",
           "retorno": null,
-          "linea": 619,
+          "linea": 585,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -3757,7 +3757,7 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], titular?: string",
           "retorno": "PolizaOpcionParte",
-          "linea": 668,
+          "linea": 634,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
@@ -3765,7 +3765,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "7fc56f2e1a9d"
+      "hash": "19827b94d919"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -4174,27 +4174,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "eb98aa65b482"
-    },
-    {
-      "ruta": "apps/asegura-portal/app/(portal)/boveda/Solapamientos.tsx",
-      "ambito": "apps/asegura-portal",
-      "exporta": [
-        "Solapamientos"
-      ],
-      "funciones": [
-        {
-          "nombre": "Solapamientos",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ solapamientos, declaradas, }: { solapamientos: readonly Solapamiento[] /** * Ids de las pólizas DECLARADAS (las que el cliente subió, de otra * compañía): su ficha vive en `/boveda/anadida/…`, no en `/boveda/poliza/…`. * Un enlace a la ru",
-          "retorno": null,
-          "linea": 19,
-          "resumen": "«Esta cobertura está en dos de tus pólizas». Componente de servidor: solo pinta lo que `detectarSolapamientos()` ya decidió. 🚨 Informa, no juzga. El texto dice QUÉ cobertura aparece en QUÉ pólizas (c"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "2368bd5b31a7"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx",
@@ -13778,7 +13757,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 106,
+          "linea": 107,
           "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa. Los valores cifrados llevan el prefijo `v1:`. Si no lo llevan, es que están en claro (así llegaron algunos del volcado) y se devuelven tal c"
         },
         {
@@ -13787,7 +13766,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 117,
+          "linea": 118,
           "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null."
         },
         {
@@ -13796,7 +13775,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 121
+          "linea": 122
         },
         {
           "nombre": "fechaIso",
@@ -13804,7 +13783,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 125
+          "linea": 126
         },
         {
           "nombre": "buscarClientes",
@@ -13812,7 +13791,7 @@
           "exportada": true,
           "params": "correduriaId: string, termino: string, limite = 20,",
           "retorno": "Promise<ClienteEncontrado[]>",
-          "linea": 135,
+          "linea": 149,
           "resumen": "Busca clientes por nombre o apellidos. Nombre y apellidos van EN CLARO en la base, así que esta búsqueda no depende del índice ciego — que es justo lo que la hace fiable: si fallara la clave de lookup"
         },
         {
@@ -13821,7 +13800,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, numerosPropios: Set<string>,",
           "retorno": "Promise<PolizaDeclaradaFicha[] | null>",
-          "linea": 384,
+          "linea": 411,
           "resumen": "Las pólizas que esta ficha ha APORTADO desde el portal del cliente. El vínculo ficha↔identidad es 1:N por el lado de la identidad (una identidad puede casar con varias fichas — empresa + su administra"
         },
         {
@@ -13830,7 +13809,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<FichaCliente | null>",
-          "linea": 441,
+          "linea": 468,
           "resumen": "La ficha entera de un cliente en UNA consulta: quién es, cómo se le llama, qué tiene contratado, cómo va de recibos y qué siniestros arrastra. Es el corazón del «pincho en el nombre y lo tengo todo». "
         },
         {
@@ -13839,7 +13818,7 @@
           "exportada": false,
           "params": "tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown, coberturas: string[] | null = null",
           "retorno": "ObjetoAsegurado",
-          "linea": 706,
+          "linea": 733,
           "resumen": "El objeto de la póliza; si CIMA no lo informa y la gemela del volcado sí, el de la gemela con una nota que dice de dónde sale. «Cifrado» manda sobre «no informado» (la dirección existe, solo que no se"
         },
         {
@@ -13848,7 +13827,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, idsPolizas: string[],",
           "retorno": "Promise<IntervinienteFicha[] | null>",
-          "linea": 732,
+          "linea": 759,
           "resumen": "Los intervinientes de las pólizas del cliente, ya descifrados. Nombre, teléfono y email del interviniente van cifrados (95 de 95 en las pólizas vivas). Cuando CIMA lo enlaza a su PROPIA ficha (`client"
         },
         {
@@ -13857,7 +13836,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 789,
+          "linea": 816,
           "resumen": "`true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío."
         },
         {
@@ -13866,7 +13845,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, polizaId: string, matricula: string | null, datos: Record<string, unknown> | null, datosGemela: Record<string, unknown> | null,",
           "retorno": "Promise<VehiculoConocido>",
-          "linea": 818,
+          "linea": 845,
           "resumen": "- por eso cada una viaja con su procedencia y NUNCA se elige sola. Si la consulta falla, `versiones` queda `[]` y marca/modelo siguen valiendo: no se tumba la pantalla por no haber podido mirar el his"
         },
         {
@@ -13875,7 +13854,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<OrigenRetarificacion | null>",
-          "linea": 879
+          "linea": 906
         },
         {
           "nombre": "clienteOrigenDe",
@@ -13883,7 +13862,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<ClienteOrigen | null>",
-          "linea": 1023,
+          "linea": 1050,
           "resumen": "La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no desde una póliza de la cartera). Misma discipl"
         },
         {
@@ -13892,15 +13871,16 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 1071,
+          "linea": 1098,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
       "tablas": [
+        "clientes",
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "4944a7a5d014"
+      "hash": "1a9b30bfffb6"
     },
     {
       "ruta": "apps/asegura/lib/cartera-filtro.ts",
@@ -130139,28 +130119,6 @@
       "hash": "159635a598d7"
     },
     {
-      "ruta": "packages/module-seguros-portal/src/solapamientos.ts",
-      "ambito": "packages/module-seguros-portal",
-      "resumen": "Coberturas que aparecen en MÁS DE UNA póliza de la misma persona. Puro: recibe las pólizas con su lista de coberturas (texto, tal como las informa la compañía por CIMA) y devuelve las familias que se repiten. 🚨 Lo que esto ES y lo que NO es: - ES un aviso INFORMATIVO: «esta cobertura está en dos pó",
-      "exporta": [
-        "detectarSolapamientos"
-      ],
-      "funciones": [
-        {
-          "nombre": "detectarSolapamientos",
-          "kind": "function",
-          "exportada": true,
-          "params": "polizas: readonly PolizaConCoberturas[]",
-          "retorno": "Solapamiento[]",
-          "linea": 75,
-          "resumen": "Devuelve solo las familias presentes en DOS O MÁS pólizas distintas. Una póliza con dos coberturas que casan (p. ej. «Defensa jurídica» y «Reclamación de daños») cuenta UNA vez: el solapamiento es ent"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "66926695d90f"
-    },
-    {
       "ruta": "packages/module-seguros-portal/src/sugerencia-relacion.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "Sugerir pedir acceso a partir de relaciones YA CONOCIDAS (12/09/2026). `cliente_relaciones` ya trae la relación real entre dos personas (o una persona y su empresa), cargada del volcado y mantenida por Alberto desde `/correduria` → Contactos — pero nada la usaba para SUGERIR pedir acceso a quien se ",
@@ -138849,7 +138807,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3394,
-    "funciones": 10505
+    "archivos": 3392,
+    "funciones": 10503
   }
 }
