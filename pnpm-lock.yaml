@@ -743,9 +743,6 @@ importers:
       '@central/module-seguros':
         specifier: workspace:*
         version: link:../../packages/module-seguros
-      '@central/module-seguros-portal':
-        specifier: workspace:*
-        version: link:../../packages/module-seguros-portal
       '@central/module-ses':
         specifier: workspace:*
         version: link:../../packages/module-ses

@@ -4,16 +4,19 @@ import { useRouter } from 'next/navigation'
 import {
   DIAS_COMUNICACION_LCS,
   GRAVEDADES_SINIESTRO,
+  TIPOS_INTERVINIENTE,
   TIPOS_SINIESTRO,
   TRANSICIONES_SINIESTRO,
+  camposDeRamoSiniestro,
   etiquetaEstadoSiniestro,
   etiquetaTipoSiniestro,
   plazoComunicacion,
+  type CampoRamoSiniestro,
   type DocumentoResumen,
   type EstadoSiniestro,
   type TipoDocumento,
+  type TipoInterviniente,
 } from '@central/module-seguros'
-import { camposDeRamo, type CampoRamo } from '@central/module-seguros-portal'
 import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { fechaEs, fechaHoraEs } from '@/lib/ficha-asegura'
@@ -23,6 +26,7 @@ import {
   textoMotivoSiniestro,
   type RespuestaSiniestro,
   type SiniestroCartera,
+  type TerceroCartera,
 } from '@/lib/siniestros-asegura'
 import Documentos from './Documentos'
 
@@ -75,6 +79,11 @@ export default function Siniestros({
   useEffect(() => { setLista(inicial) }, [inicial])
 
   const elegibles = polizas.filter((p) => p.viva && p.confirmadaCima)
+  // El ramo (`TipoSeguro`) de la póliza es de dónde sale el catálogo de campos
+  // del siniestro (`camposDeRamoSiniestro`) — NO es el mismo `tipo` que trae el
+  // siniestro (ese es la CAUSA: «colisión», «daños por agua», o el código EIAC).
+  const ramoPorPoliza: Record<string, string> = {}
+  for (const p of polizas) ramoPorPoliza[p.id] = p.tipo
   const nAbiertos = lista === null ? null : lista.filter((s) => s.abierto).length
   const resumen =
     lista === null ? 'no se ha podido leer'
@@ -106,13 +115,40 @@ export default function Siniestros({
     return r
   }
 
-  /** Seguimiento o estado: al `ok` se sustituye la fila por la que devuelve asegura. */
+  /** Seguimiento, estado o campos del ramo: al `ok` se sustituye la fila por la que devuelve asegura. */
   async function anotar(body: Record<string, unknown>): Promise<RespuestaSiniestro> {
     const r = await llamar('PATCH', body)
     if (r.estado === 'ok') {
       setLista((l) => (l === null ? [r.siniestro] : l.map((s) => (s.id === r.siniestro.id ? r.siniestro : s))))
       router.refresh()
     }
+    return r
+  }
+
+  async function llamarTercero(method: 'POST' | 'DELETE', body: Record<string, unknown>): Promise<RespuestaSiniestro> {
+    try {
+      const res = await fetch('/api/correduria/siniestro/terceros', {
+        method,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      return interpretarSiniestro(res.status, await res.json().catch(() => null))
+    } catch {
+      return { estado: 'error', motivo: 'red' }
+    }
+  }
+
+  /** Añade un tercero/testigo: al `ok` se sustituye la fila por la que devuelve asegura. */
+  async function anadirTercero(body: Record<string, unknown>): Promise<RespuestaSiniestro> {
+    const r = await llamarTercero('POST', body)
+    if (r.estado === 'ok') setLista((l) => (l === null ? [r.siniestro] : l.map((s) => (s.id === r.siniestro.id ? r.siniestro : s))))
+    return r
+  }
+
+  /** Quita un tercero/testigo: al `ok` se sustituye la fila por la que devuelve asegura. */
+  async function quitarTercero(body: Record<string, unknown>): Promise<RespuestaSiniestro> {
+    const r = await llamarTercero('DELETE', body)
+    if (r.estado === 'ok') setLista((l) => (l === null ? [r.siniestro] : l.map((s) => (s.id === r.siniestro.id ? r.siniestro : s))))
     return r
   }
 
@@ -160,7 +196,15 @@ export default function Siniestros({
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
           {lista.map((s) => (
-            <Fila key={s.id} s={s} documentos={documentosDe(s.id)} onAnotar={anotar} />
+            <Fila
+              key={s.id}
+              s={s}
+              documentos={documentosDe(s.id)}
+              onAnotar={anotar}
+              onAnadirTercero={anadirTercero}
+              onQuitarTercero={quitarTercero}
+              ramoPoliza={ramoPorPoliza[s.polizaId] ?? null}
+            />
           ))}
         </ul>
       )}
@@ -169,74 +213,245 @@ export default function Siniestros({
 }
 
 // ─── Campos por ramo ──────────────────────────────────────────────────────────
+//
+// EXCLUSIVO de siniestros `gestionado_correduria`: CIMA no manda este nivel de
+// detalle (ver la cabecera de `siniestro-ramo.ts`). El ramo es el de la
+// PÓLIZA (`TipoSeguro`), no la causa del siniestro (`s.tipo`).
 
-function BloqueRamo({ tipoSiniestro, datosRamo }: {
-  tipoSiniestro: string | null | undefined
-  datosRamo: Record<string, string>
+function BloqueRamo({ siniestroId, ramoPoliza, datosRamo, onGuardar }: {
+  siniestroId: string
+  ramoPoliza: string | null
+  datosRamo: Record<string, string | number | boolean> | null
+  onGuardar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
 }) {
-  const ramos = ramosSiniestroParaPoliza(tipoSiniestro)
-  const campos = ramos && ramos.length > 0 ? camposDeRamo(ramos[0]) : []
+  const campos = camposDeRamoSiniestro(ramoPoliza)
+  const [valores, setValores] = useState<Record<string, string>>(() => valoresIniciales(campos, datosRamo))
+  const [ocupado, setOcupado] = useState(false)
+  const [resultado, setResultado] = useState<Mensaje | null>(null)
+
   if (campos.length === 0) return null
+
+  async function guardar() {
+    const datos: Record<string, unknown> = {}
+    for (const campo of campos) {
+      const v = valores[campo.id]?.trim() ?? ''
+      if (v !== '') datos[campo.id] = v
+    }
+    setOcupado(true)
+    setResultado(null)
+    try {
+      const r = await onGuardar({ siniestroId, datosRamo: datos })
+      setResultado(r.estado === 'ok' ? { tono: 'ok', texto: 'Guardado.' } : { tono: 'error', texto: textoRespuesta(r) })
+    } finally {
+      setOcupado(false)
+    }
+  }
 
   return (
     <div>
-      <div style={etiqueta}>Datos del siniestro por ramo</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+      <div style={etiqueta}>Datos propios del ramo</div>
+      <div style={rejilla}>
         {campos.map((campo) => (
-          <Dato
-            key={campo.id}
-            label={campo.etiqueta}
-            valor={datosRamo[campo.id] ?? null}
-          />
+          <CampoDelRamo key={campo.id} def={campo} valor={valores[campo.id] ?? ''} onCambiar={(v) => setValores((old) => ({ ...old, [campo.id]: v }))} />
         ))}
       </div>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+        <button type="button" disabled={ocupado} onClick={() => void guardar()} style={btnStyle('secundario', 'sm')}>
+          {ocupado ? 'Guardando…' : 'Guardar datos del ramo'}
+        </button>
+      </div>
+      {resultado && <div role={resultado.tono === 'error' ? 'alert' : 'status'} style={{ ...cajaMensaje(resultado.tono), marginTop: 8 }}>{resultado.texto}</div>}
     </div>
   )
 }
 
-// ─── Terceros y testigos ──────────────────────────────────────────────────────
+/** `datosRamo` (valores tipados) → strings de formulario. `si`/`no` para triestado. */
+function valoresIniciales(campos: readonly CampoRamoSiniestro[], datosRamo: Record<string, string | number | boolean> | null): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const campo of campos) {
+    const v = datosRamo?.[campo.id]
+    if (v === undefined) continue
+    out[campo.id] = typeof v === 'boolean' ? (v ? 'si' : 'no') : String(v)
+  }
+  return out
+}
 
-function BloqueTerceros({ terceros }: {
-  terceros: Array<{
-    id: string
-    nombre: string | null
-    telefono: string | null
-    email: string | null
-    rol: string | null
-  }>
+/** Un campo del catálogo, pintado según su `tipo`. Mismo criterio que el catálogo de pólizas: sin valor marcado de salida en opción/triestado. */
+function CampoDelRamo({ def, valor, onCambiar }: { def: CampoRamoSiniestro; valor: string; onCambiar: (v: string) => void }) {
+  return (
+    <Campo label={def.etiqueta} ayuda={def.ayuda}>
+      {def.tipo === 'opcion' ? (
+        <select value={valor} onChange={(e) => onCambiar(e.target.value)} style={campo}>
+          <option value="">no lo sé</option>
+          {def.opciones ? def.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>) : null}
+        </select>
+      ) : def.tipo === 'triestado' ? (
+        <select value={valor} onChange={(e) => onCambiar(e.target.value)} style={campo}>
+          <option value="">no lo sé</option>
+          <option value="si">Sí</option>
+          <option value="no">No</option>
+        </select>
+      ) : def.tipo === 'fecha' ? (
+        <input type="date" value={valor} onChange={(e) => onCambiar(e.target.value)} style={campo} />
+      ) : (
+        <input
+          type="text"
+          inputMode={def.tipo === 'numero' || def.tipo === 'dinero' ? 'decimal' : undefined}
+          value={valor}
+          onChange={(e) => onCambiar(e.target.value)}
+          style={campo}
+        />
+      )}
+    </Campo>
+  )
+}
+
+// ─── Terceros y testigos ──────────────────────────────────────────────────────
+//
+// EXCLUSIVO de siniestros `gestionado_correduria` (ver `siniestro-intervinientes.ts`).
+
+function BloqueTerceros({ siniestroId, terceros, onAnadir, onQuitar }: {
+  siniestroId: string
+  terceros: TerceroCartera[] | null
+  onAnadir: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
+  onQuitar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
 }) {
+  const [formAbierto, setFormAbierto] = useState(false)
+  const [ocupado, setOcupado] = useState<string | null>(null)
+  const [resultado, setResultado] = useState<Mensaje | null>(null)
+
+  async function quitar(intervinienteId: string) {
+    if (!confirm('¿Quitar este tercero/testigo del siniestro?')) return
+    setOcupado(intervinienteId)
+    setResultado(null)
+    try {
+      const r = await onQuitar({ siniestroId, intervinienteId })
+      if (r.estado !== 'ok') setResultado({ tono: 'error', texto: textoRespuesta(r) })
+    } finally {
+      setOcupado(null)
+    }
+  }
+
   return (
     <div>
       <div style={etiqueta}>Terceros y testigos</div>
-      <div style={{ display: 'grid', gap: 12 }}>
-        {terceros.map((t) => (
-          <div
-            key={t.id}
-            style={{
-              borderLeft: '3px solid var(--border)',
-              paddingLeft: 10,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: 10,
-            }}
-          >
-            <Dato label="Nombre" valor={t.nombre} />
-            <Dato label="Rol" valor={t.rol} />
-            <Dato label="Teléfono" valor={t.telefono} />
-            <Dato label="Email" valor={t.email} />
-          </div>
-        ))}
+      {terceros === null ? (
+        <span style={muted}>no se ha podido consultar</span>
+      ) : terceros.length === 0 ? (
+        <span style={muted}>ninguno</span>
+      ) : (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {terceros.map((t) => (
+            <div key={t.id} style={{ borderLeft: '3px solid var(--border)', paddingLeft: 10, display: 'grid', gap: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+                <Dato label="Tipo" valor={t.tipo === 'testigo' ? 'Testigo' : 'Tercero'} />
+                <Dato label="Nombre" valor={t.nombre} />
+                <Dato label="Teléfono" valor={t.telefono} />
+                {t.tipo === 'tercero' && <Dato label="Matrícula" valor={t.matricula} />}
+                {t.tipo === 'tercero' && <Dato label="Marca / modelo" valor={t.marcaModelo} />}
+                {t.tipo === 'tercero' && <Dato label="Compañía" valor={t.companiaNombre} />}
+                {t.tipo === 'tercero' && <Dato label="Nº de póliza" valor={t.numeroPoliza} />}
+              </div>
+              <div>
+                <button type="button" disabled={ocupado !== null} onClick={() => void quitar(t.id)} style={btnStyle('sutil', 'sm')}>
+                  {ocupado === t.id ? 'Quitando…' : 'Quitar'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ marginTop: 8 }}>
+        <button type="button" onClick={() => setFormAbierto((v) => !v)} style={btnStyle('secundario', 'sm')} aria-expanded={formAbierto}>
+          {formAbierto ? 'Cancelar' : '➕ Añadir tercero/testigo'}
+        </button>
       </div>
+      {formAbierto && (
+        <FormTercero
+          siniestroId={siniestroId}
+          onAnadir={onAnadir}
+          onHecho={() => setFormAbierto(false)}
+        />
+      )}
+      {resultado && <div role="alert" style={{ ...cajaMensaje(resultado.tono), marginTop: 8 }}>{resultado.texto}</div>}
+    </div>
+  )
+}
+
+function FormTercero({ siniestroId, onAnadir, onHecho }: {
+  siniestroId: string
+  onAnadir: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
+  onHecho: () => void
+}) {
+  const [tipo, setTipo] = useState<TipoInterviniente>('tercero')
+  const [nombre, setNombre] = useState('')
+  const [telefono, setTelefono] = useState('')
+  const [matricula, setMatricula] = useState('')
+  const [marcaModelo, setMarcaModelo] = useState('')
+  const [companiaNombre, setCompaniaNombre] = useState('')
+  const [numeroPoliza, setNumeroPoliza] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+  const [resultado, setResultado] = useState<Mensaje | null>(null)
+
+  async function anadir() {
+    setOcupado(true)
+    setResultado(null)
+    try {
+      const r = await onAnadir({
+        siniestroId,
+        tipo,
+        nombre: nombre.trim() || null,
+        telefono: telefono.trim() || null,
+        matricula: tipo === 'tercero' ? matricula.trim() || null : null,
+        marcaModelo: tipo === 'tercero' ? marcaModelo.trim() || null : null,
+        companiaNombre: tipo === 'tercero' ? companiaNombre.trim() || null : null,
+        numeroPoliza: tipo === 'tercero' ? numeroPoliza.trim() || null : null,
+      })
+      if (r.estado === 'ok') onHecho()
+      else setResultado({ tono: 'error', texto: textoRespuesta(r) })
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  return (
+    <div style={{ ...pendienteBox, borderStyle: 'solid', display: 'grid', gap: 10, marginTop: 8 }}>
+      <div style={rejilla}>
+        <Campo label="Tipo">
+          <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoInterviniente)} style={campo}>
+            {TIPOS_INTERVINIENTE.map((t) => <option key={t} value={t}>{t === 'testigo' ? 'Testigo' : 'Tercero'}</option>)}
+          </select>
+        </Campo>
+        <Campo label="Nombre"><input value={nombre} onChange={(e) => setNombre(e.target.value)} style={campo} maxLength={150} /></Campo>
+        <Campo label="Teléfono"><input type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} style={campo} maxLength={30} /></Campo>
+      </div>
+      {tipo === 'tercero' && (
+        <div style={rejilla}>
+          <Campo label="Matrícula"><input value={matricula} onChange={(e) => setMatricula(e.target.value)} style={campo} maxLength={15} /></Campo>
+          <Campo label="Marca / modelo"><input value={marcaModelo} onChange={(e) => setMarcaModelo(e.target.value)} style={campo} maxLength={150} /></Campo>
+          <Campo label="Compañía"><input value={companiaNombre} onChange={(e) => setCompaniaNombre(e.target.value)} style={campo} maxLength={150} /></Campo>
+          <Campo label="Nº de póliza"><input value={numeroPoliza} onChange={(e) => setNumeroPoliza(e.target.value)} style={campo} maxLength={50} /></Campo>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" disabled={ocupado} onClick={() => void anadir()} style={btnStyle('primario', 'sm')}>
+          {ocupado ? 'Añadiendo…' : 'Añadir'}
+        </button>
+      </div>
+      {resultado && <div role="alert" style={cajaMensaje(resultado.tono)}>{resultado.texto}</div>}
     </div>
   )
 }
 
 // ─── Una fila (plegada) y su detalle (montaje perezoso) ─────────────────────
 
-function Fila({ s, documentos, onAnotar }: {
+function Fila({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza }: {
   s: SiniestroCartera
   documentos: DocumentoResumen[] | null
   onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
+  onAnadirTercero: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
+  onQuitarTercero: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
+  ramoPoliza: string | null
 }) {
   const [abierta, setAbierta] = useState(false)
   const propio = s.origen === 'gestionado_correduria'
@@ -292,15 +507,27 @@ function Fila({ s, documentos, onAnotar }: {
         </Celda>
         <span style={{ ...muted, fontSize: 11, alignSelf: 'center', justifySelf: 'end' }}>{abierta ? '▲' : '▼'}</span>
       </div>
-      {abierta && <Detalle s={s} documentos={documentos} onAnotar={onAnotar} />}
+      {abierta && (
+        <Detalle
+          s={s}
+          documentos={documentos}
+          onAnotar={onAnotar}
+          onAnadirTercero={onAnadirTercero}
+          onQuitarTercero={onQuitarTercero}
+          ramoPoliza={ramoPoliza}
+        />
+      )}
     </li>
   )
 }
 
-function Detalle({ s, documentos, onAnotar }: {
+function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoPoliza }: {
   s: SiniestroCartera
   documentos: DocumentoResumen[] | null
   onAnotar: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
+  onAnadirTercero: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
+  onQuitarTercero: (body: Record<string, unknown>) => Promise<RespuestaSiniestro>
+  ramoPoliza: string | null
 }) {
   const propio = s.origen === 'gestionado_correduria'
   return (
@@ -324,12 +551,12 @@ function Detalle({ s, documentos, onAnotar }: {
         <Dato label="Actualizado" valor={s.actualizado ? fechaHoraEs(s.actualizado) : null} />
       </div>
 
-      {propio && s.datosRamo && Object.keys(s.datosRamo).length > 0 && (
-        <BloqueRamo tipoSiniestro={s.tipo} datosRamo={s.datosRamo} />
+      {propio && (
+        <BloqueRamo siniestroId={s.id} ramoPoliza={ramoPoliza} datosRamo={s.datosRamo} onGuardar={onAnotar} />
       )}
 
-      {s.terceros && s.terceros.length > 0 && (
-        <BloqueTerceros terceros={s.terceros} />
+      {propio && (
+        <BloqueTerceros siniestroId={s.id} terceros={s.terceros} onAnadir={onAnadirTercero} onQuitar={onQuitarTercero} />
       )}
 
       <Seguimiento s={s} onAnotar={onAnotar} />

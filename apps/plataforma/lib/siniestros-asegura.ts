@@ -62,16 +62,31 @@ export type SiniestroCartera = {
   abierto: boolean
   /** ISO. `null` = asegura no lo manda. */
   actualizado: string | null
-  /** Campos específicos del ramo (p. ej. matrícula para auto, referencia catastral para hogar). Solo en siniestros gestionados. */
-  datosRamo?: Record<string, string>
-  /** Terceros/testigos del siniestro: personas y sus datos de contacto. */
-  terceros?: Array<{
-    id: string
-    nombre: string | null
-    telefono: string | null
-    email: string | null
-    rol: string | null
-  }>
+  /**
+   * Campos propios del ramo de la póliza (`@central/module-seguros/siniestro-ramo.ts`),
+   * p. ej. tipo de colisión para auto, gremio requerido para hogar. `null` =
+   * sin datos o asegura no lo manda. Solo se editan en `gestionado_correduria`.
+   */
+  datosRamo: Record<string, string | number | boolean> | null
+  /**
+   * Terceros y testigos. `null` = no se ha podido consultar (o asegura no lo
+   * manda) — NUNCA «no hay ninguno», que es `[]`. Exclusivo de siniestros
+   * `gestionado_correduria`.
+   */
+  terceros: TerceroCartera[] | null
+}
+
+/** Un tercero o testigo tal y como lo sirve el puerto de asegura. */
+export type TerceroCartera = {
+  id: string
+  tipo: 'tercero' | 'testigo'
+  esConductor: boolean | null
+  nombre: string | null
+  telefono: string | null
+  matricula: string | null
+  marcaModelo: string | null
+  companiaNombre: string | null
+  numeroPoliza: string | null
 }
 
 function cadena(v: unknown): string | null {
@@ -83,32 +98,45 @@ function numero(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
+/** El `datos_ramo` tal cual, o `null` si no tiene forma de objeto. Nunca `{}`. */
+function datosRamoDe(v: unknown): Record<string, string | number | boolean> | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const out: Record<string, string | number | boolean> = {}
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') out[k] = val
+  }
+  return Object.keys(out).length === 0 ? null : out
+}
+
+function leerTercero(v: unknown): TerceroCartera | null {
+  if (typeof v !== 'object' || v === null) return null
+  const t = v as Record<string, unknown>
+  const id = cadena(t.id)
+  if (!id) return null
+  return {
+    id,
+    tipo: t.tipo === 'testigo' ? 'testigo' : 'tercero',
+    esConductor: typeof t.esConductor === 'boolean' ? t.esConductor : null,
+    nombre: cadena(t.nombre),
+    telefono: cadena(t.telefono),
+    matricula: cadena(t.matricula),
+    marcaModelo: cadena(t.marcaModelo),
+    companiaNombre: cadena(t.companiaNombre),
+    numeroPoliza: cadena(t.numeroPoliza),
+  }
+}
+
+/** `terceros` del puerto → lista, o `null` si no llega o no tiene forma de lista. */
+function terceros(v: unknown): TerceroCartera[] | null {
+  if (!Array.isArray(v)) return null
+  return v.map(leerTercero).filter((t): t is TerceroCartera => t !== null)
+}
+
 /** Una fila del puerto → `SiniestroCartera`, o `null` si no tiene forma de siniestro. */
 export function leerSiniestro(v: unknown): SiniestroCartera | null {
   if (typeof v !== 'object' || v === null) return null
   const s = v as Record<string, unknown>
   if (typeof s.id !== 'string' || s.id.trim() === '') return null
-  const datosRamo = typeof s.datosRamo === 'object' && s.datosRamo !== null
-    ? Object.fromEntries(
-        Object.entries(s.datosRamo).map(([k, v]) => [k, typeof v === 'string' ? v : ''])
-      )
-    : undefined
-  const terceros = Array.isArray(s.terceros)
-    ? s.terceros
-      .map((t): typeof s.terceros[0] | null => {
-        if (typeof t !== 'object' || t === null) return null
-        const id = cadena((t as Record<string, unknown>).id)
-        if (!id) return null
-        return {
-          id,
-          nombre: cadena((t as Record<string, unknown>).nombre),
-          telefono: cadena((t as Record<string, unknown>).telefono),
-          email: cadena((t as Record<string, unknown>).email),
-          rol: cadena((t as Record<string, unknown>).rol),
-        }
-      })
-      .filter((t): t is typeof s.terceros[0] => t !== null)
-    : undefined
   return {
     id: s.id,
     clienteId: cadena(s.clienteId),
@@ -135,8 +163,8 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     confirmadoCima: typeof s.confirmadoCima === 'boolean' ? s.confirmadoCima : true,
     abierto: s.abierto === true,
     actualizado: cadena(s.actualizado),
-    datosRamo,
-    terceros,
+    datosRamo: datosRamoDe(s.datosRamo),
+    terceros: terceros(s.terceros),
   }
 }
 
