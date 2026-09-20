@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** 🚨 Fix producción: pinchar en CUALQUIER cliente de `/correduria` daba error desde
+el commit 5e67cb5 (#3126) — la ficha selecciona `siniestros.datos_ramo` y la relación
+`siniestro_intervinientes`, y la migración `2026-09-20_siniestro_ramo_intervinientes.sql` se
+escribió pero **nunca se aplicó** (el propio commit lo admitía: "pendiente de aplicar en la BD
+real"). Aplicada ahora vía Supabase MCP y verificada (columna + tabla + grant a `prisma_seguros`).
+Lección: un PR que dice "migración escrita, pendiente de aplicar" no puede darse por cerrado sin
+aplicarla — quedó rompiendo la pantalla que Alberto usa a diario durante horas.
+
 **(20/09/2026)** Añadida al PR #3142 (mismo, sin nuevo): telemetría de `faltan_producto` por
 COMPAÑÍA — cada 422 del ReRate deja fila en `seguros.operational_events` (genérica, sin migración
 nueva) y `GET /api/operador/codeoscopic/faltan-producto` agrega por compañía. Escritura best-effort,
