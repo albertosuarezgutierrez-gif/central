@@ -124,7 +124,7 @@ export type EntradaObjeto = {
  * vía `poliza_coberturas`): este es el desglose POR PARTIDA del bien, y viene
  * en un bloque EIAC distinto. `null` si no hay partidas con dato real.
  */
-function formatCapitales(d: Record<string, unknown>): string[] | null {
+export function formatCapitales(d: Record<string, unknown>): string[] | null {
   const raw = d.capitales
   if (!Array.isArray(raw)) return null
   const out: string[] = []

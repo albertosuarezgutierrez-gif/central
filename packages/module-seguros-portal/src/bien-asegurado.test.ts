@@ -221,6 +221,14 @@ test('el desglose de capital por partida se añade a detalles, en formato españ
   assert.ok(b.detalles.includes('Contenido: 30.000,50 €'))
 })
 
+test('un importe con coma decimal (string) no se pierde: misma función que /correduria', () => {
+  const b = describirBien('hogar', {
+    direccion: 'Calle Falsa 1',
+    capitales: [{ bien: 'Continente', importe: '150000,00' }],
+  })
+  assert.ok(b.detalles.includes('Continente: 150.000,00 €'))
+})
+
 test('una partida sin importe válido (0, negativo o no numérico) se pinta solo con la etiqueta', () => {
   const b = describirBien('hogar', {
     direccion: 'Calle Falsa 1',

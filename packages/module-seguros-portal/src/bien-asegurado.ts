@@ -47,6 +47,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { textoConDato } from './poliza-leida.ts'
+import { formatCapitales } from '@central/module-seguros'
 
 /** La cosa asegurada, ya legible y ya troceada por quién puede ver cada parte. */
 export interface BienAsegurado {
@@ -161,19 +162,10 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   // migrada saldría como «Construido en 1».
   if (anio !== null && anio >= 1000 && anio <= 2999) detalles.push(`Construido en ${anio}`)
   // Desglose de `Riesgo.Capitales.Capital[]` (Continente, Contenido, Joyas…):
-  // mismo dato que `capitalAsegurado` de `@central/module-seguros`, formateado
-  // igual (formato de dinero español, regla global).
-  for (const capital of Array.isArray(d.capitales) ? d.capitales : []) {
-    if (capital === null || typeof capital !== 'object') continue
-    const o = capital as Record<string, unknown>
-    const etiqueta = campo(o, 'bien') ?? campo(o, 'descripcion')
-    const importeNum = typeof o.importe === 'number' ? o.importe : Number(campo(o, 'importe'))
-    const importe = Number.isFinite(importeNum) && importeNum > 0
-      ? `${importeNum.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`
-      : null
-    const linea = etiqueta !== null && importe !== null ? `${etiqueta}: ${importe}` : (etiqueta ?? importe)
-    if (linea !== null) detalles.push(linea)
-  }
+  // MISMA función que `/correduria` (`formatCapitales` de `@central/module-seguros`,
+  // ya dependencia de este paquete) — una sola lógica de parseo/formato, no dos
+  // copias que puedan divergir (p.ej. en si aceptan coma decimal).
+  detalles.push(...(formatCapitales(d) ?? []))
 
   // ── Vehículo ──────────────────────────────────────────────────────────────
   if (RAMOS_VEHICULO.has(r) || campo(d, 'matricula') !== null) {
