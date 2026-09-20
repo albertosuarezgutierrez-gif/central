@@ -12,6 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
 **(20/09/2026)** Alberto preguntó por el repo `AminForou/mcp-gsc` (MCP de Search Console). **No se
 instaló y la decisión es suya, tomada con el dato delante:** el monorepo YA lee GSC con cuenta de
 servicio (`apps/plataforma/lib/seo-correduria/`, cron de los lunes), así que un MCP de terceros no
@@ -23,6 +24,25 @@ consolidado; sin eso la latencia se lee como bajada de tráfico). 🪤 **Y el ce
 `pnpm test:guardia` daba 948/948 con el endpoint sin registrar en `RUTAS_RUTINA` — el guardián lee
 ficheros TRACKEADOS, y el fichero estaba untracked. Verde por no verlo.** Se puso rojo al commitear
 y lo cazó `code-review`. PR #3195.
+
+**(20/09/2026)** **PR #3191 MERGEADO** (`15cc7b2e1`, 19/19 en CI): el plegado de «Recibos» y
+«Siniestros» del portal está en `main`. Lo que cambió respecto a lo anotado abajo salió de la pasada
+obligatoria de `code-review` antes de sacarlo de draft, y era el fallo caro: con la póliza plegada la
+línea de la cabecera es TODO lo que se ve, y **no contaba los recibos DEVUELTOS** — una póliza con un
+cobro fallido enseñaba «último cobrado 65,51€», frase tranquilizadora sobre lo único que deja a
+alguien sin cobertura sin enterarse. Ahora el devuelto ABRE la línea y la póliza **nace abierta**; por
+eso `resumen` es `{ texto, abrir }` y no un string (derivar la apertura del texto obliga a vaciar la
+cabecera para conseguir que se abra). También: un pendiente sin importe ni fecha se DICE en vez de
+callarse. Cepo: 8 aserciones, 10 mutaciones vistas morder.
+
+**(20/09/2026)** Portal del cliente: **«Recibos» y «Siniestros» nacen PLEGADAS**, una póliza por
+`<details>` (Alberto: «que también salga plegado y siniestro también», sobre su móvil). La cabecera
+dice lo que esconde —próximo/último recibo, o «3 siniestros · 1 sin cerrar»— desde dos helpers puros
+(`lineaRecibos`/`lineaSiniestros`) que comparten la FICHA y la cabecera; el cuerpo se calla con
+`sinResumen` para no decir dos cosas del mismo recibo. Una póliza sin nada que resumir (compañía que
+no informó recibos) **nace abierta**: dentro hay la explicación, no una lista. Cepo nuevo
+`regression-portal-recibos-plegados.test.ts` con 6 mutaciones vistas morder; medido con Chromium a
+320/360/390/1024 sin desbordes. Detalle en el PR y en `apps/asegura-portal/CLAUDE.md`.
 
 **(20/09/2026)** PR #3182 **MERGEADO** (`91cdd3abb`, 21/21 en CI): la auditoría de la correduría está
 en `main`. `/correduria` es ya **fail-closed** — `CORREDURIA_EMAILS` con el correo de Alberto puesta y

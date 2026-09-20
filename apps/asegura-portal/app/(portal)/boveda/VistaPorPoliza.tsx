@@ -5,7 +5,7 @@ import type { BloqueCartera, TitularAgrupable } from '@central/module-seguros-po
 import type { PolizaPortal } from '@/lib/cartera-lectura'
 
 
-import { IconoRamo, tituloDePoliza } from './PolizaVista'
+import { IconoRamo, tituloDePoliza, type ResumenPoliza } from './PolizaVista'
 
 /**
  * Lo que esta vista necesita de un titular, y nada más: su identidad, su
@@ -52,16 +52,55 @@ type TitularConPolizas = TitularAgrupable & { nombre: string; polizas: PolizaPor
  * las pólizas de tu empresa van aparte allí, sus recibos van aparte aquí. Una
  * lista de recibos que mezclara los tuyos con los de tu padre sería el mismo
  * fallo que se acaba de cerrar, en otra pantalla.
+ *
+ * ── 🚨 Cada póliza nace PLEGADA, y la cabecera dice lo que esconde (20/09/2026)
+ *
+ * Alberto, mirando «Mis recibos» en su móvil: «que también salga plegado, y
+ * siniestro también». Con el historial entero desplegado, una sola póliza con
+ * cinco recibos ocupaba la pantalla completa y la segunda quedaba a un
+ * pantallazo de scroll: la pantalla enseñaba UN recibo en vez de decir qué
+ * pólizas hay y cómo van. Es la misma decisión que tomó la bóveda el 19/09
+ * (`GrupoPlegable`), un piso más abajo — y la misma regla de rendimiento de la
+ * casa, con su mismo matiz: un `<details>` cerrado crea igualmente su DOM, y
+ * aquí se acepta porque son decenas de filas, no cientos.
+ *
+ * Lo que hace que plegar no sea esconder es que la cabecera contesta sola la
+ * pregunta que trae aquí a un cliente: en «Recibos», lo próximo que se le cobra
+ * y lo último que se le cobró; en «Siniestros», cuántos hay y cuántos siguen
+ * sin cerrar. Por eso el resumen lo pinta el `<summary>` y NO el cuerpo
+ * (`sinResumen`): con las dos copias, la cabecera acabaría diciendo una cosa y
+ * el cuerpo otra sobre el mismo recibo.
+ *
+ * 🚨 Y quién NACE ABIERTA lo dice `resumen(p).abrir`, no que su texto sea
+ * `null`: son dos preguntas distintas. Sin texto, porque dentro no hay lista
+ * sino la frase que explica que el silencio de la compañía NO es «estás al
+ * corriente», y plegarla deja una pantalla en la que no se ve nada y no se dice
+ * por qué. CON texto, porque hay algo que la cabecera nombra pero no puede
+ * sustituir: un recibo devuelto, cuyo chip, su explicación y el botón de avisar
+ * a la correduría están en la lista.
+ *
+ * `<details>` y no un botón con estado: esta pantalla se sirve entera desde el
+ * servidor y así funciona sin JavaScript, con el navegador anunciándolo a un
+ * lector de pantalla. El `<h4>` va DENTRO del `<summary>` para no perder la
+ * navegación por encabezados.
  */
 export function VistaPorPoliza({
   bloques,
   incluye,
+  resumen,
   bloque,
   vacio,
 }: {
   bloques: readonly BloqueCartera<TitularConPolizas>[]
   /** Qué pólizas entran. Las que no, se omiten enteras (ver cabecera). */
   incluye: (p: PolizaPortal) => boolean
+  /**
+   * Lo que la cabecera dice con la póliza CERRADA (el próximo recibo, cuántos
+   * siniestros hay) y si esa póliza se puede plegar. Lo segundo NO se deduce de
+   * lo primero: una póliza con un recibo devuelto tiene cabecera Y nace abierta
+   * (ver `ResumenPoliza`).
+   */
+  resumen: (p: PolizaPortal) => ResumenPoliza
   /** Lo que se pinta debajo del título de cada póliza. */
   bloque: (p: PolizaPortal) => ReactNode
   /** Lo que se dice cuando no queda ninguna póliza que enseñar. */
@@ -91,15 +130,21 @@ export function VistaPorPoliza({
                   título normal se va con el scroll y entonces no se sabe de
                   quién es el recibo que se está mirando. */}
               {b.conNombre && <h3 className="titular-cabecera">{t.nombre}</h3>}
-              {t.polizas.map((p) => (
-                <div key={p.id} className="poliza-bloque">
-                  <h4 className="poliza-bloque-titulo">
-                    <IconoRamo ramo={p.ramo} />
-                    {tituloDePoliza(p)}
-                  </h4>
-                  {bloque(p)}
-                </div>
-              ))}
+              {t.polizas.map((p) => {
+                const { texto, abrir } = resumen(p)
+                return (
+                  <details key={p.id} className="poliza-bloque" open={abrir}>
+                    <summary className="poliza-bloque-resumen">
+                      <h4 className="poliza-bloque-titulo">
+                        <IconoRamo ramo={p.ramo} />
+                        <span className="poliza-bloque-nombre">{tituloDePoliza(p)}</span>
+                        {texto !== null && <span className="poliza-bloque-linea">{texto}</span>}
+                      </h4>
+                    </summary>
+                    <div className="poliza-bloque-cuerpo">{bloque(p)}</div>
+                  </details>
+                )
+              })}
             </div>
           ))}
         </section>

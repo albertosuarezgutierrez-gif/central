@@ -520,6 +520,28 @@ lo primero que se ve arriba, no enterrado en medio»*.
   plegable. Lo que NO cambia es el chip de titular de cada FILA, que dice algo distinto —que esa
   póliza no es tuya— y viaja con ella.
 
+### 🧾 Y «Recibos» y «Siniestros» también nacen PLEGADAS (20/09/2026)
+
+Alberto, mirando «Mis recibos» en su móvil: *«que también salga plegado y siniestro también»*. Con el
+historial entero desplegado, una póliza con cinco recibos ocupaba la pantalla completa y la siguiente
+quedaba a un pantallazo de scroll: la pantalla enseñaba UN recibo en vez de decir qué pólizas hay y
+cómo van. Mismo gesto que la bóveda el 19/09, un piso más abajo — ahora el `<details>` es **cada
+póliza**, dentro de `VistaPorPoliza.tsx`.
+
+- 🚨 **La cabecera contesta sola la pregunta que trae aquí al cliente**, y por eso plegar no es
+  esconder: en «Recibos», lo próximo que se le cobra y lo último que se le cobró; en «Siniestros»,
+  cuántos hay y cuántos siguen sin cerrar. Sale de dos helpers puros (`lineaRecibos` /
+  `lineaSiniestros`, en `PolizaVista.tsx`) que comparten la FICHA de la póliza y la cabecera: con dos
+  copias, una diría una cosa y la otra otra sobre el mismo recibo. En la cabecera lo pinta el
+  `<summary>` y el cuerpo se calla (`sinResumen`); en la ficha, que no tiene cabecera, sigue el cuerpo.
+- 🚨 **`resumen(p) === null` nace ABIERTA**: es la póliza cuya compañía no ha informado recibos, y
+  dentro no hay lista sino la frase que explica que el silencio NO es «estás al corriente». Misma
+  regla que `GrupoPlegable`.
+- ⚠️ El `<summary>` va en `display: list-item` por lo mismo que el de la bóveda: con `flex`
+  desaparece el ▸ y no falla nada.
+- Cepo: `test/regression-portal-recibos-plegados.test.ts` (6, con **seis mutaciones vistas morder**).
+  Medido con Chromium a 320/360/390/1024: sin desbordes y cabecera ≥ 70 px.
+
 ### 🚪 La raíz `/` MIRA si ya hay sesión (05/09/2026) — y por qué no hay enlace mágico
 
 Alberto: *«cliente por codigo es un poco coñazo»* y, al preguntarle si le pedía el código cada vez o
