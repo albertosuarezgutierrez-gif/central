@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-20T19:35:00Z",
-  "sha": "e273f6d1ca11f40781830cf94ff3ced15ab431a0",
+  "generadoEn": "2026-09-20T20:13:38Z",
+  "sha": "9ea166284f4f66041eaaf43ee08149d90a51937e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -15260,7 +15260,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 133
+          "linea": 135
         },
         {
           "nombre": "resumenCartera",
@@ -15268,7 +15268,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResumenCartera>",
-          "linea": 138
+          "linea": 140
         },
         {
           "nombre": "vencimientosProximos",
@@ -15276,7 +15276,7 @@
           "exportada": true,
           "params": "correduriaId: string, dias: number = DIAS_HORIZONTE_RENOVACION, hoyRef: Date = hoyUtc(), diasAtras: number = DIAS_ANUALIDAD,",
           "retorno": "Promise<ListaVencimientos>",
-          "linea": 224,
+          "linea": 246,
           "resumen": "Pólizas vigentes de la ventana de renovación, ordenadas por urgencia real (la fecha, no la etiqueta del estado). Es la lista de llamadas de la semana. 🚨 LA VENTANA EMPIEZA EN EL PASADO, y el día que "
         },
         {
@@ -15285,7 +15285,7 @@
           "exportada": true,
           "params": "correduriaId: string, hoyRef: Date = hoyUtc(), diasAtras: number = DIAS_ANUALIDAD,",
           "retorno": "Promise<number | null>",
-          "linea": 367,
+          "linea": 389,
           "resumen": "Cuántas pólizas de la CARTERA VIVA figuran VIGENTES arrastrando un vencimiento anterior a la ventana de recuperación (más de una anualidad en el pasado). No son trabajo de hoy y por eso no entran en l"
         },
         {
@@ -15294,7 +15294,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 393,
+          "linea": 415,
           "resumen": "La única correduría de la base (medido: 1 fila). Lanza si hubiera más de una."
         },
         {
@@ -15303,7 +15303,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 402,
+          "linea": 424,
           "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null. Solo se mira si de verdad es un objeto."
         },
         {
@@ -15312,13 +15312,17 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 417,
+          "linea": 439,
           "resumen": "- sin clave, o con una clave que no abre ese registro → `objetoAsegurado` verá el `v1:` intacto y lo dirá como **«cifrado»**, que NO es «sin dato». Lo que no puede pasar nunca es que un fallo de desci"
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "clientes",
+        "lateral",
+        "polizas"
+      ],
       "rutaApi": null,
-      "hash": "a984eed0938d"
+      "hash": "39f783816475"
     },
     {
       "ruta": "apps/asegura/lib/clientes-sin-canal.ts",
@@ -65132,7 +65136,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 302
+          "linea": 292
         },
         {
           "nombre": "Contacto",
@@ -65140,7 +65144,7 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 360
+          "linea": 350
         },
         {
           "nombre": "Identidad",
@@ -65148,12 +65152,12 @@
           "exportada": false,
           "params": "{ identidad, clienteId }: { identidad: IdentidadFicha | null; clienteId: string }",
           "retorno": null,
-          "linea": 459
+          "linea": 449
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4224a224159d"
+      "hash": "6057017939fb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/decesos-nuevo/acciones.ts",
@@ -66416,7 +66420,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 608
+          "linea": 619
         },
         {
           "nombre": "btnMini",
@@ -66424,7 +66428,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 725,
+          "linea": 736,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -66433,12 +66437,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 743
+          "linea": 754
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "263d49203bc0"
+      "hash": "71b984e14774"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -67295,7 +67299,7 @@
           "exportada": true,
           "params": "{ q }: { q?: string }",
           "retorno": null,
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "Resultado",
@@ -67303,7 +67307,15 @@
           "exportada": false,
           "params": "{ r, ocupado, onForzar }: { r: ResultadoEscritura | null; ocupado: boolean; onForzar: () => void }",
           "retorno": null,
-          "linea": 142
+          "linea": 166
+        },
+        {
+          "nombre": "RamoBtn",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ etiqueta, activo, onClick, title }: { etiqueta: string; activo: boolean; onClick: () => void; title?: string }",
+          "retorno": null,
+          "linea": 205
         },
         {
           "nombre": "Grupo",
@@ -67311,7 +67323,7 @@
           "exportada": false,
           "params": "{ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 179
+          "linea": 223
         },
         {
           "nombre": "Fila",
@@ -67319,7 +67331,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 189
+          "linea": 233
         },
         {
           "nombre": "Campo",
@@ -67327,12 +67339,12 @@
           "exportada": false,
           "params": "{ label, mal, children }: { label: string; mal?: boolean; children: React.ReactNode }",
           "retorno": null,
-          "linea": 193
+          "linea": 237
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c5b1962385b4"
+      "hash": "d479793c45c1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/page.tsx",
@@ -94959,7 +94971,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6a3f9d38b0a7"
+      "hash": "060c35d3f29b"
     },
     {
       "ruta": "apps/plataforma/lib/financiero.ts",
@@ -140518,6 +140530,6 @@
   ],
   "resumen": {
     "archivos": 3422,
-    "funciones": 10648
+    "funciones": 10649
   }
 }
