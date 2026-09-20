@@ -69,7 +69,7 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
 // lib/destino.ts; se reexporta aquí para no romper los imports existentes desde '@/lib/categorizar'.
 export { clasificarDestino, DESTINO_LABEL, type Destino } from './destino'
 import { clasificarDestinoDetalle, type Destino, type DestinoDetalle } from './destino'
-import { claveReglaValida } from './correduria'
+import { claveReglaValida, detectarCompania, COMPANIA_OTRAS } from './correduria'
 import { refAdeudoSepa, esAnulacionAdeudoSepa, casarDevolucionSepa } from './devoluciones-sepa'
 
 // Detección determinista de deducciones de cuota IRPF (no de base, sino de cuota directa).
@@ -103,7 +103,7 @@ const TAM_LOTE_IA = 25
 
 async function guardarCategoria(
   cuentaId: string, id: string, c: Categorizacion, destino: Destino,
-  subcategoria?: string, confirmado = false, deduccionCuotaTipo?: string | null,
+  subcategoria?: string, confirmado = false, deduccionCuotaTipo?: string | null, companiaSeguros?: string | null,
 ): Promise<number> {
   const res = await prisma.$executeRaw`
     UPDATE movimientos_bancarios
@@ -112,11 +112,23 @@ async function guardarCategoria(
         destino = ${destino}, subcategoria = COALESCE(${subcategoria ?? null}, subcategoria),
         destino_confirmado = CASE WHEN ${confirmado} THEN true ELSE destino_confirmado END,
         deduccion_cuota_tipo = COALESCE(${deduccionCuotaTipo ?? null}, deduccion_cuota_tipo),
+        compania_seguros = COALESCE(compania_seguros, ${companiaSeguros ?? null}),
         analizado_at = now()
     WHERE id = ${id}::uuid
       AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
   `
   return Number(res)
+}
+
+// Compañía de seguros, SOLO para movimientos ya clasificados como 'seguros' (la correduría es
+// siempre BBVA — ver destino.ts). Nunca pisa una asignación manual existente (guardarCategoria hace
+// COALESCE priorizando lo que ya hay en BD). Sin match reconocido (COMPANIA_OTRAS) se deja sin
+// asignar: el movimiento sigue apareciendo en la matriz de /correduria para reclasificar a mano,
+// igual que un destino ambiguo cae a `revisar` en vez de forzarse.
+function companiaSegurosIngesta(destino: Destino, concepto: string | null, conceptoNorm: string, contraparte: string | null): string | undefined {
+  if (destino !== 'seguros') return undefined
+  const compania = detectarCompania(concepto ?? '', conceptoNorm, contraparte ?? '')
+  return compania === COMPANIA_OTRAS ? undefined : compania
 }
 
 // Subcategoría de GASTO PERSONAL a fijar en la ingesta. Prioridad: la regla del dueño / vía Pilar
@@ -191,11 +203,13 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
     const cat = categorizarPorReglas(p.concepto, p.contraparte, Number(p.importe))
     if (cat) {
       const sub = subcategoriaIngesta(d.destino, Number(p.importe), p.concepto, p.contraparte, d.subcategoria)
+      const conceptoNormalizado = (p.concepto || p.contraparte || '').slice(0, 80)
+      const compania = companiaSegurosIngesta(d.destino, p.concepto, conceptoNormalizado, p.contraparte)
       n += await guardarCategoria(cuentaId, p.id, {
         id: p.id, categoria: cat,
-        conceptoNormalizado: (p.concepto || p.contraparte || '').slice(0, 80),
+        conceptoNormalizado,
         categoriaPgc: pgcDe(cat), requiereRevision: d.revisar,
-      }, d.destino, sub, d.confirmado, deduccionCuotaTipo)
+      }, d.destino, sub, d.confirmado, deduccionCuotaTipo, compania)
     } else {
       paraIA.push(p)
     }
@@ -212,7 +226,8 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
       const { det: d, deduccionCuotaTipo } = destinoDe.get(c.id) ?? { det: FALLBACK, deduccionCuotaTipo: null }
       const p = movById.get(c.id)
       const sub = subcategoriaIngesta(d.destino, p ? Number(p.importe) : 0, p?.concepto ?? null, p?.contraparte ?? null, d.subcategoria)
-      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, sub, d.confirmado, deduccionCuotaTipo)
+      const compania = companiaSegurosIngesta(d.destino, p?.concepto ?? null, c.conceptoNormalizado, p?.contraparte ?? null)
+      n += await guardarCategoria(cuentaId, c.id, { ...c, requiereRevision: c.requiereRevision || d.revisar }, d.destino, sub, d.confirmado, deduccionCuotaTipo, compania)
     }
   }
   // 3) Cuadra los recibos SEPA devueltos (cargo + su anulación con la misma referencia): así el par
