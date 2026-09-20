@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** **PR #3191 MERGEADO** (`15cc7b2e1`, 19/19 en CI): el plegado de «Recibos» y
+«Siniestros» del portal está en `main`. Lo que cambió respecto a lo anotado abajo salió de la pasada
+obligatoria de `code-review` antes de sacarlo de draft, y era el fallo caro: con la póliza plegada la
+línea de la cabecera es TODO lo que se ve, y **no contaba los recibos DEVUELTOS** — una póliza con un
+cobro fallido enseñaba «último cobrado 65,51€», frase tranquilizadora sobre lo único que deja a
+alguien sin cobertura sin enterarse. Ahora el devuelto ABRE la línea y la póliza **nace abierta**; por
+eso `resumen` es `{ texto, abrir }` y no un string (derivar la apertura del texto obliga a vaciar la
+cabecera para conseguir que se abra). También: un pendiente sin importe ni fecha se DICE en vez de
+callarse. Cepo: 8 aserciones, 10 mutaciones vistas morder.
+
 **(20/09/2026)** Portal del cliente: **«Recibos» y «Siniestros» nacen PLEGADAS**, una póliza por
 `<details>` (Alberto: «que también salga plegado y siniestro también», sobre su móvil). La cabecera
 dice lo que esconde —próximo/último recibo, o «3 siniestros · 1 sin cerrar»— desde dos helpers puros
