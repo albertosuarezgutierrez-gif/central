@@ -17,6 +17,14 @@ flag hardcodeado (`sinVerificar: true` en `Cabecera.tsx`), no un chequeo contra 
 `seguros.polizas`, CIMA ya trae 1 póliza viva de vida y 1 de decesos (Generali, actualizadas
 17/09). Quitado el 🚧 de esos dos ramos; Salud lo conserva (sigue en 0). PR #3117.
 
+**(20/09/2026)** SEO Grupo ASegura · opinión sobre una propuesta pegada por Alberto (ChatGPT):
+descartado el enfoque local-por-barrio (contradice el ámbito NACIONAL dictado el 07/09) y el
+"gestor de seguros gratuito abierto a no-clientes" (riesgo RGPD/asesoramiento, es producto nuevo,
+no SEO — nótese que otra sesión sí lo construyó el 19/09, ver entrada "Gestor de pólizas" más abajo).
+Al ejecutar: `apps/plataforma/lib/seo-correduria/consultas.ts` tenía `pagina: null` en 3 consultas
+«problema» cuyos artículos YA estaban publicados (07 y 15/09) — `accionPropuesta` llevaba semanas
+pudiendo proponer reescribir contenido existente. Corregido (fusionado con las 2 filas nuevas que
+main añadió el 19/09 para el gestor) + `keywords.md` puesto al día. Tests seo-correduria en verde.
 **(20/09/2026) Presupuesto de auto (avant2/Codeoscopic): propietario y conductor pueden ser distintos
 del tomador.** Hasta ahora `construirPeticionAuto` mandaba SIEMPRE la misma persona como
 `holder`/`owner`/`primaryDriver` — si el dueño era otra persona/empresa o había un conductor
