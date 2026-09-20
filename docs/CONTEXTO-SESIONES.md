@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Mismo fallo de "seguro en vigor" que auto (PR #3129) también en `moto-nuevo`:
+`precalificarMotoNueva()` cotiza de calle a leads sin preguntar si tienen póliza vigente en otra
+compañía. Añadido el mismo bloque opt-in (compañía/póliza/años) a `MotoNuevo.tsx`, cero cambios en
+asegura (mecanismo genérico de `correcciones`). Cepo `test/regression-moto-nuevo-historial.test.ts`
+(verificado en rojo y restaurado). tsc 0, `pnpm test` monorepo completo 0 fallos. PR #3137 (draft).
+
 **(20/09/2026)** Codeoscopic · Alberto preguntó si el 400 de Occident (leasing/renting, tipo de
 adquisición — 2ª vez, proyectos 40788414/40802035) se podía detectar antes. El Product Form Library
 (17/09) solo cubría el Submit; extendido también al ReRate: `interpretarCamposProducto()` reconoce el
