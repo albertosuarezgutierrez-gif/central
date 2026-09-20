@@ -1,8 +1,10 @@
 import {
+  DIAS_ANUALIDAD,
   DIAS_HORIZONTE_RENOVACION,
   DIAS_PREAVISO_TOMADOR,
   POLIZA_ESTADOS_VIGENTES,
   diasHastaVencimiento,
+  inicioVentanaRecuperacion,
   objetoAsegurado,
   primaReferencia,
   urgenciaRenovacion,
@@ -164,8 +166,25 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
 }
 
 /**
- * Pólizas vigentes que vencen dentro del horizonte, ordenadas por urgencia real
+ * Pólizas vigentes de la ventana de renovación, ordenadas por urgencia real
  * (la fecha, no la etiqueta del estado). Es la lista de llamadas de la semana.
+ *
+ * 🚨 LA VENTANA EMPIEZA EN EL PASADO, y el día que no lo hizo costó dinero.
+ * Hasta el 20/09/2026 el filtro era `fechaVencimiento >= hoy`: una póliza que
+ * venció ayer sin que nadie la gestionara DEJABA DE EXISTIR para la pantalla,
+ * para el cron de Telegram y para el contador de «Hoy» — justo cuando más
+ * urgía. Y se notaba aguas abajo: la urgencia `'vencida'` de
+ * `@central/module-seguros` y su insignia en `Renovaciones.tsx` no podían
+ * renderizarse NUNCA desde este origen, así que eran código muerto que parecía
+ * cobertura. Medido ese día: 9 pólizas de Mapfre (C0058) vencidas entre el
+ * 05/06 y el 10/08/2026, 4.377,51 € de prima, invisibles.
+ *
+ * Hacia atrás se mira UNA ANUALIDAD (`DIAS_ANUALIDAD`, LCS art. 22) y no más:
+ * una fila cuyo último vencimiento es anterior a eso no describe la anualidad
+ * en curso —aunque se hubiera prorrogado sola, la fecha ya se habría movido— y
+ * meterla en la cola de hoy enterraría las recuperables bajo dato viejo (las
+ * hay: 8 pólizas con vencimiento de 2013 a 2019 y prima 0). Esas NO se
+ * esconden: las cuenta `vencidasFueraDeVentana()` y la pantalla lo declara.
  *
  * Las que tienen `fechaVencimiento` NULL NO salen aquí y eso no significa que no
  * venzan: significa que no se sabe cuándo. El resumen las cuenta aparte
@@ -175,17 +194,20 @@ export async function vencimientosProximos(
   correduriaId: string,
   dias: number = DIAS_HORIZONTE_RENOVACION,
   hoyRef: Date = hoyUtc(),
+  diasAtras: number = DIAS_ANUALIDAD,
 ): Promise<PolizaVencimiento[]> {
   if (!aseguraConfigurada()) return []
   const db = prismaAsegura()
   const hasta = new Date(hoyRef)
   hasta.setUTCDate(hasta.getUTCDate() + dias)
+  // El borde izquierdo NO es `hoyRef`: es hoy menos una anualidad.
+  const desde = inicioVentanaRecuperacion(hoyRef, diasAtras)
   const filas = await db.poliza.findMany({
     where: {
       correduriaId,
       mergedIntoPolizaId: null,
       estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
-      fechaVencimiento: { gte: hoyRef, lte: hasta },
+      fechaVencimiento: { gte: desde, lte: hasta },
       // Una ficha descartada no genera llamadas de renovación. (Hoy no puede
       // haber ninguna aquí —no se descarta lo que tiene pólizas vivas—, pero
       // «vigente con fecha futura» no es exactamente «cartera viva», así que el
@@ -254,6 +276,40 @@ export async function vencimientosProximos(
       contacto: contactos?.get(f.cliente.id) ?? null,
     }
   })
+}
+
+/**
+ * Cuántas pólizas figuran VIGENTES arrastrando un vencimiento anterior a la
+ * ventana de recuperación (más de una anualidad en el pasado).
+ *
+ * No son trabajo de hoy y por eso no entran en la lista; pero tampoco se
+ * borran de la pantalla: son 8 filas que la BD declara activas con una fecha de
+ * hace 7-13 años y prima 0, o sea dato a depurar, y esconderlas es exactamente
+ * el fallo que este módulo acaba de arreglar un piso más arriba.
+ *
+ * 🚨 `null` = NO SE HA PODIDO CONTAR, nunca «no hay». Un 0 aquí afirmaría que
+ * la cartera está limpia, que es una afirmación sobre la que se decide.
+ */
+export async function vencidasFueraDeVentana(
+  correduriaId: string,
+  hoyRef: Date = hoyUtc(),
+  diasAtras: number = DIAS_ANUALIDAD,
+): Promise<number | null> {
+  if (!aseguraConfigurada()) return null
+  try {
+    return await prismaAsegura().poliza.count({
+      where: {
+        correduriaId,
+        mergedIntoPolizaId: null,
+        estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
+        fechaVencimiento: { lt: inicioVentanaRecuperacion(hoyRef, diasAtras) },
+        cliente: { activo: true },
+      },
+    })
+  } catch (e) {
+    registrarErrorCartera('vencidasFueraDeVentana', e)
+    return null
+  }
 }
 
 /** La única correduría de la base (medido: 1 fila). Lanza si hubiera más de una. */

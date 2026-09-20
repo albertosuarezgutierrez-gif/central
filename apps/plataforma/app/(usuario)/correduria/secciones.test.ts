@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   SECCIONES, seccionDeParametro, esAccionable, contarAccionables, agregarContadores,
+  textoVencidasAntiguas,
 } from './secciones.ts'
 
 /**
@@ -86,4 +87,49 @@ test('agregarContadores: lo que aún no ha cargado no es una alarma', () => {
 
 test('agregarContadores: el 0 legible es un VALOR, no un hueco', () => {
   assert.deepEqual(agregarContadores([0]), { n: 0, parcial: false })
+})
+
+// ─── Las VENCIDAS son trabajo de hoy (20/09/2026) ────────────────────────────
+// Hasta ese día esta rama era inalcanzable: el puerto de asegura filtraba
+// `fechaVencimiento >= hoy` y una póliza vencida no llegaba nunca a la lista, así
+// que este contador no podía sumarla. Medido contra la BD: 9 pólizas de Mapfre
+// vencidas entre 41 y 107 días, 4.377,51 € de prima, con el badge a 0.
+test('una póliza YA VENCIDA suma en el contador de «Hoy», no se pierde', () => {
+  assert.equal(
+    contarAccionables([
+      { urgencia: 'vencida' },          // venció hace 41 días: recuperación
+      { urgencia: 'vencida' },          // venció hace 107 días: sigue contando
+      { urgencia: 'prorroga_inevitable' },
+      { urgencia: 'a_tiempo' },         // vence dentro de 70: eso es «Cartera»
+    ]),
+    3,
+  )
+  // Y sola: el caso que el bug volvía invisible por completo.
+  assert.equal(contarAccionables([{ urgencia: 'vencida' }]), 1)
+})
+
+// ─── Las vigentes con vencimiento de hace años se DECLARAN ───────────────────
+test('textoVencidasAntiguas: tres estados, tres frases DISTINTAS', () => {
+  const noLlega = textoVencidasAntiguas(undefined)
+  const noSePudo = textoVencidasAntiguas(null)
+  const ninguna = textoVencidasAntiguas(0)
+  const hay = textoVencidasAntiguas(8)
+  // Ninguna se parece a otra: cada una manda a mirar a un sitio distinto
+  // (desplegar asegura / mirar el puerto / nada / depurar la cartera).
+  assert.equal(new Set([noLlega, noSePudo, ninguna, hay]).size, 4)
+  // Y los dos «no lo sé» NO pueden leerse como «no hay ninguna».
+  for (const frase of [noLlega, noSePudo]) {
+    assert.ok(!/^Ninguna/.test(frase), `«${frase}» empieza afirmando una ausencia no comprobada`)
+  }
+  assert.match(noLlega, /no llega por el puerto/)
+  assert.match(noSePudo, /No se ha podido contar/)
+  // El 0 SÍ es una afirmación: se ha mirado y no hay.
+  assert.match(ninguna, /^Ninguna póliza vigente/)
+})
+
+test('textoVencidasAntiguas: concuerda en singular y en plural', () => {
+  assert.match(textoVencidasAntiguas(1), /^1 póliza figura vigente/)
+  assert.match(textoVencidasAntiguas(8), /^8 pólizas figuran vigentes/)
+  // Las 8 medidas el 20/09/2026 son dato a depurar, no trabajo de hoy.
+  assert.match(textoVencidasAntiguas(8), /no entran en la lista ni en el contador de «Hoy»/)
 })

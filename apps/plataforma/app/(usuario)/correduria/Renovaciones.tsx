@@ -1,8 +1,9 @@
 'use client'
 import Link from 'next/link'
+import { descripcionDias } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge, type Tono } from '@/components/ui'
-import { esAccionable } from './secciones'
+import { esAccionable, textoVencidasAntiguas } from './secciones'
 import AccionesContacto from './AccionesContacto'
 
 /**
@@ -23,6 +24,19 @@ import AccionesContacto from './AccionesContacto'
  * El orden lo marca la LCS art. 22: dentro del mes de preaviso el tomador ya no
  * puede oponerse a la prórroga, así que «quedan 9 días» y «quedan 70» son
  * trabajos distintos y la lista lo dice.
+ *
+ * ─── Y la ventana EMPIEZA EN EL PASADO (20/09/2026) ──────────────────────────
+ * `URGENCIAS.vencida` existía desde el primer día y NO SE PODÍA PINTAR NUNCA:
+ * el puerto de asegura filtraba `fechaVencimiento >= hoy`, así que una póliza
+ * que venció ayer sin gestionar desaparecía de esta tabla, del contador de
+ * «Hoy» y del aviso de Telegram. Medido ese día: 9 pólizas de Mapfre vencidas
+ * hace 41-107 días, 4.377,51 € de prima, invisibles en la única pantalla que
+ * Alberto abre. Un badge que no puede renderizarse es indistinguible de uno que
+ * funciona — es el mismo fallo que la regla del cepo verde persigue.
+ *
+ * Consecuencias en este fichero: los días pueden ser NEGATIVOS (se dicen «hace
+ * N días», nunca «en -N días»), la fila vencida se separa del resto con su
+ * propio fondo, y el pie declara la ventana real y lo que queda FUERA de ella.
  */
 
 import type { Contacto } from '@/lib/correduria-puerto'
@@ -70,7 +84,23 @@ export type Vencimiento = {
 export type RespVencimientos =
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo?: MotivoError; causa?: string }
-  | { estado: 'ok'; dias: number; polizas: Vencimiento[] }
+  | {
+      estado: 'ok'
+      dias: number
+      polizas: Vencimiento[]
+      /** Cuántos días hacia ATRÁS mira la ventana. `undefined` = la versión
+       *  desplegada de asegura no lo dice todavía; entonces no se afirma cuál
+       *  es (se dice el horizonte hacia delante y nada más). */
+      diasAtras?: number
+      /**
+       * Vigentes con vencimiento anterior a esa ventana (más de una anualidad):
+       * dato a depurar, no llamadas de hoy. TRES estados y ninguno se colapsa:
+       *   `undefined` = la versión desplegada de asegura no lo informa.
+       *   `null`      = se intentó contar y no se pudo.
+       *   número      = las que hay (0 incluido, y ahí 0 SÍ significa cero).
+       */
+      vencidasAntiguas?: number | null
+    }
 
 // Fecha siempre en formato español día/mes/año: "2026-06-03" → "03/06/2026".
 function fmtFecha(iso: string): string {
@@ -119,6 +149,25 @@ function CeldaObjeto({ objeto }: { objeto: ObjetoAsegurado | null }) {
 }
 
 /**
+ * Lo que queda FUERA de la ventana por el lado del pasado: vigentes con un
+ * vencimiento anterior a una anualidad (medido 20/09/2026: 8 filas de 2013-2019
+ * con prima 0). No son trabajo de hoy —meterlas en la cola enterraría las 9
+ * recuperables— pero tampoco se esconden.
+ *
+ * TRES estados y ninguno se colapsa, porque se arreglan en sitios distintos:
+ *   undefined → la versión desplegada de asegura no manda el recuento.
+ *   null      → se intentó contar y no se pudo. NUNCA se pinta como «ninguna».
+ *   número    → las que hay; aquí un 0 SÍ es una afirmación comprobada.
+ */
+function PieAntiguas({ n }: { n: number | null | undefined }) {
+  return (
+    <p style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 0' }}>
+      {textoVencidasAntiguas(n)}
+    </p>
+  )
+}
+
+/**
  * @param filtro  `accionables` = solo lo que caduca (secciones «Hoy»);
  *                `todas` = la ventana entera que devolvió el puerto («Cartera»).
  */
@@ -156,11 +205,18 @@ export default function Renovaciones({ datos, filtro }: {
 
   if (polizas.length === 0) {
     return (
-      <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
-        {filtro === 'accionables'
-          ? 'Ninguna renovación entra hoy en la ventana de preaviso (LCS art. 22).'
-          : `Ninguna póliza vigente vence en los próximos ${datos.dias} días.`}
-      </p>
+      <>
+        <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+          {filtro === 'accionables'
+            ? 'Ninguna renovación está vencida ni entra hoy en la ventana de preaviso (LCS art. 22).'
+            : `Ninguna póliza vigente vence en los próximos ${datos.dias} días${
+                datos.diasAtras ? `, ni ha vencido en los ${datos.diasAtras} anteriores` : ''
+              }.`}
+        </p>
+        {/* 🚨 Es JUSTO aquí donde más importa declararlas: una lista vacía
+            invita a leer «no hay nada», y puede haber 8 filas fuera de ventana. */}
+        {filtro === 'todas' && <PieAntiguas n={datos.vencidasAntiguas} />}
+      </>
     )
   }
 
@@ -170,11 +226,36 @@ export default function Renovaciones({ datos, filtro }: {
   const total = conPrima.reduce((s, p) => s + (p.prima ?? 0), 0)
   const sinPrima = polizas.length - conPrima.length
 
+  // Lo ya vencido se cuenta APARTE del resto de la cartera en juego: «vence
+  // dentro de 40 días» y «venció hace 40» son dos trabajos distintos, y
+  // sumarlos en un solo euro los volvería a confundir.
+  const yaVencidas = polizas.filter(p => p.dias < 0)
+  const primaVencida = yaVencidas.reduce((s, p) => s + (p.prima ?? 0), 0)
+  const vencidasSinPrima = yaVencidas.filter(p => p.prima === null).length
+
   return (
     <>
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>
         Cartera en juego: {eur(total)}{sinPrima > 0 && ` · ${sinPrima} sin prima informada`}
       </p>
+
+      {yaVencidas.length > 0 && (
+        <p
+          style={{
+            fontSize: 12, color: 'var(--negative)', background: 'var(--negative-bg)',
+            border: '1px solid var(--negative)', borderRadius: 6,
+            margin: '0 0 10px', padding: '8px 10px', fontWeight: 600,
+          }}
+        >
+          {yaVencidas.length === 1
+            ? '1 póliza YA VENCIDA y sin gestionar'
+            : `${yaVencidas.length} pólizas YA VENCIDAS y sin gestionar`}
+          {primaVencida > 0 && ` · ${eur(primaVencida)}`}
+          {vencidasSinPrima > 0 && ` · ${vencidasSinPrima} sin prima informada`}
+          {' — '}figuran vigentes con la fecha pasada: o la compañía no ha mandado la renovación, o
+          nadie la ha trabajado. Van las primeras de la lista.
+        </p>
+      )}
 
       <TablaScroll>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 720 }}>
@@ -192,12 +273,29 @@ export default function Renovaciones({ datos, filtro }: {
           <tbody>
             {polizas.map(p => {
               const u = URGENCIAS[p.urgencia] ?? URGENCIAS.a_tiempo
+              // Una vencida no puede parecer una que vence dentro de 40 días:
+              // además del badge, la fila entera va sobre fondo de alarma.
+              const vencida = p.dias < 0
               return (
-                <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <tr
+                  key={p.id}
+                  style={{
+                    borderTop: '1px solid var(--border)',
+                    ...(vencida ? { background: 'var(--negative-bg)' } : {}),
+                  }}
+                >
                   <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
                     {fmtFecha(p.fechaVencimiento)}
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                      {p.dias === 0 ? 'hoy' : `en ${p.dias} días`}
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: vencida ? 'var(--negative)' : 'var(--muted)',
+                        fontWeight: vencida ? 600 : undefined,
+                      }}
+                    >
+                      {/* `descripcionDias` es la que sabe del signo: sin ella
+                          una vencida se anunciaba como «en -41 días». */}
+                      {descripcionDias(p.dias)}
                     </div>
                   </td>
                   <td style={{ padding: '8px' }}>
@@ -253,7 +351,12 @@ export default function Renovaciones({ datos, filtro }: {
         El tomador puede oponerse a la prórroga hasta un mes antes del vencimiento (LCS art. 22): pasada esa
         fecha la póliza se renueva sola. Las pólizas sin fecha de vencimiento no salen aquí — no es que no
         venzan, es que la compañía no ha informado la fecha.
+        {datos.diasAtras
+          ? ` La ventana mira ${datos.dias} días hacia delante y ${datos.diasAtras} hacia atrás, para que una vencida sin gestionar no desaparezca.`
+          : ' La versión desplegada de asegura no dice cuántos días hacia atrás mira la ventana.'}
       </p>
+
+      {filtro === 'todas' && <PieAntiguas n={datos.vencidasAntiguas} />}
     </>
   )
 }

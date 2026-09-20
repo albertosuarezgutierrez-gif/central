@@ -23,13 +23,30 @@
 
 import { motivosSilencio, type SilencioEntidad } from './silencio-entidad.ts'
 
-/** Qué se sabe de la ingesta. Tres estados, nunca dos. */
+/**
+ * Qué se sabe de la ingesta. **Cuatro estados, y el cuarto no es ninguno de los
+ * otros tres.**
+ *
+ * 🚨 `parcial` entró el 20/09/2026 tapando un agujero de este mismo módulo. Los
+ * motivos de «no se ha podido mirar» (crudo, caja negra, cobertura, cron) SÍ se
+ * componían… y luego se tiraban: no entraban en el veredicto y `detalleSalud`
+ * los descartaba en la rama `ok`. Con la cuarentena limpia y sin constancia de
+ * ninguna corrida del cron, el parte decía literalmente «ingesta CIMA: sin
+ * ficheros atascados» — o sea, la frase tranquilizadora sobre lo único que este
+ * módulo existe para no decir. Hoy no mordía por casualidad: el estado ya era
+ * `degradada` por otra cosa.
+ *
+ * `parcial` NO es `degradada` (no hay pérdida medida) ni `ok` (no se ha mirado
+ * todo). Colapsarlo con cualquiera de los dos vuelve a perder el dato.
+ */
 export type EstadoIngesta =
-  /** Se ha podido mirar y no hay nada atascado reciente. */
+  /** Se ha podido mirar TODO y no hay nada atascado reciente. */
   | 'ok'
   /** Se ha podido mirar y SÍ se están perdiendo datos. */
   | 'degradada'
-  /** No se ha podido mirar. NO es «está bien». */
+  /** Sin pérdida medida, pero hay comprobaciones que no se han podido hacer. */
+  | 'parcial'
+  /** No se ha podido mirar nada. NO es «está bien». */
   | 'sin_datos'
 
 /** Un fichero que la ingesta no pudo procesar y dejó en cuarentena. */

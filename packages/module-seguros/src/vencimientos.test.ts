@@ -3,6 +3,10 @@ import assert from 'node:assert/strict'
 import {
   DIAS_PREAVISO_TOMADOR,
   DIAS_PREAVISO_ASEGURADOR,
+  DIAS_ANUALIDAD,
+  descripcionDias,
+  esVencidaRecuperable,
+  inicioVentanaRecuperacion,
   comunicacionEnPlazo,
   fechaLimiteComunicacionAseguradora,
   diasHastaVencimiento,
@@ -88,4 +92,52 @@ test('una comunicación en el límite exacto está en plazo', () => {
 test('sin fecha de comunicación NO se afirma que llegó tarde: es null', () => {
   assert.equal(comunicacionEnPlazo(new Date('2026-10-01'), null), null)
   assert.equal(comunicacionEnPlazo(new Date('2026-10-01'), undefined), null)
+})
+
+// ─── La ventana que MIRA HACIA ATRÁS (20/09/2026) ────────────────────────────
+// Hasta ese día `vencimientosProximos` consultaba `fechaVencimiento >= hoy`, así
+// que la urgencia 'vencida' de arriba NO PODÍA EMITIRSE NUNCA desde el origen
+// real: su rama era código muerto con aspecto de cobertura. Estos cepos fijan el
+// vocabulario del arreglo — el corte hacia atrás y cómo se DICE un plazo pasado.
+
+test('una vencida sigue siendo «vencida» aunque lleve meses: el caso real de Mapfre', () => {
+  // Las 9 pólizas de Mapfre medidas el 20/09/2026 llevaban entre 41 y 107 días
+  // vencidas. Ninguna puede degradar a otra urgencia ni «caducar» de la lista.
+  assert.equal(urgenciaRenovacion(-41), 'vencida')
+  assert.equal(urgenciaRenovacion(-107), 'vencida')
+  assert.equal(urgenciaRenovacion(-DIAS_ANUALIDAD), 'vencida')
+})
+
+test('el corte hacia atrás es UNA ANUALIDAD, que es el periodo de prórroga (LCS art. 22)', () => {
+  assert.equal(DIAS_ANUALIDAD, 365)
+  // Las 9 reales (41-107 días) entran; las 8 zombis (2.552-4.984) no.
+  assert.equal(esVencidaRecuperable(-41), true)
+  assert.equal(esVencidaRecuperable(-107), true)
+  assert.equal(esVencidaRecuperable(-365), true)
+  assert.equal(esVencidaRecuperable(-366), false)
+  assert.equal(esVencidaRecuperable(-2552), false)
+  assert.equal(esVencidaRecuperable(-4984), false)
+  // Y lo que todavía no ha vencido NO es una recuperación, es una renovación.
+  assert.equal(esVencidaRecuperable(0), false)
+  assert.equal(esVencidaRecuperable(40), false)
+})
+
+test('el borde izquierdo de la ventana es hoy MENOS una anualidad, no hoy', () => {
+  const desde = inicioVentanaRecuperacion(HOY)
+  assert.equal(desde.toISOString().slice(0, 10), '2025-09-01')
+  // Se normaliza a medianoche UTC: HOY trae las 10:00 y no deben colarse horas.
+  assert.equal(desde.toISOString(), '2025-09-01T00:00:00.000Z')
+  // Y admite otra ventana sin tocar el resto.
+  assert.equal(inicioVentanaRecuperacion(HOY, 90).toISOString().slice(0, 10), '2026-06-03')
+})
+
+test('un plazo pasado se dice «hace N días», jamás «en -N días»', () => {
+  assert.equal(descripcionDias(0), 'hoy')
+  assert.equal(descripcionDias(1), 'en 1 día')
+  assert.equal(descripcionDias(40), 'en 40 días')
+  assert.equal(descripcionDias(-1), 'hace 1 día')
+  assert.equal(descripcionDias(-41), 'hace 41 días')
+  assert.equal(descripcionDias(-107), 'hace 107 días')
+  // El cepo de verdad: el signo no puede llegar al texto.
+  for (const d of [-1, -41, -107, -365]) assert.ok(!descripcionDias(d).includes('-'))
 })
