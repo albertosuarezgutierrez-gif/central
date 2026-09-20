@@ -1,0 +1,41 @@
+{
+ "sesion": "f98f781c-c5dd-51fc-9586-d0c55154f02c",
+ "inicio": "2026-09-20T05:06:43.600Z",
+ "fin": "2026-09-20T05:08:35.818Z",
+ "llamadas": 13,
+ "categorias": {
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 26,
+   "chars_out": 47,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 11,
+   "chars_in": 2173,
+   "chars_out": 88722,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 11
+   }
+  }
+ }
+}
