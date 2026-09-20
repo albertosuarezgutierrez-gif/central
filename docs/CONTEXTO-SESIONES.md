@@ -22,9 +22,12 @@ con `CONCURRENTLY` — `polizasSinRecibo()`, que corre en cada carga de la cola 
 **se retiró tras medirlo**: con los dos creados el planificador eligió el otro, se borró y el EXPLAIN dio
 plan idéntico. Es la regla del propio fichero aplicada a sí mismo — un índice que el plan no usa solo
 paga escrituras. ⏸️ **Sin tocar y sigue siendo de Alberto:** RLS (89 tablas, 0 políticas — en bloque con
-BYPASSRLS no daría error, VACIARÍA el portal en silencio) y las 2 pólizas de CIMA que purgan el 17/10
-(`C0468_8-92361_POL`, `C0072_65792_POL`): el arreglo hacia delante ya existe en el CRM (LOO-826), pero
-esas dos solo se recuperan pidiendo el reenvío a Occident y Generali. Borradores escritos, **no enviados**.
+BYPASSRLS no daría error, VACIARÍA el portal en silencio). 🚨 **Y lo de «2 pólizas de CIMA que purgan el
+17/10» era FALSO, corregido el mismo día:** entraron solas en el reconcile del 17/09 (`8-5.874.010-V` de
+Occident y `6E-G-475000053` de Generali, las dos activas y en vigor). Se leyó el evento del PRIMER intento
+y se llamó «el estado»; el estado está en `cima_ficheros`/`polizas`, no en el log. No se mandó ningún correo.
+El residuo real sobre los 147 ficheros es **1 póliza** (Occident `M00171`, 20/06, crudo ya purgado) y los
+3 siniestros de Allianz sin póliza en cartera. Detalle y receta SQL en `docs/CIMA-CUARENTENA.md`.
 
 **(20/09/2026)** Auditoría integral de Grupo ASegura y su EJECUCIÓN (PR #3182, draft). P0 cerrado:
 las 45 rutas de `/api/correduria/*` no comprobaban quién entraba (`exigirCorreduria()` + allow-list
