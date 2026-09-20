@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** SEO Grupo ASegura · opinión sobre una propuesta pegada por Alberto (ChatGPT):
+descartado el enfoque local-por-barrio (contradice el ámbito NACIONAL dictado el 07/09) y el
+"gestor de seguros gratuito abierto a no-clientes" (riesgo RGPD/asesoramiento, es producto nuevo,
+no SEO). Al ejecutar: `apps/plataforma/lib/seo-correduria/consultas.ts` tenía `pagina: null` en 3
+consultas «problema» cuyos artículos YA estaban publicados (07 y 15/09) — `accionPropuesta`
+llevaba semanas pudiendo proponer reescribir contenido existente, y esas URLs nunca entraban en
+la comprobación de indexación (`cobertura.ts`). Corregido + `keywords.md` puesto al día. Tests
+seo-correduria 68/68, tsc plataforma 0.
 **(17/09/2026)** `guardian-rama.mjs` daba un falso "commits huérfanos" al mergear PRs por MCP —
 la causa real: la rama LOCAL `main` de este checkout iba desincronizada de `origin/main` (se
 quedó en un SHA viejo tras squash-merges anteriores), no basura huérfana como se pensó en un
