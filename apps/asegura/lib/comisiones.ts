@@ -16,6 +16,11 @@
 import { importeEiac as leerImporteEiac, sumarImportesEiac } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { registrarErrorCartera, type CausaErrorCartera } from './error-cartera'
+import {
+  LIMITE_LIQUIDACIONES,
+  LIMITE_RECIBOS_COBRADOS,
+  cribaTruncada,
+} from './cartera-techos.ts'
 
 /**
  * Importe EIAC (guardado en TEXT) → número. `null` si no se puede leer.
@@ -85,6 +90,21 @@ export type ComisionesCartera =
       periodos: PeriodoComisiones[]
       devengos: DevengoCompania[]
       cobertura: CoberturaCompania[]
+      /**
+       * 🚨 Alguna de las tres cribas (cuentas de efectivo, liquidaciones o
+       * recibos cobrados) tocó su techo, así que el LIBRO ESTÁ INCOMPLETO y el
+       * devengado sale más BAJO que el real.
+       *
+       * Es el mismo daño que el `?? 0` sobre un importe ilegible que este
+       * módulo ya corrigió, un piso más arriba: una cifra plausible y corta,
+       * sin hueco que la delate, contra la que se decide si reclamar a una
+       * compañía. Por eso es UN solo campo para las tres: a quien lo lee no le
+       * cambia la acción (no fiarse del total), y tres banderas sueltas
+       * invitarían a fiarse de dos de ellas.
+       *
+       * NO significa «hay exactamente N filas».
+       */
+      truncado: boolean
     }
 
 const iso = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null)
@@ -108,8 +128,12 @@ export async function comisionesCartera(correduriaId: string, desde: Date): Prom
       db.cuentaEfectivo.findMany({
         where: { correduriaId, periodoInicio: { gte: desde } },
         orderBy: { periodoInicio: 'asc' },
+        take: LIMITE_LIQUIDACIONES,
       }),
-      db.liquidacion.findMany({ where: { correduriaId, fechaLiquidacion: { gte: desde } } }),
+      db.liquidacion.findMany({
+        where: { correduriaId, fechaLiquidacion: { gte: desde } },
+        take: LIMITE_LIQUIDACIONES,
+      }),
     ])
 
     const periodos: PeriodoComisiones[] = cuentas
@@ -141,7 +165,16 @@ export async function comisionesCartera(correduriaId: string, desde: Date): Prom
     const recibos = await db.polizaRecibo.findMany({
       where: { correduriaId, situacion: 'cobrado', fechaSituacion: { gte: desde } },
       select: { codigoEntidadDgs: true, fechaSituacion: true, comisionBruta: true },
+      take: LIMITE_RECIBOS_COBRADOS,
     })
+
+    // Las tres cribas, en un solo veredicto. Cualquiera que muerda deja el
+    // libro corto, así que el `||` no pierde información: la acción de quien lo
+    // lee es la misma en los tres casos.
+    const truncado =
+      cribaTruncada(cuentas.length, LIMITE_LIQUIDACIONES) ||
+      cribaTruncada(liqs.length, LIMITE_LIQUIDACIONES) ||
+      cribaTruncada(recibos.length, LIMITE_RECIBOS_COBRADOS)
     // 🚨 El `?? 0` que había aquí convertía un «no se ha podido leer» en «cobró
     // 0€ de comisión» y lo sumaba igual al devengo: la cifra salía plausible y
     // más BAJA que la real, que es justo la que se compara contra el extracto de
@@ -173,7 +206,10 @@ export async function comisionesCartera(correduriaId: string, desde: Date): Prom
       })
       .sort((a, b) => a.mes.localeCompare(b.mes) || a.companiaCodigo.localeCompare(b.companiaCodigo))
 
-    // Cobertura: TODO el histórico, sin filtro de fecha. Un recuento limitado a
+    // Cobertura: TODO el histórico, sin filtro de fecha. No lleva techo y no le
+    // hace falta: son `groupBy` por `codigo_entidad_dgs`, así que devuelven una
+    // fila por compañía (5 hoy, 15 en `companias_dgs`), no una por recibo.
+    // Un recuento limitado a
     // la ventana daría «sin cobertura» a una compañía que simplemente no ha
     // movido nada este año, y eso mandaría a Alberto a hacer una gestión que no
     // hace falta.
@@ -202,7 +238,7 @@ export async function comisionesCartera(correduriaId: string, desde: Date): Prom
       }))
       .sort((a, b) => a.companiaCodigo.localeCompare(b.companiaCodigo))
 
-    return { estado: 'ok', periodos, devengos, cobertura }
+    return { estado: 'ok', periodos, devengos, cobertura, truncado }
   } catch (e) {
     // Mismo clasificador que las otras ocho rutas del puerto: la causa viaja en
     // la respuesta y el detalle (sin la URL, que llevaría la contraseña) va al

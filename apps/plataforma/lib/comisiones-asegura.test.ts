@@ -104,3 +104,30 @@ test('los códigos DGS reales son C0058/C0109, no los numéricos del cima.ts ret
   // peor que decir que no se sabe cuál es.
   assert.equal(nombreCompania('C9999'), 'C9999')
 })
+
+// ── El techo del LIBRO de comisiones ────────────────────────────────────────
+
+test('🚨 comisiones: `truncado` ausente es null, no false (mismo criterio que `ilegibles`)', () => {
+  // Contra este total se decide si se reclama a una compañía. Un `false`
+  // inventado daría por completo un libro que nadie ha comprobado.
+  const viejo = interpretarComisiones(200, {
+    comisiones: { estado: 'ok', periodos: [], cobertura: [], devengos: [] },
+  })
+  assert.equal(viejo.estado === 'ok' && viejo.truncado, null)
+
+  const raro = interpretarComisiones(200, {
+    comisiones: { estado: 'ok', periodos: [], cobertura: [], devengos: [], truncado: 1 },
+  })
+  assert.equal(raro.estado === 'ok' && raro.truncado, null)
+})
+
+test('comisiones: `false` y `true` se propagan tal cual', () => {
+  const completo = interpretarComisiones(200, {
+    comisiones: { estado: 'ok', periodos: [], cobertura: [], devengos: [], truncado: false },
+  })
+  assert.equal(completo.estado === 'ok' && completo.truncado, false)
+  const corto = interpretarComisiones(200, {
+    comisiones: { estado: 'ok', periodos: [], cobertura: [], devengos: [], truncado: true },
+  })
+  assert.equal(corto.estado === 'ok' && corto.truncado, true)
+})

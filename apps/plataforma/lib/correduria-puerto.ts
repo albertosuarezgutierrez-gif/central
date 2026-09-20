@@ -46,6 +46,27 @@ function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
 }
 
+/**
+ * El campo `truncado` del puerto de asegura, con TRES estados y no dos.
+ *
+ * 🚨 `r.truncado === true` —que es como se leía hasta hoy en `interpretarSinCanal`—
+ * colapsa el ausente a `false`, o sea a «se miró y la lista está completa». Y
+ * ausente significa lo contrario: es una versión desplegada de asegura anterior
+ * al techo, que **no sabe** si recortó. Afirmar que la lista está entera es
+ * exactamente el recorte mudo movido de sitio.
+ *
+ *   `true`  → la criba tocó su techo: falta lista, y se dice.
+ *   `false` → asegura lo comprobó y no recortó.
+ *   `null`  → no se sabe (asegura no manda el campo).
+ *
+ * Vive aquí y se exporta porque los tres lectores del puerto (vencimientos,
+ * impagados y comisiones) tienen que leerlo IGUAL: dos copias de un tri-estado
+ * divergen en el borde, que es el único sitio donde importa.
+ */
+export function leerTruncado(v: unknown): boolean | null {
+  return typeof v === 'boolean' ? v : null
+}
+
 // ── Buscador ────────────────────────────────────────────────────────────────
 
 /**
@@ -292,6 +313,12 @@ export type Impagados =
       sinRecibosInformados: number
       /** Pendientes que aún no han vencido o no traen fecha. */
       pendientesSinJuzgar: number
+      /**
+       * La criba de recibos de asegura tocó su techo: hay MÁS pólizas sin
+       * cobrar de las que trae esta lista. `null` = asegura (versión vieja) no
+       * lo informa, que **no es** «la lista está completa»: ver `leerTruncado`.
+       */
+      truncado: boolean | null
     }
 
 const ESTADOS_RETENCION = new Set([
@@ -375,6 +402,9 @@ export function interpretarImpagados(status: number, json: unknown): Impagados {
     // puede decir «ninguna póliza está sin recibos», que es lo tranquilizador.
     sinRecibosInformados: entero(r.sinRecibosInformados) ?? -1,
     pendientesSinJuzgar: entero(r.pendientesSinJuzgar) ?? -1,
+    // Sin `?? false`: un puerto que no manda el campo no ha dicho que la lista
+    // esté entera. El tercer hueco de esta pantalla se declara como los otros dos.
+    truncado: leerTruncado(r.truncado),
   }
 }
 

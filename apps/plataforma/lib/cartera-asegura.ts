@@ -11,7 +11,7 @@
 // obliga a adivinar cuál de los tres es (pasó el 31/08/2026).
 
 import type { ObjetoAsegurado } from '@central/module-seguros'
-import { interpretarContacto, type Contacto } from './correduria-puerto.ts'
+import { interpretarContacto, leerTruncado, type Contacto } from './correduria-puerto.ts'
 
 export type MotivoErrorCartera =
   | 'secreto_rechazado'   // asegura devolvió 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
@@ -172,7 +172,39 @@ export function interpretarObjeto(v: unknown): ObjetoAsegurado | null {
 export type VencimientosAsegura =
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: MotivoErrorCartera; causa?: string }
-  | { estado: 'ok'; dias: number; polizas: PolizaVencimiento[] }
+  | {
+      estado: 'ok'
+      dias: number
+      polizas: PolizaVencimiento[]
+      /**
+       * La criba de asegura tocó su techo: hay MÁS pólizas que renovar en la
+       * ventana de las que trae esta lista.
+       *
+       * 🚨 `null` = asegura (versión desplegada más vieja) no manda el campo, y
+       * eso NO es `false`. Una lista de renovaciones recortada en silencio es
+       * una lista de llamadas que no se hacen, sobre pólizas que se prorrogan
+       * solas pasado el preaviso del art. 22 LCS. Mismo criterio que
+       * `ilegibles` en `lib/comisiones-asegura.ts`.
+       */
+      truncado: boolean | null
+      /**
+       * Pólizas de la cartera viva que figuran VIGENTES con un vencimiento
+       * anterior a la ventana de recuperación. No son trabajo de hoy, pero son
+       * dato a depurar y la pantalla las declara en vez de esconderlas.
+       *
+       * 🚨 `null` = no se ha podido contar (o asegura no lo manda), NUNCA 0.
+       * Un 0 afirmaría que la cartera está limpia.
+       *
+       * 🚨 Hasta el 20/09/2026 este campo y `diasAtras` LLEGABAN del puerto y
+       * este lector no los leía, así que el pie de la pantalla decía siempre
+       * «asegura no lo informa» sobre un dato que estaba ahí. Cuatro líneas de
+       * passthrough que faltaban: el cepo de abajo las fija.
+       */
+      vencidasAntiguas: number | null
+      /** El borde IZQUIERDO de la ventana, en días. Sin él el pie no puede
+       *  decir desde cuándo cuenta lo de arriba. `null` = no informado. */
+      diasAtras: number | null
+    }
 
 /** Interpretación PURA de la respuesta del puerto de vencimientos.
  *  Una fila con forma inesperada invalida la lista entera: media lista de
@@ -216,7 +248,18 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
     })
   }
   const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 90
-  return { estado: 'ok', dias, polizas }
+  // Sin `?? 0`: los dos son «no se sabe» cuando no vienen. Colapsarlos a 0
+  // diría «no queda ninguna vencida antigua», que es justo lo contrario.
+  const entero = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null
+  return {
+    estado: 'ok',
+    dias,
+    polizas,
+    truncado: leerTruncado(r.truncado),
+    vencidasAntiguas: entero(r.vencidasAntiguas),
+    diasAtras: entero(r.diasAtras),
+  }
 }
 
 export async function vencimientosAsegura(dias = 90): Promise<VencimientosAsegura> {

@@ -191,3 +191,39 @@ export function textoVencidasAntiguas(n: number | null | undefined): string {
     'renovaciones de este año: es dato a depurar, y por eso no entran en la lista ni en el ' +
     'contador de «Hoy».'
 }
+
+/**
+ * Lo que la pantalla dice cuando una lista del puerto de asegura viene con
+ * TECHO. Tres estados, tres frases distintas, y una de ellas es el silencio:
+ *
+ *   `true`      → la criba tocó su techo: lo que se ve abajo es UNA PARTE.
+ *   `false`     → asegura lo comprobó y no recortó → `null`, no se dice nada
+ *                 (un cartel permanente de «está completa» es ruido que se
+ *                 deja de leer, y entonces el del `true` tampoco se lee).
+ *   `null`/`undefined` → asegura (versión desplegada más vieja) NO manda el
+ *                 campo. **No es `false`.** Se dice que no se sabe, en tono
+ *                 apagado, y se cura solo al desplegar asegura.
+ *
+ * 🚨 El estado que importa es el tercero: colapsarlo con el segundo convierte
+ * un «no lo he comprobado» en «esto es todo», que es exactamente el recorte
+ * mudo que el techo existe para evitar — movido de la consulta a la pantalla.
+ *
+ * Vive aquí y no en el JSX por la regla global del repo (la lógica del titular
+ * va en un helper puro y testeado), y lo comparten las tres listas para que el
+ * mismo hueco no se cuente de tres maneras distintas.
+ *
+ * @param que  El sujeto en plural, tal cual se pinta: «renovaciones»,
+ *             «pólizas sin cobrar»…
+ */
+export function textoListaTruncada(
+  truncado: boolean | null | undefined,
+  que: string,
+): string | null {
+  if (truncado === true) {
+    return `La lista viene RECORTADA: hay más ${que} de las que se ven aquí. Los ` +
+      'totales de arriba salen más bajos que la realidad.'
+  }
+  if (truncado === false) return null
+  return `La versión desplegada de asegura todavía no dice si esta lista viene recortada, ` +
+    `así que no se puede afirmar que estén todas las ${que}.`
+}

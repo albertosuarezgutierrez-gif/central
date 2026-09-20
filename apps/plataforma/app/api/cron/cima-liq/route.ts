@@ -220,6 +220,34 @@ export async function GET(req: NextRequest) {
   // cifra incompleta» — que es precisamente cuando se deja de reclamar algo.
   // `null` (una asegura más vieja no manda el campo) NO se cuenta como 0: se
   // dice que no se sabe.
+  // 🚨 Y el hueco que está POR ENCIMA de todos: la lectura vino RECORTADA.
+  // Un devengo calculado sobre parte de los recibos no es «cuadra con una
+  // cifra incompleta»: es un libro al que le faltan periodos enteros. Por eso
+  // el año se marca `leido_ok = false` —que es el mismo camino que ya existía
+  // para el fallo de lectura, y que `estadoCuadre` pinta como `no-comprobado`—
+  // en vez de dejar filas con cara de comprobadas.
+  //
+  // `truncado === null` (una asegura más vieja no manda el campo) NO se trata
+  // como `false`: no se marca nada, pero tampoco se afirma que el libro esté
+  // completo — se dice en el latido y en la respuesta. El libro se comporta
+  // como antes de que el campo existiera, que es lo único honesto que se puede
+  // hacer sin el dato.
+  if (com.truncado === true) {
+    await prisma.$executeRaw`
+      UPDATE comisiones_devengo SET leido_ok = false, actualizado_at = now()
+      WHERE cuenta_id = ${cuentaId}::uuid
+        AND periodo_inicio >= ${`${anio}-01-01`}::date`
+    await tgAviso(
+      'correduria.cima-liq',
+      `⚠️ <b>Comisiones</b> — la cartera vino <b>RECORTADA</b>: asegura tocó su techo de lectura, ` +
+        `así que faltan recibos y/o liquidaciones y el devengado de ${anio} sale más BAJO que el real.
+` +
+        `El libro queda marcado como <b>no comprobado</b>, no a cero. Hay que subir el tope en ` +
+        `<code>apps/asegura/lib/cartera-techos.ts</code>.`,
+      { html: true },
+    )
+  }
+
   const sinDato = com.devengos.some(d => d.ilegibles == null)
   const ilegibles = com.devengos.reduce((s, d) => s + (d.ilegibles ?? 0), 0)
   const lineaIlegibles = sinDato
@@ -242,18 +270,30 @@ export async function GET(req: NextRequest) {
     )
   }
 
+  // Una lectura recortada tiñe el latido: el libro de ese año NO está
+  // comprobado, y un latido verde diría lo contrario. `null` no lo tiñe (no se
+  // sabe, y no saberlo es el estado anterior a que existiera el campo), pero sí
+  // se DICE en el detalle: es donde se mira cuando algo no cuadra.
+  const notaTecho =
+    com.truncado === true
+      ? 'LECTURA RECORTADA: faltan periodos, el libro queda no comprobado'
+      : com.truncado === null
+        ? 'no se sabe si la lectura vino recortada (asegura no lo informa)'
+        : 'lectura completa'
   await registrarLatido(
     AGENTE,
-    true,
+    com.truncado !== true,
     `${filas.length} periodo(s) cuadrados · ${avisos.length} con dinero que no cuadra · ${pendientes} sin dato o sin fuente · ` +
-      (sinDato ? 'comisiones ilegibles: no se sabe' : `${ilegibles} recibo(s) con comisión ilegible`),
+      (sinDato ? 'comisiones ilegibles: no se sabe' : `${ilegibles} recibo(s) con comisión ilegible`) +
+      ` · ${notaTecho}`,
   )
   return NextResponse.json({
-    ok: true,
+    ok: com.truncado !== true,
     periodos: filas.length,
     avisos: avisos.length,
     pendientes,
-    // `null` = asegura no lo informa. No es 0.
+    // `null` = asegura no lo informa. No es 0. Igual que `recibosComisionIlegible`.
+    lecturaTruncada: com.truncado,
     recibosComisionIlegible: sinDato ? null : ilegibles,
   })
 }

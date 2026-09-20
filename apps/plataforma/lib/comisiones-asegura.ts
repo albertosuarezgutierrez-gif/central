@@ -9,6 +9,8 @@
 // un 401 (secretos que no coinciden), un error de la BD de asegura y un timeout
 // se arreglan en sitios distintos.
 
+import { leerTruncado } from './correduria-puerto.ts'
+
 export type MotivoErrorComisiones =
   | 'secreto_rechazado'   // 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
   | 'asegura_error'       // asegura respondió pero no pudo leer su BD
@@ -66,6 +68,17 @@ export type ComisionesAsegura =
       periodos: PeriodoComisiones[]
       devengos: DevengoCompania[]
       cobertura: CoberturaCompania[]
+      /**
+       * Alguna de las cribas de asegura tocó su techo: el libro viene
+       * INCOMPLETO y el devengado sale más bajo que el real.
+       *
+       * 🚨 Mismo tri-estado que `ilegibles` de aquí al lado, y por el mismo
+       * motivo: `null` = una versión desplegada más vieja de asegura no manda
+       * el campo, que NO es «se miró y está completo». Colapsarlo a `false`
+       * daría por bueno un total que nadie ha comprobado, y contra ese total se
+       * decide si se reclama a una compañía.
+       */
+      truncado: boolean | null
     }
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
@@ -132,6 +145,8 @@ export function interpretarComisiones(status: number, json: unknown): Comisiones
         ultimoRecibo: str(k.ultimoRecibo),
       }))
       .filter(k => k.companiaCodigo),
+    // Sin `?? false`: ver el comentario del tipo.
+    truncado: leerTruncado(com.truncado),
   }
 }
 

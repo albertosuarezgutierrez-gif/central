@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { descripcionDias } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge, type Tono } from '@/components/ui'
-import { esAccionable, textoVencidasAntiguas } from './secciones'
+import { esAccionable, textoListaTruncada, textoVencidasAntiguas } from './secciones'
 import AccionesContacto from './AccionesContacto'
 
 /**
@@ -100,6 +100,16 @@ export type RespVencimientos =
        *   número      = las que hay (0 incluido, y ahí 0 SÍ significa cero).
        */
       vencidasAntiguas?: number | null
+      /**
+       * La criba de asegura tocó su techo: hay MÁS pólizas que renovar en la
+       * ventana de las que trae esta lista. TRES estados, igual que el de
+       * arriba y por el mismo motivo:
+       *   `undefined`/`null` = asegura no lo informa → **no se puede afirmar
+       *                        que la lista esté completa**.
+       *   `false`            = se comprobó: están todas.
+       *   `true`             = falta lista, y se dice.
+       */
+      truncado?: boolean | null
     }
 
 // Fecha siempre en formato español día/mes/año: "2026-06-03" → "03/06/2026".
@@ -159,6 +169,29 @@ function CeldaObjeto({ objeto }: { objeto: ObjetoAsegurado | null }) {
  *   null      → se intentó contar y no se pudo. NUNCA se pinta como «ninguna».
  *   número    → las que hay; aquí un 0 SÍ es una afirmación comprobada.
  */
+/**
+ * El techo de la lista. Va ARRIBA, no al pie: si la lista viene recortada, el
+ * total de «cartera en juego» y el recuento de vencidas que se leen justo
+ * debajo salen más bajos que la realidad, y eso hay que saberlo ANTES de
+ * mirarlos. Silencio cuando asegura confirma que no recortó.
+ */
+function AvisoTruncado({ truncado }: { truncado: boolean | null | undefined }) {
+  const texto = textoListaTruncada(truncado, 'renovaciones')
+  if (texto === null) return null
+  return (
+    <p
+      style={{
+        fontSize: 12,
+        lineHeight: 1.5,
+        margin: '0 0 10px',
+        color: truncado === true ? 'var(--warning)' : 'var(--muted)',
+      }}
+    >
+      {truncado === true ? '⚠️ ' : ''}{texto}
+    </p>
+  )
+}
+
 function PieAntiguas({ n }: { n: number | null | undefined }) {
   return (
     <p style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 0' }}>
@@ -206,6 +239,9 @@ export default function Renovaciones({ datos, filtro }: {
   if (polizas.length === 0) {
     return (
       <>
+        {/* 🚨 Aquí es donde MÁS importa: «ninguna vence» sobre una lista
+            recortada es la frase tranquilizadora que no se ha comprobado. */}
+        <AvisoTruncado truncado={datos.truncado} />
         <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
           {filtro === 'accionables'
             ? 'Ninguna renovación está vencida ni entra hoy en la ventana de preaviso (LCS art. 22).'
@@ -235,6 +271,7 @@ export default function Renovaciones({ datos, filtro }: {
 
   return (
     <>
+      <AvisoTruncado truncado={datos.truncado} />
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>
         Cartera en juego: {eur(total)}{sinPrima > 0 && ` · ${sinPrima} sin prima informada`}
       </p>

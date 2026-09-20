@@ -34,6 +34,7 @@ import {
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { LIMITE_RECIBOS_IMPAGO, cribaTruncada } from './cartera-techos.ts'
 
 // 🚨 Las situaciones que significan «este dinero no ha entrado» son DOS, y no
 // son lo mismo (medido el 01/09/2026: 1 devuelto y 25 pendientes):
@@ -99,6 +100,15 @@ export type ColaRetencion = {
    * para que la cola no parezca la lista completa de lo que está sin cobrar.
    */
   pendientesSinJuzgar: number
+  /**
+   * 🚨 La criba de recibos tocó su techo (`LIMITE_RECIBOS_IMPAGO`): puede haber
+   * MÁS pólizas sin cobrar que esta lectura no ha visto. Es el tercer hueco de
+   * esta pantalla, junto a `sinRecibosInformados` y `pendientesSinJuzgar`, y el
+   * peor de los tres si se calla: los otros dos dicen «hay algo que no se
+   * sabe», este diría «esto es todo» sobre una lista recortada. NO significa
+   * «hay exactamente 2.000 recibos sin cobrar».
+   */
+  truncado: boolean
 }
 
 function esObjetoPlano(v: unknown): v is Record<string, unknown> {
@@ -161,6 +171,9 @@ export async function colaRetencion(
     resumen: resumirRetencion([]),
     sinRecibosInformados: 0,
     pendientesSinJuzgar: 0,
+    // Sin conexión no se ha leído nada, así que no hay recorte del que avisar:
+    // lo que dice «no se pudo leer» es el `estado` de la ruta, no este campo.
+    truncado: false,
   }
   if (!aseguraConfigurada()) return vacia
   const db = prismaAsegura()
@@ -194,7 +207,12 @@ export async function colaRetencion(
       },
     },
     orderBy: { fechaVencimiento: 'asc' },
+    // Techo con nombre. El orden de la criba es el del RELOJ (el recibo más
+    // antiguo primero), así que si algún día muerde se pierde lo menos urgente
+    // — pero se pierde igual, y por eso se declara justo debajo.
+    take: LIMITE_RECIBOS_IMPAGO,
   })
+  const truncado = cribaTruncada(recibos.length, LIMITE_RECIBOS_IMPAGO)
 
   // Un `pendiente` que aún no ha vencido no es un impago: es un recibo normal.
   // Se aparta y se CUENTA, en vez de descartarlo en silencio.
@@ -295,6 +313,7 @@ export async function colaRetencion(
     resumen: resumirRetencion(filas.map((f) => ({ estado: f.estado, prima: f.prima }))),
     sinRecibosInformados: await polizasSinRecibo(correduriaId),
     pendientesSinJuzgar,
+    truncado,
   }
 }
 

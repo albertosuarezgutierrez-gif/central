@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   SECCIONES, seccionDeParametro, esAccionable, contarAccionables, agregarContadores,
   textoVencidasAntiguas,
+  textoListaTruncada,
 } from './secciones.ts'
 
 /**
@@ -132,4 +134,81 @@ test('textoVencidasAntiguas: concuerda en singular y en plural', () => {
   assert.match(textoVencidasAntiguas(8), /^8 pólizas figuran vigentes/)
   // Las 8 medidas el 20/09/2026 son dato a depurar, no trabajo de hoy.
   assert.match(textoVencidasAntiguas(8), /no entran en la lista ni en el contador de «Hoy»/)
+})
+
+// ── El techo de una lista del puerto ────────────────────────────────────────
+
+test('🚨 textoListaTruncada: `true` dice que FALTA lista y que los totales son bajos', () => {
+  const t = textoListaTruncada(true, 'renovaciones')
+  assert.ok(t !== null, 'con la lista recortada la pantalla NO puede callarse')
+  assert.match(t!, /RECORTADA/)
+  assert.match(t!, /renovaciones/)
+  // Lo que se lee justo debajo (totales, recuentos) sale corto: hay que decirlo.
+  assert.match(t!, /más bajos/)
+})
+
+test('🚨 textoListaTruncada: `null` NO es `false` — el estado que importa', () => {
+  // `false` = asegura lo comprobó y no recortó → silencio (un cartel
+  // permanente de «está completa» se deja de leer, y con él el del `true`).
+  assert.equal(textoListaTruncada(false, 'renovaciones'), null)
+
+  // `null`/`undefined` = asegura no manda el campo. Colapsarlo con `false`
+  // convertiría un «no lo he comprobado» en «esto es todo».
+  for (const v of [null, undefined]) {
+    const t = textoListaTruncada(v, 'renovaciones')
+    assert.ok(t !== null, 'un puerto que no informa el techo no autoriza a afirmar que la lista está completa')
+    assert.match(t!, /no se puede afirmar/)
+  }
+
+  // Y las dos frases que SÍ se dicen tienen que ser DISTINTAS: se arreglan en
+  // sitios distintos (subir el tope vs. desplegar asegura).
+  assert.notEqual(textoListaTruncada(true, 'renovaciones'), textoListaTruncada(null, 'renovaciones'))
+})
+
+test('textoListaTruncada: el sujeto viaja tal cual, sin concordancias inventadas', () => {
+  assert.match(textoListaTruncada(true, 'pólizas sin cobrar')!, /pólizas sin cobrar/)
+  assert.match(textoListaTruncada(null, 'pólizas sin cobrar')!, /pólizas sin cobrar/)
+})
+
+// ── Y que las pantallas lo PINTEN ───────────────────────────────────────────
+// Un tope que la pantalla no puede declarar no sirve: sería el mismo recorte
+// mudo, movido del servidor al cliente. Se lee el FUENTE porque esto vive en
+// JSX y en un `tgAviso`, donde ni `tsc` ni el build miran.
+
+const sinComentarios = (t: string) =>
+  t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+const leerFuente = (p: string) => sinComentarios(readFileSync(new URL(p, import.meta.url), 'utf8'))
+
+test('🚨 Renovaciones declara el techo, y TAMBIÉN con la lista vacía', () => {
+  const src = leerFuente('./Renovaciones.tsx')
+  assert.match(src, /textoListaTruncada/, 'Renovaciones dejó de declarar el techo de la lista')
+  assert.match(src, /truncado\?: boolean \| null/, 'el tri-estado se perdió por el camino')
+  // Dos sitios: con lista y sin ella. «Ninguna vence» sobre una lista
+  // recortada es la frase tranquilizadora que nadie ha comprobado.
+  const usos = src.match(/<AvisoTruncado/g) ?? []
+  assert.ok(usos.length >= 2, `el aviso del techo se pinta en ${usos.length} sitio(s); falta el de la lista vacía`)
+})
+
+test('🚨 la cola de retención declara el techo junto a sus otros dos huecos', () => {
+  const src = leerFuente('./Retencion.tsx')
+  assert.match(src, /textoListaTruncada\(datos\.truncado, 'pólizas sin cobrar'\)/,
+    'Retencion dejó de declarar el techo de la criba de recibos')
+})
+
+test('🚨 una lectura de comisiones RECORTADA marca el libro como no comprobado', () => {
+  // El libro no tiene pantalla propia: sus filas las escribe el cron y
+  // `estadoCuadre` las pinta `no-comprobado` cuando `leido_ok = false`. Ese es
+  // el camino que ya existía para un fallo de lectura, y un recorte es una
+  // lectura incompleta: dejarlo en `true` daría filas con cara de comprobadas.
+  const src = leerFuente('../../api/cron/cima-liq/route.ts')
+  // Guarda Y escritura, JUNTAS: `leido_ok = false` ya aparece en la rama de
+  // error de arriba y `com.truncado === true` en el texto del latido, así que
+  // mirarlos por separado dejaba pasar que la rama del recorte no escribiera.
+  assert.match(
+    src,
+    /if \(com\.truncado === true\)[\s\S]{0,400}?UPDATE comisiones_devengo SET leido_ok = false/,
+    'la lectura recortada ya no marca el libro como no comprobado',
+  )
+  // `null` no puede tratarse como `false`: no se sabe si vino recortada.
+  assert.match(src, /com\.truncado === null/, 'el «no se sabe» se colapsó con «lectura completa»')
 })

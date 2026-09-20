@@ -7,6 +7,7 @@ import { MOTIVOS_PUERTO, type EnRiesgo, type Impagados } from '@/lib/correduria-
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { BtnLink, Badge, type Tono } from '@/components/ui'
 import Bloque from './Bloque'
+import { textoListaTruncada } from './secciones'
 import AccionesContacto from './AccionesContacto'
 
 /**
@@ -381,11 +382,19 @@ function Fila({ f, onDescartada }: { f: EnRiesgo; onDescartada: () => void }) {
 }
 
 /**
- * Los dos huecos que hacen que esta lista NO sea la foto completa de lo que
+ * Los TRES huecos que hacen que esta lista NO sea la foto completa de lo que
  * está sin cobrar. Sin decirlos, una cola vacía se lee como «todo al día».
+ *
+ * El tercero (el techo de la criba) se añadió el 20/09/2026 y es de otra clase
+ * que los otros dos: aquellos dicen «hay algo que no se sabe», este dice «esto
+ * que ves puede no ser todo». Por eso va el PRIMERO de la frase.
  */
 function Huecos({ datos }: { datos: Extract<Impagados, { estado: 'ok' }> }) {
   const partes: string[] = []
+  // El techo va en su PROPIO párrafo, no en la enumeración de abajo: es una
+  // frase entera y, sobre todo, condiciona lo que se está leyendo («esto puede
+  // no ser todo») en vez de sumar un hueco más a la lista.
+  const techo = textoListaTruncada(datos.truncado, 'pólizas sin cobrar')
   if (datos.sinRecibosInformados > 0) {
     partes.push(
       `${datos.sinRecibosInformados} póliza(s) vivas no tienen NINGÚN recibo informado por la ` +
@@ -401,11 +410,26 @@ function Huecos({ datos }: { datos: Extract<Impagados, { estado: 'ok' }> }) {
   if (datos.sinRecibosInformados < 0) {
     partes.push('asegura todavía no informa cuántas pólizas están sin recibos')
   }
-  if (partes.length === 0) return null
+  if (partes.length === 0 && techo === null) return null
   return (
-    <p style={{ ...pMuted, marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-      ⚠️ Esto no es todo lo que puede estar sin cobrar: {partes.join(' · ')}.
-    </p>
+    <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+      {techo !== null && (
+        <p
+          style={{
+            ...pMuted,
+            marginBottom: partes.length > 0 ? 6 : 0,
+            color: datos.truncado === true ? 'var(--warning)' : 'var(--muted)',
+          }}
+        >
+          {datos.truncado === true ? '⚠️ ' : ''}{techo}
+        </p>
+      )}
+      {partes.length > 0 && (
+        <p style={pMuted}>
+          ⚠️ Esto no es todo lo que puede estar sin cobrar: {partes.join(' · ')}.
+        </p>
+      )}
+    </div>
   )
 }
 
