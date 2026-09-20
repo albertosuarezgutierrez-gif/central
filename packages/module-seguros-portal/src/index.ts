@@ -2,7 +2,7 @@ export { NIVELES, camposVisibles } from './acceso.ts'
 // Qué COSA está asegurada (el coche, el piso). Lee `bien-asegurado.ts` antes de
 // tocarlo: `cosa` y `ubicacion` salen separados porque la dirección de un hogar
 // es un dato de la PERSONA y no la ve un tercero.
-export { describirBien, describirBienConGemela, componerUbicacion, bienTieneAlgo, BIEN_VACIO } from './bien-asegurado.ts'
+export { describirBien, describirBienConGemela, componerUbicacion, bienTieneAlgo, esRamoInmueble, BIEN_VACIO } from './bien-asegurado.ts'
 export type { BienAsegurado } from './bien-asegurado.ts'
 export type { Nivel, CamposVisibles } from './acceso.ts'
 export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar, debeSustituir } from './procedencia.ts'
@@ -22,6 +22,7 @@ export {
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
+  vencimientoDesdeEfecto,
 } from './poliza-leida.ts'
 export type { RamoPoliza, PolizaLeida } from './poliza-leida.ts'
 // Quitar de la bóveda una póliza que aportó el CLIENTE. Lee su cabecera: las de
@@ -65,7 +66,9 @@ export {
   TIPOS_AVISO,
   FUENTES_AVISO,
   HREF_POR_TIPO,
+  DIAS_VENTANA_AVISO_CARNET,
   textoGlobo,
+  entraEnVentanaCarnet,
   avisosDe,
 } from './avisos.ts'
 export type {
@@ -76,6 +79,7 @@ export type {
   ObligacionParaAviso,
   PeticionParaAviso,
   ReparoParaAviso,
+  CarnetParaAviso,
   EntradaAvisos,
   Avisos,
 } from './avisos.ts'
@@ -110,8 +114,9 @@ export {
   leadUrgente,
   normalizarNumeroPoliza,
   ordenarLeads,
+  senalCarta,
 } from './lead-declarada.ts'
-export type { EntradaLead, EstadoLead, Lead } from './lead-declarada.ts'
+export type { EntradaLead, EstadoLead, Lead, SenalCarta } from './lead-declarada.ts'
 export { cifParaBuscarFicha, etiquetaTitular, fichaParaCotejar, normalizarTitular } from './titular-declarado.ts'
 export type { TipoTitular, TitularDeclarado } from './titular-declarado.ts'
 export {
@@ -251,19 +256,38 @@ export type {
 // las que acaban delante de alguien que acaba de tener un golpe.
 export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL } from './canal-compania.ts'
 export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
-export { canalesDeLasPolizas } from './canal-compania.ts'
+export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
 // (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
 // existen en la BD pero NO se escriben: no hay pantalla que los pida.
 export {
   TIPOS_CONSENTIMIENTO,
   TIPOS_QUE_SE_REGISTRAN,
+  TEXTO_CONSENTIMIENTO_COMERCIAL,
+  VERSION_TEXTO_COMERCIAL,
   USER_AGENT_MAX,
+  consentimientoVigente,
   necesitaRegistro,
   normalizarIp,
   normalizarUserAgent,
 } from './consentimiento.ts'
-export type { TipoConsentimiento, ConsentimientoGuardado } from './consentimiento.ts'
+export type { TipoConsentimiento, ConsentimientoGuardado, ConsentimientoConFecha } from './consentimiento.ts'
+
+// La carta de NO RENOVACIÓN (art. 22 LCS) sobre una póliza declarada. Lee su
+// cabecera: se compone y se enseña, NUNCA se envía desde el portal; y lo que
+// no sabemos (NIF, localidad) sale como hueco visible, no como dato inventado.
+export {
+  HUECOS_CARTA,
+  componerCartaNoRenovacion,
+  estadoPlazoCarta,
+  fechaEnLetra,
+} from './carta-no-renovacion.ts'
+export type { CartaNoRenovacion, EstadoPlazoCarta, HuecoCarta, PolizaParaCarta } from './carta-no-renovacion.ts'
+
+// Coberturas repetidas entre pólizas de la MISMA persona. Lee su cabecera: es
+// un aviso informativo («está en dos pólizas»), nunca un juicio («te sobra»).
+export { FAMILIAS_SOLAPAMIENTO, detectarSolapamientos } from './solapamientos.ts'
+export type { FamiliaSolapamiento, PolizaConCoberturas, Solapamiento } from './solapamientos.ts'
 
 // La solicitud de SUPRESIÓN (art. 17). Lee su cabecera antes de tocarla: este
 // módulo NO borra nada, y esa es la mitad del diseño — el art. 17.3.b y el
@@ -332,7 +356,13 @@ export type { EstadoHoja, SeleccionHoja, ErrorSeleccion } from './hoja-qr.ts'
 // En qué cajón va cada titular de la bóveda (mías / de mis empresas / de quien
 // me autoriza). Se agrupa por `clienteId`, nunca por nombre: dos fichas con el
 // mismo nombre son dos titulares, y fundirlas mezcla sus pólizas en silencio.
-export { GRUPOS_CARTERA, TITULO_GRUPO, agruparCartera, grupoDeTitular } from './agrupar-cartera.ts'
+export {
+  GRUPOS_CARTERA,
+  TITULO_GRUPO,
+  agruparCartera,
+  grupoDeTitular,
+  textoCuentaSeguros,
+} from './agrupar-cartera.ts'
 export type { GrupoCartera, TitularAgrupable, BloqueCartera } from './agrupar-cartera.ts'
 
 export { TRAMOS, saludoPorHora, nombreDePila } from './saludo.ts'
@@ -403,3 +433,8 @@ export type { EstadoEnlaceVista } from './vista-corredor.ts'
 // sugiere nunca — misma guarda que ya usa `clientesVisiblesPara()`.
 export { relacionesSugeribles } from './sugerencia-relacion.ts'
 export type { SugerenciaRelacion } from './sugerencia-relacion.ts'
+
+// La revisión anual (20/09/2026): a quién se le escribe UNA vez al año con sus
+// vencimientos próximos. Puro; el cron de `apps/asegura` lo aplica.
+export { DIAS_ENTRE_REVISIONES, DIAS_HORIZONTE_REVISION, tocaRevisionAnual } from './revision-anual.ts'
+export type { DecisionRevision, EntradaRevision, MotivoNoRevision } from './revision-anual.ts'

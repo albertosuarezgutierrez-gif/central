@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { autorizacionesDeIdentidad } from '@/lib/autorizaciones'
 import { avisosDe, type Avisos } from '@/lib/avisos'
+import { carnetsDeIdentidad } from '@/lib/carnets'
 import { reparosDeMisDatos } from '@/lib/mis-datos'
 import { obligacionesDeIdentidad } from '@/lib/obligaciones'
 import { peticionesDeIdentidad } from '@/lib/peticiones'
@@ -33,7 +34,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -41,6 +42,8 @@ export async function GET() {
     // y esta app no tiene la clave), así que es la que más fácil falla — razón
     // de más para que vaya en el `allSettled` y no tumbe a las otras tres.
     reparosDeMisDatos(identidad.id),
+    // Quinta, mismo puente: la fecha de carné y de nacimiento también van cifradas.
+    carnetsDeIdentidad(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -49,12 +52,14 @@ export async function GET() {
   if (obligaciones.status === 'rejected') console.error('[avisos] obligaciones ilegibles', obligaciones.reason)
   if (peticiones.status === 'rejected') console.error('[avisos] peticiones ilegibles', peticiones.reason)
   if (datos.status === 'rejected') console.error('[avisos] datos de contacto ilegibles', datos.reason)
+  if (carnets.status === 'rejected') console.error('[avisos] carnés ilegibles', carnets.reason)
 
   const respuesta: Avisos = avisosDe({
     autorizaciones: autorizaciones.status === 'fulfilled' ? autorizaciones.value : null,
     obligaciones: obligaciones.status === 'fulfilled' ? obligaciones.value : null,
     peticiones: peticiones.status === 'fulfilled' ? peticiones.value.recibidas : null,
     datos: datos.status === 'fulfilled' ? datos.value : null,
+    carnets: carnets.status === 'fulfilled' ? carnets.value : null,
     hoy: new Date(),
   })
 

@@ -327,7 +327,14 @@ export function PolizasDeclaradas({ declaradas }: { declaradas: PolizaDeclaradaF
                 <td style={td}>{TIPOS[d.ramo ?? ''] ?? d.ramo ?? 'sin ramo'}</td>
                 <td style={td}>
                   {d.compania ?? <span style={{ color: 'var(--muted)' }}>sin compañía</span>}
-                  <div style={sub}>{d.numeroPoliza ? `nº ${d.numeroPoliza}` : 'sin número'}{d.matricula ? ` · ${d.matricula}` : ''}</div>
+                  {/* El BIEN identifica la póliza (marca/modelo/matrícula en auto, la
+                      dirección en hogar) — el nº de póliza nadie se lo sabe de memoria,
+                      así que va detrás y solo como referencia. `null` = la IA no lo leyó
+                      del documento subido, no que la póliza no tenga esos datos. */}
+                  {(d.bien.cosa || d.bien.ubicacion) && (
+                    <div style={sub}>{[d.bien.cosa, d.bien.ubicacion, ...d.bien.detalles].filter(Boolean).join(' · ')}</div>
+                  )}
+                  <div style={sub}>{d.numeroPoliza ? `nº ${d.numeroPoliza}` : 'sin número'}{d.matricula && !d.bien.cosa ? ` · ${d.matricula}` : ''}</div>
                   {/* La declaró de su EMPRESA, no a título personal — cotejarla contra esta
                       ficha personal sería el cruce equivocado (ver `yaEnCartera` más abajo). */}
                   {d.titularTipo === 'empresa' && (

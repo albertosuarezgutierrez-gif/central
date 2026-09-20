@@ -30,14 +30,16 @@ type ModeloOR = {
 const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
   logica: {
     tags: ['logica', 'datos', 'barato'],
-    lista: ['deepseek/deepseek-v4-flash', 'deepseek/deepseek-chat', 'deepseek/deepseek-chat-v3-0324', 'qwen/qwen-2.5-72b-instruct'],
+    // `deepseek/deepseek-v4-flash` retirado por DeepSeek el 10/09/2026 (routea a v4.1-flash a
+    // su precio) → apunta directo al id vigente (buscador-ia, 14/09/2026).
+    lista: ['deepseek/deepseek-v4.1-flash', 'deepseek/deepseek-chat', 'deepseek/deepseek-chat-v3-0324', 'qwen/qwen-2.5-72b-instruct'],
   },
   codigo: {
     // Programación (leer/editar código, bugs, refactors). Del más barato+capaz al premium; el
     // Director sube de nivel por complejidad/presupuesto (modelosPermitidos). Para habilitar Opus
     // en tareas duras, subir DIRECTOR_MAX_PRECIO_OUT (su salida supera el techo por defecto de 20).
     tags: ['codigo', 'logica'],
-    lista: ['deepseek/deepseek-v4-flash', 'qwen/qwen-2.5-coder-32b-instruct', 'deepseek/deepseek-chat', 'anthropic/claude-sonnet-4.5'],
+    lista: ['deepseek/deepseek-v4.1-flash', 'qwen/qwen-2.5-coder-32b-instruct', 'deepseek/deepseek-chat', 'anthropic/claude-sonnet-4.5'],
   },
   plan: {
     // PLANIFICADOR caro del "caro planifica / barato ejecuta": Claude alto ORGANIZA la tarea de

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-16T17:09:09Z",
+  "generadoEn": "2026-09-19T21:03:53Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -960,7 +960,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "asegura-web": {
         "estado": "no",
@@ -2198,15 +2198,15 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 61
+        "evidencias": 62
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 71
+        "evidencias": 78
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 23
+        "evidencias": 26
       },
       "housesevillana": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 19
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2310,11 +2310,11 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 59
+        "evidencias": 66
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 6
+        "evidencias": 7
       },
       "asegura-portal": {
         "presente": false,
@@ -3990,6 +3990,7 @@
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/documentos",
       "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/hogar-nuevo",
       "/api/operador/codeoscopic/lineas",
@@ -3998,10 +3999,12 @@
       "/api/operador/codeoscopic/precalificar",
       "/api/operador/codeoscopic/precalificar-auto-nuevo",
       "/api/operador/codeoscopic/precalificar-decesos-nuevo",
+      "/api/operador/codeoscopic/precalificar-hogar",
       "/api/operador/codeoscopic/precalificar-hogar-nuevo",
       "/api/operador/codeoscopic/precalificar-moto-nuevo",
       "/api/operador/codeoscopic/precalificar-salud-nuevo",
       "/api/operador/codeoscopic/precalificar-vida-nuevo",
+      "/api/operador/codeoscopic/product-form",
       "/api/operador/codeoscopic/proyecto",
       "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/salud-nuevo",
@@ -4036,6 +4039,7 @@
       "/api/operador/supresiones",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
+      "/api/portal/carnets",
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
       "/api/portal/documento",
@@ -4052,6 +4056,7 @@
       "/api/avisos",
       "/api/catastro",
       "/api/catastro/sugerir",
+      "/api/consentimiento",
       "/api/cron/avisos-push",
       "/api/hojas",
       "/api/hojas/[id]",
@@ -4064,6 +4069,7 @@
       "/api/peticiones/[id]",
       "/api/polizas",
       "/api/polizas/[id]",
+      "/api/polizas/[id]/reintentar",
       "/api/push/desuscribir",
       "/api/push/suscribir",
       "/api/recordatorios",
@@ -6401,7 +6407,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1371,
+    "apis": 1377,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

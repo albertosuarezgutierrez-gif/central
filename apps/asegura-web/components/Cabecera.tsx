@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { NAV_CABECERA, PORTAL_URL } from '@/lib/sitio'
+import EnlaceMedido from '@/components/EnlaceMedido'
 
 /** Enlaces internos de la nav. En su web la nav son anclas de la propia home;
  *  aquí son las páginas de ramo, que es lo que esta web tiene que posicionar. */
@@ -67,9 +68,9 @@ export default function Cabecera({ marca }: { marca: string }) {
                   🚨 Se llamaba «Área de clientes» hasta el 07/09/2026. La
                   palabra «clientes» era una puerta cerrada: se entra con un
                   correo verificado, se sea cliente o no. */}
-              <a href={PORTAL_URL} className="btn btn-brand btn-sm">
+              <EnlaceMedido href={PORTAL_URL} origen="cabecera" className="btn btn-brand btn-sm">
                 Mis seguros
-              </a>
+              </EnlaceMedido>
             </div>
           </div>
         </div>

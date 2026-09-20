@@ -1,10 +1,46 @@
 # 📚 La API de Codeoscopic / Avant2 — leída del portal oficial (01/09/2026)
 
+> 🔑 **`https://portal.api-int.codeoscopic.io/` es LA fuente de la configuración de esta API**
+> (confirmado por Alberto, 17/09/2026). Ante cualquier duda sobre un endpoint, un catálogo, un
+> campo obligatorio o el comportamiento de una compañía — antes de suponer, adivinar o pagar un
+> 400/500 real para descubrirlo — se consulta ese portal. Desde este contenedor está bloqueado por
+> el proxy de la sesión; se consulta con **Claude en Chrome** (sesión de Alberto ya autenticada) y
+> se trae la respuesta aquí. Este documento es el acumulado de esas consultas — se AMPLÍA con cada
+> hallazgo nuevo, no se sustituye.
+
 > **Procedencia:** Alberto exportó el portal de documentación
 > (`portal.api-int.codeoscopic.io`, snapshot MHTML del 01/09/2026 a las 22:06) y de ahí se extrajo
 > el índice completo de operaciones. **Es la primera documentación del fabricante que tenemos**:
 > hasta hoy solo teníamos el traspaso del repo de Manuel, que describe lo que ÉL implementó, no lo
 > que la API ofrece. El fichero no se guarda en el repo (16 MB y es material del proveedor).
+
+> 🚨 **El botón "TRY" del portal NO sirve para consultar datos reales de nuestra cuenta — no hace
+> falta y no hay que meterle credenciales (17/09/2026).** Tres motivos, comprobados el mismo día:
+> 1. Sin credenciales aplicadas el TRY da `Failed to fetch (CORS or Network Issue)`. El portal exige
+>    OAuth2 `client_credentials` (`client_id`+`client_secret`) o `X-Client-App`, y esas claves **no se
+>    escriben en un formulario web** ni se pegan en un chat — es la misma regla que ya protege
+>    `PII_ENCRYPTION_KEY`/`ASEGURA_OPERADOR_SECRET` en el resto del repo.
+> 2. **`portal.api-int.codeoscopic.io` es el entorno INT, no producción** (`api.codeoscopic.io`, sin
+>    `-int`, es donde vive el asunto real y las credenciales que tenemos en Vercel). Aunque se metieran
+>    credenciales ahí, no serían las de esta cuenta.
+> 3. **Y no hace falta: ya tenemos el camino correcto montado.** `apps/asegura/app/api/operador/
+>    codeoscopic/lineas/route.ts` (`GET /insurance-lines`, gratis, sin gastar) corre en producción con
+>    las credenciales reales — la propia `/correduria/hogar` de plataforma ya lo llama y pinta en vivo
+>    si hogar está `disponible`/`ausente`/`desconocido` para Grupo ASegura. **Para saber si hogar
+>    tarifica hoy, se abre esa página — no el portal.**
+>
+> Lo que el portal SÍ deja ver sin credenciales: el **ejemplo estático de la documentación** de
+> `GET /insurance-lines` (no son datos de nuestra cuenta, solo la forma de la respuesta):
+> ```json
+> { "id": "Car", "path": "car", "name": "Autos", "active": true,
+>   "supports": { "rating": true, "policyApplication": true, "policyApplicationsReport": true } }
+> ```
+> Y el texto del propio endpoint: *"If you think any line of insurance is missing, please contact the
+> support team for its activation."* → **`apisupport@codeoscopic.com`** es el canal para pedir que
+> activen un ramo que falte. Otros contactos del portal, para no confundir: `soporteapi@codeoscopic.com`
+> (soporte API general) y `soporteapi@avant2.es` (alta de credenciales nuevas, client_id/secret) son
+> soporte técnico; `comercial@codeoscopic.com` es comercial. Ninguno de los tres se usa sin decisión
+> explícita de Alberto — es la regla de comunicaciones salientes del `CLAUDE.md` raíz.
 
 ## 🚨 Lo que esto CORRIGE de lo que dábamos por sabido
 

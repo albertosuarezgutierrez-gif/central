@@ -285,8 +285,26 @@ model Cliente {
   polizas        Poliza[]
   siniestros     Siniestro[]
   intervenciones PolizaInterviniente[]
+  carnets        ClienteCarnetConducir[]
 
   @@map("clientes")
+}
+
+/// Carnés de conducir de un cliente (1:N — la misma persona puede tener B + C,
+/// p. ej.). `fechaCarnet` es la fecha de expedición/última renovación, CIFRADA
+/// (`v1:…`, como `clientes.fecha_nacimiento`); la caducidad se DERIVA con
+/// `caducidadCarnet()` de `@central/module-seguros`, nunca se guarda.
+model ClienteCarnetConducir {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  fechaCarnet  String?  @map("fecha_carnet") // cifrado
+  tipo         String   @db.VarChar(10)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@map("cliente_carnets_conducir")
 }
 
 model ClienteTelefono {
@@ -906,6 +924,8 @@ model PortalIdentidad {
   nombre         String?
   creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
   ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
+  /// Última «revisión anual» enviada por `app/api/cron/revision-anual`. NULL = nunca.
+  revisionAnualEnviadaEn DateTime? @map("revision_anual_enviada_en") @db.Timestamptz(6)
 
   @@map("portal_identidad")
 }
@@ -964,6 +984,12 @@ model PortalPolizaDeclarada {
   titularEmpresaNombre String?           @map("titular_empresa_nombre")
   /// Puede faltar aunque haya empresa: mucha gente no se lo sabe de memoria.
   titularEmpresaCif    String?           @map("titular_empresa_cif")
+  /// Garantías leídas del PDF por el portal. NULL = no leídas.
+  coberturas           Json?
+  /// El cliente redactó / envió la carta de no renovación desde el portal.
+  /// La señal de lead más fuerte que hay: la lee `lib/leads-portal.ts`.
+  cartaGeneradaEn      DateTime?         @map("carta_generada_en") @db.Timestamptz(6)
+  cartaEnviadaEn       DateTime?         @map("carta_enviada_en") @db.Timestamptz(6)
   creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
   actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
 

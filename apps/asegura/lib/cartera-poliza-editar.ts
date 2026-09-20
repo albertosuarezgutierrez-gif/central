@@ -1,7 +1,7 @@
-// Anotar a mano la MODALIDAD de una RC cuando la compañía no manda coberturas
-// por CIMA (09-12/09/2026). Es el único camino de escritura sobre
-// `polizas.datos_especificos` para este caso concreto — no un editor genérico
-// de la póliza.
+// Anotar a mano lo que la compañía NO manda por CIMA sobre
+// `polizas.datos_especificos`: la MODALIDAD de una RC (09-12/09/2026) y la
+// DIRECCIÓN DEL RIESGO de un inmueble (19/09/2026). Dos operaciones acotadas,
+// no un editor genérico de la póliza.
 //
 // ─── Reglas ──────────────────────────────────────────────────────────────────
 // - Solo sobre pólizas de ramo `responsabilidad_civil` de ESTA correduría
@@ -15,7 +15,8 @@
 //   `objetoAsegurado()` las antepone siempre: lo manual nunca pisa lo oficial.
 // - Deja fila en `historial_interno` del cliente titular.
 
-import { validarModalidadRc, tituloModalidadRc } from '@central/module-seguros'
+import { admiteDireccionRiesgo, validarDireccionRiesgo, validarModalidadRc, tituloModalidadRc } from '@central/module-seguros'
+import { encryptField } from '@central/module-seguros-pii'
 import { prismaAsegura, aseguraConfigurada } from './asegura-db'
 
 export type ResultadoModalidadRc =
@@ -59,6 +60,81 @@ export async function establecerModalidadRc(
     await db.poliza.update({ where: { id: poliza.id }, data: { datosEspecificos: fusionado } })
     await anotar(correduriaId, poliza.clienteId, `Modalidad de RC anotada a mano (${titulo}) por ${entrada.actor}`)
     return { ok: true, estado: 'ok', status: 200, titulo }
+  } catch (e) {
+    return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }
+  }
+}
+
+// ─── Dirección del riesgo (19/09/2026) ───────────────────────────────────────
+//
+// CIMA NO manda los datos del riesgo de hogar/comunidades: una póliza
+// que solo ha entrado por CIMA y no tiene gemela en el volcado no tiene
+// dirección en ninguna parte, y el portal la titula «Occident · Hogar» dos
+// veces seguidas. Medido el 19/09/2026 sobre la cartera viva: 32 hogar
+// solo-CIMA, 2 con dirección. Este es el camino para que el corredor la anote.
+//
+// - Solo ramos de inmueble (`admiteDireccionRiesgo`), de ESTA correduría.
+// - Se guarda con LAS MISMAS CLAVES que el volcado (`direccion`, `cp`,
+//   `localidad`) para que `describirBien()` del portal y `objetoAsegurado()`
+//   de la ficha la lean sin una rama nueva; y `direccion` va CIFRADA con
+//   `encryptField` (sobre `v1:`), igual que la trae el volcado — el portal ya
+//   la descifra. `cp` y `localidad` en claro, como allí.
+// - Fusión, no sustitución: el resto de claves de `datos_especificos` se queda.
+// - Lo anotado a mano NO pisa lo que traiga la fila: si la póliza YA tiene
+//   dirección (`direccion` presente), se rechaza — corregir un dato que vino de
+//   la compañía es otra operación, con otra trazabilidad.
+// - Deja fila en `historial_interno` del tomador.
+
+export type ResultadoDireccionRiesgo =
+  | { ok: true; estado: 'ok'; status: 200 }
+  | { ok: false; estado: 'invalido' | 'no_encontrado' | 'ya_informada' | 'sin_configurar' | 'error'; motivo: string; status: 404 | 409 | 422 | 503 | 500 }
+
+export async function establecerDireccionRiesgo(
+  correduriaId: string,
+  polizaId: string,
+  entrada: { direccion?: unknown; cp?: unknown; localidad?: unknown; actor: string },
+): Promise<ResultadoDireccionRiesgo> {
+  if (!aseguraConfigurada()) {
+    return { ok: false, estado: 'sin_configurar', motivo: 'La conexión a la cartera no está configurada.', status: 503 }
+  }
+  if (polizaId.trim() === '') {
+    return { ok: false, estado: 'invalido', motivo: 'Falta el id de la póliza.', status: 422 }
+  }
+  const v = validarDireccionRiesgo(entrada)
+  if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
+
+  try {
+    const db = prismaAsegura()
+    const poliza = await db.poliza.findFirst({
+      where: { id: polizaId, correduriaId },
+      select: { id: true, tipo: true, clienteId: true, datosEspecificos: true },
+    })
+    if (!poliza) {
+      return { ok: false, estado: 'no_encontrado', motivo: 'Esa póliza no está en la cartera de esta correduría.', status: 404 }
+    }
+    if (!admiteDireccionRiesgo(String(poliza.tipo))) {
+      return { ok: false, estado: 'invalido', motivo: 'Solo se anota dirección del riesgo en pólizas de hogar o comunidades.', status: 422 }
+    }
+
+    const previos = poliza.datosEspecificos && typeof poliza.datosEspecificos === 'object' && !Array.isArray(poliza.datosEspecificos)
+      ? (poliza.datosEspecificos as Record<string, unknown>)
+      : {}
+    if (typeof previos.direccion === 'string' && previos.direccion.trim() !== '') {
+      return { ok: false, estado: 'ya_informada', motivo: 'Esta póliza ya tiene dirección del riesgo; no se pisa desde aquí.', status: 409 }
+    }
+
+    const fusionado = {
+      ...previos,
+      direccion: encryptField(v.valor.direccion),
+      ...(v.valor.cp !== null ? { cp: v.valor.cp } : {}),
+      ...(v.valor.localidad !== null ? { localidad: v.valor.localidad } : {}),
+      direccionOrigen: 'manual',
+    }
+
+    await db.poliza.update({ where: { id: poliza.id }, data: { datosEspecificos: fusionado } })
+    const resumen = [v.valor.cp, v.valor.localidad].filter(Boolean).join(' ')
+    await anotar(correduriaId, poliza.clienteId, `Dirección del riesgo anotada a mano${resumen ? ` (${resumen})` : ''} por ${entrada.actor}`)
+    return { ok: true, estado: 'ok', status: 200 }
   } catch (e) {
     return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }
   }
