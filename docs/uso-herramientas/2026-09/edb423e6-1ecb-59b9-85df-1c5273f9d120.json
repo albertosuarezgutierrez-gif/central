@@ -1,31 +1,86 @@
 {
  "sesion": "edb423e6-1ecb-59b9-85df-1c5273f9d120",
  "inicio": "2026-09-20T04:55:52.827Z",
- "fin": "2026-09-20T04:56:24.726Z",
- "llamadas": 7,
+ "fin": "2026-09-20T05:29:56.147Z",
+ "llamadas": 126,
  "categorias": {
   "otro": {
-   "llamadas": 1,
-   "chars_in": 26,
-   "chars_out": 47,
+   "llamadas": 18,
+   "chars_in": 3162,
+   "chars_out": 217425,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Skill": 1
+    "Skill": 1,
+    "ReadNotifications": 9,
+    "ScheduleWakeup": 7,
+    "ToolSearch": 1
    }
   },
   "lectura-directa": {
-   "llamadas": 6,
-   "chars_in": 494,
-   "chars_out": 50786,
+   "llamadas": 20,
+   "chars_in": 1824,
+   "chars_out": 140483,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 2,
-    "Read": 3,
-    "Glob": 1
+    "Grep": 5,
+    "Read": 13,
+    "Glob": 2
+   }
+  },
+  "escritura": {
+   "llamadas": 16,
+   "chars_in": 30822,
+   "chars_out": 2121165,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 16
+   }
+  },
+  "bash": {
+   "llamadas": 44,
+   "chars_in": 8305,
+   "chars_out": 22792,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 44
+   }
+  },
+  "mcp:github": {
+   "llamadas": 27,
+   "chars_in": 5129,
+   "chars_out": 207622,
+   "errores": 0,
+   "archivos_citados": 13,
+   "chars_citados": 999195,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 12,
+    "mcp__github__actions_list": 4,
+    "mcp__github__get_commit": 1,
+    "mcp__github__actions_get": 3,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__merge_pull_request": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 1,
+   "chars_in": 73,
+   "chars_out": 239,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1
    }
   }
  }
