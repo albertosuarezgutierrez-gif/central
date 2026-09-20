@@ -26,6 +26,18 @@ asegura/asegura-portal/plataforma; suite completa en verde.
 **Pendiente:** aplicar la migración SQL en Supabase (schema `seguros`) y la captura desde el portal
 del cliente (`asegura-portal`, queda para otra sesión).
 
+**(20/09/2026)** Codeoscopic · Alberto preguntó si el 400 de Occident (leasing/renting, tipo de
+adquisición — 2ª vez, proyectos 40788414/40802035) se podía detectar antes. El Product Form Library
+(17/09) solo cubría el Submit; extendido también al ReRate: `interpretarCamposProducto()` reconoce el
+patrón español de campo-de-producto y devuelve `faltan_producto` (422) con `quoteCrudo` en vez del JSON
+crudo, reutilizando el mismo `ProductFormWidget`. El mismo día llegó un 3er error de Reale ("NO SE
+PERMITEN POLIZAS CON MALUS") — verificado que es un rechazo de negocio, no un campo, y el nuevo
+reconocedor NO lo confunde (test que lo fija). El catch genérico también limpia el mensaje del vendor
+con `lineasDelVendor()` para cualquier 400 no reconocido. Y un fallo real aparte: el presupuesto de
+auto a un LEAD nunca preguntaba por el seguro en vigor (últimos dígitos de póliza, para el control de
+antecedentes) — nuevo bloque opt-in en `AutoNuevo.tsx`, con el aviso de Alberto de que Mapfre y otras
+compañías a veces dan los dígitos con ceros a propósito. PR #3129. tsc 0, monorepo completo 0 fallos.
+
 **(20/09/2026) Portal → correduría, cinco piezas tras el gestor de pólizas (#3104).** (1) Embudo PostHog en
 `asegura-web` (`lib/medir.ts`: `calculadora_calculo`, `cta_portal_click` con `origen`, `lead_enviado`; sin
 PostHog cargado no hace nada). (2) La carta de no renovación es SEÑAL de lead: `carta_generada_en`/
@@ -237,6 +249,7 @@ el corredor la anota desde `/correduria/poliza/[id]` (`EditarDireccionRiesgo.tsx
 calle cifrada con `encryptField` y claves iguales al volcado: `direccion`/`cp`/`localidad`, 409 si ya
 la trae). Regla pura `validarDireccionRiesgo` en `@central/module-seguros` (7 tests, cepo del CP visto
 morder). El portal ahora DICE que falta la dirección en la ficha propia de un inmueble (`esRamoInmueble`).
+
 **(17/09/2026)** Correduría · Alberto no podía tarificar hogar («en hogar no me deja tarificar»).
 Causa: `HogarCatastro.tsx` mandaba a un flujo muerto (texto corregido en PR #3054), y retarificar una
 póliza de hogar YA existente seguía saltando a `apps/asegura` (`/cartera/poliza/[id]`, otro dominio/
