@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-20T08:43:11Z",
-  "sha": "c8a854fc5ea2ed4550a5f9eae357501fe77cdbd4",
+  "generadoEn": "2026-09-20T09:31:06Z",
+  "sha": "e2b97414683b6bfff9eba9da5c818af97759e4a3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3740,7 +3740,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 70
+          "linea": 68
         },
         {
           "nombre": "Titular",
@@ -3748,7 +3748,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date }",
           "retorno": null,
-          "linea": 619,
+          "linea": 585,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -3757,7 +3757,7 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], titular?: string",
           "retorno": "PolizaOpcionParte",
-          "linea": 668,
+          "linea": 634,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
@@ -3765,7 +3765,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "7fc56f2e1a9d"
+      "hash": "19827b94d919"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -4174,27 +4174,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "eb98aa65b482"
-    },
-    {
-      "ruta": "apps/asegura-portal/app/(portal)/boveda/Solapamientos.tsx",
-      "ambito": "apps/asegura-portal",
-      "exporta": [
-        "Solapamientos"
-      ],
-      "funciones": [
-        {
-          "nombre": "Solapamientos",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ solapamientos, declaradas, }: { solapamientos: readonly Solapamiento[] /** * Ids de las pólizas DECLARADAS (las que el cliente subió, de otra * compañía): su ficha vive en `/boveda/anadida/…`, no en `/boveda/poliza/…`. * Un enlace a la ru",
-          "retorno": null,
-          "linea": 19,
-          "resumen": "«Esta cobertura está en dos de tus pólizas». Componente de servidor: solo pinta lo que `detectarSolapamientos()` ya decidió. 🚨 Informa, no juzga. El texto dice QUÉ cobertura aparece en QUÉ pólizas (c"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "2368bd5b31a7"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/SubirPoliza.tsx",
@@ -130139,28 +130118,6 @@
       "hash": "159635a598d7"
     },
     {
-      "ruta": "packages/module-seguros-portal/src/solapamientos.ts",
-      "ambito": "packages/module-seguros-portal",
-      "resumen": "Coberturas que aparecen en MÁS DE UNA póliza de la misma persona. Puro: recibe las pólizas con su lista de coberturas (texto, tal como las informa la compañía por CIMA) y devuelve las familias que se repiten. 🚨 Lo que esto ES y lo que NO es: - ES un aviso INFORMATIVO: «esta cobertura está en dos pó",
-      "exporta": [
-        "detectarSolapamientos"
-      ],
-      "funciones": [
-        {
-          "nombre": "detectarSolapamientos",
-          "kind": "function",
-          "exportada": true,
-          "params": "polizas: readonly PolizaConCoberturas[]",
-          "retorno": "Solapamiento[]",
-          "linea": 75,
-          "resumen": "Devuelve solo las familias presentes en DOS O MÁS pólizas distintas. Una póliza con dos coberturas que casan (p. ej. «Defensa jurídica» y «Reclamación de daños») cuenta UNA vez: el solapamiento es ent"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "66926695d90f"
-    },
-    {
       "ruta": "packages/module-seguros-portal/src/sugerencia-relacion.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "Sugerir pedir acceso a partir de relaciones YA CONOCIDAS (12/09/2026). `cliente_relaciones` ya trae la relación real entre dos personas (o una persona y su empresa), cargada del volcado y mantenida por Alberto desde `/correduria` → Contactos — pero nada la usaba para SUGERIR pedir acceso a quien se ",
@@ -138849,7 +138806,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3394,
-    "funciones": 10505
+    "archivos": 3392,
+    "funciones": 10503
   }
 }
