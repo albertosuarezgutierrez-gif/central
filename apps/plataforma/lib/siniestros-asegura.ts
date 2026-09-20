@@ -62,6 +62,16 @@ export type SiniestroCartera = {
   abierto: boolean
   /** ISO. `null` = asegura no lo manda. */
   actualizado: string | null
+  /** Campos específicos del ramo (p. ej. matrícula para auto, referencia catastral para hogar). Solo en siniestros gestionados. */
+  datosRamo?: Record<string, string>
+  /** Terceros/testigos del siniestro: personas y sus datos de contacto. */
+  terceros?: Array<{
+    id: string
+    nombre: string | null
+    telefono: string | null
+    email: string | null
+    rol: string | null
+  }>
 }
 
 function cadena(v: unknown): string | null {
@@ -78,6 +88,27 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
   if (typeof v !== 'object' || v === null) return null
   const s = v as Record<string, unknown>
   if (typeof s.id !== 'string' || s.id.trim() === '') return null
+  const datosRamo = typeof s.datosRamo === 'object' && s.datosRamo !== null
+    ? Object.fromEntries(
+        Object.entries(s.datosRamo).map(([k, v]) => [k, typeof v === 'string' ? v : ''])
+      )
+    : undefined
+  const terceros = Array.isArray(s.terceros)
+    ? s.terceros
+      .map((t): typeof s.terceros[0] | null => {
+        if (typeof t !== 'object' || t === null) return null
+        const id = cadena((t as Record<string, unknown>).id)
+        if (!id) return null
+        return {
+          id,
+          nombre: cadena((t as Record<string, unknown>).nombre),
+          telefono: cadena((t as Record<string, unknown>).telefono),
+          email: cadena((t as Record<string, unknown>).email),
+          rol: cadena((t as Record<string, unknown>).rol),
+        }
+      })
+      .filter((t): t is typeof s.terceros[0] => t !== null)
+    : undefined
   return {
     id: s.id,
     clienteId: cadena(s.clienteId),
@@ -104,6 +135,8 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     confirmadoCima: typeof s.confirmadoCima === 'boolean' ? s.confirmadoCima : true,
     abierto: s.abierto === true,
     actualizado: cadena(s.actualizado),
+    datosRamo,
+    terceros,
   }
 }
 

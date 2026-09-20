@@ -13,6 +13,7 @@ import {
   type EstadoSiniestro,
   type TipoDocumento,
 } from '@central/module-seguros'
+import { camposDeRamo, type CampoRamo } from '@central/module-seguros-portal'
 import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { fechaEs, fechaHoraEs } from '@/lib/ficha-asegura'
@@ -167,6 +168,69 @@ export default function Siniestros({
   )
 }
 
+// ─── Campos por ramo ──────────────────────────────────────────────────────────
+
+function BloqueRamo({ tipoSiniestro, datosRamo }: {
+  tipoSiniestro: string | null | undefined
+  datosRamo: Record<string, string>
+}) {
+  const ramos = ramosSiniestroParaPoliza(tipoSiniestro)
+  const campos = ramos && ramos.length > 0 ? camposDeRamo(ramos[0]) : []
+  if (campos.length === 0) return null
+
+  return (
+    <div>
+      <div style={etiqueta}>Datos del siniestro por ramo</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+        {campos.map((campo) => (
+          <Dato
+            key={campo.id}
+            label={campo.etiqueta}
+            valor={datosRamo[campo.id] ?? null}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Terceros y testigos ──────────────────────────────────────────────────────
+
+function BloqueTerceros({ terceros }: {
+  terceros: Array<{
+    id: string
+    nombre: string | null
+    telefono: string | null
+    email: string | null
+    rol: string | null
+  }>
+}) {
+  return (
+    <div>
+      <div style={etiqueta}>Terceros y testigos</div>
+      <div style={{ display: 'grid', gap: 12 }}>
+        {terceros.map((t) => (
+          <div
+            key={t.id}
+            style={{
+              borderLeft: '3px solid var(--border)',
+              paddingLeft: 10,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: 10,
+            }}
+          >
+            <Dato label="Nombre" valor={t.nombre} />
+            <Dato label="Rol" valor={t.rol} />
+            <Dato label="Teléfono" valor={t.telefono} />
+            <Dato label="Email" valor={t.email} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Una fila (plegada) y su detalle (montaje perezoso) ─────────────────────
 
 function Fila({ s, documentos, onAnotar }: {
@@ -259,6 +323,14 @@ function Detalle({ s, documentos, onAnotar }: {
         <Dato label="Indemnización" valor={s.indemnizacion === null ? null : eur(s.indemnizacion)} />
         <Dato label="Actualizado" valor={s.actualizado ? fechaHoraEs(s.actualizado) : null} />
       </div>
+
+      {propio && s.datosRamo && Object.keys(s.datosRamo).length > 0 && (
+        <BloqueRamo tipoSiniestro={s.tipo} datosRamo={s.datosRamo} />
+      )}
+
+      {s.terceros && s.terceros.length > 0 && (
+        <BloqueTerceros terceros={s.terceros} />
+      )}
 
       <Seguimiento s={s} onAnotar={onAnotar} />
 
