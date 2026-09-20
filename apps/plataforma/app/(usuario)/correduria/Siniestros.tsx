@@ -347,6 +347,9 @@ function BloqueTerceros({ siniestroId, terceros, onAnadir, onQuitar }: {
                 <Dato label="Tipo" valor={t.tipo === 'testigo' ? 'Testigo' : 'Tercero'} />
                 <Dato label="Nombre" valor={t.nombre} />
                 <Dato label="Teléfono" valor={t.telefono} />
+                {t.tipo === 'tercero' && (
+                  <Dato label="¿Conducía?" valor={t.esConductor === null ? null : t.esConductor ? 'Sí' : 'No'} />
+                )}
                 {t.tipo === 'tercero' && <Dato label="Matrícula" valor={t.matricula} />}
                 {t.tipo === 'tercero' && <Dato label="Marca / modelo" valor={t.marcaModelo} />}
                 {t.tipo === 'tercero' && <Dato label="Compañía" valor={t.companiaNombre} />}
@@ -384,6 +387,7 @@ function FormTercero({ siniestroId, onAnadir, onHecho }: {
   onHecho: () => void
 }) {
   const [tipo, setTipo] = useState<TipoInterviniente>('tercero')
+  const [esConductor, setEsConductor] = useState('')
   const [nombre, setNombre] = useState('')
   const [telefono, setTelefono] = useState('')
   const [matricula, setMatricula] = useState('')
@@ -400,6 +404,7 @@ function FormTercero({ siniestroId, onAnadir, onHecho }: {
       const r = await onAnadir({
         siniestroId,
         tipo,
+        esConductor: tipo === 'tercero' && esConductor ? esConductor === 'si' : null,
         nombre: nombre.trim() || null,
         telefono: telefono.trim() || null,
         matricula: tipo === 'tercero' ? matricula.trim() || null : null,
@@ -427,6 +432,13 @@ function FormTercero({ siniestroId, onAnadir, onHecho }: {
       </div>
       {tipo === 'tercero' && (
         <div style={rejilla}>
+          <Campo label="¿Conducía?">
+            <select value={esConductor} onChange={(e) => setEsConductor(e.target.value)} style={campo}>
+              <option value="">no lo sé</option>
+              <option value="si">Sí</option>
+              <option value="no">No</option>
+            </select>
+          </Campo>
           <Campo label="Matrícula"><input value={matricula} onChange={(e) => setMatricula(e.target.value)} style={campo} maxLength={15} /></Campo>
           <Campo label="Marca / modelo"><input value={marcaModelo} onChange={(e) => setMarcaModelo(e.target.value)} style={campo} maxLength={150} /></Campo>
           <Campo label="Compañía"><input value={companiaNombre} onChange={(e) => setCompaniaNombre(e.target.value)} style={campo} maxLength={150} /></Campo>

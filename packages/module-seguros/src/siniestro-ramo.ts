@@ -22,16 +22,19 @@
 // tiene un hueco para esto) — quien llama decide si ofrece la edición según el
 // `origen`, este módulo no lo sabe ni lo necesita saber.
 //
-// ⚠️ El ramo aquí es el de la PÓLIZA (mismo vocabulario que `RAMOS_POLIZA` de
-// `@central/module-seguros-portal`, duplicado como `RAMOS_SINIESTRO` porque
-// este paquete no depende de aquel — si un ramo se añade allí, añádelo aquí
-// también). NO es el `ramo` de `TIPOS_SINIESTRO` (`siniestros.ts`), que
+// ⚠️ El ramo aquí es el de la PÓLIZA — `TipoSeguro`/`TIPOS_SEGURO` de
+// `emision.ts`, mismo paquete, así que `RAMOS_SINIESTRO` se DERIVA de ahí en
+// vez de re-teclearse (un ramo nuevo del enum real de BD ya no se puede
+// olvidar en un segundo sitio; pasó con `accidentes`, medido). NO es el
+// `ramo` de `TIPOS_SINIESTRO` (`siniestros.ts`), que
 // clasifica la CAUSA del siniestro y usa su propio vocabulario más corto
 // (`'general'`, no `'responsabilidad_civil'`); son dos preguntas distintas y
 // mezclarlas dejaría un siniestro de agua en una vivienda alquilada sin
 // catálogo porque el ramo de la póliza es `hogar` y el de `TIPOS_SINIESTRO` es
 // `'hogar'` también, pero un RC de un local sería `'general'` en uno y
 // `'comercio'`/`'responsabilidad_civil'` en el otro.
+
+import { TIPOS_SEGURO, type TipoSeguro } from './emision.ts'
 
 /** Cómo se pinta un campo — idéntico al de `campos-ramo.ts`, mismo motivo. */
 export type TipoCampo = 'texto' | 'numero' | 'dinero' | 'fecha' | 'opcion' | 'triestado'
@@ -49,20 +52,17 @@ export type CampoRamoSiniestro = {
   readonly max?: number
 }
 
-/** Ramos de póliza para los que este catálogo tiene sentido. Ver la cabecera. */
-export const RAMOS_SINIESTRO = [
-  'auto',
-  'moto',
-  'hogar',
-  'vida',
-  'salud',
-  'decesos',
-  'responsabilidad_civil',
-  'comercio',
-  'comunidades',
-  'otros',
-] as const
-export type RamoSiniestro = (typeof RAMOS_SINIESTRO)[number]
+/**
+ * Ramos de póliza para los que este catálogo tiene sentido. DERIVADO de
+ * `TIPOS_SEGURO` (`emision.ts`, mismo paquete) para que un ramo nuevo del
+ * enum real de BD (`TipoSeguro` en `asegura.prisma`) no se quede fuera sin
+ * que nada lo avise — pasó con `accidentes` (medido: faltaba, y sin catálogo
+ * un PATCH a `datosRamo` sobre esa póliza borraba en silencio devolviendo
+ * `ok`). Ya no hace falta mantenerlo a mano en dos sitios: los dos viven en
+ * este mismo paquete.
+ */
+export const RAMOS_SINIESTRO = TIPOS_SEGURO
+export type RamoSiniestro = TipoSeguro
 
 /** Tope de un texto libre: por encima no es un dato, es un pegado. */
 export const MAX_TEXTO_RAMO_SINIESTRO = 300
@@ -115,12 +115,7 @@ const CAMPOS_ACCIDENTE_VEHICULO: readonly CampoRamoSiniestro[] = [
     id: 'conductorDistintoTomador',
     etiqueta: '¿Conducía alguien distinto del tomador?',
     tipo: 'triestado',
-    ayuda: 'Si no lo sabes, déjalo en blanco.',
-  },
-  {
-    id: 'conductorNombre',
-    etiqueta: 'Nombre del conductor (si no era el tomador)',
-    tipo: 'texto',
+    ayuda: 'Si no lo sabes, déjalo en blanco. Su nombre y teléfono se anotan como tercero/testigo (marcando «¿conducía?»), no aquí — ese dato es PII y solo se cifra en `SiniestroInterviniente`.',
   },
   { id: 'tipoColision', etiqueta: 'Tipo de colisión', tipo: 'opcion', opciones: OPCIONES_TIPO_COLISION },
   {
@@ -281,8 +276,8 @@ const CAMPOS_PERSONALES: readonly CampoRamoSiniestro[] = [
 /**
  * El catálogo. Los ramos financieros (impago de alquiler, crédito, caución)
  * quedan FUERA a propósito: Grupo ASegura no los vende hoy (no están en
- * `RAMOS_SINIESTRO` porque no lo están en `RAMOS_POLIZA`). Si se dan de alta
- * algún día, se añaden entonces con la misma mecánica.
+ * `TIPOS_SEGURO`, de donde sale `RAMOS_SINIESTRO`). Si se dan de alta algún
+ * día, se añaden entonces con la misma mecánica.
  */
 export const CAMPOS_POR_RAMO_SINIESTRO: Readonly<Record<RamoSiniestro, readonly CampoRamoSiniestro[]>> = {
   auto: CAMPOS_ACCIDENTE_VEHICULO,
@@ -294,6 +289,7 @@ export const CAMPOS_POR_RAMO_SINIESTRO: Readonly<Record<RamoSiniestro, readonly 
   vida: CAMPOS_PERSONALES,
   salud: CAMPOS_PERSONALES,
   decesos: CAMPOS_PERSONALES,
+  accidentes: CAMPOS_PERSONALES,
   // Cajón de sastre: sin catálogo propio, solo lo que ya trae la cabecera.
   otros: [],
 }
