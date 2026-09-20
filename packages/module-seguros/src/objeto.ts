@@ -241,7 +241,23 @@ function objetoResponsabilidadCivil(
     coberturas,
     'Una RC no asegura un bien: lo que la identifica son sus modalidades (coberturas contratadas).',
   )
-  if (porCiMa.estado === 'conocido') return porCiMa
+
+  // Una RC de mascotas SÍ tiene un bien identificable: el animal. Las
+  // coberturas dicen la MODALIDAD (igual en dos pólizas de perros de la misma
+  // compañía); la raza es lo que distingue CUÁL perro, el mismo papel que la
+  // matrícula en auto. Se añade a `detalle` sin pisar el título de coberturas.
+  const raza = claro(d.animalRaza)
+  if (porCiMa.estado === 'conocido') {
+    return raza === null ? porCiMa : { ...porCiMa, detalle: unir([raza, porCiMa.detalle]) }
+  }
+  if (raza !== null) {
+    return {
+      estado: 'conocido',
+      titulo: raza,
+      detalle: null,
+      nota: 'RC de mascotas: la compañía no ha mandado coberturas por CIMA.',
+    }
+  }
 
   const idManual = claro(d.rcModalidad)
   if (idManual === null) return porCiMa

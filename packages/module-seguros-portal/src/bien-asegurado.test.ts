@@ -196,3 +196,15 @@ test('sin datos, BIEN_VACIO también trae matricula: null', () => {
   assert.equal(describirBien('auto', {}).matricula, null)
   assert.equal(describirBien('auto', null).matricula, null)
 })
+
+test('RC de mascotas: la raza es la `cosa`, igual que marca/modelo en auto', () => {
+  const b = describirBien('responsabilidad_civil', { animalRaza: 'Labrador Retriever' })
+  assert.equal(b.cosa, 'Labrador Retriever')
+  assert.equal(b.ubicacion, null)
+  assert.equal(b.matricula, null)
+})
+
+test('RC sin animal (una RC normal) no se confunde con mascotas: sin cosa', () => {
+  const b = describirBien('responsabilidad_civil', { rcModalidad: 'locativa' })
+  assert.equal(b.cosa, null)
+})
