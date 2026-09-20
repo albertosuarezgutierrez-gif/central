@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(20/09/2026)** Corrida la 1ª pasada del agente `agente-correduria` (skill ya existía, no se creó
+otro): cartera 157/100 vivas, 110 pólizas/72 clientes EN VIGOR, 7 vencimientos accionables
+(−30d), ingesta CIMA viva. Informe por Telegram, sin cambio de código. Sin baseline previo en
+`AGENTES-BITACORA.md` para delta de altas/bajas — próxima pasada ya tendrá con qué comparar.
+
 **(20/09/2026)** 🚨 Fix producción: pinchar en CUALQUIER cliente de `/correduria` daba error desde
 el commit 5e67cb5 (#3126) — la ficha selecciona `siniestros.datos_ramo` y la relación
 `siniestro_intervinientes`, y la migración `2026-09-20_siniestro_ramo_intervinientes.sql` se

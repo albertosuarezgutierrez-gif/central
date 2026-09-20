@@ -565,6 +565,14 @@ prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ause
   diseño de producto, **relación coste/valor**, calidad del asesoramiento. Endurece el enfoque de conducta.
 - **Revisión de la IDD (paquete RIS)**: aplicación estimada ~julio 2029. Estructural para el modelo de
   correduría (prohibiría retener comisiones a quien asesore de forma independiente). Radar, no acción.
+- **Cuatro criterios interpretativos del Servicio de Mediadores DGSFP (publicados 19/09/2026)**: (1)
+  equivalencia del diploma de Mediador de Seguros — quien lo tenga se considera con todos los módulos
+  de los anexos de la resolución de formación completados; (2) el TOMADOR debe CONSENTIR expresamente
+  la modificación de la mención del mediador en su póliza (una compañía no puede cambiar de corredor
+  a un cliente sin su OK — relevante si algún día se plantea recaptación de cartera ajena); (3)
+  prohibición de que redes cedidas a operadores de banca-seguros actúen a la vez como auxiliar externo
+  de un corredor (no aplica hoy a ASegura, pero delimita con quién NO se puede compartir red). Fuente:
+  INESE/Grupo Aseguranza, no fuente primaria DGSFP (proxy bloquea `dgsfp.mineco.gob.es`).
 
 **Argumentario de renovación (con datos, no impresiones):**
 - La subida no la decide la compañía, la decide el coste del siniestro: **recambio +9%**, coste de

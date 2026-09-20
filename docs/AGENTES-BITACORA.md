@@ -24,6 +24,17 @@
   (`claude/buscador-ia-2026-09-14`).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-20 · agente-correduria** (1ª pasada — sin entrada previa en bitácora, sin baseline
+  para delta) · hizo: cartera viva por SQL directo (`seguros.polizas`, criterio
+  `esCarteraViva`): 157 pólizas/100 clientes vivas, 110 pólizas/72 clientes EN VIGOR (47 vivas
+  canceladas); por compañía Mapfre 30/64 · Occident 46/51 · Allianz 20/27 · Generali 13/14 ·
+  Reale 1/1; detectó 18 pólizas 'vigente' con vencimiento ya pasado (CIMA no las ha
+  actualizado); 7 vencimientos accionables (ventana −30d, art. 22 LCS) con cliente+objeto+
+  fecha; confirmó ingesta CIMA viva (último fichero 18/09, 10 en 7 días); 3 titulares DGSFP
+  (4 criterios interpretativos 19/09, prioridades supervisión 2026-2028, plazo Atención al
+  Cliente 28/12/2026) vía WebSearch; informe enviado por Telegram (`/api/internal/alerta`,
+  messageId 4872); dudas: sin baseline previo no hay delta de altas/bajas real esta pasada;
+  fallos: —; PRs/commits: — (Telegram + esta entrada; sin cambio de código).
 - **2026-09-20 · facturas-correo** · hizo: pasada diaria completa. Salud Vía B OK (`dias_caido=2`,
   sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida` — `search_threads` a 0 pese a que
   `list_labels` mostraba 1 en Extraccion-fallida, quirk conocido). Barrido 4.0: 1 `sin_revisar` en
