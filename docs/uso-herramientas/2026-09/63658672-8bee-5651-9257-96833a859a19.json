@@ -1,0 +1,113 @@
+{
+ "sesion": "63658672-8bee-5651-9257-96833a859a19",
+ "inicio": "2026-09-20T10:12:34.934Z",
+ "fin": "2026-09-20T10:28:40.343Z",
+ "llamadas": 445,
+ "categorias": {
+  "bash": {
+   "llamadas": 329,
+   "chars_in": 82633,
+   "chars_out": 1485158,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 329
+   }
+  },
+  "otro": {
+   "llamadas": 14,
+   "chars_in": 122660,
+   "chars_out": 1419,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 7,
+    "SubagentHandback": 6
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 5,
+   "chars_in": 17603,
+   "chars_out": 18653,
+   "errores": 0,
+   "archivos_citados": 7,
+   "chars_citados": 234205,
+   "tools": {
+    "Agent": 5
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 149,
+   "chars_out": 17144,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 2
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 5,
+   "chars_in": 90,
+   "chars_out": 3012,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 3,
+    "mcp__Supabase__get_advisors": 1,
+    "mcp__Supabase__get_project": 1
+   }
+  },
+  "sql": {
+   "llamadas": 81,
+   "chars_in": 42083,
+   "chars_out": 111502,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 81
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 3788,
+   "chars_out": 3997,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 862,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 139,
+   "chars_out": 10116,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 7,
+   "chars_in": 805,
+   "chars_out": 32568,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_projects": 1,
+    "mcp__Vercel__filter_project_envs": 1,
+    "mcp__Vercel__get_runtime_logs": 5
+   }
+  }
+ }
+}
