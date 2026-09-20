@@ -1,0 +1,65 @@
+{
+ "sesion": "26e46e26-c0df-51a5-b59d-14f2d0e7dca4",
+ "inicio": "2026-09-20T08:38:33.717Z",
+ "fin": "2026-09-20T08:43:17.440Z",
+ "llamadas": 18,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 711,
+   "chars_out": 732,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "AskUserQuestion": 1,
+    "Skill": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 6,
+   "chars_in": 605,
+   "chars_out": 110172,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 4,
+    "Grep": 2
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 7,
+   "chars_in": 3540,
+   "chars_out": 29005,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 7
+   }
+  },
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 285,
+   "chars_out": 14037,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
+   }
+  }
+ }
+}
