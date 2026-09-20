@@ -1,8 +1,8 @@
 {
  "sesion": "f96b55ee-d85a-50df-874b-4ef5d8c9b10f",
  "inicio": "2026-09-20T08:19:07.905Z",
- "fin": "2026-09-20T12:21:05.657Z",
- "llamadas": 694,
+ "fin": "2026-09-20T15:03:04.957Z",
+ "llamadas": 711,
  "categorias": {
   "agente:general": {
    "llamadas": 2,
@@ -16,22 +16,22 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 119,
-   "chars_in": 13300,
-   "chars_out": 482338,
+   "llamadas": 121,
+   "chars_in": 13426,
+   "chars_out": 529155,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 36,
     "Glob": 2,
-    "Read": 81
+    "Read": 83
    }
   },
   "otro": {
-   "llamadas": 40,
-   "chars_in": 19451,
-   "chars_out": 366016,
+   "llamadas": 44,
+   "chars_in": 19852,
+   "chars_out": 366794,
    "errores": 0,
    "archivos_citados": 7,
    "chars_citados": 140113,
@@ -40,18 +40,18 @@
     "Skill": 5,
     "AskUserQuestion": 5,
     "ReadNotifications": 16,
-    "ToolSearch": 11
+    "ToolSearch": 15
    }
   },
   "bash": {
-   "llamadas": 316,
-   "chars_in": 69759,
-   "chars_out": 392998,
+   "llamadas": 323,
+   "chars_in": 71302,
+   "chars_out": 433272,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 316
+    "Bash": 323
    }
   },
   "mcp:Supabase": {
@@ -79,26 +79,28 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 11,
-   "chars_in": 1191,
-   "chars_out": 63528,
+   "llamadas": 14,
+   "chars_in": 1579,
+   "chars_out": 67823,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Vercel__list_projects": 2,
     "mcp__Vercel__list_deployments": 3,
-    "mcp__Vercel__get_deployment": 1,
+    "mcp__Vercel__get_deployment": 2,
     "mcp__Vercel__list_deployment_events": 1,
     "mcp__Vercel__filter_project_envs": 2,
     "mcp__Vercel__create_project_env": 1,
-    "mcp__Vercel__create_deployment": 1
+    "mcp__Vercel__create_deployment": 1,
+    "mcp__Vercel__create_sandboxes_v4": 1,
+    "mcp__Vercel__stop_session": 1
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 4,
-   "chars_in": 443,
-   "chars_out": 4487,
+   "llamadas": 5,
+   "chars_in": 445,
+   "chars_out": 4867,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -106,7 +108,8 @@
     "mcp__Claude_Code_Remote__list_repos": 1,
     "mcp__Claude_Code_Remote__add_repo": 1,
     "mcp__Claude_Code_Remote__register_repo_root": 1,
-    "mcp__Claude_Code_Remote__send_later": 1
+    "mcp__Claude_Code_Remote__send_later": 1,
+    "mcp__Claude_Code_Remote__list_environments": 1
    }
   },
   "escritura": {
