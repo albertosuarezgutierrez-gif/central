@@ -1,33 +1,33 @@
 {
  "sesion": "63658672-8bee-5651-9257-96833a859a19",
  "inicio": "2026-09-20T10:12:34.934Z",
- "fin": "2026-09-20T12:20:56.494Z",
- "llamadas": 1246,
+ "fin": "2026-09-20T13:16:51.931Z",
+ "llamadas": 1291,
  "categorias": {
   "bash": {
-   "llamadas": 939,
-   "chars_in": 639602,
-   "chars_out": 3352087,
+   "llamadas": 965,
+   "chars_in": 654399,
+   "chars_out": 3397309,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 939
+    "Bash": 965
    }
   },
   "otro": {
-   "llamadas": 54,
-   "chars_in": 218429,
-   "chars_out": 276060,
+   "llamadas": 65,
+   "chars_in": 218657,
+   "chars_out": 395395,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 21,
+    "ToolSearch": 23,
     "SubagentHandback": 15,
     "ListAgents": 6,
-    "ReadNotifications": 10,
+    "ReadNotifications": 19,
     "AskUserQuestion": 1
    }
   },
@@ -90,18 +90,18 @@
    }
   },
   "mcp:github": {
-   "llamadas": 15,
-   "chars_in": 8233,
-   "chars_out": 100484,
+   "llamadas": 20,
+   "chars_in": 8752,
+   "chars_out": 130807,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 1,
+   "chars_citados": 5665,
    "tools": {
     "mcp__github__list_pull_requests": 2,
     "mcp__github__create_pull_request": 1,
     "mcp__github__subscribe_pr_activity": 1,
     "mcp__github__actions_list": 2,
-    "mcp__github__pull_request_read": 8,
+    "mcp__github__pull_request_read": 13,
     "mcp__github__get_job_logs": 1
    }
   },
@@ -145,16 +145,17 @@
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 3,
-   "chars_in": 711,
-   "chars_out": 4272,
+   "llamadas": 6,
+   "chars_in": 3478,
+   "chars_out": 24135,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 6,
+   "chars_citados": 869297,
    "tools": {
-    "mcp__Claude_Code_Remote__send_later": 1,
+    "mcp__Claude_Code_Remote__send_later": 3,
     "mcp__Claude_Code_Remote__add_repo": 1,
-    "mcp__Claude_Code_Remote__register_repo_root": 1
+    "mcp__Claude_Code_Remote__register_repo_root": 1,
+    "mcp__Claude_Code_Remote__list_triggers": 1
    }
   }
  }
