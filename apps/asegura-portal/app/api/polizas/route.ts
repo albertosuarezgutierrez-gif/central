@@ -133,6 +133,10 @@ async function altaConDocumento(req: Request, identidadId: string) {
       // orígenes se escriben en el MISMO paso que sus datos: uno sin el otro es
       // una afirmación sobre un dato que no está.
       datosRamoOrigen: datos.datosRamoOrigen ?? Prisma.DbNull,
+      // Las garantías que el documento enumera (20/09/2026). `null` = no se
+      // pudo leer (NULL de SQL, no `JsonNull`); `[]` = leídas, ninguna. Con
+      // ellas la póliza entra en el detector de solapamientos de la bóveda.
+      coberturas: datos.coberturas ?? Prisma.DbNull,
       // Siempre `declarado`: lo ha aportado el usuario. Que lo haya leído una IA
       // no lo convierte en dato verificado — al revés, es donde más se inventa.
       procedencia: 'declarado',

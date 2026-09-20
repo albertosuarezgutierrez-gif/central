@@ -82,6 +82,9 @@ model PortalIdentidad {
   nombre         String?
   creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
   ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
+  /// Última «revisión anual» enviada por el cron mensual de `apps/asegura`.
+  /// NULL = nunca. La escribe `prisma_seguros`; el portal solo la lee.
+  revisionAnualEnviadaEn DateTime? @map("revision_anual_enviada_en") @db.Timestamptz(6)
 
   // Cómo salió el ÚLTIMO intento de vincular esta identidad con una ficha, y
   // cuándo. Lo sella `lib/vinculo.ts` en el canje del código —el único momento
@@ -239,6 +242,15 @@ model PortalPolizaDeclarada {
   /// Puede faltar aunque haya empresa: mucha gente no se lo sabe de memoria.
   titularEmpresaCif    String?           @map("titular_empresa_cif")
   extraccionBruta      Json?             @map("extraccion_bruta")
+  /// Garantías que la IA leyó en el PDF (lista de textos cortos). NULL = no se
+  /// ha leído (alta a mano o subida anterior al 20/09/2026); `[]` = leído y no
+  /// encontró ninguna. Con esto la póliza declarada entra en el detector de
+  /// solapamientos de `/boveda` junto a las de cartera.
+  coberturas           Json?
+  /// El cliente redactó la carta de no renovación (copiar / imprimir / abrir el
+  /// correo) y, si lo marcó, la envió. Señal de lead para el corredor.
+  cartaGeneradaEn      DateTime?         @map("carta_generada_en") @db.Timestamptz(6)
+  cartaEnviadaEn       DateTime?         @map("carta_enviada_en") @db.Timestamptz(6)
   creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
   actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
 

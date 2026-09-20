@@ -9,6 +9,7 @@ import {
   leadUrgente,
   normalizarNumeroPoliza,
   ordenarLeads,
+  senalCarta,
   type EntradaLead,
 } from './lead-declarada.ts'
 
@@ -158,4 +159,49 @@ test('el corte es DIAS_LEAD_URGENTE, y se comprueba en el borde', () => {
   assert.equal(leadUrgente({ diasParaAccionable: DIAS_LEAD_URGENTE, ventanaPasada: false }), true)
   assert.equal(leadUrgente({ diasParaAccionable: DIAS_LEAD_URGENTE + 1, ventanaPasada: false }), false)
   assert.equal(leadUrgente({ diasParaAccionable: 0, ventanaPasada: false }), true, 'hoy mismo es hoy')
+})
+
+// ── La carta de no renovación como señal (20/09/2026) ───────────────────────
+
+test('🚨 la señal de la carta tiene TRES valores y «enviada» manda', () => {
+  assert.equal(senalCarta({ cartaGeneradaEn: null, cartaEnviadaEn: null }), 'ninguna')
+  assert.equal(senalCarta({}), 'ninguna', 'una consulta vieja que no trae las columnas no inventa nada')
+  assert.equal(senalCarta({ cartaGeneradaEn: HOY, cartaEnviadaEn: null }), 'generada')
+  assert.equal(senalCarta({ cartaGeneradaEn: HOY, cartaEnviadaEn: HOY }), 'enviada')
+  // Marcada a mano sin haber pasado por «copiar»: sigue siendo enviada.
+  assert.equal(senalCarta({ cartaGeneradaEn: null, cartaEnviadaEn: HOY }), 'enviada')
+})
+
+test('🚨 carta ENVIADA = urgente aunque la ventana haya pasado o no haya fecha', () => {
+  // La persona ya le ha dicho a su compañía que se va. El que llegue primero
+  // se la lleva, tenga el vencimiento que tenga.
+  assert.equal(leadUrgente({ diasParaAccionable: null, ventanaPasada: true, senalCarta: 'enviada' }), true)
+  assert.equal(leadUrgente({ diasParaAccionable: null, ventanaPasada: false, senalCarta: 'enviada' }), true)
+  assert.equal(leadUrgente({ diasParaAccionable: 200, ventanaPasada: false, senalCarta: 'enviada' }), true)
+})
+
+test('🚨 carta solo GENERADA no es urgente: se generan muchas por curiosidad', () => {
+  assert.equal(leadUrgente({ diasParaAccionable: 200, ventanaPasada: false, senalCarta: 'generada' }), false)
+  assert.equal(leadUrgente({ diasParaAccionable: 3, ventanaPasada: true, senalCarta: 'generada' }), false)
+})
+
+test('🚨 en la lista, la carta manda sobre la fecha: enviada > generada > resto', () => {
+  const l = (id: string, venc: string, carta: Partial<EntradaLead>) =>
+    leadDeclarada(entrada({ id, fechaVencimiento: new Date(venc), ...carta }), HOY)!
+  const leads = [
+    l('pronto', '2026-10-15T00:00:00Z', {}),
+    l('generada-tarde', '2027-08-01T00:00:00Z', { cartaGeneradaEn: HOY }),
+    l('enviada-sin-fecha', '2027-08-01T00:00:00Z', { cartaEnviadaEn: HOY }),
+    l('tarde', '2027-06-01T00:00:00Z', {}),
+  ]
+  assert.deepEqual(ordenarLeads(leads).map((x) => x.id), ['enviada-sin-fecha', 'generada-tarde', 'pronto', 'tarde'])
+})
+
+test('la señal y la fecha de envío viajan en el lead', () => {
+  const l = leadDeclarada(entrada({ cartaGeneradaEn: HOY, cartaEnviadaEn: HOY }), HOY)!
+  assert.equal(l.senalCarta, 'enviada')
+  assert.equal(l.cartaEnviadaEn, HOY)
+  const sin = leadDeclarada(entrada(), HOY)!
+  assert.equal(sin.senalCarta, 'ninguna')
+  assert.equal(sin.cartaEnviadaEn, null)
 })
