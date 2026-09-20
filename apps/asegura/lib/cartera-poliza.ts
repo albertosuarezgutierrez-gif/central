@@ -25,7 +25,8 @@ import {
   type ObjetoAsegurado,
   type RecargoFraccionamiento,
   type ReciboResumen,
-  type RecibosPoliza, extraerDetalleCobertura, type DetalleCobertura } from '@central/module-seguros'
+  type RecibosPoliza, extraerDetalleCobertura, type DetalleCobertura,
+  seguimientoSustitucion, type SeguimientoSustitucion } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
@@ -146,6 +147,28 @@ export type FichaPoliza = {
    * la póliza no es de hogar.
    */
   capitalesHogar: { continente: CapitalAsegurado; contenido: CapitalAsegurado } | null
+  /**
+   * Sustitución por retarificación (20/09/2026): si esta póliza viene de
+   * cambiar de compañía, o si a ella la ha sustituido otra. Los dos lados
+   * pueden venir a la vez que `null` — no son excluyentes con nada más de la
+   * ficha. `seguimiento` sale de `seguimientoSustitucion()`, la MISMA regla
+   * que usa plataforma: nunca se reimplementa el «¿ya lo confirmó CIMA?».
+   */
+  sustitucion: {
+    origen: PolizaRelacionada | null
+    sustituidaPor: PolizaRelacionada | null
+    sustituidaAt: string | null
+    seguimiento: SeguimientoSustitucion
+  }
+}
+
+export type PolizaRelacionada = {
+  polizaId: string
+  clienteId: string
+  aseguradora: string
+  numeroPoliza: string | null
+  estado: string
+  confirmadaCima: boolean
 }
 
 /** Hoy en Madrid, `YYYY-MM-DD`: la horquilla pesa la antigüedad de cada caso. */
@@ -264,6 +287,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     select: {
       id: true, tipo: true, aseguradora: true, codigoEntidadDgs: true, numeroPoliza: true, idPolizaEntidad: true,
       ramoDgs: true, estado: true, situacion: true, origen: true, importRef: true, eiacXmlHash: true,
+      polizaOrigenId: true, sustituidaAt: true,
       fechaEfectoInicial: true, fechaInicio: true, fechaVencimiento: true,
       primaAnual: true, primaBruta: true, primaMensual: true, fraccionamiento: true, datosEspecificos: true,
       cliente: { select: { id: true, nombre: true, apellidos: true } },
@@ -333,6 +357,29 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     contarDocumentosPoliza(correduriaId, p.id),
     listarDocumentos(correduriaId, { polizaId: p.id }),
   ])
+
+  const [polizaOrigen, sustituidaPor] = await Promise.all([
+    p.polizaOrigenId
+      ? db.poliza
+          .findFirst({
+            where: { id: p.polizaOrigenId, correduriaId },
+            select: { id: true, clienteId: true, aseguradora: true, numeroPoliza: true, estado: true, idPolizaEntidad: true },
+          })
+          .catch(() => null)
+      : Promise.resolve(null),
+    // El reverso: ¿hay alguna póliza cuyo origen sea ESTA? Solo puede haber una
+    // (cada emisión se ancla a un `polizaOrigenId` distinto), pero por si acaso
+    // se coge la más reciente.
+    db.poliza
+      .findFirst({
+        where: { polizaOrigenId: p.id, correduriaId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, clienteId: true, aseguradora: true, numeroPoliza: true, estado: true, idPolizaEntidad: true },
+      })
+      .catch(() => null),
+  ])
+  const relacionada = (x: typeof polizaOrigen): PolizaRelacionada | null =>
+    x === null ? null : { polizaId: x.id, clienteId: x.clienteId, aseguradora: x.aseguradora, numeroPoliza: x.numeroPoliza ?? null, estado: String(x.estado), confirmadaCima: x.idPolizaEntidad !== null }
 
   const datos = datosConDireccion(p.datosEspecificos)
   const datosGemela = esObjetoPlano(gemela?.datosEspecificos) ? gemela.datosEspecificos : null
@@ -467,5 +514,11 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     retarificacion,
     estimacion,
     capitalesHogar: capitales,
+    sustitucion: {
+      origen: relacionada(polizaOrigen),
+      sustituidaPor: relacionada(sustituidaPor),
+      sustituidaAt: fechaIso(p.sustituidaAt),
+      seguimiento: seguimientoSustitucion({ polizaOrigenId: p.polizaOrigenId ?? null, idPolizaEntidad: p.idPolizaEntidad ?? null }),
+    },
   }
 }

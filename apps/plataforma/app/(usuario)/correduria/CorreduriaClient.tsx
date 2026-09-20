@@ -9,6 +9,7 @@ import CuadreComisiones from './CuadreComisiones'
 import BuscadorCartera from './BuscadorCartera'
 import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
+import Sustituciones from './Sustituciones'
 import Actividad from './Actividad'
 import Duplicadas from './Duplicadas'
 import SinCanal from './SinCanal'
@@ -154,6 +155,7 @@ export default function CorreduriaClient() {
   const [nLeads, setNLeads] = useState<number | null | undefined>(undefined)
   const [nSupresiones, setNSupresiones] = useState<number | null | undefined>(undefined)
   const [nRetencion, setNRetencion] = useState<number | null | undefined>(undefined)
+  const [nSustituciones, setNSustituciones] = useState<number | null | undefined>(undefined)
   const [nSinCanal, setNSinCanal] = useState<number | null | undefined>(undefined)
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
   const [nExportRgpd, setNExportRgpd] = useState<number | null | undefined>(undefined)
@@ -227,9 +229,9 @@ export default function CorreduriaClient() {
 
   const contadores: ContadoresSeccion = {
     hoy: {
-      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nDeclaradas]),
+      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nDeclaradas, nSustituciones]),
       tono: 'malo',
-      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra y declaradas de otra compañía a punto de renovar',
+      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra, declaradas de otra compañía a punto de renovar y sustituciones pendientes de que CIMA confirme la nueva',
     },
     clientes: {
       // El listado NO es trabajo pendiente (cuántos clientes cumplen el
@@ -345,6 +347,11 @@ export default function CorreduriaClient() {
             LCS). Es la pantalla comercial: lo único de aquí que se hace con el
             teléfono en la mano. */}
         <Retencion onContador={setNRetencion} />
+
+        {/* Cambios de compañía ya emitidos, esperando a que CIMA confirme que
+            el cliente paga la nueva. Justo después de Retención porque es la
+            otra cara del mismo teléfono: aquí no se llama, se comprueba. */}
+        <Sustituciones onContador={setNSustituciones} />
 
         {/* Pólizas que el cliente declaró de OTRA compañía y vencen pronto:
             la venta cruzada, con el teléfono en la mano en vez de un precio

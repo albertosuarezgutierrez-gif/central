@@ -223,6 +223,7 @@ export async function POST(req: Request) {
       clienteId: poliza.cliente_id,
       actor,
       catalogo: catalogoAc ?? undefined,
+      polizaOrigenId: p.poliza_id,
       proyecto: {
         projectIdCodeoscopic: projectId,
         producto: poliza.tipo,
@@ -698,6 +699,7 @@ export async function POST(req: Request) {
     clienteId: poliza.cliente_id,
     actor,
     catalogo: catalogo ?? undefined,
+    polizaOrigenId: p.poliza_id,
     proyecto: {
       projectIdCodeoscopic: projectId,
       producto: poliza.tipo,

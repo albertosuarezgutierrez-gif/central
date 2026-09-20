@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { conciliarConCima, emparejarConCima, prepararPolizaEmitida, sanearPrima, type CompaniaDgs, type ProyectoEmitido } from './emision.ts'
+import { conciliarConCima, emparejarConCima, prepararPolizaEmitida, sanearPrima, seguimientoSustitucion, type CompaniaDgs, type ProyectoEmitido } from './emision.ts'
 
 const catalogo: CompaniaDgs[] = [
   { codigoDgs: 'C0058', nombreComun: 'Mapfre', nombreCima: 'Mapfre', enCima: true, activa: true },
@@ -91,4 +91,17 @@ test('conciliar D3: en una nuestra CIMA manda en estado/fechas/número/entidad, 
   // Una que NO es nuestra: CIMA manda en todo, como el legacy.
   const ajena = conciliarConCima({ ...nuestra, origen: 'gestionada_correduria' }, { ...cima, clienteId: 'k2', dniHash: 'h9' })
   assert.ok(ajena.resultado === 'update' && ajena.cambios.clienteId === 'k2' && ajena.conservado.length === 0)
+})
+
+test('seguimientoSustitucion: sin póliza de origen, no aplica (no es una sustitución)', () => {
+  assert.equal(seguimientoSustitucion({ polizaOrigenId: null, idPolizaEntidad: null }), 'no_aplica')
+  assert.equal(seguimientoSustitucion({ polizaOrigenId: null, idPolizaEntidad: 'X123' }), 'no_aplica')
+})
+
+test('seguimientoSustitucion: emitida pero CIMA aún no la ha confirmado → esperando', () => {
+  assert.equal(seguimientoSustitucion({ polizaOrigenId: 'p-vieja', idPolizaEntidad: null }), 'esperando_cima')
+})
+
+test('seguimientoSustitucion: solo cuenta CONFIRMADA con id_poliza_entidad de CIMA, no con «se ha emitido»', () => {
+  assert.equal(seguimientoSustitucion({ polizaOrigenId: 'p-vieja', idPolizaEntidad: 'ENT-99' }), 'confirmada')
 })

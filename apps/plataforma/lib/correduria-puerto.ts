@@ -637,6 +637,76 @@ export async function impagadosAsegura(): Promise<Impagados> {
   }
 }
 
+// ── Seguimiento de sustituciones (cambio de compañía) ───────────────────────
+//
+// Pólizas marcadas `sustituida_at` (se retarificó y se EMITIÓ de verdad con
+// otra compañía) que llevan ≥3 días sin que CIMA confirme la nueva. Alberto,
+// 20/09/2026: «hay que hacerle seguimiento a que el cliente la pague, y eso
+// lo confirma CIMA» — esta cola es ese seguimiento, para que no dependa de
+// acordarse de abrir la ficha de cada cliente que cambió de compañía.
+
+export type SustitucionPendiente = {
+  clienteId: string
+  cliente: string
+  diasSustituida: number
+  sustituidaAt: string
+  polizaVieja: { id: string; aseguradora: string; numeroPoliza: string | null }
+  polizaNueva: { id: string; aseguradora: string; numeroPoliza: string | null } | null
+}
+
+export type Sustituciones =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'ok'; filas: SustitucionPendiente[] }
+
+function leerRelacionadaPuerto(v: unknown): { id: string; aseguradora: string; numeroPoliza: string | null } | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const id = cadena(o.id)
+  if (id === null) return null
+  return { id, aseguradora: cadena(o.aseguradora) ?? '', numeroPoliza: cadena(o.numeroPoliza) }
+}
+
+export function interpretarSustituciones(status: number, json: unknown): Sustituciones {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: 'asegura_error' }
+  const filas = Array.isArray(o.sustituciones)
+    ? o.sustituciones
+        .map((f): SustitucionPendiente | null => {
+          if (typeof f !== 'object' || f === null) return null
+          const x = f as Record<string, unknown>
+          const clienteId = cadena(x.clienteId)
+          const polizaVieja = leerRelacionadaPuerto(x.polizaVieja)
+          if (clienteId === null || polizaVieja === null) return null
+          return {
+            clienteId,
+            cliente: cadena(x.cliente) ?? 'sin nombre',
+            diasSustituida: entero(x.diasSustituida) ?? 0,
+            sustituidaAt: cadena(x.sustituidaAt) ?? '',
+            polizaVieja,
+            polizaNueva: leerRelacionadaPuerto(x.polizaNueva),
+          }
+        })
+        .filter((x): x is SustitucionPendiente => x !== null)
+    : []
+  return { estado: 'ok', filas }
+}
+
+export async function sustitucionesAsegura(): Promise<Sustituciones> {
+  try {
+    const r = await pedir('/api/operador/sustituciones')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarSustituciones(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
 // ── Clientes sin canal de contacto ──────────────────────────────────────────
 //
 // Quién de la cartera VIVA no tiene ni email ni teléfono. Medido el 02/09/2026:

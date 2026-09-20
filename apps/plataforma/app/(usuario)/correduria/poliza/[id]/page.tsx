@@ -61,6 +61,9 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         />
       </div>
 
+      {/* ── Sustitución por cambio de compañía ──────────────────────────── */}
+      <Sustitucion p={p} />
+
       {/* ── Qué asegura ─────────────────────────────────────────────────── */}
       <Tarjeta titulo="Qué asegura">
         <Objeto p={p} />
@@ -206,6 +209,46 @@ function Objeto({ p }: { p: Poliza }) {
         <div style={muted}>Tampoco hay copia en el volcado con más datos.</div>
       )}
       {!p.gemelaInformada && <div style={muted}>La versión desplegada de asegura no busca la copia gemela.</div>}
+    </div>
+  )
+}
+
+/**
+ * Cambio de compañía por retarificación (20/09/2026). Dos caras, no
+ * excluyentes: esta póliza puede a la vez venir de sustituir a otra Y estar
+ * ya sustituida por una tercera (si se retarifica dos veces).
+ *
+ * 🚨 «Sustituida» NO es «cancelada»: el `estado` de esta póliza lo sigue
+ * mandando CIMA, y hasta que confirme la nueva, ésta sigue viva de cara a la
+ * compañía. Por eso el seguimiento se pinta como una espera, no como un hecho
+ * consumado — Alberto: «hay que hacerle seguimiento hasta que CIMA confirma».
+ */
+function Sustitucion({ p }: { p: Poliza }) {
+  const s = p.sustitucion
+  if (s === null) return null
+  if (s.origen === null && s.sustituidaPor === null) return null
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {s.origen && (
+        <div style={{ ...tarjeta, borderStyle: 'dashed', fontSize: 13 }}>
+          🔁 Sustituye a la póliza de <strong>{s.origen.aseguradora}</strong>
+          {s.origen.numeroPoliza && ` nº ${s.origen.numeroPoliza}`} (<Link href={`/correduria/poliza/${s.origen.polizaId}`}>ver</Link>).
+        </div>
+      )}
+      {s.sustituidaPor && (
+        <div style={{ ...tarjeta, borderColor: s.seguimiento === 'confirmada' ? 'var(--positive)' : 'var(--warning)', fontSize: 13 }}>
+          {s.seguimiento === 'confirmada' ? (
+            <>✅ Sustituida por la póliza en <strong>{s.sustituidaPor.aseguradora}</strong>
+              {s.sustituidaPor.numeroPoliza && ` nº ${s.sustituidaPor.numeroPoliza}`} — CIMA ya confirmó que el cliente la está pagando.</>
+          ) : (
+            <>🟡 Sustituida por la póliza en <strong>{s.sustituidaPor.aseguradora}</strong>
+              {s.sustituidaPor.numeroPoliza && ` nº ${s.sustituidaPor.numeroPoliza}`}, emitida
+              {s.sustituidaAt ? ` el ${fmt(s.sustituidaAt)}` : ''} — <strong>pendiente de seguimiento</strong>: todavía no
+              consta que CIMA la haya confirmado (que el cliente la esté pagando de verdad).</>
+          )}{' '}
+          <Link href={`/correduria/poliza/${s.sustituidaPor.polizaId}`}>ver la nueva</Link>.
+        </div>
+      )}
     </div>
   )
 }

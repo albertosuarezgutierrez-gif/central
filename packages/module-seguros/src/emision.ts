@@ -257,6 +257,23 @@ export type Conciliacion =
  * traer: CIMA manda en lo suyo, nosotros en el riesgo y en el tomador.
  * Sobre una que NO es nuestra, CIMA manda en todo (como el legacy).
  */
+// ─── Sustitución por retarificación (cambio de compañía) ────────────────────
+//
+// Cuando se retarifica una póliza y se EMITE de verdad con otra compañía, la
+// vieja se marca `sustituida_at` (nuestro dato, nunca lo toca CIMA) y la nueva
+// guarda `poliza_origen_id`. El seguimiento no lo decide un estado inventado:
+// lo decide si CIMA ya ha confirmado la nueva (`id_poliza_entidad`), que es la
+// única prueba real de que el cliente la está pagando — hasta entonces «se ha
+// emitido» no es «está en vigor».
+
+export type SeguimientoSustitucion = 'no_aplica' | 'esperando_cima' | 'confirmada'
+
+/** ¿Hace falta seguir esta sustitución, o ya la confirmó CIMA? `polizaOrigenId: null` = esta póliza no viene de una sustitución. */
+export function seguimientoSustitucion(args: { polizaOrigenId: string | null; idPolizaEntidad: string | null }): SeguimientoSustitucion {
+  if (!args.polizaOrigenId) return 'no_aplica'
+  return args.idPolizaEntidad ? 'confirmada' : 'esperando_cima'
+}
+
 export function conciliarConCima(nuestra: NuestraPoliza, cima: CimaPoliza): Conciliacion {
   const esNuestra = nuestra.origen === 'emitida_codeoscopic'
   if (!esNuestra) {

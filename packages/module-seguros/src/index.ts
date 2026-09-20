@@ -407,6 +407,7 @@ export {
   emparejarConCima,
   conciliarConCima,
   sanearPrima,
+  seguimientoSustitucion,
   TIPOS_SEGURO,
   PRIMA_ANUAL_MAX,
   MARGEN_FECHA_INICIO_DIAS,
@@ -420,6 +421,7 @@ export {
   type NuestraPoliza,
   type CimaPoliza,
   type Conciliacion,
+  type SeguimientoSustitucion,
 } from './emision.ts'
 export {
   ladoDeGarantia,
