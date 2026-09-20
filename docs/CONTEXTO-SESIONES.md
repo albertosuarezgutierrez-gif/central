@@ -20,6 +20,15 @@ Al ejecutar: `apps/plataforma/lib/seo-correduria/consultas.ts` tenía `pagina: n
 «problema» cuyos artículos YA estaban publicados (07 y 15/09) — `accionPropuesta` llevaba semanas
 pudiendo proponer reescribir contenido existente. Corregido (fusionado con las 2 filas nuevas que
 main añadió el 19/09 para el gestor) + `keywords.md` puesto al día. Tests seo-correduria en verde.
+**(20/09/2026) Presupuesto de auto (avant2/Codeoscopic): propietario y conductor pueden ser distintos
+del tomador.** Hasta ahora `construirPeticionAuto` mandaba SIEMPRE la misma persona como
+`holder`/`owner`/`primaryDriver` — si el dueño era otra persona/empresa o había un conductor
+autorizado distinto, se cotizaba con datos incorrectos. `DatosAuto.propietario`/`.conductor`
+opcionales (persona completa; el conductor lleva su PROPIA `fechaCarnet`); si no se mandan, el
+comportamiento es idéntico a antes. UI en `auto-nuevo/AutoNuevo.tsx` (dos casillas + mini-formulario).
+🚧 Sin verificar contra el vendor real (nunca se ha pagado una cotización con owner/driver distintos
+del holder) y **no cubre propietario EMPRESA** (persona jurídica, sin `estadoCivil`). 9 tests nuevos.
+
 **(20/09/2026)** `/correduria/cliente/[id]` · Alberto: en «Aportadas desde el portal» no había
 dirección de hogar ni marca/modelo de auto, y el nº de póliza no identifica nada (regla que ya regía
 en `asegura-portal` pero no aquí). `datosRamo` de `portal_poliza_declarada` no se leía en el puerto de
