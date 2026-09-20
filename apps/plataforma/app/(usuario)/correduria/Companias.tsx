@@ -1,10 +1,10 @@
 'use client'
-import { useEffect, useState } from 'react'
 import { Building2 } from 'lucide-react'
 import Bloque from './Bloque'
 import ContactoAcciones from './ContactoAcciones'
+import { useCompanias } from './useCompanias'
 import { etiquetaArea } from '@central/module-seguros'
-import { interpretarCompanias, type Compania, type Contacto, type RespuestaCompanias } from '@/lib/companias-asegura'
+import type { Compania, Contacto } from '@/lib/companias-asegura'
 
 /**
  * Directorio de contacto por compañía aseguradora (`seguros.companias_dgs` +
@@ -22,23 +22,12 @@ import { interpretarCompanias, type Compania, type Contacto, type RespuestaCompa
  *   sin_configurar / error → aviso discreto, nunca «sin compañías».
  *   ok → tabla, con `null` en cada campo pintado como «—», nunca vacío.
  */
-type Estado = { fase: 'cargando' } | { fase: 'hecho'; r: RespuestaCompanias }
-
 function celda(v: string | null) {
   return v ?? <span style={{ color: 'var(--muted)' }}>—</span>
 }
 
 export default function Companias() {
-  const [estado, setEstado] = useState<Estado>({ fase: 'cargando' })
-
-  useEffect(() => {
-    let vivo = true
-    fetch('/api/correduria/companias')
-      .then(async (res) => interpretarCompanias(res.status, await res.json().catch(() => null)))
-      .catch((): RespuestaCompanias => ({ estado: 'error', motivo: 'red' }))
-      .then((r) => { if (vivo) setEstado({ fase: 'hecho', r }) })
-    return () => { vivo = false }
-  }, [])
+  const estado = useCompanias()
 
   if (estado.fase === 'cargando') return null
   const r = estado.r

@@ -18,6 +18,7 @@ export interface RutaCorreo {
   cautela?: boolean         // el aviso va con tono de precaución (no actúa nunca)
   enrutarSivra?: boolean    // pasar al agente de huéspedes de SIVRA
   vigilarReserva?: boolean  // registrar en reservas_correo_booking (vigía Booking↔Smoobu)
+  enrutarCorreduria?: boolean // preguntar a asegura si resuelve a una póliza VIVA y anotarlo en su ficha
   descripcion: string       // para el prompt de clasificación
   ejemplos: string[]        // remitentes/tipos de ejemplo (para el prompt)
 }
@@ -56,6 +57,7 @@ export const RUTAS: RutaCorreo[] = [
     etiqueta: 'Triaje/Correduria',
     archivar: false,
     aviso: 'digest',
+    enrutarCorreduria: true,
     descripcion: 'Correos de la correduría de seguros de Alberto (es mediador): regularizaciones, pólizas, liquidaciones de comisiones de aseguradoras.',
     ejemplos: ['Occident regularización RC', 'Mapfre corredores', 'liquidación de comisiones'],
   },
@@ -71,6 +73,7 @@ export const RUTAS: RutaCorreo[] = [
     etiqueta: 'Triaje/Correduria-Recibos',
     archivar: false,
     aviso: 'inmediato',
+    enrutarCorreduria: true,
     descripcion: 'Aviso de una ASEGURADORA sobre recibos que no han entrado: devoluciones de banco, resúmenes de impagados, pólizas anuladas por impago y —lo más valioso— avisos de recibos PRÓXIMOS a la anulación. NO es una liquidación de comisiones ni un comunicado comercial (correduria), ni una factura de un proveedor de Alberto (contabilidad).',
     ejemplos: ['Recibos devueltos de banco 14-08-2026', 'Resumen de recibos próximos a la anulación', 'Relacion anulacion polizas por impago', 'DELEGACIÓN RECIBO Nº … PÓLIZA MAPFRE'],
   },

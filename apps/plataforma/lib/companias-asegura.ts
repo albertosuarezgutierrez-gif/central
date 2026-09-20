@@ -33,6 +33,12 @@ export type Compania = {
   enCima: boolean
   claveMediador: string | null
   notas: string | null
+  /** El teléfono/WhatsApp/horario DIRECTO de siniestros de la compañía, si se conoce
+   *  (`null` = no se ha verificado). Va aparte de `contactos`: es el canal genérico
+   *  de la compañía, no la persona concreta que le lleva la cartera a Alberto. */
+  telefonoSiniestros: string | null
+  whatsappSiniestros: string | null
+  horarioSiniestros: string | null
   contactos: Contacto[]
 }
 
@@ -87,6 +93,9 @@ function leerCompania(v: unknown): Compania | null {
     enCima: o.enCima === true,
     claveMediador: cadena(o.claveMediador),
     notas: cadena(o.notas),
+    telefonoSiniestros: cadena(o.telefonoSiniestros),
+    whatsappSiniestros: cadena(o.whatsappSiniestros),
+    horarioSiniestros: cadena(o.horarioSiniestros),
     contactos: leerContactos(o.contactos),
   }
 }
