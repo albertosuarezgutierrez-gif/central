@@ -22,7 +22,7 @@ credencial de solo lectura. Ventana que toca los últimos 3 días → `parcial: 
 consolidado; sin eso la latencia se lee como bajada de tráfico). 🪤 **Y el cepo que enseña algo:
 `pnpm test:guardia` daba 948/948 con el endpoint sin registrar en `RUTAS_RUTINA` — el guardián lee
 ficheros TRACKEADOS, y el fichero estaba untracked. Verde por no verlo.** Se puso rojo al commitear
-y lo cazó `code-review`. PR #TBD.
+y lo cazó `code-review`. PR #3195.
 
 **(20/09/2026)** PR #3182 **MERGEADO** (`91cdd3abb`, 21/21 en CI): la auditoría de la correduría está
 en `main`. `/correduria` es ya **fail-closed** — `CORREDURIA_EMAILS` con el correo de Alberto puesta y
