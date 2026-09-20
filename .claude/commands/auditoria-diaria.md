@@ -594,9 +594,7 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
       conversación desde el PR. (Si no hay `PLATAFORMA_URL`/`ALERTA_TOKEN`, omite.)
       Comando de referencia:
       ```bash
-      curl -s -X POST "${PLATAFORMA_URL}/api/internal/alerta" \
-        -H "Authorization: Bearer ${ALERTA_TOKEN}" -H "Content-Type: application/json" \
-        -d '{"text":"<resumen HTML, incluye el link al PR>"}'
+      bash scripts/canal-aviso.sh POST /api/internal/alerta '{"text":"<resumen HTML, incluye el link al PR>"}'
       ```
    4. **Frugalidad:** si NO hubo nada que auto-aplicar (carril 1 vacío) Y nada "raro" (carril
       2 vacío) → no push, no PR, no Telegram. Excepción: el heartbeat semanal de abajo.
@@ -626,10 +624,10 @@ no hacer ruido.
 ## Canal de aviso — protocolo común
 
 **Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
-`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+`bash scripts/canal-aviso.sh GET /api/internal/alerta`
 
-- `200` → el canal está vivo, sigue con tu pasada.
-- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+- `HTTP_STATUS:200` → el canal está vivo, sigue con tu pasada.
+- `HTTP_STATUS:401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
   hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
   Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
   `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).

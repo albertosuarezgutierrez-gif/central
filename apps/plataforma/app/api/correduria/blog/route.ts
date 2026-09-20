@@ -13,12 +13,10 @@
 
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { extraerArticuloDePr, estadoPr, motivoMerge } from '@/lib/correduria/blog-pr'
+import { extraerArticuloDePr, estadoPr, decidirBlogPr, REPO, RAMA } from '@/lib/correduria/blog-pr'
 
 export const dynamic = 'force-dynamic'
 
-const REPO = 'albertosuarezgutierrez-gif/central'
-const RAMA = 'claude/blog-asegura'
 const API = `https://api.github.com/repos/${REPO}`
 
 function cabeceras(token: string) {
@@ -100,41 +98,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, motivo: 'Petición incompleta.' }, { status: 400 })
   }
 
-  // 🚨 Se comprueba que el PR es de LA rama del agente antes de tocarlo. Sin
-  // esto, este endpoint mezclaría cualquier PR abierto del repo por su número.
-  const info = await fetch(`${API}/pulls/${numero}`, { headers: cabeceras(token), cache: 'no-store' })
-  if (!info.ok) {
-    return NextResponse.json({ ok: false, motivo: motivoMerge(info.status, '') }, { status: 400 })
-  }
-  const pr = (await info.json()) as { head?: { ref?: string }; title?: string }
-  if (pr.head?.ref !== RAMA) {
-    return NextResponse.json({ ok: false, motivo: 'Ese PR no es del agente del blog.' }, { status: 400 })
-  }
-
-  if (accion === 'descartar') {
-    const r = await fetch(`${API}/pulls/${numero}`, {
-      method: 'PATCH', headers: cabeceras(token), body: JSON.stringify({ state: 'closed' }),
-    })
-    if (!r.ok) {
-      const txt = (await r.text()).slice(0, 200)
-      return NextResponse.json({ ok: false, motivo: motivoMerge(r.status, txt), detalle: txt }, { status: 502 })
-    }
-    return NextResponse.json({ ok: true, accion: 'descartar' })
-  }
-
-  const r = await fetch(`${API}/pulls/${numero}/merge`, {
-    method: 'PUT',
-    headers: cabeceras(token),
-    body: JSON.stringify({ merge_method: 'squash', commit_title: `${pr.title ?? 'blog'} (#${numero})` }),
-  })
-  if (!r.ok) {
-    const txt = (await r.text()).slice(0, 300)
-    let mensaje = txt
-    try { mensaje = (JSON.parse(txt) as { message?: string }).message ?? txt } catch { /* texto plano */ }
-    return NextResponse.json(
-      { ok: false, motivo: motivoMerge(r.status, mensaje), detalle: mensaje },
-      { status: 502 },
-    )
-  }
-  return NextResponse.json({ ok: true, accion: 'publicar' })
+  // decidirBlogPr comprueba que el PR es de LA rama del agente antes de tocarlo
+  // (mismo chequeo que evita mezclar cualquier PR abierto del repo por número),
+  // y es la MISMA función que usa el botón de Telegram — una sola fuente.
+  const r = await decidirBlogPr(numero, accion, token)
+  if (!r.ok) return NextResponse.json(r, { status: r.httpStatus })
+  return NextResponse.json(r)
 }

@@ -121,7 +121,16 @@ function entero(d: Record<string, unknown>, clave: string): number | null {
 const RAMOS_VEHICULO = new Set(['auto', 'moto', 'camion', 'furgoneta', 'flota'])
 
 /** Los ramos cuyo bien es un INMUEBLE: su identidad es la dirección. */
-const RAMOS_INMUEBLE = new Set(['hogar', 'comercio', 'comunidad', 'alquiler'])
+const RAMOS_INMUEBLE = new Set(['hogar', 'comercio', 'comunidad', 'comunidades', 'alquiler'])
+
+/**
+ * ¿Es un ramo cuyo bien se identifica por una dirección? Para que la ficha
+ * pueda DECIR que falta (19/09/2026): CIMA no manda el riesgo de hogar, y
+ * callar ahí se lee como «no hay nada que ver» cuando es «no nos lo han dicho».
+ */
+export function esRamoInmueble(ramo: string | null | undefined): boolean {
+  return RAMOS_INMUEBLE.has((ramo ?? '').trim().toLowerCase())
+}
 
 /**
  * Describe el bien asegurado a partir del `datos_especificos` de la póliza.

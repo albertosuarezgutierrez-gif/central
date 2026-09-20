@@ -16,7 +16,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { RAMOS } from './ramos.ts'
-import { fichaNegocio, fichaServicio } from './seo.ts'
+import { fichaNegocio, fichaServicio, fichaWebSite } from './seo.ts'
 import { SITIO_URL, AMBITO } from './sitio.ts'
 
 test('cada ramo publicado emite su ficha Service', () => {
@@ -63,6 +63,26 @@ test('el Service no publica precio ni oferta', () => {
       assert.equal(s[campo], undefined, `${r.slug}: el Service declara ${campo}`)
     }
   }
+})
+
+// `logo` e `image` apuntan a rutas de imagen GENERADAS por Next (next/og), no a
+// ficheros subidos a mano: si mañana `app/icon.tsx` u `app/opengraph-image.tsx`
+// cambian de sitio, este test rompe antes de que Google indexe un enlace roto.
+test('la ficha del negocio declara logo e image como rutas del propio sitio', () => {
+  const ficha = fichaNegocio()
+  assert.equal(ficha.logo, `${SITIO_URL}/icon`)
+  assert.equal(ficha.image, `${SITIO_URL}/opengraph-image`)
+})
+
+test('fichaWebSite declara el sitio y referencia el negocio por @id, sin inventar un buscador', () => {
+  const site = fichaWebSite()
+  assert.equal(site['@type'], 'WebSite')
+  assert.equal(site.url, SITIO_URL)
+  const pub = site.publisher as Record<string, unknown>
+  assert.equal(pub['@id'], `${SITIO_URL}/#correduria`)
+  // Sin `potentialAction`/`SearchAction`: esta web no tiene buscador interno,
+  // y declarar uno inventado es la misma mentira que un horario sin confirmar.
+  assert.equal(site.potentialAction, undefined)
 })
 
 test('knowsAbout se deriva de RAMOS, no es una segunda lista escrita a mano', () => {

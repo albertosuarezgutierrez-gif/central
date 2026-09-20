@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { gmailTransporter } from '@central/core-email'
 import { smoobuFetch } from '@/lib/smoobu'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +11,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
+  // 🚨 Sin latido ni comprobación de `res.ok` hasta el 15/09/2026: si Smoobu fallaba (401, 500...),
+  // `bookings` salía `[]` por el valor por defecto de la desestructuración y la ruta respondía
+  // `{ok:true, alertas:[]}` — un fallo de Smoobu disfrazado de «no hay ventanas ajustadas», sin
+  // ningún rastro. Mismo patrón que `auto-sessions`.
+  await registrarLatido('sivra_limpiadoras_alerta_ventana', false, 'inicio de pasada')
+
   try {
     const hoy = new Date().toISOString().split('T')[0]
     const d7 = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
@@ -17,6 +24,7 @@ export async function GET(req: NextRequest) {
     const res = await smoobuFetch(
       `/api/reservations?arrival_from=${hoy}&arrival_to=${d7}&pageSize=50`
     )
+    if (!res.ok) throw new Error(`Smoobu reservations ${res.status}`)
     const { bookings = [] } = await res.json()
 
     const alertas: any[] = []
@@ -68,8 +76,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    await registrarLatido('sivra_limpiadoras_alerta_ventana', true,
+      `${alertas.length} ventana(s) ajustada(s) de ${bookings.length} reserva(s)`)
     return NextResponse.json({ ok: true, alertas })
   } catch (e: any) {
+    await registrarLatido('sivra_limpiadoras_alerta_ventana', false, `error: ${String(e?.message ?? e).slice(0, 200)}`)
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

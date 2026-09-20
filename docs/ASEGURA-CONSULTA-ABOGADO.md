@@ -17,6 +17,25 @@
 
 ## 1. Las 32.520 fichas del volcado histórico: ¿se pueden usar comercialmente?
 
+> ✅ **RESUELTO (14/09/2026).** Alberto consultó al abogado: **sí se pueden usar**, base jurídica
+> **interés legítimo (art. 6.1.f RGPD)** por la relación contractual previa, **sin condición
+> especial** más allá de las exigencias generales (identificación del mediador, RC nº1 de
+> `packages/module-seguros/src/mediador.ts`, y derecho de oposición/baja fácil, que sigue
+> aplicando siempre bajo RGPD art. 21 con independencia de la base de legitimación). Autoriza
+> **ambos canales, email y teléfono/WhatsApp**. Queda escrito el análisis de abajo porque explica
+> el porqué y las preguntas 2-4 seguían abiertas antes de la consulta; la decisión del abogado
+> es la que manda.
+>
+> 🚨 **Lo que esto NO desbloquea, porque es un bloqueo aparte, técnico/infraestructura, no
+> legal: WhatsApp sigue sin canal.** No hay WABA propia de Grupo ASegura (la de Manuel no viaja
+> en el traspaso) y `wa_opt_in = 0` en las 32.600 fichas sigue siendo cierto — Meta exige su
+> propio opt-in para plantillas de WhatsApp Business con independencia de la base RGPD. El
+> desbloqueo de hoy abre **email** (y llamada telefónica manual) ya mismo; WhatsApp cuando exista
+> la WABA (ver `docs/CORREDURIA-INTRANET-IDEAS.md` idea K).
+>
+> **Contactabilidad real de esas 32.520 fichas:** solo **5.594 (17,2 %)** tienen algún dato de
+> contacto (`ASEGURA-MARKETING-PLAN.md` §1.2b) — es el universo direccionable real, no las 32.520.
+
 **El hecho.** `[Medido 01/09/2026]` En el schema `seguros` hay **32.600 fichas de cliente y
 28.843 pólizas**. De ellas, la cartera viva son **80 clientes / 110 pólizas** — las que entran o
 mantiene CIMA. Las otras **32.520 fichas / 28.728 pólizas** son un volcado histórico cargado en

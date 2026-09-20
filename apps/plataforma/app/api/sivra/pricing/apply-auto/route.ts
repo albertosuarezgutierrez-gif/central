@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { POST as applyPost } from "../apply/route"
 import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
-import { detalleApply, pasadaFiable, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
+import { detalleApply, pasadaFiable, type FalloEscritura, type FalloLectura } from "@/lib/sivra/pricing-latido-apply"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
   try {
     const b = await res.clone().json() as {
       ok?: boolean; properties?: number; fechas_escritas?: number
-      smoobu_rechazos?: FalloEscritura[]; sin_tarifar?: unknown[]; dryRun?: boolean
+      smoobu_rechazos?: FalloEscritura[]; smoobu_lecturas_fallidas?: FalloLectura[]
+      sin_tarifar?: unknown[]; dryRun?: boolean
       degradado?: string; demanda_degradada?: string
       paused?: boolean; message?: string; rail_ciego?: string; lecturas_degradadas?: string
     }
@@ -52,6 +53,7 @@ export async function GET(req: NextRequest) {
       fechasEscritas: b.fechas_escritas ?? 0,
       sinTarifar: b.sin_tarifar?.length ?? 0,
       fallos: b.smoobu_rechazos ?? [],
+      fallosLectura: b.smoobu_lecturas_fallidas ?? [],
       // `demanda_degradada` NO entra: el motor la declara como degradación MENOR a propósito (los
       // precios son defendibles, solo más bajos) y ya tiene su Telegram. Meterla aquí pondría el
       // latido rojo por algo que no invalida la pasada.

@@ -9,7 +9,7 @@ import { notFound } from 'next/navigation'
 import { normaPorId, citaLegible } from '@central/module-seguros'
 import { ARTICULOS, articuloPorSlug } from '@/lib/articulos'
 import { ramoPorSlug } from '@/lib/ramos'
-import { url } from '@/lib/sitio'
+import { PORTAL_URL, url } from '@/lib/sitio'
 import { fichaArticulo, fichaFaq, migas, jsonLd } from '@/lib/seo'
 
 export function generateStaticParams() {
@@ -83,6 +83,29 @@ export default async function ArticuloPagina({ params }: { params: Promise<{ slu
             ))}
           </section>
         ))}
+
+        {/* La llamada a la acción del artículo, entre el cuerpo y las FAQ:
+            quien ha leído hasta aquí tiene el problema encima y la herramienta
+            está a un clic. `href: 'PORTAL'` resuelve a `PORTAL_URL` para no
+            copiar el dominio del portal dentro de los datos. */}
+        {a.cta && (
+          <aside
+            aria-labelledby="cta-t"
+            style={{
+              marginTop: 36,
+              padding: 20,
+              background: 'var(--panel)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radio)',
+            }}
+          >
+            <h2 id="cta-t" style={{ margin: '0 0 8px', fontSize: 20 }}>{a.cta.titulo}</h2>
+            <p style={{ margin: '0 0 14px', lineHeight: 1.6, color: 'var(--muted)' }}>{a.cta.texto}</p>
+            <a href={a.cta.href === 'PORTAL' ? PORTAL_URL : a.cta.href} className="btn btn-brand" style={{ minHeight: 44 }}>
+              {a.cta.boton}
+            </a>
+          </aside>
+        )}
 
         {a.faq && a.faq.length > 0 && (
           <section>

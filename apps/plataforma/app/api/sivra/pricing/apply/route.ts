@@ -19,10 +19,12 @@ import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
 import {
   sqlCompDeNuestraLiga, sqlNotaCreible, guardaMonotoniaLiga, guardaMonotoniaLigaMed,
 } from "@/lib/sivra/pricing-comps-liga"
+import { sqlCompEsCasaComparable } from "@/lib/sivra/pricing-comps-tipo"
 import { aplicarTechoAdr } from "@/lib/sivra/pricing-techo-adr"
 import { sqlUltimaPasadaUtil, avisoPisosSinTarifar, type PisoSaltado } from "@/lib/sivra/pricing-corpus-utilizable"
+import { EDAD_MERCADO_RANCIO } from "@/lib/sivra/mercado-cobertura"
 import { sqlAnclaGlobalAcumulada, elegirAnclaGlobal, MIN_FECHAS_ANCLA } from "@/lib/sivra/pricing-ancla-global"
-import { avisoSmoobuRechaza, type FalloEscritura } from "@/lib/sivra/pricing-latido-apply"
+import { avisoSmoobuRechaza, avisoSmoobuLecturaFalla, type FalloEscritura, type FalloLectura } from "@/lib/sivra/pricing-latido-apply"
 import { aplicarPrior, indicesPrior, type IndicePrior, type MesHistorico } from "@/lib/sivra/prior-estacional"
 import { smoobuFetch } from "@/lib/smoobu"
 import { tgAviso } from '@/lib/telegram'
@@ -89,6 +91,13 @@ export async function POST(req: NextRequest) {
   const onlyProp = sp.get("property")
   const days = Math.min(Math.max(Number(sp.get("days") ?? 14), 1), PRICING_HORIZON_DAYS)
   let dryRun = sp.get("dryRun") !== "false"
+  // 🚨 Distinto de `dryRun`: este NO se pisa por la pausa global (línea siguiente). Un clic manual
+  // en «Simular» y una pasada real de `apply-auto` que cae en pausa son cosas distintas — la
+  // primera es una exploración sin intención de avisar, la segunda es Smoobu cayéndose de verdad
+  // mientras el motor está pausado, y SIGUE mereciendo el aviso inmediato de Telegram (hallazgo de
+  // la revisión, 15/09/2026: gatear por `dryRun` a secas dejaba ese caso mudo hasta el latido de
+  // las 07:45 del día siguiente).
+  const dryRunManual = dryRun
 
   // Botón de pánico / pausa global: si está pausado, NUNCA escribe (degrada a dry-run).
   let paused = false
@@ -101,7 +110,11 @@ export async function POST(req: NextRequest) {
 
 
   const MIN_SAMPLE = 5
-  const MAX_MARKET_AGE_DAYS = 7
+  // Importado, no un 7 escrito otra vez: la cola del barrido (`planDeVentanas`) usa este MISMO
+  // número para decidir qué fecha de evento hay que remedir. Si divergieran, el barrido daría por
+  // cubierta una ventana que este motor rechaza por vieja, y el desajuste solo se vería como una
+  // noche tarificada por el canal externo. Ver `EDAD_MERCADO_RANCIO` (15/09/2026).
+  const MAX_MARKET_AGE_DAYS = EDAD_MERCADO_RANCIO
 
   const recs = await prisma.$queryRaw<{
     property_id: string
@@ -129,18 +142,19 @@ export async function POST(req: NextRequest) {
     -- OJO: esta consulta va en un template literal de TS, aqui NO se pueden usar backticks ni $ { }.
     mkt AS (
       SELECT m.scenario,
-        -- Percentiles del corpus EN NUESTRA LIGA, y a continuacion los del corpus completo: el
-        -- consumidor toma el MENOR (guarda de monotonia, ver pricing-comps-liga.ts).
+        -- Percentiles del corpus EN NUESTRA LIGA Y QUE ES CASA ENTERA (no aparthotel/hotel), y a
+        -- continuacion los del corpus completo: el consumidor toma el MENOR (guarda de monotonia,
+        -- ver pricing-comps-liga.ts y pricing-comps-tipo.ts).
         percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))
-          FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::numeric med,
+          FILTER (WHERE ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "s.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)})::numeric med,
         percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))
-          FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::numeric flo,
+          FILTER (WHERE ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "s.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)})::numeric flo,
         percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))
-          FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::numeric cei,
+          FILTER (WHERE ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "s.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)})::numeric cei,
         percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric med_todos,
         percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric flo_todos,
         percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night * pricing_factor_aforo(z.max_guests, m.guests))::numeric cei_todos,
-        COUNT(*) FILTER (WHERE ${Prisma.raw(sqlCompDeNuestraLiga("m.", "s.own_score"))})::int AS sample_liga,
+        COUNT(*) FILTER (WHERE ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "s.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)})::int AS sample_liga,
         -- Solo notas CREIBLES: un 10,0 con 6 resenas no mide nada y movia esta mediana (el caso
         -- real, 68 apariciones en el corpus de Busto). Ver sqlNotaCreible.
         percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)
@@ -447,7 +461,7 @@ export async function POST(req: NextRequest) {
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night,
         -- La liga deja de filtrar en el WHERE y pasa a ser COLUMNA: el mismo scan da entonces el
         -- corpus filtrado Y el completo, que es lo que la guarda de monotonia necesita comparar.
-        ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))} AS en_liga
+        ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "sl.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)} AS en_liga
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       -- LEFT y no JOIN: sin fila de ajustes no sabemos en que liga jugamos, y eso DEJA PASAR al
@@ -561,7 +575,7 @@ export async function POST(req: NextRequest) {
         m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night,
         -- La liga deja de filtrar en el WHERE y pasa a ser COLUMNA: el mismo scan da entonces el
         -- corpus filtrado Y el completo, que es lo que la guarda de monotonia necesita comparar.
-        ${Prisma.raw(sqlCompDeNuestraLiga("m.", "sl.own_score"))} AS en_liga
+        ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "sl.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)} AS en_liga
       FROM market_rates m
       LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
       -- LEFT y no JOIN: sin fila de ajustes no sabemos en que liga jugamos, y eso DEJA PASAR al
@@ -779,6 +793,10 @@ export async function POST(req: NextRequest) {
   // eslabón que pone el precio delante del huésped fallaba en silencio — solo se apuntaba en
   // `results`, que no lee nadie. Ahora sale por Telegram, marca `ok:false` y tiñe el latido.
   const fallosSmoobu: FalloEscritura[] = []
+  // 🛑 Lecturas de /rates que fallaron ANTES de poder calcular nada (hallazgo del 15/09/2026): el
+  // 401 de HMAC en /rates llevaba 4+ días saliendo `ok:true` porque solo se apuntaba en `results`,
+  // igual que `fallosSmoobu` antes del 23/08 pero un eslabón más arriba. Ver pricing-latido-apply.ts.
+  const fallosLectura: FalloLectura[] = []
   // Noches que SÍ entraron en el canal. Sin este contador, el latido no puede distinguir «corrió y
   // nada cruzó el umbral del 3%» de «corrió y Smoobu lo rechazó todo».
   let fechasEscritas = 0
@@ -807,10 +825,16 @@ export async function POST(req: NextRequest) {
     try {
       const res = await smoobuFetch(`${BASE}/rates?apartments[]=${smoobuId}&start_date=${startDate}&end_date=${endDate}`,
         { next: { revalidate: 0 } })
-      if (!res.ok) { results.push({ property: r.property_id, error: `Smoobu GET ${res.status}` }); continue }
+      if (!res.ok) {
+        results.push({ property: r.property_id, error: `Smoobu GET ${res.status}` })
+        fallosLectura.push({ property: r.property_id, motivo: `GET ${res.status}` })
+        continue
+      }
       plRates = (await res.json()).data?.[smoobuId] ?? {}
     } catch (e) {
-      results.push({ property: r.property_id, error: `Smoobu GET ${String(e).slice(0, 80)}` }); continue
+      results.push({ property: r.property_id, error: `Smoobu GET ${String(e).slice(0, 80)}` })
+      fallosLectura.push({ property: r.property_id, motivo: String(e).slice(0, 80) })
+      continue
     }
 
     // 🚨 CÓMO SE PASA DE MERCADO (lo que paga el huésped) A BASE (lo que se pone en Smoobu).
@@ -1520,6 +1544,22 @@ export async function POST(req: NextRequest) {
     } catch { /* best-effort: el fallo ya va en la respuesta y en el latido de apply-auto */ }
   }
 
+  // 🛑 Un escalón MÁS arriba que el rechazo: Smoobu ni siquiera dejó LEER el precio actual, así que
+  // no hay propuesta que revisar para esos pisos. SIN dedupe, igual que el rechazo de escritura: si
+  // sigue caído a las 14:30 y a las 20:30, hay que oírlo las tres veces.
+  // 🚨 SOLO en `!dryRunManual` (NO `!dryRun`) — a diferencia de `fallosSmoobu` (que nace vacío en
+  // simulacro porque la escritura ni se intenta), la LECTURA de /rates se hace SIEMPRE, también al
+  // pulsar «Simular». Sin este guarda, un blip transitorio durante una exploración manual mandaría
+  // un 🛑 real a Telegram por un clic que no tocaba nada en Smoobu (hallazgo de la revisión,
+  // 15/09/2026). Y usa `dryRunManual`, no `dryRun`, para que una pasada REAL de `apply-auto` que
+  // cae en pausa global siga avisando — la pausa no significa que Smoobu haya dejado de fallar.
+  const avisoLectura = !dryRunManual ? avisoSmoobuLecturaFalla(fallosLectura) : null
+  if (avisoLectura) {
+    try {
+      await tgAviso('pisos.pricing-aplicado', avisoLectura)
+    } catch { /* best-effort: el fallo ya va en la respuesta y en el latido de apply-auto */ }
+  }
+
   // 🚨 Si no se pudieron leer los eventos, esta pasada tarificó Semana Santa como un martes de
   // febrero. Hasta el 01/08/2026 eso salía como `ok:true` y nadie se enteraba nunca: el `.catch`
   // devolvía un mapa vacío, que es indistinguible de «no hay eventos». Ahora la pasada se declara
@@ -1566,10 +1606,20 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     // 🛑 Un rechazo de Smoobu invalida la pasada: el precio no ha llegado al huésped, que es lo
     // único que este endpoint existe para conseguir. Hasta el 23/08/2026 esto salía `ok:true`.
-    ok: !eventosIlegibles && fallosSmoobu.length === 0 && lecturasCaidas.length === 0,
+    // `fallosLectura` solo invalida la pasada en `!dryRunManual` — en simulacro la lectura se hace
+    // igual (hace falta para calcular la propuesta) pero un blip transitorio no debe marcar la
+    // pasada como rota. Deliberadamente NO usa `dryRun` (que la pausa global puede forzar a true):
+    // una pasada real de `apply-auto` caída en pausa sigue siendo real, y `fallosLectura` tiñe el
+    // latido de `apply-auto` de todas formas vía `smoobu_lecturas_fallidas` más abajo — este campo
+    // `ok` es solo lo que ve quien llama a mano.
+    ok: !eventosIlegibles && fallosSmoobu.length === 0 && (dryRunManual || fallosLectura.length === 0) && lecturasCaidas.length === 0,
     // Escrituras rechazadas por el canal, con las noches que se quedaron sin aplicar. Las lee
     // `apply-auto` para teñir su latido; van en la respuesta para que el camino manual las vea igual.
     smoobu_rechazos: fallosSmoobu.length > 0 ? fallosSmoobu : undefined,
+    // Lecturas de /rates que fallaron ANTES de calcular nada (hallazgo 15/09/2026). Mismo circuito
+    // que `smoobu_rechazos`: lo lee `apply-auto` para teñir el latido, en la respuesta para el
+    // camino manual. Ver `lib/sivra/pricing-latido-apply.ts::FalloLectura`.
+    smoobu_lecturas_fallidas: fallosLectura.length > 0 ? fallosLectura : undefined,
     // Noches que SÍ entraron. Un 0 aquí es «nada cruzó el umbral del 3%», no «no corrió»: eso
     // último lo dice la AUSENCIA de latido, no este número.
     fechas_escritas: fechasEscritas,

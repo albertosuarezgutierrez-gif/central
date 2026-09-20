@@ -70,6 +70,27 @@ export type TitularAgrupable = {
 }
 
 /**
+ * Cuántos seguros hay dentro de un bloque PLEGADO (19/09/2026).
+ *
+ * 🚨 Existe por lo que promete, no por el plural. Desde hoy la bóveda nace con
+ * los bloques cerrados (Alberto: «que al cargar salga todo plegado»), y una
+ * cabecera cerrada sin cifra no dice si dentro hay una póliza o doce — es un
+ * plegable que hay que abrir para saber si merece la pena abrirlo.
+ *
+ * ⚠️ Y la cifra cuenta **todas** las pólizas del bloque, también las que el
+ * filtro de vigencia de dentro esconde de salida. Contar solo las vigentes haría
+ * que «2 seguros» tapara una cancelada sin decirlo; el filtro de dentro ya
+ * declara por su cuenta cuántas tiene escondidas, que es donde esa distinción
+ * significa algo.
+ */
+export function textoCuentaSeguros(n: number): string {
+  if (!Number.isFinite(n) || n < 0) return 'sin seguros'
+  const entero = Math.floor(n)
+  if (entero === 0) return 'sin seguros'
+  return entero === 1 ? '1 seguro' : `${entero} seguros`
+}
+
+/**
  * En qué bloque va este titular.
  *
  * 🚨 Una ficha AJENA va siempre a `autorizadas`, sea sociedad o no: la empresa

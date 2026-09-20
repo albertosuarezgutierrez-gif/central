@@ -31,6 +31,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: url('/'), changeFrequency: 'monthly', priority: 1 },
     { url: url('/cambiar-de-correduria'), changeFrequency: 'yearly', priority: 0.9 },
+    // La landing del gestor: es la página que vende lo único que no copia un
+    // comparador, así que va con la prioridad de la portada de intención.
+    { url: url('/gestor-de-seguros'), changeFrequency: 'monthly', priority: 0.9 },
     ...RAMOS.map((r) => ({
       url: url(`/seguros/${r.slug}`),
       changeFrequency: 'monthly' as const,
