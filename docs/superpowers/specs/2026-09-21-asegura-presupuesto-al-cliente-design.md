@@ -869,11 +869,29 @@ ReRate y el Submit). No bloquea nada de arriba y tapa un agujero que ya existe.
 
 ## §7. Las cinco preguntas que solo puede contestar Alberto
 
+> **✅ CONTESTADAS por Alberto el 21/09/2026** (las cuatro que se le plantearon; Q2, Q3 y Q4 siguen
+> abiertas con su recomendación en pie):
+>
+> - **Fase 2** — «me vale»: el cliente ve, elige y acepta; emite Alberto.
+> - **El alcance de la defensa de cartera es POR CLIENTE y de CUALQUIER RAMO**, que es como funciona
+>   la relación cliente↔compañía. Las canceladas no marcan: cuentan como `exPolizas` («ya fue
+>   cliente suyo»), que es argumento comercial. Es exactamente lo implementado, así que no cambia
+>   código. Se eligió sabiendo que **8 clientes tienen ya 2+ pólizas del mismo ramo en la misma
+>   compañía**: la marca dice «probable retención», no «imposible», y por eso la fila se ve.
+> - **Al aceptar SÍ se reconfirma el precio con la compañía** (ReRate), aun costando. Razón: hoy
+>   ninguno de los 187 precios guardados es «firme», así que sin reconfirmar, lo que el cliente
+>   firmaría sería un estimado. Consecuencia para §5: la Fase 2 **deja de tener cero llamadas de
+>   pago disparables por el cliente** — la aceptación dispara una. El gate de idempotencia de §5.3
+>   pasa de conveniente a **obligatorio**: pulsar dos veces o recargar no puede cobrar dos veces.
+> - **Q1 · Validez: 15 días naturales**, como se recomendaba abajo.
+> - **Q5 · Sí al correo a Codeoscopic**, en borrador para que lo envíe él (regla de comunicaciones
+>   salientes). Borrador en `docs/BORRADOR-CODEOSCOPIC-COSTE-RERATE-SUBMIT.md`, sin enviar.
+
 (Las dos ya planteadas —si le vale la Fase 2, y si al aceptar se reconfirma el precio pagando— se
 dan por hechas y no se repiten. **El canal tampoco es una pregunta: está decidido** — email +
 deep link de WhatsApp que manda él a mano, sin WABA.)
 
-**Q1 · ¿Cuántos días vale un presupuesto?**
+**Q1 · ¿Cuántos días vale un presupuesto?** — ✅ **DECIDIDO: 15 días.**
 *Recomiendo **15 días naturales**, y nunca más allá de la fecha de efecto menos un día.* Porque el
 vendor **no nos dice** cuánto vale un precio antes del ReRate, así que la fecha la ponemos nosotros
 o no hay ninguna. 15 días es corto para que no se muera solo entre que él lo manda y el cliente lo
@@ -900,7 +918,7 @@ objetivo» y lo que impide que «tres opciones» se lea como «esto es todo el m
 a veces dirá «consulté 8, me dieron precio 3», que parece poco — pero es verdad, y es lo que ya hace
 la pantalla del corredor con `r.fallos`.
 
-**Q5 · ¿Le preguntas a Codeoscopic si el ReRate y el Submit facturan?**
+**Q5 · ¿Le preguntas a Codeoscopic si el ReRate y el Submit facturan?** — ✅ **DECIDIDO: sí, en borrador.**
 *Recomiendo **sí, y antes del PR del §5.2**.* Es la única pregunta de esta spec que no se puede
 contestar desde el código: el portal del fabricante **no documenta el coste de ninguna de las dos**,
 y la única razón por la que las tratamos como facturables es que el CRM de Manuel lo hacía. De la
