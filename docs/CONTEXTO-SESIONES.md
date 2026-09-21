@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🔧 **Telemetría de PostHog ARREGLADA y verificada**: faltaban las dos envs
+`NEXT_PUBLIC_POSTHOG_*` en el proyecto Vercel `asegura`; creadas + redeploy, y un `cima-pull` en
+`dry_run` devolvió los tres eventos a PostHog (primeros desde el 05/09). PR #3242.
+📍 **Y una corrección de fondo: el adaptador de Fly YA ES DE ALBERTO.** Medido en el panel el 21/09:
+`asegura-app-cima-adapter` está en su organización `grupo-asegura` (2 máquinas, CDG), no en la cuenta
+de Manuel. `CLAUDE.md`, la skill `cima-ingesta` y el inventario decían lo contrario y se dieron por
+buenos sin mirar; corregidos los tres. **Lo único que sigue fuera es el CÓDIGO** del adaptador (repo
+privado de Manuel, Alberto con lectura): sin fork, no hay cómo redesplegar.
+
 **(21/09/2026)** 🚨 La alerta de PostHog «CIMA pull heartbeat» que spamea a Alberto es **FALSA**: la
 ingesta de CIMA está sana (55 pulls en BD, ficheros de Occident el 20/09, Actions en verde) y lo roto
 es la telemetría — **PostHog no recibe NI UN evento de ningún tipo desde el 05/09** (no es cuota:

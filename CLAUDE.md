@@ -82,10 +82,14 @@
   `crm_seguros` y queda **solo como motor de ingesta de CIMA** (cron Actions 05:30/11:30 UTC → CRM → adaptador
   Java en Fly → TIREA → `seguros`). **Su web NO se usa ni se migra su login** (decisión de Alberto 02/09):
   las pantallas de la correduría se montan en `plataforma` → `/correduria`. La Auth de Supabase (9 usuarios,
-  MFA) está copiada a central por si acaso, pero sin uso. ⏸️ **Único cabo suelto: el adaptador Java corre en
-  la cuenta de Fly de Manuel** (`asegura-app-cima-adapter`); si él lo apaga, CIMA deja de entrar SIN error y
-  solo se nota por los heartbeats `cima_pull_*` que vigila la auditoría. Traspaso de esa app a una cuenta
-  de Alberto pendiente (borrador de mensaje v8 en `docs/TRASPASO-CORREDURIA.md`, no se envía sin su OK);
+  MFA) está copiada a central por si acaso, pero sin uso. ✅ **El adaptador Java YA ESTÁ EN CASA (medido en el panel de Fly el
+  21/09/2026):** `asegura-app-cima-adapter` corre en la organización **`grupo-asegura` de Alberto**, 2
+  máquinas en CDG, desplegada hace ~20 días; Manuel no figura en el equipo de esa organización. Este
+  apartado dijo durante semanas lo contrario —«corre en la cuenta de Fly de Manuel», con su traspaso
+  «pendiente»— y se dio por bueno sin mirar el panel. ⏸️ **Lo que SÍ sigue fuera es el CÓDIGO**: el repo
+  del adaptador es privado de Manuel (`github.com/manuelsuarez/asegura-app-cima-adapter`, 23 commits,
+  último el 02/07/2026) y Alberto solo tiene acceso de lectura. La app corre igual, pero **sin ese repo
+  no se puede redesplegar** el día que haga falta: forkearlo es gratis y es lo único urgente que queda;
   el port de `cima-pull` a `apps/asegura` está APARCADO a propósito (inventario en
   `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). 🔑 **Rotar la contraseña de un rol de BD SIN actualizar el `DATABASE_URL` de su proyecto Vercel deja la
   app muerta en silencio (02/09/2026).** `prisma_seguros` se rotó tres veces ese día y `central-asegura` se
