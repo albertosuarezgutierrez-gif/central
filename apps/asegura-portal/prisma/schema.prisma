@@ -1143,3 +1143,103 @@ model PortalVistaCorredor {
   @@map("portal_vista_corredor")
   @@schema("seguros")
 }
+
+/// ─── El presupuesto que se le enseña al cliente (PR 2, 21/09/2026) ──────────
+///
+/// Las tablas las crea `apps/asegura/prisma/sql/2026-09-21_presupuesto.sql` y
+/// las escribe `prisma_seguros`. Aquí se LEEN, con el GRANT por columnas de
+/// `prisma/sql/2026-09-21_portal_presupuesto_grants.sql`, más un único
+/// `UPDATE(visto_at)`.
+///
+/// 🚨 **Lo que NO se declara, porque el rol NO lo puede leer** — y si se
+/// declarara, la consulta ENTERA reventaría con `permission denied for column`:
+///   - `tarificacion_id`  → el origen de los precios es cosa del corredor (el
+///     GRANT sí lo tiene, pero solo para que corra el trigger de asegura; ver
+///     el SQL).
+///   - `creado_por`       → quién lo preparó, dato interno.
+///   - `retirado_motivo`  → la nota con la que Alberto lo retira. Puede decir
+///     cualquier cosa sobre el cliente y no está escrita para él.
+///   - `canal_aviso`, `poliza_emitida_id`, `salida` → no hacen falta para
+///     pintar, y lo que no se pide no se puede colar en una pantalla.
+///   - `presupuesto_opcion.referencia_vendor` → el id del quote del vendor. Es
+///     la llave del ReRate, no un dato del cliente.
+model Presupuesto {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  clienteId    String    @map("cliente_id") @db.Uuid
+  /// NULL = venta nueva (no hay póliza que comparar), JAMÁS «no tiene seguro».
+  polizaId     String?   @map("poliza_id") @db.Uuid
+  ramo         String
+  /// El token del enlace, HASHEADO. NO abre sesión: dice QUÉ presupuesto es.
+  tokenHash    String    @unique @map("token_hash")
+  /// A quién se avisó, hasheado con la pimienta del portal. NULL = NO CONSTA.
+  destinoHash  String?   @map("destino_hash")
+  venceEl      DateTime  @map("vence_el") @db.Timestamptz(6)
+  creadoAt     DateTime  @default(now()) @map("creado_at") @db.Timestamptz(6)
+  enviadoAt    DateTime? @map("enviado_at") @db.Timestamptz(6)
+  /// NULL = NO CONSTA que lo haya abierto. No es «no lo ha abierto».
+  vistoAt      DateTime? @map("visto_at") @db.Timestamptz(6)
+  elegidoAt    DateTime? @map("elegido_at") @db.Timestamptz(6)
+  aceptadoAt   DateTime? @map("aceptado_at") @db.Timestamptz(6)
+  emitidoAt    DateTime? @map("emitido_at") @db.Timestamptz(6)
+  retiradoAt   DateTime? @map("retirado_at") @db.Timestamptz(6)
+
+  opciones PresupuestoOpcion[]
+  eventos  PresupuestoEvento[]
+
+  @@map("presupuesto")
+  @@schema("seguros")
+}
+
+/// SNAPSHOT de lo que se le enseñó, en su orden. No es una vista de
+/// `tarificacion_precios`: si el vendor cambia de opinión mañana, lo que se
+/// enseñó ese día sigue escrito aquí.
+model PresupuestoOpcion {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId  String    @map("presupuesto_id") @db.Uuid
+  orden          Int       @db.SmallInt
+  compania       String
+  producto       String
+  modalidad      String?
+  categoria      String?
+  /// NULL = no se pudo clasificar el nivel. No es «sin cobertura».
+  grupoCobertura String?   @map("grupo_cobertura")
+  primaEur       Decimal   @map("prima_eur") @db.Decimal(10, 2)
+  entradaEur     Decimal?  @map("entrada_eur") @db.Decimal(10, 2)
+  /// NULL = el producto NO declara franquicia. JAMÁS «sin franquicia».
+  franquiciaEur  Decimal?  @map("franquicia_eur") @db.Decimal(10, 2)
+  firmeza        String
+  requiereRerate Boolean   @map("requiere_rerate")
+  /// ⚠️ Vacío (`[]`) significa **no se congelaron**, no «no cubre nada»: el
+  /// preparador todavía no las escribe y la columna nace con el default.
+  coberturas     Json      @default("[]")
+  avisos         Json      @default("[]")
+  papeles        String[]  @default([])
+  elegidaAt      DateTime? @map("elegida_at") @db.Timestamptz(6)
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@unique([presupuestoId, orden], map: "presupuesto_opcion_orden_unico")
+  @@index([presupuestoId, orden])
+  @@map("presupuesto_opcion")
+  @@schema("seguros")
+}
+
+/// Telemetría del presupuesto. APPEND-ONLY por trigger. El portal solo escribe
+/// `apertura_ajena` y solo lee para no repetirla en cada recarga.
+model PresupuestoEvento {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId String   @map("presupuesto_id") @db.Uuid
+  tipo          String
+  ocurridoAt    DateTime @default(now()) @map("ocurrido_at") @db.Timestamptz(6)
+  origen        String
+  /// 🚨 `detalle` NO se declara: el portal no tiene SELECT sobre esa columna
+  /// (la escribe el corredor y ahí no hay nada que el portal necesite leer), y
+  /// una columna declarada sin GRANT revienta la consulta ENTERA con 42501.
+  /// Al no mandarla, la BD aplica su `'{}'::jsonb` por defecto.
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@index([presupuestoId, ocurridoAt])
+  @@map("presupuesto_evento")
+  @@schema("seguros")
+}

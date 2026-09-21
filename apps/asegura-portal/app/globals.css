@@ -3476,3 +3476,153 @@ h1 em {
   margin: 10px 0 0;
   font-size: 13px;
 }
+
+/* ── Presupuesto (21/09/2026) ───────────────────────────────────────────────
+ * La pantalla donde alguien decide gastarse su dinero. Todo sale de los tokens
+ * de `MARCA_ASEGURA`: ni un hex a mano.
+ *
+ * 📱 Se diseña a 320 px y se ensancha, no al revés. Las tarjetas se apilan y la
+ * comparación de garantías son FILAS ETIQUETADAS, nunca una tabla con scroll
+ * horizontal: una comparación que hay que arrastrar no se compara. Y ningún
+ * elemento de aquí es `position: fixed` — un `fixed` no desborda, se pone
+ * encima, y lo que taparía es justo la salida. */
+
+/* La carátula pública del enlace, sin armazón de portal detrás. */
+.caratula {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 2rem 16px;
+}
+
+/* Una sola columna hasta que de verdad caben dos tarjetas legibles. `minmax(0,
+ * 1fr)` y no `1fr`: la pista implícita de un grid se dimensiona con su
+ * contenido más ancho, y un nombre de producto largo arrastraría la página
+ * entera anulando cualquier `overflow` de más abajo. */
+.presu-tarjetas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+@media (min-width: 760px) {
+  .presu-tarjetas { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+}
+
+.presu-tarjeta {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+  min-width: 0;
+}
+/* Caducado: se sigue enseñando (es información suya) pero no se presenta como
+ * un precio que siga en pie. */
+.presu-tarjeta[data-caducado='si'] { opacity: 0.72; }
+.presu-tarjeta[data-caducado='si'] .presu-importe { text-decoration: line-through; }
+
+.presu-papel {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.presu-compania { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.presu-producto { margin: 2px 0 10px; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+
+.presu-importe {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* 🚨 El distintivo de firmeza va PEGADO al importe y por tarjeta, no en una
+ * nota al pie que se lee una vez. Hoy el 100 % de los precios son `estimado`. */
+.presu-firmeza {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--muted);
+  color: var(--muted);
+}
+.presu-firmeza[data-firmeza='firme'] { border-style: solid; border-color: var(--positive); color: var(--positive); }
+.presu-firmeza[data-firmeza='condicionado'] { border-color: var(--warning); color: var(--warning); }
+.presu-firmeza-texto { margin: 6px 0 10px; font-size: 12px; color: var(--muted); }
+
+/* La franquicia va aquí, pegada al precio, y NO escondida en el detalle. */
+.presu-franquicia { margin: 0 0 4px; font-size: 13px; font-weight: 600; }
+.presu-entrada { margin: 0 0 4px; font-size: 13px; color: var(--muted); }
+.presu-nivel { margin: 0; font-size: 13px; color: var(--muted); }
+
+.presu-avisos {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--warning);
+}
+.presu-avisos li { margin-bottom: 4px; overflow-wrap: anywhere; }
+
+.presu-sin-equivalente { margin-top: 0; }
+
+/* ── Garantías: filas etiquetadas ───────────────────────────────────────── */
+.presu-garantias-titulo { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+.presu-lineas { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.presu-lineas li {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 4px 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  border-left-width: 3px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.presu-marca { font-weight: 700; text-align: center; }
+.presu-garantia { overflow-wrap: anywhere; }
+/* La explicación en palabras va DEBAJO y no en un `title=`: `title` no existe
+ * en táctil, y esto se lee casi siempre desde un móvil. */
+.presu-estado { grid-column: 2; font-size: 12px; color: var(--muted); }
+
+.presu-lineas li[data-estado='peor'] { border-left-color: var(--negative); }
+.presu-lineas li[data-estado='peor'] .presu-marca { color: var(--negative); }
+.presu-lineas li[data-estado='mejor'] { border-left-color: var(--positive); }
+.presu-lineas li[data-estado='mejor'] .presu-marca { color: var(--positive); }
+.presu-lineas li[data-estado='igual'] { border-left-color: var(--border); }
+/* 🚨 `no_consta` con borde DISCONTINUO, que en este portal es el significado
+ * reservado de «esto no se sabe». Nunca con el aspecto de `igual`. */
+.presu-lineas li[data-estado='no_consta'] { border-style: dashed; border-left-color: var(--muted); }
+.presu-lineas li[data-estado='no_consta'] .presu-marca { color: var(--muted); }
+
+.presu-nota { margin: 10px 0 0; font-size: 12px; }
+
+/* ── Las dos salidas, con el MISMO peso visual ──────────────────────────── */
+.presu-salidas {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+@media (min-width: 640px) { .presu-salidas { grid-template-columns: 1fr 1fr; } }
+.presu-salida {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  min-width: 0;
+}
+.presu-salida h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.presu-salida p { margin: 0; font-size: 14px; color: var(--muted); flex: 1 1 auto; }
+
+.presu-plegable-cuerpo { margin-top: 12px; }
+.presu-mediador p { font-size: 13px; line-height: 1.5; }

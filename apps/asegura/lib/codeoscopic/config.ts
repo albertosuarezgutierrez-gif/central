@@ -65,7 +65,13 @@ export const TOPE_MENSUAL_DEFECTO = 200
 export const TOPE_DIARIO_MAXIMO = 250
 export const TOPE_MENSUAL_MAXIMO = 1000
 
-function entero(valor: string | undefined, defecto: number, maximo: number): number {
+/**
+ * Lee un entero de una env con defecto y techo. Exportado (21/09/2026) para que
+ * `gasto-emision.ts` use ESTA regla y no una copia suya: un valor ilegible cae
+ * al defecto y nunca se interpreta como «sin límite», y eso tiene que decidirse
+ * en un solo sitio.
+ */
+export function entero(valor: string | undefined, defecto: number, maximo: number): number {
   if (valor === undefined || valor.trim() === '') return defecto
   const n = Number(valor)
   // Un valor ilegible NO se interpreta como «sin límite»: se cae al defecto.

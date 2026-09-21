@@ -1,5 +1,5 @@
 'use client'
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 
 /**
  * Las dos piezas vivas del enlace de invitación:
@@ -41,13 +41,47 @@ function textoAcceso(codigo: unknown): string {
   return (typeof codigo === 'string' ? ERROR_ACCESO[codigo] : undefined) ?? 'Ha ocurrido un error.'
 }
 
-export function EntrarConCodigo() {
+/**
+ * `leerEnlace` (21/09/2026, PR 2 del presupuesto): el correo del enlace trae el
+ * destino —y a veces el código— en `?d=&c=`, el mismo patrón que ya usa la
+ * pantalla de entrada (`app/Entrada.tsx`). Nace apagado para que la invitación
+ * siga comportándose EXACTAMENTE igual que antes.
+ *
+ * 🚨 El enlace NO canjea solo: se rellena el campo y ya está. Un GET que
+ * canjeara se lo comerían los escáneres antivirus del correo antes de que la
+ * persona lo tocara, y al usuario le saldría `ya_usado`, que parece culpa suya.
+ *
+ * ⚠️ Este componente se REUTILIZA desde la carátula del presupuesto en vez de
+ * copiarse: los nueve textos de `ERROR_ACCESO` de aquí arriba son la diferencia
+ * entre decirle a alguien «ha fallado el envío» y «ese canal no existe», y dos
+ * copias de esa tabla divergen sin que falle nada.
+ */
+export function EntrarConCodigo({ leerEnlace = false }: { leerEnlace?: boolean } = {}) {
   const uid = useId()
   const [destino, setDestino] = useState('')
   const [codigo, setCodigo] = useState('')
   const [fase, setFase] = useState<'pedir' | 'verificar'>('pedir')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [desdeEnlace, setDesdeEnlace] = useState(false)
+
+  // Se lee de `window.location` en un efecto y no con `useSearchParams` para no
+  // arrastrar la página entera a render dinámico por leer dos parámetros.
+  useEffect(() => {
+    if (!leerEnlace) return
+    const q = new URLSearchParams(window.location.search)
+    const d = q.get('d')
+    const c = q.get('c')
+    if (!d) return
+    setDestino(d)
+    if (c) {
+      setCodigo(c)
+      setFase('verificar')
+      setDesdeEnlace(true)
+    }
+    // El código no se queda en la barra ni en el historial más de lo necesario.
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [leerEnlace])
 
   async function pedir() {
     setEnviando(true)
@@ -127,7 +161,9 @@ export function EntrarConCodigo() {
       ) : (
         <>
           <p className="suave" style={{ margin: 0 }}>
-            Te hemos enviado un código a {destino}. Caduca en 10 minutos.
+            {desdeEnlace
+              ? `Tu código ya está puesto. Pulsa «Entrar» para acceder como ${destino}.`
+              : `Te hemos enviado un código a ${destino}. Caduca en 10 minutos.`}
           </p>
           <label htmlFor={`${uid}-codigo`} style={{ fontSize: 13, fontWeight: 600 }}>
             El código
@@ -156,6 +192,7 @@ export function EntrarConCodigo() {
             onClick={() => {
               setFase('pedir')
               setCodigo('')
+              setDesdeEnlace(false)
               setError(null)
             }}
             disabled={enviando}

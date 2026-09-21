@@ -23,6 +23,7 @@ import type { ConfigCodeoscopic } from './config.ts'
 import { obtenerToken } from './cliente.ts'
 import { redactarCrudoVendor } from './emitir.ts'
 import { FRASE_SIN_CONFIRMACION, solicitudesEmision } from './reintento-emision.ts'
+import { conLibroDeEmision } from './libro-emision.ts'
 import { prisma } from '../tenant.ts'
 
 const str = (v: unknown): string | null =>
@@ -128,7 +129,19 @@ async function cerrarEnvio(
 
 export type ResultadoEnvio =
   | { ok: true; referenciaVendor: string | null; crudo: unknown }
-  | { ok: false; razon: 'en-vuelo' | 'quiza-emitido' | 'ya-emitida' | 'vendor'; mensaje: string; crudo?: unknown }
+  | {
+      ok: false
+      /**
+       * `sin-libro` y `tope` (21/09/2026) son los del LIBRO DE CONSUMO, y son
+       * distintos de los del candado: significan que no se ha llegado a llamar
+       * a la compañía porque no se podía contar el gasto o porque se ha
+       * alcanzado el tope de Submits. No se colapsan con `vendor` — ese es «el
+       * vendor contestó que no», y este es «no le hemos preguntado».
+       */
+      razon: 'en-vuelo' | 'quiza-emitido' | 'ya-emitida' | 'vendor' | 'sin-libro' | 'tope'
+      mensaje: string
+      crudo?: unknown
+    }
 
 /**
  * `POST /insurances/{projectId}/policy-applications`, multipart. Un solo
@@ -152,6 +165,9 @@ export async function enviarEmision(
     /** El corredor ha mirado el proyecto tras un intento «quizá emitido» y no
      *  hay póliza: solo así se pasa por encima de ese candado. */
     reintentoConfirmado: boolean
+    /** Quién lo pide. Va al libro de consumo, para poder explicar la factura
+     *  línea a línea (igual que `solicitadoPor` en `cotizar()`). */
+    solicitadoPor?: string
   },
 ): Promise<ResultadoEnvio> {
   const attemptId = randomUUID()
@@ -211,20 +227,68 @@ export async function enviarEmision(
     // (`docs/CODEOSCOPIC-TRASPASO-MANUEL.md`, la única referencia con la forma real
     // de esta llamada). `entrada.offerId` es aquí el `mainQuote.id` del ReRate
     // (p.ej. "Q2018406592"), que es lo que el vendor llama `quote.id`.
-    const res = await fetch(
-      `${config.baseUrl}/insurances/${encodeURIComponent(entrada.projectId)}/policy-applications`,
+    //
+    // 🚨 21/09/2026: el Submit abre su PROPIA línea en
+    // `seguros.codeoscopic_consumo` (`motivo: 'submit'`). Hasta hoy no escribía
+    // ninguna, así que el libro contaba de menos y el tope protegía menos de lo
+    // que decía. El coste sale de `CODEOSCOPIC_COSTE_SUBMIT_CENTS` y arranca en
+    // 0 —no está confirmado que esta llamada facture— pero la LÍNEA se abre
+    // igual: lo conservador es contarla. El embudo reserva ANTES del `fetch`,
+    // así que un corte de red deja la línea en `reservado`, que cuenta.
+    const gasto = await conLibroDeEmision(
       {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${token}`,
-          'x-client-app': config.clientApp,
-          'x-user-email': config.userEmail,
-          accept: 'application/vnd.codeoscopic.v1+json',
-        },
-        body: form,
+        correduriaId: entrada.correduriaId,
+        operacion: 'submit',
+        solicitadoPor: entrada.solicitadoPor ?? 'plataforma',
+        projectId: entrada.projectId,
+      },
+      async () => {
+        const res = await fetch(
+          `${config.baseUrl}/insurances/${encodeURIComponent(entrada.projectId)}/policy-applications`,
+          {
+            method: 'POST',
+            headers: {
+              authorization: `Bearer ${token}`,
+              'x-client-app': config.clientApp,
+              'x-user-email': config.userEmail,
+              accept: 'application/vnd.codeoscopic.v1+json',
+            },
+            body: form,
+          },
+        )
+        return { estadoHttp: res.status, correcto: res.ok, texto: await res.text() }
+      },
+      {
+        // Un 4xx es el vendor RECHAZANDO el cuerpo: la solicitud no llegó a la
+        // compañía, así que libera cupo — misma doctrina que `cotizar()` con
+        // `pruebaQueNoHuboCargo`. Un 5xx NO: ahí Codeoscopic dejó de esperar a
+        // la compañía y no se sabe si emitió (13/09/2026, proyecto 40685793).
+        evidenciaSinCargo: (r) =>
+          !r.correcto && r.estadoHttp >= 400 && r.estadoHttp < 500
+            ? {
+                evidencia: `validacion: el vendor rechazó el Submit con ${r.estadoHttp}, la compañía no llegó a recibirlo`,
+                codigo: 'validacion',
+              }
+            : null,
+        // 🚨 Y un 5xx tampoco es un ÉXITO: sin este `exitoso`, `conLibroDeEmision`
+        // cerraría la línea como `facturable` por defecto (es lo que hace para
+        // el ReRate, donde resolver SÍ es éxito porque `reRate()` lanza en
+        // cualquier fallo). Aquí el `fetch` no lanza con un 5xx — devuelve el
+        // estado HTTP como valor — así que sin este predicado un 500 del
+        // Submit se habría contado como gasto confirmado en vez de quedarse
+        // `reservado` (la misma duda que un timeout).
+        exitoso: (r) => r.correcto,
       },
     )
-    const texto = await res.text()
+    if (!gasto.ok) {
+      // El candado ya estaba tomado: se suelta, porque no se ha enviado nada y
+      // dejarlo puesto bloquearía 10 minutos un envío que nunca salió.
+      const mensaje = `${gasto.mensaje} NO se ha enviado nada a la compañía.`
+      await cerrarEnvio(entrada.correduriaId, entrada.projectId, attemptId, 'error', mensaje).catch(() => {})
+      return { ok: false, razon: gasto.razon, mensaje }
+    }
+
+    const { estadoHttp, correcto, texto } = gasto.valor
     let crudo: unknown = null
     try {
       crudo = texto ? JSON.parse(texto) : null
@@ -232,8 +296,8 @@ export async function enviarEmision(
       crudo = texto
     }
 
-    if (!res.ok) {
-      const mensaje = `${res.status}: ${texto.slice(0, 1000)}`
+    if (!correcto) {
+      const mensaje = `${estadoHttp}: ${texto.slice(0, 1000)}`
       await cerrarEnvio(
         entrada.correduriaId,
         entrada.projectId,

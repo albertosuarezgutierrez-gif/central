@@ -487,6 +487,7 @@ export async function POST(req: Request) {
     offerId: p.accepted_offer_id_codeoscopic,
     campos: camposConProducto,
     producto: poliza.tipo,
+    solicitadoPor: actor,
     reintentoConfirmado: cuerpo.reintentoConfirmado === true,
   })
 
@@ -563,6 +564,7 @@ export async function POST(req: Request) {
           offerId: p.accepted_offer_id_codeoscopic,
           campos: camposConProducto,
           producto: poliza.tipo,
+          solicitadoPor: actor,
           // El primer intento acabó en 400 (rechazo, no «quizá emitido»), así
           // que el candado deja pasar; el flag viaja igual por coherencia.
           reintentoConfirmado: cuerpo.reintentoConfirmado === true,
@@ -574,6 +576,24 @@ export async function POST(req: Request) {
   }
 
   if (!envio.ok) {
+    // ── El LIBRO dijo que no, y no se ha enviado nada (21/09/2026) ─────────
+    // Dos códigos distintos porque se arreglan en sitios distintos:
+    // `sin_libro` (503) es una avería nuestra —no se ha podido leer
+    // `codeoscopic_consumo` y un tope que no se puede comprobar no es un
+    // tope—, y `tope` (429) es el límite de Submits, que se sube por env o se
+    // espera. Lo que NO puede pasar es que se lean como un rechazo del vendor:
+    // ahí el corredor iría a mirar Avant2 buscando una póliza que no existe.
+    if (envio.razon === 'sin-libro' || envio.razon === 'tope') {
+      return NextResponse.json(
+        {
+          estado: 'error',
+          causa: envio.razon === 'tope' ? 'tope' : 'sin_libro',
+          mensaje: envio.mensaje,
+          quizaEmitido: false,
+        },
+        { status: envio.razon === 'tope' ? 429 : 503 },
+      )
+    }
     // «The bank account is mandatory according to the selected companies and
     // payment types.» — no es un fallo del vendor: es un dato que falta. Se
     // devuelve como hueco para que plataforma pinte la caja del IBAN. Si YA se
