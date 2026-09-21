@@ -1,8 +1,12 @@
 #!/usr/bin/env node
-// Exporta inyectarEmbeddings para ser usado por scripts/memoria-embeddings-inyectar.mjs.
-// El puerto /api/internal/grafo-codigo/embeddings fue eliminado en Sept 2026.
-// Esta función se reutiliza para inyectar embeddings de memoria.
-import { leerEnvs } from './inyectar-lotes.mjs'
+// Motor de inyección de embeddings por lotes. HOY SOLO LO USA LA MEMORIA SEMÁNTICA
+// (scripts/memoria-embeddings-inyectar.mjs → memoria_buscar).
+//
+// Se llamaba `grafo-embeddings-inyectar.mjs` hasta el 21/09/2026, cuando se retiró el grafo de
+// código propio. Se RENOMBRÓ a propósito: dejarlo con nombre de grafo lo convertía en un candidato
+// a que alguien lo borrase por parecer un resto, llevándose por delante la memoria. (Misma trampa
+// que la función SQL `grafo_embed_textos`, que SÍ conserva el nombre viejo y de la que depende
+// `memoria_buscar` — esa no se puede renombrar sin tocar la BD.)
 
 const MAX_PASADAS = 8
 const MAX_INTENTOS = 6
