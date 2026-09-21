@@ -73,7 +73,9 @@ una firma de webhook falsificada desde el 31/08 no habría disparado nada.
 
 1. **No silenciar el heartbeat.** Arreglar la fuente. Silenciarlo le quita a Manuel la única
    vigilancia que le queda de la ingesta. Si el ruido diario molesta mientras tanto, el gesto
-   correcto es un **snooze de 48 h**, no `enabled: false`.
+   correcto es un **snooze de 24 h**, que es el máximo que ofrece el panel (30 min / 1 h / 4 h / 24 h
+   o fecha a medida), no `enabled: false`. Con ese techo, silenciar compra un día: no es una
+   solución, es un aplazamiento.
 2. **Repuntar la fuente del warehouse al Supabase de central** (`wswbehlcuxqxyinousql`, schema
    `seguros`) con un rol readonly propio. Eso devuelve la vista a A1 y A14 de una vez, y es el
    arreglo de fondo.
