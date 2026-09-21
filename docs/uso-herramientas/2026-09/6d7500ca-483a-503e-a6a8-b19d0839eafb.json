@@ -1,0 +1,20 @@
+{
+ "sesion": "6d7500ca-483a-503e-a6a8-b19d0839eafb",
+ "inicio": "2026-09-21T08:54:59.371Z",
+ "fin": "2026-09-21T08:54:59.641Z",
+ "llamadas": 2,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 203,
+   "chars_out": 50209,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1,
+    "Read": 1
+   }
+  }
+ }
+}
