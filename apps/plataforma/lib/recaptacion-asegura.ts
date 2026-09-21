@@ -313,7 +313,7 @@ export async function enviarEmailRecaptacionAsegura(body: {
 // ── Envío en LOTE (cron diario) ───────────────────────────────────────────
 
 export type LoteEmail =
-  | { estado: 'ok'; candidatos: number; enviados: number; fallidos: number; detalleFallos: string[] }
+  | { estado: 'ok'; candidatos: number; enviados: number; fallidos: number; detalleFallos: string[]; descartadosPorSilencio: number }
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string }
 
@@ -328,6 +328,9 @@ export function interpretarLoteEmail(status: number, json: unknown): LoteEmail {
       enviados: entero(o.enviados) ?? 0,
       fallidos: entero(o.fallidos) ?? 0,
       detalleFallos: Array.isArray(o.detalleFallos) ? o.detalleFallos.filter((x): x is string => typeof x === 'string') : [],
+      // Cron viejo de asegura sin este campo (versión anterior al 21/09/2026) → 0,
+      // no `null`: es un recuento real de ESTA pasada, no un dato pendiente.
+      descartadosPorSilencio: entero(o.descartadosPorSilencio) ?? 0,
     }
   }
   const motivo = cadena(o.motivo) ?? cadena(o.causa) ?? cadena(o.error)
