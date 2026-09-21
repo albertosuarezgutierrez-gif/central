@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Pide a plataforma que calcule los embeddings del grafo de código (búsqueda semántica propia).
-// El puerto /api/internal/grafo-codigo/embeddings sincroniza los textos con mapa_arquitectura y embebe
-// lo pendiente hasta agotar su tiempo; aquí se le llama hasta que responda `pendientes: 0` (tope de
-// pasadas para no colgar el workflow). Misma política de reintentos que scripts/inyectar-lotes.mjs:
-// 6 intentos con espera creciente (el deploy de plataforma puede no estar READY, OpenRouter puede dar
-// 429); 401 (CRON_SECRET) y 503 (sin key) no se reintentan porque no se arreglan esperando.
-// Envs: PLATAFORMA_URL, CRON_SECRET (sin ellas se omite, exit 0).
-import { leerEnvs } from './inyectar-lotes.mjs'
+// Motor de inyección de embeddings por lotes. HOY SOLO LO USA LA MEMORIA SEMÁNTICA
+// (scripts/memoria-embeddings-inyectar.mjs → memoria_buscar).
+//
+// Se llamaba `grafo-embeddings-inyectar.mjs` hasta el 21/09/2026, cuando se retiró el grafo de
+// código propio. Se RENOMBRÓ a propósito: dejarlo con nombre de grafo lo convertía en un candidato
+// a que alguien lo borrase por parecer un resto, llevándose por delante la memoria. (Misma trampa
+// que la función SQL `grafo_embed_textos`, que SÍ conserva el nombre viejo y de la que depende
+// `memoria_buscar` — esa no se puede renombrar sin tocar la BD.)
 
 const MAX_PASADAS = 8
 const MAX_INTENTOS = 6
@@ -55,13 +55,4 @@ export async function inyectarEmbeddings({ url, secret, fetchImpl = fetch, esper
   }
   log.error(`Embeddings: siguen quedando pendientes tras ${maxPasadas} pasadas.`)
   return { ok: false, total, pendientes: -1 }
-}
-
-const esMain = process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]
-if (esMain) {
-  const envs = leerEnvs()
-  if (!envs) process.exit(0)
-  const r = await inyectarEmbeddings({ url: `${envs.PLATAFORMA_URL}/api/internal/grafo-codigo/embeddings`, secret: envs.CRON_SECRET })
-  if (!r.ok) process.exit(1)
-  console.log(`✅ Embeddings al día (${r.total} calculados en esta pasada).`)
 }

@@ -34,6 +34,10 @@ const ESTADO_DE_AGENTES = [
   // Telemetría del hook `Stop` (scripts/uso-herramientas.mjs), no de un agente concreto, pero
   // el mismo caso: puro registro que sacaba PRs enteros del carril 1 (detectado 20/09/2026).
   'docs/uso-herramientas/2026-09/session-ejemplo.json',
+  // Tabla de ahorro agregada: la regenera `auditoria.yml` en cada pasada y viaja en el MISMO PR
+  // que la radiografía (21/09/2026). Sin esta línea ese PR diario cae en carril 2 y deja de
+  // aterrizar en `main` — y con él los otros tres generados, que sí estaban.
+  'docs/USO-HERRAMIENTAS.md',
 ]
 
 // Ficheros que NUNCA deben colarse como registro: le dicen a un agente qué hacer.

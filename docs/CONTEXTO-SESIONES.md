@@ -12,6 +12,81 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
+**(21/09/2026)** 🪤 **La pasada de `code-review` antes de sacar el PR de draft se ganó el sueldo:
+6 hallazgos, 4 reales, ninguno lo cazaba un test.** El peor: al borrar la ruta del grafo se fue con
+ella `grafo_guardar_clave()`, **el único escritor de la clave de OpenRouter en Vault** — la memoria
+semántica solo la LEE, así que si Vault la perdía `memoria_buscar` moría en 503 sin camino de vuelta
+en código. Escritor trasladado a `/api/internal/memoria/embeddings` y función recreada en la BD.
+Segundo: `docs/USO-HERRAMIENTAS.md` entró en el PR diario de la radiografía pero NO en `es_registro()`
+del automerge → el PR entero (los cuatro generados) dejaba de aterrizar en `main`; cepo visto en ROJO
+antes de arreglarlo. Tercero: el SQL del grafo seguía en el repo creando funciones sobre tablas ya
+borradas (reprovisionar abortaba) — partido en `2026-09-21_motor_embeddings.sql`, que deja SOLO el
+motor que usa la memoria; los nombres siguen `grafo_*` porque así están vivos en la BD. Cuarto: la
+tabla de ahorro llevaba dentro la fecha de generación, así que cambiaba a diario aunque los datos no
+→ el corte «sin cambios» del workflow no saltaba nunca. Y dos de higiene: el `rastreador-codigo` se
+vendía como solo-lectura **con `Bash` en las herramientas**, y `vigia-infra` se autorizaba un
+`VACUUM FULL` (lock ACCESS EXCLUSIVE) sobre la BD compartida sin OK de Alberto. Los dos, corregidos.
+Tests 967/967, typecheck de plataforma limpio. PR #3242.
+
+**(21/09/2026)** 🤖 **Dos agentes nuevos, los dos nacidos de fallos medidos hoy.**
+**`vigia-infra`** (skill, mensual día 8, `docs/VIGIA-INFRA.md`): mide los TECHOS —Supabase en % de
+su cuota, hinchazón recuperable, Build Minutes y ritmo de deployments de Vercel, máquinas de Fly—.
+Van **tres sustos del mismo tipo sin una sola alerta**: 600 US$ de Build CPU (jul), la cuota de 450
+deployments/hora reventada (04/09) y hoy la BD por encima del tope con la cartera dentro, vista de
+refilón. Regla dura: **un límite sin medir NO está bien, está sin medir**, y cuenta como 🟠.
+**`rastreador-codigo`** (agente, haiku, SOLO LECTURA): el sustituto del grafo. Lleva dentro las tres
+trampas que el grafo sí sabía —barriles `@central/*`, homónimos entre apps, y «0 resultados» ≠ «no
+lo usa nadie»—. Trigger de `vigia-infra` pendiente de crear.
+
+**(21/09/2026)** 💾 **`central` estaba POR ENCIMA de la cuota del plan Free** (644 MB medidos, tope
+500). No era riesgo futuro: es la BD compartida de todas las apps. Recuperados **131 MB sin borrar
+ni una fila**, solo `VACUUM FULL` — `net._http_response` tenía **0 filas vivas ocupando 44 MB** (sin
+autovacuum desde el 05/08). Ojo: borrar filas NO baja el tamaño, hay que compactar. Un intento mío
+de tirar el índice HNSW de `grafo_embeddings` salió mal y se revirtió: estimé ~150 ms de búsqueda
+exacta y medí **11 s** (los vectores están en TOAST, cada fila va a disco).
+📊 **Y el dato que decide:** la tabla de `docs/USO-HERRAMIENTAS.md` llevaba generada sobre **1**
+sesión con 86 ficheros sin agregar. Regenerada: **el grafo propio se ha usado en 3 de 86 sesiones**
+(27 llamadas, 2 con error, ahorro tope 75k tokens) ocupando 258 MB. **Alberto decidió retirarlo y
+está hecho: BD en 284 MB**, tablas y funciones `grafo_*` borradas. Se borraron también las FUNCIONES
+a propósito: sobre una tabla vacía no fallan, **devuelven cero**, y un agente concluiría que a un
+símbolo no lo llama nadie. ⚠️ **Dos restos con nombre de grafo que NO son grafo**: la función SQL
+`grafo_embed_textos` (se conserva: `memoria_buscar` depende de ella) y el script del motor de
+embeddings, que se RENOMBRÓ a `scripts/embeddings-inyectar.mjs` para que nadie lo borre por
+parecer un resto — lo usa la memoria semántica. Sustituto = subagentes + `code-map`; `memoria_embeddings` y `mapa_arquitectura` se
+quedan (28 MB, mejor ratio). **ialimp e ia-rest juntos pesan 16 MB: no eran el problema.**
+🔧 Y la causa de fondo, corregida: **nadie regeneraba la tabla de ahorro**. Ahora la regenera
+`auditoria.yml` en cada pasada — una medición que no se refresca sola es una medición que miente.
+
+**(21/09/2026)** 🧹 **Manuel fuera de Vercel** (Alberto retiró su asiento del equipo «Pisos
+turisticos», verificado recargando la página, sin aviso de facturación). Para repuntar el warehouse
+de PostHog a central se midió ANTES de tocar nada: `operational_events` vive en el schema `seguros`
+(no `public`), 5.071 filas, último evento de hoy, **RLS desactivado y 0 políticas** → un rol sin
+BYPASSRLS SÍ verá filas. Sin esa comprobación, A1/A14 habrían seguido planas con la fuente ya
+correcta, que es el fallo caro de siempre. El `GRANT` va a **una sola tabla**: el schema `seguros`
+es la cartera con PII. Las credenciales las escribe Alberto — Claude en Chrome se negó a generar y
+pegar la contraseña, y es la postura correcta.
+
+**(21/09/2026)** 🔧 **Telemetría de PostHog ARREGLADA y verificada**: faltaban las dos envs
+`NEXT_PUBLIC_POSTHOG_*` en el proyecto Vercel `asegura`; creadas + redeploy, y un `cima-pull` en
+`dry_run` devolvió los tres eventos a PostHog (primeros desde el 05/09). PR #3242.
+📍 **Y una corrección de fondo: el adaptador de Fly YA ES DE ALBERTO.** Medido en el panel el 21/09:
+`asegura-app-cima-adapter` está en su organización `grupo-asegura` (2 máquinas, CDG), no en la cuenta
+de Manuel. `CLAUDE.md`, la skill `cima-ingesta` y el inventario decían lo contrario y se dieron por
+buenos sin mirar; corregidos los tres. **Lo único que sigue fuera es el CÓDIGO** del adaptador (repo
+privado de Manuel, Alberto con lectura): sin fork, no hay cómo redesplegar.
+
+**(21/09/2026)** 🚨 La alerta de PostHog «CIMA pull heartbeat» que spamea a Alberto es **FALSA**: la
+ingesta de CIMA está sana (55 pulls en BD, ficheros de Occident el 20/09, Actions en verde) y lo roto
+es la telemetría — **PostHog no recibe NI UN evento de ningún tipo desde el 05/09** (no es cuota:
+80/1.000.000). Causa CONFIRMADA por navegador: el proyecto Vercel `asegura` **no tiene NINGUNA env de
+PostHog** y el código hace noop silencioso sin ellas; revivirla exige redeploy (`NEXT_PUBLIC_*` se
+inlinea en build). El fix asegura#834 (17/09) partió de un diagnóstico erróneo y no podía funcionar.
+Peor: la fuente Postgres del warehouse apunta al Supabase VIEJO de Manuel (congelado el 31/08 por el
+traspaso), así que **[A1] auth sign-in failures y [A14] webhook signature llevan 3 semanas CIEGAS**
+en verde. Diagnóstico, propuesta y prompt de Chrome en `docs/ASEGURA-POSTHOG-SONDAS-CIEGAS.md`.
+Vigilar: `cima-health-alert` falló 1 vez (20/09) con 401 — si repite hoy, es avería.
+
 **(21/09/2026)** **«Duplicidad» en el volcado histórico de la ficha** (PR #3259, mergeado). Alberto, con
 la captura: dos FORD FOCUS 3935GPY idénticos (mismo vencimiento 07/10/2023, sin número) cambiando
 solo la prima (210€/201€). **No era la consulta**: son dos filas reales del volcado de junio de 2026

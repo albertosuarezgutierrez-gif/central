@@ -24,8 +24,11 @@ regla de Alberto «lo que entra por CIMA es cliente actual; el resto son leads»
    preventiva del crudo — si se confirma y luego se pierde, la compañía **no lo
    reenvía**. Cualquier cambio que adelante un `confirm` es un cambio de alto
    riesgo.
-2. **El adaptador Java NO se reescribe y NO vive en ningún repo nuestro.** Es
-   `asegura-app-cima-adapter` en la cuenta de **Fly de Manuel**. Usa WS-Security
+2. **El adaptador Java NO se reescribe, y su CÓDIGO no vive en ningún repo nuestro.**
+   La app `asegura-app-cima-adapter` corre en la organización **`grupo-asegura` de
+   Alberto** (medido en el panel de Fly el 21/09/2026; esta línea decía «en la cuenta
+   de Fly de Manuel» y era falso). El repo del código SÍ sigue siendo privado de
+   Manuel, con acceso de lectura para Alberto. Usa WS-Security
    atípico (AES-256-GCM derivado del password) que `node-soap` no soporta, y un
    **JDK 8 sidecar** porque Xerces en 17 rompe validando las respuestas SOAP.
 3. **El port a `apps/asegura` está APARCADO a propósito** (decisión de Alberto,
