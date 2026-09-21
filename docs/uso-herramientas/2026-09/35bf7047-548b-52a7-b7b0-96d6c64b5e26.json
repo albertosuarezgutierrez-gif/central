@@ -1,32 +1,32 @@
 {
  "sesion": "35bf7047-548b-52a7-b7b0-96d6c64b5e26",
  "inicio": "2026-09-21T11:01:13.537Z",
- "fin": "2026-09-21T13:58:18.774Z",
- "llamadas": 358,
+ "fin": "2026-09-21T15:04:11.797Z",
+ "llamadas": 476,
  "categorias": {
   "otro": {
-   "llamadas": 31,
-   "chars_in": 14795,
-   "chars_out": 430983,
+   "llamadas": 37,
+   "chars_in": 15026,
+   "chars_out": 470222,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 9,
+    "ToolSearch": 12,
     "SubagentHandback": 2,
-    "ReadNotifications": 19
+    "ReadNotifications": 22
    }
   },
   "bash": {
-   "llamadas": 259,
-   "chars_in": 180422,
-   "chars_out": 515521,
+   "llamadas": 361,
+   "chars_in": 325037,
+   "chars_out": 816923,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 259
+    "Bash": 361
    }
   },
   "lectura-directa": {
@@ -42,18 +42,18 @@
    }
   },
   "mcp:github": {
-   "llamadas": 20,
-   "chars_in": 22679,
-   "chars_out": 132624,
+   "llamadas": 23,
+   "chars_in": 27241,
+   "chars_out": 136483,
    "errores": 0,
    "archivos_citados": 4,
    "chars_citados": 17228,
    "tools": {
-    "mcp__github__list_pull_requests": 2,
+    "mcp__github__list_pull_requests": 3,
     "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 14,
+    "mcp__github__pull_request_read": 15,
     "mcp__github__actions_list": 2,
-    "mcp__github__update_pull_request": 1
+    "mcp__github__update_pull_request": 2
    }
   },
   "agente:Explore": {
@@ -103,14 +103,14 @@
    }
   },
   "sql": {
-   "llamadas": 20,
-   "chars_in": 8734,
-   "chars_out": 33618,
+   "llamadas": 26,
+   "chars_in": 10396,
+   "chars_out": 38918,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 20
+    "mcp__Supabase__execute_sql": 26
    }
   },
   "mcp:Google_Drive": {
@@ -122,6 +122,17 @@
    "chars_citados": 0,
    "tools": {
     "mcp__Google_Drive__search_files": 4
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 8699,
+   "chars_out": 16,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__apply_migration": 1
    }
   }
  }
