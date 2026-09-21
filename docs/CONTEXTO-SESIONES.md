@@ -71,8 +71,17 @@ que `ASEGURA_OPERADOR_SECRET` **no salga de Vercel**: se abre una URL y ya. Resu
 ROJO. 🚨 La guarda que lo hace servir de algo: si asegura responde 200 **sin `resumen`** es que su
 despliegue no entiende `crudo=1` y ha devuelto la lista normalizada — se corta con 502, porque
 relayarlo se leería como «el vendor no manda nada más». La pasada de `code-review` cazó justo eso.
-⏸️ Pendiente: ejecutar la medición y decidir. Y ojo — la fecha de matriculación de la matrícula es
-**aproximada** y puede venir `null`: podrá ordenar o acotar el desplegable, nunca elegir la versión.
+✅ **MEDIDO el mismo día (SMART FORFOUR, 53 versiones): SÍ hay fecha, pero es `releaseMarketDate`
+—salida al mercado— y NO un rango de fabricación.** No existe `yearFrom`/`yearTo`. Así que la
+matriculación **DESCARTA** las versiones posteriores y **no elige una**: cuatro acabados × dos
+potencias comparten la misma salida 2015-07. 💡 Y el hallazgo que vale más que la fecha: el catálogo
+trae `displacement`, `powerCv`, `doors`, `seats`, carrocería y PVP —casi el juego que pide el
+emparejamiento contra la ficha técnica (P.1/P.2/P.3/B)— y hoy se tira entero. 🚨 Y lo más caro: **tres PARES de versiones tienen el nombre IDÉNTICO** con códigos Base7 distintos
+(las `ELECTRIC DRIVE EQ`), y el desplegable solo enseña el nombre → el corredor no tiene con qué
+elegir y la equivocada son 0,50€ en el precio de otro coche. Además `engine=Gasolina` **no parece
+filtrar** (20 de 53 no son gasolina por nombre; confirmable gratis con `engine=Diesel`). ⚠️ `claves`
+es una UNIÓN: prueba que el campo existe, no que lo traigan las 53. Detalle en
+`docs/CODEOSCOPIC-API-PORTAL.md`. ⏸️ Decisión de Alberto: si se cablea el filtro.
 
 **(21/09/2026)** 🚨 **AVERÍA CONFIRMADA: el vigilante de la ingesta de CIMA lleva dos días sin
 funcionar.** `cima-health-alert` falló el 20/09 con `curl (22) error: 401` y hoy volvió a fallar
