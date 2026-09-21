@@ -59,6 +59,7 @@ import {
   type ResueltosHogar,
   type SupuestoHogar,
 } from '@/lib/codeoscopic/desde-cartera-hogar'
+import { supuestosVigentes } from '@central/module-seguros'
 import {
   construirPeticionAuto,
   revisarDatosAuto,
@@ -488,7 +489,7 @@ async function prepararAuto(
   // Nuestra referencia, para casar después la cotización con la póliza.
   // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
   peticion.externalId = `poliza-${polizaId}`
-  return { peticion, motivo: 'defensa-cartera', supuestos: pre.supuestos }
+  return { peticion, motivo: 'defensa-cartera', supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones) }
 }
 
 // ─── HOGAR ───────────────────────────────────────────────────────────────────
@@ -645,7 +646,7 @@ async function prepararHogarDesde(
   return {
     peticion,
     motivo: 'defensa-cartera-hogar',
-    supuestos: pre.supuestos,
+    supuestos: supuestosVigentes(pre.supuestos, correcciones),
     fuenteRiesgo: pre.fuenteRiesgo,
   }
 }
@@ -812,7 +813,7 @@ export async function prepararRetarificacionNuevaAuto(entrada: {
       // ficha — misma jugada que hogar sin póliza.
       contexto: { ramo: 'auto', puerta: 'corredor', polizaId: null, clienteId },
     },
-    supuestos: pre.supuestos,
+    supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones),
     fuenteRiesgo: null,
   }
 }
@@ -917,7 +918,7 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       solicitadoPor,
       contexto: { ramo: 'moto', puerta: 'corredor', polizaId: null, clienteId },
     },
-    supuestos: pre.supuestos,
+    supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones),
     fuenteRiesgo: null,
   }
 }
@@ -1011,7 +1012,7 @@ async function prepararRetarificacionNuevaGenerica<D, S>(entrada: {
       solicitadoPor,
       contexto: { ramo, puerta: 'corredor', polizaId: null, clienteId },
     },
-    supuestos: pre.supuestos as any,
+    supuestos: supuestosVigentes(pre.supuestos as { campo: string }[], correcciones) as any,
     fuenteRiesgo: null,
   }
 }

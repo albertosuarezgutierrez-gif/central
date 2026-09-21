@@ -12,6 +12,28 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
+**(21/09/2026)** 🚗 **Avant2 vs. lo nuestro para tarificar auto: no nos falta pantalla, nos faltan
+datos que ya viajaban INVENTADOS.** De los once campos que pide el formulario de Avant2 y el nuestro
+no, **seis ya iban en la petición con un valor que nadie había preguntado**. Tres se arreglan aquí
+sin gastar un euro porque ya viajaban (`kilometersPerYear`, `purchaseDate`, `lightTrailer`): campos
+nuevos en «1 · El coche», **vacíos a propósito** (en blanco = supuesto de siempre; con valor, manda
+el corredor), en el borrador local y con el botón bloqueado si el número está mal.
+`KM_ANUALES_SUPUESTOS` sube a `@central/module-seguros` para que pantalla y petición no puedan
+divergir, con cepo de valor visto en rojo. 🔴 **Lo gordo queda abierto y documentado:** el carnet va
+**cableado** a `{type:'B', issuingZone:'Spain'}` (`persona.ts:136`) — un carnet extranjero se declara
+como español sin que nada falle, y eso es art. 10 LCS, no un precio malo. Eso y `secondaryDriver`
+(conductor ocasional) piden **una** cotización real de verificación a 0,50€: spec + orden en
+`docs/superpowers/specs/2026-09-21-avant2-auto-tarificacion-comparativa-design.md`. Donde SÍ vamos
+por delante: Avant2 acepta «tuvo seguro» con 0 años y cotiza novel; nosotros lo paramos antes de
+gastar. 🪤 **Y la revisión obligatoria del propio PR encontró DOS bugs que había metido yo**, los dos
+de la misma familia (la pantalla afirmando algo distinto de lo que viajó): `Number('15.000')` es
+**15** —y «15.000» es justo lo que imprimía la ayuda del campo nuevo—, un tecleo con forma de chollo
+que no rechazaban ni la pantalla ni `revisarDatosAuto` ni el vendor; y el supuesto seguía pintándose
+junto al precio después de corregirlo, fallo del patrón que se tapó en las CINCO salidas del puerto.
+La lección: **el paso de `code-review` antes de sacar de draft no es burocracia** — este PR salía
+verde en los 12 checks con los dos bugs dentro. PR #3272.
+
 **(21/09/2026)** 🔗 **La cadena de CIMA ya es ENTERA de Alberto, y el vigilante arreglado enseña lo
 que tapaba.** Verificado por API, no de palabra: el repo del adaptador es hoy
 `albertosuarezgutierrez-gif/asegura-app-cima-adapter` (id 1225402598, privado, Java) — era el único
