@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-21T17:03:34Z",
-  "sha": "b299090f7d4d5bece3abe9fdb97be6dc31795228",
+  "generadoEn": "2026-09-21T19:06:21Z",
+  "sha": "3c3262c42f5943b20226886417f0cfe01da01db7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4191,6 +4191,136 @@
       "hash": "5b3447a096c9"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/Comparativa.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Actual",
+        "Tarjeta",
+        "Garantias",
+        "SinEquivalenteAviso",
+        "Mediador",
+        "Salidas",
+        "fecha"
+      ],
+      "funciones": [
+        {
+          "nombre": "Actual",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ actual }: { actual: ActualCliente | null }",
+          "retorno": null,
+          "linea": 39,
+          "resumen": "🚨 El bien se describe; el **número de póliza NO se pinta**. Regla permanente del portal: nadie se sabe su número de póliza, y dos hogares de la misma compañía se distinguen por la casa, no por trece "
+        },
+        {
+          "nombre": "Tarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ o, caducado }: { o: OpcionCliente; caducado: boolean }",
+          "retorno": null,
+          "linea": 101,
+          "resumen": "🚨 Tres cosas que esta tarjeta no puede dejar de hacer: 1. **El distintivo de firmeza va POR TARJETA**, no en una nota al pie que se lee una vez. Hoy el 100 % de los precios son `estimado`, así que de"
+        },
+        {
+          "nombre": "Garantias",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ o, actual }: { o: OpcionCliente; actual: ActualCliente | null }",
+          "retorno": null,
+          "linea": 169,
+          "resumen": "🚨 CUATRO estados por línea, no dos, y `no_consta` **nunca** se pinta como `igual`: una garantía que no se sabe si está es lo contrario de una que se sabe que está, y pintarlas igual convierte un huec"
+        },
+        {
+          "nombre": "SinEquivalenteAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ motivo }: { motivo: SinEquivalente | null }",
+          "retorno": null,
+          "linea": 209,
+          "resumen": "Los DOS motivos NO se colapsan: llevan a decisiones distintas."
+        },
+        {
+          "nombre": "Mediador",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ companiasEnPortada }: { companiasEnPortada: number }",
+          "retorno": null,
+          "linea": 229,
+          "resumen": "Art. 19 de la Ley 16/2018 y el «asesoramiento sobre la base de un análisis objetivo» del RDL 3/2020. Todo sale de `MEDIADOR` de `@central/module-seguros`: 🚨 **ni el nombre ni la clave DGSFP se teclea"
+        },
+        {
+          "nombre": "Salidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ caducado, hayPolizaActual }: { caducado: boolean; hayPolizaActual: boolean }",
+          "retorno": null,
+          "linea": 277,
+          "resumen": "🚨 DOS salidas con el MISMO peso visual, y esa simetría es el punto: si solo se ofrece «me cambio», el que dice que no se va con las manos vacías; con la carta de mediador, el «no» de hoy es el client"
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 319
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "de9d9f81dbff"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "PresupuestoPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "PresupuestoPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "El presupuesto, ya con sesión. **Solo lectura**: en este PR no se elige, no se firma y no sale nada hacia ninguna compañía (eso es el PR 4). Quién lo puede ver lo decide `presupuestoDeSesion()` y **so"
+        },
+        {
+          "nombre": "Marco",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 168
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f297683843bd"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/RestoDeOpciones.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Plegable"
+      ],
+      "funciones": [
+        {
+          "nombre": "Plegable",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titulo, children }: { titulo: string; children: ReactNode }",
+          "retorno": null,
+          "linea": 21,
+          "resumen": "El plegable «Ver el resto de opciones (N)». 🚨 **Montaje perezoso de verdad, no un `<details>` a secas.** La regla de rendimiento de la casa lo dice con estas palabras: *un `<details>` cerrado igualme"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "84ee74c2faea"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/Recordatorios.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -5691,9 +5821,10 @@
           "nombre": "EntrarConCodigo",
           "kind": "function",
           "exportada": true,
-          "params": "",
+          "params": "{ leerEnlace = false }: { leerEnlace?: boolean } = {}",
           "retorno": null,
-          "linea": 44
+          "linea": 59,
+          "resumen": "`leerEnlace` (21/09/2026, PR 2 del presupuesto): el correo del enlace trae el destino —y a veces el código— en `?d=&c=`, el mismo patrón que ya usa la pantalla de entrada (`app/Entrada.tsx`). Nace apa"
         },
         {
           "nombre": "textoResponder",
@@ -5701,7 +5832,7 @@
           "exportada": false,
           "params": "codigo: unknown, mensaje: unknown",
           "retorno": "string",
-          "linea": 210
+          "linea": 247
         },
         {
           "nombre": "fechaLarga",
@@ -5709,7 +5840,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 225,
+          "linea": 262,
           "resumen": "Fecha en español legible. Un `YYYY-MM-DD` es un DÍA, sin hora ni zona: se fuerza medianoche UTC y se formatea en UTC, o el 3 sale como el 2 para media Europa (misma regla que `lib/fechas.ts`)."
         },
         {
@@ -5718,12 +5849,12 @@
           "exportada": true,
           "params": "{ token, otorganteNombre, alcance, soloUnaPoliza, mensaje, caducaEn, texto, }: { token: string /** `null` = no hemos podido leer su nombre. No se inventa uno ni se pinta un uuid. */ otorganteNombre: string | null alcance: string /** * `true",
           "retorno": null,
-          "linea": 238
+          "linea": 275
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c9d1bcb5a253"
+      "hash": "051dd73773c8"
     },
     {
       "ruta": "apps/asegura-portal/app/invitacion/[token]/page.tsx",
@@ -5964,6 +6095,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "edf3cf6915f0"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/presupuesto/[token]/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CaratulaPresupuesto"
+      ],
+      "funciones": [
+        {
+          "nombre": "CaratulaPresupuesto",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ token: string }> }",
+          "retorno": null,
+          "linea": 54,
+          "resumen": "La carátula del enlace del presupuesto. PÚBLICA a propósito —vive fuera del grupo `(portal)`— porque a quien se le manda un presupuesto puede no haber entrado nunca al portal. ────────────────────────"
+        },
+        {
+          "nombre": "EnlaceMuerto",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 80
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a2e1c439afc3"
     },
     {
       "ruta": "apps/asegura-portal/app/RegistrarSW.tsx",
@@ -8139,6 +8299,263 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8c70a55b78a6"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/presupuesto-vista.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Lo que el CLIENTE lee de un presupuesto: etiquetas, comparación de garantías y las frases que no se pueden decir de otra manera. PURO a propósito: sin BD, sin React, sin `new Date()` implícito. Aquí vive todo lo que decide QUÉ SE AFIRMA, para poder probarlo sin levantar nada y para que el cepo lo pu",
+      "exporta": [
+        "leerFirmeza",
+        "textoFranquicia",
+        "esPapel",
+        "etiquetaPapeles",
+        "leerSinEquivalente",
+        "normalizarGarantia",
+        "compararGarantias",
+        "coberturasDeJson",
+        "textoCaducidad",
+        "textoCompaniasConsultadas",
+        "copyFijo",
+        "revisarCopyFijo"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerFirmeza",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "Firmeza",
+          "linea": 35
+        },
+        {
+          "nombre": "textoFranquicia",
+          "kind": "function",
+          "exportada": true,
+          "params": "franquiciaEur: number | null, eur: (n: number) => string",
+          "retorno": "string",
+          "linea": 79,
+          "resumen": "🚨 `null` = **el producto no declara franquicia**, jamás «sin franquicia». Enseñar un todo riesgo callando 1.500€ de franquicia es la versión cara de leer mal un dato que sí está; decir «sin franquici"
+        },
+        {
+          "nombre": "esPapel",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is PapelPortada",
+          "linea": 91
+        },
+        {
+          "nombre": "etiquetaPapeles",
+          "kind": "function",
+          "exportada": true,
+          "params": "papeles: readonly PapelPortada[], coberturaDistinta: boolean",
+          "retorno": "string | null",
+          "linea": 116,
+          "resumen": "Si dos papeles caen en la misma opción **se funden y se dice**, no se reparte para tener tres tarjetas: una tarjeta de relleno es una recomendación que nadie ha hecho. `coberturaDistinta` cambia la fr"
+        },
+        {
+          "nombre": "leerSinEquivalente",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "SinEquivalente | null",
+          "linea": 145
+        },
+        {
+          "nombre": "normalizarGarantia",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 187,
+          "resumen": "Para casar «Responsabilidad civil» con «RESPONSABILIDAD CIVIL »."
+        },
+        {
+          "nombre": "compararGarantias",
+          "kind": "function",
+          "exportada": true,
+          "params": "actuales: readonly string[] | null, nuevas: readonly string[], /** * 🚨 OBLIGATORIO y no inferido de `actuales`: «no hay póliza que comparar» y * «hay póliza y no se le ha podido leer el desglose» son los DOS estados que * esta función exis",
+          "retorno": "Comparacion",
+          "linea": 220,
+          "resumen": "Compara las garantías de una opción con las de la póliza actual. 🚨 **`no_consta` NO se pinta como `igual`.** Una garantía que no se sabe si está es lo contrario de una que se sabe que está, y pintarl"
+        },
+        {
+          "nombre": "limpiar",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: readonly string[]",
+          "retorno": "string[]",
+          "linea": 270
+        },
+        {
+          "nombre": "coberturasDeJson",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string[]",
+          "linea": 288,
+          "resumen": "Lee el jsonb de `coberturas` sin fiarse de su forma."
+        },
+        {
+          "nombre": "textoCaducidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "calculadoEl: string, venceEl: string, caducado: boolean",
+          "retorno": "string",
+          "linea": 308,
+          "resumen": "🚨 **Nunca «válido hasta el X» a secas**: eso suena a compromiso de la compañía, y la compañía no ha comprometido nada (`expirationDate` solo llega tras el ReRate, y hoy no llega). La fecha la ponemos"
+        },
+        {
+          "nombre": "textoCompaniasConsultadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "companiasEnPortada: number",
+          "retorno": "string",
+          "linea": 328,
+          "resumen": "🚨 El snapshot **no guarda** cuántas compañías se consultaron ni cuántas no dieron precio: `prepararPresupuesto()` congela solo las opciones de portada y su `preciosTotales` no se escribe en ninguna c"
+        },
+        {
+          "nombre": "copyFijo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string[]",
+          "linea": 344,
+          "resumen": "Todo el texto FIJO de esta pantalla, en un sitio, para que el guardián lo pase por `revisarCopy()` sin tener que leer el JSX. Lo que viene de la BD (nombre de compañía, garantías del EIAC) no entra: n"
+        },
+        {
+          "nombre": "revisarCopyFijo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 367,
+          "resumen": "`''` si está limpio; si no, la lista de infracciones lista para un `assert`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1cd2962ead38"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/presupuesto.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El presupuesto, visto desde el PORTAL. Solo lectura (PR 2): ni se elige, ni se firma, ni se manda nada. Lo único que este fichero escribe son dos sellos que no son del cliente sino SOBRE el cliente: `visto_at` y la telemetría. Diseño: `docs/superpowers/specs/2026-09-21-asegura-presupuesto-al-cliente",
+      "exporta": [
+        "caratulaPorToken",
+        "presupuestoDeSesion"
+      ],
+      "funciones": [
+        {
+          "nombre": "caratulaPorToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "tokenCrudo: unknown",
+          "retorno": "Promise<Caratula>",
+          "linea": 144,
+          "resumen": "Resuelve el token del enlace, SIN sesión y SIN contar nada. 🚨 Devuelve `{estado, id}` y ni un dato más: hasta que hay sesión no hay a quien enseñarle nada. Y los cuatro finales malos se colapsan en `"
+        },
+        {
+          "nombre": "presupuestoDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<LecturaPresupuesto>",
+          "linea": 177,
+          "resumen": "El presupuesto `id`, para la identidad de la cookie. El `id` viene de la URL, así que **la autorización va antes de cualquier otra lectura**: primero se decide si esta persona lo puede ver y solo desp"
+        },
+        {
+          "nombre": "motivoSinEquivalenteDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "opciones: OpcionCliente[], actual: ActualCliente | null",
+          "retorno": "SinEquivalente | null",
+          "linea": 324,
+          "resumen": "Por qué no hay «la equivalente». Se DERIVA, porque el motivo que calculó `elegirPortada()` al preparar no se guarda en ninguna columna (lo devuelve `PresupuestoPreparado` y muere ahí). 🚨 Los dos moti"
+        },
+        {
+          "nombre": "leerOpciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "presupuestoId: string",
+          "retorno": "Promise<OpcionCliente[]>",
+          "linea": 330
+        },
+        {
+          "nombre": "leerActual",
+          "kind": "function",
+          "exportada": false,
+          "params": "polizaId: string, clienteId: string, correduriaId: string",
+          "retorno": "Promise<ActualCliente | null>",
+          "linea": 385,
+          "resumen": "La póliza que se compara. Se lee por su id **y** por el `cliente_id` del presupuesto: un `poliza_id` que apuntara a otra ficha no puede pintar aquí la casa de otro. Y se exige cartera VIVA: una del vo"
+        },
+        {
+          "nombre": "describirBienDeDatos",
+          "kind": "function",
+          "exportada": false,
+          "params": "datos: unknown",
+          "retorno": "",
+          "linea": 444,
+          "resumen": "El bien, en corto. No se usa `describirBien()` del módulo porque aquí no hace falta la ficha entera: en la cabecera de la comparativa cabe una línea. La dirección viaja CIFRADA dentro de `datos_especi"
+        },
+        {
+          "nombre": "direccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Record<string, unknown>",
+          "retorno": "string | null",
+          "linea": 452
+        },
+        {
+          "nombre": "sellarVisto",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: string, clienteId: string, vistoAt: Date | null",
+          "retorno": "Promise<void>",
+          "linea": 488,
+          "resumen": "`enviado → visto`, filtrado por el `cliente_id` que YA se ha autorizado arriba, y solo la primera vez (`coalesce(visto_at, now())` escrito como un `where vistoAt: null`). Best-effort a propósito: el p"
+        },
+        {
+          "nombre": "anotarAperturaAjena",
+          "kind": "function",
+          "exportada": false,
+          "params": "presupuestoId: string",
+          "retorno": "Promise<void>",
+          "linea": 511,
+          "resumen": "Alguien con sesión ha abierto un presupuesto que no es suyo. Se anota para que Alberto lo sepa (§3.1) — no para bloquear a nadie. ⚠️ **Se anota UNA vez por hora y por presupuesto**, no una por recarga"
+        },
+        {
+          "nombre": "ultimoVinculoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 532,
+          "resumen": "Cómo salió el último intento de vínculo de esta identidad. Se LEE del sello que dejó el canje del código: aquí no existe el correo en claro, así que no se puede recalcular."
+        },
+        {
+          "nombre": "decimal",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 546,
+          "resumen": "Prisma devuelve `numeric` como `Decimal`. Se convierte en UN solo sitio."
+        },
+        {
+          "nombre": "registrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "donde: string, e: unknown",
+          "retorno": "void",
+          "linea": 553,
+          "resumen": "El motivo sí se registra; ni el token, ni el hash del canal, ni el correo."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1d761e9fe7e5"
     },
     {
       "ruta": "apps/asegura-portal/lib/push-suscripcion.ts",
@@ -11044,7 +11461,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 726
+          "linea": 746
         },
         {
           "nombre": "numero",
@@ -11052,7 +11469,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 731
+          "linea": 751
         },
         {
           "nombre": "esObjeto",
@@ -11060,7 +11477,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 735
+          "linea": 755
         },
         {
           "nombre": "coincideCompania",
@@ -11068,7 +11485,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 739
+          "linea": 759
         }
       ],
       "tablas": [
@@ -11077,7 +11494,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "0c5dae2fa44f"
+      "hash": "5623ff68f34d"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/faltan-producto/route.ts",
@@ -11195,7 +11612,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 57,
+          "linea": 58,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate) el precio que ya se enseñó en pantalla desde una cotización REAL de `seguros.tarificaciones`. 🚨 **Construida el 11/09/2026,"
         },
         {
@@ -11204,7 +11621,16 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 444
+          "linea": 468
+        },
+        {
+          "nombre": "respuestaGastoBloqueado",
+          "kind": "function",
+          "exportada": false,
+          "params": "gasto: Extract<GastoEmision<never>, { ok: false }>",
+          "retorno": null,
+          "linea": 486,
+          "resumen": "El libro dijo que no. **Sin llamada al vendor**, y por eso se contesta con dos códigos distintos: se arreglan en sitios distintos. - `sin_libro` (503): no se ha podido leer `codeoscopic_consumo`. Es u"
         },
         {
           "nombre": "leerCorrecciones",
@@ -11212,7 +11638,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 454,
+          "linea": 503,
           "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
         },
         {
@@ -11221,7 +11647,7 @@
           "exportada": false,
           "params": "campo: CampoPersona, s: string",
           "retorno": "string | null",
-          "linea": 473
+          "linea": 522
         },
         {
           "nombre": "respuestaSigueFaltando",
@@ -11229,7 +11655,7 @@
           "exportada": false,
           "params": "campos: CampoPersona[], mensajeVendor: string",
           "retorno": null,
-          "linea": 491
+          "linea": 540
         },
         {
           "nombre": "registrarFaltaProducto",
@@ -11237,7 +11663,7 @@
           "exportada": false,
           "params": "correduriaId: string, tarificacionId: string, campos: CampoProducto[]",
           "retorno": null,
-          "linea": 519,
+          "linea": 568,
           "resumen": "Telemetría de `faltan_producto` por COMPAÑÍA (20/09/2026): saber a qué compañías les falta cobertura del Product Form Library, no solo que «alguna vez pasa». Reutiliza `seguros.operational_events` (ge"
         },
         {
@@ -11246,7 +11672,7 @@
           "exportada": false,
           "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
           "retorno": null,
-          "linea": 537
+          "linea": 586
         }
       ],
       "tablas": [
@@ -11259,7 +11685,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "e8d78045cb2f"
+      "hash": "0451e70a75f9"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -16243,6 +16669,7 @@
       "ambito": "apps/asegura",
       "resumen": "Configuración del cliente de Codeoscopic / Avant2 (tarificación). ─── Por qué esto es un helper PURO y con TRES estados ─────────────────────── Aquí no hay sandbox utilizable (las credenciales que entregó Manuel el 01/09/2026 son de PRODUCCIÓN), así que **cada cotización cuesta 0,50€ de verdad**. Es",
       "exporta": [
+        "entero",
         "resolverTopes",
         "resolverConfig",
         "explicarConfig",
@@ -16252,10 +16679,11 @@
         {
           "nombre": "entero",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "valor: string | undefined, defecto: number, maximo: number",
           "retorno": "number",
-          "linea": 68
+          "linea": 74,
+          "resumen": "Lee un entero de una env con defecto y techo. Exportado (21/09/2026) para que `gasto-emision.ts` use ESTA regla y no una copia suya: un valor ilegible cae al defecto y nunca se interpreta como «sin lí"
         },
         {
           "nombre": "resolverTopes",
@@ -16263,7 +16691,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "Topes",
-          "linea": 76
+          "linea": 82
         },
         {
           "nombre": "resolverConfig",
@@ -16271,7 +16699,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>, opciones: { ignorarInterruptor?: boolean } = {},",
           "retorno": "ResolucionConfig",
-          "linea": 87,
+          "linea": 93,
           "resumen": "Resuelve la config desde un objeto de entorno. Puro: no lee `process.env` directamente para poder probarlo."
         },
         {
@@ -16280,7 +16708,7 @@
           "exportada": true,
           "params": "r: ResolucionConfig",
           "retorno": "string",
-          "linea": 133,
+          "linea": 139,
           "resumen": "Explica en una frase por qué no se puede tarificar. Para la UI y los logs."
         },
         {
@@ -16289,13 +16717,13 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "boolean",
-          "linea": 157,
+          "linea": 163,
           "resumen": "¿Está puesto el modo simulación? Puro: solo lee del objeto de entorno."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b01806afc0a1"
+      "hash": "7e27cb6bcca4"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/consumo.ts",
@@ -16304,6 +16732,9 @@
       "exporta": [
         "consumoActual",
         "reservar",
+        "consumoEmision",
+        "reservarEmision",
+        "cerrarEmisionFacturable",
         "cerrarFacturable",
         "cerrarDescartado"
       ],
@@ -16314,8 +16745,8 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<Consumo>",
-          "linea": 27,
-          "resumen": "Cuenta lo consumido hoy y este mes por esta correduría. 🚨 NO atrapa errores. Es deliberado y es el corazón del diseño: si no podemos leer el libro, no sabemos cuánto llevamos gastado, y un tope que n"
+          "linea": 38,
+          "resumen": "Cuenta lo consumido hoy y este mes por esta correduría **en COTIZACIONES** (`POST /insurances`, 0,50€). 🚨 Desde el 21/09/2026 excluye los motivos de EMISIÓN (`rerate` / `submit`), que llevan su propi"
         },
         {
           "nombre": "reservar",
@@ -16323,8 +16754,35 @@
           "exportada": true,
           "params": "input: { correduriaId: string intentoId: string motivo: string solicitadoPor: string }",
           "retorno": "Promise<Reserva>",
-          "linea": 68,
+          "linea": 80,
           "resumen": "Abre la reserva ANTES de llamar al vendor. El orden importa: si se escribiera después, una caída entre la llamada y el INSERT dejaría un cargo real sin rastro en el libro — y el tope contaría de menos"
+        },
+        {
+          "nombre": "consumoEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, operacion: OperacionEmision,",
+          "retorno": "Promise<Consumo>",
+          "linea": 104,
+          "resumen": "Lo consumido hoy y este mes en UNA operación de emisión (`rerate` / `submit`). 🚨 Mismo contrato que `consumoActual`: **NO atrapa errores**. Si no se puede leer el libro, el llamante (`libro-emision.t"
+        },
+        {
+          "nombre": "reservarEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "input: { correduriaId: string intentoId: string operacion: OperacionEmision solicitadoPor: string costeCents: number projectId: string | null }",
+          "retorno": "Promise<Reserva>",
+          "linea": 150,
+          "resumen": "Abre la reserva de un ReRate o de un Submit ANTES de llamar al vendor. Gemela de `reservar()`, con dos diferencias que son el motivo de que exista aparte en vez de un parámetro opcional: el `motivo` e"
+        },
+        {
+          "nombre": "cerrarEmisionFacturable",
+          "kind": "function",
+          "exportada": true,
+          "params": "intentoId: string",
+          "retorno": "Promise<void>",
+          "linea": 177,
+          "resumen": "Cierra como facturable una línea de emisión. Aparte de `cerrarFacturable()` por una razón concreta: allí el `projectId` es lo que devuelve la cotización y no se conocía antes de llamar, así que el cie"
         },
         {
           "nombre": "cerrarFacturable",
@@ -16332,7 +16790,7 @@
           "exportada": true,
           "params": "intentoId: string, projectId: string",
           "retorno": "Promise<void>",
-          "linea": 85,
+          "linea": 188,
           "resumen": "El vendor respondió: hay proyecto y, por tanto, cargo."
         },
         {
@@ -16341,7 +16799,7 @@
           "exportada": true,
           "params": "intentoId: string, evidencia: string, errorCodigo: string,",
           "retorno": "Promise<void>",
-          "linea": 107,
+          "linea": 210,
           "resumen": "Cierra como NO facturable. Exige evidencia por contrato (y por CHECK en BD). Solo hay tres evidencias admisibles, y todas significan que el vendor no llegó a tarificar: fallo de autenticación (401/403"
         }
       ],
@@ -16350,7 +16808,7 @@
         "ventana"
       ],
       "rutaApi": null,
-      "hash": "f46bc5c97584"
+      "hash": "3ca332c09273"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/contador.ts",
@@ -17111,7 +17569,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 28
+          "linea": 29
         },
         {
           "nombre": "bloquearEnvio",
@@ -17119,7 +17577,7 @@
           "exportada": false,
           "params": "correduriaId: string, projectId: string, attemptId: string, producto: string, permitirQuizaEmitido: boolean,",
           "retorno": "Promise<'tomado' | 'en-vuelo' | 'quiza-emitido' | 'ya-emitida'>",
-          "linea": 49,
+          "linea": 50,
           "resumen": "Toma el candado ANTES de llamar al vendor. `false` = ya había un intento en vuelo (o reciente) para este proyecto: no se llama, para no arriesgar un segundo Submit sobre el mismo contrato mientras no "
         },
         {
@@ -17128,7 +17586,7 @@
           "exportada": false,
           "params": "correduriaId: string, projectId: string, attemptId: string, // `codeoscopic_project_estado` no tiene un valor «enviada»: el éxito del // Submit se refleja aparte, cuando `registrarPolizaEmitida` (module-seguros) // pone `estado='emitida'` a",
           "retorno": "Promise<void>",
-          "linea": 94,
+          "linea": 95,
           "resumen": "`submit_in_flight_at` se limpia siempre, se haya enviado o no, porque un candado que no se suelta deja el proyecto bloqueado para siempre."
         },
         {
@@ -17137,7 +17595,7 @@
           "exportada": true,
           "params": "config: ConfigCodeoscopic, entrada: { correduriaId: string projectId: string offerId: string campos: Record<string, unknown> /** `polizas.tipo` de la póliza enlazada — solo se usa si hay que crear la * fila de emergencia (ver `bloquearEnvio",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 141,
+          "linea": 154,
           "resumen": "`POST /insurances/{projectId}/policy-applications`, multipart. Un solo intento, con CANDADO antes de llamar (ver `bloquearEnvio`). El transporte NO reutiliza `peticion()` de `cliente.ts` (JSON puro): "
         }
       ],
@@ -17147,7 +17605,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "ac4e5f262236"
+      "hash": "76ea357ea17f"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emitir-iban.ts",
@@ -17595,6 +18053,58 @@
       "hash": "fc9e589a774f"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/gasto-emision.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El gasto de las DOS llamadas al vendor que NO pasan por `cotizar()`. Lógica PURA (sin BD, sin red), como `contador.ts`. ─── Por qué existe este fichero ───────────────────────────────────────────── `cotizar.ts` es el embudo de `POST /insurances` (0,50€ confirmados): config → ámbito → libro → tope → ",
+      "exporta": [
+        "costeEmisionCents",
+        "topesEmision",
+        "describirCoste",
+        "puedeGastarEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "costeEmisionCents",
+          "kind": "function",
+          "exportada": true,
+          "params": "operacion: OperacionEmision, env: Record<string, string | undefined>,",
+          "retorno": "number",
+          "linea": 97,
+          "resumen": "Céntimos que se apuntan por cada línea de esta operación. Puro."
+        },
+        {
+          "nombre": "topesEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "operacion: OperacionEmision, env: Record<string, string | undefined>,",
+          "retorno": "Topes",
+          "linea": 108,
+          "resumen": "se pisan con su propia env. Puro."
+        },
+        {
+          "nombre": "describirCoste",
+          "kind": "function",
+          "exportada": true,
+          "params": "operacion: OperacionEmision, llamadas: number, costeCents: number,",
+          "retorno": "string",
+          "linea": 135,
+          "resumen": "Cómo se dice lo que llevamos gastado en esta operación. 🚨 Con `costeCents = 0` **no se escribe «0,00€»**: eso afirmaría que estas llamadas son gratis, y lo único cierto es que nadie lo ha confirmado."
+        },
+        {
+          "nombre": "puedeGastarEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "operacion: OperacionEmision, consumo: Consumo, topes: Topes, costeCents: number,",
+          "retorno": "Veredicto",
+          "linea": 151,
+          "resumen": "¿Cabe UNA llamada más de esta operación? Mismo contrato que `puedeCotizar()` —y por las mismas razones: se evalúa ANTES de llamar y sobre el libro ya persistido— pero con su propio recuento y sus prop"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0d0a7346dd09"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/horquilla.ts",
       "ambito": "apps/asegura",
       "resumen": "Estimación propia de prima, a partir de casos que ya conocemos. PURO. Para qué sirve DE VERDAD: no tanto para enseñarle un precio al cliente como para decidir si merece la pena PEDIRLO. Cada cotización cuesta 0,50€ y no es idempotente. Si el cliente paga 250€ y lo que hemos visto en casas parecidas ",
@@ -17796,6 +18306,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "c3f00ce4d27a"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/libro-emision.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El embudo del ReRate y del Submit: la línea en el libro de consumo que hasta el 21/09/2026 NO se abría. Impuro (BD), como `consumo.ts`. ─── Qué copia de `cotizar.ts`, y por qué se copia el ORDEN y no el código ─── `cotizar.ts` sigue siendo el embudo de `POST /insurances` y **no se toca**. Lo que se ",
+      "exporta": [
+        "conLibroDeEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "conLibroDeEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { correduriaId: string operacion: OperacionEmision solicitadoPor: string /** Para poder explicar la factura línea a línea. Puede no conocerse aún. */ projectId: string | null }, llamada: () => Promise<T>, opciones: { evidenciaSinCargo?: ",
+          "retorno": "Promise<GastoEmision<T>>",
+          "linea": 62,
+          "resumen": "Envuelve UNA llamada al vendor con su línea en el libro. `llamada` se invoca **una sola vez** y su excepción se propaga tal cual: el caller (la cascada de reparación de `/oferta` y `/emitir`) necesita"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c96ef2e24a4f"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones-producto.ts",
@@ -142791,7 +143323,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3465,
-    "funciones": 10838
+    "archivos": 3473,
+    "funciones": 10884
   }
 }
