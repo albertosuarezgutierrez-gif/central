@@ -44,6 +44,20 @@ por esa fecha («¿te vence el seguro de X por estas fechas (mes), no?»); con `
 ningún dato) se mantiene la pregunta genérica para no inventar fecha. Solo `mensajeSugerido()` en
 `Recaptacion.tsx` (los botones manuales; el cron de email usa otro camino, sin tocar). PR #3238.
 
+**(21/09/2026)** 🪤 **Dos envíos indebidos frenados por la revisión previa al merge (PR #3250), y los
+dos venían de una PREMISA, no de código mal escrito** — por eso las mutaciones en verde no los vieron:
+prueban los cepos que escribiste, no los que te faltan. (1) Resolver el destinatario de un recordatorio
+por «el `portal_vinculo` más antiguo» se apoyaba en que todas las fichas vinculadas lo están por el
+correo de esa persona: **FALSO**, un vínculo puede nacer de `cliente_emails`, que son correos de
+CONTACTO y pueden ser de otro — el recordatorio del hijo a la bandeja de su madre, sellado bajo el
+`clienteId` de ella. Con varias fichas ya no se escribe a ninguna (como `decidirFichaPropia`), y el
+vínculo de origen `corredor` no cuenta. (2) La fecha del ciclo en la clave del sello valía para el
+recurrente y duplicaba todo lo demás: `sincronizarObligacionesDeIdentidad()` **reescribe
+`fechaAccionable` en cada carga de la bóveda**, así que una corrección de CIMA dentro de la ventana
+mandaba un segundo correo de la misma renovación. La fecha entra solo si `repiteCadaMeses`.
+⏸️ Riesgo residual declarado: con UNA ficha, `portal_vinculo` no guarda si casó por el correo canónico
+o por uno de contacto — cerrarlo pide registrar esa procedencia (DDL + portal).
+
 **(21/09/2026)** §T CERRADO (PR #3250), y con un agujero más del que estaba anotado. (1) El emisor
 genérico de la intranet excluía toda obligación **sin póliza**; como el cron de vencimientos tampoco
 las coge desde #3241, una ITV o un carné propios **no avisaban por ningún canal** sin push, con la
