@@ -16,6 +16,12 @@
 // aquí para que la copia sea UNA y no dos.
 
 import { useEffect, useMemo, useState } from 'react'
+import {
+  borrarBorrador,
+  claveBorradorRetarificar,
+  guardarBorrador,
+  leerBorrador,
+} from '@/lib/correduria/borrador-local'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
@@ -219,13 +225,12 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
 
 /**
  * Borrador LOCAL de esta pantalla — lo que se ha tecleado ANTES de pagar los
- * 0,50€. Vive en `localStorage` del navegador, no en `seguros.*`: no es una
- * cotización real, solo la red de seguridad de lo tecleado mientras tanto.
- * `guardadaPrevia` (cotización YA pagada) SIEMPRE manda sobre este borrador.
+ * 0,50€. El mecanismo (caducidad, fallos de `localStorage`, por qué no va a
+ * `seguros.*`) vive en `lib/correduria/borrador-local.ts`, compartido con la
+ * pantalla de auto NUEVO: dos copias del mismo borrador es la forma callada
+ * de que una de las dos pantallas deje de guardar.
  *
- * `localStorage` puede fallar (modo privado, cuota, o `window` sin existir
- * durante el render en servidor): un fallo aquí nunca debe romper la
- * pantalla, solo perder la comodidad de recuperar lo tecleado.
+ * `guardadaPrevia` (cotización YA pagada) SIEMPRE manda sobre este borrador.
  */
 type DatosBorrador = {
   marcaId?: string
@@ -239,50 +244,7 @@ type DatosBorrador = {
   matriculacion?: string
   correcciones?: Record<string, string>
 }
-type Borrador = DatosBorrador & { guardadoEn: number }
 
-/** El borrador puede llevar DNI/nombre/teléfono/fecha de nacimiento tecleados
- *  a mano (`correcciones`): una caducidad corta acota cuánto tiempo se queda
- *  ese dato personal en el navegador si nunca se llega a pagar la cotización
- *  (`borrarBorrador` ya lo limpia ANTES, en cuanto eso pasa). */
-const BORRADOR_TTL_MS = 3 * 24 * 60 * 60 * 1000
-
-function leerBorrador(clave: string): DatosBorrador | null {
-  try {
-    if (typeof window === 'undefined') return null
-    const raw = window.localStorage.getItem(clave)
-    if (!raw) return null
-    const b: unknown = JSON.parse(raw)
-    if (!b || typeof b !== 'object') return null
-    const { guardadoEn, ...datos } = b as Borrador
-    if (typeof guardadoEn !== 'number' || Date.now() - guardadoEn > BORRADOR_TTL_MS) {
-      window.localStorage.removeItem(clave)
-      return null
-    }
-    return datos
-  } catch {
-    return null
-  }
-}
-
-function guardarBorrador(clave: string, datos: DatosBorrador) {
-  try {
-    if (typeof window === 'undefined') return
-    const b: Borrador = { ...datos, guardadoEn: Date.now() }
-    window.localStorage.setItem(clave, JSON.stringify(b))
-  } catch {
-    // Ver el comentario del tipo: perder el borrador no puede romper nada.
-  }
-}
-
-function borrarBorrador(clave: string) {
-  try {
-    if (typeof window === 'undefined') return
-    window.localStorage.removeItem(clave)
-  } catch {
-    // Ver el comentario del tipo.
-  }
-}
 
 /**
  * Resultado de buscar un texto de la ficha en un catálogo del vendor.
@@ -445,7 +407,7 @@ export default function Retarificador({
 }) {
   // Borrador local (localStorage) de esta póliza — ver `leerBorrador`/
   // `guardarBorrador`/`borrarBorrador` arriba.
-  const claveBorrador = `asegura_retarificar_borrador_${polizaId}`
+  const claveBorrador = claveBorradorRetarificar(polizaId)
 
   // ── Vehículo: marca → modelo → versión, todo del catálogo y todo gratis ────
   const [marcas, setMarcas] = useState<Opcion[]>([])
@@ -600,7 +562,7 @@ export default function Retarificador({
       // manda sobre la preselección por ficha: son ids que YA pasaron por el
       // catálogo la vez anterior, no hay nada que emparejar por texto. Si el
       // catálogo cambió y el id ya no existe, se cae al flujo normal de abajo.
-      const borradorLocal = guardadaPrevia ? null : leerBorrador(claveBorrador)
+      const borradorLocal = guardadaPrevia ? null : leerBorrador<DatosBorrador>(claveBorrador)
       if (borradorLocal?.codigoVehiculo) setCodigoVehiculo(borradorLocal.codigoVehiculo)
       if (borradorLocal?.marcaId) {
         const marcaEncontrada = lista.find((m) => m.id === borradorLocal.marcaId)
@@ -728,7 +690,7 @@ export default function Retarificador({
   // prioridad: `guardadaPrevia` (ya pagada) manda si existe.
   useEffect(() => {
     if (deshabilitado || guardadaPrevia) return
-    const b = leerBorrador(claveBorrador)
+    const b = leerBorrador<DatosBorrador>(claveBorrador)
     if (!b) return
     if (b.garaje && garajes.some((g) => g.id === b.garaje)) setGaraje(b.garaje)
     if (b.estadoCivilId && civiles.some((c) => c.id === b.estadoCivilId)) setEstadoCivilId(b.estadoCivilId)
@@ -758,7 +720,7 @@ export default function Retarificador({
   // YA pagado y siempre manda sobre este borrador al recargar la pantalla.
   useEffect(() => {
     const t = setTimeout(() => {
-      guardarBorrador(claveBorrador, {
+      guardarBorrador<DatosBorrador>(claveBorrador, {
         marcaId,
         modeloId,
         motorId,
