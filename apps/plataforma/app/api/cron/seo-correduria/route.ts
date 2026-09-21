@@ -36,6 +36,7 @@ import { tokenCuentaServicio } from '@/lib/seo-correduria/google-sa'
 import { leerGsc } from '@/lib/seo-correduria/gsc'
 import { leerCobertura, urlsPropias } from '@/lib/seo-correduria/cobertura'
 import { leerPosthog } from '@/lib/seo-correduria/posthog'
+import { urlsBlogPendientesIndexar, promptClaudeChromeIndexacion } from '@/lib/seo-correduria/indexacion-pendiente'
 import { accionPropuesta, redactarInforme } from '@/lib/seo-correduria/informe'
 import { lunesDe } from '@/lib/seo-correduria/semana'
 
@@ -129,6 +130,18 @@ async function handler(req: NextRequest) {
   const texto = redactarInforme(semana, resultados, accion, DOMINIO_PROPIO)
   // El id va LITERAL (no en una const): el guardián lib/telegram/catalogo.test.ts lee el fuente.
   await tgAviso('correduria.seo-semana', texto, { html: true })
+
+  // Google no tiene API de «solicitar indexación» para páginas normales (solo la UI de Search
+  // Console, con sesión OAuth de Alberto): si algún artículo del blog sigue sin indexar, se manda
+  // el prompt de Claude Chrome ya armado en vez de dejar que cada semana haya que redactarlo a mano.
+  if (cobertura.estado === 'ok') {
+    const pendientes = urlsBlogPendientesIndexar(cobertura.datos)
+    const prompt = promptClaudeChromeIndexacion(pendientes)
+    if (prompt) {
+      // El id va LITERAL, igual que arriba: el guardián lee el fuente.
+      await tgAviso('correduria.seo-indexacion-pendiente', prompt)
+    }
+  }
 
   const estados = { gsc: gsc.estado, posthog: posthog.estado, cobertura: cobertura.estado }
   const todasOk = Object.values(estados).every(e => e === 'ok')

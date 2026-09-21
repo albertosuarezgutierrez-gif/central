@@ -43,6 +43,13 @@ apertura/clic; un email muerto se reintentaba cada 14 días para siempre). (2) `
 pasada del lote diario. NO se creó ningún "apartado marketing" nuevo: el sistema de recaptación (cola,
 cooldown, lote diario, pantalla en `/correduria`) YA existía y cubría casi todo lo pedido.
 
+**(21/09/2026)** Cron `seo-correduria` (lunes 08:30 UTC) ya avisa solo cuando hay artículos de
+`/blog` sin indexar en Search Console: como la API de Google no tiene «solicitar indexación» para
+páginas normales (solo la UI), el aviso trae el prompt de Claude Chrome YA ARMADO con las URLs
+pendientes — Alberto lo pega y en un clic las pide, en vez de que haya que detectarlas y
+redactarlas a mano cada semana (como se hizo hoy con 3 URLs). Nuevo `lib/seo-correduria/
+indexacion-pendiente.ts` (puro, 6 tests) + id de catálogo `correduria.seo-indexacion-pendiente`.
+
 **(21/09/2026)** Auditoría ligera — 4 PRs mergeados sin entrada de memoria (huella perdida, cazada por
 el paso 4 de `/auditoria-diaria`): **#3202** enlaza y sigue las pólizas sustituidas por retarificación
 (`poliza_origen_id`, guardián anti-duplicado, cola «Seguimiento de sustituciones» en Hoy con aviso
