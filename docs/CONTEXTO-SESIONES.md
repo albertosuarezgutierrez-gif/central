@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** **«Duplicidad» en el volcado histórico de la ficha** (PR pendiente). Alberto, con
+la captura: dos FORD FOCUS 3935GPY idénticos (mismo vencimiento 07/10/2023, sin número) cambiando
+solo la prima (210€/201€). **No era la consulta**: son dos filas reales del volcado de junio de 2026
+(`asegura_app:pol2:14569` y `:15128`). Medido: **84 grupos / 188 filas / 77 clientes**, y **0 tocan
+la cartera viva** — ruido de pantalla, no recuento mal hecho. Solo 23 grupos son byte-idénticos; el
+resto son precios distintos del mismo riesgo. Se agrupan en UNA línea con TODAS las primas
+(`agruparHistoricas` en `@central/module-seguros`), sin borrar filas y sin elegir prima; el bien
+desconocido/cifrado NO agrupa. Las vivas/canceladas siguen SIN agrupar: ahí un duplicado hay que verlo.
+
 **(21/09/2026)** **La tabla de precios de retarificar, con sentido** (PR #3248, mergeado). Alberto:
 «no tiene sentido» — 24 filas ordenadas solo por prima, mezclando coberturas no comparables. Ahora
 agrupa por nivel de cobertura, filtra, ancla en la prima que paga HOY y marca la **defensa de
