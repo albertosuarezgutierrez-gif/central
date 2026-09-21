@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-21T14:11:36Z",
-  "sha": "45e0292e88b2d6ec27a15f557d003130b1f92b54",
+  "generadoEn": "2026-09-21T15:04:28Z",
+  "sha": "31a22b086cf22e81dd860a17378ea7bfbf1aa98d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -79806,57 +79806,6 @@
       "hash": "cded09e0f8ec"
     },
     {
-      "ruta": "apps/plataforma/app/api/internal/grafo-codigo/embeddings/route.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "/api/internal/grafo-codigo/embeddings — Calcula los embeddings del grafo de código (búsqueda semántica propia, sustituto de query_graph/rank_files de Graphify). Lo llama auditoria.yml (scripts/grafo-embeddings-inyectar.mjs) tras inyectar el mapa; se puede llamar varias veces: cada pasada sincroniza ",
-      "exporta": [
-        "POST"
-      ],
-      "funciones": [
-        {
-          "nombre": "POST",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 20
-        }
-      ],
-      "tablas": [
-        "grafo_embeddings",
-        "grafo_embeddings_sync",
-        "next"
-      ],
-      "rutaApi": "/api/internal/grafo-codigo/embeddings",
-      "hash": "bf7e07051624"
-    },
-    {
-      "ruta": "apps/plataforma/app/api/internal/grafo-codigo/route.ts",
-      "ambito": "apps/plataforma",
-      "resumen": "/api/internal/grafo-codigo — Puerto de INYECCIÓN del grafo de código (nodos + aristas) en Supabase. Lo llama scripts/grafo-codigo-inyectar.mjs desde el workflow .github/workflows/auditoria.yml (solo desde main) con el JSON que genera scripts/grafo-codigo.mjs (NO se commitea: ~15 MB), partido en lote",
-      "exporta": [
-        "POST"
-      ],
-      "funciones": [
-        {
-          "nombre": "POST",
-          "kind": "function",
-          "exportada": true,
-          "params": "req: NextRequest",
-          "retorno": null,
-          "linea": 26
-        }
-      ],
-      "tablas": [
-        "grafo_aristas",
-        "grafo_nodos",
-        "next",
-        "set"
-      ],
-      "rutaApi": "/api/internal/grafo-codigo",
-      "hash": "f10ff1d2e6d8"
-    },
-    {
       "ruta": "apps/plataforma/app/api/internal/gsc/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "/api/internal/gsc — Search Console A DEMANDA (la otra mitad del cron de los lunes). El cron `/api/cron/seo-correduria` lee SIEMPRE lo mismo (7 días cerrados, `query` + `page`, `sc-domain:grupoasegura.es`) y lo guarda en `seo_correduria_semana`. Esto sirve la pregunta suelta —otro rango, otras dimens",
@@ -79971,7 +79920,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 18
+          "linea": 22
         }
       ],
       "tablas": [
@@ -79979,7 +79928,7 @@
         "next"
       ],
       "rutaApi": "/api/internal/memoria/embeddings",
-      "hash": "c64ef492d104"
+      "hash": "740b98d8af3b"
     },
     {
       "ruta": "apps/plataforma/app/api/internal/memoria/route.ts",
@@ -142018,7 +141967,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3452,
-    "funciones": 10771
+    "archivos": 3450,
+    "funciones": 10769
   }
 }

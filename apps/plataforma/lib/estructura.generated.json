@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-21T12:55:09Z",
+  "generadoEn": "2026-09-21T15:04:28Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5038,8 +5038,6 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
-      "/api/internal/grafo-codigo",
-      "/api/internal/grafo-codigo/embeddings",
       "/api/internal/gsc",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
@@ -5644,9 +5642,6 @@
       "empresas_ficha",
       "facturas_proveedor",
       "fiscal_ayudas",
-      "grafo_aristas",
-      "grafo_embeddings",
-      "grafo_nodos",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
@@ -5969,6 +5964,11 @@
       "id": "verification-before-completion",
       "name": "verification-before-completion",
       "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always"
+    },
+    {
+      "id": "vigia-infra",
+      "name": "vigia-infra",
+      "description": "Agente PROGRAMADO mensual (día 8) que vigila los LÍMITES de la infraestructura — tamaño y plan de Supabase contra su cuota, hinchazón recuperable, advisors, Build Minutes y ritmo de deployments de Vercel, máquinas de Fly. Estado en docs/VIGIA-INFRA.md; Telegram + PR draft. Úsala si Alberto pregunta \"¿estamos cerca de algún límite?\" / \"¿vamos a tener que pagar algo?\" o al disparo mensual. Sin secretos."
     },
     {
       "id": "writing-plans",
@@ -6433,8 +6433,8 @@
     "verticales": 13,
     "packages": 42,
     "capacidades": 23,
-    "skills": 41,
-    "apis": 1399,
+    "skills": 42,
+    "apis": 1397,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
