@@ -16,6 +16,7 @@
 // sobre el CP, el municipio del catálogo de Codeoscopic), nunca la calle suelta.
 import { resolverTipoViaPorNombre } from '@central/core-catastro/http'
 import { partirDireccion, siglaCanonica, emparejarNombreVia } from './direccion.ts'
+import { provinciaAlternativa } from '../direccion/provincia.ts'
 import type { Opcion } from './catalogos.ts'
 import type { ClienteCartera } from './desde-cartera.ts'
 
@@ -33,34 +34,6 @@ export type TipoViaPorCatastro =
   | { estado: 'sin_match_catalogo'; nombreCatastro: string }
   /** Fallo de red o del servicio: no se sabe, no se afirma nada. */
   | { estado: 'error' }
-
-/**
- * `provinciaPorCp()` devuelve el nombre CO-OFICIAL moderno («Bizkaia»,
- * «Gipuzkoa», «A Coruña»…), que es el que usa el resto de la ficha
- * (`@central/module-seguros/sitio.ts` ya avisa: «el volcado trae unas y
- * `provinciaPorCp` devuelve otras»). El callejero del Catastro es un servicio
- * de los años 90 y responde con el nombre CLÁSICO («Vizcaya», «Guipúzcoa»,
- * «La Coruña»…) — sin traducir, `Provincia=Bizkaia` no encuentra nada y el
- * fallo se ve idéntico a «esa calle no existe» (`no_encontrada`), que es
- * justo el mismo silencio que ya documenta `sitio.ts` para la comparación.
- * No verificado contra el servicio real (sin red en desarrollo): por eso se
- * intentan las DOS formas en vez de apostar por una, y solo si ninguna
- * encuentra nada se declara `no_encontrada`.
- */
-const PROVINCIA_CLASICA: Record<string, string> = {
-  bizkaia: 'Vizcaya',
-  gipuzkoa: 'Guipúzcoa',
-  araba: 'Álava',
-  'a coruña': 'La Coruña',
-  girona: 'Gerona',
-  lleida: 'Lérida',
-  ourense: 'Orense',
-  'illes balears': 'Baleares',
-}
-
-function provinciaAlternativa(provincia: string): string | null {
-  return PROVINCIA_CLASICA[provincia.trim().toLowerCase()] ?? null
-}
 
 export async function tipoViaDelTomadorPorCatastro(
   cliente: Pick<ClienteCartera, 'direccion'>,

@@ -43,6 +43,26 @@ const TIPOS_VIA: Record<string, string> = {
 }
 
 /**
+ * El sentido CONTRARIO de `TIPOS_VIA`: del nombre canónico («Plaza») a la
+ * sigla corta que el callejero del Catastro (`ConsultaVia`/`Consulta_DNPLOC`)
+ * espera en su parámetro `TipoVia`/`Sigla` («PZ»). Recortar el nombre a sus
+ * dos primeras letras NO sirve — «Plaza» daría «PL» y el Catastro usa «PZ»,
+ * «Paseo» y «Pasaje» colisionarían en «PA»… Una sigla por canónico, la MISMA
+ * que ya usa `direccionDesdeCatastro()` en la dirección contraria.
+ */
+const SIGLA_DE_TIPO_VIA: Record<string, string> = {
+  Calle: 'CL', Avenida: 'AV', Plaza: 'PZ', Paseo: 'PS', Camino: 'CM',
+  Carretera: 'CR', Ronda: 'RD', 'Urbanización': 'UR', 'Travesía': 'TR',
+  Glorieta: 'GL', Barrio: 'BO', Barriada: 'BDA', Pasaje: 'PJ', 'Callejón': 'CJ',
+  Lugar: 'LG', 'Polígono': 'PG', Alameda: 'AL', Cuesta: 'CTA',
+}
+
+/** La sigla del Catastro para un tipo de vía canónico. `null` si no está en la tabla. */
+export function siglaDeTipoVia(nombreCanonico: string): string | null {
+  return SIGLA_DE_TIPO_VIA[nombreCanonico] ?? null
+}
+
+/**
  * De `paramsDnploc()` (`@central/core-catastro`, que sí entiende «Es:1 Pl:01
  * Pt:IZ») a `DireccionPartida`. Existe porque `partirDireccion()` de aquí
  * abajo está pensado para el texto libre de la ficha del CRM y no reconoce el

@@ -20,6 +20,7 @@ import {
   type IdentidadFicha,
   type ResultadoEscritura,
 } from '@/lib/cliente-edicion-asegura'
+import DireccionConfirmable from './DireccionConfirmable'
 
 /**
  * Editar la IDENTIDAD de un cliente de la correduría, desde la ficha de
@@ -140,7 +141,14 @@ export function EditarDireccion({ clienteId, contacto }: {
       )}
       <form onSubmit={guardar} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
         <Campo label="Dirección" mal={campoMal === 'direccion'}>
-          <input value={f.direccion} onChange={(e) => set('direccion', e.target.value)} placeholder={contacto.direccionIlegible ? 'cifrada: no se puede leer' : 'Calle, número, piso'} style={campo} />
+          <DireccionConfirmable
+            value={f.direccion}
+            onChange={(v) => set('direccion', v)}
+            codigoPostal={f.codigoPostal}
+            ciudad={f.ciudad}
+            placeholder={contacto.direccionIlegible ? 'cifrada: no se puede leer' : 'Calle, número, piso'}
+            style={campo}
+          />
         </Campo>
         <div className="edicion-fila" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
           <Campo label="Código postal" mal={campoMal === 'codigoPostal'}>

@@ -637,6 +637,61 @@ export async function impagadosAsegura(): Promise<Impagados> {
   }
 }
 
+// ── Confirmar dirección (alta/edición de cliente) ───────────────────────────
+//
+// «Escribo la calle y me sale confirmar de una lista» (Alberto, 21/09/2026):
+// mientras se teclea la dirección en `NuevoCliente`/`EditarCliente`, un
+// debounce pregunta al callejero oficial del Catastro (gratis, sin sesión
+// del cliente ni gasto) y devuelve un candidato para aceptar con un clic. NO
+// escribe nada en la cartera: es una consulta al formulario, antes de guardar.
+
+export type CandidatoDireccionConfirmable = { texto: string }
+
+export type ConfirmacionDireccion =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'candidato'; candidato: CandidatoDireccionConfirmable }
+  /** No hay provincia+municipio con los que acotar la pregunta al callejero. */
+  | { estado: 'sin_lugar' }
+  | { estado: 'sin_calle' }
+  | { estado: 'ambigua' }
+  | { estado: 'no_encontrada' }
+
+const ESTADOS_DIRECCION_ASEGURA = new Set(['candidato', 'sin_lugar', 'sin_calle', 'ambigua', 'no_encontrada', 'error'])
+
+export function interpretarConfirmacionDireccion(status: number, json: unknown): ConfirmacionDireccion {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  const estado = cadena(o.estado)
+  if (estado === null || !ESTADOS_DIRECCION_ASEGURA.has(estado)) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  if (estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (estado !== 'candidato') return { estado } as ConfirmacionDireccion
+  const c = o.candidato
+  const texto = typeof c === 'object' && c !== null ? cadena((c as Record<string, unknown>).texto) : null
+  if (texto === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+  return { estado: 'candidato', candidato: { texto } }
+}
+
+export async function confirmarDireccionAsegura(
+  direccion: string,
+  codigoPostal: string,
+  municipio: string,
+): Promise<ConfirmacionDireccion> {
+  const qs = new URLSearchParams({ direccion, codigoPostal, municipio })
+  try {
+    const r = await pedir(`/api/operador/direccion/confirmar?${qs.toString()}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarConfirmacionDireccion(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
 // ── Seguimiento de sustituciones (cambio de compañía) ───────────────────────
 //
 // Pólizas marcadas `sustituida_at` (se retarificó y se EMITIÓ de verdad con
