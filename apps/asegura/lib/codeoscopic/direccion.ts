@@ -84,7 +84,23 @@ export function tipoViaDeFicha(
 ): { id: string; nombre: string } | null {
   const tipo = partirDireccion(direccion ?? null).tipoVia
   if (tipo === null) return null
-  const buscado = normalizarToken(tipo)
+  return emparejarNombreVia(tipo, catalogo)
+}
+
+/** El nombre canónico («Calle», «Avenida»…) de un código de tipo de vía tal como
+ * lo escribe el CATASTRO en su callejero oficial («CL», «AV»…) — mismas siglas
+ * que las del CRM, reutiliza `TIPOS_VIA`. `null` si el código no está en la
+ * tabla (el Catastro tiene tipos raros que el CRM nunca escribe: «CJVN», «PZA»
+ * con otra grafía…): entonces no se afirma nada, se pregunta al corredor. */
+export function siglaCanonica(sigla: string): string | null {
+  return TIPOS_VIA[normalizarToken(sigla)] ?? null
+}
+
+export function emparejarNombreVia(
+  nombreCanonico: string,
+  catalogo: ReadonlyArray<{ id: string; nombre: string }>,
+): { id: string; nombre: string } | null {
+  const buscado = normalizarToken(nombreCanonico)
   const coincidencias = catalogo.filter((o) => normalizarToken(o.nombre) === buscado)
   return coincidencias.length === 1 ? coincidencias[0] : null
 }

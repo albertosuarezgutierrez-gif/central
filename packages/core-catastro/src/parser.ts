@@ -330,19 +330,33 @@ export function parsearVias(xml: string): Array<{ tipo: string; nombre: string }
  * es peor que no ubicar.
  */
 export function elegirVia(vias: Array<{ tipo: string; nombre: string }>, buscada: string): string | null {
+  return elegirViaConTipo(vias, buscada)?.nombre ?? null
+}
+
+/**
+ * Igual que `elegirVia()`, pero conserva el `tipo` (`tv`) de la vía ganadora —
+ * el código de tipo de vía OFICIAL del callejero («CL», «AV»…). `elegirVia()`
+ * lo tira porque hasta ahora nadie lo necesitaba (la dirección venía con su
+ * tipo ya puesto); `resolverTipoViaPorNombre()` sí, para el caso en que la
+ * ficha NO trae tipo de vía reconocible y hay que preguntárselo al callejero.
+ */
+export function elegirViaConTipo(
+  vias: Array<{ tipo: string; nombre: string }>,
+  buscada: string,
+): { tipo: string; nombre: string } | null {
   if (!vias.length) return null
   const objetivo = tokensVia(buscada)
-  if (!objetivo.length) return vias.length === 1 ? vias[0].nombre : null
+  if (!objetivo.length) return vias.length === 1 ? vias[0] : null
 
   const candidatas = vias
-    .map((v) => ({ nombre: v.nombre, tokens: tokensVia(v.nombre) }))
+    .map((v) => ({ tipo: v.tipo, nombre: v.nombre, tokens: tokensVia(v.nombre) }))
     .filter((v) => objetivo.every((t) => v.tokens.includes(t)))
   if (!candidatas.length) return null
 
   candidatas.sort((a, b) => a.tokens.length - b.tokens.length)
   // Dos candidatas igual de ajustadas = ambigüedad real, no se elige a dedo.
   if (candidatas.length > 1 && candidatas[0].tokens.length === candidatas[1].tokens.length) return null
-  return candidatas[0].nombre
+  return { tipo: candidatas[0].tipo, nombre: candidatas[0].nombre }
 }
 
 /**
