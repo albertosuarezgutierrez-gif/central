@@ -13,6 +13,22 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** 🪤 **La pasada de `code-review` antes de sacar el PR de draft se ganó el sueldo:
+6 hallazgos, 4 reales, ninguno lo cazaba un test.** El peor: al borrar la ruta del grafo se fue con
+ella `grafo_guardar_clave()`, **el único escritor de la clave de OpenRouter en Vault** — la memoria
+semántica solo la LEE, así que si Vault la perdía `memoria_buscar` moría en 503 sin camino de vuelta
+en código. Escritor trasladado a `/api/internal/memoria/embeddings` y función recreada en la BD.
+Segundo: `docs/USO-HERRAMIENTAS.md` entró en el PR diario de la radiografía pero NO en `es_registro()`
+del automerge → el PR entero (los cuatro generados) dejaba de aterrizar en `main`; cepo visto en ROJO
+antes de arreglarlo. Tercero: el SQL del grafo seguía en el repo creando funciones sobre tablas ya
+borradas (reprovisionar abortaba) — partido en `2026-09-21_motor_embeddings.sql`, que deja SOLO el
+motor que usa la memoria; los nombres siguen `grafo_*` porque así están vivos en la BD. Cuarto: la
+tabla de ahorro llevaba dentro la fecha de generación, así que cambiaba a diario aunque los datos no
+→ el corte «sin cambios» del workflow no saltaba nunca. Y dos de higiene: el `rastreador-codigo` se
+vendía como solo-lectura **con `Bash` en las herramientas**, y `vigia-infra` se autorizaba un
+`VACUUM FULL` (lock ACCESS EXCLUSIVE) sobre la BD compartida sin OK de Alberto. Los dos, corregidos.
+Tests 967/967, typecheck de plataforma limpio. PR #3242.
+
 **(21/09/2026)** 🤖 **Dos agentes nuevos, los dos nacidos de fallos medidos hoy.**
 **`vigia-infra`** (skill, mensual día 8, `docs/VIGIA-INFRA.md`): mide los TECHOS —Supabase en % de
 su cuota, hinchazón recuperable, Build Minutes y ritmo de deployments de Vercel, máquinas de Fly—.

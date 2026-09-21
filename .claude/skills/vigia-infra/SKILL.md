@@ -55,9 +55,14 @@ Por `mcp__Supabase__*` sobre **`wswbehlcuxqxyinousql`** (`central`):
    decirlo. El 21/09 el negocio de las trece apps sumaba <80 MB y el resto era utillaje de agentes.
 5. **`get_advisors`** (`security` y `performance`), y se citan con su URL de remedio.
 
-**Lo que NO haces:** borrar. Mides, propones con cifras y esperas a Alberto. La única excepción son
-los `VACUUM FULL` sobre tablas de log internas sin filas vivas, que no pierden nada — y aun esos se
-anotan en el informe uno por uno.
+**Lo que NO haces: escribir en la BD.** Mides, propones con cifras y esperas a Alberto — y eso
+incluye el `VACUUM FULL`, por tentador que sea. No pierde datos, pero toma un lock **ACCESS
+EXCLUSIVE** sobre la tabla: en la BD COMPARTIDA de producción eso deja fuera a la cartera de la
+correduría, a las finanzas y a las trece apps mientras dura, y esta rutina corre sola de
+madrugada. Decidir si una tabla es «log interno sin filas vivas» es además un juicio, y un juicio
+equivocado aquí se paga con una pantalla colgada. Lo que sí haces: dejar en el informe la lista de
+tablas candidatas con sus MB recuperables y la sentencia exacta, una por línea, listas para que
+Alberto dé el OK.
 
 ## Paso 2 — Vercel
 

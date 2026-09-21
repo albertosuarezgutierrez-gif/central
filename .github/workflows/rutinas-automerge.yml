@@ -130,6 +130,11 @@ jobs:
               apps/plataforma/lib/estructura.generated.json) return 0 ;;
               docs/ARQUITECTURA.generated.md)                return 0 ;;
               docs/mapa-funciones.generated.json)            return 0 ;;
+              # La tabla de ahorro agregada, regenerada por la MISMA pasada de auditoria.yml
+              # desde 21/09/2026 y commiteada en el MISMO PR que los tres de arriba. Es un
+              # recuento de lo ya medido, no una decisión. Sin esta línea el PR diario entero
+              # —los cuatro ficheros— cae fuera del carril 1 y deja de aterrizar en `main`.
+              docs/USO-HERRAMIENTAS.md)                      return 0 ;;
               # Landing de House Sevillana: la reescribe el agente SEO de sivra cada lunes.
               # Es código, sí, pero es el ÚNICO fichero de código que escribe un agente sin
               # humano delante, y lo guarda el test que pilló el fallo de #1487: si el agente
