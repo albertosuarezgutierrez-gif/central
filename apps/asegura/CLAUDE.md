@@ -469,6 +469,17 @@ una solicitud (el filtro la excluye).
   formulario, y ninguno se decide a favor del cliente sin que él lo diga— **solo si nadie ya puso `product`**
   (el JSON avanzado del corredor manda). El proyecto 40685793 quedó inservible (fecha de efecto caducada el
   14/09) y no se recuperó; el arreglo es para el SIGUIENTE Submit de Allianz.
+  ✅ **VERIFICADO EN REAL el 21/09/2026: el arreglo funciona.** Primera póliza de auto emitida con éxito
+  (proyecto 40769244, oferta Q2021593788, Allianz), sin errores, confirmado por Alberto a Codeoscopic. El
+  `product.options` por defecto en el Submit deja de ser una hipótesis sin probar.
+  🚨 **Y confirmado por Codeoscopic (Juan Manuel Fernández, 21/09/2026): la API REST SOLO cubre 6 ramos —
+  Car, Motorcycle, Home, Health, Burial, Term Life— y NO hay ninguna intención de añadir más.** Alberto
+  preguntó por **Comercios** y **Comunidades**, que están HABILITADOS Y ACTIVADOS en el panel de Avant2
+  Sales Manager con Occident y Reale como aseguradoras configuradas — pero eso es solo el panel web: no
+  existe endpoint, catálogo ni referencia a esos dos ramos en `portal.api-int.codeoscopic.io`. Es la misma
+  lección que ya dejó el hallazgo de RC más abajo (RC tampoco tiene ramo en Codeoscopic), aplicada a dos
+  ramos más: **un ramo activado en el panel no implica que se pueda tarificar/emitir por API.** Si aparece
+  un cliente con seguro de Comercios o Comunidades, se llama a la compañía — no hay endpoint que cablear.
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 
