@@ -35,6 +35,42 @@ por esa fecha («¿te vence el seguro de X por estas fechas (mes), no?»); con `
 ningún dato) se mantiene la pregunta genérica para no inventar fecha. Solo `mensajeSugerido()` en
 `Recaptacion.tsx` (los botones manuales; el cron de email usa otro camino, sin tocar). PR #3238.
 
+**(21/09/2026)** Tercera pasada del PR #3241: la revisión obligatoria antes de sacar de draft cazó
+**cuatro** cosas, una de ellas **regresión mía**. (1) 💣 `avisosDe()` formateaba la fecha del carné
+ANTES de validarla → una fecha basura era `RangeError` y tumbaba `/api/avisos` ENTERA (500, no `n+`) y
+la pasada del emisor de intranet **para todos los clientes**. (2) 🚨 Al quitar los recordatorios
+propios del cron de correo, `avisadaAt` dejó de sellarse y el avance de ciclo lo exigía: sin push, un
+«ITV cada 12 meses» se quedaba clavado PARA SIEMPRE — antes lo avanzaba, de rebote, el correo
+equivocado. Tercer brazo por TIEMPO (la misma ventana del aviso). (3) El cron de **push** mandaba el
+texto de renovación de póliza sobre una ITV; ahí NO se excluyen (es el único canal de un recordatorio
+sin póliza): se arregla el TEXTO, por tipo. (4) El aviso de carné caducado enlazaba a «Mis datos»,
+donde el carné no se pinta. 🪤 Lección: los cuatro salieron de correr `code-review` sobre la tanda
+que ya se había dado por verificada con 15 mutaciones en verde — **las mutaciones prueban los cepos
+que escribiste, no los que te faltan**.
+
+**(21/09/2026)** Segunda tanda del PR #3241, sobre lo mismo. (1) Aviso **`carnet_caducado`** en la
+campana del portal: el catálogo solo miraba el carné *por* caducar, así que el ya caducado
+desaparecía justo cuando hace falta decirlo (ventana 730 días, excluyente con el de proximidad, texto
+no acusatorio). (2) 🚨 **Fallo serio que mi propia precarga hacía alcanzable**: el cron de
+vencimientos de `apps/asegura` cogía TODA obligación con `avisadaAt: null` sin mirar el tipo, y su
+correo dice «el seguro vence el X» — con la ITV colgada de su póliza, el cliente leería que se queda
+sin cobertura. Arreglado en la raíz (`tipo: { notIn: TIPOS_RECORDATORIO_PROPIO }`, que sube al módulo
+puro). (3) Catálogo §R-§V. ⏸️ **§T queda SIN arreglar a propósito** (decisión de Alberto): los
+recordatorios recurrentes se pueden quedar clavados —el emisor genérico sella en `portal_aviso_enviado`
+mientras `avanzarRecordatoriosRecurrentes` exige `avisadaAt`/`avisadaPushAt`, y excluye los que no
+tienen póliza— y tocarlo es tocar un cron que escribe a clientes reales.
+
+**(21/09/2026)** Precarga de recordatorios en el portal del cliente (PR #3241, §B de
+`CORREDURIA-INTRANET-IDEAS`). Alberto: «esto se podría automatizar más… ¿tienes datos de clientes?».
+Sí, de dos: el **carné** (ya lo calcula `caducidadCarnet()` en asegura) y la **ITV** (periodicidad
+legal RD 920/2017 sobre la matriculación, estimada de la matrícula con `fechaMatriculacionEstimada()`).
+🚨 La decisión que manda: **no valen lo mismo**. `firme` (carné) entra sola en el formulario;
+`calculada` (ITV) se OFRECE con lo supuesto delante y solo entra si la persona la acepta — trato de
+Catastro. Lo decide `precargasDeRecordatorio()` en el módulo puro, NO el JSX, con guardián de raíz.
+`code-review` cazó 5, una grave: el escalón a ITV anual de los 10 años se saltaba un ciclo entero en
+los matriculados un 29 de febrero (119 meses ≠ 120). 11 mutaciones vistas en rojo. ⏸️ Sin probar en
+navegador ni medir a 320px (hace falta sesión del portal + BD): declarado en el PR.
+
 **(21/09/2026)** Recaptación + control de WhatsApp en Renovaciones. (1) `(legacy)` (26.987 pólizas del
 volcado, centinela del importador) se colaba como «compañía» en «Antes con» y en el mensaje de
 recaptación («que tuviste con (legacy)»); ahora se normaliza a `null`. (2) Recaptación ya tenía cooldown

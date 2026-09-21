@@ -7,6 +7,7 @@ import {
 } from '@central/module-seguros-portal'
 
 import { companiasConCanal } from '@/lib/canales-compania'
+import { carnetsDeIdentidad } from '@/lib/carnets'
 import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { listarContactosPropios } from '@/lib/contactos-propios'
 import { prisma } from '@/lib/db'
@@ -36,6 +37,7 @@ import {
   agruparCartera,
   avisoPartesConservados,
   consentimientoVigente,
+  precargasDeRecordatorio,
   VERSION_TEXTO_COMERCIAL,
   nombreDePila,
   saludoPorHora,
@@ -130,7 +132,70 @@ export default async function Boveda({
   // misma regla de rendimiento que el resto de la página (el servidor manda
   // solo lo que se pide). El array vacío en las demás vistas no se enseña en
   // ningún sitio, así que no hace falta que sea correcto, solo que exista.
-  const recordatorios = vista === 'recordatorios' ? await recordatoriosDeIdentidad(identidad.id) : []
+  // Los dos van en el MISMO `Promise.all` y no en serie: el del carné sale por
+  // el puente a `apps/asegura`, que tiene un tope de 8 s, y encadenado se los
+  // sumaría al render de la pestaña. Es la misma razón por la que `leerMisDatos`
+  // viaja arriba con los demás.
+  const [recordatorios, carnets] =
+    vista === 'recordatorios'
+      ? await Promise.all([
+          recordatoriosDeIdentidad(identidad.id),
+          // 🚨 `carnetsDeIdentidad` LANZA cuando no se ha podido mirar (puente
+          // caído, varias fichas, fecha ilegible). Aquí eso NO puede tumbar la
+          // bóveda entera por una precarga: se captura, se registra el motivo y
+          // se pasa `null`, que la pantalla declara como «no hemos podido
+          // comprobarlo» — nunca como «no tienes carné».
+          carnetsDeIdentidad(identidad.id).catch((e: unknown) => {
+            console.error('[boveda] carnés ilegibles para precargar', e instanceof Error ? e.message : e)
+            return null
+          }),
+        ])
+      : [[], null]
+
+  // Lo que YA SABEMOS y se le puede ofrecer precargado en esa misma pestaña
+  // (21/09/2026). Alberto, mirando el formulario vacío: «esto se podría
+  // automatizar más… ¿tienes datos de clientes?». De dos cosas sí:
+  //
+  //  · el CARNÉ, por el puente a `apps/asegura` (la fecha de expedición y la de
+  //    nacimiento van cifradas y este portal no tiene la clave, así que allí se
+  //    calcula la caducidad y aquí solo llega el resultado).
+  //  · la ITV, aplicando la periodicidad legal a la matrícula que YA está leída
+  //    arriba: ni una consulta más.
+  //
+  // 🚨 El cálculo va en el SERVIDOR a propósito, no en `Recordatorios.tsx`:
+  // `proximaItv()` tira de `@central/module-seguros` para estimar la
+  // matriculación, y ese paquete importado desde un componente de cliente se
+  // llevaría la cartera entera al bundle (misma razón que `reparosDeContacto`).
+  //
+  const precargas =
+    vista === 'recordatorios'
+      ? precargasDeRecordatorio({
+          carnets,
+          polizas: [
+            ...[...cartera.propias, ...cartera.autorizadas].flatMap((t) =>
+              t.polizas
+                // 🚨 Una póliza que ya NO está en vigor no sugiere nada: quien
+                // vendió el coche no quiere un recordatorio de su ITV, y es la
+                // misma confusión que llevó a `FiltroVigencia` («lo suyo es ver
+                // solo las pólizas en vigor y ocultar las canceladas porque da
+                // confusión», Alberto, 09/09/2026). `pendiente` —sin fecha, no
+                // se sabe— SÍ entra: esconder lo que no se sabe sería decidir
+                // por la persona que su seguro caducó.
+                .filter((p) => p.vigencia !== 'no_vigente')
+                .map((p) => ({ valor: `cartera:${p.id}`, ramo: p.ramo, matricula: p.bien.matricula })),
+            ),
+            ...declaradas.map((p) => ({
+              valor: `declarada:${p.id}`,
+              ramo: p.ramo,
+              matricula: p.matricula,
+              // Columna `date`: llega como medianoche UTC, así que el ISO
+              // recortado es exactamente el día, sin desfase de zona.
+              fechaMatriculacion: p.fechaMatriculacion ? p.fechaMatriculacion.toISOString().slice(0, 10) : null,
+            })),
+          ],
+          hoy: new Date(),
+        })
+      : { precargas: [], carnetsIlegibles: false }
 
   // La casilla comercial (19/09/2026): su estado vigente es la ÚLTIMA fila de
   // `portal_consentimiento` de tipo `comercial`, y `null` = nunca preguntado.
@@ -567,7 +632,14 @@ export default async function Boveda({
         </>
       )}
 
-      {vista === 'recordatorios' && <Recordatorios recordatorios={recordatorios} polizas={polizasParte} />}
+      {vista === 'recordatorios' && (
+        <Recordatorios
+          recordatorios={recordatorios}
+          polizas={polizasParte}
+          precargas={precargas.precargas}
+          carnetsIlegibles={precargas.carnetsIlegibles}
+        />
+      )}
 
     </>
   )

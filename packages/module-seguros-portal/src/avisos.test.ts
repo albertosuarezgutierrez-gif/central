@@ -160,7 +160,6 @@ test('un carné entra solo en su ventana (60 días), no en los 7 de las obligaci
     { id: 'c1', tipo: 'B', fechaCaducidad: fecha(0) },
     { id: 'c2', tipo: 'B', fechaCaducidad: fecha(60) },
     { id: 'c3', tipo: 'C', fechaCaducidad: fecha(61) },
-    { id: 'c4', tipo: 'B', fechaCaducidad: fecha(-1) },
   ]
   const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
   assert.deepEqual(r.avisos.map((a) => a.id), ['c1', 'c2'])
@@ -169,8 +168,78 @@ test('un carné entra solo en su ventana (60 días), no en los 7 de las obligaci
   assert.match(r.avisos[0]!.titulo, /\(B\) caduca pronto/)
 })
 
+test('🚨 un carné YA CADUCADO avisa: antes el aviso desaparecía justo al caducar', () => {
+  // El hueco que tapa esto: `entraEnVentanaCarnet` exige futuro, así que el
+  // sistema se callaba el día que empieza el problema.
+  const carnets = [{ id: 'c4', tipo: 'B', fechaCaducidad: fecha(-1) }]
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
+  assert.equal(r.avisos.length, 1)
+  assert.equal(r.avisos[0]!.tipo, 'carnet_caducado')
+  // Lleva a «Recordatorios», que es donde el carné se ve; «Mis datos» no lo
+  // pinta, así que ahí el enlace mandaría a buscar algo que no está.
+  assert.equal(r.avisos[0]!.href, '/boveda?vista=recordatorios')
+})
+
+test('🚨 el aviso de caducado NO acusa: dice lo que nos consta y ofrece corregirlo', () => {
+  const carnets = [{ id: 'c4', tipo: 'B', fechaCaducidad: fecha(-30) }]
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
+  const a = r.avisos[0]!
+  assert.match(a.titulo, /[Nn]os consta/)
+  assert.match(a.detalle, /[Ss]i ya lo has renovado/)
+  // La fecha que tenemos puede estar vieja: no se afirma como un hecho sobre
+  // la CONDUCTA de la persona. («carné de conducir» es el nombre del
+  // documento, no una acusación — por eso el cepo busca la frase, no la
+  // palabra suelta: la primera versión de este test se disparaba con el propio
+  // nombre del carné.)
+  const texto = `${a.titulo} ${a.detalle}`
+  for (const acusacion of [/conduces sin/i, /est[áa]s conduciendo/i, /no puedes conducir/i]) {
+    assert.ok(!acusacion.test(texto), `el aviso acusa: ${acusacion}`)
+  }
+})
+
+test('🚨 un carné caducado hace AÑOS deja de afirmarse: el dato ya no se sabe', () => {
+  const carnets = [
+    { id: 'reciente', tipo: 'B', fechaCaducidad: fecha(-730) },
+    { id: 'viejo', tipo: 'B', fechaCaducidad: fecha(-731) },
+  ]
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
+  assert.deepEqual(r.avisos.map((a) => a.id), ['reciente'])
+})
+
+test('🚨 un carné no puede salir a la vez como «caduca pronto» y «ya caducó»', () => {
+  for (const n of [-731, -730, -1, 0, 1, 60, 61]) {
+    const carnets = [{ id: 'c', tipo: 'B', fechaCaducidad: fecha(n) }]
+    const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
+    assert.ok(r.avisos.length <= 1, `día ${n}: ${r.avisos.length} avisos del mismo carné`)
+  }
+})
+
 test('carnets: null se declara ilegible, igual que las demás fuentes', () => {
   const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets: null, hoy: HOY })
   assert.deepEqual(r.fuentesIlegibles, ['carnets'])
   assert.equal(r.globo, '0+')
+})
+
+test('🚨 una fecha de carné malformada se SALTA: no puede tumbar toda la campana', () => {
+  // El puente solo comprueba que `fechaCaducidad` sea una cadena. Formatear la
+  // fecha antes de validarla convertía una basura en `RangeError: Invalid time
+  // value`, que sube por `avisosDe()` entera: la campana devuelve 500 en vez de
+  // degradar a `n+`, y la pasada del emisor de intranet se aborta para TODOS
+  // los clientes por el carné de uno.
+  for (const malformada of ['', '   ', 'no es una fecha', '2026-13-45', '0000-00-00']) {
+    const carnets = [{ id: 'malo', tipo: 'B', fechaCaducidad: malformada }]
+    const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
+    assert.deepEqual(r.avisos, [], `«${malformada}» no se saltó`)
+    // Y no se declara ilegible: la fuente SÍ se leyó; lo que no vale es ese carné.
+    assert.deepEqual(r.fuentesIlegibles, [])
+  }
+})
+
+test('una fecha malformada no impide avisar del carné BUENO del mismo cliente', () => {
+  const carnets = [
+    { id: 'malo', tipo: 'B', fechaCaducidad: 'no es una fecha' },
+    { id: 'bueno', tipo: 'C', fechaCaducidad: fecha(10) },
+  ]
+  const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
+  assert.deepEqual(r.avisos.map((a) => a.id), ['bueno'])
 })

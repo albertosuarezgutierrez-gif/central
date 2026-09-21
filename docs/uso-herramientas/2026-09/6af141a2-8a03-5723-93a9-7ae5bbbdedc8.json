@@ -1,0 +1,98 @@
+{
+ "sesion": "6af141a2-8a03-5723-93a9-7ae5bbbdedc8",
+ "inicio": "2026-09-21T09:13:30.501Z",
+ "fin": "2026-09-21T10:47:49.218Z",
+ "llamadas": 162,
+ "categorias": {
+  "otro": {
+   "llamadas": 23,
+   "chars_in": 8866,
+   "chars_out": 128226,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 30132,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 5,
+    "SubagentHandback": 1,
+    "TaskCreate": 4,
+    "ReportFindings": 1,
+    "ReadNotifications": 6,
+    "TaskUpdate": 4
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 31,
+   "chars_in": 3269,
+   "chars_out": 208729,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 11,
+    "Read": 20
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 1599,
+   "chars_out": 1821,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 9,
+   "chars_in": 5981,
+   "chars_out": 54939,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 23127,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__actions_list": 1,
+    "mcp__github__get_commit": 1,
+    "mcp__github__pull_request_read": 5
+   }
+  },
+  "bash": {
+   "llamadas": 65,
+   "chars_in": 21554,
+   "chars_out": 132638,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 65
+   }
+  },
+  "escritura": {
+   "llamadas": 30,
+   "chars_in": 60017,
+   "chars_out": 667258,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 5,
+    "Edit": 25
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 3,
+   "chars_in": 2055,
+   "chars_out": 455,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 2
+   }
+  }
+ }
+}
