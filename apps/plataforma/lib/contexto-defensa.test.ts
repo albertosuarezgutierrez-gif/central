@@ -1,83 +1,66 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { leerContextoDefensa } from './contexto-defensa.ts'
+import { leerContextoDefensa, motivoSinCartera } from './contexto-defensa.ts'
+import { leerCarteraCompanias } from './retarificar-asegura.ts'
 
 const POLIZA = { id: 'p-1', codigoEntidadDgs: 'C0468', aseguradora: 'Occident' }
 
 const BLOQUE = {
-  carteraCompanias: {
-    polizas: [
-      {
-        id: 'p-2',
-        codigoEntidadDgs: 'C0058',
-        aseguradora: 'Mapfre',
-        estado: 'vigente',
-        viva: true,
-        ramo: 'auto',
-        numeroPoliza: '123',
-      },
-    ],
-    catalogo: [{ codigoDgs: 'C0058', nombreComun: 'Mapfre' }],
-  },
+  estado: 'ok',
+  polizas: [
+    {
+      id: 'p-2',
+      codigoEntidadDgs: 'C0058',
+      aseguradora: 'Mapfre',
+      estado: 'activa',
+      viva: true,
+      ramo: 'auto',
+      numeroPoliza: '123',
+    },
+  ],
+  catalogo: [{ codigoDgs: 'C0058', nombreComun: 'Mapfre' }],
+  polizaActualId: 'p-1',
 }
 
-test('lee el bloque del puerto cuando viene entero', () => {
-  const r = leerContextoDefensa(BLOQUE, POLIZA)
+test('compone el contexto cuando la cartera se ha podido mirar', () => {
+  const r = leerContextoDefensa(leerCarteraCompanias(BLOQUE), POLIZA)
   assert.notEqual(r, null)
   assert.equal(r!.polizas.length, 1)
   assert.equal(r!.polizas[0]!.codigoEntidadDgs, 'C0058')
   assert.equal(r!.catalogo[0]!.nombreComun, 'Mapfre')
-  // La póliza que se está retarificando viaja para distinguir `actual`.
   assert.equal(r!.polizaActualId, 'p-1')
   assert.equal(r!.companiaActualDgs, 'C0468')
+  assert.equal(motivoSinCartera(leerCarteraCompanias(BLOQUE)), null)
 })
 
-test('🚨 sin el bloque devuelve null, NUNCA una cartera vacía', () => {
-  // Es el caso real: una `apps/asegura` desplegada antes que esto no manda el
-  // campo. Un `[]` aquí afirmaría que el cliente no tiene póliza en NINGUNA
-  // compañía, y la tabla pintaría las 24 filas como emitibles.
+test('🚨 cartera no mirada → null, NUNCA una cartera vacía', () => {
+  // El caso real: una `apps/asegura` anterior a esto no manda el bloque. Si
+  // esto devolviera un contexto con `polizas: []`, la tabla afirmaría que el
+  // cliente no está en ninguna compañía y pintaría las 24 filas emitibles.
   for (const entrada of [undefined, null, {}, { carteraCompanias: null }, 'texto', 42]) {
-    assert.equal(leerContextoDefensa(entrada, POLIZA), null, `con ${JSON.stringify(entrada)}`)
+    const c = leerCarteraCompanias(entrada)
+    assert.equal(leerContextoDefensa(c, POLIZA), null, `con ${JSON.stringify(entrada)}`)
+    assert.notEqual(motivoSinCartera(c), null, 'y se puede decir POR QUÉ')
   }
 })
 
-test('🚨 una lista con forma rara es null entera, no una lista a medias', () => {
-  // Quedarse con las filas legibles y tirar el resto dejaría una cartera
-  // INCOMPLETA con cara de completa: la compañía de la fila que se cayó
-  // saldría como «libre».
-  assert.equal(
-    leerContextoDefensa({ carteraCompanias: { polizas: [{ id: 'x' }], catalogo: [] } }, POLIZA),
-    null,
+test('🚨 cartera mirada y vacía SÍ es un resultado: `[]`, no null', () => {
+  // El otro lado de la moneda. Confundir «mirada, no tiene ninguna» con «no se
+  // ha mirado» apagaría la columna teniendo la respuesta.
+  const r = leerContextoDefensa(
+    leerCarteraCompanias({ estado: 'ok', polizas: [], catalogo: [], polizaActualId: 'p-1' }),
+    POLIZA,
   )
-  assert.equal(
-    leerContextoDefensa({ carteraCompanias: { polizas: 'no-es-lista', catalogo: [] } }, POLIZA),
-    null,
-  )
-})
-
-test('🚨 `viva` tiene que venir declarado: no se supone false', () => {
-  // `viva` decide si esa póliza defiende. Suponerla `false` dejaría fuera una
-  // póliza real en silencio, que es «no lo sé» disfrazado de «no la tiene».
-  const sinViva = {
-    carteraCompanias: {
-      polizas: [{ id: 'p-2', codigoEntidadDgs: 'C0058', aseguradora: 'Mapfre', estado: 'vigente' }],
-      catalogo: [],
-    },
-  }
-  assert.equal(leerContextoDefensa(sinViva, POLIZA), null)
-})
-
-test('una fila de catálogo sin código o sin nombre invalida el catálogo', () => {
-  const malo = {
-    carteraCompanias: { polizas: [], catalogo: [{ codigoDgs: 'C0058' }] },
-  }
-  assert.equal(leerContextoDefensa(malo, POLIZA), null)
-})
-
-test('cartera mirada y vacía SÍ es un resultado válido: `[]`, no null', () => {
-  // El otro lado de la moneda: «se ha mirado y no tiene ninguna» es un dato,
-  // y confundirlo con «no se ha mirado» apagaría la columna teniendo respuesta.
-  const r = leerContextoDefensa({ carteraCompanias: { polizas: [], catalogo: [] } }, POLIZA)
   assert.notEqual(r, null)
   assert.deepEqual(r!.polizas, [])
+})
+
+test('sin `polizaActualId` del puerto vale la póliza de la pantalla', () => {
+  // Sin ella, la compañía que se está retarificando saldría como `ocupada`
+  // («ya es cliente») en vez de `actual` («aquí se renueva»), que es otra cosa.
+  const r = leerContextoDefensa(
+    leerCarteraCompanias({ ...BLOQUE, polizaActualId: null }),
+    POLIZA,
+  )
+  assert.equal(r!.polizaActualId, 'p-1')
 })

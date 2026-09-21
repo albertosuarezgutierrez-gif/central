@@ -11,7 +11,7 @@ import {
 } from '@/lib/retarificar-asegura'
 import { precalificarHogarRetarificarAsegura } from '@/lib/hogar-retarificar-asegura'
 import Retarificador, { ValorSupuesto } from './retarificador'
-import { leerContextoDefensa } from '@/lib/contexto-defensa'
+import { leerContextoDefensa, motivoSinCartera } from '@/lib/contexto-defensa'
 import RetarificadorHogar from './RetarificadorHogar'
 
 export const dynamic = 'force-dynamic'
@@ -228,7 +228,8 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
         ramo={ramo}
         // 🚨 `null` = la cartera del cliente NO se ha podido mirar. Ver
         // `leerContextoDefensa`: nunca degrada a `[]`.
-        contextoDefensa={leerContextoDefensa(pre, p)}
+        contextoDefensa={leerContextoDefensa(pre?.carteraCompanias, p)}
+        sinCarteraPorque={pre ? motivoSinCartera(pre.carteraCompanias) : falloPre}
       />
     </Marco>
   )

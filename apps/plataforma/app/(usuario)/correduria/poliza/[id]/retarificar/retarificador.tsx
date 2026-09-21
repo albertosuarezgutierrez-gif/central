@@ -148,7 +148,15 @@ type Resultado =
       avisoSimulacion: string | null
       resumen: string
       precios: Precio[]
-      fallos: Fallo[]
+      /**
+       * 🚨 `null` = NO se guardaron (una cotización recuperada no los trae:
+       * `seguros.tarificaciones` no tiene columna para ellos). `[]` = se
+       * pidieron y ninguna compañía rechazó. Colapsarlos diría «el mercado
+       * entero contestó» sobre una lista que nadie ha mirado — y esa lista es
+       * justo la que trae «la matrícula ya está asegurada en la compañía»,
+       * que es la defensa de cartera dicha por la propia compañía.
+       */
+      fallos: Fallo[] | null
       supuestos: Supuesto[]
       /** Qué pasó con la COPIA en `seguros.tarificaciones`. Sin `cotizacionId`
        *  (dentro, si `estado==='guardada'`) no hay a qué proyecto pedirle el
@@ -191,8 +199,9 @@ function resumenDePrecios(precios: Precio[]): string {
  * aparte para «lo que ya había» frente a «lo que se acaba de pagar».
  *
  * 🚨 El `coste` NO dice «0,50€»: sería mentir sobre un cargo que no ha pasado
- * ahora. Y `fallos`/`supuestos` van vacíos porque no se persisten — es la
- * letra pequeña de una cotización recuperada, no de una recién pedida.
+ * ahora. Y los `fallos` van `null`, no `[]`: no se persisten, así que lo
+ * honrado es «no se guardaron», nunca «ninguna compañía rechazó». Los
+ * `supuestos` sí van vacíos: son de la petición, no de la respuesta.
  */
 function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
   return {
@@ -203,7 +212,7 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
     avisoSimulacion: null,
     resumen: resumenDePrecios(g.precios),
     precios: g.precios,
-    fallos: [],
+    fallos: g.fallos,
     supuestos: [],
     guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
   }
@@ -349,6 +358,7 @@ export default function Retarificador({
   deshabilitado,
   guardadaPrevia,
   contextoDefensa,
+  sinCarteraPorque,
   primaActualEur,
   ramo,
 }: {
@@ -426,6 +436,8 @@ export default function Retarificador({
    * ninguna póliza en ninguna compañía.
    */
   contextoDefensa: ContextoDefensa | null
+  /** Por qué no se ha podido mirar la cartera. `null` = sí se ha mirado. */
+  sinCarteraPorque: string | null
   /** La prima que paga HOY por esta póliza. `null` = la ficha no la trae. */
   primaActualEur: number | null
   /** `auto` | `hogar` | …: decide la escala de coberturas (el «Todo Riesgo» de
@@ -1553,6 +1565,7 @@ export default function Retarificador({
             r={resultado}
             simulacion={simulacion}
             contextoDefensa={contextoDefensa}
+            sinCarteraPorque={sinCarteraPorque}
             primaActualEur={primaActualEur}
             ramo={ramo}
           />
@@ -1568,6 +1581,7 @@ function Precios({
   r,
   simulacion,
   contextoDefensa,
+  sinCarteraPorque,
   primaActualEur,
   ramo,
 }: {
@@ -1575,6 +1589,7 @@ function Precios({
   simulacion: boolean
   /** `null` = no se ha podido mirar la cartera del cliente (ver el tipo). */
   contextoDefensa: ContextoDefensa | null
+  sinCarteraPorque: string | null
   /** Lo que paga HOY. `null` = la póliza no lo trae; no se pinta 0. */
   primaActualEur: number | null
   ramo: string | null
@@ -1721,6 +1736,7 @@ function Precios({
           No se ha podido mirar en qué compañías tiene ya póliza este cliente, así que{' '}
           <strong>ninguna fila dice si se puede emitir</strong>. El precio es igual de válido; lo que
           falta es saber si la compañía lo mandaría a defensa de cartera.
+          {sinCarteraPorque && <> Motivo: {sinCarteraPorque}</>}
         </p>
       )}
 
@@ -1946,7 +1962,17 @@ function Precios({
 
       {/* Las compañías que NO dieron precio: sin ellas, «5 precios» se lee como
           «esto es el mercado entero». Cerrado por defecto (regla de rendimiento). */}
-      {r.fallos.length > 0 && (
+      {/* Sin esta lista, «5 precios» se lee como «esto es el mercado entero».
+          `null` (recuperada) se DICE: es lo contrario de «ninguna falló». */}
+      {r.fallos === null ? (
+        <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+          De esta cotización recuperada <strong>no se guardó qué compañías no dieron precio</strong>,
+          así que arriba no está el mercado entero: solo lo que sí se guardó. Esa lista —donde la
+          compañía dice cosas como «la matrícula ya está asegurada aquí»— solo existe en el momento
+          de pedirla.
+        </p>
+      ) : (
+      r.fallos.length > 0 && (
         <details style={{ marginTop: 8 }}>
           <summary className="muted" style={{ cursor: 'pointer', minHeight: 24, fontSize: 12 }}>
             {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
@@ -1966,6 +1992,7 @@ function Precios({
             ))}
           </ul>
         </details>
+      )
       )}
 
       {/* Los supuestos, OTRA VEZ y al lado del precio: son la letra pequeña de

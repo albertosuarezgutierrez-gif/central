@@ -1,13 +1,14 @@
-// De la respuesta del puerto de asegura a lo que la tabla de precios necesita
+// De lo que sirve el puerto de asegura a lo que la tabla de precios necesita
 // para decir, de cada fila, si se puede emitir o se irá por defensa de cartera.
 //
 // Vive aparte de la pantalla por una razón concreta: esto es la frontera entre
-// dos apps que se despliegan por separado, o sea el sitio exacto donde un
-// campo ausente se convierte en una afirmación falsa. Aquí se puede probar.
+// dos apps que se despliegan por separado, o sea el sitio exacto donde un campo
+// ausente se convierte en una afirmación falsa. Aquí se puede probar.
 
 import type { CompaniaCatalogo, PolizaCliente } from '@central/module-seguros'
+import { catalogoParaDefensa, polizasParaDefensa, type CarteraCompanias } from './retarificar-asegura.ts'
 
-/** Lo que la tabla necesita. `null` = la cartera no se ha podido mirar. */
+/** Lo que la tabla necesita. `null` = la cartera del cliente no se ha mirado. */
 export type ContextoDefensa = {
   polizas: readonly PolizaCliente[]
   catalogo: readonly CompaniaCatalogo[]
@@ -24,64 +25,35 @@ export type PolizaEnCurso = {
 }
 
 /**
- * En qué compañías está ya el cliente, leído del bloque que sirve la
- * precalificación de asegura (que es gratis y ya tiene la ficha delante).
+ * 🚨 Devuelve `null` —y entonces la tabla no afirma nada de ninguna fila y lo
+ * declara en pantalla— siempre que la cartera no se haya podido mirar: una
+ * `apps/asegura` desplegada antes que esto no manda el bloque. **Un `[]` aquí
+ * diría que el cliente no tiene póliza en ninguna compañía**, que es justo la
+ * respuesta que tranquiliza, y pintaría las 24 filas como emitibles.
  *
- * 🚨 Devuelve `null` —y la tabla entonces no afirma nada de ninguna fila—
- * siempre que el bloque no venga con la forma esperada: una asegura desplegada
- * antes que esto no lo manda, y **un `[]` aquí diría que el cliente no tiene
- * póliza en ninguna compañía**, que es justo la mentira que tranquiliza.
- *
- * Se lee sobre `unknown` a propósito, como todo lo que cruza el puerto: la
- * forma se comprueba en ejecución, no se confía en el tipo de la otra app.
+ * La comprobación de forma la hizo ya `leerCarteraCompanias()`, que nunca
+ * devuelve el campo ausente como una lista vacía. Aquí solo se compone.
  */
-export function leerContextoDefensa(pre: unknown, p: PolizaEnCurso): ContextoDefensa | null {
-  if (typeof pre !== 'object' || pre === null) return null
-  const bruto = (pre as Record<string, unknown>).carteraCompanias
-  if (typeof bruto !== 'object' || bruto === null) return null
-  const b = bruto as Record<string, unknown>
-  if (!Array.isArray(b.polizas) || !Array.isArray(b.catalogo)) return null
-
-  const polizas: PolizaCliente[] = []
-  for (const fila of b.polizas) {
-    if (typeof fila !== 'object' || fila === null) return null
-    const f = fila as Record<string, unknown>
-    // `viva` tiene que venir declarado: sin él no se puede decidir si esa
-    // póliza defiende, y suponer `false` la dejaría fuera en silencio.
-    if (typeof f.viva !== 'boolean') return null
-    polizas.push({
-      id: cadenaONulo(f.id),
-      codigoEntidadDgs: cadenaONulo(f.codigoEntidadDgs),
-      aseguradora: cadenaONulo(f.aseguradora),
-      estado: cadenaONulo(f.estado),
-      viva: f.viva,
-      ramo: cadenaONulo(f.ramo),
-      numeroPoliza: cadenaONulo(f.numeroPoliza),
-    })
-  }
-
-  const catalogo: CompaniaCatalogo[] = []
-  for (const fila of b.catalogo) {
-    if (typeof fila !== 'object' || fila === null) return null
-    const f = fila as Record<string, unknown>
-    if (typeof f.codigoDgs !== 'string' || typeof f.nombreComun !== 'string') return null
-    catalogo.push({
-      codigoDgs: f.codigoDgs,
-      nombreComun: f.nombreComun,
-      nombreCima: cadenaONulo(f.nombreCima),
-      alias: Array.isArray(f.alias) ? f.alias.filter((x): x is string => typeof x === 'string') : [],
-    })
-  }
-
+export function leerContextoDefensa(
+  cartera: CarteraCompanias | null | undefined,
+  p: PolizaEnCurso,
+): ContextoDefensa | null {
+  const polizas = polizasParaDefensa(cartera)
+  if (polizas === null) return null
   return {
     polizas,
-    catalogo,
-    polizaActualId: p.id,
+    catalogo: catalogoParaDefensa(cartera),
+    // El puerto manda cuál es la póliza en curso; si no llega, la de la
+    // pantalla. Su compañía es `actual` (ahí se renueva, no se emite nueva).
+    polizaActualId:
+      cartera && cartera.estado === 'ok' ? (cartera.polizaActualId ?? p.id) : p.id,
     companiaActualDgs: p.codigoEntidadDgs,
     companiaActualNombre: p.aseguradora,
   }
 }
 
-function cadenaONulo(v: unknown): string | null {
-  return typeof v === 'string' && v.trim() !== '' ? v : null
+/** Por qué no se ha podido mirar, para pintarlo. `null` = sí se ha mirado. */
+export function motivoSinCartera(cartera: CarteraCompanias | null | undefined): string | null {
+  if (!cartera) return 'el puerto de asegura no ha mandado la cartera del cliente.'
+  return cartera.estado === 'no_disponible' ? cartera.porque : null
 }
