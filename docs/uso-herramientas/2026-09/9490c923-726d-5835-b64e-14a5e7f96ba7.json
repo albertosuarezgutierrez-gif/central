@@ -1,29 +1,79 @@
 {
  "sesion": "9490c923-726d-5835-b64e-14a5e7f96ba7",
  "inicio": "2026-09-21T04:48:15.067Z",
- "fin": "2026-09-21T04:48:28.057Z",
- "llamadas": 5,
+ "fin": "2026-09-21T05:38:25.629Z",
+ "llamadas": 38,
  "categorias": {
   "otro": {
-   "llamadas": 1,
-   "chars_in": 29,
-   "chars_out": 50,
+   "llamadas": 5,
+   "chars_in": 432,
+   "chars_out": 832,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Skill": 1
+    "Skill": 1,
+    "ToolSearch": 4
    }
   },
   "lectura-directa": {
-   "llamadas": 4,
-   "chars_in": 563,
-   "chars_out": 10412,
+   "llamadas": 11,
+   "chars_in": 1321,
+   "chars_out": 41720,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 4
+    "Grep": 6,
+    "Read": 5
+   }
+  },
+  "escritura": {
+   "llamadas": 4,
+   "chars_in": 4515,
+   "chars_out": 62786,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1,
+    "Write": 3
+   }
+  },
+  "bash": {
+   "llamadas": 9,
+   "chars_in": 2075,
+   "chars_out": 6825,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 9
+   }
+  },
+  "mcp:Google_Drive": {
+   "llamadas": 5,
+   "chars_in": 559,
+   "chars_out": 21852,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 5
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 4,
+   "chars_in": 185,
+   "chars_out": 33073,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_projects": 1,
+    "mcp__Vercel__filter_project_envs": 1,
+    "mcp__Vercel__get_project_env": 1,
+    "mcp__Vercel__list_project_domains": 1
    }
   }
  }
