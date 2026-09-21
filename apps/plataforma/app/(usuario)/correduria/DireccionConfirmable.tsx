@@ -99,7 +99,7 @@ export default function DireccionConfirmable({
               setEstado({ fase: 'quieto' })
             }}
             style={{
-              fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999,
+              fontSize: 12, fontWeight: 600, padding: '10px 14px', minHeight: 44, borderRadius: 999,
               border: '1px solid var(--primary)', background: 'var(--bg)', color: 'var(--primary)', cursor: 'pointer',
             }}
           >
