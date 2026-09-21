@@ -427,11 +427,14 @@ const CSS_RETARIFICADOR = `
   padding-right: 4px;
   text-align: center;
 }
+/* 44px: el mínimo táctil de la regla Responsive del CLAUDE.md raíz — no 36px,
+   que quedaba por debajo justo en el único botón garantizado visible (el
+   sticky) en móvil. */
 .retarificar button.ghost.icono {
   padding: 0;
-  width: 36px;
-  min-height: 36px;
-  min-width: 36px;
+  width: 44px;
+  min-height: 44px;
+  min-width: 44px;
   font-size: 16px;
   line-height: 1;
 }

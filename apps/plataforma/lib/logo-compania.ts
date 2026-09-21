@@ -47,10 +47,15 @@ export function logoCompania(nombre: string | null | undefined): { src: string; 
 export function nombreProductoSinCia(compania: string | null | undefined, producto: string | null | undefined): string | null {
   if (!producto) return producto ?? null
   if (!compania) return producto
-  const c = normalizar(compania)
+  const companiaRecortada = compania.trim()
+  const c = normalizar(companiaRecortada)
   const p = normalizar(producto)
   if (c && p.startsWith(c)) {
-    const resto = producto.slice(compania.length).trim()
+    // El recorte se mide sobre `companiaRecortada` (ya sin espacios de
+    // sobra), no sobre `compania`: un espacio de más en el dato de la BD
+    // desplazaría el corte y dejaría el producto a medias («utos» en vez
+    // de «Autos»).
+    const resto = producto.slice(companiaRecortada.length).trim()
     return resto || producto
   }
   return producto
