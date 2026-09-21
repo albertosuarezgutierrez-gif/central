@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-21T09:26:24Z",
-  "sha": "5f58b9fcb8902733b0f8be393c591985f7566e3c",
+  "generadoEn": "2026-09-21T09:59:15Z",
+  "sha": "a054b8f5f24b5045bec1b3c67dc0cc89727a37ec",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -78276,7 +78276,7 @@
           "exportada": false,
           "params": "faltan: string[], leer: () => Promise<T>",
           "retorno": "Promise<ResultadoFuente<T>>",
-          "linea": 50,
+          "linea": 51,
           "resumen": "Envuelve una lectura en el tri-estado: secreto ausente → no_configurado; excepción → error."
         },
         {
@@ -78285,7 +78285,7 @@
           "exportada": false,
           "params": "nombres: string[]",
           "retorno": "string[]",
-          "linea": 60
+          "linea": 61
         },
         {
           "nombre": "handler",
@@ -78293,12 +78293,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 65
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/seo-correduria",
-      "hash": "9adc09dd4c47"
+      "hash": "e5f26ee39358"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ses-latido/route.ts",
@@ -100715,6 +100715,38 @@
       "hash": "2ccdc0914d03"
     },
     {
+      "ruta": "apps/plataforma/lib/seo-correduria/indexacion-pendiente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/indexacion-pendiente.ts — qué URLs del blog llevan sin indexar y el prompt de Claude Chrome ya armado para pedir su indexación en Search Console. La Search Console API NO tiene endpoint de «solicitar indexación» para páginas normales (solo Job/BroadcastEvent): ese botón solo exist",
+      "exporta": [
+        "urlsBlogPendientesIndexar",
+        "promptClaudeChromeIndexacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlsBlogPendientesIndexar",
+          "kind": "function",
+          "exportada": true,
+          "params": "cobertura: DatosCobertura",
+          "retorno": "string[]",
+          "linea": 16,
+          "resumen": "URLs del blog que la URL Inspection API AÚN no da por indexadas (verdict !== PASS)."
+        },
+        {
+          "nombre": "promptClaudeChromeIndexacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "urls: string[]",
+          "retorno": "string | null",
+          "linea": 25,
+          "resumen": "El prompt de Claude Chrome, listo para pegar. `null` si no hay ninguna URL pendiente."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "756d16e9e4a6"
+    },
+    {
       "ruta": "apps/plataforma/lib/seo-correduria/informe.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/seo-correduria/informe.ts — redacción del informe semanal y elección de la acción propuesta. Las dos funciones son PURAS: reciben los `Resultados` tri-estado y devuelven texto. La acción la decide una regla, no un LLM (spec §5.4), y el informe NUNCA pinta un 0 donde una fuente está en `error`/`n",
@@ -110297,7 +110329,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 643
+          "linea": 649
         },
         {
           "nombre": "avisosDe",
@@ -110305,7 +110337,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 648,
+          "linea": 654,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -110314,13 +110346,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 658,
+          "linea": 664,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d7f9b13fabc"
+      "hash": "e298d0234502"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -141240,7 +141272,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3441,
-    "funciones": 10701
+    "archivos": 3442,
+    "funciones": 10703
   }
 }
