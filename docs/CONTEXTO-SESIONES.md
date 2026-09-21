@@ -12,6 +12,18 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 💾 **`central` estaba POR ENCIMA de la cuota del plan Free** (644 MB medidos, tope
+500). No era riesgo futuro: es la BD compartida de todas las apps. Recuperados **131 MB sin borrar
+ni una fila**, solo `VACUUM FULL` — `net._http_response` tenía **0 filas vivas ocupando 44 MB** (sin
+autovacuum desde el 05/08). Ojo: borrar filas NO baja el tamaño, hay que compactar. Un intento mío
+de tirar el índice HNSW de `grafo_embeddings` salió mal y se revirtió: estimé ~150 ms de búsqueda
+exacta y medí **11 s** (los vectores están en TOAST, cada fila va a disco).
+📊 **Y el dato que decide:** la tabla de `docs/USO-HERRAMIENTAS.md` llevaba generada sobre **1**
+sesión con 86 ficheros sin agregar. Regenerada: **el grafo propio se ha usado en 3 de 86 sesiones**
+(27 llamadas, 2 con error, ahorro tope 75k tokens) y ocupa 258 MB. Pendiente de decisión de Alberto:
+borrarlo deja la BD en ~283 MB sin pagar. `memoria_embeddings` y `mapa_arquitectura` se quedan
+(28 MB, mejor ratio). **ialimp e ia-rest juntos pesan 16 MB: no son el problema.**
+
 **(21/09/2026)** 🧹 **Manuel fuera de Vercel** (Alberto retiró su asiento del equipo «Pisos
 turisticos», verificado recargando la página, sin aviso de facturación). Para repuntar el warehouse
 de PostHog a central se midió ANTES de tocar nada: `operational_events` vive en el schema `seguros`

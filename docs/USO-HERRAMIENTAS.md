@@ -161,12 +161,37 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido (generado 2026-09-12)** — 1 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido (generado 2026-09-21)** — 86 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 1 | 26 | 42.058 | 0 | 0 |
-| `escritura` | 1 | 4 | 34.635 | 0 | 0 |
-| `mcp:github` | 1 | 4 | 134 | 0 | 0 |
-| `otro` | 1 | 2 | 1.584 | 14.545 | 0 |
+| `bash` | 81 | 8.683 | 4.665.013 | 0 | 0 |
+| `lectura-directa` | 74 | 2.800 | 4.351.103 | 0 | 0 |
+| `otro` | 79 | 2.555 | 10.562.658 | 4.976.718 | 0 |
+| `mcp:github` | 71 | 2.514 | 2.443.926 | 34.789.636 | 36 |
+| `escritura` | 67 | 1.755 | 31.752.344 | 0 | 0 |
+| `sql` | 54 | 951 | 464.927 | 2.202.601 | 8 |
+| `mcp:Claude_Code_Remote` | 45 | 418 | 119.310 | 2.165.347 | 9 |
+| `mcp:Vercel` | 21 | 243 | 471.025 | 198.719 | 1 |
+| `mcp:Booking-com` | 6 | 197 | 815.919 | 0 | 0 |
+| `mcp:Gmail` | 10 | 109 | 217.146 | 0 | 1 |
+| `mcp:Supabase` | 33 | 74 | 12.663 | 0 | 1 |
+| `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
+| `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
+| `mcp:posthog` | 4 | 40 | 49.259 | 0 | 0 |
+| `mcp:Google-Drive` | 4 | 36 | 28.803 | 0 | 0 |
+| `agente:general-purpose` | 11 | 33 | 28.477 | 596.780 | 0 |
+| `grafo-propio` | 3 | 27 | 7.644 | 74.950 | 2 |
+| `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
+| `agente:agente-mecanico` | 7 | 19 | 18.849 | 277.210 | 0 |
+| `agente:Explore` | 8 | 17 | 7.315 | 266.832 | 0 |
+| `agente:agente-architect` | 5 | 14 | 17.749 | 407.559 | 0 |
+| `mcp:Google_Drive` | 3 | 12 | 11.819 | 0 | 2 |
+| `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
+| `agente:general` | 6 | 8 | 5.205 | 231.483 | 0 |
+| `mcp:Resend` | 1 | 6 | 969 | 0 | 0 |
+| `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
+| `mcp:Supabase_asegura` | 3 | 3 | 1.932 | 0 | 0 |
+| `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
+| `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
 <!-- ahorro:fin -->
