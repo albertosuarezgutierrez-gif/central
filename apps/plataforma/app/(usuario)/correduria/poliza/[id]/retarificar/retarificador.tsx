@@ -22,6 +22,21 @@ import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
 import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
+import {
+  agruparPrecios,
+  defensaDeCartera,
+  etiquetaDefensa,
+  FILTRO_PRECIOS_VACIO,
+  FIRMEZAS,
+  FRANQUICIAS,
+  type CompaniaCatalogo,
+  type Defensa,
+  type FiltroPrecios,
+  type PolizaCliente,
+} from '@central/module-seguros'
+
+import type { ContextoDefensa } from '@/lib/contexto-defensa'
+export type { ContextoDefensa }
 
 /**
  * Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el
@@ -333,6 +348,9 @@ export default function Retarificador({
   simulacion,
   deshabilitado,
   guardadaPrevia,
+  contextoDefensa,
+  primaActualEur,
+  ramo,
 }: {
   polizaId: string
   /**
@@ -398,6 +416,21 @@ export default function Retarificador({
    * directamente, SIN volver a pagar los 0,50€ del `POST /insurances`.
    */
   guardadaPrevia: TarificacionGuardadaAuto | null
+  /**
+   * En qué compañías está ya el cliente, para decir de cada precio si se puede
+   * emitir o se irá por defensa de cartera.
+   *
+   * 🚨 `null` = NO se ha podido mirar (el puerto de asegura no lo sirve, o
+   * falló). Entonces la tabla no dice nada de ninguna fila y lo declara. Lo que
+   * NO se hace es pasar `{polizas: []}`, que afirmaría que el cliente no tiene
+   * ninguna póliza en ninguna compañía.
+   */
+  contextoDefensa: ContextoDefensa | null
+  /** La prima que paga HOY por esta póliza. `null` = la ficha no la trae. */
+  primaActualEur: number | null
+  /** `auto` | `hogar` | …: decide la escala de coberturas (el «Todo Riesgo» de
+   *  un hogar NO es el de un coche). `null` = no consta. */
+  ramo: string | null
 }) {
   // Borrador local (localStorage) de esta póliza — ver `leerBorrador`/
   // `guardarBorrador`/`borrarBorrador` arriba.
@@ -1516,7 +1549,13 @@ export default function Retarificador({
         )}
 
         {resultado.estado === 'ok' && (
-          <Precios r={resultado} simulacion={simulacion} />
+          <Precios
+            r={resultado}
+            simulacion={simulacion}
+            contextoDefensa={contextoDefensa}
+            primaActualEur={primaActualEur}
+            ramo={ramo}
+          />
         )}
       </div>
     </>
@@ -1528,14 +1567,55 @@ export default function Retarificador({
 function Precios({
   r,
   simulacion,
+  contextoDefensa,
+  primaActualEur,
+  ramo,
 }: {
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
+  /** `null` = no se ha podido mirar la cartera del cliente (ver el tipo). */
+  contextoDefensa: ContextoDefensa | null
+  /** Lo que paga HOY. `null` = la póliza no lo trae; no se pinta 0. */
+  primaActualEur: number | null
+  ramo: string | null
 }) {
   // Qué fila tiene abierto el panel de emisión real (ver emision.tsx). `null` =
   // ninguna. Vive aquí, no en el padre: es puro estado de pantalla, no algo
   // que la póliza necesite recordar entre visitas.
   const [abierta, setAbierta] = useState<string | null>(null)
+
+  // El filtro es estado de pantalla y arranca VACÍO: la tabla se abre
+  // enseñándolo todo. Un filtro puesto de fábrica esconde precios sin que
+  // nadie lo haya pedido, y eso no se distingue de que no existan.
+  const [filtro, setFiltro] = useState<FiltroPrecios>(FILTRO_PRECIOS_VACIO)
+
+  // Una defensa por NOMBRE de compañía (que es lo único que manda el vendor).
+  // Se calcula una vez por lista de precios: `defensaDeCartera` es pura.
+  const defensas = useMemo(() => {
+    if (!contextoDefensa) return null
+    const m = new Map<string, Defensa>()
+    for (const p of r.precios) {
+      const nombre = p.compania ?? ''
+      if (m.has(nombre)) continue
+      m.set(
+        nombre,
+        defensaDeCartera({
+          compania: p.compania,
+          catalogo: contextoDefensa.catalogo,
+          polizas: contextoDefensa.polizas,
+          polizaActualId: contextoDefensa.polizaActualId,
+          companiaActualDgs: contextoDefensa.companiaActualDgs,
+          companiaActualNombre: contextoDefensa.companiaActualNombre,
+        }),
+      )
+    }
+    return m
+  }, [contextoDefensa, r.precios])
+
+  const comparativa = useMemo(
+    () => agruparPrecios(r.precios, { filtro, ramo, defensaPorCompania: defensas }),
+    [r.precios, filtro, ramo, defensas],
+  )
   return (
     <div style={{ marginTop: 16 }}>
       {/* Un precio simulado y uno real se leen igual: la única diferencia está
@@ -1587,113 +1667,258 @@ function Precios({
         )}
       </p>
 
-      <div className="table-wrap">
-        <table className="precios">
-          <thead>
-            <tr>
-              <th>Aseguradora</th>
-              <th>Cobertura</th>
-              <th>Prima anual</th>
-              <th>Firmeza</th>
-              <th aria-hidden />
-            </tr>
-          </thead>
-          <tbody>
-            {r.precios.map((p, i) => {
-              const id = `${p.compania}-${p.producto}-${i}`
-              const logo = logoCompania(p.compania)
-              // El producto ya no repite el nombre de la compañía: es el
-              // mismo dato, solo que sin pintarlo dos veces en la misma fila.
-              const producto = nombreProductoSinCia(p.compania, p.producto)
-              const abrirCierra = abierta === id
-              const emisionDeshabilitada = r.simulado || cotizacionIdDe(r.guardado) === null
-              return (
-              <tr key={id}>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {logo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={logo.src}
-                        alt=""
-                        style={{ height: Math.round(18 * logo.escala), maxWidth: 52, objectFit: 'contain', flexShrink: 0 }}
-                      />
-                    ) : (
-                      <span className="badge" style={{ fontSize: 10, flexShrink: 0 }}>
-                        {(p.compania ?? '—').slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.compania ?? '—'}</div>
-                      {producto && (
-                        <div className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
-                          {producto}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td>{p.categoria ?? <span className="muted">sin declarar</span>}</td>
-                <td>
-                  <strong>{euroODash(p.primaEur)}</strong>
-                  {r.simulado && (
-                    <>
-                      {' '}
-                      <span className="badge warn">simulado</span>
-                    </>
-                  )}
-                  {/* `null` NO es «sin franquicia»: es «el producto no la
-                      declara». Callarlo sería vender un todo riesgo ocultando
-                      1.500€ de franquicia. Va pegada al precio para que quepa
-                      sin abrir una columna aparte. */}
-                  <div className="muted" style={{ fontSize: 11 }}>
-                    {p.franquiciaEur === null || p.franquiciaEur === undefined
-                      ? 'franquicia no declarada'
-                      : `franquicia ${euroODash(p.franquiciaEur)}`}
-                  </div>
-                </td>
-                <td>
-                  {/* La firmeza va PEGADA al precio: enseñar la prima sola
-                      promete algo que la compañía no ha cerrado. */}
-                  <span
-                    className={`badge ${p.firmeza === 'firme' ? 'ok' : 'warn'}`}
-                    title={p.avisos?.join(' · ')}
-                  >
-                    {p.firmeza ?? 'sin determinar'}
+      {/* ⚓ El ancla. Sin la prima que paga HOY, 24 cifras no responden a la
+          única pregunta de retarificar: ¿sube o baja? `null` = la póliza no la
+          trae, y entonces se dice — no se pinta un 0 ni se calla la columna. */}
+      {primaActualEur !== null && (
+        <p className="muted" style={{ marginTop: 0 }}>
+          Paga hoy <strong>{eur(primaActualEur)}</strong> al año. Las diferencias de abajo se miden
+          contra esa cifra.
+        </p>
+      )}
+
+      <FiltrosPrecios
+        filtro={filtro}
+        onCambiar={setFiltro}
+        niveles={comparativa.nivelesPresentes}
+        companias={comparativa.companiasPresentes}
+        hayBloqueadas={comparativa.grupos.some((g) => g.bloqueadas > 0)}
+      />
+
+      {/* Los niveles de cobertura NO son comparables entre sí cuando cada
+          compañía los nombra a su manera (el «Todo Riesgo» de un hogar no es el
+          de un coche). Cuando eso pasa, el módulo lo dice y aquí se pinta. */}
+      {comparativa.avisoEscala && (
+        <p className="muted" style={{ marginTop: 8 }}>
+          ⚠️ {comparativa.avisoEscala}
+        </p>
+      )}
+
+      <p className="muted" style={{ margin: '8px 0 4px' }}>
+        {comparativa.mostrados === comparativa.total ? (
+          <>
+            {comparativa.total} {comparativa.total === 1 ? 'precio' : 'precios'} en{' '}
+            {comparativa.grupos.length}{' '}
+            {comparativa.grupos.length === 1 ? 'nivel de cobertura' : 'niveles de cobertura'}.
+          </>
+        ) : (
+          <>
+            Mostrando {comparativa.mostrados} de {comparativa.total}
+            {comparativa.ocultosPorFiltro > 0 && <> · {comparativa.ocultosPorFiltro} por el filtro</>}
+            {comparativa.bloqueadasOcultas > 0 && (
+              <> · {comparativa.bloqueadasOcultas} que no podemos emitir</>
+            )}
+            .
+          </>
+        )}
+      </p>
+
+      {/* 🚨 Sin cartera del cliente NO se afirma nada de ninguna fila: no se
+          pinta «emitible» por defecto. `null` aquí es «no se ha mirado», y se
+          dice, porque una tabla muda se lee como una tabla limpia. */}
+      {defensas === null && (
+        <p className="muted" style={{ margin: '0 0 8px' }}>
+          No se ha podido mirar en qué compañías tiene ya póliza este cliente, así que{' '}
+          <strong>ninguna fila dice si se puede emitir</strong>. El precio es igual de válido; lo que
+          falta es saber si la compañía lo mandaría a defensa de cartera.
+        </p>
+      )}
+
+      {comparativa.mostrados === 0 ? (
+        <p className="muted">
+          Ningún precio pasa el filtro. Hay {comparativa.total} en total —{' '}
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => setFiltro(FILTRO_PRECIOS_VACIO)}
+            style={{ minHeight: 28, padding: '2px 8px', fontSize: 12 }}
+          >
+            quitar el filtro
+          </button>
+        </p>
+      ) : (
+        comparativa.grupos.map((g) => (
+          <section key={g.nivel.clave} style={{ marginTop: 14 }}>
+            <h3 style={{ margin: '0 0 2px', fontSize: 15 }}>
+              {g.nivel.label}
+              {!g.nivel.reconocido && (
+                <>
+                  {' '}
+                  <span className="badge" style={{ fontSize: 10 }} title={
+                    'Esta compañía nombra la cobertura a su manera y no se ha podido situar en la ' +
+                    'escala. Va en su propio grupo: meterla en uno conocido sería adivinar.'
+                  }>
+                    escala propia
                   </span>
-                </td>
-                <td>
-                  {/* El botón real (11/09/2026): confirma con la compañía
-                      (ReRate) y, si sale firme, permite el Submit de verdad.
-                      Sin `cotizacionId` (la cotización no quedó guardada) no
-                      hay proyecto al que pedírselo. Icono, no rótulo: es la
-                      última columna y así se queda visible aunque el resto
-                      de la fila necesite scroll horizontal. */}
-                  <button
-                    type="button"
-                    className="ghost icono"
-                    disabled={emisionDeshabilitada}
-                    aria-label={abrirCierra ? 'Ocultar emisión' : 'Emitir'}
-                    title={
-                      r.simulado
-                        ? 'Simulado: no hay proyecto real de Codeoscopic'
-                        : cotizacionIdDe(r.guardado) === null
-                          ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
-                          : abrirCierra
-                            ? 'Ocultar emisión'
-                            : 'Emitir'
-                    }
-                    onClick={() => setAbierta(abrirCierra ? null : id)}
-                  >
-                    {abrirCierra ? '✕' : '✓'}
-                  </button>
-                </td>
-              </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                </>
+              )}
+            </h3>
+            <p className="muted" style={{ margin: '0 0 6px', fontSize: 12 }}>
+              {g.filas.length === g.total ? (
+                <>{g.total} {g.total === 1 ? 'precio' : 'precios'}</>
+              ) : (
+                <>{g.filas.length} de {g.total}</>
+              )}
+              {g.matices.length > 0 && <> · {g.matices.join(' / ')}</>}
+              {g.bloqueadas > 0 && (
+                <>
+                  {' '}
+                  · <strong>{g.bloqueadas}</strong> que no podemos emitir
+                </>
+              )}
+              {g.sinComprobar > 0 && <> · {g.sinComprobar} sin comprobar</>}
+              {/* La más barata EMITIBLE es un dato distinto de «la más barata»:
+                  es la que de verdad se puede vender. Solo se dice cuando no
+                  coinciden, para no repetir la primera fila. */}
+              {g.masBarataEmitible &&
+                g.masBarataEmitible.indice !== g.filas[0]?.indice && (
+                  <>
+                    {' '}
+                    · la más barata que SÍ podemos emitir:{' '}
+                    <strong>
+                      {g.masBarataEmitible.precio.compania ?? '—'}{' '}
+                      {euroODash(g.masBarataEmitible.precio.primaEur)}
+                    </strong>
+                  </>
+                )}
+            </p>
+
+            <div className="table-wrap">
+              <table className="precios">
+                <thead>
+                  <tr>
+                    <th>Aseguradora</th>
+                    <th>Prima anual</th>
+                    {primaActualEur !== null && <th>Frente a hoy</th>}
+                    <th>Firmeza</th>
+                    {defensas !== null && <th>Emisión</th>}
+                    <th aria-hidden />
+                  </tr>
+                </thead>
+                <tbody>
+                  {g.filas.map((fila) => {
+                    const p = fila.precio
+                    // 🚨 La clave se construye con `fila.indice`, que es la
+                    // posición en `r.precios` ORIGINAL — no con la posición
+                    // dentro del grupo. Al agrupar y filtrar, el orden de
+                    // pantalla ya no es el de la lista, y una clave por
+                    // posición visible abriría el panel de Emisión sobre otro
+                    // precio distinto del que se pulsó.
+                    const id = `${p.compania}-${p.producto}-${fila.indice}`
+                    const logo = logoCompania(p.compania)
+                    const producto = nombreProductoSinCia(p.compania, p.producto)
+                    const abrirCierra = abierta === id
+                    const emisionDeshabilitada =
+                      r.simulado || cotizacionIdDe(r.guardado) === null
+                    return (
+                      <tr key={id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            {logo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={logo.src}
+                                alt=""
+                                style={{ height: Math.round(18 * logo.escala), maxWidth: 52, objectFit: 'contain', flexShrink: 0 }}
+                              />
+                            ) : (
+                              <span className="badge" style={{ fontSize: 10, flexShrink: 0 }}>
+                                {(p.compania ?? '—').slice(0, 2).toUpperCase()}
+                              </span>
+                            )}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.compania ?? '—'}</div>
+                              {producto && (
+                                <div className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                                  {producto}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <strong>{euroODash(p.primaEur)}</strong>
+                          {r.simulado && (
+                            <>
+                              {' '}
+                              <span className="badge warn">simulado</span>
+                            </>
+                          )}
+                          {/* `null` NO es «sin franquicia»: es «el producto no la
+                              declara». Callarlo sería vender un todo riesgo
+                              ocultando 1.500€ de franquicia. */}
+                          <div className="muted" style={{ fontSize: 11 }}>
+                            {p.franquiciaEur === null || p.franquiciaEur === undefined
+                              ? 'franquicia no declarada'
+                              : `franquicia ${euroODash(p.franquiciaEur)}`}
+                          </div>
+                        </td>
+                        {primaActualEur !== null && (
+                          <td>
+                            <Diferencia actual={primaActualEur} nueva={p.primaEur ?? null} />
+                          </td>
+                        )}
+                        <td>
+                          {/* La firmeza va PEGADA al precio: enseñar la prima sola
+                              promete algo que la compañía no ha cerrado. */}
+                          <span className={`badge ${p.firmeza === 'firme' ? 'ok' : 'warn'}`}>
+                            {p.firmeza ?? 'sin determinar'}
+                          </span>
+                          {/* 🚨 Los avisos vivían SOLO en un `title=`, y en un
+                              móvil no hay hover: la letra pequeña de un precio
+                              condicionado no existía en la pantalla donde se
+                              mira. Ahora se pueden abrir. */}
+                          {p.avisos && p.avisos.length > 0 && (
+                            <details style={{ marginTop: 2 }}>
+                              <summary className="muted" style={{ cursor: 'pointer', fontSize: 11 }}>
+                                {p.avisos.length} {p.avisos.length === 1 ? 'reparo' : 'reparos'}
+                              </summary>
+                              <ul style={{ margin: '2px 0 0', paddingLeft: 16, fontSize: 11 }}>
+                                {p.avisos.map((a, j) => (
+                                  <li key={j} className="muted">{a}</li>
+                                ))}
+                              </ul>
+                            </details>
+                          )}
+                        </td>
+                        {defensas !== null && (
+                          <td>
+                            <Emitibilidad defensa={fila.defensa} />
+                          </td>
+                        )}
+                        <td>
+                          {/* El botón real (11/09/2026): confirma con la compañía
+                              (ReRate) y, si sale firme, permite el Submit de verdad.
+                              Sin `cotizacionId` (la cotización no quedó guardada) no
+                              hay proyecto al que pedírselo. */}
+                          <button
+                            type="button"
+                            className="ghost icono"
+                            disabled={emisionDeshabilitada}
+                            aria-label={abrirCierra ? 'Ocultar emisión' : 'Emitir'}
+                            title={
+                              r.simulado
+                                ? 'Simulado: no hay proyecto real de Codeoscopic'
+                                : cotizacionIdDe(r.guardado) === null
+                                  ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
+                                  : abrirCierra
+                                    ? 'Ocultar emisión'
+                                    : 'Emitir'
+                            }
+                            onClick={() => setAbierta(abrirCierra ? null : id)}
+                          >
+                            {abrirCierra ? '✕' : '✓'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))
+      )}
 
       {r.precios.map((p, i) => {
         const id = `${p.compania}-${p.producto}-${i}`
@@ -2316,3 +2541,214 @@ const RESUELTOS_EN_PANTALLA = new Set<string>([
   'sexo',
   'tipoVia',
 ])
+
+// ─── Piezas de la tabla de precios ───────────────────────────────────────────
+
+/**
+ * Los filtros, en un desplegable CERRADO mientras no haya ninguno puesto.
+ *
+ * Cerrado por defecto porque con 4 precios estorban, y abierto en cuanto hay
+ * uno activo: un filtro puesto y escondido hace que falten filas sin que se
+ * vea por qué, que es la peor de las dos mentiras posibles aquí.
+ */
+function FiltrosPrecios({
+  filtro,
+  onCambiar,
+  niveles,
+  companias,
+  hayBloqueadas,
+}: {
+  filtro: FiltroPrecios
+  onCambiar: (f: FiltroPrecios) => void
+  niveles: { clave: string; label: string; n: number }[]
+  companias: string[]
+  hayBloqueadas: boolean
+}) {
+  const activo =
+    filtro.niveles.length > 0 ||
+    filtro.companias.length > 0 ||
+    filtro.firmezas.length > 0 ||
+    filtro.franquicia !== null ||
+    filtro.primaMin !== null ||
+    filtro.primaMax !== null ||
+    filtro.soloEmitibles
+
+  const alternar = <T,>(lista: T[], v: T): T[] =>
+    lista.includes(v) ? lista.filter((x) => x !== v) : [...lista, v]
+
+  return (
+    <details open={activo} style={{ marginTop: 10 }}>
+      <summary className="muted" style={{ cursor: 'pointer', minHeight: 28, fontSize: 12 }}>
+        Filtrar {activo && <span className="badge warn" style={{ fontSize: 10 }}>filtro puesto</span>}
+      </summary>
+
+      <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
+        {niveles.length > 1 && (
+          <Grupo titulo="Cobertura">
+            {niveles.map((n) => (
+              <Chip
+                key={n.clave}
+                puesto={filtro.niveles.includes(n.clave)}
+                onClick={() => onCambiar({ ...filtro, niveles: alternar(filtro.niveles, n.clave) })}
+              >
+                {n.label} ({n.n})
+              </Chip>
+            ))}
+          </Grupo>
+        )}
+
+        {companias.length > 1 && (
+          <Grupo titulo="Compañía">
+            {companias.map((c) => (
+              <Chip
+                key={c}
+                puesto={filtro.companias.includes(c)}
+                onClick={() => onCambiar({ ...filtro, companias: alternar(filtro.companias, c) })}
+              >
+                {c}
+              </Chip>
+            ))}
+          </Grupo>
+        )}
+
+        <Grupo titulo="Firmeza">
+          {FIRMEZAS.map((f) => (
+            <Chip
+              key={f.v}
+              puesto={filtro.firmezas.includes(f.v)}
+              onClick={() => onCambiar({ ...filtro, firmezas: alternar([...filtro.firmezas], f.v) })}
+            >
+              {f.label}
+            </Chip>
+          ))}
+        </Grupo>
+
+        {/* Tres valores, no dos: «sin franquicia» y «no la declara» son
+            respuestas distintas y juntarlas vendería un todo riesgo callando
+            1.500€ de franquicia. */}
+        <Grupo titulo="Franquicia">
+          {FRANQUICIAS.map((f) => (
+            <Chip
+              key={f.v}
+              puesto={filtro.franquicia === f.v}
+              onClick={() =>
+                onCambiar({ ...filtro, franquicia: filtro.franquicia === f.v ? null : f.v })
+              }
+            >
+              {f.label}
+            </Chip>
+          ))}
+        </Grupo>
+
+        {hayBloqueadas && (
+          <Grupo titulo="Defensa de cartera">
+            {/* Opt-in a propósito: por defecto las no emitibles SE VEN. El
+                precio sirve para argumentar aunque la emisión no sea nuestra,
+                y esconderlas haría invisible un fallo del emparejamiento. */}
+            <Chip
+              puesto={filtro.soloEmitibles}
+              onClick={() => onCambiar({ ...filtro, soloEmitibles: !filtro.soloEmitibles })}
+            >
+              Solo las que podemos emitir
+            </Chip>
+            <Chip
+              puesto={filtro.bloqueadasAlFinal}
+              onClick={() => onCambiar({ ...filtro, bloqueadasAlFinal: !filtro.bloqueadasAlFinal })}
+            >
+              Las demás, al final
+            </Chip>
+          </Grupo>
+        )}
+
+        {activo && (
+          <div>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => onCambiar(FILTRO_PRECIOS_VACIO)}
+              style={{ minHeight: 32, fontSize: 12 }}
+            >
+              Quitar el filtro
+            </button>
+          </div>
+        )}
+      </div>
+    </details>
+  )
+}
+
+function Grupo({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
+        {titulo}
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{children}</div>
+    </div>
+  )
+}
+
+/** 44px de alto: se pulsa con el dedo, que es como Alberto mira esto. */
+function Chip({
+  puesto,
+  onClick,
+  children,
+}: {
+  puesto: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={puesto}
+      onClick={onClick}
+      className={puesto ? '' : 'ghost'}
+      style={{ minHeight: 44, padding: '4px 10px', fontSize: 12, borderRadius: 999 }}
+    >
+      {children}
+    </button>
+  )
+}
+
+/**
+ * Cuánto cambia respecto de lo que paga hoy.
+ *
+ * `null` en la prima nueva no es 0 ni «igual»: es que la compañía no la dio, y
+ * entonces no hay diferencia que calcular y se dice.
+ */
+function Diferencia({ actual, nueva }: { actual: number; nueva: number | null }) {
+  if (nueva === null) return <span className="muted">—</span>
+  const d = nueva - actual
+  if (Math.abs(d) < 0.005) return <span className="muted">igual</span>
+  const baja = d < 0
+  const pct = actual > 0 ? Math.round((Math.abs(d) / actual) * 100) : null
+  return (
+    <span className={`badge ${baja ? 'ok' : 'warn'}`} style={{ whiteSpace: 'nowrap' }}>
+      {baja ? '−' : '+'}
+      {eur(Math.abs(d))}
+      {pct !== null && ` (${pct}%)`}
+    </span>
+  )
+}
+
+/**
+ * ¿Podemos emitir en esta compañía para este cliente?
+ *
+ * 🚨 Cuatro desenlaces y ninguno es un hueco en blanco. `null` (la defensa no
+ * se ha evaluado) y `desconocida` (se ha intentado y no se ha podido resolver)
+ * son cosas distintas y se dicen distinto: la primera no debería llegar aquí
+ * —la tabla ni pinta la columna—, la segunda es «sin comprobar», que NO es
+ * «adelante». El motivo va en el `title` Y el rótulo es legible sin hover.
+ */
+function Emitibilidad({ defensa }: { defensa: Defensa | null }) {
+  if (defensa === null) return <span className="muted" style={{ fontSize: 11 }}>sin evaluar</span>
+  const tono =
+    defensa.estado === 'libre' ? 'ok' : defensa.estado === 'desconocida' ? '' : 'warn'
+  return (
+    <span className={`badge ${tono}`} style={{ fontSize: 10 }} title={defensa.motivo}>
+      {etiquetaDefensa(defensa)}
+      {defensa.coincidencia === 'nombre' && ' ·  por nombre'}
+    </span>
+  )
+}

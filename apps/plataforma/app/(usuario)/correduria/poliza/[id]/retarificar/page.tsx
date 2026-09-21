@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { polizaAsegura } from '@/lib/poliza-asegura'
+import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import {
   catalogoAsegura,
   precalificacionAsegura,
@@ -11,6 +11,7 @@ import {
 } from '@/lib/retarificar-asegura'
 import { precalificarHogarRetarificarAsegura } from '@/lib/hogar-retarificar-asegura'
 import Retarificador, { ValorSupuesto } from './retarificador'
+import { leerContextoDefensa } from '@/lib/contexto-defensa'
 import RetarificadorHogar from './RetarificadorHogar'
 
 export const dynamic = 'force-dynamic'
@@ -221,6 +222,13 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
         simulacion={pre?.simulacion ?? false}
         deshabilitado={falla !== null}
         guardadaPrevia={guardadaPrevia}
+        // ⚓ Lo que paga HOY: sin ella, 24 precios no responden a la única
+        // pregunta de retarificar. `null` = la ficha no la trae (no es 0).
+        primaActualEur={p.primaAnual ?? p.prima ?? null}
+        ramo={ramo}
+        // 🚨 `null` = la cartera del cliente NO se ha podido mirar. Ver
+        // `leerContextoDefensa`: nunca degrada a `[]`.
+        contextoDefensa={leerContextoDefensa(pre, p)}
       />
     </Marco>
   )
