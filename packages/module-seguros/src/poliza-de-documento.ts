@@ -28,6 +28,7 @@
 // «esta póliza no tiene vencimiento», que es una afirmación, no una ausencia.
 
 import { MARCADORES_SIN_DATO } from './documento-auto.ts'
+import { normalizarMatricula } from './matricula.ts'
 
 const SIN_DATO = new Set(MARCADORES_SIN_DATO)
 
@@ -62,8 +63,32 @@ export type AvisoDocumento =
   | 'sin_vencimiento'
   | 'sin_compania'
   | 'sin_numero'
+  | 'vencimiento_proyectado'
+  | 'sin_clave_de_riesgo'
 
 export type TipoPersonaDocumento = 'fisica' | 'juridica'
+
+/**
+ * Las claves por las que se sabe si ESE riesgo ya lo lleva la casa. El número de
+ * póliza no basta y por eso están todas: una misma persona con el mismo coche
+ * cambia de número cada vez que cambia de compañía, y es el mismo riesgo.
+ *
+ * Orden de fuerza, que es el de la regla «por identidad, nunca por la etiqueta»:
+ *   1. `dni`       — quién es. Dos DNI distintos no se funden jamás.
+ *   2. `matricula` — qué coche (auto y moto). Identifica el riesgo aunque cambie
+ *                    de dueño, de compañía y de número de póliza.
+ *   3. `direccion` — qué vivienda (hogar). Es texto, así que solo sirve para
+ *                    mirar, nunca para fundir dos fichas.
+ *   4. `numeroPoliza` — la etiqueta de ESTE contrato. La más débil de las cuatro:
+ *                    cambia con cada renovación y con cada compañía.
+ */
+export type ClavesCotejo = {
+  dni: string | null
+  matricula: string | null
+  direccion: string | null
+  cp: string | null
+  numeroPoliza: string | null
+}
 
 export type AltaDesdeDocumento = {
   nombre: string
@@ -192,6 +217,89 @@ export function prepararAltaDesdeDocumento(l: LecturaPoliza): {
   }
 }
 
+/**
+ * Por qué claves se puede preguntar «¿esto ya lo llevo yo?» con lo que trae el
+ * documento. Devuelve `hayClaveDeRiesgo: false` cuando lo único que queda es el
+ * número de póliza: entonces una respuesta vacía significa «esta póliza concreta
+ * no la tengo», que NO es lo mismo que «este riesgo no lo tengo», y quien la
+ * pinte tiene que poder decir la diferencia.
+ */
+export function clavesCotejo(l: LecturaPoliza): {
+  claves: ClavesCotejo
+  hayClaveDeRiesgo: boolean
+} {
+  const esVehiculo = l.ramo === 'auto' || l.ramo === 'moto' || l.tipoLectura === 'auto'
+  const esVivienda = l.ramo === 'hogar' || l.tipoLectura === 'hogar'
+  const claves: ClavesCotejo = {
+    dni: texto(l.datos.dni),
+    matricula: esVehiculo ? matriculaCotejable(texto(l.datos.matricula)) : null,
+    direccion: esVivienda ? texto(l.datos.direccion) : null,
+    cp: esVivienda ? texto(l.datos.cp) : null,
+    numeroPoliza: texto(l.datos.numeroPoliza),
+  }
+  return {
+    claves,
+    hayClaveDeRiesgo: claves.dni !== null || claves.matricula !== null || claves.direccion !== null,
+  }
+}
+
+/**
+ * La matrícula lista para comparar. `normalizarMatricula` (de `matricula.ts`) es
+ * el normalizador ÚNICO del repo; aquí solo se le añade el tercer estado, porque
+ * para cotejar «no hay matrícula» y «matrícula vacía» no son lo mismo.
+ */
+function matriculaCotejable(v: string | null): string | null {
+  if (!v) return null
+  return normalizarMatricula(v) || null
+}
+
+/**
+ * El vencimiento que sirve para saber CUÁNDO ENTRAR, no el que imprime el papel.
+ *
+ * 🚨 Un documento que llega hoy con el vencimiento en el pasado casi nunca es una
+ * póliza muerta: es una póliza PRORROGADA. El contrato de seguro se renueva de
+ * año en año salvo denuncia (art. 22 LCS), y la gente manda el último papel que
+ * tiene a mano, que puede ser de hace tres renovaciones.
+ *
+ * Guardar esa fecha tal cual tiene un efecto concreto y silencioso: el calendario
+ * la da por pasada y **no avisa nunca**, justo de la póliza que se acaba de subir
+ * para poder entrar a tiempo.
+ *
+ * Así que se proyecta al próximo aniversario y se DECLARA con un aviso: es una
+ * fecha derivada, no leída. Si el cliente denunció el contrato, la proyección
+ * sobra — pero eso se ve llamando, y para llamar hace falta que salga en la lista.
+ *
+ * El 29 de febrero se proyecta al 28 en los años no bisiestos, no al 1 de marzo:
+ * adelantar un día una fecha de preaviso es conservador; atrasarla, no.
+ */
+export function proyectarVencimiento(
+  fecha: string | null,
+  hoy: Date = new Date(),
+): { fecha: string | null; proyectado: boolean } {
+  if (!fecha) return { fecha: null, proyectado: false }
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha)
+  if (!m) return { fecha, proyectado: false }
+  const [, anio, mes, dia] = m
+  const hoyIso = `${hoy.getUTCFullYear()}-${String(hoy.getUTCMonth() + 1).padStart(2, '0')}-${String(
+    hoy.getUTCDate(),
+  ).padStart(2, '0')}`
+  if (fecha >= hoyIso) return { fecha, proyectado: false }
+
+  const mesN = Number(mes)
+  const diaN = Number(dia)
+  let candidato = Number(anio)
+  // Se avanza de año en año hasta pasar de hoy: un papel de hace tres
+  // renovaciones no puede quedarse a mitad de camino.
+  let salida = ''
+  do {
+    candidato += 1
+    const ultimo = new Date(Date.UTC(candidato, mesN, 0)).getUTCDate()
+    const diaReal = Math.min(diaN, ultimo)
+    salida = `${candidato}-${mes}-${String(diaReal).padStart(2, '0')}`
+  } while (salida < hoyIso)
+  return { fecha: salida, proyectado: true }
+}
+
 /** Campos de la lectura que ya tienen columna propia y no se repiten en `datosRamo`. */
 const CON_COLUMNA_PROPIA = new Set([
   'compania',
@@ -213,17 +321,23 @@ const CON_COLUMNA_PROPIA = new Set([
  * `datosRamo: null` cuando no quedó nada, que **no es** `{}` («se miró y el
  * documento no traía más»).
  */
-export function prepararDeclaradaDesdeDocumento(l: LecturaPoliza): {
+export function prepararDeclaradaDesdeDocumento(
+  l: LecturaPoliza,
+  hoy: Date = new Date(),
+): {
   declarada: DeclaradaDesdeDocumento
   avisos: AvisoDocumento[]
 } {
   const avisos: AvisoDocumento[] = []
   const compania = texto(l.datos.compania)
   const numeroPoliza = texto(l.datos.numeroPoliza)
-  const fechaVencimiento = texto(l.datos.fechaVencimiento)
+  const leido = texto(l.datos.fechaVencimiento)
+  const { fecha: fechaVencimiento, proyectado } = proyectarVencimiento(leido, hoy)
   if (!compania) avisos.push('sin_compania')
   if (!numeroPoliza) avisos.push('sin_numero')
   if (!fechaVencimiento) avisos.push('sin_vencimiento')
+  if (proyectado) avisos.push('vencimiento_proyectado')
+  if (!clavesCotejo(l).hayClaveDeRiesgo) avisos.push('sin_clave_de_riesgo')
 
   const resto: Record<string, string | number> = {}
   for (const [k, v] of Object.entries(l.datos)) {
@@ -239,7 +353,7 @@ export function prepararDeclaradaDesdeDocumento(l: LecturaPoliza): {
       ramo: texto(l.ramo),
       primaAnual: numero(l.datos.primaAnual),
       fechaVencimiento,
-      matricula: texto(l.datos.matricula),
+      matricula: matriculaCotejable(texto(l.datos.matricula)),
       fechaMatriculacion: texto(l.datos.fechaMatriculacion),
       referenciaCatastral: texto(l.datos.referenciaCatastral),
       datosRamo: Object.keys(resto).length > 0 ? resto : null,

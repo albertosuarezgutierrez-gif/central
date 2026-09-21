@@ -631,7 +631,9 @@ export {
 
 // Pólizas que el corredor recibe por su cuenta y sube él (no las declara el cliente).
 export {
+  clavesCotejo,
   partirNombre,
+  proyectarVencimiento,
   tipoPersonaDeNombre,
   prepararAltaDesdeDocumento,
   prepararDeclaradaDesdeDocumento,
@@ -639,6 +641,7 @@ export {
 export type {
   AltaDesdeDocumento,
   AvisoDocumento,
+  ClavesCotejo,
   DeclaradaDesdeDocumento,
   LecturaPoliza,
   TipoLecturaDocumento,
