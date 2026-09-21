@@ -24,6 +24,18 @@
   (`claude/buscador-ia-2026-09-14`).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-21 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos, delegado a 4
+  agentes en paralelo (Booking+Trivago±Tripadvisor, 12 ventanas: 10 meses + Semana Santa +
+  Feria + Karol G). Comps nuevos verificados con SQL directo: house=117, busto=119,
+  luxury=178, duplex=149 (ninguno a 0). Confirmó restaurada la conectividad del Paso 4 (el
+  401 de Smoobu /api/rates de los ciclos 14-15/09 ya no está) y el motor despausado; cerró el
+  "evento sin identificar" del 11-jun-2027 del ciclo anterior — es Karol G, ya conocido desde
+  agosto. 48 propuestas (p50 de mercado) enviadas a `aplicar-propuesta` en dry-run forzado,
+  circuit-breaker sano, 48/48 trazadas en `pricing_decisiones`. Aprendizaje escrito
+  (`pricing_aprendizaje` id ciclo_21_09_2026) y aviso Telegram enviado (messageId 4906);
+  dudas: Paso 1 (medir ciclo anterior) con muestra muy pequeña — los ciclos 14/09 y 15/09 no
+  escribieron decisiones reales por los bloqueos, así que solo hay 4 fechas cruzables con
+  incomes; fallos: —; PRs/commits: memoria de esta pasada (sin cambio de código).
 - **2026-09-20 · agente-correduria** (1ª pasada — sin entrada previa en bitácora, sin baseline
   para delta) · hizo: cartera viva por SQL directo (`seguros.polizas`, criterio
   `esCarteraViva`): 157 pólizas/100 clientes vivas, 110 pólizas/72 clientes EN VIGOR (47 vivas
