@@ -1455,7 +1455,18 @@ export default function Retarificador({
           </p>
         )}
 
-        {faltaAlgo && !deshabilitado && (
+        {/* Si el catálogo de tipos de vía no ha podido leerse, «falta» no se
+            corrige desde aquí: no hay nada que elegir. El texto genérico de
+            abajo («corregir arriba no cuesta nada») es falso en este caso
+            concreto y deja a quien lo lee sin saber qué hacer. */}
+        {faltaTipoVia && tiposVia === null && !deshabilitado && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 8, color: 'var(--negative)' }}>
+            El catálogo de tipos de vía no se ha podido leer: recarga la página. No es un dato que se
+            pueda teclear ni elegir desde aquí.
+          </p>
+        )}
+
+        {faltaAlgo && !(faltaTipoVia && tiposVia === null) && !deshabilitado && (
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
             El botón se enciende cuando no quede ningún <span className="badge warn">falta</span> de
             arriba. Corregir arriba no cuesta nada.
