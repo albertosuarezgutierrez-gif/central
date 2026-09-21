@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-21T07:46:19Z",
-  "sha": "60186d535060661b6da50838f54555e8b341e082",
+  "generadoEn": "2026-09-21T08:22:48Z",
+  "sha": "26f034896ce688c053f9e8518d171764280ee944",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -14354,7 +14354,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 116
+          "linea": 126
         },
         {
           "nombre": "hoyUtc",
@@ -14362,7 +14362,7 @@
           "exportada": true,
           "params": "ahora: Date = new Date()",
           "retorno": "Date",
-          "linea": 122,
+          "linea": 132,
           "resumen": "Medianoche UTC de hoy: el mismo criterio que `lib/cartera.ts`, para que dos pantallas de la misma cartera no discrepen por la zona horaria del servidor."
         },
         {
@@ -14371,7 +14371,7 @@
           "exportada": true,
           "params": "v: VentanaVencimiento, ahora: Date = new Date()",
           "retorno": "RangoVencimiento",
-          "linea": 134,
+          "linea": 144,
           "resumen": "La ventana de vencimiento traducida a fechas concretas. Se resuelve en JS (y no con `current_date`) para que el rango sea el mismo que se puede enseñar en la pantalla y el mismo que se prueba en el te"
         },
         {
@@ -14380,7 +14380,7 @@
           "exportada": false,
           "params": "grupo: GrupoCartera",
           "retorno": "Prisma.Sql",
-          "linea": 153,
+          "linea": 167,
           "resumen": "`p` es el alias de `polizas`. La cadena es constante y no lleva nada del usuario: `Prisma.raw` aquí no abre ninguna puerta."
         },
         {
@@ -14389,7 +14389,7 @@
           "exportada": false,
           "params": "valores: readonly string[]",
           "retorno": "Prisma.Sql",
-          "linea": 161,
+          "linea": 175,
           "resumen": "Lista de literales como `in (…)`, cada valor PARAMETRIZADO. `compania` y `provincia` son texto libre del usuario y nunca se interpolan."
         },
         {
@@ -14398,7 +14398,7 @@
           "exportada": false,
           "params": "r: RangoVencimiento",
           "retorno": "Prisma.Sql",
-          "linea": 196
+          "linea": 210
         },
         {
           "nombre": "condicionesCliente",
@@ -14406,7 +14406,7 @@
           "exportada": false,
           "params": "correduriaId: string, f: FiltroCartera, hoy: Date, soloGrupoYTexto: boolean,",
           "retorno": "Prisma.Sql[]",
-          "linea": 212,
+          "linea": 227,
           "resumen": "Las condiciones sobre el CLIENTE. `soloGrupoYTexto` es lo que separa la lista de las facetas: las facetas se calculan sobre el grupo + el texto e IGNORAN el resto de filtros (ver `facetasDe`), así que"
         },
         {
@@ -14415,7 +14415,7 @@
           "exportada": true,
           "params": "correduriaId: string, f: FiltroCartera, hoy: Date = new Date(),",
           "retorno": "Promise<ListadoCartera>",
-          "linea": 307,
+          "linea": 322,
           "resumen": "El listado con su total, sus pólizas y sus facetas. @param hoy inyectable para poder probar las ventanas de vencimiento."
         },
         {
@@ -14424,7 +14424,7 @@
           "exportada": false,
           "params": "correduriaId: string, grupo: GrupoCartera, ids: string[],",
           "retorno": "Promise<",
-          "linea": 370,
+          "linea": 385,
           "resumen": "Las pólizas del grupo, de los clientes de ESTA página. Nunca de toda la cartera."
         },
         {
@@ -14433,7 +14433,7 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[],",
           "retorno": "Promise<Map<string,",
-          "linea": 437,
+          "linea": 452,
           "resumen": "Si se puede contactar con cada cliente de la página. Va en su propia consulta y con su propio `catch` a propósito: si las tablas de contactos no se pueden leer, la respuesta es «no se sabe» (`null`) p"
         },
         {
@@ -14442,7 +14442,7 @@
           "exportada": false,
           "params": "correduriaId: string, f: FiltroCartera, hoy: Date,",
           "retorno": "Promise<",
-          "linea": 477,
+          "linea": 492,
           "resumen": "Las facetas de los desplegables. 🎯 **Decisión deliberada: se calculan sobre el GRUPO + el texto `q`, e IGNORAN el resto de filtros.** Es lo que hace que, ya filtrando por «auto», el desplegable de co"
         }
       ],
@@ -14457,7 +14457,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "000d56011326"
+      "hash": "8ca56cda5196"
     },
     {
       "ruta": "apps/asegura/lib/cartera-historial.ts",
@@ -133996,7 +133996,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "28e04381abfb"
+      "hash": "f08abe5402cb"
     },
     {
       "ruta": "packages/module-seguros/src/garantias.ts",
