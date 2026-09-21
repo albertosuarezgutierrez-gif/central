@@ -53,6 +53,11 @@
   **Occident/Catalana** (auto, moto, hogar, comunidades, comercios) · **Fidelidade** (hogar,
   desde 14/07/2026). Pendiente: **Reale VIDA-RIESGO** devuelve «mediador no está activo» — hay
   que pedir a Reale que habilite al mediador para Avant2.
+  ⚠️ **Que Mapfre/Allianz no lleven comercio/comunidades hoy NO es un ramo bloqueado que haya
+  que pedir a Codeoscopic** (dictado por Alberto, 21/09/2026): el catálogo de ramos ya está
+  habilitado para la organización — el ramo se activa por compañía **al configurarla** en ese
+  ramo dentro del panel Avant2 (autoservicio). Es un caso distinto al de Reale VIDA-RIESGO, que
+  SÍ exige que la propia compañía habilite al mediador antes de que el panel lo acepte.
 - 🔑 **Las claves de las compañías NO se generan en el panel**: el corredor se las pide a cada
   compañía y las manda a `soporte@codeoscopic.com`, que las configura. Por eso viajaron en claro
   por email (mayo-junio/2026, tickets 267334) — **pendientes de rotar**.
