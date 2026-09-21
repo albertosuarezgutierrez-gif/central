@@ -41,12 +41,15 @@ export async function GET(req: Request) {
   // cambia es que no se tira lo que `normalizarOpciones` descarta. Sirve para
   // medir qué manda de verdad el vendor (p. ej. si cada versión trae sus años
   // de fabricación) en vez de suponerlo. Ver `lib/codeoscopic/crudo.ts`.
-  // Basta con que el parámetro VENGA: `crudo=si` o `crudo=xxx` entran igual y
-  // los valida la rama. Aceptar solo `1`/`true` dejaba que un valor mal escrito
-  // cayera en silencio al catálogo normalizado, con un 200 `ok` que se leería
-  // como «he mirado el crudo y no hay nada más» — la misma asimetría que este
-  // endpoint evita a conciencia con un `tipo` no soportado.
-  if ((params.get('crudo') ?? '') !== '') {
+  // 🚨 `has`, no `get`: basta con que el parámetro VENGA, con valor o sin él.
+  // `crudo=si`, `crudo=xxx` y **`?crudo` a secas** entran igual y los valida la
+  // rama. Las dos versiones anteriores de esta guarda dejaban caer en silencio
+  // al catálogo normalizado —`=== '1'` cualquier valor mal escrito, y
+  // `(get() ?? '') !== ''` el parámetro sin `=`, porque ahí `get` devuelve `''`
+  // y no `null`— con un 200 `ok` que se leería como «he mirado el crudo y no
+  // hay nada más». Es la afirmación que este endpoint existe para no tener que
+  // hacer, así que la guarda no puede tener ni un hueco por el que se cuele.
+  if (params.has('crudo')) {
     const c = await resolverCatalogoCrudo(params)
     switch (c.estado) {
       case 'ok':

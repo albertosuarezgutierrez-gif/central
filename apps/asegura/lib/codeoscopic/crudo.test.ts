@@ -91,3 +91,31 @@ test('extraerLista distingue las cuatro formas', () => {
   assert.equal(extraerLista({ a: 1 }).forma, 'objeto')
   assert.equal(extraerLista(null).forma, 'otro')
 })
+
+test('la guarda `crudo` de la ruta acepta el parámetro CON valor, con valor raro y SIN valor', () => {
+  // 🚨 Este cepo lee el FUENTE de la ruta y EVALÚA su condición, no compara
+  // texto: lo que importa es qué hace la guarda, no cómo está escrita.
+  //
+  // Por qué existe: un `?crudo` que cae al catálogo normalizado devuelve
+  // `200 {estado:'ok'}` con la lista de siempre, y eso se lee como «he mirado
+  // el crudo y el vendor no manda nada más» — la afirmación falsa que todo
+  // este endpoint existe para no tener que hacer. Ni `tsc` ni el build miran
+  // dentro de una condición, y las dos primeras versiones de esta guarda
+  // tenían el hueco (`=== '1'` y `(get() ?? '') !== ''`).
+  const ruta = join(
+    import.meta.dirname,
+    '../../app/api/operador/codeoscopic/catalogos/route.ts',
+  )
+  const fuente = readFileSync(ruta, 'utf8')
+  const m = fuente.match(/if \((params\.[^)]*\([^)]*\)[^)]*)\) \{\n\s*const c = await resolverCatalogoCrudo/)
+  assert.ok(m, 'no se encontró la guarda de `crudo` en la ruta: el cepo se ha quedado ciego')
+
+  const guarda = new Function('params', `return ${m[1]}`) as (p: URLSearchParams) => boolean
+  const q = (s: string) => new URL(`https://x/api?tipo=versiones${s}`).searchParams
+
+  assert.equal(guarda(q('&crudo=1')), true, 'crudo=1')
+  assert.equal(guarda(q('&crudo=true')), true, 'crudo=true')
+  assert.equal(guarda(q('&crudo=si')), true, 'un valor mal escrito NO puede colarse al normalizado')
+  assert.equal(guarda(q('&crudo')), true, '`?crudo` a secas: `get` devuelve "" y `has` devuelve true')
+  assert.equal(guarda(q('')), false, 'sin el parámetro, el catálogo normal de siempre')
+})
