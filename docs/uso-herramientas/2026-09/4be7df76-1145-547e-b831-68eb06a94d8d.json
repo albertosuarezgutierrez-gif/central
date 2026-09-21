@@ -1,31 +1,33 @@
 {
  "sesion": "4be7df76-1145-547e-b831-68eb06a94d8d",
  "inicio": "2026-09-21T08:36:46.741Z",
- "fin": "2026-09-21T08:54:05.491Z",
- "llamadas": 130,
+ "fin": "2026-09-21T09:26:10.816Z",
+ "llamadas": 242,
  "categorias": {
   "otro": {
-   "llamadas": 2,
-   "chars_in": 1203,
-   "chars_out": 1224,
+   "llamadas": 17,
+   "chars_in": 3392,
+   "chars_out": 192445,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "AskUserQuestion": 1
+    "AskUserQuestion": 1,
+    "ReadNotifications": 9,
+    "ScheduleWakeup": 6
    }
   },
   "lectura-directa": {
-   "llamadas": 52,
-   "chars_in": 6276,
-   "chars_out": 157840,
+   "llamadas": 66,
+   "chars_in": 7849,
+   "chars_out": 183319,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 23,
-    "Read": 28,
+    "Grep": 27,
+    "Read": 38,
     "Glob": 1
    }
   },
@@ -54,26 +56,44 @@
    }
   },
   "escritura": {
-   "llamadas": 30,
-   "chars_in": 44179,
-   "chars_out": 527924,
+   "llamadas": 34,
+   "chars_in": 48389,
+   "chars_out": 2265449,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 22,
+    "Edit": 26,
     "Write": 8
    }
   },
   "bash": {
-   "llamadas": 37,
-   "chars_in": 6350,
-   "chars_out": 31379,
+   "llamadas": 84,
+   "chars_in": 17435,
+   "chars_out": 81233,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 37
+    "Bash": 84
+   }
+  },
+  "mcp:github": {
+   "llamadas": 32,
+   "chars_in": 7507,
+   "chars_out": 84061,
+   "errores": 1,
+   "archivos_citados": 6,
+   "chars_citados": 657176,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 3,
+    "mcp__github__subscribe_pr_activity": 3,
+    "mcp__github__pull_request_read": 17,
+    "mcp__github__actions_list": 1,
+    "mcp__github__update_pull_request": 3,
+    "mcp__github__merge_pull_request": 3,
+    "mcp__github__unsubscribe_pr_activity": 1
    }
   }
  }
