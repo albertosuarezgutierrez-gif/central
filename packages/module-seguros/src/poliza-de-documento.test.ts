@@ -1,8 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  clasificarCoincidencias,
   clavesCotejo,
   partirNombre,
+  puedeEnlazarse,
   proyectarVencimiento,
   tipoPersonaDeNombre,
   prepararAltaDesdeDocumento,
@@ -191,7 +193,7 @@ test('el 29 de febrero se proyecta al 28, nunca al 1 de marzo', () => {
 
 test('el vencimiento proyectado sale como aviso, no en silencio', () => {
   const r = prepararDeclaradaDesdeDocumento(
-    lectura({ compania: 'Allianz', numeroPoliza: '055993459', fechaVencimiento: '2025-08-31', matricula: '2040FVF' }),
+    lectura({ compania: 'Allianz', numeroPoliza: '099999999', fechaVencimiento: '2025-08-31', matricula: '1111BBB' }),
     HOY,
   )
   assert.equal(r.declarada.fechaVencimiento, '2027-08-31')
@@ -201,9 +203,9 @@ test('el vencimiento proyectado sale como aviso, no en silencio', () => {
 // ─── Cotejo: el número de póliza NO es la clave del riesgo ─────────────────
 
 test('en auto la clave del riesgo es la matrícula', () => {
-  const r = clavesCotejo(lectura({ matricula: '2040 FVF', dni: '77362217S', numeroPoliza: '055993459' }))
-  assert.equal(r.claves.matricula, '2040FVF')
-  assert.equal(r.claves.dni, '77362217S')
+  const r = clavesCotejo(lectura({ matricula: '1111 BBB', dni: '00000001R', numeroPoliza: '099999999' }))
+  assert.equal(r.claves.matricula, '1111BBB')
+  assert.equal(r.claves.dni, '00000001R')
   assert.equal(r.hayClaveDeRiesgo, true)
 })
 
@@ -222,10 +224,10 @@ test('la matrícula de un hogar no se arrastra, ni la dirección de un coche', (
   const hogar = clavesCotejo({
     ramo: 'hogar',
     tipoLectura: 'hogar',
-    datos: { matricula: '2040FVF', direccion: 'Calle Socorro 24' },
+    datos: { matricula: '1111BBB', direccion: 'Calle Socorro 24' },
   })
   assert.equal(hogar.claves.matricula, null)
-  const auto = clavesCotejo(lectura({ matricula: '2040FVF', direccion: 'Calle Socorro 24' }))
+  const auto = clavesCotejo(lectura({ matricula: '1111BBB', direccion: 'Calle Socorro 24' }))
   assert.equal(auto.claves.direccion, null)
 })
 
@@ -233,10 +235,10 @@ test('solo con el número de póliza NO hay clave de riesgo, y se avisa', () => 
   // Un vacío buscando por número dice «esta póliza no la tengo», que no es
   // «este riesgo no lo tengo»: el mismo coche cambia de número al cambiar de
   // compañía. Quien lo pinte tiene que poder decir la diferencia.
-  const r = clavesCotejo(lectura({ numeroPoliza: '055993459' }))
+  const r = clavesCotejo(lectura({ numeroPoliza: '099999999' }))
   assert.equal(r.hayClaveDeRiesgo, false)
   const d = prepararDeclaradaDesdeDocumento(
-    lectura({ compania: 'Allianz', numeroPoliza: '055993459', fechaVencimiento: '2027-08-31' }),
+    lectura({ compania: 'Allianz', numeroPoliza: '099999999', fechaVencimiento: '2027-08-31' }),
     HOY,
   )
   assert.ok(d.avisos.includes('sin_clave_de_riesgo'))
@@ -244,34 +246,33 @@ test('solo con el número de póliza NO hay clave de riesgo, y se avisa', () => 
 
 test('la matrícula se coteja igual escrita de cualquier forma', () => {
   const de = (v: string) => clavesCotejo(lectura({ matricula: v })).claves.matricula
-  assert.equal(de('2040 FVF'), '2040FVF')
-  assert.equal(de('2040-fvf'), '2040FVF')
+  assert.equal(de('1111 BBB'), '1111BBB')
+  assert.equal(de('1111-bbb'), '1111BBB')
   assert.equal(clavesCotejo(lectura({ matricula: null })).claves.matricula, null)
 })
 
-// ─── La póliza REAL que mandó un cliente (Allianz 055993459) ────────────────
+// ─── La póliza REAL que mandó un cliente (Allianz 099999999) ────────────────
 
-test('la póliza real de Allianz se convierte en ficha y en lead sin inventar nada', () => {
-  // Datos copiados del PDF real, no escritos de memoria.
+test('una póliza de auto con la forma real se convierte en ficha y en lead sin inventar nada', () => {
   const real = lectura({
     compania: 'Allianz',
-    numeroPoliza: '055993459',
+    numeroPoliza: '099999999',
     fechaEfecto: '2024-09-06',
     fechaVencimiento: '2025-08-31',
     primaAnual: 253.59,
-    matricula: '2040FVF',
+    matricula: '1111BBB',
     marca: 'NISSAN',
     modelo: 'QASHQAI 2.0DCI ACENTA 4X4 AUTO 5P',
-    tomador: 'GABRIEL CABRERA ROSAS',
-    dni: '77362217S',
+    tomador: 'MANUEL EJEMPLO PRUEBA',
+    dni: '00000001R',
     fechaNacimiento: '1989-07-30',
     fechaCarnet: '2008-07-01',
   })
 
   const { alta, avisos: avisosAlta } = prepararAltaDesdeDocumento(real)
-  assert.equal(alta?.nombre, 'GABRIEL')
-  assert.equal(alta?.apellidos, 'CABRERA ROSAS')
-  assert.equal(alta?.dni, '77362217S')
+  assert.equal(alta?.nombre, 'MANUEL')
+  assert.equal(alta?.apellidos, 'EJEMPLO PRUEBA')
+  assert.equal(alta?.dni, '00000001R')
   assert.equal(alta?.tipoPersona, 'fisica')
   assert.equal(alta?.fechaNacimiento, '1989-07-30')
   assert.ok(!avisosAlta.includes('sin_dni'))
@@ -280,7 +281,7 @@ test('la póliza real de Allianz se convierte en ficha y en lead sin inventar na
 
   const { declarada, avisos } = prepararDeclaradaDesdeDocumento(real, HOY)
   assert.equal(declarada.compania, 'Allianz')
-  assert.equal(declarada.matricula, '2040FVF')
+  assert.equal(declarada.matricula, '1111BBB')
   assert.equal(declarada.primaAnual, 253.59)
   // La póliza es de 2024-2025 y sigue viva por prórroga: sin proyectar, el
   // calendario no avisaría nunca.
@@ -289,4 +290,35 @@ test('la póliza real de Allianz se convierte en ficha y en lead sin inventar na
   assert.ok(!avisos.includes('sin_clave_de_riesgo'))
   // Lo que no tiene columna propia se conserva entero.
   assert.equal((declarada.datosRamo as Record<string, unknown>).marca, 'NISSAN')
+})
+
+// ─── Una ficha que comparte teléfono NO es la misma persona ────────────────
+
+const porDni = { id: 'a', nombre: 'Padre Ejemplo', por: 'dni' as const, tipo: 'cliente' }
+const porTel = { id: 'b', nombre: 'Hijo Ejemplo', por: 'telefono' as const, tipo: 'lead' }
+const porMail = { id: 'c', nombre: 'Cuñado Ejemplo', por: 'email' as const, tipo: 'lead' }
+
+test('solo el DNI autoriza a enlazar la póliza a una ficha existente', () => {
+  assert.equal(puedeEnlazarse(porDni), true)
+  assert.equal(puedeEnlazarse(porTel), false)
+  assert.equal(puedeEnlazarse(porMail), false)
+})
+
+test('el teléfono compartido se clasifica como MISMO CONTACTO, no misma persona', () => {
+  // El caso real: el hijo hace el trámite del padre y en el papel va su móvil.
+  const r = clasificarCoincidencias([porTel])
+  assert.deepEqual(r.mismaPersona, [])
+  assert.equal(r.mismoContacto.length, 1)
+})
+
+test('DNI y teléfono a la vez no se mezclan en el mismo cajón', () => {
+  const r = clasificarCoincidencias([porDni, porTel, porMail])
+  assert.equal(r.mismaPersona.length, 1)
+  assert.equal(r.mismoContacto.length, 2)
+})
+
+test('sin coincidencias los dos cajones están vacíos, no nulos', () => {
+  // `[]` aquí sí es «se miró y no hay»: la consulta se hizo.
+  const r = clasificarCoincidencias([])
+  assert.deepEqual(r, { mismaPersona: [], mismoContacto: [] })
 })

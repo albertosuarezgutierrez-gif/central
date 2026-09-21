@@ -29,6 +29,7 @@
 
 import { MARCADORES_SIN_DATO } from './documento-auto.ts'
 import { normalizarMatricula } from './matricula.ts'
+import type { Coincidencia } from './cliente-edicion.ts'
 
 const SIN_DATO = new Set(MARCADORES_SIN_DATO)
 
@@ -360,4 +361,49 @@ export function prepararDeclaradaDesdeDocumento(
     },
     avisos,
   }
+}
+
+
+// ─── Qué se puede hacer con una ficha que ya tiene ese dato ─────────────────
+//
+// 🚨 Caso fundacional (21/09/2026, lo contó Alberto): una persona le escribe
+// por WhatsApp y le manda DOS pólizas, **ninguna suya** — una de su padre y
+// otra de su cuñado. Quien trae el documento no es de quien es la póliza, y el
+// trámite lo hace él, así que en esos papeles aparece SU teléfono.
+//
+// El alta busca por DNI, teléfono y email, y las tres coincidencias llegaban
+// a la pantalla con el mismo botón: «usar esta ficha». Pulsarlo sobre una
+// coincidencia de TELÉFONO cuelga la póliza del padre de la ficha del hijo, y
+// si además se llaman igual no lo nota nadie. Es la regla que el portal ya
+// tenía escrita —un móvil identifica un HOGAR, no a una persona: 740 números
+// compartidos por 1.599 fichas— incumplida en este flujo.
+//
+// Duplicar una ficha se ve y molesta; fundir dos personas no se ve y mezcla
+// sus teléfonos, sus pólizas y sus papeles. Por eso la asimetría:
+//
+//   · por DNI               → es la misma persona. Se enlaza.
+//   · por teléfono o email  → puede ser otra persona de la misma casa. NO se
+//                             enlaza: se crea su ficha y se deja dicho de quién
+//                             es el contacto que comparten.
+
+export type Cotejo = {
+  /** Misma persona, sin discusión: la póliza va a esta ficha. */
+  mismaPersona: Coincidencia[]
+  /** Comparte teléfono o email. NO es «la misma»: es su casa. */
+  mismoContacto: Coincidencia[]
+}
+
+export function clasificarCoincidencias(cs: readonly Coincidencia[]): Cotejo {
+  const mismaPersona: Coincidencia[] = []
+  const mismoContacto: Coincidencia[] = []
+  for (const c of cs) (c.por === 'dni' ? mismaPersona : mismoContacto).push(c)
+  return { mismaPersona, mismoContacto }
+}
+
+/**
+ * Si la pantalla puede ofrecer «esta póliza es de esta ficha». SOLO por DNI:
+ * es el único dato que identifica a una persona y no a un domicilio.
+ */
+export function puedeEnlazarse(c: Coincidencia): boolean {
+  return c.por === 'dni'
 }

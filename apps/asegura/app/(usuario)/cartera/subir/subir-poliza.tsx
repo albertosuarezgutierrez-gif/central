@@ -1,5 +1,8 @@
 'use client'
 
+import { clasificarCoincidencias } from '@central/module-seguros'
+import type { Coincidencia as CoincidenciaModulo } from '@central/module-seguros'
+
 import { useState } from 'react'
 import type { AutoLeido, HogarLeido } from '@central/module-seguros'
 import { revisarFichero, TIPOS_ACEPTADOS } from '@/lib/documentos/fichero'
@@ -7,7 +10,31 @@ import { eur } from '@/lib/dinero'
 
 type DatosLeidos = Record<string, string | number | null>
 
-type Coincidencia = { id: string; nombre: string; tipo: string; por: string }
+/** El tipo lo pone el módulo: si mañana aparece un criterio nuevo de
+ *  coincidencia, `tsc` avisa aquí en vez de dejar que se clasifique solo. */
+type Coincidencia = CoincidenciaModulo
+
+/**
+ * La coincidencia llega por HTTP, así que su `por` se COMPRUEBA, no se castea.
+ *
+ * 🚨 Un `por` que no se reconozca cae en `'email'` a propósito: lo único que
+ * `'dni'` habilita es el botón de enlazar esta póliza a una ficha existente, y
+ * ante un criterio desconocido la respuesta conservadora es no ofrecerlo. Al
+ * revés —tratar lo desconocido como DNI— se funden dos personas, que es el
+ * daño que no se ve.
+ */
+function leerCoincidencia(v: unknown): Coincidencia | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.id !== 'string' || o.id === '') return null
+  const por = o.por === 'dni' ? 'dni' : o.por === 'telefono' ? 'telefono' : 'email'
+  return {
+    id: o.id,
+    nombre: typeof o.nombre === 'string' ? o.nombre : '',
+    tipo: typeof o.tipo === 'string' ? o.tipo : '',
+    por,
+  }
+}
 
 type Estado =
   | { fase: 'inicio' }
@@ -211,7 +238,7 @@ export default function SubirPoliza() {
                 conflicto: {
                   error: String(j.error ?? 'Conflicto'),
                   coincidencias: Array.isArray(j.coincidencias)
-                    ? (j.coincidencias as Coincidencia[])
+                    ? j.coincidencias.map(leerCoincidencia).filter((c): c is Coincidencia => c !== null)
                     : [],
                   forzable: Boolean(j.forzable),
                 },
@@ -382,44 +409,87 @@ export default function SubirPoliza() {
                 </div>
               )}
 
-              {/* Conflicto (409): coincidencias encontradas */}
-              {estado.conflicto && (
-                <div className="card conflict-box">
-                  <h3>⚠️ Datos duplicados</h3>
-                  <p>{estado.conflicto.error}</p>
-                  <p>Se encontraron estas fichas que ya tienen este dato:</p>
-                  <div className="coincidencias-lista">
-                    {estado.conflicto.coincidencias.map((coincidencia) => (
-                      <div key={coincidencia.id} className="coincidencia-item">
-                        <div className="coincidencia-info">
-                          <strong>{coincidencia.nombre}</strong>
-                          <small className="muted">
-                            {coincidencia.tipo} · por {coincidencia.por}
-                          </small>
+              {/* Conflicto (409). 🚨 DOS listas, no una: ver `clasificarCoincidencias`.
+                  Una ficha que comparte el DNI es la misma persona; una que solo
+                  comparte teléfono o email es, casi siempre, otra persona de la
+                  misma casa — y el trámite lo suele hacer uno por todos, así que
+                  en el papel del padre va el móvil del hijo. Ofrecer «usar esta
+                  ficha» ahí cuelga la póliza del padre de la ficha del hijo, y
+                  con nombres parecidos no lo nota nadie. */}
+              {estado.conflicto && (() => {
+                const { mismaPersona, mismoContacto } = clasificarCoincidencias(
+                  estado.conflicto.coincidencias,
+                )
+                return (
+                  <div className="card conflict-box">
+                    <h3>⚠️ Ya hay fichas con estos datos</h3>
+
+                    {mismaPersona.length > 0 && (
+                      <>
+                        <p>
+                          Mismo <strong>DNI</strong>: es la misma persona. La póliza va a su ficha.
+                        </p>
+                        <div className="coincidencias-lista">
+                          {mismaPersona.map((c) => (
+                            <div key={c.id} className="coincidencia-item">
+                              <div className="coincidencia-info">
+                                <strong>{c.nombre}</strong>
+                                <small className="muted">{c.tipo} · mismo DNI</small>
+                              </div>
+                              <button
+                                className="btn btn-secondary"
+                                onClick={() => guardar(c.id)}
+                                disabled={estado.guardando}
+                              >
+                                Usar esta ficha
+                              </button>
+                            </div>
+                          ))}
                         </div>
+                      </>
+                    )}
+
+                    {mismoContacto.length > 0 && (
+                      <>
+                        <p>
+                          Comparte <strong>teléfono o correo</strong> con estas fichas. Eso suele
+                          querer decir que son de la misma casa —o que una hace el trámite por la
+                          otra—, <strong>no</strong> que sean la misma persona:
+                        </p>
+                        <div className="coincidencias-lista">
+                          {mismoContacto.map((c) => (
+                            <div key={c.id} className="coincidencia-item">
+                              <div className="coincidencia-info">
+                                <strong>{c.nombre}</strong>
+                                <small className="muted">
+                                  {c.tipo} · mismo {c.por === 'telefono' ? 'teléfono' : 'correo'}
+                                </small>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="muted" style={{ fontSize: 13 }}>
+                          Si de verdad es la misma persona, ábrele ficha y fúndelas después
+                          comprobando el DNI: fundir dos personas mezcla sus pólizas y sus papeles,
+                          y a diferencia de un duplicado no se ve.
+                        </p>
+                      </>
+                    )}
+
+                    {estado.conflicto.forzable && (
+                      <div className="mt-4">
                         <button
-                          className="btn btn-secondary"
-                          onClick={() => guardar(coincidencia.id)}
+                          className="btn btn-primary"
+                          onClick={() => guardar(undefined, true)}
                           disabled={estado.guardando}
                         >
-                          Usar esta ficha
+                          Es otra persona · crear su ficha
                         </button>
                       </div>
-                    ))}
+                    )}
                   </div>
-                  {estado.conflicto.forzable && (
-                    <div className="mt-4">
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => guardar(undefined, true)}
-                        disabled={estado.guardando}
-                      >
-                        Crear ficha nueva igualmente
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                )
+              })()}
 
               {/* Guardado exitoso */}
               {estado.guardado && !estado.conflicto && (
