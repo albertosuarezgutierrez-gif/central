@@ -13,6 +13,20 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** 🔁 **Segunda pasada a las capturas de Avant2: aparecen DOS campos más, y son de la
+misma familia que el carnet.** Alberto: «revisa bien las imágenes, hay campos que no tenemos». (1)
+`identificationDocument.type` va **cableado a `Dni`** — un NIE o un CIF se declaran como DNI; (2) la
+**matrícula asegurada** del historial la forzamos igual a la del coche que se cotiza, así que un
+bonus que viene de OTRO vehículo se declara mal. La primera pasada los dio por buenos: **un
+inventario de campos no se cierra con una lectura**. 📌 Y el remolque, medido: su toggle NO despliega
+campos (`lightTrailer` es un booleano y ya lo mandamos); el que abre lista es **Accesorios**.
+🧭 **Orden de producto dictado por Alberto:** fase 1 = precio con lo mínimo y los supuestos
+DECLARADOS; fase 2 = verificar km, remolque, accesorios y documento **antes de emitir** (la frontera
+es el ReRate, que ya es donde el precio pasa de `estimado` a firme). ⚖️ **Su «una sola pantalla para
+corredor y cliente» NO se hace tal cual**: choca con la regla 1 (dos caras, dos apps). Se comparte el
+FORMULARIO en un package y lo montan las dos apps — mismas preguntas, dos puertas, aislamiento
+estructural y no por permisos. Todo en el §5ter del documento de diseño. PR #3277.
+
 **(21/09/2026)** 🪪 **Los dos huecos gordos del auto, cerrados en código: el carnet deja de ir
 cableado y el conductor ocasional existe.** Con OK de Alberto, tras la comparativa con Avant2.
 `construirPersona` mandaba SIEMPRE `{type:'B', issuingZone:'Spain'}`, así que un carnet extranjero se
