@@ -53,6 +53,20 @@ function ramoLegible(tipo: string): string {
   return RAMOS_LEGIBLES[tipo] ?? tipo.replace(/_/g, ' ')
 }
 
+/**
+ * `(legacy)` es un CENTINELA del volcado (26.987 pólizas), no el nombre de
+ * una compañía — el importador lo escribió cuando no sabía la aseguradora
+ * real. Servirlo tal cual haría que el mensaje de recaptación dijera «que
+ * tuviste con (legacy)», que es basura con forma de dato (regla del
+ * CLAUDE.md raíz sobre valores de cajón). Trata cualquier variante como
+ * "no se conoce", igual que un `aseguradora` vacío.
+ */
+function aseguradoraLegible(v: string | null | undefined): string | null {
+  const limpio = v?.trim() || null
+  if (limpio === null) return null
+  return /^\(?legacy\)?$/i.test(limpio) ? null : limpio
+}
+
 /** Descifra sin convertir un fallo en "no tiene contacto". Mismo patrón que `cartera-impagados.ts`. */
 function descifrar(v: string | null | undefined): string | null {
   if (typeof v !== 'string' || v.trim() === '') return null
@@ -223,7 +237,7 @@ export async function colaRecaptacion(correduriaId: string): Promise<ColaRecapta
       cliente: `${f.nombre} ${f.apellidos}`.trim(),
       ramo: tipo,
       ramoLegible: ramoLegible(tipo),
-      aseguradoraAnterior: f.aseguradora?.trim() || null,
+      aseguradoraAnterior: aseguradoraLegible(f.aseguradora),
       numeroPoliza: f.numeroPoliza,
       telefono: descifrar(f.telefono),
       email: descifrar(f.email),

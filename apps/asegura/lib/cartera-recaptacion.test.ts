@@ -44,3 +44,11 @@ test('el opt-out de WhatsApp y de email se respetan cada uno por su canal', () =
   assert.match(FUENTE, /wa_opt_out_at/i)
   assert.match(FUENTE, /email_opt_out_at/i)
 })
+
+test('«(legacy)» del volcado (26.987 polizas) no se sirve como nombre de compania', () => {
+  // Es un centinela del importador, no una aseguradora real: si se cuela,
+  // el mensaje de recaptacion dice «que tuviste con (legacy)», y en la
+  // pantalla de Alberto sale «Antes con: (legacy)».
+  assert.match(FUENTE, /aseguradoraLegible/)
+  assert.match(FUENTE, /legacy/i)
+})

@@ -1174,3 +1174,20 @@ model RecaptacionEnvio {
 
   @@map("recaptacion_envios")
 }
+
+/// Historial de contactos de RENOVACIÓN — un cliente VIVO cuya póliza vence
+/// pronto, distinto de `RecaptacionEnvio` (leads muertos del volcado). No hay
+/// tabla de "cola calculada": se deriva en cada GET de `vencimientosProximos()`.
+/// Solo alimenta el cooldown y el "contactado hace N días" de la pantalla.
+model RenovacionContacto {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  polizaId     String   @map("poliza_id") @db.Uuid
+  canal        String   @default("whatsapp")
+  mensaje      String
+  creadoPor    String   @map("creado_por")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@map("renovacion_contactos")
+}

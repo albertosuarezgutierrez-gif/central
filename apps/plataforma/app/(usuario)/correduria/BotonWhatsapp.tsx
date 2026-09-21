@@ -22,7 +22,7 @@ export const VERDE_WHATSAPP = '#25D366'
  * de pulsar) ni un icono apagado (un icono que se ve promete una acción). El
  * teléfono se queda con su `tel:`, que es lo que sí se sabe que funciona.
  */
-export default function BotonWhatsapp({ telefono, mensaje, compacto = false }: {
+export default function BotonWhatsapp({ telefono, mensaje, compacto = false, onAbrir }: {
   telefono: string
   /**
    * Abre WhatsApp con el texto ya escrito, para no teclear lo mismo ochenta
@@ -38,6 +38,13 @@ export default function BotonWhatsapp({ telefono, mensaje, compacto = false }: {
    * área táctil completa de 44px.
    */
   compacto?: boolean
+  /**
+   * Se dispara AL PULSAR, sin bloquear la apertura de WhatsApp (sin
+   * `preventDefault`, igual que `BotonWhatsappRecaptacion`). Sirve para
+   * registrar «se abrió este aviso» en el historial del cliente — el envío en
+   * sí lo hace WhatsApp, esto solo deja constancia de que Alberto lo abrió.
+   */
+  onAbrir?: () => void
 }) {
   const texto = (mensaje ?? '').trim()
   const url = texto ? enlaceWhatsappConMensaje(telefono, texto) : urlWhatsapp(telefono)
@@ -52,6 +59,7 @@ export default function BotonWhatsapp({ telefono, mensaje, compacto = false }: {
       title={texto
         ? `Abrir WhatsApp con ${telefono} y el mensaje ya escrito — lo envías tú (se abre en una pestaña nueva)`
         : `Abrir WhatsApp con ${telefono} (se abre en una pestaña nueva)`}
+      onClick={onAbrir}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: lado, height: lado, minWidth: lado,
