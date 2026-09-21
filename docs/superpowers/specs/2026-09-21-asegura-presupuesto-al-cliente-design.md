@@ -924,3 +924,70 @@ contestar desde el código: el portal del fabricante **no documenta el coste de 
 y la única razón por la que las tratamos como facturables es que el CRM de Manuel lo hacía. De la
 respuesta dependen el tope, el conteo del libro y lo que se le puede llegar a permitir al cliente en
 la Fase 3. Es un correo a Juan Manuel Fernández, que ya contestó el 21/09 a las otras dos preguntas.
+
+---
+
+## §8. Añadidos del 21/09/2026 (tarde) — otra sesión, trabajando el caso real de un lead
+
+> Contexto: esta sesión llegó al mismo problema por otra puerta (Alberto recibe una póliza por
+> WhatsApp y quiere que el trabajo administrativo no lo haga él) y **rediseñó durante un rato algo
+> que ya estaba escrito aquí**, mejor. Lo que sigue es solo lo que no estaba. El resto —token vs
+> código, el canal sin WABA, el correo pedido en el flujo, el seguro del padre en el buzón del
+> hijo— ya estaba resuelto arriba y no se toca.
+
+### 8.1 Que NINGÚN precio salga firme es del vendor, no de nuestros datos
+
+El §0 mide «187 precios y NI UNO firme». Vuelto a medir el mismo día con más muestra, y con la
+desagregación que lo explica:
+
+```
+211 precios · 7 compañías · 211 `estimado` · 211 `requiere_rerate` · 24 SIN UN SOLO AVISO
+```
+
+**El dato que cierra la cuestión son los 24 sin avisos.** `firmezaDe()` (`respuesta.ts`) decide en
+este orden: `estimate === true` manda sobre todo lo demás; solo si `estimate === false` y no hay
+mensajes de tipo `warning`/`error` el precio es `firme`. Un precio sin ningún mensaje y aun así
+estimado significa que **la compañía manda su bandera de estimación por defecto en la cotización
+inicial**, no que le falte un dato nuestro.
+
+Consecuencia práctica, que esta sesión aprendió equivocándose delante de Alberto: **completar el
+historial (años asegurado, años sin siniestros, número de póliza anterior completo) NO va a devolver
+un precio firme.** Mejora el precio —un historial a ceros cotiza como conductor novel, ver el
+reparo de `aniosAsegurado` en `peticion-auto.ts`— pero no la firmeza. Decir lo contrario cuesta
+0,50€ por comprobación.
+
+Y sube de peso el aviso del §2.4: que la firma no sea la contratación **no es un caso borde, es el
+caso único**. El cliente firma un estimado el 100 % de las veces, con las 7 compañías. El documento
+y la pantalla tienen que decirlo con ese peso.
+
+### 8.2 Descartado: adelantar el ReRate a ANTES del envío
+
+Idea que surgió de 8.1: si la firmeza solo llega con el ReRate, hacerlo sobre la opción recomendada
+**antes** de mandar el presupuesto convertiría «firma unos 253€ estimados» en «firma 253,25€ que la
+compañía ya ha confirmado».
+
+**Se descarta**, y la razón es de dinero: el §7 ya decidió ReRate **al aceptar**, y ahí solo se paga
+por los presupuestos que alguien acepta. Adelantarlo cobraría también todos los que mueren sin
+respuesta, que con un embudo sin estrenar serán la mayoría. La decisión del §7 se mantiene tal cual.
+
+### 8.3 Hueco de alcance: el lead que NO tiene póliza en la cartera
+
+Todas las fases arrancan de `/correduria/poliza/[id]/retarificar`, o sea de una póliza que ya está
+en la cartera. **`auto-nuevo` no aparece en ninguna fase**, y es la pantalla del caso que motivó
+esta sesión: alguien manda por WhatsApp la póliza de un tercero que no es cliente todavía
+(`/correduria/cliente/[id]/auto-nuevo`, oportunidad nueva).
+
+Lo que eso implica, sin resolverlo aquí:
+
+- El objeto `presupuesto` del §2 se ancla a `cliente_id`, y la ficha del lead **sí existe** (la crea
+  el alta desde documento), así que el modelo no lo impide. Lo que falta es la puerta: el botón
+  «Preparar presupuesto» del PR 1 está previsto solo en `retarificador.tsx`.
+- Esa pantalla, además, **no tiene enganchado el ReRate ni el Submit**: el panel `Emision` es
+  reutilizable tal cual (sus props son genéricas) y la respuesta de `auto-nuevo` ya trae el id de
+  la cotización —`RespuestaRetarificar.guardado`—, pero el componente de pantalla lo descarta. O
+  sea: la tubería existe entera y falta enchufarla.
+- Sin eso, a un lead se le puede dar precio pero no confirmárselo ni emitirle, que es justo donde
+  se quedó el caso real del 21/09.
+
+**Decisión pendiente de Alberto:** si el PR 1 pone el botón también en `auto-nuevo` (coste: poco,
+es el mismo puerto) o si la Fase 2 se cierra sobre cartera existente y los leads esperan.
