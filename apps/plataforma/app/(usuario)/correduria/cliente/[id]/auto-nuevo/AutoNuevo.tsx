@@ -22,6 +22,7 @@ import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import {
   borrarBorrador,
   claveBorradorAutoNuevo,
@@ -80,6 +81,9 @@ type BorradorAutoNuevo = {
   matricula?: string
   matriculacion?: string
   garaje?: string
+  kmAnuales?: string
+  fechaCompra?: string
+  remolqueLigero?: boolean
   estadoCivilId?: string
   municipioId?: string
   correcciones?: Record<string, string>
@@ -209,6 +213,18 @@ export default function AutoNuevo({
   const [matricula, setMatricula] = useState('')
   const [matriculacion, setMatriculacion] = useState('')
   const [garaje, setGaraje] = useState('')
+
+  // ── Los tres datos del coche que hasta hoy viajaban SUPUESTOS ─────────────
+  // `kmAnuales`, `fechaCompra` y `remolqueLigero` ya iban en la petición al
+  // vendor (`peticion-auto.ts`), pero con un valor que nadie había preguntado:
+  // 15.000 km, fecha de compra = la de matriculación y sin remolque. Los tres
+  // mueven la prima, y los kilómetros son factor de tarifa de primer orden.
+  // Se dejan VACÍOS a propósito: en blanco significa «no se ha preguntado» y
+  // viaja el supuesto de siempre; con valor, manda el corredor. Prerrellenarlos
+  // con el supuesto convertiría un «no lo sé» en un dato afirmado.
+  const [kmAnuales, setKmAnuales] = useState('')
+  const [fechaCompra, setFechaCompra] = useState('')
+  const [remolqueLigero, setRemolqueLigero] = useState(false)
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
@@ -258,6 +274,9 @@ export default function AutoNuevo({
     // Lo que no depende de ningún catálogo se restaura tal cual.
     if (b.matricula) setMatricula(b.matricula)
     if (b.matriculacion) setMatriculacion(b.matriculacion)
+    if (b.kmAnuales) setKmAnuales(b.kmAnuales)
+    if (b.fechaCompra) setFechaCompra(b.fechaCompra)
+    if (b.remolqueLigero) setRemolqueLigero(true)
     if (b.correcciones) setCorrecciones(b.correcciones)
 
     // Lo que SÍ sale de un catálogo se restaura solo si sigue existiendo en
@@ -344,6 +363,9 @@ export default function AutoNuevo({
         matricula,
         matriculacion,
         garaje,
+        kmAnuales,
+        fechaCompra,
+        remolqueLigero,
         estadoCivilId,
         municipioId,
         correcciones,
@@ -371,6 +393,9 @@ export default function AutoNuevo({
     matricula,
     matriculacion,
     garaje,
+    kmAnuales,
+    fechaCompra,
+    remolqueLigero,
     estadoCivilId,
     municipioId,
     correcciones,
@@ -463,6 +488,20 @@ export default function AutoNuevo({
   const faltaPropietario = propietarioDistinto && !personaCompleta(propietario, false)
   const faltaConductor = conductorDistinto && !personaCompleta(conductor, true)
 
+  // Un número mal tecleado NO se manda al vendor: `revisarDatosAuto` lo
+  // rechazaría, pero ya habría costado el viaje. Se para aquí, en la pantalla.
+  //
+  // 🚨 El parseo NO es `Number()`: `Number('15.000')` es 15, y «15.000» es
+  // justo lo que imprime la ayuda de este campo. La regla vive testeada en
+  // `kilometrosDesdeTexto` (@central/module-seguros).
+  const kmLeidos = kilometrosDesdeTexto(kmAnuales)
+  const kmInvalido = kmAnuales.trim() !== '' && kmLeidos === null
+
+  // Un coche no se compra antes de matricularse. El vendor no lo comprueba: se
+  // traga las dos fechas y tarifica, así que el disparate solo se vería en el
+  // precio. Aquí es gratis.
+  const compraInvalida = fechaCompra !== '' && matriculacion !== '' && fechaCompra < matriculacion
+
   const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
   const faltaHistorial =
     tieneSeguroActual &&
@@ -476,12 +515,17 @@ export default function AutoNuevo({
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
-    aManoSinRellenar.length > 0 || faltaPropietario || faltaConductor || faltaHistorial
+    aManoSinRellenar.length > 0 || faltaPropietario || faltaConductor || faltaHistorial || kmInvalido || compraInvalida
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
     const correccionesFinal: Record<string, unknown> = { ...correcciones }
+    // En blanco = no se ha preguntado: no se manda nada y sigue mandando el
+    // supuesto del precalificador. Con valor, manda el corredor.
+    if (kmLeidos !== null) correccionesFinal.kmAnuales = kmLeidos
+    if (fechaCompra !== '' && !compraInvalida) correccionesFinal.fechaCompra = fechaCompra
+    if (remolqueLigero) correccionesFinal.remolqueLigero = true
     if (propietarioDistinto) correccionesFinal.propietario = personaParaPuerto(propietario, false)
     if (conductorDistinto) correccionesFinal.conductor = personaParaPuerto(conductor, true)
     if (tieneSeguroActual) {
@@ -622,6 +666,39 @@ export default function AutoNuevo({
               <option value="">Elige garaje</option>
               {garajes.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
             </select>
+          </Campo>
+          <Campo
+            etiqueta="Kilómetros al año"
+            falta={kmInvalido}
+            faltaTexto="no se entiende como kilometraje (dígitos, y el punto solo como separador de miles)"
+            ayuda={`En blanco viajan ${KM_ANUALES_SUPUESTOS.toLocaleString('es-ES')} como supuesto. Es factor de precio de primer orden: si el cliente lo sabe, tecléalo.`}
+          >
+            <input
+              inputMode="numeric"
+              value={kmAnuales}
+              onChange={(e) => setKmAnuales(e.target.value)}
+              placeholder={String(KM_ANUALES_SUPUESTOS)}
+              style={input}
+            />
+          </Campo>
+          <Campo
+            etiqueta="Fecha de compra"
+            falta={compraInvalida}
+            faltaTexto="no puede ser anterior a la matriculación"
+            ayuda="Solo si es de segunda mano. En blanco viaja la de matriculación, que es lo cierto salvo en ese caso."
+          >
+            <input type="date" value={fechaCompra} onChange={(e) => setFechaCompra(e.target.value)} style={input} />
+          </Campo>
+          <Campo etiqueta="Remolque ligero (< 750 kg)" falta={false} ayuda="La compañía lo pregunta. Por defecto, no.">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44 }}>
+              <input
+                type="checkbox"
+                checked={remolqueLigero}
+                onChange={(e) => setRemolqueLigero(e.target.checked)}
+                style={{ width: 18, height: 18 }}
+              />
+              <span style={{ fontSize: 14 }}>{remolqueLigero ? 'Sí, lleva' : 'No lleva'}</span>
+            </label>
           </Campo>
         </div>
       </div>

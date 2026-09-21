@@ -22,6 +22,28 @@ CIMA, mismo DGS) → el emparejador exige candidato único y las manda a cuarent
 Escritas y SIN aplicar las dos salidas (SQL de colisión + desempate por origen CIMA): las dos piden
 OK tuyo. Detalle en `docs/CIMA-CUARENTENA.md`.
 
+
+**(21/09/2026)** 🚗 **Avant2 vs. lo nuestro para tarificar auto: no nos falta pantalla, nos faltan
+datos que ya viajaban INVENTADOS.** De los once campos que pide el formulario de Avant2 y el nuestro
+no, **seis ya iban en la petición con un valor que nadie había preguntado**. Tres se arreglan aquí
+sin gastar un euro porque ya viajaban (`kilometersPerYear`, `purchaseDate`, `lightTrailer`): campos
+nuevos en «1 · El coche», **vacíos a propósito** (en blanco = supuesto de siempre; con valor, manda
+el corredor), en el borrador local y con el botón bloqueado si el número está mal.
+`KM_ANUALES_SUPUESTOS` sube a `@central/module-seguros` para que pantalla y petición no puedan
+divergir, con cepo de valor visto en rojo. 🔴 **Lo gordo queda abierto y documentado:** el carnet va
+**cableado** a `{type:'B', issuingZone:'Spain'}` (`persona.ts:136`) — un carnet extranjero se declara
+como español sin que nada falle, y eso es art. 10 LCS, no un precio malo. Eso y `secondaryDriver`
+(conductor ocasional) piden **una** cotización real de verificación a 0,50€: spec + orden en
+`docs/superpowers/specs/2026-09-21-avant2-auto-tarificacion-comparativa-design.md`. Donde SÍ vamos
+por delante: Avant2 acepta «tuvo seguro» con 0 años y cotiza novel; nosotros lo paramos antes de
+gastar. 🪤 **Y la revisión obligatoria del propio PR encontró DOS bugs que había metido yo**, los dos
+de la misma familia (la pantalla afirmando algo distinto de lo que viajó): `Number('15.000')` es
+**15** —y «15.000» es justo lo que imprimía la ayuda del campo nuevo—, un tecleo con forma de chollo
+que no rechazaban ni la pantalla ni `revisarDatosAuto` ni el vendor; y el supuesto seguía pintándose
+junto al precio después de corregirlo, fallo del patrón que se tapó en las CINCO salidas del puerto.
+La lección: **el paso de `code-review` antes de sacar de draft no es burocracia** — este PR salía
+verde en los 12 checks con los dos bugs dentro. PR #3272.
+
 **(21/09/2026)** 🔗 **La cadena de CIMA ya es ENTERA de Alberto, y el vigilante arreglado enseña lo
 que tapaba.** Verificado por API, no de palabra: el repo del adaptador es hoy
 `albertosuarezgutierrez-gif/asegura-app-cima-adapter` (id 1225402598, privado, Java) — era el único
@@ -49,6 +71,28 @@ un 200 vacío habría salido igual de verde, la fila nueva es la prueba. PR #326
 el host). ⚠️ **Cabo abierto:** `e2e-smoke` ya fallaba el 19/09 a las 10:06, con el secret aún bueno
 — su 401 de ese día NO lo explica esta rotación; si sigue rojo, el issue #815 sigue vivo.
 
+**(21/09/2026)** 🔍 **«¿El catálogo de Codeoscopic trae los años de cada versión?» llevaba meses
+contestándose de memoria, y era medible.** Causa: `normalizarOpciones` se queda con `id` + `nombre` y
+**tira el resto**, así que desde fuera de esa función no hay forma de saber qué manda el vendor — y el
+nombre no lleva años («4X4 DC LE AUTO»). Nuevo `?crudo=1` en `/api/operador/codeoscopic/catalogos`
+(solo `tipo=versiones`, mismo `GET` de catálogo, **0,00€**) + ruta en plataforma tras la sesión, para
+que `ASEGURA_OPERADOR_SECRET` **no salga de Vercel**: se abre una URL y ya. Resumidor puro `crudo.ts`
+(unión de claves de TODAS las entradas, `total: null` ≠ `0`, muestra íntegra); 9 cepos, 4 vistos en
+ROJO. 🚨 La guarda que lo hace servir de algo: si asegura responde 200 **sin `resumen`** es que su
+despliegue no entiende `crudo=1` y ha devuelto la lista normalizada — se corta con 502, porque
+relayarlo se leería como «el vendor no manda nada más». La pasada de `code-review` cazó justo eso.
+✅ **MEDIDO el mismo día (SMART FORFOUR, 53 versiones): SÍ hay fecha, pero es `releaseMarketDate`
+—salida al mercado— y NO un rango de fabricación.** No existe `yearFrom`/`yearTo`. Así que la
+matriculación **DESCARTA** las versiones posteriores y **no elige una**: cuatro acabados × dos
+potencias comparten la misma salida 2015-07. 💡 Y el hallazgo que vale más que la fecha: el catálogo
+trae `displacement`, `powerCv`, `doors`, `seats`, carrocería y PVP —casi el juego que pide el
+emparejamiento contra la ficha técnica (P.1/P.2/P.3/B)— y hoy se tira entero. 🚨 Y lo más caro: **tres PARES de versiones tienen el nombre IDÉNTICO** con códigos Base7 distintos
+(las `ELECTRIC DRIVE EQ`), y el desplegable solo enseña el nombre → el corredor no tiene con qué
+elegir y la equivocada son 0,50€ en el precio de otro coche. Además `engine=Gasolina` **no parece
+filtrar** (20 de 53 no son gasolina por nombre; confirmable gratis con `engine=Diesel`). ⚠️ `claves`
+es una UNIÓN: prueba que el campo existe, no que lo traigan las 53. Detalle en
+`docs/CODEOSCOPIC-API-PORTAL.md`. ⏸️ Decisión de Alberto: si se cablea el filtro.
+
 **(21/09/2026)** 🚨 **AVERÍA CONFIRMADA: el vigilante de la ingesta de CIMA lleva dos días sin
 funcionar.** `cima-health-alert` falló el 20/09 con `curl (22) error: 401` y hoy volvió a fallar
 igual — reproducido a mano (run 93, `workflow_dispatch`, 15:20 UTC). Su propio rastro en BD lo
@@ -62,7 +106,9 @@ no — el secret de Actions dejó de coincidir con la env var de Vercel. **Lo ar
 credencial.** La ingesta en sí está sana (`cima_pull_completed` 21/09 12:26), así que no hay pérdida
 de datos; lo que no hay es red — si CIMA se parase mañana, nadie se enteraría.
 
-**(21/09/2026)** Presupuesto al cliente — **PR 1 entero** (#3252, draft). Módulo puro
+**(21/09/2026)** Presupuesto al cliente — **PR 1 entero, MERGEADO** (#3252, squash 40b5e2655).
+⚠️ Entró **sin la comprobación en navegador ni la medida a 320px** (decisión de Alberto: «mergea»):
+la tarjeta «Preparar presupuesto» de retarificar se verá por primera vez en producción. Módulo puro
 `presupuesto-cliente.ts` (estado derivado de los sellos, caducidad = mínimo de 3 fuentes con la
 fuente declarada, regla de las tres), DDL `seguros.presupuesto|_opcion|_evento` + `firma`
 (**APLICADA**, migración `seguros_presupuesto_cliente`), puerto `/api/operador/presupuesto`, proxy en
