@@ -107,6 +107,42 @@ garajes (traspaso de Manuel §4, `car-catalogs.ts:271`). Consecuencia práctica:
 corredor cotiza HOY, sin comprar créditos** — se eligen marca, modelo y versión en tres clics. Los
 créditos solo hacen falta el día que el CLIENTE teclee una matrícula y no haya nadie eligiendo.
 
+### 📏 Qué manda DE VERDAD ese catálogo — MEDIDO el 21/09/2026
+
+Hasta hoy nadie había visto el JSON crudo: `normalizarOpciones` se queda con `id` + `nombre` y tira
+el resto, así que «¿trae los años de cada versión?» se contestaba de memoria. Se midió con
+`?crudo=1` (`GET /api/operador/codeoscopic/catalogos`, gratis) sobre **SMART FORFOUR**
+(`/car/brands/731/models/8689/vehicles?engine=Gasolina`): **53 versiones**.
+
+Claves que manda el vendor por versión:
+
+```
+code · name · description · type · model · engine · doors · seats · releaseMarketDate · retailPrice
+```
+
+Ejemplo real: `{"code":"08200080023","name":"52 AT PASSION","description":"52 AT PASSION, 5p, 71 CV, 07/2015",
+"type":{"code":"PO","name":"BERLINA 2 Volúmenes","baseType":{"code":"100","name":"TURISMO"}},
+"engine":{"type":{"id":"Gasoline"},"displacement":999,"powerCv":71,"powerKw":52},
+"doors":5,"seats":4,"releaseMarketDate":"2015-07-01","retailPrice":14960.6}`
+
+🚨 **SÍ hay fecha, pero es `releaseMarketDate` — SALIDA AL MERCADO, no un rango de fabricación.**
+No existe `yearFrom`/`yearTo`. La diferencia decide qué se puede hacer con ella: un coche
+matriculado en 2016 **no puede** ser la versión que salió en 2017-09, pero **sí** puede ser
+cualquiera de las que ya estaban a la venta. O sea, la fecha de matriculación **DESCARTA** las
+versiones posteriores; **no elige una**. En la medición, cuatro acabados (PASSION/PRIME/PROXY/base)
+× dos potencias comparten la misma salida 2015-07.
+
+⚠️ **Y lo que la medición NO dice: la cobertura.** `claves` es la UNIÓN de todas las entradas (por
+diseño: un campo que trae 1 de 50 no puede desaparecer), así que prueba que el campo EXISTE, no que
+lo traigan las 53. Para afirmar cobertura hay que contarlo.
+
+💡 **Hallazgo de propina, y vale más que la fecha:** el catálogo trae **`engine.displacement`,
+`engine.powerCv`, `engine.type`, `doors`, `seats`, `type` (carrocería) y `retailPrice`** — que es
+casi exactamente lo que pide el emparejamiento contra una ficha técnica de
+`docs/superpowers/specs/2026-09-01-asegura-alta-por-fotos-y-bonificadores.md` (`P.1` cilindrada +
+`P.2` potencia + `P.3` combustible + `B` año). Hoy se descarta todo. La foto de la ficha técnica
+como camino a la versión es más viable de lo que decía ese diseño.
+
 🚫 **Y una BD externa gratis no sustituye a esto.** Cualquier fuente de terceros (DGT open data va
 anonimizada y no lleva matrícula; el resto son de pago) devolvería **texto** («Seat León 1.6 TDI»),
 y la cotización no se hace con texto sino con el código Base7 de ELLOS. Casar texto→código es
