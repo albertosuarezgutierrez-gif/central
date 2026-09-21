@@ -1,0 +1,80 @@
+{
+ "sesion": "4be7df76-1145-547e-b831-68eb06a94d8d",
+ "inicio": "2026-09-21T08:36:46.741Z",
+ "fin": "2026-09-21T08:54:05.491Z",
+ "llamadas": 130,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 1203,
+   "chars_out": 1224,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "AskUserQuestion": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 52,
+   "chars_in": 6276,
+   "chars_out": 157840,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 23,
+    "Read": 28,
+    "Glob": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 3,
+   "chars_in": 636,
+   "chars_out": 30717,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__list_migrations": 1,
+    "mcp__Supabase__apply_migration": 1
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 1251,
+   "chars_out": 5626,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
+   }
+  },
+  "escritura": {
+   "llamadas": 30,
+   "chars_in": 44179,
+   "chars_out": 527924,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 22,
+    "Write": 8
+   }
+  },
+  "bash": {
+   "llamadas": 37,
+   "chars_in": 6350,
+   "chars_out": 31379,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 37
+   }
+  }
+ }
+}
