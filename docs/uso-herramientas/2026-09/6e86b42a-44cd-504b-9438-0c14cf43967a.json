@@ -1,64 +1,68 @@
 {
  "sesion": "6e86b42a-44cd-504b-9438-0c14cf43967a",
  "inicio": "2026-09-21T05:11:47.936Z",
- "fin": "2026-09-21T05:18:16.380Z",
- "llamadas": 111,
+ "fin": "2026-09-21T06:01:11.271Z",
+ "llamadas": 193,
  "categorias": {
   "otro": {
-   "llamadas": 11,
-   "chars_in": 832,
-   "chars_out": 1595,
+   "llamadas": 15,
+   "chars_in": 907,
+   "chars_out": 44937,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 5,
-    "ToolSearch": 6
+    "ToolSearch": 7,
+    "ReadNotifications": 3
    }
   },
   "lectura-directa": {
-   "llamadas": 15,
-   "chars_in": 1887,
-   "chars_out": 113279,
+   "llamadas": 16,
+   "chars_in": 1969,
+   "chars_out": 114242,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 6,
+    "Read": 7,
     "Grep": 9
    }
   },
   "bash": {
-   "llamadas": 14,
-   "chars_in": 2076,
-   "chars_out": 31270,
+   "llamadas": 53,
+   "chars_in": 61621,
+   "chars_out": 64732,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 14
+    "Bash": 53
    }
   },
   "mcp:github": {
-   "llamadas": 1,
-   "chars_in": 118,
-   "chars_out": 9748,
+   "llamadas": 6,
+   "chars_in": 2603,
+   "chars_out": 13776,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__github__list_pull_requests": 1
+    "mcp__github__list_pull_requests": 2,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 2
    }
   },
   "sql": {
-   "llamadas": 20,
-   "chars_in": 3689,
-   "chars_out": 47509,
+   "llamadas": 26,
+   "chars_in": 8200,
+   "chars_out": 55823,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 20
+    "mcp__Supabase__execute_sql": 26
    }
   },
   "agente:general-purpose": {
@@ -73,25 +77,37 @@
    }
   },
   "mcp:Booking-com": {
-   "llamadas": 40,
-   "chars_in": 9824,
-   "chars_out": 722606,
+   "llamadas": 48,
+   "chars_in": 11952,
+   "chars_out": 879618,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Booking-com__accommodations_search": 40
+    "mcp__Booking-com__accommodations_search": 48
    }
   },
   "mcp:Trivago": {
-   "llamadas": 6,
-   "chars_in": 867,
-   "chars_out": 4187540,
+   "llamadas": 9,
+   "chars_in": 1317,
+   "chars_out": 6187188,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Trivago__trivago-accommodation-radius-search": 6
+    "mcp__Trivago__trivago-accommodation-radius-search": 9
+   }
+  },
+  "escritura": {
+   "llamadas": 16,
+   "chars_in": 49067,
+   "chars_out": 689471,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 14,
+    "Edit": 2
    }
   }
  }
