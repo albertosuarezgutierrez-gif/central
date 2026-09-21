@@ -39,6 +39,19 @@ un 200 vacío habría salido igual de verde, la fila nueva es la prueba. PR #326
 el host). ⚠️ **Cabo abierto:** `e2e-smoke` ya fallaba el 19/09 a las 10:06, con el secret aún bueno
 — su 401 de ese día NO lo explica esta rotación; si sigue rojo, el issue #815 sigue vivo.
 
+**(21/09/2026)** 🔍 **«¿El catálogo de Codeoscopic trae los años de cada versión?» llevaba meses
+contestándose de memoria, y era medible.** Causa: `normalizarOpciones` se queda con `id` + `nombre` y
+**tira el resto**, así que desde fuera de esa función no hay forma de saber qué manda el vendor — y el
+nombre no lleva años («4X4 DC LE AUTO»). Nuevo `?crudo=1` en `/api/operador/codeoscopic/catalogos`
+(solo `tipo=versiones`, mismo `GET` de catálogo, **0,00€**) + ruta en plataforma tras la sesión, para
+que `ASEGURA_OPERADOR_SECRET` **no salga de Vercel**: se abre una URL y ya. Resumidor puro `crudo.ts`
+(unión de claves de TODAS las entradas, `total: null` ≠ `0`, muestra íntegra); 9 cepos, 4 vistos en
+ROJO. 🚨 La guarda que lo hace servir de algo: si asegura responde 200 **sin `resumen`** es que su
+despliegue no entiende `crudo=1` y ha devuelto la lista normalizada — se corta con 502, porque
+relayarlo se leería como «el vendor no manda nada más». La pasada de `code-review` cazó justo eso.
+⏸️ Pendiente: ejecutar la medición y decidir. Y ojo — la fecha de matriculación de la matrícula es
+**aproximada** y puede venir `null`: podrá ordenar o acotar el desplegable, nunca elegir la versión.
+
 **(21/09/2026)** 🚨 **AVERÍA CONFIRMADA: el vigilante de la ingesta de CIMA lleva dos días sin
 funcionar.** `cima-health-alert` falló el 20/09 con `curl (22) error: 401` y hoy volvió a fallar
 igual — reproducido a mano (run 93, `workflow_dispatch`, 15:20 UTC). Su propio rastro en BD lo
@@ -52,7 +65,9 @@ no — el secret de Actions dejó de coincidir con la env var de Vercel. **Lo ar
 credencial.** La ingesta en sí está sana (`cima_pull_completed` 21/09 12:26), así que no hay pérdida
 de datos; lo que no hay es red — si CIMA se parase mañana, nadie se enteraría.
 
-**(21/09/2026)** Presupuesto al cliente — **PR 1 entero** (#3252, draft). Módulo puro
+**(21/09/2026)** Presupuesto al cliente — **PR 1 entero, MERGEADO** (#3252, squash 40b5e2655).
+⚠️ Entró **sin la comprobación en navegador ni la medida a 320px** (decisión de Alberto: «mergea»):
+la tarjeta «Preparar presupuesto» de retarificar se verá por primera vez en producción. Módulo puro
 `presupuesto-cliente.ts` (estado derivado de los sellos, caducidad = mínimo de 3 fuentes con la
 fuente declarada, regla de las tres), DDL `seguros.presupuesto|_opcion|_evento` + `firma`
 (**APLICADA**, migración `seguros_presupuesto_cliente`), puerto `/api/operador/presupuesto`, proxy en
