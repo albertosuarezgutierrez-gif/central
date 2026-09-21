@@ -19,7 +19,8 @@ recaptación («que tuviste con (legacy)»); ahora se normaliza a `null`. (2) Re
 de WhatsApp; Renovaciones (clientes vivos que vencen pronto) no lo tenía. Nuevo: tabla
 `seguros.renovacion_contactos`, endpoint `/api/operador/renovaciones/contacto`, mensaje propio
 (`textoAvisoRenovacionWhatsapp`, cita compañía y fecha reales) y checkbox «Ocultar contactadas hace
-<14 días» + badge en `/correduria`. `tsc` 0 en asegura/plataforma, `pnpm test` 956+53 en verde.
+<14 días» + badge en `/correduria`. `tsc` 0 en asegura/plataforma, `pnpm test` 956+53 en verde, CI
+19/19 en verde. **PR #3227 mergeado.**
 
 **(21/09/2026)** Auditoría ligera — 4 PRs mergeados sin entrada de memoria (huella perdida, cazada por
 el paso 4 de `/auditoria-diaria`): **#3202** enlaza y sigue las pólizas sustituidas por retarificación
