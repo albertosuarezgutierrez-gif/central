@@ -15,7 +15,9 @@
 **(21/09/2026)** 🚨 La alerta de PostHog «CIMA pull heartbeat» que spamea a Alberto es **FALSA**: la
 ingesta de CIMA está sana (55 pulls en BD, ficheros de Occident el 20/09, Actions en verde) y lo roto
 es la telemetría — **PostHog no recibe NI UN evento de ningún tipo desde el 05/09** (no es cuota:
-80/1.000.000). El fix asegura#834 (17/09) partió de un diagnóstico erróneo y no podía funcionar.
+80/1.000.000). Causa CONFIRMADA por navegador: el proyecto Vercel `asegura` **no tiene NINGUNA env de
+PostHog** y el código hace noop silencioso sin ellas; revivirla exige redeploy (`NEXT_PUBLIC_*` se
+inlinea en build). El fix asegura#834 (17/09) partió de un diagnóstico erróneo y no podía funcionar.
 Peor: la fuente Postgres del warehouse apunta al Supabase VIEJO de Manuel (congelado el 31/08 por el
 traspaso), así que **[A1] auth sign-in failures y [A14] webhook signature llevan 3 semanas CIEGAS**
 en verde. Diagnóstico, propuesta y prompt de Chrome en `docs/ASEGURA-POSTHOG-SONDAS-CIEGAS.md`.

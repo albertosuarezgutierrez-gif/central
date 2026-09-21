@@ -26,16 +26,28 @@ diagnóstico que hoy no se sostiene: decía que `cima_pull_completed` dejó de l
 `magic_link_clicked` y `auth_signin_method` incluidos, que no salen de ningún cron. Un fallo de flush
 en un cron no puede apagar los eventos de la web. La causa es común a toda la app, no del cron.
 
-**Causa probable [Probable], sin confirmar:** falta (o está vacía, o no estaba presente en el BUILD
-del deployment vivo) `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` en el proyecto Vercel
-`asegura` (producción). `src/lib/analytics/posthog-server.ts` hace **noop SILENCIOSO** si falta
-cualquiera de las dos — ni excepción, ni log, ni nada que se vea. Y `NEXT_PUBLIC_*` se inlinea en
-build: una env añadida después no revive la telemetría sin redeploy.
+**Causa CONFIRMADA (21/09/2026, medida en el panel de Vercel):** el proyecto Vercel `asegura`
+**no tiene ninguna variable de PostHog**. Ni `NEXT_PUBLIC_POSTHOG_KEY` ni `NEXT_PUBLIC_POSTHOG_HOST`,
+ni en las del proyecto ni en las compartidas del equipo, en ningún entorno: buscar «POSTHOG» da «No
+Results Found». No están mal puestas — no existen.
 
-⚠️ **No se confirmó desde aquí a propósito:** `filter_project_envs` del MCP de Vercel devolvió la
-lista **truncada** (432 cadenas omitidas, varias `key` como `...[truncated]`). Una lista truncada no
-prueba una ausencia — es la regla de `CLAUDE.md` sobre el MCP de Vercel, y aquí aplica igual. Se
-comprueba en el panel (ver el prompt de Chrome).
+Y son exactamente las dos que el código exige: `src/lib/analytics/posthog-server.ts` construye el
+cliente solo si `key` **y** `host` están presentes, y si falta cualquiera devuelve `null`, con lo que
+`captureServer` es un **noop silencioso** — sin excepción, sin log, sin nada que se vea.
+`posthog-browser.ts` hace la misma comprobación. Con eso, la app deja de mandar telemetría sin que
+nada falle, que es justo lo que se midió: cero eventos de cualquier tipo desde el 05/09.
+
+⚠️ **Lo que sigue sin saberse: cuándo y por qué desaparecieron.** Vercel no guarda historial de
+variables borradas, así que el panel dice qué hay hoy, no qué hubo. Lo que sí encaja es la fecha: el
+05/09 hubo una tanda de deployments a producción tocando dominio y crons (asegura#817, #818 y su
+revert #819, este último en producción sobre las 16:07 CEST). **Es coincidencia temporal, no una
+causa probada.**
+
+🔧 **El arreglo, y el detalle que lo hace fallar si se salta:** `NEXT_PUBLIC_*` se **inlinea en el
+build**, no se lee en runtime. Añadir las dos variables NO revive la telemetría por sí solo: hace
+falta un **redeploy que reconstruya** (sin reutilizar la caché de build). Valores: la key es el
+`api_token` público del proyecto PostHog 167360 —la de ingesta, la que va en el cliente, no un
+secreto— y el host es `https://eu.i.posthog.com` (EU por residencia de datos, RGPD).
 
 ## 3. Lo que de verdad asusta: dos alertas VERDES porque no miran nada
 
@@ -50,7 +62,10 @@ Encima de esa tabla viven dos alertas de Manuel, las dos en `Not firing` con `la
 - **[A1] Auth sign-in failures > 30/h** (`auth_sign_in_failure`)
 - **[A14] Webhook signature failures > 5/h** (`webhook_signature_invalid`)
 
-No están tranquilas: **están ciegas**. Es exactamente el fallo que `CLAUDE.md` marca como el más
+No están tranquilas: **están ciegas**. Y se leen mal con facilidad: el panel de esa
+fuente dice «Completed», «incremental cada 6 h» y «último sync hoy», que es exactamente el aspecto de
+una tubería sana. Al revisarla el 21/09 se dio por buena por eso mismo. Lo que delata el fallo no es
+el estado del sync, sino la ÚLTIMA FILA de la tabla. Es exactamente el fallo que `CLAUDE.md` marca como el más
 caro — «un check que se pone verde porque la consulta no devolvió nada». Un ataque de fuerza bruta o
 una firma de webhook falsificada desde el 31/08 no habría disparado nada.
 
@@ -126,3 +141,18 @@ TAREA 3 — PostHog, las tres alertas
 Cuando termines, dame un resumen corto con los hallazgos de las tres tareas, y di explícitamente
 qué NO pudiste comprobar y por qué.
 ```
+
+---
+
+## Resultado de la pasada por navegador (21/09/2026)
+
+- **Vercel:** ninguna variable `POSTHOG` en el proyecto `asegura`, ni propia ni compartida, en
+  ningún entorno. Deployment vivo en producción: el de asegura#844, de hace ~22 h.
+- **PostHog, fuente Postgres:** host `aws-1-eu-central-1.pooler.supabase.com`, usuario
+  `posthog_readonly.uijsgeocgdaxkhvwtjqs` (el Supabase VIEJO), último sync del día, schema
+  `operational_events` «Completed», 3.679 filas. **La conexión SÍ se puede editar in situ**
+  (pestaña Configuration del source): no hace falta crear una fuente nueva para repuntarla a central.
+- **Alertas:** el heartbeat de CIMA en `Firing` (última notificación de esa misma mañana); A1 y A14
+  en `Not firing` con valor 0. Las tres notifican a Alberto por email y al Slack `#asegura-alerts`.
+- **Snooze:** existe, con 30 min / 1 h / 4 h / 24 h / fecha a medida. **El máximo predefinido son 24
+  h**, así que silenciar no es una solución que aguante: a lo sumo compra un día.
