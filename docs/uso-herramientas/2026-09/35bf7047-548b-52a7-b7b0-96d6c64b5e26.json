@@ -1,32 +1,32 @@
 {
  "sesion": "35bf7047-548b-52a7-b7b0-96d6c64b5e26",
  "inicio": "2026-09-21T11:01:13.537Z",
- "fin": "2026-09-21T12:52:23.911Z",
- "llamadas": 205,
+ "fin": "2026-09-21T13:28:04.027Z",
+ "llamadas": 305,
  "categorias": {
   "otro": {
-   "llamadas": 21,
-   "chars_in": 14688,
-   "chars_out": 207309,
+   "llamadas": 26,
+   "chars_in": 14785,
+   "chars_out": 308751,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 8,
+    "ToolSearch": 9,
     "SubagentHandback": 2,
-    "ReadNotifications": 10
+    "ReadNotifications": 14
    }
   },
   "bash": {
-   "llamadas": 149,
-   "chars_in": 130508,
-   "chars_out": 337824,
+   "llamadas": 221,
+   "chars_in": 158366,
+   "chars_out": 458741,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 149
+    "Bash": 221
    }
   },
   "lectura-directa": {
@@ -42,16 +42,16 @@
    }
   },
   "mcp:github": {
-   "llamadas": 14,
-   "chars_in": 22000,
-   "chars_out": 82141,
+   "llamadas": 17,
+   "chars_in": 22295,
+   "chars_out": 105497,
    "errores": 0,
-   "archivos_citados": 2,
-   "chars_citados": 8614,
+   "archivos_citados": 3,
+   "chars_citados": 12921,
    "tools": {
     "mcp__github__list_pull_requests": 2,
     "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 8,
+    "mcp__github__pull_request_read": 11,
     "mcp__github__actions_list": 2,
     "mcp__github__update_pull_request": 1
    }
@@ -79,14 +79,15 @@
    }
   },
   "escritura": {
-   "llamadas": 4,
-   "chars_in": 17451,
-   "chars_out": 93287,
+   "llamadas": 14,
+   "chars_in": 43882,
+   "chars_out": 403510,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 4
+    "Edit": 11,
+    "Write": 3
    }
   },
   "mcp:Claude_Code_Remote": {
@@ -102,14 +103,14 @@
    }
   },
   "sql": {
-   "llamadas": 4,
-   "chars_in": 2973,
-   "chars_out": 2849,
+   "llamadas": 14,
+   "chars_in": 6468,
+   "chars_out": 26954,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 4
+    "mcp__Supabase__execute_sql": 14
    }
   },
   "mcp:Google_Drive": {
