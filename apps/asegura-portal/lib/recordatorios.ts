@@ -6,7 +6,9 @@
 // 🔒 Mismo aislamiento por CÓDIGO que `lib/obligaciones.ts`: toda consulta
 // filtra por `identidadId`, que sale SIEMPRE de `lib/session`.
 import {
+  DIAS_VENTANA_AVISO,
   siguienteOcurrencia,
+  TIPOS_RECORDATORIO_PROPIO,
   type RecordatorioNormalizado,
   type TipoRecordatorio,
 } from '@central/module-seguros-portal'
@@ -37,8 +39,11 @@ export type RecordatorioVista = {
  *  así que esos dos campos ya no sirven para distinguirlo de una obligación
  *  derivada — el `tipo` sí, porque `sincronizarObligacionesDeIdentidad()`
  *  nunca escribe estos cinco. */
-const TIPOS_PROPIOS: TipoRecordatorio[] = ['itv', 'carnet', 'mantenimiento', 'revision_gas', 'libre']
-const FILTRO_PROPIOS = { tipo: { in: TIPOS_PROPIOS } }
+// 🚨 La lista vive en el módulo puro (`TIPOS_RECORDATORIO_PROPIO`) desde el
+// 21/09/2026, no aquí: la necesita también el cron de vencimientos de
+// `apps/asegura` para no mandarles su correo de «el seguro vence el X», y con
+// una copia por app las dos divergirían sin que nada fallara.
+const FILTRO_PROPIOS = { tipo: { in: [...TIPOS_RECORDATORIO_PROPIO] } }
 
 /**
  * Da de alta un recordatorio propio. La fecha que teclea la persona ES la
@@ -132,6 +137,20 @@ export async function recordatoriosDeSesion(): Promise<RecordatorioVista[]> {
  * caso que el docstring de arriba dice evitar, con el candado puesto en la
  * cerradura equivocada.
  *
+ * 🚨 TERCER brazo, del 21/09/2026: o la fecha quedó atrás MÁS que la ventana de
+ * aviso entera. Sin él, un recordatorio de alguien SIN push activado no avanza
+ * NUNCA — y desde ese día es el caso normal, porque el cron de correo de
+ * `apps/asegura` dejó de coger los recordatorios propios (su texto afirma «el
+ * seguro vence el X», que sobre una ITV es decirle a alguien que se queda sin
+ * cobertura). Hasta entonces los avanzaba ese correo equivocado; quitarlo sin
+ * este brazo los habría congelado en una fecha pasada para siempre, invisibles
+ * además para `entraEnVentana`.
+ *
+ * El plazo no es un número al azar: es la MISMA ventana en la que el aviso
+ * habría salido. Pasada entera sin que ningún canal lo sellara, no queda nada
+ * que esperar — y el recordatorio ha estado todo ese tiempo visible como
+ * vencido en su pestaña, que es donde de verdad se mira.
+ *
  * Se llama desde el mismo sitio que sincroniza las obligaciones de póliza
  * (`sincronizarObligacionesDeIdentidad`, en cada carga de la bóveda) para que
  * comparta el único punto de entrada que ya lee la campana de avisos.
@@ -166,7 +185,11 @@ export async function avanzarRecordatoriosRecurrentesDeIdentidad(identidadId: st
       identidadId,
       ...FILTRO_PROPIOS,
       repiteCadaMeses: { not: null },
-      OR: [{ avisadaAt: { not: null } }, { avisadaPushAt: { not: null } }],
+      OR: [
+        { avisadaAt: { not: null } },
+        { avisadaPushAt: { not: null } },
+        { fechaEvento: { lt: new Date(hoyUtc.getTime() - DIAS_VENTANA_AVISO * 86_400_000) } },
+      ],
       fechaEvento: { lt: hoyUtc },
     },
     select: { id: true, fechaEvento: true, repiteCadaMeses: true },

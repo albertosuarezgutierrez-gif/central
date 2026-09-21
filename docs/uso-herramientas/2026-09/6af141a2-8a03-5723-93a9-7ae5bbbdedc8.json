@@ -1,0 +1,113 @@
+{
+ "sesion": "6af141a2-8a03-5723-93a9-7ae5bbbdedc8",
+ "inicio": "2026-09-21T09:13:30.501Z",
+ "fin": "2026-09-21T11:29:48.627Z",
+ "llamadas": 331,
+ "categorias": {
+  "otro": {
+   "llamadas": 45,
+   "chars_in": 15307,
+   "chars_out": 329823,
+   "errores": 0,
+   "archivos_citados": 10,
+   "chars_citados": 115466,
+   "tools": {
+    "Skill": 3,
+    "ToolSearch": 12,
+    "SubagentHandback": 1,
+    "TaskCreate": 7,
+    "ReportFindings": 2,
+    "ReadNotifications": 13,
+    "TaskUpdate": 7
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 31,
+   "chars_in": 3269,
+   "chars_out": 208729,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 11,
+    "Read": 20
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 1599,
+   "chars_out": 1821,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 23,
+   "chars_in": 27860,
+   "chars_out": 113642,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 80654,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__actions_list": 1,
+    "mcp__github__get_commit": 1,
+    "mcp__github__pull_request_read": 14,
+    "mcp__github__update_pull_request": 3,
+    "mcp__github__merge_pull_request": 1
+   }
+  },
+  "bash": {
+   "llamadas": 180,
+   "chars_in": 92145,
+   "chars_out": 401234,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 180
+   }
+  },
+  "escritura": {
+   "llamadas": 44,
+   "chars_in": 77011,
+   "chars_out": 907256,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 5,
+    "Edit": 39
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 6,
+   "chars_in": 2247,
+   "chars_out": 4020,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2,
+    "mcp__Claude_Code_Remote__send_later": 2,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__delete_trigger": 1
+   }
+  },
+  "sql": {
+   "llamadas": 1,
+   "chars_in": 694,
+   "chars_out": 657,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 1
+   }
+  }
+ }
+}

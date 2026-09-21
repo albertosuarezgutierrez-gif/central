@@ -71,6 +71,12 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
     uno: 'un carné de conducir que caduca pronto',
     varios: 'carnés de conducir que caducan pronto',
   },
+  // «Nos consta» y no «tienes»: la fecha sale de la ficha y puede estar vieja.
+  // El correo no acusa a nadie de conducir sin carné — ver `avisos.ts`.
+  carnet_caducado: {
+    uno: 'un carné de conducir que nos consta caducado',
+    varios: 'carnés de conducir que nos constan caducados',
+  },
 }
 
 /** Un aviso, reducido a lo único que el correo necesita: su clase. */
