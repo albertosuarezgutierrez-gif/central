@@ -22,7 +22,7 @@ import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
-import { KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import {
   borrarBorrador,
   claveBorradorAutoNuevo,
@@ -490,7 +490,12 @@ export default function AutoNuevo({
 
   // Un número mal tecleado NO se manda al vendor: `revisarDatosAuto` lo
   // rechazaría, pero ya habría costado el viaje. Se para aquí, en la pantalla.
-  const kmInvalido = kmAnuales.trim() !== '' && !(Number.isFinite(Number(kmAnuales)) && Number(kmAnuales) > 0)
+  //
+  // 🚨 El parseo NO es `Number()`: `Number('15.000')` es 15, y «15.000» es
+  // justo lo que imprime la ayuda de este campo. La regla vive testeada en
+  // `kilometrosDesdeTexto` (@central/module-seguros).
+  const kmLeidos = kilometrosDesdeTexto(kmAnuales)
+  const kmInvalido = kmAnuales.trim() !== '' && kmLeidos === null
 
   // Un coche no se compra antes de matricularse. El vendor no lo comprueba: se
   // traga las dos fechas y tarifica, así que el disparate solo se vería en el
@@ -518,7 +523,7 @@ export default function AutoNuevo({
     const correccionesFinal: Record<string, unknown> = { ...correcciones }
     // En blanco = no se ha preguntado: no se manda nada y sigue mandando el
     // supuesto del precalificador. Con valor, manda el corredor.
-    if (kmAnuales.trim() !== '' && !kmInvalido) correccionesFinal.kmAnuales = Number(kmAnuales)
+    if (kmLeidos !== null) correccionesFinal.kmAnuales = kmLeidos
     if (fechaCompra !== '' && !compraInvalida) correccionesFinal.fechaCompra = fechaCompra
     if (remolqueLigero) correccionesFinal.remolqueLigero = true
     if (propietarioDistinto) correccionesFinal.propietario = personaParaPuerto(propietario, false)
@@ -665,7 +670,7 @@ export default function AutoNuevo({
           <Campo
             etiqueta="Kilómetros al año"
             falta={kmInvalido}
-            faltaTexto="tiene que ser un número de kilómetros"
+            faltaTexto="no se entiende como kilometraje (dígitos, y el punto solo como separador de miles)"
             ayuda={`En blanco viajan ${KM_ANUALES_SUPUESTOS.toLocaleString('es-ES')} como supuesto. Es factor de precio de primer orden: si el cliente lo sabe, tecléalo.`}
           >
             <input

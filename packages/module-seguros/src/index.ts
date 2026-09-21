@@ -1,4 +1,10 @@
-export { KM_ANUALES_SUPUESTOS } from './supuestos-auto.ts'
+export {
+  KM_ANUALES_SUPUESTOS,
+  KM_ANUALES_MAXIMO,
+  kilometrosDesdeTexto,
+  supuestosVigentes,
+  type SupuestoConCampo,
+} from './supuestos-auto.ts'
 
 export {
   PROHIBIDO,

@@ -34,8 +34,13 @@ test('la pantalla pregunta los tres datos que antes se suponían', () => {
 test('los tres viajan al puerto, y solo cuando el corredor los ha dicho', () => {
   assert.match(
     fuente,
-    /if \(kmAnuales\.trim\(\) !== '' && !kmInvalido\) correccionesFinal\.kmAnuales = Number\(kmAnuales\)/,
-    'los kilómetros viajan como NÚMERO y solo si se han tecleado bien',
+    /if \(kmLeidos !== null\) correccionesFinal\.kmAnuales = kmLeidos/,
+    'los kilómetros viajan YA PARSEADOS y solo si se han tecleado bien',
+  )
+  assert.doesNotMatch(
+    fuente,
+    /correccionesFinal\.kmAnuales = Number\(/,
+    '`Number()` lee «15.000» como 15: el parseo es `kilometrosDesdeTexto`, no el del navegador',
   )
   assert.match(
     fuente,
@@ -59,14 +64,15 @@ test('el campo de kilómetros NACE VACÍO: el supuesto se enseña, no se escribe
 })
 
 test('el supuesto que se enseña sale de la fuente única, no de un 15000 tecleado aquí', () => {
-  assert.match(fuente, /import \{ KM_ANUALES_SUPUESTOS \} from '@central\/module-seguros'/)
+  assert.match(fuente, /import \{[^}]*KM_ANUALES_SUPUESTOS[^}]*\} from '@central\/module-seguros'/)
   // El número en PROSA (un comentario que explica el supuesto) es correcto; lo
   // que no puede volver es el literal usado como VALOR.
   assert.doesNotMatch(fuente, /\b15000\b/, 'ningún literal del supuesto en el código de la pantalla')
 })
 
 test('un número mal tecleado se para en la pantalla, sin gastar los 0,50€', () => {
-  assert.match(fuente, /const kmInvalido = kmAnuales\.trim\(\) !== '' &&/, 'existe la comprobación')
+  assert.match(fuente, /const kmLeidos = kilometrosDesdeTexto\(kmAnuales\)/, 'el parseo es el compartido')
+  assert.match(fuente, /const kmInvalido = kmAnuales\.trim\(\) !== '' && kmLeidos === null/)
   assert.match(fuente, /faltaHistorial \|\| kmInvalido/, 'y bloquea el botón de cotizar')
 })
 
@@ -86,4 +92,27 @@ test('no se pierden al salir de la pantalla: van en el borrador local', () => {
   assert.match(fuente, /if \(b\.kmAnuales\) setKmAnuales\(b\.kmAnuales\)/, 'y se restauran al volver')
   assert.match(fuente, /if \(b\.fechaCompra\) setFechaCompra\(b\.fechaCompra\)/)
   assert.match(fuente, /if \(b\.remolqueLigero\) setRemolqueLigero\(true\)/)
+})
+
+// ── Lo que se PINTA junto al precio tiene que ser lo que VIAJÓ ──────────────
+// 🪤 El precalificador supone ANTES de recibir las correcciones, así que su
+// lista habla del estado anterior. Sin filtrarla, la pantalla enseña «este
+// precio sale suponiendo kmAnuales: 15000» junto a un precio tarificado con
+// los 8.000 que tecleó el corredor. Nada falla: solo miente, y encima sobre la
+// cotización que acaba de costar 0,50€.
+
+const PUERTO = join(import.meta.dirname, '..', 'apps/asegura/lib/retarificar-cartera.ts')
+const puerto = readFileSync(PUERTO, 'utf8')
+
+test('ninguna respuesta devuelve los supuestos SIN filtrar por las correcciones', () => {
+  assert.doesNotMatch(
+    puerto,
+    /supuestos: pre\.supuestos(?! as \{)/,
+    'un `supuestos: pre.supuestos` crudo vuelve a pintar como supuesto lo que el corredor ya corrigió',
+  )
+  assert.equal(
+    (puerto.match(/supuestosVigentes\(/g) ?? []).length,
+    5,
+    'las cinco salidas de supuestos (auto, hogar, auto nueva, moto nueva y el genérico) lo aplican',
+  )
 })

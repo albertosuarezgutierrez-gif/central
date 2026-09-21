@@ -123,6 +123,21 @@ para verificarlo.
   Prerrellenarlos con el supuesto convertiría un «no lo sé» en un dato afirmado, que es justo lo que
   este documento reprocha. Entran en el borrador local, así que no se pierden al salir a corregir
   otra cosa. Un número mal tecleado bloquea el botón en la pantalla, sin viaje.
+- 🚨 **El kilometraje NO se lee con `Number()`** (lo cazó la revisión del propio PR). En español el
+  punto es el separador de miles, así que `Number('15.000')` es **15** — y «15.000» es exactamente
+  lo que imprime la ayuda del campo con `toLocaleString('es-ES')`. Ese 15 no lo rechazaba nadie: ni
+  la pantalla, ni `revisarDatosAuto` (solo exige finito y ≥ 0), ni el vendor, que tarifica un coche
+  de quince kilómetros al año y devuelve un precio bajo y firme por los 0,50€ ya pagados. Un error
+  de tecleo con forma de chollo. La regla vive testeada en `kilometrosDesdeTexto`: el punto solo
+  vale como separador de miles y solo en su sitio (`15.000` sí, `1.5` no), la coma no se acepta, y
+  el cero tampoco — es un «no lo sé» disfrazado.
+- 🚨 **Y un supuesto corregido deja de pintarse como supuesto.** El precalificador supone ANTES de
+  recibir las correcciones, así que su lista habla del estado anterior: con 8.000 tecleados, la
+  pantalla seguía diciendo, junto al precio recién pagado, «este precio sale suponiendo kmAnuales:
+  15000». Nada fallaba; solo mentía, y sobre la cotización que acaba de costar dinero.
+  `supuestosVigentes()` filtra la lista con las correcciones aplicadas, y se aplica en las **cinco**
+  salidas del puerto (auto, hogar, auto nueva, moto nueva y el genérico de vida/salud/decesos) —
+  el fallo era del patrón, no de este campo.
 
 ---
 
