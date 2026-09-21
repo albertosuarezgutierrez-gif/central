@@ -28,6 +28,7 @@ import {
   guardarBorrador,
   leerBorrador,
 } from '@/lib/correduria/borrador-local'
+import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 
 import { pedirCatalogo, pedirCotizacionAuto } from './acciones'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
@@ -450,8 +451,13 @@ export default function AutoNuevo({
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
-  const huerfanos = (faltanInicial ?? []).filter(
-    (f) => !RESUELTOS_EN_PANTALLA.has(f.campo as string) && !CAMPOS_A_MANO[f.campo],
+  // Cada hueco, a donde de verdad se arregla (`lib/correduria/campos-faltan.ts`).
+  // Antes todo lo que no supiera teclear la pantalla se mandaba a la ficha del
+  // cliente por descarte, incluidos los seis campos del bloque 3 — que estan
+  // AQUI y en la ficha no existen.
+  const reparos = clasificarFaltan(
+    (faltanInicial ?? []).map((f) => ({ campo: f.campo as string, motivo: f.motivo })),
+    (c) => Boolean(CAMPOS_A_MANO[c]),
   )
 
   const faltaPropietario = propietarioDistinto && !personaCompleta(propietario, false)
@@ -682,14 +688,42 @@ export default function AutoNuevo({
           </div>
         )}
 
-        {huerfanos.length > 0 && (
+        {reparos.historial.length > 0 && (
+          <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--warning)', padding: 12 }}>
+            <strong>Esto se rellena aqui abajo, en «3 · ¿Tiene seguro en vigor ahora mismo?»:</strong>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
+              {reparos.historial.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
+            </ul>
+            <p style={{ margin: '6px 0 0', fontSize: 13 }}>
+              Enciende el interruptor y rellena el bloque. Si no tienes esos datos, dejalo apagado:
+              el precio sale estimado, que es honesto. Rellenarlo con ceros lo cotiza como conductor
+              novel y el precio se dispara.
+            </p>
+          </div>
+        )}
+
+        {reparos.ficha.length > 0 && (
           <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--negative)', padding: 12 }}>
             <strong style={{ color: 'var(--negative)' }}>Esto no se arregla desde esta pantalla:</strong>
             <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
-              {huerfanos.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
+              {reparos.ficha.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-              Hay que corregirlo en la ficha del cliente. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              Se corrige en la <a href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--brand)' }}>ficha
+              del cliente</a> (pestaña Contactos). Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+            </p>
+          </div>
+        )}
+
+        {reparos.desconocidos.length > 0 && (
+          <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--negative)', padding: 12 }}>
+            <strong style={{ color: 'var(--negative)' }}>Falta esto, y no se sabe donde se corrige:</strong>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
+              {reparos.desconocidos.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
+            </ul>
+            <p style={{ margin: '6px 0 0', fontSize: 13 }}>
+              El servidor lo pide y esta pantalla no lo tiene mapeado. Se dice en vez de mandarte a la
+              ficha del cliente por descarte, que seria un viaje en balde.
             </p>
           </div>
         )}
@@ -1049,4 +1083,3 @@ const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSi
 const td: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--border)' }
 
 /** Reparos que ESTA pantalla resuelve con un desplegable o una caja. */
-const RESUELTOS_EN_PANTALLA = new Set<string>(['codigoVehiculo', 'garaje', 'matricula', 'fechaMatriculacion', 'municipioCirculacionId', 'estadoCivil', 'sexo'])
