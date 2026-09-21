@@ -83,7 +83,7 @@ export type {
   EntradaAvisos,
   Avisos,
 } from './avisos.ts'
-export { debeAvisarPush } from './push.ts'
+export { debeAvisarPush, textoPushObligacion } from './push.ts'
 export {
   normalizarRecordatorio,
   siguienteOcurrencia,

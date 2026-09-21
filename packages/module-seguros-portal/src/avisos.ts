@@ -160,9 +160,11 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   // Renovar el carné se hace en la DGT, no en el portal — igual que un
   // vencimiento de póliza, el aviso enlaza a la bóveda a secas.
   carnet_en_ventana: '/boveda',
-  // El caducado lleva a «Mis datos»: lo único accionable DENTRO del portal es
-  // decirnos que ya lo renovó, porque la fecha que tenemos puede estar vieja.
-  carnet_caducado: '/boveda?vista=datos',
+  // 🚨 El caducado lleva a «Recordatorios», NO a «Mis datos»: el carné no se
+  // pinta en esa pantalla (ahí van dirección, contactos, consentimiento y
+  // supresión), así que el enlace mandaría a alguien a buscar un dato que no
+  // está. En «Recordatorios» sí aparece, porque es de donde sale su precarga.
+  carnet_caducado: '/boveda?vista=recordatorios',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -189,6 +191,21 @@ function diasHastaCarnet(fechaCaducidad: string, hoy: Date): number | null {
   const caduca = new Date(`${dia}T00:00:00Z`)
   if (Number.isNaN(caduca.getTime())) return null
   return Math.round((diaUtc(caduca).getTime() - diaUtc(hoy).getTime()) / MS_DIA)
+}
+
+/**
+ * El día del carné en castellano, o `null` si la fecha no es una fecha.
+ *
+ * 🚨 Devuelve `null` en vez de lanzar, y se llama DESPUÉS de que una de las dos
+ * ventanas haya dicho que sí. Formatearlo antes —que es como nació— convierte
+ * un `fechaCaducidad` malformado (el puente solo comprueba que sea una cadena)
+ * en un `RangeError: Invalid time value` que se lleva por delante `avisosDe()`
+ * ENTERA: la campana devuelve 500 en vez de degradar a `n+`, y la pasada del
+ * emisor de intranet se aborta para todos los clientes por el carné de uno.
+ */
+function fechaCarnetLegible(fechaCaducidad: string, hoy: Date): string | null {
+  if (diasHastaCarnet(fechaCaducidad, hoy) === null) return null
+  return FECHA.format(new Date(`${fechaCaducidad.trim().slice(0, 10)}T00:00:00Z`))
 }
 
 /**
@@ -303,8 +320,8 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     fuentesIlegibles.push('carnets')
   } else {
     for (const c of x.carnets) {
-      const cuando = FECHA.format(new Date(`${c.fechaCaducidad}T00:00:00Z`))
-      if (entraEnVentanaCarnet(c.fechaCaducidad, x.hoy)) {
+      const cuando = fechaCarnetLegible(c.fechaCaducidad, x.hoy)
+      if (cuando !== null && entraEnVentanaCarnet(c.fechaCaducidad, x.hoy)) {
         avisos.push({
           tipo: 'carnet_en_ventana',
           id: c.id,
@@ -319,12 +336,12 @@ export function avisosDe(x: EntradaAvisos): Avisos {
       // vieja, así que la salida que se le ofrece es decirnos que ya lo
       // renovó. Afirmar «tu carné está caducado» sobre un dato que nadie ha
       // comprobado sería exactamente el fallo que persigue la casa.
-      if (carnetCaducado(c.fechaCaducidad, x.hoy)) {
+      if (cuando !== null && carnetCaducado(c.fechaCaducidad, x.hoy)) {
         avisos.push({
           tipo: 'carnet_caducado',
           id: c.id,
           titulo: `Nos consta que tu carné de conducir (${c.tipo}) está caducado`,
-          detalle: `Según lo que tenemos, caducó el ${cuando}. Si ya lo has renovado, dínoslo para actualizarlo; si no, pide cita en la DGT.`,
+          detalle: `Según lo que tenemos, caducó el ${cuando}. Si ya lo has renovado, escríbenos para que lo actualicemos; si no, pide cita en la DGT.`,
           href: HREF_POR_TIPO.carnet_caducado,
         })
       }

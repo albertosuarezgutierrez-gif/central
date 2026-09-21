@@ -306,34 +306,40 @@ la caldera de un piso — usarlo sería inventar una fecha con aspecto de dato.
 
 Encontrado construyendo §R. `entraEnVentanaCarnet()` exige futuro (`faltan >= 0`), así que el aviso
 existía los 60 días ANTES y **desaparecía justo el día que el carné caduca**: el sistema se callaba en
-el único momento en que pasa algo. Tipo de aviso nuevo `carnet_caducado` (→ «Mis datos»).
+el único momento en que pasa algo. Tipo de aviso nuevo `carnet_caducado` (→ «Recordatorios», que es la pantalla donde el carné se ve;
+«Mis datos» no lo pinta y el enlace mandaba a buscar algo que no está).
 🚨 **Con tope de 2 años (`DIAS_MAX_CARNET_CADUCADO`)**: la ficha viene de un volcado y una fecha de
 hace veinte años no dice «conduce sin carné», dice «este dato es viejo». Y el texto **no acusa**: dice
 lo que NOS CONSTA y ofrece corregirlo, con cepo que prohíbe las frases de conducta.
 
-### T. 🐛 El ciclo de un recordatorio recurrente puede quedarse CLAVADO 🔴 medido, SIN arreglar
+### T. 🐛 Un recordatorio recurrente sin push: CLAVADO ✅ arreglado · MUDO 🔴 sin arreglar
 
-Medido el 21/09/2026 leyendo las tres piezas; **no se arregla aquí porque toca un cron que escribe a
-clientes reales y eso es decisión de Alberto**. Son dos agujeros distintos:
+Medido el 21/09/2026 leyendo las tres piezas. Eran dos agujeros distintos y solo uno se podía cerrar
+sin tocar lo que escribe a clientes reales.
 
-1. **Recordatorio propio SIN póliza** (un carné, una ITV sin asignar): el cron de vencimientos
-   resuelve el destinatario a través de la póliza (`o.polizaId ? … : null`), así que lo cuenta
-   `sinCanal` SIEMPRE; y el emisor genérico de intranet **lo excluye** (`polizaId: { not: null }` en su
-   `where`). ⇒ **Sin push activado no avisa por ningún canal**, aunque la pantalla diga «te avisamos».
-2. **Recordatorio propio CON póliza** (lo que crea §R): lo coge el emisor genérico, que sella en
-   `portal_aviso_enviado` — **no** en `avisada_at` ni `avisada_push_at`. Y
-   `avanzarRecordatoriosRecurrentesDeIdentidad()` exige uno de esos dos para empujar al ciclo
-   siguiente. ⇒ avisa UNA vez, se queda con la fecha pasada para siempre y, como ya está sellado,
-   **no vuelve a avisar nunca**. Es justo el fallo que el docstring de esa función dice evitar, con la
-   cerradura puesta en otra puerta.
+**1. Se quedaba CLAVADO. ✅ Arreglado en el mismo PR — y era una regresión de ese PR.**
+`avanzarRecordatoriosRecurrentesDeIdentidad()` empujaba al ciclo siguiente solo si constaba
+`avisada_at` o `avisada_push_at`. En un recordatorio propio el primero no lo sellaba nadie salvo, de
+rebote, el correo EQUIVOCADO del cron de vencimientos — el que dice «el seguro vence el X» sobre una
+ITV. Al quitar ese correo (`tipo: { notIn: TIPOS_RECORDATORIO_PROPIO }`, que era lo correcto: decirle
+a alguien que se queda sin cobertura cuando lo que vence es la inspección del coche es mentira, no
+silencio), quien no tiene push se habría quedado con su «ITV cada 12 meses» congelado en una fecha
+pasada **para siempre**, y encima invisible para la ventana de aviso. Se cierra con un tercer brazo
+en esa consulta: **o la fecha quedó atrás más que la ventana de aviso entera**. El plazo no es un
+número al azar, es la MISMA ventana en la que el aviso habría salido — pasada completa sin que ningún
+canal lo sellara, no queda nada que esperar, y el recordatorio ha estado todo ese tiempo visible como
+vencido en su pestaña, que es donde de verdad se mira.
 
-Lo que sí se arregló en el mismo PR, porque era mentira y no silencio: el cron de vencimientos ya no
-coge los recordatorios propios (`tipo: { notIn: TIPOS_RECORDATORIO_PROPIO }`). Su correo dice «es la
-última fecha para comunicar que no quieres renovar; **el seguro vence el X**», y sobre una ITV eso le
-dice a alguien que se queda sin cobertura cuando no es verdad.
-**Para decidir (Alberto):** o el emisor genérico sella además `avisada_at` en las obligaciones, o
-`avanzarRecordatorios…` deja de depender de un sello de canal. Lo primero es de una línea y cambia el
-comportamiento de un cron de correo; lo segundo es más limpio y toca el portal.
+**2. Sin push activado, un recordatorio SIN póliza sigue MUDO. 🔴 Decisión de Alberto.**
+El cron de vencimientos resuelve el destinatario a través de la póliza (`o.polizaId ? … : null`), así
+que lo cuenta `sinCanal` siempre; y el emisor genérico de intranet **lo excluye** (`polizaId: { not:
+null }` en su `where`). ⇒ un carné o una ITV sin asignar no avisan por ningún canal, aunque la
+pantalla diga «te avisamos». **No se arregla aquí porque abrir ese `where` pone a escribir correo a
+clientes reales sobre un texto que nadie ha revisado**, y eso es suyo.
+Lo que SÍ se arregló del canal que ya existía: el push dejó de mandar el texto de renovación de póliza
+sobre un recordatorio propio (`textoPushObligacion()`, por tipo, en el módulo puro). Ahí **no** se
+excluyen como en el correo, y la diferencia importa: el push es el único canal que puede avisar de un
+recordatorio sin póliza, así que callarlo lo dejaría mudo del todo. Lo que se arregla es lo que dice.
 
 ### U. Los recordatorios del cliente son una señal de venta que hoy no ve nadie 🔵 idea, sin medir
 

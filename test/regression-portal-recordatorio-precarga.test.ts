@@ -182,3 +182,31 @@ test('la ITV no se calcula con periodicidad fija: el tramo manda', () => {
   assert.ok(moto, 'los tramos de la moto tienen que estar declarados')
   assert.ok(!/cadaMeses:\s*12/.test(moto[1]!), 'la moto es bienal de por vida, no anual')
 })
+
+test('🚨 un recordatorio recurrente no se queda CLAVADO cuando nadie tiene push', () => {
+  // La regresión que esto cierra: al excluir los tipos propios del cron de
+  // correo (test de arriba), `avisadaAt` dejó de sellarse en esas filas — y el
+  // avance de ciclo lo exigía. Quien no tiene push activado se habría quedado
+  // con su «ITV cada 12 meses» congelado en una fecha pasada PARA SIEMPRE, y
+  // además invisible para la ventana de aviso. Antes lo avanzaba, de rebote, el
+  // correo equivocado que se acaba de quitar.
+  const src = leer('apps/asegura-portal/lib/recordatorios.ts')
+  assert.match(
+    src,
+    /OR:\s*\[[\s\S]{0,400}?fechaEvento:\s*\{\s*lt:\s*new Date\(hoyUtc\.getTime\(\)\s*-\s*DIAS_VENTANA_AVISO/,
+    'falta el brazo por TIEMPO: sin él, sin push el ciclo no avanza nunca',
+  )
+  assert.match(src, /DIAS_VENTANA_AVISO/, 'el plazo tiene que ser la MISMA ventana del aviso, no un número suelto')
+})
+
+test('🚨 el cron de PUSH no excluye los recordatorios propios: cambia el TEXTO', () => {
+  // Es la diferencia con el cron de correo, y confundirlas deja mudo el único
+  // canal que puede avisar de un recordatorio sin póliza.
+  const src = leer('apps/asegura-portal/app/api/cron/avisos-push/route.ts')
+  assert.match(src, /textoPushObligacion\(\{\s*tipo:\s*o\.tipo/, 'el texto tiene que decidirse por el tipo')
+  assert.match(src, /select:\s*\{[^}]*tipo:\s*true/, 'sin traer el tipo, el texto no puede depender de él')
+  assert.ok(
+    !/notIn:\s*\[\.\.\.TIPOS_RECORDATORIO_PROPIO\]/.test(src),
+    'excluirlos aquí los deja sin ningún canal de aviso',
+  )
+})
