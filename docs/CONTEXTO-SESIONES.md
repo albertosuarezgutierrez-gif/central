@@ -13,6 +13,18 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** Segunda tanda del PR #3241, sobre lo mismo. (1) Aviso **`carnet_caducado`** en la
+campana del portal: el catálogo solo miraba el carné *por* caducar, así que el ya caducado
+desaparecía justo cuando hace falta decirlo (ventana 730 días, excluyente con el de proximidad, texto
+no acusatorio). (2) 🚨 **Fallo serio que mi propia precarga hacía alcanzable**: el cron de
+vencimientos de `apps/asegura` cogía TODA obligación con `avisadaAt: null` sin mirar el tipo, y su
+correo dice «el seguro vence el X» — con la ITV colgada de su póliza, el cliente leería que se queda
+sin cobertura. Arreglado en la raíz (`tipo: { notIn: TIPOS_RECORDATORIO_PROPIO }`, que sube al módulo
+puro). (3) Catálogo §R-§V. ⏸️ **§T queda SIN arreglar a propósito** (decisión de Alberto): los
+recordatorios recurrentes se pueden quedar clavados —el emisor genérico sella en `portal_aviso_enviado`
+mientras `avanzarRecordatoriosRecurrentes` exige `avisadaAt`/`avisadaPushAt`, y excluye los que no
+tienen póliza— y tocarlo es tocar un cron que escribe a clientes reales.
+
 **(21/09/2026)** Precarga de recordatorios en el portal del cliente (PR #3241, §B de
 `CORREDURIA-INTRANET-IDEAS`). Alberto: «esto se podría automatizar más… ¿tienes datos de clientes?».
 Sí, de dos: el **carné** (ya lo calcula `caducidadCarnet()` en asegura) y la **ITV** (periodicidad
