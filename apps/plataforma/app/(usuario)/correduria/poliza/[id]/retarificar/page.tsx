@@ -414,6 +414,27 @@ const CSS_RETARIFICADOR = `
   text-transform: uppercase;
   letter-spacing: .03em;
 }
+/* La tabla de precios: fila compacta (24 filas es lo normal en un presupuesto
+   real) y la última columna —el botón de confirmar— SIEMPRE visible, aunque
+   el resto de la fila necesite scroll horizontal en móvil. */
+.retarificar table.precios { min-width: 420px; }
+.retarificar table.precios th, .retarificar table.precios td { padding: 6px 8px; font-size: 13px; }
+.retarificar table.precios th:last-child, .retarificar table.precios td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--panel);
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+.retarificar button.ghost.icono {
+  padding: 0;
+  width: 36px;
+  min-height: 36px;
+  min-width: 36px;
+  font-size: 16px;
+  line-height: 1;
+}
 .retarificar .badge {
   display: inline-block;
   padding: 2px 8px;
