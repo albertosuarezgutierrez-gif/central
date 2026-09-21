@@ -68,3 +68,17 @@ test('el listado va paginado en SQL: los ~32.000 leads no se traen enteros', () 
   assert.match(FUENTE, /limit \$\{f\.porPagina\} offset \$\{offset\}/)
   assert.match(FUENTE, /count\(\*\)::bigint as n/)
 })
+
+test('🚨 «Vencidas» tiene SUELO de anualidad, igual que Renovaciones (21/09/2026)', () => {
+  // Sin suelo, un Allianz `estado='activa'` con `fecha_vencimiento` de 2013
+  // (medido: hasta 4.985 días vencido, sin `import_ref` así que cuenta como
+  // «en vigor») salía en «Ya vencidas» junto a los que sí son trabajo de esta
+  // semana. `Renovaciones.tsx` ya aplica este mismo suelo desde el 20/09/2026;
+  // sin él este listado y aquel mostraban dos «vencidas» distintas de la
+  // misma cartera.
+  assert.match(FUENTE, /DIAS_ANUALIDAD/)
+  assert.match(
+    FUENTE,
+    /fecha_vencimiento >= \$\{r\.desde\}::date and p\.fecha_vencimiento < \$\{r\.antesDe\}::date/,
+  )
+})

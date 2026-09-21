@@ -13,6 +13,26 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** Auditoría ligera — 4 PRs mergeados sin entrada de memoria (huella perdida, cazada por
+el paso 4 de `/auditoria-diaria`): **#3202** enlaza y sigue las pólizas sustituidas por retarificación
+(`poliza_origen_id`, guardián anti-duplicado, cola «Seguimiento de sustituciones» en Hoy con aviso
+Telegram a los ≥3 días sin confirmar CIMA, y auto-detección de `compania_seguros` en 55 movimientos
+bancarios desde abril). **#3207** el desplegable de alcance (`ver`/`ver_economico`) al autorizar entre
+personas físicas ya no se oculta (antes solo salía para sociedades y mandaba siempre `ver` sin decirlo).
+**#3216** tabla de precios del retarificador compactada con logos de aseguradora (sin repetir el
+nombre), botón de emitir a 44px táctil, mismo tratamiento en el presupuesto nuevo de auto, y mensaje
+propio cuando el catálogo de tipo de vía no carga (antes el botón quedaba apagado con un texto falso).
+**#3217** la precalificación de auto pregunta al callejero del Catastro cuando la calle no empieza por
+un prefijo reconocible, antes de rendirse a elegirlo a mano.
+
+**(21/09/2026)** Correduría · CIMA: **PR #3209 mergeado** — watchlist curada `avisosImportantes`
+(`CampoImportanteSinLeer` en `@central/module-seguros`) que imprime SIEMPRE (incluso en `ok`) campos
+EIAC importantes vistos y nunca leídos, empezando por `Tomador.Domicilio`/`DatosContacto`. Separado
+a propósito del `cobertura` genérico (que no alarma). De paso corrige `apps/asegura-portal/CLAUDE.md`:
+«CIMA no manda el riesgo de hogar» era falso (RiesgoHogar.SituacionRiesgo sí llega). Auditoría de
+"Manuel ya no interviene": auditado y documentado en `apps/asegura/CLAUDE.md` (Fly.io adapter,
+webhook Codeoscopic, DPA pendiente) — sin ejecutar cambios de infra, solo pedido audit+listar.
+
 **(21/09/2026)** SIVRA · pricing: **ciclo semanal completo, los 4 pisos, tras 2 ciclos bloqueados.**
 El 401 de Smoobu `/api/rates` (14-15/09) y la pausa global (15-19/09) ya estaban resueltos al
 empezar (PR #3092); verificado en vivo antes de lanzar el ciclo. 4 agentes en paralelo escribieron

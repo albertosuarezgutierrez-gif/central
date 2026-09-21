@@ -299,4 +299,51 @@ esta pasada) — se dice explícitamente en vez de afirmar que no hay pendientes
 de código ni aviso Telegram** (regla de frugalidad).
 
 ---
-<!-- verificado: 2026-09-20 -->
+
+## ✅ Pasada ligera — 21/09/2026
+
+**Rango:** 60 commits desde la pasada de ayer (20/09, 10:39) — actividad casi toda en la correduría
+(sustituciones por retarificación #3202, alcance ver/ver_economico #3207, tabla de precios del
+retarificador #3216, tipo de vía por Catastro #3217, watchlist CIMA #3209) más el ciclo semanal de
+pricing (#3213) y buscador-ia (#3212, Groq retira el gratis a gpt-oss-120b, ya en `AGENTES-BITACORA.md`).
+
+**Reconciliación memoria (paso 4):** 4 PRs mergeados **sin entrada en `CONTEXTO-SESIONES.md`**
+pese a llevar cada uno su propio commit `chore(memoria): actualizar contexto de sesión` — ese commit
+solo tocaba el JSON de seguimiento de uso de herramientas (`docs/uso-herramientas/`), no la memoria
+real. Añadidas ahora: **#3202** (sustituciones), **#3207** (alcance ver/ver_economico), **#3216**
+(retarificador: logos + cepos), **#3217** (tipo de vía por Catastro). Detalle en la entrada de arriba
+del todo de `CONTEXTO-SESIONES.md`. `docs(asegura)` **74f0db4** (corrige "de Manuel: transferir
+proyectos" ya cumplido) fue autocontenido por su propia sesión, sin acción adicional.
+
+**Heartbeat (2-bis):** todo verde salvo los dos crónicos ya documentados (`seo_correduria` sin
+créditos Serper desde 14/09; `ses_transporte` sin establecimientos SES). Sin reparaciones automáticas
+en curso (`agente_reparaciones` vacío en 7 días).
+
+**Correduría (2-quater):** CIMA sigue entrando (`cima_pull_completed` hace 17,3h, dentro del umbral
+de 30h; `errorsCount=0`; cola estable en 145-147). `correduria_ingesta` marca DEGRADADA (7 pólizas con
+recibos/siniestros huérfanos, ya conocidas) y **C0058 (Mapfre) alcanza 90 días sin mandar nada** (su
+peor hueco hasta ahora eran 74, medido el 06/09 en `docs/ASEGURA-MAPFRE-C0058.md`) — mismo backlog ya
+documentado, sigue sin acción de Alberto (borrador de consulta a Codeoscopic sin enviar). Codeoscopic:
+4 cotizaciones/7d, 2,00€, 0 descartadas — normal.
+
+**Pricing (2bis):** `rail_baja_roto=0` · `bajo_minimo=0` · `oscilantes=0` · **`rail_alza_sin_justificar=1`**
+(🟠, `prop_luxury_busto` 2027-01-13: 72€→104€, fecha lejana sin evento ni mercado medido — un solo
+caso, no sistémico). 4 palancas activas con `min_price` y `antelacion_k=0`. `horas_desde_ultima_pasada`
+marca 11,6h, por debajo del hueco normal de 12h entre la pasada de las 20:30 y la de las 08:30 — no es
+una pasada saltada (la de anoche escribió 2 noches con `ok=true`).
+
+**Backlog de PRs (2-ter):** el automerge (`rutinas-automerge.yml`) está sano — decenas de runs en
+verde en la última hora. El problema sigue siendo el mismo ya reportado 4 veces: **42 PRs abiertos**
+(30+ inspeccionados), varios con `mergeable_state:dirty` por antigüedad (p. ej. `#2741`, 9 días,
+registro-only en su día pero su diff actual arrastra 15 ficheros por desincronía con `main`). Sin
+cambio de causa raíz desde el informe del 20/09 (aprobación de workflows en Actions) — no se repite
+el listado completo, ya hecho ayer. Acción de Alberto: el mismo lote pendiente de revisar/mergear/cerrar.
+
+No se ha podido listar las sesiones del rango (`list_sessions` de Claude Code Remote no está adjunto
+en esta pasada) — se dice explícitamente, no se afirma que no hay pendientes de conversación.
+
+**Carril 1:** esta entrada + 4 entradas de memoria + `AUTO-APLICADOS.md`. **Carril 2 vacío** (nada de
+código nuevo que arreglar). Aviso Telegram enviado por los hallazgos 🟡 (PR backlog, raíl al alza).
+
+---
+<!-- verificado: 2026-09-21 -->
