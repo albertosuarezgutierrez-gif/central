@@ -1,33 +1,33 @@
 {
  "sesion": "3cd496e8-8835-5ca2-b02c-63d50e969a57",
  "inicio": "2026-09-21T09:27:34.194Z",
- "fin": "2026-09-21T14:54:56.689Z",
- "llamadas": 453,
+ "fin": "2026-09-21T15:26:21.391Z",
+ "llamadas": 510,
  "categorias": {
   "otro": {
-   "llamadas": 80,
-   "chars_in": 22180,
-   "chars_out": 843478,
+   "llamadas": 87,
+   "chars_in": 22259,
+   "chars_out": 972646,
    "errores": 0,
    "archivos_citados": 9,
    "chars_citados": 81685,
    "tools": {
     "Skill": 2,
-    "ToolSearch": 21,
-    "ReadNotifications": 54,
+    "ToolSearch": 22,
+    "ReadNotifications": 60,
     "SubagentHandback": 2,
     "ReportFindings": 1
    }
   },
   "bash": {
-   "llamadas": 228,
-   "chars_in": 106313,
-   "chars_out": 666631,
+   "llamadas": 249,
+   "chars_in": 120372,
+   "chars_out": 711992,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 228
+    "Bash": 249
    }
   },
   "mcp:Supabase": {
@@ -44,14 +44,14 @@
    }
   },
   "sql": {
-   "llamadas": 37,
-   "chars_in": 9569,
-   "chars_out": 38991,
+   "llamadas": 39,
+   "chars_in": 10070,
+   "chars_out": 40553,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 584635,
    "tools": {
-    "mcp__Supabase__execute_sql": 37
+    "mcp__Supabase__execute_sql": 39
    }
   },
   "mcp:posthog": {
@@ -79,23 +79,27 @@
    }
   },
   "mcp:github": {
-   "llamadas": 41,
-   "chars_in": 7405,
-   "chars_out": 283015,
+   "llamadas": 68,
+   "chars_in": 14684,
+   "chars_out": 379257,
    "errores": 0,
-   "archivos_citados": 15,
-   "chars_citados": 3618698,
+   "archivos_citados": 24,
+   "chars_citados": 4884790,
    "tools": {
-    "mcp__github__actions_list": 11,
-    "mcp__github__get_file_contents": 2,
+    "mcp__github__actions_list": 18,
+    "mcp__github__get_file_contents": 4,
     "mcp__github__search_code": 2,
-    "mcp__github__get_job_logs": 1,
-    "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 18,
+    "mcp__github__get_job_logs": 7,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__pull_request_read": 24,
     "mcp__github__list_repository_collaborators": 2,
-    "mcp__github__actions_run_trigger": 1,
+    "mcp__github__actions_run_trigger": 2,
     "mcp__github__search_repositories": 2,
-    "mcp__github__update_pull_request": 1
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__unsubscribe_pr_activity": 1,
+    "mcp__github__actions_get": 1,
+    "mcp__github__subscribe_pr_activity": 1
    }
   },
   "mcp:Vercel": {
