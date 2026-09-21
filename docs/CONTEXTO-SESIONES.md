@@ -13,6 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** Correduría · CIMA: **PR #3209 mergeado** — watchlist curada `avisosImportantes`
+(`CampoImportanteSinLeer` en `@central/module-seguros`) que imprime SIEMPRE (incluso en `ok`) campos
+EIAC importantes vistos y nunca leídos, empezando por `Tomador.Domicilio`/`DatosContacto`. Separado
+a propósito del `cobertura` genérico (que no alarma). De paso corrige `apps/asegura-portal/CLAUDE.md`:
+«CIMA no manda el riesgo de hogar» era falso (RiesgoHogar.SituacionRiesgo sí llega). Auditoría de
+"Manuel ya no interviene": auditado y documentado en `apps/asegura/CLAUDE.md` (Fly.io adapter,
+webhook Codeoscopic, DPA pendiente) — sin ejecutar cambios de infra, solo pedido audit+listar.
+
 **(21/09/2026)** SIVRA · pricing: **ciclo semanal completo, los 4 pisos, tras 2 ciclos bloqueados.**
 El 401 de Smoobu `/api/rates` (14-15/09) y la pausa global (15-19/09) ya estaban resueltos al
 empezar (PR #3092); verificado en vivo antes de lanzar el ciclo. 4 agentes en paralelo escribieron
