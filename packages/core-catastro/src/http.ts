@@ -11,6 +11,7 @@
 
 import {
   elegirVia,
+  elegirViaConTipo,
   errorCatastro,
   parcelaUnica,
   parsearCatastro,
@@ -194,6 +195,36 @@ export async function resolverNombreVia(
   // ninguna gana»: lo segundo es el `null` DELIBERADO de `elegirVia` y quien
   // llama no puede tirar para adelante con el nombre crudo (ver abajo).
   return { nombre, ambigua: !nombre && vias.length > 0 }
+}
+
+/**
+ * El TIPO DE VÍA oficial de una calle, cuando la ficha NO trae uno reconocible
+ * («Severo Ochoa 12», sin «Calle»/«Avenida»…). Mismo servicio libre `ConsultaVia`
+ * que `resolverNombreVia()`, pero con `TipoVia` VACÍO: el callejero busca el
+ * nombre en TODOS los tipos de esa provincia+municipio y cada resultado trae el
+ * suyo (`tv`) — así se puede preguntar sin saberlo de antemano. Gratis (mismo
+ * servicio que ya usa la precalificación de hogar) y best-effort: quien llama
+ * decide qué hacer si no hay match, nunca se inventa un tipo.
+ *
+ * Mismo criterio de desempate que `resolverNombreVia()` (`elegirViaConTipo`):
+ * con varias calles candidatas y ninguna ganadora clara, `ambigua: true` y el
+ * `tipo` sale `null` — preferir el tipo equivocado es peor que preguntarlo.
+ */
+export async function resolverTipoViaPorNombre(
+  provincia: string,
+  municipio: string,
+  calle: string,
+): Promise<{ tipo: string | null; nombre: string | null; ambigua: boolean }> {
+  const termino = terminoBusquedaVia(calle)
+  if (!termino) return { tipo: null, nombre: null, ambigua: false }
+  const q = new URLSearchParams({ Provincia: provincia, Municipio: municipio, TipoVia: '', NombreVia: termino })
+  const vias = parsearVias(await bajarCatastroHttp(`${CATASTRO_VIA}?${q.toString()}`))
+  const ganadora = elegirViaConTipo(vias, calle)
+  return {
+    tipo: ganadora?.tipo || null,
+    nombre: ganadora?.nombre ?? null,
+    ambigua: !ganadora && vias.length > 0,
+  }
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   tipoViaTextoDelTomador,
   type Resueltos,
 } from '@/lib/codeoscopic/desde-cartera'
+import { tipoViaDelTomadorPorCatastro } from '@/lib/codeoscopic/tipo-via-catastro'
 import { resolverConfig, explicarConfig, simulacionActiva } from '@/lib/codeoscopic/config'
 import { estadoConsumo } from '@/lib/codeoscopic/cotizar'
 import {
@@ -29,6 +30,7 @@ import {
   type ReparoPublico,
 } from '@/lib/codeoscopic/precalificar-publica'
 import { registrarErrorCartera } from '@/lib/error-cartera'
+import { provinciaPorCp } from '@central/module-seguros'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -211,15 +213,49 @@ export async function GET(req: Request) {
   // Pilar Franco Ruz: «Severo Ochoa 12», sin tipo) y se elige a mano.
   const tipoViaTexto = tipoViaTextoDelTomador(origen.cliente)
   const tipoViaAuto = vias === null ? null : tipoViaDelTomador(origen.cliente, vias)
+
+  // 🗺️ Sin prefijo reconocible en la ficha, un último intento GRATIS antes de
+  // rendirse: preguntar al callejero oficial del Catastro (mismo servicio
+  // libre que ya usa la precalificación de hogar). La calle se queda dentro de
+  // `tipoViaDelTomadorPorCatastro()`, igual que arriba; aquí solo se resuelven
+  // provincia (del CP, no personal: es el catálogo de provincias españolas) y
+  // municipio (del catálogo del vendor, solo si el CP no deja duda).
+  const tipoViaCatastro =
+    vias !== null && tipoViaAuto === null && tipoViaTexto === null
+      ? await tipoViaDelTomadorPorCatastro(
+          origen.cliente,
+          provinciaPorCp(cpTomador),
+          muni !== null && muni.length === 1 ? muni[0].nombre : null,
+          vias,
+        )
+      : null
+  const tipoViaFinal = tipoViaAuto ?? (tipoViaCatastro?.estado === 'ok' ? tipoViaCatastro.opcion : null)
+
   const tipoViaMotivo =
     vias === null
       ? 'No se ha podido leer el catálogo de tipos de vía de Codeoscopic. Sin él no se puede elegir.'
-      : tipoViaAuto !== null
-        ? null
-        : tipoViaTexto === null
-          ? 'La calle de la ficha no empieza por un tipo de vía reconocible (Calle, Avenida…): elígelo a mano. ' +
-            'La compañía lo exige para emitir.'
-          : `La ficha dice «${tipoViaTexto}» y el catálogo de Codeoscopic no tiene esa opción con ese nombre exacto: elígelo a mano.`
+      : tipoViaFinal !== null
+        ? tipoViaCatastro?.estado === 'ok'
+          ? `Lo ha dicho el callejero del Catastro («${tipoViaCatastro.nombreCatastro}»): la ficha no traía ` +
+            'un tipo de vía reconocible, pero el Catastro sí conoce esa calle en ese municipio.'
+          : null
+        : tipoViaTexto !== null
+          ? `La ficha dice «${tipoViaTexto}» y el catálogo de Codeoscopic no tiene esa opción con ese nombre exacto: elígelo a mano.`
+          : tipoViaCatastro === null || tipoViaCatastro.estado === 'sin_calle'
+            ? 'La calle de la ficha no empieza por un tipo de vía reconocible (Calle, Avenida…): elígelo a mano. ' +
+              'La compañía lo exige para emitir.'
+            : tipoViaCatastro.estado === 'sin_datos_para_preguntar'
+              ? 'La calle de la ficha no empieza por un tipo de vía reconocible, y sin código postal o ' +
+                'municipio tampoco se le puede preguntar al callejero del Catastro: elígelo a mano.'
+              : tipoViaCatastro.estado === 'ambigua'
+                ? 'El callejero del Catastro tiene varias calles con ese nombre en ese municipio y ninguna ' +
+                  'gana: elígelo a mano, para no ubicar en la calle equivocada.'
+                : tipoViaCatastro.estado === 'no_encontrada'
+                  ? 'El callejero del Catastro no conoce esa calle en ese municipio: elígelo a mano.'
+                  : tipoViaCatastro.estado === 'sin_match_catalogo'
+                    ? `El Catastro dice que es «${tipoViaCatastro.nombreCatastro}» y el catálogo de ` +
+                      'Codeoscopic no tiene esa opción con ese nombre exacto: elígelo a mano.'
+                    : 'No se ha podido consultar el callejero del Catastro: elígelo a mano.'
 
   // `null` = el catálogo no llegó. NO se degrada a `[]`, que se leería como
   // «ese código postal no tiene municipios» o «no hay estados civiles».
@@ -267,7 +303,7 @@ export async function GET(req: Request) {
     fechaMatriculacion,
     codigoVehiculo: null, // lo elige el corredor: es el único que no se deduce
     garaje: null,
-    tipoViaId: tipoViaAuto?.id ?? null,
+    tipoViaId: tipoViaFinal?.id ?? null,
   }
   const pre = precalificarAuto(origen.cliente, origen.poliza, resueltos, hoyIso())
 
@@ -297,7 +333,7 @@ export async function GET(req: Request) {
       estadoCivil: estadoCivilAuto,
       estadoCivilMotivo,
       tiposVia: vias,
-      tipoVia: tipoViaAuto,
+      tipoVia: tipoViaFinal,
       tipoViaMotivo,
       consumo,
       simulacion,
