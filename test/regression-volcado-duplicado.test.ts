@@ -50,7 +50,7 @@ test('las vivas, las canceladas y las pendientes NO agrupan: ahí un duplicado h
 })
 
 test('agrupar es juntar, no elegir: se enseñan TODAS las primas y se enlaza a cada fila', () => {
-  assert.match(piezas, /grupo\.primas\.map\(n => eur\(n\)\)/, 'la celda de prima enseña todas las primas del grupo')
+  assert.match(piezas, /grupo\.primas\.map\(\(n, i\) => \(/, 'la celda de prima enseña todas las primas del grupo')
   assert.match(piezas, /grupo\.filas\.map\(\(f, i\) => \(/, 'cada fila del grupo conserva su enlace')
   assert.doesNotMatch(piezas, /grupo\.primas\[0\]/, 'nadie elige «la» prima del grupo')
   assert.doesNotMatch(piezas, /\.slice\(0, 1\)/, 'no se recorta el grupo a su primera fila')

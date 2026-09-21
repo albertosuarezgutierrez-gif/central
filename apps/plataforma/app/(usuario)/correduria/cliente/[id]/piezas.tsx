@@ -250,9 +250,13 @@ function PrimaGrupo({ grupo }: { grupo: GrupoHistorica<PolizaFicha & { bien: str
   if (grupo.primas.length === 0) {
     return <span style={{ color: 'var(--muted)' }} title="La compañía no informa la prima">sin dato</span>
   }
+  // Una prima por línea cuando hay varias (hasta 3 en la cartera real): en una
+  // sola fila `nowrap` ensancharía la columna y, con ella, la tabla entera.
   return (
     <>
-      {grupo.primas.map(n => eur(n)).join(' · ')}
+      {grupo.primas.map((n, i) => (
+        <div key={i} style={i > 0 ? { marginTop: 2 } : undefined}>{eur(n)}</div>
+      ))}
       {grupo.algunaSinPrima && (
         <div style={sub} title="Alguna de las filas del grupo no trae prima informada">+ alguna sin dato</div>
       )}
