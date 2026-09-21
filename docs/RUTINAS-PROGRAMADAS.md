@@ -354,7 +354,7 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | **Resultado** | Informe mensual por Telegram + `docs/PATRIMONIO-CFO.md` actualizado; PR draft solo si propone un agente nuevo. |
 | **Verificar** | Filas nuevas en `patrimonio_recomendaciones` + informe en el doc de estado. |
 
-### 19. Vigía de infraestructura y cuotas — *PENDIENTE DE CREAR EL TRIGGER (skill lista 21/09/2026)*
+### 22. Vigía de infraestructura y cuotas — *PENDIENTE DE CREAR EL TRIGGER (skill lista 21/09/2026)*
 | | |
 |---|---|
 | **Cuándo** | Mensual, **día 8**, ~04:00 CEST (el 5 lo ocupa `conectores-vigia`, el 15 `github-vigia`) |
