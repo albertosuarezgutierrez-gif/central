@@ -267,11 +267,25 @@ const PLUG_PORTAL =
 const PLUG_PORTAL_PIDE_EMAIL =
   'Por cierto: ahora tenemos una intranet gratuita en grupoasegura.es donde puedes controlar todos tus seguros, aunque no estés con nosotros (fechas de renovación, siniestros sin papeleo). Si me pasas tu email por aquí te doy de alta gratis.'
 
+/**
+ * La apertura cambia según lo que de verdad sabemos del lead (Alberto,
+ * 21/09/2026: "cambiaria sigues con el seguro por algo como te vence el
+ * seguro de coche ahora no?"). Con `vencimiento_antiguo` SÍ tenemos un mes
+ * real (el histórico venció hace años, pero el mes es su ventana de
+ * renovación anual) y podemos preguntar por la fecha; con `sin_vencimiento`
+ * NO hay ningún dato de cuándo — preguntar "¿te vence ahora?" ahí sería
+ * inventar una fecha que no existe, así que se mantiene "¿sigues con…?".
+ */
 function mensajeSugerido(g: GrupoLeadRecaptacion): string {
   const primera = g.polizas[0]
   const conQuien = primera.aseguradoraAnterior ? ` que tuviste con ${primera.aseguradoraAnterior}` : ''
   const plug = g.email === null ? PLUG_PORTAL_PIDE_EMAIL : PLUG_PORTAL
-  return `Hola ${g.cliente.split(' ')[0]}, ¿sigues con tu seguro de ${ramosTexto(g)}${conQuien}? Si quieres te paso un precio actualizado sin compromiso.\n\n${plug}`
+  const nombre = g.cliente.split(' ')[0]
+  const ramos = ramosTexto(g)
+  const apertura = g.tieneVencimientoAntiguo && primera.mesVencimientoAntiguo !== null
+    ? `Hola ${nombre}, ¿te vence el seguro de ${ramos} por estas fechas (${MESES[primera.mesVencimientoAntiguo - 1]}), no?`
+    : `Hola ${nombre}, ¿sigues con tu seguro de ${ramos}${conQuien}?`
+  return `${apertura} Si quieres te paso un precio actualizado sin compromiso.\n\n${plug}`
 }
 
 function textoEscritura(r: EscrituraRecaptacion): string {
