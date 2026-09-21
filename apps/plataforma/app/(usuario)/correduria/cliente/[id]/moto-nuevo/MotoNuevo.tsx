@@ -20,6 +20,7 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
+import { SelectorVersion } from '../../../SelectorVersion'
 
 function euroODash(n: number | null | undefined): string {
   return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
@@ -338,10 +339,14 @@ export default function MotoNuevo({
             </select>
           </Campo>
           <Campo etiqueta="Versión" falta={faltaVersion} faltaTexto="la elige el corredor">
-            <select value={codigoVehiculo} onChange={(e) => setCodigoVehiculo(e.target.value)} disabled={!modeloId || !motorId || cargando === 'versiones'} style={input}>
-              <option value="">{cargando === 'versiones' ? 'Cargando…' : !motorId ? 'Elige antes el combustible' : 'Elige versión'}</option>
-              {versiones.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-            </select>
+            <SelectorVersion
+              valor={codigoVehiculo}
+              onCambiar={setCodigoVehiculo}
+              versiones={versiones}
+              deshabilitado={!modeloId || !motorId || cargando === 'versiones'}
+              textoVacio={cargando === 'versiones' ? 'Cargando…' : !motorId ? 'Elige antes el combustible' : 'Elige versión'}
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
             <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />

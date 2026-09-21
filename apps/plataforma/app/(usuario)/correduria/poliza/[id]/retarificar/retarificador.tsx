@@ -22,6 +22,7 @@ import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
 import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
+import { SelectorVersion } from '../../../SelectorVersion'
 
 /**
  * Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el
@@ -513,6 +514,18 @@ export default function Retarificador({
     if (r.estado !== 'ok') throw new Error(r.mensaje)
     return r.opciones
   }
+
+  // La pista para el BUSCADOR de la versión — y solo para el buscador.
+  //
+  // Sale de otra póliza de la misma matrícula, así que prefiltra el desplegable
+  // y se dice en pantalla; seleccionar sigue siendo del corredor (ver el 🚨 de
+  // abajo). Y solo con UNA candidata: con dos o más se contradicen entre sí
+  // (`FORTWO COUPE PURE 52…` contra `FORFOUR PURE 1.1…`), y prefiltrar por una
+  // sería tomar partido en silencio.
+  const pistaVersion = useMemo(
+    () => (vehiculo?.versiones.length === 1 ? vehiculo.versiones[0].version : null),
+    [vehiculo],
+  )
 
   // ── Preselección desde la ficha ────────────────────────────────────────────
   //
@@ -1101,26 +1114,21 @@ export default function Retarificador({
                 </button>
               </div>
             ) : (
-              <select
+              <SelectorVersion
                 id="version"
-                value={codigoVehiculo}
-                onChange={(e) => setCodigoVehiculo(e.target.value)}
-                disabled={!modeloId || !motorId || cargando === 'versiones'}
-                style={{ minHeight: 44 }}
-              >
-                <option value="">
-                  {cargando === 'versiones'
+                valor={codigoVehiculo}
+                onCambiar={setCodigoVehiculo}
+                versiones={versiones}
+                deshabilitado={!modeloId || !motorId || cargando === 'versiones'}
+                textoVacio={
+                  cargando === 'versiones'
                     ? 'Cargando…'
                     : !motorId
                       ? 'Elige antes el combustible'
-                      : 'Elige versión'}
-                </option>
-                {versiones.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nombre}
-                  </option>
-                ))}
-              </select>
+                      : 'Elige versión'
+                }
+                pista={pistaVersion}
+              />
             )}
           </Campo>
 
