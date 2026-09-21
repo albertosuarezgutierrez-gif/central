@@ -10,6 +10,13 @@ import { Polizas, PolizasDeclaradas } from './piezas'
  *   pendientes     → las emitimos nosotros y CIMA aún no las ha traído;
  *   canceladas     → CIMA las manda canceladas: ya no aseguran nada;
  *   históricas     → volcado de junio de 2026, para saber qué tuvo.
+ *
+ * El volcado repite el MISMO riesgo cambiando solo la prima (84 grupos / 188
+ * filas / 77 clientes, medido 21/09/2026: el FORD FOCUS 3935GPY sale a 201€ y
+ * a 210€ con el mismo vencimiento). En la ficha eso se lee como una duplicidad,
+ * así que ese bloque —y SOLO ese— agrupa las filas idénticas en una línea y
+ * enseña todas las primas. En las vivas no se agrupa: ahí dos filas iguales son
+ * un fallo de conciliación que hay que ver, no esconder.
  */
 export default function TabPolizas({ porClase, intervinientes, declaradas }: {
   porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]>
@@ -46,10 +53,11 @@ export default function TabPolizas({ porClase, intervinientes, declaradas }: {
       {porClase.historica.length > 0 && (
         <Polizas
           titulo={`Volcado histórico (${porClase.historica.length})`}
-          nota="Del volcado de junio de 2026, con vencimientos antiguos. Sirven para saber qué tuvo contratado, no para renovar."
+          nota="Del volcado de junio de 2026, con vencimientos antiguos. Sirven para saber qué tuvo contratado, no para renovar. El volcado repite el mismo riesgo cambiando solo la prima: esas filas van juntas en una línea (🔁) con todas sus primas, sin borrar ninguna."
           polizas={porClase.historica}
           vacio=""
           plegado
+          agruparIguales
           intervinientes={intervinientes}
         />
       )}

@@ -39,7 +39,7 @@
  * entra, resuelve dos y se va tranquilo. Se cuenta en `ilegibles` y se reintenta
  * en la pasada siguiente.
  */
-import { estadoPeticion, DIAS_VENTANA_AVISO } from '@central/module-seguros-portal'
+import { estadoPeticion, entraEnVentana, DIAS_VENTANA_AVISO } from '@central/module-seguros-portal'
 import { WHERE_CARTERA_VIVA, leerSitio, textoReparoSitio, caducidadCarnet } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { avisosActivos, destinatarioDeCliente, esSoloContar } from './avisos-vencimiento'
@@ -62,6 +62,17 @@ export type ResumenAvisosIntranet = {
   fallidos: number
   /** Clientes a los que NO se escribe porque alguna de sus fuentes no se pudo leer. */
   ilegibles: number
+  /**
+   * Recordatorios propios (sin póliza) cuya identidad no tiene NINGUNA ficha
+   * vinculada, así que desde aquí no hay a quién escribir.
+   *
+   * 🚨 Se cuenta en vez de saltarse en silencio: son justo los avisos de quien
+   * entró al portal sin ser cliente de la casa, y sin este número un `enviados`
+   * tranquilizador no distinguiría «hoy no tocaba nadie» de «hay gente a la que
+   * no sabemos avisar». No es un fallo que se arregle en el código: o esa
+   * persona se vincula, o su único canal es el push.
+   */
+  sinFicha: number
   /** true = no se ha enviado nada, solo se ha contado. */
   soloContar: boolean
 }
@@ -81,7 +92,7 @@ function nombreDe(c: { nombre: string | null; apellidos: string | null } | null 
  * deliberado: «hoy no tocaba nadie» y «no he podido mirar» no pueden dar la
  * misma respuesta.
  */
-export async function reunirPendientes(correduriaId: string, hoy: Date): Promise<Pendiente[]> {
+export async function reunirPendientes(correduriaId: string, hoy: Date): Promise<{ pendientes: Pendiente[]; identidadesServidas: Set<string> }> {
   const db = prismaAsegura()
   const limiteVentana = new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA)
 
@@ -130,13 +141,21 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
       },
     }),
     // La ventana exacta la decide el módulo; aquí solo se acota para no traerlo todo.
+    //
+    // 🚨 SIN el filtro `polizaId: { not: null }` desde el 21/09/2026. Lo llevaba
+    // porque la póliza era «el ÚNICO camino hasta el destinatario», y eso dejaba
+    // MUDO todo recordatorio que el cliente se pone él (una ITV, un carné, la
+    // revisión del gas): no tienen póliza, así que ni este correo ni el cron de
+    // vencimientos los tocaban, y sin push activado no avisaban por ninguna vía
+    // mientras la pantalla prometía «te avisamos». Hay un segundo camino hasta
+    // la ficha y lo da `portal_vinculo`, que es la misma costura identidad↔cliente
+    // que usa el portal para enseñarle su cartera.
     db.portalObligacion.findMany({
       where: {
         avisadaAt: null,
-        polizaId: { not: null },
         fechaAccionable: { gte: new Date(hoy.getTime() - MS_DIA), lte: limiteVentana },
       },
-      select: { id: true, titulo: true, fechaAccionable: true, polizaId: true },
+      select: { id: true, identidadId: true, titulo: true, fechaAccionable: true, polizaId: true, repiteCadaMeses: true },
     }),
   ])
 
@@ -167,6 +186,46 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
         })
   const clientePorPoliza = new Map(polizas.map((p) => [p.id, p.clienteId]))
   for (const c of clientePorPoliza.values()) ids.add(c)
+
+  // El segundo camino hasta la ficha, para los recordatorios que el cliente se
+  // pone él (sin póliza detrás): `portal_vinculo`.
+  //
+  // 🚨 Con MÁS DE UN vínculo no se escribe a ninguna, y esto NO es prudencia
+  // de más. La primera versión desempataba por el vínculo más antiguo, con el
+  // argumento de que todas las fichas vinculadas lo están «por el correo de esa
+  // misma persona». Es FALSO: un vínculo puede nacer de `cliente_emails`, que
+  // el propio `lib/vinculo.ts` documenta como correos de contacto que **pueden
+  // ser de otra persona** (el hijo que puso su correo en la ficha de su madre).
+  // Con el desempate, el recordatorio del hijo acabaría en la bandeja de la
+  // madre —`destinatarioDeCliente()` escribe al correo de ESA ficha— y sellado
+  // bajo su `clienteId`. Es la regla de la casa de agrupar por IDENTIDAD y no
+  // por la etiqueta, en su cara cara: no duplica, MEZCLA, y el resultado es
+  // plausible.
+  //
+  // 🚨 Y nunca el vínculo del CORREDOR (`origen = 'corredor'`): es el temporal
+  // que se crea cuando Alberto mira el portal de un cliente, y apunta a la
+  // ficha que tuviera abierta. Un recordatorio creado bajo esa sesión no es de
+  // ese cliente.
+  const identidadesSinPoliza = [...new Set(obligaciones.filter((o) => o.polizaId === null).map((o) => o.identidadId))]
+  const vinculos =
+    identidadesSinPoliza.length === 0
+      ? []
+      : await db.portalVinculo.findMany({
+          where: { identidadId: { in: identidadesSinPoliza }, correduriaId, origen: { not: 'corredor' } },
+          select: { identidadId: true, clienteId: true },
+        })
+  const fichasPorIdentidad = new Map<string, Set<string>>()
+  for (const v of vinculos) {
+    const set = fichasPorIdentidad.get(v.identidadId) ?? new Set<string>()
+    set.add(v.clienteId)
+    fichasPorIdentidad.set(v.identidadId, set)
+  }
+  const clientePorIdentidad = new Map<string, string>()
+  for (const [identidadId, fichas] of fichasPorIdentidad) {
+    if (fichas.size !== 1) continue
+    clientePorIdentidad.set(identidadId, [...fichas][0]!)
+  }
+  for (const c of clientePorIdentidad.values()) ids.add(c)
 
   // 🚨 La cuarta fuente NO parte de una fila pendiente: los reparos de la
   // dirección hay que IR A MIRARLOS ficha por ficha. Por eso se acota a la
@@ -266,10 +325,13 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     })
   }
 
+  const identidadesServidas = new Set<string>()
   for (const o of obligaciones) {
-    const clienteId = o.polizaId ? clientePorPoliza.get(o.polizaId) : undefined
+    // Con póliza, por la póliza; sin ella, por el vínculo de su identidad.
+    const clienteId = o.polizaId ? clientePorPoliza.get(o.polizaId) : clientePorIdentidad.get(o.identidadId)
     if (!clienteId || !fichaPorId.has(clienteId)) continue
-    dame(clienteId).obligaciones.push({ id: o.id, titulo: o.titulo, fechaAccionable: o.fechaAccionable })
+    if (o.polizaId === null) identidadesServidas.add(o.identidadId)
+    dame(clienteId).obligaciones.push({ id: o.id, titulo: o.titulo, fechaAccionable: o.fechaAccionable, repiteCadaMeses: o.repiteCadaMeses })
   }
 
   // El MISMO juicio que pinta la ficha del corredor (`leerSitio`), para que las
@@ -311,7 +373,34 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     }
   }
 
-  return [...por.values()]
+  return { pendientes: [...por.values()], identidadesServidas }
+}
+
+/**
+ * Cuántos recordatorios propios se pierden por no haber a quién escribir.
+ *
+ * 🚨 Usa `entraEnVentana()`, la MISMA puerta que el catálogo, y no el rango
+ * ancho de la criba: con el rango, una fila de ayer que `avisosDe()` nunca
+ * habría avisado saldría aquí como un aviso perdido, y este número existe justo
+ * para no inventarse ausencias.
+ *
+ * Cuenta las dos formas de perderse, que antes eran una: sin ningún vínculo (o
+ * con varios, que es el caso que no se desempata) y con vínculo a una ficha que
+ * no se pudo leer — fusionada, de otra correduría. La segunda se caía por un
+ * `continue` silencioso, que es exactamente el silencio que este campo dice
+ * eliminar.
+ */
+async function contarSinFicha(correduriaId: string, hoy: Date, conFicha: ReadonlySet<string>): Promise<number> {
+  const db = prismaAsegura()
+  const candidatas = await db.portalObligacion.findMany({
+    where: {
+      avisadaAt: null,
+      polizaId: null,
+      fechaAccionable: { gte: new Date(hoy.getTime() - MS_DIA), lte: new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA) },
+    },
+    select: { identidadId: true, fechaAccionable: true },
+  })
+  return candidatas.filter((o) => entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy }) && !conFicha.has(o.identidadId)).length
 }
 
 /**
@@ -329,7 +418,7 @@ export async function avisarIntranet(
   if (!enlace) throw new Error('sin_portal')
 
   const db = prismaAsegura()
-  const pendientes = await reunirPendientes(correduriaId, hoy)
+  const { pendientes, identidadesServidas } = await reunirPendientes(correduriaId, hoy)
 
   const resumen: ResumenAvisosIntranet = {
     clientes: 0,
@@ -338,8 +427,14 @@ export async function avisarIntranet(
     sinCanal: 0,
     fallidos: 0,
     ilegibles: 0,
+    sinFicha: 0,
     soloContar,
   }
+
+  // Los recordatorios propios que no llegaron a ningún `Pendiente` porque su
+  // identidad no tiene ficha vinculada. Se calcula aquí y no dentro del bucle
+  // porque ese bucle recorre CLIENTES, y estos por definición no tienen uno.
+  resumen.sinFicha = await contarSinFicha(correduriaId, hoy, identidadesServidas)
 
   for (const p of pendientes) {
     const sellos = await db.portalAvisoEnviado.findMany({

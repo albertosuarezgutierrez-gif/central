@@ -49,7 +49,7 @@ import {
   remitenteCorreo,
   type IntervinienteFicha,
 } from '@central/module-seguros'
-import { DIAS_VENTANA_AVISO, entraEnVentana } from '@central/module-seguros-portal'
+import { DIAS_VENTANA_AVISO, entraEnVentana, TIPOS_RECORDATORIO_PROPIO } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import {
   LIMITE_OBLIGACIONES,
@@ -305,6 +305,23 @@ export async function ejecutarAvisosVencimiento(opts: {
   const filas = await db.portalObligacion.findMany({
     where: {
       avisadaAt: null,
+      // 🚨 Los recordatorios que el cliente se pone a SÍ MISMO (ITV, carné,
+      // caldera…) NO son el vencimiento de un seguro, y este cron solo sabe
+      // escribir de eso: su correo dice «es la última fecha para comunicar que
+      // no quieres renovar; el seguro vence el X» (art. 22 LCS). Mandado sobre
+      // una ITV, le está diciendo a alguien que se queda sin cobertura cuando
+      // no es verdad.
+      //
+      // Y la PÓLIZA no sirve para distinguirlos: desde el 13/09/2026 un
+      // recordatorio propio puede colgar de una (para decir de qué coche es), y
+      // desde el 21/09 la precarga de la ITV se la asigna sola — o sea que
+      // justo los que más se van a crear son los que tienen `polizaId`. Lo que
+      // los distingue es el TIPO.
+      //
+      // `notIn` y no `in: ['poliza','recibo']` a propósito: si algún día se
+      // deriva un tipo NUEVO de la cartera, lo correcto es que se avise (el
+      // comportamiento de hoy) y no que enmudezca sin que nadie se entere.
+      tipo: { notIn: [...TIPOS_RECORDATORIO_PROPIO] },
       fechaAccionable: { gte: hoy, lte: new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA) },
     },
     orderBy: { fechaAccionable: 'asc' },

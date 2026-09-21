@@ -450,6 +450,11 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+export {
+  agruparHistoricas,
+  type HistoricaAgrupable,
+  type GrupoHistorica,
+} from './ficha-historicas.ts'
 export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export {
   parseFiltroCartera,
@@ -628,3 +633,47 @@ export {
   type AreaContacto,
   type ContactoCompania,
 } from './compania-contactos.ts'
+
+// Defensa de cartera: en qué compañías el cliente YA está, y qué se puede
+// decir de una fila de precio por eso. Cuatro estados, `desconocida` incluida.
+export {
+  normalizarCompania,
+  resolverCompania,
+  polizaDefiende,
+  defensaDeCartera,
+  bloqueaEmision,
+  etiquetaDefensa,
+  fraseDefensa,
+  type CompaniaCatalogo,
+  type IdentidadCompania,
+  type PolizaCliente,
+  type EstadoDefensa,
+  type PolizaEnLaCompania,
+  type Defensa,
+  type EntradaDefensa,
+} from './defensa-cartera.ts'
+
+// La tabla de precios con sentido: agrupada por nivel de cobertura (que NO son
+// comparables entre sí) y con filtros cuyo valor no reconocido se DECLARA.
+export {
+  nivelCobertura,
+  parseFiltroPrecios,
+  filtroPreciosActivo,
+  describirFiltroPrecios,
+  agruparPrecios,
+  eurEs,
+  FIRMEZAS,
+  FRANQUICIAS,
+  FILTRO_PRECIOS_VACIO,
+  type FamiliaNivel,
+  type Nivel,
+  type FirmezaPrecio,
+  type PrecioComparable,
+  type FilaPrecio,
+  type FiltroFranquicia,
+  type FiltroPrecios,
+  type ParseFiltroPrecios,
+  type GrupoCobertura,
+  type Comparativa,
+  type OpcionesComparativa,
+} from './comparativa-precios.ts'

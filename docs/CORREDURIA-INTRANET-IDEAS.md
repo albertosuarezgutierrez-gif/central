@@ -282,6 +282,109 @@ Pólizas Gratuito»). Spec: `docs/superpowers/specs/2026-09-19-asegura-gestor-po
   avisamos») y verificar los canales de baja por compañía (`apps/asegura-web/lib/companias-baja.ts`,
   todo `verificado: false` porque la red bloquea los cinco dominios).
 
+### R. Precarga de recordatorios: carné e ITV ✅ CONSTRUIDO (21/09/2026) — es la UI que le faltaba a §B
+
+Alberto, mirando la pestaña vacía: *«esto se podría automatizar más… ¿tienes datos de clientes?»*.
+Sí, de dos, y **no valen lo mismo** — de ahí la decisión que sostiene la pieza (PR #3241):
+
+- **Carné → `firme`**: `cliente_carnets_conducir.fecha_carnet` + `fecha_nacimiento` (cifradas) ya las
+  convierte `caducidadCarnet()` en `apps/asegura`, y cruzan el puente ya calculadas. Entra sola en el
+  formulario, editable.
+- **ITV → `calculada`**: periodicidad legal (RD 920/2017) sobre la matriculación, que a su vez suele
+  estar **estimada** desde la matrícula (`fechaMatriculacionEstimada()`, 94,5 % acierta el año). **No
+  se rellena sola**: se enseña con lo supuesto delante y solo entra si la persona la acepta — el trato
+  del Catastro.
+
+Lo decide `precargasDeRecordatorio()` en el módulo puro, no la pantalla, con guardián de raíz.
+⚠️ **Las furgonetas (N1) se calculan como turismo y la pantalla lo avisa**: su cuadro es otro y el ramo
+solo dice `auto`/`moto`; deducirlo de la marca sería adivinar.
+🚫 **Caldera, extintores, gas y boletín eléctrico se quedan manuales**: no hay ningún dato del que
+derivar su fecha. El año de construcción del Catastro es de la INSTALACIÓN COMÚN del edificio, no de
+la caldera de un piso — usarlo sería inventar una fecha con aspecto de dato.
+
+### S. Un carné CADUCADO no se lo decía nadie ✅ CONSTRUIDO (21/09/2026)
+
+Encontrado construyendo §R. `entraEnVentanaCarnet()` exige futuro (`faltan >= 0`), así que el aviso
+existía los 60 días ANTES y **desaparecía justo el día que el carné caduca**: el sistema se callaba en
+el único momento en que pasa algo. Tipo de aviso nuevo `carnet_caducado` (→ «Recordatorios», que es la pantalla donde el carné se ve;
+«Mis datos» no lo pinta y el enlace mandaba a buscar algo que no está).
+🚨 **Con tope de 2 años (`DIAS_MAX_CARNET_CADUCADO`)**: la ficha viene de un volcado y una fecha de
+hace veinte años no dice «conduce sin carné», dice «este dato es viejo». Y el texto **no acusa**: dice
+lo que NOS CONSTA y ofrece corregirlo, con cepo que prohíbe las frases de conducta.
+
+### T. 🐛 Un recordatorio recurrente sin push: CLAVADO ✅ y MUDO ✅ — los dos cerrados (21/09/2026)
+
+Medido el 21/09/2026 leyendo las tres piezas. Eran dos agujeros distintos y solo uno se podía cerrar
+sin tocar lo que escribe a clientes reales.
+
+**1. Se quedaba CLAVADO. ✅ Arreglado en el mismo PR — y era una regresión de ese PR.**
+`avanzarRecordatoriosRecurrentesDeIdentidad()` empujaba al ciclo siguiente solo si constaba
+`avisada_at` o `avisada_push_at`. En un recordatorio propio el primero no lo sellaba nadie salvo, de
+rebote, el correo EQUIVOCADO del cron de vencimientos — el que dice «el seguro vence el X» sobre una
+ITV. Al quitar ese correo (`tipo: { notIn: TIPOS_RECORDATORIO_PROPIO }`, que era lo correcto: decirle
+a alguien que se queda sin cobertura cuando lo que vence es la inspección del coche es mentira, no
+silencio), quien no tiene push se habría quedado con su «ITV cada 12 meses» congelado en una fecha
+pasada **para siempre**, y encima invisible para la ventana de aviso. Se cierra con un tercer brazo
+en esa consulta: **o la fecha quedó atrás más que la ventana de aviso entera**. El plazo no es un
+número al azar, es la MISMA ventana en la que el aviso habría salido — pasada completa sin que ningún
+canal lo sellara, no queda nada que esperar, y el recordatorio ha estado todo ese tiempo visible como
+vencido en su pestaña, que es donde de verdad se mira.
+
+**2. Sin push activado, un recordatorio SIN póliza estaba MUDO. ✅ Cerrado, con el OK de Alberto.**
+El cron de vencimientos resuelve el destinatario a través de la póliza (`o.polizaId ? … : null`), así
+que lo cuenta `sinCanal` siempre; y el emisor genérico de intranet **lo excluye** (`polizaId: { not:
+null }` en su `where`). ⇒ un carné o una ITV sin asignar no avisaban por ningún canal, aunque la
+pantalla dijera «te avisamos».
+El `where` se abre y la ficha se resuelve por el SEGUNDO camino que ya existía: **`portal_vinculo`**,
+la misma costura identidad↔cliente con la que el portal le enseña su cartera. Con varias fichas gana
+la más antigua (mismo desempate que `vinculosPorIdentidad`), y aquí desempatar SÍ vale —a diferencia
+de escribir un dato de contacto, que con varias fichas no escribe en ninguna—: esto no mete nada en
+la ficha de nadie, solo busca una dirección, y todas están vinculadas por el correo de esa misma
+persona. Quien no tiene ninguna ficha **se CUENTA** (`sinFicha` del resumen) en vez de desaparecer:
+«no hay a quién avisar» no es «no había nada que avisar».
+🚨 **Y con MÁS DE UN vínculo no se escribe a ninguna ficha** — la primera versión desempataba por el
+más antiguo y eso era un **envío a la persona equivocada**: un `portal_vinculo` puede nacer de
+`cliente_emails`, que son correos de CONTACTO y pueden ser de otro (el hijo que puso el suyo en la
+ficha de su madre). El recordatorio del hijo habría llegado a la bandeja de ella, sellado bajo su
+`clienteId`. Es la regla de agrupar por IDENTIDAD y no por la etiqueta, en su cara cara: no duplica,
+MEZCLA, y el resultado es plausible. Tampoco cuenta el vínculo de origen `corredor` (el temporal de
+«ver su portal»: apunta a la ficha que Alberto tuviera abierta).
+🦷 **Y faltaba un tercer agujero que solo se vio al medir: el sello.** `portal_aviso_enviado` va por
+el id del aviso, y ese id era el de la FILA — así que un «ITV cada 12 meses» avisaba UNA vez y al
+año siguiente, misma fila y misma clave, se quedaba mudo para siempre. Ahora el id del aviso de
+obligación lleva **la fecha del ciclo** pegada — **pero SOLO si se repite**, y esa mitad es tan
+importante como la otra: `sincronizarObligacionesDeIdentidad()` reescribe `fechaAccionable` en cada
+carga de la bóveda, así que en una obligación DERIVADA la fecha en la clave mandaría un segundo
+correo de la misma renovación en cuanto CIMA corrigiera el vencimiento (y, al desplegar, habría
+reenviado de golpe todo lo ya sellado). Con ciclo, cada ciclo es un aviso distinto; sin ciclo, manda
+el id de la fila.
+📊 Medido antes de tocar nada (21/09/2026): `portal_aviso_enviado` **0 filas** (el emisor no ha
+mandado nunca nada), 10 obligaciones y **0 sin póliza**, **0 recurrentes**. O sea: cambiar la clave
+no puede re-enviar nada a nadie, y abrir el `where` no dispara hoy ni un correo — deja la vía lista
+para el primero que se apunte una ITV.
+Lo que SÍ se arregló del canal que ya existía: el push dejó de mandar el texto de renovación de póliza
+sobre un recordatorio propio (`textoPushObligacion()`, por tipo, en el módulo puro). Ahí **no** se
+excluyen como en el correo, y la diferencia importa: el push es el único canal que puede avisar de un
+recordatorio sin póliza, así que callarlo lo dejaría mudo del todo. Lo que se arregla es lo que dice.
+
+### U. Los recordatorios del cliente son una señal de venta que hoy no ve nadie 🔵 idea, sin medir
+
+Si alguien apunta «ITV de 5678XYZ» y esa matrícula **no está en la cartera**, acaba de decir que tiene
+un coche asegurado en otro sitio. Igual «revisión de caldera» (tiene caldera → cobertura de hogar).
+Hoy eso muere en `portal_obligacion` y no lo ve nadie de la correduría.
+⚠️ **Base legal**: es un dato que da para SU uso; usarlo comercialmente se apoya en la casilla que ya
+existe (`portal_consentimiento` tipo `comercial`, §Q), no en el alta.
+⚠️ **Y hoy no hay volumen que medir**: con 4 personas entrando al portal (§T del embudo), esto es una
+apuesta a futuro, no trabajo de este mes.
+
+### V. 🚦 El cuello NO es el producto: son las invitaciones sin mandar 🟢 gratis, y es de Alberto
+
+Medido el 12/09/2026 por `/api/operador/actividad`: **80 clientes · 52 con correo · 5 con acceso · 4
+han entrado**. Cada función nueva del portal (§A, §M, §Q, §R, §S…) la ven cuatro personas. El cuello
+son los **47 clientes con correo y sin invitar**, y el botón de invitar existe desde el 05/09
+(`POST /api/operador/cliente/portal`). No es código: es una tarde de Alberto pulsando el botón.
+**Mientras ese número no suba, construir más dentro del portal es optimizar la parte que no falla.**
+
 ## Preguntas abiertas para Alberto
 
 - ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?

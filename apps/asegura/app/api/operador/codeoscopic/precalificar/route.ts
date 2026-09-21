@@ -30,6 +30,7 @@ import {
   type ReparoPublico,
 } from '@/lib/codeoscopic/precalificar-publica'
 import { registrarErrorCartera } from '@/lib/error-cartera'
+import { carteraCompaniasDePoliza } from '@/lib/codeoscopic/cartera-companias'
 import { provinciaPorCp } from '@central/module-seguros'
 
 export const runtime = 'nodejs'
@@ -78,6 +79,22 @@ export const dynamic = 'force-dynamic'
  *   - `municipios`  → `null` = no se ha podido mirar el catálogo · `[]` = mirado y no hay (con su `municipiosMotivo`).
  *   - `estadoCivil` → `null` = no se ha emparejado, y `estadoCivilMotivo` dice por qué.
  *   - `consumo`     → `{ error }` cuando el libro no se pudo leer; nunca «gastado 0».
+ *
+ * ─── `carteraCompanias`: en qué compañías está YA el cliente ───────────────
+ * Bloque nuevo (21/09/2026) que alimenta `defensaDeCartera()` de
+ * `@central/module-seguros`, la regla que marca en la tabla de precios las filas
+ * que NO se pueden emitir porque el cliente ya es cliente de esa compañía. Sale
+ * de `lib/codeoscopic/cartera-companias.ts` y **no cuesta nada**: dos lecturas de
+ * nuestra propia cartera, cero llamadas al vendor.
+ *
+ *   `{ estado:'ok', polizas:[…], catalogo:[…], polizaActualId }`  · mirado
+ *   `{ estado:'no_disponible', porque }`                          · NO se ha podido mirar
+ *
+ * 🚨 El segundo estado existe justo para que plataforma no lea un `[]`. Una lista
+ * vacía significa «este cliente no tiene ninguna póliza nuestra» y pinta las 24
+ * filas como emitibles; un fallo de lectura tiene que salir como «sin comprobar».
+ * Y un despliegue viejo de asegura no manda el campo: ahí plataforma lee
+ * `undefined` → `desconocida`, nunca `[]`.
  *
  * ─── Respuesta ─────────────────────────────────────────────────────────────
  *   `{ estado:'ok', ramo, … }`               · 200
@@ -135,6 +152,19 @@ export async function GET(req: Request) {
 
   const simulacion = simulacionActiva(process.env)
 
+  // 🛡️ En qué compañías está YA el cliente. Es lo que deja marcar en la tabla de
+  // precios las filas que NO se pueden emitir («ya es cliente suyo») y la de la
+  // compañía actual. **No cuesta nada**: dos lecturas de nuestra propia cartera,
+  // ninguna llamada al vendor — por eso sigue viajando `gastado: '0,00€'`.
+  //
+  // Va ANTES del corte por ramo a propósito: la defensa de cartera es de la
+  // relación cliente↔compañía, no del producto, así que vale igual en una póliza
+  // de hogar que en una de auto. Y nunca lanza: un fallo sale como
+  // `{ estado:'no_disponible' }`, que plataforma pinta «sin comprobar». Colapsarlo
+  // a `[]` diría «el cliente no está en ninguna compañía» y encendería las 24
+  // filas como emitibles.
+  const carteraCompanias = await carteraCompaniasDePoliza(correduriaId, polizaId)
+
   // ── Ramos que no son auto ─────────────────────────────────────────────────
   // No se precalifican aquí (hogar tiene su propia pieza, con Catastro), así que
   // NO se devuelve `faltan: []`: eso diría «revisado y no falta nada» y
@@ -162,6 +192,7 @@ export async function GET(req: Request) {
         tipoViaMotivo: null,
         consumo: { error: 'no se ha mirado el libro de consumo: este ramo no se precalifica aquí' },
         simulacion,
+        carteraCompanias,
         gastado: '0,00€',
       },
       { status: 200 },
@@ -337,6 +368,7 @@ export async function GET(req: Request) {
       tipoViaMotivo,
       consumo,
       simulacion,
+      carteraCompanias,
       gastado: '0,00€',
     },
     { status: 200 },
