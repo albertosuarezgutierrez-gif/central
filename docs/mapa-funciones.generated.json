@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-21T12:55:09Z",
-  "sha": "4b3224ccd5b529e90e9e627e2f8d7f0d1cfb3f1d",
+  "generadoEn": "2026-09-21T14:03:36Z",
+  "sha": "fd3ef1af04c9f71ba6828eb38f007fc23fcd8790",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -65970,6 +65970,7 @@
       "ambito": "apps/plataforma",
       "exporta": [
         "Polizas",
+        "huellaBien",
         "CeldaRecibos",
         "PolizasDeclaradas",
         "etiquetaPoliza",
@@ -65981,7 +65982,7 @@
           "nombre": "Polizas",
           "kind": "function",
           "exportada": true,
-          "params": "{ titulo, nota, polizas, vacio, plegado, intervinientes, accion }: { titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean intervinientes: IntervinienteFicha[] | null /** CTA para el estado vacío (\"+ Presup",
+          "params": "{ titulo, nota, polizas, vacio, plegado, intervinientes, accion, agruparIguales }: { titulo: string; nota?: string; polizas: PolizaFicha[]; vacio: string; plegado?: boolean intervinientes: IntervinienteFicha[] | null /** CTA para el estado ",
           "retorno": null,
           "linea": 37
         },
@@ -65989,10 +65990,37 @@
           "nombre": "Intervinientes",
           "kind": "function",
           "exportada": false,
-          "params": "{ lista, polizaId }: { lista: IntervinienteFicha[] | null; polizaId: string }",
+          "params": "{ lista, polizaIds }: { lista: IntervinienteFicha[] | null; polizaIds: string[] }",
           "retorno": null,
-          "linea": 142,
+          "linea": 168,
           "resumen": "Quién más figura en la póliza (propietario, conductor habitual, contacto…), debajo de qué asegura. Se omite al tomador: ya es el título de la ficha. `null` = asegura no los informa; se calla en vez de"
+        },
+        {
+          "nombre": "huellaBien",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PolizaFicha",
+          "retorno": "string | null",
+          "linea": 212,
+          "resumen": "Huella de lo que la fila enseña en «Qué asegura», para decidir si dos filas del volcado son la misma. `null` = el volcado no lo informa o viene cifrado — y entonces la fila NO se agrupa con nadie: no "
+        },
+        {
+          "nombre": "FilasIguales",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ grupo }: { grupo: GrupoHistorica<PolizaFicha & { bien: string | null }> }",
+          "retorno": null,
+          "linea": 226,
+          "resumen": "«Esto que ves dos veces son dos filas del volcado», dicho en la propia fila. No se esconde ninguna: cada una enlaza a su póliza, y la prima de cada una va en la celda de al lado."
+        },
+        {
+          "nombre": "PrimaGrupo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ grupo }: { grupo: GrupoHistorica<PolizaFicha & { bien: string | null }> }",
+          "retorno": null,
+          "linea": 249,
+          "resumen": "La prima del grupo. Con varias filas se enseñan TODAS las primas distintas: quedarse con una sería decidir cuál estuvo contratada, que es justo lo que no se sabe. `sin dato` nunca se pinta como 0€."
         },
         {
           "nombre": "ObjetoCelda",
@@ -66000,7 +66028,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
-          "linea": 163
+          "linea": 267
         },
         {
           "nombre": "CeldaPago",
@@ -66008,7 +66036,7 @@
           "exportada": false,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
-          "linea": 205,
+          "linea": 309,
           "resumen": "Forma de pago (Alberto, 02/09/2026): son contratos anuales que la compañía FINANCIA al fraccionar, cobrando por ello. Lo que CIMA da es la periodicidad y la forma de cobro; el recargo se deriva de los"
         },
         {
@@ -66017,7 +66045,7 @@
           "exportada": false,
           "params": "{ vencimiento, viva }: { vencimiento: string | null; viva: boolean }",
           "retorno": null,
-          "linea": 231,
+          "linea": 335,
           "resumen": "La única salida de una póliza es su vencimiento, avisando 30 días antes (LCS art. 22). Se pinta solo en las vivas y solo mientras merece la pena saberlo: cuando el plazo de aviso está cerca o ya ha pa"
         },
         {
@@ -66026,7 +66054,7 @@
           "exportada": true,
           "params": "{ r }: { r: RecibosPoliza | null }",
           "retorno": null,
-          "linea": 250,
+          "linea": 354,
           "resumen": "El estado de cobro de UNA póliza. Cuatro cosas distintas, cuatro pintados: null → asegura no manda el bloque (desplegar). total 0 → la compañía no ha mandado recibos (18 de 109 vivas, medido). devuelt"
         },
         {
@@ -66035,7 +66063,7 @@
           "exportada": false,
           "params": "p: PolizaFicha",
           "retorno": "string",
-          "linea": 277
+          "linea": 381
         },
         {
           "nombre": "PolizasDeclaradas",
@@ -66043,7 +66071,7 @@
           "exportada": true,
           "params": "{ declaradas }: { declaradas: PolizaDeclaradaFicha[] | null }",
           "retorno": null,
-          "linea": 296,
+          "linea": 400,
           "resumen": "Pólizas que el cliente ha APORTADO desde el portal: NO son de la correduría (casi siempre son de otra compañía), así que van en su propio bloque y con «No la gestionamos» en cada fila — el mismo chip "
         },
         {
@@ -66052,7 +66080,7 @@
           "exportada": true,
           "params": "p: PolizaFicha",
           "retorno": "string",
-          "linea": 385,
+          "linea": 489,
           "resumen": "Cómo se nombra una póliza en una frase: la matrícula si la hay."
         },
         {
@@ -66061,7 +66089,7 @@
           "exportada": true,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 389
+          "linea": 493
         },
         {
           "nombre": "fmt",
@@ -66069,13 +66097,13 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 399,
+          "linea": 503,
           "resumen": "Fecha siempre en español: \"2026-06-03\" → \"03/06/2026\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4661c37a3508"
+      "hash": "841bfbd01364"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/salud-nuevo/acciones.ts",
@@ -66339,13 +66367,13 @@
           "exportada": true,
           "params": "{ porClase, intervinientes, declaradas }: { porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]> intervinientes: IntervinienteFicha[] | null declaradas: PolizaDeclaradaFicha[] | null }",
           "retorno": null,
-          "linea": 14,
-          "resumen": "históricas → volcado de junio de 2026, para saber qué tuvo."
+          "linea": 21,
+          "resumen": "históricas → volcado de junio de 2026, para saber qué tuvo. El volcado repite el MISMO riesgo cambiando solo la prima (84 grupos / 188 filas / 77 clientes, medido 21/09/2026: el FORD FOCUS 3935GPY sal"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0506fbb55766"
+      "hash": "c81f16e576f5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabRecibos.tsx",
@@ -134918,6 +134946,36 @@
       "hash": "41ac7a2a55c2"
     },
     {
+      "ruta": "packages/module-seguros/src/ficha-historicas.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "El VOLCADO HISTÓRICO de la ficha, agrupado — puro y testeado. El volcado de junio de 2026 trae filas REPETIDAS para el mismo riesgo: el FORD FOCUS 3935GPY de una ficha sale dos veces, mismo ramo, mismo coche, mismo vencimiento (07/10/2023), sin número de póliza, y lo único que cambia es la prima (21",
+      "exporta": [
+        "agruparHistoricas"
+      ],
+      "funciones": [
+        {
+          "nombre": "clave",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: HistoricaAgrupable",
+          "retorno": "string",
+          "linea": 64
+        },
+        {
+          "nombre": "agruparHistoricas",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizas: readonly T[],",
+          "retorno": "GrupoHistorica<T>[]",
+          "linea": 83,
+          "resumen": "Agrupa las filas del volcado que enseñan EXACTAMENTE lo mismo: mismo ramo, misma compañía y número, mismo estado, mismo vencimiento y mismo bien. La prima queda fuera de la clave a propósito — es just"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "16de6f36093a"
+    },
+    {
       "ruta": "packages/module-seguros/src/ficha-resumen.ts",
       "ambito": "packages/module-seguros",
       "resumen": "El TITULAR de la ficha del cliente de la correduría — puro y testeado. La ficha pasó de una lista larga a «cabecera + pestañas», y la cabecera es lo único que Alberto mira antes de descolgar el teléfono. Esa lógica vivía incrustada en el JSX de `apps/plataforma/app/(usuario)/correduria/cliente/[id]/",
@@ -141960,7 +142018,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3451,
-    "funciones": 10766
+    "archivos": 3452,
+    "funciones": 10771
   }
 }
