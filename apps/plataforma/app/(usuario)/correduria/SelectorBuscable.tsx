@@ -1,20 +1,23 @@
 'use client'
 
 /**
- * El desplegable de VERSIÓN del catálogo de Codeoscopic, con buscador.
+ * Un `<select>` nativo del catálogo de Codeoscopic, con buscador.
  *
- * Un modelo trae decenas de versiones, muchas con nombres casi iguales y
- * algunas IDÉNTICAS entre sí («1.0 TGDI TECNO 4X2» tres veces seguidas, que son
- * tres códigos Base7 distintos). En un `<select>` nativo eso es una lista por
- * la que hay que bajar a ojo, y elegir a ciegas entre filas gemelas.
+ * Las listas del catálogo son largas: ~100 marcas, decenas de modelos por marca
+ * y decenas de versiones por modelo — algunas con el nombre IDÉNTICO («1.0 TGDI
+ * TECNO 4X2» tres veces seguidas, que son tres códigos Base7 distintos). Sin
+ * filtro eso es bajar a ojo por la lista y, al llegar, elegir a ciegas entre
+ * filas gemelas.
  *
  * Sigue siendo un `<select>` nativo a propósito —teclado, móvil y accesibilidad
- * gratis—: lo que se añade encima es un filtro de texto. Dos detalles que no
+ * gratis—: lo que se añade encima es un filtro de texto. Tres detalles que no
  * son decoración:
  *
  *  1. La opción ya elegida NUNCA se filtra fuera (ver `filtrarOpciones`).
  *  2. El código se pinta SOLO junto a los nombres repetidos, para que dos filas
  *     gemelas se puedan distinguir.
+ *  3. Por debajo de `MINIMO_PARA_BUSCAR` opciones no aparece: en una lista de
+ *     cinco, un buscador es un trasto.
  *
  * Y la `pista` (la versión que traía otra póliza de la misma matrícula) entra
  * como TEXTO DEL BUSCADOR, nunca como selección: es texto histórico de otra
@@ -36,25 +39,31 @@ const MINIMO_PARA_BUSCAR = 8
 type Props = {
   id?: string
   valor: string
-  onCambiar: (codigo: string) => void
-  versiones: readonly OpcionSimple[]
+  onCambiar: (id: string) => void
+  opciones: readonly OpcionSimple[]
   deshabilitado?: boolean
+  /** Lo que dice la opción vacía: «Cargando…», «Elige marca»… */
   textoVacio: string
-  /** Versión vista en otra póliza de la misma matrícula, si hay UNA sola. */
+  /** Cómo se llama esto en singular y en plural, para los textos del buscador. */
+  nombre: string
+  plural: string
+  /** Ejemplos concretos en el hueco del buscador; si no, uno genérico. */
+  marcador?: string
+  /** Texto de otra fuente con el que PREfiltrar (solo la versión lo usa). */
   pista?: string | null
   style?: React.CSSProperties
 }
 
-export function SelectorVersion(props: Props) {
-  const { versiones, pista = null } = props
-  const etiquetadas = useMemo(() => etiquetarOpciones(versiones), [versiones])
+export function SelectorBuscable(props: Props) {
+  const { opciones, pista = null } = props
+  const etiquetadas = useMemo(() => etiquetarOpciones(opciones), [opciones])
   const sugerida = useMemo(
     () => (pista ? consultaSugerida(etiquetadas, pista) : ''),
     [etiquetadas, pista],
   )
 
-  // El `key` arranca el filtro de cero cada vez que cambia el catálogo (otro
-  // modelo, otro combustible): un texto viejo sobre una lista nueva dejaría el
+  // El `key` arranca el filtro de cero cada vez que cambia el catálogo (otra
+  // marca, otro combustible): un texto viejo sobre una lista nueva dejaría el
   // desplegable en blanco teniendo opciones. Se hace remontando y no con un
   // efecto que llame a `setState`, que es una ronda de renders de más.
   const clave = `${sugerida}#${etiquetadas.map((v) => v.id).join(',')}`
@@ -65,9 +74,12 @@ function Cuerpo({
   id,
   valor,
   onCambiar,
-  versiones,
+  opciones,
   deshabilitado = false,
   textoVacio,
+  nombre,
+  plural,
+  marcador,
   style,
   etiquetadas,
   sugerida,
@@ -80,7 +92,7 @@ function Cuerpo({
     [etiquetadas, consulta, valor],
   )
 
-  const hayBuscador = versiones.length >= MINIMO_PARA_BUSCAR
+  const hayBuscador = opciones.length >= MINIMO_PARA_BUSCAR
   const filtrando = consulta.trim() !== ''
   const desdePista = filtrando && !tocado && sugerida !== '' && consulta === sugerida
 
@@ -95,8 +107,8 @@ function Cuerpo({
             setTocado(true)
           }}
           disabled={deshabilitado}
-          placeholder="Buscar: TECNO, 48V, 4X2…"
-          aria-label="Buscar versión en el catálogo"
+          placeholder={marcador ?? `Buscar ${nombre}…`}
+          aria-label={`Buscar ${nombre} en el catálogo`}
           style={{ minHeight: 44, width: '100%', ...style }}
         />
       )}
@@ -119,11 +131,13 @@ function Cuerpo({
       {hayBuscador && filtrando && (
         <p className="muted" style={{ fontSize: 12, margin: 0 }}>
           {visibles.length === 0 ? (
-            <>Ninguna de las {versiones.length} versiones dice «{consulta.trim()}».</>
+            <>
+              Ninguna coincidencia con «{consulta.trim()}» entre {opciones.length} {plural}.
+            </>
           ) : (
             <>
-              {visibles.length} de {versiones.length}
-              {desdePista && <> — filtradas por la pista de otra póliza, no elegidas</>}.
+              {visibles.length} de {opciones.length} {plural}
+              {desdePista && <> — filtro puesto por la pista de otra póliza, no es una selección</>}.
             </>
           )}{' '}
           <button
@@ -135,7 +149,7 @@ function Cuerpo({
             }}
             style={{ minHeight: 28, padding: '2px 8px', fontSize: 12 }}
           >
-            Ver todas
+            Quitar filtro
           </button>
         </p>
       )}

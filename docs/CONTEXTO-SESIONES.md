@@ -12,14 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(21/09/2026)** Buscador en el desplegable de VERSIÓN del retarificador y de los embudos de
-auto/moto (`/correduria`): el catálogo de Codeoscopic devuelve decenas de versiones y algunas con
+**(21/09/2026)** Buscador en los CUATRO desplegables del catálogo de Codeoscopic —marca, modelo,
+combustible y versión— del retarificador y de los embudos de auto/moto (`/correduria`): el catálogo de Codeoscopic devuelve decenas de versiones y algunas con
 nombre IDÉNTICO (tres «1.0 TGDI TECNO 4X2» = tres códigos Base7 distintos), imposibles de
-distinguir a ojo. Componente único `SelectorVersion` + helper puro `lib/filtrar-opciones.ts`
+distinguir a ojo. Componente único `SelectorBuscable` (se calla por debajo de 8 opciones) + helper puro `lib/filtrar-opciones.ts`
 (filtro AND sin acentos, el elegido nunca se filtra fuera, el código solo se pinta junto a los
 nombres repetidos). La **pista** de otra póliza de la misma matrícula ahora **prefiltra** el
 buscador —recortada a los términos que el catálogo reconoce— pero **sigue sin seleccionar nada**,
-y solo con UNA candidata (con 2+ se contradicen). PR draft.
+y solo con UNA candidata (con 2+ se contradicen). Cepo nuevo:
+`test/regression-selector-buscable.test.ts` — volver a poner un `<select>` a pelo no rompía nada. PR #3240.
 
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
