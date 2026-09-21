@@ -167,32 +167,32 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 90 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 92 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 85 | 9.350 | 5.149.030 | 0 | 0 |
-| `lectura-directa` | 76 | 2.858 | 4.441.822 | 0 | 0 |
-| `otro` | 83 | 2.706 | 10.776.097 | 5.006.968 | 0 |
-| `mcp:github` | 75 | 2.560 | 2.503.290 | 34.989.656 | 37 |
-| `escritura` | 69 | 1.837 | 32.589.737 | 0 | 0 |
-| `sql` | 58 | 990 | 477.311 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 49 | 432 | 120.629 | 2.165.347 | 9 |
+| `bash` | 87 | 10.040 | 5.570.313 | 0 | 0 |
+| `lectura-directa` | 78 | 2.875 | 4.470.601 | 0 | 0 |
+| `otro` | 85 | 2.794 | 11.089.879 | 5.067.247 | 0 |
+| `mcp:github` | 77 | 2.660 | 2.601.092 | 36.256.829 | 39 |
+| `escritura` | 70 | 1.851 | 32.690.615 | 0 | 0 |
+| `sql` | 59 | 1.027 | 489.368 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 51 | 446 | 123.776 | 2.465.769 | 9 |
 | `mcp:Vercel` | 21 | 243 | 471.025 | 198.719 | 1 |
 | `mcp:Booking-com` | 6 | 197 | 815.919 | 0 | 0 |
 | `mcp:Gmail` | 11 | 125 | 233.941 | 0 | 1 |
-| `mcp:Supabase` | 36 | 77 | 12.956 | 0 | 1 |
+| `mcp:Supabase` | 37 | 78 | 12.960 | 0 | 1 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
 | `mcp:posthog` | 4 | 40 | 49.259 | 0 | 0 |
 | `mcp:Google-Drive` | 4 | 36 | 28.803 | 0 | 0 |
 | `agente:general-purpose` | 12 | 34 | 29.237 | 596.780 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
-| `agente:agente-mecanico` | 8 | 21 | 20.037 | 441.917 | 0 |
+| `agente:agente-mecanico` | 9 | 22 | 21.162 | 441.917 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
-| `agente:Explore` | 9 | 18 | 7.902 | 266.832 | 0 |
+| `agente:Explore` | 10 | 19 | 8.408 | 266.832 | 0 |
 | `agente:agente-architect` | 6 | 17 | 23.011 | 578.342 | 0 |
-| `mcp:Google_Drive` | 3 | 12 | 11.819 | 0 | 2 |
+| `mcp:Google_Drive` | 4 | 16 | 18.176 | 0 | 2 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
 | `agente:general` | 6 | 8 | 5.205 | 231.483 | 0 |
 | `mcp:Resend` | 1 | 6 | 969 | 0 | 0 |
@@ -200,4 +200,5 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Supabase_asegura` | 3 | 3 | 1.932 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
+| `agente:rastreador-codigo` | 1 | 1 | 422 | 0 | 0 |
 <!-- ahorro:fin -->

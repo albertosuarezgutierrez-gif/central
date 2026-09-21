@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-21T12:55:09Z",
+  "generadoEn": "2026-09-21T16:30:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 73
+        "evidencias": 78
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 63
+        "evidencias": 65
       },
       "rrhh": {
         "estado": "no",
@@ -2306,7 +2306,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 21
+        "evidencias": 22
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4032,8 +4032,10 @@
       "/api/operador/leads-web",
       "/api/operador/partes",
       "/api/operador/poliza",
+      "/api/operador/poliza-documento",
       "/api/operador/poliza/emitida",
       "/api/operador/poliza/intervinientes",
+      "/api/operador/presupuesto",
       "/api/operador/recaptacion",
       "/api/operador/recaptacion/email",
       "/api/operador/recaptacion/email-lote",
@@ -4919,6 +4921,7 @@
       "/api/correduria/cliente/relaciones",
       "/api/correduria/cliente/relaciones/aviso",
       "/api/correduria/clientes",
+      "/api/correduria/codeoscopic-crudo",
       "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
@@ -4938,6 +4941,7 @@
       "/api/correduria/leads-web",
       "/api/correduria/partes",
       "/api/correduria/poliza",
+      "/api/correduria/presupuesto",
       "/api/correduria/radar-recibos",
       "/api/correduria/recaptacion",
       "/api/correduria/recaptacion/email",
@@ -5038,8 +5042,6 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
-      "/api/internal/grafo-codigo",
-      "/api/internal/grafo-codigo/embeddings",
       "/api/internal/gsc",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
@@ -5415,6 +5417,7 @@
       "seguros.cotizaciones_anonimas",
       "seguros.cuenta_efectivo",
       "seguros.documentos",
+      "seguros.firma",
       "seguros.gestiones",
       "seguros.historial_interno",
       "seguros.interviniente_purga_log",
@@ -5434,6 +5437,9 @@
       "seguros.poliza_recibos",
       "seguros.polizas",
       "seguros.portal_aviso_enviado",
+      "seguros.presupuesto",
+      "seguros.presupuesto_evento",
+      "seguros.presupuesto_opcion",
       "seguros.recordatorios",
       "seguros.renovacion_contactos",
       "seguros.retencion_descartes",
@@ -5644,9 +5650,6 @@
       "empresas_ficha",
       "facturas_proveedor",
       "fiscal_ayudas",
-      "grafo_aristas",
-      "grafo_embeddings",
-      "grafo_nodos",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
@@ -5969,6 +5972,11 @@
       "id": "verification-before-completion",
       "name": "verification-before-completion",
       "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always"
+    },
+    {
+      "id": "vigia-infra",
+      "name": "vigia-infra",
+      "description": "Agente PROGRAMADO mensual (día 8) que vigila los LÍMITES de la infraestructura — tamaño y plan de Supabase contra su cuota, hinchazón recuperable, advisors, Build Minutes y ritmo de deployments de Vercel, máquinas de Fly. Estado en docs/VIGIA-INFRA.md; Telegram + PR draft. Úsala si Alberto pregunta \"¿estamos cerca de algún límite?\" / \"¿vamos a tener que pagar algo?\" o al disparo mensual. Sin secretos."
     },
     {
       "id": "writing-plans",
@@ -6433,8 +6441,8 @@
     "verticales": 13,
     "packages": 42,
     "capacidades": 23,
-    "skills": 41,
-    "apis": 1399,
+    "skills": 42,
+    "apis": 1401,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
