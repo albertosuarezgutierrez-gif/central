@@ -333,3 +333,79 @@ test('revisarDatosAuto: hoy y hoy+90 valen; hoy+91 se reprocha', () => {
   const r = revisarDatosAuto({ ...BASE, fechaEfecto: '2026-12-13' }, { hoy: '2026-09-13' })
   assert.ok(r.some((x) => x.campo === 'fechaEfecto' && /90 días/.test(x.motivo)))
 })
+
+// ─── Cero NO es «no lo sé» (21/09/2026, sobre la cotización real 300038dc) ───
+//
+// Salió `totalYearsInsured: 0` / `yearsWithoutAccidents: 0` para un conductor
+// con carnet de 2008 y bonus acumulado. El vendor no protestó: cotizó como
+// NOVEL y devolvió 1.963,57€ de terceros contra los ~250€ que pagaba. Un
+// precio con toda la pinta de bueno, y los 0,50€ ya gastados.
+
+test('con seguro declarado, CERO años asegurado es un reparo, no un dato', () => {
+  const r = revisarDatosAuto({
+    ...BASE,
+    aseguradoAntes: true,
+    companiaAnteriorCodigo: 'C0109',
+    polizaAnterior: '93459',
+    aniosAsegurado: 0,
+    aniosEnCompania: 0,
+    aniosSinSiniestros: 0,
+  })
+  assert.ok(
+    r.some((x) => x.campo === 'aniosAsegurado'),
+    'cero años asegurado con aseguradoAntes=true tiene que parar la cotización ANTES de pagarla',
+  )
+})
+
+test('el reparo de los ceros dice la salida: apagar el interruptor', () => {
+  const r = revisarDatosAuto({
+    ...BASE,
+    aseguradoAntes: true,
+    companiaAnteriorCodigo: 'C0109',
+    polizaAnterior: '93459',
+    aniosAsegurado: 0,
+    aniosEnCompania: 3,
+    aniosSinSiniestros: 3,
+  })
+  const rep = r.find((x) => x.campo === 'aniosAsegurado')
+  assert.ok(rep, 'tiene que haber reparo')
+  assert.match(rep!.motivo, /novel/i)
+  assert.match(rep!.motivo, /estimado/i)
+})
+
+test('unos años asegurado de verdad NO producen ese reparo', () => {
+  const r = revisarDatosAuto({
+    ...BASE,
+    aseguradoAntes: true,
+    companiaAnteriorCodigo: 'C0109',
+    polizaAnterior: '93459',
+    aniosAsegurado: 18,
+    aniosEnCompania: 2,
+    aniosSinSiniestros: 5,
+  })
+  assert.equal(r.length, 0)
+})
+
+test('0 años limpio y 0 asegurado NO cuenta como historial impecable', () => {
+  // La excepción «tantos años limpio como asegurado» significa «nunca tuvo un
+  // siniestro». `0 === 0` no significa eso: significa que no hay dato, y por
+  // esa puerta se colaba la declaración de novel sin que nada fallase.
+  assert.equal(
+    exigeDetalleDeSiniestros({ aseguradoAntes: true, aniosAsegurado: 0, aniosSinSiniestros: 0 }),
+    true,
+  )
+})
+
+test('3 años asegurado y 3 limpio sigue siendo historial impecable', () => {
+  assert.equal(
+    exigeDetalleDeSiniestros({ aseguradoAntes: true, aniosAsegurado: 3, aniosSinSiniestros: 3 }),
+    false,
+  )
+})
+
+test('5 años o más sin siniestros nunca exige el detalle', () => {
+  assert.equal(
+    exigeDetalleDeSiniestros({ aseguradoAntes: true, aniosAsegurado: 18, aniosSinSiniestros: 5 }),
+    false,
+  )
+})

@@ -22,6 +22,13 @@ import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
+import {
+  borrarBorrador,
+  claveBorradorAutoNuevo,
+  guardarBorrador,
+  leerBorrador,
+} from '@/lib/correduria/borrador-local'
+import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 
 import { pedirCatalogo, pedirCotizacionAuto } from './acciones'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
@@ -58,6 +65,36 @@ type PersonaForm = {
   telefono: string
   /** Solo la usa el conductor: es SU carnet, no el del tomador. */
   fechaCarnet: string
+}
+
+/**
+ * Lo que se guarda del formulario mientras se teclea (ver
+ * `lib/correduria/borrador-local.ts`). Todo opcional: un borrador viejo puede
+ * no traer un campo que se añadió después, y eso no puede romper la pantalla.
+ */
+type BorradorAutoNuevo = {
+  marcaId?: string
+  modeloId?: string
+  motorId?: string
+  codigoVehiculo?: string
+  matricula?: string
+  matriculacion?: string
+  garaje?: string
+  estadoCivilId?: string
+  municipioId?: string
+  correcciones?: Record<string, string>
+  propietarioDistinto?: boolean
+  propietario?: PersonaForm
+  conductorDistinto?: boolean
+  conductor?: PersonaForm
+  tieneSeguroActual?: boolean
+  companiaActualCodigo?: string
+  companiaActualLibre?: string
+  polizaActualDigitos?: string
+  aniosAsegurado?: string
+  aniosEnCompania?: string
+  aniosSinSiniestros?: string
+  siniestrosUltimos5?: string
 }
 
 const PERSONA_VACIA: PersonaForm = {
@@ -202,6 +239,155 @@ export default function AutoNuevo({
   const [aniosSinSiniestros, setAniosSinSiniestros] = useState('')
   const [siniestrosUltimos5, setSiniestrosUltimos5] = useState('')
 
+  // ── Borrador local: lo tecleado NO se pierde al salir de la pantalla ───────
+  //
+  // Esta pantalla no guardaba nada hasta que se pagaba la cotización, y el
+  // código postal —que hace falta para cotizar— se corrige en OTRA pantalla:
+  // ir a arreglarlo borraba todo lo tecleado, así que el camino normal de uso
+  // castigaba con volver a empezar. El mecanismo es el mismo que ya usaba
+  // `retarificar` (`lib/correduria/borrador-local.ts`, común a las dos).
+  //
+  // Vive en el navegador, no en `seguros.*`: un borrador no es una cotización.
+  const claveBorrador = claveBorradorAutoNuevo(clienteId)
+
+  useEffect(() => {
+    const b = leerBorrador<BorradorAutoNuevo>(claveBorrador)
+    if (!b) return
+    let vivo = true
+
+    // Lo que no depende de ningún catálogo se restaura tal cual.
+    if (b.matricula) setMatricula(b.matricula)
+    if (b.matriculacion) setMatriculacion(b.matriculacion)
+    if (b.correcciones) setCorrecciones(b.correcciones)
+
+    // Lo que SÍ sale de un catálogo se restaura solo si sigue existiendo en
+    // él: un id que ya no está dejaría un desplegable enseñando un valor que
+    // el vendor rechazaría, que es peor que el hueco.
+    if (b.garaje && garajes.some((g) => g.id === b.garaje)) setGaraje(b.garaje)
+    if (b.estadoCivilId && civiles.some((c) => c.id === b.estadoCivilId)) setEstadoCivilId(b.estadoCivilId)
+    if (b.municipioId && listaMunicipios.some((m) => m.id === b.municipioId)) setMunicipioId(b.municipioId)
+
+    if (b.propietarioDistinto) {
+      setPropietarioDistinto(true)
+      if (b.propietario) setPropietario(b.propietario)
+    }
+    if (b.conductorDistinto) {
+      setConductorDistinto(true)
+      if (b.conductor) setConductor(b.conductor)
+    }
+    if (b.tieneSeguroActual) {
+      setTieneSeguroActual(true)
+      if (b.companiaActualCodigo) setCompaniaActualCodigo(b.companiaActualCodigo)
+      if (b.companiaActualLibre) setCompaniaActualLibre(b.companiaActualLibre)
+      if (b.polizaActualDigitos) setPolizaActualDigitos(b.polizaActualDigitos)
+      if (b.aniosAsegurado) setAniosAsegurado(b.aniosAsegurado)
+      if (b.aniosEnCompania) setAniosEnCompania(b.aniosEnCompania)
+      if (b.aniosSinSiniestros) setAniosSinSiniestros(b.aniosSinSiniestros)
+      if (b.siniestrosUltimos5) setSiniestrosUltimos5(b.siniestrosUltimos5)
+    }
+
+    // El vehículo es una cascada (marca → modelo+motor → versión) y cada paso
+    // es una llamada al catálogo, gratis. Se rehace entera para que el
+    // desplegable de versión llegue poblado y `codigoVehiculo` siga siendo un
+    // código que el catálogo reconoce, no una cadena suelta del borrador.
+    if (b.marcaId) {
+      void (async () => {
+        try {
+          setCargando('modelos')
+          const [ms, mt] = await Promise.all([
+            catalogo(`tipo=modelos&marcaId=${encodeURIComponent(b.marcaId!)}`),
+            catalogo('tipo=motores'),
+          ])
+          if (!vivo) return
+          setMarcaId(b.marcaId!)
+          setModelos(ms)
+          setMotores(mt)
+          if (b.modeloId && ms.some((m) => m.id === b.modeloId)) setModeloId(b.modeloId)
+          if (b.motorId && mt.some((m) => m.id === b.motorId)) setMotorId(b.motorId)
+          if (b.modeloId && b.motorId && ms.some((m) => m.id === b.modeloId)) {
+            setCargando('versiones')
+            const vs = await catalogo(
+              `tipo=versiones&marcaId=${encodeURIComponent(b.marcaId!)}` +
+                `&modeloId=${encodeURIComponent(b.modeloId)}&motor=${encodeURIComponent(b.motorId)}`,
+            )
+            if (!vivo) return
+            setVersiones(vs)
+            if (b.codigoVehiculo && vs.some((v) => v.id === b.codigoVehiculo)) {
+              setCodigoVehiculo(b.codigoVehiculo)
+            }
+          }
+        } catch {
+          // Restaurar el coche es una comodidad: si el catálogo falla, se
+          // elige a mano. NO se pinta el error de `fallo`, que está reservado
+          // a lo que el corredor acaba de pedir.
+        } finally {
+          if (vivo) setCargando(null)
+        }
+      })()
+    }
+
+    return () => {
+      vivo = false
+    }
+    // Se restaura UNA vez al abrir la pantalla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Autoguardado: cualquier cambio se guarda, aunque no se llegue a cotizar.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      guardarBorrador<BorradorAutoNuevo>(claveBorrador, {
+        marcaId,
+        modeloId,
+        motorId,
+        codigoVehiculo,
+        matricula,
+        matriculacion,
+        garaje,
+        estadoCivilId,
+        municipioId,
+        correcciones,
+        propietarioDistinto,
+        propietario,
+        conductorDistinto,
+        conductor,
+        tieneSeguroActual,
+        companiaActualCodigo,
+        companiaActualLibre,
+        polizaActualDigitos,
+        aniosAsegurado,
+        aniosEnCompania,
+        aniosSinSiniestros,
+        siniestrosUltimos5,
+      })
+    }, 400)
+    return () => clearTimeout(t)
+  }, [
+    claveBorrador,
+    marcaId,
+    modeloId,
+    motorId,
+    codigoVehiculo,
+    matricula,
+    matriculacion,
+    garaje,
+    estadoCivilId,
+    municipioId,
+    correcciones,
+    propietarioDistinto,
+    propietario,
+    conductorDistinto,
+    conductor,
+    tieneSeguroActual,
+    companiaActualCodigo,
+    companiaActualLibre,
+    polizaActualDigitos,
+    aniosAsegurado,
+    aniosEnCompania,
+    aniosSinSiniestros,
+    siniestrosUltimos5,
+  ])
+
   async function catalogo(qs: string): Promise<Opcion[]> {
     const r = await pedirCatalogo(Object.fromEntries(new URLSearchParams(qs)))
     if (r.estado !== 'ok') throw new Error(r.mensaje)
@@ -265,8 +451,13 @@ export default function AutoNuevo({
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
-  const huerfanos = (faltanInicial ?? []).filter(
-    (f) => !RESUELTOS_EN_PANTALLA.has(f.campo as string) && !CAMPOS_A_MANO[f.campo],
+  // Cada hueco, a donde de verdad se arregla (`lib/correduria/campos-faltan.ts`).
+  // Antes todo lo que no supiera teclear la pantalla se mandaba a la ficha del
+  // cliente por descarte, incluidos los seis campos del bloque 3 — que estan
+  // AQUI y en la ficha no existen.
+  const reparos = clasificarFaltan(
+    (faltanInicial ?? []).map((f) => ({ campo: f.campo as string, motivo: f.motivo })),
+    (c) => Boolean(CAMPOS_A_MANO[c]),
   )
 
   const faltaPropietario = propietarioDistinto && !personaCompleta(propietario, false)
@@ -332,6 +523,12 @@ export default function AutoNuevo({
         setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: r.gastoDesconocido })
         return
       case 'ok':
+        // La cotización ya está pagada y guardada en `seguros.tarificaciones`,
+        // que es la fuente de verdad: el borrador local ya no pinta nada y
+        // llevaba datos personales, así que se borra en cuanto sobra. Una
+        // cotización SIMULADA no ha pagado nada y puede querer repetirse, así
+        // que ahí el borrador se queda.
+        if (!r.simulado) borrarBorrador(claveBorrador)
         setResultado({
           estado: 'ok',
           coste: r.coste,
@@ -491,14 +688,42 @@ export default function AutoNuevo({
           </div>
         )}
 
-        {huerfanos.length > 0 && (
+        {reparos.historial.length > 0 && (
+          <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--warning)', padding: 12 }}>
+            <strong>Esto se rellena aqui abajo, en «3 · ¿Tiene seguro en vigor ahora mismo?»:</strong>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
+              {reparos.historial.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
+            </ul>
+            <p style={{ margin: '6px 0 0', fontSize: 13 }}>
+              Enciende el interruptor y rellena el bloque. Si no tienes esos datos, dejalo apagado:
+              el precio sale estimado, que es honesto. Rellenarlo con ceros lo cotiza como conductor
+              novel y el precio se dispara.
+            </p>
+          </div>
+        )}
+
+        {reparos.ficha.length > 0 && (
           <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--negative)', padding: 12 }}>
             <strong style={{ color: 'var(--negative)' }}>Esto no se arregla desde esta pantalla:</strong>
             <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
-              {huerfanos.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
+              {reparos.ficha.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
             <p style={{ margin: '6px 0 0', fontSize: 13 }}>
-              Hay que corregirlo en la ficha del cliente. Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+              Se corrige en la <a href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--brand)' }}>ficha
+              del cliente</a> (pestaña Contactos). Si se pulsa igualmente, el servidor lo rechaza sin gastar nada.
+            </p>
+          </div>
+        )}
+
+        {reparos.desconocidos.length > 0 && (
+          <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--negative)', padding: 12 }}>
+            <strong style={{ color: 'var(--negative)' }}>Falta esto, y no se sabe donde se corrige:</strong>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
+              {reparos.desconocidos.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
+            </ul>
+            <p style={{ margin: '6px 0 0', fontSize: 13 }}>
+              El servidor lo pide y esta pantalla no lo tiene mapeado. Se dice en vez de mandarte a la
+              ficha del cliente por descarte, que seria un viaje en balde.
             </p>
           </div>
         )}
@@ -858,4 +1083,3 @@ const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSi
 const td: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--border)' }
 
 /** Reparos que ESTA pantalla resuelve con un desplegable o una caja. */
-const RESUELTOS_EN_PANTALLA = new Set<string>(['codigoVehiculo', 'garaje', 'matricula', 'fechaMatriculacion', 'municipioCirculacionId', 'estadoCivil', 'sexo'])

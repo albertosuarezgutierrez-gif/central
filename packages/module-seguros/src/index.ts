@@ -634,6 +634,49 @@ export {
   type ContactoCompania,
 } from './compania-contactos.ts'
 
+// Pólizas que el corredor recibe por su cuenta y sube él (no las declara el cliente).
+export {
+  clasificarCoincidencias,
+  clavesCotejo,
+  partirNombre,
+  puedeEnlazarse,
+  proyectarVencimiento,
+  tipoPersonaDeNombre,
+  prepararAltaDesdeDocumento,
+  prepararDeclaradaDesdeDocumento,
+} from './poliza-de-documento.ts'
+export type {
+  AltaDesdeDocumento,
+  AvisoDocumento,
+  ClavesCotejo,
+  Cotejo,
+  DeclaradaDesdeDocumento,
+  LecturaPoliza,
+  TipoLecturaDocumento,
+  TipoPersonaDocumento,
+} from './poliza-de-documento.ts'
+
+// El presupuesto que ve el CLIENTE: estado derivado de los sellos, caducidad
+// (mínimo de tres fuentes) y la regla de las tres opciones de portada.
+export {
+  VALIDEZ_PRESUPUESTO_DIAS,
+  admiteDecision,
+  calcularVencimiento,
+  constaEnvio,
+  elegirPortada,
+  estadoPresupuesto,
+} from './presupuesto-cliente.ts'
+export type {
+  EstadoPresupuesto,
+  FuenteVencimiento,
+  OpcionPortada,
+  PapelPortada,
+  Portada,
+  SellosPresupuesto,
+  SinEquivalente,
+  Vencimiento,
+} from './presupuesto-cliente.ts'
+
 // Defensa de cartera: en qué compañías el cliente YA está, y qué se puede
 // decir de una fila de precio por eso. Cuatro estados, `desconocida` incluida.
 export {

@@ -12,7 +12,17 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-
+**(21/09/2026)** Presupuesto al cliente — **PR 1 entero** (#3252, draft). Módulo puro
+`presupuesto-cliente.ts` (estado derivado de los sellos, caducidad = mínimo de 3 fuentes con la
+fuente declarada, regla de las tres), DDL `seguros.presupuesto|_opcion|_evento` + `firma`
+(**APLICADA**, migración `seguros_presupuesto_cliente`), puerto `/api/operador/presupuesto`, proxy en
+plataforma y botón «Preparar presupuesto» en retarificar. **No manda nada ni gasta**: congela lo que
+se enseñaría desde una cotización ya pagada. Invariantes en la BD: trigger anti-simulado sobre los DOS
+sellos de salida, una firma por documento, eventos/firma append-only. 8 cepos vistos en ROJO. La DDL
+se ensayó contra la BD real (14 pruebas, revertidas): la 1ª pasada murió en `0A000 subquery in check
+constraint` — ni tsc ni build miran dentro de un DDL. ⏸️ Decisión de Alberto pendiente: si el botón va
+también en `auto-nuevo` (el lead sin póliza, que es el caso que arrancó esto).
+>
 **(21/09/2026)** 🪤 **La pasada de `code-review` antes de sacar el PR de draft se ganó el sueldo:
 6 hallazgos, 4 reales, ninguno lo cazaba un test.** El peor: al borrar la ruta del grafo se fue con
 ella `grafo_guardar_clave()`, **el único escritor de la clave de OpenRouter en Vault** — la memoria
@@ -552,6 +562,21 @@ registro de esta pasada + PR de carril 2 (fix del allowlist) enlazados por Teleg
   pregunta de la huésped de 5-7/02/2027. ⏳ Pendiente Alberto: que el motor de Smoobu muestre la MISMA condición
   (la web no la impone; la impone lo que el huésped ve al reservar). Directa 5-7/02 con 10 pax = 777,20€ frente
   a 872€ de su Booking con Genius: la web NO sale más cara para esas fechas.
+
+## (21/09/2026) Subir la póliza que te manda el interesado → ficha + vencimiento (PR #3252)
+
+- «Guardar» en `/cartera/subir`: crea o enlaza la ficha (antiduplicado de `altaCliente`), adjunta el PDF
+  y deja la póliza en `seguros.portal_poliza_declarada` (`procedencia:'documento'`). **NO en `polizas`**:
+  ahí `import_ref` NULL sería cartera viva y su número colisionaría con el emparejamiento de CIMA.
+  La identidad del portal se crea **sin canal** — carpeta, no cuenta: no da acceso a nadie.
+- Alberto mandó una póliza REAL (Allianz 055993459, Qashqai) y destapó tres: **«Total Recibo» ≠ prima**
+  (22,09€ tras un extorno de 231,50; la real ~253€, plausible y sin nada que lo delate) · el vencimiento
+  del papel **caducado con la póliza viva** (prórroga tácita → `proyectarVencimiento`, declarado) · el
+  **mediador** es otra correduría, y hoy se tira porque `AutoLeido` no tiene ese campo.
+- «DNI tomador tb es determinante aparte numero de póliza, y en auto matrícula, hogar dirección» →
+  `clavesCotejo` por ramo; solo con el número sale `sin_clave_de_riesgo`. Falta CONSULTARLO (la dirección
+  va cifrada en `datos_especificos`) y ver la pantalla en preview (`--sin-previews` la oculta).
+
 ## (19/09/2026) Gestor de pólizas como imán de leads — landing, carta de baja, casilla comercial, solapamientos
 - Prompt de consultoría SEO de Alberto valorado: ~70 % ya existía; descartados semáforo de precio, reseñas automáticas y referidos con premio (motivos en el spec `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`). Después: «Hazlo todo».
 - Portal: `/boveda/carta/[id]` (carta art. 22 LCS, solo declaradas, NUNCA se envía), casilla `comercial` en «Mis datos» (`POST /api/consentimiento`, append-only, nace desmarcada), bloque de coberturas repetidas (3 familias, informa no juzga). Privacidad con fila 6.1.a → `VERSION_TEXTOS_LEGALES` `2026-09-v5`.

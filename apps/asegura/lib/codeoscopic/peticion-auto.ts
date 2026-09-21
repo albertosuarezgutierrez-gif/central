@@ -209,6 +209,30 @@ export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevisi
       if (!numero(d[c])) falta(c)
     }
 
+    // 🚨 CERO NO ES «NO LO SÉ» (21/09/2026, medido sobre una cotización real).
+    //
+    // `aseguradoAntes: true` con `aniosAsegurado: 0` es una contradicción: se
+    // afirma que el conductor YA tenía seguro y a la vez que lleva cero años
+    // asegurado. El vendor no la rechaza — cotiza, y cotiza como NOVEL. En la
+    // cotización `300038dc` salieron `totalYearsInsured: 0`,
+    // `yearsWithoutAccidents: 0` para un conductor con carnet de 2008 y bonus
+    // acumulado: Reale devolvió 1.963,57€ de terceros contra los ~250€ que
+    // pagaba en su compañía. Ochocientos por ciento de más, con forma de
+    // precio bueno y 0,50€ ya gastados.
+    //
+    // Rellenar con ceros lo que no se sabe es PEOR que no declarar historial:
+    // sin `aseguradoAntes` el precio sale estimado y honesto; con ceros sale
+    // firme y falso. Si no se tienen los años, se apaga el interruptor.
+    if (d.aniosAsegurado === 0) {
+      r.push({
+        campo: 'aniosAsegurado',
+        motivo:
+          'has marcado que YA tiene seguro, así que los años asegurado no pueden ser 0: la compañía ' +
+          'lo cotiza como conductor novel y el precio sale disparado. Si no sabes cuántos son, apaga ' +
+          '«tiene seguro en vigor» y pide precio estimado',
+      })
+    }
+
     // La regla más fácil de incumplir sin enterarse, y la que devuelve un 400
     // que ya se ha pagado: si no llegan a 5 años limpios y ese número no coincide
     // con los años asegurado, el vendor EXIGE el detalle de siniestros.
@@ -314,5 +338,11 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
 export function exigeDetalleDeSiniestros(d: Partial<DatosAuto>): boolean {
   if (!d.aseguradoAntes) return false
   if (!numero(d.aniosSinSiniestros)) return false
-  return d.aniosSinSiniestros! < 5 && d.aniosSinSiniestros !== d.aniosAsegurado
+  if (d.aniosSinSiniestros! >= 5) return false
+  // La excepción «tantos años limpio como asegurado» dice «nunca ha tenido un
+  // siniestro», y por eso el detalle sobra. Pero `0 === 0` NO dice eso: dice
+  // que no hay dato, y colarlo por esta puerta manda la declaración de novel
+  // sin que nada falle (ver el comentario de `aniosAsegurado` arriba).
+  if (d.aniosSinSiniestros === 0 && d.aniosAsegurado === 0) return true
+  return d.aniosSinSiniestros !== d.aniosAsegurado
 }
