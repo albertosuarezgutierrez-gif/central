@@ -21,6 +21,7 @@ import { Prisma } from './generated/asegura-client'
 import { registrarErrorCartera, type CausaErrorCartera } from './error-cartera'
 import { contactosDe, type Contacto } from './cartera-busqueda'
 import { LIMITE_VENCIMIENTOS, cribaTruncada } from './cartera-techos.ts'
+import { ultimosContactosRenovacion } from './cartera-renovaciones-contacto.ts'
 
 /**
  * Lecturas de la Fase 1 sobre la cartera real. Reglas que no se negocian:
@@ -105,6 +106,14 @@ export type PolizaVencimiento = {
    * el 83% son leads muertos—, porque una póliza que vence es de un cliente.
    */
   contacto: Contacto | null
+  /**
+   * Cuándo se abrió por última vez el WhatsApp de renovación de ESTA póliza
+   * (ISO `yyyy-mm-dd`), o `null` si nunca se registró un contacto. Alimenta
+   * el cooldown de 14 días y el "contactado hace N días" de la pantalla —
+   * ver `@central/module-seguros` `enCooldownRenovacion()` y
+   * `renovacion_contactos` en `cartera-renovaciones-contacto.ts`.
+   */
+  ultimoContactoEn: string | null
 }
 
 /**
@@ -322,6 +331,15 @@ export async function vencimientosProximos(
     [...new Set(filas.map(f => f.cliente.id))],
   )
 
+  // `null` general = no se pudo consultar el historial de contactos: no se
+  // distingue de "sin ninguno" fila a fila, pero tampoco inventa una fecha —
+  // simplemente ninguna póliza sale con `ultimoContactoEn`, que es el lado
+  // conservador (el cooldown nunca oculta una fila por error).
+  const ultimosContactos = await ultimosContactosRenovacion(
+    correduriaId,
+    filas.map(f => f.id),
+  ).catch(() => new Map<string, Date>())
+
   const polizas = filas.map(f => {
     const vencimiento = f.fechaVencimiento as Date
     const diasRestantes = diasHastaVencimiento(vencimiento, hoyRef)
@@ -352,6 +370,7 @@ export async function vencimientosProximos(
       }),
       // Si la consulta falló, `null` para todas: «no se ha podido mirar».
       contacto: contactos?.get(f.cliente.id) ?? null,
+      ultimoContactoEn: ultimosContactos.get(f.id)?.toISOString().slice(0, 10) ?? null,
     }
   })
 

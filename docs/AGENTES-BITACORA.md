@@ -34,6 +34,17 @@
   (`claude/buscador-ia-2026-09-14`).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-21 · mercado-booking** · hizo: pasada diaria completa — 24 ventanas de mercado
+  (todas las pedidas por el plan, tope max=24 de 520 candidatas/496 recortadas), 233 comps
+  reales escritos con `número_of_adults`=aforo por ventana; 4/4 ventanas de escaparate propio
+  medidas (busto_reform, duplex_center, house_sevillana, luxury_busto) para el ajuste de canal;
+  4 anuncios propios descartados de los resultados de mercado (Busto Reform, Dúplex center,
+  HOUSE SEVILLANA ×2) — no contaminaron el corpus; 0 ventanas sin respuesta del conector; latido
+  `ok:true`. Avisos que trae el plan y no corresponde arreglar aquí (solo mido): 1 mes sin
+  bucket elegible (2026-09, <3 fechas medidas) y 78 fechas de evento confirmado con corpus
+  caducado (>7d, el motor las tarifica por canal en vez de por mercado medido) — quedan para que
+  la propia acumulación diaria las vaya cubriendo. dudas: —; fallos: —; PRs/commits: — (solo
+  escritura en `market_rates`/`pricing_escaparate` vía API, sin cambio de código).
 - **2026-09-21 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos, delegado a 4
   agentes en paralelo (Booking+Trivago±Tripadvisor, 12 ventanas: 10 meses + Semana Santa +
   Feria + Karol G). Comps nuevos verificados con SQL directo: house=117, busto=119,

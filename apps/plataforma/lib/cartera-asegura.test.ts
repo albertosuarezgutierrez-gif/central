@@ -193,6 +193,21 @@ test('vencimientos: un contacto con forma rara degrada a null y NO tumba la list
   if (r.estado === 'ok') assert.equal(r.polizas[0].contacto, null)
 })
 
+// ── Último contacto de renovación (WhatsApp) ────────────────────────────────
+
+test('vencimientos: sin `ultimoContactoEn` (versión vieja de asegura) es null, no "nunca contactado"', () => {
+  const r = interpretarVencimientos(200, VENC_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.equal(r.polizas[0].ultimoContactoEn, null)
+})
+
+test('vencimientos: `ultimoContactoEn` se propaga tal cual cuando el puerto lo manda', () => {
+  const con = { ...VENC_OK, polizas: [{ ...FILA_OK, ultimoContactoEn: '2026-09-14' }] }
+  const r = interpretarVencimientos(200, con)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.equal(r.polizas[0].ultimoContactoEn, '2026-09-14')
+})
+
 // ── El techo de la lista de renovaciones ────────────────────────────────────
 
 test('🚨 vencimientos: `truncado` ausente es null («no se sabe»), NUNCA false', () => {
