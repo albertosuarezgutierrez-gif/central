@@ -13,6 +13,17 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** Precarga de recordatorios en el portal del cliente (PR #3241, §B de
+`CORREDURIA-INTRANET-IDEAS`). Alberto: «esto se podría automatizar más… ¿tienes datos de clientes?».
+Sí, de dos: el **carné** (ya lo calcula `caducidadCarnet()` en asegura) y la **ITV** (periodicidad
+legal RD 920/2017 sobre la matriculación, estimada de la matrícula con `fechaMatriculacionEstimada()`).
+🚨 La decisión que manda: **no valen lo mismo**. `firme` (carné) entra sola en el formulario;
+`calculada` (ITV) se OFRECE con lo supuesto delante y solo entra si la persona la acepta — trato de
+Catastro. Lo decide `precargasDeRecordatorio()` en el módulo puro, NO el JSX, con guardián de raíz.
+`code-review` cazó 5, una grave: el escalón a ITV anual de los 10 años se saltaba un ciclo entero en
+los matriculados un 29 de febrero (119 meses ≠ 120). 11 mutaciones vistas en rojo. ⏸️ Sin probar en
+navegador ni medir a 320px (hace falta sesión del portal + BD): declarado en el PR.
+
 **(21/09/2026)** Recaptación + control de WhatsApp en Renovaciones. (1) `(legacy)` (26.987 pólizas del
 volcado, centinela del importador) se colaba como «compañía» en «Antes con» y en el mensaje de
 recaptación («que tuviste con (legacy)»); ahora se normaliza a `null`. (2) Recaptación ya tenía cooldown
