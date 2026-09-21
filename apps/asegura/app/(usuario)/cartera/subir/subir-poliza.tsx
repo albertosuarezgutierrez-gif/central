@@ -7,6 +7,8 @@ import { eur } from '@/lib/dinero'
 
 type DatosLeidos = Record<string, string | number | null>
 
+type Coincidencia = { id: string; nombre: string; tipo: string; por: string }
+
 type Estado =
   | { fase: 'inicio' }
   | { fase: 'leyendo' }
@@ -18,6 +20,25 @@ type Estado =
       tipoLectura: 'auto' | 'hogar' | 'contrato_solo'
       datos: DatosLeidos
       campos: string[]
+      fichero: File
+      datosEditados: DatosLeidos
+      telefono: string
+      email: string
+      guardando: boolean
+      guardado?: {
+        clienteId: string
+        clienteNuevo: boolean
+        declaradaId?: string
+        documentoId: string
+        repetido: boolean
+        avisos: string[]
+      }
+      conflicto?: {
+        error: string
+        coincidencias: Coincidencia[]
+        forzable: boolean
+      }
+      error?: string
     }
   | { fase: 'error'; mensaje: string }
 
@@ -101,14 +122,20 @@ export default function SubirPoliza() {
         return
       }
       const tipoLectura = j.tipoLectura === 'hogar' || j.tipoLectura === 'auto' ? j.tipoLectura : 'contrato_solo'
+      const datosLeidos = (j.datos ?? {}) as DatosLeidos
       setEstado({
         fase: 'leido',
         nombre: String(j.nombre ?? f.name),
         fuente: String(j.fuente),
         ramo: typeof j.ramo === 'string' ? j.ramo : null,
         tipoLectura,
-        datos: (j.datos ?? {}) as DatosLeidos,
+        datos: datosLeidos,
         campos: (j.campos ?? []) as string[],
+        fichero: f,
+        datosEditados: { ...datosLeidos },
+        telefono: '',
+        email: '',
+        guardando: false,
       })
     } catch (e) {
       setEstado({ fase: 'error', mensaje: (e as Error).message })
@@ -116,6 +143,110 @@ export default function SubirPoliza() {
   }
 
   const leyendo = estado.fase === 'leyendo'
+
+  function describirAviso(codigo: string): string {
+    const AVISOS: Record<string, string> = {
+      sin_dni: 'Sin DNI en el documento: esta ficha no se puede casar por identidad, solo por nombre.',
+      nombre_partido: 'El corte entre nombre y apellidos lo ha hecho el lector, no el documento: revísalo.',
+      sin_vencimiento: 'Sin fecha de vencimiento: no habrá aviso de cuándo entrar.',
+      sin_compania: 'Sin compañía: no se podrá comprobar si esa póliza ya la lleva la casa.',
+      sin_numero: 'Sin número de póliza: no se podrá comprobar si esa póliza ya la lleva la casa.',
+      sin_nombre: 'El documento no trae el tomador.',
+    }
+    return AVISOS[codigo] ?? codigo
+  }
+
+  async function guardar(clienteId?: string, forzar?: boolean) {
+    if (estado.fase !== 'leido') return
+
+    setEstado((s) => (s.fase === 'leido' ? { ...s, guardando: true } : s))
+
+    const cuerpo = new FormData()
+    cuerpo.append('fichero', estado.fichero)
+    cuerpo.append(
+      'datos',
+      JSON.stringify({
+        lectura: {
+          ramo: estado.ramo,
+          tipoLectura: estado.tipoLectura,
+          datos: estado.datosEditados,
+        },
+        clienteId,
+        telefono: estado.telefono || undefined,
+        email: estado.email || undefined,
+        forzar,
+      }),
+    )
+
+    try {
+      const res = await fetch('/api/operador/poliza-documento', {
+        method: 'POST',
+        body: cuerpo,
+      })
+      const j = (await res.json()) as Record<string, unknown>
+
+      if (res.ok) {
+        setEstado((s) =>
+          s.fase === 'leido'
+            ? {
+                ...s,
+                guardando: false,
+                guardado: {
+                  clienteId: String(j.clienteId),
+                  clienteNuevo: Boolean(j.clienteNuevo),
+                  declaradaId: j.declaradaId ? String(j.declaradaId) : undefined,
+                  documentoId: String(j.documentoId),
+                  repetido: Boolean(j.repetido),
+                  avisos: Array.isArray(j.avisos) ? j.avisos.map(String) : [],
+                },
+              }
+            : s,
+        )
+      } else if (res.status === 409) {
+        setEstado((s) =>
+          s.fase === 'leido'
+            ? {
+                ...s,
+                guardando: false,
+                conflicto: {
+                  error: String(j.error ?? 'Conflicto'),
+                  coincidencias: Array.isArray(j.coincidencias)
+                    ? (j.coincidencias as Coincidencia[])
+                    : [],
+                  forzable: Boolean(j.forzable),
+                },
+              }
+            : s,
+        )
+      } else if (res.status === 422) {
+        setEstado((s) =>
+          s.fase === 'leido'
+            ? {
+                ...s,
+                guardando: false,
+                error: String(j.error ?? 'Error al guardar'),
+              }
+            : s,
+        )
+      } else {
+        setEstado((s) =>
+          s.fase === 'leido'
+            ? {
+                ...s,
+                guardando: false,
+                error: String(j.error ?? `Error ${res.status}`),
+              }
+            : s,
+        )
+      }
+    } catch (e) {
+      setEstado((s) =>
+        s.fase === 'leido'
+          ? { ...s, guardando: false, error: (e as Error).message }
+          : s,
+      )
+    }
+  }
 
   return (
     <>
@@ -163,36 +294,183 @@ export default function SubirPoliza() {
             </p>
           ) : (
             <>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Campo</th>
-                      <th>Leído</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {etiquetasPara(estado.tipoLectura).map(([clave, etiqueta]) => {
-                      const v = estado.datos[clave]
-                      return (
-                        <tr key={clave}>
-                          <th style={{ textAlign: 'left', width: '45%' }}>{etiqueta}</th>
-                          <td>
-                            {v === null || v === undefined ? (
-                              // Un hueco se dice. Nunca se pinta 0 ni vacío.
-                              <span className="muted">no aparece en el documento</span>
-                            ) : CAMPOS_DINERO.has(clave) ? (
-                              eur(Number(v))
-                            ) : (
-                              String(v)
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+              {/* Campos leídos editables */}
+              <div className="campos-lectura">
+                {etiquetasPara(estado.tipoLectura).map(([clave, etiqueta]) => {
+                  const v = estado.datosEditados[clave]
+                  const esMoneda = CAMPOS_DINERO.has(clave)
+                  return (
+                    <div key={clave} className="campo-editable">
+                      <label htmlFor={`campo-${clave}`}>{etiqueta}</label>
+                      <input
+                        id={`campo-${clave}`}
+                        type="text"
+                        value={v === null || v === undefined ? '' : String(v)}
+                        placeholder={
+                          v === null || v === undefined ? 'no aparece en el documento' : undefined
+                        }
+                        onChange={(e) => {
+                          setEstado((s) =>
+                            s.fase === 'leido'
+                              ? {
+                                  ...s,
+                                  datosEditados: {
+                                    ...s.datosEditados,
+                                    [clave]: e.target.value || null,
+                                  },
+                                }
+                              : s,
+                          )
+                        }}
+                      />
+                      {esMoneda && v !== null && v !== undefined && (
+                        <small className="muted">se guardará como {Number(v)}</small>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
+
+              {/* Campos de contacto */}
+              <div className="campos-contacto">
+                <h3>Contacto (opcional)</h3>
+                <div className="campo-editable">
+                  <label htmlFor="telefono">Teléfono</label>
+                  <input
+                    id="telefono"
+                    type="tel"
+                    value={estado.telefono}
+                    placeholder="no se ha encontrado en el documento"
+                    onChange={(e) => {
+                      setEstado((s) =>
+                        s.fase === 'leido' ? { ...s, telefono: e.target.value } : s,
+                      )
+                    }}
+                  />
+                </div>
+                <div className="campo-editable">
+                  <label htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={estado.email}
+                    placeholder="no se ha encontrado en el documento"
+                    onChange={(e) => {
+                      setEstado((s) =>
+                        s.fase === 'leido' ? { ...s, email: e.target.value } : s,
+                      )
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Avisos */}
+              {estado.guardado?.avisos && estado.guardado.avisos.length > 0 && (
+                <div className="avisos">
+                  {estado.guardado.avisos.map((codigo, i) => (
+                    <p key={i} className="aviso">
+                      ⚠️ {describirAviso(codigo)}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {/* Error en guardado */}
+              {estado.error && (
+                <div className="card error-box">
+                  <p className="err">{estado.error}</p>
+                </div>
+              )}
+
+              {/* Conflicto (409): coincidencias encontradas */}
+              {estado.conflicto && (
+                <div className="card conflict-box">
+                  <h3>⚠️ Datos duplicados</h3>
+                  <p>{estado.conflicto.error}</p>
+                  <p>Se encontraron estas fichas que ya tienen este dato:</p>
+                  <div className="coincidencias-lista">
+                    {estado.conflicto.coincidencias.map((coincidencia) => (
+                      <div key={coincidencia.id} className="coincidencia-item">
+                        <div className="coincidencia-info">
+                          <strong>{coincidencia.nombre}</strong>
+                          <small className="muted">
+                            {coincidencia.tipo} · por {coincidencia.por}
+                          </small>
+                        </div>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => guardar(coincidencia.id)}
+                          disabled={estado.guardando}
+                        >
+                          Usar esta ficha
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {estado.conflicto.forzable && (
+                    <div className="mt-4">
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => guardar(undefined, true)}
+                        disabled={estado.guardando}
+                      >
+                        Crear ficha nueva igualmente
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Guardado exitoso */}
+              {estado.guardado && !estado.conflicto && (
+                <div className="card success-box">
+                  <h3>✓ Documento guardado</h3>
+                  {estado.guardado.repetido ? (
+                    <p>Ese mismo documento ya estaba en la ficha: no se ha duplicado nada.</p>
+                  ) : (
+                    <>
+                      <p>
+                        El documento se ha guardado correctamente en{' '}
+                        <strong>
+                          {estado.guardado.clienteNuevo
+                            ? 'una ficha nueva'
+                            : 'la ficha existente'}
+                        </strong>
+                        .
+                      </p>
+                      {process.env.NEXT_PUBLIC_PLATAFORMA_URL && (
+                        <a
+                          href={`${process.env.NEXT_PUBLIC_PLATAFORMA_URL}/correduria/cliente/${estado.guardado.clienteId}`}
+                          className="btn btn-secondary"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ver ficha en plataforma →
+                        </a>
+                      )}
+                      {!process.env.NEXT_PUBLIC_PLATAFORMA_URL && (
+                        <p className="muted">
+                          Ficha del cliente: <code>{estado.guardado.clienteId}</code>
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Botón Guardar */}
+              {!estado.guardado && (
+                <div className="botones-accion">
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => guardar()}
+                    disabled={estado.guardando || estado.campos.length === 0}
+                  >
+                    {estado.guardando ? 'Guardando…' : 'Guardar'}
+                  </button>
+                </div>
+              )}
+
               <p className="muted">
                 <span className="badge warn">Leído de un documento</span> Ninguno de estos datos
                 está confirmado: los ha leído una máquina. Revísalos antes de usarlos, y ten en

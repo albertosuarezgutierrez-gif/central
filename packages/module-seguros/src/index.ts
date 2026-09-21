@@ -628,3 +628,19 @@ export {
   type AreaContacto,
   type ContactoCompania,
 } from './compania-contactos.ts'
+
+// Pólizas que el corredor recibe por su cuenta y sube él (no las declara el cliente).
+export {
+  partirNombre,
+  tipoPersonaDeNombre,
+  prepararAltaDesdeDocumento,
+  prepararDeclaradaDesdeDocumento,
+} from './poliza-de-documento.ts'
+export type {
+  AltaDesdeDocumento,
+  AvisoDocumento,
+  DeclaradaDesdeDocumento,
+  LecturaPoliza,
+  TipoLecturaDocumento,
+  TipoPersonaDocumento,
+} from './poliza-de-documento.ts'
