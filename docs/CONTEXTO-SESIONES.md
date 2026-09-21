@@ -12,6 +12,33 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** **La tabla de precios de retarificar, con sentido** (PR #3248, mergeado). Alberto:
+«no tiene sentido» — 24 filas ordenadas solo por prima, mezclando coberturas no comparables. Ahora
+agrupa por nivel de cobertura, filtra, ancla en la prima que paga HOY y marca la **defensa de
+cartera** (libre/ocupada/actual/**desconocida**), emparejando por **código DGS, no por nombre**.
+Reglas puras en `@central/module-seguros` + `carteraCompanias` en la precalificación (gratis), que
+degrada a `no_disponible`, nunca a `[]`. 🚨 **Medido: 8 clientes YA tienen 2+ pólizas del mismo ramo
+en la misma compañía** — estar ahí no impide emitir, así que la fila se MARCA, no se esconde. Tres
+fallos de paso: la clave de fila era la posición visible (al agrupar, «Emitir» abría otro precio),
+`fallos: []` en una cotización recuperada mentía, y los avisos vivían solo en un `title=` (invisible
+en móvil). ⏸️ **Pendiente de Alberto:** el SQL `2026-09-21_tarificacion_identidad_y_fallos.sql` SIN
+ejecutar (primero la migración, después su código, o revientan las cotizaciones ya pagadas); la
+pantalla NO vista en navegador ni a 320px (mergeado igualmente por decisión suya); y las 6 pantallas
+`*-nuevo` siguen con la tabla vieja.
+
+**(21/09/2026)** **Presupuesto al cliente — spec escrita, Fase 2 confirmada** (en el mismo PR #3248;
+`docs/superpowers/specs/2026-09-21-asegura-presupuesto-al-cliente-design.md`). Alberto quiere mandar
+el presupuesto al cliente para que elija desde su intranet. Decidido: **el cliente ve, elige y FIRMA
+(`@central/core-firma`, eIDAS art. 26 por OTP email); emite Alberto.** Canal: email + **deep link
+`wa.me`** que manda él a mano — sin WABA, reutilizando `invitacion-whatsapp.ts`/`telefono-wa.ts`; el
+WhatsApp lleva el enlace pero **el código de acceso va al email** (un móvil identifica un hogar, no a
+una persona). Validez 15 días. **Al aceptar SÍ se reconfirma el precio** aun costando, porque ninguno
+de los 187 precios guardados es «firme» ⇒ la Fase 2 deja de tener cero llamadas de pago del cliente y
+el gate de idempotencia pasa a obligatorio. Tres medidas incómodas: **el tope de gasto NO ve el ReRate
+ni el Submit**, el **IPID no existe en el repo** (bloqueo duro de la Fase 3), y el correo **nunca pide
+datos** (lleva al portal). Borrador a Codeoscopic en `docs/BORRADOR-CODEOSCOPIC-COSTE-RERATE-SUBMIT.md`,
+**sin enviar**. Q2/Q3/Q4 del §7 siguen abiertas.
+
 **(21/09/2026)** Asociaciones de corredores. Se buscó en Gmail la asociación en la que estuvo Alberto
 (E2K, que **no es asociación sino alianza por contrato marco**: clave y cartera viven en un contrato
 privado, no en estatutos). Enviados correos de presentación a **AUNNA, Pactrebol, ACSA y APROMES**
