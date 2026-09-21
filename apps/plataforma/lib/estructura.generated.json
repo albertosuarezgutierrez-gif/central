@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-21T07:46:19Z",
+  "generadoEn": "2026-09-21T08:41:24Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -416,7 +416,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "estado": "usado",
@@ -444,7 +444,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "no",
@@ -4020,6 +4020,7 @@
       "/api/operador/companias/contacto/[id]",
       "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
+      "/api/operador/direccion/confirmar",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
@@ -4924,6 +4925,7 @@
       "/api/correduria/companias/contactado",
       "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
+      "/api/correduria/direccion-confirmar",
       "/api/correduria/documentos",
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
@@ -6429,7 +6431,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1395,
+    "apis": 1397,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
