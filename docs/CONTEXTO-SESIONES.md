@@ -20,6 +20,12 @@ disponibles por API REST** aunque estén activados en el panel de Avant2 con Occ
 6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
 (solo doc), sin código tocado.
 
+**(21/09/2026)** Recaptación — apertura del mensaje sugerido ya no dice siempre «¿sigues con tu
+seguro?»: con leads `vencimiento_antiguo` (se conoce el mes real de renovación) pregunta directamente
+por esa fecha («¿te vence el seguro de X por estas fechas (mes), no?»); con `sin_vencimiento` (sin
+ningún dato) se mantiene la pregunta genérica para no inventar fecha. Solo `mensajeSugerido()` en
+`Recaptacion.tsx` (los botones manuales; el cron de email usa otro camino, sin tocar). PR #3238.
+
 **(21/09/2026)** Recaptación + control de WhatsApp en Renovaciones. (1) `(legacy)` (26.987 pólizas del
 volcado, centinela del importador) se colaba como «compañía» en «Antes con» y en el mensaje de
 recaptación («que tuviste con (legacy)»); ahora se normaliza a `null`. (2) Recaptación ya tenía cooldown
