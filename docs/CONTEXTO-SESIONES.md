@@ -12,6 +12,17 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** Presupuesto al cliente — **PR 1 entero** (#3252, draft). Módulo puro
+`presupuesto-cliente.ts` (estado derivado de los sellos, caducidad = mínimo de 3 fuentes con la
+fuente declarada, regla de las tres), DDL `seguros.presupuesto|_opcion|_evento` + `firma`
+(**APLICADA**, migración `seguros_presupuesto_cliente`), puerto `/api/operador/presupuesto`, proxy en
+plataforma y botón «Preparar presupuesto» en retarificar. **No manda nada ni gasta**: congela lo que
+se enseñaría desde una cotización ya pagada. Invariantes en la BD: trigger anti-simulado sobre los DOS
+sellos de salida, una firma por documento, eventos/firma append-only. 8 cepos vistos en ROJO. La DDL
+se ensayó contra la BD real (14 pruebas, revertidas): la 1ª pasada murió en `0A000 subquery in check
+constraint` — ni tsc ni build miran dentro de un DDL. ⏸️ Decisión de Alberto pendiente: si el botón va
+también en `auto-nuevo` (el lead sin póliza, que es el caso que arrancó esto).
+>
 **(21/09/2026)** Asociaciones de corredores. Se buscó en Gmail la asociación en la que estuvo Alberto
 (E2K, que **no es asociación sino alianza por contrato marco**: clave y cartera viven en un contrato
 privado, no en estatutos). Enviados correos de presentación a **AUNNA, Pactrebol, ACSA y APROMES**
