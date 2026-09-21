@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🤖 **Pasada diaria de `trading-analista` corrida entera** (NAV+cartera real a
+plataforma, 24 símbolos analizados/puntuados, Telegram, radar semanal comprobado). Hallazgo para
+la próxima pasada: el conector IBKR devolvió **series de precios repetidas entre símbolos distintos**
+(APP≡SPOT, y algún otro cruce) — verificado con refetches individuales, no es error de transcripción.
+El guardián de precios del servidor (×2 + suplantación) cazó y vetó SPY y META por esto; el resto
+entró limpio. Si se repite, revisar el conector, no solo confiar en el guardián. Sin PR (solo BD +
+Telegram + bitácora).
+
 **(21/09/2026)** 🖥️ **Presupuesto al cliente: PR 2 (pantalla del portal, solo lectura) + el ReRate/Submit
 ya cuentan en el libro — ambos EN PRODUCCIÓN.** `apps/asegura-portal` gana la carátula pública y la
 comparativa autenticada; grants por columnas y fix del trigger `presupuesto_no_enviar_simulado()`

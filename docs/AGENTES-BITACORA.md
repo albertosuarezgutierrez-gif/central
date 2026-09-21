@@ -14,6 +14,18 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-21 · trading-analista** · hizo: pasada diaria completa — NAV 33.452,47€ y cartera real
+  (CVX+VWCE) empujados a plataforma, watchlist (24 símbolos) analizada, `/analizar` y `/puntuar`
+  corridos, Telegram enviado, snapshot semanal del radar comprobado (satélite 3/5 cohetes
+  confirmados). dudas: el conector IBKR devolvió series de precios REPETIDAS entre varios símbolos
+  distintos de la watchlist (confirmado con refetches individuales, p.ej. APP≡SPOT) — no es fallo de
+  transcripción, es el propio conector; el guardián de precios del servidor (×2 + suplantación) cazó
+  y vetó 2 símbolos (SPY, META) por esto, el resto entró limpio — si se repite en pasadas futuras,
+  merece revisión del conector, no solo confiar en el guardián. fallos: ninguna operación nueva se
+  abrió (todas las top-5 ideas vetadas por barrera: posición ya abierta / bajo SMA50 / dirección no
+  alcista); 0 tesis puntuadas/cerradas (nada vencía ventana hoy); contraste con 2ª fuente sin dato
+  fresco (Stooq/Yahoo 3 sesiones por detrás). PRs/commits: — (solo BD + Telegram, sin código).
+
 - **2026-09-21 · buscador-ia** · hizo: watch semanal; 🔴 hallazgo crítico — Groq retiró el gratis a
   `openai/gpt-oss-120b` el 11/09/2026 ($0,15/$0,60 por M, 5 fuentes independientes), y es el ÚNICO
   eslabón de la cadena sin presupuesto ni tarifa cargada (con NIM apagado, es el fallback gratis
