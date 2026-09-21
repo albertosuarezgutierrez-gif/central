@@ -217,3 +217,39 @@ test('🚨 `autorizado_cliente_id` se declara NULLABLE: la BD lo es desde el 04/
   const src = fuente('apps/asegura/lib/avisos-intranet.ts')
   assert.match(src, /autorizadoClienteId: \{ not: null \}/, 'la consulta principal no puede traerse filas de invitado')
 })
+
+test('🚨 un recordatorio RECURRENTE vuelve a avisar en el ciclo siguiente', () => {
+  // El fallo que esto cierra: el sello de `portal_aviso_enviado` va por el id
+  // del aviso. Con el id de la FILA pelado, un «ITV cada 12 meses» avisaba una
+  // vez y al año siguiente —misma fila, misma clave— se quedaba mudo para
+  // siempre. La fila avanza de fecha; la clave tiene que avanzar con ella.
+  const ciclo1 = new Date('2026-09-16T00:00:00Z')
+  const ciclo2 = new Date('2027-09-16T00:00:00Z')
+  const uno = pendiente({ obligaciones: [{ id: 'fila-1', titulo: 'ITV del Ibiza', fechaAccionable: ciclo1 }] })
+  const a1 = avisosNuevos(uno, HOY, new Set())!
+  assert.equal(a1.nuevos.length, 1)
+  const sellado = new Set([claveAviso(a1.nuevos[0]!)])
+
+  // Mismo ciclo, ya sellado: no se repite.
+  assert.equal(avisosNuevos(uno, HOY, sellado)!.nuevos.length, 0)
+
+  // Ciclo siguiente, MISMA fila: sí avisa.
+  const dos = pendiente({ obligaciones: [{ id: 'fila-1', titulo: 'ITV del Ibiza', fechaAccionable: ciclo2 }] })
+  assert.equal(avisosNuevos(dos, new Date('2027-09-15T08:00:00Z'), sellado)!.nuevos.length, 1)
+})
+
+test('🚨 el emisor coge también los recordatorios SIN póliza, por el vínculo', () => {
+  // Hasta el 21/09/2026 el `where` llevaba `polizaId: { not: null }`, así que
+  // una ITV o un carné que el cliente se apunta no salía por correo NI por el
+  // cron de vencimientos: sin push activado, no avisaba por ninguna vía
+  // mientras la pantalla prometía «te avisamos».
+  const src = fuente('apps/asegura/lib/avisos-intranet.ts')
+  assert.ok(
+    !/portalObligacion\.findMany\([\s\S]{0,400}?polizaId:\s*\{\s*not:\s*null\s*\}/.test(src),
+    'el emisor no puede volver a excluir los recordatorios sin póliza',
+  )
+  assert.match(src, /db\.portalVinculo\.findMany\(/, 'el segundo camino hasta la ficha es portal_vinculo')
+  assert.match(src, /clientePorIdentidad\.get\(o\.identidadId\)/, 'una obligación sin póliza se reparte por su identidad')
+  // Y el que no tiene ficha se CUENTA, no se pierde.
+  assert.match(src, /sinFicha/, 'lo que no se puede avisar se declara en el resumen')
+})

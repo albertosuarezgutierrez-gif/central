@@ -168,6 +168,12 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
+
+/** `YYYY-MM-DD` en UTC. Se usa para el id por ciclo de una obligación: tiene que
+ *  ser estable (el mismo ciclo, la misma clave) y no depender del huso. */
+function diaIso(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
 const MS_DIA = 86_400_000
 
 function diaUtc(d: Date): Date {
@@ -291,7 +297,15 @@ export function avisosDe(x: EntradaAvisos): Avisos {
       if (!entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy: x.hoy })) continue
       avisos.push({
         tipo: 'obligacion_en_ventana',
-        id: o.id,
+        // 🚨 El id lleva la FECHA del ciclo, no solo el id de la fila, y eso es
+        // lo que permite avisar de un recordatorio RECURRENTE más de una vez.
+        // El emisor de correo de la intranet sella por este id
+        // (`portal_aviso_enviado`), así que con el id pelado un «ITV cada 12
+        // meses» avisaría una vez y el año siguiente, ya sellado, se quedaría
+        // mudo para siempre — la misma fila, la misma clave. Con la fecha
+        // dentro, cada ciclo es un aviso distinto y el sello sigue impidiendo
+        // el duplicado DENTRO del ciclo, que es lo que tiene que impedir.
+        id: `${o.id}:${diaIso(o.fechaAccionable)}`,
         titulo: o.titulo,
         detalle: `Puedes actuar hasta el ${FECHA.format(o.fechaAccionable)}.`,
         href: HREF_POR_TIPO.obligacion_en_ventana,
