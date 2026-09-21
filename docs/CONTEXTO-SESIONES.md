@@ -12,6 +12,21 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🔗 **La cadena de CIMA ya es ENTERA de Alberto, y el vigilante arreglado enseña lo
+que tapaba.** Verificado por API, no de palabra: el repo del adaptador es hoy
+`albertosuarezgutierrez-gif/asegura-app-cima-adapter` (id 1225402598, privado, Java) — era el único
+eslabón sin salida, porque sin él no se podía redesplegar. Cadena completa: Actions (repo `asegura`)
+→ CRM en Vercel → adaptador en Fly (`grupo-asegura`) → TIREA. **Sigue fuera:** los secrets de TIREA
+de producción (Manuel los manda por enlace de un solo uso) y su permiso `write` en el repo `asegura`,
+pendiente de retirar.
+🚨 **Y CIMA NO está «100% ok», que era la pregunta:** la ingesta sí (145 ficheros `confirmed`, último
+21/09 10:58), pero el health-alert —ahora que funciona— reporta **4 ficheros con contenido sin
+persistir, todos de junio y todos ya CONFIRMADOS a TIREA**, o sea fuera de la cola: 3 `SIN` de C0109
+en `review` con `0/1 siniestros` (07 y 20/06) y 1 `POL` de C0468 con `polizas_persisted=2` de
+`polizas_count=3` — una póliza de tres no entró. Su única copia es el crudo, con TTL: 10 ficheros en
+`cima_cuarentena_crudo`, próxima purga **17/10**. No es urgente hoy, pero tiene fecha. El vigilante
+llevaba dos días sin poder decirlo.
+
 **(21/09/2026)** ✅ **Cerrada la avería del vigilante de CIMA: 48 h caído, arreglada en 15 s.** Era
 lo diagnosticado — el secret `INTERNAL_API_SECRET` de Actions ya no coincidía con la env var de
 Vercel. **La fecha lo remató:** esa env var se editó el 20/09, justo entre el último run verde
