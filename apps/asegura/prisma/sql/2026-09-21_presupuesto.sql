@@ -4,11 +4,13 @@
 -- (§2.2 son estas tablas). PR 1 de los seis de §6: el objeto, congelado. Nada
 -- de lo que hay aquí manda un correo ni gasta un euro.
 --
--- ⛔ NO APLICADA TODAVÍA. Se aplica con el OK de Alberto y ANTES de que el
---    puerto la nombre: la costumbre de la casa (ver la cabecera de
---    2026-09-21_tarificacion_identidad_y_fallos.sql) es que el código no cite
---    una columna que aún no existe, porque el INSERT falla y lo que se pierde
---    es trabajo ya pagado.
+-- ✅ APLICADA el 21/09/2026 (migración `seguros_presupuesto_cliente`), ANTES de
+--    que el puerto la nombre y no después. Es el orden que exige la casa: un
+--    INSERT que cite algo que todavía no existe no falla en `tsc` ni en el
+--    build, falla en producción y lo que se pierde es trabajo ya pagado (ver la
+--    cabecera de 2026-09-21_tarificacion_identidad_y_fallos.sql).
+--    Son CUATRO TABLAS NUEVAS Y VACÍAS: no altera ninguna columna existente, no
+--    toca un solo dato de la cartera y se deshace con cuatro `drop table`.
 --
 -- ─── Por qué NO valen `tarificaciones` + `tarificacion_precios` ─────────────
 -- Esas dos responden «qué precio me dio el vendor y cuánto me costó

@@ -1203,3 +1203,132 @@ model RenovacionContacto {
 
   @@map("renovacion_contactos")
 }
+
+/// El presupuesto que se le enseña a un CLIENTE (21/09/2026).
+///
+/// NO es `Tarificacion`: aquella responde «qué precio me dio el vendor y cuánto
+/// costó preguntarlo»; esta, «QUÉ LE ENSEÑÉ A ESTA PERSONA, cuándo, cuál eligió
+/// y qué firmó». Por eso las opciones son una COPIA congelada y no un puntero.
+///
+/// 🚨 El estado NO es una columna: se DERIVA de los sellos con
+/// `estadoPresupuesto()` de `@central/module-seguros`. Guardarlo obligaría a
+/// mantenerlo sincronizado, y el día que una transición se olvide la columna
+/// miente sin que nada falle.
+model Presupuesto {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String    @map("correduria_id") @db.Uuid
+  clienteId        String    @map("cliente_id") @db.Uuid
+  /// NULL = venta nueva (no hay póliza que comparar), JAMÁS «no tiene seguro».
+  polizaId         String?   @map("poliza_id") @db.Uuid
+  ramo             String
+  tarificacionId   String    @map("tarificacion_id") @db.Uuid
+  /// El token del enlace, HASHEADO. En claro solo existe en el mensaje que sale.
+  tokenHash        String    @unique @map("token_hash")
+  canalAviso       String?   @map("canal_aviso")
+  destinoHash      String?   @map("destino_hash")
+  venceEl          DateTime  @map("vence_el") @db.Timestamptz(6)
+  creadoAt         DateTime  @default(now()) @map("creado_at") @db.Timestamptz(6)
+  /// Se abrió WhatsApp con el mensaje escrito. NO prueba que se enviara.
+  enlaceGeneradoAt DateTime? @map("enlace_generado_at") @db.Timestamptz(6)
+  enviadoAt        DateTime? @map("enviado_at") @db.Timestamptz(6)
+  /// NULL = NO CONSTA que lo haya abierto. No es «no lo ha abierto».
+  vistoAt          DateTime? @map("visto_at") @db.Timestamptz(6)
+  elegidoAt        DateTime? @map("elegido_at") @db.Timestamptz(6)
+  aceptadoAt       DateTime? @map("aceptado_at") @db.Timestamptz(6)
+  emitidoAt        DateTime? @map("emitido_at") @db.Timestamptz(6)
+  retiradoAt       DateTime? @map("retirado_at") @db.Timestamptz(6)
+  retiradoMotivo   String?   @map("retirado_motivo")
+  salida           String?
+  polizaEmitidaId  String?   @map("poliza_emitida_id") @db.Uuid
+  creadoPor        String    @map("creado_por")
+
+  opciones PresupuestoOpcion[]
+  eventos  PresupuestoEvento[]
+
+  @@index([correduriaId, creadoAt])
+  @@index([clienteId, creadoAt])
+  @@map("presupuesto")
+}
+
+/// SNAPSHOT de una opción tal y como se le enseñó. Si el vendor cambia de
+/// opinión mañana, lo que se enseñó ese día sigue escrito aquí.
+model PresupuestoOpcion {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId    String    @map("presupuesto_id") @db.Uuid
+  /// El orden EXACTO en que se pintaron: parte de lo que se firma.
+  orden            Int       @db.SmallInt
+  compania         String
+  producto         String
+  modalidad        String?
+  categoria        String?
+  /// NULL = no se pudo clasificar el nivel, y entonces no puede ser portada.
+  grupoCobertura   String?   @map("grupo_cobertura")
+  primaEur         Decimal   @map("prima_eur") @db.Decimal(10, 2)
+  entradaEur       Decimal?  @map("entrada_eur") @db.Decimal(10, 2)
+  /// NULL = el producto NO declara franquicia. JAMÁS «sin franquicia».
+  franquiciaEur    Decimal?  @map("franquicia_eur") @db.Decimal(10, 2)
+  firmeza          String
+  requiereRerate   Boolean   @map("requiere_rerate")
+  referenciaVendor String?   @map("referencia_vendor")
+  coberturas       Json      @default("[]")
+  avisos           Json      @default("[]")
+  /// equivalente / mas_barata / mejor_cubierta. ARRAY porque una misma opción
+  /// puede ser dos a la vez, y eso se dice en vez de repartirlo.
+  papeles          String[]  @default([])
+  elegidaAt        DateTime? @map("elegida_at") @db.Timestamptz(6)
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@unique([presupuestoId, orden], map: "presupuesto_opcion_orden_unico")
+  @@index([presupuestoId, orden])
+  @@map("presupuesto_opcion")
+}
+
+/// Telemetría del presupuesto. APPEND-ONLY por trigger: un libro que se puede
+/// editar no prueba nada.
+model PresupuestoEvento {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId String   @map("presupuesto_id") @db.Uuid
+  tipo          String
+  ocurridoAt    DateTime @default(now()) @map("ocurrido_at") @db.Timestamptz(6)
+  /// 'corredor' | 'cliente' | 'sistema'. Sin esto, «visto» y «marcado como
+  /// visto por Alberto» serían la misma fila.
+  origen        String
+  detalle       Json     @default("{}")
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@index([presupuestoId, ocurridoAt])
+  @@map("presupuesto_evento")
+}
+
+/// La evidencia de una firma. Genérica desde el día uno porque la carta de
+/// nombramiento de mediador firma igual, y una segunda tabla de firmas sería un
+/// segundo criterio de qué cuenta como firma.
+///
+/// 🚨 Única por documento: pulsar dos veces devuelve la primera evidencia, no
+/// crea una segunda. Con dos firmas sobre el mismo documento no hay «la firma».
+model Firma {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId   String   @map("correduria_id") @db.Uuid
+  documentoTipo  String   @map("documento_tipo")
+  documentoId    String   @map("documento_id") @db.Uuid
+  clienteId      String   @map("cliente_id") @db.Uuid
+  identidadId    String?  @map("identidad_id") @db.Uuid
+  /// Hash del DOCUMENTO que se enseñó al firmar, no de esta fila.
+  docHash        String   @map("doc_hash")
+  algoritmo      String
+  metodo         String
+  firmanteNombre String?  @map("firmante_nombre")
+  firmanteEmail  String?  @map("firmante_email")
+  firmanteDni    String?  @map("firmante_dni")
+  ip             String?
+  userAgent      String?  @map("user_agent")
+  selloTiempo    DateTime @default(now()) @map("sello_tiempo") @db.Timestamptz(6)
+  evidencia      Json     @default("{}")
+  creadaAt       DateTime @default(now()) @map("creada_at") @db.Timestamptz(6)
+
+  @@unique([documentoTipo, documentoId], map: "firma_documento_unico")
+  @@index([clienteId, creadaAt])
+  @@map("firma")
+}

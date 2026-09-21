@@ -26,6 +26,7 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto 
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
+import PrepararPresupuesto from './PrepararPresupuesto'
 import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
 import { SelectorBuscable } from '../../../SelectorBuscable'
@@ -1911,6 +1912,18 @@ function Precios({
           />
         )
       })}
+
+      {/* 📄 Preparar el presupuesto que verá el cliente (PR 1 de la spec del
+          21/09/2026). No manda nada, no vuelve a cotizar y no cuesta un euro:
+          congela las opciones de esta misma consulta, que ya está pagada.
+          Sin `cotizacionId` no hay de dónde congelarlas, y entonces no se
+          ofrece el botón en vez de ofrecer uno que falla al pulsarlo. */}
+      {cotizacionIdDe(r.guardado) !== null && (
+        <PrepararPresupuesto
+          tarificacionId={cotizacionIdDe(r.guardado) as string}
+          simulado={r.simulado}
+        />
+      )}
 
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p className="muted">
