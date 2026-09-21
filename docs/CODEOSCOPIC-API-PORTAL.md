@@ -136,6 +136,21 @@ versiones posteriores; **no elige una**. En la medición, cuatro acabados (PASSI
 diseño: un campo que trae 1 de 50 no puede desaparecer), así que prueba que el campo EXISTE, no que
 lo traigan las 53. Para afirmar cobertura hay que contarlo.
 
+🚨 **DOS versiones distintas pueden tener el MISMO nombre, y el desplegable solo enseña el nombre.**
+En las 53 medidas hay **tres pares** con nombre idéntico y código Base7 distinto: `ELECTRIC DRIVE EQ
+PASSION` (`…051` / `…046`), `ELECTRIC DRIVE EQ PRIME` (`…052` / `…048`) y `ELECTRIC DRIVE EQ`
+(`…049` / `…045`). Como `normalizarOpciones` deja solo `{id, nombre}`, el corredor ve dos filas
+idénticas y **no tiene con qué elegir**: si acierta es por azar, y cotizar la que no era son 0,50€
+gastados en el precio de otro coche. Es justo lo que desempatarían los campos descartados
+(`releaseMarketDate`, `powerCv`, `retailPrice`).
+
+⚠️ **Y el parámetro `engine` NO parece filtrar.** Pidiendo `engine=Gasolina` volvieron las 53, y por
+nombre **20 no son de gasolina**: 6 con `CDI` (diésel) y 14 `ELECTRIC DRIVE`. [Probable, no medido
+del todo] — se infiere del nombre, porque la muestra son 3 entradas y las 3 sí son `Gasoline`.
+Confirmarlo es gratis: repetir con `engine=Diesel` y ver si la lista cambia. Si no cambia, `engine`
+es un parámetro obligatorio que el vendor exige (400 sin él, medido el 03/09/2026) y luego ignora,
+y entonces la única criba real del desplegable es la que hagamos nosotros.
+
 💡 **Hallazgo de propina, y vale más que la fecha:** el catálogo trae **`engine.displacement`,
 `engine.powerCv`, `engine.type`, `doors`, `seats`, `type` (carrocería) y `retailPrice`** — que es
 casi exactamente lo que pide el emparejamiento contra una ficha técnica de
