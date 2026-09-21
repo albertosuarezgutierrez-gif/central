@@ -140,7 +140,7 @@ export function normalizarRecordatorio(entrada: EntradaRecordatorio): ResultadoR
 }
 
 /** Último día del mes `y`-`m` (0-indexado), en UTC. */
-function ultimoDiaDelMes(y: number, m: number): number {
+export function ultimoDiaDelMes(y: number, m: number): number {
   return new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
 }
 

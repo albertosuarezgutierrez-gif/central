@@ -438,3 +438,21 @@ export type { DecisionRevision, EntradaRevision, MotivoNoRevision } from './revi
 // candidatos y decide el match EXACTO; la lectura de la BD vive en `apps/asegura`.
 export { candidatosNumeroPoliza, elegirPolizasResueltas } from './correo-aseguradora.ts'
 export type { PolizaResoluble, ResolucionPoliza } from './correo-aseguradora.ts'
+
+// Próxima ITV por la periodicidad legal (RD 920/2017) sobre la fecha de
+// matriculación (21/09/2026). Lee su cabecera: `fiabilidad` distingue la
+// primera inspección (firme) de un ciclo que SUPONE revisiones anteriores.
+export { perfilItvDeRamo, proximaItv } from './itv.ts'
+export type { FiabilidadItv, PerfilItv, ProximaItv } from './itv.ts'
+
+// Lo que el portal ya sabe y puede ofrecer precargado al ponerse un
+// recordatorio (21/09/2026). `confianza` decide AQUÍ, no en la pantalla, si una
+// fecha se puede meter sola en el formulario o hay que ofrecerla.
+export { precargasDeRecordatorio } from './recordatorio-precarga.ts'
+export type {
+  ConfianzaPrecarga,
+  EntradaPrecargas,
+  PolizaParaPrecarga,
+  Precargas,
+  PrecargaRecordatorio,
+} from './recordatorio-precarga.ts'
