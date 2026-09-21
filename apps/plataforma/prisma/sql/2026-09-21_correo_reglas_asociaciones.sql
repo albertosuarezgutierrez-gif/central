@@ -11,3 +11,16 @@ INSERT INTO correo_reglas (patron, categoria, creado_por) VALUES
   ('@infoacsa.com',       'asociacion-corredores', 'alberto'),
   ('@apromes.com',        'asociacion-corredores', 'alberto')
 ON CONFLICT (patron) DO NOTHING;
+
+-- 🚨 Segunda tanda, el mismo día y por un fallo MEDIDO: AUNNA contestó desde
+-- `javier.sampedro@aunnanetwork.es`, no desde el `info@aunnaasociacion.es` al que se
+-- escribió. La regla no casó y la respuesta cayó al clasificador genérico. Escribir a un
+-- buzón NO garantiza que la casa conteste desde ese dominio: las agrupaciones tienen una
+-- sociedad detrás (aunnanetwork/aunnabroker para Aunna, Grupo PACC para Pactrebol) y
+-- responde una persona con el correo corporativo de ESA sociedad. Se siembran también
+-- esos dominios.
+INSERT INTO correo_reglas (patron, categoria, creado_por) VALUES
+  ('@aunnanetwork.es',  'asociacion-corredores', 'alberto'),
+  ('@aunnabroker.es',   'asociacion-corredores', 'alberto'),
+  ('@grupopacc.es',     'asociacion-corredores', 'alberto')
+ON CONFLICT (patron) DO NOTHING;
