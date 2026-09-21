@@ -41,6 +41,10 @@ export const CRON_JOBS: CronJob[] = [
   // el parte del día lea siempre una huella fresca. Lee la cartera por el puerto
   // de central-asegura; si no puede leerla, lo dice — no se calla.
   { path: '/api/cron/correduria-renovaciones', schedule: '30 6 * * *' },
+  // Seguimiento de sustituciones (cambio de compañía): 06:35, justo detrás de
+  // renovaciones — comparten sección «Hoy» de /correduria y es cómodo que sus
+  // avisos lleguen juntos. Digest diario mientras algo siga sin confirmar CIMA.
+  { path: '/api/cron/correduria-sustituciones', schedule: '35 6 * * *' },
   // Recaptación por email de leads solo-email (sin teléfono usable): 07:00,
   // antes del vigía de latidos de las 07:45. Manda hasta 25/día por Resend con
   // baja de un clic (LSSI art. 21); a quien tiene teléfono se le sigue

@@ -298,3 +298,41 @@ export function conciliarConCima(nuestra: NuestraPoliza, cima: CimaPoliza): Conc
     conservado,
   }
 }
+
+// ─── Sustitución por retarificación (cambio de compañía) ────────────────────
+//
+// Cuando se retarifica una póliza y se EMITE de verdad con otra compañía, la
+// vieja se marca `sustituida_at` (nuestro dato, nunca lo toca CIMA) y la nueva
+// guarda `poliza_origen_id`. El seguimiento no lo decide un estado inventado:
+// lo decide si CIMA ya ha confirmado la nueva (`id_poliza_entidad`), que es la
+// única prueba real de que el cliente la está pagando — hasta entonces «se ha
+// emitido» no es «está en vigor».
+
+export type SeguimientoSustitucion = 'no_aplica' | 'esperando_cima' | 'confirmada'
+
+/** ¿Hace falta seguir esta sustitución, o ya la confirmó CIMA? `polizaOrigenId: null` = esta póliza no viene de una sustitución. */
+export function seguimientoSustitucion(args: { polizaOrigenId: string | null; idPolizaEntidad: string | null }): SeguimientoSustitucion {
+  if (!args.polizaOrigenId) return 'no_aplica'
+  return args.idPolizaEntidad ? 'confirmada' : 'esperando_cima'
+}
+
+export type ValidacionPolizaOrigen = { valido: true } | { valido: false; aviso: string }
+
+/**
+ * Guardián anti-duplicado: una póliza sustituida solo puede tener UNA
+ * sustituta. Sin esto, retarificar dos veces la misma póliza (o un reintento
+ * que se cuela) dejaría a la vieja con dos «hijas» — la ficha reversa
+ * (`sustituidaPor`) solo puede enseñar una, así que la otra se volvería
+ * invisible desde ahí aunque su propia ficha SÍ diga «sustituye a X»: un
+ * enlace roto en un sentido y vivo en el otro.
+ *
+ * No bloquea la emisión (el dinero ya se ha gastado en Codeoscopic): degrada
+ * a «se registra sin enlazar», con el aviso explicando por qué, igual que el
+ * resto de `avisos` de `prepararPolizaEmitida`.
+ */
+export function validarPolizaOrigen(origen: { existe: boolean; yaTieneSustituta: boolean } | null): ValidacionPolizaOrigen {
+  if (origen === null) return { valido: true }
+  if (!origen.existe) return { valido: false, aviso: 'la póliza de origen no es de esta correduría: se registra la emisión sin enlazarla' }
+  if (origen.yaTieneSustituta) return { valido: false, aviso: 'la póliza de origen ya tenía otra sustituta: no se duplica el enlace (revisa cuál es la buena a mano)' }
+  return { valido: true }
+}
