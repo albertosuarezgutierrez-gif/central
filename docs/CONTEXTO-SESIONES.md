@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🚨 La alerta de PostHog «CIMA pull heartbeat» que spamea a Alberto es **FALSA**: la
+ingesta de CIMA está sana (55 pulls en BD, ficheros de Occident el 20/09, Actions en verde) y lo roto
+es la telemetría — **PostHog no recibe NI UN evento de ningún tipo desde el 05/09** (no es cuota:
+80/1.000.000). El fix asegura#834 (17/09) partió de un diagnóstico erróneo y no podía funcionar.
+Peor: la fuente Postgres del warehouse apunta al Supabase VIEJO de Manuel (congelado el 31/08 por el
+traspaso), así que **[A1] auth sign-in failures y [A14] webhook signature llevan 3 semanas CIEGAS**
+en verde. Diagnóstico, propuesta y prompt de Chrome en `docs/ASEGURA-POSTHOG-SONDAS-CIEGAS.md`.
+Vigilar: `cima-health-alert` falló 1 vez (20/09) con 401 — si repite hoy, es avería.
+
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
 `product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
