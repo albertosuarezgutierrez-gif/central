@@ -6,6 +6,7 @@ import { coincidenciaBloquea, provinciaPorCp, revisarAlta } from '@central/modul
 import { btnStyle } from '@/components/ui'
 import { campoDesdeTermino, interpretarEscritura, textoMotivo, type ResultadoEscritura } from '@/lib/cliente-edicion-asegura'
 import { RAMOS_PRESUPUESTO } from '@/lib/ficha-asegura'
+import DireccionConfirmable from './DireccionConfirmable'
 
 /**
  * Alta de un cliente de la correduría desde plataforma.
@@ -124,7 +125,14 @@ export default function NuevoCliente({ q }: { q?: string }) {
 
       <Grupo titulo="Dónde vive">
         <Campo label="Dirección" mal={campoMal === 'direccion'}>
-          <input value={f.direccion} onChange={(e) => set('direccion', e.target.value)} placeholder="Calle, número, piso" style={campo} />
+          <DireccionConfirmable
+            value={f.direccion}
+            onChange={(v) => set('direccion', v)}
+            codigoPostal={f.codigoPostal}
+            ciudad={f.ciudad}
+            placeholder="Calle, número, piso"
+            style={campo}
+          />
         </Campo>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
           <Campo label="Código postal" mal={campoMal === 'codigoPostal'}>
