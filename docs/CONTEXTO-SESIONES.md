@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🖥️ **Presupuesto al cliente: PR 2 (pantalla del portal, solo lectura) + el ReRate/Submit
+ya cuentan en el libro — ambos EN PRODUCCIÓN.** `apps/asegura-portal` gana la carátula pública y la
+comparativa autenticada; grants por columnas y fix del trigger `presupuesto_no_enviar_simulado()`
+aplicados en la Supabase real. Independiente: `/oferta`/`/emitir` abren su propia línea en
+`codeoscopic_consumo` (coste a 0€ por defecto). `code-review` cazó y se corrigieron 4 fallos reales
+(colisión de rutas del portal, dos afirmaciones falsas de "seguro actual" en venta nueva, un 5xx del
+Submit cerrado como facturable). `central-asegura`/`asegura-portal` confirmados `READY`. PR #3281.
+Pendiente: el PR 3 (envío) escriba `destino_hash` para que la autorización por canal conceda algo.
+
 **(21/09/2026)** 🚨 **El residuo de CIMA eran RECIBOS, y la causa es una póliza DUPLICADA — no una
 llamada a Occident.** Corrige lo dicho en el PR #3270: los 4 ficheros del aviso no son «3 SIN + 1
 POL» sino **3 REC + 1 POL, los 4 de Occident**, y **ninguno tiene copia en el crudo**, así que la
