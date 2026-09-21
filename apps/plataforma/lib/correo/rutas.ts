@@ -78,6 +78,20 @@ export const RUTAS: RutaCorreo[] = [
     ejemplos: ['Recibos devueltos de banco 14-08-2026', 'Resumen de recibos próximos a la anulación', 'Relacion anulacion polizas por impago', 'DELEGACIÓN RECIBO Nº … PÓLIZA MAPFRE'],
   },
   {
+    // Respuestas de las asociaciones/agrupaciones de corredores a las que Alberto ha pedido
+    // condiciones para asociarse (AUNNA, Pactrebol, ACSA, APROMES…). Es `inmediato` y NO
+    // `correduria` a propósito: son negociaciones abiertas con plazo —una cotización de cuota,
+    // un cuadro de rappel o un contrato de adhesión— y en el digest de las 22:30 se leerían
+    // junto a veinte comunicados comerciales de aseguradoras, que es justo lo que `correduria`
+    // recoge. Tampoco es `leads-negocio`: ahí Alberto vende, aquí le venden a él.
+    categoria: 'asociacion-corredores',
+    etiqueta: 'Triaje/Asociaciones',
+    archivar: false,
+    aviso: 'inmediato',
+    descripcion: 'Respuesta de una ASOCIACIÓN, agrupación o red de corredores de seguros a la que Alberto ha pedido información para asociarse: cuota, condiciones, panel de compañías, cuadro de rappel, servicio de suscripción, contrato de adhesión o documentación de alta. NO es una aseguradora liquidando comisiones (correduria) ni un aviso de recibo impagado (correduria-recibo).',
+    ejemplos: ['AUNNA Asociación', 'Pactrebol', 'ACSA Andalucía', 'APROMES', 'FECOR', 'condiciones de asociación', 'contrato de adhesión'],
+  },
+  {
     categoria: 'personal-importante',
     etiqueta: 'Triaje/Personal',
     archivar: false,
