@@ -225,7 +225,7 @@ test('🚨 un recordatorio RECURRENTE vuelve a avisar en el ciclo siguiente', ()
   // siempre. La fila avanza de fecha; la clave tiene que avanzar con ella.
   const ciclo1 = new Date('2026-09-16T00:00:00Z')
   const ciclo2 = new Date('2027-09-16T00:00:00Z')
-  const uno = pendiente({ obligaciones: [{ id: 'fila-1', titulo: 'ITV del Ibiza', fechaAccionable: ciclo1 }] })
+  const uno = pendiente({ obligaciones: [{ id: 'fila-1', titulo: 'ITV del Ibiza', fechaAccionable: ciclo1, repiteCadaMeses: 12 }] })
   const a1 = avisosNuevos(uno, HOY, new Set())!
   assert.equal(a1.nuevos.length, 1)
   const sellado = new Set([claveAviso(a1.nuevos[0]!)])
@@ -234,7 +234,7 @@ test('🚨 un recordatorio RECURRENTE vuelve a avisar en el ciclo siguiente', ()
   assert.equal(avisosNuevos(uno, HOY, sellado)!.nuevos.length, 0)
 
   // Ciclo siguiente, MISMA fila: sí avisa.
-  const dos = pendiente({ obligaciones: [{ id: 'fila-1', titulo: 'ITV del Ibiza', fechaAccionable: ciclo2 }] })
+  const dos = pendiente({ obligaciones: [{ id: 'fila-1', titulo: 'ITV del Ibiza', fechaAccionable: ciclo2, repiteCadaMeses: 12 }] })
   assert.equal(avisosNuevos(dos, new Date('2027-09-15T08:00:00Z'), sellado)!.nuevos.length, 1)
 })
 
@@ -252,4 +252,33 @@ test('🚨 el emisor coge también los recordatorios SIN póliza, por el víncul
   assert.match(src, /clientePorIdentidad\.get\(o\.identidadId\)/, 'una obligación sin póliza se reparte por su identidad')
   // Y el que no tiene ficha se CUENTA, no se pierde.
   assert.match(src, /sinFicha/, 'lo que no se puede avisar se declara en el resumen')
+})
+
+test('🚨 una obligación de PÓLIZA no cambia de clave aunque CIMA corrija el vencimiento', () => {
+  // `sincronizarObligacionesDeIdentidad()` reescribe `fechaAccionable` en cada
+  // carga de la bóveda. Si la clave del sello llevara la fecha también aquí, una
+  // corrección dentro de la ventana mandaría un SEGUNDO correo de la misma
+  // renovación — y de paso, al desplegar, todo lo ya sellado habría vuelto a
+  // contar como nuevo.
+  const antes = pendiente({ obligaciones: [{ id: 'poliza-1', titulo: 'Renovación', fechaAccionable: new Date('2026-09-16T00:00:00Z') }] })
+  const a = avisosNuevos(antes, HOY, new Set())!
+  const sellado = new Set([claveAviso(a.nuevos[0]!)])
+  const despues = pendiente({ obligaciones: [{ id: 'poliza-1', titulo: 'Renovación', fechaAccionable: new Date('2026-09-18T00:00:00Z') }] })
+  assert.equal(avisosNuevos(despues, HOY, sellado)!.nuevos.length, 0, 'la fecha cambió y se mandó otro correo de lo mismo')
+})
+
+test('🚨 con VARIAS fichas vinculadas no se escribe a ninguna, y el corredor no cuenta', () => {
+  // El fallo que esto cierra: un `portal_vinculo` puede nacer de
+  // `cliente_emails`, que son correos de contacto que pueden ser DE OTRA
+  // PERSONA. Desempatar por el más antiguo mandaba el recordatorio del hijo a
+  // la bandeja de su madre, sellado bajo el clienteId de ella. Y el vínculo de
+  // origen `corredor` es el temporal de «ver su portal»: apunta a la ficha que
+  // Alberto tuviera abierta.
+  const src = fuente('apps/asegura/lib/avisos-intranet.ts')
+  assert.match(src, /origen:\s*\{\s*not:\s*'corredor'\s*\}/, 'el vínculo del corredor no puede resolver un destinatario')
+  assert.match(src, /if\s*\(fichas\.size\s*!==\s*1\)\s*continue/, 'con varias fichas no se elige ninguna')
+  assert.ok(
+    !/orderBy:\s*\{\s*creadoEn:\s*'asc'\s*\}/.test(src),
+    'no puede volver el desempate por el vínculo más antiguo',
+  )
 })

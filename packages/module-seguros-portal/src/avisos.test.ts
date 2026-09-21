@@ -62,15 +62,10 @@ test('las obligaciones entran solo en la VENTANA del módulo (0..7 días antes d
     obl({ id: 'pasada', fechaAccionable: dias(-1) }),
   ]
   const r = avisosDe({ autorizaciones: vacias, obligaciones, peticiones: [], datos: [], carnets: [], hoy: HOY })
-  // El id lleva la FECHA del ciclo pegada (21/09/2026): es lo que permite que un
-  // recordatorio recurrente vuelva a avisar el año siguiente pese al sello de
-  // `portal_aviso_enviado`, que va por este id. Se comprueba el prefijo, que es
-  // lo que identifica la fila.
   assert.deepEqual(
-    r.avisos.map((a) => a.id.split(':')[0]),
+    r.avisos.map((a) => a.id),
     ['hoy', 'borde'],
   )
-  assert.match(r.avisos[0]!.id, /^hoy:\d{4}-\d{2}-\d{2}$/, 'sin la fecha, el recurrente avisa una sola vez en su vida')
   assert.equal(r.avisos[0]!.tipo, 'obligacion_en_ventana')
   assert.equal(r.avisos[0]!.href, '/boveda', 'lleva a la bóveda, que ya no tiene un calendario con ancla propia')
   assert.match(r.avisos[0]!.detalle, /hasta el 8 de septiembre/, 'la fecha que se enseña es la ACCIONABLE, no la del vencimiento')
@@ -247,4 +242,31 @@ test('una fecha malformada no impide avisar del carné BUENO del mismo cliente',
   ]
   const r = avisosDe({ autorizaciones: vacias, obligaciones: [], peticiones: [], datos: [], carnets, hoy: HOY })
   assert.deepEqual(r.avisos.map((a) => a.id), ['bueno'])
+})
+
+test('🚨 solo el recordatorio RECURRENTE lleva la fecha del ciclo en su id', () => {
+  // Las dos mitades importan, y por motivos opuestos:
+  //  · con ciclo, sin la fecha el sello de `portal_aviso_enviado` lo deja mudo
+  //    para siempre después del primer aviso (misma fila, misma clave);
+  //  · sin ciclo, CON la fecha se manda un SEGUNDO correo de la misma
+  //    renovación en cuanto CIMA corrija el vencimiento, porque
+  //    `sincronizarObligacionesDeIdentidad()` reescribe `fechaAccionable` en
+  //    cada carga de la bóveda y la clave cambiaría con ella.
+  const base = { titulo: 'x', fechaAccionable: dias(0) }
+  const r = avisosDe({
+    autorizaciones: vacias,
+    obligaciones: [
+      { ...base, id: 'una-vez' },
+      { ...base, id: 'una-vez-explicita', repiteCadaMeses: null },
+      { ...base, id: 'recurrente', repiteCadaMeses: 12 },
+    ],
+    peticiones: [],
+    datos: [],
+    carnets: [],
+    hoy: HOY,
+  })
+  const ids = r.avisos.map((a) => a.id)
+  assert.equal(ids[0], 'una-vez')
+  assert.equal(ids[1], 'una-vez-explicita')
+  assert.match(ids[2]!, /^recurrente:\d{4}-\d{2}-\d{2}$/)
 })

@@ -766,6 +766,11 @@ model PortalObligacion {
   /// `fechaEvento` − DIAS_PREAVISO_TOMADOR. Es la fecha que se le dice al cliente.
   fechaAccionable   DateTime             @map("fecha_accionable") @db.Date
   procedencia       PortalProcedencia
+  /// Cada cuántos meses se repite el recordatorio propio (`smallint`, CHECK 1-120),
+  /// o NULL si es de una sola vez. Aquí solo se lee: es lo que distingue un aviso
+  /// que tiene ciclo siguiente de uno que no, y de eso depende la forma de la
+  /// clave con la que `portal_aviso_enviado` lo sella.
+  repiteCadaMeses   Int?                 @map("repite_cada_meses") @db.SmallInt
   confirmadaAt      DateTime?            @map("confirmada_at") @db.Timestamptz(6)
   /// Sello del envío. Que exista es lo único que impide avisar dos veces.
   avisadaAt         DateTime?            @map("avisada_at") @db.Timestamptz(6)

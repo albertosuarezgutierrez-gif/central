@@ -78,6 +78,9 @@ export type ObligacionParaAviso = {
   id: string
   titulo: string
   fechaAccionable: Date
+  /** Cada cuántos meses se repite, o `null`/ausente si es de una sola vez.
+   *  Solo se usa para la forma del id del aviso — ver el comentario de abajo. */
+  repiteCadaMeses?: number | null
 }
 
 /** Lo mínimo de una petición de acceso recibida; el resto de `PeticionRecibida` no se mira. */
@@ -297,15 +300,23 @@ export function avisosDe(x: EntradaAvisos): Avisos {
       if (!entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy: x.hoy })) continue
       avisos.push({
         tipo: 'obligacion_en_ventana',
-        // 🚨 El id lleva la FECHA del ciclo, no solo el id de la fila, y eso es
-        // lo que permite avisar de un recordatorio RECURRENTE más de una vez.
-        // El emisor de correo de la intranet sella por este id
-        // (`portal_aviso_enviado`), así que con el id pelado un «ITV cada 12
-        // meses» avisaría una vez y el año siguiente, ya sellado, se quedaría
-        // mudo para siempre — la misma fila, la misma clave. Con la fecha
-        // dentro, cada ciclo es un aviso distinto y el sello sigue impidiendo
-        // el duplicado DENTRO del ciclo, que es lo que tiene que impedir.
-        id: `${o.id}:${diaIso(o.fechaAccionable)}`,
+        // 🚨 El id lleva la fecha del ciclo SOLO si la obligación se repite, y
+        // esa distinción es la que hace segura la pieza entera.
+        //
+        // Por qué con fecha en las recurrentes: el emisor de correo de la
+        // intranet sella por este id (`portal_aviso_enviado`), así que con el
+        // id de la FILA pelado un «ITV cada 12 meses» avisaría una vez y al año
+        // siguiente —misma fila, misma clave— se quedaría mudo para siempre.
+        //
+        // 🚨 Y por qué NO en las demás: `sincronizarObligacionesDeIdentidad()`
+        // REESCRIBE `fechaAccionable` en cada carga de la bóveda, así que una
+        // corrección del vencimiento que traiga CIMA dentro de la ventana
+        // cambiaría la clave y mandaría un SEGUNDO correo de la misma
+        // renovación. El id de fila lo impide, y en una obligación derivada no
+        // hay ciclo siguiente que desbloquear. De paso, las claves ya selladas
+        // siguen valiendo: cambiar la forma para todas habría reenviado de
+        // golpe todo lo que estuviera en ventana al desplegar.
+        id: o.repiteCadaMeses ? `${o.id}:${diaIso(o.fechaAccionable)}` : o.id,
         titulo: o.titulo,
         detalle: `Puedes actuar hasta el ${FECHA.format(o.fechaAccionable)}.`,
         href: HREF_POR_TIPO.obligacion_en_ventana,
