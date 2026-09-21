@@ -12,6 +12,19 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🔍 **«¿El catálogo de Codeoscopic trae los años de cada versión?» llevaba meses
+contestándose de memoria, y era medible.** Causa: `normalizarOpciones` se queda con `id` + `nombre` y
+**tira el resto**, así que desde fuera de esa función no hay forma de saber qué manda el vendor — y el
+nombre no lleva años («4X4 DC LE AUTO»). Nuevo `?crudo=1` en `/api/operador/codeoscopic/catalogos`
+(solo `tipo=versiones`, mismo `GET` de catálogo, **0,00€**) + ruta en plataforma tras la sesión, para
+que `ASEGURA_OPERADOR_SECRET` **no salga de Vercel**: se abre una URL y ya. Resumidor puro `crudo.ts`
+(unión de claves de TODAS las entradas, `total: null` ≠ `0`, muestra íntegra); 9 cepos, 4 vistos en
+ROJO. 🚨 La guarda que lo hace servir de algo: si asegura responde 200 **sin `resumen`** es que su
+despliegue no entiende `crudo=1` y ha devuelto la lista normalizada — se corta con 502, porque
+relayarlo se leería como «el vendor no manda nada más». La pasada de `code-review` cazó justo eso.
+⏸️ Pendiente: ejecutar la medición y decidir. Y ojo — la fecha de matriculación de la matrícula es
+**aproximada** y puede venir `null`: podrá ordenar o acotar el desplegable, nunca elegir la versión.
+
 **(21/09/2026)** 🚨 **AVERÍA CONFIRMADA: el vigilante de la ingesta de CIMA lleva dos días sin
 funcionar.** `cima-health-alert` falló el 20/09 con `curl (22) error: 401` y hoy volvió a fallar
 igual — reproducido a mano (run 93, `workflow_dispatch`, 15:20 UTC). Su propio rastro en BD lo

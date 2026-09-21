@@ -154,13 +154,40 @@ export async function versiones(
   modeloId: string,
   motor: string,
 ): Promise<Opcion[]> {
-  return normalizarOpciones(
-    await catalogo(
-      config,
-      `/car/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
-        `/vehicles?engine=${encodeURIComponent(motor)}`,
-    ),
-  )
+  return (await versionesCrudas(config, marcaId, modeloId, motor)).opciones
+}
+
+/**
+ * Lo mismo, devolviendo ADEMÁS el payload del vendor sin tocar — igual que
+ * `productosDeLinea`.
+ *
+ * 🚨 No es un lujo de depuración: `normalizarOpciones` se queda con `id` y
+ * `nombre` y tira el resto, así que desde fuera de esta función **no hay forma
+ * de saber qué más manda el vendor**. La pregunta que lo motiva es si cada
+ * versión trae sus años de fabricación (para poder cruzarlos con la fecha de
+ * matriculación, que sale gratis de la matrícula); nadie lo había medido
+ * nunca, y sin el crudo la respuesta solo podía ser una suposición.
+ *
+ * El path se construye AQUÍ y solo aquí: si el crudo lo construyera por su
+ * cuenta, mediría una ruta distinta de la que usa la pantalla.
+ *
+ * Sigue siendo **gratis**: es el mismo `GET` de catálogo, con la misma caché.
+ */
+export async function versionesCrudas(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: string,
+): Promise<{ opciones: Opcion[]; crudo: unknown; path: string }> {
+  // 🚨 El path se devuelve, no se reconstruye fuera. Una medición se acompaña
+  // de la petición EXACTA que la produjo, y una copia sin `encodeURIComponent`
+  // declararía una URL distinta de la enviada en cuanto el motor llevara una
+  // barra o un espacio («Gasolina/Híbrido»): irreproducible para quien la lea.
+  const path =
+    `/car/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
+    `/vehicles?engine=${encodeURIComponent(motor)}`
+  const crudo = await catalogo(config, path)
+  return { opciones: normalizarOpciones(crudo), crudo, path }
 }
 
 // ─── Catálogos de HOGAR (gratis) ─────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
-import { resolverCatalogo } from '@/lib/retarificar-cartera'
+import { resolverCatalogo, resolverCatalogoCrudo } from '@/lib/retarificar-cartera'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -34,7 +34,39 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  const r = await resolverCatalogo(new URL(req.url).searchParams)
+  const params = new URL(req.url).searchParams
+
+  // `?crudo=1` — el payload del vendor SIN recortar, solo para `tipo=versiones`.
+  // Misma autorización, mismo `GET` de catálogo y **0,00€**: lo único que
+  // cambia es que no se tira lo que `normalizarOpciones` descarta. Sirve para
+  // medir qué manda de verdad el vendor (p. ej. si cada versión trae sus años
+  // de fabricación) en vez de suponerlo. Ver `lib/codeoscopic/crudo.ts`.
+  // Basta con que el parámetro VENGA: `crudo=si` o `crudo=xxx` entran igual y
+  // los valida la rama. Aceptar solo `1`/`true` dejaba que un valor mal escrito
+  // cayera en silencio al catálogo normalizado, con un 200 `ok` que se leería
+  // como «he mirado el crudo y no hay nada más» — la misma asimetría que este
+  // endpoint evita a conciencia con un `tipo` no soportado.
+  if ((params.get('crudo') ?? '') !== '') {
+    const c = await resolverCatalogoCrudo(params)
+    switch (c.estado) {
+      case 'ok':
+        return NextResponse.json({
+          estado: 'ok',
+          path: c.path,
+          resumen: c.resumen,
+          opciones: c.opciones,
+          gastado: '0,00€',
+        })
+      case 'invalido':
+        return NextResponse.json({ estado: 'error', causa: 'otro', mensaje: c.mensaje }, { status: 400 })
+      case 'sin_configurar':
+        return NextResponse.json({ estado: 'sin_configurar', mensaje: c.mensaje }, { status: 503 })
+      case 'error':
+        return NextResponse.json({ estado: 'error', causa: c.causa, mensaje: c.mensaje }, { status: 502 })
+    }
+  }
+
+  const r = await resolverCatalogo(params)
   switch (r.estado) {
     case 'ok':
       return NextResponse.json({
