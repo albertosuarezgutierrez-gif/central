@@ -158,3 +158,22 @@ qué NO pudiste comprobar y por qué.
   en `Not firing` con valor 0. Las tres notifican a Alberto por email y al Slack `#asegura-alerts`.
 - **Snooze:** existe, con 30 min / 1 h / 4 h / 24 h / fecha a medida. **El máximo predefinido son 24
   h**, así que silenciar no es una solución que aguante: a lo sumo compra un día.
+
+---
+
+## ✅ Arreglado y VERIFICADO (21/09/2026, 10:23 UTC)
+
+1. Creadas en el proyecto Vercel `asegura` (los tres entornos, con comentario que explica por qué):
+   `NEXT_PUBLIC_POSTHOG_KEY` y `NEXT_PUBLIC_POSTHOG_HOST`.
+2. Redeploy de producción sobre `main` (`fa4d3b9`): `dpl_DmYrb2FdifLNCkHgWdHdYpNJqUqx`, **READY**, con
+   el alias `app.grupoasegura.com` servido y `aliasError: null`. El redeploy era imprescindible:
+   `NEXT_PUBLIC_*` se inlinea en build.
+3. **La prueba, que es lo que cuenta:** se disparó `cima-pull` por `workflow_dispatch` con
+   **`dry_run=true`** (procesa en memoria, NO persiste ni confirma a TIREA) y PostHog recibió
+   `cima_pull_started`, `cima_pull_queue_depth` y `cima_pull_completed` a las **12:23:44 (Madrid)**.
+   Primeros eventos desde el 05/09. Causa confirmada Y arreglo demostrado sobre el sistema real, no
+   sobre un supuesto.
+
+⚠️ **Lo que esto NO arregla, y conviene no confundir:** las alertas **[A1]** y **[A14]** siguen
+ciegas. No dependen de estos eventos sino del data warehouse, que sigue apuntando al Supabase viejo.
+Ahí no se ha tocado nada.
