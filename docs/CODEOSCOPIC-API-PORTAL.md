@@ -420,6 +420,15 @@ Analytics, bCover, Tesis ERP— es producto suyo, no API.
    contratos activos **no se les puede renovar con la suya por API**.
 4. **Decesos, vida y salud están en Integra y nosotros tenemos CERO pólizas.** Es mercado que la
    correduría no toca hoy, no una carencia técnica.
+5. 🔎 **Comercios y Comunidades TAMPOCO son ramo de Integra (verificado 21/09/2026, búsqueda dirigida
+   en el índice completo del portal, incluido el filtro "comm" para no dejar fuera variantes).** Cero
+   coincidencias — ni endpoint, ni catálogo, ni mención — pese a que el panel Avant2 (multitarificador,
+   más amplio que la API REST) SÍ los tiene activos con Occident y Reale. Es la misma familia de fallo
+   que RC: el panel no es la API. `insuranceLine.id` **no es un enum fijo documentado** — el schema lo
+   tipa como `string` libre y `GET /insurance-lines` dice explícitamente: «si crees que falta un ramo,
+   contacta a soporte para activarlo» — así que la lista real depende de qué tenga activado CADA
+   correduría, no de un catálogo estático. Eso no cambia la conclusión: comercios/comunidades no
+   aparecen ni en el índice de operaciones ni en ningún catálogo, así que no hay endpoint que cablear.
 
 ⚠️ Lo que este documento **no** autoriza a decir: cuántas de esas compañías puede cotizar Grupo
 Asegura de verdad. Eso son `GET /insurance-lines` y los acuerdos firmados, no un PDF de marketing.
