@@ -61,6 +61,7 @@ function etiquetaBonita(categoria: string): string {
     'correduria-recibo': 'Recibo sin cobrar (correduría)',
     'huespedes': 'Huésped',
     'leads-negocio': 'Oportunidad de negocio',
+    'asociacion-corredores': 'Asociación de corredores',
     'seguridad-sospechosa': 'Seguridad',
   }
   return m[categoria] ?? categoria

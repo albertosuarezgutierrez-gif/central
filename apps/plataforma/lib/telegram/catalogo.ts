@@ -607,6 +607,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Lunes 08:30 UTC',
   },
   {
+    id: 'correduria.seo-indexacion-pendiente', categoria: 'correduria',
+    titulo: 'Artículos del blog sin indexar en Google — prompt listo',
+    que: 'Uno o más artículos de /blog llevan sin indexar en Search Console. Google no tiene API para pedir indexación de páginas normales (solo la UI), así que el mensaje trae el prompt de Claude Chrome ya armado: pégalo y en un clic solicita la indexación de cada URL.',
+    cuando: 'Lunes 08:30 UTC (detrás del informe semanal), solo si hay artículos pendientes',
+  },
+  {
     id: 'correduria.seo-agente-cambio', categoria: 'correduria',
     titulo: 'Propuesta de metadata SEO para un ramo (agente autónomo)',
     que: 'Un ramo de asegura-web no aparece en el top-10 de su consulta objetivo: la IA propone un title/description nuevo y abre un PR DRAFT contra apps/asegura-web para que lo revises. Nunca escribe a main ni mergea solo.',

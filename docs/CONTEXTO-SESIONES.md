@@ -12,6 +12,24 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** Asociaciones de corredores. Se buscó en Gmail la asociación en la que estuvo Alberto
+(E2K, que **no es asociación sino alianza por contrato marco**: clave y cartera viven en un contrato
+privado, no en estatutos). Enviados correos de presentación a **AUNNA, Pactrebol, ACSA y APROMES**
+pidiendo cuota, panel de compañías, servicio de suscripción para riesgos raros y —lo decisivo—
+**bajo qué clave DGSFP se emite el negocio**: si se emite bajo la de la agrupación, el EIAC lo recibe
+ella y nuestra cartera se queda ciega. 🚨 **AUNNA exige 1 M€ de cartera mínima (autos <55%)**: con 105
+pólizas no entra. Triaje de correo: categoría nueva `asociacion-corredores` (aviso INMEDIATO) + 4
+reglas de dominio ya insertadas en `correo_reglas`. PR #3247.
+
+**(21/09/2026)** Buscador en los CUATRO desplegables del catálogo de Codeoscopic (marca, modelo,
+combustible y versión) del retarificador y de los embudos de auto/moto de `/correduria`: el catálogo
+trae ~100 marcas y versiones con nombre IDÉNTICO (tres «1.0 TGDI TECNO 4X2» = tres Base7 distintos).
+Componente `SelectorBuscable` (mudo por debajo de 8 opciones) + helper puro `lib/filtrar-opciones.ts`.
+La **pista** de otra póliza de la misma matrícula PREfiltra —solo si el buscador se ve, solo con UNA
+candidata y buscando solo por NOMBRE (por código, un «52» de kW casa dentro de un Base7 ajeno y
+esconde la candidata buena)— pero nunca selecciona. 🪤 Lección: un cepo con un fixture que NO
+reproduce el fallo pasa por la razón equivocada; se vio verde hasta rehacerlo. PR #3240, **mergeado**.
+
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
 `product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
@@ -25,6 +43,42 @@ seguro?»: con leads `vencimiento_antiguo` (se conoce el mes real de renovación
 por esa fecha («¿te vence el seguro de X por estas fechas (mes), no?»); con `sin_vencimiento` (sin
 ningún dato) se mantiene la pregunta genérica para no inventar fecha. Solo `mensajeSugerido()` en
 `Recaptacion.tsx` (los botones manuales; el cron de email usa otro camino, sin tocar). PR #3238.
+
+**(21/09/2026)** Tercera pasada del PR #3241: la revisión obligatoria antes de sacar de draft cazó
+**cuatro** cosas, una de ellas **regresión mía**. (1) 💣 `avisosDe()` formateaba la fecha del carné
+ANTES de validarla → una fecha basura era `RangeError` y tumbaba `/api/avisos` ENTERA (500, no `n+`) y
+la pasada del emisor de intranet **para todos los clientes**. (2) 🚨 Al quitar los recordatorios
+propios del cron de correo, `avisadaAt` dejó de sellarse y el avance de ciclo lo exigía: sin push, un
+«ITV cada 12 meses» se quedaba clavado PARA SIEMPRE — antes lo avanzaba, de rebote, el correo
+equivocado. Tercer brazo por TIEMPO (la misma ventana del aviso). (3) El cron de **push** mandaba el
+texto de renovación de póliza sobre una ITV; ahí NO se excluyen (es el único canal de un recordatorio
+sin póliza): se arregla el TEXTO, por tipo. (4) El aviso de carné caducado enlazaba a «Mis datos»,
+donde el carné no se pinta. 🪤 Lección: los cuatro salieron de correr `code-review` sobre la tanda
+que ya se había dado por verificada con 15 mutaciones en verde — **las mutaciones prueban los cepos
+que escribiste, no los que te faltan**.
+
+**(21/09/2026)** Segunda tanda del PR #3241, sobre lo mismo. (1) Aviso **`carnet_caducado`** en la
+campana del portal: el catálogo solo miraba el carné *por* caducar, así que el ya caducado
+desaparecía justo cuando hace falta decirlo (ventana 730 días, excluyente con el de proximidad, texto
+no acusatorio). (2) 🚨 **Fallo serio que mi propia precarga hacía alcanzable**: el cron de
+vencimientos de `apps/asegura` cogía TODA obligación con `avisadaAt: null` sin mirar el tipo, y su
+correo dice «el seguro vence el X» — con la ITV colgada de su póliza, el cliente leería que se queda
+sin cobertura. Arreglado en la raíz (`tipo: { notIn: TIPOS_RECORDATORIO_PROPIO }`, que sube al módulo
+puro). (3) Catálogo §R-§V. ⏸️ **§T queda SIN arreglar a propósito** (decisión de Alberto): los
+recordatorios recurrentes se pueden quedar clavados —el emisor genérico sella en `portal_aviso_enviado`
+mientras `avanzarRecordatoriosRecurrentes` exige `avisadaAt`/`avisadaPushAt`, y excluye los que no
+tienen póliza— y tocarlo es tocar un cron que escribe a clientes reales.
+
+**(21/09/2026)** Precarga de recordatorios en el portal del cliente (PR #3241, §B de
+`CORREDURIA-INTRANET-IDEAS`). Alberto: «esto se podría automatizar más… ¿tienes datos de clientes?».
+Sí, de dos: el **carné** (ya lo calcula `caducidadCarnet()` en asegura) y la **ITV** (periodicidad
+legal RD 920/2017 sobre la matriculación, estimada de la matrícula con `fechaMatriculacionEstimada()`).
+🚨 La decisión que manda: **no valen lo mismo**. `firme` (carné) entra sola en el formulario;
+`calculada` (ITV) se OFRECE con lo supuesto delante y solo entra si la persona la acepta — trato de
+Catastro. Lo decide `precargasDeRecordatorio()` en el módulo puro, NO el JSX, con guardián de raíz.
+`code-review` cazó 5, una grave: el escalón a ITV anual de los 10 años se saltaba un ciclo entero en
+los matriculados un 29 de febrero (119 meses ≠ 120). 11 mutaciones vistas en rojo. ⏸️ Sin probar en
+navegador ni medir a 320px (hace falta sesión del portal + BD): declarado en el PR.
 
 **(21/09/2026)** Recaptación + control de WhatsApp en Renovaciones. (1) `(legacy)` (26.987 pólizas del
 volcado, centinela del importador) se colaba como «compañía» en «Antes con» y en el mensaje de
@@ -42,6 +96,13 @@ apertura/clic; un email muerto se reintentaba cada 14 días para siempre). (2) `
 (lib/recaptacion-silencio.ts) saca de la cola a quien lleva 3 envíos sin abrir ninguno — corre en cada
 pasada del lote diario. NO se creó ningún "apartado marketing" nuevo: el sistema de recaptación (cola,
 cooldown, lote diario, pantalla en `/correduria`) YA existía y cubría casi todo lo pedido.
+
+**(21/09/2026)** Cron `seo-correduria` (lunes 08:30 UTC) ya avisa solo cuando hay artículos de
+`/blog` sin indexar en Search Console: como la API de Google no tiene «solicitar indexación» para
+páginas normales (solo la UI), el aviso trae el prompt de Claude Chrome YA ARMADO con las URLs
+pendientes — Alberto lo pega y en un clic las pide, en vez de que haya que detectarlas y
+redactarlas a mano cada semana (como se hizo hoy con 3 URLs). Nuevo `lib/seo-correduria/
+indexacion-pendiente.ts` (puro, 6 tests) + id de catálogo `correduria.seo-indexacion-pendiente`.
 
 **(21/09/2026)** Auditoría ligera — 4 PRs mergeados sin entrada de memoria (huella perdida, cazada por
 el paso 4 de `/auditoria-diaria`): **#3202** enlaza y sigue las pólizas sustituidas por retarificación

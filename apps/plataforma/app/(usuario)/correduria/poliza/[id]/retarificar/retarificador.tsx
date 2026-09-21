@@ -22,6 +22,7 @@ import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
 import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
+import { SelectorBuscable } from '../../../SelectorBuscable'
 import {
   agruparPrecios,
   defensaDeCartera,
@@ -29,10 +30,8 @@ import {
   FILTRO_PRECIOS_VACIO,
   FIRMEZAS,
   FRANQUICIAS,
-  type CompaniaCatalogo,
   type Defensa,
   type FiltroPrecios,
-  type PolizaCliente,
 } from '@central/module-seguros'
 
 import type { ContextoDefensa } from '@/lib/contexto-defensa'
@@ -559,6 +558,18 @@ export default function Retarificador({
     return r.opciones
   }
 
+  // La pista para el BUSCADOR de la versión — y solo para el buscador.
+  //
+  // Sale de otra póliza de la misma matrícula, así que prefiltra el desplegable
+  // y se dice en pantalla; seleccionar sigue siendo del corredor (ver el 🚨 de
+  // abajo). Y solo con UNA candidata: con dos o más se contradicen entre sí
+  // (`FORTWO COUPE PURE 52…` contra `FORFOUR PURE 1.1…`), y prefiltrar por una
+  // sería tomar partido en silencio.
+  const pistaVersion = useMemo(
+    () => (vehiculo?.versiones.length === 1 ? vehiculo.versiones[0].version : null),
+    [vehiculo],
+  )
+
   // ── Preselección desde la ficha ────────────────────────────────────────────
   //
   // La compañía manda matrícula, MARCA y MODELO; lo único que falta es la
@@ -1043,20 +1054,16 @@ export default function Retarificador({
             falta={false}
             ayuda={<ProcedenciaCatalogo emp={autoMarca} elegido={marcaId} que="marca" />}
           >
-            <select
+            <SelectorBuscable
               id="marca"
-              value={marcaId}
-              onChange={(e) => void alElegirMarca(e.target.value)}
-              disabled={deshabilitado || cargando === 'marcas'}
-              style={{ minHeight: 44 }}
-            >
-              <option value="">{cargando === 'marcas' ? 'Cargando…' : 'Elige marca'}</option>
-              {marcas.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nombre}
-                </option>
-              ))}
-            </select>
+              valor={marcaId}
+              onCambiar={(v) => void alElegirMarca(v)}
+              opciones={marcas}
+              deshabilitado={deshabilitado || cargando === 'marcas'}
+              textoVacio={cargando === 'marcas' ? 'Cargando…' : 'Elige marca'}
+              nombre="marca"
+              plural="marcas"
+            />
           </Campo>
 
           <Campo
@@ -1065,20 +1072,16 @@ export default function Retarificador({
             falta={false}
             ayuda={<ProcedenciaCatalogo emp={autoModelo} elegido={modeloId} que="modelo" />}
           >
-            <select
+            <SelectorBuscable
               id="modelo"
-              value={modeloId}
-              onChange={(e) => void alElegirModelo(e.target.value)}
-              disabled={!marcaId || cargando === 'modelos'}
-              style={{ minHeight: 44 }}
-            >
-              <option value="">{cargando === 'modelos' ? 'Cargando…' : 'Elige modelo'}</option>
-              {modelos.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nombre}
-                </option>
-              ))}
-            </select>
+              valor={modeloId}
+              onCambiar={(v) => void alElegirModelo(v)}
+              opciones={modelos}
+              deshabilitado={!marcaId || cargando === 'modelos'}
+              textoVacio={cargando === 'modelos' ? 'Cargando…' : 'Elige modelo'}
+              nombre="modelo"
+              plural="modelos"
+            />
           </Campo>
 
           <Campo
@@ -1094,20 +1097,16 @@ export default function Retarificador({
               </span>
             }
           >
-            <select
+            <SelectorBuscable
               id="motor"
-              value={motorId}
-              onChange={(e) => alElegirMotor(e.target.value)}
-              disabled={deshabilitado || cargando === 'motores'}
-              style={{ minHeight: 44 }}
-            >
-              <option value="">{cargando === 'motores' ? 'Cargando…' : 'Elige combustible'}</option>
-              {motores.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nombre}
-                </option>
-              ))}
-            </select>
+              valor={motorId}
+              onCambiar={alElegirMotor}
+              opciones={motores}
+              deshabilitado={deshabilitado || cargando === 'motores'}
+              textoVacio={cargando === 'motores' ? 'Cargando…' : 'Elige combustible'}
+              nombre="combustible"
+              plural="combustibles"
+            />
           </Campo>
 
           <Campo
@@ -1146,26 +1145,24 @@ export default function Retarificador({
                 </button>
               </div>
             ) : (
-              <select
+              <SelectorBuscable
                 id="version"
-                value={codigoVehiculo}
-                onChange={(e) => setCodigoVehiculo(e.target.value)}
-                disabled={!modeloId || !motorId || cargando === 'versiones'}
-                style={{ minHeight: 44 }}
-              >
-                <option value="">
-                  {cargando === 'versiones'
+                valor={codigoVehiculo}
+                onCambiar={setCodigoVehiculo}
+                opciones={versiones}
+                deshabilitado={!modeloId || !motorId || cargando === 'versiones'}
+                textoVacio={
+                  cargando === 'versiones'
                     ? 'Cargando…'
                     : !motorId
                       ? 'Elige antes el combustible'
-                      : 'Elige versión'}
-                </option>
-                {versiones.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nombre}
-                  </option>
-                ))}
-              </select>
+                      : 'Elige versión'
+                }
+                nombre="versión"
+                plural="versiones"
+                marcador="Buscar: TECNO, 48V, 4X2…"
+                pista={pistaVersion}
+              />
             )}
           </Campo>
 

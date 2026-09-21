@@ -2,7 +2,11 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { SUGERENCIAS_RECORDATORIO, type TipoRecordatorio } from '@central/module-seguros-portal'
+import {
+  SUGERENCIAS_RECORDATORIO,
+  type PrecargaRecordatorio,
+  type TipoRecordatorio,
+} from '@central/module-seguros-portal'
 
 import { fechaEs } from '@/lib/fechas'
 import type { RecordatorioVista } from '@/lib/recordatorios'
@@ -62,18 +66,30 @@ type Estado = { tipo: 'listo' } | { tipo: 'guardando' } | { tipo: 'error'; texto
 export function Recordatorios({
   recordatorios,
   polizas,
+  precargas,
+  carnetsIlegibles,
 }: {
   recordatorios: RecordatorioVista[]
   /** Para poder decir «ITV del Ibiza» en vez de «ITV»: Alberto, 13/09/2026
    *  («lo lógico es asignarlo al bien asegurado»). La MISMA lista que ya arma
    *  `page.tsx` para `ParteSiniestro` — matrícula/dirección, no nº de póliza. */
   polizas: readonly PolizaOpcionParte[]
+  /** Lo que ya sabemos y se le puede ofrecer hecho (21/09/2026). Lo compone
+   *  `precargasDeRecordatorio()` en el SERVIDOR: aquí no se calcula ninguna
+   *  fecha ni se decide de qué calidad es un dato. */
+  precargas: readonly PrecargaRecordatorio[]
+  /** `true` = no hemos podido comprobar si tiene carné. Se DICE: callarlo lo
+   *  haría indistinguible de «no tienes ninguno». */
+  carnetsIlegibles: boolean
 }) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
   const [form, setForm] = useState<Formulario>(VACIO)
   const [estado, setEstado] = useState<Estado>({ tipo: 'listo' })
   const [borrandoId, setBorrandoId] = useState<string | null>(null)
+  /** La precarga con la que se abrió el formulario, para poder explicar de
+   *  dónde sale la fecha (o para ofrecerla, si es calculada). */
+  const [precarga, setPrecarga] = useState<PrecargaRecordatorio | null>(null)
 
   function abrirConSugerencia(clave: string) {
     // Con un guardado en curso, abrir otra sugerencia pisaría `form`/`estado` con datos de
@@ -94,8 +110,43 @@ export function Recordatorios({
           }
         : VACIO,
     )
+    setPrecarga(null)
     setEstado({ tipo: 'listo' })
     setAbierto(true)
+  }
+
+  /**
+   * Abre el formulario con lo que ya sabemos.
+   *
+   * 🚨 La fecha SOLO se mete sola cuando la precarga es `firme` (el carné: sale
+   * de fechas reales de la ficha y de una cuenta legal exacta). Una `calculada`
+   * —la ITV, que supone la matriculación y las revisiones anteriores— se deja
+   * VACÍA y se ofrece debajo del campo con su aviso, que es el mismo trato que
+   * reciben los metros del Catastro. Rellenarla sola dejaría que alguien pulse
+   * «Guardar» sin mirar y se lleve una fecha que puede estar a meses de la suya.
+   *
+   * Quién es firme y quién no NO se decide aquí: viene calculado del servidor.
+   */
+  function abrirConPrecarga(p: PrecargaRecordatorio) {
+    if (estado.tipo === 'guardando') return
+    setForm({
+      tipo: p.tipo,
+      titulo: p.titulo,
+      fecha: p.confianza === 'firme' ? p.fecha : '',
+      repite: opcionRepiteDe(p.repiteCadaMeses),
+      repiteOtro: '',
+      poliza: p.polizaValor ?? '',
+    })
+    setPrecarga(p)
+    setEstado({ tipo: 'listo' })
+    setAbierto(true)
+  }
+
+  function cerrar() {
+    setAbierto(false)
+    setForm(VACIO)
+    setPrecarga(null)
+    setEstado({ tipo: 'listo' })
   }
 
   async function guardar(e: React.FormEvent) {
@@ -133,9 +184,7 @@ export function Recordatorios({
         }),
       })
       if (r.ok) {
-        setForm(VACIO)
-        setAbierto(false)
-        setEstado({ tipo: 'listo' })
+        cerrar()
         router.refresh()
         return
       }
@@ -168,6 +217,43 @@ export function Recordatorios({
         de conducir, la revisión de la caldera, los extintores del local… lo que sea, con la fecha que
         elijas. Y si es cíclico, se repite solo.
       </p>
+
+      {/* Lo que ya sabemos, primero: es lo que ahorra teclear. Va en su propia
+          fila y con su título para que se distinga de los atajos en blanco de
+          abajo — un botón que trae la fecha puesta y otro que no, mezclados, se
+          pulsan igual y solo uno cumple lo que promete.
+          🚨 Las genéricas NO se quitan: alguien puede tener un coche que no
+          aseguramos nosotros, y su ITV también le vence. */}
+      {precargas.length > 0 && (
+        <>
+          <p className="antetitulo" style={{ marginTop: 4 }}>
+            Con lo que ya sabemos de ti
+          </p>
+          <div className="recordatorio-sugerencias">
+            {precargas.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="boton-tenue"
+                onClick={() => abrirConPrecarga(p)}
+                disabled={estado.tipo === 'guardando'}
+              >
+                + {p.titulo}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* «No lo hemos podido mirar» NO es «no tienes carné»: son dos frases
+          distintas y solo una es verdad aquí. Se dice en voz baja porque no
+          bloquea nada — el formulario manual sigue debajo. */}
+      {carnetsIlegibles && (
+        <p className="suave" style={{ fontSize: 13 }}>
+          No hemos podido comprobar si nos consta tu carné de conducir, así que abajo no verás su fecha.
+          Puedes ponerla tú.
+        </p>
+      )}
 
       <div className="recordatorio-sugerencias">
         {SUGERENCIAS_RECORDATORIO.map((s) => (
@@ -208,6 +294,34 @@ export function Recordatorios({
             <span>Cuándo quieres que te avisemos</span>
             <input type="date" value={form.fecha} onChange={(e) => setForm((p) => ({ ...p, fecha: e.target.value }))} />
           </label>
+
+          {/* De dónde sale la fecha, justo debajo del campo que la lleva.
+              Dos tratos distintos porque son dos calidades de dato distintas
+              (lo decide el servidor, no esta pantalla):
+               · `firme`     → ya está puesta; se dice de dónde y que se puede cambiar.
+               · `calculada` → el campo está VACÍO y aquí se OFRECE, con lo que
+                 hemos tenido que suponer delante. El aviso se queda aunque la
+                 acepte: sigue siendo una fecha calculada después de pulsar. */}
+          {precarga !== null && precarga.confianza === 'firme' && (
+            <p className="suave" style={{ fontSize: 13, marginTop: -8 }}>
+              La hemos puesto con la fecha que nos consta en tu ficha. Si no es la tuya, cámbiala.
+            </p>
+          )}
+          {precarga !== null && precarga.confianza === 'calculada' && (
+            <div className="suave" style={{ fontSize: 13, marginTop: -8 }}>
+              <p style={{ margin: 0 }}>{precarga.aviso}</p>
+              {form.fecha !== precarga.fecha && (
+                <button
+                  type="button"
+                  className="boton-tenue"
+                  style={{ marginTop: 8 }}
+                  onClick={() => setForm((p) => ({ ...p, fecha: precarga.fecha }))}
+                >
+                  Usar el {fechaEs(new Date(`${precarga.fecha}T00:00:00Z`))}
+                </button>
+              )}
+            </div>
+          )}
           {polizas.length > 0 && (
             <label className="mi-direccion-campo">
               <span>De qué seguro es (opcional)</span>
@@ -257,11 +371,7 @@ export function Recordatorios({
             <button
               type="button"
               className="boton secundario"
-              onClick={() => {
-                setAbierto(false)
-                setForm(VACIO)
-                setEstado({ tipo: 'listo' })
-              }}
+              onClick={cerrar}
               disabled={estado.tipo === 'guardando'}
             >
               Cancelar
