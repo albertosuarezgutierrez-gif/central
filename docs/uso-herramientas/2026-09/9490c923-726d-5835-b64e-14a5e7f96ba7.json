@@ -1,8 +1,8 @@
 {
  "sesion": "9490c923-726d-5835-b64e-14a5e7f96ba7",
  "inicio": "2026-09-21T04:48:15.067Z",
- "fin": "2026-09-21T05:38:25.629Z",
- "llamadas": 38,
+ "fin": "2026-09-21T06:08:27.415Z",
+ "llamadas": 53,
  "categorias": {
   "otro": {
    "llamadas": 5,
@@ -17,38 +17,38 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 11,
-   "chars_in": 1321,
-   "chars_out": 41720,
+   "llamadas": 20,
+   "chars_in": 2407,
+   "chars_out": 67076,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 6,
-    "Read": 5
+    "Grep": 9,
+    "Read": 11
    }
   },
   "escritura": {
-   "llamadas": 4,
-   "chars_in": 4515,
-   "chars_out": 62786,
+   "llamadas": 5,
+   "chars_in": 6740,
+   "chars_out": 125435,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 1,
+    "Edit": 2,
     "Write": 3
    }
   },
   "bash": {
-   "llamadas": 9,
-   "chars_in": 2075,
-   "chars_out": 6825,
+   "llamadas": 14,
+   "chars_in": 3549,
+   "chars_out": 8787,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 9
+    "Bash": 14
    }
   },
   "mcp:Google_Drive": {
