@@ -57,9 +57,14 @@ type Props = {
 export function SelectorBuscable(props: Props) {
   const { opciones, pista = null } = props
   const etiquetadas = useMemo(() => etiquetarOpciones(opciones), [opciones])
+  // 🚨 La pista solo prefiltra si el buscador SE VE. Sin él no hay caja que
+  // enseñe el filtro ni botón para quitarlo: las opciones descartadas serían
+  // inalcanzables y la pantalla no diría por qué. Y con menos de 8 no hace
+  // ninguna falta: se leen de un vistazo.
   const sugerida = useMemo(
-    () => (pista ? consultaSugerida(etiquetadas, pista) : ''),
-    [etiquetadas, pista],
+    () =>
+      pista && opciones.length >= MINIMO_PARA_BUSCAR ? consultaSugerida(etiquetadas, pista) : '',
+    [etiquetadas, opciones.length, pista],
   )
 
   // El `key` arranca el filtro de cero cada vez que cambia el catálogo (otra
@@ -129,7 +134,7 @@ function Cuerpo({
       </select>
 
       {hayBuscador && filtrando && (
-        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+        <p style={{ fontSize: 12, margin: 0, color: 'var(--muted)' }}>
           {visibles.length === 0 ? (
             <>
               Ninguna coincidencia con «{consulta.trim()}» entre {opciones.length} {plural}.
@@ -140,14 +145,28 @@ function Cuerpo({
               {desdePista && <> — filtro puesto por la pista de otra póliza, no es una selección</>}.
             </>
           )}{' '}
+          {/*
+            Es la ÚNICA salida del filtro, así que va a los 44 px táctiles de la
+            regla responsive. Y con estilos propios: `.ghost` solo existe dentro
+            del `<style>` acotado de `.retarificar`, así que en los embudos de
+            auto y moto el botón saldría sin estilar.
+          */}
           <button
             type="button"
-            className="ghost"
             onClick={() => {
               setConsulta('')
               setTocado(true)
             }}
-            style={{ minHeight: 28, padding: '2px 8px', fontSize: 12 }}
+            style={{
+              minHeight: 44,
+              padding: '4px 12px',
+              fontSize: 12,
+              background: 'transparent',
+              color: 'inherit',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              cursor: 'pointer',
+            }}
           >
             Quitar filtro
           </button>

@@ -30,15 +30,25 @@ export function filtrarOpciones<T extends OpcionSimple>(
   opciones: readonly T[],
   consulta: string,
   seleccionado = '',
+  donde: DondeBuscar = 'nombre+codigo',
 ): T[] {
   const terminos = normalizar(consulta).split(' ').filter(Boolean)
   if (terminos.length === 0) return [...opciones]
   return opciones.filter((o) => {
     if (seleccionado !== '' && o.id === seleccionado) return true
-    const heno = normalizar(`${o.nombre} ${o.id}`)
+    const heno = normalizar(donde === 'nombre' ? o.nombre : `${o.nombre} ${o.id}`)
     return terminos.every((t) => heno.includes(t))
   })
 }
+
+/**
+ * Dónde se busca. Lo que teclea una PERSONA vale contra el nombre y el código
+ * (a veces tiene el Base7 delante). Lo que viene de una PISTA, solo contra el
+ * nombre: son dos vocabularios distintos y el código es numérico, así que un
+ * término como «52» sobreviviría por aparecer DENTRO del código de otra
+ * versión — y entonces la pista esconde justo la que buscaba.
+ */
+export type DondeBuscar = 'nombre+codigo' | 'nombre'
 
 /**
  * Añade el código al nombre SOLO cuando ese nombre está repetido en la lista.
@@ -79,7 +89,7 @@ export function consultaSugerida(opciones: readonly OpcionSimple[], pista: strin
   const elegidos: string[] = []
   for (const t of normalizar(pista).split(' ').filter(Boolean)) {
     const prueba = [...elegidos, t].join(' ')
-    if (filtrarOpciones(opciones, prueba).length > 0) elegidos.push(t)
+    if (filtrarOpciones(opciones, prueba, '', 'nombre').length > 0) elegidos.push(t)
   }
   return elegidos.join(' ')
 }

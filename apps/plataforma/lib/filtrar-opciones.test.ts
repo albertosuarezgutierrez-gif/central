@@ -60,3 +60,29 @@ test('la pista de otra póliza se recorta a lo que el catálogo SÍ reconoce', (
 test('una pista que no casa con nada deja el buscador vacío, no roto', () => {
   assert.equal(consultaSugerida(CATALOGO, 'FORFOUR PURE 1.1'), '')
 })
+
+test('la pista NO se cuela por el código: «52» no vale por estar dentro de un Base7', () => {
+  // Caso real: dos SMART FORTWO COUPE del mismo modelo. El «52» de la pista son
+  // los kW y no existe en ningún NOMBRE, pero sí dentro del código `B7-52110`
+  // de una de ellas. Buscando también en el código, ese término sobrevivía y
+  // la consulta dejaba en pantalla UNA sola versión — escondiendo la otra, que
+  // era igual de candidata. Un filtro de más que decide por el corredor.
+  const smart = [
+    { id: 'B7-52110', nombre: 'FORTWO COUPE PURE' },
+    { id: 'B7-90031', nombre: 'FORTWO COUPE PASSION' },
+  ]
+  const q = consultaSugerida(smart, 'FORTWO COUPE 52 KW')
+  assert.equal(q, 'fortwo coupe')
+  assert.deepEqual(
+    filtrarOpciones(smart, q).map((o) => o.id),
+    ['B7-52110', 'B7-90031'],
+  )
+})
+
+test('lo que teclea una persona SÍ busca por código', () => {
+  assert.deepEqual(
+    filtrarOpciones(CATALOGO, 'b7-004').map((o) => o.id),
+    ['B7-004'],
+  )
+  assert.equal(filtrarOpciones(CATALOGO, 'b7-004', '', 'nombre').length, 0)
+})

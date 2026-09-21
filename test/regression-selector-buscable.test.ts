@@ -57,3 +57,25 @@ test('solo la VERSIÓN recibe pista: con 2+ candidatas se contradicen', () => {
   assert.match(src, /vehiculo\?\.versiones\.length === 1 \? vehiculo\.versiones\[0\]\.version : null/)
   assert.equal((src.match(/\bpista=\{/g) ?? []).length, 1)
 })
+
+test('sin buscador a la vista, la pista NO prefiltra', () => {
+  // Con menos de `MINIMO_PARA_BUSCAR` opciones no hay caja que enseñe el filtro
+  // ni botón para quitarlo: lo que la pista dejara fuera sería inalcanzable, y
+  // la pantalla no diría por qué. Es el fallo mudo de toda esta familia.
+  const src = leer('apps/plataforma/app/(usuario)/correduria/SelectorBuscable.tsx')
+  assert.match(src, /pista && opciones\.length >= MINIMO_PARA_BUSCAR \? consultaSugerida/)
+})
+
+test('el componente no se apoya en clases que solo existen en el retarificador', () => {
+  // `.muted` y `.ghost` viven en el <style> acotado a `.retarificar`. Usarlas
+  // aquí deja el contador y el botón SIN ESTILAR en auto-nuevo y moto-nuevo,
+  // que van con estilos en línea. No falla: solo se ve feo, y solo ahí.
+  const src = leer('apps/plataforma/app/(usuario)/correduria/SelectorBuscable.tsx')
+  assert.doesNotMatch(src, /className="(muted|ghost)"/)
+})
+
+test('la única salida del filtro es táctil (44 px)', () => {
+  const src = leer('apps/plataforma/app/(usuario)/correduria/SelectorBuscable.tsx')
+  const boton = src.slice(src.indexOf('Quitar filtro') - 700, src.indexOf('Quitar filtro'))
+  assert.match(boton, /minHeight: 44/)
+})
