@@ -49,42 +49,33 @@ escribe en `movimientos_bancarios`?") y NO sepas ya el archivo. Salta este paso 
   la verdad es el archivo real, que sí lees entero.
 - El coste real que ahorras se registra: el endpoint equivalente escribe en `ai_usos` (`endpoint='codigo'`).
 
-## Grafo propio — callers, impacto, vecinos, tests (12/09/2026)
+## Callers, impacto, vecinos, tests → un SUBAGENTE (el grafo se retiró el 21/09/2026)
 
-Lo que Graphify servía como tools vive ahora en dos tablas de la MISMA Supabase (`grafo_nodos`,
-`grafo_aristas`; lo genera `scripts/grafo-codigo.mjs` en cada push a `main`) y se consulta por
-`mcp__Supabase__execute_sql` (`project_id='wswbehlcuxqxyinousql'`). Una llamada, filas planas:
+🗑️ **Las tablas `grafo_nodos`/`grafo_aristas`/`grafo_embeddings` y todas las funciones `grafo_*` ya
+NO existen.** Se borraron de Supabase el 21/09/2026: ocupaban 258 MB de una BD que estaba por encima
+del límite del plan Free y, medido sobre las 86 sesiones de `docs/uso-herramientas/`, se habían usado
+en **3**. Si ves un `SELECT * FROM grafo_callers(...)` en algún documento viejo, está obsoleto.
 
-| Pregunta | SQL |
+**Cómo se responden ahora esas preguntas:**
+
+| Pregunta | Cómo |
 |---|---|
-| ¿Quién llama/usa a `X`? (prof 2 = quién llama a quien lo llama) | `SELECT * FROM grafo_callers('X', 2)` |
-| ¿A qué llama `X` (o un archivo entero)? | `SELECT * FROM grafo_callees('apps/asegura/lib/cartera-ficha.ts')` |
-| Radio de impacto de un archivo (quién depende de él, 2 saltos, sin tests) | `SELECT * FROM grafo_impacto('packages/module-seguros/src/cartera-viva.ts')` |
-| Vecinos directos (de quién depende / quién depende de él, con símbolos) | `SELECT * FROM grafo_vecinos('<ruta>')` |
-| ¿Qué tests cubren un archivo? | `SELECT * FROM grafo_tests_de('<ruta>')` |
-| Buscar símbolo por subcadena | `SELECT * FROM grafo_find('cartera', 20)` |
-| Camino de dependencias entre dos archivos | `SELECT * FROM grafo_camino('apps/x/route.ts', 'packages/y/lib.ts')` |
-| Quién referencia un símbolo (llamadas + imports) | `SELECT * FROM grafo_referencias('esCarteraViva')` |
-| Imports/exports de un archivo | `SELECT * FROM grafo_imports_exports('<ruta>')` |
-| Ficha de un nodo (tipo, línea, exportado) | `SELECT * FROM grafo_nodo('esCarteraViva')` |
-| Pregunta en lenguaje natural → símbolos parecidos (semántico, embeddings) | `SELECT id, ruta, similitud FROM grafo_buscar('¿dónde se decide la cartera viva?', 15)` |
-| Pregunta en lenguaje natural → archivos relevantes para una tarea | `SELECT * FROM grafo_rank_files('¿dónde se decide la cartera viva?', 10)` |
-| Frescura | `SELECT sha, max(updated_at) FROM grafo_nodos GROUP BY 1` — compáralo con `git rev-parse origin/main` |
+| ¿Dónde vive esta funcionalidad? | Este mismo mapa (`mapa_arquitectura`), que SE QUEDA |
+| ¿Quién llama/usa a `X`? | `Grep` del símbolo, o un subagente si hay que cribar muchos resultados |
+| ¿Qué rompe si toco este archivo? | Subagente (`Explore`): que greppee importadores y te devuelva la lista |
+| ¿Qué tests cubren esto? | `Grep` del símbolo en `**/*.test.ts` |
+| Pregunta en lenguaje natural sobre el código | Subagente: acota con este mapa y greppea varios patrones |
 
-- `X` puede ser el nombre (`esCarteraViva`) o el id completo (`ruta#nombre`). Los ids de símbolo son
-  siempre `ruta#nombre`; los de archivo, la ruta.
-- **Consciente de barriles:** `grafo_impacto`/`grafo_vecinos` cuentan como dependiente a quien importó el
-  símbolo desde `@central/<pkg>` (el `index.ts`), no solo a quien importó el archivo literal.
-- **Lo que NO ve** (regex, sin compilador): llamadas por variable intermedia, imports dinámicos con cadena
-  calculada, alias encadenados raros. Un «0 callers» aquí es «no encontré ninguno», no «nadie lo llama»:
-  antes de borrar algo, `Grep`.
-- **`grafo_buscar`/`grafo_nodo` dan línea y tipo, no el cuerpo** — a propósito, para no saltarse el paso
-  de leer el código real. Precisión (12 categorías de Graphify, incluida la búsqueda semántica) medida
-  contra un símbolo real y ambiguo el 12/09/2026: `docs/USO-HERRAMIENTAS.md` — el grafo propio igualó o
-  superó a Graphify en 10 de 12 categorías (2 con forma distinta, ninguna perdida).
-- **Graphify ya NO se usa para código** (ni estructural ni semántico) — solo sigue conectado para
-  `memories_about`/`recall`/`remember` (memoria durable), mientras dure la cuota. Para
-  callers/impacto/vecinos/tests/camino/referencias/búsqueda semántica, usa siempre esto.
+**Por qué un subagente y no leerlo tú:** se come los archivos en SU contexto y te devuelve solo el
+informe — que es justo lo que aportaba el grafo. En la medición del 21/09, `general-purpose` (596k
+tokens citados en 11 sesiones), `Explore` (266k en 8) y `agente-mecanico` (277k en 7) ya ahorraban
+más que el grafo (75k en 3).
+
+⚠️ **Lo que se pierde:** la búsqueda semántica sobre código. Un `Grep` no sabe qué querías decir, así
+que hay que probar varios patrones. Asumido a cambio de los 258 MB.
+
+✅ **`memoria_buscar()` sigue viva** (`memoria_embeddings`, sobre `docs/CONTEXTO-SESIONES.md` y
+`docs/memoria/*.md`): para decisiones, convenciones y gotchas del proyecto. No se tocó.
 
 ## Relación con el resto
 - Mismo índice que consume el **Director de código** (`apps/plataforma/lib/ia-director-codigo.ts`,

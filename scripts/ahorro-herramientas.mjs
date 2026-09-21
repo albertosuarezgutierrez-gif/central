@@ -94,7 +94,12 @@ if (esMain) {
   const ag = agregar(leerResumenes(DIR_USO, mes))
   if (args.includes('--json')) { console.log(JSON.stringify(ag, null, 2)) }
   else {
-    const titulo = `Uso de herramientas${mes ? ` · ${mes}` : ' · todo lo medido'} (generado ${new Date().toISOString().slice(0, 10)})`
+    // SIN fecha de generación a propósito (21/09/2026). Este bloque lo regenera `auditoria.yml`
+    // en CADA pasada, y una fecha dentro hacía que el fichero cambiase TODOS los días aunque los
+    // datos fueran idénticos: el corte «Radiografía ya al día — sin cambios» del workflow no se
+    // daba nunca y se abría rama + PR a diario para nada. La frescura ya la dice el recuento de
+    // sesiones medidas (cambia cuando cambian los datos) y, con precisión, el log de git.
+    const titulo = `Uso de herramientas${mes ? ` · ${mes}` : ' · todo lo medido'}`
     const tabla = tablaMarkdown(ag, titulo)
     const md = arg('--md')
     if (md) {

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Pide a plataforma que calcule los embeddings de la memoria semántica (memoria_buscar). Reutiliza
-// TAL CUAL inyectarEmbeddings() de scripts/grafo-embeddings-inyectar.mjs (misma política de
+// TAL CUAL inyectarEmbeddings() de scripts/embeddings-inyectar.mjs (misma política de
 // reintentos, mismo contrato { pendientes }) contra el puerto de memoria en vez del de grafo.
 // Envs: PLATAFORMA_URL, CRON_SECRET (sin ellas se omite, exit 0).
 import { leerEnvs } from './inyectar-lotes.mjs'
-import { inyectarEmbeddings } from './grafo-embeddings-inyectar.mjs'
+import { inyectarEmbeddings } from './embeddings-inyectar.mjs'
 
 const envs = leerEnvs()
 if (!envs) process.exit(0)

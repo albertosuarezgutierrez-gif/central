@@ -23,6 +23,116 @@ se ensayó contra la BD real (14 pruebas, revertidas): la 1ª pasada murió en `
 constraint` — ni tsc ni build miran dentro de un DDL. ⏸️ Decisión de Alberto pendiente: si el botón va
 también en `auto-nuevo` (el lead sin póliza, que es el caso que arrancó esto).
 >
+**(21/09/2026)** 🪤 **La pasada de `code-review` antes de sacar el PR de draft se ganó el sueldo:
+6 hallazgos, 4 reales, ninguno lo cazaba un test.** El peor: al borrar la ruta del grafo se fue con
+ella `grafo_guardar_clave()`, **el único escritor de la clave de OpenRouter en Vault** — la memoria
+semántica solo la LEE, así que si Vault la perdía `memoria_buscar` moría en 503 sin camino de vuelta
+en código. Escritor trasladado a `/api/internal/memoria/embeddings` y función recreada en la BD.
+Segundo: `docs/USO-HERRAMIENTAS.md` entró en el PR diario de la radiografía pero NO en `es_registro()`
+del automerge → el PR entero (los cuatro generados) dejaba de aterrizar en `main`; cepo visto en ROJO
+antes de arreglarlo. Tercero: el SQL del grafo seguía en el repo creando funciones sobre tablas ya
+borradas (reprovisionar abortaba) — partido en `2026-09-21_motor_embeddings.sql`, que deja SOLO el
+motor que usa la memoria; los nombres siguen `grafo_*` porque así están vivos en la BD. Cuarto: la
+tabla de ahorro llevaba dentro la fecha de generación, así que cambiaba a diario aunque los datos no
+→ el corte «sin cambios» del workflow no saltaba nunca. Y dos de higiene: el `rastreador-codigo` se
+vendía como solo-lectura **con `Bash` en las herramientas**, y `vigia-infra` se autorizaba un
+`VACUUM FULL` (lock ACCESS EXCLUSIVE) sobre la BD compartida sin OK de Alberto. Los dos, corregidos.
+Tests 967/967, typecheck de plataforma limpio. PR #3242.
+
+**(21/09/2026)** 🤖 **Dos agentes nuevos, los dos nacidos de fallos medidos hoy.**
+**`vigia-infra`** (skill, mensual día 8, `docs/VIGIA-INFRA.md`): mide los TECHOS —Supabase en % de
+su cuota, hinchazón recuperable, Build Minutes y ritmo de deployments de Vercel, máquinas de Fly—.
+Van **tres sustos del mismo tipo sin una sola alerta**: 600 US$ de Build CPU (jul), la cuota de 450
+deployments/hora reventada (04/09) y hoy la BD por encima del tope con la cartera dentro, vista de
+refilón. Regla dura: **un límite sin medir NO está bien, está sin medir**, y cuenta como 🟠.
+**`rastreador-codigo`** (agente, haiku, SOLO LECTURA): el sustituto del grafo. Lleva dentro las tres
+trampas que el grafo sí sabía —barriles `@central/*`, homónimos entre apps, y «0 resultados» ≠ «no
+lo usa nadie»—. Trigger de `vigia-infra` pendiente de crear.
+
+**(21/09/2026)** 💾 **`central` estaba POR ENCIMA de la cuota del plan Free** (644 MB medidos, tope
+500). No era riesgo futuro: es la BD compartida de todas las apps. Recuperados **131 MB sin borrar
+ni una fila**, solo `VACUUM FULL` — `net._http_response` tenía **0 filas vivas ocupando 44 MB** (sin
+autovacuum desde el 05/08). Ojo: borrar filas NO baja el tamaño, hay que compactar. Un intento mío
+de tirar el índice HNSW de `grafo_embeddings` salió mal y se revirtió: estimé ~150 ms de búsqueda
+exacta y medí **11 s** (los vectores están en TOAST, cada fila va a disco).
+📊 **Y el dato que decide:** la tabla de `docs/USO-HERRAMIENTAS.md` llevaba generada sobre **1**
+sesión con 86 ficheros sin agregar. Regenerada: **el grafo propio se ha usado en 3 de 86 sesiones**
+(27 llamadas, 2 con error, ahorro tope 75k tokens) ocupando 258 MB. **Alberto decidió retirarlo y
+está hecho: BD en 284 MB**, tablas y funciones `grafo_*` borradas. Se borraron también las FUNCIONES
+a propósito: sobre una tabla vacía no fallan, **devuelven cero**, y un agente concluiría que a un
+símbolo no lo llama nadie. ⚠️ **Dos restos con nombre de grafo que NO son grafo**: la función SQL
+`grafo_embed_textos` (se conserva: `memoria_buscar` depende de ella) y el script del motor de
+embeddings, que se RENOMBRÓ a `scripts/embeddings-inyectar.mjs` para que nadie lo borre por
+parecer un resto — lo usa la memoria semántica. Sustituto = subagentes + `code-map`; `memoria_embeddings` y `mapa_arquitectura` se
+quedan (28 MB, mejor ratio). **ialimp e ia-rest juntos pesan 16 MB: no eran el problema.**
+🔧 Y la causa de fondo, corregida: **nadie regeneraba la tabla de ahorro**. Ahora la regenera
+`auditoria.yml` en cada pasada — una medición que no se refresca sola es una medición que miente.
+
+**(21/09/2026)** 🧹 **Manuel fuera de Vercel** (Alberto retiró su asiento del equipo «Pisos
+turisticos», verificado recargando la página, sin aviso de facturación). Para repuntar el warehouse
+de PostHog a central se midió ANTES de tocar nada: `operational_events` vive en el schema `seguros`
+(no `public`), 5.071 filas, último evento de hoy, **RLS desactivado y 0 políticas** → un rol sin
+BYPASSRLS SÍ verá filas. Sin esa comprobación, A1/A14 habrían seguido planas con la fuente ya
+correcta, que es el fallo caro de siempre. El `GRANT` va a **una sola tabla**: el schema `seguros`
+es la cartera con PII. Las credenciales las escribe Alberto — Claude en Chrome se negó a generar y
+pegar la contraseña, y es la postura correcta.
+
+**(21/09/2026)** 🔧 **Telemetría de PostHog ARREGLADA y verificada**: faltaban las dos envs
+`NEXT_PUBLIC_POSTHOG_*` en el proyecto Vercel `asegura`; creadas + redeploy, y un `cima-pull` en
+`dry_run` devolvió los tres eventos a PostHog (primeros desde el 05/09). PR #3242.
+📍 **Y una corrección de fondo: el adaptador de Fly YA ES DE ALBERTO.** Medido en el panel el 21/09:
+`asegura-app-cima-adapter` está en su organización `grupo-asegura` (2 máquinas, CDG), no en la cuenta
+de Manuel. `CLAUDE.md`, la skill `cima-ingesta` y el inventario decían lo contrario y se dieron por
+buenos sin mirar; corregidos los tres. **Lo único que sigue fuera es el CÓDIGO** del adaptador (repo
+privado de Manuel, Alberto con lectura): sin fork, no hay cómo redesplegar.
+
+**(21/09/2026)** 🚨 La alerta de PostHog «CIMA pull heartbeat» que spamea a Alberto es **FALSA**: la
+ingesta de CIMA está sana (55 pulls en BD, ficheros de Occident el 20/09, Actions en verde) y lo roto
+es la telemetría — **PostHog no recibe NI UN evento de ningún tipo desde el 05/09** (no es cuota:
+80/1.000.000). Causa CONFIRMADA por navegador: el proyecto Vercel `asegura` **no tiene NINGUNA env de
+PostHog** y el código hace noop silencioso sin ellas; revivirla exige redeploy (`NEXT_PUBLIC_*` se
+inlinea en build). El fix asegura#834 (17/09) partió de un diagnóstico erróneo y no podía funcionar.
+Peor: la fuente Postgres del warehouse apunta al Supabase VIEJO de Manuel (congelado el 31/08 por el
+traspaso), así que **[A1] auth sign-in failures y [A14] webhook signature llevan 3 semanas CIEGAS**
+en verde. Diagnóstico, propuesta y prompt de Chrome en `docs/ASEGURA-POSTHOG-SONDAS-CIEGAS.md`.
+Vigilar: `cima-health-alert` falló 1 vez (20/09) con 401 — si repite hoy, es avería.
+
+**(21/09/2026)** **«Duplicidad» en el volcado histórico de la ficha** (PR #3259, mergeado). Alberto, con
+la captura: dos FORD FOCUS 3935GPY idénticos (mismo vencimiento 07/10/2023, sin número) cambiando
+solo la prima (210€/201€). **No era la consulta**: son dos filas reales del volcado de junio de 2026
+(`asegura_app:pol2:14569` y `:15128`). Medido: **84 grupos / 188 filas / 77 clientes**, y **0 tocan
+la cartera viva** — ruido de pantalla, no recuento mal hecho. Solo 23 grupos son byte-idénticos; el
+resto son precios distintos del mismo riesgo. Se agrupan en UNA línea con TODAS las primas
+(`agruparHistoricas` en `@central/module-seguros`), sin borrar filas y sin elegir prima; el bien
+desconocido/cifrado NO agrupa. Las vivas/canceladas siguen SIN agrupar: ahí un duplicado hay que verlo.
+
+**(21/09/2026)** **La tabla de precios de retarificar, con sentido** (PR #3248, mergeado). Alberto:
+«no tiene sentido» — 24 filas ordenadas solo por prima, mezclando coberturas no comparables. Ahora
+agrupa por nivel de cobertura, filtra, ancla en la prima que paga HOY y marca la **defensa de
+cartera** (libre/ocupada/actual/**desconocida**), emparejando por **código DGS, no por nombre**.
+Reglas puras en `@central/module-seguros` + `carteraCompanias` en la precalificación (gratis), que
+degrada a `no_disponible`, nunca a `[]`. 🚨 **Medido: 8 clientes YA tienen 2+ pólizas del mismo ramo
+en la misma compañía** — estar ahí no impide emitir, así que la fila se MARCA, no se esconde. Tres
+fallos de paso: la clave de fila era la posición visible (al agrupar, «Emitir» abría otro precio),
+`fallos: []` en una cotización recuperada mentía, y los avisos vivían solo en un `title=` (invisible
+en móvil). ⏸️ **Pendiente de Alberto:** el SQL `2026-09-21_tarificacion_identidad_y_fallos.sql` SIN
+ejecutar (primero la migración, después su código, o revientan las cotizaciones ya pagadas); la
+pantalla NO vista en navegador ni a 320px (mergeado igualmente por decisión suya); y las 6 pantallas
+`*-nuevo` siguen con la tabla vieja.
+
+**(21/09/2026)** **Presupuesto al cliente — spec escrita, Fase 2 confirmada** (en el mismo PR #3248;
+`docs/superpowers/specs/2026-09-21-asegura-presupuesto-al-cliente-design.md`). Alberto quiere mandar
+el presupuesto al cliente para que elija desde su intranet. Decidido: **el cliente ve, elige y FIRMA
+(`@central/core-firma`, eIDAS art. 26 por OTP email); emite Alberto.** Canal: email + **deep link
+`wa.me`** que manda él a mano — sin WABA, reutilizando `invitacion-whatsapp.ts`/`telefono-wa.ts`; el
+WhatsApp lleva el enlace pero **el código de acceso va al email** (un móvil identifica un hogar, no a
+una persona). Validez 15 días. **Al aceptar SÍ se reconfirma el precio** aun costando, porque ninguno
+de los 187 precios guardados es «firme» ⇒ la Fase 2 deja de tener cero llamadas de pago del cliente y
+el gate de idempotencia pasa a obligatorio. Tres medidas incómodas: **el tope de gasto NO ve el ReRate
+ni el Submit**, el **IPID no existe en el repo** (bloqueo duro de la Fase 3), y el correo **nunca pide
+datos** (lleva al portal). Borrador a Codeoscopic en `docs/BORRADOR-CODEOSCOPIC-COSTE-RERATE-SUBMIT.md`,
+**sin enviar**. Q2/Q3/Q4 del §7 siguen abiertas.
+
 **(21/09/2026)** Asociaciones de corredores. Se buscó en Gmail la asociación en la que estuvo Alberto
 (E2K, que **no es asociación sino alianza por contrato marco**: clave y cartera viven en un contrato
 privado, no en estatutos). Enviados correos de presentación a **AUNNA, Pactrebol, ACSA y APROMES**

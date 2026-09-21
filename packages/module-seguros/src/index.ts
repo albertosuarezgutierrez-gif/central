@@ -450,6 +450,11 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+export {
+  agruparHistoricas,
+  type HistoricaAgrupable,
+  type GrupoHistorica,
+} from './ficha-historicas.ts'
 export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export {
   parseFiltroCartera,
