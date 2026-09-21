@@ -40,6 +40,12 @@ esos se auto-mergean.
 
 ## Grafo propio frente a Graphify — medición del 12/09/2026
 
+> 🗑️ **El grafo propio se RETIRÓ el 21/09/2026** y con él `scripts/grafo-codigo.mjs`, las tablas
+> `grafo_nodos`/`grafo_aristas`/`grafo_embeddings` y sus funciones de consulta: los nombres que
+> citan las dos tablas de abajo ya no existen en el repo. Se conservan porque son la MEDICIÓN que
+> justificó en su día dar de baja Graphify, y porque la que lo retiró está más abajo, en el
+> agregado. El sustituto es `rastreador-codigo` + `code-map` (ver `CLAUDE.md`).
+
 Mismo símbolo, mismas preguntas, el día que se construyó (HEAD `f85f137`):
 
 | Pregunta | Graphify | Grafo propio (`scripts/grafo-codigo.mjs`) |

@@ -1,5 +1,7 @@
-// Envío por LOTES a un puerto interno de plataforma (/api/internal/*), compartido por
-// scripts/mapa-arquitectura-inyectar.mjs y scripts/grafo-codigo-inyectar.mjs.
+// Envío por LOTES a un puerto interno de plataforma (/api/internal/*). Lo usa
+// scripts/mapa-arquitectura-inyectar.mjs; lo usaba también scripts/grafo-codigo-inyectar.mjs,
+// borrado el 21/09/2026 al retirarse el grafo de código (por eso el texto de abajo lo nombra:
+// es historia, no un fichero que puedas abrir).
 //
 // Por qué existe (12/09/2026): Vercel corta el body de una función en ~4,5 MB (413
 // FUNCTION_PAYLOAD_TOO_LARGE). El mapa de funciones (docs/mapa-funciones.generated.json) se
