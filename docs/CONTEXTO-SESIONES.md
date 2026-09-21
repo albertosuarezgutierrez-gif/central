@@ -12,6 +12,19 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🚨 **AVERÍA CONFIRMADA: el vigilante de la ingesta de CIMA lleva dos días sin
+funcionar.** `cima-health-alert` falló el 20/09 con `curl (22) error: 401` y hoy volvió a fallar
+igual — reproducido a mano (run 93, `workflow_dispatch`, 15:20 UTC). Su propio rastro en BD lo
+confirma: `cima_health_alert_run` en `seguros.operational_events` tiene su última fila el **19/09
+13:40**, cero en 48 h. **NO es el host ni la protección de Vercel**, y así se descartó: `cima-pull`
+pega al MISMO `app.grupoasegura.com` con `Bearer CRON_SECRET` y sin cabecera de bypass, y hoy salió
+verde (12:25); mientras, `e2e-smoke` —el otro consumidor de `INTERNAL_API_SECRET`, que SÍ manda el
+bypass— lleva tres runs seguidos con `api-health … unexpected_http_401` (issue #815 abierto,
+acumulando un comentario diario que nadie mira). O sea: `CRON_SECRET` vale, `INTERNAL_API_SECRET`
+no — el secret de Actions dejó de coincidir con la env var de Vercel. **Lo arregla Alberto: es una
+credencial.** La ingesta en sí está sana (`cima_pull_completed` 21/09 12:26), así que no hay pérdida
+de datos; lo que no hay es red — si CIMA se parase mañana, nadie se enteraría.
+
 **(21/09/2026)** Presupuesto al cliente — **PR 1 entero, MERGEADO** (#3252, squash 40b5e2655).
 ⚠️ Entró **sin la comprobación en navegador ni la medida a 320px** (decisión de Alberto: «mergea»):
 la tarjeta «Preparar presupuesto» de retarificar se verá por primera vez en producción. Módulo puro
