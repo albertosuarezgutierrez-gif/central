@@ -1,41 +1,104 @@
 {
  "sesion": "b952e7b4-0dc2-5a36-ba36-dd6e02656489",
  "inicio": "2026-09-20T20:09:53.915Z",
- "fin": "2026-09-20T20:10:42.177Z",
- "llamadas": 11,
+ "fin": "2026-09-21T04:29:58.551Z",
+ "llamadas": 82,
  "categorias": {
   "otro": {
-   "llamadas": 1,
-   "chars_in": 26,
-   "chars_out": 47,
+   "llamadas": 7,
+   "chars_in": 4242,
+   "chars_out": 1058,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Skill": 1
+    "Skill": 1,
+    "ToolSearch": 5,
+    "SubagentHandback": 1
    }
   },
   "lectura-directa": {
-   "llamadas": 8,
-   "chars_in": 911,
-   "chars_out": 66030,
+   "llamadas": 28,
+   "chars_in": 3422,
+   "chars_out": 260640,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 5,
-    "Read": 3
+    "Grep": 13,
+    "Read": 15
    }
   },
   "bash": {
-   "llamadas": 2,
-   "chars_in": 187,
-   "chars_out": 15859,
+   "llamadas": 21,
+   "chars_in": 3106,
+   "chars_out": 24330,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 2
+    "Bash": 21
+   }
+  },
+  "escritura": {
+   "llamadas": 2,
+   "chars_in": 9673,
+   "chars_out": 160853,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 9,
+   "chars_in": 1879,
+   "chars_out": 13620,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 3,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__unsubscribe_pr_activity": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 12,
+   "chars_in": 7246,
+   "chars_out": 49207,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 12
+   }
+  },
+  "agente:general": {
+   "llamadas": 2,
+   "chars_in": 5913,
+   "chars_out": 3133,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 190984,
+   "tools": {
+    "Agent": 2
    }
   }
  }
