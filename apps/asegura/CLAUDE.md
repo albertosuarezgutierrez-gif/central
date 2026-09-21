@@ -1537,10 +1537,23 @@ cualquier envío (`seguros.recaptacion_envios`). El "no interesado" reutiliza el
 ficha YA EXISTENTE (`descartarCliente`, `DELETE /api/operador/cliente`) — no se construyó
 un estado de descarte nuevo. Spec: `docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md`.
 
-## Lo que falta y de quién depende
-- **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se
-  descargan los ficheros de las compañías, si usa Vercel Blob y qué dominios tiene.
-- **De Alberto:** poner contraseña al rol, fijar la fecha de corte, y decidir si se formaliza
-  el contrato de encargado de tratamiento.
+## Lo que falta y de quién depende (revisado 21/09/2026 — la línea vieja «De Manuel: transferir sus
+proyectos…» ya estaba CUMPLIDA y desfasada: repo, Vercel y BD llevan en la cuenta de Alberto desde
+el 31/08-02/09, ver el cierre de `docs/TRASPASO-CORREDURIA.md`. Manuel ya no interviene en el
+proyecto; lo que queda es exclusivamente infraestructura y gestiones, no código)
+
+- **🔴 El adaptador Java de CIMA (`asegura-app-cima-adapter`) sigue en la cuenta de Fly.io de
+  Manuel.** Es el único punto vivo que aún depende de él: si se apaga o pierde el acceso, la
+  ingesta de CIMA se para **sin error visible** (solo lo delatan los heartbeats
+  `cima_pull_*`). El port a `apps/asegura` (Fase 2, aparcada por decisión de Alberto del
+  02/09/2026: «fly es barato y ya está hecho») está inventariado y listo para retomar en
+  `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md` si algún día hay que dejar de depender de él.
+- **El webhook de Codeoscopic sigue registrado contra `app.grupoasegura.com`** (el CRM de
+  Manuel), no contra `central-asegura`. El endpoint propio ya está construido
+  (`POST /api/webhooks/codeoscopic`); falta que Alberto le pida a Codeoscopic (JM) que repunte
+  la URL — gestión suya, no código.
+- **De Alberto:** decidir si se formaliza el contrato de encargado de tratamiento con Manuel
+  (`docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`, en borrador y sin enviar — documenta el
+  tratamiento que él hizo en el pasado, así que sigue haciendo falta aunque ya no intervenga).
 - **Del corte:** cambiar a mano las URLs registradas en los paneles de **Codeoscopic** y
   **Meta/WhatsApp**. Eso no viaja en ninguna transferencia.

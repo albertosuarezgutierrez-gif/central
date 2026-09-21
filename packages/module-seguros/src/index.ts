@@ -105,6 +105,7 @@ export {
   type PolizaEnCartera,
   type GrupoHuerfanas,
   type RepartoHuerfanas,
+  type CampoImportanteSinLeer,
 } from './ingesta.ts'
 export {
   veredictoEntidad,

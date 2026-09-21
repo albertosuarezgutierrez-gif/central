@@ -226,6 +226,34 @@ export const HORAS_PULL_MUDO = 26
  */
 export const DIAS_AVISO_PURGA = 14
 
+/**
+ * Un campo que CIMA manda de forma CONSTANTE (visto en casi todos los ficheros
+ * recientes, no una vez suelta) y que el mapper NUNCA lee.
+ *
+ * 🚨 Nace de un caso real (20/09/2026): `Tomador.PersonaFisica.Domicilio` y
+ * `.DatosContacto` (email, teléfono) llegan en el 100% de los POL recientes
+ * —`veces_visto` igual al número de ficheros vistos— y nunca se han leído. La
+ * `cobertura` genérica (`CoberturaResumen`) NO podía delatar esto a propósito:
+ * el EIAC trae cientos de campos y esa cifra está diseñada para no alarmar
+ * nunca (ver el comentario de `cobertura` más abajo). Sin un vigía dedicado, un
+ * campo así —constante, no residual— puede pasar meses sin que nadie repare en
+ * que estaba ahí. Este es ese vigía: una LISTA CURADA y pequeña (la mantiene
+ * quien construye el puerto), no un barrido genérico.
+ *
+ * No es «la avería del día»: es una OPORTUNIDAD conocida que hay que decidir,
+ * no una pérdida. Por eso nunca entra en `hayPerdida`/`degradada` — entra en
+ * `avisosImportantes`, que se imprime SIEMPRE, en los tres estados que no son
+ * `sin_datos`, para que no se pueda silenciar quedando «todo ok».
+ */
+export type CampoImportanteSinLeer = {
+  /** Identificador legible de a qué corresponde (p. ej. `tomador_contacto`). */
+  id: string
+  /** Frase para el humano: qué dato es y por qué importa. */
+  etiqueta: string
+  /** Cuántas veces se ha visto SIN leerse, sobre las rutas recientes. */
+  vecesVisto: number
+}
+
 export type EntradaSalud = {
   /** Ficheros en cuarentena. Lista vacía = comprobado que no hay. */
   cuarentena: FicheroEnCuarentena[] | null
@@ -277,6 +305,13 @@ export type EntradaSalud = {
    * es el hueco que más caro sale.
    */
   parciales?: FicheroParcial[] | null
+  /**
+   * Watchlist curada de campos importantes que CIMA manda de forma constante
+   * y nunca se leen (ver `CampoImportanteSinLeer`). `[]`/ausente = ninguno
+   * conocido hoy; no es una señal de pérdida, así que no hace falta un `null`
+   * separado — si no se pudo medir, simplemente no se manda ninguno.
+   */
+  camposImportantes?: CampoImportanteSinLeer[]
 }
 
 export type SaludIngesta = {
@@ -335,6 +370,15 @@ export type SaludIngesta = {
    * Vacío = todo lo que se pidió se pudo mirar. NO es «no hay nada que mirar».
    */
   huecos: string[]
+  /**
+   * Avisos de la watchlist curada (`CampoImportanteSinLeer`): campos que CIMA
+   * manda de forma constante y nunca se leen. Se imprimen SIEMPRE, en los tres
+   * estados que no son `sin_datos` — no entran en `hayPerdida` (no son una
+   * avería) y por eso, sin este campo aparte, se perderían en la rama `ok`
+   * igual que le pasó al cron mudo antes del 20/09/2026 (ver la cabecera del
+   * fichero). Vacío = ninguno conocido hoy, no «no se ha mirado».
+   */
+  avisosImportantes: string[]
 }
 
 /** Un valor de cajón (vacío, guiones, «desconocido») es ausencia, no dato. */
@@ -402,8 +446,13 @@ export function saludIngesta(
       objetosEnRevision: null,
       motivos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
       huecos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
+      avisosImportantes: [],
     }
   }
+
+  const avisosImportantes = (e.camposImportantes ?? []).map(
+    c => `${c.etiqueta} (visto sin leer ${c.vecesVisto} veces)`,
+  )
 
   const total = e.cuarentena.length
   const recientes = e.cuarentena.filter(f => f.dias <= diasRecientes).length
@@ -655,6 +704,7 @@ export function saludIngesta(
     rechazos,
     motivos,
     huecos,
+    avisosImportantes,
   }
 }
 
@@ -673,14 +723,21 @@ export function saludIngesta(
  */
 export function detalleSalud(s: SaludIngesta): string {
   if (s.estado === 'sin_datos') return 'ingesta CIMA: no se ha podido comprobar'
+  // 🚨 Se imprime en LOS TRES estados que no son `sin_datos`, con su propio
+  // separador — nunca dentro de `motivos`/`huecos`, que son «avería» y «no se
+  // ha podido mirar» respectivamente, y esto no es ninguna de las dos. Un
+  // watchlist que solo se viera en `degradada` desaparecería justo el día en
+  // que no hay ninguna otra avería que lo arrastre a pantalla.
+  const importantes =
+    s.avisosImportantes.length > 0 ? ` · CIMA manda y no se lee: ${s.avisosImportantes.join(' · ')}` : ''
   const sinComprobar = s.huecos.length > 0 ? ` · sin comprobar: ${s.huecos.join(' · ')}` : ''
   if (s.estado === 'degradada') {
-    return `ingesta CIMA DEGRADADA · ${s.motivos.join(' · ')}`
+    return `ingesta CIMA DEGRADADA · ${s.motivos.join(' · ')}${importantes}`
   }
   if (s.estado === 'parcial') {
     // Ni «va bien» ni «se está perdiendo»: se ha mirado a medias, y lo primero
     // que se dice es QUÉ falta por mirar.
-    return `ingesta CIMA COMPROBADA A MEDIAS${sinComprobar}`
+    return `ingesta CIMA COMPROBADA A MEDIAS${sinComprobar}${importantes}`
   }
   // En `ok` los huecos están vacíos POR CONSTRUCCIÓN (uno solo ya daría
   // `parcial`), así que `sinComprobar` aquí siempre es ''. Lo que sí puede
@@ -691,7 +748,7 @@ export function detalleSalud(s: SaludIngesta): string {
     (s.silencio === null ? ' · silencio por compañía: sin comprobar' : '')
   return (s.total === 0
     ? 'ingesta CIMA: sin ficheros atascados'
-    : `ingesta CIMA: sin novedades (${s.total} en backlog antiguo)`) + noPedido + sinComprobar
+    : `ingesta CIMA: sin novedades (${s.total} en backlog antiguo)`) + noPedido + sinComprobar + importantes
 }
 
 // ── El recordatorio: por qué un aviso que se calla es un aviso roto ─────────

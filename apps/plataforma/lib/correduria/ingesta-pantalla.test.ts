@@ -207,7 +207,7 @@ const saludBase = {
   huerfanas: 0, huerfanasResolubles: 0, huerfanasReparto: null,
   primaPerdida: null, rechazos: [], silencio: [], motivos: [], huecos: [],
   crudo: null, cobertura: null, cajaNegra: null, ultimoPull: null,
-  parciales: null, objetosEnRevision: null,
+  parciales: null, objetosEnRevision: null, avisosImportantes: [],
 }
 
 test('🚨 el cron mudo se lee ANTES que nada: lo demás está a cero por su culpa', () => {
