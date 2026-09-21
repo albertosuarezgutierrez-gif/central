@@ -13,6 +13,11 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-21** · `docs/CONTEXTO-SESIONES.md`, `docs/AUDITORIA-2026-09.md` · 4 entradas de memoria
+  nuevas (PRs #3202, #3207, #3216, #3217 mergeados sin anotar — su commit "chore(memoria)" solo
+  tocaba el JSON de uso de herramientas, no la memoria real) + entrada de la pasada ligera de hoy ·
+  hueco cazado por el paso 4 (reconciliación memoria/skills) de `/auditoria-diaria` · SHA de esta
+  auditoría (ver commit de este PR)
 - **2026-09-20 (II)** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · entrada de la
   pasada ligera de seguimiento (~3h tras la profunda semanal de esta mañana) · rango de 2 commits
   ya autoreconciliados, heartbeat/correduría/pricing sin cambios, sin hallazgo nuevo · SHA de esta
