@@ -39,6 +39,7 @@ import {
   sqlCarteraEnVigor,
   sqlCarteraNoEnVigor,
   diasDeVentana,
+  DIAS_ANUALIDAD,
   type FiltroCartera,
   type GrupoCartera,
   type VentanaVencimiento,
@@ -110,7 +111,16 @@ export type RangoVencimiento =
    *  informado (1.194 medidas el 31/08). Poder pedirlas es lo que las hace
    *  reclamables, así que es un modo de primera y no un residuo. */
   | { modo: 'sin_fecha' }
-  | { modo: 'vencidas'; antesDe: string }
+  /**
+   * `desde` es el suelo de la anualidad (`DIAS_ANUALIDAD`, `vencimientos.ts`),
+   * el MISMO que ya aplica `Renovaciones.tsx` desde el 20/09/2026: una póliza
+   * vencida hace más de un año no es trabajo de renovación, es dato abandonado
+   * (medido esa fecha: Allianz con vencimientos de 2013-2019, hasta 4.985 días
+   * vencidos, seguía marcada `estado='activa'` y salía en «Ya vencidas» sin
+   * ningún suelo). Sin esta ventana, este listado y el de Renovaciones
+   * mostraban dos «vencidas» distintas para la misma cartera.
+   */
+  | { modo: 'vencidas'; desde: string; antesDe: string }
   | { modo: 'entre'; desde: string; hasta: string }
 
 function iso(d: Date): string {
@@ -134,7 +144,11 @@ export function hoyUtc(ahora: Date = new Date()): Date {
 export function rangoVentana(v: VentanaVencimiento, ahora: Date = new Date()): RangoVencimiento {
   if (v === 'sin_fecha') return { modo: 'sin_fecha' }
   const hoy = hoyUtc(ahora)
-  if (v === 'vencidas') return { modo: 'vencidas', antesDe: iso(hoy) }
+  if (v === 'vencidas') {
+    const desde = new Date(hoy)
+    desde.setUTCDate(desde.getUTCDate() - DIAS_ANUALIDAD)
+    return { modo: 'vencidas', desde: iso(desde), antesDe: iso(hoy) }
+  }
   if (v === 'anio') {
     const a = hoy.getUTCFullYear()
     return { modo: 'entre', desde: `${a}-01-01`, hasta: `${a}-12-31` }
@@ -196,7 +210,8 @@ const LATERAL_VIVAS = Prisma.sql`
 function condVencimiento(r: RangoVencimiento): Prisma.Sql {
   if (r.modo === 'sin_fecha') return Prisma.sql`p.fecha_vencimiento is null`
   if (r.modo === 'vencidas') {
-    return Prisma.sql`p.fecha_vencimiento is not null and p.fecha_vencimiento < ${r.antesDe}::date`
+    return Prisma.sql`p.fecha_vencimiento is not null
+      and p.fecha_vencimiento >= ${r.desde}::date and p.fecha_vencimiento < ${r.antesDe}::date`
   }
   return Prisma.sql`p.fecha_vencimiento is not null
     and p.fecha_vencimiento >= ${r.desde}::date and p.fecha_vencimiento <= ${r.hasta}::date`
