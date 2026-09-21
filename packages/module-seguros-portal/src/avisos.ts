@@ -78,6 +78,9 @@ export type ObligacionParaAviso = {
   id: string
   titulo: string
   fechaAccionable: Date
+  /** Cada cuántos meses se repite, o `null`/ausente si es de una sola vez.
+   *  Solo se usa para la forma del id del aviso — ver el comentario de abajo. */
+  repiteCadaMeses?: number | null
 }
 
 /** Lo mínimo de una petición de acceso recibida; el resto de `PeticionRecibida` no se mira. */
@@ -168,6 +171,12 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
+
+/** `YYYY-MM-DD` en UTC. Se usa para el id por ciclo de una obligación: tiene que
+ *  ser estable (el mismo ciclo, la misma clave) y no depender del huso. */
+function diaIso(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
 const MS_DIA = 86_400_000
 
 function diaUtc(d: Date): Date {
@@ -291,7 +300,23 @@ export function avisosDe(x: EntradaAvisos): Avisos {
       if (!entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy: x.hoy })) continue
       avisos.push({
         tipo: 'obligacion_en_ventana',
-        id: o.id,
+        // 🚨 El id lleva la fecha del ciclo SOLO si la obligación se repite, y
+        // esa distinción es la que hace segura la pieza entera.
+        //
+        // Por qué con fecha en las recurrentes: el emisor de correo de la
+        // intranet sella por este id (`portal_aviso_enviado`), así que con el
+        // id de la FILA pelado un «ITV cada 12 meses» avisaría una vez y al año
+        // siguiente —misma fila, misma clave— se quedaría mudo para siempre.
+        //
+        // 🚨 Y por qué NO en las demás: `sincronizarObligacionesDeIdentidad()`
+        // REESCRIBE `fechaAccionable` en cada carga de la bóveda, así que una
+        // corrección del vencimiento que traiga CIMA dentro de la ventana
+        // cambiaría la clave y mandaría un SEGUNDO correo de la misma
+        // renovación. El id de fila lo impide, y en una obligación derivada no
+        // hay ciclo siguiente que desbloquear. De paso, las claves ya selladas
+        // siguen valiendo: cambiar la forma para todas habría reenviado de
+        // golpe todo lo que estuviera en ventana al desplegar.
+        id: o.repiteCadaMeses ? `${o.id}:${diaIso(o.fechaAccionable)}` : o.id,
         titulo: o.titulo,
         detalle: `Puedes actuar hasta el ${FECHA.format(o.fechaAccionable)}.`,
         href: HREF_POR_TIPO.obligacion_en_ventana,

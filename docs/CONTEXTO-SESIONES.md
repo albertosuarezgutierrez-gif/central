@@ -44,6 +44,17 @@ por esa fecha («¿te vence el seguro de X por estas fechas (mes), no?»); con `
 ningún dato) se mantiene la pregunta genérica para no inventar fecha. Solo `mensajeSugerido()` en
 `Recaptacion.tsx` (los botones manuales; el cron de email usa otro camino, sin tocar). PR #3238.
 
+**(21/09/2026)** §T CERRADO (PR #3250), y con un agujero más del que estaba anotado. (1) El emisor
+genérico de la intranet excluía toda obligación **sin póliza**; como el cron de vencimientos tampoco
+las coge desde #3241, una ITV o un carné propios **no avisaban por ningún canal** sin push, con la
+pantalla prometiendo «te avisamos». Se abre por el segundo camino que ya existía, **`portal_vinculo`**
+(varias fichas → la más antigua; desempatar aquí SÍ vale, no se escribe nada en ninguna ficha).
+(2) Quien no tiene ficha se **cuenta** (`sinFicha`), no se salta. (3) 🦷 El que no estaba en §T: el
+sello de `portal_aviso_enviado` iba por el id de la FILA, así que un «ITV cada 12 meses» avisaba UNA
+vez en su vida — misma fila, misma clave. El id del aviso lleva ahora **la fecha del ciclo**. 📊 Medido
+antes de tocar: 0 sellos, 0 obligaciones sin póliza, 0 recurrentes → cambiar la clave no re-envía nada
+y abrir el `where` no dispara hoy ni un correo.
+
 **(21/09/2026)** Tercera pasada del PR #3241: la revisión obligatoria antes de sacar de draft cazó
 **cuatro** cosas, una de ellas **regresión mía**. (1) 💣 `avisosDe()` formateaba la fecha del carné
 ANTES de validarla → una fecha basura era `RangeError` y tumbaba `/api/avisos` ENTERA (500, no `n+`) y

@@ -312,7 +312,7 @@ el único momento en que pasa algo. Tipo de aviso nuevo `carnet_caducado` (→ �
 hace veinte años no dice «conduce sin carné», dice «este dato es viejo». Y el texto **no acusa**: dice
 lo que NOS CONSTA y ofrece corregirlo, con cepo que prohíbe las frases de conducta.
 
-### T. 🐛 Un recordatorio recurrente sin push: CLAVADO ✅ arreglado · MUDO 🔴 sin arreglar
+### T. 🐛 Un recordatorio recurrente sin push: CLAVADO ✅ y MUDO ✅ — los dos cerrados (21/09/2026)
 
 Medido el 21/09/2026 leyendo las tres piezas. Eran dos agujeros distintos y solo uno se podía cerrar
 sin tocar lo que escribe a clientes reales.
@@ -330,12 +330,38 @@ número al azar, es la MISMA ventana en la que el aviso habría salido — pasad
 canal lo sellara, no queda nada que esperar, y el recordatorio ha estado todo ese tiempo visible como
 vencido en su pestaña, que es donde de verdad se mira.
 
-**2. Sin push activado, un recordatorio SIN póliza sigue MUDO. 🔴 Decisión de Alberto.**
+**2. Sin push activado, un recordatorio SIN póliza estaba MUDO. ✅ Cerrado, con el OK de Alberto.**
 El cron de vencimientos resuelve el destinatario a través de la póliza (`o.polizaId ? … : null`), así
 que lo cuenta `sinCanal` siempre; y el emisor genérico de intranet **lo excluye** (`polizaId: { not:
-null }` en su `where`). ⇒ un carné o una ITV sin asignar no avisan por ningún canal, aunque la
-pantalla diga «te avisamos». **No se arregla aquí porque abrir ese `where` pone a escribir correo a
-clientes reales sobre un texto que nadie ha revisado**, y eso es suyo.
+null }` en su `where`). ⇒ un carné o una ITV sin asignar no avisaban por ningún canal, aunque la
+pantalla dijera «te avisamos».
+El `where` se abre y la ficha se resuelve por el SEGUNDO camino que ya existía: **`portal_vinculo`**,
+la misma costura identidad↔cliente con la que el portal le enseña su cartera. Con varias fichas gana
+la más antigua (mismo desempate que `vinculosPorIdentidad`), y aquí desempatar SÍ vale —a diferencia
+de escribir un dato de contacto, que con varias fichas no escribe en ninguna—: esto no mete nada en
+la ficha de nadie, solo busca una dirección, y todas están vinculadas por el correo de esa misma
+persona. Quien no tiene ninguna ficha **se CUENTA** (`sinFicha` del resumen) en vez de desaparecer:
+«no hay a quién avisar» no es «no había nada que avisar».
+🚨 **Y con MÁS DE UN vínculo no se escribe a ninguna ficha** — la primera versión desempataba por el
+más antiguo y eso era un **envío a la persona equivocada**: un `portal_vinculo` puede nacer de
+`cliente_emails`, que son correos de CONTACTO y pueden ser de otro (el hijo que puso el suyo en la
+ficha de su madre). El recordatorio del hijo habría llegado a la bandeja de ella, sellado bajo su
+`clienteId`. Es la regla de agrupar por IDENTIDAD y no por la etiqueta, en su cara cara: no duplica,
+MEZCLA, y el resultado es plausible. Tampoco cuenta el vínculo de origen `corredor` (el temporal de
+«ver su portal»: apunta a la ficha que Alberto tuviera abierta).
+🦷 **Y faltaba un tercer agujero que solo se vio al medir: el sello.** `portal_aviso_enviado` va por
+el id del aviso, y ese id era el de la FILA — así que un «ITV cada 12 meses» avisaba UNA vez y al
+año siguiente, misma fila y misma clave, se quedaba mudo para siempre. Ahora el id del aviso de
+obligación lleva **la fecha del ciclo** pegada — **pero SOLO si se repite**, y esa mitad es tan
+importante como la otra: `sincronizarObligacionesDeIdentidad()` reescribe `fechaAccionable` en cada
+carga de la bóveda, así que en una obligación DERIVADA la fecha en la clave mandaría un segundo
+correo de la misma renovación en cuanto CIMA corrigiera el vencimiento (y, al desplegar, habría
+reenviado de golpe todo lo ya sellado). Con ciclo, cada ciclo es un aviso distinto; sin ciclo, manda
+el id de la fila.
+📊 Medido antes de tocar nada (21/09/2026): `portal_aviso_enviado` **0 filas** (el emisor no ha
+mandado nunca nada), 10 obligaciones y **0 sin póliza**, **0 recurrentes**. O sea: cambiar la clave
+no puede re-enviar nada a nadie, y abrir el `where` no dispara hoy ni un correo — deja la vía lista
+para el primero que se apunte una ITV.
 Lo que SÍ se arregló del canal que ya existía: el push dejó de mandar el texto de renovación de póliza
 sobre un recordatorio propio (`textoPushObligacion()`, por tipo, en el módulo puro). Ahí **no** se
 excluyen como en el correo, y la diferencia importa: el push es el único canal que puede avisar de un
