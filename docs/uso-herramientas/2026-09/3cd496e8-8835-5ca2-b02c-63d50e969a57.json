@@ -1,55 +1,56 @@
 {
  "sesion": "3cd496e8-8835-5ca2-b02c-63d50e969a57",
  "inicio": "2026-09-21T09:27:34.194Z",
- "fin": "2026-09-21T12:18:01.275Z",
- "llamadas": 142,
+ "fin": "2026-09-21T13:08:29.382Z",
+ "llamadas": 177,
  "categorias": {
   "otro": {
-   "llamadas": 40,
-   "chars_in": 12483,
-   "chars_out": 481695,
+   "llamadas": 47,
+   "chars_in": 12724,
+   "chars_out": 530572,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 13,
-    "ReadNotifications": 25,
+    "ToolSearch": 16,
+    "ReadNotifications": 29,
     "SubagentHandback": 1
    }
   },
   "bash": {
-   "llamadas": 31,
-   "chars_in": 28531,
-   "chars_out": 80154,
+   "llamadas": 32,
+   "chars_in": 28687,
+   "chars_out": 80348,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 31
+    "Bash": 32
    }
   },
   "mcp:Supabase": {
-   "llamadas": 2,
-   "chars_in": 31,
-   "chars_out": 767,
+   "llamadas": 4,
+   "chars_in": 62,
+   "chars_out": 1306,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__list_projects": 1,
-    "mcp__Supabase__get_project": 1
+    "mcp__Supabase__list_projects": 2,
+    "mcp__Supabase__get_project": 1,
+    "mcp__Supabase__get_organization": 1
    }
   },
   "sql": {
-   "llamadas": 10,
-   "chars_in": 2751,
-   "chars_out": 17913,
+   "llamadas": 24,
+   "chars_in": 4961,
+   "chars_out": 28329,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 10
+    "mcp__Supabase__execute_sql": 24
    }
   },
   "mcp:posthog": {
@@ -77,9 +78,9 @@
    }
   },
   "mcp:github": {
-   "llamadas": 27,
-   "chars_in": 5843,
-   "chars_out": 200474,
+   "llamadas": 29,
+   "chars_in": 6058,
+   "chars_out": 207983,
    "errores": 0,
    "archivos_citados": 6,
    "chars_citados": 1776193,
@@ -89,10 +90,10 @@
     "mcp__github__search_code": 2,
     "mcp__github__get_job_logs": 1,
     "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 10,
+    "mcp__github__pull_request_read": 11,
     "mcp__github__list_repository_collaborators": 2,
     "mcp__github__actions_run_trigger": 1,
-    "mcp__github__search_repositories": 1
+    "mcp__github__search_repositories": 2
    }
   },
   "mcp:Vercel": {
@@ -141,6 +142,28 @@
    "chars_citados": 0,
    "tools": {
     "Read": 3
+   }
+  },
+  "grafo-propio": {
+   "llamadas": 8,
+   "chars_in": 2181,
+   "chars_out": 7294,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 8
+   }
+  },
+  "code-map": {
+   "llamadas": 1,
+   "chars_in": 85,
+   "chars_out": 520,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 1
    }
   }
  }
