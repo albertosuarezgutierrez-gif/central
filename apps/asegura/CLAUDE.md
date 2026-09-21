@@ -330,6 +330,34 @@ utilizable). Reglas que no se negocian al tocar esto:
   dinero, y la BD lo fuerza con un CHECK (`descarte_con_evidencia`).
 - **Sin libro no se cotiza.** Si la lectura del contador falla, se aborta: un tope que no se puede
   comprobar no es un tope.
+- 🚨 **Y `cotizar()` NO es el único camino al vendor: el ReRate y el Submit también abren línea en el
+  libro desde el 21/09/2026.** Hasta ese día ni `/api/operador/codeoscopic/oferta`
+  (`POST /insurances/{id}/offers`) ni `/api/operador/codeoscopic/emitir`
+  (`POST /insurances/{id}/policy-applications`) escribían NADA en `seguros.codeoscopic_consumo`, así
+  que `puedeCotizar()` no las veía y **el tope diario/mensual no las contaba** — con el CRM de Manuel
+  tratando el ReRate como facturable y `noRetry`, el libro llevaba contando de menos. Ahora las dos
+  pasan por su propio embudo (`lib/codeoscopic/libro-emision.ts` → `conLibroDeEmision()`), que copia
+  el ORDEN de `cotizar()`: libro (fail-closed) → tope → **reserva ANTES de llamar** → un solo
+  intento → cierre. `cotizar()` no se ha tocado.
+  - **Motivo propio** (`rerate` / `submit`) y **contadores SEPARADOS**: `consumoActual()` (el libro
+    de cotizar) los excluye por `motivo`, y `consumoEmision()` cuenta solo el suyo. Mezclarlos haría
+    que agotar el tope de una cosa apagara la otra sin que nadie supiera por qué, y que la cifra de
+    «cotizaciones que te quedan hoy» contara cosas que no son cotizaciones.
+  - 🚨 **El coste arranca en 0 y va en env: `CODEOSCOPIC_COSTE_RERATE_CENTS` /
+    `CODEOSCOPIC_COSTE_SUBMIT_CENTS`.** **No está confirmado que estas dos llamadas facturen** (el
+    portal del fabricante no lo documenta; la pregunta está redactada y sin enviar en
+    `docs/BORRADOR-CODEOSCOPIC-COSTE-RERATE-SUBMIT.md`, la manda Alberto). Se cuenta la LLAMADA, que
+    es lo que tapaba el agujero, y no se le pone precio: **ese 0 significa «sin confirmar», no
+    «gratis»**, y por eso los mensajes lo dicen con palabras en vez de pintar un `0,00€`. El día que
+    Codeoscopic conteste se pone la cifra en Vercel y nada más cambia.
+  - **Topes propios**, `CODEOSCOPIC_TOPE_{RERATE,SUBMIT}_{DIARIO,MENSUAL}`; por defecto, los de
+    cotizar × 2. El factor no es estético: la cascada de reparación de 400s puede hacer **dos**
+    llamadas por acción del corredor, y cada ReRate/Submit va detrás de una cotización que ya está
+    topada — con el mismo número, este freno cortaría emisiones legítimas en vez de cazar un bucle.
+  - Desenlaces nuevos, sin colapsar: **503 `sin_libro`** (no se pudo leer el libro; avería nuestra,
+    reintentar no la arregla) y **429 `tope`**. Ninguno es un rechazo del vendor: las dos frases
+    dicen que **no se ha llamado a la compañía**, para que nadie vaya a buscar a Avant2 una póliza
+    que no existe. Guardián: `test/regression-asegura-gasto-codeoscopic.test.ts`.
 - **Un solo intento.** `POST /insurances` no es idempotente: reintentar crea otro proyecto y otro
   cargo. La única repetición permitida es re-pedir el token tras un 401 (el vendor no tarificó).
 - **Los precios se pintan con su FIRMEZA.** En el fixture del sandbox ninguno de los 18 era firme, y
