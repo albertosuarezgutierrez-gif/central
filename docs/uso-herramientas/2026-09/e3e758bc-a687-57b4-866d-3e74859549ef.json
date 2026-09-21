@@ -1,0 +1,95 @@
+{
+ "sesion": "e3e758bc-a687-57b4-866d-3e74859549ef",
+ "inicio": "2026-09-21T23:15:58.633Z",
+ "fin": "2026-09-21T23:41:54.545Z",
+ "llamadas": 134,
+ "categorias": {
+  "otro": {
+   "llamadas": 5,
+   "chars_in": 638,
+   "chars_out": 1535,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 4,
+    "Skill": 1
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 780,
+   "chars_out": 6124,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 10,
+   "chars_in": 1011,
+   "chars_out": 56541,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 6,
+    "Grep": 3,
+    "Glob": 1
+   }
+  },
+  "bash": {
+   "llamadas": 23,
+   "chars_in": 8279,
+   "chars_out": 21335,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 23
+   }
+  },
+  "mcp:Interactive-Brokers--IBKR-": {
+   "llamadas": 71,
+   "chars_in": 4778,
+   "chars_out": 421152,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Interactive-Brokers--IBKR-__get_account_summary": 1,
+    "mcp__Interactive-Brokers--IBKR-__get_account_positions": 1,
+    "mcp__Interactive-Brokers--IBKR-__get_account_trades": 1,
+    "mcp__Interactive-Brokers--IBKR-__search_contracts": 24,
+    "mcp__Interactive-Brokers--IBKR-__get_price_history": 44
+   }
+  },
+  "escritura": {
+   "llamadas": 16,
+   "chars_in": 132684,
+   "chars_out": 1449540,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 5,
+    "Edit": 11
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 1781,
+   "chars_out": 1025,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__get_file_contents": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  }
+ }
+}
