@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-21T07:46:19Z",
+  "generadoEn": "2026-09-21T09:14:17Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -416,7 +416,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "estado": "usado",
@@ -444,7 +444,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "no",
@@ -4020,6 +4020,7 @@
       "/api/operador/companias/contacto/[id]",
       "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
+      "/api/operador/direccion/confirmar",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
@@ -4037,6 +4038,7 @@
       "/api/operador/recaptacion/email",
       "/api/operador/recaptacion/email-lote",
       "/api/operador/recaptacion/whatsapp",
+      "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
       "/api/operador/retencion/descartar",
       "/api/operador/sin-canal",
@@ -4924,6 +4926,7 @@
       "/api/correduria/companias/contactado",
       "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
+      "/api/correduria/direccion-confirmar",
       "/api/correduria/documentos",
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
@@ -4939,6 +4942,7 @@
       "/api/correduria/recaptacion",
       "/api/correduria/recaptacion/email",
       "/api/correduria/recaptacion/whatsapp",
+      "/api/correduria/renovaciones/contacto",
       "/api/correduria/retencion/descartar",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
@@ -5431,6 +5435,7 @@
       "seguros.polizas",
       "seguros.portal_aviso_enviado",
       "seguros.recordatorios",
+      "seguros.renovacion_contactos",
       "seguros.retencion_descartes",
       "seguros.siniestro_contrarios",
       "seguros.siniestro_intervinientes",
@@ -6429,7 +6434,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 41,
-    "apis": 1395,
+    "apis": 1399,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
