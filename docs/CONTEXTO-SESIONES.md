@@ -12,7 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(21/09/2026)** Presupuesto al cliente — **PR 1 entero** (#3252, draft). Módulo puro
+**(21/09/2026)** Presupuesto al cliente — **PR 1 entero, MERGEADO** (#3252, squash 40b5e2655).
+⚠️ Entró **sin la comprobación en navegador ni la medida a 320px** (decisión de Alberto: «mergea»):
+la tarjeta «Preparar presupuesto» de retarificar se verá por primera vez en producción. Módulo puro
 `presupuesto-cliente.ts` (estado derivado de los sellos, caducidad = mínimo de 3 fuentes con la
 fuente declarada, regla de las tres), DDL `seguros.presupuesto|_opcion|_evento` + `firma`
 (**APLICADA**, migración `seguros_presupuesto_cliente`), puerto `/api/operador/presupuesto`, proxy en
