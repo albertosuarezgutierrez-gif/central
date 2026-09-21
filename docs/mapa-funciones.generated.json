@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-21T09:26:24Z",
-  "sha": "5f58b9fcb8902733b0f8be393c591985f7566e3c",
+  "generadoEn": "2026-09-21T10:04:05Z",
+  "sha": "4d148a4745ffef0993cf425fb2b5bfdf63da5f3a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -65260,7 +65260,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "personaCompleta",
@@ -65268,7 +65268,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "boolean",
-          "linea": 67,
+          "linea": 68,
           "resumen": "¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor."
         },
         {
@@ -65277,7 +65277,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "Record<string, unknown>",
-          "linea": 81,
+          "linea": 82,
           "resumen": "La forma que espera `DatosAuto.propietario`/`conductor` en el puerto de asegura."
         },
         {
@@ -65286,7 +65286,7 @@
           "exportada": true,
           "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, consumo, simulacion, companias, }: { clienteId: string etiquetaCliente: string /** `null` = no se ha podido precalificar la person",
           "retorno": null,
-          "linea": 113
+          "linea": 114
         },
         {
           "nombre": "BloquePersona",
@@ -65294,7 +65294,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onActivo, persona, onPersona, civiles, conCarnet, }: { etiqueta: string activo: boolean onActivo: (v: boolean) => void persona: PersonaForm onPersona: (p: PersonaForm) => void civiles: Opcion[] conCarnet: boolean }",
           "retorno": null,
-          "linea": 623,
+          "linea": 649,
           "resumen": "El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador."
         },
         {
@@ -65303,7 +65303,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 693
+          "linea": 719
         },
         {
           "nombre": "Contador",
@@ -65311,7 +65311,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 706
+          "linea": 732
         },
         {
           "nombre": "Precios",
@@ -65319,14 +65319,14 @@
           "exportada": false,
           "params": "{ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }",
           "retorno": null,
-          "linea": 725
+          "linea": 751
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "7635b1c7bbce"
+      "hash": "d025ee11a3da"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/page.tsx",
@@ -65801,7 +65801,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "MotoNuevo",
@@ -65809,7 +65809,7 @@
           "exportada": true,
           "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, }: { clienteId: string etiquetaCliente: string /** `null` = no se ha podido precalificar la person",
           "retorno": null,
-          "linea": 67
+          "linea": 68
         },
         {
           "nombre": "Campo",
@@ -65817,7 +65817,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 570
+          "linea": 595
         },
         {
           "nombre": "Contador",
@@ -65825,7 +65825,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 583
+          "linea": 608
         },
         {
           "nombre": "Precios",
@@ -65833,14 +65833,14 @@
           "exportada": false,
           "params": "{ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }",
           "retorno": null,
-          "linea": 602
+          "linea": 627
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "cc2d2c575da1"
+      "hash": "ddbf856f8571"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/page.tsx",
@@ -68214,7 +68214,7 @@
           "exportada": false,
           "params": "guardado: unknown",
           "retorno": "string | null",
-          "linea": 32,
+          "linea": 33,
           "resumen": "Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el embudo de asegura (`Guardado`: `{estado:'guardada', cotizacionId}` | `{estado:'no_guardada'|'no_intentada', motivo}`). `unknown`"
         },
         {
@@ -68223,7 +68223,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 41,
+          "linea": 42,
           "resumen": "La fecha de HOY en local (no `toISOString()`, que es UTC y puede dar el día de ayer/mañana según la hora): es el valor que Allianz acepta siempre — su 400 real es «no puede estar a más de 90 días vist"
         },
         {
@@ -68232,7 +68232,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": "string",
-          "linea": 46,
+          "linea": 47,
           "resumen": "Hoy + `n` días, en local (mismo criterio que `hoyISO`)."
         },
         {
@@ -68241,7 +68241,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 52
+          "linea": 53
         },
         {
           "nombre": "normalizarTexto",
@@ -68249,7 +68249,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 63,
+          "linea": 64,
           "resumen": "Quita tildes y mayúsculas para comparar «Casado» con «CASADO». Espejo de `normalizarTexto()` de `apps/asegura/lib/codeoscopic/opciones.ts`."
         },
         {
@@ -68258,7 +68258,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 76,
+          "linea": 77,
           "resumen": "🚨 El `eur()` de plataforma devuelve «0,00€» para lo que no es un número finito, y eso aquí sería una MENTIRA: una prima que la compañía no ha declarado es un «no lo sé», no un cero. Tres estados, no "
         },
         {
@@ -68267,7 +68267,7 @@
           "exportada": false,
           "params": "precios: Precio[]",
           "retorno": "string",
-          "linea": 167,
+          "linea": 168,
           "resumen": "El resumen honrado de una cotización, a partir de solo sus precios (sin fallos: la cotización GUARDADA no los persiste, ver `apps/asegura/lib/ codeoscopic/cotizaciones.ts`). Mismo criterio que `resumi"
         },
         {
@@ -68276,7 +68276,7 @@
           "exportada": false,
           "params": "g: TarificacionGuardadaAuto",
           "retorno": "Resultado",
-          "linea": 182,
+          "linea": 183,
           "resumen": "Convierte la cotización YA GUARDADA en el mismo `Resultado` que pinta una cotización recién pedida — para que la pantalla no necesite un camino aparte para «lo que ya había» frente a «lo que se acaba "
         },
         {
@@ -68285,7 +68285,7 @@
           "exportada": false,
           "params": "clave: string",
           "retorno": "DatosBorrador | null",
-          "linea": 227
+          "linea": 228
         },
         {
           "nombre": "guardarBorrador",
@@ -68293,7 +68293,7 @@
           "exportada": false,
           "params": "clave: string, datos: DatosBorrador",
           "retorno": null,
-          "linea": 245
+          "linea": 246
         },
         {
           "nombre": "borrarBorrador",
@@ -68301,7 +68301,7 @@
           "exportada": false,
           "params": "clave: string",
           "retorno": null,
-          "linea": 255
+          "linea": 256
         },
         {
           "nombre": "buscarEnCatalogo",
@@ -68309,7 +68309,7 @@
           "exportada": false,
           "params": "catalogo: Opcion[], texto: string | null",
           "retorno": "Emparejamiento",
-          "linea": 289,
+          "linea": 290,
           "resumen": "Empareja un texto de la ficha con una opción del catálogo. Mismo criterio que `emparejar()` de `opciones.ts` —exacto y normalizado, y ante la duda no preselecciona— pero devolviendo POR QUÉ no ha casa"
         },
         {
@@ -68318,7 +68318,7 @@
           "exportada": true,
           "params": "{ polizaId, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilAuto, tiposVia, tipoViaAuto, tipoViaMotivo, fechaMatriculacion, vehiculo, consumo, simulacion, deshabilitado, guardadaPrevia, }: { polizaId: string /** * ",
           "retorno": null,
-          "linea": 319,
+          "linea": 320,
           "resumen": "El único sitio de la app donde un clic cuesta 0,50€ — **salvo en simulación**. Cuatro cosas son deliberadas: - El botón dice EN el botón lo que cuesta el clic, no en una nota al pie, y dice la verdad "
         },
         {
@@ -68327,7 +68327,7 @@
           "exportada": false,
           "params": "{ r, simulacion, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean }",
           "retorno": null,
-          "linea": 1528
+          "linea": 1527
         },
         {
           "nombre": "ValorSupuesto",
@@ -68335,7 +68335,7 @@
           "exportada": true,
           "params": "{ s }: { s: Supuesto }",
           "retorno": null,
-          "linea": 1790,
+          "linea": 1789,
           "resumen": "Un supuesto, con su valor — o con la explicación de por qué no lo hay. 🔒 `oculto` NO es «no hay valor»: es «lo hay y se queda en asegura», porque es un dato personal del tomador (su código postal, tí"
         },
         {
@@ -68344,7 +68344,7 @@
           "exportada": false,
           "params": "{ guardadaPrevia, onDescartar, }: { guardadaPrevia: TarificacionGuardadaAuto onDescartar: () => void }",
           "retorno": null,
-          "linea": 1821,
+          "linea": 1820,
           "resumen": "Avisa de que la pantalla ha arrancado con una cotización YA PAGADA, para que no se lea como si el precio de abajo fuera gratis o recién pedido. Todo lo prellenado sigue siendo editable, pero «Pedir pr"
         },
         {
@@ -68353,7 +68353,7 @@
           "exportada": false,
           "params": "{ guardadaPrevia }: { guardadaPrevia: TarificacionGuardadaAuto }",
           "retorno": null,
-          "linea": 1865
+          "linea": 1864
         },
         {
           "nombre": "BannerSimulacion",
@@ -68361,7 +68361,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 1885
+          "linea": 1884
         },
         {
           "nombre": "CabeceraPaso",
@@ -68369,7 +68369,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub }: { n: number; titulo: string; sub?: string }",
           "retorno": null,
-          "linea": 1911
+          "linea": 1910
         },
         {
           "nombre": "Paso",
@@ -68377,7 +68377,7 @@
           "exportada": false,
           "params": "{ n, titulo, sub, children, }: { n: number titulo: string sub?: string children: React.ReactNode }",
           "retorno": null,
-          "linea": 1943
+          "linea": 1942
         },
         {
           "nombre": "Campo",
@@ -68385,7 +68385,7 @@
           "exportada": false,
           "params": "{ id, etiqueta, falta, faltaTexto, ayuda, children, }: { id: string etiqueta: string falta: boolean faltaTexto?: string ayuda?: React.ReactNode children: React.ReactNode }",
           "retorno": null,
-          "linea": 1969,
+          "linea": 1968,
           "resumen": "Un campo del formulario: etiqueta, control, ayuda y —si falta— su marca. La marca va AQUÍ y no en una lista encima del botón: «falta la versión» a diez centímetros del desplegable de la versión obliga"
         },
         {
@@ -68394,7 +68394,7 @@
           "exportada": false,
           "params": "{ vehiculo, autoMarca, autoModelo, }: { vehiculo: VehiculoConocido | null autoMarca: Emparejamiento autoModelo: Emparejamiento }",
           "retorno": null,
-          "linea": 2010,
+          "linea": 2009,
           "resumen": "Lo que la cartera YA sabe del coche: informativo, compacto y sin competir con los campos. Sustituye al texto que durante un día negó que la compañía mandara el modelo. Era falso y medido al revés: las"
         },
         {
@@ -68403,7 +68403,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, estado, }: { etiqueta: string valor: string | null estado: Emparejamiento['estado'] }",
           "retorno": null,
-          "linea": 2081
+          "linea": 2080
         },
         {
           "nombre": "ProcedenciaCatalogo",
@@ -68411,7 +68411,7 @@
           "exportada": false,
           "params": "{ emp, elegido, que, }: { emp: Emparejamiento elegido: string que: string }",
           "retorno": null,
-          "linea": 2118,
+          "linea": 2117,
           "resumen": "De dónde sale lo que hay puesto en un desplegable — o por qué no hay nada."
         },
         {
@@ -68420,7 +68420,7 @@
           "exportada": false,
           "params": "{ versiones }: { versiones: VersionCandidata[] }",
           "retorno": null,
-          "linea": 2165,
+          "linea": 2164,
           "resumen": "Las versiones vistas en OTRAS pólizas de la misma matrícula. 🚨 Son PISTAS, nunca una selección. Son texto histórico de otra póliza, no códigos Base7 del catálogo, y con dos o más pueden contradecirse"
         },
         {
@@ -68429,7 +68429,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: Consumo; simulacion: boolean }",
           "retorno": null,
-          "linea": 2219,
+          "linea": 2218,
           "resumen": "El contador de gasto. En simulación no se toca el libro, así que su estado se cuenta como información de contexto y NO en rojo: un «tarificación apagada» en rojo sobre una pantalla que sí funciona y n"
         }
       ],
@@ -68437,7 +68437,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "d7f9490a4f52"
+      "hash": "28c53347c870"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/RetarificadorHogar.tsx",
@@ -68986,6 +68986,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2625e1c077db"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/SelectorBuscable.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SelectorBuscable"
+      ],
+      "funciones": [
+        {
+          "nombre": "SelectorBuscable",
+          "kind": "function",
+          "exportada": true,
+          "params": "props: Props",
+          "retorno": null,
+          "linea": 57
+        },
+        {
+          "nombre": "Cuerpo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ id, valor, onCambiar, opciones, deshabilitado = false, textoVacio, nombre, plural, marcador, style, etiquetadas, sugerida, }: Props & { etiquetadas: (OpcionSimple & { etiqueta: string })[]; sugerida: string }",
+          "retorno": null,
+          "linea": 78
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "79f76d97a3f1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/SinCanal.tsx",
@@ -78276,7 +78306,7 @@
           "exportada": false,
           "params": "faltan: string[], leer: () => Promise<T>",
           "retorno": "Promise<ResultadoFuente<T>>",
-          "linea": 50,
+          "linea": 51,
           "resumen": "Envuelve una lectura en el tri-estado: secreto ausente → no_configurado; excepción → error."
         },
         {
@@ -78285,7 +78315,7 @@
           "exportada": false,
           "params": "nombres: string[]",
           "retorno": "string[]",
-          "linea": 60
+          "linea": 61
         },
         {
           "nombre": "handler",
@@ -78293,12 +78323,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 64
+          "linea": 65
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/seo-correduria",
-      "hash": "9adc09dd4c47"
+      "hash": "e5f26ee39358"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ses-latido/route.ts",
@@ -95510,6 +95540,58 @@
       "hash": "060c35d3f29b"
     },
     {
+      "ruta": "apps/plataforma/lib/filtrar-opciones.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Filtro de texto para las listas largas del catálogo de Codeoscopic (las versiones de un modelo son decenas: «1.0 TGDI 48V TECNO 4X2», «1.0 TGDI ESSENCE 4X2»…). Puro y aparte del componente para poder probarlo. /",
+      "exporta": [
+        "normalizar",
+        "filtrarOpciones",
+        "etiquetarOpciones",
+        "consultaSugerida"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizar",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 10,
+          "resumen": "Minúsculas, sin acentos y con los espacios colapsados: así «TECNO» casa con «tecno»."
+        },
+        {
+          "nombre": "filtrarOpciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "opciones: readonly T[], consulta: string, seleccionado = '', donde: DondeBuscar = 'nombre+codigo',",
+          "retorno": "T[]",
+          "linea": 29,
+          "resumen": "Deja las opciones que contienen TODOS los términos escritos (AND, en cualquier orden): «48v tecno» encuentra «1.0 TGDI 48V TECNO 4X2». Busca en el nombre Y en el código, que es lo que el tarificador p"
+        },
+        {
+          "nombre": "etiquetarOpciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "opciones: readonly T[],",
+          "retorno": "(T &",
+          "linea": 60,
+          "resumen": "Añade el código al nombre SOLO cuando ese nombre está repetido en la lista. El catálogo devuelve versiones homónimas (tres «1.0 TGDI TECNO 4X2» seguidas en el mismo desplegable) que son códigos Base7 "
+        },
+        {
+          "nombre": "consultaSugerida",
+          "kind": "function",
+          "exportada": true,
+          "params": "opciones: readonly OpcionSimple[], pista: string",
+          "retorno": "string",
+          "linea": 88,
+          "resumen": "Convierte una PISTA en texto libre (la versión escrita en otra póliza de la misma matrícula: «HEV 1.6 GDI DT TECNO RED») en la consulta más larga que todavía encuentra algo en el catálogo. Va término "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "41055adff913"
+    },
+    {
       "ruta": "apps/plataforma/lib/financiero.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -100713,6 +100795,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2ccdc0914d03"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seo-correduria/indexacion-pendiente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/indexacion-pendiente.ts — qué URLs del blog llevan sin indexar y el prompt de Claude Chrome ya armado para pedir su indexación en Search Console. La Search Console API NO tiene endpoint de «solicitar indexación» para páginas normales (solo Job/BroadcastEvent): ese botón solo exist",
+      "exporta": [
+        "urlsBlogPendientesIndexar",
+        "promptClaudeChromeIndexacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlsBlogPendientesIndexar",
+          "kind": "function",
+          "exportada": true,
+          "params": "cobertura: DatosCobertura",
+          "retorno": "string[]",
+          "linea": 16,
+          "resumen": "URLs del blog que la URL Inspection API AÚN no da por indexadas (verdict !== PASS)."
+        },
+        {
+          "nombre": "promptClaudeChromeIndexacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "urls: string[]",
+          "retorno": "string | null",
+          "linea": 25,
+          "resumen": "El prompt de Claude Chrome, listo para pegar. `null` si no hay ninguna URL pendiente."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "756d16e9e4a6"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/informe.ts",
@@ -110297,7 +110411,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 643
+          "linea": 649
         },
         {
           "nombre": "avisosDe",
@@ -110305,7 +110419,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 648,
+          "linea": 654,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -110314,13 +110428,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 658,
+          "linea": 664,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1d7f9b13fabc"
+      "hash": "e298d0234502"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -141240,7 +141354,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3441,
-    "funciones": 10701
+    "archivos": 3444,
+    "funciones": 10709
   }
 }
