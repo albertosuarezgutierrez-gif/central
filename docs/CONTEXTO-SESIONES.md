@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** Asociaciones de corredores. Se buscó en Gmail la asociación en la que estuvo Alberto
+(E2K, que **no es asociación sino alianza por contrato marco**: clave y cartera viven en un contrato
+privado, no en estatutos). Enviados correos de presentación a **AUNNA, Pactrebol, ACSA y APROMES**
+pidiendo cuota, panel de compañías, servicio de suscripción para riesgos raros y —lo decisivo—
+**bajo qué clave DGSFP se emite el negocio**: si se emite bajo la de la agrupación, el EIAC lo recibe
+ella y nuestra cartera se queda ciega. 🚨 **AUNNA exige 1 M€ de cartera mínima (autos <55%)**: con 105
+pólizas no entra. Triaje de correo: categoría nueva `asociacion-corredores` (aviso INMEDIATO) + 4
+reglas de dominio ya insertadas en `correo_reglas`. PR pendiente de nº.
+
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
 `product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
