@@ -12,6 +12,21 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🚗 **Avant2 vs. lo nuestro para tarificar auto: no nos falta pantalla, nos faltan
+datos que ya viajaban INVENTADOS.** De los once campos que pide el formulario de Avant2 y el nuestro
+no, **seis ya iban en la petición con un valor que nadie había preguntado**. Tres se arreglan aquí
+sin gastar un euro porque ya viajaban (`kilometersPerYear`, `purchaseDate`, `lightTrailer`): campos
+nuevos en «1 · El coche», **vacíos a propósito** (en blanco = supuesto de siempre; con valor, manda
+el corredor), en el borrador local y con el botón bloqueado si el número está mal.
+`KM_ANUALES_SUPUESTOS` sube a `@central/module-seguros` para que pantalla y petición no puedan
+divergir, con cepo de valor visto en rojo. 🔴 **Lo gordo queda abierto y documentado:** el carnet va
+**cableado** a `{type:'B', issuingZone:'Spain'}` (`persona.ts:136`) — un carnet extranjero se declara
+como español sin que nada falle, y eso es art. 10 LCS, no un precio malo. Eso y `secondaryDriver`
+(conductor ocasional) piden **una** cotización real de verificación a 0,50€: spec + orden en
+`docs/superpowers/specs/2026-09-21-avant2-auto-tarificacion-comparativa-design.md`. Donde SÍ vamos
+por delante: Avant2 acepta «tuvo seguro» con 0 años y cotiza novel; nosotros lo paramos antes de
+gastar.
+
 **(21/09/2026)** ✅ **Cerrada la avería del vigilante de CIMA: 48 h caído, arreglada en 15 s.** Era
 lo diagnosticado — el secret `INTERNAL_API_SECRET` de Actions ya no coincidía con la env var de
 Vercel. **La fecha lo remató:** esa env var se editó el 20/09, justo entre el último run verde

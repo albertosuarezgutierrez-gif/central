@@ -1,3 +1,5 @@
+export { KM_ANUALES_SUPUESTOS } from './supuestos-auto.ts'
+
 export {
   PROHIBIDO,
   ACOTA_AMBITO,

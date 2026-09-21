@@ -35,6 +35,7 @@ import {
 } from './peticion-auto.ts'
 import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-moto.ts'
 import { partirDireccion, tipoViaDeFicha } from './direccion.ts'
+import { KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
 export type Supuesto = {
@@ -182,8 +183,14 @@ export function tipoViaTextoDelTomador(cliente: Pick<ClienteCartera, 'direccion'
   return partirDireccion(cliente.direccion ?? null).tipoVia
 }
 
-/** Kilómetros al año cuando nadie lo ha dicho. Media española declarada. */
-export const KM_ANUALES_POR_DEFECTO = 15000
+/**
+ * Kilómetros al año cuando nadie lo ha dicho. Media española declarada.
+ *
+ * El número NO vive aquí: lo fija `@central/module-seguros` porque la pantalla
+ * de plataforma tiene que enseñar el MISMO supuesto que viaja en la petición.
+ * Se re-exporta con el nombre de siempre para no tocar a quien ya lo importa.
+ */
+export const KM_ANUALES_POR_DEFECTO = KM_ANUALES_SUPUESTOS
 
 /** Años asegurado que se presumen cuando no consta el inicio de la relación. */
 const ANIOS_ASEGURADO_MINIMOS = 1
