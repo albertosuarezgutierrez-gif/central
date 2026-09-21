@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-21T10:10:53Z",
-  "sha": "7a663e8facdf3113a138ab63fd93757b58aa94ce",
+  "generadoEn": "2026-09-21T11:33:26Z",
+  "sha": "1e79254a313a9f1cb25f399f6a810da913021049",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3784,7 +3784,7 @@
           "exportada": true,
           "params": "{ searchParams, }: { // Next 15 entrega los parámetros como promesa. La vista NO da acceso a nada: // lo que decide qué datos se leen es la sesión de abajo, así que un valor // raro aquí solo elige otra pestaña, nunca otros datos. searchPar",
           "retorno": null,
-          "linea": 76
+          "linea": 78
         },
         {
           "nombre": "Titular",
@@ -3792,7 +3792,7 @@
           "exportada": false,
           "params": "{ titular, grupo, conNombre, hoy, }: { titular: TitularPortal grupo: GrupoCartera conNombre: boolean /** Resuelto en el servidor (la página es `force-dynamic`). */ hoy: Date }",
           "retorno": null,
-          "linea": 600,
+          "linea": 672,
           "resumen": "Las pólizas de un titular, como LISTA. 🚨 Dos marcas distintas, que dicen cosas distintas: - La **cabecera pegajosa** (`titular-cabecera`) dice DE QUIÉN es este tramo de la lista, y se queda a la vist"
         },
         {
@@ -3801,7 +3801,7 @@
           "exportada": false,
           "params": "p: PolizaPortal, companias: readonly FilaCompania[], titular?: string",
           "retorno": "PolizaOpcionParte",
-          "linea": 649,
+          "linea": 721,
           "resumen": "La etiqueta de una póliza de la CARTERA en el desplegable del parte. Con `titular` cuando la póliza es de otra persona que ha autorizado a esta: sin el nombre, dos pólizas de auto de la misma compañía"
         }
       ],
@@ -3809,7 +3809,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "3251b9d9c3ea"
+      "hash": "925369c1859b"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ParteSiniestro.tsx",
@@ -4203,15 +4203,15 @@
           "exportada": false,
           "params": "meses: number | null",
           "retorno": "string",
-          "linea": 41
+          "linea": 45
         },
         {
           "nombre": "Recordatorios",
           "kind": "function",
           "exportada": true,
-          "params": "{ recordatorios, polizas, }: { recordatorios: RecordatorioVista[] /** Para poder decir «ITV del Ibiza» en vez de «ITV»: Alberto, 13/09/2026 * («lo lógico es asignarlo al bien asegurado»). La MISMA lista que ya arma * `page.tsx` para `ParteS",
+          "params": "{ recordatorios, polizas, precargas, carnetsIlegibles, }: { recordatorios: RecordatorioVista[] /** Para poder decir «ITV del Ibiza» en vez de «ITV»: Alberto, 13/09/2026 * («lo lógico es asignarlo al bien asegurado»). La MISMA lista que ya a",
           "retorno": null,
-          "linea": 62
+          "linea": 66
         },
         {
           "nombre": "etiquetaMeses",
@@ -4219,7 +4219,7 @@
           "exportada": false,
           "params": "meses: number",
           "retorno": "string",
-          "linea": 314
+          "linea": 424
         }
       ],
       "tablas": [
@@ -4227,7 +4227,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "5609f18cbeb5"
+      "hash": "e8dc742b6443"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/ResumenTitular.tsx",
@@ -4625,7 +4625,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/avisos-push",
-      "hash": "6bd1a2868ecc"
+      "hash": "0c2c65d6eab9"
     },
     {
       "ruta": "apps/asegura-portal/app/api/hojas/[id]/route.ts",
@@ -8230,7 +8230,7 @@
           "exportada": true,
           "params": "identidadId: string, valor: RecordatorioNormalizado",
           "retorno": "Promise<",
-          "linea": 55,
+          "linea": 60,
           "resumen": "Da de alta un recordatorio propio. La fecha que teclea la persona ES la fecha en la que quiere que le avisen — `fechaAccionable` es la MISMA, sin restarle los 30 días del art. 22 LCS (eso es de una re"
         },
         {
@@ -8239,7 +8239,7 @@
           "exportada": true,
           "params": "identidadId: string, id: string",
           "retorno": "Promise<boolean>",
-          "linea": 76,
+          "linea": 81,
           "resumen": "Solo borra lo suyo: el `where` lleva `identidadId` Y `...FILTRO_PROPIOS`, así que ni una petición con el id de la obligación de OTRO ni el id de una obligación derivada de póliza (que no tiene dueño d"
         },
         {
@@ -8248,7 +8248,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<RecordatorioVista[]>",
-          "linea": 83
+          "linea": 88
         },
         {
           "nombre": "recordatoriosDeSesion",
@@ -8256,7 +8256,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<RecordatorioVista[]>",
-          "linea": 105,
+          "linea": 110,
           "resumen": "Envoltura que resuelve la identidad por la puerta única."
         },
         {
@@ -8265,7 +8265,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 153,
+          "linea": 172,
           "resumen": "Empuja al ciclo siguiente los recordatorios RECURRENTES cuyo aviso ya salió y cuya fecha ya pasó. Es lo que hace que un «ITV cada 12 meses» no se quede mudo para siempre tras el primer aviso: sin este"
         },
         {
@@ -8274,12 +8274,12 @@
           "exportada": true,
           "params": "identidadId: string, hoy: Date = new Date()",
           "retorno": "Promise<void>",
-          "linea": 157
+          "linea": 176
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c34782589a49"
+      "hash": "f38c60eb7157"
     },
     {
       "ruta": "apps/asegura-portal/lib/representacion.ts",
@@ -13430,7 +13430,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3ec39d66ddbf"
+      "hash": "ac372fda847a"
     },
     {
       "ruta": "apps/asegura/lib/backfill-contacto.ts",
@@ -18964,7 +18964,7 @@
           "exportada": false,
           "params": "partes: readonly string[]",
           "retorno": "string",
-          "linea": 99,
+          "linea": 105,
           "resumen": "`['a','b','c']` → `a, b y c`. Vacío no ocurre (quien llama no escribe sin avisos)."
         },
         {
@@ -18973,7 +18973,7 @@
           "exportada": true,
           "params": "avisos: readonly AvisoParaCorreo[]",
           "retorno": "string",
-          "linea": 108,
+          "linea": 114,
           "resumen": "Las clases presentes, contadas y nombradas, en el orden del catálogo (no en el de llegada: así dos correos con lo mismo se leen igual)."
         },
         {
@@ -18982,7 +18982,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 120
+          "linea": 126
         },
         {
           "nombre": "cuerpoAvisosIntranet",
@@ -18990,7 +18990,7 @@
           "exportada": true,
           "params": "d: DatosAvisosIntranet",
           "retorno": "CuerpoCorreo",
-          "linea": 130,
+          "linea": 136,
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta, para que su cepo pueda recorrer el texto entero. Mismo motivo que en `correo-aviso-acceso.ts`: un guardián que neces"
         },
         {
@@ -18999,13 +18999,13 @@
           "exportada": true,
           "params": "destino: string, d: DatosAvisosIntranet",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 190,
+          "linea": 196,
           "resumen": "El envío. Devuelve el desenlace en vez de lanzar, por lo mismo que el resto de correos de esta app: «no hay proveedor» es una variable de Vercel que falta, y un reintento no la pone."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e7c5e7c160fd"
+      "hash": "d8922e04f60e"
     },
     {
       "ruta": "apps/asegura/lib/correo-invitacion-portal.ts",
@@ -92463,7 +92463,7 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "RutaCorreo",
-          "linea": 152
+          "linea": 166
         },
         {
           "nombre": "descripcionParaPrompt",
@@ -92471,13 +92471,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 161,
+          "linea": 175,
           "resumen": "Genera el bloque de categorías para el prompt de clasificación (sin duplicar la lista)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a96f7559aac2"
+      "hash": "8d2a3fc6c65a"
     },
     {
       "ruta": "apps/plataforma/lib/correo/smoobu-notificacion.ts",
@@ -92616,7 +92616,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 69
+          "linea": 70
         },
         {
           "nombre": "digestTriaje",
@@ -92624,7 +92624,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 242,
+          "linea": 243,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -92633,7 +92633,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 282,
+          "linea": 283,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         }
       ],
@@ -92643,7 +92643,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "681ba5723fad"
+      "hash": "d41e48287846"
     },
     {
       "ruta": "apps/plataforma/lib/cron-auth.ts",
@@ -130649,6 +130649,7 @@
       "resumen": "Los AVISOS de la campana: qué tiene pendiente la persona que ha entrado, en una sola lista, con un enlace al sitio donde cada cosa se resuelve. Esto es PURO a propósito: recibe lo que ya leyeron `lib/autorizaciones.ts` y `lib/obligaciones.ts` (cada uno con su frontera de identidad) y no toca la BD. ",
       "exporta": [
         "entraEnVentanaCarnet",
+        "carnetCaducado",
         "textoGlobo",
         "avisosDe"
       ],
@@ -130659,7 +130660,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 152
+          "linea": 173
         },
         {
           "nombre": "entraEnVentanaCarnet",
@@ -130667,8 +130668,35 @@
           "exportada": true,
           "params": "fechaCaducidad: string, hoy: Date",
           "retorno": "boolean",
-          "linea": 157,
+          "linea": 178,
           "resumen": "`YYYY-MM-DD` dentro de la ventana del carné, a fecha `hoy`. Mismo criterio que `entraEnVentana()`: solo futuro."
+        },
+        {
+          "nombre": "diasHastaCarnet",
+          "kind": "function",
+          "exportada": false,
+          "params": "fechaCaducidad: string, hoy: Date",
+          "retorno": "number | null",
+          "linea": 188,
+          "resumen": "Días que faltan para que caduque (negativos si YA caducó), o `null` si la fecha no es una fecha. Se saca aparte porque lo necesitan las dos ventanas y con dos parseos acabarían discrepando en el borde"
+        },
+        {
+          "nombre": "fechaCarnetLegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "fechaCaducidad: string, hoy: Date",
+          "retorno": "string | null",
+          "linea": 206,
+          "resumen": "El día del carné en castellano, o `null` si la fecha no es una fecha. 🚨 Devuelve `null` en vez de lanzar, y se llama DESPUÉS de que una de las dos ventanas haya dicho que sí. Formatearlo antes —que e"
+        },
+        {
+          "nombre": "carnetCaducado",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaCaducidad: string, hoy: Date",
+          "retorno": "boolean",
+          "linea": 218,
+          "resumen": "El carné YA caducó y la fecha es lo bastante reciente como para afirmarlo. 🚨 Es EXCLUYENTE con `entraEnVentanaCarnet` por construcción (aquella exige `faltan >= 0` y esta `faltan < 0`): un mismo carn"
         },
         {
           "nombre": "textoGlobo",
@@ -130676,7 +130704,7 @@
           "exportada": true,
           "params": "n: number, ilegibles: number, fuentes: number",
           "retorno": "string | null",
-          "linea": 172,
+          "linea": 229,
           "resumen": "· ninguna legible → `!` (no se sabe nada)."
         },
         {
@@ -130685,12 +130713,12 @@
           "exportada": true,
           "params": "x: EntradaAvisos",
           "retorno": "Avisos",
-          "linea": 178
+          "linea": 235
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "41f69c07b564"
+      "hash": "cfaf850ee8fd"
     },
     {
       "ruta": "packages/module-seguros-portal/src/bien-asegurado.ts",
@@ -131620,6 +131648,72 @@
       "hash": "635303734d84"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/itv.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Cuándo le toca la próxima ITV a un vehículo, según su antigüedad. 🚨 LO PRIMERO, PORQUE ES LO QUE DECIDE CÓMO SE PINTA: esto NO sabe cuándo pasó la última inspección — nadie en este sistema lo sabe. Lo único que hace es aplicar la periodicidad LEGAL a la fecha de matriculación, así que hay dos calid",
+      "exporta": [
+        "perfilItvDeRamo",
+        "proximaItv"
+      ],
+      "funciones": [
+        {
+          "nombre": "perfilItvDeRamo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined",
+          "retorno": "PerfilItv | null",
+          "linea": 71,
+          "resumen": "El ramo de la póliza → perfil. Cualquier otro ramo no tiene ITV que calcular."
+        },
+        {
+          "nombre": "dia",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "Date | null",
+          "linea": 84
+        },
+        {
+          "nombre": "iso",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 95
+        },
+        {
+          "nombre": "mesesEntre",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: Date, hasta: Date",
+          "retorno": "number",
+          "linea": 111,
+          "resumen": "Meses completos entre dos fechas (el mismo criterio de «edad» que usa la ley). 🚨 El día del aniversario se RECORTA al último del mes de llegada, y eso no es un detalle: un vehículo matriculado un 29 "
+        },
+        {
+          "nombre": "cadaMesesEnEdad",
+          "kind": "function",
+          "exportada": false,
+          "params": "tramos: readonly Tramo[], edadMeses: number",
+          "retorno": "number",
+          "linea": 123,
+          "resumen": "Cada cuántos meses le toca a esa EDAD. El tramo más viejo que ya ha alcanzado."
+        },
+        {
+          "nombre": "proximaItv",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: { /** `YYYY-MM-DD`. */ fechaMatriculacion: string perfil: PerfilItv hoy: Date }",
+          "retorno": "ProximaItv | null",
+          "linea": 138,
+          "resumen": "La próxima ITV de un vehículo matriculado en `fechaMatriculacion`. Devuelve `null` —«no lo sé»— y NUNCA una fecha de relleno cuando la fecha de matriculación no es una fecha real (`YYYY-MM-DD` válida)"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c2630cd85949"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/lead-declarada.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "Una póliza que el cliente sube al portal, vista DESDE EL LADO DEL CORREDOR. ── Por qué existe (07/09/2026) ───────────────────────────────────────────── Medido ese día: `seguros.portal_poliza_declarada` solo la leían los partes y la exportación RGPD. **Ninguna pantalla de Alberto la miraba.** O sea,",
@@ -132208,7 +132302,8 @@
       "ambito": "packages/module-seguros-portal",
       "resumen": "El push es un canal INDEPENDIENTE del correo (12/09/2026): usa la misma ventana de `entraEnVentana()`/`DIAS_VENTANA_AVISO` que ya decide el correo, pero su propio sello (`avisadaPushAt`, no `avisadaAt`) — el correo lo manda `apps/asegura` con el email en claro; el push lo manda `apps/asegura-portal`",
       "exporta": [
-        "debeAvisarPush"
+        "debeAvisarPush",
+        "textoPushObligacion"
       ],
       "funciones": [
         {
@@ -132217,12 +132312,21 @@
           "exportada": true,
           "params": "o: { fechaAccionable: Date; avisadaPushAt: Date | null }, hoy: Date",
           "retorno": "boolean",
-          "linea": 8
+          "linea": 9
+        },
+        {
+          "nombre": "textoPushObligacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: { tipo: string; titulo: string }",
+          "retorno": "",
+          "linea": 29,
+          "resumen": "Qué dice el push de una obligación, según SU TIPO. 🚨 Existe porque el texto único que había antes —«Tu seguro pide una decisión… te queda poco margen para decidir si lo renuevas»— es de una RENOVACIÓ"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "990bcc9ecc2b"
+      "hash": "ef957335b418"
     },
     {
       "ruta": "packages/module-seguros-portal/src/recibo-historial.ts",
@@ -132330,6 +132434,7 @@
       "resumen": "Recordatorios que el CLIENTE se pone a sí mismo — ITV, carnet, caldera, extintores, o cualquier otra cosa en texto libre. Es la mitad del motor de `portal_obligacion` que hasta el 13/09/2026 solo alimentaban las pólizas (ver `2026-09-03_portal_obligacion.sql`: «el enum nace con sitio para el resto p",
       "exporta": [
         "normalizarRecordatorio",
+        "ultimoDiaDelMes",
         "siguienteOcurrencia"
       ],
       "funciones": [
@@ -132339,16 +132444,16 @@
           "exportada": true,
           "params": "entrada: EntradaRecordatorio",
           "retorno": "ResultadoRecordatorio",
-          "linea": 88,
+          "linea": 109,
           "resumen": "Valida lo que manda el formulario. NO impone que la fecha sea futura: un recordatorio con fecha pasada simplemente no cae dentro de la ventana de aviso (`entraEnVentana()`) y no molesta a nadie — rech"
         },
         {
           "nombre": "ultimoDiaDelMes",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "y: number, m: number",
           "retorno": "number",
-          "linea": 143,
+          "linea": 164,
           "resumen": "Último día del mes `y`-`m` (0-indexado), en UTC."
         },
         {
@@ -132357,13 +132462,44 @@
           "exportada": true,
           "params": "fechaEvento: Date, repiteCadaMeses: number",
           "retorno": "Date",
-          "linea": 153,
+          "linea": 174,
           "resumen": "`base` + `meses`, conservando el DÍA salvo que el mes destino sea más corto (31 de enero + 1 mes = 28/29 de febrero) — el mismo criterio que `sumarMesesClamp()` de `cobro-declarado.ts`, para que un re"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2d70850cf01e"
+      "hash": "4dacb97e09e5"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/recordatorio-precarga.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Lo que el portal YA SABE y puede ofrecerle precargado a la persona cuando se pone un recordatorio, en vez de hacérselo teclear. Nace de una pregunta de Alberto (21/09/2026) mirando la pestaña: «esto se podría automatizar más… ¿tienes datos de clientes?». Sí, de dos: · el **carné de conducir**, que y",
+      "exporta": [
+        "precargasDeRecordatorio"
+      ],
+      "funciones": [
+        {
+          "nombre": "titulo",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 105,
+          "resumen": "Recorta al máximo que acepta `normalizarRecordatorio()`: un título más largo se rechazaría al guardar y la persona vería un error que no ha provocado."
+        },
+        {
+          "nombre": "precargasDeRecordatorio",
+          "kind": "function",
+          "exportada": true,
+          "params": "x: EntradaPrecargas",
+          "retorno": "Precargas",
+          "linea": 116,
+          "resumen": "Compone lo que se le puede ofrecer precargado. El carné va primero: es lo único `firme`, y lo que más cuesta renovar tarde (cita en la DGT, y reconocimiento médico a partir de los 65). Las ITV van des"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0f001eac95b6"
     },
     {
       "ruta": "packages/module-seguros-portal/src/resumen-cartera.ts",
@@ -141354,7 +141490,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3444,
-    "funciones": 10709
+    "archivos": 3446,
+    "funciones": 10721
   }
 }
