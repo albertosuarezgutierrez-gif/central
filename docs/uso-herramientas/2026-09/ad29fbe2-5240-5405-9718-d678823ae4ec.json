@@ -1,18 +1,18 @@
 {
  "sesion": "ad29fbe2-5240-5405-9718-d678823ae4ec",
  "inicio": "2026-09-21T09:58:35.919Z",
- "fin": "2026-09-21T12:25:31.683Z",
- "llamadas": 184,
+ "fin": "2026-09-21T13:58:31.950Z",
+ "llamadas": 188,
  "categorias": {
   "otro": {
-   "llamadas": 73,
-   "chars_in": 30358,
-   "chars_out": 298817,
+   "llamadas": 75,
+   "chars_in": 30499,
+   "chars_out": 299200,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 10,
+    "ToolSearch": 12,
     "WebSearch": 49,
     "SubagentHandback": 1,
     "ReadNotifications": 12,
@@ -31,15 +31,15 @@
    }
   },
   "mcp:Gmail": {
-   "llamadas": 22,
-   "chars_in": 21066,
-   "chars_out": 91275,
+   "llamadas": 23,
+   "chars_in": 21126,
+   "chars_out": 111005,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Gmail__search_threads": 7,
-    "mcp__Gmail__get_thread": 2,
+    "mcp__Gmail__get_thread": 3,
     "mcp__Gmail__create_draft": 5,
     "mcp__Gmail__send_message": 4,
     "mcp__Gmail__delete_draft": 3,
@@ -110,15 +110,16 @@
    }
   },
   "mcp:Google_Calendar": {
-   "llamadas": 2,
-   "chars_in": 2103,
-   "chars_out": 2652,
+   "llamadas": 3,
+   "chars_in": 4979,
+   "chars_out": 6244,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Google_Calendar__list_events": 1,
-    "mcp__Google_Calendar__create_event": 1
+    "mcp__Google_Calendar__create_event": 1,
+    "mcp__Google_Calendar__update_event": 1
    }
   }
  }
