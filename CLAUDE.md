@@ -86,12 +86,17 @@
   21/09/2026):** `asegura-app-cima-adapter` corre en la organización **`grupo-asegura` de Alberto**, 2
   máquinas en CDG, desplegada hace ~20 días; Manuel no figura en el equipo de esa organización. Este
   apartado dijo durante semanas lo contrario —«corre en la cuenta de Fly de Manuel», con su traspaso
-  «pendiente»— y se dio por bueno sin mirar el panel. ⏸️ **Lo que SÍ sigue fuera es el CÓDIGO**: el repo
-  del adaptador es privado de Manuel (`github.com/manuelsuarez/asegura-app-cima-adapter`, 23 commits,
-  último el 02/07/2026) y Alberto solo tiene acceso de lectura. La app corre igual, pero **sin ese repo
-  no se puede redesplegar** el día que haga falta: forkearlo es gratis y es lo único urgente que queda;
-  el port de `cima-pull` a `apps/asegura` está APARCADO a propósito (inventario en
-  `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). 🔑 **Rotar la contraseña de un rol de BD SIN actualizar el `DATABASE_URL` de su proyecto Vercel deja la
+  «pendiente»— y se dio por bueno sin mirar el panel. ✅ **Y el CÓDIGO también está ya en casa
+  (21/09/2026):** Manuel transfirió el repo del adaptador, que hoy es
+  `albertosuarezgutierrez-gif/asegura-app-cima-adapter` (id 1225402598, privado, Java) — verificado por
+  la API, no por su palabra. Hasta ese día era suyo y Alberto solo leía: **sin ese repo no se podía
+  redesplegar**, que era el único punto de la cadena sin salida. Ahora la cadena entera es de Alberto:
+  Actions (repo `asegura`) → CRM en Vercel → adaptador en Fly (`grupo-asegura`) → TIREA. ⏸️ **Lo que
+  sigue fuera:** los secrets de TIREA de PRODUCCIÓN (`WSE_USER`/`WSE_PASSWORD`/`WSE_PLATAFORMA`), que
+  Manuel dijo que manda por enlace de un solo uso — hoy la ingesta corre con ellos puestos, pero sin
+  copia no se puede rehacer la conexión desde cero; y Manuel conserva permiso `write` en el repo
+  `asegura` (él ya dio el OK para quitárselo). El port de `cima-pull` a `apps/asegura` está APARCADO a
+  propósito (inventario en `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). 🔑 **Rotar la contraseña de un rol de BD SIN actualizar el `DATABASE_URL` de su proyecto Vercel deja la
   app muerta en silencio (02/09/2026).** `prisma_seguros` se rotó tres veces ese día y `central-asegura` se
   quedó con la vieja: toda la cartera —y con ella el libro de comisiones— moría en `password authentication
   failed`, y ese texto **solo existía en los logs del pooler de Supabase**. Lo cazó el clasificador de causas
