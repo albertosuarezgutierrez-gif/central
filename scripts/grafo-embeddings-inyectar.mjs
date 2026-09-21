@@ -1,11 +1,7 @@
 #!/usr/bin/env node
-// Pide a plataforma que calcule los embeddings del grafo de código (búsqueda semántica propia).
-// El puerto /api/internal/grafo-codigo/embeddings sincroniza los textos con mapa_arquitectura y embebe
-// lo pendiente hasta agotar su tiempo; aquí se le llama hasta que responda `pendientes: 0` (tope de
-// pasadas para no colgar el workflow). Misma política de reintentos que scripts/inyectar-lotes.mjs:
-// 6 intentos con espera creciente (el deploy de plataforma puede no estar READY, OpenRouter puede dar
-// 429); 401 (CRON_SECRET) y 503 (sin key) no se reintentan porque no se arreglan esperando.
-// Envs: PLATAFORMA_URL, CRON_SECRET (sin ellas se omite, exit 0).
+// Exporta inyectarEmbeddings para ser usado por scripts/memoria-embeddings-inyectar.mjs.
+// El puerto /api/internal/grafo-codigo/embeddings fue eliminado en Sept 2026.
+// Esta función se reutiliza para inyectar embeddings de memoria.
 import { leerEnvs } from './inyectar-lotes.mjs'
 
 const MAX_PASADAS = 8
@@ -55,13 +51,4 @@ export async function inyectarEmbeddings({ url, secret, fetchImpl = fetch, esper
   }
   log.error(`Embeddings: siguen quedando pendientes tras ${maxPasadas} pasadas.`)
   return { ok: false, total, pendientes: -1 }
-}
-
-const esMain = process.argv[1] && new URL(import.meta.url).pathname === process.argv[1]
-if (esMain) {
-  const envs = leerEnvs()
-  if (!envs) process.exit(0)
-  const r = await inyectarEmbeddings({ url: `${envs.PLATAFORMA_URL}/api/internal/grafo-codigo/embeddings`, secret: envs.CRON_SECRET })
-  if (!r.ok) process.exit(1)
-  console.log(`✅ Embeddings al día (${r.total} calculados en esta pasada).`)
 }

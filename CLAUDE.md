@@ -261,98 +261,60 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
-## 🗺️ Grafo de código PROPIO — Graphify sin uso exclusivo (12-13/09/2026, medido en dos rondas)
-**La cuota gratis de Graphify se agota, y a los tres días de hacerlo obligatorio nadie había medido
-cuánto ahorraba.** Decisión de Alberto (12/09/2026): grafo propio + medir el uso de cada herramienta.
-- **Callers, callees, impacto, vecinos, tests que cubren un archivo, buscar símbolo, camino entre
-  archivos, referencias, imports/exports, ficha de nodo Y búsqueda semántica → grafo propio**
-  (`grafo_nodos`/`grafo_aristas`/`grafo_embeddings` en la Supabase compartida; funciones
-  `grafo_callers/callees/impacto/vecinos/tests_de/find/camino/referencias/imports_exports/nodo/
-  buscar/rank_files`, por `mcp__Supabase__execute_sql`). Recetas en la skill **`code-map`**. La parte
-  estructural la genera `scripts/grafo-codigo.mjs` (regex, Node puro, 1,8 s) en cada push a `main`
-  (`scripts/grafo-codigo-inyectar.mjs` → `/api/internal/grafo-codigo`); la semántica corre
-  `grafo_embed_lote` sobre OpenRouter (`/api/internal/grafo-codigo/embeddings`, mismo workflow).
-  ⚠️ Un push a `main` con token de App NO dispara el workflow (ver sección CI): si el `sha` de
-  `grafo_nodos` va por detrás de `origin/main`, dispara `auditoria.yml` a mano (`workflow_dispatch`).
-- **Medición de paridad (12/09/2026, `docs/USO-HERRAMIENTAS.md`):** las 12 categorías de herramienta
-  de Graphify probadas contra un símbolo REAL y ambiguo (`isCronAuthorized`, duplicado en 3 apps) —
-  en 10 de 12 categorías el grafo propio igualó o superó a Graphify, y en 2 lo superó con
-  datos objetivamente mejores: **callers/referencias** (Graphify resuelve nombres duplicados entre
-  apps a UNA declaración arbitraria y calla el resto — 1 caller contra los 80 reales; el grafo propio
-  agrega las 6 declaraciones homónimas) y **búsqueda semántica** (`query_graph` confundió «autorización
-  de cron» con «autorización de cliente de seguros» por la palabra compartida; `grafo_buscar` acertó
-  el archivo correcto). Detalle completo, tabla por tabla, en `docs/USO-HERRAMIENTAS.md`.
-- **Medición de paridad de MEMORIA (12-13/09/2026, dos rondas, `docs/USO-HERRAMIENTAS.md`):** `memoria_buscar()`
-  (embeddings sobre `docs/CONTEXTO-SESIONES.md`+`docs/memoria/*.md`, PR #2848) probado contra
-  `recall`/`memories_about` de Graphify en 4 preguntas reales sobre decisiones/gotchas documentados
-  (Serper, pantalla de Vanesa, incidente Smoobu 401, capitalización «Grupo ASegura»): **4 de 4**
-  `memoria_buscar` igualó o superó a Graphify, nunca al revés — en 3 Graphify no encontró nada
-  relevante, y en el caso Smoobu SÍ era relevante pero **desfasado** (congelado en un estado
-  intermedio ya resuelto), mientras `memoria_buscar` devolvió la línea de tiempo completa y vigente.
-  **Ya NO se usan** `graphify_find/node/callers/callees/file_neighbors/tests_for/impact/trace/
-  shortest_path/references/imports_exports/rank_files/render_subgraph` ni `query_graph` para código
-  (sustituidos por `grafo_*`), **ni `remember`/`recall`/`memories_about`** (sustituidos por
-  `memoria_buscar` + el hábito ya existente de anotar `docs/CONTEXTO-SESIONES.md` al cerrar sesión).
-  **Ronda 2 (13/09/2026, sin el sesgo de elegir preguntas sabiendo ya la respuesta):** 5 preguntas
-  sobre desarrollo real (2 de código con `grafo_impacto`/`grafo_callers`, 3 de memoria) — **5 de 5**
-  para el grafo propio/`memoria_buscar`, **0 de 5** para Graphify, con dos fallos duros nuevos:
-  `graphify_callers` no resolvió el símbolo, y `graphify_impact` mezcló el archivo real con 8
-  ficheros de OTRA app. Total acumulado: **9 de 9** para el grafo propio/`memoria_buscar`, **0 de 9**
-  limpios para Graphify. Con esto se cumple la condición de Alberto («que lo creado sea 100% igual»)
-  sobre las 9 preguntas medidas — ya no es solo "consistente", es sin un solo caso a favor de
-  Graphify. **Cancelarlo sigue siendo decisión de Alberto** (ver más abajo: el MCP sigue instalado
-  a la espera de que él la tome).
-- **📏 Todo uso de herramienta se MIDE solo** (hook `PostToolUse` → `scripts/uso-herramientas.mjs`, un
-  JSON por sesión en `docs/uso-herramientas/AAAA-MM/`; en vivo se escribe en `.git/uso-herramientas/` y
-  el `Stop` hook lo copia y commitea solo con la memoria o cada 30 min — persistirlo en cada `Stop` era
-  un push por turno = CI + 12 deployments de Vercel por turno, medido el 12/09/2026). Agregado con
-  `node scripts/ahorro-herramientas.mjs --md docs/USO-HERRAMIENTAS.md`. Mide llamadas, tokens pagados
-  y **cota superior** del ahorro (archivos citados); **no mide utilidad** — eso sigue en
-  `docs/AGENTE-MECANICO-BITACORA.md`. Antes de declarar obligatoria (o retirar) una herramienta, mira
-  esa tabla: es la regla «mide el ahorro, no lo supongas» con denominador de verdad.
+## 🗺️ Navegación de código: SUBAGENTES (el grafo propio se RETIRÓ el 21/09/2026)
 
-El MCP de **Graphify** sigue instalado (pendiente de que Alberto decida darlo de baja — ver medición
-de paridad de memoria arriba) pero ya no tiene uso exclusivo: no uses ninguna de sus herramientas,
-código o memoria, salvo para volver a medir paridad. Workspace
-`grupo-asegura`; `repository_id` principal **`albertosuarezgutierrez-gif/central`** — el workspace
-también tiene indexados como repos SUELTOS `asegura`, `sivra`, `ialimp`, `house-sevillana-landing`
-(restos de cuando esas apps vivían fuera, o el CRM externo de Manuel): **pasa siempre `repository_id:
-"albertosuarezgutierrez-gif/central"` explícito** en toda consulta — el nombre corto sin
-`repository_id` puede resolver al repo suelto viejo en vez de a `apps/sivra`/`apps/ialimp`
-dentro de central.
+**El grafo de código propio ya no existe.** Sus tablas (`grafo_nodos`, `grafo_aristas`,
+`grafo_embeddings`) y todas sus funciones `grafo_*` se borraron de Supabase el 21/09/2026. No las
+busques: no están, y su paso de regeneración se quitó de `auditoria.yml`.
 
-**Principio (vale igual para el grafo propio):** el grafo responde «¿dónde está algo y qué está
-relacionado con ello?». El código fuente responde «¿qué hace realmente?». **Nunca sustituyas la
-lectura del código por una suposición del grafo** — el grafo localiza y traza relaciones, no
-sustituye leer la implementación antes de tocarla. `grafo_nodo`/`grafo_buscar` dan línea y tipo, no
-el cuerpo, precisamente para que este paso no se salte.
+**Por qué, medido y no supuesto.** `central` estaba en **644 MB** sobre un tope de 500 (plan Free) —
+y es la BD compartida de TODAS las apps, incluida la cartera de la correduría. Al regenerar la tabla
+de ahorro de `docs/USO-HERRAMIENTAS.md` (llevaba hecha sobre **1** sesión, con 86 ficheros de
+telemetría sin agregar) salió el dato que decidió: **el grafo se había usado en 3 de 86 sesiones**,
+27 llamadas, 2 con error, ahorro tope 75k tokens — ocupando **258 MB**. En esa misma medición los
+subagentes ahorraban más y se usaban más (`general-purpose` 596k tokens citados en 11 sesiones,
+`Explore` 266k en 8, `agente-mecanico` 277k en 7). Se borró lo que costaba y no se usaba.
 
-Flujo antes de modificar código compartido (función, componente, servicio, API, modelo):
-`GRAFO PROPIO (localizar) → ANALIZAR IMPACTO → LEER CÓDIGO → PLANIFICAR → MODIFICAR → VERIFICAR`.
+**Qué se usa AHORA para localizar código, en este orden:**
+1. **`code-map`** (tabla `mapa_arquitectura`, que SE QUEDA): índice de firmas para acotar candidatos
+   a coste ~0 antes de leer nada. 88.901 tokens citados en solo 5 llamadas — el mejor ratio de todo.
+2. **Un subagente** (`Explore`, `general-purpose` o `agente-mecanico`) para lo que antes preguntabas
+   al grafo: quién llama a algo, qué rompe un cambio, dónde vive una funcionalidad. El agente
+   greppea, se come los archivos en SU contexto y devuelve solo el informe — que es exactamente lo
+   que aportaba el grafo, sin ocupar disco.
+3. **`Grep`/`Read` directos** solo para lo acotado: una función concreta en un archivo que ya sabes.
 
-**Memoria durable:** ya NO se usa `memories_about`/`recall`/`remember` de Graphify (medición de
-paridad 12/09/2026, arriba) — usa `memoria_buscar()` sobre `docs/CONTEXTO-SESIONES.md`/
-`docs/memoria/*.md` y anota ahí, al cerrar sesión, decisiones técnicas permanentes, convenciones del
-proyecto, gotchas y restricciones importantes — NO detalles temporales de una tarea concreta ni
-información obvia que ya está en el código.
+**`memoria_buscar()` SIGUE VIVA y no se toca** (`memoria_embeddings`, 16 MB): sobre
+`docs/CONTEXTO-SESIONES.md` + `docs/memoria/*.md`. Es lo que ganó 9-0 a `recall`/`memories_about` de
+Graphify en las dos rondas de medición (12-13/09/2026), incluido un caso donde Graphify devolvió
+información **desfasada**, congelada en un estado ya resuelto. Sigue siendo la vía para recuperar
+decisiones técnicas, convenciones y gotchas; y al cerrar sesión se anota ahí, como siempre.
+⚙️ Detalle de implementación que importa: la función `grafo_embed_textos` **se conservó a propósito**
+pese al nombre — `memoria_buscar` y `memoria_embed_lote` dependen de ella. No la borres por parecer
+un resto del grafo.
 
-**Navegación:** no hagas exploraciones masivas con `Grep`/`Glob`/lectura indiscriminada.
-Pregunta primero al grafo propio (dónde vive la funcionalidad, quién la consume, qué depende de
-ella, qué archivos están relacionados, cuál es el camino de ejecución) y lee después
-SOLO el código necesario — ni carpetas completas ni archivos enteros cuando basta una función.
+**Lo que se pierde, dicho claro:** la búsqueda *semántica* sobre el código («¿dónde se decide si un
+cron está autorizado?»). Un agente tiene que probar varios patrones y acierta algo menos que un
+embedding. Con 3 usos en 86 sesiones, es el precio aceptado.
 
-**Antes de crear algo nuevo**, busca en el grafo propio (`grafo_find`/`grafo_buscar`) componentes
-similares, patrones existentes, servicios reutilizables o integraciones ya montadas: no dupliques
-un patrón que ya existe en el monorepo.
+🚨 **Y el motivo por el que se borraron también las FUNCIONES, no solo las tablas:** una función
+`grafo_callers` sobre una tabla vacía no falla — **devuelve cero**. Un agente preguntaría «¿quién
+llama a `X`?», recibiría una lista vacía y concluiría que no la llama nadie. Es exactamente el fallo
+que este documento marca como el más caro («un check que se pone verde porque la consulta no devolvió
+nada»). Borradas, fallan ruidosamente, que es lo correcto.
 
-**Frescura:** antes de confiar en el grafo propio para una decisión importante, compara su `sha`
-contra el HEAD real de la rama (`SELECT sha, max(updated_at) FROM grafo_nodos GROUP BY 1` vs
-`git rev-parse origin/main`). Si no coincide, el grafo va con retraso: avísalo, no asumas que las
-relaciones que devuelve siguen vigentes.
+**Si algún día se quiere de vuelta:** la parte estructural se regeneraba en 1,8 s con Node puro y los
+embeddings por OpenRouter. Antes de reintroducirlo, **mide el uso real** en
+`docs/USO-HERRAMIENTAS.md` — es la regla «mide el ahorro, no lo supongas», y es la que lo retiró.
 
-**Después de cambios que afecten arquitectura**, vuelve a consultar el grafo propio (`grafo_impacto`/
-`grafo_vecinos`) para validar el impacto real, además de la verificación normal (tests, typecheck,
-lint, build) que ya exige este documento.
+El MCP de **Graphify** sigue instalado y sigue sin usarse: su medición fue **0 de 9**, con dos fallos
+duros (`graphify_impact` mezclando ficheros de otra app, `graphify_callers` devolviendo 1 caller de
+los 80 reales). Que el grafo propio ya no esté **no lo reactiva**: el sustituto son los subagentes.
+
+**Principio que no cambia:** localizar ≠ entender. Cualquier herramienta —índice, agente o grep—
+responde «¿dónde está?»; el código fuente responde «¿qué hace?». **Nunca sustituyas la lectura del
+código por una suposición.** Flujo antes de tocar código compartido:
+`ACOTAR (code-map/agente) → LEER EL CÓDIGO → PLANIFICAR → MODIFICAR → VERIFICAR`.
 
 ## 🧹 Quién mira qué pantalla — regla global permanente
 **Antes de dar por avisada a una persona, comprueba en qué pantalla trabaja.** Un aviso que sale por

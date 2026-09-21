@@ -20,9 +20,14 @@ de tirar el índice HNSW de `grafo_embeddings` salió mal y se revirtió: estim�
 exacta y medí **11 s** (los vectores están en TOAST, cada fila va a disco).
 📊 **Y el dato que decide:** la tabla de `docs/USO-HERRAMIENTAS.md` llevaba generada sobre **1**
 sesión con 86 ficheros sin agregar. Regenerada: **el grafo propio se ha usado en 3 de 86 sesiones**
-(27 llamadas, 2 con error, ahorro tope 75k tokens) y ocupa 258 MB. Pendiente de decisión de Alberto:
-borrarlo deja la BD en ~283 MB sin pagar. `memoria_embeddings` y `mapa_arquitectura` se quedan
-(28 MB, mejor ratio). **ialimp e ia-rest juntos pesan 16 MB: no son el problema.**
+(27 llamadas, 2 con error, ahorro tope 75k tokens) ocupando 258 MB. **Alberto decidió retirarlo y
+está hecho: BD en 284 MB**, tablas y funciones `grafo_*` borradas. Se borraron también las FUNCIONES
+a propósito: sobre una tabla vacía no fallan, **devuelven cero**, y un agente concluiría que a un
+símbolo no lo llama nadie. ⚠️ Se CONSERVA `grafo_embed_textos` pese al nombre: `memoria_buscar`
+depende de ella. Sustituto = subagentes + `code-map`; `memoria_embeddings` y `mapa_arquitectura` se
+quedan (28 MB, mejor ratio). **ialimp e ia-rest juntos pesan 16 MB: no eran el problema.**
+🔧 Y la causa de fondo, corregida: **nadie regeneraba la tabla de ahorro**. Ahora la regenera
+`auditoria.yml` en cada pasada — una medición que no se refresca sola es una medición que miente.
 
 **(21/09/2026)** 🧹 **Manuel fuera de Vercel** (Alberto retiró su asiento del equipo «Pisos
 turisticos», verificado recargando la página, sin aviso de facturación). Para repuntar el warehouse

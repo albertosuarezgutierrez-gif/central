@@ -47,9 +47,10 @@ jobs:
   radiografia:
     name: Radiografía al día
     runs-on: ubuntu-latest
-    # 5 → 15 min (12/09/2026): la inyección del grafo son ~13 POSTs secuenciales con reintentos, y un
-    # corte a mitad deja las tablas con dos `sha` mezclados hasta la siguiente pasada completa.
-    timeout-minutes: 25 # 15→25 el 12/09/2026: la memoria semántica añade otra pasada de hasta 8×300s tras la del grafo
+    # 25 min: la inyección del mapa son POSTs secuenciales con reintentos y la memoria semántica
+    # añade otra pasada de hasta 8×300s. (Se dimensionó cuando además iba el grafo de código, que se
+    # retiró el 21/09/2026; el margen se deja por si el corpus de memoria crece.)
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,6 +64,14 @@ jobs:
 
       - name: Regenerar radiografía
         run: node scripts/auditar-estructura.mjs
+
+      # 📏 Tabla de ahorro de herramientas. Se añadió el 21/09/2026: NADIE la regeneraba. Llevaba
+      # generada sobre UNA sesión desde el 12/09 con 86 ficheros de telemetría sin agregar, así que
+      # durante nueve días la tabla que decide si una herramienta vale la pena decía otra cosa que
+      # los datos. Al agregarla salió que el grafo de código se usaba en 3 de 86 sesiones — y se
+      # retiró. Una medición que no se refresca sola es una medición que miente.
+      - name: Regenerar tabla de ahorro de herramientas
+        run: node scripts/ahorro-herramientas.mjs --md docs/USO-HERRAMIENTAS.md
 
       # SOLO en main: la radiografía se commitea de vuelta únicamente en la rama principal.
       # En ramas de feature ese commit-bot generaba un push extra que reconstruía TODOS los
@@ -95,7 +104,7 @@ jobs:
           RAMA: claude/auditoria-radiografia
         run: |
           set -euo pipefail
-          FILES="apps/plataforma/lib/estructura.generated.json docs/ARQUITECTURA.generated.md docs/mapa-funciones.generated.json"
+          FILES="apps/plataforma/lib/estructura.generated.json docs/ARQUITECTURA.generated.md docs/mapa-funciones.generated.json docs/USO-HERRAMIENTAS.md"
           if [ -z "$(git status --porcelain $FILES)" ]; then
             echo "Radiografía ya al día — sin cambios."
             exit 0
@@ -199,27 +208,12 @@ jobs:
         # parte el mapa en lotes de ~1 MB y reintenta con backoff (un 401 no se reintenta).
         run: node scripts/mapa-arquitectura-inyectar.mjs docs/mapa-funciones.generated.json
 
-      # Grafo de código propio (nodos + aristas) → tablas grafo_nodos/grafo_aristas, por lotes.
-      # Mismo patrón que el mapa: solo desde main, sin DATABASE_URL en CI, se omite si faltan secrets.
-      # `!cancelled()`: el grafo NO depende del mapa — si el mapa falla, el grafo se carga igual (el
-      # 12/09 un 413 del mapa dejó el grafo sin su primera carga, y las dos tablas son independientes).
-      - name: Inyectar grafo de código en Supabase
-        if: github.ref_name == 'main' && !cancelled()
-        env:
-          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          node scripts/grafo-codigo.mjs --out /tmp/grafo-codigo.json
-          node scripts/grafo-codigo-inyectar.mjs /tmp/grafo-codigo.json
-
-      # Embeddings del grafo (búsqueda semántica propia: grafo_buscar / grafo_rank_files). Va detrás del
-      # mapa porque los textos salen de mapa_arquitectura; se llama al puerto hasta que no queden pendientes.
-      - name: Calcular embeddings del grafo (búsqueda semántica)
-        if: github.ref_name == 'main' && !cancelled()
-        env:
-          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: node scripts/grafo-embeddings-inyectar.mjs
+      # 🗑️ El grafo de código propio se RETIRÓ el 21/09/2026 (tablas y funciones `grafo_*` borradas).
+      # Medido sobre las 86 sesiones de `docs/uso-herramientas/`: se usó en 3, con 27 llamadas y un
+      # ahorro tope de 75k tokens, mientras ocupaba 258 MB de una BD que estaba POR ENCIMA del límite
+      # del plan Free. Los subagentes (general-purpose/Explore/agente-mecanico) hacen el mismo trabajo
+      # y en esa misma medición ahorran más. No reintroducir estos pasos sin medir antes el uso real.
+      # `mapa_arquitectura` (arriba) y la memoria semántica (abajo) SÍ se quedan: mejor ratio.
 
       # Memoria semántica propia (memoria_buscar: sustituto de recall/memories_about de Graphify).
       # Corpus: docs/CONTEXTO-SESIONES.md + docs/memoria/*.md. Independiente del grafo de código
