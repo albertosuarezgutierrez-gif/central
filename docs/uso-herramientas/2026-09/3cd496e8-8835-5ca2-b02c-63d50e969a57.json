@@ -1,32 +1,32 @@
 {
  "sesion": "3cd496e8-8835-5ca2-b02c-63d50e969a57",
  "inicio": "2026-09-21T09:27:34.194Z",
- "fin": "2026-09-21T13:08:29.382Z",
- "llamadas": 177,
+ "fin": "2026-09-21T13:44:17.179Z",
+ "llamadas": 243,
  "categorias": {
   "otro": {
-   "llamadas": 47,
-   "chars_in": 12724,
-   "chars_out": 530572,
+   "llamadas": 59,
+   "chars_in": 12748,
+   "chars_out": 603644,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
     "ToolSearch": 16,
-    "ReadNotifications": 29,
+    "ReadNotifications": 41,
     "SubagentHandback": 1
    }
   },
   "bash": {
-   "llamadas": 32,
-   "chars_in": 28687,
-   "chars_out": 80348,
+   "llamadas": 68,
+   "chars_in": 47965,
+   "chars_out": 216862,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 32
+    "Bash": 68
    }
   },
   "mcp:Supabase": {
@@ -43,14 +43,14 @@
    }
   },
   "sql": {
-   "llamadas": 24,
-   "chars_in": 4961,
-   "chars_out": 28329,
+   "llamadas": 31,
+   "chars_in": 7082,
+   "chars_out": 35262,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 1,
+   "chars_citados": 584635,
    "tools": {
-    "mcp__Supabase__execute_sql": 24
+    "mcp__Supabase__execute_sql": 31
    }
   },
   "mcp:posthog": {
@@ -123,36 +123,37 @@
    }
   },
   "agente:agente-mecanico": {
-   "llamadas": 1,
-   "chars_in": 1505,
-   "chars_out": 1702,
+   "llamadas": 2,
+   "chars_in": 4214,
+   "chars_out": 4633,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 10,
+   "chars_citados": 658830,
    "tools": {
-    "Agent": 1
+    "Agent": 2
    }
   },
   "lectura-directa": {
-   "llamadas": 3,
-   "chars_in": 223,
-   "chars_out": 91234,
+   "llamadas": 12,
+   "chars_in": 844,
+   "chars_out": 148413,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 3
+    "Read": 10,
+    "Grep": 2
    }
   },
   "grafo-propio": {
-   "llamadas": 8,
-   "chars_in": 2181,
-   "chars_out": 7294,
+   "llamadas": 9,
+   "chars_in": 3336,
+   "chars_out": 7814,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 8
+    "mcp__Supabase__execute_sql": 9
    }
   },
   "code-map": {
