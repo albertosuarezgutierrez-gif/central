@@ -289,19 +289,27 @@ aplicarla.**
 
 ### Las dos salidas, y por qué no se ha tocado nada
 
-1. **Por datos** — vaciar `codigo_entidad_dgs` en la fila del VOLCADO de cada par en colisión
-   (`apps/asegura/prisma/sql/2026-09-21_polizas_dgs_colision.sql`, escrita y **SIN aplicar**). Deja
-   la fila de CIMA como candidata única. Es reversible y no borra nada, pero le quita el código de
-   compañía a la ficha del lead.
-2. **Por código** — en `recibo-matching.ts` y `siniestro-matching.ts`, romper el empate cuando de los
-   ≥2 candidatos **exactamente uno** viene de CIMA (`import_ref IS NULL`). Arregla también las
-   colisiones futuras sin tocar la cartera. **No es relajar el emparejador** —sigue exigiendo un
-   único ganador— pero cambia dónde se cuelga un recibo, así que es cambio de alto riesgo y vive en
-   el repo de la ingesta.
+La salida es de **código**, no de datos, y vive en el repo de la ingesta (que es donde están los
+tests del emparejador):
 
-No se ejecuta ninguna de las dos sin OK de Alberto: la 1 escribe en la cartera viva de la correduría
-y la 2 toca el emparejador, que es justo lo que este documento prohíbe cambiar a la ligera.
+1. **Separar las etiquetas** en `persist-recibo.ts` / `persist-siniestro.ts`:
+   `poliza_ambigua` ≠ `sin_poliza_en_cartera`. Es lo barato y lo que evita que la próxima
+   investigación vuelva a empezar llamando a la compañía equivocada.
+2. **Romper el empate por origen** en `recibo-matching.ts` / `siniestro-matching.ts`: con ≥2
+   candidatos, si **exactamente uno** es cartera viva (`esCarteraViva()`), ese gana. No relaja el
+   emparejador —sigue exigiendo un único ganador— y cubre también las colisiones futuras. Cambia
+   dónde se cuelga un recibo: alto riesgo, PR propio con tests, y OK de Alberto.
 
-**Lo que sí debería cambiar en cualquier caso:** que `persist-recibo.ts` y `persist-siniestro.ts`
-distingan `sin_poliza_en_cartera` de `poliza_ambigua`. Mientras compartan etiqueta, la próxima
-investigación volverá a empezar llamando a la compañía equivocada.
+🪤 **Y lo que NO se hace, aprendido el mismo día:** la primera versión de esto era un `UPDATE` que
+vaciaba `codigo_entidad_dgs` en la fila histórica de cada par. La revisión le encontró **seis**
+defectos, y el peor era la premisa: usaba `import_ref IS NOT NULL` como «es del volcado», cuando
+`CLAUDE.md` ya documenta que **una póliza que CIMA mantiene al día conserva su `import_ref`** (la
+`3021700291186` de Reale). Esa fila habría perdido su DGS y se habría quedado muda para siempre —
+el arreglo causando exactamente el daño que venía a reparar. El criterio bueno es `esCarteraViva()`
+= `import_ref IS NULL OR eiac_xml_hash IS NOT NULL`.
+
+Queda en el repo solo la consulta de diagnóstico, **sin un solo `UPDATE`**:
+`apps/asegura/prisma/sql/2026-09-21_polizas_dgs_colision_DIAGNOSTICO.sql`. Replica la clave EXACTA
+del emparejador (minúsculas con puntuación, `JUNK_POLIZA_NUMBERS`, longitud ≥5, placeholders fuera)
+y agrupa por correduría, porque una clave «parecida» cuenta colisiones que el emparejador no ve y se
+calla las que sí. Su veredicto por grupo: **19 rescatables, 10 sin fila de CIMA, 0 con dos vivas.**
