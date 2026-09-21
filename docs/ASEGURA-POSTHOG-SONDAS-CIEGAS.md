@@ -177,3 +177,39 @@ qué NO pudiste comprobar y por qué.
 ⚠️ **Lo que esto NO arregla, y conviene no confundir:** las alertas **[A1]** y **[A14]** siguen
 ciegas. No dependen de estos eventos sino del data warehouse, que sigue apuntando al Supabase viejo.
 Ahí no se ha tocado nada.
+
+---
+
+## 🧾 Repuntar el warehouse a central — receta medida (21/09/2026, 11:00 UTC)
+
+**Bloque A, hecho por Alberto:** retirado `manuelsuarezz@gmail.com` del equipo Vercel «Pisos
+turisticos» (`pisos-turisticos-projects`); verificado recargando la página, no por el *toast*.
+Queda un solo Owner. Sin aviso de cambio de facturación en el flujo.
+
+**Bloque B, diagnóstico cerrado:** la fuente Postgres de PostHog conecta con
+`posthog_readonly.uijsgeocgdaxkhvwtjqs` contra `aws-1-eu-central-1.pooler.supabase.com`, schema
+`public` — o sea, **el Supabase viejo**. Que el schema figure «Completed / sincronizado hoy» es
+exactamente el aspecto que tiene una tubería sana: lo que delata el fallo es la ÚLTIMA FILA (31/08),
+no el estado del conector.
+
+**Medido en central (`wswbehlcuxqxyinousql`, región `eu-west-1`) antes de tocar nada:**
+
+| Comprobación | Resultado |
+|---|---|
+| ¿Existe la tabla? | `seguros.operational_events` (no `public`) |
+| ¿Tiene datos vivos? | **5.071 filas**, último evento **21/09 10:58 UTC** |
+| ¿Late el cron? | **4** `cima_pull_completed` en las últimas 25 h |
+| ¿RLS? | `relrowsecurity = false`, **0 políticas** → un rol sin `BYPASSRLS` verá las filas |
+| Columna de tiempo | `occurred_at` (no `created_at`), PK `id` uuid |
+
+Ese último punto es el que decide si el arreglo funciona o vuelve a quedarse en verde mintiendo: con
+RLS activo y sin política, el rol nuevo habría leído **0 filas** y A1/A14 habrían seguido planas, esta
+vez con la fuente «correcta».
+
+**El grant va acotado a UNA tabla, a propósito.** El schema `seguros` tiene la cartera entera (PII
+Tier-1: nombres, DNI, direcciones de riesgo, IBAN). Un `GRANT SELECT ON ALL TABLES IN SCHEMA seguros`
+metería todo eso en un warehouse de terceros. La sonda solo necesita `operational_events`.
+
+**Las credenciales las escribe Alberto**, no un agente: Claude en Chrome se negó a generar la
+contraseña y a pegarla en el campo de PostHog, y es la postura correcta (misma regla que ya estaba
+dictada para SIVRA).

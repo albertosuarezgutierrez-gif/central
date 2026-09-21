@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🧹 **Manuel fuera de Vercel** (Alberto retiró su asiento del equipo «Pisos
+turisticos», verificado recargando la página, sin aviso de facturación). Para repuntar el warehouse
+de PostHog a central se midió ANTES de tocar nada: `operational_events` vive en el schema `seguros`
+(no `public`), 5.071 filas, último evento de hoy, **RLS desactivado y 0 políticas** → un rol sin
+BYPASSRLS SÍ verá filas. Sin esa comprobación, A1/A14 habrían seguido planas con la fuente ya
+correcta, que es el fallo caro de siempre. El `GRANT` va a **una sola tabla**: el schema `seguros`
+es la cartera con PII. Las credenciales las escribe Alberto — Claude en Chrome se negó a generar y
+pegar la contraseña, y es la postura correcta.
+
 **(21/09/2026)** 🔧 **Telemetría de PostHog ARREGLADA y verificada**: faltaban las dos envs
 `NEXT_PUBLIC_POSTHOG_*` en el proyecto Vercel `asegura`; creadas + redeploy, y un `cima-pull` en
 `dry_run` devolvió los tres eventos a PostHog (primeros desde el 05/09). PR #3242.
