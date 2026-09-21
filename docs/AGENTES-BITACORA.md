@@ -14,6 +14,20 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-21 · trading-analista** · hizo: pasada PARCIAL 20:15 UTC (sin huella de hoy en Supabase,
+  no era repesca). Completado con éxito: NAV IBKR (33.450,64€) → `/api/trading/saldo`; cartera real
+  (CVX+VWCE) → `/api/trading/cartera`; `get_account_trades` 0 nuevas + latido `trading_operaciones` OK.
+  NO ejecutado `/analizar`/`/puntuar`: montar el payload de 24 símbolos exige transcribir a mano
+  ~121 velas OHLCV/símbolo desde el resultado de `get_price_history` (el MCP no permite volcar a
+  fichero ni hay script en el repo que lo automatice) — es el riesgo que el landmine de la skill
+  prohíbe explícitamente (transcripción manual envenenando EMA/MACD/RSI/ADX). Al intentarlo detecté
+  una transcripción ya incompleta (perdí la vela de hoy de IWM), así que corté antes de mandar
+  datos sucios al modelo, en vez de forzar el paso. dudas: si vale la pena escribir un pequeño
+  helper en `apps/plataforma` (o un endpoint) que reciba el JSON crudo de `get_price_history` por
+  símbolo y arme el payload de `/analizar` server-side, para que la sesión no tenga que transcribir;
+  fallos: transcripción manual de OHLCV demostrada poco fiable en este canal — no repetir el intento
+  sin ese helper. PRs/commits: — (solo Telegram + esta entrada).
+
 - **2026-09-21 · buscador-ia** · hizo: watch semanal; 🔴 hallazgo crítico — Groq retiró el gratis a
   `openai/gpt-oss-120b` el 11/09/2026 ($0,15/$0,60 por M, 5 fuentes independientes), y es el ÚNICO
   eslabón de la cadena sin presupuesto ni tarifa cargada (con NIM apagado, es el fallback gratis

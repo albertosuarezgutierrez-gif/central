@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🤖 **Pasada trading-analista PARCIAL (20:15 UTC).** NAV/cartera/operaciones OK; `/analizar`
+y `/puntuar` NO corrieron — montar su payload exige transcribir a mano ~121 velas OHLCV × 24 símbolos
+desde `get_price_history` (sin script/MCP que lo automatice), y al intentarlo se detectó una
+transcripción ya incompleta. Se cortó antes de mandar datos sucios al modelo (landmine de la skill).
+Telegram enviado, entrada en `docs/AGENTES-BITACORA.md`. Pendiente: helper server-side que reciba el
+JSON crudo de `get_price_history` y arme el payload sin transcripción manual en la sesión.
+
 **(21/09/2026)** 🖥️ **Presupuesto al cliente: PR 2 (pantalla del portal, solo lectura) + el ReRate/Submit
 ya cuentan en el libro — ambos EN PRODUCCIÓN.** `apps/asegura-portal` gana la carátula pública y la
 comparativa autenticada; grants por columnas y fix del trigger `presupuesto_no_enviar_simulado()`
