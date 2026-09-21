@@ -836,6 +836,48 @@ export async function catalogoAsegura(params: Record<string, string>): Promise<R
   }
 }
 
+/**
+ * El MISMO catálogo, pero sin recortar: lo que el vendor manda de verdad.
+ *
+ * Solo está soportado `tipo=versiones`, y su motivo es una pregunta concreta:
+ * si cada versión trae sus años de fabricación, la fecha de matriculación
+ * (que sale gratis de la matrícula) podría ordenar o acotar el desplegable.
+ * Hoy no se sabe, porque asegura se queda con `id` y `nombre` y tira el resto.
+ *
+ * **Gratis** (`GET` de catálogo, interruptor apagado). Devuelve el status y el
+ * json del puerto TAL CUAL: es una medición, y reinterpretarla aquí sería
+ * añadir una capa entre el dato y quien lo mira.
+ */
+export async function catalogoCrudoAsegura(
+  params: Record<string, string>,
+): Promise<{ status: number; json: unknown }> {
+  const qs = new URLSearchParams({ ...params, crudo: '1' }).toString()
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/catalogos?${qs}`, { method: 'GET' }, TIMEOUT_CATALOGO_MS)
+    if (r === null) {
+      return {
+        status: 503,
+        json: {
+          estado: 'sin_configurar',
+          mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).',
+        },
+      }
+    }
+    return r
+  } catch (e) {
+    // Un fallo de red NO se devuelve como un crudo vacío: eso se leería como
+    // «el vendor no manda nada más», que es justo lo que se está midiendo.
+    return {
+      status: 502,
+      json: {
+        estado: 'error',
+        motivo: 'red',
+        mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})`,
+      },
+    }
+  }
+}
+
 export type PeticionRetarificar = {
   polizaId: string
   /** Quién responde de este cargo. Va al libro de consumo de asegura. */

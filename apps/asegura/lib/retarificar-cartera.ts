@@ -116,6 +116,7 @@ import {
   marcas,
   modelos,
   versiones,
+  versionesCrudas,
   tiposDeMotor,
   tiposDeGaraje,
   estadosCiviles,
@@ -143,6 +144,7 @@ import {
   type DisponibilidadDecesos,
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
+import { resumirCrudo, type ResumenCrudo } from '@/lib/codeoscopic/crudo'
 import type { PeticionCotizacion, ResultadoCotizacion } from '@/lib/codeoscopic/cotizar'
 import { MARCA_SIMULACION } from '@/lib/codeoscopic/simulacion'
 import { resumirCotizacion } from '@/lib/codeoscopic/respuesta'
@@ -1218,6 +1220,63 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
     return {
       estado: 'error',
       causa: registrarErrorCartera(`catalogos/${tipo ?? 'sin-tipo'}`, e),
+      mensaje: e instanceof Error ? e.message : String(e),
+    }
+  }
+}
+
+// ─── El catálogo CRUDO, para medir qué se está tirando ───────────────────────
+
+export type ResultadoCrudo =
+  | { estado: 'ok'; path: string; resumen: ResumenCrudo; opciones: Opcion[] }
+  | { estado: 'invalido'; mensaje: string }
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'error'; causa: CausaErrorCartera; mensaje: string }
+
+/**
+ * `tipo=versiones` **sin recortar**: las claves que manda el vendor de verdad y
+ * una muestra de entradas enteras.
+ *
+ * Existe para contestar con una medición, y no de memoria, a «¿trae el catálogo
+ * los años de fabricación de cada versión?» — la pieza que permitiría cruzar la
+ * versión con la fecha de matriculación (que sale gratis de la matrícula). El
+ * desplegable del corredor solo enseña el NOMBRE, y ahí no salen años; si el
+ * vendor los manda, están en un campo que `normalizarOpciones` descarta.
+ *
+ * 🚨 **Gratis, y el único catálogo soportado es `versiones`.** No es una puerta
+ * genérica al vendor: pedir el crudo de cualquier otro `tipo` responde
+ * `invalido` con su nombre, en vez de devolver la lista normalizada de siempre
+ * — que se leería como «he mirado el crudo y no hay nada más», que es la
+ * afirmación que este endpoint existe para no tener que hacer.
+ */
+export async function resolverCatalogoCrudo(params: URLSearchParams): Promise<ResultadoCrudo> {
+  const tipo = params.get('tipo')
+  if (tipo !== 'versiones') {
+    return {
+      estado: 'invalido',
+      mensaje: `el crudo solo está soportado en tipo=versiones (se pidió «${tipo ?? ''}»)`,
+    }
+  }
+
+  const marcaId = params.get('marcaId')
+  const modeloId = params.get('modeloId')
+  const motor = params.get('motor')
+  if (!marcaId || !modeloId || !motor) {
+    return { estado: 'invalido', mensaje: 'faltan marcaId, modeloId y motor' }
+  }
+
+  const r = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (r.estado !== 'lista') return { estado: 'sin_configurar', mensaje: explicarConfig(r) }
+
+  try {
+    const { opciones, crudo, path } = await versionesCrudas(r.config, marcaId, modeloId, motor)
+    // El path viene de la propia función que hizo la petición: conste QUÉ se
+    // preguntó. Una medición sin su petición al lado no la comprueba nadie más.
+    return { estado: 'ok', path, resumen: resumirCrudo(crudo), opciones }
+  } catch (e) {
+    return {
+      estado: 'error',
+      causa: registrarErrorCartera('catalogos-crudo/versiones', e),
       mensaje: e instanceof Error ? e.message : String(e),
     }
   }

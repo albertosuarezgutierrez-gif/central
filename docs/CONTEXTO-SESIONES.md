@@ -12,6 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
 **(21/09/2026)** 🚗 **Avant2 vs. lo nuestro para tarificar auto: no nos falta pantalla, nos faltan
 datos que ya viajaban INVENTADOS.** De los once campos que pide el formulario de Avant2 y el nuestro
 no, **seis ya iban en la petición con un valor que nadie había preguntado**. Tres se arreglan aquí
@@ -27,6 +28,21 @@ como español sin que nada falle, y eso es art. 10 LCS, no un precio malo. Eso y
 por delante: Avant2 acepta «tuvo seguro» con 0 años y cotiza novel; nosotros lo paramos antes de
 gastar.
 
+**(21/09/2026)** 🔗 **La cadena de CIMA ya es ENTERA de Alberto, y el vigilante arreglado enseña lo
+que tapaba.** Verificado por API, no de palabra: el repo del adaptador es hoy
+`albertosuarezgutierrez-gif/asegura-app-cima-adapter` (id 1225402598, privado, Java) — era el único
+eslabón sin salida, porque sin él no se podía redesplegar. Cadena completa: Actions (repo `asegura`)
+→ CRM en Vercel → adaptador en Fly (`grupo-asegura`) → TIREA. **Sigue fuera:** los secrets de TIREA
+de producción (Manuel los manda por enlace de un solo uso) y su permiso `write` en el repo `asegura`,
+pendiente de retirar.
+🚨 **Y CIMA NO está «100% ok», que era la pregunta:** la ingesta sí (145 ficheros `confirmed`, último
+21/09 10:58), pero el health-alert —ahora que funciona— reporta **4 ficheros con contenido sin
+persistir, todos de junio y todos ya CONFIRMADOS a TIREA**, o sea fuera de la cola: 3 `SIN` de C0109
+en `review` con `0/1 siniestros` (07 y 20/06) y 1 `POL` de C0468 con `polizas_persisted=2` de
+`polizas_count=3` — una póliza de tres no entró. Su única copia es el crudo, con TTL: 10 ficheros en
+`cima_cuarentena_crudo`, próxima purga **17/10**. No es urgente hoy, pero tiene fecha. El vigilante
+llevaba dos días sin poder decirlo.
+
 **(21/09/2026)** ✅ **Cerrada la avería del vigilante de CIMA: 48 h caído, arreglada en 15 s.** Era
 lo diagnosticado — el secret `INTERNAL_API_SECRET` de Actions ya no coincidía con la env var de
 Vercel. **La fecha lo remató:** esa env var se editó el 20/09, justo entre el último run verde
@@ -38,6 +54,19 @@ un 200 vacío habría salido igual de verde, la fila nueva es la prueba. PR #326
 «avería» a «resuelta»; se conserva el diagnóstico entero porque lo reutilizable es cómo se descartó
 el host). ⚠️ **Cabo abierto:** `e2e-smoke` ya fallaba el 19/09 a las 10:06, con el secret aún bueno
 — su 401 de ese día NO lo explica esta rotación; si sigue rojo, el issue #815 sigue vivo.
+
+**(21/09/2026)** 🔍 **«¿El catálogo de Codeoscopic trae los años de cada versión?» llevaba meses
+contestándose de memoria, y era medible.** Causa: `normalizarOpciones` se queda con `id` + `nombre` y
+**tira el resto**, así que desde fuera de esa función no hay forma de saber qué manda el vendor — y el
+nombre no lleva años («4X4 DC LE AUTO»). Nuevo `?crudo=1` en `/api/operador/codeoscopic/catalogos`
+(solo `tipo=versiones`, mismo `GET` de catálogo, **0,00€**) + ruta en plataforma tras la sesión, para
+que `ASEGURA_OPERADOR_SECRET` **no salga de Vercel**: se abre una URL y ya. Resumidor puro `crudo.ts`
+(unión de claves de TODAS las entradas, `total: null` ≠ `0`, muestra íntegra); 9 cepos, 4 vistos en
+ROJO. 🚨 La guarda que lo hace servir de algo: si asegura responde 200 **sin `resumen`** es que su
+despliegue no entiende `crudo=1` y ha devuelto la lista normalizada — se corta con 502, porque
+relayarlo se leería como «el vendor no manda nada más». La pasada de `code-review` cazó justo eso.
+⏸️ Pendiente: ejecutar la medición y decidir. Y ojo — la fecha de matriculación de la matrícula es
+**aproximada** y puede venir `null`: podrá ordenar o acotar el desplegable, nunca elegir la versión.
 
 **(21/09/2026)** 🚨 **AVERÍA CONFIRMADA: el vigilante de la ingesta de CIMA lleva dos días sin
 funcionar.** `cima-health-alert` falló el 20/09 con `curl (22) error: 401` y hoy volvió a fallar
@@ -52,7 +81,9 @@ no — el secret de Actions dejó de coincidir con la env var de Vercel. **Lo ar
 credencial.** La ingesta en sí está sana (`cima_pull_completed` 21/09 12:26), así que no hay pérdida
 de datos; lo que no hay es red — si CIMA se parase mañana, nadie se enteraría.
 
-**(21/09/2026)** Presupuesto al cliente — **PR 1 entero** (#3252, draft). Módulo puro
+**(21/09/2026)** Presupuesto al cliente — **PR 1 entero, MERGEADO** (#3252, squash 40b5e2655).
+⚠️ Entró **sin la comprobación en navegador ni la medida a 320px** (decisión de Alberto: «mergea»):
+la tarjeta «Preparar presupuesto» de retarificar se verá por primera vez en producción. Módulo puro
 `presupuesto-cliente.ts` (estado derivado de los sellos, caducidad = mínimo de 3 fuentes con la
 fuente declarada, regla de las tres), DDL `seguros.presupuesto|_opcion|_evento` + `firma`
 (**APLICADA**, migración `seguros_presupuesto_cliente`), puerto `/api/operador/presupuesto`, proxy en
