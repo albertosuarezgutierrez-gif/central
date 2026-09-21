@@ -29,7 +29,7 @@ de WhatsApp; Renovaciones (clientes vivos que vencen pronto) no lo tenía. Nuevo
 <14 días» + badge en `/correduria`. `tsc` 0 en asegura/plataforma, `pnpm test` 956+53 en verde, CI
 19/19 en verde. **PR #3227 mergeado.**
 
-**(21/09/2026)** PR #3232 (draft): recaptación por email de leads sin vencimiento — dos huecos cerrados
+**(21/09/2026)** PR #3232 mergeado: recaptación por email de leads sin vencimiento — dos huecos cerrados
 tras pregunta de Alberto por un "agente comercial" para leads sin móvil. (1) El webhook de Resend
 ahora distingue `email.bounced`/`email.complained` y aplica opt-out automático (antes solo veía
 apertura/clic; un email muerto se reintentaba cada 14 días para siempre). (2) `descartarLeadsSilenciosos`
