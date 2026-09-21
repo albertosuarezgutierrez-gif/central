@@ -1,0 +1,113 @@
+{
+ "sesion": "3cd496e8-8835-5ca2-b02c-63d50e969a57",
+ "inicio": "2026-09-21T09:27:34.194Z",
+ "fin": "2026-09-21T09:53:20.751Z",
+ "llamadas": 44,
+ "categorias": {
+  "otro": {
+   "llamadas": 5,
+   "chars_in": 386,
+   "chars_out": 745,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 4
+   }
+  },
+  "bash": {
+   "llamadas": 7,
+   "chars_in": 4989,
+   "chars_out": 11528,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 7
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 4,
+   "chars_in": 1113,
+   "chars_out": 13769,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 4
+   }
+  },
+  "mcp:posthog": {
+   "llamadas": 16,
+   "chars_in": 1507,
+   "chars_out": 89738,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__posthog__exec": 16
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 144,
+   "chars_out": 4114,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__add_repo": 1,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 7,
+   "chars_in": 3637,
+   "chars_out": 102001,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__actions_list": 3,
+    "mcp__github__get_file_contents": 1,
+    "mcp__github__search_code": 1,
+    "mcp__github__get_job_logs": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 1,
+   "chars_in": 22,
+   "chars_out": 1299,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__filter_project_envs": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 8190,
+   "chars_out": 16670,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 1
+   }
+  }
+ }
+}
