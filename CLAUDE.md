@@ -278,10 +278,11 @@ subagentes ahorraban más y se usaban más (`general-purpose` 596k tokens citado
 **Qué se usa AHORA para localizar código, en este orden:**
 1. **`code-map`** (tabla `mapa_arquitectura`, que SE QUEDA): índice de firmas para acotar candidatos
    a coste ~0 antes de leer nada. 88.901 tokens citados en solo 5 llamadas — el mejor ratio de todo.
-2. **Un subagente** (`Explore`, `general-purpose` o `agente-mecanico`) para lo que antes preguntabas
-   al grafo: quién llama a algo, qué rompe un cambio, dónde vive una funcionalidad. El agente
-   greppea, se come los archivos en SU contexto y devuelve solo el informe — que es exactamente lo
-   que aportaba el grafo, sin ocupar disco.
+2. **`rastreador-codigo`** (`.claude/agents/`, modelo económico, SOLO LECTURA) para lo que antes
+   preguntabas al grafo: quién llama a algo, qué rompe un cambio, qué tests cubren un archivo. Lleva
+   dentro las tres trampas del repo —barriles `@central/*`, homónimos entre apps, y que «0
+   resultados» es «no encontré», no «no lo usa nadie»— y devuelve `archivo:línea` + conclusión, sin
+   volcados. Para un barrido más abierto, `Explore` o `general-purpose`.
 3. **`Grep`/`Read` directos** solo para lo acotado: una función concreta en un archivo que ya sabes.
 
 **`memoria_buscar()` SIGUE VIVA y no se toca** (`memoria_embeddings`, 16 MB): sobre

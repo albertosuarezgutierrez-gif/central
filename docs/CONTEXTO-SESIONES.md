@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🤖 **Dos agentes nuevos, los dos nacidos de fallos medidos hoy.**
+**`vigia-infra`** (skill, mensual día 8, `docs/VIGIA-INFRA.md`): mide los TECHOS —Supabase en % de
+su cuota, hinchazón recuperable, Build Minutes y ritmo de deployments de Vercel, máquinas de Fly—.
+Van **tres sustos del mismo tipo sin una sola alerta**: 600 US$ de Build CPU (jul), la cuota de 450
+deployments/hora reventada (04/09) y hoy la BD por encima del tope con la cartera dentro, vista de
+refilón. Regla dura: **un límite sin medir NO está bien, está sin medir**, y cuenta como 🟠.
+**`rastreador-codigo`** (agente, haiku, SOLO LECTURA): el sustituto del grafo. Lleva dentro las tres
+trampas que el grafo sí sabía —barriles `@central/*`, homónimos entre apps, y «0 resultados» ≠ «no
+lo usa nadie»—. Trigger de `vigia-infra` pendiente de crear.
+
 **(21/09/2026)** 💾 **`central` estaba POR ENCIMA de la cuota del plan Free** (644 MB medidos, tope
 500). No era riesgo futuro: es la BD compartida de todas las apps. Recuperados **131 MB sin borrar
 ni una fila**, solo `VACUUM FULL` — `net._http_response` tenía **0 filas vivas ocupando 44 MB** (sin

@@ -354,6 +354,21 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | **Resultado** | Informe mensual por Telegram + `docs/PATRIMONIO-CFO.md` actualizado; PR draft solo si propone un agente nuevo. |
 | **Verificar** | Filas nuevas en `patrimonio_recomendaciones` + informe en el doc de estado. |
 
+### 19. Vigía de infraestructura y cuotas — *PENDIENTE DE CREAR EL TRIGGER (skill lista 21/09/2026)*
+| | |
+|---|---|
+| **Cuándo** | Mensual, **día 8**, ~04:00 CEST (el 5 lo ocupa `conectores-vigia`, el 15 `github-vigia`) |
+| **Prompt** | `Ejecuta la skill vigia-infra` (+ `PLATAFORMA_URL`/`ALERTA_TOKEN` en instrucciones para el aviso, como psd2) |
+| **MCPs / envs** | `mcp__Supabase__*` (proyecto `central`), `mcp__Vercel__*` (equipo `pisos-turisticos-projects`). Fly no tiene MCP: se mira en panel o se deja como «sin medir». `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos). |
+| **Qué hace** | Mide los TECHOS: plan y tamaño de la BD de Supabase contra su cuota (en % del tope, no en MB sueltos), hinchazón recuperable antes de proponer borrar nada, advisors; Build CPU Minutes de Vercel, higiene del `ignoreCommand` app por app y ritmo de deployments; máquinas de Fly. |
+| **Resultado** | Reescribe `docs/VIGIA-INFRA.md` entero **con la fecha de la pasada aunque todo esté verde**. Telegram solo si hay 🟠/🔴 o cambio de semáforo. PR draft `claude/vigia-infra-<fecha>` si propone un cambio de configuración o un borrado — **nunca lo aplica ella**. |
+
+**Regla dura de esta rutina:** un límite que no se ha medido **no está bien**, está *sin medir*, y
+cuenta como 🟠. Una llamada fallida, vacía o truncada es «no lo sé», jamás «dentro de cuota». Nació
+el 21/09/2026 tras el tercer susto del mismo tipo (600 US$ de Build CPU en julio, la cuota de 450
+deployments/hora reventada el 04/09, y la BD en 644 MB sobre un tope de 500 con la cartera dentro):
+los tres eran medibles con una consulta y a ninguno lo cazó una alerta.
+
 ### 20. Seguimiento — ¿dejó de oscilar el motor de precios? — *UN SOLO DISPARO, 03/09/2026*
 
 | | |
