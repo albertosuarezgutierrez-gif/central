@@ -9,7 +9,7 @@
 // Las reglas no son adivinadas: salen del builder de Manuel, verificado por él
 // contra el entorno real, y están transcritas en docs/CODEOSCOPIC-TRASPASO-MANUEL.md §3.
 
-import { construirPersona, revisarPersona, RE_EMAIL, type DatosPersona } from './persona.ts'
+import { construirPersona, revisarPersona, RE_EMAIL, type DatosPersona, type CarnetExtra } from './persona.ts'
 import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
 
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
@@ -20,6 +20,39 @@ export type DatosAuto = DatosPersona & {
   // `fechaCarnet` de aquí es la del TOMADOR y solo se manda como carnet del
   // conductor cuando NO hay `conductor` propio (ver más abajo).
   fechaCarnet: string
+
+  /**
+   * Tipo de carnet y zona de expedición del TOMADOR (y del conductor cuando no
+   * hay uno propio). Opcionales: sin ellos viajan los supuestos `B` y `Spain`,
+   * que es el caso normal — pero el supuesto se DECLARA, no se cablea. Ver
+   * `CarnetExtra` en `persona.ts` para el porqué (un carnet extranjero
+   * declarado como español es art. 10 LCS, no un precio malo).
+   *
+   * Son ids de catálogo (`/car/driving-licenses`,
+   * `/car/driving-license-issuing-zones`), nunca literales de la pantalla.
+   */
+  tipoCarnet?: string | null
+  zonaCarnet?: string | null
+
+  /**
+   * 🚧 El CONDUCTOR OCASIONAL (`risk.secondaryDriver`), cuando el coche lo
+   * conduce también alguien más de forma habitual-pero-no-principal (el
+   * cónyuge, un hijo).
+   *
+   * Por qué importa y no es un adorno: no declararlo es **reticencia**
+   * (art. 10 LCS). La compañía puede reducir la indemnización en proporción, y
+   * el conductor joven no declarado es el caso de manual. Avant2 lo pregunta
+   * con un interruptor en el paso de «Personas»; nosotros no lo mandábamos
+   * siquiera.
+   *
+   * **Sin verificar contra el vendor**, igual que `propietario` y `conductor`:
+   * `secondaryDriver` está en el contrato de `CarRisk`
+   * (`docs/CODEOSCOPIC-API-PORTAL.md`, «Campos del risk sin citar») y se
+   * proyecta como una persona más, pero el primer intento real puede devolver
+   * un 400 nuevo —como pasó con `email`, `roadName` y `engine`— y ese 400 se
+   * paga. Lleva su PROPIA fecha de carnet: es su carnet, no el del tomador.
+   */
+  conductorOcasional?: (DatosPersona & CarnetExtra & { fechaCarnet: string }) | null
 
   /**
    * 🚧 El propietario, SOLO cuando es una persona DISTINTA del tomador
@@ -46,7 +79,7 @@ export type DatosAuto = DatosPersona & {
    * carnet, no el del tomador — y por eso no es opcional dentro del objeto.
    * Misma advertencia de «sin verificar» que `propietario`.
    */
-  conductor?: (DatosPersona & { fechaCarnet: string }) | null
+  conductor?: (DatosPersona & CarnetExtra & { fechaCarnet: string }) | null
 
   // ── Vehículo ──
   codigoVehiculo: string // el código Base7 de la VERSIÓN, del catálogo
@@ -168,6 +201,36 @@ export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevisi
       })
     }
   }
+  // El conductor ocasional es OPCIONAL, pero a medias no vale: una persona
+  // declarada sin sus datos es peor que no declararla (el vendor la rechaza
+  // después de cobrar). Mismas reglas que el conductor habitual.
+  if (d.conductorOcasional) {
+    const faltan = revisarPersona(d.conductorOcasional)
+    if (faltan.length > 0) {
+      r.push({
+        campo: 'conductorOcasional',
+        motivo: `datos del conductor ocasional incompletos: ${faltan.map((f) => f.campo).join(', ')}`,
+      })
+    }
+    if (!texto(d.conductorOcasional.fechaCarnet)) {
+      r.push({ campo: 'conductorOcasional', motivo: 'el conductor ocasional necesita su fecha de carnet' })
+    } else if (!RE_FECHA.test(String(d.conductorOcasional.fechaCarnet))) {
+      r.push({ campo: 'conductorOcasional', motivo: 'la fecha de carnet del conductor ocasional tiene que ser aaaa-mm-dd' })
+    }
+    // 🚨 Dos personas con el MISMO DNI y distinto dato son un 400 del vendor
+    // («Two persons have been declared with the same identification by
+    // different data»), y aquí es fácil llegar por descuido: si el ocasional
+    // es el propio tomador, lo que hay es un tomador, no dos conductores.
+    const dniOcasional = String(d.conductorOcasional.dni ?? '').trim().toUpperCase()
+    const dniPrincipal = String((d.conductor ?? d).dni ?? '').trim().toUpperCase()
+    if (dniOcasional !== '' && dniOcasional === dniPrincipal) {
+      r.push({
+        campo: 'conductorOcasional',
+        motivo: 'el conductor ocasional tiene el mismo DNI que el habitual: si conduce solo él, no declares un ocasional',
+      })
+    }
+  }
+
   if (d.conductor) {
     const faltanConductor = revisarPersona(d.conductor)
     if (faltanConductor.length > 0) {
@@ -286,9 +349,22 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
   // Con `propietario`/`conductor` propios (DNI distinto), esa regla de cruce
   // no aplica — son personas distintas — pero el resto SÍ: cada una se
   // construye con `construirPersona` para no reinventar la proyección.
-  const tomador = construirPersona(d, d.conductor ? {} : { fechaCarnet: d.fechaCarnet })
+  // El carnet del tomador: su fecha, su tipo y su zona. Los dos últimos caen a
+  // `B`/`Spain` dentro de `construirPersona`, en un solo sitio.
+  const carnetTomador: CarnetExtra = {
+    fechaCarnet: d.fechaCarnet,
+    tipoCarnet: d.tipoCarnet,
+    zonaCarnet: d.zonaCarnet,
+  }
+  const tomador = construirPersona(d, d.conductor ? {} : carnetTomador)
   const propietario = d.propietario ? construirPersona(d.propietario) : tomador
-  const conductor = d.conductor ? construirPersona(d.conductor, { fechaCarnet: d.conductor.fechaCarnet }) : tomador
+  const conductor = d.conductor
+    ? construirPersona(d.conductor, {
+        fechaCarnet: d.conductor.fechaCarnet,
+        tipoCarnet: d.conductor.tipoCarnet,
+        zonaCarnet: d.conductor.zonaCarnet,
+      })
+    : tomador
 
   const riesgo: Record<string, unknown> = {
     vehicle: { code: d.codigoVehiculo },
@@ -307,6 +383,16 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
     owner: propietario,
     primaryDriver: conductor,
     previouslyInsured: d.aseguradoAntes ?? false,
+  }
+
+  // 🚧 El conductor ocasional, solo si se ha declarado. No se inventa uno
+  // «por si acaso»: declarar a alguien que no conduce también es declarar mal.
+  if (d.conductorOcasional) {
+    riesgo.secondaryDriver = construirPersona(d.conductorOcasional, {
+      fechaCarnet: d.conductorOcasional.fechaCarnet,
+      tipoCarnet: d.conductorOcasional.tipoCarnet,
+      zonaCarnet: d.conductorOcasional.zonaCarnet,
+    })
   }
 
   if (d.aseguradoAntes) {

@@ -145,18 +145,93 @@ para verificarlo.
 
 | # | Hueco | Por qué no ahora | Qué haría falta |
 |---|---|---|---|
-| 1 | **Zona de expedición + tipo de carnet** (`issuingZone`, `type`) | cambia la petición de TODAS las cotizaciones de auto | leer `/car/driving-license-issuing-zones` y `/car/driving-licenses` (gratis), selector en el bloque del tomador con España por defecto **declarado**, y **una** cotización real de verificación (0,50€) |
-| 2 | **Conductor ocasional** (`secondaryDriver`) | campo nuevo en el JSON: primer intento puede ser un 400 pagado | mismo patrón que `conductor` (que sigue 🚧 sin verificar). Conviene verificar los dos en la misma pasada |
+| 1 | ~~Zona de expedición + tipo de carnet~~ | ✅ **HECHO** (21/09/2026, con OK de Alberto) | — |
+| 2 | ~~Conductor ocasional~~ (`secondaryDriver`) | ✅ **HECHO** (21/09/2026). 🚧 **Sin verificar contra el vendor**: falta UNA cotización real | — |
+| 2b | 🔴 **Tipo de documento** (`identificationDocument.type`) | **cableado a `Dni`**, igual que iba el carnet. Un NIE, un pasaporte o un CIF se declaran como DNI | catálogo del vendor + selector; mismo patrón que el carnet, y probablemente la misma cotización de verificación |
+| 2c | 🔴 **Matrícula asegurada** de la póliza anterior | la forzamos igual a la del coche que se cotiza (`previousInsurance.registrationPlate = riesgo.registrationPlate`). Si el bonus viene de OTRO vehículo, se declara mal | campo propio en el bloque del historial, con la del coche como valor por defecto |
 | 3 | **Fecha de efecto elegible** | hoy es supuesta y tiene dos cepos del vendor ya cazados; tocarla sin pantalla es fácil de romper | campo `date` con los dos cepos pintados antes de pulsar (hoy ≤ fecha ≤ hoy+90) |
 | 4 | **CP de circulación distinto del de residencia** | necesita resolver `town.id` del CP nuevo, que es otro catálogo y otra cascada | reutilizar el resolutor de municipios que ya usa el bloque del tomador |
 | 5 | **Accesorios / opciones instaladas** (`installedAccessories[]`, `installedOptions[]`) | `/car/vehicles/{code}/options` sin explorar; valor comercial bajo hoy | medir primero qué devuelve para un coche real |
 | 6 | **Elegir compañías** | no ahorra dinero; es visibilidad | pasar la selección en la petición y enseñarla |
 | 7 | **«Oportunidad» con fecha de cierre** | es CRM comercial, no tarificación | va con el embudo de leads, no aquí |
 
-Orden propuesto: **1 → 2** (los dos que afectan a la validez de lo declarado, y comparten la única
-cotización de verificación), luego **3**, y el resto cuando estorben.
+Orden propuesto: ~~**1 → 2**~~ hechos el mismo día. Siguen **2b y 2c**, que son de la misma familia
+que los dos primeros —declaran mal el riesgo, no dan un precio malo— y por eso van antes que el
+resto. Luego **3**, y lo demás cuando estorbe.
+
+🔎 **2b y 2c salen de una SEGUNDA pasada a las mismas capturas**, pedida por Alberto («revisa bien
+las imágenes, hay campos que no tenemos»). La primera pasada los dio por buenos, que es la lección:
+un inventario de campos no se cierra con una lectura, y los dos que se escaparon son justo los del
+tipo que este documento venía a cazar.
+
+📌 **El remolque, medido y no supuesto:** en la captura, «Remolque ligero (< 750 kg)» está
+ENCENDIDO y debajo solo aparece «Accesorios» — no despliega ningún campo. En el contrato del vendor
+`lightTrailer` es un booleano y nada más, y ya lo mandamos. El que sí abre una lista al activarse es
+**Accesorios** (hueco 5).
+
+### §5bis. Lo que falta de los dos primeros: UNA cotización real (0,50€)
+
+El código está puesto y verificado hasta donde se puede sin gastar: los dos catálogos se sirven
+(`GET`, gratis), la proyección está testeada y los cepos se han visto en rojo. Lo que **no** se ha
+comprobado es que el vendor acepte el cuerpo:
+
+- `drivingLicenses[].issuingZone.id` con un valor distinto de `Spain` — el catálogo existe, pero que
+  el ReRate lo acepte sin pedir un dato más es una suposición razonable, no un hecho medido.
+- `risk.secondaryDriver` — está en el contrato de `CarRisk`, nunca se ha mandado. Un 400 nuevo es
+  plausible: pasó con `email`, `roadName` y `engine`, y **ese 400 se paga**.
+
+Por eso la verificación la dispara ALBERTO desde la pantalla, con un cliente real, y no un agente por
+su cuenta (regla 20 de `correduria-crm`: Codeoscopic cuesta 0,50€ y no es idempotente). Con una sola
+cotización se prueban los dos a la vez: se elige una zona de expedición distinta **y** se declara un
+conductor ocasional en el mismo presupuesto.
 
 ---
+
+## §5ter. El orden de producto: precio primero, verificación al final
+
+Dictado de Alberto (21/09/2026): «hacerla lo más simplificado posible, dar precio y después
+verificar por los kilometrajes, el tema del remolque, todo eso, pero eso es al final […] para que al
+cliente final no preguntarle tanto».
+
+**Dos fases, y la frontera es el ReRate**, que es la que ya marca el propio vendor:
+
+- **Fase 1 · precio.** Lo mínimo que hace falta para que la compañía tarifique: vehículo, persona,
+  garaje, fecha de efecto e historial. Todo lo demás viaja con su supuesto DECLARADO. El precio que
+  sale es `estimado`, y así se enseña.
+- **Fase 2 · verificación, antes de emitir.** Kilómetros reales, remolque, accesorios, tipo de
+  documento, matrícula del bonus, carnet. Aquí ya hay alguien interesado, así que preguntar sale
+  gratis en abandono y caro no preguntarlo: son los datos que convierten un `estimado` en un precio
+  confirmable y, sobre todo, en un riesgo bien declarado.
+
+Eso encaja con lo que el código ya hace —`firmeza: 'estimado'` hasta el ReRate— y con la regla de
+la casa: un supuesto que viaja se declara, no se esconde. **Lo que NO se hace es quitar preguntas
+mandando el supuesto en silencio**: la fase 1 es más corta porque enseña lo que supone, no porque
+finja que lo sabe.
+
+### Una pantalla, dos puertas
+
+Alberto: «que la pantalla que hagamos nosotros, nuestra propia intranet, sea la misma que después le
+aparezca a los clientes para tarificar».
+
+**El formulario se comparte; la pantalla no.** La regla 1 de `correduria-crm` es «dos caras, dos
+apps»: el corredor en `apps/plataforma`, el cliente en `apps/asegura-portal` con rol propio sin
+BYPASSRLS y su propio secreto de sesión. Una URL común con permisos es exactamente lo que esa regla
+prohíbe, y el día que una comprobación falle el cliente ve cartera ajena.
+
+La forma que cumple lo que Alberto pide sin romperlo: **el formulario vive en un package
+(`@central/module-seguros*`) y lo montan las dos apps**. Mismas preguntas, mismo orden, mismo
+aspecto; dos puertas distintas, con el aislamiento estructural y no de permisos. Para el usuario es
+idéntico; para la seguridad, no se parece en nada.
+
+Detalles que ya sabemos que cambian entre las dos caras, y que el componente recibe como
+parámetros en vez de decidirlos él:
+
+- **Quién paga.** Del lado del cliente, un botón que gasta 0,50€ no puede estar suelto: o la fase 1
+  se sirve desde una cotización ya pagada, o hay un límite por identidad. Sin eso, el tarificador
+  público es una factura abierta (regla 20).
+- **Qué se enseña.** El corredor ve las 24 filas; al cliente se le enseñan tres opciones en portada,
+  como ya hace `presupuesto-cliente.ts`.
+- **Qué se puede teclear.** El cliente no elige compañía ni toca el historial de otro.
 
 ## §6. Lo que este documento NO autoriza a decir
 

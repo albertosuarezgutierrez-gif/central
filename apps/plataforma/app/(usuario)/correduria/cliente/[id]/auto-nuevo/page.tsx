@@ -47,9 +47,14 @@ export default async function AutoNuevoPage({ params }: { params: Promise<{ id: 
     </div>
   )
 
-  const [garajes, civiles, pre, companiasResp] = await Promise.all([
+  // Los dos del carnet NO son bloqueantes a propósito: si no se pueden leer,
+  // viaja el supuesto de siempre (B, España) y la pantalla lo dice en el hueco
+  // del campo. Bloquear la cotización por ellos sería peor que el problema.
+  const [garajes, civiles, zonasCarnet, tiposCarnet, pre, companiasResp] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
+    catalogoAsegura({ tipo: 'zonas-carnet' }),
+    catalogoAsegura({ tipo: 'tipos-carnet' }),
     precalificarAutoNuevaAsegura({ clienteId }),
     companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
   ])
@@ -90,6 +95,8 @@ export default async function AutoNuevoPage({ params }: { params: Promise<{ id: 
         faltanInicial={pre.pre.faltan}
         garajes={garajes.estado === 'ok' ? garajes.opciones : []}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}
+        zonasCarnet={zonasCarnet.estado === 'ok' ? zonasCarnet.opciones : []}
+        tiposCarnet={tiposCarnet.estado === 'ok' ? tiposCarnet.opciones : []}
         municipios={pre.pre.municipios}
         municipiosMotivo={pre.pre.municipiosMotivo}
         estadoCivilAuto={pre.pre.estadoCivil}

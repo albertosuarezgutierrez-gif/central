@@ -87,6 +87,10 @@ type BorradorAutoNuevo = {
   estadoCivilId?: string
   municipioId?: string
   correcciones?: Record<string, string>
+  zonaCarnet?: string
+  tipoCarnet?: string
+  ocasionalDistinto?: boolean
+  ocasional?: PersonaForm
   propietarioDistinto?: boolean
   propietario?: PersonaForm
   conductorDistinto?: boolean
@@ -158,6 +162,8 @@ export default function AutoNuevo({
   faltanInicial,
   garajes,
   civiles,
+  zonasCarnet,
+  tiposCarnet,
   municipios,
   municipiosMotivo,
   estadoCivilAuto,
@@ -171,6 +177,9 @@ export default function AutoNuevo({
   faltanInicial: Reparo[] | null
   garajes: Opcion[]
   civiles: Opcion[]
+  /** Catálogos del carnet. `[]` = no se han podido leer: viaja el supuesto B/España. */
+  zonasCarnet: Opcion[]
+  tiposCarnet: Opcion[]
   municipios: Opcion[] | null
   municipiosMotivo: string | null
   estadoCivilAuto: Opcion | null
@@ -235,6 +244,19 @@ export default function AutoNuevo({
   // Por defecto tomador=propietario=conductor (el único caso probado contra el
   // vendor). Si Alberto marca la casilla, se piden los datos MÍNIMOS de esa
   // persona — nunca se inventan ni se copian del tomador.
+  // ── El carnet: qué tipo y dónde se expidió ────────────────────────────────
+  // Vacío = «no se ha preguntado», y entonces viaja el supuesto (B, España)
+  // DECLARADO como tal. Prerrellenarlos con el defecto volvería a convertir un
+  // «no lo sé» en un dato afirmado — que es de lo que iba todo esto.
+  const [zonaCarnet, setZonaCarnet] = useState('')
+  const [tipoCarnet, setTipoCarnet] = useState('')
+
+  // ── Conductor ocasional ───────────────────────────────────────────────────
+  // No declararlo es reticencia (art. 10 LCS): la compañía puede reducir la
+  // indemnización, y el conductor joven no declarado es el caso de manual.
+  const [ocasionalDistinto, setOcasionalDistinto] = useState(false)
+  const [ocasional, setOcasional] = useState<PersonaForm>(PERSONA_VACIA)
+
   const [propietarioDistinto, setPropietarioDistinto] = useState(false)
   const [propietario, setPropietario] = useState<PersonaForm>(PERSONA_VACIA)
   const [conductorDistinto, setConductorDistinto] = useState(false)
@@ -286,6 +308,12 @@ export default function AutoNuevo({
     if (b.estadoCivilId && civiles.some((c) => c.id === b.estadoCivilId)) setEstadoCivilId(b.estadoCivilId)
     if (b.municipioId && listaMunicipios.some((m) => m.id === b.municipioId)) setMunicipioId(b.municipioId)
 
+    if (b.zonaCarnet && zonasCarnet.some((z) => z.id === b.zonaCarnet)) setZonaCarnet(b.zonaCarnet)
+    if (b.tipoCarnet && tiposCarnet.some((t) => t.id === b.tipoCarnet)) setTipoCarnet(b.tipoCarnet)
+    if (b.ocasionalDistinto) {
+      setOcasionalDistinto(true)
+      if (b.ocasional) setOcasional(b.ocasional)
+    }
     if (b.propietarioDistinto) {
       setPropietarioDistinto(true)
       if (b.propietario) setPropietario(b.propietario)
@@ -369,6 +397,10 @@ export default function AutoNuevo({
         estadoCivilId,
         municipioId,
         correcciones,
+        zonaCarnet,
+        tipoCarnet,
+        ocasionalDistinto,
+        ocasional,
         propietarioDistinto,
         propietario,
         conductorDistinto,
@@ -399,6 +431,10 @@ export default function AutoNuevo({
     estadoCivilId,
     municipioId,
     correcciones,
+    zonaCarnet,
+    tipoCarnet,
+    ocasionalDistinto,
+    ocasional,
     propietarioDistinto,
     propietario,
     conductorDistinto,
@@ -487,6 +523,14 @@ export default function AutoNuevo({
 
   const faltaPropietario = propietarioDistinto && !personaCompleta(propietario, false)
   const faltaConductor = conductorDistinto && !personaCompleta(conductor, true)
+  const faltaOcasional = ocasionalDistinto && !personaCompleta(ocasional, true)
+  // El vendor rechaza dos personas con el mismo DNI y distinto dato, y ese 400
+  // se paga. Si el ocasional es el mismo que conduce, lo que hay es un
+  // conductor, no dos: se dice aquí, gratis.
+  const ocasionalDuplicado =
+    ocasionalDistinto &&
+    ocasional.dni.trim() !== '' &&
+    ocasional.dni.trim().toUpperCase() === (conductorDistinto ? conductor.dni : '').trim().toUpperCase()
 
   // Un número mal tecleado NO se manda al vendor: `revisarDatosAuto` lo
   // rechazaría, pero ya habría costado el viaje. Se para aquí, en la pantalla.
@@ -515,7 +559,7 @@ export default function AutoNuevo({
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
-    aManoSinRellenar.length > 0 || faltaPropietario || faltaConductor || faltaHistorial || kmInvalido || compraInvalida
+    aManoSinRellenar.length > 0 || faltaPropietario || faltaConductor || faltaHistorial || kmInvalido || compraInvalida || faltaOcasional || ocasionalDuplicado
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
@@ -526,6 +570,13 @@ export default function AutoNuevo({
     if (kmLeidos !== null) correccionesFinal.kmAnuales = kmLeidos
     if (fechaCompra !== '' && !compraInvalida) correccionesFinal.fechaCompra = fechaCompra
     if (remolqueLigero) correccionesFinal.remolqueLigero = true
+    // En blanco NO se manda: el precalificador ya declara el supuesto, y
+    // `supuestosVigentes` lo retira en cuanto aquí se elige algo.
+    if (zonaCarnet !== '') correccionesFinal.zonaCarnet = zonaCarnet
+    if (tipoCarnet !== '') correccionesFinal.tipoCarnet = tipoCarnet
+    if (ocasionalDistinto && !ocasionalDuplicado) {
+      correccionesFinal.conductorOcasional = personaParaPuerto(ocasional, true)
+    }
     if (propietarioDistinto) correccionesFinal.propietario = personaParaPuerto(propietario, false)
     if (conductorDistinto) correccionesFinal.conductor = personaParaPuerto(conductor, true)
     if (tieneSeguroActual) {
@@ -733,6 +784,34 @@ export default function AutoNuevo({
               {listaMunicipios.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
             </select>
           </Campo>
+          <Campo
+            etiqueta="Carnet expedido en"
+            falta={false}
+            ayuda={
+              zonasCarnet.length === 0
+                ? 'No se ha podido leer el catálogo: viaja España como supuesto.'
+                : 'En blanco viaja España, marcado como supuesto. Con un carnet de fuera, elígelo: declararlo como español es declarar mal el riesgo.'
+            }
+          >
+            <select value={zonaCarnet} onChange={(e) => setZonaCarnet(e.target.value)} style={input} disabled={zonasCarnet.length === 0}>
+              <option value="">España (supuesto)</option>
+              {zonasCarnet.map((z) => <option key={z.id} value={z.id}>{z.nombre}</option>)}
+            </select>
+          </Campo>
+          <Campo
+            etiqueta="Tipo de carnet"
+            falta={false}
+            ayuda={
+              tiposCarnet.length === 0
+                ? 'No se ha podido leer el catálogo: viaja el B como supuesto.'
+                : 'En blanco viaja el B de turismos, marcado como supuesto.'
+            }
+          >
+            <select value={tipoCarnet} onChange={(e) => setTipoCarnet(e.target.value)} style={input} disabled={tiposCarnet.length === 0}>
+              <option value="">B · turismos (supuesto)</option>
+              {tiposCarnet.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+            </select>
+          </Campo>
         </div>
 
         {aMano.length > 0 && (
@@ -830,6 +909,26 @@ export default function AutoNuevo({
           civiles={civiles}
           conCarnet
         />
+        <div style={{ height: 12 }} />
+        <BloquePersona
+          etiqueta="Lo conduce también otra persona de forma habitual (conductor ocasional)"
+          activo={ocasionalDistinto}
+          onActivo={setOcasionalDistinto}
+          persona={ocasional}
+          onPersona={setOcasional}
+          civiles={civiles}
+          conCarnet
+        />
+        {ocasionalDuplicado && (
+          <p style={{ color: 'var(--negative)', fontSize: 13, margin: '8px 0 0' }}>
+            El conductor ocasional tiene el mismo DNI que el habitual. Si conduce solo él, no declares un
+            ocasional: la compañía rechaza dos personas con el mismo documento, y ese rechazo se paga.
+          </p>
+        )}
+        <p style={{ color: 'var(--muted)', fontSize: 12, margin: '10px 0 0' }}>
+          El ocasional no es un adorno: no declarar a quien también conduce es reticencia (art. 10 LCS) y la
+          compañía puede reducir la indemnización. El caso de manual es el hijo con carnet reciente.
+        </p>
       </div>
 
       <div style={cardStyle}>

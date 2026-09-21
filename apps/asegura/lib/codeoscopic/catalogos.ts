@@ -128,6 +128,28 @@ export async function modelos(config: ConfigCodeoscopic, marcaId: string): Promi
  * Los tipos de motor de coche. Gratis, y hace falta ANTES que las versiones.
  * Ver `versiones()`.
  */
+/**
+ * Zonas de expedición del carnet (`Spain`, y las de fuera). **Gratis.**
+ *
+ * 🚨 Existe desde siempre y no lo usábamos: la zona iba cableada a `Spain` en
+ * `construirPersona`, así que un carnet extranjero se declaraba como español
+ * sin que nada fallase. Avant2 SÍ lo pregunta (captura del 21/09/2026).
+ */
+export async function zonasExpedicionCarnet(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/car/driving-license-issuing-zones'))
+}
+
+/**
+ * Tipos de carnet (`B`, y los demás, con su `minAge`). **Gratis.**
+ *
+ * Mismo caso que la zona: iba cableado a `B`. Ojo al leerlo — el catálogo de
+ * moto trae además `maxDisplacement`, el de auto no
+ * (`docs/CODEOSCOPIC-API-PORTAL.md`).
+ */
+export async function tiposDeCarnet(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/car/driving-licenses'))
+}
+
 export async function tiposDeMotor(config: ConfigCodeoscopic): Promise<Opcion[]> {
   return normalizarOpciones(await catalogo(config, '/car/engine-types'))
 }
