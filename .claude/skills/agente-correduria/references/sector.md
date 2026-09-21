@@ -51,8 +51,20 @@
   **Allianz** (autos, motos, hogar, vida-riesgo) · **Mapfre** (autos, motos, hogar) ·
   **Reale** (autos, motos, hogar, comercios, comunidades, decesos, vida-riesgo) ·
   **Occident/Catalana** (auto, moto, hogar, comunidades, comercios) · **Fidelidade** (hogar,
-  desde 14/07/2026). Pendiente: **Reale VIDA-RIESGO** devuelve «mediador no está activo» — hay
-  que pedir a Reale que habilite al mediador para Avant2.
+  desde 14/07/2026).
+  ✅ **CERRADO el 21/09/2026: Reale VIDA-RIESGO YA ESTÁ ACTIVA, ya no da «mediador no está
+  activo».** Verificado en vivo en el panel (Administración → Productos → por cada compañía se
+  ve el desplegable de ramos y su estado): producto **"RealeVida"**, conexión **38605**, check
+  verde, sin ningún mensaje de error. La correduría tiene **7 ramos habilitados en total**
+  (Autos, Comercios, Comunidades, Decesos, Hogar, Motos, Vida-Riesgo); los otros 12 del panel
+  (Salud, Defensa Jurídica, Seguros de viaje…) están deshabilitados a nivel de correduría, así
+  que ninguna compañía puede tener ramo activado ahí.
+  📋 **Estado por compañía, medido ese mismo día (panel Avant2, no de memoria/soporte):**
+  Allianz → Autos, Hogar, Motos, Vida-Riesgo (producto "AllianzVida", conexión PA342521, activa).
+  Mapfre → Autos, Hogar, Motos; **sin Vida-Riesgo** (solo en «Nuevos productos disponibles», no
+  contratada). Reale → los 7 ramos habilitados, incluido Vida-Riesgo. **Generali → NO activada en
+  NINGUNO de los 7 ramos** (aparece solo en «Nuevos productos disponibles», reconocida por el
+  sistema pero sin contratar — coherente con que por CIMA solo empezó a volcar el 14/09/2026).
   ⚠️ **Que Mapfre/Allianz no lleven comercio/comunidades hoy NO es un ramo bloqueado que haya
   que pedir a Codeoscopic** (dictado por Alberto, 21/09/2026): el catálogo de ramos ya está
   habilitado para la organización — el ramo se activa por compañía **al configurarla** en ese
