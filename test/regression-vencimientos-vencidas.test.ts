@@ -146,10 +146,12 @@ test('las antiguas se declaran con TRES estados: no llega / no se pudo contar / 
 
 test('la LISTA VACÍA también declara las antiguas: es donde más se lee «no hay nada»', () => {
   // Una lista vacía con 8 filas fuera de ventana invita a leer «la cartera está
-  // al día». El pie se pinta en las DOS salidas, no solo bajo la tabla.
+  // al día». El pie se pinta en las TRES salidas: sin ninguna en la ventana,
+  // con todas ocultas por el filtro «contactadas hace <14 días» (21/09/2026),
+  // y bajo la tabla cuando sí hay filas visibles.
   const usos = RENOVACIONES.match(/<PieAntiguas n=\{datos\.vencidasAntiguas\} \/>/g) ?? []
   assert.equal(
-    usos.length, 2,
-    'PieAntiguas tiene que pintarse en la rama de lista vacía Y bajo la tabla',
+    usos.length, 3,
+    'PieAntiguas tiene que pintarse en las dos ramas de lista vacía Y bajo la tabla',
   )
 })

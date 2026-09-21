@@ -1,6 +1,7 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
-import { descripcionDias, type Retarificabilidad } from '@central/module-seguros'
+import { descripcionDias, enCooldownRenovacion, textoAvisoRenovacionWhatsapp, type Retarificabilidad } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge, BtnLink, type Tono } from '@/components/ui'
 import { esAccionable, textoListaTruncada, textoVencidasAntiguas } from './secciones'
@@ -63,6 +64,12 @@ const TIPOS: Record<string, string> = {
   comunidad: 'Comunidad', accidentes: 'Accidentes',
 }
 
+/** Minúsculas para que case dentro de una frase («tu seguro de auto vence…»):
+ *  `TIPOS` está pensado para una celda de tabla («Auto»), no para prosa. */
+function ramoEnFrase(tipo: string): string {
+  return (TIPOS[tipo] ?? tipo.replace(/_/g, ' ')).toLowerCase()
+}
+
 export type ObjetoAsegurado = {
   estado: 'conocido' | 'no_informado' | 'cifrado' | 'sin_objeto'
   titulo: string | null; detalle: string | null; nota: string | null
@@ -84,6 +91,10 @@ export type Vencimiento = {
    *  consulta caída). NO es «no hay forma de llamarle»: por eso no se pinta
    *  nada en vez de un icono apagado o un «sin teléfono». */
   contacto: Contacto | null
+  /** ISO `yyyy-mm-dd` de la última vez que se abrió el WhatsApp de renovación
+   *  de ESTA póliza, o `null` si nunca se registró uno (o asegura todavía no
+   *  manda el campo — los dos casos se tratan igual: sin badge, sin cooldown). */
+  ultimoContactoEn: string | null
 }
 
 export type RespVencimientos =
@@ -213,6 +224,11 @@ export default function Renovaciones({ datos, filtro }: {
   datos: RespVencimientos | null
   filtro: 'accionables' | 'todas'
 }) {
+  // Hook antes de cualquier `return`: los tres estados de carga/error de más
+  // abajo son early returns, y React exige que los hooks se llamen siempre en
+  // el mismo orden.
+  const [ocultarContactadas, setOcultarContactadas] = useState(true)
+
   if (datos === null) {
     return <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Cargando renovaciones…</p>
   }
@@ -237,11 +253,11 @@ export default function Renovaciones({ datos, filtro }: {
     )
   }
 
-  const polizas = filtro === 'accionables'
+  const polizasVentana = filtro === 'accionables'
     ? datos.polizas.filter(p => esAccionable(p.urgencia))
     : datos.polizas
 
-  if (polizas.length === 0) {
+  if (polizasVentana.length === 0) {
     return (
       <>
         {/* 🚨 Aquí es donde MÁS importa: «ninguna vence» sobre una lista
@@ -256,6 +272,41 @@ export default function Renovaciones({ datos, filtro }: {
         </p>
         {/* 🚨 Es JUSTO aquí donde más importa declararlas: una lista vacía
             invita a leer «no hay nada», y puede haber 8 filas fuera de ventana. */}
+        {filtro === 'todas' && <PieAntiguas n={datos.vencidasAntiguas} />}
+      </>
+    )
+  }
+
+  // «Ocultar contactadas» filtra sobre lo que YA se ve, nunca sobre el techo
+  // de la petición: es una comodidad de pantalla, no una segunda ventana.
+  const hoy = new Date()
+  const polizas = ocultarContactadas
+    ? polizasVentana.filter(p => !enCooldownRenovacion(
+        p.ultimoContactoEn ? { creadoAt: new Date(`${p.ultimoContactoEn}T00:00:00Z`) } : null, hoy,
+      ))
+    : polizasVentana
+  const ocultasPorContacto = polizasVentana.length - polizas.length
+
+  const checkboxContactadas = (
+    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>
+      <input
+        type="checkbox"
+        checked={ocultarContactadas}
+        onChange={(e) => setOcultarContactadas(e.target.checked)}
+      />
+      Ocultar contactadas por WhatsApp en los últimos 14 días
+    </label>
+  )
+
+  if (polizas.length === 0) {
+    return (
+      <>
+        <AvisoTruncado truncado={datos.truncado} />
+        {checkboxContactadas}
+        <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+          Las {polizasVentana.length} que vencen ya se contactaron por WhatsApp en los últimos 14 días —
+          no es que no quede ninguna, es que el filtro de arriba las está ocultando.
+        </p>
         {filtro === 'todas' && <PieAntiguas n={datos.vencidasAntiguas} />}
       </>
     )
@@ -277,6 +328,12 @@ export default function Renovaciones({ datos, filtro }: {
   return (
     <>
       <AvisoTruncado truncado={datos.truncado} />
+      {checkboxContactadas}
+      {ocultasPorContacto > 0 && (
+        <p style={{ fontSize: 11, color: 'var(--muted)', margin: '-6px 0 10px' }}>
+          {ocultasPorContacto === 1 ? '1 oculta' : `${ocultasPorContacto} ocultas`} por haberse contactado hace menos de 14 días.
+        </p>
+      )}
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 10px' }}>
         Cartera en juego: {eur(total)}{sinPrima > 0 && ` · ${sinPrima} sin prima informada`}
       </p>
@@ -356,7 +413,10 @@ export default function Renovaciones({ datos, filtro }: {
                     )}
                     {/* Llamar · WhatsApp · escribir sin salir de la lista: esta
                         tabla es la cola de trabajo comercial, y hasta ahora
-                        había que abrir la ficha solo para copiar el teléfono. */}
+                        había que abrir la ficha solo para copiar el teléfono.
+                        El WhatsApp lleva el aviso de renovación YA ESCRITO
+                        (compañía, ramo y fecha) y, al abrirse, registra el
+                        contacto — es lo que alimenta el checkbox de arriba. */}
                     {p.contacto && (
                       <>
                         {' '}
@@ -365,8 +425,33 @@ export default function Renovaciones({ datos, filtro }: {
                           email={p.contacto.email}
                           ilegible={p.contacto.telefonoIlegible && p.contacto.emailIlegible}
                           quien={p.cliente}
+                          mensaje={textoAvisoRenovacionWhatsapp({
+                            nombre: p.cliente,
+                            ramoLegible: ramoEnFrase(p.tipo),
+                            aseguradora: p.aseguradora,
+                            fechaVencimiento: p.fechaVencimiento,
+                          })}
+                          onWhatsapp={() => {
+                            if (!p.clienteId) return
+                            fetch('/api/correduria/renovaciones/contacto', {
+                              method: 'POST',
+                              headers: { 'content-type': 'application/json' },
+                              body: JSON.stringify({
+                                clienteId: p.clienteId, polizaId: p.id,
+                                mensaje: textoAvisoRenovacionWhatsapp({
+                                  nombre: p.cliente, ramoLegible: ramoEnFrase(p.tipo),
+                                  aseguradora: p.aseguradora, fechaVencimiento: p.fechaVencimiento,
+                                }),
+                              }),
+                            }).catch(() => {})
+                          }}
                         />
                       </>
+                    )}
+                    {p.ultimoContactoEn && (
+                      <div style={{ marginTop: 2 }}>
+                        <Badge tono="neutral">contactada {fmtFecha(p.ultimoContactoEn)}</Badge>
+                      </div>
                     )}
                     {p.numeroPoliza && (
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>nº {p.numeroPoliza}</div>

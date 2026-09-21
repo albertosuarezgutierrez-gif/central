@@ -616,6 +616,9 @@ export { nombreDePila } from './nombre-de-pila.ts'
 export { COOLDOWN_DIAS, enCooldown, textoBaseRecaptacionWhatsapp, textoBaseRecaptacionEmail } from './recaptacion.ts'
 export type { EnvioRecienteRecaptacion, PersonalizacionRecaptacion } from './recaptacion.ts'
 
+export { COOLDOWN_RENOVACION_DIAS, enCooldownRenovacion, textoAvisoRenovacionWhatsapp } from './renovacion-contacto.ts'
+export type { ContactoReciente, PersonalizacionRenovacion } from './renovacion-contacto.ts'
+
 export {
   AREAS_CONTACTO,
   areaContacto,

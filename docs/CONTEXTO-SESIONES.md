@@ -13,6 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** Recaptación + control de WhatsApp en Renovaciones. (1) `(legacy)` (26.987 pólizas del
+volcado, centinela del importador) se colaba como «compañía» en «Antes con» y en el mensaje de
+recaptación («que tuviste con (legacy)»); ahora se normaliza a `null`. (2) Recaptación ya tenía cooldown
+de WhatsApp; Renovaciones (clientes vivos que vencen pronto) no lo tenía. Nuevo: tabla
+`seguros.renovacion_contactos`, endpoint `/api/operador/renovaciones/contacto`, mensaje propio
+(`textoAvisoRenovacionWhatsapp`, cita compañía y fecha reales) y checkbox «Ocultar contactadas hace
+<14 días» + badge en `/correduria`. `tsc` 0 en asegura/plataforma, `pnpm test` 956+53 en verde.
+
 **(21/09/2026)** Auditoría ligera — 4 PRs mergeados sin entrada de memoria (huella perdida, cazada por
 el paso 4 de `/auditoria-diaria`): **#3202** enlaza y sigue las pólizas sustituidas por retarificación
 (`poliza_origen_id`, guardián anti-duplicado, cola «Seguimiento de sustituciones» en Hoy con aviso

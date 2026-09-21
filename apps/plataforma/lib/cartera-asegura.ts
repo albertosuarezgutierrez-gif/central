@@ -158,6 +158,13 @@ export type PolizaVencimiento = {
    * «está guardado y la clave PII no lo abre» — que se arregla en otro sitio.
    */
   contacto: Contacto | null
+  /**
+   * Cuándo se abrió por última vez el WhatsApp de renovación de esta póliza
+   * (ISO `yyyy-mm-dd`). `null` = nunca se registró un contacto (o la versión
+   * desplegada de asegura todavía no manda el campo) — los dos casos se
+   * tratan igual aquí: no ofrecer el badge, nunca inventar una fecha.
+   */
+  ultimoContactoEn: string | null
 }
 
 const ESTADOS_OBJETO = new Set(['conocido', 'no_informado', 'cifrado', 'sin_objeto'])
@@ -254,6 +261,7 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
       // del mismo bloque harían que el icono saliera en una pantalla y no en
       // otra para el MISMO cliente.
       contacto: interpretarContacto(f.contacto),
+      ultimoContactoEn: typeof f.ultimoContactoEn === 'string' && f.ultimoContactoEn !== '' ? f.ultimoContactoEn : null,
     })
   }
   const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 90
