@@ -36,6 +36,7 @@ import {
 import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-moto.ts'
 import { partirDireccion, tipoViaDeFicha } from './direccion.ts'
 import { KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
+import { TIPO_CARNET_SUPUESTO, ZONA_CARNET_SUPUESTA } from './persona.ts'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
 export type Supuesto = {
@@ -358,6 +359,23 @@ export function precalificarAuto(
     codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
     matricula: limpio(poliza.matricula) ?? undefined,
     fechaMatriculacion: limpio(resueltos.fechaMatriculacion) ?? undefined,
+    // 🚨 El carnet: tipo y zona iban CABLEADOS a `B`/`Spain` dentro de
+    // `construirPersona`, así que un carnet extranjero se declaraba como
+    // español sin que nada fallase (art. 10 LCS, no un precio malo). Siguen
+    // siendo el defecto —es el caso normal— pero ahora se DECLARAN, para que
+    // la pantalla pueda decir sobre qué se ha tarificado. Si el corredor elige
+    // otra cosa, la corrección los pisa y `supuestosVigentes` los retira.
+    tipoCarnet: suponer(
+      'tipoCarnet',
+      TIPO_CARNET_SUPUESTO,
+      'no se ha preguntado qué carnet tiene; se supone el B de turismos',
+    ) as string,
+    zonaCarnet: suponer(
+      'zonaCarnet',
+      ZONA_CARNET_SUPUESTA,
+      'no se ha preguntado dónde se expidió el carnet; se supone España',
+    ) as string,
+
     kmAnuales: suponer(
       'kmAnuales',
       KM_ANUALES_POR_DEFECTO,
@@ -484,6 +502,23 @@ export function precalificarAutoNueva(
     codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
     matricula: limpio(resueltos.matricula) ?? undefined,
     fechaMatriculacion: limpio(resueltos.fechaMatriculacion) ?? undefined,
+    // 🚨 El carnet: tipo y zona iban CABLEADOS a `B`/`Spain` dentro de
+    // `construirPersona`, así que un carnet extranjero se declaraba como
+    // español sin que nada fallase (art. 10 LCS, no un precio malo). Siguen
+    // siendo el defecto —es el caso normal— pero ahora se DECLARAN, para que
+    // la pantalla pueda decir sobre qué se ha tarificado. Si el corredor elige
+    // otra cosa, la corrección los pisa y `supuestosVigentes` los retira.
+    tipoCarnet: suponer(
+      'tipoCarnet',
+      TIPO_CARNET_SUPUESTO,
+      'no se ha preguntado qué carnet tiene; se supone el B de turismos',
+    ) as string,
+    zonaCarnet: suponer(
+      'zonaCarnet',
+      ZONA_CARNET_SUPUESTA,
+      'no se ha preguntado dónde se expidió el carnet; se supone España',
+    ) as string,
+
     kmAnuales: suponer(
       'kmAnuales',
       KM_ANUALES_POR_DEFECTO,

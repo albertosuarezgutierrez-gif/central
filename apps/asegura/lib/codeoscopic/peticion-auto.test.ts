@@ -409,3 +409,70 @@ test('5 años o más sin siniestros nunca exige el detalle', () => {
     false,
   )
 })
+
+// ─── El carnet: tipo y zona ya NO van cableados (21/09/2026) ─────────────────
+//
+// 🪤 Hasta hoy `construirPersona` mandaba SIEMPRE `{type:'B', issuingZone:'Spain'}`.
+// Un cliente con carnet extranjero se declaraba como español y el vendor lo
+// aceptaba: tarificaba y devolvía un precio firme. No es un precio malo, es
+// una declaración inexacta del riesgo (art. 10 LCS) que paga el asegurado el
+// día del siniestro. Lo destapó comparar nuestro formulario con el de Avant2,
+// que SÍ pregunta la zona de expedición.
+
+test('sin decir nada, el carnet sigue siendo B de España: es el caso normal', () => {
+  const c = construirPeticionAuto(BASE) as any
+  assert.deepEqual(c.holder.drivingLicenses, [
+    { type: { id: 'B' }, date: '2005-01-01', issuingZone: { id: 'Spain' } },
+  ])
+})
+
+test('un carnet extranjero viaja como extranjero', () => {
+  const c = construirPeticionAuto({ ...BASE, zonaCarnet: 'EuropeanUnion', tipoCarnet: 'B' }) as any
+  assert.equal(c.holder.drivingLicenses[0].issuingZone.id, 'EuropeanUnion')
+  // Y sigue siendo la MISMA persona en los tres papeles: el vendor cruza por DNI.
+  assert.deepEqual(c.holder, c.risk.owner)
+  assert.deepEqual(c.holder, c.risk.primaryDriver)
+})
+
+// ─── Conductor ocasional (`secondaryDriver`) ────────────────────────────────
+
+const OCASIONAL = {
+  dni: '11111111h',
+  nombre: 'Hija',
+  apellido1: 'Apellido',
+  fechaNacimiento: '2004-03-02',
+  sexo: 'mujer' as const,
+  estadoCivil: 'Single',
+  telefono: '611111111',
+  fechaCarnet: '2023-05-10',
+}
+
+test('si no se declara conductor ocasional, no viaja ninguno', () => {
+  const c = construirPeticionAuto(BASE) as any
+  assert.equal('secondaryDriver' in c.risk, false, 'no se inventa una persona que no conduce')
+})
+
+test('el conductor ocasional viaja como secondaryDriver, con SU carnet', () => {
+  const c = construirPeticionAuto({ ...BASE, conductorOcasional: OCASIONAL }) as any
+  assert.equal(c.risk.secondaryDriver.identificationDocument.id, '11111111H')
+  assert.equal(c.risk.secondaryDriver.drivingLicenses[0].date, '2023-05-10')
+  // No se mezcla con el tomador.
+  assert.notDeepEqual(c.risk.secondaryDriver, c.holder)
+})
+
+test('un ocasional a medias se para ANTES de pagar, no después', () => {
+  const faltan = revisarDatosAuto({ ...BASE, conductorOcasional: { ...OCASIONAL, telefono: '' } })
+  assert.equal(faltan.some((f) => f.campo === 'conductorOcasional'), true)
+})
+
+test('un ocasional sin fecha de carnet se para: es su carnet, no el del tomador', () => {
+  const faltan = revisarDatosAuto({ ...BASE, conductorOcasional: { ...OCASIONAL, fechaCarnet: '' } })
+  assert.equal(faltan.some((f) => f.campo === 'conductorOcasional'), true)
+})
+
+test('el ocasional con el MISMO DNI que el habitual es un 400 pagado: se para aquí', () => {
+  // «Two persons have been declared with the same identification by different
+  // data». Si conduce solo él, lo que hay es un tomador, no dos conductores.
+  const faltan = revisarDatosAuto({ ...BASE, conductorOcasional: { ...OCASIONAL, dni: BASE.dni } })
+  assert.equal(faltan.some((f) => f.campo === 'conductorOcasional'), true)
+})

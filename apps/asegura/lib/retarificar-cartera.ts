@@ -119,6 +119,8 @@ import {
   versionesCrudas,
   tiposDeMotor,
   tiposDeGaraje,
+  zonasExpedicionCarnet,
+  tiposDeCarnet,
   estadosCiviles,
   municipiosPorCp,
   lineasDeSeguro,
@@ -1153,6 +1155,12 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
       }
       case 'garajes':
         return { estado: 'ok', opciones: await tiposDeGaraje(config) }
+      // Los dos del carnet. **Gratis**, como el resto: elegir la zona de
+      // expedición tiene que poder hacerse antes de que nadie pague 0,50€.
+      case 'zonas-carnet':
+        return { estado: 'ok', opciones: await zonasExpedicionCarnet(config) }
+      case 'tipos-carnet':
+        return { estado: 'ok', opciones: await tiposDeCarnet(config) }
       case 'estados-civiles':
         return { estado: 'ok', opciones: await estadosCiviles(config) }
       case 'municipios': {

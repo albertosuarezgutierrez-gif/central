@@ -13,6 +13,18 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** 🪪 **Los dos huecos gordos del auto, cerrados en código: el carnet deja de ir
+cableado y el conductor ocasional existe.** Con OK de Alberto, tras la comparativa con Avant2.
+`construirPersona` mandaba SIEMPRE `{type:'B', issuingZone:'Spain'}`, así que un carnet extranjero se
+declaraba como español **y el vendor lo aceptaba**: tarifica y devuelve precio firme. No es un precio
+malo — es art. 10 LCS, y lo paga el asegurado el día del siniestro. Ahora salen de catálogo
+(`/car/driving-license-issuing-zones`, `/car/driving-licenses`, los dos gratis) y el defecto B/España
+**se declara como supuesto**, no se cablea. Y `risk.secondaryDriver` viaja por fin: no declarar a
+quien también conduce es reticencia, misma ley. La pantalla para el 400 de «dos personas, mismo DNI»
+antes de pagarlo. ⏳ **Falta UNA cotización real (0,50€) y la dispara Alberto**, no un agente: que el
+vendor acepte `issuingZone` distinto de `Spain` y `secondaryDriver` es suposición razonable, no
+medida — como pasó con `email`, `roadName` y `engine`, un 400 nuevo se paga.
+
 **(21/09/2026)** 🚗 **Avant2 vs. lo nuestro para tarificar auto: no nos falta pantalla, nos faltan
 datos que ya viajaban INVENTADOS.** De los once campos que pide el formulario de Avant2 y el nuestro
 no, **seis ya iban en la petición con un valor que nadie había preguntado**. Tres se arreglan aquí

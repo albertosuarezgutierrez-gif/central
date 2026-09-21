@@ -145,16 +145,31 @@ para verificarlo.
 
 | # | Hueco | Por qué no ahora | Qué haría falta |
 |---|---|---|---|
-| 1 | **Zona de expedición + tipo de carnet** (`issuingZone`, `type`) | cambia la petición de TODAS las cotizaciones de auto | leer `/car/driving-license-issuing-zones` y `/car/driving-licenses` (gratis), selector en el bloque del tomador con España por defecto **declarado**, y **una** cotización real de verificación (0,50€) |
-| 2 | **Conductor ocasional** (`secondaryDriver`) | campo nuevo en el JSON: primer intento puede ser un 400 pagado | mismo patrón que `conductor` (que sigue 🚧 sin verificar). Conviene verificar los dos en la misma pasada |
+| 1 | ~~Zona de expedición + tipo de carnet~~ | ✅ **HECHO** (21/09/2026, con OK de Alberto) | — |
+| 2 | ~~Conductor ocasional~~ (`secondaryDriver`) | ✅ **HECHO** (21/09/2026). 🚧 **Sin verificar contra el vendor**: falta UNA cotización real | — |
 | 3 | **Fecha de efecto elegible** | hoy es supuesta y tiene dos cepos del vendor ya cazados; tocarla sin pantalla es fácil de romper | campo `date` con los dos cepos pintados antes de pulsar (hoy ≤ fecha ≤ hoy+90) |
 | 4 | **CP de circulación distinto del de residencia** | necesita resolver `town.id` del CP nuevo, que es otro catálogo y otra cascada | reutilizar el resolutor de municipios que ya usa el bloque del tomador |
 | 5 | **Accesorios / opciones instaladas** (`installedAccessories[]`, `installedOptions[]`) | `/car/vehicles/{code}/options` sin explorar; valor comercial bajo hoy | medir primero qué devuelve para un coche real |
 | 6 | **Elegir compañías** | no ahorra dinero; es visibilidad | pasar la selección en la petición y enseñarla |
 | 7 | **«Oportunidad» con fecha de cierre** | es CRM comercial, no tarificación | va con el embudo de leads, no aquí |
 
-Orden propuesto: **1 → 2** (los dos que afectan a la validez de lo declarado, y comparten la única
-cotización de verificación), luego **3**, y el resto cuando estorben.
+Orden propuesto: ~~**1 → 2**~~ hechos el mismo día; sigue **3**, y el resto cuando estorben.
+
+### §5bis. Lo que falta de los dos primeros: UNA cotización real (0,50€)
+
+El código está puesto y verificado hasta donde se puede sin gastar: los dos catálogos se sirven
+(`GET`, gratis), la proyección está testeada y los cepos se han visto en rojo. Lo que **no** se ha
+comprobado es que el vendor acepte el cuerpo:
+
+- `drivingLicenses[].issuingZone.id` con un valor distinto de `Spain` — el catálogo existe, pero que
+  el ReRate lo acepte sin pedir un dato más es una suposición razonable, no un hecho medido.
+- `risk.secondaryDriver` — está en el contrato de `CarRisk`, nunca se ha mandado. Un 400 nuevo es
+  plausible: pasó con `email`, `roadName` y `engine`, y **ese 400 se paga**.
+
+Por eso la verificación la dispara ALBERTO desde la pantalla, con un cliente real, y no un agente por
+su cuenta (regla 20 de `correduria-crm`: Codeoscopic cuesta 0,50€ y no es idempotente). Con una sola
+cotización se prueban los dos a la vez: se elige una zona de expedición distinta **y** se declara un
+conductor ocasional en el mismo presupuesto.
 
 ---
 

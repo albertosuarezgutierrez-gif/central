@@ -118,11 +118,41 @@ export function revisarPersona(d: Partial<DatosPersona>): ReparoPersona[] {
   return r
 }
 
+/** Lo que vale cuando nadie ha dicho otra cosa. Ver `CarnetExtra`. */
+export const TIPO_CARNET_SUPUESTO = 'B'
+export const ZONA_CARNET_SUPUESTA = 'Spain'
+
 /**
- * Construye la persona. `fechaCarnet` solo la lleva auto: es el carnet B del
- * conductor. Hogar no lo manda — no hace falta para el precio.
+ * El carnet del conductor. `fechaCarnet` solo la lleva auto.
+ *
+ * 🚨 `tipo` y `zona` estuvieron CABLEADOS a `B` y `Spain` desde que existe este
+ * fichero, y por eso un cliente con carnet extranjero se declaraba como
+ * español **sin que nada fallase**: el vendor acepta la combinación, tarifica y
+ * devuelve un precio firme. No es un precio malo — es una declaración inexacta
+ * del riesgo (art. 10 LCS), y quien la paga es el asegurado el día del
+ * siniestro (comparativa con Avant2, 21/09/2026: su formulario SÍ pregunta la
+ * zona de expedición, porque el catálogo `/car/driving-license-issuing-zones`
+ * existe y tiene más de un valor).
+ *
+ * Siguen teniendo valor por defecto —son el caso de nueve de cada diez— pero
+ * ahora el defecto se DECLARA como supuesto (`suponer('zonaCarnet', …)`) para
+ * que la pantalla pueda decir sobre qué se ha tarificado, en vez de afirmarlo
+ * en silencio. Los ids salen del catálogo del vendor, nunca de un literal
+ * tecleado en la pantalla.
  */
-export function construirPersona(d: DatosPersona, extra: { fechaCarnet?: string | null } = {}): Record<string, unknown> {
+export type CarnetExtra = {
+  fechaCarnet?: string | null
+  /** `drivingLicenses[].type.id` — del catálogo `/car/driving-licenses`. */
+  tipoCarnet?: string | null
+  /** `drivingLicenses[].issuingZone.id` — del catálogo `/car/driving-license-issuing-zones`. */
+  zonaCarnet?: string | null
+}
+
+/**
+ * Construye la persona. `extra` es el carnet, que solo lleva auto: hogar no lo
+ * manda — no hace falta para el precio.
+ */
+export function construirPersona(d: DatosPersona, extra: CarnetExtra = {}): Record<string, unknown> {
   const persona: Record<string, unknown> = {
     identificationDocument: { type: { id: 'Dni' }, id: d.dni.trim().toUpperCase() },
     name: d.nombre.trim(),
@@ -133,7 +163,15 @@ export function construirPersona(d: DatosPersona, extra: { fechaCarnet?: string 
     phones: [{ number: d.telefono.replace(/\s/g, ''), primary: true }],
   }
   if (texto(extra.fechaCarnet)) {
-    persona.drivingLicenses = [{ type: { id: 'B' }, date: extra.fechaCarnet, issuingZone: { id: 'Spain' } }]
+    // El defecto se aplica AQUÍ y en un solo sitio; quien lo quiera distinto lo
+    // manda, y quien no lo mande queda declarado como supuesto aguas arriba.
+    persona.drivingLicenses = [
+      {
+        type: { id: texto(extra.tipoCarnet) ? extra.tipoCarnet!.trim() : TIPO_CARNET_SUPUESTO },
+        date: extra.fechaCarnet,
+        issuingZone: { id: texto(extra.zonaCarnet) ? extra.zonaCarnet!.trim() : ZONA_CARNET_SUPUESTA },
+      },
+    ]
   }
   if (texto(d.apellido2)) persona.surname2 = d.apellido2!.trim()
   // El correo, si la ficha lo tiene — como `emails[]`, igual que `phones[]`.
