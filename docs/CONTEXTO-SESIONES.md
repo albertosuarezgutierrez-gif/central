@@ -13,6 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** PR #3232 (draft): recaptación por email de leads sin vencimiento — dos huecos cerrados
+tras pregunta de Alberto por un "agente comercial" para leads sin móvil. (1) El webhook de Resend
+ahora distingue `email.bounced`/`email.complained` y aplica opt-out automático (antes solo veía
+apertura/clic; un email muerto se reintentaba cada 14 días para siempre). (2) `descartarLeadsSilenciosos`
+(lib/recaptacion-silencio.ts) saca de la cola a quien lleva 3 envíos sin abrir ninguno — corre en cada
+pasada del lote diario. NO se creó ningún "apartado marketing" nuevo: el sistema de recaptación (cola,
+cooldown, lote diario, pantalla en `/correduria`) YA existía y cubría casi todo lo pedido.
+
 **(21/09/2026)** Auditoría ligera — 4 PRs mergeados sin entrada de memoria (huella perdida, cazada por
 el paso 4 de `/auditoria-diaria`): **#3202** enlaza y sigue las pólizas sustituidas por retarificación
 (`poliza_origen_id`, guardián anti-duplicado, cola «Seguimiento de sustituciones» en Hoy con aviso
