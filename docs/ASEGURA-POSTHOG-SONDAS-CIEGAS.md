@@ -89,10 +89,12 @@ una firma de webhook falsificada desde el 31/08 no habría disparado nada.
 Los puntos 1-3 se tocan en la cuenta de PostHog y el 4 en Vercel: **nada de esto es código de este
 repo**, y el 2 toca una credencial de BD, así que no se hace sin OK explícito.
 
-## 5. 🚨 AVERÍA CONFIRMADA — el vigilante de la ingesta lleva dos días caído
+## 5. ✅ RESUELTA — el vigilante de la ingesta estuvo dos días caído (19-21/09/2026)
 
-> Esta sección decía «cabo suelto menor, para vigilar: si vuelve a fallar hoy, es avería».
-> **Falló.** Actualizada el 21/09/2026 a las 15:21 UTC con lo medido.
+> Historia de esta sección, que es el valor que tiene: nació como «cabo suelto menor, para vigilar:
+> si vuelve a fallar hoy, es avería». Falló → se reescribió como avería confirmada (15:21 UTC) →
+> Alberto repuso el secret y quedó **cerrada a las 15:34 UTC del 21/09**. Se conserva entera
+> porque el diagnóstico —cómo se descartó el host y se señaló el secret— es lo reutilizable.
 
 `cima-health-alert` (el único aviso automático de que la ingesta de CIMA se ha parado) **falla con
 `curl: (22) ... error: 401`** contra `https://app.grupoasegura.com/api/internal/cima/quarantine`.
@@ -102,6 +104,7 @@ repo**, y el 2 toca una credencial de BD, así que no se hace sin OK explícito.
 | 19/09 13:40 | run 91, programado | ✅ verde — **última vez que el vigilante funcionó** |
 | 20/09 13:54 | run 92, programado | ❌ `401` |
 | 21/09 15:20 | run 93, **disparado a mano** para no esperar al cron | ❌ `401` — reproducido |
+| 21/09 15:34 | run 94, tras reponer el secret | ✅ **verde, con datos reales** |
 
 Y su propio rastro en BD lo confirma sin depender de Actions: el workflow llama con `?record_run=1`,
 que deja un `cima_health_alert_run` en `seguros.operational_events`. **Última fila: 19/09 13:40.
@@ -121,15 +124,36 @@ valor del secret en GitHub Actions dejó de coincidir con la env var `INTERNAL_A
 proyecto Vercel `asegura`.** Es el patrón de «rotación sin actualizar al consumidor» que esta casa
 ya tiene documentado (CLAUDE.md, el `prisma_seguros` del 02/09).
 
-**Lo arregla Alberto: es una credencial, y aquí las credenciales no las escribe Claude.**
-Settings → Secrets and variables → Actions → `INTERNAL_API_SECRET`, con el mismo valor que la env
-var de Vercel. Un `workflow_dispatch` de `cima-health-alert` lo verifica en 30 s.
+**Lo arregló Alberto — es una credencial, y aquí las credenciales no las escribe Claude.** Copió el
+valor de la env var de Vercel al secret de Actions y el `workflow_dispatch` lo confirmó en 15 s.
 
-⚠️ **Lo que esto NO es:** la ingesta está sana. `cima_pull` corrió hoy a las 10:57 y 12:25, las dos
-verdes, y hay pólizas entrando. No se ha perdido ningún dato. Lo que falta es la **red**: si CIMA
-dejara de entrar mañana, el aviso no saldría — exactamente el fallo que `CLAUDE.md` marca como el
-más caro, pero un piso más arriba (aquí ni siquiera se pone verde: falla, y el fallo no lo mira
-nadie porque un workflow rojo en un repo que Alberto no abre es indistinguible del silencio).
+🔎 **La fecha cerró el diagnóstico:** la env var `INTERNAL_API_SECRET` del proyecto Vercel se había
+editado el **20/09**, justo entre el último run verde (19/09 13:40) y el primero en 401 (20/09
+13:54). O sea: el valor NUEVO estaba en Vercel y el VIEJO en Actions. Rotación sin actualizar al
+consumidor, confirmada por el reloj y no solo por deducción.
+
+✅ **Cierre verificado contra BD, no contra Actions** (que es lo que este documento predica): el
+run 94 devolvió estado real —cuarentena 3 (umbral 40), requiere acción 0, residuo parcial 4, último
+pull `2026-09-21T12:26:21Z`, `stale=false`— y, sobre todo, `cima_health_alert_run` en
+`seguros.operational_events` **volvió a escribir: 21/09 15:34:49**, después de 48 h clavado en el
+19/09 13:40. Un 200 vacío habría salido igual de verde en Actions; la fila nueva es la prueba.
+
+⚠️ **Cabo que queda abierto:** `e2e-smoke` ya fallaba el **19/09 a las 10:06**, cuando el secret
+todavía era bueno (esa misma tarde el health-alert pasó). Así que su `unexpected_http_401` de ese
+día **no lo explica esta rotación** — o «editada hace 1 día» era redondeo del panel de Vercel. Si
+tras reponer el secret `e2e-smoke` sigue rojo, la causa es otra y el issue #815 sigue vivo.
+
+⚠️ **Lo que nunca fue:** la ingesta estuvo sana todo el tiempo. `cima_pull` corrió el 21/09 a las
+10:57 y 12:25, las dos verdes, con pólizas entrando. No se perdió ningún dato: lo que faltó durante
+48 h fue la **red**.
+
+📌 **La lección, que es lo que hay que recordar:** un workflow ROJO en un repo que nadie abre es
+indistinguible del silencio. `CLAUDE.md` avisa del check que se pone verde sin mirar nada; este es
+el piso de arriba — el que falla ruidosamente y aun así no llega a ningún humano. Por eso la señal
+que cerró el caso no fue el verde de Actions sino la fila nueva en `operational_events`: **el
+vigilante necesita a su vez un rastro consultable desde fuera de Actions**, y el `?record_run=1` de
+este workflow es exactamente eso. Cuando montes una alarma, pregúntate también quién vigila que la
+alarma siga viva.
 
 ---
 
