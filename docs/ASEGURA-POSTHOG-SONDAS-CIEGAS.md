@@ -89,15 +89,47 @@ una firma de webhook falsificada desde el 31/08 no habría disparado nada.
 Los puntos 1-3 se tocan en la cuenta de PostHog y el 4 en Vercel: **nada de esto es código de este
 repo**, y el 2 toca una credencial de BD, así que no se hace sin OK explícito.
 
-## 5. Cabo suelto menor, para vigilar
+## 5. 🚨 AVERÍA CONFIRMADA — el vigilante de la ingesta lleva dos días caído
 
-`cima-health-alert` (el vigilante de la ingesta, diario ~13:54 UTC) **falló el 20/09** con
-`curl: (22) ... error: 401` contra `https://app.grupoasegura.com/api/internal/cima/quarantine`.
-Es **1 fallo de 92 runs** y el anterior (19/09) salió verde, así que hoy no es una avería declarada:
-puede ser un deployment en vuelo. Pero un 401 significa que la ruta existe y **rechaza la
-credencial** (`INTERNAL_API_SECRET` / `VERCEL_PROTECTION_BYPASS_SECRET`), que es el patrón de
-«rotación sin actualizar al consumidor» ya conocido en esta casa. **Si vuelve a fallar hoy, es
-avería** — y con él cae el único aviso automático de que la ingesta se ha parado.
+> Esta sección decía «cabo suelto menor, para vigilar: si vuelve a fallar hoy, es avería».
+> **Falló.** Actualizada el 21/09/2026 a las 15:21 UTC con lo medido.
+
+`cima-health-alert` (el único aviso automático de que la ingesta de CIMA se ha parado) **falla con
+`curl: (22) ... error: 401`** contra `https://app.grupoasegura.com/api/internal/cima/quarantine`.
+
+| Cuándo | Qué | Resultado |
+|---|---|---|
+| 19/09 13:40 | run 91, programado | ✅ verde — **última vez que el vigilante funcionó** |
+| 20/09 13:54 | run 92, programado | ❌ `401` |
+| 21/09 15:20 | run 93, **disparado a mano** para no esperar al cron | ❌ `401` — reproducido |
+
+Y su propio rastro en BD lo confirma sin depender de Actions: el workflow llama con `?record_run=1`,
+que deja un `cima_health_alert_run` en `seguros.operational_events`. **Última fila: 19/09 13:40.
+Cero en 48 h.**
+
+**No es el host, y no es la protección de Vercel.** Se descartó con dos medidas, no por descarte
+teórico:
+- `cima-pull` pega al **mismo** `app.grupoasegura.com`, con `Authorization: Bearer CRON_SECRET` y
+  **sin** cabecera de bypass — y hoy salió **verde** (`cima_pull_completed` 21/09 12:26). Si el
+  host o la protección fueran el problema, este también caería.
+- `e2e-smoke`, el **otro** consumidor de `INTERNAL_API_SECRET` —y este **sí** manda el bypass—
+  lleva **tres runs seguidos** fallando (19, 20 y 21/09) con `[ FAIL ] api-health … unexpected_http_401`.
+  Tiene el issue **#815** abierto acumulando un comentario diario que no mira nadie.
+
+O sea: con `CRON_SECRET` el mismo host responde 200; con `INTERNAL_API_SECRET` responde 401. **El
+valor del secret en GitHub Actions dejó de coincidir con la env var `INTERNAL_API_SECRET` del
+proyecto Vercel `asegura`.** Es el patrón de «rotación sin actualizar al consumidor» que esta casa
+ya tiene documentado (CLAUDE.md, el `prisma_seguros` del 02/09).
+
+**Lo arregla Alberto: es una credencial, y aquí las credenciales no las escribe Claude.**
+Settings → Secrets and variables → Actions → `INTERNAL_API_SECRET`, con el mismo valor que la env
+var de Vercel. Un `workflow_dispatch` de `cima-health-alert` lo verifica en 30 s.
+
+⚠️ **Lo que esto NO es:** la ingesta está sana. `cima_pull` corrió hoy a las 10:57 y 12:25, las dos
+verdes, y hay pólizas entrando. No se ha perdido ningún dato. Lo que falta es la **red**: si CIMA
+dejara de entrar mañana, el aviso no saldría — exactamente el fallo que `CLAUDE.md` marca como el
+más caro, pero un piso más arriba (aquí ni siquiera se pone verde: falla, y el fallo no lo mira
+nadie porque un workflow rojo en un repo que Alberto no abre es indistinguible del silencio).
 
 ---
 
