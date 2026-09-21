@@ -21,6 +21,7 @@ import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
 import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
+import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
 
 /**
  * Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el
@@ -1454,7 +1455,18 @@ export default function Retarificador({
           </p>
         )}
 
-        {faltaAlgo && !deshabilitado && (
+        {/* Si el catálogo de tipos de vía no ha podido leerse, «falta» no se
+            corrige desde aquí: no hay nada que elegir. El texto genérico de
+            abajo («corregir arriba no cuesta nada») es falso en este caso
+            concreto y deja a quien lo lee sin saber qué hacer. */}
+        {faltaTipoVia && tiposVia === null && !deshabilitado && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 8, color: 'var(--negative)' }}>
+            El catálogo de tipos de vía no se ha podido leer: recarga la página. No es un dato que se
+            pueda teclear ni elegir desde aquí.
+          </p>
+        )}
+
+        {faltaAlgo && !(faltaTipoVia && tiposVia === null) && !deshabilitado && (
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
             El botón se enciende cuando no quede ningún <span className="badge warn">falta</span> de
             arriba. Corregir arriba no cuesta nada.
@@ -1576,25 +1588,51 @@ function Precios({
       </p>
 
       <div className="table-wrap">
-        <table>
+        <table className="precios">
           <thead>
             <tr>
-              <th>Compañía</th>
-              <th>Producto</th>
+              <th>Aseguradora</th>
               <th>Cobertura</th>
               <th>Prima anual</th>
-              <th>Franquicia</th>
               <th>Firmeza</th>
-              <th>Acciones</th>
+              <th aria-hidden />
             </tr>
           </thead>
           <tbody>
             {r.precios.map((p, i) => {
               const id = `${p.compania}-${p.producto}-${i}`
+              const logo = logoCompania(p.compania)
+              // El producto ya no repite el nombre de la compañía: es el
+              // mismo dato, solo que sin pintarlo dos veces en la misma fila.
+              const producto = nombreProductoSinCia(p.compania, p.producto)
+              const abrirCierra = abierta === id
+              const emisionDeshabilitada = r.simulado || cotizacionIdDe(r.guardado) === null
               return (
               <tr key={id}>
-                <td>{p.compania ?? '—'}</td>
-                <td>{p.producto ?? '—'}</td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    {logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={logo.src}
+                        alt=""
+                        style={{ height: Math.round(18 * logo.escala), maxWidth: 52, objectFit: 'contain', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <span className="badge" style={{ fontSize: 10, flexShrink: 0 }}>
+                        {(p.compania ?? '—').slice(0, 2).toUpperCase()}
+                      </span>
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.compania ?? '—'}</div>
+                      {producto && (
+                        <div className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                          {producto}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </td>
                 <td>{p.categoria ?? <span className="muted">sin declarar</span>}</td>
                 <td>
                   <strong>{euroODash(p.primaEur)}</strong>
@@ -1604,16 +1642,15 @@ function Precios({
                       <span className="badge warn">simulado</span>
                     </>
                   )}
-                </td>
-                <td>
                   {/* `null` NO es «sin franquicia»: es «el producto no la
                       declara». Callarlo sería vender un todo riesgo ocultando
-                      1.500€ de franquicia. */}
-                  {p.franquiciaEur === null || p.franquiciaEur === undefined ? (
-                    <span className="muted">no la declara</span>
-                  ) : (
-                    euroODash(p.franquiciaEur)
-                  )}
+                      1.500€ de franquicia. Va pegada al precio para que quepa
+                      sin abrir una columna aparte. */}
+                  <div className="muted" style={{ fontSize: 11 }}>
+                    {p.franquiciaEur === null || p.franquiciaEur === undefined
+                      ? 'franquicia no declarada'
+                      : `franquicia ${euroODash(p.franquiciaEur)}`}
+                  </div>
                 </td>
                 <td>
                   {/* La firmeza va PEGADA al precio: enseñar la prima sola
@@ -1629,21 +1666,26 @@ function Precios({
                   {/* El botón real (11/09/2026): confirma con la compañía
                       (ReRate) y, si sale firme, permite el Submit de verdad.
                       Sin `cotizacionId` (la cotización no quedó guardada) no
-                      hay proyecto al que pedírselo. */}
+                      hay proyecto al que pedírselo. Icono, no rótulo: es la
+                      última columna y así se queda visible aunque el resto
+                      de la fila necesite scroll horizontal. */}
                   <button
                     type="button"
-                    className="ghost"
-                    disabled={r.simulado || cotizacionIdDe(r.guardado) === null}
+                    className="ghost icono"
+                    disabled={emisionDeshabilitada}
+                    aria-label={abrirCierra ? 'Ocultar emisión' : 'Emitir'}
                     title={
                       r.simulado
                         ? 'Simulado: no hay proyecto real de Codeoscopic'
                         : cotizacionIdDe(r.guardado) === null
                           ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
-                          : undefined
+                          : abrirCierra
+                            ? 'Ocultar emisión'
+                            : 'Emitir'
                     }
-                    onClick={() => setAbierta(abierta === id ? null : id)}
+                    onClick={() => setAbierta(abrirCierra ? null : id)}
                   >
-                    {abierta === id ? 'Ocultar' : 'Emitir'}
+                    {abrirCierra ? '✕' : '✓'}
                   </button>
                 </td>
               </tr>
