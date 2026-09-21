@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** 🚨 **El residuo de CIMA eran RECIBOS, y la causa es una póliza DUPLICADA — no una
+llamada a Occident.** Corrige lo dicho en el PR #3270: los 4 ficheros del aviso no son «3 SIN + 1
+POL» sino **3 REC + 1 POL, los 4 de Occident**, y **ninguno tiene copia en el crudo**, así que la
+purga del 17/10 no pinta nada aquí. Los 3 SIN de Allianz ya están completos desde el 24/06. Los 40
+recibos atascados reclaman 6 pólizas que existen **las 6 por duplicado** (fila del volcado + fila de
+CIMA, mismo DGS) → el emparejador exige candidato único y las manda a cuarentena con la etiqueta
+`sin_poliza_en_cartera`, que es falsa. Alcance: **19 números** (10 Occident, 8 Mapfre, 1 Allianz).
+Escritas y SIN aplicar las dos salidas (SQL de colisión + desempate por origen CIMA): las dos piden
+OK tuyo. Detalle en `docs/CIMA-CUARENTENA.md`.
+
 
 **(21/09/2026)** 🔁 **Segunda pasada a las capturas de Avant2: aparecen DOS campos más, y son de la
 misma familia que el carnet.** Alberto: «revisa bien las imágenes, hay campos que no tenemos». (1)

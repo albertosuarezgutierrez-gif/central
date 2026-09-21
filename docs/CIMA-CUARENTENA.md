@@ -213,3 +213,103 @@ Lectura de solo lectura del estado agregado (espejo JSON del panel `/salud-cima`
 `?record_run=1`): `GET https://app.grupoasegura.com/api/internal/cima/quarantine` con cabecera
 `x-internal-secret`. Mira `crudoCuarentena.purgaInminente` y `cuarentenaPorRecuperabilidad`: ahí es
 donde esto se ve venir antes de que el TTL lo borre.
+
+---
+
+## 🚨 El residuo de HOY son RECIBOS, y la causa es una póliza DUPLICADA (21/09/2026)
+
+> Medido contra la Supabase compartida y contra el código del CRM ya clonado, no deducido.
+> **Corrige por escrito tres afirmaciones de esta misma sesión** (una de ellas ya mergeada en el
+> cuerpo del PR #3270): dijo que los 4 ficheros del aviso eran «3 SIN de Allianz + 1 POL» y que su
+> única copia era el crudo con purga el 17/10. **Las dos cosas son falsas.**
+
+### Quiénes son los 4 de verdad
+
+La señal `residuoParcial` del vigilante está definida en
+`src/lib/integrations/cima/health-snapshot.ts` del CRM y exige
+`estado IN ('confirmed','persisted')` **y** (`polizas_persisted < polizas_count` **o**
+`error_detalle LIKE 'errores_parciales%' / 'review_parcial%'`). Corriendo esa misma condición:
+
+| Fichero | Tipo | Entidad | Qué falta |
+|---|---|---|---|
+| `C0468_M00171_REC_299_1_20260915…` | REC | Occident | `review_parcial_recibos` — **29** recibos a cuarentena |
+| `C0468_8-92361_REC_299_1_20260915…` | REC | Occident | `review_parcial_recibos` — **10** recibos a cuarentena |
+| `C0468_M00171_REC_261_1_20260712…` | REC | Occident | `review_parcial_recibos` — **1** recibo a cuarentena |
+| `C0468_M00171_POL_132_1_20260620…` | POL | Occident | 2 de 3 pólizas |
+
+Los **4 son de Occident** y **tres son RECIBOS**: exactamente el hueco que el apartado anterior
+dejaba declarado como «sin medir, que no es lo mismo que medido a cero». Son **40 recibos**.
+
+Los 3 SIN de Allianz que se habían señalado **no están en esta señal** (su `estado` es `review`, que
+es la *cuarentena*, otra cosa) y además **ya no les falta nada**: su siniestro `660560623` de la
+póliza `031698897` lo entregó entero el fichero del 30/04 el 24/06 a las 14:16:27 —
+`cima_siniestro_persisted`— tres horas después de que la póliza naciera (10:12:14). Sus filas en
+`review` son la foto del PRIMER intento, que es justo el fallo de método que este documento ya
+describe un apartado más arriba. **Ninguno de los 4 tiene fila en `cima_cuarentena_crudo`** (0 por
+`xml_hash` y 0 por `nombre_fichero`): las 10 filas del crudo son todas de septiembre y están sanas,
+así que **la purga del 17/10 no tiene nada que ver con este residuo**.
+
+### La causa de los 40 recibos: `sin_poliza_en_cartera` MIENTE
+
+`matchReciboPoliza()` (`recibo-matching.ts`) devuelve `null` en tres casos distintos —0 candidatos,
+≥2 candidatos y clave incompleta— y `persist-recibo.ts` escribe **el mismo** `reason:
+"sin_poliza_en_cartera"` para los tres. O sea: la etiqueta afirma «esa póliza no está en la cartera»
+cuando lo que ha pasado puede ser **que esté DOS VECES**. Es el centinela disfrazado de dato que
+`CLAUDE.md` marca como el peor caso: un «no he sabido decidir» vestido de hecho — y es el que llevó a
+concluir en este mismo documento que 10 pólizas de Occident «no existen» y que eso «es una llamada a
+la compañía».
+
+**Las 6 pólizas que reclaman los recibos rechazados existen las 6, y las 6 por duplicado**, las dos
+filas con `codigo_entidad_dgs = 'C0468'`: una del volcado histórico del 21/06 y otra creada por CIMA
+el 15/09 o el 17/09, con minutos de diferencia respecto al recibo que luego no supo cuál elegir
+(`548325602` nació a las 10:17:28 y sus recibos se rechazaron entre las 10:17:46 y las 10:18:16).
+
+### El alcance, que es mayor que los 40 recibos
+
+Colisiones `numero_poliza` + `codigo_entidad_dgs` con **una fila de CIMA y otra del volcado** — cada
+una es una póliza a la que ni un siniestro, ni un recibo ni un movimiento CEF podrá colgarse jamás,
+y siempre en silencio:
+
+| Compañía | DGS | Números afectados |
+|---|---|---|
+| Occident | C0468 | **10** (`548271155`, `548325602`, `8-6.226.669-V`, `BIDP019061`, `BIDP023227`, `BIDP036783`, `BIDQ020971`, `BIDS018699`, `BIDT001398`, `GPAEA0200043`) |
+| Mapfre | C0058 | **8** |
+| Allianz | C0109 | **1** |
+
+Son **19**. Que las de Occident sean exactamente **10** y que este documento tenga más arriba una
+tabla de «**10** que ningún código arregla» es una coincidencia que pide comprobarse antes de volver
+a llamar a nadie — no se da aquí por demostrado que sean las mismas, pero es la primera hipótesis.
+
+🪤 **Y la lección de método, que es la que vale para la próxima migración:** el relleno de Plus Ultra
+del 06/09 midió la ambigüedad **ese día** («0 filas tocadas quedan en un grupo ambiguo») y era
+verdad. Dejó de serlo el **15/09**, cuando CIMA creó sus propias filas con esos mismos números. La
+guarda comprobaba una foto; el peligro es dinámico. **Una migración que depende de que no haya
+homónimos necesita un cepo que lo siga comprobando después, no una comprobación en el momento de
+aplicarla.**
+
+### Las dos salidas, y por qué no se ha tocado nada
+
+La salida es de **código**, no de datos, y vive en el repo de la ingesta (que es donde están los
+tests del emparejador):
+
+1. **Separar las etiquetas** en `persist-recibo.ts` / `persist-siniestro.ts`:
+   `poliza_ambigua` ≠ `sin_poliza_en_cartera`. Es lo barato y lo que evita que la próxima
+   investigación vuelva a empezar llamando a la compañía equivocada.
+2. **Romper el empate por origen** en `recibo-matching.ts` / `siniestro-matching.ts`: con ≥2
+   candidatos, si **exactamente uno** es cartera viva (`esCarteraViva()`), ese gana. No relaja el
+   emparejador —sigue exigiendo un único ganador— y cubre también las colisiones futuras. Cambia
+   dónde se cuelga un recibo: alto riesgo, PR propio con tests, y OK de Alberto.
+
+🪤 **Y lo que NO se hace, aprendido el mismo día:** la primera versión de esto era un `UPDATE` que
+vaciaba `codigo_entidad_dgs` en la fila histórica de cada par. La revisión le encontró **seis**
+defectos, y el peor era la premisa: usaba `import_ref IS NOT NULL` como «es del volcado», cuando
+`CLAUDE.md` ya documenta que **una póliza que CIMA mantiene al día conserva su `import_ref`** (la
+`3021700291186` de Reale). Esa fila habría perdido su DGS y se habría quedado muda para siempre —
+el arreglo causando exactamente el daño que venía a reparar. El criterio bueno es `esCarteraViva()`
+= `import_ref IS NULL OR eiac_xml_hash IS NOT NULL`.
+
+Queda en el repo solo la consulta de diagnóstico, **sin un solo `UPDATE`**:
+`apps/asegura/prisma/sql/2026-09-21_polizas_dgs_colision_DIAGNOSTICO.sql`. Replica la clave EXACTA
+del emparejador (minúsculas con puntuación, `JUNK_POLIZA_NUMBERS`, longitud ≥5, placeholders fuera)
+y agrupa por correduría, porque una clave «parecida» cuenta colisiones que el emparejador no ve y se
+calla las que sí. Su veredicto por grupo: **19 rescatables, 10 sin fila de CIMA, 0 con dos vivas.**

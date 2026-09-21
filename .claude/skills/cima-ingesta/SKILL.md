@@ -24,11 +24,12 @@ regla de Alberto «lo que entra por CIMA es cliente actual; el resto son leads»
    preventiva del crudo — si se confirma y luego se pierde, la compañía **no lo
    reenvía**. Cualquier cambio que adelante un `confirm` es un cambio de alto
    riesgo.
-2. **El adaptador Java NO se reescribe, y su CÓDIGO no vive en ningún repo nuestro.**
+2. **El adaptador Java NO se reescribe, pero YA es entero de Alberto.**
    La app `asegura-app-cima-adapter` corre en la organización **`grupo-asegura` de
    Alberto** (medido en el panel de Fly el 21/09/2026; esta línea decía «en la cuenta
-   de Fly de Manuel» y era falso). El repo del código SÍ sigue siendo privado de
-   Manuel, con acceso de lectura para Alberto. Usa WS-Security
+   de Fly de Manuel» y era falso), y **el repo del código también es suyo desde el
+   21/09/2026**: `albertosuarezgutierrez-gif/asegura-app-cima-adapter` (verificado por
+   la API). Lo único que sigue fuera son los secrets de TIREA de PRODUCCIÓN. Usa WS-Security
    atípico (AES-256-GCM derivado del password) que `node-soap` no soporta, y un
    **JDK 8 sidecar** porque Xerces en 17 rompe validando las respuestas SOAP.
 3. **El port a `apps/asegura` está APARCADO a propósito** (decisión de Alberto,
@@ -102,7 +103,7 @@ En este orden, y **sin saltarse el paso 0**:
 6. **¿Y el webhook de Codeoscopic?** `codeoscopic_cuarentena_crudo` (la caja
    negra). Guarda la FORMA del cuerpo rechazado, no el cuerpo en claro.
 
-## 🪤 Las tres trampas de método que ya han costado una tarde
+## 🪤 Las trampas de método que ya han costado una tarde
 
 - **Un contraste que responde lo mismo a todo no está midiendo nada.** El campo 2
   del nombre del fichero **no es el número de póliza**: contrastar contra esa
@@ -110,6 +111,16 @@ En este orden, y **sin saltarse el paso 0**:
 - **La causa obvia suele ser la falsa.** `normalizePolizaNumber` parecía el
   sospechoso del atasco de la cuarentena; se midió y **quitar la puntuación no
   desatascaba ni una sola clave**. Iba camino de reportarse como causa.
+- 🚨 **`sin_poliza_en_cartera` NO significa que la póliza no esté** (medido 21/09/2026).
+  `matchReciboPoliza()` devuelve `null` con 0 candidatos, con ≥2 y con clave incompleta, y
+  `persist-recibo.ts` escribe la MISMA etiqueta para los tres. Los 40 recibos de Occident
+  atascados reclamaban 6 pólizas que están las 6 — **cada una DOS veces**, una del volcado y
+  otra creada por CIMA días antes. Antes de concluir que una póliza no existe, cuenta cuántas
+  filas tienen ese número con ese DGS. Detalle y alcance (19 números) en `docs/CIMA-CUARENTENA.md`.
+- ⏳ **Una guarda anti-ambigüedad mide una FOTO; el peligro es dinámico.** El relleno de Plus
+  Ultra del 06/09 dejó «0 filas en grupo ambiguo» y era cierto: dejó de serlo el 15/09, cuando
+  CIMA creó sus propias filas con esos números. Si una migración depende de que no haya
+  homónimos, el cepo tiene que seguir comprobándolo DESPUÉS.
 - **Rellenar un campo para «arreglar» emparejamientos puede ROMPER los que
   funcionan.** Al dar `codigo_entidad_dgs='C0468'` a las pólizas «Plus Ultra»,
   11 pasaban de 1 candidato a 2 → ambiguo → cuarentena. La guarda no es «es Plus
