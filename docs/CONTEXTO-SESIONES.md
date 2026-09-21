@@ -26,7 +26,13 @@ como español sin que nada falle, y eso es art. 10 LCS, no un precio malo. Eso y
 (conductor ocasional) piden **una** cotización real de verificación a 0,50€: spec + orden en
 `docs/superpowers/specs/2026-09-21-avant2-auto-tarificacion-comparativa-design.md`. Donde SÍ vamos
 por delante: Avant2 acepta «tuvo seguro» con 0 años y cotiza novel; nosotros lo paramos antes de
-gastar.
+gastar. 🪤 **Y la revisión obligatoria del propio PR encontró DOS bugs que había metido yo**, los dos
+de la misma familia (la pantalla afirmando algo distinto de lo que viajó): `Number('15.000')` es
+**15** —y «15.000» es justo lo que imprimía la ayuda del campo nuevo—, un tecleo con forma de chollo
+que no rechazaban ni la pantalla ni `revisarDatosAuto` ni el vendor; y el supuesto seguía pintándose
+junto al precio después de corregirlo, fallo del patrón que se tapó en las CINCO salidas del puerto.
+La lección: **el paso de `code-review` antes de sacar de draft no es burocracia** — este PR salía
+verde en los 12 checks con los dos bugs dentro. PR #3272.
 
 **(21/09/2026)** 🔗 **La cadena de CIMA ya es ENTERA de Alberto, y el vigilante arreglado enseña lo
 que tapaba.** Verificado por API, no de palabra: el repo del adaptador es hoy
