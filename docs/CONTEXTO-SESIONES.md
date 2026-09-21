@@ -13,6 +13,19 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** Tercera pasada del PR #3241: la revisión obligatoria antes de sacar de draft cazó
+**cuatro** cosas, una de ellas **regresión mía**. (1) 💣 `avisosDe()` formateaba la fecha del carné
+ANTES de validarla → una fecha basura era `RangeError` y tumbaba `/api/avisos` ENTERA (500, no `n+`) y
+la pasada del emisor de intranet **para todos los clientes**. (2) 🚨 Al quitar los recordatorios
+propios del cron de correo, `avisadaAt` dejó de sellarse y el avance de ciclo lo exigía: sin push, un
+«ITV cada 12 meses» se quedaba clavado PARA SIEMPRE — antes lo avanzaba, de rebote, el correo
+equivocado. Tercer brazo por TIEMPO (la misma ventana del aviso). (3) El cron de **push** mandaba el
+texto de renovación de póliza sobre una ITV; ahí NO se excluyen (es el único canal de un recordatorio
+sin póliza): se arregla el TEXTO, por tipo. (4) El aviso de carné caducado enlazaba a «Mis datos»,
+donde el carné no se pinta. 🪤 Lección: los cuatro salieron de correr `code-review` sobre la tanda
+que ya se había dado por verificada con 15 mutaciones en verde — **las mutaciones prueban los cepos
+que escribiste, no los que te faltan**.
+
 **(21/09/2026)** Segunda tanda del PR #3241, sobre lo mismo. (1) Aviso **`carnet_caducado`** en la
 campana del portal: el catálogo solo miraba el carné *por* caducar, así que el ya caducado
 desaparecía justo cuando hace falta decirlo (ventana 730 días, excluyente con el de proximidad, texto
