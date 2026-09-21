@@ -12,6 +12,18 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** ✅ **Cerrada la avería del vigilante de CIMA: 48 h caído, arreglada en 15 s.** Era
+lo diagnosticado — el secret `INTERNAL_API_SECRET` de Actions ya no coincidía con la env var de
+Vercel. **La fecha lo remató:** esa env var se editó el 20/09, justo entre el último run verde
+(19/09 13:40) y el primero en 401 (20/09 13:54); el valor nuevo estaba en Vercel y el viejo en
+Actions. Alberto copió uno al otro y el run 94 salió verde con datos reales (cuarentena 3/40,
+último pull `12:26:21`, `stale=false`). **Verificado contra BD, no contra Actions**, que es la
+regla de la casa: `cima_health_alert_run` volvió a escribir a las **15:34:49** tras 48 h clavado —
+un 200 vacío habría salido igual de verde, la fila nueva es la prueba. PR #3266 (doc actualizada de
+«avería» a «resuelta»; se conserva el diagnóstico entero porque lo reutilizable es cómo se descartó
+el host). ⚠️ **Cabo abierto:** `e2e-smoke` ya fallaba el 19/09 a las 10:06, con el secret aún bueno
+— su 401 de ese día NO lo explica esta rotación; si sigue rojo, el issue #815 sigue vivo.
+
 **(21/09/2026)** 🚨 **AVERÍA CONFIRMADA: el vigilante de la ingesta de CIMA lleva dos días sin
 funcionar.** `cima-health-alert` falló el 20/09 con `curl (22) error: 401` y hoy volvió a fallar
 igual — reproducido a mano (run 93, `workflow_dispatch`, 15:20 UTC). Su propio rastro en BD lo
