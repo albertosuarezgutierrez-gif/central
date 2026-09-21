@@ -1,0 +1,31 @@
+{
+ "sesion": "6af141a2-8a03-5723-93a9-7ae5bbbdedc8",
+ "inicio": "2026-09-21T09:13:30.501Z",
+ "fin": "2026-09-21T09:13:40.068Z",
+ "llamadas": 5,
+ "categorias": {
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 26,
+   "chars_out": 47,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 4,
+   "chars_in": 384,
+   "chars_out": 30040,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 2,
+    "Read": 2
+   }
+  }
+ }
+}
