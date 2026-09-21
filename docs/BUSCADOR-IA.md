@@ -30,7 +30,7 @@
 |---|---|---|---|---|
 | OpenRouter (primario pasarela — el cron escribe la tabla; ESTE agente cura sus listas, Paso 1.5) | `deepseek/deepseek-v4.1-flash` (swap 14/09/2026; el anterior `deepseek/deepseek-v4-flash` fue RETIRADO por DeepSeek el 10/09/2026 y enrutaba aquí igualmente, pero como alias "temporal") | `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` | $0,15/$0,60 por M (tope 1€/día) — subió desde $0,086/$0,17 con el relanzamiento de DeepSeek, no por nuestro swap | ✅ vivo por catálogo (14/09/2026); sin mini-eval en vivo (sin key) |
 | NVIDIA NIM (**APAGADO por defecto** desde 28/08/2026) | — (sin id; se nombra al reactivar) | `NVIDIA_API_KEY` + **`NVIDIA_TEXTO=1`** + **`NVIDIA_BRAIN_MODEL`** | gratis (~40 RPM) | ⚫ **APAGADO por decisión de Alberto (28/08/2026): «ya NIM nada, todo OpenRouter».** No es una avería puntual sino un patrón: TRES ids muertos por EOL en 11 días, y en los 7 días previos OpenRouter sirvió el **100%** del tráfico de texto mientras NIM no sirvió ni una respuesta real (solo su propia sonda). El código se conserva ENTERO (mismo trato que Gemini el 02/08) y se reactiva con las tres envs de la columna — el modelo NO tiene default: reactivar exige nombrar un id **verificado con llamada real**, porque la ficha del catálogo no prueba que el modelo viva. La sonda diaria ya no lo pincha si está apagado. **No afecta a la VISIÓN** (`nimVision`, otro modelo, sin evidencia de muerte). Histórico — 🔴 **MUERTO 26/08/2026 09:00 UTC (410 Gone), sin reemplazo elegido — comprobado 28/08.** `meta/llama-3.1-70b-instruct` ha llegado a su EOL: el 410 de NIM da la fecha exacta (`has reached its end of life on 2026-08-26T09:00:00`). Medido en `ai_usos`, no supuesto: último ✅ de la sonda el **26/08 07:03 UTC**, 410 en las pasadas del **27/08 07:02** y **28/08 07:00**. **Tercera muerte de un id de NIM en 11 días** (llama-4-maverick 17/08 · z-ai/glm-5.2 21/08 · esta). ⚠️ **Y la señal que la anunciaba se descartó por error el 24/08** (ver bitácora). Sin swap todavía: elegir id nuevo exige verificación EN VIVO (`/v1/models` + llamada real con key) y no hay `NVIDIA_API_KEY` en la sesión. Impacto real acotado: OpenRouter sirvió el **100%** del tráfico de texto de los últimos 7 días; NIM solo aportaba intentos muertos. Histórico del swap anterior — 🔄 **SWAP 22/08/2026, verificado EN VIVO** — `z-ai/glm-5.2` (default desde el 17/08) murió por **HTTP 410 Gone** el 21/08/2026, ANTES de la fecha 24/08/2026 que anunciaba su propia ficha (`build.nvidia.com/z-ai/glm-5.2/modelcard`) — otra vez la ficha no probaba el API. Confirmado contra el listado real `GET /v1/models` (102 vivos, ni un solo `z-ai/*`) vía harness temporal (`nim-catalogo-temp`, edge function de ia-rest, borrada/neutralizada tras usar) llamado desde SQL con `pg_net` (WebFetch a dominios NVIDIA/Supabase seguía bloqueado por el proxy de esta sesión). Mini-eval con key real sobre 4 candidatos vivos: `meta/llama-3.1-70b-instruct` **PASA limpio y rápido** (A: respuesta cálida directa en español · B: exactamente `ESCALAR`); `openai/gpt-oss-120b` y `minimaxai/minimax-m3` **>25s por respuesta en NIM** (descartados por latencia, aunque minimax sí devolvió `ESCALAR` limpio); `mistralai/mistral-large-2-instruct` **404 "Not found for account"** pese a listar en `/v1/models` (no todos los ids del catálogo están habilitados para la cuenta gratuita). Swap aplicado en TODO el radio (core-ai, plataforma, rrhh, ia-rest + 4 edge functions redesplegadas + `sonda-ia.ts`, que es la sonda exacta que el health-check reportó muerta). **24/08: repasado por WebSearch (sin `NVIDIA_API_KEY` en esta sesión, WebFetch a `build.nvidia.com`/`docs.api.nvidia.com` bloqueado por el proxy — igual que pasadas anteriores). Única señal de alarma: "NVIDIA NIM Llama-3.1-70b-instruct microservice reached End of Support, July 2026" (NGC) — descartada tras verificar que se refiere al CONTENEDOR NIM autoalojado (Docker/NGC para on-prem, versión 1.10), NO al endpoint hosted de `build.nvidia.com` que consumimos por API key; son dos ciclos de vida distintos (fuente: developer.nvidia.com/nim, spheron.network). Sin evidencia de retirada del endpoint hosted → se mantiene vivo, sin swap.** |
-| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | gratis (rate-limited) | ✅ **VIVO, reforzado (24/08)** — sigue siendo el destino de migración recomendado por Groq para TODOS sus deprecados recientes: `kimi-k2-instruct-0905`→(23/03), `llama-4-maverick-17b`→(20/02), `llama-3.1-8b-instant`/`llama-3.3-70b-versatile`/`qwen3-32b`/`llama-4-scout-17b`→(17/06, dejan de servirse en agosto/2026). Cuantos más modelos apuntan aquí, más sólido el eslabón. |
+| Groq (fallback 1) | `openai/gpt-oss-120b` | `GROQ_API_KEY` / `GROQ_BRAIN_MODEL` | 🔴 **YA NO ES GRATIS (desde 11/09/2026): $0,15/$0,60 por M** — ver hallazgo 21/09/2026 | 🟡 vivo pero de PAGO SIN presupuesto vigilado — ver hallazgo crítico de hoy |
 | Cerebras (fallback 2, plumbing 27/07/2026) | `gpt-oss-120b` | `CEREBRAS_API_KEY` / `CEREBRAS_MODEL` | gratis (1M tok/día, ctx 8192 en tier gratis) | ✅ vivo (24/08) — free tier de 1M tok/día confirmado por fuentes externas; RPM sigue discrepando entre fuentes (5 vs 30) como en pasadas previas, sin key para zanjarlo — **INACTIVO sin key**, pendiente de Alberto |
 | Gemini (fallback 3, APAGADO por defecto) | `gemini-flash-latest` | `GEMINI_API_KEY` **+ `GEMINI_TEXTO=1`** / `GEMINI_BRAIN_MODEL` | gratis | ✅ vivo (24/08) — familia Flash/Flash-Lite mantiene tier gratis (confirmado a 15/08/2026); sin mención de retirada del alias rodante; sigue apagado por falta de cuota real |
 | Kimi/Moonshot (fallback 4, de pago) | `kimi-k2.6` | `MOONSHOT_API_KEY` / `MOONSHOT_MODEL` | $0,95/$4,00 por M | ✅ **VIVO** (24/08) — confirmado de nuevo sin sunset propio; Moonshot empuja hacia K3 (flagship, $3/$15 por M) pero K2.6 sigue en catálogo activo |
@@ -75,6 +75,52 @@
 | **Qwen3.7 Flash** — nuevo (14/09/2026) | OpenRouter (de pago) | `qwen/qwen3.7-flash` (a confirmar exacto) | $0,03/$0,13 por M — MÁS BARATO que nuestro default actual (`deepseek/deepseek-v4.1-flash`, $0,15/$0,60) | Posible candidato a desplazar el default de `logica`/`codigo` SI la calidad aguanta — el V4.1 Flash subió de precio con el swap forzoso del 10/09/2026, justo cuando este apareció más barato | Sin mini-eval (sin `OPENROUTER_API_KEY`); NO se actúa sin comparar A/B — anotado para la próxima pasada |
 
 ## Bitácora de hallazgos (lo más reciente arriba)
+
+- **2026-09-21 · pasada semanal — 🔴 HALLAZGO CRÍTICO: Groq retiró gratis a `openai/gpt-oss-120b`
+  el 11/09/2026, y en la cadena es el ÚNICO eslabón sin presupuesto ni tarifa cargada.** Cinco
+  fuentes independientes (cloudzero.com, requesty.ai, freellm.net, eesel.ai, markaicode.com)
+  coinciden: desde el 11/09/2026 el modelo dejó de estar marcado gratis en Groq y pasa a
+  **$0,15/$0,60 por M tokens** (input/output). Sin `GROQ_API_KEY` en esta sesión — no se pudo
+  contrastar con una llamada real ni con `console.groq.com` (bloqueado por el proxy, como en
+  pasadas anteriores); WebFetch a las fuentes de precio también bloqueado, así que el dato es de
+  WebSearch, con cinco fuentes independientes en la misma cifra y fecha.
+  **Por qué es crítico y no un simple swap:** `groqEnvConfig()` en `client.ts` activa el eslabón
+  con solo comprobar `GROQ_API_KEY` — no hay gate de presupuesto, ni tarifa cargada en `ai_usos`
+  (el comentario de `apps/plataforma/lib/pasarela.ts:149` dice literalmente «groq/cerebras SÍ son
+  gratis, kimi no — sin tarifa cargada todavía»). Si el hallazgo es correcto, cada llamada que cae
+  a Groq (que es el ÚNICO fallback gratis real desde que NIM se apagó el 28/08 — Cerebras sigue
+  inactivo sin key y Gemini apagado) genera gasto real **sin que ningún límite lo vigile ni ningún
+  informe lo cuente** — el mismo punto ciego que motivó `AI_GATEWAY_LIMITE_DIARIO_EUR` para
+  OpenRouter/Kimi, pero Groq quedó fuera de ese diseño precisamente porque se daba por gratis para
+  siempre. **No se propone swap ni PR**: sustituir el eslabón que hoy sirve el 100% del fallback
+  real por otra cosa, o meterle presupuesto, es una decisión de Alberto (regla de esta skill:
+  gratis→pago nunca es mecánico), agravada porque aquí quien cambió las reglas fue el proveedor,
+  no nosotros. **Recomendación para la decisión:** (a) verificar con una llamada real en cuanto
+  haya `GROQ_API_KEY` en sesión — antes de gastar nada; (b) si se confirma, decidir entre asumir el
+  coste con presupuesto vigilado (mismo patrón que OpenRouter) o promover a Cerebras (aún gratis,
+  mismo modelo `gpt-oss-120b`, infra distinta) como primer fallback y dejar Groq más atrás en la
+  cadena.
+  **Resto de la cadena confirmado vivo por WebSearch (sin keys de proveedor en esta sesión):**
+  OpenRouter `deepseek/deepseek-v4.1-flash` sigue vivo (pricing ~$0,13/$0,52 según OpenRouter,
+  ligera variación sobre los $0,15/$0,60 anotados el 14/09 — sin key para confirmar cuál pesa el
+  tráfico real); Gemini `gemini-flash-latest` vivo (Flash/Flash-Lite mantienen free tier), pero
+  ⚠️ `google/gemini-2.5-flash` — primer preferido de la categoría `contexto` en las listas
+  `PREFERIDOS` del cron `ia-director-refresh` — tiene **deprecación anunciada para 16/10/2026**:
+  no urge esta semana (sigue sirviendo) pero hay que curar esa lista antes de esa fecha (Paso 1.5);
+  Kimi `kimi-k2.6` confirmado sin sunset propio, K2.5+moonshot-v1 siguen retirados desde el
+  31/08 (ya sabido); Cerebras `gpt-oss-120b` vivo, free tier 1M tok/día sigue citado por la mayoría
+  de fuentes, una fuente aislada menciona "trial con tarjeta desde julio/2026" sin corroborar —
+  sigue INACTIVO sin key, sin urgencia. **Visión (NIM)** — mismo riesgo ABIERTO sin novedad: NGC
+  sigue marcando `llama-3.2-11b-vision-instruct` como "End of Support", sin confirmación de que
+  afecte al endpoint hosted (`build.nvidia.com`) ni desmentido — no se puede verificar sin
+  `NVIDIA_API_KEY`, sigue en vigilancia reforzada. **Embeddings** `openai/text-embedding-3-small`
+  (OpenRouter) — una alerta aislada (email retractado según el propio foro de OpenAI) mencionaba
+  retirada el 23/10/2026; la fuente primaria (foro de desarrolladores de OpenAI) lo desmiente
+  explícitamente como error de comunicación — sin acción, vigilar la próxima pasada por si se
+  confirma algo distinto. **Descubrimiento (Paso 2):** `Qwen3.7 Flash` sigue sin mini-eval (sin
+  `OPENROUTER_API_KEY`) — pricing confirmado ($0,03/$0,13 por M) pero sin benchmark oficial (Qwen
+  no publicó ficha propia para la variante Flash, solo changelog de una línea); no se actúa sin
+  comparar A/B. Preflight Telegram 200 OK → aviso enviado (hallazgo crítico de Groq).
 
 - **2026-09-14 · pasada semanal — 🔴 HALLAZGO CRÍTICO: nuestro default de OpenRouter, `deepseek/
   deepseek-v4-flash`, fue RETIRADO por DeepSeek el 10/09/2026 — sigue "funcionando" pero a casi

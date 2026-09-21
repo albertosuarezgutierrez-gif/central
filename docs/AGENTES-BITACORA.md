@@ -14,6 +14,16 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-21 · buscador-ia** · hizo: watch semanal; 🔴 hallazgo crítico — Groq retiró el gratis a
+  `openai/gpt-oss-120b` el 11/09/2026 ($0,15/$0,60 por M, 5 fuentes independientes), y es el ÚNICO
+  eslabón de la cadena sin presupuesto ni tarifa cargada (con NIM apagado, es el fallback gratis
+  real); sin PR (decisión de Alberto), Telegram enviado con recomendación (verificar con llamada
+  real o promover Cerebras). Resto de la cadena vivo sin novedad crítica; anotado que
+  `gemini-2.5-flash` (1er preferido de `PREFERIDOS.contexto` del Director) se deprecará 16/10/2026,
+  aún vivo. dudas: sin `GROQ_API_KEY`/`NVIDIA_API_KEY`/`OPENROUTER_API_KEY` en sesión, hallazgo de
+  Groq solo por WebSearch (console.groq.com bloqueado por el proxy, igual que pasadas anteriores) —
+  pendiente confirmar con llamada real; fallos: —; PRs/commits: — (solo doc + Telegram, sin código).
+
 - **2026-09-14 · buscador-ia** · hizo: watch semanal; detectó que DeepSeek retiró
   `deepseek/deepseek-v4-flash` (10/09/2026) — enrutaba a v4.1-flash a casi el doble de precio,
   silencioso, en el default de `core-ai`/Director/cron; swap directo a `deepseek/deepseek-v4.1-flash`
