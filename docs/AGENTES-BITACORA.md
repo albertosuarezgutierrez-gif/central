@@ -34,6 +34,18 @@
   (`claude/buscador-ia-2026-09-14`).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-21 · facturas-correo** · hizo: pasada diaria completa (Paso 0→5). Preflight canal
+  200 OK. Paso 0: Vía B sana (`dias_caido=3` — fin de semana sin PDFs nuevos desde el viernes
+  18/09, dentro de lo normal; `list_labels` marcaba 1 en Extraccion-fallida pero `search_threads`
+  a 0, quirk conocido); sin backlog en `PDF-pendiente`/`Revisar`. Paso 1: 5 candidatos Gmail, los
+  5 mensajes de huéspedes de Booking (descartados, no factura). Paso 1-bis: sin subidas nuevas en
+  `_subir_aqui` ni en la raíz `2026`. Paso 4.0 (barrido obligatorio): 1 `sin_revisar` en
+  `v_facturas_sin_cargo` — `anthropic-credit-2791` (76,50€, 08/09) sigue sin cargo casado: los dos
+  candidatos bancarios (07/09 y 10/09, mismo importe/concepto) siguen ambos con
+  `duplicado_estado='ignorado'`, ambiguo, sin cambios desde la pasada de ayer. Nada que conciliar
+  ni archivar hoy; dudas: cuál de los dos cargos Anthropic del 07/09 o 10/09 (si alguno) corresponde
+  a esta factura — para tu decisión; fallos: —; PRs/commits: solo esta entrada (sin cambios de
+  código ni escritura en `movimientos_bancarios`).
 - **2026-09-21 · mercado-booking** · hizo: pasada diaria completa — 24 ventanas de mercado
   (todas las pedidas por el plan, tope max=24 de 520 candidatas/496 recortadas), 233 comps
   reales escritos con `número_of_adults`=aforo por ventana; 4/4 ventanas de escaparate propio
