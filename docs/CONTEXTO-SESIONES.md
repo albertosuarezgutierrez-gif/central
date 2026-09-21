@@ -32,6 +32,15 @@ traspaso), así que **[A1] auth sign-in failures y [A14] webhook signature lleva
 en verde. Diagnóstico, propuesta y prompt de Chrome en `docs/ASEGURA-POSTHOG-SONDAS-CIEGAS.md`.
 Vigilar: `cima-health-alert` falló 1 vez (20/09) con 401 — si repite hoy, es avería.
 
+**(21/09/2026)** Buscador en los CUATRO desplegables del catálogo de Codeoscopic (marca, modelo,
+combustible y versión) del retarificador y de los embudos de auto/moto de `/correduria`: el catálogo
+trae ~100 marcas y versiones con nombre IDÉNTICO (tres «1.0 TGDI TECNO 4X2» = tres Base7 distintos).
+Componente `SelectorBuscable` (mudo por debajo de 8 opciones) + helper puro `lib/filtrar-opciones.ts`.
+La **pista** de otra póliza de la misma matrícula PREfiltra —solo si el buscador se ve, solo con UNA
+candidata y buscando solo por NOMBRE (por código, un «52» de kW casa dentro de un Base7 ajeno y
+esconde la candidata buena)— pero nunca selecciona. 🪤 Lección: un cepo con un fixture que NO
+reproduce el fallo pasa por la razón equivocada; se vio verde hasta rehacerlo. PR #3240, **mergeado**.
+
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
 `product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
@@ -62,6 +71,13 @@ apertura/clic; un email muerto se reintentaba cada 14 días para siempre). (2) `
 (lib/recaptacion-silencio.ts) saca de la cola a quien lleva 3 envíos sin abrir ninguno — corre en cada
 pasada del lote diario. NO se creó ningún "apartado marketing" nuevo: el sistema de recaptación (cola,
 cooldown, lote diario, pantalla en `/correduria`) YA existía y cubría casi todo lo pedido.
+
+**(21/09/2026)** Cron `seo-correduria` (lunes 08:30 UTC) ya avisa solo cuando hay artículos de
+`/blog` sin indexar en Search Console: como la API de Google no tiene «solicitar indexación» para
+páginas normales (solo la UI), el aviso trae el prompt de Claude Chrome YA ARMADO con las URLs
+pendientes — Alberto lo pega y en un clic las pide, en vez de que haya que detectarlas y
+redactarlas a mano cada semana (como se hizo hoy con 3 URLs). Nuevo `lib/seo-correduria/
+indexacion-pendiente.ts` (puro, 6 tests) + id de catálogo `correduria.seo-indexacion-pendiente`.
 
 **(21/09/2026)** Auditoría ligera — 4 PRs mergeados sin entrada de memoria (huella perdida, cazada por
 el paso 4 de `/auditoria-diaria`): **#3202** enlaza y sigue las pólizas sustituidas por retarificación

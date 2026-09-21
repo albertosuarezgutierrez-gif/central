@@ -20,6 +20,7 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
+import { SelectorBuscable } from '../../../SelectorBuscable'
 
 function euroODash(n: number | null | undefined): string {
   return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
@@ -320,28 +321,52 @@ export default function MotoNuevo({
         {fallo && <p style={{ color: 'var(--negative)', fontSize: 13 }}>{fallo}</p>}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           <Campo etiqueta="Marca" falta={false}>
-            <select value={marcaId} onChange={(e) => void alElegirMarca(e.target.value)} disabled={cargando === 'marcas'} style={input}>
-              <option value="">{cargando === 'marcas' ? 'Cargando…' : 'Elige marca'}</option>
-              {marcas.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-            </select>
+            <SelectorBuscable
+              valor={marcaId}
+              onCambiar={(v) => void alElegirMarca(v)}
+              opciones={marcas}
+              deshabilitado={cargando === 'marcas'}
+              textoVacio={cargando === 'marcas' ? 'Cargando…' : 'Elige marca'}
+              nombre="marca"
+              plural="marcas"
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="Modelo" falta={false}>
-            <select value={modeloId} onChange={(e) => alElegirModelo(e.target.value)} disabled={!marcaId || cargando === 'modelos'} style={input}>
-              <option value="">{cargando === 'modelos' ? 'Cargando…' : 'Elige modelo'}</option>
-              {modelos.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-            </select>
+            <SelectorBuscable
+              valor={modeloId}
+              onCambiar={alElegirModelo}
+              opciones={modelos}
+              deshabilitado={!marcaId || cargando === 'modelos'}
+              textoVacio={cargando === 'modelos' ? 'Cargando…' : 'Elige modelo'}
+              nombre="modelo"
+              plural="modelos"
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="Combustible" falta={motorId === ''} faltaTexto="lo elige el corredor">
-            <select value={motorId} onChange={(e) => alElegirMotor(e.target.value)} style={input}>
-              <option value="">Elige combustible</option>
-              {MOTORES.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-            </select>
+            <SelectorBuscable
+              valor={motorId}
+              onCambiar={alElegirMotor}
+              opciones={MOTORES}
+              textoVacio="Elige combustible"
+              nombre="combustible"
+              plural="combustibles"
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="Versión" falta={faltaVersion} faltaTexto="la elige el corredor">
-            <select value={codigoVehiculo} onChange={(e) => setCodigoVehiculo(e.target.value)} disabled={!modeloId || !motorId || cargando === 'versiones'} style={input}>
-              <option value="">{cargando === 'versiones' ? 'Cargando…' : !motorId ? 'Elige antes el combustible' : 'Elige versión'}</option>
-              {versiones.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-            </select>
+            <SelectorBuscable
+              valor={codigoVehiculo}
+              onCambiar={setCodigoVehiculo}
+              opciones={versiones}
+              deshabilitado={!modeloId || !motorId || cargando === 'versiones'}
+              textoVacio={cargando === 'versiones' ? 'Cargando…' : !motorId ? 'Elige antes el combustible' : 'Elige versión'}
+              nombre="versión"
+              plural="versiones"
+              marcador="Buscar: TECNO, 48V, 4X2…"
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
             <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
