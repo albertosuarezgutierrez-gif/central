@@ -13,6 +13,18 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(21/09/2026)** SIVRA · pricing: **ciclo semanal completo, los 4 pisos, tras 2 ciclos bloqueados.**
+El 401 de Smoobu `/api/rates` (14-15/09) y la pausa global (15-19/09) ya estaban resueltos al
+empezar (PR #3092); verificado en vivo antes de lanzar el ciclo. 4 agentes en paralelo escribieron
+comps reales en `market_rates`: house=117, busto=119, luxury=178, duplex=149 (ninguno a 0,
+verificado con SQL). Cerrado el "evento sin identificar" del 11-jun-2027 (ciclo 15/09): es Karol G
+en La Cartuja, ya confirmado desde agosto. 48 propuestas (p50 de mercado) enviadas a
+`aplicar-propuesta` en dry-run, circuit-breaker sano, 48/48 trazadas en `pricing_decisiones`.
+Aprendizaje en `pricing_aprendizaje` (`ciclo_21_09_2026`) y Telegram enviado (messageId 4906).
+Pendiente: el Paso 1 (medir ciclo anterior) sigue con muestra pequeña por los 2 ciclos previos
+bloqueados — hará falta un ciclo más para tener elasticidad real.
+
+
 **(20/09/2026)** **Revisión de `/correduria` (arquitecto+diseño) + alta de lead con oportunidad**
 (PR #3203, mergeado): el KPI «Cartera viva» contaba por `clientes.tipo` (campo sin mantener) en vez de
 `esCarteraEnVigor()` — daba 1.774 clientes/3.302 leads cuando la cartera real es 72/110, contradiciendo
