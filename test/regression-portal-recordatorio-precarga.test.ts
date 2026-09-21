@@ -142,6 +142,35 @@ test('🚨 cepo POSITIVO: la pantalla dice cuándo NO se ha podido comprobar el 
   )
 })
 
+test('🚨 el cron de vencimientos NO manda su correo sobre un recordatorio propio', () => {
+  // El fallo que esto cierra, y que esta misma precarga hace alcanzable: la
+  // precarga de ITV cuelga el recordatorio de su póliza (para decir de qué
+  // coche es), y el cron de vencimientos cogía TODA obligación con
+  // `avisadaAt: null` sin mirar el tipo. Su correo dice «es la última fecha
+  // para comunicar que no quieres renovar; el seguro vence el X» — sobre una
+  // ITV, eso es decirle a alguien que se queda sin cobertura cuando no es
+  // verdad. Lo que los distingue es el TIPO, nunca la póliza.
+  const src = leer('apps/asegura/lib/avisos-vencimiento.ts')
+  assert.match(
+    src,
+    /tipo:\s*\{\s*notIn:\s*\[\.\.\.TIPOS_RECORDATORIO_PROPIO\]\s*\}/,
+    'el where del cron tiene que excluir los recordatorios propios',
+  )
+  assert.match(src, /TIPOS_RECORDATORIO_PROPIO.*from '@central\/module-seguros-portal'/, 'la lista se importa, no se copia')
+})
+
+test('🚨 la lista de tipos propios vive en UN sitio: dos copias divergirían en silencio', () => {
+  const modulo = leer('packages/module-seguros-portal/src/recordatorio-libre.ts')
+  assert.match(modulo, /export const TIPOS_RECORDATORIO_PROPIO/)
+  // El portal la importa en vez de declarar la suya.
+  const portal = leer('apps/asegura-portal/lib/recordatorios.ts')
+  assert.ok(
+    !/const TIPOS_PROPIOS\s*[:=]/.test(portal),
+    'el portal no puede volver a declarar su propia copia de la lista',
+  )
+  assert.match(portal, /TIPOS_RECORDATORIO_PROPIO/)
+})
+
 test('la ITV no se calcula con periodicidad fija: el tramo manda', () => {
   const src = leer(ITV)
   // Los dos tramos del turismo tienen que estar: sin el de los 10 años, a un

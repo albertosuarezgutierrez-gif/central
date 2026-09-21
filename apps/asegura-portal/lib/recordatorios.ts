@@ -7,6 +7,7 @@
 // filtra por `identidadId`, que sale SIEMPRE de `lib/session`.
 import {
   siguienteOcurrencia,
+  TIPOS_RECORDATORIO_PROPIO,
   type RecordatorioNormalizado,
   type TipoRecordatorio,
 } from '@central/module-seguros-portal'
@@ -37,8 +38,11 @@ export type RecordatorioVista = {
  *  así que esos dos campos ya no sirven para distinguirlo de una obligación
  *  derivada — el `tipo` sí, porque `sincronizarObligacionesDeIdentidad()`
  *  nunca escribe estos cinco. */
-const TIPOS_PROPIOS: TipoRecordatorio[] = ['itv', 'carnet', 'mantenimiento', 'revision_gas', 'libre']
-const FILTRO_PROPIOS = { tipo: { in: TIPOS_PROPIOS } }
+// 🚨 La lista vive en el módulo puro (`TIPOS_RECORDATORIO_PROPIO`) desde el
+// 21/09/2026, no aquí: la necesita también el cron de vencimientos de
+// `apps/asegura` para no mandarles su correo de «el seguro vence el X», y con
+// una copia por app las dos divergirían sin que nada fallara.
+const FILTRO_PROPIOS = { tipo: { in: [...TIPOS_RECORDATORIO_PROPIO] } }
 
 /**
  * Da de alta un recordatorio propio. La fecha que teclea la persona ES la

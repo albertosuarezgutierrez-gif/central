@@ -456,3 +456,8 @@ export type {
   Precargas,
   PrecargaRecordatorio,
 } from './recordatorio-precarga.ts'
+
+// Los cinco tipos de recordatorio PROPIO (21/09/2026). Se exporta porque lo
+// necesita también el cron de vencimientos de `apps/asegura`, que no puede
+// tratarlos como el vencimiento de un seguro — ver su cabecera.
+export { TIPOS_RECORDATORIO_PROPIO } from './recordatorio-libre.ts'

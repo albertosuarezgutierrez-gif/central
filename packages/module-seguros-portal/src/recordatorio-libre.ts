@@ -77,7 +77,28 @@ export type ResultadoRecordatorio =
       error: 'titulo_invalido' | 'fecha_invalida' | 'tipo_invalido' | 'repeticion_invalida' | 'poliza_ambigua'
     }
 
-const TIPOS_VALIDOS: readonly TipoRecordatorio[] = ['itv', 'carnet', 'mantenimiento', 'revision_gas', 'libre']
+/**
+ * Los CINCO tipos que se pone la persona a sí misma, frente a los que DERIVA
+ * `sincronizarObligacionesDeIdentidad()` de la cartera (`poliza`, `recibo`).
+ *
+ * 🚨 Vive aquí, exportado, porque lo necesitan dos apps y con dos copias
+ * divergirían en silencio. En `apps/asegura` lo usa el cron de vencimientos
+ * para NO tratarlos como el vencimiento de un seguro: su correo dice «es la
+ * última fecha para comunicar que no quieres renovar; el seguro vence el X», y
+ * eso sobre la ITV de un coche es decirle a alguien que se queda sin cobertura
+ * cuando no es verdad. Un recordatorio propio PUEDE llevar `polizaId` (para
+ * decir de qué coche es), así que la póliza no sirve para distinguirlos: el
+ * tipo sí.
+ */
+export const TIPOS_RECORDATORIO_PROPIO: readonly TipoRecordatorio[] = [
+  'itv',
+  'carnet',
+  'mantenimiento',
+  'revision_gas',
+  'libre',
+]
+
+const TIPOS_VALIDOS: readonly TipoRecordatorio[] = TIPOS_RECORDATORIO_PROPIO
 
 /**
  * Valida lo que manda el formulario. NO impone que la fecha sea futura: un

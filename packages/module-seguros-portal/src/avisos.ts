@@ -24,6 +24,7 @@ export const TIPOS_AVISO = [
   'obligacion_en_ventana',
   'datos_por_revisar',
   'carnet_en_ventana',
+  'carnet_caducado',
 ] as const
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
 
@@ -35,6 +36,21 @@ export type TipoAviso = (typeof TIPOS_AVISO)[number]
  * catálogo.
  */
 export const DIAS_VENTANA_AVISO_CARNET = 60
+
+/**
+ * Hasta cuándo se dice que un carné está CADUCADO (21/09/2026).
+ *
+ * 🚨 El aviso de arriba solo mira al futuro (`faltan >= 0`), así que
+ * desaparecía justo el día que el carné caduca: el sistema se callaba en el
+ * único momento en que pasa algo. Conducir con el carné caducado es sanción y
+ * una discusión con la compañía el día del siniestro.
+ *
+ * Pero no se puede avisar hacia atrás sin límite: la ficha viene de un volcado
+ * y una fecha de hace veinte años no dice «conduce sin carné», dice «este dato
+ * es viejo». Pasados dos años se deja de afirmar, porque ya no se sabe. Es la
+ * regla de la casa: un dato que no se ha comprobado no se pinta como un hecho.
+ */
+export const DIAS_MAX_CARNET_CADUCADO = 730
 
 export type Aviso = {
   tipo: TipoAviso
@@ -144,6 +160,9 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   // Renovar el carné se hace en la DGT, no en el portal — igual que un
   // vencimiento de póliza, el aviso enlaza a la bóveda a secas.
   carnet_en_ventana: '/boveda',
+  // El caducado lleva a «Mis datos»: lo único accionable DENTRO del portal es
+  // decirnos que ya lo renovó, porque la fecha que tenemos puede estar vieja.
+  carnet_caducado: '/boveda?vista=datos',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -155,12 +174,33 @@ function diaUtc(d: Date): Date {
 
 /** `YYYY-MM-DD` dentro de la ventana del carné, a fecha `hoy`. Mismo criterio que `entraEnVentana()`: solo futuro. */
 export function entraEnVentanaCarnet(fechaCaducidad: string, hoy: Date): boolean {
+  const faltan = diasHastaCarnet(fechaCaducidad, hoy)
+  return faltan !== null && faltan >= 0 && faltan <= DIAS_VENTANA_AVISO_CARNET
+}
+
+/**
+ * Días que faltan para que caduque (negativos si YA caducó), o `null` si la
+ * fecha no es una fecha. Se saca aparte porque lo necesitan las dos ventanas y
+ * con dos parseos acabarían discrepando en el borde.
+ */
+function diasHastaCarnet(fechaCaducidad: string, hoy: Date): number | null {
   const dia = fechaCaducidad.trim().slice(0, 10)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return false
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return null
   const caduca = new Date(`${dia}T00:00:00Z`)
-  if (Number.isNaN(caduca.getTime())) return false
-  const faltan = Math.round((diaUtc(caduca).getTime() - diaUtc(hoy).getTime()) / MS_DIA)
-  return faltan >= 0 && faltan <= DIAS_VENTANA_AVISO_CARNET
+  if (Number.isNaN(caduca.getTime())) return null
+  return Math.round((diaUtc(caduca).getTime() - diaUtc(hoy).getTime()) / MS_DIA)
+}
+
+/**
+ * El carné YA caducó y la fecha es lo bastante reciente como para afirmarlo.
+ *
+ * 🚨 Es EXCLUYENTE con `entraEnVentanaCarnet` por construcción (aquella exige
+ * `faltan >= 0` y esta `faltan < 0`): un mismo carné no puede salir a la vez
+ * como «caduca pronto» y «ya caducó».
+ */
+export function carnetCaducado(fechaCaducidad: string, hoy: Date): boolean {
+  const faltan = diasHastaCarnet(fechaCaducidad, hoy)
+  return faltan !== null && faltan < 0 && faltan >= -DIAS_MAX_CARNET_CADUCADO
 }
 
 /**
@@ -263,14 +303,31 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     fuentesIlegibles.push('carnets')
   } else {
     for (const c of x.carnets) {
-      if (!entraEnVentanaCarnet(c.fechaCaducidad, x.hoy)) continue
-      avisos.push({
-        tipo: 'carnet_en_ventana',
-        id: c.id,
-        titulo: `Tu carné de conducir (${c.tipo}) caduca pronto`,
-        detalle: `Caduca el ${FECHA.format(new Date(`${c.fechaCaducidad}T00:00:00Z`))}. Pide cita en la DGT con tiempo.`,
-        href: HREF_POR_TIPO.carnet_en_ventana,
-      })
+      const cuando = FECHA.format(new Date(`${c.fechaCaducidad}T00:00:00Z`))
+      if (entraEnVentanaCarnet(c.fechaCaducidad, x.hoy)) {
+        avisos.push({
+          tipo: 'carnet_en_ventana',
+          id: c.id,
+          titulo: `Tu carné de conducir (${c.tipo}) caduca pronto`,
+          detalle: `Caduca el ${cuando}. Pide cita en la DGT con tiempo.`,
+          href: HREF_POR_TIPO.carnet_en_ventana,
+        })
+        continue
+      }
+      // 🚨 El aviso NO acusa a nadie de conducir sin carné: dice lo que nos
+      // CONSTA, que es otra cosa. La fecha sale de la ficha y puede estar
+      // vieja, así que la salida que se le ofrece es decirnos que ya lo
+      // renovó. Afirmar «tu carné está caducado» sobre un dato que nadie ha
+      // comprobado sería exactamente el fallo que persigue la casa.
+      if (carnetCaducado(c.fechaCaducidad, x.hoy)) {
+        avisos.push({
+          tipo: 'carnet_caducado',
+          id: c.id,
+          titulo: `Nos consta que tu carné de conducir (${c.tipo}) está caducado`,
+          detalle: `Según lo que tenemos, caducó el ${cuando}. Si ya lo has renovado, dínoslo para actualizarlo; si no, pide cita en la DGT.`,
+          href: HREF_POR_TIPO.carnet_caducado,
+        })
+      }
     }
   }
 
