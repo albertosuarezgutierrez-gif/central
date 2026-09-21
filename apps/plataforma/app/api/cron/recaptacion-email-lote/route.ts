@@ -38,15 +38,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, motivo: r.motivo }, { status: 200 })
   }
 
-  const detalle = `${r.candidatos} candidatos · ${r.enviados} enviados · ${r.fallidos} fallidos`
+  const detalle = `${r.candidatos} candidatos · ${r.enviados} enviados · ${r.fallidos} fallidos · ${r.descartadosPorSilencio} descartados por silencio`
   await registrarLatido(AGENTE, true, detalle)
 
-  if (r.enviados > 0 || r.fallidos > 0) {
+  if (r.enviados > 0 || r.fallidos > 0 || r.descartadosPorSilencio > 0) {
     const lineasFallos = r.detalleFallos.slice(0, 5).map((f) => `· ${f}`).join('\n')
     const mensaje = [
       `📧 *Recaptación por email · lote diario*`,
       `${r.enviados} enviados de ${r.candidatos} candidatos.`,
       r.fallidos > 0 ? `⚠️ ${r.fallidos} fallidos:\n${lineasFallos}` : null,
+      // Los que no abrieron en 3 intentos ya no vuelven a la cola: probablemente
+      // ese correo no existe o no lo usan.
+      r.descartadosPorSilencio > 0 ? `🔇 ${r.descartadosPorSilencio} lead(s) descartado(s): sin abrir ningún email en 3 intentos.` : null,
     ].filter(Boolean).join('\n')
     await tgAviso('correduria.recaptacion-lote', mensaje).catch(() => {})
   }

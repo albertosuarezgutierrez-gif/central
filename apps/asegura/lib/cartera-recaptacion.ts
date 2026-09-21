@@ -34,6 +34,8 @@ import { estadoEmailDeFicha } from './email-ficha'
 import { urlBaja, urlPublicaAsegura } from './recaptacion-baja'
 import { candidatosLoteEmail, LIMITE_LOTE_POR_DEFECTO } from './recaptacion-lote'
 import { dentroVentanaAntiguo } from './recaptacion-ventana'
+import { esLeadSilencioso, UMBRAL_SILENCIO } from './recaptacion-silencio'
+import { descartarCliente } from './cartera-edicion'
 
 export { candidatosLoteEmail } from './recaptacion-lote'
 
@@ -305,6 +307,45 @@ export type ResultadoBaja =
   | { estado: 'error'; motivo: string }
 
 /**
+ * Opt-out AUTOMÁTICO cuando Resend confirma que el correo rebotó o el
+ * destinatario se quejó de spam (14/09/2026). A diferencia de
+ * `aplicarBajaEmail` (que resuelve por el id del envío, del enlace de baja),
+ * este resuelve por `resend_message_id`: es el webhook quien lo dispara, no
+ * un clic del destinatario — no hay enlace de por medio.
+ *
+ * Idempotente por la misma razón que `aplicarBajaEmail`: el webhook puede
+ * reintentar la entrega del evento.
+ */
+export async function aplicarBajaPorRebote(resendMessageId: string, motivo: 'rebotado' | 'queja'): Promise<ResultadoBaja> {
+  if (!aseguraConfigurada()) return { estado: 'error', motivo: 'sin_configurar' }
+  try {
+    const db = prismaAsegura()
+    const envio = await db.$queryRaw<{ clienteId: string; correduriaId: string; emailOptOutAt: Date | null }[]>(Prisma.sql`
+      select c.id as "clienteId", c.correduria_id as "correduriaId", c.email_opt_out_at as "emailOptOutAt"
+      from recaptacion_envios r
+      join clientes c on c.id = r.cliente_id
+      where r.resend_message_id = ${resendMessageId} and r.canal = 'email'
+      limit 1
+    `)
+    const fila = envio[0]
+    if (!fila) return { estado: 'no_encontrado' }
+    if (fila.emailOptOutAt) return { estado: 'ok', yaEstaba: true }
+
+    await db.$executeRaw(Prisma.sql`
+      update clientes set email_opt_out_at = now() where id = ${fila.clienteId}::uuid and email_opt_out_at is null
+    `)
+    const texto = motivo === 'rebotado'
+      ? 'Recaptación: email RECHAZADO por el proveedor (dirección muerta) — baja automática de correo'
+      : 'Recaptación: destinatario marcó el email como spam — baja automática de correo'
+    await anotar(fila.correduriaId, fila.clienteId, texto)
+    return { estado: 'ok', yaEstaba: false }
+  } catch (e) {
+    console.error('[cartera-recaptacion] fallo aplicando la baja por rebote:', e instanceof Error ? e.message : e)
+    return { estado: 'error', motivo: 'fallo_bd' }
+  }
+}
+
+/**
  * Resuelve el token de baja (el `id` de un `recaptacion_envios`) contra la
  * ficha del cliente y le pone `email_opt_out_at`. Idempotente: pulsar el
  * enlace dos veces (un cliente de correo que prefetchea, o el propio cliente
@@ -488,6 +529,46 @@ export type ResumenLoteEmail = {
   enviados: number
   fallidos: number
   detalleFallos: string[]
+  /** Leads descartados ESTA pasada por `descartarLeadsSilenciosos` (ver abajo). */
+  descartadosPorSilencio: number
+}
+
+const ACTOR_CRON_SILENCIO = 'cron (recaptación: sin apertura tras varios intentos)'
+
+/**
+ * Descarta (borrado suave, igual que el botón "descartar" de la ficha) los
+ * leads con `UMBRAL_SILENCIO` o más envíos de email y ninguna apertura/clic
+ * — 21/09/2026, a petición de Alberto: "para desechar los que no abran el
+ * mail porque lo mismo ya ni lo usan o esos mail ya ni existen".
+ *
+ * Al `activo=false` los saca `colaRecaptacion` (filtra `c.activo`) sin tocar
+ * nada más: es la MISMA guarda que ya usa `descartarCliente` (ninguna póliza
+ * viva), así que un lead con actividad real no se pierde por error.
+ */
+export async function descartarLeadsSilenciosos(correduriaId: string): Promise<number> {
+  if (!aseguraConfigurada()) return 0
+  const db = prismaAsegura()
+  const filas = await db.$queryRaw<{ clienteId: string; enviosEmail: bigint; conApertura: boolean }[]>(Prisma.sql`
+    select
+      r.cliente_id as "clienteId",
+      count(*) filter (where r.canal = 'email')::bigint as "enviosEmail",
+      bool_or(r.canal = 'email' and r.estado in ('abierto', 'pinchado')) as "conApertura"
+    from recaptacion_envios r
+    join clientes c on c.id = r.cliente_id
+    where r.correduria_id = ${correduriaId}::uuid and c.activo
+    group by r.cliente_id
+    having count(*) filter (where r.canal = 'email') >= ${UMBRAL_SILENCIO}
+  `)
+
+  let descartados = 0
+  for (const f of filas) {
+    if (!esLeadSilencioso(Number(f.enviosEmail), f.conApertura)) continue
+    const r = await descartarCliente(correduriaId, f.clienteId, ACTOR_CRON_SILENCIO, `${f.enviosEmail} emails de recaptación sin abrir`)
+    if (r.ok) descartados++
+    // `!r.ok` es casi siempre `tiene_polizas_vivas` (un lead que se hizo cliente
+    // entre medias): correcto no tocarlo, no es un fallo que haya que anotar.
+  }
+  return descartados
 }
 
 /**
@@ -505,12 +586,17 @@ export async function enviarLoteEmail(
   correduriaId: string,
   opts: { limite?: number; actor: string },
 ): Promise<ResumenLoteEmail> {
-  const vacio: ResumenLoteEmail = { candidatos: 0, enviados: 0, fallidos: 0, detalleFallos: [] }
+  const vacio: ResumenLoteEmail = { candidatos: 0, enviados: 0, fallidos: 0, detalleFallos: [], descartadosPorSilencio: 0 }
   if (!aseguraConfigurada()) return vacio
+
+  // Antes de elegir a quién escribir: sacar de la cola a quien lleva
+  // UMBRAL_SILENCIO envíos sin abrir ninguno — si no, esta misma pasada
+  // volvería a intentarlo (con el cooldown ya pasado hace tiempo).
+  const descartadosPorSilencio = await descartarLeadsSilenciosos(correduriaId)
 
   const cola = await colaRecaptacion(correduriaId)
   const candidatos = candidatosLoteEmail(cola.leads, opts.limite ?? LIMITE_LOTE_POR_DEFECTO)
-  if (candidatos.length === 0) return { ...vacio, candidatos: 0 }
+  if (candidatos.length === 0) return { ...vacio, candidatos: 0, descartadosPorSilencio }
 
   const db = prismaAsegura()
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
@@ -544,7 +630,7 @@ export async function enviarLoteEmail(
     }
   }
 
-  return { candidatos: candidatos.length, enviados, fallidos: candidatos.length - enviados, detalleFallos }
+  return { candidatos: candidatos.length, enviados, fallidos: candidatos.length - enviados, detalleFallos, descartadosPorSilencio }
 }
 
 function escaparHtmlLote(s: string): string {

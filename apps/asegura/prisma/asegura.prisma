@@ -1150,6 +1150,13 @@ enum EstadoEnvioRecaptacion {
   enlace_abierto
   abierto
   pinchado
+  /// Resend confirmó que el proveedor de correo del destinatario RECHAZÓ el
+  /// mensaje (dirección muerta). Aplica opt-out automático — reintentar es
+  /// gastar el cupo del lote en un correo que no existe.
+  rebotado
+  /// El destinatario lo marcó como spam. Aplica opt-out automático: seguir
+  /// escribiéndole daña la reputación del dominio de envío.
+  queja
 
   @@map("estado_envio_recaptacion")
 }
