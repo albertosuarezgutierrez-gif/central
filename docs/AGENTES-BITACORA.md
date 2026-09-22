@@ -48,6 +48,19 @@
   (`claude/buscador-ia-2026-09-14`).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-22 · mercado-booking** · hizo: pasada diaria completa — 24 ventanas de mercado (todas
+  las pedidas por el plan, tope max=24 de 516 candidatas/492 recortadas), 232 comps reales
+  escritos con `number_of_adults`=aforo por ventana; 3/4 ventanas de escaparate propio medidas
+  (busto_reform, luxury_busto, house_sevillana) para el ajuste de canal — Dúplex center sin
+  disponibilidad en Booking para esas fechas (`hotel_names_no_availability`), contado como hueco,
+  no como fallo; 2 anuncios propios descartados de los resultados de mercado (HOUSE SEVILLANA
+  ×2, ventanas 11-oct/12pax y 22-sep/12pax) — no contaminaron el corpus; 0 ventanas sin respuesta
+  del conector; latido `ok:true`. Avisos que trae el plan y no corresponde arreglar aquí (solo
+  mido): 1 mes sin bucket elegible (2026-09, <3 fechas medidas) y 77 fechas de evento confirmado
+  con corpus caducado (>7d, el motor las tarifica por canal en vez de por mercado medido) —
+  quedan para que la propia acumulación diaria las vaya cubriendo. dudas: —; fallos: —;
+  PRs/commits: — (solo escritura en `market_rates`/`pricing_escaparate` vía API, sin cambio de
+  código).
 - **2026-09-21 · facturas-correo** · hizo: pasada diaria completa (Paso 0→5). Preflight canal
   200 OK. Paso 0: Vía B sana (`dias_caido=3` — fin de semana sin PDFs nuevos desde el viernes
   18/09, dentro de lo normal; `list_labels` marcaba 1 en Extraccion-fallida pero `search_threads`
