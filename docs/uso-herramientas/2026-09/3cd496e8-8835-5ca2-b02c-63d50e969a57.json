@@ -1,8 +1,8 @@
 {
  "sesion": "3cd496e8-8835-5ca2-b02c-63d50e969a57",
  "inicio": "2026-09-21T09:27:34.194Z",
- "fin": "2026-09-22T09:10:58.164Z",
- "llamadas": 809,
+ "fin": "2026-09-22T09:37:26.591Z",
+ "llamadas": 811,
  "categorias": {
   "otro": {
    "llamadas": 128,
@@ -150,15 +150,15 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 25,
-   "chars_in": 1965,
-   "chars_out": 190805,
+   "llamadas": 27,
+   "chars_in": 2137,
+   "chars_out": 213049,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 19,
-    "Grep": 5,
+    "Read": 20,
+    "Grep": 6,
     "Glob": 1
    }
   },
