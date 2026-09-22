@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/09/2026)** ✅ **Auditoría diaria (ligera): sin hallazgos nuevos.** Heartbeat, correduría (CIMA
+entrando, C0058 en 91 días sin mandar, backlog conocido) y pricing (raíl sano, 1 alza sin justificar
+🟠 aislada) igual que el 21/09. Backlog de PRs en `dirty` sigue sin resolverse (mismo lote, automerge
+sano). Sin Telegram por ser redundante. Detalle en `docs/AUDITORIA-2026-09.md`.
+
 **(21/09/2026)** 🤖 **Pasada trading-analista PARCIAL (20:15 UTC).** NAV/cartera/operaciones OK; `/analizar`
 y `/puntuar` NO corrieron — montar su payload exige transcribir a mano ~121 velas OHLCV × 24 símbolos
 desde `get_price_history` (sin script/MCP que lo automatice), y al intentarlo se detectó una
