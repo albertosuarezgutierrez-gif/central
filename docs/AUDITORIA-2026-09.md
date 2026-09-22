@@ -346,4 +346,44 @@ en esta pasada) — se dice explícitamente, no se afirma que no hay pendientes 
 código nuevo que arreglar). Aviso Telegram enviado por los hallazgos 🟡 (PR backlog, raíl al alza).
 
 ---
-<!-- verificado: 2026-09-21 -->
+
+## ✅ Pasada ligera — 22/09/2026
+
+**Rango:** 36 commits desde la última auditoría (21/09 10:29, `f050ab3`) hasta hoy (`11037df`),
+casi todo correduría — presupuesto al cliente PR 1 y PR 2 en producción, libro de consumo
+Codeoscopic, cierre del residuo CIMA (pólizas duplicadas) — más el auto-tarificador Avant2.
+
+**Heartbeat (2-bis):** todo verde salvo los crónicos ya documentados. `ses_transporte`
+(`pendienteConocido`, revisar 06/10) sin cambios. `psd2_health_check` sigue con la BBVA rota en
+Enable Banking (sesión 401 desde el 13-16/09, Telegram ya enviado en su día, PR #3022) — última
+pasada hace 144,9h, todavía dentro de su umbral semanal (192h); no hay pasada nueva que confirme si
+sigue caída. Sin reparaciones automáticas en curso (`agente_reparaciones` no consultado esta pasada,
+sin indicio de necesidad).
+
+**Correduría (2-quater):** CIMA sigue entrando (`cima_pull_completed` hace ~15h, dentro de 30h;
+`errorsCount=0`; cola estable en 148). `correduria_ingesta` sigue DEGRADADA (7 pólizas con
+recibos/siniestros huérfanos, backlog ya conocido) y **C0058 (Mapfre) ya son 91 días sin mandar
+nada** (89→90→91, incremento diario esperado, sin acción nueva de Alberto). Codeoscopic:
+11 cotizaciones/7d, 5,50€, 2 descartadas — coherente con el lanzamiento en producción del
+presupuesto al cliente (PR #3281, mismo día).
+
+**Pricing (2bis):** `rail_baja_roto=0` · `bajo_minimo=0` · `oscilantes=0` ·
+`rail_alza_sin_justificar=1` (🟠, un solo caso, mismo patrón que ayer). 4 palancas activas y sanas
+(`enabled`/`apply_enabled=true`, `min_price` puesto, `antelacion_k=0`). `horas_desde_ultima_pasada`
+11,5h — dentro del hueco normal 20:30→08:30 (12h), no es una pasada saltada.
+
+**Backlog de PRs (2-ter):** automerge (`rutinas-automerge.yml`) sano — runs en verde cada pocos
+minutos en la última hora. El backlog de PRs abiertos en `mergeable_state:dirty` (p. ej. #2318,
+#3157) sigue igual que en las últimas pasadas — mismo problema ya reportado, sin cambio de causa
+raíz. No se repite el listado completo.
+
+No se ha podido listar las sesiones del rango (`list_sessions` de Claude Code Remote no está
+disponible en esta pasada) — se dice explícitamente, no se afirma que no hay pendientes de
+conversación.
+
+**Carril 1:** esta entrada + `AUTO-APLICADOS.md`. **Carril 2 vacío** (nada de código nuevo que
+arreglar, nada 🔴). Sin hallazgos nuevos respecto a la pasada de ayer — no se manda Telegram
+(ruido redundante sobre lo mismo ya avisado).
+
+---
+<!-- verificado: 2026-09-22 -->
