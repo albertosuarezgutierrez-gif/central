@@ -12,6 +12,17 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(22/09/2026)** 🪤 **El "smoke rojo" diario de `asegura` (issue #815) era falso el 86% de las veces —
+18 de 21 días.** El smoke suite pasaba (`PASS 3/FAIL 0/EXIT 0`) pero el step posterior "Cleanup smoke
+residue" moría con `password authentication failed for user "postgres"` contra `FRANKFURT_DATABASE_URL`
+(Supabase de Frankfurt) — mismo patrón que la rotación de `prisma_seguros` del 02/09: secret de rol
+rotado sin actualizar el consumidor. El job tumbaba entero y el aviso automático pegaba el resumen
+del smoke (verde) diciendo "sigue en FAIL", mintiendo sobre la causa. Arreglado en
+`asegura#845` (mergeado): la purga ya no puede tumbar el job (`continue-on-error`), y su fallo abre
+su propia alerta `[LOO-873]` separada de `smoke-failure`. **Pendiente de Alberto: rotar
+`FRANKFURT_DATABASE_URL`** en los secrets de Actions de `asegura` con la contraseña actual de `postgres`.
+También PR `central` #3278 (recibos duplicados de CIMA) mergeado el 21/09 — sin novedad hoy.
+
 **(22/09/2026)** ✅ **Auditoría diaria (ligera): sin hallazgos nuevos.** Heartbeat, correduría (CIMA
 entrando, C0058 en 91 días sin mandar, backlog conocido) y pricing (raíl sano, 1 alza sin justificar
 🟠 aislada) igual que el 21/09. Backlog de PRs en `dirty` sigue sin resolverse (mismo lote, automerge
