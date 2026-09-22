@@ -14,6 +14,21 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-22 · facturas-correo** · hizo: pasada tras 3 días sin correr (última 19/09). Paso 0: Vía B
+  sana (`_buzon_pdf` con copia de hoy), sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
+  (verificado por `search_threads`, no por `list_labels`). Paso 1 (ventana `newer_than:4d` por el hueco
+  de 3 días): 0 facturas deducibles nuevas — Endesa Bustos Reform es solo notificación sin PDF adjunto
+  (Endesa no manda PDF de Bustos por email, ya documentado; se imputará por contrato cuando entre el
+  cargo), Digimobil/Allianz eran marketing y el PDF de Mapfre de hoy era un folleto ya en Trash de
+  Alberto — los 3 hilos reales etiquetados `Facturas/Procesada`. Paso 4.0 (barrido backlog): de 19
+  facturas en `v_facturas_sin_cargo`, 18 ya `revisada_sin_cargo` (sin cambios) y 1 `sin_revisar`
+  (`anthropic-credit-2791`, 76,50€, 08/09) que dejo SIN conciliar: hay 2 cargos banco de -76,50€
+  candidatos (07/09 y 10/09) pero los DOS tienen `duplicado_estado='ignorado'` — ambiguo y con un patrón
+  raro (normalmente solo uno de un par queda `ignorado`), así que no auto-confirmo. `agente_salud` y
+  latido `facturas_correo` actualizados (ok:true). dudas: por qué los 2 cargos ANTHROPIC IRELAND de
+  76,50€ están ambos `ignorado` en vez de uno real+uno duplicado — revisar el import PSD2 de esa
+  ventana; fallos: —. PRs/commits: (este commit).
+
 - **2026-09-21 · trading-analista** · hizo: pasada PARCIAL 20:15 UTC (sin huella de hoy en Supabase,
   no era repesca). Completado con éxito: NAV IBKR (33.450,64€) → `/api/trading/saldo`; cartera real
   (CVX+VWCE) → `/api/trading/cartera`; `get_account_trades` 0 nuevas + latido `trading_operaciones` OK.
