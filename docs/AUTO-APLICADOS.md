@@ -13,6 +13,10 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-22** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · pasada ligera diaria:
+  sin hallazgos nuevos (heartbeat/correduría/pricing/backlog de PRs = mismo estado que el 21/09,
+  sin Telegram por ser redundante) · commit de esta auditoría
+
 - **2026-09-21** · `docs/CONTEXTO-SESIONES.md`, `docs/AUDITORIA-2026-09.md` · 4 entradas de memoria
   nuevas (PRs #3202, #3207, #3216, #3217 mergeados sin anotar — su commit "chore(memoria)" solo
   tocaba el JSON de uso de herramientas, no la memoria real) + entrada de la pasada ligera de hoy ·
