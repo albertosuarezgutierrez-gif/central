@@ -22,6 +22,7 @@ del smoke (verde) diciendo "sigue en FAIL", mintiendo sobre la causa. Arreglado 
 su propia alerta `[LOO-873]` separada de `smoke-failure`. **Pendiente de Alberto: rotar
 `FRANKFURT_DATABASE_URL`** en los secrets de Actions de `asegura` con la contraseña actual de `postgres`.
 También PR `central` #3278 (recibos duplicados de CIMA) mergeado el 21/09 — sin novedad hoy.
+
 **(21/09/2026)** 🤖 **Pasada trading-analista PARCIAL (20:15 UTC).** NAV/cartera/operaciones OK; `/analizar`
 y `/puntuar` NO corrieron — montar su payload exige transcribir a mano ~121 velas OHLCV × 24 símbolos
 desde `get_price_history` (sin script/MCP que lo automatice), y al intentarlo se detectó una
