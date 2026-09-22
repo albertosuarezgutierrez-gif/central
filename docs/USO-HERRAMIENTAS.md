@@ -167,24 +167,25 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 92 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 95 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 87 | 10.419 | 5.772.276 | 0 | 0 |
-| `lectura-directa` | 78 | 2.926 | 4.666.605 | 0 | 0 |
-| `otro` | 85 | 2.856 | 11.244.883 | 5.299.379 | 0 |
-| `mcp:github` | 77 | 2.721 | 2.655.218 | 37.039.137 | 41 |
-| `escritura` | 70 | 1.917 | 33.428.100 | 0 | 0 |
-| `sql` | 60 | 1.075 | 511.254 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 51 | 466 | 129.442 | 2.465.769 | 9 |
+| `bash` | 90 | 10.517 | 5.811.529 | 0 | 0 |
+| `lectura-directa` | 81 | 2.952 | 4.688.390 | 0 | 0 |
+| `otro` | 88 | 2.885 | 11.317.572 | 5.309.050 | 0 |
+| `mcp:github` | 79 | 2.782 | 2.739.115 | 37.836.077 | 50 |
+| `escritura` | 73 | 1.930 | 34.408.656 | 0 | 0 |
+| `sql` | 62 | 1.086 | 517.092 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 51 | 474 | 138.851 | 2.729.511 | 9 |
 | `mcp:Vercel` | 23 | 262 | 482.874 | 198.719 | 1 |
-| `mcp:Booking-com` | 6 | 197 | 815.919 | 0 | 0 |
+| `mcp:Booking-com` | 7 | 224 | 912.510 | 0 | 0 |
 | `mcp:Gmail` | 11 | 125 | 233.941 | 0 | 1 |
-| `mcp:Supabase` | 38 | 80 | 13.156 | 0 | 1 |
+| `mcp:Supabase` | 38 | 82 | 13.266 | 0 | 1 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
+| `mcp:Interactive-Brokers--IBKR-` | 1 | 51 | 73.084 | 0 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
-| `mcp:posthog` | 4 | 40 | 49.259 | 0 | 0 |
+| `mcp:posthog` | 4 | 43 | 54.330 | 0 | 0 |
 | `mcp:Google-Drive` | 4 | 36 | 28.803 | 0 | 0 |
 | `agente:general-purpose` | 12 | 34 | 29.237 | 596.780 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
@@ -197,7 +198,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `agente:general` | 6 | 8 | 5.205 | 231.483 | 0 |
 | `mcp:Resend` | 1 | 6 | 969 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
-| `mcp:Supabase_asegura` | 4 | 4 | 1.935 | 0 | 0 |
+| `mcp:Supabase_asegura` | 5 | 5 | 1.947 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
 | `agente:rastreador-codigo` | 1 | 1 | 422 | 0 | 0 |
