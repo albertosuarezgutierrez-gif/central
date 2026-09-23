@@ -15,7 +15,9 @@ import {
   diasHasta,
   proximoAniversario,
   puntuarLead,
+  pasoConTarea,
   siguientePasoLead,
+  PREFIJO_LLAMADA_CONTESTADA,
   sqlCarteraEnVigor,
   ventanaDe,
   type CanalLead,
@@ -25,7 +27,7 @@ import {
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { descifrarCampo } from './cartera-edicion'
-import { MARCA_CIERRE_AUTOMATICO } from './oportunidad-seguimiento'
+import { MARCA_CIERRE_AUTOMATICO, MARCA_CIERRE_LLAMADA } from './oportunidad-seguimiento'
 
 export type LeadCompetencia = {
   oportunidadId: string
@@ -95,6 +97,7 @@ type Fila = {
   intentos: number
   ultimoEnvioAt: Date | null
   respondio: boolean
+  proximaTarea: { tipo: string; fechaLimite: string; observaciones: string } | null
   fueCliente: boolean
 }
 
@@ -142,6 +145,7 @@ export async function leadsCompetencia(
           and g.tipo::text in ('llamada', 'email', 'whatsapp')
           -- Las que cerró el sistema al ganar/perder no son un contacto: reabrir no suma intentos.
           and position(${MARCA_CIERRE_AUTOMATICO} in g.observaciones) = 0
+          and position(${MARCA_CIERRE_LLAMADA} in g.observaciones) = 0
           and g.updated_at > now() - interval '12 months') as intentos,
       greatest(
         (select max(r.created_at) from recaptacion_envios r
@@ -151,12 +155,31 @@ export async function leadsCompetencia(
             and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
             and g.tipo::text in ('llamada', 'email', 'whatsapp')
             and position(${MARCA_CIERRE_AUTOMATICO} in g.observaciones) = 0
+          and position(${MARCA_CIERRE_LLAMADA} in g.observaciones) = 0
             and g.updated_at > now() - interval '12 months')
       ) as "ultimoEnvioAt",
-      exists (
+      (exists (
         select 1 from recaptacion_envios r
         where r.cliente_id = c.id and r.estado::text in ('enlace_abierto', 'abierto', 'pinchado')
-      ) as respondio,
+      ) or coalesce((
+        -- Una llamada que COGIÓ también es haber respondido, pero solo si es el
+        -- ÚLTIMO contacto: tras varios «no contesta» vuelve a ser uno más.
+        select starts_with(g.observaciones, ${PREFIJO_LLAMADA_CONTESTADA}) from gestiones g
+        where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
+          and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
+          and g.tipo::text in ('llamada', 'email', 'whatsapp')
+          and position(${MARCA_CIERRE_AUTOMATICO} in g.observaciones) = 0
+          and position(${MARCA_CIERRE_LLAMADA} in g.observaciones) = 0
+        order by g.updated_at desc limit 1
+      ), false)) as respondio,
+      -- La tarea pendiente más próxima: manda sobre la secuencia (pasoConTarea).
+      (select json_build_object('tipo', g.tipo::text,
+                'fechaLimite', to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD'),
+                'observaciones', g.observaciones)
+        from gestiones g
+        where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
+          and g.origen_trigger = 'central:seguimiento' and g.estado::text <> 'cerrada' and g.fecha_limite is not null
+        order by g.fecha_limite limit 1) as "proximaTarea",
       -- Cualquier póliza nuestra, de cualquier época: hoy no está en vigor (lo
       -- excluye el filtro de abajo), así que es relación contractual PREVIA.
       exists (
@@ -256,12 +279,16 @@ export async function leadsCompetencia(
         respondioAntes: f.respondio,
         ramo: f.ramo,
       }),
-      siguientePaso: siguientePasoLead(
-        dias,
-        f.intentos,
-        ultimo === null ? null : -diasHasta(ultimo, hoy),
-        f.respondio,
-        f.estado === 'pendiente_cliente',
+      siguientePaso: pasoConTarea(
+        siguientePasoLead(
+          dias,
+          f.intentos,
+          ultimo === null ? null : -diasHasta(ultimo, hoy),
+          f.respondio,
+          f.estado === 'pendiente_cliente',
+        ),
+        f.proximaTarea,
+        hoy,
       ),
     })
   }

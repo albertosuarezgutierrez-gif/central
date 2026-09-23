@@ -93,12 +93,37 @@ export type PasoLead =
   | { accion: 'esperar'; motivo: string; dentroDeDias: number }
   | { accion: 'primer_contacto' | 'recordatorio' | 'llamada'; motivo: string; dentroDeDias: number }
   | { accion: 'aparcar'; motivo: string; dentroDeDias: 0 }
+  /** Hay una tarea pendiente que no es una llamada: manda ella, no la secuencia. */
+  | { accion: 'tarea'; motivo: string; dentroDeDias: number }
+
+/**
+ * Una tarea pendiente de la oportunidad manda sobre la secuencia: si pidió
+ * precio o que le llamen el jueves, lo que toca es ESO, no otro recordatorio.
+ * Sin esto, quien acaba de decir «quiero precio» volvería a salir en la cola
+ * de llamadas de hoy. La vencida se dice vencida (0 días), no se esconde.
+ */
+export function pasoConTarea(
+  paso: PasoLead,
+  tarea: { tipo: string; fechaLimite: string; observaciones: string } | null,
+  hoy: Date,
+): PasoLead {
+  if (tarea === null) return paso
+  const d = diasHasta(tarea.fechaLimite, hoy)
+  const cuando = d < 0 ? `vencida hace ${-d} día(s)` : d === 0 ? 'para hoy' : `para el ${tarea.fechaLimite}`
+  const que = tarea.observaciones.split('\n')[0].slice(0, 120)
+  return tarea.tipo === 'llamada'
+    ? { accion: 'llamada', motivo: `${que} (${cuando})`, dentroDeDias: Math.max(0, d) }
+    : { accion: 'tarea', motivo: `${que} (${cuando})`, dentroDeDias: Math.max(0, d) }
+}
 
 /** A cuántos días del aniversario se escribe por primera vez. */
 export const DIAS_PRIMER_CONTACTO = 60
 export const DIAS_RECORDATORIO = 7
 export const DIAS_LLAMADA = 14
 export const MAX_INTENTOS = 3
+/** Con quien respondió se insiste algo más, pero con tope y espaciado. */
+export const MAX_INTENTOS_RESPONDIO = 5
+export const DIAS_ENTRE_LLAMADAS_RESPONDIO = 2
 
 /**
  * Qué toca con un lead, por reglas: primer contacto a 60 días del aniversario,
@@ -120,8 +145,12 @@ export function siguientePasoLead(
     const falta = diasDesdeUltimo === null ? 0 : Math.max(0, DIAS_RECORDATORIO - diasDesdeUltimo)
     return { accion: 'llamada', motivo: 'tiene una propuesta enviada: confirma si la acepta', dentroDeDias: falta }
   }
-  if (respondio && intentos > 0) {
-    return { accion: 'llamada', motivo: 'respondió a un contacto anterior: llámale mientras está templado', dentroDeDias: 0 }
+  // Templado, pero no para siempre: llamadas espaciadas y, pasado el tope,
+  // se aparca como cualquiera (si no, un «no contesta» detrás de otro lo
+  // devolvería a la cola cada día sin fin).
+  if (respondio && intentos > 0 && intentos < MAX_INTENTOS_RESPONDIO) {
+    const falta = diasDesdeUltimo === null ? 0 : Math.max(0, DIAS_ENTRE_LLAMADAS_RESPONDIO - diasDesdeUltimo)
+    return { accion: 'llamada', motivo: 'respondió a un contacto anterior: llámale mientras está templado', dentroDeDias: falta }
   }
   if (intentos >= MAX_INTENTOS) {
     return { accion: 'aparcar', motivo: `${intentos} intentos sin respuesta: se aparca hasta el año que viene`, dentroDeDias: 0 }
@@ -175,5 +204,7 @@ export function textoPasoLead(paso: { accion: PasoLead['accion']; dentroDeDias: 
       return telefono ? 'Llamar' : correo ? 'Sin teléfono: escribir por correo' : 'Sin canal permitido'
     case 'aparcar':
       return 'Proponer aparcar hasta el año que viene'
+    case 'tarea':
+      return paso.dentroDeDias > 0 ? `Tarea pendiente en ${paso.dentroDeDias} día(s)` : 'Tarea pendiente'
   }
 }

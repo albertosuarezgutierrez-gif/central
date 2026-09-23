@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { canalLead, diasHasta, proximoAniversario, puntuarLead, siguientePasoLead, textoPasoLead, ventanaDe } from './lead-competencia.ts'
+import { canalLead, diasHasta, pasoConTarea, proximoAniversario, puntuarLead, siguientePasoLead, textoPasoLead, ventanaDe } from './lead-competencia.ts'
 
 const hoy = new Date(Date.UTC(2026, 8, 23)) // 23/09/2026
 
@@ -73,4 +73,24 @@ test('el paso se dice con el canal permitido: primer contacto sin correo es una 
   for (const paso of [primer, siguientePasoLead(40, 1, 3), siguientePasoLead(30, 2, 20)]) {
     assert.equal(textoPasoLead(paso, 'sin_canal_permitido'), 'Sin canal permitido')
   }
+})
+
+test('una tarea pendiente manda sobre la secuencia', () => {
+  const hoy = new Date('2026-09-23T00:00:00Z')
+  const seq = siguientePasoLead(30, 1, 10, true)
+  assert.equal(pasoConTarea(seq, null, hoy), seq)
+  const precio = pasoConTarea(seq, { tipo: 'tarea', fechaLimite: '2026-09-25', observaciones: 'Preparar la comparativa' }, hoy)
+  assert.equal(precio.accion, 'tarea')
+  assert.equal(precio.dentroDeDias, 2)
+  const rellamada = pasoConTarea(seq, { tipo: 'llamada', fechaLimite: '2026-09-20', observaciones: 'Volver a llamar' }, hoy)
+  assert.equal(rellamada.accion, 'llamada')
+  assert.equal(rellamada.dentroDeDias, 0)
+  assert.match(rellamada.motivo, /vencida hace 3/)
+  assert.equal(textoPasoLead(precio, 'solo_telefono'), 'Tarea pendiente en 2 día(s)')
+})
+
+test('quien respondió no vuelve a la cola cada día: espaciado y con tope', () => {
+  assert.equal(siguientePasoLead(30, 2, 0, true).dentroDeDias, 2)
+  assert.equal(siguientePasoLead(30, 2, 3, true).dentroDeDias, 0)
+  assert.equal(siguientePasoLead(30, 5, 3, true).accion, 'aparcar')
 })

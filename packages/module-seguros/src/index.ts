@@ -734,11 +734,16 @@ export {
   type OpcionesComparativa,
 } from './comparativa-precios.ts'
 export {
-  DIAS_LLAMADA, DIAS_PRIMER_CONTACTO, DIAS_RECORDATORIO, MAX_INTENTOS,
-  canalLead, diasHasta, proximoAniversario, puntuarLead, siguientePasoLead, textoPasoLead, ventanaDe,
+  DIAS_ENTRE_LLAMADAS_RESPONDIO, DIAS_LLAMADA, DIAS_PRIMER_CONTACTO, DIAS_RECORDATORIO, MAX_INTENTOS, MAX_INTENTOS_RESPONDIO,
+  canalLead, diasHasta, pasoConTarea, proximoAniversario, puntuarLead, siguientePasoLead, textoPasoLead, ventanaDe,
 } from './lead-competencia.ts'
 export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
 export { MOTIVOS_PERDIDA, PRIORIDADES_TAREA, TIPOS_TAREA, aplicarAccion, validarTarea } from './oportunidad-seguimiento.ts'
+export {
+  DIAS_APARCAR_NO_INTERESA, DIAS_PREPARAR_PRECIO, MAX_DIAS_RELLAMADA, PREFIJO_LLAMADA_CONTESTADA, PREFIJO_LLAMADA_SIN_RESPUESTA,
+  RESULTADOS_LLAMADA, planLlamada,
+} from './llamada-resultado.ts'
+export type { PlanLlamada, ResultadoLlamada } from './llamada-resultado.ts'
 export type {
   AccionOportunidad,
   Cambios as CambiosOportunidad,
