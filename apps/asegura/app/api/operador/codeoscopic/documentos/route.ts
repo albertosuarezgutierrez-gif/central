@@ -2,12 +2,10 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { correduriaUnica } from '@/lib/cartera'
 import { prisma } from '@/lib/tenant'
-import { prismaAsegura } from '@/lib/asegura-db'
-import { guardarDocumento } from '@/lib/cartera-documentos'
 import { resolverConfigEmision, leerProyectoCrudo, redactarCrudoVendor } from '@/lib/codeoscopic/emitir'
-import { peticion, descargarFicheroVendor } from '@/lib/codeoscopic/cliente'
+import { peticion } from '@/lib/codeoscopic/cliente'
 import { solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
-import { documentosEmitidos, documentoPoliza, documentoCaducado } from '@/lib/codeoscopic/documentos-emitidos'
+import { archivarDocumentoEmitido } from '@/lib/codeoscopic/archivar-documento'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -107,47 +105,22 @@ export async function GET(req: Request) {
   // ── Descarga y archivo del PDF, best-effort ──────────────────────────────
   // La URL sale del crudo SIN redactar (no lleva PII: es del propio vendor),
   // pero nunca se devuelve al cliente HTTP — solo se usa para el GET interno.
+  // Solo se puede archivar si el proyecto ya está acuñado (`poliza_id` puesto);
+  // `archivarDocumentoEmitido` (compartido con `emitir/route.ts`) hace el resto.
   let documentoGuardado: { id: string; repetido: boolean } | null = null
   let avisoDocumento: string | null = null
-  const docs = documentosEmitidos(policyApplication)
-  const poliza = documentoPoliza(docs)
-  if (poliza && correduria) {
-    if (documentoCaducado(poliza)) {
-      avisoDocumento = `El documento "${poliza.nombre}" caducó el ${poliza.caducaEn} — Codeoscopic ya no lo sirve.`
+  if (correduria) {
+    const fila = await prisma.$queryRaw<{ poliza_id: string | null }[]>`
+      select poliza_id from codeoscopic_projects
+      where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
+    `
+    const polizaId = fila[0]?.poliza_id ?? null
+    if (!polizaId) {
+      avisoDocumento = 'El proyecto todavía no tiene `poliza_id` (no se ha acuñado): no se archiva sin saber de qué póliza es.'
     } else {
-      try {
-        const fila = await prisma.$queryRaw<{ poliza_id: string | null }[]>`
-          select poliza_id from codeoscopic_projects
-          where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
-        `
-        const polizaId = fila[0]?.poliza_id ?? null
-        if (!polizaId) {
-          avisoDocumento = 'El proyecto todavía no tiene `poliza_id` (no se ha acuñado): no se archiva sin saber de qué póliza es.'
-        } else {
-          const yaGuardado = await prismaAsegura().documento.findFirst({
-            where: { correduriaId: correduria.id, polizaId, tipo: 'poliza', subidoPor: 'agente' },
-            select: { id: true },
-          })
-          if (yaGuardado) {
-            documentoGuardado = { id: yaGuardado.id, repetido: true }
-          } else {
-            const { bytes } = await descargarFicheroVendor(r.config, poliza.url)
-            const guardado = await guardarDocumento(correduria.id, {
-              polizaId,
-              tipo: 'poliza',
-              nombre: `${poliza.nombre}.pdf`,
-              mime: 'application/pdf',
-              contenido: bytes,
-              subidoPor: 'agente',
-              notas: `Descargado de Codeoscopic (issuedDocuments) el ${new Date().toISOString()}.`,
-            })
-            documentoGuardado = guardado.ok ? { id: guardado.documento.id, repetido: guardado.repetido } : null
-            if (!guardado.ok) avisoDocumento = `No se pudo archivar el PDF: ${guardado.motivo}`
-          }
-        }
-      } catch (e) {
-        avisoDocumento = `No se pudo descargar el PDF del vendor: ${e instanceof Error ? e.message : String(e)}`
-      }
+      const archivado = await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId, crudo: policyApplication })
+      documentoGuardado = archivado.documentoGuardado
+      avisoDocumento = archivado.avisoDocumento
     }
   }
 

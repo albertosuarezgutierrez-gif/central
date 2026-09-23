@@ -20,10 +20,18 @@ const texto = (v: unknown): string | null =>
   typeof v === 'string' && v.trim() !== '' ? v.trim() : null
 
 /**
- * Lee `issuedDocuments[]` de la respuesta cruda del vendor (la `PolicyApplication_V1`
- * completa, o directamente el array). Un elemento sin `name` o sin `url` no se
- * puede descargar ni archivar con sentido: se descarta en vez de inventar un
- * nombre o intentar un `GET` a `undefined`.
+ * Lee `issuedDocuments[]` de la respuesta cruda del vendor. Acepta las TRES
+ * formas que de verdad llegan (mismo espíritu que `solicitudesEmision()` de
+ * `reintento-emision.ts`, que ya resuelve esta misma ambigüedad para el
+ * `status`/`policyNumber`):
+ *  - una `PolicyApplication_V1` suelta (el Retrieve individual, `documentos/route.ts`);
+ *  - el proyecto entero con `policyApplications[]` (`GET /insurances/{id}`,
+ *    `crudoPrevio` de `emitir/route.ts`);
+ *  - el array crudo del Submit (`envio.crudo`), donde solo ALGUNA solicitud
+ *    trae `issuedDocuments` (ver `SUBMIT_RESPONSE_ARRAY` del test).
+ * Un elemento sin `name` o sin `url` no se puede descargar ni archivar con
+ * sentido: se descarta en vez de inventar un nombre o intentar un `GET` a
+ * `undefined`.
  *
  * `[]` = «no hay ninguno documentado en esta respuesta» — no es «el vendor no
  * emitió nada»: puede que la solicitud siga pendiente, o que el proyecto no
@@ -44,9 +52,19 @@ export function documentosEmitidos(crudo: unknown): DocumentoEmitido[] {
 }
 
 function extraerArray(crudo: unknown): unknown[] {
-  if (Array.isArray(crudo)) return crudo
+  // El array del Submit: cada elemento es SU PROPIA solicitud — se agregan los
+  // `issuedDocuments` de todas (lo normal es que solo una los traiga).
+  if (Array.isArray(crudo)) return crudo.flatMap((item) => extraerDeUnaSolicitud(item))
   if (typeof crudo !== 'object' || crudo === null) return []
   const o = crudo as Record<string, unknown>
+  // El proyecto entero (`GET /insurances/{id}`): las solicitudes van dentro.
+  if (Array.isArray(o.policyApplications)) return extraerArray(o.policyApplications)
+  return extraerDeUnaSolicitud(o)
+}
+
+function extraerDeUnaSolicitud(v: unknown): unknown[] {
+  if (typeof v !== 'object' || v === null) return []
+  const o = v as Record<string, unknown>
   return Array.isArray(o.issuedDocuments) ? o.issuedDocuments : []
 }
 
