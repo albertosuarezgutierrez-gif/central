@@ -139,3 +139,41 @@ export function siguientePasoLead(
   const falta = Math.max(0, DIAS_LLAMADA - diasDesdeUltimo)
   return { accion: 'llamada', motivo: 'no ha respondido a dos contactos: mejor por teléfono', dentroDeDias: falta }
 }
+
+// ─── Por dónde se le puede escribir (LSSI art. 21.2) ─────────────────────────
+// Por CORREO solo a quien fue cliente nuestro: la LSSI permite la comunicación
+// comercial por medios electrónicos sin consentimiento previo únicamente si hubo
+// relación contractual y se ofrecen productos similares (y siempre con la baja
+// en cada envío). Al resto, teléfono. Un lead con correo y sin teléfono que
+// nunca fue cliente no tiene canal PERMITIDO aunque tenga canal — y eso no es
+// «sin datos», es «no se le puede escribir»: se cuenta aparte, no se esconde.
+// El consentimiento comercial del portal (`portal_consentimiento`, tipo
+// `comercial`) también abriría el correo; aún no se cruza aquí.
+
+export type CanalLead = 'telefono_y_correo' | 'solo_telefono' | 'solo_correo' | 'sin_canal_permitido'
+
+export function canalLead(d: { fueCliente: boolean; tieneTelefono: boolean; tieneEmail: boolean }): CanalLead {
+  const correo = d.tieneEmail && d.fueCliente
+  if (d.tieneTelefono && correo) return 'telefono_y_correo'
+  if (d.tieneTelefono) return 'solo_telefono'
+  if (correo) return 'solo_correo'
+  return 'sin_canal_permitido'
+}
+
+/** El paso, dicho con el canal que de verdad se puede usar: «primer contacto» a quien no se le puede escribir es una llamada. */
+export function textoPasoLead(paso: { accion: PasoLead['accion']; dentroDeDias: number }, canal: CanalLead): string {
+  const correo = canal === 'telefono_y_correo' || canal === 'solo_correo'
+  const telefono = canal === 'telefono_y_correo' || canal === 'solo_telefono'
+  switch (paso.accion) {
+    case 'esperar':
+      return `Esperar ${paso.dentroDeDias} día(s)`
+    case 'primer_contacto':
+      return correo ? 'Primer correo' : telefono ? 'Primera llamada' : 'Sin canal permitido'
+    case 'recordatorio':
+      return correo ? 'Recordatorio por correo' : telefono ? 'Volver a llamar' : 'Sin canal permitido'
+    case 'llamada':
+      return telefono ? 'Llamar' : correo ? 'Sin teléfono: escribir por correo' : 'Sin canal permitido'
+    case 'aparcar':
+      return 'Proponer aparcar hasta el año que viene'
+  }
+}

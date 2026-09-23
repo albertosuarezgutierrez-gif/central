@@ -1,4 +1,6 @@
 'use client'
+
+import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { CalendarClock, Landmark, FolderOpen } from 'lucide-react'
@@ -374,6 +376,16 @@ export default function CorreduriaClient() {
         >
           <Renovaciones datos={vencimientos} filtro="accionables" />
         </Bloque>
+
+        {/* La pantalla de VENDER: los dos carriles (clientes y leads) con su
+            seguimiento. Aquí solo el acceso: la lista vive en su página. */}
+        <Link href="/correduria/vencimientos" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '14px 16px', minHeight: 44, borderRadius: 14, background: 'var(--primary-light)', color: 'var(--primary)', textDecoration: 'none' }}>
+          <span style={{ display: 'grid', gap: 2 }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>Vencimientos · clientes y leads</span>
+            <span style={{ fontSize: 13 }}>Próximos 90 días, por probabilidad de venta × prima, con su seguimiento</span>
+          </span>
+          <span aria-hidden="true">›</span>
+        </Link>
 
         {/* Las pólizas que los clientes suben al portal y que NO lleva la casa.
             Va la última de «Hoy» a propósito: una renovación propia se PIERDE

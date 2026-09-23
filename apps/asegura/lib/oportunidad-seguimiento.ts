@@ -50,6 +50,11 @@ export type OportunidadSeguimiento = {
   polizaGanadaId: string | null
 }
 
+/** Lo que se añade a una tarea que cierra el sistema al ganar/perder: no es un contacto y no cuenta como intento. */
+export const MARCA_CIERRE_AUTOMATICO = '— Cerrada al marcar la oportunidad como'
+
+export type ContextoOportunidad = { cliente: string | null; aseguradora: string | null; fueCliente: boolean }
+
 export type EntradaHistorial = {
   accion: string
   estadoAntes: string | null
@@ -124,13 +129,22 @@ function mapOportunidad(f: FilaOportunidad): OportunidadSeguimiento {
 export async function leerOportunidad(
   correduriaId: string,
   id: string,
-): Promise<{ oportunidad: OportunidadSeguimiento; historial: EntradaHistorial[]; tareas: Tarea[] } | null> {
+): Promise<{ oportunidad: OportunidadSeguimiento; contexto: ContextoOportunidad; historial: EntradaHistorial[]; tareas: Tarea[] } | null> {
   if (!UUID.test(id)) return null
   const db = prismaAsegura()
   const [fila] = await db.$queryRaw<FilaOportunidad[]>(Prisma.sql`
     ${SELECT_OPORTUNIDAD} where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
   if (!fila) return null
-  const [historial, tareas] = await Promise.all([
+  const [contexto, historial, tareas] = await Promise.all([
+    // Para pintar la cabecera sin otra llamada: quién es y qué tiene en la
+    // otra compañía. Sin datos de contacto: esos se piden a la ficha.
+    db.$queryRaw<ContextoOportunidad[]>(Prisma.sql`
+      select nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente,
+             nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora,
+             exists (select 1 from polizas p where p.cliente_id = c.id and p.correduria_id = c.correduria_id
+                     and p.merged_into_poliza_id is null and p.estado::text <> 'competencia') as "fueCliente"
+      from oportunidades o join clientes c on c.id = o.cliente_id and c.correduria_id = o.correduria_id
+      where o.id = ${id}::uuid and o.correduria_id = ${correduriaId}::uuid`).then(r => r[0] ?? { cliente: null, aseguradora: null, fueCliente: false }),
     db.$queryRaw<{ accion: string; estadoAntes: string | null; estadoDespues: string | null; detalle: unknown; actor: string; fecha: Date }[]>(Prisma.sql`
       select accion, estado_antes::text as "estadoAntes", estado_despues::text as "estadoDespues",
              detalle, actor, created_at as fecha
@@ -149,6 +163,7 @@ export async function leerOportunidad(
   ])
   return {
     oportunidad: mapOportunidad(fila),
+    contexto,
     historial: historial.map(h => ({ ...h, fecha: h.fecha.toISOString() })),
     tareas: tareas.map(t => ({ ...t, creada: t.creada.toISOString() })),
   }
@@ -234,7 +249,7 @@ export async function cambiarEstadoOportunidad(
     if (c.cerrada === true) {
       const cerradas = await tx.$executeRaw(Prisma.sql`
         update gestiones set estado = 'cerrada', updated_at = now(),
-          observaciones = observaciones || ${`\n— Cerrada al marcar la oportunidad como ${c.estado}.`}
+          observaciones = observaciones || ${`\n${MARCA_CIERRE_AUTOMATICO} ${c.estado}.`}
         where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado <> 'cerrada'`)
       if (cerradas > 0) detalle.tareasCerradas = cerradas
     }

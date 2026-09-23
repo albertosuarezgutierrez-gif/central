@@ -11,18 +11,21 @@
  * se le trabaja desde su ficha y su renovación, no como lead).
  */
 import {
+  canalLead,
   diasHasta,
   proximoAniversario,
   puntuarLead,
   siguientePasoLead,
   sqlCarteraEnVigor,
   ventanaDe,
+  type CanalLead,
   type PasoLead,
   type VentanaLead,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { descifrarCampo } from './cartera-edicion'
+import { MARCA_CIERRE_AUTOMATICO } from './oportunidad-seguimiento'
 
 export type LeadCompetencia = {
   oportunidadId: string
@@ -48,6 +51,9 @@ export type LeadCompetencia = {
   /** Otras pólizas de la competencia del mismo cliente: se le trabaja una vez, no N. */
   otrasOportunidades: number
   respondioAntes: boolean
+  /** Tuvo alguna póliza con nosotros (cualquier época): abre el correo por LSSI 21.2. */
+  fueCliente: boolean
+  canal: CanalLead
   puntuacion: number
   siguientePaso: PasoLead
 }
@@ -61,6 +67,8 @@ export type ListaLeadsCompetencia = {
   porVentana: Record<VentanaLead, number>
   /** `true` = la consulta tocó el techo: puede haber más. */
   truncado: boolean
+  /** Tienen correo pero nunca fueron clientes y no tienen teléfono: no se les puede escribir (LSSI 21.2). */
+  sinCanalPermitido: number
 }
 
 const TECHO = 5000
@@ -87,6 +95,7 @@ type Fila = {
   intentos: number
   ultimoEnvioAt: Date | null
   respondio: boolean
+  fueCliente: boolean
 }
 
 function hoyUtc(): Date {
@@ -100,7 +109,7 @@ export async function leadsCompetencia(
   hoy: Date = hoyUtc(),
 ): Promise<ListaLeadsCompetencia> {
   const porVentana: Record<VentanaLead, number> = { menos_30: 0, '30_60': 0, '60_90': 0, mas_90: 0 }
-  if (!aseguraConfigurada()) return { leads: [], totalConFecha: 0, ilegibles: 0, porVentana, truncado: false }
+  if (!aseguraConfigurada()) return { leads: [], totalConFecha: 0, ilegibles: 0, porVentana, truncado: false, sinCanalPermitido: 0 }
   const filas = await prismaAsegura().$queryRaw<Fila[]>(Prisma.sql`
     select
       o.id::text as "oportunidadId", o.estado::text as estado, c.id::text as "clienteId", c.nombre, c.apellidos,
@@ -131,6 +140,8 @@ export async function leadsCompetencia(
         where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
           and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
           and g.tipo::text in ('llamada', 'email', 'whatsapp')
+          -- Las que cerró el sistema al ganar/perder no son un contacto: reabrir no suma intentos.
+          and position(${MARCA_CIERRE_AUTOMATICO} in g.observaciones) = 0
           and g.updated_at > now() - interval '12 months') as intentos,
       greatest(
         (select max(r.created_at) from recaptacion_envios r
@@ -139,12 +150,21 @@ export async function leadsCompetencia(
           where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
             and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
             and g.tipo::text in ('llamada', 'email', 'whatsapp')
+            and position(${MARCA_CIERRE_AUTOMATICO} in g.observaciones) = 0
             and g.updated_at > now() - interval '12 months')
       ) as "ultimoEnvioAt",
       exists (
         select 1 from recaptacion_envios r
         where r.cliente_id = c.id and r.estado::text in ('enlace_abierto', 'abierto', 'pinchado')
-      ) as respondio
+      ) as respondio,
+      -- Cualquier póliza nuestra, de cualquier época: hoy no está en vigor (lo
+      -- excluye el filtro de abajo), así que es relación contractual PREVIA.
+      exists (
+        select 1 from polizas p
+        where p.cliente_id = c.id and p.correduria_id = c.correduria_id and p.merged_into_poliza_id is null
+          -- «competencia» es una póliza suya con OTRA compañía: no es contrato con nosotros.
+          and p.estado::text <> 'competencia'
+      ) as "fueCliente"
     from oportunidades o
     join clientes c on c.id = o.cliente_id
     where o.correduria_id = ${correduriaId}::uuid
@@ -187,6 +207,7 @@ export async function leadsCompetencia(
   const leads: LeadCompetencia[] = []
   let totalConFecha = 0
   let ilegibles = 0
+  let sinCanalPermitido = 0
   for (const { f, venc, dias, otras } of porCliente.values()) {
     const telefono = descifrarCampo(f.telefono)
     const email = descifrarCampo(f.email)
@@ -194,6 +215,12 @@ export async function leadsCompetencia(
     // contactable, y tampoco desaparece sin dejar rastro.
     if (telefono === null && email === null) {
       ilegibles++
+      continue
+    }
+    const canal = canalLead({ fueCliente: f.fueCliente, tieneTelefono: telefono !== null, tieneEmail: email !== null })
+    // Con canal pero sin canal PERMITIDO: se cuenta, no se lista como trabajo.
+    if (canal === 'sin_canal_permitido') {
+      sinCanalPermitido++
       continue
     }
     totalConFecha++
@@ -219,9 +246,12 @@ export async function leadsCompetencia(
       ultimoContactoEn: ultimo,
       otrasOportunidades: otras,
       respondioAntes: f.respondio,
+      fueCliente: f.fueCliente,
+      canal,
       puntuacion: puntuarLead({
         tieneTelefono: telefono !== null,
-        tieneEmail: email !== null,
+        // El correo solo puntúa si se le puede escribir (LSSI 21.2).
+        tieneEmail: canal === 'telefono_y_correo' || canal === 'solo_correo',
         prima: f.prima,
         respondioAntes: f.respondio,
         ramo: f.ramo,
@@ -237,5 +267,5 @@ export async function leadsCompetencia(
   }
   // Probabilidad × prima: por puntuación y, a igualdad, lo que vence antes.
   leads.sort((a, b) => b.puntuacion - a.puntuacion || a.dias - b.dias)
-  return { leads, totalConFecha, ilegibles, porVentana, truncado: filas.length >= TECHO }
+  return { leads, totalConFecha, ilegibles, porVentana, truncado: filas.length >= TECHO, sinCanalPermitido }
 }
