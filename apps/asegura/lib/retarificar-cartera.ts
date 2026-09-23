@@ -41,6 +41,7 @@
  */
 
 import { correduriaUnica } from '@/lib/cartera'
+import { catastroPorReferencia, motivoCatastro } from '@/lib/codeoscopic/catastro-referencia'
 import { origenRetarificacion, clienteOrigenDe, type OrigenRetarificacion } from '@/lib/cartera-ficha'
 import {
   precalificarAuto,
@@ -166,6 +167,9 @@ export type CuerpoRetarificacion = {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  /** Referencia catastral de 20 del piso: el riesgo se consulta AQUÍ al Catastro
+   *  (manda sobre `catastro`, que son números puestos por quien llama). */
+  referencia?: string
   /** Pasa por encima de `proyectoVigenteDePoliza`: pide precio de nuevo aunque
    *  ya haya un proyecto vigente sin emitir. Solo para cuando de verdad hace
    *  falta una cotización nueva (los datos del riesgo cambiaron). */
@@ -671,12 +675,26 @@ const CORRECCIONES_BOOLEANAS = [
  * ese mensaje es lo que dice qué campo sobra o falta, y un 400 de validación
  * no se cobra.
  */
-function prepararHogar(
+async function prepararHogar(
   origen: OrigenRetarificacion,
   cuerpo: CuerpoRetarificacion,
   polizaId: string,
   modo: 'cotizar' | 'limites' = 'cotizar',
 ): Promise<Preparado> {
+  if (typeof cuerpo.referencia === 'string') {
+    const c = await catastroPorReferencia(cuerpo.referencia)
+    if (c.estado !== 'ok') {
+      return paraPreparado({ error: `${motivoCatastro(c)} No se ha llamado a Codeoscopic.` }, c.estado === 'error' ? 503 : 422)
+    }
+    return prepararHogarDesde(
+      origen.cliente,
+      { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, hogar: origen.hogar },
+      cuerpo,
+      `poliza-${polizaId}`,
+      c.catastro,
+      modo,
+    )
+  }
   const catastro: CatastroHogar | null = esObjetoPlano(cuerpo.catastro)
     ? {
         metrosCuadrados: numero(cuerpo.catastro.metrosCuadrados),

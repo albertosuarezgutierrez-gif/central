@@ -18,6 +18,8 @@ import { comisionesAsegura, nombreCompania } from '@/lib/comisiones-asegura'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { estadoCuadre, mesEnPeriodo, finDeMes, ESTADOS_PENDIENTES, type EstadoCuadre } from '@/lib/correduria/cuadre'
+import { bancoDePeriodo, casarAbonos, rangoAbonos, type AbonoBanco } from '@/lib/correduria/casar-banco'
+import { ENV_LISTA_CORREDURIA, listaCorreduria } from '@/lib/correduria-acceso'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -32,9 +34,6 @@ export const maxDuration = 60
  */
 const AGENTE = 'cima_liq'
 
-/** Días tras el cierre del periodo en los que aún se acepta el ingreso. */
-const VENTANA_COBRO_DIAS = 45
-
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get('authorization')
@@ -43,15 +42,43 @@ export async function GET(req: NextRequest) {
     (!!secret && req.nextUrl.searchParams.get('secret') === secret)
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const cuenta = await prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM cuentas LIMIT 1`
+  // 🚨 De QUIÉN es el libro. Era `SELECT id FROM cuentas LIMIT 1` sin orden: con tres cuentas en la BD,
+  // Postgres devolvía la que le venía bien, y desde el 20/09/2026 escribía en una cuenta SIN bancos —
+  // el libro de Alberto se quedó congelado ese día y nada falló. Ahora: las cuentas con acceso a la
+  // correduría (`CORREDURIA_EMAILS`, la misma lista que guarda `/correduria`), y entre ellas la que
+  // recibe los abonos de seguros en sus bancos.
+  const lista = listaCorreduria()
+  // Sin la lista no se escribe nada (fail-closed, igual que `/correduria`): «no sé de quién es el libro»
+  // no autoriza a escribirlo en una cuenta cualquiera.
+  if (lista === null) {
+    const motivo = `falta ${ENV_LISTA_CORREDURIA}: no se sabe de quién es el libro, no se escribe nada`
+    await registrarLatido(AGENTE, false, motivo)
+    return NextResponse.json({ ok: false, msg: motivo })
+  }
+  const cuenta = await prisma.$queryRaw<Array<{ id: string; abonos: number }>>`
+    SELECT c.id, (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+                  WHERE cb.cuenta_id = c.id AND mb.destino = 'seguros' AND mb.importe > 0
+                    AND coalesce(mb.duplicado_estado, '') <> 'ignorado')::int AS abonos
+    FROM cuentas c
+    WHERE lower(c.email) = ANY(${lista}::text[])
+    ORDER BY abonos DESC, c.created_at, c.id
+    LIMIT 1`
   if (!cuenta.length) {
-    await registrarLatido(AGENTE, false, 'sin ninguna cuenta en la BD: no se ha podido cuadrar nada')
-    return NextResponse.json({ ok: true, msg: 'Sin cuentas' })
+    const motivo = `ninguna cuenta casa con ${ENV_LISTA_CORREDURIA} (¿errata en la lista?): no se ha podido cuadrar nada`
+    await registrarLatido(AGENTE, false, motivo)
+    return NextResponse.json({ ok: false, msg: motivo })
   }
   const cuentaId = cuenta[0].id
+  // Una cuenta sin un solo abono de seguros deja el tramo del banco a «—» en todo el libro: es
+  // exactamente el fallo del 20/09, así que el latido no puede quedar verde.
+  const avisoCuenta = cuenta[0].abonos === 0
+    ? 'la cuenta elegida no tiene abonos de seguros en sus bancos: el tramo del banco no se ha podido cruzar'
+    : null
 
+  // Desde el 1 de diciembre del año anterior: en enero llega la liquidación de diciembre, y sin ese
+  // periodo en el libro su abono no tendría a dónde ir.
   const anio = new Date().getFullYear()
-  const com = await comisionesAsegura(`${anio}-01-01`)
+  const com = await comisionesAsegura(`${anio - 1}-12-01`)
 
   if (com.estado === 'sin_configurar') {
     // El puerto no está conectado. NO es «no hay comisiones»: no se escribe nada
@@ -139,6 +166,31 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── El banco: cada abono de seguros a UN periodo como mucho (`casar-banco.ts`) ─
+  const periodosLiq = filas.map(f => ({ codigo: f.codigo, inicio: f.inicio, fin: f.fin, remesa: f.remesa }))
+  const rango = rangoAbonos(periodosLiq)
+  const abonos: AbonoBanco[] = rango === null ? [] : (await prisma.$queryRaw<Array<{
+    id: string; fecha: string; importe: number; concepto: string | null; concepto_normalizado: string | null
+    contraparte: string | null; compania_seguros: string | null
+  }>>`
+    SELECT mb.id::text AS id, to_char(mb.fecha_operacion, 'YYYY-MM-DD') AS fecha, mb.importe::float AS importe,
+           mb.concepto, mb.concepto_normalizado, mb.contraparte, mb.compania_seguros
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.destino = 'seguros'
+      AND mb.importe > 0
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.fecha_operacion >= ${rango.desde}::date
+      AND mb.fecha_operacion <= ${rango.hasta}::date
+    ORDER BY mb.fecha_operacion, mb.id`).map(r => ({
+      id: r.id, fecha: r.fecha, importe: Number(r.importe), concepto: r.concepto,
+      conceptoNormalizado: r.concepto_normalizado, contraparte: r.contraparte, companiaSeguros: r.compania_seguros,
+    }))
+  const reglas = new Map((await prisma.$queryRaw<Array<{ clave: string; compania: string }>>`
+    SELECT clave, compania FROM correduria_reglas WHERE cuenta_id = ${cuentaId}::uuid`).map(r => [r.clave, r.compania]))
+  const casado = casarAbonos(periodosLiq, abonos, reglas)
+
   const avisos: string[] = []
   let pendientes = 0
 
@@ -149,22 +201,8 @@ export async function GET(req: NextRequest) {
     const recibos = delPeriodo.reduce((s, d) => s + d.recibos, 0)
     const esperado = recibos > 0 ? Math.round(delPeriodo.reduce((s, d) => s + d.bruto, 0) * 100) / 100 : null
 
-    // Ingreso en el BBVA de ESA compañía. Solo cuenta lo identificado: un
-    // movimiento sin compañía asignada no se atribuye a nadie a la ligera.
-    const hasta = new Date(new Date(`${f.fin}T00:00:00Z`).getTime() + VENTANA_COBRO_DIAS * 864e5)
-    const banco = await prisma.$queryRaw<Array<{ total: number | null; ids: string[] | null }>>`
-      SELECT sum(mb.importe)::float AS total, array_agg(mb.id) AS ids
-      FROM movimientos_bancarios mb
-      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-      WHERE cb.cuenta_id = ${cuentaId}::uuid
-        AND mb.destino = 'seguros'
-        AND mb.importe > 0
-        AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
-        AND mb.compania_seguros = ${nombreCompania(f.codigo)}
-        AND mb.fecha_operacion >= ${new Date(`${f.inicio}T00:00:00Z`)}
-        AND mb.fecha_operacion <= ${hasta}`
-    const bancoTotal = banco[0]?.total ?? null
-    const bancoIds = banco[0]?.ids ?? []
+    const { total: bancoTotal, ids: bancoIds } = bancoDePeriodo(
+      { codigo: f.codigo, inicio: f.inicio, fin: f.fin, remesa: f.remesa }, casado, abonos)
 
     await prisma.$executeRaw`
       INSERT INTO comisiones_devengo
@@ -280,15 +318,23 @@ export async function GET(req: NextRequest) {
       : com.truncado === null
         ? 'no se sabe si la lectura vino recortada (asegura no lo informa)'
         : 'lectura completa'
+  const pasadaOk = com.truncado !== true && avisoCuenta === null
   await registrarLatido(
     AGENTE,
-    com.truncado !== true,
-    `${filas.length} periodo(s) cuadrados · ${avisos.length} con dinero que no cuadra · ${pendientes} sin dato o sin fuente · ` +
-      (sinDato ? 'comisiones ilegibles: no se sabe' : `${ilegibles} recibo(s) con comisión ilegible`) +
-      ` · ${notaTecho}`,
+    pasadaOk,
+    [
+      avisoCuenta,
+      `${filas.length} periodo(s) cuadrados · ${avisos.length} con dinero que no cuadra · ${pendientes} sin dato o sin fuente`,
+      sinDato ? 'comisiones ilegibles: no se sabe' : `${ilegibles} recibo(s) con comisión ilegible`,
+      casado.sinPeriodo > 0 ? `${casado.sinPeriodo} abono(s) de seguros sin periodo en el libro` : null,
+      notaTecho,
+    ].filter(Boolean).join(' · '),
   )
   return NextResponse.json({
-    ok: com.truncado !== true,
+    ok: pasadaOk,
+    cuentaSinAbonos: avisoCuenta !== null,
+    // Abonos de una compañía del libro que no se han podido atribuir a ningún periodo (su mes no está).
+    abonosSinPeriodo: casado.sinPeriodo,
     periodos: filas.length,
     avisos: avisos.length,
     pendientes,

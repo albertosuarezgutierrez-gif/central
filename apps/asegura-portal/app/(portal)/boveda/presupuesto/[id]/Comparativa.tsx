@@ -1,6 +1,7 @@
 import { MEDIADOR, NO_EXCLUSIVIDAD } from '@central/module-seguros'
 
 import { eur } from '@/lib/dinero'
+import { NombrarCorredor } from './NombrarCorredor'
 import type { ActualCliente, OpcionCliente } from '@/lib/presupuesto'
 import {
   AVISO_NO_ES_CONTRATACION,
@@ -274,7 +275,11 @@ export function Mediador({ companiasEnPortada }: { companiasEnPortada: number })
  * bloque `Actual` de arriba ya dice que no tiene. Se hace visible con
  * `hayPolizaActual`.
  */
-export function Salidas({ caducado, hayPolizaActual }: { caducado: boolean; hayPolizaActual: boolean }) {
+export function Salidas({ caducado, hayPolizaActual, presupuestoId, puedeNombrar, corredor }: {
+  caducado: boolean; hayPolizaActual: boolean
+  /** Se puede firmar la carta de nombramiento (no retirado ni emitido ni aceptado). */
+  presupuestoId: string; puedeNombrar: boolean; corredor: boolean
+}) {
   const { email, telefono } = MEDIADOR.identidad
   return (
     <section className="seccion">
@@ -300,7 +305,8 @@ export function Salidas({ caducado, hayPolizaActual }: { caducado: boolean; hayP
               Si prefieres no cambiar de compañía, puedo pasar a ser tu corredor en la póliza que ya
               tienes. No cambia ni tu precio ni tus garantías: cambia a quién llamas cuando pasa algo.
             </p>
-            <a className="boton secundario" href={`tel:${telefono}`}>
+            {puedeNombrar && <NombrarCorredor presupuestoId={presupuestoId} corredor={corredor} />}
+            <a className="boton-tenue" href={`tel:${telefono}`}>
               Hablarlo por teléfono
             </a>
           </article>

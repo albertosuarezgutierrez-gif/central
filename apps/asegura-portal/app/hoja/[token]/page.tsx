@@ -7,7 +7,7 @@ import {
   polizasDeLaHoja,
 } from '@central/module-seguros-portal'
 
-import { canalDeCompania, type CanalCompania } from '@central/module-seguros-portal'
+import { canalDeCompania, textoSoloRamos, type CanalCompania } from '@central/module-seguros-portal'
 import { companiasConCanal } from '@/lib/canales-compania'
 import { carteraDeIdentidad, type PolizaPortal } from '@/lib/cartera-lectura'
 import { fechaEs } from '@/lib/fechas'
@@ -309,8 +309,9 @@ function Telefonos({ canal }: { canal: CanalCompania }) {
             {/* 🚨 El horario va con SU vía, no heredado: un canal de siniestros
                 sin horario se lee como «siempre», y esa es la promesa que se
                 rompe un sábado por la noche. */}
+            {v.tipo === 'whatsapp' && textoSoloRamos(v.soloRamos) && <span className="hoja-horario">{textoSoloRamos(v.soloRamos)}</span>}
             {v.horario && <span className="hoja-horario">{v.horario}</span>}
-            {v.tipo === 'whatsapp' && v.nota && <span className="hoja-horario">Solo {v.nota}</span>}
+            {v.tipo === 'whatsapp' && v.nota && <span className="hoja-horario">{v.nota}</span>}
           </li>
         ))}
       </ul>

@@ -15,6 +15,7 @@ export async function pedirPrecalificacionHogar(entrada: {
   polizaId: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
+  referencia?: string
 }): Promise<RespuestaPrecalificacionHogar> {
   return precalificarHogarRetarificarAsegura(entrada)
 }
@@ -28,6 +29,7 @@ export async function pedirLimitesHogar(entrada: {
   polizaId: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
+  referencia?: string
 }): Promise<RespuestaLimitesHogar> {
   return limitesHogarAsegura(entrada)
 }

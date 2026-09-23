@@ -54,6 +54,12 @@ export type TelefonoCompania = {
    * de siniestros (Mapfre: solo hogar, L-V). `null` = es el mismo número.
    */
   whatsappNota?: string | null
+  /**
+   * Para qué ramos vale ese WhatsApp, con los códigos de `polizas.tipo` (`['hogar']`).
+   * `null`/ausente = para todos. Mapfre y Fidelidade: solo hogar — enseñárselo a un
+   * cliente de auto le manda a una línea que no le atiende.
+   */
+  whatsappRamos?: readonly string[] | null
   /** Horario de la línea de siniestros. `null` = no lo sabemos, NO «siempre». */
   horario: string | null
   /** La página oficial donde se comprueba. Es lo que se enlaza si no está verificado. */
@@ -84,7 +90,8 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
       { para: 'Decesos', numeros: ['918 366 181', '900 814 111'], horario: '24 horas' },
     ],
     whatsapp: '+34920750075',
-    whatsappNota: 'para dar parte de hogar, de lunes a viernes de 8:00 a 20:00',
+    whatsappNota: 'de lunes a viernes, de 8:00 a 20:00',
+    whatsappRamos: ['hogar'],
     horario: null,
     fuente: 'https://www.mapfre.es/particulares/contacto/atencion/',
     verificado: true,
@@ -106,7 +113,9 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
       { para: 'Hogar y comercio', numeros: ['913 255 258'], horario: '24 horas' },
       { para: 'Vehículos pesados', numeros: ['900 117 120'], horario: '24 horas' },
     ],
-    whatsapp: null,
+    // WhatsApp aportado por Alberto (corredor) el 23/09/2026, con su horario (PR #3409).
+    whatsapp: '+34638930466',
+    whatsappNota: 'de lunes a viernes, de 9:00 a 19:00 (dato de tu corredor, no de su web)',
     horario: null,
     fuente: 'https://www.allianz.es/contacto.html',
     verificado: true,
@@ -151,13 +160,16 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     codigoDgs: 'C0072',
     // Captura de su web del 23/09/2026: los dos números son de asistencia en
     // carretera (el 911 también desde el extranjero). La grúa por WhatsApp sale
-    // como botón sin número visible, así que no se publica.
+    // como botón sin número visible. Ese número es +34 654 03 36 29: perfil de
+    // WhatsApp Business VERIFICADO «Generali» (captura de Alberto, 23/09/2026),
+    // con un asistente para gestiones de los seguros, grúa incluida. Horario no publicado.
     siniestros: null,
     asistencia: [
       { para: 'Asistencia en carretera', numeros: ['911 123 443', '900 903 433'], horario: null },
       { para: 'Asistencia en carretera desde el extranjero', numeros: ['+34 911 123 443'], horario: null },
     ],
-    whatsapp: null,
+    whatsapp: '+34654033629',
+    whatsappNota: 'asistente virtual para gestiones y grúa; no publica horario (su perfil verificado de WhatsApp Business)',
     horario: null,
     fuente: 'https://www.generali.es/contacto-generali',
     verificado: true,
@@ -172,7 +184,8 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     siniestros: null,
     asistencia: [{ para: 'Hogar', numeros: ['915 901 759', '900 802 822'], horario: null }],
     whatsapp: '+34666519911',
-    whatsappNota: 'para hogar',
+    whatsappNota: null,
+    whatsappRamos: ['hogar'],
     horario: null,
     fuente: 'https://www.fidelidade.es/',
     verificado: true,

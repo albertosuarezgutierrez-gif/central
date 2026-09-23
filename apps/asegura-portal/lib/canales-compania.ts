@@ -23,6 +23,7 @@ export function companiasConCanal(): FilaCompania[] {
     asistencias: c.asistencia.flatMap((a) => a.numeros.map((numero) => ({ para: a.para, numero, horario: a.horario }))),
     whatsappSiniestros: c.whatsapp,
     whatsappNota: c.whatsappNota ?? null,
+    whatsappRamos: c.whatsappRamos ?? null,
     horarioSiniestros: c.horario,
     verificadoEn: c.verificadoEl,
   }))

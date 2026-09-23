@@ -791,3 +791,4 @@ export {
   TELEFONOS_COMPANIAS, esTelefonoPublicable, hrefTel, telefonoVerificadoPorCodigo, telefonosParaPublicar, whatsappLegible,
   type LineaAsistencia, type TelefonoCompania,
 } from './telefonos-companias.ts'
+export { ACCIONES_CARTA_MEDIADOR, ESTADOS_CARTA_ABIERTA, cartaNombramientoMediador, esCompaniaDeRelleno, transicionCartaMediador, type AccionCartaMediador, type DatosCartaMediador, type EstadoCartaMediador } from './carta-mediador.ts'

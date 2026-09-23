@@ -12,6 +12,33 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🏦 **PR 9: libro de comisiones — el banco casado abono a abono y la cuenta correcta.** #3414 (WhatsApp por
+ramo en plataforma) mergeado. Medido: el cron `cima-liq` elegía cuenta con `LIMIT 1` sin orden y desde el 20/09 escribía
+en una cuenta sin bancos (libro de Alberto congelado); y sus ventanas de 45 días contaban el mismo abono en 2-3 periodos
+(Occident ene: 592€ vs 301€ devengados). `casar-banco.ts` (puro, 8 tests, mutaciones vistas morder). Hallazgos para
+Alberto: 5 ingresos de nómina/pensión y un reembolso de Vercel clasificados `destino='seguros'`; la regla M1454 dice Asisa;
+Allianz liquida (4 periodos) sin ningún abono identificado en BBVA. Mapfre WhatsApp (23b) pendiente de aplicar tras deploy.
+
+**(23/09/2026)** 📲 **PR 8: el WhatsApp de siniestros respeta su ramo también en plataforma.** #3409 mergeado. La ficha
+de un siniestro en `/correduria` pintaba el WhatsApp de la compañía sin mirar el ramo: con el de Mapfre (solo partes de
+hogar) activo habría ofrecido esa línea en siniestros de auto. Ahora `whatsappParaRamo()` (plataforma, misma regla que
+el portal: con restricción y ramo desconocido → no se pinta) + nota «Solo para partes de hogar»; asegura sirve
+`whatsappSiniestrosRamos` en `/api/operador/companias`. Pendiente tras desplegar: aplicar
+`apps/asegura-portal/prisma/sql/2026-09-23b_companias_whatsapp_mapfre_hogar.sql` (activa Mapfre hogar).
+
+**(23/09/2026)** 📲 **PR 7: el parte también a la compañía por WhatsApp (lo manda el cliente).** #3401 (PR 6) mergeado con su
+revisión (carta nunca a «(legacy)», guardas del botón en el puente, cartas pendientes en Hoy). Nuevo: tras dar el parte, si
+la póliza tiene WhatsApp de su compañía VÁLIDO PARA SU RAMO, dos toques: abrir el chat con el texto escrito (`wa.me?text=`)
+y compartir un PDF montado en el navegador con datos y fotos (pdf-lib; lo que no entra se dice). BD: `companias_dgs.
+whatsapp_siniestros_ramos` (aplicada). WhatsApp puesto: Allianz +34638930466 (L-V 9-19), Generali +34654033629 (asistente).
+🚨 Pendiente tras DESPLEGAR el portal: aplicar `2026-09-23b_companias_whatsapp_mapfre_hogar.sql` (Mapfre, solo hogar).
+Siguiente: copia del parte por correo a la compañía vía la cola de aprobaciones.
+**(23/09/2026)** 🤝 **Presupuesto PR 6: carta de nombramiento de mediador (salida B).** #3395 (PR 5) mergeado con su
+revisión (tomador del presupuesto, empresas sin fecha de nacimiento, correo principal, no fundir NIF). Nuevo: tabla
+`seguros.carta_mediador` (aplicada, CHECK y único vistos morder); el cliente firma en el portal «Nombrarte mi corredor»
+(código al correo, solo el tomador, no si CIMA ya la trae); Telegram a Alberto; tarjeta en la ficha de póliza para
+marcarla enviada/aceptada/rechazada — la carta la manda Alberto, nada sale solo. Pendiente: mandarla por la cola;
+WhatsApp de siniestros/grúa de Generali y Mapfre (pide los números oficiales a Alberto).
 **(23/09/2026)** 🏠 **Capitales recomendados de hogar, probados en real.** #3388: el vendor exige `effectiveDate`
 en recommend-limits aunque el ejemplo del portal no la trae (400 medido con una póliza de hogar real) · #3391: el botón
 dice POR QUÉ está apagado. Solo 2 hogares vivos traen m²/año/CP en la póliza → el resto se corta en retarificar:
@@ -345,6 +372,16 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Catálogo verificado movido a `packages/module-seguros/src/telefonos-companias.ts` (con `codigoDgs`). Lo leen la web, el portal (`asegura-portal/lib/canales-compania.ts`, ya sin BD) y el puerto `/api/operador/companias` de asegura (pisa las columnas). Columnas `telefono_*` de `companias_dgs` comentadas como OBSOLETAS en BD, no borradas.
 - Portal: `FilaCompania` admite varias asistencias rotuladas («Asistencia · Hogar») y la nota del WhatsApp (Mapfre: solo hogar). Cepo nuevo `test/regression-telefonos-fuente-unica.test.ts` (visto en rojo).
 - Cambiar un número = PR al catálogo con captura y fecha, nunca UPDATE a la BD.
+## (23/09/2026) correduría: retarificar hogar SIN m²/año/CP con el Catastro
+- Medido: 22 de las 28 pólizas de hogar vivas no canceladas no traían el riesgo (ni póliza ni gemela) y se quedaban en «no se puede retarificar». Ahora retarificar ofrece buscar la vivienda en el Catastro (precargada con la dirección del CLIENTE, avisando de que puede no ser la del riesgo) → elegir piso → la ficha sale con m²/año/CP «del Catastro».
+- Solo viaja la REFERENCIA de 20 a asegura (`referencia` en precalificar-hogar, retarificar y limites-hogar); asegura consulta el Catastro ella misma (`lib/codeoscopic/catastro-referencia.ts`): los números con los que se paga no los pone plataforma. El Catastro solo rellena huecos, no pisa la póliza.
+- Cepo `catastro-referencia.test.ts` (visto en rojo). Sin prueba real desde el contenedor: el proxy da 403 al Catastro; el mismo cliente ya funciona en hogar-nuevo.
+- Pendiente: guardar la referencia elegida en la póliza (hoy se elige cada vez).
+
+## (23/09/2026) plataforma: capital recomendado de hogar en un clic (retarificar)
+- Primera recomendación real de `recommend-limits` OK (continente 93.000€, contenido 27.000€). Ahora cada fila ofrece mínimo/media/máximo y hay «Usar los dos recomendados»; el cliente elige o se corrige a mano. NO se guarda en la póliza, solo en la cotización (decisión: la recomendación nunca se escribe sola).
+- «Pedir precio» ya no se queda colgado si se corta la red (try/catch con «no se sabe si ha costado»).
+- Pendiente: Catastro por dirección para las pólizas de hogar sin m²/año/CP (solo 2 las tienen); preguntar a Codeoscopic si recommend-limits factura.
 
 ## (23/09/2026) asegura-web + BD: teléfonos de compañías verificados con capturas (PR #3398)
 - Web `/telefonos-siniestros`: Mapfre, Allianz, Generali, Reale, Fidelidade y Asisa verificadas con capturas de Alberto (Occident ya lo estaba). `asistencia` = lista por riesgo; solo Reale (900 455 900) y Occident publican voz para dar parte.

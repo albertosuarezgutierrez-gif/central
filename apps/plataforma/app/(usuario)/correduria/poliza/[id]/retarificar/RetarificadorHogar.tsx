@@ -87,9 +87,12 @@ function euroODash(n: number | null | undefined): string {
 export default function RetarificadorHogar({
   polizaId,
   preInicial,
+  referencia,
 }: {
   polizaId: string
   preInicial: PrecalificacionHogar
+  /** Referencia catastral del piso elegido (pólizas sin m²/año/CP): viaja en cada llamada. */
+  referencia?: string
 }) {
   const [pre, setPre] = useState(preInicial)
   const [resueltos, setResueltos] = useState<Record<string, unknown>>({})
@@ -103,7 +106,7 @@ export default function RetarificadorHogar({
   async function recalcular(nuevosResueltos: Record<string, unknown>, nuevasCorrecciones: Record<string, unknown>) {
     setRecalculando(true)
     try {
-      const r = await pedirPrecalificacionHogar({ polizaId, resueltos: nuevosResueltos, correcciones: nuevasCorrecciones })
+      const r = await pedirPrecalificacionHogar({ polizaId, resueltos: nuevosResueltos, correcciones: nuevasCorrecciones, referencia })
       if (r.estado === 'ok') {
         setPre(r.pre)
         setErrorRecalculo(null)
@@ -189,7 +192,14 @@ export default function RetarificadorHogar({
 
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
-    const r = await pedirCotizacion({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones })
+    let r: Awaited<ReturnType<typeof pedirCotizacion>>
+    try {
+      r = await pedirCotizacion({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones, referencia })
+    } catch (e) {
+      // Se cortó entre el navegador y plataforma: la cotización pudo llegar a Codeoscopic.
+      setResultado({ estado: 'error', mensaje: e instanceof Error ? e.message : String(e), gastoDesconocido: true })
+      return
+    }
     switch (r.estado) {
       case 'faltan':
         setResultado({ estado: 'faltan', faltan: r.faltan })
@@ -237,6 +247,18 @@ export default function RetarificadorHogar({
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
+      {pre.catastro !== null && (
+        <div className="card">
+          <p style={{ margin: 0 }}>
+            <strong>Riesgo completado con el Catastro</strong>
+            {pre.catastro.direccionLegible ? `: ${pre.catastro.direccionLegible}` : ''}
+          </p>
+          <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
+            Solo rellena lo que la póliza no trae (m², año, CP), y cada dato sale marcado «del Catastro». Comprueba con
+            el cliente que es su vivienda asegurada.
+          </p>
+        </div>
+      )}
       {pre.primaActual !== null && (
         <div className="card">
           <p className="muted" style={{ margin: 0, fontSize: 12 }}>
@@ -321,9 +343,9 @@ export default function RetarificadorHogar({
                               .join(', ')}.`
                           : null
                 }
-                pedir={() => pedirLimitesHogar({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones })}
-                usar={(campo, valor) => {
-                  const nuevas = { ...correcciones, [campo]: valor }
+                pedir={() => pedirLimitesHogar({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones, referencia })}
+                usar={(capitales) => {
+                  const nuevas = { ...correcciones, ...capitales }
                   setCorrecciones(nuevas)
                   void recalcular(resueltos, nuevas)
                 }}
@@ -431,7 +453,7 @@ function RecomendarCapital({
   /** `null` = se puede pedir; si no, POR QUÉ no (se enseña tal cual). */
   bloqueo: string | null
   pedir: () => Promise<RespuestaLimitesHogar>
-  usar: (campo: 'capitalContinente' | 'capitalContenido', valor: number) => void
+  usar: (capitales: Partial<Record<'capitalContinente' | 'capitalContenido', number>>) => void
 }) {
   const [estado, setEstado] = useState<RespuestaLimitesHogar | 'pidiendo' | null>(null)
   const pidiendo = estado === 'pidiendo'
@@ -461,8 +483,24 @@ function RecomendarCapital({
       </p>
       {estado !== null && estado !== 'pidiendo' && estado.estado === 'ok' && (
         <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-          <RangoFila titulo="Continente" rango={estado.continente} usar={(v) => usar('capitalContinente', v)} />
-          <RangoFila titulo="Contenido" rango={estado.contenido} usar={(v) => usar('capitalContenido', v)} />
+          <RangoFila titulo="Continente" rango={estado.continente} usar={(v) => usar({ capitalContinente: v })} />
+          <RangoFila titulo="Contenido" rango={estado.contenido} usar={(v) => usar({ capitalContenido: v })} />
+          {estado.continente?.media != null && estado.contenido?.media != null && (
+            <button
+              type="button"
+              className="primary"
+              onClick={() =>
+                usar({ capitalContinente: estado.continente!.media!, capitalContenido: estado.contenido!.media! })
+              }
+              style={{ minHeight: 44, justifySelf: 'start' }}
+            >
+              Usar los dos recomendados
+            </button>
+          )}
+          <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+            Se aplica a esta cotización, no se guarda en la póliza. Si el cliente prefiere otra cifra, cámbiala en su
+            fila de arriba.
+          </p>
           <p className="muted" style={{ fontSize: 12, margin: 0 }}>
             {estado.coste}
             {estado.restantesHoy !== null ? ` · quedan hoy ${estado.restantesHoy}` : ''}
@@ -514,11 +552,13 @@ function RangoFila({ titulo, rango, usar }: { titulo: string; rango: RangoCapita
           (de {rango.minimo !== null ? eur(rango.minimo) : '—'} a {rango.maximo !== null ? eur(rango.maximo) : '—'})
         </span>
       </span>
-      {rango.media !== null && (
-        <button type="button" onClick={() => usar(rango.media!)} style={{ minHeight: 44 }}>
-          Usar {eur(rango.media)}
-        </button>
-      )}
+      {[rango.minimo, rango.media, rango.maximo]
+        .filter((v, i, a): v is number => v !== null && a.indexOf(v) === i)
+        .map((v) => (
+          <button key={v} type="button" onClick={() => usar(v)} style={{ minHeight: 44 }}>
+            Usar {eur(v)}
+          </button>
+        ))}
     </div>
   )
 }

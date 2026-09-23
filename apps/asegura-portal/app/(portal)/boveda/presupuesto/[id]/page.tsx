@@ -186,7 +186,13 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         </section>
       )}
 
-      <Salidas caducado={p.caducado} hayPolizaActual={p.actual !== null} />
+      <Salidas
+        caducado={p.caducado}
+        hayPolizaActual={p.actual !== null}
+        presupuestoId={p.id}
+        puedeNombrar={!p.retirado && p.aceptadoAt === null && p.emitidoAt === null && p.enviadoAt !== null}
+        corredor={p.vistaDeCorredor}
+      />
       <Mediador companiasEnPortada={companias} />
 
       <p className="volver">

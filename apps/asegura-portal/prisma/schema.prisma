@@ -1042,6 +1042,8 @@ model CompaniaDgs {
   telefonoSiniestros   String?   @map("telefono_siniestros")
   telefonoAsistencia   String?   @map("telefono_asistencia")
   whatsappSiniestros   String?   @map("whatsapp_siniestros")
+  /// Ramos para los que vale el WhatsApp (`polizas.tipo`); vacío = todos. Mapfre: solo hogar.
+  whatsappSiniestrosRamos String[] @default([]) @map("whatsapp_siniestros_ramos")
   horarioSiniestros    String?   @map("horario_siniestros")
   telefonoVerificadoEn DateTime? @map("telefono_verificado_en") @db.Date
 

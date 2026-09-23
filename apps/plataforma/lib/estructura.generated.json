@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-23T16:22:55Z",
+  "generadoEn": "2026-09-23T20:35:53Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -416,7 +416,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 11
       },
       "asegura-portal": {
         "estado": "usado",
@@ -444,7 +444,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "no",
@@ -524,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 11
       },
       "asegura-portal": {
         "estado": "usado",
@@ -577,8 +577,8 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 4
       },
       "asegura-portal": {
         "estado": "no",
@@ -960,7 +960,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 7
       },
       "asegura-web": {
         "estado": "no",
@@ -2198,15 +2198,15 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 88
+        "evidencias": 97
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 85
+        "evidencias": 90
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 26
+        "evidencias": 27
       },
       "housesevillana": {
         "estado": "no",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 74
+        "evidencias": 77
       },
       "rrhh": {
         "estado": "no",
@@ -2306,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 23
+        "evidencias": 24
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 69
+        "evidencias": 74
       },
       "asegura-web": {
         "estado": "usado",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 11
+        "evidencias": 15
       },
       "asegura-portal": {
         "presente": false,
@@ -3977,10 +3977,12 @@
       "/api/cron/revision-anual",
       "/api/operador/actividad",
       "/api/operador/actividad-nueva",
+      "/api/operador/anulaciones",
       "/api/operador/aprobaciones",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
+      "/api/operador/carta-mediador",
       "/api/operador/cartera",
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
@@ -3999,6 +4001,7 @@
       "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/faltan-producto",
       "/api/operador/codeoscopic/hogar-nuevo",
+      "/api/operador/codeoscopic/limites-hogar",
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/moto-nuevo",
       "/api/operador/codeoscopic/oferta",
@@ -4063,14 +4066,18 @@
       "/api/operador/tareas-hoy",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
+      "/api/portal/anulacion",
       "/api/portal/carnets",
+      "/api/portal/carta-mediador",
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
       "/api/portal/contactos",
       "/api/portal/contactos/[id]",
+      "/api/portal/datos-emision",
       "/api/portal/documento",
       "/api/portal/mejorar-precio",
       "/api/portal/nota",
+      "/api/portal/presupuesto",
       "/api/publico/recaptacion/baja",
       "/api/webhooks/codeoscopic",
       "/api/webhooks/resend"
@@ -4078,6 +4085,7 @@
     "asegura-portal": [
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
+      "/api/anulacion",
       "/api/autorizaciones",
       "/api/autorizaciones/[id]",
       "/api/avisos",
@@ -4085,6 +4093,7 @@
       "/api/catastro/sugerir",
       "/api/consentimiento",
       "/api/cron/avisos-push",
+      "/api/documento/dni",
       "/api/hojas",
       "/api/hojas/[id]",
       "/api/invitaciones",
@@ -4101,6 +4110,8 @@
       "/api/polizas/[id]",
       "/api/polizas/[id]/carta",
       "/api/polizas/[id]/reintentar",
+      "/api/presupuesto/carta",
+      "/api/presupuesto/firma",
       "/api/push/desuscribir",
       "/api/push/suscribir",
       "/api/recordatorios",
@@ -4109,6 +4120,7 @@
       "/api/siniestros",
       "/api/siniestros/[id]/adjuntos",
       "/api/siniestros/[id]/adjuntos/[documentoId]",
+      "/api/siniestros/[id]/whatsapp",
       "/api/sugerencia",
       "/api/sugerencias",
       "/api/sugerencias/pedir",
@@ -4919,11 +4931,13 @@
       "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/actividad",
+      "/api/correduria/anulaciones",
       "/api/correduria/aprobaciones",
       "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
       "/api/correduria/blog",
       "/api/correduria/buscar",
+      "/api/correduria/carta-mediador",
       "/api/correduria/cartera",
       "/api/correduria/cartera-lista",
       "/api/correduria/catastro",
@@ -5414,6 +5428,7 @@
     "asegura": [
       "if",
       "seguros._volcado_control",
+      "seguros.anulacion",
       "seguros.aprobacion",
       "seguros.auditoria",
       "seguros.backfill_dni_plan",
@@ -5422,6 +5437,7 @@
       "seguros.bot_eval_runs",
       "seguros.bot_eval_scores",
       "seguros.bot_turn_traces",
+      "seguros.carta_mediador",
       "seguros.cartera_foto",
       "seguros.channel_inbound_messages",
       "seguros.cima_ficheros",
@@ -6476,7 +6492,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1429,
+    "apis": 1443,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

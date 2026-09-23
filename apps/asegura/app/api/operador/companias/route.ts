@@ -43,6 +43,7 @@ export async function GET(req: Request) {
         telefonoSiniestros: t?.siniestros ?? null,
         telefonoAsistencia: null,
         whatsappSiniestros: t?.whatsapp ?? null,
+        whatsappSiniestrosRamos: t?.whatsappRamos ?? [],
         horarioSiniestros: t?.horario ?? null,
         telefonoFuente: t?.fuente ?? null,
         telefonoVerificadoEn: t?.verificadoEl ?? null,

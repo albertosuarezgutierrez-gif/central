@@ -53,7 +53,7 @@ export const maxDuration = 180
  *    no una cotización.
  *
  * ── Cuerpo ──────────────────────────────────────────────────────────────────
- *   { polizaId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, catastro? }
+ *   { polizaId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, catastro?, referencia? }
  *
  * ── Respuesta ───────────────────────────────────────────────────────────────
  * **La MISMA** que `POST /api/cartera/polizas/{id}/retarificar`, campo por
@@ -115,6 +115,7 @@ export const POST = auditado(async (req: Request) => {
       resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
       correcciones,
       catastro: esObjeto(cuerpo.catastro) ? cuerpo.catastro : null,
+      referencia: typeof cuerpo.referencia === 'string' ? cuerpo.referencia : undefined,
       // El escape hatch del guardián de reutilización. Solo el booleano exacto:
       // plataforma lo manda únicamente tras «Descartar y pedir precio de cero».
       // Hasta el 12/09/2026 esta ruta lo tiraba y el guardián era infranqueable

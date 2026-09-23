@@ -34,7 +34,7 @@ test('ninguna app lee de la BD los teléfonos de las compañías', () => {
   // Una `select` de Prisma sobre `companiaDgs` con esas columnas es leer la
   // copia vieja. Se exige `companiaDgs` en el mismo fichero porque el mismo
   // nombre existe como bandera de visibilidad (`acceso.ts`), que no es la BD.
-  const prohibido = /\b(telefonoSiniestros|telefonoAsistencia|whatsappSiniestros|horarioSiniestros)\s*:\s*true\b/
+  const prohibido = /\b(telefonoSiniestros|telefonoAsistencia|whatsappSiniestros|whatsappSiniestrosRamos|horarioSiniestros)\s*:\s*true\b/
   const culpables = ['apps', 'packages']
     .flatMap((d) => fuentes(join(RAIZ, d)))
     .filter((f) => {

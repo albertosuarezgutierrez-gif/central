@@ -588,7 +588,7 @@ function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ra
   compania: Compania | null
 }) {
   const propio = s.origen === 'gestionado_correduria'
-  const contactoCia = compania ? contactoSiniestroDe(compania) : null
+  const contactoCia = compania ? contactoSiniestroDe(compania, ramoPoliza) : null
   return (
     <div style={{ borderTop: '1px solid var(--border)', padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14, fontSize: 13 }}>
       <div>
@@ -615,6 +615,7 @@ function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ra
               <div>
                 <div style={etiqueta}>WhatsApp</div>
                 <a href={`https://wa.me/${contactoCia.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">💬 {contactoCia.whatsapp}</a>
+                {contactoCia.whatsappNota && <div style={{ ...muted, fontSize: 12 }}>{contactoCia.whatsappNota}</div>}
               </div>
             )}
             {contactoCia.horario && <Dato label="Horario" valor={contactoCia.horario} />}
