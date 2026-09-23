@@ -234,6 +234,8 @@ export type EstadoPresupuestoLista =
 export type PresupuestoEnLista = {
   id: string
   estado: EstadoPresupuestoLista
+  /** `null` si la versión de asegura desplegada no lo manda: entonces no se cruzan los datos para emitir. */
+  clienteId: string | null
   creadoAt: string
   venceEl: string
   enviadoAt: string | null
@@ -253,7 +255,7 @@ export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
   const id = s(o.id), estado = s(o.estado), creadoAt = s(o.creadoAt), venceEl = s(o.venceEl)
   if (!id || !estado || !creadoAt || !venceEl || !ESTADOS.includes(estado as EstadoPresupuestoLista)) return null
   return {
-    id, estado: estado as EstadoPresupuestoLista, creadoAt, venceEl,
+    id, estado: estado as EstadoPresupuestoLista, clienteId: s(o.clienteId), creadoAt, venceEl,
     enviadoAt: s(o.enviadoAt), enlaceGeneradoAt: s(o.enlaceGeneradoAt), vistoAt: s(o.vistoAt),
     opciones: typeof o.opciones === 'number' ? o.opciones : 0,
     desdeEur: typeof o.desdeEur === 'number' ? o.desdeEur : null,
@@ -299,4 +301,33 @@ export function textoAviso(status: number, j: unknown): { ok: boolean; texto: st
   if (status === 200 && o.estado === 'emitido') return { ok: true, texto: 'Anotado como emitido. Si firmó la anulación de su póliza anterior, ya te espera en «Hoy · Esperan tu OK».' }
   if (typeof o.detalle === 'string') return { ok: false, texto: `NO enviado: ${o.detalle}` }
   return { ok: false, texto: 'NO se sabe si ha salido: no se ha podido hablar con asegura. Recarga antes de repetir.' }
+}
+
+/**
+ * La línea «datos para emitir» de un presupuesto (§4bis), a partir de lo que manda asegura para su
+ * cliente. Tres salidas que no se colapsan: no se pudo mirar · completos · lo que falta y quién lo pone.
+ * 🚨 Un cifrado que no abre NO es «falta»: se dice aparte, porque se arregla en Vercel, no llamando.
+ */
+export function fraseDatosEmision(v: unknown): { texto: string; alerta: boolean } {
+  const o = typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null
+  const datos = Array.isArray(o?.datos) ? (o!.datos as unknown[]) : null
+  if (!datos) return { texto: 'Datos para emitir: no se han podido comprobar.', alerta: false }
+  const filas = datos.flatMap((d) => {
+    const x = typeof d === 'object' && d !== null ? (d as Record<string, unknown>) : {}
+    return typeof x.etiqueta === 'string' && typeof x.estado === 'string' && typeof x.aporta === 'string'
+      ? [{ etiqueta: x.etiqueta.replace(/\s*\(.*\)$/, ''), estado: x.estado, aporta: x.aporta }] : []
+  })
+  if (filas.length !== datos.length) return { texto: 'Datos para emitir: no se han podido comprobar.', alerta: false }
+  const de = (f: (x: (typeof filas)[number]) => boolean) => filas.filter(f).map((x) => x.etiqueta.toLowerCase())
+  const cliente = de((x) => x.estado === 'falta' && x.aporta !== 'corredor')
+  const corredor = de((x) => x.estado === 'falta' && x.aporta === 'corredor')
+  const revision = de((x) => x.estado === 'en_revision')
+  const ilegibles = filas.filter((x) => x.estado === 'no_legible').length
+  const partes: string[] = []
+  if (cliente.length) partes.push(`falta ${cliente.join(', ')} (se lo pide su portal)`)
+  if (revision.length) partes.push(`${revision.join(' y ')}: ha subido su DNI, revísalo en Documentos`)
+  if (corredor.length) partes.push(`${corredor.join(', ')}: la pones tú al emitir`)
+  if (ilegibles) partes.push(`⚠ ${ilegibles} dato${ilegibles === 1 ? '' : 's'} no abre${ilegibles === 1 ? '' : 'n'}: revisa la clave PII de asegura`)
+  if (!partes.length) return { texto: 'Datos para emitir: completos ✓', alerta: false }
+  return { texto: `Datos para emitir: ${partes.join(' · ')}.`, alerta: ilegibles > 0 || cliente.length > 0 }
 }
