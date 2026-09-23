@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-23T09:17:42Z",
-  "sha": "ac115054eb0e209f05c24cb385d9aa773cbaff78",
+  "generadoEn": "2026-09-23T09:51:43Z",
+  "sha": "10c4a36456287c2d8fb50d2d2d6c0abed4371fb6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12530,6 +12530,27 @@
       "hash": "4f4c1daff309"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/leads-competencia/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "GET /api/operador/leads-competencia?dias=90 — carril de LEADS de Vencimientos (solo lectura). La fecha de cada lead es ESTIMADA: aniversario de la póliza que tenía en otra compañía (tabla heredada `op"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/leads-competencia",
+      "hash": "bc2d8cc2392e"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/leads-web/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -20465,6 +20486,50 @@
       ],
       "rutaApi": null,
       "hash": "8136c7384eba"
+    },
+    {
+      "ruta": "apps/asegura/lib/leads-competencia.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El carril de LEADS de Vencimientos: pólizas que los leads tenían en OTRA compañía (tabla heredada `oportunidades`, estado `competencia`), con el próximo aniversario de su fecha de fin. Solo lectura: no envía ni escribe. Por qué y qué significa la fecha: cabecera de `lead-competencia.ts` en `@central",
+      "exporta": [
+        "leadsCompetencia"
+      ],
+      "funciones": [
+        {
+          "nombre": "aseguradoraLegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "string | null",
+          "linea": 67,
+          "resumen": "Valor de cajón del volcado de Manuel: no es una compañía."
+        },
+        {
+          "nombre": "hoyUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Date",
+          "linea": 89
+        },
+        {
+          "nombre": "leadsCompetencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, horizonteDias = 90, hoy: Date = hoyUtc(),",
+          "retorno": "Promise<ListaLeadsCompetencia>",
+          "linea": 94
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "current_date",
+        "oportunidades",
+        "polizas",
+        "recaptacion_envios"
+      ],
+      "rutaApi": null,
+      "hash": "48cd65be92a7"
     },
     {
       "ruta": "apps/asegura/lib/leads-portal.ts",
@@ -136789,6 +136854,67 @@
       "hash": "99462f31996b"
     },
     {
+      "ruta": "packages/module-seguros/src/lead-competencia.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "packages/module-seguros/src/lead-competencia.ts El carril de LEADS de Vencimientos (Fase 1 de ASegura OS, 23/09/2026). ── Por qué existe ────────────────────────────────────────────────────────── La tabla heredada `seguros.oportunidades` (app de Manuel, importada el 21/06/2026) guarda 3.676 pólizas ",
+      "exporta": [
+        "proximoAniversario",
+        "diasHasta",
+        "ventanaDe",
+        "puntuarLead",
+        "siguientePasoLead"
+      ],
+      "funciones": [
+        {
+          "nombre": "proximoAniversario",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaIso: string | null | undefined, hoy: Date",
+          "retorno": "string | null",
+          "linea": 28,
+          "resumen": "El próximo aniversario (≥ hoy) de una fecha pasada, en `yyyy-mm-dd`. `null` si la fecha no se puede leer: sin fecha no hay a qué anclar el contacto, y eso no es «vence hoy». Un 29 de febrero cae al 28"
+        },
+        {
+          "nombre": "diasHasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaIso: string, hoy: Date",
+          "retorno": "number",
+          "linea": 45,
+          "resumen": "Días naturales entre hoy y una fecha `yyyy-mm-dd` (0 = hoy)."
+        },
+        {
+          "nombre": "ventanaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias: number",
+          "retorno": "VentanaLead",
+          "linea": 51
+        },
+        {
+          "nombre": "puntuarLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosPuntuacion",
+          "retorno": "number",
+          "linea": 78,
+          "resumen": "Puntuación 0-100 para ORDENAR la lista, no para decidir nada: por reglas y a la vista, sin modelo. Pesa sobre todo poder hablar con él (sin canal no se vende) y que el ramo se pueda tarificar hoy. La "
+        },
+        {
+          "nombre": "siguientePasoLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias: number, intentos: number, diasDesdeUltimo: number | null, respondio = false,",
+          "retorno": "PasoLead",
+          "linea": 111,
+          "resumen": "Qué toca con un lead, por reglas: primer contacto a 60 días del aniversario, recordatorio a los 7 días sin respuesta, llamada a los 14 y, tras 3 intentos sin respuesta, se aparca hasta el año siguient"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "41243c9edf86"
+    },
+    {
       "ruta": "packages/module-seguros/src/matricula.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Estimación de la fecha de matriculación a partir de la matrícula española. 🚨 LO PRIMERO, PORQUE ES LO QUE MÁS DUELE SI SE OLVIDA: esto es una ESTIMACIÓN, nunca un dato oficial. Lo único que sabe este módulo es en qué POSICIÓN de la serie nacional cae una matrícula; la fecha sale de interpolar esa p",
@@ -143640,7 +143766,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3480,
-    "funciones": 10909
+    "archivos": 3483,
+    "funciones": 10918
   }
 }
