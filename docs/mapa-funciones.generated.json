@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-23T20:35:53Z",
-  "sha": "916b7d57537659dd3048c451627d49bbb66bd160",
+  "generadoEn": "2026-09-23T20:59:51Z",
+  "sha": "3cf35449cae97cbc38a529268181d9ae68ba6b52",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -82184,12 +82184,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 38
+          "linea": 37
         }
       ],
       "tablas": [
         "comisiones_cobertura",
         "comisiones_devengo",
+        "correduria_reglas",
         "cuentas",
         "cuentas_bancarias",
         "movimientos_bancarios",
@@ -82197,7 +82198,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "070e93d22583"
+      "hash": "e4d6ccd48101"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/cima-pull-respaldo/route.ts",
@@ -96411,6 +96412,93 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "fcf22c705006"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria/casar-banco.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "El tramo del BANCO del libro de comisiones: qué abono del BBVA paga qué periodo. Lógica PURA (sin BD) para poder testearla; la llama `app/api/cron/cima-liq`. 🚨 Por qué existe (medido el 23/09/2026): el cron sumaba, para cada periodo, TODOS los abonos de la compañía entre el inicio del periodo y 45 ",
+      "exporta": [
+        "codigoDeAbono",
+        "mesDelConcepto",
+        "casarAbonos",
+        "bancoDePeriodo",
+        "rangoAbonos"
+      ],
+      "funciones": [
+        {
+          "nombre": "codigoDeAbono",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AbonoBanco, reglas: ReadonlyMap<string, string>",
+          "retorno": "string | null",
+          "linea": 51,
+          "resumen": "Código DGS de la compañía que paga el abono, o `null` si no se sabe. Misma prioridad que la matriz (`app/api/correduria/route.ts`): asignación manual → regla aprendida por clave → concepto. Un abono q"
+        },
+        {
+          "nombre": "mesDelConcepto",
+          "kind": "function",
+          "exportada": true,
+          "params": "concepto: string | null",
+          "retorno": "string | null",
+          "linea": 67,
+          "resumen": "El mes que el propio concepto dice pagar: «Liq.comisiones 202512», «Comisiones mayo 2026050», «-fra-comis-20250531». Solo años 202x, con un no-dígito delante y como mucho dos dígitos detrás (el día): "
+        },
+        {
+          "nombre": "mas",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string, dias: number",
+          "retorno": "string",
+          "linea": 72
+        },
+        {
+          "nombre": "clave",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PeriodoLiq",
+          "retorno": "string",
+          "linea": 76
+        },
+        {
+          "nombre": "mitadMesAnterior",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string",
+          "retorno": "string",
+          "linea": 81,
+          "resumen": "El día 15 del mes anterior al de `fecha` (`YYYY-MM-DD`)."
+        },
+        {
+          "nombre": "casarAbonos",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodos: readonly PeriodoLiq[], abonos: readonly AbonoBanco[], reglas: ReadonlyMap<string, string>,",
+          "retorno": "Casado",
+          "linea": 106,
+          "resumen": "3. el último cerrado antes del pago, SOLO si cubre el mes anterior al pago (se liquida al acabar el periodo). Si el mes que se paga no está en el libro, el abono no se asigna: medido, sin esta condici"
+        },
+        {
+          "nombre": "bancoDePeriodo",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PeriodoLiq, casado: Casado, abonos: readonly AbonoBanco[],",
+          "retorno": "",
+          "linea": 149,
+          "resumen": "Total y abonos casados con un periodo. `total: null` = ningún abono identificado (no «0€ cobrados»)."
+        },
+        {
+          "nombre": "rangoAbonos",
+          "kind": "function",
+          "exportada": true,
+          "params": "periodos: readonly PeriodoLiq[]",
+          "retorno": "",
+          "linea": 162,
+          "resumen": "Primera y última fecha que hay que traer del banco para poder casar estos periodos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "faa33d6957fa"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/cuadre.ts",
@@ -149096,7 +149184,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3604,
-    "funciones": 11349
+    "archivos": 3605,
+    "funciones": 11357
   }
 }
