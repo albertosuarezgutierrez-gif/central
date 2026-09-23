@@ -25,6 +25,11 @@ bloqueo de horas, se DESBLOQUEAN con OK de Alberto (sin estrenar: el 1er intento
 🏍️ Retarificar MOTO de cartera hecho (asegura `precalificarMoto`/`prepararMoto` + plataforma `MotoNuevo` modo
 póliza; cepo `test/regression-retarificar-moto.test.ts`); sin emisión de moto aún. Después: catálogos propios de moto (garaje, carnés, fecha de matrícula) y carné de MOTO de la ficha (A>A2>A1>AM) validado contra catálogo; sin él, B como supuesto marcado. Y emisión de moto de cartera: `MotoNuevo` (modo póliza) monta el mismo panel `Emision` que auto; el ReRate ya no manda a Allianz Motos las opciones de Allianz AUTO (`opcionesPorDefecto(compania, ramo)`). asegura#848: `playwright / portal` rojo = preview tras
 la Deployment Protection de Vercel (va a `vercel.com/login`), pasa en todas las ramas, no es del PR.
+**(23/09/2026)** 🏍️ Mergeado #3329 (retarificar + emitir moto). Después: **cruce carné × versión de moto**
+(`apps/asegura/lib/codeoscopic/carnet-moto.ts`): `maxDisplacement` cc / `maxEnginePower` kW del carné contra
+`engine.displacement`/`engine.powerKw` de la versión, releída GRATIS del catálogo (la pantalla manda marca/modelo/motor),
+antes de pagar en moto de cartera y nueva. Sin dato no bloquea (ni afirma «cubre»). ⚠️ Sin medir que la versión de moto
+traiga `powerKw` como la de coche; pendiente: ¿declarar también el B junto al A?
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
 compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña

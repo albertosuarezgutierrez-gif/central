@@ -136,6 +136,8 @@ import {
   experienciaConduccionMoto,
   tiposDeGarajeMoto,
   tiposDeCarnetMoto,
+  limitesCarnetMoto,
+  motorDeVersionMoto,
   MOTORES_MOTO,
   vidaDisponible,
   saludDisponible,
@@ -149,6 +151,7 @@ import {
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
 import { resumirCrudo, type ResumenCrudo } from '@/lib/codeoscopic/crudo'
+import { choqueCarnetVersion } from '@/lib/codeoscopic/carnet-moto'
 import type { PeticionCotizacion, ResultadoCotizacion } from '@/lib/codeoscopic/cotizar'
 import { MARCA_SIMULACION } from '@/lib/codeoscopic/simulacion'
 import { resumirCotizacion } from '@/lib/codeoscopic/respuesta'
@@ -514,24 +517,54 @@ async function prepararAuto(
 
 // ─── MOTO ────────────────────────────────────────────────────────────────────
 
+/** La versión que eligió la pantalla, con lo necesario para releerla del catálogo (gratis). */
+type VersionMotoElegida = { marcaId: string; modeloId: string; motor: MotorMoto; codigo: string }
+
+function versionMotoElegida(
+  resueltos: Record<string, unknown> | undefined,
+  codigo: string | null | undefined,
+): VersionMotoElegida | null {
+  const marcaId = cadena(resueltos?.marcaId)
+  const modeloId = cadena(resueltos?.modeloId)
+  const motor = cadena(resueltos?.motor)
+  if (!marcaId || !modeloId || !motor || !codigo) return null
+  if (!(MOTORES_MOTO as readonly string[]).includes(motor)) return null
+  return { marcaId, modeloId, motor: motor as MotorMoto, codigo }
+}
+
 /**
- * El tipo de carné de moto tiene que existir en el catálogo del vendor
- * (`/motorcycle/driving-licenses`, gratis): un id que no está es un 400. Si el
- * catálogo no se puede leer NO se bloquea (se deja que hable el vendor, que no
- * cobra un 400 de validación); `null` = vale o no se ha podido comprobar.
+ * Dos comprobaciones gratis antes de pagar:
+ *  1. El tipo de carné tiene que existir en `/motorcycle/driving-licenses`: un
+ *     id que no está es un 400.
+ *  2. Ese carné tiene que CUBRIR la versión elegida (cc y kW, `carnet-moto.ts`):
+ *     el vendor tarifica un A1 sobre una 600 sin quejarse, y el fallo se
+ *     descubre en el siniestro.
+ * Si un catálogo no se puede leer, o falta un dato para cruzar, NO se bloquea
+ * (se deja que hable el vendor); `null` = vale o no se ha podido comprobar,
+ * nunca «compatible».
  */
 async function reparoCarnetMoto(
-  config: Parameters<typeof tiposDeCarnetMoto>[0],
+  config: Parameters<typeof limitesCarnetMoto>[0],
   tipo: string | null | undefined,
+  version: VersionMotoElegida | null,
 ): Promise<{ campo: 'tipoCarnet'; motivo: string } | null> {
   if (!tipo) return null
-  const catalogo = await tiposDeCarnetMoto(config).catch((): null => null)
-  if (catalogo === null || catalogo.length === 0) return null
-  if (catalogo.some((o) => o.id === tipo)) return null
-  return {
-    campo: 'tipoCarnet',
-    motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${catalogo.map((o) => o.id).join(', ')})`,
+  const limites = await limitesCarnetMoto(config).catch((): null => null)
+  if (limites === null || limites.length === 0) return null
+  const carnet = limites.find((l) => l.id === tipo)
+  if (!carnet) {
+    return {
+      campo: 'tipoCarnet',
+      motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${limites.map((l) => l.id).join(', ')})`,
+    }
   }
+  if (!version) return null
+  const motor = await motorDeVersionMoto(config, version.marcaId, version.modeloId, version.motor, version.codigo).catch(
+    (): null => null,
+  )
+  if (!motor) return null
+  const choque = choqueCarnetVersion(carnet, motor)
+  return choque ? { campo: 'tipoCarnet', motivo: choque } : null
 }
 
 /**
@@ -570,7 +603,11 @@ async function prepararMoto(
   if (moto.estado !== 'disponible') {
     return paraPreparado({ error: 'moto no tarifica para esta organización (o no se ha podido comprobar)', moto }, 409)
   }
-  const reparoCarnet = await reparoCarnetMoto(cfg.config, datos.tipoCarnet)
+  const reparoCarnet = await reparoCarnetMoto(
+    cfg.config,
+    datos.tipoCarnet,
+    versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+  )
   if (reparoCarnet) return paraPreparado({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422)
 
   let peticion: Record<string, unknown>
@@ -988,7 +1025,11 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       ),
     }
   }
-  const reparoCarnet = await reparoCarnetMoto(cfg.config, datos.tipoCarnet)
+  const reparoCarnet = await reparoCarnetMoto(
+    cfg.config,
+    datos.tipoCarnet,
+    versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+  )
   if (reparoCarnet) {
     return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422) }
   }
