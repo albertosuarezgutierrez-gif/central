@@ -1,13 +1,13 @@
 {
  "sesion": "f58383c9-8020-5a2e-9db9-10fa8a6cb709",
  "inicio": "2026-09-23T09:09:30.593Z",
- "fin": "2026-09-23T09:48:04.075Z",
- "llamadas": 207,
+ "fin": "2026-09-23T10:18:27.783Z",
+ "llamadas": 238,
  "categorias": {
   "otro": {
-   "llamadas": 30,
-   "chars_in": 3248,
-   "chars_out": 71588,
+   "llamadas": 41,
+   "chars_in": 3270,
+   "chars_out": 153735,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -15,31 +15,31 @@
     "Skill": 2,
     "ToolSearch": 21,
     "ScheduleWakeup": 3,
-    "ReadNotifications": 3,
+    "ReadNotifications": 14,
     "PushNotification": 1
    }
   },
   "lectura-directa": {
-   "llamadas": 8,
-   "chars_in": 769,
-   "chars_out": 73474,
+   "llamadas": 10,
+   "chars_in": 932,
+   "chars_out": 81212,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 6,
+    "Read": 8,
     "Grep": 2
    }
   },
   "bash": {
-   "llamadas": 14,
-   "chars_in": 4492,
-   "chars_out": 18817,
+   "llamadas": 24,
+   "chars_in": 6461,
+   "chars_out": 33544,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 14
+    "Bash": 24
    }
   },
   "mcp:Gmail": {
@@ -92,27 +92,29 @@
    }
   },
   "escritura": {
-   "llamadas": 3,
-   "chars_in": 5338,
-   "chars_out": 781134,
+   "llamadas": 7,
+   "chars_in": 8281,
+   "chars_out": 1648188,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 3
+    "Edit": 7
    }
   },
   "mcp:github": {
-   "llamadas": 3,
-   "chars_in": 2647,
-   "chars_out": 332,
+   "llamadas": 7,
+   "chars_in": 2998,
+   "chars_out": 10080,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 6,
+   "chars_citados": 2090434,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 1,
-    "mcp__github__subscribe_pr_activity": 1
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 3,
+    "mcp__github__update_pull_request": 1
    }
   }
  }
