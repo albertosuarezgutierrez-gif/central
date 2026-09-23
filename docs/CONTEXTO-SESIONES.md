@@ -24,6 +24,7 @@ columna, DELETE en 3 tablas, nada de `public`, sin contraseña; `apps/asegura/pr
 **PostHog:** la fuente se repuntó a central (`seguros`), pero su tabla quedó anclada a `public` y no hay forma de
 cambiarlo sin renombrarla (lo que rompería las alertas CIMA heartbeat, A1 y A14): vista `public.operational_events`
 solo para `posthog_readonly` (`apps/asegura/prisma/sql/2026-09-23_posthog_vista_operational_events.sql`).
+✅ Sync verificado por la API: 5.112 filas, última 23/09 15:58 (+02); solo esa tabla activa, 0 de `seguros`.
 Lección: «Completed» en un sync de PostHog no dice nada; la señal es la ÚLTIMA fila (estuvo con 0 filas desde el 11/09).
 
 
