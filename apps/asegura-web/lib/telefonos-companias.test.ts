@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import { FECHA_VERIFICACION } from './companias-baja.ts'
+import { ARTICULOS, textoArticulo } from './articulos.ts'
 import { TELEFONOS_COMPANIAS, hrefTel, telefonosParaPublicar } from './telefonos-companias.ts'
 
 test('cada compañía tiene su página oficial y no se da por verificada sin fecha', () => {
@@ -11,14 +12,20 @@ test('cada compañía tiene su página oficial y no se da por verificada sin fec
     if (c.verificado) assert.match(c.verificadoEl ?? '', FECHA_VERIFICACION, `${c.slug}: verificado sin fecha`)
     else assert.equal(c.verificadoEl, null, `${c.slug}: fecha de verificación sin verificar`)
     if (c.whatsapp) assert.match(c.whatsapp, /^\+\d{9,15}$/, `${c.slug}: WhatsApp fuera de E.164`)
+    for (const a of c.asistencia) {
+      assert.ok(a.para.trim() && a.numeros.length > 0, `${c.slug}: línea de asistencia sin rótulo o sin número`)
+    }
   }
 })
 
 // 🚨 El cepo que importa: una compañía sin verificar sale en la lista, pero
 // SIN ningún número. Se mira el objeto que recibe la página, no una copia.
 test('de una compañía sin verificar no sale ningún número hacia la página', () => {
-  const salida = telefonosParaPublicar()
-  assert.equal(salida.length, TELEFONOS_COMPANIAS.length, 'una compañía desaparece de la lista en vez de decir «pídenoslo»')
+  // Desde el 23/09/2026 todas están verificadas, así que el cepo mira una
+  // compañía sin verificar fabricada aquí: sin ella miraría al vacío.
+  const lista = [...TELEFONOS_COMPANIAS, { ...TELEFONOS_COMPANIAS[0], slug: 'sin-verificar', verificado: false, verificadoEl: null }]
+  const salida = telefonosParaPublicar(lista)
+  assert.equal(salida.length, lista.length, 'una compañía desaparece de la lista en vez de decir «pídenoslo»')
   const sinVerificar = salida.filter((s) => !s.publicable)
   assert.ok(sinVerificar.length > 0, 'no hay compañías sin verificar que vigilar: el cepo miraría al vacío')
   for (const s of sinVerificar) {
@@ -31,7 +38,7 @@ test('la página pinta desde `telefonosParaPublicar()` y no teclea ningún núme
   assert.match(pagina, /telefonosParaPublicar\(\)/, 'la página ya no usa el filtro de verificadas')
   assert.doesNotMatch(pagina, /TELEFONOS_COMPANIAS/, 'la página lee la lista cruda y se salta el filtro')
   for (const c of TELEFONOS_COMPANIAS) {
-    for (const n of [c.siniestros, c.asistencia, c.whatsapp]) {
+    for (const n of [c.siniestros, ...c.asistencia.flatMap((a) => a.numeros), c.whatsapp]) {
       if (n) assert.ok(!pagina.includes(n), `${c.slug}: el número ${n} está tecleado en la página`)
     }
   }
@@ -47,4 +54,17 @@ test('la página está en el sitemap y la enlaza /siniestro (nada huérfano)', (
   assert.match(sitemap, /url\('\/telefonos-siniestros'\)/)
   const siniestro = readFileSync(new URL('../app/siniestro/page.tsx', import.meta.url), 'utf8')
   assert.match(siniestro, /href="\/telefonos-siniestros"/)
+})
+
+// Los teléfonos viven en UN sitio. Un artículo del blog que los copie se queda
+// viejo el día que la compañía cambia de número, y nada falla: el artículo
+// sigue verde y manda al lector a una línea muerta. Se enlaza la página.
+test('ningún artículo del blog copia un teléfono de compañía', () => {
+  const numeros = TELEFONOS_COMPANIAS.flatMap((c) => [c.siniestros, ...c.asistencia.flatMap((a) => a.numeros), c.whatsapp])
+    .filter((n): n is string => !!n)
+    .map((n) => n.replace(/\D/g, '').replace(/^34(?=\d{9}$)/, ''))
+  for (const a of ARTICULOS) {
+    const digitos = textoArticulo(a).replace(/\D/g, '')
+    for (const n of numeros) assert.ok(!digitos.includes(n), `${a.slug}: copia el ${n}; enlaza /telefonos-siniestros`)
+  }
 })

@@ -57,6 +57,18 @@ export type NormaCitable = {
  * exige repetir esa lectura; copiar de un resumen ajeno, no.
  */
 export const NORMAS_CITABLES: readonly NormaCitable[] = [
+  // Leído el 23/09/2026 en la misma copia del PDF consolidado del BOE
+  // (`docs/normativa/`), artículo dieciséis completo.
+  {
+    id: 'lcs-16',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '16',
+    sintesis:
+      'El siniestro debe comunicarse al asegurador en un plazo máximo de siete días desde que se conoce, salvo que la póliza fije uno más amplio; si no se hace, el asegurador puede reclamar los daños y perjuicios que cause esa falta de declaración.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-09-23',
+    cubre: ['articulo:16', 'ley:50/1980'],
+  },
   {
     id: 'lcs-18',
     norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',

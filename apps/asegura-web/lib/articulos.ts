@@ -786,6 +786,86 @@ export const ARTICULOS: readonly Articulo[] = [
       },
     ],
   },
+  // 23/09/2026. Idea de Alberto: que se puede dar parte por WhatsApp es algo
+  // que muchos asegurados no saben. Lo que dice de cada compañía sale de las
+  // capturas de sus webs de ese día (las mismas que verificaron
+  // `telefonos-companias.ts`). 🚨 NINGÚN número va aquí: vive en
+  // `/telefonos-siniestros`, que tiene una sola fuente y su fecha. Dos copias de
+  // un teléfono de siniestros es una copia que se queda vieja sin que falle
+  // nada; lo vigila `telefonos-companias.test.ts`.
+  {
+    slug: 'dar-parte-seguro-por-whatsapp',
+    h1: '¿Se puede dar parte del seguro por WhatsApp? Qué compañías lo permiten',
+    title: 'Dar parte del seguro por WhatsApp: qué compañías',
+    description:
+      'Varias aseguradoras ya aceptan el parte por WhatsApp, pero no todas ni para todos los seguros. Qué compañías lo ofrecen, para qué y qué mandar en el mensaje.',
+    fecha: '2026-09-23',
+    consulta: 'dar parte seguro por whatsapp',
+    resumen:
+      'Sí, en varias compañías. Occident atiende siniestros por WhatsApp en el mismo número que usa para llamar; Mapfre y Fidelidade lo tienen para el seguro de hogar, y Generali para pedir la grúa. No es universal: depende de la compañía y del tipo de seguro, así que antes de escribir conviene saber a qué número y para qué.',
+    base: ['lcs-16'],
+    ramos: ['hogar', 'auto'],
+    cta: {
+      titulo: 'Los números, comprobados en la web de cada compañía',
+      texto:
+        'Tenemos en una sola página los teléfonos y los WhatsApp de siniestros y asistencia de las compañías con las que trabajamos, con la fecha en que los comprobamos en su web oficial.',
+      boton: 'Ver los teléfonos de siniestros',
+      href: '/telefonos-siniestros',
+    },
+    secciones: [
+      {
+        titulo: 'Qué compañías aceptan el parte por WhatsApp',
+        parrafos: [
+          'Occident usa el mismo número para llamar y para escribir por WhatsApp, y en su web lo da tanto para declarar un siniestro de hogar como uno de auto. Es el caso más completo: un solo número para todo.',
+          'Mapfre tiene un WhatsApp para dar parte del seguro de hogar, en horario de lunes a viernes de 8:00 a 20:00. Ese mismo número lo usa también para autorizaciones médicas. Para el coche publica sus teléfonos de asistencia en carretera, no un WhatsApp.',
+          'Fidelidade publica un WhatsApp en su página de siniestros de hogar, junto a su línea de atención al cliente.',
+          'Generali permite pedir la grúa por WhatsApp desde su página de asistencia en carretera. Ojo: eso es asistencia —que venga alguien a sacarte de la carretera—, no la declaración del siniestro.',
+          'Lo comprobamos en la web oficial de cada compañía el 23 de septiembre de 2026. Las compañías cambian sus canales, así que el número exacto está siempre en nuestra página de teléfonos, con la fecha de la última comprobación.',
+        ],
+      },
+      {
+        titulo: 'Qué mandar en el primer mensaje',
+        parrafos: [
+          'El número de póliza, o si no lo tienes a mano, tu DNI o la matrícula del coche. Es lo primero que te van a pedir para localizarte.',
+          'Qué ha pasado, cuándo y dónde, en dos o tres frases. No hace falta un relato largo: la compañía te preguntará lo que necesite.',
+          'Fotos del daño. Es la gran ventaja del WhatsApp frente a la llamada: las mandas en el momento, con la fecha del móvil, y quedan unidas a la conversación.',
+          'En un accidente de coche, además, la foto del parte amistoso firmado por los dos conductores, por las dos caras.',
+        ],
+      },
+      {
+        titulo: 'Las ventajas, y lo que no cambia',
+        parrafos: [
+          'Queda todo por escrito: qué dijiste, cuándo lo dijiste y qué te contestaron. Si luego hay un desacuerdo, tienes la conversación. Con una llamada, lo único que queda es tu memoria.',
+          'Lo que no cambia es el plazo. El artículo 16 de la Ley de Contrato de Seguro pide comunicar el siniestro en un máximo de siete días desde que lo conoces, salvo que tu póliza dé más, y el canal no lo alarga. Escribir por WhatsApp un viernes por la noche cuenta; que te contesten el lunes no significa que hayas avisado el lunes.',
+          'Tampoco cambia lo que cubre la póliza. Dar parte por WhatsApp es solo la forma de avisar: la cobertura, la franquicia y la peritación son las mismas que si llamas.',
+        ],
+      },
+      {
+        titulo: 'Si tu compañía no tiene WhatsApp, o no sabes cuál es',
+        parrafos: [
+          'Del resto de compañías con las que trabajamos no hemos encontrado un WhatsApp de siniestros publicado en su web. Eso no quiere decir que no lo tengan para algún producto concreto: mira el dorso de tu póliza o la app de la compañía.',
+          'Y si tu seguro lo llevamos nosotros, escríbenos a nosotros. Damos el parte con la compañía, te decimos qué documentos hacen falta y seguimos el expediente hasta que se cierra. Para eso está el corredor.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Vale un parte dado por WhatsApp igual que por teléfono?',
+        respuesta:
+          'Sí, si es un canal que la propia compañía publica para dar parte. Guarda la conversación: es la prueba de cuándo avisaste y de qué contaste.',
+      },
+      {
+        pregunta: '¿Puedo mandar fotos y vídeos del daño?',
+        respuesta:
+          'Sí, y conviene hacerlo en el primer mensaje o justo después. Fotos generales para situar el daño y de cerca para ver el detalle, antes de limpiar o reparar nada.',
+      },
+      {
+        pregunta: '¿Me atienden a cualquier hora?',
+        respuesta:
+          'Depende de la compañía. Occident publica atención las 24 horas; el WhatsApp de hogar de Mapfre, de lunes a viernes de 8:00 a 20:00. Fuera de horario puedes escribir igual, pero la respuesta llegará cuando abran.',
+      },
+    ],
+  },
   // El agente quincenal de `apps/plataforma` (`lib/correduria/blog-agente.ts`)
   // añade el artículo nuevo JUSTO ENCIMA de esta línea y abre un PR. Es la
   // única forma en que un proceso automático toca este fichero: no reescribe
