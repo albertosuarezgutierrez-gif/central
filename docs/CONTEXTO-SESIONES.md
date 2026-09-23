@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
+`apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
+`product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
+del PR de emisión que quedaba "sin probar en real"; (2) **Comercios y Comunidades NO están
+disponibles por API REST** aunque estén activados en el panel de Avant2 con Occident/Reale — solo
+6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
+(solo doc), sin código tocado.
 
 **(23/09/2026)** 🧹 **La purga del e2e-smoke de `asegura` borraba en la BD equivocada.** Tras el traspaso (05/09)
 el smoke escribe en `seguros` de central, pero la purga apuntaba a Frankfurt (`FRANKFURT_DATABASE_URL`): 0 filas
@@ -458,6 +465,15 @@ La **pista** de otra póliza de la misma matrícula PREfiltra —solo si el busc
 candidata y buscando solo por NOMBRE (por código, un «52» de kW casa dentro de un Base7 ajeno y
 esconde la candidata buena)— pero nunca selecciona. 🪤 Lección: un cepo con un fixture que NO
 reproduce el fallo pasa por la razón equivocada; se vio verde hasta rehacerlo. PR #3240, **mergeado**.
+
+**(23/09/2026)** Cerrado el hueco de `issuedDocuments[]` anotado el 13/09: Alberto leyó el OpenAPI
+vivo de INT (20 preguntas, resumen en `docs/CODEOSCOPIC-API-PORTAL.md`) y confirmó la forma
+(`{name, url, creationDateTime, expirationDateTime}`, se descarga con `GET {url}` + el mismo Bearer,
+gratis). Nuevo `lib/codeoscopic/documentos-emitidos.ts` (puro, fixtures reales) +
+`descargarFicheroVendor()` en `cliente.ts`; `GET /api/operador/codeoscopic/documentos?projectId=`
+ahora descarga y archiva el PDF en `seguros.documentos` (best-effort, idempotente) cuando la póliza
+ya está acuñada. Falta cablearlo en el flujo de acuñado mismo (`registrarPolizaEmitida`) — pendiente
+declarado. tsc 0, `pnpm test` asegura 552/552.
 
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del

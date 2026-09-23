@@ -889,6 +889,33 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   que ya vale para hogar sin tocarla — lo que SÍ ramificaba mal era el bookkeeping: `codeoscopic_projects.
   producto` llevaba `'auto'` a fuego en el INSERT del ReRate y en el puente de emergencia del Submit
   (`bloquearEnvio`); los dos usan ahora `polizas.tipo` real.
+- **📄 El PDF de la póliza emitida SÍ se archiva — hueco cerrado el 23/09/2026.** Desde el 13/09/2026
+  quedaba anotado como pendiente: `issuedDocuments[]` (`InsuranceFile_V1`) existía en el modelo de
+  `PolicyApplication_V1` pero la forma exacta del tag `File` no estaba en el portal público (solo en
+  el OpenAPI vivo, bloqueado desde el contenedor de Claude por el proxy). Alberto lo leyó a mano
+  (`portal.api-int.codeoscopic.io/static/....yaml`, entorno INT, 23/09/2026) y confirmó la forma:
+  `{ name, description?, url, creationDateTime, expirationDateTime }`, con `name`/`url`/
+  `creationDateTime`/`expirationDateTime` obligatorios; se descarga con **`GET {url}` + el MISMO
+  Bearer OAuth2**, literal del portal: «Execute a GET request to this URL with the Authorization
+  header to download the file» — sin `x-client-app`/`x-user-email` (esas son de tarificar, no de
+  descargar). La descarga es **gratis**: no pasa por el libro de consumo (`descargarFicheroVendor()`
+  en `lib/codeoscopic/cliente.ts`).
+  - `lib/codeoscopic/documentos-emitidos.ts` (puro, con fixtures LITERALES del OpenAPI de INT):
+    `documentosEmitidos()` lee el array sin inventar nombre en un elemento sin `name`/`url`;
+    `documentoCaducado()` compara contra el reloj, nunca contra una duración supuesta (los dos
+    ejemplos reales del portal traen ~365 días para «Póliza» y 24 h para informes de oferta — la
+    duración NO es una regla documentada); `documentoPoliza()` prioriza el que se llama «Póliza».
+  - `GET /api/operador/codeoscopic/documentos?projectId=` (el endpoint de diagnóstico del 17/09) ahora
+    también **descarga y archiva** el PDF en `seguros.documentos` (`tipo:'poliza'`,
+    `subidoPor:'agente'`) cuando el proyecto ya tiene `codeoscopic_projects.poliza_id` (o sea, ya está
+    acuñado) — sin acuñar, se dice por qué en vez de archivar sin saber de qué póliza es. Idempotente:
+    si ya hay un documento `tipo:'poliza'` + `subidoPor:'agente'` para esa póliza, no vuelve a
+    descargar. Todo el bloque es **best-effort**: un fallo de descarga o archivo nunca tumba la
+    respuesta — el `issuedDocuments` crudo sigue viajando igual para que la pantalla enseñe el enlace.
+  - **Pendiente, no cableado a propósito:** esto vive en el endpoint de diagnóstico, no en el flujo de
+    acuñado (`registrarPolizaEmitida`, `lib/emision.ts`). Cablearlo ahí es el siguiente paso obvio,
+    pero exige decidir CUÁNDO reintentar si `issuedDocuments[]` aún no está poblado en el momento del
+    acuñado (el portal no dice cuánto tarda el vendor en generarlo).
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo
