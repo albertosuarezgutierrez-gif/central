@@ -40,7 +40,9 @@ export async function GET(req: NextRequest) {
     (d.anulacionesConfirmadas ? `; ${d.anulacionesConfirmadas} anulación(es) confirmada(s) por CIMA` : '') +
     (d.sustitucionesEnlazadas ? `; ${d.sustitucionesEnlazadas} sustitución(es) enlazada(s) sola(s)` : '') +
     (d.sustitucionesAmbiguas ? `; ${d.sustitucionesAmbiguas} posible(s) sustitución(es) ambigua(s) sin enlazar` : '') +
-    (d.duplicidades ? `; ${d.duplicidades} posible(s) duplicidad(es): dos pólizas vigentes del mismo riesgo` : '')
+    (d.duplicidades ? `; ${d.duplicidades} posible(s) duplicidad(es): dos pólizas vigentes del mismo riesgo` : '') +
+    (d.presupuestosEmitidos ? `; ${d.presupuestosEmitidos} presupuesto(s) emitido(s): su anulación firmada pasa a tu OK` : '') +
+    (d.anulacionesPorSustitucion ? `; ${d.anulacionesPorSustitucion} anulación(es) por sustitución abierta(s), a la espera de la firma del cliente` : '')
   // Una retención que tocaba abrir y falló es una llamada que no aparece en «Hoy»: el latido lo dice.
   const fallo = (d.retencionesFallidas ? `⚠️ ${d.retencionesFallidas} retención(es) NO se pudieron abrir (ver logs de asegura); ` : '') +
     (d.sustitucionesFallidas ? '⚠️ el enlace automático de sustituciones falló en esta pasada (ver logs de asegura); ' : '') +

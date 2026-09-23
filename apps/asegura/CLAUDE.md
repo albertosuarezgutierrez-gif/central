@@ -728,8 +728,12 @@ module-seguros).** Caso José Suárez: Mapfre→Reale del mismo Kona y el portal
 referencia catastral de 20 o dirección DESCIFRADA+CP en inmuebles; índice ciego del DNI del asegurado en personas; RC y
 comercio sin dato → nada), efecto a −60/+30 días del aniversario de la vieja (actual o anterior: CIMA puede traerla ya
 renovada), sin `poliza_padre_id` entre ellas. La misma clave cuenta **duplicidades** (dos vigentes solapadas que no se
-suceden). Escribe solo `sustituida_at`/`poliza_origen_id` + historial; no comunica nada. «En vigor» excluye la vieja SOLO
-mientras la sustituta siga vigente. Portal: `sustituidasARetirar` la quita de la LISTA (no del acceso) por lector, con la
+suceden). Escribe solo `sustituida_at`/`poliza_origen_id` + historial. «En vigor» excluye la vieja SIEMPRE (Alberto: «esa se
+anula y se anula»; si la nueva cae por impago se avisa como cualquier impago, y el estado real lo trae CIMA). Después, en
+el mismo punto de guardado: `liberarPresupuestosEmitidos` marca emitido el presupuesto aceptado cuya nueva ya consta (de la
+compañía elegida, por código DGS) → su anulación FIRMADA en la aceptación pasa sola a la cola; y
+`abrirAnulacionesPorSustitucion` abre `sustitucion`/`solicitada` para las emitidas fuera de presupuesto (web) → aviso
+`anulacion_por_firmar` en la campana y en el correo de la intranet; el correo a la compañía sigue pasando por el OK. Portal: `sustituidasARetirar` la quita de la LISTA (no del acceso) por lector, con la
 nueva empezada y sin siniestros/devueltos pendientes. ⚠️ Medido: CIMA casi no manda el dato del riesgo fuera de motor
 (hogar 7/34 con dirección, 0 refcat, 0 DNI de asegurado en personas) → capturarlo al emitir es lo que falta.
 ✉️ **Cola de aprobaciones (`seguros.aprobacion`, `lib/aprobaciones.ts`, puerto `/api/operador/aprobaciones`).** Un recibo

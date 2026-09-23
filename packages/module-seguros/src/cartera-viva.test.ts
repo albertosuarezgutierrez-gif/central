@@ -95,20 +95,20 @@ test('en vigor = los estados de POLIZA_ESTADOS_VIGENTES, no un «distinto de can
 
 test('el where de Prisma y el SQL de «en vigor» dicen lo mismo que el predicado', () => {
   assert.deepEqual(WHERE_CARTERA_EN_VIGOR, {
-    AND: [WHERE_CARTERA_VIVA, { estado: { in: [...POLIZA_ESTADOS_VIGENTES] } }],
+    AND: [WHERE_CARTERA_VIVA, { estado: { in: [...POLIZA_ESTADOS_VIGENTES] } }, { sustituidaAt: null }],
   })
   assert.equal(
     sqlCarteraEnVigor('p'),
-    "((p.import_ref is null or p.eiac_xml_hash is not null) and p.estado::text in ('activa', 'en_renovacion', 'en_vigor', 'recibo_devuelto', 'cambio_clave') and not (p.sustituida_at is not null and exists (select 1 from polizas sust_n where sust_n.poliza_origen_id = p.id and sust_n.merged_into_poliza_id is null and sust_n.estado::text in ('activa', 'en_renovacion', 'en_vigor', 'recibo_devuelto', 'cambio_clave'))))",
+    "((p.import_ref is null or p.eiac_xml_hash is not null) and p.estado::text in ('activa', 'en_renovacion', 'en_vigor', 'recibo_devuelto', 'cambio_clave') and p.sustituida_at is null)",
   )
   assert.equal(sqlCarteraNoEnVigor('x'), `(${sqlCarteraEnVigor('x')} is not true)`)
 })
 
 test('🚨 una póliza sustituida no está en vigor: el cliente no tiene dos seguros del mismo coche', () => {
   const p = { importRef: null, eiacXmlHash: 'abc', estado: 'activa' }
-  assert.equal(esCarteraEnVigor({ ...p, sustituidaPorVigente: true }), false)
-  // Si la sustituta se anula, la vieja vuelve a contar: un enlace no la entierra para siempre.
-  assert.equal(esCarteraEnVigor({ ...p, sustituidaPorVigente: false }), true)
+  // La sustituida se anula y se queda anulada, pase lo que pase con la nueva (Alberto, 23/09/2026).
+  assert.equal(esCarteraEnVigor({ ...p, sustituidaAt: new Date('2026-09-23') }), false)
+  assert.equal(esCarteraEnVigor({ ...p, sustituidaAt: null }), true)
   assert.equal(esCarteraEnVigor(p), true)
-  assert.match(sqlCarteraEnVigor('p'), /sust_n\.estado::text in/)
+  assert.match(sqlCarteraEnVigor('p'), /p\.sustituida_at is null/)
 })

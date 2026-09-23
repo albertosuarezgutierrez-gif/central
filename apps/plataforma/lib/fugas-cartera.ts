@@ -43,6 +43,10 @@ export type Deteccion = {
   duplicidades: number | null
   /** `true` = el enlace de sustituciones falló en esa pasada. */
   sustitucionesFallidas: boolean
+  /** Presupuestos aceptados que pasaron a emitidos solos (su anulación firmada va a la cola). */
+  presupuestosEmitidos: number | null
+  /** Expedientes de anulación por sustitución abiertos solos (esperan la firma del cliente). */
+  anulacionesPorSustitucion: number | null
 }
 
 export type Lectura<T> = { estado: 'ok'; dato: T } | { estado: 'sin_datos'; causa: string }
@@ -127,6 +131,8 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
       sustitucionesAmbiguas: numONull(o.sustitucionesAmbiguas),
       duplicidades: numONull(o.duplicidades),
       sustitucionesFallidas: o.sustitucionesFallidas === true,
+      presupuestosEmitidos: numONull(o.presupuestosEmitidos),
+      anulacionesPorSustitucion: numONull(o.anulacionesPorSustitucion),
     },
   }
 }

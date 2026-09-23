@@ -197,3 +197,28 @@ export function sustituidasARetirar(
   }
   return retirar
 }
+
+/**
+ * La anulación de la VIEJA cuando la sustituta ya está emitida y nadie la ha pedido (la nueva se
+ * emitió fuera de nuestro presupuesto: en la web de la compañía o de Codeoscopic). Nace `solicitada`
+ * y la FIRMA el cliente en su portal; el correo a la compañía sale después por la cola, como siempre.
+ *
+ * Efecto: el vencimiento si la nueva empieza como mucho 30 días antes (es un cambio a vencimiento, lo
+ * más fácil de aceptar para la compañía); si no —la vieja ya se renovó sola—, el día que empieza la
+ * nueva. `null` = no hay con qué (sin fechas): se deja al corredor.
+ */
+export function solicitudPorSustitucion(
+  s: { vencimiento: string | null; inicioNueva: string | null; mismaCompania: boolean },
+  hoy: string,
+): { tipo: 'sustitucion'; solicitadaPor: 'cliente'; motivo: 'competidor' | 'otro'; motivoTexto: string | null; fechaEfecto: string } | null {
+  if (s.inicioNueva === null) return null
+  const aVencimiento = s.vencimiento !== null && s.vencimiento >= hoy && dias(s.inicioNueva, s.vencimiento) <= 30
+  const fechaEfecto = aVencimiento ? s.vencimiento! : s.inicioNueva
+  return {
+    tipo: 'sustitucion',
+    solicitadaPor: 'cliente',
+    motivo: s.mismaCompania ? 'otro' : 'competidor',
+    motivoTexto: s.mismaCompania ? 'Sustituida por otra póliza de la misma compañía.' : null,
+    fechaEfecto,
+  }
+}

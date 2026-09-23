@@ -6,7 +6,7 @@
 // Solo toca NUESTROS campos (`sustituida_at`, `poliza_origen_id`): CIMA no los escribe nunca, así
 // que la próxima ingesta no los pisa. No se comunica nada a nadie.
 
-import { detectarSustituciones, POLIZA_ESTADOS_VIGENTES, sqlCarteraViva, type RiesgoComun } from '@central/module-seguros'
+import { detectarSustituciones, POLIZA_ESTADOS_VIGENTES, solicitudPorSustitucion, sqlCarteraViva, validarSolicitudAnulacion, type RiesgoComun } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import type { prismaAsegura } from './asegura-db'
@@ -85,4 +85,75 @@ export async function enlazarSustituciones(tx: Tx, correduriaId: string): Promis
     enlazadas++
   }
   return { enlazadas, ambiguas, duplicidades: duplicidades.length }
+}
+
+/**
+ * «Se avisa a la compañía cuando se emite la otra» (Alberto, 23/09/2026). Un presupuesto ACEPTADO
+ * (el cliente firmó la opción y, con ella, la anulación de su póliza vieja) espera a que alguien
+ * pulse «Ya está emitida» para soltar esa anulación a la cola. Aquí se marca solo en cuanto la
+ * nueva CONSTA: una póliza del mismo cliente que sustituye a la del presupuesto y es de la compañía
+ * elegida (por código DGS; un nombre que no casa con el catálogo no se da por bueno).
+ */
+export async function liberarPresupuestosEmitidos(tx: Tx, correduriaId: string): Promise<number> {
+  const filas = await tx.$queryRaw<{ id: string; nueva: string }[]>`
+    with cand as (
+      select distinct on (pr.id) pr.id, n.id as nueva
+      from presupuesto pr
+        join presupuesto_opcion o on o.id = pr.opcion_elegida_id
+        join polizas n on n.poliza_origen_id = pr.poliza_id and n.cliente_id = pr.cliente_id and n.merged_into_poliza_id is null
+        join companias_dgs cd on cd.codigo_dgs = n.codigo_entidad_dgs
+      where pr.correduria_id = ${correduriaId}::uuid and pr.poliza_id is not null
+        and pr.aceptado_at is not null and pr.emitido_at is null and pr.retirado_at is null
+        and lower(trim(o.compania)) in (lower(cd.nombre_comun), lower(coalesce(cd.nombre_cima, '')))
+      order by pr.id, n.created_at desc)
+    update presupuesto set emitido_at = now(), poliza_emitida_id = coalesce(presupuesto.poliza_emitida_id, cand.nueva::uuid)
+    from cand where presupuesto.id = cand.id and presupuesto.emitido_at is null
+    returning presupuesto.id::text as id, cand.nueva::text as nueva`
+  for (const f of filas) {
+    await tx.$executeRaw`
+      insert into presupuesto_evento (presupuesto_id, tipo, origen, detalle)
+      values (${f.id}::uuid, 'emitido', 'sistema', ${JSON.stringify({ polizaEmitidaId: f.nueva, via: 'sustitucion_en_cartera' })}::jsonb)`
+  }
+  return filas.length
+}
+
+/**
+ * La nueva se emitió FUERA de nuestro presupuesto (web de la compañía o de Codeoscopic) y nadie ha
+ * pedido la baja de la vieja: se abre el expediente `sustitucion` en `solicitada`, que el cliente
+ * FIRMA en su portal; el correo a la compañía sale después por la cola de aprobaciones. Nunca sobre
+ * una póliza que ya tuvo expediente (tampoco uno desistido: esa decisión ya se tomó).
+ */
+export async function abrirAnulacionesPorSustitucion(tx: Tx, correduriaId: string, hoy: string): Promise<{ abiertas: number; sinDatos: number }> {
+  const filas = await tx.$queryRaw<{ id: string; cliente_id: string; vencimiento: string | null; inicio: string | null; misma: boolean; compania: string | null; numero: string | null }[]>`
+    select distinct on (v.id) v.id::text as id, v.cliente_id::text as cliente_id,
+           to_char(v.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento, to_char(n.fecha_inicio, 'YYYY-MM-DD') as inicio,
+           coalesce(v.codigo_entidad_dgs = n.codigo_entidad_dgs, false) as misma, n.aseguradora as compania, n.numero_poliza as numero
+    from polizas v
+      join polizas n on n.poliza_origen_id = v.id and n.merged_into_poliza_id is null and n.estado::text = any(${VIGENTES}::text[])
+    where v.correduria_id = ${correduriaId}::uuid and v.sustituida_at is not null and v.merged_into_poliza_id is null
+      and v.estado::text = any(${VIGENTES}::text[])
+      and not exists (select 1 from anulacion a where a.poliza_id = v.id)
+      and not exists (select 1 from presupuesto pr where pr.poliza_id = v.id and pr.aceptado_at is not null and pr.retirado_at is null)
+    order by v.id, n.created_at desc`
+  let abiertas = 0
+  let sinDatos = 0
+  for (const f of filas) {
+    const s = solicitudPorSustitucion({ vencimiento: f.vencimiento, inicioNueva: f.inicio, mismaCompania: f.misma }, hoy)
+    const v = s && validarSolicitudAnulacion(s, { vencimiento: f.vencimiento, hoy })
+    if (!v || !v.ok) { sinDatos++; continue }
+    const r = v.solicitud
+    const ins = await tx.$queryRaw<{ id: string }[]>`
+      insert into anulacion (correduria_id, poliza_id, cliente_id, tipo, solicitada_por, motivo, motivo_texto, fecha_efecto, creada_por)
+      values (${correduriaId}::uuid, ${f.id}::uuid, ${f.cliente_id}::uuid, ${r.tipo}, ${r.solicitadaPor}, ${r.motivo},
+              ${r.motivoTexto}, ${r.fechaEfecto}::date, 'sistema:sustitucion')
+      on conflict do nothing
+      returning id::text as id`
+    if (!ins[0]) continue
+    await tx.$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
+      values (${correduriaId}::uuid, ${f.cliente_id}::uuid, ${f.id}::uuid, cast('gestion' as tipo_historial_interno),
+              ${`Anulación por sustitución abierta sola (efecto ${r.fechaEfecto}): la sustituye la póliza ${f.compania ?? ''} ${f.numero ?? ''}. Falta la firma del cliente en su portal; después, el correo a la compañía pasa por tu OK.`})`
+    abiertas++
+  }
+  return { abiertas, sinDatos }
 }

@@ -83,9 +83,9 @@ test('una fuente ilegible NO colapsa a «sin avisos»: se declara y el globo lle
 })
 
 test('ninguna fuente legible = «!»: no se sabe nada y se dice', () => {
-  const r = avisosDe({ autorizaciones: null, obligaciones: null, peticiones: null, datos: null, carnets: null, hoy: HOY })
+  const r = avisosDe({ autorizaciones: null, obligaciones: null, peticiones: null, datos: null, carnets: null, firmas: null, hoy: HOY })
   assert.deepEqual(r.avisos, [])
-  assert.deepEqual(r.fuentesIlegibles, ['peticiones', 'autorizaciones', 'obligaciones', 'datos', 'carnets'])
+  assert.deepEqual(r.fuentesIlegibles, ['peticiones', 'autorizaciones', 'obligaciones', 'datos', 'carnets', 'firmas'])
   assert.equal(r.globo, '!')
 })
 
@@ -269,4 +269,12 @@ test('🚨 solo el recordatorio RECURRENTE lleva la fecha del ciclo en su id', (
   assert.equal(ids[0], 'una-vez')
   assert.equal(ids[1], 'una-vez-explicita')
   assert.match(ids[2]!, /^recurrente:\d{4}-\d{2}-\d{2}$/)
+})
+
+test('🚨 una anulación que espera SU firma sale en la campana: sin firma no se pide la baja y la vieja se renueva', () => {
+  const r = avisosDe({ autorizaciones: null, obligaciones: [], peticiones: [], datos: [], carnets: [], firmas: [{ id: 'a1', compania: 'Mapfre' }], hoy: HOY })
+  assert.deepEqual(r.avisos.map((a) => [a.tipo, a.id, a.href]), [['anulacion_por_firmar', 'a1', '/boveda']])
+  assert.match(r.avisos[0]!.titulo, /Mapfre/)
+  // Ilegible ≠ «no tienes nada que firmar».
+  assert.ok(avisosDe({ autorizaciones: null, obligaciones: [], peticiones: [], datos: [], carnets: [], firmas: null, hoy: HOY }).fuentesIlegibles.includes('firmas'))
 })

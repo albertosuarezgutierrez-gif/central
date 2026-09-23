@@ -77,6 +77,10 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
     uno: 'un carné de conducir que nos consta caducado',
     varios: 'carnés de conducir que nos constan caducados',
   },
+  anulacion_por_firmar: {
+    uno: 'un documento pendiente de tu firma',
+    varios: 'documentos pendientes de tu firma',
+  },
 }
 
 /** Un aviso, reducido a lo único que el correo necesita: su clase. */

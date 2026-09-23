@@ -96,10 +96,11 @@ export function sqlVolcadoHistorico(alias = 'p'): string {
 export type EntradaCarteraEnVigor = EntradaCarteraViva & {
   /** `estado_poliza` de la BD. `null`/`undefined` = no vigente (no se supone). */
   estado: string | null | undefined
-  /** `true` = tiene `sustituida_at` Y la póliza que la sustituye sigue VIGENTE: otra ocupa su sitio
-   *  y el cliente no tiene dos seguros del mismo coche (caso José Suárez, 23/09/2026). Si la
-   *  sustituta se anula, la vieja vuelve a contar sola. `undefined` = quien llama no lo lee. */
-  sustituidaPorVigente?: boolean
+  /** `polizas.sustituida_at`. Con valor, otra póliza ocupa su sitio y esta se ANULA: deja de ser
+   *  cartera en vigor para siempre, pase lo que pase con la nueva (Alberto, 23/09/2026: «esa se
+   *  anula y se anula»; si la nueva cae por impago se avisa como cualquier impago, y el estado real
+   *  lo trae CIMA). `undefined` = quien llama no lo lee. */
+  sustituidaAt?: unknown
 }
 
 /**
@@ -111,7 +112,7 @@ export type EntradaCarteraEnVigor = EntradaCarteraViva & {
  */
 export function esCarteraEnVigor(p: EntradaCarteraEnVigor): boolean {
   if (!esCarteraViva(p)) return false
-  if (p.sustituidaPorVigente === true) return false
+  if (p.sustituidaAt != null) return false
   return p.estado != null && esEstadoVigente(p.estado)
 }
 
@@ -120,23 +121,17 @@ export function esCarteraNoEnVigor(p: EntradaCarteraEnVigor): boolean {
   return !esCarteraEnVigor(p)
 }
 
-/** El mismo criterio como `where` de Prisma. Combínalo dentro de un `AND`. ⚠️ NO excluye la
- *  sustituida (Prisma no tiene la relación con la sustituta): donde importe, `sqlCarteraEnVigor`. */
+/** El mismo criterio como `where` de Prisma. Combínalo dentro de un `AND`. */
 export const WHERE_CARTERA_EN_VIGOR = {
-  AND: [WHERE_CARTERA_VIVA, { estado: { in: [...POLIZA_ESTADOS_VIGENTES] } }],
+  AND: [WHERE_CARTERA_VIVA, { estado: { in: [...POLIZA_ESTADOS_VIGENTES] } }, { sustituidaAt: null }],
 }
 
 const SQL_ESTADOS_VIGENTES = POLIZA_ESTADOS_VIGENTES.map((e) => `'${e}'`).join(', ')
 
-/** La sustituida sale de «en vigor» SOLO mientras su sustituta siga vigente (si esta se anula, la
- *  vieja vuelve sola; un enlace no es para siempre). */
-function sqlNoSustituida(alias: string): string {
-  return `not (${alias}.sustituida_at is not null and exists (select 1 from polizas sust_n where sust_n.poliza_origen_id = ${alias}.id and sust_n.merged_into_poliza_id is null and sust_n.estado::text in (${SQL_ESTADOS_VIGENTES})))`
-}
 
 /** El mismo criterio en SQL crudo. `alias` es el de `polizas`. */
 export function sqlCarteraEnVigor(alias = 'p'): string {
-  return `(${sqlCarteraViva(alias)} and ${alias}.estado::text in (${SQL_ESTADOS_VIGENTES}) and ${sqlNoSustituida(alias)})`
+  return `(${sqlCarteraViva(alias)} and ${alias}.estado::text in (${SQL_ESTADOS_VIGENTES}) and ${alias}.sustituida_at is null)`
 }
 
 /** El complementario exacto en SQL crudo. `is not true` y no `not (…)`: con

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { claveRiesgo, detectarSustituciones, sustituidasARetirar, type PolizaParaSustitucion } from './sustitucion-auto.ts'
+import { claveRiesgo, detectarSustituciones, solicitudPorSustitucion, sustituidasARetirar, type PolizaParaSustitucion } from './sustitucion-auto.ts'
 
 function pol(p: Partial<PolizaParaSustitucion> & { id: string }): PolizaParaSustitucion {
   return {
@@ -106,4 +106,15 @@ test('🚨 duplicidad: dos vigentes del mismo coche que se pisan y no se suceden
   assert.deepEqual(r.duplicidades.map((d) => [d.aId, d.bId]), [['a', 'b']])
   // Si la vieja ya no está vigente, no es duplicidad: es historia.
   assert.equal(detectarSustituciones([{ ...a, vigente: false }, b]).duplicidades.length, 0)
+})
+
+test('anulación por sustitución: a vencimiento si la nueva entra en los 30 días previos; si no, el día que entra', () => {
+  // José: Reale desde el 22/09, Mapfre vence el 24/09 → a vencimiento.
+  assert.equal(solicitudPorSustitucion({ vencimiento: '2026-09-24', inicioNueva: '2026-09-22', mismaCompania: false }, '2026-09-23')?.fechaEfecto, '2026-09-24')
+  // Occident ya renovada hasta 2027 y la Allianz desde el 17/09/2026 → el día que entra la nueva.
+  assert.equal(solicitudPorSustitucion({ vencimiento: '2027-09-09', inicioNueva: '2026-09-17', mismaCompania: false }, '2026-09-23')?.fechaEfecto, '2026-09-17')
+  // Vencimiento ya pasado: no se puede pedir «a vencimiento».
+  assert.equal(solicitudPorSustitucion({ vencimiento: '2026-09-20', inicioNueva: '2026-09-19', mismaCompania: false }, '2026-09-23')?.fechaEfecto, '2026-09-19')
+  assert.equal(solicitudPorSustitucion({ vencimiento: '2026-09-24', inicioNueva: null, mismaCompania: false }, '2026-09-23'), null)
+  assert.equal(solicitudPorSustitucion({ vencimiento: '2026-09-24', inicioNueva: '2026-09-22', mismaCompania: true }, '2026-09-23')?.motivo, 'otro')
 })
