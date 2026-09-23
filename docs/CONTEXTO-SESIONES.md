@@ -17,6 +17,8 @@
 (página de intención, `SOLO_INTENCION`, mismo ramo en BD que la RC). «claims made» ~90/mes, KD 0 → artículo que cita arts. 3 y
 73 LCS, añadidos a `NORMAS_CITABLES` leyendo el PDF consolidado del BOE (el texto que dio otro asistente era INVENTADO). Oficios sueltos
 0-50/mes: descartados. Portal `clientes.` → `noindex` en el layout raíz (competía por la marca). Consultas añadidas al cron.
+Texto consolidado de la LCS guardado en `docs/normativa/` (boe.es bloqueado en sesión: citar SOLO desde ahí);
+skill `seo-asegura` actualizada con qué sirve de OpenSEO (GSC y métricas sí; rank tracker = pago) y la regla de normas.
 
 **(23/09/2026)** ⭐ **Petición de reseñas de Google: borrador listo, SIN enviar.** `docs/asegura-resenas/` (texto
 WhatsApp + correo, QR PNG/SVG). Enlace directo a «escribir reseña» con el `place_id` de la ficha leído vía OpenSEO

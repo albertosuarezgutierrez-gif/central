@@ -19,7 +19,8 @@
 // que se leyó. Lo que no está, no se cita: se pide que se añada.
 //
 // ─── Cómo se amplía ────────────────────────────────────────────────────────
-// Abriendo la fuente (el texto consolidado del BOE), leyendo el artículo
+// Abriendo la fuente (el texto consolidado del BOE; sin red, la copia de
+// `docs/normativa/`), leyendo el artículo
 // entero, y escribiendo aquí la síntesis con la fecha de esa lectura. No se
 // añade una norma «de memoria» ni copiando de otra web: el valor de esta lista
 // es exactamente el de la comprobación que hay detrás.
