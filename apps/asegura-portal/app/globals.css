@@ -3626,3 +3626,14 @@ h1 em {
 
 .presu-plegable-cuerpo { margin-top: 12px; }
 .presu-mediador p { font-size: 13px; line-height: 1.5; }
+
+/* «Tus vencimientos» (pieza 1-5, 23/09/2026): una tarjeta por póliza que
+ * renueva en 60 días, con su botón. Mismo borde y panel que las filas. */
+.vencimiento-tarjeta {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+}

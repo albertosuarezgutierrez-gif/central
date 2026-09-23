@@ -13,6 +13,13 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** 💶 **Pieza 1-5: portal «Tus vencimientos» + «Quiero que me mejores el precio».** En «Mis seguros» del portal, tarjeta por
+póliza PROPIA en vigor que renueva en ≤60 días (no las de terceros autorizados; una fecha pasada NO entra). El botón lleva a
+`/boveda/mejorar/[id]` (prioridad · canal · momento · nota) → `POST /api/mejorar-precio` (portal) → puente `POST /api/portal/mejorar-precio`
+(asegura, `lib/mejorar-precio-portal.ts`): oportunidad `en_negociacion`/`renovacion` con `info_riesgo.origen='portal:mejorar-precio'` + tarea
+de hoy prioridad alta (→ «Hoy · Tareas de hoy») + historial + Telegram. Idempotente por póliza (candado + 120 días). La nota libre va a la
+tarea, nunca a `oportunidad_historial` (append-only). Casilla comercial compacta junto al alta de pólizas de otras compañías (misma ruta y texto).
+
 **(23/09/2026)** 🟠 **Vencimientos: «YA VENCIDAS» → «Renovación sin recibir» + WhatsApp a leads.** Alberto: «pólizas vencidas en junio, no tiene
 sentido». Eran 10 de Mapfre con la última anualidad COBRADA hasta esa fecha y **Mapfre (C0058) sin mandar ficheros por CIMA desde el 23/06**
 (medido en `cima_ficheros`). Ahora van al final en tono aviso, fuera de «cartera en juego», con el último fichero CIMA por compañía
