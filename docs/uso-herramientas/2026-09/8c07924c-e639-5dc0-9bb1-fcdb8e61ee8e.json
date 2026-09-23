@@ -1,19 +1,19 @@
 {
  "sesion": "8c07924c-e639-5dc0-9bb1-fcdb8e61ee8e",
  "inicio": "2026-09-23T15:29:06.084Z",
- "fin": "2026-09-23T18:26:08.577Z",
- "llamadas": 332,
+ "fin": "2026-09-23T18:47:10.015Z",
+ "llamadas": 364,
  "categorias": {
   "otro": {
-   "llamadas": 73,
-   "chars_in": 4651,
-   "chars_out": 682346,
+   "llamadas": 93,
+   "chars_in": 4691,
+   "chars_out": 868060,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "ToolSearch": 19,
-    "ReadNotifications": 48,
+    "ReadNotifications": 68,
     "Skill": 4,
     "SendUserFile": 1,
     "SubagentHandback": 1
@@ -59,20 +59,20 @@
    }
   },
   "bash": {
-   "llamadas": 140,
-   "chars_in": 67699,
-   "chars_out": 451444,
+   "llamadas": 148,
+   "chars_in": 74229,
+   "chars_out": 505062,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 140
+    "Bash": 148
    }
   },
   "mcp:github": {
-   "llamadas": 39,
-   "chars_in": 14468,
-   "chars_out": 92282,
+   "llamadas": 41,
+   "chars_in": 14652,
+   "chars_out": 92482,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 678241,
@@ -81,24 +81,24 @@
     "mcp__github__create_pull_request": 8,
     "mcp__github__get_job_logs": 1,
     "mcp__github__pull_request_read": 11,
-    "mcp__github__update_pull_request": 7,
-    "mcp__github__merge_pull_request": 7,
+    "mcp__github__update_pull_request": 8,
+    "mcp__github__merge_pull_request": 8,
     "mcp__github__actions_get": 2,
     "mcp__github__get_check_run": 1
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 30,
-   "chars_in": 3016,
-   "chars_out": 14151,
+   "llamadas": 32,
+   "chars_in": 3135,
+   "chars_out": 15838,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 8,
     "mcp__Claude_Code_Remote__send_later": 8,
-    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 7,
-    "mcp__Claude_Code_Remote__delete_trigger": 7
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 8,
+    "mcp__Claude_Code_Remote__delete_trigger": 8
    }
   },
   "escritura": {
