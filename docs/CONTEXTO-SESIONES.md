@@ -13,6 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** ✍️ **Fase 1, PR B: seguimiento de oportunidades (primeras ESCRITURAS sobre `oportunidades`/`gestiones`).**
+Migración aditiva `2026-09-23_oportunidad_seguimiento.sql`: motivo de pérdida estructurado (+competidor, prima rival),
+`aparcada_hasta`, `cerrada_at`, CHECK «perdida sin motivo no existe» y `oportunidad_historial` append-only (antes/después +
+actor, en la MISMA transacción). Reglas puras `aplicarAccion`/`validarTarea` (module-seguros); puerto `GET/POST
+/api/operador/oportunidad` y `POST/PATCH …/oportunidad/tarea`. El carril de leads incluye las que están en seguimiento y
+excluye las aparcadas. LSSI medido: de 3.327 leads solo 267 fueron clientes (55 desde 2023) → email por 21.2 solo a esos;
+el resto, teléfono (interés legítimo + Robinson). No hay columna de consentimiento comercial en `clientes`.
+
 **(23/09/2026)** 🎯 **Fase 1 (vender), PR A: carril de LEADS de Vencimientos, solo lectura.** Hallazgo: `seguros.oportunidades`
 (legacy, nadie la leía) guarda 3.676 pólizas de leads en OTRA compañía con `fecha_fin_vigencia` real de 2023-24 → **3.546
 contactables y no clientes en vigor, 874 con aniversario en ≤90 días** (vs 216 del volcado 2013-18). Reglas puras en
