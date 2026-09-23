@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import { FECHA_VERIFICACION } from './companias-baja.ts'
+import { ARTICULOS, textoArticulo } from './articulos.ts'
 import { TELEFONOS_COMPANIAS, hrefTel, telefonosParaPublicar } from './telefonos-companias.ts'
 
 test('cada compañía tiene su página oficial y no se da por verificada sin fecha', () => {
@@ -53,4 +54,17 @@ test('la página está en el sitemap y la enlaza /siniestro (nada huérfano)', (
   assert.match(sitemap, /url\('\/telefonos-siniestros'\)/)
   const siniestro = readFileSync(new URL('../app/siniestro/page.tsx', import.meta.url), 'utf8')
   assert.match(siniestro, /href="\/telefonos-siniestros"/)
+})
+
+// Los teléfonos viven en UN sitio. Un artículo del blog que los copie se queda
+// viejo el día que la compañía cambia de número, y nada falla: el artículo
+// sigue verde y manda al lector a una línea muerta. Se enlaza la página.
+test('ningún artículo del blog copia un teléfono de compañía', () => {
+  const numeros = TELEFONOS_COMPANIAS.flatMap((c) => [c.siniestros, ...c.asistencia.flatMap((a) => a.numeros), c.whatsapp])
+    .filter((n): n is string => !!n)
+    .map((n) => n.replace(/\D/g, '').replace(/^34(?=\d{9}$)/, ''))
+  for (const a of ARTICULOS) {
+    const digitos = textoArticulo(a).replace(/\D/g, '')
+    for (const n of numeros) assert.ok(!digitos.includes(n), `${a.slug}: copia el ${n}; enlaza /telefonos-siniestros`)
+  }
 })
