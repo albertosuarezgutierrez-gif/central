@@ -62,17 +62,35 @@ jobs:
         app: [ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen, mariscos, asegura, asegura-portal, asegura-web, housesevillana]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # HEAD = merge del PR, HEAD^1 = su base
+      # 💸 Solo en PRs: si el PR no toca esta app ni un package que consuma, el job
+      # se salta sus pasos y termina en VERDE (el check es requerido: filtrar con
+      # `paths:` lo dejaría en «Expected»). Push a main y dispatch: siempre entero.
+      # Motivo y reglas (fail-open) en scripts/ci-app-afectada.mjs.
+      - name: ¿El PR toca esta app?
+        id: afecta
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            node scripts/ci-app-afectada.mjs apps/${{ matrix.app }} HEAD^1
+          else
+            echo "afecta=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: pnpm/action-setup@v4
+        if: steps.afecta.outputs.afecta != 'false'
       - uses: actions/setup-node@v4
+        if: steps.afecta.outputs.afecta != 'false'
         with:
           node-version: '20'
           cache: 'pnpm'
           cache-dependency-path: pnpm-lock.yaml
       - name: Install
+        if: steps.afecta.outputs.afecta != 'false'
         run: pnpm install --no-frozen-lockfile
       # prisma y typescript son deps de cada APP (no de la raíz) → se ejecutan
       # DESDE el dir de la app, igual que su build, para que pnpm los resuelva.
       - name: Prisma generate + TypeScript check
+        if: steps.afecta.outputs.afecta != 'false'
         working-directory: apps/${{ matrix.app }}
         run: |
           # Si la app define `prisma:generate` (varios schemas, p.ej. asegura con
