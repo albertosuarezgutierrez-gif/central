@@ -461,3 +461,20 @@ export type {
 // necesita también el cron de vencimientos de `apps/asegura`, que no puede
 // tratarlos como el vencimiento de un seguro — ver su cabecera.
 export { TIPOS_RECORDATORIO_PROPIO } from './recordatorio-libre.ts'
+
+// «Quiero que me mejores el precio» (pieza 1-5 de ASegura OS, 23/09/2026).
+export {
+  CANALES_PRECIO,
+  DIAS_VENTANA_VENCIMIENTOS,
+  MAX_NOTA_PRECIO,
+  MOMENTOS_LLAMADA,
+  PRIORIDADES_PRECIO,
+  ROTULO_CANAL,
+  ROTULO_MOMENTO,
+  ROTULO_PRIORIDAD,
+  diasHasta as diasHastaVencimientoPortal,
+  enVentanaVencimientos,
+  textoTareaPrecio,
+  validarPeticionPrecio,
+} from './mejorar-precio.ts'
+export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } from './mejorar-precio.ts'

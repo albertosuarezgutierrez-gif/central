@@ -23,7 +23,16 @@ import { TEXTO_CONSENTIMIENTO_COMERCIAL } from '@central/module-seguros-portal'
  *    Dejarla marcada tras un error sería enseñar un consentimiento que no
  *    existe en la BD.
  */
-export function ConsentimientoComercial({ inicial }: { inicial: boolean | null }) {
+export function ConsentimientoComercial({ inicial, compacto = false }: {
+  inicial: boolean | null
+  /**
+   * Versión corta para «Mis seguros», junto al alta de pólizas de otras
+   * compañías (pieza 1-5, 23/09/2026): es donde de verdad se decide, al
+   * guardar un seguro que no llevamos. Misma casilla, mismo texto sellado y
+   * misma ruta; solo cambia el envoltorio.
+   */
+  compacto?: boolean
+}) {
   const [marcado, setMarcado] = useState(inicial === true)
   const [estado, setEstado] = useState<'reposo' | 'guardando' | 'guardado' | 'error'>('reposo')
 
@@ -47,12 +56,18 @@ export function ConsentimientoComercial({ inicial }: { inicial: boolean | null }
 
   return (
     <section className="seccion" aria-labelledby="consentimiento-titulo">
-      <p className="antetitulo">Propuestas de la correduría</p>
-      <h2 id="consentimiento-titulo">¿Quieres que revisemos lo que tienes?</h2>
+      {compacto ? (
+        <h2 id="consentimiento-titulo" style={{ fontSize: 16 }}>¿Te avisamos antes de que venzan, con una propuesta?</h2>
+      ) : (
+        <>
+          <p className="antetitulo">Propuestas de la correduría</p>
+          <h2 id="consentimiento-titulo">¿Quieres que revisemos lo que tienes?</h2>
+        </>
+      )}
       <p className="suave" style={{ marginTop: 0 }}>
         Guardar aquí tus seguros no nos autoriza a nada más que a guardarlos. Si además quieres que te
         propongamos alternativas cuando se acerque un vencimiento, márcalo aquí. Es independiente del resto
-        del servicio y lo puedes retirar cuando quieras.
+        del servicio y lo puedes retirar cuando quieras{compacto ? <> en <a href="/boveda?vista=datos">Mis datos</a></> : null}.
       </p>
       <label className="consentimiento-casilla">
         <input
