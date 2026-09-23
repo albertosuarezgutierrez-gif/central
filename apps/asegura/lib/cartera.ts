@@ -190,7 +190,7 @@ export async function resumenCartera(correduriaId: string): Promise<ResumenCarte
               and p.merged_into_poliza_id is null
               and ${Prisma.raw(sqlCarteraEnVigor('p'))}
           ) v on true
-          where c.correduria_id = ${correduriaId}
+          where c.correduria_id = ${correduriaId}::uuid
             and c.merged_into_cliente_id is null
             and c.activo = true
         `),
