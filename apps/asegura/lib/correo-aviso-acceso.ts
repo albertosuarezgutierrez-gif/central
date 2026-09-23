@@ -44,7 +44,7 @@
 
 import { remitenteCorreo } from '@central/module-seguros'
 
-import { rechazoDeRemitente, type ResultadoEnvioCorreo } from './correo-invitacion-portal'
+import { rechazoDeRemitente, type ResultadoEnvioCorreo } from './correo-invitacion-portal.ts'
 
 /** Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual. */
 function esc(s: string): string {
