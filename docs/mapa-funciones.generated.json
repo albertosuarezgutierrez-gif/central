@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-23T10:57:43Z",
-  "sha": "444d859cad68ec5010ac08746f5e8a29511742a4",
+  "generadoEn": "2026-09-23T12:02:55Z",
+  "sha": "21086e01026fb4001208d3b63cb20d60af95ab49",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -20616,7 +20616,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 69,
+          "linea": 77,
           "resumen": "Valor de cajón del volcado de Manuel: no es una compañía."
         },
         {
@@ -20625,7 +20625,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 92
+          "linea": 101
         },
         {
           "nombre": "leadsCompetencia",
@@ -20633,7 +20633,7 @@
           "exportada": true,
           "params": "correduriaId: string, horizonteDias = 90, hoy: Date = hoyUtc(),",
           "retorno": "Promise<ListaLeadsCompetencia>",
-          "linea": 97
+          "linea": 106
         }
       ],
       "tablas": [
@@ -20645,7 +20645,7 @@
         "recaptacion_envios"
       ],
       "rutaApi": null,
-      "hash": "729e05b0917c"
+      "hash": "222ba9c6d08d"
     },
     {
       "ruta": "apps/asegura/lib/leads-portal.ts",
@@ -20830,7 +20830,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 72
+          "linea": 77
         },
         {
           "nombre": "dia",
@@ -20838,7 +20838,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 77
+          "linea": 82
         },
         {
           "nombre": "mapOportunidad",
@@ -20846,7 +20846,7 @@
           "exportada": false,
           "params": "f: FilaOportunidad",
           "retorno": "OportunidadSeguimiento",
-          "linea": 105
+          "linea": 110
         },
         {
           "nombre": "leerOportunidad",
@@ -20854,7 +20854,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string,",
           "retorno": "Promise<",
-          "linea": 124,
+          "linea": 129,
           "resumen": "La oportunidad con su historial y sus tareas. `null` = no existe o no es de esta correduría."
         },
         {
@@ -20863,7 +20863,7 @@
           "exportada": false,
           "params": "antes: OportunidadSeguimiento, cambios: CambiosOportunidad",
           "retorno": "Record<string, unknown>",
-          "linea": 162,
+          "linea": 177,
           "resumen": "Solo los campos que cambian, con su antes y su después (salvo texto libre)."
         },
         {
@@ -20872,7 +20872,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, peticion: PeticionAccion, actor: string, hoy: Date = hoyUtc(),",
           "retorno": "Promise<",
-          "linea": 181
+          "linea": 196
         },
         {
           "nombre": "textoCambio",
@@ -20880,7 +20880,7 @@
           "exportada": false,
           "params": "accion: string, antes: OportunidadSeguimiento, despues: OportunidadSeguimiento, actor: string",
           "retorno": "string",
-          "linea": 262
+          "linea": 277
         },
         {
           "nombre": "crearTarea",
@@ -20888,7 +20888,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, datos: { tipo?: unknown; prioridad?: unknown; observaciones?: unknown; fechaLimite?: unknown }, actor: string, hoy: Date = hoyUtc(),",
           "retorno": "Promise<",
-          "linea": 270
+          "linea": 285
         },
         {
           "nombre": "cerrarTarea",
@@ -20896,7 +20896,7 @@
           "exportada": true,
           "params": "correduriaId: string, tareaId: string, resultado: string | null, actor: string,",
           "retorno": "Promise<",
-          "linea": 308
+          "linea": 323
         },
         {
           "nombre": "anotarEnFicha",
@@ -20904,10 +20904,11 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 343
+          "linea": 358
         }
       ],
       "tablas": [
+        "clientes",
         "gestiones",
         "historial_interno",
         "oportunidad_historial",
@@ -20915,7 +20916,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "290ede72460d"
+      "hash": "1c6ee413a56c"
     },
     {
       "ruta": "apps/asegura/lib/partes-portal.ts",
@@ -67996,7 +67997,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 74
+          "linea": 76
         },
         {
           "nombre": "fmtFecha",
@@ -68004,7 +68005,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 79,
+          "linea": 81,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -68013,7 +68014,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 129
+          "linea": 131
         },
         {
           "nombre": "CorreduriaClient",
@@ -68021,7 +68022,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 131
+          "linea": 133
         },
         {
           "nombre": "CarteraResumen",
@@ -68029,7 +68030,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 626
+          "linea": 638
         },
         {
           "nombre": "btnMini",
@@ -68037,7 +68038,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 743,
+          "linea": 755,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -68046,12 +68047,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 761
+          "linea": 773
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "599b10e35c11"
+      "hash": "9d1bb97e7b46"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -69011,6 +69012,107 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ddba4c17f130"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "OportunidadPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "OportunidadPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 6,
+          "resumen": "Seguimiento de UNA oportunidad: estado, tareas e historial (maqueta aprobada el 23/09/2026)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "68409f973884"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SeguimientoClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SeguimientoClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 28
+        },
+        {
+          "nombre": "masDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, n: number",
+          "retorno": "string",
+          "linea": 31
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": "string",
+          "linea": 36
+        },
+        {
+          "nombre": "enviar",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, metodo: 'POST' | 'PATCH', body: Record<string, unknown>",
+          "retorno": "Promise<string | null>",
+          "linea": 44
+        },
+        {
+          "nombre": "SeguimientoClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ id }: { id: string }",
+          "retorno": null,
+          "linea": 57
+        },
+        {
+          "nombre": "FormPerder",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ enviando, onEnviar, onCancelar }: { enviando: boolean; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
+          "retorno": null,
+          "linea": 186
+        },
+        {
+          "nombre": "FormAparcar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ enviando, hoy, onEnviar, onCancelar }: { enviando: boolean; hoy: string; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
+          "retorno": null,
+          "linea": 226
+        },
+        {
+          "nombre": "Tareas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, onCambio }: { oportunidadId: string; tareas: TareaSeguimiento[]; descartadas: number; fueCliente: boolean | null; cerrada: boolean; hoy: string; onCambio: () => void }",
+          "retorno": null,
+          "linea": 256
+        }
+      ],
+      "tablas": [
+        "lucide",
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "ebc09433e969"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/page.tsx",
@@ -70793,6 +70895,95 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2442e4086398"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/vencimientos/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "VencimientosPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "VencimientosPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Vencimientos: la pantalla de VENDER (pieza 1-3 de ASegura OS, maqueta aprobada por Alberto el 23/09/2026). Dos carriles —clientes que renuevan y leads con su seguro en otra compañía— y desde cada lead"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "37f120630974"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/vencimientos/VencimientosClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "VencimientosClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "carrilDeUrl",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Carril",
+          "linea": 23
+        },
+        {
+          "nombre": "VencimientosClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "CarrilLeads",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ datos }: { datos: LeadsVencimientos | null }",
+          "retorno": null,
+          "linea": 91
+        },
+        {
+          "nombre": "Chip",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ activo, onClick, children }: { activo: boolean; onClick: () => void; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 150
+        },
+        {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 168
+        },
+        {
+          "nombre": "tonoCanal",
+          "kind": "function",
+          "exportada": false,
+          "params": "l: LeadVencimiento",
+          "retorno": "Tono",
+          "linea": 173
+        },
+        {
+          "nombre": "FilaLead",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ l }: { l: LeadVencimiento }",
+          "retorno": null,
+          "linea": 180
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "91dd18da1c82"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/dashboard/GestionSociedad.tsx",
@@ -78319,6 +78510,27 @@
       "hash": "2838b2a4c6b4"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/leads-competencia/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/correduria/leads-competencia?dias=90 — carril de LEADS de Vencimientos (puerto de asegura, solo lectura). La fecha es ESTIMADA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/leads-competencia",
+      "hash": "866c50e9e4a3"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/leads-web/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -78359,6 +78571,74 @@
       "tablas": [],
       "rutaApi": "/api/correduria/leads",
       "hash": "176c8db4cabc"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/oportunidad/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "/api/correduria/oportunidad — seguimiento de una oportunidad. Reenvía al puerto de asegura, que valida la regla (perder sin motivo = 422) y deja el historial. El `actor` lo pone el servidor y va el ÚL"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/oportunidad",
+      "hash": "a05abe942bc2"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/oportunidad/tarea/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST",
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "/api/correduria/oportunidad/tarea — tareas de seguimiento (puerto de asegura). POST { oportunidadId, tipo, fechaLimite, observaciones, prioridad? } → crea PATCH { tareaId, resultado? } → cierra"
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "reenviar",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest, obligatorio: 'oportunidadId' | 'tareaId', llamada: (b: Record<string, unknown>) => Promise<Reenvio>",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/oportunidad/tarea",
+      "hash": "e4c0e291fb1c"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/partes/route.ts",
@@ -102255,6 +102535,150 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "bd2abd7c894c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seguimiento-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Vencimientos (carril de LEADS) y seguimiento de oportunidades de la correduría, leídos del puerto de asegura. Esta app no toca la BD de la correduría: `lib` puro para interpretar (testeable con `node --test`) y un reenvío fino para la red, solo desde rutas API (el secreto no sale de ahí). Tres estad",
+      "exporta": [
+        "interpretarLead",
+        "interpretarLeads",
+        "interpretarOportunidad",
+        "rotuloCanal",
+        "parsearPrima",
+        "leadsCompetenciaAsegura",
+        "oportunidadAsegura",
+        "accionOportunidadAsegura",
+        "crearTareaAsegura",
+        "cerrarTareaAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "objeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 75
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 78
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 81
+        },
+        {
+          "nombre": "uno",
+          "kind": "function",
+          "exportada": false,
+          "params": "lista: readonly T[], v: unknown",
+          "retorno": "T | null",
+          "linea": 84
+        },
+        {
+          "nombre": "interpretarLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "LeadVencimiento | null",
+          "linea": 88
+        },
+        {
+          "nombre": "interpretarLeads",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LeadsVencimientos",
+          "linea": 130
+        },
+        {
+          "nombre": "interpretarOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaOportunidad",
+          "linea": 199
+        },
+        {
+          "nombre": "rotuloCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CanalLead | null",
+          "retorno": "string",
+          "linea": 277,
+          "resumen": "`null` = no se sabe (asegura antigua): se dice, no se afirma «solo teléfono»."
+        },
+        {
+          "nombre": "parsearPrima",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "number | null | 'invalido'",
+          "linea": 318,
+          "resumen": "Prima tecleada en formato español. Solo se aceptan formas sin ambigüedad: «1.200» es mil doscientos, nunca 1,2; «1200», «1.200,50», «412,5» y «412.50» también. Lo que no encaja es `'invalido'`, no un "
+        },
+        {
+          "nombre": "llamar",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string, init: RequestInit",
+          "retorno": "Promise<Reenvio>",
+          "linea": 333
+        },
+        {
+          "nombre": "leadsCompetenciaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias: number",
+          "retorno": "Promise<Reenvio>",
+          "linea": 350
+        },
+        {
+          "nombre": "oportunidadAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 353
+        },
+        {
+          "nombre": "accionOportunidadAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 356
+        },
+        {
+          "nombre": "crearTareaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 359
+        },
+        {
+          "nombre": "cerrarTareaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 362
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "4b435ce11eb1"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/agente-decidir.ts",
@@ -137228,7 +137652,9 @@
         "diasHasta",
         "ventanaDe",
         "puntuarLead",
-        "siguientePasoLead"
+        "siguientePasoLead",
+        "canalLead",
+        "textoPasoLead"
       ],
       "funciones": [
         {
@@ -137274,11 +137700,28 @@
           "retorno": "PasoLead",
           "linea": 111,
           "resumen": "Qué toca con un lead, por reglas: primer contacto a 60 días del aniversario, recordatorio a los 7 días sin respuesta, llamada a los 14 y, tras 3 intentos sin respuesta, se aparca hasta el año siguient"
+        },
+        {
+          "nombre": "canalLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { fueCliente: boolean; tieneTelefono: boolean; tieneEmail: boolean }",
+          "retorno": "CanalLead",
+          "linea": 155
+        },
+        {
+          "nombre": "textoPasoLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "paso: { accion: PasoLead['accion']; dentroDeDias: number }, canal: CanalLead",
+          "retorno": "string",
+          "linea": 164,
+          "resumen": "El paso, dicho con el canal que de verdad se puede usar: «primer contacto» a quien no se le puede escribir es una llamada."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "44cfbb08b916"
+      "hash": "3f288092ccc0"
     },
     {
       "ruta": "packages/module-seguros/src/matricula.ts",
@@ -144204,7 +144647,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3490,
-    "funciones": 10957
+    "archivos": 3498,
+    "funciones": 10997
   }
 }
