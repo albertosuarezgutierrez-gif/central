@@ -22,6 +22,15 @@ columna, DELETE en 3 tablas, nada de `public`, sin contraseña; `apps/asegura/pr
 `asegura#849` (secret `SMOKE_CLEANUP_DATABASE_URL`, `search_path` fijado, sin secret falla en vez de saltarse).
 **Pendiente de Alberto:** contraseña del rol + secret en el mismo paso. #815 cerrado solo; #847 sigue abierto hasta el primer run bueno.
 
+
+
+**(23/09/2026)** 💳 **Pieza 1-6: control del gasto de IA.** Cron diario `/api/cron/ia-saldo` (06:10 UTC): foto del saldo de OpenRouter en
+`ia_saldo_diario` → gasto medio 7 días y **días de saldo**; Telegram (`sistema.ia-creditos`) a ≤7 días o bajo `AI_CREDITOS_UMBRAL`, y si una
+app pasa el 80 % de su tope mensual. El detalle del latido `ia_saldo` dice qué % del gasto real NO pasó por la pasarela. Tope mensual en €
+por app (`ia_presupuestos.limite_mensual_eur`; la pasarela bloquea el camino de pago al 100 %); asegura sembrado a 5 €/mes. La IA de texto de
+asegura va por `lib/ia.ts` → pasarela (visión sigue directa). **Pendiente de Alberto:** `AI_GATEWAY_URL` + `AI_GATEWAY_SECRET` en Vercel
+`central-asegura` (sin ellas cae a directo y lo avisa en el log); límite de crédito en el panel de OpenRouter como tope duro.
+
 **(23/09/2026)** 📇 **Contactos para el móvil (.vcf).** Botón en `/correduria` → Clientes: clientes en vigor (67) + leads de Vencimientos,
 con «· AS Cliente» / «· AS Lead» en el nombre para saber quién llama. Solo nombre, teléfono, correo y enlace a la ficha (ni DNI ni dirección).
 Datos por `GET /api/operador/contactos-movil` (asegura, descifra) → `libroVcard` (module-seguros) en `/api/correduria/contactos-movil`.

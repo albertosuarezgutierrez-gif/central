@@ -24,7 +24,8 @@
 // proveedor de IA respondió. El mismo comportamiento ante un marcador de cajón
 // lo vigila `test/regression-marcadores-sin-dato.test.ts`.
 
-import { aiComplete, openrouterVision, cleanJSON } from '@central/core-ai'
+import { openrouterVision, cleanJSON } from '@central/core-ai'
+import { iaTexto } from '../ia.ts'
 import {
   normalizarAutoLeido,
   autoLeidoVacio,
@@ -192,11 +193,11 @@ export async function leerPoliza(
       )
     }
     try {
-      const salida = await aiComplete(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1100 })
+      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1100, timeoutMs: 55_000, privado: true })
       const { ramo, auto, hogar } = parsear(salida)
       return empaquetar(ramo, auto, hogar, 'texto')
     } catch (e) {
-      console.warn('[asegura] aiComplete falló:', e)
+      console.warn('[asegura] lectura de texto por IA falló:', e)
       return nadaLeido(`No se ha podido leer el documento: ${mensaje(e)}`)
     }
   }

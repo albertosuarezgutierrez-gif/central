@@ -211,6 +211,10 @@ El resto de `/cartera` (buscar, ficha) sigue vivo como respaldo del corredor, pe
   nunca `0,00€`.
 
 ## Envs
+🤖 **`AI_GATEWAY_URL` + `AI_GATEWAY_SECRET` (23/09/2026):** la IA de texto va por la pasarela de plataforma
+(`lib/ia.ts` → `iaTexto()`), que la anota en `ai_usos` con app='asegura' y le aplica el tope mensual
+(`ia_presupuestos`, 5 €/mes). Sin ellas cae a `aiComplete` directo — funciona, pero fuera de todo control.
+No llames a `aiComplete` desde otro fichero: lo vigila `lib/ia.test.ts`.
 `DATABASE_URL`, `DIRECT_URL` (rol `prisma_seguros`; **desde el 02/09/2026 también es la conexión de la
 CARTERA**, con `?schema=seguros` que añade `lib/asegura-url.ts`), `ASEGURA_SESSION_SECRET`.
 ⚠️ **Contraseña de `prisma_seguros` ROTADA el 02/09/2026 a las 10:17 UTC** (`ALTER ROLE`, verificador

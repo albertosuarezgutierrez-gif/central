@@ -779,6 +779,19 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.paper-tracker.',
   },
   {
+    id: 'ia_saldo',
+    vigiladoDesde: '2026-09-23',
+    etiqueta: '💳 Saldo de OpenRouter y tope mensual de IA (diario 06:10)',
+    // Diario → 30 h, el estándar de los diarios: tolera un día saltado.
+    maxHoras: 30,
+    nota:
+      'Nadie está mirando el saldo de OpenRouter ni el tope mensual por app: si se agota, la ' +
+      'pasarela cae a la cadena gratis sin avisar antes. Mira los logs de /api/cron/ia-saldo; si ' +
+      'el detalle dice «OpenRouter /credits HTTP 401», la OPENROUTER_API_KEY de plataforma; si trae ' +
+      'una excepción sobre `ia_saldo_diario`, que la migración 2026-09-23 esté aplicada. ' +
+      'Huella: agente_latidos.ia_saldo.',
+  },
+  {
     id: 'sivra_prevision',
     vigiladoDesde: '2026-08-30',
     etiqueta: '🔮 Foto diaria de la previsión por piso (diario 05:50)',
