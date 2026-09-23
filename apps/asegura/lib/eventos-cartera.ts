@@ -32,7 +32,12 @@ export async function fotoActual(correduriaId: string): Promise<Foto> {
   const [polizas, recibos, siniestros] = await Promise.all([
     db.$queryRaw<{ id: string; cliente_id: string; estado: string; vencimiento: string | null; sustituida: boolean; fusionada: boolean }[]>`
       select p.id, p.cliente_id, p.estado::text as estado, to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento,
-             p.sustituida_at is not null as sustituida, p.merged_into_poliza_id is not null as fusionada
+             -- «Sustituida» = hay a dónde se fue: sustitución registrada, o una póliza que la tiene como
+             -- madre (renovación como póliza nueva) u origen (cambio de compañía). Su baja no es pérdida.
+             (p.sustituida_at is not null or exists (
+               select 1 from polizas h where h.merged_into_poliza_id is null
+                 and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id))) as sustituida,
+             p.merged_into_poliza_id is not null as fusionada
       from polizas p where p.correduria_id = ${correduriaId}::uuid and ${viva}`,
     db.$queryRaw<{ id: string; poliza_id: string; cliente_id: string; situacion: string | null }[]>`
       select r.id, r.poliza_id, p.cliente_id, r.situacion::text as situacion
