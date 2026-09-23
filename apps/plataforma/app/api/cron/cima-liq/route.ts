@@ -48,18 +48,23 @@ export async function GET(req: NextRequest) {
   // correduría (`CORREDURIA_EMAILS`, la misma lista que guarda `/correduria`), y entre ellas la que
   // recibe los abonos de seguros en sus bancos.
   const lista = listaCorreduria()
-  // Sin la lista se toman todas las cuentas (un cron no tiene sesión que denegar), y se DICE en el latido.
+  // Sin la lista no se escribe nada (fail-closed, igual que `/correduria`): «no sé de quién es el libro»
+  // no autoriza a escribirlo en una cuenta cualquiera.
+  if (lista === null) {
+    const motivo = `falta ${ENV_LISTA_CORREDURIA}: no se sabe de quién es el libro, no se escribe nada`
+    await registrarLatido(AGENTE, false, motivo)
+    return NextResponse.json({ ok: false, msg: motivo })
+  }
   const cuenta = await prisma.$queryRaw<Array<{ id: string; abonos: number }>>`
     SELECT c.id, (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-                  WHERE cb.cuenta_id = c.id AND mb.destino = 'seguros' AND mb.importe > 0)::int AS abonos
+                  WHERE cb.cuenta_id = c.id AND mb.destino = 'seguros' AND mb.importe > 0
+                    AND coalesce(mb.duplicado_estado, '') <> 'ignorado')::int AS abonos
     FROM cuentas c
-    WHERE ${lista === null} OR lower(c.email) = ANY(${lista ?? []}::text[])
+    WHERE lower(c.email) = ANY(${lista}::text[])
     ORDER BY abonos DESC, c.created_at, c.id
     LIMIT 1`
   if (!cuenta.length) {
-    const motivo = lista === null
-      ? 'sin ninguna cuenta en la BD: no se ha podido cuadrar nada'
-      : `ninguna cuenta casa con ${ENV_LISTA_CORREDURIA} (¿errata en la lista?): no se ha podido cuadrar nada`
+    const motivo = `ninguna cuenta casa con ${ENV_LISTA_CORREDURIA} (¿errata en la lista?): no se ha podido cuadrar nada`
     await registrarLatido(AGENTE, false, motivo)
     return NextResponse.json({ ok: false, msg: motivo })
   }
@@ -69,7 +74,6 @@ export async function GET(req: NextRequest) {
   const avisoCuenta = cuenta[0].abonos === 0
     ? 'la cuenta elegida no tiene abonos de seguros en sus bancos: el tramo del banco no se ha podido cruzar'
     : null
-  const notaLista = lista === null ? `sin ${ENV_LISTA_CORREDURIA}: cuenta elegida entre todas` : null
 
   // Desde el 1 de diciembre del año anterior: en enero llega la liquidación de diciembre, y sin ese
   // periodo en el libro su abono no tendría a dónde ir.
@@ -324,7 +328,6 @@ export async function GET(req: NextRequest) {
       sinDato ? 'comisiones ilegibles: no se sabe' : `${ilegibles} recibo(s) con comisión ilegible`,
       casado.sinPeriodo > 0 ? `${casado.sinPeriodo} abono(s) de seguros sin periodo en el libro` : null,
       notaTecho,
-      notaLista,
     ].filter(Boolean).join(' · '),
   )
   return NextResponse.json({
