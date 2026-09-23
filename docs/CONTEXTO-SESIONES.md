@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🧩 **asegura-portal: «Tus vencimientos» con fuente única** (`lib/vencimientos.ts`). La ventana
+de 60 días y la prima «pagas ahora» estaban copiadas en la bóveda, en el bloque y en «Mejorar el precio»: si
+divergían, la bóveda dejaba de pedir las peticiones y el bloque enseñaba el botón a quien ya lo había pedido.
+Ahora la página calcula la lista una vez y se la pasa al bloque; `primaQuePaga()` la comparten las dos pantallas.
+
 **(23/09/2026)** 🔎 **OpenSEO probado sobre grupoasegura.es + PR de títulos/descripciones.** Proyecto OpenSEO
 «Grupo ASegura» creado (ES/es; ~400 créditos de alta, sin plan). Hallazgos: al buscar la marca sale 1.º **Asegura
 Group** (otra correduría, Granada) y nosotros 2.º; fuera del top-20 de «correduría de seguros sevilla» (manda el
