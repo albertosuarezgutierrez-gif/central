@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-23T09:51:43Z",
-  "sha": "10c4a36456287c2d8fb50d2d2d6c0abed4371fb6",
+  "generadoEn": "2026-09-23T10:21:30Z",
+  "sha": "c7efca1bee42259dee392fe3cc077fd3beaa87ab",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12593,6 +12593,90 @@
       "hash": "bf0efe17b343"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/oportunidad/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "Seguimiento de UNA oportunidad (Fase 1 de ASegura OS). GET ?id= → oportunidad + historial (auditoría) + tareas POST { id, accion, ..., actor } → cambia su estado: interesado · propuesta_enviada · gana"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 37
+        },
+        {
+          "nombre": "actorDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: Record<string, unknown>",
+          "retorno": "string",
+          "linea": 69
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/oportunidad",
+      "hash": "4e3b93f32e7d"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/oportunidad/tarea/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST",
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Tareas de seguimiento de una oportunidad (tabla heredada `gestiones`). POST { oportunidadId, tipo, fechaLimite, observaciones, prioridad?, actor } → crea PATCH { tareaId, resultado?, actor } → cierra "
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "escribir",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request, accion: (correduriaId: string, b: Record<string, unknown>) => Promise<Resultado>",
+          "retorno": null,
+          "linea": 33
+        },
+        {
+          "nombre": "actorDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: Record<string, unknown>",
+          "retorno": "string",
+          "linea": 51
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/oportunidad/tarea",
+      "hash": "2aee70815b0d"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/partes/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -20490,7 +20574,7 @@
     {
       "ruta": "apps/asegura/lib/leads-competencia.ts",
       "ambito": "apps/asegura",
-      "resumen": "El carril de LEADS de Vencimientos: pólizas que los leads tenían en OTRA compañía (tabla heredada `oportunidades`, estado `competencia`), con el próximo aniversario de su fecha de fin. Solo lectura: no envía ni escribe. Por qué y qué significa la fecha: cabecera de `lead-competencia.ts` en `@central",
+      "resumen": "El carril de LEADS de Vencimientos: pólizas que los leads tenían en OTRA compañía (tabla heredada `oportunidades`, abiertas y no aparcadas), con el próximo aniversario de su fecha de fin. Solo lectura: no envía ni escribe. Por qué y qué significa la fecha: cabecera de `lead-competencia.ts` en `@cent",
       "exporta": [
         "leadsCompetencia"
       ],
@@ -20501,7 +20585,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 67,
+          "linea": 69,
           "resumen": "Valor de cajón del volcado de Manuel: no es una compañía."
         },
         {
@@ -20510,7 +20594,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 89
+          "linea": 92
         },
         {
           "nombre": "leadsCompetencia",
@@ -20518,18 +20602,19 @@
           "exportada": true,
           "params": "correduriaId: string, horizonteDias = 90, hoy: Date = hoyUtc(),",
           "retorno": "Promise<ListaLeadsCompetencia>",
-          "linea": 94
+          "linea": 97
         }
       ],
       "tablas": [
         "clientes",
         "current_date",
+        "gestiones",
         "oportunidades",
         "polizas",
         "recaptacion_envios"
       ],
       "rutaApi": null,
-      "hash": "48cd65be92a7"
+      "hash": "729e05b0917c"
     },
     {
       "ruta": "apps/asegura/lib/leads-portal.ts",
@@ -20696,6 +20781,110 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6a284c2bc9a1"
+    },
+    {
+      "ruta": "apps/asegura/lib/oportunidad-seguimiento.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/oportunidad-seguimiento.ts Escrituras del seguimiento de una oportunidad (Fase 1 de ASegura OS, PR B): cambiar su estado y crear/cerrar sus tareas (tabla heredada `gestiones`). Las reglas —qué transición vale y qué exige— están en `@central/module-seguros` (`aplicarAccion`, `validar",
+      "exporta": [
+        "leerOportunidad",
+        "cambiarEstadoOportunidad",
+        "crearTarea",
+        "cerrarTarea"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Date",
+          "linea": 72
+        },
+        {
+          "nombre": "dia",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date | null",
+          "retorno": "string | null",
+          "linea": 77
+        },
+        {
+          "nombre": "mapOportunidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaOportunidad",
+          "retorno": "OportunidadSeguimiento",
+          "linea": 105
+        },
+        {
+          "nombre": "leerOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string,",
+          "retorno": "Promise<",
+          "linea": 124,
+          "resumen": "La oportunidad con su historial y sus tareas. `null` = no existe o no es de esta correduría."
+        },
+        {
+          "nombre": "diferencias",
+          "kind": "function",
+          "exportada": false,
+          "params": "antes: OportunidadSeguimiento, cambios: CambiosOportunidad",
+          "retorno": "Record<string, unknown>",
+          "linea": 162,
+          "resumen": "Solo los campos que cambian, con su antes y su después (salvo texto libre)."
+        },
+        {
+          "nombre": "cambiarEstadoOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string, peticion: PeticionAccion, actor: string, hoy: Date = hoyUtc(),",
+          "retorno": "Promise<",
+          "linea": 181
+        },
+        {
+          "nombre": "textoCambio",
+          "kind": "function",
+          "exportada": false,
+          "params": "accion: string, antes: OportunidadSeguimiento, despues: OportunidadSeguimiento, actor: string",
+          "retorno": "string",
+          "linea": 262
+        },
+        {
+          "nombre": "crearTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, oportunidadId: string, datos: { tipo?: unknown; prioridad?: unknown; observaciones?: unknown; fechaLimite?: unknown }, actor: string, hoy: Date = hoyUtc(),",
+          "retorno": "Promise<",
+          "linea": 270
+        },
+        {
+          "nombre": "cerrarTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, tareaId: string, resultado: string | null, actor: string,",
+          "retorno": "Promise<",
+          "linea": 308
+        },
+        {
+          "nombre": "anotarEnFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 343
+        }
+      ],
+      "tablas": [
+        "gestiones",
+        "historial_interno",
+        "oportunidad_historial",
+        "oportunidades",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "290ede72460d"
     },
     {
       "ruta": "apps/asegura/lib/partes-portal.ts",
@@ -136904,7 +137093,7 @@
           "nombre": "siguientePasoLead",
           "kind": "function",
           "exportada": true,
-          "params": "dias: number, intentos: number, diasDesdeUltimo: number | null, respondio = false,",
+          "params": "dias: number, intentos: number, diasDesdeUltimo: number | null, respondio = false, propuestaEnviada = false,",
           "retorno": "PasoLead",
           "linea": 111,
           "resumen": "Qué toca con un lead, por reglas: primer contacto a 60 días del aniversario, recordatorio a los 7 días sin respuesta, llamada a los 14 y, tras 3 intentos sin respuesta, se aparca hasta el año siguient"
@@ -136912,7 +137101,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "41243c9edf86"
+      "hash": "44cfbb08b916"
     },
     {
       "ruta": "packages/module-seguros/src/matricula.ts",
@@ -137280,6 +137469,78 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "aea56ce2ecf5"
+    },
+    {
+      "ruta": "packages/module-seguros/src/oportunidad-seguimiento.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "packages/module-seguros/src/oportunidad-seguimiento.ts El SEGUIMIENTO de una oportunidad (Fase 1 de ASegura OS, PR B, 23/09/2026): qué transiciones de estado existen, qué exige cada una y qué tarea es válida. Puro: decide, no escribe. La escritura (con su auditoría en la misma transacción) vive en `",
+      "exporta": [
+        "aplicarAccion",
+        "validarTarea"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 66
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 72
+        },
+        {
+          "nombre": "diasDesdeHoy",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string, hoy: Date",
+          "retorno": "number",
+          "linea": 78
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null | 'invalido'",
+          "linea": 83
+        },
+        {
+          "nombre": "estaAparcada",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: EstadoActual, hoy: Date",
+          "retorno": "boolean",
+          "linea": 90
+        },
+        {
+          "nombre": "aplicarAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "actual: EstadoActual, p: PeticionAccion, hoy: Date",
+          "retorno": "ResultadoAccion",
+          "linea": 100,
+          "resumen": "Valida una acción contra el estado actual y devuelve lo que hay que escribir, o por qué no. No hay transición «por defecto»: una acción que no encaja con el estado se rechaza con su motivo, porque apl"
+        },
+        {
+          "nombre": "validarTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { tipo?: unknown; prioridad?: unknown; observaciones?: unknown; fechaLimite?: unknown }, hoy: Date,",
+          "retorno": "",
+          "linea": 206,
+          "resumen": "Una tarea sin fecha no es seguimiento: es una nota que nadie vuelve a mirar. Por eso la fecha límite es obligatoria y no puede estar en el pasado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3b45d5c654e2"
     },
     {
       "ruta": "packages/module-seguros/src/orden-polizas.ts",
@@ -143766,7 +144027,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3483,
-    "funciones": 10918
+    "archivos": 3487,
+    "funciones": 10942
   }
 }
