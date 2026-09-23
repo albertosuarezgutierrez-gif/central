@@ -29,7 +29,7 @@ import {
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
-import { DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
+import { caducidadCarnet, DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { RAMOS_DESCRITOS_POR_COBERTURAS } from './cartera'
 import { ordenPolizasFicha } from '@central/module-seguros'
@@ -396,6 +396,56 @@ export type FichaCliente = {
    * «no ha aportado ninguna»: eso es `[]`.
    */
   declaradas: PolizaDeclaradaFicha[] | null
+  /**
+   * Sus carnés de conducir (`cliente_carnets_conducir`): tipo, fecha de
+   * expedición y próxima caducidad. `null` = no se pudo leer; `[]` = no consta
+   * ninguno. Una fecha que no se descifra viaja como `null` con
+   * `fechaIlegible: true`, nunca se quita la fila: el carné existe.
+   */
+  carnets: CarnetFicha[] | null
+}
+
+export type CarnetFicha = {
+  id: string
+  tipo: string
+  fechaExpedicion: string | null
+  fechaIlegible: boolean
+  /** `null` si falta la expedición o la fecha de nacimiento (no se adivina el tramo). */
+  fechaCaducidad: string | null
+}
+
+const ORDEN_CARNET = ['A', 'A2', 'A1', 'AM', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE']
+
+async function listarCarnets(
+  correduriaId: string,
+  clienteId: string,
+  fechaNacimiento: string | null,
+): Promise<CarnetFicha[] | null> {
+  try {
+    const filas = await prismaAsegura().clienteCarnetConducir.findMany({
+      where: { clienteId, correduriaId },
+      select: { id: true, tipo: true, fechaCarnet: true },
+    })
+    const rango = (t: string) => {
+      const i = ORDEN_CARNET.indexOf(t.toUpperCase())
+      return i === -1 ? ORDEN_CARNET.length : i
+    }
+    return filas
+      .map((f) => {
+        const fecha = normalizarFecha(descifrar(f.fechaCarnet))
+        const cad = caducidadCarnet({ fechaCarnet: fecha, fechaNacimiento, tipo: f.tipo })
+        return {
+          id: f.id,
+          tipo: f.tipo,
+          fechaExpedicion: fecha,
+          fechaIlegible: fecha === null && ilegible(f.fechaCarnet),
+          fechaCaducidad: cad?.fechaCaducidad ?? null,
+        }
+      })
+      .sort((a, b) => rango(a.tipo) - rango(b.tipo))
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -612,6 +662,7 @@ export async function fichaCliente(
       .filter((n): n is string => n !== null),
   )
   const declaradas = await listarDeclaradas(correduriaId, c.id, numerosPropios)
+  const carnets = await listarCarnets(correduriaId, c.id, normalizarFecha(descifrar(c.fechaNacimiento)))
   const historial = await historialCliente(correduriaId, c.id)
   const presupuestos = await cotizacionesVivas(correduriaId, c.id, DIAS_PRESUPUESTO_VIVO)
   const estado = estadoCliente({
@@ -648,6 +699,7 @@ export async function fichaCliente(
     contactos,
     relaciones,
     declaradas,
+    carnets,
     estado,
     historial,
     cotizacionesVivas: presupuestos,

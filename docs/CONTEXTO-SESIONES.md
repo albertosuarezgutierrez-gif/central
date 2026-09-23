@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
+La moto de Víctor (Allianz 031698897) salía con catálogo de coche porque CIMA la guardó como `auto`
+(Allianz/Mapfre no mandan `ClaseVehiculo='MO'`). 18 pólizas corregidas a `moto` en BD (ids en asegura#848)
++ ingesta parcheada (matrícula ya moto → moto; guarda clase/categoría/Base7/cilindrada en crudo). ⚠️ Ahora
+una `moto` da 409 al retarificar: `retarificar-cartera.ts` solo hace auto/hogar → punto 1 del plan.
+Ficha: carnets (tipo, expedición, caducidad) en la cabecera. Plan + prompt para el portal:
+`docs/CODEOSCOPIC-PLAN-RAMOS-2026-09.md` (🔴 vida/salud/decesos mandan un `risk` que la API contradice).
+❌ Error de sesión: el asistente de moto de asegura#848 se hizo en la web de Manuel, que NO se usa.
+
 **(22/09/2026)** 🪤 **El "smoke rojo" diario de `asegura` (issue #815) era falso el 86% de las veces —
 18 de 21 días.** El smoke suite pasaba (`PASS 3/FAIL 0/EXIT 0`) pero el step posterior "Cleanup smoke
 residue" moría con `password authentication failed for user "postgres"` contra `FRANKFURT_DATABASE_URL`
