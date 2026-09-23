@@ -595,6 +595,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:50, y solo cuando ha entrado alguno',
   },
   {
+    id: 'correduria.actividad-cliente', categoria: 'correduria',
+    titulo: 'Actividad de un cliente en el portal',
+    que: 'Lo que hace un cliente en su intranet: entrar, pedir el código y no entrar, cambiar su dirección, dar un parte o pedir que se borren sus datos. Un mensaje por pasada, agrupado por cliente, con el enlace a su ficha y sin datos de contacto. La póliza declarada y la sugerencia no van aquí: el portal ya las avisa al instante.',
+    cuando: 'Cada 5 minutos, y solo cuando ha pasado algo',
+  },
+  {
     id: 'correduria.parte-sin-abrir', categoria: 'correduria',
     titulo: 'Parte del cliente sin abrir en la compañía',
     que: 'Partes que un cliente nos dio por el portal y que TODAVÍA no están abiertos en la entidad, con lo que queda del plazo del art. 16 LCS (7 días). Incluye los que ya has leído («recibido»): leerlo no lo comunica.',

@@ -13,6 +13,13 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** 👤 **Aviso por Telegram de todo lo que hace un cliente en el portal (pieza 1-7).** Cron `correduria-actividad`
+(plataforma, cada 5 min) ← puerto `GET /api/operador/actividad-nueva?desde=` (asegura, mismo UNION del muro de Actividad,
+orden ascendente, sin embudo). Regla pura `actividad-aviso.ts` (module-seguros): marca de agua con VENTANA de 3 h porque
+`acceso_fallido` aparece 60 min tarde; dedupe por `tipo:id`; primera pasada ancla sin avisar; la marca NO avanza si el
+Telegram no sale. Un mensaje por pasada agrupado por cliente, sin texto libre ni datos de contacto. Se saltan póliza
+declarada y sugerencia (el portal ya avisa al instante). Id `correduria.actividad-cliente` en el catálogo; latido vigilado.
+
 **(23/09/2026)** ✍️ **Fase 1, PR B: seguimiento de oportunidades (primeras ESCRITURAS sobre `oportunidades`/`gestiones`).**
 Migración aditiva `2026-09-23_oportunidad_seguimiento.sql`: motivo de pérdida estructurado (+competidor, prima rival),
 `aparcada_hasta`, `cerrada_at`, CHECK «perdida sin motivo no existe» y `oportunidad_historial` append-only (antes/después +
