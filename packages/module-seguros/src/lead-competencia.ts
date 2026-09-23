@@ -189,17 +189,33 @@ export function canalLead(d: { fueCliente: boolean; tieneTelefono: boolean; tien
   return 'sin_canal_permitido'
 }
 
-/** El paso, dicho con el canal que de verdad se puede usar: «primer contacto» a quien no se le puede escribir es una llamada. */
-export function textoPasoLead(paso: { accion: PasoLead['accion']; dentroDeDias: number }, canal: CanalLead): string {
+/**
+ * ¿Se le puede escribir por WhatsApp? WhatsApp es «comunicación electrónica»
+ * (LSSI art. 21), el mismo régimen que el correo: sin consentimiento, solo a
+ * quien FUE cliente. Un `fueCliente` desconocido (`null`) no abre la puerta.
+ * Que el número sea un móvil lo decide la pantalla (`urlWhatsapp`), no esto.
+ */
+export function puedeWhatsappLead(d: { fueCliente: boolean | null; tieneTelefono: boolean }): boolean {
+  return d.fueCliente === true && d.tieneTelefono
+}
+
+/**
+ * El paso, dicho con el canal que de verdad se puede usar: «primer contacto» a
+ * quien no se le puede escribir es una llamada. Con `whatsapp` (Alberto,
+ * 23/09/2026: es la vía preferente) el primer contacto y el recordatorio son
+ * por WhatsApp antes que por correo.
+ */
+export function textoPasoLead(paso: { accion: PasoLead['accion']; dentroDeDias: number }, canal: CanalLead, whatsapp = false): string {
   const correo = canal === 'telefono_y_correo' || canal === 'solo_correo'
   const telefono = canal === 'telefono_y_correo' || canal === 'solo_telefono'
+  const wa = whatsapp && telefono
   switch (paso.accion) {
     case 'esperar':
       return `Esperar ${paso.dentroDeDias} día(s)`
     case 'primer_contacto':
-      return correo ? 'Primer correo' : telefono ? 'Primera llamada' : 'Sin canal permitido'
+      return wa ? 'Primer WhatsApp' : correo ? 'Primer correo' : telefono ? 'Primera llamada' : 'Sin canal permitido'
     case 'recordatorio':
-      return correo ? 'Recordatorio por correo' : telefono ? 'Volver a llamar' : 'Sin canal permitido'
+      return wa ? 'Recordatorio por WhatsApp' : correo ? 'Recordatorio por correo' : telefono ? 'Volver a llamar' : 'Sin canal permitido'
     case 'llamada':
       return telefono ? 'Llamar' : correo ? 'Sin teléfono: escribir por correo' : 'Sin canal permitido'
     case 'aparcar':

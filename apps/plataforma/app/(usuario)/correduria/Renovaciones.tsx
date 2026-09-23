@@ -8,6 +8,7 @@ import { esAccionable, textoListaTruncada, textoVencidasAntiguas } from './secci
 import AccionesContacto from './AccionesContacto'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from './rotulo-retarificar'
+import { ordenarRenovaciones, resumenSinRecibir, textoCompaniaSinRecibir } from './renovacion-sin-recibir'
 
 /**
  * Las pólizas que vencen: la máquina comercial de una correduría.
@@ -52,7 +53,9 @@ import { describirCausaAsegura } from '@/lib/correduria-puerto'
 // indistinguibles a 12px, que es justo donde estaba la diferencia entre «aún
 // puedes moverla» y «ya se prorroga sola».
 const URGENCIAS: Record<string, { label: string; tono: Tono }> = {
-  vencida: { label: 'Vencida', tono: 'negativo' },
+  // No es «vencida»: figura vigente con la fecha pasada porque la compañía no
+  // ha mandado la renovación (ver `renovacion-sin-recibir.ts`).
+  vencida: { label: 'Renovación sin recibir', tono: 'aviso' },
   prorroga_inevitable: { label: 'Se prorroga (fuera de plazo)', tono: 'negativo' },
   ultima_llamada: { label: 'Última llamada', tono: 'aviso' },
   a_tiempo: { label: 'A tiempo', tono: 'neutral' },
@@ -91,6 +94,8 @@ export type Vencimiento = {
    *  consulta caída). NO es «no hay forma de llamarle»: por eso no se pinta
    *  nada en vez de un icono apagado o un «sin teléfono». */
   contacto: Contacto | null
+  /** `YYYY-MM-DD` del último fichero de CIMA de su compañía; `null` = no se sabe. */
+  ultimoFicheroCompania?: string | null
   /** ISO `yyyy-mm-dd` de la última vez que se abrió el WhatsApp de renovación
    *  de ESTA póliza, o `null` si nunca se registró uno (o asegura todavía no
    *  manda el campo — los dos casos se tratan igual: sin badge, sin cooldown). */
@@ -312,18 +317,15 @@ export default function Renovaciones({ datos, filtro }: {
     )
   }
 
-  // Primas conocidas y desconocidas, separadas: la compañía no siempre informa
-  // la prima (medido con Allianz por EIAC) y un total a secas la daría por 0.
-  const conPrima = polizas.filter(p => p.prima !== null)
+  // Lo que figura vigente con la fecha pasada NO está «en juego»: la compañía
+  // no ha mandado la renovación y lo normal es que se haya prorrogado sola. Se
+  // cuenta aparte y va al final (23/09/2026, 10 de Mapfre que salían en rojo).
+  const sinRecibir = resumenSinRecibir(polizas)
+  const enJuego = polizas.filter(p => p.dias >= 0)
+  const conPrima = enJuego.filter(p => p.prima !== null)
   const total = conPrima.reduce((s, p) => s + (p.prima ?? 0), 0)
-  const sinPrima = polizas.length - conPrima.length
-
-  // Lo ya vencido se cuenta APARTE del resto de la cartera en juego: «vence
-  // dentro de 40 días» y «venció hace 40» son dos trabajos distintos, y
-  // sumarlos en un solo euro los volvería a confundir.
-  const yaVencidas = polizas.filter(p => p.dias < 0)
-  const primaVencida = yaVencidas.reduce((s, p) => s + (p.prima ?? 0), 0)
-  const vencidasSinPrima = yaVencidas.filter(p => p.prima === null).length
+  const sinPrima = enJuego.length - conPrima.length
+  const ordenadas = ordenarRenovaciones(polizas)
 
   return (
     <>
@@ -338,22 +340,25 @@ export default function Renovaciones({ datos, filtro }: {
         Cartera en juego: {eur(total)}{sinPrima > 0 && ` · ${sinPrima} sin prima informada`}
       </p>
 
-      {yaVencidas.length > 0 && (
-        <p
+      {sinRecibir && (
+        <div
           style={{
-            fontSize: 12, color: 'var(--negative)', background: 'var(--negative-bg)',
-            border: '1px solid var(--negative)', borderRadius: 6,
-            margin: '0 0 10px', padding: '8px 10px', fontWeight: 600,
+            fontSize: 12, lineHeight: 1.5, color: 'var(--text)', background: 'var(--warning-bg)',
+            border: '1px solid var(--warning)', borderRadius: 6, margin: '0 0 10px', padding: '8px 10px',
           }}
         >
-          {yaVencidas.length === 1
-            ? '1 póliza YA VENCIDA y sin gestionar'
-            : `${yaVencidas.length} pólizas YA VENCIDAS y sin gestionar`}
-          {primaVencida > 0 && ` · ${eur(primaVencida)}`}
-          {vencidasSinPrima > 0 && ` · ${vencidasSinPrima} sin prima informada`}
-          {' — '}figuran vigentes con la fecha pasada: o la compañía no ha mandado la renovación, o
-          nadie la ha trabajado. Van las primeras de la lista.
-        </p>
+          <strong>
+            {sinRecibir.n === 1 ? '1 póliza con la renovación sin recibir' : `${sinRecibir.n} pólizas con la renovación sin recibir`}
+            {sinRecibir.prima > 0 && ` · ${eur(sinRecibir.prima)}`}
+            {sinRecibir.sinPrima > 0 && ` · ${sinRecibir.sinPrima} sin prima informada`}
+          </strong>
+          {' — '}figuran vigentes con la fecha pasada: la compañía no ha mandado por CIMA ni la anualidad
+          nueva ni una anulación. Salvo que alguien la anulara, se prorrogan solas (LCS art. 22), así que
+          lo normal es que sigan en vigor. Compruébalas en el portal de la compañía. Van al final de la lista.
+          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+            {sinRecibir.companias.map(c => <li key={c.aseguradora}>{textoCompaniaSinRecibir(c)}</li>)}
+          </ul>
+        </div>
       )}
 
       <TablaScroll>
@@ -371,17 +376,17 @@ export default function Renovaciones({ datos, filtro }: {
             </tr>
           </thead>
           <tbody>
-            {polizas.map(p => {
+            {ordenadas.map(p => {
               const u = URGENCIAS[p.urgencia] ?? URGENCIAS.a_tiempo
-              // Una vencida no puede parecer una que vence dentro de 40 días:
-              // además del badge, la fila entera va sobre fondo de alarma.
+              // Una renovación sin recibir no puede parecer una que vence dentro
+              // de 40 días: además del badge, la fila va sobre fondo de aviso.
               const vencida = p.dias < 0
               return (
                 <tr
                   key={p.id}
                   style={{
                     borderTop: '1px solid var(--border)',
-                    ...(vencida ? { background: 'var(--negative-bg)' } : {}),
+                    ...(vencida ? { background: 'var(--warning-bg)' } : {}),
                   }}
                 >
                   <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
@@ -389,7 +394,7 @@ export default function Renovaciones({ datos, filtro }: {
                     <div
                       style={{
                         fontSize: 11,
-                        color: vencida ? 'var(--negative)' : 'var(--muted)',
+                        color: vencida ? 'var(--warning)' : 'var(--muted)',
                         fontWeight: vencida ? 600 : undefined,
                       }}
                     >

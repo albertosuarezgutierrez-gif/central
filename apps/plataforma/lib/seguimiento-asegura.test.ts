@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal } from './seguimiento-asegura.ts'
+import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -120,4 +120,18 @@ test('tareas de hoy: error no es «no hay», y una fila rota se cuenta', () => {
   assert.equal(r.descartadas, 1)
   assert.equal(r.truncado, true)
   assert.equal(r.tareas[0].cliente, null)
+})
+
+test('🪤 WhatsApp de seguimiento solo a quien fue cliente, y con el mes del aniversario', () => {
+  const r = interpretarLeads(200, { estado: 'ok', leads: [lead, { ...lead, oportunidadId: 'o2', fueCliente: true, canal: 'telefono_y_correo' }], porVentana: {} })
+  assert.ok(r.estado === 'ok')
+  // Nunca fue cliente: WhatsApp es comunicación electrónica como el correo (LSSI 21.2).
+  assert.equal(whatsappDeLead(r.leads[0]), null)
+  const wa = whatsappDeLead(r.leads[1])
+  assert.ok(wa)
+  assert.equal(wa.telefono, '600')
+  assert.match(wa.mensaje, /por noviembre\?/)
+  // Sin teléfono, nada; y con fueCliente desconocido tampoco se abre la puerta.
+  assert.equal(whatsappDeLead({ ...r.leads[1], telefono: null }), null)
+  assert.equal(whatsappDeLead({ ...r.leads[1], fueCliente: null }), null)
 })

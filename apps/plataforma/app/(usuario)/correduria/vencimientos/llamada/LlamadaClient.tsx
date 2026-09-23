@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Phone } from 'lucide-react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
+import WhatsappLead from '../WhatsappLead'
 import { eur } from '@/lib/dinero'
 import {
   MOTIVOS_PERDIDA_UI,
@@ -144,9 +145,13 @@ function Ficha({ l, onSiguiente }: { l: LeadVencimiento; onSiguiente: () => void
       </div>
 
       {l.telefono && (
-        <a href={`tel:${l.telefono.replace(/\s+/g, '')}`} style={{ ...btnStyle('primario'), minHeight: 52, fontSize: 16, gap: 8 }}>
-          <Phone size={20} strokeWidth={1.75} /> Llamar · {l.telefono}
-        </a>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <a href={`tel:${l.telefono.replace(/\s+/g, '')}`} style={{ ...btnStyle('primario'), minHeight: 52, fontSize: 16, gap: 8, flex: '1 1 auto' }}>
+            <Phone size={20} strokeWidth={1.75} /> Llamar · {l.telefono}
+          </a>
+          {/* Si no coge, el WhatsApp con el mensaje ya escrito (solo a quien fue cliente). */}
+          <WhatsappLead lead={l} />
+        </div>
       )}
 
       <section style={{ ...cardStyle, display: 'grid', gap: 6 }}>

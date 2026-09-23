@@ -11,11 +11,13 @@ import {
   ROTULO_VENTANA,
   colaLlamadas,
   rotuloCanal,
+  whatsappDeLead,
   type LeadVencimiento,
   type LeadsVencimientos,
   type VentanaLead,
 } from '@/lib/seguimiento-asegura'
 import Renovaciones, { type RespVencimientos } from '../Renovaciones'
+import WhatsappLead from './WhatsappLead'
 
 type Carril = 'clientes' | 'leads'
 const POR_PAGINA = 50
@@ -187,7 +189,7 @@ function tonoCanal(l: LeadVencimiento): Tono {
 }
 
 function FilaLead({ l }: { l: LeadVencimiento }) {
-  const paso = l.canal ? textoPasoLead(l.paso, l.canal) : l.paso.motivo
+  const paso = l.canal ? textoPasoLead(l.paso, l.canal, whatsappDeLead(l) !== null) : l.paso.motivo
   const puedeLlamar = l.telefono !== null && l.canal !== 'solo_correo' && l.canal !== 'sin_canal_permitido'
   return (
     <li style={{ padding: '12px 14px', borderRadius: 14, border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', flexWrap: 'wrap', gap: '10px 16px', alignItems: 'center' }}>
@@ -220,6 +222,7 @@ function FilaLead({ l }: { l: LeadVencimiento }) {
             <Phone size={18} strokeWidth={1.75} />
           </a>
         )}
+        <WhatsappLead lead={l} />
         <Link href={`/correduria/oportunidad/${l.oportunidadId}`} style={btnStyle(l.paso.accion === 'llamada' ? 'primario' : 'secundario')}>Abrir</Link>
       </div>
     </li>
