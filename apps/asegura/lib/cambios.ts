@@ -28,6 +28,7 @@ type Primitivo = string | number | boolean | null
 export const CAMPOS_CON_VALOR: ReadonlySet<string> = new Set([
   'cliente.activo',
   'anulacion.estado',
+  'carta_mediador.estado',
   'siniestro.estado',
   'poliza.estado',
   'poliza.modalidad_rc',

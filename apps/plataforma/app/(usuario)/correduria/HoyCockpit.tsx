@@ -13,6 +13,7 @@ import { cuandoTarea, lineaEstadoIngesta, sinInvitar } from './hoy-cockpit'
 import PerdidasCartera from './PerdidasCartera'
 import Aprobaciones from './Aprobaciones'
 import Anulaciones from './Anulaciones'
+import CartasMediador from './CartasMediador'
 
 /**
  * El cockpit de «Hoy» (pieza 1-4 de ASegura OS, maqueta aprobada el
@@ -182,6 +183,7 @@ export default function HoyCockpit({
 
       <PerdidasCartera />
       <Anulaciones />
+      <CartasMediador />
 
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}
       <section id="esperan-ok" style={{ display: 'grid', gap: 6 }}>
