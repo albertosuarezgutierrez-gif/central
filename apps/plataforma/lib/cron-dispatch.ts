@@ -167,6 +167,8 @@ export const CRON_JOBS: CronJob[] = [
   // Cada 5 min: es un aviso de «acaba de pasar», no un resumen. La marca de
   // agua NO avanza si el Telegram no sale. Ver el fichero de la ruta.
   { path: '/api/cron/correduria-actividad', schedule: '*/5 * * * *' },
+  // Detector de cambios de la cartera (Fase 2 ASegura OS): 45 min después de cada pull de CIMA.
+  { path: '/api/cron/correduria-eventos', schedule: '15 6,12 * * *' },
   // Blog de grupoasegura.es: un artículo cada dos semanas (día 1 y 15, 08:00 UTC).
   // Cron no sabe decir «cada 14 días», y una lista de días de mes es lo más cercano
   // que además es ESTABLE: un `*/14` se descuadraría en cada mes de 31 días.

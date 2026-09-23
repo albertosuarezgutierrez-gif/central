@@ -42,6 +42,13 @@ disponibles por API REST** aunque estén activados en el panel de Avant2 con Occ
 6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
 (solo doc), sin código tocado.
 
+**(23/09/2026)** 📉 **ASegura OS 2-a — eventos de cartera + pérdidas.** `seguros.evento` (clave UNIQUE, revisión
+cerrada con CHECK) y `cartera_foto` (aplicadas). Detector puro `detectarCambios` (primera pasada solo ancla; baja,
+anula al vencimiento, desaparecida, renovada, recibo devuelto/cobrado, siniestro nuevo/cerrado) vía
+`POST /api/operador/eventos/detectar` desde el cron `correduria-eventos` (06:15/12:15 UTC, latido). Pérdidas sin
+sustitución → Telegram `correduria.fuga-cartera` + bloque «Pérdidas de cartera» en Hoy. Tras desplegar: la
+primera pasada ancla (159 pólizas vivas); el primer evento real llegará con el siguiente cambio de CIMA.
+
 **(23/09/2026)** 💾 **Copia semanal cifrada de `seguros`** (ASegura OS, continuidad). Workflow
 `copia-seguros.yml` (lunes 03:00 UTC): `pg_dump` → **restaura en Postgres 17 desechable y compara
 recuentos** → GPG AES256 → artefacto 90 días; si falla, Telegram. Rol `backup_seguros` creado INERTE

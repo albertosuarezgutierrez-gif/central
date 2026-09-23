@@ -601,6 +601,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Cada 5 minutos, y solo cuando ha pasado algo',
   },
   {
+    id: 'correduria.fuga-cartera', categoria: 'correduria',
+    titulo: 'Posible pérdida de cartera',
+    que: 'Una póliza viva que CIMA da de baja, que anuncia que no renovará («anula al vencimiento») o que deja de aparecer, SIN una sustitución registrada. Un mensaje por pasada con el tomador (enlazado a su ficha), la compañía y el número; se revisa en /correduria → Hoy (pérdida con motivo, o no es pérdida).',
+    cuando: 'Tras cada pull de CIMA (06:15 y 12:15 UTC), solo si aparece alguna nueva',
+  },
+  {
     id: 'correduria.parte-sin-abrir', categoria: 'correduria',
     titulo: 'Parte del cliente sin abrir en la compañía',
     que: 'Partes que un cliente nos dio por el portal y que TODAVÍA no están abiertos en la entidad, con lo que queda del plazo del art. 16 LCS (7 días). Incluye los que ya has leído («recibido»): leerlo no lo comunica.',

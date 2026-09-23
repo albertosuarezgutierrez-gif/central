@@ -375,6 +375,7 @@ Ya existe y es la parte más madura: `core-ai` (cadena de fallback) + gateway (c
   - ✅ Todo el uso de IA de asegura por el gateway (1-6, #3327).
   - Los tres con su test o cepo visto fallar.
 - **Fase 2 — Eventos/Workflows** (depende de F1)
+  - ✅ **2-a (23/09):** `seguros.evento` + `cartera_foto` + detector por foto (`detectarCambios`, module-seguros) lanzado por el cron `correduria-eventos` (06:15 y 12:15 UTC) → pérdidas sin sustitución por Telegram (`correduria.fuga-cartera`) y en «Hoy» (bloque «Pérdidas de cartera», resolución cerrada: pérdida con motivo o no es pérdida). Sin despachador todavía: los demás eventos quedan guardados para los flujos siguientes.
   - `seguros.evento` + dispatcher + detector diff de CIMA.
   - `oportunidad` + `motivo_perdida`.
   - `aprobacion` + `politica_accion`.
