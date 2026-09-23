@@ -31,7 +31,7 @@ import Formulario from '@/components/Formulario'
 export const metadata: Metadata = {
   title: 'Qué hacer si tienes un siniestro',
   description:
-    'Los plazos que marca la ley cuando das un parte: 7 días para comunicarlo, 40 para el pago mínimo. Qué hace tu corredor y qué puedes hacer si la compañía deniega o no contesta.',
+    'Plazos legales al dar un parte: 7 días para comunicarlo, 40 para el pago mínimo. Qué hace tu corredor y qué hacer si la compañía deniega o no contesta.',
   alternates: { canonical: url('/siniestro') },
   openGraph: {
     title: 'Qué hacer si tienes un siniestro',

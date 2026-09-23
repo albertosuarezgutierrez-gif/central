@@ -82,7 +82,7 @@ export const ARTICULOS: readonly Articulo[] = [
   {
     slug: 'preaviso-un-mes-no-renovar-seguro',
     h1: 'El preaviso de un mes para no renovar tu seguro',
-    title: 'El preaviso de un mes para no renovar el seguro',
+    title: 'Preaviso de un mes para no renovar el seguro',
     description:
       'Tu póliza no se decide el día que vence, sino un mes antes. Qué dice el artículo 22 de la Ley de Contrato de Seguro y cómo calcular tu fecha real.',
     fecha: '2026-09-07',
@@ -371,7 +371,7 @@ export const ARTICULOS: readonly Articulo[] = [
   {
     slug: 'como-dar-de-baja-un-seguro-a-tiempo',
     h1: 'Cómo dar de baja un seguro a tiempo, paso a paso',
-    title: 'Cómo dar de baja un seguro a tiempo, paso a paso',
+    title: 'Cómo dar de baja un seguro a tiempo',
     description:
       'Para no renovar un seguro hay que avisar por escrito un mes antes del vencimiento. Qué lleva la carta, por dónde enviarla y qué hacer después. Vale para todas.',
     fecha: '2026-09-19',
@@ -638,7 +638,7 @@ export const ARTICULOS: readonly Articulo[] = [
   {
     slug: 'siniestro-salud-autorizacion-y-reembolso',
     h1: 'Seguro de salud: cómo pedir una autorización y qué hacer si te la deniegan',
-    title: 'Cómo pedir autorización en el seguro de salud',
+    title: 'Pedir autorización en el seguro de salud',
     description:
       'La autorización no siempre es automática. Qué pruebas la necesitan, cómo pedirla, en qué plazo responden y qué hacer si te la deniegan.',
     fecha: '2026-09-20',
