@@ -13,6 +13,13 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** 📞 **Pieza 1-3: pantalla Vencimientos + seguimiento, en plataforma.** `/correduria/vencimientos` (pestañas
+Clientes = `Renovaciones` de siempre · Leads = puerto `leads-competencia`, 50 + «Ver más», filtro por ventana) y
+`/correduria/oportunidad/[id]` (pasos, Interesado/Propuesta/Ganada/Perdida…/Aparcar…/Reabrir, tareas con fecha, historial).
+Canal por LSSI 21.2 en `module-seguros` (`canalLead`/`textoPasoLead`): correo solo si fue cliente; los que solo tienen correo
+y nunca lo fueron (38 medidos) salen de la lista y se cuentan. Asegura manda `fueCliente`/`canal` y el contexto de la
+oportunidad. Lector puro `lib/seguimiento-asegura.ts` (+5 tests, cepos vistos en rojo). Falta: modo llamada y Hoy (1-4).
+
 **(23/09/2026)** 🎨 **Maquetas de vender APROBADAS por Alberto («tienes mi ok»)** — artefacto «Grupo ASegura · Maquetas vender»
 (https://claude.ai/artifact/Jb2XWZPzhN2ynF2F6cpPZ9): Hoy (móvil+escritorio), Vencimientos clientes/leads, seguimiento de una
 oportunidad, perder (8 motivos reales) y aparcar, modo llamada, y portal (portada, «mejórame el precio», declarar seguro de

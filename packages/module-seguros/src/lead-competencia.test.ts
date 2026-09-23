@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { diasHasta, proximoAniversario, puntuarLead, siguientePasoLead, ventanaDe } from './lead-competencia.ts'
+import { canalLead, diasHasta, proximoAniversario, puntuarLead, siguientePasoLead, textoPasoLead, ventanaDe } from './lead-competencia.ts'
 
 const hoy = new Date(Date.UTC(2026, 8, 23)) // 23/09/2026
 
@@ -54,4 +54,19 @@ test('quien respondió no se aparca: se le llama', () => {
 test('con propuesta enviada no se propone un primer contacto', () => {
   assert.equal(siguientePasoLead(80, 0, null, false, true).accion, 'llamada')
   assert.equal(siguientePasoLead(40, 1, 3, false, true).dentroDeDias, 4)
+})
+
+test('LSSI 21.2: correo solo a quien fue cliente; sin teléfono ni relación previa no hay canal permitido', () => {
+  assert.equal(canalLead({ fueCliente: true, tieneTelefono: true, tieneEmail: true }), 'telefono_y_correo')
+  assert.equal(canalLead({ fueCliente: false, tieneTelefono: true, tieneEmail: true }), 'solo_telefono')
+  assert.equal(canalLead({ fueCliente: true, tieneTelefono: false, tieneEmail: true }), 'solo_correo')
+  assert.equal(canalLead({ fueCliente: false, tieneTelefono: false, tieneEmail: true }), 'sin_canal_permitido')
+})
+
+test('el paso se dice con el canal permitido: primer contacto sin correo es una llamada', () => {
+  const primer = siguientePasoLead(50, 0, null)
+  assert.equal(textoPasoLead(primer, 'solo_telefono'), 'Primera llamada')
+  assert.equal(textoPasoLead(primer, 'telefono_y_correo'), 'Primer correo')
+  assert.equal(textoPasoLead(primer, 'sin_canal_permitido'), 'Sin canal permitido')
+  assert.equal(textoPasoLead(siguientePasoLead(30, 2, 20), 'solo_correo'), 'Sin teléfono: escribir por correo')
 })

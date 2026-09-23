@@ -735,9 +735,9 @@ export {
 } from './comparativa-precios.ts'
 export {
   DIAS_LLAMADA, DIAS_PRIMER_CONTACTO, DIAS_RECORDATORIO, MAX_INTENTOS,
-  diasHasta, proximoAniversario, puntuarLead, siguientePasoLead, ventanaDe,
+  canalLead, diasHasta, proximoAniversario, puntuarLead, siguientePasoLead, textoPasoLead, ventanaDe,
 } from './lead-competencia.ts'
-export type { DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
+export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
 export { MOTIVOS_PERDIDA, PRIORIDADES_TAREA, TIPOS_TAREA, aplicarAccion, validarTarea } from './oportunidad-seguimiento.ts'
 export type {
   AccionOportunidad,
