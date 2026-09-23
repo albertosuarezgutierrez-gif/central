@@ -65,6 +65,13 @@ export type PrecalificacionHogar = {
   etiquetaCliente: string
   /** Lo que el cliente paga HOY al año. `null` = no consta en la ficha. */
   primaActual: number | null
+  /** El piso del Catastro que se ha usado para los huecos del riesgo. `null` = no se ha consultado. */
+  catastro: {
+    direccionLegible: string | null
+    metrosCuadrados: number | null
+    anioConstruccion: number | null
+    codigoPostal: string | null
+  } | null
   resumen: ResumenHogar
   /** El id por defecto de cada desplegable (o `null` si el catálogo no da nada que suponer). */
   defectos: Record<string, string | null>
@@ -226,6 +233,15 @@ export function interpretarPrecalificacionHogarRetarificar(status: number, json:
       polizaId: r.polizaId,
       etiquetaCliente: cadena(r.etiquetaCliente) ?? '',
       primaActual: numero(r.primaActual),
+      catastro:
+        typeof r.catastro === 'object' && r.catastro !== null
+          ? {
+              direccionLegible: cadena((r.catastro as Record<string, unknown>).direccionLegible),
+              metrosCuadrados: numero((r.catastro as Record<string, unknown>).metrosCuadrados),
+              anioConstruccion: numero((r.catastro as Record<string, unknown>).anioConstruccion),
+              codigoPostal: cadena((r.catastro as Record<string, unknown>).codigoPostal),
+            }
+          : null,
       resumen,
       defectos: leerDefectos(r.defectos),
       vias: leerOpciones(r.vias),
@@ -276,8 +292,11 @@ export async function precalificarHogarRetarificarAsegura(entrada: {
   polizaId: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
+  /** Referencia catastral de 20 del piso elegido: asegura consulta el Catastro para los huecos. */
+  referencia?: string
 }): Promise<RespuestaPrecalificacionHogar> {
   const qs = new URLSearchParams({ polizaId: entrada.polizaId })
+  if (entrada.referencia) qs.set('referencia', entrada.referencia)
   if (entrada.resueltos) qs.set('resueltos', JSON.stringify(entrada.resueltos))
   if (entrada.correcciones) qs.set('correcciones', JSON.stringify(entrada.correcciones))
   try {

@@ -361,6 +361,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (23/09/2026) correduría: retarificar hogar SIN m²/año/CP con el Catastro
+- Medido: 22 de las 28 pólizas de hogar vivas no canceladas no traían el riesgo (ni póliza ni gemela) y se quedaban en «no se puede retarificar». Ahora retarificar ofrece buscar la vivienda en el Catastro (precargada con la dirección del CLIENTE, avisando de que puede no ser la del riesgo) → elegir piso → la ficha sale con m²/año/CP «del Catastro».
+- Solo viaja la REFERENCIA de 20 a asegura (`referencia` en precalificar-hogar, retarificar y limites-hogar); asegura consulta el Catastro ella misma (`lib/codeoscopic/catastro-referencia.ts`): los números con los que se paga no los pone plataforma. El Catastro solo rellena huecos, no pisa la póliza.
+- Cepo `catastro-referencia.test.ts` (visto en rojo). Sin prueba real desde el contenedor: el proxy da 403 al Catastro; el mismo cliente ya funciona en hogar-nuevo.
+- Pendiente: guardar la referencia elegida en la póliza (hoy se elige cada vez).
+
 ## (23/09/2026) plataforma: capital recomendado de hogar en un clic (retarificar)
 - Primera recomendación real de `recommend-limits` OK (continente 93.000€, contenido 27.000€). Ahora cada fila ofrece mínimo/media/máximo y hay «Usar los dos recomendados»; el cliente elige o se corrige a mano. NO se guarda en la póliza, solo en la cotización (decisión: la recomendación nunca se escribe sola).
 - «Pedir precio» ya no se queda colgado si se corta la red (try/catch con «no se sabe si ha costado»).
