@@ -386,6 +386,7 @@ export type RespuestaAviso =
   | { estado: 'sin_email'; motivo: string }
   | { estado: 'sin_portal'; motivo: string }
   | { estado: 'sin_correo_configurado'; motivo: string }
+  | { estado: 'remitente_no_verificado'; motivo: string }
   | { estado: 'error_envio'; motivo: string }
   | { estado: 'invalido'; motivo: string }
   | { estado: 'error'; motivo: string }
@@ -395,6 +396,7 @@ const ESTADOS_AVISO = [
   'sin_email',
   'sin_portal',
   'sin_correo_configurado',
+  'remitente_no_verificado',
   'error_envio',
   'invalido',
 ] as const
@@ -440,6 +442,8 @@ export function textoAviso(r: RespuestaAviso, nombre: string): string {
       return `⚠️ No se ha enviado: ${textoMotivoRelaciones(r.motivo)}`
     case 'error_envio':
       return `⚠️ El proveedor de correo no aceptó el mensaje, así que NO le ha llegado. Vuelve a intentarlo.`
+    case 'remitente_no_verificado':
+      return '⚙️ No se ha enviado y NO sirve reintentarlo: Resend rechaza el remitente porque su dominio no está verificado. Se arregla en resend.com/domains (y en el DNS del dominio).'
     case 'sin_correo_configurado':
       return (
         `⚙️ No se ha enviado y NO sirve reintentarlo: ${textoMotivoRelaciones(r.motivo)} Se arregla en las ` +

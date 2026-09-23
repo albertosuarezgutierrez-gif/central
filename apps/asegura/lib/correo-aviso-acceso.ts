@@ -44,7 +44,7 @@
 
 import { remitenteCorreo } from '@central/module-seguros'
 
-import type { ResultadoEnvioCorreo } from './correo-invitacion-portal'
+import { rechazoDeRemitente, type ResultadoEnvioCorreo } from './correo-invitacion-portal'
 
 /** Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual. */
 function esc(s: string): string {
@@ -198,7 +198,8 @@ export async function enviarAvisoAcceso(destino: string, d: DatosAvisoAcceso): P
     return 'enviado'
   } catch (e) {
     // El motivo, nunca el destino: un log es donde un dato personal sobrevive más tiempo.
-    console.error('[asegura/aviso-acceso] fallo enviando el aviso:', e instanceof Error ? e.message : e)
-    return 'rechazado'
+    const mensaje = e instanceof Error ? e.message : String(e)
+    console.error('[asegura/aviso-acceso] fallo enviando el aviso:', mensaje)
+    return rechazoDeRemitente(mensaje) ? 'remitente_no_verificado' : 'rechazado'
   }
 }

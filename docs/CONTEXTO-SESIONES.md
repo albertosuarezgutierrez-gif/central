@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
+**(23/09/2026)** 🚨 **Invitar al portal dio 0/25: el dominio de envío `envios.grupoasegura.es` NO tenía sus registros DNS en IONOS**
+(DKIM `resend._domainkey.envios`, MX+SPF `send.envios`); Resend rechazaba con `550 domain is not verified`. Alberto los creó
+y está `verified` (08:50 UTC). Ese dominio también manda los códigos del portal: hasta entonces nadie podía entrar. Código:
+desenlace `remitente_no_verificado` (`rechazoDeRemitente()`), el lote se corta con 3 fallos iguales seguidos
+(`rachaDeFallos`) y la pantalla agrupa los fallos por motivo con el nombre del cliente.
+
 **(23/09/2026)** ✉️💸 **Invitar al portal por lotes + recorte de minutos de Actions (PR #3295).** El portal nunca
 había mandado una invitación: ahora `/correduria` → Actividad → «Invitar al portal» prepara la lista (solo `invitable`
 en vigor, motivos de exclusión, texto tal cual) y envía tras marcar «revisado»; tandas de 25, presupuesto 180 s, sin

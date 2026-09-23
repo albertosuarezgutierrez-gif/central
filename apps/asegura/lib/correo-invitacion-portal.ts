@@ -194,7 +194,21 @@ export function cuerpoInvitacionPortal(d: DatosInvitacionPortal): CuerpoInvitaci
  * hacerlo igual desde la portada con su correo. Lo único que ha fallado es
  * contárselo.
  */
-export type ResultadoEnvioCorreo = 'enviado' | 'sin_proveedor' | 'rechazado'
+export type ResultadoEnvioCorreo = 'enviado' | 'sin_proveedor' | 'remitente_no_verificado' | 'rechazado'
+
+/**
+ * El rechazo que NO es de este correo sino del REMITENTE: el proveedor dice que
+ * el dominio de `ASEGURA_MAIL_FROM` no está verificado. Caso real (23/09/2026):
+ * `550 The envios.grupoasegura.es domain is not verified`, 25 veces seguidas en
+ * un lote, y la pantalla decía «no se ha podido enviar» sin decir por qué. Se
+ * arregla en el panel de Resend y en el DNS del dominio; reintentar, nunca.
+ */
+export const MOTIVO_REMITENTE =
+  'El proveedor de correo rechaza el REMITENTE: el dominio de ASEGURA_MAIL_FROM no está verificado en Resend. Se arregla en resend.com/domains (y en el DNS del dominio); reintentarlo no lo arregla.'
+
+export function rechazoDeRemitente(mensaje: string): boolean {
+  return /domain is not verified|domain.{0,40}not.{0,10}verified|not verified.{0,40}domain/i.test(mensaje)
+}
 
 export async function enviarInvitacionPortal(
   destino: string,
@@ -220,7 +234,8 @@ export async function enviarInvitacionPortal(
     return 'enviado'
   } catch (e) {
     // El motivo, nunca el destino: un log es donde un dato personal sobrevive más tiempo.
-    console.error('[asegura/invitacion-portal] fallo enviando la invitación:', e instanceof Error ? e.message : e)
-    return 'rechazado'
+    const mensaje = e instanceof Error ? e.message : String(e)
+    console.error('[asegura/invitacion-portal] fallo enviando la invitación:', mensaje)
+    return rechazoDeRemitente(mensaje) ? 'remitente_no_verificado' : 'rechazado'
   }
 }
