@@ -163,6 +163,20 @@ test('el resto de campos usan las mismas claves que construirPersona()', () => {
   assert.equal(leerCampoPersona(q, 'dni'), '12345678Z')
 })
 
+test('fechaCarnet corrige la fecha del PRINCIPAL sin convertir el A de una moto en B ni perder el B', () => {
+  const moto = {
+    drivingLicenses: [
+      { type: { id: 'A' }, date: '2005-03-01', issuingZone: { id: 'Spain' } },
+      { type: { id: 'B' }, date: '1999-06-01', issuingZone: { id: 'Spain' } },
+    ],
+  }
+  const q = aplicarCampoPersona(moto, 'fechaCarnet', '2006-01-01') as Record<string, unknown>
+  assert.deepEqual(q.drivingLicenses, [
+    { type: { id: 'A' }, date: '2006-01-01', issuingZone: { id: 'Spain' } },
+    { type: { id: 'B' }, date: '1999-06-01', issuingZone: { id: 'Spain' } },
+  ])
+})
+
 test('mismoValor tolera mayúsculas/espacios del vendor y traduce el sexo', () => {
   assert.equal(mismoValor('nombreVia', 'calle  betis', 'CALLE BETIS'), true)
   assert.equal(mismoValor('nombreVia', 'Calle Betis', null), false)

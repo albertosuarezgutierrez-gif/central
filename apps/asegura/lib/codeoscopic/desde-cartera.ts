@@ -669,6 +669,16 @@ export function carnetMotoDeFicha(
   return null
 }
 
+/**
+ * La fecha del carné B de la ficha, para declararlo junto al de moto. Solo el
+ * B de la tabla de carnés, con su fecha: `cliente.fechaCarnet` es «la del
+ * conductor» y no dice de qué carné es, así que no se usa para esto.
+ */
+export function carnetBDeFicha(carnets: ClienteCartera['carnets']): string | null {
+  const b = (carnets ?? []).find((c) => c.tipo.toUpperCase().replace(/\s/g, '') === 'B')
+  return b ? limpio(b.fechaExpedicion) : null
+}
+
 export function precalificarMotoNueva(
   cliente: ClienteCartera,
   resueltos: ResueltosMotoNueva,
@@ -700,8 +710,8 @@ export function precalificarMotoNueva(
   // ── El carné: el de MOTO de la ficha, si consta. Tarificar una moto con la
   // antigüedad del carné B es declarar mal el riesgo (auditoría 23/09/2026).
   const deMoto = carnetMotoDeFicha(cliente.carnets)
-  const carnet: Pick<Partial<DatosMoto>, 'fechaCarnet' | 'tipoCarnet' | 'zonaCarnet'> = deMoto
-    ? { fechaCarnet: deMoto.fecha, tipoCarnet: deMoto.tipo }
+  const carnet: Pick<Partial<DatosMoto>, 'fechaCarnet' | 'tipoCarnet' | 'zonaCarnet' | 'fechaCarnetB'> = deMoto
+    ? { fechaCarnet: deMoto.fecha, tipoCarnet: deMoto.tipo, fechaCarnetB: carnetBDeFicha(cliente.carnets) }
     : {
         fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
         tipoCarnet: suponer(
