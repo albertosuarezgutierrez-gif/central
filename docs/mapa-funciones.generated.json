@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-21T19:06:21Z",
-  "sha": "3c3262c42f5943b20226886417f0cfe01da01db7",
+  "generadoEn": "2026-09-23T07:47:51Z",
+  "sha": "852a5bd79ae793354332ed8882699009ae48c547",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -78574,6 +78574,39 @@
       "hash": "070e93d22583"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/cima-pull-respaldo/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── RESPALDO del pull de CIMA (Grupo ASegura). El pull principal lo dispara GitHub Actions (repo `asegura`, 05:30/11:30 UTC) contra `app.grupoasegura.com/api/crons/cima-pull`. El 22/09/2026 el presupuesto de Actions de la cuent",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "detalleAnterior",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 39,
+          "resumen": "Lo que dejó la pasada anterior, para no repetir el mismo aviso dos veces al día."
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 50
+        }
+      ],
+      "tablas": [
+        "agente_latidos",
+        "next"
+      ],
+      "rutaApi": "/api/cron/cima-pull-respaldo",
+      "hash": "526905fa74a6"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/concursos-avisos/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -78707,21 +78740,12 @@
       ],
       "funciones": [
         {
-          "nombre": "firma",
-          "kind": "function",
-          "exportada": false,
-          "params": "salud: SaludIngesta",
-          "retorno": "string",
-          "linea": 54,
-          "resumen": "Firma de lo que se ha visto hoy. Sirve para no repetir el MISMO aviso cada mañana mientras la avería sigue abierta: el estado vive en el latido y en la pantalla; el Telegram suena cuando algo CAMBIA ("
-        },
-        {
           "nombre": "leerCabecera",
           "kind": "function",
           "exportada": false,
           "params": "detalle: string | null",
           "retorno": "",
-          "linea": 90,
+          "linea": 45,
           "resumen": "La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`. Va delante y separada del texto humano por ` · `. El formato viejo era solo la firma, así que un `detalle` sin `|` "
         },
         {
@@ -78730,7 +78754,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 103
+          "linea": 58
         }
       ],
       "tablas": [
@@ -78738,7 +78762,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/correduria-ingesta",
-      "hash": "f83595719afa"
+      "hash": "068c24afe1f0"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-partes/route.ts",
@@ -93848,7 +93872,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 202,
+          "linea": 208,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -93857,7 +93881,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 232,
+          "linea": 238,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -93866,7 +93890,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 254
+          "linea": 260
         },
         {
           "nombre": "ventanaMinutos",
@@ -93874,7 +93898,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 262,
+          "linea": 268,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -93883,13 +93907,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 274,
+          "linea": 280,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "690066a3cd00"
+      "hash": "8e42004cb071"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -111704,7 +111728,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 649
+          "linea": 655
         },
         {
           "nombre": "avisosDe",
@@ -111712,7 +111736,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 654,
+          "linea": 660,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -111721,13 +111745,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 664,
+          "linea": 670,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e298d0234502"
+      "hash": "ed9d5f772198"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -136282,6 +136306,9 @@
       "exporta": [
         "saludIngesta",
         "detalleSalud",
+        "decidirRespaldoPull",
+        "firmaAvisoIngesta",
+        "normalizarFirmaIngesta",
         "decidirAvisoIngesta",
         "repartirHuerfanas",
         "textoHuerfanas"
@@ -136331,12 +136358,39 @@
           "resumen": "Una línea para el latido/Telegram. Nunca dice «todo bien» sin haberlo mirado. 🚨 Hasta el 20/09/2026 la rama `ok` DESCARTABA los motivos y solo pegaba una coletilla cableada para dos señales (rechazos"
         },
         {
+          "nombre": "decidirRespaldoPull",
+          "kind": "function",
+          "exportada": true,
+          "params": "ultimoPull: UltimoPullIngesta | null | undefined, umbral = HORAS_RESPALDO_PULL,",
+          "retorno": "DecisionRespaldoPull",
+          "linea": 814,
+          "resumen": "¿Dispara el respaldo el pull de CIMA? Existe por la avería del 22/09/2026: el presupuesto de GitHub Actions de la cuenta se agotó (lo consume casi todo `central`), los jobs de `asegura` se quedaron si"
+        },
+        {
+          "nombre": "firmaAvisoIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "salud: SaludIngesta",
+          "retorno": "string",
+          "linea": 838,
+          "resumen": "Firma de lo que el vigía ha visto hoy, para no repetir el MISMO aviso cada mañana mientras la avería sigue abierta (el Telegram suena cuando algo CAMBIA; ver `decidirAvisoIngesta`). Vivía dentro de la"
+        },
+        {
+          "nombre": "normalizarFirmaIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "firma: string | null",
+          "retorno": "string | null",
+          "linea": 871,
+          "resumen": "Lee una firma GUARDADA en el formato de hoy. Las anteriores al 23/09/2026 no traían el tramo del cron (cinco tramos en vez de seis): se leen como «el cron corría», que es lo que decía el vigía cuando "
+        },
+        {
           "nombre": "decidirAvisoIngesta",
           "kind": "function",
           "exportada": true,
           "params": "e: { firmaAnterior: string | null firmaActual: string ultimoAvisoEn: Date | null /** Desde cuándo consta abierta esta misma avería. `null` = no se sabe. */ abiertaDesde?: Date | null hoy: Date diasRecordatorio?: number }",
           "retorno": "DecisionAviso",
-          "linea": 798,
+          "linea": 889,
           "resumen": "¿Hay que sonar hoy? - `primera` — no consta que se haya avisado nunca. Suena siempre: perder un aviso es peor que duplicarlo. - `cambio` — el estado ha cambiado (entró otro fichero, apareció otra huér"
         },
         {
@@ -136345,7 +136399,7 @@
           "exportada": false,
           "params": "g: { entidad: string; entidadNombre: string | null; clave: string | null },",
           "retorno": "string",
-          "linea": 933,
+          "linea": 1024,
           "resumen": "Etiqueta de a quién se le pide: compañía + CLAVE DE MEDIADOR, nunca solo la compañía. Occident manda por tres claves y el atasco no está repartido igual: decir «Occident» manda a revisar una cartera q"
         },
         {
@@ -136354,7 +136408,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 940
+          "linea": 1031
         },
         {
           "nombre": "agrupar",
@@ -136362,7 +136416,7 @@
           "exportada": false,
           "params": "filas: PolizaHuerfana[]",
           "retorno": "GrupoHuerfanas[]",
-          "linea": 948
+          "linea": 1039
         },
         {
           "nombre": "repartirHuerfanas",
@@ -136370,7 +136424,7 @@
           "exportada": true,
           "params": "filas: PolizaHuerfana[] | null",
           "retorno": "RepartoHuerfanas | null",
-          "linea": 1006,
+          "linea": 1097,
           "resumen": "Reparte las huérfanas por lo que hay que HACER con cada una. 🚨 `null` entra, `null` sale: no haber podido listarlas no es «no hay ninguna». Un `[]` aquí significa «se miró y no hay», y la diferencia "
         },
         {
@@ -136379,7 +136433,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string",
-          "linea": 1023,
+          "linea": 1114,
           "resumen": "Los números vienen de un XML de la compañía: se escapan antes de ir a HTML."
         },
         {
@@ -136388,13 +136442,13 @@
           "exportada": true,
           "params": "r: RepartoHuerfanas | null, opciones: { tope?: number; donde?: string } = {},",
           "retorno": "string",
-          "linea": 1035,
+          "linea": 1126,
           "resumen": "El bloque del Telegram, en HTML. Cadena vacía cuando no hay nada que decir. Dice QUÉ HACER, no cuántas hay: «pídele a Occident el volcado de estas 12 pólizas de la clave M00171» y la lista detrás, par"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cf9102ee8a7a"
+      "hash": "d01c3b5fd911"
     },
     {
       "ruta": "packages/module-seguros/src/intervinientes.ts",
@@ -143323,7 +143377,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3473,
-    "funciones": 10884
+    "archivos": 3474,
+    "funciones": 10888
   }
 }

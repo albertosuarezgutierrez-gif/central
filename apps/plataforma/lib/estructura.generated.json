@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-21T19:06:21Z",
+  "generadoEn": "2026-09-23T07:47:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 65
+        "evidencias": 66
       },
       "rrhh": {
         "estado": "no",
@@ -4962,6 +4962,7 @@
       "/api/cron/canario-lead",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
+      "/api/cron/cima-pull-respaldo",
       "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
@@ -6442,7 +6443,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1401,
+    "apis": 1402,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
