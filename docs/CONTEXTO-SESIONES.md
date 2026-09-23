@@ -20,6 +20,9 @@ una `moto` da 409 al retarificar: `retarificar-cartera.ts` solo hace auto/hogar 
 Ficha: carnets (tipo, expedición, caducidad) en la cabecera. Plan + prompt para el portal:
 `docs/CODEOSCOPIC-PLAN-RAMOS-2026-09.md` (🔴 vida/salud/decesos mandan un `risk` que la API contradice).
 ❌ Error de sesión: el asistente de moto de asegura#848 se hizo en la web de Manuel, que NO se usa.
+🔒 Mismo día: vida/salud/decesos BLOQUEADOS en `cotizar()` (`ramos-bloqueados.ts`, por ramo y por línea;
+409 0,00€, simulación intacta) hasta corregir su `risk`. asegura#848: `playwright / portal` rojo = preview tras
+la Deployment Protection de Vercel (va a `vercel.com/login`), pasa en todas las ramas, no es del PR.
 
 **(22/09/2026)** 🪤 **El "smoke rojo" diario de `asegura` (issue #815) era falso el 86% de las veces —
 18 de 21 días.** El smoke suite pasaba (`PASS 3/FAIL 0/EXIT 0`) pero el step posterior "Cleanup smoke
