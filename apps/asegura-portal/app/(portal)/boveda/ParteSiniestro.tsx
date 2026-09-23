@@ -14,7 +14,10 @@ import {
   canalesDeLasPolizas,
   componerDescripcion,
   TEXTO_SIN_CANAL,
+  textoSoloRamos,
+  whatsappParaRamo,
   type CanalCompania,
+  type DatosParteWhatsapp,
   type ViaCanal,
 } from '@central/module-seguros-portal'
 // Del módulo puro, que no importa `node:*` ni red: se puede cargar desde un
@@ -29,6 +32,8 @@ import {
 } from '@central/module-seguros'
 
 import { fechaEs } from '@/lib/fechas'
+
+import { EnviarACompania } from './EnviarACompania'
 
 /**
  * «Dar parte de un siniestro» — el formulario que abre el CLIENTE desde su móvil,
@@ -97,6 +102,15 @@ export type PolizaOpcionParte = {
    * sabemos (no es de auto, o la compañía no la ha informado).
    */
   matriculaPropia?: string | null
+  /**
+   * Solo para el mensaje que el cliente manda, si quiere, a SU compañía por
+   * WhatsApp tras dar el parte: identifican la póliza ante ella. Nunca se
+   * pintan sueltos. `null`/`undefined` = no lo sabemos y el mensaje no lo dice.
+   */
+  numeroPoliza?: string | null
+  titular?: string | null
+  /** Matrícula o dirección del riesgo. */
+  bien?: string | null
 }
 
 /**
@@ -535,6 +549,8 @@ function ViaCanalEnlace({ via }: { via: ViaCanal }) {
       <a className="canal-via" href={via.enlace} target="_blank" rel="noreferrer noopener">
         <span className="canal-via-que">Dar parte por WhatsApp</span>
         <span className="canal-via-num">{via.numero}</span>
+        {/* Mapfre: su WhatsApp es solo de hogar. Se dice, para que nadie mande ahí un parte de auto. */}
+        {textoSoloRamos(via.soloRamos) !== null && <span className="canal-via-horario">{textoSoloRamos(via.soloRamos)}</span>}
         {via.horario !== null && <span className="canal-via-horario">Atiende {via.horario}</span>}
       </a>
     )
@@ -600,6 +616,18 @@ export function ParteSiniestro({
    */
   const [parteId, setParteId] = useState<string | null>(null)
   /**
+   * Lo que hace falta para que el cliente se lo mande TAMBIÉN a su compañía por WhatsApp,
+   * fotografiado al enviar (el formulario se vacía justo después). `null` = esa póliza no
+   * tiene un WhatsApp de la compañía que valga para su ramo, o no eligió póliza.
+   */
+  const [paraCompania, setParaCompania] = useState<{
+    compania: string
+    numero: string
+    horario: string | null
+    datos: Omit<DatosParteWhatsapp, 'conPdf'>
+    ficheros: File[]
+  } | null>(null)
+  /**
    * Cuenta cada `abrir()`/`cerrar()`. La geolocalización puede tardar hasta 8 s
    * (el `timeout`), y si entre el clic y la respuesta el cliente cierra el
    * formulario y lo reabre para OTRO siniestro, la respuesta tardía no puede
@@ -653,6 +681,7 @@ export function ParteSiniestro({
     setErrorGeneral(null)
     setFicheros([])
     setParteId(null)
+    setParaCompania(null)
     setEstado('reposo')
     setGeo('reposo')
     setAbierto(true)
@@ -914,6 +943,30 @@ export function ParteSiniestro({
       if (r.status === 201) {
         const cuerpo = (await r.json().catch(() => null)) as { plazo?: Plazo; id?: unknown } | null
         setRecibido(cuerpo?.plazo ?? null)
+        const wa = polizaSeleccionada ? whatsappParaRamo(polizaSeleccionada.canal, polizaSeleccionada.ramo) : null
+        setParaCompania(
+          polizaSeleccionada && wa
+            ? {
+                compania: polizaSeleccionada.canal.nombre,
+                numero: wa.numero,
+                horario: wa.horario,
+                datos: {
+                  compania: polizaSeleccionada.canal.nombre,
+                  numeroPoliza: polizaSeleccionada.numeroPoliza ?? null,
+                  titular: polizaSeleccionada.titular ?? null,
+                  bien: polizaSeleccionada.bien ?? null,
+                  fechaHecho: form.fechaHecho,
+                  horaAproximada: form.horaAproximada || null,
+                  lugar: form.lugar.trim() || null,
+                  descripcion: descripcionFinal,
+                  hayHeridos: aTriestado(form.hayHeridos),
+                  hayTerceros: aTriestado(form.hayTerceros),
+                },
+                // Solo los que valen como documento: un vídeo o un fichero de 30 MB tampoco van al PDF.
+                ficheros: ficheros.filter(reintentable).map((f) => f.fichero),
+              }
+            : null,
+        )
         setEstado('enviado')
         setAbierto(false)
         setForm(VACIO)
@@ -1044,6 +1097,15 @@ export function ParteSiniestro({
                 </p>
               )}
             </div>
+          )}
+          {paraCompania && (
+            <EnviarACompania
+              compania={paraCompania.compania}
+              numero={paraCompania.numero}
+              horario={paraCompania.horario}
+              datos={paraCompania.datos}
+              ficheros={paraCompania.ficheros}
+            />
           )}
         </div>
       )}

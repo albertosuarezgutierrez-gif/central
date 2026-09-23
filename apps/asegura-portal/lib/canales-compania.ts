@@ -35,6 +35,7 @@ export async function companiasConCanal(): Promise<FilaCompania[]> {
       telefonoSiniestros: true,
       telefonoAsistencia: true,
       whatsappSiniestros: true,
+      whatsappSiniestrosRamos: true,
       horarioSiniestros: true,
       telefonoVerificadoEn: true,
     },
@@ -45,6 +46,8 @@ export async function companiasConCanal(): Promise<FilaCompania[]> {
     telefonoSiniestros: f.telefonoSiniestros,
     telefonoAsistencia: f.telefonoAsistencia,
     whatsappSiniestros: f.whatsappSiniestros,
+    // Vacío = «para todos los ramos».
+    whatsappRamos: f.whatsappSiniestrosRamos.length > 0 ? f.whatsappSiniestrosRamos : null,
     horarioSiniestros: f.horarioSiniestros,
     // Una columna `date` de Postgres llega como medianoche UTC. Se corta la
     // cadena ISO en vez de formatear con la zona del servidor, que en Vercel no

@@ -48,6 +48,12 @@ export type FilaCompania = {
   telefonoSiniestros: string | null
   telefonoAsistencia: string | null
   whatsappSiniestros: string | null
+  /**
+   * Para qué ramos vale ese WhatsApp (`['hogar']`), con los códigos de `polizas.tipo`.
+   * `null`/ausente = para todos. Existe por Mapfre: su WhatsApp es SOLO de partes de
+   * hogar, y enseñárselo a un cliente de auto le manda a una línea que no le atiende.
+   */
+  whatsappRamos?: readonly string[] | null
   horarioSiniestros: string | null
   /** `YYYY-MM-DD`. Viaja hasta la pantalla: un número comprobado hace tres años falla igual que uno equivocado. */
   verificadoEn: string | null
@@ -75,6 +81,8 @@ export type ViaCanal =
       /** `https://wa.me/<dígitos>`. Ya validado: si no se pudo construir, la vía no existe. */
       enlace: string
       horario: string | null
+      /** Solo para estos ramos (`['hogar']`); `null` = para todos. Se DICE en pantalla. */
+      soloRamos: string[] | null
     }
 
 export type CanalCompania = {
@@ -100,11 +108,49 @@ const E164 = /^\+[1-9][0-9]{7,14}$/
  * mal construido **no falla** — abre WhatsApp con un número que no existe, que
  * es un fallo que solo se descubre el día que hace falta.
  */
-export function enlaceWhatsapp(e164: string | null): string | null {
+export function enlaceWhatsapp(e164: string | null, texto?: string | null): string | null {
   if (typeof e164 !== 'string') return null
   const t = e164.trim()
   if (!E164.test(t)) return null
-  return `https://wa.me/${t.slice(1)}`
+  const mensaje = typeof texto === 'string' ? texto.trim() : ''
+  return `https://wa.me/${t.slice(1)}${mensaje === '' ? '' : `?text=${encodeURIComponent(mensaje)}`}`
+}
+
+/** `['hogar']` limpio; vacío o ausente = sin restricción (`null`), nunca «para ninguno». */
+function ramosONull(v: readonly string[] | null | undefined): string[] | null {
+  if (!Array.isArray(v)) return null
+  const r = v.map((x) => (typeof x === 'string' ? x.trim().toLowerCase() : '')).filter((x) => x !== '')
+  return r.length === 0 ? null : r
+}
+
+const RAMO_LEGIBLE: Record<string, string> = {
+  auto: 'auto', moto: 'moto', hogar: 'hogar', vida: 'vida', salud: 'salud', decesos: 'decesos',
+  responsabilidad_civil: 'responsabilidad civil', comercio: 'comercio', comunidades: 'comunidades', accidentes: 'accidentes',
+}
+
+/** «Solo para partes de hogar». `null` si vale para todo. */
+export function textoSoloRamos(soloRamos: readonly string[] | null): string | null {
+  if (soloRamos === null || soloRamos.length === 0) return null
+  const nombres = soloRamos.map((r) => RAMO_LEGIBLE[r] ?? r.replace(/_/g, ' '))
+  const lista = nombres.length === 1 ? nombres[0] : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`
+  return `Solo para partes de ${lista}`
+}
+
+/**
+ * El WhatsApp de la compañía que vale para ESTA póliza, o `null`.
+ *
+ * 🚨 Con una restricción de ramo y el ramo de la póliza desconocido, `null`: mandar
+ * un parte de auto a la línea de hogar no falla — lo deja sin contestar.
+ */
+export function whatsappParaRamo(
+  canal: CanalCompania,
+  ramo: string | null | undefined,
+): Extract<ViaCanal, { tipo: 'whatsapp' }> | null {
+  const via = canal.vias.find((v): v is Extract<ViaCanal, { tipo: 'whatsapp' }> => v.tipo === 'whatsapp')
+  if (!via) return null
+  if (via.soloRamos === null) return via
+  const r = typeof ramo === 'string' ? ramo.trim().toLowerCase() : ''
+  return r !== '' && via.soloRamos.includes(r) ? via : null
 }
 
 /** Vacío o solo espacios es «no consta», no un horario. */
@@ -132,7 +178,7 @@ export function viasDeCompania(f: FilaCompania): ViaCanal[] {
 
   const enlace = enlaceWhatsapp(f.whatsappSiniestros)
   if (enlace !== null) {
-    vias.push({ tipo: 'whatsapp', numero: (f.whatsappSiniestros as string).trim(), enlace, horario })
+    vias.push({ tipo: 'whatsapp', numero: (f.whatsappSiniestros as string).trim(), enlace, horario, soloRamos: ramosONull(f.whatsappRamos) })
   }
 
   const asistencia = textoONull(f.telefonoAsistencia)

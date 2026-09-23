@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 📲 **PR 7: el parte también a la compañía por WhatsApp (lo manda el cliente).** #3401 (PR 6) mergeado con su
+revisión (carta nunca a «(legacy)», guardas del botón en el puente, cartas pendientes en Hoy). Nuevo: tras dar el parte, si
+la póliza tiene WhatsApp de su compañía VÁLIDO PARA SU RAMO, dos toques: abrir el chat con el texto escrito (`wa.me?text=`)
+y compartir un PDF montado en el navegador con datos y fotos (pdf-lib; lo que no entra se dice). BD: `companias_dgs.
+whatsapp_siniestros_ramos` (aplicada). WhatsApp puesto: Allianz +34638930466 (L-V 9-19), Generali +34654033629 (asistente).
+🚨 Pendiente tras DESPLEGAR el portal: aplicar `2026-09-23b_companias_whatsapp_mapfre_hogar.sql` (Mapfre, solo hogar).
+Siguiente: copia del parte por correo a la compañía vía la cola de aprobaciones.
 **(23/09/2026)** 🤝 **Presupuesto PR 6: carta de nombramiento de mediador (salida B).** #3395 (PR 5) mergeado con su
 revisión (tomador del presupuesto, empresas sin fecha de nacimiento, correo principal, no fundir NIF). Nuevo: tabla
 `seguros.carta_mediador` (aplicada, CHECK y único vistos morder); el cliente firma en el portal «Nombrarte mi corredor»

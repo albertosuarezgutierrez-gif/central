@@ -24,6 +24,7 @@
     "@prisma/client": "^5.22.0",
     "jose": "^5.9.3",
     "next": "^15.5.25",
+    "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^4.10.38",
     "prisma": "^5.22.0",

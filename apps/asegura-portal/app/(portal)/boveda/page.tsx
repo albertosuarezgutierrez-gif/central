@@ -279,9 +279,9 @@ export default async function Boveda({
   // sale SIEMPRE de la cartera ya leída para esta identidad: ningún id de
   // póliza entra desde la request.
   const polizasParte: PolizaOpcionParte[] = [
-    ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p, companias))),
+    ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p, companias, undefined, t.nombre))),
     ...cartera.autorizadas.flatMap((t) =>
-      t.polizas.map((p) => opcionCartera(p, companias, t.nombre)),
+      t.polizas.map((p) => opcionCartera(p, companias, t.nombre, t.nombre)),
     ),
     ...declaradas.map((p) => ({
       valor: `declarada:${p.id}`,
@@ -293,6 +293,8 @@ export default async function Boveda({
       canal: canalDeCompania(p.compania, companias),
       ramo: p.ramo,
       matriculaPropia: p.matricula,
+      numeroPoliza: p.numeroPoliza,
+      bien: p.matricula,
       etiqueta: [
         p.compania ?? 'Compañía sin identificar',
         p.ramo ? RAMO[p.ramo] ?? p.ramo : null,
@@ -751,7 +753,13 @@ function Titular({
  * sin el nombre, dos pólizas de auto de la misma compañía son indistinguibles y
  * el parte acaba colgado de la del padre en vez de la del hijo.
  */
-function opcionCartera(p: PolizaPortal, companias: readonly FilaCompania[], titular?: string): PolizaOpcionParte {
+function opcionCartera(
+  p: PolizaPortal,
+  companias: readonly FilaCompania[],
+  titular?: string,
+  /** El titular tal como figura, para el mensaje a la compañía (propias incluidas). */
+  titularPoliza?: string | null,
+): PolizaOpcionParte {
   return {
     valor: `cartera:${p.id}`,
     // A quién acude el asegurado de ESA compañía. Viaja pegado a la opción para
@@ -761,6 +769,9 @@ function opcionCartera(p: PolizaPortal, companias: readonly FilaCompania[], titu
     canal: canalDeCompania(p.compania, companias),
     ramo: p.ramo,
     matriculaPropia: p.bien.matricula,
+    numeroPoliza: p.numeroPoliza,
+    titular: titularPoliza ?? null,
+    bien: p.bien.matricula ?? p.bien.cosa ?? p.bien.ubicacion ?? null,
     etiqueta: [
       p.compania,
       RAMO[p.ramo] ?? p.ramo,
