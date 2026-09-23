@@ -22,6 +22,7 @@ export const CONSULTAS: Consulta[] = [
   { consulta: 'seguro de responsabilidad civil', pagina: '/seguros/responsabilidad-civil', grupo: 'ramo' },
   { consulta: 'seguro de flota', pagina: '/seguros/flota', grupo: 'ramo' },
   { consulta: 'seguro de responsabilidad civil para fontaneros', pagina: '/seguros/responsabilidad-civil-fontaneros', grupo: 'ramo' },
+  { consulta: 'seguro de responsabilidad civil para autónomos', pagina: '/seguros/responsabilidad-civil-autonomos', grupo: 'ramo' },
 
   // §2 Intención de problema — donde está el dinero y casi no hay competencia
   //
@@ -43,4 +44,5 @@ export const CONSULTAS: Consulta[] = [
   // 19/09/2026: el gestor de pólizas y la guía de baja (landing `/gestor-de-seguros` + artículo).
   { consulta: 'cómo dar de baja un seguro', pagina: '/blog/como-dar-de-baja-un-seguro-a-tiempo', grupo: 'problema' },
   { consulta: 'organizar mis seguros en un solo sitio', pagina: '/gestor-de-seguros', grupo: 'problema' },
+  { consulta: 'qué es claims made', pagina: '/blog/que-es-claims-made-seguro-responsabilidad-civil', grupo: 'problema' },
 ]
