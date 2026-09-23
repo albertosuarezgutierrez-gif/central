@@ -140,6 +140,7 @@ export const NAV = [
   // motivo que RC y flota para ir al pie y no a la cabecera — está medida al
   // límite, ver `FUERA_DE_CABECERA` más abajo.
   { href: '/seguros/responsabilidad-civil-fontaneros', texto: 'RC de fontaneros' },
+  { href: '/seguros/responsabilidad-civil-autonomos', texto: 'RC para autónomos' },
   { href: '/cambiar-de-correduria', texto: 'Cambiar de correduría' },
   // La página de intención del gestor (19/09/2026): «organizar mis seguros en
   // un solo sitio». Va al pie, como todo lo que no es ramo — la cabecera está
@@ -180,6 +181,7 @@ const FUERA_DE_CABECERA: readonly string[] = [
   '/seguros/responsabilidad-civil',
   '/seguros/flota',
   '/seguros/responsabilidad-civil-fontaneros',
+  '/seguros/responsabilidad-civil-autonomos',
 ]
 
 export const NAV_CABECERA = NAV.filter(

@@ -48,7 +48,14 @@ const FRAUNCES =
   'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&display=swap'
 const DISPLAY = "'Fraunces', ui-serif, Georgia, 'Times New Roman', serif"
 
-export const metadata = { title: 'Mis seguros — Grupo ASegura' }
+// 🚨 `noindex` para TODO el portal (23/09/2026). Search Console lo enseñaba:
+// `clientes.grupoasegura.es` sumaba 72 impresiones en 28 días para «grupo
+// asegurador» (posición ~85, 0 clics) y competía con la web pública por la
+// propia marca («grup asecura»: portal 19,9, web 22,8). Es una pantalla de
+// acceso: no tiene nada que posicionar, y lo que resta se lo resta a
+// `grupoasegura.es`. Va en el layout RAÍZ para que no dependa de acordarse en
+// cada página nueva. Lo vigila `lib/noindex.test.ts`.
+export const metadata = { title: 'Mis seguros — Grupo ASegura', robots: { index: false, follow: false } }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

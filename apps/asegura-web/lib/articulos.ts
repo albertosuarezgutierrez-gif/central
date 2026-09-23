@@ -714,6 +714,78 @@ export const ARTICULOS: readonly Articulo[] = [
       },
     ],
   },
+  // 23/09/2026. «claims made» ~90 búsquedas/mes, KD 0 (DataForSEO vía OpenSEO),
+  // y Search Console ya enseñaba la web para esa consulta desde la página de RC
+  // en la posición ~76. Los arts. 3 y 73 LCS se verificaron el mismo día contra
+  // el texto consolidado del BOE (ver `lcs-3`/`lcs-73` en `NORMAS_CITABLES`).
+  {
+    slug: 'que-es-claims-made-seguro-responsabilidad-civil',
+    h1: 'Qué es «claims made» en un seguro de responsabilidad civil',
+    title: 'Qué es claims made en un seguro de RC',
+    description:
+      'Claims made significa que la póliza responde por la fecha de la reclamación, no por la del hecho. Qué implica, qué es la retroactividad y dónde están los huecos.',
+    fecha: '2026-09-23',
+    consulta: 'claims made',
+    resumen:
+      'Una póliza «claims made» responde de las reclamaciones que te llegan mientras está en vigor, no de los hechos que ocurren mientras está en vigor. La diferencia parece técnica hasta el día en que cambias de compañía o dejas la actividad.',
+    base: ['lcs-3', 'lcs-73'],
+    ramos: ['responsabilidad-civil', 'responsabilidad-civil-autonomos'],
+    secciones: [
+      {
+        titulo: 'Dos formas de decir «cuándo» cubre una póliza',
+        parrafos: [
+          'Un seguro de responsabilidad civil tiene que fijar qué momento cuenta para saber si un siniestro entra: el día en que ocurrió el hecho o el día en que alguien te reclama por él. En muchos ramos coinciden casi siempre. En la responsabilidad civil, sobre todo la profesional, pueden separarse años.',
+          'En el sistema de ocurrencia manda la fecha del hecho: si el error o el daño se produjo mientras la póliza estaba en vigor, esa póliza responde aunque la reclamación llegue después. En el sistema de reclamación —en inglés, «claims made»— manda la fecha de la reclamación: la póliza responde de lo que te reclamen mientras está en vigor.',
+        ],
+      },
+      {
+        titulo: 'La retroactividad: hasta dónde mira hacia atrás',
+        parrafos: [
+          'Una póliza por reclamación no cubre cualquier hecho del pasado. Fija una fecha de retroactividad, y solo responde de reclamaciones por hechos ocurridos a partir de ese día.',
+          'Es el dato que más se pasa por alto al contratar y el que más pesa al cambiar de compañía. Si tu póliza nueva tiene una retroactividad corta, un trabajo hecho antes queda fuera de la nueva; y si la vieja era por reclamación, tampoco responde, porque la reclamación llega cuando ya no está en vigor.',
+        ],
+      },
+      {
+        titulo: 'El periodo posterior: qué pasa cuando la póliza se acaba',
+        parrafos: [
+          'La otra cara es el periodo de reclamación posterior: un plazo después de que la póliza termine durante el que todavía se aceptan reclamaciones por hechos ocurridos mientras estuvo vigente.',
+          'Importa sobre todo al dejar la actividad: jubilación, cierre del negocio, cambio de profesión. Sin ese periodo, lo que te reclamen al día siguiente de cancelar no lo cubre nadie.',
+        ],
+      },
+      {
+        titulo: 'Qué dice la ley, y qué tiene que cumplir la póliza',
+        parrafos: [
+          'El artículo 73 de la Ley de Contrato de Seguro admite dos fórmulas. La primera limita la cobertura a las reclamaciones presentadas hasta un plazo después de que termine el contrato, que no puede ser inferior a un año. La segunda la limita a las reclamaciones presentadas mientras la póliza está en vigor, pero entonces tiene que cubrir también los hechos ocurridos al menos un año antes de que empezara.',
+          'La ley las trata como cláusulas limitativas de los derechos del asegurado, y el artículo 3 exige que ese tipo de cláusulas aparezcan destacadas de modo especial en la póliza y que las aceptes específicamente por escrito.',
+          'Si tu póliza delimita la cobertura por reclamación y esa cláusula no aparece destacada ni firmada, merece la pena revisarlo con quien te la gestiona.',
+        ],
+      },
+      {
+        titulo: 'Qué miramos antes de mover una póliza de RC',
+        parrafos: [
+          'Tres datos, siempre juntos: el sistema de la póliza actual (ocurrencia o reclamación), su fecha de retroactividad y si deja periodo posterior. Con esos tres se ve si el cambio abre un hueco y cómo cerrarlo pactando la retroactividad en la póliza nueva.',
+          'Es un análisis que no depende de la compañía, sino del condicionado, y por eso se hace con la póliza delante.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Es peor una póliza claims made que una de ocurrencia?',
+        respuesta:
+          'No necesariamente. Es la forma habitual en la responsabilidad civil profesional y puede cubrir bien si la retroactividad y el periodo posterior están pactados. Lo que la hace peligrosa es no saber que la tienes cuando cambias de compañía o dejas de trabajar.',
+      },
+      {
+        pregunta: '¿Dónde veo si mi póliza es claims made?',
+        respuesta:
+          'En las condiciones generales o especiales, en el apartado de delimitación temporal de la cobertura o ámbito temporal. Busca las expresiones «reclamación», «fecha de retroactividad» y «periodo de reclamación posterior».',
+      },
+      {
+        pregunta: 'Voy a jubilarme. ¿Qué pasa con los trabajos que hice?',
+        respuesta:
+          'Si tu póliza es por reclamación, lo que te reclamen después de cancelarla solo lo cubre el periodo posterior que tenga pactado. Antes de darla de baja conviene comprobar ese plazo y, si hace falta, negociar uno más largo.',
+      },
+    ],
+  },
   // El agente quincenal de `apps/plataforma` (`lib/correduria/blog-agente.ts`)
   // añade el artículo nuevo JUSTO ENCIMA de esta línea y abre un PR. Es la
   // única forma en que un proceso automático toca este fichero: no reescribe

@@ -130,6 +130,19 @@ está en esa lista, es que nadie la ha invitado, que no es lo mismo que no tener
 la «bajada» que sale es la latencia de Google. Y como el resto del repo: `503 no_configurado` (falta
 el secreto) y `502 error` (Google falló) **no son cero tráfico**; se dicen tal cual.
 
+**OpenSEO (MCP), medido el 23/09/2026 — qué sirve y qué no** (proyecto «Grupo ASegura»,
+`projectId` en `list_projects`, gratis):
+- ✅ `get_search_console_performance`: GSC por consulta/página/dispositivo, **sin créditos**. Es la
+  forma más rápida de preguntar a GSC desde una sesión.
+- ✅ `get_keyword_metrics`: volumen, KD y CPC de una lista de consultas (céntimos). Úsalo ANTES de
+  escribir una página: decidió RC autónomos (~1.000/mes, KD 0) y descartó los oficios sueltos
+  (0-50/mes) y reforzar hogar/auto (volumen ~0 en las búsquedas locales por las que salían).
+- ✅ `get_business_profile`: la ficha de Google (`place_id` `ChIJX9-iRQRsEg0RvJs_K-MXksA`, CID
+  `13876179666332523452`); de ahí sale el enlace de reseñas de `docs/asegura-resenas/`.
+- ❌ **Rank tracker: exige plan de pago.** Hay uno creado (manual, 18 consultas) sin ejecutar. No
+  pagues por él: las posiciones ya salen de GSC. Y **Serper se retiró del cron a propósito el
+  14/09** (PR #2936): una fila `serp` que falta NO es una avería.
+
 ### 2. Elige UNA cosa y hazla
 
 No cinco a medias. Por orden de retorno (§3 del plan):
@@ -155,6 +168,11 @@ No cinco a medias. Por orden de retorno (§3 del plan):
 - **Cita la ley cuando la haya** (art. 22 LCS para el preaviso, RDL 3/2020 para la mediación): es
   lo que distingue un texto de corredor de un texto de comparador, y es lo que Google premia en
   YMYL. Verifica el artículo antes de citarlo — una cita inventada cuesta más que no citar.
+  🚨 **Cómo se verifica, porque desde la sesión `boe.es` está BLOQUEADO:** el texto consolidado
+  de la Ley de Contrato de Seguro está en el repo (`docs/normativa/`, leer su README); cualquier
+  norma que cites va a `NORMAS_CITABLES` (`packages/module-seguros/src/normas.ts`) leída de ahí.
+  **Nunca** aceptes el texto de una norma que dé otro asistente o un chat: el 23/09 uno devolvió
+  un art. 73 LCS inventado («delimitadoras» por «limitativas» y un párrafo que no existe).
 - **La voz de la home es PRIMERA PERSONA, y el nombre no se teclea** (decidido el 06/09/2026, PR
   #2421). El hero explicaba lo que la correduría *es* («Somos correduría, no compañía…») y
   enumeraba cinco ramos de un tirón, así que no priorizaba ninguno; ahora abre por el momento del
@@ -225,6 +243,8 @@ Por orden de retorno para una correduría pequeña (oficina en Sevilla, venta na
    desde el móvil. Necesita verificación por Alberto (llega una postal o un código al domicilio).
    Un GBP con cero reseñas no convierte: la petición de reseña a los ~80 clientes actuales va
    pegada a esto, y **la manda Alberto**.
+   ✅ Ficha verificada y con horario; **borrador de la petición + QR listos** en
+   `docs/asegura-resenas/` (23/09/2026). Medido ese día: 1 reseña y fuera del pack local.
 2. **LinkedIn (perfil de Alberto, no página de empresa).** El nicho que más interesa es
    **empresas y flota**, y ahí la relación es de persona a persona. Contenido: lo mismo que la web
    de intención de problema, en corto.

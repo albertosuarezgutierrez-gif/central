@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { articulosDeRamo } from '@/lib/articulos'
-import { RAMOS, ramoPorSlug } from '@/lib/ramos'
+import { RAMOS, SOLO_INTENCION, ramoPorSlug } from '@/lib/ramos'
 import { url } from '@/lib/sitio'
 import { fichaFaq, fichaServicio, migas, jsonLd } from '@/lib/seo'
 import Formulario from '@/components/Formulario'
@@ -174,14 +174,14 @@ export default async function PaginaRamo({ params }: Props) {
             🚨 `responsabilidad-civil` marcaba «Comercio o empresa» hasta el
             05/09/2026 porque no existía su opción: el lead llegaba diciendo que
             quería un seguro de comercio, que es un dato plausible y falso.
-            `responsabilidad-civil-fontaneros` es página de intención, no un
-            ramo nuevo en BD (sigue siendo `responsabilidad_civil`): marca la
+            las páginas de intención (`SOLO_INTENCION`: RC de fontaneros y
+            de autónomos) no son un ramo nuevo en BD (sigue siendo `responsabilidad_civil`): marca la
             opción general, igual que vida-y-salud comparte una sola. */}
         <Formulario
           ramoPorDefecto={
             ramo.slug === 'vida-y-salud'
               ? 'vida'
-              : ramo.slug === 'responsabilidad-civil-fontaneros'
+              : SOLO_INTENCION.includes(ramo.slug)
                 ? 'responsabilidad-civil'
                 : ramo.slug
           }

@@ -42,6 +42,14 @@ código de 6 cifras a SU correo (10 min, 5 intentos, 60 s entre códigos) + nomb
 `seguros_anulacion_firma` aplicada. «Firma recibida» a mano sigue para la firma en papel. Siguiente: 2-d-3 (aviso a la
 compañía por la cola de aprobaciones, con la carta firmada).
 
+**(23/09/2026)** 🧾 **asegura-web: RC para autónomos + artículo «claims made» + portal en `noindex`.** Datos (OpenSEO):
+«seguro responsabilidad civil autonomo» ~1.000/mes, KD 0, CPC 4,87 € → `/seguros/responsabilidad-civil-autonomos`
+(página de intención, `SOLO_INTENCION`, mismo ramo en BD que la RC). «claims made» ~90/mes, KD 0 → artículo que cita arts. 3 y
+73 LCS, añadidos a `NORMAS_CITABLES` leyendo el PDF consolidado del BOE (el texto que dio otro asistente era INVENTADO). Oficios sueltos
+0-50/mes: descartados. Portal `clientes.` → `noindex` en el layout raíz (competía por la marca). Consultas añadidas al cron.
+Texto consolidado de la LCS guardado en `docs/normativa/` (boe.es bloqueado en sesión: citar SOLO desde ahí);
+skill `seo-asegura` actualizada con qué sirve de OpenSEO (GSC y métricas sí; rank tracker = pago) y la regla de normas.
+
 **(23/09/2026)** ⭐ **Petición de reseñas de Google: borrador listo, SIN enviar.** `docs/asegura-resenas/` (texto
 WhatsApp + correo, QR PNG/SVG). Enlace directo a «escribir reseña» con el `place_id` de la ficha leído vía OpenSEO
 (`ChIJX9-iRQRsEg0RvJs_K-MXksA`, CID `13876179666332523452`): 1 reseña, horario L-V 9-18 ya puesto. A TODOS los 67 en
