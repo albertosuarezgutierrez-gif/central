@@ -245,6 +245,7 @@ export async function GET(req: Request) {
             metrosCuadrados: catastro.metrosCuadrados,
             anioConstruccion: catastro.anioConstruccion,
             codigoPostal: catastro.codigoPostal,
+            vivienda: catastro.vivienda ?? null,
           },
         }
       : {}),

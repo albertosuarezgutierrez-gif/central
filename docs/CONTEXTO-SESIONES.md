@@ -354,6 +354,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (23/09/2026) hogar: CIMA SÍ manda el riesgo; el Catastro da tipo de vivienda y planta
+- Medido: CIMA manda `RiesgoHogar` (superficie, situación, capitales, Antigüedad, ClaseInmueble, UsoInmueble, Zona, MedidasProteccion). La ingesta (repo `asegura`) lee superficie/dirección/capitales solo desde el 20/09 (asegura#841): las 4 pólizas con fichero posterior las tienen, las 24 anteriores no, y el crudo solo se guarda desde el 17/09 → hace falta pedir a cada compañía el REENVÍO de cartera (Alberto). Antigüedad/ClaseInmueble/UsoInmueble/Zona/Medidas sin leer: sus códigos están en el PDF EIAC V07.1 (§13.3 claves), no se mapean a ojo.
+- `core-catastro`: `construcciones` (<lcons>) + `caracterizarVivienda()` → piso/unifamiliar, planta, m² de vivienda sin comunes, anexos. Fixtures de respuestas REALES (San Vicente 40 y Socorro 24, vía WebFetch: el proxy del contenedor da 403 al Catastro, WebFetch no). Retarificar lo pinta y avisa si los m² de la póliza difieren >15 % del Catastro (infraseguro).
+- Pendiente: mapear piso/planta a `/home/property-types` (solo se conoce `MiddleFloor`; `emparejar` es exacto a propósito → hace falta la lista real del desplegable).
+
 ## (23/09/2026) correduría: la referencia catastral del piso se GUARDA en la póliza de hogar
 - Tras elegir el piso en retarificar, botón «Guardar esta vivienda en la póliza» → `PATCH /api/operador/poliza` `campo: 'referencia_catastral'` (asegura la comprueba en el Catastro ANTES de escribir; fusión en `datos_especificos.referenciaCatastral`, historial con anterior→nueva). Solo la referencia: m²/año/CP se consultan al tarificar y salen «del Catastro».
 - `retarificabilidad()` (module-seguros): hogar sin m²/año/CP pero con referencia de 20 guardada → retarificable, `fuente: 'catastro'` (plataforma acepta ya esa fuente). Asegura usa la guardada sola si la pantalla no manda otra; «Cambiar de vivienda» = `?buscar=1`.

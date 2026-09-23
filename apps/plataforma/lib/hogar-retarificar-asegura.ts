@@ -74,6 +74,13 @@ export type PrecalificacionHogar = {
     metrosCuadrados: number | null
     anioConstruccion: number | null
     codigoPostal: string | null
+    /** Lo que el Catastro dice de la vivienda. `null` = no lo publica o no se puede decir. */
+    vivienda: {
+      tipo: 'piso' | 'unifamiliar' | null
+      planta: number | null
+      superficieVivienda: number | null
+      anexos: string[]
+    } | null
   } | null
   resumen: ResumenHogar
   /** El id por defecto de cada desplegable (o `null` si el catálogo no da nada que suponer). */
@@ -245,6 +252,7 @@ export function interpretarPrecalificacionHogarRetarificar(status: number, json:
               metrosCuadrados: numero((r.catastro as Record<string, unknown>).metrosCuadrados),
               anioConstruccion: numero((r.catastro as Record<string, unknown>).anioConstruccion),
               codigoPostal: cadena((r.catastro as Record<string, unknown>).codigoPostal),
+              vivienda: leerVivienda((r.catastro as Record<string, unknown>).vivienda),
             }
           : null,
       resumen,
@@ -257,6 +265,17 @@ export function interpretarPrecalificacionHogarRetarificar(status: number, json:
       ramo: leerRamo(r.ramo),
       consumo: leerConsumo(r.consumo),
     },
+  }
+}
+
+function leerVivienda(v: unknown): NonNullable<PrecalificacionHogar['catastro']>['vivienda'] {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  return {
+    tipo: o.tipo === 'piso' || o.tipo === 'unifamiliar' ? o.tipo : null,
+    planta: numero(o.planta),
+    superficieVivienda: numero(o.superficieVivienda),
+    anexos: Array.isArray(o.anexos) ? o.anexos.filter((a): a is string => typeof a === 'string') : [],
   }
 }
 
