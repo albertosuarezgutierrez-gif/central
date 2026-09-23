@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
+**(23/09/2026)** 🔑 **Rotadas las contraseñas de `prisma_almacen` y `prisma_seguros`** (estaban en claro en snippets guardados del SQL Editor de Supabase; también se borró el de la API key de Smoobu, que NO se rota: es la misma cuenta que usan sivra/plataforma/ialimp y además ya vive en claro en `pms_connections`).
+Verificado: almacen `/catalogo` carga 169 artículos; `central-asegura` responde 200 en el puerto `/api/operador/*` desde las 18:58 UTC y hay 3 conexiones de `prisma_seguros` en `pg_stat_activity`.
+Tres trampas medidas: (1) las `DATABASE_URL`/`DIRECT_URL` son **Sensitive**: hay que pegar la URL ENTERA, no solo la contraseña; (2) un «Redeploy» del último despliegue sale **Canceled** por el `ignoreCommand` si ese commit no toca la app → se redespliega el que lleva la etiqueta «Current» (cada Save de una env ya lanza uno); (3) un espacio al copiar la contraseña dio 82 `password authentication failed` en 15 min — la cartera cayó de 18:40 a 18:58 UTC. Supabase guarda el `ALTER ROLE` en logs con `{REDACTED}`.
+
 **(23/09/2026)** 🪪 **Presupuesto PR 5: qué falta para EMITIR.** #3390 (PR 4) mergeado con su revisión (sin anulación
 si ya hay expediente abierto o la póliza no es suya/vigente; retirar un aceptado desiste su anulación). Nuevo:
 `huecosParaEmitirDesdeFicha` (correo, DNI, nacimiento, dirección con número+CP, cuenta) sobre la ficha + lo propio de
