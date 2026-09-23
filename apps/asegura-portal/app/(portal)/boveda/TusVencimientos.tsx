@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { diasHastaVencimientoPortal, enVentanaVencimientos } from '@central/module-seguros-portal'
-
-import type { PolizaPortal } from '@/lib/cartera-lectura'
+import type { Vencimiento } from '@/lib/vencimientos'
+import { primaQuePaga } from '@/lib/vencimientos'
 import type { PeticionAbierta } from '@/lib/mejorar-precio'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
@@ -13,10 +12,10 @@ import { tituloDePoliza } from './PolizaVista'
  * mejores el precio». Es la venta que inicia el propio cliente.
  *
  * Reglas:
- *  - Solo sus pólizas (las de sus fichas), en vigor, con fecha. Una póliza de
- *    alguien que le ha autorizado a verla no lleva botón: decide su tomador.
- *  - Una fecha ya pasada NO entra: significa que la compañía no ha mandado la
- *    renovación, y decirle «renovó» sería afirmar algo que no sabemos.
+ *  - Solo sus pólizas (las de sus fichas). Una póliza de alguien que le ha
+ *    autorizado a verla no lleva botón: decide su tomador. Qué entra en la
+ *    ventana lo decide `vencimientosEnVentana()` y lo calcula la página una sola
+ *    vez: es la misma lista con la que decide si pide las peticiones.
  *  - Se pinta la prima ACTUAL («pagas»), no una «prima de renovación» que no
  *    conocemos. Sin prima visible, no se inventa.
  *  - Si no hay nada en la ventana, no pinta nada: la lista de la cartera ya
@@ -24,16 +23,10 @@ import { tituloDePoliza } from './PolizaVista'
  *  - `peticiones === null` = no se pudo saber si ya lo pidió: se deja el botón
  *    (pedir dos veces no crea dos: asegura es idempotente).
  */
-export function TusVencimientos({ polizas, peticiones, hoyIso }: {
-  polizas: PolizaPortal[]
+export function TusVencimientos({ vencimientos: filas, peticiones }: {
+  vencimientos: Vencimiento[]
   peticiones: PeticionAbierta[] | null
-  hoyIso: string
 }) {
-  const filas = polizas
-    .filter((p) => p.vigencia === 'vigente' && p.fechaVencimiento !== null)
-    .map((p) => ({ p, dias: diasHastaVencimientoPortal(p.fechaVencimiento!.toISOString().slice(0, 10), hoyIso) }))
-    .filter((f) => enVentanaVencimientos(f.dias))
-    .sort((a, b) => (a.dias ?? 0) - (b.dias ?? 0))
   if (filas.length === 0) return null
   const pedidas = new Map((peticiones ?? []).map((x) => [x.polizaId, x.pedidoEl]))
 
@@ -42,9 +35,7 @@ export function TusVencimientos({ polizas, peticiones, hoyIso }: {
       <h2 id="vencimientos-titulo">Tus vencimientos</h2>
       <div style={{ display: 'grid', gap: 10 }}>
         {filas.map(({ p, dias }) => {
-          // Un 0 guardado no es una prima: se calla, igual que asegura (`nullif(…, 0)`).
-  const primaLeida = p.prima?.bruta ?? p.prima?.anual ?? null
-  const prima = primaLeida !== null && primaLeida > 0 ? primaLeida : null
+          const prima = primaQuePaga(p.prima)
           const pedido = pedidas.get(p.id)
           return (
             <article key={p.id} className="vencimiento-tarjeta">
