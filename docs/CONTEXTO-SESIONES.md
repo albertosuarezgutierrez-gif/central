@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** ✍️ **ASegura OS 2-d-2: el cliente firma su anulación en el portal.** #3368 (2-d) mergeado. El corredor
+abre el expediente y el cliente lo ve en «Pendiente de tu firma» (bóveda): carta entera (`cartaAnulacion()`, pura),
+código de 6 cifras a SU correo (10 min, 5 intentos, 60 s entre códigos) + nombre que casa con el tomador → `FirmaPropia`
+(eIDAS art. 26) sobre el texto EXACTO que se guarda en `anulacion.carta_texto`; fila en `seguros.firma` y expediente a
+`firmada`. Puente estrecho `/api/portal/anulacion` (sin `clienteId`); la vista de corredor no firma (403). Migración
+`seguros_anulacion_firma` aplicada. «Firma recibida» a mano sigue para la firma en papel. Siguiente: 2-d-3 (aviso a la
+compañía por la cola de aprobaciones, con la carta firmada).
+
 **(23/09/2026)** 📝 **ASegura OS 2-d: expediente de anulación.** #3365 (2-c) mergeado con los fixes de su revisión
 (texto que caduca con su plazo, recibo cobrado → aviso retirado, timeout = «a medias» cerrable a mano). Tabla
 `seguros.anulacion` (aplicada; CHECK: sin firma no hay «comunicada», un expediente abierto por póliza). Reglas puras

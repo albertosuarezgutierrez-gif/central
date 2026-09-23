@@ -179,7 +179,7 @@ function Abierta({ a, ocupado, firmando, nota, setFirmando, setNota, accion }: {
           El cliente desiste
         </button>
       </div>
-      {a.estado === 'solicitada' && <span style={NOTA}>Sin la firma del cliente no se comunica a la compañía.</span>}
+      {a.estado === 'solicitada' && <span style={NOTA}>Sin la firma del cliente no se comunica a la compañía. Si tiene portal, la ve en «Pendiente de tu firma» y firma con un código a su correo; si firma en papel, pulsa «Firma recibida».</span>}
     </div>
   )
 }

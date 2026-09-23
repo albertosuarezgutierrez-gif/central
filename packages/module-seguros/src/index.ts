@@ -779,8 +779,8 @@ export type { AccionAprobacion, Borrador, Decision, EntradaReciboDevuelto, Estad
 export {
   ACCIONES_ANULACION, DIAS_ESPERA_CONFIRMACION, ESTADOS_ANULACION, ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION,
   ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION, MOTIVOS_ANULACION, SOLICITANTES_ANULACION, TIPOS_ANULACION,
-  resolucionDeAnulacion, siguientePaso as siguientePasoAnulacion, transicion as transicionAnulacion, validarSolicitud as validarSolicitudAnulacion,
+  cartaAnulacion, resolucionDeAnulacion, siguientePaso as siguientePasoAnulacion, transicion as transicionAnulacion, validarSolicitud as validarSolicitudAnulacion,
 } from './anulacion.ts'
 export type {
-  AccionAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
+  AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
 } from './anulacion.ts'

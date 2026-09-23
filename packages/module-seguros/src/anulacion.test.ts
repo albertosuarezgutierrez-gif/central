@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { resolucionDeAnulacion, siguientePaso, transicion, validarSolicitud } from './anulacion.ts'
+import { cartaAnulacion, resolucionDeAnulacion, siguientePaso, transicion, validarSolicitud } from './anulacion.ts'
 
 const base = { tipo: 'no_renovacion', solicitadaPor: 'cliente', motivo: 'precio', fechaEfecto: '2027-01-10' }
 const ctx = { vencimiento: '2027-01-10', hoy: '2026-09-23' }
@@ -66,4 +66,19 @@ test('la baja que explica: sustitución no es pérdida; el resto lleva un motivo
   assert.deepEqual(resolucionDeAnulacion({ tipo: 'sustitucion', motivo: 'precio' }), { resolucion: 'no_es_perdida' })
   assert.deepEqual(resolucionDeAnulacion({ tipo: 'no_renovacion', motivo: 'competidor' }), { resolucion: 'perdida', motivo: 'competidor' })
   assert.deepEqual(resolucionDeAnulacion({ tipo: 'inmediata', motivo: 'venta_del_bien' }), { resolucion: 'perdida', motivo: 'otro' })
+})
+
+test('la carta: identifica la póliza y la voluntad; sin compañía o número no hay carta que firmar', () => {
+  const d = { tomador: 'María Alcalá', compania: 'MAPFRE', numeroPoliza: '0732000113003', ramo: 'hogar', tipo: 'no_renovacion' as const,
+    fechaEfecto: '2027-01-10', fechaCarta: '2026-09-23', mediador: 'Grupo ASegura' }
+  const c = cartaAnulacion(d)!
+  assert.match(c, /A la atención de MAPFRE/)
+  assert.match(c, /póliza nº 0732000113003 \(hogar\)/)
+  assert.match(c, /me opongo a su prórroga.*10\/01\/2027.*art\. 22/)
+  assert.match(c, /Firmado electrónicamente el 23\/09\/2026/)
+  assert.match(cartaAnulacion({ ...d, tipo: 'inmediata' })!, /solicito su anulación con efecto el 10\/01\/2027\./)
+  assert.equal(cartaAnulacion({ ...d, compania: null }), null)
+  assert.equal(cartaAnulacion({ ...d, numeroPoliza: '  ' }), null)
+  assert.equal(cartaAnulacion({ ...d, tomador: '' }), null)
+  assert.equal(cartaAnulacion(d), cartaAnulacion(d), 'determinista: lo firmado se puede recomponer')
 })
