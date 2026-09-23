@@ -290,6 +290,12 @@ además el `sameAs` de la idea F.
 
 </details>
 
+> 📍 **Medido el 23/09/2026 (OpenSEO, Google España, top 20): la ficha NO aparece.** Para
+> «correduría de seguros sevilla» mandan el **local pack** (Albroksa, Lara Broker, Benjumea,
+> AndalBrok, Seingur, López Barneto) y directorios (ProntoPro, corredurias.org); grupoasegura.es
+> tampoco sale en orgánico. Con **una** reseña no se entra en el pack: las reseñas de clientes
+> reales siguen siendo la palanca nº1 y siguen siendo de Alberto. Re-medir tras las primeras reseñas.
+
 ## ✅ J. Google Search Console — ya estaba conectada desde mayo
 
 > ✅ **CERRADO el 07/09/2026.** La propiedad de tipo Dominio `sc-domain:grupoasegura.es` **estaba
@@ -423,6 +429,20 @@ flota de transporte, los pisos de SIVRA. Todos necesitan RC, multirriesgo de loc
 o accidentes. **Relación ya abierta, coste de captación cero**, y encima son quienes pueden dar las
 **primeras reseñas** que hacen falta para la idea I.
 **Bloqueo:** son conversaciones de Alberto. Aquí solo se prepara el material.
+
+## O. Colisión de marca con «Asegura Group» — 🟠 (medido 23/09/2026)
+
+Al buscar la marca en Google España (OpenSEO), el **1.º es `asegura-group.com`** — Asegura Group
+Gestión Integral Correduría de Seguros S.L., **otra correduría**, con sede en Granada — y
+grupoasegura.es sale **2.º**. Sus perfiles (Facebook, LinkedIn, directorios de empresas) ocupan
+también el resto de la primera página. Es un nombre casi idéntico en el mismo sector y en Andalucía:
+quien nos busca de oídas puede acabar llamándoles a ellos.
+- ✅ Hecho: la portada ya lleva «Grupo ASegura» en el `<title>` (antes no la llevaba: la plantilla
+  del layout no se aplica al segmento raíz) — PR #3353.
+- Pendiente: que la ficha de Google (idea I) y los perfiles sociales (idea M) usen **exactamente**
+  «Grupo ASegura» y enlacen a grupoasegura.es, para que Google junte la entidad. Y el `sameAs` de F.
+- ⚖️ **No es tarea del agente**: si hay conflicto de marca registrada (OEPM/EUIPO), lo mira Alberto
+  con un abogado. Aquí no se afirma quién tiene prioridad.
 
 ---
 

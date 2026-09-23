@@ -79,7 +79,7 @@ export const metadata: Metadata = {
     template: '%s · Grupo ASegura',
   },
   description:
-    'Correduría de seguros inscrita en la DGSFP que media en toda España. Analizamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
+    'Correduría inscrita en la DGSFP que media en toda España. Analizamos varias compañías para tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
   openGraph: {
     type: 'website',
     locale: 'es_ES',

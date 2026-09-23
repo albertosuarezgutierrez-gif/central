@@ -22,10 +22,10 @@ import { MEDIADOR, NO_EXCLUSIVIDAD, lineaIdentificacion } from '@central/module-
 import { AMBITO, url } from '@/lib/sitio'
 
 export const metadata: Metadata = {
-  title: 'Quiénes somos · Correduría de seguros en toda España',
+  title: 'Quiénes somos: correduría en toda España',
   // Ni aquí se teclea la clave: la descripción se compone desde `MEDIADOR`, que
   // es la misma fuente que pinta el cuerpo de la página.
-  description: `${MEDIADOR.marca} es la correduría de ${MEDIADOR.identidad.nombre}, corredor inscrito en la DGSFP con la clave ${MEDIADOR.identidad.claveDgsfp}. Qué es una correduría, quién responde y cómo cobramos.`,
+  description: `${MEDIADOR.marca} es la correduría de ${MEDIADOR.identidad.nombre}, corredor inscrito en la DGSFP (${MEDIADOR.identidad.claveDgsfp}). Qué es una correduría, quién responde y cómo cobramos.`,
   alternates: { canonical: url('/quienes-somos') },
   robots: { index: true, follow: true },
 }
