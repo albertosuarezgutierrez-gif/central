@@ -7,6 +7,9 @@ import { TEXTO_AJENO, TEXTO_VINCULO_AMBIGUO, textoCaducidad } from '@/lib/presup
 import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fecha } from './Comparativa'
 import { Plegable } from './RestoDeOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
+import { DatosParaContratar } from './DatosParaContratar'
+import { datosParaContratar } from '@/lib/datos-emision'
+import { getIdentidad } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,6 +85,10 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   }
 
   const p = r.presupuesto
+  // Qué falta para emitir (§4bis): solo mientras se puede contratar. `null` = no se pudo mirar.
+  const mostrarDatos = !p.retirado && !p.caducado && p.emitidoAt === null && p.enviadoAt !== null
+  const identidad = mostrarDatos ? await getIdentidad() : null
+  const datos = identidad ? await datosParaContratar(identidad.id, p.id) : null
   const portada = p.opciones.filter((o) => o.esPortada)
   const resto = p.opciones.filter((o) => !o.esPortada)
   const companias = new Set(portada.map((o) => o.compania)).size
@@ -158,6 +165,9 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           </section>
         )
       })}
+
+      {/* La comparativa es la portada (§4.1): lo que falta para contratar va debajo. */}
+      {mostrarDatos && <DatosParaContratar datos={datos} corredor={p.vistaDeCorredor} />}
 
       {/* Cerrado por defecto y con montaje perezoso (regla de rendimiento).
           ⚠️ Hoy `resto` está SIEMPRE vacío: el preparador congela solo las

@@ -322,7 +322,7 @@ export {
   type RelacionFicha,
 } from './relaciones.ts'
 export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
-export { correoPresupuesto, mensajePresupuestoWhatsapp, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
+export { correoPresupuesto, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -786,3 +786,4 @@ export type {
   AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
 } from './anulacion.ts'
 export { anulacionPorCambio, documentoAceptacion, esCambioCompania, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'
+export { datosDelTomador, huecosParaEmitirDesdeFicha, type CampoEmision, type DatoEmision, type DatoPropioEnPoliza, type DatosParaEmitir, type EstadoDatoEmision, type FichaParaEmitir, type QuienAporta, type ValorLeido } from './datos-para-emitir.ts'

@@ -18,6 +18,12 @@ dice POR QUÉ está apagado. Solo 2 hogares vivos traen m²/año/CP en la póliz
 propuesta pendiente de ofrecer Catastro por dirección. Pendiente Alberto: 2ª prueba del botón, prompt de Chrome
 sobre el esquema del portal (obligatorios, `includeIndividualResults`, coste) y preguntar a Codeoscopic si factura.
 
+**(23/09/2026)** 🪪 **Presupuesto PR 5: qué falta para EMITIR.** #3390 (PR 4) mergeado con su revisión (sin anulación
+si ya hay expediente abierto o la póliza no es suya/vigente; retirar un aceptado desiste su anulación). Nuevo:
+`huecosParaEmitirDesdeFicha` (correo, DNI, nacimiento, dirección con número+CP, cuenta) sobre la ficha + lo propio de
+sus pólizas; `no_legible` nunca se le pide. Portal: bloque «Datos para contratar» + subir DNI (lo revisa Alberto; la
+identidad no se teclea). Tarjeta de Alberto: línea de datos. Correo: «me faltan N datos» sin pedirlos. Sin migración.
+
 **(23/09/2026)** ✍️ **Presupuesto PR 4: el cliente elige y FIRMA en el portal.** #3386 (PR 3, aviso) mergeado. En su
 presupuesto el cliente pulsa «Elegir esta opción», lee el documento («NO es todavía el contrato»), pide código al
 correo y firma (`FirmaPropia`, `presupuesto.documento_texto`/`firma_id`, CHECK). Si la opción es de otra compañía

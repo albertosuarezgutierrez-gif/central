@@ -19,6 +19,17 @@ export type DatosAvisoPresupuesto = {
   venceEl: Date
   /** El correo con el que tiene que entrar: el mismo al que va el código. */
   email: string
+  /**
+   * Cuántos datos suyos faltan para poder emitir (§4bis). Solo el NÚMERO: el aviso nunca pide el DNI
+   * ni la cuenta — un correo que pide datos no se distingue de un phishing. `null`/0 = no se menciona.
+   */
+  faltanDatos?: number | null
+}
+
+/** La línea de «me faltan N datos tuyos», o `null` si no hay que decirla. */
+export function lineaDatosQueFaltan(n: number | null | undefined): string | null {
+  if (!n || n < 1) return null
+  return `Para poder contratarlo me ${n === 1 ? 'falta un dato tuyo' : `faltan ${n} datos tuyos`}: los confirmas dentro, en un minuto. Nunca te los pediré por correo ni por WhatsApp.`
 }
 
 function fechaEs(d: Date): string {
@@ -36,7 +47,8 @@ export function mensajePresupuestoWhatsapp(d: DatosAvisoPresupuesto): string {
     `Te he preparado un presupuesto de seguro. Lo puedes ver aquí: ${d.enlace}`,
     `Para abrirlo entra con tu correo ${d.email}: te llegará un código.`,
     `Es válido hasta el ${fechaEs(d.venceEl)}. Cualquier duda, me dices.`,
-  ].join('\n\n')
+    lineaDatosQueFaltan(d.faltanDatos),
+  ].filter((l): l is string => l !== null).join('\n\n')
 }
 
 function escapar(s: string): string {
@@ -52,17 +64,13 @@ export function correoPresupuesto(d: DatosAvisoPresupuesto): CorreoPresupuesto {
     'Te he preparado un presupuesto de seguro. Para verlo, abre este enlace y entra con este mismo correo; te llegará un código de acceso.',
     d.enlace,
     `Es válido hasta el ${fechaEs(d.venceEl)}.`,
+    lineaDatosQueFaltan(d.faltanDatos),
     'Si tienes cualquier duda, responde a este correo.',
     'Alberto Suárez · Grupo ASegura',
-  ]
+  ].filter((l): l is string => l !== null)
   const texto = lineas.join('\n\n')
-  const html = [
-    `<p>${escapar(lineas[0]!)}</p>`,
-    `<p>${escapar(lineas[1]!)}</p>`,
-    `<p><a href="${escapar(d.enlace)}">Ver mi presupuesto</a></p>`,
-    `<p>${escapar(lineas[3]!)}</p>`,
-    `<p>${escapar(lineas[4]!)}</p>`,
-    `<p>${escapar(lineas[5]!)}</p>`,
-  ].join('\n')
+  const html = lineas
+    .map((l) => (l === d.enlace ? `<p><a href="${escapar(d.enlace)}">Ver mi presupuesto</a></p>` : `<p>${escapar(l)}</p>`))
+    .join('\n')
   return { asunto, texto, html }
 }
