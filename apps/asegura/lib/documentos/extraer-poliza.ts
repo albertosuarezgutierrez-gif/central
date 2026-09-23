@@ -193,7 +193,7 @@ export async function leerPoliza(
       )
     }
     try {
-      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1100, timeoutMs: 60_000, privado: true })
+      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1100, timeoutMs: 55_000, privado: true })
       const { ramo, auto, hogar } = parsear(salida)
       return empaquetar(ramo, auto, hogar, 'texto')
     } catch (e) {
