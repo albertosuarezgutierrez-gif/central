@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-23T12:45:15Z",
+  "generadoEn": "2026-09-23T13:15:06Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4035,6 +4035,7 @@
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/llamada",
       "/api/operador/oportunidad/tarea",
+      "/api/operador/oportunidad/whatsapp",
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza-documento",
@@ -4950,6 +4951,7 @@
       "/api/correduria/oportunidad",
       "/api/correduria/oportunidad/llamada",
       "/api/correduria/oportunidad/tarea",
+      "/api/correduria/oportunidad/whatsapp",
       "/api/correduria/partes",
       "/api/correduria/poliza",
       "/api/correduria/portal-invitaciones",
@@ -6458,7 +6460,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1416,
+    "apis": 1418,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
