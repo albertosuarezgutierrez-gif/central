@@ -6,6 +6,7 @@ import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import AnulacionPoliza from './AnulacionPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
+import CartaMediadorPoliza from './CartaMediadorPoliza'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
@@ -139,6 +140,7 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
       <Tarjeta titulo="Anulación">
         <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
         <PresupuestosPoliza polizaId={p.id} />
+        <CartaMediadorPoliza polizaId={p.id} />
       </Tarjeta>
 
       {/* ── Documentación ───────────────────────────────────────────────── */}

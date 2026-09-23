@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🤝 **Presupuesto PR 6: carta de nombramiento de mediador (salida B).** #3395 (PR 5) mergeado con su
+revisión (tomador del presupuesto, empresas sin fecha de nacimiento, correo principal, no fundir NIF). Nuevo: tabla
+`seguros.carta_mediador` (aplicada, CHECK y único vistos morder); el cliente firma en el portal «Nombrarte mi corredor»
+(código al correo, solo el tomador, no si CIMA ya la trae); Telegram a Alberto; tarjeta en la ficha de póliza para
+marcarla enviada/aceptada/rechazada — la carta la manda Alberto, nada sale solo. Pendiente: mandarla por la cola;
+WhatsApp de siniestros/grúa de Generali y Mapfre (pide los números oficiales a Alberto).
+
 **(23/09/2026)** 🪪 **Presupuesto PR 5: qué falta para EMITIR.** #3390 (PR 4) mergeado con su revisión (sin anulación
 si ya hay expediente abierto o la póliza no es suya/vigente; retirar un aceptado desiste su anulación). Nuevo:
 `huecosParaEmitirDesdeFicha` (correo, DNI, nacimiento, dirección con número+CP, cuenta) sobre la ficha + lo propio de
