@@ -503,7 +503,7 @@ function BloqueCanal({ canal, deLaElegida }: { canal: CanalCompania; deLaElegida
       ) : (
         <>
           {canal.vias.map((v) => (
-            <ViaCanalEnlace key={`${v.tipo}-${v.tipo === 'telefono' ? v.uso : 'wa'}-${v.numero}`} via={v} />
+            <ViaCanalEnlace key={`${v.tipo}-${v.tipo === 'telefono' ? `${v.uso}-${v.para ?? ''}` : 'wa'}-${v.numero}`} via={v} />
           ))}
           {canal.verificadoEn !== null && (
             // Un número comprobado hace tres años falla igual que uno
