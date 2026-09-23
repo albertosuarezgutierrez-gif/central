@@ -13,6 +13,15 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** 🧹 **La purga del e2e-smoke de `asegura` borraba en la BD equivocada.** Tras el traspaso (05/09)
+el smoke escribe en `seguros` de central, pero la purga apuntaba a Frankfurt (`FRANKFURT_DATABASE_URL`): 0 filas
+allí y **17 cotizaciones + 17 leads falsos «Smoke Test Auto» en la cartera + 48 eventos** aquí. Reponer la
+contraseña de Frankfurt (lo que se iba a hacer, Manuel frenó con buen criterio) la habría puesto en verde sin
+borrar nada. Hecho: residuo limpiado (queda 1 con `consent_logs`, a propósito); rol **`smoke_cleanup`** (SELECT por
+columna, DELETE en 3 tablas, nada de `public`, sin contraseña; `apps/asegura/prisma/sql/2026-09-23_smoke_cleanup_rol.sql`);
+`asegura#849` (secret `SMOKE_CLEANUP_DATABASE_URL`, `search_path` fijado, sin secret falla en vez de saltarse).
+**Pendiente de Alberto:** contraseña del rol + secret en el mismo paso. #815 cerrado solo; #847 sigue abierto hasta el primer run bueno.
+
 **(23/09/2026)** 📇 **Contactos para el móvil (.vcf).** Botón en `/correduria` → Clientes: clientes en vigor (67) + leads de Vencimientos,
 con «· AS Cliente» / «· AS Lead» en el nombre para saber quién llama. Solo nombre, teléfono, correo y enlace a la ficha (ni DNI ni dirección).
 Datos por `GET /api/operador/contactos-movil` (asegura, descifra) → `libroVcard` (module-seguros) en `/api/correduria/contactos-movil`.
