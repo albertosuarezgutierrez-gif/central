@@ -124,3 +124,11 @@ test('el ramo va con el id EXACTO que se le pasa, y la referencia nuestra solo s
   const con = construirPeticionMoto({ ...BASE, referenciaExterna: 'cot-000000' }, LINEA) as any
   assert.equal(con.externalId, 'cot-000000')
 })
+
+test('el carné de MOTO viaja con su tipo: A con su fecha, no el B supuesto', () => {
+  const c = construirPeticionMoto({ ...BASE, tipoCarnet: 'A', fechaCarnet: '2005-03-01' }, 'Motorcycle') as any
+  const lic = c.risk.primaryDriver.drivingLicenses
+  assert.equal(lic.length, 1)
+  assert.deepEqual(lic[0].type, { id: 'A' })
+  assert.equal(lic[0].date, '2005-03-01')
+})

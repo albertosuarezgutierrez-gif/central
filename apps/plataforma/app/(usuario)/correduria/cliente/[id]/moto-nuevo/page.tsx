@@ -54,7 +54,7 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
   )
 
   const [garajes, civiles, pre, companiasResp] = await Promise.all([
-    catalogoAsegura({ tipo: 'garajes' }),
+    catalogoAsegura({ tipo: 'garajes-moto' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
     precalificarMotoNuevaAsegura({ clienteId }),
     companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),

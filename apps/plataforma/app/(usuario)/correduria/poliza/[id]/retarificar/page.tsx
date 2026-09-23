@@ -125,7 +125,7 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
   // (`/precalificar`, gratis), que desde ese día sirve también moto.
   if (ramo === 'moto') {
     const [garajesM, civilesM, precalM] = await Promise.all([
-      catalogoAsegura({ tipo: 'garajes' }),
+      catalogoAsegura({ tipo: 'garajes-moto' }),
       catalogoAsegura({ tipo: 'estados-civiles' }),
       precalificacionAsegura(p.id),
     ])

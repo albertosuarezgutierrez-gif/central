@@ -134,6 +134,8 @@ import {
   modelosMoto,
   versionesMoto,
   experienciaConduccionMoto,
+  tiposDeGarajeMoto,
+  tiposDeCarnetMoto,
   MOTORES_MOTO,
   vidaDisponible,
   saludDisponible,
@@ -513,6 +515,26 @@ async function prepararAuto(
 // ─── MOTO ────────────────────────────────────────────────────────────────────
 
 /**
+ * El tipo de carné de moto tiene que existir en el catálogo del vendor
+ * (`/motorcycle/driving-licenses`, gratis): un id que no está es un 400. Si el
+ * catálogo no se puede leer NO se bloquea (se deja que hable el vendor, que no
+ * cobra un 400 de validación); `null` = vale o no se ha podido comprobar.
+ */
+async function reparoCarnetMoto(
+  config: Parameters<typeof tiposDeCarnetMoto>[0],
+  tipo: string | null | undefined,
+): Promise<{ campo: 'tipoCarnet'; motivo: string } | null> {
+  if (!tipo) return null
+  const catalogo = await tiposDeCarnetMoto(config).catch((): null => null)
+  if (catalogo === null || catalogo.length === 0) return null
+  if (catalogo.some((o) => o.id === tipo)) return null
+  return {
+    campo: 'tipoCarnet',
+    motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${catalogo.map((o) => o.id).join(', ')})`,
+  }
+}
+
+/**
  * Como `prepararAuto`, con el catálogo y el `risk` de moto: la póliza da la
  * matrícula y el historial (`precalificarMoto`); la versión, el garaje y la
  * experiencia de conducción los resuelve la pantalla (gratis). El id del ramo
@@ -548,6 +570,8 @@ async function prepararMoto(
   if (moto.estado !== 'disponible') {
     return paraPreparado({ error: 'moto no tarifica para esta organización (o no se ha podido comprobar)', moto }, 409)
   }
+  const reparoCarnet = await reparoCarnetMoto(cfg.config, datos.tipoCarnet)
+  if (reparoCarnet) return paraPreparado({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422)
 
   let peticion: Record<string, unknown>
   try {
@@ -964,6 +988,10 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       ),
     }
   }
+  const reparoCarnet = await reparoCarnetMoto(cfg.config, datos.tipoCarnet)
+  if (reparoCarnet) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422) }
+  }
 
   let peticion: Record<string, unknown>
   try {
@@ -1271,6 +1299,11 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
       }
       case 'experiencia-moto':
         return { estado: 'ok', opciones: await experienciaConduccionMoto(config) }
+      // Catálogos PROPIOS de moto (23/09/2026): el de garajes de coche no es el de motos.
+      case 'garajes-moto':
+        return { estado: 'ok', opciones: await tiposDeGarajeMoto(config) }
+      case 'carnets-moto':
+        return { estado: 'ok', opciones: await tiposDeCarnetMoto(config) }
       // Los ramos habilitados para esta organización y, resuelto aquí mismo,
       // si hogar/moto están entre ellos (con su id EXACTO). Tres estados, no dos.
       case 'lineas': {

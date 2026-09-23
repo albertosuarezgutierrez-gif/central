@@ -5,6 +5,7 @@ import {
   precalificarAutoNueva,
   precalificarMotoNueva,
   precalificarMoto,
+  carnetMotoDeFicha,
   partirApellidos,
   sexoDeSaludo,
   aniosEntre,
@@ -476,5 +477,42 @@ test('moto de cartera: con siniestros anotados no se presume ninguno', () => {
 test('moto de cartera: sin matrícula en la póliza, falta', () => {
   const r = preMotoPoliza({ matricula: null })
   assert.ok(r.faltan.some((f) => f.campo === 'matricula'))
+})
+
+// ─── El carné de MOTO (23/09/2026) ──────────────────────────────────────────
+
+test('carnetMotoDeFicha: el de mayor rango con fecha (A > A2 > A1 > AM); el B no cuenta', () => {
+  assert.deepEqual(
+    carnetMotoDeFicha([
+      { tipo: 'B', fechaExpedicion: '1999-06-01' },
+      { tipo: 'A1', fechaExpedicion: '2001-01-01' },
+      { tipo: 'a2', fechaExpedicion: '2010-05-05' },
+    ]),
+    { tipo: 'A2', fecha: '2010-05-05' },
+  )
+  assert.equal(carnetMotoDeFicha([{ tipo: 'A', fechaExpedicion: null }]), null)
+  assert.equal(carnetMotoDeFicha([{ tipo: 'B', fechaExpedicion: '1999-06-01' }]), null)
+  assert.equal(carnetMotoDeFicha(null), null)
+})
+
+test('moto con carné A en la ficha: se declara A con SU fecha, sin supuesto de tipo', () => {
+  const r = precalificarMoto(
+    { ...CLIENTE, carnets: [{ tipo: 'B', fechaExpedicion: '1999-06-01' }, { tipo: 'A', fechaExpedicion: '2005-03-01' }] },
+    POLIZA_MOTO,
+    RESUELTOS_MOTO,
+    HOY,
+  )
+  assert.equal(r.datos.tipoCarnet, 'A')
+  assert.equal(r.datos.fechaCarnet, '2005-03-01')
+  assert.equal(r.supuestos.some((x) => x.campo === 'tipoCarnet'), false)
+})
+
+test('moto SIN carné de moto en la ficha: B con la fecha del conductor, DECLARADO y en cabeza (optimista)', () => {
+  const r = precalificarMoto({ ...CLIENTE, carnets: [] }, POLIZA_MOTO, RESUELTOS_MOTO, HOY)
+  assert.equal(r.datos.tipoCarnet, 'B')
+  assert.equal(r.datos.fechaCarnet, CLIENTE.fechaCarnet)
+  const s = r.supuestos.find((x) => x.campo === 'tipoCarnet')
+  assert.ok(s && s.optimista, 'el B en una moto tiene que salir como supuesto marcado')
+  assert.match(String(s?.porque), /carné de moto/)
 })
 

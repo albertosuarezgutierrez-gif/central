@@ -225,7 +225,7 @@ export async function GET(req: Request) {
         )
       : Promise.resolve<Opcion[] | null>([]),
     origen.poliza.matricula
-      ? fechaMatriculacionDeMatricula(cfg, origen.poliza.matricula)
+      ? fechaMatriculacionDeMatricula(cfg, origen.poliza.matricula, origen.tipo === 'moto' ? 'motorcycle' : 'car')
       : Promise.resolve({ estado: 'error' as const, detalle: 'la póliza no tiene matrícula' }),
     // El catálogo de tipos de vía (`/road-types`), gratis: el Submit exige
     // `roadType.id` y es una referencia de catálogo, así que la pantalla lo
@@ -339,9 +339,8 @@ export async function GET(req: Request) {
   }
   // Moto: misma secuencia, con su precalificación (catálogo de motos,
   // experiencia de conducción). La versión, el garaje y la experiencia los
-  // elige el corredor en la pantalla. ⚠️ La fecha de matriculación sale hoy
-  // del endpoint de coche (`/car/registration-date`): es por matrícula y
-  // aproximada igual; el `/motorcycle/registration-date` es el punto 2 del plan.
+  // elige el corredor en la pantalla. La fecha de matriculación de moto sale
+  // de su propio `/motorcycle/registration-date` (arriba).
   const pre =
     origen.tipo === 'moto'
       ? precalificarMoto(
