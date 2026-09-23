@@ -13,6 +13,6 @@ const cuerpo = fuente.slice(inicio, fin === -1 ? undefined : fin)
 
 test('porNumeroPoliza compara el número de póliza COMPACTADO, no tal cual', () => {
   assert.ok(inicio >= 0, 'no se encuentra porNumeroPoliza')
-  assert.match(cuerpo, /regexp_replace\(upper\(numero_poliza\), '\[\^A-Z0-9\]', '', 'g'\)/)
+  assert.match(cuerpo, /regexp_replace\(upper\(p\.numero_poliza\), '\[\^A-Z0-9\]', '', 'g'\)/)
   assert.doesNotMatch(cuerpo, /numeroPoliza:\s*\{\s*contains/)
 })
