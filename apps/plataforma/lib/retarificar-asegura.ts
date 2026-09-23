@@ -613,7 +613,7 @@ export type RespuestaRetarificar =
   | { estado: 'faltan'; faltan: Reparo[] }
   /** 402 · el tope diario/mensual. No es un fallo: es el tope haciendo su trabajo. */
   | { estado: 'tope'; mensaje: string }
-  /** 409 · el ramo no se retarifica todavía (hoy solo auto y hogar). */
+  /** 409 · el ramo no se retarifica todavía (hoy solo auto, moto y hogar). */
   | { estado: 'ramo'; mensaje: string }
   /**
    * 409 · ya hay un proyecto de Codeoscopic con oferta confirmada y sin caducar

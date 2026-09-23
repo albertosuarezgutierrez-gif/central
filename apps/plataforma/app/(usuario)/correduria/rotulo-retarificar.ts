@@ -17,6 +17,7 @@ import type { Retarificabilidad } from '@central/module-seguros'
  */
 export function rotuloRetarificar(r: Retarificabilidad | null | undefined): string {
   if (r?.ramo === 'auto') return 'Retarificar auto'
+  if (r?.ramo === 'moto') return 'Retarificar moto'
   if (r?.ramo === 'hogar') return 'Retarificar hogar ↗'
   return 'Retarificar ↗'
 }

@@ -20,6 +20,7 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
+import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 
 function euroODash(n: number | null | undefined): string {
@@ -63,7 +64,22 @@ type Resultado =
       supuestos: Supuesto[]
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; proyectoVigente?: boolean }
+
+/**
+ * Modo PÓLIZA (retarificar una moto de la cartera, 23/09/2026): la misma
+ * pantalla, pero la matrícula y el historial (compañía anterior, nº, años) salen
+ * de la póliza en asegura (`precalificarMoto`), así que no se teclean, y el
+ * precio se pide por `POST /retarificar` de esa póliza.
+ */
+export type PolizaMoto = {
+  id: string
+  matricula: string | null
+  /** Aproximada, del vendor por la matrícula. `null` = no se ha podido saber: se teclea. */
+  fechaMatriculacion: string | null
+  /** Qué se declara como seguro anterior, para enseñarlo (la aseguradora y el nº). */
+  anterior: string
+}
 
 export default function MotoNuevo({
   clienteId,
@@ -77,7 +93,9 @@ export default function MotoNuevo({
   consumo,
   simulacion,
   companias,
+  poliza = null,
 }: {
+  poliza?: PolizaMoto | null
   clienteId: string
   etiquetaCliente: string
   /** `null` = no se ha podido precalificar la persona · `[]` = revisado, nada falta. */
@@ -122,8 +140,8 @@ export default function MotoNuevo({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const [matricula, setMatricula] = useState('')
-  const [matriculacion, setMatriculacion] = useState('')
+  const [matricula, setMatricula] = useState(poliza?.matricula ?? '')
+  const [matriculacion, setMatriculacion] = useState(poliza?.fechaMatriculacion ?? '')
   const [garaje, setGaraje] = useState('')
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
@@ -213,7 +231,8 @@ export default function MotoNuevo({
   const faltaGaraje = !garaje
   const faltaCivil = !estadoCivilId
   const faltaMunicipio = !municipioId
-  const faltaMatricula = !matricula.trim()
+  // En modo póliza la matrícula la pone asegura desde la póliza: no se exige aquí.
+  const faltaMatricula = !poliza && !matricula.trim()
   const faltaMatriculacion = !matriculacion
   const faltaMotoAnterior = experienciaConduccion === 'OtherMotorcycle' && !motoAnteriorCodigo.trim()
 
@@ -224,6 +243,7 @@ export default function MotoNuevo({
   )
 
   const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
+  // En modo póliza la tarjeta del toggle no se pinta, así que se queda en false.
   const faltaHistorial =
     tieneSeguroActual &&
     (!companiaActualElegida ||
@@ -240,6 +260,11 @@ export default function MotoNuevo({
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
+    await pedirPrecio(false)
+  }
+
+  /** `forzarNuevo` SOLO tras «Descartar y pedir precio de cero» (modo póliza). */
+  async function pedirPrecio(forzarNuevo: boolean) {
     setResultado({ estado: 'cotizando' })
     const correccionesFinal: Record<string, unknown> = {
       ...correcciones,
@@ -254,7 +279,23 @@ export default function MotoNuevo({
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
       if (siniestrosUltimos5.trim() !== '') correccionesFinal.siniestrosUltimos5 = Number(siniestrosUltimos5)
     }
-    const r = await pedirCotizacionMoto({
+    const resueltosPoliza = {
+      codigoVehiculo,
+      garaje,
+      estadoCivilId,
+      municipioId,
+      fechaMatriculacion: matriculacion,
+      garajeEsSupuesto: true,
+      experienciaConduccion: experienciaConduccion || undefined,
+    }
+    const r = poliza
+      ? await pedirCotizacion({
+          polizaId: poliza.id,
+          resueltos: resueltosPoliza,
+          correcciones: correccionesFinal,
+          ...(forzarNuevo ? { forzarNuevo: true } : {}),
+        })
+      : await pedirCotizacionMoto({
       clienteId,
       resueltos: {
         codigoVehiculo,
@@ -278,6 +319,8 @@ export default function MotoNuevo({
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
         return
       case 'proyecto_vigente':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, proyectoVigente: true })
+        return
       case 'ramo':
       case 'no_encontrada':
       case 'sin_configurar':
@@ -368,9 +411,15 @@ export default function MotoNuevo({
               style={input}
             />
           </Campo>
-          <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
-            <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
-          </Campo>
+          {poliza ? (
+            <Campo etiqueta="Matrícula" falta={false} ayuda="Sale de la póliza: no se cambia aquí.">
+              <input value={matricula || 'La de la póliza'} readOnly style={{ ...input, opacity: 0.8 }} />
+            </Campo>
+          ) : (
+            <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
+              <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
+            </Campo>
+          )}
           <Campo etiqueta="Fecha de matriculación" falta={faltaMatriculacion}>
             <input type="date" value={matriculacion} onChange={(e) => setMatriculacion(e.target.value)} style={input} />
           </Campo>
@@ -479,6 +528,15 @@ export default function MotoNuevo({
         )}
       </div>
 
+      {poliza ? (
+      <div style={cardStyle}>
+        <CardHeader
+          title="2c · Seguro anterior: esta póliza"
+          sub="La compañía, el número y la antigüedad salen de la póliza que se retarifica: es lo que da el bonus. Los años que no constan se suponen a la baja y salen en los supuestos junto al precio."
+        />
+        <p style={{ fontSize: 13, margin: 0 }}>{poliza.anterior}</p>
+      </div>
+      ) : (
       <div style={cardStyle}>
         <CardHeader
           title="2c · ¿Tiene seguro EN VIGOR ahora mismo?"
@@ -548,6 +606,7 @@ export default function MotoNuevo({
           </div>
         )}
       </div>
+      )}
 
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
@@ -585,6 +644,16 @@ export default function MotoNuevo({
             {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
+        )}
+        {resultado.estado === 'error' && resultado.proyectoVigente && poliza && (
+          <button
+            type="button"
+            onClick={() => void pedirPrecio(true)}
+            disabled={!puedePulsar}
+            style={{ ...btnStyle('secundario'), width: '100%', maxWidth: 420, marginTop: 8 }}
+          >
+            {simulacion ? 'Descartar y simular de cero' : 'Descartar y pedir precio de cero — cuesta 0,50€'}
+          </button>
         )}
         {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} />}
       </div>

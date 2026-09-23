@@ -13,6 +13,7 @@ import { precalificarHogarRetarificarAsegura } from '@/lib/hogar-retarificar-ase
 import Retarificador, { ValorSupuesto } from './retarificador'
 import { leerContextoDefensa, motivoSinCartera } from '@/lib/contexto-defensa'
 import RetarificadorHogar from './RetarificadorHogar'
+import MotoNuevo from '../../../cliente/[id]/moto-nuevo/MotoNuevo'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,7 +80,7 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
           <h2>Esta póliza no se puede retarificar todavía</h2>
           <p>
             {p.retarificacion?.motivo ??
-              'Hoy solo se retarifican auto y hogar, y no consta que esta sea de ninguno de los dos.'}
+              'Hoy solo se retarifican auto, moto y hogar, y no consta que esta sea de ninguno de los tres.'}
           </p>
         </div>
       </Marco>
@@ -112,6 +113,62 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
       <Marco>
         <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
         <RetarificadorHogar polizaId={p.id} preInicial={preHogar.pre} />
+      </Marco>
+    )
+  }
+
+  // ── MOTO (23/09/2026) ────────────────────────────────────────────────────
+  //
+  // La pantalla de moto nueva en modo póliza: mismo catálogo de motos, y la
+  // matrícula y el historial los pone asegura desde la póliza
+  // (`precalificarMoto`). La precalificación es la misma ruta que auto
+  // (`/precalificar`, gratis), que desde ese día sirve también moto.
+  if (ramo === 'moto') {
+    const [garajesM, civilesM, precalM] = await Promise.all([
+      catalogoAsegura({ tipo: 'garajes' }),
+      catalogoAsegura({ tipo: 'estados-civiles' }),
+      precalificacionAsegura(p.id),
+    ])
+    if (precalM.estado !== 'ok') {
+      return (
+        <Marco>
+          <Cabecera sub={`${sub} · moto`} polizaId={p.id} />
+          <div className="card err">No se ha podido precalificar la moto: {precalM.mensaje}</div>
+        </Marco>
+      )
+    }
+    const pm = precalM.pre
+    const fallosCatalogoM = [garajesM, civilesM].filter((c) => c.estado !== 'ok')
+    return (
+      <Marco>
+        <Cabecera sub={`${sub} · moto`} polizaId={p.id} />
+        {fallosCatalogoM.length > 0 && (
+          <div className="card err">
+            No se han podido leer los catálogos de garajes o estados civiles de Codeoscopic: sin ellos no hay ids
+            válidos que mandar, así que no se puede cotizar todavía.
+          </div>
+        )}
+        <MotoNuevo
+          poliza={{
+            id: p.id,
+            matricula: null,
+            fechaMatriculacion: pm.fechaMatriculacion,
+            anterior:
+              `${p.aseguradora}${p.numeroPoliza ? `, póliza nº ${p.numeroPoliza}` : ''}` +
+              `${p.objeto?.titulo ? ` · ${p.objeto.titulo}` : ''}.`,
+          }}
+          clienteId={p.cliente.id}
+          etiquetaCliente={p.cliente.nombre}
+          faltanInicial={pm.faltan}
+          garajes={garajesM.estado === 'ok' ? garajesM.opciones : []}
+          civiles={civilesM.estado === 'ok' ? civilesM.opciones : []}
+          municipios={pm.municipios}
+          municipiosMotivo={pm.municipiosMotivo}
+          estadoCivilMoto={pm.estadoCivil}
+          consumo={pm.consumo}
+          simulacion={pm.simulacion}
+          companias={null}
+        />
       </Marco>
     )
   }

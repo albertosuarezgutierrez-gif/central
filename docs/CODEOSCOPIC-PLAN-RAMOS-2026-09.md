@@ -24,11 +24,11 @@ modelos de COCHE. Tres causas encadenadas, de abajo arriba:
 | Ramo | Cotizar nueva | Retarificar cartera | Emitir | Estado |
 |---|---|---|---|---|
 | Auto | ✅ | ✅ | ✅ (con póliza) | Único probado de punta a punta (1ª emisión real 21/09) |
-| Moto | ✅ `peticion-moto.ts` | ❌ 409 | ❌ | Usa catálogos de COCHE y declara solo carnet B |
+| Moto | ✅ `peticion-moto.ts` | ✅ (23/09) | ❌ | Usa catálogos de COCHE (garaje, fecha de matriculación) y declara solo carnet B |
 | Hogar | ✅ | ✅ | ✅ (con póliza) | Sin tope de 90 días de efecto; `recommend-limits` sin cablear |
-| Vida riesgo | 🔴 risk mal formado | ❌ | ❌ | Manda `insured`+`capital`; la API exige `deathBenefit` |
-| Salud | 🔴 risk mal formado | ❌ | ❌ | Manda `insured`+`capital`; la API exige `insureds[]` |
-| Decesos | 🔴 risk mal formado | ❌ | ❌ | Igual que salud |
+| Vida riesgo | 🟡 forma de la referencia, sin estrenar | ❌ | ❌ | `insured`+`deathBenefit` desde el 23/09 |
+| Salud | 🟡 forma de la referencia, sin estrenar | ❌ | ❌ | `insureds[]` desde el 23/09 |
+| Decesos | 🟡 forma de la referencia, sin estrenar | ❌ | ❌ | `insureds[]` desde el 23/09 |
 | RC, comercio, comunidades | — | — | — | **No existen en la API** (confirmado por Codeoscopic 21/09). Se llama a la compañía |
 
 ## Hallazgos transversales
@@ -68,7 +68,7 @@ modelos de COCHE. Tres causas encadenadas, de abajo arriba:
 
 | # | Qué | Tamaño |
 |---|---|---|
-| 1 | **Retarificar moto desde cartera**: `'moto'` en `retarificable.ts`; `precalificarMoto()` copiando `precalificarAuto` (`desde-cartera.ts:268-445`); `prepararMoto()` en `retarificar-cartera.ts` reutilizando `construirPeticionMoto`; rama moto en la pantalla de plataforma | M |
+| 1 | ✅ **Retarificar moto desde cartera (23/09/2026)**: `retarificable.ts` admite moto; `precalificarMoto()` (moto nueva + `historialDePoliza`, compartido con auto); `prepararMoto()` en `retarificar-cartera.ts`; `/precalificar` sirve moto; en plataforma `poliza/[id]/retarificar` abre `MotoNuevo` en modo póliza. Sin emisión de moto todavía (solo precio) | M |
 | 2 | Catálogos `/motorcycle/*` que faltan, y cablearlos en moto-nuevo y en el punto 1 | S |
 | 3 | Carnet de moto: tipo A/A2/A1/AM + fecha desde `cliente_carnets_conducir`, cruzado con `maxDisplacement`/`maxEnginePower` de la versión antes de pagar | M |
 | 4 | ✅ Vida/salud/decesos con la forma de la referencia (vida `insured`+`deathBenefit`; salud/decesos `insureds[]`) y **desbloqueados con OK de Alberto (23/09/2026)**. El primer intento real de cada ramo es el estreno: un 400 se lee y se corrige en `peticion-<ramo>.ts`. Falta quitar de la pantalla el capital de salud/decesos y la duración de vida (ya no viajan) | S + M |
