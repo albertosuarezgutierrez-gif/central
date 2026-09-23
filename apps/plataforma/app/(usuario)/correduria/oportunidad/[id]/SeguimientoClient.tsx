@@ -9,6 +9,7 @@ import {
   MOTIVOS_PERDIDA_UI,
   ROTULO_ESTADO,
   TIPOS_TAREA_UI,
+  parsearPrima,
   type EstadoOportunidad,
   type LecturaOportunidad,
   type TareaSeguimiento,
@@ -38,15 +39,18 @@ function fecha(iso: string | null): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Madrid' })
 }
 
+const AMBIGUO = 'No se ha podido confirmar si se guardó: recarga para verlo antes de repetirlo.'
+
 async function enviar(url: string, metodo: 'POST' | 'PATCH', body: Record<string, unknown>): Promise<string | null> {
   try {
     const r = await fetch(url, { method: metodo, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
     const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string; causa?: string } | null
     if (r.ok && j?.estado === 'ok') return null
+    // 502/red: el puerto pudo guardar y cortarse la respuesta. No se invita a repetir a ciegas.
+    if (r.status === 502 || j?.motivo === 'red') return AMBIGUO
     return j?.motivo ?? j?.causa ?? `No se ha podido guardar (HTTP ${r.status}).`
   } catch {
-    // Ambiguo: puede haberse guardado. Se recarga para ver el estado real antes de repetir.
-    return 'Se cortó la conexión: recarga para ver si se guardó antes de repetirlo.'
+    return AMBIGUO
   }
 }
 
@@ -57,8 +61,11 @@ export default function SeguimientoClient({ id }: { id: string }) {
 
   const cargar = useCallback(() => {
     fetch(`/api/correduria/oportunidad?id=${encodeURIComponent(id)}`)
-      .then(r => r.json())
-      .then(setDatos)
+      .then(async r => {
+        if (r.status === 401 || r.status === 403) return setDatos({ estado: 'error', motivo: 'sin acceso: vuelve a iniciar sesión' })
+        const j = await r.json().catch(() => null)
+        setDatos(j && typeof j === 'object' && 'estado' in j ? (j as LecturaOportunidad) : { estado: 'error', motivo: `HTTP ${r.status}` })
+      })
       .catch(() => setDatos({ estado: 'error', motivo: 'red' }))
   }, [id])
   useEffect(cargar, [cargar])
@@ -153,7 +160,7 @@ export default function SeguimientoClient({ id }: { id: string }) {
         {envio.estado === 'error' && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{envio.motivo}</p>}
       </section>
 
-      <Tareas oportunidadId={id} tareas={datos.tareas} cerrada={cerrada} hoy={hoy} onCambio={cargar} />
+      <Tareas oportunidadId={id} tareas={datos.tareas} descartadas={datos.tareasDescartadas} fueCliente={datos.fueCliente} cerrada={cerrada} hoy={hoy} onCambio={cargar} />
 
       <section style={{ ...cardStyle, display: 'grid', gap: 4 }}>
         <h2 style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>Historial</h2>
@@ -182,8 +189,8 @@ function FormPerder({ enviando, onEnviar, onCancelar }: { enviando: boolean; onE
   const [prima, setPrima] = useState('')
   const [detalle, setDetalle] = useState('')
   // «1.234,50» (español) o «412.5»: con coma, los puntos son de millar; sin coma, el punto es decimal.
-  const primaNum = prima.trim() === '' ? null : Number(prima.includes(',') ? prima.replace(/\./g, '').replace(',', '.') : prima)
-  const valido = motivo !== '' && (motivo !== 'competidor' || competidor.trim() !== '') && (motivo !== 'otro' || detalle.trim() !== '') && (primaNum === null || (Number.isFinite(primaNum) && primaNum > 0))
+  const primaNum = parsearPrima(prima)
+  const valido = motivo !== '' && (motivo !== 'competidor' || competidor.trim() !== '') && (motivo !== 'otro' || detalle.trim() !== '') && primaNum !== 'invalido'
   return (
     <form onSubmit={e => { e.preventDefault(); if (valido) onEnviar({ accion: 'perder', motivo, competidor: competidor.trim() || null, primaCompetidor: primaNum, detalle: detalle.trim() || null }) }}
       style={{ display: 'grid', gap: 12, padding: 14, borderRadius: 12, border: '1px solid var(--border)' }}>
@@ -201,6 +208,7 @@ function FormPerder({ enviando, onEnviar, onCancelar }: { enviando: boolean; onE
         </label>
         <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Prima que le ofrecen (si la sabes)
           <input value={prima} onChange={e => setPrima(e.target.value)} inputMode="decimal" placeholder="412,00" style={{ minHeight: 44, borderRadius: 10, border: '1px solid var(--border)', padding: '0 10px', fontSize: 14 }} />
+            {primaNum === 'invalido' && <span style={{ color: 'var(--negative)' }}>Escríbela como 412,50 o 1.200</span>}
         </label>
       </div>
       <label style={{ display: 'grid', gap: 4, fontSize: 13 }}>Detalle{motivo === 'otro' ? ' (obligatorio)' : ' (opcional)'}
@@ -245,7 +253,7 @@ function FormAparcar({ enviando, hoy, onEnviar, onCancelar }: { enviando: boolea
   )
 }
 
-function Tareas({ oportunidadId, tareas, cerrada, hoy, onCambio }: { oportunidadId: string; tareas: TareaSeguimiento[]; cerrada: boolean; hoy: string; onCambio: () => void }) {
+function Tareas({ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, onCambio }: { oportunidadId: string; tareas: TareaSeguimiento[]; descartadas: number; fueCliente: boolean | null; cerrada: boolean; hoy: string; onCambio: () => void }) {
   const [obs, setObs] = useState('')
   const [tipo, setTipo] = useState('llamada')
   const [limite, setLimite] = useState(hoy)
@@ -271,6 +279,8 @@ function Tareas({ oportunidadId, tareas, cerrada, hoy, onCambio }: { oportunidad
   }
 
   const rotuloTipo = (t: string) => TIPOS_TAREA_UI.find(x => x.valor === t)?.rotulo ?? t
+  // LSSI 21.2: por correo solo a quien fue cliente. Sin comprobar = no se ofrece.
+  const tipos = TIPOS_TAREA_UI.filter(t => t.valor !== 'email' || fueCliente === true)
   return (
     <section style={{ ...cardStyle, display: 'grid', gap: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -300,8 +310,9 @@ function Tareas({ oportunidadId, tareas, cerrada, hoy, onCambio }: { oportunidad
           </label>
           <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted)' }}>Tipo
             <select value={tipo} onChange={e => setTipo(e.target.value)} style={{ minHeight: 44, borderRadius: 10, border: '1px solid var(--border)', padding: '0 8px', fontSize: 14, background: 'var(--surface)' }}>
-              {TIPOS_TAREA_UI.map(t => <option key={t.valor} value={t.valor}>{t.rotulo}</option>)}
+              {tipos.map(t => <option key={t.valor} value={t.valor}>{t.rotulo}</option>)}
             </select>
+            {fueCliente !== true && <span style={{ fontSize: 11 }}>Sin «Correo»: {fueCliente === false ? 'nunca fue cliente' : 'no consta que fuera cliente'} (LSSI 21.2).</span>}
           </label>
           <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted)' }}>Para el
             <input type="date" value={limite} min={hoy} onChange={e => setLimite(e.target.value)} style={{ minHeight: 44, borderRadius: 10, border: '1px solid var(--border)', padding: '0 8px', fontSize: 14 }} />
@@ -315,6 +326,7 @@ function Tareas({ oportunidadId, tareas, cerrada, hoy, onCambio }: { oportunidad
         </form>
       )}
       {error && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{error}</p>}
+      {descartadas > 0 && <p style={{ margin: 0, fontSize: 12, color: 'var(--warning)' }}>{descartadas} tarea(s) del puerto no se han podido leer y no se muestran.</p>}
       {hechas.length > 0 && (
         <details>
           <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--muted)', minHeight: 44, display: 'flex', alignItems: 'center' }}>Hechas ({hechas.length})</summary>

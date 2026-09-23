@@ -69,4 +69,8 @@ test('el paso se dice con el canal permitido: primer contacto sin correo es una 
   assert.equal(textoPasoLead(primer, 'telefono_y_correo'), 'Primer correo')
   assert.equal(textoPasoLead(primer, 'sin_canal_permitido'), 'Sin canal permitido')
   assert.equal(textoPasoLead(siguientePasoLead(30, 2, 20), 'solo_correo'), 'Sin teléfono: escribir por correo')
+  // A quien no se le puede escribir no se le propone escribirle, en NINGÚN paso.
+  for (const paso of [primer, siguientePasoLead(40, 1, 3), siguientePasoLead(30, 2, 20)]) {
+    assert.equal(textoPasoLead(paso, 'sin_canal_permitido'), 'Sin canal permitido')
+  }
 })

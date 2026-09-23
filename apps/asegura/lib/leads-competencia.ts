@@ -25,6 +25,7 @@ import {
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { descifrarCampo } from './cartera-edicion'
+import { MARCA_CIERRE_AUTOMATICO } from './oportunidad-seguimiento'
 
 export type LeadCompetencia = {
   oportunidadId: string
@@ -139,6 +140,8 @@ export async function leadsCompetencia(
         where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
           and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
           and g.tipo::text in ('llamada', 'email', 'whatsapp')
+          -- Las que cerró el sistema al ganar/perder no son un contacto: reabrir no suma intentos.
+          and position(${MARCA_CIERRE_AUTOMATICO} in g.observaciones) = 0
           and g.updated_at > now() - interval '12 months') as intentos,
       greatest(
         (select max(r.created_at) from recaptacion_envios r
@@ -147,6 +150,7 @@ export async function leadsCompetencia(
           where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
             and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
             and g.tipo::text in ('llamada', 'email', 'whatsapp')
+            and position(${MARCA_CIERRE_AUTOMATICO} in g.observaciones) = 0
             and g.updated_at > now() - interval '12 months')
       ) as "ultimoEnvioAt",
       exists (
@@ -158,6 +162,8 @@ export async function leadsCompetencia(
       exists (
         select 1 from polizas p
         where p.cliente_id = c.id and p.correduria_id = c.correduria_id and p.merged_into_poliza_id is null
+          -- «competencia» es una póliza suya con OTRA compañía: no es contrato con nosotros.
+          and p.estado::text <> 'competencia'
       ) as "fueCliente"
     from oportunidades o
     join clientes c on c.id = o.cliente_id

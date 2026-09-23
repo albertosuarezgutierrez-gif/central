@@ -13,17 +13,27 @@
  * lee y se rotula.
  */
 
-export type VentanaLead = 'menos_30' | '30_60' | '60_90' | 'mas_90'
-export type CanalLead = 'telefono_y_correo' | 'solo_telefono' | 'solo_correo' | 'sin_canal_permitido'
-export type AccionPaso = 'esperar' | 'primer_contacto' | 'recordatorio' | 'llamada' | 'aparcar'
-export type EstadoOportunidad = 'competencia' | 'en_negociacion' | 'pendiente_cliente' | 'ganada' | 'perdida'
+import {
+  MOTIVOS_PERDIDA,
+  TIPOS_TAREA,
+  type CanalLead,
+  type EstadoOportunidad,
+  type MotivoPerdida,
+  type PasoLead,
+  type TipoTarea,
+  type VentanaLead,
+} from '@central/module-seguros'
+
+export type { CanalLead, EstadoOportunidad, VentanaLead }
+export type AccionPaso = PasoLead['accion']
 
 export type LeadVencimiento = {
   oportunidadId: string
   estado: EstadoOportunidad
   clienteId: string
-  cliente: string
-  ramo: string
+  /** `null` = la ficha no tiene nombre legible: se dice, no se inventa. */
+  cliente: string | null
+  ramo: string | null
   aseguradora: string | null
   /** `null` = no consta: nunca se pinta 0,00€. */
   prima: number | null
@@ -86,13 +96,20 @@ export function interpretarLead(v: unknown): LeadVencimiento | null {
   const ventana = uno(VENTANAS, o.ventana)
   const p = objeto(o.siguientePaso)
   const accion = p ? uno(ACCIONES_PASO, p.accion) : null
+  const dentroDeDias = p ? numero(p.dentroDeDias) : null
+  const intentos = numero(o.intentos)
+  const puntuacion = numero(o.puntuacion)
+  // Lo que asegura calcula siempre es obligatorio: si falta, la fila está rota
+  // y se cuenta como descartada. Un 0 inventado pintaría «0 de 3 intentos» o
+  // una prioridad falsa sobre un lead del que no se sabe nada.
   if (!oportunidadId || !clienteId || !estado || !venc || dias === null || !ventana || !p || !accion) return null
+  if (dentroDeDias === null || intentos === null || puntuacion === null) return null
   return {
     oportunidadId,
     estado,
     clienteId,
-    cliente: texto(o.cliente) ?? '(sin nombre)',
-    ramo: texto(o.ramo) ?? 'otro',
+    cliente: texto(o.cliente),
+    ramo: texto(o.ramo),
     aseguradora: texto(o.aseguradora),
     prima: numero(o.prima),
     vencimientoEstimado: venc,
@@ -100,13 +117,13 @@ export function interpretarLead(v: unknown): LeadVencimiento | null {
     ventana,
     telefono: texto(o.telefono),
     email: texto(o.email),
-    intentos: numero(o.intentos) ?? 0,
+    intentos,
     ultimoContactoEn: texto(o.ultimoContactoEn),
     respondioAntes: o.respondioAntes === true,
     fueCliente: typeof o.fueCliente === 'boolean' ? o.fueCliente : null,
     canal: uno(CANALES, o.canal),
-    puntuacion: numero(o.puntuacion) ?? 0,
-    paso: { accion, motivo: texto(p.motivo) ?? '', dentroDeDias: numero(p.dentroDeDias) ?? 0 },
+    puntuacion,
+    paso: { accion, motivo: texto(p.motivo) ?? '', dentroDeDias },
   }
 }
 
@@ -156,7 +173,7 @@ export type TareaSeguimiento = {
   id: string
   tipo: string
   prioridad: string
-  estado: string
+  estado: 'pendiente' | 'cerrada'
   observaciones: string
   fechaLimite: string | null
 }
@@ -171,6 +188,8 @@ export type LecturaOportunidad =
       aseguradora: string | null
       fueCliente: boolean | null
       tareas: TareaSeguimiento[]
+      /** Tareas del puerto sin la forma esperada: se cuentan, no se pintan como «pendiente». */
+      tareasDescartadas: number
       historial: EntradaHistorial[]
     }
   | { estado: 'no_encontrado' }
@@ -191,15 +210,20 @@ export function interpretarOportunidad(status: number, json: unknown): LecturaOp
   }
   const ctx = objeto(o?.contexto)
   const tareas: TareaSeguimiento[] = []
+  let tareasDescartadas = 0
   for (const t of Array.isArray(o?.tareas) ? o.tareas : []) {
     const r = objeto(t)
     const tid = texto(r?.id)
-    if (!r || !tid) continue
+    const tipo = texto(r?.tipo)
+    const prioridad = texto(r?.prioridad)
+    const est = r?.estado === 'pendiente' || r?.estado === 'cerrada' ? r.estado : null
+    // Sin estado no se sabe si está hecha: suponer «pendiente» la pintaría como trabajo por hacer.
+    if (!r || !tid || !tipo || !prioridad || !est) { tareasDescartadas++; continue }
     tareas.push({
       id: tid,
-      tipo: texto(r.tipo) ?? 'tarea',
-      prioridad: texto(r.prioridad) ?? 'media',
-      estado: texto(r.estado) ?? 'pendiente',
+      tipo,
+      prioridad,
+      estado: est,
       observaciones: typeof r.observaciones === 'string' ? r.observaciones : '',
       fechaLimite: texto(r.fechaLimite),
     })
@@ -235,6 +259,7 @@ export function interpretarOportunidad(status: number, json: unknown): LecturaOp
     aseguradora: ctx ? texto(ctx.aseguradora) : null,
     fueCliente: ctx && typeof ctx.fueCliente === 'boolean' ? ctx.fueCliente : null,
     tareas,
+    tareasDescartadas,
     historial,
   }
 }
@@ -267,24 +292,39 @@ export const ROTULO_ESTADO: Record<EstadoOportunidad, string> = {
   perdida: 'Perdida',
 }
 
-/** Los ocho motivos de `MOTIVOS_PERDIDA` (module-seguros), en castellano de pantalla. Mismo orden. */
-export const MOTIVOS_PERDIDA_UI: readonly { valor: string; rotulo: string }[] = [
-  { valor: 'precio', rotulo: 'Precio' },
-  { valor: 'competidor', rotulo: 'Se va con otra compañía' },
-  { valor: 'coberturas', rotulo: 'Coberturas' },
-  { valor: 'cliente_desiste', rotulo: 'Ya no lo necesita' },
-  { valor: 'sin_respuesta', rotulo: 'No responde' },
-  { valor: 'no_contactable', rotulo: 'No se le puede contactar' },
-  { valor: 'ya_asegurado', rotulo: 'Ya lo tiene asegurado' },
-  { valor: 'otro', rotulo: 'Otro (explica cuál)' },
-]
+const ROTULO_MOTIVO: Record<MotivoPerdida, string> = {
+  precio: 'Precio',
+  competidor: 'Se va con otra compañía',
+  coberturas: 'Coberturas',
+  cliente_desiste: 'Ya no lo necesita',
+  sin_respuesta: 'No responde',
+  no_contactable: 'No se le puede contactar',
+  ya_asegurado: 'Ya lo tiene asegurado',
+  otro: 'Otro (explica cuál)',
+}
+/** Los motivos del módulo, en su orden: un motivo nuevo sin rótulo no compila. */
+export const MOTIVOS_PERDIDA_UI: readonly { valor: MotivoPerdida; rotulo: string }[] =
+  MOTIVOS_PERDIDA.map((valor) => ({ valor, rotulo: ROTULO_MOTIVO[valor] }))
 
-export const TIPOS_TAREA_UI: readonly { valor: string; rotulo: string }[] = [
-  { valor: 'llamada', rotulo: 'Llamada' },
-  { valor: 'email', rotulo: 'Correo' },
-  { valor: 'whatsapp', rotulo: 'WhatsApp' },
-  { valor: 'tarea', rotulo: 'Tarea' },
-]
+const ROTULO_TIPO_TAREA: Record<TipoTarea, string> = { llamada: 'Llamada', email: 'Correo', whatsapp: 'WhatsApp', tarea: 'Tarea' }
+export const TIPOS_TAREA_UI: readonly { valor: TipoTarea; rotulo: string }[] =
+  TIPOS_TAREA.map((valor) => ({ valor, rotulo: ROTULO_TIPO_TAREA[valor] }))
+
+/**
+ * Prima tecleada en formato español. Solo se aceptan formas sin ambigüedad:
+ * «1.200» es mil doscientos, nunca 1,2; «1200», «1.200,50», «412,5» y «412.50»
+ * también. Lo que no encaja es `'invalido'`, no un número plausible.
+ */
+export function parsearPrima(t: string): number | null | 'invalido' {
+  const s = t.trim().replace(/\s*€$/, '')
+  if (s === '') return null
+  let n: number
+  if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(s)) n = Number(s.replace(/\./g, '').replace(',', '.'))
+  else if (/^\d+(,\d{1,2})?$/.test(s)) n = Number(s.replace(',', '.'))
+  else if (/^\d+\.\d{1,2}$/.test(s)) n = Number(s)
+  else return 'invalido'
+  return n > 0 && n < 1_000_000 ? n : 'invalido'
+}
 
 // ─── Red (solo desde rutas API de plataforma) ────────────────────────────────
 

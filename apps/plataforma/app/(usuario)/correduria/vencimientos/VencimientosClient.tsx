@@ -186,9 +186,9 @@ function FilaLead({ l }: { l: LeadVencimiento }) {
         {l.puntuacion}
       </span>
       <div style={{ flex: '1 1 220px', minWidth: 0, display: 'grid', gap: 2 }}>
-        <Link href={`/correduria/oportunidad/${l.oportunidadId}`} style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)', textDecoration: 'none' }}>{l.cliente}</Link>
+        <Link href={`/correduria/oportunidad/${l.oportunidadId}`} style={{ fontWeight: 600, fontSize: 15, color: 'var(--text)', textDecoration: 'none' }}>{l.cliente ?? '(ficha sin nombre)'}</Link>
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>
-          {l.ramo}{l.aseguradora ? ` · ${l.aseguradora}` : ''} · {l.prima === null ? 'prima sin dato' : eur(l.prima)}
+          {l.ramo ?? 'ramo sin dato'}{l.aseguradora ? ` · ${l.aseguradora}` : ''} · {l.prima === null ? 'prima sin dato' : eur(l.prima)}
           {l.fueCliente === true ? ' · fue cliente' : l.fueCliente === false ? ' · nunca fue cliente' : ''}
         </span>
       </div>
@@ -207,7 +207,7 @@ function FilaLead({ l }: { l: LeadVencimiento }) {
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
         {puedeLlamar && (
-          <a href={`tel:${l.telefono}`} aria-label={`Llamar a ${l.cliente}`} title="Llamar" style={{ ...btnStyle('secundario'), width: 44, padding: 0 }}>
+          <a href={`tel:${l.telefono}`} aria-label={`Llamar a ${l.cliente ?? 'este lead'}`} title="Llamar" style={{ ...btnStyle('secundario'), width: 44, padding: 0 }}>
             <Phone size={18} strokeWidth={1.75} />
           </a>
         )}

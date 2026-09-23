@@ -172,7 +172,7 @@ export function textoPasoLead(paso: { accion: PasoLead['accion']; dentroDeDias: 
     case 'recordatorio':
       return correo ? 'Recordatorio por correo' : telefono ? 'Volver a llamar' : 'Sin canal permitido'
     case 'llamada':
-      return telefono ? 'Llamar' : 'Sin teléfono: escribir por correo'
+      return telefono ? 'Llamar' : correo ? 'Sin teléfono: escribir por correo' : 'Sin canal permitido'
     case 'aparcar':
       return 'Proponer aparcar hasta el año que viene'
   }

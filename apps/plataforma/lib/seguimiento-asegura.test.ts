@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { interpretarLeads, interpretarOportunidad, MOTIVOS_PERDIDA_UI, rotuloCanal } from './seguimiento-asegura.ts'
+import { MOTIVOS_PERDIDA } from '@central/module-seguros'
+import { interpretarLeads, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -21,11 +21,17 @@ test('lista vacía con ok es «no hay»; sin configurar y error NO lo son', () =
 })
 
 test('la prima que no consta sigue siendo null, y una fila rota se cuenta, no se inventa', () => {
-  const r = interpretarLeads(200, { estado: 'ok', leads: [lead, { oportunidadId: 'x' }], porVentana: { '30_60': 1 } })
+  const { intentos: _i, ...sinIntentos } = lead
+  void _i
+  const r = interpretarLeads(200, { estado: 'ok', leads: [lead, { oportunidadId: 'x' }, sinIntentos, { ...lead, ramo: null, cliente: null }], porVentana: { '30_60': 1 } })
   assert.ok(r.estado === 'ok')
-  assert.equal(r.leads.length, 1)
+  assert.equal(r.leads.length, 2)
   assert.equal(r.leads[0].prima, null)
-  assert.equal(r.descartadas, 1)
+  // Sin intentos no se pinta «0 de 3»: la fila se descarta y se cuenta.
+  assert.equal(r.descartadas, 2)
+  // Ramo o nombre que no constan siguen siendo null, no «otro».
+  assert.equal(r.leads[1].ramo, null)
+  assert.equal(r.leads[1].cliente, null)
   assert.equal(r.porVentana['30_60'], 1)
   assert.equal(r.porVentana.menos_30, 0)
 })
@@ -46,21 +52,33 @@ test('oportunidad: 404 es «no encontrada», no un error; el contexto que falta 
   const r = interpretarOportunidad(200, {
     estado: 'ok',
     oportunidad: { id: 'o1', clienteId: 'c1', estado: 'en_negociacion', primaCompetidor: null },
-    tareas: [{ id: 't1', tipo: 'llamada', estado: 'pendiente', observaciones: 'x', fechaLimite: '2026-09-25' }, { sinId: true }],
+    tareas: [
+      { id: 't1', tipo: 'llamada', prioridad: 'media', estado: 'pendiente', observaciones: 'x', fechaLimite: '2026-09-25' },
+      { sinId: true },
+      // Sin estado no se sabe si está hecha: no se pinta como pendiente.
+      { id: 't2', tipo: 'llamada', prioridad: 'media', observaciones: 'y', fechaLimite: null },
+    ],
     historial: [{ accion: 'interesado', actor: 'a', fecha: '2026-09-22T10:00:00Z' }],
   })
   assert.ok(r.estado === 'ok')
   assert.equal(r.cliente, null)
   assert.equal(r.fueCliente, null)
   assert.equal(r.tareas.length, 1)
+  assert.equal(r.tareasDescartadas, 2)
   assert.equal(r.historial.length, 1)
 })
 
-test('los motivos de la pantalla son EXACTAMENTE los del módulo, en el mismo orden', () => {
-  // Con una lista divergente, la pantalla ofrecería un motivo que el puerto rechaza con 422.
-  const fuente = readFileSync(new URL('../../../packages/module-seguros/src/oportunidad-seguimiento.ts', import.meta.url), 'utf8')
-  const bloque = fuente.match(/MOTIVOS_PERDIDA = \[([\s\S]*?)\] as const/)
-  assert.ok(bloque, 'no se encuentra MOTIVOS_PERDIDA en el módulo')
-  const delModulo = [...bloque[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1])
-  assert.deepEqual(MOTIVOS_PERDIDA_UI.map((m) => m.valor), delModulo)
+test('los motivos de la pantalla son los del módulo, en su orden y con rótulo', () => {
+  assert.deepEqual(MOTIVOS_PERDIDA_UI.map((m) => m.valor), [...MOTIVOS_PERDIDA])
+  for (const m of MOTIVOS_PERDIDA_UI) assert.ok(m.rotulo.length > 0, m.valor)
+})
+
+test('prima en español: «1.200» son mil doscientos, lo ambiguo no pasa', () => {
+  assert.equal(parsearPrima('1.200'), 1200)
+  assert.equal(parsearPrima('1.200,50'), 1200.5)
+  assert.equal(parsearPrima('412,5'), 412.5)
+  assert.equal(parsearPrima('412.50'), 412.5)
+  assert.equal(parsearPrima('1200 €'), 1200)
+  assert.equal(parsearPrima(''), null)
+  for (const mal of ['1,200.50', '12.34.5', '0', 'abc', '1.2345', '-5']) assert.equal(parsearPrima(mal), 'invalido', mal)
 })
