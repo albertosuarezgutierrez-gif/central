@@ -1,0 +1,90 @@
+{
+ "sesion": "f58383c9-8020-5a2e-9db9-10fa8a6cb709",
+ "inicio": "2026-09-23T09:09:30.593Z",
+ "fin": "2026-09-23T09:14:53.204Z",
+ "llamadas": 47,
+ "categorias": {
+  "otro": {
+   "llamadas": 9,
+   "chars_in": 740,
+   "chars_out": 1071,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 6,
+    "ScheduleWakeup": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 5,
+   "chars_in": 536,
+   "chars_out": 64393,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 3,
+    "Grep": 2
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 71,
+   "chars_out": 116,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 9,
+   "chars_in": 809,
+   "chars_out": 68681,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 5,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__get_thread": 3
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 4,
+   "chars_in": 411,
+   "chars_out": 63318,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 4
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 6,
+   "chars_in": 7651,
+   "chars_out": 13917,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 6
+   }
+  },
+  "sql": {
+   "llamadas": 13,
+   "chars_in": 4296,
+   "chars_out": 31364,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 13
+   }
+  }
+ }
+}
