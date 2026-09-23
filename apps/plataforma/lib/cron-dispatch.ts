@@ -206,6 +206,8 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/correo-resumen-semanal', schedule: '0 9 * * 1' },
   { path: '/api/cron/patrones-fiscal-refresh', schedule: '30 5 * * *' },
   { path: '/api/cron/ia-director-refresh', schedule: '0 5 * * 1' },
+  // Saldo de OpenRouter con previsión de días + tope mensual por app (pieza 1-6, 23/09/2026).
+  { path: '/api/cron/ia-saldo', schedule: '10 6 * * *' },
 ]
 
 // Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta
