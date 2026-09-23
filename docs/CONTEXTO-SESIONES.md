@@ -341,6 +341,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (23/09/2026) plataforma: capital recomendado de hogar en un clic (retarificar)
+- Primera recomendación real de `recommend-limits` OK (continente 93.000€, contenido 27.000€). Ahora cada fila ofrece mínimo/media/máximo y hay «Usar los dos recomendados»; el cliente elige o se corrige a mano. NO se guarda en la póliza, solo en la cotización (decisión: la recomendación nunca se escribe sola).
+- «Pedir precio» ya no se queda colgado si se corta la red (try/catch con «no se sabe si ha costado»).
+- Pendiente: Catastro por dirección para las pólizas de hogar sin m²/año/CP (solo 2 las tienen); preguntar a Codeoscopic si recommend-limits factura.
+
 ## (23/09/2026) asegura-web + BD: teléfonos de compañías verificados con capturas (PR #3398)
 - Web `/telefonos-siniestros`: Mapfre, Allianz, Generali, Reale, Fidelidade y Asisa verificadas con capturas de Alberto (Occident ya lo estaba). `asistencia` = lista por riesgo; solo Reale (900 455 900) y Occident publican voz para dar parte.
 - BD `seguros.companias_dgs` corregida con OK de Alberto: Mapfre siniestros 900 122 122 (era la MÉDICA) → NULL, asistencia 900 822 822 (hogar+carretera); Reale siniestros 900 455 900 / asistencia 900 365 900. Generali, Allianz y Fidelidade: solo nota en `telefono_fuente` (captura no contradice / solo hogar). Asisa no tiene fila (no se inventa código DGS).
