@@ -14,6 +14,7 @@ test('🪤 sin enlace ni correo ni precio real NO se toca la fila: todas las gua
     "if (ficha.estado !== 'ok') return error('sin_email'",
     "if (t?.simulado !== false) return error('simulado'",
     "if (!AVISABLE.has(estado)) return error('no_enviable'",
+    "if (portal?.estado !== 'invitable' && portal?.estado !== 'ya_entra') {",
   ]) {
     const i = avisar.indexOf(g)
     assert.ok(i > 0 && i < primeraEscritura, `${g} antes de escribir`)
@@ -32,4 +33,11 @@ test('🪤 `enviado_at` solo se sella si el proveedor aceptó; el WhatsApp solo 
   assert.ok(fallo > 0 && sello > fallo, 'el sello va detrás del corte por fallo')
   const whatsapp = avisar.slice(avisar.indexOf("if (entrada.canal === 'whatsapp_enlace') {"), avisar.indexOf('const envio = await mandarCorreo('))
   assert.doesNotMatch(whatsapp, /enviadoAt/)
+})
+
+test('🪤 si el correo no sale, se devuelve la llave anterior; y solo se confirma un WhatsApp cuyo enlace sigue vivo', () => {
+  const fallo = avisar.slice(avisar.indexOf("if (envio !== 'enviado') {"))
+  assert.match(fallo.slice(0, 300), /where: \{ id: p\.id, tokenHash: nuevoHash \}, data: \{ tokenHash: p\.tokenHash/)
+  const confirmar = src.slice(src.indexOf('export async function confirmarWhatsapp'))
+  assert.match(confirmar, /estadoPresupuesto\(p, ahora\) !== 'enlazado' \|\| p\.canalAviso !== 'whatsapp_enlace'/)
 })

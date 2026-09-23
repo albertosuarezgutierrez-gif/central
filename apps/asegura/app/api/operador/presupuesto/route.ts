@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 
 // `sin_enlace`/`sin_proveedor`/`remitente` son averías nuestras (503); `rechazado`, del proveedor (502).
 const STATUS_FALLO: Record<FalloEnvio, number> = {
-  no_encontrado: 404, no_enviable: 409, ocupado: 409, simulado: 422, sin_email: 422,
+  no_encontrado: 404, no_enviable: 409, ocupado: 409, simulado: 422, sin_email: 422, sin_acceso: 422,
   sin_enlace: 503, sin_proveedor: 503, remitente_no_verificado: 503, rechazado: 502,
 }
 

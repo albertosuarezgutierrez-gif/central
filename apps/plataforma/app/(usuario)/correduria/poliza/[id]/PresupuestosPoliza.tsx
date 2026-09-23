@@ -89,7 +89,11 @@ export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
               )}
               {a.avisar && (
                 <button type="button" disabled={!libre} style={btnStyle('secundario')}
-                  onClick={() => void patch(p, { accion: 'avisar', canal: 'whatsapp_enlace' }, window.open('', '_blank'))}>Por WhatsApp</button>
+                  onClick={() => {
+                    // Rotar la llave mata el enlace que ya tenga: si ya se le avisó, se pregunta antes.
+                    if (a.reenvio && !window.confirm('Se le abrirá un WhatsApp con un enlace NUEVO: el que ya tiene dejará de abrir. ¿Seguir?')) return
+                    void patch(p, { accion: 'avisar', canal: 'whatsapp_enlace' }, window.open('', '_blank'))
+                  }}>Por WhatsApp</button>
               )}
               {a.confirmarWhatsapp && (
                 <button type="button" disabled={!libre} style={btnStyle('secundario')}

@@ -27,13 +27,13 @@ import { generarTokenVista, hashTokenVista } from '@central/module-seguros-porta
 import { prismaAsegura } from './asegura-db'
 import { MOTIVO_REMITENTE, rechazoDeRemitente } from './correo-invitacion-portal'
 import { estadoEmailDeFicha } from './email-ficha'
-import { nombreDe } from './invitacion-portal'
+import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
 import { fechaEfectoDe } from './presupuesto'
 
 export type CanalAviso = 'email' | 'whatsapp_enlace'
 
 export type FalloEnvio =
-  | 'no_encontrado' | 'no_enviable' | 'sin_enlace' | 'sin_email' | 'simulado' | 'ocupado'
+  | 'no_encontrado' | 'no_enviable' | 'sin_enlace' | 'sin_email' | 'sin_acceso' | 'simulado' | 'ocupado'
   | 'sin_proveedor' | 'remitente_no_verificado' | 'rechazado'
 
 export type ResultadoEnvio =
@@ -68,6 +68,14 @@ function error(motivo: FalloEnvio, detalle: string): ResultadoEnvio {
   return { estado: 'error', motivo, detalle }
 }
 
+const TEXTO_SIN_ACCESO: Record<string, string> = {
+  ambiguo: 'Su correo aparece en más de una ficha: en el portal no vería el presupuesto. Resuelve el duplicado primero.',
+  resuelve_a_otra: 'Su correo lleva a OTRA ficha: en el portal vería «no es tuyo». Resuelve el duplicado primero.',
+  sin_email: 'La ficha no tiene un correo con el que entrar al portal.',
+  ilegible: 'El correo de la ficha no se puede descifrar (PII_ENCRYPTION_KEY).',
+  no_comprobado: 'No se ha podido comprobar que su correo le lleve a esta ficha en el portal (PII_LOOKUP_KEY o consulta caída). No se avisa a ciegas.',
+}
+
 const TEXTO_SIN_EMAIL: Record<string, string> = {
   no_encontrado: 'La ficha del cliente no existe o está fusionada.',
   baja_de_correo: 'El cliente se dio de baja de correo: no se le avisa por ningún canal que lleve a un código por correo.',
@@ -84,7 +92,7 @@ export async function avisarPresupuesto(
   const p = await db.presupuesto.findFirst({
     where: { id: entrada.id, correduriaId },
     select: {
-      id: true, clienteId: true, tarificacionId: true, tokenHash: true, creadoAt: true, venceEl: true,
+      id: true, clienteId: true, tarificacionId: true, tokenHash: true, canalAviso: true, creadoAt: true, venceEl: true,
       enlaceGeneradoAt: true, enviadoAt: true, vistoAt: true, elegidoAt: true, aceptadoAt: true, emitidoAt: true, retiradoAt: true,
     },
   })
@@ -99,6 +107,18 @@ export async function avisarPresupuesto(
 
   const ficha = await estadoEmailDeFicha(correduriaId, p.clienteId)
   if (ficha.estado !== 'ok') return error('sin_email', TEXTO_SIN_EMAIL[ficha.estado] ?? 'No hay un correo al que mandar el código.')
+  // El portal enseña el presupuesto por el VÍNCULO con la ficha, y ese vínculo solo se forma si su
+  // correo resuelve a ESTA ficha. Avisar a quien luego vería «este presupuesto no es tuyo» es peor
+  // que no avisar: misma predicción que la invitación al portal.
+  const portal = await estadoPortalDeFicha(correduriaId, p.clienteId)
+  if (portal?.estado !== 'invitable' && portal?.estado !== 'ya_entra') {
+    return error('sin_acceso', TEXTO_SIN_ACCESO[portal?.estado ?? 'no_comprobado'] ?? TEXTO_SIN_ACCESO.no_comprobado!)
+  }
+  // Por WhatsApp se le dice con qué correo entrar: solo si se puede afirmar cuál.
+  if (entrada.canal === 'whatsapp_enlace' && !portal.emailInvitacion) {
+    return error('sin_acceso', 'No se puede afirmar con qué correo entrará, así que por WhatsApp no se le nombra ninguno. Mándalo por correo.')
+  }
+  const emailAcceso = entrada.canal === 'whatsapp_enlace' ? portal.emailInvitacion! : ficha.email
 
   const token = generarTokenVista()
   const enlace = enlacePresupuesto(token)
@@ -106,15 +126,17 @@ export async function avisarPresupuesto(
 
   const venceSiSale = calcularVencimiento({ creadoAt: p.creadoAt, enviadoAt: p.enviadoAt ?? ahora, fechaEfecto: fechaEfectoDe(t.peticion) }).venceEl
   const nombre = await nombreDe(correduriaId, p.clienteId)
-  const datos = { nombre, enlace, venceEl: venceSiSale, email: ficha.email }
+  const datos = { nombre, enlace, venceEl: venceSiSale, email: emailAcceso }
 
   // Compare-and-swap sobre el hash anterior: el segundo clic no encuentra la fila.
+  const nuevoHash = await hashTokenVista(token)
   const rotado = await db.presupuesto.updateMany({
     where: { id: p.id, correduriaId, tokenHash: p.tokenHash, retiradoAt: null, elegidoAt: null, aceptadoAt: null, emitidoAt: null },
     data: {
-      tokenHash: await hashTokenVista(token),
+      tokenHash: nuevoHash,
       canalAviso: entrada.canal,
-      ...(entrada.canal === 'whatsapp_enlace' && p.enlaceGeneradoAt === null ? { enlaceGeneradoAt: ahora } : {}),
+      // El WhatsApp promete «válido hasta»: esa fecha se guarda ya, no al confirmar.
+      ...(entrada.canal === 'whatsapp_enlace' ? { venceEl: venceSiSale, ...(p.enlaceGeneradoAt === null ? { enlaceGeneradoAt: ahora } : {}) } : {}),
     },
   })
   if (rotado.count === 0) return error('ocupado', 'Otro clic lo está enviando o ha cambiado a la vez. Recarga antes de repetir.')
@@ -130,12 +152,14 @@ export async function avisarPresupuesto(
 
   const envio = await mandarCorreo(ficha.email, correoPresupuesto(datos))
   if (envio !== 'enviado') {
+    // No salió: se devuelve la llave anterior para que el enlace que el cliente ya tuviera siga abriendo.
+    await db.presupuesto.updateMany({ where: { id: p.id, tokenHash: nuevoHash }, data: { tokenHash: p.tokenHash, canalAviso: p.canalAviso } })
     await db.presupuestoEvento.create({
       data: { presupuestoId: p.id, tipo: 'envio_fallido', origen: 'sistema', detalle: { actor: entrada.actor, canal: 'email', motivo: envio } },
     })
     if (envio === 'sin_proveedor') return error('sin_proveedor', 'No hay proveedor de correo configurado en asegura. No ha salido nada.')
     if (envio === 'remitente_no_verificado') return error('remitente_no_verificado', MOTIVO_REMITENTE)
-    return error('rechazado', 'El proveedor rechazó el correo. No consta que haya salido; el enlace anterior, si lo había, ya no abre.')
+    return error('rechazado', 'El proveedor rechazó el correo. No consta que haya salido; el enlace anterior, si lo había, sigue abriendo.')
   }
   await db.presupuesto.update({
     where: { id: p.id },
@@ -160,24 +184,27 @@ export async function confirmarWhatsapp(
   const db = prismaAsegura()
   const p = await db.presupuesto.findFirst({
     where: { id: entrada.id, correduriaId },
-    select: { id: true, creadoAt: true, tarificacionId: true, enlaceGeneradoAt: true, enviadoAt: true, retiradoAt: true },
+    select: {
+      id: true, canalAviso: true, venceEl: true, enlaceGeneradoAt: true, enviadoAt: true, vistoAt: true,
+      elegidoAt: true, aceptadoAt: true, emitidoAt: true, retiradoAt: true,
+    },
   })
   if (!p) return error('no_encontrado', 'Ese presupuesto no existe en esta correduría.')
-  if (p.enlaceGeneradoAt === null || p.enviadoAt !== null || p.retiradoAt !== null) {
-    return error('no_enviable', 'Solo se confirma un WhatsApp abierto y todavía sin marcar como enviado.')
+  // Solo un WhatsApp abierto, vigente y cuyo enlace sigue siendo el último: si después se intentó
+  // por correo, la llave rotó y lo que se mandó por WhatsApp ya no abre.
+  if (estadoPresupuesto(p, ahora) !== 'enlazado' || p.canalAviso !== 'whatsapp_enlace') {
+    return error('no_enviable', 'Solo se confirma un WhatsApp abierto, vigente y cuyo enlace no se ha sustituido después.')
   }
-  const [t] = await db.$queryRaw<{ peticion: unknown }[]>`
-    select peticion from tarificaciones where id = ${p.tarificacionId}::uuid and correduria_id = ${correduriaId}::uuid`
-  const venceEl = calcularVencimiento({ creadoAt: p.creadoAt, enviadoAt: ahora, fechaEfecto: fechaEfectoDe(t?.peticion) }).venceEl
+  // `venceEl` ya se guardó al abrir WhatsApp: es la fecha que el mensaje prometió.
   const n = await db.presupuesto.updateMany({
-    where: { id: p.id, correduriaId, enviadoAt: null, retiradoAt: null },
-    data: { enviadoAt: ahora, venceEl },
+    where: { id: p.id, correduriaId, enviadoAt: null, retiradoAt: null, canalAviso: 'whatsapp_enlace' },
+    data: { enviadoAt: ahora },
   })
   if (n.count === 0) return error('ocupado', 'Ha cambiado a la vez. Recarga.')
   await db.presupuestoEvento.create({
     data: { presupuestoId: p.id, tipo: 'enviado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'whatsapp_enlace', confirmado_a_mano: true } },
   })
-  return { estado: 'confirmado', venceEl: venceEl.toISOString() }
+  return { estado: 'confirmado', venceEl: p.venceEl.toISOString() }
 }
 
 type ResultadoCorreo = 'enviado' | 'sin_proveedor' | 'remitente_no_verificado' | 'rechazado'
