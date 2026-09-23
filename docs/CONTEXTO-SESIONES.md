@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** ✉️ **ASegura OS 2-c: cola única de aprobaciones.** #3352 (retención 2-b) mergeado. Tabla
+`seguros.aprobacion` + `POLITICA` en código (`enviar_correo_cliente → aprobar`). 1er productor: un recibo que CIMA pasa a
+`devuelto` deja en «Hoy · Esperan tu OK» un correo al cliente con el reloj del art. 15 LCS (sin nº de póliza entero);
+Alberto lo retoca y lo envía o lo descarta. El envío reclama la fila (`pendiente→enviando`) antes de mandar y lee el
+correo de la ficha; caduca a 7 días; `enviando` viejo = «no se sabe si salió». SQL y CHECKs probados contra la BD.
+Siguiente: WF-Anulación (firma + comunicación a la compañía, que también pasará por esta cola).
+
 **(23/09/2026)** 📞 **ASegura OS pieza 2-b: retención automática.** #3345 (eventos de cartera 2-a) mergeado.
 Ahora, cuando el detector ve una póliza ANULADA (baja o «anula al vencimiento») SIN sustitución y con el
 vencimiento por delante, abre en la MISMA transacción una oportunidad `en_negociacion` (`info_riesgo.origen='retencion_cima'`)

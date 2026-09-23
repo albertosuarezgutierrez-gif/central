@@ -11,6 +11,7 @@ import type { VistaIngesta } from '@/lib/correduria/ingesta-pantalla'
 import { agregarContadores, type Contador, type Seccion } from './secciones'
 import { cuandoTarea, lineaEstadoIngesta, sinInvitar } from './hoy-cockpit'
 import PerdidasCartera from './PerdidasCartera'
+import Aprobaciones from './Aprobaciones'
 
 /**
  * El cockpit de «Hoy» (pieza 1-4 de ASegura OS, maqueta aprobada el
@@ -62,6 +63,7 @@ export default function HoyCockpit({
   const [verTodas, setVerTodas] = useState(false)
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [nAprobaciones, setNAprobaciones] = useState<N>(undefined)
 
   const cargarTareas = useCallback(() => {
     fetch('/api/correduria/tareas-hoy')
@@ -105,7 +107,7 @@ export default function HoyCockpit({
 
   const hoy = hoyMadrid()
   const nTareas: N = tareas === null ? undefined : tareas.estado === 'ok' ? tareas.tareas.length : null
-  const nOk = nRecaptacion === undefined || nBlog === undefined ? undefined : agregarContadores([nRecaptacion, nBlog])
+  const nOk = nRecaptacion === undefined || nBlog === undefined || nAprobaciones === undefined ? undefined : agregarContadores([nRecaptacion, nBlog, nAprobaciones])
   const estado = lineaEstadoIngesta(ingesta)
   const colorEstado = estado.tono === 'ok' ? 'var(--positive)' : estado.tono === 'malo' ? 'var(--negative)' : estado.tono === 'aviso' ? 'var(--warning)' : 'var(--muted)'
   const vencidas = tareas?.estado === 'ok' ? tareas.tareas.filter(t => cuandoTarea(t.fechaLimite, hoy).vencida).length : 0
@@ -182,6 +184,7 @@ export default function HoyCockpit({
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}
       <section id="esperan-ok" style={{ display: 'grid', gap: 6 }}>
         <h2 style={TITULO}>Esperan tu OK{nOk && nOk.n > 0 ? ` · ${cifraC(nOk)}` : ''}</h2>
+        <Aprobaciones onContador={setNAprobaciones} />
         <FilaOk n={nRecaptacion} titulo="Leads para recaptar" sub="Correo solo a quien fue cliente (LSSI 21.2); tú decides a quién se envía." onClick={() => onIr('clientes')} />
         <FilaOk n={nBlog} titulo="Artículos del blog" sub="Escritos y pendientes de publicar." onClick={() => onIr('redes')} />
         {nOk && nOk.n === 0 && !nOk.parcial && <p style={NOTA}>Nada esperando tu OK.</p>}

@@ -29,6 +29,7 @@ import {
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { proponerReciboDevuelto } from './aprobaciones'
 
 type Consultor = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw'>
 
@@ -80,8 +81,12 @@ export type ResultadoDeteccion = {
   polizasEnFoto: number
   /** Oportunidades de retención abiertas en esta pasada (anulada con el vencimiento por delante). */
   retencionesAbiertas: number
-  /** Retenciones que tocaba abrir y fallaron (el evento sí se guardó). */
+  /** Retenciones o avisos que tocaba proponer y fallaron (el evento sí se guardó). */
   retencionesFallidas: number
+  /** Avisos al cliente propuestos en esta pasada, pendientes de OK (recibos devueltos). */
+  aprobacionesNuevas: number
+  /** Avisos de recibo devuelto que no se pudieron proponer (no se reintentan: el evento ya consta). */
+  aprobacionesFallidas: number
   /** Retenciones abiertas antes que se cierran porque ya no hacen falta. */
   retencionesCerradas: number
 }
@@ -106,13 +111,14 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     }
     const d = detectarCambios(anterior, actual)
     const insertados: EventoCartera[] = []
+    const idEvento = new Map<string, string>()
     for (const e of d.eventos) {
       const r = await tx.$queryRaw<{ id: string }[]>`
         insert into evento (correduria_id, tipo, entidad, entidad_id, cliente_id, datos, clave)
         values (${correduriaId}::uuid, ${e.tipo}, ${e.entidad}, ${e.id}::uuid, ${e.clienteId}::uuid, ${JSON.stringify(e.datos)}::jsonb, ${e.clave})
         on conflict (clave) do nothing
         returning id`
-      if (r[0]) insertados.push(e)
+      if (r[0]) { insertados.push(e); idEvento.set(e.clave, r[0].id) }
     }
     // En la MISMA transacción que el evento: si la retención no se puede abrir, no se guarda la foto
     // y la próxima pasada lo reintenta (la clave del evento impide abrirla dos veces).
@@ -133,6 +139,21 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
         await tx.$executeRaw`rollback to savepoint retencion`
         retencionesFallidas++
         console.error('[eventos-cartera] retención no abierta para la póliza', e.id, err instanceof Error ? err.message : err)
+      }
+    }
+    // Recibo devuelto → aviso al cliente propuesto, pendiente del OK de Alberto (cola de aprobaciones).
+    let aprobacionesNuevas = 0
+    let aprobacionesFallidas = 0
+    for (const e of insertados) {
+      if (e.tipo !== 'RECIBO_DEVUELTO') continue
+      await tx.$executeRaw`savepoint aprobacion`
+      try {
+        if (await proponerReciboDevuelto(tx, correduriaId, e.id, idEvento.get(e.clave) ?? null)) aprobacionesNuevas++
+        await tx.$executeRaw`release savepoint aprobacion`
+      } catch (err) {
+        await tx.$executeRaw`rollback to savepoint aprobacion`
+        aprobacionesFallidas++
+        console.error('[eventos-cartera] propuesta de aviso no creada para el recibo', e.id, err instanceof Error ? err.message : err)
       }
     }
     // Las abiertas en pasadas anteriores que ya no hacen falta: la sustitución llegó en un pull
@@ -157,6 +178,8 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       retenciones,
       retencionesFallidas,
       retencionesCerradas,
+      aprobacionesNuevas,
+      aprobacionesFallidas,
     }
   }, { timeout: 30_000 }).then(async (r) => {
     const { retenciones, ...resto } = r
@@ -229,7 +252,7 @@ async function cerrarRetencionesResueltas(tx: Consultor & Pick<ReturnType<typeof
                 else 'no_es_perdida' end as motivo,
            s.id::text as sustituta
     from oportunidades o
-    join polizas p on p.id = (o.info_riesgo->>'polizaId')::uuid
+    join polizas p on p.id = (o.info_riesgo->>'polizaId')::uuid and p.correduria_id = o.correduria_id
     left join lateral (
       select h.id from polizas h where h.merged_into_poliza_id is null
         and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id)

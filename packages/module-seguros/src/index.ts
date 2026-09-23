@@ -774,3 +774,5 @@ export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, detectarCambios,
 export type { Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
 export { ORIGEN_RETENCION, decidirRetencion } from './retencion-fuga.ts'
 export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
+export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, borradorReciboDevuelto, caducaEn, decisionValida } from './aprobaciones.ts'
+export type { AccionAprobacion, Borrador, Decision, EntradaReciboDevuelto, EstadoAprobacion, Politica } from './aprobaciones.ts'
