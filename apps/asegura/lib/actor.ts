@@ -24,6 +24,9 @@ export function leerActor(valor: string | null | undefined): Actor {
   if (v === '') return { tipo: 'desconocido', motivo: 'sin_cabecera' }
   const m = FORMATO.exec(v)
   if (!m) return { tipo: 'desconocido', motivo: 'mal_formada' }
+  // Un humano va SIEMPRE por su cuentaId: un `humano:nombre@correo.es` metería un correo en una
+  // tabla que no se puede borrar.
+  if (m[1] === 'humano' && !UUID.test(m[2])) return { tipo: 'desconocido', motivo: 'mal_formada' }
   return { tipo: m[1] as 'humano' | 'agente' | 'sistema', id: m[2] }
 }
 

@@ -371,7 +371,7 @@ Ya existe y es la parte más madura: `core-ai` (cadena de fallback) + gateway (c
 - **Fase 1b — Core mínimo (en paralelo; bloquea a los agentes, no a vender)**
   - ✅ Webhook de Telegram fail-closed (#3330). Pendiente: router por prefijo.
   - ✅ Actor en el puerto (23/09): cabecera `x-actor` (`humano:<cuentaId>` · `agente:<id>` · `sistema:<origen>`) desde `cabecerasPuerto()` de plataforma, y una fila en `seguros.auditoria` por cada escritura autorizada vía `auditado()` (guardián en `apps/asegura/lib/auditoria.test.ts`). **No es JWT**: firmarlo con una clave derivada del mismo Bearer no añadía nada frente a quien ya tiene el secreto; es atribución, no autorización, hasta que los agentes tengan credencial propia (Fase 5). Sin cabecera queda como `desconocido`, sin rechazar.
-  - `seguros.auditoria`: añadir el antes/después por campo (pieza c) en las escrituras de `lib/cartera-*`.
+  - ✅ Antes/después por campo (pieza c, 23/09): `anotarCambio()` en las escrituras críticas (cliente, siniestro, póliza, relaciones, autorizaciones, supresiones, intervinientes, documentos, emisión) → columna `cambios` de la misma fila de `seguros.auditoria`. Solo guardan valor los campos de la lista blanca de `lib/cambios.ts` (estados, tipos, fechas, importes); lo personal consta como «tocado». Las oportunidades ya tenían su `oportunidad_historial`. Pendiente: router de Telegram por prefijo, cuando exista `aos_` (Fase 2).
   - ✅ Todo el uso de IA de asegura por el gateway (1-6, #3327).
   - Los tres con su test o cepo visto fallar.
 - **Fase 2 — Eventos/Workflows** (depende de F1)

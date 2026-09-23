@@ -24,6 +24,7 @@
 // - Deja fila en `historial_interno` de la ficha afectada, sin datos de identidad.
 
 import { prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
 
 export interface ResultadoQuitar {
   ok: boolean
@@ -103,6 +104,7 @@ export async function quitarInterviniente(
       return { ok: false, estado: 'no_encontrado', motivo: 'La línea ya no estaba.', status: 404 }
     }
 
+    anotarCambio({ entidad: 'interviniente', id: intervinienteId, campo: 'existe', antes: true, despues: false })
     await anotar(
       correduriaId,
       fila.clienteId,

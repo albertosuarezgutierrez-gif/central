@@ -18,6 +18,7 @@
 import { admiteDireccionRiesgo, validarDireccionRiesgo, validarModalidadRc, tituloModalidadRc } from '@central/module-seguros'
 import { encryptField } from '@central/module-seguros-pii'
 import { prismaAsegura, aseguraConfigurada } from './asegura-db'
+import { anotarCambio } from './auditoria'
 
 export type ResultadoModalidadRc =
   | { ok: true; estado: 'ok'; status: 200; titulo: string }
@@ -58,6 +59,7 @@ export async function establecerModalidadRc(
     const fusionado = { ...previos, rcModalidad: v.id, rcModalidadTitulo: titulo, rcModalidadNota: v.nota }
 
     await db.poliza.update({ where: { id: poliza.id }, data: { datosEspecificos: fusionado } })
+    anotarCambio({ entidad: 'poliza', id: poliza.id, campo: 'modalidad_rc', despues: v.id })
     await anotar(correduriaId, poliza.clienteId, `Modalidad de RC anotada a mano (${titulo}) por ${entrada.actor}`)
     return { ok: true, estado: 'ok', status: 200, titulo }
   } catch (e) {
@@ -132,6 +134,7 @@ export async function establecerDireccionRiesgo(
     }
 
     await db.poliza.update({ where: { id: poliza.id }, data: { datosEspecificos: fusionado } })
+    anotarCambio({ entidad: 'poliza', id: poliza.id, campo: 'direccion_riesgo' })
     const resumen = [v.valor.cp, v.valor.localidad].filter(Boolean).join(' ')
     await anotar(correduriaId, poliza.clienteId, `Dirección del riesgo anotada a mano${resumen ? ` (${resumen})` : ''} por ${entrada.actor}`)
     return { ok: true, estado: 'ok', status: 200 }

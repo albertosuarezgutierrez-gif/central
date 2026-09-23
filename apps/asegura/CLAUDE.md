@@ -709,6 +709,9 @@ van envueltas en `auditado()` (`lib/auditoria.ts`) y escriben una fila en `segur
 actor de la cabecera `x-actor` que manda plataforma (`humano:<cuentaId>` · `agente:<id>` · `sistema:<origen>`;
 sin ella, `desconocido`), ruta, ids UUID y código HTTP. **Una ruta de escritura nueva sin `auditado(` no pasa
 `lib/auditoria.test.ts`.** Es atribución, no autorización: el actor viaja dentro del mismo Bearer.
+Y el QUÉ: una función que escribe la cartera llama a `anotarCambio({entidad, id, campo, antes, despues})`
+tras escribir, y va a la columna `cambios` de esa fila. 🚨 Solo guardan valor los campos de
+`CAMPOS_CON_VALOR` (`lib/cambios.ts`); añadir ahí un dato personal lo rompe `lib/cambios.test.ts`.
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 

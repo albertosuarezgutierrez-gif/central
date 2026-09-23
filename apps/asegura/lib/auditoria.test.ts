@@ -20,6 +20,8 @@ test('leerActor: sin cabecera o mal formada es «desconocido», nunca «sistema�
   assert.deepEqual(leerActor('humano:'), { tipo: 'desconocido', motivo: 'mal_formada' })
   assert.deepEqual(leerActor('humano:a b'), { tipo: 'desconocido', motivo: 'mal_formada' })
   assert.deepEqual(leerActor('humano:' + 'x'.repeat(121)), { tipo: 'desconocido', motivo: 'mal_formada' })
+  // un humano solo por su cuentaId: un correo no puede acabar en una tabla que no se borra
+  assert.deepEqual(leerActor('humano:alberto@grupoasegura.es'), { tipo: 'desconocido', motivo: 'mal_formada' })
 })
 
 test('idsDeEscritura: solo claves con forma de id y valores UUID, de query y cuerpo', () => {
