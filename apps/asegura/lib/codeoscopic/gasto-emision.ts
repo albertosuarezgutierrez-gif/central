@@ -42,31 +42,42 @@ import {
 } from './config.ts'
 import { consumidasHoy, consumidasMes, eurCents, type Consumo, type Veredicto } from './contador.ts'
 
-/** Las dos operaciones. El valor ES el `motivo` que se escribe en el libro. */
+/** Las operaciones. El valor ES el `motivo` que se escribe en el libro. */
 export const MOTIVO_RERATE = 'rerate'
 export const MOTIVO_SUBMIT = 'submit'
-export const MOTIVOS_EMISION = [MOTIVO_RERATE, MOTIVO_SUBMIT] as const
+/**
+ * `POST /home/recommend-limits` (23/09/2026): capitales recomendados de hogar.
+ * No es de emisión, pero comparte el problema: [Probable] tarifica por dentro
+ * con cada compañía (devuelve un capital POR PRODUCTO) y el portal no dice si
+ * cuesta. Mismo embudo, contador propio.
+ */
+export const MOTIVO_LIMITES = 'limites_hogar'
+export const MOTIVOS_EMISION = [MOTIVO_RERATE, MOTIVO_SUBMIT, MOTIVO_LIMITES] as const
 export type OperacionEmision = (typeof MOTIVOS_EMISION)[number]
 
 /** Cómo se llama cada una en un mensaje para el corredor. */
 export const ETIQUETA_EMISION: Record<OperacionEmision, string> = {
   rerate: 'confirmaciones de precio (ReRate)',
   submit: 'envíos de emisión (Submit)',
+  limites_hogar: 'recomendaciones de capital de hogar',
 }
 
 export const ENV_COSTE_CENTS: Record<OperacionEmision, string> = {
   rerate: 'CODEOSCOPIC_COSTE_RERATE_CENTS',
   submit: 'CODEOSCOPIC_COSTE_SUBMIT_CENTS',
+  limites_hogar: 'CODEOSCOPIC_COSTE_LIMITES_CENTS',
 }
 
 export const ENV_TOPE_DIARIO: Record<OperacionEmision, string> = {
   rerate: 'CODEOSCOPIC_TOPE_RERATE_DIARIO',
   submit: 'CODEOSCOPIC_TOPE_SUBMIT_DIARIO',
+  limites_hogar: 'CODEOSCOPIC_TOPE_LIMITES_DIARIO',
 }
 
 export const ENV_TOPE_MENSUAL: Record<OperacionEmision, string> = {
   rerate: 'CODEOSCOPIC_TOPE_RERATE_MENSUAL',
   submit: 'CODEOSCOPIC_TOPE_SUBMIT_MENSUAL',
+  limites_hogar: 'CODEOSCOPIC_TOPE_LIMITES_MENSUAL',
 }
 
 /**

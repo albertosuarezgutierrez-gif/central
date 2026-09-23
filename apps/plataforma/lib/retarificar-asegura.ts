@@ -1661,3 +1661,102 @@ export async function tarificacionGuardadaAsegura(polizaId: string): Promise<Res
 // campo se copia del backend LITERALMENTE, con su comentario, y el cepo
 // `test/regression-retarificar-plataforma.test.ts` prohíbe que plataforma
 // importe de asegura en vez de mantener esta copia.
+
+// ─── Capitales recomendados de HOGAR (`POST /home/recommend-limits`) ─────────
+//
+// 🚨 Se trata como una llamada que puede costar: el portal no la documenta como
+// facturable, pero devuelve un capital por compañía y [Probable] tarifica por
+// dentro. asegura la mete en el libro de consumo (motivo `limites_hogar`, tope
+// propio) y detrás del interruptor de tarificar. Aquí: confirmación explícita,
+// un solo intento, y un fallo de red se dice como «no se sabe si ha costado».
+
+/** Un capital recomendado. Cada extremo `null` = el vendor no lo trae (nunca 0). */
+export type RangoCapital = { media: number | null; minimo: number | null; maximo: number | null }
+
+export type RespuestaLimitesHogar =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'faltan'; faltan: Reparo[]; mensaje: string }
+  | { estado: 'tope'; mensaje: string }
+  | { estado: 'error'; mensaje: string; gastoDesconocido: boolean }
+  | {
+      estado: 'ok'
+      continente: RangoCapital | null
+      contenido: RangoCapital | null
+      /** Con el coste a 0 en asegura dice «sin confirmar», no «0,00€». */
+      coste: string
+      restantesHoy: number | null
+    }
+
+function rangoCapital(v: unknown): RangoCapital | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) && x > 0 ? x : null)
+  const r = { media: n(o.media), minimo: n(o.minimo), maximo: n(o.maximo) }
+  return r.media === null && r.minimo === null && r.maximo === null ? null : r
+}
+
+/** Puro: la respuesta del puerto → lo que pinta la pantalla. */
+export function interpretarLimitesHogar(status: number, json: unknown): RespuestaLimitesHogar {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
+  const mensaje = typeof o.mensaje === 'string' ? o.mensaje : typeof o.error === 'string' ? o.error : `HTTP ${status}`
+  if (status === 200 && o.estado === 'ok') {
+    return {
+      estado: 'ok',
+      continente: rangoCapital(o.continente),
+      contenido: rangoCapital(o.contenido),
+      coste: typeof o.coste === 'string' ? o.coste : 'coste sin confirmar',
+      restantesHoy: typeof o.restantesHoy === 'number' ? o.restantesHoy : null,
+    }
+  }
+  if (Array.isArray(o.faltan)) {
+    const faltan = o.faltan.filter(
+      (f): f is Reparo => typeof f === 'object' && f !== null && typeof (f as Reparo).campo === 'string',
+    )
+    return { estado: 'faltan', faltan, mensaje }
+  }
+  if (status === 429 || o.estado === 'tope') return { estado: 'tope', mensaje }
+  if (status === 503 && o.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje }
+  // Solo `gastado: '0,00€'` autoriza a decir que no ha costado; sin él, no se sabe.
+  return { estado: 'error', mensaje, gastoDesconocido: o.gastado !== '0,00€' }
+}
+
+export async function limitesHogarAsegura(p: {
+  polizaId: string
+  resueltos?: Record<string, unknown>
+  correcciones?: Record<string, unknown>
+  solicitadoPor?: string
+}): Promise<RespuestaLimitesHogar> {
+  try {
+    const r = await pedir(
+      '/api/operador/codeoscopic/limites-hogar',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          polizaId: p.polizaId,
+          confirmado: true,
+          solicitadoPor: p.solicitadoPor ?? 'plataforma',
+          ...(p.resueltos ? { resueltos: p.resueltos } : {}),
+          ...(p.correcciones ? { correcciones: p.correcciones } : {}),
+        }),
+      },
+      TIMEOUT_COTIZAR_MS,
+    )
+    if (r === null) {
+      return {
+        estado: 'sin_configurar',
+        mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET). No se ha llamado a Codeoscopic.',
+      }
+    }
+    return interpretarLimitesHogar(r.status, r.json)
+  } catch (e) {
+    const expirado = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')
+    return {
+      estado: 'error',
+      mensaje:
+        (expirado ? `Codeoscopic no ha respondido en ${Math.round(TIMEOUT_COTIZAR_MS / 1000)} s` : `No se ha podido llegar a asegura (${e instanceof Error ? e.message : String(e)})`) +
+        ' — no se sabe si la recomendación ha salido ni si ha costado. Míralo en el consumo antes de volver a pulsar.',
+      gastoDesconocido: true,
+    }
+  }
+}

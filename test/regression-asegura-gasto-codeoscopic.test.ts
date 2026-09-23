@@ -78,7 +78,11 @@ test('nadie llama al vendor por su cuenta: el POST de cotización pasa por cotiz
       (f) =>
         !f.includes('lib/codeoscopic/cotizar.ts') &&
         !f.includes('lib/codeoscopic/emitir.ts') &&
-        !f.includes('lib/codeoscopic/product-form.ts'),
+        !f.includes('lib/codeoscopic/product-form.ts') &&
+        // CUARTA excepción (23/09/2026): `POST /home/recommend-limits`. Su coste no
+        // está documentado y [Probable] tarifica por dentro, así que va por el
+        // libro de consumo como el ReRate — lo vigila el test de más abajo.
+        !f.includes('lib/codeoscopic/limites-hogar.ts'),
     )
     .filter((f) => {
       const src = FUENTE(f)
@@ -212,14 +216,14 @@ test('el Submit abre su línea en el libro, y la reserva va ANTES del fetch', ()
   assert.ok(iEmbudo > 0 && iFetch > iEmbudo, 'el fetch del Submit tiene que ir DENTRO de conLibroDeEmision()')
 })
 
-test('🚨 los contadores están SEPARADOS: el libro de cotizar no cuenta el ReRate ni el Submit', () => {
+test('🚨 los contadores están SEPARADOS: el libro de cotizar no cuenta el ReRate, el Submit ni la recomendación de capital', () => {
   // Si se mezclaran, agotar el tope de una cosa apagaría la otra sin que nadie
   // supiera por qué, y la cifra de «cotizaciones que te quedan hoy» que pinta
   // la pantalla del corredor contaría cosas que no son cotizaciones.
   const src = FUENTE_LIBRO('apps/asegura/lib/codeoscopic/consumo.ts')
   assert.match(
     src,
-    /motivo not in \(\$\{MOTIVO_RERATE\}, \$\{MOTIVO_SUBMIT\}\)/,
+    /motivo not in \(\$\{MOTIVO_RERATE\}, \$\{MOTIVO_SUBMIT\}, \$\{MOTIVO_LIMITES\}\)/,
     'consumoActual() (el libro de cotizar) tiene que excluir los motivos de emisión',
   )
   assert.match(
@@ -306,4 +310,20 @@ test('el detector reconoce una ruta que cotiza, y no confunde la sonda', () => {
     'la sonda es gratis: no debe contar como gasto',
   )
   assert.ok(!llamaAlEmbudoDePago('const x = cotizar()'), 'sin el import no es nuestro embudo')
+})
+
+test('la recomendación de capital de hogar abre su línea en el libro y va detrás del interruptor de TARIFICAR', () => {
+  const llamantes = ficheros(/^apps\/asegura\/(app|lib)\/.*\.tsx?$/)
+    .filter((f) => !f.includes('lib/codeoscopic/limites-hogar.ts'))
+    .filter((f) => /\brecomendarLimitesHogar\s*\(/.test(FUENTE(f)))
+  assert.ok(llamantes.length > 0, 'nadie llama a recomendarLimitesHogar(): el cepo se ha quedado ciego')
+  for (const f of llamantes) {
+    const src = FUENTE(f)
+    assert.match(src, /\bconLibroDeEmision\s*\(/, `${f}: sin conLibroDeEmision la llamada no cuenta en el tope`)
+    assert.match(src, /operacion:\s*'limites_hogar'/, `${f}: con otro motivo se mezclaría con otro contador`)
+    // El interruptor de verdad: sin `ignorarInterruptor`, apagado no sale nada.
+    assert.match(src, /resolverConfig\(process\.env\)/, `${f}: tiene que ir detrás de CODEOSCOPIC_TARIFICACION_ACTIVA`)
+    assert.match(src, /cuerpo\.confirmado !== true/, `${f}: sin confirmado:true explícito`)
+    assert.doesNotMatch(src, /export\s+(async\s+)?function\s+GET\b|export\s+const\s+GET\b/, `${f}: un GET se dispararía con un prefetch`)
+  }
 })

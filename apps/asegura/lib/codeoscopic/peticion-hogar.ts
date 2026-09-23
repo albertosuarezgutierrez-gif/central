@@ -160,7 +160,16 @@ export const CATALOGOS_HOGAR_OBLIGATORIOS = [
 /**
  * Comprueba los datos ANTES de gastar. Devuelve TODOS los reparos a la vez.
  */
-export function revisarDatosHogar(d: Partial<DatosHogar>): ReparoHogar[] {
+export function revisarDatosHogar(
+  d: Partial<DatosHogar>,
+  opciones: {
+    /**
+     * Para `POST /home/recommend-limits`: el capital es justo lo que se le
+     * pregunta, así que no puede exigirse. La fecha de efecto tampoco viaja.
+     */
+    paraRecomendarCapital?: boolean
+  } = {},
+): ReparoHogar[] {
   const r: ReparoHogar[] = []
   const falta = (c: keyof DatosHogar, m = 'hace falta para poder cotizar') => r.push({ campo: c, motivo: m })
 
@@ -197,7 +206,7 @@ export function revisarDatosHogar(d: Partial<DatosHogar>): ReparoHogar[] {
   // propietario que alquila, solo continente. Cero en los dos no es una póliza.
   const cont = numeroPositivo(d.capitalContinente)
   const contd = numeroPositivo(d.capitalContenido)
-  if (!cont && !contd)
+  if (!cont && !contd && !opciones.paraRecomendarCapital)
     r.push({ campo: 'capitalContinente', motivo: 'hace falta capital de continente o de contenido (en euros, mayor que 0)' })
   if (d.capitalContinente !== undefined && d.capitalContinente !== null && !cont && d.capitalContinente !== 0)
     r.push({ campo: 'capitalContinente', motivo: 'tiene que ser un importe en euros' })
@@ -213,7 +222,9 @@ export function revisarDatosHogar(d: Partial<DatosHogar>): ReparoHogar[] {
     if (v !== undefined && v !== null && !enteroNoNegativo(v)) r.push({ campo: c, motivo: 'tiene que ser un entero, 0 o más' })
   }
 
-  if (!texto(d.fechaEfecto)) falta('fechaEfecto')
+  if (opciones.paraRecomendarCapital) {
+    // la fecha de efecto no viaja en la recomendación
+  } else if (!texto(d.fechaEfecto)) falta('fechaEfecto')
   else if (!RE_FECHA.test(String(d.fechaEfecto))) r.push({ campo: 'fechaEfecto', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
 
   return r
@@ -243,6 +254,34 @@ export function construirPeticionHogar(d: DatosHogar, lineaId: string): Record<s
     throw new Error(`codeoscopic_datos_incompletos: ${reparos.map((x) => `${x.campo} (${x.motivo})`).join(' · ')}`)
   }
 
+  const { persona, riesgo } = tomadorYRiesgo(d)
+  const cuerpo: Record<string, unknown> = {
+    insuranceLine: { id: lineaId },
+    effectiveDate: d.fechaEfecto,
+    holder: persona,
+    risk: riesgo,
+  }
+  if (texto(d.referenciaExterna)) cuerpo.externalId = d.referenciaExterna
+  return cuerpo
+}
+
+/**
+ * El cuerpo de `POST /home/recommend-limits`: el MISMO `holder` + `risk` que la
+ * cotización, sin `insuranceLine` ni `effectiveDate` (ejemplo del portal,
+ * `docs/CODEOSCOPIC-API-PORTAL.md` § Hogar). Si la ficha ya trae un capital,
+ * viaja igual que en la cotización: no se esconde un dato que tenemos.
+ */
+export function construirPeticionLimitesHogar(d: Omit<DatosHogar, 'fechaEfecto'> & { fechaEfecto?: string }): Record<string, unknown> {
+  const reparos = revisarDatosHogar(d, { paraRecomendarCapital: true })
+  if (reparos.length > 0) {
+    throw new Error(`codeoscopic_datos_incompletos: ${reparos.map((x) => `${x.campo} (${x.motivo})`).join(' · ')}`)
+  }
+  const { persona, riesgo } = tomadorYRiesgo(d as DatosHogar)
+  return { holder: persona, risk: riesgo }
+}
+
+/** Lo común a cotizar y a recomendar capital: la persona y el riesgo, ya validados. */
+function tomadorYRiesgo(d: DatosHogar): { persona: Record<string, unknown>; riesgo: Record<string, unknown> } {
   const persona = construirPersona(d)
   const V = CAMPOS_VENDOR
 
@@ -288,13 +327,5 @@ export function construirPeticionHogar(d: DatosHogar, lineaId: string): Record<s
   // El dueño: la misma persona que el tomador cuando lo es. Si es inquilino no
   // se inventa un dueño; el vendor dirá (400, gratis) si lo exige.
   if (d.propietarioEsTomador) riesgo[V.propietario] = persona
-
-  const cuerpo: Record<string, unknown> = {
-    insuranceLine: { id: lineaId },
-    effectiveDate: d.fechaEfecto,
-    holder: persona,
-    risk: riesgo,
-  }
-  if (texto(d.referenciaExterna)) cuerpo.externalId = d.referenciaExterna
-  return cuerpo
+  return { persona, riesgo }
 }

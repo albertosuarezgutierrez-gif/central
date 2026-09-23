@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  construirPeticionLimitesHogar,
   construirPeticionHogar,
   revisarDatosHogar,
   CAMPOS_VENDOR,
@@ -174,4 +175,28 @@ test('los opcionales elegidos viajan; la reforma y el vigilante solo si se dicen
   assert.equal(c.risk.address.cadastralReference, '0000000XX0000X0000XX')
   assert.equal(c.risk.jewelsOutSafeBoxLimit, 3000)
   assert.equal(c.externalId, 'poliza:x')
+})
+
+test('recomendar capital: mismo holder + risk que la cotización, sin ramo ni fecha, y SIN exigir capital', () => {
+  const { capitalContinente: _a, capitalContenido: _b, fechaEfecto: _c, ...sinCapital } = BASE
+  void _a; void _b; void _c
+  // Para cotizar, sin capital hay reparo; para recomendarlo, no.
+  assert.ok(revisarDatosHogar(sinCapital).some((r) => r.campo === 'capitalContinente'))
+  assert.deepEqual(revisarDatosHogar(sinCapital, { paraRecomendarCapital: true }), [])
+  const c = construirPeticionLimitesHogar(sinCapital) as any
+  assert.equal(c.insuranceLine, undefined)
+  assert.equal(c.effectiveDate, undefined)
+  assert.equal(c.risk.buildingsLimit, undefined)
+  const cot = construirPeticionHogar(BASE, 'Home') as any
+  assert.deepEqual(c.holder, cot.holder)
+  // El riesgo es el mismo salvo los capitales, que aquí no se han dado.
+  const { buildingsLimit: _x, contentsLimit: _y, ...riesgoSinCapital } = cot.risk
+  void _x; void _y
+  assert.deepEqual(c.risk, riesgoSinCapital)
+})
+
+test('recomendar capital: los demás datos obligatorios SIGUEN exigiéndose (se corta antes de llamar)', () => {
+  const { metrosCuadrados: _m, ...sinM2 } = BASE
+  void _m
+  assert.throws(() => construirPeticionLimitesHogar(sinM2 as any), /metrosCuadrados/)
 })

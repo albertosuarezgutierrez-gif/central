@@ -284,8 +284,13 @@ campo; `holder` lleva `owner` como rol por defecto y requerido, por eso se manda
 **`POST /home/recommend-limits`** (gratis según el portal, que no menciona créditos; puede tardar >1 min):
 mismo `holder` + `risk` que la cotización (en el ejemplo el `risk` lleva además `floorId` y `reformed`), sin
 `insuranceLine`. Responde `{ buildingsLimit: {average, highest, lowest}, contentsLimit: {…}, results: [ {product, buildingsLimit, contentsLimit} ] }`
-(los `results` por compañía solo con `?includeIndividualResults=true`). **Por cablear**: es la forma de no
-teclear capitales a ojo cuando la ficha no los trae.
+(los `results` por compañía solo con `?includeIndividualResults=true`). ✅ **Cableado el 23/09/2026**: botón
+«Recomendar capitales» en plataforma → retarificar hogar → `POST /api/operador/codeoscopic/limites-hogar` de asegura
+(`lib/codeoscopic/limites-hogar.ts`). ⚠️ **«Gratis» no está confirmado** —devuelve un capital por compañía y
+[Probable] tarifica por dentro—, así que va detrás del interruptor de tarificar y abre línea en el libro de
+consumo (motivo `limites_hogar`, `CODEOSCOPIC_COSTE_LIMITES_CENTS` a 0 = «sin confirmar», tope propio). Es una
+recomendación: la pantalla ofrece «Usar X€», nunca rellena sola. Solo para pólizas de hogar existentes; para una
+oportunidad nueva (`hogar-nuevo`) sigue pendiente.
 
 **Lo que respondió el ejemplo del portal a una cotización de hogar** (útil para saber qué mensajes esperar):
 Reale y Catalana «Error de conexión con la compañía»; Lagun Aro «Es obligatorio indicar los años de las

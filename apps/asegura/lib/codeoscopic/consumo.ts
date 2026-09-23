@@ -10,7 +10,7 @@
 
 import { prisma } from '../tenant.ts'
 import { COSTE_COTIZACION_CENTS } from './config.ts'
-import { MOTIVO_RERATE, MOTIVO_SUBMIT, type OperacionEmision } from './gasto-emision.ts'
+import { MOTIVO_LIMITES, MOTIVO_RERATE, MOTIVO_SUBMIT, type OperacionEmision } from './gasto-emision.ts'
 import type { Consumo } from './contador.ts'
 
 export type Reserva = { intentoId: string; correduriaId: string }
@@ -47,7 +47,7 @@ export async function consumoActual(correduriaId: string): Promise<Consumo> {
       from seguros.codeoscopic_consumo
       where correduria_id = ${correduriaId}::uuid
         and creado_at >= date_trunc('month', now() at time zone 'Europe/Madrid')
-        and motivo not in (${MOTIVO_RERATE}, ${MOTIVO_SUBMIT})
+        and motivo not in (${MOTIVO_RERATE}, ${MOTIVO_SUBMIT}, ${MOTIVO_LIMITES})
     )
     select
       count(*) filter (
