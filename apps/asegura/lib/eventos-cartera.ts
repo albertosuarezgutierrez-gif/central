@@ -248,7 +248,7 @@ async function cerrarRetencionesResueltas(tx: Consultor & Pick<ReturnType<typeof
                 else 'no_es_perdida' end as motivo,
            s.id::text as sustituta
     from oportunidades o
-    join polizas p on p.id = (o.info_riesgo->>'polizaId')::uuid
+    join polizas p on p.id = (o.info_riesgo->>'polizaId')::uuid and p.correduria_id = o.correduria_id
     left join lateral (
       select h.id from polizas h where h.merged_into_poliza_id is null
         and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id)
