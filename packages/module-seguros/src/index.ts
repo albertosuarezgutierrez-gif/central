@@ -768,3 +768,5 @@ export {
   serializarMarcaActividad,
 } from './actividad-aviso.ts'
 export type { DecisionActividad, MarcaActividad } from './actividad-aviso.ts'
+export { libroVcard, nombreVisible, vcardContacto } from './vcard.ts'
+export type { ContactoMovil, GrupoContacto } from './vcard.ts'
