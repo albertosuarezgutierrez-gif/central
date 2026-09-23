@@ -783,6 +783,97 @@ export type DecisionAviso =
   | { avisar: true; motivo: MotivoAviso; diasAbierta: number | null }
 
 /**
+ * Horas sin un pull COMPLETADO a partir de las cuales el respaldo de plataforma
+ * dispara el pull de CIMA él mismo. El pull principal corre en GitHub Actions a
+ * las 05:30 y 11:30 UTC y el respaldo mira a las 08:00 y 14:00 (2,5 h de margen
+ * para un run de Actions que arranca tarde, que es lo habitual en los `schedule`).
+ *
+ * El umbral tiene que ser MENOR que la distancia entre las dos pasadas del
+ * respaldo (6 h): con 6, si Actions está muerto y el respaldo de las 08:00 corre,
+ * a las 14:00 el último pull tiene ~5,9 h y el de la tarde no se cubre nunca.
+ * Y MAYOR que el margen tras la franja (2,5 h), o dispararía con Actions sano.
+ */
+export const HORAS_RESPALDO_PULL = 3
+
+export type DecisionRespaldoPull =
+  | { disparar: true; horas: number }
+  | { disparar: false; motivo: 'al_dia' | 'sin_dato'; horas: number | null }
+
+/**
+ * ¿Dispara el respaldo el pull de CIMA?
+ *
+ * Existe por la avería del 22/09/2026: el presupuesto de GitHub Actions de la
+ * cuenta se agotó (lo consume casi todo `central`), los jobs de `asegura` se
+ * quedaron sin runner y CIMA estuvo ~45 h sin entrar sin que nada lo disparara.
+ *
+ * 🚨 Sin dato NO dispara. «No sé cuándo fue el último pull» no autoriza a
+ * lanzar otro: dos pulls a la vez se pisan en la cola de TIREA, y confirmar un
+ * fichero lo consume para siempre. El hueco lo avisa el vigía (`ultimoPull`
+ * null ya es un «esto NO es va bien»), no este disparador.
+ */
+export function decidirRespaldoPull(
+  ultimoPull: UltimoPullIngesta | null | undefined,
+  umbral = HORAS_RESPALDO_PULL,
+): DecisionRespaldoPull {
+  if (ultimoPull === null || ultimoPull === undefined || !Number.isFinite(ultimoPull.horas)) {
+    return { disparar: false, motivo: 'sin_dato', horas: null }
+  }
+  if (ultimoPull.horas > umbral) return { disparar: true, horas: ultimoPull.horas }
+  return { disparar: false, motivo: 'al_dia', horas: ultimoPull.horas }
+}
+
+/**
+ * Firma de lo que el vigía ha visto hoy, para no repetir el MISMO aviso cada
+ * mañana mientras la avería sigue abierta (el Telegram suena cuando algo
+ * CAMBIA; ver `decidirAvisoIngesta`).
+ *
+ * Vivía dentro de la ruta del cron de plataforma y por eso no tenía cepo. Tres
+ * veces se ha comido un aviso por dejar fuera una señal: las compañías mudas,
+ * las pólizas concretas a pedir y, el 23/09/2026, **el cron parado**. Ese día
+ * el detalle del latido decía «El cron de CIMA lleva 37 h sin completar» y el
+ * Telegram no sonó: el cron había muerto por falta de minutos de GitHub Actions
+ * y la firma seguía siendo `degradada:0:7:C0058:-`, igual que dos días antes.
+ * Toda señal que pueda cambiar el diagnóstico tiene que entrar aquí.
+ */
+export function firmaAvisoIngesta(salud: SaludIngesta): string {
+  // Ordenadas para que el mismo conjunto produzca siempre la misma cadena.
+  const mudas = (salud.silencio ?? [])
+    .filter(e => e.veredicto === 'silencio')
+    .map(e => e.entidad)
+    .sort()
+    .join(',')
+  // `null` (no comprobado) y `[]` (comprobado, ninguna) no pueden dar la misma firma.
+  const silencio = salud.silencio === null ? '?' : mudas || '-'
+  // Las pólizas concretas que hay que PEDIR, no solo cuántas son: si una entra y
+  // otra se resuelve el mismo día, el recuento no se mueve.
+  const pedir = salud.huerfanasReparto === null
+    ? '?'
+    : salud.huerfanasReparto.pedir
+        .flatMap(g => g.polizas.map(n => `${g.entidad}/${g.clave ?? ''}/${n}`))
+        .sort()
+        .join(',') || '-'
+  // El cron de CIMA: `?` = no consta ninguna corrida (hueco), `mudo` = más de
+  // HORAS_PULL_MUDO sin completar, `ok` = corre. Las firmas guardadas antes de
+  // existir este tramo se leen con `normalizarFirmaIngesta`.
+  const pull = salud.ultimoPull === null
+    ? '?'
+    : salud.ultimoPull.horas > HORAS_PULL_MUDO ? 'mudo' : 'ok'
+  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}:${pull}`
+}
+
+/**
+ * Lee una firma GUARDADA en el formato de hoy. Las anteriores al 23/09/2026 no
+ * traían el tramo del cron (cinco tramos en vez de seis): se leen como «el cron
+ * corría», que es lo que decía el vigía cuando las escribió (si no, el motivo
+ * del aviso lo habría dicho). Sin esto, el primer despliegue haría sonar un
+ * «cambio» falso y reiniciaría la antigüedad de las averías abiertas.
+ */
+export function normalizarFirmaIngesta(firma: string | null): string | null {
+  if (firma === null) return null
+  return firma.split(':').length === 5 ? `${firma}:ok` : firma
+}
+
+/**
  * ¿Hay que sonar hoy?
  *
  * - `primera`      — no consta que se haya avisado nunca. Suena siempre: perder

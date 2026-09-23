@@ -577,6 +577,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:45, y solo cuando algo cambia',
   },
   {
+    id: 'correduria.cima-respaldo', categoria: 'correduria',
+    titulo: 'Respaldo del pull de CIMA',
+    que: 'El pull de GitHub Actions no ha corrido y plataforma lo lanza por su cuenta: avisa si lo consigue (la primera vez), si falla o si el respaldo no está configurado.',
+    cuando: 'A las 08:00 y 14:00 UTC, solo si Actions no ha traído CIMA',
+  },
+  {
     id: 'correduria.cima-liq', categoria: 'correduria',
     titulo: 'Liquidaciones de comisiones (CIMA)',
     que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',

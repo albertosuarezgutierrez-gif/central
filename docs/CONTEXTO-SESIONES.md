@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🚨 **CIMA estuvo ~45 h PARADO (22/09 10:10 → 23/09 07:15 UTC) y el vigía lo vio y NO avisó.**
+Causa: presupuesto de GitHub Actions de la cuenta a 0 $ sin tarjeta; lo agota `central` (~71.700 min/mes vs ~2.070
+de `asegura`) y los jobs de `asegura` se quedaban sin runner. Alberto puso tarjeta + 20 $/mes y relanzó (verificado en
+BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero la firma anti-repetición no incluía el cron
+→ Telegram mudo: ahora `firmaAvisoIngesta` (module-seguros, con cepo visto fallar). Nuevo respaldo
+`/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
+puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
+facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
 ## 23/09/2026 — Alerta PSD2 sync (BBVA)
 - Feed BBVA sin movimientos desde 2026-09-10 (13 días); Kutxabank sigue fresco (hoy) y por eso
   la consulta agregada de `movimientos_bancarios` salía en verde — la caída solo se ve por banco.
