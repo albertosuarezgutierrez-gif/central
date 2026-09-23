@@ -112,13 +112,15 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
   {
     slug: 'occident',
     nombre: 'Occident',
+    // Reconfirmado el 23/09/2026 con una captura de la página «Declaración de
+    // siniestro de hogar» de occident.com, que da este mismo número.
     siniestros: '917 83 83 83',
     asistencia: [],
     whatsapp: '+34917838383',
     horario: '24 horas, los 365 días',
     fuente: 'https://www.occident.com/',
     verificado: true,
-    verificadoEl: '2026-09-14',
+    verificadoEl: '2026-09-23',
   },
   {
     slug: 'reale',
