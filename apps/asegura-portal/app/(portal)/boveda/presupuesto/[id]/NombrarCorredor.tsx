@@ -87,8 +87,8 @@ export function NombrarCorredor({ presupuestoId, corredor }: { presupuestoId: st
     return (
       <p className="confirmacion" style={{ margin: 0 }}>
         {paso.enviada
-          ? 'Ya firmaste la carta y se la hemos enviado a tu compañía. Te avisamos cuando la acepte.'
-          : 'Carta firmada. Se la mandamos a tu compañía; hasta que la acepte, seguimos sin ser tus corredores en esa póliza.'}
+          ? 'Ya firmaste la carta y se la hemos enviado a tu compañía. Falta que la acepte: hasta entonces, seguimos sin ser tus corredores en esa póliza.'
+          : 'Carta firmada. Tu corredor se la hace llegar a tu compañía; hasta que la acepte, seguimos sin ser tus corredores en esa póliza.'}
       </p>
     )
   }

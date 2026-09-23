@@ -4,7 +4,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { accionCarta, cartasDePoliza } from '@/lib/carta-mediador'
+import { accionCarta, cartasDePoliza, cartasPorTramitar } from '@/lib/carta-mediador'
 import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic'
 /**
  * /api/operador/carta-mediador — las cartas de nombramiento de mediador de una póliza (PR 6).
  *   GET   ?polizaId=  → { estado:'ok', cartas }  (`error` si no se pudo leer: nunca «no hay»)
+ *   GET   ?pendientes=1 → { estado:'ok', cartas } las firmadas sin mandar y las enviadas sin respuesta («Hoy»)
  *   PATCH { id, accion:'enviada'|'aceptada'|'rechazada'|'desistida', motivo?, actor }
  * «Enviada» la marca Alberto tras mandarla él: aquí no sale nada hacia la compañía.
  */
@@ -20,9 +21,15 @@ export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
-    const polizaId = new URL(req.url).searchParams.get('polizaId')?.trim() ?? ''
+    const q = new URL(req.url).searchParams
+    const polizaId = q.get('polizaId')?.trim() ?? ''
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' })
+    if (q.get('pendientes') === '1') {
+      const lista = await cartasPorTramitar(correduria.id)
+      if (lista === null) return NextResponse.json({ estado: 'error', motivo: 'no se pudieron leer las cartas' })
+      return NextResponse.json({ estado: 'ok', cartas: lista })
+    }
     const cartas = await cartasDePoliza(correduria.id, polizaId)
     if (cartas === null) return NextResponse.json({ estado: 'error', motivo: 'no se pudieron leer las cartas' })
     return NextResponse.json({ estado: 'ok', cartas })

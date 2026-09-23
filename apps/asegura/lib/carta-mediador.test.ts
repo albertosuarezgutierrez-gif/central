@@ -34,3 +34,18 @@ test('🪤 las acciones del corredor pasan por la regla pura y por compare-and-s
   assert.match(op, /transicionCartaMediador\(c\.estado, accion\)/)
   assert.match(op, /and estado = \$\{c\.estado\}`/)
 })
+
+test('🪤 la compañía sale del código DGS antes que de `aseguradora` (el volcado escribe «(legacy)»)', () => {
+  const b = src.slice(src.indexOf('async function base('), src.indexOf('function componer('))
+  assert.match(b, /coalesce\(cda\.nombre_comun, pol\.aseguradora\) as compania/)
+  assert.match(b, /left join companias_dgs cda on cda\.codigo_dgs = pol\.codigo_entidad_dgs/)
+})
+
+test('🪤 el puente aplica las guardas del botón: ni retirado, ni sin enviar, ni tras elegir cambiar de compañía', () => {
+  const b = src.slice(src.indexOf('async function base('), src.indexOf('function componer('))
+  assert.match(b, /if \(b\.retirado \|\| !b\.enviado\) return/)
+  assert.match(b, /if \(b\.aceptado \|\| b\.emitido \|\| b\.anulacionAbierta\) \{/)
+  assert.match(b, /if \(b\.cartaAceptada\) return/)
+  // Y las guardas van ANTES de devolver la base: si no, no guardan nada.
+  assert.ok(b.indexOf('b.anulacionAbierta) {') < b.indexOf('return { b }'))
+})

@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
-import { accionCartaAsegura, leerCartas } from '@/lib/carta-mediador-asegura'
+import { accionCartaAsegura, leerCartas, leerCartasPorTramitar } from '@/lib/carta-mediador-asegura'
 
 export const dynamic = 'force-dynamic'
 
-/** GET ?polizaId= — cartas de nombramiento de esa póliza. `sin_datos` ≠ «no hay». */
+/** GET ?polizaId= — cartas de nombramiento de esa póliza; ?pendientes=1 — las de «Hoy». `sin_datos` ≠ «no hay». */
 export async function GET(req: Request) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta
-  const polizaId = new URL(req.url).searchParams.get('polizaId') ?? ''
+  const q = new URL(req.url).searchParams
+  if (q.get('pendientes') === '1') return NextResponse.json(await leerCartasPorTramitar())
+  const polizaId = q.get('polizaId') ?? ''
   if (!polizaId) return NextResponse.json({ estado: 'sin_datos', causa: 'falta la póliza' }, { status: 422 })
   return NextResponse.json(await leerCartas(polizaId))
 }

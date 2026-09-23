@@ -11,7 +11,7 @@
 import { createHash, randomInt } from 'node:crypto'
 import { FirmaPropia, TEXTO_CONSENTIMIENTO, nombreCoincide } from '@central/core-firma'
 import {
-  cartaNombramientoMediador, remitenteCorreo, sqlCarteraViva, transicionCartaMediador,
+  ESTADOS_ANULACION_ABIERTA, cartaNombramientoMediador, remitenteCorreo, sqlCarteraEnVigor, sqlCarteraViva, transicionCartaMediador,
   type AccionCartaMediador, type EstadoCartaMediador,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
@@ -28,11 +28,20 @@ export const MAX_CODIGOS_DIA = 5
 
 const hashCodigo = (c: string) => createHash('sha256').update(c).digest('hex')
 const huella = (t: string) => createHash('sha256').update(t, 'utf8').digest('hex')
+const ANULACION_ABIERTA = [...ESTADOS_ANULACION_ABIERTA] as string[]
 const hoyMadrid = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
 
 type Base = {
   presupuestoId: string; polizaId: string; clienteId: string; tomador: string
-  numeroPoliza: string | null; compania: string | null; ramo: string | null; yaNuestra: boolean
+  numeroPoliza: string | null; compania: string | null; ramo: string | null
+  /** Lo que la póliza dice de sí misma: del volcado de 2013-2018 no es fiable, se enseña a Alberto, no se decide con ello. */
+  estadoPoliza: string | null; vence: string | null
+}
+
+type Guardas = {
+  presClienteId: string; yaNuestra: boolean; enVigor: boolean
+  retirado: boolean; aceptado: boolean; emitido: boolean; enviado: boolean
+  anulacionAbierta: boolean; cartaAceptada: boolean
 }
 
 type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
@@ -47,20 +56,38 @@ async function base(correduriaId: string, identidadId: string, presupuestoId: st
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
   const f = await fichaPropiaDe(correduriaId, identidadId)
   if (f.estado !== 'ok') return f
-  const [b] = await prismaAsegura().$queryRaw<(Base & { presClienteId: string })[]>`
+  // 🚨 La compañía por su código DGS primero: el volcado escribe «(legacy)» en `aseguradora`, y lo que
+  // quede de relleno lo rechaza `cartaNombramientoMediador` (nunca «A la atención de (legacy)»).
+  const [b] = await prismaAsegura().$queryRaw<(Base & Guardas)[]>`
     select pr.id::text as "presupuestoId", pol.id::text as "polizaId", pol.cliente_id::text as "clienteId",
            pr.cliente_id::text as "presClienteId",
            trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
-           pol.numero_poliza as "numeroPoliza", pol.aseguradora as compania, pol.tipo::text as ramo,
-           ${Prisma.raw(sqlCarteraViva('pol'))} as "yaNuestra"
+           pol.numero_poliza as "numeroPoliza", coalesce(cda.nombre_comun, pol.aseguradora) as compania, pol.tipo::text as ramo,
+           pol.estado::text as "estadoPoliza", to_char(pol.fecha_vencimiento, 'YYYY-MM-DD') as vence,
+           ${Prisma.raw(sqlCarteraViva('pol'))} as "yaNuestra",
+           coalesce(${Prisma.raw(sqlCarteraEnVigor('pol'))}, false) as "enVigor",
+           pr.retirado_at is not null as retirado, pr.aceptado_at is not null as aceptado,
+           pr.emitido_at is not null as emitido, pr.enviado_at is not null as enviado,
+           exists (select 1 from anulacion an where an.poliza_id = pol.id and an.estado = any(${ANULACION_ABIERTA}::text[])) as "anulacionAbierta",
+           exists (select 1 from carta_mediador cm where cm.poliza_id = pol.id and cm.estado = 'aceptada') as "cartaAceptada"
     from presupuesto pr
       join polizas pol on pol.id = pr.poliza_id and pol.correduria_id = pr.correduria_id and pol.merged_into_poliza_id is null
       join clientes c on c.id = pol.cliente_id
+      left join companias_dgs cda on cda.codigo_dgs = pol.codigo_entidad_dgs
     where pr.id = ${presupuestoId}::uuid and pr.correduria_id = ${correduriaId}::uuid`
   if (!b) return { estado: 'no_disponible', motivo: 'Este presupuesto no va sobre una póliza tuya que conozcamos: escríbenos y lo hablamos.' }
   if (b.presClienteId !== f.clienteId || b.clienteId !== f.clienteId) return { estado: 'otra_ficha' }
+  // Las mismas guardas que el botón (`puedeNombrar`): el puente no se fía de que la UI lo haya escondido.
+  if (b.retirado || !b.enviado) return { estado: 'no_disponible', motivo: 'Este presupuesto ya no está disponible. Recarga la página.' }
+  // Aceptar una opción es la salida A (cambiar de compañía): firmar además el nombramiento sería contradecirse.
+  if (b.aceptado || b.emitido || b.anulacionAbierta) {
+    return { estado: 'no_disponible', motivo: 'Ya elegiste cambiar de compañía con este presupuesto: tu póliza actual se anula, no hace falta nombrarnos en ella.' }
+  }
+  if (b.cartaAceptada) return { estado: 'no_disponible', motivo: 'Tu compañía ya aceptó que seamos tus corredores en esta póliza: en unos días la verás aquí.' }
   // Si CIMA ya la trae, ya somos su corredor: no hay nada que nombrar.
-  if (b.yaNuestra) return { estado: 'no_disponible', motivo: 'Esta póliza ya la gestionamos nosotros.' }
+  if (b.yaNuestra) {
+    return { estado: 'no_disponible', motivo: b.enVigor ? 'Esta póliza ya la gestionamos nosotros.' : 'Esta póliza nos consta como no vigente: escríbenos y lo miramos.' }
+  }
   return { b }
 }
 
@@ -125,7 +152,9 @@ export async function pedirCodigoCarta(correduriaId: string, identidadId: string
     values (${correduriaId}::uuid, ${r.b.clienteId}::uuid, ${r.b.polizaId}::uuid, ${presupuestoId}::uuid)
     on conflict (poliza_id) where estado in ('pendiente', 'firmada', 'enviada') do nothing`
   const a = await abierta(r.b.polizaId)
-  if (!a || a.clienteId !== r.b.clienteId) return { estado: 'no_encontrado' }
+  if (!a) return { estado: 'no_encontrado' }
+  // La póliza cambió de ficha (fusión, reasignación) con una carta abierta: lo resuelve Alberto.
+  if (a.clienteId !== r.b.clienteId) return { estado: 'no_disponible', motivo: 'Ya hay una carta en trámite sobre esta póliza: escríbenos y lo miramos contigo.' }
   if (a.estado !== 'pendiente') return { estado: 'ya_firmada', enviada: a.estado === 'enviada' }
 
   const codigo = String(randomInt(0, 1_000_000)).padStart(6, '0')
@@ -244,7 +273,10 @@ export async function firmarCarta(
   } catch (e) {
     console.error('[carta-mediador] historial no anotado:', e instanceof Error ? e.message : e)
   }
-  const aviso = `🤝 ${b.tomador} ha FIRMADO la carta de nombramiento de mediador de su póliza de ${b.compania} (nº ${b.numeroPoliza}). ` +
+  const situacion = b.estadoPoliza || b.vence
+    ? ` En la ficha consta${b.estadoPoliza ? ` «${b.estadoPoliza}»` : ''}${b.vence ? `, vencimiento ${b.vence.split('-').reverse().join('/')}` : ''}: si es del volcado antiguo, confírmalo con la compañía antes.`
+    : ''
+  const aviso = `🤝 ${b.tomador} ha FIRMADO la carta de nombramiento de mediador de su póliza de ${b.compania} (nº ${b.numeroPoliza}).${situacion} ` +
     'Mándala a la compañía desde la ficha de la póliza y márcala como enviada: la póliza no es nuestra hasta que la acepten.'
   return { estado: 'firmada', firmadaEl: hoy, aviso }
 }
@@ -267,6 +299,35 @@ export async function cartasDePoliza(correduriaId: string, polizaId: string): Pr
       order by created_at desc limit 10`
   } catch (e) {
     console.error('[carta-mediador] no se pudo leer:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+export type CartaPorTramitar = {
+  id: string; estado: 'firmada' | 'enviada'; polizaId: string; cliente: string | null
+  compania: string | null; numeroPoliza: string | null; firmadaAt: Date; enviadaAt: Date | null
+}
+
+/**
+ * Las cartas que esperan a Alberto (firmadas sin mandar) o a la compañía (enviadas sin respuesta), para
+ * «Hoy». Sin esta lista una carta firmada solo se veía entrando en la ficha de esa póliza. `null` = no se pudo leer.
+ */
+export async function cartasPorTramitar(correduriaId: string): Promise<CartaPorTramitar[] | null> {
+  try {
+    return await prismaAsegura().$queryRaw<CartaPorTramitar[]>`
+      select cm.id::text as id, cm.estado, cm.poliza_id::text as "polizaId",
+             nullif(trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))), '') as cliente,
+             coalesce(cda.nombre_comun, pol.aseguradora) as compania, pol.numero_poliza as "numeroPoliza",
+             cm.firmada_at as "firmadaAt", cm.enviada_at as "enviadaAt"
+      from carta_mediador cm
+        join polizas pol on pol.id = cm.poliza_id
+        left join clientes c on c.id = cm.cliente_id
+        left join companias_dgs cda on cda.codigo_dgs = pol.codigo_entidad_dgs
+      where cm.correduria_id = ${correduriaId}::uuid and cm.estado in ('firmada', 'enviada')
+      order by (cm.estado = 'firmada') desc, cm.firmada_at
+      limit 50`
+  } catch (e) {
+    console.error('[carta-mediador] no se pudo leer la lista:', e instanceof Error ? e.message : e)
     return null
   }
 }

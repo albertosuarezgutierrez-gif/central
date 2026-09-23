@@ -22,6 +22,15 @@ export type DatosCartaMediador = {
   fechaCarta: string
 }
 
+/**
+ * Valores de «cajón» que el volcado histórico escribe en `polizas.aseguradora` (26.987 pólizas con
+ * «(legacy)», medido el 23/09/2026). No identifican a nadie: una carta «A la atención de (legacy)»
+ * se firmaría y no se podría mandar. Se tratan como compañía que falta.
+ */
+export function esCompaniaDeRelleno(compania: string): boolean {
+  return /^\(.*\)$|^(n\/?a|otr[ao]s?|desconocid[ao]|sin compa[ñn][ií]a|-+)$/i.test(compania.trim())
+}
+
 function fechaEs(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split('-')
   return `${d}/${m}/${y}`
@@ -35,7 +44,7 @@ export function cartaNombramientoMediador(d: DatosCartaMediador): string | null 
   const tomador = d.tomador.trim()
   const compania = d.compania?.trim()
   const numero = d.numeroPoliza?.trim()
-  if (!tomador || !compania || !numero) return null
+  if (!tomador || !compania || !numero || esCompaniaDeRelleno(compania)) return null
   const poliza = `la póliza nº ${numero}${d.ramo ? ` (${d.ramo})` : ''}`
   const { nombre, figura, claveDgsfp, nif } = MEDIADOR.identidad
   return [

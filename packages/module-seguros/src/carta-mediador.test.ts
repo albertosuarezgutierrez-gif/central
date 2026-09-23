@@ -21,6 +21,12 @@ test('🪤 sin compañía o sin número no hay carta que firmar', () => {
   assert.equal(cartaNombramientoMediador({ ...d, tomador: '' }), null)
 })
 
+test('🪤 una compañía de relleno del volcado («(legacy)») no es una compañía: no hay carta', () => {
+  assert.equal(cartaNombramientoMediador({ ...d, compania: '(legacy)' }), null)
+  assert.equal(cartaNombramientoMediador({ ...d, compania: 'desconocida' }), null)
+  assert.ok(cartaNombramientoMediador({ ...d, compania: 'Allianz' }))
+})
+
 test('🪤 sin firma no se envía; solo una enviada se acepta o rechaza; aceptada es final', () => {
   assert.equal(transicionCartaMediador('pendiente', 'enviada'), null)
   assert.equal(transicionCartaMediador('firmada', 'enviada'), 'enviada')

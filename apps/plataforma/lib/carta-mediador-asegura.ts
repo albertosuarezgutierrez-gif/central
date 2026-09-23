@@ -37,6 +37,25 @@ export function leerCarta(v: unknown): CartaMediador | null {
   }
 }
 
+export type CartaPorTramitar = {
+  id: string; estado: 'firmada' | 'enviada'; polizaId: string; cliente: string | null
+  compania: string | null; numeroPoliza: string | null; firmadaAt: string; enviadaAt: string | null
+}
+
+export type LecturaPorTramitar = { estado: 'ok'; cartas: CartaPorTramitar[] } | { estado: 'sin_datos'; causa: string }
+
+/** Una fila de «Hoy». Ilegible → `null` (y la lista entera se declara ilegible). */
+export function leerCartaPorTramitar(v: unknown): CartaPorTramitar | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const id = t(o.id), polizaId = t(o.polizaId), firmadaAt = t(o.firmadaAt)
+  if (!id || !polizaId || !firmadaAt || (o.estado !== 'firmada' && o.estado !== 'enviada')) return null
+  return {
+    id, estado: o.estado, polizaId, cliente: t(o.cliente), compania: t(o.compania), numeroPoliza: t(o.numeroPoliza),
+    firmadaAt, enviadaAt: t(o.enviadaAt),
+  }
+}
+
 /** Qué se puede hacer desde cada estado (la regla la vuelve a aplicar asegura). */
 export function accionesCarta(e: EstadoCartaMediador): { enviar: boolean; resolver: boolean; desistir: boolean } {
   return { enviar: e === 'firmada', resolver: e === 'enviada', desistir: e === 'pendiente' || e === 'firmada' || e === 'enviada' }
@@ -68,6 +87,22 @@ export async function leerCartas(polizaId: string): Promise<LecturaCartas> {
     const lista = j.cartas.map(leerCarta)
     if (lista.some((x) => x === null)) return { estado: 'sin_datos', causa: 'asegura devolvió una carta incompleta' }
     return { estado: 'ok', cartas: lista as CartaMediador[] }
+  } catch {
+    return { estado: 'sin_datos', causa: 'no se pudo llegar a asegura' }
+  }
+}
+
+export async function leerCartasPorTramitar(): Promise<LecturaPorTramitar> {
+  const b = base()
+  if (!b) return { estado: 'sin_datos', causa: 'puerto sin configurar (falta ASEGURA_OPERADOR_SECRET)' }
+  try {
+    const res = await fetch(`${b.url}?pendientes=1`, { headers: await cabecerasPuerto(b.secreto), cache: 'no-store', signal: AbortSignal.timeout(15_000) })
+    const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    if (res.status === 404) return { estado: 'sin_datos', causa: 'asegura aún no tiene /api/operador/carta-mediador desplegado' }
+    if (!res.ok || j?.estado !== 'ok' || !Array.isArray(j.cartas)) return { estado: 'sin_datos', causa: `HTTP ${res.status}` }
+    const lista = j.cartas.map(leerCartaPorTramitar)
+    if (lista.some((x) => x === null)) return { estado: 'sin_datos', causa: 'asegura devolvió una carta incompleta' }
+    return { estado: 'ok', cartas: lista as CartaPorTramitar[] }
   } catch {
     return { estado: 'sin_datos', causa: 'no se pudo llegar a asegura' }
   }
