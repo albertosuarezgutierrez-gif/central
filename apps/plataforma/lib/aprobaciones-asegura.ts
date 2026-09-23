@@ -8,6 +8,14 @@ import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type Aprobacion = {
   id: string
+  /** `compania` = el correo va a la compañía (anulación firmada), no al cliente. */
+  para: 'cliente' | 'compania'
+  /** Nombre de la compañía cuando `para === 'compania'`. */
+  destinatario: string | null
+  /** Buzones activos de esa compañía entre los que Alberto ELIGE (vacío si no hay ninguno o es para el cliente). */
+  buzones: Buzon[]
+  /** El que recibió la última anulación de esa compañía; `null` = hay que elegir, no se adivina. */
+  buzonSugerido: string | null
   origen: string
   clienteId: string
   cliente: string | null
@@ -17,6 +25,8 @@ export type Aprobacion = {
   creada: string
   caduca: string
 }
+
+export type Buzon = { id: string; nombre: string; cargo: string | null; area: string | null; email: string }
 
 /** Un envío que se quedó a medias: no se sabe si salió. Se cierra a mano tras mirarlo en Resend. */
 export type EnvioIncierto = { id: string; clienteId: string; cliente: string | null; asunto: string; desde: string }
@@ -28,7 +38,7 @@ export type LecturaAprobaciones =
 export type Desenlace = 'ejecutada' | 'rechazada' | 'cerrada' | 'no_encontrada' | 'ya_decidida' | 'sin_email' | 'sin_correo_configurado' | 'fallida' | 'incierto' | 'invalida' | 'error'
 
 export type CuerpoDecision =
-  | { id: string; decision: 'aprobar'; asunto: string; texto: string }
+  | { id: string; decision: 'aprobar'; asunto: string; texto: string; contactoId?: string }
   | { id: string; decision: 'rechazar' }
   | { id: string; decision: 'cerrar_incierto'; salio: boolean }
 
@@ -53,13 +63,29 @@ function texto(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v : null
 }
 
+function leerBuzon(v: unknown): Buzon | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const id = texto(o.id), nombre = texto(o.nombre), email = texto(o.email)
+  if (!id || !nombre || !email) return null
+  return { id, nombre, email, cargo: texto(o.cargo), area: texto(o.area) }
+}
+
 export function leerAprobacion(v: unknown): Aprobacion | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
   const id = texto(o.id), clienteId = texto(o.clienteId), asunto = texto(o.asunto), cuerpo = texto(o.texto)
   if (!id || !clienteId || !asunto || !cuerpo) return null
+  const buzones = Array.isArray(o.buzones) ? o.buzones.map(leerBuzon).filter((b): b is Buzon => b !== null) : []
+  const sugerido = texto(o.buzonSugerido)
   return {
     id, clienteId, asunto, texto: cuerpo,
+    buzones,
+    // Un sugerido que no está en la lista no se preselecciona: se elegiría un buzón que no se ve.
+    buzonSugerido: sugerido && buzones.some((b) => b.id === sugerido) ? sugerido : null,
+    // Solo es para la compañía si asegura lo dice; un valor raro NO cambia el destinatario pintado.
+    para: o.accion === 'enviar_correo_compania' ? 'compania' : 'cliente',
+    destinatario: texto(o.destinatario),
     origen: texto(o.origen) ?? 'desconocido',
     cliente: texto(o.cliente),
     urgente: o.urgente === true,

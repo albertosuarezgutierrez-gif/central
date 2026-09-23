@@ -15,8 +15,9 @@
 **(23/09/2026)** 📨 **ASegura OS 2-d-3: la anulación firmada va a la compañía por la cola.** Acción nueva
 `enviar_correo_compania` (política `aprobar`) en `seguros.aprobacion` (+`anulacion_id`, CHECK; migración aplicada). Al
 listar «Esperan tu OK» se propone sola cada anulación firmada en el portal sin propuesta (idempotente; rechazada no
-vuelve). Buzón = `contactoParaAnulacion()`: administración > general > sin clasificar, nunca comercial/siniestros; la
-carta GUARDADA al firmar va adjunta (.txt) y no se edita. Solo si el correo SALE pasa a `comunicada`; si se desiste,
+vuelve; fallida/caducada se re-propone). Buzón: lo ELIGE Alberto en la tarjeta entre los contactos activos de esa
+compañía (por área no: medido, «administración» es cobros o rebota) y queda en `compania_contactos.recibe_anulaciones`
+para preseleccionarlo la próxima vez. Carta GUARDADA adjunta (.txt), no editable. Solo si SALE → `comunicada`; si se desiste,
 la propuesta caduca. Firma en papel: la manda Alberto y pulsa «Comunicada».
 
 **(23/09/2026)** ✍️ **ASegura OS 2-d-2: el cliente firma su anulación en el portal.** #3368 (2-d) mergeado. El corredor

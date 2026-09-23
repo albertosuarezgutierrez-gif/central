@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { POLITICA, borradorReciboDevuelto, caducaEn, decisionValida } from './aprobaciones.ts'
+import { POLITICA, borradorAnulacionCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
 
 const hoy = new Date('2026-09-23T10:00:00Z')
 const base = { ramo: 'auto', compania: 'MAPFRE', numeroPoliza: '3021700291186', importe: 225.97, vencimiento: '2026-09-10', hoy }
@@ -53,4 +53,47 @@ test('la decisión: aprobar exige asunto y texto; el asunto no puede partir cabe
 
 test('caduca a los 7 días', () => {
   assert.equal(caducaEn(hoy).toISOString(), '2026-09-30T10:00:00.000Z')
+})
+
+const anu = {
+  tomador: 'Pilar Franco Ruz', compania: 'Allianz', numeroPoliza: '048765432', tipo: 'no_renovacion' as const,
+  fechaEfecto: '2026-12-01', firmadaEl: '2026-09-23', docHash: 'a'.repeat(64), mediador: 'Grupo ASegura', hoy,
+}
+
+test('comunicar a la compañía pide OK, y la nota dice qué, quién firmó, cuándo y con qué huella', () => {
+  assert.equal(POLITICA.enviar_correo_compania, 'aprobar')
+  const b = borradorAnulacionCompania(anu)
+  assert.match(b.texto, /Pilar Franco Ruz, tomador de la póliza nº 048765432/)
+  assert.match(b.texto, /oposición a la prórroga/)
+  assert.match(b.texto, /firmada por el tomador el 23\/09\/2026/)
+  assert.match(b.texto, new RegExp('a'.repeat(64)))
+  assert.match(b.asunto, /no renovación · póliza nº 048765432/)
+  assert.equal(b.urgente, false)
+})
+
+test('caduca con el efecto si llega antes que el mes; con el efecto cerca es urgente; pasado, tres días', () => {
+  const cerca = borradorAnulacionCompania({ ...anu, tipo: 'inmediata', fechaEfecto: '2026-10-05' })
+  assert.equal(cerca.urgente, true)
+  assert.ok(cerca.caduca.getTime() < Date.parse('2026-10-05T00:00:00Z'))
+  assert.match(cerca.texto, /anulación de la póliza con efecto el 05\/10\/2026/)
+  assert.equal(borradorAnulacionCompania(anu).caduca.getTime(), caducaEn(hoy, 30).getTime())
+  // 🪤 Efecto retroactivo (o de hoy): no nace caducada.
+  const pasada = borradorAnulacionCompania({ ...anu, tipo: 'inmediata', fechaEfecto: '2026-09-01' })
+  assert.equal(pasada.urgente, true)
+  assert.equal(pasada.caduca.getTime(), caducaEn(hoy, 3).getTime())
+})
+
+test('🪤 el buzón no se deduce por área: solo se preselecciona el que ya recibió una anulación', () => {
+  const c = (id: string, recibeAnulaciones: boolean, orden = 0, activo = true) => ({ id, email: `${id}@x.es`, orden, activo, recibeAnulaciones })
+  assert.equal(buzonSugerido([c('adm', false), c('gen', false)]), null)
+  assert.equal(buzonSugerido([c('adm', false), c('marcado', true)]), 'marcado')
+  assert.equal(buzonSugerido([c('viejo', true, 0, false)]), null, 'uno dado de baja no se preselecciona')
+  assert.equal(buzonSugerido([c('b', true, 2), c('a', true, 1)]), 'a')
+})
+
+test('decidir: el buzón elegido viaja como uuid; otra cosa invalida la decisión', () => {
+  const base = { decision: 'aprobar', asunto: 's', texto: 't' }
+  assert.equal(decisionValida({ ...base, contactoId: '11111111-1111-1111-1111-111111111111' })?.decision, 'aprobar')
+  assert.equal(decisionValida({ ...base, contactoId: 'a@b.es' }), null)
+  assert.deepEqual(decisionValida(base), { decision: 'aprobar', asunto: 's', texto: 't' })
 })

@@ -19,7 +19,25 @@ test('el envío solo existe detrás de la decisión «aprobar» y el destinatari
   const rechazar = src.indexOf("if (d.decision === 'rechazar')")
   assert.ok(rechazar > 0 && rechazar < src.indexOf('await enviarCorreo('))
   assert.match(src, /const ficha = await estadoEmailDeFicha\(correduriaId, a\.clienteId\)/)
-  assert.match(src, /const destino = ficha\.email/)
+  assert.match(src, /destino = ficha\.email/)
+})
+
+test('🪤 a la compañía: el buzón es el que ELIGE Alberto entre los de ESA compañía, y la anulación pasa a comunicada SOLO si salió', () => {
+  const decidir = src.slice(src.indexOf('export async function decidirAprobacion'))
+  // El contacto elegido tiene que ser un activo de la compañía de la póliza: un id de otra compañía no vale.
+  assert.match(src, /where id = \$\{contactoId\}::uuid and compania_codigo_dgs = \$\{n\.dgs\} and activo/)
+  assert.match(src, /if \(!contactoId\) return \{ estado: 'sin_email'/)
+  assert.match(decidir, /destino = r\.email/)
+  const comunicada = decidir.indexOf('await marcarComunicada(correduriaId, a.anulacionId)')
+  const guarda = decidir.indexOf('if (envio.ok && paraCompania && a.anulacionId)')
+  assert.ok(guarda > 0 && comunicada > guarda && comunicada - guarda < 200, 'solo con el envío hecho')
+  assert.match(src, /update anulacion set estado = 'comunicada'[^`]*estado = 'firmada'`/)
+  // El reclamo exige que la anulación SIGA firmada: desistida entre medias, no sale el correo.
+  assert.match(decidir, /accion <> 'enviar_correo_compania'\s+or exists \(select 1 from anulacion n where n\.id = aprobacion\.anulacion_id and n\.estado = 'firmada'\)/)
+  // Una sola propuesta viva por anulación: el índice parcial manda, así que el conflicto no va atado a `clave`.
+  assert.match(src, /values \(\$\{correduriaId\}::uuid, 'enviar_correo_compania'[\s\S]{0,600}on conflict do nothing/)
+  // Lo que se adjunta es la carta GUARDADA al firmar, nunca un texto recompuesto.
+  assert.match(src, /adjunto: \{ nombre: `solicitud-anulacion-\$\{num\}\.txt`, texto: n\.carta \}/)
 })
 
 test('antes de decidir se retira lo obsoleto: no se manda «no consta pagado» de un recibo ya cobrado', () => {

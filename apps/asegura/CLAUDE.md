@@ -733,6 +733,9 @@ retención ni se anuncia fuga. Cepo `lib/anulaciones.test.ts`.
 ✍️ **Firma del cliente (2-d-2, `lib/anulacion-portal.ts`, puente `/api/portal/anulacion`).** Solo del tomador y solo en `solicitada`;
 código al correo de la ficha OBLIGATORIO (la sesión de 30 días no firma); lo hasheado por `FirmaPropia` es el MISMO texto que se
 guarda en `carta_texto` y se mandará a la compañía. Cepo `lib/anulacion-portal.test.ts`.
+📨 **Aviso a la compañía (2-d-3, `proponerAnulacionesFirmadas` + `decidirAprobacion` en `lib/aprobaciones.ts`).** Acción
+`enviar_correo_compania`: el buzón lo ELIGE Alberto en la tarjeta entre los contactos activos de ESA compañía (nunca por área: medido, «administración» es a veces cobros o rebota) y queda recordado en `compania_contactos.recibe_anulaciones` para la siguiente; carta firmada adjunta tal cual; la
+anulación pasa a `comunicada` SOLO si el correo salió. Cepo `lib/aprobaciones.test.ts`.
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 

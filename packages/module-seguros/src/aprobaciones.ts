@@ -12,7 +12,7 @@
 
 import { retencion } from './retencion.ts'
 
-export const ACCIONES_APROBACION = ['enviar_correo_cliente'] as const
+export const ACCIONES_APROBACION = ['enviar_correo_cliente', 'enviar_correo_compania'] as const
 export type AccionAprobacion = (typeof ACCIONES_APROBACION)[number]
 
 export type Politica = 'auto' | 'aprobar' | 'prohibido'
@@ -20,6 +20,8 @@ export type Politica = 'auto' | 'aprobar' | 'prohibido'
 /** Qué hace el sistema con cada acción. Relajar una a `auto` es una decisión de Alberto, por PR. */
 export const POLITICA: Readonly<Record<AccionAprobacion, Politica>> = {
   enviar_correo_cliente: 'aprobar',
+  // Comunicar una anulación firmada a la compañía (pieza 2-d-3): la carta sale en nombre del tomador.
+  enviar_correo_compania: 'aprobar',
 }
 
 export const ESTADOS_APROBACION = ['pendiente', 'enviando', 'ejecutada', 'rechazada', 'caducada', 'fallida'] as const
@@ -110,8 +112,79 @@ export function borradorReciboDevuelto(e: EntradaReciboDevuelto): Borrador | nul
   }
 }
 
+export type EntradaAnulacionCompania = {
+  tomador: string
+  compania: string
+  numeroPoliza: string
+  tipo: 'no_renovacion' | 'inmediata' | 'sustitucion'
+  /** `YYYY-MM-DD`. */
+  fechaEfecto: string
+  /** Cuándo firmó el cliente, `YYYY-MM-DD`. */
+  firmadaEl: string
+  /** Huella SHA-256 del texto firmado (la de `seguros.firma.doc_hash`). */
+  docHash: string
+  mediador: string
+  hoy: Date
+}
+
+/**
+ * El correo a la compañía con la anulación firmada (pieza 2-d-3). La carta firmada va ADJUNTA y no
+ * se edita (su huella es la de la firma); esto es solo la nota que la acompaña.
+ *
+ * Caduca con la fecha de efecto (pasada, ya no hay nada que anular a tiempo) y como mucho a 30 días:
+ * una comunicación a la compañía no se pierde a la semana como un aviso al cliente.
+ */
+export function borradorAnulacionCompania(e: EntradaAnulacionCompania): Borrador {
+  const que = e.tipo === 'no_renovacion'
+    ? `su oposición a la prórroga de la póliza, con efecto al vencimiento del ${fechaEs(e.fechaEfecto)}`
+    : `la anulación de la póliza con efecto el ${fechaEs(e.fechaEfecto)}`
+  const texto = [
+    'Buenos días:',
+    '',
+    `En nombre de nuestro cliente ${e.tomador}, tomador de la póliza nº ${e.numeroPoliza}, les trasladamos ${que}.`,
+    '',
+    `Adjuntamos la solicitud firmada por el tomador el ${fechaEs(e.firmadaEl)} con firma electrónica avanzada ` +
+      `(huella SHA-256 del documento: ${e.docHash}).`,
+    '',
+    'Les rogamos que confirmen la recepción y la fecha en que queda anulada.',
+    '',
+    'Un saludo,',
+    e.mediador,
+  ].join('\n')
+  const efecto = new Date(Date.parse(`${e.fechaEfecto}T00:00:00Z`) - 2 * 3_600_000)
+  const mes = caducaEn(e.hoy, 30)
+  // Un efecto pasado o de hoy (anulación inmediata con efecto retroactivo) se propone igual, con unos
+  // días para decidir: si caducara al nacer, desaparecería sin que nadie la viera.
+  const minimo = caducaEn(e.hoy, 3)
+  const dias = (Date.parse(`${e.fechaEfecto}T00:00:00Z`) - e.hoy.getTime()) / 86_400_000
+  const caduca = efecto < mes ? efecto : mes
+  return {
+    asunto: `Solicitud de ${e.tipo === 'no_renovacion' ? 'no renovación' : 'anulación'} · póliza nº ${e.numeroPoliza} · ${e.tomador}`,
+    texto,
+    // Con el efecto a menos de 45 días, el plazo de un mes del art. 22 LCS ya aprieta.
+    urgente: dias < 45,
+    caduca: caduca < minimo ? minimo : caduca,
+  }
+}
+
+export type BuzonCompania = { id: string; activo: boolean; email: string | null; orden: number; recibeAnulaciones: boolean }
+
+/**
+ * El buzón de la compañía que se PRESELECCIONA para mandarle una anulación: el que ya recibió una
+ * (lo marca el envío que Alberto aprueba). NO se deduce por área: con los contactos reales, el de
+ * «administración» de una compañía es el de recibos impagados y el de otra rebota. `null` = no hay
+ * ninguno marcado, y lo elige Alberto en la tarjeta.
+ */
+export function buzonSugerido(contactos: BuzonCompania[]): string | null {
+  const c = contactos
+    .filter((x) => x.activo && x.recibeAnulaciones && x.email && x.email.includes('@'))
+    .sort((a, b) => a.orden - b.orden)[0]
+  return c ? c.id : null
+}
+
 export type Decision =
-  | { decision: 'aprobar'; asunto: string; texto: string }
+  /** `contactoId`: el buzón de la compañía elegido en la tarjeta (solo para `enviar_correo_compania`). */
+  | { decision: 'aprobar'; asunto: string; texto: string; contactoId?: string }
   | { decision: 'rechazar' }
   /** Un envío que se quedó a medias: Alberto ha mirado en el proveedor si salió o no. */
   | { decision: 'cerrar_incierto'; salio: boolean }
@@ -126,5 +199,9 @@ export function decisionValida(v: unknown): Decision | null {
   const asunto = typeof o.asunto === 'string' ? o.asunto.replace(/[\r\n]+/g, ' ').trim() : ''
   const texto = typeof o.texto === 'string' ? o.texto.trim() : ''
   if (!asunto || asunto.length > 200 || !texto || texto.length > 5000) return null
+  if (o.contactoId !== undefined && o.contactoId !== null) {
+    if (typeof o.contactoId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(o.contactoId)) return null
+    return { decision: 'aprobar', asunto, texto, contactoId: o.contactoId }
+  }
   return { decision: 'aprobar', asunto, texto }
 }

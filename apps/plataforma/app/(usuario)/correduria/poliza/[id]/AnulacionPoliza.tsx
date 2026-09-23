@@ -179,6 +179,7 @@ function Abierta({ a, ocupado, firmando, nota, setFirmando, setNota, accion }: {
           El cliente desiste
         </button>
       </div>
+      {a.estado === 'firmada' && <span style={NOTA}>Si la firmó en el portal, el correo a la compañía con la carta firmada adjunta te espera en «Hoy · Esperan tu OK» y, al enviarlo, pasa sola a «comunicada». Si la mandas tú (firma en papel, o descartaste ese correo), pulsa «Comunicada a la compañía» cuando salga.</span>}
       {a.estado === 'solicitada' && <span style={NOTA}>Sin la firma del cliente no se comunica a la compañía. Si tiene portal, la ve en «Pendiente de tu firma» y firma con un código a su correo; si firma en papel, pulsa «Firma recibida».</span>}
     </div>
   )
