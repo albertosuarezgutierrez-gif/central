@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 📨 **Presupuesto al cliente, PR 3: el aviso sale con tu clic.** #3384 (2-d-3) mergeado con los
+arreglos de su revisión (índice único parcial: una sola propuesta viva por anulación, aplicado y visto morder).
+Ficha de póliza → «Presupuestos»: Enviar por correo (asegura; `enviado_at` solo si el proveedor acepta) o Por
+WhatsApp (`wa.me/?text=` sin número; «Ya lo he mandado» sella). El aviso NO lleva precio ni compañía; el token se
+rota con compare-and-swap (dos clics = un correo). `destino_hash` sigue NULL: el portal da acceso por el vínculo
+de la ficha. Pendiente del PR 3: cola en Hoy. Siguiente: PR 4 (elegir y firmar).
+
 **(23/09/2026)** 📨 **ASegura OS 2-d-3: la anulación firmada va a la compañía por la cola.** Acción nueva
 `enviar_correo_compania` (política `aprobar`) en `seguros.aprobacion` (+`anulacion_id`, CHECK; migración aplicada). Al
 listar «Esperan tu OK» se propone sola cada anulación firmada en el portal sin propuesta (idempotente; rechazada no

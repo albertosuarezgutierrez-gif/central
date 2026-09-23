@@ -322,6 +322,7 @@ export {
   type RelacionFicha,
 } from './relaciones.ts'
 export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
+export { correoPresupuesto, mensajePresupuestoWhatsapp, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
