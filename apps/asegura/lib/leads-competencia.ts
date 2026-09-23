@@ -20,9 +20,9 @@ import {
   type PasoLead,
   type VentanaLead,
 } from '@central/module-seguros'
-import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { descifrarCampo } from './cartera-edicion'
 
 export type LeadCompetencia = {
   oportunidadId: string
@@ -40,8 +40,11 @@ export type LeadCompetencia = {
   ventana: VentanaLead
   telefono: string | null
   email: string | null
+  /** Envíos que le llegaron en los últimos 12 meses (sin rebotes ni quejas), de cualquier campaña. */
   intentos: number
   ultimoContactoEn: string | null
+  /** Otras pólizas de la competencia del mismo cliente: se le trabaja una vez, no N. */
+  otrasOportunidades: number
   respondioAntes: boolean
   puntuacion: number
   siguientePaso: PasoLead
@@ -49,14 +52,23 @@ export type LeadCompetencia = {
 
 export type ListaLeadsCompetencia = {
   leads: LeadCompetencia[]
-  /** Candidatos con fecha legible, antes de cortar por horizonte. */
+  /** Candidatos con fecha legible (uno por cliente), antes de cortar por horizonte. */
   totalConFecha: number
+  /** Con contacto guardado pero que no se ha podido descifrar: no se listan y se cuentan. */
+  ilegibles: number
   porVentana: Record<VentanaLead, number>
   /** `true` = la consulta tocó el techo: puede haber más. */
   truncado: boolean
 }
 
 const TECHO = 5000
+
+/** Valor de cajón del volcado de Manuel: no es una compañía. */
+function aseguradoraLegible(v: string | null): string | null {
+  const limpio = v?.trim() || null
+  if (limpio === null) return null
+  return /^\(?legacy\)?$/i.test(limpio) ? null : limpio
+}
 
 type Fila = {
   oportunidadId: string
@@ -74,17 +86,6 @@ type Fila = {
   respondio: boolean
 }
 
-/** Descifra sin convertir un fallo en «no tiene contacto». */
-function descifrar(v: string | null): string | null {
-  if (typeof v !== 'string' || v.trim() === '') return null
-  if (!v.startsWith('v1:')) return v
-  try {
-    return decryptField(v)
-  } catch {
-    return null
-  }
-}
-
 function hoyUtc(): Date {
   const d = new Date()
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
@@ -96,24 +97,30 @@ export async function leadsCompetencia(
   hoy: Date = hoyUtc(),
 ): Promise<ListaLeadsCompetencia> {
   const porVentana: Record<VentanaLead, number> = { menos_30: 0, '30_60': 0, '60_90': 0, mas_90: 0 }
-  if (!aseguraConfigurada()) return { leads: [], totalConFecha: 0, porVentana, truncado: false }
+  if (!aseguraConfigurada()) return { leads: [], totalConFecha: 0, ilegibles: 0, porVentana, truncado: false }
   const filas = await prismaAsegura().$queryRaw<Fila[]>(Prisma.sql`
     select
       o.id::text as "oportunidadId", c.id::text as "clienteId", c.nombre, c.apellidos,
       o.tipo::text as ramo,
       nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora,
-      -- Un 0 guardado tampoco es una prima (regla NULL≠0). El texto del JSON
-      -- solo se convierte si tiene forma de número.
+      -- Un 0 guardado tampoco es una prima (regla NULL≠0), y no puede tapar la
+      -- del JSON. Del texto solo se aceptan formas sin ambigüedad: «450»,
+      -- «450.5», «450,50». «1.200» (¿mil doscientos o uno coma dos?) queda NULL.
       nullif(coalesce(
-        o.prima_bruta,
-        case when (o.poliza_competencia->>'prima') ~ '^[0-9]+([.][0-9]+)?$'
-             then (o.poliza_competencia->>'prima')::numeric end
+        nullif(o.prima_bruta, 0),
+        case when (o.poliza_competencia->>'prima') ~ '^[0-9]+([.,][0-9]{1,2})?$'
+             then replace(o.poliza_competencia->>'prima', ',', '.')::numeric end
       ), 0)::float8 as prima,
       o.fecha_fin_vigencia as "fechaFin",
       case when c.wa_opt_out_at is null then c.telefono else null end as telefono,
       case when c.email_opt_out_at is null then c.email else null end as email,
-      (select count(*)::int from recaptacion_envios r where r.cliente_id = c.id) as intentos,
-      (select max(r.created_at) from recaptacion_envios r where r.cliente_id = c.id) as "ultimoEnvioAt",
+      -- Solo el último año: el «aparcar» es hasta el aniversario siguiente, no
+      -- para siempre. Un rebote o una queja no es un intento que le llegara.
+      (select count(*)::int from recaptacion_envios r
+        where r.cliente_id = c.id and r.created_at > now() - interval '12 months'
+          and r.estado::text not in ('rebotado', 'queja')) as intentos,
+      (select max(r.created_at) from recaptacion_envios r
+        where r.cliente_id = c.id and r.created_at > now() - interval '12 months') as "ultimoEnvioAt",
       exists (
         select 1 from recaptacion_envios r
         where r.cliente_id = c.id and r.estado::text in ('enlace_abierto', 'abierto', 'pinchado')
@@ -136,38 +143,57 @@ export async function leadsCompetencia(
           and p.merged_into_poliza_id is null
           and ${Prisma.raw(sqlCarteraEnVigor('p'))}
       )
+    -- Si se topa, que se caiga lo que vence más lejos, no filas al azar.
+    order by mod((extract(doy from o.fecha_fin_vigencia) - extract(doy from current_date))::int + 366, 366)
     limit ${TECHO}
   `)
 
+  // Un cliente, una fila: se queda su oportunidad que vence antes y el resto
+  // se cuenta. Varias filas del mismo cliente serían varios planes de contacto.
+  const porCliente = new Map<string, { f: Fila; venc: string; dias: number; otras: number }>()
+  for (const f of filas) {
+    const venc = proximoAniversario(f.fechaFin.toISOString().slice(0, 10), hoy)
+    if (venc === null) continue
+    const dias = diasHasta(venc, hoy)
+    const previa = porCliente.get(f.clienteId)
+    if (!previa) porCliente.set(f.clienteId, { f, venc, dias, otras: 0 })
+    else if (dias < previa.dias) porCliente.set(f.clienteId, { f, venc, dias, otras: previa.otras + 1 })
+    else previa.otras++
+  }
+
   const leads: LeadCompetencia[] = []
   let totalConFecha = 0
-  for (const f of filas) {
-    const fechaFin = f.fechaFin.toISOString().slice(0, 10)
-    const venc = proximoAniversario(fechaFin, hoy)
-    if (venc === null) continue
+  let ilegibles = 0
+  for (const { f, venc, dias, otras } of porCliente.values()) {
+    const telefono = descifrarCampo(f.telefono)
+    const email = descifrarCampo(f.email)
+    // Guardado pero ilegible (clave PII, o una cadena vacía): no se lista como
+    // contactable, y tampoco desaparece sin dejar rastro.
+    if (telefono === null && email === null) {
+      ilegibles++
+      continue
+    }
     totalConFecha++
-    const dias = diasHasta(venc, hoy)
     const ventana = ventanaDe(dias)
     porVentana[ventana]++
     if (dias > horizonteDias) continue
-    const telefono = descifrar(f.telefono)
-    const email = descifrar(f.email)
     const ultimo = f.ultimoEnvioAt ? f.ultimoEnvioAt.toISOString().slice(0, 10) : null
     leads.push({
       oportunidadId: f.oportunidadId,
       clienteId: f.clienteId,
       cliente: [f.nombre, f.apellidos].filter((s) => s && s.trim() !== '').join(' ').trim() || '(sin nombre)',
       ramo: f.ramo,
-      aseguradora: f.aseguradora,
+      aseguradora: aseguradoraLegible(f.aseguradora),
       prima: f.prima,
       vencimientoEstimado: venc,
-      fechaFinOriginal: fechaFin,
+      fechaFinOriginal: f.fechaFin.toISOString().slice(0, 10),
       dias,
       ventana,
       telefono,
       email,
       intentos: f.intentos,
       ultimoContactoEn: ultimo,
+      otrasOportunidades: otras,
       respondioAntes: f.respondio,
       puntuacion: puntuarLead({
         tieneTelefono: telefono !== null,
@@ -176,10 +202,10 @@ export async function leadsCompetencia(
         respondioAntes: f.respondio,
         ramo: f.ramo,
       }),
-      siguientePaso: siguientePasoLead(dias, f.intentos, ultimo === null ? null : -diasHasta(ultimo, hoy)),
+      siguientePaso: siguientePasoLead(dias, f.intentos, ultimo === null ? null : -diasHasta(ultimo, hoy), f.respondio),
     })
   }
   // Probabilidad × prima: por puntuación y, a igualdad, lo que vence antes.
   leads.sort((a, b) => b.puntuacion - a.puntuacion || a.dias - b.dias)
-  return { leads, totalConFecha, porVentana, truncado: filas.length >= TECHO }
+  return { leads, totalConFecha, ilegibles, porVentana, truncado: filas.length >= TECHO }
 }

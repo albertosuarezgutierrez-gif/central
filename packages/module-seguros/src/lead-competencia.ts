@@ -104,9 +104,19 @@ export const MAX_INTENTOS = 3
  * Qué toca con un lead, por reglas: primer contacto a 60 días del aniversario,
  * recordatorio a los 7 días sin respuesta, llamada a los 14 y, tras 3 intentos
  * sin respuesta, se aparca hasta el año siguiente. `diasDesdeUltimo` = `null`
- * cuando nunca se le contactó. Nada aquí envía nada: dice qué toca y cuándo.
+ * cuando nunca se le contactó. Un lead que ya RESPONDIÓ (abrió o pinchó) no
+ * se aparca ni recibe otro recordatorio: está templado y toca llamarle.
+ * Nada aquí envía nada: dice qué toca y cuándo.
  */
-export function siguientePasoLead(dias: number, intentos: number, diasDesdeUltimo: number | null): PasoLead {
+export function siguientePasoLead(
+  dias: number,
+  intentos: number,
+  diasDesdeUltimo: number | null,
+  respondio = false,
+): PasoLead {
+  if (respondio && intentos > 0) {
+    return { accion: 'llamada', motivo: 'respondió a un contacto anterior: llámale mientras está templado', dentroDeDias: 0 }
+  }
   if (intentos >= MAX_INTENTOS) {
     return { accion: 'aparcar', motivo: `${intentos} intentos sin respuesta: se aparca hasta el año que viene`, dentroDeDias: 0 }
   }

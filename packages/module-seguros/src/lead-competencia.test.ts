@@ -44,3 +44,9 @@ test('secuencia: espera, primer contacto, recordatorio, llamada, aparcar', () =>
   assert.equal(siguientePasoLead(30, 2, 20).dentroDeDias, 0)
   assert.equal(siguientePasoLead(10, 3, 1).accion, 'aparcar')
 })
+
+test('quien respondió no se aparca: se le llama', () => {
+  assert.equal(siguientePasoLead(30, 3, 5, true).accion, 'llamada')
+  assert.equal(siguientePasoLead(40, 1, 3, true).accion, 'llamada')
+  assert.equal(siguientePasoLead(80, 0, null, true).accion, 'esperar')
+})
