@@ -45,6 +45,7 @@ export type OportunidadSeguimiento = {
   competidor: string | null
   primaCompetidor: number | null
   aparcadaHasta: string | null
+  aparcadaMotivo: string | null
   cerradaAt: string | null
   polizaGanadaId: string | null
 }
@@ -88,6 +89,7 @@ type FilaOportunidad = {
   competidor: string | null
   primaCompetidor: number | null
   aparcadaHasta: Date | null
+  aparcadaMotivo: string | null
   cerradaAt: Date | null
   polizaGanadaId: string | null
 }
@@ -97,7 +99,7 @@ const SELECT_OPORTUNIDAD = Prisma.sql`
          fecha_fin_vigencia as "fechaFin", motivo_perdida as "motivoPerdida",
          motivo_perdida_detalle as "motivoDetalle", competidor,
          prima_competidor::float8 as "primaCompetidor", aparcada_hasta as "aparcadaHasta",
-         cerrada_at as "cerradaAt", poliza_ganada_id::text as "polizaGanadaId"
+         aparcada_motivo as "aparcadaMotivo", cerrada_at as "cerradaAt", poliza_ganada_id::text as "polizaGanadaId"
   from oportunidades`
 
 function mapOportunidad(f: FilaOportunidad): OportunidadSeguimiento {
@@ -112,6 +114,7 @@ function mapOportunidad(f: FilaOportunidad): OportunidadSeguimiento {
     competidor: f.competidor,
     primaCompetidor: f.primaCompetidor,
     aparcadaHasta: dia(f.aparcadaHasta),
+    aparcadaMotivo: f.aparcadaMotivo,
     cerradaAt: f.cerradaAt ? f.cerradaAt.toISOString() : null,
     polizaGanadaId: f.polizaGanadaId,
   }
@@ -134,9 +137,12 @@ export async function leerOportunidad(
       from oportunidad_historial
       where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
       order by created_at desc limit 100`),
-    db.$queryRaw<{ id: string; tipo: string; prioridad: string; estado: string; observaciones: string; fechaLimite: Date | null; creada: Date }[]>(Prisma.sql`
+    // La fecha límite se lee en hora de MADRID: las heredadas vencen a la
+    // medianoche de Madrid (22:00/23:00 UTC) y cortadas en UTC saldrían un día antes.
+    db.$queryRaw<{ id: string; tipo: string; prioridad: string; estado: string; observaciones: string; fechaLimite: string | null; creada: Date }[]>(Prisma.sql`
       select id::text as id, tipo::text as tipo, prioridad::text as prioridad, estado::text as estado,
-             observaciones, fecha_limite as "fechaLimite", created_at as creada
+             observaciones, to_char(fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "fechaLimite",
+             created_at as creada
       from gestiones
       where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
       order by (estado = 'cerrada'), fecha_limite nulls last, created_at desc limit 100`),
@@ -144,24 +150,30 @@ export async function leerOportunidad(
   return {
     oportunidad: mapOportunidad(fila),
     historial: historial.map(h => ({ ...h, fecha: h.fecha.toISOString() })),
-    tareas: tareas.map(t => ({ ...t, fechaLimite: dia(t.fechaLimite), creada: t.creada.toISOString() })),
+    tareas: tareas.map(t => ({ ...t, creada: t.creada.toISOString() })),
   }
 }
 
-/** Solo los campos que cambian, con su antes y su después. */
-function diferencias(antes: OportunidadSeguimiento, cambios: CambiosOportunidad): Record<string, { antes: unknown; despues: unknown }> {
+/** Texto escrito a mano: puede llevar datos personales, y el historial no se
+ *  puede borrar. De estos campos solo consta QUE cambiaron, no el valor. */
+const TEXTO_LIBRE: ReadonlySet<keyof CambiosOportunidad> = new Set(['motivoDetalle', 'aparcadaMotivo'])
+
+/** Solo los campos que cambian, con su antes y su después (salvo texto libre). */
+function diferencias(antes: OportunidadSeguimiento, cambios: CambiosOportunidad): Record<string, unknown> {
   const pares: [keyof CambiosOportunidad, unknown][] = [
     ['motivoPerdida', antes.motivoPerdida],
     ['motivoDetalle', antes.motivoDetalle],
     ['competidor', antes.competidor],
     ['primaCompetidor', antes.primaCompetidor],
     ['aparcadaHasta', antes.aparcadaHasta],
+    ['aparcadaMotivo', antes.aparcadaMotivo],
     ['polizaGanadaId', antes.polizaGanadaId],
   ]
-  const out: Record<string, { antes: unknown; despues: unknown }> = {}
+  const out: Record<string, unknown> = {}
   for (const [campo, viejo] of pares) {
     const nuevo = cambios[campo]
-    if (nuevo !== undefined && nuevo !== viejo) out[campo] = { antes: viejo, despues: nuevo }
+    if (nuevo === undefined || nuevo === viejo) continue
+    out[campo] = TEXTO_LIBRE.has(campo) ? { cambiado: true, vacio: nuevo === null } : { antes: viejo, despues: nuevo }
   }
   return out
 }
@@ -181,16 +193,19 @@ export async function cambiarEstadoOportunidad(
     if (!fila) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Esa oportunidad no es de esta correduría.', status: 404 as const }
     const antes = mapOportunidad(fila)
 
-    if (peticion.accion === 'ganar' && typeof peticion.polizaGanadaId === 'string' && peticion.polizaGanadaId !== '') {
-      const [pol] = await tx.$queryRaw<{ ok: number }[]>(Prisma.sql`
-        select 1 as ok from polizas
-        where id = ${peticion.polizaGanadaId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${antes.clienteId}::uuid`).catch(() => [])
-      if (!pol) return { ok: false as const, estado: 'invalido' as const, motivo: 'Esa póliza no es de este cliente.', status: 422 as const }
-    }
-
+    // Primero la regla pura (valida también que la póliza sea un uuid); la
+    // consulta de la póliza va después y sin `catch`: un error de BD es un
+    // error, no «esa póliza no es de este cliente».
     const decidido = aplicarAccion({ estado: antes.estado, aparcadaHasta: antes.aparcadaHasta }, peticion, hoy)
     if (!decidido.ok) return { ok: false as const, estado: 'conflicto' as const, motivo: decidido.motivo, status: 422 as const }
     const c = decidido.cambios
+
+    if (typeof c.polizaGanadaId === 'string') {
+      const [pol] = await tx.$queryRaw<{ ok: number }[]>(Prisma.sql`
+        select 1 as ok from polizas
+        where id = ${c.polizaGanadaId}::uuid and correduria_id = ${correduriaId}::uuid and cliente_id = ${antes.clienteId}::uuid`)
+      if (!pol) return { ok: false as const, estado: 'invalido' as const, motivo: 'Esa póliza no es de este cliente.', status: 422 as const }
+    }
 
     // `undefined` = no tocar: COALESCE sobre un flag, no sobre el valor, para
     // que un `null` explícito SÍ borre (reabrir quita el motivo de pérdida).
@@ -202,6 +217,7 @@ export async function cambiarEstadoOportunidad(
         competidor = case when ${c.competidor !== undefined} then ${c.competidor ?? null} else competidor end,
         prima_competidor = case when ${c.primaCompetidor !== undefined} then ${c.primaCompetidor ?? null}::numeric else prima_competidor end,
         aparcada_hasta = case when ${c.aparcadaHasta !== undefined} then ${c.aparcadaHasta ?? null}::date else aparcada_hasta end,
+        aparcada_motivo = case when ${c.aparcadaMotivo !== undefined} then ${c.aparcadaMotivo ?? null} else aparcada_motivo end,
         poliza_ganada_id = case when ${c.polizaGanadaId !== undefined} then ${c.polizaGanadaId ?? null}::uuid else poliza_ganada_id end,
         cerrada_at = case when ${c.cerrada === true} then now() when ${c.cerrada === false} then null else cerrada_at end,
         updated_at = now()
@@ -210,9 +226,18 @@ export async function cambiarEstadoOportunidad(
         fecha_fin_vigencia as "fechaFin", motivo_perdida as "motivoPerdida",
         motivo_perdida_detalle as "motivoDetalle", competidor,
         prima_competidor::float8 as "primaCompetidor", aparcada_hasta as "aparcadaHasta",
-        cerrada_at as "cerradaAt", poliza_ganada_id::text as "polizaGanadaId"`)
+        aparcada_motivo as "aparcadaMotivo", cerrada_at as "cerradaAt", poliza_ganada_id::text as "polizaGanadaId"`)
 
-    const detalle = diferencias(antes, c)
+    const detalle: Record<string, unknown> = diferencias(antes, c)
+    // Ganada o perdida, sus tareas pendientes ya no tienen sentido: se cierran
+    // aquí, en la misma transacción, en vez de quedarse abiertas para siempre.
+    if (c.cerrada === true) {
+      const cerradas = await tx.$executeRaw(Prisma.sql`
+        update gestiones set estado = 'cerrada', updated_at = now(),
+          observaciones = observaciones || ${`\n— Cerrada al marcar la oportunidad como ${c.estado}.`}
+        where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado <> 'cerrada'`)
+      if (cerradas > 0) detalle.tareasCerradas = cerradas
+    }
     await tx.$executeRaw(Prisma.sql`
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
       values (${correduriaId}::uuid, ${id}::uuid, ${peticion.accion},
@@ -259,11 +284,12 @@ export async function crearTarea(
       select cliente_id::text as "clienteId", estado::text as estado from oportunidades
       where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
     if (!opp) return null
-    // Fin del día de Madrid ≈ 22:00 UTC; basta para que «hoy» no caduque a medianoche UTC.
+    if (opp.estado === 'ganada' || opp.estado === 'perdida') return 'cerrada' as const
+    // Vence al final del día EN MADRID, que es donde se trabaja.
     const [nueva] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
       insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
       values (${correduriaId}::uuid, cast(${t.tipo} as gestion_tipo), cast(${t.prioridad} as gestion_prioridad),
-              'pendiente', ${t.observaciones}, (${t.fechaLimite}::date + time '21:59:59') at time zone 'UTC',
+              'pendiente', ${t.observaciones}, (${t.fechaLimite}::date + time '23:59:59') at time zone 'Europe/Madrid',
               ${opp.clienteId}::uuid, ${oportunidadId}::uuid, 'central:seguimiento')
       returning id::text as id`)
     await tx.$executeRaw(Prisma.sql`
@@ -274,6 +300,7 @@ export async function crearTarea(
     return { tareaId: nueva.id, clienteId: opp.clienteId }
   })
   if (!r) return { ok: false, estado: 'no_encontrado', motivo: 'Esa oportunidad no es de esta correduría.', status: 404 }
+  if (r === 'cerrada') return { ok: false, estado: 'conflicto', motivo: 'Esa oportunidad ya está cerrada: reábrela antes de añadirle tareas.', status: 409 }
   await anotarEnFicha(correduriaId, r.clienteId, `Tarea (${t.tipo}) para el ${t.fechaLimite}: ${t.observaciones.slice(0, 140)} — por ${actor}`)
   return { ok: true, tareaId: r.tareaId }
 }
@@ -289,7 +316,8 @@ export async function cerrarTarea(
   const r = await db.$transaction(async tx => {
     const [t] = await tx.$queryRaw<{ oportunidadId: string | null; clienteId: string | null; estado: string }[]>(Prisma.sql`
       select oportunidad_id::text as "oportunidadId", cliente_id::text as "clienteId", estado::text as estado
-      from gestiones where id = ${tareaId}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+      from gestiones where id = ${tareaId}::uuid and correduria_id = ${correduriaId}::uuid
+        and oportunidad_id is not null for update`)
     if (!t) return 'no_encontrado' as const
     if (t.estado === 'cerrada') return 'ya_cerrada' as const
     await tx.$executeRaw(Prisma.sql`
@@ -301,12 +329,12 @@ export async function cerrarTarea(
       await tx.$executeRaw(Prisma.sql`
         insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
         select ${correduriaId}::uuid, o.id, 'tarea_cerrada', o.estado, o.estado,
-               ${JSON.stringify({ tareaId, resultado })}::jsonb, ${actor}
+               ${JSON.stringify({ tareaId, conResultado: resultado !== null })}::jsonb, ${actor}
         from oportunidades o where o.id = ${t.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`)
     }
     return t
   })
-  if (r === 'no_encontrado') return { ok: false, estado: 'no_encontrado', motivo: 'Esa tarea no es de esta correduría.', status: 404 }
+  if (r === 'no_encontrado') return { ok: false, estado: 'no_encontrado', motivo: 'No hay tarea de seguimiento con ese id en esta correduría.', status: 404 }
   if (r === 'ya_cerrada') return { ok: false, estado: 'conflicto', motivo: 'Esa tarea ya estaba cerrada.', status: 409 }
   if (r.clienteId) await anotarEnFicha(correduriaId, r.clienteId, `Tarea cerrada${resultado ? `: ${resultado.slice(0, 140)}` : ''} — por ${actor}`)
   return { ok: true }

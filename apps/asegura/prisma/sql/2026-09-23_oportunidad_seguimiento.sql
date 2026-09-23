@@ -6,7 +6,8 @@
 --
 -- Qué añade:
 --   1. `oportunidades`: motivo de pérdida estructurado (+ detalle, compañía y
---      prima que ganaron), `aparcada_hasta` y `cerrada_at`.
+--      prima que ganaron), `aparcada_hasta` + `aparcada_motivo` (aparcar no es
+--      perder: su motivo va aparte) y `cerrada_at`.
 --   2. CHECK: una oportunidad `perdida` SIN motivo no puede existir. Se pone en
 --      la BD y no solo en el código porque un UPDATE escrito a mano también
 --      tiene que respetarlo (hoy hay 0 perdidas, así que valida sin tocar nada).
@@ -14,7 +15,7 @@
 --      una fila por cada cambio con antes/después y quién.
 --
 -- Reversible: `DROP TABLE seguros.oportunidad_historial` + `ALTER TABLE ...
--- DROP COLUMN` de las seis columnas y los dos CHECK.
+-- DROP COLUMN` de las siete columnas y los dos CHECK.
 
 ALTER TABLE seguros.oportunidades
   ADD COLUMN IF NOT EXISTS motivo_perdida          text,
@@ -22,6 +23,7 @@ ALTER TABLE seguros.oportunidades
   ADD COLUMN IF NOT EXISTS competidor              text,
   ADD COLUMN IF NOT EXISTS prima_competidor        numeric(12,2),
   ADD COLUMN IF NOT EXISTS aparcada_hasta          date,
+  ADD COLUMN IF NOT EXISTS aparcada_motivo         text,
   ADD COLUMN IF NOT EXISTS cerrada_at              timestamptz;
 
 -- La lista es la de `MOTIVOS_PERDIDA` de @central/module-seguros; si una cambia,
@@ -44,8 +46,10 @@ CREATE TABLE IF NOT EXISTS seguros.oportunidad_historial (
   accion          text NOT NULL,
   estado_antes    seguros.estado_comercial,
   estado_despues  seguros.estado_comercial,
-  -- Antes/después de los campos que cambiaron, y la tarea si la hubo. Nunca
-  -- datos de contacto: el teléfono o el correo del lead no viajan aquí.
+  -- Antes/después de los campos que cambiaron, y la tarea si la hubo. Ni datos
+  -- de contacto ni TEXTO LIBRE (motivos escritos a mano, observaciones): de esos
+  -- solo consta que cambiaron. Así esta tabla, que no se puede borrar, no guarda
+  -- nada que una supresión RGPD obligue a quitar.
   detalle         jsonb NOT NULL DEFAULT '{}'::jsonb,
   actor           text NOT NULL,
   created_at      timestamptz NOT NULL DEFAULT now()
@@ -53,11 +57,9 @@ CREATE TABLE IF NOT EXISTS seguros.oportunidad_historial (
 
 CREATE INDEX IF NOT EXISTS idx_oportunidad_historial_oportunidad
   ON seguros.oportunidad_historial (oportunidad_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_gestiones_oportunidad
-  ON seguros.gestiones (oportunidad_id) WHERE oportunidad_id IS NOT NULL;
 
 CREATE OR REPLACE FUNCTION seguros.oportunidad_historial_reject_modification()
-RETURNS trigger LANGUAGE plpgsql AS $reject$
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $reject$
 BEGIN
   RAISE EXCEPTION 'seguros.oportunidad_historial es append-only (intento de % en %)',
     tg_op, tg_table_name;
@@ -69,6 +71,11 @@ CREATE TRIGGER oportunidad_historial_reject_modification
   BEFORE UPDATE OR DELETE ON seguros.oportunidad_historial
   FOR EACH ROW EXECUTE FUNCTION seguros.oportunidad_historial_reject_modification();
 
--- El GRANT del bootstrap es sobre las tablas que existían entonces: una tabla
--- nueva necesita el suyo. Solo leer e insertar (append-only).
+-- Los privilegios por defecto del schema dan SELECT/INSERT/UPDATE/DELETE en toda
+-- tabla nueva a `prisma_seguros` Y a `crm_seguros` (el CRM de Manuel, que sigue
+-- vivo como motor de ingesta). La auditoría la escribe solo esta app: el CRM no
+-- puede ni leerla ni meter filas con un `actor` inventado, y `prisma_seguros`
+-- solo lee e inserta (el trigger es la segunda barrera, no la única).
+REVOKE ALL ON seguros.oportunidad_historial FROM crm_seguros;
+REVOKE UPDATE, DELETE, TRUNCATE ON seguros.oportunidad_historial FROM prisma_seguros;
 GRANT SELECT, INSERT ON seguros.oportunidad_historial TO prisma_seguros;

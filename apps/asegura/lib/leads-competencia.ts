@@ -124,15 +124,20 @@ export async function leadsCompetencia(
       (select count(*)::int from recaptacion_envios r
         where r.cliente_id = c.id and r.created_at > now() - interval '12 months'
           and r.estado::text not in ('rebotado', 'queja'))
+      -- Solo las tareas creadas desde aquí: las 301 heredadas del volcado
+      -- llevan fecha de junio de 2026 (la de la carga, no la de la llamada) y
+      -- contarían como contactos recientes que no lo son.
       + (select count(*)::int from gestiones g
-        where g.oportunidad_id = o.id and g.estado::text = 'cerrada'
+        where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
+          and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
           and g.tipo::text in ('llamada', 'email', 'whatsapp')
           and g.updated_at > now() - interval '12 months') as intentos,
       greatest(
         (select max(r.created_at) from recaptacion_envios r
           where r.cliente_id = c.id and r.created_at > now() - interval '12 months'),
         (select max(g.updated_at) from gestiones g
-          where g.oportunidad_id = o.id and g.estado::text = 'cerrada'
+          where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
+            and g.origen_trigger = 'central:seguimiento' and g.estado::text = 'cerrada'
             and g.tipo::text in ('llamada', 'email', 'whatsapp')
             and g.updated_at > now() - interval '12 months')
       ) as "ultimoEnvioAt",
@@ -221,7 +226,13 @@ export async function leadsCompetencia(
         respondioAntes: f.respondio,
         ramo: f.ramo,
       }),
-      siguientePaso: siguientePasoLead(dias, f.intentos, ultimo === null ? null : -diasHasta(ultimo, hoy), f.respondio),
+      siguientePaso: siguientePasoLead(
+        dias,
+        f.intentos,
+        ultimo === null ? null : -diasHasta(ultimo, hoy),
+        f.respondio,
+        f.estado === 'pendiente_cliente',
+      ),
     })
   }
   // Probabilidad × prima: por puntuación y, a igualdad, lo que vence antes.

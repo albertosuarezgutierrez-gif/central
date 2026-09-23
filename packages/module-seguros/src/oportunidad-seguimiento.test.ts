@@ -39,6 +39,17 @@ test('aparcar conserva el estado, exige fecha futura, tope y motivo', () => {
   assert.ok(r.ok)
   assert.equal(r.cambios.estado, 'competencia')
   assert.equal(r.cambios.aparcadaHasta, '2027-09-01')
+  assert.equal(r.cambios.aparcadaMotivo, '3 intentos sin respuesta')
+  assert.equal(r.cambios.motivoDetalle, undefined)
+})
+
+test('ganar sin póliza no borra la que hubiera; al desaparcar se borra su motivo', () => {
+  const g = aplicarAccion({ estado: 'en_negociacion', aparcadaHasta: null }, { accion: 'ganar' }, hoy)
+  assert.ok(g.ok)
+  assert.equal(g.cambios.polizaGanadaId, undefined)
+  const i = aplicarAccion({ estado: 'competencia', aparcadaHasta: '2027-01-01' }, { accion: 'interesado' }, hoy)
+  assert.ok(i.ok)
+  assert.equal(i.cambios.aparcadaMotivo, null)
 })
 
 test('reabrir: la perdida vuelve a negociación y borra el motivo; lo aparcado se desaparca', () => {

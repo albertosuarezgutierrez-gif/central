@@ -50,6 +50,8 @@ export type Cambios = {
   competidor?: string | null
   primaCompetidor?: number | null
   aparcadaHasta?: string | null
+  /** Por qué se aparcó. Columna propia: no es un motivo de PÉRDIDA. */
+  aparcadaMotivo?: string | null
   polizaGanadaId?: string | null
   cerrada?: boolean
 }
@@ -102,13 +104,13 @@ export function aplicarAccion(actual: EstadoActual, p: PeticionAccion, hoy: Date
       if (actual.estado !== 'competencia' && actual.estado !== 'en_negociacion') {
         return { ok: false, motivo: `No se puede marcar «interesado» desde «${actual.estado}».` }
       }
-      return { ok: true, cambios: { estado: 'en_negociacion', aparcadaHasta: null } }
+      return { ok: true, cambios: { estado: 'en_negociacion', aparcadaHasta: null, aparcadaMotivo: null } }
 
     case 'propuesta_enviada':
       if (actual.estado !== 'en_negociacion' && actual.estado !== 'competencia') {
         return { ok: false, motivo: `Solo se envía una propuesta a una oportunidad abierta sin propuesta (está «${actual.estado}»).` }
       }
-      return { ok: true, cambios: { estado: 'pendiente_cliente', aparcadaHasta: null } }
+      return { ok: true, cambios: { estado: 'pendiente_cliente', aparcadaHasta: null, aparcadaMotivo: null } }
 
     case 'ganar': {
       if (actual.estado !== 'en_negociacion' && actual.estado !== 'pendiente_cliente') {
@@ -118,7 +120,11 @@ export function aplicarAccion(actual: EstadoActual, p: PeticionAccion, hoy: Date
       if (poliza !== null && (typeof poliza !== 'string' || !UUID.test(poliza))) {
         return { ok: false, motivo: 'La póliza ganada no es un identificador válido.' }
       }
-      return { ok: true, cambios: { estado: 'ganada', polizaGanadaId: poliza as string | null, aparcadaHasta: null, cerrada: true } }
+      // Sin póliza, el campo no se toca (`undefined`): un `null` borraría una que ya hubiera.
+      return {
+        ok: true,
+        cambios: { estado: 'ganada', polizaGanadaId: poliza === null ? undefined : (poliza as string), aparcadaHasta: null, aparcadaMotivo: null, cerrada: true },
+      }
     }
 
     case 'perder': {
@@ -142,6 +148,7 @@ export function aplicarAccion(actual: EstadoActual, p: PeticionAccion, hoy: Date
           competidor,
           primaCompetidor: prima,
           aparcadaHasta: null,
+          aparcadaMotivo: null,
           cerrada: true,
         },
       }
@@ -156,17 +163,26 @@ export function aplicarAccion(actual: EstadoActual, p: PeticionAccion, hoy: Date
       if (dias > MAX_DIAS_APARCADA) return { ok: false, motivo: `No se aparca más de ${MAX_DIAS_APARCADA} días: si no interesa, se pierde con su motivo.` }
       const detalle = texto(p.detalle, 500)
       if (detalle === null) return { ok: false, motivo: 'Di por qué se aparca.' }
-      return { ok: true, cambios: { estado: actual.estado, aparcadaHasta: hasta, motivoDetalle: detalle } }
+      return { ok: true, cambios: { estado: actual.estado, aparcadaHasta: hasta, aparcadaMotivo: detalle } }
     }
 
     case 'reabrir':
       if (actual.estado === 'perdida') {
         return {
           ok: true,
-          cambios: { estado: 'en_negociacion', motivoPerdida: null, motivoDetalle: null, competidor: null, primaCompetidor: null, aparcadaHasta: null, cerrada: false },
+          cambios: {
+            estado: 'en_negociacion',
+            motivoPerdida: null,
+            motivoDetalle: null,
+            competidor: null,
+            primaCompetidor: null,
+            aparcadaHasta: null,
+            aparcadaMotivo: null,
+            cerrada: false,
+          },
         }
       }
-      if (abierta && estaAparcada(actual, hoy)) return { ok: true, cambios: { estado: actual.estado, aparcadaHasta: null } }
+      if (abierta && estaAparcada(actual, hoy)) return { ok: true, cambios: { estado: actual.estado, aparcadaHasta: null, aparcadaMotivo: null } }
       return { ok: false, motivo: `Solo se reabre una oportunidad perdida o aparcada (está «${actual.estado}»).` }
 
     default:

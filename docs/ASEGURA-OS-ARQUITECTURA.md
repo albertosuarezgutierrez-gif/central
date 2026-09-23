@@ -607,14 +607,41 @@ Enviar la invitación a los **51 clientes invitables**. El botón ya existe en l
 | 0-c | Commit del doc de arquitectura + memoria | sesión | S |
 | 1-0 | Invitación masiva al portal de los 51 invitables, con previsualización y OK de Alberto | sesión (S) | S |
 | 1-M | Maquetas HTML: Hoy, Vencimientos (dos carriles), modo llamada, portada del portal | sesión, un artefacto | M |
-| 1-1 | Tablas `oportunidad` (+motivo de pérdida) y `tarea` (reutiliza `gestiones`) + auditoría de sus escrituras | sesión (datos) + revisión de `agente-architect` | M |
-| 1-2 | Motor de vencimientos: carriles de clientes y leads, ventanas, puntuación y secuencias como job | sesión la lógica pura; `agente-mecanico` los tests | M |
+| 1-1 | Tablas `oportunidad` (+motivo de pérdida) y `tarea` (reutiliza `gestiones`) + auditoría de sus escrituras | sesión (datos) + revisión de `agente-architect` | M · 🟡 PR #3309 |
+| 1-2 | Motor de vencimientos: carriles de clientes y leads, ventanas, puntuación y secuencias como job | sesión la lógica pura; `agente-mecanico` los tests | M · ✅ carril de leads (#3307) |
 | 1-3 | Pantalla Vencimientos + modo llamada (según la maqueta aprobada) | `agente-mecanico` / `delegar-codigo` sobre la maqueta | M |
 | 1-4 | Hoy como cockpit (aprobaciones, incidencias, tareas) | `agente-mecanico` | M |
 | 1-5 | Portal: «Tus vencimientos» + «Mejórame el precio» + consentimiento en declaradas | sesión (aislamiento) + mecánico (UI) | M |
 | 1-6 | Control de IA: saldo diario con previsión + tope mensual + key propia de asegura | sesión (pequeño) | S |
+| 1-7 | **Aviso por Telegram de TODO lo que hace un cliente** (§S) | sesión (pequeño, 2-3 ficheros) | S |
 
 Cada fila es un PR y una sesión. Las filas 1-3/1-4 y 1-5/1-6 no se pisan y pueden ir en paralelo.
+
+## S. Aviso por Telegram de todo lo que hace un cliente (Alberto, 23/09)
+
+> «Que cuando entre cliente me llegue aviso por Telegram; al principio hay que hacer seguimiento de todo.»
+
+Hoy lo que hace un cliente (entrar al portal, cambiar su dirección, dar un parte, declarar una póliza, pedir
+un código y no poder entrar, pedir la supresión…) **solo se ve si Alberto abre `/correduria` → Actividad**. El
+feed ya existe y junta las seis fuentes (`GET /api/operador/actividad`, `lib/actividad-cartera.ts`); lo que
+falta es que **empuje**. Diseño:
+
+- **Qué avisa, en la fase inicial: TODO.** Cada evento del feed de un cliente (no los del corredor) → un
+  Telegram, con quién, qué pasó y el enlace a su ficha. Incluye además la **entrada de un cliente nuevo por
+  CIMA** (póliza nueva de alguien que no era cliente) y el **lead de la web**, que hoy ya avisa. Sin
+  filtrar: se mide el volumen durante unas semanas y solo entonces se decide qué pasa a resumen diario.
+- **Cómo:** un job más del `cron-dispatch` de plataforma (cada 5 min), que pide al puerto los eventos
+  desde el último sello y los manda con `core-telegram` (prefijo propio, p. ej. `act_`). **Sello
+  persistente** (último `id`/fecha enviados, en BD, no en memoria): sin él, cada pasada repetiría los
+  avisos o, peor, se saltaría los que caen entre dos instancias.
+- **Datos que viajan:** nombre y qué hizo — **nunca** teléfono, correo, DNI ni dirección (el Telegram se
+  lee con gente delante y no es un canal cifrado de extremo a extremo). Para el detalle, el enlace.
+- **Avisos que llevan acción** (como el «El domicilio tarifica en hogar y auto: revisa si afecta a alguna de
+  sus pólizas» del cambio de dirección): el aviso lleva esa misma advertencia y, cuando exista la cola de
+  tareas (1-1), **crea la tarea de revisarlo** en vez de quedarse en texto.
+- **Fallo visible:** si el job no puede leer el feed, avisa del fallo una vez; nunca «0 novedades».
+- **Cuando moleste:** agrupar en ráfagas (varios eventos del mismo cliente en 10 min → un mensaje) y, más
+  adelante, pasar los de baja señal a un resumen diario. Esa decisión se toma con datos, no a priori.
 
 ## Verificación de esta fase
 
