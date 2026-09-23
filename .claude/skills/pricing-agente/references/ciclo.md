@@ -1,7 +1,7 @@
 # Agente de pricing IA — sivra
 
 > **El cerebro.** La IA decide, pero la escritura a Smoobu pasa SIEMPRE por los raíles del
-> `POST /api/pricing/aplicar-propuesta` (Paso 4) que la IA **no puede saltarse**: suelo de coste,
+> `POST /api/sivra/pricing/aplicar-propuesta` de plataforma (Paso 4; la copia de sivra está retirada) que la IA **no puede saltarse**: suelo de coste,
 > tope ±/día, pausa global, circuit-breaker, auditoría. Lección de los 125€: los raíles van en el
 > código, no en la confianza al LLM. **Arranca SIEMPRE en `dryRun`** y pasa a vivo solo tras revisar.
 

@@ -35,7 +35,14 @@ bloqueo de horas, se DESBLOQUEAN con OK de Alberto (sin estrenar: el 1er intento
 🏍️ Retarificar MOTO de cartera hecho (asegura `precalificarMoto`/`prepararMoto` + plataforma `MotoNuevo` modo
 póliza; cepo `test/regression-retarificar-moto.test.ts`); sin emisión de moto aún. Después: catálogos propios de moto (garaje, carnés, fecha de matrícula) y carné de MOTO de la ficha (A>A2>A1>AM) validado contra catálogo; sin él, B como supuesto marcado. Y emisión de moto de cartera: `MotoNuevo` (modo póliza) monta el mismo panel `Emision` que auto; el ReRate ya no manda a Allianz Motos las opciones de Allianz AUTO (`opcionesPorDefecto(compania, ramo)`). asegura#848: `playwright / portal` rojo = preview tras
 la Deployment Protection de Vercel (va a `vercel.com/login`), pasa en todas las ramas, no es del PR.
-
+**(23/09/2026)** 🏍️ Mergeado #3329 (retarificar + emitir moto). Después: **cruce carné × versión de moto**
+(`apps/asegura/lib/codeoscopic/carnet-moto.ts`): `maxDisplacement` cc / `maxEnginePower` kW del carné contra
+`engine.displacement`/`engine.powerKw` de la versión, releída GRATIS del catálogo (la pantalla manda marca/modelo/motor),
+antes de pagar en moto de cartera y nueva. Sin dato no bloquea (ni afirma «cubre»). ⚠️ Sin medir que la versión de moto
+traiga `powerKw` como la de coche; pendiente: ¿declarar también el B junto al A?
+Mergeado #3347. Medir los catálogos NO se puede desde el contenedor (sin secretos; api-int.codeoscopic.io bloqueado
+por el proxy): se abre el crudo a `carnets-moto` y `versiones-moto` (`TIPOS_CRUDO`, lista cerrada) para que Alberto lo mida
+con su sesión en `/api/correduria/codeoscopic-crudo?tipo=carnets-moto`. El ejemplo oficial de moto declara B + A.
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
 compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña
@@ -52,6 +59,13 @@ del PR de emisión que quedaba "sin probar en real"; (2) **Comercios y Comunidad
 disponibles por API REST** aunque estén activados en el panel de Avant2 con Occident/Reale — solo
 6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
 (solo doc), sin código tocado.
+
+**(23/09/2026)** 📉 **ASegura OS 2-a — eventos de cartera + pérdidas.** `seguros.evento` (clave UNIQUE, revisión
+cerrada con CHECK) y `cartera_foto` (aplicadas). Detector puro `detectarCambios` (primera pasada solo ancla; baja,
+anula al vencimiento, desaparecida, renovada, recibo devuelto/cobrado, siniestro nuevo/cerrado) vía
+`POST /api/operador/eventos/detectar` desde el cron `correduria-eventos` (06:15/12:15 UTC, latido). Pérdidas sin
+sustitución → Telegram `correduria.fuga-cartera` + bloque «Pérdidas de cartera» en Hoy. Tras desplegar: la
+primera pasada ancla (159 pólizas vivas); el primer evento real llegará con el siguiente cambio de CIMA.
 
 **(23/09/2026)** 💾 **Copia semanal cifrada de `seguros`** (ASegura OS, continuidad). Workflow
 `copia-seguros.yml` (lunes 03:00 UTC): `pg_dump` → **restaura en Postgres 17 desechable y compara
@@ -215,6 +229,14 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (23/09/2026) Auditoría precios dinámicos + fechas sin referencia y copia de sivra retiradas
+- Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Hallazgos abiertos: 33 saltos >50%/día en 90d (17 Luxury Busto), `booking_mcp` con 9 huecos en 49 días y ~50-56% de cobertura futura, `pricing_decisiones` 2 días por detrás de `pricing_applied`.
+- Fix raíl: `aplicar-propuesta` (plataforma) ya NO escribe una fecha sin precio actual en Smoobu salvo que el piso tenga suelo Y techo (ningún piso tiene `max_price` → pasaba la propuesta cruda sin techo). Helper `lib/sivra/pricing-railes-propuesta.ts` + test; no audita esas filas en `pricing_applied` (new_price=0 envenenaría `ref24`).
+- Saltos de Luxury Busto (Alberto eligió «límite × evento»): el techo por ADR (×1,30) bajaba los días normales de nov a 75€ y dejaba fuera los eventos (200-223€, ×2,7 el día de al lado). Ahora un evento SIN mercado medido de su fecha (<3 comps fiables) lleva techo ADR×1,30×factor y libera la guarda «evento a ciegas»; con mercado medido o lectura caída, sin cambio. Karol G (factor ≥2 sin mes) sigue congelando.
+- Huecos `booking_mcp` (9 días en 49; peor 08-11/09): la rutina `trig_01Sr5KXErpEhGCtT1F16hv4W` (08:30 UTC) simplemente no arrancó esos días (ni filas ni PR de bitácora); no es código. Riesgo real: >7 días sin pasada → el motor salta el piso entero (`MAX_MARKET_AGE_DAYS`). Decidido 2ª pasada diaria (13:30 UTC); un agente NO puede editar esa rutina (creada por API) ni crear otra con el conector de Booking → ⏳ Alberto: cambiar su horario a `30 8,13 * * *` en claude.ai/code/routines.
+- Cobertura de mercado: el plan del barrido son 512 ventanas (muestra, no todas las fechas) y ya no hay vírgenes; el cuello era que TODO evento confirmado caducaba a 7 días → 268 ventanas «caducadas» contra 24/pasada, y la cola solo medía eventos. Ahora `edadMaxEvento`: 7/14/30 días según falten ≤30/≤90/>90 (~13 ventanas/día de eventos). Corregido además el aviso del plan: el motor NO salta esas fechas (usa 120 días de corpus por fecha); el único plazo de 7 días es el de la última pasada de cada piso.
+- `apps/sivra`: `aplicar-propuesta` → 410 (copia duplicada); `cron-auth` deniega sin `CRON_SECRET` en producción (`cron-auth-decision.ts` + test). `pisos-zona` sigue vivo en sivra.
 
 ## 23/09/2026 — Alerta PSD2 sync (BBVA)
 - Feed BBVA sin movimientos desde 2026-09-10 (13 días); Kutxabank sigue fresco (hoy) y por eso

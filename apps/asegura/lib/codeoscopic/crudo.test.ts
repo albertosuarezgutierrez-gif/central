@@ -119,3 +119,23 @@ test('la guarda `crudo` de la ruta acepta el parámetro CON valor, con valor rar
   assert.equal(guarda(q('&crudo')), true, '`?crudo` a secas: `get` devuelve "" y `has` devuelve true')
   assert.equal(guarda(q('')), false, 'sin el parámetro, el catálogo normal de siempre')
 })
+
+test('crudo: carnets-moto y versiones-moto se pueden medir; la lista sigue CERRADA', () => {
+  // `retarificar-cartera.ts` no se importa bajo node --test (alias `@/`): se lee el fuente.
+  const fuente = readFileSync(new URL('../retarificar-cartera.ts', import.meta.url), 'utf8')
+  assert.match(fuente, /export const TIPOS_CRUDO = \['versiones', 'versiones-moto', 'carnets-moto'\] as const/)
+  // La guarda de entrada rechaza todo lo que no esté en la lista (no cae al normalizado).
+  assert.match(
+    fuente,
+    /if \(tipo !== 'versiones' && tipo !== 'versiones-moto' && tipo !== 'carnets-moto'\) \{\s*return \{\s*estado: 'invalido'/,
+  )
+  // El motor de moto es un enum cerrado: un «Gasolina» no llega al vendor.
+  assert.match(fuente, /tipo === 'versiones-moto' && !\(MOTORES_MOTO as readonly string\[\]\)\.includes\(motor/)
+  // Cada tipo lee SU catálogo crudo.
+  assert.match(fuente, /tipo === 'carnets-moto'\s*\?\s*await carnetsMotoCrudos\(/)
+  assert.match(fuente, /tipo === 'versiones-moto'\s*\?\s*await versionesMotoCrudas\(/)
+  // Los carnés viajan ENTEROS (la muestra de 3 dejaría fuera el A2 o el A), y la ruta los reenvía.
+  assert.match(fuente, /const completo = tipo === 'carnets-moto' \? \{ completo: crudo \} : \{\}/)
+  const ruta = readFileSync(new URL('../../app/api/operador/codeoscopic/catalogos/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /\.\.\.\(c\.completo !== undefined \? \{ completo: c\.completo \} : \{\}\)/)
+})

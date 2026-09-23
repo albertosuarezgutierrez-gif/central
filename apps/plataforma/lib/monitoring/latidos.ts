@@ -296,6 +296,20 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.correduria_actividad.',
   },
   {
+    id: 'correduria_eventos',
+    vigiladoDesde: '2026-09-23',
+    etiqueta: '📉 Detector de cambios de la cartera — pérdidas por Telegram (06:15 y 12:15 UTC)',
+    // Dos pasadas al día → 14 h de margen: una pasada perdida es un tropiezo; dos, un cron muerto.
+    maxHoras: 14,
+    nota:
+      'Compara la foto de la cartera viva con la anterior y guarda los eventos (baja, anula al ' +
+      'vencimiento, renovación, recibo devuelto, siniestro nuevo…) en seguros.evento. Solo avisa de las ' +
+      'PÉRDIDAS sin sustitución. «NO se ha podido mirar» (puerto, secreto o BD de asegura) NO quiere decir ' +
+      'que no haya cambios; «primera pasada» es que se ancló la foto sin emitir nada; «SIN avisar» es que ' +
+      'el Telegram no salió (los eventos ya están guardados y se ven en «Hoy»). ' +
+      'Huella: agente_latidos.correduria_eventos.',
+  },
+  {
     id: 'correduria_siniestros',
     vigiladoDesde: '2026-09-05',
     etiqueta: '🚨 Siniestros nuevos de la cartera — avisar para llamar al cliente (cron diario 06:50)',

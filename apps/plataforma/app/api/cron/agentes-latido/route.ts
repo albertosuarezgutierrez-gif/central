@@ -46,6 +46,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   correduria_actividad: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_actividad'`,
+  correduria_eventos: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_eventos'`,
   correduria_siniestros: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_siniestros'`,

@@ -10,6 +10,7 @@ import { colaLlamadas, TIPOS_TAREA_UI, type LeadsVencimientos, type TareasDeHoy 
 import type { VistaIngesta } from '@/lib/correduria/ingesta-pantalla'
 import { agregarContadores, type Contador, type Seccion } from './secciones'
 import { cuandoTarea, lineaEstadoIngesta, sinInvitar } from './hoy-cockpit'
+import PerdidasCartera from './PerdidasCartera'
 
 /**
  * El cockpit de «Hoy» (pieza 1-4 de ASegura OS, maqueta aprobada el
@@ -175,6 +176,8 @@ export default function HoyCockpit({
         {tareas?.estado === 'ok' && tareas.descartadas > 0 && <p style={NOTA}>{tareas.descartadas} tarea(s) no se han podido leer y no se muestran.</p>}
         {error && <p role="alert" style={{ ...NOTA, color: 'var(--negative)' }}>{error}</p>}
       </section>
+
+      <PerdidasCartera />
 
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}
       <section id="esperan-ok" style={{ display: 'grid', gap: 6 }}>
