@@ -15,18 +15,18 @@ import { checkVideoIA, videoConSubtitulo } from '@/lib/ai-video'
 
 export async function POST(req: NextRequest) {
   // Verificar secret_token que Telegram envía en X-Telegram-Bot-Api-Secret-Token
+  // FAIL-CLOSED: sin ningún secreto configurado no se acepta nada (antes pasaba todo).
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET
-  if (secret) {
-    const incoming = req.headers.get('x-telegram-bot-api-secret-token')
-    // El webhook real del bot apunta a plataforma, que nos reenvía los updates
-    // de Instagram. Su TELEGRAM_WEBHOOK_SECRET es otro valor (env por proyecto),
-    // así que el reenvío se autentica con el secreto compartido del puerto
-    // god-panel ↔ ia-rest.
-    const operador = process.env.OPERADOR_SHARED_SECRET
-    const esReenvio = !!operador && req.headers.get('x-operador-secret') === operador
-    if (incoming !== secret && !esReenvio) {
-      return NextResponse.json({ ok: false }, { status: 401 })
-    }
+  const incoming = req.headers.get('x-telegram-bot-api-secret-token')
+  // El webhook real del bot apunta a plataforma, que nos reenvía los updates
+  // de Instagram. Su TELEGRAM_WEBHOOK_SECRET es otro valor (env por proyecto),
+  // así que el reenvío se autentica con el secreto compartido del puerto
+  // god-panel ↔ ia-rest.
+  const operador = process.env.OPERADOR_SHARED_SECRET
+  const esReenvio = !!operador && req.headers.get('x-operador-secret') === operador
+  const esTelegram = !!secret && incoming === secret
+  if (!esTelegram && !esReenvio) {
+    return NextResponse.json({ ok: false }, { status: 401 })
   }
 
   const body = await req.json() as {

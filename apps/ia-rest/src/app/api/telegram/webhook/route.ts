@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
   // Verificar token secreto en la URL
   const { searchParams } = new URL(req.url)
   const secret = searchParams.get('secret')
-  if (secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+  // FAIL-CLOSED explícito: sin la env no se acepta nada (no depender de que null !== undefined).
+  if (!process.env.TELEGRAM_WEBHOOK_SECRET || secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -22,6 +22,12 @@ columna, DELETE en 3 tablas, nada de `public`, sin contraseña; `apps/asegura/pr
 `asegura#849` (secret `SMOKE_CLEANUP_DATABASE_URL`, `search_path` fijado, sin secret falla en vez de saltarse).
 **Pendiente de Alberto:** contraseña del rol + secret en el mismo paso. #815 cerrado solo; #847 sigue abierto hasta el primer run bueno.
 
+**(23/09/2026)** 🔒 **Fase 1b-a: webhooks de Telegram FAIL-CLOSED + emisor validado.** `verifyTelegramWebhook` (core-telegram) ya no acepta
+nada sin `TELEGRAM_WEBHOOK_SECRET` (antes `return true`) y compara en tiempo constante; nuevo `emisorAutorizado()`: el webhook de
+plataforma ignora (200) todo update que no venga del chat `TELEGRAM_CHAT_ID` — el secreto prueba que es Telegram, no quién pulsó.
+Las 3 rutas de Telegram de ia-rest también dejan de saltarse la comprobación sin env. Envs verificadas en producción antes (plataforma
+e ia-rest). Guardián `test/regression-telegram-fail-closed.test.ts` visto fallar. Pendiente 1b: router por prefijo, JWT de actor, auditoría.
+
 **(23/09/2026)** 💳 **Pieza 1-6: control del gasto de IA.** Cron diario `/api/cron/ia-saldo` (06:10 UTC): foto del saldo de OpenRouter en
 `ia_saldo_diario` → gasto medio 7 días y **días de saldo**; Telegram (`sistema.ia-creditos`) a ≤7 días o bajo `AI_CREDITOS_UMBRAL`, y si una
 app pasa el 80 % de su tope mensual. El detalle del latido `ia_saldo` dice qué % del gasto real NO pasó por la pasarela. Tope mensual en €
