@@ -449,6 +449,21 @@ function pathVersionesMoto(marcaId: string, modeloId: string, motor: MotorMoto):
   )
 }
 
+/**
+ * Versiones de MOTO sin recortar, con su path — como `versionesCrudas`. Para
+ * medir si traen `engine.displacement` y `engine.powerKw` (`carnet-moto.ts`).
+ */
+export async function versionesMotoCrudas(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: MotorMoto,
+): Promise<{ opciones: Opcion[]; crudo: unknown; path: string }> {
+  const path = pathVersionesMoto(marcaId, modeloId, motor)
+  const crudo = await catalogo(config, path)
+  return { opciones: normalizarOpciones(crudo), crudo, path }
+}
+
 /** Cilindrada y kW de la versión elegida (`carnet-moto.ts`). **Gratis**; `null` = no está en la lista. */
 export async function motorDeVersionMoto(
   config: ConfigCodeoscopic,
@@ -467,13 +482,24 @@ export async function tiposDeGarajeMoto(config: ConfigCodeoscopic): Promise<Opci
 }
 
 /** Tipos de carné de MOTO (A, A2, A1, AM…): `/motorcycle/driving-licenses`. */
+const PATH_CARNETS_MOTO = '/motorcycle/driving-licenses'
+
 export async function tiposDeCarnetMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
-  return normalizarOpciones(await catalogo(config, '/motorcycle/driving-licenses'))
+  return normalizarOpciones(await catalogo(config, PATH_CARNETS_MOTO))
+}
+
+/** Carnés de moto sin recortar: los límites (`maxDisplacement`, `maxEnginePower`) que se tiran al normalizar. */
+export async function carnetsMotoCrudos(
+  config: ConfigCodeoscopic,
+): Promise<{ opciones: Opcion[]; crudo: unknown; path: string }> {
+  const path = PATH_CARNETS_MOTO
+  const crudo = await catalogo(config, path)
+  return { opciones: normalizarOpciones(crudo), crudo, path }
 }
 
 /** El mismo catálogo con sus límites (`maxDisplacement` cc, `maxEnginePower` kW), que `normalizarOpciones` tira. */
 export async function limitesCarnetMoto(config: ConfigCodeoscopic): Promise<LimiteCarnet[]> {
-  return limitesDeCarnets(await catalogo(config, '/motorcycle/driving-licenses'))
+  return limitesDeCarnets(await catalogo(config, PATH_CARNETS_MOTO))
 }
 
 export async function experienciaConduccionMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {

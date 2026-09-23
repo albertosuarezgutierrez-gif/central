@@ -138,6 +138,8 @@ import {
   tiposDeCarnetMoto,
   limitesCarnetMoto,
   motorDeVersionMoto,
+  carnetsMotoCrudos,
+  versionesMotoCrudas,
   MOTORES_MOTO,
   vidaDisponible,
   saludDisponible,
@@ -1386,6 +1388,9 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
 
 // ─── El catálogo CRUDO, para medir qué se está tirando ───────────────────────
 
+/** Los catálogos cuyo crudo se puede medir. Lista CERRADA: no es una puerta genérica al vendor. */
+export const TIPOS_CRUDO = ['versiones', 'versiones-moto', 'carnets-moto'] as const
+
 export type ResultadoCrudo =
   | { estado: 'ok'; path: string; resumen: ResumenCrudo; opciones: Opcion[] }
   | { estado: 'invalido'; mensaje: string }
@@ -1402,7 +1407,12 @@ export type ResultadoCrudo =
  * desplegable del corredor solo enseña el NOMBRE, y ahí no salen años; si el
  * vendor los manda, están en un campo que `normalizarOpciones` descarta.
  *
- * 🚨 **Gratis, y el único catálogo soportado es `versiones`.** No es una puerta
+ * Desde el 23/09/2026 también `versiones-moto` y `carnets-moto`: el cruce
+ * carné × cilindrada (`carnet-moto.ts`) lee `maxDisplacement`/`maxEnginePower`
+ * del carné y `engine.displacement`/`engine.powerKw` de la versión, y solo el
+ * A1 estaba medido. Esto es lo que lo mide.
+ *
+ * 🚨 **Gratis, y solo los de `TIPOS_CRUDO`.** No es una puerta
  * genérica al vendor: pedir el crudo de cualquier otro `tipo` responde
  * `invalido` con su nombre, en vez de devolver la lista normalizada de siempre
  * — que se leería como «he mirado el crudo y no hay nada más», que es la
@@ -1410,32 +1420,40 @@ export type ResultadoCrudo =
  */
 export async function resolverCatalogoCrudo(params: URLSearchParams): Promise<ResultadoCrudo> {
   const tipo = params.get('tipo')
-  if (tipo !== 'versiones') {
+  if (tipo !== 'versiones' && tipo !== 'versiones-moto' && tipo !== 'carnets-moto') {
     return {
       estado: 'invalido',
-      mensaje: `el crudo solo está soportado en tipo=versiones (se pidió «${tipo ?? ''}»)`,
+      mensaje: `el crudo solo está soportado en ${TIPOS_CRUDO.join(', ')} (se pidió «${tipo ?? ''}»)`,
     }
   }
 
   const marcaId = params.get('marcaId')
   const modeloId = params.get('modeloId')
   const motor = params.get('motor')
-  if (!marcaId || !modeloId || !motor) {
+  if (tipo !== 'carnets-moto' && (!marcaId || !modeloId || !motor)) {
     return { estado: 'invalido', mensaje: 'faltan marcaId, modeloId y motor' }
+  }
+  if (tipo === 'versiones-moto' && !(MOTORES_MOTO as readonly string[]).includes(motor ?? '')) {
+    return { estado: 'invalido', mensaje: `motor de moto no válido: ${motor} (${MOTORES_MOTO.join(', ')})` }
   }
 
   const r = resolverConfig(process.env, { ignorarInterruptor: true })
   if (r.estado !== 'lista') return { estado: 'sin_configurar', mensaje: explicarConfig(r) }
 
   try {
-    const { opciones, crudo, path } = await versionesCrudas(r.config, marcaId, modeloId, motor)
+    const { opciones, crudo, path } =
+      tipo === 'carnets-moto'
+        ? await carnetsMotoCrudos(r.config)
+        : tipo === 'versiones-moto'
+          ? await versionesMotoCrudas(r.config, marcaId!, modeloId!, motor as MotorMoto)
+          : await versionesCrudas(r.config, marcaId!, modeloId!, motor!)
     // El path viene de la propia función que hizo la petición: conste QUÉ se
     // preguntó. Una medición sin su petición al lado no la comprueba nadie más.
     return { estado: 'ok', path, resumen: resumirCrudo(crudo), opciones }
   } catch (e) {
     return {
       estado: 'error',
-      causa: registrarErrorCartera('catalogos-crudo/versiones', e),
+      causa: registrarErrorCartera(`catalogos-crudo/${tipo}`, e),
       mensaje: e instanceof Error ? e.message : String(e),
     }
   }

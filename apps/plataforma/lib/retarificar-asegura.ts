@@ -840,7 +840,8 @@ export async function catalogoAsegura(params: Record<string, string>): Promise<R
 /**
  * El MISMO catálogo, pero sin recortar: lo que el vendor manda de verdad.
  *
- * Solo está soportado `tipo=versiones`, y su motivo es una pregunta concreta:
+ * Tipos soportados (lista cerrada en asegura): `versiones`, `versiones-moto` y
+ * `carnets-moto` (límites cc/kW del cruce carné × moto). El de `versiones` nació de una pregunta concreta:
  * si cada versión trae sus años de fabricación, la fecha de matriculación
  * (que sale gratis de la matrícula) podría ordenar o acotar el desplegable.
  * Hoy no se sabe, porque asegura se queda con `id` y `nombre` y tira el resto.
