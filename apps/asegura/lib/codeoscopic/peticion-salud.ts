@@ -78,9 +78,12 @@ export function construirPeticionSalud(d: DatosSalud, lineaId: string): Record<s
 
   const persona = construirPersona(d)
 
+  // Forma según la referencia oficial (23/09/2026): `insureds` (obligatorio),
+  // array de `NaturalPerson_V1`. Hoy solo el tomador. El capital NO viaja: la
+  // referencia no documenta campo para él, y un nombre inventado es lo que
+  // tenía bloqueado el ramo.
   const riesgo: Record<string, unknown> = {
-    insured: persona,
-    capital: d.capital,
+    insureds: [persona],
   }
 
   const cuerpo: Record<string, unknown> = {

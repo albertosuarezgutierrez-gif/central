@@ -16,9 +16,11 @@ const BASE: DatosSalud = {
 }
 const LINEA = 'Health'
 
-test('la MISMA persona va en holder y risk.insured, e idéntica', () => {
+test('la MISMA persona va en holder y como único elemento de risk.insureds, e idéntica', () => {
   const c = construirPeticionSalud(BASE, LINEA) as any
-  assert.deepEqual(c.holder, c.risk.insured)
+  assert.deepEqual(c.risk.insureds, [c.holder])
+  assert.equal(c.risk.insured, undefined)
+  assert.equal(c.risk.capital, undefined)
 })
 
 test('sin capital no se puede cotizar', () => {
