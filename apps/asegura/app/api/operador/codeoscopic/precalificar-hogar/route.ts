@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion, type OrigenRetarificacion } from '@/lib/cartera-ficha'
-import { precalificarHogarCartera, partirDireccion, type ResueltosHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
+import { precalificarHogarCartera, partirDireccion, type ResueltosHogar, type CatastroHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
+import { catastroPorReferencia, motivoCatastro } from '@/lib/codeoscopic/catastro-referencia'
 import { resolverConfig, explicarConfig } from '@/lib/codeoscopic/config'
 import {
   estadosCiviles,
@@ -34,7 +35,7 @@ export const dynamic = 'force-dynamic'
 type DefectosHogar = Record<CatalogoPantalla | 'road-types', string | null>
 
 /**
- * `GET /api/operador/codeoscopic/precalificar-hogar?polizaId=&resueltos=&correcciones=`
+ * `GET /api/operador/codeoscopic/precalificar-hogar?polizaId=&resueltos=&correcciones=&referencia=`
  * — la ficha de HOGAR de una póliza YA EXISTENTE (retarificar), gratis, para
  * que `apps/plataforma` → `/correduria` la pinte sin saltar a asegura.
  *
@@ -60,6 +61,7 @@ export async function GET(req: Request) {
   }
   const resueltosQuery = leerJson(params.get('resueltos')) ?? {}
   const correccionesQuery = leerJson(params.get('correcciones')) ?? {}
+  const referenciaQuery = cadena(params.get('referencia'))
 
   let correduriaId: string
   try {
@@ -122,6 +124,20 @@ export async function GET(req: Request) {
     )
   }
 
+  // ── El Catastro, solo si el corredor ha elegido el piso (gratis) ─────────
+  // Para las pólizas sin m²/año/CP: rellena los huecos, nunca pisa la ficha.
+  let catastro: CatastroHogar | null = null
+  if (referenciaQuery !== null) {
+    const c = await catastroPorReferencia(referenciaQuery)
+    if (c.estado !== 'ok') {
+      return NextResponse.json(
+        { estado: 'error', causa: 'otro', mensaje: motivoCatastro(c), gastado: '0,00€' },
+        { status: c.estado === 'error' ? 503 : 404 },
+      )
+    }
+    catastro = c.catastro
+  }
+
   // ── Catálogos y ramos, todo gratis y con el interruptor APAGADO ───────────
   const r = resolverConfig(process.env, { ignorarInterruptor: true })
   if (r.estado !== 'lista') {
@@ -131,7 +147,7 @@ export async function GET(req: Request) {
 
   const catalogos: Partial<Record<CatalogoPantalla, Opcion[]>> = {}
   const fallosCatalogo: string[] = []
-  const cpRiesgo = origen.hogar?.cp ?? origen.cliente.codigoPostal
+  const cpRiesgo = origen.hogar?.cp ?? catastro?.codigoPostal ?? origen.cliente.codigoPostal
 
   const [civiles, municipios, lineas, viasRaw, ...cats] = await Promise.all([
     estadosCiviles(cfg).catch((): Opcion[] => []),
@@ -156,9 +172,10 @@ export async function GET(req: Request) {
   const defectos = {} as DefectosHogar
   for (const n of CATALOGOS_PANTALLA) defectos[n] = elegirDefecto(catalogos[n] ?? [], DEFECTOS_HOGAR[n])?.id ?? null
   // El tipo de vía se empareja con la dirección de la FICHA (póliza o gemela);
-  // solo cae al defecto si no casa. La del Catastro no aplica: no hay Catastro
-  // en este flujo (el riesgo ya se conoce por la póliza).
-  const viaDeLaFicha = emparejar(vias, partirDireccion(origen.hogar?.direccion ?? null).tipoVia)
+  // si la ficha no trae calle, con la del Catastro; solo después, el defecto.
+  const viaDeLaFicha =
+    emparejar(vias, partirDireccion(origen.hogar?.direccion ?? null).tipoVia) ??
+    (origen.hogar?.direccion ? null : emparejar(vias, catastro?.direccion?.tipoVia ?? null))
   const viaDefecto = viaDeLaFicha ?? elegirDefecto(vias, DEFECTO_TIPO_VIA)
   defectos['road-types'] = viaDefecto?.id ?? null
   const propietarioEsTomador = pareceOpcionPropietario(elegirDefecto(catalogos.uses ?? [], DEFECTOS_HOGAR.uses))
@@ -193,6 +210,7 @@ export async function GET(req: Request) {
     { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, hogar: origen.hogar },
     resueltos,
     hoyIso(),
+    catastro,
   )
 
   // Correcciones libres (texto/número/euros/fecha/sí-no), igual que el navegador.
@@ -215,6 +233,16 @@ export async function GET(req: Request) {
     polizaId,
     etiquetaCliente: origen.etiqueta,
     primaActual: origen.primaAnual,
+    ...(catastro
+      ? {
+          catastro: {
+            direccionLegible: direccionLegible(catastro),
+            metrosCuadrados: catastro.metrosCuadrados,
+            anioConstruccion: catastro.anioConstruccion,
+            codigoPostal: catastro.codigoPostal,
+          },
+        }
+      : {}),
     resumen,
     defectos,
     vias,
@@ -226,6 +254,15 @@ export async function GET(req: Request) {
     consumo,
     gastado: '0,00€',
   })
+}
+
+function direccionLegible(catastro: CatastroHogar): string | null {
+  const d = catastro.direccion
+  if (!d?.nombre) return null
+  let s = `${d.tipoVia ?? ''} ${d.nombre} ${d.numero ?? ''}`.replace(/\s+/g, ' ').trim()
+  if (d.planta) s += `, ${d.planta}º`
+  if (d.puerta) s += ` ${d.puerta}`
+  return s
 }
 
 function leerJson(v: string | null): Record<string, unknown> | null {

@@ -887,6 +887,8 @@ export type PeticionRetarificar = {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  /** Referencia catastral de 20 del piso: el riesgo lo consulta asegura, no lo pone plataforma. */
+  referencia?: string
   /**
    * Pasa por encima del guardián de reutilización de asegura (409
    * `proyecto_vigente`). Solo `true` cuando el corredor ha DESCARTADO a
@@ -927,6 +929,7 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
           ...(p.resueltos ? { resueltos: p.resueltos } : {}),
           ...(p.correcciones ? { correcciones: p.correcciones } : {}),
           ...(p.catastro ? { catastro: p.catastro } : {}),
+          ...(p.referencia ? { referencia: p.referencia } : {}),
           // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
           ...(p.forzarNuevo === true ? { forzarNuevo: true } : {}),
         }),
@@ -1724,6 +1727,7 @@ export async function limitesHogarAsegura(p: {
   polizaId: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
+  referencia?: string
   solicitadoPor?: string
 }): Promise<RespuestaLimitesHogar> {
   try {
@@ -1738,6 +1742,7 @@ export async function limitesHogarAsegura(p: {
           solicitadoPor: p.solicitadoPor ?? 'plataforma',
           ...(p.resueltos ? { resueltos: p.resueltos } : {}),
           ...(p.correcciones ? { correcciones: p.correcciones } : {}),
+          ...(p.referencia ? { referencia: p.referencia } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,

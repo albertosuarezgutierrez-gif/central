@@ -16,7 +16,7 @@ export const maxDuration = 300
  * `POST /api/operador/codeoscopic/limites-hogar` — los capitales de continente y
  * contenido que Codeoscopic recomienda para la vivienda de una póliza de hogar.
  *
- *   { polizaId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, catastro? }
+ *   { polizaId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, catastro?, referencia? }
  *
  * Mismo cuerpo que `/retarificar` (la vivienda se precalifica igual), sin exigir
  * capital: es lo que se pregunta.

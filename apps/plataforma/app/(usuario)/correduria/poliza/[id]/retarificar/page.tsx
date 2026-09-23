@@ -13,6 +13,9 @@ import { precalificarHogarRetarificarAsegura } from '@/lib/hogar-retarificar-ase
 import Retarificador, { ValorSupuesto } from './retarificador'
 import { leerContextoDefensa, motivoSinCartera } from '@/lib/contexto-defensa'
 import RetarificadorHogar from './RetarificadorHogar'
+import { BuscadorCatastro, ElegirPiso } from './BuscadorCatastro'
+import { consultarHogar, normalizarReferencia } from '@/lib/correduria-hogar'
+import { fichaAsegura } from '@/lib/ficha-asegura'
 import MotoNuevo from '../../../cliente/[id]/moto-nuevo/MotoNuevo'
 
 export const dynamic = 'force-dynamic'
@@ -37,8 +40,15 @@ export const maxDuration = 180
  * puerto de operador y se pinta aquí. `apps/asegura` sigue siendo la trastienda:
  * tiene la cartera y es la única que habla con Codeoscopic.
  */
-export default async function RetarificarPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function RetarificarPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const { id } = await params
+  const sp = await searchParams
   const r = await polizaAsegura(id)
 
   if (r.estado !== 'ok') {
@@ -72,6 +82,97 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
       </Marco>
     )
   }
+  // ── HOGAR sin m²/año/CP: el riesgo sale del Catastro (23/09/2026) ────────
+  //
+  // 22 de las 28 pólizas de hogar vivas no traen el riesgo (ni la póliza ni su
+  // gemela). Antes se quedaban aquí, en «no se puede retarificar todavía». Se
+  // elige el piso en el Catastro (gratis) y SOLO la referencia viaja a asegura,
+  // que consulta los datos ella misma: los números con los que se paga un
+  // precio no los pone plataforma.
+  if (String(p.tipo).toLowerCase() === 'hogar' && !p.retarificable) {
+    const cab = <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
+    const refParam = cadena(sp.referencia)
+    let referencia = refParam ? normalizarReferencia(refParam) : null
+    const direccion = cadena(sp.direccion)
+    const municipio = cadena(sp.municipio) ?? 'SEVILLA'
+    const provincia = cadena(sp.provincia) ?? 'SEVILLA'
+
+    const motivo = (
+      <div className="card">
+        <p style={{ margin: 0 }}>
+          {p.retarificacion?.motivo ?? 'La póliza no trae los datos del riesgo (m², año de construcción, CP).'}
+        </p>
+      </div>
+    )
+
+    if (referencia === null && direccion) {
+      const r = await consultarHogar({ por: 'direccion', direccion, municipio, provincia })
+      if (r.estado === 'ok') {
+        referencia = r.referencia
+      } else {
+        const buscador = (
+          <BuscadorCatastro polizaId={p.id} direccion={direccion} municipio={municipio} provincia={provincia} deCliente={false} />
+        )
+        if (r.estado === 'elegir') {
+          return (
+            <Marco>
+              {cab}
+              <ElegirPiso polizaId={p.id} via={r.via} inmuebles={r.inmuebles} />
+              {buscador}
+            </Marco>
+          )
+        }
+        return (
+          <Marco>
+            {cab}
+            <div className="card err">{mensajeCatastro(r)}</div>
+            {buscador}
+          </Marco>
+        )
+      }
+    }
+
+    if (referencia === null) {
+      const ficha = await fichaAsegura(p.cliente.id)
+      const c = ficha.estado === 'ok' ? ficha.ficha.contacto : null
+      return (
+        <Marco>
+          {cab}
+          {motivo}
+          <BuscadorCatastro
+            polizaId={p.id}
+            direccion={c?.direccion ?? ''}
+            municipio={c?.ciudad ?? municipio}
+            provincia={c?.provincia ?? provincia}
+            deCliente={Boolean(c?.direccion)}
+          />
+        </Marco>
+      )
+    }
+
+    const preCat = await precalificarHogarRetarificarAsegura({ polizaId: p.id, referencia })
+    if (preCat.estado !== 'ok') {
+      return (
+        <Marco>
+          {cab}
+          <div className={`card ${preCat.estado === 'no_encontrado' ? 'muted' : 'err'}`}>
+            No se ha podido precalificar el hogar con el Catastro: {preCat.mensaje}
+          </div>
+          <BuscadorCatastro polizaId={p.id} direccion="" municipio={municipio} provincia={provincia} deCliente={false} />
+        </Marco>
+      )
+    }
+    return (
+      <Marco>
+        {cab}
+        <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+          <Link href={`/correduria/poliza/${p.id}/retarificar`}>← Elegir otra vivienda</Link>
+        </p>
+        <RetarificadorHogar polizaId={p.id} preInicial={preCat.pre} referencia={referencia} />
+      </Marco>
+    )
+  }
+
   if (!p.retarificable || ramo === null) {
     return (
       <Marco>
@@ -442,6 +543,24 @@ function Fila({
  * más ancho, la tabla de precios (que declara `min-width`) arrastra la página
  * entera fuera de la pantalla y anula su propio `overflow-x` envolvente.
  */
+function cadena(v: string | string[] | undefined): string | null {
+  const s = Array.isArray(v) ? v[0] : v
+  return typeof s === 'string' && s.trim() !== '' ? s.trim() : null
+}
+
+function mensajeCatastro(r: { estado: 'ambigua' | 'no_encontrado' | 'direccion_ilegible' } | { estado: 'error'; motivo: string }): string {
+  switch (r.estado) {
+    case 'ambigua':
+      return 'El callejero tiene varias calles parecidas en ese municipio: escribe el nombre completo de la vía, o usa la referencia catastral (recibo del IBI).'
+    case 'no_encontrado':
+      return 'Se ha consultado y el Catastro no devuelve ningún inmueble con esos datos.'
+    case 'direccion_ilegible':
+      return 'No se ha sabido leer la dirección: hace falta tipo de vía, nombre y número («Calle San Vicente 40»).'
+    case 'error':
+      return `No se ha podido consultar el Catastro (${r.motivo}). No significa que la vivienda no exista: no se ha podido mirar.`
+  }
+}
+
 function Marco({ children }: { children: React.ReactNode }) {
   return (
     <main style={{ maxWidth: 960, margin: '0 auto', padding: '20px 16px 48px' }}>
