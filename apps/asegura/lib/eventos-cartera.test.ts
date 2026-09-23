@@ -13,8 +13,9 @@ test('la retención se abre DENTRO de la transacción del detector, antes de gua
   assert.ok(abre < foto, 'si la retención falla, la foto no se guarda y se reintenta')
 })
 
-test('solo anula al vencimiento SIN sustitución abre retención', () => {
-  assert.match(src, /e\.tipo !== 'POLIZA_ANULA_AL_VENCIMIENTO' \|\| !esFugaSinExplicar\(e\)/)
+test('solo baja / anula al vencimiento SIN sustitución abren retención', () => {
+  assert.match(src, /new Set<string>\(\['POLIZA_ANULA_AL_VENCIMIENTO', 'POLIZA_BAJA'\]\)/)
+  assert.match(src, /!RETENIBLES\.has\(e\.tipo\) \|\| !esFugaSinExplicar\(e\)/)
   assert.match(src, /p\.sustituida_at is null/)
 })
 

@@ -143,7 +143,7 @@ export function mensajeFugas(fugas: Fuga[], urlFicha: (clienteId: string) => str
   })
   const resto = fugas.length > 15 ? `\n…y ${fugas.length - 15} más en «Hoy».` : ''
   const retener = retenciones && retenciones > 0
-    ? `\n\n📞 ${retenciones === 1 ? 'Abierta 1 retención' : `Abiertas ${retenciones} retenciones`} (anula al vencimiento): llamada de prioridad alta en «Hoy · Tareas de hoy».`
+    ? `\n\n📞 ${retenciones === 1 ? 'Abierta 1 retención' : `Abiertas ${retenciones} retenciones`} (anulada antes de su vencimiento): llamada de prioridad alta en «Hoy · Tareas de hoy».`
     : ''
   return `📉 <b>Posibles pérdidas de cartera</b> (CIMA, sin sustitución registrada)\n${lineas.join('\n')}${resto}${retener}\n\nRevísalas en /correduria → Hoy: ¿se ha perdido el cliente y por qué?`
 }

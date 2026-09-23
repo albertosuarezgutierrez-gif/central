@@ -14,8 +14,15 @@ test('anula al vencimiento con tiempo por delante abre retención con el plazo',
   }
 })
 
-test('una baja o desaparición no abre nada: ya no hay a quién retener', () => {
-  assert.deepEqual(decidirRetencion({ ...base, tipo: 'POLIZA_BAJA' }), { abrir: false, motivo: 'no_es_anulacion' })
+test('una baja de CIMA con el vencimiento por delante abre, sin afirmar que sea a vencimiento', () => {
+  const d = decidirRetencion({ ...base, tipo: 'POLIZA_BAJA' })
+  assert.ok(d.abrir && /da de baja auto MAPFRE nº 123/.test(d.texto) && /Si la anulación es a vencimiento/.test(d.texto))
+  assert.ok(d.abrir && !/«anula al vencimiento»/.test(d.texto))
+  assert.deepEqual(decidirRetencion({ ...base, tipo: 'POLIZA_BAJA', vencimiento: '2026-09-01' }), { abrir: false, motivo: 'ya_vencida' })
+  assert.deepEqual(decidirRetencion({ ...base, tipo: 'POLIZA_BAJA', vencimiento: null }), { abrir: false, motivo: 'sin_fecha' })
+})
+
+test('una desaparición no abre nada', () => {
   assert.deepEqual(decidirRetencion({ ...base, tipo: 'POLIZA_DESAPARECIDA' }), { abrir: false, motivo: 'no_es_anulacion' })
 })
 

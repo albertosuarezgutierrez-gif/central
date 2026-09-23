@@ -77,7 +77,7 @@ export type ResultadoDeteccion = {
   /** Pérdidas SIN sustitución que acaban de aparecer: lo que merece un aviso. */
   fugasNuevas: FugaNueva[]
   polizasEnFoto: number
-  /** Oportunidades de retención abiertas en esta pasada (anula al vencimiento con tiempo por delante). */
+  /** Oportunidades de retención abiertas en esta pasada (anulada con el vencimiento por delante). */
   retencionesAbiertas: number
 }
 
@@ -114,8 +114,9 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     const retenciones: Retencion[] = []
     for (const e of insertados) {
       // Con sustitución registrada (renueva como póliza nueva, cambio de compañía) no hay nadie a quien retener.
-      if (e.tipo !== 'POLIZA_ANULA_AL_VENCIMIENTO' || !esFugaSinExplicar(e)) continue
-      const r = await abrirRetencion(tx, correduriaId, e.id)
+      // Baja y anula-al-vencimiento: CIMA no distingue una anulación a vencimiento de una inmediata.
+      if (!RETENIBLES.has(e.tipo) || !esFugaSinExplicar(e)) continue
+      const r = await abrirRetencion(tx, correduriaId, e.id, e.tipo)
       if (r) retenciones.push(r)
     }
     await tx.$executeRaw`
@@ -145,6 +146,7 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
 type Retencion = { oportunidadId: string; clienteId: string; polizaId: string; texto: string }
 
 const ACTOR_RETENCION = 'sistema:cima'
+const RETENIBLES = new Set<string>(['POLIZA_ANULA_AL_VENCIMIENTO', 'POLIZA_BAJA'])
 /** Una retención más vieja que esto no bloquea abrir otra (sería de la anualidad anterior). */
 const DIAS_RETENCION_VIVA = 120
 
@@ -153,11 +155,11 @@ function hoyMadrid(): string {
 }
 
 /**
- * Pieza 2-b: CIMA marca una póliza como «anula al vencimiento» → oportunidad de retención
+ * Pieza 2-b: CIMA anula una póliza con el vencimiento por delante → oportunidad de retención
  * (`en_negociacion`) + llamada de prioridad alta para hoy, que sale en «Hoy · Tareas de hoy».
  * `null` si no toca (ya vencida, póliza que no está, o ya hay una retención abierta para ella).
  */
-async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string, polizaId: string): Promise<Retencion | null> {
+async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string, polizaId: string, tipo: string): Promise<Retencion | null> {
   const [p] = await tx.$queryRaw<{ clienteId: string; ramo: string; compania: string | null; numeroPoliza: string | null; vencimiento: string | null; prima: string | null }[]>`
     select p.cliente_id::text as "clienteId", p.tipo::text as ramo, p.aseguradora as compania, p.numero_poliza as "numeroPoliza",
            to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento, nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima
@@ -166,7 +168,7 @@ async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegu
       and not exists (select 1 from polizas h where h.merged_into_poliza_id is null and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id))`
   if (!p) return null
   const hoy = hoyMadrid()
-  const d = decidirRetencion({ tipo: 'POLIZA_ANULA_AL_VENCIMIENTO', ramo: p.ramo, compania: p.compania, numeroPoliza: p.numeroPoliza, vencimiento: p.vencimiento, hoy })
+  const d = decidirRetencion({ tipo, ramo: p.ramo, compania: p.compania, numeroPoliza: p.numeroPoliza, vencimiento: p.vencimiento, hoy })
   if (!d.abrir) return null
   const [ya] = await tx.$queryRaw<{ id: string }[]>`
     select o.id::text as id from oportunidades o
