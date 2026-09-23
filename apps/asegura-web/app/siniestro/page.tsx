@@ -145,6 +145,10 @@ export default function Siniestro() {
         parte, no desde que a uno le viene bien.
       </p>
       <p style={{ maxWidth: 640 }}>
+        ¿Buscas el número de tu compañía?{' '}
+        <Link href="/telefonos-siniestros">Teléfonos para dar parte a cada aseguradora</Link>.
+      </p>
+      <p style={{ maxWidth: 640 }}>
         Si eres cliente nuestro, llámanos y lo abrimos contigo. Si no lo eres, la información de esta página te sirve
         igual: está para que sepas qué puedes exigir.
       </p>

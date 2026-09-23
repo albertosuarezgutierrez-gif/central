@@ -461,7 +461,13 @@ sevilla» 26,4) con 1-13 impresiones en tres meses. Y medido en DataForSEO (Open
 para eso no compensa, y meter «Sevilla» en la nacional lo prohíbe `ACOTA_AMBITO`. Para lo local
 manda el pack de Google Business (idea I): reseñas.
 
-💡 **Idea nueva, sin hacer: una página de «teléfonos de siniestros por compañía».** Lo que sí tiene
+✅ **HECHA el 23/09/2026 — `/telefonos-siniestros` (datos en `apps/asegura-web/lib/telefonos-companias.ts`,
+cepo en su `.test.ts`).** Hoy solo publica el número de **Occident** (confirmado por Alberto el 14/09);
+Mapfre, Allianz, Reale y Generali salen como «no lo hemos comprobado» con enlace a su web oficial hasta
+que una persona abra `fuente`, vea el mismo número y ponga `verificado: true` con la fecha. **Mientras
+Mapfre no esté verificada, la página no captura la búsqueda de 1.300/mes que la justifica.**
+
+💡 Idea de origen: una página de «teléfonos de siniestros por compañía». Lo que sí tiene
 volumen y dificultad casi nula son búsquedas NAVEGACIONALES de quien tiene un siniestro encima:
 «mapfre seguro hogar teléfono» 1.300/mes (KD 4), «seguro hogar catalana occidente teléfono» 110,
 «mapfre seguro hogar telefono siniestros» 40. Es intención de problema pura y los números ya están

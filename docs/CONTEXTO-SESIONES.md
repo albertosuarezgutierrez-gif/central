@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** ☎️ **asegura-web: `/telefonos-siniestros`.** Teléfonos para dar parte por compañía, con el patrón de
+`companias-baja`: `lib/telefonos-companias.ts` + cepo, y nada sin `verificado: true` + fecha. Solo Occident publicado
+(confirmado por Alberto 14/09); Mapfre/Allianz/Reale/Generali salen como «no comprobado» con enlace a su web: sus
+números de `companias_dgs` vienen de extractos de buscador. **Pendiente de Alberto:** verificarlos (Mapfre es la
+búsqueda de 1.300/mes). Enlazada desde `/siniestro` y en el sitemap. Medida a 320/390/1024: sin desbordes, tel a 44 px.
+
 **(23/09/2026)** 📈 **SEO correduría: Search Console leída vía OpenSEO + idea «reforzar hogar/auto» DESCARTADA.**
 3 meses: 3 clics, ~900 impresiones. Hogar/auto salen por búsquedas locales de Sevilla con volumen ~0 (medido en
 DataForSEO), así que no se tocan. Idea nueva anotada (P en `docs/ASEGURA-SEO-REDES-IDEAS.md`): página de
