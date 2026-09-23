@@ -84,7 +84,8 @@ export function detectarCambios(anterior: Foto | null, actual: Foto): Deteccion 
     const eraVigente = esEstadoVigente(a.estado)
     if (eraVigente && !esEstadoVigente(p.estado)) {
       const tipo = p.estado === 'anula_al_vencimiento' ? 'POLIZA_ANULA_AL_VENCIMIENTO' : 'POLIZA_BAJA'
-      ev({ tipo, entidad: 'poliza', id: p.id, clienteId: p.clienteId, datos: { antes: a.estado, despues: p.estado, vencimiento: p.vencimiento, sustituida: p.sustituida } }, p.estado)
+      // El vencimiento va en la clave: la misma póliza puede anunciar su baja otro año, y eso es otra pérdida.
+      ev({ tipo, entidad: 'poliza', id: p.id, clienteId: p.clienteId, datos: { antes: a.estado, despues: p.estado, vencimiento: p.vencimiento, sustituida: p.sustituida } }, `${p.estado}:${p.vencimiento ?? 'sin-fecha'}`)
     }
     if (a.vencimiento && p.vencimiento && p.vencimiento > a.vencimiento) {
       ev({ tipo: 'POLIZA_RENOVADA', entidad: 'poliza', id: p.id, clienteId: p.clienteId, datos: { antes: a.vencimiento, despues: p.vencimiento } }, p.vencimiento)
@@ -94,7 +95,7 @@ export function detectarCambios(anterior: Foto | null, actual: Foto): Deteccion 
     if (actual.polizas[a.id]) continue
     // Una lápida de fusión o una póliza ya dada de baja que deja de verse no es una pérdida nueva.
     if (a.fusionada || !esEstadoVigente(a.estado)) continue
-    ev({ tipo: 'POLIZA_DESAPARECIDA', entidad: 'poliza', id: a.id, clienteId: a.clienteId, datos: { ultimoEstado: a.estado, vencimiento: a.vencimiento, sustituida: a.sustituida } }, 'baja')
+    ev({ tipo: 'POLIZA_DESAPARECIDA', entidad: 'poliza', id: a.id, clienteId: a.clienteId, datos: { ultimoEstado: a.estado, vencimiento: a.vencimiento, sustituida: a.sustituida } }, `baja:${a.vencimiento ?? 'sin-fecha'}`)
   }
 
   // ── Recibos ──
@@ -121,6 +122,20 @@ export function detectarCambios(anterior: Foto | null, actual: Foto): Deteccion 
   }
 
   return { primeraVez: false, eventos }
+}
+
+/**
+ * Freno de cordura: si de una foto a otra DESAPARECE una parte grande de la cartera, lo más probable
+ * es que la foto actual esté a medias (ingesta en curso, consulta cortada), no que se hayan ido
+ * todos los clientes a la vez. Entonces no se emite nada y se avisa de la avería.
+ */
+export const UMBRAL_DESAPARICION = 0.2
+export function fotoSospechosa(anterior: Foto | null, actual: Foto): boolean {
+  if (fotoVacia(anterior)) return false
+  const antes = Object.keys((anterior as Foto).polizas)
+  if (antes.length < 20) return false
+  const desaparecidas = antes.filter((id) => !actual.polizas[id]).length
+  return desaparecidas > antes.length * UMBRAL_DESAPARICION
 }
 
 /**

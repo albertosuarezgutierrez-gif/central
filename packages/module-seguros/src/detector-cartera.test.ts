@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { detectarCambios, esFugaSinExplicar, type Foto, type HuellaPoliza } from './detector-cartera.ts'
+import { detectarCambios, esFugaSinExplicar, fotoSospechosa, type Foto, type HuellaPoliza } from './detector-cartera.ts'
 
 const pol = (id: string, o: Partial<HuellaPoliza> = {}): HuellaPoliza => ({
   id, clienteId: 'c-' + id, estado: 'en_vigor', vencimiento: '2027-01-10', sustituida: false, fusionada: false, ...o,
@@ -72,4 +72,19 @@ test('una baja con sustitución registrada no es una pérdida sin explicar', () 
   assert.equal(esFugaSinExplicar({ tipo: 'POLIZA_BAJA', datos: { sustituida: false } }), true)
   assert.equal(esFugaSinExplicar({ tipo: 'POLIZA_BAJA', datos: { sustituida: true } }), false)
   assert.equal(esFugaSinExplicar({ tipo: 'RECIBO_DEVUELTO', datos: {} }), false)
+})
+
+test('la misma baja otro año es otra pérdida (la clave lleva el vencimiento)', () => {
+  const k2026 = detectarCambios(foto([pol('a')]), foto([pol('a', { estado: 'anula_al_vencimiento' })])).eventos[0].clave
+  const k2027 = detectarCambios(foto([pol('a', { vencimiento: '2028-01-10' })]), foto([pol('a', { estado: 'anula_al_vencimiento', vencimiento: '2028-01-10' })])).eventos[0].clave
+  assert.notEqual(k2026, k2027)
+})
+
+test('freno de cordura: desaparecer más del 20 % de golpe es una foto rota, no una fuga masiva', () => {
+  const muchas = Array.from({ length: 50 }, (_, i) => pol(`p${i}`))
+  assert.equal(fotoSospechosa(foto(muchas), foto(muchas.slice(0, 45))), false) // 10 %
+  assert.equal(fotoSospechosa(foto(muchas), foto(muchas.slice(0, 30))), true) // 40 %
+  assert.equal(fotoSospechosa(foto(muchas), foto([])), true)
+  assert.equal(fotoSospechosa(null, foto([])), false)
+  assert.equal(fotoSospechosa(foto(muchas.slice(0, 5)), foto([])), false, 'con pocas pólizas no se juzga')
 })

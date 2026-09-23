@@ -17,6 +17,7 @@ import {
   TIPOS_FUGA,
   detectarCambios,
   esFugaSinExplicar,
+  fotoSospechosa,
   nombreEvento,
   sqlCarteraViva,
   type EventoCartera,
@@ -26,8 +27,9 @@ import {
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 
-export async function fotoActual(correduriaId: string): Promise<Foto> {
-  const db = prismaAsegura()
+type Consultor = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw'>
+
+export async function fotoActual(correduriaId: string, db: Consultor = prismaAsegura()): Promise<Foto> {
   const viva = Prisma.raw(sqlCarteraViva('p'))
   const [polizas, recibos, siniestros] = await Promise.all([
     db.$queryRaw<{ id: string; cliente_id: string; estado: string; vencimiento: string | null; sustituida: boolean; fusionada: boolean }[]>`
@@ -75,14 +77,25 @@ export type ResultadoDeteccion = {
   polizasEnFoto: number
 }
 
+/** La foto actual parece rota (ha desaparecido de golpe una parte grande de la cartera). */
+export class FotoSospechosa extends Error {}
+
 export async function detectarYGuardar(correduriaId: string): Promise<ResultadoDeteccion> {
   const db = prismaAsegura()
-  const actual = await fotoActual(correduriaId)
   return db.$transaction(async (tx) => {
-    // Bloqueo de la fila de la foto: dos pasadas a la vez compararían contra la misma foto vieja.
+    // Candado por correduría y la foto DENTRO: dos pasadas a la vez (el cron y una manual) no
+    // pueden comparar una foto vieja contra otra ya guardada. `for update` no basta la primera vez,
+    // cuando la fila aún no existe.
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`cartera_foto:${correduriaId}`}))`
+    const actual = await fotoActual(correduriaId, tx)
     const previa = await tx.$queryRaw<{ foto: Foto }[]>`
-      select foto from cartera_foto where correduria_id = ${correduriaId}::uuid for update`
-    const d = detectarCambios(previa[0]?.foto ?? null, actual)
+      select foto from cartera_foto where correduria_id = ${correduriaId}::uuid`
+    const anterior = previa[0]?.foto ?? null
+    // Sin guardar la foto: la próxima pasada, con la foto ya completa, compara contra la buena.
+    if (fotoSospechosa(anterior, actual)) {
+      throw new FotoSospechosa(`la foto actual tiene ${Object.keys(actual.polizas).length} pólizas y la anterior ${Object.keys(anterior?.polizas ?? {}).length}: parece a medias`)
+    }
+    const d = detectarCambios(anterior, actual)
     const insertados: EventoCartera[] = []
     for (const e of d.eventos) {
       const r = await tx.$queryRaw<{ id: string }[]>`
@@ -111,10 +124,9 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
   }, { timeout: 30_000 })
 }
 
-type Consultor = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw'>
-
 /** Lo mínimo para reconocer la póliza: nombre del tomador, número y compañía. Nada de contacto. */
-async function describirFugas(db: Consultor, correduriaId: string, claves: string[] | null, limite = 100): Promise<FugaNueva[]> {
+async function describirFugas(db: Consultor, correduriaId: string, claves: string[] | null): Promise<FugaNueva[]> {
+  const limite = claves ? claves.length : 100
   const tipos = TIPOS_FUGA as readonly string[]
   const filas = await db.$queryRaw<{ id: string; tipo: TipoEventoCartera; cliente_id: string; nombre: string | null; apellidos: string | null; numero_poliza: string | null; aseguradora: string | null; despues: string | null }[]>`
     select e.id, e.tipo, e.cliente_id, c.nombre, c.apellidos, p.numero_poliza, p.aseguradora, e.datos->>'despues' as despues
@@ -122,7 +134,11 @@ async function describirFugas(db: Consultor, correduriaId: string, claves: strin
     left join clientes c on c.id = e.cliente_id
     left join polizas p on p.id = e.entidad_id
     where e.correduria_id = ${correduriaId}::uuid and e.tipo = any(${tipos}::text[])
-      and coalesce((e.datos->>'sustituida')::boolean, false) = false
+      -- La sustitución se mira AHORA, no la que había al crear el evento: la renovación con número
+      -- nuevo (o la emitida por Codeoscopic) puede llegar en un pull posterior al de la baja.
+      and not exists (select 1 from polizas s where s.id = e.entidad_id and s.sustituida_at is not null)
+      and not exists (select 1 from polizas h where h.merged_into_poliza_id is null
+                        and (h.poliza_padre_id = e.entidad_id or h.poliza_origen_id = e.entidad_id))
       and ${claves ? Prisma.sql`e.clave = any(${claves}::text[])` : Prisma.sql`e.estado = 'pendiente'`}
     order by e.created_at desc
     limit ${limite}`

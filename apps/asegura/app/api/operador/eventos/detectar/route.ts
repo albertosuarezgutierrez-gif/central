@@ -3,7 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { detectarYGuardar } from '@/lib/eventos-cartera'
+import { FotoSospechosa, detectarYGuardar } from '@/lib/eventos-cartera'
 import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
@@ -27,6 +27,7 @@ export const POST = auditado(async (req: Request) => {
     const r = await detectarYGuardar(correduria.id)
     return NextResponse.json({ estado: 'ok', ...r })
   } catch (e) {
+    if (e instanceof FotoSospechosa) return NextResponse.json({ estado: 'error', motivo: `foto sospechosa, no se emite nada: ${e.message}` }, { status: 500 })
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/eventos/detectar', e) }, { status: 500 })
   }
 })
