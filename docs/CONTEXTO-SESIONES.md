@@ -26,6 +26,13 @@ el portal: con restricción y ramo desconocido → no se pinta) + nota «Solo pa
 `whatsappSiniestrosRamos` en `/api/operador/companias`. Pendiente tras desplegar: aplicar
 `apps/asegura-portal/prisma/sql/2026-09-23b_companias_whatsapp_mapfre_hogar.sql` (activa Mapfre hogar).
 
+**(23/09/2026)** 📊 **Pasada `trading-analista` (rutina programada 20:15 UTC).** NAV/cartera real/operaciones
+empujados a plataforma (sin salto, 0 ops nuevas); 24 símbolos descargados uno a uno (protocolo anti-baraje);
+`/analizar` 22/24 (0 compras: posición abierta/concentración/tendencia bajista) y `/puntuar` (0/0); dos avisos
+Telegram (resumen + stops viables). META y ABNB vetados por `suplantados` sin causa clara (transcripción
+verificada). Único cambio en repo: auto-informe en `docs/AGENTES-BITACORA.md`. PR draft #3419 (branch
+`claude/peaceful-lovelace-65nljo`), sin pendientes de código.
+
 **(23/09/2026)** 📲 **PR 7: el parte también a la compañía por WhatsApp (lo manda el cliente).** #3401 (PR 6) mergeado con su
 revisión (carta nunca a «(legacy)», guardas del botón en el puente, cartas pendientes en Hoy). Nuevo: tras dar el parte, si
 la póliza tiene WhatsApp de su compañía VÁLIDO PARA SU RAMO, dos toques: abrir el chat con el texto escrito (`wa.me?text=`)
