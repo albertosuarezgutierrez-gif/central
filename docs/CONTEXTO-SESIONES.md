@@ -40,6 +40,9 @@ traiga `powerKw` como la de coche; pendiente: ¿declarar también el B junto al 
 Mergeado #3347. Medir los catálogos NO se puede desde el contenedor (sin secretos; api-int.codeoscopic.io bloqueado
 por el proxy): se abre el crudo a `carnets-moto` y `versiones-moto` (`TIPOS_CRUDO`, lista cerrada) para que Alberto lo mida
 con su sesión en `/api/correduria/codeoscopic-crudo?tipo=carnets-moto`. El ejemplo oficial de moto declara B + A.
+#3351 mergeado. Carné B en moto: si la ficha tiene carné de moto Y B con fecha, el B viaja detrás (`drivingLicenses[1]`,
+`fechaCarnetB`); el de moto sigue en `[0]`. Arreglado de paso: el PATCH de `fechaCarnet` tras un 400 (`interprete-400`)
+pisaba el A de una moto con un B de España y se llevaba el resto de carnés.
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
 compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña
