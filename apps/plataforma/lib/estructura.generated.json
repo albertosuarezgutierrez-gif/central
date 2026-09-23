@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-23T10:21:30Z",
+  "generadoEn": "2026-09-23T10:57:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 66
+        "evidencias": 67
       },
       "rrhh": {
         "estado": "no",
@@ -3976,6 +3976,7 @@
       "/api/cron/avisos-vencimiento",
       "/api/cron/revision-anual",
       "/api/operador/actividad",
+      "/api/operador/actividad-nueva",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
@@ -4973,6 +4974,7 @@
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
       "/api/cron/contable-proactivo",
+      "/api/cron/correduria-actividad",
       "/api/cron/correduria-ingesta",
       "/api/cron/correduria-partes",
       "/api/cron/correduria-renovaciones",
@@ -6449,7 +6451,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1407,
+    "apis": 1409,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
