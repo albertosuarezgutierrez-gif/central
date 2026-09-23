@@ -5,7 +5,7 @@ import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
 import { url } from '@/lib/sitio'
 import { fichaFaq, migas, jsonLd } from '@/lib/seo'
 import type { Ramo } from '@/lib/ramos'
-import { hrefTel, telefonosParaPublicar } from '@/lib/telefonos-companias'
+import { hrefTel, telefonosParaPublicar, whatsappLegible } from '@/lib/telefonos-companias'
 
 // Por qué existe (medido el 23/09/2026, `docs/ASEGURA-SEO-REDES-IDEAS.md` §P):
 // «mapfre seguro hogar teléfono» son ~1.300 búsquedas al mes con dificultad
@@ -121,22 +121,38 @@ export default function TelefonosSiniestros() {
                     <a href={hrefTel(x.c.siniestros)} style={telefono}>{x.c.siniestros}</a>
                   </p>
                 )}
-                {x.c.asistencia && x.c.asistencia !== x.c.siniestros && (
-                  <p style={{ margin: '4px 0 0' }}>
-                    <span style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>
-                      Asistencia
-                    </span>
-                    <br />
-                    <a href={hrefTel(x.c.asistencia)} style={telefono}>{x.c.asistencia}</a>
-                  </p>
-                )}
+                {/* Una línea por tipo de riesgo, rotulada como la rotula la compañía:
+                    con un solo «Asistencia» alguien marcaría la grúa por una fuga. */}
+                {x.c.asistencia
+                  .filter((a) => !(a.numeros.length === 1 && a.numeros[0] === x.c.siniestros))
+                  .map((a) => (
+                    <p key={a.para} style={{ margin: '4px 0 0' }}>
+                      <span style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>
+                        {a.para === 'Asistencia' ? 'Asistencia' : `Asistencia · ${a.para}`}
+                        {a.horario ? ` · ${a.horario}` : ''}
+                      </span>
+                      <br />
+                      {a.numeros.map((n, i) => (
+                        <span key={n}>
+                          {i > 0 && <span style={{ color: 'var(--muted)' }}> o </span>}
+                          <a href={hrefTel(n)} style={telefono}>{n}</a>
+                        </span>
+                      ))}
+                    </p>
+                  ))}
                 {/* WhatsApp sin `tel:`: un enlace de llamada sobre él marcaría la
                     línea de voz, que es otra promesa. */}
-                {x.c.whatsapp && (
+                {x.c.whatsapp && !x.c.whatsappNota && (
                   <p style={{ margin: '4px 0 0', color: 'var(--muted)' }}>También por WhatsApp en ese mismo número.</p>
                 )}
+                {x.c.whatsapp && x.c.whatsappNota && (
+                  <p style={{ margin: '4px 0 0', color: 'var(--muted)' }}>
+                    WhatsApp {whatsappLegible(x.c.whatsapp)}, {x.c.whatsappNota}.
+                  </p>
+                )}
                 <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--muted)' }}>
-                  {x.c.horario ? `Horario: ${x.c.horario}. ` : 'Horario: no lo hemos podido comprobar. '}
+                  {x.c.siniestros && (x.c.horario ? `Horario: ${x.c.horario}. ` : 'Horario: no lo hemos podido comprobar. ')}
+                  {!x.c.siniestros && 'Para dar parte, el número de tu póliza o pídenoslo. '}
                   Comprobado el {fechaLegible(x.c.verificadoEl!)} en{' '}
                   <a href={x.c.fuente} rel="noopener">su web oficial</a>.
                 </p>

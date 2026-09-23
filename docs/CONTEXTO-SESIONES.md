@@ -324,6 +324,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (23/09/2026) asegura-web: Mapfre, Allianz y Generali verificados en /telefonos-siniestros
+- Con capturas de sus webs oficiales que mandó Alberto. `asistencia` pasa a lista de líneas por riesgo (`para`/`numeros`/`horario`); `whatsappNota` opcional. Ninguna de las tres enseña un teléfono de «dar parte» por voz → `siniestros: null`.
+- 🚨 **BD sin tocar, pendiente de Alberto:** `seguros.companias_dgs` de Mapfre (C0058) tiene 900 122 122 como siniestros/asistencia y es la línea MÉDICA; el portal se lo enseña a sus clientes como «dar parte». Allianz 900 300 250 tampoco está verificado.
+- Quedan sin verificar Reale y Occident.
+
 ## (23/09/2026) Auditoría precios dinámicos → PR #3344 (mergeado) + rutina Booking 2×/día
 - Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Hallazgos abiertos: 33 saltos >50%/día en 90d (17 Luxury Busto), `booking_mcp` con 9 huecos en 49 días y ~50-56% de cobertura futura, `pricing_decisiones` 2 días por detrás de `pricing_applied`.
 - Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Puntos 1,2,4,5 resueltos en PR #3344 (squash 6330f05); punto 3 = rutina Booking a `30 8,13` (Alberto, PR #3357). ⏳ Verificación programada 24/09 15:00 UTC (trig_01GL83WaeXaPJHvbmGJK91jk): precios evento Luxury nov bajando a ~100-115€, `eventos_caducados` < 68, dos tandas `booking_mcp`, latidos ok.

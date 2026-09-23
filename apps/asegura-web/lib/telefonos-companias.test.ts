@@ -11,6 +11,9 @@ test('cada compañía tiene su página oficial y no se da por verificada sin fec
     if (c.verificado) assert.match(c.verificadoEl ?? '', FECHA_VERIFICACION, `${c.slug}: verificado sin fecha`)
     else assert.equal(c.verificadoEl, null, `${c.slug}: fecha de verificación sin verificar`)
     if (c.whatsapp) assert.match(c.whatsapp, /^\+\d{9,15}$/, `${c.slug}: WhatsApp fuera de E.164`)
+    for (const a of c.asistencia) {
+      assert.ok(a.para.trim() && a.numeros.length > 0, `${c.slug}: línea de asistencia sin rótulo o sin número`)
+    }
   }
 })
 
@@ -31,7 +34,7 @@ test('la página pinta desde `telefonosParaPublicar()` y no teclea ningún núme
   assert.match(pagina, /telefonosParaPublicar\(\)/, 'la página ya no usa el filtro de verificadas')
   assert.doesNotMatch(pagina, /TELEFONOS_COMPANIAS/, 'la página lee la lista cruda y se salta el filtro')
   for (const c of TELEFONOS_COMPANIAS) {
-    for (const n of [c.siniestros, c.asistencia, c.whatsapp]) {
+    for (const n of [c.siniestros, ...c.asistencia.flatMap((a) => a.numeros), c.whatsapp]) {
       if (n) assert.ok(!pagina.includes(n), `${c.slug}: el número ${n} está tecleado en la página`)
     }
   }
