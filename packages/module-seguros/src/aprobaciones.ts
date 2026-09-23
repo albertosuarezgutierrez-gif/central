@@ -43,7 +43,12 @@ export type EntradaReciboDevuelto = {
   hoy: Date
 }
 
-export type Borrador = { asunto: string; texto: string; urgente: boolean }
+/**
+ * `caduca`: hasta cuándo es VERDAD el texto. «Está a tiempo hasta el X» deja de serlo el día X, así
+ * que la propuesta caduca entonces aunque no hayan pasado los 7 días: un texto que ya miente no se
+ * puede aprobar.
+ */
+export type Borrador = { asunto: string; texto: string; urgente: boolean; caduca: Date }
 
 function fechaEs(iso: string): string {
   const [a, m, d] = iso.split('-')
@@ -66,8 +71,11 @@ function masDias(iso: string, dias: number): string {
  * puede ser la de otro.
  */
 export function borradorReciboDevuelto(e: EntradaReciboDevuelto): Borrador | null {
+  // Sin fecha no se sabe si el impago es de ayer o de hace años (el volcado trae recibos viejos sin
+  // fecha): eso se mira en el portal de la compañía, no se le escribe al cliente a ciegas.
+  if (!e.vencimiento) return null
   const r = retencion(e.vencimiento, 'devuelto', e.hoy)
-  if (r.estado === 'extinguida') return null
+  if (r.estado === 'extinguida' || r.estado === 'sin_fecha') return null
   const seguro = ['seguro', e.ramo ? `de ${e.ramo}` : null, e.compania ? `con ${e.compania}` : null].filter(Boolean).join(' ')
   const cola = e.numeroPoliza && e.numeroPoliza.length > 4 ? ` (póliza terminada en ${e.numeroPoliza.slice(-4)})` : ''
   const importe = e.importe !== null ? ` de ${eur(e.importe)}` : ''
@@ -91,20 +99,29 @@ export function borradorReciboDevuelto(e: EntradaReciboDevuelto): Borrador | nul
   }
   lineas.push('', 'Responda a este correo o llámenos y le decimos cómo pagarlo. Si ya lo ha pagado, ignore este mensaje.', '', 'Un saludo,', 'Grupo ASegura')
 
+  // Medianoche de Madrid del día límite, cogida con margen (UTC+2): antes, nunca después.
+  const finPlazo = new Date(Date.parse(`${masDias(e.vencimiento, 30)}T00:00:00Z`) - 2 * 3_600_000)
+  const semana = caducaEn(e.hoy)
   return {
+    caduca: r.estado === 'en_plazo' && finPlazo < semana ? finPlazo : semana,
     asunto: r.estado === 'suspendida' ? 'Su seguro está en suspenso por un recibo devuelto' : 'Recibo de su seguro devuelto por el banco',
     texto: lineas.join('\n'),
     urgente: r.estado === 'suspendida',
   }
 }
 
-export type Decision = { decision: 'aprobar'; asunto: string; texto: string } | { decision: 'rechazar' }
+export type Decision =
+  | { decision: 'aprobar'; asunto: string; texto: string }
+  | { decision: 'rechazar' }
+  /** Un envío que se quedó a medias: Alberto ha mirado en el proveedor si salió o no. */
+  | { decision: 'cerrar_incierto'; salio: boolean }
 
 /** Valida lo que llega del corredor: puede retocar asunto y texto, nunca vaciarlos. */
 export function decisionValida(v: unknown): Decision | null {
   if (!v || typeof v !== 'object') return null
   const o = v as Record<string, unknown>
   if (o.decision === 'rechazar') return { decision: 'rechazar' }
+  if (o.decision === 'cerrar_incierto') return typeof o.salio === 'boolean' ? { decision: 'cerrar_incierto', salio: o.salio } : null
   if (o.decision !== 'aprobar') return null
   const asunto = typeof o.asunto === 'string' ? o.asunto.replace(/[\r\n]+/g, ' ').trim() : ''
   const texto = typeof o.texto === 'string' ? o.texto.trim() : ''

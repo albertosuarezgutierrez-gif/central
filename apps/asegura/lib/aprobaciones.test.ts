@@ -18,7 +18,22 @@ test('un solo sitio envía correo, y solo tras reclamar la fila (pendiente → e
 test('el envío solo existe detrás de la decisión «aprobar» y el destinatario sale de la ficha', () => {
   const rechazar = src.indexOf("if (d.decision === 'rechazar')")
   assert.ok(rechazar > 0 && rechazar < src.indexOf('await enviarCorreo('))
-  assert.match(src, /const destino = await emailDeFicha\(correduriaId, a\.clienteId\)/)
+  assert.match(src, /const ficha = await estadoEmailDeFicha\(correduriaId, a\.clienteId\)/)
+  assert.match(src, /const destino = ficha\.email/)
+})
+
+test('antes de decidir se retira lo obsoleto: no se manda «no consta pagado» de un recibo ya cobrado', () => {
+  const decidir = src.slice(src.indexOf('export async function decidirAprobacion'))
+  const retira = decidir.indexOf('await retirarObsoletas(correduriaId)')
+  assert.ok(retira > 0 && retira < decidir.indexOf("set estado = 'enviando'"))
+  assert.match(src, /r\.situacion::text is distinct from 'devuelto'/)
+})
+
+test('un corte esperando al proveedor NO se da por «no enviado»: se queda a medias', () => {
+  const incierto = src.indexOf('if (!envio.ok && envio.incierto)')
+  assert.ok(incierto > 0 && incierto < src.indexOf("const final = envio.ok ? 'ejecutada' : 'fallida'"))
+  // Cerrar a mano solo lo que lleva >10 min a medias, nunca un envío en curso.
+  assert.match(src, /estado = 'enviando' and decidida_at < now\(\) - interval '10 minutes'`\n    if \(n === 0\)/)
 })
 
 test('el detector propone el aviso de recibo devuelto en su transacción, con punto de guardado', () => {

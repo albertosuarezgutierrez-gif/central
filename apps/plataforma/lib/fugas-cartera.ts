@@ -33,6 +33,7 @@ export type Deteccion = {
   retencionesCerradas: number | null
   /** Correos a clientes propuestos (recibo devuelto), esperando tu OK; `null` = asegura no lo manda. */
   aprobacionesNuevas: number | null
+  aprobacionesFallidas: number | null
 }
 
 export type Lectura<T> = { estado: 'ok'; dato: T } | { estado: 'sin_datos'; causa: string }
@@ -111,6 +112,7 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
       retencionesFallidas: numONull(o.retencionesFallidas),
       retencionesCerradas: numONull(o.retencionesCerradas),
       aprobacionesNuevas: numONull(o.aprobacionesNuevas),
+      aprobacionesFallidas: numONull(o.aprobacionesFallidas),
     },
   }
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
-import { aprobacionesPendientes, decidir } from '@/lib/aprobaciones-asegura'
+import { aprobacionesPendientes, decidir, type CuerpoDecision } from '@/lib/aprobaciones-asegura'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,17 +11,18 @@ export async function GET() {
   return NextResponse.json(await aprobacionesPendientes())
 }
 
-/** PATCH { id, decision:'aprobar', asunto, texto } | { id, decision:'rechazar' } — el actor sale de la SESIÓN. */
+/** PATCH { id, decision:'aprobar', asunto, texto } | { id, decision:'rechazar' } | { id, decision:'cerrar_incierto', salio } — el actor sale de la SESIÓN. */
 export async function PATCH(req: Request) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const id = typeof b?.id === 'string' ? b.id : ''
-  const decision = b?.decision === 'aprobar' || b?.decision === 'rechazar' ? b.decision : null
-  if (!id || !decision) return NextResponse.json({ desenlace: 'invalida', motivo: null }, { status: 422 })
-  const r = await decidir({
-    id, decision,
-    ...(decision === 'aprobar' ? { asunto: typeof b?.asunto === 'string' ? b.asunto : '', texto: typeof b?.texto === 'string' ? b.texto : '' } : {}),
-  }, guarda.session.email)
+  const cuerpo: CuerpoDecision | null =
+    b?.decision === 'aprobar' ? { id, decision: 'aprobar', asunto: typeof b.asunto === 'string' ? b.asunto : '', texto: typeof b.texto === 'string' ? b.texto : '' }
+    : b?.decision === 'rechazar' ? { id, decision: 'rechazar' }
+    : b?.decision === 'cerrar_incierto' && typeof b.salio === 'boolean' ? { id, decision: 'cerrar_incierto', salio: b.salio }
+    : null
+  if (!id || !cuerpo) return NextResponse.json({ desenlace: 'invalida', motivo: null }, { status: 422 })
+  const r = await decidir(cuerpo, guarda.session.email)
   return NextResponse.json({ desenlace: r.desenlace, motivo: r.motivo }, { status: r.status })
 }

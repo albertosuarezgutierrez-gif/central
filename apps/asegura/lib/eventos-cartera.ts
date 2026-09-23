@@ -85,6 +85,8 @@ export type ResultadoDeteccion = {
   retencionesFallidas: number
   /** Avisos al cliente propuestos en esta pasada, pendientes de OK (recibos devueltos). */
   aprobacionesNuevas: number
+  /** Avisos de recibo devuelto que no se pudieron proponer (no se reintentan: el evento ya consta). */
+  aprobacionesFallidas: number
   /** Retenciones abiertas antes que se cierran porque ya no hacen falta. */
   retencionesCerradas: number
 }
@@ -141,6 +143,7 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     }
     // Recibo devuelto → aviso al cliente propuesto, pendiente del OK de Alberto (cola de aprobaciones).
     let aprobacionesNuevas = 0
+    let aprobacionesFallidas = 0
     for (const e of insertados) {
       if (e.tipo !== 'RECIBO_DEVUELTO') continue
       await tx.$executeRaw`savepoint aprobacion`
@@ -149,7 +152,7 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
         await tx.$executeRaw`release savepoint aprobacion`
       } catch (err) {
         await tx.$executeRaw`rollback to savepoint aprobacion`
-        retencionesFallidas++
+        aprobacionesFallidas++
         console.error('[eventos-cartera] propuesta de aviso no creada para el recibo', e.id, err instanceof Error ? err.message : err)
       }
     }
@@ -176,6 +179,7 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       retencionesFallidas,
       retencionesCerradas,
       aprobacionesNuevas,
+      aprobacionesFallidas,
     }
   }, { timeout: 30_000 }).then(async (r) => {
     const { retenciones, ...resto } = r

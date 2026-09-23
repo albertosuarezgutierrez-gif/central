@@ -14,9 +14,10 @@ export const dynamic = 'force-dynamic'
  * Cola única de aprobaciones: lo que el sistema propone y solo se hace con OK.
  *
  *   GET   → { estado:'ok', pendientes, inciertos }
- *   PATCH { id, decision:'aprobar', asunto, texto } | { id, decision:'rechazar' }, actor
- *         → { estado:'ejecutada'|'rechazada' } · 404 no existe · 409 ya decidida ·
- *           422 sin_email · 503 sin_correo_configurado · 502 fallida
+ *   PATCH { id, decision:'aprobar', asunto, texto } | { id, decision:'rechazar' }
+ *         | { id, decision:'cerrar_incierto', salio }, actor
+ *         → { estado:'ejecutada'|'rechazada'|'cerrada' } · 404 no existe · 409 ya decidida ·
+ *           422 sin_email · 503 sin_correo_configurado · 502 fallida · 504 incierto (pudo salir)
  */
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
   }
 }
 
-const STATUS: Record<string, number> = { ejecutada: 200, rechazada: 200, no_encontrada: 404, ya_decidida: 409, sin_email: 422, sin_correo_configurado: 503, fallida: 502 }
+const STATUS: Record<string, number> = { ejecutada: 200, rechazada: 200, cerrada: 200, no_encontrada: 404, ya_decidida: 409, sin_email: 422, sin_correo_configurado: 503, fallida: 502, incierto: 504 }
 
 export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

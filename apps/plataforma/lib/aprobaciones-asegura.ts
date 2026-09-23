@@ -18,22 +18,32 @@ export type Aprobacion = {
   caduca: string
 }
 
+/** Un envío que se quedó a medias: no se sabe si salió. Se cierra a mano tras mirarlo en Resend. */
+export type EnvioIncierto = { id: string; clienteId: string; cliente: string | null; asunto: string; desde: string }
+
 export type LecturaAprobaciones =
-  | { estado: 'ok'; pendientes: Aprobacion[]; inciertos: number }
+  | { estado: 'ok'; pendientes: Aprobacion[]; inciertos: EnvioIncierto[] }
   | { estado: 'sin_datos'; causa: string }
 
-export type Desenlace = 'ejecutada' | 'rechazada' | 'no_encontrada' | 'ya_decidida' | 'sin_email' | 'sin_correo_configurado' | 'fallida' | 'invalida' | 'error'
+export type Desenlace = 'ejecutada' | 'rechazada' | 'cerrada' | 'no_encontrada' | 'ya_decidida' | 'sin_email' | 'sin_correo_configurado' | 'fallida' | 'incierto' | 'invalida' | 'error'
+
+export type CuerpoDecision =
+  | { id: string; decision: 'aprobar'; asunto: string; texto: string }
+  | { id: string; decision: 'rechazar' }
+  | { id: string; decision: 'cerrar_incierto'; salio: boolean }
 
 /** Una frase por desenlace. Ninguno de los fallos puede leerse como «el correo salió». */
 export function textoDesenlace(d: Desenlace, motivo?: string | null): string {
   switch (d) {
     case 'ejecutada': return 'Enviado.'
     case 'rechazada': return 'Descartado: no se envía nada.'
+    case 'cerrada': return 'Anotado.'
     case 'no_encontrada': return 'No existe esa propuesta.'
     case 'ya_decidida': return 'Ya estaba decidida o ha caducado: no se ha enviado nada ahora.'
-    case 'sin_email': return 'NO enviado: la ficha no tiene un correo legible. Sigue pendiente; añade el correo en la ficha.'
+    case 'sin_email': return `NO enviado: ${motivo ?? 'no hay un correo al que escribir'}. Sigue pendiente.`
     case 'sin_correo_configurado': return `NO enviado: ${motivo ?? 'el correo de la correduría no está configurado'}. Sigue pendiente; reintentarlo no lo arregla.`
     case 'fallida': return `NO enviado: ${motivo ?? 'el proveedor rechazó el mensaje'}.`
+    case 'incierto': return 'NO se sabe si ha salido: se cortó esperando al proveedor. Míralo en Resend antes de repetir; queda en «a medias».'
     case 'invalida': return 'NO enviado: el asunto y el texto no pueden ir vacíos.'
     default: return 'NO se sabe si se ha enviado: no se ha podido hablar con asegura. Mira la lista antes de repetir.'
   }
@@ -64,6 +74,14 @@ function base(): { url: string; secreto: string } | null {
   return { url: `${(process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')}/api/operador/aprobaciones`, secreto }
 }
 
+export function leerIncierto(v: unknown): EnvioIncierto | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const id = texto(o.id), clienteId = texto(o.clienteId)
+  if (!id || !clienteId) return null
+  return { id, clienteId, cliente: texto(o.cliente), asunto: texto(o.asunto) ?? '', desde: texto(o.desde) ?? '' }
+}
+
 export async function aprobacionesPendientes(): Promise<LecturaAprobaciones> {
   const b = base()
   if (!b) return { estado: 'sin_datos', causa: 'puerto sin configurar (falta ASEGURA_OPERADOR_SECRET)' }
@@ -75,13 +93,15 @@ export async function aprobacionesPendientes(): Promise<LecturaAprobaciones> {
     const pendientes = j.pendientes.map(leerAprobacion)
     // Una fila ilegible no se esconde: si falta una, la lista no es la lista.
     if (pendientes.some(x => x === null)) return { estado: 'sin_datos', causa: 'asegura devolvió una propuesta incompleta' }
-    return { estado: 'ok', pendientes: pendientes as Aprobacion[], inciertos: typeof j.inciertos === 'number' ? j.inciertos : 0 }
+    const inciertos = Array.isArray(j.inciertos) ? j.inciertos.map(leerIncierto) : [null]
+    if (inciertos.some(x => x === null)) return { estado: 'sin_datos', causa: 'asegura devolvió los envíos a medias ilegibles' }
+    return { estado: 'ok', pendientes: pendientes as Aprobacion[], inciertos: inciertos as EnvioIncierto[] }
   } catch {
     return { estado: 'sin_datos', causa: 'no se pudo llegar a asegura' }
   }
 }
 
-export async function decidir(cuerpo: { id: string; decision: 'aprobar' | 'rechazar'; asunto?: string; texto?: string }, actor: string): Promise<{ status: number; desenlace: Desenlace; motivo: string | null }> {
+export async function decidir(cuerpo: CuerpoDecision, actor: string): Promise<{ status: number; desenlace: Desenlace; motivo: string | null }> {
   const b = base()
   if (!b) return { status: 503, desenlace: 'error', motivo: null }
   try {
@@ -95,7 +115,7 @@ export async function decidir(cuerpo: { id: string; decision: 'aprobar' | 'recha
     })
     const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
     const estado = typeof j?.estado === 'string' ? j.estado : 'error'
-    const conocidos: Desenlace[] = ['ejecutada', 'rechazada', 'no_encontrada', 'ya_decidida', 'sin_email', 'sin_correo_configurado', 'fallida', 'invalida']
+    const conocidos: Desenlace[] = ['ejecutada', 'rechazada', 'cerrada', 'no_encontrada', 'ya_decidida', 'sin_email', 'sin_correo_configurado', 'fallida', 'incierto', 'invalida']
     return { status: res.status, desenlace: (conocidos as string[]).includes(estado) ? (estado as Desenlace) : 'error', motivo: texto(j?.motivo) }
   } catch {
     return { status: 504, desenlace: 'error', motivo: null }

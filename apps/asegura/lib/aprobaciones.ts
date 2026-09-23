@@ -11,12 +11,12 @@
 //
 // El SQL crudo no prefija `seguros.`: la conexión ya trae `?schema=seguros`.
 
-import { POLITICA, borradorReciboDevuelto, caducaEn, importeEiac, remitenteCorreo, type Decision } from '@central/module-seguros'
+import { POLITICA, borradorReciboDevuelto, importeEiac, remitenteCorreo, type Decision } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { rechazoDeRemitente } from './correo-invitacion-portal.ts'
-import { emailDeFicha } from './email-ficha'
+import { estadoEmailDeFicha } from './email-ficha'
 
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
 
@@ -44,7 +44,7 @@ export async function proponerReciboDevuelto(tx: Tx, correduriaId: string, recib
     values (${correduriaId}::uuid, 'enviar_correo_cliente', ${ORIGEN_RECIBO_DEVUELTO},
             ${`${ORIGEN_RECIBO_DEVUELTO}:${reciboId}:${r.vencimiento ?? 'sin_fecha'}`},
             ${r.clienteId}::uuid, ${r.polizaId}::uuid, ${eventoId}::uuid,
-            ${JSON.stringify({ asunto: b.asunto, texto: b.texto })}::jsonb, ${b.urgente}, ${caducaEn(new Date())})
+            ${JSON.stringify({ asunto: b.asunto, texto: b.texto })}::jsonb, ${b.urgente}, ${b.caduca})
     on conflict (clave) do nothing
     returning id::text as id`
   return ins.length > 0
@@ -62,12 +62,28 @@ export type AprobacionPendiente = {
   caduca: string
 }
 
-/** Pendientes, urgentes primero. Antes caduca lo vencido: una propuesta vieja no se ejecuta. */
-export async function aprobacionesPendientes(correduriaId: string): Promise<AprobacionPendiente[]> {
+/**
+ * Retira lo que ya no es verdad: lo caducado, y el aviso de un recibo que ya no consta devuelto
+ * (se cobró o la compañía lo rectificó). Escribirle «no consta pagado» a quien ya ha pagado es
+ * justo lo que el sistema sabe y no puede callarse. Corre antes de listar Y antes de decidir.
+ */
+export async function retirarObsoletas(correduriaId: string): Promise<void> {
   const db = prismaAsegura()
   await db.$executeRaw`
     update aprobacion set estado = 'caducada', decidida_at = now(), decidida_por = 'sistema:caducidad'
     where correduria_id = ${correduriaId}::uuid and estado = 'pendiente' and caduca_at < now()`
+  await db.$executeRaw`
+    update aprobacion a set estado = 'caducada', decidida_at = now(), decidida_por = 'sistema:recibo_resuelto',
+           resultado = 'El recibo ya no consta devuelto: no se envía.'
+    from poliza_recibos r
+    where a.correduria_id = ${correduriaId}::uuid and a.estado = 'pendiente' and a.origen = ${ORIGEN_RECIBO_DEVUELTO}
+      and r.id::text = split_part(a.clave, ':', 2) and r.situacion::text is distinct from 'devuelto'`
+}
+
+/** Pendientes, urgentes primero. */
+export async function aprobacionesPendientes(correduriaId: string): Promise<AprobacionPendiente[]> {
+  const db = prismaAsegura()
+  await retirarObsoletas(correduriaId)
   const filas = await db.$queryRaw<{ id: string; origen: string; clienteId: string; nombre: string | null; apellidos: string | null; propuesta: { asunto?: unknown; texto?: unknown }; urgente: boolean; creada: Date; caduca: Date }[]>`
     select a.id::text as id, a.origen, a.cliente_id::text as "clienteId", c.nombre, c.apellidos, a.propuesta, a.urgente,
            a.created_at as creada, a.caduca_at as caduca
@@ -93,14 +109,29 @@ export type ResultadoDecision =
   | { estado: 'no_encontrada' }
   /** Ya no está pendiente (la decidió otro clic, caducó o se está enviando). */
   | { estado: 'ya_decidida' }
-  /** La ficha no tiene correo legible: sigue pendiente, no se ha enviado nada. */
-  | { estado: 'sin_email' }
+  /** No hay a quién escribir (sin correo, baja de correo, ficha fusionada): sigue pendiente. */
+  | { estado: 'sin_email'; motivo: string }
   /** No hay proveedor o remitente de correo: sigue pendiente, reintentarlo no lo arregla. */
   | { estado: 'sin_correo_configurado'; motivo: string }
   /** El proveedor rechazó el envío: queda `fallida`. */
   | { estado: 'fallida'; motivo: string }
+  /** Se cortó esperando al proveedor: pudo salir. Queda `enviando` y sale en «a medias». */
+  | { estado: 'incierto'; motivo: string }
+  /** Un envío a medias cerrado a mano tras mirarlo en el proveedor. */
+  | { estado: 'cerrada' }
 
-async function enviarCorreo(destino: string, asunto: string, texto: string): Promise<{ ok: true } | { ok: false; configuracion: boolean; motivo: string }> {
+/** Cortes de red o de espera: el proveedor pudo haber aceptado el mensaje antes de cortarse. */
+export function falloIncierto(mensaje: string): boolean {
+  return /timeout|timed out|ETIMEDOUT|ECONNRESET|ESOCKET|socket hang up|aborted/i.test(mensaje)
+}
+
+const MOTIVO_SIN_EMAIL: Record<'no_encontrado' | 'baja_de_correo' | 'sin_email', string> = {
+  sin_email: 'la ficha no tiene correo; añádelo o descarta el aviso',
+  baja_de_correo: 'el cliente se dio de baja del correo; descarta el aviso y llámale',
+  no_encontrado: 'la ficha ya no existe (¿fusionada?); descarta el aviso',
+}
+
+async function enviarCorreo(destino: string, asunto: string, texto: string): Promise<{ ok: true } | { ok: false; configuracion: boolean; incierto?: boolean; motivo: string }> {
   // Carga perezosa, como en el resto de correos de la app: `@central/core-email` no resuelve con `node --test`.
   const { createMailTransporter } = await import('@central/core-email')
   const transporter = createMailTransporter()
@@ -113,6 +144,7 @@ async function enviarCorreo(destino: string, asunto: string, texto: string): Pro
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e)
     console.error('[aprobaciones] el proveedor rechazó el correo:', m)
+    if (falloIncierto(m)) return { ok: false, configuracion: false, incierto: true, motivo: 'se cortó esperando al proveedor de correo; pudo salir' }
     return { ok: false, configuracion: rechazoDeRemitente(m), motivo: rechazoDeRemitente(m) ? 'El dominio del remitente no está verificado en Resend.' : 'El proveedor de correo no aceptó el mensaje.' }
   }
 }
@@ -121,6 +153,18 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
   if (!UUID.test(id)) return { estado: 'no_encontrada' }
   const db = prismaAsegura()
   const quien = actor.slice(0, 100)
+
+  if (d.decision === 'cerrar_incierto') {
+    const final = d.salio ? 'ejecutada' : 'fallida'
+    const n = await db.$executeRaw`
+      update aprobacion set estado = ${final}, resultado = ${`Comprobado a mano por ${quien}: ${d.salio ? 'salió' : 'no salió'}.`}
+      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'enviando' and decidida_at < now() - interval '10 minutes'`
+    if (n === 0) return { estado: 'ya_decidida' }
+    anotarCambio({ entidad: 'aprobacion', id, campo: 'estado', antes: 'enviando', despues: final })
+    return { estado: 'cerrada' }
+  }
+
+  await retirarObsoletas(correduriaId)
   const [a] = await db.$queryRaw<{ estado: string; clienteId: string; caducada: boolean }[]>`
     select estado, cliente_id::text as "clienteId", caduca_at < now() as caducada
     from aprobacion where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
@@ -137,8 +181,10 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
   }
 
   // Antes de reclamar: sin destinatario no se toca la fila (sigue pendiente para cuando haya correo).
-  const destino = await emailDeFicha(correduriaId, a.clienteId)
-  if (!destino) return { estado: 'sin_email' }
+  const ficha = await estadoEmailDeFicha(correduriaId, a.clienteId)
+  if (ficha.estado === 'ilegible') return { estado: 'sin_correo_configurado', motivo: 'el correo de la ficha no se puede descifrar (PII_ENCRYPTION_KEY en central-asegura)' }
+  if (ficha.estado !== 'ok') return { estado: 'sin_email', motivo: MOTIVO_SIN_EMAIL[ficha.estado] }
+  const destino = ficha.email
 
   // Reclamo atómico: solo una petición pasa de pendiente a enviando.
   const reclamada = await db.$executeRaw`
@@ -152,6 +198,11 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
     // No ha salido nada y reintentar no lo arregla: vuelve a pendiente para cuando esté configurado.
     await db.$executeRaw`update aprobacion set estado = 'pendiente', decidida_at = null, decidida_por = null where id = ${id}::uuid and estado = 'enviando'`
     return { estado: 'sin_correo_configurado', motivo: envio.motivo }
+  }
+  if (!envio.ok && envio.incierto) {
+    // Pudo salir: ni «ejecutada» ni «fallida». Se queda en `enviando` y pasa a «a medias».
+    await db.$executeRaw`update aprobacion set resultado = ${envio.motivo} where id = ${id}::uuid and estado = 'enviando'`
+    return { estado: 'incierto', motivo: envio.motivo }
   }
   const final = envio.ok ? 'ejecutada' : 'fallida'
   await db.$executeRaw`
@@ -176,9 +227,20 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
  * Envíos que se reclamaron y no llegaron a cerrarse (el proceso murió a mitad): NO se sabe si el
  * correo salió, y por eso no se reintentan solos. Se cuentan para que la pantalla lo diga.
  */
-export async function enviosInciertos(correduriaId: string): Promise<number> {
-  const [r] = await prismaAsegura().$queryRaw<{ n: number }[]>`
-    select count(*)::int as n from aprobacion
-    where correduria_id = ${correduriaId}::uuid and estado = 'enviando' and decidida_at < now() - interval '10 minutes'`
-  return r?.n ?? 0
+export type EnvioIncierto = { id: string; clienteId: string; cliente: string | null; asunto: string; desde: string }
+
+export async function enviosInciertos(correduriaId: string): Promise<EnvioIncierto[]> {
+  const filas = await prismaAsegura().$queryRaw<{ id: string; clienteId: string; nombre: string | null; apellidos: string | null; propuesta: { asunto?: unknown }; desde: Date }[]>`
+    select a.id::text as id, a.cliente_id::text as "clienteId", c.nombre, c.apellidos, a.propuesta, a.decidida_at as desde
+    from aprobacion a left join clientes c on c.id = a.cliente_id
+    where a.correduria_id = ${correduriaId}::uuid and a.estado = 'enviando' and a.decidida_at < now() - interval '10 minutes'
+    order by a.decidida_at
+    limit 50`
+  return filas.map((f) => ({
+    id: f.id,
+    clienteId: f.clienteId,
+    cliente: [f.nombre, f.apellidos].filter(Boolean).join(' ') || null,
+    asunto: typeof f.propuesta?.asunto === 'string' ? f.propuesta.asunto : '',
+    desde: f.desde.toISOString(),
+  }))
 }

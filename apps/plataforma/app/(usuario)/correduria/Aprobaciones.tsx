@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { btnStyle } from '@/components/ui'
-import { textoDesenlace, type Aprobacion, type Desenlace, type LecturaAprobaciones } from '@/lib/aprobaciones-asegura'
+import { textoDesenlace, type Aprobacion, type CuerpoDecision, type Desenlace, type LecturaAprobaciones } from '@/lib/aprobaciones-asegura'
 
 const ORIGEN: Record<string, string> = { recibo_devuelto: 'Recibo devuelto' }
 
@@ -21,7 +21,8 @@ export default function Aprobaciones({ onContador }: { onContador?: (n: number |
   const cargar = useCallback(() => {
     fetch('/api/correduria/aprobaciones')
       .then(r => (r.ok ? r.json() : { estado: 'sin_datos', causa: `HTTP ${r.status}` }))
-      .then((x: LecturaAprobaciones) => { setD(x); onContador?.(x.estado === 'ok' ? x.pendientes.length : null) })
+      // Lo que está a medias también espera a Alberto: cuenta, para que «Nada esperando tu OK» no mienta.
+      .then((x: LecturaAprobaciones) => { setD(x); onContador?.(x.estado === 'ok' ? x.pendientes.length + x.inciertos.length : null) })
       .catch(() => { setD({ estado: 'sin_datos', causa: 'red' }); onContador?.(null) })
   }, [onContador])
   useEffect(() => { cargar() }, [cargar])
@@ -29,15 +30,19 @@ export default function Aprobaciones({ onContador }: { onContador?: (n: number |
   async function decidir(a: Aprobacion, decision: 'aprobar' | 'rechazar') {
     const e = edit[a.id] ?? { asunto: a.asunto, texto: a.texto }
     if (decision === 'aprobar' && !window.confirm(`Se va a enviar un correo a ${a.cliente ?? 'este cliente'}:\n\n«${e.asunto}»\n\n¿Enviar?`)) return
-    setOcupado(a.id); setAviso(null)
+    await mandar(decision === 'aprobar' ? { id: a.id, decision, ...e } : { id: a.id, decision })
+  }
+
+  async function mandar(cuerpo: CuerpoDecision) {
+    setOcupado(cuerpo.id); setAviso(null)
     try {
       const r = await fetch('/api/correduria/aprobaciones', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: a.id, decision, ...(decision === 'aprobar' ? e : {}) }),
+        body: JSON.stringify(cuerpo),
       })
       const j = (await r.json().catch(() => null)) as { desenlace?: Desenlace; motivo?: string | null } | null
       const des = j?.desenlace ?? 'error'
-      setAviso({ ok: des === 'ejecutada' || des === 'rechazada', texto: textoDesenlace(des, j?.motivo) })
+      setAviso({ ok: des === 'ejecutada' || des === 'rechazada' || des === 'cerrada', texto: textoDesenlace(des, j?.motivo) })
     } catch {
       setAviso({ ok: false, texto: textoDesenlace('error') })
     } finally {
@@ -50,15 +55,23 @@ export default function Aprobaciones({ onContador }: { onContador?: (n: number |
   if (d.estado === 'sin_datos') {
     return <p style={{ ...NOTA, color: 'var(--negative)' }}>No se han podido leer los correos pendientes de OK ({d.causa}). No significa que no haya.</p>
   }
-  if (d.pendientes.length === 0 && d.inciertos === 0 && !aviso) return null
+  if (d.pendientes.length === 0 && d.inciertos.length === 0 && !aviso) return null
 
   return (
     <div style={{ display: 'grid', gap: 6 }}>
-      {d.inciertos > 0 && (
-        <p style={{ ...NOTA, color: 'var(--warning)' }}>
-          ⚠️ {d.inciertos} envío(s) se quedaron a medias y no se sabe si salieron. No se reintentan solos: compruébalo antes de volver a escribir.
-        </p>
-      )}
+      {d.inciertos.map(x => (
+        <div key={x.id} style={{ display: 'grid', gap: 6, padding: '8px 12px', borderRadius: 12, border: '1px solid var(--warning)', background: 'var(--surface)' }}>
+          <span style={{ fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>⚠️ Correo a medias · {x.cliente ?? '(ficha sin nombre)'}</span>
+          <span style={{ ...NOTA, overflowWrap: 'anywhere' }}>
+            «{x.asunto}» — no se sabe si salió. No se reintenta solo: míralo en Resend y dilo aquí.
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <button type="button" disabled={ocupado !== null} onClick={() => void mandar({ id: x.id, decision: 'cerrar_incierto', salio: true })} style={btnStyle('sutil')}>Sí salió</button>
+            <button type="button" disabled={ocupado !== null} onClick={() => void mandar({ id: x.id, decision: 'cerrar_incierto', salio: false })} style={btnStyle('sutil')}>No salió</button>
+            <Link href={`/correduria/cliente/${x.clienteId}`} style={ENLACE}>Ver ficha</Link>
+          </div>
+        </div>
+      ))}
       {d.pendientes.map(a => {
         const e = edit[a.id] ?? { asunto: a.asunto, texto: a.texto }
         const abiertaEsta = abierta === a.id
@@ -88,7 +101,7 @@ export default function Aprobaciones({ onContador }: { onContador?: (n: number |
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                   <button type="button" disabled={ocupado !== null} onClick={() => void decidir(a, 'aprobar')} style={btnStyle('primario')}>Enviar</button>
                   <button type="button" disabled={ocupado !== null} onClick={() => void decidir(a, 'rechazar')} style={btnStyle('sutil')}>Descartar</button>
-                  <Link href={`/correduria/cliente/${a.clienteId}`} style={{ fontSize: 13 }}>Ver ficha</Link>
+                  <Link href={`/correduria/cliente/${a.clienteId}`} style={ENLACE}>Ver ficha</Link>
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>Se envía al correo de la ficha. Caduca el {new Date(a.caduca).toLocaleDateString('es-ES')} si nadie lo decide.</span>
               </>
@@ -102,3 +115,4 @@ export default function Aprobaciones({ onContador }: { onContador?: (n: number |
 }
 
 const NOTA: React.CSSProperties = { margin: 0, fontSize: 13, color: 'var(--muted)' }
+const ENLACE: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', minHeight: 44, padding: '0 8px', fontSize: 13 }
