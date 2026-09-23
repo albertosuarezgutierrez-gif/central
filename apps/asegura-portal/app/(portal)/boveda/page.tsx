@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 
 import {
   canalDeCompania,
+  diasHastaVencimientoPortal,
+  enVentanaVencimientos,
   plazoComunicacion,
   type FilaCompania,
 } from '@central/module-seguros-portal'
@@ -14,6 +16,7 @@ import { prisma } from '@/lib/db'
 import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { leerMisDatos, reparosDeContacto } from '@/lib/mis-datos'
+import { peticionesPrecio } from '@/lib/mejorar-precio'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
@@ -54,6 +57,7 @@ import { SubirPoliza } from './SubirPoliza'
 import { GestionContactos } from './GestionContactos'
 import { MisDatos } from './MisDatos'
 import { TusDatos } from './TusDatos'
+import { TusVencimientos } from './TusVencimientos'
 
 export const dynamic = 'force-dynamic'
 
@@ -126,7 +130,17 @@ export default async function Boveda({
   // el 09/09/2026: no aportaba nada que la ficha de cada póliza no dijera ya),
   // pero se siguen sincronizando: es lo que lee la campana de avisos
   // (`/api/avisos`) para el chip «puedes actuar hasta…».
+  // «Ya lo pediste» de «Tus vencimientos»: una llamada al puente, y SOLO si
+  // algo suyo renueva en 60 días (si no, el bloque no se pinta). En paralelo
+  // con la sincronización para no sumar su espera a la página.
+  const hoyMadrid = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+  const hayVencimientos = vista === 'seguros' && cartera.propias.some((t) => t.polizas.some((p) =>
+    p.vigencia === 'vigente' && p.fechaVencimiento !== null &&
+    enVentanaVencimientos(diasHastaVencimientoPortal(p.fechaVencimiento.toISOString().slice(0, 10), hoyMadrid))))
+  const peticionesP = hayVencimientos ? peticionesPrecio(identidad.id) : Promise.resolve(null)
+
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
+  const peticiones = await peticionesP
 
   // Los recordatorios PROPIOS solo se leen para la pestaña que los pinta —
   // misma regla de rendimiento que el resto de la página (el servidor manda
@@ -204,8 +218,10 @@ export default async function Boveda({
   // la pestaña que la pinta — mismo criterio de rendimiento que el resto.
   const contactosLista = vista === 'datos' ? await listarContactosPropios(identidad.id) : ({ estado: 'sin_puente' } as const)
 
+  // Desde el 23/09/2026 también en «Mis seguros»: la casilla corta va junto al
+  // alta de pólizas de otras compañías, que es donde se decide (pieza 1-5).
   const consentimientoComercial =
-    vista === 'datos'
+    vista === 'datos' || vista === 'seguros'
       ? consentimientoVigente(
           await prisma.portalConsentimiento.findMany({
             where: { identidadId: identidad.id, tipo: 'comercial' },
@@ -400,6 +416,14 @@ export default async function Boveda({
               El alta va justo detrás, que es lo que pidió Alberto. */}
           <AvisoContacto lectura={contacto} />
 
+          {/* «Tus vencimientos» (pieza 1-5): solo si algo SUYO renueva en 60
+              días; si no, no pinta nada y el alta sigue arriba. */}
+          <TusVencimientos
+            polizas={cartera.propias.flatMap((t) => t.polizas)}
+            peticiones={peticiones}
+            hoyIso={hoyMadrid}
+          />
+
           {/* 🚨 El alta va ARRIBA, no debajo de la lista (19/09/2026). Alberto:
               «Añade una póliza» tiene que ser lo primero que se vea. Hasta hoy
               vivía DENTRO de la sección de la cartera y detrás de todas sus
@@ -409,6 +433,9 @@ export default async function Boveda({
               MISMAS que ofrece `EditarPoliza`: un alta a mano y una corrección
               tienen que ofrecer la misma lista. */}
           <SubirPoliza ramos={RAMOS_OPCIONES} />
+          {/* La casilla comercial, corta, junto al alta: solo mientras no la
+              haya dado. Retirarla sigue estando en «Mis datos». */}
+          {consentimientoComercial !== true && <ConsentimientoComercial inicial={consentimientoComercial} compacto />}
 
       {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
           su portal: «mis seguros y mis pólizas es lo mismo… que venga de CIMA,
