@@ -21,6 +21,7 @@ import type { ConfigCodeoscopic } from './config.ts'
 export type { Opcion } from './opciones.ts'
 export { normalizarTexto, emparejar, elegirDefecto, pareceOpcionPropietario } from './opciones.ts'
 import { normalizarTexto, type Opcion } from './opciones.ts'
+import { limitesDeCarnets, motorDeVersion, type LimiteCarnet, type MotorVersion } from './carnet-moto.ts'
 
 /**
  * Caché en memoria con TTL. Los catálogos del vendor cambian de año en año, no
@@ -437,13 +438,26 @@ export async function versionesMoto(
   modeloId: string,
   motor: MotorMoto,
 ): Promise<Opcion[]> {
-  return normalizarOpciones(
-    await catalogo(
-      config,
-      `/motorcycle/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
-        `/vehicles?engine=${encodeURIComponent(motor)}`,
-    ),
+  return normalizarOpciones(await catalogo(config, pathVersionesMoto(marcaId, modeloId, motor)))
+}
+
+/** Un solo sitio que construye el path: la pantalla y el cruce de carné leen la MISMA caché. */
+function pathVersionesMoto(marcaId: string, modeloId: string, motor: MotorMoto): string {
+  return (
+    `/motorcycle/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
+    `/vehicles?engine=${encodeURIComponent(motor)}`
   )
+}
+
+/** Cilindrada y kW de la versión elegida (`carnet-moto.ts`). **Gratis**; `null` = no está en la lista. */
+export async function motorDeVersionMoto(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: MotorMoto,
+  codigo: string,
+): Promise<MotorVersion | null> {
+  return motorDeVersion(await catalogo(config, pathVersionesMoto(marcaId, modeloId, motor)), codigo)
 }
 
 /** `ThisMotorcycle` | `OtherMotorcycle`. Obligatorio en `risk.drivingExperience.id`. */
@@ -455,6 +469,11 @@ export async function tiposDeGarajeMoto(config: ConfigCodeoscopic): Promise<Opci
 /** Tipos de carné de MOTO (A, A2, A1, AM…): `/motorcycle/driving-licenses`. */
 export async function tiposDeCarnetMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
   return normalizarOpciones(await catalogo(config, '/motorcycle/driving-licenses'))
+}
+
+/** El mismo catálogo con sus límites (`maxDisplacement` cc, `maxEnginePower` kW), que `normalizarOpciones` tira. */
+export async function limitesCarnetMoto(config: ConfigCodeoscopic): Promise<LimiteCarnet[]> {
+  return limitesDeCarnets(await catalogo(config, '/motorcycle/driving-licenses'))
 }
 
 export async function experienciaConduccionMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
