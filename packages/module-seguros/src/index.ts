@@ -95,6 +95,7 @@ export {
   DIAS_RECORDATORIO_INGESTA,
   decidirAvisoIngesta,
   firmaAvisoIngesta,
+  normalizarFirmaIngesta,
   decidirRespaldoPull,
   HORAS_RESPALDO_PULL,
   repartirHuerfanas,

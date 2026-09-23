@@ -7,6 +7,7 @@ import {
   HORAS_RECHAZO_RECIENTE,
   decidirAvisoIngesta,
   firmaAvisoIngesta,
+  normalizarFirmaIngesta,
   decidirRespaldoPull,
   HORAS_RESPALDO_PULL,
   repartirHuerfanas,
@@ -814,6 +815,23 @@ test('firma: «no consta ninguna corrida» y «el cron corre» no dan la misma f
     firmaAvisoIngesta(degradada(null)),
     firmaAvisoIngesta(degradada({ horas: 3, procesados: 2 })),
   )
+})
+
+test('firma: una firma guardada en el formato viejo (sin el cron) no hace sonar un «cambio» falso', () => {
+  const hoy = firmaAvisoIngesta(degradada({ horas: 3, procesados: 2 }))
+  const vieja = hoy.slice(0, hoy.lastIndexOf(':')) // lo que había en el latido antes del despliegue
+  assert.equal(normalizarFirmaIngesta(vieja), hoy)
+  const d = decidirAvisoIngesta({
+    firmaAnterior: normalizarFirmaIngesta(vieja),
+    firmaActual: hoy,
+    ultimoAvisoEn: new Date('2026-09-22T06:45:00Z'),
+    hoy: new Date('2026-09-23T06:45:00Z'),
+  })
+  assert.equal(d.avisar, false)
+  // Pero si hoy el cron está parado, la firma vieja (que decía «corre») sí suena.
+  const mudo = firmaAvisoIngesta(degradada({ horas: 37, procesados: 0 }))
+  assert.notEqual(normalizarFirmaIngesta(vieja), mudo)
+  assert.equal(normalizarFirmaIngesta(null), null)
 })
 
 test('firma: mismo estado dos días seguidos → misma firma (no repite el aviso)', () => {

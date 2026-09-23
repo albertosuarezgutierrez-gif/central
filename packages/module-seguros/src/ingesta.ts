@@ -783,25 +783,17 @@ export type DecisionAviso =
   | { avisar: true; motivo: MotivoAviso; diasAbierta: number | null }
 
 /**
- * ¿Hay que sonar hoy?
- *
- * - `primera`      — no consta que se haya avisado nunca. Suena siempre: perder
- *                    un aviso es peor que duplicarlo.
- * - `cambio`       — el estado ha cambiado (entró otro fichero, apareció otra
- *                    huérfana). Suena, y el mensaje lo dirá.
- * - `recordatorio` — sigue igual, pero lleva demasiado abierta.
- *
- * `ultimoAvisoEn = null` NO significa «hace poco»: significa **no lo sabemos**,
- * y ante eso se avisa. Es la regla de la casa aplicada a una alarma — un hueco
- * en el registro no puede convertirse en silencio.
- */
-/**
  * Horas sin un pull COMPLETADO a partir de las cuales el respaldo de plataforma
  * dispara el pull de CIMA él mismo. El pull principal corre en GitHub Actions a
- * las 05:30 y 11:30 UTC y el respaldo mira a las 07:00 y 13:00: si la última
- * corrida completada tiene más de 6 h, la de esa franja NO ha ocurrido.
+ * las 05:30 y 11:30 UTC y el respaldo mira a las 08:00 y 14:00 (2,5 h de margen
+ * para un run de Actions que arranca tarde, que es lo habitual en los `schedule`).
+ *
+ * El umbral tiene que ser MENOR que la distancia entre las dos pasadas del
+ * respaldo (6 h): con 6, si Actions está muerto y el respaldo de las 08:00 corre,
+ * a las 14:00 el último pull tiene ~5,9 h y el de la tarde no se cubre nunca.
+ * Y MAYOR que el margen tras la franja (2,5 h), o dispararía con Actions sano.
  */
-export const HORAS_RESPALDO_PULL = 6
+export const HORAS_RESPALDO_PULL = 3
 
 export type DecisionRespaldoPull =
   | { disparar: true; horas: number }
@@ -861,14 +853,39 @@ export function firmaAvisoIngesta(salud: SaludIngesta): string {
         .sort()
         .join(',') || '-'
   // El cron de CIMA: `?` = no consta ninguna corrida (hueco), `mudo` = más de
-  // HORAS_PULL_MUDO sin completar, `ok` = corre. Va al FINAL para que las firmas
-  // viejas sean prefijo de las nuevas solo cuando no aportan nada distinto.
+  // HORAS_PULL_MUDO sin completar, `ok` = corre. Las firmas guardadas antes de
+  // existir este tramo se leen con `normalizarFirmaIngesta`.
   const pull = salud.ultimoPull === null
     ? '?'
     : salud.ultimoPull.horas > HORAS_PULL_MUDO ? 'mudo' : 'ok'
   return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}:${pull}`
 }
 
+/**
+ * Lee una firma GUARDADA en el formato de hoy. Las anteriores al 23/09/2026 no
+ * traían el tramo del cron (cinco tramos en vez de seis): se leen como «el cron
+ * corría», que es lo que decía el vigía cuando las escribió (si no, el motivo
+ * del aviso lo habría dicho). Sin esto, el primer despliegue haría sonar un
+ * «cambio» falso y reiniciaría la antigüedad de las averías abiertas.
+ */
+export function normalizarFirmaIngesta(firma: string | null): string | null {
+  if (firma === null) return null
+  return firma.split(':').length === 5 ? `${firma}:ok` : firma
+}
+
+/**
+ * ¿Hay que sonar hoy?
+ *
+ * - `primera`      — no consta que se haya avisado nunca. Suena siempre: perder
+ *                    un aviso es peor que duplicarlo.
+ * - `cambio`       — el estado ha cambiado (entró otro fichero, apareció otra
+ *                    huérfana). Suena, y el mensaje lo dirá.
+ * - `recordatorio` — sigue igual, pero lleva demasiado abierta.
+ *
+ * `ultimoAvisoEn = null` NO significa «hace poco»: significa **no lo sabemos**,
+ * y ante eso se avisa. Es la regla de la casa aplicada a una alarma — un hueco
+ * en el registro no puede convertirse en silencio.
+ */
 export function decidirAvisoIngesta(e: {
   firmaAnterior: string | null
   firmaActual: string

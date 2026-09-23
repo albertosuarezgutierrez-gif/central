@@ -24,6 +24,7 @@ import {
   detalleSalud,
   decidirAvisoIngesta,
   firmaAvisoIngesta,
+  normalizarFirmaIngesta,
   textoHuerfanas,
   DIAS_RECORDATORIO_INGESTA,
 } from '@central/module-seguros'
@@ -79,11 +80,13 @@ export async function GET(req: NextRequest) {
   // Desde cuándo consta abierta ESTA misma avería: se arrastra mientras la
   // firma no cambie, y se reinicia cuando cambia. Es lo que permite decir
   // «lleva 59 días» en vez de «otra vez esto».
-  const mismaAveria = previo.firma !== null && previo.firma === actual
+  // Las firmas guardadas antes del tramo del cron se leen en el formato de hoy.
+  const firmaPrevia = normalizarFirmaIngesta(previo.firma)
+  const mismaAveria = firmaPrevia !== null && firmaPrevia === actual
   const abiertaDesde = mismaAveria ? (previo.abierta ?? previo.aviso) : ahora
 
   const decision = decidirAvisoIngesta({
-    firmaAnterior: previo.firma,
+    firmaAnterior: firmaPrevia,
     firmaActual: actual,
     ultimoAvisoEn: previo.aviso,
     abiertaDesde,

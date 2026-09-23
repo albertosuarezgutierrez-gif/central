@@ -17,7 +17,7 @@ Causa: presupuesto de GitHub Actions de la cuenta a 0 $ sin tarjeta; lo agota `c
 de `asegura`) y los jobs de `asegura` se quedaban sin runner. Alberto puso tarjeta + 20 $/mes y relanzó (verificado en
 BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero la firma anti-repetición no incluía el cron
 → Telegram mudo: ahora `firmaAvisoIngesta` (module-seguros, con cepo visto fallar). Nuevo respaldo
-`/api/cron/cima-pull-respaldo` (07:00/13:00, solo dispara si Actions no corrió) — **necesita `ASEGURA_CRM_CRON_SECRET`
+`/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — **necesita `ASEGURA_CRM_CRON_SECRET`
 en Vercel plataforma** (= `CRON_SECRET` de `asegura`). Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
