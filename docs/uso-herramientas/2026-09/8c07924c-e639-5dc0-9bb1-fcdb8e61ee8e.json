@@ -1,0 +1,49 @@
+{
+ "sesion": "8c07924c-e639-5dc0-9bb1-fcdb8e61ee8e",
+ "inicio": "2026-09-23T15:29:06.084Z",
+ "fin": "2026-09-23T15:30:00.816Z",
+ "llamadas": 16,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 545,
+   "chars_out": 1088,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 3
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 93,
+   "chars_out": 87,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1
+   }
+  },
+  "mcp:OpenSEO": {
+   "llamadas": 12,
+   "chars_in": 645,
+   "chars_out": 28450,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__OpenSEO__whoami": 3,
+    "mcp__OpenSEO__list_projects": 1,
+    "mcp__OpenSEO__create_project": 1,
+    "mcp__OpenSEO__run_site_audit": 1,
+    "mcp__OpenSEO__get_search_console_performance": 1,
+    "mcp__OpenSEO__get_backlinks_overview": 1,
+    "mcp__OpenSEO__get_audit_status": 2,
+    "mcp__OpenSEO__get_serp_results": 1,
+    "mcp__OpenSEO__get_audit_issues": 1
+   }
+  }
+ }
+}
