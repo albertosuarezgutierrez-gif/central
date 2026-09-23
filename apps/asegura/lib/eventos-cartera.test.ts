@@ -19,7 +19,19 @@ test('solo baja / anula al vencimiento SIN sustitución abren retención', () =>
   assert.match(src, /p\.sustituida_at is null/)
 })
 
-test('no se abre una segunda retención abierta para la misma póliza', () => {
-  assert.match(src, /info_riesgo->>'origen' = \$\{ORIGEN_RETENCION\}/)
-  assert.match(src, /estado::text in \('competencia', 'en_negociacion', 'pendiente_cliente'\)/)
+
+test('un fallo al abrir la retención de UNA póliza no tumba la detección (punto de guardado)', () => {
+  assert.match(src, /savepoint retencion`[\s\S]*abrirRetencion\(tx,[\s\S]*rollback to savepoint retencion/)
+})
+
+test('en cada pasada se cierran las retenciones que ya no hacen falta, antes de guardar la foto', () => {
+  const cierra = src.indexOf('await cerrarRetencionesResueltas(tx,')
+  assert.ok(cierra > 0 && cierra < src.indexOf('insert into cartera_foto'))
+  assert.match(src, /resolucion = 'no_es_perdida'/)
+  assert.match(src, /any\(\$\{ESTADOS_VIGENTES\}::text\[\]\)/)
+})
+
+test('no se abre retención si la póliza ya tiene CUALQUIER oportunidad abierta (portal incluido)', () => {
+  const abrir = src.slice(src.indexOf('async function abrirRetencion'), src.indexOf('const ESTADOS_VIGENTES'))
+  assert.doesNotMatch(abrir, /info_riesgo->>'origen' = \$\{ORIGEN_RETENCION\}/)
 })

@@ -15,6 +15,7 @@ import { Prisma } from './generated/asegura-client'
 import {
   MOTIVOS_PERDIDA,
   ORIGEN_RETENCION,
+  POLIZA_ESTADOS_VIGENTES,
   TIPOS_FUGA,
   decidirRetencion,
   detectarCambios,
@@ -79,6 +80,10 @@ export type ResultadoDeteccion = {
   polizasEnFoto: number
   /** Oportunidades de retención abiertas en esta pasada (anulada con el vencimiento por delante). */
   retencionesAbiertas: number
+  /** Retenciones que tocaba abrir y fallaron (el evento sí se guardó). */
+  retencionesFallidas: number
+  /** Retenciones abiertas antes que se cierran porque ya no hacen falta. */
+  retencionesCerradas: number
 }
 
 /** La foto actual parece rota (ha desaparecido de golpe una parte grande de la cartera). */
@@ -112,13 +117,28 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     // En la MISMA transacción que el evento: si la retención no se puede abrir, no se guarda la foto
     // y la próxima pasada lo reintenta (la clave del evento impide abrirla dos veces).
     const retenciones: Retencion[] = []
+    let retencionesFallidas = 0
     for (const e of insertados) {
       // Con sustitución registrada (renueva como póliza nueva, cambio de compañía) no hay nadie a quien retener.
       // Baja y anula-al-vencimiento: CIMA no distingue una anulación a vencimiento de una inmediata.
       if (!RETENIBLES.has(e.tipo) || !esFugaSinExplicar(e)) continue
-      const r = await abrirRetencion(tx, correduriaId, e.id, e.tipo)
-      if (r) retenciones.push(r)
+      // Punto de guardado por póliza: un fallo que se repite en UNA póliza no puede tumbar la detección
+      // entera de la correduría en cada pasada. Se cuenta y se dice; el evento queda y se revisa en «Hoy».
+      await tx.$executeRaw`savepoint retencion`
+      try {
+        const r = await abrirRetencion(tx, correduriaId, e.id, e.tipo)
+        await tx.$executeRaw`release savepoint retencion`
+        if (r) retenciones.push(r)
+      } catch (err) {
+        await tx.$executeRaw`rollback to savepoint retencion`
+        retencionesFallidas++
+        console.error('[eventos-cartera] retención no abierta para la póliza', e.id, err instanceof Error ? err.message : err)
+      }
     }
+    // Las abiertas en pasadas anteriores que ya no hacen falta: la sustitución llegó en un pull
+    // posterior, CIMA la reactivó, o se revisó como «no es pérdida». Sin esto la llamada quedaría
+    // vencida en «Tareas de hoy» para siempre, y alguien llamaría a «retener» a quien ya renovó.
+    const retencionesCerradas = await cerrarRetencionesResueltas(tx, correduriaId)
     await tx.$executeRaw`
       insert into cartera_foto (correduria_id, foto, tomada_at) values (${correduriaId}::uuid, ${JSON.stringify(actual)}::jsonb, now())
       on conflict (correduria_id) do update set foto = excluded.foto, tomada_at = excluded.tomada_at`
@@ -135,6 +155,8 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       fugasNuevas,
       polizasEnFoto: Object.keys(actual.polizas).length,
       retenciones,
+      retencionesFallidas,
+      retencionesCerradas,
     }
   }, { timeout: 30_000 }).then(async (r) => {
     const { retenciones, ...resto } = r
@@ -173,10 +195,11 @@ async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegu
   const [ya] = await tx.$queryRaw<{ id: string }[]>`
     select o.id::text as id from oportunidades o
     where o.correduria_id = ${correduriaId}::uuid and o.info_riesgo->>'polizaId' = ${polizaId}
-      and o.info_riesgo->>'origen' = ${ORIGEN_RETENCION}
       and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
       and o.created_at > now() - make_interval(days => ${DIAS_RETENCION_VIVA}::int)
     limit 1`
+  // Cualquier oportunidad abierta de esa póliza (retención o «mejórame el precio» del portal): ya hay
+  // quien la trabaja, y dos llamadas altas al mismo cliente por lo mismo es ruido.
   if (ya) return null
   const [o] = await tx.$queryRaw<{ id: string }[]>`
     insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, numero_poliza, prima_bruta, info_riesgo)
@@ -193,6 +216,49 @@ async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegu
     values (${correduriaId}::uuid, ${o.id}::uuid, 'creada_retencion', null, 'en_negociacion',
             ${JSON.stringify({ polizaId, diasRestantes: d.diasRestantes })}::jsonb, ${ACTOR_RETENCION})`
   return { oportunidadId: o.id, clienteId: p.clienteId, polizaId, texto: d.texto }
+}
+
+const ESTADOS_VIGENTES = [...POLIZA_ESTADOS_VIGENTES] as string[]
+
+/** Cierra como `ganada` las retenciones abiertas cuya póliza ya no se pierde, y sus tareas. */
+async function cerrarRetencionesResueltas(tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string): Promise<number> {
+  const filas = await tx.$queryRaw<{ id: string; motivo: string; sustituta: string | null }[]>`
+    select o.id::text as id,
+           case when s.id is not null then 'sustituida'
+                when p.estado::text = any(${ESTADOS_VIGENTES}::text[]) then 'vigente'
+                else 'no_es_perdida' end as motivo,
+           s.id::text as sustituta
+    from oportunidades o
+    join polizas p on p.id = (o.info_riesgo->>'polizaId')::uuid
+    left join lateral (
+      select h.id from polizas h where h.merged_into_poliza_id is null
+        and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id)
+      order by h.created_at desc limit 1) s on true
+    where o.correduria_id = ${correduriaId}::uuid
+      and o.info_riesgo->>'origen' = ${ORIGEN_RETENCION}
+      and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      and (s.id is not null or p.sustituida_at is not null
+           or p.estado::text = any(${ESTADOS_VIGENTES}::text[])
+           or exists (select 1 from evento e where e.correduria_id = o.correduria_id and e.entidad_id = p.id
+                        and e.tipo in ('POLIZA_BAJA', 'POLIZA_ANULA_AL_VENCIMIENTO') and e.resolucion = 'no_es_perdida'
+                        and e.created_at >= o.created_at - interval '1 minute'))
+    for update of o`
+  for (const f of filas) {
+    await tx.$executeRaw`
+      update oportunidades set estado = 'ganada', cerrada_at = now(), updated_at = now(),
+             poliza_ganada_id = coalesce(${f.sustituta}::uuid, poliza_ganada_id)
+      where id = ${f.id}::uuid`
+    await tx.$executeRaw`
+      update gestiones set estado = 'cerrada', updated_at = now(),
+             observaciones = observaciones || ${`\n— Cerrada sola: ya no hay que retener (${f.motivo}).`}
+      where oportunidad_id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado <> 'cerrada'`
+    await tx.$executeRaw`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${f.id}::uuid, 'retencion_resuelta', null, 'ganada',
+              ${JSON.stringify({ motivo: f.motivo })}::jsonb, ${ACTOR_RETENCION})`
+    anotarCambio({ entidad: 'oportunidad', id: f.id, campo: 'estado', antes: 'en_negociacion', despues: 'ganada' })
+  }
+  return filas.length
 }
 
 /** Best-effort y fuera de la transacción: la oportunidad y la llamada ya están guardadas. */

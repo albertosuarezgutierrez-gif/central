@@ -34,13 +34,16 @@ export async function GET(req: NextRequest) {
 
   const d = r.dato
   const resumen = (Object.entries(d.porTipo).map(([t, n]) => `${t} ${n}`).join(', ') || 'ninguno') +
-    (d.retencionesAbiertas ? `; ${d.retencionesAbiertas} retención(es) abierta(s)` : '')
+    (d.retencionesAbiertas ? `; ${d.retencionesAbiertas} retención(es) abierta(s)` : '') +
+    (d.retencionesCerradas ? `; ${d.retencionesCerradas} retención(es) cerrada(s) por innecesaria(s)` : '')
+  // Una retención que tocaba abrir y falló es una llamada que no aparece en «Hoy»: el latido lo dice.
+  const fallo = d.retencionesFallidas ? `⚠️ ${d.retencionesFallidas} retención(es) NO se pudieron abrir (ver logs de asegura); ` : ''
   if (d.primeraVez) {
     await registrarLatido(AGENTE, true, `primera pasada: foto anclada (${d.polizasEnFoto} pólizas vivas), sin eventos`)
     return NextResponse.json({ ok: true, estado: 'anclado', polizas: d.polizasEnFoto })
   }
   if (d.fugasNuevas.length === 0) {
-    await registrarLatido(AGENTE, true, `comprobado: ${d.nuevos} evento(s) nuevo(s) (${resumen}), ninguna pérdida sin explicar`)
+    await registrarLatido(AGENTE, !fallo, `${fallo}comprobado: ${d.nuevos} evento(s) nuevo(s) (${resumen}), ninguna pérdida sin explicar`)
     return NextResponse.json({ ok: true, estado: 'sin_fugas', nuevos: d.nuevos, porTipo: d.porTipo })
   }
 
@@ -52,8 +55,8 @@ export async function GET(req: NextRequest) {
     salio = id !== null
     if (salio) await avisoEnviado('correduria.fuga-cartera')
   }
-  const ok = salio || !permitido
-  const detalle = `${d.nuevos} evento(s) nuevo(s) (${resumen}); ${d.fugasNuevas.length} pérdida(s) sin explicar ` +
+  const ok = (salio || !permitido) && !fallo
+  const detalle = `${fallo}${d.nuevos} evento(s) nuevo(s) (${resumen}); ${d.fugasNuevas.length} pérdida(s) sin explicar ` +
     (salio ? 'avisada(s)' : permitido ? 'SIN avisar (el Telegram no salió; siguen en «Hoy»)' : '(aviso silenciado en /telegram)')
   await registrarLatido(AGENTE, ok, detalle)
   return NextResponse.json({ ok, estado: 'fugas', fugas: d.fugasNuevas.length, avisado: salio, silenciado: !permitido })

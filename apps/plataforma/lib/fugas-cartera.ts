@@ -27,6 +27,10 @@ export type Deteccion = {
   polizasEnFoto: number
   /** `null` = asegura no lo manda (versión anterior), no «ninguna». */
   retencionesAbiertas: number | null
+  /** Retenciones que tocaba abrir y fallaron; `null` = asegura no lo manda. */
+  retencionesFallidas: number | null
+  /** Retenciones de antes cerradas solas porque ya no hacen falta; `null` = asegura no lo manda. */
+  retencionesCerradas: number | null
 }
 
 export type Lectura<T> = { estado: 'ok'; dato: T } | { estado: 'sin_datos'; causa: string }
@@ -90,6 +94,7 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
     if (!x) return { estado: 'sin_datos', causa: 'asegura devolvió una pérdida sin id, tipo o cliente' }
     fugasNuevas.push(x)
   }
+  const numONull = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
   return {
     estado: 'ok',
@@ -100,7 +105,9 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
       porTipo: (typeof o.porTipo === 'object' && o.porTipo !== null ? o.porTipo : {}) as Record<string, number>,
       fugasNuevas,
       polizasEnFoto: num(o.polizasEnFoto),
-      retencionesAbiertas: typeof o.retencionesAbiertas === 'number' && Number.isFinite(o.retencionesAbiertas) ? o.retencionesAbiertas : null,
+      retencionesAbiertas: numONull(o.retencionesAbiertas),
+      retencionesFallidas: numONull(o.retencionesFallidas),
+      retencionesCerradas: numONull(o.retencionesCerradas),
     },
   }
 }
