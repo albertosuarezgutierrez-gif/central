@@ -1,33 +1,33 @@
 {
  "sesion": "3cd496e8-8835-5ca2-b02c-63d50e969a57",
  "inicio": "2026-09-21T09:27:34.194Z",
- "fin": "2026-09-23T20:38:18.179Z",
- "llamadas": 1171,
+ "fin": "2026-09-23T21:09:44.842Z",
+ "llamadas": 1179,
  "categorias": {
   "otro": {
-   "llamadas": 183,
-   "chars_in": 30690,
-   "chars_out": 2182650,
+   "llamadas": 187,
+   "chars_in": 30698,
+   "chars_out": 2226242,
    "errores": 0,
    "archivos_citados": 13,
    "chars_citados": 127305,
    "tools": {
     "Skill": 6,
     "ToolSearch": 37,
-    "ReadNotifications": 136,
+    "ReadNotifications": 140,
     "SubagentHandback": 2,
     "ReportFindings": 2
    }
   },
   "bash": {
-   "llamadas": 446,
-   "chars_in": 217766,
-   "chars_out": 1183761,
+   "llamadas": 447,
+   "chars_in": 217926,
+   "chars_out": 1184173,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 446
+    "Bash": 447
    }
   },
   "mcp:Supabase": {
@@ -88,9 +88,9 @@
    }
   },
   "mcp:github": {
-   "llamadas": 218,
-   "chars_in": 58730,
-   "chars_out": 1038905,
+   "llamadas": 219,
+   "chars_in": 58842,
+   "chars_out": 1039636,
    "errores": 11,
    "archivos_citados": 41,
    "chars_citados": 13497449,
@@ -100,7 +100,7 @@
     "mcp__github__search_code": 2,
     "mcp__github__get_job_logs": 17,
     "mcp__github__create_pull_request": 14,
-    "mcp__github__pull_request_read": 67,
+    "mcp__github__pull_request_read": 68,
     "mcp__github__list_repository_collaborators": 3,
     "mcp__github__actions_run_trigger": 4,
     "mcp__github__search_repositories": 3,
@@ -119,9 +119,9 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 28,
-   "chars_in": 4304,
-   "chars_out": 82309,
+   "llamadas": 30,
+   "chars_in": 4654,
+   "chars_out": 82613,
    "errores": 3,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -132,7 +132,7 @@
     "mcp__Vercel__get_deployment": 1,
     "mcp__Vercel__list_team_members": 1,
     "mcp__Vercel__list_deployments": 5,
-    "mcp__Vercel__get_runtime_logs": 15,
+    "mcp__Vercel__get_runtime_logs": 17,
     "mcp__Vercel__web_fetch_vercel_url": 1
    }
   },
