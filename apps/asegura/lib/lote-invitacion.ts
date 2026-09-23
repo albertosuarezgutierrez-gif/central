@@ -23,8 +23,15 @@
 import type { EstadoPortal } from './invitacion-portal'
 
 export const DIAS_SIN_REPETIR = 30
-/** Tope por pulsación: el envío es secuencial y la ruta tiene 300 s. */
-export const MAX_POR_LOTE = 80
+/**
+ * Tope por pulsación. El envío es secuencial (cada correo abre su SMTP y vuelve
+ * a comprobar la ficha) y la ruta tiene 300 s: si la función muriera a mitad, el
+ * último correo podría salir sin su nota en el historial y repetirse en la
+ * siguiente tanda. Tandas cortas + `SEGUNDOS_PRESUPUESTO` lo evitan.
+ */
+export const MAX_POR_LOTE = 25
+/** A partir de aquí no se empieza otro envío: lo que quede sale como `sinIntentar`. */
+export const SEGUNDOS_PRESUPUESTO = 180
 
 export type FichaCenso = {
   clienteId: string

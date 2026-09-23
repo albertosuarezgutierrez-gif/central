@@ -10,7 +10,7 @@ import { sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { estadoPortalDeFicha, invitarAlPortal, nombreDe, PREFIJO_INVITACION_ANOTADA } from './invitacion-portal'
 import { cuerpoInvitacionPortal, enlacePortal } from './correo-invitacion-portal'
-import { decidirLote, paraElLote, MAX_POR_LOTE, type DecisionLote, type FichaCenso } from './lote-invitacion'
+import { decidirLote, paraElLote, MAX_POR_LOTE, SEGUNDOS_PRESUPUESTO, type DecisionLote, type FichaCenso } from './lote-invitacion'
 
 export type CensoPortal = {
   /** Clientes con ≥1 póliza en vigor (`esCarteraEnVigor`). */
@@ -84,6 +84,7 @@ export async function invitarLote(
   correduriaId: string,
   entrada: { clienteIds: string[]; actor: string },
 ): Promise<ResultadoLote> {
+  const inicio = Date.now()
   const censo = await censoPortal(correduriaId)
   const permitidos = new Set(censo.decision.enviar)
   const unicos = [...new Set(entrada.clienteIds)]
@@ -94,6 +95,7 @@ export async function invitarLote(
   let parado: string | null = null
   let intentados = 0
   for (const clienteId of lote) {
+    if ((Date.now() - inicio) / 1000 > SEGUNDOS_PRESUPUESTO) break
     intentados++
     const r = await invitarAlPortal(correduriaId, { clienteId, actor: entrada.actor })
     if (r.ok) {
