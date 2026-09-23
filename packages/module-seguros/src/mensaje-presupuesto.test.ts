@@ -29,3 +29,15 @@ test('pasa el filtro de copy regulado', () => {
   assert.deepEqual(revisarCopy(mensajePresupuestoWhatsapp(d)), [])
   assert.deepEqual(revisarCopy(correoPresupuesto(d).texto), [])
 })
+
+test('🪤 los datos que faltan se CUENTAN, nunca se piden: ni DNI, ni IBAN, ni cuenta en el aviso', () => {
+  const c = correoPresupuesto({ ...d, faltanDatos: 3 })
+  const w = mensajePresupuestoWhatsapp({ ...d, faltanDatos: 1 })
+  assert.match(c.texto, /me faltan 3 datos tuyos/)
+  assert.match(c.html, /me faltan 3 datos tuyos/)
+  assert.match(w, /me falta un dato tuyo/)
+  for (const t of [c.texto, w]) assert.doesNotMatch(t, /\b(DNI|NIE|IBAN|cuenta bancaria|fecha de nacimiento)\b/i)
+  assert.doesNotMatch(correoPresupuesto({ ...d, faltanDatos: 0 }).texto, /faltan?/)
+  assert.doesNotMatch(correoPresupuesto(d).texto, /faltan?/)
+  assert.deepEqual(revisarCopy(c.texto), revisarCopy(correoPresupuesto(d).texto))
+})

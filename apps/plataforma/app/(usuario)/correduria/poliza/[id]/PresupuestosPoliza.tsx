@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import {
-  ROTULO_ESTADO_PRESUPUESTO, accionesPresupuesto, leerPresupuestoEnLista, textoAviso,
+  ROTULO_ESTADO_PRESUPUESTO, accionesPresupuesto, fraseDatosEmision, leerPresupuestoEnLista, textoAviso,
   type PresupuestoEnLista,
 } from '@/lib/presupuesto-asegura'
 import { eur } from '@/lib/dinero'
@@ -17,14 +17,16 @@ import { btnStyle } from '@/components/ui'
  */
 export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
   const [lista, setLista] = useState<PresupuestoEnLista[] | null | 'error'>(null)
+  const [datosEmision, setDatosEmision] = useState<Record<string, unknown>>({})
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
 
   const cargar = useCallback(() => {
     fetch(`/api/correduria/presupuesto?polizaId=${encodeURIComponent(polizaId)}`, { cache: 'no-store' })
       .then(async (r) => {
-        const j = (await r.json().catch(() => null)) as { estado?: string; presupuestos?: unknown[] } | null
+        const j = (await r.json().catch(() => null)) as { estado?: string; presupuestos?: unknown[]; datosEmision?: Record<string, unknown> } | null
         if (!r.ok || j?.estado !== 'ok' || !Array.isArray(j.presupuestos)) { setLista('error'); return }
+        setDatosEmision(j.datosEmision && typeof j.datosEmision === 'object' ? j.datosEmision : {})
         const filas = j.presupuestos.map(leerPresupuestoEnLista)
         setLista(filas.some((f) => f === null) ? 'error' : (filas as PresupuestoEnLista[]))
       })
@@ -78,6 +80,10 @@ export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
               {ROTULO_ESTADO_PRESUPUESTO[p.estado]} · {p.opciones} opción{p.opciones === 1 ? '' : 'es'}
               {p.desdeEur !== null ? ` · desde ${eur(p.desdeEur)}` : ''} · vale hasta el {new Date(p.venceEl).toLocaleDateString('es-ES')}
             </span>
+            {p.clienteId && p.estado !== 'retirado' && p.estado !== 'emitido' && p.estado !== 'caducado' && (() => {
+              const d = fraseDatosEmision(datosEmision[p.clienteId])
+              return <span style={{ fontSize: 13, color: d.alerta ? 'var(--negative, #c0392b)' : 'var(--muted, #666)' }}>{d.texto}</span>
+            })()}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {a.avisar && (
                 <button type="button" disabled={!libre} style={btnStyle('primario')} onClick={() => {

@@ -7,6 +7,8 @@ import { correduriaUnica } from '@/lib/cartera'
 import { listarPresupuestos, prepararPresupuesto, retirarPresupuesto } from '@/lib/presupuesto'
 import { auditado } from '@/lib/auditoria'
 import { avisarPresupuesto, confirmarWhatsapp, marcarEmitido, type FalloEnvio } from '@/lib/envio-presupuesto'
+import { datosParaEmitir } from '@/lib/datos-emision'
+import type { DatosParaEmitir } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,7 +59,16 @@ export async function GET(req: Request) {
     if (lista === null) {
       return NextResponse.json({ estado: 'error', motivo: 'no se pudo leer los presupuestos' })
     }
-    return NextResponse.json({ estado: 'ok', presupuestos: lista })
+    // Qué le falta a cada tomador para emitir (§4bis). Por cliente, y `null` si no se pudo leer:
+    // un fallo aquí no tumba la lista ni se pinta como «no falta nada».
+    const datosEmision: Record<string, DatosParaEmitir | null> = {}
+    for (const cid of new Set(lista.map((p) => p.clienteId))) {
+      datosEmision[cid] = await datosParaEmitir(correduria.id, cid).catch((e) => {
+        registrarErrorCartera('operador/presupuesto/datos-emision', e)
+        return null
+      })
+    }
+    return NextResponse.json({ estado: 'ok', presupuestos: lista, datosEmision })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/presupuesto', e) })
   }
