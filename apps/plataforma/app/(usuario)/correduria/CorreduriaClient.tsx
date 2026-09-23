@@ -31,6 +31,7 @@ import Recaptacion from './Recaptacion'
 import LeadsWebConversion from './LeadsWebConversion'
 import PanelIngesta, { AvisoIngesta } from './Ingesta'
 import Secciones, { type ContadoresSeccion } from './Secciones'
+import HoyCockpit from './HoyCockpit'
 import {
   contadorIngesta, interpretarVistaIngesta, type VistaIngesta,
 } from '@/lib/correduria/ingesta-pantalla'
@@ -165,6 +166,7 @@ export default function CorreduriaClient() {
   const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
   const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
+  const [nTareasHoy, setNTareasHoy] = useState<number | null | undefined>(undefined)
   // Su contador ya NO se suma en «Hoy» (ver el comentario junto a `agregarContadores`
   // de la sección `hoy`, más abajo): el valor no hace falta, solo la función.
   const [, setNDeclaradas] = useState<number | null | undefined>(undefined)
@@ -231,6 +233,13 @@ export default function CorreduriaClient() {
 
   const cIngesta = contadorIngesta(ingesta)
 
+  // Lo que la franja de «Hoy» llama incidencias: lo que ya está roto o con un
+  // plazo corriendo. `undefined` mientras cargan; `null` si ninguna se pudo leer.
+  // Hasta que contestan las cuatro no se pinta nada: un «0» con tres colas
+  // aún cargando sería una afirmación que nadie ha comprobado.
+  const colasIncid = [nPartes, nSupresiones, nRetencion, nSustituciones]
+  const nIncidencias = colasIncid.some(n => n === undefined) ? undefined : agregarContadores(colasIncid)
+
   const contadores: ContadoresSeccion = {
     hoy: {
       // 🚨 `nDeclaradas` NO entra aquí. `DeclaradasVencer` y `LeadsPortal` leen
@@ -240,9 +249,9 @@ export default function CorreduriaClient() {
       // `nLeads`); `DeclaradasVencer` se conserva SOLO como vista de llamada
       // rápida (teléfono/email en claro) para las ya vinculadas ≤60 días, pero
       // ya no suma un segundo aviso de lo mismo.
-      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nSustituciones]),
+      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nSustituciones, nTareasHoy]),
       tono: 'malo',
-      title: 'Partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra, declaradas de otra compañía a punto de renovar y sustituciones pendientes de que CIMA confirme la nueva',
+      title: 'Tareas de seguimiento para hoy, partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra, declaradas de otra compañía a punto de renovar y sustituciones pendientes de que CIMA confirme la nueva',
     },
     clientes: {
       // El listado NO es trabajo pendiente (cuántos clientes cumplen el
@@ -333,6 +342,18 @@ export default function CorreduriaClient() {
           Lo que se hace con el teléfono en la mano y caduca. El orden es el de
           la urgencia REAL, no el del dinero. */}
       <div role="tabpanel" aria-label="Hoy" className="corr-panel" style={panel('hoy')}>
+        {/* El cockpit (pieza 1-4): franja + tareas de hoy + lo que espera tu OK
+            + lo que han hecho los clientes en el portal. Las incidencias son
+            los bloques de siempre, justo debajo: la franja solo las cuenta. */}
+        <HoyCockpit
+          ingesta={ingesta}
+          nIncidencias={nIncidencias}
+          nRecaptacion={nRecaptacion}
+          nBlog={nBlog}
+          onIr={cambiarSeccion}
+          onContadorTareas={setNTareasHoy}
+        />
+
         {/* Los partes de siniestro que ha abierto el CLIENTE desde el portal y
             nadie ha mirado. Van los primeros —antes incluso que el teléfono—
             porque quien lo mandó cree que su compañía ya lo sabe, y hasta que

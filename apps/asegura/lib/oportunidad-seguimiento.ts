@@ -451,6 +451,54 @@ const ETIQUETA_LLAMADA: Record<string, string> = {
   no_interesa: 'Llamada: no le interesa (aparcada hasta el año que viene)',
 }
 
+export type TareaDeHoy = {
+  id: string
+  tipo: string
+  prioridad: string
+  observaciones: string
+  /** Día límite en Madrid (aaaa-mm-dd). */
+  fechaLimite: string
+  oportunidadId: string
+  estadoOportunidad: string
+  clienteId: string
+  /** `null` = la ficha no tiene nombre legible. */
+  cliente: string | null
+  ramo: string | null
+}
+
+const TECHO_TAREAS_HOY = 200
+
+/**
+ * Las tareas de seguimiento que vencen hoy o ya vencieron (para «Hoy» de
+ * plataforma). Solo las de oportunidades abiertas: una tarea de una ganada o
+ * perdida ya la cerró el sistema. `truncado` = hay más de las que se devuelven.
+ */
+export async function tareasDeHoy(
+  correduriaId: string,
+  // «Hoy» es el de Madrid: con la fecha UTC, entre las 00:00 y las 02:00 el
+  // corte seguiría en ayer y las tareas de hoy no saldrían.
+  hoyIso: string = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }),
+): Promise<{ tareas: TareaDeHoy[]; truncado: boolean }> {
+  const filas = await prismaAsegura().$queryRaw<TareaDeHoy[]>(Prisma.sql`
+    select g.id::text as id, g.tipo::text as tipo, g.prioridad::text as prioridad,
+           coalesce(g.observaciones, '') as observaciones,
+           to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "fechaLimite",
+           o.id::text as "oportunidadId", o.estado::text as "estadoOportunidad",
+           c.id::text as "clienteId",
+           nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente,
+           o.tipo::text as ramo
+    from gestiones g
+    join oportunidades o on o.id = g.oportunidad_id and o.correduria_id = g.correduria_id
+    join clientes c on c.id = o.cliente_id and c.correduria_id = o.correduria_id
+    where g.correduria_id = ${correduriaId}::uuid
+      and g.origen_trigger = 'central:seguimiento' and g.estado::text <> 'cerrada'
+      and g.fecha_limite <= (${hoyIso}::date + time '23:59:59') at time zone 'Europe/Madrid'
+      and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+    order by g.fecha_limite, (g.prioridad::text = 'alta') desc
+    limit ${TECHO_TAREAS_HOY + 1}`)
+  return { tareas: filas.slice(0, TECHO_TAREAS_HOY), truncado: filas.length > TECHO_TAREAS_HOY }
+}
+
 async function anotarEnFicha(correduriaId: string, clienteId: string, texto: string): Promise<void> {
   try {
     await prismaAsegura().$executeRaw(Prisma.sql`
