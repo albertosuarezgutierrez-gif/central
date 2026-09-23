@@ -16,6 +16,7 @@ import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 // `error` («no se ha podido mirar»). Colapsarlos diría que un cliente no existe
 // cuando lo que pasa es que el puerto no responde.
 
+import { cabecerasPuerto } from './puerto-actor.ts'
 export type EstadoFicha = 'sin_configurar' | 'error' | 'no_encontrado' | 'ok'
 
 export type RecibosPoliza = {
@@ -738,7 +739,7 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
-    headers: { Authorization: `Bearer ${secret}` },
+    headers: { ...(await cabecerasPuerto(secret)) },
     cache: 'no-store',
     signal: AbortSignal.timeout(8000),
   })

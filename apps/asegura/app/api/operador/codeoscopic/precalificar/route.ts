@@ -32,6 +32,7 @@ import {
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { carteraCompaniasDePoliza } from '@/lib/codeoscopic/cartera-companias'
 import { provinciaPorCp } from '@central/module-seguros'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

@@ -6,6 +6,7 @@ import { correduriaUnica } from '@/lib/cartera'
 import { revisarFichero } from '@/lib/documentos/extraer-poliza'
 import { guardarPolizaDeDocumento } from '@/lib/poliza-de-documento'
 import type { LecturaPoliza, TipoLecturaDocumento } from '@central/module-seguros'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,7 +30,7 @@ export const maxDuration = 60
  * Entra como multipart: `fichero` + `datos` (JSON con la lectura revisada, la
  * ficha elegida si la hay, y el contacto que el corredor teclee).
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
       { status: 500 },
     )
   }
-}
+})
 
 function texto(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null

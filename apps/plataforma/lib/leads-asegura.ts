@@ -20,6 +20,7 @@
 // Y una fila sin `id` no es una fila que no exista: no hay ficha a la que ir,
 // así que no se pinta — pero se CUENTA en `ilegibles` y la pantalla lo dice.
 import { MOTIVOS_PUERTO, type MotivoPuerto, describirCausaAsegura } from './correduria-puerto.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
 export { MOTIVOS_PUERTO, describirCausaAsegura }
@@ -186,7 +187,7 @@ export async function leadsAsegura(): Promise<Reenvio> {
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/leads`, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     })

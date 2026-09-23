@@ -18,6 +18,8 @@
 // instante (decisión de Alberto, 23/09/2026).
 // ────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
+import { cabecerasPuerto } from '../../../../lib/puerto-actor'
+
 import { Prisma } from '@prisma/client'
 import { tgSend } from '@/lib/telegram'
 import { avisoPermitido, avisoEnviado } from '@/lib/telegram/avisos'
@@ -76,7 +78,7 @@ async function leerPuerto(desde: string): Promise<Lectura> {
   let json: unknown
   try {
     const res = await fetch(`${base}/api/operador/actividad-nueva?${q}`, {
-      headers: { Authorization: `Bearer ${secreto}` },
+      headers: { ...(await cabecerasPuerto(secreto)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     })

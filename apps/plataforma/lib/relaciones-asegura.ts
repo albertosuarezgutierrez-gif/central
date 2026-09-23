@@ -27,6 +27,8 @@
 // y no hay ninguna anotada». Un `null` NUNCA se pinta como «no tiene familia».
 
 import type { RelacionFicha } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 
 // 🚨 El vocabulario de la autorización vive en `@central/module-seguros-portal`
 // (`src/autorizacion.ts`), que es la fuente. Se repite aquí como listas de
@@ -476,15 +478,15 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-function cabeceras(): Record<string, string> | null {
+async function cabeceras(): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? { Authorization: `Bearer ${secret}` } : null
+  return secret ? await cabecerasPuerto(secret) : null
 }
 
 export type Reenvio = { status: number; json: unknown }
 
 async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}${path}`, {

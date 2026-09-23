@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { descartarRetencion } from '@/lib/cartera-impagados'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 // llamar" un número de días (por defecto 10, tope 30). NO la marca como
 // resuelta: si el recibo sigue sin cobrar al caducar el plazo, vuelve a
 // salir sola. Ver la cabecera de `lib/cartera-impagados.ts`.
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
@@ -36,4 +37,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/retencion/descartar', e) }, { status: 500 })
   }
-}
+})

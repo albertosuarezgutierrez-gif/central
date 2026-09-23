@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { descifrarCampo } from '@/lib/cartera-edicion'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ export const dynamic = 'force-dynamic'
 //
 // Cada llamada deja fila en `historial_interno`, en claro, con quién lo pidió:
 // es la única forma de que una revelación se pueda auditar después.
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente/dni', e) }, { status: 500 })
   }
-}
+})
 
 /** Best-effort: que el historial falle no bloquea la revelación, pero se grita. */
 async function anotar(correduriaId: string, clienteId: string, texto: string): Promise<void> {

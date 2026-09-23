@@ -5,6 +5,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { listarPresupuestos, prepararPresupuesto, retirarPresupuesto } from '@/lib/presupuesto'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,7 +53,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const cuerpo = (await req.json().catch(() => null)) as Record<string, unknown> | null
@@ -87,9 +88,9 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/presupuesto', e) })
   }
-}
+})
 
-export async function PATCH(req: Request) {
+export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const cuerpo = (await req.json().catch(() => null)) as Record<string, unknown> | null
@@ -113,4 +114,4 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/presupuesto', e) })
   }
-}
+})

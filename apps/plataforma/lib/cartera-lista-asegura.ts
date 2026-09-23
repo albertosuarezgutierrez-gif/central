@@ -23,6 +23,7 @@
 //   2. La RED: `pedirCartera()`, solo desde la ruta API de plataforma.
 
 import { type MotivoPuerto, describirCausaAsegura } from './correduria-puerto.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
 export { describirCausaAsegura }
@@ -381,7 +382,7 @@ export async function pedirCartera(query: string): Promise<Reenvio> {
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/cartera${query ? `?${query}` : ''}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     })

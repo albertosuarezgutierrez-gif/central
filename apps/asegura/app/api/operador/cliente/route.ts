@@ -6,6 +6,7 @@ import { correduriaUnica } from '@/lib/cartera'
 import { fichaCliente } from '@/lib/cartera-ficha'
 import { altaCliente, descartarCliente, editarCliente, restaurarCliente } from '@/lib/cartera-edicion'
 import type { EdicionCliente } from '@central/module-seguros'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,7 +50,7 @@ export async function GET(req: Request) {
 // Va colgado del POST y no de un endpoint nuevo porque es la contrapartida
 // exacta del DELETE de abajo, y así el par «descartar/restaurar» vive en el
 // mismo fichero y con el mismo contrato.
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const restaurar = new URL(req.url).searchParams.has('restaurar')
   try {
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente', e) }, { status: 500 })
   }
-}
+})
 
 // DELETE /api/operador/cliente — DESCARTA la ficha (`{ id, actor?, motivo? }`).
 //
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
 // `no_encontrado` (404) · `error` (500) · `ok`. El 500 incluye el caso de que
 // NO se hayan podido contar las pólizas vivas: sin poder comprobarlo no se
 // descarta, y se dice — no se da por bueno con un 0.
-export async function DELETE(req: Request) {
+export const DELETE = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -99,13 +100,13 @@ export async function DELETE(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente', e) }, { status: 500 })
   }
-}
+})
 
 // PATCH /api/operador/cliente — EDICIÓN. Lo libre (dirección, CP, ciudad,
 // provincia, notas) entra tal cual; la identidad (DNI, nombre, apellidos,
 // fecha de nacimiento) SOLO con `documentoId` de un DNI recibido de este
 // cliente (422 `documento_requerido` / `documento_no_acredita` si no).
-export async function PATCH(req: Request) {
+export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -124,7 +125,7 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente', e) }, { status: 500 })
   }
-}
+})
 
 function actorDe(b: Record<string, unknown>): string {
   return typeof b.actor === 'string' && b.actor.trim() !== '' ? b.actor.trim().slice(0, 120) : 'plataforma'

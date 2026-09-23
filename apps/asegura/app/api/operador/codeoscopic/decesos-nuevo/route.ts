@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
 import { prepararRetarificacionNuevaDecesos, respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,7 @@ export const maxDuration = 180
  * ── Cuerpo ──────────────────────────────────────────────────────────────────
  *   { clienteId, confirmado: true, solicitadoPor?, resueltos?, correcciones? }
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
   const r = await cotizar(p.peticion)
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })
-}
+})
 
 function esObjeto(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)

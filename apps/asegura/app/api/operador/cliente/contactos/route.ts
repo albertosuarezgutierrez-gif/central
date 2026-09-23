@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { anadirContacto, borrarContacto, cambiarContacto, listarContactos, type ResultadoContacto } from '@/lib/cartera-edicion'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   return escribir(req, (correduriaId, b) =>
     anadirContacto(correduriaId, cadena(b.clienteId) ?? '', {
       tipo: b.tipo === 'email' ? 'email' : 'telefono',
@@ -49,9 +50,9 @@ export async function POST(req: Request) {
       actor: cadena(b.actor) ?? 'plataforma',
     }),
   )
-}
+})
 
-export async function PATCH(req: Request) {
+export const PATCH = auditado(async (req: Request) => {
   return escribir(req, (correduriaId, b) =>
     cambiarContacto(correduriaId, cadena(b.clienteId) ?? '', {
       id: cadena(b.id) ?? '',
@@ -62,13 +63,13 @@ export async function PATCH(req: Request) {
       actor: cadena(b.actor) ?? 'plataforma',
     }),
   )
-}
+})
 
-export async function DELETE(req: Request) {
+export const DELETE = auditado(async (req: Request) => {
   return escribir(req, (correduriaId, b) =>
     borrarContacto(correduriaId, cadena(b.clienteId) ?? '', { id: cadena(b.id) ?? '', actor: cadena(b.actor) ?? 'plataforma' }),
   )
-}
+})
 
 async function escribir(
   req: Request,

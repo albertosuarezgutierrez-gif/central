@@ -11,6 +11,7 @@ import {
   seguirSiniestro,
   type ResultadoSiniestro,
 } from '@/lib/cartera-siniestros'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -51,7 +52,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   return escribir(req, (correduriaId, b) =>
     abrirSiniestro(correduriaId, {
       polizaId: cadena(b.polizaId) ?? '',
@@ -68,14 +69,14 @@ export async function POST(req: Request) {
       actor: cadena(b.actor) ?? 'plataforma',
     }),
   )
-}
+})
 
 const CAMPOS_SEGUIMIENTO = [
   'referencia', 'gravedad', 'tramitadorNombre', 'tramitadorTelefono', 'tramitadorEmail',
   'peritoNombre', 'peritoTelefono', 'peritoEmail', 'reservaImporte', 'indemnizacionImporte', 'nota',
 ] as const
 
-export async function PATCH(req: Request) {
+export const PATCH = auditado(async (req: Request) => {
   return escribir(req, (correduriaId, b) => {
     const siniestroId = cadena(b.siniestroId) ?? ''
     const actor = cadena(b.actor) ?? 'plataforma'
@@ -90,7 +91,7 @@ export async function PATCH(req: Request) {
     }
     return seguirSiniestro(correduriaId, { ...seguimiento, siniestroId, actor })
   })
-}
+})
 
 async function escribir(req: Request, accion: (correduriaId: string, body: Record<string, unknown>) => Promise<ResultadoSiniestro>) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

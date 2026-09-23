@@ -369,10 +369,10 @@ Ya existe y es la parte más madura: `core-ai` (cadena de fallback) + gateway (c
   - Solo exige de la Fase 1b la auditoría de sus propias escrituras.
   - Incluye en el portal (§Q): «Tus vencimientos» + «Mejórame el precio», consentimiento en las declaradas, centro de preferencias e invitación al portal en cada contacto de renovación.
 - **Fase 1b — Core mínimo (en paralelo; bloquea a los agentes, no a vender)**
-  - Webhook de Telegram fail-closed + router por prefijo.
-  - JWT de actor en el puerto.
-  - `seguros.auditoria` + `auditar()` en todas las escrituras de `lib/cartera-*`.
-  - Todo el uso de IA de asegura por el gateway.
+  - ✅ Webhook de Telegram fail-closed (#3330). Pendiente: router por prefijo.
+  - ✅ Actor en el puerto (23/09): cabecera `x-actor` (`humano:<cuentaId>` · `agente:<id>` · `sistema:<origen>`) desde `cabecerasPuerto()` de plataforma, y una fila en `seguros.auditoria` por cada escritura autorizada vía `auditado()` (guardián en `apps/asegura/lib/auditoria.test.ts`). **No es JWT**: firmarlo con una clave derivada del mismo Bearer no añadía nada frente a quien ya tiene el secreto; es atribución, no autorización, hasta que los agentes tengan credencial propia (Fase 5). Sin cabecera queda como `desconocido`, sin rechazar.
+  - `seguros.auditoria`: añadir el antes/después por campo (pieza c) en las escrituras de `lib/cartera-*`.
+  - ✅ Todo el uso de IA de asegura por el gateway (1-6, #3327).
   - Los tres con su test o cepo visto fallar.
 - **Fase 2 — Eventos/Workflows** (depende de F1)
   - `seguros.evento` + dispatcher + detector diff de CIMA.

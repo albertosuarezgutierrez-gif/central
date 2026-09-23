@@ -10,6 +10,7 @@
 // se arreglan en sitios distintos.
 
 import { leerTruncado } from './correduria-puerto.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type MotivoErrorComisiones =
   | 'secreto_rechazado'   // 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
@@ -158,7 +159,7 @@ export async function comisionesAsegura(desde: string): Promise<ComisionesAsegur
   try {
     const base = (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
     const res = await fetch(`${base}/api/operador/comisiones?desde=${encodeURIComponent(desde)}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15000),
     })

@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { autorizarVer, borrarRelacion, cambiarTipoRelacion, crearRelacion, listarRelaciones, type ResultadoRelacion } from '@/lib/cartera-relaciones'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -47,13 +48,13 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   return escribir(req, (c, b) =>
     crearRelacion(c, cadena(b.clienteId) ?? '', { relacionadoId: cadena(b.relacionadoId) ?? '', tipo: b.tipo, observaciones: b.observaciones, actor: actorDe(b) }),
   )
-}
+})
 
-export async function PATCH(req: Request) {
+export const PATCH = auditado(async (req: Request) => {
   return escribir(req, (c, b) => {
     // Dos escrituras distintas por el mismo verbo, y se separan por la PRESENCIA
     // de `tipo`, no por `autoriza`: `b.autoriza === true` convierte un cuerpo sin
@@ -80,11 +81,11 @@ export async function PATCH(req: Request) {
       actor: actorDe(b),
     })
   })
-}
+})
 
-export async function DELETE(req: Request) {
+export const DELETE = auditado(async (req: Request) => {
   return escribir(req, (c, b) => borrarRelacion(c, cadena(b.clienteId) ?? '', { relacionadoId: cadena(b.relacionadoId) ?? '', actor: actorDe(b) }))
-}
+})
 
 async function escribir(req: Request, accion: (correduriaId: string, body: Record<string, unknown>) => Promise<ResultadoRelacion>) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

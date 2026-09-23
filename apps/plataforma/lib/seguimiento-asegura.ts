@@ -13,6 +13,7 @@
  * lee y se rotula.
  */
 
+import { cabecerasPuerto } from './puerto-actor.ts'
 import {
   MOTIVOS_PERDIDA,
   TIPOS_TAREA,
@@ -449,7 +450,7 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
   try {
     const res = await fetch(`${base}${path}`, {
       ...init,
-      headers: { Authorization: `Bearer ${secret}`, ...(init.body ? { 'content-type': 'application/json' } : {}) },
+      headers: { ...(await cabecerasPuerto(secret)), ...(init.body ? { 'content-type': 'application/json' } : {}) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     })

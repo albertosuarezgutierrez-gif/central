@@ -5,6 +5,7 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { fichaPoliza } from '@/lib/cartera-poliza'
 import { establecerDireccionRiesgo, establecerModalidadRc } from '@/lib/cartera-poliza-editar'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,7 +39,7 @@ export async function GET(req: Request) {
 //   - `campo: 'direccion_riesgo'`: la DIRECCIÓN DEL RIESGO de un inmueble
 //     (hogar/comunidades). Body `{ id, direccion, cp?, localidad?, actor }`.
 //     409 `ya_informada` si la póliza ya la trae: no se pisa desde aquí.
-export async function PATCH(req: Request) {
+export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ estado: 'error', motivo: 'No autorizado' }, { status: 401 })
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const id = typeof body?.id === 'string' ? body.id.trim() : ''
@@ -62,4 +63,4 @@ export async function PATCH(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/poliza-patch', e) }, { status: 500 })
   }
-}
+})

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
+import { auditado } from '@/lib/auditoria'
 import { prisma } from '@/lib/tenant'
 import { correduriaUnica } from '@/lib/cartera'
 import { catalogoCompanias, registrarPolizaEmitida } from '@/lib/emision'
@@ -64,7 +65,7 @@ export const maxDuration = 60
  * nadie. `campos` son los datos que pida `policy-application-fields` (se
  * consulta aquí mismo, gratis, y viaja en la respuesta de error si faltan).
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -741,7 +742,7 @@ export async function POST(req: Request) {
     cuenta: cuentaRespuesta,
     crudo: redactarCrudoVendor(envio.crudo),
   })
-}
+})
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null

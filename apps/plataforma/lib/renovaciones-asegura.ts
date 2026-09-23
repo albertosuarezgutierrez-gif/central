@@ -6,6 +6,7 @@
 // de escritura, así que se reutiliza `EscrituraRecaptacion`/
 // `interpretarEscrituraRecaptacion` en vez de duplicar los cinco estados.
 import { interpretarEscrituraRecaptacion, type EscrituraRecaptacion } from './recaptacion-asegura'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
@@ -16,9 +17,7 @@ async function pedirCon(path: string, init: RequestInit, timeoutMs: number = 800
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
     ...init,
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      ...(init.body ? { 'content-type': 'application/json' } : {}),
+    headers: { ...(await cabecerasPuerto(secret)), ...(init.body ? { 'content-type': 'application/json' } : {}),
     },
     cache: 'no-store',
     signal: AbortSignal.timeout(timeoutMs),
