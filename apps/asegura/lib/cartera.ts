@@ -95,6 +95,13 @@ export type PolizaVencimiento = {
    */
   retarificacion: Retarificabilidad
   /**
+   * `YYYY-MM-DD` del último fichero de CIMA de la compañía de esta póliza, o
+   * `null` si no se sabe (sin código DGS o la consulta falló). Lo usa la
+   * pantalla para no llamar «vencida sin gestionar» a lo que es una renovación
+   * que la compañía no ha mandado.
+   */
+  ultimoFicheroCompania: string | null
+  /**
    * Para llamar sin abrir la ficha. Es la MISMA pieza que el buscador
    * (`contactosDe` de `cartera-busqueda.ts`), no una copia: el contrato de los
    * tres estados —dato / «no consta» / «cifrado y no abre»— tiene que ser uno
@@ -287,6 +294,7 @@ export async function vencimientosProximos(
     select: {
       id: true, tipo: true, aseguradora: true, numeroPoliza: true, fechaVencimiento: true,
       primaAnual: true, primaBruta: true, fraccionamiento: true, datosEspecificos: true,
+      codigoEntidadDgs: true,
       cliente: { select: { id: true, nombre: true, apellidos: true } },
     },
   })
@@ -340,6 +348,13 @@ export async function vencimientosProximos(
     filas.map(f => f.id),
   ).catch(() => new Map<string, Date>())
 
+  // Último fichero de CIMA por compañía. Es lo que distingue «vencida sin
+  // gestionar» de «la compañía no ha mandado la renovación»: el 23/09/2026
+  // salían 10 pólizas de Mapfre como YA VENCIDAS con su última anualidad
+  // cobrada y Mapfre sin mandar un solo fichero desde el 23/06. `null` en el
+  // mapa entero = no se pudo mirar, y la fila sale sin fecha (no se afirma).
+  const ultimoFichero = await ultimoFicheroPorCompania(correduriaId).catch(() => null)
+
   const polizas = filas.map(f => {
     const vencimiento = f.fechaVencimiento as Date
     const diasRestantes = diasHastaVencimiento(vencimiento, hoyRef)
@@ -371,10 +386,21 @@ export async function vencimientosProximos(
       // Si la consulta falló, `null` para todas: «no se ha podido mirar».
       contacto: contactos?.get(f.cliente.id) ?? null,
       ultimoContactoEn: ultimosContactos.get(f.id)?.toISOString().slice(0, 10) ?? null,
+      ultimoFicheroCompania: f.codigoEntidadDgs ? ultimoFichero?.get(f.codigoEntidadDgs) ?? null : null,
     }
   })
 
   return { polizas, truncado }
+}
+
+/** `YYYY-MM-DD` del último fichero de CIMA descargado de cada compañía (código DGS). */
+async function ultimoFicheroPorCompania(correduriaId: string): Promise<Map<string, string>> {
+  const filas = await prismaAsegura().$queryRaw<{ codigo: string; ultimo: string }[]>`
+    select codigo_entidad as codigo, to_char(max(descargado_at), 'YYYY-MM-DD') as ultimo
+    from cima_ficheros
+    where correduria_id = ${correduriaId}::uuid and codigo_entidad is not null and descargado_at is not null
+    group by codigo_entidad`
+  return new Map(filas.map(f => [f.codigo, f.ultimo]))
 }
 
 /**

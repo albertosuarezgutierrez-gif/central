@@ -1,0 +1,193 @@
+{
+ "sesion": "3a3ac822-426e-55b8-8cb8-d090a23da8f9",
+ "inicio": "2026-09-23T05:11:15.768Z",
+ "fin": "2026-09-23T12:26:42.839Z",
+ "llamadas": 1128,
+ "categorias": {
+  "agente:Explore": {
+   "llamadas": 5,
+   "chars_in": 11227,
+   "chars_out": 12327,
+   "errores": 0,
+   "archivos_citados": 10,
+   "chars_citados": 1044933,
+   "tools": {
+    "Agent": 5
+   }
+  },
+  "bash": {
+   "llamadas": 663,
+   "chars_in": 423336,
+   "chars_out": 2119812,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 663
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 56,
+   "chars_in": 7387,
+   "chars_out": 499086,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 35,
+    "Grep": 21
+   }
+  },
+  "otro": {
+   "llamadas": 134,
+   "chars_in": 43707,
+   "chars_out": 1803622,
+   "errores": 0,
+   "archivos_citados": 142,
+   "chars_citados": 2997695,
+   "tools": {
+    "AskUserQuestion": 3,
+    "Skill": 7,
+    "ToolSearch": 34,
+    "ExitPlanMode": 6,
+    "ReadNotifications": 58,
+    "SubagentHandback": 3,
+    "Artifact": 20,
+    "ArtifactComments": 2,
+    "ReportFindings": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 63,
+   "chars_in": 385900,
+   "chars_out": 1791819,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 41,
+    "Edit": 22
+   }
+  },
+  "sql": {
+   "llamadas": 49,
+   "chars_in": 36764,
+   "chars_out": 58191,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 49
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 37,
+   "chars_in": 4909,
+   "chars_out": 23260,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__add_repo": 1,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 9,
+    "mcp__Claude_Code_Remote__send_later": 12,
+    "mcp__Claude_Code_Remote__delete_trigger": 9,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 6
+   }
+  },
+  "mcp:github": {
+   "llamadas": 103,
+   "chars_in": 47843,
+   "chars_out": 464705,
+   "errores": 7,
+   "archivos_citados": 3,
+   "chars_citados": 132659,
+   "tools": {
+    "mcp__github__actions_list": 36,
+    "mcp__github__get_job_logs": 3,
+    "mcp__github__actions_get": 1,
+    "mcp__github__get_check_run": 1,
+    "mcp__github__get_file_contents": 1,
+    "mcp__github__list_pull_requests": 3,
+    "mcp__github__create_pull_request": 10,
+    "mcp__github__update_pull_request": 12,
+    "mcp__github__pull_request_read": 24,
+    "mcp__github__merge_pull_request": 9,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__unsubscribe_pr_activity": 1,
+    "mcp__github__add_issue_comment": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 3734,
+   "chars_out": 4099,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 20109,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 6,
+   "chars_in": 675,
+   "chars_out": 28630,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_deployments": 1,
+    "mcp__Vercel__list_projects": 1,
+    "mcp__Vercel__get_runtime_logs": 4
+   }
+  },
+  "mcp:Resend": {
+   "llamadas": 6,
+   "chars_in": 1319,
+   "chars_out": 3942,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Resend__list-domains": 1,
+    "mcp__Resend__get-domain": 4,
+    "mcp__Resend__verify-domain": 1
+   }
+  },
+  "mcp:Google_Calendar": {
+   "llamadas": 1,
+   "chars_in": 633,
+   "chars_out": 1088,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Calendar__create_event": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 2983,
+   "chars_out": 3169,
+   "errores": 0,
+   "archivos_citados": 5,
+   "chars_citados": 42913,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 2646,
+   "chars_out": 407,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__apply_migration": 1,
+    "mcp__Supabase__list_projects": 1
+   }
+  }
+ }
+}

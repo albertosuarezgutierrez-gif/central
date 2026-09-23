@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-21T19:06:21Z",
+  "generadoEn": "2026-09-23T12:45:15Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 78
+        "evidencias": 83
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 65
+        "evidencias": 72
       },
       "rrhh": {
         "estado": "no",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "presente": false,
@@ -3976,6 +3976,7 @@
       "/api/cron/avisos-vencimiento",
       "/api/cron/revision-anual",
       "/api/operador/actividad",
+      "/api/operador/actividad-nueva",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
@@ -4029,12 +4030,17 @@
       "/api/operador/impagados",
       "/api/operador/ingesta",
       "/api/operador/leads",
+      "/api/operador/leads-competencia",
       "/api/operador/leads-web",
+      "/api/operador/oportunidad",
+      "/api/operador/oportunidad/llamada",
+      "/api/operador/oportunidad/tarea",
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza-documento",
       "/api/operador/poliza/emitida",
       "/api/operador/poliza/intervinientes",
+      "/api/operador/portal/invitaciones",
       "/api/operador/presupuesto",
       "/api/operador/recaptacion",
       "/api/operador/recaptacion/email",
@@ -4049,6 +4055,7 @@
       "/api/operador/siniestros-nuevos",
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
+      "/api/operador/tareas-hoy",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/portal/carnets",
@@ -4938,9 +4945,14 @@
       "/api/correduria/ingesta",
       "/api/correduria/intervinientes",
       "/api/correduria/leads",
+      "/api/correduria/leads-competencia",
       "/api/correduria/leads-web",
+      "/api/correduria/oportunidad",
+      "/api/correduria/oportunidad/llamada",
+      "/api/correduria/oportunidad/tarea",
       "/api/correduria/partes",
       "/api/correduria/poliza",
+      "/api/correduria/portal-invitaciones",
       "/api/correduria/presupuesto",
       "/api/correduria/radar-recibos",
       "/api/correduria/recaptacion",
@@ -4953,6 +4965,7 @@
       "/api/correduria/siniestro/terceros",
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
+      "/api/correduria/tareas-hoy",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -4962,11 +4975,13 @@
       "/api/cron/canario-lead",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
+      "/api/cron/cima-pull-respaldo",
       "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
       "/api/cron/contable-proactivo",
+      "/api/cron/correduria-actividad",
       "/api/cron/correduria-ingesta",
       "/api/cron/correduria-partes",
       "/api/cron/correduria-renovaciones",
@@ -5428,6 +5443,7 @@
       "seguros.mensajes",
       "seguros.ofertas_automaticas",
       "seguros.operational_events",
+      "seguros.oportunidad_historial",
       "seguros.oportunidades",
       "seguros.peticiones",
       "seguros.poliza_coberturas",
@@ -6442,7 +6458,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1401,
+    "apis": 1416,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

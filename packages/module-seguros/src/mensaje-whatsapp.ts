@@ -94,3 +94,38 @@ export function mensajePresentacionWhatsapp(nombre: string): string {
     'Y para cualquier duda de tus seguros, un parte o echar un ojo a una póliza que tengas contratada, me escribes por aquí.',
   ].join('\n')
 }
+
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+/**
+ * El WhatsApp de SEGUIMIENTO a un lead de Vencimientos (Alberto, 23/09/2026:
+ * «la vía de contacto preferente es WhatsApp; no automático, pero sí
+ * contactos»). Lo abre Alberto con un clic y lo envía él: nada sale solo.
+ *
+ * Distinto de `mensajePresentacionWhatsapp`: aquel presenta la intranet; este
+ * va a lo que toca — su seguro renueva pronto — y ofrece mirarlo.
+ *
+ * 🚨 Dos cosas que no se negocian:
+ *   · No promete precio ni ahorro («te miro si hay algo mejor», no «te lo
+ *     bajo»): lo vigila `copy-regulado`.
+ *   · Lleva la BAJA en el propio mensaje. WhatsApp es comunicación
+ *     electrónica (LSSI art. 21) y cada envío comercial tiene que ofrecer
+ *     una forma sencilla de no recibir más.
+ *
+ * `mesAniversario` es 1-12 o `null`; la fecha del lead es ESTIMADA
+ * (aniversario de una póliza antigua), así que se pregunta, no se afirma.
+ */
+export function mensajeRenovacionLeadWhatsapp(d: { nombre: string | null; ramo: string | null; mesAniversario: number | null }): string {
+  const pila = nombreDePila(d.nombre)
+  const ramo = d.ramo ? d.ramo.replace(/_/g, ' ').toLowerCase() : null
+  const mes = d.mesAniversario !== null && d.mesAniversario >= 1 && d.mesAniversario <= 12 ? MESES[d.mesAniversario - 1] : null
+  const seguro = ramo ? `el seguro de ${ramo}` : 'tu seguro'
+  const pregunta = mes ? `¿Te renueva ${seguro} por ${mes}?` : `¿Cuándo te renueva ${seguro}?`
+  return [
+    pila ? `Hola ${pila}, soy ${FIRMA}, corredor de seguros.` : `Hola, soy ${FIRMA}, corredor de seguros.`,
+    '',
+    `${pregunta} Si quieres, antes de que se renueve lo miro con las compañías con las que trabajo y te digo si hay algo que te encaje mejor, sin compromiso.`,
+    '',
+    'Si prefieres que no te escriba más, dímelo y no lo vuelvo a hacer.',
+  ].join('\n')
+}

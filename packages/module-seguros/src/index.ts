@@ -94,6 +94,10 @@ export {
   DIAS_AVISO_PURGA,
   DIAS_RECORDATORIO_INGESTA,
   decidirAvisoIngesta,
+  firmaAvisoIngesta,
+  normalizarFirmaIngesta,
+  decidirRespaldoPull,
+  HORAS_RESPALDO_PULL,
   repartirHuerfanas,
   textoHuerfanas,
   TOPE_POLIZAS_TELEGRAM,
@@ -109,6 +113,7 @@ export {
   type FicheroParcial,
   type MotivoAviso,
   type DecisionAviso,
+  type DecisionRespaldoPull,
   type PolizaHuerfana,
   type PolizaEnCartera,
   type GrupoHuerfanas,
@@ -316,7 +321,7 @@ export {
   type RelacionFila,
   type RelacionFicha,
 } from './relaciones.ts'
-export { mensajePresentacionWhatsapp } from './mensaje-whatsapp.ts'
+export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -728,3 +733,38 @@ export {
   type Comparativa,
   type OpcionesComparativa,
 } from './comparativa-precios.ts'
+export {
+  DIAS_ENTRE_LLAMADAS_RESPONDIO, DIAS_LLAMADA, DIAS_PRIMER_CONTACTO, DIAS_RECORDATORIO, MAX_INTENTOS, MAX_INTENTOS_RESPONDIO,
+  canalLead, diasHasta, pasoConTarea, proximoAniversario, puedeWhatsappLead, puntuarLead, siguientePasoLead, textoPasoLead, ventanaDe,
+} from './lead-competencia.ts'
+export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
+export { MOTIVOS_PERDIDA, PRIORIDADES_TAREA, TIPOS_TAREA, aplicarAccion, validarTarea } from './oportunidad-seguimiento.ts'
+export {
+  DIAS_APARCAR_NO_INTERESA, DIAS_PREPARAR_PRECIO, MAX_DIAS_RELLAMADA, PREFIJO_LLAMADA_CONTESTADA, PREFIJO_LLAMADA_SIN_RESPUESTA,
+  RESULTADOS_LLAMADA, planLlamada,
+} from './llamada-resultado.ts'
+export type { PlanLlamada, ResultadoLlamada } from './llamada-resultado.ts'
+export type {
+  AccionOportunidad,
+  Cambios as CambiosOportunidad,
+  EstadoActual as EstadoActualOportunidad,
+  EstadoOportunidad,
+  MotivoPerdida,
+  PeticionAccion,
+  PrioridadTarea,
+  ResultadoAccion,
+  TareaValida,
+  TipoTarea,
+} from './oportunidad-seguimiento.ts'
+export {
+  TIPOS_YA_AVISADOS,
+  VENTANA_MINUTOS,
+  claveEvento,
+  decidirAvisosActividad,
+  desdeConsulta,
+  detalleActividad,
+  leerMarcaActividad,
+  mensajeActividad,
+  serializarMarcaActividad,
+} from './actividad-aviso.ts'
+export type { DecisionActividad, MarcaActividad } from './actividad-aviso.ts'

@@ -32,11 +32,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # HEAD = merge del PR, HEAD^1 = su base
+
+      # 💸 Solo en PRs: si el PR no toca ia-rest ni un package que consuma, se saltan
+      # install/lint/tsc/build y el job (check REQUERIDO) termina en verde. Push a
+      # main y dispatch: siempre entero. Reglas (fail-open) en scripts/ci-app-afectada.mjs.
+      - name: ¿El PR toca ia-rest?
+        id: afecta
+        working-directory: .
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # La regla se ejecuta desde la BASE, no desde el PR: así un PR no puede
+            # saltarse sus propios checks editando el script (Graphify, #3297).
+            if git show HEAD^1:scripts/ci-app-afectada.mjs > "$RUNNER_TEMP/afectada.mjs" 2>/dev/null; then
+              node "$RUNNER_TEMP/afectada.mjs" apps/ia-rest HEAD^1
+            else
+              echo "afecta=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "afecta=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup pnpm
+        if: steps.afecta.outputs.afecta != 'false'
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
+        if: steps.afecta.outputs.afecta != 'false'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -44,20 +67,24 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
+        if: steps.afecta.outputs.afecta != 'false'
         run: pnpm install --no-frozen-lockfile
 
       # ── 1. ESLint ──────────────────────────────────────────────────────────
       - name: Lint
+        if: steps.afecta.outputs.afecta != 'false'
         run: pnpm run lint
 
       # ── 2. TypeScript ──────────────────────────────────────────────────────
       - name: TypeScript check
+        if: steps.afecta.outputs.afecta != 'false'
         run: pnpm exec tsc --noEmit
 
       # ── 3. Build ───────────────────────────────────────────────────────────
       # Usamos vars dummy para que next build no falle por falta de env.
       # El objetivo es verificar que el código compila, no que funciona en runtime.
       - name: Build
+        if: steps.afecta.outputs.afecta != 'false'
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://wswbehlcuxqxyinousql.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci_dummy_key_build_check_only

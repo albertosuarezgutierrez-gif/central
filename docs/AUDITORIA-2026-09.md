@@ -386,4 +386,54 @@ arreglar, nada 🔴). Sin hallazgos nuevos respecto a la pasada de ayer — no s
 (ruido redundante sobre lo mismo ya avisado).
 
 ---
-<!-- verificado: 2026-09-22 -->
+
+## ✅ Pasada ligera — 23/09/2026
+
+**Rango:** 8 commits desde la pasada de ayer (`bb0401b`) hasta hoy (`5d0c191`) — CIMA parado
+~45h por presupuesto de Actions agotado (arreglado, con respaldo nuevo `cima-pull-respaldo`), alerta
+PSD2 BBVA, y «Invitar al portal por lotes» + recorte de minutos de Actions. Las 3 entradas de
+`CONTEXTO-SESIONES.md` que corresponden ya estaban anotadas por las propias sesiones — nada que
+reconciliar ahí.
+
+**Heartbeat (2-bis):** 43 filas en `agente_latidos`, prácticamente todo ✅. Dos `ok=false`:
+`ses_transporte` (crónico desde 21/08, sin establecimientos SES — sin cambios) y
+`correduria_renovaciones` (`"no se pudo leer la cartera: red"`, fallo de red de HOY, 25,6h desde su
+último ok — todavía dentro de su umbral de ~30h, no es 🔴 por umbral; primera vez que se ve este
+motivo, a vigilar si se repite mañana). `agente_reparaciones`: sin intentos en los últimos 7 días.
+
+**Correduría (2-quater):** CIMA entrando con normalidad (`cima_pull_completed` hace <1h, cola
+estable en 151, `errorsCount=0`) — coherente con el arreglo de ayer (PR #3293) y con el latido
+`cima_pull_respaldo` («al día, no hace falta respaldo»). `correduria_ingesta` sigue DEGRADADA (mismo
+backlog conocido: 7 pólizas huérfanas ya en cartera, 3 arrastradas de antes) y **C0058 (Mapfre) ya
+son 92 días sin mandar nada** (91→92, incremento diario esperado). Codeoscopic: 11 cotizaciones/7d,
+5,50€, 2 descartadas — igual que ayer.
+
+**Pricing (2bis):** `rail_baja_roto=0` · `bajo_minimo=0` · `oscilantes=0` ·
+`rail_alza_sin_justificar=1` (🟠, mismo patrón que ayer). 4 palancas activas y sanas
+(`enabled`/`apply_enabled=true`, `min_price` puesto, `antelacion_k=0`). `horas_desde_ultima_pasada`
+7,8h, `noches_ultima_pasada=16` — sano.
+
+**Backlog de PRs (2-ter):** automerge (`rutinas-automerge.yml`) sano — varios runs en verde en la
+última hora, incluida la fusión inmediata del PR de radiografía (#3296). 41 PRs abiertos; el backlog
+en `mergeable_state:dirty`/`blocked` (p. ej. #2318 desde el 05/09, #2966 esperando lectura de
+Alberto) sigue igual que en las últimas pasadas — mismo problema ya reportado, sin cambio de causa
+raíz ni crecimiento apreciable. No se repite el listado completo.
+
+**Frescura de mapas (paso 4):** `docs/FUENTES-DE-VERDAD.md` fila de `cima-ingesta` no incluía el
+cron nuevo `cima-pull-respaldo`, `packages/module-seguros/src/ingesta.ts` (`firmaAvisoIngesta`,
+`decidirRespaldoPull`) ni `docs/ASEGURA-OS-ARQUITECTURA.md`, todos del commit `852a5bd` de ayer —
+corregido. Como `docs/FUENTES-DE-VERDAD.md` es uno de los docs que el automerge de registro
+**no** acepta (cambia comportamiento), va en el PR de carril 2 de hoy, no en el de registro.
+
+No se ha podido listar las sesiones del rango (`list_sessions` de Claude Code Remote no está
+disponible en esta pasada) — se dice explícitamente, no se afirma que no hay pendientes de
+conversación. Los 41 PRs abiertos (2-ter) cubren razonablemente ese hueco: sus títulos no muestran
+ninguna sesión sin huella en memoria/bitácora.
+
+**Carril 1:** esta entrada + `AUTO-APLICADOS.md` + `CONTEXTO-SESIONES.md` (PR de registro aparte,
+auto-mergeable). **Carril 2:** el fix de `docs/FUENTES-DE-VERDAD.md` (texto acotado, pero cambia un
+doc que el automerge excluye a propósito) — PR draft, sin 🔴 nuevo. Sin Telegram: nada que Alberto
+no supiera ya de ayer, y el único cambio de carril 2 es una corrección de mapa, no una decisión.
+
+---
+<!-- verificado: 2026-09-23 -->

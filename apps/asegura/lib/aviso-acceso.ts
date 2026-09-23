@@ -28,6 +28,7 @@ import { estadoAutorizacion } from '@central/module-seguros-portal'
 import { prismaAsegura } from './asegura-db'
 import { emailDeFicha } from './email-ficha'
 import { enlaceDeAutorizaciones, enviarAvisoAcceso } from './correo-aviso-acceso'
+import { MOTIVO_REMITENTE } from './correo-invitacion-portal'
 
 export type FalloAviso =
   | 'no_encontrado'
@@ -35,6 +36,7 @@ export type FalloAviso =
   | 'sin_email'
   | 'sin_portal'
   | 'sin_correo_configurado'
+  | 'remitente_no_verificado'
   | 'error_envio'
 
 export type ResultadoAviso =
@@ -119,6 +121,9 @@ export async function avisarAccesoPendiente(
         'asegura no tiene ningún proveedor de correo configurado (falta RESEND_API_KEY, SMTP_USER+SMTP_PASSWORD o GMAIL_USER+GMAIL_APP_PASSWORD en Vercel). Reintentarlo no lo arregla.',
       status: 503,
     }
+  }
+  if (enviado === 'remitente_no_verificado') {
+    return { ok: false, estado: 'remitente_no_verificado', motivo: MOTIVO_REMITENTE, status: 503 }
   }
   if (enviado === 'rechazado') {
     return { ok: false, estado: 'error_envio', motivo: 'El proveedor de correo no aceptó el mensaje. Vuelve a intentarlo.', status: 502 }

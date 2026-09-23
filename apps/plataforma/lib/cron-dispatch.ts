@@ -151,11 +151,22 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/sivra/eventos/verificar', schedule: '30 5 * * *' },
   { path: '/api/cron/cima-liq', schedule: '30 7 * * *' },
   { path: '/api/cron/correduria-ingesta', schedule: '45 6 * * *' },
+  // RESPALDO del pull de CIMA (23/09/2026): el pull principal corre en GitHub Actions del repo
+  // `asegura` (05:30/11:30) y el 22/09 se quedó ~45 h sin runner porque el presupuesto de Actions
+  // de la cuenta se agotó. Este mira 2,5 h después de cada franja (los `schedule` de Actions arrancan
+  // tarde a menudo) y SOLO dispara si esa franja no completó (`decidirRespaldoPull`): con Actions sano
+  // no hace nada.
+  { path: '/api/cron/cima-pull-respaldo', schedule: '0 8,14 * * *' },
   // Siniestros nuevos de la cartera: 06:50, justo DETRÁS del vigía de la ingesta (06:45) —
   // si los datos de CIMA no están entrando, ese aviso llega primero y explica por qué este
   // no trae nada— y antes de `agentes-latido` (07:45), para que el parte del día lea una
   // huella fresca. Avisa a Alberto para que LLAME al cliente y le haga seguimiento.
   { path: '/api/cron/correduria-siniestros', schedule: '50 6 * * *' },
+  // Aviso por Telegram de todo lo que hace un cliente en el portal (entrar, no
+  // poder entrar, cambiar su dirección, dar un parte, pedir la supresión…).
+  // Cada 5 min: es un aviso de «acaba de pasar», no un resumen. La marca de
+  // agua NO avanza si el Telegram no sale. Ver el fichero de la ruta.
+  { path: '/api/cron/correduria-actividad', schedule: '*/5 * * * *' },
   // Blog de grupoasegura.es: un artículo cada dos semanas (día 1 y 15, 08:00 UTC).
   // Cron no sabe decir «cada 14 días», y una lista de días de mes es lo más cercano
   // que además es ESTABLE: un `*/14` se descuadraría en cada mes de 31 días.

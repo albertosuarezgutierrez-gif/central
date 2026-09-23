@@ -28,6 +28,7 @@
 import {
   POR_PAGINA_ACTIVIDAD,
   POR_PAGINA_ACTIVIDAD_MAX,
+  TIPOS_YA_AVISADOS,
   sqlCarteraViva,
   type EmbudoPortal,
   type EventoActividad,
@@ -73,8 +74,17 @@ type FilaEvento = {
  * y ordenarlas en JavaScript— no sabe paginar: para dar la página 3 habría que
  * traerse las tres primeras de cada fuente y descartar la mayoría.
  */
-function consultaEventos(correduriaId: string, filtro: FiltroActividad, porPagina: number, offset: number) {
-  const desde = new Date(Date.now() - filtro.dias * 24 * 60 * 60 * 1000)
+function consultaEventos(
+  correduriaId: string,
+  filtro: FiltroActividad,
+  porPagina: number,
+  offset: number,
+  // Con cursor (el aviso por Telegram): límite inferior propio y orden
+  // ASCENDENTE, para que un corte por `limite` deje fuera lo más nuevo y no
+  // lo más viejo. Sin cursor, el muro de siempre.
+  cursor?: { desde: Date; excluirTipos?: readonly string[] },
+) {
+  const desde = cursor?.desde ?? new Date(Date.now() - filtro.dias * 24 * 60 * 60 * 1000)
   const soloCliente = filtro.quien === 'cliente'
   const prefContacto = `${PREFIJO_HISTORIAL_CONTACTO_PROPIO}%`
   const prefSugerencia = `${PREFIJO_HISTORIAL_SUGERENCIA}%`
@@ -172,7 +182,12 @@ function consultaEventos(correduriaId: string, filtro: FiltroActividad, porPagin
            count(*) over () as total
     from eventos e
     left join clientes c on c.id = e.cliente_id
-    order by e.fecha desc, e.id asc
+    ${
+      cursor?.excluirTipos && cursor.excluirTipos.length > 0
+        ? Prisma.sql`where e.tipo not in (${Prisma.join(cursor.excluirTipos.map((t) => Prisma.sql`${t}`))})`
+        : Prisma.empty
+    }
+    ${cursor ? Prisma.sql`order by e.fecha asc, e.id asc` : Prisma.sql`order by e.fecha desc, e.id asc`}
     limit ${porPagina} offset ${offset}`
 }
 
@@ -285,6 +300,42 @@ export async function actividadCartera(
     }
   } catch (e) {
     return { estado: 'error', causa: registrarErrorCartera('actividad-cartera', e) }
+  }
+}
+
+export type RespuestaActividadNueva =
+  | { estado: 'ok'; eventos: EventoActividad[]; total: number }
+  | { estado: 'error'; causa: string }
+
+/**
+ * Lo que han hecho los CLIENTES desde `desde` (inclusive), en orden ascendente,
+ * para el aviso por Telegram de plataforma (`correduria-actividad`). Sin el
+ * embudo: son cinco consultas que un vigía que pasa cada 5 minutos no necesita.
+ * `total` = cuántos casan: si es mayor que `eventos.length`, quien llama sabe
+ * que se ha quedado corto.
+ */
+export async function actividadNueva(correduriaId: string, desde: Date, limite: number): Promise<RespuestaActividadNueva> {
+  try {
+    const filtro: FiltroActividad = { quien: 'cliente', dias: 1, pagina: 1 }
+    // Lo que el portal ya avisa al instante no se pide: si no, ocuparía sitio
+    // en la página y adelantaría el corte por `limite` sin servir para nada.
+    const filas = await consultaEventos(correduriaId, filtro, limite, 0, { desde, excluirTipos: [...TIPOS_YA_AVISADOS] })
+    return {
+      estado: 'ok',
+      eventos: filas.map((f) => ({
+        id: f.id,
+        tipo: f.tipo,
+        fecha: f.fecha.toISOString(),
+        clienteId: f.cliente_id,
+        cliente: nombreFicha(f.nombre, f.apellidos),
+        // El texto libre del cliente (descripción de un parte, motivo de una
+        // supresión) NO viaja: el único consumidor es un aviso que no lo usa.
+        texto: null,
+      })),
+      total: filas.length > 0 ? Number(filas[0].total) : 0,
+    }
+  } catch (e) {
+    return { estado: 'error', causa: registrarErrorCartera('actividad-nueva', e) }
   }
 }
 

@@ -119,10 +119,14 @@ test('la pantalla NO puede anunciar una vencida como «en -N días»', () => {
 
 test('una vencida no puede parecer una que vence dentro de 40 días', () => {
   // La insignia (que existía y no se podía pintar) y el realce de la fila.
-  assert.match(RENOVACIONES, /vencida: \{ label: 'Vencida', tono: 'negativo' \}/)
+  // 23/09/2026: el tono pasó de alarma a AVISO y el rótulo de «Vencida» a
+  // «Renovación sin recibir» — Alberto, sobre 10 de Mapfre con la anualidad
+  // cobrada y Mapfre sin mandar ficheros por CIMA desde el 23/06: «no tiene
+  // sentido». Lo que este cepo sigue exigiendo es que se DISTINGA del resto.
+  assert.match(RENOVACIONES, /vencida: \{ label: 'Renovación sin recibir', tono: 'aviso' \}/)
   assert.match(RENOVACIONES, /const vencida = p\.dias < 0/)
   assert.ok(
-    /vencida \? \{ background: 'var\(--negative-bg\)' \}/.test(RENOVACIONES),
+    /vencida \? \{ background: 'var\(--warning-bg\)' \}/.test(RENOVACIONES),
     'la fila vencida ya no se separa visualmente del resto de la lista',
   )
 })
