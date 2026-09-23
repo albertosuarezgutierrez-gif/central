@@ -114,11 +114,6 @@ export const RAMOS: readonly Ramo[] = [
         respuesta:
           'La póliza se prorroga sola al vencimiento salvo que se avise antes. Como tomador puedes oponerte a la prórroga comunicándolo con al menos un mes de antelación a la fecha de vencimiento (art. 22 de la Ley de Contrato de Seguro). Esa fecha límite es lo que conviene tener apuntada, porque se pasa sin que nadie te avise.',
       },
-      {
-        pregunta: '¿Cobráis algo por revisar mi póliza?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
-      },
     ],
   },
   {
@@ -167,11 +162,6 @@ export const RAMOS: readonly Ramo[] = [
         respuesta:
           'La póliza se prorroga sola salvo aviso. La comunidad, como tomadora, puede oponerse a la prórroga comunicándolo con al menos un mes de antelación a la fecha de vencimiento (art. 22 de la Ley de Contrato de Seguro). Con el calendario de juntas de por medio, esa fecha hay que tenerla apuntada con margen.',
       },
-      {
-        pregunta: '¿Cobráis algo por revisar la póliza de la comunidad?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; la comunidad no abona ningún honorario adicional por el servicio de mediación.',
-      },
     ],
   },
   {
@@ -219,11 +209,6 @@ export const RAMOS: readonly Ramo[] = [
         pregunta: '¿Puedo cambiar de compañía sin esperar al vencimiento?',
         respuesta:
           'La póliza se prorroga sola al vencimiento salvo que se avise antes. Como tomador puedes oponerte a la prórroga comunicándolo con al menos un mes de antelación a esa fecha (art. 22 de la Ley de Contrato de Seguro). Es la fecha que más se pasa, porque nadie te la recuerda.',
-      },
-      {
-        pregunta: '¿Cobráis por estudiar el seguro de mi negocio?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
       },
     ],
   },
@@ -287,11 +272,6 @@ export const RAMOS: readonly Ramo[] = [
         respuesta:
           'El seguro de responsabilidad civil de suscripción obligatoria lo exige la Ley sobre responsabilidad civil y seguro en la circulación de vehículos a motor (texto refundido aprobado por el Real Decreto Legislativo 8/2004) a todo vehículo con estacionamiento habitual en España, sea de una persona o de una empresa. Lo que no es obligatorio es el resto de coberturas, y ahí es donde hay decisiones que tomar.',
       },
-      {
-        pregunta: '¿Cobráis por estudiar la flota de mi empresa?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
-      },
     ],
   },
   {
@@ -340,11 +320,6 @@ export const RAMOS: readonly Ramo[] = [
         pregunta: '¿Puedo cambiar de seguro de coche antes de que acabe el año?',
         respuesta:
           'La póliza se prorroga sola al vencimiento salvo aviso previo. Como tomador puedes oponerte a la prórroga comunicándolo con al menos un mes de antelación a la fecha de vencimiento (art. 22 de la Ley de Contrato de Seguro). Apuntar esa fecha evita quedarse otro año atado sin quererlo.',
-      },
-      {
-        pregunta: '¿Cobráis algo por revisar mi seguro de coche?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
       },
     ],
   },
@@ -445,14 +420,9 @@ export const RAMOS: readonly Ramo[] = [
           'Es hasta cuándo hacia atrás responde la póliza por hechos anteriores a su contratación. Sin retroactividad, un error cometido antes de firmar queda fuera aunque la reclamación llegue estando ya cubierto. Al cambiar de aseguradora es de los primeros datos que hay que poner sobre la mesa.',
       },
       {
-        pregunta: '¿Es obligatorio el seguro de responsabilidad civil para un autónomo?',
+        pregunta: '¿Es obligatorio el seguro de responsabilidad civil?',
         respuesta:
-          'No con carácter general: depende de la profesión y de la norma que la regule. Hay actividades con seguro obligatorio y colegios profesionales que lo exigen para ejercer, y hay contratos y pliegos que lo piden sin que ninguna ley lo imponga. Lo que hay que comprobar es qué te exigen a ti y con qué límite.',
-      },
-      {
-        pregunta: '¿Cobráis honorarios por el estudio de la RC?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación. Grupo ASegura es correduría inscrita en el registro de la DGSFP.',
+          'No con carácter general: depende de la actividad y de la norma que la regule. Hay actividades con seguro obligatorio y colegios profesionales que lo exigen para ejercer, y hay contratos y pliegos que lo piden sin que ninguna ley lo imponga. Lo que hay que comprobar es qué te exigen a ti y con qué límite.',
       },
     ],
   },
@@ -516,11 +486,6 @@ export const RAMOS: readonly Ramo[] = [
         respuesta:
           'Depende de la retroactividad que pacte la póliza nueva. Si no cubre hacia atrás, una reclamación por un trabajo hecho antes de cambiar de aseguradora puede quedar fuera aunque hoy tengas seguro en vigor. Es de los primeros datos que comprobamos antes de mover una póliza de instalador.',
       },
-      {
-        pregunta: '¿Cobráis honorarios por revisar el seguro de mi actividad?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
-      },
     ],
   },
   // 📌 Segunda página de INTENCIÓN (23/09/2026), y esta sí con volumen MEDIDO:
@@ -573,11 +538,6 @@ export const RAMOS: readonly Ramo[] = [
         pregunta: '¿Me cubre el seguro de hogar como autónomo si trabajo desde casa?',
         respuesta:
           'La responsabilidad civil de un seguro de hogar es la de la vida privada y suele excluir expresamente la actividad profesional. Si trabajas desde casa, los daños que cause tu trabajo necesitan su propia póliza de RC.',
-      },
-      {
-        pregunta: '¿Cobráis honorarios por revisar mi seguro de RC?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
       },
     ],
   },

@@ -36,8 +36,8 @@ test('🪤 el enlace lleva el texto codificado, y sin E.164 no hay enlace', () =
 
 test('🪤 un WhatsApp solo de hogar no se ofrece para auto ni para un ramo desconocido', () => {
   const fila: FilaCompania = {
-    nombreComun: 'Mapfre', telefonoSiniestros: null, telefonoAsistencia: '900 822 822',
-    whatsappSiniestros: '+34920750075', whatsappRamos: ['hogar'], horarioSiniestros: null, verificadoEn: '2026-09-23',
+    nombreComun: 'Mapfre', telefonoSiniestros: null, asistencias: [{ para: 'Hogar', numero: '900 822 822', horario: null }],
+    whatsappSiniestros: '+34920750075', whatsappNota: null, whatsappRamos: ['hogar'], horarioSiniestros: null, verificadoEn: '2026-09-23',
   }
   const canal = canalDeCompania('Mapfre', [fila])
   assert.equal(whatsappParaRamo(canal, 'hogar')?.numero, '+34920750075')

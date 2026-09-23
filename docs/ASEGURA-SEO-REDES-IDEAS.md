@@ -385,7 +385,11 @@ consultoría de Alberto (spec `docs/superpowers/specs/2026-09-19-asegura-gestor-
 30 impresiones era inalcanzable sin tráfico. **No automatizar el SEO antes de tener tráfico** — al
 principio la rutina propone y Alberto decide, no al revés.
 
-## L. Canibalización interna de las FAQ — 🟢 menor
+## ✅ L. Canibalización interna de las FAQ — cerrada (23/09/2026)
+
+✅ **Hecha:** la pregunta «¿cobráis…?» estaba en 8 de las 9 páginas de ramo con la misma respuesta; se quitó de todas y queda UNA frase en el bloque «Que te llamemos» de la plantilla. La RC general y la de autónomos compartían «¿Es obligatorio… para un autónomo?»: la general pasa a «¿Es obligatorio el seguro de responsabilidad civil?». Y la rejilla «Qué revisamos» de la portada usa `RAMOS_PRODUCTO` (sin las tarjetas de RC de fontaneros y autónomos junto a la general). Queda a propósito el preaviso del art. 22 LCS en hogar/auto/comercio/comunidades: es la misma regla legal, adaptada a cada ramo.
+
+Contexto original:
 
 La última pregunta de los 6 ramos es prácticamente la misma («¿cobráis algo?») con la misma
 respuesta (`ramos.ts:116, 169, 222, 275, 383` + `cambiar-de-correduria:76`). Seis respuestas casi
@@ -464,11 +468,20 @@ sevilla» 26,4) con 1-13 impresiones en tres meses. Y medido en DataForSEO (Open
 para eso no compensa, y meter «Sevilla» en la nacional lo prohíbe `ACOTA_AMBITO`. Para lo local
 manda el pack de Google Business (idea I): reseñas.
 
-✅ **HECHA el 23/09/2026 — `/telefonos-siniestros` (datos en `apps/asegura-web/lib/telefonos-companias.ts`,
-cepo en su `.test.ts`).** Hoy solo publica el número de **Occident** (confirmado por Alberto el 14/09);
-Mapfre, Allianz, Reale y Generali salen como «no lo hemos comprobado» con enlace a su web oficial hasta
-que una persona abra `fuente`, vea el mismo número y ponga `verificado: true` con la fecha. **Mientras
-Mapfre no esté verificada, la página no captura la búsqueda de 1.300/mes que la justifica.**
+✅ **HECHA el 23/09/2026 — `/telefonos-siniestros`, con las 7 compañías VERIFICADAS** (Mapfre,
+Allianz, Generali, Reale, Occident, Fidelidade, Asisa) por capturas de sus webs oficiales que mandó
+Alberto (PRs #3398, #3412). 🔀 **Los datos viven en UNA sola fuente desde #3412:**
+`packages/module-seguros/src/telefonos-companias.ts`, que leen la web, el portal del cliente y el
+puerto de asegura. Las columnas `telefono_*` de `companias_dgs` están OBSOLETAS (daban a Mapfre su
+línea médica como «dar parte»). Cambiar un número = PR a ese catálogo con captura y fecha.
+Solo Reale (900 455 900) y Occident (917 83 83 83, voz y WhatsApp) publican voz para dar parte.
+✅ **Y su artículo hermano `/blog/dar-parte-seguro-por-whatsapp`** (idea de Alberto): qué compañías
+aceptan el parte por WhatsApp, sin copiar ningún número (un cepo lo impide: enlaza la página).
+
+⏭️ **Siguiente, sin hacer:** una página por compañía (`/telefonos-siniestros/mapfre`…) para las
+navegacionales de abajo; medir antes su volumen con OpenSEO. Y datos estructurados FAQ en las dos
+páginas. Pendiente de Alberto: capturas de Fidelidade (emergencias y auto), la línea de voz de
+Mapfre para dar parte y el 900 300 250 de Allianz.
 
 💡 Idea de origen: una página de «teléfonos de siniestros por compañía». Lo que sí tiene
 volumen y dificultad casi nula son búsquedas NAVEGACIONALES de quien tiene un siniestro encima:

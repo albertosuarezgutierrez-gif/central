@@ -2150,6 +2150,14 @@ exento nuevo en el cepo es una puerta abierta para siempre a cambio de nada.
 
 ## ☎️ El teléfono de la compañía (05/09/2026) — el sitio existe, los números los pone una persona
 
+> 🔀 **ACTUALIZADO 23/09/2026 — esta sección es HISTORIA: las columnas `telefono_*` de `companias_dgs`
+> ya NO se leen** (están comentadas como OBSOLETAS en la BD). La única fuente es el catálogo verificado
+> `packages/module-seguros/src/telefonos-companias.ts`, el mismo que publica la web; `lib/canales-compania.ts`
+> lo convierte a `FilaCompania` (con varias líneas de asistencia rotuladas y la nota del WhatsApp) y el
+> puerto de asegura pisa esas columnas con él. Motivo: las dos copias se separaron y el portal daba a
+> Mapfre su línea MÉDICA como «dar parte». Lo vigila `test/regression-telefonos-fuente-unica.test.ts`.
+> Cambiar un número = PR a ese catálogo con captura de la web oficial y fecha, nunca un UPDATE.
+
 Alberto quiere una **hoja imprimible** («la del frigorífico») con lo que hace falta después de un
 percance: compañía, nº de póliza, tomador y **a quién llamar**. Ese teléfono no estaba en ninguna
 parte: medido el 04/09/2026, el único `telefono` de todo el schema que no es de una persona es el de

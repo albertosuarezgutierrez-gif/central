@@ -383,6 +383,10 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - `retarificabilidad()` (module-seguros): hogar sin m²/año/CP pero con referencia de 20 guardada → retarificable, `fuente: 'catastro'` (plataforma acepta ya esa fuente). Asegura usa la guardada sola si la pantalla no manda otra; «Cambiar de vivienda» = `?buscar=1`.
 - La ingesta de CIMA fusiona con `||`: no la borra. Pendiente: mandar `cadastralReference` al vendor (el campo ya existe en peticion-hogar, nadie lo rellena).
 
+## (23/09/2026) Teléfonos de compañías: UNA sola fuente (web + portal + puerto)
+- Catálogo verificado movido a `packages/module-seguros/src/telefonos-companias.ts` (con `codigoDgs`). Lo leen la web, el portal (`asegura-portal/lib/canales-compania.ts`, ya sin BD) y el puerto `/api/operador/companias` de asegura (pisa las columnas). Columnas `telefono_*` de `companias_dgs` comentadas como OBSOLETAS en BD, no borradas.
+- Portal: `FilaCompania` admite varias asistencias rotuladas («Asistencia · Hogar») y la nota del WhatsApp (Mapfre: solo hogar). Cepo nuevo `test/regression-telefonos-fuente-unica.test.ts` (visto en rojo).
+- Cambiar un número = PR al catálogo con captura y fecha, nunca UPDATE a la BD.
 ## (23/09/2026) correduría: retarificar hogar SIN m²/año/CP con el Catastro
 - Medido: 22 de las 28 pólizas de hogar vivas no canceladas no traían el riesgo (ni póliza ni gemela) y se quedaban en «no se puede retarificar». Ahora retarificar ofrece buscar la vivienda en el Catastro (precargada con la dirección del CLIENTE, avisando de que puede no ser la del riesgo) → elegir piso → la ficha sale con m²/año/CP «del Catastro».
 - Solo viaja la REFERENCIA de 20 a asegura (`referencia` en precalificar-hogar, retarificar y limites-hogar); asegura consulta el Catastro ella misma (`lib/codeoscopic/catastro-referencia.ts`): los números con los que se paga no los pone plataforma. El Catastro solo rellena huecos, no pisa la póliza.
