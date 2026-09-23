@@ -89,7 +89,7 @@ test('piso real: elementos comunes → piso, planta 2, 87 m² de vivienda (112 c
   const d = parsearCatastro(PISO_SAN_VICENTE_40)
   assert.equal(d.superficie, 112)
   assert.equal(d.anioConstruccion, 1994)
-  assert.equal(d.construcciones.length, 2)
+  assert.equal(d.construcciones?.length, 2)
   assert.deepEqual(caracterizarVivienda(d), { tipo: 'piso', planta: 2, superficieVivienda: 87, anexos: [] })
 })
 

@@ -38,7 +38,7 @@ export interface DatosCatastro {
    * elementos comunes, aparcamiento, almacén… cada una con su planta y m².
    * Vacío = el Catastro no las publica para esta finca, no «no tiene».
    */
-  construcciones: ConstruccionCatastro[]
+  construcciones?: ConstruccionCatastro[]
 }
 
 /** Una unidad constructiva de `<lcons>`. */
@@ -127,9 +127,10 @@ export interface ViviendaCatastro {
 }
 
 export function caracterizarVivienda(d: DatosCatastro): ViviendaCatastro | null {
-  const viviendas = d.construcciones.filter((c) => /VIVIENDA/i.test(c.uso ?? ''))
+  const construcciones = d.construcciones ?? []
+  const viviendas = construcciones.filter((c) => /VIVIENDA/i.test(c.uso ?? ''))
   if (viviendas.length === 0) return null
-  const comunes = d.construcciones.some((c) => /COMUN/i.test(c.uso ?? ''))
+  const comunes = construcciones.some((c) => /COMUN/i.test(c.uso ?? ''))
   const plantas = [...new Set(viviendas.map((c) => c.planta ?? ''))]
   const plantaNum = plantas.length === 1 && /^-?\d+$/.test(plantas[0]) ? Number(plantas[0]) : null
   // `cuotaParticipacion` ya viene a null cuando es el 100 % (finca entera).
@@ -144,7 +145,7 @@ export function caracterizarVivienda(d: DatosCatastro): ViviendaCatastro | null 
   const sup = viviendas.reduce((s, c) => s + (c.superficie ?? 0), 0)
   const anexos = [
     ...new Set(
-      d.construcciones
+      construcciones
         .map((c) => c.uso ?? '')
         .filter((u) => u !== '' && !/VIVIENDA|COMUN/i.test(u)),
     ),
