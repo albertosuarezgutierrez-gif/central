@@ -19,6 +19,13 @@ y está `verified` (08:50 UTC). Ese dominio también manda los códigos del port
 desenlace `remitente_no_verificado` (`rechazoDeRemitente()`), el lote se corta con 3 fallos iguales seguidos
 (`rachaDeFallos`) y la pantalla agrupa los fallos por motivo con el nombre del cliente.
 
+**(23/09/2026)** ✅ **Auditoría diaria (ligera): sin hallazgos 🔴.** Heartbeat sano salvo los
+crónicos (`ses_transporte`) y un fallo de red aislado de `correduria_renovaciones` (dentro de
+umbral, a vigilar). CIMA entrando con normalidad tras el arreglo de ayer, pricing sano, backlog de
+PRs `dirty` sin cambio. Un fix de mapa en `docs/FUENTES-DE-VERDAD.md` (cron `cima-pull-respaldo` +
+`module-seguros/src/ingesta.ts` que faltaban) va por PR de carril 2 al excluirlo el automerge de
+registro. Detalle en `docs/AUDITORIA-2026-09.md`.
+
 **(23/09/2026)** ✉️💸 **Invitar al portal por lotes + recorte de minutos de Actions (PR #3295).** El portal nunca
 había mandado una invitación: ahora `/correduria` → Actividad → «Invitar al portal» prepara la lista (solo `invitable`
 en vigor, motivos de exclusión, texto tal cual) y envía tras marcar «revisado»; tandas de 25, presupuesto 180 s, sin
