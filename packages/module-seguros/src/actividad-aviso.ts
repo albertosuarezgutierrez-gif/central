@@ -38,6 +38,13 @@ export const VENTANA_MINUTOS = 180
 /** Tope de caracteres del mensaje (Telegram corta en 4.096). */
 const TOPE_MENSAJE = 3500
 
+/**
+ * Tope de claves que se recuerdan. La marca vive en el `detalle` del latido,
+ * y ese `detalle` se pega entero en el aviso de latidos caídos: sin tope, un
+ * día movido lo haría pasar de los 4.096 caracteres de Telegram.
+ */
+const MAX_CLAVES = 120
+
 export type MarcaActividad = {
   /** Hasta dónde se miró en la última pasada que avisó (o ancló). ISO UTC. */
   instante: string
@@ -49,11 +56,18 @@ export type DecisionActividad =
   | { avisar: false; motivo: 'primera_vez'; marca: MarcaActividad; anteriores: number }
   | { avisar: false; motivo: 'sin_novedades'; marca: MarcaActividad }
   | { avisar: true; motivo: 'nuevos'; nuevos: EventoActividad[]; marca: MarcaActividad }
+  /** El puerto se quedó corto y la marca no puede avanzar: se dice, no se da por «nada nuevo». */
+  | { avisar: false; motivo: 'atascado'; causa: string }
 
 const MS_VENTANA = VENTANA_MINUTOS * 60_000
 
+/**
+ * `tipo:` + los 8 primeros caracteres del id (uuid): 32 bits bastan para no
+ * chocar entre las decenas de eventos de una ventana de 3 h, y la mitad de
+ * largo que el uuid entero (ver `MAX_CLAVES`).
+ */
 export function claveEvento(e: Pick<EventoActividad, 'tipo' | 'id'>): string {
-  return `${e.tipo}:${e.id}`
+  return `${e.tipo}:${e.id.slice(0, 8)}`
 }
 
 /** El `desde` que hay que pedir al puerto: la marca menos la ventana (o ahora menos la ventana, la primera vez). */
@@ -83,18 +97,37 @@ export function decidirAvisosActividad(p: {
   const fechas = p.eventos.map(e => new Date(e.fecha).getTime()).filter(Number.isFinite)
   const hasta = p.truncado && fechas.length > 0 ? Math.max(...fechas) : p.ahora.getTime()
   const instante = new Date(hasta).toISOString()
-  // Solo se recuerdan las claves que la PRÓXIMA consulta puede volver a traer.
+
+  // Truncado, dos casos que NO se pueden dar por buenos:
+  // - Primera pasada: anclar en el último visto haría que la siguiente
+  //   anunciara como «nuevo» el histórico que quedó fuera.
+  // - Sin avance: si lo visto no pasa de la marca anterior, cada pasada
+  //   pediría la misma página para siempre y diría «nada nuevo» en verde.
+  if (p.truncado && (p.marca === null || hasta <= new Date(p.marca.instante).getTime())) {
+    return {
+      avisar: false,
+      motivo: 'atascado',
+      causa: `hay más eventos en la ventana de ${VENTANA_MINUTOS} min de los que devuelve el puerto; la marca no puede avanzar sin saltarse alguno`,
+    }
+  }
+
+  // Solo se recuerdan las claves que la PRÓXIMA consulta puede volver a traer,
+  // y como mucho las MAX_CLAVES más recientes.
   const dentroDeVentana = (e: EventoActividad) => new Date(e.fecha).getTime() >= hasta - MS_VENTANA
+  const clavesVentana = () =>
+    avisables
+      .filter(dentroDeVentana)
+      .sort((a, b) => b.fecha.localeCompare(a.fecha))
+      .slice(0, MAX_CLAVES)
+      .map(claveEvento)
 
   if (p.marca === null) {
-    const claves = avisables.filter(dentroDeVentana).map(claveEvento)
-    return { avisar: false, motivo: 'primera_vez', marca: { instante, claves }, anteriores: avisables.length }
+    return { avisar: false, motivo: 'primera_vez', marca: { instante, claves: clavesVentana() }, anteriores: avisables.length }
   }
 
   const yaAvisadas = new Set(p.marca.claves)
   const nuevos = avisables.filter(e => !yaAvisadas.has(claveEvento(e)))
-  const claves = avisables.filter(dentroDeVentana).map(claveEvento)
-  const marca = { instante, claves }
+  const marca = { instante, claves: clavesVentana() }
   if (nuevos.length === 0) return { avisar: false, motivo: 'sin_novedades', marca }
   return { avisar: true, motivo: 'nuevos', nuevos, marca }
 }
@@ -127,11 +160,20 @@ export function mensajeActividad(nuevos: EventoActividad[], urlFicha: (clienteId
     const primero = eventos[0]
     const nombre = primero.cliente ? escapar(primero.cliente) : 'Sin ficha vinculada'
     const enlace = primero.clienteId ? ` · <a href="${escapar(urlFicha(primero.clienteId))}">abrir ficha</a>` : ''
-    const lineas = eventos.map(e => {
+    // Un bloque nunca se descarta entero: si un solo cliente tiene tantas
+    // líneas que no cabe (p. ej. 40 códigos pedidos seguidos), se recorta por
+    // líneas y se dice cuántas faltan. Si no, saldría una cabecera sin nombre.
+    let bloque = `<b>${nombre}</b>${enlace}`
+    let puestas = 0
+    for (const e of eventos) {
       const riesgo = riesgoActividad(String(e.tipo))
-      return `• ${horaMadrid(e.fecha)} ${escapar(etiquetaActividad(String(e.tipo)))}` + (riesgo ? `\n  ⚠️ ${escapar(riesgo)}` : '')
-    })
-    bloques.push(`<b>${nombre}</b>${enlace}\n${lineas.join('\n')}`)
+      const linea = `• ${horaMadrid(e.fecha)} ${escapar(etiquetaActividad(String(e.tipo)))}` + (riesgo ? `\n  ⚠️ ${escapar(riesgo)}` : '')
+      if ((cabecera + bloque + linea).length > TOPE_MENSAJE - 200) break
+      bloque += `\n${linea}`
+      puestas++
+    }
+    if (puestas < eventos.length) bloque += `\n• … y ${eventos.length - puestas} más de este cliente`
+    bloques.push(bloque)
   }
 
   let texto = cabecera
@@ -150,7 +192,7 @@ export function mensajeActividad(nuevos: EventoActividad[], urlFicha: (clienteId
 export function detalleActividad(
   d: DecisionActividad | { avisar: false; motivo: 'sin_datos'; causa?: string | null },
 ): string {
-  if (d.motivo === 'sin_datos') {
+  if (d.motivo === 'sin_datos' || d.motivo === 'atascado') {
     return `actividad del portal: NO se ha podido mirar${d.causa ? ` (${d.causa})` : ''} — esto NO significa que no haya habido`
   }
   if (d.motivo === 'primera_vez') {

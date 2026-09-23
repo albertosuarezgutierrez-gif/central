@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
+import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { actividadNueva } from '@/lib/actividad-cartera'
@@ -30,10 +31,15 @@ export async function GET(req: Request) {
   const limiteBruto = Number(q.get('limite') ?? '100')
   const limite = Number.isFinite(limiteBruto) ? Math.min(200, Math.max(1, Math.trunc(limiteBruto))) : 100
 
-  if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
-  const correduria = await correduriaUnica().catch(() => null)
-  if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
-
-  const r = await actividadNueva(correduria.id, desde, limite)
-  return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : 500 })
+  try {
+    if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
+    const correduria = await correduriaUnica()
+    if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
+    const r = await actividadNueva(correduria.id, desde, limite)
+    return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : 500 })
+  } catch (e) {
+    // Un fallo de lectura sale con su CAUSA (credenciales, conexión…), no
+    // pelado: el latido del cron de plataforma la enseña y dice dónde mirar.
+    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/actividad-nueva', e) }, { status: 500 })
+  }
 }

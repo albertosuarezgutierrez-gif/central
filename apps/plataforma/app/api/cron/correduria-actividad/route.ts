@@ -112,9 +112,12 @@ export async function GET(req: NextRequest) {
       SELECT detalle FROM agente_latidos WHERE agente = ${AGENTE}`)
     detalleAnterior = filas[0]?.detalle ?? null
   } catch {
-    // Sin poder leer la marca no se inventa una: se trataría como primera
-    // pasada y anclaría sobre lo de hoy, enterrando lo que quedara por avisar.
-    await registrarLatido(AGENTE, false, detalleActividad({ avisar: false, motivo: 'sin_datos', causa: 'no se pudo leer la marca de agua del latido' }))
+    // Sin poder leer la marca no se inventa una, y TAMPOCO se escribe el
+    // latido: `registrarLatido` reescribe el `detalle` entero y borraría la
+    // marca guardada, con lo que la pasada siguiente anclaría sin avisar de lo
+    // pendiente. El silencio del latido (`ultimo_ok_at` que no avanza) ya lo
+    // delata en la vigilancia diaria.
+    console.error('[correduria-actividad] no se pudo leer la marca de agua del latido')
     return NextResponse.json({ ok: false, motivo: 'marca_ilegible' }, { status: 500 })
   }
 
@@ -134,6 +137,13 @@ export async function GET(req: NextRequest) {
     ahora,
     truncado: lectura.total > lectura.eventos.length,
   })
+
+  if (decision.motivo === 'atascado') {
+    // Se conserva la marca anterior y el latido sale en ROJO: esto no es «nada nuevo».
+    const detalle = detalleActividad(decision)
+    await registrarLatido(AGENTE, false, marca ? serializarMarcaActividad(marca, detalle) : detalle)
+    return NextResponse.json({ ok: false, estado: 'atascado', causa: decision.causa })
+  }
 
   if (decision.avisar === false) {
     const detalle = detalleActividad(decision)

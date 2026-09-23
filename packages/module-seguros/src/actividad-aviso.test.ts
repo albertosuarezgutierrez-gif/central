@@ -19,6 +19,7 @@ test('la primera pasada ancla y no manda el histórico', () => {
   const d = decidirAvisosActividad({ marca: null, eventos: [ev('1', 'acceso', '2026-09-23T09:00:00Z')], ahora, truncado: false })
   assert.equal(d.avisar, false)
   assert.equal(d.motivo, 'primera_vez')
+  assert.ok(d.motivo === 'primera_vez')
   assert.deepEqual(d.marca.claves, ['acceso:1'])
 })
 
@@ -35,7 +36,7 @@ test('lo ya avisado no se repite; lo nuevo sí, y el acceso fallido tardío entr
     ahora,
     truncado: false,
   })
-  assert.ok(d.avisar)
+  assert.ok(d.motivo === 'nuevos')
   assert.deepEqual(d.nuevos.map(e => e.id), ['2', '3'])
   assert.deepEqual(d.marca.claves.sort(), ['acceso:1', 'acceso_fallido:2', 'direccion:3'])
 })
@@ -54,7 +55,24 @@ test('lo que el portal ya avisa al instante no se repite', () => {
 test('si el puerto trunca, la marca solo avanza hasta lo visto', () => {
   const marca: MarcaActividad = { instante: '2026-09-23T09:00:00Z', claves: [] }
   const d = decidirAvisosActividad({ marca, eventos: [ev('1', 'acceso', '2026-09-23T09:10:00Z')], ahora, truncado: true })
+  assert.ok(d.motivo === 'nuevos')
   assert.equal(d.marca.instante, '2026-09-23T09:10:00.000Z')
+})
+
+test('truncado sin avance o en la primera pasada: atascado, nunca «nada nuevo»', () => {
+  const marca: MarcaActividad = { instante: '2026-09-23T09:30:00Z', claves: ['acceso:1'] }
+  const d = decidirAvisosActividad({ marca, eventos: [ev('1', 'acceso', '2026-09-23T09:00:00Z')], ahora, truncado: true })
+  assert.equal(d.motivo, 'atascado')
+  const p = decidirAvisosActividad({ marca: null, eventos: [ev('1', 'acceso', '2026-09-23T09:00:00Z')], ahora, truncado: true })
+  assert.equal(p.motivo, 'atascado')
+})
+
+test('un cliente con demasiadas líneas se recorta, no desaparece', () => {
+  const muchos = Array.from({ length: 60 }, (_, i) => ev(String(i).padStart(8, '0'), 'acceso_fallido', `2026-09-23T09:${String(i % 60).padStart(2, '0')}:00Z`))
+  const m = mensajeActividad(muchos, id => `https://p.test/c/${id}`)
+  assert.ok(m.length <= 3500)
+  assert.match(m, /Rafael Martínez Sáez/)
+  assert.match(m, /más de este cliente/)
 })
 
 test('se consulta con la ventana hacia atrás', () => {
