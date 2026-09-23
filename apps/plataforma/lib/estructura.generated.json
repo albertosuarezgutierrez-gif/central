@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-23T09:51:43Z",
+  "generadoEn": "2026-09-23T10:21:30Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 80
+        "evidencias": 82
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4031,6 +4031,8 @@
       "/api/operador/leads",
       "/api/operador/leads-competencia",
       "/api/operador/leads-web",
+      "/api/operador/oportunidad",
+      "/api/operador/oportunidad/tarea",
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza-documento",
@@ -5432,6 +5434,7 @@
       "seguros.mensajes",
       "seguros.ofertas_automaticas",
       "seguros.operational_events",
+      "seguros.oportunidad_historial",
       "seguros.oportunidades",
       "seguros.peticiones",
       "seguros.poliza_coberturas",
@@ -6446,7 +6449,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1405,
+    "apis": 1407,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
