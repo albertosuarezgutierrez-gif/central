@@ -40,7 +40,7 @@ test('🚨 un abono entra en UN periodo aunque las ventanas de 45 días se pisen
     abono({ id: 'feb', fecha: '2026-03-03', importe: 200, companiaSeguros: 'Occident' }),
   ]
   const c = casarAbonos(periodos, abonos, SIN_REGLAS)
-  const todos = [...c.values()].flat()
+  const todos = [...c.porPeriodo.values()].flat()
   assert.equal(todos.length, 2, 'cada abono una sola vez')
   assert.deepEqual(bancoDePeriodo(periodos[0], c, abonos), { total: 100, ids: ['ene'] })
   assert.deepEqual(bancoDePeriodo(periodos[1], c, abonos), { total: 200, ids: ['feb'] })
@@ -63,6 +63,41 @@ test('sin mes en el concepto, gana el periodo cuya remesa coincide (±1€)', ()
   const abonos = [abono({ id: 'x', fecha: '2026-07-02', importe: 19.6, companiaSeguros: 'Allianz' })]
   const c = casarAbonos(periodos, abonos, SIN_REGLAS)
   assert.deepEqual(bancoDePeriodo(periodos[0], c, abonos).ids, ['x'])
+})
+
+test('remesas parecidas: cada abono a la más cercana y cerrada, sin repetir periodo', () => {
+  const periodos = [mes('C0109', '2026-05', 19.64), mes('C0109', '2026-06', 19.2)]
+  const abonos = [
+    abono({ id: 'may', fecha: '2026-06-02', importe: 19.64, companiaSeguros: 'Allianz' }),
+    abono({ id: 'jun', fecha: '2026-07-02', importe: 19.2, companiaSeguros: 'Allianz' }),
+  ]
+  const c = casarAbonos(periodos, abonos, SIN_REGLAS)
+  assert.deepEqual(bancoDePeriodo(periodos[0], c, abonos).ids, ['may'])
+  assert.deepEqual(bancoDePeriodo(periodos[1], c, abonos).ids, ['jun'])
+})
+
+test('dos meses con la MISMA remesa: el segundo abono no se amontona en el primer periodo', () => {
+  const periodos = [mes('C0109', '2026-05', 19.64), mes('C0109', '2026-06', 19.64)]
+  const abonos = [
+    abono({ id: 'jun', fecha: '2026-07-02', importe: 19.64, companiaSeguros: 'Allianz' }),
+    abono({ id: 'may', fecha: '2026-06-02', importe: 19.64, companiaSeguros: 'Allianz' }),
+  ]
+  const c = casarAbonos(periodos, abonos, SIN_REGLAS)
+  assert.deepEqual(bancoDePeriodo(periodos[0], c, abonos).ids, ['may'])
+  assert.deepEqual(bancoDePeriodo(periodos[1], c, abonos).ids, ['jun'])
+})
+
+test('si falta el mes que se paga, el abono no cae en el periodo anterior y se cuenta', () => {
+  const periodos = [{ codigo: 'C0109', inicio: '2026-02-01', fin: '2026-03-01', remesa: 80.77 }, mes('C0109', '2026-04')]
+  const abonos = [abono({ id: 'mar', fecha: '2026-04-03', importe: 50, companiaSeguros: 'Allianz' })]
+  const c = casarAbonos(periodos, abonos, SIN_REGLAS)
+  assert.equal(bancoDePeriodo(periodos[0], c, abonos).total, null)
+  assert.equal(c.sinPeriodo, 1)
+})
+
+test('una asignación manual con otro nombre de la compañía no se pierde', () => {
+  assert.equal(codigoDeAbono(abono({ id: 'a', fecha: '2026-01-02', importe: 1, companiaSeguros: 'Catalana Occidente' }), SIN_REGLAS), 'C0468')
+  assert.equal(mesDelConcepto('REF 20260312345'), null)
 })
 
 test('un abono de principios de mes sin periodo cerrado antes (el del mes anterior al libro) no se asigna', () => {

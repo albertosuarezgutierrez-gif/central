@@ -19,7 +19,7 @@ import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { estadoCuadre, mesEnPeriodo, finDeMes, ESTADOS_PENDIENTES, type EstadoCuadre } from '@/lib/correduria/cuadre'
 import { bancoDePeriodo, casarAbonos, rangoAbonos, type AbonoBanco } from '@/lib/correduria/casar-banco'
-import { listaCorreduria } from '@/lib/correduria-acceso'
+import { ENV_LISTA_CORREDURIA, listaCorreduria } from '@/lib/correduria-acceso'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -48,21 +48,33 @@ export async function GET(req: NextRequest) {
   // correduría (`CORREDURIA_EMAILS`, la misma lista que guarda `/correduria`), y entre ellas la que
   // recibe los abonos de seguros en sus bancos.
   const lista = listaCorreduria()
-  const cuenta = await prisma.$queryRaw<Array<{ id: string }>>`
-    SELECT c.id FROM cuentas c
+  // Sin la lista se toman todas las cuentas (un cron no tiene sesión que denegar), y se DICE en el latido.
+  const cuenta = await prisma.$queryRaw<Array<{ id: string; abonos: number }>>`
+    SELECT c.id, (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+                  WHERE cb.cuenta_id = c.id AND mb.destino = 'seguros' AND mb.importe > 0)::int AS abonos
+    FROM cuentas c
     WHERE ${lista === null} OR lower(c.email) = ANY(${lista ?? []}::text[])
-    ORDER BY (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-              WHERE cb.cuenta_id = c.id AND mb.destino = 'seguros' AND mb.importe > 0) DESC,
-             c.created_at, c.id
+    ORDER BY abonos DESC, c.created_at, c.id
     LIMIT 1`
   if (!cuenta.length) {
-    await registrarLatido(AGENTE, false, 'sin ninguna cuenta en la BD: no se ha podido cuadrar nada')
-    return NextResponse.json({ ok: true, msg: 'Sin cuentas' })
+    const motivo = lista === null
+      ? 'sin ninguna cuenta en la BD: no se ha podido cuadrar nada'
+      : `ninguna cuenta casa con ${ENV_LISTA_CORREDURIA} (¿errata en la lista?): no se ha podido cuadrar nada`
+    await registrarLatido(AGENTE, false, motivo)
+    return NextResponse.json({ ok: false, msg: motivo })
   }
   const cuentaId = cuenta[0].id
+  // Una cuenta sin un solo abono de seguros deja el tramo del banco a «—» en todo el libro: es
+  // exactamente el fallo del 20/09, así que el latido no puede quedar verde.
+  const avisoCuenta = cuenta[0].abonos === 0
+    ? 'la cuenta elegida no tiene abonos de seguros en sus bancos: el tramo del banco no se ha podido cruzar'
+    : null
+  const notaLista = lista === null ? `sin ${ENV_LISTA_CORREDURIA}: cuenta elegida entre todas` : null
 
+  // Desde el 1 de diciembre del año anterior: en enero llega la liquidación de diciembre, y sin ese
+  // periodo en el libro su abono no tendría a dónde ir.
   const anio = new Date().getFullYear()
-  const com = await comisionesAsegura(`${anio}-01-01`)
+  const com = await comisionesAsegura(`${anio - 1}-12-01`)
 
   if (com.estado === 'sin_configurar') {
     // El puerto no está conectado. NO es «no hay comisiones»: no se escribe nada
@@ -302,15 +314,24 @@ export async function GET(req: NextRequest) {
       : com.truncado === null
         ? 'no se sabe si la lectura vino recortada (asegura no lo informa)'
         : 'lectura completa'
+  const pasadaOk = com.truncado !== true && avisoCuenta === null
   await registrarLatido(
     AGENTE,
-    com.truncado !== true,
-    `${filas.length} periodo(s) cuadrados · ${avisos.length} con dinero que no cuadra · ${pendientes} sin dato o sin fuente · ` +
-      (sinDato ? 'comisiones ilegibles: no se sabe' : `${ilegibles} recibo(s) con comisión ilegible`) +
-      ` · ${notaTecho}`,
+    pasadaOk,
+    [
+      avisoCuenta,
+      `${filas.length} periodo(s) cuadrados · ${avisos.length} con dinero que no cuadra · ${pendientes} sin dato o sin fuente`,
+      sinDato ? 'comisiones ilegibles: no se sabe' : `${ilegibles} recibo(s) con comisión ilegible`,
+      casado.sinPeriodo > 0 ? `${casado.sinPeriodo} abono(s) de seguros sin periodo en el libro` : null,
+      notaTecho,
+      notaLista,
+    ].filter(Boolean).join(' · '),
   )
   return NextResponse.json({
-    ok: com.truncado !== true,
+    ok: pasadaOk,
+    cuentaSinAbonos: avisoCuenta !== null,
+    // Abonos de una compañía del libro que no se han podido atribuir a ningún periodo (su mes no está).
+    abonosSinPeriodo: casado.sinPeriodo,
     periodos: filas.length,
     avisos: avisos.length,
     pendientes,
