@@ -19,7 +19,8 @@ patrón que `oferta/route.ts`) solo si la solicitud está aprobada y aún no tra
 `meritaReintentoDocumento()` nuevo en `documentos-emitidos.ts`, puro y testeado. `maxDuration` sube
 de 60 a 120 (la ruta encadena hasta 4 llamadas al vendor); `retrievePolicyApplication()` extrae el
 Retrieve a un solo sitio para que la lectura y el reintento no diverjan — los dos hallazgos de un
-`code-review` obligatorio antes de este commit. tsc 0, `pnpm test` asegura 612/612.
+`code-review` obligatorio antes de este commit. Mergeado `main` para resolver conflicto con el lote
+de moto/CIMA de abajo; tsc 0, `pnpm test` asegura 633/633 tras el merge.
 
 **(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
 La moto de Víctor (Allianz 031698897) salía con catálogo de coche porque CIMA la guardó como `auto`
