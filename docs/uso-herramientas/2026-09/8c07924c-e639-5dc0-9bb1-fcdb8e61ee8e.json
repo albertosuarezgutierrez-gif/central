@@ -1,18 +1,20 @@
 {
  "sesion": "8c07924c-e639-5dc0-9bb1-fcdb8e61ee8e",
  "inicio": "2026-09-23T15:29:06.084Z",
- "fin": "2026-09-23T15:30:00.816Z",
- "llamadas": 16,
+ "fin": "2026-09-23T16:03:15.319Z",
+ "llamadas": 130,
  "categorias": {
   "otro": {
-   "llamadas": 3,
-   "chars_in": 545,
-   "chars_out": 1088,
+   "llamadas": 29,
+   "chars_in": 1089,
+   "chars_out": 223622,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 3
+    "ToolSearch": 8,
+    "ReadNotifications": 18,
+    "Skill": 3
    }
   },
   "lectura-directa": {
@@ -27,9 +29,9 @@
    }
   },
   "mcp:OpenSEO": {
-   "llamadas": 12,
-   "chars_in": 645,
-   "chars_out": 28450,
+   "llamadas": 18,
+   "chars_in": 1527,
+   "chars_out": 40925,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -38,11 +40,65 @@
     "mcp__OpenSEO__list_projects": 1,
     "mcp__OpenSEO__create_project": 1,
     "mcp__OpenSEO__run_site_audit": 1,
-    "mcp__OpenSEO__get_search_console_performance": 1,
+    "mcp__OpenSEO__get_search_console_performance": 6,
     "mcp__OpenSEO__get_backlinks_overview": 1,
     "mcp__OpenSEO__get_audit_status": 2,
     "mcp__OpenSEO__get_serp_results": 1,
-    "mcp__OpenSEO__get_audit_issues": 1
+    "mcp__OpenSEO__get_audit_issues": 1,
+    "mcp__OpenSEO__inspect_urls": 1
+   }
+  },
+  "bash": {
+   "llamadas": 55,
+   "chars_in": 25669,
+   "chars_out": 177819,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 55
+   }
+  },
+  "mcp:github": {
+   "llamadas": 17,
+   "chars_in": 4915,
+   "chars_out": 58231,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 2,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__get_job_logs": 1,
+    "mcp__github__pull_request_read": 6,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__merge_pull_request": 2,
+    "mcp__github__actions_get": 2
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 8,
+   "chars_in": 780,
+   "chars_out": 3952,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2,
+    "mcp__Claude_Code_Remote__send_later": 2,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 2,
+    "mcp__Claude_Code_Remote__delete_trigger": 2
+   }
+  },
+  "escritura": {
+   "llamadas": 2,
+   "chars_in": 3346,
+   "chars_out": 7072,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 2
    }
   }
  }
