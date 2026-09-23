@@ -18,6 +18,8 @@ import { comisionesAsegura, nombreCompania } from '@/lib/comisiones-asegura'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { estadoCuadre, mesEnPeriodo, finDeMes, ESTADOS_PENDIENTES, type EstadoCuadre } from '@/lib/correduria/cuadre'
+import { bancoDePeriodo, casarAbonos, rangoAbonos, type AbonoBanco } from '@/lib/correduria/casar-banco'
+import { listaCorreduria } from '@/lib/correduria-acceso'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -32,9 +34,6 @@ export const maxDuration = 60
  */
 const AGENTE = 'cima_liq'
 
-/** Días tras el cierre del periodo en los que aún se acepta el ingreso. */
-const VENTANA_COBRO_DIAS = 45
-
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   const auth = req.headers.get('authorization')
@@ -43,7 +42,19 @@ export async function GET(req: NextRequest) {
     (!!secret && req.nextUrl.searchParams.get('secret') === secret)
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const cuenta = await prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM cuentas LIMIT 1`
+  // 🚨 De QUIÉN es el libro. Era `SELECT id FROM cuentas LIMIT 1` sin orden: con tres cuentas en la BD,
+  // Postgres devolvía la que le venía bien, y desde el 20/09/2026 escribía en una cuenta SIN bancos —
+  // el libro de Alberto se quedó congelado ese día y nada falló. Ahora: las cuentas con acceso a la
+  // correduría (`CORREDURIA_EMAILS`, la misma lista que guarda `/correduria`), y entre ellas la que
+  // recibe los abonos de seguros en sus bancos.
+  const lista = listaCorreduria()
+  const cuenta = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT c.id FROM cuentas c
+    WHERE ${lista === null} OR lower(c.email) = ANY(${lista ?? []}::text[])
+    ORDER BY (SELECT count(*) FROM movimientos_bancarios mb JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+              WHERE cb.cuenta_id = c.id AND mb.destino = 'seguros' AND mb.importe > 0) DESC,
+             c.created_at, c.id
+    LIMIT 1`
   if (!cuenta.length) {
     await registrarLatido(AGENTE, false, 'sin ninguna cuenta en la BD: no se ha podido cuadrar nada')
     return NextResponse.json({ ok: true, msg: 'Sin cuentas' })
@@ -139,6 +150,31 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── El banco: cada abono de seguros a UN periodo como mucho (`casar-banco.ts`) ─
+  const periodosLiq = filas.map(f => ({ codigo: f.codigo, inicio: f.inicio, fin: f.fin, remesa: f.remesa }))
+  const rango = rangoAbonos(periodosLiq)
+  const abonos: AbonoBanco[] = rango === null ? [] : (await prisma.$queryRaw<Array<{
+    id: string; fecha: string; importe: number; concepto: string | null; concepto_normalizado: string | null
+    contraparte: string | null; compania_seguros: string | null
+  }>>`
+    SELECT mb.id::text AS id, to_char(mb.fecha_operacion, 'YYYY-MM-DD') AS fecha, mb.importe::float AS importe,
+           mb.concepto, mb.concepto_normalizado, mb.contraparte, mb.compania_seguros
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.destino = 'seguros'
+      AND mb.importe > 0
+      AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
+      AND mb.fecha_operacion >= ${rango.desde}::date
+      AND mb.fecha_operacion <= ${rango.hasta}::date
+    ORDER BY mb.fecha_operacion, mb.id`).map(r => ({
+      id: r.id, fecha: r.fecha, importe: Number(r.importe), concepto: r.concepto,
+      conceptoNormalizado: r.concepto_normalizado, contraparte: r.contraparte, companiaSeguros: r.compania_seguros,
+    }))
+  const reglas = new Map((await prisma.$queryRaw<Array<{ clave: string; compania: string }>>`
+    SELECT clave, compania FROM correduria_reglas WHERE cuenta_id = ${cuentaId}::uuid`).map(r => [r.clave, r.compania]))
+  const casado = casarAbonos(periodosLiq, abonos, reglas)
+
   const avisos: string[] = []
   let pendientes = 0
 
@@ -149,22 +185,8 @@ export async function GET(req: NextRequest) {
     const recibos = delPeriodo.reduce((s, d) => s + d.recibos, 0)
     const esperado = recibos > 0 ? Math.round(delPeriodo.reduce((s, d) => s + d.bruto, 0) * 100) / 100 : null
 
-    // Ingreso en el BBVA de ESA compañía. Solo cuenta lo identificado: un
-    // movimiento sin compañía asignada no se atribuye a nadie a la ligera.
-    const hasta = new Date(new Date(`${f.fin}T00:00:00Z`).getTime() + VENTANA_COBRO_DIAS * 864e5)
-    const banco = await prisma.$queryRaw<Array<{ total: number | null; ids: string[] | null }>>`
-      SELECT sum(mb.importe)::float AS total, array_agg(mb.id) AS ids
-      FROM movimientos_bancarios mb
-      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
-      WHERE cb.cuenta_id = ${cuentaId}::uuid
-        AND mb.destino = 'seguros'
-        AND mb.importe > 0
-        AND coalesce(mb.duplicado_estado, '') <> 'ignorado'
-        AND mb.compania_seguros = ${nombreCompania(f.codigo)}
-        AND mb.fecha_operacion >= ${new Date(`${f.inicio}T00:00:00Z`)}
-        AND mb.fecha_operacion <= ${hasta}`
-    const bancoTotal = banco[0]?.total ?? null
-    const bancoIds = banco[0]?.ids ?? []
+    const { total: bancoTotal, ids: bancoIds } = bancoDePeriodo(
+      { codigo: f.codigo, inicio: f.inicio, fin: f.fin, remesa: f.remesa }, casado, abonos)
 
     await prisma.$executeRaw`
       INSERT INTO comisiones_devengo

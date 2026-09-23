@@ -1486,6 +1486,15 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
   día y el `DATABASE_URL` del proyecto Vercel `central-asegura` se quedó con la vieja. **No era el schema**
   — esa hipótesis se escribió aquí como probable y era falsa.
   ⚠️ Al escribir el aviso de un fallo, la pregunta no es «¿he dicho que falló?» sino **«¿dice dónde mirar?»**.
+- 🏦 **El tramo del BANCO se casa abono a abono (23/09/2026, `lib/correduria/casar-banco.ts`).** El cron
+  sumaba para cada periodo TODOS los abonos de la compañía en `[inicio, fin+45d]`: con periodos mensuales
+  esas ventanas se pisan y el mismo abono contaba en dos o tres periodos (Occident ene/2026: 592,19€ «en
+  banco» contra 300,70€ devengados), y solo miraba la columna `compania_seguros` (vacía en 73 abonos que la
+  matriz sí atribuye). Ahora cada abono va a UN periodo como mucho: mes del concepto («Liq.comisiones
+  202512») → remesa igual ±1€ → último periodo cerrado antes del pago; si el periodo que paga no está en el
+  libro, no se regala al siguiente. La compañía, con la MISMA cascada que la matriz (manual → regla →
+  concepto). 🚨 **Y la cuenta del libro ya no es `SELECT id FROM cuentas LIMIT 1`**: sin orden, desde el
+  20/09 escribía en una cuenta sin bancos y el libro de Alberto se congeló. Sale de `CORREDURIA_EMAILS`.
 - 🚨 **PENDIENTE — la cifra fiscal de comisiones sigue siendo una ESTIMACIÓN.** `lib/finanzas.ts:594`
   eleva el neto del banco al bruto con `× (0,15/0,85)` y da por hecho que TODO abono de seguros es una
   comisión neta al 15 %; un periodo deudor de Occident rompe el supuesto. El bruto y la retención
