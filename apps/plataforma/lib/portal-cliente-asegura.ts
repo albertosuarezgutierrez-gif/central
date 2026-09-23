@@ -395,7 +395,7 @@ function cabeceras(): Record<string, string> | null {
 
 export type Reenvio = { status: number; json: unknown }
 
-async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
+async function llamar(path: string, init: RequestInit, timeoutMs = 15_000): Promise<Reenvio> {
   const h = cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
@@ -403,7 +403,7 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
       ...init,
       headers: { ...h, ...(init.body ? { 'content-type': 'application/json' } : {}) },
       cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {
@@ -476,4 +476,23 @@ export function portalAsegura(clienteId: string): Promise<Reenvio> {
  */
 export function invitarPortalAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/cliente/portal', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/**
+ * `GET /api/operador/portal/invitaciones` — el censo del envío por lotes: a quién
+ * se escribiría, a quién no y por qué, y el correo tal cual saldría. Gratis.
+ * Tarda: comprueba una a una las fichas de la cartera en vigor.
+ */
+export function censoInvitacionesAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/portal/invitaciones', { method: 'GET' }, 60_000)
+}
+
+/**
+ * `POST /api/operador/portal/invitaciones` — `{clienteIds, actor}`. Escribe a
+ * personas reales: solo lo dispara Alberto tras ver la lista y el texto (regla
+ * de comunicaciones salientes del `CLAUDE.md` raíz). asegura vuelve a filtrar
+ * los ids contra su censo de ahora, así que un id que ya no toca no recibe nada.
+ */
+export function invitarLoteAsegura(body: { clienteIds: string[]; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/portal/invitaciones', { method: 'POST', body: JSON.stringify(body) }, 290_000)
 }

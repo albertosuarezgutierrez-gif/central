@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** ✉️💸 **Invitar al portal por lotes + recorte de minutos de Actions (PR #3295).** El portal nunca
+había mandado una invitación: ahora `/correduria` → Actividad → «Invitar al portal» prepara la lista (solo `invitable`
+en vigor, motivos de exclusión, texto tal cual) y envía tras marcar «revisado»; tandas de 25, presupuesto 180 s, sin
+repetir <30 días. **No se ha enviado nada: lo pulsa Alberto.** Actions: `tests.yml` era el 68 % de ~71.700 min/mes;
+cada `Typecheck · <app>` salta sus pasos (y sale verde) si el PR no toca su app (`scripts/ci-app-afectada.mjs`,
+fail-open). Siguiente palanca: lo mismo en `ci.yml` (build de ia-rest, ~4.100 min/mes).
+
 **(23/09/2026)** 🚨 **CIMA estuvo ~45 h PARADO (22/09 10:10 → 23/09 07:15 UTC) y el vigía lo vio y NO avisó.**
 Causa: presupuesto de GitHub Actions de la cuenta a 0 $ sin tarjeta; lo agota `central` (~71.700 min/mes vs ~2.070
 de `asegura`) y los jobs de `asegura` se quedaban sin runner. Alberto puso tarjeta + 20 $/mes y relanzó (verificado en
