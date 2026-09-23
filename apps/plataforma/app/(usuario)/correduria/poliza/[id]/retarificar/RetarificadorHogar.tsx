@@ -247,18 +247,7 @@ export default function RetarificadorHogar({
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      {pre.catastro !== null && (
-        <div className="card">
-          <p style={{ margin: 0 }}>
-            <strong>Riesgo completado con el Catastro</strong>
-            {pre.catastro.direccionLegible ? `: ${pre.catastro.direccionLegible}` : ''}
-          </p>
-          <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
-            Solo rellena lo que la póliza no trae (m², año, CP), y cada dato sale marcado «del Catastro». Comprueba con
-            el cliente que es su vivienda asegurada.
-          </p>
-        </div>
-      )}
+      {pre.catastro !== null && <ViviendaCatastro polizaId={polizaId} catastro={pre.catastro} />}
       {pre.primaActual !== null && (
         <div className="card">
           <p className="muted" style={{ margin: 0, fontSize: 12 }}>
@@ -437,6 +426,63 @@ export default function RetarificadorHogar({
 }
 
 // ─── Capitales recomendados por Codeoscopic ──────────────────────────────────
+
+/**
+ * El piso del Catastro con el que se han rellenado los huecos. Si no está
+ * guardado en la póliza, se ofrece guardarlo (la próxima vez no hay que
+ * buscarlo); guardado o no, se puede cambiar por otro.
+ */
+function ViviendaCatastro({ polizaId, catastro }: { polizaId: string; catastro: NonNullable<PrecalificacionHogar['catastro']> }) {
+  const [estado, setEstado] = useState<'libre' | 'guardando' | 'guardada' | { error: string }>(
+    catastro.guardada ? 'guardada' : 'libre',
+  )
+  async function guardar() {
+    setEstado('guardando')
+    try {
+      const res = await fetch('/api/correduria/poliza', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: polizaId, campo: 'referencia_catastral', referencia: catastro.referencia }),
+      })
+      const j = (await res.json().catch(() => null)) as { ok?: boolean; motivo?: string } | null
+      setEstado(res.ok && j?.ok ? 'guardada' : { error: j?.motivo ?? `HTTP ${res.status}` })
+    } catch (e) {
+      setEstado({ error: e instanceof Error ? e.message : String(e) })
+    }
+  }
+  return (
+    <div className="card">
+      <p style={{ margin: 0 }}>
+        <strong>Riesgo completado con el Catastro</strong>
+        {catastro.direccionLegible ? `: ${catastro.direccionLegible}` : ''}
+        {catastro.referencia ? <span className="muted" style={{ fontSize: 12 }}> · ref. {catastro.referencia}</span> : null}
+      </p>
+      <p className="muted" style={{ margin: '4px 0 8px', fontSize: 12 }}>
+        Solo rellena lo que la póliza no trae (m², año, CP), y cada dato sale marcado «del Catastro». Comprueba con el
+        cliente que es su vivienda asegurada.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        {estado === 'guardada' ? (
+          <span className="badge ok">Guardada en la póliza</span>
+        ) : (
+          catastro.referencia !== null && (
+            <button type="button" onClick={() => void guardar()} disabled={estado === 'guardando'} style={{ minHeight: 44 }}>
+              {estado === 'guardando' ? 'Guardando…' : 'Guardar esta vivienda en la póliza'}
+            </button>
+          )
+        )}
+        <a href={`/correduria/poliza/${polizaId}/retarificar?buscar=1`} style={{ fontSize: 13 }}>
+          Cambiar de vivienda
+        </a>
+      </div>
+      {typeof estado === 'object' && (
+        <p className="err" style={{ margin: '8px 0 0', fontSize: 13 }}>
+          No se ha guardado: {estado.error}
+        </p>
+      )}
+    </div>
+  )
+}
 
 const CAMPOS_CAPITAL = new Set(['capitalContinente', 'capitalContenido'])
 

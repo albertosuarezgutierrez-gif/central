@@ -67,6 +67,9 @@ export type PrecalificacionHogar = {
   primaActual: number | null
   /** El piso del Catastro que se ha usado para los huecos del riesgo. `null` = no se ha consultado. */
   catastro: {
+    referencia: string | null
+    /** `true` = es la que ya está guardada en la póliza. */
+    guardada: boolean
     direccionLegible: string | null
     metrosCuadrados: number | null
     anioConstruccion: number | null
@@ -236,6 +239,8 @@ export function interpretarPrecalificacionHogarRetarificar(status: number, json:
       catastro:
         typeof r.catastro === 'object' && r.catastro !== null
           ? {
+              referencia: cadena((r.catastro as Record<string, unknown>).referencia),
+              guardada: (r.catastro as Record<string, unknown>).guardada === true,
               direccionLegible: cadena((r.catastro as Record<string, unknown>).direccionLegible),
               metrosCuadrados: numero((r.catastro as Record<string, unknown>).metrosCuadrados),
               anioConstruccion: numero((r.catastro as Record<string, unknown>).anioConstruccion),

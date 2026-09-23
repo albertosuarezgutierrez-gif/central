@@ -354,6 +354,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (23/09/2026) correduría: la referencia catastral del piso se GUARDA en la póliza de hogar
+- Tras elegir el piso en retarificar, botón «Guardar esta vivienda en la póliza» → `PATCH /api/operador/poliza` `campo: 'referencia_catastral'` (asegura la comprueba en el Catastro ANTES de escribir; fusión en `datos_especificos.referenciaCatastral`, historial con anterior→nueva). Solo la referencia: m²/año/CP se consultan al tarificar y salen «del Catastro».
+- `retarificabilidad()` (module-seguros): hogar sin m²/año/CP pero con referencia de 20 guardada → retarificable, `fuente: 'catastro'` (plataforma acepta ya esa fuente). Asegura usa la guardada sola si la pantalla no manda otra; «Cambiar de vivienda» = `?buscar=1`.
+- La ingesta de CIMA fusiona con `||`: no la borra. Pendiente: mandar `cadastralReference` al vendor (el campo ya existe en peticion-hogar, nadie lo rellena).
+
 ## (23/09/2026) correduría: retarificar hogar SIN m²/año/CP con el Catastro
 - Medido: 22 de las 28 pólizas de hogar vivas no canceladas no traían el riesgo (ni póliza ni gemela) y se quedaban en «no se puede retarificar». Ahora retarificar ofrece buscar la vivienda en el Catastro (precargada con la dirección del CLIENTE, avisando de que puede no ser la del riesgo) → elegir piso → la ficha sale con m²/año/CP «del Catastro».
 - Solo viaja la REFERENCIA de 20 a asegura (`referencia` en precalificar-hogar, retarificar y limites-hogar); asegura consulta el Catastro ella misma (`lib/codeoscopic/catastro-referencia.ts`): los números con los que se paga no los pone plataforma. El Catastro solo rellena huecos, no pisa la póliza.

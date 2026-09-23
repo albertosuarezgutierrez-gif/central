@@ -681,8 +681,10 @@ async function prepararHogar(
   polizaId: string,
   modo: 'cotizar' | 'limites' = 'cotizar',
 ): Promise<Preparado> {
-  if (typeof cuerpo.referencia === 'string') {
-    const c = await catastroPorReferencia(cuerpo.referencia)
+  // La elegida en pantalla manda; si no, la que el corredor guardó en la póliza.
+  const referencia = typeof cuerpo.referencia === 'string' ? cuerpo.referencia : origen.referenciaCatastral
+  if (referencia !== null) {
+    const c = await catastroPorReferencia(referencia)
     if (c.estado !== 'ok') {
       return paraPreparado({ error: `${motivoCatastro(c)} No se ha llamado a Codeoscopic.` }, c.estado === 'error' ? 503 : 422)
     }
