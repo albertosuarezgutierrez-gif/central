@@ -258,8 +258,10 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
           ? `El peor, ${peor.entidad}${peor.clave ? ` / clave ${peor.clave}` : ''} ${peor.tipo}: ` +
             `${peor.enRevision} de ${peor.declarados} (${peor.fichero}). `
           : '') +
-        'CIMA ya confirmó esos ficheros a TIREA y no los reenvía: esto no se arregla pidiéndolos otra vez, ' +
-        'sino corrigiendo el mapper en la ingesta de origen y reprocesando el crudo antes de que caduque.',
+        'CIMA ya confirmó esos ficheros a TIREA y no los reenvía: pedirlos otra vez no sirve. Mira el motivo ' +
+        'de cada objeto en la ingesta de origen: si es el mapper, se corrige; si es «sin póliza», suele ser ' +
+        'una póliza duplicada por fusionar. Después se reprocesa el crudo antes de que caduque (solo existe ' +
+        'desde el 17/09/2026: los ficheros anteriores hay que bajarlos del Portal CIMA).',
     })
   }
 
