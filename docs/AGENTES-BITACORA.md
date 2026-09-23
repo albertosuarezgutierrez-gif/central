@@ -14,6 +14,13 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-23 · psd2-health-check** · hizo: consulta de frescura agregada OK (último mov hoy, sin
+  caída de volumen, 0 filas sin fecha), pero al desglosar por banco encontró BBVA sin movimientos
+  desde 2026-09-10 (13 días) con sesión Enable Banking CLOSED — la agregación lo tapaba porque
+  Kutxabank sigue fresco. Alertó por Telegram y anotó en CONTEXTO-SESIONES.md. dudas: si conviene
+  desglosar por banco en la propia consulta del Paso 1 de la skill, no solo en la agregada; fallos: —;
+  PRs/commits: commit directo a main (memoria + bitácora).
+
 - **2026-09-22 · facturas-correo** · hizo: pasada tras 3 días sin correr (última 19/09). Paso 0: Vía B
   sana (`_buzon_pdf` con copia de hoy), sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
   (verificado por `search_threads`, no por `list_labels`). Paso 1 (ventana `newer_than:4d` por el hueco
