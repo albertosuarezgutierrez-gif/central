@@ -711,3 +711,52 @@ Respuesta de Manuel (su Claude, medido contra su BD de producción) a las cinco 
   `/insurance-drafts` (24 h) y el fichero del informe de ofertas (24 h, y **solo se descarga una vez**).
 - **El changelog del portal tiene UNA entrada, de 2024-03-07.** La API no publica cambios desde
   entonces.
+
+## 📖 Las 20 preguntas contra el OpenAPI vivo de INT (23/09/2026)
+
+Alberto exportó el spec completo (`https://portal.api-int.codeoscopic.io/static/....yaml`, OpenAPI
+3.0.3, 111 paths, 397 schemas), el overview, la sección OAuth2 y los 50 ejemplos JSON referenciados,
+y contestó 20 preguntas concretas. El detalle íntegro (con los JSON literales) vive fuera del repo,
+en el markdown que lo generó; aquí solo lo que cambia lo que `central` puede dar por sabido.
+
+- **`issuedDocuments[]` (`InsuranceFile_V1`) — CERRADO, cableado en `apps/asegura/CLAUDE.md`.**
+  `{ name, description?, url, creationDateTime, expirationDateTime }`, los cuatro primeros
+  obligatorios salvo `description`. Se descarga con `GET {url}` + el MISMO Bearer OAuth2, sin
+  `x-client-app`/`x-user-email`. La duración NO es una regla documentada (ejemplos reales: ~365 días
+  para «Póliza», 24 h para informes); la única mención de «descarga única» es del **informe de
+  ofertas**, no de la póliza.
+- **Vida (`TermLifeRisk_V1`): sin campo de duración ni de fecha de fin del riesgo, y `deathBenefit`
+  NO se puede cambiar por `PATCH`** (`TermLifeRiskPatch_V1` solo trae `insured`+`type`). La unidad de
+  `deathBenefit` (euros/céntimos) tampoco está documentada.
+- **Salud y decesos (`HealthRisk_V1`/`BurialRisk_V1`): cada asegurado es un `NaturalPerson_V1` a
+  secas** — sin parentesco, sin rol propio, sin capital por persona en el esquema. Si algún día
+  `central` tarifica estos ramos, esos datos —si existen— viajarían por `product.options`, no por el
+  riesgo.
+- **Moto: los catálogos de garaje y carnets no tienen ejemplo de respuesta**, solo el `example` del
+  esquema (`CommunalParking`, `A1`). Coche y moto COMPARTEN el esquema `GarageType_V1`, pero la lista
+  completa de ids de cada catálogo sigue sin verse en una respuesta real.
+- **[Inconsistencia] Los ids de acciones y estados NO son fiables sin verlos en una respuesta real de
+  INT:** la acción de emitir se llama `SubmitPolicyApplicationAction` en el esquema y
+  `SubmitPolicyApplication` en el texto de dos operaciones distintas; el estado revisado aparece como
+  `QuoteRevised` en un sitio y `RevisedQuote` en otro. `central` ya sigue esta regla (`solicitudesEmision`/
+  `veredictoSolicitud` en `reintento-emision.ts` tratan lo no reconocido como `desconocido`, nunca
+  lo dan por bueno) — este hallazgo la confirma, no la cambia.
+  ⚠️ De regalo, el ejemplo de `actions[]` de **decesos** trae `{"id": "reRate", ...}` en minúscula
+  (el resto siempre `"ReRate"`): comparar sin distinguir mayúsculas si algún día se lee ese campo.
+- **Adjuntos (`POST .../policy-application-documents`): el envío de ficheros sigue en «Upcoming»**,
+  sin fecha ni alternativa documentada. Mientras tanto, lo que exija adjuntar documentación se sigue
+  emitiendo desde la app de Avant2, no por API — coincide con lo que este documento ya decía.
+- **Facturación y rate limits: NO DOCUMENTADO, ninguno de los dos.** No preguntar por 429/cuotas ni
+  por si `POST .../offers` o `POST .../policy-applications` se facturan aparte: la doc no lo dice; si
+  hace falta saberlo, hay que preguntarlo a soporte, no inferirlo del spec.
+- **URL de producción: NO DOCUMENTADA como tal.** Solo aparece el host `https://api.codeoscopic.io`
+  dentro de URLs de ejemplo (incluida `issuedDocuments[].url`). Al pasar de INT a producción de
+  verdad, pedir a soporte las dos URLs (token + servidor) explícitamente — no asumir que es
+  `api-int` → `api` a secas aunque los ejemplos lo insinúen.
+- **Identificación:** `Cif` SÍ vale como `holder` en coche y moto (`owner` también); `primaryDriver`/
+  `secondaryDriver` solo `Dni`/`Nie`/`Passport`. `nationality.code` es obligatorio con `Nie` o
+  `Passport` — ya vale para lo que `central` ya sabía, ahora con cita literal del esquema.
+
+Para resolver lo que sigue como «NO DOCUMENTADO» (catálogos completos de moto, unidad de
+`deathBenefit`, facturación): llamar al catálogo real en INT con credenciales, o preguntar a
+`soporteapi@avant2.es`.
