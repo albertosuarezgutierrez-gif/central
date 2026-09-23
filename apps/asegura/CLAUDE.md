@@ -941,6 +941,19 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
     vio fallar sin el cambio) para aceptar las TRES formas que de verdad llegan a estos dos sitios —
     el array crudo del Submit, el proyecto entero con `policyApplications[]`, y la solicitud suelta del
     Retrieve individual — con el mismo espíritu que `solicitudesEmision()` ya resolvía para el estado.
+  - **Y el reintento SÍ se cableó — pero en el endpoint de diagnóstico, no en el acuñado (mismo
+    23/09/2026).** Son sitios con exigencias opuestas: acuñar pasa una vez, con el corredor delante,
+    y no puede quedarse esperando al vendor — de ahí el «no se reintenta» de arriba. El diagnóstico es
+    a demanda y el `GET` es gratis, así que aquí SÍ tiene sentido esperar un poco. `GET
+    /api/operador/codeoscopic/documentos?projectId=` repite el Retrieve **UNA vez** (2,5 s de pausa,
+    mismo patrón que `oferta/route.ts` con `effectiveDate`: nunca un bucle sin salida) **solo si** la
+    solicitud está `aprobada` y esta lectura no trajo ningún documento — reintentar sobre una pendiente
+    o rechazada no cambiaría nada por esperar. Guarda pura y testeada:
+    `meritaReintentoDocumento(veredicto, docs)` en `documentos-emitidos.ts`. `maxDuration` subió de 60 a
+    **120**: la ruta encadena hasta cuatro llamadas al vendor (proyecto, Retrieve, su reintento, descarga
+    del PDF) y con 60 s el peor caso mataría la función antes de responder — rompiendo la promesa de «la
+    descarga nunca rompe la respuesta» por el propio plazo, no por un fallo. El Retrieve vive en UN solo
+    helper (`retrievePolicyApplication`) para que la primera lectura y el reintento no puedan divergir.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo

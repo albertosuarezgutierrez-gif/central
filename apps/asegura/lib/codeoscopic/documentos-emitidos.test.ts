@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { documentosEmitidos, documentoCaducado, documentoPoliza } from './documentos-emitidos.ts'
+import { documentosEmitidos, documentoCaducado, documentoPoliza, meritaReintentoDocumento } from './documentos-emitidos.ts'
 
 // Fixtures LITERALES del OpenAPI vivo de INT (leído el 23/09/2026, ver
 // docs/CODEOSCOPIC-API-PORTAL.md § 12) — no inventados: son los dos únicos
@@ -87,4 +87,13 @@ test('documentoPoliza prioriza el que se llama "Póliza" sobre otros informes', 
   ]
   assert.equal(documentoPoliza(docs)?.url, 'https://x/2')
   assert.equal(documentoPoliza([]), null)
+})
+
+test('meritaReintentoDocumento: solo aprobada Y sin documentos', () => {
+  const conDoc = documentosEmitidos(POLICY_APPLICATION_GET)
+  assert.equal(meritaReintentoDocumento('aprobada', []), true)
+  assert.equal(meritaReintentoDocumento('aprobada', conDoc), false)
+  assert.equal(meritaReintentoDocumento('pendiente', []), false)
+  assert.equal(meritaReintentoDocumento('rechazada', []), false)
+  assert.equal(meritaReintentoDocumento('desconocido', []), false)
 })

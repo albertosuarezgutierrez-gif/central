@@ -9,6 +9,8 @@
 // Módulo PURO (sin Prisma, sin red): solo interpreta lo que ya trajo
 // `GET /insurances/{id}/policy-applications/{policyApplicationId}`.
 
+import type { VeredictoSolicitud } from './reintento-emision.ts'
+
 export type DocumentoEmitido = {
   nombre: string
   url: string
@@ -85,4 +87,18 @@ export function documentoCaducado(d: DocumentoEmitido, ahora: Date = new Date())
  *  igual pero no se asumen como "la póliza". */
 export function documentoPoliza(docs: readonly DocumentoEmitido[]): DocumentoEmitido | null {
   return docs.find((d) => /p[óo]liza/i.test(d.nombre)) ?? docs[0] ?? null
+}
+
+/**
+ * ¿Merece la pena volver a pedir esta solicitud? Solo si la compañía YA
+ * aprobó y esta lectura no trae ningún documento todavía — si está
+ * `pendiente`/`rechazada`/`desconocida`, esperar no va a traer un PDF que la
+ * compañía no ha generado (y puede que nunca genere). Es la guarda del
+ * reintento ÚNICO de `documentos/route.ts` (mismo patrón, un solo reintento
+ * tras una pausa corta, que `oferta/route.ts` ya usa con la fecha de
+ * efecto): nunca un bucle sin salida ni un reintento sobre algo que no va a
+ * cambiar por esperar.
+ */
+export function meritaReintentoDocumento(veredicto: VeredictoSolicitud, docs: readonly DocumentoEmitido[]): boolean {
+  return veredicto === 'aprobada' && docs.length === 0
 }

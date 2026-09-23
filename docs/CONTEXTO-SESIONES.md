@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** Cableado el reintento del PDF de `issuedDocuments[]` en el endpoint de
+DIAGNÓSTICO (no en el acuñado, que sigue sin reintentar a propósito): `GET
+/api/operador/codeoscopic/documentos?projectId=` repite el Retrieve UNA vez (2,5s de pausa, mismo
+patrón que `oferta/route.ts`) solo si la solicitud está aprobada y aún no trae documentos —
+`meritaReintentoDocumento()` nuevo en `documentos-emitidos.ts`, puro y testeado. `maxDuration` sube
+de 60 a 120 (la ruta encadena hasta 4 llamadas al vendor); `retrievePolicyApplication()` extrae el
+Retrieve a un solo sitio para que la lectura y el reintento no diverjan — los dos hallazgos de un
+`code-review` obligatorio antes de este commit. Mergeado `main` para resolver conflicto con el lote
+de moto/CIMA de abajo; tsc 0, `pnpm test` asegura 633/633 tras el merge.
+
 **(23/09/2026)** 🧩 **asegura-portal: «Tus vencimientos» con fuente única** (`lib/vencimientos.ts`). La ventana
 de 60 días y la prima «pagas ahora» estaban copiadas en la bóveda, en el bloque y en «Mejorar el precio»: si
 divergían, la bóveda dejaba de pedir las peticiones y el bloque enseñaba el botón a quien ya lo había pedido.
