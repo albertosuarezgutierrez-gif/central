@@ -72,7 +72,13 @@ jobs:
         id: afecta
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            node scripts/ci-app-afectada.mjs apps/${{ matrix.app }} HEAD^1
+            # La regla se ejecuta desde la BASE, no desde el PR: así un PR no puede
+            # saltarse sus propios checks editando el script (Graphify, #3297).
+            if git show HEAD^1:scripts/ci-app-afectada.mjs > "$RUNNER_TEMP/afectada.mjs" 2>/dev/null; then
+              node "$RUNNER_TEMP/afectada.mjs" apps/${{ matrix.app }} HEAD^1
+            else
+              echo "afecta=true" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "afecta=true" >> "$GITHUB_OUTPUT"
           fi
