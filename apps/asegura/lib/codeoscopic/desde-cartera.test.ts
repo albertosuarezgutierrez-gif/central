@@ -4,6 +4,7 @@ import {
   precalificarAuto,
   precalificarAutoNueva,
   precalificarMotoNueva,
+  precalificarMoto,
   partirApellidos,
   sexoDeSaludo,
   aniosEntre,
@@ -17,6 +18,7 @@ import {
   type Resueltos,
   type ResueltosAutoNueva,
   type ResueltosMotoNueva,
+  type ResueltosMoto,
 } from './desde-cartera.ts'
 
 const HOY = '2026-09-01'
@@ -422,3 +424,57 @@ test('moto: NINGÚN supuesto rellena un dato personal', () => {
     assert.ok(!personales.includes(s.campo), `no se puede suponer un dato personal: ${s.campo}`)
   }
 })
+
+// ─── MOTO, retarificar una póliza de la cartera ─────────────────────────────
+
+const POLIZA_MOTO: PolizaCartera = {
+  ...POLIZA,
+  numeroPoliza: '031698897',
+  codigoEntidadDgs: 'C0109',
+  matricula: '1234ABC',
+  vehiculo: { marca: 'HONDA', modelo: 'NTV 700', versiones: [] },
+}
+
+const RESUELTOS_MOTO: ResueltosMoto = {
+  municipioId: 41091,
+  estadoCivilId: 'Single',
+  fechaMatriculacion: '2016-02-20',
+  codigoVehiculo: '12345678',
+  garaje: 'CommunalParking',
+  experienciaConduccion: 'ThisMotorcycle',
+}
+
+function preMotoPoliza(p: Partial<PolizaCartera> = {}) {
+  return precalificarMoto(CLIENTE, { ...POLIZA_MOTO, ...p }, RESUELTOS_MOTO, HOY)
+}
+
+test('moto de cartera: la póliza actual es la ANTERIOR (bonus por antigüedad), no de calle', () => {
+  const r = preMotoPoliza()
+  assert.deepEqual(r.faltan, [])
+  assert.equal(r.datos.aseguradoAntes, true)
+  assert.equal(r.datos.companiaAnteriorCodigo, 'C0109')
+  assert.equal(r.datos.polizaAnterior, '031698897')
+  assert.equal(r.datos.aniosAsegurado, 10)
+  assert.equal(r.datos.matricula, '1234ABC')
+})
+
+test('moto de cartera: efecto al día siguiente del vencimiento, y un solo supuesto de fecha', () => {
+  const r = preMotoPoliza()
+  assert.equal(r.datos.fechaEfecto, '2026-10-16')
+  const fechas = r.supuestos.filter((x) => x.campo === 'fechaEfecto')
+  assert.equal(fechas.length, 1)
+  assert.match(String(fechas[0].porque), /vencimiento/)
+})
+
+test('moto de cartera: con siniestros anotados no se presume ninguno', () => {
+  const r = preMotoPoliza({ siniestrosRegistrados: 2 })
+  assert.equal(r.datos.aniosSinSiniestros, 0)
+  assert.equal(r.datos.siniestrosUltimos5, 2)
+  assert.equal(r.supuestos.some((x) => x.campo === 'aniosSinSiniestros'), false)
+})
+
+test('moto de cartera: sin matrícula en la póliza, falta', () => {
+  const r = preMotoPoliza({ matricula: null })
+  assert.ok(r.faltan.some((f) => f.campo === 'matricula'))
+})
+

@@ -76,8 +76,8 @@ import {
   CATALOGOS_HOGAR_OBLIGATORIOS,
   type DatosHogar,
 } from '@/lib/codeoscopic/peticion-hogar'
-import type { Supuesto, ResueltosMotoNueva, SupuestoMoto } from '@/lib/codeoscopic/desde-cartera'
-import { precalificarMotoNueva } from '@/lib/codeoscopic/desde-cartera'
+import type { Supuesto, ResueltosMotoNueva, ResueltosMoto, SupuestoMoto } from '@/lib/codeoscopic/desde-cartera'
+import { precalificarMotoNueva, precalificarMoto } from '@/lib/codeoscopic/desde-cartera'
 import {
   construirPeticionVida,
   revisarDatosVida,
@@ -307,6 +307,8 @@ export async function prepararRetarificacion(entrada: {
   let preparado: Preparado
   if (origen.tipo === 'auto') {
     preparado = await prepararAuto(origen, cuerpo, polizaId)
+  } else if (origen.tipo === 'moto') {
+    preparado = await prepararMoto(origen, cuerpo, polizaId)
   } else if (origen.tipo === 'hogar') {
     preparado = await prepararHogar(origen, cuerpo, polizaId)
   } else {
@@ -490,6 +492,55 @@ async function prepararAuto(
   }
   // Nuestra referencia, para casar después la cotización con la póliza.
   // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
+  peticion.externalId = `poliza-${polizaId}`
+  return { peticion, motivo: 'defensa-cartera', supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones) }
+}
+
+// ─── MOTO ────────────────────────────────────────────────────────────────────
+
+/**
+ * Como `prepararAuto`, con el catálogo y el `risk` de moto: la póliza da la
+ * matrícula y el historial (`precalificarMoto`); la versión, el garaje y la
+ * experiencia de conducción los resuelve la pantalla (gratis). El id del ramo
+ * sale de `/insurance-lines`, nunca escrito a mano.
+ */
+async function prepararMoto(
+  origen: OrigenRetarificacion,
+  cuerpo: CuerpoRetarificacion,
+  polizaId: string,
+): Promise<Preparado> {
+  const resueltos: ResueltosMoto = {
+    municipioId: numero(cuerpo.resueltos?.municipioId),
+    estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
+    fechaMatriculacion: cadena(cuerpo.resueltos?.fechaMatriculacion),
+    codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
+    garaje: cadena(cuerpo.resueltos?.garaje),
+    garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
+    experienciaConduccion: cadena(cuerpo.resueltos?.experienciaConduccion),
+  }
+
+  const pre = precalificarMoto(origen.cliente, origen.poliza, resueltos, hoyIso())
+  const datos: Partial<DatosMoto> = {
+    ...pre.datos,
+    ...limpiarCorrecciones<DatosMoto>(cuerpo.correcciones),
+  }
+  const faltan = revisarDatosMoto(datos)
+  if (faltan.length > 0) return paraPreparado({ error: 'faltan datos para cotizar', faltan }, 422)
+
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista') return paraPreparado({ error: explicarConfig(cfg) }, 503)
+  const lineas = await lineasDeSeguro(cfg.config).catch(() => [])
+  const moto = motoDisponible(lineas)
+  if (moto.estado !== 'disponible') {
+    return paraPreparado({ error: 'moto no tarifica para esta organización (o no se ha podido comprobar)', moto }, 409)
+  }
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construirPeticionMoto(datos as DatosMoto, moto.id)
+  } catch (e) {
+    return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
+  }
   peticion.externalId = `poliza-${polizaId}`
   return { peticion, motivo: 'defensa-cartera', supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones) }
 }
