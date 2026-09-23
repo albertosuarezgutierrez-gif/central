@@ -28,6 +28,7 @@ import {
 } from '@/lib/codeoscopic/emitir-iban'
 import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
+import { archivarDocumentoEmitido } from '@/lib/codeoscopic/archivar-documento'
 import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 
@@ -240,6 +241,11 @@ export const POST = auditado(async (req: Request) => {
       `[emitir] proyecto ${projectId}: solicitud ${aprobada.id ?? '?'} ya aprobada por la compañía (póliza ${aprobada.numeroPoliza ?? 'sin número'}) — ` +
         (acunadoAc.ok ? 'acuñada sin reenviar' : `NO acuñada: ${acunadoAc.motivo}`),
     )
+    // Best-effort: el PDF de la póliza puede venir ya en `issuedDocuments[]` del
+    // proyecto que se acaba de leer (`crudoPrevio`) — sin gastar un GET extra.
+    const archivadoAc = acunadoAc.ok
+      ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunadoAc.polizaId, crudo: crudoPrevio })
+      : { documentoGuardado: null, avisoDocumento: null }
     return NextResponse.json({
       estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
       // Aquí no se ha enviado nada: si no se acuña, el motivo real es lo único útil.
@@ -247,6 +253,8 @@ export const POST = auditado(async (req: Request) => {
       referenciaVendor: aprobada.numeroPoliza,
       acunado: acunadoAc,
       cuenta: null,
+      documentoGuardado: archivadoAc.documentoGuardado,
+      avisoDocumento: archivadoAc.avisoDocumento,
       crudo: redactarCrudoVendor(crudoPrevio),
     })
   }
@@ -733,6 +741,13 @@ export const POST = auditado(async (req: Request) => {
     },
   })
 
+  // Best-effort: el propio Submit puede traer ya `issuedDocuments[]` en su
+  // respuesta (`envio.crudo`) — se descarga y archiva sin gastar otro GET.
+  // Un fallo aquí nunca deshace el acuñado que ya se hizo arriba.
+  const archivado = acunado.ok
+    ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunado.polizaId, crudo: envio.crudo })
+    : { documentoGuardado: null, avisoDocumento: null }
+
   return NextResponse.json({
     estado: acunado.ok ? 'ok' : 'emitido_sin_acunar',
     referenciaVendor: envio.referenciaVendor,
@@ -740,6 +755,8 @@ export const POST = auditado(async (req: Request) => {
     // Con qué cuenta se ha emitido (enmascarada) y de dónde salió: la póliza
     // nueva se cobrará ahí, y eso tiene que verse sin abrir el `crudo`.
     cuenta: cuentaRespuesta,
+    documentoGuardado: archivado.documentoGuardado,
+    avisoDocumento: archivado.avisoDocumento,
     crudo: redactarCrudoVendor(envio.crudo),
   })
 })

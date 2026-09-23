@@ -921,10 +921,21 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
     si ya hay un documento `tipo:'poliza'` + `subidoPor:'agente'` para esa póliza, no vuelve a
     descargar. Todo el bloque es **best-effort**: un fallo de descarga o archivo nunca tumba la
     respuesta — el `issuedDocuments` crudo sigue viajando igual para que la pantalla enseñe el enlace.
-  - **Pendiente, no cableado a propósito:** esto vive en el endpoint de diagnóstico, no en el flujo de
-    acuñado (`registrarPolizaEmitida`, `lib/emision.ts`). Cablearlo ahí es el siguiente paso obvio,
-    pero exige decidir CUÁNDO reintentar si `issuedDocuments[]` aún no está poblado en el momento del
-    acuñado (el portal no dice cuánto tarda el vendor en generarlo).
+  - **Cableado también en el flujo de acuñado real, 23/09/2026 (mismo día).** Extraído a
+    `lib/codeoscopic/archivar-documento.ts` (`archivarDocumentoEmitido()`, compartido con el endpoint
+    de diagnóstico de arriba) y llamado en `emitir/route.ts` en los DOS sitios donde
+    `registrarPolizaEmitida` acuña: el Submit directo (con `envio.crudo`, la respuesta del propio
+    `POST .../policy-applications`) y el camino `acunarExistente` (con `crudoPrevio`, el `GET` del
+    proyecto que ya se había leído gratis para comprobar si había solicitud viva). **Ninguno de los dos
+    gasta un GET extra**: usa el crudo que la petición YA tenía en la mano.
+    🚨 **Decisión sobre el «cuándo reintentar» que quedaba pendiente: NO se reintenta.** Si en ese
+    crudo `issuedDocuments[]` todavía no está poblado (el portal no dice cuánto tarda el vendor en
+    generarlo), simplemente no se archiva nada — `documentoGuardado`/`avisoDocumento` van a `null` y el
+    acuñado no se ve afectado. El endpoint de diagnóstico sigue siendo el camino para archivarlo más
+    tarde, a mano, sobre un proyecto ya acuñado. `documentosEmitidos()` se extendió (con test que se
+    vio fallar sin el cambio) para aceptar las TRES formas que de verdad llegan a estos dos sitios —
+    el array crudo del Submit, el proyecto entero con `policyApplications[]`, y la solicitud suelta del
+    Retrieve individual — con el mismo espíritu que `solicitudesEmision()` ya resolvía para el estado.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo

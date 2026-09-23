@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
+(no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
+compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña
+(Submit directo y `acunarExistente`), reusando el crudo que la petición ya tenía — sin GET extra.
+Decisión sobre el pendiente de la vez anterior: si `issuedDocuments[]` no está poblado aún, NO se
+reintenta, se deja `null` y queda para el endpoint de diagnóstico. `documentosEmitidos()` se
+extendió para aceptar las tres formas reales del crudo (test visto fallar sin el cambio). tsc 0,
+`pnpm test` asegura 611/611.
+
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
 `product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
