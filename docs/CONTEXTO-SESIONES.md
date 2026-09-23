@@ -188,6 +188,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (23/09/2026) Auditoría precios dinámicos + fechas sin referencia y copia de sivra retiradas
 - Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Hallazgos abiertos: 33 saltos >50%/día en 90d (17 Luxury Busto), `booking_mcp` con 9 huecos en 49 días y ~50-56% de cobertura futura, `pricing_decisiones` 2 días por detrás de `pricing_applied`.
 - Fix raíl: `aplicar-propuesta` (plataforma) ya NO escribe una fecha sin precio actual en Smoobu salvo que el piso tenga suelo Y techo (ningún piso tiene `max_price` → pasaba la propuesta cruda sin techo). Helper `lib/sivra/pricing-railes-propuesta.ts` + test; no audita esas filas en `pricing_applied` (new_price=0 envenenaría `ref24`).
+- Saltos de Luxury Busto (Alberto eligió «límite × evento»): el techo por ADR (×1,30) bajaba los días normales de nov a 75€ y dejaba fuera los eventos (200-223€, ×2,7 el día de al lado). Ahora un evento SIN mercado medido de su fecha (<3 comps fiables) lleva techo ADR×1,30×factor y libera la guarda «evento a ciegas»; con mercado medido o lectura caída, sin cambio. Karol G (factor ≥2 sin mes) sigue congelando.
 - `apps/sivra`: `aplicar-propuesta` → 410 (copia duplicada); `cron-auth` deniega sin `CRON_SECRET` en producción (`cron-auth-decision.ts` + test). `pisos-zona` sigue vivo en sivra.
 
 ## 23/09/2026 — Alerta PSD2 sync (BBVA)
