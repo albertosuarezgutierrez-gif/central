@@ -639,7 +639,8 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   `/home/occupancy-types`); nuestro `uso` va a `use` y `ocupacion` a `occupancy` porque cada uno bebe de su
   catálogo. Un 400 de validación **no se cobra**; la pantalla enseña el mensaje entero. Caso de prueba: las
   dos de Occident vivas de J.S.S. (el riesgo está solo en la gemela; la de Sevilla es la verificada con el
-  Catastro: 76 m² / 1994 / 41002). Por cablear: `POST /home/recommend-limits` para no teclear capitales a ojo.
+  Catastro: 76 m² / 1994 / 41002). ✅ `POST /home/recommend-limits` cableado el 23/09/2026 (`/api/operador/codeoscopic/limites-hogar`, botón en
+  plataforma): coste sin confirmar, así que va por el libro de consumo (`limites_hogar`) y detrás del interruptor de tarificar.
 - **Siguiente ramo: HOGAR** (2º más vendido, y más fácil: no hay vehículo que identificar, así que
   desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
   `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo

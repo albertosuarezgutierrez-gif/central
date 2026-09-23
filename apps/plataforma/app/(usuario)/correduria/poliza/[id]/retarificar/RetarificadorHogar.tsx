@@ -28,7 +28,8 @@ import type {
   Supuesto,
 } from '@/lib/hogar-retarificar-asegura'
 import { pedirCotizacion } from './acciones'
-import { pedirPrecalificacionHogar } from './acciones-hogar'
+import { pedirLimitesHogar, pedirPrecalificacionHogar } from './acciones-hogar'
+import type { RangoCapital, RespuestaLimitesHogar } from '@/lib/retarificar-asegura'
 
 type Grupo = 'donde' | 'como' | 'protecciones' | 'capitales' | 'tomador' | 'cotizacion'
 
@@ -302,6 +303,24 @@ export default function RetarificadorHogar({
                 />
               ))}
             </div>
+            {g.id === 'capitales' && (
+              <RecomendarCapital
+                // Solo cuando lo ÚNICO que falta es el capital: con otro hueco el
+                // vendor contestaría 400 y el botón prometería algo que no llega.
+                habilitado={
+                  pre.ramo.estado === 'disponible' &&
+                  pre.fallosCatalogo.length === 0 &&
+                  !recalculando &&
+                  pre.resumen.faltan.every((f) => CAMPOS_CAPITAL.has(f.campo))
+                }
+                pedir={() => pedirLimitesHogar({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones })}
+                usar={(campo, valor) => {
+                  const nuevas = { ...correcciones, [campo]: valor }
+                  setCorrecciones(nuevas)
+                  void recalcular(resueltos, nuevas)
+                }}
+              />
+            )}
           </div>
         )
       })}
@@ -383,6 +402,113 @@ export default function RetarificadorHogar({
 
         {resultado.estado === 'ok' && <Precios r={resultado} primaActual={pre.primaActual} />}
       </div>
+    </div>
+  )
+}
+
+// ─── Capitales recomendados por Codeoscopic ──────────────────────────────────
+
+const CAMPOS_CAPITAL = new Set(['capitalContinente', 'capitalContenido'])
+
+/**
+ * `POST /home/recommend-limits`. Es una RECOMENDACIÓN: se enseña con su horquilla
+ * y el corredor decide si la usa — nunca se escribe sola en la ficha. El coste no
+ * está confirmado por Codeoscopic, y el botón lo dice.
+ */
+function RecomendarCapital({
+  habilitado,
+  pedir,
+  usar,
+}: {
+  habilitado: boolean
+  pedir: () => Promise<RespuestaLimitesHogar>
+  usar: (campo: 'capitalContinente' | 'capitalContenido', valor: number) => void
+}) {
+  const [estado, setEstado] = useState<RespuestaLimitesHogar | 'pidiendo' | null>(null)
+  const pidiendo = estado === 'pidiendo'
+  return (
+    <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+      <button
+        type="button"
+        onClick={async () => {
+          setEstado('pidiendo')
+          try {
+            setEstado(await pedir())
+          } catch (e) {
+            // Se cortó entre el navegador y plataforma: la llamada pudo llegar a Codeoscopic.
+            setEstado({ estado: 'error', mensaje: e instanceof Error ? e.message : String(e), gastoDesconocido: true })
+          }
+        }}
+        disabled={!habilitado || pidiendo}
+        style={{ minHeight: 44 }}
+      >
+        {pidiendo ? 'Pidiendo recomendación… (puede tardar más de 1 min)' : 'Recomendar capitales (Codeoscopic)'}
+      </button>
+      <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
+        {habilitado
+          ? 'Codeoscopic calcula continente y contenido para esta vivienda. No está confirmado que sea gratis: cuenta en el consumo.'
+          : 'Se enciende cuando lo único que falta arriba es el capital.'}
+      </p>
+      {estado !== null && estado !== 'pidiendo' && estado.estado === 'ok' && (
+        <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+          <RangoFila titulo="Continente" rango={estado.continente} usar={(v) => usar('capitalContinente', v)} />
+          <RangoFila titulo="Contenido" rango={estado.contenido} usar={(v) => usar('capitalContenido', v)} />
+          <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+            {estado.coste}
+            {estado.restantesHoy !== null ? ` · quedan hoy ${estado.restantesHoy}` : ''}
+          </p>
+        </div>
+      )}
+      {estado !== null && estado !== 'pidiendo' && estado.estado === 'faltan' && (
+        <div style={{ marginTop: 8 }}>
+          <p className="badge ok">No se ha gastado nada</p>
+          <ul>
+            {estado.faltan.map((f) => (
+              <li key={f.campo}>
+                <strong>{f.campo}</strong>: {f.motivo}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {estado !== null && estado !== 'pidiendo' && (estado.estado === 'error' || estado.estado === 'tope' || estado.estado === 'sin_configurar') && (
+        <p className="err" style={{ marginTop: 8, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {estado.estado === 'tope' ? '🛑 Tope alcanzado: ' : '⚠️ '}
+          {estado.mensaje}
+          {estado.estado === 'error' && estado.gastoDesconocido && (
+            <>
+              {' '}
+              <strong>No se sabe si esto ha costado.</strong>
+            </>
+          )}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function RangoFila({ titulo, rango, usar }: { titulo: string; rango: RangoCapital | null; usar: (v: number) => void }) {
+  if (rango === null) {
+    return (
+      <p style={{ margin: 0 }}>
+        <strong>{titulo}</strong>: <span className="muted">Codeoscopic no ha recomendado ninguno</span>
+      </p>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+      <span>
+        <strong>{titulo}</strong>: {rango.media !== null ? eur(rango.media) : '—'}
+        <span className="muted" style={{ fontSize: 12 }}>
+          {' '}
+          (de {rango.minimo !== null ? eur(rango.minimo) : '—'} a {rango.maximo !== null ? eur(rango.maximo) : '—'})
+        </span>
+      </span>
+      {rango.media !== null && (
+        <button type="button" onClick={() => usar(rango.media!)} style={{ minHeight: 44 }}>
+          Usar {eur(rango.media)}
+        </button>
+      )}
     </div>
   )
 }

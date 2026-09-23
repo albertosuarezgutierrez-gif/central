@@ -49,6 +49,10 @@ local pack → ficha de Google Business). Search Console NO conectado en OpenSEO
 críticos. PR: la portada no llevaba la marca en `<title>` (la plantilla `%s · Grupo ASegura` no aplica al segmento
 raíz) y los 3 legales la duplicaban; títulos ≤60 y descripciones ≤160 medidos en el HTML servido.
 
+**(23/09/2026)** 🏠 **Capitales recomendados de hogar** (`POST /home/recommend-limits`): botón «Recomendar capitales» en
+plataforma → retarificar hogar, que ofrece «Usar X€» (nunca rellena solo). El coste NO está confirmado (devuelve capital por
+compañía, [Probable] tarifica por dentro): detrás de `CODEOSCOPIC_TARIFICACION_ACTIVA`, `confirmado:true`, libro de consumo con
+motivo `limites_hogar` (coste en env a 0 = sin confirmar, tope propio) y 4ª excepción del guardián de gasto. Falta para `hogar-nuevo`.
 **(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
 La moto de Víctor (Allianz 031698897) salía con catálogo de coche porque CIMA la guardó como `auto`
 (Allianz/Mapfre no mandan `ClaseVehiculo='MO'`). 18 pólizas corregidas a `moto` en BD (ids en asegura#848)
