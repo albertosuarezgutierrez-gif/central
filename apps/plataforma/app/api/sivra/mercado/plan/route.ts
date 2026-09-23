@@ -249,16 +249,17 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  // 🚨 Fechas de evento CONFIRMADO con el corpus CADUCADO para el motor. No es lo mismo que «sin
-  // medir»: tienen comps, pero de hace más de `EDAD_MERCADO_RANCIO` días, así que `pricing/apply`
-  // las rechaza y esas noches se quedan con el precio del canal externo. Se declara POR FECHA
+  // 🚨 Fechas de evento CONFIRMADO con el corpus más viejo de lo que su antelación admite
+  // (`edadMaxEvento`: 7/14/30 días según falten ≤30/≤90/>90). No es «sin medir»: tienen comps, y
+  // `pricing/apply` los sigue usando (acepta hasta 120 días por fecha), pero con un precio de
+  // mercado que puede haberse movido. Se declara POR FECHA
   // porque el otro aviso que existe (`avisoPisosSinTarifar`) es por PISO y solo salta cuando el
   // piso entero se cae: un piso tarificado con normalidad puede tener sus noches más caras del año
   // sin tocar, que es exactamente lo que pasó con Semana Santa 2027 del Dúplex.
   if (caducadas.length) {
     avisos.push(
-      `${caducadas.length} fecha(s) de evento CONFIRMADO con corpus caducado (>${EDAD_MERCADO_RANCIO}d, ` +
-      `el motor las salta y las tarifica el canal): ` +
+      `${caducadas.length} fecha(s) de evento CONFIRMADO con corpus viejo para su antelación ` +
+      `(>7d a ≤30 días vista, >14d a ≤90, >30d más lejos; el motor las tarifica con ese corpus): ` +
       `${caducadas.map(c => `${c.checkin} (${c.diasSinMedir}d${c.etiqueta ? `, ${c.etiqueta}` : ""})`).join(", ")}`,
     )
   }
