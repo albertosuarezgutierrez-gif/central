@@ -42,7 +42,9 @@ export function TusVencimientos({ polizas, peticiones, hoyIso }: {
       <h2 id="vencimientos-titulo">Tus vencimientos</h2>
       <div style={{ display: 'grid', gap: 10 }}>
         {filas.map(({ p, dias }) => {
-          const prima = p.prima?.bruta ?? p.prima?.anual ?? null
+          // Un 0 guardado no es una prima: se calla, igual que asegura (`nullif(…, 0)`).
+  const primaLeida = p.prima?.bruta ?? p.prima?.anual ?? null
+  const prima = primaLeida !== null && primaLeida > 0 ? primaLeida : null
           const pedido = pedidas.get(p.id)
           return (
             <article key={p.id} className="vencimiento-tarjeta">

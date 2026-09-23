@@ -7,6 +7,9 @@ import { pedirMejorarPrecio, peticionesPrecioAbiertas } from '@/lib/mejorar-prec
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 
 export const dynamic = 'force-dynamic'
+
+/** Un id mal formado es un 422, no un 503: si llegara al `::uuid` reventaría como avería. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const runtime = 'nodejs'
 
 /**
@@ -20,7 +23,7 @@ export async function GET(req: Request) {
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
     const identidadId = new URL(req.url).searchParams.get('identidadId')?.trim() ?? ''
-    if (identidadId === '') return NextResponse.json({ estado: 'invalido' }, { status: 422 })
+    if (!UUID.test(identidadId)) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
     const r = await peticionesPrecioAbiertas(correduria.id, identidadId)
@@ -38,7 +41,7 @@ export async function POST(req: Request) {
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
     const identidadId = typeof body?.identidadId === 'string' ? body.identidadId.trim() : ''
     const polizaId = typeof body?.polizaId === 'string' ? body.polizaId.trim() : ''
-    if (identidadId === '' || polizaId === '') return NextResponse.json({ estado: 'invalido', motivo: 'Faltan datos.' }, { status: 422 })
+    if (!UUID.test(identidadId) || polizaId === '') return NextResponse.json({ estado: 'invalido', motivo: 'Faltan datos.' }, { status: 422 })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
     const r = await pedirMejorarPrecio(correduria.id, identidadId, polizaId, body)

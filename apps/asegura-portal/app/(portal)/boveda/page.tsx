@@ -434,8 +434,9 @@ export default async function Boveda({
               tienen que ofrecer la misma lista. */}
           <SubirPoliza ramos={RAMOS_OPCIONES} />
           {/* La casilla comercial, corta, junto al alta: solo mientras no la
-              haya dado. Retirarla sigue estando en «Mis datos». */}
-          {consentimientoComercial !== true && <ConsentimientoComercial inicial={consentimientoComercial} compacto />}
+              contestado: a quien dijo que no no se le vuelve a preguntar en cada visita.
+              Cambiarla (en los dos sentidos) sigue estando en «Mis datos». */}
+          {consentimientoComercial === null && <ConsentimientoComercial inicial={consentimientoComercial} compacto />}
 
       {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
           su portal: «mis seguros y mis pólizas es lo mismo… que venga de CIMA,

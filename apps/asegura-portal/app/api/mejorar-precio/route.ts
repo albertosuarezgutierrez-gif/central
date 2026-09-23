@@ -32,7 +32,9 @@ export async function POST(req: Request) {
   const r = await pedirPrecio(identidad.id, polizaId, cuerpo)
   if (r.estado === 'ok' && !r.yaExistia) {
     try {
-      await tgSend(`💶 Un cliente pide desde el portal que le mejores el precio de una póliza que renueva pronto. Lo tienes en «Hoy · Tareas de hoy».\nIdentidad ${identidad.id}`)
+      const id = await tgSend(`💶 Un cliente pide desde el portal que le mejores el precio de una póliza que renueva pronto. Lo tienes en «Hoy · Tareas de hoy».\nIdentidad ${identidad.id}`)
+      // `null` = sin canal (falta TELEGRAM_*): la tarea de hoy sigue creada, pero se dice.
+      if (id === null) console.warn('[portal/mejorar-precio] aviso sin enviar: falta TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID en este proyecto')
     } catch (e) {
       console.error('[portal/mejorar-precio] Telegram no salió:', e instanceof Error ? e.message : e)
     }
