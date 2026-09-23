@@ -134,4 +134,8 @@ test('crudo: carnets-moto y versiones-moto se pueden medir; la lista sigue CERRA
   // Cada tipo lee SU catálogo crudo.
   assert.match(fuente, /tipo === 'carnets-moto'\s*\?\s*await carnetsMotoCrudos\(/)
   assert.match(fuente, /tipo === 'versiones-moto'\s*\?\s*await versionesMotoCrudas\(/)
+  // Los carnés viajan ENTEROS (la muestra de 3 dejaría fuera el A2 o el A), y la ruta los reenvía.
+  assert.match(fuente, /const completo = tipo === 'carnets-moto' \? \{ completo: crudo \} : \{\}/)
+  const ruta = readFileSync(new URL('../../app/api/operador/codeoscopic/catalogos/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /\.\.\.\(c\.completo !== undefined \? \{ completo: c\.completo \} : \{\}\)/)
 })

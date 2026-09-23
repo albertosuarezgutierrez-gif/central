@@ -1392,7 +1392,7 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
 export const TIPOS_CRUDO = ['versiones', 'versiones-moto', 'carnets-moto'] as const
 
 export type ResultadoCrudo =
-  | { estado: 'ok'; path: string; resumen: ResumenCrudo; opciones: Opcion[] }
+  | { estado: 'ok'; path: string; resumen: ResumenCrudo; opciones: Opcion[]; completo?: unknown }
   | { estado: 'invalido'; mensaje: string }
   | { estado: 'sin_configurar'; mensaje: string }
   | { estado: 'error'; causa: CausaErrorCartera; mensaje: string }
@@ -1449,7 +1449,10 @@ export async function resolverCatalogoCrudo(params: URLSearchParams): Promise<Re
           : await versionesCrudas(r.config, marcaId!, modeloId!, motor!)
     // El path viene de la propia función que hizo la petición: conste QUÉ se
     // preguntó. Una medición sin su petición al lado no la comprueba nadie más.
-    return { estado: 'ok', path, resumen: resumirCrudo(crudo), opciones }
+    // Los carnés son una lista corta y lo que se mide son TODOS sus límites: la
+    // muestra de `resumirCrudo` (3 entradas) dejaría fuera justo el A2 o el A.
+    const completo = tipo === 'carnets-moto' ? { completo: crudo } : {}
+    return { estado: 'ok', path, resumen: resumirCrudo(crudo), opciones, ...completo }
   } catch (e) {
     return {
       estado: 'error',
