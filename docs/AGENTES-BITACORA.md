@@ -35,6 +35,18 @@
   conviene darla de alta en `cuentas_bancarias`/PSD2 para poder conciliar esa serie; fallos: —.
   PRs/commits: (este commit).
 
+- **2026-09-23 · mercado-booking** · hizo: pasada completa de las 24 ventanas pedidas por el plan
+  (`?max=24`, sin recorte de filtro — quedaron 488 fuera del tope, esperado) → 223 comps reales
+  escritos vía `booking_mcp` (aforo 2/4/5/12, línea sep-2026 + evento 26-29 dic). Paso 2-bis
+  (escaparate propio, 4 ventanas de refresco) → 0/4 medidas: los 4 pisos salieron SIN
+  disponibilidad en Booking para 24-26 sep con su propio `hotel_names` (coherente con que
+  House Sevillana tampoco apareciera como comparable en las búsquedas de mercado de esas mismas
+  fechas — está ocupada, no es un fallo del conector). 1 anuncio propio descartado como
+  comparable (House Sevillana, ventana 23-25 sep aforo 12). Latido `ok:false` por el
+  escaparate sin medir (regla de la skill), aunque el mercado fue perfecto. dudas: si el plan
+  debería reintentar el escaparate en fechas distintas cuando las pedidas salen ocupadas, en vez
+  de darlas por `escaparateSinRespuesta` sin más; fallos: —. PRs/commits: (este commit).
+
 - **2026-09-23 · psd2-health-check** · hizo: consulta de frescura agregada OK (último mov hoy, sin
   caída de volumen, 0 filas sin fecha), pero al desglosar por banco encontró BBVA sin movimientos
   desde 2026-09-10 (13 días) con sesión Enable Banking CLOSED — la agregación lo tapaba porque

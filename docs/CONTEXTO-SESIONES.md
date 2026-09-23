@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
+**(23/09/2026)** 🎯 **Fase 1 (vender), PR A: carril de LEADS de Vencimientos, solo lectura.** Hallazgo: `seguros.oportunidades`
+(legacy, nadie la leía) guarda 3.676 pólizas de leads en OTRA compañía con `fecha_fin_vigencia` real de 2023-24 → **3.546
+contactables y no clientes en vigor, 874 con aniversario en ≤90 días** (vs 216 del volcado 2013-18). Reglas puras en
+`module-seguros/lead-competencia.ts` (aniversario ESTIMADO, ventanas, puntuación, secuencia 60d/+7/+14/aparcar a 3 intentos);
+`GET /api/operador/leads-competencia?dias=` en asegura. No envía nada. ⚠️ Antes de escribir en masa a estos leads Alberto
+debe decidir la base legal (LSSI 21.2). Siguiente: PR B (escrituras: estado + motivo de pérdida, tareas en `gestiones`,
+auditoría; revisión de agente-architect) y UI tras la revisión de maquetas del 24/09 10:00.
+
 **(23/09/2026)** 🚨 **Invitar al portal dio 0/25: el dominio de envío `envios.grupoasegura.es` NO tenía sus registros DNS en IONOS**
 (DKIM `resend._domainkey.envios`, MX+SPF `send.envios`); Resend rechazaba con `550 domain is not verified`. Alberto los creó
 y está `verified` (08:50 UTC). Ese dominio también manda los códigos del portal: hasta entonces nadie podía entrar. Código:
@@ -32,6 +41,14 @@ umbral, a vigilar). CIMA entrando con normalidad tras el arreglo de ayer, pricin
 PRs `dirty` sin cambio. Un fix de mapa en `docs/FUENTES-DE-VERDAD.md` (cron `cima-pull-respaldo` +
 `module-seguros/src/ingesta.ts` que faltaban) va por PR de carril 2 al excluirlo el automerge de
 registro. Detalle en `docs/AUDITORIA-2026-09.md`.
+
+**(23/09/2026)** 🏨 **Rutina `mercado-booking`: mercado completo, escaparate en blanco.** 223 comps
+reales en las 24 ventanas de mercado del plan (aforo 2/4/5/12, línea sep + evento 26-29 dic).
+El paso 2-bis (escaparate propio, 4 ventanas de refresco 24-26 sep) salió 0/4: los 4 pisos
+propios estaban SIN disponibilidad en Booking esas fechas — coherente con que House Sevillana
+tampoco saliera como comparable ajeno en esa misma ventana. Latido `ok:false` por la regla de
+la skill (escaparate sin medir mueve `channel_markup`/`cuota_fija` con parámetros viejos), aunque
+el mercado fue perfecto. Sin PR: solo API + esta memoria.
 
 **(23/09/2026)** ✉️💸 **Invitar al portal por lotes + recorte de minutos de Actions (PR #3295).** El portal nunca
 había mandado una invitación: ahora `/correduria` → Actividad → «Invitar al portal» prepara la lista (solo `invitable`
