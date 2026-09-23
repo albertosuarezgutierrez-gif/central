@@ -85,6 +85,7 @@ export async function pedirCotizacion(entrada: {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  referencia?: string
   /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetarificar.forzarNuevo`. */
   forzarNuevo?: boolean
 }): Promise<RespuestaRetarificar> {
@@ -95,6 +96,7 @@ export async function pedirCotizacion(entrada: {
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
     catastro: entrada.catastro ?? null,
+    referencia: entrada.referencia,
     forzarNuevo: entrada.forzarNuevo === true,
   })
 }

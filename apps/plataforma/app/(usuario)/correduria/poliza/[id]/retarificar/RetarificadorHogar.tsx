@@ -87,9 +87,12 @@ function euroODash(n: number | null | undefined): string {
 export default function RetarificadorHogar({
   polizaId,
   preInicial,
+  referencia,
 }: {
   polizaId: string
   preInicial: PrecalificacionHogar
+  /** Referencia catastral del piso elegido (pólizas sin m²/año/CP): viaja en cada llamada. */
+  referencia?: string
 }) {
   const [pre, setPre] = useState(preInicial)
   const [resueltos, setResueltos] = useState<Record<string, unknown>>({})
@@ -103,7 +106,7 @@ export default function RetarificadorHogar({
   async function recalcular(nuevosResueltos: Record<string, unknown>, nuevasCorrecciones: Record<string, unknown>) {
     setRecalculando(true)
     try {
-      const r = await pedirPrecalificacionHogar({ polizaId, resueltos: nuevosResueltos, correcciones: nuevasCorrecciones })
+      const r = await pedirPrecalificacionHogar({ polizaId, resueltos: nuevosResueltos, correcciones: nuevasCorrecciones, referencia })
       if (r.estado === 'ok') {
         setPre(r.pre)
         setErrorRecalculo(null)
@@ -191,7 +194,7 @@ export default function RetarificadorHogar({
     setResultado({ estado: 'cotizando' })
     let r: Awaited<ReturnType<typeof pedirCotizacion>>
     try {
-      r = await pedirCotizacion({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones })
+      r = await pedirCotizacion({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones, referencia })
     } catch (e) {
       // Se cortó entre el navegador y plataforma: la cotización pudo llegar a Codeoscopic.
       setResultado({ estado: 'error', mensaje: e instanceof Error ? e.message : String(e), gastoDesconocido: true })
@@ -244,6 +247,18 @@ export default function RetarificadorHogar({
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
+      {pre.catastro !== null && (
+        <div className="card">
+          <p style={{ margin: 0 }}>
+            <strong>Riesgo completado con el Catastro</strong>
+            {pre.catastro.direccionLegible ? `: ${pre.catastro.direccionLegible}` : ''}
+          </p>
+          <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
+            Solo rellena lo que la póliza no trae (m², año, CP), y cada dato sale marcado «del Catastro». Comprueba con
+            el cliente que es su vivienda asegurada.
+          </p>
+        </div>
+      )}
       {pre.primaActual !== null && (
         <div className="card">
           <p className="muted" style={{ margin: 0, fontSize: 12 }}>
@@ -328,7 +343,7 @@ export default function RetarificadorHogar({
                               .join(', ')}.`
                           : null
                 }
-                pedir={() => pedirLimitesHogar({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones })}
+                pedir={() => pedirLimitesHogar({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones, referencia })}
                 usar={(capitales) => {
                   const nuevas = { ...correcciones, ...capitales }
                   setCorrecciones(nuevas)
