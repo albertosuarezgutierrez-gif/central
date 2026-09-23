@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** ✅ **Auditoría diaria (ligera): sin hallazgos 🔴.** Heartbeat sano salvo los
+crónicos (`ses_transporte`) y un fallo de red aislado de `correduria_renovaciones` (dentro de
+umbral, a vigilar). CIMA entrando con normalidad tras el arreglo de ayer, pricing sano, backlog de
+PRs `dirty` sin cambio. Un fix de mapa en `docs/FUENTES-DE-VERDAD.md` (cron `cima-pull-respaldo` +
+`module-seguros/src/ingesta.ts` que faltaban) va por PR de carril 2 al excluirlo el automerge de
+registro. Detalle en `docs/AUDITORIA-2026-09.md`.
+
 **(23/09/2026)** 🏨 **Rutina `mercado-booking`: mercado completo, escaparate en blanco.** 223 comps
 reales en las 24 ventanas de mercado del plan (aforo 2/4/5/12, línea sep + evento 26-29 dic).
 El paso 2-bis (escaparate propio, 4 ventanas de refresco 24-26 sep) salió 0/4: los 4 pisos

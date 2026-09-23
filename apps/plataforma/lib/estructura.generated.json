@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-21T19:06:21Z",
+  "generadoEn": "2026-09-23T08:17:07Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 78
+        "evidencias": 79
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 65
+        "evidencias": 66
       },
       "rrhh": {
         "estado": "no",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 9
+        "evidencias": 10
       },
       "asegura-portal": {
         "presente": false,
@@ -4035,6 +4035,7 @@
       "/api/operador/poliza-documento",
       "/api/operador/poliza/emitida",
       "/api/operador/poliza/intervinientes",
+      "/api/operador/portal/invitaciones",
       "/api/operador/presupuesto",
       "/api/operador/recaptacion",
       "/api/operador/recaptacion/email",
@@ -4941,6 +4942,7 @@
       "/api/correduria/leads-web",
       "/api/correduria/partes",
       "/api/correduria/poliza",
+      "/api/correduria/portal-invitaciones",
       "/api/correduria/presupuesto",
       "/api/correduria/radar-recibos",
       "/api/correduria/recaptacion",
@@ -4962,6 +4964,7 @@
       "/api/cron/canario-lead",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
+      "/api/cron/cima-pull-respaldo",
       "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
@@ -6442,7 +6445,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1401,
+    "apis": 1404,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
