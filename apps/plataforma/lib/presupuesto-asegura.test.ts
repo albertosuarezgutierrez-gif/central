@@ -139,3 +139,16 @@ test('sin nada que advertir, no se inventa ningún aviso', () => {
   const f = frasePresupuesto(preparado({ opciones: [{ ...OPCION, firmeza: 'firme' }] }))
   assert.deepEqual(f, [])
 })
+
+test('🪤 el aviso: «enlazado» no es «enviado» y ningún fallo se pinta como salido', async () => {
+  const { accionesPresupuesto, textoAviso, leerPresupuestoEnLista } = await import('./presupuesto-asegura.ts')
+  assert.equal(accionesPresupuesto('enlazado').confirmarWhatsapp, true)
+  assert.equal(accionesPresupuesto('enviado').confirmarWhatsapp, false)
+  assert.equal(accionesPresupuesto('elegido').avisar, false)
+  assert.equal(accionesPresupuesto('caducado').avisar, false)
+  assert.equal(textoAviso(502, { estado: 'error', detalle: 'El proveedor rechazó el correo.' }).ok, false)
+  assert.equal(textoAviso(200, { estado: 'enviado' }).ok, false, 'sin email no se afirma el destino')
+  assert.equal(textoAviso(500, null).ok, false)
+  assert.equal(textoAviso(200, { estado: 'enlace', whatsapp: 'https://wa.me/?text=x' }).whatsapp, 'https://wa.me/?text=x')
+  assert.equal(leerPresupuestoEnLista({ id: 'a', estado: 'raro', creadoAt: 'x', venceEl: 'y' }), null)
+})

@@ -394,7 +394,7 @@ async function leerNivelActual(
   }
 }
 
-function fechaEfectoDe(peticion: unknown): Date | null {
+export function fechaEfectoDe(peticion: unknown): Date | null {
   if (!peticion || typeof peticion !== 'object') return null
   const v = (peticion as Record<string, unknown>).effectiveDate
   if (typeof v !== 'string' || v.trim() === '') return null

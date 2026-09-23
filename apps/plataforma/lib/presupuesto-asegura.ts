@@ -225,3 +225,75 @@ export function retirarPresupuestoAsegura(cuerpo: Record<string, unknown>): Prom
     body: JSON.stringify(cuerpo),
   })
 }
+
+// ─── El aviso al cliente (PR 3) ──────────────────────────────────────────────
+
+export type EstadoPresupuestoLista =
+  | 'borrador' | 'enlazado' | 'enviado' | 'visto' | 'elegido' | 'aceptado' | 'emitido' | 'caducado' | 'retirado'
+
+export type PresupuestoEnLista = {
+  id: string
+  estado: EstadoPresupuestoLista
+  creadoAt: string
+  venceEl: string
+  enviadoAt: string | null
+  enlaceGeneradoAt: string | null
+  vistoAt: string | null
+  opciones: number
+  desdeEur: number | null
+}
+
+const ESTADOS: readonly EstadoPresupuestoLista[] = ['borrador', 'enlazado', 'enviado', 'visto', 'elegido', 'aceptado', 'emitido', 'caducado', 'retirado']
+
+/** Una fila ilegible NO se descarta: devuelve `null` y la lista entera se declara ilegible. */
+export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const s = (x: unknown) => (typeof x === 'string' && x !== '' ? x : null)
+  const id = s(o.id), estado = s(o.estado), creadoAt = s(o.creadoAt), venceEl = s(o.venceEl)
+  if (!id || !estado || !creadoAt || !venceEl || !ESTADOS.includes(estado as EstadoPresupuestoLista)) return null
+  return {
+    id, estado: estado as EstadoPresupuestoLista, creadoAt, venceEl,
+    enviadoAt: s(o.enviadoAt), enlaceGeneradoAt: s(o.enlaceGeneradoAt), vistoAt: s(o.vistoAt),
+    opciones: typeof o.opciones === 'number' ? o.opciones : 0,
+    desdeEur: typeof o.desdeEur === 'number' ? o.desdeEur : null,
+  }
+}
+
+/**
+ * Qué se puede hacer con él. `enlazado` NO es `enviado`: se abrió WhatsApp y no consta que
+ * saliera, así que se ofrece «Ya lo he mandado» y se deja volver a avisar.
+ */
+export function accionesPresupuesto(e: EstadoPresupuestoLista): { avisar: boolean; confirmarWhatsapp: boolean; retirar: boolean; reenvio: boolean } {
+  const avisar = e === 'borrador' || e === 'enlazado' || e === 'enviado' || e === 'visto'
+  return {
+    avisar,
+    reenvio: e === 'enviado' || e === 'visto',
+    confirmarWhatsapp: e === 'enlazado',
+    retirar: e !== 'retirado' && e !== 'emitido',
+  }
+}
+
+export const ROTULO_ESTADO_PRESUPUESTO: Record<EstadoPresupuestoLista, string> = {
+  borrador: 'Preparado, sin enviar',
+  enlazado: 'WhatsApp abierto · no consta que saliera',
+  enviado: 'Enviado · no consta que lo haya abierto',
+  visto: 'Lo ha abierto',
+  elegido: 'Ha elegido una opción',
+  aceptado: 'Aceptado',
+  emitido: 'Emitido',
+  caducado: 'Caducado',
+  retirado: 'Retirado',
+}
+
+/** La frase del desenlace de «Avisar». Ningún fallo se lee como «ha salido». */
+export function textoAviso(status: number, j: unknown): { ok: boolean; texto: string; whatsapp?: string } {
+  const o = (typeof j === 'object' && j !== null ? j : {}) as Record<string, unknown>
+  if (status === 200 && o.estado === 'enviado' && typeof o.email === 'string') return { ok: true, texto: `Enviado a ${o.email}.` }
+  if (status === 200 && o.estado === 'enlace' && typeof o.whatsapp === 'string') {
+    return { ok: true, texto: 'Se ha abierto WhatsApp con el mensaje: elige su chat y envíalo. Luego pulsa «Ya lo he mandado».', whatsapp: o.whatsapp }
+  }
+  if (status === 200 && o.estado === 'confirmado') return { ok: true, texto: 'Anotado como enviado por WhatsApp.' }
+  if (typeof o.detalle === 'string') return { ok: false, texto: `NO enviado: ${o.detalle}` }
+  return { ok: false, texto: 'NO se sabe si ha salido: no se ha podido hablar con asegura. Recarga antes de repetir.' }
+}

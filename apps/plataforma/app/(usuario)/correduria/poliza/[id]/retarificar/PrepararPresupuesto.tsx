@@ -129,19 +129,9 @@ function Preparado({ p, token }: { p: PresupuestoPreparado; token: string }) {
         ))}
       </ul>
 
-      {/* 🔑 El enlace en claro viaja UNA vez y no se guarda: en la BD solo vive
-          su hash. Se enseña aquí para poder abrirlo cuando exista la pantalla
-          del cliente (PR 2); hoy todavía no hay nada al otro lado, y decirlo es
-          parte del trabajo — un enlace que promete una página que no existe es
-          peor que no darlo. */}
-      <p className="muted" style={{ marginTop: 0, wordBreak: 'break-all' }}>
-        Enlace del presupuesto (se enseña <strong>una sola vez</strong>; en la base solo se guarda su
-        huella): <code>{token}</code>
-      </p>
       <p className="muted" style={{ marginTop: 0 }}>
-        Todavía <strong>no se puede enviar</strong>: la pantalla que ve el cliente y el envío por
-        correo o WhatsApp son los pasos siguientes. Lo que hay hecho es lo que se le enseñará, ya
-        congelado.
+        Queda <strong>preparado, sin enviar</strong>. Para mandárselo, vuelve a la ficha de la póliza →
+        «Presupuestos»: por correo o por WhatsApp, siempre con tu clic.
       </p>
     </section>
   )
