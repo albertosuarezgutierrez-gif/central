@@ -20,6 +20,24 @@ código de 6 cifras a SU correo (10 min, 5 intentos, 60 s entre códigos) + nomb
 `seguros_anulacion_firma` aplicada. «Firma recibida» a mano sigue para la firma en papel. Siguiente: 2-d-3 (aviso a la
 compañía por la cola de aprobaciones, con la carta firmada).
 
+**(23/09/2026)** ⭐ **Petición de reseñas de Google: borrador listo, SIN enviar.** `docs/asegura-resenas/` (texto
+WhatsApp + correo, QR PNG/SVG). Enlace directo a «escribir reseña» con el `place_id` de la ficha leído vía OpenSEO
+(`ChIJX9-iRQRsEg0RvJs_K-MXksA`, CID `13876179666332523452`): 1 reseña, horario L-V 9-18 ya puesto. A TODOS los 67 en
+vigor (nada de filtrar ni incentivar: política de Google). Lo manda Alberto. Verificar los 4 teléfonos de
+`/telefonos-siniestros` sigue siendo suyo: el proxy bloquea mapfre/allianz/reale/generali también a WebFetch.
+
+**(23/09/2026)** ☎️ **asegura-web: `/telefonos-siniestros`.** Teléfonos para dar parte por compañía, con el patrón de
+`companias-baja`: `lib/telefonos-companias.ts` + cepo, y nada sin `verificado: true` + fecha. Solo Occident publicado
+(confirmado por Alberto 14/09); Mapfre/Allianz/Reale/Generali salen como «no comprobado» con enlace a su web: sus
+números de `companias_dgs` vienen de extractos de buscador. **Pendiente de Alberto:** verificarlos (Mapfre es la
+búsqueda de 1.300/mes). Enlazada desde `/siniestro` y en el sitemap. Medida a 320/390/1024: sin desbordes, tel a 44 px.
+
+**(23/09/2026)** 📈 **SEO correduría: Search Console leída vía OpenSEO + idea «reforzar hogar/auto» DESCARTADA.**
+3 meses: 3 clics, ~900 impresiones. Hogar/auto salen por búsquedas locales de Sevilla con volumen ~0 (medido en
+DataForSEO), así que no se tocan. Idea nueva anotada (P en `docs/ASEGURA-SEO-REDES-IDEAS.md`): página de
+«teléfonos de siniestros por compañía» (búsquedas navegacionales con volumen y KD ~0), pendiente del OK de Alberto.
+El cron `seo-correduria` ya lee GSC; lo roto es Serper (sin créditos, sin fila `serp` el 21/09).
+
 **(23/09/2026)** 📝 **ASegura OS 2-d: expediente de anulación.** #3365 (2-c) mergeado con los fixes de su revisión
 (texto que caduca con su plazo, recibo cobrado → aviso retirado, timeout = «a medias» cerrable a mano). Tabla
 `seguros.anulacion` (aplicada; CHECK: sin firma no hay «comunicada», un expediente abierto por póliza). Reglas puras
@@ -57,6 +75,10 @@ local pack → ficha de Google Business). Search Console NO conectado en OpenSEO
 críticos. PR: la portada no llevaba la marca en `<title>` (la plantilla `%s · Grupo ASegura` no aplica al segmento
 raíz) y los 3 legales la duplicaban; títulos ≤60 y descripciones ≤160 medidos en el HTML servido.
 
+**(23/09/2026)** 🏠 **Capitales recomendados de hogar** (`POST /home/recommend-limits`): botón «Recomendar capitales» en
+plataforma → retarificar hogar, que ofrece «Usar X€» (nunca rellena solo). El coste NO está confirmado (devuelve capital por
+compañía, [Probable] tarifica por dentro): detrás de `CODEOSCOPIC_TARIFICACION_ACTIVA`, `confirmado:true`, libro de consumo con
+motivo `limites_hogar` (coste en env a 0 = sin confirmar, tope propio) y 4ª excepción del guardián de gasto. Falta para `hogar-nuevo`.
 **(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
 La moto de Víctor (Allianz 031698897) salía con catálogo de coche porque CIMA la guardó como `auto`
 (Allianz/Mapfre no mandan `ClaseVehiculo='MO'`). 18 pólizas corregidas a `moto` en BD (ids en asegura#848)

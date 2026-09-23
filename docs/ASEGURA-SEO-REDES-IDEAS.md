@@ -295,6 +295,9 @@ además el `sameAs` de la idea F.
 > AndalBrok, Seingur, López Barneto) y directorios (ProntoPro, corredurias.org); grupoasegura.es
 > tampoco sale en orgánico. Con **una** reseña no se entra en el pack: las reseñas de clientes
 > reales siguen siendo la palanca nº1 y siguen siendo de Alberto. Re-medir tras las primeras reseñas.
+>
+> ⭐ **Borrador de la petición preparado el 23/09/2026** en `docs/asegura-resenas/` (texto + QR al
+> enlace directo de reseña). Sin enviar: lo manda Alberto.
 
 ## ✅ J. Google Search Console — ya estaba conectada desde mayo
 
@@ -445,6 +448,43 @@ quien nos busca de oídas puede acabar llamándoles a ellos.
   con un abogado. Aquí no se afirma quién tiene prioridad.
 
 ---
+
+## P. Lo que dijo Search Console el 23/09/2026 (vía OpenSEO) — y la idea que se DESCARTA
+
+📊 **3 meses (20/06–20/09): 3 clics, ~900 impresiones.** La marca bien escrita va en posición 2,4 con
+9 impresiones; «grupo asegurador» (201, pos. 60) y «asegura facil» (~100, pos. 42-95, **otra marca**)
+son ruido. Mejor página con intención: `/cambiar-de-correduria` (pos. 5,9, 1 clic).
+
+🚫 **Descartado: «reforzar /seguros/hogar y /seguros/auto para subirlas de la 18-20 a primera
+página».** Se propuso mirando la posición MEDIA por página, y engañaba por dos lados: esa media la
+tiraban hacia arriba búsquedas de MARCA (pos. 6,7), y lo genérico por lo que salen es LOCAL
+(«seguros de hogar en sevilla» 25,6 · «seguro coche todo riesgo sevilla» 22,8 · «seguro de coche en
+sevilla» 26,4) con 1-13 impresiones en tres meses. Y medido en DataForSEO (OpenSEO, 23/09): ni
+«seguro hogar sevilla» ni «seguro coche sevilla» aparecen con volumen propio. Una landing local
+para eso no compensa, y meter «Sevilla» en la nacional lo prohíbe `ACOTA_AMBITO`. Para lo local
+manda el pack de Google Business (idea I): reseñas.
+
+✅ **HECHA el 23/09/2026 — `/telefonos-siniestros` (datos en `apps/asegura-web/lib/telefonos-companias.ts`,
+cepo en su `.test.ts`).** Hoy solo publica el número de **Occident** (confirmado por Alberto el 14/09);
+Mapfre, Allianz, Reale y Generali salen como «no lo hemos comprobado» con enlace a su web oficial hasta
+que una persona abra `fuente`, vea el mismo número y ponga `verificado: true` con la fecha. **Mientras
+Mapfre no esté verificada, la página no captura la búsqueda de 1.300/mes que la justifica.**
+
+💡 Idea de origen: una página de «teléfonos de siniestros por compañía». Lo que sí tiene
+volumen y dificultad casi nula son búsquedas NAVEGACIONALES de quien tiene un siniestro encima:
+«mapfre seguro hogar teléfono» 1.300/mes (KD 4), «seguro hogar catalana occidente teléfono» 110,
+«mapfre seguro hogar telefono siniestros» 40. Es intención de problema pura y los números ya están
+VERIFICADOS en `seguros.companias_dgs` (con fuente y fecha, ver `apps/asegura-portal/CLAUDE.md`,
+«El teléfono de la compañía»). ⚠️ Antes de escribirla: solo hay verificadas 5 compañías, y la regla
+del portal manda también aquí — **un número sin verificar no se publica**, «pídenoslo» en su lugar.
+Y compite contra la web de la propia compañía: el objetivo realista es el hueco de «qué hacer
+además de llamar», no desbancarla. Pide el OK de Alberto (es una página nueva con datos de terceros).
+
+🔌 **OpenSEO, qué aporta de verdad.** Search Console **ya la lee el cron `seo-correduria`** (fila
+`gsc` en `ok` las semanas del 14 y el 21/09), así que conectarla también en OpenSEO es redundante
+para la rutina. Donde sí suma: **SERP en vivo** (~5 créditos/consulta) y **volúmenes de búsqueda**
+(~55/semilla), justo lo que Serper ya no da — la semana del 14/09 su fila salió `error` por
+«Not enough credits» y la del 21/09 **no hay fila `serp`**. Saldo de alta ~400 créditos, sin plan.
 
 ## ✅ Cerrado (no volver a abrirlo)
 

@@ -95,8 +95,8 @@ test('el veredicto dice cuántas quedan, y el tope mensual también corta', () =
   assert.match(corta.explicacion, /Submit/)
 })
 
-test('los motivos del libro son exactamente los dos, y son el valor de la operación', () => {
-  assert.deepEqual([...MOTIVOS_EMISION], ['rerate', 'submit'])
+test('los motivos del libro son exactamente los tres, y son el valor de la operación', () => {
+  assert.deepEqual([...MOTIVOS_EMISION], ['rerate', 'submit', 'limites_hogar'])
   assert.equal(MOTIVO_RERATE, 'rerate')
   assert.equal(MOTIVO_SUBMIT, 'submit')
 })

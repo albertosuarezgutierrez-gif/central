@@ -72,6 +72,7 @@ import {
 } from '@/lib/codeoscopic/peticion-moto'
 import {
   construirPeticionHogar,
+  construirPeticionLimitesHogar,
   revisarDatosHogar,
   CATALOGOS_HOGAR_OBLIGATORIOS,
   type DatosHogar,
@@ -674,6 +675,7 @@ function prepararHogar(
   origen: OrigenRetarificacion,
   cuerpo: CuerpoRetarificacion,
   polizaId: string,
+  modo: 'cotizar' | 'limites' = 'cotizar',
 ): Promise<Preparado> {
   const catastro: CatastroHogar | null = esObjetoPlano(cuerpo.catastro)
     ? {
@@ -689,6 +691,7 @@ function prepararHogar(
     cuerpo,
     `poliza-${polizaId}`,
     catastro,
+    modo,
   )
 }
 
@@ -706,6 +709,8 @@ async function prepararHogarDesde(
   cuerpo: CuerpoRetarificacion,
   externalId: string,
   catastro: CatastroHogar | null,
+  /** `limites`: el cuerpo de `POST /home/recommend-limits` (sin capital exigido). */
+  modo: 'cotizar' | 'limites' = 'cotizar',
 ): Promise<Preparado> {
   const rs: Record<string, unknown> = esObjetoPlano(cuerpo.resueltos) ? cuerpo.resueltos : {}
   const s = esObjetoPlano(rs.supuestos) ? rs.supuestos : {}
@@ -756,7 +761,7 @@ async function prepararHogarDesde(
     }
   }
   const datos: Partial<DatosHogar> = { ...pre.datos, ...(correcciones as Partial<DatosHogar>) }
-  const faltan = revisarDatosHogar(datos)
+  const faltan = revisarDatosHogar(datos, { paraRecomendarCapital: modo === 'limites' })
   if (faltan.length > 0) {
     return paraPreparado({ error: 'faltan datos para cotizar', faltan }, 422)
   }
@@ -777,6 +782,20 @@ async function prepararHogarDesde(
     )
   }
 
+  const supuestosVivos = supuestosVigentes(pre.supuestos, correcciones)
+  if (modo === 'limites') {
+    try {
+      return {
+        peticion: construirPeticionLimitesHogar(datos as DatosHogar),
+        motivo: 'limites_hogar',
+        supuestos: supuestosVivos,
+        fuenteRiesgo: pre.fuenteRiesgo,
+      }
+    } catch (e) {
+      return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
+    }
+  }
+
   let peticion: Record<string, unknown>
   try {
     peticion = construirPeticionHogar(datos as DatosHogar, hogar.id)
@@ -788,9 +807,48 @@ async function prepararHogarDesde(
   return {
     peticion,
     motivo: 'defensa-cartera-hogar',
-    supuestos: supuestosVigentes(pre.supuestos, correcciones),
+    supuestos: supuestosVivos,
     fuenteRiesgo: pre.fuenteRiesgo,
   }
+}
+
+// ─── HOGAR: capitales recomendados (`POST /home/recommend-limits`) ───────────
+
+export type PreparadoLimitesHogar =
+  | { estado: 'listo'; correduriaId: string; cuerpo: Record<string, unknown> }
+  | { estado: 'corte'; respuesta: ResultadoRetarificar }
+
+/**
+ * El cuerpo para pedir a Codeoscopic los capitales recomendados de la vivienda
+ * de una póliza de hogar. Misma precalificación que la retarificación (ficha,
+ * gemela o Catastro), pero sin exigir capital: es lo que se pregunta.
+ * **No gasta**: todo lo de aquí es gratis y corta con `gastado: '0,00€'`; la
+ * llamada vive en la ruta, dentro del libro de consumo.
+ */
+export async function prepararLimitesHogar(entrada: {
+  polizaId: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoLimitesHogar> {
+  const cuerpo = entrada.cuerpo ?? {}
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto({ error: 'No se ha podido resolver la correduría. No se ha llamado a Codeoscopic.' }, 503),
+    }
+  }
+  // 🛡️ Aislamiento: la póliza se busca SIEMPRE dentro de esta correduría.
+  const origen = await origenRetarificacion(correduria.id, entrada.polizaId)
+  if (!origen) return { estado: 'corte', respuesta: sinGasto({ error: 'póliza no encontrada' }, 404) }
+  if (origen.tipo !== 'hogar') {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto({ error: `los capitales recomendados son de hogar, y esta póliza es de ${origen.tipo}` }, 409),
+    }
+  }
+  const preparado = await prepararHogar(origen, cuerpo, entrada.polizaId, 'limites')
+  if ('respuesta' in preparado) return { estado: 'corte', respuesta: preparado.respuesta }
+  return { estado: 'listo', correduriaId: correduria.id, cuerpo: preparado.peticion }
 }
 
 // ─── HOGAR, oportunidad nueva (sin póliza) ───────────────────────────────────
