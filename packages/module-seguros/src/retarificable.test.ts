@@ -61,3 +61,16 @@ test('los números del volcado vienen como texto y se aceptan; la basura no', ()
   assert.equal(cpValido(' 41002 '), '41002')
   assert.equal(cpValido('4100'), null)
 })
+
+test('hogar sin m²/año/CP pero con la referencia catastral del PISO guardada → se retarifica desde el Catastro', () => {
+  const r = retarificabilidad({ tipo: 'hogar', datos: { referenciaCatastral: '9872023VH5797S0001WX' } })
+  assert.equal(r.retarificable, true)
+  assert.equal(r.fuente, 'catastro')
+  // La de 14 es la del edificio (sin m² ni año): no vale.
+  assert.equal(retarificabilidad({ tipo: 'hogar', datos: { referenciaCatastral: '9872023VH5797S' } }).retarificable, false)
+  // Lo de la póliza manda sobre el Catastro.
+  const completa = { metrosCuadrados: '80', anioConstruccion: '1990', cp: '41003', referenciaCatastral: '9872023VH5797S0001WX' }
+  assert.equal(retarificabilidad({ tipo: 'hogar', datos: completa }).fuente, 'poliza')
+  // Cancelada, nunca.
+  assert.equal(retarificabilidad({ tipo: 'hogar', estado: 'cancelada', datos: { referenciaCatastral: '9872023VH5797S0001WX' } }).retarificable, false)
+})

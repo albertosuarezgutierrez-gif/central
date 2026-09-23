@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { btnStyle } from '@/components/ui'
+import DireccionConfirmable from '../../DireccionConfirmable'
 
 /**
  * «¿Dónde está el inmueble?» — CIMA no manda la dirección del riesgo de
@@ -15,12 +16,15 @@ import { btnStyle } from '@/components/ui'
  * que el portal del cliente la enseña sin más. No pisa una dirección que ya
  * exista: el puerto devuelve 409.
  */
-export default function EditarDireccionRiesgo({ polizaId }: { polizaId: string }) {
+export default function EditarDireccionRiesgo({ polizaId, esHogar }: { polizaId: string; esHogar: boolean }) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
   const [direccion, setDireccion] = useState('')
   const [cp, setCp] = useState('')
   const [localidad, setLocalidad] = useState('')
+  // El piso elegido en el Catastro (solo hogar): se guarda con la dirección y
+  // la póliza pasa a poder retarificarse sin volver a buscarlo.
+  const [referencia, setReferencia] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -52,6 +56,20 @@ export default function EditarDireccionRiesgo({ polizaId }: { polizaId: string }
         setError(typeof j?.motivo === 'string' ? j.motivo : 'No se ha podido guardar.')
         return
       }
+      if (esHogar && referencia) {
+        const r2 = await fetch('/api/correduria/poliza', {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: polizaId, campo: 'referencia_catastral', referencia }),
+        })
+        const j2 = (await r2.json().catch(() => null)) as Record<string, unknown> | null
+        if (!r2.ok || j2?.ok !== true) {
+          // La dirección SÍ se ha guardado: se dice qué falló, no se deshace.
+          setError(`Dirección guardada, pero la referencia catastral no: ${typeof j2?.motivo === 'string' ? j2.motivo : `HTTP ${r2.status}`}.`)
+          router.refresh()
+          return
+        }
+      }
       setAbierto(false)
       router.refresh()
     } catch {
@@ -67,7 +85,15 @@ export default function EditarDireccionRiesgo({ polizaId }: { polizaId: string }
     <div style={{ display: 'grid', gap: 8, marginTop: 8, border: '1px dashed var(--border)', borderRadius: 10, padding: 10 }}>
       <label style={{ fontSize: 12, color: 'var(--muted)' }}>
         Dirección
-        <input type="text" value={direccion} onChange={e => setDireccion(e.target.value)} maxLength={200} placeholder="p. ej. Calle Socorro 24, 3º B" style={campo} />
+        <DireccionConfirmable
+          value={direccion}
+          onChange={setDireccion}
+          codigoPostal={cp}
+          ciudad={localidad}
+          placeholder="p. ej. Calle Socorro 24, 3º B"
+          style={campo}
+          onReferencia={setReferencia}
+        />
       </label>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 120px) minmax(0, 1fr)', gap: 8 }}>
         <label style={{ fontSize: 12, color: 'var(--muted)' }}>

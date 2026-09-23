@@ -254,6 +254,7 @@ export {
   numeroPositivo,
   anioPlausible,
   cpValido,
+  referenciaCatastral,
   type Retarificabilidad,
   type RamoRetarificable,
   type EntradaRetarificable,
