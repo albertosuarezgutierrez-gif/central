@@ -13,6 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** 🎨 **Maquetas de vender APROBADAS por Alberto («tienes mi ok»)** — artefacto «Grupo ASegura · Maquetas vender»
+(https://claude.ai/artifact/Jb2XWZPzhN2ynF2F6cpPZ9): Hoy (móvil+escritorio), Vencimientos clientes/leads, seguimiento de una
+oportunidad, perder (8 motivos reales) y aparcar, modo llamada, y portal (portada, «mejórame el precio», declarar seguro de
+otra compañía con DOS casillas separadas `avisos`/`comercial`, centro de preferencias). Cifras de leads corregidas a las de
+PR A (874 en ≤90 días de 3.546) y canal LSSI: correo solo a ex-clientes, resto teléfono. PR #3311 mergeado. Siguiente:
+construir 1-3 (Vencimientos + modo llamada) y 1-4 (Hoy) sobre las maquetas. «Esperan tu OK» e «Incidencias» de Hoy
+dependen de la cola de aprobaciones y del detector de fugas (Fase 2): salen vacíos con nota hasta entonces.
+
 **(23/09/2026)** 👤 **Aviso por Telegram de todo lo que hace un cliente en el portal (pieza 1-7).** Cron `correduria-actividad`
 (plataforma, cada 5 min) ← puerto `GET /api/operador/actividad-nueva?desde=` (asegura, mismo UNION del muro de Actividad,
 orden ascendente, sin embudo). Regla pura `actividad-aviso.ts` (module-seguros): marca de agua con VENTANA de 3 h porque
