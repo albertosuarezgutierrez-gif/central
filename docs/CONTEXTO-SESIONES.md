@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+## 23/09/2026 — Alerta PSD2 sync (BBVA)
+- Feed BBVA sin movimientos desde 2026-09-10 (13 días); Kutxabank sigue fresco (hoy) y por eso
+  la consulta agregada de `movimientos_bancarios` salía en verde — la caída solo se ve por banco.
+- Causa: sesión Enable Banking de BBVA en estado CLOSED (`Session is closed`), detectado en el
+  sync de hoy 06:00 UTC (`conexiones_banco.ultimo_avisos`, sin prefijo ℹ️).
+- Acción: re-vincular BBVA en `/banca`. Alerta enviada por Telegram.
+
 **(22/09/2026)** 🪤 **El "smoke rojo" diario de `asegura` (issue #815) era falso el 86% de las veces —
 18 de 21 días.** El smoke suite pasaba (`PASS 3/FAIL 0/EXIT 0`) pero el step posterior "Cleanup smoke
 residue" moría con `password authentication failed for user "postgres"` contra `FRANKFURT_DATABASE_URL`
