@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🏠 **Capitales recomendados de hogar, probados en real.** #3388: el vendor exige `effectiveDate`
+en recommend-limits aunque el ejemplo del portal no la trae (400 medido con una póliza de hogar real) · #3391: el botón
+dice POR QUÉ está apagado. Solo 2 hogares vivos traen m²/año/CP en la póliza → el resto se corta en retarificar:
+propuesta pendiente de ofrecer Catastro por dirección. Pendiente Alberto: 2ª prueba del botón, prompt de Chrome
+sobre el esquema del portal (obligatorios, `includeIndividualResults`, coste) y preguntar a Codeoscopic si factura.
+
 
 **(23/09/2026)** 🔑 **Rotadas las contraseñas de `prisma_almacen` y `prisma_seguros`** (estaban en claro en snippets guardados del SQL Editor de Supabase; también se borró el de la API key de Smoobu, que NO se rota: es la misma cuenta que usan sivra/plataforma/ialimp y además ya vive en claro en `pms_connections`).
 Verificado: almacen `/catalogo` carga 169 artículos; `central-asegura` responde 200 en el puerto `/api/operador/*` desde las 18:58 UTC y hay 3 conexiones de `prisma_seguros` en `pg_stat_activity`.
