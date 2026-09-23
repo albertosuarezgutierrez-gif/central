@@ -171,18 +171,18 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 96 | 12.930 | 7.750.531 | 0 | 0 |
-| `otro` | 94 | 3.347 | 12.751.500 | 6.687.387 | 0 |
-| `lectura-directa` | 87 | 3.197 | 5.254.461 | 0 | 0 |
-| `mcp:github` | 85 | 3.155 | 3.019.568 | 39.437.814 | 57 |
-| `escritura` | 79 | 2.164 | 37.538.933 | 0 | 0 |
-| `sql` | 67 | 1.303 | 590.686 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 53 | 591 | 160.405 | 2.729.511 | 9 |
-| `mcp:Vercel` | 24 | 271 | 501.377 | 198.719 | 3 |
+| `bash` | 96 | 13.045 | 7.849.563 | 0 | 0 |
+| `otro` | 94 | 3.367 | 12.809.197 | 6.690.320 | 0 |
+| `lectura-directa` | 87 | 3.210 | 5.269.642 | 0 | 0 |
+| `mcp:github` | 85 | 3.171 | 3.023.650 | 39.437.814 | 57 |
+| `escritura` | 79 | 2.166 | 37.544.435 | 0 | 0 |
+| `sql` | 67 | 1.321 | 604.280 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 53 | 594 | 161.546 | 2.729.910 | 9 |
+| `mcp:Vercel` | 24 | 273 | 505.216 | 198.719 | 3 |
 | `mcp:Booking-com` | 8 | 248 | 1.006.622 | 0 | 0 |
 | `mcp:Gmail` | 13 | 217 | 346.727 | 0 | 2 |
 | `mcp:Supabase` | 39 | 109 | 13.937 | 0 | 1 |
-| `agente:general-purpose` | 15 | 57 | 40.612 | 652.039 | 0 |
+| `agente:general-purpose` | 15 | 58 | 41.278 | 662.088 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 1 | 51 | 73.084 | 0 | 0 |
 | `mcp:Google-Drive` | 6 | 50 | 50.016 | 0 | 2 |
@@ -190,8 +190,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
 | `mcp:OpenSEO` | 1 | 30 | 20.595 | 0 | 0 |
 | `agente:agente-architect` | 8 | 29 | 31.973 | 990.129 | 0 |
+| `agente:Explore` | 11 | 28 | 13.784 | 604.888 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
-| `agente:Explore` | 11 | 27 | 13.295 | 601.174 | 0 |
 | `agente:agente-mecanico` | 10 | 27 | 27.164 | 463.448 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Google_Drive` | 4 | 16 | 18.176 | 0 | 2 |
