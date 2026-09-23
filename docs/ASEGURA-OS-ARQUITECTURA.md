@@ -535,7 +535,17 @@ Lo que falta es **un embudo único con seguimiento**:
 
 **Uso real (medido)**: 10 identidades y 8 vinculadas a ficha sobre **67 clientes en vigor (~12 %)**. 18 accesos en total, 7 pólizas declaradas, 0 partes.
 
+**Medido de nuevo el 23/09 a las 07:40 UTC**:
+- **0 invitaciones enviadas en toda la historia** (`portal_invitacion` vacía), con 51 clientes invitables (tienen correo y su ficha se resuelve sin ambigüedad).
+- **0 presupuestos** creados (el PR 1-2 del presupuesto está construido pero sin usar).
+- 0 suscripciones push y 0 peticiones de acceso; 15 autorizaciones entre familiares y 40 códigos de acceso emitidos.
+
+El portal no falla por diseño: **nunca se ha invitado a nadie**.
+
 🚨 **El portal está bien construido y casi nadie lo usa.** Antes de añadir funciones, lo que más rinde es **activarlo**. Cada cambio de abajo está pensado para que el cliente tenga un motivo para entrar y para que **venda**.
+
+### Q-0. Lo primero, antes de construir nada: INVITAR
+Enviar la invitación a los **51 clientes invitables**. El botón ya existe en la ficha → pestaña Contactos → «Portal del cliente». En lote hace falta una acción masiva con previsualización. Es una comunicación a clientes, así que **sale solo con OK explícito de Alberto sobre el texto y la lista**. Coste ~0 y es la palanca que más mueve el uso del portal. Los 29 clientes sin correo se atienden en la llamada de renovación de §P, pidiéndoles el correo.
 
 ### Qué cambia, por orden de impacto en ventas
 1. **«Tus vencimientos» como portada.** Qué renueva, cuándo y a qué prima, con un botón **«Quiero que me mejores el precio»**. Crea una oportunidad en el embudo de Vencimientos (§P) con origen `portal`. **Es la venta iniciada por el cliente, la más barata que existe.**
@@ -595,6 +605,7 @@ Lo que falta es **un embudo único con seguimiento**:
 | 0-d | Medir y reducir el consumo de Actions de `central` (sin romper los checks requeridos) | `agente-mecanico` mide; la sesión decide | M |
 | 0-b | Disparo de `cima-pull` y alarma de pull mudo en el cron-dispatch + Telegram | sesión (pequeño, 2-3 ficheros) | S |
 | 0-c | Commit del doc de arquitectura + memoria | sesión | S |
+| 1-0 | Invitación masiva al portal de los 51 invitables, con previsualización y OK de Alberto | sesión (S) | S |
 | 1-M | Maquetas HTML: Hoy, Vencimientos (dos carriles), modo llamada, portada del portal | sesión, un artefacto | M |
 | 1-1 | Tablas `oportunidad` (+motivo de pérdida) y `tarea` (reutiliza `gestiones`) + auditoría de sus escrituras | sesión (datos) + revisión de `agente-architect` | M |
 | 1-2 | Motor de vencimientos: carriles de clientes y leads, ventanas, puntuación y secuencias como job | sesión la lógica pura; `agente-mecanico` los tests | M |
