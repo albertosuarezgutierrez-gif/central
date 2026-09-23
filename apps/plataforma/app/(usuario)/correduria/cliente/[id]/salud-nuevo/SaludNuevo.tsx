@@ -71,7 +71,6 @@ export default function SaludNuevo({
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
   const faltaCivil = !estadoCivilId
-  const faltaCapital = !capital.trim() || !(Number(capital) > 0)
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
@@ -81,7 +80,7 @@ export default function SaludNuevo({
 
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
-  const faltaAlgo = faltaCivil || faltaCapital || aManoSinRellenar.length > 0
+  const faltaAlgo = faltaCivil || aManoSinRellenar.length > 0
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
@@ -90,7 +89,7 @@ export default function SaludNuevo({
       clienteId,
       resueltos: {
         estadoCivilId,
-        capital: Number(capital),
+        ...(Number(capital) > 0 ? { capital: Number(capital) } : {}),
         // 🔒 `modalidadDeseada` NUNCA viaja al vendor: no hay campo confirmado
         // donde ponerla. Solo se manda como CORRECCIÓN informativa, que asegura
         // también descarta al construir la petición.
@@ -144,9 +143,9 @@ export default function SaludNuevo({
       )}
 
       <div style={cardStyle}>
-        <CardHeader title="1 · La cobertura" sub="Salud no encaja bien en «capital»: es lo único mínimo disponible hoy sin el contrato del vendor. Lo teclea el corredor." />
+        <CardHeader title="1 · La cobertura" sub="La API de salud no tiene campo de capital ni de modalidad: la compañía cotiza su producto para el asegurado. Estos dos datos son notas para ti y NO viajan." />
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Campo etiqueta="Capital / importe de referencia (€)" falta={faltaCapital}>
+          <Campo etiqueta="Importe de referencia (€)" falta={false} ayuda="Opcional. Nota para el corredor: NO viaja al vendor (la API no tiene ese campo).">
             <input type="number" min={0} step={1000} value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="15000" style={input} />
           </Campo>
           <Campo etiqueta="Modalidad deseada" falta={false} ayuda="Nota para el corredor: NO viaja al vendor (no hay campo confirmado).">

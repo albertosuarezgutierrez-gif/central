@@ -12,6 +12,19 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
+La moto de Víctor (Allianz 031698897) salía con catálogo de coche porque CIMA la guardó como `auto`
+(Allianz/Mapfre no mandan `ClaseVehiculo='MO'`). 18 pólizas corregidas a `moto` en BD (ids en asegura#848)
++ ingesta parcheada (matrícula ya moto → moto; guarda clase/categoría/Base7/cilindrada en crudo). ⚠️ Ahora
+una `moto` da 409 al retarificar: `retarificar-cartera.ts` solo hace auto/hogar → punto 1 del plan.
+Ficha: carnets (tipo, expedición, caducidad) en la cabecera. Plan + prompt para el portal:
+`docs/CODEOSCOPIC-PLAN-RAMOS-2026-09.md` (🔴 vida/salud/decesos mandan un `risk` que la API contradice).
+❌ Error de sesión: el asistente de moto de asegura#848 se hizo en la web de Manuel, que NO se usa.
+🔓 Mismo día: vida/salud/decesos pasan a la forma de la referencia (`deathBenefit`; `insureds[]`) y, tras un
+bloqueo de horas, se DESBLOQUEAN con OK de Alberto (sin estrenar: el 1er intento real de cada uno es el test).
+🏍️ Retarificar MOTO de cartera hecho (asegura `precalificarMoto`/`prepararMoto` + plataforma `MotoNuevo` modo
+póliza; cepo `test/regression-retarificar-moto.test.ts`); sin emisión de moto aún. Después: catálogos propios de moto (garaje, carnés, fecha de matrícula) y carné de MOTO de la ficha (A>A2>A1>AM) validado contra catálogo; sin él, B como supuesto marcado. Y emisión de moto de cartera: `MotoNuevo` (modo póliza) monta el mismo panel `Emision` que auto; el ReRate ya no manda a Allianz Motos las opciones de Allianz AUTO (`opcionesPorDefecto(compania, ramo)`). asegura#848: `playwright / portal` rojo = preview tras
+la Deployment Protection de Vercel (va a `vercel.com/login`), pasa en todas las ramas, no es del PR.
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
 compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña

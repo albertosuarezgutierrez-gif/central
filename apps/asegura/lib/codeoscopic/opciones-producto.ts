@@ -55,7 +55,12 @@ const ALLIANZ_AUTO_320200: OpcionProducto[] = [
  * así que el caller manda `[]` (comportamiento igual que hasta ahora, y el
  * vendor lo dirá con su propio 400 real si le hace falta algo).
  */
-export function opcionesPorDefecto(compania: string): OpcionProducto[] | null {
+export function opcionesPorDefecto(compania: string, ramo: string | null = 'auto'): OpcionProducto[] | null {
+  // Por (compañía, RAMO): las 14 de Allianz son del producto de AUTO 320200.
+  // Mandárselas al ReRate de Allianz Motos sería declarar opciones de otro
+  // producto (auditoría 23/09/2026, plan punto 7). Sin ramo se asume auto,
+  // que es el comportamiento de siempre.
+  if ((ramo ?? 'auto') !== 'auto') return null
   const c = compania.trim().toLowerCase()
   // Copia defensiva: el array de arriba es un módulo compartido entre invocaciones
   // (proceso Node reutilizado en serverless) — devolver la misma referencia dejaría

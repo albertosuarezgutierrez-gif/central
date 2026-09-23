@@ -16,13 +16,16 @@ const BASE: DatosDecesos = {
 }
 const LINEA = 'Burial'
 
-test('la MISMA persona va en holder y risk.insured, e idéntica', () => {
+test('la MISMA persona va en holder y como único elemento de risk.insureds, e idéntica', () => {
   const c = construirPeticionDecesos(BASE, LINEA) as any
-  assert.deepEqual(c.holder, c.risk.insured)
+  assert.deepEqual(c.risk.insureds, [c.holder])
+  assert.equal(c.risk.insured, undefined)
+  assert.equal(c.risk.capital, undefined)
 })
 
-test('sin capital no se puede cotizar', () => {
-  assert.ok(revisarDatosDecesos({ ...BASE, capital: undefined as any }).some((x) => x.campo === 'capital'))
+test('sin capital SÍ se puede cotizar: no viaja, así que no se exige', () => {
+  assert.equal(revisarDatosDecesos({ ...BASE, capital: undefined as any }).some((x) => x.campo === 'capital'), false)
+  assert.ok(revisarDatosDecesos({ ...BASE, capital: -5 }).some((x) => x.campo === 'capital'))
 })
 
 test('unos datos válidos no dan ningún reparo', () => {

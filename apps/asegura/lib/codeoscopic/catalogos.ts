@@ -379,13 +379,15 @@ export function normalizarMatricula(m: string): string {
 export async function fechaMatriculacionDeMatricula(
   config: ConfigCodeoscopic,
   matricula: string,
+  /** Moto tiene su propio `/motorcycle/registration-date` (referencia de la API, 23/09/2026). */
+  ramo: 'car' | 'motorcycle' = 'car',
 ): Promise<FechaMatriculacion> {
   const placa = normalizarMatricula(matricula)
   if (placa === '') return { estado: 'error', detalle: 'matrícula vacía' }
   try {
     const raw = (await peticion(config, {
       metodo: 'GET',
-      path: `/car/registration-date?plate=${encodeURIComponent(placa)}`,
+      path: `/${ramo}/registration-date?plate=${encodeURIComponent(placa)}`,
       timeoutMs: config.timeoutGenericoMs,
     })) as unknown
     const fecha = leerFecha(raw)
@@ -445,6 +447,16 @@ export async function versionesMoto(
 }
 
 /** `ThisMotorcycle` | `OtherMotorcycle`. Obligatorio en `risk.drivingExperience.id`. */
+/** Garajes de MOTO: catálogo propio `/motorcycle/garage-types` (no el de coche). */
+export async function tiposDeGarajeMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/garage-types'))
+}
+
+/** Tipos de carné de MOTO (A, A2, A1, AM…): `/motorcycle/driving-licenses`. */
+export async function tiposDeCarnetMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/driving-licenses'))
+}
+
 export async function experienciaConduccionMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
   return normalizarOpciones(await catalogo(config, '/motorcycle/driving-experience-options'))
 }

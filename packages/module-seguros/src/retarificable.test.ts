@@ -13,6 +13,19 @@ test('auto: con matrícula sí, sin matrícula no, y la gemela vale', () => {
   assert.deepEqual(gem, { ramo: 'auto', retarificable: true, motivo: null, fuente: 'gemela' })
 })
 
+test('moto: como auto, por la matrícula, y el ramo que sale es moto (su catálogo es otro)', () => {
+  assert.deepEqual(retarificabilidad({ tipo: 'moto', datos: { matricula: '1234ABC' } }), {
+    ramo: 'moto',
+    retarificable: true,
+    motivo: null,
+    fuente: 'poliza',
+  })
+  assert.equal(retarificabilidad({ tipo: 'moto', datos: null, datosGemela: { matricula: '1234ABC' } }).fuente, 'gemela')
+  const sin = retarificabilidad({ tipo: 'moto', datos: { marca: 'HONDA' } })
+  assert.equal(sin.retarificable, false)
+  assert.match(sin.motivo ?? '', /matrícula/)
+})
+
 test('hogar: CIMA sin objeto + gemela con m²/año/CP → retarificable por la gemela', () => {
   const r = retarificabilidad({ tipo: 'hogar', datos: null, datosGemela: HOGAR })
   assert.deepEqual(r, { ramo: 'hogar', retarificable: true, motivo: null, fuente: 'gemela' })

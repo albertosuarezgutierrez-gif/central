@@ -222,6 +222,57 @@ export type Ficha = {
    * es «no ha aportado ninguna» (eso es `[]`).
    */
   declaradas: PolizaDeclaradaFicha[] | null
+  /**
+   * Carnés de conducir de la ficha. `null` = asegura no manda el bloque o no
+   * pudo leerlo — NO es «no tiene carné» (eso es `[]`).
+   */
+  carnets: CarnetFicha[] | null
+}
+
+export type CarnetFicha = {
+  id: string
+  tipo: string
+  /** ISO. `null` con `fechaIlegible` = guardada pero no se descifra. */
+  fechaExpedicion: string | null
+  fechaIlegible: boolean
+  /** ISO. `null` = no se ha podido calcular (falta expedición o nacimiento). */
+  fechaCaducidad: string | null
+}
+
+/** `null` si el bloque no llega o no es una lista; una fila rara se salta. */
+export function leerCarnets(v: unknown): CarnetFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: CarnetFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const d = fila as Record<string, unknown>
+    if (typeof d.id !== 'string' || typeof d.tipo !== 'string' || d.tipo.trim() === '') continue
+    out.push({
+      id: d.id,
+      tipo: d.tipo.trim().toUpperCase(),
+      fechaExpedicion: cadena(d.fechaExpedicion),
+      fechaIlegible: d.fechaIlegible === true,
+      fechaCaducidad: cadena(d.fechaCaducidad),
+    })
+  }
+  return out
+}
+
+/**
+ * Estado de la caducidad frente a `hoy` (ISO). La caducidad se CALCULA desde la
+ * fecha de expedición guardada, que suele ser la antigua (volcado o fecha de
+ * obtención): si ya pasó, lo que se sabe es que no consta la renovación, no que
+ * el carné esté caducado. Por eso ese estado es `sin_renovacion`, no «caducado».
+ */
+export function estadoCaducidadCarnet(
+  fechaCaducidad: string | null,
+  hoy: string,
+): 'sin_renovacion' | 'pronto' | 'vigente' | 'desconocido' {
+  if (!fechaCaducidad) return 'desconocido'
+  if (fechaCaducidad < hoy) return 'sin_renovacion'
+  const limite = new Date(`${hoy}T00:00:00Z`)
+  limite.setUTCDate(limite.getUTCDate() + 90)
+  return fechaCaducidad <= limite.toISOString().slice(0, 10) ? 'pronto' : 'vigente'
 }
 
 export type AnotacionHistorial = { id: string; tipo: string; texto: string; fecha: string }
@@ -681,6 +732,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       historial: leerHistorial(f.historial),
       cotizacionesVivas: entero(f.cotizacionesVivas),
       declaradas: leerDeclaradas(f.declaradas),
+      carnets: leerCarnets(f.carnets),
       piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }

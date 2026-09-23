@@ -72,6 +72,12 @@ export type ClienteCartera = {
   /** Fecha del carnet B, de `cliente_carnets_conducir`. */
   fechaCarnet: string | null
   /**
+   * Los carnés de la ficha (`cliente_carnets_conducir`), ya descifrados. Solo
+   * los usa moto, para declarar el carné de MOTO. `null` = no se han podido
+   * leer; `undefined` = no se han pedido (ramos que no los usan).
+   */
+  carnets?: { tipo: string; fechaExpedicion: string | null }[] | null
+  /**
    * Dirección en texto libre de la ficha, ya descifrada. `null` = no hay o no
    * se ha podido descifrar. Se usa SOLO para trocearla y rellenar `nombreVia`
    * por defecto (11º 400 real, ReRate): si ya la tenemos, no se le vuelve a
@@ -260,25 +266,24 @@ export function diaSiguiente(f: string): string {
 }
 
 /**
- * Construye la precalificación.
- *
- * `hoy` entra por parámetro para que la función sea pura y los tests no
- * dependan del calendario.
+ * Fecha de efecto e historial de una póliza que se RETARIFICA: común a auto y
+ * moto. La póliza actual pasa a ser la anterior (compañía, número, antigüedad),
+ * y lo que no consta se supone y se declara con `suponer`.
  */
-export function precalificarAuto(
-  cliente: ClienteCartera,
+function historialDePoliza(
   poliza: PolizaCartera,
-  resueltos: Resueltos,
   hoy: string,
-): Precalificacion {
-  const supuestos: Supuesto[] = []
-  const suponer = (campo: keyof DatosAuto, valor: unknown, porque: string, optimista = false) => {
-    supuestos.push({ campo, valor, porque, optimista })
-    return valor
-  }
-
-  const { primero, segundo } = partirApellidos(cliente.apellidos)
-
+  suponer: (campo: 'fechaEfecto' | 'aniosAsegurado' | 'aniosSinSiniestros', valor: unknown, porque: string, optimista?: boolean) => unknown,
+): {
+  fechaEfecto: string
+  aseguradoAntes: true
+  companiaAnteriorCodigo: string | null
+  polizaAnterior: string | null
+  aniosAsegurado: number
+  aniosEnCompania: number
+  aniosSinSiniestros: number
+  siniestrosUltimos5: number
+} {
   // ── Fecha de efecto: el día después de que venza la póliza actual ──────────
   // Es lo que de verdad quiere el cliente («cuánto me costaría al renovar»), y
   // si la póliza no tiene vencimiento se cotiza para mañana.
@@ -323,6 +328,40 @@ export function precalificarAuto(
           `siniestros anotados no prueba que no los haya`,
         true,
       ) as number)
+
+  return {
+    fechaEfecto,
+    aseguradoAntes: true,
+    companiaAnteriorCodigo: limpio(poliza.codigoEntidadDgs),
+    polizaAnterior: limpio(poliza.numeroPoliza),
+    aniosAsegurado,
+    aniosEnCompania: aniosAsegurado,
+    aniosSinSiniestros,
+    siniestrosUltimos5: huboSiniestros ? poliza.siniestrosRegistrados : 0,
+  }
+}
+
+/**
+ * Construye la precalificación.
+ *
+ * `hoy` entra por parámetro para que la función sea pura y los tests no
+ * dependan del calendario.
+ */
+export function precalificarAuto(
+  cliente: ClienteCartera,
+  poliza: PolizaCartera,
+  resueltos: Resueltos,
+  hoy: string,
+): Precalificacion {
+  const supuestos: Supuesto[] = []
+  const suponer = (campo: keyof DatosAuto, valor: unknown, porque: string, optimista = false) => {
+    supuestos.push({ campo, valor, porque, optimista })
+    return valor
+  }
+
+  const { primero, segundo } = partirApellidos(cliente.apellidos)
+
+  const historial = historialDePoliza(poliza, hoy, suponer)
 
   // ── El nombre de la vía: si la ficha ya trae una dirección, no se vuelve a
   // pedir (11º 400 real, ReRate). Es la misma jugada que ya hace hogar con la
@@ -388,15 +427,7 @@ export function precalificarAuto(
     garaje: limpio(resueltos.garaje) ?? undefined,
 
     // ── Historial ──
-    aseguradoAntes: true,
-    companiaAnteriorCodigo: limpio(poliza.codigoEntidadDgs),
-    polizaAnterior: limpio(poliza.numeroPoliza),
-    aniosAsegurado,
-    aniosEnCompania: aniosAsegurado,
-    aniosSinSiniestros,
-    siniestrosUltimos5: huboSiniestros ? poliza.siniestrosRegistrados : 0,
-
-    fechaEfecto,
+    ...historial,
   }
 
   if (limpio(cliente.codigoPostal) !== null) {
@@ -619,6 +650,25 @@ export type ResueltosMotoNueva = {
   experienciaConduccion: string | null
 }
 
+/** Carnés de moto de más a menos habilitante: se declara el de mayor rango. */
+const CARNETS_MOTO = ['A', 'A2', 'A1', 'AM'] as const
+
+/**
+ * El carné de MOTO que consta en la ficha, con su fecha: el de mayor rango
+ * (A > A2 > A1 > AM). `null` = no consta ninguno con fecha legible — y entonces
+ * NO se inventa: se cae al carné del conductor y se declara como supuesto.
+ */
+export function carnetMotoDeFicha(
+  carnets: ClienteCartera['carnets'],
+): { tipo: string; fecha: string } | null {
+  if (!carnets) return null
+  for (const tipo of CARNETS_MOTO) {
+    const k = carnets.find((c) => c.tipo.toUpperCase().replace(/\s/g, '') === tipo && limpio(c.fechaExpedicion) !== null)
+    if (k) return { tipo, fecha: k.fechaExpedicion as string }
+  }
+  return null
+}
+
 export function precalificarMotoNueva(
   cliente: ClienteCartera,
   resueltos: ResueltosMotoNueva,
@@ -647,6 +697,30 @@ export function precalificarMotoNueva(
         'corrígelo si no es el caso',
     ) as string)
 
+  // ── El carné: el de MOTO de la ficha, si consta. Tarificar una moto con la
+  // antigüedad del carné B es declarar mal el riesgo (auditoría 23/09/2026).
+  const deMoto = carnetMotoDeFicha(cliente.carnets)
+  const carnet: Pick<Partial<DatosMoto>, 'fechaCarnet' | 'tipoCarnet' | 'zonaCarnet'> = deMoto
+    ? { fechaCarnet: deMoto.fecha, tipoCarnet: deMoto.tipo }
+    : {
+        fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+        tipoCarnet: suponer(
+          'tipoCarnet',
+          TIPO_CARNET_SUPUESTO,
+          cliente.carnets === null
+            ? 'no se han podido leer los carnés de la ficha; se declara el B con la fecha del conductor — ' +
+                'compruébalo: una moto de más de 125 cc exige carné de moto'
+            : 'no consta carné de moto (A, A2, A1, AM) con fecha en la ficha; se declara el B con la fecha ' +
+                'del conductor — una moto de más de 125 cc exige carné de moto, añádelo a la ficha',
+          true,
+        ) as string,
+      }
+  carnet.zonaCarnet = suponer(
+    'zonaCarnet',
+    ZONA_CARNET_SUPUESTA,
+    'no se ha preguntado dónde se expidió el carné; se supone España',
+  ) as string
+
   const datos: Partial<DatosMoto> = {
     // ── Persona ──
     dni: limpio(cliente.dni) ?? undefined,
@@ -657,7 +731,7 @@ export function precalificarMotoNueva(
     sexo: sexoDeSaludo(cliente.saludo) ?? undefined,
     estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
-    fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+    ...carnet,
     cpResidencia: limpio(cliente.codigoPostal),
     municipioResidenciaId: resueltos.municipioId,
 
@@ -700,5 +774,33 @@ export function precalificarMotoNueva(
     })
   }
 
+  return { datos, supuestos, faltan: revisarDatosMoto(datos) }
+}
+
+// ─── MOTO, retarificar una póliza de la cartera ─────────────────────────────
+
+/** Lo resuelto con red para una moto de la cartera: la matrícula sale de la póliza. */
+export type ResueltosMoto = Omit<ResueltosMotoNueva, 'matricula'>
+
+/**
+ * Hermana de `precalificarAuto()` para una póliza de MOTO: persona, vehículo y
+ * circulación como `precalificarMotoNueva()` (catálogo `/motorcycle/*`,
+ * experiencia de conducción), y encima la fecha de efecto y el historial de la
+ * póliza (`historialDePoliza`), que es lo que da el bonus por antigüedad.
+ */
+export function precalificarMoto(
+  cliente: ClienteCartera,
+  poliza: PolizaCartera,
+  resueltos: ResueltosMoto,
+  hoy: string,
+): PrecalificacionMoto {
+  const base = precalificarMotoNueva(cliente, { ...resueltos, matricula: poliza.matricula }, hoy)
+  // La fecha de efecto de «nueva» (mañana) no vale aquí: la decide el vencimiento.
+  const supuestos: SupuestoMoto[] = base.supuestos.filter((x) => x.campo !== 'fechaEfecto')
+  const suponer = (campo: keyof DatosMoto, valor: unknown, porque: string, optimista = false) => {
+    supuestos.push({ campo, valor, porque, optimista })
+    return valor
+  }
+  const datos: Partial<DatosMoto> = { ...base.datos, ...historialDePoliza(poliza, hoy, suponer) }
   return { datos, supuestos, faltan: revisarDatosMoto(datos) }
 }

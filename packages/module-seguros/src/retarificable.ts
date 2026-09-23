@@ -5,7 +5,7 @@
 // divergentes son cuatro pantallas que dicen cosas distintas de la misma póliza.
 //
 // ─── Lo que decide ──────────────────────────────────────────────────────────
-// · AUTO: hace falta la matrícula.
+// · AUTO y MOTO: hace falta la matrícula (la moto, con su catálogo `/motorcycle/*`).
 // · HOGAR: hacen falta m², año de construcción y código postal del riesgo — es
 //   lo mínimo que un multirriesgo pide para tarificar y lo que el Catastro da.
 //   Se miran la póliza Y su copia gemela del volcado: CIMA no manda el objeto
@@ -17,7 +17,7 @@
 // El `motivo` es para el `title` del guion en pantalla: la misma frase en la
 // ficha del cliente, la de la póliza y la cola de retención.
 
-export type RamoRetarificable = 'auto' | 'hogar'
+export type RamoRetarificable = 'auto' | 'moto' | 'hogar'
 
 export type Retarificabilidad = {
   ramo: RamoRetarificable | null
@@ -44,11 +44,11 @@ export function retarificabilidad(e: EntradaRetarificable): Retarificabilidad {
     return NO('La póliza está cancelada en CIMA: no hay nada que retarificar.')
   }
 
-  if (tipo === 'auto') {
+  if (tipo === 'auto' || tipo === 'moto') {
     const propia = texto(e.datos?.matricula)
     const gemela = texto(e.datosGemela?.matricula)
-    if (propia) return { ramo: 'auto', retarificable: true, motivo: null, fuente: 'poliza' }
-    if (gemela) return { ramo: 'auto', retarificable: true, motivo: null, fuente: 'gemela' }
+    if (propia) return { ramo: tipo, retarificable: true, motivo: null, fuente: 'poliza' }
+    if (gemela) return { ramo: tipo, retarificable: true, motivo: null, fuente: 'gemela' }
     return NO('La compañía no ha informado la matrícula.')
   }
 
@@ -63,7 +63,7 @@ export function retarificabilidad(e: EntradaRetarificable): Retarificabilidad {
     )
   }
 
-  return NO(`Hoy solo se retarifica auto y hogar (esta es de ${tipo || 'un ramo sin informar'}).`)
+  return NO(`Hoy solo se retarifica auto, moto y hogar (esta es de ${tipo || 'un ramo sin informar'}).`)
 }
 
 /** Lo que un cuestionario de hogar exige y no se puede suponer. */

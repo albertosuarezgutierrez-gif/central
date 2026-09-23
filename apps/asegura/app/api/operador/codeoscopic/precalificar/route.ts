@@ -5,6 +5,7 @@ import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion } from '@/lib/cartera-ficha'
 import {
   precalificarAuto,
+  precalificarMoto,
   tipoViaDelTomador,
   tipoViaTextoDelTomador,
   type Resueltos,
@@ -165,11 +166,11 @@ export async function GET(req: Request) {
   // filas como emitibles.
   const carteraCompanias = await carteraCompaniasDePoliza(correduriaId, polizaId)
 
-  // ── Ramos que no son auto ─────────────────────────────────────────────────
+  // ── Ramos que no son auto ni moto ─────────────────────────────────────────
   // No se precalifican aquí (hogar tiene su propia pieza, con Catastro), así que
   // NO se devuelve `faltan: []`: eso diría «revisado y no falta nada» y
   // encendería el botón. `null` es «no se ha mirado», que es la verdad.
-  if (origen.tipo !== 'auto') {
+  if (origen.tipo !== 'auto' && origen.tipo !== 'moto') {
     return NextResponse.json(
       {
         estado: 'ok',
@@ -177,7 +178,7 @@ export async function GET(req: Request) {
         precalificado: false,
         motivo:
           origen.retarificacion.motivo ??
-          `esta ruta solo precalifica auto; el ramo de esta póliza es «${origen.tipo}»`,
+          `esta ruta solo precalifica auto y moto; el ramo de esta póliza es «${origen.tipo}»`,
         vehiculo: null,
         faltan: null,
         supuestos: [],
@@ -224,7 +225,7 @@ export async function GET(req: Request) {
         )
       : Promise.resolve<Opcion[] | null>([]),
     origen.poliza.matricula
-      ? fechaMatriculacionDeMatricula(cfg, origen.poliza.matricula)
+      ? fechaMatriculacionDeMatricula(cfg, origen.poliza.matricula, origen.tipo === 'moto' ? 'motorcycle' : 'car')
       : Promise.resolve({ estado: 'error' as const, detalle: 'la póliza no tiene matrícula' }),
     // El catálogo de tipos de vía (`/road-types`), gratis: el Submit exige
     // `roadType.id` y es una referencia de catálogo, así que la pantalla lo
@@ -336,7 +337,26 @@ export async function GET(req: Request) {
     garaje: null,
     tipoViaId: tipoViaFinal?.id ?? null,
   }
-  const pre = precalificarAuto(origen.cliente, origen.poliza, resueltos, hoyIso())
+  // Moto: misma secuencia, con su precalificación (catálogo de motos,
+  // experiencia de conducción). La versión, el garaje y la experiencia los
+  // elige el corredor en la pantalla. La fecha de matriculación de moto sale
+  // de su propio `/motorcycle/registration-date` (arriba).
+  const pre =
+    origen.tipo === 'moto'
+      ? precalificarMoto(
+          origen.cliente,
+          origen.poliza,
+          {
+            municipioId: resueltos.municipioId,
+            estadoCivilId: resueltos.estadoCivilId,
+            fechaMatriculacion,
+            codigoVehiculo: null,
+            garaje: null,
+            experienciaConduccion: null,
+          },
+          hoyIso(),
+        )
+      : precalificarAuto(origen.cliente, origen.poliza, resueltos, hoyIso())
 
   // El libro de consumo. `estadoConsumo()` mira el interruptor de verdad (no lo
   // ignora), así que con la tarificación apagada devuelve `{ error }` — que es
@@ -349,7 +369,7 @@ export async function GET(req: Request) {
   return NextResponse.json(
     {
       estado: 'ok',
-      ramo: 'auto',
+      ramo: origen.tipo,
       precalificado: true,
       motivo: null,
       // Marca, modelo y las versiones vistas en otras pólizas de la misma
