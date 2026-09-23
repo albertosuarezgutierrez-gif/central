@@ -53,14 +53,21 @@ por `central`. Ese síntoma —fallo instantáneo sin máquina— se diagnostica
 - El vigía `correduria_ingesta` ya incluye el cron en su firma (`firmaAvisoIngesta`): antes vio las 37 h
   de parada y calló porque la firma no cambió.
 
-## ⏸️ El cabo suelto que sigue abierto
+## ✅ El `reconcile` YA está programado (medido 23/09/2026)
 
-**El `reconcile` no está en la ejecución programada.** Vacía la cuarentena
-reprocesando los `review` contra la cartera actual, es idempotente, y sale de un
-input de `workflow_dispatch`: en los cron llega vacío. O sea, **la cuarentena
-solo se vacía si alguien se acuerda de pulsarlo**. El parche (tres líneas, y por
-qué NO vale un `||` de la expresión de GitHub) está escrito en
-`docs/CIMA-CUARENTENA.md` y **sin aplicar**: vive en el repo `asegura`.
+`cima-pull.yml` del repo `asegura` lo corre solo a las **06:00 UTC** (LOO-990,
+`IS_RECONCILE_SCHEDULE`). Esta sección decía que seguía «sin aplicar» y era falso.
+🚨 **Pero el reconcile solo re-saca ficheros SIN confirmar.** Un fichero con
+objetos en cuarentena que ya se confirmó a TIREA (`estado='confirmed'`,
+`error_detalle='review_parcial_*'`) no vuelve por esa vía: sale del crudo
+(`cima_cuarentena_crudo`, guarda el JSON de TODO fichero 30 días, **solo desde el
+17/09/2026**) con `cima-reprocesar-cuarentena.yml`, o —si es anterior— bajando
+el XML del Portal CIMA y metiéndolo por `POST /api/internal/cima/ingerir-manual`.
+Caso: 36 recibos de Occident del 15/09 (dos REC 299) atascados por pólizas
+duplicadas que se fusionaron el 17/09; su crudo no existe.
+**Antes de reprocesar un `sin_poliza_en_cartera`, busca duplicados vivos**
+(mismo número normalizado + DGS, `merged_into_poliza_id IS NULL`): el 23/09 quedaban
+3 parejas que solo diferían en la puntuación (`HR G`/`HR-G`, `/ 045981539`).
 
 ## Quién manda qué, de verdad (medido el 16/09/2026)
 

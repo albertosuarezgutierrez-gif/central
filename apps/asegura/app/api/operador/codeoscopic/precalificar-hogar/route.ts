@@ -126,9 +126,11 @@ export async function GET(req: Request) {
 
   // ── El Catastro, solo si el corredor ha elegido el piso (gratis) ─────────
   // Para las pólizas sin m²/año/CP: rellena los huecos, nunca pisa la ficha.
+  // La elegida en pantalla manda; si no, la que el corredor guardó en la póliza.
+  const referenciaUsada = referenciaQuery?.replace(/[\s-]/g, '').toUpperCase() ?? origen.referenciaCatastral
   let catastro: CatastroHogar | null = null
-  if (referenciaQuery !== null) {
-    const c = await catastroPorReferencia(referenciaQuery)
+  if (referenciaUsada !== null) {
+    const c = await catastroPorReferencia(referenciaUsada)
     if (c.estado !== 'ok') {
       return NextResponse.json(
         { estado: 'error', causa: 'otro', mensaje: motivoCatastro(c), gastado: '0,00€' },
@@ -236,10 +238,14 @@ export async function GET(req: Request) {
     ...(catastro
       ? {
           catastro: {
+            referencia: referenciaUsada,
+            /** La que ya está guardada en la póliza (no hace falta ofrecer guardarla). */
+            guardada: origen.referenciaCatastral !== null && referenciaUsada === origen.referenciaCatastral,
             direccionLegible: direccionLegible(catastro),
             metrosCuadrados: catastro.metrosCuadrados,
             anioConstruccion: catastro.anioConstruccion,
             codigoPostal: catastro.codigoPostal,
+            vivienda: catastro.vivienda ?? null,
           },
         }
       : {}),

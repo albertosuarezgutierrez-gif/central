@@ -28,6 +28,7 @@
 import { revisarDatosHogar, type DatosHogar, type ReparoHogar } from './peticion-hogar.ts'
 import { partirApellidos, sexoDeSaludo, diaSiguiente, type ClienteCartera } from './desde-cartera.ts'
 import { partirDireccion, direccionDesdeCatastro, type DireccionPartida } from './direccion.ts'
+import type { ViviendaCatastro } from '@central/core-catastro'
 
 /** El riesgo de hogar tal como lo trae la ficha (póliza o gemela), ya descifrado. */
 export type HogarCartera = {
@@ -59,6 +60,8 @@ export type CatastroHogar = {
    * esta no se usa: manda siempre `h.direccion` (dato de la ficha).
    */
   direccion?: DireccionPartida | null
+  /** Piso/unifamiliar, planta y m² de la vivienda según sus unidades constructivas. */
+  vivienda?: ViviendaCatastro | null
 }
 
 /** Los desplegables de catálogo que la pantalla resuelve (ids del vendor). */

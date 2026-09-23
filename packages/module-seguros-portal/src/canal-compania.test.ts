@@ -24,8 +24,9 @@ import {
 const VACIA: FilaCompania = {
   nombreComun: 'Occident',
   telefonoSiniestros: null,
-  telefonoAsistencia: null,
+  asistencias: [],
   whatsappSiniestros: null,
+  whatsappNota: null,
   horarioSiniestros: null,
   verificadoEn: null,
 }
@@ -40,8 +41,9 @@ const OCCIDENT: FilaCompania = {
 const MAPFRE: FilaCompania = {
   nombreComun: 'Mapfre',
   telefonoSiniestros: '900 122 122',
-  telefonoAsistencia: '900 122 122',
+  asistencias: [{ para: null, numero: '900 122 122', horario: null }],
   whatsappSiniestros: null,
+  whatsappNota: null,
   horarioSiniestros: null,
   verificadoEn: '2026-09-05',
 }

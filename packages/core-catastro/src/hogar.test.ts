@@ -8,6 +8,7 @@ const SAN_VICENTE: DatosCatastro = {
   direccion: 'CL SAN VICENTE 40 Es:1 Pl:02 Pt:14 41002 SEVILLA (SEVILLA)',
   superficie: 76, anioConstruccion: 1994, uso: 'Residencial', cuotaParticipacion: null,
   clase: 'UR', provincia: 'SEVILLA', municipio: 'SEVILLA', codigoPostal: '41002',
+  construcciones: [],
 }
 
 test('el caso real de Alberto: 76 m², 1994, Sevilla 41002, listo para cotizar', () => {

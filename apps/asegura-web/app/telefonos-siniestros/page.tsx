@@ -80,6 +80,13 @@ const FAQ = {
   ],
 } as Pick<Ramo, 'faq'>
 
+/** El WhatsApp es la misma línea que la de dar parte (Occident): se dice sin repetir el número. */
+function mismoNumero(siniestros: string | null, whatsapp: string): boolean {
+  if (siniestros === null) return false
+  const d = (n: string) => n.replace(/\D/g, '').replace(/^34(?=\d{9}$)/, '')
+  return d(siniestros) === d(whatsapp)
+}
+
 export default function TelefonosSiniestros() {
   const companias = telefonosParaPublicar()
   const faq = fichaFaq(FAQ as Ramo)
@@ -142,12 +149,13 @@ export default function TelefonosSiniestros() {
                   ))}
                 {/* WhatsApp sin `tel:`: un enlace de llamada sobre él marcaría la
                     línea de voz, que es otra promesa. */}
-                {x.c.whatsapp && !x.c.whatsappNota && (
-                  <p style={{ margin: '4px 0 0', color: 'var(--muted)' }}>También por WhatsApp en ese mismo número.</p>
-                )}
-                {x.c.whatsapp && x.c.whatsappNota && (
+                {x.c.whatsapp && (
                   <p style={{ margin: '4px 0 0', color: 'var(--muted)' }}>
-                    WhatsApp {whatsappLegible(x.c.whatsapp)}, {x.c.whatsappNota}.
+                    {mismoNumero(x.c.siniestros, x.c.whatsapp) && !x.c.whatsappNota && !x.c.whatsappRamos?.length
+                      ? 'También por WhatsApp en ese mismo número.'
+                      : `WhatsApp ${whatsappLegible(x.c.whatsapp)}${
+                          x.c.whatsappRamos?.length ? `, solo para partes de ${x.c.whatsappRamos.join(' y ')}` : ''
+                        }${x.c.whatsappNota ? `, ${x.c.whatsappNota}` : ''}.`}
                   </p>
                 )}
                 <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--muted)' }}>

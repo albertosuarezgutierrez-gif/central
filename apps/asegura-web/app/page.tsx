@@ -312,7 +312,11 @@ export default function Home() {
           </Reveal>
           <Reveal delay={0.1}>
             <div className="rejilla">
-              {RAMOS.map((r) => (
+              {/* RAMOS_PRODUCTO, como la cifra de abajo: las páginas de INTENCIÓN
+                  (RC de fontaneros, de autónomos) salían como tarjetas propias
+                  junto a la RC general y la rejilla repetía tres veces lo mismo.
+                  Siguen enlazadas desde «Otros seguros» de cada ramo y el pie. */}
+              {RAMOS_PRODUCTO.map((r) => (
                 <Link key={r.slug} href={`/seguros/${r.slug}`} className="tarjeta">
                   <span className="tarjeta-icono">
                     <IconoRamo slug={r.slug} />
