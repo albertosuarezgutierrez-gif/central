@@ -567,7 +567,7 @@ export const RAMOS: readonly Ramo[] = [
       {
         pregunta: '¿Qué pasa con un trabajo antiguo si la reclamación llega cuando ya he cambiado de seguro?',
         respuesta:
-          'Depende de la delimitación temporal de las dos pólizas. Si la nueva responde por reclamación (claims made) sin retroactividad suficiente, o la vieja no deja un periodo de reclamación posterior, ese trabajo puede quedar sin cobertura. La Ley de Contrato de Seguro regula estas cláusulas, y es lo primero que revisamos antes de mover una póliza.',
+          'Depende de la delimitación temporal de las dos pólizas. Si la nueva responde por reclamación (claims made) sin retroactividad suficiente, o la vieja no deja un periodo de reclamación posterior, ese trabajo puede quedar sin cobertura. El art. 73 de la Ley de Contrato de Seguro regula estas cláusulas, y es lo primero que revisamos antes de mover una póliza.',
       },
       {
         pregunta: '¿Me cubre el seguro de hogar como autónomo si trabajo desde casa?',

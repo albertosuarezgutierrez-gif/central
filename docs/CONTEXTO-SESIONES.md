@@ -14,8 +14,8 @@
 >
 **(23/09/2026)** 🧾 **asegura-web: RC para autónomos + artículo «claims made» + portal en `noindex`.** Datos (OpenSEO):
 «seguro responsabilidad civil autonomo» ~1.000/mes, KD 0, CPC 4,87 € → `/seguros/responsabilidad-civil-autonomos`
-(página de intención, `SOLO_INTENCION`, mismo ramo en BD que la RC). «claims made» ~90/mes, KD 0 → artículo SIN número de
-artículo de la LCS (BOE bloqueado desde la sesión; añadir `lcs-73` a `NORMAS_CITABLES` cuando se lea). Oficios sueltos
+(página de intención, `SOLO_INTENCION`, mismo ramo en BD que la RC). «claims made» ~90/mes, KD 0 → artículo que cita arts. 3 y
+73 LCS, añadidos a `NORMAS_CITABLES` leyendo el PDF consolidado del BOE (el texto que dio otro asistente era INVENTADO). Oficios sueltos
 0-50/mes: descartados. Portal `clientes.` → `noindex` en el layout raíz (competía por la marca). Consultas añadidas al cron.
 
 **(23/09/2026)** ⭐ **Petición de reseñas de Google: borrador listo, SIN enviar.** `docs/asegura-resenas/` (texto

@@ -96,6 +96,32 @@ export const NORMAS_CITABLES: readonly NormaCitable[] = [
     verificado: '2026-09-07',
     cubre: ['articulo:23', 'ley:50/1980'],
   },
+  // 🚨 Los dos siguientes se leyeron el 23/09/2026 en el PDF del texto
+  // consolidado del BOE («Última modificación: 25 de julio de 2025») que subió
+  // Alberto, porque boe.es no era alcanzable desde la sesión. Antes se probó a
+  // pedir el texto a otro asistente y devolvió un art. 73 INVENTADO —llamaba
+  // «delimitadoras» a lo que la ley llama «limitativas» y añadía un párrafo que
+  // no existe—: es exactamente el error que esta lista está para impedir.
+  {
+    id: 'lcs-3',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '3',
+    sintesis:
+      'Las cláusulas limitativas de los derechos de los asegurados deben destacarse de modo especial en la póliza y ser específicamente aceptadas por escrito.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-09-23',
+    cubre: ['articulo:3', 'ley:50/1980'],
+  },
+  {
+    id: 'lcs-73',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '73',
+    sintesis:
+      'En el seguro de responsabilidad civil se admiten, como cláusulas limitativas sujetas al artículo 3, las que limitan la cobertura a reclamaciones presentadas hasta al menos un año después del fin del contrato, o a reclamaciones presentadas durante su vigencia si cubren hechos anteriores de al menos un año antes de su inicio.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-09-23',
+    cubre: ['articulo:73', 'ley:50/1980'],
+  },
   {
     id: 'orden-ecc-2502-2012',
     norma:

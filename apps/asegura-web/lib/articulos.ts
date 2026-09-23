@@ -716,10 +716,8 @@ export const ARTICULOS: readonly Articulo[] = [
   },
   // 23/09/2026. «claims made» ~90 búsquedas/mes, KD 0 (DataForSEO vía OpenSEO),
   // y Search Console ya enseñaba la web para esa consulta desde la página de RC
-  // en la posición ~76. 🚨 Sin número de artículo a propósito: la delimitación
-  // temporal la regula la Ley de Contrato de Seguro, pero su artículo no está en
-  // `NORMAS_CITABLES` (el BOE no era alcanzable desde la sesión para leerlo), y
-  // aquí no se cita de memoria. Cuando se verifique, se añade la norma y `base`.
+  // en la posición ~76. Los arts. 3 y 73 LCS se verificaron el mismo día contra
+  // el texto consolidado del BOE (ver `lcs-3`/`lcs-73` en `NORMAS_CITABLES`).
   {
     slug: 'que-es-claims-made-seguro-responsabilidad-civil',
     h1: 'Qué es «claims made» en un seguro de responsabilidad civil',
@@ -730,6 +728,7 @@ export const ARTICULOS: readonly Articulo[] = [
     consulta: 'claims made',
     resumen:
       'Una póliza «claims made» responde de las reclamaciones que te llegan mientras está en vigor, no de los hechos que ocurren mientras está en vigor. La diferencia parece técnica hasta el día en que cambias de compañía o dejas la actividad.',
+    base: ['lcs-3', 'lcs-73'],
     ramos: ['responsabilidad-civil', 'responsabilidad-civil-autonomos'],
     secciones: [
       {
@@ -754,9 +753,10 @@ export const ARTICULOS: readonly Articulo[] = [
         ],
       },
       {
-        titulo: 'Por qué está permitido, y qué tiene que cumplir',
+        titulo: 'Qué dice la ley, y qué tiene que cumplir la póliza',
         parrafos: [
-          'La Ley de Contrato de Seguro admite estas cláusulas en los seguros de responsabilidad civil, pero como limitan los derechos del asegurado exige que cubran un periodo mínimo antes o después de la vigencia, y que la póliza las destaque de forma especial y las aceptes por escrito.',
+          'El artículo 73 de la Ley de Contrato de Seguro admite dos fórmulas. La primera limita la cobertura a las reclamaciones presentadas hasta un plazo después de que termine el contrato, que no puede ser inferior a un año. La segunda la limita a las reclamaciones presentadas mientras la póliza está en vigor, pero entonces tiene que cubrir también los hechos ocurridos al menos un año antes de que empezara.',
+          'La ley las trata como cláusulas limitativas de los derechos del asegurado, y el artículo 3 exige que ese tipo de cláusulas aparezcan destacadas de modo especial en la póliza y que las aceptes específicamente por escrito.',
           'Si tu póliza delimita la cobertura por reclamación y esa cláusula no aparece destacada ni firmada, merece la pena revisarlo con quien te la gestiona.',
         ],
       },
