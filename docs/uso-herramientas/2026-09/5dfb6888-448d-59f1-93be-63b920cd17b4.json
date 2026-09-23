@@ -1,8 +1,8 @@
 {
  "sesion": "5dfb6888-448d-59f1-93be-63b920cd17b4",
  "inicio": "2026-09-12T13:47:37.256Z",
- "fin": "2026-09-22T09:17:36.592Z",
- "llamadas": 3382,
+ "fin": "2026-09-22T09:22:57.448Z",
+ "llamadas": 3383,
  "categorias": {
   "bash": {
    "llamadas": 1619,
@@ -81,14 +81,14 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 551,
-   "chars_in": 64957,
-   "chars_out": 2727621,
+   "llamadas": 552,
+   "chars_in": 65020,
+   "chars_out": 2728487,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 371,
+    "Read": 372,
     "Grep": 169,
     "Glob": 11
    }
