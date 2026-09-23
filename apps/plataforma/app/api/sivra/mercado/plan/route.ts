@@ -9,6 +9,9 @@ import {
 import {
   planDeVentanas, parsearParametrosPlan, mesesSinBucket, FUENTES_FIABLES, MIN_FECHAS_BUCKET,
   EDAD_MERCADO_RANCIO,
+  EDAD_EVENTO_CERCA,
+  EDAD_EVENTO_MEDIO,
+  EDAD_EVENTO_LEJOS,
   type CoberturaVentana,
 } from "@/lib/sivra/mercado-cobertura"
 import { NOMBRE_PORTAL } from "@/lib/sivra/mercado-propios"
@@ -287,11 +290,13 @@ export async function GET(req: NextRequest) {
     // de las ventanas de ESTA pasada van a desatascarlos. Va en el contrato para que el parte de
     // la rutina pueda decir «abril-2027 sigue a ciegas» en vez de callarlo.
     meses_sin_bucket: [...mesesCortos].sort(),
-    // Fechas de evento confirmado que el motor ya NO puede tarificar por corpus viejo. Van en el
+    // Fechas de evento confirmado con el corpus más viejo de lo que su antelación admite. Van en el
     // contrato para que la rutina pueda decir «la Semana Santa lleva 18 días sin medir» en vez de
     // que se note solo en el precio publicado.
     eventos_caducados: caducadas,
+    // Plazo de la última pasada de cada PISO en el motor (no el de remedir eventos: ese va aparte).
     max_edad_mercado_dias: EDAD_MERCADO_RANCIO,
+    max_edad_evento_dias: { hasta_30_dias: EDAD_EVENTO_CERCA, hasta_90_dias: EDAD_EVENTO_MEDIO, mas_lejos: EDAD_EVENTO_LEJOS },
     min_fechas_bucket: MIN_FECHAS_BUCKET,
     pedidas_mes_corto: ventanas.filter(v => v.mesCorto === true).length,
     ventanas,
