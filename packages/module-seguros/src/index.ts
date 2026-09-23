@@ -738,3 +738,16 @@ export {
   diasHasta, proximoAniversario, puntuarLead, siguientePasoLead, ventanaDe,
 } from './lead-competencia.ts'
 export type { DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
+export { MOTIVOS_PERDIDA, PRIORIDADES_TAREA, TIPOS_TAREA, aplicarAccion, validarTarea } from './oportunidad-seguimiento.ts'
+export type {
+  AccionOportunidad,
+  Cambios as CambiosOportunidad,
+  EstadoActual as EstadoActualOportunidad,
+  EstadoOportunidad,
+  MotivoPerdida,
+  PeticionAccion,
+  PrioridadTarea,
+  ResultadoAccion,
+  TareaValida,
+  TipoTarea,
+} from './oportunidad-seguimiento.ts'

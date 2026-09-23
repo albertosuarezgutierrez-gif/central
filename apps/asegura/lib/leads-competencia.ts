@@ -1,6 +1,6 @@
 /**
  * El carril de LEADS de Vencimientos: pólizas que los leads tenían en OTRA
- * compañía (tabla heredada `oportunidades`, estado `competencia`), con el
+ * compañía (tabla heredada `oportunidades`, abiertas y no aparcadas), con el
  * próximo aniversario de su fecha de fin. Solo lectura: no envía ni escribe.
  *
  * Por qué y qué significa la fecha: cabecera de `lead-competencia.ts` en
@@ -26,6 +26,8 @@ import { descifrarCampo } from './cartera-edicion'
 
 export type LeadCompetencia = {
   oportunidadId: string
+  /** `competencia` = sin trabajar; `en_negociacion`/`pendiente_cliente` = en seguimiento. */
+  estado: 'competencia' | 'en_negociacion' | 'pendiente_cliente'
   clienteId: string
   cliente: string
   ramo: string
@@ -40,7 +42,7 @@ export type LeadCompetencia = {
   ventana: VentanaLead
   telefono: string | null
   email: string | null
-  /** Envíos que le llegaron en los últimos 12 meses (sin rebotes ni quejas), de cualquier campaña. */
+  /** Contactos del último año: envíos (sin rebotes ni quejas) + tareas de contacto cerradas de esta oportunidad. */
   intentos: number
   ultimoContactoEn: string | null
   /** Otras pólizas de la competencia del mismo cliente: se le trabaja una vez, no N. */
@@ -72,6 +74,7 @@ function aseguradoraLegible(v: string | null): string | null {
 
 type Fila = {
   oportunidadId: string
+  estado: LeadCompetencia['estado']
   clienteId: string
   nombre: string | null
   apellidos: string | null
@@ -100,7 +103,7 @@ export async function leadsCompetencia(
   if (!aseguraConfigurada()) return { leads: [], totalConFecha: 0, ilegibles: 0, porVentana, truncado: false }
   const filas = await prismaAsegura().$queryRaw<Fila[]>(Prisma.sql`
     select
-      o.id::text as "oportunidadId", c.id::text as "clienteId", c.nombre, c.apellidos,
+      o.id::text as "oportunidadId", o.estado::text as estado, c.id::text as "clienteId", c.nombre, c.apellidos,
       o.tipo::text as ramo,
       nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora,
       -- Un 0 guardado tampoco es una prima (regla NULL≠0), y no puede tapar la
@@ -116,11 +119,23 @@ export async function leadsCompetencia(
       case when c.email_opt_out_at is null then c.email else null end as email,
       -- Solo el último año: el «aparcar» es hasta el aniversario siguiente, no
       -- para siempre. Un rebote o una queja no es un intento que le llegara.
+      -- Una llamada, un email o un WhatsApp registrados como tarea cerrada de
+      -- esta oportunidad también son un intento.
       (select count(*)::int from recaptacion_envios r
         where r.cliente_id = c.id and r.created_at > now() - interval '12 months'
-          and r.estado::text not in ('rebotado', 'queja')) as intentos,
-      (select max(r.created_at) from recaptacion_envios r
-        where r.cliente_id = c.id and r.created_at > now() - interval '12 months') as "ultimoEnvioAt",
+          and r.estado::text not in ('rebotado', 'queja'))
+      + (select count(*)::int from gestiones g
+        where g.oportunidad_id = o.id and g.estado::text = 'cerrada'
+          and g.tipo::text in ('llamada', 'email', 'whatsapp')
+          and g.updated_at > now() - interval '12 months') as intentos,
+      greatest(
+        (select max(r.created_at) from recaptacion_envios r
+          where r.cliente_id = c.id and r.created_at > now() - interval '12 months'),
+        (select max(g.updated_at) from gestiones g
+          where g.oportunidad_id = o.id and g.estado::text = 'cerrada'
+            and g.tipo::text in ('llamada', 'email', 'whatsapp')
+            and g.updated_at > now() - interval '12 months')
+      ) as "ultimoEnvioAt",
       exists (
         select 1 from recaptacion_envios r
         where r.cliente_id = c.id and r.estado::text in ('enlace_abierto', 'abierto', 'pinchado')
@@ -128,7 +143,10 @@ export async function leadsCompetencia(
     from oportunidades o
     join clientes c on c.id = o.cliente_id
     where o.correduria_id = ${correduriaId}::uuid
-      and o.estado::text = 'competencia'
+      -- Abiertas y no aparcadas: la ganada y la perdida salen del carril; la
+      -- aparcada vuelve sola el día que vence su aparcada_hasta.
+      and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      and (o.aparcada_hasta is null or o.aparcada_hasta <= current_date)
       and o.fecha_fin_vigencia is not null
       and c.correduria_id = o.correduria_id
       and c.merged_into_cliente_id is null
@@ -180,6 +198,7 @@ export async function leadsCompetencia(
     const ultimo = f.ultimoEnvioAt ? f.ultimoEnvioAt.toISOString().slice(0, 10) : null
     leads.push({
       oportunidadId: f.oportunidadId,
+      estado: f.estado,
       clienteId: f.clienteId,
       cliente: [f.nombre, f.apellidos].filter((s) => s && s.trim() !== '').join(' ').trim() || '(sin nombre)',
       ramo: f.ramo,
