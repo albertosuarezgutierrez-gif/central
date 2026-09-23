@@ -168,16 +168,21 @@ function Resultado({ r }: { r: ResultadoLote }) {
       </p>
       {r.parado && (
         <p style={{ color: 'var(--negative)', margin: '6px 0 0' }}>
-          Se paró el envío: {r.parado === 'sin_correo_configurado' ? 'asegura no tiene proveedor de correo configurado' : 'no hay portal configurado'}. Reintentar no lo arregla: es una variable de Vercel.
+          Se paró el envío para no repetir el mismo fallo con el resto: {r.porMotivo[0]?.motivo ?? r.parado}
         </p>
       )}
       {r.fallidos.length > 0 && (
         <details style={{ marginTop: 6 }}>
           <summary style={{ cursor: 'pointer', color: 'var(--warning)' }}>{r.fallidos.length} no se pudieron enviar</summary>
+          {r.porMotivo.map((m) => (
+            <p key={m.motivo} style={{ margin: '6px 0 0', fontSize: 14 }}>
+              <b>{m.n}×</b> {m.motivo}
+            </p>
+          ))}
           <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 14 }}>
             {r.fallidos.map((f) => (
               <li key={f.clienteId}>
-                <a href={`/correduria/cliente/${f.clienteId}`}>ficha</a>: {f.motivo}
+                <a href={`/correduria/cliente/${f.clienteId}`}>{f.nombre ?? '(ficha sin nombre legible)'}</a>
               </li>
             ))}
           </ul>

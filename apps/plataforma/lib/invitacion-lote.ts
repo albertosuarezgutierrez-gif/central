@@ -84,7 +84,16 @@ export function interpretarCenso(status: number, json: unknown): ResultadoCenso 
 }
 
 export type ResultadoLote =
-  | { estado: 'hecho'; enviados: number; fallidos: Array<{ clienteId: string; motivo: string }>; sinIntentar: number; descartados: number; parado: string | null }
+  | {
+      estado: 'hecho'
+      enviados: number
+      fallidos: Array<{ clienteId: string; nombre: string | null; motivo: string }>
+      /** Los fallos agrupados por motivo: 25 rechazos iguales son UNA avería, no 25. */
+      porMotivo: Array<{ motivo: string; n: number }>
+      sinIntentar: number
+      descartados: number
+      parado: string | null
+    }
   /** Se cortó la espera: el envío puede haber seguido en asegura. NO es «falló». */
   | { estado: 'sin_confirmar'; motivo: string }
   | { estado: 'error'; motivo: string }
@@ -94,12 +103,20 @@ export function interpretarLote(status: number, json: unknown): ResultadoLote {
   const enviados = num(o.enviados)
   if ((status === 200 || status === 503) && enviados !== null && (o.estado === 'ok' || o.estado === 'parado')) {
     const fallidos = Array.isArray(o.fallidos)
-      ? o.fallidos.map(obj).map((f) => ({ clienteId: String(f.clienteId ?? ''), motivo: texto(f.motivo) ?? String(f.estado ?? '') }))
+      ? o.fallidos.map(obj).map((f) => ({
+          clienteId: String(f.clienteId ?? ''),
+          nombre: texto(f.nombre),
+          motivo: texto(f.motivo) ?? String(f.estado ?? ''),
+        }))
       : []
+    const cuenta = new Map<string, number>()
+    for (const f of fallidos) cuenta.set(f.motivo, (cuenta.get(f.motivo) ?? 0) + 1)
+    const porMotivo = [...cuenta].map(([motivo, n]) => ({ motivo, n })).sort((a, b) => b.n - a.n)
     return {
       estado: 'hecho',
       enviados,
       fallidos,
+      porMotivo,
       sinIntentar: num(o.sinIntentar) ?? 0,
       descartados: num(o.descartados) ?? 0,
       parado: texto(o.parado),

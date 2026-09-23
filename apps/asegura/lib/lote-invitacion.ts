@@ -72,8 +72,22 @@ export function decidirLote(fichas: FichaCenso[], diasSinRepetir = DIAS_SIN_REPE
  * siguientes envíos van a fallar igual y el lote se para en vez de repetir el
  * mismo error 50 veces.
  */
-export const FALLOS_QUE_PARAN = ['sin_correo_configurado', 'sin_portal'] as const
+export const FALLOS_QUE_PARAN = ['sin_correo_configurado', 'sin_portal', 'remitente_no_verificado'] as const
 
 export function paraElLote(estadoFallo: string): boolean {
   return (FALLOS_QUE_PARAN as readonly string[]).includes(estadoFallo)
+}
+
+/**
+ * Y aunque el fallo no se reconozca como de instalación: si los últimos
+ * `FALLOS_SEGUIDOS_PARAN` intentos fallaron IGUAL, la avería no es de las fichas.
+ * Caso real (23/09/2026): 25 rechazos idénticos del proveedor en una tanda.
+ * Un envío con éxito en medio rompe la racha.
+ */
+export const FALLOS_SEGUIDOS_PARAN = 3
+
+export function rachaDeFallos(estados: readonly (string | null)[], n = FALLOS_SEGUIDOS_PARAN): boolean {
+  if (estados.length < n) return false
+  const ultimos = estados.slice(-n)
+  return ultimos[0] !== null && ultimos.every((e) => e === ultimos[0])
 }

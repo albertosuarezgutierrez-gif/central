@@ -13,7 +13,7 @@ import assert from 'node:assert/strict'
 
 import { CAMPOS_PROHIBIDOS_EN_INVITACION } from '@central/module-seguros-portal'
 
-import { cuerpoInvitacionPortal, enlacePortal } from './correo-invitacion-portal.ts'
+import { cuerpoInvitacionPortal, enlacePortal, rechazoDeRemitente } from './correo-invitacion-portal.ts'
 
 /** Baja a minúsculas y quita tildes: sin esto «compañía» no casaría con `compania`. */
 function aplanar(s: string): string {
@@ -107,4 +107,11 @@ test('🚨 sin portal utilizable NO se manda un correo que dice «entra aqui» s
   assert.equal(enlacePortal('no-es-una-url'), null)
   // http:// no vale: en esa pantalla se teclea un código de acceso.
   assert.equal(enlacePortal('http://clientes.grupoasegura.es'), null)
+})
+
+test('el 550 de dominio sin verificar se reconoce como fallo del REMITENTE; otro rechazo no', () => {
+  // Literal del log de producción, 23/09/2026.
+  assert.equal(rechazoDeRemitente('Message failed: 550 The envios.grupoasegura.es domain is not verified. Please, add and verify your domain on https://resend.com/domains'), true)
+  assert.equal(rechazoDeRemitente('Message failed: 550 5.1.1 mailbox unavailable'), false)
+  assert.equal(rechazoDeRemitente('Connection timeout'), false)
 })

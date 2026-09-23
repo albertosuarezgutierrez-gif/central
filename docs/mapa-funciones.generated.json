@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-23T08:17:07Z",
-  "sha": "3481ff4507df031f14b1f25f6ed9e21c6baa6044",
+  "generadoEn": "2026-09-23T09:17:42Z",
+  "sha": "ac115054eb0e209f05c24cb385d9aa773cbaff78",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -13745,7 +13745,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { otorganteId: string; autorizadoId: string; actor: string },",
           "retorno": "Promise<ResultadoAviso>",
-          "linea": 48,
+          "linea": 50,
           "resumen": "Avisa a `autorizadoId` de que `otorganteId` le ha dado acceso y está esperando su confirmación."
         },
         {
@@ -13754,14 +13754,14 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 157
+          "linea": 162
         }
       ],
       "tablas": [
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "f54734095d71"
+      "hash": "085c00e369f9"
     },
     {
       "ruta": "apps/asegura/lib/avisos-intranet-reglas.ts",
@@ -19737,7 +19737,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b4c539486c33"
+      "hash": "ccf351d9ab70"
     },
     {
       "ruta": "apps/asegura/lib/correo-avisos-intranet.ts",
@@ -19805,6 +19805,7 @@
       "exporta": [
         "enlacePortal",
         "cuerpoInvitacionPortal",
+        "rechazoDeRemitente",
         "enviarInvitacionPortal"
       ],
       "funciones": [
@@ -19845,17 +19846,25 @@
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta. Separado del envío para que su cepo pueda recorrer el texto entero — un guardián que necesitara un servidor SMTP par"
         },
         {
+          "nombre": "rechazoDeRemitente",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensaje: string",
+          "retorno": "boolean",
+          "linea": 209
+        },
+        {
           "nombre": "enviarInvitacionPortal",
           "kind": "function",
           "exportada": true,
           "params": "destino: string, d: DatosInvitacionPortal,",
           "retorno": "Promise<ResultadoEnvioCorreo>",
-          "linea": 199
+          "linea": 213
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1cf369d09c6f"
+      "hash": "20ed11bb5b32"
     },
     {
       "ruta": "apps/asegura/lib/cron-auth.ts",
@@ -20366,7 +20375,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "aa0279e0a032"
+      "hash": "634dcd9e9619"
     },
     {
       "ruta": "apps/asegura/lib/invitacion-portal.ts",
@@ -20384,7 +20393,7 @@
           "exportada": false,
           "params": "hash: string",
           "retorno": "Promise<Candidato[]>",
-          "linea": 143,
+          "linea": 144,
           "resumen": "Los candidatos que el portal encontraría para ese email: su columna principal (`clientes.email_lookup_hash`) y la lista de contacto (`cliente_emails`). ⚠️ Se busca en TODA la base, no solo en esta cor"
         },
         {
@@ -20393,7 +20402,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 162,
+          "linea": 163,
           "resumen": "Las identidades que ya entran con esta ficha, y cuándo lo hicieron por última vez."
         },
         {
@@ -20402,7 +20411,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FichaPortal | null>",
-          "linea": 197,
+          "linea": 198,
           "resumen": "¿Qué se puede hacer hoy con esta ficha? Es lo que la pantalla pinta ANTES de ofrecer el botón, para que Alberto no invite a quien va a acabar mirando una bóveda vacía ni le mande a alguien que entró a"
         },
         {
@@ -20411,7 +20420,7 @@
           "exportada": false,
           "params": "email: string, clienteId: string,",
           "retorno": "Promise<'invitable' | 'ambiguo' | 'resuelve_a_otra' | 'no_comprobado'>",
-          "linea": 244,
+          "linea": 245,
           "resumen": "Lo que el portal decidiría con ese correo, calculado con SU misma función. Cualquier tropiezo devuelve `no_comprobado`, nunca `invitable`."
         },
         {
@@ -20420,7 +20429,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 291,
+          "linea": 292,
           "resumen": "El correo al que se le escribiría, o `null` si no hay uno legible **por el motivo que sea**. Aquí los cinco desenlaces de `estadoEmailDeFicha` sí se colapsan a propósito: quien llama solo necesita sab"
         },
         {
@@ -20429,7 +20438,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 309,
+          "linea": 310,
           "resumen": "El nombre de la ficha, para el saludo. `null` = no hay uno legible."
         },
         {
@@ -20438,7 +20447,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { clienteId: string; actor: string },",
           "retorno": "Promise<ResultadoInvitacion>",
-          "linea": 324,
+          "linea": 325,
           "resumen": "Manda la invitación. Comprueba lo mismo que `estadoPortalDeFicha` **otra vez** y no se fía de lo que la pantalla creyera: entre que se pintó el botón y se pulsó pueden haber pasado minutos, y el estad"
         },
         {
@@ -20447,7 +20456,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 437,
+          "linea": 441,
           "resumen": "Deja constancia de que se le contó. Best-effort a propósito: el correo ya ha salido y un historial caído no puede deshacerlo ni presentarlo como fallido. 🚨 Sin la dirección dentro: un historial es do"
         }
       ],
@@ -20455,7 +20464,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "fabbfae16009"
+      "hash": "8136c7384eba"
     },
     {
       "ruta": "apps/asegura/lib/leads-portal.ts",
@@ -20538,7 +20547,8 @@
       "resumen": "La regla PURA del envío por lotes de la invitación al portal: de toda la cartera en vigor, a quién se le escribe y a quién no, y por qué. ── Por qué existe (23/09/2026) ───────────────────────────────────────────── Medido ese día: el portal lleva desde el 01/09 funcionando y **no se había mandado ni",
       "exporta": [
         "decidirLote",
-        "paraElLote"
+        "paraElLote",
+        "rachaDeFallos"
       ],
       "funciones": [
         {
@@ -20556,11 +20566,19 @@
           "params": "estadoFallo: string",
           "retorno": "boolean",
           "linea": 77
+        },
+        {
+          "nombre": "rachaDeFallos",
+          "kind": "function",
+          "exportada": true,
+          "params": "estados: readonly (string | null)[], n = FALLOS_SEGUIDOS_PARAN",
+          "retorno": "boolean",
+          "linea": 89
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e515f4066f13"
+      "hash": "40e1d9d9bf07"
     },
     {
       "ruta": "apps/asegura/lib/migracion-decision.ts",
@@ -68332,7 +68350,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9563828b1fd7"
+      "hash": "2bf25b9155e1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/layout.tsx",
@@ -98485,12 +98503,12 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "ResultadoLote",
-          "linea": 92
+          "linea": 101
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bed06f0eb912"
+      "hash": "167d2edafeb6"
     },
     {
       "ruta": "apps/plataforma/lib/invitacion-whatsapp.ts",
@@ -100193,7 +100211,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaInvitacion",
-          "linea": 196
+          "linea": 197
         },
         {
           "nombre": "fechaAcceso",
@@ -100201,7 +100219,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 233,
+          "linea": 234,
           "resumen": "Una fecha ISO en castellano de pantalla: «3 de septiembre de 2026»."
         },
         {
@@ -100210,7 +100228,7 @@
           "exportada": true,
           "params": "ultimoAccesoEn: string | null",
           "retorno": "string",
-          "linea": 246,
+          "linea": 247,
           "resumen": "Cuándo entró por última vez. 🚨 Sin fecha se dice **«no consta cuándo»**, nunca «nunca ha entrado»: llegamos aquí porque hay una identidad vinculada, o sea que entrar, entró — lo que falta es la marca"
         },
         {
@@ -100219,7 +100237,7 @@
           "exportada": true,
           "params": "p: PortalCartera",
           "retorno": "FrasePortal",
-          "linea": 256,
+          "linea": 257,
           "resumen": "El estado → la frase que dice qué hacer. Vive aquí (puro, con test) y no en el JSX: es lo que Alberto lee para decidir, y el sitio donde dos estados que se arreglan en sitios distintos acabarían con e"
         },
         {
@@ -100228,7 +100246,7 @@
           "exportada": true,
           "params": "identidades: number | null",
           "retorno": "string",
-          "linea": 318,
+          "linea": 319,
           "resumen": "Cuántas personas entran con esta ficha. `null` = no se contó, y se dice."
         },
         {
@@ -100237,7 +100255,7 @@
           "exportada": true,
           "params": "r: RespuestaInvitacion, nombre: string",
           "retorno": "string",
-          "linea": 332,
+          "linea": 333,
           "resumen": "El desenlace del envío, en una frase. Puro y con test para que un «se ha enviado» no pueda salir de un desenlace que no envió nada. 🚨 En el caso bueno el texto NO dice que el cliente ya esté dentro: "
         },
         {
@@ -100246,7 +100264,7 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 372,
+          "linea": 378,
           "resumen": "El motivo técnico del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
@@ -100255,7 +100273,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 387
+          "linea": 393
         },
         {
           "nombre": "cabeceras",
@@ -100263,7 +100281,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Record<string, string> | null",
-          "linea": 391
+          "linea": 397
         },
         {
           "nombre": "llamar",
@@ -100271,7 +100289,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit, timeoutMs = 15_000",
           "retorno": "Promise<Reenvio>",
-          "linea": 398
+          "linea": 404
         },
         {
           "nombre": "vistaCorredorAsegura",
@@ -100279,7 +100297,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 420,
+          "linea": 426,
           "resumen": "La «vista de corredor» (08/09/2026): pide a asegura un enlace de UN solo uso (10 min) que abre el portal como lo ve ese cliente. Vuelve aquí y lo abre Alberto en su navegador: no se manda a nadie."
         },
         {
@@ -100288,7 +100306,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaVista",
-          "linea": 428
+          "linea": 434
         },
         {
           "nombre": "textoVista",
@@ -100296,7 +100314,7 @@
           "exportada": true,
           "params": "r: Exclude<RespuestaVista, { estado: 'ok' }>, nombre: string",
           "retorno": "string",
-          "linea": 445
+          "linea": 451
         },
         {
           "nombre": "portalAsegura",
@@ -100304,7 +100322,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 464
+          "linea": 470
         },
         {
           "nombre": "invitarPortalAsegura",
@@ -100312,7 +100330,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 477,
+          "linea": 483,
           "resumen": "`POST /api/operador/cliente/portal` — `{clienteId, actor}`: le manda el correo con el enlace del portal. 🚨 Escribe a una persona real, así que no es un `GET` más: lo dispara Alberto pulsando, nunca u"
         },
         {
@@ -100321,7 +100339,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 486,
+          "linea": 492,
           "resumen": "`GET /api/operador/portal/invitaciones` — el censo del envío por lotes: a quién se escribiría, a quién no y por qué, y el correo tal cual saldría. Gratis. Tarda: comprueba una a una las fichas de la c"
         },
         {
@@ -100330,13 +100348,13 @@
           "exportada": true,
           "params": "body: { clienteIds: string[]; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 496,
+          "linea": 502,
           "resumen": "`POST /api/operador/portal/invitaciones` — `{clienteIds, actor}`. Escribe a personas reales: solo lo dispara Alberto tras ver la lista y el texto (regla de comunicaciones salientes del `CLAUDE.md` raí"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9f3793642d71"
+      "hash": "c481787f2f9b"
     },
     {
       "ruta": "apps/plataforma/lib/presupuesto-asegura.ts",
@@ -101174,7 +101192,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaAviso",
-          "linea": 402
+          "linea": 404
         },
         {
           "nombre": "textoAviso",
@@ -101182,7 +101200,7 @@
           "exportada": true,
           "params": "r: RespuestaAviso, nombre: string",
           "retorno": "string",
-          "linea": 427,
+          "linea": 429,
           "resumen": "La frase de pantalla, PURA y con test, para que «se ha enviado» no pueda salir de un desenlace que no envió nada."
         },
         {
@@ -101191,7 +101209,7 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 454,
+          "linea": 458,
           "resumen": "El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
@@ -101200,7 +101218,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 471
+          "linea": 475
         },
         {
           "nombre": "cabeceras",
@@ -101208,7 +101226,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Record<string, string> | null",
-          "linea": 475
+          "linea": 479
         },
         {
           "nombre": "llamar",
@@ -101216,7 +101234,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit",
           "retorno": "Promise<Reenvio>",
-          "linea": 482
+          "linea": 486
         },
         {
           "nombre": "relacionesAsegura",
@@ -101224,7 +101242,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 499,
+          "linea": 503,
           "resumen": "`GET /api/operador/cliente/relaciones?id=` — las relaciones de una ficha."
         },
         {
@@ -101233,7 +101251,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 504,
+          "linea": 508,
           "resumen": "`POST` — alta de un vínculo `{clienteId, relacionadoId, tipo, observaciones?, actor}`."
         },
         {
@@ -101242,7 +101260,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 509,
+          "linea": 513,
           "resumen": "`PATCH` — `{clienteId, relacionadoId, autoriza, actor}`: la ficha autoriza/revoca al relacionado."
         },
         {
@@ -101251,7 +101269,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 514,
+          "linea": 518,
           "resumen": "`DELETE` — `{clienteId, relacionadoId, actor}`: quita el vínculo (los dos sentidos)."
         },
         {
@@ -101260,13 +101278,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 525,
+          "linea": 529,
           "resumen": "`POST …/relaciones/aviso` — `{clienteId, relacionadoId, actor}`: escribe al relacionado para que confirme el acceso que la ficha le ha dado. 🚨 Manda un correo a un TERCERO, así que no es un `PATCH` m"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b3fd582d4758"
+      "hash": "32674ca3822b"
     },
     {
       "ruta": "apps/plataforma/lib/renovaciones-asegura.ts",
@@ -143623,6 +143641,6 @@
   ],
   "resumen": {
     "archivos": 3480,
-    "funciones": 10907
+    "funciones": 10909
   }
 }
