@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🏦 **PR 9: libro de comisiones — el banco casado abono a abono y la cuenta correcta.** #3414 (WhatsApp por
+ramo en plataforma) mergeado. Medido: el cron `cima-liq` elegía cuenta con `LIMIT 1` sin orden y desde el 20/09 escribía
+en una cuenta sin bancos (libro de Alberto congelado); y sus ventanas de 45 días contaban el mismo abono en 2-3 periodos
+(Occident ene: 592€ vs 301€ devengados). `casar-banco.ts` (puro, 8 tests, mutaciones vistas morder). Hallazgos para
+Alberto: 5 ingresos de nómina/pensión y un reembolso de Vercel clasificados `destino='seguros'`; la regla M1454 dice Asisa;
+Allianz liquida (4 periodos) sin ningún abono identificado en BBVA. Mapfre WhatsApp (23b) pendiente de aplicar tras deploy.
+
 **(23/09/2026)** 📲 **PR 8: el WhatsApp de siniestros respeta su ramo también en plataforma.** #3409 mergeado. La ficha
 de un siniestro en `/correduria` pintaba el WhatsApp de la compañía sin mirar el ramo: con el de Mapfre (solo partes de
 hogar) activo habría ofrecido esa línea en siniestros de auto. Ahora `whatsappParaRamo()` (plataforma, misma regla que
