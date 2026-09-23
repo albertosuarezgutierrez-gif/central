@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 📈 **SEO correduría: Search Console leída vía OpenSEO + idea «reforzar hogar/auto» DESCARTADA.**
+3 meses: 3 clics, ~900 impresiones. Hogar/auto salen por búsquedas locales de Sevilla con volumen ~0 (medido en
+DataForSEO), así que no se tocan. Idea nueva anotada (P en `docs/ASEGURA-SEO-REDES-IDEAS.md`): página de
+«teléfonos de siniestros por compañía» (búsquedas navegacionales con volumen y KD ~0), pendiente del OK de Alberto.
+El cron `seo-correduria` ya lee GSC; lo roto es Serper (sin créditos, sin fila `serp` el 21/09).
+
 **(23/09/2026)** 📝 **ASegura OS 2-d: expediente de anulación.** #3365 (2-c) mergeado con los fixes de su revisión
 (texto que caduca con su plazo, recibo cobrado → aviso retirado, timeout = «a medias» cerrable a mano). Tabla
 `seguros.anulacion` (aplicada; CHECK: sin firma no hay «comunicada», un expediente abierto por póliza). Reglas puras
