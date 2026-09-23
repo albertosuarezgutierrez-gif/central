@@ -30,6 +30,9 @@ la Deployment Protection de Vercel (va a `vercel.com/login`), pasa en todas las 
 `engine.displacement`/`engine.powerKw` de la versión, releída GRATIS del catálogo (la pantalla manda marca/modelo/motor),
 antes de pagar en moto de cartera y nueva. Sin dato no bloquea (ni afirma «cubre»). ⚠️ Sin medir que la versión de moto
 traiga `powerKw` como la de coche; pendiente: ¿declarar también el B junto al A?
+Mergeado #3347. Medir los catálogos NO se puede desde el contenedor (sin secretos; api-int.codeoscopic.io bloqueado
+por el proxy): se abre el crudo a `carnets-moto` y `versiones-moto` (`TIPOS_CRUDO`, lista cerrada) para que Alberto lo mida
+con su sesión en `/api/correduria/codeoscopic-crudo?tipo=carnets-moto`. El ejemplo oficial de moto declara B + A.
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
 compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña
