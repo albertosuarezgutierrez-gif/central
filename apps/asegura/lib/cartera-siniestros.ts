@@ -30,6 +30,7 @@ import {
 import { encryptField, encryptFieldNullable, decryptFieldNullable } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
 import type { SiniestroFicha, SiniestroIntervinienteFicha } from './cartera-ficha'
 
 /** Columnas que necesita `SiniestroFicha`. Lo usan la ficha de cliente, la de póliza y este módulo. */
@@ -261,6 +262,7 @@ export async function abrirSiniestro(
     },
     select: SELECT_SINIESTRO,
   })
+  anotarCambio({ entidad: 'siniestro', id: creado.id, campo: 'estado', antes: null, despues: 'abierto' })
   await anotarHistorial(
     correduriaId,
     poliza.clienteId,
@@ -286,6 +288,7 @@ export async function cambiarEstadoSiniestro(
     data: { estado: entrada.estado as 'abierto' | 'en_tramitacion' | 'cerrado' | 'rechazado', updatedAt: new Date() },
     select: SELECT_SINIESTRO,
   })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'estado', antes: actual.estado, despues: entrada.estado })
   await anotarHistorial(
     correduriaId,
     s.clienteId,
@@ -320,6 +323,7 @@ export async function seguirSiniestro(
   if (nota !== null) data.comentario = anadirNota(actual.comentario, nota)
 
   const nuevo = await db.siniestro.update({ where: { id: s.id }, data, select: SELECT_SINIESTRO })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'seguimiento' })
   await anotarHistorial(
     correduriaId,
     s.clienteId,
@@ -356,6 +360,7 @@ export async function actualizarDatosRamoSiniestro(
     data: { datosRamo: r.datos === null ? Prisma.DbNull : r.datos, updatedAt: new Date() },
     select: SELECT_SINIESTRO,
   })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'datos_ramo' })
   await anotarHistorial(correduriaId, s.clienteId, `Siniestro${actual.referencia ? ` ${actual.referencia}` : ''}: campos del ramo actualizados por ${entrada.actor}`)
   return { ok: true, siniestro: mapSiniestro(nuevo), aviso: null, ignorados: [] }
 }
@@ -394,6 +399,7 @@ export async function anadirTercero(
       numeroPoliza: i.numeroPoliza,
     },
   })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'terceros' })
   await anotarHistorial(correduriaId, s.clienteId, `Siniestro${s.referencia ? ` ${s.referencia}` : ''}: ${i.tipo === 'tercero' ? 'tercero' : 'testigo'} añadido por ${entrada.actor}`)
 
   const nuevo = await db.siniestro.findFirstOrThrow({ where: { id: s.id }, select: SELECT_SINIESTRO })
@@ -412,6 +418,7 @@ export async function quitarTercero(
   if (!existente) return noEncontrado('Ese tercero/testigo no existe en este siniestro.')
 
   await db.siniestroInterviniente.delete({ where: { id: existente.id } })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'terceros' })
   await anotarHistorial(correduriaId, s.clienteId, `Siniestro${s.referencia ? ` ${s.referencia}` : ''}: ${existente.tipo === 'tercero' ? 'tercero' : 'testigo'} eliminado por ${entrada.actor}`)
 
   const nuevo = await db.siniestro.findFirstOrThrow({ where: { id: s.id }, select: SELECT_SINIESTRO })

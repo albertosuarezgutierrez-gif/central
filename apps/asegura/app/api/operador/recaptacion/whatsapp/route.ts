@@ -4,13 +4,14 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarEnvioWhatsapp } from '@/lib/cartera-recaptacion'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
 // POST /api/operador/recaptacion/whatsapp — registra que Alberto pulsó el
 // botón de WhatsApp (el envío en sí lo hace su propio WhatsApp: sin WABA no
 // hay forma de mandarlo desde aquí). `{ clienteId, polizaId, mensaje, actor? }`.
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -33,4 +34,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/recaptacion/whatsapp', e) }, { status: 500 })
   }
-}
+})

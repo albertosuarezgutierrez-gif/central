@@ -1,3 +1,4 @@
+import { cabecerasPuerto } from './puerto-actor.ts'
 // La cola de recaptación de leads sin vencimiento (12/09/2026), leída del
 // puerto de asegura (`/api/operador/recaptacion*`). Mismo patrón que
 // `correduria-puerto.ts`: interpretación PURA (sin red, la prueba el client
@@ -258,9 +259,7 @@ async function pedirCon(path: string, init: RequestInit, timeoutMs: number = 800
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
     ...init,
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      ...(init.body ? { 'content-type': 'application/json' } : {}),
+    headers: { ...(await cabecerasPuerto(secret)), ...(init.body ? { 'content-type': 'application/json' } : {}),
     },
     cache: 'no-store',
     signal: AbortSignal.timeout(timeoutMs),

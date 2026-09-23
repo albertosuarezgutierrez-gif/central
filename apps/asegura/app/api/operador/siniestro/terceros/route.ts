@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { anadirTercero, quitarTercero, type ResultadoSiniestro } from '@/lib/cartera-siniestros'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -18,7 +19,7 @@ export const dynamic = 'force-dynamic'
  * Reglas en `@central/module-seguros` (`siniestro-intervinientes.ts`) y BD en
  * `lib/cartera-siniestros.ts`. EXCLUSIVO de siniestros `gestionado_correduria`.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   return escribir(req, (correduriaId, b) =>
     anadirTercero(correduriaId, {
       siniestroId: cadena(b.siniestroId) ?? '',
@@ -33,9 +34,9 @@ export async function POST(req: Request) {
       actor: cadena(b.actor) ?? 'plataforma',
     }),
   )
-}
+})
 
-export async function DELETE(req: Request) {
+export const DELETE = auditado(async (req: Request) => {
   return escribir(req, (correduriaId, b) =>
     quitarTercero(correduriaId, {
       siniestroId: cadena(b.siniestroId) ?? '',
@@ -43,7 +44,7 @@ export async function DELETE(req: Request) {
       actor: cadena(b.actor) ?? 'plataforma',
     }),
   )
-}
+})
 
 async function escribir(req: Request, accion: (correduriaId: string, body: Record<string, unknown>) => Promise<ResultadoSiniestro>) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

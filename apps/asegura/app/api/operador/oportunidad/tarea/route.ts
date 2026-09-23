@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { cerrarTarea, crearTarea } from '@/lib/oportunidad-seguimiento'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,20 +14,20 @@ export const dynamic = 'force-dynamic'
  *   PATCH { tareaId, resultado?, actor }                                        → cierra
  * Sin fecha límite no hay tarea: una tarea sin fecha es una nota que nadie vuelve a mirar.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   return escribir(req, async (correduriaId, b) => {
     if (typeof b.oportunidadId !== 'string') return { ok: false, estado: 'invalido', motivo: 'falta oportunidadId', status: 422 }
     return crearTarea(correduriaId, b.oportunidadId, { tipo: b.tipo, prioridad: b.prioridad, observaciones: b.observaciones, fechaLimite: b.fechaLimite }, actorDe(b))
   })
-}
+})
 
-export async function PATCH(req: Request) {
+export const PATCH = auditado(async (req: Request) => {
   return escribir(req, async (correduriaId, b) => {
     if (typeof b.tareaId !== 'string') return { ok: false, estado: 'invalido', motivo: 'falta tareaId', status: 422 }
     const resultado = typeof b.resultado === 'string' && b.resultado.trim() !== '' ? b.resultado.trim().slice(0, 500) : null
     return cerrarTarea(correduriaId, b.tareaId, resultado, actorDe(b))
   })
-}
+})
 
 type Resultado = { ok: true; [k: string]: unknown } | { ok: false; estado: string; motivo: string; status: number }
 

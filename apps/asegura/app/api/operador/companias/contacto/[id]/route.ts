@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +14,7 @@ type Ctx = { params: Promise<{ id: string }> }
  * o de correo sobre un contacto (best-effort: si esto falla, el botón de
  * WhatsApp/mail igual se ha abierto — no bloquea nada).
  */
-export async function PATCH(req: Request, ctx: Ctx) {
+export const PATCH = auditado(async (req: Request, ctx: Ctx) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { id } = await ctx.params
   try {
@@ -30,4 +31,4 @@ export async function PATCH(req: Request, ctx: Ctx) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/companias/contacto', e) })
   }
-}
+})

@@ -6,6 +6,7 @@ import { respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retari
 import { direccionDesdeCatastro, type CatastroHogar } from '@/lib/codeoscopic/desde-cartera-hogar'
 import { paramsDnploc } from '@central/core-catastro'
 import { bajarCatastro } from '@central/core-catastro/http'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -51,7 +52,7 @@ const RE_REF20 = /^[0-9A-Z]{20}$/
  * · 404 cliente/Catastro), porque la preparan y la redactan las mismas
  * funciones del lib compartido.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -150,7 +151,7 @@ export async function POST(req: Request) {
 
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })
-}
+})
 
 function esObjeto(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)

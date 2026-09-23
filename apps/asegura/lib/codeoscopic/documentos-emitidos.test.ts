@@ -50,6 +50,19 @@ test('documentosEmitidos acepta el array del Submit y encuentra el elemento con 
   assert.equal(docs[0].url, 'https://api.codeoscopic.io/insurances/632/files/pm-id-1538')
 })
 
+test('documentosEmitidos acepta el array COMPLETO del Submit (envio.crudo), no solo un elemento suelto', () => {
+  const docs = documentosEmitidos(SUBMIT_RESPONSE_ARRAY)
+  assert.equal(docs.length, 1)
+  assert.equal(docs[0].url, 'https://api.codeoscopic.io/insurances/632/files/pm-id-1538')
+})
+
+test('documentosEmitidos acepta el proyecto entero con policyApplications[] (crudoPrevio de emitir/route.ts)', () => {
+  const proyecto = { effectiveDate: '2026-09-01', policyApplications: SUBMIT_RESPONSE_ARRAY }
+  const docs = documentosEmitidos(proyecto)
+  assert.equal(docs.length, 1)
+  assert.equal(docs[0].url, 'https://api.codeoscopic.io/insurances/632/files/pm-id-1538')
+})
+
 test('un elemento sin name o sin url se descarta, no se inventa', () => {
   assert.deepEqual(documentosEmitidos({ issuedDocuments: [{ url: 'https://x' }, { name: 'Póliza' }] }), [])
 })

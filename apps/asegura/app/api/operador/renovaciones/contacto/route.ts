@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarContactoRenovacion } from '@/lib/cartera-renovaciones-contacto'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic'
 // botón de WhatsApp del aviso de renovación (el envío en sí lo hace su propio
 // WhatsApp: sin WABA no hay forma de mandarlo desde aquí). Mismo contrato que
 // `/api/operador/recaptacion/whatsapp`: `{ clienteId, polizaId, mensaje, actor? }`.
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -34,4 +35,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/renovaciones/contacto', e) }, { status: 500 })
   }
-}
+})

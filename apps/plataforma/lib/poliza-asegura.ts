@@ -10,6 +10,7 @@ import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 import type { DocumentoResumen, EvolucionPrima, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { CapitalAsegurado, DetalleCobertura } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type CoberturaFicha = {
   orden: number | null
@@ -436,7 +437,7 @@ export async function polizaAsegura(id: string): Promise<RespuestaPoliza> {
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/poliza?id=${encodeURIComponent(id)}`, {
-      headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store', signal: AbortSignal.timeout(8000),
+      headers: { ...(await cabecerasPuerto(secret)) }, cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     return interpretarPoliza(res.status, await res.json().catch(() => null))
   } catch {

@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { backfillDniLookupHash } from '@/lib/backfill-dni'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 // Descifrar ~32.600 fichas y hashearlas no cabe en el default de 10 s.
@@ -58,7 +59,7 @@ export async function GET(req: Request) {
  * fichas de la cartera y no debe salir de un `curl` a medio escribir. Admite
  * `{"limite":N}` para escribir por tandas.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -82,4 +83,4 @@ export async function POST(req: Request) {
       { status: 500 },
     )
   }
-}
+})

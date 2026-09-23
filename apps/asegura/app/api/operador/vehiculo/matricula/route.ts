@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { resolverMatricula } from '@central/core-vehiculos'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -22,7 +23,7 @@ export const dynamic = 'force-dynamic'
  *
  * Cuerpo: `{ matricula: string, pais?: 'ES' | 'PT' }`
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -48,4 +49,4 @@ export async function POST(req: Request) {
     const status = /límite de consultas/.test(mensaje) ? 429 : 502
     return NextResponse.json({ estado: 'error', mensaje }, { status })
   }
-}
+})

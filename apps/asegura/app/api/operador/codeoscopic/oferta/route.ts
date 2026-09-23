@@ -28,6 +28,7 @@ import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 import { conLibroDeEmision, type GastoEmision } from '@/lib/codeoscopic/libro-emision'
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada } from '@/lib/codeoscopic/fecha-efecto'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -55,7 +56,7 @@ export const maxDuration = 60
  * QUÉ precio de esa cotización se confirma (p. ej. «Allianz» / «Terceros
  * Ampliado»), tal y como se enseñaron en la tabla de precios.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -463,7 +464,7 @@ export async function POST(req: Request) {
       { status: 500 },
     )
   }
-}
+})
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null

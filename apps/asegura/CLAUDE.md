@@ -704,6 +704,15 @@ cuatro CHECK probados en la BD real en un bloque con rollback). `poliza_document
 > 📘 **Visión y orden de trabajo del CRM de la correduría: `docs/CORREDURIA-CRM-VISION.md`** (dictado de
 > Alberto, 02/09/2026; skill router `correduria-crm`). Léelo antes de añadir pantallas o escrituras.
 
+🪪 **Toda escritura del puerto deja rastro (23/09/2026):** las rutas que exportan POST/PATCH/PUT/DELETE
+van envueltas en `auditado()` (`lib/auditoria.ts`) y escriben una fila en `seguros.auditoria` (append-only):
+actor de la cabecera `x-actor` que manda plataforma (`humano:<cuentaId>` · `agente:<id>` · `sistema:<origen>`;
+sin ella, `desconocido`), ruta, ids UUID y código HTTP. **Una ruta de escritura nueva sin `auditado(` no pasa
+`lib/auditoria.test.ts`.** Es atribución, no autorización: el actor viaja dentro del mismo Bearer.
+Y el QUÉ: una función que escribe la cartera llama a `anotarCambio({entidad, id, campo, antes, despues})`
+tras escribir, y va a la columna `cambios` de esa fila. 🚨 Solo guardan valor los campos de
+`CAMPOS_CON_VALOR` (`lib/cambios.ts`); añadir ahí un dato personal lo rompe `lib/cambios.test.ts`.
+
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
 - **`GET /clientes?q=`** — buscador por nombre y apellidos. `buscado:false` cuando el término tiene
@@ -912,10 +921,21 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
     si ya hay un documento `tipo:'poliza'` + `subidoPor:'agente'` para esa póliza, no vuelve a
     descargar. Todo el bloque es **best-effort**: un fallo de descarga o archivo nunca tumba la
     respuesta — el `issuedDocuments` crudo sigue viajando igual para que la pantalla enseñe el enlace.
-  - **Pendiente, no cableado a propósito:** esto vive en el endpoint de diagnóstico, no en el flujo de
-    acuñado (`registrarPolizaEmitida`, `lib/emision.ts`). Cablearlo ahí es el siguiente paso obvio,
-    pero exige decidir CUÁNDO reintentar si `issuedDocuments[]` aún no está poblado en el momento del
-    acuñado (el portal no dice cuánto tarda el vendor en generarlo).
+  - **Cableado también en el flujo de acuñado real, 23/09/2026 (mismo día).** Extraído a
+    `lib/codeoscopic/archivar-documento.ts` (`archivarDocumentoEmitido()`, compartido con el endpoint
+    de diagnóstico de arriba) y llamado en `emitir/route.ts` en los DOS sitios donde
+    `registrarPolizaEmitida` acuña: el Submit directo (con `envio.crudo`, la respuesta del propio
+    `POST .../policy-applications`) y el camino `acunarExistente` (con `crudoPrevio`, el `GET` del
+    proyecto que ya se había leído gratis para comprobar si había solicitud viva). **Ninguno de los dos
+    gasta un GET extra**: usa el crudo que la petición YA tenía en la mano.
+    🚨 **Decisión sobre el «cuándo reintentar» que quedaba pendiente: NO se reintenta.** Si en ese
+    crudo `issuedDocuments[]` todavía no está poblado (el portal no dice cuánto tarda el vendor en
+    generarlo), simplemente no se archiva nada — `documentoGuardado`/`avisoDocumento` van a `null` y el
+    acuñado no se ve afectado. El endpoint de diagnóstico sigue siendo el camino para archivarlo más
+    tarde, a mano, sobre un proyecto ya acuñado. `documentosEmitidos()` se extendió (con test que se
+    vio fallar sin el cambio) para aceptar las TRES formas que de verdad llegan a estos dos sitios —
+    el array crudo del Submit, el proyecto entero con `policyApplications[]`, y la solicitud suelta del
+    Retrieve individual — con el mismo espíritu que `solicitudesEmision()` ya resolvía para el estado.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo

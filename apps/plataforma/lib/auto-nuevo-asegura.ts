@@ -31,6 +31,7 @@ import {
   type Supuesto,
 } from './retarificar-asegura.ts'
 import { describirCausaAsegura, MOTIVOS_PUERTO, type MotivoPuerto } from './correduria-puerto.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { RespuestaRetarificar, RespuestaCatalogo, ConsumoPuerto, Opcion, MotivoPuerto }
 export type { Reparo, Supuesto, Precio, Fallo } from './retarificar-asegura.ts'
@@ -146,7 +147,7 @@ async function pedir(path: string, init: RequestInit, timeoutMs: number): Promis
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
     ...init,
-    headers: { ...(init.headers ?? {}), Authorization: `Bearer ${secret}` },
+    headers: { ...(init.headers ?? {}), ...(await cabecerasPuerto(secret)) },
     cache: 'no-store',
     signal: AbortSignal.timeout(timeoutMs),
   })

@@ -159,7 +159,7 @@ test('descartar exige contar las pólizas vivas con la fuente única, y no desca
 
 test('el puerto de asegura sirve el descarte y su vuelta', () => {
   const src = fuente('apps/asegura/app/api/operador/cliente/route.ts')
-  assert.match(src, /export async function DELETE\(/, 'falta el DELETE del puerto')
+  assert.match(src, /export const DELETE = auditado\(/, 'falta el DELETE del puerto (envuelto en auditado)')
   assert.match(src, /restaurar/, 'falta el camino de vuelta (POST ?restaurar)')
   assert.match(src, /operadorAutorizado\(req\)/, 'el puerto sigue exigiendo el Bearer')
 })

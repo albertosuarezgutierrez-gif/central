@@ -15,6 +15,8 @@
 // 🚨 Una línea de CIMA NO se puede quitar: el puerto responde 409 porque el
 // siguiente pull la recrearía. Ese motivo llega tal cual a la pantalla; aquí no
 // se inventa ningún texto para él.
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v : null
@@ -66,9 +68,9 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-function cabeceras(): Record<string, string> | null {
+async function cabeceras(): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? { Authorization: `Bearer ${secret}` } : null
+  return secret ? await cabecerasPuerto(secret) : null
 }
 
 export type Reenvio = { status: number; json: unknown }
@@ -83,7 +85,7 @@ export async function quitarIntervinienteAsegura(
   actor: string,
   motivo?: string,
 ): Promise<Reenvio> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/poliza/intervinientes`, {

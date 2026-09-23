@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { resolverPolizasDeCorreo } from '@/lib/cartera-correo-resolver'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -23,7 +24,7 @@ export const runtime = 'nodejs'
  * escribe nada. Quien resuelve decide si anota algo, por
  * `POST /api/operador/cliente/historial` (una llamada por cliente resuelto).
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
@@ -36,4 +37,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/correo/resolver', e) })
   }
-}
+})

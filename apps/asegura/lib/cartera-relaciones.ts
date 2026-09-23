@@ -45,6 +45,7 @@ import {
   type TituloRepresentacion,
 } from '@central/module-seguros-portal'
 import { prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
 
 /**
  * El texto que la correduría dice haber leído al cliente cuando anota por
@@ -357,6 +358,8 @@ export async function crearRelacion(
       db.clienteRelacion.create({ data: { correduriaId, clienteAId: clienteId, clienteBId: entrada.relacionadoId, tipoRelacion: tipo, observaciones: obs } }),
       db.clienteRelacion.create({ data: { correduriaId, clienteAId: entrada.relacionadoId, clienteBId: clienteId, tipoRelacion: tipoInverso(tipo), observaciones: obs } }),
     ])
+    anotarCambio({ entidad: 'relacion', id: entrada.relacionadoId, campo: 'existe', antes: false, despues: true })
+    anotarCambio({ entidad: 'relacion', id: entrada.relacionadoId, campo: 'tipo', antes: null, despues: tipo })
     await anotar(correduriaId, clienteId, `Relación añadida desde plataforma por ${entrada.actor}: ${tipo} (ficha ${entrada.relacionadoId})`)
     await anotar(correduriaId, entrada.relacionadoId, `Relación añadida desde plataforma por ${entrada.actor}: ${tipoInverso(tipo)} (ficha ${clienteId})`)
     return devolver(correduriaId, clienteId)
@@ -436,6 +439,7 @@ export async function cambiarTipoRelacion(
         data: { tipoRelacion: inverso },
       }),
     ])
+    anotarCambio({ entidad: 'relacion', id: entrada.relacionadoId, campo: 'tipo', antes, despues: tipo })
     await anotar(correduriaId, clienteId, `Relación cambiada desde plataforma por ${entrada.actor}: ${antes} → ${tipo} (ficha ${entrada.relacionadoId})`)
     await anotar(correduriaId, entrada.relacionadoId, `Relación cambiada desde plataforma por ${entrada.actor}: ${tipoInverso(antes)} → ${inverso} (ficha ${clienteId})`)
     return devolver(correduriaId, clienteId)
@@ -549,6 +553,7 @@ export async function autorizarVer(
       if (r.count === 0) {
         return { ok: false, estado: 'no_encontrado', motivo: 'No hay ninguna autorización que revocar entre esas dos fichas.', status: 404 }
       }
+      anotarCambio({ entidad: 'autorizacion', id: clienteId, campo: 'estado', antes: 'vigente', despues: 'revocada' })
       await anotar(correduriaId, clienteId, `REVOCA la autorización de la ficha ${entrada.relacionadoId} a ver sus pólizas (${r.count} autorización(es)) — anotado desde plataforma por ${entrada.actor}`)
       await anotar(correduriaId, entrada.relacionadoId, `La ficha ${clienteId} le retira la autorización a ver sus pólizas — anotado desde plataforma por ${entrada.actor}`)
       return devolver(correduriaId, clienteId)
@@ -602,6 +607,8 @@ export async function autorizarVer(
           versionTexto: TEXTO_AUTORIZACION_CORREDOR_V1,
         },
       })
+      anotarCambio({ entidad: 'autorizacion', id: clienteId, campo: 'estado', antes: 'vigente', despues: 'vigente' })
+      anotarCambio({ entidad: 'autorizacion', id: clienteId, campo: 'alcance', antes: null, despues: alcance })
     } catch (e) {
       // Carrera contra el índice único: mismo caso, mismo mensaje.
       if (esViolacionDeUnico(e)) {
@@ -661,6 +668,8 @@ export async function borrarRelacion(
       where: { correduriaId, OR: [{ clienteAId: clienteId, clienteBId: entrada.relacionadoId }, { clienteAId: entrada.relacionadoId, clienteBId: clienteId }] },
     })
     if (r.count === 0) return { ok: false, estado: 'no_encontrado', motivo: 'No había ningún vínculo entre esas fichas.', status: 404 }
+    anotarCambio({ entidad: 'relacion', id: clienteId, campo: 'existe', antes: true, despues: false })
+    anotarCambio({ entidad: 'relacion', id: entrada.relacionadoId, campo: 'existe', antes: true, despues: false })
     await anotar(correduriaId, clienteId, `Relación con la ficha ${entrada.relacionadoId} borrada desde plataforma por ${entrada.actor} (las autorizaciones vivas entre las dos fichas quedan revocadas)`)
     return devolver(correduriaId, clienteId)
   } catch (e) {

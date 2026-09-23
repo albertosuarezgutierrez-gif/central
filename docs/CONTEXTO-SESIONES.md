@@ -25,6 +25,15 @@ bloqueo de horas, se DESBLOQUEAN con OK de Alberto (sin estrenar: el 1er intento
 🏍️ Retarificar MOTO de cartera hecho (asegura `precalificarMoto`/`prepararMoto` + plataforma `MotoNuevo` modo
 póliza; cepo `test/regression-retarificar-moto.test.ts`); sin emisión de moto aún. Después: catálogos propios de moto (garaje, carnés, fecha de matrícula) y carné de MOTO de la ficha (A>A2>A1>AM) validado contra catálogo; sin él, B como supuesto marcado. Y emisión de moto de cartera: `MotoNuevo` (modo póliza) monta el mismo panel `Emision` que auto; el ReRate ya no manda a Allianz Motos las opciones de Allianz AUTO (`opcionesPorDefecto(compania, ramo)`). asegura#848: `playwright / portal` rojo = preview tras
 la Deployment Protection de Vercel (va a `vercel.com/login`), pasa en todas las ramas, no es del PR.
+**(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
+(no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
+compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña
+(Submit directo y `acunarExistente`), reusando el crudo que la petición ya tenía — sin GET extra.
+Decisión sobre el pendiente de la vez anterior: si `issuedDocuments[]` no está poblado aún, NO se
+reintenta, se deja `null` y queda para el endpoint de diagnóstico. `documentosEmitidos()` se
+extendió para aceptar las tres formas reales del crudo (test visto fallar sin el cambio). tsc 0,
+`pnpm test` asegura 611/611.
+
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
 `product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
@@ -32,6 +41,16 @@ del PR de emisión que quedaba "sin probar en real"; (2) **Comercios y Comunidad
 disponibles por API REST** aunque estén activados en el panel de Avant2 con Occident/Reale — solo
 6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
 (solo doc), sin código tocado.
+
+**(23/09/2026)** 🪪 **ASegura OS 1b-b — actor en el puerto + `seguros.auditoria`.** plataforma manda
+`x-actor` en TODA llamada al puerto de asegura (`lib/puerto-actor.ts` → `cabecerasPuerto()`;
+la sesión la resuelve `instrumentation.ts` porque varios clientes del puerto los importan
+componentes `'use client'`). asegura envuelve sus 44 rutas de escritura con `auditado()` y deja
+una fila por llamada autorizada (actor, ruta, ids UUID, estado HTTP) en `seguros.auditoria`
+(aplicada; append-only verificado en BD). No es JWT a propósito (mismo secreto = nada que ganar).
+Sin cabecera → `desconocido`, sin rechazar. **Pieza (c) en el mismo PR (#3337):** `anotarCambio()` →
+columna `cambios` (aplicada); valores SOLO para la lista blanca de `lib/cambios.ts`, lo personal va como «tocado».
+Tras desplegar, comprobar que una edición a mano deja fila `humano:` (si sale `sistema:plataforma`, instrumentation no ve la cookie).
 
 **(23/09/2026)** 🧹 **La purga del e2e-smoke de `asegura` borraba en la BD equivocada.** Tras el traspaso (05/09)
 el smoke escribe en `seguros` de central, pero la purga apuntaba a Frankfurt (`FRANKFURT_DATABASE_URL`): 0 filas

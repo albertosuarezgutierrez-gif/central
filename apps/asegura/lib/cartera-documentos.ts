@@ -23,6 +23,7 @@ import {
   type TipoDocumento,
 } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
 
 export type Destino = { clienteId?: string | null; polizaId?: string | null; siniestroId?: string | null }
 
@@ -214,6 +215,7 @@ export async function guardarDocumento(
       },
       select: SELECT_RESUMEN,
     })
+    anotarCambio({ entidad: 'documento', id: fila.id, campo: 'estado', antes: null, despues: 'recibido' })
     return { ok: true, documento: aResumen(fila), repetido }
   } catch (e) {
     return { ok: false, motivo: e instanceof Error ? e.message : String(e), status: 500 }
@@ -232,6 +234,7 @@ export async function pedirDocumento(
       data: { correduriaId, ...destino, tipo: entrada.tipo, estado: 'pedido', notas: entrada.notas?.trim() || null },
       select: SELECT_RESUMEN,
     })
+    anotarCambio({ entidad: 'documento', id: fila.id, campo: 'estado', antes: null, despues: 'pedido' })
     return { ok: true, documento: aResumen(fila), repetido: false }
   } catch (e) {
     return { ok: false, motivo: e instanceof Error ? e.message : String(e), status: 500 }
@@ -245,6 +248,9 @@ export async function marcarRevisado(correduriaId: string, id: string, por: stri
       where: { id, correduriaId, estado: 'recibido' },
       data: { estado: 'revisado', revisadoAt: new Date(), revisadoPor: por.slice(0, 100) },
     })
+    if (r.count > 0) {
+      anotarCambio({ entidad: 'documento', id, campo: 'estado', antes: 'recibido', despues: 'revisado' })
+    }
     return r.count > 0
   } catch {
     return false
@@ -255,6 +261,9 @@ export async function marcarRevisado(correduriaId: string, id: string, por: stri
 export async function borrarDocumento(correduriaId: string, id: string): Promise<boolean> {
   try {
     const r = await prismaAsegura().documento.deleteMany({ where: { id, correduriaId } })
+    if (r.count > 0) {
+      anotarCambio({ entidad: 'documento', id, campo: 'existe', antes: true, despues: false })
+    }
     return r.count > 0
   } catch {
     return false

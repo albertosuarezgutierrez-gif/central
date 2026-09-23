@@ -6,6 +6,7 @@ import {
   respuestaRetarificacion,
   type CuerpoRetarificacion,
 } from '@/lib/retarificar-cartera'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -61,7 +62,7 @@ export const maxDuration = 180
  * dos funciones del lib compartido. La única diferencia con su gemela es quién
  * autoriza y de dónde sale `solicitadoPor`.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -132,7 +133,7 @@ export async function POST(req: Request) {
 
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })
-}
+})
 
 function esObjeto(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)

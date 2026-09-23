@@ -2,12 +2,11 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { correduriaUnica } from '@/lib/cartera'
 import { prisma } from '@/lib/tenant'
-import { prismaAsegura } from '@/lib/asegura-db'
-import { guardarDocumento } from '@/lib/cartera-documentos'
 import { resolverConfigEmision, leerProyectoCrudo, redactarCrudoVendor } from '@/lib/codeoscopic/emitir'
-import { peticion, descargarFicheroVendor } from '@/lib/codeoscopic/cliente'
+import { peticion } from '@/lib/codeoscopic/cliente'
 import { solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
-import { documentosEmitidos, documentoPoliza, documentoCaducado } from '@/lib/codeoscopic/documentos-emitidos'
+import { archivarDocumentoEmitido } from '@/lib/codeoscopic/archivar-documento'
+import { documentosEmitidos, documentoPoliza } from '@/lib/codeoscopic/documentos-emitidos'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -107,47 +106,33 @@ export async function GET(req: Request) {
   // ── Descarga y archivo del PDF, best-effort ──────────────────────────────
   // La URL sale del crudo SIN redactar (no lleva PII: es del propio vendor),
   // pero nunca se devuelve al cliente HTTP — solo se usa para el GET interno.
+  // Solo se mira `poliza_id` si de verdad HAY un documento que archivar: un
+  // proyecto sin `issuedDocuments[]` (pendiente, sin aprobar) no tiene nada
+  // que archivar y no debe decir «falta poliza_id» sobre un documento que no
+  // existe. Y TODO el bloque va en un único try/catch (`archivarDocumentoEmitido`
+  // ya protege su propia descarga, pero la lectura de `poliza_id` de aquí NO
+  // estaba cubierta antes de este comentario — un fallo del pooler tumbaba el
+  // endpoint entero en vez de degradar a un aviso, rompiendo la promesa de
+  // arriba de que «la descarga NUNCA rompe la respuesta»).
   let documentoGuardado: { id: string; repetido: boolean } | null = null
   let avisoDocumento: string | null = null
-  const docs = documentosEmitidos(policyApplication)
-  const poliza = documentoPoliza(docs)
+  const poliza = documentoPoliza(documentosEmitidos(policyApplication))
   if (poliza && correduria) {
-    if (documentoCaducado(poliza)) {
-      avisoDocumento = `El documento "${poliza.nombre}" caducó el ${poliza.caducaEn} — Codeoscopic ya no lo sirve.`
-    } else {
-      try {
-        const fila = await prisma.$queryRaw<{ poliza_id: string | null }[]>`
-          select poliza_id from codeoscopic_projects
-          where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
-        `
-        const polizaId = fila[0]?.poliza_id ?? null
-        if (!polizaId) {
-          avisoDocumento = 'El proyecto todavía no tiene `poliza_id` (no se ha acuñado): no se archiva sin saber de qué póliza es.'
-        } else {
-          const yaGuardado = await prismaAsegura().documento.findFirst({
-            where: { correduriaId: correduria.id, polizaId, tipo: 'poliza', subidoPor: 'agente' },
-            select: { id: true },
-          })
-          if (yaGuardado) {
-            documentoGuardado = { id: yaGuardado.id, repetido: true }
-          } else {
-            const { bytes } = await descargarFicheroVendor(r.config, poliza.url)
-            const guardado = await guardarDocumento(correduria.id, {
-              polizaId,
-              tipo: 'poliza',
-              nombre: `${poliza.nombre}.pdf`,
-              mime: 'application/pdf',
-              contenido: bytes,
-              subidoPor: 'agente',
-              notas: `Descargado de Codeoscopic (issuedDocuments) el ${new Date().toISOString()}.`,
-            })
-            documentoGuardado = guardado.ok ? { id: guardado.documento.id, repetido: guardado.repetido } : null
-            if (!guardado.ok) avisoDocumento = `No se pudo archivar el PDF: ${guardado.motivo}`
-          }
-        }
-      } catch (e) {
-        avisoDocumento = `No se pudo descargar el PDF del vendor: ${e instanceof Error ? e.message : String(e)}`
+    try {
+      const fila = await prisma.$queryRaw<{ poliza_id: string | null }[]>`
+        select poliza_id from codeoscopic_projects
+        where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
+      `
+      const polizaId = fila[0]?.poliza_id ?? null
+      if (!polizaId) {
+        avisoDocumento = 'El proyecto todavía no tiene `poliza_id` (no se ha acuñado): no se archiva sin saber de qué póliza es.'
+      } else {
+        const archivado = await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId, crudo: policyApplication })
+        documentoGuardado = archivado.documentoGuardado
+        avisoDocumento = archivado.avisoDocumento
       }
+    } catch (e) {
+      avisoDocumento = `No se pudo descargar el PDF del vendor: ${e instanceof Error ? e.message : String(e)}`
     }
   }
 

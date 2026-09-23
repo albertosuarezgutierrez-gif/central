@@ -5,6 +5,7 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { estadoPortalDeFicha, invitarAlPortal } from '@/lib/invitacion-portal'
 import { enlacePortal } from '@/lib/correo-invitacion-portal'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -64,7 +65,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -83,4 +84,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente/portal', e) }, { status: 500 })
   }
-}
+})

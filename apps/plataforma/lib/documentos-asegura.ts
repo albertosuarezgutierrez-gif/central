@@ -12,6 +12,8 @@ import {
   type DocumentoResumen,
   type TipoDocumento,
 } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 
 export type Documentos =
   | { estado: 'sin_configurar' }
@@ -71,9 +73,9 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-function cabeceras(): Record<string, string> | null {
+async function cabeceras(): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? { Authorization: `Bearer ${secret}` } : null
+  return secret ? await cabecerasPuerto(secret) : null
 }
 
 export type Destino = { clienteId?: string | null; polizaId?: string | null; siniestroId?: string | null }
@@ -87,7 +89,7 @@ function query(d: Destino): string {
 }
 
 export async function documentosAsegura(d: Destino): Promise<Documentos> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/documentos?${query(d)}`, {
@@ -103,7 +105,7 @@ export async function documentosAsegura(d: Destino): Promise<Documentos> {
 
 /** Reenvía el formulario (fichero + destino + tipo + notas) tal cual a asegura. */
 export async function subirDocumentoAsegura(form: FormData): Promise<{ status: number; json: unknown }> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   const res = await fetch(`${urlAsegura()}/api/operador/documentos`, {
     method: 'POST',
@@ -117,7 +119,7 @@ export async function subirDocumentoAsegura(form: FormData): Promise<{ status: n
 export async function pedirDocumentoAsegura(
   d: Destino & { tipo: TipoDocumento; notas?: string | null },
 ): Promise<{ status: number; json: unknown }> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   const res = await fetch(`${urlAsegura()}/api/operador/documentos`, {
     method: 'POST',
@@ -129,7 +131,7 @@ export async function pedirDocumentoAsegura(
 }
 
 export async function revisarDocumentoAsegura(id: string, por: string): Promise<{ status: number; json: unknown }> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   const res = await fetch(`${urlAsegura()}/api/operador/documentos/${encodeURIComponent(id)}`, {
     method: 'PATCH',
@@ -141,7 +143,7 @@ export async function revisarDocumentoAsegura(id: string, por: string): Promise<
 }
 
 export async function borrarDocumentoAsegura(id: string): Promise<{ status: number; json: unknown }> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   const res = await fetch(`${urlAsegura()}/api/operador/documentos/${encodeURIComponent(id)}`, {
     method: 'DELETE',
@@ -153,7 +155,7 @@ export async function borrarDocumentoAsegura(id: string): Promise<{ status: numb
 
 /** El fichero, en streaming, tal cual lo sirve asegura. `null` si no hay secreto. */
 export async function descargarDocumentoAsegura(id: string): Promise<Response | null> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return null
   return fetch(`${urlAsegura()}/api/operador/documentos/${encodeURIComponent(id)}`, {
     headers: h,

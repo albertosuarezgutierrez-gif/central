@@ -41,6 +41,7 @@ import { describirCausaAsegura, MOTIVOS_PUERTO, type MotivoPuerto } from './corr
 // consumir. Duplicarlos aquí sería crear una segunda definición del argumento de
 // una función que ya se importa de ese mismo sitio.
 import type { CompaniaCatalogo, PolizaCliente } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
 
@@ -802,7 +803,7 @@ async function pedir(
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
     ...init,
-    headers: { ...(init.headers ?? {}), Authorization: `Bearer ${secret}` },
+    headers: { ...(init.headers ?? {}), ...(await cabecerasPuerto(secret)) },
     cache: 'no-store',
     signal: AbortSignal.timeout(timeoutMs),
   })

@@ -35,6 +35,8 @@
 // coma, dejando de reconocer los apartados que no se pudieron consultar sin que
 // nada fallara.
 import { CATEGORIAS_EXPORT, MOTIVO_TEXTO, type CategoriaExport } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 
 const CATEGORIAS = new Set<string>(CATEGORIAS_EXPORT)
 
@@ -251,9 +253,9 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-function cabeceras(): Record<string, string> | null {
+async function cabeceras(): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? { Authorization: `Bearer ${secret}` } : null
+  return secret ? await cabecerasPuerto(secret) : null
 }
 
 export type Reenvio = { status: number; json: unknown }
@@ -266,7 +268,7 @@ export type Reenvio = { status: number; json: unknown }
  * no una lista.
  */
 export async function exportRgpdAsegura(identidadId: string): Promise<Reenvio> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(
