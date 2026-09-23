@@ -307,11 +307,19 @@ export default function RetarificadorHogar({
               <RecomendarCapital
                 // Solo cuando lo ÚNICO que falta es el capital: con otro hueco el
                 // vendor contestaría 400 y el botón prometería algo que no llega.
-                habilitado={
-                  pre.ramo.estado === 'disponible' &&
-                  pre.fallosCatalogo.length === 0 &&
-                  !recalculando &&
-                  pre.resumen.faltan.every((f) => CAMPOS_CAPITAL.has(f.campo))
+                bloqueo={
+                  pre.ramo.estado !== 'disponible'
+                    ? 'hogar no tarifica para esta organización (o no se ha podido comprobar).'
+                    : pre.fallosCatalogo.length > 0
+                      ? `no se han podido leer los catálogos: ${pre.fallosCatalogo.join(', ')}.`
+                      : recalculando
+                        ? 'recalculando…'
+                        : pre.resumen.faltan.some((f) => !CAMPOS_CAPITAL.has(f.campo))
+                          ? `antes falta: ${pre.resumen.faltan
+                              .filter((f) => !CAMPOS_CAPITAL.has(f.campo))
+                              .map((f) => f.etiqueta)
+                              .join(', ')}.`
+                          : null
                 }
                 pedir={() => pedirLimitesHogar({ polizaId, resueltos: cuerpoResueltosFinal(), correcciones })}
                 usar={(campo, valor) => {
@@ -416,16 +424,18 @@ const CAMPOS_CAPITAL = new Set(['capitalContinente', 'capitalContenido'])
  * está confirmado por Codeoscopic, y el botón lo dice.
  */
 function RecomendarCapital({
-  habilitado,
+  bloqueo,
   pedir,
   usar,
 }: {
-  habilitado: boolean
+  /** `null` = se puede pedir; si no, POR QUÉ no (se enseña tal cual). */
+  bloqueo: string | null
   pedir: () => Promise<RespuestaLimitesHogar>
   usar: (campo: 'capitalContinente' | 'capitalContenido', valor: number) => void
 }) {
   const [estado, setEstado] = useState<RespuestaLimitesHogar | 'pidiendo' | null>(null)
   const pidiendo = estado === 'pidiendo'
+  const habilitado = bloqueo === null
   return (
     <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
       <button
@@ -447,7 +457,7 @@ function RecomendarCapital({
       <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
         {habilitado
           ? 'Codeoscopic calcula continente y contenido para esta vivienda. No está confirmado que sea gratis: cuenta en el consumo.'
-          : 'Se enciende cuando lo único que falta arriba es el capital.'}
+          : `Apagado: ${bloqueo}`}
       </p>
       {estado !== null && estado !== 'pidiendo' && estado.estado === 'ok' && (
         <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
