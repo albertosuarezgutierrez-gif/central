@@ -733,3 +733,8 @@ export {
   type Comparativa,
   type OpcionesComparativa,
 } from './comparativa-precios.ts'
+export {
+  DIAS_LLAMADA, DIAS_PRIMER_CONTACTO, DIAS_RECORDATORIO, MAX_INTENTOS,
+  diasHasta, proximoAniversario, puntuarLead, siguientePasoLead, ventanaDe,
+} from './lead-competencia.ts'
+export type { DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
