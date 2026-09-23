@@ -78,7 +78,6 @@ const SELECT = Prisma.sql`
 
 /** Los expedientes de una póliza, el más reciente primero. */
 export async function anulacionesDePoliza(correduriaId: string, polizaId: string): Promise<Anulacion[]> {
-  if (!UUID.test(polizaId)) return []
   const filas = await prismaAsegura().$queryRaw<Fila[]>(Prisma.sql`${SELECT}
     where a.correduria_id = ${correduriaId}::uuid and a.poliza_id = ${polizaId}::uuid
     order by a.created_at desc limit 20`)
@@ -104,10 +103,13 @@ export type ResultadoCrear =
 export async function crearAnulacion(correduriaId: string, polizaId: string, cuerpo: unknown, actor: string): Promise<ResultadoCrear> {
   if (!UUID.test(polizaId)) return { estado: 'no_encontrada' }
   const db = prismaAsegura()
-  const [p] = await db.$queryRaw<{ clienteId: string; vencimiento: string | null }[]>`
-    select p.cliente_id::text as "clienteId", to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento
+  const [p] = await db.$queryRaw<{ clienteId: string; vencimiento: string | null; vigente: boolean }[]>`
+    select p.cliente_id::text as "clienteId", to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento,
+           p.estado::text = any(${VIGENTES}::text[]) as vigente
     from polizas p where p.id = ${polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null`
   if (!p) return { estado: 'no_encontrada' }
+  // Una póliza que ya no está en vigor no se anula: se confirmaría sola sin haber hecho nada.
+  if (!p.vigente) return { estado: 'invalida', motivo: 'La póliza ya no está en vigor según CIMA: no hay nada que anular.' }
   const v = validarSolicitudAnulacion(cuerpo, { vencimiento: p.vencimiento, hoy: hoyMadrid() })
   if (!v.ok) return { estado: 'invalida', motivo: v.motivo }
   const s = v.solicitud
@@ -177,25 +179,40 @@ async function historial(correduriaId: string, clienteId: string, polizaId: stri
 }
 
 /**
- * Devuelve las pólizas confirmadas. Detector de cartera, dentro de su transacción: expedientes abiertos cuya póliza CIMA ya trae
- * como no vigente → confirmados, y la baja pendiente de revisar de esa póliza queda explicada
- * con el motivo del expediente (deja de salir como «pérdida sin explicar»).
+ * Detector de cartera, dentro de su transacción.
+ *
+ * 1. Solo un expediente COMUNICADO se confirma solo, cuando CIMA trae la póliza no vigente. Uno
+ *    sin firma o sin comunicar NO: si la compañía cancela la póliza por otra razón (un impago),
+ *    decir «confirmada» atribuiría la baja a una anulación que nunca salió.
+ * 2. La baja pendiente de una póliza con expediente comunicado o confirmado (también a mano, antes
+ *    de que CIMA la trajera) queda explicada con el motivo del expediente. Solo bajas posteriores al
+ *    expediente y sin sustitución.
+ *
+ * Devuelve cuántos se confirmaron y las pólizas cuya baja quedó explicada (no se anuncian como fuga).
  */
-export async function confirmarAnulaciones(tx: Tx, correduriaId: string): Promise<string[]> {
-  const filas = await tx.$queryRaw<{ id: string; polizaId: string; tipo: TipoAnulacion; motivo: MotivoAnulacion }[]>`
+export async function confirmarAnulaciones(tx: Tx, correduriaId: string): Promise<{ confirmadas: number; explicadas: string[] }> {
+  const confirmadas = await tx.$queryRaw<{ id: string }[]>`
     update anulacion a set estado = 'confirmada', confirmada_at = now(), updated_at = now()
     from polizas p
-    where a.correduria_id = ${correduriaId}::uuid and a.estado = any(${ABIERTOS}::text[])
-      and p.id = a.poliza_id and not (p.estado::text = any(${VIGENTES}::text[]))
-    returning a.id::text as id, a.poliza_id::text as "polizaId", a.tipo, a.motivo`
-  for (const f of filas) {
-    const r = resolucionDeAnulacion(f)
+    where a.correduria_id = ${correduriaId}::uuid and a.estado = 'comunicada'
+      and p.id = a.poliza_id and p.merged_into_poliza_id is null and not (p.estado::text = any(${VIGENTES}::text[]))
+    returning a.id::text as id`
+  for (const f of confirmadas) anotarCambio({ entidad: 'anulacion', id: f.id, campo: 'estado', antes: 'comunicada', despues: 'confirmada' })
+
+  const bajas = await tx.$queryRaw<{ eventoId: string; polizaId: string; tipo: TipoAnulacion; motivo: MotivoAnulacion }[]>`
+    select distinct on (e.id) e.id::text as "eventoId", e.entidad_id::text as "polizaId", a.tipo, a.motivo
+    from evento e join anulacion a on a.poliza_id = e.entidad_id and a.correduria_id = e.correduria_id
+    where e.correduria_id = ${correduriaId}::uuid and e.entidad = 'poliza' and e.estado = 'pendiente'
+      and e.tipo in ('POLIZA_BAJA', 'POLIZA_ANULA_AL_VENCIMIENTO', 'POLIZA_DESAPARECIDA')
+      and coalesce(e.datos->>'sustituida', 'false') <> 'true'
+      and a.estado in ('comunicada', 'confirmada') and e.created_at >= a.created_at - interval '1 day'
+    order by e.id, a.created_at desc`
+  for (const b of bajas) {
+    const r = resolucionDeAnulacion(b)
     await tx.$executeRaw`
       update evento set estado = 'revisado', resolucion = ${r.resolucion}, motivo = ${r.resolucion === 'perdida' ? r.motivo : null},
              revisado_at = now(), revisado_por = 'sistema:anulacion'
-      where correduria_id = ${correduriaId}::uuid and entidad = 'poliza' and entidad_id = ${f.polizaId}::uuid
-        and estado = 'pendiente' and tipo in ('POLIZA_BAJA', 'POLIZA_ANULA_AL_VENCIMIENTO', 'POLIZA_DESAPARECIDA')`
-    anotarCambio({ entidad: 'anulacion', id: f.id, campo: 'estado', antes: null, despues: 'confirmada' })
+      where id = ${b.eventoId}::uuid and estado = 'pendiente'`
   }
-  return filas.map((f) => f.polizaId)
+  return { confirmadas: confirmadas.length, explicadas: [...new Set(bajas.map((b) => b.polizaId))] }
 }

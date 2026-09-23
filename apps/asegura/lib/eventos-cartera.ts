@@ -125,7 +125,8 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     }
     // Anulaciones tramitadas que CIMA ya refleja: expediente confirmado y la baja, explicada (antes de
     // decidir retenciones: a quien pidió anularla no se le llama para «retenerle»).
-    const anuladas = new Set(await confirmarAnulaciones(tx, correduriaId))
+    const anul = await confirmarAnulaciones(tx, correduriaId)
+    const anuladas = new Set(anul.explicadas)
     // En la MISMA transacción que el evento: si la retención no se puede abrir, no se guarda la foto
     // y la próxima pasada lo reintenta (la clave del evento impide abrirla dos veces).
     const retenciones: Retencion[] = []
@@ -187,7 +188,7 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       retencionesCerradas,
       aprobacionesNuevas,
       aprobacionesFallidas,
-      anulacionesConfirmadas: anuladas.size,
+      anulacionesConfirmadas: anul.confirmadas,
     }
   }, { timeout: 30_000 }).then(async (r) => {
     const { retenciones, ...resto } = r
@@ -220,7 +221,8 @@ async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegu
       and p.sustituida_at is null
       and not exists (select 1 from polizas h where h.merged_into_poliza_id is null and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id))
       -- Con expediente de anulación (lo pidió el cliente y se está tramitando) no hay a quién retener.
-      and not exists (select 1 from anulacion a where a.poliza_id = p.id and a.estado <> 'desistida')`
+      and not exists (select 1 from anulacion a where a.poliza_id = p.id
+                        and (a.estado in ('solicitada', 'firmada', 'comunicada') or (a.estado = 'confirmada' and a.confirmada_at > now() - interval '400 days')))`
   if (!p) return null
   const hoy = hoyMadrid()
   const d = decidirRetencion({ tipo, ramo: p.ramo, compania: p.compania, numeroPoliza: p.numeroPoliza, vencimiento: p.vencimiento, hoy })

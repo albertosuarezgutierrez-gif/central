@@ -30,11 +30,12 @@ CREATE TABLE IF NOT EXISTS seguros.anulacion (
   confirmada_at  timestamptz,
   desistida_at   timestamptz,
   CONSTRAINT anulacion_otro_con_texto CHECK (motivo <> 'otro' OR motivo_texto IS NOT NULL),
-  -- Cada estado lleva su marca de tiempo, y no se comunica sin haber firmado.
+  -- Cada estado lleva su marca de tiempo; no se comunica sin firmar ni se confirma sin comunicar
+  -- (aplicado también como migración `seguros_anulacion_confirmada_exige_comunicada`).
   CONSTRAINT anulacion_estado_coherente CHECK (
     (estado <> 'firmada' OR firmada_at IS NOT NULL)
     AND (estado <> 'comunicada' OR (firmada_at IS NOT NULL AND comunicada_at IS NOT NULL))
-    AND (estado <> 'confirmada' OR confirmada_at IS NOT NULL)
+    AND (estado <> 'confirmada' OR (firmada_at IS NOT NULL AND comunicada_at IS NOT NULL AND confirmada_at IS NOT NULL))
     AND (estado <> 'desistida' OR desistida_at IS NOT NULL)
     AND (comunicada_at IS NULL OR firmada_at IS NOT NULL)
   )

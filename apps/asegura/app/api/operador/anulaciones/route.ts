@@ -26,6 +26,10 @@ export async function GET(req: Request) {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' })
     const polizaId = new URL(req.url).searchParams.get('polizaId')
+    // Un id mal formado no es «no tiene expediente»: se dice que la petición no vale.
+    if (polizaId !== null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(polizaId)) {
+      return NextResponse.json({ estado: 'invalida', motivo: 'polizaId no válido' }, { status: 422 })
+    }
     const anulaciones = polizaId ? await anulacionesDePoliza(correduria.id, polizaId) : await anulacionesAbiertas(correduria.id)
     return NextResponse.json({ estado: 'ok', anulaciones })
   } catch (e) {

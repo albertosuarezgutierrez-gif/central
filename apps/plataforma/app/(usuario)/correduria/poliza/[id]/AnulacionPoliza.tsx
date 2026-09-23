@@ -103,7 +103,7 @@ export default function AnulacionPoliza({ polizaId, vencimiento }: { polizaId: s
             </select>
           </Campo>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button type="button" disabled={ocupado} style={btnStyle('primario')} onClick={async () => {
+            <button type="button" disabled={ocupado || !fechaForm} style={btnStyle('primario')} onClick={async () => {
               const ok = await mandar('POST', { polizaId, tipo: form.tipo, solicitadaPor: form.solicitadaPor, motivo: form.motivo, motivoTexto: form.motivoTexto || null, fechaEfecto: fechaForm })
               if (ok) setAbrirForm(false)
             }}>Abrir expediente</button>

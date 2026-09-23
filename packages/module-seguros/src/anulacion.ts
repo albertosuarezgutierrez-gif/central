@@ -110,9 +110,13 @@ export function validarSolicitud(v: unknown, ctx: { vencimiento: string | null; 
     const w = ventanaAnulacion(ctx.vencimiento, new Date(`${ctx.hoy}T12:00:00Z`))
     // Art. 22 LCS: el tomador se opone a la prórroga con un mes de antelación. Fuera de plazo la
     // compañía puede prorrogar igual; se deja tramitar (hay compañías que la aceptan), avisado.
-    const advertencia = w && !w.enPlazo && solicitadaPor === 'cliente'
-      ? `Fuera del plazo del art. 22 LCS (había que avisar antes del ${fechaEs(w.limiteAviso)}): la compañía puede prorrogarla otro año.`
-      : null
+    // La compañía, en cambio, tiene que avisar con dos meses.
+    const diasHasta = diasEntre(ctx.hoy, ctx.vencimiento)
+    const advertencia = solicitadaPor === 'compania'
+      ? (diasHasta < 60 ? 'La compañía tiene que oponerse a la prórroga con dos meses de antelación (art. 22 LCS): este aviso llega tarde.' : null)
+      : w && !w.enPlazo
+        ? `Fuera del plazo del art. 22 LCS (había que avisar antes del ${fechaEs(w.limiteAviso)}): la compañía puede prorrogarla otro año.`
+        : null
     return { ok: true, solicitud, advertencia }
   }
 
@@ -142,7 +146,8 @@ export function transicion(estado: EstadoAnulacion, accion: AccionAnulacion): Es
     case 'marcar_firmada': return estado === 'solicitada' ? 'firmada' : null
     // Sin firma no se comunica: la anulación es del tomador, no de la correduría.
     case 'marcar_comunicada': return estado === 'firmada' ? 'comunicada' : null
-    case 'confirmar': return 'confirmada'
+    // Confirmar es que la compañía ha aplicado lo que se le comunicó: sin comunicación no hay qué confirmar.
+    case 'confirmar': return estado === 'comunicada' ? 'confirmada' : null
     case 'desistir': return 'desistida'
   }
 }
