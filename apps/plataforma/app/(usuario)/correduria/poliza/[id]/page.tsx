@@ -4,6 +4,7 @@ import type { CapitalAsegurado } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
+import AnulacionPoliza from './AnulacionPoliza'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
@@ -132,6 +133,10 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
       {/* ── Intervinientes ──────────────────────────────────────────────── */}
       <Tarjeta titulo="Intervinientes">
         <Intervinientes p={p} />
+      </Tarjeta>
+
+      <Tarjeta titulo="Anulación">
+        <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
       </Tarjeta>
 
       {/* ── Documentación ───────────────────────────────────────────────── */}

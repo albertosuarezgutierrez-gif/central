@@ -12,6 +12,7 @@ import { agregarContadores, type Contador, type Seccion } from './secciones'
 import { cuandoTarea, lineaEstadoIngesta, sinInvitar } from './hoy-cockpit'
 import PerdidasCartera from './PerdidasCartera'
 import Aprobaciones from './Aprobaciones'
+import Anulaciones from './Anulaciones'
 
 /**
  * El cockpit de «Hoy» (pieza 1-4 de ASegura OS, maqueta aprobada el
@@ -180,6 +181,7 @@ export default function HoyCockpit({
       </section>
 
       <PerdidasCartera />
+      <Anulaciones />
 
       {/* ── Esperan tu OK ─────────────────────────────────────────── */}
       <section id="esperan-ok" style={{ display: 'grid', gap: 6 }}>
