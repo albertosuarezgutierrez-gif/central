@@ -20,3 +20,10 @@ test('sin enlace no inventa uno y con muchas recorta', () => {
   const m = mensajeFugas(Array.from({ length: 20 }, (_, i) => f({ id: `e${i}` })), () => null)
   assert.match(m, /…y 5 más/)
 })
+
+test('las retenciones abiertas se anuncian; null (asegura vieja) o 0 no dicen nada', () => {
+  assert.match(mensajeFugas([f({ tipo: 'POLIZA_ANULA_AL_VENCIMIENTO' })], () => null, 1), /Abierta 1 retención/)
+  assert.match(mensajeFugas([f()], () => null, 3), /Abiertas 3 retenciones/)
+  assert.doesNotMatch(mensajeFugas([f()], () => null, null), /retenci/)
+  assert.doesNotMatch(mensajeFugas([f()], () => null, 0), /retenci/)
+})

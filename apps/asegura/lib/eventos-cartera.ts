@@ -14,7 +14,9 @@
 import { Prisma } from './generated/asegura-client'
 import {
   MOTIVOS_PERDIDA,
+  ORIGEN_RETENCION,
   TIPOS_FUGA,
+  decidirRetencion,
   detectarCambios,
   esFugaSinExplicar,
   fotoSospechosa,
@@ -75,6 +77,8 @@ export type ResultadoDeteccion = {
   /** Pérdidas SIN sustitución que acaban de aparecer: lo que merece un aviso. */
   fugasNuevas: FugaNueva[]
   polizasEnFoto: number
+  /** Oportunidades de retención abiertas en esta pasada (anula al vencimiento con tiempo por delante). */
+  retencionesAbiertas: number
 }
 
 /** La foto actual parece rota (ha desaparecido de golpe una parte grande de la cartera). */
@@ -105,6 +109,15 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
         returning id`
       if (r[0]) insertados.push(e)
     }
+    // En la MISMA transacción que el evento: si la retención no se puede abrir, no se guarda la foto
+    // y la próxima pasada lo reintenta (la clave del evento impide abrirla dos veces).
+    const retenciones: Retencion[] = []
+    for (const e of insertados) {
+      // Con sustitución registrada (renueva como póliza nueva, cambio de compañía) no hay nadie a quien retener.
+      if (e.tipo !== 'POLIZA_ANULA_AL_VENCIMIENTO' || !esFugaSinExplicar(e)) continue
+      const r = await abrirRetencion(tx, correduriaId, e.id)
+      if (r) retenciones.push(r)
+    }
     await tx.$executeRaw`
       insert into cartera_foto (correduria_id, foto, tomada_at) values (${correduriaId}::uuid, ${JSON.stringify(actual)}::jsonb, now())
       on conflict (correduria_id) do update set foto = excluded.foto, tomada_at = excluded.tomada_at`
@@ -120,8 +133,76 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       porTipo,
       fugasNuevas,
       polizasEnFoto: Object.keys(actual.polizas).length,
+      retenciones,
     }
-  }, { timeout: 30_000 })
+  }, { timeout: 30_000 }).then(async (r) => {
+    const { retenciones, ...resto } = r
+    for (const x of retenciones) await anotarRetencion(correduriaId, x)
+    return { ...resto, retencionesAbiertas: retenciones.length }
+  })
+}
+
+type Retencion = { oportunidadId: string; clienteId: string; polizaId: string; texto: string }
+
+const ACTOR_RETENCION = 'sistema:cima'
+/** Una retención más vieja que esto no bloquea abrir otra (sería de la anualidad anterior). */
+const DIAS_RETENCION_VIVA = 120
+
+function hoyMadrid(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+}
+
+/**
+ * Pieza 2-b: CIMA marca una póliza como «anula al vencimiento» → oportunidad de retención
+ * (`en_negociacion`) + llamada de prioridad alta para hoy, que sale en «Hoy · Tareas de hoy».
+ * `null` si no toca (ya vencida, póliza que no está, o ya hay una retención abierta para ella).
+ */
+async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string, polizaId: string): Promise<Retencion | null> {
+  const [p] = await tx.$queryRaw<{ clienteId: string; ramo: string; compania: string | null; numeroPoliza: string | null; vencimiento: string | null; prima: string | null }[]>`
+    select p.cliente_id::text as "clienteId", p.tipo::text as ramo, p.aseguradora as compania, p.numero_poliza as "numeroPoliza",
+           to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento, nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima
+    from polizas p where p.id = ${polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null
+      and p.sustituida_at is null
+      and not exists (select 1 from polizas h where h.merged_into_poliza_id is null and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id))`
+  if (!p) return null
+  const hoy = hoyMadrid()
+  const d = decidirRetencion({ tipo: 'POLIZA_ANULA_AL_VENCIMIENTO', ramo: p.ramo, compania: p.compania, numeroPoliza: p.numeroPoliza, vencimiento: p.vencimiento, hoy })
+  if (!d.abrir) return null
+  const [ya] = await tx.$queryRaw<{ id: string }[]>`
+    select o.id::text as id from oportunidades o
+    where o.correduria_id = ${correduriaId}::uuid and o.info_riesgo->>'polizaId' = ${polizaId}
+      and o.info_riesgo->>'origen' = ${ORIGEN_RETENCION}
+      and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      and o.created_at > now() - make_interval(days => ${DIAS_RETENCION_VIVA}::int)
+    limit 1`
+  if (ya) return null
+  const [o] = await tx.$queryRaw<{ id: string }[]>`
+    insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, numero_poliza, prima_bruta, info_riesgo)
+    values (${correduriaId}::uuid, ${p.clienteId}::uuid, cast(${p.ramo} as tipo_seguro), 'renovacion', 'en_negociacion',
+            ${p.vencimiento}::date, ${p.numeroPoliza}, ${p.prima}::numeric, ${JSON.stringify({ origen: ORIGEN_RETENCION, polizaId })}::jsonb)
+    returning id::text as id`
+  await tx.$executeRaw`
+    insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, poliza_id, oportunidad_id, origen_trigger)
+    values (${correduriaId}::uuid, cast('llamada' as gestion_tipo), 'alta', 'pendiente', ${d.texto},
+            (${hoy}::date + time '23:59:59') at time zone 'Europe/Madrid',
+            ${p.clienteId}::uuid, ${polizaId}::uuid, ${o.id}::uuid, 'central:seguimiento')`
+  await tx.$executeRaw`
+    insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+    values (${correduriaId}::uuid, ${o.id}::uuid, 'creada_retencion', null, 'en_negociacion',
+            ${JSON.stringify({ polizaId, diasRestantes: d.diasRestantes })}::jsonb, ${ACTOR_RETENCION})`
+  return { oportunidadId: o.id, clienteId: p.clienteId, polizaId, texto: d.texto }
+}
+
+/** Best-effort y fuera de la transacción: la oportunidad y la llamada ya están guardadas. */
+async function anotarRetencion(correduriaId: string, r: Retencion): Promise<void> {
+  anotarCambio({ entidad: 'oportunidad', id: r.oportunidadId, campo: 'estado', antes: null, despues: 'en_negociacion' })
+  try {
+    await prismaAsegura().$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
+      values (${correduriaId}::uuid, ${r.clienteId}::uuid, ${r.polizaId}::uuid, cast('gestion' as tipo_historial_interno), ${r.texto})`
+  } catch (e) {
+    console.error('[eventos-cartera] historial de la retención no anotado:', e instanceof Error ? e.message : e)
+  }
 }
 
 /** Lo mínimo para reconocer la póliza: nombre del tomador, número y compañía. Nada de contacto. */

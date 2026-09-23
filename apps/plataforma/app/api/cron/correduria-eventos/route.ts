@@ -33,7 +33,8 @@ export async function GET(req: NextRequest) {
   }
 
   const d = r.dato
-  const resumen = Object.entries(d.porTipo).map(([t, n]) => `${t} ${n}`).join(', ') || 'ninguno'
+  const resumen = (Object.entries(d.porTipo).map(([t, n]) => `${t} ${n}`).join(', ') || 'ninguno') +
+    (d.retencionesAbiertas ? `; ${d.retencionesAbiertas} retención(es) abierta(s)` : '')
   if (d.primeraVez) {
     await registrarLatido(AGENTE, true, `primera pasada: foto anclada (${d.polizasEnFoto} pólizas vivas), sin eventos`)
     return NextResponse.json({ ok: true, estado: 'anclado', polizas: d.polizasEnFoto })
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
   const permitido = await avisoPermitido('correduria.fuga-cartera')
   let salio = false
   if (permitido) {
-    const id = await tgSend(mensajeFugas(d.fugasNuevas, (c) => urlFichaCliente(c))).catch(() => null)
+    const id = await tgSend(mensajeFugas(d.fugasNuevas, (c) => urlFichaCliente(c), d.retencionesAbiertas)).catch(() => null)
     salio = id !== null
     if (salio) await avisoEnviado('correduria.fuga-cartera')
   }

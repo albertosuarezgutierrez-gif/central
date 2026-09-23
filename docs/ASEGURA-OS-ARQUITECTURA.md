@@ -376,6 +376,7 @@ Ya existe y es la parte más madura: `core-ai` (cadena de fallback) + gateway (c
   - Los tres con su test o cepo visto fallar.
 - **Fase 2 — Eventos/Workflows** (depende de F1)
   - ✅ **2-a (23/09):** `seguros.evento` + `cartera_foto` + detector por foto (`detectarCambios`, module-seguros) lanzado por el cron `correduria-eventos` (06:15 y 12:15 UTC) → pérdidas sin sustitución por Telegram (`correduria.fuga-cartera`) y en «Hoy» (bloque «Pérdidas de cartera», resolución cerrada: pérdida con motivo o no es pérdida). Sin despachador todavía: los demás eventos quedan guardados para los flujos siguientes.
+  - ✅ **2-b (23/09):** retención automática — «anula al vencimiento» sin sustitución → oportunidad `en_negociacion` (`origen='retencion_cima'`) + llamada alta para hoy, en la misma transacción del detector (`abrirRetencion` en `apps/asegura/lib/eventos-cartera.ts`, regla pura `decidirRetencion`).
   - `seguros.evento` + dispatcher + detector diff de CIMA.
   - `oportunidad` + `motivo_perdida`.
   - `aprobacion` + `politica_accion`.

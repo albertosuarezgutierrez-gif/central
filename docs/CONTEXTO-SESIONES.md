@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 📞 **ASegura OS pieza 2-b: retención automática.** #3345 (eventos de cartera 2-a) mergeado.
+Ahora, cuando el detector ve una póliza pasar a «anula al vencimiento» SIN sustitución y con el vencimiento
+por delante, abre en la MISMA transacción una oportunidad `en_negociacion` (`info_riesgo.origen='retencion_cima'`)
++ llamada de prioridad alta para hoy (sale en «Hoy · Tareas de hoy») + `oportunidad_historial`; ficha anotada
+best-effort. Regla pura `decidirRetencion` (module-seguros). El Telegram de pérdidas dice cuántas retenciones abrió.
+SQL probado contra la BD con rollback. Siguiente: cola única de aprobaciones con su 1er productor (recibo devuelto).
 **(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
 La moto de Víctor (Allianz 031698897) salía con catálogo de coche porque CIMA la guardó como `auto`
 (Allianz/Mapfre no mandan `ClaseVehiculo='MO'`). 18 pólizas corregidas a `moto` en BD (ids en asegura#848)
