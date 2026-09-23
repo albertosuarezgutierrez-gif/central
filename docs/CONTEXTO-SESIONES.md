@@ -368,6 +368,21 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (23/09/2026) correduría: calle + número → el Catastro propone el piso (verifica la dirección)
+- `DireccionConfirmable` (alta/edición de cliente y dirección del riesgo de la póliza): con calle+número+CP+ciudad aparece «Comprobar en el Catastro y elegir el piso» → lista de pisos del portal (o ✅ si es una sola vivienda, o ⚠️ «el Catastro no tiene ese número»). Con BOTÓN, no al teclear (el Catastro corta si se le pregunta seguido). Nunca bloquea el guardado.
+- En la póliza de HOGAR, el piso elegido guarda además la referencia catastral (pasa a retarificable). En el cliente solo verifica: un cliente puede tener varias casas.
+- Piezas puras en `apps/plataforma/lib/correduria/piso-catastro.ts` (+ test, visto en rojo con «Calle 28 de Febrero 5»).
+
+## (23/09/2026) hogar: CIMA SÍ manda el riesgo; el Catastro da tipo de vivienda y planta
+- Medido: CIMA manda `RiesgoHogar` (superficie, situación, capitales, Antigüedad, ClaseInmueble, UsoInmueble, Zona, MedidasProteccion). La ingesta (repo `asegura`) lee superficie/dirección/capitales solo desde el 20/09 (asegura#841): las 4 pólizas con fichero posterior las tienen, las 24 anteriores no, y el crudo solo se guarda desde el 17/09 → hace falta pedir a cada compañía el REENVÍO de cartera (Alberto). Antigüedad/ClaseInmueble/UsoInmueble/Zona/Medidas sin leer: sus códigos están en el PDF EIAC V07.1 (§13.3 claves), no se mapean a ojo.
+- `core-catastro`: `construcciones` (<lcons>) + `caracterizarVivienda()` → piso/unifamiliar, planta, m² de vivienda sin comunes, anexos. Fixtures de respuestas REALES (San Vicente 40 y Socorro 24, vía WebFetch: el proxy del contenedor da 403 al Catastro, WebFetch no). Retarificar lo pinta y avisa si los m² de la póliza difieren >15 % del Catastro (infraseguro).
+- Pendiente: mapear piso/planta a `/home/property-types` (solo se conoce `MiddleFloor`; `emparejar` es exacto a propósito → hace falta la lista real del desplegable).
+
+## (23/09/2026) correduría: la referencia catastral del piso se GUARDA en la póliza de hogar
+- Tras elegir el piso en retarificar, botón «Guardar esta vivienda en la póliza» → `PATCH /api/operador/poliza` `campo: 'referencia_catastral'` (asegura la comprueba en el Catastro ANTES de escribir; fusión en `datos_especificos.referenciaCatastral`, historial con anterior→nueva). Solo la referencia: m²/año/CP se consultan al tarificar y salen «del Catastro».
+- `retarificabilidad()` (module-seguros): hogar sin m²/año/CP pero con referencia de 20 guardada → retarificable, `fuente: 'catastro'` (plataforma acepta ya esa fuente). Asegura usa la guardada sola si la pantalla no manda otra; «Cambiar de vivienda» = `?buscar=1`.
+- La ingesta de CIMA fusiona con `||`: no la borra. Pendiente: mandar `cadastralReference` al vendor (el campo ya existe en peticion-hogar, nadie lo rellena).
+
 ## (23/09/2026) Teléfonos de compañías: UNA sola fuente (web + portal + puerto)
 - Catálogo verificado movido a `packages/module-seguros/src/telefonos-companias.ts` (con `codigoDgs`). Lo leen la web, el portal (`asegura-portal/lib/canales-compania.ts`, ya sin BD) y el puerto `/api/operador/companias` de asegura (pisa las columnas). Columnas `telefono_*` de `companias_dgs` comentadas como OBSOLETAS en BD, no borradas.
 - Portal: `FilaCompania` admite varias asistencias rotuladas («Asistencia · Hogar») y la nota del WhatsApp (Mapfre: solo hogar). Cepo nuevo `test/regression-telefonos-fuente-unica.test.ts` (visto en rojo).

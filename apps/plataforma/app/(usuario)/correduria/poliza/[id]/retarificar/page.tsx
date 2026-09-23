@@ -89,7 +89,13 @@ export default async function RetarificarPage({
   // elige el piso en el Catastro (gratis) y SOLO la referencia viaja a asegura,
   // que consulta los datos ella misma: los números con los que se paga un
   // precio no los pone plataforma.
-  if (String(p.tipo).toLowerCase() === 'hogar' && !p.retarificable) {
+  //
+  // Con la referencia ya GUARDADA la póliza es retarificable (`fuente:
+  // 'catastro'`) y va por el camino normal de abajo: asegura la usa sola.
+  // `?buscar=1` / `?direccion=` / `?referencia=` fuerzan este paso para
+  // cambiar de vivienda.
+  const cambiandoVivienda = Boolean(cadena(sp.buscar) ?? cadena(sp.direccion) ?? cadena(sp.referencia))
+  if (String(p.tipo).toLowerCase() === 'hogar' && !cancelada && (!p.retarificable || cambiandoVivienda)) {
     const cab = <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
     const refParam = cadena(sp.referencia)
     let referencia = refParam ? normalizarReferencia(refParam) : null
@@ -165,9 +171,6 @@ export default async function RetarificarPage({
     return (
       <Marco>
         {cab}
-        <p className="muted" style={{ margin: 0, fontSize: 12 }}>
-          <Link href={`/correduria/poliza/${p.id}/retarificar`}>← Elegir otra vivienda</Link>
-        </p>
         <RetarificadorHogar polizaId={p.id} preInicial={preCat.pre} referencia={referencia} />
       </Marco>
     )

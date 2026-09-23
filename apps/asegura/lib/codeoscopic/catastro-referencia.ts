@@ -4,7 +4,7 @@
 // piso en plataforma y aquí solo viaja la referencia — los números los pone el
 // Catastro, no quien llama, porque con ellos se pide un precio que se cobra.
 
-import { paramsDnploc } from '@central/core-catastro'
+import { caracterizarVivienda, paramsDnploc } from '@central/core-catastro'
 import { bajarCatastro } from '@central/core-catastro/http'
 import { direccionDesdeCatastro, type CatastroHogar } from './desde-cartera-hogar.ts'
 
@@ -34,6 +34,7 @@ export async function catastroPorReferencia(valor: string): Promise<CatastroPorR
         codigoPostal: datos.codigoPostal,
         uso: datos.uso,
         direccion: direccionDesdeCatastro(paramsDnploc(datos.direccion)),
+        vivienda: caracterizarVivienda(datos),
       },
     }
   } catch (e) {

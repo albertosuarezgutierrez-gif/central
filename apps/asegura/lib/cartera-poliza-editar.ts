@@ -19,6 +19,7 @@ import { admiteDireccionRiesgo, validarDireccionRiesgo, validarModalidadRc, titu
 import { encryptField } from '@central/module-seguros-pii'
 import { prismaAsegura, aseguraConfigurada } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { catastroPorReferencia, motivoCatastro } from './codeoscopic/catastro-referencia'
 
 export type ResultadoModalidadRc =
   | { ok: true; estado: 'ok'; status: 200; titulo: string }
@@ -138,6 +139,77 @@ export async function establecerDireccionRiesgo(
     const resumen = [v.valor.cp, v.valor.localidad].filter(Boolean).join(' ')
     await anotar(correduriaId, poliza.clienteId, `Dirección del riesgo anotada a mano${resumen ? ` (${resumen})` : ''} por ${entrada.actor}`)
     return { ok: true, estado: 'ok', status: 200 }
+  } catch (e) {
+    return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }
+  }
+}
+
+// ─── Referencia catastral del piso (23/09/2026) ──────────────────────────────
+//
+// 22 de las 28 pólizas de hogar vivas no traen m², año ni CP. El corredor
+// elige el piso en el Catastro al retarificar; guardarla aquí evita elegirlo
+// cada vez y hace que la póliza pase a retarificable (`fuente: 'catastro'`).
+//
+// - Solo hogar, de ESTA correduría.
+// - Se comprueba contra el Catastro ANTES de escribir: no se guarda una
+//   referencia que no existe (ni la de 14, que es el edificio).
+// - Se guarda SOLO la referencia, no los m²/año/CP: esos se consultan al
+//   tarificar y salen marcados «del Catastro», nunca como dato de la compañía.
+// - Es dato nuestro, no de CIMA: cambiarla sí se permite (otro piso), y el
+//   historial dice de cuál a cuál. La ingesta de CIMA fusiona con `||`, así
+//   que no la borra.
+
+export type ResultadoReferenciaCatastral =
+  | { ok: true; estado: 'ok'; status: 200; referencia: string }
+  | { ok: false; estado: 'invalido' | 'no_encontrado' | 'sin_configurar' | 'error'; motivo: string; status: 404 | 422 | 503 | 500 }
+
+export async function establecerReferenciaCatastral(
+  correduriaId: string,
+  polizaId: string,
+  entrada: { referencia?: unknown; actor: string },
+): Promise<ResultadoReferenciaCatastral> {
+  if (!aseguraConfigurada()) {
+    return { ok: false, estado: 'sin_configurar', motivo: 'La conexión a la cartera no está configurada.', status: 503 }
+  }
+  if (polizaId.trim() === '' || typeof entrada.referencia !== 'string') {
+    return { ok: false, estado: 'invalido', motivo: 'Faltan el id de la póliza o la referencia.', status: 422 }
+  }
+
+  try {
+    const db = prismaAsegura()
+    const poliza = await db.poliza.findFirst({
+      where: { id: polizaId, correduriaId },
+      select: { id: true, tipo: true, clienteId: true, datosEspecificos: true },
+    })
+    if (!poliza) {
+      return { ok: false, estado: 'no_encontrado', motivo: 'Esa póliza no está en la cartera de esta correduría.', status: 404 }
+    }
+    if (String(poliza.tipo) !== 'hogar') {
+      return { ok: false, estado: 'invalido', motivo: 'La referencia catastral solo se guarda en pólizas de hogar.', status: 422 }
+    }
+
+    const c = await catastroPorReferencia(entrada.referencia)
+    if (c.estado !== 'ok') {
+      return { ok: false, estado: c.estado === 'error' ? 'error' : 'invalido', motivo: motivoCatastro(c), status: c.estado === 'error' ? 503 : 422 }
+    }
+
+    const previos = poliza.datosEspecificos && typeof poliza.datosEspecificos === 'object' && !Array.isArray(poliza.datosEspecificos)
+      ? (poliza.datosEspecificos as Record<string, unknown>)
+      : {}
+    const anterior = typeof previos.referenciaCatastral === 'string' ? previos.referenciaCatastral : null
+    if (anterior === c.referencia) return { ok: true, estado: 'ok', status: 200, referencia: c.referencia }
+
+    const fusionado = { ...previos, referenciaCatastral: c.referencia, referenciaCatastralOrigen: 'manual' }
+    await db.poliza.update({ where: { id: poliza.id }, data: { datosEspecificos: fusionado } })
+    anotarCambio({ entidad: 'poliza', id: poliza.id, campo: 'referencia_catastral', despues: c.referencia })
+    await anotar(
+      correduriaId,
+      poliza.clienteId,
+      anterior
+        ? `Referencia catastral de la póliza cambiada (${anterior} → ${c.referencia}) por ${entrada.actor}`
+        : `Referencia catastral guardada en la póliza (${c.referencia}) por ${entrada.actor}`,
+    )
+    return { ok: true, estado: 'ok', status: 200, referencia: c.referencia }
   } catch (e) {
     return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }
   }

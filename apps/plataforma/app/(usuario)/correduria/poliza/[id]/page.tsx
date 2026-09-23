@@ -212,7 +212,7 @@ function Objeto({ p }: { p: Poliza }) {
           falta —la dirección existe, solo que aquí no se lee— y el puerto la
           rechazaría con 409 igualmente. */}
       {admiteDireccionRiesgo(p.tipo) && !sinCalle.cifrada && !sinCalle.propia && !sinCalle.gemela && (
-        <EditarDireccionRiesgo polizaId={p.id} />
+        <EditarDireccionRiesgo polizaId={p.id} esHogar={p.tipo === 'hogar'} />
       )}
       {!conocido && !gemConocida && p.gemelaInformada && p.gemela === null && (
         <div style={muted}>Tampoco hay copia en el volcado con más datos.</div>
