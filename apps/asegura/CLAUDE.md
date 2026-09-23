@@ -721,6 +721,14 @@ sustitución por revisar y su resolución cerrada (pérdida + motivo de `MOTIVOS
 📞 Y una póliza anulada (baja o «anula al vencimiento» — CIMA solo escribe `activa`/`cancelada`, así que una
 anulación a vencimiento llega como baja) sin sustitución y con el vencimiento por delante abre SOLO, en la misma transacción, una retención
 (`oportunidades` `origen=retencion_cima` + llamada alta hoy en `gestiones`); una por póliza abierta. Cepo `lib/eventos-cartera.test.ts`.
+🔁 **Sustitución AUTOMÁTICA (23/09/2026, `lib/sustituciones-auto.ts`, regla pura `detectarSustituciones` en
+module-seguros).** Caso José Suárez: Mapfre→Reale del mismo Kona y el portal pintaba DOS seguros «En vigor». Dentro de
+`detectarYGuardar`, ANTES de la foto, se enlaza sola la nueva con la vieja cuando es determinista (mismo cliente + ramo +
+MATRÍCULA, número distinto, efecto a −60/+30 días del aniversario de la vieja —el actual o el anterior, porque CIMA puede
+traerla ya renovada—) y única (una vieja con dos nuevas no se enlaza: `sustitucionesAmbiguas`). Escribe solo nuestros
+campos (`sustituida_at`, `poliza_origen_id`) + historial; no comunica nada. `sqlCarteraEnVigor`/`esCarteraEnVigor`
+excluyen la sustituida y el portal la esconde tras la nueva («Sustituye a tu seguro de X»). Hogar NO entra (dirección
+cifrada). Medido: enlaza 3 parejas (José, 6668JGF Occident→Allianz, moto 4897FTM Allianz→Occident).
 ✉️ **Cola de aprobaciones (`seguros.aprobacion`, `lib/aprobaciones.ts`, puerto `/api/operador/aprobaciones`).** Un recibo
 que pasa a `devuelto` deja un correo PROPUESTO al cliente; solo sale con `decision:'aprobar'` desde plataforma. El envío
 reclama la fila (`pendiente → enviando`) ANTES de mandar y lee el correo de la ficha en ese momento; `enviando` viejo =

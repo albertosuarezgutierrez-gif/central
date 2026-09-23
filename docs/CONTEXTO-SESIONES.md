@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🔁 **PR 10: sustitución de póliza AUTOMÁTICA (caso José Suárez).** #3418 mergeado y borradas las 22
+filas congeladas del libro de la cuenta sin bancos. José pasó su Kona 9833LJC de Mapfre a Reale y el portal pintaba dos
+«En vigor». Alberto: «tiene que ser automático». `detectarSustituciones` (puro) + `enlazarSustituciones` en el detector,
+antes de la foto: mismo cliente+ramo+matrícula, efecto ±aniversario (actual o anterior), única. `sqlCarteraEnVigor`
+excluye la sustituida; el portal la esconde («Sustituye a tu seguro de X», GRANT de 2 columnas aplicado). Medido: 3
+parejas (José, Occident→Allianz 6668JGF, moto Allianz→Occident 4897FTM). Hogar fuera (dirección cifrada). La
+comunicación de no renovación a Mapfre NO se automatiza (sale a una compañía: sigue siendo decisión de Alberto).
+
 **(23/09/2026)** 🏦 **PR 9: libro de comisiones — el banco casado abono a abono y la cuenta correcta.** #3414 (WhatsApp por
 ramo en plataforma) mergeado. Medido: el cron `cima-liq` elegía cuenta con `LIMIT 1` sin orden y desde el 20/09 escribía
 en una cuenta sin bancos (libro de Alberto congelado); y sus ventanas de 45 días contaban el mismo abono en 2-3 periodos

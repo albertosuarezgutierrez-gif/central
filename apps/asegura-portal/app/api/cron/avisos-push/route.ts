@@ -73,7 +73,7 @@ export async function GET(req: Request) {
   const polizaIds = [...new Set(enVentana.map((o) => o.polizaId).filter((id): id is string => id !== null))]
   const polizasVivas = polizaIds.length
     ? await prisma.poliza.findMany({
-        where: { id: { in: polizaIds }, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null, estado: { in: [...POLIZA_ESTADOS_VIGENTES] } },
+        where: { id: { in: polizaIds }, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null, sustituidaAt: null, estado: { in: [...POLIZA_ESTADOS_VIGENTES] } },
         select: { id: true, clienteId: true },
       })
     : []

@@ -87,6 +87,7 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
               {ESTADO[p.estado] ?? p.estado}
             </span>
             {deOtro && <span className="chip acento">De {deOtro}</span>}
+            {p.sustituyeA && <span className="chip">Sustituye a {p.sustituyeA.compania}</span>}
           </span>
         </span>
         {/* Decorativo: lo que anuncia que se puede entrar es que la fila ENTERA

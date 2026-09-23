@@ -908,6 +908,10 @@ model Poliza {
   /// GRANT concedido el 03/09/2026; sin él la consulta entera reventaría.
   eiacXmlHash        String?          @map("eiac_xml_hash") @db.VarChar(64)
   mergedIntoPolizaId String?          @map("merged_into_poliza_id") @db.Uuid
+  /// Otra póliza ya ocupa su sitio (cambio de compañía). GRANT de columna del 23/09/2026.
+  sustituidaAt       DateTime?        @map("sustituida_at") @db.Timestamptz(6)
+  /// La póliza a la que ESTA sustituye. GRANT de columna del 23/09/2026.
+  polizaOrigenId     String?          @map("poliza_origen_id") @db.Uuid
   createdAt          DateTime         @map("created_at") @db.Timestamp(6)
   updatedAt          DateTime         @map("updated_at") @db.Timestamp(6)
 

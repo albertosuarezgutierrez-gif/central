@@ -59,7 +59,7 @@ import {
   type CamposVisibles,
   type Nivel,
 } from '@central/module-seguros-portal'
-import { importeEiac, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
+import { importeEiac, ocultarSustituidas, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
 
 import { decryptField } from '@central/module-seguros-pii'
 
@@ -142,6 +142,8 @@ export type PolizaPortal = {
   vigencia: Vigencia
   /** CIMA la ha traído. `false` = emitida por nosotros y la compañía aún no la confirma. */
   confirmadaCima: boolean
+  /** La póliza a la que esta sustituye (cambio de compañía), que ya no se pinta aparte. `null` = ninguna. */
+  sustituyeA: { compania: string; fechaVencimiento: Date | null } | null
   /**
    * De dónde viene la fila, tal cual está en la BD. NO es para pintarlo: es lo
    * que necesitan aguas abajo (`lib/obligaciones.ts`) para volver a preguntar
@@ -507,7 +509,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const autorizadosIds = [...new Set([...porOtorgante.keys(), ...otorganteDePoliza.values()])]
 
   const todosIds = [...propiosIds, ...autorizadosIds]
-  const [clientes, polizas] = await Promise.all([
+  const [clientes, polizasLeidas] = await Promise.all([
     prisma.cliente.findMany({
       where: { id: { in: todosIds }, mergedIntoClienteId: null },
       // `tipoPersona` decide QUÉ se sirve de una ficha ajena: una sociedad no
@@ -528,6 +530,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     }),
   ])
 
+  // 🚨 La póliza SUSTITUIDA no se pinta al lado de la que la sustituye (23/09/2026, José Suárez:
+  // su Kona salía dos veces «En vigor», Mapfre y Reale). Solo se esconde si la nueva está en la
+  // MISMA lista: esconderla sin su sustituta dejaría al cliente sin ninguna. La nueva lo dice.
+  const { visibles: polizas, sustituyeA } = ocultarSustituidas(polizasLeidas)
   const polizaIds = polizas.map((p) => p.id)
 
   // ── Las GEMELAS del volcado ───────────────────────────────────────────────
@@ -697,6 +703,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       estado: p.estado,
       vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento: p.fechaVencimiento }, hoy),
       confirmadaCima: p.idPolizaEntidad !== null,
+      sustituyeA: (() => {
+        const v = sustituyeA.get(p.id)
+        return v ? { compania: v.aseguradora, fechaVencimiento: v.fechaVencimiento } : null
+      })(),
       procedencia: { importRef: p.importRef, eiacXmlHash: p.eiacXmlHash },
       prima: ve.prima
         ? {

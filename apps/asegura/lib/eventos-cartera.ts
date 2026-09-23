@@ -31,6 +31,7 @@ import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { proponerReciboDevuelto } from './aprobaciones'
 import { confirmarAnulaciones } from './anulaciones'
+import { enlazarSustituciones } from './sustituciones-auto'
 
 type Consultor = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw'>
 
@@ -92,6 +93,10 @@ export type ResultadoDeteccion = {
   anulacionesConfirmadas: number
   /** Retenciones abiertas antes que se cierran porque ya no hacen falta. */
   retencionesCerradas: number
+  /** Pólizas nuevas enlazadas solas con la que sustituyen (mismo cliente, ramo y matrícula). */
+  sustitucionesEnlazadas: number
+  /** Parejas que casaban pero no de forma única: no se enlazan (se mira a mano en la ficha). */
+  sustitucionesAmbiguas: number
 }
 
 /** La foto actual parece rota (ha desaparecido de golpe una parte grande de la cartera). */
@@ -104,6 +109,9 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     // pueden comparar una foto vieja contra otra ya guardada. `for update` no basta la primera vez,
     // cuando la fila aún no existe.
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`cartera_foto:${correduriaId}`}))`
+    // Antes de la foto: una póliza que acaba de sustituirse sale ya como `sustituida`, y su baja
+    // posterior no se anuncia como fuga ni abre una retención a quien simplemente cambió de compañía.
+    const sust = await enlazarSustituciones(tx, correduriaId)
     const actual = await fotoActual(correduriaId, tx)
     const previa = await tx.$queryRaw<{ foto: Foto }[]>`
       select foto from cartera_foto where correduria_id = ${correduriaId}::uuid`
@@ -189,6 +197,8 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       aprobacionesNuevas,
       aprobacionesFallidas,
       anulacionesConfirmadas: anul.confirmadas,
+      sustitucionesEnlazadas: sust.enlazadas,
+      sustitucionesAmbiguas: sust.ambiguas,
     }
   }, { timeout: 30_000 }).then(async (r) => {
     const { retenciones, ...resto } = r

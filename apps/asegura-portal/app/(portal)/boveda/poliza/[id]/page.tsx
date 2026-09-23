@@ -9,6 +9,7 @@ import { getIdentidad } from '@/lib/session'
 
 import {
   AvisoReciboDevuelto,
+  textoSustitucion,
   Coberturas,
   ESTADO,
   HistorialSiniestros,
@@ -107,6 +108,8 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
           </span>
         ))}
       </div>
+
+      {textoSustitucion(p) && <p className="hueco">{textoSustitucion(p)}.</p>}
 
       <AvisoReciboDevuelto p={p} />
 

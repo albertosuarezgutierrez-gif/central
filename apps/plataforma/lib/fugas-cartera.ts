@@ -35,6 +35,10 @@ export type Deteccion = {
   aprobacionesNuevas: number | null
   aprobacionesFallidas: number | null
   anulacionesConfirmadas: number | null
+  /** Pólizas enlazadas solas con la que sustituyen; `null` = asegura no lo manda. */
+  sustitucionesEnlazadas: number | null
+  /** Sustituciones que casaban con más de una póliza y no se enlazaron. */
+  sustitucionesAmbiguas: number | null
 }
 
 export type Lectura<T> = { estado: 'ok'; dato: T } | { estado: 'sin_datos'; causa: string }
@@ -115,6 +119,8 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
       aprobacionesNuevas: numONull(o.aprobacionesNuevas),
       aprobacionesFallidas: numONull(o.aprobacionesFallidas),
       anulacionesConfirmadas: numONull(o.anulacionesConfirmadas),
+      sustitucionesEnlazadas: numONull(o.sustitucionesEnlazadas),
+      sustitucionesAmbiguas: numONull(o.sustitucionesAmbiguas),
     },
   }
 }
