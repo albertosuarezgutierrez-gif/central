@@ -613,7 +613,7 @@ Enviar la invitación a los **51 clientes invitables**. El botón ya existe en l
 | 1-4 | Hoy como cockpit (aprobaciones, incidencias, tareas) | `agente-mecanico` | M |
 | 1-5 | Portal: «Tus vencimientos» + «Mejórame el precio» + consentimiento en declaradas | sesión (aislamiento) + mecánico (UI) | M |
 | 1-6 | Control de IA: saldo diario con previsión + tope mensual + key propia de asegura | sesión (pequeño) | S |
-| 1-7 | **Aviso por Telegram de TODO lo que hace un cliente** (§S) | sesión (pequeño, 2-3 ficheros) | S |
+| 1-7 | **Aviso por Telegram de TODO lo que hace un cliente** (§S) | sesión (pequeño, 2-3 ficheros) | S · 🟡 construido (cron `correduria-actividad`) |
 
 Cada fila es un PR y una sesión. Las filas 1-3/1-4 y 1-5/1-6 no se pisan y pueden ir en paralelo.
 
@@ -640,6 +640,11 @@ falta es que **empuje**. Diseño:
   sus pólizas» del cambio de dirección): el aviso lleva esa misma advertencia y, cuando exista la cola de
   tareas (1-1), **crea la tarea de revisarlo** en vez de quedarse en texto.
 - **Fallo visible:** si el job no puede leer el feed, avisa del fallo una vez; nunca «0 novedades».
+- **Construido (23/09):** alcance «todo lo del portal»; póliza declarada y sugerencia se saltan porque el portal
+  ya las avisa al instante (el primer acceso llega duplicado, aceptado). Puerto `GET /api/operador/actividad-nueva`
+  (asegura), cron `correduria-actividad` cada 5 min (plataforma), regla pura `actividad-aviso.ts`. Un mensaje por
+  pasada agrupado por cliente. Fuera: subida de documentos, peticiones de acceso, autorizaciones, «confirmó sus
+  datos» (no están en el feed) y cliente nuevo por CIMA (sin señal fiable).
 - **Cuando moleste:** agrupar en ráfagas (varios eventos del mismo cliente en 10 min → un mensaje) y, más
   adelante, pasar los de baja señal a un resumen diario. Esa decisión se toma con datos, no a priori.
 

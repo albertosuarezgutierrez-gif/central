@@ -282,6 +282,20 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.correduria_ingesta.',
   },
   {
+    id: 'correduria_actividad',
+    vigiladoDesde: '2026-09-23',
+    etiqueta: '👤 Actividad de clientes en el portal — aviso por Telegram (cron cada 5 min)',
+    // Cada 5 min → 1 h de margen: doce pasadas perdidas seguidas ya no es un tropiezo.
+    maxHoras: 1,
+    nota:
+      'Empuja a Telegram lo que hace un cliente en su intranet (entrar, no poder entrar, cambiar su ' +
+      'dirección, dar un parte, pedir la supresión). Lee el `detalle`: «NO se ha podido mirar» (puerto, ' +
+      'secreto o BD de asegura) NO quiere decir que nadie haya hecho nada; «primera pasada» es que se ' +
+      'ancló la marca sin mandar el histórico; «nada nuevo (comprobado)» sí es que se miró y no hay; ' +
+      '«SIN avisar» es que el Telegram no salió y se reintenta (la marca NO avanza). ' +
+      'Huella: agente_latidos.correduria_actividad.',
+  },
+  {
     id: 'correduria_siniestros',
     vigiladoDesde: '2026-09-05',
     etiqueta: '🚨 Siniestros nuevos de la cartera — avisar para llamar al cliente (cron diario 06:50)',

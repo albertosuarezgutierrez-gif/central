@@ -43,6 +43,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   // ve desde aquí: `prisma_plataforma` no tiene acceso al schema `seguros`): esa tabla solo crece
   // cuando entra un siniestro, así que un mes tranquilo y un cron muerto serían el mismo silencio.
   // Lo que se vigila es la PASADA del vigía, y su `detalle` trae la marca de agua.
+  correduria_actividad: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_actividad'`,
   correduria_siniestros: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_siniestros'`,

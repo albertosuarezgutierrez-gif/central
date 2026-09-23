@@ -162,6 +162,11 @@ export const CRON_JOBS: CronJob[] = [
   // no trae nada— y antes de `agentes-latido` (07:45), para que el parte del día lea una
   // huella fresca. Avisa a Alberto para que LLAME al cliente y le haga seguimiento.
   { path: '/api/cron/correduria-siniestros', schedule: '50 6 * * *' },
+  // Aviso por Telegram de todo lo que hace un cliente en el portal (entrar, no
+  // poder entrar, cambiar su dirección, dar un parte, pedir la supresión…).
+  // Cada 5 min: es un aviso de «acaba de pasar», no un resumen. La marca de
+  // agua NO avanza si el Telegram no sale. Ver el fichero de la ruta.
+  { path: '/api/cron/correduria-actividad', schedule: '*/5 * * * *' },
   // Blog de grupoasegura.es: un artículo cada dos semanas (día 1 y 15, 08:00 UTC).
   // Cron no sabe decir «cada 14 días», y una lista de días de mes es lo más cercano
   // que además es ESTABLE: un `*/14` se descuadraría en cada mes de 31 días.

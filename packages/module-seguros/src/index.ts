@@ -751,3 +751,15 @@ export type {
   TareaValida,
   TipoTarea,
 } from './oportunidad-seguimiento.ts'
+export {
+  TIPOS_YA_AVISADOS,
+  VENTANA_MINUTOS,
+  claveEvento,
+  decidirAvisosActividad,
+  desdeConsulta,
+  detalleActividad,
+  leerMarcaActividad,
+  mensajeActividad,
+  serializarMarcaActividad,
+} from './actividad-aviso.ts'
+export type { DecisionActividad, MarcaActividad } from './actividad-aviso.ts'
