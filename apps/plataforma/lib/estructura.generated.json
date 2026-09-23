@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-23T12:45:15Z",
+  "generadoEn": "2026-09-23T13:26:42Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -960,7 +960,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-web": {
         "estado": "no",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 83
+        "evidencias": 84
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 82
+        "evidencias": 85
       },
       "asegura-web": {
         "estado": "usado",
@@ -2306,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 23
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 66
+        "evidencias": 69
       },
       "asegura-web": {
         "estado": "usado",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 10
+        "evidencias": 11
       },
       "asegura-portal": {
         "presente": false,
@@ -4035,6 +4035,7 @@
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/llamada",
       "/api/operador/oportunidad/tarea",
+      "/api/operador/oportunidad/whatsapp",
       "/api/operador/partes",
       "/api/operador/poliza",
       "/api/operador/poliza-documento",
@@ -4064,6 +4065,7 @@
       "/api/portal/contactos",
       "/api/portal/contactos/[id]",
       "/api/portal/documento",
+      "/api/portal/mejorar-precio",
       "/api/portal/nota",
       "/api/publico/recaptacion/baja",
       "/api/webhooks/codeoscopic",
@@ -4084,6 +4086,7 @@
       "/api/invitaciones",
       "/api/invitaciones/[id]",
       "/api/invitaciones/responder",
+      "/api/mejorar-precio",
       "/api/mis-datos",
       "/api/mis-datos/confirmar",
       "/api/mis-datos/contactos",
@@ -4950,6 +4953,7 @@
       "/api/correduria/oportunidad",
       "/api/correduria/oportunidad/llamada",
       "/api/correduria/oportunidad/tarea",
+      "/api/correduria/oportunidad/whatsapp",
       "/api/correduria/partes",
       "/api/correduria/poliza",
       "/api/correduria/portal-invitaciones",
@@ -6458,7 +6462,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1416,
+    "apis": 1420,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
