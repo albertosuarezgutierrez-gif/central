@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-23T12:02:55Z",
+  "generadoEn": "2026-09-23T12:35:02Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 82
+        "evidencias": 83
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4033,6 +4033,7 @@
       "/api/operador/leads-competencia",
       "/api/operador/leads-web",
       "/api/operador/oportunidad",
+      "/api/operador/oportunidad/llamada",
       "/api/operador/oportunidad/tarea",
       "/api/operador/partes",
       "/api/operador/poliza",
@@ -4946,6 +4947,7 @@
       "/api/correduria/leads-competencia",
       "/api/correduria/leads-web",
       "/api/correduria/oportunidad",
+      "/api/correduria/oportunidad/llamada",
       "/api/correduria/oportunidad/tarea",
       "/api/correduria/partes",
       "/api/correduria/poliza",
@@ -6454,7 +6456,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1412,
+    "apis": 1414,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
