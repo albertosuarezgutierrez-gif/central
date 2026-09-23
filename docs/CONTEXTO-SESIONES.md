@@ -20,7 +20,11 @@ contraseña de Frankfurt (lo que se iba a hacer, Manuel frenó con buen criterio
 borrar nada. Hecho: residuo limpiado (queda 1 con `consent_logs`, a propósito); rol **`smoke_cleanup`** (SELECT por
 columna, DELETE en 3 tablas, nada de `public`, sin contraseña; `apps/asegura/prisma/sql/2026-09-23_smoke_cleanup_rol.sql`);
 `asegura#849` (secret `SMOKE_CLEANUP_DATABASE_URL`, `search_path` fijado, sin secret falla en vez de saltarse).
-**Pendiente de Alberto:** contraseña del rol + secret en el mismo paso. #815 cerrado solo; #847 sigue abierto hasta el primer run bueno.
+✅ Secret puesto y verificado (run 35870222592: la purga borró 1 cot + 3 eventos + 1 lead; #847 cerrado).
+**PostHog:** la fuente se repuntó a central (`seguros`), pero su tabla quedó anclada a `public` y no hay forma de
+cambiarlo sin renombrarla (lo que rompería las alertas CIMA heartbeat, A1 y A14): vista `public.operational_events`
+solo para `posthog_readonly` (`apps/asegura/prisma/sql/2026-09-23_posthog_vista_operational_events.sql`).
+Lección: «Completed» en un sync de PostHog no dice nada; la señal es la ÚLTIMA fila (estuvo con 0 filas desde el 11/09).
 
 
 
