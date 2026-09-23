@@ -620,11 +620,21 @@ function descifrarCalle(v: string): string | null {
 
 async function porNumeroPoliza(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
+  // `c.valor` llega COMPACTO («3HG410018502»: sin guiones, barras ni espacios) y
+  // el número se guarda como lo escribió la compañía («3H-G-410018502»). Un
+  // `contains` directo no casaba nunca con los que llevan separadores y la
+  // pantalla decía «nadie coincide» de una póliza que sí está (23/09/2026). Se
+  // compacta también la columna antes de comparar.
+  const ids = await db.$queryRaw<{ id: string }[]>`
+    select id from polizas
+    where correduria_id = ${correduriaId}::uuid
+      and merged_into_poliza_id is null
+      and regexp_replace(upper(numero_poliza), '[^A-Z0-9]', '', 'g') like ${'%' + c.valor + '%'}
+    limit ${LIMITE}
+  `
   const filas = await db.poliza.findMany({
     where: {
-      correduriaId,
-      mergedIntoPolizaId: null,
-      numeroPoliza: { contains: c.valor, mode: 'insensitive' },
+      id: { in: ids.map((r) => r.id) },
       cliente: { mergedIntoClienteId: null, activo: true },
     },
     select: {
