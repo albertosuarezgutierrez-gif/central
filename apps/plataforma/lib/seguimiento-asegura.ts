@@ -19,6 +19,7 @@ import {
   mensajeRenovacionLeadWhatsapp,
   puedeWhatsappLead,
   type CanalLead,
+  type ContactoMovil,
   type EstadoOportunidad,
   type MotivoPerdida,
   type PasoLead,
@@ -480,6 +481,27 @@ export function registrarLlamadaAsegura(body: Record<string, unknown>): Promise<
 /** Anota que se abrió el WhatsApp de seguimiento de un lead (no envía nada). */
 export function registrarWhatsappAsegura(body: { oportunidadId: string; actor: string }): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/whatsapp', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/** Clientes en vigor y leads de Vencimientos con su contacto, para el .vcf del móvil. */
+export function contactosMovilAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/contactos-movil', { method: 'GET' })
+}
+
+/**
+ * Lectura defensiva de la respuesta: `null` = no se pudo leer (el .vcf NO se
+ * genera vacío, que se importaría como «no tienes a nadie»).
+ */
+export function interpretarContactosMovil(status: number, j: unknown): { contactos: ContactoMovil[]; clientesSinLeer: number } | null {
+  const o = (typeof j === 'object' && j !== null ? j : {}) as Record<string, unknown>
+  if (status !== 200 || o.estado !== 'ok' || !Array.isArray(o.contactos)) return null
+  const txt = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v : null)
+  const contactos = o.contactos.flatMap((c): ContactoMovil[] => {
+    const x = (typeof c === 'object' && c !== null ? c : {}) as Record<string, unknown>
+    if (typeof x.clienteId !== 'string' || (x.grupo !== 'cliente' && x.grupo !== 'lead')) return []
+    return [{ clienteId: x.clienteId, nombre: txt(x.nombre), apellidos: txt(x.apellidos), telefono: txt(x.telefono), email: txt(x.email), grupo: x.grupo }]
+  })
+  return { contactos, clientesSinLeer: typeof o.clientesSinLeer === 'number' ? o.clientesSinLeer : 0 }
 }
 
 export function tareasHoyAsegura(): Promise<Reenvio> {

@@ -13,6 +13,12 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** 📇 **Contactos para el móvil (.vcf).** Botón en `/correduria` → Clientes: clientes en vigor (67) + leads de Vencimientos,
+con «· AS Cliente» / «· AS Lead» en el nombre para saber quién llama. Solo nombre, teléfono, correo y enlace a la ficha (ni DNI ni dirección).
+Datos por `GET /api/operador/contactos-movil` (asegura, descifra) → `libroVcard` (module-seguros) en `/api/correduria/contactos-movil`.
+🚨 La cuenta de Google de Alberto es **Gmail personal** (medido 23/09, MX de grupoasegura.es en IONOS): el .vcf se importa en el
+ALMACENAMIENTO DEL TELÉFONO, no en Google (sin contrato de encargado). Sincronización automática solo si pasa a Google Workspace.
+
 **(23/09/2026)** 💶 **Pieza 1-5: portal «Tus vencimientos» + «Quiero que me mejores el precio».** En «Mis seguros» del portal, tarjeta por
 póliza PROPIA en vigor que renueva en ≤60 días (no las de terceros autorizados; una fecha pasada NO entra). El botón lleva a
 `/boveda/mejorar/[id]` (prioridad · canal · momento · nota) → `POST /api/mejorar-precio` (portal) → puente `POST /api/portal/mejorar-precio`

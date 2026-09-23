@@ -1,5 +1,6 @@
 'use client'
 
+import ContactosMovil from './ContactosMovil'
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
@@ -436,6 +437,7 @@ export default function CorreduriaClient() {
           provincia, vencimiento o hueco de venta cruzada, y sacar la lista.
           Es la herramienta de trabajo; «Cartera» es la foto. */}
       <div role="tabpanel" aria-label="Clientes" className="corr-panel" style={panel('clientes')}>
+        <ContactosMovil />
         <ListaCartera onContador={setNClientes} />
 
         {/* Leads del volcado sin vencimiento, con contacto, que hoy no son
