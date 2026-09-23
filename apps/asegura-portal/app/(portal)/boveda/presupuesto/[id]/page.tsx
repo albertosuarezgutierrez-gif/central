@@ -6,6 +6,7 @@ import { TEXTO_AJENO, TEXTO_VINCULO_AMBIGUO, textoCaducidad } from '@/lib/presup
 
 import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fecha } from './Comparativa'
 import { Plegable } from './RestoDeOpciones'
+import { AceptarOpcion } from './AceptarOpcion'
 
 export const dynamic = 'force-dynamic'
 
@@ -115,6 +116,14 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
 
       <Actual actual={p.actual} />
 
+      {p.aceptadoAt !== null && (
+        <section className="seccion">
+          <p className="confirmacion" style={{ margin: 0 }}>
+            Aceptaste este presupuesto el {fecha(p.aceptadoAt)}{p.emitidoAt !== null ? '. Emitido' : ''}
+          </p>
+        </section>
+      )}
+
       <section className="seccion">
         <h2 style={{ marginTop: 0 }}>Lo que he encontrado</h2>
         <SinEquivalenteAviso motivo={p.motivoSinEquivalente} />
@@ -132,11 +141,23 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         )}
       </section>
 
-      {portada.map((o) => (
-        <section className="seccion" key={`g-${o.id}`}>
-          <Garantias o={o} actual={p.actual} />
-        </section>
-      ))}
+      {portada.map((o) => {
+        const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
+        return (
+          <section className="seccion" key={`g-${o.id}`}>
+            <Garantias o={o} actual={p.actual} />
+            {puedeAceptar && o.primaEur !== null && (
+              <AceptarOpcion
+                presupuestoId={p.id}
+                opcionId={o.id}
+                prima={o.primaEur}
+                compania={o.compania}
+                corredor={p.vistaDeCorredor}
+              />
+            )}
+          </section>
+        )
+      })}
 
       {/* Cerrado por defecto y con montaje perezoso (regla de rendimiento).
           ⚠️ Hoy `resto` está SIEMPRE vacío: el preparador congela solo las

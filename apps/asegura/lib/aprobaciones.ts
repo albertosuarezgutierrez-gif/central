@@ -77,6 +77,8 @@ export async function proponerAnulacionesFirmadas(correduriaId: string): Promise
       join firma f on f.id = a.firma_id
       left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
     where a.correduria_id = ${correduriaId}::uuid and a.estado = 'firmada' and a.carta_texto is not null
+      -- Firmada junto a un presupuesto (cambio de compañía): no sale hasta que la nueva conste emitida.
+      and (a.presupuesto_id is null or exists (select 1 from presupuesto pr where pr.id = a.presupuesto_id and pr.emitido_at is not null))
       and not exists (select 1 from aprobacion x where x.anulacion_id = a.id
                       and x.estado in ('pendiente', 'enviando', 'ejecutada', 'rechazada'))`
   let n = 0

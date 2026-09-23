@@ -152,3 +152,12 @@ test('🪤 el aviso: «enlazado» no es «enviado» y ningún fallo se pinta com
   assert.equal(textoAviso(200, { estado: 'enlace', whatsapp: 'https://wa.me/?text=x' }).whatsapp, 'https://wa.me/?text=x')
   assert.equal(leerPresupuestoEnLista({ id: 'a', estado: 'raro', creadoAt: 'x', venceEl: 'y' }), null)
 })
+
+test('🪤 solo un aceptado se marca emitido', async () => {
+  const { accionesPresupuesto, textoAviso } = await import('./presupuesto-asegura.ts')
+  assert.equal(accionesPresupuesto('aceptado').emitir, true)
+  assert.equal(accionesPresupuesto('elegido').emitir, false)
+  assert.equal(accionesPresupuesto('emitido').emitir, false)
+  assert.equal(textoAviso(409, { estado: 'error', detalle: 'x' }).ok, false)
+  assert.equal(textoAviso(200, { estado: 'emitido' }).ok, true)
+})
