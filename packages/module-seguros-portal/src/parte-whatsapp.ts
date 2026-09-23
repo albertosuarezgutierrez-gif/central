@@ -81,3 +81,17 @@ export function mensajeParteWhatsapp(d: DatosParteWhatsapp): string | null {
   ]
   return lineas.filter((l): l is string => l !== null).join('\n')
 }
+
+/**
+ * La línea que queda en el historial de su ficha (y el aviso a Alberto) cuando el cliente
+ * pulsa «ya se lo he mandado». 🚨 Es SU palabra: nosotros no vemos esa conversación, y la
+ * frase lo dice para que nadie dé por abierto un siniestro que la compañía no ha recibido.
+ */
+export function notaParteMandadoWhatsapp(compania: string, fechaHecho: string, conPdf: boolean): string {
+  const f = FECHA.exec(fechaHecho.trim())
+  const cuando = f ? ` del ${f[3]}/${f[2]}/${f[1]}` : ''
+  return (
+    `📲 El cliente dice que ha mandado el parte${cuando} a ${compania.trim() || 'su compañía'} por WhatsApp` +
+    `${conPdf ? ', con el PDF de datos y fotos' : ''}. No lo hemos visto: confírmalo con la compañía y apunta el nº de siniestro.`
+  )
+}

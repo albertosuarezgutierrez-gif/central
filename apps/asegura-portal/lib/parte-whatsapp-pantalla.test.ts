@@ -25,3 +25,10 @@ test('🪤 un fichero que no cabe en el PDF se dice, no se pierde en silencio', 
   assert.match(pdf, /Ficheros que no se han podido incluir/)
   assert.match(boton, /r\.omitidos\.length > 0/)
 })
+
+test('🪤 «ya se lo he mandado» solo anota partes de ESA identidad, y el botón lo manda al parte creado', () => {
+  const lib = readFileSync(new URL('./parte-compania.ts', import.meta.url), 'utf8')
+  assert.match(lib, /where: \{ id: parteId, identidadId \}/)
+  assert.ok(lib.indexOf("if (!parte) return { estado: 'no_encontrado' }") < lib.indexOf('/api/portal/nota'))
+  assert.match(boton, /fetch\(`\/api\/siniestros\/\$\{parteId\}\/whatsapp`/)
+})

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { RELATO_MAX_WHATSAPP, mensajeParteWhatsapp, type DatosParteWhatsapp } from './parte-whatsapp.ts'
+import { RELATO_MAX_WHATSAPP, mensajeParteWhatsapp, notaParteMandadoWhatsapp, type DatosParteWhatsapp } from './parte-whatsapp.ts'
 import { canalDeCompania, enlaceWhatsapp, textoSoloRamos, whatsappParaRamo, type FilaCompania } from './canal-compania.ts'
 
 const d: DatosParteWhatsapp = {
@@ -45,4 +45,10 @@ test('🪤 un WhatsApp solo de hogar no se ofrece para auto ni para un ramo desc
   assert.equal(textoSoloRamos(['hogar']), 'Solo para partes de hogar')
   const libre = canalDeCompania('Mapfre', [{ ...fila, whatsappRamos: null }])
   assert.equal(whatsappParaRamo(libre, null)?.soloRamos, null)
+})
+
+test('🪤 la nota de «ya se lo he mandado» dice que es palabra del cliente, no un envío comprobado', () => {
+  const t = notaParteMandadoWhatsapp('Generali', '2026-09-23', true)
+  assert.match(t, /El cliente dice que ha mandado el parte del 23\/09\/2026 a Generali por WhatsApp, con el PDF/)
+  assert.match(t, /No lo hemos visto/)
 })

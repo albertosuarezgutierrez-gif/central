@@ -1105,6 +1105,7 @@ export function ParteSiniestro({
               horario={paraCompania.horario}
               datos={paraCompania.datos}
               ficheros={paraCompania.ficheros}
+              parteId={parteId}
             />
           )}
         </div>
