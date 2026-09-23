@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-23T16:22:55Z",
+  "generadoEn": "2026-09-23T19:39:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -524,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 10
       },
       "asegura-portal": {
         "estado": "usado",
@@ -577,8 +577,8 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 3
       },
       "asegura-portal": {
         "estado": "no",
@@ -960,7 +960,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-web": {
         "estado": "no",
@@ -2198,15 +2198,15 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 88
+        "evidencias": 95
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 85
+        "evidencias": 87
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 26
+        "evidencias": 27
       },
       "housesevillana": {
         "estado": "no",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 74
+        "evidencias": 76
       },
       "rrhh": {
         "estado": "no",
@@ -2306,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 23
+        "evidencias": 24
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 69
+        "evidencias": 71
       },
       "asegura-web": {
         "estado": "usado",
@@ -2848,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 11
+        "evidencias": 14
       },
       "asegura-portal": {
         "presente": false,
@@ -3977,6 +3977,7 @@
       "/api/cron/revision-anual",
       "/api/operador/actividad",
       "/api/operador/actividad-nueva",
+      "/api/operador/anulaciones",
       "/api/operador/aprobaciones",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
@@ -3999,6 +4000,7 @@
       "/api/operador/codeoscopic/emitir",
       "/api/operador/codeoscopic/faltan-producto",
       "/api/operador/codeoscopic/hogar-nuevo",
+      "/api/operador/codeoscopic/limites-hogar",
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/moto-nuevo",
       "/api/operador/codeoscopic/oferta",
@@ -4063,14 +4065,17 @@
       "/api/operador/tareas-hoy",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
+      "/api/portal/anulacion",
       "/api/portal/carnets",
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
       "/api/portal/contactos",
       "/api/portal/contactos/[id]",
+      "/api/portal/datos-emision",
       "/api/portal/documento",
       "/api/portal/mejorar-precio",
       "/api/portal/nota",
+      "/api/portal/presupuesto",
       "/api/publico/recaptacion/baja",
       "/api/webhooks/codeoscopic",
       "/api/webhooks/resend"
@@ -4078,6 +4083,7 @@
     "asegura-portal": [
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
+      "/api/anulacion",
       "/api/autorizaciones",
       "/api/autorizaciones/[id]",
       "/api/avisos",
@@ -4085,6 +4091,7 @@
       "/api/catastro/sugerir",
       "/api/consentimiento",
       "/api/cron/avisos-push",
+      "/api/documento/dni",
       "/api/hojas",
       "/api/hojas/[id]",
       "/api/invitaciones",
@@ -4101,6 +4108,7 @@
       "/api/polizas/[id]",
       "/api/polizas/[id]/carta",
       "/api/polizas/[id]/reintentar",
+      "/api/presupuesto/firma",
       "/api/push/desuscribir",
       "/api/push/suscribir",
       "/api/recordatorios",
@@ -4919,6 +4927,7 @@
       "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/actividad",
+      "/api/correduria/anulaciones",
       "/api/correduria/aprobaciones",
       "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
@@ -5414,6 +5423,7 @@
     "asegura": [
       "if",
       "seguros._volcado_control",
+      "seguros.anulacion",
       "seguros.aprobacion",
       "seguros.auditoria",
       "seguros.backfill_dni_plan",
@@ -6476,7 +6486,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1429,
+    "apis": 1438,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
