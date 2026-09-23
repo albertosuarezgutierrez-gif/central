@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** Cableado el reintento del PDF de `issuedDocuments[]` en el endpoint de
+DIAGNÓSTICO (no en el acuñado, que sigue sin reintentar a propósito): `GET
+/api/operador/codeoscopic/documentos?projectId=` repite el Retrieve UNA vez (2,5s de pausa, mismo
+patrón que `oferta/route.ts`) solo si la solicitud está aprobada y aún no trae documentos —
+`meritaReintentoDocumento()` nuevo en `documentos-emitidos.ts`, puro y testeado. `maxDuration` sube
+de 60 a 120 (la ruta encadena hasta 4 llamadas al vendor); `retrievePolicyApplication()` extrae el
+Retrieve a un solo sitio para que la lectura y el reintento no diverjan — los dos hallazgos de un
+`code-review` obligatorio antes de este commit. tsc 0, `pnpm test` asegura 612/612.
+
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
 compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña

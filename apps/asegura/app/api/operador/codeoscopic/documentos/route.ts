@@ -6,10 +6,17 @@ import { resolverConfigEmision, leerProyectoCrudo, redactarCrudoVendor } from '@
 import { peticion } from '@/lib/codeoscopic/cliente'
 import { solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
 import { archivarDocumentoEmitido } from '@/lib/codeoscopic/archivar-documento'
-import { documentosEmitidos, documentoPoliza } from '@/lib/codeoscopic/documentos-emitidos'
+import { documentosEmitidos, documentoPoliza, meritaReintentoDocumento } from '@/lib/codeoscopic/documentos-emitidos'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+// 120, no 60: esta ruta hoy encadena HASTA CUATRO llamadas al vendor (el
+// proyecto, el Retrieve, su reintento y la descarga del PDF), cada una con
+// su propio timeout configurable hasta 60 s (`CODEOSCOPIC_REQUEST_TIMEOUT_MS`,
+// `lib/codeoscopic/config.ts`) — con 60 s de presupuesto, el peor caso mataría
+// la función ANTES de responder, rompiendo la promesa de «la descarga NUNCA
+// rompe la respuesta» por un motivo distinto (el propio plazo, no un fallo).
+export const maxDuration = 120
 
 /**
  * `GET ?projectId=` — lo que Codeoscopic devuelve de la SOLICITUD DE EMISIÓN
@@ -22,9 +29,30 @@ export const dynamic = 'force-dynamic'
  * creationDateTime, expirationDateTime}`, se descarga con `GET {url}` + el
  * MISMO Bearer, gratis).
  *
+ * 🚨 Reintento ÚNICO (23/09/2026): si la compañía ya aprobó y esta lectura no
+ * trae `issuedDocuments[]` (el vendor no ha terminado de generarlo — el
+ * portal no dice cuánto tarda), se repite el Retrieve UNA vez tras una pausa
+ * corta. Gratis (sigue siendo un `GET`) y acotado: mismo patrón que
+ * `oferta/route.ts` con `effectiveDate` — nunca un bucle sin salida, ni un
+ * reintento sobre una solicitud pendiente/rechazada (ahí esperar no cambia
+ * nada). Sigue siendo esto, y no el flujo de acuñado, el sitio donde se
+ * reintenta: en `emitir/route.ts` se decidió NO reintentar porque una
+ * emisión no puede quedarse esperando al vendor con el corredor delante.
+ *
  * La descarga NUNCA rompe la respuesta: si falla, el `issuedDocuments` crudo
  * sigue viajando igual para que la pantalla enseñe el enlace de todos modos.
  */
+/** El Retrieve individual (`GET .../policy-applications/{id}`), en UN solo
+ *  sitio: la primera lectura y el reintento tienen que pedir EXACTAMENTE lo
+ *  mismo, o divergirían en silencio si algún día cambia (cabecera, timeout…). */
+async function retrievePolicyApplication(config: Parameters<typeof peticion>[0], projectId: string, solicitudId: string): Promise<unknown> {
+  return peticion(config, {
+    metodo: 'GET',
+    path: `/insurances/${encodeURIComponent(projectId)}/policy-applications/${encodeURIComponent(solicitudId)}`,
+    timeoutMs: config.timeoutGenericoMs,
+  })
+}
+
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ estado: 'error', mensaje: 'no autorizado' }, { status: 401 })
@@ -75,11 +103,7 @@ export async function GET(req: Request) {
 
   let policyApplication: unknown
   try {
-    policyApplication = await peticion(r.config, {
-      metodo: 'GET',
-      path: `/insurances/${encodeURIComponent(projectId)}/policy-applications/${encodeURIComponent(solicitud.id)}`,
-      timeoutMs: r.config.timeoutGenericoMs,
-    })
+    policyApplication = await retrievePolicyApplication(r.config, projectId, solicitud.id)
   } catch (e) {
     return NextResponse.json({
       estado: 'ok',
@@ -87,6 +111,22 @@ export async function GET(req: Request) {
       solicitud,
       mensaje: `no se pudo hacer el Retrieve individual: ${e instanceof Error ? e.message : String(e)}`,
     })
+  }
+
+  // ── Reintento ÚNICO si aprobada pero sin documentos todavía ─────────────
+  // Gratis (GET) y acotado a uno solo — si el vendor sigue sin traer nada
+  // tras la pausa, se sigue con lo que ya se tiene: nunca un bucle sin
+  // salida, y nunca sobre una solicitud pendiente/rechazada (ahí no hay nada
+  // que esperar). Un fallo en el reintento no tumba la respuesta: se queda
+  // con la primera lectura, que ya es válida.
+  if (meritaReintentoDocumento(solicitud.veredicto, documentosEmitidos(policyApplication))) {
+    await new Promise((resolve) => setTimeout(resolve, 2500))
+    try {
+      const relectura = await retrievePolicyApplication(r.config, projectId, solicitud.id)
+      if (documentosEmitidos(relectura).length > 0) policyApplication = relectura
+    } catch {
+      // Sin reintento aplicado: se sigue con la primera lectura.
+    }
   }
 
   // Best-effort: guarda la respuesta cruda para no perderla otra vez. SIEMPRE
