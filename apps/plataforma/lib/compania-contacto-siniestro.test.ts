@@ -1,7 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { companiaDeSiniestro, contactoSiniestroDe, tieneAlgoQueEnsenar } from './compania-contacto-siniestro.ts'
+import { companiaDeSiniestro, contactoSiniestroDe, tieneAlgoQueEnsenar, whatsappParaRamo } from './compania-contacto-siniestro.ts'
+import { leerCompanias } from './companias-asegura.ts'
 import type { Compania, Contacto } from './companias-asegura.ts'
 
 function compania(p: Partial<Compania> = {}): Compania {
@@ -14,6 +15,7 @@ function compania(p: Partial<Compania> = {}): Compania {
     notas: null,
     telefonoSiniestros: null,
     whatsappSiniestros: null,
+    whatsappSiniestrosRamos: null,
     horarioSiniestros: null,
     contactos: [],
     ...p,
@@ -81,6 +83,32 @@ test('whatsapp y horario son SIEMPRE los de la compañía, aunque haya persona d
 })
 
 test('tieneAlgoQueEnsenar: false solo cuando los cuatro campos son null', () => {
-  assert.equal(tieneAlgoQueEnsenar({ nombre: null, telefono: null, whatsapp: null, horario: null }), false)
-  assert.equal(tieneAlgoQueEnsenar({ nombre: null, telefono: null, whatsapp: null, horario: '24h' }), true)
+  assert.equal(tieneAlgoQueEnsenar({ nombre: null, telefono: null, whatsapp: null, whatsappNota: null, horario: null }), false)
+  assert.equal(tieneAlgoQueEnsenar({ nombre: null, telefono: null, whatsapp: null, whatsappNota: null, horario: '24h' }), true)
+})
+
+// ── WhatsApp restringido por ramo (23/09/2026) ───────────────────────────────
+
+test('🚨 el WhatsApp de hogar de Mapfre NO sale en un siniestro de auto, ni con el ramo desconocido', () => {
+  const c = compania({ whatsappSiniestros: '+34920750075', whatsappSiniestrosRamos: ['hogar'] })
+  assert.equal(contactoSiniestroDe(c, 'auto').whatsapp, null)
+  assert.equal(contactoSiniestroDe(c, null).whatsapp, null)
+  assert.equal(contactoSiniestroDe(c).whatsapp, null)
+  const h = contactoSiniestroDe(c, 'Hogar')
+  assert.equal(h.whatsapp, '+34920750075')
+  assert.equal(h.whatsappNota, 'Solo para partes de hogar')
+})
+
+test('sin restricción de ramo el WhatsApp vale para todo y no lleva nota', () => {
+  const c = compania({ whatsappSiniestros: '+34654033629' })
+  assert.equal(whatsappParaRamo(c, 'auto'), '+34654033629')
+  assert.equal(whatsappParaRamo(c, null), '+34654033629')
+  assert.equal(contactoSiniestroDe(c, 'auto').whatsappNota, null)
+})
+
+test('el parser: lista vacía o ausente = sin restricción (null); normaliza a minúsculas', () => {
+  const base = { codigoDgs: 'C0058', nombreComun: 'Mapfre', whatsappSiniestros: '+34920750075' }
+  assert.equal(leerCompanias([{ ...base, whatsappSiniestrosRamos: [] }])![0].whatsappSiniestrosRamos, null)
+  assert.equal(leerCompanias([base])![0].whatsappSiniestrosRamos, null)
+  assert.deepEqual(leerCompanias([{ ...base, whatsappSiniestrosRamos: [' HOGAR ', 7] }])![0].whatsappSiniestrosRamos, ['hogar'])
 })

@@ -650,6 +650,9 @@ model CompaniaDgs {
   telefonoFuente        String?   @map("telefono_fuente")
   telefonoVerificadoEn  DateTime? @map("telefono_verificado_en") @db.Timestamptz(6)
   whatsappSiniestros    String?   @map("whatsapp_siniestros")
+  // Vacío = el WhatsApp vale para todos los ramos; con valores, SOLO para esos
+  // (Mapfre: solo partes de hogar). NOT NULL DEFAULT '{}' en la BD (23/09/2026).
+  whatsappSiniestrosRamos String[] @default([]) @map("whatsapp_siniestros_ramos")
   horarioSiniestros     String?   @map("horario_siniestros")
   claveMediador     String?   @map("clave_mediador")
   contactos         CompaniaContacto[]

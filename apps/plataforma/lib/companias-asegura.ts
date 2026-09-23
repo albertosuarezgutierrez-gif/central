@@ -40,6 +40,9 @@ export type Compania = {
    *  de la compañía, no la persona concreta que le lleva la cartera a Alberto. */
   telefonoSiniestros: string | null
   whatsappSiniestros: string | null
+  /** Ramos para los que vale ese WhatsApp (`null` = para todos, o el puerto no lo dice).
+   *  Mapfre: solo `['hogar']` — un parte de auto a esa línea se queda sin contestar. */
+  whatsappSiniestrosRamos: string[] | null
   horarioSiniestros: string | null
   contactos: Contacto[]
 }
@@ -82,6 +85,13 @@ function leerContactos(v: unknown): Contacto[] {
   return v.map(leerContacto).filter((c): c is Contacto => c !== null)
 }
 
+/** Lista de ramos en minúsculas, o `null` si no llega, no es lista o queda vacía («vale para todos»). */
+function ramos(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null
+  const r = v.filter((x): x is string => typeof x === 'string').map((x) => x.trim().toLowerCase()).filter((x) => x !== '')
+  return r.length === 0 ? null : r
+}
+
 function leerCompania(v: unknown): Compania | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
@@ -97,6 +107,7 @@ function leerCompania(v: unknown): Compania | null {
     notas: cadena(o.notas),
     telefonoSiniestros: cadena(o.telefonoSiniestros),
     whatsappSiniestros: cadena(o.whatsappSiniestros),
+    whatsappSiniestrosRamos: ramos(o.whatsappSiniestrosRamos),
     horarioSiniestros: cadena(o.horarioSiniestros),
     contactos: leerContactos(o.contactos),
   }

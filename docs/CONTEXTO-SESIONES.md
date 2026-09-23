@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 📲 **PR 8: el WhatsApp de siniestros respeta su ramo también en plataforma.** #3409 mergeado. La ficha
+de un siniestro en `/correduria` pintaba el WhatsApp de la compañía sin mirar el ramo: con el de Mapfre (solo partes de
+hogar) activo habría ofrecido esa línea en siniestros de auto. Ahora `whatsappParaRamo()` (plataforma, misma regla que
+el portal: con restricción y ramo desconocido → no se pinta) + nota «Solo para partes de hogar»; asegura sirve
+`whatsappSiniestrosRamos` en `/api/operador/companias`. Pendiente tras desplegar: aplicar
+`apps/asegura-portal/prisma/sql/2026-09-23b_companias_whatsapp_mapfre_hogar.sql` (activa Mapfre hogar).
+
 **(23/09/2026)** 📲 **PR 7: el parte también a la compañía por WhatsApp (lo manda el cliente).** #3401 (PR 6) mergeado con su
 revisión (carta nunca a «(legacy)», guardas del botón en el puente, cartas pendientes en Hoy). Nuevo: tras dar el parte, si
 la póliza tiene WhatsApp de su compañía VÁLIDO PARA SU RAMO, dos toques: abrir el chat con el texto escrito (`wa.me?text=`)

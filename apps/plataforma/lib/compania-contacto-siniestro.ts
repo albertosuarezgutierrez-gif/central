@@ -42,7 +42,33 @@ export type ContactoSiniestro = {
   nombre: string | null
   telefono: string | null
   whatsapp: string | null
+  /** «Solo para partes de hogar» cuando el WhatsApp está restringido a unos ramos. */
+  whatsappNota: string | null
   horario: string | null
+}
+
+const RAMO_LEGIBLE: Record<string, string> = {
+  auto: 'auto', moto: 'moto', hogar: 'hogar', vida: 'vida', salud: 'salud', decesos: 'decesos',
+  responsabilidad_civil: 'responsabilidad civil', comercio: 'comercio', comunidades: 'comunidades', accidentes: 'accidentes',
+}
+
+function notaRamos(r: readonly string[]): string {
+  const n = r.map((x) => RAMO_LEGIBLE[x] ?? x.replace(/_/g, ' '))
+  return `Solo para partes de ${n.length === 1 ? n[0] : `${n.slice(0, -1).join(', ')} y ${n[n.length - 1]}`}`
+}
+
+/**
+ * El WhatsApp de la compañía si vale para ESTE ramo. Misma regla que
+ * `whatsappParaRamo` del portal: con restricción y ramo desconocido, `null` —
+ * un parte de auto a la línea de hogar de Mapfre no falla, se queda sin contestar.
+ */
+export function whatsappParaRamo(compania: Compania, ramo: string | null): string | null {
+  const w = compania.whatsappSiniestros
+  if (w === null) return null
+  const solo = compania.whatsappSiniestrosRamos
+  if (solo === null || solo.length === 0) return w
+  const r = (ramo ?? '').trim().toLowerCase()
+  return r !== '' && solo.includes(r) ? w : null
 }
 
 /**
@@ -56,12 +82,15 @@ export type ContactoSiniestro = {
  * NADA que enseñar (no confundir con la compañía sin resolver, que no llama
  * a esta función).
  */
-export function contactoSiniestroDe(compania: Compania): ContactoSiniestro {
+export function contactoSiniestroDe(compania: Compania, ramo: string | null = null): ContactoSiniestro {
   const destacado = contactoDestacado(compania.contactos as ContactoCompania[], 'siniestros')
+  const whatsapp = whatsappParaRamo(compania, ramo)
+  const solo = compania.whatsappSiniestrosRamos
   return {
     nombre: destacado?.nombre ?? null,
     telefono: destacado?.telefono ?? compania.telefonoSiniestros,
-    whatsapp: compania.whatsappSiniestros,
+    whatsapp,
+    whatsappNota: whatsapp !== null && solo !== null && solo.length > 0 ? notaRamos(solo) : null,
     horario: compania.horarioSiniestros,
   }
 }
