@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
   const resumen = (Object.entries(d.porTipo).map(([t, n]) => `${t} ${n}`).join(', ') || 'ninguno') +
     (d.retencionesAbiertas ? `; ${d.retencionesAbiertas} retención(es) abierta(s)` : '') +
     (d.retencionesCerradas ? `; ${d.retencionesCerradas} retención(es) cerrada(s) por innecesaria(s)` : '') +
-    (d.aprobacionesNuevas ? `; ${d.aprobacionesNuevas} correo(s) propuesto(s) esperando tu OK` : '')
+    (d.aprobacionesNuevas ? `; ${d.aprobacionesNuevas} correo(s) propuesto(s) esperando tu OK` : '') +
+    (d.anulacionesConfirmadas ? `; ${d.anulacionesConfirmadas} anulación(es) confirmada(s) por CIMA` : '')
   // Una retención que tocaba abrir y falló es una llamada que no aparece en «Hoy»: el latido lo dice.
   const fallo = (d.retencionesFallidas ? `⚠️ ${d.retencionesFallidas} retención(es) NO se pudieron abrir (ver logs de asegura); ` : '') +
     (d.aprobacionesFallidas ? `⚠️ ${d.aprobacionesFallidas} aviso(s) de recibo devuelto NO se pudieron proponer y no se reintentan (ver logs de asegura); ` : '')

@@ -30,6 +30,7 @@ import {
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { proponerReciboDevuelto } from './aprobaciones'
+import { confirmarAnulaciones } from './anulaciones'
 
 type Consultor = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw'>
 
@@ -87,6 +88,8 @@ export type ResultadoDeteccion = {
   aprobacionesNuevas: number
   /** Avisos de recibo devuelto que no se pudieron proponer (no se reintentan: el evento ya consta). */
   aprobacionesFallidas: number
+  /** Expedientes de anulación que CIMA ya refleja (la póliza ya no está vigente). */
+  anulacionesConfirmadas: number
   /** Retenciones abiertas antes que se cierran porque ya no hacen falta. */
   retencionesCerradas: number
 }
@@ -120,6 +123,9 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
         returning id`
       if (r[0]) { insertados.push(e); idEvento.set(e.clave, r[0].id) }
     }
+    // Anulaciones tramitadas que CIMA ya refleja: expediente confirmado y la baja, explicada (antes de
+    // decidir retenciones: a quien pidió anularla no se le llama para «retenerle»).
+    const anuladas = new Set(await confirmarAnulaciones(tx, correduriaId))
     // En la MISMA transacción que el evento: si la retención no se puede abrir, no se guarda la foto
     // y la próxima pasada lo reintenta (la clave del evento impide abrirla dos veces).
     const retenciones: Retencion[] = []
@@ -166,7 +172,8 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
 
     const porTipo: Partial<Record<TipoEventoCartera, number>> = {}
     for (const e of insertados) porTipo[e.tipo] = (porTipo[e.tipo] ?? 0) + 1
-    const fugas = insertados.filter(esFugaSinExplicar)
+    // Una baja con su expediente de anulación ya está explicada: no se anuncia como fuga.
+    const fugas = insertados.filter((e) => esFugaSinExplicar(e) && !anuladas.has(e.id))
     const fugasNuevas = fugas.length ? await describirFugas(tx, correduriaId, fugas.map((f) => f.clave)) : []
     return {
       primeraVez: d.primeraVez,
@@ -180,6 +187,7 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       retencionesCerradas,
       aprobacionesNuevas,
       aprobacionesFallidas,
+      anulacionesConfirmadas: anuladas.size,
     }
   }, { timeout: 30_000 }).then(async (r) => {
     const { retenciones, ...resto } = r
@@ -210,7 +218,9 @@ async function abrirRetencion(tx: Consultor & Pick<ReturnType<typeof prismaAsegu
            to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento, nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima
     from polizas p where p.id = ${polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null
       and p.sustituida_at is null
-      and not exists (select 1 from polizas h where h.merged_into_poliza_id is null and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id))`
+      and not exists (select 1 from polizas h where h.merged_into_poliza_id is null and (h.poliza_padre_id = p.id or h.poliza_origen_id = p.id))
+      -- Con expediente de anulación (lo pidió el cliente y se está tramitando) no hay a quién retener.
+      and not exists (select 1 from anulacion a where a.poliza_id = p.id and a.estado <> 'desistida')`
   if (!p) return null
   const hoy = hoyMadrid()
   const d = decidirRetencion({ tipo, ramo: p.ramo, compania: p.compania, numeroPoliza: p.numeroPoliza, vencimiento: p.vencimiento, hoy })

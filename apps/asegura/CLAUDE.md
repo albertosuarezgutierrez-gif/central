@@ -724,6 +724,11 @@ anulación a vencimiento llega como baja) sin sustitución y con el vencimiento 
 que pasa a `devuelto` deja un correo PROPUESTO al cliente; solo sale con `decision:'aprobar'` desde plataforma. El envío
 reclama la fila (`pendiente → enviando`) ANTES de mandar y lee el correo de la ficha en ese momento; `enviando` viejo =
 «no se sabe si salió», no se reintenta solo. Cepo `lib/aprobaciones.test.ts`.
+📝 **Expediente de anulación (`seguros.anulacion`, `lib/anulaciones.ts`, puerto `/api/operador/anulaciones`).** Lo abre
+el corredor desde la ficha de póliza; reglas en `anulacion.ts` de module-seguros. Sin firma no se comunica (CHECK
+`anulacion_estado_coherente`), un abierto por póliza (índice parcial). `confirmarAnulaciones(tx)` corre en el detector
+ANTES de las retenciones: póliza no vigente → confirmada + su baja revisada con el motivo; con expediente no se abre
+retención ni se anuncia fuga. Cepo `lib/anulaciones.test.ts`.
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
