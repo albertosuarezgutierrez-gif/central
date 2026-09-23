@@ -5,6 +5,7 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { pulirConIA } from '@/lib/recaptacion-ia'
 import { enviarEmailRecaptacion } from '@/lib/cartera-recaptacion'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ export const dynamic = 'force-dynamic'
 // 🚨 Y `actor` ya NO se lee del cuerpo: lo pone el servidor. Este puerto se
 // autentica con un secreto compartido, así que un nombre que mande el llamante
 // es una firma falsificable en la pista de auditoría.
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/recaptacion/email', e) }, { status: 500 })
   }
-}
+})
 
 /**
  * Cada desenlace se arregla en un sitio distinto y por eso no se colapsan:

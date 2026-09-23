@@ -13,6 +13,8 @@
 // sobre el schema `seguros` (solo `prisma_seguros`/`crm_seguros` lo tienen).
 
 import { areaContacto, type AreaContacto } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 
 export type Contacto = {
   id: string
@@ -124,15 +126,15 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-function cabeceras(): Record<string, string> | null {
+async function cabeceras(): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? { Authorization: `Bearer ${secret}` } : null
+  return secret ? await cabecerasPuerto(secret) : null
 }
 
 export type Reenvio = { status: number; json: unknown }
 
 export async function companiasAsegura(): Promise<Reenvio> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/companias`, {
@@ -148,7 +150,7 @@ export async function companiasAsegura(): Promise<Reenvio> {
 
 /** Marca un contacto como recién contactado. Best-effort: el llamador no bloquea el WhatsApp/mail por esto. */
 export async function marcarContactoAsegura(contactoId: string): Promise<Reenvio> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/companias/contacto/${encodeURIComponent(contactoId)}`, {

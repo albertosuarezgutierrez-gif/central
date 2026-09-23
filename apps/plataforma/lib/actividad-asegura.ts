@@ -19,6 +19,7 @@
 import { type EmbudoPortal, type EventoActividad } from '@central/module-seguros'
 
 import { MOTIVOS_PUERTO, type MotivoPuerto, describirCausaAsegura } from './correduria-puerto.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
 export { MOTIVOS_PUERTO, describirCausaAsegura }
@@ -147,7 +148,7 @@ export async function actividadAsegura(query: string): Promise<Reenvio> {
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/actividad${query ? `?${query}` : ''}`, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     })

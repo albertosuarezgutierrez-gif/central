@@ -7,6 +7,7 @@
 
 import type { Retarificabilidad } from '@central/module-seguros'
 import { leerRetarificacion } from './ficha-asegura.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type MotivoPuerto = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
 
@@ -418,7 +419,7 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
-    headers: { Authorization: `Bearer ${secret}` },
+    headers: { ...(await cabecerasPuerto(secret)) },
     cache: 'no-store',
     // 🚨 Más que el `pool_timeout` de Prisma en asegura (10 s), a propósito
     // (19/09/2026): con 8 s, cuando asegura se quedaba sin conexión (P2024) esta
@@ -436,7 +437,7 @@ async function pedirPost(path: string, body: Record<string, unknown>): Promise<{
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+    headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
     body: JSON.stringify(body),
     cache: 'no-store',
     signal: AbortSignal.timeout(15_000),
@@ -1163,7 +1164,7 @@ export async function escribirBackfillDni(limite?: number): Promise<EscrituraBac
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/backfill-dni`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
       body: JSON.stringify({ confirmar: 'escribir', limite }),
       cache: 'no-store',
       // Muy por encima de los 8 s del resto del puerto: esto descifra la cartera
@@ -1295,7 +1296,7 @@ export async function escribirBackfillContacto(limite?: number): Promise<Escritu
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/backfill-contacto`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
       body: JSON.stringify({ confirmar: 'escribir', limite }),
       cache: 'no-store',
       signal: AbortSignal.timeout(290_000),

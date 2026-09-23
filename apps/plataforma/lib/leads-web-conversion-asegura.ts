@@ -1,3 +1,4 @@
+import { cabecerasPuerto } from './puerto-actor.ts'
 // Lectura del puerto `GET /api/operador/leads-web` de asegura: de los leads
 // captados por la web pública de la correduría (`apps/asegura-web`), cuántos
 // son hoy cartera viva. Es el prerrequisito que Alberto pidió antes de gastar
@@ -105,7 +106,7 @@ export async function conversionLeadsWebAsegura(): Promise<ConversionLeadsWeb> {
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/leads-web`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(8000),
     })

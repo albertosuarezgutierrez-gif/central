@@ -25,6 +25,7 @@ import {
   type FicheroParcial,
   type CampoImportanteSinLeer,
 } from '@central/module-seguros'
+import { cabecerasPuerto } from '../puerto-actor.ts'
 
 export type RespuestaIngesta =
   | { estado: 'sin_configurar' }
@@ -371,7 +372,7 @@ function urlAsegura(): string {
 async function pedir(ruta: string, secret: string): Promise<{ status: number; json: unknown } | null> {
   try {
     const res = await fetch(`${urlAsegura()}${ruta}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     return { status: res.status, json: await res.json().catch(() => null) }

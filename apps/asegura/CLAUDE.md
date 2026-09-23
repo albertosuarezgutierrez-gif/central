@@ -704,6 +704,15 @@ cuatro CHECK probados en la BD real en un bloque con rollback). `poliza_document
 > 📘 **Visión y orden de trabajo del CRM de la correduría: `docs/CORREDURIA-CRM-VISION.md`** (dictado de
 > Alberto, 02/09/2026; skill router `correduria-crm`). Léelo antes de añadir pantallas o escrituras.
 
+🪪 **Toda escritura del puerto deja rastro (23/09/2026):** las rutas que exportan POST/PATCH/PUT/DELETE
+van envueltas en `auditado()` (`lib/auditoria.ts`) y escriben una fila en `seguros.auditoria` (append-only):
+actor de la cabecera `x-actor` que manda plataforma (`humano:<cuentaId>` · `agente:<id>` · `sistema:<origen>`;
+sin ella, `desconocido`), ruta, ids UUID y código HTTP. **Una ruta de escritura nueva sin `auditado(` no pasa
+`lib/auditoria.test.ts`.** Es atribución, no autorización: el actor viaja dentro del mismo Bearer.
+Y el QUÉ: una función que escribe la cartera llama a `anotarCambio({entidad, id, campo, antes, despues})`
+tras escribir, y va a la columna `cambios` de esa fila. 🚨 Solo guardan valor los campos de
+`CAMPOS_CON_VALOR` (`lib/cambios.ts`); añadir ahí un dato personal lo rompe `lib/cambios.test.ts`.
+
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
 - **`GET /clientes?q=`** — buscador por nombre y apellidos. `buscado:false` cuando el término tiene

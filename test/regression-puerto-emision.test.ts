@@ -29,7 +29,9 @@ function fuente(f: string): string {
 }
 
 function exportaVerbo(src: string, verbo: string): boolean {
-  return new RegExp(`export\\s+(async\\s+)?function\\s+${verbo}\\b`).test(src)
+  // `export const POST = auditado(...)` (rutas de escritura del puerto, 23/09/2026) exporta el
+  // verbo igual que una `function`; sin esta rama un `export const GET = …` pasaría el cepo.
+  return new RegExp(`export\\s+(async\\s+)?function\\s+${verbo}\\b|export\\s+const\\s+${verbo}\\s*=`).test(src)
 }
 
 /** El código sin comentarios: un cepo que mira código no puede dispararse

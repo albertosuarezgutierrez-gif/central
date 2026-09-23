@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { quitarInterviniente } from '@/lib/cartera-intervinientes'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -22,7 +23,7 @@ export const dynamic = 'force-dynamic'
  * `intervinienteId` es la FILA, no el cliente: la misma persona puede intervenir
  * en varias pólizas y aquí solo se quita de la que se está mirando.
  */
-export async function DELETE(req: Request) {
+export const DELETE = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -46,4 +47,4 @@ export async function DELETE(req: Request) {
       { status: 500 },
     )
   }
-}
+})

@@ -11,6 +11,7 @@
 // obliga a adivinar cuál de los tres es (pasó el 31/08/2026).
 
 import type { ObjetoAsegurado, Retarificabilidad } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
 import { interpretarContacto, leerTruncado, type Contacto } from './correduria-puerto.ts'
 import { leerRetarificacion } from './ficha-asegura.ts'
 
@@ -95,7 +96,7 @@ export async function carteraAsegura(): Promise<CarteraAsegura> {
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/resumen`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     const json = await res.json().catch(() => null)
@@ -291,7 +292,7 @@ export async function vencimientosAsegura(dias = 90): Promise<VencimientosAsegur
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/vencimientos?dias=${dias}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     const json = await res.json().catch(() => null)
@@ -367,7 +368,7 @@ export async function declaradasVencerAsegura(dias = 60): Promise<DeclaradasVenc
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/declaradas-vencer?dias=${dias}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     const json = await res.json().catch(() => null)

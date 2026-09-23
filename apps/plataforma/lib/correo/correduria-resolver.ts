@@ -12,6 +12,7 @@
 // `cliente-edicion-asegura.ts`. Nunca inventa un cliente ni degrada un fallo
 // de red a «no hay póliza»: eso sería tan malo como colgar la nota en la
 // ficha equivocada, solo que en la otra dirección (se perdería la señal).
+import { cabecerasPuerto } from '../puerto-actor.ts'
 
 export type ResolucionCorreo = { clienteId: string; polizaId: string; numeroPoliza: string }
 
@@ -19,9 +20,9 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-function cabeceras(): Record<string, string> | null {
+async function cabeceras(): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' } : null
+  return secret ? { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' } : null
 }
 
 function leerResolucion(v: unknown): ResolucionCorreo | null {
@@ -47,7 +48,7 @@ function leerResolucion(v: unknown): ResolucionCorreo | null {
  * deje de avanzar.
  */
 export async function resolverCorreoAseguradora(texto: string): Promise<ResolucionCorreo[] | undefined> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return undefined
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/correo/resolver`, {
@@ -68,7 +69,7 @@ export async function resolverCorreoAseguradora(texto: string): Promise<Resoluci
 
 /** `true` = se anotó. `false` = no se pudo (sin secreto, red, o asegura rechazó). */
 export async function anotarHistorialDesdeCorreo(clienteId: string, texto: string): Promise<boolean> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return false
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/cliente/historial`, {

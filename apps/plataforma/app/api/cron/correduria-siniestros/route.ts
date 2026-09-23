@@ -22,6 +22,8 @@
 // `@central/module-seguros` (`siniestro-nuevo.ts`), con sus cepos.
 // ────────────────────────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from 'next/server'
+import { cabecerasPuerto } from '../../../../lib/puerto-actor'
+
 import { Prisma } from '@prisma/client'
 import { tgSend } from '@/lib/telegram'
 import { avisoPermitido, avisoEnviado } from '@/lib/telegram/avisos'
@@ -114,7 +116,7 @@ async function leerPuerto(desde: string | null, limite: number): Promise<Lectura
   let json: unknown
   try {
     const res = await fetch(`${base}/api/operador/siniestros-nuevos?${q}`, {
-      headers: { Authorization: `Bearer ${secreto}` },
+      headers: { ...(await cabecerasPuerto(secreto)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     })

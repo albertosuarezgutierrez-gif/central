@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { resolverConfig, explicarConfig } from '@/lib/codeoscopic/config'
 import { reenviarProductForm, type ProductFormRequest } from '@/lib/codeoscopic/product-form'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,7 +17,7 @@ const METODOS_PERMITIDOS = new Set(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
  *
  * **No gasta ninguna cotización**: corre en la vía gratis, como `/lineas`.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
   }
@@ -52,4 +53,4 @@ export async function POST(req: Request) {
       { status: 502 },
     )
   }
-}
+})

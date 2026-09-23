@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { auditado } from '@/lib/auditoria'
 
 import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
 // volvería invisible justo al producirse.
 const ESTADOS = ['en_curso', 'resuelta_total', 'resuelta_parcial', 'denegada'] as const
 
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const cuerpo = (await req.json().catch(() => null)) as Record<string, unknown> | null
@@ -65,4 +66,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/supresiones', e) })
   }
-}
+})

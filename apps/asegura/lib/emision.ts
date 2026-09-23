@@ -15,6 +15,7 @@
 import { prepararPolizaEmitida, validarPolizaOrigen, type CompaniaDgs, type ProyectoEmitido } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { reactivarPorPoliza } from './cartera-edicion'
+import { anotarCambio } from './auditoria'
 
 /** Catálogo de compañías por código DGS. `null` = no se pudo leer (no es «vacío»). */
 export async function catalogoCompanias(): Promise<CompaniaDgs[] | null> {
@@ -139,6 +140,10 @@ export async function registrarPolizaEmitida(
     }
     return creada.id
   })
+  anotarCambio({ entidad: 'poliza', id: polizaId, campo: 'estado', antes: null, despues: f.estado })
+  if (f.numeroPoliza) {
+    anotarCambio({ entidad: 'poliza', id: polizaId, campo: 'numero_poliza', antes: null, despues: f.numeroPoliza })
+  }
   // Una ficha DESCARTADA que vuelve a tener una póliza es un cliente otra vez:
   // se reactiva sola. Es la contrapartida de la guarda de `descartarCliente`
   // (solo se descarta lo que NO tiene pólizas vivas), y va DESPUÉS de la

@@ -48,6 +48,7 @@ import {
   type TipoContacto,
   type TipoHistorial,
 } from '@central/module-seguros'
+import { anotarCambio } from './auditoria'
 import {
   computeDniLookupHash,
   computeEmailLookupHash,
@@ -350,6 +351,7 @@ export async function anadirContacto(
         ? await db.clienteTelefono.create({ data: { clienteId, correduriaId, telefono: valorCifrado, telefonoLookupHash: hash, etiqueta, esPrincipal: principal } })
         : await db.clienteEmail.create({ data: { clienteId, correduriaId, email: valorCifrado, emailLookupHash: hash, ...mitades, etiqueta, esPrincipal: principal } })
     if (principal) await espejarPrincipal(correduriaId, clienteId, tipo)
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: tipo === 'telefono' ? 'telefono' : 'email' })
     await anotarHistorial(correduriaId, clienteId, 'contacto', `${tipo === 'telefono' ? 'Teléfono' : 'Email'} añadido${etiqueta ? ` (${etiqueta})` : ''}${principal ? ', principal' : ''} desde plataforma por ${entrada.actor}`)
     const contactos = (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] }
     return {
@@ -477,6 +479,7 @@ export async function cambiarContacto(
       entrada.principal === true ? 'puesto como principal' : null,
     ].filter((x): x is string => x !== null)
     if (hechos.length > 0) {
+      anotarCambio({ entidad: 'cliente', id: clienteId, campo: tipo === 'telefono' ? 'telefono' : 'email' })
       await anotarHistorial(correduriaId, clienteId, 'contacto', `${que} ${hechos.join(' y ')} desde plataforma por ${entrada.actor}`)
     }
 
@@ -511,6 +514,7 @@ export async function borrarContacto(
         where: { id: clienteId, correduriaId },
         data: tipo === 'telefono' ? { telefono: null, telefonoLookupHash: null } : { email: null, emailLookupHash: null, emailDominioHash: null, emailUsuarioHash: null },
       })
+      anotarCambio({ entidad: 'cliente', id: clienteId, campo: tipo === 'telefono' ? 'telefono' : 'email' })
       await anotarHistorial(correduriaId, clienteId, 'contacto', `${tipo === 'telefono' ? 'Teléfono' : 'Email'} borrado desde plataforma por ${entrada.actor}`)
       return { ok: true, contacto: null, contactos: (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] } }
     }
@@ -532,6 +536,7 @@ export async function borrarContacto(
       }
       await espejarPrincipal(correduriaId, clienteId, tipo)
     }
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: tipo === 'telefono' ? 'telefono' : 'email' })
     await anotarHistorial(correduriaId, clienteId, 'contacto', `${tipo === 'telefono' ? 'Teléfono' : 'Email'} borrado desde plataforma por ${entrada.actor}`)
     return { ok: true, contacto: null, contactos: (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] } }
   } catch (e) {
@@ -608,6 +613,28 @@ export async function editarCliente(
     if (r.libre.notas !== undefined) data.notas = r.libre.notas
 
     await db.cliente.update({ where: { id: clienteId }, data })
+    // Anotar cambios de auditoria (sin antes/despues)
+    for (const clave of ['nombre', 'apellidos', 'dni', 'fecha_nacimiento', 'direccion', 'codigo_postal', 'ciudad', 'provincia', 'notas'] as const) {
+      if (clave === 'dni' && r.identidad.dni !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'dni' })
+      } else if (clave === 'fecha_nacimiento' && r.identidad.fechaNacimiento !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'fecha_nacimiento' })
+      } else if (clave === 'nombre' && r.identidad.nombre !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'nombre' })
+      } else if (clave === 'apellidos' && r.identidad.apellidos !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'apellidos' })
+      } else if (clave === 'direccion' && r.libre.direccion !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'direccion' })
+      } else if (clave === 'codigo_postal' && r.libre.codigoPostal !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'codigo_postal' })
+      } else if (clave === 'ciudad' && r.libre.ciudad !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'ciudad' })
+      } else if (clave === 'provincia' && r.libre.provincia !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'provincia' })
+      } else if (clave === 'notas' && r.libre.notas !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'notas' })
+      }
+    }
     await anotarHistorial(correduriaId, clienteId, 'gestion', textoHistorialEdicion(r, { actor, documentoId: edicion.documentoId }))
     return { ok: true }
   } catch (e) {
@@ -707,10 +734,12 @@ export async function descartarCliente(
       }
     }
 
+    const actividadAnterior = c?.activo ?? true
     await prismaAsegura().cliente.updateMany({
       where: { id: clienteId, correduriaId },
       data: { activo: false, updatedAt: new Date() },
     })
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'activo', antes: actividadAnterior, despues: false })
     await anotarHistorial(
       correduriaId,
       clienteId,
@@ -736,10 +765,12 @@ export async function restaurarCliente(
     const c = await clienteDe(correduriaId, clienteId)
     if (!c) return noEncontrado()
     if (c.activo) return { ok: true, activo: true, yaEstaba: true }
+    const actividadAnterior = c.activo
     await prismaAsegura().cliente.updateMany({
       where: { id: clienteId, correduriaId },
       data: { activo: true, updatedAt: new Date() },
     })
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'activo', antes: actividadAnterior, despues: true })
     await anotarHistorial(
       correduriaId,
       clienteId,
@@ -768,6 +799,7 @@ export async function reactivarPorPoliza(correduriaId: string, clienteId: string
       data: { activo: true, updatedAt: new Date() },
     })
     if (r.count === 0) return
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'activo', antes: false, despues: true })
     await anotarHistorial(
       correduriaId,
       clienteId,
@@ -853,6 +885,8 @@ export async function altaCliente(
         insert into historial_interno (correduria_id, cliente_id, tipo, texto)
         values (${correduriaId}::uuid, ${creado.id}::uuid, cast(${tipoHist} as tipo_historial_interno),
                 ${textoHistorialAlta(a, { actor, compartido: telEnOtra || mailEnOtra })})`
+      // Anotar cambio de auditoria
+      anotarCambio({ entidad: 'cliente', id: creado.id, campo: 'activo', antes: null, despues: true })
       return creado.id
     })
     return { ok: true, id }

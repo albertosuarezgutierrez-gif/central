@@ -13,6 +13,7 @@
 // sobre una cotización YA PAGADA. El envío es el PR 3 del §6 de la spec.
 
 import type { EstadoPresupuesto } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type OpcionPresupuesto = {
   orden: number
@@ -187,7 +188,7 @@ async function puerto(init: RequestInit, query = ''): Promise<Reenvio> {
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/presupuesto${query}`, {
       ...init,
-      headers: { ...(init.headers ?? {}), Authorization: `Bearer ${secret}` },
+      headers: { ...(init.headers ?? {}), ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(30_000),
     })

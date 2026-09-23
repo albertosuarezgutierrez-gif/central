@@ -20,6 +20,16 @@ disponibles por API REST** aunque estén activados en el panel de Avant2 con Occ
 6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
 (solo doc), sin código tocado.
 
+**(23/09/2026)** 🪪 **ASegura OS 1b-b — actor en el puerto + `seguros.auditoria`.** plataforma manda
+`x-actor` en TODA llamada al puerto de asegura (`lib/puerto-actor.ts` → `cabecerasPuerto()`;
+la sesión la resuelve `instrumentation.ts` porque varios clientes del puerto los importan
+componentes `'use client'`). asegura envuelve sus 44 rutas de escritura con `auditado()` y deja
+una fila por llamada autorizada (actor, ruta, ids UUID, estado HTTP) en `seguros.auditoria`
+(aplicada; append-only verificado en BD). No es JWT a propósito (mismo secreto = nada que ganar).
+Sin cabecera → `desconocido`, sin rechazar. **Pieza (c) en el mismo PR (#3337):** `anotarCambio()` →
+columna `cambios` (aplicada); valores SOLO para la lista blanca de `lib/cambios.ts`, lo personal va como «tocado».
+Tras desplegar, comprobar que una edición a mano deja fila `humano:` (si sale `sistema:plataforma`, instrumentation no ve la cookie).
+
 **(23/09/2026)** 🧹 **La purga del e2e-smoke de `asegura` borraba en la BD equivocada.** Tras el traspaso (05/09)
 el smoke escribe en `seguros` de central, pero la purga apuntaba a Frankfurt (`FRANKFURT_DATABASE_URL`): 0 filas
 allí y **17 cotizaciones + 17 leads falsos «Smoke Test Auto» en la cartera + 48 eventos** aquí. Reponer la

@@ -1,3 +1,4 @@
+import { cabecerasPuerto } from './puerto-actor.ts'
 // Reenvío al puerto de asegura para anotar a mano la modalidad de una RC
 // (09-12/09/2026) o la dirección del riesgo de un inmueble (19/09/2026). Mismo patrón que `cliente-edicion-asegura.ts::llamar`.
 
@@ -13,7 +14,7 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
   try {
     const res = await fetch(`${urlAsegura()}${path}`, {
       ...init,
-      headers: { Authorization: `Bearer ${secret}`, ...(init.body ? { 'content-type': 'application/json' } : {}) },
+      headers: { ...(await cabecerasPuerto(secret)), ...(init.body ? { 'content-type': 'application/json' } : {}) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     })
