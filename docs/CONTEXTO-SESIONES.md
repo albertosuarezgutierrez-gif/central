@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 💸 **Pasada `facturas-correo`: conciliado un gap real (Endesa Socorro llevaba
+`Facturas/Procesada` sin haberse conciliado nunca, PDF sin adjunto) + un falso positivo del auto-dedup
+(dos cargos Anthropic de 76,50€ con `referencia`/`dedupe_hash` distintos, uno marcado `ignorado` por
+error).** 2 facturas nuevas: Anthropic 170€ (correduría, archivada, sin cargo — tarjeta ****5332 fuera
+del feed PSD2) y Endesa Socorro nueva sin importe (solo enlace, sin PDF) → ambas `PDF-pendiente`.
+Detalle en `docs/AGENTES-BITACORA.md`. Pendiente: dar de alta la Mastercard ****5332 en PSD2 si se va
+a usar para los créditos de Anthropic.
+
 **(23/09/2026)** ✅ **Auditoría diaria (ligera): sin hallazgos 🔴.** Heartbeat sano salvo los
 crónicos (`ses_transporte`) y un fallo de red aislado de `correduria_renovaciones` (dentro de
 umbral, a vigilar). CIMA entrando con normalidad tras el arreglo de ayer, pricing sano, backlog de
