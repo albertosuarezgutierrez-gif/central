@@ -13,6 +13,12 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** 🧭 **Pieza 1-4: «Hoy» como cockpit** (`HoyCockpit.tsx` arriba de la sección Hoy de `/correduria`). Franja: llamadas hoy
+(→ modo llamada) · tareas de hoy · esperan tu OK · incidencias, con tres estados (`n`, `n+` parcial, `!`); línea de salud de CIMA.
+Tareas de hoy = `GET /api/operador/tareas-hoy` (asegura, corte con la fecha de MADRID) cerrables en sitio. «Esperan tu OK» usa lo
+que existe (recaptación + blog): la cola única de aprobaciones sigue siendo Fase 2. Portal 24 h + embudo desde el muro de actividad.
+Las incidencias NO se repintan: son los bloques de siempre debajo. #3315 (modo llamada) mergeado.
+
 **(23/09/2026)** ☎️ **Pieza 1-3 cerrada: modo llamada** (`/correduria/vencimientos/llamada`, botón «Modo llamada · N para hoy» en Leads).
 Cola = leads con teléfono permitido y llamada/primer contacto para hoy (con correo permitido, el 1er contacto va por correo).
 Resultados → `planLlamada` (module-seguros) aplicado por `POST /api/operador/oportunidad/llamada` en UNA transacción: la llamada

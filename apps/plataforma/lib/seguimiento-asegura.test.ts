@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, guionLlamada, interpretarLeads, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal } from './seguimiento-asegura.ts'
+import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -107,4 +107,17 @@ test('el guion no inventa lo que no consta', () => {
   assert.ok(!g.includes('null'))
   assert.ok(!g.includes('hace unos años le llevamos'))
   assert.match(g, /sin confirmar/)
+})
+
+test('tareas de hoy: error no es «no hay», y una fila rota se cuenta', () => {
+  assert.equal(interpretarTareasHoy(503, null).estado, 'sin_configurar')
+  assert.equal(interpretarTareasHoy(500, { estado: 'error', causa: 'credenciales' }).estado, 'error')
+  assert.equal(interpretarTareasHoy(200, { estado: 'ok' }).estado, 'error')
+  const ok = { id: 't', tipo: 'llamada', prioridad: 'alta', fechaLimite: '2026-09-23', oportunidadId: 'o', clienteId: 'c', observaciones: 'x', cliente: null, ramo: 'auto' }
+  const r = interpretarTareasHoy(200, { estado: 'ok', tareas: [ok, { ...ok, fechaLimite: null }], truncado: true })
+  assert.ok(r.estado === 'ok')
+  assert.equal(r.tareas.length, 1)
+  assert.equal(r.descartadas, 1)
+  assert.equal(r.truncado, true)
+  assert.equal(r.tareas[0].cliente, null)
 })

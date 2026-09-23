@@ -326,6 +326,53 @@ export function parsearPrima(t: string): number | null | 'invalido' {
   return n > 0 && n < 1_000_000 ? n : 'invalido'
 }
 
+// ─── Tareas de hoy (cockpit «Hoy») ──────────────────────────────────────────
+
+export type TareaDeHoy = {
+  id: string
+  tipo: string
+  prioridad: string
+  observaciones: string
+  fechaLimite: string
+  oportunidadId: string
+  clienteId: string
+  cliente: string | null
+  ramo: string | null
+}
+
+export type TareasDeHoy =
+  | { estado: 'ok'; tareas: TareaDeHoy[]; truncado: boolean; descartadas: number }
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+
+export function interpretarTareasHoy(status: number, json: unknown): TareasDeHoy {
+  const o = objeto(json)
+  if (o?.estado === 'sin_configurar' || status === 503) return { estado: 'sin_configurar' }
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || !o || o.estado !== 'ok' || !Array.isArray(o.tareas)) {
+    return { estado: 'error', motivo: texto(o?.causa) ?? texto(o?.motivo) ?? `HTTP ${status}` }
+  }
+  const tareas: TareaDeHoy[] = []
+  let descartadas = 0
+  for (const t of o.tareas) {
+    const r = objeto(t)
+    const id = texto(r?.id)
+    const tipo = texto(r?.tipo)
+    const prioridad = texto(r?.prioridad)
+    const fechaLimite = texto(r?.fechaLimite)
+    const oportunidadId = texto(r?.oportunidadId)
+    const clienteId = texto(r?.clienteId)
+    if (!r || !id || !tipo || !prioridad || !fechaLimite || !oportunidadId || !clienteId) { descartadas++; continue }
+    tareas.push({
+      id, tipo, prioridad, fechaLimite, oportunidadId, clienteId,
+      observaciones: typeof r.observaciones === 'string' ? r.observaciones : '',
+      cliente: texto(r.cliente),
+      ramo: texto(r.ramo),
+    })
+  }
+  return { estado: 'ok', tareas, truncado: o.truncado === true, descartadas }
+}
+
 // ─── Modo llamada ────────────────────────────────────────────────────────────
 
 /** Lo que toca por TELÉFONO hoy: una tarea que no es llamada o un correo no entran aquí. */
@@ -406,4 +453,8 @@ export function cerrarTareaAsegura(body: Record<string, unknown>): Promise<Reenv
 }
 export function registrarLlamadaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/llamada', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export function tareasHoyAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/tareas-hoy', { method: 'GET' })
 }
