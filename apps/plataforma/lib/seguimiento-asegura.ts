@@ -69,7 +69,7 @@ export type LeadsVencimientos =
 
 const VENTANAS: readonly VentanaLead[] = ['menos_30', '30_60', '60_90', 'mas_90']
 const CANALES: readonly CanalLead[] = ['telefono_y_correo', 'solo_telefono', 'solo_correo', 'sin_canal_permitido']
-const ACCIONES_PASO: readonly AccionPaso[] = ['esperar', 'primer_contacto', 'recordatorio', 'llamada', 'aparcar']
+const ACCIONES_PASO: readonly AccionPaso[] = ['esperar', 'primer_contacto', 'recordatorio', 'llamada', 'aparcar', 'tarea']
 const ESTADOS: readonly EstadoOportunidad[] = ['competencia', 'en_negociacion', 'pendiente_cliente', 'ganada', 'perdida']
 
 function objeto(v: unknown): Record<string, unknown> | null {
@@ -326,6 +326,48 @@ export function parsearPrima(t: string): number | null | 'invalido' {
   return n > 0 && n < 1_000_000 ? n : 'invalido'
 }
 
+// ─── Modo llamada ────────────────────────────────────────────────────────────
+
+/** Lo que toca por TELÉFONO hoy: una tarea que no es llamada o un correo no entran aquí. */
+const ACCIONES_POR_TELEFONO: readonly AccionPaso[] = ['primer_contacto', 'recordatorio', 'llamada']
+
+/**
+ * La cola de llamadas de hoy, en el orden de la lista (probabilidad × prima).
+ * Solo quien se puede llamar (teléfono y canal que lo permite) y a quien le
+ * toca ya: un primer contacto a quien se le puede escribir va por correo, no aquí.
+ */
+export function colaLlamadas(leads: readonly LeadVencimiento[]): LeadVencimiento[] {
+  return leads.filter((l) => {
+    if (l.telefono === null || (l.canal !== 'solo_telefono' && l.canal !== 'telefono_y_correo')) return false
+    if (!ACCIONES_POR_TELEFONO.includes(l.paso.accion) || l.paso.dentroDeDias > 0) return false
+    // Con correo permitido, el primer contacto y el recordatorio van por correo.
+    if (l.canal === 'telefono_y_correo' && l.paso.accion !== 'llamada') return false
+    return true
+  })
+}
+
+/** Guion corto de la llamada, con lo que se sabe del lead. Lo que no consta no se inventa. */
+export function guionLlamada(l: LeadVencimiento): string[] {
+  const ramo = l.ramo ?? 'su seguro'
+  const donde = l.aseguradora ? ` con ${l.aseguradora}` : ''
+  return [
+    l.fueCliente === true
+      ? 'Soy Alberto, de Grupo ASegura: hace unos años le llevamos un seguro.'
+      : 'Soy Alberto, de Grupo ASegura, correduría de seguros en Sevilla.',
+    `¿Sigue con ${l.ramo ? `el seguro de ${ramo}` : ramo}${donde}? ¿Cuándo le renueva? (tenemos ~${l.vencimientoEstimado}, sin confirmar)`,
+    'Le preparo una comparativa sin compromiso antes de esa fecha.',
+    'Si dice que sí: pedir su correo y permiso para enviársela.',
+  ]
+}
+
+export const RESULTADOS_LLAMADA_UI = [
+  { valor: 'quiere_precio', rotulo: 'Quiere precio' },
+  { valor: 'otro_dia', rotulo: 'Llamar otro día' },
+  { valor: 'no_contesta', rotulo: 'No contesta' },
+  { valor: 'no_interesa', rotulo: 'No le interesa' },
+] as const
+export type ResultadoLlamadaUI = (typeof RESULTADOS_LLAMADA_UI)[number]['valor']
+
 // ─── Red (solo desde rutas API de plataforma) ────────────────────────────────
 
 export type Reenvio = { status: number; json: unknown }
@@ -361,4 +403,7 @@ export function crearTareaAsegura(body: Record<string, unknown>): Promise<Reenvi
 }
 export function cerrarTareaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/tarea', { method: 'PATCH', body: JSON.stringify(body) })
+}
+export function registrarLlamadaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/llamada', { method: 'POST', body: JSON.stringify(body) })
 }

@@ -13,6 +13,13 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** ☎️ **Pieza 1-3 cerrada: modo llamada** (`/correduria/vencimientos/llamada`, botón «Modo llamada · N para hoy» en Leads).
+Cola = leads con teléfono permitido y llamada/primer contacto para hoy (con correo permitido, el 1er contacto va por correo).
+Resultados → `planLlamada` (module-seguros) aplicado por `POST /api/operador/oportunidad/llamada` en UNA transacción: la llamada
+queda como tarea `llamada` cerrada (intento), «Quiere precio» → interesado + tarea comparativa a 2 d, «Otro día» → rellamada,
+«No le interesa» → aparca 1 año con motivo. Una tarea pendiente manda sobre la secuencia (`pasoConTarea`, acción nueva `tarea`),
+y una llamada contestada (`PREFIJO_LLAMADA_CONTESTADA`) cuenta como «respondió». #3313 (pantalla) ya mergeado.
+
 **(23/09/2026)** 📞 **Pieza 1-3: pantalla Vencimientos + seguimiento, en plataforma.** `/correduria/vencimientos` (pestañas
 Clientes = `Renovaciones` de siempre · Leads = puerto `leads-competencia`, 50 + «Ver más», filtro por ventana) y
 `/correduria/oportunidad/[id]` (pasos, Interesado/Propuesta/Ganada/Perdida…/Aparcar…/Reabrir, tareas con fecha, historial).

@@ -9,6 +9,7 @@ import { eur } from '@/lib/dinero'
 import {
   ROTULO_ESTADO,
   ROTULO_VENTANA,
+  colaLlamadas,
   rotuloCanal,
   type LeadVencimiento,
   type LeadsVencimientos,
@@ -97,6 +98,8 @@ function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
     [datos, ventana],
   )
 
+  const hoyPorTelefono = useMemo(() => (datos?.estado === 'ok' ? colaLlamadas(datos.leads).length : 0), [datos])
+
   if (datos === null) return <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Cargando leads…</p>
   if (datos.estado === 'sin_configurar') {
     return <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Los leads no se pueden leer: falta conectar el puerto con central-asegura. No significa que no haya.</p>
@@ -116,6 +119,12 @@ function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
         {datos.truncado && <> ⚠️ La lista llegó recortada: hay más de los que se ven.</>}
         {datos.descartadas > 0 && <> {datos.descartadas} fila(s) del puerto no se han podido leer.</>}
       </div>
+
+      {hoyPorTelefono > 0 && (
+        <Link href="/correduria/vencimientos/llamada" style={{ ...btnStyle('primario'), justifySelf: 'start', gap: 8 }}>
+          <Phone size={18} strokeWidth={1.75} /> Modo llamada · {hoyPorTelefono} para hoy
+        </Link>
+      )}
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>Aniversario en</span>

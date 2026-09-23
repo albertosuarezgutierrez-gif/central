@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { interpretarLeads, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal } from './seguimiento-asegura.ts'
+import { colaLlamadas, guionLlamada, interpretarLeads, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -81,4 +81,30 @@ test('prima en español: «1.200» son mil doscientos, lo ambiguo no pasa', () =
   assert.equal(parsearPrima('1200 €'), 1200)
   assert.equal(parsearPrima(''), null)
   for (const mal of ['1,200.50', '12.34.5', '0', 'abc', '1.2345', '-5']) assert.equal(parsearPrima(mal), 'invalido', mal)
+})
+
+test('la cola de llamadas: solo a quien se puede llamar y le toca hoy', () => {
+  const base = interpretarLeads(200, { estado: 'ok', leads: [lead] })
+  assert.ok(base.estado === 'ok')
+  const l = base.leads[0]
+  const hoy = { ...l, paso: { accion: 'primer_contacto' as const, motivo: '', dentroDeDias: 0 } }
+  assert.equal(colaLlamadas([hoy]).length, 1)
+  // Le toca otro día, o no tiene teléfono, o no es por teléfono: fuera.
+  assert.equal(colaLlamadas([{ ...hoy, paso: { ...hoy.paso, dentroDeDias: 3 } }]).length, 0)
+  assert.equal(colaLlamadas([{ ...hoy, telefono: null }]).length, 0)
+  assert.equal(colaLlamadas([{ ...hoy, paso: { accion: 'tarea' as const, motivo: '', dentroDeDias: 0 } }]).length, 0)
+  // Canal sin comprobar (asegura antigua) no se llama a ciegas.
+  assert.equal(colaLlamadas([{ ...hoy, canal: null }]).length, 0)
+  // Con correo permitido, el primer contacto va por correo; la llamada sí entra.
+  assert.equal(colaLlamadas([{ ...hoy, canal: 'telefono_y_correo' }]).length, 0)
+  assert.equal(colaLlamadas([{ ...hoy, canal: 'telefono_y_correo', paso: { accion: 'llamada' as const, motivo: '', dentroDeDias: 0 } }]).length, 1)
+})
+
+test('el guion no inventa lo que no consta', () => {
+  const r = interpretarLeads(200, { estado: 'ok', leads: [{ ...lead, ramo: null, aseguradora: null }] })
+  assert.ok(r.estado === 'ok')
+  const g = guionLlamada(r.leads[0]).join(' ')
+  assert.ok(!g.includes('null'))
+  assert.ok(!g.includes('hace unos años le llevamos'))
+  assert.match(g, /sin confirmar/)
 })
