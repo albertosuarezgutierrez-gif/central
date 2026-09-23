@@ -18,7 +18,9 @@ vencimiento por delante, abre en la MISMA transacción una oportunidad `en_negoc
 + llamada de prioridad alta para hoy (sale en «Hoy · Tareas de hoy») + `oportunidad_historial`; ficha anotada
 best-effort. Regla pura `decidirRetencion` (module-seguros). El Telegram de pérdidas dice cuántas retenciones abrió.
 🚨 CIMA solo escribe activa/cancelada (`eiac-pol-mapper.ts` del repo asegura): una anulación a vencimiento
-llega como BAJA y no se distingue de una inmediata, por eso la baja también abre. SQL probado con rollback. Siguiente: cola única de aprobaciones con su 1er productor (recibo devuelto).
+llega como BAJA y no se distingue de una inmediata, por eso la baja también abre. SQL probado con rollback.
+Y se cierra sola (ganada + llamadas cerradas) si luego llega la sustitución, CIMA la reactiva o se revisa como
+«no es pérdida»; punto de guardado por póliza para que un fallo no tumbe la detección entera. Siguiente: cola única de aprobaciones con su 1er productor (recibo devuelto).
 **(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
 La moto de Víctor (Allianz 031698897) salía con catálogo de coche porque CIMA la guardó como `auto`
 (Allianz/Mapfre no mandan `ClaseVehiculo='MO'`). 18 pólizas corregidas a `moto` en BD (ids en asegura#848)
