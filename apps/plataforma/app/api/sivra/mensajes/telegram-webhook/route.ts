@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
+import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook, emisorAutorizado } from '@central/core-telegram'
 import { enviarAlHuespedDetallado } from '@/lib/sivra/agente-huesped/enviar'
 import { avisoFalloEnvio } from '@/lib/sivra/agente-huesped/motivo-envio'
 import { detectarExtra, mencionaImporte } from '@/lib/sivra/agente-huesped/extras'
@@ -129,6 +129,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 401 })
   }
   const body: any = await req.json().catch(() => ({}))
+  // El secreto solo prueba que el update lo manda Telegram; quién pulsó el botón lo dice el chat.
+  // Por aquí se aprueban pagos, envíos y borradores: solo cuenta lo que viene del chat de Alberto.
+  // 200 y no 401 para que Telegram no reintente el update ajeno.
+  if (!emisorAutorizado(body)) {
+    console.warn('[tg] update ignorado: no viene del chat autorizado')
+    return NextResponse.json({ ok: true })
+  }
 
   // ── Agente Instagram/blog de ia-rest (bot compartido) ────────────────────
   // El webhook del bot apunta AQUÍ, pero los callbacks ig_*/blog_*/briefing_*

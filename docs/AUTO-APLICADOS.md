@@ -13,6 +13,10 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-23** · `docs/AUDITORIA-2026-09.md` · sección "Pasada ligera — 23/09/2026" añadida
+  (heartbeat, correduría, pricing, backlog de PRs — todo consistente con la pasada de ayer, sin
+  🔴 nuevo) · pasada ligera diaria, rango 8 commits desde `bb0401b` · commit de esta auditoría
+
 - **2026-09-22** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · pasada ligera diaria:
   sin hallazgos nuevos (heartbeat/correduría/pricing/backlog de PRs = mismo estado que el 21/09,
   sin Telegram por ser redundante) · commit de esta auditoría

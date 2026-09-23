@@ -42,6 +42,17 @@ regla de Alberto «lo que entra por CIMA es cliente actual; el resto son leads»
    ≥2 → cuarentena. Colgar un siniestro de la póliza equivocada es peor que no
    colgarlo. No lo «arregles» relajándolo.
 
+## 🛟 Si CIMA enmudece, mira primero el PRESUPUESTO de Actions (23/09/2026)
+
+El 22/09 **todos** los workflows del repo `asegura` fallaron en 3-4 s con `runner_id: 0` y sin logs: no
+era código, era el presupuesto de GitHub Actions de la cuenta (0 $, «Stop usage», sin tarjeta) agotado
+por `central`. Ese síntoma —fallo instantáneo sin máquina— se diagnostica en Billing, no en el código.
+- Desde ese día hay **respaldo**: `apps/plataforma` → `/api/cron/cima-pull-respaldo` (08:00/14:00 UTC)
+  dispara el pull SOLO si la franja de Actions no completó (`decidirRespaldoPull`, >3 h; sin dato NO
+  dispara). Se enciende con `ASEGURA_CRM_CRON_SECRET` en Vercel plataforma; sin ella, si CIMA está parado, lo avisa por Telegram (`correduria.cima-respaldo`).
+- El vigía `correduria_ingesta` ya incluye el cron en su firma (`firmaAvisoIngesta`): antes vio las 37 h
+  de parada y calló porque la firma no cambió.
+
 ## ⏸️ El cabo suelto que sigue abierto
 
 **El `reconcile` no está en la ejecución programada.** Vacía la cuarentena

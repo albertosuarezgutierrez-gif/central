@@ -282,6 +282,20 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.correduria_ingesta.',
   },
   {
+    id: 'correduria_actividad',
+    vigiladoDesde: '2026-09-23',
+    etiqueta: '👤 Actividad de clientes en el portal — aviso por Telegram (cron cada 5 min)',
+    // Cada 5 min → 1 h de margen: doce pasadas perdidas seguidas ya no es un tropiezo.
+    maxHoras: 1,
+    nota:
+      'Empuja a Telegram lo que hace un cliente en su intranet (entrar, no poder entrar, cambiar su ' +
+      'dirección, dar un parte, pedir la supresión). Lee el `detalle`: «NO se ha podido mirar» (puerto, ' +
+      'secreto o BD de asegura) NO quiere decir que nadie haya hecho nada; «primera pasada» es que se ' +
+      'ancló la marca sin mandar el histórico; «nada nuevo (comprobado)» sí es que se miró y no hay; ' +
+      '«SIN avisar» es que el Telegram no salió y se reintenta (la marca NO avanza). ' +
+      'Huella: agente_latidos.correduria_actividad.',
+  },
+  {
     id: 'correduria_siniestros',
     vigiladoDesde: '2026-09-05',
     etiqueta: '🚨 Siniestros nuevos de la cartera — avisar para llamar al cliente (cron diario 06:50)',
@@ -763,6 +777,19 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'El paper-tracker (evolución de las cohortes de paper trading) no ha corrido esta semana. ' +
       'Revisa el cron `/api/cron/paper-tracker` (`0 10 * * 1`) en Vercel. ' +
       'Huella: agente_latidos.paper-tracker.',
+  },
+  {
+    id: 'ia_saldo',
+    vigiladoDesde: '2026-09-23',
+    etiqueta: '💳 Saldo de OpenRouter y tope mensual de IA (diario 06:10)',
+    // Diario → 30 h, el estándar de los diarios: tolera un día saltado.
+    maxHoras: 30,
+    nota:
+      'Nadie está mirando el saldo de OpenRouter ni el tope mensual por app: si se agota, la ' +
+      'pasarela cae a la cadena gratis sin avisar antes. Mira los logs de /api/cron/ia-saldo; si ' +
+      'el detalle dice «OpenRouter /credits HTTP 401», la OPENROUTER_API_KEY de plataforma; si trae ' +
+      'una excepción sobre `ia_saldo_diario`, que la migración 2026-09-23 esté aplicada. ' +
+      'Huella: agente_latidos.ia_saldo.',
   },
   {
     id: 'sivra_prevision',

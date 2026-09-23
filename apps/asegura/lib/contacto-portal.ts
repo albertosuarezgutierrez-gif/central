@@ -95,7 +95,7 @@ export type ResultadoContactoPropio =
   | { estado: 'error'; causa: string }
 
 /** Los `cliente_id` que esa identidad tiene vinculados en esta correduría. */
-async function fichasDeIdentidad(correduriaId: string, identidadId: string): Promise<string[]> {
+export async function fichasDeIdentidad(correduriaId: string, identidadId: string): Promise<string[]> {
   const filas = await prismaAsegura().$queryRaw<{ cliente_id: string }[]>`
     select cliente_id
     from portal_vinculo

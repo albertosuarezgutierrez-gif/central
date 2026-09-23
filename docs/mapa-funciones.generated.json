@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-21T19:06:21Z",
-  "sha": "3c3262c42f5943b20226886417f0cfe01da01db7",
+  "generadoEn": "2026-09-23T12:45:15Z",
+  "sha": "6ef41c3bb29206d78f89cecfd66b32a872fdb154",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10815,6 +10815,27 @@
       "hash": "38790d6efb78"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/actividad-nueva/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "Lo que han hecho los CLIENTES en el portal desde un instante, para el aviso por Telegram de plataforma (`correduria-actividad`, cada 5 min). GET ?desde=<ISO>&limite=<n> → { estado:'ok', eventos: [...]"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/actividad-nueva",
+      "hash": "943bd5beab7b"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/actividad/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -12530,6 +12551,27 @@
       "hash": "4f4c1daff309"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/leads-competencia/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "GET /api/operador/leads-competencia?dias=90 — carril de LEADS de Vencimientos (solo lectura). La fecha de cada lead es ESTIMADA: aniversario de la póliza que tenía en otra compañía (tabla heredada `op"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/leads-competencia",
+      "hash": "bc2d8cc2392e"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/leads-web/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -12570,6 +12612,111 @@
       "tablas": [],
       "rutaApi": "/api/operador/leads",
       "hash": "bf0efe17b343"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/oportunidad/llamada/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Resultado de una llamada del modo llamada (pieza 1-3 de ASegura OS). POST { oportunidadId, resultado, nota?, volverEl?, motivo?, actor } Registro de la llamada + cambio de estado + siguiente tarea, en"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/oportunidad/llamada",
+      "hash": "db7cd5c34e6b"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/oportunidad/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "Seguimiento de UNA oportunidad (Fase 1 de ASegura OS). GET ?id= → oportunidad + historial (auditoría) + tareas POST { id, accion, ..., actor } → cambia su estado: interesado · propuesta_enviada · gana"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 37
+        },
+        {
+          "nombre": "actorDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: Record<string, unknown>",
+          "retorno": "string",
+          "linea": 69
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/oportunidad",
+      "hash": "4e3b93f32e7d"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/oportunidad/tarea/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "POST",
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Tareas de seguimiento de una oportunidad (tabla heredada `gestiones`). POST { oportunidadId, tipo, fechaLimite, observaciones, prioridad?, actor } → crea PATCH { tareaId, resultado?, actor } → cierra "
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "escribir",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: Request, accion: (correduriaId: string, b: Record<string, unknown>) => Promise<Resultado>",
+          "retorno": null,
+          "linea": 33
+        },
+        {
+          "nombre": "actorDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: Record<string, unknown>",
+          "retorno": "string",
+          "linea": 51
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/oportunidad/tarea",
+      "hash": "2aee70815b0d"
     },
     {
       "ruta": "apps/asegura/app/api/operador/partes/route.ts",
@@ -12711,6 +12858,36 @@
       "tablas": [],
       "rutaApi": "/api/operador/poliza",
       "hash": "48b5716b2432"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/portal/invitaciones/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 25,
+          "resumen": "Invitación al portal POR LOTES (plataforma → asegura, Bearer). GET → censo: a quién se escribiría, a quién no y por qué, y el correo tal cual saldría POST { clienteIds, actor } → envía a esos ids (sol"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 38
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/portal/invitaciones",
+      "hash": "25067cf5d72f"
     },
     {
       "ruta": "apps/asegura/app/api/operador/presupuesto/route.ts",
@@ -13104,6 +13281,27 @@
       "hash": "fec5d7247855"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/tareas-hoy/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "GET — las tareas de seguimiento que vencen hoy o ya vencieron, para el cockpit «Hoy» de plataforma. Lista vacía con `ok` = no hay; `error` = no se ha podido mirar (nunca se degrada a lista vacía)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/tareas-hoy",
+      "hash": "fc9a43956f06"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/vehiculo/matricula/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -13488,16 +13686,17 @@
       "resumen": "El muro de actividad de TODA la cartera, y el embudo de la intranet. ─── Qué problema resuelve ─────────────────────────────────────────────────── El historial existía por ficha: para saber qué había hecho alguien había que entrar en su ficha, y para saber qué había hecho *alguien* había que entrar ",
       "exporta": [
         "embudoPortal",
-        "actividadCartera"
+        "actividadCartera",
+        "actividadNueva"
       ],
       "funciones": [
         {
           "nombre": "consultaEventos",
           "kind": "function",
           "exportada": false,
-          "params": "correduriaId: string, filtro: FiltroActividad, porPagina: number, offset: number",
+          "params": "correduriaId: string, filtro: FiltroActividad, porPagina: number, offset: number, // Con cursor (el aviso por Telegram): límite inferior propio y orden // ASCENDENTE, para que un corte por `limite` deje fuera lo más nuevo y no // lo más vie",
           "retorno": null,
-          "linea": 76,
+          "linea": 77,
           "resumen": "La línea de tiempo. Un solo `UNION ALL` porque la alternativa —seis consultas y ordenarlas en JavaScript— no sabe paginar: para dar la página 3 habría que traerse las tres primeras de cada fuente y de"
         },
         {
@@ -13506,7 +13705,7 @@
           "exportada": false,
           "params": "etiqueta: string, sql: Prisma.Sql",
           "retorno": "Promise<number | null>",
-          "linea": 180,
+          "linea": 195,
           "resumen": "Una cuenta del embudo. `null` si no se pudo hacer — nunca 0."
         },
         {
@@ -13515,7 +13714,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<EmbudoPortal>",
-          "linea": 200,
+          "linea": 215,
           "resumen": "El embudo: de los clientes de la casa, cuántos llegan a cada escalón de la intranet. «Cliente» es cartera viva y punto (`sqlCarteraViva`), no `clientes.tipo`: esa columna dice 2.742 clientes cuando so"
         },
         {
@@ -13524,8 +13723,17 @@
           "exportada": true,
           "params": "correduriaId: string, filtro: FiltroActividad,",
           "retorno": "Promise<RespuestaActividad>",
-          "linea": 258,
+          "linea": 273,
           "resumen": "El muro entero: eventos de la ventana pedida + el embudo."
+        },
+        {
+          "nombre": "actividadNueva",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, desde: Date, limite: number",
+          "retorno": "Promise<RespuestaActividadNueva>",
+          "linea": 317,
+          "resumen": "Lo que han hecho los CLIENTES desde `desde` (inclusive), en orden ascendente, para el aviso por Telegram de plataforma (`correduria-actividad`). Sin el embudo: son cinco consultas que un vigía que pas"
         },
         {
           "nombre": "nombreFicha",
@@ -13533,7 +13741,7 @@
           "exportada": false,
           "params": "nombre: string | null, apellidos: string | null",
           "retorno": "string | null",
-          "linea": 298,
+          "linea": 349,
           "resumen": "`null` cuando el evento no tiene ficha detrás. No cae a «Sin nombre» ni a una cadena vacía: la pantalla necesita distinguir «esto lo hizo alguien que todavía no está casado con ninguna ficha» de «esto"
         }
       ],
@@ -13554,7 +13762,7 @@
         "vinc"
       ],
       "rutaApi": null,
-      "hash": "4b77b3aa6130"
+      "hash": "4d84ca545833"
     },
     {
       "ruta": "apps/asegura/lib/asegura-db.ts",
@@ -13715,7 +13923,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { otorganteId: string; autorizadoId: string; actor: string },",
           "retorno": "Promise<ResultadoAviso>",
-          "linea": 48,
+          "linea": 50,
           "resumen": "Avisa a `autorizadoId` de que `otorganteId` le ha dado acceso y está esperando su confirmación."
         },
         {
@@ -13724,14 +13932,14 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 157
+          "linea": 162
         }
       ],
       "tablas": [
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "f54734095d71"
+      "hash": "085c00e369f9"
     },
     {
       "ruta": "apps/asegura/lib/avisos-intranet-reglas.ts",
@@ -19707,7 +19915,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b4c539486c33"
+      "hash": "ccf351d9ab70"
     },
     {
       "ruta": "apps/asegura/lib/correo-avisos-intranet.ts",
@@ -19775,6 +19983,7 @@
       "exporta": [
         "enlacePortal",
         "cuerpoInvitacionPortal",
+        "rechazoDeRemitente",
         "enviarInvitacionPortal"
       ],
       "funciones": [
@@ -19815,17 +20024,25 @@
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta. Separado del envío para que su cepo pueda recorrer el texto entero — un guardián que necesitara un servidor SMTP par"
         },
         {
+          "nombre": "rechazoDeRemitente",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensaje: string",
+          "retorno": "boolean",
+          "linea": 209
+        },
+        {
           "nombre": "enviarInvitacionPortal",
           "kind": "function",
           "exportada": true,
           "params": "destino: string, d: DatosInvitacionPortal,",
           "retorno": "Promise<ResultadoEnvioCorreo>",
-          "linea": 199
+          "linea": 213
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1cf369d09c6f"
+      "hash": "20ed11bb5b32"
     },
     {
       "ruta": "apps/asegura/lib/cron-auth.ts",
@@ -20296,11 +20513,55 @@
       "hash": "889bc422c9d3"
     },
     {
+      "ruta": "apps/asegura/lib/invitacion-portal-lote.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Invitación al portal POR LOTES: el censo (quién es invitable en la cartera en vigor) y el envío. La regla de a quién se escribe vive, pura y con su cepo, en `lote-invitacion.ts`; aquí solo se lee la BD y se llama, uno a uno, al MISMO `invitarAlPortal` que usa el botón de la ficha — que vuelve a comp",
+      "exporta": [
+        "censoPortal",
+        "invitarLote"
+      ],
+      "funciones": [
+        {
+          "nombre": "clientesEnVigor",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<Array<",
+          "linea": 25
+        },
+        {
+          "nombre": "censoPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<CensoPortal>",
+          "linea": 45
+        },
+        {
+          "nombre": "invitarLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, entrada: { clienteIds: string[]; actor: string },",
+          "retorno": "Promise<ResultadoLote>",
+          "linea": 83,
+          "resumen": "🚨 Solo envía a ids que el censo de AHORA vuelve a dar como enviables: la lista que manda la pantalla es la que Alberto vio, no una autorización para escribir a cualquier id que llegue en el cuerpo."
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "historial_interno",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "634dcd9e9619"
+    },
+    {
       "ruta": "apps/asegura/lib/invitacion-portal.ts",
       "ambito": "apps/asegura",
       "resumen": "Invitar a un CLIENTE al portal, y —antes— saber si tiene sentido invitarle. ── El hueco que tapa (Alberto, 05/09/2026) ──────────────────────────────── «No aparece el enviar invitación a la intranet.» No aparecía porque no existía: el portal lleva funcionando desde el 01/09 y la única forma de entra",
       "exporta": [
         "estadoPortalDeFicha",
+        "nombreDe",
         "invitarAlPortal"
       ],
       "funciones": [
@@ -20310,7 +20571,7 @@
           "exportada": false,
           "params": "hash: string",
           "retorno": "Promise<Candidato[]>",
-          "linea": 143,
+          "linea": 144,
           "resumen": "Los candidatos que el portal encontraría para ese email: su columna principal (`clientes.email_lookup_hash`) y la lista de contacto (`cliente_emails`). ⚠️ Se busca en TODA la base, no solo en esta cor"
         },
         {
@@ -20319,7 +20580,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 162,
+          "linea": 163,
           "resumen": "Las identidades que ya entran con esta ficha, y cuándo lo hicieron por última vez."
         },
         {
@@ -20328,7 +20589,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FichaPortal | null>",
-          "linea": 197,
+          "linea": 198,
           "resumen": "¿Qué se puede hacer hoy con esta ficha? Es lo que la pantalla pinta ANTES de ofrecer el botón, para que Alberto no invite a quien va a acabar mirando una bóveda vacía ni le mande a alguien que entró a"
         },
         {
@@ -20337,7 +20598,7 @@
           "exportada": false,
           "params": "email: string, clienteId: string,",
           "retorno": "Promise<'invitable' | 'ambiguo' | 'resuelve_a_otra' | 'no_comprobado'>",
-          "linea": 244,
+          "linea": 245,
           "resumen": "Lo que el portal decidiría con ese correo, calculado con SU misma función. Cualquier tropiezo devuelve `no_comprobado`, nunca `invitable`."
         },
         {
@@ -20346,16 +20607,16 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 291,
+          "linea": 292,
           "resumen": "El correo al que se le escribiría, o `null` si no hay uno legible **por el motivo que sea**. Aquí los cinco desenlaces de `estadoEmailDeFicha` sí se colapsan a propósito: quien llama solo necesita sab"
         },
         {
           "nombre": "nombreDe",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 302,
+          "linea": 310,
           "resumen": "El nombre de la ficha, para el saludo. `null` = no hay uno legible."
         },
         {
@@ -20364,7 +20625,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { clienteId: string; actor: string },",
           "retorno": "Promise<ResultadoInvitacion>",
-          "linea": 317,
+          "linea": 325,
           "resumen": "Manda la invitación. Comprueba lo mismo que `estadoPortalDeFicha` **otra vez** y no se fía de lo que la pantalla creyera: entre que se pintó el botón y se pulsó pueden haber pasado minutos, y el estad"
         },
         {
@@ -20373,7 +20634,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 430,
+          "linea": 441,
           "resumen": "Deja constancia de que se le contó. Best-effort a propósito: el correo ya ha salido y un historial caído no puede deshacerlo ni presentarlo como fallido. 🚨 Sin la dirección dentro: un historial es do"
         }
       ],
@@ -20381,7 +20642,52 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "f7c20688c2ad"
+      "hash": "8136c7384eba"
+    },
+    {
+      "ruta": "apps/asegura/lib/leads-competencia.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El carril de LEADS de Vencimientos: pólizas que los leads tenían en OTRA compañía (tabla heredada `oportunidades`, abiertas y no aparcadas), con el próximo aniversario de su fecha de fin. Solo lectura: no envía ni escribe. Por qué y qué significa la fecha: cabecera de `lead-competencia.ts` en `@cent",
+      "exporta": [
+        "leadsCompetencia"
+      ],
+      "funciones": [
+        {
+          "nombre": "aseguradoraLegible",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "string | null",
+          "linea": 79,
+          "resumen": "Valor de cajón del volcado de Manuel: no es una compañía."
+        },
+        {
+          "nombre": "hoyUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Date",
+          "linea": 104
+        },
+        {
+          "nombre": "leadsCompetencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, horizonteDias = 90, hoy: Date = hoyUtc(),",
+          "retorno": "Promise<ListaLeadsCompetencia>",
+          "linea": 109
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "current_date",
+        "gestiones",
+        "oportunidades",
+        "polizas",
+        "recaptacion_envios"
+      ],
+      "rutaApi": null,
+      "hash": "1490044a406b"
     },
     {
       "ruta": "apps/asegura/lib/leads-portal.ts",
@@ -20459,6 +20765,45 @@
       "hash": "919e7e99308c"
     },
     {
+      "ruta": "apps/asegura/lib/lote-invitacion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "La regla PURA del envío por lotes de la invitación al portal: de toda la cartera en vigor, a quién se le escribe y a quién no, y por qué. ── Por qué existe (23/09/2026) ───────────────────────────────────────────── Medido ese día: el portal lleva desde el 01/09 funcionando y **no se había mandado ni",
+      "exporta": [
+        "decidirLote",
+        "paraElLote",
+        "rachaDeFallos"
+      ],
+      "funciones": [
+        {
+          "nombre": "decidirLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "fichas: FichaCenso[], diasSinRepetir = DIAS_SIN_REPETIR",
+          "retorno": "DecisionLote",
+          "linea": 50
+        },
+        {
+          "nombre": "paraElLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "estadoFallo: string",
+          "retorno": "boolean",
+          "linea": 77
+        },
+        {
+          "nombre": "rachaDeFallos",
+          "kind": "function",
+          "exportada": true,
+          "params": "estados: readonly (string | null)[], n = FALLOS_SEGUIDOS_PARAN",
+          "retorno": "boolean",
+          "linea": 89
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "40e1d9d9bf07"
+    },
+    {
       "ruta": "apps/asegura/lib/migracion-decision.ts",
       "ambito": "apps/asegura",
       "resumen": "¿Cuándo se considera que la cartera «ya está aquí»? — LÓGICA PURA, sin BD. Vive aparte de `estado-migracion.ts` por el mismo motivo que `tenant-ambito.ts` vive aparte de `tenant.ts`: la regla se puede probar sin Prisma ni red, y lo que se equivocó fue la REGLA, no la consulta. ─── El fallo que origi",
@@ -20509,6 +20854,140 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "6a284c2bc9a1"
+    },
+    {
+      "ruta": "apps/asegura/lib/oportunidad-seguimiento.ts",
+      "ambito": "apps/asegura",
+      "resumen": "apps/asegura/lib/oportunidad-seguimiento.ts Escrituras del seguimiento de una oportunidad (Fase 1 de ASegura OS, PR B): cambiar su estado y crear/cerrar sus tareas (tabla heredada `gestiones`). Las reglas —qué transición vale y qué exige— están en `@central/module-seguros` (`aplicarAccion`, `validar",
+      "exporta": [
+        "leerOportunidad",
+        "cambiarEstadoOportunidad",
+        "crearTarea",
+        "cerrarTarea",
+        "registrarLlamada",
+        "tareasDeHoy"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Date",
+          "linea": 80
+        },
+        {
+          "nombre": "dia",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date | null",
+          "retorno": "string | null",
+          "linea": 85
+        },
+        {
+          "nombre": "mapOportunidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: FilaOportunidad",
+          "retorno": "OportunidadSeguimiento",
+          "linea": 113
+        },
+        {
+          "nombre": "leerOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string,",
+          "retorno": "Promise<",
+          "linea": 132,
+          "resumen": "La oportunidad con su historial y sus tareas. `null` = no existe o no es de esta correduría."
+        },
+        {
+          "nombre": "diferencias",
+          "kind": "function",
+          "exportada": false,
+          "params": "antes: OportunidadSeguimiento, cambios: CambiosOportunidad",
+          "retorno": "Record<string, unknown>",
+          "linea": 180,
+          "resumen": "Solo los campos que cambian, con su antes y su después (salvo texto libre)."
+        },
+        {
+          "nombre": "cambiarEstadoOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, id: string, peticion: PeticionAccion, actor: string, hoy: Date = hoyUtc(),",
+          "retorno": "Promise<",
+          "linea": 199
+        },
+        {
+          "nombre": "transicionar",
+          "kind": "function",
+          "exportada": false,
+          "params": "tx: Tx, correduriaId: string, antes: OportunidadSeguimiento, peticion: PeticionAccion, actor: string, hoy: Date,",
+          "retorno": "Promise<",
+          "linea": 226,
+          "resumen": "La transición sobre una oportunidad YA bloqueada (`for update`) por quien llama: la usan el cambio de estado suelto y el registro de una llamada, que la hace en la misma transacción que sus tareas."
+        },
+        {
+          "nombre": "textoCambio",
+          "kind": "function",
+          "exportada": false,
+          "params": "accion: string, antes: OportunidadSeguimiento, despues: OportunidadSeguimiento, actor: string",
+          "retorno": "string",
+          "linea": 299
+        },
+        {
+          "nombre": "crearTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, oportunidadId: string, datos: { tipo?: unknown; prioridad?: unknown; observaciones?: unknown; fechaLimite?: unknown }, actor: string, hoy: Date = hoyUtc(),",
+          "retorno": "Promise<",
+          "linea": 307
+        },
+        {
+          "nombre": "cerrarTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, tareaId: string, resultado: string | null, actor: string,",
+          "retorno": "Promise<",
+          "linea": 345
+        },
+        {
+          "nombre": "registrarLlamada",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, oportunidadId: string, datos: { resultado?: unknown; nota?: unknown; volverEl?: unknown; motivo?: unknown }, actor: string, hoy: Date = hoyUtc(),",
+          "retorno": "Promise<",
+          "linea": 387,
+          "resumen": "Registra el resultado de una llamada en UNA transacción: la llamada queda como tarea `llamada` cerrada (cuenta como intento), las llamadas pendientes que vencían hoy se dan por hechas, y se aplican el"
+        },
+        {
+          "nombre": "tareasDeHoy",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, // «Hoy» es el de Madrid: con la fecha UTC, entre las 00:00 y las 02:00 el // corte seguiría en ayer y las tareas de hoy no saldrían. hoyIso: string = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' ",
+          "retorno": "Promise<",
+          "linea": 476,
+          "resumen": "Las tareas de seguimiento que vencen hoy o ya vencieron (para «Hoy» de plataforma). Solo las de oportunidades abiertas: una tarea de una ganada o perdida ya la cerró el sistema. `truncado` = hay más d"
+        },
+        {
+          "nombre": "anotarEnFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 502
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "gestiones",
+        "historial_interno",
+        "oportunidad_historial",
+        "oportunidades",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "22cf637ec329"
     },
     {
       "ruta": "apps/asegura/lib/partes-portal.ts",
@@ -65897,7 +66376,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 45,
+          "linea": 46,
           "resumen": "El muro de actividad de TODA la cartera: qué han hecho los clientes, incluidas sus entradas en la intranet. ─── Por qué existe ────────────────────────────────────────────────────────── El historial y"
         },
         {
@@ -65906,7 +66385,7 @@
           "exportada": false,
           "params": "fecha: string, desde: string | null",
           "retorno": "boolean",
-          "linea": 174,
+          "linea": 177,
           "resumen": "`true` solo cuando las dos fechas son legibles: ante la duda, no se marca nada como nuevo."
         },
         {
@@ -65915,7 +66394,7 @@
           "exportada": false,
           "params": "{ e }: { e: EmbudoPortal }",
           "retorno": null,
-          "linea": 183
+          "linea": 186
         },
         {
           "nombre": "Filtros",
@@ -65923,7 +66402,7 @@
           "exportada": false,
           "params": "{ quien, dias, onQuien, onDias, }: { quien: QuienActividad dias: number onQuien: (v: QuienActividad) => void onDias: (v: number) => void }",
           "retorno": null,
-          "linea": 241
+          "linea": 244
         },
         {
           "nombre": "Fila",
@@ -65931,7 +66410,7 @@
           "exportada": false,
           "params": "{ e, nuevo, }: { e: { id: string; tipo: string; fecha: string; clienteId: string | null; cliente: string | null; texto: string | null } nuevo: boolean }",
           "retorno": null,
-          "linea": 288
+          "linea": 291
         },
         {
           "nombre": "fechaCorta",
@@ -65939,7 +66418,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 371,
+          "linea": 374,
           "resumen": "Una fecha que no parsea se enseña tal cual: preferible a «Invalid Date»."
         },
         {
@@ -65948,7 +66427,7 @@
           "exportada": false,
           "params": "{ pagina, total, mostrados, onPagina, cargando, }: { pagina: number total: number mostrados: number onPagina: (n: number) => void cargando: boolean }",
           "retorno": null,
-          "linea": 379
+          "linea": 382
         },
         {
           "nombre": "Aviso",
@@ -65956,13 +66435,13 @@
           "exportada": false,
           "params": "{ r, cargando }: { r: ResultadoActividad | null; cargando: boolean }",
           "retorno": null,
-          "linea": 427,
+          "linea": 430,
           "resumen": "🚨 Nunca se pinta un muro vacío por un fallo. «No se ha podido leer» y «no ha pasado nada» se verían igual, y solo uno de los dos autoriza a concluir que los clientes no están usando la intranet."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb7389d281e1"
+      "hash": "1d19b2bf2926"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Blog.tsx",
@@ -67589,7 +68068,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 74
+          "linea": 77
         },
         {
           "nombre": "fmtFecha",
@@ -67597,7 +68076,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 79,
+          "linea": 82,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -67606,7 +68085,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 129
+          "linea": 132
         },
         {
           "nombre": "CorreduriaClient",
@@ -67614,7 +68093,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 131
+          "linea": 134
         },
         {
           "nombre": "CarteraResumen",
@@ -67622,7 +68101,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 626
+          "linea": 659
         },
         {
           "nombre": "btnMini",
@@ -67630,7 +68109,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 743,
+          "linea": 776,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -67639,12 +68118,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 761
+          "linea": 794
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "599b10e35c11"
+      "hash": "ab2af46c2ec8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -68091,6 +68570,118 @@
       "hash": "12a6e1549941"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/hoy-cockpit.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "La lógica del cockpit «Hoy» sin JSX (pieza 1-4 de ASegura OS, maqueta aprobada el 23/09/2026), para poder probarla con `node --test`. Tres estados en todo lo que se cuenta: número, `0` y `null` = «no se ha podido mirar». Un cockpit que dice «0 incidencias» porque una lectura falló es peor que no ten",
+      "exporta": [
+        "lineaEstadoIngesta",
+        "cuandoTarea",
+        "sinInvitar"
+      ],
+      "funciones": [
+        {
+          "nombre": "lineaEstadoIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: VistaIngesta | null",
+          "retorno": "LineaEstado",
+          "linea": 15,
+          "resumen": "La línea de salud bajo la franja: CIMA al día o no, y desde cuándo."
+        },
+        {
+          "nombre": "dias",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": "number",
+          "linea": 26,
+          "resumen": "Días entre dos fechas aaaa-mm-dd (b − a)."
+        },
+        {
+          "nombre": "cuandoTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaLimite: string, hoy: string",
+          "retorno": "",
+          "linea": 31,
+          "resumen": "«hoy», «ayer» o «vencida hace N d»: la vencida no se esconde entre las de hoy."
+        },
+        {
+          "nombre": "sinInvitar",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EmbudoPortal | null",
+          "retorno": "number | null",
+          "linea": 42,
+          "resumen": "Clientes con correo a los que aún no se ha invitado al portal. `null` si falta cualquiera de las dos cuentas: restar un «no se sabe» daría un número que parece cierto."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "33c7f7029f9f"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/HoyCockpit.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "HoyCockpit"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 29
+        },
+        {
+          "nombre": "hora",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 32
+        },
+        {
+          "nombre": "cifra",
+          "kind": "function",
+          "exportada": false,
+          "params": "n: N",
+          "retorno": "string",
+          "linea": 39
+        },
+        {
+          "nombre": "cifraC",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Contador | null | undefined",
+          "retorno": "string",
+          "linea": 43,
+          "resumen": "Un contador agregado: «n+» si alguna cola no se pudo leer (es un SUELO, no el total)."
+        },
+        {
+          "nombre": "HoyCockpit",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ ingesta, nIncidencias, nRecaptacion, nBlog, onIr, onContadorTareas, }: { ingesta: VistaIngesta | null /** Partes + supresiones + recibos + sustituciones, ya agregado por la pantalla. */ nIncidencias: Contador | null | undefined nRecaptaci",
+          "retorno": null,
+          "linea": 47
+        },
+        {
+          "nombre": "FilaOk",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ n, titulo, sub, onClick }: { n: N; titulo: string; sub: string; onClick: () => void }",
+          "retorno": null,
+          "linea": 227
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cd1f97583b93"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Ingesta.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -68200,6 +68791,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ff4e48d10125"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/InvitarPortalLote.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "InvitarPortalLote"
+      ],
+      "funciones": [
+        {
+          "nombre": "InvitarPortalLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 23,
+          "resumen": "Invitar al portal a TODOS los que se puede de una vez (23/09/2026). Medido ese día: el portal lleva desde el 01/09 y no se había mandado ni una invitación; la única forma era ficha a ficha. Esto no ca"
+        },
+        {
+          "nombre": "Resultado",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r }: { r: ResultadoLote }",
+          "retorno": null,
+          "linea": 158
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2bf25b9155e1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/layout.tsx",
@@ -68575,6 +69195,107 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ddba4c17f130"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "OportunidadPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "OportunidadPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ params }: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 6,
+          "resumen": "Seguimiento de UNA oportunidad: estado, tareas e historial (maqueta aprobada el 23/09/2026)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "68409f973884"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SeguimientoClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "SeguimientoClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 28
+        },
+        {
+          "nombre": "masDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, n: number",
+          "retorno": "string",
+          "linea": 31
+        },
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": "string",
+          "linea": 36
+        },
+        {
+          "nombre": "enviar",
+          "kind": "function",
+          "exportada": false,
+          "params": "url: string, metodo: 'POST' | 'PATCH', body: Record<string, unknown>",
+          "retorno": "Promise<string | null>",
+          "linea": 44
+        },
+        {
+          "nombre": "SeguimientoClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ id }: { id: string }",
+          "retorno": null,
+          "linea": 57
+        },
+        {
+          "nombre": "FormPerder",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ enviando, onEnviar, onCancelar }: { enviando: boolean; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
+          "retorno": null,
+          "linea": 186
+        },
+        {
+          "nombre": "FormAparcar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ enviando, hoy, onEnviar, onCancelar }: { enviando: boolean; hoy: string; onEnviar: (b: Record<string, unknown>) => void; onCancelar: () => void }",
+          "retorno": null,
+          "linea": 226
+        },
+        {
+          "nombre": "Tareas",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, onCambio }: { oportunidadId: string; tareas: TareaSeguimiento[]; descartadas: number; fueCliente: boolean | null; cerrada: boolean; hoy: string; onCambio: () => void }",
+          "retorno": null,
+          "linea": 256
+        }
+      ],
+      "tablas": [
+        "lucide",
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "ebc09433e969"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/page.tsx",
@@ -70357,6 +71078,168 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2442e4086398"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/vencimientos/llamada/LlamadaClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "LlamadaClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 23
+        },
+        {
+          "nombre": "masDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, n: number",
+          "retorno": "string",
+          "linea": 26
+        },
+        {
+          "nombre": "fechaLarga",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 31
+        },
+        {
+          "nombre": "LlamadaClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 36
+        },
+        {
+          "nombre": "Ficha",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ l, onSiguiente }: { l: LeadVencimiento; onSiguiente: () => void }",
+          "retorno": null,
+          "linea": 80
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bafef1f2c6a4"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/vencimientos/llamada/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "LlamadaPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "LlamadaPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "Modo llamada (pieza 1-3 de ASegura OS, maqueta aprobada el 23/09/2026): la lista de hoy, un lead por pantalla, con lo necesario para llamar y los botones de resultado que dejan escrito el siguiente pa"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9ad7f32fb964"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/vencimientos/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "VencimientosPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "VencimientosPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Vencimientos: la pantalla de VENDER (pieza 1-3 de ASegura OS, maqueta aprobada por Alberto el 23/09/2026). Dos carriles —clientes que renuevan y leads con su seguro en otra compañía— y desde cada lead"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "37f120630974"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/vencimientos/VencimientosClient.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "VencimientosClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "carrilDeUrl",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Carril",
+          "linea": 24
+        },
+        {
+          "nombre": "VencimientosClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 29
+        },
+        {
+          "nombre": "CarrilLeads",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ datos }: { datos: LeadsVencimientos | null }",
+          "retorno": null,
+          "linea": 92
+        },
+        {
+          "nombre": "Chip",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ activo, onClick, children }: { activo: boolean; onClick: () => void; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 159
+        },
+        {
+          "nombre": "fechaCorta",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 177
+        },
+        {
+          "nombre": "tonoCanal",
+          "kind": "function",
+          "exportada": false,
+          "params": "l: LeadVencimiento",
+          "retorno": "Tono",
+          "linea": 182
+        },
+        {
+          "nombre": "FilaLead",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ l }: { l: LeadVencimiento }",
+          "retorno": null,
+          "linea": 189
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "022df0332111"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/dashboard/GestionSociedad.tsx",
@@ -77883,6 +78766,27 @@
       "hash": "2838b2a4c6b4"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/leads-competencia/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/correduria/leads-competencia?dias=90 — carril de LEADS de Vencimientos (puerto de asegura, solo lectura). La fecha es ESTIMADA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/leads-competencia",
+      "hash": "866c50e9e4a3"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/leads-web/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -77923,6 +78827,95 @@
       "tablas": [],
       "rutaApi": "/api/correduria/leads",
       "hash": "176c8db4cabc"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/oportunidad/llamada/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "/api/correduria/oportunidad/llamada — resultado de una llamada del modo llamada. POST { oportunidadId, resultado, nota?, volverEl?, motivo? }. Asegura lo aplica en una transacción; el actor lo pone el"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/oportunidad/llamada",
+      "hash": "6f56c12e1206"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/oportunidad/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "/api/correduria/oportunidad — seguimiento de una oportunidad. Reenvía al puerto de asegura, que valida la regla (perder sin motivo = 422) y deja el historial. El `actor` lo pone el servidor y va el ÚL"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/oportunidad",
+      "hash": "a05abe942bc2"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/oportunidad/tarea/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST",
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 12,
+          "resumen": "/api/correduria/oportunidad/tarea — tareas de seguimiento (puerto de asegura). POST { oportunidadId, tipo, fechaLimite, observaciones, prioridad? } → crea PATCH { tareaId, resultado? } → cierra"
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "reenviar",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest, obligatorio: 'oportunidadId' | 'tareaId', llamada: (b: Record<string, unknown>) => Promise<Reenvio>",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/oportunidad/tarea",
+      "hash": "e4c0e291fb1c"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/partes/route.ts",
@@ -77974,6 +78967,36 @@
       "tablas": [],
       "rutaApi": "/api/correduria/poliza",
       "hash": "5ff94752ea9f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/portal-invitaciones/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "/api/correduria/portal-invitaciones — invitación al portal POR LOTES. GET → a quién se escribiría y el correo tal cual (gratis) POST { clienteIds } → envía. El `actor` lo pone el SERVIDOR desde la ses"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/portal-invitaciones",
+      "hash": "f7491742d7cd"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/presupuesto/route.ts",
@@ -78323,6 +79346,27 @@
       "hash": "dd7cdeb83ae5"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/tareas-hoy/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "GET — tareas de seguimiento que vencen hoy o ya vencieron (puerto de asegura)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/tareas-hoy",
+      "hash": "0c350d246e33"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/vencimientos/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -78354,7 +79398,7 @@
           "exportada": false,
           "params": "ag: { id: string; etiqueta: string; maxHoras: number; nota: string }, evaluadoAt: Date, alerta: boolean, horas: number | null, motivo: string, sondaError: string | null,",
           "retorno": "Promise<void>",
-          "linea": 256,
+          "linea": 259,
           "resumen": "Persiste el veredicto de UN agente en `agente_veredicto` para que lo pueda leer una pantalla. 🚨 NO es `agente_salud` (05/09/2026): esa tabla ya existía desde julio con otro esquema —el badge que el p"
         },
         {
@@ -78363,7 +79407,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 277
+          "linea": 280
         }
       ],
       "tablas": [
@@ -78378,7 +79422,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "18faaf2d627b"
+      "hash": "1355c8af6ca3"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -78574,6 +79618,39 @@
       "hash": "070e93d22583"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/cima-pull-respaldo/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── RESPALDO del pull de CIMA (Grupo ASegura). El pull principal lo dispara GitHub Actions (repo `asegura`, 05:30/11:30 UTC) contra `app.grupoasegura.com/api/crons/cima-pull`. El 22/09/2026 el presupuesto de Actions de la cuent",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "detalleAnterior",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 39,
+          "resumen": "Lo que dejó la pasada anterior, para no repetir el mismo aviso dos veces al día."
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 50
+        }
+      ],
+      "tablas": [
+        "agente_latidos",
+        "next"
+      ],
+      "rutaApi": "/api/cron/cima-pull-respaldo",
+      "hash": "526905fa74a6"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/concursos-avisos/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -78699,6 +79776,56 @@
       "hash": "000ade6ee05e"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/correduria-actividad/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Aviso por Telegram de TODO lo que hace un cliente en el portal (Grupo ASegura). Pieza 1-7 de ASegura OS, dictado de Alberto (23/09/2026): «Que cuando entre cliente me llegue aviso por Telegram; al principio hay que hacer se",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 49
+        },
+        {
+          "nombre": "leerFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "EventoActividad | null",
+          "linea": 54,
+          "resumen": "Una fila del puerto, o `null` si no tiene forma (sin id, tipo o fecha no se puede deduplicar)."
+        },
+        {
+          "nombre": "leerPuerto",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string",
+          "retorno": "Promise<Lectura>",
+          "linea": 69,
+          "resumen": "Lee el puerto de `central-asegura`. CUALQUIER duda acaba en `sin_datos`, nunca en una lista vacía: «nadie ha hecho nada» y «no se ha podido mirar» no son lo mismo. El `texto` de cada evento ni se guar"
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 106
+        }
+      ],
+      "tablas": [
+        "agente_latidos",
+        "next"
+      ],
+      "rutaApi": "/api/cron/correduria-actividad",
+      "hash": "12683630787b"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/correduria-ingesta/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Vigía de la INGESTA de CIMA (Grupo ASegura). 🚨 Existe por una avería real: del 24/06 al 30/08/2026 se quedaron 42 ficheros de CIMA sin procesar —23 recibos por 7.721,71€ de prima y 20 siniestros, casi todos de Occident— y ",
@@ -78707,21 +79834,12 @@
       ],
       "funciones": [
         {
-          "nombre": "firma",
-          "kind": "function",
-          "exportada": false,
-          "params": "salud: SaludIngesta",
-          "retorno": "string",
-          "linea": 54,
-          "resumen": "Firma de lo que se ha visto hoy. Sirve para no repetir el MISMO aviso cada mañana mientras la avería sigue abierta: el estado vive en el latido y en la pantalla; el Telegram suena cuando algo CAMBIA ("
-        },
-        {
           "nombre": "leerCabecera",
           "kind": "function",
           "exportada": false,
           "params": "detalle: string | null",
           "retorno": "",
-          "linea": 90,
+          "linea": 45,
           "resumen": "La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`. Va delante y separada del texto humano por ` · `. El formato viejo era solo la firma, así que un `detalle` sin `|` "
         },
         {
@@ -78730,7 +79848,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 103
+          "linea": 58
         }
       ],
       "tablas": [
@@ -78738,7 +79856,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/correduria-ingesta",
-      "hash": "f83595719afa"
+      "hash": "068c24afe1f0"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-partes/route.ts",
@@ -93848,7 +94966,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 202,
+          "linea": 213,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -93857,7 +94975,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 232,
+          "linea": 243,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -93866,7 +94984,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 254
+          "linea": 265
         },
         {
           "nombre": "ventanaMinutos",
@@ -93874,7 +94992,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 262,
+          "linea": 273,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -93883,13 +95001,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 274,
+          "linea": 285,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "690066a3cd00"
+      "hash": "7d58b7dfb7ac"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -98244,6 +99362,68 @@
       "hash": "19f9c752a45a"
     },
     {
+      "ruta": "apps/plataforma/lib/invitacion-lote.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lectura PURA de las dos respuestas del envío por lotes de la invitación al portal (`/api/operador/portal/invitaciones` de asegura). Separada del componente para que su cepo corra sin navegador. 🚨 Cada motivo por el que una ficha queda FUERA se nombra: `sin_email` se arregla pidiéndole el correo, `r",
+      "exporta": [
+        "interpretarCenso",
+        "interpretarLote"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown>",
+          "linea": 42
+        },
+        {
+          "nombre": "num",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 45
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 48
+        },
+        {
+          "nombre": "motivoError",
+          "kind": "function",
+          "exportada": false,
+          "params": "status: number, o: Record<string, unknown>",
+          "retorno": "string",
+          "linea": 52
+        },
+        {
+          "nombre": "interpretarCenso",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "ResultadoCenso",
+          "linea": 59
+        },
+        {
+          "nombre": "interpretarLote",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "ResultadoLote",
+          "linea": 101
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "167d2edafeb6"
+    },
+    {
       "ruta": "apps/plataforma/lib/invitacion-whatsapp.ts",
       "ambito": "apps/plataforma",
       "resumen": "Invitar al portal **por WhatsApp**, con el mismo mensaje que va por correo. ── Lo que pidió Alberto (08/09/2026) ─────────────────────────────────────── «Como tenemos el tema de WhatsApp ya desarrollado, poner al lado el botón de WhatsApp: le doy y ese mismo mensaje se le envía al cliente, que tenem",
@@ -98810,7 +99990,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "97d5e8a427cc"
+      "hash": "8cc6d51aa60d"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -99892,7 +101072,9 @@
         "interpretarVista",
         "textoVista",
         "portalAsegura",
-        "invitarPortalAsegura"
+        "invitarPortalAsegura",
+        "censoInvitacionesAsegura",
+        "invitarLoteAsegura"
       ],
       "funciones": [
         {
@@ -99942,7 +101124,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaInvitacion",
-          "linea": 196
+          "linea": 197
         },
         {
           "nombre": "fechaAcceso",
@@ -99950,7 +101132,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 233,
+          "linea": 234,
           "resumen": "Una fecha ISO en castellano de pantalla: «3 de septiembre de 2026»."
         },
         {
@@ -99959,7 +101141,7 @@
           "exportada": true,
           "params": "ultimoAccesoEn: string | null",
           "retorno": "string",
-          "linea": 246,
+          "linea": 247,
           "resumen": "Cuándo entró por última vez. 🚨 Sin fecha se dice **«no consta cuándo»**, nunca «nunca ha entrado»: llegamos aquí porque hay una identidad vinculada, o sea que entrar, entró — lo que falta es la marca"
         },
         {
@@ -99968,7 +101150,7 @@
           "exportada": true,
           "params": "p: PortalCartera",
           "retorno": "FrasePortal",
-          "linea": 256,
+          "linea": 257,
           "resumen": "El estado → la frase que dice qué hacer. Vive aquí (puro, con test) y no en el JSX: es lo que Alberto lee para decidir, y el sitio donde dos estados que se arreglan en sitios distintos acabarían con e"
         },
         {
@@ -99977,7 +101159,7 @@
           "exportada": true,
           "params": "identidades: number | null",
           "retorno": "string",
-          "linea": 318,
+          "linea": 319,
           "resumen": "Cuántas personas entran con esta ficha. `null` = no se contó, y se dice."
         },
         {
@@ -99986,7 +101168,7 @@
           "exportada": true,
           "params": "r: RespuestaInvitacion, nombre: string",
           "retorno": "string",
-          "linea": 332,
+          "linea": 333,
           "resumen": "El desenlace del envío, en una frase. Puro y con test para que un «se ha enviado» no pueda salir de un desenlace que no envió nada. 🚨 En el caso bueno el texto NO dice que el cliente ya esté dentro: "
         },
         {
@@ -99995,7 +101177,7 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 372,
+          "linea": 378,
           "resumen": "El motivo técnico del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
@@ -100004,7 +101186,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 387
+          "linea": 393
         },
         {
           "nombre": "cabeceras",
@@ -100012,15 +101194,15 @@
           "exportada": false,
           "params": "",
           "retorno": "Record<string, string> | null",
-          "linea": 391
+          "linea": 397
         },
         {
           "nombre": "llamar",
           "kind": "function",
           "exportada": false,
-          "params": "path: string, init: RequestInit",
+          "params": "path: string, init: RequestInit, timeoutMs = 15_000",
           "retorno": "Promise<Reenvio>",
-          "linea": 398
+          "linea": 404
         },
         {
           "nombre": "vistaCorredorAsegura",
@@ -100028,7 +101210,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 420,
+          "linea": 426,
           "resumen": "La «vista de corredor» (08/09/2026): pide a asegura un enlace de UN solo uso (10 min) que abre el portal como lo ve ese cliente. Vuelve aquí y lo abre Alberto en su navegador: no se manda a nadie."
         },
         {
@@ -100037,7 +101219,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaVista",
-          "linea": 428
+          "linea": 434
         },
         {
           "nombre": "textoVista",
@@ -100045,7 +101227,7 @@
           "exportada": true,
           "params": "r: Exclude<RespuestaVista, { estado: 'ok' }>, nombre: string",
           "retorno": "string",
-          "linea": 445
+          "linea": 451
         },
         {
           "nombre": "portalAsegura",
@@ -100053,7 +101235,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 464
+          "linea": 470
         },
         {
           "nombre": "invitarPortalAsegura",
@@ -100061,13 +101243,31 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 477,
+          "linea": 483,
           "resumen": "`POST /api/operador/cliente/portal` — `{clienteId, actor}`: le manda el correo con el enlace del portal. 🚨 Escribe a una persona real, así que no es un `GET` más: lo dispara Alberto pulsando, nunca u"
+        },
+        {
+          "nombre": "censoInvitacionesAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 492,
+          "resumen": "`GET /api/operador/portal/invitaciones` — el censo del envío por lotes: a quién se escribiría, a quién no y por qué, y el correo tal cual saldría. Gratis. Tarda: comprueba una a una las fichas de la c"
+        },
+        {
+          "nombre": "invitarLoteAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: { clienteIds: string[]; actor: string }",
+          "retorno": "Promise<Reenvio>",
+          "linea": 502,
+          "resumen": "`POST /api/operador/portal/invitaciones` — `{clienteIds, actor}`. Escribe a personas reales: solo lo dispara Alberto tras ver la lista y el texto (regla de comunicaciones salientes del `CLAUDE.md` raí"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "789961cbb62e"
+      "hash": "c481787f2f9b"
     },
     {
       "ruta": "apps/plataforma/lib/presupuesto-asegura.ts",
@@ -100905,7 +102105,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaAviso",
-          "linea": 402
+          "linea": 404
         },
         {
           "nombre": "textoAviso",
@@ -100913,7 +102113,7 @@
           "exportada": true,
           "params": "r: RespuestaAviso, nombre: string",
           "retorno": "string",
-          "linea": 427,
+          "linea": 429,
           "resumen": "La frase de pantalla, PURA y con test, para que «se ha enviado» no pueda salir de un desenlace que no envió nada."
         },
         {
@@ -100922,7 +102122,7 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 454,
+          "linea": 458,
           "resumen": "El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan."
         },
         {
@@ -100931,7 +102131,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 471
+          "linea": 475
         },
         {
           "nombre": "cabeceras",
@@ -100939,7 +102139,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Record<string, string> | null",
-          "linea": 475
+          "linea": 479
         },
         {
           "nombre": "llamar",
@@ -100947,7 +102147,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit",
           "retorno": "Promise<Reenvio>",
-          "linea": 482
+          "linea": 486
         },
         {
           "nombre": "relacionesAsegura",
@@ -100955,7 +102155,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 499,
+          "linea": 503,
           "resumen": "`GET /api/operador/cliente/relaciones?id=` — las relaciones de una ficha."
         },
         {
@@ -100964,7 +102164,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 504,
+          "linea": 508,
           "resumen": "`POST` — alta de un vínculo `{clienteId, relacionadoId, tipo, observaciones?, actor}`."
         },
         {
@@ -100973,7 +102173,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 509,
+          "linea": 513,
           "resumen": "`PATCH` — `{clienteId, relacionadoId, autoriza, actor}`: la ficha autoriza/revoca al relacionado."
         },
         {
@@ -100982,7 +102182,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 514,
+          "linea": 518,
           "resumen": "`DELETE` — `{clienteId, relacionadoId, actor}`: quita el vínculo (los dos sentidos)."
         },
         {
@@ -100991,13 +102191,13 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 525,
+          "linea": 529,
           "resumen": "`POST …/relaciones/aviso` — `{clienteId, relacionadoId, actor}`: escribe al relacionado para que confirme el acceso que la ficha le ha dado. 🚨 Manda un correo a un TERCERO, así que no es un `PATCH` m"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b3fd582d4758"
+      "hash": "32674ca3822b"
     },
     {
       "ruta": "apps/plataforma/lib/renovaciones-asegura.ts",
@@ -101633,6 +102833,197 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "bd2abd7c894c"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seguimiento-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Vencimientos (carril de LEADS) y seguimiento de oportunidades de la correduría, leídos del puerto de asegura. Esta app no toca la BD de la correduría: `lib` puro para interpretar (testeable con `node --test`) y un reenvío fino para la red, solo desde rutas API (el secreto no sale de ahí). Tres estad",
+      "exporta": [
+        "interpretarLead",
+        "interpretarLeads",
+        "interpretarOportunidad",
+        "rotuloCanal",
+        "parsearPrima",
+        "interpretarTareasHoy",
+        "colaLlamadas",
+        "guionLlamada",
+        "leadsCompetenciaAsegura",
+        "oportunidadAsegura",
+        "accionOportunidadAsegura",
+        "crearTareaAsegura",
+        "cerrarTareaAsegura",
+        "registrarLlamadaAsegura",
+        "tareasHoyAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "objeto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 75
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 78
+        },
+        {
+          "nombre": "numero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 81
+        },
+        {
+          "nombre": "uno",
+          "kind": "function",
+          "exportada": false,
+          "params": "lista: readonly T[], v: unknown",
+          "retorno": "T | null",
+          "linea": 84
+        },
+        {
+          "nombre": "interpretarLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "LeadVencimiento | null",
+          "linea": 88
+        },
+        {
+          "nombre": "interpretarLeads",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LeadsVencimientos",
+          "linea": 130
+        },
+        {
+          "nombre": "interpretarOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaOportunidad",
+          "linea": 199
+        },
+        {
+          "nombre": "rotuloCanal",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CanalLead | null",
+          "retorno": "string",
+          "linea": 277,
+          "resumen": "`null` = no se sabe (asegura antigua): se dice, no se afirma «solo teléfono»."
+        },
+        {
+          "nombre": "parsearPrima",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string",
+          "retorno": "number | null | 'invalido'",
+          "linea": 318,
+          "resumen": "Prima tecleada en formato español. Solo se aceptan formas sin ambigüedad: «1.200» es mil doscientos, nunca 1,2; «1200», «1.200,50», «412,5» y «412.50» también. Lo que no encaja es `'invalido'`, no un "
+        },
+        {
+          "nombre": "interpretarTareasHoy",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "TareasDeHoy",
+          "linea": 348
+        },
+        {
+          "nombre": "colaLlamadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "leads: readonly LeadVencimiento[]",
+          "retorno": "LeadVencimiento[]",
+          "linea": 386,
+          "resumen": "La cola de llamadas de hoy, en el orden de la lista (probabilidad × prima). Solo quien se puede llamar (teléfono y canal que lo permite) y a quien le toca ya: un primer contacto a quien se le puede es"
+        },
+        {
+          "nombre": "guionLlamada",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LeadVencimiento",
+          "retorno": "string[]",
+          "linea": 397,
+          "resumen": "Guion corto de la llamada, con lo que se sabe del lead. Lo que no consta no se inventa."
+        },
+        {
+          "nombre": "llamar",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string, init: RequestInit",
+          "retorno": "Promise<Reenvio>",
+          "linea": 422
+        },
+        {
+          "nombre": "leadsCompetenciaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias: number",
+          "retorno": "Promise<Reenvio>",
+          "linea": 439
+        },
+        {
+          "nombre": "oportunidadAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 442
+        },
+        {
+          "nombre": "accionOportunidadAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 445
+        },
+        {
+          "nombre": "crearTareaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 448
+        },
+        {
+          "nombre": "cerrarTareaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 451
+        },
+        {
+          "nombre": "registrarLlamadaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 454
+        },
+        {
+          "nombre": "tareasHoyAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Reenvio>",
+          "linea": 458
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "507d26dd7d4c"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/agente-decidir.ts",
@@ -111704,7 +113095,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 649
+          "linea": 661
         },
         {
           "nombre": "avisosDe",
@@ -111712,7 +113103,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 654,
+          "linea": 666,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -111721,13 +113112,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 664,
+          "linea": 676,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e298d0234502"
+      "hash": "f2720d147f22"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -134367,6 +135758,102 @@
       "hash": "6ba1ed12321a"
     },
     {
+      "ruta": "packages/module-seguros/src/actividad-aviso.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "packages/module-seguros/src/actividad-aviso.ts El aviso por Telegram de lo que hacen los clientes en el portal (pieza 1-7 de ASegura OS, 23/09/2026). Alberto: «que cuando entre cliente me llegue aviso por Telegram; al principio hay que hacer seguimiento de todo». Puro: decide qué eventos son nuevos,",
+      "exporta": [
+        "claveEvento",
+        "desdeConsulta",
+        "decidirAvisosActividad",
+        "mensajeActividad",
+        "detalleActividad",
+        "serializarMarcaActividad",
+        "leerMarcaActividad"
+      ],
+      "funciones": [
+        {
+          "nombre": "claveEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: Pick<EventoActividad, 'tipo' | 'id'>",
+          "retorno": "string",
+          "linea": 69,
+          "resumen": "`tipo:` + los 8 primeros caracteres del id (uuid): 32 bits bastan para no chocar entre las decenas de eventos de una ventana de 3 h, y la mitad de largo que el uuid entero (ver `MAX_CLAVES`)."
+        },
+        {
+          "nombre": "desdeConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "marca: MarcaActividad | null, ahora: Date",
+          "retorno": "string",
+          "linea": 74,
+          "resumen": "El `desde` que hay que pedir al puerto: la marca menos la ventana (o ahora menos la ventana, la primera vez)."
+        },
+        {
+          "nombre": "decidirAvisosActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { marca: MarcaActividad | null eventos: EventoActividad[] ahora: Date truncado: boolean }",
+          "retorno": "DecisionActividad",
+          "linea": 90,
+          "resumen": "Qué hay que avisar y dónde queda la marca. - Primera vez (sin marca): ancla y NO avisa — mandar el histórico de golpe no es seguimiento, es ruido. - `truncado` (el puerto tenía más de los que devolvió"
+        },
+        {
+          "nombre": "escapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 135
+        },
+        {
+          "nombre": "horaMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 139
+        },
+        {
+          "nombre": "mensajeActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "nuevos: EventoActividad[], urlFicha: (clienteId: string) => string",
+          "retorno": "string",
+          "linea": 150,
+          "resumen": "El mensaje: UNO por pasada, agrupado por cliente (varias acciones seguidas del mismo cliente son un bloque, no N avisos). HTML de Telegram. `urlFicha(clienteId)` la pone quien llama (la base de la URL"
+        },
+        {
+          "nombre": "detalleActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DecisionActividad | { avisar: false; motivo: 'sin_datos'; causa?: string | null },",
+          "retorno": "string",
+          "linea": 192
+        },
+        {
+          "nombre": "serializarMarcaActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "marca: MarcaActividad, detalle: string",
+          "retorno": "string",
+          "linea": 209
+        },
+        {
+          "nombre": "leerMarcaActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "detalle: string | null | undefined",
+          "retorno": "MarcaActividad | null",
+          "linea": 214,
+          "resumen": "`null` = no consta o ilegible → se trata como primera vez (ancla sin avisar)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bacb75c0933b"
+    },
+    {
       "ruta": "packages/module-seguros/src/actividad.ts",
       "ambito": "packages/module-seguros",
       "resumen": "El muro de actividad de la cartera: qué se considera un evento, cómo se rotula y cuál de ellos exige mirar una póliza. Vive en el módulo compartido porque lo necesitan las DOS apps: `apps/asegura` para construir la consulta y `apps/plataforma` para pintar los filtros y los rótulos. Es la misma razón",
@@ -136282,6 +137769,9 @@
       "exporta": [
         "saludIngesta",
         "detalleSalud",
+        "decidirRespaldoPull",
+        "firmaAvisoIngesta",
+        "normalizarFirmaIngesta",
         "decidirAvisoIngesta",
         "repartirHuerfanas",
         "textoHuerfanas"
@@ -136331,12 +137821,39 @@
           "resumen": "Una línea para el latido/Telegram. Nunca dice «todo bien» sin haberlo mirado. 🚨 Hasta el 20/09/2026 la rama `ok` DESCARTABA los motivos y solo pegaba una coletilla cableada para dos señales (rechazos"
         },
         {
+          "nombre": "decidirRespaldoPull",
+          "kind": "function",
+          "exportada": true,
+          "params": "ultimoPull: UltimoPullIngesta | null | undefined, umbral = HORAS_RESPALDO_PULL,",
+          "retorno": "DecisionRespaldoPull",
+          "linea": 814,
+          "resumen": "¿Dispara el respaldo el pull de CIMA? Existe por la avería del 22/09/2026: el presupuesto de GitHub Actions de la cuenta se agotó (lo consume casi todo `central`), los jobs de `asegura` se quedaron si"
+        },
+        {
+          "nombre": "firmaAvisoIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "salud: SaludIngesta",
+          "retorno": "string",
+          "linea": 838,
+          "resumen": "Firma de lo que el vigía ha visto hoy, para no repetir el MISMO aviso cada mañana mientras la avería sigue abierta (el Telegram suena cuando algo CAMBIA; ver `decidirAvisoIngesta`). Vivía dentro de la"
+        },
+        {
+          "nombre": "normalizarFirmaIngesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "firma: string | null",
+          "retorno": "string | null",
+          "linea": 871,
+          "resumen": "Lee una firma GUARDADA en el formato de hoy. Las anteriores al 23/09/2026 no traían el tramo del cron (cinco tramos en vez de seis): se leen como «el cron corría», que es lo que decía el vigía cuando "
+        },
+        {
           "nombre": "decidirAvisoIngesta",
           "kind": "function",
           "exportada": true,
           "params": "e: { firmaAnterior: string | null firmaActual: string ultimoAvisoEn: Date | null /** Desde cuándo consta abierta esta misma avería. `null` = no se sabe. */ abiertaDesde?: Date | null hoy: Date diasRecordatorio?: number }",
           "retorno": "DecisionAviso",
-          "linea": 798,
+          "linea": 889,
           "resumen": "¿Hay que sonar hoy? - `primera` — no consta que se haya avisado nunca. Suena siempre: perder un aviso es peor que duplicarlo. - `cambio` — el estado ha cambiado (entró otro fichero, apareció otra huér"
         },
         {
@@ -136345,7 +137862,7 @@
           "exportada": false,
           "params": "g: { entidad: string; entidadNombre: string | null; clave: string | null },",
           "retorno": "string",
-          "linea": 933,
+          "linea": 1024,
           "resumen": "Etiqueta de a quién se le pide: compañía + CLAVE DE MEDIADOR, nunca solo la compañía. Occident manda por tres claves y el atasco no está repartido igual: decir «Occident» manda a revisar una cartera q"
         },
         {
@@ -136354,7 +137871,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 940
+          "linea": 1031
         },
         {
           "nombre": "agrupar",
@@ -136362,7 +137879,7 @@
           "exportada": false,
           "params": "filas: PolizaHuerfana[]",
           "retorno": "GrupoHuerfanas[]",
-          "linea": 948
+          "linea": 1039
         },
         {
           "nombre": "repartirHuerfanas",
@@ -136370,7 +137887,7 @@
           "exportada": true,
           "params": "filas: PolizaHuerfana[] | null",
           "retorno": "RepartoHuerfanas | null",
-          "linea": 1006,
+          "linea": 1097,
           "resumen": "Reparte las huérfanas por lo que hay que HACER con cada una. 🚨 `null` entra, `null` sale: no haber podido listarlas no es «no hay ninguna». Un `[]` aquí significa «se miró y no hay», y la diferencia "
         },
         {
@@ -136379,7 +137896,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "string",
-          "linea": 1023,
+          "linea": 1114,
           "resumen": "Los números vienen de un XML de la compañía: se escapan antes de ir a HTML."
         },
         {
@@ -136388,13 +137905,13 @@
           "exportada": true,
           "params": "r: RepartoHuerfanas | null, opciones: { tope?: number; donde?: string } = {},",
           "retorno": "string",
-          "linea": 1035,
+          "linea": 1126,
           "resumen": "El bloque del Telegram, en HTML. Cadena vacía cuando no hay nada que decir. Dice QUÉ HACER, no cuántas hay: «pídele a Occident el volcado de estas 12 pólizas de la clave M00171» y la lista detrás, par"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cf9102ee8a7a"
+      "hash": "d01c3b5fd911"
     },
     {
       "ruta": "packages/module-seguros/src/intervinientes.ts",
@@ -136470,6 +137987,141 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "99462f31996b"
+    },
+    {
+      "ruta": "packages/module-seguros/src/lead-competencia.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "packages/module-seguros/src/lead-competencia.ts El carril de LEADS de Vencimientos (Fase 1 de ASegura OS, 23/09/2026). ── Por qué existe ────────────────────────────────────────────────────────── La tabla heredada `seguros.oportunidades` (app de Manuel, importada el 21/06/2026) guarda 3.676 pólizas ",
+      "exporta": [
+        "proximoAniversario",
+        "diasHasta",
+        "ventanaDe",
+        "puntuarLead",
+        "pasoConTarea",
+        "siguientePasoLead",
+        "canalLead",
+        "textoPasoLead"
+      ],
+      "funciones": [
+        {
+          "nombre": "proximoAniversario",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaIso: string | null | undefined, hoy: Date",
+          "retorno": "string | null",
+          "linea": 28,
+          "resumen": "El próximo aniversario (≥ hoy) de una fecha pasada, en `yyyy-mm-dd`. `null` si la fecha no se puede leer: sin fecha no hay a qué anclar el contacto, y eso no es «vence hoy». Un 29 de febrero cae al 28"
+        },
+        {
+          "nombre": "diasHasta",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaIso: string, hoy: Date",
+          "retorno": "number",
+          "linea": 45,
+          "resumen": "Días naturales entre hoy y una fecha `yyyy-mm-dd` (0 = hoy)."
+        },
+        {
+          "nombre": "ventanaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias: number",
+          "retorno": "VentanaLead",
+          "linea": 51
+        },
+        {
+          "nombre": "puntuarLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DatosPuntuacion",
+          "retorno": "number",
+          "linea": 78,
+          "resumen": "Puntuación 0-100 para ORDENAR la lista, no para decidir nada: por reglas y a la vista, sin modelo. Pesa sobre todo poder hablar con él (sin canal no se vende) y que el ramo se pueda tarificar hoy. La "
+        },
+        {
+          "nombre": "pasoConTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "paso: PasoLead, tarea: { tipo: string; fechaLimite: string; observaciones: string } | null, hoy: Date,",
+          "retorno": "PasoLead",
+          "linea": 105,
+          "resumen": "Una tarea pendiente de la oportunidad manda sobre la secuencia: si pidió precio o que le llamen el jueves, lo que toca es ESO, no otro recordatorio. Sin esto, quien acaba de decir «quiero precio» volv"
+        },
+        {
+          "nombre": "siguientePasoLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias: number, intentos: number, diasDesdeUltimo: number | null, respondio = false, propuestaEnviada = false,",
+          "retorno": "PasoLead",
+          "linea": 136,
+          "resumen": "Qué toca con un lead, por reglas: primer contacto a 60 días del aniversario, recordatorio a los 7 días sin respuesta, llamada a los 14 y, tras 3 intentos sin respuesta, se aparca hasta el año siguient"
+        },
+        {
+          "nombre": "canalLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { fueCliente: boolean; tieneTelefono: boolean; tieneEmail: boolean }",
+          "retorno": "CanalLead",
+          "linea": 184
+        },
+        {
+          "nombre": "textoPasoLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "paso: { accion: PasoLead['accion']; dentroDeDias: number }, canal: CanalLead",
+          "retorno": "string",
+          "linea": 193,
+          "resumen": "El paso, dicho con el canal que de verdad se puede usar: «primer contacto» a quien no se le puede escribir es una llamada."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5f1fe9581a32"
+    },
+    {
+      "ruta": "packages/module-seguros/src/llamada-resultado.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Modo llamada (Fase 1 de ASegura OS, pieza 1-3): qué deja escrito cada resultado de una llamada a un lead. Puro: asegura lo aplica en UNA transacción (registro de la llamada + cambio de estado + siguiente tarea), para que un clic no deje la mitad hecha. Regla de la casa: nada queda sin siguiente paso",
+      "exporta": [
+        "planLlamada"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 40
+        },
+        {
+          "nombre": "masDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "hoy: Date, n: number",
+          "retorno": "string",
+          "linea": 46
+        },
+        {
+          "nombre": "diasHastaFecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string, hoy: Date",
+          "retorno": "number | null",
+          "linea": 51
+        },
+        {
+          "nombre": "planLlamada",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { resultado?: unknown; nota?: unknown; volverEl?: unknown; motivo?: unknown }, estado: EstadoOportunidad, hoy: Date,",
+          "retorno": "",
+          "linea": 58
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f6350dd149b1"
     },
     {
       "ruta": "packages/module-seguros/src/matricula.ts",
@@ -136837,6 +138489,78 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "aea56ce2ecf5"
+    },
+    {
+      "ruta": "packages/module-seguros/src/oportunidad-seguimiento.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "packages/module-seguros/src/oportunidad-seguimiento.ts El SEGUIMIENTO de una oportunidad (Fase 1 de ASegura OS, PR B, 23/09/2026): qué transiciones de estado existen, qué exige cada una y qué tarea es válida. Puro: decide, no escribe. La escritura (con su auditoría en la misma transacción) vive en `",
+      "exporta": [
+        "aplicarAccion",
+        "validarTarea"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 66
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 72
+        },
+        {
+          "nombre": "diasDesdeHoy",
+          "kind": "function",
+          "exportada": false,
+          "params": "fecha: string, hoy: Date",
+          "retorno": "number",
+          "linea": 78
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null | 'invalido'",
+          "linea": 83
+        },
+        {
+          "nombre": "estaAparcada",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: EstadoActual, hoy: Date",
+          "retorno": "boolean",
+          "linea": 90
+        },
+        {
+          "nombre": "aplicarAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "actual: EstadoActual, p: PeticionAccion, hoy: Date",
+          "retorno": "ResultadoAccion",
+          "linea": 100,
+          "resumen": "Valida una acción contra el estado actual y devuelve lo que hay que escribir, o por qué no. No hay transición «por defecto»: una acción que no encaja con el estado se rechaza con su motivo, porque apl"
+        },
+        {
+          "nombre": "validarTarea",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { tipo?: unknown; prioridad?: unknown; observaciones?: unknown; fechaLimite?: unknown }, hoy: Date,",
+          "retorno": "",
+          "linea": 206,
+          "resumen": "Una tarea sin fecha no es seguimiento: es una nota que nadie vuelve a mirar. Por eso la fecha límite es obligatoria y no puede estar en el pasado."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3b45d5c654e2"
     },
     {
       "ruta": "packages/module-seguros/src/orden-polizas.ts",
@@ -143323,7 +145047,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3473,
-    "funciones": 10884
+    "archivos": 3507,
+    "funciones": 11030
   }
 }

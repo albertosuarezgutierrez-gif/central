@@ -20,6 +20,7 @@ import {
   type ResultadoActividad,
 } from '@/lib/actividad-asegura'
 import Bloque from './Bloque'
+import InvitarPortalLote from './InvitarPortalLote'
 
 /**
  * El muro de actividad de TODA la cartera: qué han hecho los clientes, incluidas
@@ -103,6 +104,8 @@ export default function Actividad() {
       >
         {r?.ok ? <Embudo e={r.embudo} /> : <Aviso r={r} cargando={cargando} />}
       </Bloque>
+
+      <InvitarPortalLote />
 
       <Bloque
         titulo="Qué han hecho"

@@ -74,14 +74,14 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'sistema.ia-presupuesto', categoria: 'sistema',
     titulo: 'Presupuesto de IA agotado',
-    que: 'Se ha alcanzado el tope diario de gasto en IA de pago; queda solo la cadena gratuita.',
+    que: 'Se ha alcanzado el tope diario o mensual de gasto en IA de pago; queda solo la cadena gratuita.',
     cuando: 'Solo si se agota',
   },
   {
     id: 'sistema.ia-creditos', categoria: 'sistema',
-    titulo: 'Créditos de OpenRouter bajos',
-    que: 'Queda poco saldo en OpenRouter y conviene recargar.',
-    cuando: 'Lunes a las 07:00 (solo bajo umbral)',
+    titulo: 'Control de gasto de IA',
+    que: 'El saldo de OpenRouter da para 7 días o menos, o una app pasa del 80 % de su tope mensual de IA.',
+    cuando: 'Todos los días a las 08:10 (solo si hay algo que hacer)',
   },
   {
     id: 'sistema.ia-director', categoria: 'sistema',
@@ -577,6 +577,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:45, y solo cuando algo cambia',
   },
   {
+    id: 'correduria.cima-respaldo', categoria: 'correduria',
+    titulo: 'Respaldo del pull de CIMA',
+    que: 'El pull de GitHub Actions no ha corrido y plataforma lo lanza por su cuenta: avisa si lo consigue (la primera vez), si falla o si el respaldo no está configurado.',
+    cuando: 'A las 08:00 y 14:00 UTC, solo si Actions no ha traído CIMA',
+  },
+  {
     id: 'correduria.cima-liq', categoria: 'correduria',
     titulo: 'Liquidaciones de comisiones (CIMA)',
     que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',
@@ -587,6 +593,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Siniestro nuevo de un cliente',
     que: 'Un siniestro que ha entrado por CIMA (o sea, YA abierto en la compañía): quién es el cliente, qué compañía, qué póliza, cuándo pasó y la referencia, para llamarle y hacerle seguimiento.',
     cuando: 'Todos los días a las 08:50, y solo cuando ha entrado alguno',
+  },
+  {
+    id: 'correduria.actividad-cliente', categoria: 'correduria',
+    titulo: 'Actividad de un cliente en el portal',
+    que: 'Lo que hace un cliente en su intranet: entrar, pedir el código y no entrar, cambiar su dirección, dar un parte o pedir que se borren sus datos. Un mensaje por pasada, agrupado por cliente, con el enlace a su ficha y sin datos de contacto. La póliza declarada y la sugerencia no van aquí: el portal ya las avisa al instante.',
+    cuando: 'Cada 5 minutos, y solo cuando ha pasado algo',
   },
   {
     id: 'correduria.parte-sin-abrir', categoria: 'correduria',

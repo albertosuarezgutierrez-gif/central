@@ -26,6 +26,159 @@ bloqueo de horas, se DESBLOQUEAN con OK de Alberto (sin estrenar: el 1er intento
 póliza; cepo `test/regression-retarificar-moto.test.ts`); sin emisión de moto aún. asegura#848: `playwright / portal` rojo = preview tras
 la Deployment Protection de Vercel (va a `vercel.com/login`), pasa en todas las ramas, no es del PR.
 
+**(23/09/2026)** 🧹 **La purga del e2e-smoke de `asegura` borraba en la BD equivocada.** Tras el traspaso (05/09)
+el smoke escribe en `seguros` de central, pero la purga apuntaba a Frankfurt (`FRANKFURT_DATABASE_URL`): 0 filas
+allí y **17 cotizaciones + 17 leads falsos «Smoke Test Auto» en la cartera + 48 eventos** aquí. Reponer la
+contraseña de Frankfurt (lo que se iba a hacer, Manuel frenó con buen criterio) la habría puesto en verde sin
+borrar nada. Hecho: residuo limpiado (queda 1 con `consent_logs`, a propósito); rol **`smoke_cleanup`** (SELECT por
+columna, DELETE en 3 tablas, nada de `public`, sin contraseña; `apps/asegura/prisma/sql/2026-09-23_smoke_cleanup_rol.sql`);
+`asegura#849` (secret `SMOKE_CLEANUP_DATABASE_URL`, `search_path` fijado, sin secret falla en vez de saltarse).
+✅ Secret puesto y verificado (run 35870222592: la purga borró 1 cot + 3 eventos + 1 lead; #847 cerrado).
+**PostHog:** la fuente se repuntó a central (`seguros`), pero su tabla quedó anclada a `public` y no hay forma de
+cambiarlo sin renombrarla (lo que rompería las alertas CIMA heartbeat, A1 y A14): vista `public.operational_events`
+solo para `posthog_readonly` (`apps/asegura/prisma/sql/2026-09-23_posthog_vista_operational_events.sql`).
+✅ Sync verificado por la API: 5.112 filas, última 23/09 15:58 (+02); solo esa tabla activa, 0 de `seguros`.
+Lección: «Completed» en un sync de PostHog no dice nada; la señal es la ÚLTIMA fila (estuvo con 0 filas desde el 11/09).
+
+
+
+**(23/09/2026)** 🔒 **Fase 1b-a: webhooks de Telegram FAIL-CLOSED + emisor validado.** `verifyTelegramWebhook` (core-telegram) ya no acepta
+nada sin `TELEGRAM_WEBHOOK_SECRET` (antes `return true`) y compara en tiempo constante; nuevo `emisorAutorizado()`: el webhook de
+plataforma ignora (200) todo update que no venga del chat `TELEGRAM_CHAT_ID` — el secreto prueba que es Telegram, no quién pulsó.
+Las 3 rutas de Telegram de ia-rest también dejan de saltarse la comprobación sin env. Envs verificadas en producción antes (plataforma
+e ia-rest). Guardián `test/regression-telegram-fail-closed.test.ts` visto fallar. Pendiente 1b: router por prefijo, JWT de actor, auditoría.
+
+**(23/09/2026)** 💳 **Pieza 1-6: control del gasto de IA.** Cron diario `/api/cron/ia-saldo` (06:10 UTC): foto del saldo de OpenRouter en
+`ia_saldo_diario` → gasto medio 7 días y **días de saldo**; Telegram (`sistema.ia-creditos`) a ≤7 días o bajo `AI_CREDITOS_UMBRAL`, y si una
+app pasa el 80 % de su tope mensual. El detalle del latido `ia_saldo` dice qué % del gasto real NO pasó por la pasarela. Tope mensual en €
+por app (`ia_presupuestos.limite_mensual_eur`; la pasarela bloquea el camino de pago al 100 %); asegura sembrado a 5 €/mes. La IA de texto de
+asegura va por `lib/ia.ts` → pasarela (visión sigue directa). **Pendiente de Alberto:** `AI_GATEWAY_URL` + `AI_GATEWAY_SECRET` en Vercel
+`central-asegura` (sin ellas cae a directo y lo avisa en el log); límite de crédito en el panel de OpenRouter como tope duro.
+
+**(23/09/2026)** 📇 **Contactos para el móvil (.vcf).** Botón en `/correduria` → Clientes: clientes en vigor (67) + leads de Vencimientos,
+con «· AS Cliente» / «· AS Lead» en el nombre para saber quién llama. Solo nombre, teléfono, correo y enlace a la ficha (ni DNI ni dirección).
+Datos por `GET /api/operador/contactos-movil` (asegura, descifra) → `libroVcard` (module-seguros) en `/api/correduria/contactos-movil`.
+🚨 La cuenta de Google de Alberto es **Gmail personal** (medido 23/09, MX de grupoasegura.es en IONOS): el .vcf se importa en el
+ALMACENAMIENTO DEL TELÉFONO, no en Google (sin contrato de encargado). Sincronización automática solo si pasa a Google Workspace.
+
+**(23/09/2026)** 💶 **Pieza 1-5: portal «Tus vencimientos» + «Quiero que me mejores el precio».** En «Mis seguros» del portal, tarjeta por
+póliza PROPIA en vigor que renueva en ≤60 días (no las de terceros autorizados; una fecha pasada NO entra). El botón lleva a
+`/boveda/mejorar/[id]` (prioridad · canal · momento · nota) → `POST /api/mejorar-precio` (portal) → puente `POST /api/portal/mejorar-precio`
+(asegura, `lib/mejorar-precio-portal.ts`): oportunidad `en_negociacion`/`renovacion` con `info_riesgo.origen='portal:mejorar-precio'` + tarea
+de hoy prioridad alta (→ «Hoy · Tareas de hoy») + historial + Telegram. Idempotente por póliza (candado + 120 días). La nota libre va a la
+tarea, nunca a `oportunidad_historial` (append-only). Casilla comercial compacta junto al alta de pólizas de otras compañías (misma ruta y texto).
+
+**(23/09/2026)** 🟠 **Vencimientos: «YA VENCIDAS» → «Renovación sin recibir» + WhatsApp a leads.** Alberto: «pólizas vencidas en junio, no tiene
+sentido». Eran 10 de Mapfre con la última anualidad COBRADA hasta esa fecha y **Mapfre (C0058) sin mandar ficheros por CIMA desde el 23/06**
+(medido en `cima_ficheros`). Ahora van al final en tono aviso, fuera de «cartera en juego», con el último fichero CIMA por compañía
+(`ultimoFicheroCompania` en `/api/operador/vencimientos`; helper `renovacion-sin-recibir.ts`). WhatsApp de seguimiento en Leads y modo
+llamada (`WhatsappLead.tsx`, mensaje `mensajeRenovacionLeadWhatsapp` con baja): **solo a quien fue cliente** (LSSI art. 21, WhatsApp = comunicación
+electrónica, mismo régimen que el correo); al pulsar se anota como intento (`POST /api/operador/oportunidad/whatsapp`, 1/día). Pendiente: llamar
+a Mapfre por el corte de CIMA; pieza 1-5 (portal) en curso tras este PR.
+
+**(23/09/2026)** 🧭 **Pieza 1-4: «Hoy» como cockpit** (`HoyCockpit.tsx` arriba de la sección Hoy de `/correduria`). Franja: llamadas hoy
+(→ modo llamada) · tareas de hoy · esperan tu OK · incidencias, con tres estados (`n`, `n+` parcial, `!`); línea de salud de CIMA.
+Tareas de hoy = `GET /api/operador/tareas-hoy` (asegura, corte con la fecha de MADRID) cerrables en sitio. «Esperan tu OK» usa lo
+que existe (recaptación + blog): la cola única de aprobaciones sigue siendo Fase 2. Portal 24 h + embudo desde el muro de actividad.
+Las incidencias NO se repintan: son los bloques de siempre debajo. #3315 (modo llamada) mergeado.
+
+**(23/09/2026)** ☎️ **Pieza 1-3 cerrada: modo llamada** (`/correduria/vencimientos/llamada`, botón «Modo llamada · N para hoy» en Leads).
+Cola = leads con teléfono permitido y llamada/primer contacto para hoy (con correo permitido, el 1er contacto va por correo).
+Resultados → `planLlamada` (module-seguros) aplicado por `POST /api/operador/oportunidad/llamada` en UNA transacción: la llamada
+queda como tarea `llamada` cerrada (intento), «Quiere precio» → interesado + tarea comparativa a 2 d, «Otro día» → rellamada,
+«No le interesa» → aparca 1 año con motivo. Una tarea pendiente manda sobre la secuencia (`pasoConTarea`, acción nueva `tarea`),
+y una llamada contestada (`PREFIJO_LLAMADA_CONTESTADA`) cuenta como «respondió». #3313 (pantalla) ya mergeado.
+
+**(23/09/2026)** 📞 **Pieza 1-3: pantalla Vencimientos + seguimiento, en plataforma.** `/correduria/vencimientos` (pestañas
+Clientes = `Renovaciones` de siempre · Leads = puerto `leads-competencia`, 50 + «Ver más», filtro por ventana) y
+`/correduria/oportunidad/[id]` (pasos, Interesado/Propuesta/Ganada/Perdida…/Aparcar…/Reabrir, tareas con fecha, historial).
+Canal por LSSI 21.2 en `module-seguros` (`canalLead`/`textoPasoLead`): correo solo si fue cliente; los que solo tienen correo
+y nunca lo fueron (38 medidos) salen de la lista y se cuentan. Asegura manda `fueCliente`/`canal` y el contexto de la
+oportunidad. Lector puro `lib/seguimiento-asegura.ts` (+5 tests, cepos vistos en rojo). Falta: modo llamada y Hoy (1-4).
+
+**(23/09/2026)** 🎨 **Maquetas de vender APROBADAS por Alberto («tienes mi ok»)** — artefacto «Grupo ASegura · Maquetas vender»
+(https://claude.ai/artifact/Jb2XWZPzhN2ynF2F6cpPZ9): Hoy (móvil+escritorio), Vencimientos clientes/leads, seguimiento de una
+oportunidad, perder (8 motivos reales) y aparcar, modo llamada, y portal (portada, «mejórame el precio», declarar seguro de
+otra compañía con DOS casillas separadas `avisos`/`comercial`, centro de preferencias). Cifras de leads corregidas a las de
+PR A (874 en ≤90 días de 3.546) y canal LSSI: correo solo a ex-clientes, resto teléfono. PR #3311 mergeado. Siguiente:
+construir 1-3 (Vencimientos + modo llamada) y 1-4 (Hoy) sobre las maquetas. «Esperan tu OK» e «Incidencias» de Hoy
+dependen de la cola de aprobaciones y del detector de fugas (Fase 2): salen vacíos con nota hasta entonces.
+
+**(23/09/2026)** 👤 **Aviso por Telegram de todo lo que hace un cliente en el portal (pieza 1-7).** Cron `correduria-actividad`
+(plataforma, cada 5 min) ← puerto `GET /api/operador/actividad-nueva?desde=` (asegura, mismo UNION del muro de Actividad,
+orden ascendente, sin embudo). Regla pura `actividad-aviso.ts` (module-seguros): marca de agua con VENTANA de 3 h porque
+`acceso_fallido` aparece 60 min tarde; dedupe por `tipo:id`; primera pasada ancla sin avisar; la marca NO avanza si el
+Telegram no sale. Un mensaje por pasada agrupado por cliente, sin texto libre ni datos de contacto. Se saltan póliza
+declarada y sugerencia (el portal ya avisa al instante). Id `correduria.actividad-cliente` en el catálogo; latido vigilado.
+
+**(23/09/2026)** ✍️ **Fase 1, PR B: seguimiento de oportunidades (primeras ESCRITURAS sobre `oportunidades`/`gestiones`).**
+Migración aditiva `2026-09-23_oportunidad_seguimiento.sql`: motivo de pérdida estructurado (+competidor, prima rival),
+`aparcada_hasta`, `cerrada_at`, CHECK «perdida sin motivo no existe» y `oportunidad_historial` append-only (antes/después +
+actor, en la MISMA transacción). Reglas puras `aplicarAccion`/`validarTarea` (module-seguros); puerto `GET/POST
+/api/operador/oportunidad` y `POST/PATCH …/oportunidad/tarea`. El carril de leads incluye las que están en seguimiento y
+excluye las aparcadas. LSSI medido: de 3.327 leads solo 267 fueron clientes (55 desde 2023) → email por 21.2 solo a esos;
+el resto, teléfono (interés legítimo + Robinson). No hay columna de consentimiento comercial en `clientes`.
+
+**(23/09/2026)** 🎯 **Fase 1 (vender), PR A: carril de LEADS de Vencimientos, solo lectura.** Hallazgo: `seguros.oportunidades`
+(legacy, nadie la leía) guarda 3.676 pólizas de leads en OTRA compañía con `fecha_fin_vigencia` real de 2023-24 → **3.546
+contactables y no clientes en vigor, 874 con aniversario en ≤90 días** (vs 216 del volcado 2013-18). Reglas puras en
+`module-seguros/lead-competencia.ts` (aniversario ESTIMADO, ventanas, puntuación, secuencia 60d/+7/+14/aparcar a 3 intentos);
+`GET /api/operador/leads-competencia?dias=` en asegura. No envía nada. ⚠️ Antes de escribir en masa a estos leads Alberto
+debe decidir la base legal (LSSI 21.2). Siguiente: PR B (escrituras: estado + motivo de pérdida, tareas en `gestiones`,
+auditoría; revisión de agente-architect) y UI tras la revisión de maquetas del 24/09 10:00.
+
+**(23/09/2026)** 🚨 **Invitar al portal dio 0/25: el dominio de envío `envios.grupoasegura.es` NO tenía sus registros DNS en IONOS**
+(DKIM `resend._domainkey.envios`, MX+SPF `send.envios`); Resend rechazaba con `550 domain is not verified`. Alberto los creó
+y está `verified` (08:50 UTC). Ese dominio también manda los códigos del portal: hasta entonces nadie podía entrar. Código:
+desenlace `remitente_no_verificado` (`rechazoDeRemitente()`), el lote se corta con 3 fallos iguales seguidos
+(`rachaDeFallos`) y la pantalla agrupa los fallos por motivo con el nombre del cliente.
+
+**(23/09/2026)** 💸 **Pasada `facturas-correo`: conciliado un gap real (Endesa Socorro llevaba
+`Facturas/Procesada` sin haberse conciliado nunca, PDF sin adjunto) + un falso positivo del auto-dedup
+(dos cargos Anthropic de 76,50€ con `referencia`/`dedupe_hash` distintos, uno marcado `ignorado` por
+error).** 2 facturas nuevas: Anthropic 170€ (correduría, archivada, sin cargo — tarjeta ****5332 fuera
+del feed PSD2) y Endesa Socorro nueva sin importe (solo enlace, sin PDF) → ambas `PDF-pendiente`.
+Detalle en `docs/AGENTES-BITACORA.md`. Pendiente: dar de alta la Mastercard ****5332 en PSD2 si se va
+a usar para los créditos de Anthropic.
+
+**(23/09/2026)** ✅ **Auditoría diaria (ligera): sin hallazgos 🔴.** Heartbeat sano salvo los
+crónicos (`ses_transporte`) y un fallo de red aislado de `correduria_renovaciones` (dentro de
+umbral, a vigilar). CIMA entrando con normalidad tras el arreglo de ayer, pricing sano, backlog de
+PRs `dirty` sin cambio. Un fix de mapa en `docs/FUENTES-DE-VERDAD.md` (cron `cima-pull-respaldo` +
+`module-seguros/src/ingesta.ts` que faltaban) va por PR de carril 2 al excluirlo el automerge de
+registro. Detalle en `docs/AUDITORIA-2026-09.md`.
+
+**(23/09/2026)** 🏨 **Rutina `mercado-booking`: mercado completo, escaparate en blanco.** 223 comps
+reales en las 24 ventanas de mercado del plan (aforo 2/4/5/12, línea sep + evento 26-29 dic).
+El paso 2-bis (escaparate propio, 4 ventanas de refresco 24-26 sep) salió 0/4: los 4 pisos
+propios estaban SIN disponibilidad en Booking esas fechas — coherente con que House Sevillana
+tampoco saliera como comparable ajeno en esa misma ventana. Latido `ok:false` por la regla de
+la skill (escaparate sin medir mueve `channel_markup`/`cuota_fija` con parámetros viejos), aunque
+el mercado fue perfecto. Sin PR: solo API + esta memoria.
+
+**(23/09/2026)** ✉️💸 **Invitar al portal por lotes + recorte de minutos de Actions (PR #3295).** El portal nunca
+había mandado una invitación: ahora `/correduria` → Actividad → «Invitar al portal» prepara la lista (solo `invitable`
+en vigor, motivos de exclusión, texto tal cual) y envía tras marcar «revisado»; tandas de 25, presupuesto 180 s, sin
+repetir <30 días. **No se ha enviado nada: lo pulsa Alberto.** Actions: `tests.yml` era el 68 % de ~71.700 min/mes;
+cada `Typecheck · <app>` salta sus pasos (y sale verde) si el PR no toca su app (`scripts/ci-app-afectada.mjs`,
+fail-open); `ci.yml` (build de ia-rest, ~4.100 min/mes) con la misma guarda en el PR siguiente.
+
+**(23/09/2026)** 🚨 **CIMA estuvo ~45 h PARADO (22/09 10:10 → 23/09 07:15 UTC) y el vigía lo vio y NO avisó.**
+Causa: presupuesto de GitHub Actions de la cuenta a 0 $ sin tarjeta; lo agota `central` (~71.700 min/mes vs ~2.070
+de `asegura`) y los jobs de `asegura` se quedaban sin runner. Alberto puso tarjeta + 20 $/mes y relanzó (verificado en
+BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero la firma anti-repetición no incluía el cron
+→ Telegram mudo: ahora `firmaAvisoIngesta` (module-seguros, con cepo visto fallar). Nuevo respaldo
+`/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
+puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
+facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## 23/09/2026 — Alerta PSD2 sync (BBVA)
+- Feed BBVA sin movimientos desde 2026-09-10 (13 días); Kutxabank sigue fresco (hoy) y por eso
+  la consulta agregada de `movimientos_bancarios` salía en verde — la caída solo se ve por banco.
+- Causa: sesión Enable Banking de BBVA en estado CLOSED (`Session is closed`), detectado en el
+  sync de hoy 06:00 UTC (`conexiones_banco.ultimo_avisos`, sin prefijo ℹ️).
+- Acción: re-vincular BBVA en `/banca`. Alerta enviada por Telegram.
+
 **(22/09/2026)** 🪤 **El "smoke rojo" diario de `asegura` (issue #815) era falso el 86% de las veces —
 18 de 21 días.** El smoke suite pasaba (`PASS 3/FAIL 0/EXIT 0`) pero el step posterior "Cleanup smoke
 residue" moría con `password authentication failed for user "postgres"` contra `FRANKFURT_DATABASE_URL`
