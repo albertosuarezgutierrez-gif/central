@@ -458,6 +458,15 @@ candidata y buscando solo por NOMBRE (por código, un «52» de kW casa dentro d
 esconde la candidata buena)— pero nunca selecciona. 🪤 Lección: un cepo con un fixture que NO
 reproduce el fallo pasa por la razón equivocada; se vio verde hasta rehacerlo. PR #3240, **mergeado**.
 
+**(23/09/2026)** Cerrado el hueco de `issuedDocuments[]` anotado el 13/09: Alberto leyó el OpenAPI
+vivo de INT (20 preguntas, resumen en `docs/CODEOSCOPIC-API-PORTAL.md`) y confirmó la forma
+(`{name, url, creationDateTime, expirationDateTime}`, se descarga con `GET {url}` + el mismo Bearer,
+gratis). Nuevo `lib/codeoscopic/documentos-emitidos.ts` (puro, fixtures reales) +
+`descargarFicheroVendor()` en `cliente.ts`; `GET /api/operador/codeoscopic/documentos?projectId=`
+ahora descarga y archiva el PDF en `seguros.documentos` (best-effort, idempotente) cuando la póliza
+ya está acuñada. Falta cablearlo en el flujo de acuñado mismo (`registrarPolizaEmitida`) — pendiente
+declarado. tsc 0, `pnpm test` asegura 552/552.
+
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
 `product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat

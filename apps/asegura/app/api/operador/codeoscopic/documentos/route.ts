@@ -2,26 +2,29 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { correduriaUnica } from '@/lib/cartera'
 import { prisma } from '@/lib/tenant'
+import { prismaAsegura } from '@/lib/asegura-db'
+import { guardarDocumento } from '@/lib/cartera-documentos'
 import { resolverConfigEmision, leerProyectoCrudo, redactarCrudoVendor } from '@/lib/codeoscopic/emitir'
-import { peticion } from '@/lib/codeoscopic/cliente'
+import { peticion, descargarFicheroVendor } from '@/lib/codeoscopic/cliente'
 import { solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
+import { documentosEmitidos, documentoPoliza, documentoCaducado } from '@/lib/codeoscopic/documentos-emitidos'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
  * `GET ?projectId=` — lo que Codeoscopic devuelve de la SOLICITUD DE EMISIÓN
- * de un proyecto, en crudo, incluido `issuedDocuments[]` si lo manda.
+ * de un proyecto, en crudo, incluido `issuedDocuments[]` si lo manda. Y, desde
+ * el 23/09/2026, DESCARGA el PDF de la póliza (best-effort) y lo archiva en
+ * `seguros.documentos` — es el hueco anotado el 13/09/2026 tras el primer 500
+ * real («al acuñar, bajar `issuedDocuments[]` a `seguros.documentos` — falta la
+ * forma del tag `File` del portal»), cerrado con el OpenAPI vivo de INT (ver
+ * `docs/CODEOSCOPIC-API-PORTAL.md` § 12: `InsuranceFile_V1` = `{name, url,
+ * creationDateTime, expirationDateTime}`, se descarga con `GET {url}` + el
+ * MISMO Bearer, gratis).
  *
- * 🚨 17/09/2026: la forma exacta del tag `File` dentro de `issuedDocuments[]`
- * NO está documentada en el portal (solo en el OpenAPI vivo, bloqueado desde
- * este contenedor por el proxy — hay que leerlo desde Vercel o Chrome). Este
- * endpoint NO adivina esa forma: lee el `GET /insurances/{id}` (gratis, ya
- * cableado en `/proyecto`) para encontrar el `id` de la solicitud, hace el
- * `GET .../policy-applications/{id}` (Retrieve, también gratis) y devuelve
- * la respuesta TAL CUAL — y la persiste en `quote_data` para no perderla
- * otra vez. Ver esa respuesta real es lo que permite diseñar la extracción
- * del PDF sin inventar el nombre de un campo.
+ * La descarga NUNCA rompe la respuesta: si falla, el `issuedDocuments` crudo
+ * sigue viajando igual para que la pantalla enseñe el enlace de todos modos.
  */
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) {
@@ -101,11 +104,60 @@ export async function GET(req: Request) {
 
   const issuedDocuments = (policyApplicationRedactado as Record<string, unknown> | null)?.issuedDocuments ?? null
 
+  // ── Descarga y archivo del PDF, best-effort ──────────────────────────────
+  // La URL sale del crudo SIN redactar (no lleva PII: es del propio vendor),
+  // pero nunca se devuelve al cliente HTTP — solo se usa para el GET interno.
+  let documentoGuardado: { id: string; repetido: boolean } | null = null
+  let avisoDocumento: string | null = null
+  const docs = documentosEmitidos(policyApplication)
+  const poliza = documentoPoliza(docs)
+  if (poliza && correduria) {
+    if (documentoCaducado(poliza)) {
+      avisoDocumento = `El documento "${poliza.nombre}" caducó el ${poliza.caducaEn} — Codeoscopic ya no lo sirve.`
+    } else {
+      try {
+        const fila = await prisma.$queryRaw<{ poliza_id: string | null }[]>`
+          select poliza_id from codeoscopic_projects
+          where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
+        `
+        const polizaId = fila[0]?.poliza_id ?? null
+        if (!polizaId) {
+          avisoDocumento = 'El proyecto todavía no tiene `poliza_id` (no se ha acuñado): no se archiva sin saber de qué póliza es.'
+        } else {
+          const yaGuardado = await prismaAsegura().documento.findFirst({
+            where: { correduriaId: correduria.id, polizaId, tipo: 'poliza', subidoPor: 'agente' },
+            select: { id: true },
+          })
+          if (yaGuardado) {
+            documentoGuardado = { id: yaGuardado.id, repetido: true }
+          } else {
+            const { bytes } = await descargarFicheroVendor(r.config, poliza.url)
+            const guardado = await guardarDocumento(correduria.id, {
+              polizaId,
+              tipo: 'poliza',
+              nombre: `${poliza.nombre}.pdf`,
+              mime: 'application/pdf',
+              contenido: bytes,
+              subidoPor: 'agente',
+              notas: `Descargado de Codeoscopic (issuedDocuments) el ${new Date().toISOString()}.`,
+            })
+            documentoGuardado = guardado.ok ? { id: guardado.documento.id, repetido: guardado.repetido } : null
+            if (!guardado.ok) avisoDocumento = `No se pudo archivar el PDF: ${guardado.motivo}`
+          }
+        }
+      } catch (e) {
+        avisoDocumento = `No se pudo descargar el PDF del vendor: ${e instanceof Error ? e.message : String(e)}`
+      }
+    }
+  }
+
   return NextResponse.json({
     estado: 'ok',
     encontrada: true,
     solicitud,
     issuedDocuments,
+    documentoGuardado,
+    avisoDocumento,
     policyApplication: policyApplicationRedactado,
   })
 }
