@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead } from './seguimiento-asegura.ts'
+import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -134,4 +134,16 @@ test('🪤 WhatsApp de seguimiento solo a quien fue cliente, y con el mes del an
   // Sin teléfono, nada; y con fueCliente desconocido tampoco se abre la puerta.
   assert.equal(whatsappDeLead({ ...r.leads[1], telefono: null }), null)
   assert.equal(whatsappDeLead({ ...r.leads[1], fueCliente: null }), null)
+})
+
+test('🪤 contactos del móvil: un fallo NO da una lista vacía (se importaría como «no tienes a nadie»)', () => {
+  assert.equal(interpretarContactosMovil(503, { estado: 'sin_configurar' }), null)
+  assert.equal(interpretarContactosMovil(200, { estado: 'ok' }), null)
+  const r = interpretarContactosMovil(200, { estado: 'ok', clientesSinLeer: 0, contactos: [
+    { clienteId: 'c1', nombre: 'Ana', apellidos: null, telefono: '600', email: '', grupo: 'cliente' },
+    { clienteId: 'c2', grupo: 'otro' },
+  ] })
+  assert.ok(r)
+  assert.equal(r.contactos.length, 1)
+  assert.equal(r.contactos[0].email, null)
 })
