@@ -95,7 +95,7 @@ export async function proponerAnulacionesFirmadas(correduriaId: string): Promise
       values (${correduriaId}::uuid, 'enviar_correo_compania', ${ORIGEN_ANULACION}, ${ORIGEN_ANULACION} || ':' || ${f.id} || ':' || (select count(*) + 1 from aprobacion x where x.anulacion_id = ${f.id}::uuid)::text,
               ${f.clienteId}::uuid, ${f.polizaId}::uuid, ${f.id}::uuid,
               ${JSON.stringify({ asunto: b.asunto, texto: b.texto })}::jsonb, ${b.urgente}, ${b.caduca})
-      on conflict (clave) do nothing
+      on conflict do nothing
       returning id::text as id`
     n += ins.length
   }
@@ -270,11 +270,19 @@ async function destinoAnulacion(correduriaId: string, anulacionId: string | null
 }
 
 /** La anulación pasa a «comunicada»: el correo salió (o Alberto ha comprobado que salió). */
-async function marcarComunicada(correduriaId: string, anulacionId: string): Promise<void> {
-  const n = await prismaAsegura().$executeRaw`
-    update anulacion set estado = 'comunicada', comunicada_at = now(), updated_at = now()
-    where id = ${anulacionId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'firmada'`
-  if (n > 0) anotarCambio({ entidad: 'anulacion', id: anulacionId, campo: 'estado', antes: 'firmada', despues: 'comunicada' })
+async function marcarComunicada(correduriaId: string, anulacionId: string): Promise<boolean> {
+  // El correo YA salió cuando se llama: un fallo aquí no puede convertirse en un 500 que invite a
+  // repetir el envío. Se registra y la nota del historial lo dice, para marcarla a mano en la póliza.
+  try {
+    const n = await prismaAsegura().$executeRaw`
+      update anulacion set estado = 'comunicada', comunicada_at = now(), updated_at = now()
+      where id = ${anulacionId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'firmada'`
+    if (n > 0) anotarCambio({ entidad: 'anulacion', id: anulacionId, campo: 'estado', antes: 'firmada', despues: 'comunicada' })
+    return true
+  } catch (e) {
+    console.error('[aprobaciones] correo enviado pero la anulación no pasó a comunicada:', e instanceof Error ? e.message : e)
+    return false
+  }
 }
 
 export async function decidirAprobacion(correduriaId: string, id: string, d: Decision, actor: string): Promise<ResultadoDecision> {
@@ -290,9 +298,14 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
     if (n === 0) return { estado: 'ya_decidida' }
     anotarCambio({ entidad: 'aprobacion', id, campo: 'estado', antes: 'enviando', despues: final })
     if (d.salio) {
-      const [x] = await db.$queryRaw<{ anulacionId: string | null }[]>`
-        select anulacion_id::text as "anulacionId" from aprobacion where id = ${id}::uuid and accion = 'enviar_correo_compania'`
-      if (x?.anulacionId) await marcarComunicada(correduriaId, x.anulacionId)
+      const [x] = await db.$queryRaw<{ anulacionId: string | null; clienteId: string; polizaId: string | null }[]>`
+        select anulacion_id::text as "anulacionId", cliente_id::text as "clienteId", poliza_id::text as "polizaId"
+        from aprobacion where id = ${id}::uuid and accion = 'enviar_correo_compania'`
+      if (x?.anulacionId) {
+        const ok = await marcarComunicada(correduriaId, x.anulacionId)
+        await anotarHistorial(correduriaId, x.clienteId, x.polizaId,
+          `Anulación comunicada a la compañía: el envío se quedó a medias y ${quien} comprobó que salió.${ok ? '' : ' ⚠️ No se pudo marcar «comunicada»: márcala a mano en la póliza.'}`)
+      }
     }
     return { estado: 'cerrada' }
   }
@@ -359,9 +372,10 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
     update aprobacion set estado = ${final}, resultado = ${envio.ok ? 'enviado' : envio.motivo}
     where id = ${id}::uuid and estado = 'enviando'`
   anotarCambio({ entidad: 'aprobacion', id, campo: 'estado', antes: 'pendiente', despues: final })
+  let comunicadaOk = true
   if (envio.ok && paraCompania && a.anulacionId) {
     // La anulación pasa a «comunicada» solo cuando el correo SALIÓ; con «a medias» se queda firmada.
-    await marcarComunicada(correduriaId, a.anulacionId)
+    comunicadaOk = await marcarComunicada(correduriaId, a.anulacionId)
     // Y ese buzón queda recordado: la próxima anulación de esta compañía lo trae preseleccionado.
     if (contactoElegido) {
       try {
@@ -374,19 +388,23 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
     }
   }
   if (envio.ok) {
-    try {
-      const nota = paraCompania
-        ? `Anulación comunicada a ${compania ?? 'la compañía'} (${destino}) con OK de ${quien}, con la carta firmada adjunta.`
-        : `Correo enviado con OK de ${quien}: «${d.asunto}».`
-      await db.$executeRaw(Prisma.sql`
-        insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
-        values (${correduriaId}::uuid, ${a.clienteId}::uuid, ${a.polizaId}::uuid, cast('contacto' as tipo_historial_interno), ${nota})`)
-    } catch (e) {
-      console.error('[aprobaciones] historial no anotado:', e instanceof Error ? e.message : e)
-    }
+    const nota = paraCompania
+      ? `Anulación comunicada a ${compania ?? 'la compañía'} (${destino}) con OK de ${quien}, con la carta firmada adjunta.${comunicadaOk ? '' : ' ⚠️ No se pudo marcar «comunicada»: márcala a mano en la póliza (el correo YA salió, no lo repitas).'}`
+      : `Correo enviado con OK de ${quien}: «${d.asunto}».`
+    await anotarHistorial(correduriaId, a.clienteId, a.polizaId, nota)
     return { estado: 'ejecutada' }
   }
   return { estado: 'fallida', motivo: envio.motivo }
+}
+
+async function anotarHistorial(correduriaId: string, clienteId: string, polizaId: string | null, nota: string): Promise<void> {
+  try {
+    await prismaAsegura().$executeRaw(Prisma.sql`
+      insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
+      values (${correduriaId}::uuid, ${clienteId}::uuid, ${polizaId}::uuid, cast('contacto' as tipo_historial_interno), ${nota})`)
+  } catch (e) {
+    console.error('[aprobaciones] historial no anotado:', e instanceof Error ? e.message : e)
+  }
 }
 
 /**

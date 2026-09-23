@@ -34,6 +34,8 @@ test('🪤 a la compañía: el buzón es el que ELIGE Alberto entre los de ESA c
   assert.match(src, /update anulacion set estado = 'comunicada'[^`]*estado = 'firmada'`/)
   // El reclamo exige que la anulación SIGA firmada: desistida entre medias, no sale el correo.
   assert.match(decidir, /accion <> 'enviar_correo_compania'\s+or exists \(select 1 from anulacion n where n\.id = aprobacion\.anulacion_id and n\.estado = 'firmada'\)/)
+  // Una sola propuesta viva por anulación: el índice parcial manda, así que el conflicto no va atado a `clave`.
+  assert.match(src, /values \(\$\{correduriaId\}::uuid, 'enviar_correo_compania'[\s\S]{0,600}on conflict do nothing/)
   // Lo que se adjunta es la carta GUARDADA al firmar, nunca un texto recompuesto.
   assert.match(src, /adjunto: \{ nombre: `solicitud-anulacion-\$\{num\}\.txt`, texto: n\.carta \}/)
 })
