@@ -50,7 +50,7 @@ import { computeEmailLookupHash } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
 import { estadoEmailDeFicha } from './email-ficha'
-import { enlacePortal, enviarInvitacionPortal } from './correo-invitacion-portal'
+import { enlacePortal, enviarInvitacionPortal, MOTIVO_REMITENTE } from './correo-invitacion-portal'
 
 /**
  * Qué se puede hacer hoy con esta ficha respecto al portal. Son SIETE estados a
@@ -125,6 +125,7 @@ export type FalloInvitacion =
   | 'no_comprobado'
   | 'error_envio'
   | 'sin_correo_configurado'
+  | 'remitente_no_verificado'
 
 export type ResultadoInvitacion =
   | { ok: true; yaEntraba: boolean }
@@ -406,6 +407,9 @@ export async function invitarAlPortal(
         'asegura no tiene ningún proveedor de correo configurado (falta RESEND_API_KEY, SMTP_USER+SMTP_PASSWORD o GMAIL_USER+GMAIL_APP_PASSWORD en Vercel). No es que el envío fallara: no hay por dónde enviar, y reintentarlo no lo arregla.',
       status: 503,
     }
+  }
+  if (enviado === 'remitente_no_verificado') {
+    return { ok: false, estado: 'remitente_no_verificado', motivo: MOTIVO_REMITENTE, status: 503 }
   }
   if (enviado === 'rechazado') {
     return {

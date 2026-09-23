@@ -157,6 +157,7 @@ export const FALLOS_INVITACION = [
   'no_comprobado',
   'error_envio',
   'sin_correo_configurado',
+  'remitente_no_verificado',
 ] as const
 export type FalloInvitacion = (typeof FALLOS_INVITACION)[number]
 
@@ -358,6 +359,11 @@ export function textoInvitacion(r: RespuestaInvitacion, nombre: string): string 
       return (
         `⚙️ No se ha enviado y NO sirve reintentarlo: ${textoMotivoPortal(r.motivo)} Se arregla en las variables ` +
         `del proyecto Vercel central-asegura (y hay que redesplegar), no llamando a ${nombre}.`
+      )
+    case 'remitente_no_verificado':
+      return (
+        `⚙️ No se ha enviado y NO sirve reintentarlo: Resend rechaza el remitente porque su dominio no está ` +
+        `verificado. Se arregla en resend.com/domains (y en el DNS del dominio), no llamando a ${nombre}.`
       )
     case 'no_encontrado':
       return 'Esa ficha ya no está en la correduría. No se ha enviado nada.'

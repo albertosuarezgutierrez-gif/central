@@ -49,3 +49,23 @@ test('un 401 es el secreto, no «no se pudo»', () => {
   assert.equal(r.estado, 'error')
   if (r.estado === 'error') assert.match(r.motivo, /secreto/)
 })
+
+test('los fallos se agrupan por motivo y conservan el nombre', () => {
+  const r = interpretarLote(503, {
+    estado: 'parado',
+    enviados: 0,
+    fallidos: [
+      { clienteId: 'a', nombre: 'Ana', estado: 'error_envio', motivo: 'm1' },
+      { clienteId: 'b', nombre: null, estado: 'error_envio', motivo: 'm1' },
+      { clienteId: 'c', nombre: 'Carlos', estado: 'sin_email', motivo: 'm2' },
+    ],
+    parado: 'error_envio',
+    sinIntentar: 22,
+    descartados: 0,
+  })
+  assert.equal(r.estado, 'hecho')
+  if (r.estado !== 'hecho') return
+  assert.deepEqual(r.porMotivo, [{ motivo: 'm1', n: 2 }, { motivo: 'm2', n: 1 }])
+  assert.equal(r.fallidos[0].nombre, 'Ana')
+  assert.equal(r.fallidos[1].nombre, null)
+})

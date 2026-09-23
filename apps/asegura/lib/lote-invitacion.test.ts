@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { decidirLote, paraElLote, DIAS_SIN_REPETIR } from './lote-invitacion.ts'
+import { decidirLote, paraElLote, rachaDeFallos, DIAS_SIN_REPETIR } from './lote-invitacion.ts'
 
 const f = (clienteId: string, estado: Parameters<typeof decidirLote>[0][number]['estado'], invitadoHaceDias: number | null = null) =>
   ({ clienteId, estado, invitadoHaceDias })
@@ -32,4 +32,16 @@ test('un fallo de instalación para el lote; uno de ficha, no', () => {
   assert.equal(paraElLote('sin_portal'), true)
   assert.equal(paraElLote('sin_email'), false)
   assert.equal(paraElLote('error_envio'), false)
+})
+
+test('el remitente sin verificar para el lote', () => {
+  assert.equal(paraElLote('remitente_no_verificado'), true)
+})
+
+test('tres fallos IGUALES seguidos paran; un envío en medio rompe la racha', () => {
+  assert.equal(rachaDeFallos(['error_envio', 'error_envio']), false)
+  assert.equal(rachaDeFallos(['error_envio', 'error_envio', 'error_envio']), true)
+  assert.equal(rachaDeFallos(['error_envio', null, 'error_envio', 'error_envio']), false)
+  assert.equal(rachaDeFallos(['sin_email', 'error_envio', 'error_envio']), false)
+  assert.equal(rachaDeFallos([null, null, null]), false)
 })

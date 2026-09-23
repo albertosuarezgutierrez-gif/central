@@ -10,7 +10,7 @@ import { sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { estadoPortalDeFicha, invitarAlPortal, nombreDe, PREFIJO_INVITACION_ANOTADA } from './invitacion-portal'
 import { cuerpoInvitacionPortal, enlacePortal } from './correo-invitacion-portal'
-import { decidirLote, paraElLote, MAX_POR_LOTE, SEGUNDOS_PRESUPUESTO, type DecisionLote, type FichaCenso } from './lote-invitacion'
+import { decidirLote, paraElLote, rachaDeFallos, MAX_POR_LOTE, SEGUNDOS_PRESUPUESTO, type DecisionLote, type FichaCenso } from './lote-invitacion'
 
 export type CensoPortal = {
   /** Clientes con ≥1 póliza en vigor (`esCarteraEnVigor`). */
@@ -66,8 +66,8 @@ export async function censoPortal(correduriaId: string): Promise<CensoPortal> {
 
 export type ResultadoLote = {
   enviados: number
-  fallidos: Array<{ clienteId: string; estado: string; motivo: string }>
-  /** Si el lote se cortó por un fallo de instalación, cuál. */
+  fallidos: Array<{ clienteId: string; nombre: string | null; estado: string; motivo: string }>
+  /** Si el lote se cortó (fallo de instalación o racha de fallos iguales), con qué estado. */
   parado: string | null
   /** Ids que no se llegaron a intentar (por el corte o por el tope). */
   sinIntentar: number
@@ -94,16 +94,22 @@ export async function invitarLote(
   const fallidos: ResultadoLote['fallidos'] = []
   let parado: string | null = null
   let intentados = 0
+  /** `null` = enviado. Para cortar una racha de fallos idénticos. */
+  const historia: Array<string | null> = []
   for (const clienteId of lote) {
     if ((Date.now() - inicio) / 1000 > SEGUNDOS_PRESUPUESTO) break
     intentados++
     const r = await invitarAlPortal(correduriaId, { clienteId, actor: entrada.actor })
     if (r.ok) {
       enviados++
+      historia.push(null)
       continue
     }
-    fallidos.push({ clienteId, estado: r.estado, motivo: r.motivo })
-    if (paraElLote(r.estado)) {
+    // El nombre es un extra: si su lectura falla, no puede tumbar el informe de lo ya enviado.
+    const nombre = await nombreDe(correduriaId, clienteId).catch(() => null)
+    fallidos.push({ clienteId, nombre, estado: r.estado, motivo: r.motivo })
+    historia.push(r.estado)
+    if (paraElLote(r.estado) || rachaDeFallos(historia)) {
       parado = r.estado
       break
     }
