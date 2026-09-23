@@ -7,7 +7,7 @@ import { canalDeCompania, enlaceWhatsapp, textoSoloRamos, whatsappParaRamo, type
 const d: DatosParteWhatsapp = {
   compania: 'Generali', numeroPoliza: 'G-123', titular: 'Ana López', bien: '1234 ABC',
   fechaHecho: '2026-09-23', horaAproximada: '18:40', lugar: 'Av. de la Palmera, Sevilla',
-  descripcion: 'Me han dado por detrás en un semáforo.', hayHeridos: null, hayTerceros: true, conPdf: true,
+  descripcion: 'Me han dado por detrás en un semáforo.', hayHeridos: null, hayTerceros: true, conPdf: true, conFotos: true,
 }
 
 test('🪤 el mensaje identifica la póliza y dice «No lo sé» cuando no se contestó', () => {
@@ -17,6 +17,7 @@ test('🪤 el mensaje identifica la póliza y dice «No lo sé» cuando no se co
   assert.match(t, /¿Hay heridos\?: No lo sé/)
   assert.match(t, /¿Hay otros implicados\?: Sí/)
   assert.match(t, /parte en PDF con las fotos/)
+  assert.doesNotMatch(mensajeParteWhatsapp({ ...d, conFotos: false })!, /con las fotos/)
 })
 
 test('🪤 sin fecha o sin relato no hay mensaje; un relato largo se recorta', () => {
@@ -51,4 +52,10 @@ test('🪤 la nota de «ya se lo he mandado» dice que es palabra del cliente, n
   const t = notaParteMandadoWhatsapp('Generali', '2026-09-23', true)
   assert.match(t, /El cliente dice que ha mandado el parte del 23\/09\/2026 a Generali por WhatsApp, con el PDF/)
   assert.match(t, /No lo hemos visto/)
+})
+
+test('🪤 al recortar un relato largo se conservan los datos del otro vehículo (van al final)', () => {
+  const t = mensajeParteWhatsapp({ ...d, descripcion: 'y'.repeat(2000) + '\n\nOtro vehículo: matrícula 9999 ZZZ' })!
+  assert.match(t, /Otro vehículo: matrícula 9999 ZZZ/)
+  assert.ok(t.length < 2000)
 })

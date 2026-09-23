@@ -41,7 +41,7 @@ function paraFuente(font: PDFFont, t: string): string {
 
 function partirLineas(font: PDFFont, texto: string, tam: number, ancho: number): string[] {
   const salida: string[] = []
-  for (const parrafo of texto.split('\n')) {
+  for (const parrafo of texto.replace(/\t/g, ' ').split('\n')) {
     let linea = ''
     for (const palabra of parrafo.split(/\s+/).filter(Boolean)) {
       const prueba = linea ? `${linea} ${palabra}` : palabra
@@ -64,13 +64,17 @@ function partirLineas(font: PDFFont, texto: string, tam: number, ancho: number):
 /** Una foto a JPEG ≤1600 px por el canvas. `null` si el navegador no sabe leerla. */
 async function aJpeg(f: File): Promise<Uint8Array | null> {
   try {
-    const bmp = await createImageBitmap(f)
+    // `from-image`: la foto sale derecha también en navegadores que no aplican el EXIF solos.
+    const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' })
     const escala = Math.min(1, LADO_MAX / Math.max(bmp.width, bmp.height))
     const c = document.createElement('canvas')
     c.width = Math.max(1, Math.round(bmp.width * escala))
     c.height = Math.max(1, Math.round(bmp.height * escala))
     const ctx = c.getContext('2d')
-    if (!ctx) return null
+    if (!ctx) {
+      bmp.close?.()
+      return null
+    }
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, c.width, c.height)
     ctx.drawImage(bmp, 0, 0, c.width, c.height)
@@ -122,7 +126,9 @@ export async function pdfDelParte(datos: DatosPdfParte, ficheros: readonly File[
     const nombre = f.name || 'fichero'
     if (f.type === 'application/pdf' || /\.pdf$/i.test(nombre)) {
       try {
-        const otro = await PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: true })
+        // Sin `ignoreEncryption`: un PDF protegido lanza y se declara omitido. Con él, pdf-lib
+        // copiaría páginas cifradas que salen en blanco y contarían como incluidas.
+        const otro = await PDFDocument.load(await f.arrayBuffer())
         const paginas = await doc.copyPages(otro, otro.getPageIndices())
         paginas.forEach((p) => doc.addPage(p))
         incluidos++

@@ -105,7 +105,7 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     ],
     // WhatsApp aportado por Alberto (corredor) el 23/09/2026, con su horario.
     whatsapp: '+34638930466',
-    whatsappNota: 'de lunes a viernes, de 9:00 a 19:00',
+    whatsappNota: 'de lunes a viernes, de 9:00 a 19:00 (dato de tu corredor, no de su web)',
     horario: null,
     fuente: 'https://www.allianz.es/contacto.html',
     verificado: true,
@@ -156,7 +156,7 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
       { para: 'Asistencia en carretera desde el extranjero', numeros: ['+34 911 123 443'], horario: null },
     ],
     whatsapp: '+34654033629',
-    whatsappNota: 'asistente virtual para gestiones y grúa; no publica horario',
+    whatsappNota: 'asistente virtual para gestiones y grúa; no publica horario (su perfil verificado de WhatsApp Business)',
     horario: null,
     fuente: 'https://www.generali.es/contacto-generali',
     verificado: true,

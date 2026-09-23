@@ -15,7 +15,7 @@ test('🪤 el WhatsApp del parte sale de whatsappParaRamo (Mapfre hogar no se of
 
 test('🪤 nunca se afirma que el parte llegó a la compañía: el cliente lo manda y no lo vemos', () => {
   assert.doesNotMatch(boton, /enviado a|se ha enviado|ya lo tiene|te confirmamos/i)
-  assert.match(boton, /nosotros no vemos esa conversación/)
+  assert.match(boton, /no vemos esa conversación/)
 })
 
 test('🪤 un fichero que no cabe en el PDF se dice, no se pierde en silencio', () => {
@@ -28,7 +28,21 @@ test('🪤 un fichero que no cabe en el PDF se dice, no se pierde en silencio', 
 
 test('🪤 «ya se lo he mandado» solo anota partes de ESA identidad, y el botón lo manda al parte creado', () => {
   const lib = readFileSync(new URL('./parte-compania.ts', import.meta.url), 'utf8')
-  assert.match(lib, /where: \{ id: parteId, identidadId \}/)
+  assert.match(lib, /where: \{ id: parteId, identidadId: identidad\.id \}/)
   assert.ok(lib.indexOf("if (!parte) return { estado: 'no_encontrado' }") < lib.indexOf('/api/portal/nota'))
   assert.match(boton, /fetch\(`\/api\/siniestros\/\$\{parteId\}\/whatsapp`/)
+})
+
+test('🪤 la compañía la pone el servidor desde el parte y el Telegram va escapado y con límite', () => {
+  const lib = readFileSync(new URL('./parte-compania.ts', import.meta.url), 'utf8')
+  const ruta = readFileSync(new URL('../app/api/siniestros/[id]/whatsapp/route.ts', import.meta.url), 'utf8')
+  assert.doesNotMatch(ruta, /\?\.compania/)
+  assert.match(lib, /companiaDelParte\(identidad\.id, parte\.polizaId, parte\.polizaDeclaradaId\)/)
+  assert.match(lib, /tgSend\(`\$\{quien\}: \$\{escaparHtml\(texto\)\}/)
+  assert.match(lib, /rateLimit\(`parte-wa:/)
+})
+
+test('🪤 un PDF cifrado no se cuela como incluido; «con el PDF» solo si se compartió', () => {
+  assert.doesNotMatch(pdf, /ignoreEncryption: true/)
+  assert.match(boton, /conPdf: compartido/)
 })

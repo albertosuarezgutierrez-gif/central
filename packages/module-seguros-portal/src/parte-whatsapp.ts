@@ -29,8 +29,10 @@ export type DatosParteWhatsapp = {
   descripcion: string
   hayHeridos: boolean | null
   hayTerceros: boolean | null
-  /** ¿Adjuntará el PDF con las fotos? Cambia la última frase. */
+  /** ¿Adjuntará el PDF del parte? Cambia la última frase. */
   conPdf: boolean
+  /** ¿Lleva fotos o documentos ese PDF? Sin ellos no se promete «con las fotos». */
+  conFotos?: boolean
 }
 
 /** Tope del relato dentro del mensaje: la URL de wa.me no admite textos enormes. */
@@ -43,6 +45,22 @@ function limpio(v: string | null | undefined): string | null {
   if (typeof v !== 'string') return null
   const t = v.replace(/\s+/g, ' ').trim()
   return t === '' ? null : t
+}
+
+/**
+ * El relato cabe en `RELATO_MAX_WHATSAPP`. Si hay que cortar, se corta el MEDIO: el último
+ * párrafo es el bloque del otro vehículo (`componerDescripcion` lo pone al final) y es justo
+ * lo que la compañía necesita — la matrícula del tercero no puede ser lo que se pierde.
+ */
+function recortarRelato(relato: string): string {
+  if (relato.length <= RELATO_MAX_WHATSAPP) return relato
+  const corte = relato.lastIndexOf('\n\n')
+  const cola = corte > 0 ? relato.slice(corte + 2).trim() : ''
+  if (cola !== '' && cola.length <= RELATO_MAX_WHATSAPP / 2) {
+    const cabeza = relato.slice(0, RELATO_MAX_WHATSAPP - cola.length - 3).trimEnd()
+    return `${cabeza}…\n\n${cola}`
+  }
+  return `${relato.slice(0, RELATO_MAX_WHATSAPP - 1).trimEnd()}…`
 }
 
 function triestado(v: boolean | null): string {
@@ -61,7 +79,7 @@ export function mensajeParteWhatsapp(d: DatosParteWhatsapp): string | null {
   const numero = limpio(d.numeroPoliza)
   const poliza = numero ? `nº ${numero}${compania ? ` (${compania})` : ''}` : compania ? `de ${compania}, no tengo el número a mano` : null
 
-  const recorte = relato.length > RELATO_MAX_WHATSAPP ? `${relato.slice(0, RELATO_MAX_WHATSAPP - 1).trimEnd()}…` : relato
+  const recorte = recortarRelato(relato)
   const lineas = [
     'Hola, quiero dar parte de un siniestro.',
     '',
@@ -76,7 +94,7 @@ export function mensajeParteWhatsapp(d: DatosParteWhatsapp): string | null {
     'Qué ha pasado:',
     recorte,
     '',
-    d.conPdf ? 'Os mando a continuación el parte en PDF con las fotos.' : null,
+    d.conPdf ? `Os mando a continuación el parte en PDF${d.conFotos ? ' con las fotos' : ''}.` : null,
     'Mi corredor es Grupo ASegura.',
   ]
   return lineas.filter((l): l is string => l !== null).join('\n')
