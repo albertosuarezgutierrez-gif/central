@@ -14,6 +14,27 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-23 · facturas-correo** · hizo: pasada disparada por el trigger diario. Paso 0: Vía B sana
+  (`_buzon_pdf` con copia de hoy), `PDF-pendiente`/`Revisar` vacíos antes de empezar. **Paso 4.0
+  (backlog `facturas_drive` sin cargo, obligatorio):** de 20 filas en `v_facturas_sin_cargo` solo 1
+  estaba `sin_revisar` (Anthropic 76,50€ del 08/09) — casaba exacto por `fecha_valor` (no
+  `fecha_operacion`) con un movimiento BBVA marcado `duplicado_estado='ignorado'` por un falso
+  positivo del auto-dedup (mismo importe+concepto que otro cargo real de fecha distinta, `referencia`/
+  `dedupe_hash` diferentes) → conciliado y limpiado el `duplicado_estado`. Al revisar Endesa Socorro
+  apareció un GAP que el barrido normal no cubre (mira `facturas_drive`→banco, no al revés): un cargo
+  de -37,87€ (24/08, contrato 130139486193) llevaba `Facturas/Procesada` puesto pero nunca se concilió
+  ni se archivó PDF (Endesa no manda adjunto, solo enlace externo) → conciliación inversa por banco
+  (importe del banco como bueno, `propiedad_id='prop_house_sevillana'`), hilo re-etiquetado también
+  `PDF-pendiente` para no perder el archivo cuando alguna vía lo permita. **Paso 1** (2 días): 2
+  candidatos reales de 14 hilos — factura Anthropic Ireland/Stripe nueva (recibo 2242-5411, 170,00€,
+  22/09, seguros/correduría) archivada en `09-Septiembre-2026`, sin cargo casado (mismo patrón que 4
+  hermanas previas: la Mastercard ****5332 no está dada de alta en `cuentas_bancarias` →
+  `sin_cargo_motivo='fuera_del_feed'`); y una factura de luz Endesa Socorro nueva (ref. P26CON039980996,
+  periodo 31/07-13/09) sin importe ni PDF en el correo (solo enlace) y sin cargo bancario todavía →
+  etiquetada `PDF-pendiente`. dudas: si la Mastercard ****5332 de los créditos prepago de Anthropic
+  conviene darla de alta en `cuentas_bancarias`/PSD2 para poder conciliar esa serie; fallos: —.
+  PRs/commits: (este commit).
+
 - **2026-09-23 · mercado-booking** · hizo: pasada completa de las 24 ventanas pedidas por el plan
   (`?max=24`, sin recorte de filtro — quedaron 488 fuera del tope, esperado) → 223 comps reales
   escritos vía `booking_mcp` (aforo 2/4/5/12, línea sep-2026 + evento 26-29 dic). Paso 2-bis
