@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 📝 **ASegura OS 2-d: expediente de anulación.** #3365 (2-c) mergeado con los fixes de su revisión
+(texto que caduca con su plazo, recibo cobrado → aviso retirado, timeout = «a medias» cerrable a mano). Tabla
+`seguros.anulacion` (aplicada; CHECK: sin firma no hay «comunicada», un expediente abierto por póliza). Reglas puras
+`anulacion.ts` (art. 22 LCS con advertencia, transiciones, siguiente paso, alarma si CIMA no la refleja a 15 días del
+efecto). Ficha de póliza: «Tramitar anulación» + pasos; «Hoy» lista las abiertas. El detector la CONFIRMA cuando CIMA
+trae la póliza no vigente, resuelve su baja con el motivo y no abre retención a quien la pidió. La firma hoy es una nota
+del corredor. Siguiente: 2-d-2 firma del cliente en el portal (core-firma) y 2-d-3 aviso a la compañía por la cola.
+
 **(23/09/2026)** ✉️ **ASegura OS 2-c: cola única de aprobaciones.** #3352 (retención 2-b) mergeado. Tabla
 `seguros.aprobacion` + `POLITICA` en código (`enviar_correo_cliente → aprobar`). 1er productor: un recibo que CIMA pasa a
 `devuelto` deja en «Hoy · Esperan tu OK» un correo al cliente con el reloj del art. 15 LCS (sin nº de póliza entero);

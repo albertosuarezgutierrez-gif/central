@@ -123,9 +123,22 @@ export function recargoFraccionamiento(args: {
 
 /**
  * Cuándo se puede dejar la póliza. Los contratos son ANUALES (LCS art. 22):
- * la única salida es el vencimiento, avisando con 30 días. Antes de eso,
- * cambiar de compañía no libera de pagar el resto del ciclo.
+ * la única salida es el vencimiento, avisando con UN MES de antelación. Antes
+ * de eso, cambiar de compañía no libera de pagar el resto del ciclo.
+ *
+ * «Un mes» es un mes natural, no 30 días: con vencimiento el 31/03 el límite
+ * es el 28/02 (el día 31 no existe en febrero y se toma el último), no el
+ * 01/03. Contar 30 días daba hasta 3 días de más, y en un plazo legal eso es
+ * decirle a alguien que está a tiempo cuando ya no lo está.
  */
+/** El mismo día del mes anterior; si ese día no existe (31/03 → febrero), el último del mes. */
+function mesAntes(d: Date): Date {
+  const año = d.getUTCMonth() === 0 ? d.getUTCFullYear() - 1 : d.getUTCFullYear()
+  const mes = (d.getUTCMonth() + 11) % 12
+  const ultimo = new Date(Date.UTC(año, mes + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(año, mes, Math.min(d.getUTCDate(), ultimo)))
+}
+
 export function ventanaAnulacion(
   vencimiento: string | null,
   hoy: Date = new Date(),
@@ -133,8 +146,7 @@ export function ventanaAnulacion(
   if (vencimiento === null) return null
   const v = new Date(`${vencimiento}T00:00:00Z`)
   if (Number.isNaN(v.getTime())) return null
-  const limite = new Date(v)
-  limite.setUTCDate(limite.getUTCDate() - 30)
+  const limite = mesAntes(v)
   const h = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate()))
   const dias = Math.round((limite.getTime() - h.getTime()) / 86_400_000)
   return {

@@ -27,6 +27,7 @@ type Primitivo = string | number | boolean | null
 /** `entidad.campo` cuyos valores se pueden guardar: datos de negocio, nunca de una persona. */
 export const CAMPOS_CON_VALOR: ReadonlySet<string> = new Set([
   'cliente.activo',
+  'anulacion.estado',
   'siniestro.estado',
   'poliza.estado',
   'poliza.modalidad_rc',
