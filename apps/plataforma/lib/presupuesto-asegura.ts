@@ -264,12 +264,14 @@ export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
  * Qué se puede hacer con él. `enlazado` NO es `enviado`: se abrió WhatsApp y no consta que
  * saliera, así que se ofrece «Ya lo he mandado» y se deja volver a avisar.
  */
-export function accionesPresupuesto(e: EstadoPresupuestoLista): { avisar: boolean; confirmarWhatsapp: boolean; retirar: boolean; reenvio: boolean } {
+export function accionesPresupuesto(e: EstadoPresupuestoLista): { avisar: boolean; confirmarWhatsapp: boolean; retirar: boolean; reenvio: boolean; emitir: boolean } {
   const avisar = e === 'borrador' || e === 'enlazado' || e === 'enviado' || e === 'visto'
   return {
     avisar,
     reenvio: e === 'enviado' || e === 'visto',
     confirmarWhatsapp: e === 'enlazado',
+    // Aceptado = firmado por el cliente: falta que la compañía emita. Marcarlo desbloquea la anulación.
+    emitir: e === 'aceptado',
     retirar: e !== 'retirado' && e !== 'emitido',
   }
 }
@@ -280,7 +282,7 @@ export const ROTULO_ESTADO_PRESUPUESTO: Record<EstadoPresupuestoLista, string> =
   enviado: 'Enviado · no consta que lo haya abierto',
   visto: 'Lo ha abierto',
   elegido: 'Ha elegido una opción',
-  aceptado: 'Aceptado',
+  aceptado: 'Aceptado y firmado · falta emitir (no hay cobertura aún)',
   emitido: 'Emitido',
   caducado: 'Caducado',
   retirado: 'Retirado',
@@ -294,6 +296,7 @@ export function textoAviso(status: number, j: unknown): { ok: boolean; texto: st
     return { ok: true, texto: 'Se ha abierto WhatsApp con el mensaje: elige su chat y envíalo. Luego pulsa «Ya lo he mandado».', whatsapp: o.whatsapp }
   }
   if (status === 200 && o.estado === 'confirmado') return { ok: true, texto: 'Anotado como enviado por WhatsApp.' }
+  if (status === 200 && o.estado === 'emitido') return { ok: true, texto: 'Anotado como emitido. Si firmó la anulación de su póliza anterior, ya te espera en «Hoy · Esperan tu OK».' }
   if (typeof o.detalle === 'string') return { ok: false, texto: `NO enviado: ${o.detalle}` }
   return { ok: false, texto: 'NO se sabe si ha salido: no se ha podido hablar con asegura. Recarga antes de repetir.' }
 }

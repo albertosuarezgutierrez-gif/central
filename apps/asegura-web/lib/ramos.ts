@@ -523,6 +523,64 @@ export const RAMOS: readonly Ramo[] = [
       },
     ],
   },
+  // 📌 Segunda página de INTENCIÓN (23/09/2026), y esta sí con volumen MEDIDO:
+  // «seguro responsabilidad civil autonomo» ~1.000 búsquedas/mes en España,
+  // KD 0 y CPC 4,87 € (DataForSEO vía OpenSEO). Los oficios sueltos
+  // (electricista, pintor, albañil…) salieron entre 0 y 50/mes: no compensan una
+  // página cada uno. Mismo ramo real que `responsabilidad-civil`.
+  {
+    slug: 'responsabilidad-civil-autonomos',
+    nombre: 'RC para autónomos',
+    h1: 'Seguro de responsabilidad civil para autónomos en toda España',
+    title: 'Seguro de RC para autónomos en España',
+    description:
+      'Correduría de seguros en toda España. Seguro de RC para autónomos: explotación o profesional, límites, retroactividad y qué te exige tu cliente o tu colegio.',
+    intro: [
+      'Como autónomo respondes con tu propio patrimonio de los daños que cause tu trabajo. Una póliza de responsabilidad civil es lo que se interpone entre una reclamación y tus ahorros, y por eso no basta con tener «una»: tiene que describir lo que haces de verdad.',
+      'Somos correduría y trabajamos con varias compañías. Antes de hablar de primas miramos tu actividad, quién te contrata y qué te exigen por contrato, pliego o colegio, porque de ahí salen el tipo de RC, el límite y la delimitación temporal que te encajan.',
+    ],
+    cubre: [
+      'Si necesitas RC de explotación, RC profesional o las dos: la primera responde de los daños que causa tu actividad; la segunda, del perjuicio económico por un error en tu trabajo o tu asesoramiento.',
+      'La actividad declarada en la póliza: si describe todo lo que haces, porque lo que no está descrito es lo primero que se discute en un siniestro.',
+      'El límite por siniestro y por año, y los sublímites, comparados con lo que te exige quien te contrata.',
+      'La delimitación temporal: si la póliza responde por el hecho ocurrido o por la reclamación recibida mientras está en vigor (claims made), con qué retroactividad y qué pasa cuando dejas la actividad.',
+      'La RC patronal si tienes a alguien contratado, y la de subcontratistas si encargas parte del trabajo a otros autónomos.',
+      'Los daños a lo que te dejan para trabajar: el inmueble del cliente, sus equipos o los bienes que custodias, que muchas pólizas excluyen si no se pactan.',
+    ],
+    paraQuien: [
+      'Acabas de darte de alta como autónomo y un cliente, una plataforma o un pliego te pide un certificado de responsabilidad civil.',
+      'Tienes ya un seguro pero no sabes si es de explotación o profesional, ni con qué límite.',
+      'Ejerces una profesión colegiada o regulada y quieres comprobar que tu póliza acredita lo que te exigen.',
+      'Vas a cambiar de compañía o a dejar la actividad y no quieres que queden trabajos antiguos sin cobertura.',
+    ],
+    faq: [
+      {
+        pregunta: '¿Es obligatorio el seguro de responsabilidad civil para un autónomo?',
+        respuesta:
+          'No hay una obligación general para todos los autónomos. Es obligatorio en las actividades cuya norma lo exige y en muchas profesiones colegiadas, y además hay clientes, plataformas y pliegos que lo piden para contratarte aunque ninguna ley lo imponga. Lo primero es comprobar qué te exigen a ti y con qué límite.',
+      },
+      {
+        pregunta: '¿RC de explotación o RC profesional?',
+        respuesta:
+          'La de explotación cubre los daños materiales y personales que causas al trabajar: una inundación en casa de un cliente, una caída en tu local. La profesional cubre el perjuicio económico que causa un error en tu trabajo intelectual o técnico: un cálculo mal hecho, un plazo vencido. Un electricista necesita sobre todo la primera; un asesor, la segunda; muchos autónomos, las dos.',
+      },
+      {
+        pregunta: '¿Qué pasa con un trabajo antiguo si la reclamación llega cuando ya he cambiado de seguro?',
+        respuesta:
+          'Depende de la delimitación temporal de las dos pólizas. Si la nueva responde por reclamación (claims made) sin retroactividad suficiente, o la vieja no deja un periodo de reclamación posterior, ese trabajo puede quedar sin cobertura. El art. 73 de la Ley de Contrato de Seguro regula estas cláusulas, y es lo primero que revisamos antes de mover una póliza.',
+      },
+      {
+        pregunta: '¿Me cubre el seguro de hogar como autónomo si trabajo desde casa?',
+        respuesta:
+          'La responsabilidad civil de un seguro de hogar es la de la vida privada y suele excluir expresamente la actividad profesional. Si trabajas desde casa, los daños que cause tu trabajo necesitan su propia póliza de RC.',
+      },
+      {
+        pregunta: '¿Cobráis honorarios por revisar mi seguro de RC?',
+        respuesta:
+          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
+      },
+    ],
+  },
 ]
 
 /**
@@ -532,7 +590,7 @@ export const RAMOS: readonly Ramo[] = [
  * civil que `responsabilidad-civil`, con un enfoque de contenido distinto
  * para una consulta distinta — no una línea de negocio nueva.
  */
-const SOLO_INTENCION: readonly string[] = ['responsabilidad-civil-fontaneros']
+export const SOLO_INTENCION: readonly string[] = ['responsabilidad-civil-fontaneros', 'responsabilidad-civil-autonomos']
 
 /**
  * Los RAMOS que son un producto real y distinto entre sí. Úsalo para contar

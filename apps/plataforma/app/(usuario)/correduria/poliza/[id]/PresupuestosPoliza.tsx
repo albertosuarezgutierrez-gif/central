@@ -101,8 +101,15 @@ export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
                   Ya lo he mandado
                 </button>
               )}
+              {a.emitir && (
+                <button type="button" disabled={!libre} style={btnStyle('primario')}
+                  onClick={() => { if (window.confirm('¿La compañía ya ha EMITIDO la póliza nueva? Si el cliente firmó la anulación de la anterior, se te propondrá mandarla.')) void patch(p, { accion: 'emitido' }) }}>
+                  Ya está emitida
+                </button>
+              )}
               {a.retirar && (
                 <button type="button" disabled={!libre} style={btnStyle('sutil')} onClick={() => {
+                  if (p.estado === 'aceptado' && !window.confirm('El cliente ya lo ACEPTÓ y firmó. Si firmó también la anulación de su póliza actual, se desiste: no saldrá a la compañía. ¿Retirar?')) return
                   const motivo = window.prompt('¿Por qué se retira? (se guarda con el presupuesto)')
                   if (motivo && motivo.trim() !== '') void patch(p, { motivo })
                 }}>Retirar</button>

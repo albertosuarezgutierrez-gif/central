@@ -228,3 +228,26 @@ async function mandarCorreo(destino: string, c: { asunto: string; texto: string;
     return rechazoDeRemitente(mensaje) ? 'remitente_no_verificado' : 'rechazado'
   }
 }
+
+/**
+ * Alberto marca el presupuesto aceptado como EMITIDO (la compañía ya ha emitido la póliza). Es lo que
+ * desbloquea el envío de la anulación de la póliza vieja, si la hubo. Solo sobre uno aceptado.
+ */
+export async function marcarEmitido(
+  correduriaId: string,
+  entrada: { id: string; actor: string },
+): Promise<{ estado: 'emitido' } | { estado: 'error'; motivo: 'no_encontrado' | 'no_enviable'; detalle: string }> {
+  const db = prismaAsegura()
+  const n = await db.presupuesto.updateMany({
+    where: { id: entrada.id, correduriaId, aceptadoAt: { not: null }, emitidoAt: null, retiradoAt: null },
+    data: { emitidoAt: new Date() },
+  })
+  if (n.count === 0) {
+    const existe = await db.presupuesto.findFirst({ where: { id: entrada.id, correduriaId }, select: { id: true } })
+    return existe
+      ? { estado: 'error', motivo: 'no_enviable', detalle: 'Solo se marca emitido un presupuesto aceptado y aún sin emitir.' }
+      : { estado: 'error', motivo: 'no_encontrado', detalle: 'Ese presupuesto no existe en esta correduría.' }
+  }
+  await db.presupuestoEvento.create({ data: { presupuestoId: entrada.id, tipo: 'emitido', origen: 'corredor', detalle: { actor: entrada.actor } } })
+  return { estado: 'emitido' }
+}

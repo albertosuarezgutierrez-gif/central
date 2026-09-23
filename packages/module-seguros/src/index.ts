@@ -785,3 +785,4 @@ export {
 export type {
   AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
 } from './anulacion.ts'
+export { anulacionPorCambio, documentoAceptacion, esCambioCompania, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'

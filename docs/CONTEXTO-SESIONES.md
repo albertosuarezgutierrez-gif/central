@@ -18,6 +18,13 @@ dice POR QUÉ está apagado. Solo 2 hogares vivos traen m²/año/CP en la póliz
 propuesta pendiente de ofrecer Catastro por dirección. Pendiente Alberto: 2ª prueba del botón, prompt de Chrome
 sobre el esquema del portal (obligatorios, `includeIndividualResults`, coste) y preguntar a Codeoscopic si factura.
 
+**(23/09/2026)** ✍️ **Presupuesto PR 4: el cliente elige y FIRMA en el portal.** #3386 (PR 3, aviso) mergeado. En su
+presupuesto el cliente pulsa «Elegir esta opción», lee el documento («NO es todavía el contrato»), pide código al
+correo y firma (`FirmaPropia`, `presupuesto.documento_texto`/`firma_id`, CHECK). Si la opción es de otra compañía
+(por código DGS, nunca por nombre; sin código no se anula nada), firma a la vez la anulación de su póliza a
+VENCIMIENTO (`anulacion.presupuesto_id`), que NO sale hasta que Alberto pulsa «Ya está emitida» en la tarjeta
+Presupuestos (y «Comunicada» está vetado mientras). Telegram a Alberto al aceptar (desde el portal). Migración aplicada.
+
 **(23/09/2026)** 📨 **Presupuesto al cliente, PR 3: el aviso sale con tu clic.** #3384 (2-d-3) mergeado con los
 arreglos de su revisión (índice único parcial: una sola propuesta viva por anulación, aplicado y visto morder).
 Ficha de póliza → «Presupuestos»: Enviar por correo (asegura; `enviado_at` solo si el proveedor acepta) o Por
@@ -40,6 +47,14 @@ código de 6 cifras a SU correo (10 min, 5 intentos, 60 s entre códigos) + nomb
 `firmada`. Puente estrecho `/api/portal/anulacion` (sin `clienteId`); la vista de corredor no firma (403). Migración
 `seguros_anulacion_firma` aplicada. «Firma recibida» a mano sigue para la firma en papel. Siguiente: 2-d-3 (aviso a la
 compañía por la cola de aprobaciones, con la carta firmada).
+
+**(23/09/2026)** 🧾 **asegura-web: RC para autónomos + artículo «claims made» + portal en `noindex`.** Datos (OpenSEO):
+«seguro responsabilidad civil autonomo» ~1.000/mes, KD 0, CPC 4,87 € → `/seguros/responsabilidad-civil-autonomos`
+(página de intención, `SOLO_INTENCION`, mismo ramo en BD que la RC). «claims made» ~90/mes, KD 0 → artículo que cita arts. 3 y
+73 LCS, añadidos a `NORMAS_CITABLES` leyendo el PDF consolidado del BOE (el texto que dio otro asistente era INVENTADO). Oficios sueltos
+0-50/mes: descartados. Portal `clientes.` → `noindex` en el layout raíz (competía por la marca). Consultas añadidas al cron.
+Texto consolidado de la LCS guardado en `docs/normativa/` (boe.es bloqueado en sesión: citar SOLO desde ahí);
+skill `seo-asegura` actualizada con qué sirve de OpenSEO (GSC y métricas sí; rank tracker = pago) y la regla de normas.
 
 **(23/09/2026)** ⭐ **Petición de reseñas de Google: borrador listo, SIN enviar.** `docs/asegura-resenas/` (texto
 WhatsApp + correo, QR PNG/SVG). Enlace directo a «escribir reseña» con el `place_id` de la ficha leído vía OpenSEO

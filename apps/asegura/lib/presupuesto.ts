@@ -25,6 +25,7 @@ import {
 import { generarTokenVista, hashTokenVista } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
 import { registrarErrorCartera } from './error-cartera'
 
 /**
@@ -526,13 +527,23 @@ export async function retirarPresupuesto(
     return { estado: 'error', motivo: 'ya_retirado', detalle: 'Ese presupuesto ya estaba retirado.' }
   }
 
-  await db.presupuesto.update({
-    where: { id: fila.id },
-    data: {
-      retiradoAt: new Date(),
-      retiradoMotivo: motivo,
-      eventos: { create: [{ tipo: 'retirado', origen: 'corredor', detalle: { actor: entrada.actor, motivo } }] },
-    },
+  // Si el cliente ya lo había aceptado firmando la anulación de su póliza vieja, esa anulación esperaba
+  // a la emisión, que ya no llegará: se desiste en el mismo paso. Si no, quedaría `firmada` para
+  // siempre, bloqueando otro expediente de esa póliza y pidiendo un «márcalo emitido» imposible.
+  const desistidas = await db.$transaction(async (tx) => {
+    await tx.presupuesto.update({
+      where: { id: fila.id },
+      data: {
+        retiradoAt: new Date(),
+        retiradoMotivo: motivo,
+        eventos: { create: [{ tipo: 'retirado', origen: 'corredor', detalle: { actor: entrada.actor, motivo } }] },
+      },
+    })
+    return tx.$queryRaw<{ id: string }[]>`
+      update anulacion set estado = 'desistida', desistida_at = now(), updated_at = now()
+      where presupuesto_id = ${fila.id}::uuid and correduria_id = ${correduriaId}::uuid and estado in ('solicitada', 'firmada')
+      returning id::text as id`
   })
+  for (const a of desistidas) anotarCambio({ entidad: 'anulacion', id: a.id, campo: 'estado', antes: 'firmada', despues: 'desistida' })
   return { estado: 'ok' }
 }
