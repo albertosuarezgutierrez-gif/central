@@ -118,9 +118,31 @@ export async function tgAskForReply(text: string, opts: { chatId?: string } = {}
   } catch { return null }
 }
 
-// Verifica el header secreto que Telegram envía en cada webhook.
-export function verifyTelegramWebhook(headerValue: string | null): boolean {
-  const secret = process.env.TELEGRAM_WEBHOOK_SECRET
-  if (!secret) return true // si no se configuró, no se exige (dev)
-  return headerValue === secret
+// Verifica el header secreto que Telegram envía en cada webhook. FAIL-CLOSED: sin
+// TELEGRAM_WEBHOOK_SECRET no se acepta nada. Antes dejaba pasar todo si faltaba la env, y por este
+// webhook se aprueban cosas con botones (pagos, envíos, borradores): un olvido de env no puede
+// convertirlo en una puerta abierta a cualquiera que conozca la URL.
+export function verifyTelegramWebhook(headerValue: string | null, secret = process.env.TELEGRAM_WEBHOOK_SECRET): boolean {
+  if (!secret || !headerValue || headerValue.length !== secret.length) return false
+  let diff = 0
+  for (let i = 0; i < secret.length; i++) diff |= secret.charCodeAt(i) ^ headerValue.charCodeAt(i)
+  return diff === 0
+}
+
+type UpdateTelegram = {
+  callback_query?: { from?: { id?: number | string }; message?: { chat?: { id?: number | string } } }
+  message?: { chat?: { id?: number | string } }
+}
+
+/**
+ * ¿Viene el update del chat autorizado (el de Alberto)? El secreto del header solo prueba que lo
+ * manda Telegram, NO quién pulsó: cualquiera que escriba al bot genera updates válidos. El bot solo
+ * manda botones a TELEGRAM_CHAT_ID, así que un botón o mensaje de otro chat se ignora.
+ * Sin chat permitido configurado → false (fail-closed). Un update sin chat reconocible → false.
+ */
+export function emisorAutorizado(update: UpdateTelegram, chatPermitido = process.env.TELEGRAM_CHAT_ID): boolean {
+  if (!chatPermitido) return false
+  const cb = update.callback_query
+  const chat = cb ? (cb.message?.chat?.id ?? cb.from?.id) : update.message?.chat?.id
+  return chat !== undefined && chat !== null && String(chat) === String(chatPermitido)
 }
