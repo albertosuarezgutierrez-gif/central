@@ -7,6 +7,7 @@ import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
 import { peticionesPrecio } from '@/lib/mejorar-precio'
 import { getIdentidad } from '@/lib/session'
+import { primaQuePaga } from '@/lib/vencimientos'
 
 import { tituloDePoliza } from '../../PolizaVista'
 import { FormMejorar } from './FormMejorar'
@@ -33,9 +34,7 @@ export default async function MejorarPrecio({ params }: { params: Promise<{ id: 
 
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
   const dias = diasHastaVencimientoPortal(p.fechaVencimiento.toISOString().slice(0, 10), hoy)
-  // Un 0 guardado no es una prima: se calla, igual que asegura (`nullif(…, 0)`).
-  const primaLeida = p.prima?.bruta ?? p.prima?.anual ?? null
-  const prima = primaLeida !== null && primaLeida > 0 ? primaLeida : null
+  const prima = primaQuePaga(p.prima)
   const pedido = (await peticionesPrecio(identidad.id))?.find((x) => x.polizaId === p.id)?.pedidoEl ?? null
 
   return (

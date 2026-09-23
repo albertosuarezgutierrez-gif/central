@@ -323,9 +323,17 @@ export function aplicarCampoPersona(
     case 'telefono':
       p.phones = [{ number: v.replace(/\s/g, ''), primary: true }]
       return p
-    case 'fechaCarnet':
-      p.drivingLicenses = [{ type: { id: 'B' }, date: v, issuingZone: { id: 'Spain' } }]
+    case 'fechaCarnet': {
+      // Se corrige la fecha del carné PRINCIPAL (`[0]`) conservando su tipo, su
+      // zona y los demás carnés: pisarlo con un B de España convertía el A de
+      // una moto en un B, y se llevaba el B que viajaba detrás.
+      const [principal, ...resto] = arr(p.drivingLicenses).map((x) => obj(x))
+      p.drivingLicenses = [
+        { type: { id: 'B' }, issuingZone: { id: 'Spain' }, ...(principal ?? {}), date: v },
+        ...resto,
+      ]
       return p
+    }
     case 'email':
       // 🚨 `emails[]`, medido el 13/09/2026 sobre el proyecto 40685666 (el
       // vendor devuelve `emails: []`; con `email` a secas el PATCH daba 200 y

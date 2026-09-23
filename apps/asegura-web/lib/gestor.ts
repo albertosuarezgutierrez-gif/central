@@ -40,9 +40,9 @@ import type { Faq } from './ramos.ts'
 
 export const GESTOR = {
   ruta: '/gestor-de-seguros',
-  title: 'Gestor de seguros gratis: todas tus pólizas en un solo sitio',
+  title: 'Gestor de seguros gratis: tus pólizas juntas',
   description:
-    'Guarda las pólizas de cualquier compañía en tu área privada y ve hasta qué día puedes decidir cada renovación. Gratis, sin ser cliente y sin cambiar de correduría.',
+    'Guarda pólizas de cualquier compañía en tu área privada y ve hasta qué día puedes decidir cada renovación. Gratis, sin ser cliente ni cambiar de correduría.',
   h1: 'Todos tus seguros, de cualquier compañía, en un solo sitio',
   lead:
     'Sube el PDF o una foto de cada póliza y te la dejamos leída: compañía, número, vencimiento y coberturas. Tu área privada te enseña hasta qué día puedes decidir cada renovación y te prepara la carta si no quieres renovar. Sin coste, sin ser cliente y sin cambiar de correduría.',

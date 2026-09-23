@@ -146,6 +146,12 @@ export type CarnetExtra = {
   tipoCarnet?: string | null
   /** `drivingLicenses[].issuingZone.id` — del catálogo `/car/driving-license-issuing-zones`. */
   zonaCarnet?: string | null
+  /**
+   * Más carnés DETRÁS del principal (misma zona). Moto: el B junto al A, como
+   * el ejemplo oficial `motorcycle/quotation-request.json`. El principal va
+   * SIEMPRE en `[0]`: `formulario-guardado` e `interprete-400` leen ahí la fecha.
+   */
+  adicionales?: { tipo: string; fecha: string }[] | null
 }
 
 /**
@@ -172,6 +178,14 @@ export function construirPersona(d: DatosPersona, extra: CarnetExtra = {}): Reco
         issuingZone: { id: texto(extra.zonaCarnet) ? extra.zonaCarnet!.trim() : ZONA_CARNET_SUPUESTA },
       },
     ]
+    for (const a of extra.adicionales ?? []) {
+      if (!texto(a.tipo) || !texto(a.fecha)) continue
+      ;(persona.drivingLicenses as unknown[]).push({
+        type: { id: a.tipo.trim() },
+        date: a.fecha,
+        issuingZone: { id: texto(extra.zonaCarnet) ? extra.zonaCarnet!.trim() : ZONA_CARNET_SUPUESTA },
+      })
+    }
   }
   if (texto(d.apellido2)) persona.surname2 = d.apellido2!.trim()
   // El correo, si la ficha lo tiene — como `emails[]`, igual que `phones[]`.

@@ -22,6 +22,18 @@ Retrieve a un solo sitio para que la lectura y el reintento no diverjan — los 
 `code-review` obligatorio antes de este commit. Mergeado `main` para resolver conflicto con el lote
 de moto/CIMA de abajo; tsc 0, `pnpm test` asegura 633/633 tras el merge.
 
+**(23/09/2026)** 🧩 **asegura-portal: «Tus vencimientos» con fuente única** (`lib/vencimientos.ts`). La ventana
+de 60 días y la prima «pagas ahora» estaban copiadas en la bóveda, en el bloque y en «Mejorar el precio»: si
+divergían, la bóveda dejaba de pedir las peticiones y el bloque enseñaba el botón a quien ya lo había pedido.
+Ahora la página calcula la lista una vez y se la pasa al bloque; `primaQuePaga()` la comparten las dos pantallas.
+
+**(23/09/2026)** 🔎 **OpenSEO probado sobre grupoasegura.es + PR de títulos/descripciones.** Proyecto OpenSEO
+«Grupo ASegura» creado (ES/es; ~400 créditos de alta, sin plan). Hallazgos: al buscar la marca sale 1.º **Asegura
+Group** (otra correduría, Granada) y nosotros 2.º; fuera del top-20 de «correduría de seguros sevilla» (manda el
+local pack → ficha de Google Business). Search Console NO conectado en OpenSEO (pendiente de Alberto). Auditoría: 0
+críticos. PR: la portada no llevaba la marca en `<title>` (la plantilla `%s · Grupo ASegura` no aplica al segmento
+raíz) y los 3 legales la duplicaban; títulos ≤60 y descripciones ≤160 medidos en el HTML servido.
+
 **(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
 La moto de Víctor (Allianz 031698897) salía con catálogo de coche porque CIMA la guardó como `auto`
 (Allianz/Mapfre no mandan `ClaseVehiculo='MO'`). 18 pólizas corregidas a `moto` en BD (ids en asegura#848)
@@ -43,6 +55,9 @@ traiga `powerKw` como la de coche; pendiente: ¿declarar también el B junto al 
 Mergeado #3347. Medir los catálogos NO se puede desde el contenedor (sin secretos; api-int.codeoscopic.io bloqueado
 por el proxy): se abre el crudo a `carnets-moto` y `versiones-moto` (`TIPOS_CRUDO`, lista cerrada) para que Alberto lo mida
 con su sesión en `/api/correduria/codeoscopic-crudo?tipo=carnets-moto`. El ejemplo oficial de moto declara B + A.
+#3351 mergeado. Carné B en moto: si la ficha tiene carné de moto Y B con fecha, el B viaja detrás (`drivingLicenses[1]`,
+`fechaCarnetB`); el de moto sigue en `[0]`. Arreglado de paso: el PATCH de `fechaCarnet` tras un 400 (`interprete-400`)
+pisaba el A de una moto con un B de España y se llevaba el resto de carnés.
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
 compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña
@@ -230,11 +245,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
-## (23/09/2026) Auditoría precios dinámicos + fechas sin referencia y copia de sivra retiradas
+## (23/09/2026) Auditoría precios dinámicos → PR #3344 (mergeado) + rutina Booking 2×/día
 - Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Hallazgos abiertos: 33 saltos >50%/día en 90d (17 Luxury Busto), `booking_mcp` con 9 huecos en 49 días y ~50-56% de cobertura futura, `pricing_decisiones` 2 días por detrás de `pricing_applied`.
-- Fix raíl: `aplicar-propuesta` (plataforma) ya NO escribe una fecha sin precio actual en Smoobu salvo que el piso tenga suelo Y techo (ningún piso tiene `max_price` → pasaba la propuesta cruda sin techo). Helper `lib/sivra/pricing-railes-propuesta.ts` + test; no audita esas filas en `pricing_applied` (new_price=0 envenenaría `ref24`).
+- Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Puntos 1,2,4,5 resueltos en PR #3344 (squash 6330f05); punto 3 = rutina Booking a `30 8,13` (Alberto, PR #3357). ⏳ Verificación programada 24/09 15:00 UTC (trig_01GL83WaeXaPJHvbmGJK91jk): precios evento Luxury nov bajando a ~100-115€, `eventos_caducados` < 68, dos tandas `booking_mcp`, latidos ok.
 - Saltos de Luxury Busto (Alberto eligió «límite × evento»): el techo por ADR (×1,30) bajaba los días normales de nov a 75€ y dejaba fuera los eventos (200-223€, ×2,7 el día de al lado). Ahora un evento SIN mercado medido de su fecha (<3 comps fiables) lleva techo ADR×1,30×factor y libera la guarda «evento a ciegas»; con mercado medido o lectura caída, sin cambio. Karol G (factor ≥2 sin mes) sigue congelando.
-- Huecos `booking_mcp` (9 días en 49; peor 08-11/09): la rutina `trig_01Sr5KXErpEhGCtT1F16hv4W` (08:30 UTC) simplemente no arrancó esos días (ni filas ni PR de bitácora); no es código. Riesgo real: >7 días sin pasada → el motor salta el piso entero (`MAX_MARKET_AGE_DAYS`). Decidido 2ª pasada diaria (13:30 UTC); un agente NO puede editar esa rutina (creada por API) ni crear otra con el conector de Booking → ⏳ Alberto: cambiar su horario a `30 8,13 * * *` en claude.ai/code/routines.
+- Huecos `booking_mcp` (9 días en 49; peor 08-11/09): la rutina `trig_01Sr5KXErpEhGCtT1F16hv4W` (08:30 UTC) simplemente no arrancó esos días (ni filas ni PR de bitácora); no es código. Riesgo real: >7 días sin pasada → el motor salta el piso entero (`MAX_MARKET_AGE_DAYS`). Decidido 2ª pasada diaria (13:30 UTC); un agente NO puede editar esa rutina (creada por API) ni crear otra con el conector de Booking → ✅ Alberto la cambió a `30 8,13 * * *` (UTC) el 23/09 desde el editor. Verificación programada 24/09 15:00 UTC.
 - Cobertura de mercado: el plan del barrido son 512 ventanas (muestra, no todas las fechas) y ya no hay vírgenes; el cuello era que TODO evento confirmado caducaba a 7 días → 268 ventanas «caducadas» contra 24/pasada, y la cola solo medía eventos. Ahora `edadMaxEvento`: 7/14/30 días según falten ≤30/≤90/>90 (~13 ventanas/día de eventos). Corregido además el aviso del plan: el motor NO salta esas fechas (usa 120 días de corpus por fecha); el único plazo de 7 días es el de la última pasada de cada piso.
 - `apps/sivra`: `aplicar-propuesta` → 410 (copia duplicada); `cron-auth` deniega sin `CRON_SECRET` en producción (`cron-auth-decision.ts` + test). `pisos-zona` sigue vivo en sivra.
 

@@ -36,7 +36,7 @@ import {
 import { url } from '@/lib/sitio'
 
 export const metadata: Metadata = {
-  title: 'Política de privacidad · Grupo ASegura',
+  title: 'Política de privacidad',
   description:
     'Qué datos trata Grupo ASegura cuando pides presupuesto, con qué base jurídica, quién más los ve, cuánto se conservan y cómo ejercer tus derechos ante el RGPD.',
   alternates: { canonical: url('/legal/privacidad') },

@@ -13,9 +13,10 @@ import Escaneo from '@/components/Escaneo'
 import EnlaceMedido from '@/components/EnlaceMedido'
 
 export const metadata: Metadata = {
-  title: 'Correduría de seguros en toda España',
+  // Sin `title`: la portada es el segmento raíz, donde la plantilla `%s · Grupo ASegura`
+  // no se aplica; así hereda el `default` del layout, que es el que lleva la marca.
   description:
-    'Correduría de seguros inscrita en la DGSFP que media en toda España. Comparamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
+    'Correduría inscrita en la DGSFP que media en toda España. Comparamos varias compañías para tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
   alternates: { canonical: url('/') },
 }
 
