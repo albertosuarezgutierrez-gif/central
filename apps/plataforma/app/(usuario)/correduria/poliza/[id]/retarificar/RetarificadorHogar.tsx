@@ -432,7 +432,12 @@ function RecomendarCapital({
         type="button"
         onClick={async () => {
           setEstado('pidiendo')
-          setEstado(await pedir())
+          try {
+            setEstado(await pedir())
+          } catch (e) {
+            // Se cortó entre el navegador y plataforma: la llamada pudo llegar a Codeoscopic.
+            setEstado({ estado: 'error', mensaje: e instanceof Error ? e.message : String(e), gastoDesconocido: true })
+          }
         }}
         disabled={!habilitado || pidiendo}
         style={{ minHeight: 44 }}
