@@ -17,6 +17,12 @@
 Verificado: almacen `/catalogo` carga 169 artículos; `central-asegura` responde 200 en el puerto `/api/operador/*` desde las 18:58 UTC y hay 3 conexiones de `prisma_seguros` en `pg_stat_activity`.
 Tres trampas medidas: (1) las `DATABASE_URL`/`DIRECT_URL` son **Sensitive**: hay que pegar la URL ENTERA, no solo la contraseña; (2) un «Redeploy» del último despliegue sale **Canceled** por el `ignoreCommand` si ese commit no toca la app → se redespliega el que lleva la etiqueta «Current» (cada Save de una env ya lanza uno); (3) un espacio al copiar la contraseña dio 82 `password authentication failed` en 15 min — la cartera cayó de 18:40 a 18:58 UTC. Supabase guarda el `ALTER ROLE` en logs con `{REDACTED}`.
 
+**(23/09/2026)** 🪪 **Presupuesto PR 5: qué falta para EMITIR.** #3390 (PR 4) mergeado con su revisión (sin anulación
+si ya hay expediente abierto o la póliza no es suya/vigente; retirar un aceptado desiste su anulación). Nuevo:
+`huecosParaEmitirDesdeFicha` (correo, DNI, nacimiento, dirección con número+CP, cuenta) sobre la ficha + lo propio de
+sus pólizas; `no_legible` nunca se le pide. Portal: bloque «Datos para contratar» + subir DNI (lo revisa Alberto; la
+identidad no se teclea). Tarjeta de Alberto: línea de datos. Correo: «me faltan N datos» sin pedirlos. Sin migración.
+
 **(23/09/2026)** ✍️ **Presupuesto PR 4: el cliente elige y FIRMA en el portal.** #3386 (PR 3, aviso) mergeado. En su
 presupuesto el cliente pulsa «Elegir esta opción», lee el documento («NO es todavía el contrato»), pide código al
 correo y firma (`FirmaPropia`, `presupuesto.documento_texto`/`firma_id`, CHECK). Si la opción es de otra compañía

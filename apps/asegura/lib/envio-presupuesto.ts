@@ -25,6 +25,7 @@ import { calcularVencimiento, correoPresupuesto, estadoPresupuesto, mensajePresu
 import { generarTokenVista, hashTokenVista } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
+import { datosParaEmitir } from './datos-emision'
 import { MOTIVO_REMITENTE, rechazoDeRemitente } from './correo-invitacion-portal'
 import { estadoEmailDeFicha } from './email-ficha'
 import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
@@ -126,7 +127,9 @@ export async function avisarPresupuesto(
 
   const venceSiSale = calcularVencimiento({ creadoAt: p.creadoAt, enviadoAt: p.enviadoAt ?? ahora, fechaEfecto: fechaEfectoDe(t.peticion) }).venceEl
   const nombre = await nombreDe(correduriaId, p.clienteId)
-  const datos = { nombre, enlace, venceEl: venceSiSale, email: emailAcceso }
+  // Cuántos datos SUYOS faltan para emitir (§4bis): solo el número. Si no se puede leer, no se dice nada.
+  const faltanDatos = await datosParaEmitir(correduriaId, p.clienteId).then((r) => r?.faltanCliente ?? null).catch(() => null)
+  const datos = { nombre, enlace, venceEl: venceSiSale, email: emailAcceso, faltanDatos }
 
   // Compare-and-swap sobre el hash anterior: el segundo clic no encuentra la fila.
   const nuevoHash = await hashTokenVista(token)
