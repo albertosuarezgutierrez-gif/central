@@ -29,6 +29,13 @@ disponibles por API REST** aunque estén activados en el panel de Avant2 con Occ
 6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
 (solo doc), sin código tocado.
 
+**(23/09/2026)** 💾 **Copia semanal cifrada de `seguros`** (ASegura OS, continuidad). Workflow
+`copia-seguros.yml` (lunes 03:00 UTC): `pg_dump` → **restaura en Postgres 17 desechable y compara
+recuentos** → GPG AES256 → artefacto 90 días; si falla, Telegram. Rol `backup_seguros` creado INERTE
+(solo SELECT de `seguros`, BYPASSRLS). **Pendiente de Alberto:** contraseña del rol + secrets
+`SEGUROS_BACKUP_DATABASE_URL` (conexión directa/sesión :5432) y `SEGUROS_BACKUP_PASSPHRASE` (guardarla
+también fuera), y lanzar el workflow a mano una vez. Procedimiento en `docs/COPIA-SEGUROS.md`.
+
 **(23/09/2026)** 🪪 **ASegura OS 1b-b — actor en el puerto + `seguros.auditoria`.** plataforma manda
 `x-actor` en TODA llamada al puerto de asegura (`lib/puerto-actor.ts` → `cabecerasPuerto()`;
 la sesión la resuelve `instrumentation.ts` porque varios clientes del puerto los importan
