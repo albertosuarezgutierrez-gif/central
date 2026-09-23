@@ -15,7 +15,7 @@ import { createHash, randomInt, randomUUID } from 'node:crypto'
 import { FirmaPropia, TEXTO_CONSENTIMIENTO, nombreCoincide } from '@central/core-firma'
 import {
   MEDIADOR, admiteDecision, anulacionPorCambio, cartaAnulacion, documentoAceptacion, esCambioCompania,
-  estadoPresupuesto, remitenteCorreo,
+  ESTADOS_ANULACION_ABIERTA, POLIZA_ESTADOS_VIGENTES, estadoPresupuesto, remitenteCorreo,
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
@@ -28,6 +28,8 @@ export const MAX_INTENTOS = 5
 export const SEGUNDOS_ENTRE_CODIGOS = 60
 export const MAX_CODIGOS_DIA = 5
 
+const VIGENTES = [...POLIZA_ESTADOS_VIGENTES] as string[]
+const ABIERTAS = [...ESTADOS_ANULACION_ABIERTA] as string[]
 const hashCodigo = (c: string) => createHash('sha256').update(c).digest('hex')
 const huella = (t: string) => createHash('sha256').update(t, 'utf8').digest('hex')
 const hoyMadrid = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
@@ -40,6 +42,10 @@ type Fila = {
   opcionId: string; compania: string; producto: string | null; prima: string | null; franquicia: string | null; firmeza: string
   opcionDgs: string | null
   actualCompania: string | null; actualNumero: string | null; actualDgs: string | null; actualVence: string | null
+  /** La póliza vinculada es de esta correduría, del MISMO cliente, no fusionada y en vigor. */
+  polizaApta: boolean
+  /** Ya hay un expediente de anulación abierto para esa póliza (el índice único no admite otro). */
+  expedienteAbierto: boolean
 }
 
 async function leer(correduriaId: string, clienteId: string, presupuestoId: string, opcionId: string): Promise<Fila | null> {
@@ -53,7 +59,11 @@ async function leer(correduriaId: string, clienteId: string, presupuestoId: stri
            o.id::text as "opcionId", o.compania, o.producto, o.prima_eur::text as prima, o.franquicia_eur::text as franquicia, o.firmeza,
            (select cd.codigo_dgs from companias_dgs cd where lower(cd.nombre_comun) = lower(o.compania) limit 1) as "opcionDgs",
            coalesce(cda.nombre_comun, pol.aseguradora) as "actualCompania", pol.numero_poliza as "actualNumero",
-           pol.codigo_entidad_dgs as "actualDgs", to_char(pol.fecha_vencimiento, 'YYYY-MM-DD') as "actualVence"
+           pol.codigo_entidad_dgs as "actualDgs", to_char(pol.fecha_vencimiento, 'YYYY-MM-DD') as "actualVence",
+           coalesce(pol.correduria_id = p.correduria_id and pol.cliente_id = p.cliente_id and pol.merged_into_poliza_id is null
+                    and pol.estado::text = any(${VIGENTES}::text[]), false) as "polizaApta",
+           exists (select 1 from anulacion an where an.poliza_id = p.poliza_id
+                     and an.estado = any(${ABIERTAS}::text[])) as "expedienteAbierto"
     from presupuesto p
       join clientes c on c.id = p.cliente_id
       join presupuesto_opcion o on o.presupuesto_id = p.id and o.id = ${opcionId}::uuid
@@ -82,6 +92,11 @@ function componer(f: Fila, hoy: string): Compuesto | null {
     const cambio = esCambioCompania(f.actualDgs, f.opcionDgs)
     if (cambio === null) {
       sinAnulacion = 'No podemos confirmar si la opción es de otra compañía que tu póliza actual; tu corredor se encarga de la anulación si hace falta.'
+    } else if (cambio && !f.polizaApta) {
+      // Las mismas guardas que `crearAnulacion`: no se firma la baja de una póliza que no es suya o ya no está en vigor.
+      sinAnulacion = 'Tu póliza actual no nos consta en vigor a tu nombre; tu corredor revisa si hay que anularla.'
+    } else if (cambio && f.expedienteAbierto) {
+      sinAnulacion = 'Ya hay una anulación de tu póliza actual en trámite con tu corredor; no hace falta firmar otra.'
     } else if (cambio) {
       const a = anulacionPorCambio({ compania: f.actualCompania, numeroPoliza: f.actualNumero, vencimiento: f.actualVence }, new Date())
       if (!a.ok) sinAnulacion = `${a.motivo} Tu corredor se encarga de la anulación de tu póliza actual.`
@@ -259,34 +274,42 @@ export async function firmarAceptacion(
       returning id::text as id`
     return fila?.id ?? null
   }
-  const ok = await db.$transaction(async (tx) => {
-    const firmaId = await insertarFirma(tx as typeof db, 'presupuesto', presupuestoId, evidencia)
-    if (!firmaId) return false
-    const n = await tx.$executeRaw`
-      update presupuesto set aceptado_at = now(), elegido_at = coalesce(elegido_at, now()), opcion_elegida_id = ${opcionId}::uuid,
-             documento_texto = ${c.documento}, firma_id = ${firmaId}::uuid, firma_otp_hash = null, firma_otp_expira = null,
-             salida = ${c.anulacion ? 'cambio_compania' : null}
-      where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid and aceptado_at is null and retirado_at is null`
-    if (n === 0) throw new Error('el presupuesto cambió mientras se firmaba')
-    await tx.$executeRaw`update presupuesto_opcion set elegida_at = now() where id = ${opcionId}::uuid and presupuesto_id = ${presupuestoId}::uuid`
-    await tx.$executeRaw`
-      insert into presupuesto_evento (presupuesto_id, tipo, origen, detalle)
-      values (${presupuestoId}::uuid, 'aceptado', 'cliente', ${JSON.stringify({ opcionId, conAnulacion: !!c.anulacion })}::jsonb)`
-    if (c.anulacion && anulacionId && evidenciaAnulacion && f.polizaId) {
-      // La anulación nace firmada, pero la cola no la propone hasta que el presupuesto esté emitido.
+  let ok: boolean
+  try {
+    ok = await db.$transaction(async (tx) => {
+      const firmaId = await insertarFirma(tx as typeof db, 'presupuesto', presupuestoId, evidencia)
+      if (!firmaId) return false
+      const n = await tx.$executeRaw`
+        update presupuesto set aceptado_at = now(), elegido_at = coalesce(elegido_at, now()), opcion_elegida_id = ${opcionId}::uuid,
+               documento_texto = ${c.documento}, firma_id = ${firmaId}::uuid, firma_otp_hash = null, firma_otp_expira = null,
+               salida = ${c.anulacion ? 'cambio_compania' : null}
+        where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid and aceptado_at is null and retirado_at is null`
+      if (n === 0) throw new Error('el presupuesto cambió mientras se firmaba')
+      await tx.$executeRaw`update presupuesto_opcion set elegida_at = now() where id = ${opcionId}::uuid and presupuesto_id = ${presupuestoId}::uuid`
       await tx.$executeRaw`
-        insert into anulacion (id, correduria_id, poliza_id, cliente_id, tipo, solicitada_por, motivo, motivo_texto,
-                               fecha_efecto, estado, creada_por, firmada_at, carta_texto, firma_nota, presupuesto_id)
-        values (${anulacionId}::uuid, ${correduriaId}::uuid, ${f.polizaId}::uuid, ${clienteId}::uuid, 'sustitucion', 'cliente', 'otro',
-                'Cambio de compañía: presupuesto aceptado en el portal', ${c.anulacion.fechaEfecto}::date, 'firmada', 'portal',
-                now(), ${c.anulacion.carta}, 'Firmada por el cliente en el portal junto con la aceptación del presupuesto',
-                ${presupuestoId}::uuid)`
-      const firmaAnul = await insertarFirma(tx as typeof db, 'anulacion', anulacionId, evidenciaAnulacion)
-      if (!firmaAnul) throw new Error('la firma de la anulación ya existía')
-      await tx.$executeRaw`update anulacion set firma_id = ${firmaAnul}::uuid where id = ${anulacionId}::uuid`
-    }
-    return true
-  })
+        insert into presupuesto_evento (presupuesto_id, tipo, origen, detalle)
+        values (${presupuestoId}::uuid, 'aceptado', 'cliente', ${JSON.stringify({ opcionId, conAnulacion: !!c.anulacion })}::jsonb)`
+      if (c.anulacion && anulacionId && evidenciaAnulacion && f.polizaId) {
+        // La anulación nace firmada, pero la cola no la propone hasta que el presupuesto esté emitido.
+        await tx.$executeRaw`
+          insert into anulacion (id, correduria_id, poliza_id, cliente_id, tipo, solicitada_por, motivo, motivo_texto,
+                                 fecha_efecto, estado, creada_por, firmada_at, carta_texto, firma_nota, presupuesto_id)
+          values (${anulacionId}::uuid, ${correduriaId}::uuid, ${f.polizaId}::uuid, ${clienteId}::uuid, 'sustitucion', 'cliente', 'otro',
+                  'Cambio de compañía: presupuesto aceptado en el portal', ${c.anulacion.fechaEfecto}::date, 'firmada', 'portal',
+                  now(), ${c.anulacion.carta}, 'Firmada por el cliente en el portal junto con la aceptación del presupuesto',
+                  ${presupuestoId}::uuid)`
+        const firmaAnul = await insertarFirma(tx as typeof db, 'anulacion', anulacionId, evidenciaAnulacion)
+        if (!firmaAnul) throw new Error('la firma de la anulación ya existía')
+        await tx.$executeRaw`update anulacion set firma_id = ${firmaAnul}::uuid where id = ${anulacionId}::uuid`
+      }
+      return true
+    })
+  } catch (e) {
+    // Carrera: Alberto abrió un expediente de esa póliza entre leer y firmar. Lo que se leyó ya no vale:
+    // al recargar, el documento sale sin anulación y se firma de nuevo.
+    if (e instanceof Error && /uq_anulacion_abierta_por_poliza/.test(e.message)) return { estado: 'documento_cambiado' }
+    throw e
+  }
   if (!ok) return { estado: 'no_admite', motivo: 'Este presupuesto ya estaba aceptado.' }
 
   anotarCambio({ entidad: 'presupuesto', id: presupuestoId, campo: 'aceptado', antes: null, despues: opcionId })

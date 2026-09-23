@@ -109,6 +109,7 @@ export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
               )}
               {a.retirar && (
                 <button type="button" disabled={!libre} style={btnStyle('sutil')} onClick={() => {
+                  if (p.estado === 'aceptado' && !window.confirm('El cliente ya lo ACEPTÓ y firmó. Si firmó también la anulación de su póliza actual, se desiste: no saldrá a la compañía. ¿Retirar?')) return
                   const motivo = window.prompt('¿Por qué se retira? (se guarda con el presupuesto)')
                   if (motivo && motivo.trim() !== '') void patch(p, { motivo })
                 }}>Retirar</button>

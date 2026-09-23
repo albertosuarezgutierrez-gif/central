@@ -65,11 +65,19 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
       })
       return
     }
-    if (r?.j.estado === 'no_disponible' && typeof r.j.motivo === 'string') {
+    // `preparar` devuelve el estado de asegura tal cual (caducado → `no_admite` con su motivo), no `no_disponible`.
+    const estado = typeof r?.j.estado === 'string' ? r.j.estado : 'error'
+    if (r && estado !== 'error' && typeof r.j.motivo === 'string') {
       setAviso(r.j.motivo)
       return
     }
-    setAviso('No hemos podido preparar la aceptación. Inténtalo en unos minutos o llámanos.')
+    const fijo: Record<string, string> = {
+      no_encontrado: 'Este presupuesto ya no está disponible. Recarga la página.',
+      sin_ficha: 'Este presupuesto ya no está disponible. Recarga la página.',
+      varias_fichas: 'Este presupuesto ya no está disponible. Recarga la página.',
+      sin_precio: 'La opción no tiene precio. Escríbeme para revisarla.',
+    }
+    setAviso(fijo[estado] ?? 'No hemos podido preparar la aceptación. Inténtalo en unos minutos o llámanos.')
   }
 
   async function pedirCodigo() {
