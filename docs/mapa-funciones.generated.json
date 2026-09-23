@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-23T10:21:30Z",
-  "sha": "c7efca1bee42259dee392fe3cc077fd3beaa87ab",
+  "generadoEn": "2026-09-23T10:57:43Z",
+  "sha": "444d859cad68ec5010ac08746f5e8a29511742a4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10815,6 +10815,27 @@
       "hash": "38790d6efb78"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/actividad-nueva/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 24,
+          "resumen": "Lo que han hecho los CLIENTES en el portal desde un instante, para el aviso por Telegram de plataforma (`correduria-actividad`, cada 5 min). GET ?desde=<ISO>&limite=<n> → { estado:'ok', eventos: [...]"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/actividad-nueva",
+      "hash": "943bd5beab7b"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/actividad/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -13623,16 +13644,17 @@
       "resumen": "El muro de actividad de TODA la cartera, y el embudo de la intranet. ─── Qué problema resuelve ─────────────────────────────────────────────────── El historial existía por ficha: para saber qué había hecho alguien había que entrar en su ficha, y para saber qué había hecho *alguien* había que entrar ",
       "exporta": [
         "embudoPortal",
-        "actividadCartera"
+        "actividadCartera",
+        "actividadNueva"
       ],
       "funciones": [
         {
           "nombre": "consultaEventos",
           "kind": "function",
           "exportada": false,
-          "params": "correduriaId: string, filtro: FiltroActividad, porPagina: number, offset: number",
+          "params": "correduriaId: string, filtro: FiltroActividad, porPagina: number, offset: number, // Con cursor (el aviso por Telegram): límite inferior propio y orden // ASCENDENTE, para que un corte por `limite` deje fuera lo más nuevo y no // lo más vie",
           "retorno": null,
-          "linea": 76,
+          "linea": 77,
           "resumen": "La línea de tiempo. Un solo `UNION ALL` porque la alternativa —seis consultas y ordenarlas en JavaScript— no sabe paginar: para dar la página 3 habría que traerse las tres primeras de cada fuente y de"
         },
         {
@@ -13641,7 +13663,7 @@
           "exportada": false,
           "params": "etiqueta: string, sql: Prisma.Sql",
           "retorno": "Promise<number | null>",
-          "linea": 180,
+          "linea": 195,
           "resumen": "Una cuenta del embudo. `null` si no se pudo hacer — nunca 0."
         },
         {
@@ -13650,7 +13672,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<EmbudoPortal>",
-          "linea": 200,
+          "linea": 215,
           "resumen": "El embudo: de los clientes de la casa, cuántos llegan a cada escalón de la intranet. «Cliente» es cartera viva y punto (`sqlCarteraViva`), no `clientes.tipo`: esa columna dice 2.742 clientes cuando so"
         },
         {
@@ -13659,8 +13681,17 @@
           "exportada": true,
           "params": "correduriaId: string, filtro: FiltroActividad,",
           "retorno": "Promise<RespuestaActividad>",
-          "linea": 258,
+          "linea": 273,
           "resumen": "El muro entero: eventos de la ventana pedida + el embudo."
+        },
+        {
+          "nombre": "actividadNueva",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, desde: Date, limite: number",
+          "retorno": "Promise<RespuestaActividadNueva>",
+          "linea": 317,
+          "resumen": "Lo que han hecho los CLIENTES desde `desde` (inclusive), en orden ascendente, para el aviso por Telegram de plataforma (`correduria-actividad`). Sin el embudo: son cinco consultas que un vigía que pas"
         },
         {
           "nombre": "nombreFicha",
@@ -13668,7 +13699,7 @@
           "exportada": false,
           "params": "nombre: string | null, apellidos: string | null",
           "retorno": "string | null",
-          "linea": 298,
+          "linea": 349,
           "resumen": "`null` cuando el evento no tiene ficha detrás. No cae a «Sin nombre» ni a una cadena vacía: la pantalla necesita distinguir «esto lo hizo alguien que todavía no está casado con ninguna ficha» de «esto"
         }
       ],
@@ -13689,7 +13720,7 @@
         "vinc"
       ],
       "rutaApi": null,
-      "hash": "4b77b3aa6130"
+      "hash": "4d84ca545833"
     },
     {
       "ruta": "apps/asegura/lib/asegura-db.ts",
@@ -78789,7 +78820,7 @@
           "exportada": false,
           "params": "ag: { id: string; etiqueta: string; maxHoras: number; nota: string }, evaluadoAt: Date, alerta: boolean, horas: number | null, motivo: string, sondaError: string | null,",
           "retorno": "Promise<void>",
-          "linea": 256,
+          "linea": 259,
           "resumen": "Persiste el veredicto de UN agente en `agente_veredicto` para que lo pueda leer una pantalla. 🚨 NO es `agente_salud` (05/09/2026): esa tabla ya existía desde julio con otro esquema —el badge que el p"
         },
         {
@@ -78798,7 +78829,7 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 277
+          "linea": 280
         }
       ],
       "tablas": [
@@ -78813,7 +78844,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/agentes-latido",
-      "hash": "18faaf2d627b"
+      "hash": "1355c8af6ca3"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/banca-alertas/route.ts",
@@ -79165,6 +79196,56 @@
       ],
       "rutaApi": "/api/cron/contable-proactivo",
       "hash": "000ade6ee05e"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/correduria-actividad/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── Aviso por Telegram de TODO lo que hace un cliente en el portal (Grupo ASegura). Pieza 1-7 de ASegura OS, dictado de Alberto (23/09/2026): «Que cuando entre cliente me llegue aviso por Telegram; al principio hay que hacer se",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 49
+        },
+        {
+          "nombre": "leerFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "EventoActividad | null",
+          "linea": 54,
+          "resumen": "Una fila del puerto, o `null` si no tiene forma (sin id, tipo o fecha no se puede deduplicar)."
+        },
+        {
+          "nombre": "leerPuerto",
+          "kind": "function",
+          "exportada": false,
+          "params": "desde: string",
+          "retorno": "Promise<Lectura>",
+          "linea": 69,
+          "resumen": "Lee el puerto de `central-asegura`. CUALQUIER duda acaba en `sin_datos`, nunca en una lista vacía: «nadie ha hecho nada» y «no se ha podido mirar» no son lo mismo. El `texto` de cada evento ni se guar"
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 106
+        }
+      ],
+      "tablas": [
+        "agente_latidos",
+        "next"
+      ],
+      "rutaApi": "/api/cron/correduria-actividad",
+      "hash": "12683630787b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-ingesta/route.ts",
@@ -94307,7 +94388,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 208,
+          "linea": 213,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -94316,7 +94397,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 238,
+          "linea": 243,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -94325,7 +94406,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 260
+          "linea": 265
         },
         {
           "nombre": "ventanaMinutos",
@@ -94333,7 +94414,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 268,
+          "linea": 273,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -94342,13 +94423,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 280,
+          "linea": 285,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8e42004cb071"
+      "hash": "7d58b7dfb7ac"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -99331,7 +99412,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "97d5e8a427cc"
+      "hash": "8cc6d51aa60d"
     },
     {
       "ruta": "apps/plataforma/lib/monitoring/reparable.ts",
@@ -112245,7 +112326,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 655
+          "linea": 661
         },
         {
           "nombre": "avisosDe",
@@ -112253,7 +112334,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 660,
+          "linea": 666,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -112262,13 +112343,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 670,
+          "linea": 676,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ed9d5f772198"
+      "hash": "f2720d147f22"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -134908,6 +134989,102 @@
       "hash": "6ba1ed12321a"
     },
     {
+      "ruta": "packages/module-seguros/src/actividad-aviso.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "packages/module-seguros/src/actividad-aviso.ts El aviso por Telegram de lo que hacen los clientes en el portal (pieza 1-7 de ASegura OS, 23/09/2026). Alberto: «que cuando entre cliente me llegue aviso por Telegram; al principio hay que hacer seguimiento de todo». Puro: decide qué eventos son nuevos,",
+      "exporta": [
+        "claveEvento",
+        "desdeConsulta",
+        "decidirAvisosActividad",
+        "mensajeActividad",
+        "detalleActividad",
+        "serializarMarcaActividad",
+        "leerMarcaActividad"
+      ],
+      "funciones": [
+        {
+          "nombre": "claveEvento",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: Pick<EventoActividad, 'tipo' | 'id'>",
+          "retorno": "string",
+          "linea": 69,
+          "resumen": "`tipo:` + los 8 primeros caracteres del id (uuid): 32 bits bastan para no chocar entre las decenas de eventos de una ventana de 3 h, y la mitad de largo que el uuid entero (ver `MAX_CLAVES`)."
+        },
+        {
+          "nombre": "desdeConsulta",
+          "kind": "function",
+          "exportada": true,
+          "params": "marca: MarcaActividad | null, ahora: Date",
+          "retorno": "string",
+          "linea": 74,
+          "resumen": "El `desde` que hay que pedir al puerto: la marca menos la ventana (o ahora menos la ventana, la primera vez)."
+        },
+        {
+          "nombre": "decidirAvisosActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { marca: MarcaActividad | null eventos: EventoActividad[] ahora: Date truncado: boolean }",
+          "retorno": "DecisionActividad",
+          "linea": 90,
+          "resumen": "Qué hay que avisar y dónde queda la marca. - Primera vez (sin marca): ancla y NO avisa — mandar el histórico de golpe no es seguimiento, es ruido. - `truncado` (el puerto tenía más de los que devolvió"
+        },
+        {
+          "nombre": "escapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 135
+        },
+        {
+          "nombre": "horaMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 139
+        },
+        {
+          "nombre": "mensajeActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "nuevos: EventoActividad[], urlFicha: (clienteId: string) => string",
+          "retorno": "string",
+          "linea": 150,
+          "resumen": "El mensaje: UNO por pasada, agrupado por cliente (varias acciones seguidas del mismo cliente son un bloque, no N avisos). HTML de Telegram. `urlFicha(clienteId)` la pone quien llama (la base de la URL"
+        },
+        {
+          "nombre": "detalleActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DecisionActividad | { avisar: false; motivo: 'sin_datos'; causa?: string | null },",
+          "retorno": "string",
+          "linea": 192
+        },
+        {
+          "nombre": "serializarMarcaActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "marca: MarcaActividad, detalle: string",
+          "retorno": "string",
+          "linea": 209
+        },
+        {
+          "nombre": "leerMarcaActividad",
+          "kind": "function",
+          "exportada": true,
+          "params": "detalle: string | null | undefined",
+          "retorno": "MarcaActividad | null",
+          "linea": 214,
+          "resumen": "`null` = no consta o ilegible → se trata como primera vez (ancla sin avisar)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "bacb75c0933b"
+    },
+    {
       "ruta": "packages/module-seguros/src/actividad.ts",
       "ambito": "packages/module-seguros",
       "resumen": "El muro de actividad de la cartera: qué se considera un evento, cómo se rotula y cuál de ellos exige mirar una póliza. Vive en el módulo compartido porque lo necesitan las DOS apps: `apps/asegura` para construir la consulta y `apps/plataforma` para pintar los filtros y los rótulos. Es la misma razón",
@@ -144027,7 +144204,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3487,
-    "funciones": 10942
+    "archivos": 3490,
+    "funciones": 10957
   }
 }
