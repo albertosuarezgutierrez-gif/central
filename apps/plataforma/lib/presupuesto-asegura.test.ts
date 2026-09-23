@@ -168,6 +168,8 @@ test('🪤 datos para emitir: «no se pudo mirar» ≠ «completos», y un cifra
   assert.equal(fraseDatosEmision(null).texto, 'Datos para emitir: no se han podido comprobar.')
   assert.equal(fraseDatosEmision({ datos: [fila('DNI', 'ok'), { raro: 1 }] }).texto, 'Datos para emitir: no se han podido comprobar.')
   assert.equal(fraseDatosEmision({ datos: [fila('DNI', 'ok')] }).texto, 'Datos para emitir: completos ✓')
+  assert.equal(fraseDatosEmision({ datos: [] }).texto, 'Datos para emitir: no se han podido comprobar.')
+  assert.equal(fraseDatosEmision({ datos: [fila('DNI', 'nuevo_estado')] }).texto, 'Datos para emitir: no se han podido comprobar.')
   const r = fraseDatosEmision({ datos: [fila('DNI / NIE', 'no_legible', 'cliente_dni'), fila('Cuenta para domiciliar el recibo', 'falta', 'corredor')] })
   assert.doesNotMatch(r.texto, /falta dni/i)
   assert.match(r.texto, /1 dato no abre/)

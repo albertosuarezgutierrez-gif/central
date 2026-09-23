@@ -1,13 +1,13 @@
 import Link from 'next/link'
 
-import { fraseDato, type DatosParaContratar as Datos } from '@/lib/datos-emision'
+import { fraseDato, type ResultadoDatosParaContratar } from '@/lib/datos-emision'
 import { SubirDni } from './SubirDni'
 
 /**
  * «Datos para contratar» (§4bis): lo que tenemos de ti y lo que falta para poder emitir. Solo lo
  * común a todas las compañías; si la que elijas pide algo más, se pide después, al elegir.
  */
-export function DatosParaContratar({ datos, corredor }: { datos: Datos | null; corredor: boolean }) {
+export function DatosParaContratar({ datos, corredor }: { datos: ResultadoDatosParaContratar | null; corredor: boolean }) {
   if (datos === null) {
     return (
       <section className="seccion">
@@ -15,6 +15,19 @@ export function DatosParaContratar({ datos, corredor }: { datos: Datos | null; c
         <p className="pendiente" style={{ margin: 0 }}>
           Ahora mismo no podemos comprobar tus datos. No quiere decir que falte nada: vuelve a mirarlo en un rato.
         </p>
+      </section>
+    )
+  }
+  if (datos.estado !== 'ok') {
+    const texto = datos.estado === 'otra_ficha'
+      ? 'Este presupuesto es de otra persona: los datos para contratarlo los confirma ella desde su propio acceso.'
+      : datos.estado === 'varias_fichas'
+        ? 'Tu correo aparece en más de una ficha y no sabemos cuál es la tuya: escríbenos y lo resolvemos contigo.'
+        : 'No tenemos una ficha tuya a la que asociar estos datos: escríbenos y lo resolvemos contigo.'
+    return (
+      <section className="seccion">
+        <h2 style={{ marginTop: 0 }}>Datos para contratar</h2>
+        <p className="pendiente" style={{ margin: 0 }}>{texto}</p>
       </section>
     )
   }

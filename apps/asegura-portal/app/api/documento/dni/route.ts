@@ -6,7 +6,8 @@ import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
-const MAX_BYTES = 10 * 1024 * 1024
+// El límite de cuerpo de una función de Vercel es ~4,5 MB: por encima no llega ni a este código.
+const MAX_BYTES = 4 * 1024 * 1024
 
 /**
  * POST /api/documento/dni — el cliente sube su DNI para completar los «datos para contratar» (§4bis).
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
   }
   const fichero = form.get('documento')
   if (!(fichero instanceof File)) return NextResponse.json({ estado: 'invalido', motivo: 'Elige una foto o un PDF de tu DNI.' }, { status: 400 })
-  if (fichero.size > MAX_BYTES) return NextResponse.json({ estado: 'invalido', motivo: 'El fichero pasa de 10 MB.' }, { status: 413 })
+  if (fichero.size > MAX_BYTES) return NextResponse.json({ estado: 'invalido', motivo: 'El fichero pasa de 4 MB. Súbelo con menos resolución o en PDF.' }, { status: 413 })
 
   const r = await guardarDocumentoPropio(identidad.id, {
     tipo: 'dni',
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
     contenido: Buffer.from(await fichero.arrayBuffer()),
   })
   if (r.estado === 'ok') return NextResponse.json({ estado: 'ok' })
-  if (r.estado === 'invalido') return NextResponse.json({ estado: 'invalido', motivo: 'Solo se admiten fotos (JPG, PNG) o PDF.' }, { status: 415 })
+  if (r.estado === 'invalido') return NextResponse.json({ estado: 'invalido', motivo: `No se ha podido guardar: ${r.motivo}. Se admiten fotos (JPG, PNG, HEIC) o PDF.` }, { status: 415 })
   if (r.estado === 'sin_ficha' || r.estado === 'varias_fichas') {
     return NextResponse.json({ estado: 'no_disponible', motivo: 'No podemos colgarlo de tu ficha desde aquí. Escríbenos y lo hacemos contigo.' }, { status: 409 })
   }

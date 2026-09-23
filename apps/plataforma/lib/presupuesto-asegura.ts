@@ -308,16 +308,20 @@ export function textoAviso(status: number, j: unknown): { ok: boolean; texto: st
  * cliente. Tres salidas que no se colapsan: no se pudo mirar · completos · lo que falta y quién lo pone.
  * 🚨 Un cifrado que no abre NO es «falta»: se dice aparte, porque se arregla en Vercel, no llamando.
  */
+const ESTADOS_DATO: readonly string[] = ['ok', 'falta', 'en_revision', 'no_legible']
+const APORTA_DATO: readonly string[] = ['cliente_datos', 'cliente_dni', 'corredor']
+
 export function fraseDatosEmision(v: unknown): { texto: string; alerta: boolean } {
   const o = typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : null
   const datos = Array.isArray(o?.datos) ? (o!.datos as unknown[]) : null
   if (!datos) return { texto: 'Datos para emitir: no se han podido comprobar.', alerta: false }
   const filas = datos.flatMap((d) => {
     const x = typeof d === 'object' && d !== null ? (d as Record<string, unknown>) : {}
-    return typeof x.etiqueta === 'string' && typeof x.estado === 'string' && typeof x.aporta === 'string'
+    return typeof x.etiqueta === 'string' && ESTADOS_DATO.includes(x.estado as string) && APORTA_DATO.includes(x.aporta as string)
       ? [{ etiqueta: x.etiqueta.replace(/\s*\(.*\)$/, ''), estado: x.estado, aporta: x.aporta }] : []
   })
-  if (filas.length !== datos.length) return { texto: 'Datos para emitir: no se han podido comprobar.', alerta: false }
+  // Una lista vacía o con un estado que no conocemos NO es «completos»: se dice que no se pudo comprobar.
+  if (filas.length === 0 || filas.length !== datos.length) return { texto: 'Datos para emitir: no se han podido comprobar.', alerta: false }
   const de = (f: (x: (typeof filas)[number]) => boolean) => filas.filter(f).map((x) => x.etiqueta.toLowerCase())
   const cliente = de((x) => x.estado === 'falta' && x.aporta !== 'corredor')
   const corredor = de((x) => x.estado === 'falta' && x.aporta === 'corredor')

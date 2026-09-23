@@ -3637,3 +3637,7 @@ h1 em {
   border-radius: 16px;
   background: var(--panel);
 }
+
+/* El input de fichero va invisible dentro de su <label>: el anillo de foco lo pinta la etiqueta. */
+.boton-fichero { position: relative; }
+.boton-fichero:focus-within { outline: 3px solid color-mix(in oklab, var(--primary) 50%, transparent); outline-offset: 2px; }

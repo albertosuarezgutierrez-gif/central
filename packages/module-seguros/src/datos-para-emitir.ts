@@ -19,10 +19,16 @@ export type EstadoDatoEmision = 'ok' | 'falta' | 'en_revision' | 'no_legible'
 /** Quién pone el dato que falta: el cliente en «Mis datos», el cliente subiendo su DNI, o el corredor. */
 export type QuienAporta = 'cliente_datos' | 'cliente_dni' | 'corredor'
 
-/** Un campo tal como sale de la BD: `legible=false` = cifrado que no abre (NO es «vacío»). */
-export type ValorLeido = { valor: string | null; legible: boolean }
+/**
+ * Un campo tal como sale de la BD: `legible=false` = cifrado que no abre (NO es «vacío»).
+ * `mostrar=false` = consta, pero no se enseña ni enmascarado (la cuenta de una póliza, que puede
+ * ser de otro pagador; el correo de quien se dio de baja).
+ */
+export type ValorLeido = { valor: string | null; legible: boolean; mostrar?: boolean }
 
 export type FichaParaEmitir = {
+  /** `juridica` = empresa: no tiene fecha de nacimiento y su documento es el CIF. `null` = no consta. */
+  tipoPersona: 'fisica' | 'juridica' | null
   email: ValorLeido
   dni: ValorLeido
   fechaNacimiento: ValorLeido
@@ -90,20 +96,23 @@ const limpio = (v: string | null | undefined): string | null => {
  * fuente (taparlo escondería la avería). Tampoco se mezclan personas: solo filas con su `cliente_id`.
  */
 export function datosDelTomador(ficha: FichaParaEmitir, propios: readonly DatoPropioEnPoliza[]): FichaParaEmitir {
-  const rellenar = (v: ValorLeido, de: (p: DatoPropioEnPoliza) => string | null): ValorLeido => {
+  const rellenar = (v: ValorLeido, de: (p: DatoPropioEnPoliza) => string | null, mostrar = true): ValorLeido => {
     if (!v.legible || limpio(v.valor) !== null) return v
-    for (const p of propios) {
-      const x = limpio(de(p))
-      if (x !== null) return { valor: x, legible: true }
-    }
-    return v
+    // Dos valores distintos = no se sabe cuál es el suyo (volcado mal enlazado): no se rellena.
+    // Es la regla de la casa: dos identificadores distintos no se funden.
+    const distintos = [...new Set(propios.map((p) => limpio(de(p))).filter((x): x is string => x !== null)
+      .map((x) => x.replace(/\s/g, '').toUpperCase()))]
+    if (distintos.length !== 1) return v
+    const x = propios.map((p) => limpio(de(p))).find((y): y is string => y !== null)!
+    return { valor: x, legible: true, mostrar }
   }
   return {
     ...ficha,
     email: rellenar(ficha.email, (p) => p.email),
     dni: rellenar(ficha.dni, (p) => p.nif),
     fechaNacimiento: rellenar(ficha.fechaNacimiento, (p) => p.fechaNacimiento),
-    iban: rellenar(ficha.iban, (p) => p.iban),
+    // La cuenta de una póliza puede ser de otro pagador: cuenta como dato, pero no se enseña.
+    iban: rellenar(ficha.iban, (p) => p.iban, false),
   }
 }
 
@@ -123,25 +132,34 @@ function enmascarar(campo: CampoEmision, v: string): string | null {
 
 /** Qué falta para emitir, campo a campo. Puro: la lectura y el descifrado van fuera. */
 export function huecosParaEmitirDesdeFicha(f: FichaParaEmitir): DatosParaEmitir {
+  const empresa = f.tipoPersona === 'juridica'
   const estado = (campo: CampoEmision, v: ValorLeido, completo = true): { estado: EstadoDatoEmision; muestra: string | null } => {
     if (!v.legible) return { estado: 'no_legible', muestra: null }
     const x = limpio(v.valor)
-    if (x !== null && completo) return { estado: 'ok', muestra: enmascarar(campo, x) }
-    if ((campo === 'dni' || campo === 'fechaNacimiento') && f.dniPendienteDeRevisar) return { estado: 'en_revision', muestra: null }
-    return { estado: 'falta', muestra: x !== null ? enmascarar(campo, x) : null }
+    const muestra = x !== null && v.mostrar !== false ? enmascarar(campo, x) : null
+    if (x !== null && completo) return { estado: 'ok', muestra }
+    if ((campo === 'dni' || campo === 'fechaNacimiento') && f.dniPendienteDeRevisar && !empresa) return { estado: 'en_revision', muestra: null }
+    return { estado: 'falta', muestra }
   }
-  // La dirección vale si trae calle y número (ver `partirDireccion`) Y código postal. `null` al
-  // trocear = no se sabe: se trata como incompleta, que es lo conservador (pedir de más cuesta un
-  // minuto; emitir sin número cuesta un cargo).
-  const direccionOk = f.direccionCompleta === true && limpio(f.codigoPostal) !== null
+  // La dirección vale si trae calle y número (ver `partirDireccion`) Y un código postal de 5 cifras.
+  // `null` al trocear = no se sabe: se trata como incompleta, que es lo conservador (pedir de más
+  // cuesta un minuto; emitir sin número cuesta un cargo).
+  const direccionOk = f.direccionCompleta === true && /^\d{5}$/.test(limpio(f.codigoPostal) ?? '')
   const lista: [CampoEmision, ValorLeido, boolean?][] = [
     ['email', f.email],
     ['dni', f.dni],
-    ['fechaNacimiento', f.fechaNacimiento],
+    // Una empresa no nace: no se le pide lo que nunca podrá dar.
+    ...(empresa ? [] : [['fechaNacimiento', f.fechaNacimiento] as [CampoEmision, ValorLeido]]),
     ['direccion', f.direccion, direccionOk],
     ['iban', f.iban],
   ]
-  const datos = lista.map(([campo, v, completo]) => ({ campo, etiqueta: ETIQUETA[campo], aporta: APORTA[campo], ...estado(campo, v, completo) }))
+  const datos = lista.map(([campo, v, completo]) => ({
+    campo,
+    etiqueta: campo === 'dni' && empresa ? 'CIF' : ETIQUETA[campo],
+    // El CIF de una sociedad no se acredita subiendo «tu DNI»: lo confirma el corredor.
+    aporta: campo === 'dni' && empresa ? 'corredor' as const : APORTA[campo],
+    ...estado(campo, v, completo),
+  }))
   return {
     datos,
     faltanCliente: datos.filter((d) => d.estado === 'falta' && d.aporta !== 'corredor').length,

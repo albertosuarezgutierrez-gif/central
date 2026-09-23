@@ -16,14 +16,22 @@ export type DatoParaContratar = {
   muestra: string | null
 }
 
-export type DatosParaContratar = { datos: DatoParaContratar[]; faltanCliente: number }
+export type DatosParaContratar = { estado: 'ok'; datos: DatoParaContratar[]; faltanCliente: number }
+
+/**
+ * Lo que se puede decir. `otra_ficha`: ves el presupuesto (te llegó a tu correo) pero es de OTRA
+ * ficha — no se te enseñan tus datos ni se te pide nada, para no mezclar dos personas.
+ * `varias_fichas`/`sin_ficha`: no es «vuelve en un rato», no va a cambiar solo.
+ */
+export type ResultadoDatosParaContratar = DatosParaContratar | { estado: 'otra_ficha' | 'varias_fichas' | 'sin_ficha' }
 
 const ESTADOS = ['ok', 'falta', 'en_revision', 'no_legible'] as const
 const APORTA = ['cliente_datos', 'cliente_dni', 'corredor'] as const
 
 /** `null` = no se ha podido leer (401, 5xx, corte o forma rara). Jamás «no falta nada». */
-export function interpretarDatosParaContratar(status: number, j: unknown): DatosParaContratar | null {
+export function interpretarDatosParaContratar(status: number, j: unknown): ResultadoDatosParaContratar | null {
   const o = typeof j === 'object' && j !== null ? (j as Record<string, unknown>) : null
+  if (status === 409 && (o?.estado === 'otra_ficha' || o?.estado === 'varias_fichas' || o?.estado === 'sin_ficha')) return { estado: o.estado }
   if (status !== 200 || o?.estado !== 'ok' || !Array.isArray(o.datos) || typeof o.faltanCliente !== 'number') return null
   const datos: DatoParaContratar[] = []
   for (const d of o.datos as unknown[]) {
@@ -35,7 +43,7 @@ export function interpretarDatosParaContratar(status: number, j: unknown): Datos
       aporta: x.aporta as DatoParaContratar['aporta'], muestra: typeof x.muestra === 'string' ? x.muestra : null,
     })
   }
-  return { datos, faltanCliente: o.faltanCliente }
+  return { estado: 'ok', datos, faltanCliente: o.faltanCliente }
 }
 
 /** Lo que se le dice al cliente de un dato. Nunca «falta» sobre un dato que no abre. */
@@ -46,19 +54,19 @@ export function fraseDato(d: DatoParaContratar): string {
     case 'no_legible': return 'Lo tenemos; lo revisamos nosotros'
     case 'falta':
       if (d.aporta === 'corredor') return 'Lo confirmamos contigo al contratar. Nunca te lo pediremos por correo.'
-      if (d.aporta === 'cliente_dni') return 'Falta: sube una foto de tu DNI por las dos caras'
+      if (d.aporta === 'cliente_dni') return 'Falta: sube una foto de tu documento de identidad (DNI o NIE) por las dos caras'
       return d.muestra ? `Incompleto (tenemos «${d.muestra}»): corrígelo en Mis datos` : 'Falta: añádelo en Mis datos'
   }
 }
 
-export async function datosParaContratar(identidadId: string): Promise<DatosParaContratar | null> {
+export async function datosParaContratar(identidadId: string, presupuestoId: string): Promise<ResultadoDatosParaContratar | null> {
   const base = process.env.ASEGURA_PUENTE_URL
   const secret = process.env.ASEGURA_PORTAL_PUENTE_SECRET
   if (!base || !secret) return null
   const control = new AbortController()
   const reloj = setTimeout(() => control.abort(), PORTAL_PUENTE_TIEMPO_MS)
   try {
-    const res = await fetch(`${base.replace(/\/+$/, '')}/api/portal/datos-emision?identidadId=${encodeURIComponent(identidadId)}`, {
+    const res = await fetch(`${base.replace(/\/+$/, '')}/api/portal/datos-emision?identidadId=${encodeURIComponent(identidadId)}&presupuestoId=${encodeURIComponent(presupuestoId)}`, {
       headers: { authorization: `Bearer ${secret}` },
       cache: 'no-store',
       signal: control.signal,
