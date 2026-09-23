@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server"
 import { auth } from "@/lib/auth"
+import { autorizaSecreto } from "@/lib/cron-auth-decision"
 
 // Autorización para endpoints de cron / escritura del módulo de pricing.
 //
@@ -7,22 +8,23 @@ import { auth } from "@/lib/auth"
 //   - CRON_SECRET (Bearer o ?secret=) → crons de Vercel y llamadas server-to-server.
 //   - (opcional) sesión de admin de NextAuth → llamadas desde el panel del propietario.
 //
-// Transición: si CRON_SECRET aún NO está definido en el entorno, permite el acceso (para no
-// romper los crons existentes antes de definir la env en Vercel) y deja un aviso en el log.
-// En cuanto se define CRON_SECRET en producción, estos endpoints quedan protegidos.
+// Sin secreto en producción se deniega: ver `cron-auth-decision.ts`.
 export async function isCronAuthorized(
   req: NextRequest,
   opts: { allowSession?: boolean } = {},
 ): Promise<boolean> {
   const secret = process.env.CRON_SECRET
-  if (secret) {
-    const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
-    const qs = req.nextUrl.searchParams.get("secret")
-    if (bearer === secret || qs === secret) return true
-  } else {
-    console.warn("[cron-auth] CRON_SECRET no definido — endpoint sin proteger (definir en Vercel)")
-    return true
+  const produccion = process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production"
+  if (!secret) {
+    if (produccion) console.error("[cron-auth] CRON_SECRET NO definido en producción — se DENIEGA (revisa las envs)")
+    else console.warn("[cron-auth] CRON_SECRET no definido — endpoint sin proteger (solo dev)")
   }
+  if (autorizaSecreto({
+    secret,
+    bearer: req.headers.get("authorization")?.replace(/^Bearer\s+/i, ""),
+    qs: req.nextUrl.searchParams.get("secret"),
+    produccion,
+  })) return true
   if (opts.allowSession) {
     const session = await auth().catch(() => null)
     if (session?.user) return true

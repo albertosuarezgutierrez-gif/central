@@ -8,9 +8,9 @@
 > Finanzas, mensajería, limpiadoras, agente IA, el motor de pricing y **los crons de negocio** viven ya en
 > **plataforma** (`/sivra/*`, `/api/sivra/*`; `apps/plataforma/vercel.json`). `apps/sivra/vercel.json`
 > solo conserva **1 cron** (`/api/seo-refresh` semanal). **Para cualquier feature/fix interno → trabaja en `apps/plataforma`, NO aquí.**
-> **Excepción (consolidación parcial):** `/api/pricing/aplicar-propuesta` y `/api/pricing/pisos-zona`
-> —el raíl que usa el **agente de pricing** (skill `pricing-agente`)— **siguen SOLO en sivra**
-> (`housesevillana.vercel.app`); no se portaron. Razón extra para no apagar sivra.
+> **Excepción (consolidación parcial):** `/api/pricing/pisos-zona` (puebla `pricing_piso_zona`) **sigue
+> SOLO en sivra** (`housesevillana.vercel.app`). El raíl del **agente de pricing** (skill `pricing-agente`)
+> es `POST /api/sivra/pricing/aplicar-propuesta` de **plataforma**; la copia de sivra devuelve 410 desde el 23/09/2026.
 >
 > **🚫 `apps/sivra` NO se borra (decisión de Alberto).** Se mantiene SOLO como **web pública de reserva
 > directa de House Sevillana** (`housesevillana.es`/`.vercel.app`: landing multidioma `app/[locale]`, SEO

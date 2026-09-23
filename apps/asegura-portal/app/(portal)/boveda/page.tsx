@@ -2,8 +2,6 @@ import { redirect } from 'next/navigation'
 
 import {
   canalDeCompania,
-  diasHastaVencimientoPortal,
-  enVentanaVencimientos,
   plazoComunicacion,
   type FilaCompania,
 } from '@central/module-seguros-portal'
@@ -21,6 +19,7 @@ import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
+import { vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { FilaDeclarada } from './FilaDeclarada'
 import { FiltroVigencia } from './FiltroVigencia'
@@ -134,10 +133,12 @@ export default async function Boveda({
   // algo suyo renueva en 60 días (si no, el bloque no se pinta). En paralelo
   // con la sincronización para no sumar su espera a la página.
   const hoyMadrid = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
-  const hayVencimientos = vista === 'seguros' && cartera.propias.some((t) => t.polizas.some((p) =>
-    p.vigencia === 'vigente' && p.fechaVencimiento !== null &&
-    enVentanaVencimientos(diasHastaVencimientoPortal(p.fechaVencimiento.toISOString().slice(0, 10), hoyMadrid))))
-  const peticionesP = hayVencimientos ? peticionesPrecio(identidad.id) : Promise.resolve(null)
+  // La MISMA lista pinta el bloque: si se calculara dos veces y discreparan, el
+  // bloque saldría sin peticiones (`null`) y enseñaría el botón a quien ya pidió.
+  const vencimientos = vista === 'seguros'
+    ? vencimientosEnVentana(cartera.propias.flatMap((t) => t.polizas), hoyMadrid)
+    : []
+  const peticionesP = vencimientos.length > 0 ? peticionesPrecio(identidad.id) : Promise.resolve(null)
 
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
   const peticiones = await peticionesP
@@ -418,11 +419,7 @@ export default async function Boveda({
 
           {/* «Tus vencimientos» (pieza 1-5): solo si algo SUYO renueva en 60
               días; si no, no pinta nada y el alta sigue arriba. */}
-          <TusVencimientos
-            polizas={cartera.propias.flatMap((t) => t.polizas)}
-            peticiones={peticiones}
-            hoyIso={hoyMadrid}
-          />
+          <TusVencimientos vencimientos={vencimientos} peticiones={peticiones} />
 
           {/* 🚨 El alta va ARRIBA, no debajo de la lista (19/09/2026). Alberto:
               «Añade una póliza» tiene que ser lo primero que se vea. Hasta hoy

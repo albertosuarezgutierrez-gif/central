@@ -8,7 +8,9 @@ export const maxDuration = 30
 /**
  * `GET /api/correduria/codeoscopic-crudo?marcaId=&modeloId=&motor=` — qué manda
  * DE VERDAD el catálogo de versiones de Codeoscopic, antes de que asegura lo
- * recorte a `id` + `nombre`.
+ * recorte a `id` + `nombre`. Con `tipo=versiones-moto` (motor `Gasoline`,
+ * `Diesel` u `Others`) las de moto, y con `tipo=carnets-moto` (sin más
+ * parámetros) los carnés de moto con sus límites de cc y kW.
  *
  * ─── Por qué hay una ruta para esto ─────────────────────────────────────────
  * La pregunta era medible y llevaba meses contestándose de memoria: ¿trae cada
@@ -31,10 +33,13 @@ export async function GET(req: Request) {
   if (!guarda.ok) return guarda.respuesta
 
   const q = new URL(req.url).searchParams
+  // `tipo` por defecto `versiones` (coche), como antes de existir el parámetro.
+  // `carnets-moto` no lleva más parámetros; la lista cerrada la valida asegura.
+  const tipo = q.get('tipo') ?? 'versiones'
   const marcaId = q.get('marcaId')
   const modeloId = q.get('modeloId')
   const motor = q.get('motor')
-  if (!marcaId || !modeloId || !motor) {
+  if (tipo !== 'carnets-moto' && (!marcaId || !modeloId || !motor)) {
     // Se dice QUÉ falta. Sin los tres el vendor responde 400 y quien mire no
     // sabría si el catálogo está vacío o si faltaba un parámetro.
     return NextResponse.json(
@@ -49,7 +54,9 @@ export async function GET(req: Request) {
     )
   }
 
-  const r = await catalogoCrudoAsegura({ tipo: 'versiones', marcaId, modeloId, motor })
+  const r = await catalogoCrudoAsegura(
+    tipo === 'carnets-moto' ? { tipo } : { tipo, marcaId: marcaId!, modeloId: modeloId!, motor: motor! },
+  )
 
   // 🚨 LA GUARDA QUE HACE QUE ESTO SIRVA DE ALGO. Una asegura desplegada SIN
   // este cambio no entiende `crudo=1`: lo ignora y devuelve 200 `estado:'ok'`

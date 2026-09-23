@@ -291,7 +291,11 @@ export default function MotoNuevo({
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
       if (siniestrosUltimos5.trim() !== '') correccionesFinal.siniestrosUltimos5 = Number(siniestrosUltimos5)
     }
+    // marca/modelo/motor no viajan al vendor: asegura los usa para releer la versión
+    // del catálogo (gratis) y cruzar su cilindrada y kW con el carné antes de pagar.
+    const version = { marcaId, modeloId, motor: motorId }
     const resueltosPoliza = {
+      ...version,
       codigoVehiculo,
       garaje,
       estadoCivilId,
@@ -310,6 +314,7 @@ export default function MotoNuevo({
       : await pedirCotizacionMoto({
       clienteId,
       resueltos: {
+        ...version,
         codigoVehiculo,
         garaje,
         estadoCivilId,

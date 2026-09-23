@@ -136,6 +136,10 @@ import {
   experienciaConduccionMoto,
   tiposDeGarajeMoto,
   tiposDeCarnetMoto,
+  limitesCarnetMoto,
+  motorDeVersionMoto,
+  carnetsMotoCrudos,
+  versionesMotoCrudas,
   MOTORES_MOTO,
   vidaDisponible,
   saludDisponible,
@@ -149,6 +153,7 @@ import {
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
 import { resumirCrudo, type ResumenCrudo } from '@/lib/codeoscopic/crudo'
+import { choqueCarnetVersion } from '@/lib/codeoscopic/carnet-moto'
 import type { PeticionCotizacion, ResultadoCotizacion } from '@/lib/codeoscopic/cotizar'
 import { MARCA_SIMULACION } from '@/lib/codeoscopic/simulacion'
 import { resumirCotizacion } from '@/lib/codeoscopic/respuesta'
@@ -514,23 +519,65 @@ async function prepararAuto(
 
 // ─── MOTO ────────────────────────────────────────────────────────────────────
 
+/** La versión que eligió la pantalla, con lo necesario para releerla del catálogo (gratis). */
+type VersionMotoElegida = { marcaId: string; modeloId: string; motor: MotorMoto; codigo: string }
+
+function versionMotoElegida(
+  resueltos: Record<string, unknown> | undefined,
+  codigoCrudo: unknown,
+): VersionMotoElegida | null {
+  const marcaId = cadena(resueltos?.marcaId)
+  const modeloId = cadena(resueltos?.modeloId)
+  const motor = cadena(resueltos?.motor)
+  // Una corrección puede traer el código como número JSON: el catálogo lo compara como texto.
+  const codigo = typeof codigoCrudo === 'number' ? String(codigoCrudo) : cadena(codigoCrudo)
+  if (!marcaId || !modeloId || !motor || !codigo) return null
+  if (!(MOTORES_MOTO as readonly string[]).includes(motor)) return null
+  return { marcaId, modeloId, motor: motor as MotorMoto, codigo }
+}
+
 /**
- * El tipo de carné de moto tiene que existir en el catálogo del vendor
- * (`/motorcycle/driving-licenses`, gratis): un id que no está es un 400. Si el
- * catálogo no se puede leer NO se bloquea (se deja que hable el vendor, que no
- * cobra un 400 de validación); `null` = vale o no se ha podido comprobar.
+ * Dos comprobaciones gratis antes de pagar:
+ *  1. El tipo de carné tiene que existir en `/motorcycle/driving-licenses`: un
+ *     id que no está es un 400.
+ *  2. Ese carné tiene que CUBRIR la versión elegida (cc y kW, `carnet-moto.ts`):
+ *     el vendor tarifica un A1 sobre una 600 sin quejarse, y el fallo se
+ *     descubre en el siniestro.
+ * Si un catálogo no se puede leer, o falta un dato para cruzar, NO se bloquea
+ * (se deja que hable el vendor); `null` = vale o no se ha podido comprobar,
+ * nunca «compatible».
  */
 async function reparoCarnetMoto(
-  config: Parameters<typeof tiposDeCarnetMoto>[0],
+  config: Parameters<typeof limitesCarnetMoto>[0],
   tipo: string | null | undefined,
+  version: VersionMotoElegida | null,
 ): Promise<{ campo: 'tipoCarnet'; motivo: string } | null> {
   if (!tipo) return null
-  const catalogo = await tiposDeCarnetMoto(config).catch((): null => null)
-  if (catalogo === null || catalogo.length === 0) return null
-  if (catalogo.some((o) => o.id === tipo)) return null
+  // Las dos lecturas son GET de catálogo gratis e independientes: en paralelo.
+  const [limites, motor] = await Promise.all([
+    limitesCarnetMoto(config).catch((): null => null),
+    version
+      ? motorDeVersionMoto(config, version.marcaId, version.modeloId, version.motor, version.codigo).catch(
+          (): null => null,
+        )
+      : null,
+  ])
+  if (limites === null || limites.length === 0) return null
+  const carnet = limites.find((l) => l.id === tipo)
+  if (!carnet) {
+    return {
+      campo: 'tipoCarnet',
+      motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${limites.map((l) => l.id).join(', ')})`,
+    }
+  }
+  if (!motor) return null
+  const choque = choqueCarnetVersion(carnet, motor)
+  if (!choque) return null
+  // El carné sale de la ficha, o es el B supuesto si la ficha no trae uno de moto:
+  // el arreglo está en la ficha del cliente, no en esta pantalla.
   return {
     campo: 'tipoCarnet',
-    motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${catalogo.map((o) => o.id).join(', ')})`,
+    motivo: `${choque}. Si el conductor tiene otro carné de moto, dalo de alta en su ficha (con su fecha) y vuelve a pedir el precio`,
   }
 }
 
@@ -570,7 +617,11 @@ async function prepararMoto(
   if (moto.estado !== 'disponible') {
     return paraPreparado({ error: 'moto no tarifica para esta organización (o no se ha podido comprobar)', moto }, 409)
   }
-  const reparoCarnet = await reparoCarnetMoto(cfg.config, datos.tipoCarnet)
+  const reparoCarnet = await reparoCarnetMoto(
+    cfg.config,
+    datos.tipoCarnet,
+    versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+  )
   if (reparoCarnet) return paraPreparado({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422)
 
   let peticion: Record<string, unknown>
@@ -988,7 +1039,11 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       ),
     }
   }
-  const reparoCarnet = await reparoCarnetMoto(cfg.config, datos.tipoCarnet)
+  const reparoCarnet = await reparoCarnetMoto(
+    cfg.config,
+    datos.tipoCarnet,
+    versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+  )
   if (reparoCarnet) {
     return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422) }
   }
@@ -1333,8 +1388,11 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
 
 // ─── El catálogo CRUDO, para medir qué se está tirando ───────────────────────
 
+/** Los catálogos cuyo crudo se puede medir. Lista CERRADA: no es una puerta genérica al vendor. */
+export const TIPOS_CRUDO = ['versiones', 'versiones-moto', 'carnets-moto'] as const
+
 export type ResultadoCrudo =
-  | { estado: 'ok'; path: string; resumen: ResumenCrudo; opciones: Opcion[] }
+  | { estado: 'ok'; path: string; resumen: ResumenCrudo; opciones: Opcion[]; completo?: unknown }
   | { estado: 'invalido'; mensaje: string }
   | { estado: 'sin_configurar'; mensaje: string }
   | { estado: 'error'; causa: CausaErrorCartera; mensaje: string }
@@ -1349,7 +1407,12 @@ export type ResultadoCrudo =
  * desplegable del corredor solo enseña el NOMBRE, y ahí no salen años; si el
  * vendor los manda, están en un campo que `normalizarOpciones` descarta.
  *
- * 🚨 **Gratis, y el único catálogo soportado es `versiones`.** No es una puerta
+ * Desde el 23/09/2026 también `versiones-moto` y `carnets-moto`: el cruce
+ * carné × cilindrada (`carnet-moto.ts`) lee `maxDisplacement`/`maxEnginePower`
+ * del carné y `engine.displacement`/`engine.powerKw` de la versión, y solo el
+ * A1 estaba medido. Esto es lo que lo mide.
+ *
+ * 🚨 **Gratis, y solo los de `TIPOS_CRUDO`.** No es una puerta
  * genérica al vendor: pedir el crudo de cualquier otro `tipo` responde
  * `invalido` con su nombre, en vez de devolver la lista normalizada de siempre
  * — que se leería como «he mirado el crudo y no hay nada más», que es la
@@ -1357,32 +1420,43 @@ export type ResultadoCrudo =
  */
 export async function resolverCatalogoCrudo(params: URLSearchParams): Promise<ResultadoCrudo> {
   const tipo = params.get('tipo')
-  if (tipo !== 'versiones') {
+  if (tipo !== 'versiones' && tipo !== 'versiones-moto' && tipo !== 'carnets-moto') {
     return {
       estado: 'invalido',
-      mensaje: `el crudo solo está soportado en tipo=versiones (se pidió «${tipo ?? ''}»)`,
+      mensaje: `el crudo solo está soportado en ${TIPOS_CRUDO.join(', ')} (se pidió «${tipo ?? ''}»)`,
     }
   }
 
   const marcaId = params.get('marcaId')
   const modeloId = params.get('modeloId')
   const motor = params.get('motor')
-  if (!marcaId || !modeloId || !motor) {
+  if (tipo !== 'carnets-moto' && (!marcaId || !modeloId || !motor)) {
     return { estado: 'invalido', mensaje: 'faltan marcaId, modeloId y motor' }
+  }
+  if (tipo === 'versiones-moto' && !(MOTORES_MOTO as readonly string[]).includes(motor ?? '')) {
+    return { estado: 'invalido', mensaje: `motor de moto no válido: ${motor} (${MOTORES_MOTO.join(', ')})` }
   }
 
   const r = resolverConfig(process.env, { ignorarInterruptor: true })
   if (r.estado !== 'lista') return { estado: 'sin_configurar', mensaje: explicarConfig(r) }
 
   try {
-    const { opciones, crudo, path } = await versionesCrudas(r.config, marcaId, modeloId, motor)
+    const { opciones, crudo, path } =
+      tipo === 'carnets-moto'
+        ? await carnetsMotoCrudos(r.config)
+        : tipo === 'versiones-moto'
+          ? await versionesMotoCrudas(r.config, marcaId!, modeloId!, motor as MotorMoto)
+          : await versionesCrudas(r.config, marcaId!, modeloId!, motor!)
     // El path viene de la propia función que hizo la petición: conste QUÉ se
     // preguntó. Una medición sin su petición al lado no la comprueba nadie más.
-    return { estado: 'ok', path, resumen: resumirCrudo(crudo), opciones }
+    // Los carnés son una lista corta y lo que se mide son TODOS sus límites: la
+    // muestra de `resumirCrudo` (3 entradas) dejaría fuera justo el A2 o el A.
+    const completo = tipo === 'carnets-moto' ? { completo: crudo } : {}
+    return { estado: 'ok', path, resumen: resumirCrudo(crudo), opciones, ...completo }
   } catch (e) {
     return {
       estado: 'error',
-      causa: registrarErrorCartera('catalogos-crudo/versiones', e),
+      causa: registrarErrorCartera(`catalogos-crudo/${tipo}`, e),
       mensaje: e instanceof Error ? e.message : String(e),
     }
   }

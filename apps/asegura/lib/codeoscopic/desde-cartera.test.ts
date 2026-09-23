@@ -6,6 +6,7 @@ import {
   precalificarMotoNueva,
   precalificarMoto,
   carnetMotoDeFicha,
+  carnetBDeFicha,
   partirApellidos,
   sexoDeSaludo,
   aniosEntre,
@@ -505,6 +506,22 @@ test('moto con carné A en la ficha: se declara A con SU fecha, sin supuesto de 
   assert.equal(r.datos.tipoCarnet, 'A')
   assert.equal(r.datos.fechaCarnet, '2005-03-01')
   assert.equal(r.supuestos.some((x) => x.campo === 'tipoCarnet'), false)
+})
+
+test('moto con A y B en la ficha: el B viaja también (fechaCarnetB); sin carné de moto, no', () => {
+  const conAyB = precalificarMoto(
+    { ...CLIENTE, carnets: [{ tipo: 'B', fechaExpedicion: '1999-06-01' }, { tipo: 'A', fechaExpedicion: '2005-03-01' }] },
+    POLIZA_MOTO,
+    RESUELTOS_MOTO,
+    HOY,
+  )
+  assert.equal(conAyB.datos.fechaCarnetB, '1999-06-01')
+  // Sin carné de moto el principal YA es el B: nada que añadir.
+  const soloB = precalificarMoto({ ...CLIENTE, carnets: [{ tipo: 'B', fechaExpedicion: '1999-06-01' }] }, POLIZA_MOTO, RESUELTOS_MOTO, HOY)
+  assert.equal(soloB.datos.fechaCarnetB, undefined)
+  assert.equal(carnetBDeFicha([{ tipo: ' b ', fechaExpedicion: '1999-06-01' }]), '1999-06-01')
+  assert.equal(carnetBDeFicha([{ tipo: 'B', fechaExpedicion: null }]), null, 'sin fecha no se declara')
+  assert.equal(carnetBDeFicha(null), null)
 })
 
 test('moto SIN carné de moto en la ficha: B con la fecha del conductor, DECLARADO y en cabeza (optimista)', () => {

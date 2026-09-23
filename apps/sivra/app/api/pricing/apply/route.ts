@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic"
 // escribía en Smoobu con la lógica vieja (sin ninguna guarda), pisando al motor vivo.
 //
 // El motor CANÓNICO es apps/plataforma/app/api/sivra/pricing/apply (cron apply-auto 3×/día).
-// Los raíles del agente (aplicar-propuesta) SIGUEN VIVOS en esta app — solo se retira el motor.
+// Los raíles del agente (aplicar-propuesta) se retiraron también de esta app el 23/09/2026: viven en plataforma.
 const GONE = () =>
   NextResponse.json(
     {

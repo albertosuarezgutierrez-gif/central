@@ -58,6 +58,7 @@ export async function GET(req: Request) {
           path: c.path,
           resumen: c.resumen,
           opciones: c.opciones,
+          ...(c.completo !== undefined ? { completo: c.completo } : {}),
           gastado: '0,00€',
         })
       case 'invalido':
