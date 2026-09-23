@@ -50,3 +50,8 @@ test('quien respondió no se aparca: se le llama', () => {
   assert.equal(siguientePasoLead(40, 1, 3, true).accion, 'llamada')
   assert.equal(siguientePasoLead(80, 0, null, true).accion, 'esperar')
 })
+
+test('con propuesta enviada no se propone un primer contacto', () => {
+  assert.equal(siguientePasoLead(80, 0, null, false, true).accion, 'llamada')
+  assert.equal(siguientePasoLead(40, 1, 3, false, true).dentroDeDias, 4)
+})

@@ -113,7 +113,13 @@ export function siguientePasoLead(
   intentos: number,
   diasDesdeUltimo: number | null,
   respondio = false,
+  propuestaEnviada = false,
 ): PasoLead {
+  // Con propuesta enviada ya no se capta: se confirma si la acepta.
+  if (propuestaEnviada) {
+    const falta = diasDesdeUltimo === null ? 0 : Math.max(0, DIAS_RECORDATORIO - diasDesdeUltimo)
+    return { accion: 'llamada', motivo: 'tiene una propuesta enviada: confirma si la acepta', dentroDeDias: falta }
+  }
   if (respondio && intentos > 0) {
     return { accion: 'llamada', motivo: 'respondió a un contacto anterior: llámale mientras está templado', dentroDeDias: 0 }
   }
