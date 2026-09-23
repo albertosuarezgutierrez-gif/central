@@ -17,11 +17,19 @@
 // 🚨 Unidades: se compara cc con cc y kW con kW. `powerCv` NO se convierte: si
 // la versión no trae kW, la potencia queda como «no se sabe», no se deriva.
 //
+// 🚨 Margen: Base7 puede guardar la potencia en CV y pasarla a kW, y una A2
+// homologada a 48 CV sale a 35,3 kW. Con `>` estricto eso bloquearía una
+// cotización legítima; por eso solo cuenta un exceso mayor que `MARGEN_*`.
+//
 // 🚨 «No se sabe» NO es «cubre». Si falta un límite o un dato de la versión, el
 // cruce devuelve `null` y NO bloquea (el vendor no cobra por no saberlo), pero
 // tampoco afirma nada: quien llama no lo pinta como «compatible».
 
 import { extraerLista } from './crudo.ts'
+
+/** Redondeos de ficha técnica que NO son exceso (ver cabecera). */
+export const MARGEN_CC = 1
+export const MARGEN_KW = 0.5
 
 /** Límites de un tipo de carné. `null` = el catálogo no pone límite (o no lo trae). */
 export type LimiteCarnet = { id: string; maxCc: number | null; maxKw: number | null }
@@ -76,10 +84,10 @@ export function motorDeVersion(raw: unknown, codigo: string): MotorVersion | nul
  */
 export function choqueCarnetVersion(carnet: LimiteCarnet, motor: MotorVersion): string | null {
   const excesos: string[] = []
-  if (carnet.maxCc !== null && motor.cc !== null && motor.cc > carnet.maxCc) {
+  if (carnet.maxCc !== null && motor.cc !== null && motor.cc > carnet.maxCc + MARGEN_CC) {
     excesos.push(`${motor.cc} cc (máximo ${carnet.maxCc} cc)`)
   }
-  if (carnet.maxKw !== null && motor.kw !== null && motor.kw > carnet.maxKw) {
+  if (carnet.maxKw !== null && motor.kw !== null && motor.kw > carnet.maxKw + MARGEN_KW) {
     excesos.push(`${motor.kw} kW (máximo ${carnet.maxKw} kW)`)
   }
   if (excesos.length === 0) return null

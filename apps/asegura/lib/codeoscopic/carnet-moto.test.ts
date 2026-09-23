@@ -2,7 +2,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { limitesDeCarnets, motorDeVersion, choqueCarnetVersion } from './carnet-moto.ts'
 
-// Forma del catálogo según la referencia y el snapshot del portal (A1 medido).
+// Forma del catálogo según la referencia y el snapshot del portal. SOLO el A1 está medido
+// (`{"id":"A1","minAge":16,"maxDisplacement":125}`); AM, A2 y A son supuestos hasta
+// tener un `/motorcycle/driving-licenses` real delante.
 const CARNETS = [
   { id: 'AM', minAge: 15, maxDisplacement: 50 },
   { id: 'A1', minAge: 16, maxDisplacement: 125, maxEnginePower: 11 },
@@ -46,6 +48,10 @@ test('choqueCarnetVersion: un A1 no cubre una 689 cc / 54 kW', () => {
   assert.match(choqueCarnetVersion(a2, { cc: 689, kw: 54 }) ?? '', /54 kW \(máximo 35 kW\)/)
   assert.equal(choqueCarnetVersion(a, { cc: 1300, kw: 130 }), null)
   assert.equal(choqueCarnetVersion(a1, { cc: 125, kw: 11 }), null, 'el límite es inclusivo')
+  // 48 CV = 35,3 kW: una A2 homologada no puede quedarse sin precio por el redondeo.
+  assert.equal(choqueCarnetVersion(a2, { cc: 689, kw: 35.3 }), null, 'redondeo CV→kW dentro del margen')
+  assert.match(choqueCarnetVersion(a2, { cc: 689, kw: 35.6 }) ?? '', /35.6 kW/)
+  assert.match(choqueCarnetVersion(a1, { cc: 127, kw: 11 }) ?? '', /127 cc/)
 })
 
 test('choqueCarnetVersion: sin dato NO hay choque (no se bloquea lo que no se ha podido mirar)', () => {

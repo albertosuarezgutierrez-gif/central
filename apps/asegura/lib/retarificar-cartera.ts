@@ -522,11 +522,13 @@ type VersionMotoElegida = { marcaId: string; modeloId: string; motor: MotorMoto;
 
 function versionMotoElegida(
   resueltos: Record<string, unknown> | undefined,
-  codigo: string | null | undefined,
+  codigoCrudo: unknown,
 ): VersionMotoElegida | null {
   const marcaId = cadena(resueltos?.marcaId)
   const modeloId = cadena(resueltos?.modeloId)
   const motor = cadena(resueltos?.motor)
+  // Una corrección puede traer el código como número JSON: el catálogo lo compara como texto.
+  const codigo = typeof codigoCrudo === 'number' ? String(codigoCrudo) : cadena(codigoCrudo)
   if (!marcaId || !modeloId || !motor || !codigo) return null
   if (!(MOTORES_MOTO as readonly string[]).includes(motor)) return null
   return { marcaId, modeloId, motor: motor as MotorMoto, codigo }
@@ -549,7 +551,15 @@ async function reparoCarnetMoto(
   version: VersionMotoElegida | null,
 ): Promise<{ campo: 'tipoCarnet'; motivo: string } | null> {
   if (!tipo) return null
-  const limites = await limitesCarnetMoto(config).catch((): null => null)
+  // Las dos lecturas son GET de catálogo gratis e independientes: en paralelo.
+  const [limites, motor] = await Promise.all([
+    limitesCarnetMoto(config).catch((): null => null),
+    version
+      ? motorDeVersionMoto(config, version.marcaId, version.modeloId, version.motor, version.codigo).catch(
+          (): null => null,
+        )
+      : null,
+  ])
   if (limites === null || limites.length === 0) return null
   const carnet = limites.find((l) => l.id === tipo)
   if (!carnet) {
@@ -558,13 +568,15 @@ async function reparoCarnetMoto(
       motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${limites.map((l) => l.id).join(', ')})`,
     }
   }
-  if (!version) return null
-  const motor = await motorDeVersionMoto(config, version.marcaId, version.modeloId, version.motor, version.codigo).catch(
-    (): null => null,
-  )
   if (!motor) return null
   const choque = choqueCarnetVersion(carnet, motor)
-  return choque ? { campo: 'tipoCarnet', motivo: choque } : null
+  if (!choque) return null
+  // El carné sale de la ficha, o es el B supuesto si la ficha no trae uno de moto:
+  // el arreglo está en la ficha del cliente, no en esta pantalla.
+  return {
+    campo: 'tipoCarnet',
+    motivo: `${choque}. Si el conductor tiene otro carné de moto, dalo de alta en su ficha (con su fecha) y vuelve a pedir el precio`,
+  }
 }
 
 /**
