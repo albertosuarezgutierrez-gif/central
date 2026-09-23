@@ -722,13 +722,16 @@ sustitución por revisar y su resolución cerrada (pérdida + motivo de `MOTIVOS
 anulación a vencimiento llega como baja) sin sustitución y con el vencimiento por delante abre SOLO, en la misma transacción, una retención
 (`oportunidades` `origen=retencion_cima` + llamada alta hoy en `gestiones`); una por póliza abierta. Cepo `lib/eventos-cartera.test.ts`.
 🔁 **Sustitución AUTOMÁTICA (23/09/2026, `lib/sustituciones-auto.ts`, regla pura `detectarSustituciones` en
-module-seguros).** Caso José Suárez: Mapfre→Reale del mismo Kona y el portal pintaba DOS seguros «En vigor». Dentro de
-`detectarYGuardar`, ANTES de la foto, se enlaza sola la nueva con la vieja cuando es determinista (mismo cliente + ramo +
-MATRÍCULA, número distinto, efecto a −60/+30 días del aniversario de la vieja —el actual o el anterior, porque CIMA puede
-traerla ya renovada—) y única (una vieja con dos nuevas no se enlaza: `sustitucionesAmbiguas`). Escribe solo nuestros
-campos (`sustituida_at`, `poliza_origen_id`) + historial; no comunica nada. `sqlCarteraEnVigor`/`esCarteraEnVigor`
-excluyen la sustituida y el portal la esconde tras la nueva («Sustituye a tu seguro de X»). Hogar NO entra (dirección
-cifrada). Medido: enlaza 3 parejas (José, 6668JGF Occident→Allianz, moto 4897FTM Allianz→Occident).
+module-seguros).** Caso José Suárez: Mapfre→Reale del mismo Kona y el portal pintaba DOS «En vigor». Dentro de
+`detectarYGuardar`, ANTES de la foto y con punto de guardado, se enlaza sola la nueva con la vieja si es determinista y
+única: mismo cliente + ramo + **clave del riesgo por ramo** (`claveRiesgo`: matrícula con formato real en motor;
+referencia catastral de 20 o dirección DESCIFRADA+CP en inmuebles; índice ciego del DNI del asegurado en personas; RC y
+comercio sin dato → nada), efecto a −60/+30 días del aniversario de la vieja (actual o anterior: CIMA puede traerla ya
+renovada), sin `poliza_padre_id` entre ellas. La misma clave cuenta **duplicidades** (dos vigentes solapadas que no se
+suceden). Escribe solo `sustituida_at`/`poliza_origen_id` + historial; no comunica nada. «En vigor» excluye la vieja SOLO
+mientras la sustituta siga vigente. Portal: `sustituidasARetirar` la quita de la LISTA (no del acceso) por lector, con la
+nueva empezada y sin siniestros/devueltos pendientes. ⚠️ Medido: CIMA casi no manda el dato del riesgo fuera de motor
+(hogar 7/34 con dirección, 0 refcat, 0 DNI de asegurado en personas) → capturarlo al emitir es lo que falta.
 ✉️ **Cola de aprobaciones (`seguros.aprobacion`, `lib/aprobaciones.ts`, puerto `/api/operador/aprobaciones`).** Un recibo
 que pasa a `devuelto` deja un correo PROPUESTO al cliente; solo sale con `decision:'aprobar'` desde plataforma. El envío
 reclama la fila (`pendiente → enviando`) ANTES de mandar y lee el correo de la ficha en ese momento; `enviando` viejo =

@@ -59,7 +59,7 @@ import {
   type CamposVisibles,
   type Nivel,
 } from '@central/module-seguros-portal'
-import { importeEiac, ocultarSustituidas, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
+import { importeEiac, sustituidasARetirar, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
 
 import { decryptField } from '@central/module-seguros-pii'
 
@@ -142,8 +142,17 @@ export type PolizaPortal = {
   vigencia: Vigencia
   /** CIMA la ha traído. `false` = emitida por nosotros y la compañía aún no la confirma. */
   confirmadaCima: boolean
-  /** La póliza a la que esta sustituye (cambio de compañía), que ya no se pinta aparte. `null` = ninguna. */
+  /** Id de la póliza a la que esta sustituye (cambio de compañía). Interno: sirve para cruzar. */
+  sustituyeAId: string | null
+  /** La póliza a la que sustituye, SOLO si este lector también la ve. `null` = ninguna o no visible. */
   sustituyeA: { compania: string; fechaVencimiento: Date | null } | null
+  /**
+   * 🚨 La que ocupa su sitio, cuando esta ya se RETIRA DE LA LISTA (`sustituidasARetirar`: la nueva ha
+   * empezado, está vigente, este lector la ve y esta no tiene nada pendiente). Retirar de la lista no
+   * quita el acceso: la ficha, los partes y los recibos siguen siendo suyos. Por eso la póliza sigue
+   * en `TitularPortal.polizas` y solo `carteraALaVista()` la quita, para PINTAR la bóveda.
+   */
+  sustituidaPor: { compania: string; desde: Date | null } | null
   /**
    * De dónde viene la fila, tal cual está en la BD. NO es para pintarlo: es lo
    * que necesitan aguas abajo (`lib/obligaciones.ts`) para volver a preguntar
@@ -291,6 +300,15 @@ const SIN_VINCULO: CarteraPortal = {
 /** `nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo. */
 function nivelDeVinculo(v: string): Nivel {
   return (NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta'
+}
+
+/**
+ * La cartera para PINTAR la lista (bóveda, hoja QR): sin las pólizas ya sustituidas. Los permisos
+ * (partes, ficha, recordatorios) usan la cartera entera, nunca esta.
+ */
+export function carteraALaVista(c: CarteraPortal): CarteraPortal {
+  const quitar = (ts: TitularPortal[]) => ts.map((t) => ({ ...t, polizas: t.polizas.filter((p) => p.sustituidaPor === null) }))
+  return { ...c, propias: quitar(c.propias), autorizadas: quitar(c.autorizadas) }
 }
 
 export async function carteraDeSesion(): Promise<CarteraPortal | null> {
@@ -509,7 +527,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const autorizadosIds = [...new Set([...porOtorgante.keys(), ...otorganteDePoliza.values()])]
 
   const todosIds = [...propiosIds, ...autorizadosIds]
-  const [clientes, polizasLeidas] = await Promise.all([
+  const [clientes, polizas] = await Promise.all([
     prisma.cliente.findMany({
       where: { id: { in: todosIds }, mergedIntoClienteId: null },
       // `tipoPersona` decide QUÉ se sirve de una ficha ajena: una sociedad no
@@ -530,10 +548,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     }),
   ])
 
-  // 🚨 La póliza SUSTITUIDA no se pinta al lado de la que la sustituye (23/09/2026, José Suárez:
-  // su Kona salía dos veces «En vigor», Mapfre y Reale). Solo se esconde si la nueva está en la
-  // MISMA lista: esconderla sin su sustituta dejaría al cliente sin ninguna. La nueva lo dice.
-  const { visibles: polizas, sustituyeA } = ocultarSustituidas(polizasLeidas)
+  // A quién sustituye cada póliza: solo cuenta si la vieja está marcada `sustituida_at` (un
+  // `poliza_origen_id` suelto es una referencia, no una sustitución).
+  const sustituidas = new Set(polizas.filter((p) => p.sustituidaAt != null).map((p) => p.id))
   const polizaIds = polizas.map((p) => p.id)
 
   // ── Las GEMELAS del volcado ───────────────────────────────────────────────
@@ -703,10 +720,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       estado: p.estado,
       vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento: p.fechaVencimiento }, hoy),
       confirmadaCima: p.idPolizaEntidad !== null,
-      sustituyeA: (() => {
-        const v = sustituyeA.get(p.id)
-        return v ? { compania: v.aseguradora, fechaVencimiento: v.fechaVencimiento } : null
-      })(),
+      sustituyeAId: p.polizaOrigenId !== null && sustituidas.has(p.polizaOrigenId) ? p.polizaOrigenId : null,
+      // Los dos se deciden POR LECTOR en `titular()`, con lo que ese lector puede ver.
+      sustituyeA: null,
+      sustituidaPor: null,
       procedencia: { importRef: p.importRef, eiacXmlHash: p.eiacXmlHash },
       prima: ve.prima
         ? {
@@ -798,6 +815,24 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         return campos === null ? null : aPortal(p, campos)
       })
       .filter((x): x is PolizaPortal => x !== null)
+    // Sustituciones POR LECTOR (caso José Suárez, 23/09/2026): con lo que este lector ve, nunca antes.
+    const porId = new Map(suyas.map((p) => [p.id, p]))
+    const retirar = sustituidasARetirar(
+      suyas.map((p) => ({
+        id: p.id,
+        sustituyeAId: p.sustituyeAId,
+        fechaInicio: p.fechaInicio,
+        vigente: p.vigencia === 'vigente',
+        conPendientes: (p.siniestrosAbiertos?.length ?? 0) > 0 || (p.recibos?.devueltos ?? 0) > 0,
+      })),
+      new Date(),
+    )
+    for (const p of suyas) {
+      const v = p.sustituyeAId === null ? undefined : porId.get(p.sustituyeAId)
+      p.sustituyeA = v ? { compania: v.compania, fechaVencimiento: v.fechaVencimiento } : null
+      const n = porId.get(retirar.get(p.id) ?? '')
+      p.sustituidaPor = n ? { compania: n.compania, desde: n.fechaInicio } : null
+    }
     return {
       clienteId,
       nombre,

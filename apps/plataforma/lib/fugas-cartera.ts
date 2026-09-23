@@ -39,6 +39,10 @@ export type Deteccion = {
   sustitucionesEnlazadas: number | null
   /** Sustituciones que casaban con más de una póliza y no se enlazaron. */
   sustitucionesAmbiguas: number | null
+  /** Dos vigentes del mismo riesgo solapadas; `null` = asegura no lo manda. */
+  duplicidades: number | null
+  /** `true` = el enlace de sustituciones falló en esa pasada. */
+  sustitucionesFallidas: boolean
 }
 
 export type Lectura<T> = { estado: 'ok'; dato: T } | { estado: 'sin_datos'; causa: string }
@@ -121,6 +125,8 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
       anulacionesConfirmadas: numONull(o.anulacionesConfirmadas),
       sustitucionesEnlazadas: numONull(o.sustitucionesEnlazadas),
       sustitucionesAmbiguas: numONull(o.sustitucionesAmbiguas),
+      duplicidades: numONull(o.duplicidades),
+      sustitucionesFallidas: o.sustitucionesFallidas === true,
     },
   }
 }

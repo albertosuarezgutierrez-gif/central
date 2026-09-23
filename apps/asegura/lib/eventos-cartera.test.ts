@@ -40,4 +40,6 @@ test('🚨 la sustitución se enlaza ANTES de la foto: la baja de la vieja no na
   const enlace = src.indexOf('await enlazarSustituciones(tx, correduriaId)')
   assert.ok(enlace > 0, 'detectarYGuardar ya no enlaza sustituciones')
   assert.ok(enlace < src.indexOf('await fotoActual(correduriaId, tx)'), 'enlazar después de la foto deja la baja como fuga')
+  // Con punto de guardado: un fallo del enlace no puede tumbar la detección de eventos entera.
+  assert.ok(src.lastIndexOf('savepoint sustitucion`', enlace) > 0 && src.indexOf('rollback to savepoint sustitucion', enlace) > enlace)
 })

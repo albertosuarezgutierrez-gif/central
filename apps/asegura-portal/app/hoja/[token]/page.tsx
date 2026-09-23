@@ -9,7 +9,7 @@ import {
 
 import { canalDeCompania, textoSoloRamos, type CanalCompania } from '@central/module-seguros-portal'
 import { companiasConCanal } from '@/lib/canales-compania'
-import { carteraDeIdentidad, type PolizaPortal } from '@/lib/cartera-lectura'
+import { carteraALaVista, carteraDeIdentidad, type PolizaPortal } from '@/lib/cartera-lectura'
 import { fechaEs } from '@/lib/fechas'
 import { declaradasDeIdentidad, hojaPorToken, sellarUso, type DeclaradaEnHoja } from '@/lib/hojas'
 
@@ -121,7 +121,7 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
   if (hoja && hoja.anuladaEn === null) {
     const hoy = new Date()
     const [cartera, misDeclaradas] = await Promise.all([
-      carteraDeIdentidad(hoja.identidadId),
+      carteraDeIdentidad(hoja.identidadId).then(carteraALaVista),
       declaradasDeIdentidad(hoja.identidadId),
     ])
     // 🚨 Regla 5 de `hoja-qr.ts`: solo lo que sigue en vigor. «Todas mis

@@ -7,14 +7,21 @@
 // una sustituía a la otra. Dictado de Alberto: «tiene que ser automático… tienes información de
 // todo en cada momento».
 //
-// Solo se enlaza cuando la prueba es DETERMINISTA — mismo cliente, mismo ramo y la MISMA matrícula —
-// y la nueva empieza cerca del vencimiento de la vieja. Si una vieja casa con dos nuevas (o una
-// nueva con dos viejas) no se enlaza ninguna: elegir por el orden de la consulta enlazaría el coche
-// equivocado, y ese error no deja hueco visible. Hogar no entra todavía: su dirección viaja cifrada
-// y comparar la cadena cifrada no prueba nada.
+// Solo se enlaza cuando la prueba es DETERMINISTA — mismo cliente, mismo ramo y el MISMO riesgo — y
+// la nueva empieza cerca del aniversario de la vieja. Qué es «el mismo riesgo» depende del ramo
+// (Alberto, 23/09/2026: «motor tiene matrícula, inmueble… dirección (referencia catastral), vida…
+// DNI»): matrícula en motor; referencia catastral —o, sin ella, la dirección DESCIFRADA + CP— en
+// inmuebles; el DNI (índice ciego) del asegurado en los ramos de personas. Sin ese dato no hay
+// prueba y no se enlaza: RC, comercio sin dirección… (medido: CIMA no manda nada del riesgo en ellos).
+// Si una vieja casa con dos nuevas (o una nueva con dos viejas) no se enlaza ninguna: elegir por el
+// orden de la consulta enlazaría el coche equivocado, y ese error no deja hueco visible.
+//
+// La misma clave destapa la DUPLICIDAD: dos pólizas vigentes del mismo riesgo que se solapan y no
+// se suceden (el cliente paga dos veces lo mismo, o una entró dos veces con números distintos).
 
-import { normalizarMatricula } from './matricula.ts'
+import { formatoMatricula, normalizarMatricula } from './matricula.ts'
 import { normalizarNumeroPoliza } from './duplicados.ts'
+import { normalizarDireccion } from './busqueda.ts'
 
 /** Días antes del vencimiento de la vieja en los que la nueva puede empezar (cambio anticipado). */
 export const SUSTITUCION_DIAS_ANTES = 60
@@ -30,22 +37,67 @@ export type PolizaParaSustitucion = {
   /** `YYYY-MM-DD`. `null` = no se sabe → no se enlaza. */
   fechaInicio: string | null
   fechaVencimiento: string | null
-  /** `datos_especificos.matricula` tal cual. `null`/vacía = sin prueba → no se enlaza. */
+  /** `datos_especificos.matricula` tal cual (motor). `null`/vacía = sin prueba → no se enlaza. */
   matricula: string | null
+  /** Referencia catastral del inmueble, si la hay. */
+  refCatastral?: string | null
+  /** Dirección del riesgo YA DESCIFRADA (inmuebles). Un valor que sigue cifrado (`v1:`) no cuenta. */
+  direccion?: string | null
+  cp?: string | null
+  /** Índice ciego del DNI del asegurado (ramos de personas). */
+  nifAsegurado?: string | null
   /** La nueva tiene que seguir en vigor: una que el cliente ya anuló no sustituye a nada. */
   vigente: boolean
   /** Ya marcada como sustituida (por emisión o por una pasada anterior). */
   sustituida: boolean
   /** Ya tiene `poliza_origen_id`: ya sabe a quién sustituye. */
   conOrigen: boolean
+  /** `poliza_padre_id`: la renovación ya encadenada no es una sustitución. */
+  padreId?: string | null
 }
 
-export type SustitucionDetectada = { viejaId: string; nuevaId: string; matricula: string }
+/** Cómo se sabe que es el mismo riesgo. `valor` solo lleva la matrícula (dato del contrato); una
+ *  dirección o un DNI no se repiten fuera de aquí. */
+export type RiesgoComun = { tipo: 'matricula' | 'catastro' | 'direccion' | 'asegurado'; valor: string | null }
+
+export type SustitucionDetectada = { viejaId: string; nuevaId: string; riesgo: RiesgoComun }
+export type DuplicidadDetectada = { aId: string; bId: string; riesgo: RiesgoComun }
 
 export type ResultadoSustituciones = {
   enlaces: SustitucionDetectada[]
   /** Parejas que casaban pero no de forma única: no se enlazan y se cuentan. */
   ambiguas: number
+  /** Dos vigentes del mismo riesgo que se solapan sin sucederse. No se toca nada: se avisa. */
+  duplicidades: DuplicidadDetectada[]
+}
+
+const MOTOR = new Set(['auto', 'moto'])
+const INMUEBLE = new Set(['hogar', 'comercio', 'comunidades', 'pyme', 'oficina'])
+const PERSONAS = new Set(['vida', 'salud', 'decesos', 'accidentes'])
+
+/** La clave del riesgo según el ramo, o `null` si no hay prueba. */
+export function claveRiesgo(p: PolizaParaSustitucion): { clave: string; riesgo: RiesgoComun } | null {
+  if (MOTOR.has(p.ramo)) {
+    const m = normalizarMatricula(p.matricula ?? '')
+    // Solo una matrícula con formato real prueba algo («PENDIENTE», «SIN», un bastidor no).
+    return formatoMatricula(m) !== 'desconocido' ? { clave: `mat:${m}`, riesgo: { tipo: 'matricula', valor: m } } : null
+  }
+  if (INMUEBLE.has(p.ramo)) {
+    const rc = (p.refCatastral ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+    // 20 caracteres = un inmueble; 14 = la PARCELA entera (todo el edificio): no distingue pisos.
+    if (rc.length === 20) return { clave: `cat:${rc}`, riesgo: { tipo: 'catastro', valor: null } }
+    const d = p.direccion ?? ''
+    const cp = (p.cp ?? '').replace(/\D/g, '')
+    if (d.startsWith('v1:') || cp.length !== 5) return null
+    const n = normalizarDireccion(d)
+    // Sin número no es una dirección de un inmueble concreto (una calle entera no prueba nada).
+    return n.length >= 8 && /\d/.test(n) ? { clave: `dir:${cp}|${n}`, riesgo: { tipo: 'direccion', valor: null } } : null
+  }
+  if (PERSONAS.has(p.ramo)) {
+    const h = (p.nifAsegurado ?? '').trim()
+    return h.length >= 16 ? { clave: `nif:${h}`, riesgo: { tipo: 'asegurado', valor: null } } : null
+  }
+  return null
 }
 
 function dias(a: string, b: string): number {
@@ -76,38 +128,41 @@ function distanciaAniversario(inicioVieja: string, vencimiento: string, inicioNu
   return Math.abs(a) <= Math.abs(b) ? a : b
 }
 
-function claveBien(p: PolizaParaSustitucion): string | null {
-  const m = normalizarMatricula(p.matricula ?? '')
-  // Menos de 5 caracteres no es una matrícula (un «-», «SIN», un bastidor cortado): sin prueba.
-  return m.length >= 5 ? `${p.clienteId}|${p.ramo}|${m}` : null
-}
-
 /**
  * Parejas vieja → nueva que se pueden enlazar solas. Ninguna escritura: quien llama marca la vieja
  * `sustituida_at` y la nueva `poliza_origen_id`.
  */
 export function detectarSustituciones(polizas: readonly PolizaParaSustitucion[]): ResultadoSustituciones {
-  const porBien = new Map<string, PolizaParaSustitucion[]>()
+  const porBien = new Map<string, { riesgo: RiesgoComun; grupo: PolizaParaSustitucion[] }>()
   for (const p of polizas) {
-    const k = claveBien(p)
-    if (k === null || p.fechaInicio === null) continue
-    porBien.set(k, [...(porBien.get(k) ?? []), p])
+    const r = claveRiesgo(p)
+    if (r === null || p.fechaInicio === null) continue
+    const k = `${p.clienteId}|${p.ramo}|${r.clave}`
+    const g = porBien.get(k) ?? { riesgo: r.riesgo, grupo: [] }
+    g.grupo.push(p)
+    porBien.set(k, g)
   }
 
   const candidatas: SustitucionDetectada[] = []
-  for (const [k, grupo] of porBien) {
+  const duplicidades: DuplicidadDetectada[] = []
+  for (const { riesgo, grupo } of porBien.values()) {
     if (grupo.length < 2) continue
     for (const vieja of grupo) {
       if (vieja.sustituida || vieja.fechaVencimiento === null) continue
       for (const nueva of grupo) {
         if (nueva.id === vieja.id || !nueva.vigente || nueva.conOrigen || nueva.fechaInicio === null) continue
+        if (nueva.padreId === vieja.id) continue
         // La misma póliza escrita dos veces (volcado + CIMA, ceros a la izquierda) NO es una sustitución.
         const nv = normalizarNumeroPoliza(vieja.numeroPoliza)
         if (nv !== null && nv === normalizarNumeroPoliza(nueva.numeroPoliza)) continue
         if (nueva.fechaInicio <= vieja.fechaInicio!) continue
         const d = distanciaAniversario(vieja.fechaInicio!, vieja.fechaVencimiento, nueva.fechaInicio)
-        if (d < -SUSTITUCION_DIAS_ANTES || d > SUSTITUCION_DIAS_DESPUES) continue
-        candidatas.push({ viejaId: vieja.id, nuevaId: nueva.id, matricula: k.split('|')[2]! })
+        if (d < -SUSTITUCION_DIAS_ANTES || d > SUSTITUCION_DIAS_DESPUES) {
+          // No se suceden: si las dos siguen vigentes y se pisan, es una duplicidad.
+          if (vieja.vigente && nueva.fechaInicio < vieja.fechaVencimiento) duplicidades.push({ aId: vieja.id, bId: nueva.id, riesgo })
+          continue
+        }
+        candidatas.push({ viejaId: vieja.id, nuevaId: nueva.id, riesgo })
       }
     }
   }
@@ -119,22 +174,26 @@ export function detectarSustituciones(polizas: readonly PolizaParaSustitucion[])
     cuentaNueva.set(c.nuevaId, (cuentaNueva.get(c.nuevaId) ?? 0) + 1)
   }
   const enlaces = candidatas.filter((c) => cuentaVieja.get(c.viejaId) === 1 && cuentaNueva.get(c.nuevaId) === 1)
-  return { enlaces, ambiguas: candidatas.length - enlaces.length }
+  return { enlaces, ambiguas: candidatas.length - enlaces.length, duplicidades }
 }
 
 /**
- * Lo que ve el cliente: la vieja desaparece de su lista cuando la que la sustituye está en la MISMA
- * lista (si no, esconderla le dejaría sin ninguna), y la nueva sabe a quién sustituye.
+ * Lo que ve el cliente, POR LECTOR (ya filtrado por lo que ese lector puede ver): qué vieja se retira
+ * de la LISTA porque su sustituta ocupa su sitio. Solo se retira si la nueva está en la misma lista,
+ * ya ha EMPEZADO y está vigente, y la vieja no tiene nada pendiente (un siniestro abierto, un recibo
+ * devuelto): hasta entonces las dos se enseñan. Esconder de la lista no quita el acceso — la ficha,
+ * los partes y los recibos de la vieja siguen siendo suyos. Devuelve `viejaId → nuevaId`.
  */
-export function ocultarSustituidas<T extends { id: string; sustituidaAt: unknown; polizaOrigenId: string | null }>(
-  polizas: readonly T[],
-): { visibles: T[]; sustituyeA: Map<string, T> } {
+export function sustituidasARetirar(
+  polizas: readonly { id: string; sustituyeAId: string | null; fechaInicio: Date | null; vigente: boolean; conPendientes: boolean }[],
+  hoy: Date,
+): Map<string, string> {
   const porId = new Map(polizas.map((p) => [p.id, p]))
-  const sustituyeA = new Map<string, T>()
-  for (const p of polizas) {
-    const origen = p.polizaOrigenId === null ? undefined : porId.get(p.polizaOrigenId)
-    if (origen !== undefined && origen.sustituidaAt != null) sustituyeA.set(p.id, origen)
+  const retirar = new Map<string, string>()
+  for (const n of polizas) {
+    const v = n.sustituyeAId === null ? undefined : porId.get(n.sustituyeAId)
+    if (v === undefined || !n.vigente || n.fechaInicio === null || n.fechaInicio > hoy || v.conPendientes) continue
+    retirar.set(v.id, n.id)
   }
-  const ocultas = new Set([...sustituyeA.values()].map((v) => v.id))
-  return { visibles: polizas.filter((p) => !ocultas.has(p.id)), sustituyeA }
+  return retirar
 }
