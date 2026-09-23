@@ -385,7 +385,11 @@ consultoría de Alberto (spec `docs/superpowers/specs/2026-09-19-asegura-gestor-
 30 impresiones era inalcanzable sin tráfico. **No automatizar el SEO antes de tener tráfico** — al
 principio la rutina propone y Alberto decide, no al revés.
 
-## L. Canibalización interna de las FAQ — 🟢 menor
+## ✅ L. Canibalización interna de las FAQ — cerrada (23/09/2026)
+
+✅ **Hecha:** la pregunta «¿cobráis…?» estaba en 8 de las 9 páginas de ramo con la misma respuesta; se quitó de todas y queda UNA frase en el bloque «Que te llamemos» de la plantilla. La RC general y la de autónomos compartían «¿Es obligatorio… para un autónomo?»: la general pasa a «¿Es obligatorio el seguro de responsabilidad civil?». Y la rejilla «Qué revisamos» de la portada usa `RAMOS_PRODUCTO` (sin las tarjetas de RC de fontaneros y autónomos junto a la general). Queda a propósito el preaviso del art. 22 LCS en hogar/auto/comercio/comunidades: es la misma regla legal, adaptada a cada ramo.
+
+Contexto original:
 
 La última pregunta de los 6 ramos es prácticamente la misma («¿cobráis algo?») con la misma
 respuesta (`ramos.ts:116, 169, 222, 275, 383` + `cambiar-de-correduria:76`). Seis respuestas casi
