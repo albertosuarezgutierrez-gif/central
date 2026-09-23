@@ -25,6 +25,12 @@ export type Deteccion = {
   porTipo: Record<string, number>
   fugasNuevas: Fuga[]
   polizasEnFoto: number
+  /** `null` = asegura no lo manda (versión anterior), no «ninguna». */
+  retencionesAbiertas: number | null
+  /** Retenciones que tocaba abrir y fallaron; `null` = asegura no lo manda. */
+  retencionesFallidas: number | null
+  /** Retenciones de antes cerradas solas porque ya no hacen falta; `null` = asegura no lo manda. */
+  retencionesCerradas: number | null
 }
 
 export type Lectura<T> = { estado: 'ok'; dato: T } | { estado: 'sin_datos'; causa: string }
@@ -88,6 +94,7 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
     if (!x) return { estado: 'sin_datos', causa: 'asegura devolvió una pérdida sin id, tipo o cliente' }
     fugasNuevas.push(x)
   }
+  const numONull = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
   return {
     estado: 'ok',
@@ -98,6 +105,9 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
       porTipo: (typeof o.porTipo === 'object' && o.porTipo !== null ? o.porTipo : {}) as Record<string, number>,
       fugasNuevas,
       polizasEnFoto: num(o.polizasEnFoto),
+      retencionesAbiertas: numONull(o.retencionesAbiertas),
+      retencionesFallidas: numONull(o.retencionesFallidas),
+      retencionesCerradas: numONull(o.retencionesCerradas),
     },
   }
 }
@@ -130,7 +140,7 @@ function escapar(s: string): string {
 }
 
 /** Aviso de Telegram (HTML). Nombre del tomador, póliza y compañía; nada de contacto. */
-export function mensajeFugas(fugas: Fuga[], urlFicha: (clienteId: string) => string | null): string {
+export function mensajeFugas(fugas: Fuga[], urlFicha: (clienteId: string) => string | null, retenciones: number | null = null): string {
   const lineas = fugas.slice(0, 15).map((f) => {
     const poliza = [f.aseguradora, f.polizaNumero ? `nº ${f.polizaNumero}` : null].filter(Boolean).join(' ')
     const quien = escapar(f.cliente ?? 'cliente sin nombre')
@@ -139,5 +149,8 @@ export function mensajeFugas(fugas: Fuga[], urlFicha: (clienteId: string) => str
     return `• <b>${escapar(f.titulo)}</b> — ${nombre}${poliza ? ` · ${escapar(poliza)}` : ''}`
   })
   const resto = fugas.length > 15 ? `\n…y ${fugas.length - 15} más en «Hoy».` : ''
-  return `📉 <b>Posibles pérdidas de cartera</b> (CIMA, sin sustitución registrada)\n${lineas.join('\n')}${resto}\n\nRevísalas en /correduria → Hoy: ¿se ha perdido el cliente y por qué?`
+  const retener = retenciones && retenciones > 0
+    ? `\n\n📞 ${retenciones === 1 ? 'Abierta 1 retención' : `Abiertas ${retenciones} retenciones`} (anulada antes de su vencimiento): llamada de prioridad alta en «Hoy · Tareas de hoy».`
+    : ''
+  return `📉 <b>Posibles pérdidas de cartera</b> (CIMA, sin sustitución registrada)\n${lineas.join('\n')}${resto}${retener}\n\nRevísalas en /correduria → Hoy: ¿se ha perdido el cliente y por qué?`
 }

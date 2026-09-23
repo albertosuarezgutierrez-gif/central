@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 📞 **ASegura OS pieza 2-b: retención automática.** #3345 (eventos de cartera 2-a) mergeado.
+Ahora, cuando el detector ve una póliza ANULADA (baja o «anula al vencimiento») SIN sustitución y con el
+vencimiento por delante, abre en la MISMA transacción una oportunidad `en_negociacion` (`info_riesgo.origen='retencion_cima'`)
++ llamada de prioridad alta para hoy (sale en «Hoy · Tareas de hoy») + `oportunidad_historial`; ficha anotada
+best-effort. Regla pura `decidirRetencion` (module-seguros). El Telegram de pérdidas dice cuántas retenciones abrió.
+🚨 CIMA solo escribe activa/cancelada (`eiac-pol-mapper.ts` del repo asegura): una anulación a vencimiento
+llega como BAJA y no se distingue de una inmediata, por eso la baja también abre. SQL probado con rollback.
+Y se cierra sola (ganada + llamadas cerradas) si luego llega la sustitución, CIMA la reactiva o se revisa como
+«no es pérdida»; punto de guardado por póliza para que un fallo no tumbe la detección entera. Siguiente: cola única de aprobaciones con su 1er productor (recibo devuelto).
+
 **(23/09/2026)** 🧩 **asegura-portal: «Tus vencimientos» con fuente única** (`lib/vencimientos.ts`). La ventana
 de 60 días y la prima «pagas ahora» estaban copiadas en la bóveda, en el bloque y en «Mejorar el precio»: si
 divergían, la bóveda dejaba de pedir las peticiones y el bloque enseñaba el botón a quien ya lo había pedido.

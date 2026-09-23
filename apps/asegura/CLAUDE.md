@@ -717,6 +717,9 @@ tras escribir, y va a la columna `cambios` de esa fila. 🚨 Solo guardan valor 
 (`cartera_foto`) con la actual y guarda lo que cambió en `evento` (`lib/eventos-cartera.ts`, regla pura
 `detectarCambios` en module-seguros). La primera pasada solo ancla. `GET/PATCH /api/operador/eventos` = pérdidas sin
 sustitución por revisar y su resolución cerrada (pérdida + motivo de `MOTIVOS_PERDIDA`, o no es pérdida).
+📞 Y una póliza anulada (baja o «anula al vencimiento» — CIMA solo escribe `activa`/`cancelada`, así que una
+anulación a vencimiento llega como baja) sin sustitución y con el vencimiento por delante abre SOLO, en la misma transacción, una retención
+(`oportunidades` `origen=retencion_cima` + llamada alta hoy en `gestiones`); una por póliza abierta. Cepo `lib/eventos-cartera.test.ts`.
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
