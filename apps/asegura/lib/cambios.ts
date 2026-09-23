@@ -43,6 +43,7 @@ export const CAMPOS_CON_VALOR: ReadonlySet<string> = new Set([
   'interviniente.existe',
   'documento.estado',
   'documento.existe',
+  'evento.estado',
 ])
 
 /** Tope por fila: una escritura masiva no convierte la auditoría en un volcado. */

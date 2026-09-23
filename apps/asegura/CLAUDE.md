@@ -713,6 +713,11 @@ Y el QUÉ: una función que escribe la cartera llama a `anotarCambio({entidad, i
 tras escribir, y va a la columna `cambios` de esa fila. 🚨 Solo guardan valor los campos de
 `CAMPOS_CON_VALOR` (`lib/cambios.ts`); añadir ahí un dato personal lo rompe `lib/cambios.test.ts`.
 
+📉 **Eventos de cartera (23/09/2026):** `POST /api/operador/eventos/detectar` compara la foto de la cartera viva
+(`cartera_foto`) con la actual y guarda lo que cambió en `evento` (`lib/eventos-cartera.ts`, regla pura
+`detectarCambios` en module-seguros). La primera pasada solo ancla. `GET/PATCH /api/operador/eventos` = pérdidas sin
+sustitución por revisar y su resolución cerrada (pérdida + motivo de `MOTIVOS_PERDIDA`, o no es pérdida).
+
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
 - **`GET /clientes?q=`** — buscador por nombre y apellidos. `buscado:false` cuando el término tiene
