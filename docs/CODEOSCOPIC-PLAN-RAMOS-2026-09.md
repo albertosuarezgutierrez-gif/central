@@ -71,7 +71,7 @@ modelos de COCHE. Tres causas encadenadas, de abajo arriba:
 | 1 | **Retarificar moto desde cartera**: `'moto'` en `retarificable.ts`; `precalificarMoto()` copiando `precalificarAuto` (`desde-cartera.ts:268-445`); `prepararMoto()` en `retarificar-cartera.ts` reutilizando `construirPeticionMoto`; rama moto en la pantalla de plataforma | M |
 | 2 | Catálogos `/motorcycle/*` que faltan, y cablearlos en moto-nuevo y en el punto 1 | S |
 | 3 | Carnet de moto: tipo A/A2/A1/AM + fecha desde `cliente_carnets_conducir`, cruzado con `maxDisplacement`/`maxEnginePower` de la versión antes de pagar | M |
-| 4 | ✅ **Bloqueo HECHO (23/09/2026)**: `cotizar()` corta vida/salud/decesos antes del gasto (`lib/codeoscopic/ramos-bloqueados.ts`, 409 con 0,00€; la simulación sigue). `risk` corregido ese día a la forma de la referencia (vida `insured`+`deathBenefit`; salud/decesos `insureds[]`), sin probar contra el vendor. Falta: OK de Alberto para desbloquear, y quitar de la pantalla el capital de salud/decesos y la duración de vida, que ya no viajan | S + M |
+| 4 | ✅ Vida/salud/decesos con la forma de la referencia (vida `insured`+`deathBenefit`; salud/decesos `insureds[]`) y **desbloqueados con OK de Alberto (23/09/2026)**. El primer intento real de cada ramo es el estreno: un 400 se lee y se corrige en `peticion-<ramo>.ts`. Falta quitar de la pantalla el capital de salud/decesos y la duración de vida (ya no viajan) | S + M |
 | 5 | Timeouts ReRate/Submit a ~150 s y `maxDuration` 180 | S |
 | 6 | `motivoFechaEfectoInvalida` en hogar, moto y demás ramos | S |
 | 7 | Opciones por defecto por (compañía, ramo) | S |

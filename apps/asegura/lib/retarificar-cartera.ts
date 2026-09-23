@@ -368,8 +368,8 @@ export function respuestaRetarificacion(
     // 402 cuando el freno es el TOPE: eso no es un fallo, es el tope haciendo
     // su trabajo, y la pantalla lo cuenta distinto de un error del vendor.
     return {
-      status: r.razon === 'tope' ? 402 : r.razon === 'vendor' ? 502 : r.razon === 'ramo-bloqueado' ? 409 : 503,
-      cuerpo: { error: r.mensaje, razon: r.razon, ...(r.razon === 'ramo-bloqueado' ? { gastado: '0,00€' } : {}) },
+      status: r.razon === 'tope' ? 402 : r.razon === 'vendor' ? 502 : 503,
+      cuerpo: { error: r.mensaje, razon: r.razon },
     }
   }
 

@@ -27,7 +27,6 @@ import { puedeCotizar, eurCents, type Veredicto, type Consumo } from './contador
 import { consumoActual, reservar, cerrarFacturable, cerrarDescartado } from './consumo.ts'
 import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
-import { motivoRamoBloqueado } from './ramos-bloqueados.ts'
 import { cotizacionSimulada } from './simulacion.ts'
 import {
   guardarSinTumbar,
@@ -60,11 +59,7 @@ export type ResultadoCotizacion =
        */
       guardado: Guardado
     }
-  | {
-      ok: false
-      razon: 'apagado' | 'mal-configurado' | 'sin-libro' | 'tope' | 'vendor' | 'ramo-bloqueado'
-      mensaje: string
-    }
+  | { ok: false; razon: 'apagado' | 'mal-configurado' | 'sin-libro' | 'tope' | 'vendor'; mensaje: string }
 
 export type PeticionCotizacion = {
   correduriaId: string
@@ -230,11 +225,6 @@ export async function cotizar(
       guardado,
     }
   }
-
-  // 0b — Ramo bloqueado. Después de la simulación (que no cuesta) y antes de
-  // todo lo que pueda acabar en un cargo: ver `ramos-bloqueados.ts`.
-  const bloqueo = motivoRamoBloqueado(p.contexto?.ramo, p.cuerpo)
-  if (bloqueo) return { ok: false, razon: 'ramo-bloqueado', mensaje: bloqueo }
 
   // 1 — Config
   const r = resolverConfig(env)
