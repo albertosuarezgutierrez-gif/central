@@ -108,3 +108,9 @@ test('sin unidades constructivas no se caracteriza, y una sola planta baja sin c
   assert.equal(v?.tipo, null)
   assert.deepEqual(v?.anexos, ['APARCAMIENTO'])
 })
+
+test('un BAJO con elementos comunes es un piso: lo decide el elemento común, no la planta', () => {
+  const bajo = `<bico><lcons><cons><lcd>VIVIENDA</lcd><dt><lourb><loint><pt>00</pt><pu>A</pu></loint></lourb></dt><dfcons><stl>70</stl></dfcons></cons>
+<cons><lcd>ELEMENTOS COMUNES</lcd><dfcons><stl>12</stl></dfcons></cons></lcons></bico>`
+  assert.deepEqual(caracterizarVivienda(parsearCatastro(bajo)), { tipo: 'piso', planta: 0, superficieVivienda: 70, anexos: [] })
+})
