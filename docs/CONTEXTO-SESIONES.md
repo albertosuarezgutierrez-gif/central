@@ -324,10 +324,10 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
-## (23/09/2026) asegura-web: Mapfre, Allianz, Generali y Reale verificados en /telefonos-siniestros
-- Con capturas de sus webs oficiales que mandó Alberto. `asistencia` pasa a lista de líneas por riesgo (`para`/`numeros`/`horario`); `whatsappNota` opcional. Mapfre/Allianz/Generali no enseñan un teléfono de «dar parte» por voz → `siniestros: null`; Reale sí (900 455 900). Las cinco ya verificadas: el cepo de «sin verificar» usa una compañía fabricada.
-- 🚨 **BD sin tocar, pendiente de Alberto:** `seguros.companias_dgs` de Mapfre (C0058) tiene 900 122 122 como siniestros/asistencia y es la línea MÉDICA; el portal se lo enseña a sus clientes como «dar parte». Allianz 900 300 250 sin verificar; Reale 900 365 900 es asistencia, no siniestros.
-
+## (23/09/2026) asegura-web + BD: teléfonos de compañías verificados con capturas (PR #3398)
+- Web `/telefonos-siniestros`: Mapfre, Allianz, Generali, Reale, Fidelidade y Asisa verificadas con capturas de Alberto (Occident ya lo estaba). `asistencia` = lista por riesgo; solo Reale (900 455 900) y Occident publican voz para dar parte.
+- **BD `seguros.companias_dgs` corregida con OK de Alberto:** Mapfre siniestros 900 122 122 (era la MÉDICA) → NULL, asistencia 900 822 822 (hogar+carretera); Reale siniestros 900 455 900 / asistencia 900 365 900. Generali, Allianz y Fidelidade: solo nota en `telefono_fuente` (captura no contradice / solo hogar). Asisa no tiene fila (no se inventa código DGS).
+- Pendiente: Fidelidade emergencias (plegado) y auto; línea de voz de Mapfre para dar parte.
 ## (23/09/2026) Auditoría precios dinámicos → PR #3344 (mergeado) + rutina Booking 2×/día
 - Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Hallazgos abiertos: 33 saltos >50%/día en 90d (17 Luxury Busto), `booking_mcp` con 9 huecos en 49 días y ~50-56% de cobertura futura, `pricing_decisiones` 2 días por detrás de `pricing_applied`.
 - Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Puntos 1,2,4,5 resueltos en PR #3344 (squash 6330f05); punto 3 = rutina Booking a `30 8,13` (Alberto, PR #3357). ⏳ Verificación programada 24/09 15:00 UTC (trig_01GL83WaeXaPJHvbmGJK91jk): precios evento Luxury nov bajando a ~100-115€, `eventos_caducados` < 68, dos tandas `booking_mcp`, latidos ok.

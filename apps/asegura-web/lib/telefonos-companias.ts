@@ -70,10 +70,13 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     // envió Alberto. 🚨 Desmiente la BD: el 900 122 122 que `companias_dgs` daba
     // como «siniestros» es la línea de ASISTENCIA MÉDICA. La captura no trae un
     // número de voz para dar parte (solo el WhatsApp de hogar), así que
-    // `siniestros` queda vacío en vez de adivinarlo. Tampoco trae el de auto.
+    // `siniestros` queda vacío en vez de adivinarlo. La segunda captura (página
+    // entera) confirma que el de hogar es también el de ayuda en carretera.
     siniestros: null,
     asistencia: [
-      { para: 'Hogar', numeros: ['918 365 365', '900 822 822'], horario: '24 horas' },
+      { para: 'Hogar y ayuda en carretera', numeros: ['918 365 365', '900 822 822'], horario: '24 horas' },
+      { para: 'Ayuda en carretera desde el extranjero', numeros: ['+34 915 811 823'], horario: '24 horas' },
+      { para: 'Viajes', numeros: ['915 811 823', '900 814 400'], horario: '24 horas' },
       { para: 'Médica', numeros: ['900 122 122'], horario: '24 horas' },
       { para: 'Accidentes personales', numeros: ['918 366 224', '900 810 852'], horario: '24 horas' },
       { para: 'Decesos', numeros: ['918 366 181', '900 814 111'], horario: '24 horas' },
@@ -149,6 +152,32 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     whatsapp: null,
     horario: null,
     fuente: 'https://www.generali.es/contacto-generali',
+    verificado: true,
+    verificadoEl: '2026-09-23',
+  },
+  {
+    slug: 'fidelidade',
+    nombre: 'Fidelidade',
+    // Captura de su página «Siniestros y asistencia» del 23/09/2026, solo el
+    // bloque HOGAR: el teléfono de emergencias venía plegado y auto no salía.
+    siniestros: null,
+    asistencia: [{ para: 'Hogar', numeros: ['915 901 759', '900 802 822'], horario: null }],
+    whatsapp: '+34666519911',
+    whatsappNota: 'para hogar',
+    horario: null,
+    fuente: 'https://www.fidelidade.es/',
+    verificado: true,
+    verificadoEl: '2026-09-23',
+  },  {
+    slug: 'asisa',
+    nombre: 'Asisa',
+    // Aseguradora de salud: no hay «parte», hay atención al cliente (24 h, todos
+    // los días, según su página «Soy de ASISA», captura del 23/09/2026).
+    siniestros: null,
+    asistencia: [{ para: 'Atención al cliente', numeros: ['919 911 999', '900 922 992'], horario: '24 horas, todos los días' }],
+    whatsapp: null,
+    horario: null,
+    fuente: 'https://www.asisa.es/',
     verificado: true,
     verificadoEl: '2026-09-23',
   },

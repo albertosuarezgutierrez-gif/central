@@ -20,7 +20,7 @@ test('cada compañía tiene su página oficial y no se da por verificada sin fec
 // 🚨 El cepo que importa: una compañía sin verificar sale en la lista, pero
 // SIN ningún número. Se mira el objeto que recibe la página, no una copia.
 test('de una compañía sin verificar no sale ningún número hacia la página', () => {
-  // Desde el 23/09/2026 las cinco están verificadas, así que el cepo mira una
+  // Desde el 23/09/2026 todas están verificadas, así que el cepo mira una
   // compañía sin verificar fabricada aquí: sin ella miraría al vacío.
   const lista = [...TELEFONOS_COMPANIAS, { ...TELEFONOS_COMPANIAS[0], slug: 'sin-verificar', verificado: false, verificadoEl: null }]
   const salida = telefonosParaPublicar(lista)
