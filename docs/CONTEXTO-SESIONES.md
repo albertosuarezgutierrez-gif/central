@@ -28,7 +28,9 @@ búsqueda de 1.300/mes). Enlazada desde `/siniestro` y en el sitemap. Medida a 3
 3 meses: 3 clics, ~900 impresiones. Hogar/auto salen por búsquedas locales de Sevilla con volumen ~0 (medido en
 DataForSEO), así que no se tocan. Idea nueva anotada (P en `docs/ASEGURA-SEO-REDES-IDEAS.md`): página de
 «teléfonos de siniestros por compañía» (búsquedas navegacionales con volumen y KD ~0), pendiente del OK de Alberto.
-El cron `seo-correduria` ya lee GSC; lo roto es Serper (sin créditos, sin fila `serp` el 21/09).
+El cron `seo-correduria` ya lee GSC. ⚠️ Corregido el mismo día: Serper NO está roto, se RETIRÓ a propósito el 14/09
+(PR #2936, decisión de Alberto) — por eso no hay fila `serp` el 21/09. El rank tracker de OpenSEO (creado, manual, 18
+consultas) exige plan de pago: no se ha ejecutado. Las posiciones salen de GSC, que es gratis y ya está en el cron.
 
 **(23/09/2026)** 📝 **ASegura OS 2-d: expediente de anulación.** #3365 (2-c) mergeado con los fixes de su revisión
 (texto que caduca con su plazo, recibo cobrado → aviso retirado, timeout = «a medias» cerrable a mano). Tabla
