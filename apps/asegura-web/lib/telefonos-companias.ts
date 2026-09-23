@@ -112,8 +112,8 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
   {
     slug: 'occident',
     nombre: 'Occident',
-    // Reconfirmado el 23/09/2026 con una captura de la página «Declaración de
-    // siniestro de hogar» de occident.com, que da este mismo número.
+    // Reconfirmado el 23/09/2026 con capturas de las páginas «Declaración de
+    // siniestro de hogar» y «… de auto» de occident.com: las dos dan este número.
     siniestros: '917 83 83 83',
     asistencia: [],
     whatsapp: '+34917838383',
