@@ -17,7 +17,7 @@ había mandado una invitación: ahora `/correduria` → Actividad → «Invitar 
 en vigor, motivos de exclusión, texto tal cual) y envía tras marcar «revisado»; tandas de 25, presupuesto 180 s, sin
 repetir <30 días. **No se ha enviado nada: lo pulsa Alberto.** Actions: `tests.yml` era el 68 % de ~71.700 min/mes;
 cada `Typecheck · <app>` salta sus pasos (y sale verde) si el PR no toca su app (`scripts/ci-app-afectada.mjs`,
-fail-open). Siguiente palanca: lo mismo en `ci.yml` (build de ia-rest, ~4.100 min/mes).
+fail-open); `ci.yml` (build de ia-rest, ~4.100 min/mes) con la misma guarda en el PR siguiente.
 
 **(23/09/2026)** 🚨 **CIMA estuvo ~45 h PARADO (22/09 10:10 → 23/09 07:15 UTC) y el vigía lo vio y NO avisó.**
 Causa: presupuesto de GitHub Actions de la cuenta a 0 $ sin tarjeta; lo agota `central` (~71.700 min/mes vs ~2.070
