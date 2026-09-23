@@ -222,9 +222,9 @@ export function revisarDatosHogar(
     if (v !== undefined && v !== null && !enteroNoNegativo(v)) r.push({ campo: c, motivo: 'tiene que ser un entero, 0 o más' })
   }
 
-  if (opciones.paraRecomendarCapital) {
-    // la fecha de efecto no viaja en la recomendación
-  } else if (!texto(d.fechaEfecto)) falta('fechaEfecto')
+  // También en la recomendación: el vendor la exige (400 «The effective date is
+  // mandatory», medido el 23/09/2026 aunque el ejemplo del portal no la lleva).
+  if (!texto(d.fechaEfecto)) falta('fechaEfecto')
   else if (!RE_FECHA.test(String(d.fechaEfecto))) r.push({ campo: 'fechaEfecto', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
 
   return r
@@ -266,18 +266,19 @@ export function construirPeticionHogar(d: DatosHogar, lineaId: string): Record<s
 }
 
 /**
- * El cuerpo de `POST /home/recommend-limits`: el MISMO `holder` + `risk` que la
- * cotización, sin `insuranceLine` ni `effectiveDate` (ejemplo del portal,
- * `docs/CODEOSCOPIC-API-PORTAL.md` § Hogar). Si la ficha ya trae un capital,
- * viaja igual que en la cotización: no se esconde un dato que tenemos.
+ * El cuerpo de `POST /home/recommend-limits`: `effectiveDate` + el MISMO
+ * `holder` + `risk` que la cotización, sin `insuranceLine`. El ejemplo del
+ * portal (`docs/CODEOSCOPIC-API-PORTAL.md` § Hogar) no trae la fecha, pero el
+ * vendor responde 400 «The effective date is mandatory» sin ella (23/09/2026).
+ * Si la ficha ya trae un capital, viaja igual que en la cotización.
  */
-export function construirPeticionLimitesHogar(d: Omit<DatosHogar, 'fechaEfecto'> & { fechaEfecto?: string }): Record<string, unknown> {
+export function construirPeticionLimitesHogar(d: DatosHogar): Record<string, unknown> {
   const reparos = revisarDatosHogar(d, { paraRecomendarCapital: true })
   if (reparos.length > 0) {
     throw new Error(`codeoscopic_datos_incompletos: ${reparos.map((x) => `${x.campo} (${x.motivo})`).join(' · ')}`)
   }
-  const { persona, riesgo } = tomadorYRiesgo(d as DatosHogar)
-  return { holder: persona, risk: riesgo }
+  const { persona, riesgo } = tomadorYRiesgo(d)
+  return { effectiveDate: d.fechaEfecto, holder: persona, risk: riesgo }
 }
 
 /** Lo común a cotizar y a recomendar capital: la persona y el riesgo, ya validados. */

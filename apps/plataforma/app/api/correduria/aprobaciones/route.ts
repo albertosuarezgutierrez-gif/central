@@ -11,14 +11,14 @@ export async function GET() {
   return NextResponse.json(await aprobacionesPendientes())
 }
 
-/** PATCH { id, decision:'aprobar', asunto, texto } | { id, decision:'rechazar' } | { id, decision:'cerrar_incierto', salio } — el actor sale de la SESIÓN. */
+/** PATCH { id, decision:'aprobar', asunto, texto, contactoId? } | { id, decision:'rechazar' } | { id, decision:'cerrar_incierto', salio } — el actor sale de la SESIÓN. */
 export async function PATCH(req: Request) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const id = typeof b?.id === 'string' ? b.id : ''
   const cuerpo: CuerpoDecision | null =
-    b?.decision === 'aprobar' ? { id, decision: 'aprobar', asunto: typeof b.asunto === 'string' ? b.asunto : '', texto: typeof b.texto === 'string' ? b.texto : '' }
+    b?.decision === 'aprobar' ? { id, decision: 'aprobar', asunto: typeof b.asunto === 'string' ? b.asunto : '', texto: typeof b.texto === 'string' ? b.texto : '', ...(typeof b.contactoId === 'string' ? { contactoId: b.contactoId } : {}) }
     : b?.decision === 'rechazar' ? { id, decision: 'rechazar' }
     : b?.decision === 'cerrar_incierto' && typeof b.salio === 'boolean' ? { id, decision: 'cerrar_incierto', salio: b.salio }
     : null

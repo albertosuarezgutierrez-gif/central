@@ -25,6 +25,8 @@ export type Anulacion = {
   firmaNota: string | null
   comunicadaAt: string | null
   confirmadaAt: string | null
+  /** Firmada con un presupuesto cuya póliza nueva aún no consta emitida. Ausente (asegura vieja) = false. */
+  esperaEmision: boolean
   siguiente: { texto: string; alerta: boolean } | null
 }
 
@@ -65,6 +67,7 @@ export function leerAnulacion(v: unknown): Anulacion | null {
     solicitadaPor: texto(o.solicitadaPor) ?? 'desconocido', motivoTexto: texto(o.motivoTexto),
     creada: texto(o.creada) ?? '', firmadaAt: texto(o.firmadaAt), firmaNota: texto(o.firmaNota),
     comunicadaAt: texto(o.comunicadaAt), confirmadaAt: texto(o.confirmadaAt),
+    esperaEmision: o.esperaEmision === true,
     siguiente: s && typeof s.texto === 'string' ? { texto: s.texto, alerta: s.alerta === true } : null,
   }
 }

@@ -15,6 +15,7 @@ import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { leerMisDatos, reparosDeContacto } from '@/lib/mis-datos'
 import { peticionesPrecio } from '@/lib/mejorar-precio'
+import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
@@ -57,6 +58,7 @@ import { GestionContactos } from './GestionContactos'
 import { MisDatos } from './MisDatos'
 import { TusDatos } from './TusDatos'
 import { TusVencimientos } from './TusVencimientos'
+import { FirmarAnulacion } from './FirmarAnulacion'
 
 export const dynamic = 'force-dynamic'
 
@@ -139,9 +141,12 @@ export default async function Boveda({
     ? vencimientosEnVentana(cartera.propias.flatMap((t) => t.polizas), hoyMadrid)
     : []
   const peticionesP = vencimientos.length > 0 ? peticionesPrecio(identidad.id) : Promise.resolve(null)
+  // Anulaciones que el corredor ha preparado y esperan su firma (pieza 2-d-2).
+  // `null` = no se pudo saber: no se pinta nada, pero tampoco se afirma que no haya.
+  const firmasP = vista === 'seguros' ? anulacionesPendientes(identidad.id) : Promise.resolve(null)
 
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
-  const peticiones = await peticionesP
+  const [peticiones, firmas] = await Promise.all([peticionesP, firmasP])
 
   // Los recordatorios PROPIOS solo se leen para la pestaña que los pinta —
   // misma regla de rendimiento que el resto de la página (el servidor manda
@@ -416,6 +421,9 @@ export default async function Boveda({
               aviso que se baja por debajo de una acción deja de ser un aviso.
               El alta va justo detrás, que es lo que pidió Alberto. */}
           <AvisoContacto lectura={contacto} />
+
+          {/* Lo único que el cliente TIENE que hacer y que tiene fecha: su firma. */}
+          {firmas && <FirmarAnulacion anulaciones={firmas.anulaciones} consentimiento={firmas.consentimiento} corredor={Boolean(identidad.corredor)} />}
 
           {/* «Tus vencimientos» (pieza 1-5): solo si algo SUYO renueva en 60
               días; si no, no pinta nada y el alta sigue arriba. */}

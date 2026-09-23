@@ -12,6 +12,36 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** ✍️ **Presupuesto PR 4: el cliente elige y FIRMA en el portal.** #3386 (PR 3, aviso) mergeado. En su
+presupuesto el cliente pulsa «Elegir esta opción», lee el documento («NO es todavía el contrato»), pide código al
+correo y firma (`FirmaPropia`, `presupuesto.documento_texto`/`firma_id`, CHECK). Si la opción es de otra compañía
+(por código DGS, nunca por nombre; sin código no se anula nada), firma a la vez la anulación de su póliza a
+VENCIMIENTO (`anulacion.presupuesto_id`), que NO sale hasta que Alberto pulsa «Ya está emitida» en la tarjeta
+Presupuestos (y «Comunicada» está vetado mientras). Telegram a Alberto al aceptar (desde el portal). Migración aplicada.
+
+**(23/09/2026)** 📨 **Presupuesto al cliente, PR 3: el aviso sale con tu clic.** #3384 (2-d-3) mergeado con los
+arreglos de su revisión (índice único parcial: una sola propuesta viva por anulación, aplicado y visto morder).
+Ficha de póliza → «Presupuestos»: Enviar por correo (asegura; `enviado_at` solo si el proveedor acepta) o Por
+WhatsApp (`wa.me/?text=` sin número; «Ya lo he mandado» sella). El aviso NO lleva precio ni compañía; el token se
+rota con compare-and-swap (dos clics = un correo). `destino_hash` sigue NULL: el portal da acceso por el vínculo
+de la ficha. Pendiente del PR 3: cola en Hoy. Siguiente: PR 4 (elegir y firmar).
+
+**(23/09/2026)** 📨 **ASegura OS 2-d-3: la anulación firmada va a la compañía por la cola.** Acción nueva
+`enviar_correo_compania` (política `aprobar`) en `seguros.aprobacion` (+`anulacion_id`, CHECK; migración aplicada). Al
+listar «Esperan tu OK» se propone sola cada anulación firmada en el portal sin propuesta (idempotente; rechazada no
+vuelve; fallida/caducada se re-propone). Buzón: lo ELIGE Alberto en la tarjeta entre los contactos activos de esa
+compañía (por área no: medido, «administración» es cobros o rebota) y queda en `compania_contactos.recibe_anulaciones`
+para preseleccionarlo la próxima vez. Carta GUARDADA adjunta (.txt), no editable. Solo si SALE → `comunicada`; si se desiste,
+la propuesta caduca. Firma en papel: la manda Alberto y pulsa «Comunicada».
+
+**(23/09/2026)** ✍️ **ASegura OS 2-d-2: el cliente firma su anulación en el portal.** #3368 (2-d) mergeado. El corredor
+abre el expediente y el cliente lo ve en «Pendiente de tu firma» (bóveda): carta entera (`cartaAnulacion()`, pura),
+código de 6 cifras a SU correo (10 min, 5 intentos, 60 s entre códigos) + nombre que casa con el tomador → `FirmaPropia`
+(eIDAS art. 26) sobre el texto EXACTO que se guarda en `anulacion.carta_texto`; fila en `seguros.firma` y expediente a
+`firmada`. Puente estrecho `/api/portal/anulacion` (sin `clienteId`); la vista de corredor no firma (403). Migración
+`seguros_anulacion_firma` aplicada. «Firma recibida» a mano sigue para la firma en papel. Siguiente: 2-d-3 (aviso a la
+compañía por la cola de aprobaciones, con la carta firmada).
+
 **(23/09/2026)** 🧾 **asegura-web: RC para autónomos + artículo «claims made» + portal en `noindex`.** Datos (OpenSEO):
 «seguro responsabilidad civil autonomo» ~1.000/mes, KD 0, CPC 4,87 € → `/seguros/responsabilidad-civil-autonomos`
 (página de intención, `SOLO_INTENCION`, mismo ramo en BD que la RC). «claims made» ~90/mes, KD 0 → artículo que cita arts. 3 y

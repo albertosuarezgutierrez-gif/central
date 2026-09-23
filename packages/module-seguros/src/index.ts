@@ -322,6 +322,7 @@ export {
   type RelacionFicha,
 } from './relaciones.ts'
 export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
+export { correoPresupuesto, mensajePresupuestoWhatsapp, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -774,13 +775,14 @@ export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, detectarCambios,
 export type { Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
 export { ORIGEN_RETENCION, decidirRetencion } from './retencion-fuga.ts'
 export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
-export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, borradorReciboDevuelto, caducaEn, decisionValida } from './aprobaciones.ts'
-export type { AccionAprobacion, Borrador, Decision, EntradaReciboDevuelto, EstadoAprobacion, Politica } from './aprobaciones.ts'
+export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, borradorAnulacionCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
+export type { AccionAprobacion, Borrador, BuzonCompania, Decision, EntradaAnulacionCompania, EntradaReciboDevuelto, EstadoAprobacion, Politica } from './aprobaciones.ts'
 export {
   ACCIONES_ANULACION, DIAS_ESPERA_CONFIRMACION, ESTADOS_ANULACION, ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION,
   ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION, MOTIVOS_ANULACION, SOLICITANTES_ANULACION, TIPOS_ANULACION,
-  resolucionDeAnulacion, siguientePaso as siguientePasoAnulacion, transicion as transicionAnulacion, validarSolicitud as validarSolicitudAnulacion,
+  cartaAnulacion, resolucionDeAnulacion, siguientePaso as siguientePasoAnulacion, transicion as transicionAnulacion, validarSolicitud as validarSolicitudAnulacion,
 } from './anulacion.ts'
 export type {
-  AccionAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
+  AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
 } from './anulacion.ts'
+export { anulacionPorCambio, documentoAceptacion, esCambioCompania, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'

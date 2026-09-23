@@ -6,8 +6,15 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { listarPresupuestos, prepararPresupuesto, retirarPresupuesto } from '@/lib/presupuesto'
 import { auditado } from '@/lib/auditoria'
+import { avisarPresupuesto, confirmarWhatsapp, marcarEmitido, type FalloEnvio } from '@/lib/envio-presupuesto'
 
 export const dynamic = 'force-dynamic'
+
+// `sin_enlace`/`sin_proveedor`/`remitente` son averías nuestras (503); `rechazado`, del proveedor (502).
+const STATUS_FALLO: Record<FalloEnvio, number> = {
+  no_encontrado: 404, no_enviable: 409, ocupado: 409, simulado: 422, sin_email: 422, sin_acceso: 422,
+  sin_enlace: 503, sin_proveedor: 503, remitente_no_verificado: 503, rechazado: 502,
+}
 
 /**
  * El presupuesto al cliente, por el puerto de operador (plataforma → asegura).
@@ -15,6 +22,9 @@ export const dynamic = 'force-dynamic'
  *   GET   ?clienteId= | ?polizaId=  → los presupuestos ya preparados
  *   POST  { polizaId | tarificacionId, claveNivelActual?, actor } → prepara un BORRADOR
  *   PATCH { id, motivo, actor }     → lo retira (con motivo, siempre)
+ *   PATCH { id, accion:'avisar', canal:'email'|'whatsapp_enlace', actor } → avisa al cliente (PR 3)
+ *   PATCH { id, accion:'confirmar_whatsapp', actor } → Alberto dice que el WhatsApp ya salió
+ *   PATCH { id, accion:'emitido', actor } → la compañía ya emitió la póliza del presupuesto aceptado
  *
  * 🚨 NADA DE ESTO SALE AL CLIENTE NI CUESTA UN EURO. Prepara la fila y congela
  * las opciones desde una tarificación YA PAGADA; el envío es el PR 3 y la firma
@@ -105,6 +115,19 @@ export const PATCH = auditado(async (req: Request) => {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' })
+
+    if (cuerpo?.accion === 'emitido') {
+      const r = await marcarEmitido(correduria.id, { id, actor })
+      return NextResponse.json(r, { status: r.estado === 'error' ? (r.motivo === 'no_encontrado' ? 404 : 409) : 200 })
+    }
+    if (cuerpo?.accion === 'avisar' || cuerpo?.accion === 'confirmar_whatsapp') {
+      const canal = cuerpo.canal === 'email' || cuerpo.canal === 'whatsapp_enlace' ? cuerpo.canal : null
+      if (cuerpo.accion === 'avisar' && !canal) return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
+      const r = cuerpo.accion === 'avisar'
+        ? await avisarPresupuesto(correduria.id, { id, canal: canal!, actor })
+        : await confirmarWhatsapp(correduria.id, { id, actor })
+      return NextResponse.json(r, { status: r.estado === 'error' ? STATUS_FALLO[r.motivo] : 200 })
+    }
 
     const r = await retirarPresupuesto(correduria.id, { id, motivo, actor })
     if (r.estado === 'error') {

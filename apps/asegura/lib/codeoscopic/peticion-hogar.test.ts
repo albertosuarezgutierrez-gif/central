@@ -177,15 +177,16 @@ test('los opcionales elegidos viajan; la reforma y el vigilante solo si se dicen
   assert.equal(c.externalId, 'poliza:x')
 })
 
-test('recomendar capital: mismo holder + risk que la cotización, sin ramo ni fecha, y SIN exigir capital', () => {
-  const { capitalContinente: _a, capitalContenido: _b, fechaEfecto: _c, ...sinCapital } = BASE
-  void _a; void _b; void _c
+test('recomendar capital: fecha + mismo holder + risk que la cotización, sin ramo, y SIN exigir capital', () => {
+  const { capitalContinente: _a, capitalContenido: _b, ...sinCapital } = BASE
+  void _a; void _b
   // Para cotizar, sin capital hay reparo; para recomendarlo, no.
   assert.ok(revisarDatosHogar(sinCapital).some((r) => r.campo === 'capitalContinente'))
   assert.deepEqual(revisarDatosHogar(sinCapital, { paraRecomendarCapital: true }), [])
   const c = construirPeticionLimitesHogar(sinCapital) as any
   assert.equal(c.insuranceLine, undefined)
-  assert.equal(c.effectiveDate, undefined)
+  // Sin ella el vendor responde 400 «The effective date is mandatory» (23/09/2026).
+  assert.equal(c.effectiveDate, BASE.fechaEfecto)
   assert.equal(c.risk.buildingsLimit, undefined)
   const cot = construirPeticionHogar(BASE, 'Home') as any
   assert.deepEqual(c.holder, cot.holder)
@@ -199,4 +200,7 @@ test('recomendar capital: los demás datos obligatorios SIGUEN exigiéndose (se 
   const { metrosCuadrados: _m, ...sinM2 } = BASE
   void _m
   assert.throws(() => construirPeticionLimitesHogar(sinM2 as any), /metrosCuadrados/)
+  const { fechaEfecto: _f, ...sinFecha } = BASE
+  void _f
+  assert.throws(() => construirPeticionLimitesHogar(sinFecha as any), /fechaEfecto/)
 })
