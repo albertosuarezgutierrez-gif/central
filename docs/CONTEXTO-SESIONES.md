@@ -23,7 +23,7 @@ Ficha: carnets (tipo, expedición, caducidad) en la cabecera. Plan + prompt para
 🔓 Mismo día: vida/salud/decesos pasan a la forma de la referencia (`deathBenefit`; `insureds[]`) y, tras un
 bloqueo de horas, se DESBLOQUEAN con OK de Alberto (sin estrenar: el 1er intento real de cada uno es el test).
 🏍️ Retarificar MOTO de cartera hecho (asegura `precalificarMoto`/`prepararMoto` + plataforma `MotoNuevo` modo
-póliza; cepo `test/regression-retarificar-moto.test.ts`); sin emisión de moto aún. Después: catálogos propios de moto (garaje, carnés, fecha de matrícula) y carné de MOTO de la ficha (A>A2>A1>AM) validado contra catálogo; sin él, B como supuesto marcado. asegura#848: `playwright / portal` rojo = preview tras
+póliza; cepo `test/regression-retarificar-moto.test.ts`); sin emisión de moto aún. Después: catálogos propios de moto (garaje, carnés, fecha de matrícula) y carné de MOTO de la ficha (A>A2>A1>AM) validado contra catálogo; sin él, B como supuesto marcado. Y emisión de moto de cartera: `MotoNuevo` (modo póliza) monta el mismo panel `Emision` que auto; el ReRate ya no manda a Allianz Motos las opciones de Allianz AUTO (`opcionesPorDefecto(compania, ramo)`). asegura#848: `playwright / portal` rojo = preview tras
 la Deployment Protection de Vercel (va a `vercel.com/login`), pasa en todas las ramas, no es del PR.
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del

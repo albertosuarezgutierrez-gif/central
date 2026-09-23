@@ -52,3 +52,18 @@ test('plataforma: en modo póliza un hueco que no se arregla en pantalla apaga e
       'lo rechaza: la pantalla promete un precio que no llega',
   )
 })
+
+test('emisión de moto: el precio de una póliza se puede emitir con el MISMO panel que auto', () => {
+  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
+  assert.match(moto, /import \{ Emision \} from '\.\.\/\.\.\/\.\.\/poliza\/\[id\]\/retarificar\/emision'/)
+  // Solo en modo póliza (hay una póliza de la cartera a la que colgar la nueva)…
+  assert.match(moto, /emitible=\{poliza !== null\}/)
+  // …y nunca sobre un precio simulado o sin cotización guardada.
+  assert.match(moto, /const puedeEmitir = emitible && !r\.simulado && cotizacionId !== null/)
+  assert.match(moto, /guardado: r\.guardado,/, 'sin el `guardado` de la respuesta no hay cotizacionId y el botón nunca se enciende')
+})
+
+test('ReRate: las opciones por defecto de Allianz AUTO no se mandan a una moto', () => {
+  const oferta = leer('apps/asegura/app/api/operador/codeoscopic/oferta/route.ts')
+  assert.match(oferta, /opcionesPorDefecto\(compania, t\.producto\)/)
+})

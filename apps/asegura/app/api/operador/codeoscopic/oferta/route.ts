@@ -311,7 +311,7 @@ export async function POST(req: Request) {
               projectId,
               precio.id,
               precio.productId,
-              productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania),
+              productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania, t.producto),
             ),
         )
         if (!gasto.ok) return respuestaGastoBloqueado(gasto)

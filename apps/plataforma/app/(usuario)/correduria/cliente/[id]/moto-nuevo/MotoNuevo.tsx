@@ -21,6 +21,7 @@ import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
+import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 
 function euroODash(n: number | null | undefined): string {
@@ -62,6 +63,8 @@ type Resultado =
       precios: Precio[]
       fallos: Fallo[]
       supuestos: Supuesto[]
+      /** Qué pasó con la copia guardada: su `cotizacionId` es lo que permite emitir. */
+      guardado?: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; proyectoVigente?: boolean }
@@ -349,6 +352,7 @@ export default function MotoNuevo({
           precios: r.precios,
           fallos: r.fallos,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
       default: {
@@ -664,7 +668,7 @@ export default function MotoNuevo({
             {simulacion ? 'Descartar y simular de cero' : 'Descartar y pedir precio de cero — cuesta 0,50€'}
           </button>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} />}
+        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible={poliza !== null} />}
       </div>
     </div>
   )
@@ -702,7 +706,26 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
   )
 }
 
-function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }) {
+/** El id de la cotización guardada: sin él no hay proyecto al que pedir la emisión. */
+function cotizacionIdDe(guardado: unknown): string | null {
+  if (typeof guardado !== 'object' || guardado === null) return null
+  const g = guardado as Record<string, unknown>
+  return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
+}
+
+function Precios({
+  r,
+  simulacion,
+  emitible = false,
+}: {
+  r: Extract<Resultado, { estado: 'ok' }>
+  simulacion: boolean
+  /** Solo en modo póliza (23/09/2026): emitir exige una póliza de la cartera a la que colgar la nueva. */
+  emitible?: boolean
+}) {
+  const [abierta, setAbierta] = useState<string | null>(null)
+  const cotizacionId = cotizacionIdDe(r.guardado)
+  const puedeEmitir = emitible && !r.simulado && cotizacionId !== null
   return (
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
@@ -730,6 +753,7 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
             <tr>
               <th style={th}>Compañía</th><th style={th}>Producto</th><th style={th}>Cobertura</th>
               <th style={th}>Prima anual</th><th style={th}>Franquicia</th><th style={th}>Firmeza</th>
+              {emitible && <th style={th}>Emitir</th>}
             </tr>
           </thead>
           <tbody>
@@ -744,11 +768,48 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
                 </td>
                 <td style={td}>{p.franquiciaEur === null || p.franquiciaEur === undefined ? <span style={{ color: 'var(--muted)' }}>no la declara</span> : euroODash(p.franquiciaEur)}</td>
                 <td style={td}><Badge tono={p.firmeza === 'firme' ? 'positivo' : 'aviso'} title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge></td>
+                {emitible && (
+                  <td style={td}>
+                    <button
+                      type="button"
+                      disabled={!puedeEmitir}
+                      onClick={() => {
+                        const id = `${p.compania}-${p.producto}-${i}`
+                        setAbierta(abierta === id ? null : id)
+                      }}
+                      title={
+                        r.simulado
+                          ? 'Simulado: no hay proyecto real de Codeoscopic'
+                          : cotizacionId === null
+                            ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
+                            : 'Confirmar con la compañía y emitir'
+                      }
+                      style={{ ...btnStyle('secundario', 'sm') }}
+                    >
+                      {abierta === `${p.compania}-${p.producto}-${i}` ? 'Ocultar' : 'Emitir'}
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {puedeEmitir &&
+        r.precios.map((p, i) => {
+          const id = `${p.compania}-${p.producto}-${i}`
+          if (abierta !== id) return null
+          return (
+            <Emision
+              key={id}
+              tarificacionId={cotizacionId as string}
+              compania={p.compania ?? ''}
+              categoria={p.categoria ?? ''}
+              primaEur={p.primaEur ?? null}
+              onCerrar={() => setAbierta(null)}
+            />
+          )
+        })}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
       )}
