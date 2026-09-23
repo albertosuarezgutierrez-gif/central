@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-23T12:02:55Z",
+  "generadoEn": "2026-09-23T12:45:15Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 82
+        "evidencias": 83
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 70
+        "evidencias": 72
       },
       "rrhh": {
         "estado": "no",
@@ -4033,6 +4033,7 @@
       "/api/operador/leads-competencia",
       "/api/operador/leads-web",
       "/api/operador/oportunidad",
+      "/api/operador/oportunidad/llamada",
       "/api/operador/oportunidad/tarea",
       "/api/operador/partes",
       "/api/operador/poliza",
@@ -4054,6 +4055,7 @@
       "/api/operador/siniestros-nuevos",
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
+      "/api/operador/tareas-hoy",
       "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
       "/api/portal/carnets",
@@ -4946,6 +4948,7 @@
       "/api/correduria/leads-competencia",
       "/api/correduria/leads-web",
       "/api/correduria/oportunidad",
+      "/api/correduria/oportunidad/llamada",
       "/api/correduria/oportunidad/tarea",
       "/api/correduria/partes",
       "/api/correduria/poliza",
@@ -4962,6 +4965,7 @@
       "/api/correduria/siniestro/terceros",
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
+      "/api/correduria/tareas-hoy",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -6454,7 +6458,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1412,
+    "apis": 1416,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
