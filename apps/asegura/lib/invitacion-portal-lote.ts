@@ -105,7 +105,9 @@ export async function invitarLote(
       historia.push(null)
       continue
     }
-    fallidos.push({ clienteId, nombre: await nombreDe(correduriaId, clienteId), estado: r.estado, motivo: r.motivo })
+    // El nombre es un extra: si su lectura falla, no puede tumbar el informe de lo ya enviado.
+    const nombre = await nombreDe(correduriaId, clienteId).catch(() => null)
+    fallidos.push({ clienteId, nombre, estado: r.estado, motivo: r.motivo })
     historia.push(r.estado)
     if (paraElLote(r.estado) || rachaDeFallos(historia)) {
       parado = r.estado
