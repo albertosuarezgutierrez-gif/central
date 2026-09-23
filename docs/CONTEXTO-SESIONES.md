@@ -65,6 +65,8 @@ con su sesión en `/api/correduria/codeoscopic-crudo?tipo=carnets-moto`. El ejem
 #3351 mergeado. Carné B en moto: si la ficha tiene carné de moto Y B con fecha, el B viaja detrás (`drivingLicenses[1]`,
 `fechaCarnetB`); el de moto sigue en `[0]`. Arreglado de paso: el PATCH de `fechaCarnet` tras un 400 (`interprete-400`)
 pisaba el A de una moto con un B de España y se llevaba el resto de carnés.
+#3355 y asegura#848 mergeados (23/09): la ingesta de CIMA ya no devuelve a `auto` las 18 motos corregidas. Moto de Víctor
+(031698897) lista para la 1ª emisión real desde plataforma: faltan en pantalla versión, estado civil y sexo (ficha sin ellos).
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
 compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña
