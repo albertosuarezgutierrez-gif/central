@@ -17,9 +17,16 @@ Causa: presupuesto de GitHub Actions de la cuenta a 0 $ sin tarjeta; lo agota `c
 de `asegura`) y los jobs de `asegura` se quedaban sin runner. Alberto puso tarjeta + 20 $/mes y relanzó (verificado en
 BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero la firma anti-repetición no incluía el cron
 → Telegram mudo: ahora `firmaAvisoIngesta` (module-seguros, con cepo visto fallar). Nuevo respaldo
-`/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — **necesita `ASEGURA_CRM_CRON_SECRET`
-en Vercel plataforma** (= `CRON_SECRET` de `asegura`). Pendiente: reducir minutos de Actions de `central`; país de
+`/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
+puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## 23/09/2026 — Alerta PSD2 sync (BBVA)
+- Feed BBVA sin movimientos desde 2026-09-10 (13 días); Kutxabank sigue fresco (hoy) y por eso
+  la consulta agregada de `movimientos_bancarios` salía en verde — la caída solo se ve por banco.
+- Causa: sesión Enable Banking de BBVA en estado CLOSED (`Session is closed`), detectado en el
+  sync de hoy 06:00 UTC (`conexiones_banco.ultimo_avisos`, sin prefijo ℹ️).
+- Acción: re-vincular BBVA en `/banca`. Alerta enviada por Telegram.
 
 **(22/09/2026)** 🪤 **El "smoke rojo" diario de `asegura` (issue #815) era falso el 86% de las veces —
 18 de 21 días.** El smoke suite pasaba (`PASS 3/FAIL 0/EXIT 0`) pero el step posterior "Cleanup smoke
