@@ -51,6 +51,29 @@ export const FUENTES_FIABLES: FuenteComparable[] = ['booking_mcp', 'manual']
  */
 export const EDAD_MERCADO_RANCIO = 7
 
+/**
+ * Cada cuánto hay que REMEDIR una fecha de evento confirmado, según lo lejos que esté (23/09/2026).
+ *
+ * Antes era `EDAD_MERCADO_RANCIO` (7 días) para todas, y eso era inalcanzable: 68 fechas de evento
+ * × 4 aforos = 268 ventanas «caducadas» contra 24 ventanas por pasada diaria (harían falta ~38/día
+ * solo para eventos). Resultado medido: las 24 plazas diarias iban ENTERAS a eventos y ninguna fecha
+ * normal se volvía a medir. Un evento a seis meses no cambia de precio en una semana; uno a quince
+ * días sí. Con este escalonado la carga de eventos baja a ~13 ventanas/día.
+ *
+ * Esto decide la COLA del barrido, no lo que acepta el motor: `pricing/apply` usa hasta 120 días de
+ * corpus por fecha (el único plazo de 7 días del motor es el de la última pasada de cada PISO).
+ */
+export const EDAD_EVENTO_CERCA = 7    // check-in a ≤30 días
+export const EDAD_EVENTO_MEDIO = 14   // check-in a 31-90 días
+export const EDAD_EVENTO_LEJOS = 30   // check-in a >90 días
+
+export function edadMaxEvento(checkin: string, hoyIso: string): number {
+  const dias = diasEntre(hoyIso, checkin)
+  if (dias <= 30) return EDAD_EVENTO_CERCA
+  if (dias <= 90) return EDAD_EVENTO_MEDIO
+  return EDAD_EVENTO_LEJOS
+}
+
 /** Última medición fiable de una ventana (fecha × aforo). `null` = nunca se ha medido. */
 export type CoberturaVentana = {
   /** YYYY-MM-DD */
@@ -305,12 +328,13 @@ function clave(checkin: string, aforo: number): string {
  * orden es el de siempre — un consumidor que no sepa qué meses están cortos no debe adivinarlo.
  */
 /**
- * Ventana de evento CONFIRMADO ya medida pero con el corpus fuera del plazo que acepta el motor.
- * No es «sin medir» (tiene comps) ni «cubierta» (el motor la rechaza): es el tercer estado que la
- * cola no distinguía. Ver `EDAD_MERCADO_RANCIO`.
+ * Ventana de evento CONFIRMADO ya medida pero con el corpus más viejo de lo que su antelación
+ * admite (`edadMaxEvento`). No es «sin medir» (tiene comps) ni «fresca»: es el tercer estado que la
+ * cola no distinguía.
  */
-function esEventoCaducado(v: VentanaPedida, maxEdad = EDAD_MERCADO_RANCIO): boolean {
-  return v.eventoConfirmado === true && v.diasSinMedir !== null && v.diasSinMedir > maxEdad
+function esEventoCaducado(v: VentanaPedida, hoyIso: string): boolean {
+  return v.eventoConfirmado === true && v.diasSinMedir !== null
+    && v.diasSinMedir > edadMaxEvento(v.checkin, hoyIso)
 }
 
 /**
@@ -324,11 +348,11 @@ function esEventoCaducado(v: VentanaPedida, maxEdad = EDAD_MERCADO_RANCIO): bool
  */
 export function eventosCaducados(
   pedidas: VentanaPedida[],
-  maxEdad = EDAD_MERCADO_RANCIO,
+  hoyIso: string,
 ): { checkin: string; etiqueta?: string; diasSinMedir: number; aforos: number[] }[] {
   const porFecha = new Map<string, { checkin: string; etiqueta?: string; diasSinMedir: number; aforos: number[] }>()
   for (const v of pedidas) {
-    if (!esEventoCaducado(v, maxEdad)) continue
+    if (!esEventoCaducado(v, hoyIso)) continue
     const previa = porFecha.get(v.checkin)
     if (!previa) {
       porFecha.set(v.checkin, {
@@ -411,14 +435,14 @@ export function planDeVentanas(
       if (a.ronda !== b.ronda) return a.ronda - b.ronda
       return a.checkin.localeCompare(b.checkin)
     }
-    // Ambas medidas. Primero el EVENTO CONFIRMADO cuyo corpus ya pasó de `EDAD_MERCADO_RANCIO`:
-    // esa ventana no está «cubierta», está caducada — el motor la va a rechazar por vieja y la
-    // noche se la queda PriceLabs. Y como siempre hay vírgenes en un plan de 12 meses, sin este
-    // escalón no volvía a subir jamás (ver EDAD_MERCADO_RANCIO: Semana Santa 2027 del Dúplex).
+    // Ambas medidas. Primero el EVENTO CONFIRMADO cuyo corpus ya pasó de lo que su antelación
+    // admite (`edadMaxEvento`): esa ventana no está «cubierta», está caducada. Y como siempre hay
+    // vírgenes en un plan de 12 meses, sin este escalón no volvía a subir jamás (Semana Santa 2027
+    // del Dúplex, 15/09/2026).
     // Solo CONFIRMADO, igual que las dos reservas de `conReservas`: un evento previsto es una
     // apuesta y no puede desplazar a una fecha que el motor tiene realmente a ciegas.
-    const aCaducada = esEventoCaducado(a)
-    const bCaducada = esEventoCaducado(b)
+    const aCaducada = esEventoCaducado(a, hoyIso)
+    const bCaducada = esEventoCaducado(b, hoyIso)
     if (aCaducada !== bCaducada) return aCaducada ? -1 : 1
     // La más vieja primero; empate → la fecha más cercana.
     if (a.diasSinMedir !== b.diasSinMedir) return (b.diasSinMedir ?? 0) - (a.diasSinMedir ?? 0)
@@ -431,7 +455,7 @@ export function planDeVentanas(
     ventanas,
     candidatas: pedidas.length,
     recortadas: Math.max(0, pedidas.length - ventanas.length),
-    caducadas: eventosCaducados(pedidas),
+    caducadas: eventosCaducados(pedidas, hoyIso),
   }
 }
 

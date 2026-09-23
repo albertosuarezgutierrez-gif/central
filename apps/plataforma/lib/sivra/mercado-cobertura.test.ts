@@ -4,6 +4,7 @@ import {
   ventanasQuePedir, planDeVentanas, parsearParametrosPlan, detalleIngesta, ingestaFiable,
   mesesSinBucket, FUENTES_FIABLES, MAX_VENTANAS_DEFECTO, MAX_VENTANAS_TECHO, MIN_FECHAS_BUCKET,
   EDAD_MERCADO_RANCIO,
+  edadMaxEvento, EDAD_EVENTO_CERCA, EDAD_EVENTO_MEDIO, EDAD_EVENTO_LEJOS,
 } from './mercado-cobertura.ts'
 import { ventanasDelBarrido } from './mercado-ventanas.ts'
 
@@ -492,15 +493,15 @@ test('un evento CONFIRMADO con corpus caducado adelanta a las medidas recientes'
   const plan = ventanasDelBarrido(HOY, EVENTO_SS, { mesesBase: 3, maxEventos: 3, fechasPorMes: 1 })
   const soloCuatro = new Map<number, string[]>([[4, ['prop_duplex_center']]])
   // TODAS medidas, para caer en el tramo «ambas medidas» del comparador. La de evento es la MÁS
-  // NUEVA de las tres (11 días) — sin el escalón nuevo iría la última por antigüedad.
+  // NUEVA de las tres (17 días; a 50 días vista su plazo es 14) — sin el escalón iría la última.
   const cobertura = plan.map(v => ({
     checkin: v.checkin, aforo: 4,
-    ultimaMedicion: v.motivo === 'evento' ? '2026-07-26' : '2026-01-10',
+    ultimaMedicion: v.motivo === 'evento' ? '2026-07-20' : '2026-01-10',
     comps: 10,
   }))
   const pedidas = ventanasQuePedir(plan, soloCuatro, cobertura, HOY, 10)
   assert.equal(pedidas[0].motivo, 'evento', 'la caducada de evento manda sobre las medidas normales')
-  assert.equal(pedidas[0].diasSinMedir, 11)
+  assert.equal(pedidas[0].diasSinMedir, 17)
   assert.ok(
     pedidas[1].diasSinMedir! > pedidas[0].diasSinMedir!,
     'y lo hace PESE a ser más nueva que las que adelanta: ese es justo el escalón que faltaba',
@@ -561,4 +562,33 @@ test('el motor y la cola comparten el MISMO plazo de frescura', () => {
   // Si divergen, el barrido da por cubierta una ventana que `pricing/apply` rechaza por vieja, y
   // eso solo se ve como una noche tarificada por el canal externo. El 7 del motor se importa de aquí.
   assert.equal(EDAD_MERCADO_RANCIO, 7)
+})
+
+// ── Plazo de remedición ESCALONADO por antelación (23/09/2026) ───────────────────────────────
+// Con 7 días para todo, 268 ventanas de evento «caducadas» contra 24 por pasada: la cola solo medía
+// eventos y ninguna fecha normal se volvía a medir.
+
+test('el plazo de un evento depende de lo lejos que esté', () => {
+  assert.equal(edadMaxEvento('2026-08-20', HOY), EDAD_EVENTO_CERCA)   // 14 días vista
+  assert.equal(edadMaxEvento('2026-09-05', HOY), EDAD_EVENTO_CERCA)   // 30: aún cerca
+  assert.equal(edadMaxEvento('2026-09-06', HOY), EDAD_EVENTO_MEDIO)   // 31
+  assert.equal(edadMaxEvento('2026-11-04', HOY), EDAD_EVENTO_MEDIO)   // 90
+  assert.equal(edadMaxEvento('2026-11-05', HOY), EDAD_EVENTO_LEJOS)   // 91
+  assert.ok(EDAD_EVENTO_CERCA < EDAD_EVENTO_MEDIO && EDAD_EVENTO_MEDIO < EDAD_EVENTO_LEJOS)
+})
+
+test('un evento LEJANO medido hace 18 días no está caducado; uno CERCANO sí', () => {
+  const ev: Parameters<typeof ventanasDelBarrido>[1] = [
+    { fecha: '2026-08-20', factor: 2, nombre: 'Cerca', confirmado: true },
+    { fecha: '2027-03-25', factor: 3, nombre: 'Lejos', confirmado: true },
+  ]
+  const plan = ventanasDelBarrido(HOY, ev, { mesesBase: 1, maxEventos: 2, fechasPorMes: 1 })
+  // Sin esto el `!includes` de abajo pasaría aunque el evento lejano ni estuviera en el plan.
+  assert.ok(plan.some(v => v.checkin === '2027-03-25' && v.motivo === 'evento'), 'el evento lejano está en el plan')
+  assert.ok(plan.some(v => v.checkin === '2026-08-20' && v.motivo === 'evento'), 'y el cercano también')
+  const cobertura = plan.map(v => ({ checkin: v.checkin, aforo: 4, ultimaMedicion: '2026-07-19', comps: 10 }))
+  const { caducadas } = planDeVentanas(plan, AFOROS, cobertura, HOY, 50)
+  const fechas = caducadas.map(c => c.checkin)
+  assert.ok(fechas.includes('2026-08-20'), 'a 14 días vista, 18 días sin medir es caducado')
+  assert.ok(!fechas.includes('2027-03-25'), 'a 7 meses vista, 18 días sin medir todavía vale')
 })

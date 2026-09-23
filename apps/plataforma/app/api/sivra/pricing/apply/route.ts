@@ -1207,10 +1207,10 @@ export async function POST(req: NextRequest) {
       // describe) y desciende por el mismo `acotarPorTecho`, o sea a velocidad de rail y sin
       // perforar min_price.
       //
-      // Se DESCARTA su `liberaCongelacion`, y es correcto, no un olvido: las dos guardas que ese
-      // flag desactiva (Karol G con evFactor >= 2, y «evento a ciegas» desde 1,15) solo actuan en
-      // fechas de EVENTO, que son exactamente las que este techo no toca. Propagarlo solo podria
-      // descongelar una fecha de evento por una via que nunca la ha juzgado.
+      // Su `liberaCongelacion` solo se propaga en fechas de EVENTO sin mercado medido (23/09/2026),
+      // donde el techo va escalado por el factor y SÍ ha juzgado la fecha; y solo a la guarda
+      // «evento a ciegas» y a la de outlier, nunca a la de Karol G (factor ≥2 sin mes).
+      let liberaAdrEvento = false
       {
         const aq = adrMes.get(r.property_id)?.get(Number(ym.slice(5, 7)))
         const tAdr = aplicarTechoAdr({
@@ -1219,6 +1219,11 @@ export async function POST(req: NextRequest) {
           nochesMuestra: aq?.nights ?? 0,
           factorEvento: evFactor,
           suelo: r.min_price,
+          // Sin la lectura del bucket por fecha no se sabe si el evento está medido: `null` lo deja
+          // al mercado, como antes. Un fallo de consulta no puede recortar un evento.
+          compsFiablesFecha: lecturasCaidas.some(l => l.nombre === 'bucket_fecha')
+            ? null
+            : (fiablesFecha.get(r.property_id)?.get(date) ?? 0),
         })
         // 🔇 `suelo_manda` = el techo por ADR cae por DEBAJO del suelo de coste, o sea que este
         // piso-mes historicamente no cubre ni min_price. NO se capa (capar fijaria el precio en
@@ -1239,6 +1244,10 @@ export async function POST(req: NextRequest) {
           const acA = acotarPorTecho({ target, techo: tAdr.techo, old, railLo, minPrice: r.min_price })
           if (acA.acotado) adrAcotadas.push({ fecha: date, techo: tAdr.techo, adr: Math.round(aBase(aq!.adr)) })
           target = acA.target
+          // En una fecha de EVENTO sin mercado medido, este techo es el único juicio que hay: si el
+          // precio vivo lo supera, la guarda «evento a ciegas» no puede retenerlo (si no, el techo
+          // escalado nunca mordería). La guarda de Karol G (factor ≥2 sin mes) NO se libera.
+          if (tAdr.escaladoEvento != null && acA.liberaCongelacion) liberaAdrEvento = true
         }
       }
       const liberaTecho = acote.liberaCongelacion
@@ -1266,7 +1275,7 @@ export async function POST(req: NextRequest) {
               { old },
             ),
           })
-      const liberaGuardas = liberaTecho || desc.libera
+      const liberaGuardas = liberaTecho || liberaAdrEvento || desc.libera
       // Guarda de evento fuerte (lección Karol G, 15/07/2026): con factor ≥2 y SIN mercado del
       // mes (fallback global), el precio NUNCA baja — el bucket global (dominado por temporada
       // media/baja) arrastraría la noche de evento hacia abajo (788→283 en jun-2027) y el factor
