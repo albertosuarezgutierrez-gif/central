@@ -295,6 +295,9 @@ además el `sameAs` de la idea F.
 > AndalBrok, Seingur, López Barneto) y directorios (ProntoPro, corredurias.org); grupoasegura.es
 > tampoco sale en orgánico. Con **una** reseña no se entra en el pack: las reseñas de clientes
 > reales siguen siendo la palanca nº1 y siguen siendo de Alberto. Re-medir tras las primeras reseñas.
+>
+> ⭐ **Borrador de la petición preparado el 23/09/2026** en `docs/asegura-resenas/` (texto + QR al
+> enlace directo de reseña). Sin enviar: lo manda Alberto.
 
 ## ✅ J. Google Search Console — ya estaba conectada desde mayo
 

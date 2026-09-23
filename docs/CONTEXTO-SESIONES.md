@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** ⭐ **Petición de reseñas de Google: borrador listo, SIN enviar.** `docs/asegura-resenas/` (texto
+WhatsApp + correo, QR PNG/SVG). Enlace directo a «escribir reseña» con el `place_id` de la ficha leído vía OpenSEO
+(`ChIJX9-iRQRsEg0RvJs_K-MXksA`, CID `13876179666332523452`): 1 reseña, horario L-V 9-18 ya puesto. A TODOS los 67 en
+vigor (nada de filtrar ni incentivar: política de Google). Lo manda Alberto. Verificar los 4 teléfonos de
+`/telefonos-siniestros` sigue siendo suyo: el proxy bloquea mapfre/allianz/reale/generali también a WebFetch.
+
 **(23/09/2026)** ☎️ **asegura-web: `/telefonos-siniestros`.** Teléfonos para dar parte por compañía, con el patrón de
 `companias-baja`: `lib/telefonos-companias.ts` + cepo, y nada sin `verificado: true` + fecha. Solo Occident publicado
 (confirmado por Alberto 14/09); Mapfre/Allianz/Reale/Generali salen como «no comprobado» con enlace a su web: sus
