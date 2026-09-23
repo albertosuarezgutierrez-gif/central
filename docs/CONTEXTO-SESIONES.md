@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** ✍️ **Presupuesto PR 4: el cliente elige y FIRMA en el portal.** #3386 (PR 3, aviso) mergeado. En su
+presupuesto el cliente pulsa «Elegir esta opción», lee el documento («NO es todavía el contrato»), pide código al
+correo y firma (`FirmaPropia`, `presupuesto.documento_texto`/`firma_id`, CHECK). Si la opción es de otra compañía
+(por código DGS, nunca por nombre; sin código no se anula nada), firma a la vez la anulación de su póliza a
+VENCIMIENTO (`anulacion.presupuesto_id`), que NO sale hasta que Alberto pulsa «Ya está emitida» en la tarjeta
+Presupuestos (y «Comunicada» está vetado mientras). Telegram a Alberto al aceptar (desde el portal). Migración aplicada.
+
 **(23/09/2026)** 📨 **Presupuesto al cliente, PR 3: el aviso sale con tu clic.** #3384 (2-d-3) mergeado con los
 arreglos de su revisión (índice único parcial: una sola propuesta viva por anulación, aplicado y visto morder).
 Ficha de póliza → «Presupuestos»: Enviar por correo (asegura; `enviado_at` solo si el proveedor acepta) o Por

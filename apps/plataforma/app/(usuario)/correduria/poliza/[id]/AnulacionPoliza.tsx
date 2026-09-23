@@ -162,7 +162,7 @@ function Abierta({ a, ocupado, firmando, nota, setFirmando, setNota, accion }: {
             <button type="button" disabled={ocupado} style={btnStyle('sutil')} onClick={() => setFirmando(false)}>Cancelar</button>
           </>
         )}
-        {a.estado === 'firmada' && (
+        {a.estado === 'firmada' && !a.esperaEmision && (
           <button type="button" disabled={ocupado} style={btnStyle('primario')}
             onClick={() => { if (window.confirm(`¿Ya se ha comunicado la anulación a ${a.compania ?? 'la compañía'}?`)) void accion('marcar_comunicada') }}>
             Comunicada a la compañía
@@ -179,7 +179,8 @@ function Abierta({ a, ocupado, firmando, nota, setFirmando, setNota, accion }: {
           El cliente desiste
         </button>
       </div>
-      {a.estado === 'firmada' && <span style={NOTA}>Si la firmó en el portal, el correo a la compañía con la carta firmada adjunta te espera en «Hoy · Esperan tu OK» y, al enviarlo, pasa sola a «comunicada». Si la mandas tú (firma en papel, o descartaste ese correo), pulsa «Comunicada a la compañía» cuando salga.</span>}
+      {a.estado === 'firmada' && a.esperaEmision && <span style={NOTA}>La firmó junto con el presupuesto nuevo: no sale hacia la compañía hasta que marques ese presupuesto como emitido (tarjeta «Presupuestos»). Así el cliente nunca se queda sin seguro si la emisión falla.</span>}
+      {a.estado === 'firmada' && !a.esperaEmision && <span style={NOTA}>Si la firmó en el portal, el correo a la compañía con la carta firmada adjunta te espera en «Hoy · Esperan tu OK» y, al enviarlo, pasa sola a «comunicada». Si la mandas tú (firma en papel, o descartaste ese correo), pulsa «Comunicada a la compañía» cuando salga.</span>}
       {a.estado === 'solicitada' && <span style={NOTA}>Sin la firma del cliente no se comunica a la compañía. Si tiene portal, la ve en «Pendiente de tu firma» y firma con un código a su correo; si firma en papel, pulsa «Firma recibida».</span>}
     </div>
   )

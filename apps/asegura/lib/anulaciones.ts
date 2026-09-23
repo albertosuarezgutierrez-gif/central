@@ -45,6 +45,8 @@ export type Anulacion = {
   firmaNota: string | null
   comunicadaAt: string | null
   confirmadaAt: string | null
+  /** Firmada junto a un presupuesto aceptado cuya póliza nueva aún no consta emitida: no se comunica todavía. */
+  esperaEmision: boolean
   siguiente: SiguientePasoAnulacion | null
 }
 
@@ -52,7 +54,7 @@ type Fila = {
   id: string; polizaId: string; clienteId: string; nombre: string | null; apellidos: string | null; numeroPoliza: string | null
   compania: string | null; tipo: TipoAnulacion; solicitadaPor: string; motivo: MotivoAnulacion; motivoTexto: string | null
   fechaEfecto: string; estado: EstadoAnulacion; creada: Date; firmadaAt: Date | null; firmaNota: string | null
-  comunicadaAt: Date | null; confirmadaAt: Date | null
+  comunicadaAt: Date | null; confirmadaAt: Date | null; esperaEmision: boolean
 }
 
 function mapear(f: Fila, hoy: string): Anulacion {
@@ -64,7 +66,10 @@ function mapear(f: Fila, hoy: string): Anulacion {
     creada: f.creada.toISOString(),
     firmadaAt: f.firmadaAt?.toISOString() ?? null, firmaNota: f.firmaNota,
     comunicadaAt: f.comunicadaAt?.toISOString() ?? null, confirmadaAt: f.confirmadaAt?.toISOString() ?? null,
-    siguiente: siguientePasoAnulacion({ estado: f.estado, fechaEfecto: f.fechaEfecto, compania: f.compania }, hoy),
+    esperaEmision: f.esperaEmision,
+    siguiente: f.esperaEmision && f.estado === 'firmada'
+      ? { texto: 'Espera a que la compañía emita la póliza nueva (márcalo en su presupuesto): hasta entonces no se comunica.', alerta: false }
+      : siguientePasoAnulacion({ estado: f.estado, fechaEfecto: f.fechaEfecto, compania: f.compania }, hoy),
   }
 }
 
@@ -73,7 +78,8 @@ const SELECT = Prisma.sql`
          p.numero_poliza as "numeroPoliza", p.aseguradora as compania, a.tipo, a.solicitada_por as "solicitadaPor",
          a.motivo, a.motivo_texto as "motivoTexto", to_char(a.fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto", a.estado,
          a.created_at as creada, a.firmada_at as "firmadaAt", a.firma_nota as "firmaNota",
-         a.comunicada_at as "comunicadaAt", a.confirmada_at as "confirmadaAt"
+         a.comunicada_at as "comunicadaAt", a.confirmada_at as "confirmadaAt",
+         (a.presupuesto_id is not null and not exists (select 1 from presupuesto pr where pr.id = a.presupuesto_id and pr.emitido_at is not null)) as "esperaEmision"
   from anulacion a join polizas p on p.id = a.poliza_id left join clientes c on c.id = a.cliente_id`
 
 /** Los expedientes de una póliza, el más reciente primero. */
@@ -141,10 +147,15 @@ export type ResultadoAccion =
 export async function accionAnulacion(correduriaId: string, id: string, accion: AccionAnulacion, nota: string | null, actor: string): Promise<ResultadoAccion> {
   if (!UUID.test(id)) return { estado: 'no_encontrada' }
   const db = prismaAsegura()
-  const [a] = await db.$queryRaw<{ estado: EstadoAnulacion; clienteId: string; polizaId: string }[]>`
-    select estado, cliente_id::text as "clienteId", poliza_id::text as "polizaId"
+  const [a] = await db.$queryRaw<{ estado: EstadoAnulacion; clienteId: string; polizaId: string; esperaEmision: boolean }[]>`
+    select estado, cliente_id::text as "clienteId", poliza_id::text as "polizaId",
+           (presupuesto_id is not null and not exists (select 1 from presupuesto pr where pr.id = anulacion.presupuesto_id and pr.emitido_at is not null)) as "esperaEmision"
     from anulacion where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
   if (!a) return { estado: 'no_encontrada' }
+  // Comunicar la baja de la vieja antes de que exista la nueva deja al cliente sin seguro.
+  if (accion === 'marcar_comunicada' && a.esperaEmision) {
+    return { estado: 'no_permitida', motivo: 'La póliza nueva aún no consta emitida: márcala emitida en su presupuesto antes de comunicar esta anulación.' }
+  }
   const nuevo = transicionAnulacion(a.estado, accion)
   if (!nuevo) {
     return { estado: 'no_permitida', motivo: accion === 'marcar_comunicada' && a.estado === 'solicitada' ? 'Sin la firma del cliente no se comunica a la compañía.' : `Desde «${a.estado}» no se puede.` }
