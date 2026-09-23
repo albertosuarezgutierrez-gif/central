@@ -720,6 +720,10 @@ sustitución por revisar y su resolución cerrada (pérdida + motivo de `MOTIVOS
 📞 Y una póliza anulada (baja o «anula al vencimiento» — CIMA solo escribe `activa`/`cancelada`, así que una
 anulación a vencimiento llega como baja) sin sustitución y con el vencimiento por delante abre SOLO, en la misma transacción, una retención
 (`oportunidades` `origen=retencion_cima` + llamada alta hoy en `gestiones`); una por póliza abierta. Cepo `lib/eventos-cartera.test.ts`.
+✉️ **Cola de aprobaciones (`seguros.aprobacion`, `lib/aprobaciones.ts`, puerto `/api/operador/aprobaciones`).** Un recibo
+que pasa a `devuelto` deja un correo PROPUESTO al cliente; solo sale con `decision:'aprobar'` desde plataforma. El envío
+reclama la fila (`pendiente → enviando`) ANTES de mandar y lee el correo de la ficha en ese momento; `enviando` viejo =
+«no se sabe si salió», no se reintenta solo. Cepo `lib/aprobaciones.test.ts`.
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
