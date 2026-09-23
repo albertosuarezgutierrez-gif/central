@@ -103,7 +103,9 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
       { para: 'Hogar y comercio', numeros: ['913 255 258'], horario: '24 horas' },
       { para: 'Vehículos pesados', numeros: ['900 117 120'], horario: '24 horas' },
     ],
-    whatsapp: null,
+    // WhatsApp aportado por Alberto (corredor) el 23/09/2026, con su horario.
+    whatsapp: '+34638930466',
+    whatsappNota: 'de lunes a viernes, de 9:00 a 19:00 (dato de tu corredor, no de su web)',
     horario: null,
     fuente: 'https://www.allianz.es/contacto.html',
     verificado: true,
@@ -145,13 +147,16 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
     nombre: 'Generali',
     // Captura de su web del 23/09/2026: los dos números son de asistencia en
     // carretera (el 911 también desde el extranjero). La grúa por WhatsApp sale
-    // como botón sin número visible, así que no se publica.
+    // como botón sin número visible. Ese número es +34 654 03 36 29: perfil de
+    // WhatsApp Business VERIFICADO «Generali» (captura de Alberto, 23/09/2026),
+    // con un asistente para gestiones de los seguros, grúa incluida. Horario no publicado.
     siniestros: null,
     asistencia: [
       { para: 'Asistencia en carretera', numeros: ['911 123 443', '900 903 433'], horario: null },
       { para: 'Asistencia en carretera desde el extranjero', numeros: ['+34 911 123 443'], horario: null },
     ],
-    whatsapp: null,
+    whatsapp: '+34654033629',
+    whatsappNota: 'asistente virtual para gestiones y grúa; no publica horario (su perfil verificado de WhatsApp Business)',
     horario: null,
     fuente: 'https://www.generali.es/contacto-generali',
     verificado: true,
