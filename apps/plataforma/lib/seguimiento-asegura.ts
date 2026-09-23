@@ -16,6 +16,8 @@
 import {
   MOTIVOS_PERDIDA,
   TIPOS_TAREA,
+  mensajeRenovacionLeadWhatsapp,
+  puedeWhatsappLead,
   type CanalLead,
   type EstadoOportunidad,
   type MotivoPerdida,
@@ -393,6 +395,26 @@ export function colaLlamadas(leads: readonly LeadVencimiento[]): LeadVencimiento
   })
 }
 
+/**
+ * El WhatsApp de seguimiento de un lead, o `null` si no se le puede escribir
+ * por ahí (Alberto, 23/09/2026: es la vía preferente; lo abre y lo envía él).
+ * Mismo régimen que el correo (LSSI art. 21): solo a quien FUE cliente. Que
+ * el número sea un móvil lo decide `BotonWhatsapp`, que no pinta nada si no.
+ */
+export function whatsappDeLead(l: LeadVencimiento): { telefono: string; mensaje: string } | null {
+  if (l.telefono === null || l.canal === 'sin_canal_permitido') return null
+  if (!puedeWhatsappLead({ fueCliente: l.fueCliente, tieneTelefono: true })) return null
+  const mes = Number(l.vencimientoEstimado.slice(5, 7))
+  return {
+    telefono: l.telefono,
+    mensaje: mensajeRenovacionLeadWhatsapp({
+      nombre: l.cliente,
+      ramo: l.ramo,
+      mesAniversario: Number.isInteger(mes) && mes >= 1 && mes <= 12 ? mes : null,
+    }),
+  }
+}
+
 /** Guion corto de la llamada, con lo que se sabe del lead. Lo que no consta no se inventa. */
 export function guionLlamada(l: LeadVencimiento): string[] {
   const ramo = l.ramo ?? 'su seguro'
@@ -453,6 +475,11 @@ export function cerrarTareaAsegura(body: Record<string, unknown>): Promise<Reenv
 }
 export function registrarLlamadaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/llamada', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/** Anota que se abrió el WhatsApp de seguimiento de un lead (no envía nada). */
+export function registrarWhatsappAsegura(body: { oportunidadId: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/whatsapp', { method: 'POST', body: JSON.stringify(body) })
 }
 
 export function tareasHoyAsegura(): Promise<Reenvio> {

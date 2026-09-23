@@ -165,6 +165,11 @@ export type PolizaVencimiento = {
    * tratan igual aquí: no ofrecer el badge, nunca inventar una fecha.
    */
   ultimoContactoEn: string | null
+  /**
+   * `YYYY-MM-DD` del último fichero de CIMA de la compañía de la póliza.
+   * `null` = no se sabe (asegura vieja, sin código DGS o consulta caída).
+   */
+  ultimoFicheroCompania: string | null
 }
 
 const ESTADOS_OBJETO = new Set(['conocido', 'no_informado', 'cifrado', 'sin_objeto'])
@@ -262,6 +267,8 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
       // otra para el MISMO cliente.
       contacto: interpretarContacto(f.contacto),
       ultimoContactoEn: typeof f.ultimoContactoEn === 'string' && f.ultimoContactoEn !== '' ? f.ultimoContactoEn : null,
+      ultimoFicheroCompania: typeof f.ultimoFicheroCompania === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.ultimoFicheroCompania)
+        ? f.ultimoFicheroCompania : null,
     })
   }
   const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 90

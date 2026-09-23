@@ -444,6 +444,57 @@ export async function registrarLlamada(
   return { ok: true, resultado: r.registro, siguienteTareaId: r.siguienteTareaId }
 }
 
+/** Texto del registro: el prefijo lo reconoce quien lea el historial como contacto por WhatsApp. */
+export const REGISTRO_WHATSAPP = 'WhatsApp de seguimiento abierto desde Vencimientos (lo envía el corredor a mano).'
+
+/**
+ * Deja constancia de que Alberto ha abierto el WhatsApp de seguimiento de un
+ * lead (23/09/2026). El mensaje lo envía él desde su teléfono: esto NO envía
+ * nada, solo anota el contacto para que cuente como intento y la secuencia
+ * pase al paso siguiente (recordatorio → llamada).
+ *
+ * Una vez por día y oportunidad: pulsar dos veces el botón no son dos
+ * contactos. Solo sobre oportunidades abiertas.
+ */
+export async function registrarWhatsapp(
+  correduriaId: string,
+  oportunidadId: string,
+  actor: string,
+  hoy: Date = hoyUtc(),
+): Promise<{ ok: true; yaRegistrado: boolean } | Fallo> {
+  if (!UUID.test(oportunidadId)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
+  const hoyIso = hoy.toISOString().slice(0, 10)
+  const r = await prismaAsegura().$transaction(async tx => {
+    const [fila] = await tx.$queryRaw<FilaOportunidad[]>(Prisma.sql`
+      ${SELECT_OPORTUNIDAD} where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+    if (!fila) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Esa oportunidad no es de esta correduría.', status: 404 as const }
+    const o = mapOportunidad(fila)
+    if (o.estado === 'ganada' || o.estado === 'perdida') {
+      return { ok: false as const, estado: 'conflicto' as const, motivo: `Esta oportunidad ya está ${o.estado}.`, status: 409 as const }
+    }
+    const [ya] = await tx.$queryRaw<{ n: number }[]>(Prisma.sql`
+      select count(*)::int as n from gestiones
+      where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
+        and origen_trigger = 'central:seguimiento' and tipo::text = 'whatsapp' and estado::text = 'cerrada'
+        and fecha_limite >= (${hoyIso}::date + time '00:00:00') at time zone 'Europe/Madrid'
+        and fecha_limite <= (${hoyIso}::date + time '23:59:59') at time zone 'Europe/Madrid'`)
+    if ((ya?.n ?? 0) > 0) return { ok: true as const, clienteId: o.clienteId, yaRegistrado: true }
+    await tx.$executeRaw(Prisma.sql`
+      insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
+      values (${correduriaId}::uuid, 'whatsapp', 'media', 'cerrada', ${REGISTRO_WHATSAPP},
+              (${hoyIso}::date + time '23:59:59') at time zone 'Europe/Madrid',
+              ${o.clienteId}::uuid, ${oportunidadId}::uuid, 'central:seguimiento')`)
+    await tx.$executeRaw(Prisma.sql`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${oportunidadId}::uuid, 'whatsapp',
+              cast(${o.estado} as estado_comercial), cast(${o.estado} as estado_comercial), '{}'::jsonb, ${actor})`)
+    return { ok: true as const, clienteId: o.clienteId, yaRegistrado: false }
+  })
+  if (!r.ok) return r
+  if (!r.yaRegistrado) await anotarEnFicha(correduriaId, r.clienteId, `WhatsApp de seguimiento abierto — por ${actor}`)
+  return { ok: true, yaRegistrado: r.yaRegistrado }
+}
+
 const ETIQUETA_LLAMADA: Record<string, string> = {
   quiere_precio: 'Llamada: quiere precio (oportunidad interesada, comparativa pendiente)',
   otro_dia: 'Llamada: pide que le llamen otro día',

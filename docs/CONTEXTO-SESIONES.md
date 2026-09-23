@@ -13,6 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** 🟠 **Vencimientos: «YA VENCIDAS» → «Renovación sin recibir» + WhatsApp a leads.** Alberto: «pólizas vencidas en junio, no tiene
+sentido». Eran 10 de Mapfre con la última anualidad COBRADA hasta esa fecha y **Mapfre (C0058) sin mandar ficheros por CIMA desde el 23/06**
+(medido en `cima_ficheros`). Ahora van al final en tono aviso, fuera de «cartera en juego», con el último fichero CIMA por compañía
+(`ultimoFicheroCompania` en `/api/operador/vencimientos`; helper `renovacion-sin-recibir.ts`). WhatsApp de seguimiento en Leads y modo
+llamada (`WhatsappLead.tsx`, mensaje `mensajeRenovacionLeadWhatsapp` con baja): **solo a quien fue cliente** (LSSI art. 21, WhatsApp = comunicación
+electrónica, mismo régimen que el correo); al pulsar se anota como intento (`POST /api/operador/oportunidad/whatsapp`, 1/día). Pendiente: llamar
+a Mapfre por el corte de CIMA; pieza 1-5 (portal) en curso tras este PR.
+
 **(23/09/2026)** 🧭 **Pieza 1-4: «Hoy» como cockpit** (`HoyCockpit.tsx` arriba de la sección Hoy de `/correduria`). Franja: llamadas hoy
 (→ modo llamada) · tareas de hoy · esperan tu OK · incidencias, con tres estados (`n`, `n+` parcial, `!`); línea de salud de CIMA.
 Tareas de hoy = `GET /api/operador/tareas-hoy` (asegura, corte con la fecha de MADRID) cerrables en sitio. «Esperan tu OK» usa lo
