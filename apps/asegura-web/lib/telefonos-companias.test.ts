@@ -20,8 +20,11 @@ test('cada compañía tiene su página oficial y no se da por verificada sin fec
 // 🚨 El cepo que importa: una compañía sin verificar sale en la lista, pero
 // SIN ningún número. Se mira el objeto que recibe la página, no una copia.
 test('de una compañía sin verificar no sale ningún número hacia la página', () => {
-  const salida = telefonosParaPublicar()
-  assert.equal(salida.length, TELEFONOS_COMPANIAS.length, 'una compañía desaparece de la lista en vez de decir «pídenoslo»')
+  // Desde el 23/09/2026 las cinco están verificadas, así que el cepo mira una
+  // compañía sin verificar fabricada aquí: sin ella miraría al vacío.
+  const lista = [...TELEFONOS_COMPANIAS, { ...TELEFONOS_COMPANIAS[0], slug: 'sin-verificar', verificado: false, verificadoEl: null }]
+  const salida = telefonosParaPublicar(lista)
+  assert.equal(salida.length, lista.length, 'una compañía desaparece de la lista en vez de decir «pídenoslo»')
   const sinVerificar = salida.filter((s) => !s.publicable)
   assert.ok(sinVerificar.length > 0, 'no hay compañías sin verificar que vigilar: el cepo miraría al vacío')
   for (const s of sinVerificar) {

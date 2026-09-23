@@ -120,13 +120,20 @@ export const TELEFONOS_COMPANIAS: readonly TelefonoCompania[] = [
   {
     slug: 'reale',
     nombre: 'Reale',
-    siniestros: '900 365 900',
-    asistencia: [{ para: 'Asistencia', numeros: ['900 365 900'], horario: null }],
+    // Captura de reale.es/es/te-ayudamos/contacto del 23/09/2026. Para ABRIR un
+    // siniestro es atención al cliente (900 455 900); el 900 365 900 que traía
+    // la BD es el de asistencia (grúa y hogar). El 91 454 74 00 sale en los tres
+    // bloques: se publica solo en las asistencias, junto a su 900.
+    siniestros: '900 455 900',
+    asistencia: [
+      { para: 'En carretera', numeros: ['900 365 900', '91 454 74 00'], horario: '24 horas, todos los días' },
+      { para: 'Hogar', numeros: ['900 365 900', '91 454 74 00'], horario: '24 horas, todos los días' },
+    ],
     whatsapp: null,
     horario: null,
-    fuente: 'https://www.reale.es/es/te-ayudamos/asistencia',
-    verificado: false,
-    verificadoEl: null,
+    fuente: 'https://www.reale.es/es/te-ayudamos/contacto',
+    verificado: true,
+    verificadoEl: '2026-09-23',
   },
   {
     slug: 'generali',
@@ -164,11 +171,11 @@ export function hrefTel(numero: string): string {
  * SIN ningún número —solo el nombre y su página oficial—: no se filtran de la
  * lista, porque desaparecer se leería como «con esa no hay nada que hacer».
  */
-export function telefonosParaPublicar(): Array<
+export function telefonosParaPublicar(companias: readonly TelefonoCompania[] = TELEFONOS_COMPANIAS): Array<
   | { publicable: true; c: TelefonoCompania }
   | { publicable: false; c: Pick<TelefonoCompania, 'slug' | 'nombre' | 'fuente'> }
 > {
-  return TELEFONOS_COMPANIAS.map((c) =>
+  return companias.map((c) =>
     esPublicable(c) ? { publicable: true as const, c } : { publicable: false as const, c: { slug: c.slug, nombre: c.nombre, fuente: c.fuente } },
   )
 }
