@@ -138,6 +138,17 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
       )
     }
     const pm = precalM.pre
+    if (!pm.precalificado) {
+      return (
+        <Marco>
+          <Cabecera sub={`${sub} · moto`} polizaId={p.id} />
+          <div className="card err">
+            asegura no ha precalificado esta póliza de moto: {pm.motivo ?? 'sin motivo'}. No se monta el
+            formulario para no pedir un precio que el servidor rechazaría.
+          </div>
+        </Marco>
+      )
+    }
     const fallosCatalogoM = [garajesM, civilesM].filter((c) => c.estado !== 'ok')
     return (
       <Marco>

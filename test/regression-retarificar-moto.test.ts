@@ -42,3 +42,13 @@ test('plataforma: en modo póliza el precio se pide por /retarificar de ESA pól
       'cotizaría de calle, sin la compañía anterior ni la antigüedad que dan el bonus',
   )
 })
+
+test('plataforma: en modo póliza un hueco que no se arregla en pantalla apaga el botón', () => {
+  const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
+  assert.match(
+    moto,
+    /\|\| \(poliza !== null && huerfanos\.length > 0\)/,
+    'sin esto, con la compañía o el nº anterior vacíos en la póliza, el botón se enciende y el servidor ' +
+      'lo rechaza: la pantalla promete un precio que no llega',
+  )
+})

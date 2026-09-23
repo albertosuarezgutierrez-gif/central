@@ -493,20 +493,22 @@ function Carnets({ carnets }: { carnets: CarnetFicha[] | null }) {
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
       {carnets.map((k) => {
         const est = estadoCaducidadCarnet(k.fechaCaducidad, hoy)
-        const aviso = est === 'caducado' || est === 'pronto'
+        const aviso = est === 'pronto'
         const cad =
           k.fechaCaducidad === null
             ? 'caducidad no calculable (falta la fecha de expedición o la de nacimiento)'
-            : `${est === 'caducado' ? 'caducó' : 'caduca'} el ${fmt(k.fechaCaducidad)}`
+            : est === 'sin_renovacion'
+              ? `con la fecha guardada caducaba el ${fmt(k.fechaCaducidad)}; si lo ha renovado, la renovación no consta`
+              : `caduca el ${fmt(k.fechaCaducidad)}`
         return (
           <span
             key={k.id}
             title={`Carné ${k.tipo} · ${cad}`}
-            style={aviso ? { color: 'var(--warning)' } : undefined}
+            style={aviso ? { color: 'var(--warning)' } : est === 'sin_renovacion' ? { color: 'var(--muted)' } : undefined}
           >
             🚦 {k.tipo} ·{' '}
             {k.fechaIlegible ? 'fecha cifrada' : k.fechaExpedicion ? fmt(k.fechaExpedicion) : 'sin fecha'}
-            {aviso ? (est === 'caducado' ? ' (caducado)' : ' (caduca pronto)') : null}
+            {aviso ? ' (caduca pronto)' : est === 'sin_renovacion' ? ' (renovación no registrada)' : null}
           </span>
         )
       })}

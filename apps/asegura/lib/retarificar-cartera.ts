@@ -303,6 +303,20 @@ export async function prepararRetarificacion(entrada: {
     }
   }
 
+  // Una póliza CANCELADA no se retarifica (misma regla que pinta el botón en
+  // `retarificabilidad()`): quien llame al puerto directamente no puede
+  // saltársela. Solo esa rama: hogar puede traer el riesgo del Catastro en el
+  // cuerpo aunque la ficha no lo tenga, y ahí el helper diría «no» de más.
+  if (String(origen.estado).toLowerCase() === 'cancelada') {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        { error: origen.retarificacion.motivo ?? `hoy no se retarifica el ramo «${origen.tipo}»` },
+        409,
+      ),
+    }
+  }
+
   // ── El cuerpo que viaja, según el ramo. Todo lo de aquí es GRATIS ─────────
   let preparado: Preparado
   if (origen.tipo === 'auto') {

@@ -239,7 +239,11 @@ export default function MotoNuevo({
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
   const huerfanos = (faltanInicial ?? []).filter(
-    (f) => !RESUELTOS_EN_PANTALLA.has(f.campo as string) && !CAMPOS_A_MANO[f.campo],
+    // En modo póliza la matrícula NO se resuelve en pantalla (la pone asegura
+    // desde la póliza): si falta, es un hueco de la ficha y se enseña como tal.
+    (f) =>
+      !(RESUELTOS_EN_PANTALLA.has(f.campo as string) && !(poliza && f.campo === 'matricula')) &&
+      !CAMPOS_A_MANO[f.campo],
   )
 
   const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
@@ -257,6 +261,11 @@ export default function MotoNuevo({
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
     faltaMotoAnterior || aManoSinRellenar.length > 0 || faltaHistorial
+    // En modo póliza, un hueco que no se arregla aquí (compañía o nº anterior,
+    // CP de circulación, matrícula) también apaga el botón: el servidor lo
+    // rechazaría igual, y el botón encendido prometería un precio que no llega.
+    || (poliza !== null && huerfanos.length > 0)
+
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {

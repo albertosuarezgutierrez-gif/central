@@ -23,7 +23,7 @@ import { construirPersona, revisarPersona, type DatosPersona } from './persona.t
 export type DatosSalud = DatosPersona & {
   /** 🚧 Capital / importe de referencia de la cobertura. Ver cabecera: salud no
    * es naturalmente un «capital», pero es el único dato mínimo disponible hoy. */
-  capital: number
+  capital?: number | null
 
   /** Texto libre del corredor sobre la modalidad deseada. NO viaja al vendor
    * (no hay catálogo confirmado de modalidades): es una nota para el humano. */
@@ -50,8 +50,10 @@ export function revisarDatosSalud(d: Partial<DatosSalud>): ReparoSalud[] {
 
   for (const x of revisarPersona(d)) r.push(x as ReparoSalud)
 
-  if (d.capital === undefined || d.capital === null) falta('capital')
-  else if (!numero(d.capital) || d.capital <= 0)
+  // El capital es OPCIONAL: la API no tiene campo para él en este ramo y no
+  // viaja (ver `construirPeticion*`). Exigirlo haría creer al corredor que el
+  // precio que paga es para ese importe. Si se da, al menos tiene que ser válido.
+  if (d.capital !== undefined && d.capital !== null && (!numero(d.capital) || d.capital <= 0))
     r.push({ campo: 'capital', motivo: 'tiene que ser un importe en euros mayor que 0' })
 
   if (!texto(d.fechaEfecto)) falta('fechaEfecto')

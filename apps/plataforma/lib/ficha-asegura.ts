@@ -257,13 +257,18 @@ export function leerCarnets(v: unknown): CarnetFicha[] | null {
   return out
 }
 
-/** Estado de la caducidad frente a `hoy` (ISO): vencido, vence en ≤90 días o en regla. */
+/**
+ * Estado de la caducidad frente a `hoy` (ISO). La caducidad se CALCULA desde la
+ * fecha de expedición guardada, que suele ser la antigua (volcado o fecha de
+ * obtención): si ya pasó, lo que se sabe es que no consta la renovación, no que
+ * el carné esté caducado. Por eso ese estado es `sin_renovacion`, no «caducado».
+ */
 export function estadoCaducidadCarnet(
   fechaCaducidad: string | null,
   hoy: string,
-): 'caducado' | 'pronto' | 'vigente' | 'desconocido' {
+): 'sin_renovacion' | 'pronto' | 'vigente' | 'desconocido' {
   if (!fechaCaducidad) return 'desconocido'
-  if (fechaCaducidad < hoy) return 'caducado'
+  if (fechaCaducidad < hoy) return 'sin_renovacion'
   const limite = new Date(`${hoy}T00:00:00Z`)
   limite.setUTCDate(limite.getUTCDate() + 90)
   return fechaCaducidad <= limite.toISOString().slice(0, 10) ? 'pronto' : 'vigente'

@@ -22,7 +22,7 @@ import { construirPersona, revisarPersona, type DatosPersona } from './persona.t
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
 export type DatosDecesos = DatosPersona & {
   /** Capital / prestación garantizada, en euros. */
-  capital: number
+  capital?: number | null
 
   fechaEfecto: string
   referenciaExterna?: string | null
@@ -45,8 +45,10 @@ export function revisarDatosDecesos(d: Partial<DatosDecesos>): ReparoDecesos[] {
 
   for (const x of revisarPersona(d)) r.push(x as ReparoDecesos)
 
-  if (d.capital === undefined || d.capital === null) falta('capital')
-  else if (!numero(d.capital) || d.capital <= 0)
+  // El capital es OPCIONAL: la API no tiene campo para él en este ramo y no
+  // viaja (ver `construirPeticion*`). Exigirlo haría creer al corredor que el
+  // precio que paga es para ese importe. Si se da, al menos tiene que ser válido.
+  if (d.capital !== undefined && d.capital !== null && (!numero(d.capital) || d.capital <= 0))
     r.push({ campo: 'capital', motivo: 'tiene que ser un importe en euros mayor que 0' })
 
   if (!texto(d.fechaEfecto)) falta('fechaEfecto')

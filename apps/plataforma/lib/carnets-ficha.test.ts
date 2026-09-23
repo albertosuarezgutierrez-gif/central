@@ -26,9 +26,9 @@ test('normaliza el tipo y conserva fecha ilegible sin inventarla', () => {
   )
 })
 
-test('caducidad frente a hoy: caducado · pronto (≤90 días) · vigente · desconocido', () => {
+test('caducidad frente a hoy: sin renovación registrada (NO «caducado») · pronto (≤90 días) · vigente · desconocido', () => {
   const hoy = '2026-09-23'
-  assert.equal(estadoCaducidadCarnet('2026-09-22', hoy), 'caducado')
+  assert.equal(estadoCaducidadCarnet('2026-09-22', hoy), 'sin_renovacion')
   assert.equal(estadoCaducidadCarnet('2026-12-22', hoy), 'pronto')
   assert.equal(estadoCaducidadCarnet('2026-12-23', hoy), 'vigente')
   assert.equal(estadoCaducidadCarnet(null, hoy), 'desconocido')
