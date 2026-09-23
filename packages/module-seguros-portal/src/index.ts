@@ -257,7 +257,7 @@ export type {
 export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL, textoSoloRamos, whatsappParaRamo } from './canal-compania.ts'
 export { mensajeParteWhatsapp, notaParteMandadoWhatsapp, RELATO_MAX_WHATSAPP } from './parte-whatsapp.ts'
 export type { DatosParteWhatsapp } from './parte-whatsapp.ts'
-export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
+export type { FilaCompania, LineaAsistenciaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
 // (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`

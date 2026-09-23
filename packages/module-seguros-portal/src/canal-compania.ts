@@ -9,9 +9,12 @@
 // la pantalla tiene DOS caminos y el primero no somos nosotros.
 //
 // El primero exige un dato que hasta el 05/09/2026 no existía en el sistema: a
-// qué canal acude el asegurado de ESA compañía. Vive en `companias_dgs`
-// (`telefono_siniestros`, `telefono_asistencia`, `whatsapp_siniestros`,
-// `horario_siniestros`) y lo rellena una persona contra la fuente.
+// qué canal acude el asegurado de ESA compañía. Desde el 23/09/2026 vive en UN
+// solo sitio, el catálogo verificado de `@central/module-seguros`
+// (`telefonos-companias.ts`), que es el mismo que publica la web; antes eran
+// las columnas `telefono_*` de `companias_dgs`, que se separaron de la web y
+// daban a Mapfre su línea médica como «dar parte». La app lo convierte a
+// `FilaCompania` (`apps/asegura-portal/lib/canales-compania.ts`).
 //
 // Las reglas de qué se puede DECIR de ese canal están aquí, puras y con test,
 // porque son las que más caro salen si se relajan: lo que sale de aquí acaba
@@ -42,12 +45,30 @@
 //     por nombre EXACTO y no hay coincidencia aproximada a propósito: ver
 //     `canalDeCompania()`.
 
-/** La fila de `companias_dgs`, tal y como la puede leer el rol del portal. */
+/** Una línea de asistencia, con el rótulo que le pone la compañía. */
+export type LineaAsistenciaCompania = {
+  /** «Hogar», «Coche, moto y furgoneta»… `null` = la compañía no la rotula. */
+  para: string | null
+  numero: string
+  /** Como lo publica la compañía para ESTA línea. `null` = no consta. */
+  horario: string | null
+}
+
+/** Lo que el portal sabe del canal de una compañía (del catálogo verificado). */
 export type FilaCompania = {
   nombreComun: string
   telefonoSiniestros: string | null
-  telefonoAsistencia: string | null
+  /**
+   * Una LISTA: hay compañías con un número por riesgo (Allianz: coche, hogar,
+   * pesados). Colapsarlas en uno manda a la grúa a quien tiene una fuga.
+   */
+  asistencias: readonly LineaAsistenciaCompania[]
   whatsappSiniestros: string | null
+  /**
+   * Para qué sirve el WhatsApp si NO es la misma línea que la de dar parte
+   * (Mapfre: solo hogar, L-V 8-20). `null` = es la misma: hereda su horario.
+   */
+  whatsappNota: string | null
   /**
    * Para qué ramos vale ese WhatsApp (`['hogar']`), con los códigos de `polizas.tipo`.
    * `null`/ausente = para todos. Existe por Mapfre: su WhatsApp es SOLO de partes de
@@ -71,6 +92,8 @@ export type ViaCanal =
       tipo: 'telefono'
       /** `siniestros` = dar parte · `asistencia` = grúa / urgencia in situ. Son distintas. */
       uso: 'siniestros' | 'asistencia'
+      /** Rótulo de la línea de asistencia («Hogar»). `null` en dar parte o si no lo tiene. */
+      para: string | null
       numero: string
       /** `null` = no consta. La pantalla NO rellena ese hueco con «24 h». */
       horario: string | null
@@ -81,6 +104,8 @@ export type ViaCanal =
       /** `https://wa.me/<dígitos>`. Ya validado: si no se pudo construir, la vía no existe. */
       enlace: string
       horario: string | null
+      /** Para qué sirve, si no es para todo («para dar parte de hogar, de lunes a viernes…»). */
+      nota: string | null
       /** Solo para estos ramos (`['hogar']`); `null` = para todos. Se DICE en pantalla. */
       soloRamos: string[] | null
     }
@@ -174,18 +199,32 @@ export function viasDeCompania(f: FilaCompania): ViaCanal[] {
   const vias: ViaCanal[] = []
 
   const siniestros = textoONull(f.telefonoSiniestros)
-  if (siniestros !== null) vias.push({ tipo: 'telefono', uso: 'siniestros', numero: siniestros, horario })
+  if (siniestros !== null) vias.push({ tipo: 'telefono', uso: 'siniestros', para: null, numero: siniestros, horario })
 
   const enlace = enlaceWhatsapp(f.whatsappSiniestros)
   if (enlace !== null) {
-    vias.push({ tipo: 'whatsapp', numero: (f.whatsappSiniestros as string).trim(), enlace, horario, soloRamos: ramosONull(f.whatsappRamos) })
+    const nota = textoONull(f.whatsappNota)
+    // Con nota, el WhatsApp es OTRA línea (con su propio horario, dentro de la
+    // nota): heredar el de dar parte sería inventárselo.
+    vias.push({
+      tipo: 'whatsapp',
+      numero: (f.whatsappSiniestros as string).trim(),
+      enlace,
+      horario: nota === null ? horario : null,
+      nota,
+      soloRamos: ramosONull(f.whatsappRamos),
+    })
   }
 
-  const asistencia = textoONull(f.telefonoAsistencia)
-  // 🚨 La asistencia NO hereda `horario_siniestros`. Ese horario es del canal de
+  // 🚨 La asistencia NO hereda `horarioSiniestros`. Ese horario es del canal de
   // dar parte; la grúa puede tener otro, y copiárselo sería inventarse el dato
-  // de la vía que se usa justo a la hora en la que el otro no atiende.
-  if (asistencia !== null) vias.push({ tipo: 'telefono', uso: 'asistencia', numero: asistencia, horario: null })
+  // de la vía que se usa justo a la hora en la que el otro no atiende. Cada
+  // línea lleva el suyo, o ninguno.
+  for (const a of f.asistencias) {
+    const numero = textoONull(a.numero)
+    if (numero === null) continue
+    vias.push({ tipo: 'telefono', uso: 'asistencia', para: textoONull(a.para), numero, horario: textoONull(a.horario) })
+  }
 
   return vias
 }

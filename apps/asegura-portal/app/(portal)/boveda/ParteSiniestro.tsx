@@ -517,7 +517,7 @@ function BloqueCanal({ canal, deLaElegida }: { canal: CanalCompania; deLaElegida
       ) : (
         <>
           {canal.vias.map((v) => (
-            <ViaCanalEnlace key={`${v.tipo}-${v.tipo === 'telefono' ? v.uso : 'wa'}-${v.numero}`} via={v} />
+            <ViaCanalEnlace key={`${v.tipo}-${v.tipo === 'telefono' ? `${v.uso}-${v.para ?? ''}` : 'wa'}-${v.numero}`} via={v} />
           ))}
           {canal.verificadoEn !== null && (
             // Un número comprobado hace tres años falla igual que uno
@@ -552,11 +552,16 @@ function ViaCanalEnlace({ via }: { via: ViaCanal }) {
         {/* Mapfre: su WhatsApp es solo de hogar. Se dice, para que nadie mande ahí un parte de auto. */}
         {textoSoloRamos(via.soloRamos) !== null && <span className="canal-via-horario">{textoSoloRamos(via.soloRamos)}</span>}
         {via.horario !== null && <span className="canal-via-horario">Atiende {via.horario}</span>}
+        {/* Horario u origen del dato cuando el WhatsApp es otra línea (Mapfre,
+            Allianz, Generali). Los ramos van arriba, en `soloRamos`. */}
+        {via.nota !== null && <span className="canal-via-horario">{via.nota}</span>}
       </a>
     )
   }
 
-  const que = via.uso === 'siniestros' ? 'Dar parte por teléfono' : 'Asistencia en carretera y urgencias'
+  // La asistencia se rotula con la línea que es («Hogar», «Coche, moto y
+  // furgoneta»): con un solo rótulo genérico, quien tiene una fuga marcaría la grúa.
+  const que = via.uso === 'siniestros' ? 'Dar parte por teléfono' : via.para !== null ? `Asistencia · ${via.para}` : 'Asistencia'
   return (
     <a className="canal-via" href={`tel:${via.numero.replace(/\s/g, '')}`}>
       <span className="canal-via-que">{que}</span>

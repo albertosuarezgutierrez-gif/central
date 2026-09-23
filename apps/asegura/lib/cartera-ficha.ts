@@ -29,7 +29,7 @@ import {
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
-import { caducidadCarnet, DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
+import { caducidadCarnet, DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, referenciaCatastral, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { RAMOS_DESCRITOS_POR_COBERTURAS } from './cartera'
 import { ordenPolizasFicha } from '@central/module-seguros'
@@ -960,6 +960,8 @@ export type OrigenRetarificacion = {
    */
   primaAnual: number | null
   retarificacion: Retarificabilidad
+  /** Referencia catastral del piso que el corredor guardó (hogar). `null` = no hay. */
+  referenciaCatastral: string | null
 }
 
 export async function origenRetarificacion(
@@ -1093,6 +1095,7 @@ export async function origenRetarificacion(
     // Decimal de Prisma: `null` se queda en null, jamás en 0.
     primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
     retarificacion,
+    referenciaCatastral: esHogar ? referenciaCatastral(datos) : null,
   }
 }
 

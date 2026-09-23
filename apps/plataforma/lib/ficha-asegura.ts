@@ -436,7 +436,7 @@ export function leerRecibos(v: unknown): RecibosPoliza | null {
 }
 
 const RAMOS_RETARIFICABLES = new Set(['auto', 'hogar'])
-const FUENTES_RETARIFICACION = new Set(['poliza', 'gemela'])
+const FUENTES_RETARIFICACION = new Set(['poliza', 'gemela', 'catastro'])
 
 /**
  * El veredicto de retarificación, o `null` si no llega o llega con forma rara.

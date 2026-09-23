@@ -207,6 +207,19 @@ con el PR. Nada se borra sin cerrarse.
 
 ---
 
+## Teléfonos de compañías — UNA fuente, y no se publica sin captura (23/09/2026)
+
+`/telefonos-siniestros` y el portal del cliente leen el MISMO catálogo:
+`packages/module-seguros/src/telefonos-companias.ts`. Nunca las columnas `telefono_*` de
+`companias_dgs` (obsoletas; lo vigila `test/regression-telefonos-fuente-unica.test.ts`).
+- Un número solo se publica con `verificado: true` + fecha, y se verifica con la web oficial o una
+  captura de ella que mande Alberto — **nunca** con un buscador ni con otro asistente de IA (el 23/09
+  otro asistente se inventó teléfonos y un artículo de ley).
+- Los artículos del blog **no copian números**: enlazan `/telefonos-siniestros` (cepo en
+  `apps/asegura-web/lib/telefonos-companias.test.ts`).
+- Separa siempre «dar parte» de «asistencia» (grúa, urgencias) y rotula cada asistencia por riesgo:
+  la BD daba la línea médica de Mapfre como la de siniestros.
+
 ## Auditoría de SEO técnico — qué mirar en `apps/asegura-web`
 
 Antes de escribir contenido nuevo, comprueba que lo que ya existe se puede indexar:

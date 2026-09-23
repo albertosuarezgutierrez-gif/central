@@ -248,16 +248,11 @@ export default function RetarificadorHogar({
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       {pre.catastro !== null && (
-        <div className="card">
-          <p style={{ margin: 0 }}>
-            <strong>Riesgo completado con el Catastro</strong>
-            {pre.catastro.direccionLegible ? `: ${pre.catastro.direccionLegible}` : ''}
-          </p>
-          <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
-            Solo rellena lo que la póliza no trae (m², año, CP), y cada dato sale marcado «del Catastro». Comprueba con
-            el cliente que es su vivienda asegurada.
-          </p>
-        </div>
+        <ViviendaCatastro
+          polizaId={polizaId}
+          catastro={pre.catastro}
+          m2Poliza={m2DeLaPoliza(pre)}
+        />
       )}
       {pre.primaActual !== null && (
         <div className="card">
@@ -437,6 +432,116 @@ export default function RetarificadorHogar({
 }
 
 // ─── Capitales recomendados por Codeoscopic ──────────────────────────────────
+
+/**
+ * El piso del Catastro con el que se han rellenado los huecos. Si no está
+ * guardado en la póliza, se ofrece guardarlo (la próxima vez no hay que
+ * buscarlo); guardado o no, se puede cambiar por otro.
+ */
+function ViviendaCatastro({
+  polizaId,
+  catastro,
+  m2Poliza,
+}: {
+  polizaId: string
+  catastro: NonNullable<PrecalificacionHogar['catastro']>
+  /** Los m² que declara la póliza (compañía o volcado). `null` = no los trae. */
+  m2Poliza: number | null
+}) {
+  const [estado, setEstado] = useState<'libre' | 'guardando' | 'guardada' | { error: string }>(
+    catastro.guardada ? 'guardada' : 'libre',
+  )
+  async function guardar() {
+    setEstado('guardando')
+    try {
+      const res = await fetch('/api/correduria/poliza', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: polizaId, campo: 'referencia_catastral', referencia: catastro.referencia }),
+      })
+      const j = (await res.json().catch(() => null)) as { ok?: boolean; motivo?: string } | null
+      setEstado(res.ok && j?.ok ? 'guardada' : { error: j?.motivo ?? `HTTP ${res.status}` })
+    } catch (e) {
+      setEstado({ error: e instanceof Error ? e.message : String(e) })
+    }
+  }
+  return (
+    <div className="card">
+      <p style={{ margin: 0 }}>
+        <strong>Riesgo completado con el Catastro</strong>
+        {catastro.direccionLegible ? `: ${catastro.direccionLegible}` : ''}
+        {catastro.referencia ? <span className="muted" style={{ fontSize: 12 }}> · ref. {catastro.referencia}</span> : null}
+      </p>
+      {resumenVivienda(catastro) && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{resumenVivienda(catastro)}</p>}
+      {discrepanciaM2(m2Poliza, catastro) && (
+        <p className="err" style={{ margin: '4px 0 0', fontSize: 13 }}>
+          ⚠️ {discrepanciaM2(m2Poliza, catastro)}
+        </p>
+      )}
+      <p className="muted" style={{ margin: '4px 0 8px', fontSize: 12 }}>
+        Solo rellena lo que la póliza no trae (m², año, CP), y cada dato sale marcado «del Catastro». Comprueba con el
+        cliente que es su vivienda asegurada.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+        {estado === 'guardada' ? (
+          <span className="badge ok">Guardada en la póliza</span>
+        ) : (
+          catastro.referencia !== null && (
+            <button type="button" onClick={() => void guardar()} disabled={estado === 'guardando'} style={{ minHeight: 44 }}>
+              {estado === 'guardando' ? 'Guardando…' : 'Guardar esta vivienda en la póliza'}
+            </button>
+          )
+        )}
+        <a href={`/correduria/poliza/${polizaId}/retarificar?buscar=1`} style={{ fontSize: 13 }}>
+          Cambiar de vivienda
+        </a>
+      </div>
+      {typeof estado === 'object' && (
+        <p className="err" style={{ margin: '8px 0 0', fontSize: 13 }}>
+          No se ha guardado: {estado.error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Los m² de la póliza, solo si vienen de la compañía o del volcado (no un supuesto ni el Catastro). */
+function m2DeLaPoliza(pre: PrecalificacionHogar): number | null {
+  const f = pre.resumen.filas.find((x) => x.campo === 'metrosCuadrados')
+  if (!f || (f.procedencia !== 'poliza' && f.procedencia !== 'volcado')) return null
+  const n = typeof f.valor === 'number' ? f.valor : Number(f.valor)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+function resumenVivienda(c: NonNullable<PrecalificacionHogar['catastro']>): string | null {
+  const v = c.vivienda
+  const partes: string[] = []
+  if (v?.tipo === 'piso') partes.push(v.planta !== null ? `Piso en planta ${v.planta === 0 ? 'baja' : v.planta}` : 'Piso')
+  if (v?.tipo === 'unifamiliar') partes.push('Vivienda unifamiliar (la finca entera)')
+  if (v?.superficieVivienda && c.metrosCuadrados && v.superficieVivienda !== c.metrosCuadrados) {
+    partes.push(`${v.superficieVivienda} m² de vivienda (${c.metrosCuadrados} m² con zonas comunes)`)
+  } else if (c.metrosCuadrados) {
+    partes.push(`${c.metrosCuadrados} m²`)
+  }
+  if (c.anioConstruccion) partes.push(`construida en ${c.anioConstruccion}`)
+  if (v && v.anexos.length > 0) partes.push(`con ${v.anexos.map((a) => a.toLowerCase()).join(', ')}`)
+  return partes.length > 0 ? `Catastro: ${partes.join(' · ')}.` : null
+}
+
+/**
+ * La póliza y el Catastro no coinciden en m² (más de un 15 %). No decide nada:
+ * lo dice, porque un continente calculado sobre menos metros de los reales es
+ * infraseguro, y eso hay que hablarlo con el cliente en la renovación.
+ */
+function discrepanciaM2(m2Poliza: number | null, c: NonNullable<PrecalificacionHogar['catastro']>): string | null {
+  const cat = c.vivienda?.superficieVivienda ?? c.metrosCuadrados
+  if (m2Poliza === null || !cat) return null
+  const refs = [cat, c.metrosCuadrados].filter((x): x is number => typeof x === 'number' && x > 0)
+  if (refs.some((r) => Math.abs(m2Poliza - r) / r <= 0.15)) return null
+  return `La póliza declara ${m2Poliza} m² y el Catastro da ${cat} m²${
+    c.metrosCuadrados && c.metrosCuadrados !== cat ? ` (${c.metrosCuadrados} con zonas comunes)` : ''
+  }. Comprueba con el cliente: si la casa es más grande de lo declarado, puede estar infrasegurada.`
+}
 
 const CAMPOS_CAPITAL = new Set(['capitalContinente', 'capitalContenido'])
 

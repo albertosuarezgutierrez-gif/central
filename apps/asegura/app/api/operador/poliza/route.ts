@@ -4,7 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { fichaPoliza } from '@/lib/cartera-poliza'
-import { establecerDireccionRiesgo, establecerModalidadRc } from '@/lib/cartera-poliza-editar'
+import { establecerDireccionRiesgo, establecerModalidadRc, establecerReferenciaCatastral } from '@/lib/cartera-poliza-editar'
 import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
@@ -33,12 +33,14 @@ export async function GET(req: Request) {
 }
 
 // PATCH /api/operador/poliza — anotar a mano lo que la compañía no manda por
-// CIMA. DOS operaciones y ninguna más, elegidas por `campo`:
+// CIMA. TRES operaciones y ninguna más, elegidas por `campo`:
 //   - sin `campo` (o `campo: 'modalidad_rc'`): la MODALIDAD de una RC. Body
 //     `{ id, modalidad, nota?, actor }`.
 //   - `campo: 'direccion_riesgo'`: la DIRECCIÓN DEL RIESGO de un inmueble
 //     (hogar/comunidades). Body `{ id, direccion, cp?, localidad?, actor }`.
 //     409 `ya_informada` si la póliza ya la trae: no se pisa desde aquí.
+//   - `campo: 'referencia_catastral'`: la referencia de 20 del PISO (hogar),
+//     comprobada contra el Catastro antes de guardar. Body `{ id, referencia, actor }`.
 export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ estado: 'error', motivo: 'No autorizado' }, { status: 401 })
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
@@ -56,6 +58,10 @@ export const PATCH = auditado(async (req: Request) => {
         localidad: body?.localidad,
         actor,
       })
+      return NextResponse.json(r, { status: r.status })
+    }
+    if (body?.campo === 'referencia_catastral') {
+      const r = await establecerReferenciaCatastral(correduria.id, id, { referencia: body?.referencia, actor })
       return NextResponse.json(r, { status: r.status })
     }
     const r = await establecerModalidadRc(correduria.id, id, { modalidad: body?.modalidad, nota: body?.nota, actor })

@@ -18,6 +18,20 @@
 corregido). No salen por reconcile (fichero ya `confirmed`) ni por crudo (solo existe desde el 17/09) → hay que bajar los
 2 zips del Portal CIMA y usar `ingerir-manual`. Fusionadas 2 parejas vivas más (solo diferían en puntuación, mismo cliente);
 queda `UV-G-410081428` (Generali) con clientes distintos para Alberto. Skill `cima-ingesta`: el reconcile SÍ está programado.
+**(23/09/2026)** 🏦 **PR 9: libro de comisiones — el banco casado abono a abono y la cuenta correcta.** #3414 (WhatsApp por
+ramo en plataforma) mergeado. Medido: el cron `cima-liq` elegía cuenta con `LIMIT 1` sin orden y desde el 20/09 escribía
+en una cuenta sin bancos (libro de Alberto congelado); y sus ventanas de 45 días contaban el mismo abono en 2-3 periodos
+(Occident ene: 592€ vs 301€ devengados). `casar-banco.ts` (puro, 8 tests, mutaciones vistas morder). Hallazgos para
+Alberto: 5 ingresos de nómina/pensión y un reembolso de Vercel clasificados `destino='seguros'`; la regla M1454 dice Asisa;
+Allianz liquida (4 periodos) sin ningún abono identificado en BBVA. Mapfre WhatsApp (23b) pendiente de aplicar tras deploy.
+
+**(23/09/2026)** 📲 **PR 8: el WhatsApp de siniestros respeta su ramo también en plataforma.** #3409 mergeado. La ficha
+de un siniestro en `/correduria` pintaba el WhatsApp de la compañía sin mirar el ramo: con el de Mapfre (solo partes de
+hogar) activo habría ofrecido esa línea en siniestros de auto. Ahora `whatsappParaRamo()` (plataforma, misma regla que
+el portal: con restricción y ramo desconocido → no se pinta) + nota «Solo para partes de hogar»; asegura sirve
+`whatsappSiniestrosRamos` en `/api/operador/companias`. Pendiente tras desplegar: aplicar
+`apps/asegura-portal/prisma/sql/2026-09-23b_companias_whatsapp_mapfre_hogar.sql` (activa Mapfre hogar).
+
 **(23/09/2026)** 📲 **PR 7: el parte también a la compañía por WhatsApp (lo manda el cliente).** #3401 (PR 6) mergeado con su
 revisión (carta nunca a «(legacy)», guardas del botón en el puente, cartas pendientes en Hoy). Nuevo: tras dar el parte, si
 la póliza tiene WhatsApp de su compañía VÁLIDO PARA SU RAMO, dos toques: abrir el chat con el texto escrito (`wa.me?text=`)
@@ -360,6 +374,25 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (23/09/2026) correduría: calle + número → el Catastro propone el piso (verifica la dirección)
+- `DireccionConfirmable` (alta/edición de cliente y dirección del riesgo de la póliza): con calle+número+CP+ciudad aparece «Comprobar en el Catastro y elegir el piso» → lista de pisos del portal (o ✅ si es una sola vivienda, o ⚠️ «el Catastro no tiene ese número»). Con BOTÓN, no al teclear (el Catastro corta si se le pregunta seguido). Nunca bloquea el guardado.
+- En la póliza de HOGAR, el piso elegido guarda además la referencia catastral (pasa a retarificable). En el cliente solo verifica: un cliente puede tener varias casas.
+- Piezas puras en `apps/plataforma/lib/correduria/piso-catastro.ts` (+ test, visto en rojo con «Calle 28 de Febrero 5»).
+
+## (23/09/2026) hogar: CIMA SÍ manda el riesgo; el Catastro da tipo de vivienda y planta
+- Medido: CIMA manda `RiesgoHogar` (superficie, situación, capitales, Antigüedad, ClaseInmueble, UsoInmueble, Zona, MedidasProteccion). La ingesta (repo `asegura`) lee superficie/dirección/capitales solo desde el 20/09 (asegura#841): las 4 pólizas con fichero posterior las tienen, las 24 anteriores no, y el crudo solo se guarda desde el 17/09 → hace falta pedir a cada compañía el REENVÍO de cartera (Alberto). Antigüedad/ClaseInmueble/UsoInmueble/Zona/Medidas sin leer: sus códigos están en el PDF EIAC V07.1 (§13.3 claves), no se mapean a ojo.
+- `core-catastro`: `construcciones` (<lcons>) + `caracterizarVivienda()` → piso/unifamiliar, planta, m² de vivienda sin comunes, anexos. Fixtures de respuestas REALES (San Vicente 40 y Socorro 24, vía WebFetch: el proxy del contenedor da 403 al Catastro, WebFetch no). Retarificar lo pinta y avisa si los m² de la póliza difieren >15 % del Catastro (infraseguro).
+- Pendiente: mapear piso/planta a `/home/property-types` (solo se conoce `MiddleFloor`; `emparejar` es exacto a propósito → hace falta la lista real del desplegable).
+
+## (23/09/2026) correduría: la referencia catastral del piso se GUARDA en la póliza de hogar
+- Tras elegir el piso en retarificar, botón «Guardar esta vivienda en la póliza» → `PATCH /api/operador/poliza` `campo: 'referencia_catastral'` (asegura la comprueba en el Catastro ANTES de escribir; fusión en `datos_especificos.referenciaCatastral`, historial con anterior→nueva). Solo la referencia: m²/año/CP se consultan al tarificar y salen «del Catastro».
+- `retarificabilidad()` (module-seguros): hogar sin m²/año/CP pero con referencia de 20 guardada → retarificable, `fuente: 'catastro'` (plataforma acepta ya esa fuente). Asegura usa la guardada sola si la pantalla no manda otra; «Cambiar de vivienda» = `?buscar=1`.
+- La ingesta de CIMA fusiona con `||`: no la borra. Pendiente: mandar `cadastralReference` al vendor (el campo ya existe en peticion-hogar, nadie lo rellena).
+
+## (23/09/2026) Teléfonos de compañías: UNA sola fuente (web + portal + puerto)
+- Catálogo verificado movido a `packages/module-seguros/src/telefonos-companias.ts` (con `codigoDgs`). Lo leen la web, el portal (`asegura-portal/lib/canales-compania.ts`, ya sin BD) y el puerto `/api/operador/companias` de asegura (pisa las columnas). Columnas `telefono_*` de `companias_dgs` comentadas como OBSOLETAS en BD, no borradas.
+- Portal: `FilaCompania` admite varias asistencias rotuladas («Asistencia · Hogar») y la nota del WhatsApp (Mapfre: solo hogar). Cepo nuevo `test/regression-telefonos-fuente-unica.test.ts` (visto en rojo).
+- Cambiar un número = PR al catálogo con captura y fecha, nunca UPDATE a la BD.
 ## (23/09/2026) correduría: retarificar hogar SIN m²/año/CP con el Catastro
 - Medido: 22 de las 28 pólizas de hogar vivas no canceladas no traían el riesgo (ni póliza ni gemela) y se quedaban en «no se puede retarificar». Ahora retarificar ofrece buscar la vivienda en el Catastro (precargada con la dirección del CLIENTE, avisando de que puede no ser la del riesgo) → elegir piso → la ficha sale con m²/año/CP «del Catastro».
 - Solo viaja la REFERENCIA de 20 a asegura (`referencia` en precalificar-hogar, retarificar y limites-hogar); asegura consulta el Catastro ella misma (`lib/codeoscopic/catastro-referencia.ts`): los números con los que se paga no los pone plataforma. El Catastro solo rellena huecos, no pisa la póliza.

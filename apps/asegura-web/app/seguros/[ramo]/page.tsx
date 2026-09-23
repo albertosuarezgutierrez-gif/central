@@ -166,7 +166,8 @@ export default async function PaginaRamo({ params }: Props) {
       <section id="presupuesto" aria-labelledby="pedir" style={panel}>
         <h2 id="pedir">Que te llamemos</h2>
         <p style={{ color: 'var(--muted)', fontSize: 15 }}>
-          Sin compromiso y sin coste. Te contesta una persona.
+          Sin compromiso y sin coste. Te contesta una persona. Como corredores nos paga la compañía, con una
+          comisión sobre la prima: tú no pagas honorarios por la mediación.
         </p>
         {/* El slug del ramo ES el valor del desplegable, salvo `vida-y-salud`,
             que en el formulario son dos opciones distintas y hay que elegir
