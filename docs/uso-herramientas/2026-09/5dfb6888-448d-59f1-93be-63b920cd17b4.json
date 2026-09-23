@@ -1,35 +1,35 @@
 {
  "sesion": "5dfb6888-448d-59f1-93be-63b920cd17b4",
  "inicio": "2026-09-12T13:47:37.256Z",
- "fin": "2026-09-23T15:05:11.277Z",
- "llamadas": 3557,
+ "fin": "2026-09-23T15:37:44.289Z",
+ "llamadas": 3675,
  "categorias": {
   "bash": {
-   "llamadas": 1712,
-   "chars_in": 710618,
-   "chars_out": 3596297,
+   "llamadas": 1768,
+   "chars_in": 718078,
+   "chars_out": 3672493,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1712
+    "Bash": 1768
    }
   },
   "mcp:github": {
-   "llamadas": 317,
-   "chars_in": 140085,
-   "chars_out": 1225698,
+   "llamadas": 333,
+   "chars_in": 143300,
+   "chars_out": 1309841,
    "errores": 1,
-   "archivos_citados": 89,
-   "chars_citados": 9534536,
+   "archivos_citados": 91,
+   "chars_citados": 9553712,
    "tools": {
-    "mcp__github__create_pull_request": 27,
-    "mcp__github__subscribe_pr_activity": 15,
-    "mcp__github__pull_request_read": 159,
+    "mcp__github__create_pull_request": 28,
+    "mcp__github__subscribe_pr_activity": 16,
+    "mcp__github__pull_request_read": 169,
     "mcp__github__list_pull_requests": 14,
-    "mcp__github__update_pull_request": 32,
-    "mcp__github__actions_list": 26,
-    "mcp__github__merge_pull_request": 26,
+    "mcp__github__update_pull_request": 34,
+    "mcp__github__actions_list": 27,
+    "mcp__github__merge_pull_request": 27,
     "mcp__github__actions_get": 3,
     "mcp__github__get_job_logs": 2,
     "mcp__github__get_commit": 1,
@@ -38,17 +38,17 @@
    }
   },
   "otro": {
-   "llamadas": 372,
-   "chars_in": 90067,
-   "chars_out": 7485363,
+   "llamadas": 385,
+   "chars_in": 91455,
+   "chars_out": 7603077,
    "errores": 0,
-   "archivos_citados": 66,
-   "chars_citados": 3407800,
+   "archivos_citados": 67,
+   "chars_citados": 3416211,
    "tools": {
-    "Skill": 26,
-    "ToolSearch": 85,
-    "ScheduleWakeup": 26,
-    "ReadNotifications": 197,
+    "Skill": 27,
+    "ToolSearch": 87,
+    "ScheduleWakeup": 29,
+    "ReadNotifications": 204,
     "AskUserQuestion": 5,
     "WebSearch": 2,
     "WebFetch": 1,
@@ -58,14 +58,14 @@
    }
   },
   "escritura": {
-   "llamadas": 372,
-   "chars_in": 591285,
-   "chars_out": 30540201,
+   "llamadas": 388,
+   "chars_in": 609591,
+   "chars_out": 33373831,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 346,
+    "Edit": 362,
     "Write": 26
    }
   },
@@ -81,15 +81,15 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 580,
-   "chars_in": 67514,
-   "chars_out": 2925761,
+   "llamadas": 597,
+   "chars_in": 69162,
+   "chars_out": 2987820,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 398,
-    "Grep": 171,
+    "Read": 413,
+    "Grep": 173,
     "Glob": 11
    }
   },
