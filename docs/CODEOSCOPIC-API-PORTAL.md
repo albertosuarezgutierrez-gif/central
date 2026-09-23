@@ -284,7 +284,7 @@ campo; `holder` lleva `owner` como rol por defecto y requerido, por eso se manda
 **`POST /home/recommend-limits`** (gratis según el portal, que no menciona créditos; puede tardar >1 min):
 mismo `holder` + `risk` que la cotización (en el ejemplo el `risk` lleva además `floorId` y `reformed`), sin
 `insuranceLine`. 🚨 **Y CON `effectiveDate`, aunque el ejemplo no la trae**: sin ella responde 400 «The effective
-date is mandatory» (medido en real el 23/09/2026, póliza 3H-G-410018502). Responde `{ buildingsLimit: {average, highest, lowest}, contentsLimit: {…}, results: [ {product, buildingsLimit, contentsLimit} ] }`
+date is mandatory» (medido en real el 23/09/2026 con una póliza de hogar de la cartera). Responde `{ buildingsLimit: {average, highest, lowest}, contentsLimit: {…}, results: [ {product, buildingsLimit, contentsLimit} ] }`
 (los `results` por compañía solo con `?includeIndividualResults=true`). ✅ **Cableado el 23/09/2026**: botón
 «Recomendar capitales» en plataforma → retarificar hogar → `POST /api/operador/codeoscopic/limites-hogar` de asegura
 (`lib/codeoscopic/limites-hogar.ts`). ⚠️ **«Gratis» no está confirmado** —devuelve un capital por compañía y

@@ -18,6 +18,16 @@ revisión (tomador del presupuesto, empresas sin fecha de nacimiento, correo pri
 (código al correo, solo el tomador, no si CIMA ya la trae); Telegram a Alberto; tarjeta en la ficha de póliza para
 marcarla enviada/aceptada/rechazada — la carta la manda Alberto, nada sale solo. Pendiente: mandarla por la cola;
 WhatsApp de siniestros/grúa de Generali y Mapfre (pide los números oficiales a Alberto).
+**(23/09/2026)** 🏠 **Capitales recomendados de hogar, probados en real.** #3388: el vendor exige `effectiveDate`
+en recommend-limits aunque el ejemplo del portal no la trae (400 medido con una póliza de hogar real) · #3391: el botón
+dice POR QUÉ está apagado. Solo 2 hogares vivos traen m²/año/CP en la póliza → el resto se corta en retarificar:
+propuesta pendiente de ofrecer Catastro por dirección. Pendiente Alberto: 2ª prueba del botón, prompt de Chrome
+sobre el esquema del portal (obligatorios, `includeIndividualResults`, coste) y preguntar a Codeoscopic si factura.
+
+
+**(23/09/2026)** 🔑 **Rotadas las contraseñas de `prisma_almacen` y `prisma_seguros`** (estaban en claro en snippets guardados del SQL Editor de Supabase; también se borró el de la API key de Smoobu, que NO se rota: es la misma cuenta que usan sivra/plataforma/ialimp y además ya vive en claro en `pms_connections`).
+Verificado: almacen `/catalogo` carga 169 artículos; `central-asegura` responde 200 en el puerto `/api/operador/*` desde las 18:58 UTC y hay 3 conexiones de `prisma_seguros` en `pg_stat_activity`.
+Tres trampas medidas: (1) las `DATABASE_URL`/`DIRECT_URL` son **Sensitive**: hay que pegar la URL ENTERA, no solo la contraseña; (2) un «Redeploy» del último despliegue sale **Canceled** por el `ignoreCommand` si ese commit no toca la app → se redespliega el que lleva la etiqueta «Current» (cada Save de una env ya lanza uno); (3) un espacio al copiar la contraseña dio 82 `password authentication failed` en 15 min — la cartera cayó de 18:40 a 18:58 UTC. Supabase guarda el `ALTER ROLE` en logs con `{REDACTED}`.
 
 **(23/09/2026)** 🪪 **Presupuesto PR 5: qué falta para EMITIR.** #3390 (PR 4) mergeado con su revisión (sin anulación
 si ya hay expediente abierto o la póliza no es suya/vigente; retirar un aceptado desiste su anulación). Nuevo:
@@ -336,6 +346,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (23/09/2026) asegura-web + BD: teléfonos de compañías verificados con capturas (PR #3398)
+- Web `/telefonos-siniestros`: Mapfre, Allianz, Generali, Reale, Fidelidade y Asisa verificadas con capturas de Alberto (Occident ya lo estaba). `asistencia` = lista por riesgo; solo Reale (900 455 900) y Occident publican voz para dar parte.
+- BD `seguros.companias_dgs` corregida con OK de Alberto: Mapfre siniestros 900 122 122 (era la MÉDICA) → NULL, asistencia 900 822 822 (hogar+carretera); Reale siniestros 900 455 900 / asistencia 900 365 900. Generali, Allianz y Fidelidade: solo nota en `telefono_fuente` (captura no contradice / solo hogar). Asisa no tiene fila (no se inventa código DGS).
+- Artículo nuevo `/blog/dar-parte-seguro-por-whatsapp` (idea de Alberto), sin números: enlaza `/telefonos-siniestros`; cepo nuevo impide copiar teléfonos a artículos. Art. 16 LCS añadido a `NORMAS_CITABLES` (leído en `docs/normativa/`).
+- Pendiente: Fidelidade emergencias (plegado) y auto; línea de voz de Mapfre para dar parte.
 
 ## (23/09/2026) Auditoría precios dinámicos → PR #3344 (mergeado) + rutina Booking 2×/día
 - Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Hallazgos abiertos: 33 saltos >50%/día en 90d (17 Luxury Busto), `booking_mcp` con 9 huecos en 49 días y ~50-56% de cobertura futura, `pricing_decisiones` 2 días por detrás de `pricing_applied`.
