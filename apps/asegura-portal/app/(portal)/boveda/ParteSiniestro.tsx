@@ -536,11 +536,16 @@ function ViaCanalEnlace({ via }: { via: ViaCanal }) {
         <span className="canal-via-que">Dar parte por WhatsApp</span>
         <span className="canal-via-num">{via.numero}</span>
         {via.horario !== null && <span className="canal-via-horario">Atiende {via.horario}</span>}
+        {/* Si solo sirve para un ramo (Mapfre: hogar), se dice: sin la nota, el
+            de auto escribiría a una línea que no le atiende. */}
+        {via.nota !== null && <span className="canal-via-horario">Solo {via.nota}</span>}
       </a>
     )
   }
 
-  const que = via.uso === 'siniestros' ? 'Dar parte por teléfono' : 'Asistencia en carretera y urgencias'
+  // La asistencia se rotula con la línea que es («Hogar», «Coche, moto y
+  // furgoneta»): con un solo rótulo genérico, quien tiene una fuga marcaría la grúa.
+  const que = via.uso === 'siniestros' ? 'Dar parte por teléfono' : via.para !== null ? `Asistencia · ${via.para}` : 'Asistencia'
   return (
     <a className="canal-via" href={`tel:${via.numero.replace(/\s/g, '')}`}>
       <span className="canal-via-que">{que}</span>

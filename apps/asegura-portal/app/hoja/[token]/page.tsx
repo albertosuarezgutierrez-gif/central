@@ -291,7 +291,7 @@ function Telefonos({ canal }: { canal: CanalCompania }) {
             <strong>
               {/* Dar parte y asistencia NO se colapsan: en el arcén hace falta
                   la segunda, y en el salón de casa la primera. */}
-              {v.tipo === 'whatsapp' ? 'WhatsApp' : v.uso === 'asistencia' ? 'Asistencia' : 'Dar parte'}
+              {v.tipo === 'whatsapp' ? 'WhatsApp' : v.uso === 'asistencia' ? (v.para !== null ? `Asistencia · ${v.para}` : 'Asistencia') : 'Dar parte'}
             </strong>{' '}
             {/* 🚨 Pulsable. Con el teléfono fuera del papel, ESTA es la única
                 superficie donde ese número existe, y se abre en el arcén con
@@ -310,6 +310,7 @@ function Telefonos({ canal }: { canal: CanalCompania }) {
                 sin horario se lee como «siempre», y esa es la promesa que se
                 rompe un sábado por la noche. */}
             {v.horario && <span className="hoja-horario">{v.horario}</span>}
+            {v.tipo === 'whatsapp' && v.nota && <span className="hoja-horario">Solo {v.nota}</span>}
           </li>
         ))}
       </ul>

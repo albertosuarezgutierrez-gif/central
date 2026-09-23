@@ -255,7 +255,7 @@ export type {
 // no pintar un WhatsApp como un teléfono, no cruzar de forma aproximada) son
 // las que acaban delante de alguien que acaba de tener un golpe.
 export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL } from './canal-compania.ts'
-export type { FilaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
+export type { FilaCompania, LineaAsistenciaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
 // (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
