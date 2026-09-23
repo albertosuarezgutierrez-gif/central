@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-23T08:17:07Z",
+  "generadoEn": "2026-09-23T09:51:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 79
+        "evidencias": 80
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4029,6 +4029,7 @@
       "/api/operador/impagados",
       "/api/operador/ingesta",
       "/api/operador/leads",
+      "/api/operador/leads-competencia",
       "/api/operador/leads-web",
       "/api/operador/partes",
       "/api/operador/poliza",
@@ -6445,7 +6446,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1404,
+    "apis": 1405,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
