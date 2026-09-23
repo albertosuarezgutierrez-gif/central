@@ -16,6 +16,7 @@ test('los rechazos de la firma dicen qué hacer', () => {
   assert.equal(interpretarFirma(422, { estado: 'nombre_no_coincide' }).estado, 'reintentar')
   assert.equal(interpretarFirma(410, { estado: 'codigo_caducado' }).estado, 'reintentar')
   assert.equal(interpretarFirma(404, { estado: 'no_encontrada' }).estado, 'no_disponible')
+  assert.equal(interpretarFirma(409, { estado: 'carta_cambiada' }).estado, 'no_disponible')
 })
 
 test('🪤 el código: «enviado» exige correo; sin_correo_configurado no es culpa del cliente', () => {
@@ -32,10 +33,11 @@ test('🪤 pendientes: no poder leerlas (null) no es «no tienes nada» ([])', (
   assert.deepEqual(interpretarPendientes(409, { estado: 'sin_ficha' }), { anulaciones: [], consentimiento: '' })
   const r = interpretarPendientes(200, {
     estado: 'ok', consentimiento: 'Texto',
-    anulaciones: [{ id: 'a1', tipo: 'no_renovacion', fechaEfecto: '2026-12-01', carta: 'Carta', compania: 'Mapfre', numeroPoliza: '1' }, { id: 'a2' }],
+    anulaciones: [{ id: 'a1', tipo: 'no_renovacion', fechaEfecto: '2026-12-01', carta: 'Carta', cartaHash: 'a'.repeat(64), compania: 'Mapfre', numeroPoliza: '1' }, { id: 'a2' }],
   })
   assert.equal(r?.anulaciones.length, 1)
   assert.equal(r?.anulaciones[0].carta, 'Carta')
+  assert.equal(r?.anulaciones[0].cartaHash, 'a'.repeat(64))
 })
 
 test('🪤 la vista de corredor no firma: el veto va ANTES de llamar al puente', () => {

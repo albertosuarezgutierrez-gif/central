@@ -86,7 +86,7 @@ function Tarjeta({ a, consentimiento, corredor }: { a: AnulacionPendiente; conse
   async function firmar() {
     setOcupado(true)
     setAviso(null)
-    const r = await enviar({ accion: 'firmar', codigo, nombre })
+    const r = await enviar({ accion: 'firmar', codigo, nombre, cartaHash: a.cartaHash })
     setOcupado(false)
     if (r?.j.estado === 'firmada' && typeof r.j.firmadaEl === 'string') { setPaso({ paso: 'firmada', firmadaEl: r.j.firmadaEl }); return }
     if ((r?.j.estado === 'reintentar' || r?.j.estado === 'no_disponible') && typeof r.j.motivo === 'string') { setAviso(r.j.motivo); return }
@@ -111,7 +111,7 @@ function Tarjeta({ a, consentimiento, corredor }: { a: AnulacionPendiente; conse
         <span className="suave" style={{ fontSize: 13 }}>{poliza || 'Póliza'} · con efecto el {fecha(a.fechaEfecto)}</span>
       </div>
 
-      {a.carta === null ? (
+      {a.carta === null || a.cartaHash === null ? (
         <p className="suave" style={{ margin: 0, fontSize: 14 }}>
           A la carta le falta un dato de la póliza. Te llamamos para completarla antes de firmar.
         </p>

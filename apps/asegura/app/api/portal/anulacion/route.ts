@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 
 const STATUS: Record<string, number> = {
   codigo_enviado: 200, firmada: 200, no_encontrada: 404, carta_incompleta: 409, sin_email: 422, sin_correo_configurado: 503,
-  fallo_envio: 502, espera: 429, sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422,
+  fallo_envio: 502, espera: 429, limite_codigos: 429, carta_cambiada: 409, sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422,
   nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, error: 503,
 }
 
@@ -57,9 +57,10 @@ export const POST = auditado(async (req: Request) => {
     if (b?.accion === 'firmar') {
       const codigo = typeof b.codigo === 'string' ? b.codigo : ''
       const nombre = typeof b.nombre === 'string' ? b.nombre : ''
-      if (!/^\d{6}$/.test(codigo.trim()) || !nombre.trim()) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
+      const cartaHash = typeof b.cartaHash === 'string' ? b.cartaHash : ''
+      if (!/^\d{6}$/.test(codigo.trim()) || !nombre.trim() || !/^[0-9a-f]{64}$/.test(cartaHash)) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
       const r = await firmarAnulacion(correduria.id, identidadId, anulacionId, {
-        codigo, nombre,
+        codigo, nombre, cartaHash,
         ip: typeof b.ip === 'string' ? b.ip.slice(0, 100) : null,
         userAgent: typeof b.userAgent === 'string' ? b.userAgent.slice(0, 300) : null,
       })

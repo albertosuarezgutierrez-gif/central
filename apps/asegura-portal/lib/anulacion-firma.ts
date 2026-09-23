@@ -20,6 +20,8 @@ export type AnulacionPendiente = {
   fechaEfecto: string
   /** `null` = a la carta le falta un dato: no se puede firmar y se dice. */
   carta: string | null
+  /** Huella de la carta que se enseña: vuelve al firmar para que no se firme otra distinta. */
+  cartaHash: string | null
 }
 
 export type LecturaPendientes = { anulaciones: AnulacionPendiente[]; consentimiento: string }
@@ -59,6 +61,7 @@ export function interpretarPendientes(status: number, j: unknown): LecturaPendie
       tipo: x.tipo,
       fechaEfecto: x.fechaEfecto,
       carta: typeof x.carta === 'string' && x.carta.trim() !== '' ? x.carta : null,
+      cartaHash: typeof x.cartaHash === 'string' && /^[0-9a-f]{64}$/.test(x.cartaHash) ? x.cartaHash : null,
     }]
   })
   return { anulaciones, consentimiento: o.consentimiento }
@@ -73,6 +76,9 @@ export function interpretarCodigo(status: number, j: unknown): ResultadoCodigo {
     return { estado: 'codigo_enviado', email: o.email, minutos: o.minutos }
   }
   if (o.estado === 'espera' && typeof o.segundos === 'number') return { estado: 'espera', segundos: o.segundos }
+  if (o.estado === 'limite_codigos') {
+    return { estado: 'no_disponible', motivo: 'Hoy ya te hemos mandado varios códigos. Inténtalo mañana o llámanos y la firmamos contigo.' }
+  }
   if (o.estado === 'no_encontrada' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: NO_ENCONTRADA }
   if (o.estado === 'carta_incompleta') return { estado: 'no_disponible', motivo: INCOMPLETA }
   if (o.estado === 'sin_email') {
@@ -95,6 +101,7 @@ export function interpretarFirma(status: number, j: unknown): ResultadoFirma {
     }
   }
   if (o.estado === 'nombre_no_coincide') return { estado: 'reintentar', motivo: 'Escribe tu nombre y apellidos tal como figuran en la póliza.' }
+  if (o.estado === 'carta_cambiada') return { estado: 'no_disponible', motivo: 'La carta ha cambiado desde que la abriste. Recarga la página y léela de nuevo antes de firmar.' }
   if (o.estado === 'codigo_caducado') return { estado: 'reintentar', motivo: 'El código ha caducado. Pide uno nuevo.' }
   if (o.estado === 'sin_codigo' || o.estado === 'demasiados_intentos') return { estado: 'reintentar', motivo: 'Pide un código nuevo para firmar.' }
   if (o.estado === 'invalido') return { estado: 'reintentar', motivo: 'Revisa el código (6 cifras) y tu nombre.' }
@@ -147,7 +154,7 @@ export async function pedirCodigo(identidadId: string, anulacionId: string): Pro
 export async function firmar(
   identidadId: string,
   anulacionId: string,
-  datos: { codigo: string; nombre: string; ip: string | null; userAgent: string | null },
+  datos: { codigo: string; nombre: string; cartaHash: string; ip: string | null; userAgent: string | null },
 ): Promise<ResultadoFirma> {
   const r = await llamar('/api/portal/anulacion', {
     method: 'POST',

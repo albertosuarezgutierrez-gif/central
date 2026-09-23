@@ -25,6 +25,8 @@ export const MINUTOS_CODIGO = 10
 export const MAX_INTENTOS = 5
 /** Entre dos códigos, como poco: cada código es un correo al cliente y reinicia los intentos. */
 export const SEGUNDOS_ENTRE_CODIGOS = 60
+/** Tope de códigos por anulación y día: cada código reinicia los intentos, así que sin tope no hay límite. */
+export const MAX_CODIGOS_DIA = 5
 
 const hashCodigo = (c: string) => createHash('sha256').update(c).digest('hex')
 
@@ -41,7 +43,11 @@ export type AnulacionParaFirmar = {
   fechaEfecto: string
   /** `null` = falta un dato que la carta necesita (compañía, número): no se puede firmar y se dice. */
   carta: string | null
+  /** Huella de la carta que se enseña: al firmar vuelve, y si la carta ya no es esa, no se firma. */
+  cartaHash: string | null
 }
+
+const huella = (texto: string) => createHash('sha256').update(texto, 'utf8').digest('hex')
 
 type Pendiente = {
   id: string; clienteId: string; polizaId: string; tomador: string; numeroPoliza: string | null; compania: string | null
@@ -88,10 +94,13 @@ export async function anulacionesParaFirmar(correduriaId: string, identidadId: s
   return {
     estado: 'ok',
     consentimiento: TEXTO_CONSENTIMIENTO,
-    anulaciones: filas.map((p) => ({
-      id: p.id, numeroPoliza: p.numeroPoliza, compania: p.compania, ramo: p.ramo, tipo: p.tipo,
-      fechaEfecto: p.fechaEfecto, carta: carta(p, hoy),
-    })),
+    anulaciones: filas.map((p) => {
+      const texto = carta(p, hoy)
+      return {
+        id: p.id, numeroPoliza: p.numeroPoliza, compania: p.compania, ramo: p.ramo, tipo: p.tipo,
+        fechaEfecto: p.fechaEfecto, carta: texto, cartaHash: texto ? huella(texto) : null,
+      }
+    }),
   }
 }
 
@@ -105,6 +114,8 @@ export type ResultadoCodigo =
   | { estado: 'fallo_envio' }
   /** Acaba de pedir uno: el anterior sigue valiendo. */
   | { estado: 'espera'; segundos: number }
+  /** Ya se han pedido los códigos de hoy para esta anulación: mañana, o que llame. */
+  | { estado: 'limite_codigos' }
   | SinFicha
 
 function enmascarar(email: string): string {
@@ -119,12 +130,6 @@ export async function pedirCodigoFirma(correduriaId: string, identidadId: string
   const [p] = await pendientesDe(correduriaId, f.clienteId, anulacionId)
   if (!p) return { estado: 'no_encontrada' }
   if (!carta(p, hoyMadrid())) return { estado: 'carta_incompleta' }
-  if (p.otpExpira) {
-    const emitido = p.otpExpira.getTime() - MINUTOS_CODIGO * 60_000
-    const faltan = Math.ceil((emitido + SEGUNDOS_ENTRE_CODIGOS * 1000 - Date.now()) / 1000)
-    if (faltan > 0) return { estado: 'espera', segundos: faltan }
-  }
-
   const ficha = await estadoEmailDeFicha(correduriaId, f.clienteId)
   if (ficha.estado === 'ilegible') return { estado: 'sin_correo_configurado', motivo: 'no se puede leer el correo de tu ficha' }
   if (ficha.estado !== 'ok') return { estado: 'sin_email', motivo: ficha.estado === 'baja_de_correo' ? 'te diste de baja del correo' : 'no tenemos tu correo' }
@@ -134,11 +139,27 @@ export async function pedirCodigoFirma(correduriaId: string, identidadId: string
   if (!transporter || !process.env.ASEGURA_MAIL_FROM?.trim()) return { estado: 'sin_correo_configurado', motivo: 'el correo de la correduría no está configurado' }
 
   const codigo = String(randomInt(0, 1_000_000)).padStart(6, '0')
-  // Se guarda ANTES de mandar: si el envío falla, el código viejo queda sustituido y no vale.
-  await prismaAsegura().$executeRaw`
+  // Se guarda ANTES de mandar (si el envío falla, el código viejo queda sustituido y no vale), y en
+  // UNA sentencia con sus dos frenos: 60 s desde el anterior y tope diario. Leer y luego escribir
+  // dejaría pasar dos peticiones a la vez, y cada una es un correo al cliente.
+  const n = await prismaAsegura().$executeRaw`
     update anulacion set firma_otp_hash = ${hashCodigo(codigo)}, firma_otp_intentos = 0,
-           firma_otp_expira = now() + make_interval(mins => ${MINUTOS_CODIGO}::int), updated_at = now()
-    where id = ${anulacionId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'solicitada'`
+           firma_otp_expira = now() + make_interval(mins => ${MINUTOS_CODIGO}::int),
+           firma_otp_envios = case when firma_otp_envios_dia = current_date then firma_otp_envios + 1 else 1 end,
+           firma_otp_envios_dia = current_date, updated_at = now()
+    where id = ${anulacionId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'solicitada'
+      and (firma_otp_expira is null
+           or firma_otp_expira <= now() + make_interval(secs => ${MINUTOS_CODIGO * 60 - SEGUNDOS_ENTRE_CODIGOS}::int))
+      and (firma_otp_envios_dia is distinct from current_date or firma_otp_envios < ${MAX_CODIGOS_DIA}::int)`
+  if (n === 0) {
+    const [e] = await prismaAsegura().$queryRaw<{ agotado: boolean; faltan: number | null }[]>`
+      select (firma_otp_envios_dia = current_date and firma_otp_envios >= ${MAX_CODIGOS_DIA}::int) as agotado,
+             ceil(extract(epoch from (firma_otp_expira - now())) - ${MINUTOS_CODIGO * 60 - SEGUNDOS_ENTRE_CODIGOS})::int as faltan
+      from anulacion where id = ${anulacionId}::uuid and estado = 'solicitada'`
+    if (!e) return { estado: 'no_encontrada' }
+    if (e.agotado) return { estado: 'limite_codigos' }
+    return { estado: 'espera', segundos: Math.max(1, e.faltan ?? SEGUNDOS_ENTRE_CODIGOS) }
+  }
   try {
     await transporter.sendMail({
       from: remitenteCorreo(process.env.ASEGURA_MAIL_FROM),
@@ -163,13 +184,15 @@ export type ResultadoFirma =
   | { estado: 'demasiados_intentos' }
   | { estado: 'codigo_incorrecto'; quedan: number }
   | { estado: 'nombre_no_coincide' }
+  /** La carta ya no es la que se enseñó (cambió la fecha o un dato de la póliza): que recargue. */
+  | { estado: 'carta_cambiada' }
   | SinFicha
 
 export async function firmarAnulacion(
   correduriaId: string,
   identidadId: string,
   anulacionId: string,
-  datos: { codigo: string; nombre: string; ip: string | null; userAgent: string | null },
+  datos: { codigo: string; nombre: string; cartaHash: string; ip: string | null; userAgent: string | null },
 ): Promise<ResultadoFirma> {
   if (!UUID.test(anulacionId)) return { estado: 'no_encontrada' }
   const f = await fichaPropiaDe(correduriaId, identidadId)
@@ -179,18 +202,24 @@ export async function firmarAnulacion(
 
   // Control exclusivo: el código es OBLIGATORIO (la sesión sola no firma una anulación).
   if (!p.otpHash || !p.otpExpira) return { estado: 'sin_codigo' }
-  if (p.otpExpira.getTime() < Date.now()) return { estado: 'codigo_caducado' }
-  if (p.otpIntentos >= MAX_INTENTOS) return { estado: 'demasiados_intentos' }
-  if (hashCodigo(datos.codigo.trim()) !== p.otpHash) {
-    await prismaAsegura().$executeRaw`
-      update anulacion set firma_otp_intentos = firma_otp_intentos + 1 where id = ${anulacionId}::uuid and estado = 'solicitada'`
-    return { estado: 'codigo_incorrecto', quedan: Math.max(0, MAX_INTENTOS - p.otpIntentos - 1) }
+  // El intento se GASTA antes de comparar y en una sola sentencia: leer el contador y sumar después
+  // dejaría que cien peticiones a la vez leyeran todas «0 intentos».
+  const [gastado] = await prismaAsegura().$queryRaw<{ hash: string; intentos: number }[]>`
+    update anulacion set firma_otp_intentos = firma_otp_intentos + 1
+    where id = ${anulacionId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'solicitada'
+      and firma_otp_hash is not null and firma_otp_expira > now() and firma_otp_intentos < ${MAX_INTENTOS}::int
+    returning firma_otp_hash as hash, firma_otp_intentos as intentos`
+  if (!gastado) return p.otpExpira.getTime() < Date.now() ? { estado: 'codigo_caducado' } : { estado: 'demasiados_intentos' }
+  if (hashCodigo(datos.codigo.trim()) !== gastado.hash) {
+    return { estado: 'codigo_incorrecto', quedan: Math.max(0, MAX_INTENTOS - gastado.intentos) }
   }
   if (!nombreCoincide(datos.nombre, p.tomador)) return { estado: 'nombre_no_coincide' }
 
   const hoy = hoyMadrid()
   const texto = carta(p, hoy)
   if (!texto) return { estado: 'carta_incompleta' }
+  // Se firma lo que se leyó: si la carta de ahora no es la enseñada, no se firma otra en su lugar.
+  if (huella(texto) !== datos.cartaHash) return { estado: 'carta_cambiada' }
   const ficha = await estadoEmailDeFicha(correduriaId, f.clienteId)
   const contexto = { fecha: new Date().toISOString(), ip: datos.ip, user_agent: datos.userAgent }
   // Lo que se hashea es EXACTAMENTE el texto que se guarda en `carta_texto` y que se mandará.

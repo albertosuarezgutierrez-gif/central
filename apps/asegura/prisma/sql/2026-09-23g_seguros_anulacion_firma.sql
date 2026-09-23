@@ -14,3 +14,13 @@ ALTER TABLE seguros.anulacion
   ADD COLUMN IF NOT EXISTS firma_otp_hash     text,
   ADD COLUMN IF NOT EXISTS firma_otp_expira   timestamptz,
   ADD COLUMN IF NOT EXISTS firma_otp_intentos smallint NOT NULL DEFAULT 0;
+
+-- Segunda parte (migración `seguros_anulacion_firma_tipo_y_envios`, aplicada el mismo día, tras la
+-- revisión del PR #3375): `seguros.firma` solo admitía 'presupuesto' y 'carta_mediador', así que
+-- TODA firma de anulación moría en el CHECK. Y un tope de códigos por anulación y día: pedir otro
+-- código reinicia los 5 intentos, y sin tope acumulado eso eran ~7.200 pruebas al día.
+ALTER TABLE seguros.firma DROP CONSTRAINT firma_documento_tipo_check;
+ALTER TABLE seguros.firma ADD CONSTRAINT firma_documento_tipo_check CHECK (documento_tipo IN ('presupuesto', 'carta_mediador', 'anulacion'));
+ALTER TABLE seguros.anulacion
+  ADD COLUMN IF NOT EXISTS firma_otp_envios     smallint NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS firma_otp_envios_dia date;

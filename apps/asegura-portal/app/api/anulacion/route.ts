@@ -35,11 +35,12 @@ export async function POST(req: Request) {
   if (b.accion === 'firmar') {
     const codigo = typeof b.codigo === 'string' ? b.codigo.trim() : ''
     const nombre = typeof b.nombre === 'string' ? b.nombre.trim() : ''
-    if (!/^\d{6}$/.test(codigo) || nombre === '') {
+    const cartaHash = typeof b.cartaHash === 'string' ? b.cartaHash : ''
+    if (!/^\d{6}$/.test(codigo) || nombre === '' || !/^[0-9a-f]{64}$/.test(cartaHash)) {
       return NextResponse.json({ estado: 'reintentar', motivo: 'Revisa el código (6 cifras) y tu nombre.' }, { status: 422 })
     }
     const r = await firmar(identidad.id, anulacionId, {
-      codigo, nombre,
+      codigo, nombre, cartaHash,
       ip: normalizarIp(req.headers.get('x-forwarded-for')),
       userAgent: normalizarUserAgent(req.headers.get('user-agent')),
     })
