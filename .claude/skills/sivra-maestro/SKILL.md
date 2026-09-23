@@ -19,8 +19,9 @@ compartida `wswbehlcuxqxyinousql` (con ialimp+plataforma).
 1. **`apps/sivra` NO se borra (decisión de Alberto).** La "Fase 2 destructiva" (redirigir
    dominio, borrar app/proyecto Vercel) está **CANCELADA**.
 2. **Feature/fix interno → trabaja en `apps/plataforma`, NO en sivra.** Excepción:
-   `/api/pricing/aplicar-propuesta` y `/api/pricing/pisos-zona` (raíl del agente de pricing)
-   siguen SOLO en sivra — otra razón para no apagarla.
+   `/api/pricing/pisos-zona` (puebla `pricing_piso_zona`) sigue SOLO en sivra. Los raíles del
+   agente viven en plataforma (`/api/sivra/pricing/aplicar-propuesta`); la copia de sivra devuelve
+   410 desde el 23/09/2026.
 3. 🚨 **BD compartida con ialimp** (app real de limpiadoras, lee con anon key en cliente): **NO**
    toques RLS, `security_invoker`, privacidad de buckets ni GRANTs asumiendo que solo sivra usa la BD.
 4. **Prisma ≠ BD real**: el schema modela 5 tablas; la BD tiene 90+. Si tocas SQL, verifica

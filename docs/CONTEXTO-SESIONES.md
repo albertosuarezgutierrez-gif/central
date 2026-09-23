@@ -185,6 +185,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (23/09/2026) Auditoría precios dinámicos + fechas sin referencia y copia de sivra retiradas
+- Auditoría (solo lectura): motor canónico sano, PriceLabs fuera. Hallazgos abiertos: 33 saltos >50%/día en 90d (17 Luxury Busto), `booking_mcp` con 9 huecos en 49 días y ~50-56% de cobertura futura, `pricing_decisiones` 2 días por detrás de `pricing_applied`.
+- Fix raíl: `aplicar-propuesta` (plataforma) ya NO escribe una fecha sin precio actual en Smoobu salvo que el piso tenga suelo Y techo (ningún piso tiene `max_price` → pasaba la propuesta cruda sin techo). Helper `lib/sivra/pricing-railes-propuesta.ts` + test; no audita esas filas en `pricing_applied` (new_price=0 envenenaría `ref24`).
+- `apps/sivra`: `aplicar-propuesta` → 410 (copia duplicada); `cron-auth` deniega sin `CRON_SECRET` en producción (`cron-auth-decision.ts` + test). `pisos-zona` sigue vivo en sivra.
+
 ## 23/09/2026 — Alerta PSD2 sync (BBVA)
 - Feed BBVA sin movimientos desde 2026-09-10 (13 días); Kutxabank sigue fresco (hoy) y por eso
   la consulta agregada de `movimientos_bancarios` salía en verde — la caída solo se ve por banco.
