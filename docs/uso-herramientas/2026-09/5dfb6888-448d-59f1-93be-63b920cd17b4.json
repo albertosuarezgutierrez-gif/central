@@ -1,34 +1,34 @@
 {
  "sesion": "5dfb6888-448d-59f1-93be-63b920cd17b4",
  "inicio": "2026-09-12T13:47:37.256Z",
- "fin": "2026-09-23T15:37:44.289Z",
- "llamadas": 3675,
+ "fin": "2026-09-23T16:07:50.911Z",
+ "llamadas": 3735,
  "categorias": {
   "bash": {
-   "llamadas": 1768,
-   "chars_in": 718078,
-   "chars_out": 3672493,
+   "llamadas": 1794,
+   "chars_in": 722292,
+   "chars_out": 3682369,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1768
+    "Bash": 1794
    }
   },
   "mcp:github": {
-   "llamadas": 333,
-   "chars_in": 143300,
-   "chars_out": 1309841,
+   "llamadas": 344,
+   "chars_in": 144554,
+   "chars_out": 1344956,
    "errores": 1,
    "archivos_citados": 91,
    "chars_citados": 9553712,
    "tools": {
     "mcp__github__create_pull_request": 28,
     "mcp__github__subscribe_pr_activity": 16,
-    "mcp__github__pull_request_read": 169,
+    "mcp__github__pull_request_read": 177,
     "mcp__github__list_pull_requests": 14,
     "mcp__github__update_pull_request": 34,
-    "mcp__github__actions_list": 27,
+    "mcp__github__actions_list": 30,
     "mcp__github__merge_pull_request": 27,
     "mcp__github__actions_get": 3,
     "mcp__github__get_job_logs": 2,
@@ -38,17 +38,17 @@
    }
   },
   "otro": {
-   "llamadas": 385,
-   "chars_in": 91455,
-   "chars_out": 7603077,
+   "llamadas": 404,
+   "chars_in": 93751,
+   "chars_out": 7819321,
    "errores": 0,
-   "archivos_citados": 67,
-   "chars_citados": 3416211,
+   "archivos_citados": 70,
+   "chars_citados": 3443712,
    "tools": {
     "Skill": 27,
     "ToolSearch": 87,
-    "ScheduleWakeup": 29,
-    "ReadNotifications": 204,
+    "ScheduleWakeup": 33,
+    "ReadNotifications": 219,
     "AskUserQuestion": 5,
     "WebSearch": 2,
     "WebFetch": 1,
@@ -58,14 +58,14 @@
    }
   },
   "escritura": {
-   "llamadas": 388,
-   "chars_in": 609591,
-   "chars_out": 33373831,
+   "llamadas": 390,
+   "chars_in": 615613,
+   "chars_out": 34660031,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 362,
+    "Edit": 364,
     "Write": 26
    }
   },
@@ -81,14 +81,14 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 597,
-   "chars_in": 69162,
-   "chars_out": 2987820,
+   "llamadas": 599,
+   "chars_in": 69326,
+   "chars_out": 2996098,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 413,
+    "Read": 415,
     "Grep": 173,
     "Glob": 11
    }
