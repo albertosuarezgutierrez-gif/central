@@ -74,14 +74,14 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'sistema.ia-presupuesto', categoria: 'sistema',
     titulo: 'Presupuesto de IA agotado',
-    que: 'Se ha alcanzado el tope diario de gasto en IA de pago; queda solo la cadena gratuita.',
+    que: 'Se ha alcanzado el tope diario o mensual de gasto en IA de pago; queda solo la cadena gratuita.',
     cuando: 'Solo si se agota',
   },
   {
     id: 'sistema.ia-creditos', categoria: 'sistema',
-    titulo: 'Créditos de OpenRouter bajos',
-    que: 'Queda poco saldo en OpenRouter y conviene recargar.',
-    cuando: 'Lunes a las 07:00 (solo bajo umbral)',
+    titulo: 'Control de gasto de IA',
+    que: 'El saldo de OpenRouter da para 7 días o menos, o una app pasa del 80 % de su tope mensual de IA.',
+    cuando: 'Todos los días a las 08:10 (solo si hay algo que hacer)',
   },
   {
     id: 'sistema.ia-director', categoria: 'sistema',

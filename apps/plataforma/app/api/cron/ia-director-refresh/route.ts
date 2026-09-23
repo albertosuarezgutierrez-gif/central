@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 import { tgAviso } from '@/lib/telegram'
+import { leerCreditosOpenRouter } from '@/lib/ia-creditos'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
@@ -233,26 +234,9 @@ export async function GET(req: NextRequest) {
       .catch((e) => console.error(`[ia-director-refresh] snapshot aprendizaje falló para ${id}:`, e))
   }
 
-  // 4) Vigilancia de créditos (requiere key; si no hay, se salta sin fallar).
-  let creditos: { total: number; usado: number; restante: number } | null = null
-  const apiKey = process.env.OPENROUTER_API_KEY
-  if (apiKey) {
-    try {
-      const rc = await fetch('https://openrouter.ai/api/v1/credits', {
-        headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(15_000),
-      })
-      if (rc.ok) {
-        const jc = (await rc.json()) as { data?: { total_credits?: number; total_usage?: number } }
-        const total = Number(jc.data?.total_credits ?? 0)
-        const usado = Number(jc.data?.total_usage ?? 0)
-        creditos = { total, usado, restante: +(total - usado).toFixed(2) }
-        const umbral = Number(process.env.AI_CREDITOS_UMBRAL ?? 5)
-        if (creditos.restante < umbral) {
-          await tgAviso('sistema.ia-creditos', `🔴 <b>IA — créditos OpenRouter bajos</b>\nQuedan $${creditos.restante} (umbral $${umbral}). Recarga en openrouter.ai o la pasarela caerá a la cadena gratis.`).catch(() => {})
-        }
-      }
-    } catch { /* la vigilancia de créditos nunca tumba el refresh */ }
-  }
+  // 4) Saldo de OpenRouter (solo para el informe de la respuesta). El AVISO de saldo bajo lo da el
+  //    cron diario /api/cron/ia-saldo, con previsión de días; aquí ya no se avisa para no duplicar.
+  const { creditos } = await leerCreditosOpenRouter()
 
   return NextResponse.json({ ok: true, version, sinCambios, porCategoria, suplentes, caidos, penalizados, creditos })
 }
