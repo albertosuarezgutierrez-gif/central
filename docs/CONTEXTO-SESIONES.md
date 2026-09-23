@@ -13,7 +13,7 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 **(23/09/2026)** 🔎 **OpenSEO probado sobre grupoasegura.es + PR de títulos/descripciones.** Proyecto OpenSEO
-«Grupo ASegura» creado (ES/es; ~400 créditos de alta, sin plan). Hallazgos: para «grupo asegura» sale 1.º **Asegura
+«Grupo ASegura» creado (ES/es; ~400 créditos de alta, sin plan). Hallazgos: al buscar la marca sale 1.º **Asegura
 Group** (otra correduría, Granada) y nosotros 2.º; fuera del top-20 de «correduría de seguros sevilla» (manda el
 local pack → ficha de Google Business). Search Console NO conectado en OpenSEO (pendiente de Alberto). Auditoría: 0
 críticos. PR: la portada no llevaba la marca en `<title>` (la plantilla `%s · Grupo ASegura` no aplica al segmento
