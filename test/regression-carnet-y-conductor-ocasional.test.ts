@@ -42,10 +42,11 @@ test('el carnet NO vuelve a viajar cableado', () => {
 
 test('el supuesto del carnet se DECLARA, no se aplica en silencio', () => {
   const desde = readFileSync(join(raiz, 'apps/asegura/lib/codeoscopic/desde-cartera.ts'), 'utf8')
-  // Dos veces: retarificar una póliza y la oportunidad nueva. Moto tiene su
-  // propio catálogo de carnets y queda fuera a propósito.
-  assert.equal((desde.match(/suponer\(\s*'zonaCarnet'/g) ?? []).length, 2)
-  assert.equal((desde.match(/suponer\(\s*'tipoCarnet'/g) ?? []).length, 2)
+  // Tres: auto (retarificar una póliza y la oportunidad nueva) y moto
+  // (`precalificarMotoNueva`, que usa también la moto de cartera). Moto declara
+  // el B solo cuando la ficha no trae carné de moto (23/09/2026).
+  assert.equal((desde.match(/suponer\(\s*'zonaCarnet'/g) ?? []).length, 3)
+  assert.equal((desde.match(/suponer\(\s*'tipoCarnet'/g) ?? []).length, 3)
 })
 
 test('el conductor ocasional viaja como `secondaryDriver`', () => {

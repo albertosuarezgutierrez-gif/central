@@ -22,9 +22,10 @@ test('la MISMA persona va en holder y risk.insured, e idéntica', () => {
   assert.deepEqual(c.holder, c.risk.insured)
 })
 
-test('el capital viaja tal cual, en euros', () => {
+test('el capital viaja como deathBenefit, en euros, y no como capital', () => {
   const c = construirPeticionVida(BASE, LINEA) as any
-  assert.equal(c.risk.capital, 30000)
+  assert.equal(c.risk.deathBenefit, 30000)
+  assert.equal(c.risk.capital, undefined)
 })
 
 test('sin capital no se puede cotizar', () => {
@@ -37,11 +38,9 @@ test('capital a 0 o negativo se rechaza (no es un importe válido)', () => {
   assert.ok(revisarDatosVida({ ...BASE, capital: -100 }).some((x) => x.campo === 'capital'))
 })
 
-test('duración es opcional, y solo viaja si es un número', () => {
-  const sin = construirPeticionVida(BASE, LINEA) as any
-  assert.equal(sin.risk.durationYears, undefined)
+test('la duración NO viaja: TermLifeRisk_V1 no documenta ese campo', () => {
   const con = construirPeticionVida({ ...BASE, duracionAnios: 10 }, LINEA) as any
-  assert.equal(con.risk.durationYears, 10)
+  assert.deepEqual(Object.keys(con.risk).sort(), ['deathBenefit', 'insured'])
 })
 
 test('unos datos válidos no dan ningún reparo', () => {

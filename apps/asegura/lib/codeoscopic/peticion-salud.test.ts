@@ -16,13 +16,16 @@ const BASE: DatosSalud = {
 }
 const LINEA = 'Health'
 
-test('la MISMA persona va en holder y risk.insured, e idéntica', () => {
+test('la MISMA persona va en holder y como único elemento de risk.insureds, e idéntica', () => {
   const c = construirPeticionSalud(BASE, LINEA) as any
-  assert.deepEqual(c.holder, c.risk.insured)
+  assert.deepEqual(c.risk.insureds, [c.holder])
+  assert.equal(c.risk.insured, undefined)
+  assert.equal(c.risk.capital, undefined)
 })
 
-test('sin capital no se puede cotizar', () => {
-  assert.ok(revisarDatosSalud({ ...BASE, capital: undefined as any }).some((x) => x.campo === 'capital'))
+test('sin capital SÍ se puede cotizar: no viaja, así que no se exige', () => {
+  assert.equal(revisarDatosSalud({ ...BASE, capital: undefined as any }).some((x) => x.campo === 'capital'), false)
+  assert.ok(revisarDatosSalud({ ...BASE, capital: -5 }).some((x) => x.campo === 'capital'))
 })
 
 test('modalidadDeseada NUNCA viaja al vendor: no hay campo confirmado', () => {

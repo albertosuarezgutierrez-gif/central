@@ -97,11 +97,15 @@ export function construirPeticionVida(d: DatosVida, lineaId: string): Record<str
 
   const persona = construirPersona(d)
 
+  // Forma de `TermLifeRisk_V1` según la referencia oficial (23/09/2026):
+  // `insured` + `deathBenefit` (obligatorio). El capital va en euros como
+  // número [Probable: la referencia no fija el tipo]; si el vendor quiere otra
+  // forma contesta 400, que no se cobra. La duración NO viaja: no hay campo
+  // documentado y mandar uno inventado es lo que tenía bloqueado el ramo.
   const riesgo: Record<string, unknown> = {
     insured: persona,
-    capital: d.capital,
+    deathBenefit: d.capital,
   }
-  if (numero(d.duracionAnios)) riesgo.durationYears = d.duracionAnios
 
   const cuerpo: Record<string, unknown> = {
     insuranceLine: { id: lineaId },

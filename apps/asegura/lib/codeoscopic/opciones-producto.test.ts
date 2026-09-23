@@ -116,3 +116,10 @@ test('conProductoPorDefecto: familiaAllianz sin marcar (u omitido) sigue en fals
   const opciones = (r.product as { options: { id: string; value: unknown }[] }).options
   assert.equal(opciones.find((o) => o.id === 'insuredFamilyInAllianz')?.value, false)
 })
+
+test('opcionesPorDefecto: las de Allianz son de AUTO; moto u hogar no las heredan', () => {
+  assert.ok(opcionesPorDefecto('Allianz', 'auto'))
+  assert.ok(opcionesPorDefecto('Allianz', null), 'sin ramo conocido se mantiene el comportamiento de auto')
+  assert.equal(opcionesPorDefecto('Allianz', 'moto'), null)
+  assert.equal(opcionesPorDefecto('Allianz', 'hogar'), null)
+})

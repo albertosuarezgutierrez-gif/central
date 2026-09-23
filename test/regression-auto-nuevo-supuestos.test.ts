@@ -112,7 +112,7 @@ test('ninguna respuesta devuelve los supuestos SIN filtrar por las correcciones'
   )
   assert.equal(
     (puerto.match(/supuestosVigentes\(/g) ?? []).length,
-    5,
-    'las cinco salidas de supuestos (auto, hogar, auto nueva, moto nueva y el genérico) lo aplican',
+    6,
+    'las seis salidas de supuestos (auto, moto, hogar, auto nueva, moto nueva y el genérico) lo aplican',
   )
 })

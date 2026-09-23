@@ -76,8 +76,8 @@ import {
   CATALOGOS_HOGAR_OBLIGATORIOS,
   type DatosHogar,
 } from '@/lib/codeoscopic/peticion-hogar'
-import type { Supuesto, ResueltosMotoNueva, SupuestoMoto } from '@/lib/codeoscopic/desde-cartera'
-import { precalificarMotoNueva } from '@/lib/codeoscopic/desde-cartera'
+import type { Supuesto, ResueltosMotoNueva, ResueltosMoto, SupuestoMoto } from '@/lib/codeoscopic/desde-cartera'
+import { precalificarMotoNueva, precalificarMoto } from '@/lib/codeoscopic/desde-cartera'
 import {
   construirPeticionVida,
   revisarDatosVida,
@@ -134,6 +134,8 @@ import {
   modelosMoto,
   versionesMoto,
   experienciaConduccionMoto,
+  tiposDeGarajeMoto,
+  tiposDeCarnetMoto,
   MOTORES_MOTO,
   vidaDisponible,
   saludDisponible,
@@ -303,10 +305,26 @@ export async function prepararRetarificacion(entrada: {
     }
   }
 
+  // Una póliza CANCELADA no se retarifica (misma regla que pinta el botón en
+  // `retarificabilidad()`): quien llame al puerto directamente no puede
+  // saltársela. Solo esa rama: hogar puede traer el riesgo del Catastro en el
+  // cuerpo aunque la ficha no lo tenga, y ahí el helper diría «no» de más.
+  if (String(origen.estado).toLowerCase() === 'cancelada') {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        { error: origen.retarificacion.motivo ?? `hoy no se retarifica el ramo «${origen.tipo}»` },
+        409,
+      ),
+    }
+  }
+
   // ── El cuerpo que viaja, según el ramo. Todo lo de aquí es GRATIS ─────────
   let preparado: Preparado
   if (origen.tipo === 'auto') {
     preparado = await prepararAuto(origen, cuerpo, polizaId)
+  } else if (origen.tipo === 'moto') {
+    preparado = await prepararMoto(origen, cuerpo, polizaId)
   } else if (origen.tipo === 'hogar') {
     preparado = await prepararHogar(origen, cuerpo, polizaId)
   } else {
@@ -490,6 +508,77 @@ async function prepararAuto(
   }
   // Nuestra referencia, para casar después la cotización con la póliza.
   // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
+  peticion.externalId = `poliza-${polizaId}`
+  return { peticion, motivo: 'defensa-cartera', supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones) }
+}
+
+// ─── MOTO ────────────────────────────────────────────────────────────────────
+
+/**
+ * El tipo de carné de moto tiene que existir en el catálogo del vendor
+ * (`/motorcycle/driving-licenses`, gratis): un id que no está es un 400. Si el
+ * catálogo no se puede leer NO se bloquea (se deja que hable el vendor, que no
+ * cobra un 400 de validación); `null` = vale o no se ha podido comprobar.
+ */
+async function reparoCarnetMoto(
+  config: Parameters<typeof tiposDeCarnetMoto>[0],
+  tipo: string | null | undefined,
+): Promise<{ campo: 'tipoCarnet'; motivo: string } | null> {
+  if (!tipo) return null
+  const catalogo = await tiposDeCarnetMoto(config).catch((): null => null)
+  if (catalogo === null || catalogo.length === 0) return null
+  if (catalogo.some((o) => o.id === tipo)) return null
+  return {
+    campo: 'tipoCarnet',
+    motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${catalogo.map((o) => o.id).join(', ')})`,
+  }
+}
+
+/**
+ * Como `prepararAuto`, con el catálogo y el `risk` de moto: la póliza da la
+ * matrícula y el historial (`precalificarMoto`); la versión, el garaje y la
+ * experiencia de conducción los resuelve la pantalla (gratis). El id del ramo
+ * sale de `/insurance-lines`, nunca escrito a mano.
+ */
+async function prepararMoto(
+  origen: OrigenRetarificacion,
+  cuerpo: CuerpoRetarificacion,
+  polizaId: string,
+): Promise<Preparado> {
+  const resueltos: ResueltosMoto = {
+    municipioId: numero(cuerpo.resueltos?.municipioId),
+    estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
+    fechaMatriculacion: cadena(cuerpo.resueltos?.fechaMatriculacion),
+    codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
+    garaje: cadena(cuerpo.resueltos?.garaje),
+    garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
+    experienciaConduccion: cadena(cuerpo.resueltos?.experienciaConduccion),
+  }
+
+  const pre = precalificarMoto(origen.cliente, origen.poliza, resueltos, hoyIso())
+  const datos: Partial<DatosMoto> = {
+    ...pre.datos,
+    ...limpiarCorrecciones<DatosMoto>(cuerpo.correcciones),
+  }
+  const faltan = revisarDatosMoto(datos)
+  if (faltan.length > 0) return paraPreparado({ error: 'faltan datos para cotizar', faltan }, 422)
+
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista') return paraPreparado({ error: explicarConfig(cfg) }, 503)
+  const lineas = await lineasDeSeguro(cfg.config).catch(() => [])
+  const moto = motoDisponible(lineas)
+  if (moto.estado !== 'disponible') {
+    return paraPreparado({ error: 'moto no tarifica para esta organización (o no se ha podido comprobar)', moto }, 409)
+  }
+  const reparoCarnet = await reparoCarnetMoto(cfg.config, datos.tipoCarnet)
+  if (reparoCarnet) return paraPreparado({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422)
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construirPeticionMoto(datos as DatosMoto, moto.id)
+  } catch (e) {
+    return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
+  }
   peticion.externalId = `poliza-${polizaId}`
   return { peticion, motivo: 'defensa-cartera', supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones) }
 }
@@ -899,6 +988,10 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
       ),
     }
   }
+  const reparoCarnet = await reparoCarnetMoto(cfg.config, datos.tipoCarnet)
+  if (reparoCarnet) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422) }
+  }
 
   let peticion: Record<string, unknown>
   try {
@@ -1206,6 +1299,11 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
       }
       case 'experiencia-moto':
         return { estado: 'ok', opciones: await experienciaConduccionMoto(config) }
+      // Catálogos PROPIOS de moto (23/09/2026): el de garajes de coche no es el de motos.
+      case 'garajes-moto':
+        return { estado: 'ok', opciones: await tiposDeGarajeMoto(config) }
+      case 'carnets-moto':
+        return { estado: 'ok', opciones: await tiposDeCarnetMoto(config) }
       // Los ramos habilitados para esta organización y, resuelto aquí mismo,
       // si hogar/moto están entre ellos (con su id EXACTO). Tres estados, no dos.
       case 'lineas': {

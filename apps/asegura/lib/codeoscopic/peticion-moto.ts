@@ -20,6 +20,10 @@ export type DatosMoto = DatosPersona & {
   // dni, nombre, apellidos, nacimiento, sexo, estado civil, teléfono y
   // residencia vienen de `DatosPersona` (compartido con auto y hogar).
   fechaCarnet: string
+  /** `drivingLicenses[].type.id` del catálogo `/motorcycle/driving-licenses` (A, A2, A1, AM…). */
+  tipoCarnet?: string | null
+  /** `drivingLicenses[].issuingZone.id`. Sin él, `Spain` (declarado como supuesto aguas arriba). */
+  zonaCarnet?: string | null
 
   // ── Vehículo ──
   codigoVehiculo: string // el código Base7 de la VERSIÓN, del catálogo
@@ -144,7 +148,7 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<str
 
   // 🚨 LA MISMA persona, proyectada IDÉNTICA en holder/owner/primaryDriver — ver
   // el motivo en `peticion-auto.ts`.
-  const persona = construirPersona(d, { fechaCarnet: d.fechaCarnet })
+  const persona = construirPersona(d, { fechaCarnet: d.fechaCarnet, tipoCarnet: d.tipoCarnet, zonaCarnet: d.zonaCarnet })
 
   const riesgo: Record<string, unknown> = {
     vehicle: { code: d.codigoVehiculo },
