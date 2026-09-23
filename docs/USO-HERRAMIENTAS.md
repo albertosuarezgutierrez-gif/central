@@ -171,17 +171,17 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 96 | 12.190 | 7.005.168 | 0 | 0 |
-| `otro` | 94 | 3.214 | 12.292.637 | 6.188.583 | 0 |
-| `lectura-directa` | 87 | 3.139 | 5.015.131 | 0 | 0 |
-| `mcp:github` | 85 | 3.062 | 2.978.237 | 39.268.254 | 57 |
-| `escritura` | 79 | 2.115 | 37.252.151 | 0 | 0 |
-| `sql` | 66 | 1.254 | 572.463 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 53 | 547 | 153.202 | 2.729.511 | 9 |
+| `bash` | 96 | 12.245 | 7.055.901 | 0 | 0 |
+| `otro` | 94 | 3.231 | 12.352.613 | 6.354.894 | 0 |
+| `lectura-directa` | 87 | 3.170 | 5.079.178 | 0 | 0 |
+| `mcp:github` | 85 | 3.071 | 2.985.394 | 39.268.254 | 57 |
+| `escritura` | 79 | 2.119 | 37.284.442 | 0 | 0 |
+| `sql` | 66 | 1.256 | 572.819 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 53 | 550 | 153.729 | 2.729.511 | 9 |
 | `mcp:Vercel` | 24 | 271 | 501.377 | 198.719 | 3 |
 | `mcp:Booking-com` | 8 | 248 | 1.006.622 | 0 | 0 |
 | `mcp:Gmail` | 13 | 217 | 346.727 | 0 | 2 |
-| `mcp:Supabase` | 39 | 95 | 13.599 | 0 | 1 |
+| `mcp:Supabase` | 39 | 96 | 13.603 | 0 | 1 |
 | `agente:general-purpose` | 14 | 55 | 39.844 | 637.069 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 1 | 51 | 73.084 | 0 | 0 |
@@ -189,8 +189,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:posthog` | 4 | 44 | 64.033 | 0 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
+| `agente:agente-mecanico` | 10 | 26 | 25.635 | 453.477 | 0 |
 | `agente:Explore` | 11 | 25 | 12.103 | 579.777 | 0 |
-| `agente:agente-mecanico` | 10 | 25 | 24.001 | 444.826 | 0 |
 | `agente:agente-architect` | 8 | 21 | 27.323 | 822.071 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:OpenSEO` | 1 | 18 | 10.231 | 0 | 0 |
@@ -200,7 +200,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `agente:general` | 6 | 8 | 5.205 | 231.483 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:Supabase_asegura` | 5 | 5 | 1.947 | 0 | 0 |
-| `agente:rastreador-codigo` | 2 | 2 | 727 | 0 | 0 |
+| `agente:rastreador-codigo` | 2 | 3 | 1.124 | 1.618 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
 | `mcp:Google_Calendar` | 1 | 1 | 272 | 0 | 0 |
