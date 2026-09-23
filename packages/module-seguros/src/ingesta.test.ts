@@ -6,6 +6,9 @@ import {
   DIAS_CUARENTENA_RECIENTE,
   HORAS_RECHAZO_RECIENTE,
   decidirAvisoIngesta,
+  firmaAvisoIngesta,
+  decidirRespaldoPull,
+  HORAS_RESPALDO_PULL,
   repartirHuerfanas,
   textoHuerfanas,
   TOPE_POLIZAS_TELEGRAM,
@@ -779,4 +782,65 @@ test('sin saber de cuántas compañías sale, se DICE en vez de callarlo', () =>
     cobertura: { rutas: 10, rutasNuncaLeidas: 4, entidadesObservadas: null, porTipo: [] },
   })
   assert.match(s.motivos.join(' · '), /no consta de cuántas compañías/)
+})
+
+// ── Firma anti-repetición: el cron parado tiene que CAMBIARLA (23/09/2026) ───
+// El detalle decía «El cron de CIMA lleva 37 h sin completar» y el Telegram no
+// sonó: la ingesta YA estaba degradada por otra causa (Mapfre muda), así que el
+// estado no cambió, y la firma no incluía el cron. Los casos de abajo parten de
+// una ingesta ya degradada a propósito: con una sana, el cron mudo cambiaría el
+// estado y el test pasaría por el motivo equivocado (medido: pasaba igual con
+// el tramo del cron quitado de la firma).
+
+const degradada = (ultimoPull: { horas: number; procesados: number | null } | null) =>
+  saludIngesta({ cuarentena: [f('SIN', 'C0468', 2)], ultimoPull })
+
+test('firma: con la ingesta ya degradada, el cron que se para cambia la firma → suena', () => {
+  const corre = degradada({ horas: 3, procesados: 2 })
+  const mudo = degradada({ horas: 37, procesados: 0 })
+  assert.equal(corre.estado, mudo.estado) // el estado NO lo delata: solo la firma puede
+  assert.notEqual(firmaAvisoIngesta(corre), firmaAvisoIngesta(mudo))
+  const d = decidirAvisoIngesta({
+    firmaAnterior: firmaAvisoIngesta(corre),
+    firmaActual: firmaAvisoIngesta(mudo),
+    ultimoAvisoEn: new Date('2026-09-22T06:45:00Z'),
+    hoy: new Date('2026-09-23T06:45:00Z'),
+  })
+  assert.equal(d.avisar, true)
+})
+
+test('firma: «no consta ninguna corrida» y «el cron corre» no dan la misma firma', () => {
+  assert.notEqual(
+    firmaAvisoIngesta(degradada(null)),
+    firmaAvisoIngesta(degradada({ horas: 3, procesados: 2 })),
+  )
+})
+
+test('firma: mismo estado dos días seguidos → misma firma (no repite el aviso)', () => {
+  assert.equal(
+    firmaAvisoIngesta(degradada({ horas: 30, procesados: 0 })),
+    firmaAvisoIngesta(degradada({ horas: 54, procesados: 0 })),
+  )
+})
+
+// ── Respaldo del pull de CIMA desde plataforma (23/09/2026) ─────────────────
+
+test('respaldo: el pull de Actions no ha corrido (37 h) → dispara', () => {
+  assert.deepEqual(decidirRespaldoPull({ horas: 37, procesados: 0 }), { disparar: true, horas: 37 })
+})
+
+test('respaldo: el pull de las 05:30 ya completó (1,5 h) → NO dispara, se pisarían en TIREA', () => {
+  const d = decidirRespaldoPull({ horas: 1.5, procesados: 3 })
+  assert.equal(d.disparar, false)
+})
+
+test('respaldo: justo en el umbral no dispara; por encima, sí', () => {
+  assert.equal(decidirRespaldoPull({ horas: HORAS_RESPALDO_PULL, procesados: 0 }).disparar, false)
+  assert.equal(decidirRespaldoPull({ horas: HORAS_RESPALDO_PULL + 0.1, procesados: 0 }).disparar, true)
+})
+
+test('respaldo: sin dato del último pull NO dispara (no sé ≠ está parado)', () => {
+  assert.deepEqual(decidirRespaldoPull(null), { disparar: false, motivo: 'sin_dato', horas: null })
+  assert.deepEqual(decidirRespaldoPull(undefined), { disparar: false, motivo: 'sin_dato', horas: null })
+  assert.deepEqual(decidirRespaldoPull({ horas: Number.NaN, procesados: null }), { disparar: false, motivo: 'sin_dato', horas: null })
 })

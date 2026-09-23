@@ -151,6 +151,11 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/sivra/eventos/verificar', schedule: '30 5 * * *' },
   { path: '/api/cron/cima-liq', schedule: '30 7 * * *' },
   { path: '/api/cron/correduria-ingesta', schedule: '45 6 * * *' },
+  // RESPALDO del pull de CIMA (23/09/2026): el pull principal corre en GitHub Actions del repo
+  // `asegura` (05:30/11:30) y el 22/09 se quedó ~45 h sin runner porque el presupuesto de Actions
+  // de la cuenta se agotó. Este mira 90 min después de cada franja y SOLO dispara si esa franja no
+  // completó (`decidirRespaldoPull`): con Actions sano no hace nada y nunca se pisan en TIREA.
+  { path: '/api/cron/cima-pull-respaldo', schedule: '0 7,13 * * *' },
   // Siniestros nuevos de la cartera: 06:50, justo DETRÁS del vigía de la ingesta (06:45) —
   // si los datos de CIMA no están entrando, ese aviso llega primero y explica por qué este
   // no trae nada— y antes de `agentes-latido` (07:45), para que el parte del día lea una
