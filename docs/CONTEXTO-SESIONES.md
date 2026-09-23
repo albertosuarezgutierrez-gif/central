@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
+`apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
+`product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
+del PR de emisión que quedaba "sin probar en real"; (2) **Comercios y Comunidades NO están
+disponibles por API REST** aunque estén activados en el panel de Avant2 con Occident/Reale — solo
+6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
+(solo doc), sin código tocado.
 
 **(23/09/2026)** 🧹 **La purga del e2e-smoke de `asegura` borraba en la BD equivocada.** Tras el traspaso (05/09)
 el smoke escribe en `seguros` de central, pero la purga apuntaba a Frankfurt (`FRANKFURT_DATABASE_URL`): 0 filas
