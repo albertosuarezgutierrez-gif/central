@@ -12,6 +12,21 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 📨 **ASegura OS 2-d-3: la anulación firmada va a la compañía por la cola.** Acción nueva
+`enviar_correo_compania` (política `aprobar`) en `seguros.aprobacion` (+`anulacion_id`, CHECK; migración aplicada). Al
+listar «Esperan tu OK» se propone sola cada anulación firmada en el portal sin propuesta (idempotente; rechazada no
+vuelve). Buzón = `contactoParaAnulacion()`: administración > general > sin clasificar, nunca comercial/siniestros; la
+carta GUARDADA al firmar va adjunta (.txt) y no se edita. Solo si el correo SALE pasa a `comunicada`; si se desiste,
+la propuesta caduca. Firma en papel: la manda Alberto y pulsa «Comunicada».
+
+**(23/09/2026)** ✍️ **ASegura OS 2-d-2: el cliente firma su anulación en el portal.** #3368 (2-d) mergeado. El corredor
+abre el expediente y el cliente lo ve en «Pendiente de tu firma» (bóveda): carta entera (`cartaAnulacion()`, pura),
+código de 6 cifras a SU correo (10 min, 5 intentos, 60 s entre códigos) + nombre que casa con el tomador → `FirmaPropia`
+(eIDAS art. 26) sobre el texto EXACTO que se guarda en `anulacion.carta_texto`; fila en `seguros.firma` y expediente a
+`firmada`. Puente estrecho `/api/portal/anulacion` (sin `clienteId`); la vista de corredor no firma (403). Migración
+`seguros_anulacion_firma` aplicada. «Firma recibida» a mano sigue para la firma en papel. Siguiente: 2-d-3 (aviso a la
+compañía por la cola de aprobaciones, con la carta firmada).
+
 **(23/09/2026)** ⭐ **Petición de reseñas de Google: borrador listo, SIN enviar.** `docs/asegura-resenas/` (texto
 WhatsApp + correo, QR PNG/SVG). Enlace directo a «escribir reseña» con el `place_id` de la ficha leído vía OpenSEO
 (`ChIJX9-iRQRsEg0RvJs_K-MXksA`, CID `13876179666332523452`): 1 reseña, horario L-V 9-18 ya puesto. A TODOS los 67 en

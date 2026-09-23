@@ -179,3 +179,48 @@ export function resolucionDeAnulacion(a: { tipo: TipoAnulacion; motivo: MotivoAn
   const directo = MOTIVOS_PERDIDA.find((m) => m === a.motivo)
   return { resolucion: 'perdida', motivo: directo ?? 'otro' }
 }
+
+export type DatosCarta = {
+  tomador: string
+  compania: string | null
+  numeroPoliza: string | null
+  ramo: string | null
+  tipo: TipoAnulacion
+  /** `YYYY-MM-DD`. */
+  fechaEfecto: string
+  /** `YYYY-MM-DD`: el día en que se compone (y se firma). */
+  fechaCarta: string
+  mediador: string
+}
+
+/**
+ * La carta de anulación que el TOMADOR firma en el portal y que después se manda a la compañía.
+ * `null` si falta un dato sin el cual la carta no identifica la póliza (compañía o número):
+ * una carta con huecos no se puede firmar, porque lo firmado tiene que ser lo que se envía.
+ *
+ * El texto es EXACTAMENTE lo que se hashea: cualquier cambio de redacción cambia la huella de las
+ * cartas futuras, nunca la de las ya firmadas (esas guardan su texto).
+ */
+export function cartaAnulacion(d: DatosCarta): string | null {
+  const tomador = d.tomador.trim()
+  if (!tomador || !d.compania?.trim() || !d.numeroPoliza?.trim()) return null
+  const poliza = `la póliza nº ${d.numeroPoliza.trim()}${d.ramo ? ` (${d.ramo})` : ''}`
+  const voluntad =
+    d.tipo === 'no_renovacion'
+      ? `me opongo a su prórroga, de modo que el contrato termine en su vencimiento del ${fechaEs(d.fechaEfecto)} (art. 22 de la Ley de Contrato de Seguro).`
+      : d.tipo === 'sustitucion'
+        ? `solicito su anulación con efecto el ${fechaEs(d.fechaEfecto)}, por sustituirse por otra póliza.`
+        : `solicito su anulación con efecto el ${fechaEs(d.fechaEfecto)}.`
+  return [
+    `A la atención de ${d.compania.trim()}`,
+    '',
+    `Asunto: anulación de ${poliza}`,
+    '',
+    `Yo, ${tomador}, tomador de ${poliza}, ${voluntad}`,
+    '',
+    `Esta comunicación se tramita a través de mi corredor de seguros, ${d.mediador}.`,
+    '',
+    `Firmado electrónicamente el ${fechaEs(d.fechaCarta)}.`,
+    tomador,
+  ].join('\n')
+}
