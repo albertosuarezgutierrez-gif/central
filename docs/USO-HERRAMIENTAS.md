@@ -171,28 +171,28 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 95 | 11.241 | 6.356.156 | 0 | 0 |
-| `otro` | 93 | 3.058 | 11.786.880 | 6.058.474 | 0 |
-| `lectura-directa` | 86 | 3.027 | 4.850.074 | 0 | 0 |
-| `mcp:github` | 84 | 2.896 | 2.855.564 | 37.869.242 | 57 |
-| `escritura` | 78 | 2.001 | 35.416.557 | 0 | 0 |
-| `sql` | 66 | 1.194 | 560.032 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 52 | 511 | 144.666 | 2.729.511 | 9 |
-| `mcp:Vercel` | 24 | 268 | 490.032 | 198.719 | 1 |
+| `bash` | 95 | 11.630 | 6.648.231 | 0 | 0 |
+| `otro` | 93 | 3.123 | 11.998.930 | 6.071.875 | 0 |
+| `lectura-directa` | 86 | 3.070 | 4.911.615 | 0 | 0 |
+| `mcp:github` | 84 | 2.980 | 2.924.348 | 39.156.634 | 57 |
+| `escritura` | 78 | 2.026 | 36.428.330 | 0 | 0 |
+| `sql` | 66 | 1.235 | 568.685 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 52 | 526 | 147.864 | 2.729.511 | 9 |
+| `mcp:Vercel` | 24 | 269 | 490.356 | 198.719 | 2 |
 | `mcp:Booking-com` | 8 | 248 | 1.006.622 | 0 | 0 |
 | `mcp:Gmail` | 13 | 217 | 346.727 | 0 | 2 |
-| `mcp:Supabase` | 39 | 84 | 13.368 | 0 | 1 |
+| `mcp:Supabase` | 39 | 89 | 13.482 | 0 | 1 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
+| `agente:general-purpose` | 14 | 51 | 37.811 | 605.110 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 1 | 51 | 73.084 | 0 | 0 |
-| `agente:general-purpose` | 14 | 50 | 37.774 | 605.110 | 0 |
 | `mcp:Google-Drive` | 6 | 50 | 50.016 | 0 | 2 |
+| `mcp:posthog` | 4 | 44 | 64.033 | 0 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
-| `mcp:posthog` | 4 | 43 | 54.330 | 0 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
-| `agente:Explore` | 11 | 24 | 11.489 | 528.065 | 0 |
+| `agente:Explore` | 11 | 25 | 12.103 | 579.777 | 0 |
 | `agente:agente-mecanico` | 9 | 22 | 21.162 | 441.917 | 0 |
+| `agente:agente-architect` | 8 | 21 | 27.323 | 822.071 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
-| `agente:agente-architect` | 8 | 20 | 26.690 | 727.676 | 0 |
 | `mcp:Google_Drive` | 4 | 16 | 18.176 | 0 | 2 |
 | `mcp:Resend` | 2 | 12 | 1.955 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
